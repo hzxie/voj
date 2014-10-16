@@ -1,0 +1,30 @@
+div#content div#main-content {
+	margin-top: 20px;
+}
+
+div#content div#main-content div#discussion table {
+	background-color: #fff;
+	border-top: 5px solid #16a085;
+
+}
+
+div#content div#main-content div#discussion table tr.viewed {
+	filter: alpha(opacity=50);
+	opacity: .5;
+}
+
+div#content div#main-content div#discussion table td {
+	padding: 10px;
+	text-align: center;
+	vertical-align: middle;
+}
+
+div#content div#main-content div#discussion table td.avatar,
+div#content div#main-content div#discussion table td.replies {
+	width: 50px;
+}
+
+div#content div#main-content div#discussion table td.topic {
+	text-align: left;
+	vertical-align: top;
+}
