@@ -4,7 +4,7 @@
 <html lang="en-US">
 <head>
     <meta charset="UTF-8">
-    <title>Home | Verwandlung Online Judge</title>
+    <title>Welcome Back | Verwandlung Online Judge</title>
     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="author" content="谢浩哲">
@@ -16,7 +16,7 @@
     <link rel="stylesheet" type="text/css" href="<c:url value="/assets/css/flat-ui.css" />">
     <link rel="stylesheet" type="text/css" href="<c:url value="/assets/css/font-awesome.min.css" />">
     <link rel="stylesheet" type="text/css" href="<c:url value="/assets/css/style.css" />">
-    <link rel="stylesheet" type="text/css" href="<c:url value="/assets/css/homepage.css" />">
+    <link rel="stylesheet" type="text/css" href="<c:url value="/assets/css/login.css" />">
     <!-- JavaScript -->
     <script type="text/javascript" src="<c:url value="/assets/js/jquery-1.11.1.min.js" />"></script>
     <script type="text/javascript" src="<c:url value="/assets/js/bootstrap.min.js" />"></script>
@@ -53,29 +53,30 @@
         </div> <!-- .container -->
     </div> <!-- #header -->
     <div id="content">
-        <div id="introduction" class="carousel slide">
-            <ol class="carousel-indicators">
-                <li data-target="#introduction" data-slide-to="0" class="active"></li>
-                <li data-target="#introduction" data-slide-to="1"></li>
-                <li data-target="#introduction" data-slide-to="2"></li>
-            </ol>
-            <div class="carousel-inner">
-                <div class="active item first"></div>
-                <div class="item second"></div>
-                <div class="item third"></div>
-            </div>
-        </div> <!-- #introduction -->
-        <div id="slogan" class="row-fluid">
-            <div class="container">
-                <div class="span5 offset7">
-                    <h2>Start Your OJ Journey Today!</h2>
-                    <p><button class="btn btn-success" onclick="window.location.href='accounts/register'">Get Started Now</button></p>
-                    <p><a href="accounts/login">Log In</a></p>
-                </div> <!-- .span6 -->
-            </div> <!-- .container -->
-        </div> <!-- #slogan -->
-        <div class="row-fluid">
-        </div>
+        <div id="login">
+            <h2>Sign in</h2>
+            <form id="login-form" action="" method="POST">
+                <p class="row-fluid">
+                    <label for="username">Username</label>
+                    <input id="username" name="username" class="span12" type="text" maxlength="16" />
+                </p>
+                <p class="row-fluid">
+                    <label for="password">Password</label>
+                    <input id="password" name="password" class="span12" type="password" maxlength="16" />
+                </p>
+                <p>
+                    <label for="remember-me">
+                        <input type="checkbox" /> Remember Me
+                    </label>
+                </p>
+                <p>
+                    <button class="btn btn-success btn-block">Sign in</button>
+                </p>
+            </form> <!-- #login-form -->
+        </div> <!-- #login -->
+        <p class="text-center">
+            Don't have an account?<br /><a href="<c:url value="/accounts/register" />">Create an account</a>
+        </p>
     </div> <!-- #content -->
     <div id="footer">
         <div class="container">
@@ -84,12 +85,5 @@
     </div> <!-- #footer -->
     <!-- JavaScript -->
     <!-- Placed at the end of the document so the pages load faster -->
-    <script type="text/javascript">
-        $(document).ready(function() {
-            $('.carousel').carousel({
-                interval: 5000
-            });
-        });
-    </script>
 </body>
 </html>

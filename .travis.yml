@@ -1,0 +1,16 @@
+language: java
+jdk:
+  - oraclejdk8
+  - openjdk7
+  - oraclejdk7
+
+services: mysql
+
+before_script:
+  - mysql -e 'CREATE DATABASE voj;'
+  - mysql voj < voj.sql
+
+script: mvn test -f web/verwandlung/pom.xml
+
+after_script:
+  - mysql -e 'DROP DATABASE voj;'

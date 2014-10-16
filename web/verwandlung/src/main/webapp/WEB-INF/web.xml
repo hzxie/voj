@@ -1,12 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<web-app id="verwandlung" version="2.5" xmlns="http://java.sun.com/xml/ns/javaee"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://java.sun.com/xml/ns/javaee 
-    http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd">
-    
-  <display-name>Verwandlung Online Judge</display-name>
-  
-  <!-- Spring MVC Configuration -->
+<web-app xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns="http://java.sun.com/xml/ns/javaee"
+	xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
+	id="verwandlung" version="2.5">
+	<display-name>Verwandlung Online Judge</display-name>
 	<servlet>
 		<servlet-name>dispatcher</servlet-name>
 		<servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
@@ -20,8 +17,6 @@
 		<param-name>contextConfigLocation</param-name>
 		<param-value>/WEB-INF/dispatcher-servlet.xml</param-value>
 	</context-param>
-
-	<!-- Druid -->
 	<servlet>
 		<servlet-name>DruidStatView</servlet-name>
 		<servlet-class>com.alibaba.druid.support.http.StatViewServlet</servlet-class>
@@ -30,19 +25,4 @@
 		<servlet-name>DruidStatView</servlet-name>
 		<url-pattern>/druid/*</url-pattern>
 	</servlet-mapping>
-
-	<!-- Log4j -->
-	<!-- 
-	<context-param>
-		<param-name>log4jConfigLocation</param-name>
-		<param-value>classpath:log4j.properties</param-value>
-	</context-param>
-	<listener>
-		<listener-class>org.springframework.web.util.Log4jConfigListener</listener-class>
-	</listener>
-
-	<listener>
-		<listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
-	</listener>
-	-->
 </web-app>
