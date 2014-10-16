@@ -1,4 +1,4 @@
-[![Verwandlung Online Judge](https://raw.githubusercontent.com/zjhzxhz/verwandlung/master/web/verwandlung/src/main/webapp/assets/img/logo.png)](#)
+![Verwandlung Online Judge](https://raw.githubusercontent.com/zjhzxhz/verwandlung/master/web/verwandlung/src/main/webapp/assets/img/logo.png)
 
 Version: 1.0.0 (Under Development)
 
@@ -30,7 +30,7 @@ In 2012, Alibaba Inc. published a message queue product called [MetaQ](https://g
 
 MetaQ stands for *Metamorphosis*, which is a famous literature written by the author Franz Kafka.
 
-As the message queue is one of the important components in the application, so I named the application *Verwandlung*, which is the German name of  Metamorphosis.
+As the message queue is one of the important components in the application, so I named the application *Verwandlung*, which is the German name of *Metamorphosis*.
 
 ### Architecture
 
