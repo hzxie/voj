@@ -1,2 +1,0 @@
-# Disable Log4j in Test Environment
-log4j.rootLogger=OFF
