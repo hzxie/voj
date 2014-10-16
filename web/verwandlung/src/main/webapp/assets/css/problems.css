@@ -1,0 +1,78 @@
+div#content div#locator {
+	background-color: #fff;
+	border-top: 0;
+	border-left: 10px solid #ffe6b0;
+	padding: 10px;
+	-webkit-box-shadow: 0 0 5px rgba(0,0,0,0.1);
+	   -moz-box-shadow: 0 0 5px rgba(0,0,0,0.1);
+			box-shadow: 0 0 5px rgba(0,0,0,0.1);
+}
+
+div#content div#locator ul.inline {
+	margin-bottom: 0;
+}
+
+div#content div#main-content {
+	margin-top: 20px;
+}
+
+div#content div#main-content div#problems table {
+	border: 1px solid #e8e8e8;
+	-webkit-box-shadow: 0 0 5px rgba(0,0,0,0.1);
+	   -moz-box-shadow: 0 0 5px rgba(0,0,0,0.1);
+			box-shadow: 0 0 5px rgba(0,0,0,0.1);
+}
+
+div#content div#main-content div#problems table thead {
+	background-color: #16a085;
+	color: #fff;
+}
+
+div#content div#main-content div#problems table th.th-flag {
+	width: 5%;
+}
+
+div#content div#main-content div#problems table th.th-submission {
+	width: 15%;	
+}
+
+div#content div#main-content div#problems table th.th-ac-rate {
+	width: 5%;
+}
+
+div#content div#main-content div#problems table td.name {
+	text-align: left;
+}
+
+div#content div#main-content div#problems table td {
+	border-left: 1px solid #e8e8e8;
+	color: #666;
+	text-align: center;
+}
+
+div#content div#main-content div#problems table td.flag-ac > a {
+	color: #f00;
+}
+
+div#content div#main-content div#problems table td.flag-pe > a,
+div#content div#main-content div#problems table td.flag-wa > a,
+div#content div#main-content div#problems table td.flag-tle > a,
+div#content div#main-content div#problems table td.flag-mle > a,
+div#content div#main-content div#problems table td.flag-ole > a,
+div#content div#main-content div#problems table td.flag-re > a,
+div#content div#main-content div#problems table td.flag-ce > a {
+	color: #4d7aff;
+}
+
+div#content div#main-content div#problems table td.name a {
+	color: #333;
+	text-align: left;
+}
+
+div#content div#sidebar div.widget {
+	background-color: #fff;
+	border-top: 4px solid #16a085;
+	margin-bottom: 20px;
+	padding: 10px;
+}
+

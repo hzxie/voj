@@ -1,0 +1,119 @@
+html, body {
+	background: #f3f3f3;
+	font-family: "Microsoft YaHei", "Sogoe UI Light", "Sogoe UI";
+	margin: 0;
+	padding: 0;
+}
+
+a {
+	text-decoration: none;
+}
+
+div.container {
+	width: 960px;
+}
+
+div#header {
+	overflow: hidden;
+	padding: 20px 0;
+	top: 0;
+	z-index: 128;
+}
+
+div#header div#logo img {
+	float: left;
+	max-height: 40px;
+}
+
+div#header div#logo span {
+	display: block;
+	float: left;
+	font-size: 24px;
+	font-weight: bold;
+	margin: 8px 10px;
+}
+
+div#header div#nav {
+	margin-top: 12px;
+	text-align: right;
+}
+
+div#drawer-nav {
+	background-color: #000;
+	color: #fff;
+	filter: alpha(opacity=85);
+	opacity: .85;
+	padding: 30px 40px;
+	position: fixed;
+	top: 0;
+	right: 0;
+	bottom: 0;
+}
+
+div#drawer-nav div.section {
+	clear: both;
+	margin-bottom: 20px;
+	padding-bottom: 20px;
+	padding-right: 60px;
+}
+
+div#drawer-nav div#accounts.section {
+	border-bottom: 1px solid #606060;
+	margin-top: 60px;
+}
+
+div#footer {
+	color: #000;
+	font-size: 12px;
+	padding: 20px 0;
+	text-align: center;
+}
+
+/* Smaller than standard 960 (devices and browsers) */
+/* Tablet Portrait size to standard 960 (devices and browsers) */
+@media only screen and (min-width: 768px) and (max-width: 959px) {
+	div.container {
+		width: 768px;
+	}
+}
+
+/* All Mobile Sizes (devices and browser) */
+/* Mobile Landscape Size to Tablet Portrait (devices and browsers) */
+@media only screen and (min-width: 480px) and (max-width: 767px) {
+	div.container {
+		width: 480px;
+	}
+
+	div#header div#logo {
+		text-align: center;
+	}
+
+	div#header div#logo img {
+		float: none;
+	}
+
+	div#header div#nav {
+		margin-top: 20px;
+		text-align: center;
+	}
+}
+
+/* Mobile Portrait Size to Mobile Landscape Size (devices and browsers) */
+@media only screen and (max-width: 479px) {
+	div.container {
+		width: 300px;
+	}
+
+	div#header div#logo {
+		text-align: center;
+	}
+
+	div#header div#logo img {
+		float: none;
+	}
+
+	div#header div#nav {
+		margin-top: 20px;
+		text-align: center;
+	}
+}
