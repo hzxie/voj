@@ -46,8 +46,9 @@ div#drawer-nav {
 	padding: 30px 40px;
 	position: fixed;
 	top: 0;
-	right: 0;
+	right: -320px;
 	bottom: 0;
+	z-index: 256;
 }
 
 div#drawer-nav div.section {
@@ -60,6 +61,19 @@ div#drawer-nav div.section {
 div#drawer-nav div#accounts.section {
 	border-bottom: 1px solid #606060;
 	margin-top: 60px;
+}
+
+div#drawer-nav div#profile {
+	font-size: 12px;
+}
+
+div#drawer-nav div#profile h5 {
+	margin-top: 20px;
+	text-transform: lowercase;
+}
+
+div#drawer-nav div#profile ul.inline > li {
+	padding-left: 0;
 }
 
 div#footer {

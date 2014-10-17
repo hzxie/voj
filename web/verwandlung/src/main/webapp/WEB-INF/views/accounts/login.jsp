@@ -43,7 +43,7 @@
             </div> <!-- #logo -->
             <div id="nav" class="span6">
                 <ul class="inline">
-                    <li><a href="<c:url value="/problems" />">Problems</a></li>
+                    <li><a href="<c:url value="/p" />">Problems</a></li>
                     <li><a href="<c:url value="/discussion" />">Discussion</a></li>
                     <li><a href="<c:url value="/competition" />">Competition</a></li>
                     <li><a href="<c:url value="/submission" />">Submission</a></li>
@@ -56,7 +56,9 @@
         <div id="login">
             <h2>Sign in</h2>
             <div class="alert alert-error hide">Incorrect username or password.</div>
-            <div class="alert alert-success hide">You are now logged out.</div>
+            <c:if test="${isLogout}">
+            <div class="alert alert-success">You are now logged out.</div>
+            </c:if>
             <form id="login-form" method="post" onsubmit="onSubmit(); return false;">
                 <p class="row-fluid">
                     <label for="username">Username</label>
