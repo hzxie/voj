@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Configuration status="WARN">
 	<Properties>
-		<Property name="fileName">/home/xiehaozhe/logs/voj.log</Property>
-		<Property name="filePattern">/home/xiehaozhe/logs/voj-%d{yyyy-MM-dd}-%i.log.gz</Property>
+		<Property name="fileName">${sys:catalina.home}/logs/voj.log</Property>
+		<Property name="filePattern">${sys:catalina.home}/logs/voj-%d{yyyy-MM-dd}-%i.log.gz</Property>
 		<Property name="patternLayout">[%p] %d [%t] %c - %m%n</Property>
 	</Properties>
 	<Appenders>
