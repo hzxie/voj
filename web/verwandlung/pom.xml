@@ -1,14 +1,14 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-	<groupId>com.happystudio</groupId>
-	<artifactId>verwandlung</artifactId>
+	<groupId>edu.hfut</groupId>
+	<artifactId>oes</artifactId>
 	<packaging>war</packaging>
 	<version>1.0.0-SNAPSHOT</version>
 	<name>Verwandlung Online Judge</name>
 	<url>http://maven.apache.org</url>
 	<properties>
-		<spring.version>4.1.1.RELEASE</spring.version>
+		<spring.version>4.0.5.RELEASE</spring.version>
 		<hibernate.version>4.3.6.Final</hibernate.version>
 		<druid.version>1.0.9</druid.version>
 	</properties>
@@ -102,7 +102,7 @@
 		<dependency>
 			<groupId>com.jayway.jsonpath</groupId>
 			<artifactId>json-path</artifactId>
-			<version>1.1.0</version>
+			<version>0.9.1</version>
 			<scope>test</scope>
 		</dependency>
 		<!-- Others -->
@@ -113,17 +113,6 @@
 		</dependency>
 	</dependencies>
 	<build>
-		<finalName>verwandlung</finalName>
-		<plugins>
-			<plugin>
-				<artifactId>maven-surefire-plugin</artifactId>
-				<version>2.17</version>
-				<configuration>
-					<systemPropertyVariables>
-						<log4j.configuration>file:${project.build.testOutputDirectory}/log4j-silent.properties</log4j.configuration>
-					</systemPropertyVariables>
-				</configuration>
-			</plugin>
-		</plugins>
+		<finalName>Verwandlung Online Judge</finalName>
 	</build>
 </project>
