@@ -55,7 +55,9 @@
     <div id="content">
         <div id="login">
             <h2>Sign in</h2>
-            <form id="login-form" action="" method="POST">
+            <div class="alert alert-error hide">Incorrect username or password.</div>
+            <div class="alert alert-success hide">You are now logged out.</div>
+            <form id="login-form" method="post" onsubmit="onSubmit(); return false;">
                 <p class="row-fluid">
                     <label for="username">Username</label>
                     <input id="username" name="username" class="span12" type="text" maxlength="16" />
@@ -70,7 +72,7 @@
                     </label>
                 </p>
                 <p>
-                    <button class="btn btn-success btn-block">Sign in</button>
+                    <button class="btn btn-primary btn-block" type="submit">Sign in</button>
                 </p>
             </form> <!-- #login-form -->
         </div> <!-- #login -->
@@ -85,5 +87,45 @@
     </div> <!-- #footer -->
     <!-- JavaScript -->
     <!-- Placed at the end of the document so the pages load faster -->
+    <script type="text/javascript">
+        function onSubmit() {
+            $('.alert-success').hide();
+            
+            $('button[type=submit]').attr('disabled', 'disabled');
+            $('button[type=submit]').html('Please wait...');
+            
+            var username = $('#username').val(),
+                password = $('#password').val();
+            doLoginAction(username, password);
+        };
+    </script>
+    <script type="text/javascript">
+        function doLoginAction(username, password) {
+            var postData = 'username=' + username + '&password=' + password;
+            $.ajax({
+                    type: 'POST',
+                    url: '<c:url value="/accounts/login.action" />',
+                    data: postData,
+                    dataType: 'JSON',
+                    success: function(result){
+                        console.log(result);
+                        return processLoginResult(result);
+                }
+            });
+        }
+    </script>
+    <script type="text/javascript">
+        function processLoginResult(result) {
+            if ( result['isSuccessful'] ) {
+                window.location.href='<c:url value="/" />';
+            } else {
+                $('#password').val('');
+                $('.alert-error').removeClass('hide');
+            }
+
+            $('button[type=submit]').html('Sign in');
+            $('button[type=submit]').removeAttr('disabled');
+        }
+    </script>
 </body>
 </html>
