@@ -9,7 +9,6 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -30,7 +29,8 @@ public class AccountsController {
     /**
      * 显示用户的登录页面.
      * @param isLogout - 是否处于登出状态
-     * @param model - 登录页面的Model
+     * @param request - Http Servlet Request对象
+     * @param session - Http Session对象
      * @return 包含登录页面信息的ModelAndView对象
      */
     @RequestMapping(value = "/login")
@@ -41,14 +41,48 @@ public class AccountsController {
         if ( isLogout ) {
             destroySession(request, session);
         }
-        return new ModelAndView("accounts/login");
+        
+        ModelAndView view = null;
+        if ( isLoggedIn(session) ) {
+            view = new ModelAndView("redirect:/");
+        } else {
+            view = new ModelAndView("accounts/login");
+            view.addObject("isLogout", isLogout);
+        }
+        return view;
     }
+    
+    /**
+     * 为注销的用户销毁Session.
+     * @param request - HttpServletRequest对象
+     * @param session - HttpSession 对象
+     */
+    private void destroySession(HttpServletRequest request, HttpSession session) {
+        session.removeAttribute("isLoggedIn");
+        
+        String ipAddress = request.getRemoteAddr();
+        logger.info(String.format("%s logged out at %s", new Object[] {user, ipAddress}));
+    }
+    
+    /**
+     * 检查用户是否已经登录.
+     * @param session - HttpSession 对象
+     * @return 用户是否已经登录
+     */
+    private boolean isLoggedIn(HttpSession session) {
+        Boolean isLoggedIn = (Boolean)session.getAttribute("isLoggedIn");
+        if ( isLoggedIn == null || !isLoggedIn.booleanValue() ) {
+            return false;
+        }
+        return true;
+    }
+    
     /**
      * 处理用户的异步登录请求.
      * @param username - 用户名
      * @param password - 密码
+     * @param request - Http Servlet Request对象
      * @param session - Http Session对象
-     * @param model - 登陆页面的Model
      * @return 一个包含若干标志位的JSON数据
      */
     @RequestMapping(value = "/login.action", method = RequestMethod.POST)
@@ -56,8 +90,7 @@ public class AccountsController {
             @RequestParam(value="username", required=true) String username,
             @RequestParam(value="password", required=true) String password,
             HttpServletRequest request,
-            HttpSession session,
-            Model model) {
+            HttpSession session) {
         String ipAddress = request.getRemoteAddr();
         HashMap<String, Boolean> result = getLoginResult(username, password);
         logger.info(String.format("User: [Username=%s] tried to log in at %s", new Object[] {username, ipAddress}));
@@ -98,37 +131,16 @@ public class AccountsController {
      */
     private void getSession(HttpServletRequest request, HttpSession session, User user) {
         session.setAttribute("isLoggedIn", true);
-        session.setAttribute("uid", user.getUid());
-        session.setAttribute("username", user.getUsername());
-        session.setAttribute("email", user.getEmail());
-        session.setAttribute("userGroupSlug", 
-                    user.getUserGroup().getUserGroupSlug());
-        session.setAttribute("userGroupName", 
-                user.getUserGroup().getUserGroupName());
-        session.setAttribute("preferLanguageSlug", 
-                user.getPreferLanguage().getLanguageSlug());
-        session.setAttribute("preferLanguageName", 
-                user.getPreferLanguage().getLanguageName());
+        session.setAttribute("user", user);
         
         String ipAddress = request.getRemoteAddr();
         logger.info(String.format("%s logged in at %s", new Object[] {user, ipAddress}));
     }
-    
-    /**
-     * 为注销的用户销毁Session.
-     * @param request - HttpServletRequest对象
-     * @param session - HttpSession 对象
-     */
-    private void destroySession(HttpServletRequest request, HttpSession session) {
-        session.removeAttribute("isLoggedIn");
-        
-        String ipAddress = request.getRemoteAddr();
-        logger.info(String.format("%s logged out at %s", new Object[] {user, ipAddress}));
-    }
-    
+ 
     /**
      * 显示用户的注册页面
-     * @param model - 注册页面的Model
+     * @param request - Http Servlet Request对象
+     * @param session - Http Session对象
      * @return 包含注册页面信息的ModelAndView对象
      */
     @RequestMapping(value = "/register")

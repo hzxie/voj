@@ -19,6 +19,9 @@
 		<param-name>contextConfigLocation</param-name>
 		<param-value>/WEB-INF/dispatcher-servlet.xml</param-value>
 	</context-param>
+	<listener>
+		<listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
+	</listener>
 
 	<!-- Druid -->
 	<servlet>
@@ -36,7 +39,8 @@
 		<param-value>classpath:log4j2.xml</param-value>
 	</context-param>
 	
-	<listener>
-		<listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
-	</listener>
+	<!-- Home Page -->
+	<welcome-file-list>
+    	<welcome-file>/</welcome-file>
+	</welcome-file-list>
 </web-app>
