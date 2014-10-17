@@ -56,10 +56,10 @@ public class UserDao {
     public boolean createUser(User user) {
         Session session = sessionFactory.getCurrentSession();
         String username = user.getUsername();
-		if ( username.isEmpty() ) {
-			return false;
-		}
-		
+        if ( username.isEmpty() ) {
+            return false;
+        }
+        
         session.save(user);
         session.flush();
         return true;

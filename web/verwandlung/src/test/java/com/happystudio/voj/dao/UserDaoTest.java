@@ -45,7 +45,7 @@ public class UserDaoTest {
      */
     @Test
     public void testGetUserUsingUidNotExists() {
-    	User user = userDao.getUserUsingUid(-65535);
+        User user = userDao.getUserUsingUid(-65535);
         Assert.assertNull(user);
     }
     
@@ -82,9 +82,9 @@ public class UserDaoTest {
     @Test
     public void testcreateUserNormal() {
         Language preferLanguage = new Language(1, "text/x-c", "C");
-    	UserGroup userGroup = new UserGroup(1, "users", "User");
+        UserGroup userGroup = new UserGroup(1, "users", "User");
         User user = new User("NewUser", DigestUtils.md5Hex("Password"), 
-        						"user@zjhzxhz.com", userGroup, preferLanguage);
+                                "user@zjhzxhz.com", userGroup, preferLanguage);
         Assert.assertTrue(userDao.createUser(user));
         
         user = userDao.getUserUsingUsername("NewUser");
@@ -101,10 +101,10 @@ public class UserDaoTest {
      */
     @Test(expected = org.hibernate.exception.ConstraintViolationException.class)
     public void testcreateUserExists() {
-    	Language preferLanguage = new Language(1, "text/x-c", "C");
+        Language preferLanguage = new Language(1, "text/x-c", "C");
         UserGroup userGroup = new UserGroup(1, "users", "User");
         User user = new User("zjhzxhz", DigestUtils.md5Hex("Password"), 
-								"user@zjhzxhz.com", userGroup, preferLanguage);
+                                "user@zjhzxhz.com", userGroup, preferLanguage);
         userDao.createUser(user);
     }
     
@@ -115,10 +115,10 @@ public class UserDaoTest {
      */
     @Test
     public void testcreateUserEmptyUsername() {
-    	Language preferLanguage = new Language(1, "text/x-c", "C");
+        Language preferLanguage = new Language(1, "text/x-c", "C");
         UserGroup userGroup = new UserGroup(1, "users", "User");
         User user = new User("", DigestUtils.md5Hex("Password"), 
-								"user@zjhzxhz.com", userGroup, preferLanguage);
+                                "user@zjhzxhz.com", userGroup, preferLanguage);
         Assert.assertFalse(userDao.createUser(user));
     }
     
@@ -129,10 +129,10 @@ public class UserDaoTest {
      */
     @Test(expected = org.hibernate.exception.DataException.class)
     public void testcreateUserIllegalUsername() {
-    	Language preferLanguage = new Language(1, "text/x-c", "C");
+        Language preferLanguage = new Language(1, "text/x-c", "C");
         UserGroup userGroup = new UserGroup(1, "users", "User");
         User user = new User("VeryVeryLongUsername", DigestUtils.md5Hex("Password"), 
-								"user@zjhzxhz.com", userGroup, preferLanguage);
+                                "user@zjhzxhz.com", userGroup, preferLanguage);
         userDao.createUser(user);
     }
     
@@ -143,10 +143,10 @@ public class UserDaoTest {
      */
     @Test(expected = org.hibernate.exception.DataException.class)
     public void testcreateUserIllegalUserGroup() {
-    	Language preferLanguage = new Language(1, "text/x-c", "C");
+        Language preferLanguage = new Language(1, "text/x-c", "C");
         UserGroup userGroup = new UserGroup(4, "NotExists", "不存在用户组");
         User user = new User("VeryVeryLongUsername", DigestUtils.md5Hex("Password"), 
-								"user@zjhzxhz.com", userGroup, preferLanguage);
+                                "user@zjhzxhz.com", userGroup, preferLanguage);
         userDao.createUser(user);
     }
     
@@ -178,9 +178,9 @@ public class UserDaoTest {
         Assert.assertNull(user);
         
         Language preferLanguage = new Language(1, "text/x-c", "C");
-    	UserGroup userGroup = new UserGroup(1, "users", "User");
+        UserGroup userGroup = new UserGroup(1, "users", "User");
         user = new User(-65535, "NotExists", DigestUtils.md5Hex("Password"), 
-							"user@zjhzxhz.com", userGroup, preferLanguage);
+                            "user@zjhzxhz.com", userGroup, preferLanguage);
         Assert.assertFalse(userDao.updateUser(user));
     }
     
@@ -191,11 +191,11 @@ public class UserDaoTest {
      */
     @Test
     public void testUpdateUserIllegalPassword() {
-    	Language preferLanguage = new Language(2, "text/x-c++-src", "C++");
-    	UserGroup userGroup = new UserGroup(3, "administrators", "Administrators");
-    	User user = new User("zjhzxhz", DigestUtils.md5Hex("Password") + "X", 
-								"zjhzxhz@gmail.com", userGroup, preferLanguage);
-    	Assert.assertFalse(userDao.updateUser(user));
+        Language preferLanguage = new Language(2, "text/x-c++-src", "C++");
+        UserGroup userGroup = new UserGroup(3, "administrators", "Administrators");
+        User user = new User("zjhzxhz", DigestUtils.md5Hex("Password") + "X", 
+                                "zjhzxhz@gmail.com", userGroup, preferLanguage);
+        Assert.assertFalse(userDao.updateUser(user));
     }
     
     /**
@@ -205,10 +205,10 @@ public class UserDaoTest {
      */
     @Test
     public void testUpdateUserIllegalUserGroup() {
-    	Language preferLanguage = new Language(2, "text/x-c++-src", "C++");
+        Language preferLanguage = new Language(2, "text/x-c++-src", "C++");
         UserGroup userGroup = new UserGroup(4, "NotExists", "不存在用户组");
         User user = new User("zjhzxhz", DigestUtils.md5Hex("Password") + "X", 
-								"zjhzxhz@gmail.com", userGroup, preferLanguage);
+                                "zjhzxhz@gmail.com", userGroup, preferLanguage);
         Assert.assertFalse(userDao.updateUser(user));
     }
     

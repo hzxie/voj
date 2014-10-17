@@ -48,7 +48,7 @@ public class User {
      */
     public User(int uid, String username, String password, String email, 
                 UserGroup userGroup, Language preferLanguage) {
-    	this.uid = uid;
+        this.uid = uid;
         this.username = username;
         this.password = password;
         this.email = email;
