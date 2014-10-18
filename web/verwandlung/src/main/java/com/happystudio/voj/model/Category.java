@@ -1,5 +1,7 @@
 package com.happystudio.voj.model;
 
+import java.io.Serializable;
+
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
@@ -12,7 +14,7 @@ import javax.persistence.Table;
  */
 @Entity
 @Table(name = "voj_categories")
-public class Category {
+public class Category implements Serializable {
 	/**
 	 * 试题分类的默认构造函数.
 	 */
@@ -106,4 +108,9 @@ public class Category {
 	 */
 	@Column(name = "category_name")
 	private String categoryName;
+	
+	/**
+	 * 唯一的序列化标识符.
+	 */
+	private static final long serialVersionUID = 5363244411730352606L;
 }

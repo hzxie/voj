@@ -1,5 +1,6 @@
 package com.happystudio.voj.model;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,8 +20,8 @@ import javax.persistence.Table;
  */
 @Entity
 @Table(name = "voj_users")
-public class User {
-    /**
+public class User implements Serializable {
+	/**
      * User类的默认构造函数. 
      */
     public User() { }
@@ -227,4 +228,9 @@ public class User {
     @OneToMany(targetEntity = Submission.class, 
             	fetch = FetchType.LAZY, mappedBy = "user")
     private List<Submission> submission = new ArrayList<Submission>();
+    
+    /**
+	 * 唯一的序列化标识符.
+	 */
+	private static final long serialVersionUID = 798599195431882295L;
 }

@@ -1,5 +1,6 @@
 package com.happystudio.voj.model;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -17,8 +18,8 @@ import javax.persistence.Table;
  */
 @Entity
 @Table(name = "voj_languages")
-public class Language {
-    /**
+public class Language implements Serializable {
+	/**
      * 编程语言的默认构造函数.
      */
     public Language() { }
@@ -157,4 +158,9 @@ public class Language {
 	@OneToMany(targetEntity = Submission.class, 
             fetch = FetchType.LAZY, mappedBy = "language")
 	private List<Submission> submission = new ArrayList<Submission>();
+	
+	/**
+	 * 唯一的序列化标识符
+	 */
+	private static final long serialVersionUID = -7310526886823356436L;
 }
