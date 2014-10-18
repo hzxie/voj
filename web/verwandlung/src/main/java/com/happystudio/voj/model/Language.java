@@ -99,6 +99,22 @@ public class Language {
         this.users = users;
     }
     
+    /**
+     * 获取评测记录集合(用于1-N关联).
+     * @return 评测记录集合
+     */
+    public List<Submission> getSubmission() {
+    	return submission;
+    }
+    
+    /**
+     * 设置评测记录集合.
+     * @param submission - 评测记录集合
+     */
+    public void setSubmission(List<Submission> submission) {
+    	this.submission = submission;
+    }
+    
     /* (non-Javadoc)
      * @see java.lang.Object#toString()
      */
@@ -134,4 +150,11 @@ public class Language {
     @OneToMany(targetEntity = User.class, 
                 fetch = FetchType.LAZY, mappedBy = "preferLanguage")
     private List<User> users = new ArrayList<User>();
+    
+    /**
+     * 评测记录集合(以便1-N关联).
+     */
+	@OneToMany(targetEntity = Submission.class, 
+            fetch = FetchType.LAZY, mappedBy = "language")
+	private List<Submission> submission = new ArrayList<Submission>();
 }

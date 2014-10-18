@@ -1,0 +1,91 @@
+div#content div#main-content {
+	margin-top: 20px;
+}
+
+div#content div#main-content div#submission table {
+	border: 1px solid #e8e8e8;
+	-webkit-box-shadow: 0 0 5px rgba(0,0,0,0.1);
+	   -moz-box-shadow: 0 0 5px rgba(0,0,0,0.1);
+			box-shadow: 0 0 5px rgba(0,0,0,0.1);
+}
+
+div#content div#main-content div#submission table thead {
+	background-color: #16a085;
+	color: #fff;
+}
+
+div#content div#main-content div#submission table th {
+	border-left: 1px solid #e8e8e8;
+	text-align: center;
+	vertical-align: middle;
+}
+
+div#content div#main-content div#submission table th.time,
+div#content div#main-content div#submission table td.time,
+div#content div#main-content div#submission table th.memory,
+div#content div#main-content div#submission table td.memory,
+div#content div#main-content div#submission table th.user,
+div#content div#main-content div#submission table td.user {
+	border-left: none;
+}
+
+div#content div#main-content div#submission table th.name,
+div#content div#main-content div#submission table td.name {
+	text-align: left;
+}
+
+div#content div#main-content div#submission table td {
+	border-left: 1px solid #e8e8e8;
+	color: #666;
+	text-align: center;
+	vertical-align: middle;
+}
+
+div#content div#main-content div#submission table td.flag-ac > a {
+	color: #f00;
+}
+
+div#content div#main-content div#submission table td.flag-pe > a,
+div#content div#main-content div#submission table td.flag-wa > a,
+div#content div#main-content div#submission table td.flag-tle > a,
+div#content div#main-content div#submission table td.flag-mle > a,
+div#content div#main-content div#submission table td.flag-ole > a {
+	color: #4d7aff;
+}
+
+div#content div#main-content div#submission table td.flag-re > a,
+div#content div#main-content div#submission table td.flag-ce > a {
+	color: #49a932;
+}
+
+/* Smaller than standard 960 (devices and browsers) */
+/* Tablet Portrait size to standard 960 (devices and browsers) */
+@media only screen and (min-width: 768px) and (max-width: 959px) {
+}
+
+/* All Mobile Sizes (devices and browser) */
+/* Mobile Landscape Size to Tablet Portrait (devices and browsers) */
+@media only screen and (min-width: 480px) and (max-width: 767px) {
+	div#content div#main-content div#submission table th.time,
+	div#content div#main-content div#submission table td.time,
+	div#content div#main-content div#submission table th.memory,
+	div#content div#main-content div#submission table td.memory,
+	div#content div#main-content div#submission table th.language,
+	div#content div#main-content div#submission table td.language {
+		display: none;
+	}
+}
+
+/* Mobile Portrait Size to Mobile Landscape Size (devices and browsers) */
+@media only screen and (max-width: 479px) {
+	div#content div#main-content div#submission table th.time,
+	div#content div#main-content div#submission table td.time,
+	div#content div#main-content div#submission table th.memory,
+	div#content div#main-content div#submission table td.memory,
+	div#content div#main-content div#submission table th.language,
+	div#content div#main-content div#submission table td.language,
+	div#content div#main-content div#submission table th.submit-time, 
+	div#content div#main-content div#submission table td.submit-time {
+		display: none;
+	}
+}

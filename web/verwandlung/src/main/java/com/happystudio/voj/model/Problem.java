@@ -1,9 +1,14 @@
 package com.happystudio.voj.model;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
+import javax.persistence.OneToMany;
 import javax.persistence.Table;
 
 /**
@@ -252,6 +257,22 @@ public class Problem {
 		this.hint = hint;
 	}
 	
+	/**
+     * 获取评测记录集合(用于1-N关联).
+     * @return 评测记录集合
+     */
+    public List<Submission> getSubmission() {
+    	return submission;
+    }
+    
+    /**
+     * 设置评测记录集合.
+     * @param submission - 评测记录集合
+     */
+    public void setSubmission(List<Submission> submission) {
+    	this.submission = submission;
+    }
+	
 	/* (non-Javadoc)
 	 * @see java.lang.Object#toString()
 	 */
@@ -330,4 +351,11 @@ public class Problem {
 	 */
 	@Column(name = "problem_hint")
 	private String hint;
+	
+    /**
+     * 用户评测记录集合(用于1-N连接).
+     */
+    @OneToMany(targetEntity = Submission.class, 
+            fetch = FetchType.LAZY, mappedBy = "user")
+    private List<Submission> submission = new ArrayList<Submission>();
 }

@@ -1,11 +1,16 @@
 package com.happystudio.voj.model;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
+import javax.persistence.OneToMany;
 import javax.persistence.Table;
 
 /**
@@ -151,7 +156,23 @@ public class User {
     public void setPreferLanguage(Language preferLanguage) {
         this.preferLanguage = preferLanguage;
     }
+
+    /**
+     * 获取评测记录集合(用于1-N关联).
+     * @return 评测记录集合
+     */
+    public List<Submission> getSubmission() {
+    	return submission;
+    }
     
+    /**
+     * 设置评测记录集合.
+     * @param submission - 评测记录集合
+     */
+    public void setSubmission(List<Submission> submission) {
+    	this.submission = submission;
+    }
+  
     /* (non-Javadoc)
      * @see java.lang.Object#toString()
      */
@@ -160,7 +181,7 @@ public class User {
                 new Object[] { uid, username, password, email, userGroup, preferLanguage });
     }
 
-    /**
+	/**
      * 用户的唯一标识符.
      */
     @Id
@@ -199,4 +220,11 @@ public class User {
     @ManyToOne(targetEntity = Language.class)
     @JoinColumn(name = "prefer_language_id", referencedColumnName="language_id")
     private Language preferLanguage;
+    
+    /**
+     * 用户评测记录集合(用于1-N连接).
+     */
+    @OneToMany(targetEntity = Submission.class, 
+            	fetch = FetchType.LAZY, mappedBy = "user")
+    private List<Submission> submission = new ArrayList<Submission>();
 }

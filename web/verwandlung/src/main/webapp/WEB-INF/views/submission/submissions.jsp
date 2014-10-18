@@ -4,7 +4,7 @@
 <html lang="en-US">
 <head>
     <meta charset="UTF-8">
-    <title>Problems | Verwandlung Online Judge</title>
+    <title>Submission | Verwandlung Online Judge</title>
     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="author" content="谢浩哲">
@@ -16,7 +16,7 @@
     <link rel="stylesheet" type="text/css" href="<c:url value="/assets/css/flat-ui.css" />">
     <link rel="stylesheet" type="text/css" href="<c:url value="/assets/css/font-awesome.min.css" />">
     <link rel="stylesheet" type="text/css" href="<c:url value="/assets/css/style.css" />">
-    <link rel="stylesheet" type="text/css" href="<c:url value="/assets/css/problems.css" />">
+    <link rel="stylesheet" type="text/css" href="<c:url value="/assets/css/submissions.css" />">
     <!-- JavaScript -->
     <script type="text/javascript" src="<c:url value="/assets/js/jquery-1.11.1.min.js" />"></script>
     <!--[if lte IE 9]>
@@ -52,51 +52,40 @@
         </div> <!-- .container -->
     </div> <!-- #header -->
     <div id="content" class="container">
-        <div id="locator">
-            <ul class="inline">
-                <li>Locator:</li>
-                <c:forEach var="locatorID" begin="${startIndexOfProblems}" end="${startIndexOfProblems + totalProblems}" step="${numberOfProblemsPerPage}">
-                <li><a href="<c:url value="/p?start=${locatorID}" />">P${locatorID}</a></li>
-                </c:forEach>
-            </ul>
-        </div> <!-- #locator -->
         <div id="main-content" class="row-fluid">
-            <div id="problems" class="span8">
+            <div id="submission" class="span12">
                 <table class="table table-striped">
                     <thead>
                         <tr>
                             <th class="flag">Result</th>
+                            <th class="score">Score</th>
+                            <th class="time">Time</th>
+                            <th class="memory">Memory</th>
                             <th class="name">Name</th>
-                            <th class="submission">Submission</th>
-                            <th class="ac-rate">AC%</th>
+                            <th class="user">User</th>
+                            <th class="language">Language</th>
+                            <th class="submit-time">Submit Time</th>
                         </tr>
                     </thead>
                     <tbody>
-                    	<c:forEach var="problem" items="${problems}">
+                    	<c:forEach var="submission" items="${submissions}">
                         <tr>
-                            <td class="flag-ac"><a href="#">AC</a></td>
-                            <td class="name"><a href="<c:url value="/p/${problem.getProblemID()}" />">P${problem.getProblemID()} ${problem.getProblemName()}</a></td>
-                            <td>37460</td>
-                            <td>82%</td>
+                            <td class="flag-${submission.getRuntimeResult().getRuntimeResultSlug().toLowerCase()}"><a href="<c:url value="/submission/${submission.getSubmissionID()}" />">${submission.getRuntimeResult().getRuntimeResultName()}</a></td>
+							<td class="score">${submission.getRuntimeScore()}</td>
+							<td class="time">${submission.getUsedTime()} ms</td>
+							<td class="memory">${submission.getUsedMemory()} K</td>
+							<td class="name"><a href="<c:url value="/p/${submission.getProblem().getProblemID()}" />">P${submission.getProblem().getProblemID()} ${submission.getProblem().getProblemName()}</a></td>
+							<td class="user"><a href="<c:url value="/accounts/user?${submission.getUser().getUid()}" />">${submission.getUser().getUsername()}</a></td>
+							<td class="language">${submission.getLanguage().getLanguageName()}</td>
+							<td class="submit-time">${submission.getSubmitTime()}</td>
                         </tr>
                         </c:forEach>
-                        <tr class="more-problems">
-                            <td colspan="4">More Problems...</td>
+                        <tr class="more-submissions">
+                            <td colspan="8">More Submission...</td>
                         </tr>
                     </tbody>
                 </table>
             </div> <!-- #problems -->
-            <div id="sidebar" class="span4">
-                <div id="search-widget" class="widget">
-                    <h4>Search</h4>
-                    <form id="search-form" action="#">
-                        
-                    </form>
-                </div> <!-- #search-widget -->
-                <div id="filter-widget" class="widget">
-                    <h4>Filter</h4>
-                </div> <!-- #filter-widget -->
-            </div> <!-- #sidebar -->
         </div> <!-- #main-content -->
     </div> <!-- #content -->
     <div id="footer">
