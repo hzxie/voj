@@ -37,8 +37,8 @@ public class UserDao {
     public User getUserUsingUsername(String username) {
         Session session = sessionFactory.getCurrentSession();
         @SuppressWarnings("unchecked")
-        List<User> users = (List<User>)session.createQuery("from User where username = ?")
-                                                .setString(0, username).list();
+        List<User> users = (List<User>)session.createQuery("FROM User WHERE username = ?0")
+                                                .setString("0", username).list();
         for (User user : users ) {
             if ( user.getUsername().equals(username) ) {
                 return user;

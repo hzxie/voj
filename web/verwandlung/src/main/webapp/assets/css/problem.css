@@ -32,8 +32,7 @@ div#content div#main-content div.problem div.body div#io-sample.section {
 	border-top-color: #ff7373;
 }
 
-div#content div#main-content div.problem div.body div.section p,
-div#content div#main-content div.problem div.body div.section pre {
+div#content div#main-content div.problem div.body div.section div.description {
 	color: #666;
 	margin-left: 20px;
 }
@@ -52,8 +51,6 @@ div#content div#main-content div.problem div.body div#mask {
 
 div#content div#main-content div.problem div.body form#code-editor {
 	background: rgba(255, 255, 255, 0.3);
-	filter: alpha(opacity=0);
-	opacity: 0;
 	padding: 10px;
 	position: absolute;
 	top: 10px;

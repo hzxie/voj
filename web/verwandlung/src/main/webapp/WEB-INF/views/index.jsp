@@ -20,7 +20,6 @@
     <link rel="stylesheet" type="text/css" href="<c:url value="/assets/css/homepage.css" />">
     <!-- JavaScript -->
     <script type="text/javascript" src="<c:url value="/assets/js/jquery-1.11.1.min.js" />"></script>
-    <script type="text/javascript" src="<c:url value="/assets/js/bootstrap.min.js" />"></script>
     <!--[if lte IE 9]>
         <script type="text/javascript" src="<c:url value="/assets/js/jquery.placeholder.js" />"></script>
     <![endif]-->
@@ -120,26 +119,14 @@
     </div> <!-- #footer -->
     <!-- JavaScript -->
     <!-- Placed at the end of the document so the pages load faster -->
+    <script type="text/javascript" src="<c:url value="/assets/js/bootstrap.min.js" />"></script>
+    <script type="text/javascript" src="<c:url value="/assets/js/drawer-menu.js" />"></script>
     <script type="text/javascript">
         $(document).ready(function() {
             $('.carousel').carousel({
                 interval: 5000
             });
         });
-    </script>
-    <script type="text/javascript">
-        function openDrawerMenu() {
-            $('#drawer-nav').animate({
-                right: 0
-            }, 100);
-        }
-    </script>
-    <script type="text/javascript">
-        function closeDrawerMenu() {
-            $('#drawer-nav').animate({
-                right: -320
-            }, 100);
-        }
     </script>
 </body>
 </html>
