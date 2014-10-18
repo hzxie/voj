@@ -77,6 +77,15 @@ public class Category {
 	public void setCategoryName(String categoryName) {
 		this.categoryName = categoryName;
 	}
+	
+	/* (non-Javadoc)
+	 * @see java.lang.Object#toString()
+	 */
+	@Override
+    public String toString() {
+        return String.format("Category [ID=%d, Slug=%s, Name=%s]",
+                new Object[] { categoryID, categorySlug, categoryName });
+    }
 
 	/**
 	 * 试题分类的唯一标识符.

@@ -28,15 +28,15 @@ div#content div#main-content div#problems table thead {
 	color: #fff;
 }
 
-div#content div#main-content div#problems table th.th-flag {
+div#content div#main-content div#problems table th.flag {
 	width: 5%;
 }
 
-div#content div#main-content div#problems table th.th-submission {
+div#content div#main-content div#problems table th.submission {
 	width: 15%;	
 }
 
-div#content div#main-content div#problems table th.th-ac-rate {
+div#content div#main-content div#problems table th.ac-rate {
 	width: 5%;
 }
 

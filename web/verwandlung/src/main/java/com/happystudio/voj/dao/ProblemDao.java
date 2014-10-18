@@ -55,9 +55,26 @@ public class ProblemDao {
     	return problems;
     }
     
-    // public List<Problem> getProblemsUsingCategory(Category category) { }
-    // public List<Problem> getProblemsUsingTag(Tag tag) { }
-    // public List<Problem> getProblemsUsingKeyword(String keyword) { }
+    /**
+     * TODO: 完善这个函数.
+     */
+    public List<Problem> getProblemsUsingCategoryID(int categoryID, int offset, int limit) { 
+    	return null;
+    }
+    
+    /**
+     * TODO: 完善这个函数.
+     */
+    /*public List<Problem> getProblemsUsingTagID(int tagID, int offset, int limit) { 
+    	return null;
+    }*/
+    
+    /**
+     * TODO: 完善这个函数.
+     */
+    public List<Problem> getProblemsUsingKeyword(String keyword, int offset, int limit) { 
+    	return null;
+    }
     
     /**
      * 创建一个新的试题对象.
