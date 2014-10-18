@@ -43,4 +43,10 @@
 	<welcome-file-list>
     	<welcome-file>/</welcome-file>
 	</welcome-file-list>
+	
+	<!-- Error Page -->
+	<error-page>
+		<error-code>404</error-code>
+		<location>/WEB-INF/views/error/404.jsp</location>
+	</error-page>
 </web-app>

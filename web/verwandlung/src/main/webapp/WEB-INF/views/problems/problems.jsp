@@ -55,7 +55,9 @@
         <div id="locator">
             <ul class="inline">
                 <li>Locator:</li>
-                <li>P1000</li>
+                <c:forEach var="locatorID" begin="${startIndexOfProblems}" end="${startIndexOfProblems + totalProblems}" step="${numberOfProblemsPerPage}">
+                <li><a href="<c:url value="/p?start=${locatorID}" />">P${locatorID}</a></li>
+                </c:forEach>
             </ul>
         </div> <!-- #locator -->
         <div id="main-content" class="row-fluid">
@@ -70,18 +72,14 @@
                         </tr>
                     </thead>
                     <tbody>
+                    	<c:forEach var="problem" items="${problems}">
                         <tr>
                             <td class="flag-ac"><a href="#">AC</a></td>
-                            <td class="name"><a href="#">P1000 A+B Problem</a></td>
+                            <td class="name"><a href="<c:url value="/p/${problem.getProblemID()}" />">P${problem.getProblemID()} ${problem.getProblemName()}</a></td>
                             <td>37460</td>
                             <td>82%</td>
                         </tr>
-                        <tr>
-                            <td class="flag-tle"><a href="#">TLE</a></td>
-                            <td class="name"><a href="#">P1001 谁拿了最多奖学金</a></td>
-                            <td>22483</td>
-                            <td>60%</td>
-                        </tr>
+                        </c:forEach>
                         <tr class="more-problems">
                             <td colspan="4">More Problems...</td>
                         </tr>
@@ -101,27 +99,6 @@
             </div> <!-- #sidebar -->
         </div> <!-- #main-content -->
     </div> <!-- #content -->
-    <div id="drawer-nav">
-        <span class="pull-right"><a href="#">Close &times;</a></span>
-        <div id="accounts" class="section">
-            <h4>My Accounts</h4>
-            <div id="profile">
-            	<img src="http://www.gravatar.com/avatar/4e0641af9ded3461809bd7ea02780b5c?s=100&amp;d=mm" alt="avatar" class="img-circle" />
-            	<h5>谢浩哲</h5>
-            	<p>zjhzxhz@gmail.com</p>
-            	<p>个人通过/提交: 32/91(35%)</p>
-            	<p>Language Preference: C++</p>
-            </div> <!-- #profile -->
-        </div> <!-- .section -->
-        <div id="about" class="section">
-            <h4>About</h4>
-            <ul>
-                <li>Judgers</li>
-                <li>Feedback</li>
-                <li>About Us</li>
-            </ul>
-        </div> <!-- .section -->
-    </div> <!-- #drawer-nav -->
     <div id="footer">
         <div class="container">
             <p id="copyright">Copyright&copy; 2005-2014 <a href="http://www.zjhzxhz.com/" target="_blank">HApPy Studio</a>. All rights reserved.</p>

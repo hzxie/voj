@@ -4,7 +4,7 @@
 <html lang="en-US">
 <head>
     <meta charset="UTF-8">
-    <title>Problems | Verwandlung Online Judge</title>
+    <title>P${problem.getProblemID()} ${problem.getProblemName()} | Verwandlung Online Judge</title>
     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="author" content="谢浩哲">
@@ -19,7 +19,7 @@
     <link rel="stylesheet" type="text/css" href="<c:url value="/assets/css/problem.css" />">
     <link rel="stylesheet" type="text/css" href="<c:url value="/assets/css/codemirror.css" />">
     <link rel="stylesheet" type="text/css" href="<c:url value="/assets/css/codemirror-neat.css" />">
-<!-- JavaScript -->
+    <!-- JavaScript -->
     <script type="text/javascript" src="<c:url value="/assets/js/jquery-1.11.1.min.js" />"></script>
     <!--[if lte IE 9]>
         <script type="text/javascript" src="<c:url value="/assets/js/jquery.placeholder.js" />"></script>
@@ -59,28 +59,41 @@
                 <div class="problem">
                     <div class="header">
                         <span class="pull-right">Accepted</span>
-                        <span class="name">P1000 A+B Problem</span>
+                        <span class="name">P${problem.getProblemID()} ${problem.getProblemName()}</span>
                     </div> <!-- .header -->
                     <div class="body">
                         <div class="section">
                             <h4>Description</h4>
-                            <p>Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book.</p>
+                            <div class="description">${problem.getDescription()}</div> <!-- .description -->
                         </div> <!-- .section -->
                         <div class="section">
                             <h4>Format</h4>
                             <h5>Input</h5>
-                            <p>Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book.</p>
+                            <div class="description">${problem.getInputFormat()}</div> <!-- .description -->
                             <h5>Output</h5>
-                            <p>Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book.</p>
+                            <div class="description">${problem.getOutputFormat()}</div> <!-- .description -->
                         </div> <!-- .section -->
                         <div id="io-sample" class="section">
                             <h4>Samples</h4>
                             <h5>Sample Input</h5>
-                            <pre>Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book.</pre>
+                            <div class="description"><pre>${problem.getSampleInput()}</pre></div> <!-- .description -->
                             <h5>Sample Output</h5>
-                            <pre>Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book.</pre>
+                            <div class="description"><pre>${problem.getSampleOutput()}</pre></div> <!-- .description -->
                         </div> <!-- .section -->
-                        <form id="code-editor" onsubmit="onSubmit(); return false;" method="POST">
+                        <div class="section">
+                            <h4>Restrictions</h4>
+                            <div class="description">
+                                <p><strong>Time Limit: </strong>${problem.getTimeLimit()} ms</p>
+                                <p><strong>Memory Limit: </strong>${problem.getMemoryLimit()} KB</p>
+                            </div> <!-- .description -->
+                        </div> <!-- .section -->
+                        <c:if test="${problem.getHint() != null}">
+                        <div class="section">
+                            <h4>Hint</h4>
+                            <div class="description">${problem.getHint()}</div> <!-- .description -->
+                        </div> <!-- .section -->
+                        </c:if>
+                        <form id="code-editor" class="hide" onsubmit="onSubmit(); return false;" method="POST">
                             <textarea name="codemirror-editor" id="codemirror-editor"></textarea>
                             <div class="row-fluid">
                                 <div class="span4">
@@ -153,12 +166,12 @@
     <script type="text/javascript">
         $('#submit-solution').click(function() {
             $('#mask').removeClass('hide');
-            $('#code-editor').addClass('fade');
+            $('#code-editor').removeClass('hide');
         });
     </script>
     <script type="text/javascript">
         $('#close-submission').click(function() {
-            $('#code-editor').removeClass('fade');
+            $('#code-editor').addClass('hide');
             $('#mask').addClass('hide');
         });
     </script>
