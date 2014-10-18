@@ -1,5 +1,6 @@
 package com.happystudio.voj.model;
 
+import java.io.Serializable;
 import java.util.Date;
 
 import javax.persistence.Column;
@@ -16,7 +17,7 @@ import javax.persistence.Table;
  */
 @Entity
 @Table(name = "voj_submission")
-public class Submission {
+public class Submission implements Serializable {
 	/**
 	 * 评测记录类的默认构造函数.
 	 */
@@ -267,6 +268,18 @@ public class Submission {
 		this.code = code;
 	}
 	
+	/* (non-Javadoc)
+	 * @see java.lang.Object#toString()
+	 */
+	@Override
+	public String toString() {
+		return String.format("Submission [ID=%d, Problem={%s}, User={%s}, Language={%s}, SubmitTime={%s}, "
+				+ "ExecuteTime={%s}, UsedTime=%d, UsedMemory=%d, RuntimeResult={%s}, RuntimeScore=%d, "
+				+ "RuntimeLog=%s, Code=%s]",
+                new Object[] { submissionID, problem, user, language, submitTime, executeTime, usedTime, usedMemory,
+						runtimeResult, runtimeScore, runtimeLog, code});
+	}
+	
 	/**
 	 * 评测记录的唯一标识符. 
 	 */
@@ -344,4 +357,9 @@ public class Submission {
 	 */
 	@Column(name = "submission_code")
 	String code;
+	
+	/**
+	 * 唯一的序列化标识符.
+	 */
+	private static final long serialVersionUID = -1984683070957842963L;
 }
