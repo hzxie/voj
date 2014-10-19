@@ -68,7 +68,7 @@ public class SubmissionDao {
      */
     public long getAcceptedSubmissionUsingUserID(int userID) { 
     	Session session = sessionFactory.getCurrentSession();
-    	Query query = session.createQuery("SELECT COUNT(*) FROM Submission WHERE user.uid = ?0 AND runtimeResult.runtimeResultSlug = ?1")
+    	Query query = session.createQuery("SELECT COUNT(DISTINCT problem) FROM Submission WHERE user.uid = ?0 AND runtimeResult.runtimeResultSlug = ?1")
     					.setParameter("0", userID)
     					.setParameter("1", "AC");
     	return (Long)query.uniqueResult();
