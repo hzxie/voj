@@ -9,7 +9,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.happystudio.voj.model.Problem;
 import com.happystudio.voj.model.Submission;
 
 /**
@@ -33,31 +32,56 @@ public class SubmissionDao {
     /**
      * 通过试题唯一标识符获取某个范围内的所有试题.
      * @param offset - 试题唯一标识符的起始编号
-     * @param limit - 需要获取的试题的数量
+     * @param limit - 每次加载评测记录的数量
      * @return 某个范围内的所有试题
      */
     public List<Submission> getSubmissions(int offset, int limit) {
     	Session session = sessionFactory.getCurrentSession();
     	@SuppressWarnings("unchecked")
-		List<Submission> submissions = (List<Submission>)session.createQuery("FROM Submission WHERE submissionID >= ?0")
+		List<Submission> submissions = (List<Submission>)session.createQuery("FROM Submission WHERE submissionID >= ?0 ORDER BY submissionID DESC")
 										.setParameter("0", offset)
 										.setMaxResults(limit).list();
     	return submissions;
     }
     
     /**
-     * TODO: 完善这个函数.
+     * 获取某个用户对某个试题的提交记录.
+     * @param problemID - 试题的唯一标识符
+     * @param userID - 用户的唯一标识符
+     * @param limit - 每次加载评测记录的数量
+     * @return 某个用户对某个试题的提交记录
      */
-    public List<Submission> getSubmissionUsingProblemID(Problem problem, int offset, int limit) { 
-    	return null;
+    public List<Submission> getSubmissionUsingProblemIDAndUserID(int problemID, int userID, int limit) { 
+    	Session session = sessionFactory.getCurrentSession();
+    	@SuppressWarnings("unchecked")
+		List<Submission> submissions = (List<Submission>)session.createQuery("FROM Submission WHERE problem.problemID = ?0 AND user.uid = ?1 ORDER BY submissionID DESC")
+										.setParameter("1", problemID)
+										.setParameter("0", userID)
+										.setMaxResults(limit).list();
+    	return submissions;
     }
     
     /**
-     * TODO: 完善这个函数.
+     * 获取某个用户通过(Accpeted)提交记录的数量.
+     * @param userID - 用户的唯一标识符
+     * @return 某个用户通过(Accpeted)提交记录的数量
+     */
+    public long getAcceptedSubmissionUsingUserID(int userID) { 
+    	Session session = sessionFactory.getCurrentSession();
+    	Query query = session.createQuery("SELECT COUNT(*) FROM Submission WHERE user.uid = ?0 AND runtimeResult.runtimeResultSlug = ?1")
+    					.setParameter("0", userID)
+    					.setParameter("1", "AC");
+    	return (Long)query.uniqueResult();
+    }
+    
+    /**
+     * 获取某个用户全部提交记录的数量.
+     * @param userID - 用户的唯一标识符
+     * @return 某个用户全部提交记录的数量
      */
     public long getTotalSubmissionUsingUserID(int userID) { 
     	Session session = sessionFactory.getCurrentSession();
-    	Query query = session.createQuery("SELECT COUNT(*) FROM Submission WHERE User.getUid() = ?0")
+    	Query query = session.createQuery("SELECT COUNT(*) FROM Submission WHERE user.uid = ?0")
     					.setParameter("0", userID);
     	return (Long)query.uniqueResult();
     }

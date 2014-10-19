@@ -2,17 +2,16 @@
 <Configuration status="WARN">
 	<Properties>
 		<Property name="fileName">${sys:catalina.home}/logs/voj.log</Property>
-		<Property name="filePattern">${sys:catalina.home}/logs/voj-%d{yyyy-MM-dd}-%i.log.gz</Property>
+		<Property name="filePattern">${sys:catalina.home}/logs/voj-%d{yyyy-MM-dd}.log</Property>
 		<Property name="patternLayout">[%p] %d [%t] %c - %m%n</Property>
 	</Properties>
 	<Appenders>
 		<Console name="Console">
 			<PatternLayout pattern="${patternLayout}" />
 		</Console>
-		<RollingFile name="RollingFile" fileName="${fileName}"
-			filePattern="${filePattern}">
+		<RollingFile name="RollingFile" fileName="${fileName}" filePattern="${filePattern}">
 			<Policies>
-				<SizeBasedTriggeringPolicy size="64 MB" />
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
 			</Policies>
 			<PatternLayout pattern="${patternLayout}" />
 		</RollingFile>

@@ -5,10 +5,14 @@ import javax.servlet.http.HttpSession;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.servlet.ModelAndView;
+
+import com.happystudio.voj.model.User;
+import com.happystudio.voj.service.SubmissionService;
 
 /**
  * 处理应用程序公共的请求.
@@ -19,8 +23,8 @@ import org.springframework.web.servlet.ModelAndView;
 public class DefaultController {
     /**
      * 显示应用程序的首页.
-     * @param request
-     * @param session
+     * @param request - HttpRequest对象
+     * @param session - HttpSession对象
      * @return 一个包含首页信息的ModelAndView对象
      */
     @RequestMapping(value = "/*", method = RequestMethod.GET)
@@ -29,7 +33,9 @@ public class DefaultController {
         ModelAndView view = new ModelAndView("index");
         view.addObject("isLogin", isLoggedIn);
         if ( isLoggedIn ) {
-            view.addObject("profile", session.getAttribute("user"));
+        	User user = (User)session.getAttribute("user");
+            view.addObject("profile", user)
+            	.addObject("submissionStats", submissionService.getUserSubmissionStats(user.getUid()));
         }
         return view;
     }
@@ -46,6 +52,12 @@ public class DefaultController {
         }
         return true;
     }
+    
+    /**
+     * 自动注入的UserService对象.
+     */
+    @Autowired
+    SubmissionService submissionService;
     
     /**
      * 日志记录器.

@@ -27,7 +27,8 @@ public class ProblemService {
 	
 	/**
 	 * 获取试题列表.
-	 * @param offset - 试题起始序号
+	 * @param offset - 试题唯一标识符的起始序号
+	 * @param limit - 每次加载试题的数量
 	 * @return 试题列表(List<Problem>对象)
 	 */
 	public List<Problem> getProblems(int offset, int limit) {

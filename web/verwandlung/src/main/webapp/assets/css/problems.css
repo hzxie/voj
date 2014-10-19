@@ -32,7 +32,7 @@ div#content div#main-content div#problems table th.flag {
 	width: 5%;
 }
 
-div#content div#main-content div#problems table th.submission {
+div#content div#main-content div#problems table th.problems {
 	width: 15%;	
 }
 
@@ -58,10 +58,13 @@ div#content div#main-content div#problems table td.flag-pe > a,
 div#content div#main-content div#problems table td.flag-wa > a,
 div#content div#main-content div#problems table td.flag-tle > a,
 div#content div#main-content div#problems table td.flag-mle > a,
-div#content div#main-content div#problems table td.flag-ole > a,
+div#content div#main-content div#problems table td.flag-ole > a {
+	color: #4d7aff;
+}
+
 div#content div#main-content div#problems table td.flag-re > a,
 div#content div#main-content div#problems table td.flag-ce > a {
-	color: #4d7aff;
+	color: #49a932;
 }
 
 div#content div#main-content div#problems table td.name a {
