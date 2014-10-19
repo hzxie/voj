@@ -1,5 +1,6 @@
 <%@ page language="java" contentType="text/html; charset=utf-8" pageEncoding="utf-8"%>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <!doctype html>
 <html lang="en-US">
 <head>
@@ -44,9 +45,9 @@
                 <ul class="inline">
                     <li><a href="<c:url value="/p" />">Problems</a></li>
                     <li><a href="<c:url value="/discussion" />">Discussion</a></li>
-                    <li><a href="<c:url value="/competition" />">Competition</a></li>
+                    <li><a href="<c:url value="/contests" />">Contests</a></li>
                     <li><a href="<c:url value="/submission" />">Submission</a></li>
-                    <li><a href="javascript:void(0)">More</a></li>
+                    <li><a href="javascript:openDrawerMenu()">More</a></li>
                 </ul>
             </div> <!-- #nav -->
         </div> <!-- .container -->
@@ -68,16 +69,16 @@
                         </tr>
                     </thead>
                     <tbody>
-                    	<c:forEach var="submission" items="${submissions}">
+                        <c:forEach var="submission" items="${submissions}">
                         <tr>
                             <td class="flag-${submission.getRuntimeResult().getRuntimeResultSlug().toLowerCase()}"><a href="<c:url value="/submission/${submission.getSubmissionID()}" />">${submission.getRuntimeResult().getRuntimeResultName()}</a></td>
-							<td class="score">${submission.getRuntimeScore()}</td>
-							<td class="time">${submission.getUsedTime()} ms</td>
-							<td class="memory">${submission.getUsedMemory()} K</td>
-							<td class="name"><a href="<c:url value="/p/${submission.getProblem().getProblemID()}" />">P${submission.getProblem().getProblemID()} ${submission.getProblem().getProblemName()}</a></td>
-							<td class="user"><a href="<c:url value="/accounts/user?${submission.getUser().getUid()}" />">${submission.getUser().getUsername()}</a></td>
-							<td class="language">${submission.getLanguage().getLanguageName()}</td>
-							<td class="submit-time">${submission.getSubmitTime()}</td>
+                            <td class="score">${submission.runtimeScore}</td>
+                            <td class="time">${submission.usedTime} ms</td>
+                            <td class="memory">${submission.usedMemory} K</td>
+                            <td class="name"><a href="<c:url value="/p/${submission.problem.problemID}" />">P${submission.problem.problemID} ${submission.problem.problemName}</a></td>
+                            <td class="user"><a href="<c:url value="/accounts/user?${submission.user.uid}" />">${submission.user.username}</a></td>
+                            <td class="language">${submission.language.languageName}</td>
+                            <td class="submit-time"><fmt:formatDate pattern="yyyy-MM-dd HH:mm:ss" value="${submission.submitTime}" /></td>
                         </tr>
                         </c:forEach>
                         <tr class="more-submissions">
@@ -88,6 +89,42 @@
             </div> <!-- #problems -->
         </div> <!-- #main-content -->
     </div> <!-- #content -->
+    <div id="drawer-nav">
+        <span class="pull-right"><a href="javascript:closeDrawerMenu();">Close &times;</a></span>
+        <div id="accounts" class="section">
+            <h4>My Accounts</h4>
+            <div id="profile">
+            <c:choose>
+            <c:when test="${isLogin}">
+                <img src="http://www.gravatar.com/avatar/${DigestUtils.md5Hex(user.getEmail().toLowerCase())}?s=100&amp;d=mm" alt="avatar" class="img-circle" />
+                <h5>${user.getUsername()}</h5>
+                <p>${user.getEmail()}</p>
+                <p>Accepted/Submit: ${submissionStats.get("accpetedSubmission")}/${submissionStats.get("totalSubmission")}(${submissionStats.get("acRate")}%)</p>
+                <p>Language Preference: ${user.getPreferLanguage().getLanguageName()}</p>
+                <ul class="inline">
+                    <li><a href="<c:url value="/accounts/dashboard" />">Dashboard</a></li>
+                    <li><a href="<c:url value="/accounts/login?logout=true" />">Sign out</a></li>
+                </ul>
+            </c:when>
+            <c:otherwise>
+                <p>You are not logged in.</p>
+                <ul class="inline">
+                    <li><a href="<c:url value="/accounts/login" />">Sign in</a></li>
+                    <li><a href="<c:url value="/accounts/register" />">Sign up</a></li>
+                </ul>
+            </c:otherwise>
+            </c:choose>
+            </div> <!-- #profile -->
+        </div> <!-- .section -->
+        <div id="about" class="section">
+            <h4>About</h4>
+            <ul>
+                <li><a href="#">Judgers</a></li>
+                <li><a href="#">Feedback</a></li>
+                <li><a href="#">About Us</a></li>
+            </ul>
+        </div> <!-- .section -->
+    </div> <!-- #drawer-nav -->
     <div id="footer">
         <div class="container">
             <p id="copyright">Copyright&copy; 2005-2014 <a href="http://www.zjhzxhz.com/" target="_blank">HApPy Studio</a>. All rights reserved.</p>
@@ -95,5 +132,6 @@
     </div> <!-- #footer -->
     <!-- JavaScript -->
     <!-- Placed at the end of the document so the pages load faster -->
+    <script type="text/javascript" src="<c:url value="/assets/js/drawer-menu.js" />"></script>
 </body>
 </html>

@@ -9,6 +9,7 @@
 	<url>http://maven.apache.org</url>
 	<properties>
 		<spring.version>4.0.5.RELEASE</spring.version>
+		<aspectj.version>1.8.2</aspectj.version>
 		<hibernate.version>4.3.6.Final</hibernate.version>
 		<druid.version>1.0.9</druid.version>
 	</properties>
@@ -38,6 +39,16 @@
 			<groupId>org.springframework</groupId>
 			<artifactId>spring-orm</artifactId>
 			<version>${spring.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.aspectj</groupId>
+			<artifactId>aspectjrt</artifactId>
+			<version>${aspectj.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.aspectj</groupId>
+			<artifactId>aspectjtools</artifactId>
+			<version>${aspectj.version}</version>
 		</dependency>
 		<!-- Hibernate -->
 		<dependency>

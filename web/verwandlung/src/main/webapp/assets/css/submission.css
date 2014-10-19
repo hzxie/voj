@@ -1,0 +1,69 @@
+div#content div#main-content div.submission {
+	-webkit-box-shadow: 0 0 5px rgba(0,0,0,0.1);
+	   -moz-box-shadow: 0 0 5px rgba(0,0,0,0.1);
+			box-shadow: 0 0 5px rgba(0,0,0,0.1);
+}
+
+div#content div#main-content div.submission div.header {
+	background-color: #16a085;
+	color: #fff;
+	padding: 10px;
+}
+
+div#content div#main-content div.submission div.body {
+	background-color: #fff;
+	position: relative;
+	padding: 20px;
+}
+
+div#content div#main-content div.submission div.body div.section {
+	border-top: 5px solid #16a085;
+	padding-top: 10px;
+	margin-top: 20px;
+}
+
+div#content div#main-content div.submission div.body div.section:first-child {
+	border-top: none;
+	padding-top: 0;
+	margin-top: 0;
+}
+
+div#content div#main-content div.submission div.body div.section div.description {
+	color: #666;
+	margin-left: 20px;
+}
+
+div#content div#main-content div.submission div.body div.section table td {
+	border-top: none;
+}
+
+div#content div#main-content div.submission div.body div.section table td.flag-ac {
+	color: #f00;
+}
+
+div#content div#main-content div.submission div.body div.section table td.flag-pe
+div#content div#main-content div.submission div.body div.section table td.flag-wa,
+div#content div#main-content div.submission div.body div.section table td.flag-tle,
+div#content div#main-content div.submission div.body div.section table td.flag-mle,
+div#content div#main-content div.submission div.body div.section table td.flag-ole {
+	color: #4d7aff;
+}
+
+div#content div#main-content div.submission div.body div.section table td.flag-re,
+div#content div#main-content div.submission div.body div.section table td.flag-ce {
+	color: #49a932;
+}
+
+div#content div#main-content div.submission div.body div.section table tr > td:first-child {
+	font-weight: bold;
+}
+
+div#content div#sidebar div.section {
+	margin-bottom: 10px;
+	padding-bottom: 10px;
+}
+
+div#content div#sidebar div.section ul {
+	list-style: none;
+	margin-left: 0;
+}

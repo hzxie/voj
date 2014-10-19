@@ -1,10 +1,11 @@
 <%@ page language="java" contentType="text/html; charset=utf-8" pageEncoding="utf-8"%>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <!doctype html>
 <html lang="en-US">
 <head>
     <meta charset="UTF-8">
-    <title>Welcome Back | Verwandlung Online Judge</title>
+    <title>Submission | Verwandlung Online Judge</title>
     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="author" content="谢浩哲">
@@ -16,10 +17,10 @@
     <link rel="stylesheet" type="text/css" href="<c:url value="/assets/css/flat-ui.css" />">
     <link rel="stylesheet" type="text/css" href="<c:url value="/assets/css/font-awesome.min.css" />">
     <link rel="stylesheet" type="text/css" href="<c:url value="/assets/css/style.css" />">
-    <link rel="stylesheet" type="text/css" href="<c:url value="/assets/css/login.css" />">
+    <link rel="stylesheet" type="text/css" href="<c:url value="/assets/css/submission.css" />">
+    <link rel="stylesheet" type="text/css" href="<c:url value="/assets/css/highlight.css" />">
     <!-- JavaScript -->
     <script type="text/javascript" src="<c:url value="/assets/js/jquery-1.11.1.min.js" />"></script>
-    <script type="text/javascript" src="<c:url value="/assets/js/bootstrap.min.js" />"></script>
     <!--[if lte IE 9]>
         <script type="text/javascript" src="<c:url value="/assets/js/jquery.placeholder.js" />"></script>
     <![endif]-->
@@ -52,35 +53,78 @@
             </div> <!-- #nav -->
         </div> <!-- .container -->
     </div> <!-- #header -->
-    <div id="content">
-        <div id="login">
-            <h2>Sign in</h2>
-            <div class="alert alert-error hide">Incorrect username or password.</div>
-            <c:if test="${isLogout}">
-            <div class="alert alert-success">You are now logged out.</div>
-            </c:if>
-            <form id="login-form" method="post" onsubmit="onSubmit(); return false;">
-                <p class="row-fluid">
-                    <label for="username">Username</label>
-                    <input id="username" name="username" class="span12" type="text" maxlength="16" />
-                </p>
-                <p class="row-fluid">
-                    <label for="password">Password</label>
-                    <input id="password" name="password" class="span12" type="password" maxlength="16" />
-                </p>
-                <p>
-                    <label for="remember-me">
-                        <input type="checkbox" /> Remember Me
-                    </label>
-                </p>
-                <p>
-                    <button class="btn btn-primary btn-block" type="submit">Sign in</button>
-                </p>
-            </form> <!-- #login-form -->
-        </div> <!-- #login -->
-        <p class="text-center">
-            Don't have an account?<br /><a href="<c:url value="/accounts/register" />">Create an account</a>
-        </p>
+    <div id="content" class="container">
+        <div class="row-fluid">
+            <div id="main-content" class="span9">
+                <div class="submission">
+                    <div class="header">
+                        <span class="pull-right"></span>
+                        <span class="name">P${submission.problem.problemID} ${submission.problem.problemName}</span>
+                    </div> <!-- .header -->
+                    <div class="body">
+                        <div class="section">
+                            <h4>Overview</h4>
+                            <div class="description">
+                                <table class="table">
+                                    <tr>
+                                        <td>Runtime Result</td>
+                                        <td class="flag-${submission.runtimeResult.runtimeResultSlug.toLowerCase()}">${submission.runtimeResult.runtimeResultName}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Problem</td>
+                                        <td><a href="<c:url value="/p/${submission.problem.problemID}" />">P${submission.problem.problemID} ${submission.problem.problemName}</a></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Submit Time</td>
+                                        <td><fmt:formatDate pattern="yyyy-MM-dd HH:mm:ss" value="${submission.submitTime}" /></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Language</td>
+                                        <td>${submission.language.languageName}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Judger</td>
+                                        <td>Default Judger</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Used Time</td>
+                                        <td>${submission.usedTime} ms</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Used Memory</td>
+                                        <td>${submission.usedMemory} K</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Execute Time</td>
+                                        <td><fmt:formatDate pattern="yyyy-MM-dd HH:mm:ss" value="${submission.executeTime}" /></td>
+                                    </tr>
+                                </table>
+                            </div> <!-- .description -->
+                        </div> <!-- .section -->
+                        <div class="section">
+                            <h4>Runtime Result</h4>
+                            <div class="description">${submission.runtimeLog}</div> <!-- .description -->
+                        </div> <!-- .section -->
+                        <c:if test="${submission.getUser() != null}">
+                        <div class="section">
+                            <h4>Code</h4>
+                            <div class="description">
+                            	<pre><code>${submission.code.replace("<", "&lt;").replace(">", "&gt;")}</code></pre>
+                            </div> <!-- .description -->
+                        </div> <!-- .section -->
+                        </c:if>
+                    </div> <!-- .body -->
+                </div> <!-- .submission -->
+            </div> <!-- #main-content -->
+            <div id="sidebar" class="span3">
+                <div id="profile" class="section">
+                	<h5>User</h5>
+                </div> <!-- #profile -->
+                <div id="problem" class="section">
+                    <h5>Problem</h5>
+                </div> <!-- problem -->
+            </div> <!-- #sidebar -->
+        </div> <!-- .row-fluid -->
     </div> <!-- #content -->
     <div id="drawer-nav">
         <span class="pull-right"><a href="javascript:closeDrawerMenu();">Close &times;</a></span>
@@ -126,45 +170,7 @@
     <!-- JavaScript -->
     <!-- Placed at the end of the document so the pages load faster -->
     <script type="text/javascript" src="<c:url value="/assets/js/drawer-menu.js" />"></script>
-    <script type="text/javascript">
-        function onSubmit() {
-            $('.alert-success').hide();
-            
-            $('button[type=submit]').attr('disabled', 'disabled');
-            $('button[type=submit]').html('Please wait...');
-            
-            var username = $('#username').val(),
-                password = $('#password').val();
-            doLoginAction(username, password);
-        };
-    </script>
-    <script type="text/javascript">
-        function doLoginAction(username, password) {
-            var postData = 'username=' + username + '&password=' + password;
-            $.ajax({
-                    type: 'POST',
-                    url: '<c:url value="/accounts/login.action" />',
-                    data: postData,
-                    dataType: 'JSON',
-                    success: function(result){
-                        console.log(result);
-                        return processLoginResult(result);
-                }
-            });
-        }
-    </script>
-    <script type="text/javascript">
-        function processLoginResult(result) {
-            if ( result['isSuccessful'] ) {
-                window.location.href='<c:url value="/" />';
-            } else {
-                $('#password').val('');
-                $('.alert-error').removeClass('hide');
-            }
-
-            $('button[type=submit]').html('Sign in');
-            $('button[type=submit]').removeAttr('disabled');
-        }
-    </script>
+    <script type="text/javascript" src="<c:url value="/assets/js/highlight.pack.js" />"></script>
+    <script type="text/javascript">hljs.initHighlightingOnLoad();</script>
 </body>
 </html>

@@ -15,6 +15,7 @@ import org.springframework.web.servlet.ModelAndView;
 import com.happystudio.voj.exception.ResourceNotFoundException;
 import com.happystudio.voj.model.Problem;
 import com.happystudio.voj.service.ProblemService;
+import com.happystudio.voj.service.SubmissionService;
 
 /**
  * 处理用户的查看试题/提交评测等请求.
@@ -37,12 +38,13 @@ public class ProblemsController {
 		if ( startIndex < START_INDEX_OF_PROBLEMS ) {
 			startIndex = START_INDEX_OF_PROBLEMS;
 		}
-        return new ModelAndView("problems/problems")
-        			.addObject("problems", problemService.getProblems(startIndex, NUMBER_OF_PROBLEMS_PER_PAGE))
-        			.addObject("profile", session.getAttribute("user"))
-        			.addObject("startIndexOfProblems", START_INDEX_OF_PROBLEMS)
-        			.addObject("numberOfProblemsPerPage", NUMBER_OF_PROBLEMS_PER_PAGE)
-        			.addObject("totalProblems", problemService.getNumberOfProblems());
+        
+		ModelAndView view = new ModelAndView("problems/problems");
+        view.addObject("problems", problemService.getProblems(startIndex, NUMBER_OF_PROBLEMS_PER_PAGE))
+        	.addObject("startIndexOfProblems", START_INDEX_OF_PROBLEMS)
+        	.addObject("numberOfProblemsPerPage", NUMBER_OF_PROBLEMS_PER_PAGE)
+        	.addObject("totalProblems", problemService.getNumberOfProblems());
+        return view;
     }
 	
 	/**
@@ -60,9 +62,12 @@ public class ProblemsController {
 		if ( problem == null || !problem.isPublic() ) {
 			throw new ResourceNotFoundException();
 		}
-        return new ModelAndView("problems/problem")
-        			.addObject("problem", problem)
-        			.addObject("profile", session.getAttribute("user"));
+		
+		ModelAndView view = new ModelAndView("problems/problem");
+        view.addObject("problem", problem);
+        
+        // view.addObject("submission", submissionService.getSubmissionUsingProblemIDAndUserID(problemID, userID, limit));
+        return view;
     }
 	
 	/**
@@ -80,6 +85,12 @@ public class ProblemsController {
      */
     @Autowired
     ProblemService problemService;
+    
+    /**
+     * 自动注入的SubmissionService对象.
+     */
+    @Autowired
+    SubmissionService submissionService;
     
     /**
      * 日志记录器.

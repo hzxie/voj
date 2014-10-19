@@ -4,6 +4,8 @@ import java.io.Serializable;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
 import javax.persistence.Table;
 
 /**
@@ -90,6 +92,8 @@ public class Tag implements Serializable {
 	/**
 	 * 试题标签的唯一标识符. 
 	 */
+	@Id
+    @GeneratedValue
 	@Column(name = "tag_id")
 	private int tagID;
 	
