@@ -46,7 +46,7 @@
                     <li><a href="<c:url value="/p" />">Problems</a></li>
                     <li><a href="<c:url value="/discussion" />">Discussion</a></li>
                     <li><a href="<c:url value="/contests" />">Contests</a></li>
-                    <li><a href="<c:url value="/submission" />">Submission</a></li>
+                    <li><a href="<c:url value="/submissions" />">Submission</a></li>
                     <li><a href="javascript:openDrawerMenu()">More</a></li>
                 </ul>
             </div> <!-- #nav -->

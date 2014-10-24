@@ -1,5 +1,6 @@
 <%@ page language="java" contentType="text/html; charset=utf-8" pageEncoding="utf-8"%>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<jsp:useBean id='DigestUtils' scope='request' class='com.happystudio.voj.util.DigestUtils'/>
 <!doctype html>
 <html lang="en-US">
 <head>
@@ -45,7 +46,7 @@
                     <li><a href="<c:url value="/p" />">Problems</a></li>
                     <li><a href="<c:url value="/discussion" />">Discussion</a></li>
                     <li><a href="<c:url value="/contests" />">Contests</a></li>
-                    <li><a href="<c:url value="/submission" />">Submission</a></li>
+                    <li><a href="<c:url value="/submissions" />">Submission</a></li>
                     <li><a href="javascript:openDrawerMenu()">More</a></li>
                 </ul>
             </div> <!-- #nav -->

@@ -21,8 +21,8 @@ import com.happystudio.voj.service.SubmissionService;
  * @author Xie Haozhe
  */
 @Controller
-@RequestMapping(value = "/submission")
-public class SubmissionController {
+@RequestMapping(value = "/submissions")
+public class SubmissionsController {
 	@RequestMapping(value = "")
     public ModelAndView submissionsView(
     		@RequestParam(value="start", required = false, defaultValue = "1") int startIndex,
@@ -30,7 +30,7 @@ public class SubmissionController {
 		if ( startIndex < START_INDEX_OF_SUBMISSION ) {
 			startIndex = START_INDEX_OF_SUBMISSION;
 		}
-		return new ModelAndView("submission/submissions")
+		return new ModelAndView("submissions/submissions")
 					.addObject("submissions", submissionService.getSubmissions(START_INDEX_OF_SUBMISSION, NUMBER_OF_SUBMISSION_PER_PAGE));
 	}
 	
@@ -42,7 +42,7 @@ public class SubmissionController {
 		if ( submission == null ) {
 			throw new ResourceNotFoundException();
 		}
-		ModelAndView view = new ModelAndView("submission/submission");
+		ModelAndView view = new ModelAndView("submissions/submission");
         view.addObject("submission", submission);
         return view;
 	}
@@ -67,5 +67,5 @@ public class SubmissionController {
      * 日志记录器.
      */
 	@SuppressWarnings("unused")
-	private Logger logger = LogManager.getLogger(SubmissionController.class);
+	private Logger logger = LogManager.getLogger(SubmissionsController.class);
 }
