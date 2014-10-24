@@ -28,20 +28,27 @@ div#content div#main-content div#problems table thead {
 	color: #fff;
 }
 
+
+div#content div#main-content div#problems table th {
+	text-align: center;
+	vertical-align: middle;
+}
+
 div#content div#main-content div#problems table th.flag {
 	width: 5%;
 }
 
-div#content div#main-content div#problems table th.problems {
+div#content div#main-content div#problems table th.name,
+div#content div#main-content div#problems table td.name {
+	text-align: left;
+}
+
+div#content div#main-content div#problems table th.submission {
 	width: 15%;	
 }
 
 div#content div#main-content div#problems table th.ac-rate {
 	width: 5%;
-}
-
-div#content div#main-content div#problems table td.name {
-	text-align: left;
 }
 
 div#content div#main-content div#problems table td {

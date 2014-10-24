@@ -2,6 +2,7 @@
 	xmlns:mvc="http://www.springframework.org/schema/mvc"
 	xmlns:tx="http://www.springframework.org/schema/tx" 
 	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:aop="http://www.springframework.org/schema/aop"
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://www.springframework.org/schema/beans
 	http://www.springframework.org/schema/beans/spring-beans-4.1.xsd
@@ -10,17 +11,24 @@
 	http://www.springframework.org/schema/tx
 	http://www.springframework.org/schema/tx/spring-tx-4.1.xsd
 	http://www.springframework.org/schema/context
-	http://www.springframework.org/schema/context/spring-context-4.1.xsd">
+	http://www.springframework.org/schema/context/spring-context-4.1.xsd
+	http://www.springframework.org/schema/aop
+	http://www.springframework.org/schema/aop/spring-aop-4.1.xsd">
+
+	<!-- Base Components -->
+	<context:component-scan base-package="com.happystudio.voj" />
+
 	<!-- Enable @Controller annotation support -->
 	<mvc:annotation-driven />
-
-	<context:component-scan base-package="com.happystudio.voj" />
 	<mvc:resources mapping="/assets/**" location="/assets/" />
 	<mvc:resources mapping="/druid/**" location="/WEB-INF/support/http/resources" />
+	
+	<!-- Enable AspectJ style of Spring AOP -->
+	<aop:aspectj-autoproxy />
+	<bean id="viewAspect" class="com.happystudio.voj.aspect.ViewAspect" />
 
 	<!-- Map simple view name such as "test" into /WEB-INF/test.jsp -->
-	<bean
-		class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+	<bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
 		<property name="prefix">
 			<value>/WEB-INF/views/</value>
 		</property>
