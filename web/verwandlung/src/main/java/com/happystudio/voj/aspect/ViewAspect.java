@@ -23,15 +23,12 @@ public class ViewAspect {
 	 * @param proceedingJoinPoint - ProceedingJoinPoint对象
 	 * @param session - HttpSession对象
 	 * @return 一个包含预期视图的ModelAndView对象
+	 * @throws Throwable - ResourceNotFound异常
 	 */
 	@Around(value = "execution(* com.happystudio.voj.controller.*.*View(..)) && args(.., session)")
-	public ModelAndView getUserProfile(ProceedingJoinPoint proceedingJoinPoint, HttpSession session) {
+	public ModelAndView getUserProfile(ProceedingJoinPoint proceedingJoinPoint, HttpSession session) throws Throwable {
 		ModelAndView view = null;
-		try {
-			view = (ModelAndView) proceedingJoinPoint.proceed();
-		} catch (Throwable e) {
-			e.printStackTrace();
-		}
+		view = (ModelAndView) proceedingJoinPoint.proceed();
 		
 		boolean isLoggedIn = isLoggedIn(session);
 		if ( isLoggedIn ) {
