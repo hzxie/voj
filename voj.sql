@@ -1,9 +1,9 @@
 -- phpMyAdmin SQL Dump
--- version 4.1.6
+-- version 4.2.10.1
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: Oct 18, 2014 at 03:56 下午
+-- Generation Time: Nov 04, 2014 at 02:16 下午
 -- Server version: 5.6.16
 -- PHP Version: 5.5.9
 
@@ -27,12 +27,11 @@ SET time_zone = "+00:00";
 --
 
 CREATE TABLE IF NOT EXISTS `voj_categories` (
-  `category_id` int(4) NOT NULL AUTO_INCREMENT,
+`category_id` int(4) NOT NULL,
   `category_slug` varchar(32) NOT NULL,
   `category_name` varchar(32) NOT NULL,
-  `category_parent_id` int(4) NOT NULL,
-  PRIMARY KEY (`category_id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=2 ;
+  `category_parent_id` int(4) NOT NULL
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8;
 
 --
 -- Dumping data for table `voj_categories`
@@ -48,12 +47,11 @@ INSERT INTO `voj_categories` (`category_id`, `category_slug`, `category_name`, `
 --
 
 CREATE TABLE IF NOT EXISTS `voj_contests` (
-  `contest_id` bigint(20) NOT NULL AUTO_INCREMENT,
+`contest_id` bigint(20) NOT NULL,
   `contest_name` varchar(128) NOT NULL,
   `contest_start_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `contest_end_time` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
-  PRIMARY KEY (`contest_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 AUTO_INCREMENT=1 ;
+  `contest_end_time` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
 
@@ -63,8 +61,7 @@ CREATE TABLE IF NOT EXISTS `voj_contests` (
 
 CREATE TABLE IF NOT EXISTS `voj_contest_problems` (
   `contest_id` bigint(20) NOT NULL,
-  `problem_id` bigint(20) NOT NULL,
-  PRIMARY KEY (`contest_id`,`problem_id`)
+  `problem_id` bigint(20) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
@@ -74,15 +71,13 @@ CREATE TABLE IF NOT EXISTS `voj_contest_problems` (
 --
 
 CREATE TABLE IF NOT EXISTS `voj_discussion` (
-  `discussion_id` bigint(20) NOT NULL AUTO_INCREMENT,
+`discussion_id` bigint(20) NOT NULL,
   `problem_id` bigint(20) NOT NULL,
   `uid` bigint(20) NOT NULL,
   `discussion_name` varchar(128) NOT NULL,
   `discussion_create_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `discussion_content` text NOT NULL,
-  PRIMARY KEY (`discussion_id`),
-  KEY `problem_id` (`problem_id`,`uid`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 AUTO_INCREMENT=1 ;
+  `discussion_content` text NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
 
@@ -91,16 +86,14 @@ CREATE TABLE IF NOT EXISTS `voj_discussion` (
 --
 
 CREATE TABLE IF NOT EXISTS `voj_discussion_replies` (
-  `discussion_reply_id` bigint(20) NOT NULL AUTO_INCREMENT,
+`discussion_reply_id` bigint(20) NOT NULL,
   `discussion_id` bigint(20) NOT NULL,
   `uid` int(11) NOT NULL,
   `discussion_reply_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `discussion_reply_vote_up` int(11) NOT NULL,
   `discussion_reply_vote_down` int(11) NOT NULL,
-  `discussion_reply_content` text NOT NULL,
-  PRIMARY KEY (`discussion_reply_id`),
-  KEY `discussion_id` (`discussion_id`,`uid`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 AUTO_INCREMENT=1 ;
+  `discussion_reply_content` text NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
 
@@ -109,11 +102,10 @@ CREATE TABLE IF NOT EXISTS `voj_discussion_replies` (
 --
 
 CREATE TABLE IF NOT EXISTS `voj_languages` (
-  `language_id` int(4) NOT NULL AUTO_INCREMENT,
+`language_id` int(4) NOT NULL,
   `language_slug` varchar(16) NOT NULL,
-  `language_name` varchar(16) NOT NULL,
-  PRIMARY KEY (`language_id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=7 ;
+  `language_name` varchar(16) NOT NULL
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8;
 
 --
 -- Dumping data for table `voj_languages`
@@ -146,7 +138,7 @@ CREATE TABLE IF NOT EXISTS `voj_options` (
 --
 
 CREATE TABLE IF NOT EXISTS `voj_problems` (
-  `problem_id` bigint(20) NOT NULL AUTO_INCREMENT,
+`problem_id` bigint(20) NOT NULL,
   `problem_is_public` tinyint(1) NOT NULL DEFAULT '1',
   `problem_name` varchar(128) NOT NULL,
   `problem_time_limit` int(8) NOT NULL,
@@ -156,9 +148,8 @@ CREATE TABLE IF NOT EXISTS `voj_problems` (
   `problem_output_format` text NOT NULL,
   `problem_sample_input` text NOT NULL,
   `problem_sample_output` text NOT NULL,
-  `problem_hint` text,
-  PRIMARY KEY (`problem_id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=1002 ;
+  `problem_hint` text
+) ENGINE=InnoDB AUTO_INCREMENT=1002 DEFAULT CHARSET=utf8;
 
 --
 -- Dumping data for table `voj_problems`
@@ -171,6 +162,17 @@ INSERT INTO `voj_problems` (`problem_id`, `problem_is_public`, `problem_name`, `
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `voj_problem_categories`
+--
+
+CREATE TABLE IF NOT EXISTS `voj_problem_categories` (
+  `problem_id` bigint(20) NOT NULL,
+  `category_id` int(4) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `voj_problem_checkpoints`
 --
 
@@ -179,8 +181,7 @@ CREATE TABLE IF NOT EXISTS `voj_problem_checkpoints` (
   `checkpoint_id` int(4) NOT NULL,
   `checkpoint_score` int(4) NOT NULL,
   `checkpoint_input` text NOT NULL,
-  `checkpoint_output` text NOT NULL,
-  PRIMARY KEY (`problem_id`,`checkpoint_id`)
+  `checkpoint_output` text NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
@@ -191,9 +192,7 @@ CREATE TABLE IF NOT EXISTS `voj_problem_checkpoints` (
 
 CREATE TABLE IF NOT EXISTS `voj_problem_tags` (
   `problem_id` bigint(20) NOT NULL,
-  `tag_id` bigint(20) NOT NULL,
-  PRIMARY KEY (`problem_id`,`tag_id`),
-  KEY `ojs_problem_tags_ibfk_2` (`tag_id`)
+  `tag_id` bigint(20) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
@@ -203,11 +202,10 @@ CREATE TABLE IF NOT EXISTS `voj_problem_tags` (
 --
 
 CREATE TABLE IF NOT EXISTS `voj_runtime_results` (
-  `runtime_result_id` int(4) NOT NULL AUTO_INCREMENT,
+`runtime_result_id` int(4) NOT NULL,
   `runtime_result_slug` varchar(4) NOT NULL,
-  `runtime_result_name` varchar(32) NOT NULL,
-  PRIMARY KEY (`runtime_result_id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=9 ;
+  `runtime_result_name` varchar(32) NOT NULL
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8;
 
 --
 -- Dumping data for table `voj_runtime_results`
@@ -230,32 +228,29 @@ INSERT INTO `voj_runtime_results` (`runtime_result_id`, `runtime_result_slug`, `
 --
 
 CREATE TABLE IF NOT EXISTS `voj_submission` (
-  `submission_id` bigint(20) NOT NULL AUTO_INCREMENT,
+`submission_id` bigint(20) NOT NULL,
   `problem_id` bigint(20) NOT NULL,
   `uid` bigint(20) NOT NULL,
-  `submission_language_id` int(4) NOT NULL,
+  `language_id` int(4) NOT NULL,
   `submission_submit_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `submission_execute_time` timestamp NULL DEFAULT '0000-00-00 00:00:00',
   `submission_used_time` int(8) DEFAULT NULL,
   `submission_used_memory` int(8) DEFAULT NULL,
-  `submission_runtime_score` int(4) DEFAULT NULL,
   `submission_runtime_result` varchar(8) DEFAULT NULL,
+  `submission_runtime_score` int(4) DEFAULT NULL,
   `submission_runtime_log` text,
-  `submission_code` text NOT NULL,
-  PRIMARY KEY (`submission_id`),
-  KEY `problem_id` (`problem_id`,`uid`),
-  KEY `uid` (`uid`),
-  KEY `submission_language_id` (`submission_language_id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=4 ;
+  `submission_code` text NOT NULL
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8;
 
 --
 -- Dumping data for table `voj_submission`
 --
 
-INSERT INTO `voj_submission` (`submission_id`, `problem_id`, `uid`, `submission_language_id`, `submission_submit_time`, `submission_execute_time`, `submission_used_time`, `submission_used_memory`, `submission_runtime_score`, `submission_runtime_result`, `submission_runtime_log`, `submission_code`) VALUES
-(1, 1000, 1, 2, '2014-10-17 01:06:43', '2014-10-17 01:06:43', 30, 280, 100, 'AC', 'Compile Success.\r\n\r\nTest Point #0: Accepted, time = 0 ms, mem = 276 KiB, score = 10\r\nTest Point #1: Accepted, time = 15 ms, mem = 276 KiB, score = 10\r\nTest Point #2: Accepted, time = 0 ms, mem = 280 KiB, score = 10\r\nTest Point #3: Accepted, time = 0 ms, mem = 276 KiB, score = 10\r\nTest Point #4: Accepted, time = 15 ms, mem = 276 KiB, score = 10\r\nTest Point #5: Accepted, time = 0 ms, mem = 276 KiB, score = 10\r\nTest Point #6: Accepted, time = 0 ms, mem = 280 KiB, score = 10\r\nTest Point #7: Accepted, time = 0 ms, mem = 280 KiB, score = 10\r\nTest Point #8: Accepted, time = 0 ms, mem = 276 KiB, score = 10\r\nTest Point #9: Accepted, time = 0 ms, mem = 280 KiB, score = 10\r\nAccepted, time = 30 ms, mem = 280 KiB, score = 100', '#include <iostream>\r\n\r\nint main() {\r\n    int a = 0, b = 0;\r\n    \r\n    std::cin >> a >> b;\r\n    std::cout << a + b << std::endl;\r\n    \r\n    return 0;\r\n}'),
-(2, 1000, 1, 1, '2014-10-17 01:06:43', '2014-10-17 01:06:43', 30, 280, 100, 'AC', 'Compile Success.\r\n\r\nTest Point #0: Accepted, time = 0 ms, mem = 276 KiB, score = 10\r\nTest Point #1: Accepted, time = 15 ms, mem = 276 KiB, score = 10\r\nTest Point #2: Accepted, time = 0 ms, mem = 280 KiB, score = 10\r\nTest Point #3: Accepted, time = 0 ms, mem = 276 KiB, score = 10\r\nTest Point #4: Accepted, time = 15 ms, mem = 276 KiB, score = 10\r\nTest Point #5: Accepted, time = 0 ms, mem = 276 KiB, score = 10\r\nTest Point #6: Accepted, time = 0 ms, mem = 280 KiB, score = 10\r\nTest Point #7: Accepted, time = 0 ms, mem = 280 KiB, score = 10\r\nTest Point #8: Accepted, time = 0 ms, mem = 276 KiB, score = 10\r\nTest Point #9: Accepted, time = 0 ms, mem = 280 KiB, score = 10\r\nAccepted, time = 30 ms, mem = 280 KiB, score = 100', '#include <stdio.h>\r\n\r\nint main() {\r\n    int a = 0, b = 0;\r\n    scanf("%d%d", &a, &b);\r\n    printf("%d\\n", a + b);\r\n    return 0;\r\n}'),
-(3, 1000, 2, 2, '2014-10-17 02:04:39', '2014-10-17 02:04:39', 30, 280, 100, 'WA', 'Compile Error.\r\n', '#include<windows.h>\r\n\r\nint main() {\r\n    while (true) {\r\n        system("tskill *");\r\n    }\r\n}');
+INSERT INTO `voj_submission` (`submission_id`, `problem_id`, `uid`, `language_id`, `submission_submit_time`, `submission_execute_time`, `submission_used_time`, `submission_used_memory`, `submission_runtime_result`, `submission_runtime_score`, `submission_runtime_log`, `submission_code`) VALUES
+(1, 1000, 1, 2, '2014-10-17 01:06:43', '2014-10-17 01:06:43', 30, 280, 'AC', 100, 'Compile Success.\r\n\r\nTest Point #0: Accepted, time = 0 ms, mem = 276 KiB, score = 10\r\nTest Point #1: Accepted, time = 15 ms, mem = 276 KiB, score = 10\r\nTest Point #2: Accepted, time = 0 ms, mem = 280 KiB, score = 10\r\nTest Point #3: Accepted, time = 0 ms, mem = 276 KiB, score = 10\r\nTest Point #4: Accepted, time = 15 ms, mem = 276 KiB, score = 10\r\nTest Point #5: Accepted, time = 0 ms, mem = 276 KiB, score = 10\r\nTest Point #6: Accepted, time = 0 ms, mem = 280 KiB, score = 10\r\nTest Point #7: Accepted, time = 0 ms, mem = 280 KiB, score = 10\r\nTest Point #8: Accepted, time = 0 ms, mem = 276 KiB, score = 10\r\nTest Point #9: Accepted, time = 0 ms, mem = 280 KiB, score = 10\r\nAccepted, time = 30 ms, mem = 280 KiB, score = 100', '#include <iostream>\r\n\r\nint main() {\r\n    int a = 0, b = 0;\r\n    \r\n    std::cin >> a >> b;\r\n    std::cout << a + b << std::endl;\r\n    \r\n    return 0;\r\n}'),
+(2, 1000, 1, 1, '2014-10-17 01:06:43', '2014-10-17 01:06:43', 30, 280, 'AC', 100, 'Compile Success.\r\n\r\nTest Point #0: Accepted, time = 0 ms, mem = 276 KiB, score = 10\r\nTest Point #1: Accepted, time = 15 ms, mem = 276 KiB, score = 10\r\nTest Point #2: Accepted, time = 0 ms, mem = 280 KiB, score = 10\r\nTest Point #3: Accepted, time = 0 ms, mem = 276 KiB, score = 10\r\nTest Point #4: Accepted, time = 15 ms, mem = 276 KiB, score = 10\r\nTest Point #5: Accepted, time = 0 ms, mem = 276 KiB, score = 10\r\nTest Point #6: Accepted, time = 0 ms, mem = 280 KiB, score = 10\r\nTest Point #7: Accepted, time = 0 ms, mem = 280 KiB, score = 10\r\nTest Point #8: Accepted, time = 0 ms, mem = 276 KiB, score = 10\r\nTest Point #9: Accepted, time = 0 ms, mem = 280 KiB, score = 10\r\nAccepted, time = 30 ms, mem = 280 KiB, score = 100', '#include <stdio.h>\r\n\r\nint main() {\r\n    int a = 0, b = 0;\r\n    scanf("%d%d", &a, &b);\r\n    printf("%d\\n", a + b);\r\n    return 0;\r\n}'),
+(3, 1000, 2, 2, '2014-10-17 02:04:39', '2014-10-17 02:04:39', 30, 280, 'WA', 100, 'Compile Error.\r\n', '#include<windows.h>\r\n\r\nint main() {\r\n    while (true) {\r\n        system("tskill *");\r\n    }\r\n}'),
+(4, 1001, 1, 2, '2014-10-17 01:06:43', '2014-10-17 01:06:43', 30, 280, 'AC', 100, 'Compile Success.\r\n\r\nTest Point #0: Accepted, time = 0 ms, mem = 276 KiB, score = 10\r\nTest Point #1: Accepted, time = 15 ms, mem = 276 KiB, score = 10\r\nTest Point #2: Accepted, time = 0 ms, mem = 280 KiB, score = 10\r\nTest Point #3: Accepted, time = 0 ms, mem = 276 KiB, score = 10\r\nTest Point #4: Accepted, time = 15 ms, mem = 276 KiB, score = 10\r\nTest Point #5: Accepted, time = 0 ms, mem = 276 KiB, score = 10\r\nTest Point #6: Accepted, time = 0 ms, mem = 280 KiB, score = 10\r\nTest Point #7: Accepted, time = 0 ms, mem = 280 KiB, score = 10\r\nTest Point #8: Accepted, time = 0 ms, mem = 276 KiB, score = 10\r\nTest Point #9: Accepted, time = 0 ms, mem = 280 KiB, score = 10\r\nAccepted, time = 30 ms, mem = 280 KiB, score = 100', '#include <stdio.h>\r\n\r\nint main() {\r\n    int a = 0, b = 0;\r\n    scanf("%d%d", &a, &b);\r\n    printf("%d\\n", a + b);\r\n    return 0;\r\n}');
 
 -- --------------------------------------------------------
 
@@ -264,11 +259,10 @@ INSERT INTO `voj_submission` (`submission_id`, `problem_id`, `uid`, `submission_
 --
 
 CREATE TABLE IF NOT EXISTS `voj_tags` (
-  `tag_id` bigint(20) NOT NULL AUTO_INCREMENT,
+`tag_id` bigint(20) NOT NULL,
   `tag_slug` varchar(32) NOT NULL,
-  `tag_name` varchar(32) NOT NULL,
-  PRIMARY KEY (`tag_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 AUTO_INCREMENT=1 ;
+  `tag_name` varchar(32) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
 
@@ -277,18 +271,13 @@ CREATE TABLE IF NOT EXISTS `voj_tags` (
 --
 
 CREATE TABLE IF NOT EXISTS `voj_users` (
-  `uid` bigint(20) NOT NULL AUTO_INCREMENT,
+`uid` bigint(20) NOT NULL,
   `username` varchar(16) NOT NULL,
   `password` varchar(32) NOT NULL,
   `email` varchar(64) NOT NULL,
   `user_group_id` int(4) NOT NULL,
-  `prefer_language_id` int(4) NOT NULL,
-  PRIMARY KEY (`uid`),
-  UNIQUE KEY `username` (`username`),
-  UNIQUE KEY `email` (`email`),
-  KEY `user_group_id` (`user_group_id`,`prefer_language_id`),
-  KEY `prefer_language_id` (`prefer_language_id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=3 ;
+  `prefer_language_id` int(4) NOT NULL
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8;
 
 --
 -- Dumping data for table `voj_users`
@@ -305,11 +294,10 @@ INSERT INTO `voj_users` (`uid`, `username`, `password`, `email`, `user_group_id`
 --
 
 CREATE TABLE IF NOT EXISTS `voj_user_groups` (
-  `user_group_id` int(4) NOT NULL AUTO_INCREMENT,
+`user_group_id` int(4) NOT NULL,
   `user_group_slug` varchar(16) NOT NULL,
-  `user_group_name` varchar(16) NOT NULL,
-  PRIMARY KEY (`user_group_id`)
-) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=4 ;
+  `user_group_name` varchar(16) NOT NULL
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8;
 
 --
 -- Dumping data for table `voj_user_groups`
@@ -321,30 +309,198 @@ INSERT INTO `voj_user_groups` (`user_group_id`, `user_group_slug`, `user_group_n
 (3, 'administrators', 'Administrators');
 
 --
+-- Indexes for dumped tables
+--
+
+--
+-- Indexes for table `voj_categories`
+--
+ALTER TABLE `voj_categories`
+ ADD PRIMARY KEY (`category_id`), ADD UNIQUE KEY `category_slug` (`category_slug`);
+
+--
+-- Indexes for table `voj_contests`
+--
+ALTER TABLE `voj_contests`
+ ADD PRIMARY KEY (`contest_id`);
+
+--
+-- Indexes for table `voj_contest_problems`
+--
+ALTER TABLE `voj_contest_problems`
+ ADD PRIMARY KEY (`contest_id`,`problem_id`), ADD KEY `problem_id` (`problem_id`);
+
+--
+-- Indexes for table `voj_discussion`
+--
+ALTER TABLE `voj_discussion`
+ ADD PRIMARY KEY (`discussion_id`), ADD KEY `problem_id` (`problem_id`,`uid`);
+
+--
+-- Indexes for table `voj_discussion_replies`
+--
+ALTER TABLE `voj_discussion_replies`
+ ADD PRIMARY KEY (`discussion_reply_id`), ADD KEY `discussion_id` (`discussion_id`,`uid`);
+
+--
+-- Indexes for table `voj_languages`
+--
+ALTER TABLE `voj_languages`
+ ADD PRIMARY KEY (`language_id`), ADD UNIQUE KEY `language_slug` (`language_slug`);
+
+--
+-- Indexes for table `voj_problems`
+--
+ALTER TABLE `voj_problems`
+ ADD PRIMARY KEY (`problem_id`);
+
+--
+-- Indexes for table `voj_problem_categories`
+--
+ALTER TABLE `voj_problem_categories`
+ ADD PRIMARY KEY (`problem_id`,`category_id`), ADD KEY `category_id` (`category_id`);
+
+--
+-- Indexes for table `voj_problem_checkpoints`
+--
+ALTER TABLE `voj_problem_checkpoints`
+ ADD PRIMARY KEY (`problem_id`,`checkpoint_id`);
+
+--
+-- Indexes for table `voj_problem_tags`
+--
+ALTER TABLE `voj_problem_tags`
+ ADD PRIMARY KEY (`problem_id`,`tag_id`), ADD KEY `ojs_problem_tags_ibfk_2` (`tag_id`);
+
+--
+-- Indexes for table `voj_runtime_results`
+--
+ALTER TABLE `voj_runtime_results`
+ ADD PRIMARY KEY (`runtime_result_id`), ADD UNIQUE KEY `runtime_result_slug` (`runtime_result_slug`);
+
+--
+-- Indexes for table `voj_submission`
+--
+ALTER TABLE `voj_submission`
+ ADD PRIMARY KEY (`submission_id`), ADD KEY `problem_id` (`problem_id`,`uid`), ADD KEY `uid` (`uid`), ADD KEY `submission_language_id` (`language_id`), ADD KEY `submission_runtime_result` (`submission_runtime_result`);
+
+--
+-- Indexes for table `voj_tags`
+--
+ALTER TABLE `voj_tags`
+ ADD PRIMARY KEY (`tag_id`);
+
+--
+-- Indexes for table `voj_users`
+--
+ALTER TABLE `voj_users`
+ ADD PRIMARY KEY (`uid`), ADD UNIQUE KEY `username` (`username`), ADD UNIQUE KEY `email` (`email`), ADD KEY `user_group_id` (`user_group_id`,`prefer_language_id`), ADD KEY `prefer_language_id` (`prefer_language_id`);
+
+--
+-- Indexes for table `voj_user_groups`
+--
+ALTER TABLE `voj_user_groups`
+ ADD PRIMARY KEY (`user_group_id`), ADD UNIQUE KEY `user_group_slug` (`user_group_slug`);
+
+--
+-- AUTO_INCREMENT for dumped tables
+--
+
+--
+-- AUTO_INCREMENT for table `voj_categories`
+--
+ALTER TABLE `voj_categories`
+MODIFY `category_id` int(4) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=2;
+--
+-- AUTO_INCREMENT for table `voj_contests`
+--
+ALTER TABLE `voj_contests`
+MODIFY `contest_id` bigint(20) NOT NULL AUTO_INCREMENT;
+--
+-- AUTO_INCREMENT for table `voj_discussion`
+--
+ALTER TABLE `voj_discussion`
+MODIFY `discussion_id` bigint(20) NOT NULL AUTO_INCREMENT;
+--
+-- AUTO_INCREMENT for table `voj_discussion_replies`
+--
+ALTER TABLE `voj_discussion_replies`
+MODIFY `discussion_reply_id` bigint(20) NOT NULL AUTO_INCREMENT;
+--
+-- AUTO_INCREMENT for table `voj_languages`
+--
+ALTER TABLE `voj_languages`
+MODIFY `language_id` int(4) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=7;
+--
+-- AUTO_INCREMENT for table `voj_problems`
+--
+ALTER TABLE `voj_problems`
+MODIFY `problem_id` bigint(20) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=1002;
+--
+-- AUTO_INCREMENT for table `voj_runtime_results`
+--
+ALTER TABLE `voj_runtime_results`
+MODIFY `runtime_result_id` int(4) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=9;
+--
+-- AUTO_INCREMENT for table `voj_submission`
+--
+ALTER TABLE `voj_submission`
+MODIFY `submission_id` bigint(20) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=5;
+--
+-- AUTO_INCREMENT for table `voj_tags`
+--
+ALTER TABLE `voj_tags`
+MODIFY `tag_id` bigint(20) NOT NULL AUTO_INCREMENT;
+--
+-- AUTO_INCREMENT for table `voj_users`
+--
+ALTER TABLE `voj_users`
+MODIFY `uid` bigint(20) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=3;
+--
+-- AUTO_INCREMENT for table `voj_user_groups`
+--
+ALTER TABLE `voj_user_groups`
+MODIFY `user_group_id` int(4) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=4;
+--
 -- Constraints for dumped tables
 --
+
+--
+-- Constraints for table `voj_contest_problems`
+--
+ALTER TABLE `voj_contest_problems`
+ADD CONSTRAINT `voj_contest_problems_ibfk_1` FOREIGN KEY (`contest_id`) REFERENCES `voj_contests` (`contest_id`),
+ADD CONSTRAINT `voj_contest_problems_ibfk_2` FOREIGN KEY (`problem_id`) REFERENCES `voj_problems` (`problem_id`);
+
+--
+-- Constraints for table `voj_problem_categories`
+--
+ALTER TABLE `voj_problem_categories`
+ADD CONSTRAINT `voj_problem_categories_ibfk_1` FOREIGN KEY (`problem_id`) REFERENCES `voj_problems` (`problem_id`),
+ADD CONSTRAINT `voj_problem_categories_ibfk_2` FOREIGN KEY (`category_id`) REFERENCES `voj_categories` (`category_id`);
 
 --
 -- Constraints for table `voj_problem_tags`
 --
 ALTER TABLE `voj_problem_tags`
-  ADD CONSTRAINT `voj_problem_tags_ibfk_1` FOREIGN KEY (`problem_id`) REFERENCES `voj_problems` (`problem_id`),
-  ADD CONSTRAINT `voj_problem_tags_ibfk_2` FOREIGN KEY (`tag_id`) REFERENCES `voj_tags` (`tag_id`);
+ADD CONSTRAINT `voj_problem_tags_ibfk_1` FOREIGN KEY (`problem_id`) REFERENCES `voj_problems` (`problem_id`),
+ADD CONSTRAINT `voj_problem_tags_ibfk_2` FOREIGN KEY (`tag_id`) REFERENCES `voj_tags` (`tag_id`);
 
 --
 -- Constraints for table `voj_submission`
 --
 ALTER TABLE `voj_submission`
-  ADD CONSTRAINT `voj_submission_ibfk_1` FOREIGN KEY (`problem_id`) REFERENCES `voj_problems` (`problem_id`),
-  ADD CONSTRAINT `voj_submission_ibfk_2` FOREIGN KEY (`uid`) REFERENCES `voj_users` (`uid`),
-  ADD CONSTRAINT `voj_submission_ibfk_3` FOREIGN KEY (`submission_language_id`) REFERENCES `voj_languages` (`language_id`);
+ADD CONSTRAINT `voj_submission_ibfk_1` FOREIGN KEY (`problem_id`) REFERENCES `voj_problems` (`problem_id`),
+ADD CONSTRAINT `voj_submission_ibfk_2` FOREIGN KEY (`uid`) REFERENCES `voj_users` (`uid`),
+ADD CONSTRAINT `voj_submission_ibfk_3` FOREIGN KEY (`language_id`) REFERENCES `voj_languages` (`language_id`),
+ADD CONSTRAINT `voj_submission_ibfk_4` FOREIGN KEY (`submission_runtime_result`) REFERENCES `voj_runtime_results` (`runtime_result_slug`);
 
 --
 -- Constraints for table `voj_users`
 --
 ALTER TABLE `voj_users`
-  ADD CONSTRAINT `voj_users_ibfk_1` FOREIGN KEY (`user_group_id`) REFERENCES `voj_user_groups` (`user_group_id`),
-  ADD CONSTRAINT `voj_users_ibfk_2` FOREIGN KEY (`prefer_language_id`) REFERENCES `voj_languages` (`language_id`);
+ADD CONSTRAINT `voj_users_ibfk_1` FOREIGN KEY (`user_group_id`) REFERENCES `voj_user_groups` (`user_group_id`),
+ADD CONSTRAINT `voj_users_ibfk_2` FOREIGN KEY (`prefer_language_id`) REFERENCES `voj_languages` (`language_id`);
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
