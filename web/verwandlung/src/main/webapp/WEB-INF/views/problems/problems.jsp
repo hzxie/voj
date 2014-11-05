@@ -1,5 +1,6 @@
 <%@ page language="java" contentType="text/html; charset=utf-8" pageEncoding="utf-8"%>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <jsp:useBean id='DigestUtils' scope='request' class='com.happystudio.voj.util.DigestUtils'/>
 <!doctype html>
 <html lang="en-US">
@@ -73,12 +74,19 @@
                         </tr>
                     </thead>
                     <tbody>
-                    	<c:forEach var="problem" items="${problems}">
+                        <c:forEach var="problem" items="${problems}">
                         <tr>
                             <td class="flag-ac"><a href="#">AC</a></td>
-                            <td class="name"><a href="<c:url value="/p/${problem.getProblemID()}" />">P${problem.getProblemID()} ${problem.getProblemName()}</a></td>
-                            <td>37460</td>
-                            <td>82%</td>
+                            <td class="name"><a href="<c:url value="/p/${problem.getProblemID()}" />">P${problem.problemID} ${problem.problemName}</a></td>
+                            <td>${problem.totalSubmission}</td>
+                            <td>
+                            <c:choose>
+                                <c:when test="${problem.totalSubmission == 0}">0%</c:when>
+                                <c:otherwise>
+                                	<fmt:formatNumber type="number"  maxFractionDigits="0" value="${problem.acceptedSubmission * 100 / problem.totalSubmission}" />%
+                                </c:otherwise>
+                            </c:choose>
+                            </td>
                         </tr>
                         </c:forEach>
                         <tr class="more-problems">
@@ -107,11 +115,11 @@
             <div id="profile">
             <c:choose>
             <c:when test="${isLogin}">
-                <img src="http://www.gravatar.com/avatar/${DigestUtils.md5Hex(user.getEmail().toLowerCase())}?s=100&amp;d=mm" alt="avatar" class="img-circle" />
-                <h5>${user.getUsername()}</h5>
-                <p>${user.getEmail()}</p>
-                <p>Accepted/Submit: ${submissionStats.get("accpetedSubmission")}/${submissionStats.get("totalSubmission")}(${submissionStats.get("acRate")}%)</p>
-                <p>Language Preference: ${user.getPreferLanguage().getLanguageName()}</p>
+                <img src="http://www.gravatar.com/avatar/${DigestUtils.md5Hex(user.email.toLowerCase())}?s=100&amp;d=mm" alt="avatar" class="img-circle" />
+                <h5>${user.username}</h5>
+                <p>${user.email}</p>
+                <p>Accepted/Submit: ${submissionStats.get("acceptedSubmission")}/${submissionStats.get("totalSubmission")}(${submissionStats.get("acRate")}%)</p>
+                <p>Language Preference: ${user.preferLanguage.languageName}</p>
                 <ul class="inline">
                     <li><a href="<c:url value="/accounts/dashboard" />">Dashboard</a></li>
                     <li><a href="<c:url value="/accounts/login?logout=true" />">Sign out</a></li>

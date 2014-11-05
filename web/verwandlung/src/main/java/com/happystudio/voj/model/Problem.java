@@ -12,6 +12,8 @@ import javax.persistence.Id;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
 
+import org.hibernate.annotations.Formula;
+
 /**
  * 试题的Model.
  * @author Xie Haozhe
@@ -28,6 +30,8 @@ public class Problem implements Serializable {
 	 * Problem的构造函数.
 	 * @param isPublic - 试题是否公开
 	 * @param problemName - 试题的名称
+	 * @param totalSubmission - 试题提交总数
+	 * @param acceptedSubmission - 试题提交通过总数
 	 * @param timeLimit - 最大运行时间
 	 * @param memoryLimit - 最大运行内存
 	 * @param description - 试题描述
@@ -37,11 +41,13 @@ public class Problem implements Serializable {
 	 * @param sampleOutput - 试题样例输出
 	 * @param hint - 试题提示
 	 */
-	public Problem(boolean isPublic, String problemName, int timeLimit, int memoryLimit, 
-					String description, String inputFormat, String outputFormat, 
+	public Problem(boolean isPublic, String problemName, int totalSubmission, int acceptedSubmission,
+					int timeLimit, int memoryLimit,  String description, String inputFormat, String outputFormat, 
 					String sampleInput, String sampleOutput, String hint) { 
 		this.isPublic = isPublic;
 		this.problemName = problemName;
+		this.totalSubmission = totalSubmission;
+		this.acceptedSubmission = acceptedSubmission;
 		this.timeLimit = timeLimit;
 		this.memoryLimit = memoryLimit;
 		this.description = description;
@@ -57,6 +63,8 @@ public class Problem implements Serializable {
 	 * @param problemID - 试题唯一标识符
 	 * @param isPublic - 试题是否公开
 	 * @param problemName - 试题的名称
+	 * @param totalSubmission - 试题提交总数
+	 * @param acceptedSubmission - 试题提交通过总数
 	 * @param timeLimit - 最大运行时间
 	 * @param memoryLimit - 最大运行内存
 	 * @param description - 试题描述
@@ -66,12 +74,14 @@ public class Problem implements Serializable {
 	 * @param sampleOutput - 试题样例输出
 	 * @param hint - 试题提示
 	 */
-	public Problem(int problemID, boolean isPublic, String problemName, int timeLimit, int memoryLimit, 
-					String description, String inputFormat, String outputFormat, 
+	public Problem(int problemID, boolean isPublic, String problemName, int totalSubmission, int acceptedSubmission,
+					int timeLimit, int memoryLimit,  String description, String inputFormat, String outputFormat, 
 					String sampleInput, String sampleOutput, String hint) { 
 		this.problemID = problemID;
 		this.isPublic = isPublic;
 		this.problemName = problemName;
+		this.totalSubmission = totalSubmission;
+		this.acceptedSubmission = acceptedSubmission;
 		this.timeLimit = timeLimit;
 		this.memoryLimit = memoryLimit;
 		this.description = description;
@@ -128,6 +138,38 @@ public class Problem implements Serializable {
 	 */
 	public void setProblemName(String problemName) {
 		this.problemName = problemName;
+	}
+
+	/**
+	 * 获取试题提交总数.
+	 * @return 试题提交总数
+	 */
+	public int getTotalSubmission() {
+		return totalSubmission;
+	}
+
+	/**
+	 * 设置试题提交总数.
+	 * @param totalSubmission - 试题提交总数
+	 */
+	public void setTotalSubmission(int totalSubmission) {
+		this.totalSubmission = totalSubmission;
+	}
+
+	/**
+	 * 获取试题提交通过总数.
+	 * @return 试题提交通过总数
+	 */
+	public int getAcceptedSubmission() {
+		return acceptedSubmission;
+	}
+
+	/**
+	 * 设置试题提交通过总数
+	 * @param acceptedSubmission - 试题提交通过总数
+	 */
+	public void setAcceptedSubmission(int acceptedSubmission) {
+		this.acceptedSubmission = acceptedSubmission;
 	}
 
 	/**
@@ -279,10 +321,12 @@ public class Problem implements Serializable {
 	 */
 	@Override
 	public String toString() {
-		return String.format("Problem: [ProblemID=%s, isPublic=%s, ProblemName=%s, TimeLimit=%s, MemoryLimit=%s, "
-							+ "Description=%s, InputFormat=%s, OutputFormat=%s, SampleInput=%s, SampleOutput=%s, Hint=%s]", 
-                new Object[] { problemID, isPublic, problemName, timeLimit, memoryLimit, description, 
-								inputFormat, outputFormat, sampleInput, sampleOutput, hint});
+		return String.format("Problem: [ProblemID=%s, isPublic=%s, ProblemName=%s, TotalSubmission=%s, "
+				            + "AcceptedSubmission=%s, TimeLimit=%s, MemoryLimit=%s, Description=%s, "
+							+ "InputFormat=%s, OutputFormat=%s, SampleInput=%s, SampleOutput=%s, Hint=%s]", 
+                new Object[] { problemID, isPublic, problemName, totalSubmission, acceptedSubmission, 
+				            	timeLimit, memoryLimit, description, inputFormat, outputFormat, sampleInput, 
+				            	sampleOutput, hint});
 	}
 
 	/**
@@ -304,6 +348,18 @@ public class Problem implements Serializable {
 	 */
 	@Column(name = "problem_name")
 	private String problemName;
+	
+	/**
+	 * 试题的总提交总数.
+	 */
+	@Formula(value = "(SELECT COUNT(*) FROM voj_submissions s WHERE s.problem_id = problem_id)")
+	private int totalSubmission;
+	
+	/**
+	 * 试题的提交通过总数.
+	 */
+	@Formula(value = "(SELECT COUNT(*) FROM voj_submissions s WHERE s.problem_id = problem_id AND s.submission_runtime_result = 'AC')")
+	private int acceptedSubmission;
 	
 	/**
 	 * 最大运行时间.

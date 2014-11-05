@@ -89,7 +89,7 @@
                 <img src="http://www.gravatar.com/avatar/${DigestUtils.md5Hex(user.getEmail().toLowerCase())}?s=100&amp;d=mm" alt="avatar" class="img-circle" />
                 <h5>${user.getUsername()}</h5>
                 <p>${user.getEmail()}</p>
-                <p>Accepted/Submit: ${submissionStats.get("accpetedSubmission")}/${submissionStats.get("totalSubmission")}(${submissionStats.get("acRate")}%)</p>
+                <p>Accepted/Submit: ${submissionStats.get("acceptedSubmission")}/${submissionStats.get("totalSubmission")}(${submissionStats.get("acRate")}%)</p>
                 <p>Language Preference: ${user.getPreferLanguage().getLanguageName()}</p>
                 <ul class="inline">
                     <li><a href="<c:url value="/accounts/dashboard" />">Dashboard</a></li>

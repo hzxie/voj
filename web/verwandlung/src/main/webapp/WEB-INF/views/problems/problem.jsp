@@ -60,38 +60,38 @@
                 <div class="problem">
                     <div class="header">
                         <span class="pull-right">Accepted</span>
-                        <span class="name">P${problem.getProblemID()} ${problem.getProblemName()}</span>
+                        <span class="name">P${problem.problemID} ${problem.problemName}</span>
                     </div> <!-- .header -->
                     <div class="body">
                         <div class="section">
                             <h4>Description</h4>
-                            <div class="description">${problem.getDescription()}</div> <!-- .description -->
+                            <div class="description">${problem.description}</div> <!-- .description -->
                         </div> <!-- .section -->
                         <div class="section">
                             <h4>Format</h4>
                             <h5>Input</h5>
-                            <div class="description">${problem.getInputFormat()}</div> <!-- .description -->
+                            <div class="description">${problem.inputFormat}</div> <!-- .description -->
                             <h5>Output</h5>
-                            <div class="description">${problem.getOutputFormat()}</div> <!-- .description -->
+                            <div class="description">${problem.outputFormat}</div> <!-- .description -->
                         </div> <!-- .section -->
                         <div id="io-sample" class="section">
                             <h4>Samples</h4>
                             <h5>Sample Input</h5>
-                            <div class="description"><pre>${problem.getSampleInput()}</pre></div> <!-- .description -->
+                            <div class="description"><pre>${problem.sampleInput}</pre></div> <!-- .description -->
                             <h5>Sample Output</h5>
-                            <div class="description"><pre>${problem.getSampleOutput()}</pre></div> <!-- .description -->
+                            <div class="description"><pre>${problem.sampleOutput}</pre></div> <!-- .description -->
                         </div> <!-- .section -->
                         <div class="section">
                             <h4>Restrictions</h4>
                             <div class="description">
-                                <p><strong>Time Limit: </strong>${problem.getTimeLimit()} ms</p>
-                                <p><strong>Memory Limit: </strong>${problem.getMemoryLimit()} KB</p>
+                                <p><strong>Time Limit: </strong>${problem.timeLimit} ms</p>
+                                <p><strong>Memory Limit: </strong>${problem.memoryLimit} KB</p>
                             </div> <!-- .description -->
                         </div> <!-- .section -->
                         <c:if test="${problem.getHint() != null}">
                         <div class="section">
                             <h4>Hint</h4>
-                            <div class="description">${problem.getHint()}</div> <!-- .description -->
+                            <div class="description">${problem.hint}</div> <!-- .description -->
                         </div> <!-- .section -->
                         </c:if>
                         <form id="code-editor" class="hide" onsubmit="onSubmit(); return false;" method="POST">
@@ -142,11 +142,11 @@
             <div id="profile">
             <c:choose>
             <c:when test="${isLogin}">
-                <img src="http://www.gravatar.com/avatar/${DigestUtils.md5Hex(user.getEmail().toLowerCase())}?s=100&amp;d=mm" alt="avatar" class="img-circle" />
-                <h5>${user.getUsername()}</h5>
-                <p>${user.getEmail()}</p>
-                <p>Accepted/Submit: ${submissionStats.get("accpetedSubmission")}/${submissionStats.get("totalSubmission")}(${submissionStats.get("acRate")}%)</p>
-                <p>Language Preference: ${user.getPreferLanguage().getLanguageName()}</p>
+                <img src="http://www.gravatar.com/avatar/${DigestUtils.md5Hex(user.email.toLowerCase())}?s=100&amp;d=mm" alt="avatar" class="img-circle" />
+                <h5>${user.username}</h5>
+                <p>${user.email}</p>
+                <p>Accepted/Submit: ${submissionStats.get("acceptedSubmission")}/${submissionStats.get("totalSubmission")}(${submissionStats.get("acRate")}%)</p>
+                <p>Language Preference: ${user.preferLanguage.languageName}</p>
                 <ul class="inline">
                     <li><a href="<c:url value="/accounts/dashboard" />">Dashboard</a></li>
                     <li><a href="<c:url value="/accounts/login?logout=true" />">Sign out</a></li>

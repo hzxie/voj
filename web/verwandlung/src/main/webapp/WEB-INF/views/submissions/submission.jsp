@@ -110,7 +110,7 @@
                         <div class="section">
                             <h4>Code</h4>
                             <div class="description">
-                            	<pre><code>${submission.code.replace("<", "&lt;").replace(">", "&gt;")}</code></pre>
+                                <pre><code>${submission.code.replace("<", "&lt;").replace(">", "&gt;")}</code></pre>
                             </div> <!-- .description -->
                         </div> <!-- .section -->
                         </c:if>
@@ -119,7 +119,7 @@
             </div> <!-- #main-content -->
             <div id="sidebar" class="span3">
                 <div id="profile" class="section">
-                	<h5>User</h5>
+                    <h5>User</h5>
                 </div> <!-- #profile -->
                 <div id="problem" class="section">
                     <h5>Problem</h5>
@@ -137,7 +137,7 @@
                 <img src="http://www.gravatar.com/avatar/${DigestUtils.md5Hex(user.getEmail().toLowerCase())}?s=100&amp;d=mm" alt="avatar" class="img-circle" />
                 <h5>${user.getUsername()}</h5>
                 <p>${user.getEmail()}</p>
-                <p>Accepted/Submit: ${submissionStats.get("accpetedSubmission")}/${submissionStats.get("totalSubmission")}(${submissionStats.get("acRate")}%)</p>
+                <p>Accepted/Submit: ${submissionStats.get("acceptedSubmission")}/${submissionStats.get("totalSubmission")}(${submissionStats.get("acRate")}%)</p>
                 <p>Language Preference: ${user.getPreferLanguage().getLanguageName()}</p>
                 <ul class="inline">
                     <li><a href="<c:url value="/accounts/dashboard" />">Dashboard</a></li>

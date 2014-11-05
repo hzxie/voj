@@ -90,11 +90,11 @@
             <div id="profile">
             <c:choose>
             <c:when test="${isLogin}">
-                <img src="http://www.gravatar.com/avatar/${DigestUtils.md5Hex(user.getEmail().toLowerCase())}?s=100&amp;d=mm" alt="avatar" class="img-circle" />
-                <h5>${user.getUsername()}</h5>
-                <p>${user.getEmail()}</p>
-                <p>Accepted/Submit: ${submissionStats.get("accpetedSubmission")}/${submissionStats.get("totalSubmission")}(${submissionStats.get("acRate")}%)</p>
-                <p>Language Preference: ${user.getPreferLanguage().getLanguageName()}</p>
+                <img src="http://www.gravatar.com/avatar/${DigestUtils.md5Hex(user.email.toLowerCase())}?s=100&amp;d=mm" alt="avatar" class="img-circle" />
+                <h5>${user.username}</h5>
+                <p>${user.email}</p>
+                <p>Accepted/Submit: ${submissionStats.get("acceptedSubmission")}/${submissionStats.get("totalSubmission")}(${submissionStats.get("acRate")}%)</p>
+                <p>Language Preference: ${user.preferLanguage.languageName}</p>
                 <ul class="inline">
                     <li><a href="<c:url value="/accounts/dashboard" />">Dashboard</a></li>
                     <li><a href="<c:url value="/accounts/login?logout=true" />">Sign out</a></li>

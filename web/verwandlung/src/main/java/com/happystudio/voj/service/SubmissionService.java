@@ -63,7 +63,7 @@ public class SubmissionService {
 		}
 		
 		Map<String, Long> submissionStats = new HashMap<String, Long>(4);
-		submissionStats.put("accpetedSubmission", acceptedSubmission);
+		submissionStats.put("acceptedSubmission", acceptedSubmission);
 		submissionStats.put("totalSubmission", totalSubmission);
 		submissionStats.put("acRate", acRate);
 		return submissionStats;
