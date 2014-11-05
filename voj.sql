@@ -3,7 +3,7 @@
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: Nov 04, 2014 at 02:16 下午
+-- Generation Time: Nov 05, 2014 at 05:11 下午
 -- Server version: 5.6.16
 -- PHP Version: 5.5.9
 
@@ -224,10 +224,10 @@ INSERT INTO `voj_runtime_results` (`runtime_result_id`, `runtime_result_slug`, `
 -- --------------------------------------------------------
 
 --
--- Table structure for table `voj_submission`
+-- Table structure for table `voj_submissions`
 --
 
-CREATE TABLE IF NOT EXISTS `voj_submission` (
+CREATE TABLE IF NOT EXISTS `voj_submissions` (
 `submission_id` bigint(20) NOT NULL,
   `problem_id` bigint(20) NOT NULL,
   `uid` bigint(20) NOT NULL,
@@ -243,10 +243,10 @@ CREATE TABLE IF NOT EXISTS `voj_submission` (
 ) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8;
 
 --
--- Dumping data for table `voj_submission`
+-- Dumping data for table `voj_submissions`
 --
 
-INSERT INTO `voj_submission` (`submission_id`, `problem_id`, `uid`, `language_id`, `submission_submit_time`, `submission_execute_time`, `submission_used_time`, `submission_used_memory`, `submission_runtime_result`, `submission_runtime_score`, `submission_runtime_log`, `submission_code`) VALUES
+INSERT INTO `voj_submissions` (`submission_id`, `problem_id`, `uid`, `language_id`, `submission_submit_time`, `submission_execute_time`, `submission_used_time`, `submission_used_memory`, `submission_runtime_result`, `submission_runtime_score`, `submission_runtime_log`, `submission_code`) VALUES
 (1, 1000, 1, 2, '2014-10-17 01:06:43', '2014-10-17 01:06:43', 30, 280, 'AC', 100, 'Compile Success.\r\n\r\nTest Point #0: Accepted, time = 0 ms, mem = 276 KiB, score = 10\r\nTest Point #1: Accepted, time = 15 ms, mem = 276 KiB, score = 10\r\nTest Point #2: Accepted, time = 0 ms, mem = 280 KiB, score = 10\r\nTest Point #3: Accepted, time = 0 ms, mem = 276 KiB, score = 10\r\nTest Point #4: Accepted, time = 15 ms, mem = 276 KiB, score = 10\r\nTest Point #5: Accepted, time = 0 ms, mem = 276 KiB, score = 10\r\nTest Point #6: Accepted, time = 0 ms, mem = 280 KiB, score = 10\r\nTest Point #7: Accepted, time = 0 ms, mem = 280 KiB, score = 10\r\nTest Point #8: Accepted, time = 0 ms, mem = 276 KiB, score = 10\r\nTest Point #9: Accepted, time = 0 ms, mem = 280 KiB, score = 10\r\nAccepted, time = 30 ms, mem = 280 KiB, score = 100', '#include <iostream>\r\n\r\nint main() {\r\n    int a = 0, b = 0;\r\n    \r\n    std::cin >> a >> b;\r\n    std::cout << a + b << std::endl;\r\n    \r\n    return 0;\r\n}'),
 (2, 1000, 1, 1, '2014-10-17 01:06:43', '2014-10-17 01:06:43', 30, 280, 'AC', 100, 'Compile Success.\r\n\r\nTest Point #0: Accepted, time = 0 ms, mem = 276 KiB, score = 10\r\nTest Point #1: Accepted, time = 15 ms, mem = 276 KiB, score = 10\r\nTest Point #2: Accepted, time = 0 ms, mem = 280 KiB, score = 10\r\nTest Point #3: Accepted, time = 0 ms, mem = 276 KiB, score = 10\r\nTest Point #4: Accepted, time = 15 ms, mem = 276 KiB, score = 10\r\nTest Point #5: Accepted, time = 0 ms, mem = 276 KiB, score = 10\r\nTest Point #6: Accepted, time = 0 ms, mem = 280 KiB, score = 10\r\nTest Point #7: Accepted, time = 0 ms, mem = 280 KiB, score = 10\r\nTest Point #8: Accepted, time = 0 ms, mem = 276 KiB, score = 10\r\nTest Point #9: Accepted, time = 0 ms, mem = 280 KiB, score = 10\r\nAccepted, time = 30 ms, mem = 280 KiB, score = 100', '#include <stdio.h>\r\n\r\nint main() {\r\n    int a = 0, b = 0;\r\n    scanf("%d%d", &a, &b);\r\n    printf("%d\\n", a + b);\r\n    return 0;\r\n}'),
 (3, 1000, 2, 2, '2014-10-17 02:04:39', '2014-10-17 02:04:39', 30, 280, 'WA', 100, 'Compile Error.\r\n', '#include<windows.h>\r\n\r\nint main() {\r\n    while (true) {\r\n        system("tskill *");\r\n    }\r\n}'),
@@ -379,9 +379,9 @@ ALTER TABLE `voj_runtime_results`
  ADD PRIMARY KEY (`runtime_result_id`), ADD UNIQUE KEY `runtime_result_slug` (`runtime_result_slug`);
 
 --
--- Indexes for table `voj_submission`
+-- Indexes for table `voj_submissions`
 --
-ALTER TABLE `voj_submission`
+ALTER TABLE `voj_submissions`
  ADD PRIMARY KEY (`submission_id`), ADD KEY `problem_id` (`problem_id`,`uid`), ADD KEY `uid` (`uid`), ADD KEY `submission_language_id` (`language_id`), ADD KEY `submission_runtime_result` (`submission_runtime_result`);
 
 --
@@ -442,9 +442,9 @@ MODIFY `problem_id` bigint(20) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=1002;
 ALTER TABLE `voj_runtime_results`
 MODIFY `runtime_result_id` int(4) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=9;
 --
--- AUTO_INCREMENT for table `voj_submission`
+-- AUTO_INCREMENT for table `voj_submissions`
 --
-ALTER TABLE `voj_submission`
+ALTER TABLE `voj_submissions`
 MODIFY `submission_id` bigint(20) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=5;
 --
 -- AUTO_INCREMENT for table `voj_tags`
@@ -487,13 +487,13 @@ ADD CONSTRAINT `voj_problem_tags_ibfk_1` FOREIGN KEY (`problem_id`) REFERENCES `
 ADD CONSTRAINT `voj_problem_tags_ibfk_2` FOREIGN KEY (`tag_id`) REFERENCES `voj_tags` (`tag_id`);
 
 --
--- Constraints for table `voj_submission`
+-- Constraints for table `voj_submissions`
 --
-ALTER TABLE `voj_submission`
-ADD CONSTRAINT `voj_submission_ibfk_1` FOREIGN KEY (`problem_id`) REFERENCES `voj_problems` (`problem_id`),
-ADD CONSTRAINT `voj_submission_ibfk_2` FOREIGN KEY (`uid`) REFERENCES `voj_users` (`uid`),
-ADD CONSTRAINT `voj_submission_ibfk_3` FOREIGN KEY (`language_id`) REFERENCES `voj_languages` (`language_id`),
-ADD CONSTRAINT `voj_submission_ibfk_4` FOREIGN KEY (`submission_runtime_result`) REFERENCES `voj_runtime_results` (`runtime_result_slug`);
+ALTER TABLE `voj_submissions`
+ADD CONSTRAINT `voj_submissions_ibfk_1` FOREIGN KEY (`problem_id`) REFERENCES `voj_problems` (`problem_id`),
+ADD CONSTRAINT `voj_submissions_ibfk_2` FOREIGN KEY (`uid`) REFERENCES `voj_users` (`uid`),
+ADD CONSTRAINT `voj_submissions_ibfk_3` FOREIGN KEY (`language_id`) REFERENCES `voj_languages` (`language_id`),
+ADD CONSTRAINT `voj_submissions_ibfk_4` FOREIGN KEY (`submission_runtime_result`) REFERENCES `voj_runtime_results` (`runtime_result_slug`);
 
 --
 -- Constraints for table `voj_users`

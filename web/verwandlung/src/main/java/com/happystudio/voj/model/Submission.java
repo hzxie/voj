@@ -16,7 +16,7 @@ import javax.persistence.Table;
  * @author Xie Haozhe
  */
 @Entity
-@Table(name = "voj_submission")
+@Table(name = "voj_submissions")
 public class Submission implements Serializable {
 	/**
 	 * 评测记录类的默认构造函数.
