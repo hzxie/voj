@@ -32,13 +32,13 @@ public class Submission implements Serializable {
 	 * @param executeTime - 评测开始执行时间
 	 * @param usedTime - 评测运行总时间
 	 * @param usedMemory - 评测运行占用最大内存
-	 * @param runtimeResult - 评测结果
-	 * @param runtimeScore - 评测运行得分
-	 * @param runtimeLog - 评测运行日志
+	 * @param judgeResult - 评测结果
+	 * @param judgeScore - 评测运行得分
+	 * @param judgeLog - 评测运行日志
 	 * @param code - 评测所执行的代码
 	 */
 	public Submission(Problem problem, User user, Language language, Date submitTime,  Date executeTime, 
-			int usedTime, int usedMemory, RuntimeResult runtimeResult, int runtimeScore,  String runtimeLog, String code) { 
+			int usedTime, int usedMemory, JudgeResult judgeResult, int judgeScore,  String judgeLog, String code) { 
 		this.problem = problem;
 		this.user = user;
 		this.language = language;
@@ -46,9 +46,9 @@ public class Submission implements Serializable {
 		this.executeTime = executeTime;
 		this.usedTime = usedTime;
 		this.usedMemory = usedMemory;
-		this.runtimeResult = runtimeResult;
-		this.runtimeScore = runtimeScore;
-		this.runtimeLog = runtimeLog;
+		this.judgeResult = judgeResult;
+		this.judgeScore = judgeScore;
+		this.judgeLog = judgeLog;
 		this.code = code;
 	}
 	
@@ -62,14 +62,14 @@ public class Submission implements Serializable {
 	 * @param executeTime - 评测开始执行时间
 	 * @param usedTime - 评测运行总时间
 	 * @param usedMemory - 评测运行占用最大内存
-	 * @param runtimeResult - 评测结果
-	 * @param runtimeScore - 评测运行得分
-	 * @param runtimeLog - 评测运行日志
+	 * @param judgeResult - 评测结果
+	 * @param judgeScore - 评测运行得分
+	 * @param judgeLog - 评测运行日志
 	 * @param code - 评测所执行的代码
 	 */
 	public Submission(int submissionID, Problem problem, User user, Language language, Date submitTime, 
-			Date executeTime, int usedTime, int usedMemory, RuntimeResult runtimeResult, int runtimeScore, 
-			String runtimeLog, String code) { 
+			Date executeTime, int usedTime, int usedMemory, JudgeResult judgeResult, int judgeScore, 
+			String judgeLog, String code) { 
 		this.submissionID = submissionID;
 		this.problem = problem;
 		this.user = user;
@@ -78,9 +78,9 @@ public class Submission implements Serializable {
 		this.executeTime = executeTime;
 		this.usedTime = usedTime;
 		this.usedMemory = usedMemory;
-		this.runtimeResult = runtimeResult;
-		this.runtimeScore = runtimeScore;
-		this.runtimeLog = runtimeLog;
+		this.judgeResult = judgeResult;
+		this.judgeScore = judgeScore;
+		this.judgeLog = judgeLog;
 		this.code = code;
 	}
 	
@@ -208,48 +208,48 @@ public class Submission implements Serializable {
 	 * 获取评测结果.
 	 * @return 评测结果
 	 */
-	public RuntimeResult getRuntimeResult() {
-		return runtimeResult;
+	public JudgeResult getJudgeResult() {
+		return judgeResult;
 	}
 	
 	/**
 	 * 设置评测结果.
-	 * @param runtimeResult - 评测结果
+	 * @param judgeResult - 评测结果
 	 */
-	public void setRuntimeResult(RuntimeResult runtimeResult) {
-		this.runtimeResult = runtimeResult;
+	public void setJudgeResult(JudgeResult judgeResult) {
+		this.judgeResult = judgeResult;
 	}
 	
 	/**
 	 * 获取评测运行得分.
 	 * @return 评测运行得分
 	 */
-	public int getRuntimeScore() {
-		return runtimeScore;
+	public int getJudgeScore() {
+		return judgeScore;
 	}
 	
 	/**
 	 * 设置评测运行得分.
-	 * @param runtimeScore - 评测运行得分
+	 * @param judgeScore - 评测运行得分
 	 */
-	public void setRuntimeScore(int runtimeScore) {
-		this.runtimeScore = runtimeScore;
+	public void setJudgeScore(int judgeScore) {
+		this.judgeScore = judgeScore;
 	}
 	
 	/**
 	 * 获取评测运行日志.
 	 * @return 评测运行日志
 	 */
-	public String getRuntimeLog() {
-		return runtimeLog;
+	public String getJudgeLog() {
+		return judgeLog;
 	}
 	
 	/**
 	 * 设置评测运行日志
-	 * @param runtimeLog - 评测运行日志
+	 * @param judgeLog - 评测运行日志
 	 */
-	public void setRuntimeLog(String runtimeLog) {
-		this.runtimeLog = runtimeLog;
+	public void setJudgeLog(String judgeLog) {
+		this.judgeLog = judgeLog;
 	}
 	
 	/**
@@ -274,10 +274,10 @@ public class Submission implements Serializable {
 	@Override
 	public String toString() {
 		return String.format("Submission [ID=%d, Problem={%s}, User={%s}, Language={%s}, SubmitTime={%s}, "
-				+ "ExecuteTime={%s}, UsedTime=%d, UsedMemory=%d, RuntimeResult={%s}, RuntimeScore=%d, "
-				+ "RuntimeLog=%s, Code=%s]",
+				+ "ExecuteTime={%s}, UsedTime=%d, UsedMemory=%d, JudgeResult={%s}, JudgeScore=%d, "
+				+ "JudgeLog=%s, Code=%s]",
                 new Object[] { submissionID, problem, user, language, submitTime, executeTime, usedTime, usedMemory,
-						runtimeResult, runtimeScore, runtimeLog, code});
+						judgeResult, judgeScore, judgeLog, code});
 	}
 	
 	/**
@@ -336,21 +336,21 @@ public class Submission implements Serializable {
 	/**
 	 * 评测结果.
 	 */
-	@ManyToOne(targetEntity = RuntimeResult.class)
-    @JoinColumn(name = "submission_runtime_result", referencedColumnName="runtime_result_slug")
-	RuntimeResult runtimeResult;
+	@ManyToOne(targetEntity = JudgeResult.class)
+    @JoinColumn(name = "submission_judge_result", referencedColumnName="judge_result_slug")
+	JudgeResult judgeResult;
 	
 	/**
 	 * 评测运行得分.
 	 */
-	@Column(name = "submission_runtime_score")
-	int runtimeScore;
+	@Column(name = "submission_judge_score")
+	int judgeScore;
 	
 	/**
 	 * 评测运行日志.
 	 */
-	@Column(name = "submission_runtime_log")
-	String runtimeLog;
+	@Column(name = "submission_judge_log")
+	String judgeLog;
 	
 	/**
 	 * 评测所执行的代码.

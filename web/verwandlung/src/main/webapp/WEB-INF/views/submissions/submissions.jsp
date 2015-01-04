@@ -72,8 +72,8 @@
                     <tbody>
                         <c:forEach var="submission" items="${submissions}">
                         <tr>
-                            <td class="flag-${submission.runtimeResult.runtimeResultSlug.toLowerCase()}"><a href="<c:url value="/submissions/${submission.submissionID}" />">${submission.runtimeResult.runtimeResultName}</a></td>
-                            <td class="score">${submission.runtimeScore}</td>
+                            <td class="flag-${submission.judgeResult.judgeResultSlug.toLowerCase()}"><a href="<c:url value="/submissions/${submission.submissionID}" />">${submission.judgeResult.judgeResultName}</a></td>
+                            <td class="score">${submission.judgeScore}</td>
                             <td class="time">${submission.usedTime} ms</td>
                             <td class="memory">${submission.usedMemory} K</td>
                             <td class="name"><a href="<c:url value="/p/${submission.problem.problemID}" />">P${submission.problem.problemID} ${submission.problem.problemName}</a></td>
