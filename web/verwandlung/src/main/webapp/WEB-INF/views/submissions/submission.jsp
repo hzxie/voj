@@ -69,7 +69,7 @@
                                 <table class="table">
                                     <tr>
                                         <td>Runtime Result</td>
-                                        <td class="flag-${submission.runtimeResult.runtimeResultSlug.toLowerCase()}">${submission.runtimeResult.runtimeResultName}</td>
+                                        <td class="flag-${submission.judgeResult.judgeResultSlug.toLowerCase()}">${submission.judgeResult.judgeResultName}</td>
                                     </tr>
                                     <tr>
                                         <td>Problem</td>
@@ -104,7 +104,7 @@
                         </div> <!-- .section -->
                         <div class="section">
                             <h4>Runtime Result</h4>
-                            <div class="description">${submission.runtimeLog}</div> <!-- .description -->
+                            <div class="description">${submission.judgeLog}</div> <!-- .description -->
                         </div> <!-- .section -->
                         <c:if test="${submission.getUser() != null}">
                         <div class="section">

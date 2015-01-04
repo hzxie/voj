@@ -17,71 +17,71 @@ import javax.persistence.Table;
  * @author Xie Haozhe
  */
 @Entity
-@Table(name = "voj_runtime_results")
-public class RuntimeResult implements Serializable {
+@Table(name = "voj_judge_results")
+public class JudgeResult implements Serializable {
 	/**
 	 * 评测结果类的默认构造函数.
 	 */
-	public RuntimeResult() { }
+	public JudgeResult() { }
 	
 	/**
 	 * 评测结果类的构造函数.
-	 * @param runtimeResultID - 评测结果的唯一标识符
-	 * @param runtimeResultSlug - 评测结果的唯一英文缩写
-	 * @param runtimeResultName - 评测结果的名称
+	 * @param judgeResultID - 评测结果的唯一标识符
+	 * @param judgeResultSlug - 评测结果的唯一英文缩写
+	 * @param judgeResultName - 评测结果的名称
 	 */
-	public RuntimeResult(int runtimeResultID, String runtimeResultSlug, String runtimeResultName) {
-		this.runtimeResultID = runtimeResultID;
-		this.runtimeResultSlug = runtimeResultSlug;
-		this.runtimeResultName = runtimeResultName;
+	public JudgeResult(int judgeResultID, String judgeResultSlug, String judgeResultName) {
+		this.judgeResultID = judgeResultID;
+		this.judgeResultSlug = judgeResultSlug;
+		this.judgeResultName = judgeResultName;
 	}
 	
 	/**
 	 * 获取评测结果的唯一标识符.
 	 * @return 评测结果的唯一标识符
 	 */
-	public int getRuntimeResultID() {
-		return runtimeResultID;
+	public int getJudgeResultID() {
+		return judgeResultID;
 	}
 
 	/**
 	 * 设置评测结果的唯一标识符.
-	 * @param runtimeResultID - 评测结果的唯一标识符
+	 * @param judgeResultID - 评测结果的唯一标识符
 	 */
-	public void setRuntimeResultID(int runtimeResultID) {
-		this.runtimeResultID = runtimeResultID;
+	public void setJudgeResultID(int judgeResultID) {
+		this.judgeResultID = judgeResultID;
 	}
 
 	/**
 	 * 获取评测结果的唯一英文缩写.
 	 * @return - 评测结果的唯一英文缩写
 	 */
-	public String getRuntimeResultSlug() {
-		return runtimeResultSlug;
+	public String getJudgeResultSlug() {
+		return judgeResultSlug;
 	}
 
 	/**
 	 * 设置评测结果的唯一英文缩写.
-	 * @param runtimeResultSlug - 评测结果的唯一英文缩写
+	 * @param judgeResultSlug - 评测结果的唯一英文缩写
 	 */
-	public void setRuntimeResultSlug(String runtimeResultSlug) {
-		this.runtimeResultSlug = runtimeResultSlug;
+	public void setJudgeResultSlug(String judgeResultSlug) {
+		this.judgeResultSlug = judgeResultSlug;
 	}
 
 	/**
 	 * 获取评测结果的名称.
 	 * @return 评测结果的名称
 	 */
-	public String getRuntimeResultName() {
-		return runtimeResultName;
+	public String getJudgeResultName() {
+		return judgeResultName;
 	}
 
 	/**
 	 * 设置评测结果的名称.
-	 * @param runtimeResultName - 评测结果的名称
+	 * @param judgeResultName - 评测结果的名称
 	 */
-	public void setRuntimeResultName(String runtimeResultName) {
-		this.runtimeResultName = runtimeResultName;
+	public void setJudgeResultName(String judgeResultName) {
+		this.judgeResultName = judgeResultName;
 	}
 
     /**
@@ -105,8 +105,8 @@ public class RuntimeResult implements Serializable {
      */
     @Override
     public String toString() {
-        return String.format("RuntimeResult [ID=%d, Slug=%s, Name=%s]",
-                new Object[] { runtimeResultID, runtimeResultSlug, runtimeResultName });
+        return String.format("JudgeResult [ID=%d, Slug=%s, Name=%s]",
+                new Object[] { judgeResultID, judgeResultSlug, judgeResultName });
     }
 
 	/**
@@ -114,26 +114,26 @@ public class RuntimeResult implements Serializable {
 	 */
     @Id
     @GeneratedValue
-	@Column(name = "runtime_result_id")
-	private int runtimeResultID;
+	@Column(name = "judge_result_id")
+	private int judgeResultID;
 	
 	/**
 	 * 评测结果的英文唯一缩写.
 	 */
-    @Column(name = "runtime_result_slug")
-	private String runtimeResultSlug;
+    @Column(name = "judge_result_slug")
+	private String judgeResultSlug;
 	
 	/**
 	 * 评测结果的名称.
 	 */
-    @Column(name = "runtime_result_name")
-	private String runtimeResultName;
+    @Column(name = "judge_result_name")
+	private String judgeResultName;
 	
 	/**
      * 评测记录集合(以便1-N关联).
      */
 	@OneToMany(targetEntity = Submission.class, 
-            	fetch = FetchType.LAZY, mappedBy = "runtimeResult")
+            	fetch = FetchType.LAZY, mappedBy = "judgeResult")
 	private List<Submission> submission = new ArrayList<Submission>();
 	
 	/**
