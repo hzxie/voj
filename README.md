@@ -1,4 +1,4 @@
-![Verwandlung Online Judge](https://raw.githubusercontent.com/zjhzxhz/verwandlung/master/web/verwandlung/src/main/webapp/assets/img/logo.png)
+![Verwandlung Online Judge](https://raw.githubusercontent.com/zjhzxhz/verwandlung/master/web/src/main/webapp/assets/img/logo.png)
 
 Version: 1.0.0 (Under Development)
 
@@ -17,10 +17,10 @@ Cross-Platform Online Judge System based on [Spring MVC Framework](http://spring
 The application used following components:
 
  - [Spring](http://spring.io) MVC Famework
+ - [MyBatis](https://mybatis.github.io/mybatis-3/index.html) Persistence Framework.
  - [Druid](https://github.com/alibaba/druid/) Database Connection Pool
  - [CodeMirror](http://codemirror.net) Editor
- - [MetaQ](https://github.com/killme2008/Metamorphosis) Message Queue
- - [Socket IO](http://socket.io)
+ - [Apache ActiveMQ](http://activemq.apache.org/) Message Queue
 
 ### The Origin of Verwandlung
 

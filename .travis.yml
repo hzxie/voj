@@ -10,7 +10,7 @@ before_script:
   - mysql -e 'CREATE DATABASE voj;'
   - mysql voj < voj.sql
 
-script: mvn test -f web/verwandlung/pom.xml
+script: mvn test -f web/pom.xml
 
 after_script:
   - mysql -e 'DROP DATABASE voj;'
