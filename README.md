@@ -1,11 +1,11 @@
-![Verwandlung Online Judge](https://raw.githubusercontent.com/zjhzxhz/verwandlung/master/web/src/main/webapp/assets/img/logo.png)
+![Verwandlung Online Judge](https://raw.githubusercontent.com/zjhzxhz/voj/master/web/src/main/webapp/assets/img/logo.png)
 
 Version: 1.0.0 (Under Development)
 
-[![Build Status](https://travis-ci.org/zjhzxhz/verwandlung.png?branch=master)](https://travis-ci.org/zjhzxhz/verwandlung)
+[![Build Status](https://travis-ci.org/zjhzxhz/voj.png?branch=master)](https://travis-ci.org/zjhzxhz/voj)
 
 [**Official Website**](#) | 
-[**Tech Support**](http://www.zjhzxhz.com) |
+[**Tech Support**](http://zjhzxhz.com) |
 [**Change Log**](#)
 
 ---
