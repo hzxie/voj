@@ -1,7 +1,8 @@
 <beans xmlns="http://www.springframework.org/schema/beans"
-	xmlns:mvc="http://www.springframework.org/schema/mvc"
-	xmlns:tx="http://www.springframework.org/schema/tx" 
+	xmlns:mvc="http://www.springframework.org/schema/mvc" 
+	xmlns:tx="http://www.springframework.org/schema/tx"
 	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:aop="http://www.springframework.org/schema/aop" 
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://www.springframework.org/schema/beans
 	http://www.springframework.org/schema/beans/spring-beans-4.1.xsd
@@ -10,14 +11,24 @@
 	http://www.springframework.org/schema/tx
 	http://www.springframework.org/schema/tx/spring-tx-4.1.xsd
 	http://www.springframework.org/schema/context
-	http://www.springframework.org/schema/context/spring-context-4.1.xsd">
-	<!-- Enable @Controller annotation support -->
-	<mvc:annotation-driven />
+	http://www.springframework.org/schema/context/spring-context-4.1.xsd
+	http://www.springframework.org/schema/aop
+	http://www.springframework.org/schema/aop/spring-aop-4.1.xsd">
+
+	<!-- Base Components -->
+	<context:annotation-config />
 	<context:component-scan base-package="com.trunkshell.voj" />
 
+	<!-- Enable @Controller annotation support -->
+	<mvc:annotation-driven />
+	<mvc:resources mapping="/assets/**" location="/assets/" />
+	<mvc:resources mapping="/druid/**" location="/WEB-INF/support/http/resources" />
+	
+	<!-- Enable AspectJ style of Spring AOP -->
+	<aop:aspectj-autoproxy />
+
 	<!-- Map simple view name such as "test" into /WEB-INF/test.jsp -->
-	<bean
-		class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+	<bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
 		<property name="prefix">
 			<value>/WEB-INF/views/</value>
 		</property>
@@ -29,37 +40,33 @@
 	<!-- JDBC Data Source. It is assumed you have MySQL running on localhost 
 		port 3306 with username root and blank password. Change below if it's not 
 		the case -->
-	<bean id="oesDataSource" class="com.alibaba.druid.pool.DruidDataSource"
+	<bean id="dataSource" 
+		class="com.alibaba.druid.pool.DruidDataSource"
 		init-method="init" destroy-method="close">
 		<property name="driverClassName" value="com.mysql.jdbc.Driver" />
-		<property name="url" value="jdbc:mysql://127.0.0.1:3306/voj?characterEncoding=UTF-8" />
+		<property name="url" value="jdbc:mysql://127.0.0.1:3306/test?characterEncoding=UTF-8" />
 		<property name="username" value="root" />
 		<property name="password" value="" />
+		<property name="initialSize" value="0" />
+		<property name="maxActive" value="5" />
+		<property name="minIdle" value="3" />
+		<property name="maxIdle" value="10" />
+		<property name="maxWait" value="30000" />
+		<property name="timeBetweenEvictionRunsMillis" value="60000" />
+		<property name="minEvictableIdleTimeMillis" value="25200000" />
+		<property name="removeAbandoned" value="true" />
+		<property name="removeAbandonedTimeout" value="1800" />
 		<property name="validationQuery" value="SELECT 1" />
 	</bean>
-
-	<!-- Hibernate Session Factory -->
-	<bean id="oesSessionFactory"
-		class="org.springframework.orm.hibernate4.LocalSessionFactoryBean">
-		<property name="dataSource" ref="oesDataSource" />
-		<property name="packagesToScan">
-			<array>
-				<value>com.trunkshell.voj.model</value>
-			</array>
-		</property>
-		<property name="hibernateProperties">
-			<value>
-				hibernate.dialect=org.hibernate.dialect.MySQLDialect
-			</value>
-		</property>
+	<bean id="sessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+		<property name="dataSource" ref="dataSource" />
 	</bean>
-
-	<!-- Hibernate Transaction Manager -->
+	<bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+		<property name="basePackage" value="com.trunkshell.voj.mapper" />
+	</bean>
 	<bean id="transactionManager"
-		class="org.springframework.orm.hibernate4.HibernateTransactionManager">
-		<property name="sessionFactory" ref="oesSessionFactory" />
+		  class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref="dataSource" />
 	</bean>
-
-	<!-- Activates annotation based transaction management -->
-	<tx:annotation-driven transaction-manager="transactionManager" />
+	<tx:annotation-driven transaction-manager="transactionManager"/>
 </beans>
