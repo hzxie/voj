@@ -73,7 +73,7 @@ public interface UserMapper {
 	 * 更新用户对象.
 	 * @param user - 待更新信息的用户对象
 	 */
-	@Update("UPDATE voj_users SET username = #{username}, password = #{password}, email = {email}, user_group_id = #{userGroup.userGroupId}, prefer_language_id = #{preferLanguage.languageId} WHERE uid = #{uid}")
+	@Update("UPDATE voj_users SET username = #{username}, password = #{password}, email = #{email}, user_group_id = #{userGroup.userGroupId}, prefer_language_id = #{preferLanguage.languageId} WHERE uid = #{uid}")
 	@Options(flushCache = true)
 	public void updateUser(User user);
 	
