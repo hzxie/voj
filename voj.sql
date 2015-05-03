@@ -3,7 +3,7 @@
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: Jan 04, 2015 at 10:24 上午
+-- Generation Time: May 03, 2015 at 01:22 PM
 -- Server version: 5.6.21
 -- PHP Version: 5.6.3
 
@@ -277,7 +277,7 @@ CREATE TABLE IF NOT EXISTS `voj_users` (
   `email` varchar(64) NOT NULL,
   `user_group_id` int(4) NOT NULL,
   `prefer_language_id` int(4) NOT NULL
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=1000 DEFAULT CHARSET=utf8;
 
 --
 -- Dumping data for table `voj_users`
@@ -285,7 +285,8 @@ CREATE TABLE IF NOT EXISTS `voj_users` (
 
 INSERT INTO `voj_users` (`uid`, `username`, `password`, `email`, `user_group_id`, `prefer_language_id`) VALUES
 (1, 'zjhzxhz', '785ee107c11dfe36de668b1ae7baacbb', 'zjhzxhz@gmail.com', 3, 2),
-(2, 'voj@tester', '785ee107c11dfe36de668b1ae7baacbb', 'support@zjhzxhz.com', 3, 2);
+(2, 'voj@tester', '785ee107c11dfe36de668b1ae7baacbb', 'support@zjhzxhz.com', 1, 2),
+(3, 'another-user', '785ee107c11dfe36de668b1ae7baacbb', 'voj@zjhzxhz.com', 1, 2);
 
 -- --------------------------------------------------------
 
@@ -455,7 +456,7 @@ MODIFY `tag_id` bigint(20) NOT NULL AUTO_INCREMENT;
 -- AUTO_INCREMENT for table `voj_users`
 --
 ALTER TABLE `voj_users`
-MODIFY `uid` bigint(20) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=3;
+MODIFY `uid` bigint(20) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=1000;
 --
 -- AUTO_INCREMENT for table `voj_user_groups`
 --

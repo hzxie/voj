@@ -2,6 +2,7 @@ package com.trunkshell.voj.mapper;
 
 import org.apache.ibatis.annotations.CacheNamespace;
 import org.apache.ibatis.annotations.Options;
+import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Result;
 import org.apache.ibatis.annotations.Results;
 import org.apache.ibatis.annotations.Select;
@@ -26,7 +27,7 @@ public interface UserGroupMapper {
 		 @Result(property = "userGroupSlug", column = "user_group_slug"),
 		 @Result(property = "userGroupName", column = "user_group_name")
 	})
-	public UserGroup getUserGroupUsingId(int userGroupId);
+	public UserGroup getUserGroupUsingId(@Param("userGroupId") int userGroupId);
 	
 	/**
 	 * 通过用户组的唯一英文缩写获取用户组对象.
@@ -40,5 +41,5 @@ public interface UserGroupMapper {
 		 @Result(property = "userGroupSlug", column = "user_group_slug"),
 		 @Result(property = "userGroupName", column = "user_group_name")
 	})
-	public UserGroup getUserGroupUsingSlug(String userGroupSlug);
+	public UserGroup getUserGroupUsingSlug(@Param("userGroupSlug") String userGroupSlug);
 }

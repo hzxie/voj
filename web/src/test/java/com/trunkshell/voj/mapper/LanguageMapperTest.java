@@ -127,7 +127,13 @@ public class LanguageMapperTest {
 	 */
 	@Test
 	public void testDeleteLanguageExists() {
+		Language language = languageMapper.getLanguageUsingId(6);
+		Assert.assertNotNull(language);
+		
 		languageMapper.deleteLanguage(6);
+		
+		language = languageMapper.getLanguageUsingId(6);
+		Assert.assertNull(language);
 	}
 	
 	/**
@@ -137,6 +143,9 @@ public class LanguageMapperTest {
 	 */
 	@Test
 	public void testDeleteLanguageNotExists() {
+		Language language = languageMapper.getLanguageUsingId(6);
+		Assert.assertNull(language);
+		
 		languageMapper.deleteLanguage(0);
 	}
 	
