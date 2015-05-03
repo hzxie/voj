@@ -16,14 +16,23 @@ public class Language implements Serializable {
 	
 	/**
 	 * 编程语言的构造函数.
+	 * @param languageSlug - 编程语言的英文缩写
+	 * @param languageName - 编程语言的名称
+	 */
+	public Language(String languageSlug, String languageName) {
+		this.languageSlug = languageSlug;
+		this.languageName = languageName;
+	}
+	
+	/**
+	 * 编程语言的构造函数.
 	 * @param languageId - 编程语言的唯一标识符
 	 * @param languageSlug - 编程语言的英文缩写
 	 * @param languageName - 编程语言的名称
 	 */
 	public Language(int languageId, String languageSlug, String languageName) {
+		this(languageSlug, languageName);
 		this.languageId = languageId;
-		this.languageSlug = languageSlug;
-		this.languageName = languageName;
 	}
 	
 	/**
