@@ -1,16 +1,16 @@
 language: java
 jdk:
   - oraclejdk8
-  - openjdk7
   - oraclejdk7
+  - openjdk7
 
 services: mysql
 
 before_script:
-  - mysql -e 'CREATE DATABASE voj;'
-  - mysql voj < voj.sql
+  - mysql -e 'CREATE DATABASE test;'
+  - mysql test < voj.sql
 
 script: mvn test -f web/pom.xml
 
 after_script:
-  - mysql -e 'DROP DATABASE voj;'
+  - mysql -e 'DROP DATABASE test;'
