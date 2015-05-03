@@ -4,6 +4,7 @@ import org.apache.ibatis.annotations.CacheNamespace;
 import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Options;
+import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Result;
 import org.apache.ibatis.annotations.Results;
 import org.apache.ibatis.annotations.Select;
@@ -29,7 +30,7 @@ public interface LanguageMapper {
 		 @Result(property = "languageSlug", column = "language_slug"),
 		 @Result(property = "languageName", column = "language_name")
 	})
-	public Language getLanguageUsingId(int languageId);
+	public Language getLanguageUsingId(@Param("languageId") int languageId);
 	
 	/**
 	 * 通过编程语言的唯一英文缩写获取编程语言对象.
@@ -43,7 +44,7 @@ public interface LanguageMapper {
 		 @Result(property = "languageSlug", column = "language_slug"),
 		 @Result(property = "languageName", column = "language_name")
 	})
-	public Language getLanguageUsingSlug(String languageSlug);
+	public Language getLanguageUsingSlug(@Param("languageSlug") String languageSlug);
 	
 	/**
 	 * 添加编程语言对象.
