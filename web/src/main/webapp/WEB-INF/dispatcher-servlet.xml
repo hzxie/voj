@@ -72,17 +72,17 @@
 		<property name="removeAbandonedTimeout" value="${jdbc.removeAbandonedTimeout}" />
 		<property name="validationQuery" value="SELECT 1" />
 	</bean>
-    <bean id="sessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
-        <property name="dataSource" ref="dataSource" />
-    </bean>
-    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
-        <property name="basePackage" value="com.trunkshell.voj.mapper" />
-    </bean>
-    <bean id="transactionManager"
-          class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
-        <property name="dataSource" ref="dataSource" />
-    </bean>
-    <tx:annotation-driven transaction-manager="transactionManager"/>
+	<bean id="sessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+		<property name="dataSource" ref="dataSource" />
+	</bean>
+	<bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+		<property name="basePackage" value="com.trunkshell.voj.mapper" />
+	</bean>
+	<bean id="transactionManager"
+		  class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref="dataSource" />
+	</bean>
+	<tx:annotation-driven transaction-manager="transactionManager"/>
 	
 	<!-- Internationalization and Localization -->
 	<bean id="messageSource"

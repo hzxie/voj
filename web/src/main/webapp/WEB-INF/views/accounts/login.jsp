@@ -47,8 +47,8 @@
             </c:if>
             <form id="login-form" method="post" onsubmit="onSubmit(); return false;">
                 <p class="row-fluid">
-                    <label for="username">Username</label>
-                    <input id="username" name="username" class="span12" type="text" maxlength="16" />
+                    <label for="username">Username or Email</label>
+                    <input id="username" name="username" class="span12" type="text" maxlength="32" />
                 </p>
                 <p class="row-fluid">
                     <label for="password">Password</label>
@@ -73,6 +73,7 @@
     <!-- JavaScript -->
     <!-- Placed at the end of the document so the pages load faster -->
     <script type="text/javascript" src="${cdnUrl}/js/site.js"></script>
+    <script type="text/javascript" src="${cdnUrl}/js/md5.min.js"></script>
     <script type="text/javascript">
         function onSubmit() {
             $('.alert-success').hide();
@@ -80,16 +81,19 @@
             $('button[type=submit]').html('Please wait...');
             
             var username = $('#username').val(),
-                password = $('#password').val();
+                password   = md5($('#password').val()),
+                rememberMe = $('input#remember-me').is(':checked');
             
-            return doLoginAction(username, password);
+            $('#password').val(password);
+            return doLoginAction(username, password, rememberMe);
         };
     </script>
     <script type="text/javascript">
-        function doLoginAction(username, password) {
+        function doLoginAction(username, password, rememberMe) {
             var postData = {
                 'username': username,
-                'password': password
+                'password': password,
+                'rememberMe': rememberMe
             };
             
             $.ajax({
