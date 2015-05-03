@@ -60,8 +60,8 @@ public class UserGroupMapperTest {
 	}
 	
 	/**
-	 * 测试用例: 测试getUserGroupUsingId(int)方法
-	 * 测试数据: 不存在的用户组唯一标识符
+	 * 测试用例: 测试getUserGroupUsingSlug(String)方法
+	 * 测试数据: 不存在的用户组唯一英文缩写
 	 * 预期结果: 返回空引用
 	 */
 	@Test
