@@ -83,6 +83,96 @@ div#footer {
 	text-align: center;
 }
 
+/* Style for Markdown Editor */
+div#wmd-button-bar {
+	background-color: transparent;
+	border: 1px solid #ccc;
+	border-bottom: 0;
+	clear: both;
+	margin: 10px 0 0 0;
+	padding: 0 12px;
+}
+
+div#wmd-button-bar ul {
+	margin: 0;
+	padding: 0.75rem 0;
+}
+
+div#wmd-button-bar li {
+	display: inline-block;
+	list-style: none;
+}
+
+div#wmd-button-bar li.wmd-spacer {
+	width: 1.5rem;
+}
+
+div#wmd-button-bar li.wmd-button > span {
+    background-image: url('../img/wmd-buttons.svg');
+    background-repeat: no-repeat;
+    background-position: 0px 0px;
+    width: 20px;
+    height: 20px;
+    display: inline-block;
+}
+
+div.wmd-panel textarea.wmd-input {
+	border-radius: 0;
+	height: 240px;
+	line-height: 1.2;
+	padding: 10px;
+	resize: none;
+	width: 100% !important;
+}
+
+div.wmd-preview {
+	border: 1px dotted #ccc;
+	clear: both;
+	margin-top: 10px;
+	padding: 10px;
+}
+
+div.wmd-prompt-background {
+	background-color: #000;
+	opacity: .5;
+}
+
+div.wmd-prompt-dialog {
+	background-color: #fff;
+}
+
+/* Style for Markdown Style */
+div.markdown h1 {
+	font-size: 16px;
+}
+
+div.markdown h2 {
+	font-size: 14px;
+}
+
+div.markdown h3 {
+	font-size: 12px;
+}
+
+div.markdown h4 {
+	font-size: 10px;
+}
+
+div.markdown h5 {
+	font-size: 8px;
+}
+
+div.markdown h6 {
+	font-size: 6px;
+}
+
+div.markdown code {
+	color: #333;
+	display: block;
+	word-wrap: break-word;
+	white-space: pre;
+}
+
 /* Smaller than standard 960 (devices and browsers) */
 /* Tablet Portrait size to standard 960 (devices and browsers) */
 @media only screen and (min-width: 768px) and (max-width: 959px) {
