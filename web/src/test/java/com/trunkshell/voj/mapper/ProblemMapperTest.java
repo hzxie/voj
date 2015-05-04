@@ -47,7 +47,7 @@ public class ProblemMapperTest {
 		Assert.assertEquals("A+B Problem", problemName);
 		
 		long acceptedSubmission = problem.getAcceptedSubmission();
-		Assert.assertEquals(2, acceptedSubmission);
+		Assert.assertEquals(1, acceptedSubmission);
 	}
 	
 	/**
@@ -79,7 +79,7 @@ public class ProblemMapperTest {
 		Assert.assertEquals("A+B Problem", problemName);
 		
 		long acceptedSubmission = firstProblem.getAcceptedSubmission();
-		Assert.assertEquals(2, acceptedSubmission);
+		Assert.assertEquals(1, acceptedSubmission);
 	}
 	
 	/**

@@ -52,7 +52,7 @@ public class LanguageMapperTest {
 	 */
 	@Test
 	public void testGetLanguageUsingSlugExists() {
-		Language language = languageMapper.getLanguageUsingSlug("text/x-c");
+		Language language = languageMapper.getLanguageUsingSlug("text/x-csrc");
 		Assert.assertNotNull(language);
 		
 		String languageName = language.getLanguageName();
