@@ -56,7 +56,7 @@ public class Problem implements Serializable {
 	 * @param sampleOutput - 试题样例输出
 	 * @param hint - 试题提示
 	 */
-	public Problem(int problemId, boolean isPublic, String problemName, int timeLimit, 
+	public Problem(long problemId, boolean isPublic, String problemName, int timeLimit, 
 					int memoryLimit, String description, String inputFormat, String outputFormat, 
 					String sampleInput, String sampleOutput, String hint) { 
 		this(isPublic, problemName, timeLimit, memoryLimit, description, inputFormat, outputFormat, sampleInput, sampleOutput, hint);
@@ -67,7 +67,7 @@ public class Problem implements Serializable {
 	 * 获取试题唯一标识符.
 	 * @return 试题唯一标识符
 	 */
-	public long getProblemID() {
+	public long getProblemId() {
 		return problemId;
 	}
 
@@ -75,7 +75,7 @@ public class Problem implements Serializable {
 	 * 设置试题唯一标识符.
 	 * @param problemId - 试题唯一标识符
 	 */
-	public void setProblemID(long problemId) {
+	public void setProblemId(long problemId) {
 		this.problemId = problemId;
 	}
 	
@@ -352,5 +352,5 @@ public class Problem implements Serializable {
 	/**
 	 * 唯一的序列化标识符.
 	 */
-	private static final long serialVersionUID = 4703482016721365340L;
+	private static final long serialVersionUID = 4703482016721365341L;
 }

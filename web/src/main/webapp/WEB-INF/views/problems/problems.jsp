@@ -1,6 +1,7 @@
 <%@ page language="java" contentType="text/html; charset=utf-8" pageEncoding="utf-8"%>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/fmt" prefix="fmt" %>
 <spring:eval expression="@propertyConfigurer.getProperty('cdn.url')" var="cdnUrl" />
 <!DOCTYPE html>
 <html lang="${language}">
@@ -62,7 +63,7 @@
                         <c:forEach var="problem" items="${problems}">
                         <tr>
                             <td class="flag-ac"><a href="#">AC</a></td>
-                            <td class="name"><a href="<c:url value="/p/${problem.getProblemID()}" />">P${problem.problemID} ${problem.problemName}</a></td>
+                            <td class="name"><a href="<c:url value="/p/${problem.problemId}" />">P${problem.problemId} ${problem.problemName}</a></td>
                             <td>${problem.totalSubmission}</td>
                             <td>
                             <c:choose>
