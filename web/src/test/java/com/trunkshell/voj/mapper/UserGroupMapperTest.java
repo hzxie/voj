@@ -55,7 +55,7 @@ public class UserGroupMapperTest {
 		UserGroup userGroup = userGroupMapper.getUserGroupUsingSlug("users");
 		Assert.assertNotNull(userGroup);
 		
-		int userGroupId = userGroup.getUserGroupID();
+		int userGroupId = userGroup.getUserGroupId();
 		Assert.assertEquals(1, userGroupId);
 	}
 	
