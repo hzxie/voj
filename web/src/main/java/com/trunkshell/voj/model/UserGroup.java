@@ -30,7 +30,7 @@ public class UserGroup implements Serializable {
 	 * 获取用户组唯一标识符.
 	 * @return 用户组唯一标识符
 	 */
-	public int getUserGroupID() {
+	public int getUserGroupId() {
 		return userGroupId;
 	}
 
@@ -38,7 +38,7 @@ public class UserGroup implements Serializable {
 	 * 设置用户组唯一标识符.
 	 * @param userGroupId - 用户组唯一标识符
 	 */
-	public void setUserGroupID(int userGroupId) {
+	public void setUserGroupId(int userGroupId) {
 		this.userGroupId = userGroupId;
 	}
 
