@@ -53,7 +53,9 @@
                 <table class="table table-striped">
                     <thead>
                         <tr>
+                        <c:if test="${isLogin}">
                             <th class="flag">Result</th>
+                        </c:if>
                             <th class="name">Name</th>
                             <th class="submission">Submission</th>
                             <th class="ac-rate">AC%</th>
@@ -62,7 +64,9 @@
                     <tbody>
                         <c:forEach var="problem" items="${problems}">
                         <tr>
+                        <c:if test="${isLogin}">
                             <td class="flag-ac"><a href="#">AC</a></td>
+                        </c:if>
                             <td class="name"><a href="<c:url value="/p/${problem.problemId}" />">P${problem.problemId} ${problem.problemName}</a></td>
                             <td>${problem.totalSubmission}</td>
                             <td>

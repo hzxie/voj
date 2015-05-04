@@ -44,7 +44,9 @@
             <div id="main-content" class="span9">
                 <div class="problem">
                     <div class="header">
+                    <c:if test="${isLogin}">
                         <span class="pull-right">Accepted</span>
+                    </c:if>
                         <span class="name">P${problem.problemId} ${problem.problemName}</span>
                     </div> <!-- .header -->
                     <div class="body">
@@ -84,7 +86,7 @@
                             <div class="row-fluid">
                                 <div class="span4">
                                     <select id="languages">
-                                        <option value="text/x-c">C</option>
+                                        <option value="text/x-csrc">C</option>
                                         <option value="text/x-c++src">C++</option>
                                         <option value="text/x-java">Java</option>
                                         <option value="text/x-pascal">Pascal</option>
@@ -106,7 +108,9 @@
                 <div id="actions" class="section">
                     <h5>Actions</h5>
                     <ul>
+                    <c:if test="${isLogin}">
                         <li><a id="submit-solution" href="javascript:void(0);">Submit Solution</a></li>
+                    </c:if>
                         <li><a href="#">View Solution</a></li>
                         <li><a href="#">View Submission</a></li>
                     </ul>
@@ -125,14 +129,8 @@
     <!-- Java Script -->
     <!-- Placed at the end of the document so the pages load faster -->
     <script type="text/javascript" src="${cdnUrl}/js/site.js"></script>
-    <script type="text/javascript" src="${cdnUrl}/js/markdown.min.js"></script>
-    <script type="text/javascript" src="${cdnUrl}/js/codemirror.min.js"></script>
-    <script type="text/javascript" src="${cdnUrl}/mode/clike.js"></script>
-    <script type="text/javascript" src="${cdnUrl}/mode/pascal.js"></script>
-    <script type="text/javascript" src="${cdnUrl}/mode/python.js"></script>
-    <script type="text/javascript" src="${cdnUrl}/mode/ruby.js"></script>
     <script type="text/javascript">
-        $(function() {
+        $.getScript('${cdnUrl}/js/markdown.min.js', function() {
             converter = Markdown.getSanitizingConverter();
             converter.hooks.chain("preBlockGamut", function (text, rbg) {
                 return text.replace(/^ {0,3}""" *\\n((?:.*?\\n)+?) {0,3}""" *$/gm, function (whole, inner) {
@@ -149,19 +147,31 @@
         });
     </script>
     <script type="text/javascript">
-        codeMirrorEditor = CodeMirror.fromTextArea(document.getElementById('codemirror-editor'), {
-            mode: $('select#languages').val(),
-            tabMode: 'indent',
-            theme: 'neat',
-            tabSize: 4,
-            indentUnit: 4,
-            lineNumbers: true,
-            lineWrapping: true
+        $.getScript('${cdnUrl}/js/codemirror.min.js', function() {
+           $.when(
+                $.getScript('${cdnUrl}/mode/clike.js'),
+                $.getScript('${cdnUrl}/mode/pascal.js'),
+                $.getScript('${cdnUrl}/mode/python.js'),
+                $.getScript('${cdnUrl}/mode/ruby.js'),
+                $.Deferred(function(deferred) {
+                    $(deferred.resolve);
+                })
+            ).done(function() {
+                window.codeMirrorEditor = CodeMirror.fromTextArea(document.getElementById('codemirror-editor'), {
+                    mode: $('select#languages').val(),
+                    tabMode: 'indent',
+                    theme: 'neat',
+                    tabSize: 4,
+                    indentUnit: 4,
+                    lineNumbers: true,
+                    lineWrapping: true
+                });
+            }); 
         });
     </script>
     <script type="text/javascript">
         $('select#languages').change(function() {
-            codeMirrorEditor.setOption('mode', $(this).val());
+            window.codeMirrorEditor.setOption('mode', $(this).val());
         });
     </script>
     <script type="text/javascript">
@@ -178,7 +188,7 @@
     </script>
     <script type="text/javascript">
         function onSubmit() {
-
+            var code = window.codeMirrorEditor.getValue();
         }
     </script>
 </body>

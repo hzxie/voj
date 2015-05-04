@@ -89,6 +89,12 @@ div#content div#main-content div.problem div.body form#code-editor.fade {
 	        transition-delay: 0s;
 }
 
+div#content div#main-content div.problem div.body form#code-editor textarea#codemirror-editor {
+	-webkit-box-sizing: border-box;
+       -moz-box-sizing: border-box;
+            box-sizing: border-box;
+}
+
 div#content div#main-content div.problem div.body form#code-editor select#languages {
 	margin-top: 5px;
 }
