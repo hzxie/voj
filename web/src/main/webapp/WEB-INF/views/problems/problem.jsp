@@ -149,10 +149,10 @@
     <script type="text/javascript">
         $.getScript('${cdnUrl}/js/codemirror.min.js', function() {
            $.when(
-                $.getScript('${cdnUrl}/mode/clike.js'),
-                $.getScript('${cdnUrl}/mode/pascal.js'),
-                $.getScript('${cdnUrl}/mode/python.js'),
-                $.getScript('${cdnUrl}/mode/ruby.js'),
+                $.getScript('${cdnUrl}/mode/clike.min.js'),
+                $.getScript('${cdnUrl}/mode/pascal.min.js'),
+                $.getScript('${cdnUrl}/mode/python.min.js'),
+                $.getScript('${cdnUrl}/mode/ruby.min.js'),
                 $.Deferred(function(deferred) {
                     $(deferred.resolve);
                 })
