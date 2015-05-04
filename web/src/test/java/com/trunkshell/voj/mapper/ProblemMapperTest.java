@@ -72,7 +72,7 @@ public class ProblemMapperTest {
 		Assert.assertEquals(2, problems.size());
 		
 		Problem firstProblem = problems.get(0);
-		long problemId = firstProblem.getProblemID();
+		long problemId = firstProblem.getProblemId();
 		Assert.assertEquals(1000, problemId);
 		
 		String problemName = firstProblem.getProblemName();
@@ -93,7 +93,7 @@ public class ProblemMapperTest {
 		Assert.assertEquals(1, problems.size());
 		
 		Problem firstProblem = problems.get(0);
-		long problemId = firstProblem.getProblemID();
+		long problemId = firstProblem.getProblemId();
 		Assert.assertEquals(1001, problemId);
 		
 		long acceptedSubmission = firstProblem.getAcceptedSubmission();
