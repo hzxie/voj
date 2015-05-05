@@ -30,18 +30,18 @@ public interface SubmissionMapper {
 	@Select("SELECT * FROM voj_submissions WHERE submission_id = #{submissionId}")
 	@Options(useCache = true)
 	@Results({
-		 @Result(property = "submissionId", column = "submission_id"),
-		 @Result(property = "problem", column = "problem_id", javaType=Problem.class, one = @One(select="com.trunkshell.voj.mapper.ProblemMapper.getProblem")),
-		 @Result(property = "user", column = "uid", javaType=User.class, one = @One(select="com.trunkshell.voj.mapper.UserMapper.getUserUsingUid")),
-		 @Result(property = "language", column = "language_id", javaType=Language.class, one = @One(select="com.trunkshell.voj.mapper.LanguageMapper.getLanguageUsingId")),
-		 @Result(property = "submitTime", column = "submission_submit_time"),
-		 @Result(property = "executeTime", column = "submission_execute_time"),
-		 @Result(property = "usedTime", column = "submission_used_time"),
-		 @Result(property = "usedMemory", column = "submission_used_memory"),
-		 @Result(property = "judgeResult", column = "submission_judge_result", javaType=JudgeResult.class, one = @One(select="com.trunkshell.voj.mapper.JudgeResultMapper.getJudgeResultUsingSlug")),
-		 @Result(property = "judgeScore", column = "submission_judge_score"),
-		 @Result(property = "judgeLog", column = "submission_judge_log"),
-		 @Result(property = "code", column = "submission_code"),
+		@Result(property = "submissionId", column = "submission_id"),
+		@Result(property = "problem", column = "problem_id", javaType=Problem.class, one = @One(select="com.trunkshell.voj.mapper.ProblemMapper.getProblem")),
+		@Result(property = "user", column = "uid", javaType=User.class, one = @One(select="com.trunkshell.voj.mapper.UserMapper.getUserUsingUid")),
+		@Result(property = "language", column = "language_id", javaType=Language.class, one = @One(select="com.trunkshell.voj.mapper.LanguageMapper.getLanguageUsingId")),
+		@Result(property = "submitTime", column = "submission_submit_time"),
+		@Result(property = "executeTime", column = "submission_execute_time"),
+		@Result(property = "usedTime", column = "submission_used_time"),
+		@Result(property = "usedMemory", column = "submission_used_memory"),
+		@Result(property = "judgeResult", column = "submission_judge_result", javaType=JudgeResult.class, one = @One(select="com.trunkshell.voj.mapper.JudgeResultMapper.getJudgeResultUsingSlug")),
+		@Result(property = "judgeScore", column = "submission_judge_score"),
+		@Result(property = "judgeLog", column = "submission_judge_log"),
+		@Result(property = "code", column = "submission_code"),
 	})
 	public Submission getSubmission(@Param("submissionId") long submissionId);
 	
@@ -76,9 +76,9 @@ public interface SubmissionMapper {
 	@Select("SELECT * FROM voj_submissions WHERE problem_id = #{problemId} AND uid = #{uid} ORDER BY submission_id DESC LIMIT #{limit}")
 	@Options(useCache = true)
 	@Results({
-		 @Result(property = "submissionId", column = "submission_id"),
-		 @Result(property = "submitTime", column = "submission_submit_time"),
-		 @Result(property = "judgeResult", column = "submission_judge_result", javaType=JudgeResult.class, one = @One(select="com.trunkshell.voj.mapper.JudgeResultMapper.getJudgeResultUsingSlug")),
+		@Result(property = "submissionId", column = "submission_id"),
+		@Result(property = "submitTime", column = "submission_submit_time"),
+		@Result(property = "judgeResult", column = "submission_judge_result", javaType=JudgeResult.class, one = @One(select="com.trunkshell.voj.mapper.JudgeResultMapper.getJudgeResultUsingSlug")),
 	})
 	public List<Submission> getSubmissionUsingProblemIdAndUserId(@Param("problemId") long problemId, @Param("uid") long uid, @Param("limit") int limit);
 	
@@ -89,11 +89,12 @@ public interface SubmissionMapper {
 	 * @param problemIdUpperBound - 试题ID区间的上界
 	 * @return 某个试题ID区间段内的最新的评测结果
 	 */
-	@Select("SELECT problem_id, submission_judge_result FROM ( SELECT * FROM voj_submissions ORDER BY submission_id DESC ) s WHERE uid = #{uid} AND problem_id >= #{problemIdLowerBound} AND problem_id <= #{problemIdUpperBound} GROUP BY problem_id")
+	@Select("SELECT submission_id, problem_id, submission_judge_result FROM ( SELECT * FROM voj_submissions ORDER BY submission_id DESC ) s WHERE uid = #{uid} AND problem_id >= #{problemIdLowerBound} AND problem_id <= #{problemIdUpperBound} GROUP BY problem_id")
 	@Options(useCache = true)
 	@Results({
-		 @Result(property = "problem", column = "problem_id", javaType=Problem.class, one = @One(select="com.trunkshell.voj.mapper.ProblemMapper.getProblem")),
-		 @Result(property = "judgeResult", column = "submission_judge_result", javaType=JudgeResult.class, one = @One(select="com.trunkshell.voj.mapper.JudgeResultMapper.getJudgeResultUsingSlug"))
+		@Result(property = "submissionId", column = "submission_id"),
+		@Result(property = "problem", column = "problem_id", javaType=Problem.class, one = @One(select="com.trunkshell.voj.mapper.ProblemMapper.getProblem")),
+		@Result(property = "judgeResult", column = "submission_judge_result", javaType=JudgeResult.class, one = @One(select="com.trunkshell.voj.mapper.JudgeResultMapper.getJudgeResultUsingSlug"))
 	})
 	public List<Submission> getLatestSubmissionOfProblems(@Param("uid") long uid, @Param("problemIdLowerBound") long problemIdLowerBound, @Param("problemIdUpperBound") long problemIdUpperBound);
 	
@@ -104,11 +105,12 @@ public interface SubmissionMapper {
 	 * @param problemIdUpperBound - 试题ID区间的上界
 	 * @return 某个试题ID区间段内的通过的评测结果
 	 */
-	@Select("SELECT problem_id, submission_judge_result FROM voj_submissions WHERE uid = #{uid} AND problem_id >= #{problemIdLowerBound} AND problem_id <= #{problemIdUpperBound} AND submission_judge_result = 'AC' GROUP BY problem_id")
+	@Select("SELECT submission_id, problem_id, submission_judge_result FROM voj_submissions WHERE uid = #{uid} AND problem_id >= #{problemIdLowerBound} AND problem_id <= #{problemIdUpperBound} AND submission_judge_result = 'AC' GROUP BY problem_id")
 	@Options(useCache = true)
 	@Results({
-		 @Result(property = "problem", column = "problem_id", javaType=Problem.class, one = @One(select="com.trunkshell.voj.mapper.ProblemMapper.getProblem")),
-		 @Result(property = "judgeResult", column = "submission_judge_result", javaType=JudgeResult.class, one = @One(select="com.trunkshell.voj.mapper.JudgeResultMapper.getJudgeResultUsingSlug"))
+		@Result(property = "submissionId", column = "submission_id"),
+		@Result(property = "problem", column = "problem_id", javaType=Problem.class, one = @One(select="com.trunkshell.voj.mapper.ProblemMapper.getProblem")),
+		@Result(property = "judgeResult", column = "submission_judge_result", javaType=JudgeResult.class, one = @One(select="com.trunkshell.voj.mapper.JudgeResultMapper.getJudgeResultUsingSlug"))
 	})
 	public List<Submission> getAcceptedSubmissionOfProblems(@Param("uid") long uid, @Param("problemIdLowerBound") long problemIdLowerBound, @Param("problemIdUpperBound") long problemIdUpperBound);
 	
