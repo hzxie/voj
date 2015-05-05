@@ -109,7 +109,7 @@ public interface SubmissionMapper {
 	 * @param problemIdUpperBound - 试题ID区间的上界
 	 * @return 某个试题ID区间段内的最新的评测结果
 	 */
-	@Select("SELECT submission_id, problem_id, submission_judge_result FROM ( SELECT * FROM voj_submissions ORDER BY submission_id DESC ) s WHERE uid = #{uid} AND problem_id >= #{problemIdLowerBound} AND problem_id < #{problemIdUpperBound} GROUP BY problem_id")
+	@Select("SELECT submission_id, s1.problem_id, submission_judge_result FROM voj_submissions  s1 INNER JOIN ( SELECT MAX(submission_id) AS max_submission_id, problem_id FROM voj_submissions WHERE uid = #{uid} AND problem_id >= #{problemIdLowerBound} AND problem_id < #{problemIdUpperBound} GROUP BY problem_id ) s2 ON s1.problem_id = s2.problem_id AND s1.submission_id = s2.max_submission_id")
 	@Options(useCache = true)
 	@Results({
 		@Result(property = "submissionId", column = "submission_id"),
