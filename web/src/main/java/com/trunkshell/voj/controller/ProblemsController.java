@@ -1,7 +1,6 @@
 package com.trunkshell.voj.controller;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpSession;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -33,7 +32,7 @@ public class ProblemsController {
 	@RequestMapping(value = "")
     public ModelAndView problemsView(
             @RequestParam(value="start", required = false, defaultValue = "1") int startIndex,
-            HttpServletRequest request, HttpSession session) {
+            HttpServletRequest request) {
 		if ( startIndex < START_INDEX_OF_PROBLEMS ) {
 			startIndex = START_INDEX_OF_PROBLEMS;
 		}
@@ -56,7 +55,7 @@ public class ProblemsController {
 	@RequestMapping(value = "/{problemId}")
     public ModelAndView problemView(
     		@PathVariable("problemId") int problemId,
-    		HttpServletRequest request, HttpSession session) {
+    		HttpServletRequest request) {
 		Problem problem = problemService.getProblem(problemId);
 		if ( problem == null || !problem.isPublic() ) {
 			throw new ResourceNotFoundException();

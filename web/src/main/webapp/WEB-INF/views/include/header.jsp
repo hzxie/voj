@@ -28,10 +28,10 @@
             <c:choose>
             <c:when test="${isLogin}">
                 <img src="${cdnUrl}/img/avatar.png" alt="avatar" class="img-circle" />
-                <h5>${user.getUsername()}</h5>
-                <p>${user.getEmail()}</p>
+                <h5>${user.username}</h5>
+                <p>${user.email}</p>
                 <p>Accepted/Submit: ${submissionStats.get("acceptedSubmission")}/${submissionStats.get("totalSubmission")}(${submissionStats.get("acRate")}%)</p>
-                <p>Language Preference: ${user.getPreferLanguage().getLanguageName()}</p>
+                <p>Language Preference: ${user.preferLanguage.languageName}</p>
                 <ul class="inline">
                     <li><a href="<c:url value="/accounts/dashboard" />">Dashboard</a></li>
                     <li><a href="<c:url value="/accounts/login?logout=true" />">Sign out</a></li>
