@@ -58,22 +58,13 @@ public interface ProblemMapper {
      * @param limit - 需要获取的试题的数量
      * @return 某个范围内的所有试题
      */
-	@Select("SELECT " + ALL_FIELDS + " FROM voj_problems p WHERE problem_id >= #{problemId} LIMIT #{limit}")
+	@Select("SELECT " + SUMMERY_FIELDS + " FROM voj_problems p WHERE problem_id >= #{problemId} AND problem_is_public = true LIMIT #{limit}")
 	@Options(useCache = true)
 	@Results({
 		 @Result(property = "problemId", column = "problem_id"),
-		 @Result(property = "isPublic", column = "problem_is_public"),
 		 @Result(property = "problemName", column = "problem_name"),
 		 @Result(property = "totalSubmission", column = "total_submission"),
-		 @Result(property = "acceptedSubmission", column = "accepted_submission"),
-		 @Result(property = "timeLimit", column = "problem_time_limit"),
-		 @Result(property = "memoryLimit", column = "problem_memory_limit"),
-		 @Result(property = "description", column = "problem_description"),
-		 @Result(property = "inputFormat", column = "problem_input_format"),
-		 @Result(property = "outputFormat", column = "problem_output_format"),
-		 @Result(property = "sampleInput", column = "problem_sample_input"),
-		 @Result(property = "sampleOutput", column = "problem_sample_output"),
-		 @Result(property = "hint", column = "problem_hint")
+		 @Result(property = "acceptedSubmission", column = "accepted_submission")
 	})
 	public List<Problem> getProblems(@Param("problemId") long offset, @Param("limit") int limit);
 	
@@ -108,7 +99,7 @@ public interface ProblemMapper {
      */
 	@Delete("DELETE FROM voj_problems WHERE problem_id = #{problemId}")
 	@Options(flushCache = true)
-	public boolean deleteProblem(int problemId);
+	public boolean deleteProblem(long problemId);
 
 	/**
 	 * 获取试题提交总次数的SQL子查询语句. 
@@ -121,7 +112,12 @@ public interface ProblemMapper {
 	final String ACCEPTED_SUBMISSION_FIELD = "(SELECT COUNT(DISTINCT(uid)) FROM voj_submissions s WHERE s.problem_id = p.problem_id AND s.submission_judge_result = 'AC') AS accepted_submission";
 	
 	/**
-	 * 试题必需属性的SQL表达式.
+	 * 试题所有属性的SQL表达式.
 	 */
 	final String ALL_FIELDS = "*, " + TOTAL_SUBMISSION_FIELD + ", " + ACCEPTED_SUBMISSION_FIELD;
+	
+	/**
+	 * 试题必需属性的SQL表达式.
+	 */
+	final String SUMMERY_FIELDS = "problem_id, problem_name, " + TOTAL_SUBMISSION_FIELD + ", " + ACCEPTED_SUBMISSION_FIELD;
 }
