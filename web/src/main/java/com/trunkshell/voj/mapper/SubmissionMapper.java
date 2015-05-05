@@ -89,7 +89,7 @@ public interface SubmissionMapper {
 	 * @param problemIdUpperBound - 试题ID区间的上界
 	 * @return 某个试题ID区间段内的最新的评测结果
 	 */
-	@Select("SELECT submission_id, problem_id, submission_judge_result FROM ( SELECT * FROM voj_submissions ORDER BY submission_id DESC ) s WHERE uid = #{uid} AND problem_id >= #{problemIdLowerBound} AND problem_id <= #{problemIdUpperBound} GROUP BY problem_id")
+	@Select("SELECT submission_id, problem_id, submission_judge_result FROM ( SELECT * FROM voj_submissions ORDER BY submission_id DESC ) s WHERE uid = #{uid} AND problem_id >= #{problemIdLowerBound} AND problem_id < #{problemIdUpperBound} GROUP BY problem_id")
 	@Options(useCache = true)
 	@Results({
 		@Result(property = "submissionId", column = "submission_id"),
@@ -105,7 +105,7 @@ public interface SubmissionMapper {
 	 * @param problemIdUpperBound - 试题ID区间的上界
 	 * @return 某个试题ID区间段内的通过的评测结果
 	 */
-	@Select("SELECT submission_id, problem_id, submission_judge_result FROM voj_submissions WHERE uid = #{uid} AND problem_id >= #{problemIdLowerBound} AND problem_id <= #{problemIdUpperBound} AND submission_judge_result = 'AC' GROUP BY problem_id")
+	@Select("SELECT submission_id, problem_id, submission_judge_result FROM voj_submissions WHERE uid = #{uid} AND problem_id >= #{problemIdLowerBound} AND problem_id < #{problemIdUpperBound} AND submission_judge_result = 'AC' GROUP BY problem_id")
 	@Options(useCache = true)
 	@Results({
 		@Result(property = "submissionId", column = "submission_id"),

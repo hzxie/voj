@@ -108,3 +108,20 @@ div#content div#sidebar div.section ul {
 	list-style: none;
 	margin-left: 0;
 }
+
+div#content div#sidebar div#submission.section span.flag-AC {
+	color: #f00;
+}
+
+div#content div#sidebar div#submission.section span.flag-PE,
+div#content div#sidebar div#submission.section span.flag-WA,
+div#content div#sidebar div#submission.section span.flag-TLE,
+div#content div#sidebar div#submission.section span.flag-MLE,
+div#content div#sidebar div#submission.section span.flag-OLE {
+	color: #4d7aff;
+}
+
+div#content div#sidebar div#submission.section span.flag-RE,
+div#content div#sidebar div#submission.section span.flag-CE {
+	color: #49a932;
+}

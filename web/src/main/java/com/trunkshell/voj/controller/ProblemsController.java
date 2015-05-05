@@ -1,5 +1,6 @@
 package com.trunkshell.voj.controller;
 
+import java.util.List;
 import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
@@ -89,7 +90,15 @@ public class ProblemsController {
 		ModelAndView view = new ModelAndView("problems/problem");
         view.addObject("problem", problem);
         
-        // view.addObject("submission", submissionService.getSubmissionUsingProblemIDAndUserID(problemID, userID, limit));
+        HttpSession session = request.getSession();
+        if ( isLoggedIn(session) ) {
+        	long userId = (Long)session.getAttribute("uid");
+        	Map<Long, Submission> submissionOfProblems = submissionService.getSubmissionOfProblems(userId, problemId, problemId + 1);
+        	List<Submission> submissions = submissionService.getSubmissionUsingProblemIdAndUserId(problemId, userId, NUMBER_OF_SUBMISSIONS_PER_PROBLEM);
+        	
+        	view.addObject("latestSubmission", submissionOfProblems);
+        	view.addObject("submissions", submissions);
+        }
         return view;
     }
 	
@@ -102,6 +111,11 @@ public class ProblemsController {
 	 * 每次请求所加载试题数量.
 	 */
 	private static final int NUMBER_OF_PROBLEMS_PER_PAGE = 100;
+	
+	/**
+	 * 每个试题加载最近提交的数量.
+	 */
+	private static final int NUMBER_OF_SUBMISSIONS_PER_PROBLEM = 10;
 	
 	/**
      * 自动注入的ProblemService对象.

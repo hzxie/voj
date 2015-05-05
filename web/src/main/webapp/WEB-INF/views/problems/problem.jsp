@@ -1,6 +1,7 @@
 <%@ page language="java" contentType="text/html; charset=utf-8" pageEncoding="utf-8"%>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/fmt" prefix="fmt" %>
 <spring:eval expression="@propertyConfigurer.getProperty('cdn.url')" var="cdnUrl" />
 <!DOCTYPE html>
 <html lang="${language}">
@@ -45,7 +46,9 @@
                 <div class="problem">
                     <div class="header">
                     <c:if test="${isLogin}">
-                        <span class="pull-right">Accepted</span>
+                        <c:if test="${latestSubmission[problem.problemId] != null}">
+                            <span class="pull-right">${latestSubmission[problem.problemId].judgeResult.judgeResultName}</span>
+                        </c:if>
                     </c:if>
                         <span class="name">P${problem.problemId} ${problem.problemName}</span>
                     </div> <!-- .header -->
@@ -117,6 +120,19 @@
                 </div> <!-- #actions -->
                 <div id="submission" class="section">
                     <h5>Submission</h5>
+                    <ul>
+                    <fmt:setLocale value="${language}" />
+                    <c:forEach var="submission" items="${submissions}">
+                        <li>
+                            <span class="pull-right flag-${submission.judgeResult.judgeResultSlug}">
+                                ${submission.judgeResult.judgeResultSlug}
+                            </span>
+                            <a href="<c:url value="/submission/${submission.submissionId}" />">
+                                <fmt:formatDate value="${submission.submitTime}" type="both" dateStyle="short" timeStyle="short"/>
+                            </a>
+                        </li>
+                    </c:forEach>
+                    </ul>
                 </div> <!-- submission -->
                 <div id="discussion" class="section">
                     <h5>Discussion</h5>
@@ -167,6 +183,12 @@
                     lineWrapping: true
                 });
             }); 
+        });
+    </script>
+    <script type="text/javascript">
+        $(function() {
+            var preferLanguage = '${user.preferLanguage.languageSlug}';
+            $('select#languages').val(preferLanguage);
         });
     </script>
     <script type="text/javascript">
