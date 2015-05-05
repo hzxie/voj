@@ -55,22 +55,20 @@ public class SubmissionService {
 	 * @param problemIdUpperBound - 试题ID区间的上界
 	 * @return 某个试题ID区间段内的通过的评测结果
 	 */
-	public Map<Long, String> getSubmissionOfProblems(long userId, long problemIdLowerBound, long problemIdUpperBound) {
+	public Map<Long, Submission> getSubmissionOfProblems(long userId, long problemIdLowerBound, long problemIdUpperBound) {
 		int hashMapSize = (int)(problemIdUpperBound - problemIdLowerBound + 1);
-		Map<Long, String> submissionOfProblems = new HashMap<Long, String>(hashMapSize, 1);
+		Map<Long, Submission> submissionOfProblems = new HashMap<Long, Submission>(hashMapSize, 1);
 		List<Submission> latestSubmission = submissionMapper.getLatestSubmissionOfProblems(userId, problemIdLowerBound, problemIdUpperBound);
 		List<Submission> acceptedSubmission = submissionMapper.getAcceptedSubmissionOfProblems(userId, problemIdLowerBound, problemIdUpperBound);
 		
 		for ( Submission s : latestSubmission ) {
 			long problemId = s.getProblem().getProblemId();
-			String judgeResultSlug = s.getJudgeResult().getJudgeResultSlug();
-			submissionOfProblems.put(problemId, judgeResultSlug);
+			submissionOfProblems.put(problemId, s);
 		}
 		// 使用已通过的评测记录更新部分值
 		for ( Submission s : acceptedSubmission ) {
 			long problemId = s.getProblem().getProblemId();
-			String judgeResultSlug = s.getJudgeResult().getJudgeResultSlug();
-			submissionOfProblems.put(problemId, judgeResultSlug);
+			submissionOfProblems.put(problemId, s);
 		}
 		
 		return submissionOfProblems;

@@ -1,6 +1,9 @@
 package com.trunkshell.voj.controller;
 
+import java.util.Map;
+
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -13,7 +16,9 @@ import org.springframework.web.servlet.ModelAndView;
 
 import com.trunkshell.voj.exception.ResourceNotFoundException;
 import com.trunkshell.voj.model.Problem;
+import com.trunkshell.voj.model.Submission;
 import com.trunkshell.voj.service.ProblemService;
+import com.trunkshell.voj.service.SubmissionService;
 
 /**
  * 处理用户的查看试题/提交评测等请求.
@@ -42,8 +47,28 @@ public class ProblemsController {
         	.addObject("startIndexOfProblems", START_INDEX_OF_PROBLEMS)
         	.addObject("numberOfProblemsPerPage", NUMBER_OF_PROBLEMS_PER_PAGE)
         	.addObject("totalProblems", problemService.getNumberOfProblems());
+        
+        HttpSession session = request.getSession();
+        if ( isLoggedIn(session) ) {
+        	long userId = (Long)session.getAttribute("uid");
+        	Map<Long, Submission> submissionOfProblems = submissionService.getSubmissionOfProblems(userId, startIndex, startIndex + NUMBER_OF_PROBLEMS_PER_PAGE);
+        	view.addObject("submissionOfProblems", submissionOfProblems);
+        }
         return view;
     }
+	
+	/**
+	 * 检查用户是否已经登录.
+	 * @param session - HttpSession 对象
+	 * @return 用户是否已经登录
+	 */
+	private boolean isLoggedIn(HttpSession session) {
+		Boolean isLoggedIn = (Boolean)session.getAttribute("isLoggedIn");
+		if ( isLoggedIn == null || !isLoggedIn.booleanValue() ) {
+			return false;
+		}
+		return true;
+	}
 	
 	/**
 	 * 加载试题的详细信息.
@@ -79,10 +104,16 @@ public class ProblemsController {
 	private static final int NUMBER_OF_PROBLEMS_PER_PAGE = 100;
 	
 	/**
-     * 自动注入的UserService对象.
+     * 自动注入的ProblemService对象.
      */
     @Autowired
-    ProblemService problemService;
+    private ProblemService problemService;
+    
+    /**
+     * 自动注入的SubmissionService对象.
+     */
+    @Autowired
+    private SubmissionService submissionService;
     
     /**
      * 日志记录器.

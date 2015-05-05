@@ -65,7 +65,16 @@
                         <c:forEach var="problem" items="${problems}">
                         <tr>
                         <c:if test="${isLogin}">
-                            <td class="flag-ac"><a href="#">AC</a></td>
+                            <c:choose>
+                                <c:when test="${submissionOfProblems[problem.problemId] == null}"><td></td></c:when>
+                                <c:otherwise>
+                                    <td class="flag-${submissionOfProblems[problem.problemId].judgeResult.judgeResultSlug}">
+                                        <a href="<c:url value="/submission/${submissionOfProblems[problem.problemId].submissionId}" />">
+                                            ${submissionOfProblems[problem.problemId].judgeResult.judgeResultSlug}
+                                        </a>
+                                    </td>
+                                </c:otherwise>
+                            </c:choose>
                         </c:if>
                             <td class="name"><a href="<c:url value="/p/${problem.problemId}" />">P${problem.problemId} ${problem.problemName}</a></td>
                             <td>${problem.totalSubmission}</td>
