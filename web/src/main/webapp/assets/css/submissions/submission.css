@@ -58,6 +58,18 @@ div#content div#main-content div.submission div.body div.section table tr > td:f
 	font-weight: bold;
 }
 
+div#content div#main-content div.submission pre {
+	margin-top: 20px;
+}
+
+div#content div#main-content div.submission pre,
+div#content div#main-content div.submission code {
+	background-color: #fff;
+	border: none;
+	font-size: 14px;
+	padding: 0;
+}
+
 div#content div#sidebar div.section {
 	margin-bottom: 10px;
 	padding-bottom: 10px;

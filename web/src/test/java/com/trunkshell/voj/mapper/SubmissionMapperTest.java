@@ -50,13 +50,13 @@ public class SubmissionMapperTest {
 	}
 	
 	/**
-	 * 测试用例: 测试getSubmissions(long, int)方法
+	 * 测试用例: 测试getSubmissionsUsingOffset(long, int)方法
 	 * 测试数据: 获取ID从1010起始的10次提交(ID From 1010 to 1000)
 	 * 预期结果: 返回提交列表(共4次提交)
 	 */
 	@Test
 	public void testGetSubmissionsFrom1010WithLimit10() {
-		List<Submission> submissions = submissionMapper.getSubmissions(1010, 10);
+		List<Submission> submissions = submissionMapper.getSubmissionsUsingOffset(1010, 10);
 		Assert.assertEquals(4, submissions.size());
 		
 		Submission firstSubmission = submissions.get(0);
@@ -65,13 +65,13 @@ public class SubmissionMapperTest {
 	}
 	
 	/**
-	 * 测试用例: 测试getSubmissions(long, int)方法
+	 * 测试用例: 测试getSubmissionsUsingOffset(long, int)方法
 	 * 测试数据: 获取ID从1003起始的2次提交
 	 * 预期结果: 返回提交列表(共2次提交)
 	 */
 	@Test
 	public void testGetSubmissionsFrom1003WithLimit2() {
-		List<Submission> submissions = submissionMapper.getSubmissions(1003, 2);
+		List<Submission> submissions = submissionMapper.getSubmissionsUsingOffset(1003, 2);
 		Assert.assertEquals(2, submissions.size());
 		
 		Submission firstSubmission = submissions.get(0);
@@ -80,13 +80,13 @@ public class SubmissionMapperTest {
 	}
 	
 	/**
-	 * 测试用例: 测试getSubmissions(long, int)方法
+	 * 测试用例: 测试getSubmissionsUsingOffset(long, int)方法
 	 * 测试数据: 获取ID从100起始的10次提交(ID From 100 to 90)
 	 * 预期结果: 返回空提交列表
 	 */
 	@Test
 	public void testGetSubmissionsFrom100WithLimit10() {
-		List<Submission> submissions = submissionMapper.getSubmissions(100, 10);
+		List<Submission> submissions = submissionMapper.getSubmissionsUsingOffset(100, 10);
 		Assert.assertEquals(0, submissions.size());
 	}
 	

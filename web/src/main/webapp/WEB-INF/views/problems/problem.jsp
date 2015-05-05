@@ -1,7 +1,8 @@
 <%@ page language="java" contentType="text/html; charset=utf-8" pageEncoding="utf-8"%>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
-<%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/fmt" prefix="fmt" %>
+<fmt:setLocale value="${language}" />
+<%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <spring:eval expression="@propertyConfigurer.getProperty('cdn.url')" var="cdnUrl" />
 <!DOCTYPE html>
 <html lang="${language}">
@@ -21,6 +22,7 @@
     <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/codemirror.min.css" />
     <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/style.css" />
     <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/problems/problem.css" />
+    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/highlight.min.css" />
     <!-- JavaScript -->
     <script type="text/javascript" src="${cdnUrl}/js/jquery-1.11.1.min.js"></script>
     <script type="text/javascript" src="${cdnUrl}/js/bootstrap.min.js"></script>
@@ -121,7 +123,6 @@
                 <div id="submission" class="section">
                     <h5>Submission</h5>
                     <ul>
-                    <fmt:setLocale value="${language}" />
                     <c:forEach var="submission" items="${submissions}">
                         <li>
                             <span class="pull-right flag-${submission.judgeResult.judgeResultSlug}">
@@ -183,6 +184,14 @@
                     lineWrapping: true
                 });
             }); 
+        });
+    </script>
+    <script type="text/javascript">
+        $.getScript('${cdnUrl}/js/highlight.min.js', function() {
+            $('code').each(function(i, block) {
+                console.log(block);
+                hljs.highlightBlock(block);
+            });
         });
     </script>
     <script type="text/javascript">

@@ -29,12 +29,21 @@ public class SubmissionService {
 	
 	/**
 	 * 获取评测记录列表.
+	 * @param limit - 每次加载评测记录的数量
+	 * @return 试题列表(List<Submission>对象)
+	 */
+	public List<Submission> getSubmissions(int limit) {
+		return submissionMapper.getSubmissions(limit);
+	}
+	
+	/**
+	 * 获取评测记录列表.
 	 * @param offset - 评测记录唯一标识符的起始序号
 	 * @param limit - 每次加载评测记录的数量
 	 * @return 试题列表(List<Submission>对象)
 	 */
 	public List<Submission> getSubmissions(long offset, int limit) {
-		return submissionMapper.getSubmissions(offset, limit);
+		return submissionMapper.getSubmissionsUsingOffset(offset, limit);
 	}
 	
 	/**

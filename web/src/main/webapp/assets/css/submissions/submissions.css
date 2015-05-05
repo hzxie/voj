@@ -41,20 +41,20 @@ div#content div#main-content div#submission table td {
 	vertical-align: middle;
 }
 
-div#content div#main-content div#submission table td.flag-ac > a {
+div#content div#main-content div#submission table td.flag-AC > a {
 	color: #f00;
 }
 
-div#content div#main-content div#submission table td.flag-pe > a,
-div#content div#main-content div#submission table td.flag-wa > a,
-div#content div#main-content div#submission table td.flag-tle > a,
-div#content div#main-content div#submission table td.flag-mle > a,
-div#content div#main-content div#submission table td.flag-ole > a {
+div#content div#main-content div#submission table td.flag-PE > a,
+div#content div#main-content div#submission table td.flag-WA > a,
+div#content div#main-content div#submission table td.flag-TLE > a,
+div#content div#main-content div#submission table td.flag-MLE > a,
+div#content div#main-content div#submission table td.flag-OLE > a {
 	color: #4d7aff;
 }
 
-div#content div#main-content div#submission table td.flag-re > a,
-div#content div#main-content div#submission table td.flag-ce > a {
+div#content div#main-content div#submission table td.flag-RE > a,
+div#content div#main-content div#submission table td.flag-CE > a {
 	color: #49a932;
 }
 
