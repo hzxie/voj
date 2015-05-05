@@ -240,7 +240,7 @@ CREATE TABLE IF NOT EXISTS `voj_submissions` (
   `submission_judge_score` int(4) DEFAULT NULL,
   `submission_judge_log` text,
   `submission_code` text NOT NULL
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=1004 DEFAULT CHARSET=utf8;
 
 --
 -- Dumping data for table `voj_submissions`
