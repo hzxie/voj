@@ -29,7 +29,7 @@ public class UserMapperTest {
 	 */
 	@Test
 	public void testGetUserUsingUidExists() {
-		User user = userMapper.getUserUsingUid(1);
+		User user = userMapper.getUserUsingUid(1000);
 		Assert.assertNotNull(user);
 		
 		String username = user.getUsername();
@@ -58,7 +58,7 @@ public class UserMapperTest {
 		Assert.assertNotNull(user);
 		
 		long uid = user.getUid();
-		Assert.assertEquals(1, uid);
+		Assert.assertEquals(1000, uid);
 	}
 	
 	/**
@@ -83,7 +83,7 @@ public class UserMapperTest {
 		Assert.assertNotNull(user);
 		
 		long uid = user.getUid();
-		Assert.assertEquals(1, uid);
+		Assert.assertEquals(1000, uid);
 	}
 	
 	/**
@@ -174,7 +174,7 @@ public class UserMapperTest {
 	 */
 	@Test
 	public void testUpdateUserNormal() {
-		User user = userMapper.getUserUsingUid(1);
+		User user = userMapper.getUserUsingUid(1000);
 		Assert.assertNotNull(user);
 		
 		user.setEmail("zjhzxhz@hit.edu.cn");
@@ -188,7 +188,7 @@ public class UserMapperTest {
 	 */
 	@Test(expected = org.springframework.dao.DuplicateKeyException.class)
 	public void testUpdateUserUsingExistingEmail() {
-		User user = userMapper.getUserUsingUid(1);
+		User user = userMapper.getUserUsingUid(1000);
 		Assert.assertNotNull(user);
 		
 		user.setEmail("support@zjhzxhz.com");
@@ -202,12 +202,12 @@ public class UserMapperTest {
 	 */
 	@Test
 	public void testDeleteUserExists() {
-		User user = userMapper.getUserUsingUid(1);
+		User user = userMapper.getUserUsingUid(1002);
 		Assert.assertNotNull(user);
 		
-		userMapper.deleteUser(3);
+		userMapper.deleteUser(1002);
 		
-		user = userMapper.getUserUsingUid(3);
+		user = userMapper.getUserUsingUid(1002);
 		Assert.assertNull(user);
 	}
 	
