@@ -99,6 +99,13 @@ div#content div#main-content div.problem div.body form#code-editor select#langua
 	margin-top: 5px;
 }
 
+div#content div#main-content div.problem code {
+	background-color: #fff;
+	border: none;
+	font-size: 14px;
+	padding: 0;
+}
+
 div#content div#sidebar div.section {
 	margin-bottom: 10px;
 	padding-bottom: 10px;
