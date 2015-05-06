@@ -105,11 +105,20 @@
                 </div> <!-- .submission -->
             </div> <!-- #main-content -->
             <div id="sidebar" class="span3">
-                <div id="profile" class="section">
+                <div id="submit-user" class="section">
                     <h5>User</h5>
+                    <img src="${cdnUrl}/img/avatar.jpg" alt="User Avatar" class="img-circle" />
+                    <p>
+                        Username: <a href="<c:url value="/accounts/user/${submission.user.uid}" />">${submission.user.username}</a>
+                    </p>
                 </div> <!-- #profile -->
                 <div id="problem" class="section">
-                    <h5>Problem</h5>
+                    <h5>Action</h5>
+                    <ul>
+                        <li><a href="<c:url value="/p/${submission.problem.problemId}" />">View Problem</a></li>
+                        <li><a href="<c:url value="/p/${submission.problem.problemId}/solution" />">View Solution</a></li>
+                        <li><a href="<c:url value="/submission?pid=${submission.problem.problemId}" />">View Submission</a></li>
+                    </ul>
                 </div> <!-- problem -->
             </div> <!-- #sidebar -->
         </div> <!-- .row-fluid -->
@@ -119,6 +128,7 @@
     <!-- Java Script -->
     <!-- Placed at the end of the document so the pages load faster -->
     <script type="text/javascript" src="${cdnUrl}/js/site.js"></script>
+    <script type="text/javascript" src="${cdnUrl}/js/md5.min.js"></script>
     <script type="text/javascript">
         $.getScript('${cdnUrl}/js/markdown.min.js', function() {
             converter = Markdown.getSanitizingConverter();
@@ -140,6 +150,33 @@
         $.getScript('${cdnUrl}/js/highlight.min.js', function() {
             $('pre code').each(function(i, block) {
                 hljs.highlightBlock(block);
+            });
+        });
+    </script>
+    <script type="text/javascript">
+        $(function() {
+            var imageObject       = $('img', '#submit-user'),
+                hashCode          = md5('${submission.user.email}'),
+            <c:choose>
+            <c:when test="${language == 'zh_CN'}">
+                gravatarSeriveUrl = 'http://gravatar.duoshuo.com/';
+            </c:when>
+            <c:otherwise>
+                gravatarSeriveUrl = 'https://www.gravatar.com/';
+            </c:otherwise>
+            </c:choose>
+                
+            $.ajax({
+                type: 'GET',
+                url: gravatarSeriveUrl + hashCode + '.json',
+                dataType: 'jsonp',
+                success: function(result){
+                    if ( result != null ) {
+                        var imageUrl    = result['entry'][0]['thumbnailUrl'],
+                            requrestUrl = imageUrl + '?s=200';
+                        $(imageObject).attr('src', requrestUrl);
+                    }
+                }
             });
         });
     </script>

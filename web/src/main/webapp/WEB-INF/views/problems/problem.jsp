@@ -116,12 +116,16 @@
                     <c:if test="${isLogin}">
                         <li><a id="submit-solution" href="javascript:void(0);">Submit Solution</a></li>
                     </c:if>
-                        <li><a href="#">View Solution</a></li>
-                        <li><a href="#">View Submission</a></li>
+                        <li><a href="<c:url value="/p/${submission.problem.problemId}/solution" />">View Solution</a></li>
+                        <li><a href="<c:url value="/submission?pid=${submission.problem.problemId}" />">View Submission</a></li>
                     </ul>
                 </div> <!-- #actions -->
+                <c:if test="${isLogin}">
                 <div id="submission" class="section">
                     <h5>Submission</h5>
+                    <c:if test="${submissions == null || submissions.size() == 0}">
+                        <p>No Submission</p>
+                    </c:if>
                     <ul>
                     <c:forEach var="submission" items="${submissions}">
                         <li>
@@ -135,6 +139,7 @@
                     </c:forEach>
                     </ul>
                 </div> <!-- submission -->
+                </c:if>
                 <div id="discussion" class="section">
                     <h5>Discussion</h5>
                 </div> <!-- discussion -->

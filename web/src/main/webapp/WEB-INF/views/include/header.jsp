@@ -27,7 +27,7 @@
             <div id="profile">
             <c:choose>
             <c:when test="${isLogin}">
-                <img src="${cdnUrl}/img/avatar.png" alt="avatar" class="img-circle" />
+                <img src="${cdnUrl}/img/avatar.jpg" alt="avatar" class="img-circle" />
                 <h5>${user.username}</h5>
                 <p>${user.email}</p>
                 <p>Accepted/Submit: ${submissionStats.get("acceptedSubmission")}/${submissionStats.get("totalSubmission")}(${submissionStats.get("acRate")}%)</p>
