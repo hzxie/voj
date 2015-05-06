@@ -55,10 +55,15 @@
             <div class="container">
                 <div class="span5 offset7">
                     <h2>Start Your OJ Journey Today!</h2>
-                    <c:if test="${!isLogin}">
+                    <c:choose>
+                    <c:when test="${isLogin}">
                         <p><button class="btn btn-success" onclick="window.location.href='<c:url value="/accounts/register" />'">Get Started Now</button></p>
                         <p><a href="<c:url value="/accounts/login" />">Log In</a></p>
-                    </c:if>
+                    </c:when>
+                    <c:otherwise>
+                        <p><button class="btn btn-success" onclick="window.location.href='<c:url value="/p" />'">Get Started Now</button></p>
+                    </c:otherwise>
+                    </c:choose>
                 </div> <!-- .span6 -->
             </div> <!-- .container -->
         </div> <!-- #slogan -->
