@@ -13,7 +13,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="author" content="谢浩哲">
     <!-- Icon -->
-    <link href="${cdnUrl}/img/favicon.ico" rel="shortcut icon">
+    <link href="${cdnUrl}/img/favicon.ico" rel="shortcut icon" type="image/x-icon">
     <!-- StyleSheets -->
     <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/bootstrap.min.css" />
     <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/bootstrap-responsive.min.css" />
@@ -32,7 +32,7 @@
     <![endif]-->
     <!--[if lte IE 6]>
         <script type="text/javascript"> 
-            window.location.href='../not-supported';
+            window.location.href='<c:url value="/not-supported" />';
         </script>
     <![endif]-->
 </head>

@@ -24,4 +24,15 @@ public class DefaultController {
 		ModelAndView view = new ModelAndView("index");
 		return view;
 	}
+	
+	/**
+	 * 显示升级浏览器页面.
+	 * @param request - HttpRequest对象
+	 * @return 一个包含升级浏览器页面内容的ModelAndView对象
+	 */
+	@RequestMapping(value = "/not-supported", method = RequestMethod.GET)
+	public ModelAndView notSupportedView(HttpServletRequest request) {
+		ModelAndView view = new ModelAndView("misc/not-supported");
+		return view;
+	}
 }

@@ -11,14 +11,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="author" content="谢浩哲">
     <!-- Icon -->
-    <link href="${cdnUrl}/img/favicon.ico" rel="shortcut icon">
+    <link href="${cdnUrl}/img/favicon.ico" rel="shortcut icon" type="image/x-icon">
     <!-- StyleSheets -->
     <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/bootstrap.min.css" />
     <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/bootstrap-responsive.min.css" />
     <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/flat-ui.min.css" />
     <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/font-awesome.min.css" />
     <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/style.css" />
-    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/404.css" />
+    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/misc/error.css" />
     <!-- JavaScript -->
     <script type="text/javascript" src="${cdnUrl}/js/jquery-1.11.1.min.js"></script>
     <script type="text/javascript" src="${cdnUrl}/js/bootstrap.min.js"></script>
@@ -30,7 +30,7 @@
     <![endif]-->
     <!--[if lte IE 6]>
         <script type="text/javascript"> 
-            window.location.href='../not-supported';
+            window.location.href='<c:url value="/not-supported" />';
         </script>
     <![endif]-->
 </head>
@@ -41,9 +41,9 @@
     <div id="content" class="container">
         <div class="row-fluid">
             <div class="span6">
-                <img src="<c:url value="/assets/img/404.png" />" alt="Error" />
+                <img src="<c:url value="/assets/img/error.png" />" alt="Error" />
             </div> <!-- .span6 -->
-            <div class="span6" style="padding-top: 180px;">
+            <div id="error-message" class="span6">
                 <h4>Page Not Found!</h4>
                 <p>The requested URL was not found on this server.</p>
                 <button class="btn btn-primary" onclick="history.go(-1);">Go back</button>
