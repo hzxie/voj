@@ -1,6 +1,7 @@
 package com.trunkshell.voj.controller;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -21,23 +22,28 @@ public class ExceptionHandlingController {
 	/**
 	 * 处理ResourceNotFoundException异常的方法.
 	 * @param request - HttpRequest对象
+	 * @param response - HttpResponse对象
 	 * @return 返回一个包含异常信息的ModelAndView对象
 	 */
 	@ResponseStatus(value=HttpStatus.NOT_FOUND)
 	@ExceptionHandler(ResourceNotFoundException.class)
-	public ModelAndView ResourceNotFoundView(HttpServletRequest request) {
+	public ModelAndView ResourceNotFoundView(
+			HttpServletRequest request, HttpServletResponse response) {
 		ModelAndView view = new ModelAndView("errors/404");
         return view;
 	}
 	
 	/**
 	 * 处理通用Exception异常的方法.
+	 * @param ex - 抛出的异常对象
 	 * @param request - HttpRequest对象
+	 * @param response - HttpResponse对象
 	 * @return 返回一个包含异常信息的ModelAndView对象
 	 */
 	@ResponseStatus(value=HttpStatus.INTERNAL_SERVER_ERROR)
 	@ExceptionHandler(Exception.class)
-	public ModelAndView InternelServerErrorView(HttpServletRequest request, Exception ex) {
+	public ModelAndView InternelServerErrorView(
+			Exception ex, HttpServletRequest request, HttpServletResponse response) {
 		logger.catching(ex);
 		
 		ModelAndView view = new ModelAndView("errors/500");

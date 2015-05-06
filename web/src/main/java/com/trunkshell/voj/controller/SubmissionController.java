@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.List;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -29,10 +30,12 @@ public class SubmissionController {
 	/**
 	 * 显示提交列表的页面.
 	 * @param request - HttpRequest对象
+	 * @param response - HttpResponse对象
 	 * @return 包含提交列表的ModelAndView对象 
 	 */
 	@RequestMapping(value = "")
-    public ModelAndView submissionsView(HttpServletRequest request) {
+    public ModelAndView submissionsView(
+    		HttpServletRequest request, HttpServletResponse response) {
 		List<Submission> submissions = submissionService.getSubmissions(NUMBER_OF_SUBMISSION_PER_PAGE);
 		return new ModelAndView("submissions/submissions")
 					.addObject("submissions", submissions);
@@ -61,12 +64,13 @@ public class SubmissionController {
 	 * 显示提交详细信息的页面.
 	 * @param submissionId - 提交的唯一标识符
 	 * @param request - HttpRequest对象
+	 * @param response - HttpResponse对象
 	 * @return 包含提交详细信息的ModelAndView对象 
 	 */
 	@RequestMapping(value = "/{submissionId}")
     public ModelAndView submissionView(
     		@PathVariable("submissionId") int submissionId,
-    	    HttpServletRequest request) {
+    	    HttpServletRequest request, HttpServletResponse response) {
 		Submission submission = submissionService.getSubmission(submissionId);
 		if ( submission == null ) {
 			throw new ResourceNotFoundException();

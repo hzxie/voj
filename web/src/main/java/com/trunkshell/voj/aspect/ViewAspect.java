@@ -3,6 +3,7 @@ package com.trunkshell.voj.aspect;
 import java.util.Locale;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -11,6 +12,7 @@ import org.aspectj.lang.annotation.Aspect;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.servlet.ModelAndView;
 
+import com.trunkshell.voj.util.LocaleUtils;
 import com.trunkshell.voj.model.User;
 import com.trunkshell.voj.service.SubmissionService;
 import com.trunkshell.voj.service.UserService;
@@ -26,16 +28,18 @@ public class ViewAspect {
 	 * 加载已登录用户的个人信息及答题情况.
 	 * @param proceedingJoinPoint - ProceedingJoinPoint对象
 	 * @param request - HttpRequest对象
+	 * @param response - HttpResponse对象
 	 * @return 一个包含预期视图的ModelAndView对象
 	 * @throws Throwable - ResourceNotFound异常
 	 */
-	@Around(value = "execution(* com.trunkshell.voj.controller.*.*View(..)) && args(.., request)")
-	public ModelAndView getUserProfile(ProceedingJoinPoint proceedingJoinPoint, HttpServletRequest request) throws Throwable {
+	@Around(value = "execution(* com.trunkshell.voj.controller.*.*View(..)) && args(.., request, response)")
+	public ModelAndView getUserProfile(ProceedingJoinPoint proceedingJoinPoint, 
+			HttpServletRequest request, HttpServletResponse response) throws Throwable {
 		ModelAndView view = null;
 		HttpSession session = request.getSession();
 		
 		view = (ModelAndView) proceedingJoinPoint.proceed();
-		view.addObject("language", getUserLanguage(request, session));
+		view.addObject("language", getUserLanguage(request, response));
 		
 		boolean isLoggedIn = isLoggedIn(session);
 		if ( isLoggedIn ) {
@@ -65,15 +69,16 @@ public class ViewAspect {
 	/**
 	 * 获取当前用户的显示语言.
 	 * @param request - HttpRequest对象
-	 * @param session - HttpSession对象
+	 * @param response - HttpResponse对象
 	 * @return 当前用户显示语言的唯一英文缩写
 	 */
-	private String getUserLanguage(HttpServletRequest request, HttpSession session) {
+	private String getUserLanguage(HttpServletRequest request, HttpServletResponse response) {
+		HttpSession session = request.getSession();
 		Object languageAttribute = session.getAttribute("language");
 		
 		if ( languageAttribute == null ) {
-			String preferNaturalLanguage = getPreferNaturalLanguage(request);
-			session.setAttribute("language", preferNaturalLanguage);
+			String preferNaturalLanguage = getPreferNaturalLanguage(request, response);
+			LocaleUtils.setLocale(request, response, preferNaturalLanguage);
 			return preferNaturalLanguage;
 		}
 		return (String) languageAttribute;
@@ -82,15 +87,16 @@ public class ViewAspect {
 	/**
 	 * 根据用户浏览器语言和系统支持的语言推荐默认语言.
 	 * @param request - HttpRequest对象
+	 * @param response - HttpResponse对象
 	 * @return 推荐语言的代码(例如zh_CN)
 	 */
-	private String getPreferNaturalLanguage(HttpServletRequest request) {
+	private String getPreferNaturalLanguage(HttpServletRequest request, HttpServletResponse response) {
 		final String DEFAULT_LANGUAGE = "en_US";
 		final String[] supportedLanguages = { "en_US", "zh_CN" };
 		Locale browserLocale = getBrowserLocale(request);
 		
 		for ( String supportedLanguage : supportedLanguages ) {
-			Locale supportLanguageLocale = getLocaleOfSupportedLanguage(supportedLanguage);
+			Locale supportLanguageLocale = LocaleUtils.getLocaleOfLanguage(supportedLanguage);
 			if ( supportLanguageLocale.getLanguage().equals(browserLocale.getLanguage()) ) {
 				return supportedLanguage;
 			}
@@ -106,19 +112,6 @@ public class ViewAspect {
 	private Locale getBrowserLocale(HttpServletRequest request) {
 		Locale locale = request.getLocale();
 		return locale;
-	}
-	
-	/**
-	 * 根据IETF Language Tag获取对应的Locale对象.
-	 * @param languageName - 语言的名称(例如zh_CN)
-	 * @return 预期的Locale对象
-	 */
-	private Locale getLocaleOfSupportedLanguage(String languageName) {
-		String[] localeMeta = languageName.split("_");
-		String language = localeMeta[0];
-		String country = localeMeta[1];
-		
-		return new Locale(language, country);
 	}
 	
 	/**
