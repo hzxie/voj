@@ -99,14 +99,14 @@ public class LanguageMapperTest {
 	 */
 	@Test
 	public void testUpdateLanguageNormal() {
-		Language language = languageMapper.getLanguageUsingId(1);
+		Language language = languageMapper.getLanguageUsingId(2);
 		Assert.assertNotNull(language);
 		
-		language.setLanguageName("C Language");
+		language.setLanguageName("D");
 		languageMapper.updateLanguage(language);
 		
-		language = languageMapper.getLanguageUsingId(1);
-		Assert.assertEquals("C Language", language.getLanguageName());
+		language = languageMapper.getLanguageUsingId(2);
+		Assert.assertEquals("D", language.getLanguageName());
 	}
 	
 	/**
