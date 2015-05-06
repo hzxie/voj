@@ -96,7 +96,6 @@ public class AccountsController {
 		logger.info(String.format("User: [Username=%s] tried to log in at %s", new Object[] {username, ipAddress}));
 		if ( result.get("isSuccessful") ) {
 			User user = userService.getUserUsingUsernameOrEmail(username);
-			System.out.println(user);
 			getSession(request, user, isAutoLoginAllowed);
 		}
 		return result;

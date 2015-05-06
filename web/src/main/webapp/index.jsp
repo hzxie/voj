@@ -9,7 +9,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="author" content="谢浩哲">
     <!-- Icon -->
-    <link href="${cdnUrl}/img/favicon.ico" rel="shortcut icon">
+    <link href="${cdnUrl}/img/favicon.ico" rel="shortcut icon" type="image/x-icon">
 </head>
 <body>
     <c:redirect url="/"> </c:redirect>

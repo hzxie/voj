@@ -6,7 +6,7 @@
 <html lang="${language}">
 <head>
     <meta charset="UTF-8">
-    <title>Home | Verwandlung Online Judge</title>
+    <title>Internal Server Error | Verwandlung Online Judge</title>
     <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="author" content="谢浩哲">
@@ -18,7 +18,7 @@
     <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/flat-ui.min.css" />
     <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/font-awesome.min.css" />
     <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/style.css" />
-    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/homepage.css" />
+    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/misc/error.css" />
     <!-- JavaScript -->
     <script type="text/javascript" src="${cdnUrl}/js/jquery-1.11.1.min.js"></script>
     <script type="text/javascript" src="${cdnUrl}/js/bootstrap.min.js"></script>
@@ -38,44 +38,16 @@
     <!-- Header -->
     <%@ include file="/WEB-INF/views/include/header.jsp" %>
     <!-- Content -->
-    <div id="content">
-        <div id="introduction" class="carousel slide">
-            <ol class="carousel-indicators">
-                <li data-target="#introduction" data-slide-to="0" class="active"></li>
-                <li data-target="#introduction" data-slide-to="1"></li>
-                <li data-target="#introduction" data-slide-to="2"></li>
-            </ol>
-            <div class="carousel-inner">
-                <div class="active item first"></div>
-                <div class="item second"></div>
-                <div class="item third"></div>
-            </div>
-        </div> <!-- #introduction -->
-        <div id="slogan" class="row-fluid">
-            <div class="container">
-                <div class="span5 offset7">
-                    <h2>Start Your OJ Journey Today!</h2>
-                    <c:choose>
-                    <c:when test="${!isLogin}">
-                        <p><button class="btn btn-success" onclick="window.location.href='<c:url value="/accounts/register" />'">Get Started Now</button></p>
-                        <p><a href="<c:url value="/accounts/login" />">Log In</a></p>
-                    </c:when>
-                    <c:otherwise>
-                        <p><button class="btn btn-success" onclick="window.location.href='<c:url value="/p" />'">Get Started Now</button></p>
-                    </c:otherwise>
-                    </c:choose>
-                </div> <!-- .span6 -->
-            </div> <!-- .container -->
-        </div> <!-- #slogan -->
-        <div class="row-fluid container">
-            <div id="main-content" class="span8">
-                <div id="contests">
-                </div> <!-- #contests -->
-                <div id="discussion">
-                </div> <!-- #discussion -->
-            </div> <!-- #main-content -->
-            <div id="sidebar" class="span4">
-            </div> <!-- #sidebar -->
+    <div id="content" class="container">
+        <div class="row-fluid">
+            <div class="span6">
+                <img src="<c:url value="/assets/img/error.png" />" alt="Error" />
+            </div> <!-- .span6 -->
+            <div id="error-message" class="span6">
+                <h4>Internal Server Error Occurred!</h4>
+                <p>The requested URL caused an internal server error.</p>
+                <button class="btn btn-primary" onclick="history.go(-1);">Go back</button>
+            </div> <!-- .span6 -->
         </div> <!-- .row-fluid -->
     </div> <!-- #content -->
     <!-- Footer -->
@@ -83,12 +55,5 @@
     <!-- Java Script -->
     <!-- Placed at the end of the document so the pages load faster -->
     <script type="text/javascript" src="${cdnUrl}/js/site.js"></script>
-    <script type="text/javascript">
-        $(document).ready(function() {
-            $('.carousel').carousel({
-                interval: 5000
-            });
-        });
-    </script>
 </body>
 </html>
