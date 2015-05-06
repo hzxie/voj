@@ -4,6 +4,7 @@ div#content div#main-content {
 
 div#content div#main-content div#submission table {
 	border: 1px solid #e8e8e8;
+	margin-bottom: 0;
 	-webkit-box-shadow: 0 0 5px rgba(0,0,0,0.1);
 	   -moz-box-shadow: 0 0 5px rgba(0,0,0,0.1);
 			box-shadow: 0 0 5px rgba(0,0,0,0.1);
@@ -56,6 +57,23 @@ div#content div#main-content div#submission table td.flag-OLE > a {
 div#content div#main-content div#submission table td.flag-RE > a,
 div#content div#main-content div#submission table td.flag-CE > a {
 	color: #49a932;
+}
+
+div#content div#main-content div#submission div#more-submissions {
+	background-color: #f9f9f9;
+	border-bottom: 5px solid #1abc9c;
+	cursor: pointer;
+	padding: 10px;
+	text-align: center;
+}
+
+div#content div#main-content div#submission div#more-submissions p {
+	margin-bottom: 0;
+}
+
+div#content div#main-content div#submission div#more-submissions img {
+	max-height: 15px;
+	height: 15px;
 }
 
 /* Smaller than standard 960 (devices and browsers) */

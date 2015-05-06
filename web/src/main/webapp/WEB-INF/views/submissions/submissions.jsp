@@ -58,7 +58,7 @@
                     </thead>
                     <tbody>
                         <c:forEach var="submission" items="${submissions}">
-                        <tr>
+                        <tr data-value="${submission.submissionId}">
                             <td class="flag-${submission.judgeResult.judgeResultSlug}"><a href="<c:url value="/submission/${submission.submissionId}" />">${submission.judgeResult.judgeResultName}</a></td>
                             <td class="score">${submission.judgeScore}</td>
                             <td class="time">${submission.usedTime} ms</td>
@@ -67,16 +67,17 @@
                             <td class="user"><a href="<c:url value="/accounts/user/${submission.user.uid}" />">${submission.user.username}</a></td>
                             <td class="language">${submission.language.languageName}</td>
                             <td class="submit-time">
-                            	<fmt:formatDate value="${submission.submitTime}" type="both" dateStyle="default" timeStyle="default"/>
+                                <fmt:formatDate value="${submission.submitTime}" type="both" dateStyle="default" timeStyle="default"/>
                             </td>
                         </tr>
                         </c:forEach>
-                        <tr class="more-submissions">
-                            <td colspan="8">More Submission...</td>
-                        </tr>
                     </tbody>
                 </table>
-            </div> <!-- #problems -->
+                <div id="more-submissions">
+                    <p class="availble">More Submission...</p>
+                    <img src="${cdnUrl}/img/loading.gif" alt="Loading" class="hide" />
+                </div>
+            </div> <!-- #submission -->
         </div> <!-- #main-content -->
     </div> <!-- #content -->
     <!-- Footer -->
@@ -84,5 +85,104 @@
     <!-- Java Script -->
     <!-- Placed at the end of the document so the pages load faster -->
     <script type="text/javascript" src="${cdnUrl}/js/site.js"></script>
+    <script type="text/javascript" src="${cdnUrl}/js/date-${language}.min.js"></script>
+    <script type="text/javascript">
+        function setLoadingStatus(isLoading) {
+            if ( isLoading ) {
+                $('p', '#more-submissions').addClass('hide');
+                $('img', '#more-submissions').removeClass('hide');
+            } else {
+                $('img', '#more-submissions').addClass('hide');
+                $('p', '#more-submissions').removeClass('hide');
+            }
+        }
+    </script>
+    <script type="text/javascript">
+        $('#more-submissions').click(function(event) {
+            var isLoading            = $('img', this).is(':visible'),
+                hasNextRecord        = $('p', this).hasClass('availble'),
+                lastSubmissionRecord = $('tr:last-child', '#submission tbody'),
+                lastSubmissionId     = $(lastSubmissionRecord).attr('data-value');
+
+            if ( !isLoading && hasNextRecord ) {
+                setLoadingStatus(true);
+                return getMoreSubmissions(lastSubmissionId - 1);
+            }
+        });
+    </script>
+    <script type="text/javascript">
+        function getMoreSubmissions(startIndex) {
+        	var pageRequests = {
+                'startIndex': startIndex
+            };
+
+            $.ajax({
+                type: 'POST',
+                url: '<c:url value="/submission/getSubmissions.action" />',
+                data: pageRequests,
+                dataType: 'JSON',
+                success: function(result){
+                    return processResult(result);
+                }
+            });
+        }
+    </script>
+    <script type="text/javascript">
+        function processResult(result) {
+            if ( result['isSuccessful'] ) {
+                displaySubmissionRecords(result['submissions']);
+            } else {
+                $('p', '#more-submissions').removeClass('availble');
+                $('p', '#more-submissions').html('No more submission');
+                $('#more-submissions').css('cursor', 'default');
+            }
+            setLoadingStatus(false);
+        }
+    </script>
+    <script type="text/javascript">
+        function displaySubmissionRecords(submissions) {
+            for ( var i = 0; i < submissions.length; ++ i ) {
+                $('table > tbody', '#submission').append(
+                    getSubmissionContent(submissions[i]['submissionId'], submissions[i]['judgeResult'], 
+                                         submissions[i]['judgeScore'], submissions[i]['usedTime'], 
+                                         submissions[i]['usedMemory'], submissions[i]['problem'], 
+                                         submissions[i]['user'], submissions[i]['language'], submissions[i]['submitTime'])
+                );
+            }
+        }
+    </script>
+    <script type="text/javascript">
+        function getSubmissionContent(submissionId, judgeResult, judgeScore, usedTime, usedMemory, problem, user, language, submitTime) {
+            var submissionTemplate = '<tr data-value="%s">' +
+                                     '    <td class="flag-%s"><a href="<c:url value="/submission/%s" />">%s</a></td>' +
+                                     '    <td class="score">%s</td>' +
+                                     '    <td class="time">%s ms</td>' +
+                                     '    <td class="memory">%s K</td>' +
+                                     '    <td class="name"><a href="<c:url value="/p/%s" />">P%s %s</a></td>' +
+                                     '    <td class="user"><a href="<c:url value="/accounts/user/%s" />">%s</a></td>' +
+                                     '    <td class="language">%s</td>' +
+                                     '    <td class="submit-time">%s</td>' +
+                                     '</tr>';
+
+            return submissionTemplate.format(submissionId, judgeResult['judgeResultSlug'], submissionId, 
+                                             judgeResult['judgeResultName'], judgeScore, usedTime, usedMemory, 
+                                             problem['problemId'], problem['problemId'], problem['problemName'],
+                                             user['uid'], user['username'], language['languageName'], getFormatedDateString(submitTime, '${language}'));
+        }
+    </script>
+    <script type="text/javascript">
+        function getFormatedDateString(dateTime, locale) {
+            var dateObject = new Date(dateTime),
+                dateString = dateObject.toString();
+
+            if ( locale == 'en_US' ) {
+                dateString = dateObject.toString('MMM d, yyyy h:mm:ss tt');
+            } else if ( locale == 'zh_CN' ) {
+                dateString = dateObject.toString('yyyy-mm-dd hh:mm:ss');
+            }
+
+            return dateString;
+        }
+    </script>
 </body>
 </html>

@@ -49,7 +49,7 @@ public class UserService {
 	 * @return 一个User的对象或空引用
 	 */
 	public HashMap<String, Boolean> isAccountValid(String username, String password) {
-		HashMap<String, Boolean> result = new HashMap<String, Boolean>();
+		HashMap<String, Boolean> result = new HashMap<String, Boolean>(5, 1);
 		result.put("isUsernameEmpty", username.isEmpty());
 		result.put("isPasswordEmpty", password.isEmpty());
 		result.put("isAccountValid", false);
