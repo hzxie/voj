@@ -6,7 +6,7 @@
 <html lang="${language}">
 <head>
     <meta charset="UTF-8">
-    <title>Welcome Back | Verwandlung Online Judge</title>
+    <title><spring:message code="voj.accounts.login.title" text="Welcome Back" /> | Verwandlung Online Judge</title>
     <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="author" content="谢浩哲">
@@ -40,32 +40,32 @@
     <!-- Content -->
     <div id="content">
         <div id="login">
-            <h2>Sign in</h2>
-            <div class="alert alert-error hide">Incorrect username or password.</div>
+            <h2><spring:message code="voj.accounts.login.sign-in" text="Sign in" /></h2>
+            <div class="alert alert-error hide"><spring:message code="voj.accounts.login.incorrect-password" text="Incorrect username or password." /></div>
             <c:if test="${isLogout}">
-            <div class="alert alert-success">You are now logged out.</div>
+            <div class="alert alert-success"><spring:message code="voj.accounts.login.sign-out" text="You are now logged out." /></div>
             </c:if>
             <form id="login-form" method="post" onsubmit="onSubmit(); return false;">
                 <p class="row-fluid">
-                    <label for="username">Username or Email</label>
+                    <label for="username"><spring:message code="voj.accounts.login.username" text="Username or Email" /></label>
                     <input id="username" name="username" class="span12" type="text" maxlength="32" />
                 </p>
                 <p class="row-fluid">
-                    <label for="password">Password</label>
+                    <label for="password"><spring:message code="voj.accounts.login.password" text="Password" /></label>
                     <input id="password" name="password" class="span12" type="password" maxlength="16" />
                 </p>
                 <p>
                     <label for="remember-me">
-                        <input type="checkbox" /> Remember Me
+                        <input type="checkbox" /> <spring:message code="voj.accounts.login.remember-me" text="Remember Me" />
                     </label>
                 </p>
                 <p>
-                    <button class="btn btn-primary btn-block" type="submit">Sign in</button>
+                    <button class="btn btn-primary btn-block" type="submit"><spring:message code="voj.accounts.login.sign-in" text="Sign in" /></button>
                 </p>
             </form> <!-- #login-form -->
         </div> <!-- #login -->
         <p class="text-center">
-            Don't have an account?<br /><a href="<c:url value="/accounts/register" />">Create an account</a>
+            <spring:message code="voj.accounts.login.dont-have-account" text="Don't have an account?" /><br /><a href="<c:url value="/accounts/register" />"><spring:message code="voj.accounts.login.create-account" text="Create an account" /></a>
         </p>
     </div> <!-- #content -->
     <!-- Footer -->

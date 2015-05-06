@@ -6,7 +6,7 @@
 <html lang="${language}">
 <head>
     <meta charset="UTF-8">
-    <title>Page Not Found | Verwandlung Online Judge</title>
+    <title><spring:message code="voj.error.404.title" text="Page Not Found" /> | Verwandlung Online Judge</title>
     <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="author" content="谢浩哲">
@@ -44,9 +44,9 @@
                 <img src="<c:url value="/assets/img/error.png" />" alt="Error" />
             </div> <!-- .span6 -->
             <div id="error-message" class="span6">
-                <h4>Page Not Found!</h4>
-                <p>The requested URL was not found on this server.</p>
-                <button class="btn btn-primary" onclick="history.go(-1);">Go back</button>
+                <h4><spring:message code="voj.error.404.page-not-found" text="Page not found!" /></h4>
+                <p><spring:message code="voj.error.404.message" text="The requested URL was not found on this server." /></p>
+                <button class="btn btn-primary" onclick="history.go(-1);"><spring:message code="voj.error.404.go-back" text="Go back" /></button>
             </div> <!-- .span6 -->
         </div> <!-- .row-fluid -->
     </div> <!-- #content -->

@@ -6,6 +6,9 @@
 <jsp:useBean id="date" class="java.util.Date" />
 	<div id="footer">
         <div class="container">
-            <p id="copyright">Copyright&copy; 2005-<%= new java.text.SimpleDateFormat("yyyy").format(new java.util.Date()) %> <a href="http://zjhzxhz.com/" target="_blank">Trunk Shell</a>. All rights reserved.</p>
+            <p id="copyright">
+            	<spring:message code="voj.include.footer.copyright" text="Copyright" />&copy; 2005-<%= new java.text.SimpleDateFormat("yyyy").format(new java.util.Date()) %> <a href="http://zjhzxhz.com/" target="_blank">Trunk Shell</a>. 
+            	<spring:message code="voj.include.footer.all-rights-reserved" text="All rights reserved." />
+            </p>
         </div> <!-- .container -->
     </div> <!-- #footer -->
