@@ -31,7 +31,6 @@ public class AccountsController {
      * 显示用户的登录页面.
      * @param isLogout - 是否处于登出状态
      * @param request - Http Servlet Request对象
-     * @param session - Http Session对象
      * @return 包含登录页面信息的ModelAndView对象
      */
     @RequestMapping(value = "/login")
