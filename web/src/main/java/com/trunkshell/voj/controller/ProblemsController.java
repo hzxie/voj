@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
 import org.apache.logging.log4j.LogManager;
@@ -32,13 +33,13 @@ public class ProblemsController {
 	 * 显示试题库中的全部试题.
 	 * @param startIndex - 试题的起始下标
 	 * @param request - Http Servlet Request对象
-     * @param session - Http Session对象
+     * @param response - HttpResponse对象
 	 * @return 包含试题库页面信息的ModelAndView对象
 	 */
 	@RequestMapping(value = "")
     public ModelAndView problemsView(
             @RequestParam(value="start", required = false, defaultValue = "1") int startIndex,
-            HttpServletRequest request) {
+            HttpServletRequest request, HttpServletResponse response) {
 		if ( startIndex < START_INDEX_OF_PROBLEMS ) {
 			startIndex = START_INDEX_OF_PROBLEMS;
 		}
@@ -75,13 +76,13 @@ public class ProblemsController {
 	 * 加载试题的详细信息.
 	 * @param problemID - 试题的唯一标识符
 	 * @param request - Http Servlet Request对象
-     * @param session - Http Session对象
+     * @param response - HttpResponse对象
 	 * @return 包含试题详细信息的ModelAndView对象
 	 */
 	@RequestMapping(value = "/{problemId}")
     public ModelAndView problemView(
     		@PathVariable("problemId") int problemId,
-    		HttpServletRequest request) {
+    		HttpServletRequest request, HttpServletResponse response) {
 		Problem problem = problemService.getProblem(problemId);
 		if ( problem == null || !problem.isPublic() ) {
 			throw new ResourceNotFoundException();
