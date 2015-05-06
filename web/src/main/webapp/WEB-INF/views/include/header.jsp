@@ -11,48 +11,48 @@
             </div> <!-- #logo -->
             <div id="nav" class="span6">
                 <ul class="inline">
-                    <li><a href="<c:url value="/p" />">Problems</a></li>
-                    <li><a href="<c:url value="/discussion" />">Discussion</a></li>
-                    <li><a href="<c:url value="/contests" />">Contests</a></li>
-                    <li><a href="<c:url value="/submission" />">Submission</a></li>
-                    <li><a href="javascript:openDrawerMenu()">More</a></li>
+                    <li><a href="<c:url value="/p" />"><spring:message code="voj.include.header.problems" text="Problems" /></a></li>
+                    <li><a href="<c:url value="/discussion" />"><spring:message code="voj.include.header.discussion" text="Discussion" /></a></li>
+                    <li><a href="<c:url value="/contests" />"><spring:message code="voj.include.header.contests" text="Contests" /></a></li>
+                    <li><a href="<c:url value="/submission" />"><spring:message code="voj.include.header.submission" text="Submission" /></a></li>
+                    <li><a href="javascript:openDrawerMenu()"><spring:message code="voj.include.header.more" text="More" /></a></li>
                 </ul>
             </div> <!-- #nav -->
         </div> <!-- .container -->
     </div> <!-- #header -->
     <div id="drawer-nav">
-        <span class="pull-right"><a href="javascript:closeDrawerMenu();">Close &times;</a></span>
+        <span class="pull-right"><a href="javascript:closeDrawerMenu();"><spring:message code="voj.include.header.close" text="Close" /> &times;</a></span>
         <div id="accounts" class="section">
-            <h4>My Accounts</h4>
+            <h4><spring:message code="voj.include.header.my-accounts" text="My Accounts" /></h4>
             <div id="profile">
             <c:choose>
             <c:when test="${isLogin}">
                 <img src="${cdnUrl}/img/avatar.jpg" alt="avatar" class="img-circle" />
                 <h5>${user.username}</h5>
                 <p>${user.email}</p>
-                <p>Accepted/Submit: ${submissionStats.get("acceptedSubmission")}/${submissionStats.get("totalSubmission")}(${submissionStats.get("acRate")}%)</p>
-                <p>Language Preference: ${user.preferLanguage.languageName}</p>
+                <p><spring:message code="voj.include.header.accepted" text="Accepted" />/<spring:message code="voj.include.header.submit" text="Submit" />: ${submissionStats.get("acceptedSubmission")}/${submissionStats.get("totalSubmission")}(${submissionStats.get("acRate")}%)</p>
+                <p><spring:message code="voj.include.header.language-preference" text="Language Preference" />: ${user.preferLanguage.languageName}</p>
                 <ul class="inline">
-                    <li><a href="<c:url value="/accounts/dashboard" />">Dashboard</a></li>
-                    <li><a href="<c:url value="/accounts/login?logout=true" />">Sign out</a></li>
+                    <li><a href="<c:url value="/accounts/dashboard" />"><spring:message code="voj.include.header.dashboard" text="Dashboard" /></a></li>
+                    <li><a href="<c:url value="/accounts/login?logout=true" />"><spring:message code="voj.include.header.sign-out" text="Sign out" /></a></li>
                 </ul>
             </c:when>
             <c:otherwise>
-                <p>You are not logged in.</p>
+                <p><spring:message code="voj.include.header.not-logged-in" text="You are not logged in." /></p>
                 <ul class="inline">
-                    <li><a href="<c:url value="/accounts/login" />">Sign in</a></li>
-                    <li><a href="<c:url value="/accounts/register" />">Sign up</a></li>
+                    <li><a href="<c:url value="/accounts/login" />"><spring:message code="voj.include.header.sign-in" text="Sign in" /></a></li>
+                    <li><a href="<c:url value="/accounts/register" />"><spring:message code="voj.include.header.sign-up" text="Sign up" /></a></li>
                 </ul>
             </c:otherwise>
             </c:choose>
             </div> <!-- #profile -->
         </div> <!-- .section -->
         <div id="about" class="section">
-            <h4>About</h4>
+            <h4><spring:message code="voj.include.header.about" text="About" /></h4>
             <ul>
-                <li><a href="#">Judgers</a></li>
-                <li><a href="#">Feedback</a></li>
-                <li><a href="#">About Us</a></li>
+                <li><a href="#"><spring:message code="voj.include.header.judgers" text="Judgers" /></a></li>
+                <li><a href="#"><spring:message code="voj.include.header.feedback" text="Feedback" /></a></li>
+                <li><a href="#"><spring:message code="voj.include.header.about-us" text="About us" /></a></li>
             </ul>
         </div> <!-- .section -->
     </div> <!-- #drawer-nav -->

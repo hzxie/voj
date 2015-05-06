@@ -7,7 +7,7 @@
 <html lang="${language}">
 <head>
     <meta charset="UTF-8">
-    <title>Browser no longer supported | Verwandlung Online Judge</title>
+    <title><spring:message code="voj.misc.not-supported.title" text="Browser no longer supported" /> | Verwandlung Online Judge</title>
     <meta name="robots" content="noindex">
     <meta name="author" content="谢浩哲">
     <!-- Icon -->
@@ -43,8 +43,8 @@
 </head>
 <body>
     <img src="${cdnUrl}/img/logo.jpg" alt="Logo" width="218px" height="34px" />
-    <h1>Your Browser is no longer supported.</h1>
-    <p>Verwandlung Online Judge no longer supports your browser. Please upgrade your browser.</p>
+    <h1><spring:message code="voj.misc.not-supported.browser-not-supported" text="Your Browser is no longer supported." /></h1>
+    <p><spring:message code="voj.misc.not-supported.message" text="Verwandlung Online Judge no longer supports your browser. Please upgrade your browser." /></p>
     <table width="650px" cellpadding="5">
         <tbody>
             <tr>
@@ -75,11 +75,11 @@
                 </td>
             </tr>
             <tr>
-                <td align="center" valign="top"><a href="http://www.google.com/chrome/?hl=${language}">Download Google Chrome</a></td>
-                <td align="center" valign="top"><a href="http://www.mozilla.com/firefox/">Download Firefox</a></td>
-                <td align="center" valign="top"><a href="http://www.microsoft.com/windows/internet-explorer/default.aspx">Download Internet Explorer</a></td>
-                <td align="center" valign="top"><a href="http://www.opera.com/">Download Opera</a></td>
-                <td align="center" valign="top"><a href="http://www.apple.com/safari/download/">Download Safari</a></td>
+                <td align="center" valign="top"><a href="http://www.google.com/chrome/?hl=${language}"><spring:message code="voj.misc.not-supported.download" text="Download" /> Google Chrome</a></td>
+                <td align="center" valign="top"><a href="http://www.mozilla.com/firefox/"><spring:message code="voj.misc.not-supported.download" text="Download" /> Firefox</a></td>
+                <td align="center" valign="top"><a href="http://www.microsoft.com/windows/internet-explorer/default.aspx"><spring:message code="voj.misc.not-supported.download" text="Download" /> Internet Explorer</a></td>
+                <td align="center" valign="top"><a href="http://www.opera.com/"><spring:message code="voj.misc.not-supported.download" text="Download" /> Opera</a></td>
+                <td align="center" valign="top"><a href="http://www.apple.com/safari/download/"><spring:message code="voj.misc.not-supported.download" text="Download" /> Safari</a></td>
             </tr>
         </tbody>
     </table>

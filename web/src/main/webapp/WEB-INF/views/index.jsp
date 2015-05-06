@@ -6,7 +6,7 @@
 <html lang="${language}">
 <head>
     <meta charset="UTF-8">
-    <title>Home | Verwandlung Online Judge</title>
+    <title><spring:message code="voj.index.title" text="Home" /> | Verwandlung Online Judge</title>
     <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="author" content="谢浩哲">
@@ -54,14 +54,14 @@
         <div id="slogan" class="row-fluid">
             <div class="container">
                 <div class="span5 offset7">
-                    <h2>Start Your OJ Journey Today!</h2>
+                    <h2><spring:message code="voj.index.slogan" text="Start Your OJ Journey Today!" /></h2>
                     <c:choose>
                     <c:when test="${!isLogin}">
-                        <p><button class="btn btn-success" onclick="window.location.href='<c:url value="/accounts/register" />'">Get Started Now</button></p>
-                        <p><a href="<c:url value="/accounts/login" />">Log In</a></p>
+                        <p><button class="btn btn-success" onclick="window.location.href='<c:url value="/accounts/register" />'"><spring:message code="voj.index.get-started" text="Get Started Now" /></button></p>
+                        <p><a href="<c:url value="/accounts/login" />"><spring:message code="voj.index.login" text="Sign In" /></a></p>
                     </c:when>
                     <c:otherwise>
-                        <p><button class="btn btn-success" onclick="window.location.href='<c:url value="/p" />'">Get Started Now</button></p>
+                        <p><button class="btn btn-success" onclick="window.location.href='<c:url value="/p" />'"><spring:message code="voj.index.get-started" text="Get Started Now" /></button></p>
                     </c:otherwise>
                     </c:choose>
                 </div> <!-- .span6 -->
