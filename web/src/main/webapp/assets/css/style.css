@@ -67,6 +67,11 @@ div#drawer-nav div#profile {
 	font-size: 12px;
 }
 
+div#drawer-nav div#profile img {
+	width: 128px;
+	max-width: 128px;
+}
+
 div#drawer-nav div#profile h5 {
 	margin-top: 20px;
 	text-transform: lowercase;
