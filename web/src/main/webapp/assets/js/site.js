@@ -1,6 +1,5 @@
 /*!
  * Global JavaScript by @zjhzxhz
- * http://www.testzilla.org/
  *
  * Copyright 2015 Contributors
  * Released under the GPL v3 license
@@ -27,3 +26,24 @@ function closeDrawerMenu() {
         right: -320
     }, 100);
 }
+
+/* Display the avatar of the user in DrawerMenu */
+$(function() {
+    var imageObject       = $('img', '#drawer-nav #profile'),
+        email             = $('p.email', '#drawer-nav #profile').html(),
+        hashCode          = md5(email),
+        gravatarSeriveUrl = 'https://secure.gravatar.com/';
+    
+    $.ajax({
+        type: 'GET',
+        url: gravatarSeriveUrl + hashCode + '.json',
+        dataType: 'jsonp',
+        success: function(result){
+            if ( result != null ) {
+                var imageUrl    = result['entry'][0]['thumbnailUrl'],
+                    requrestUrl = imageUrl + '?s=200';
+                $(imageObject).attr('src', requrestUrl);
+            }
+        }
+    });
+});

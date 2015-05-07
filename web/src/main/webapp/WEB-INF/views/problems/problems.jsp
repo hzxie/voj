@@ -7,7 +7,7 @@
 <html lang="${language}">
 <head>
     <meta charset="UTF-8">
-    <title>Problems | Verwandlung Online Judge</title>
+    <title><spring:message code="voj.problems.problems.title" text="Problems" /> | Verwandlung Online Judge</title>
     <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="author" content="谢浩哲">
@@ -42,7 +42,7 @@
     <div id="content" class="container">
         <div id="locator">
             <ul class="inline">
-                <li>Locator:</li>
+                <li><spring:message code="voj.problems.problems.locator" text="Locator" />:</li>
                 <c:forEach var="locatorID" begin="${startIndexOfProblems}" end="${startIndexOfProblems + totalProblems}" step="${numberOfProblemsPerPage}">
                 <li><a href="<c:url value="/p?start=${locatorID}" />">P${locatorID}</a></li>
                 </c:forEach>
@@ -54,10 +54,10 @@
                     <thead>
                         <tr>
                         <c:if test="${isLogin}">
-                            <th class="flag">Result</th>
+                            <th class="flag"><spring:message code="voj.problems.problems.result" text="Result" /></th>
                         </c:if>
-                            <th class="name">Name</th>
-                            <th class="submission">Submission</th>
+                            <th class="name"><spring:message code="voj.problems.problems.name" text="Name" /></th>
+                            <th class="submission"><spring:message code="voj.problems.problems.submission" text="Submission" /></th>
                             <th class="ac-rate">AC%</th>
                         </tr>
                     </thead>
@@ -88,20 +88,21 @@
                             </td>
                         </tr>
                         </c:forEach>
-                        <tr class="more-problems">
-                            <td colspan="4">More Problems...</td>
-                        </tr>
                     </tbody>
                 </table>
+                <div id="more-problems">
+                    <p class="availble"><spring:message code="voj.problems.problems.more-problems" text="More Problems..." /></p>
+                    <img src="${cdnUrl}/img/loading.gif" alt="Loading" class="hide" />
+                </div>
             </div> <!-- #problems -->
             <div id="sidebar" class="span4">
                 <div id="search-widget" class="widget">
-                    <h4>Search</h4>
+                    <h4><spring:message code="voj.problems.problems.search" text="Search" /></h4>
                     <form id="search-form" action="#">
                     </form>
                 </div> <!-- #search-widget -->
                 <div id="filter-widget" class="widget">
-                    <h4>Filter</h4>
+                    <h4><spring:message code="voj.problems.problems.filter" text="Filter" /></h4>
                 </div> <!-- #filter-widget -->
             </div> <!-- #sidebar -->
         </div> <!-- #main-content -->

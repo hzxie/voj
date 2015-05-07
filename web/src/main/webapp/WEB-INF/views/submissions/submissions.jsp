@@ -8,7 +8,7 @@
 <html lang="${language}">
 <head>
     <meta charset="UTF-8">
-    <title>Submission | Verwandlung Online Judge</title>
+    <title><spring:message code="voj.submissions.submissions.title" text="Submission" /> | Verwandlung Online Judge</title>
     <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="author" content="谢浩哲">
@@ -46,14 +46,14 @@
                 <table class="table table-striped">
                     <thead>
                         <tr>
-                            <th class="flag">Result</th>
-                            <th class="score">Score</th>
-                            <th class="time">Time</th>
-                            <th class="memory">Memory</th>
-                            <th class="name">Name</th>
-                            <th class="user">User</th>
-                            <th class="language">Language</th>
-                            <th class="submit-time">Submit Time</th>
+                            <th class="flag"><spring:message code="voj.submissions.submissions.result" text="Result" /></th>
+                            <th class="score"><spring:message code="voj.submissions.submissions.score" text="Score" /></th>
+                            <th class="time"><spring:message code="voj.submissions.submissions.time" text="Time" /></th>
+                            <th class="memory"><spring:message code="voj.submissions.submissions.memory" text="Memory" /></th>
+                            <th class="name"><spring:message code="voj.submissions.submissions.problem" text="Problem" /></th>
+                            <th class="user"><spring:message code="voj.submissions.submissions.user" text="User" /></th>
+                            <th class="language"><spring:message code="voj.submissions.submissions.language" text="Language" /></th>
+                            <th class="submit-time"><spring:message code="voj.submissions.submissions.submit-time" text="Submit Time" /></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -74,7 +74,7 @@
                     </tbody>
                 </table>
                 <div id="more-submissions">
-                    <p class="availble">More Submission...</p>
+                    <p class="availble"><spring:message code="voj.submissions.submissions.more-submission" text="More Submission..." /></p>
                     <img src="${cdnUrl}/img/loading.gif" alt="Loading" class="hide" />
                 </div>
             </div> <!-- #submission -->
@@ -133,7 +133,7 @@
                 displaySubmissionRecords(result['submissions']);
             } else {
                 $('p', '#more-submissions').removeClass('availble');
-                $('p', '#more-submissions').html('No more submission');
+                $('p', '#more-submissions').html('<spring:message code="voj.submissions.submissions.no-more-submission" text="No more submission" />');
                 $('#more-submissions').css('cursor', 'default');
             }
             setLoadingStatus(false);

@@ -37,20 +37,20 @@ div#content div#main-content div.submission div.body div.section table td {
 	border-top: none;
 }
 
-div#content div#main-content div.submission div.body div.section table td.flag-ac {
+div#content div#main-content div.submission div.body div.section table td.flag-AC {
 	color: #f00;
 }
 
-div#content div#main-content div.submission div.body div.section table td.flag-pe
-div#content div#main-content div.submission div.body div.section table td.flag-wa,
-div#content div#main-content div.submission div.body div.section table td.flag-tle,
-div#content div#main-content div.submission div.body div.section table td.flag-mle,
-div#content div#main-content div.submission div.body div.section table td.flag-ole {
+div#content div#main-content div.submission div.body div.section table td.flag-PE,
+div#content div#main-content div.submission div.body div.section table td.flag-WA,
+div#content div#main-content div.submission div.body div.section table td.flag-TLE,
+div#content div#main-content div.submission div.body div.section table td.flag-MLE,
+div#content div#main-content div.submission div.body div.section table td.flag-OLE {
 	color: #4d7aff;
 }
 
-div#content div#main-content div.submission div.body div.section table td.flag-re,
-div#content div#main-content div.submission div.body div.section table td.flag-ce {
+div#content div#main-content div.submission div.body div.section table td.flag-RE,
+div#content div#main-content div.submission div.body div.section table td.flag-CE {
 	color: #49a932;
 }
 

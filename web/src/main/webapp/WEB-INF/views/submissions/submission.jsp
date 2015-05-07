@@ -8,7 +8,7 @@
 <html lang="${language}">
 <head>
     <meta charset="UTF-8">
-    <title>Submission | Verwandlung Online Judge</title>
+    <title><spring:message code="voj.submissions.submission.title" text="Submission #" />${submission.submissionId} | Verwandlung Online Judge</title>
     <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="author" content="谢浩哲">
@@ -51,51 +51,51 @@
                     </div> <!-- .header -->
                     <div class="body">
                         <div class="section">
-                            <h4>Overview</h4>
+                            <h4><spring:message code="voj.submissions.submission.overview" text="Overview" /></h4>
                             <div class="description">
                                 <table class="table">
                                     <tr>
-                                        <td>Runtime Result</td>
-                                        <td class="flag-${submission.judgeResult.judgeResultSlug.toLowerCase()}">${submission.judgeResult.judgeResultName}</td>
+                                        <td><spring:message code="voj.submissions.submission.judge-result" text="Judge Result" /></td>
+                                        <td class="flag-${submission.judgeResult.judgeResultSlug}">${submission.judgeResult.judgeResultName}</td>
                                     </tr>
                                     <tr>
-                                        <td>Problem</td>
+                                        <td><spring:message code="voj.submissions.submission.problem" text="Problem" /></td>
                                         <td><a href="<c:url value="/p/${submission.problem.problemId}" />">P${submission.problem.problemId} ${submission.problem.problemName}</a></td>
                                     </tr>
                                     <tr>
-                                        <td>Submit Time</td>
+                                        <td><spring:message code="voj.submissions.submission.submit-time" text="Submit Time" /></td>
                                         <td><fmt:formatDate value="${submission.submitTime}" type="both" dateStyle="default" timeStyle="default"/></td>
                                     </tr>
                                     <tr>
-                                        <td>Language</td>
+                                        <td><spring:message code="voj.submissions.submission.language" text="Language" /></td>
                                         <td>${submission.language.languageName}</td>
                                     </tr>
                                     <tr>
-                                        <td>Judger</td>
+                                        <td><spring:message code="voj.submissions.submission.judger" text="Judger" /></td>
                                         <td>Default Judger</td>
                                     </tr>
                                     <tr>
-                                        <td>Used Time</td>
+                                        <td><spring:message code="voj.submissions.submission.used-time" text="Used Time" /></td>
                                         <td>${submission.usedTime} ms</td>
                                     </tr>
                                     <tr>
-                                        <td>Used Memory</td>
+                                        <td><spring:message code="voj.submissions.submission.used-memory" text="Used Memory" /></td>
                                         <td>${submission.usedMemory} K</td>
                                     </tr>
                                     <tr>
-                                        <td>Execute Time</td>
+                                        <td><spring:message code="voj.submissions.submission.execute-time" text="Execute Time" /></td>
                                         <td><fmt:formatDate value="${submission.executeTime}" type="both" dateStyle="default" timeStyle="default"/></td>
                                     </tr>
                                 </table>
                             </div> <!-- .description -->
                         </div> <!-- .section -->
                         <div class="section">
-                            <h4>Runtime Result</h4>
+                            <h4><spring:message code="voj.submissions.submission.judge-result" text="Judge Result" /></h4>
                             <div class="description markdown">${submission.judgeLog}</div> <!-- .description -->
                         </div> <!-- .section -->
                         <c:if test="${submission.user == user}">
                         <div class="section">
-                            <h4>Code</h4>
+                            <h4><spring:message code="voj.submissions.submission.code" text="Code" /></h4>
                             <div class="description">
                                 <pre><code>${submission.code.replace("<", "&lt;").replace(">", "&gt;")}</code></pre>
                             </div> <!-- .description -->
@@ -106,18 +106,18 @@
             </div> <!-- #main-content -->
             <div id="sidebar" class="span3">
                 <div id="submit-user" class="section">
-                    <h5>User</h5>
+                    <h5><spring:message code="voj.submissions.submission.user" text="User" /></h5>
                     <img src="${cdnUrl}/img/avatar.jpg" alt="User Avatar" class="img-circle" />
                     <p>
-                        Username: <a href="<c:url value="/accounts/user/${submission.user.uid}" />">${submission.user.username}</a>
+                        <spring:message code="voj.submissions.submission.submitted-by" text="Submitted by" /> <a href="<c:url value="/accounts/user/${submission.user.uid}" />">${submission.user.username}</a>
                     </p>
                 </div> <!-- #profile -->
                 <div id="problem" class="section">
-                    <h5>Action</h5>
+                    <h5><spring:message code="voj.submissions.submission.action" text="Action" /></h5>
                     <ul>
-                        <li><a href="<c:url value="/p/${submission.problem.problemId}" />">View Problem</a></li>
-                        <li><a href="<c:url value="/p/${submission.problem.problemId}/solution" />">View Solution</a></li>
-                        <li><a href="<c:url value="/submission?pid=${submission.problem.problemId}" />">View Submission</a></li>
+                        <li><a href="<c:url value="/p/${submission.problem.problemId}" />"><spring:message code="voj.submissions.submission.view-problem" text="View Problem" /></a></li>
+                        <li><a href="<c:url value="/p/${submission.problem.problemId}/solution" />"><spring:message code="voj.submissions.submission.view-solution" text="View Solution" /></a></li>
+                        <li><a href="<c:url value="/submission?pid=${submission.problem.problemId}" />"><spring:message code="voj.submissions.submission.view-submission" text="View Submission" /></a></li>
                     </ul>
                 </div> <!-- problem -->
             </div> <!-- #sidebar -->
@@ -157,14 +157,7 @@
         $(function() {
             var imageObject       = $('img', '#submit-user'),
                 hashCode          = md5('${submission.user.email}'),
-            <c:choose>
-            <c:when test="${language == 'zh_CN'}">
-                gravatarSeriveUrl = 'http://gravatar.duoshuo.com/';
-            </c:when>
-            <c:otherwise>
-                gravatarSeriveUrl = 'https://www.gravatar.com/';
-            </c:otherwise>
-            </c:choose>
+                gravatarSeriveUrl = 'https://secure.gravatar.com/';
                 
             $.ajax({
                 type: 'GET',
