@@ -71,11 +71,48 @@
         <div class="row-fluid container">
             <div id="main-content" class="span8">
                 <div id="contests">
+                    <table class="table">
+                        <tbody>
+                            <tr class="contest Live">
+                                <td class="overview">
+                                    <h5><a href="#">Contest Demo</a></h5>
+                                    <ul class="inline">
+                                        <li>ACM</li>
+                                        <li><spring:message code="voj.index.start-time" text="Start Time" />: 2015/05/07 22:00</li>
+                                        <li><spring:message code="voj.index.end-time" text="End Time" />: 2015/05/08 0:00</li>
+                                    </ul>
+                                </td>
+                                <td class="status">Live</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div> <!-- #contests -->
                 <div id="discussion">
+                	<table class="table">
+                        <tbody>
+                            <tr class="discussion-threads">
+                                <td class="avatar">
+                                    <img src="${cdnUrl}/img/avatar.jpg" alt="avatar" />
+                                </td>
+                                <td class="overview">
+                                    <h5><a href="#">Discussion Threads Demo</a></h5>
+                                    <ul class="inline">
+                                        <li><spring:message code="voj.index.author" text="Author" />: <a href="#">zjhzxhz</a></li>
+                                        <li><spring:message code="voj.index.posted-in" text="Posted in" />: <a href="#">Forum #1</a></li>
+                                        <li><spring:message code="voj.index.latest-reply" text="Latest reply" />: <a href="#">voj-tester</a> @6 hours ago</li>
+                                    </ul>
+                                </td>
+                                <td class="reply-count">0</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div> <!-- #discussion -->
             </div> <!-- #main-content -->
             <div id="sidebar" class="span4">
+                <div id="bulletin-board" class="widget">
+                    <h4><spring:message code="voj.index.bulletin-board" text="Bulletin Board" /></h4>
+                    <p><spring:message code="voj.index.no-notification" text="No notification now." /></p>
+                </div> <!-- #kanban -->
             </div> <!-- #sidebar -->
         </div> <!-- .row-fluid -->
     </div> <!-- #content -->
