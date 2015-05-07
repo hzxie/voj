@@ -34,6 +34,9 @@ $(function() {
         hashCode          = md5(email),
         gravatarSeriveUrl = 'https://secure.gravatar.com/';
     
+    if ( typeof(email) == 'undefined' ) {
+        return;
+    }
     $.ajax({
         type: 'GET',
         url: gravatarSeriveUrl + hashCode + '.json',

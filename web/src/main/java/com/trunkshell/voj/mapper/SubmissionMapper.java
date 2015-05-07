@@ -3,12 +3,15 @@ package com.trunkshell.voj.mapper;
 import java.util.List;
 
 import org.apache.ibatis.annotations.CacheNamespace;
+import org.apache.ibatis.annotations.Delete;
+import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.One;
 import org.apache.ibatis.annotations.Options;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Result;
 import org.apache.ibatis.annotations.Results;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 
 import com.trunkshell.voj.model.JudgeResult;
 import com.trunkshell.voj.model.Language;
@@ -152,9 +155,28 @@ public interface SubmissionMapper {
 	@Options(useCache = true)
 	public long getTotalSubmissionUsingUserId(@Param("uid") long uid);
 	
+	
+	/**
+	 * 创建提交记录.
+	 * @param submission - 待创建的提交记录对象
+	 */
+	@Insert("INSERT INTO voj_submission(problem_id, uid, language_id, submission_code) VALUES (#{problem.problemId, #{user.uid}, #{language.languageId}, #{code})")
+	@Options(flushCache = true)
 	public void createSubmission(Submission submission);
 	
+	/**
+	 * 更新提交记录.
+	 * @param submission - 待更新的提交记录对象
+	 */
+	@Update("UPDATE voj_submission SET problem_id = #{problem.problemId}, uid = #{user.uid}, language_id = #{language.languageId}, submission_submit_time = #{submitTime}, submission_execute_time = #{executeTime}, submission_used_time = #{usedTime}, submission_used_memory = #{usedMemory}, submission_judge_result = #{judgeResult.judgeResultSlug}, submission_judge_score = #{judgeScore}, submission_judge_log = #{judgeLog}, submission_code = #{code} WHERE submission_id = #{submissionId}")
+	@Options(flushCache = true)
 	public void updateSubmission(Submission submission);
 	
-	public void deleteSubmission(long submissionId);
+	/**
+	 * 通过提交记录的唯一标识符删除提交记录.
+	 * @param submissionId - 提交记录的唯一标识符
+	 */
+	@Delete("DELETE FROM voj_submissions WHERE submission_id = #{submissionId}")
+	@Options(flushCache = true)
+	public void deleteSubmission(@Param("submissionId") long submissionId);
 }

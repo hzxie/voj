@@ -76,21 +76,21 @@ public interface ProblemMapper {
 	
 	/**
      * 创建一个新的试题对象.
-     * @param problem - 试题对象的实例
+     * @param problem - 试题对象
      * @return 操作是否成功完成
      */
 	@Insert("INSERT INTO voj_problems (problem_is_public, problem_name, problem_time_limit, problem_memory_limit, problem_description, problem_input_format, problem_output_format, problem_sample_input, problem_sample_output, problem_hint) VALUES (#{isPublic}, #{problemName}, #{timeLimit}, #{memoryLimit}, #{description}, #{inputFormat}, #{outputFormat}, #{sampleInput}, #{sampleOutput}, #{hint})")
 	@Options(useGeneratedKeys = true, keyProperty = "problem_id", flushCache = true)
-	public boolean createProblem(Problem problem);
+	public void createProblem(Problem problem);
 	
 	/**
      * 更新试题信息.
-     * @param problem - 试题对象的实例
+     * @param problem - 试题对象
      * @return 操作是否成功完成
      */
 	@Update("UPDATE voj_problems SET problem_is_public = #{isPublic}, problem_name = #{problemName}, problem_time_limit = #{timeLimit}, problem_memory_limit = #{memoryLimit}, problem_description = #{description}, problem_input_format = #{inputFormat}, problem_output_format = #{outputFormat}, problem_sample_input = #{sampleInput}, problem_sample_output = #{sampleOutput}, problem_hint = #{hint} WHERE problem_id = #{problemId}")
 	@Options(flushCache = true)
-	public boolean updateProblem(Problem problem);
+	public void updateProblem(Problem problem);
 	
 	/**
      * 通过试题的唯一标识符删除一个试题对象.
@@ -99,7 +99,7 @@ public interface ProblemMapper {
      */
 	@Delete("DELETE FROM voj_problems WHERE problem_id = #{problemId}")
 	@Options(flushCache = true)
-	public boolean deleteProblem(long problemId);
+	public void deleteProblem(long problemId);
 
 	/**
 	 * 获取试题提交总次数的SQL子查询语句. 

@@ -25,6 +25,7 @@
     <!-- JavaScript -->
     <script type="text/javascript" src="${cdnUrl}/js/jquery-1.11.1.min.js"></script>
     <script type="text/javascript" src="${cdnUrl}/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="${cdnUrl}/js/md5.min.js"></script>
     <!--[if lte IE 9]>
         <script type="text/javascript" src="${cdnUrl}/js/jquery.placeholder.min.js"></script>
     <![endif]-->
@@ -128,7 +129,6 @@
     <!-- Java Script -->
     <!-- Placed at the end of the document so the pages load faster -->
     <script type="text/javascript" src="${cdnUrl}/js/site.js"></script>
-    <script type="text/javascript" src="${cdnUrl}/js/md5.min.js"></script>
     <script type="text/javascript">
         $.getScript('${cdnUrl}/js/markdown.min.js', function() {
             converter = Markdown.getSanitizingConverter();

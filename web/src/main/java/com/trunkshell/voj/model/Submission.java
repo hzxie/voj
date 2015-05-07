@@ -16,7 +16,22 @@ public class Submission implements Serializable {
 	public Submission() { }
 	
 	/**
-	 * 评测记录类的默认函数.
+	 * 评测记录类的构造函数.
+	 * @param problem - 评测对应的试题对象
+	 * @param user - 评测提交者的用户对象
+	 * @param language - 提交所使用的语言对象
+	 * @param submitTime - 评测提交时间
+	 * @param code - 评测所执行的代码
+	 */
+	public Submission(Problem problem, User user, Language language, String code) { 
+		this.problem = problem;
+		this.user = user;
+		this.language = language;
+		this.code = code;
+	}
+	
+	/**
+	 * 评测记录类的构造函数.
 	 * @param problem - 评测对应的试题对象
 	 * @param user - 评测提交者的用户对象
 	 * @param language - 提交所使用的语言对象
@@ -31,9 +46,7 @@ public class Submission implements Serializable {
 	 */
 	public Submission(Problem problem, User user, Language language, Date submitTime,  Date executeTime, 
 			int usedTime, int usedMemory, JudgeResult judgeResult, int judgeScore,  String judgeLog, String code) { 
-		this.problem = problem;
-		this.user = user;
-		this.language = language;
+		this(problem, user, language, code);
 		this.submitTime = submitTime;
 		this.executeTime = executeTime;
 		this.usedTime = usedTime;
@@ -41,11 +54,10 @@ public class Submission implements Serializable {
 		this.judgeResult = judgeResult;
 		this.judgeScore = judgeScore;
 		this.judgeLog = judgeLog;
-		this.code = code;
 	}
 	
 	/**
-	 * 评测记录类的默认函数.
+	 * 评测记录类的构造函数.
 	 * @param submissionId - 评测记录的唯一标识符
 	 * @param problem - 评测对应的试题对象
 	 * @param user - 评测提交者的用户对象
