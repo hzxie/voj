@@ -3,7 +3,7 @@
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: May 07, 2015 at 10:24 AM
+-- Generation Time: May 07, 2015 at 05:29 PM
 -- Server version: 5.6.21
 -- PHP Version: 5.6.3
 
@@ -49,7 +49,7 @@ INSERT INTO `voj_categories` (`category_id`, `category_slug`, `category_name`, `
 CREATE TABLE IF NOT EXISTS `voj_contests` (
 `contest_id` bigint(20) NOT NULL,
   `contest_name` varchar(128) NOT NULL,
-  `contest_start_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `contest_start_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `contest_end_time` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
@@ -72,12 +72,28 @@ CREATE TABLE IF NOT EXISTS `voj_contest_problems` (
 
 CREATE TABLE IF NOT EXISTS `voj_discussion_replies` (
 `discussion_reply_id` bigint(20) NOT NULL,
-  `discussion_topic_id` bigint(20) NOT NULL,
+  `discussion_threads_id` bigint(20) NOT NULL,
   `discussion_reply_uid` bigint(20) NOT NULL,
   `discussion_reply_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `discussion_reply_vote_up` int(11) NOT NULL,
-  `discussion_reply_vote_down` int(11) NOT NULL,
+  `discussion_reply_vote_up` bigint(20) NOT NULL DEFAULT '0',
+  `discussion_reply_vote_down` bigint(20) NOT NULL DEFAULT '0',
   `discussion_reply_content` text NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `voj_discussion_threads`
+--
+
+CREATE TABLE IF NOT EXISTS `voj_discussion_threads` (
+`discussion_threads_id` bigint(20) NOT NULL,
+  `discussion_topic_id` int(8) NOT NULL,
+  `disscussion_creator_uid` bigint(20) NOT NULL,
+  `problem_id` bigint(20) DEFAULT NULL,
+  `discussion_threads_name` varchar(128) NOT NULL,
+  `discussion_create_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `discussion_content` text NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
@@ -87,12 +103,9 @@ CREATE TABLE IF NOT EXISTS `voj_discussion_replies` (
 --
 
 CREATE TABLE IF NOT EXISTS `voj_discussion_topics` (
-`discussion_topic_id` bigint(20) NOT NULL,
-  `problem_id` bigint(20) NOT NULL,
-  `disscussion_creator_uid` bigint(20) NOT NULL,
-  `discussion_topic_name` varchar(128) NOT NULL,
-  `discussion_create_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `discussion_content` text NOT NULL
+`discussion_topic_id` int(8) NOT NULL,
+  `discussion_topic_slug` varchar(128) NOT NULL,
+  `discussion_topic_name` varchar(128) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
@@ -336,13 +349,19 @@ ALTER TABLE `voj_contest_problems`
 -- Indexes for table `voj_discussion_replies`
 --
 ALTER TABLE `voj_discussion_replies`
- ADD PRIMARY KEY (`discussion_reply_id`), ADD KEY `discussion_id` (`discussion_topic_id`,`discussion_reply_uid`), ADD KEY `discussion_reply_uid` (`discussion_reply_uid`);
+ ADD PRIMARY KEY (`discussion_reply_id`), ADD KEY `discussion_id` (`discussion_threads_id`,`discussion_reply_uid`), ADD KEY `discussion_reply_uid` (`discussion_reply_uid`);
+
+--
+-- Indexes for table `voj_discussion_threads`
+--
+ALTER TABLE `voj_discussion_threads`
+ ADD PRIMARY KEY (`discussion_threads_id`), ADD KEY `problem_id` (`discussion_topic_id`,`disscussion_creator_uid`), ADD KEY `disscussion_creator_uid` (`disscussion_creator_uid`), ADD KEY `problem_id_2` (`problem_id`);
 
 --
 -- Indexes for table `voj_discussion_topics`
 --
 ALTER TABLE `voj_discussion_topics`
- ADD PRIMARY KEY (`discussion_topic_id`), ADD KEY `problem_id` (`problem_id`,`disscussion_creator_uid`), ADD KEY `disscussion_creator_uid` (`disscussion_creator_uid`);
+ ADD PRIMARY KEY (`discussion_topic_id`);
 
 --
 -- Indexes for table `voj_judge_results`
@@ -424,10 +443,15 @@ MODIFY `contest_id` bigint(20) NOT NULL AUTO_INCREMENT;
 ALTER TABLE `voj_discussion_replies`
 MODIFY `discussion_reply_id` bigint(20) NOT NULL AUTO_INCREMENT;
 --
+-- AUTO_INCREMENT for table `voj_discussion_threads`
+--
+ALTER TABLE `voj_discussion_threads`
+MODIFY `discussion_threads_id` bigint(20) NOT NULL AUTO_INCREMENT;
+--
 -- AUTO_INCREMENT for table `voj_discussion_topics`
 --
 ALTER TABLE `voj_discussion_topics`
-MODIFY `discussion_topic_id` bigint(20) NOT NULL AUTO_INCREMENT;
+MODIFY `discussion_topic_id` int(8) NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT for table `voj_judge_results`
 --
@@ -478,14 +502,15 @@ ADD CONSTRAINT `voj_contest_problems_ibfk_2` FOREIGN KEY (`problem_id`) REFERENC
 -- Constraints for table `voj_discussion_replies`
 --
 ALTER TABLE `voj_discussion_replies`
-ADD CONSTRAINT `voj_discussion_replies_ibfk_1` FOREIGN KEY (`discussion_topic_id`) REFERENCES `voj_discussion_topics` (`discussion_topic_id`),
 ADD CONSTRAINT `voj_discussion_replies_ibfk_2` FOREIGN KEY (`discussion_reply_uid`) REFERENCES `voj_users` (`uid`);
 
 --
--- Constraints for table `voj_discussion_topics`
+-- Constraints for table `voj_discussion_threads`
 --
-ALTER TABLE `voj_discussion_topics`
-ADD CONSTRAINT `voj_discussion_topics_ibfk_2` FOREIGN KEY (`disscussion_creator_uid`) REFERENCES `voj_users` (`uid`);
+ALTER TABLE `voj_discussion_threads`
+ADD CONSTRAINT `voj_discussion_threads_ibfk_1` FOREIGN KEY (`disscussion_creator_uid`) REFERENCES `voj_users` (`uid`),
+ADD CONSTRAINT `voj_discussion_threads_ibfk_2` FOREIGN KEY (`discussion_topic_id`) REFERENCES `voj_discussion_topics` (`discussion_topic_id`),
+ADD CONSTRAINT `voj_discussion_threads_ibfk_3` FOREIGN KEY (`problem_id`) REFERENCES `voj_problems` (`problem_id`);
 
 --
 -- Constraints for table `voj_problem_categories`
