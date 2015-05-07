@@ -50,9 +50,9 @@
         <div id="about" class="section">
             <h4><spring:message code="voj.include.header.about" text="About" /></h4>
             <ul>
-                <li><a href="#"><spring:message code="voj.include.header.judgers" text="Judgers" /></a></li>
-                <li><a href="#"><spring:message code="voj.include.header.feedback" text="Feedback" /></a></li>
-                <li><a href="#"><spring:message code="voj.include.header.about-us" text="About us" /></a></li>
+                <li><a href="<c:url value="/judgers" />"><spring:message code="voj.include.header.judgers" text="Judgers" /></a></li>
+                <li><a href="https://github.com/zjhzxhz/voj/issues" target="_blank"><spring:message code="voj.include.header.feedback" text="Feedback" /></a></li>
+                <li><a href="<c:url value="/about" />"><spring:message code="voj.include.header.about-us" text="About us" /></a></li>
             </ul>
         </div> <!-- .section -->
     </div> <!-- #drawer-nav -->

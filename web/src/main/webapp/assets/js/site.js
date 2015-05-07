@@ -50,3 +50,15 @@ $(function() {
         }
     });
 });
+
+/* Display Current Language Name */
+$(function() {
+    var languageMapper      = {
+        'en_US': 'English',
+        'zh_CN': '简体中文'
+    };
+    var currentLanguageCode = $('#current-language').html(),
+        currentLanguageName = languageMapper[currentLanguageCode];
+
+    $('#current-language').html(currentLanguageName);
+});

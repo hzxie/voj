@@ -84,8 +84,18 @@ div#drawer-nav div#profile ul.inline > li {
 div#footer {
 	color: #000;
 	font-size: 12px;
+	margin-top: 40px;
 	padding: 20px 0;
 	text-align: center;
+}
+
+div#footer ul#footer-nav a {
+	color: #333;
+}
+
+div#footer iframe {
+	width: 51px;
+	height: 20px;
 }
 
 /* Style for Markdown Editor */
