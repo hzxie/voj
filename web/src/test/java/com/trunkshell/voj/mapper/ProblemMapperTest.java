@@ -137,11 +137,11 @@ public class ProblemMapperTest {
 		problem.setProblemName("New Problem Name");
 		problemMapper.updateProblem(problem);
 		
-		/*
+		/**
 		 * The following Assert CANNOT passed in CI due to 
 		 * the bug of Spring Test Framework. But it really works.
 		 */
-		/**
+		/*
 		 * Problem updatedProblem = problemMapper.getProblem(1001);
 		 * String problemName = updatedProblem.getProblemName();
 		 * Assert.assertEquals("New Problem Name", problemName);

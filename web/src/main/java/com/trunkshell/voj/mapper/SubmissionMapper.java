@@ -155,12 +155,11 @@ public interface SubmissionMapper {
 	@Options(useCache = true)
 	public long getTotalSubmissionUsingUserId(@Param("uid") long uid);
 	
-	
 	/**
 	 * 创建提交记录.
 	 * @param submission - 待创建的提交记录对象
 	 */
-	@Insert("INSERT INTO voj_submission(problem_id, uid, language_id, submission_code) VALUES (#{problem.problemId, #{user.uid}, #{language.languageId}, #{code})")
+	@Insert("INSERT INTO voj_submissions(problem_id, uid, language_id, submission_code) VALUES (#{problem.problemId}, #{user.uid}, #{language.languageId}, #{code})")
 	@Options(flushCache = true)
 	public void createSubmission(Submission submission);
 	
@@ -168,7 +167,7 @@ public interface SubmissionMapper {
 	 * 更新提交记录.
 	 * @param submission - 待更新的提交记录对象
 	 */
-	@Update("UPDATE voj_submission SET problem_id = #{problem.problemId}, uid = #{user.uid}, language_id = #{language.languageId}, submission_submit_time = #{submitTime}, submission_execute_time = #{executeTime}, submission_used_time = #{usedTime}, submission_used_memory = #{usedMemory}, submission_judge_result = #{judgeResult.judgeResultSlug}, submission_judge_score = #{judgeScore}, submission_judge_log = #{judgeLog}, submission_code = #{code} WHERE submission_id = #{submissionId}")
+	@Update("UPDATE voj_submissions SET problem_id = #{problem.problemId}, uid = #{user.uid}, language_id = #{language.languageId}, submission_submit_time = #{submitTime}, submission_execute_time = #{executeTime}, submission_used_time = #{usedTime}, submission_used_memory = #{usedMemory}, submission_judge_result = #{judgeResult.judgeResultSlug}, submission_judge_score = #{judgeScore}, submission_judge_log = #{judgeLog}, submission_code = #{code} WHERE submission_id = #{submissionId}")
 	@Options(flushCache = true)
 	public void updateSubmission(Submission submission);
 	
