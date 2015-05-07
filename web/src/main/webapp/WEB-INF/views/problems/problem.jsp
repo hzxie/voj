@@ -56,33 +56,33 @@
                     </div> <!-- .header -->
                     <div class="body">
                         <div class="section">
-                            <h4>Description</h4>
+                            <h4><spring:message code="voj.problems.problem.description" text="Description" /></h4>
                             <div class="description markdown">${problem.description}</div> <!-- .description -->
                         </div> <!-- .section -->
                         <div class="section">
-                            <h4>Format</h4>
-                            <h5>Input</h5>
+                            <h4><spring:message code="voj.problems.problem.format" text="Format" /></h4>
+                            <h5><spring:message code="voj.problems.problem.input" text="Input" /></h5>
                             <div class="description">${problem.inputFormat}</div> <!-- .description -->
-                            <h5>Output</h5>
+                            <h5><spring:message code="voj.problems.problem.output" text="Output" /></h5>
                             <div class="description">${problem.outputFormat}</div> <!-- .description -->
                         </div> <!-- .section -->
                         <div id="io-sample" class="section">
-                            <h4>Samples</h4>
-                            <h5>Sample Input</h5>
+                            <h4><spring:message code="voj.problems.problem.samples" text="Samples" /></h4>
+                            <h5><spring:message code="voj.problems.problem.sample-input" text="Sample Input" /></h5>
                             <div class="description"><pre>${problem.sampleInput}</pre></div> <!-- .description -->
-                            <h5>Sample Output</h5>
+                            <h5><spring:message code="voj.problems.problem.sample-output" text="Sample Output" /></h5>
                             <div class="description"><pre>${problem.sampleOutput}</pre></div> <!-- .description -->
                         </div> <!-- .section -->
                         <div class="section">
-                            <h4>Restrictions</h4>
+                            <h4><spring:message code="voj.problems.problem.restrictions" text="Restrictions" /></h4>
                             <div class="description">
-                                <p><strong>Time Limit: </strong>${problem.timeLimit} ms</p>
-                                <p><strong>Memory Limit: </strong>${problem.memoryLimit} KB</p>
+                                <p><strong><spring:message code="voj.problems.problem.time-limit" text="Time Limit" />: </strong>${problem.timeLimit} ms</p>
+                                <p><strong><spring:message code="voj.problems.problem.memory-limit" text="Memory Limit" />: </strong>${problem.memoryLimit} KB</p>
                             </div> <!-- .description -->
                         </div> <!-- .section -->
                         <c:if test="${problem.hint != null}">
                         <div class="section">
-                            <h4>Hint</h4>
+                            <h4><spring:message code="voj.problems.problem.hint" text="Hint" /></h4>
                             <div class="description markdown">${problem.hint}</div> <!-- .description -->
                         </div> <!-- .section -->
                         </c:if>
@@ -100,8 +100,8 @@
                                     </select>
                                 </div> <!-- .span4 -->
                                 <div class="span8 text-right">
-                                    <button type="submit" class="btn btn-primary">Submit</button>
-                                    <button id="close-submission" class="btn">Cancel</button>
+                                    <button type="submit" class="btn btn-primary"><spring:message code="voj.problems.problem.submit" text="Submit" /></button>
+                                    <button id="close-submission" class="btn"><spring:message code="voj.problems.problem.cancel" text="Cancel" /></button>
                                 </div> <!-- .span8 -->
                             </div> <!-- .row-fluid -->
                         </form> <!-- #code-editor-->
@@ -111,29 +111,29 @@
             </div> <!-- #main-content -->
             <div id="sidebar" class="span3">
                 <div id="actions" class="section">
-                    <h5>Actions</h5>
+                    <h5><spring:message code="voj.problems.problem.actions" text="Actions" /></h5>
                     <ul>
                     <c:if test="${isLogin}">
-                        <li><a id="submit-solution" href="javascript:void(0);">Submit Solution</a></li>
+                        <li><a id="submit-solution" href="javascript:void(0);"><spring:message code="voj.problems.problem.submit-solution" text="Submit Solution" /></a></li>
                     </c:if>
-                        <li><a href="<c:url value="/p/${submission.problem.problemId}/solution" />">View Solution</a></li>
-                        <li><a href="<c:url value="/submission?pid=${submission.problem.problemId}" />">View Submission</a></li>
+                        <li><a href="<c:url value="/p/${problem.problemId}/solution" />"><spring:message code="voj.problems.problem.view-solution" text="View Solution" /></a></li>
+                        <li><a href="<c:url value="/submission?pid=${problem.problemId}" />"><spring:message code="voj.problems.problem.view-submission" text="View Submission" /></a></li>
                     </ul>
                 </div> <!-- #actions -->
                 <c:if test="${isLogin}">
                 <div id="submission" class="section">
-                    <h5>Submission</h5>
+                    <h5><spring:message code="voj.problems.problem.submission" text="My Submission" /></h5>
                     <c:if test="${submissions == null || submissions.size() == 0}">
-                        <p>No Submission</p>
+                        <p><spring:message code="voj.problems.problem.no-submission" text="No submission" /></p>
                     </c:if>
                     <ul>
                     <c:forEach var="submission" items="${submissions}">
                         <li>
                             <span class="pull-right flag-${submission.judgeResult.judgeResultSlug}">
-                                ${submission.judgeResult.judgeResultSlug}
+                                ${submission.judgeResult.judgeResultName}
                             </span>
                             <a href="<c:url value="/submission/${submission.submissionId}" />">
-                                <fmt:formatDate value="${submission.submitTime}" type="both" dateStyle="short" timeStyle="short"/>
+                                <fmt:formatDate value="${submission.submitTime}" type="date" dateStyle="short" timeStyle="short"/>
                             </a>
                         </li>
                     </c:forEach>
@@ -141,7 +141,11 @@
                 </div> <!-- submission -->
                 </c:if>
                 <div id="discussion" class="section">
-                    <h5>Discussion</h5>
+                    <h5><spring:message code="voj.problems.problem.discussion" text="Discussion" /></h5>
+                    <c:if test="${discussion == null || discussion.size() == 0}">
+                        <p><spring:message code="voj.problems.problem.no-discussion" text="No discussion" /></p>
+                    </c:if>
+                    <ul>
                 </div> <!-- discussion -->
             </div> <!-- #sidebar -->
         </div> <!-- .row-fluid -->

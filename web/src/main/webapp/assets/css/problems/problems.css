@@ -3,9 +3,6 @@ div#content div#locator {
 	border-top: 0;
 	border-left: 10px solid #ffe6b0;
 	padding: 10px;
-	-webkit-box-shadow: 0 0 5px rgba(0,0,0,0.1);
-	   -moz-box-shadow: 0 0 5px rgba(0,0,0,0.1);
-			box-shadow: 0 0 5px rgba(0,0,0,0.1);
 }
 
 div#content div#locator ul.inline {
@@ -18,9 +15,10 @@ div#content div#main-content {
 
 div#content div#main-content div#problems table {
 	border: 1px solid #e8e8e8;
+	margin-bottom: 0;
 	-webkit-box-shadow: 0 0 5px rgba(0,0,0,0.1);
 	   -moz-box-shadow: 0 0 5px rgba(0,0,0,0.1);
-			box-shadow: 0 0 5px rgba(0,0,0,0.1);
+	        box-shadow: 0 0 5px rgba(0,0,0,0.1);
 }
 
 div#content div#main-content div#problems table thead {
@@ -77,6 +75,23 @@ div#content div#main-content div#problems table td.flag-CE > a {
 div#content div#main-content div#problems table td.name a {
 	color: #333;
 	text-align: left;
+}
+
+div#content div#main-content div#problems div#more-problems {
+	background-color: #f9f9f9;
+	border-bottom: 5px solid #1abc9c;
+	cursor: pointer;
+	padding: 10px;
+	text-align: center;
+}
+
+div#content div#main-content div#problems div#more-problems p {
+	margin-bottom: 0;
+}
+
+div#content div#main-content div#problems div#more-problems img {
+	max-height: 15px;
+	height: 15px;
 }
 
 div#content div#sidebar div.widget {

@@ -29,7 +29,7 @@
             <c:when test="${isLogin}">
                 <img src="${cdnUrl}/img/avatar.jpg" alt="avatar" class="img-circle" />
                 <h5>${user.username}</h5>
-                <p>${user.email}</p>
+                <p class="email">${user.email}</p>
                 <p><spring:message code="voj.include.header.accepted" text="Accepted" />/<spring:message code="voj.include.header.submit" text="Submit" />: ${submissionStats.get("acceptedSubmission")}/${submissionStats.get("totalSubmission")}(${submissionStats.get("acRate")}%)</p>
                 <p><spring:message code="voj.include.header.language-preference" text="Language Preference" />: ${user.preferLanguage.languageName}</p>
                 <ul class="inline">
