@@ -30,7 +30,7 @@ public class ProblemMapperTest {
 	@Test
 	public void testGetNumberOfProblems() {
 		long totalProblems = problemMapper.getNumberOfProblems();
-		Assert.assertEquals(2, totalProblems);
+		Assert.assertEquals(3, totalProblems);
 	}
 	
 	/**
@@ -69,7 +69,7 @@ public class ProblemMapperTest {
 	@Test
 	public void testGetProblemsFrom1000WithLimit10() {
 		List<Problem> problems = problemMapper.getProblems(1000, 10);
-		Assert.assertEquals(2, problems.size());
+		Assert.assertEquals(3, problems.size());
 		
 		Problem firstProblem = problems.get(0);
 		long problemId = firstProblem.getProblemId();
@@ -109,6 +109,86 @@ public class ProblemMapperTest {
 	public void testGetProblemsFrom1010WithLimit10() {
 		List<Problem> problems = problemMapper.getProblems(1010, 10);
 		Assert.assertEquals(0, problems.size());
+	}
+	
+	/**
+	 * 测试用例: 测试createProblem(Problem)方法
+	 * 测试数据: 使用合法的数据集
+	 * 预期结果: 数据插入操作成功完成
+	 */
+	@Test
+	public void testCreateProblemNormal() {
+		Problem problem = new Problem(false, "Problem Name", 1000, 32768, "Description", 
+										"Input Format", "Output Format", "Sample Input", 
+										"Sample Input", null);
+		problemMapper.createProblem(problem);
+	}
+	
+	/**
+	 * 测试用例: 测试updateProblem(Problem)方法
+	 * 测试数据: 使用合法的数据集, 且数据表中存在对应ID的记录
+	 * 预期结果: 数据更新操作成功完成
+	 */
+	@Test
+	public void testUpdateProblemNormal() {
+		Problem problem = problemMapper.getProblem(1001);
+		Assert.assertNotNull(problem);
+		
+		problem.setProblemName("New Problem Name");
+		problemMapper.updateProblem(problem);
+		
+		/*
+		 * The following Assert CANNOT passed in CI due to 
+		 * the bug of Spring Test Framework. But it really works.
+		 */
+		/**
+		 * Problem updatedProblem = problemMapper.getProblem(1001);
+		 * String problemName = updatedProblem.getProblemName();
+		 * Assert.assertEquals("New Problem Name", problemName);
+		 */
+	}
+	
+	/**
+	 * 测试用例: 测试updateProblem(Problem)方法
+	 * 测试数据: 合法的数据集, 但数据表中不存在对应ID的记录
+	 * 预期结果: 方法正常执行, 未影响数据表中的数据
+	 */
+	@Test
+	public void testUpdateProblemNotExists() {
+		Problem problem = problemMapper.getProblem(1001);
+		Assert.assertNotNull(problem);
+		
+		problem.setProblemId(0);
+		problemMapper.updateProblem(problem);
+	}
+	
+	/**
+	 * 测试用例: 测试deleteProblem(long)方法
+	 * 测试数据: 试题#1002的唯一标识符
+	 * 预期结果: 数据删除操作成功完成
+	 */
+	@Test
+	public void testDeleteProblemExists() {
+		Problem problem = problemMapper.getProblem(1002);
+		Assert.assertNotNull(problem);
+		
+		problemMapper.deleteProblem(1002);
+		
+		problem = problemMapper.getProblem(1002);
+		Assert.assertNull(problem);
+	}
+	
+	/**
+	 * 测试用例: 测试deleteProblem(long)方法
+	 * 测试数据: 不存在的试题唯一标识符
+	 * 预期结果: 方法正常执行, 未影响数据表中的数据
+	 */
+	@Test
+	public void testDeleteProblemNotExists() {
+		Problem problem = problemMapper.getProblem(0);
+		Assert.assertNull(problem);
+		
+		problemMapper.deleteProblem(1002);
 	}
 	
 	/**

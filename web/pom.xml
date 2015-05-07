@@ -8,7 +8,7 @@
 	<name>Verwandlung Online Judge</name>
 	<url>http://maven.apache.org</url>
 	<properties>
-		<spring.version>4.1.5.RELEASE</spring.version>
+		<spring.version>4.1.6.RELEASE</spring.version>
 		<aspectj.version>1.8.5</aspectj.version>
 		<mybatis.version>3.2.8</mybatis.version>
 		<druid.version>1.0.13</druid.version>
