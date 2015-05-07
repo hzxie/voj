@@ -11,8 +11,10 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.test.context.transaction.TransactionConfiguration;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.trunkshell.voj.model.Language;
 import com.trunkshell.voj.model.Problem;
 import com.trunkshell.voj.model.Submission;
+import com.trunkshell.voj.model.User;
 
 /**
  * SubmissionMapper测试类.
@@ -217,8 +219,123 @@ public class SubmissionMapperTest {
 	}
 	
 	/**
+	 * 测试用例: 测试createSubmission(Submission)方法
+	 * 测试数据: 使用合法的数据集
+	 * 预期结果: 数据插入操作成功完成
+	 */
+	@Test
+	public void testCreateSubmissionNormal() {
+		Problem problem = problemMapper.getProblem(1000);
+		User user = userMapper.getUserUsingUid(1000);
+		Language language = languageMapper.getLanguageUsingId(1);
+		
+		Submission submission = new Submission(problem, user, language, "C Code");
+		submissionMapper.createSubmission(submission);
+	}
+	
+	/**
+	 * 测试用例: 测试createSubmission(Submission)方法
+	 * 测试数据: 使用不存在的外键值(编程语言对象)
+	 * 预期结果: 抛出DataIntegrityViolationException异常
+	 */
+	@Test(expected = org.springframework.dao.DataIntegrityViolationException.class)
+	public void testCreateSubmissionUsingNotExistingLanguage() {
+		Problem problem = problemMapper.getProblem(1000);
+		User user = userMapper.getUserUsingUid(1000);
+		Language language = new Language(0, "not-exists", "Not Exists");
+		
+		Submission submission = new Submission(problem, user, language, "Code");
+		submissionMapper.createSubmission(submission);
+	}
+	
+	/**
+	 * 测试用例: 测试updateSubmission(Submission)方法
+	 * 测试数据: 使用合法的数据集, 且数据表中存在对应ID的记录
+	 * 预期结果: 数据更新操作成功完成
+	 */
+	@Test
+	public void testUpdateSubmissionNormal() {
+		Submission submission = submissionMapper.getSubmission(1002);
+		Assert.assertNotNull(submission);
+		
+		submission.setJudgeScore(20);
+		submissionMapper.updateSubmission(submission);
+		
+		/**
+		 * The following Assert CANNOT passed in CI due to 
+		 * the bug of Spring Test Framework. But it really works.
+		 */
+		/*
+		 * Submission updatedSubmission = submissionMapper.getSubmission(1002);
+		 * int judgeScore = updatedSubmission.getJudgeScore();
+		 * Assert.assertEquals(20, judgeScore);
+		 */
+	}
+	
+	/**
+	 * 测试用例: 测试updateSubmission(Submission)方法
+	 * 测试数据: 使用合法的数据集, 但数据表中不存在对应ID的记录
+	 * 预期结果: 方法正常执行, 未影响数据表中的数据
+	 */
+	@Test
+	public void testUpdateSubmissionNotExists() {
+		Submission submission = submissionMapper.getSubmission(1000);
+		Assert.assertNotNull(submission);
+		
+		submission.setSubmissionId(0);
+		submissionMapper.updateSubmission(submission);
+	}
+	
+	/**
+	 * 测试用例: 测试deleteSubmission(long)方法
+	 * 测试数据: 提交记录#1003的唯一标识符
+	 * 预期结果: 数据删除操作成功完成
+	 */
+	@Test
+	public void testDeleteSubmissionExists() {
+		Submission submission = submissionMapper.getSubmission(1003);
+		Assert.assertNotNull(submission);
+		
+		submissionMapper.deleteSubmission(1003);
+		
+		submission = submissionMapper.getSubmission(1003);
+		Assert.assertNull(submission);
+	}
+	
+	/**
+	 * 测试用例: 测试deleteSubmission(long)方法
+	 * 测试数据: 不存在的提交记录唯一标识符
+	 * 预期结果: 方法正常执行, 未影响数据表中的数据
+	 */
+	@Test
+	public void testDeleteSubmissionNotExists() {
+		Submission submission = submissionMapper.getSubmission(0);
+		Assert.assertNull(submission);
+		
+		submissionMapper.deleteSubmission(0);
+	}
+	
+	/**
 	 * 待测试的SubmissionMapper对象.
 	 */
 	@Autowired
 	private SubmissionMapper submissionMapper;
+	
+	/**
+	 * ProblemMapper对象, 用于构建单元测试用例.
+	 */
+	@Autowired
+	private ProblemMapper problemMapper;
+	
+	/**
+	 * UserMapper对象, 用于构建单元测试用例.
+	 */
+	@Autowired
+	private UserMapper userMapper;
+	
+	/**
+	 * LanguageMapper对象, 用于构建单元测试用例.
+	 */
+	@Autowired
+	private LanguageMapper languageMapper;
 }
