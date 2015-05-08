@@ -28,9 +28,6 @@
     <!--[if lte IE 9]>
         <script type="text/javascript" src="${cdnUrl}/js/jquery.placeholder.min.js"></script>
     <![endif]-->
-    <!--[if lte IE 7]>
-        <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/font-awesome-ie7.min.css" />
-    <![endif]-->
     <!--[if lte IE 6]>
         <script type="text/javascript"> 
             window.location.href='<c:url value="/not-supported" />';
