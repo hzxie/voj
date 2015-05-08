@@ -17,20 +17,10 @@ div#header {
 	overflow: hidden;
 	padding: 20px 0;
 	top: 0;
-	z-index: 128;
 }
 
 div#header div#logo img {
-	float: left;
 	max-height: 40px;
-}
-
-div#header div#logo span {
-	display: block;
-	float: left;
-	font-size: 24px;
-	font-weight: bold;
-	margin: 8px 10px;
 }
 
 div#header div#nav {
