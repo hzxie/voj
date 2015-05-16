@@ -1,9 +1,11 @@
-<beans xmlns="http://www.springframework.org/schema/beans"
+<beans xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns="http://www.springframework.org/schema/beans"
 	xmlns:mvc="http://www.springframework.org/schema/mvc" 
 	xmlns:tx="http://www.springframework.org/schema/tx"
 	xmlns:context="http://www.springframework.org/schema/context"
 	xmlns:aop="http://www.springframework.org/schema/aop" 
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:amq="http://activemq.apache.org/schema/core"
+	xmlns:jms="http://www.springframework.org/schema/jms"
 	xmlns:util="http://www.springframework.org/schema/util"
 	xsi:schemaLocation="http://www.springframework.org/schema/beans
 	http://www.springframework.org/schema/beans/spring-beans-4.1.xsd
@@ -15,6 +17,10 @@
 	http://www.springframework.org/schema/context/spring-context-4.1.xsd
 	http://www.springframework.org/schema/aop
 	http://www.springframework.org/schema/aop/spring-aop-4.1.xsd
+	http://activemq.apache.org/schema/core
+	http://activemq.apache.org/schema/core/activemq-core-5.11.1.xsd
+	http://www.springframework.org/schema/jms
+	http://www.springframework.org/schema/jms/spring-jms.xsd
 	http://www.springframework.org/schema/util 
 	http://www.springframework.org/schema/util/spring-util-4.1.xsd">
 
@@ -103,6 +109,28 @@
 		</property>
 	</bean>
 	<bean id="vojMailSender" class="com.trunkshell.voj.util.MailSender"></bean>
+	
+	<!-- Message Service -->
+	<bean id="amqConnectionFactory" class="org.apache.activemq.ActiveMQConnectionFactory">
+		<constructor-arg index="0" value="tcp://localhost:61616"/>
+	</bean>
+	<bean id="connectionFactory" class="org.springframework.jms.connection.CachingConnectionFactory">
+		<constructor-arg ref="amqConnectionFactory" />
+	</bean> 
+	<bean id="defaultDestination" class="org.apache.activemq.command.ActiveMQQueue">
+		<constructor-arg index="0" value="vojMessageQueue"/>
+	</bean>		
+	<bean id="jmsTemplate" class="org.springframework.jms.core.JmsTemplate">
+		<property name="connectionFactory" ref="connectionFactory" />
+		<property name="defaultDestination" ref="defaultDestination" />
+	</bean>
+	<bean class="org.springframework.jms.listener.SimpleMessageListenerContainer">
+		<property name="connectionFactory" ref="connectionFactory" />
+		<property name="destinationName" value="vojMessageQueue" />
+		<property name="messageListener" ref="messageReceiver" />
+	</bean> 
+	<bean id="messageSender" class="com.trunkshell.voj.util.MessageSender"></bean>
+	<bean id="messageReceiver" class="com.trunkshell.voj.util.MessageReceiver"></bean>
 	
 	<!-- Internationalization and Localization -->
 	<bean id="messageSource"

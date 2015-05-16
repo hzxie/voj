@@ -89,4 +89,28 @@
 	<bean id="vojMailSender" 
 		class="com.trunkshell.voj.util.MailSender">
 	</bean>
+	
+	<!-- Message Service -->
+	<bean id="amqConnectionFactory" class="org.apache.activemq.ActiveMQConnectionFactory">
+		<constructor-arg index="0" value="tcp://localhost:61616"/>
+	</bean>
+	<bean id="connectionFactory" class="org.springframework.jms.connection.CachingConnectionFactory">
+		<constructor-arg ref="amqConnectionFactory" />
+	</bean> 
+	<bean id="defaultDestination" class="org.apache.activemq.command.ActiveMQQueue">
+		<constructor-arg index="0" value="vojMessageQueue"/>
+	</bean>		
+	<bean id="jmsTemplate" class="org.springframework.jms.core.JmsTemplate">
+		<property name="connectionFactory" ref="connectionFactory" />
+		<property name="defaultDestination" ref="defaultDestination" />
+	</bean>
+	<bean class="org.springframework.jms.listener.SimpleMessageListenerContainer">
+		<property name="connectionFactory" ref="connectionFactory" />
+		<property name="destinationName" value="vojMessageQueue" />
+		<property name="messageListener" ref="messageReceiver" />
+	</bean> 
+	<bean id="messageSender" class="com.trunkshell.voj.util.MessageSender"></bean>
+	<bean id="messageReceiver" class="com.trunkshell.voj.util.MessageReceiver"></bean>
+	
+	
 </beans>

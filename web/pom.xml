@@ -12,6 +12,7 @@
 		<aspectj.version>1.8.5</aspectj.version>
 		<mybatis.version>3.2.8</mybatis.version>
 		<druid.version>1.0.13</druid.version>
+		<activemq.version>5.11.1</activemq.version>
 	</properties>
 	<dependencies>
 		<!-- Spring -->
@@ -38,6 +39,11 @@
 		<dependency>
 			<groupId>org.springframework</groupId>
 			<artifactId>spring-orm</artifactId>
+			<version>${spring.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-jms</artifactId>
 			<version>${spring.version}</version>
 		</dependency>
 		<dependency>
@@ -118,6 +124,12 @@
 			<groupId>org.apache.velocity</groupId>
 			<artifactId>velocity</artifactId>
 			<version>1.7</version>
+		</dependency>
+		<!-- Message Service -->
+		<dependency>
+			<groupId>org.apache.activemq</groupId>
+			<artifactId>activemq-spring</artifactId>
+			<version>${activemq.version}</version>
 		</dependency>
 		<!-- Logger -->
 		<dependency>
