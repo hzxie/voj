@@ -92,7 +92,7 @@
 	
 	<!-- Message Service -->
 	<bean id="amqConnectionFactory" class="org.apache.activemq.ActiveMQConnectionFactory">
-		<constructor-arg index="0" value="tcp://localhost:61616"/>
+		<constructor-arg index="0" value="vm://localhost?broker.persistent=false"/>
 	</bean>
 	<bean id="connectionFactory" class="org.springframework.jms.connection.CachingConnectionFactory">
 		<constructor-arg ref="amqConnectionFactory" />
