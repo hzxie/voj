@@ -80,7 +80,7 @@ public interface ProblemMapper {
      * @return 操作是否成功完成
      */
 	@Insert("INSERT INTO voj_problems (problem_is_public, problem_name, problem_time_limit, problem_memory_limit, problem_description, problem_input_format, problem_output_format, problem_sample_input, problem_sample_output, problem_hint) VALUES (#{isPublic}, #{problemName}, #{timeLimit}, #{memoryLimit}, #{description}, #{inputFormat}, #{outputFormat}, #{sampleInput}, #{sampleOutput}, #{hint})")
-	@Options(useGeneratedKeys = true, keyProperty = "problem_id", flushCache = true)
+	@Options(useGeneratedKeys = true, keyProperty = "problemId", keyColumn = "problem_id", flushCache = true)
 	public void createProblem(Problem problem);
 	
 	/**

@@ -1,6 +1,6 @@
 package com.trunkshell.voj.controller;
 
-import java.util.HashMap;
+import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -60,7 +60,7 @@ public class AccountsController {
      * @param session - HttpSession 对象
      */
     private void destroySession(HttpServletRequest request, HttpSession session) {
-        session.removeAttribute("isLoggedIn");
+        session.setAttribute("isLoggedIn", false);
         
         User currentUser = HttpSessionParser.getCurrentUser(request.getSession());
         String ipAddress = HttpRequestParser.getRemoteAddr(request);
@@ -88,13 +88,13 @@ public class AccountsController {
 	 * @return 一个包含若干标志位的JSON对象
 	 */
 	@RequestMapping(value = "/login.action", method = RequestMethod.POST)
-	public @ResponseBody HashMap<String, Boolean> loginAction(
+	public @ResponseBody Map<String, Boolean> loginAction(
 			@RequestParam(value="username", required=true) String username,
 			@RequestParam(value="password", required=true) String password,
 			@RequestParam(value="rememberMe", required=true) boolean isAutoLoginAllowed,
 			HttpServletRequest request) {
 		String ipAddress = HttpRequestParser.getRemoteAddr(request);
-		HashMap<String, Boolean> result = userService.isAccountValid(username, password);
+		Map<String, Boolean> result = userService.isAccountValid(username, password);
 		logger.info(String.format("User: [Username=%s] tried to log in at %s", new Object[] {username, ipAddress}));
 		if ( result.get("isSuccessful") ) {
 			User user = userService.getUserUsingUsernameOrEmail(username);

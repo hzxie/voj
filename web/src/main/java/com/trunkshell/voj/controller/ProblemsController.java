@@ -13,14 +13,19 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.ModelAndView;
 
 import com.trunkshell.voj.exception.ResourceNotFoundException;
 import com.trunkshell.voj.model.Problem;
 import com.trunkshell.voj.model.Submission;
+import com.trunkshell.voj.model.User;
 import com.trunkshell.voj.service.ProblemService;
 import com.trunkshell.voj.service.SubmissionService;
+import com.trunkshell.voj.util.HttpRequestParser;
+import com.trunkshell.voj.util.HttpSessionParser;
 
 /**
  * 处理用户的查看试题/提交评测等请求.
@@ -32,7 +37,7 @@ public class ProblemsController {
 	/**
 	 * 显示试题库中的全部试题.
 	 * @param startIndex - 试题的起始下标
-	 * @param request - Http Servlet Request对象
+	 * @param request - HttpRequest对象
      * @param response - HttpResponse对象
 	 * @return 包含试题库页面信息的ModelAndView对象
 	 */
@@ -75,7 +80,7 @@ public class ProblemsController {
 	/**
 	 * 加载试题的详细信息.
 	 * @param problemID - 试题的唯一标识符
-	 * @param request - Http Servlet Request对象
+	 * @param request - HttpRequest对象
      * @param response - HttpResponse对象
 	 * @return 包含试题详细信息的ModelAndView对象
 	 */
@@ -102,6 +107,31 @@ public class ProblemsController {
         }
         return view;
     }
+	
+	/**
+	 * @param problemId - 试题的唯一标识符
+	 * @param languageSlug - 编程语言的唯一英文缩写
+	 * @param code - 代码
+	 * @param request - HttpRequest对象
+	 * @return
+	 */
+	@RequestMapping(value = "/createSubmission.action", method = RequestMethod.POST)
+	public @ResponseBody Map<String, Object> createSubmissionAction(
+			@RequestParam(value="problemId", required=true) long problemId,
+			@RequestParam(value="languageSlug", required=true) String languageSlug,
+			@RequestParam(value="code", required=true) String code,
+			HttpServletRequest request) {
+		String ipAddress = HttpRequestParser.getRemoteAddr(request);
+		User currentUser = HttpSessionParser.getCurrentUser(request.getSession());
+		
+		Map<String, Object> result = submissionService.createSubmission(currentUser, problemId, languageSlug, code);
+		boolean isSuccessful = (Boolean)result.get("isSuccessful");
+		if ( isSuccessful ) {
+			long submissionId = (Long)result.get("submissionId");
+			logger.info(String.format("User: {%s} submitted code with SubmissionId #%s at %s", new Object[] {currentUser, submissionId, ipAddress}));
+		}
+		return result;
+	}
 	
 	/**
 	 * 系统中试题的起始序号.
@@ -133,6 +163,5 @@ public class ProblemsController {
     /**
      * 日志记录器.
      */
-	@SuppressWarnings("unused")
 	private Logger logger = LogManager.getLogger(ProblemsController.class);
 }

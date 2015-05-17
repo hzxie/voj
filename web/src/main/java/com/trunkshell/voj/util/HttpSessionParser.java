@@ -29,14 +29,20 @@ public class HttpSessionParser {
 	 * @return Session中的用户对象
 	 */
 	public static User getCurrentUser(HttpSession session) {
-		Object obj = session.getAttribute("uid");
+		Object isLoggedInAttribute = session.getAttribute("isLoggedIn");
+		Object uidAttribute = session.getAttribute("uid");
+		User user = null;
 		
-		if ( obj == null ) {
+		if ( isLoggedInAttribute == null || uidAttribute == null ) {
 			return null;
 		}
-		long uid = (Long)obj;
-    	User user = userService.getUserUsingUid(uid);
-    	
+		
+		boolean isLoggedIn = (Boolean)isLoggedInAttribute;
+		long uid = (Long)uidAttribute;
+		
+		if ( isLoggedIn ) {
+			user = userService.getUserUsingUid(uid);
+		}
     	return user;
 	}
 	
