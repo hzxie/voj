@@ -111,6 +111,4 @@
 	</bean> 
 	<bean id="messageSender" class="com.trunkshell.voj.util.MessageSender"></bean>
 	<bean id="messageReceiver" class="com.trunkshell.voj.util.MessageReceiver"></bean>
-	
-	
 </beans>
