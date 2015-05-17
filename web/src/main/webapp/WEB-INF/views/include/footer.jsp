@@ -23,7 +23,9 @@
                 <spring:message code="voj.include.footer.all-rights-reserved" text="All rights reserved." />
             </p>
             <p>
-                <iframe src="https://ghbtns.com/github-btn.html?user=zjhzxhz&repo=voj&type=star&count=false" frameborder="0" scrolling="0"></iframe>
+                <button class="btn-github" onclick="window.location.href='https://github.com/zjhzxhz/voj/'">
+                    <i class="fa fa-github"></i> Star
+                </button>
             </p>
         </div> <!-- .container -->
     </div> <!-- #footer -->
