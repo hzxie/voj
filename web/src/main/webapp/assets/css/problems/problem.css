@@ -124,6 +124,12 @@ div#content div#sidebar div.section ul {
 	margin-left: 0;
 }
 
+div#content div#sidebar div#submission.section span.flag-PD,
+div#content div#sidebar div#submission.section span.flag-CPL,
+div#content div#sidebar div#submission.section span.flag-JUD {
+	color: #ffa500;
+}
+
 div#content div#sidebar div#submission.section span.flag-AC {
 	color: #f00;
 }

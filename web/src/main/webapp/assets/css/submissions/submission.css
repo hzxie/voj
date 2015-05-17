@@ -37,6 +37,12 @@ div#content div#main-content div.submission div.body div.section table td {
 	border-top: none;
 }
 
+div#content div#main-content div.submission div.body div.section table td.flag-PD,
+div#content div#main-content div.submission div.body div.section table td.flag-CPL,
+div#content div#main-content div.submission div.body div.section table td.flag-JUD {
+	color: #ffa500;
+}
+
 div#content div#main-content div.submission div.body div.section table td.flag-AC {
 	color: #f00;
 }

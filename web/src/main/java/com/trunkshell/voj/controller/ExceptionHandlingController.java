@@ -46,8 +46,6 @@ public class ExceptionHandlingController {
 			Exception ex, HttpServletRequest request, HttpServletResponse response) {
 		logger.catching(ex);
 		
-		ex.printStackTrace();
-		
 		ModelAndView view = new ModelAndView("errors/500");
 		return view;
 	}

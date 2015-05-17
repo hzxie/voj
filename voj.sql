@@ -3,7 +3,7 @@
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: May 17, 2015 at 05:12 PM
+-- Generation Time: May 17, 2015 at 05:29 PM
 -- Server version: 5.6.21
 -- PHP Version: 5.6.3
 
@@ -125,14 +125,17 @@ CREATE TABLE IF NOT EXISTS `voj_judge_results` (
 --
 
 INSERT INTO `voj_judge_results` (`judge_result_id`, `judge_result_slug`, `judge_result_name`) VALUES
-(1, 'AC', 'Accepted'),
-(2, 'WA', 'Wrong Answer'),
-(3, 'TLE', 'Time Limit Exceed'),
-(4, 'OLE', 'Output Limit Exceed'),
-(5, 'MLE', 'Memory Limit Exceed'),
-(6, 'RE', 'Runtime Error'),
-(7, 'PE', 'Presentation Error'),
-(8, 'CE', 'Compile Error');
+(1, 'PD', 'Pending'),
+(2, 'CPL', 'Compiling'),
+(3, 'JUD', 'Judging'),
+(4, 'AC', 'Accepted'),
+(5, 'WA', 'Wrong Answer'),
+(6, 'TLE', 'Time Limit Exceed'),
+(7, 'OLE', 'Output Limit Exceed'),
+(8, 'MLE', 'Memory Limit Exceed'),
+(9, 'RE', 'Runtime Error'),
+(10, 'PE', 'Presentation Error'),
+(11, 'CE', 'Compile Error');
 
 -- --------------------------------------------------------
 
@@ -250,7 +253,7 @@ CREATE TABLE IF NOT EXISTS `voj_submissions` (
   `submission_execute_time` timestamp NULL DEFAULT NULL,
   `submission_used_time` int(8) DEFAULT NULL,
   `submission_used_memory` int(8) DEFAULT NULL,
-  `submission_judge_result` varchar(8) DEFAULT NULL,
+  `submission_judge_result` varchar(8) NOT NULL DEFAULT 'PD',
   `submission_judge_score` int(4) DEFAULT NULL,
   `submission_judge_log` text,
   `submission_code` text NOT NULL
@@ -518,6 +521,12 @@ ADD CONSTRAINT `voj_discussion_threads_ibfk_3` FOREIGN KEY (`problem_id`) REFERE
 ALTER TABLE `voj_problem_categories`
 ADD CONSTRAINT `voj_problem_categories_ibfk_1` FOREIGN KEY (`problem_id`) REFERENCES `voj_problems` (`problem_id`),
 ADD CONSTRAINT `voj_problem_categories_ibfk_2` FOREIGN KEY (`category_id`) REFERENCES `voj_categories` (`category_id`);
+
+--
+-- Constraints for table `voj_problem_checkpoints`
+--
+ALTER TABLE `voj_problem_checkpoints`
+ADD CONSTRAINT `voj_problem_checkpoints_ibfk_1` FOREIGN KEY (`problem_id`) REFERENCES `voj_problems` (`problem_id`);
 
 --
 -- Constraints for table `voj_problem_tags`
