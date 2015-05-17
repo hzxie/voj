@@ -3,7 +3,7 @@
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: May 07, 2015 at 05:29 PM
+-- Generation Time: May 17, 2015 at 05:12 PM
 -- Server version: 5.6.21
 -- PHP Version: 5.6.3
 
@@ -247,7 +247,7 @@ CREATE TABLE IF NOT EXISTS `voj_submissions` (
   `uid` bigint(20) NOT NULL,
   `language_id` int(4) NOT NULL,
   `submission_submit_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `submission_execute_time` timestamp NULL DEFAULT '0000-00-00 00:00:00',
+  `submission_execute_time` timestamp NULL DEFAULT NULL,
   `submission_used_time` int(8) DEFAULT NULL,
   `submission_used_memory` int(8) DEFAULT NULL,
   `submission_judge_result` varchar(8) DEFAULT NULL,

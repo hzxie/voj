@@ -1,6 +1,7 @@
 package com.trunkshell.voj.service;
 
 import java.util.HashMap;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -46,10 +47,10 @@ public class UserService {
 	 * 验证用户身份是否有效.
 	 * @param username - 用户名或电子邮件地址
 	 * @param password - 密码(已使用MD5加密)
-	 * @return 一个User的对象或空引用
+	 * @return 一个包含登录验证结果的Map<String, Boolean>对象
 	 */
-	public HashMap<String, Boolean> isAccountValid(String username, String password) {
-		HashMap<String, Boolean> result = new HashMap<String, Boolean>(5, 1);
+	public Map<String, Boolean> isAccountValid(String username, String password) {
+		Map<String, Boolean> result = new HashMap<String, Boolean>(5, 1);
 		result.put("isUsernameEmpty", username.isEmpty());
 		result.put("isPasswordEmpty", password.isEmpty());
 		result.put("isAccountValid", false);

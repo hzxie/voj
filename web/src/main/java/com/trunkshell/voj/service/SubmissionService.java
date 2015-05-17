@@ -4,12 +4,19 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.trunkshell.voj.mapper.LanguageMapper;
+import com.trunkshell.voj.mapper.ProblemMapper;
 import com.trunkshell.voj.mapper.SubmissionMapper;
+import com.trunkshell.voj.model.Language;
+import com.trunkshell.voj.model.Problem;
 import com.trunkshell.voj.model.Submission;
+import com.trunkshell.voj.model.User;
 
 /**
  * 提交类(Submission)的业务逻辑层.
@@ -104,8 +111,71 @@ public class SubmissionService {
 	}
 	
 	/**
+	 * 创建提交记录, 并将评测任务加入消息队列.
+	 * @param user - 已登录的用户对象
+	 * @param problemId - 试题的唯一标识符
+	 * @param languageSlug - 编程语言的唯一英文缩写
+	 * @param code - 代码
+	 * @return 一个包含提交记录创建结果的Map<String, Object>对象, 并包含创建的提交记录的唯一标识符.
+	 */
+	public Map<String, Object> createSubmission(User user, long problemId, String languageSlug, String code) {
+		Problem problem = problemMapper.getProblem(problemId);
+		Language language = languageMapper.getLanguageUsingSlug(languageSlug);
+		
+		Submission submission = new Submission(problem, user, language, code);
+		
+		@SuppressWarnings("unchecked")
+		Map<String, Object> result = (Map<String, Object>) getSubmissionCreationResult(submission);
+		boolean isSuccessful = (Boolean)result.get("isSuccessful");
+		if ( isSuccessful ) {
+			submissionMapper.createSubmission(submission);
+			
+			long submissionId = submission.getSubmissionId();
+			result.put("submissionId", submissionId);
+		}
+		return result;
+	}
+	
+	/**
+	 * 验证提交记录数据.
+	 * @param submission - 待创建的提交记录对象
+	 * @return 一个包含提交记录的验证结果的Map<String, Boolean>对象
+	 */
+	private Map<String, ? extends Object> getSubmissionCreationResult(Submission submission) {
+		Map<String, Boolean> result = new HashMap<String, Boolean>();
+		String code = submission.getCode();
+		result.put("isUserLogined", submission.getUser() != null);
+		result.put("isProblemExists", submission.getProblem() != null);
+		result.put("isLanguageExists", submission.getLanguage() != null);
+		result.put("isCodeEmpty", code == null || code.length() == 0);
+		
+		boolean isSuccessful = result.get("isUserLogined")    &&  result.get("isProblemExists") &&
+							   result.get("isLanguageExists") && !result.get("isCodeEmpty");
+		result.put("isSuccessful", isSuccessful);
+		return result;
+	}
+	
+	/**
 	 * 自动注入的SubmissionMapper对象.
 	 */
 	@Autowired
 	private SubmissionMapper submissionMapper;
+	
+	/**
+	 * 自动注入的ProblemMapper对象.
+	 */
+	@Autowired
+	private ProblemMapper problemMapper;
+	
+	/**
+	 * 自动注入的LanguageMapper对象.
+	 */
+	@Autowired
+	private LanguageMapper languageMapper;
+	
+	/**
+     * 日志记录器.
+     */
+	@SuppressWarnings("unused")
+	private Logger logger = LogManager.getLogger(SubmissionService.class);
 }

@@ -99,6 +99,14 @@ div#content div#main-content div.problem div.body form#code-editor select#langua
 	margin-top: 5px;
 }
 
+div#content div#main-content div.problem div.body form#code-editor div#submission-error {
+	padding-top: 12px;
+}
+
+div#content div#main-content div.problem div.body form#code-editor div#submission-action {
+	text-align: right;
+}
+
 div#content div#main-content div.problem code {
 	background-color: #fff;
 	border: none;
@@ -131,4 +139,11 @@ div#content div#sidebar div#submission.section span.flag-OLE {
 div#content div#sidebar div#submission.section span.flag-RE,
 div#content div#sidebar div#submission.section span.flag-CE {
 	color: #49a932;
+}
+
+/* All Mobile Sizes (devices and browser) */
+@media only screen and (max-width: 767px) {
+	div#content div#main-content div.problem div.body form#code-editor div#submission-action {
+		text-align: left;
+	}
 }
