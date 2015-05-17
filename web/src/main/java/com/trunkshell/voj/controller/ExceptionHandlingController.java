@@ -27,7 +27,7 @@ public class ExceptionHandlingController {
 	 */
 	@ResponseStatus(value=HttpStatus.NOT_FOUND)
 	@ExceptionHandler(ResourceNotFoundException.class)
-	public ModelAndView ResourceNotFoundView(
+	public ModelAndView resourceNotFoundView(
 			HttpServletRequest request, HttpServletResponse response) {
 		ModelAndView view = new ModelAndView("errors/404");
         return view;
@@ -42,7 +42,7 @@ public class ExceptionHandlingController {
 	 */
 	@ResponseStatus(value=HttpStatus.INTERNAL_SERVER_ERROR)
 	@ExceptionHandler(Exception.class)
-	public ModelAndView InternelServerErrorView(
+	public ModelAndView internalServerErrorView(
 			Exception ex, HttpServletRequest request, HttpServletResponse response) {
 		logger.catching(ex);
 		
