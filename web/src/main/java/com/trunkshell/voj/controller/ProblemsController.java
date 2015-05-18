@@ -24,6 +24,7 @@ import com.trunkshell.voj.model.Submission;
 import com.trunkshell.voj.model.User;
 import com.trunkshell.voj.service.ProblemService;
 import com.trunkshell.voj.service.SubmissionService;
+import com.trunkshell.voj.util.CsrfProtector;
 import com.trunkshell.voj.util.HttpRequestParser;
 import com.trunkshell.voj.util.HttpSessionParser;
 
@@ -104,6 +105,7 @@ public class ProblemsController {
         	
         	view.addObject("latestSubmission", submissionOfProblems);
         	view.addObject("submissions", submissions);
+        	view.addObject("csrfToken", CsrfProtector.getCsrfToken(session));
         }
         return view;
     }
@@ -113,22 +115,27 @@ public class ProblemsController {
 	 * @param languageSlug - 编程语言的唯一英文缩写
 	 * @param code - 代码
 	 * @param request - HttpRequest对象
-	 * @return
+	 * @return 一个包含提交记录创建结果的Map<String, Object>对象
 	 */
 	@RequestMapping(value = "/createSubmission.action", method = RequestMethod.POST)
 	public @ResponseBody Map<String, Object> createSubmissionAction(
 			@RequestParam(value="problemId", required=true) long problemId,
 			@RequestParam(value="languageSlug", required=true) String languageSlug,
 			@RequestParam(value="code", required=true) String code,
+			@RequestParam(value="csrfToken", required=true) String csrfToken,
 			HttpServletRequest request) {
+		HttpSession session = request.getSession();
 		String ipAddress = HttpRequestParser.getRemoteAddr(request);
-		User currentUser = HttpSessionParser.getCurrentUser(request.getSession());
+		User currentUser = HttpSessionParser.getCurrentUser(session);
+		boolean isCsrfTokenValid = CsrfProtector.isCsrfTokenValid(csrfToken, session);
 		
-		Map<String, Object> result = submissionService.createSubmission(currentUser, problemId, languageSlug, code);
+		Map<String, Object> result = submissionService.createSubmission(
+				currentUser, problemId, languageSlug, code, isCsrfTokenValid);
 		boolean isSuccessful = (Boolean)result.get("isSuccessful");
 		if ( isSuccessful ) {
 			long submissionId = (Long)result.get("submissionId");
-			logger.info(String.format("User: {%s} submitted code with SubmissionId #%s at %s", new Object[] {currentUser, submissionId, ipAddress}));
+			logger.info(String.format("User: {%s} submitted code with SubmissionId #%s at %s", 
+					new Object[] {currentUser, submissionId, ipAddress}));
 		}
 		return result;
 	}

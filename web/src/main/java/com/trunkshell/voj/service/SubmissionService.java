@@ -86,7 +86,6 @@ public class SubmissionService {
 			long problemId = s.getProblem().getProblemId();
 			submissionOfProblems.put(problemId, s);
 		}
-		
 		return submissionOfProblems;
 	}
 	
@@ -116,16 +115,18 @@ public class SubmissionService {
 	 * @param problemId - 试题的唯一标识符
 	 * @param languageSlug - 编程语言的唯一英文缩写
 	 * @param code - 代码
+	 * @param isCsrfTokenValid - CSRF的Token是否正确
 	 * @return 一个包含提交记录创建结果的Map<String, Object>对象, 并包含创建的提交记录的唯一标识符.
 	 */
-	public Map<String, Object> createSubmission(User user, long problemId, String languageSlug, String code) {
+	public Map<String, Object> createSubmission(User user, long problemId, 
+			String languageSlug, String code, boolean isCsrfTokenValid) {
 		Problem problem = problemMapper.getProblem(problemId);
 		Language language = languageMapper.getLanguageUsingSlug(languageSlug);
 		
 		Submission submission = new Submission(problem, user, language, code);
 		
 		@SuppressWarnings("unchecked")
-		Map<String, Object> result = (Map<String, Object>) getSubmissionCreationResult(submission);
+		Map<String, Object> result = (Map<String, Object>) getSubmissionCreationResult(submission, isCsrfTokenValid);
 		boolean isSuccessful = (Boolean)result.get("isSuccessful");
 		if ( isSuccessful ) {
 			submissionMapper.createSubmission(submission);
@@ -139,18 +140,21 @@ public class SubmissionService {
 	/**
 	 * 验证提交记录数据.
 	 * @param submission - 待创建的提交记录对象
+	 * @param isCsrfTokenValid - CSRF的Token是否正确
 	 * @return 一个包含提交记录的验证结果的Map<String, Boolean>对象
 	 */
-	private Map<String, ? extends Object> getSubmissionCreationResult(Submission submission) {
+	private Map<String, ? extends Object> getSubmissionCreationResult(Submission submission, boolean isCsrfTokenValid) {
 		Map<String, Boolean> result = new HashMap<String, Boolean>();
 		String code = submission.getCode();
 		result.put("isUserLogined", submission.getUser() != null);
 		result.put("isProblemExists", submission.getProblem() != null);
 		result.put("isLanguageExists", submission.getLanguage() != null);
 		result.put("isCodeEmpty", code == null || code.length() == 0);
+		result.put("isCsrfTokenValid", isCsrfTokenValid);
 		
 		boolean isSuccessful = result.get("isUserLogined")    &&  result.get("isProblemExists") &&
-							   result.get("isLanguageExists") && !result.get("isCodeEmpty");
+							   result.get("isLanguageExists") && !result.get("isCodeEmpty")     &&
+							   result.get("isCsrfTokenValid");
 		result.put("isSuccessful", isSuccessful);
 		return result;
 	}
