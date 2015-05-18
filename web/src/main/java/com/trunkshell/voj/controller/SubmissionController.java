@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.ModelAndView;
@@ -34,7 +35,7 @@ public class SubmissionController {
 	 * @param response - HttpResponse对象
 	 * @return 包含提交列表的ModelAndView对象 
 	 */
-	@RequestMapping(value = "")
+	@RequestMapping(value = "", method = RequestMethod.GET)
     public ModelAndView submissionsView(
     		HttpServletRequest request, HttpServletResponse response) {
 		List<Submission> submissions = submissionService.getSubmissions(NUMBER_OF_SUBMISSION_PER_PAGE);
@@ -48,7 +49,7 @@ public class SubmissionController {
 	 * @param request - HttpRequest对象
 	 * @return 一个包含提交记录列表的HashMap对象
 	 */
-	@RequestMapping(value = "/getSubmissions.action")
+	@RequestMapping(value = "/getSubmissions.action", method = RequestMethod.GET)
 	public @ResponseBody Map<String, Object> getSubmissionAction(
 			@RequestParam(value="startIndex", required=true) long startIndex,
 			HttpServletRequest request) {
@@ -67,7 +68,7 @@ public class SubmissionController {
 	 * @param request - HttpRequest对象
 	 * @return 一个包含提交记录列表的HashMap对象
 	 */
-	@RequestMapping(value = "/getLatestSubmissions.action")
+	@RequestMapping(value = "/getLatestSubmissions.action", method = RequestMethod.GET)
 	public @ResponseBody Map<String, Object> getLatestSubmissionsAction(
 			@RequestParam(value="startIndex", required=true) long startIndex,
 			HttpServletRequest request) {
@@ -87,7 +88,7 @@ public class SubmissionController {
 	 * @param response - HttpResponse对象
 	 * @return 包含提交详细信息的ModelAndView对象 
 	 */
-	@RequestMapping(value = "/{submissionId}")
+	@RequestMapping(value = "/{submissionId}", method = RequestMethod.GET)
     public ModelAndView submissionView(
     		@PathVariable("submissionId") long submissionId,
     	    HttpServletRequest request, HttpServletResponse response) {

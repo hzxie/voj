@@ -4,7 +4,7 @@
 	xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_3_0.xsd"
 	id="voj" version="3.0">
 	<display-name>Verwandlung Online Judge</display-name>
-	
+
 	<!-- Spring MVC Configuration -->
 	<servlet>
 		<servlet-name>dispatcher</servlet-name>
@@ -32,18 +32,18 @@
 		<servlet-name>DruidStatView</servlet-name>
 		<url-pattern>/druid/*</url-pattern>
 	</servlet-mapping>
-	
+
 	<!-- Log4j -->
 	<context-param>
 		<param-name>log4jConfigLocation</param-name>
 		<param-value>classpath:log4j2.xml</param-value>
 	</context-param>
-	
+
 	<!-- Home Page -->
 	<welcome-file-list>
-    	<welcome-file>/</welcome-file>
+		<welcome-file>/</welcome-file>
 	</welcome-file-list>
-	
+
 	<!-- Error Page -->
 	<error-page>
 		<error-code>404</error-code>

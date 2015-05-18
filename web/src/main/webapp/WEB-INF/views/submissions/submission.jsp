@@ -147,6 +147,25 @@
         });
     </script>
     <script type="text/javascript">
+        $.when(
+            $.getScript('${cdnUrl}/js/sockjs-1.0.0.min.js'),
+            $.getScript('${cdnUrl}/js/stomp-2.3.4.min.js'),
+            $.Deferred(function(deferred){
+                $(deferred.resolve);
+            })
+        ).done(function(){
+            var socket      = new SockJS('<c:url value="/websocket/getRealTimeJudgeResult.action/${submission.submissionId}" />'),
+                stompClient = Stomp.over(socket);
+
+            stompClient.connect({}, function(frame) {
+                console.log('Connected: ' + frame);
+                stompClient.subscribe('/topic/judgeResult', function(message){
+                    console.log(message);
+                });
+            });
+        });
+    </script>
+    <script type="text/javascript">
         $.getScript('${cdnUrl}/js/highlight.min.js', function() {
             $('pre code').each(function(i, block) {
                 hljs.highlightBlock(block);
@@ -171,14 +190,6 @@
                     }
                 }
             });
-        });
-    </script>
-    <script type="text/javascript">
-        $(function() {
-            /*var es = new EventSource('<c:url value="/submission/getRealTimeJudgeResult.action?submissionId=${submission.submissionId}" />');
-            es.addEventListener('message', function(e) {
-                console.log(e.data);
-            }, false);*/
         });
     </script>
 </body>
