@@ -43,7 +43,7 @@ public class ProblemsController {
      * @param response - HttpResponse对象
 	 * @return 包含试题库页面信息的ModelAndView对象
 	 */
-	@RequestMapping(value = "")
+	@RequestMapping(value = "", method = RequestMethod.GET)
     public ModelAndView problemsView(
             @RequestParam(value="start", required = false, defaultValue = "1") int startIndex,
             HttpServletRequest request, HttpServletResponse response) {
@@ -73,7 +73,7 @@ public class ProblemsController {
 	 * @param request - HttpRequest对象
 	 * @return 一个包含试题列表的HashMap对象
 	 */
-	@RequestMapping(value = "/getProblems.action")
+	@RequestMapping(value = "/getProblems.action", method = RequestMethod.GET)
 	public @ResponseBody Map<String, Object> getSubmissionAction(
 			@RequestParam(value="startIndex", required = true) long startIndex,
 			HttpServletRequest request) {
@@ -113,7 +113,7 @@ public class ProblemsController {
      * @param response - HttpResponse对象
 	 * @return 包含试题详细信息的ModelAndView对象
 	 */
-	@RequestMapping(value = "/{problemId}")
+	@RequestMapping(value = "/{problemId}", method = RequestMethod.GET)
     public ModelAndView problemView(
     		@PathVariable("problemId") long problemId,
     		HttpServletRequest request, HttpServletResponse response) {

@@ -35,7 +35,7 @@ public class AccountsController {
      * @param response - HttpResponse对象
      * @return 包含登录页面信息的ModelAndView对象
      */
-    @RequestMapping(value = "/login")
+    @RequestMapping(value = "/login", method = RequestMethod.GET)
     public ModelAndView loginView(
             @RequestParam(value="logout", required=false, defaultValue="false") boolean isLogout,
             HttpServletRequest request, HttpServletResponse response) {
