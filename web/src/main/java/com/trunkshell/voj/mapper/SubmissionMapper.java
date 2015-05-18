@@ -160,7 +160,7 @@ public interface SubmissionMapper {
 	 * @param submission - 待创建的提交记录对象
 	 */
 	@Insert("INSERT INTO voj_submissions(problem_id, uid, language_id, submission_code) VALUES (#{problem.problemId}, #{user.uid}, #{language.languageId}, #{code})")
-	@Options(flushCache = true)
+	@Options(useGeneratedKeys = true, keyProperty = "submissionId", keyColumn = "submission_id", flushCache = true)
 	public void createSubmission(Submission submission);
 	
 	/**

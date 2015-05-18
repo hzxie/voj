@@ -66,7 +66,7 @@ public interface UserMapper {
 	 * @param user - 待创建的用户对象
 	 */
 	@Insert("INSERT INTO voj_users (username, password, email, user_group_id, prefer_language_id) VALUES (#{username}, #{password}, #{email}, #{userGroup.userGroupId}, #{preferLanguage.languageId})")
-	@Options(useGeneratedKeys = true, keyProperty = "uid", flushCache = true)
+	@Options(useGeneratedKeys = true, keyProperty = "uid", keyColumn = "uid", flushCache = true)
 	public void createUser(User user);
 	
 	/**
