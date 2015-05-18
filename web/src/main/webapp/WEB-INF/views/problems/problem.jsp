@@ -100,10 +100,11 @@
                                         <option value="text/x-ruby">Ruby</option>
                                     </select>
                                 </div> <!-- .span4 -->
-                                <div class="span8 text-right">
+                                <div id="submission-error" class="offset1 span4"></div> <!-- #submission-error -->
+                                <div id="submission-action" class="span3">
                                     <button type="submit" class="btn btn-primary"><spring:message code="voj.problems.problem.submit" text="Submit" /></button>
                                     <button id="close-submission" class="btn"><spring:message code="voj.problems.problem.cancel" text="Cancel" /></button>
-                                </div> <!-- .span8 -->
+                                </div> <!-- #submission-action -->
                             </div> <!-- .row-fluid -->
                         </form> <!-- #code-editor-->
                         <div id="mask" class="hide"></div> <!-- #mask -->
@@ -199,7 +200,6 @@
     <script type="text/javascript">
         $.getScript('${cdnUrl}/js/highlight.min.js', function() {
             $('code').each(function(i, block) {
-                console.log(block);
                 hljs.highlightBlock(block);
             });
         });
@@ -229,7 +229,54 @@
     </script>
     <script type="text/javascript">
         function onSubmit() {
-            var code = window.codeMirrorEditor.getValue();
+            var problemId   = ${problem.problemId},
+                language    = $('select#languages').val(),
+                code        = window.codeMirrorEditor.getValue();
+
+            console.log(problemId, language, code);
+
+            $('button[type=submit]', '#code-editor').attr('disabled', 'disabled');
+            $('button[type=submit]', '#code-editor').html('<spring:message code="voj.problems.problem.please-wait" text="Please wait..." />');
+
+            return createSubmissionAction(problemId, language, code);
+        }
+    </script>
+    <script type="text/javascript">
+        function createSubmissionAction(problemId, languageSlug, code) {
+            var postData = {
+                'problemId': problemId,
+                'languageSlug': languageSlug,
+                'code': code
+            };
+
+            $.ajax({
+                type: 'POST',
+                url: '<c:url value="/p/createSubmission.action" />',
+                data: postData,
+                dataType: 'JSON',
+                success: function(result){
+                    if ( result['isSuccessful'] ) {
+                        var submissionId = result['submissionId'];
+                        window.location.href = '<c:url value="/submission/" />' + submissionId;
+                    } else {
+                        var errorMessage = '';
+
+                        if ( !result['isUserLogined'] ) {
+                            errorMessage = '<spring:message code="voj.problems.problem.user-not-login" text="Please sign in first." />';
+                        } else if ( !result['isProblemExists'] ) {
+                            errorMessage = '<spring:message code="voj.problems.problem.problem-not-exists" text="The problem not exists." />';
+                        } else if ( !result['isLanguageExists'] ) {
+                            errorMessage = '<spring:message code="voj.problems.problem.language-not-exists" text="The language not exists." />';
+                        } else if ( result['isCodeEmpty'] ) {
+                            errorMessage = '<spring:message code="voj.problems.problem.empty-code" text="Please enter the code." />';
+                        }
+                        $('#submission-error').html(errorMessage);
+                    }
+
+                    $('button[type=submit]', '#code-editor').removeAttr('disabled');
+                    $('button[type=submit]', '#code-editor').html('<spring:message code="voj.problems.problem.submit" text="Submit" />');
+                }
+            });
         }
     </script>
 </body>

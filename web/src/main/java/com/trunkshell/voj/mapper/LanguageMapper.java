@@ -51,7 +51,7 @@ public interface LanguageMapper {
 	 * @param language - 待添加的编程语言对象 
 	 */
 	@Insert("INSERT INTO voj_languages (language_id, language_slug, language_name) VALUES (#{languageId}, #{languageSlug}, #{languageName})")
-	@Options(useGeneratedKeys = true, keyProperty = "language_id", flushCache = true)
+	@Options(useGeneratedKeys = true, keyProperty = "languageId", keyColumn = "language_id", flushCache = true)
 	public void createLanguage(Language language);
 	
 	/**

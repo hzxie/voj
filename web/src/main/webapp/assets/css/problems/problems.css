@@ -55,6 +55,12 @@ div#content div#main-content div#problems table td {
 	text-align: center;
 }
 
+div#content div#main-content div#problems table td.flag-PD > a,
+div#content div#main-content div#problems table td.flag-CPL > a,
+div#content div#main-content div#problems table td.flag-JUD > a {
+	color: #ffa500;
+}
+
 div#content div#main-content div#problems table td.flag-AC > a {
 	color: #f00;
 }
