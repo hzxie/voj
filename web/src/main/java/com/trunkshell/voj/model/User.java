@@ -2,6 +2,8 @@ package com.trunkshell.voj.model;
 
 import java.io.Serializable;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 /**
  * 用户的Model.
  * 对应数据库中的voj_users数据表.
@@ -163,21 +165,25 @@ public class User implements Serializable {
 	/**
 	 * 密码(已采用MD5加密).
 	 */
+	@JsonIgnore
 	private String password;
 
 	/**
 	 * 电子邮件地址.
 	 */
+	@JsonIgnore
 	private String email;
 	
 	/**
 	 * 用户组对象.
 	 */
+	@JsonIgnore
 	private UserGroup userGroup;
 	
 	/**
 	 * 用户偏好语言对象.
 	 */
+	@JsonIgnore
 	private Language preferLanguage;
 	
 	/**

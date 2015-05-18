@@ -74,7 +74,7 @@ public interface SubmissionMapper {
      * @param limit - 每次加载评测记录的数量
      * @return 某个范围内的所有试题
      */
-	@Select("SELECT * FROM voj_submissions WHERE submission_id <= #{submissionId} ORDER BY submission_id DESC LIMIT #{limit}")
+	@Select("SELECT * FROM voj_submissions WHERE submission_id < #{submissionId} ORDER BY submission_id DESC LIMIT #{limit}")
 	@Options(useCache = true)
 	@Results({
 		 @Result(property = "submissionId", column = "submission_id"),
@@ -88,6 +88,27 @@ public interface SubmissionMapper {
 		 @Result(property = "judgeScore", column = "submission_judge_score")
 	})
 	public List<Submission> getSubmissionsUsingOffset(@Param("submissionId") long offset, @Param("limit") int limit);
+	
+	/**
+     * 通过试题唯一标识符获取某个范围内的所有试题.
+     * @param offset - 试题唯一标识符的起始编号
+     * @param limit - 每次加载评测记录的数量
+     * @return 某个范围内的所有试题
+     */
+	@Select("SELECT * FROM voj_submissions WHERE submission_id > #{submissionId} ORDER BY submission_id LIMIT #{limit}")
+	@Options(useCache = true)
+	@Results({
+		 @Result(property = "submissionId", column = "submission_id"),
+		 @Result(property = "problem", column = "problem_id", javaType=Problem.class, one = @One(select="com.trunkshell.voj.mapper.ProblemMapper.getProblem")),
+		 @Result(property = "user", column = "uid", javaType=User.class, one = @One(select="com.trunkshell.voj.mapper.UserMapper.getUserUsingUid")),
+		 @Result(property = "language", column = "language_id", javaType=Language.class, one = @One(select="com.trunkshell.voj.mapper.LanguageMapper.getLanguageUsingId")),
+		 @Result(property = "submitTime", column = "submission_submit_time"),
+		 @Result(property = "usedTime", column = "submission_used_time"),
+		 @Result(property = "usedMemory", column = "submission_used_memory"),
+		 @Result(property = "judgeResult", column = "submission_judge_result", javaType=JudgeResult.class, one = @One(select="com.trunkshell.voj.mapper.JudgeResultMapper.getJudgeResultUsingSlug")),
+		 @Result(property = "judgeScore", column = "submission_judge_score")
+	})
+	public List<Submission> getLatestSubmissionsUsingOffset(@Param("submissionId") long offset, @Param("limit") int limit);
 	
 	/**
      * 获取某个用户对某个试题的提交记录.

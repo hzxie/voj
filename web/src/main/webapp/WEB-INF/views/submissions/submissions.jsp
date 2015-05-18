@@ -88,6 +88,45 @@
     <script type="text/javascript" src="${cdnUrl}/js/site.js"></script>
     <script type="text/javascript" src="${cdnUrl}/js/date-${language}.min.js"></script>
     <script type="text/javascript">
+        setInterval(function() {
+            var firstSubmissionRecord = $('tr:first-child', '#submission tbody'),
+                firstSubmissionId     = $(firstSubmissionRecord).attr('data-value');
+            
+            getLatestSubmissions(firstSubmissionId);
+        }, 10000);
+    </script>
+    <script type="text/javascript">
+        function getLatestSubmissions(startIndex) {
+            var pageRequests = {
+                'startIndex': startIndex
+            };
+
+            $.ajax({
+                type: 'GET',
+                url: '<c:url value="/submission/getLatestSubmissions.action" />',
+                data: pageRequests,
+                dataType: 'JSON',
+                success: function(result){
+                    if ( result['isSuccessful'] ) {
+                        displayLatestSubmissionRecords(result['submissions']);
+                    }
+                }
+            });
+        }
+    </script>
+    <script type="text/javascript">
+        function displayLatestSubmissionRecords(submissions) {
+            for ( var i = 0; i < submissions.length; ++ i ) {
+                $('table > tbody', '#submission').prepend(
+                    getSubmissionContent(submissions[i]['submissionId'], submissions[i]['judgeResult'], 
+                                         submissions[i]['judgeScore'], submissions[i]['usedTime'], 
+                                         submissions[i]['usedMemory'], submissions[i]['problem'], 
+                                         submissions[i]['user'], submissions[i]['language'], submissions[i]['submitTime'])
+                );
+            }
+        }
+    </script>
+    <script type="text/javascript">
         function setLoadingStatus(isLoading) {
             if ( isLoading ) {
                 $('p', '#more-submissions').addClass('hide');
@@ -107,31 +146,31 @@
 
             if ( !isLoading && hasNextRecord ) {
                 setLoadingStatus(true);
-                return getMoreSubmissions(lastSubmissionId - 1);
+                return getMoreHistorySubmissions(lastSubmissionId);
             }
         });
     </script>
     <script type="text/javascript">
-        function getMoreSubmissions(startIndex) {
+        function getMoreHistorySubmissions(startIndex) {
         	var pageRequests = {
                 'startIndex': startIndex
             };
 
             $.ajax({
-                type: 'POST',
+                type: 'GET',
                 url: '<c:url value="/submission/getSubmissions.action" />',
                 data: pageRequests,
                 dataType: 'JSON',
                 success: function(result){
-                    return processResult(result);
+                    return processHistorySubmissionsResult(result);
                 }
             });
         }
     </script>
     <script type="text/javascript">
-        function processResult(result) {
+        function processHistorySubmissionsResult(result) {
             if ( result['isSuccessful'] ) {
-                displaySubmissionRecords(result['submissions']);
+                displayHistorySubmissionRecords(result['submissions']);
             } else {
                 $('p', '#more-submissions').removeClass('availble');
                 $('p', '#more-submissions').html('<spring:message code="voj.submissions.submissions.no-more-submission" text="No more submission" />');
@@ -141,7 +180,7 @@
         }
     </script>
     <script type="text/javascript">
-        function displaySubmissionRecords(submissions) {
+        function displayHistorySubmissionRecords(submissions) {
             for ( var i = 0; i < submissions.length; ++ i ) {
                 $('table > tbody', '#submission').append(
                     getSubmissionContent(submissions[i]['submissionId'], submissions[i]['judgeResult'], 
@@ -179,7 +218,7 @@
             if ( locale == 'en_US' ) {
                 dateString = dateObject.toString('MMM d, yyyy h:mm:ss tt');
             } else if ( locale == 'zh_CN' ) {
-                dateString = dateObject.toString('yyyy-mm-dd hh:mm:ss');
+                dateString = dateObject.toString('yyyy-M-dd HH:mm:ss');
             }
 
             return dateString;

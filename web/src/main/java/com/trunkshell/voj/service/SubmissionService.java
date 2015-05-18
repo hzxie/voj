@@ -54,6 +54,16 @@ public class SubmissionService {
 	}
 	
 	/**
+	 * 获取最新的评测记录列表.
+	 * @param offset - 评测记录唯一标识符的起始序号
+	 * @param limit - 每次加载评测记录的数量
+	 * @return 试题列表(List<Submission>对象)
+	 */
+	public List<Submission> getLatestSubmissions(long offset, int limit) {
+		return submissionMapper.getLatestSubmissionsUsingOffset(offset, limit);
+	}
+	
+	/**
 	 * 获取某个用户对某个试题的提交记录.
 	 * @param problemId - 试题的唯一标识符
 	 * @param userId - 用户的唯一标识符
@@ -144,7 +154,7 @@ public class SubmissionService {
 	 * @return 一个包含提交记录的验证结果的Map<String, Boolean>对象
 	 */
 	private Map<String, ? extends Object> getSubmissionCreationResult(Submission submission, boolean isCsrfTokenValid) {
-		Map<String, Boolean> result = new HashMap<String, Boolean>();
+		Map<String, Boolean> result = new HashMap<String, Boolean>(6, 1);
 		String code = submission.getCode();
 		result.put("isUserLogined", submission.getUser() != null);
 		result.put("isProblemExists", submission.getProblem() != null);
