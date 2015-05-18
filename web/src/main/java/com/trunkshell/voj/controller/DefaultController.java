@@ -29,6 +29,19 @@ public class DefaultController {
 	}
 	
 	/**
+	 * 对于所有未正常映射URL的页面, 显示页面未找到.
+	 * @param request - HttpRequest对象
+	 * @param response - HttpResponse对象
+	 * @return 返回一个包含异常信息的ModelAndView对象
+	 */
+	@RequestMapping(value = "/*", method = RequestMethod.GET)
+	public ModelAndView notFoundView(
+			HttpServletRequest request, HttpServletResponse response) {
+		ModelAndView view = new ModelAndView("errors/404");
+		return view;
+	}
+	
+	/**
 	 * 显示升级浏览器页面.
 	 * @param request - HttpRequest对象
 	 * @param response - HttpResponse对象
