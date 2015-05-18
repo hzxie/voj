@@ -39,7 +39,7 @@ public class DigestUtils {
 	 * 生成GUID.
 	 * @return GUID
 	 */
-	public static String generateGuid() {
+	public static String getGuid() {
 		return UUID.randomUUID().toString();
 	}
 }

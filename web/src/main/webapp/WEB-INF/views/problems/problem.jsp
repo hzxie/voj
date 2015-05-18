@@ -102,6 +102,7 @@
                                 </div> <!-- .span4 -->
                                 <div id="submission-error" class="offset1 span4"></div> <!-- #submission-error -->
                                 <div id="submission-action" class="span3">
+                                    <input type="hidden" id="csrfToken" value="${csrfToken}" />
                                     <button type="submit" class="btn btn-primary"><spring:message code="voj.problems.problem.submit" text="Submit" /></button>
                                     <button id="close-submission" class="btn"><spring:message code="voj.problems.problem.cancel" text="Cancel" /></button>
                                 </div> <!-- #submission-action -->
@@ -231,22 +232,22 @@
         function onSubmit() {
             var problemId   = ${problem.problemId},
                 language    = $('select#languages').val(),
-                code        = window.codeMirrorEditor.getValue();
-
-            console.log(problemId, language, code);
+                code        = window.codeMirrorEditor.getValue(),
+                csrfToken   = $('#csrfToken').val();
 
             $('button[type=submit]', '#code-editor').attr('disabled', 'disabled');
             $('button[type=submit]', '#code-editor').html('<spring:message code="voj.problems.problem.please-wait" text="Please wait..." />');
 
-            return createSubmissionAction(problemId, language, code);
+            return createSubmissionAction(problemId, language, code, csrfToken);
         }
     </script>
     <script type="text/javascript">
-        function createSubmissionAction(problemId, languageSlug, code) {
+        function createSubmissionAction(problemId, languageSlug, code, csrfToken) {
             var postData = {
                 'problemId': problemId,
                 'languageSlug': languageSlug,
-                'code': code
+                'code': code,
+                'csrfToken': csrfToken
             };
 
             $.ajax({
@@ -261,7 +262,9 @@
                     } else {
                         var errorMessage = '';
 
-                        if ( !result['isUserLogined'] ) {
+                        if ( !result['isCsrfTokenValid'] ) {
+                            errorMessage = '<spring:message code="voj.problems.problem.invalid-token" text="Invalid token." />';
+                        } else if ( !result['isUserLogined'] ) {
                             errorMessage = '<spring:message code="voj.problems.problem.user-not-login" text="Please sign in first." />';
                         } else if ( !result['isProblemExists'] ) {
                             errorMessage = '<spring:message code="voj.problems.problem.problem-not-exists" text="The problem not exists." />';
