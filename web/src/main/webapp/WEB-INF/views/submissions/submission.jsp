@@ -173,5 +173,13 @@
             });
         });
     </script>
+    <script type="text/javascript">
+        $(function() {
+            /*var es = new EventSource('<c:url value="/submission/getRealTimeJudgeResult.action?submissionId=${submission.submissionId}" />');
+            es.addEventListener('message', function(e) {
+                console.log(e.data);
+            }, false);*/
+        });
+    </script>
 </body>
 </html>

@@ -2,6 +2,8 @@ package com.trunkshell.voj.model;
 
 import java.io.Serializable;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 /**
  * 试题的Model.
  * 对应数据库中的voj_problems数据表.
@@ -312,41 +314,49 @@ public class Problem implements Serializable {
 	/**
 	 * 最大运行时间.
 	 */
+	@JsonIgnore
 	private int timeLimit;
 	
 	/**
 	 * 最大运行内存.
 	 */
+	@JsonIgnore
 	private int memoryLimit;
 	
 	/**
 	 * 试题描述.
 	 */
+	@JsonIgnore
 	private String description;
 	
 	/**
 	 * 输入格式.
 	 */
+	@JsonIgnore
 	private String inputFormat;
 	
 	/**
 	 * 输出格式.
 	 */
+	@JsonIgnore
 	private String outputFormat;
 	
 	/**
 	 * 样例输入.
 	 */
+	@JsonIgnore
 	private String sampleInput;
 	
 	/**
 	 * 样例输出.
 	 */
+	@JsonIgnore
 	private String sampleOutput;
 	
 	/**
 	 * 试题提示.
 	 */
+	@JsonIgnore
 	private String hint;
 	
 	/**
