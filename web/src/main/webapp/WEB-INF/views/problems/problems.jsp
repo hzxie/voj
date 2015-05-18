@@ -64,7 +64,7 @@
                     </thead>
                     <tbody>
                         <c:forEach var="problem" items="${problems}">
-                        <tr>
+                        <tr data-value="${problem.problemId}">
                         <c:if test="${isLogin}">
                             <c:choose>
                                 <c:when test="${submissionOfProblems[problem.problemId] == null}"><td></td></c:when>
@@ -113,5 +113,120 @@
     <!-- Java Script -->
     <!-- Placed at the end of the document so the pages load faster -->
     <script type="text/javascript" src="${cdnUrl}/js/site.js"></script>
+    <script type="text/javascript">
+        function setLoadingStatus(isLoading) {
+            if ( isLoading ) {
+                $('p', '#more-problems').addClass('hide');
+                $('img', '#more-problems').removeClass('hide');
+            } else {
+                $('img', '#more-problems').addClass('hide');
+                $('p', '#more-problems').removeClass('hide');
+            }
+        }
+    </script>
+    <script type="text/javascript">
+        $('#more-problems').click(function(event) {
+            var isLoading         = $('img', this).is(':visible'),
+                hasNextRecord     = $('p', this).hasClass('availble'),
+                lastProblemRecord = $('tr:last-child', '#problems tbody'),
+                lastProblemId     = parseInt($(lastProblemRecord).attr('data-value'));
+
+            if ( !isLoading && hasNextRecord ) {
+                setLoadingStatus(true);
+                return getMoreProblems(lastProblemId + 1);
+            }
+        });
+    </script>
+    <script type="text/javascript">
+        function getMoreProblems(startIndex) {
+            var pageRequests = {
+                'startIndex': startIndex
+            };
+
+            $.ajax({
+                type: 'GET',
+                url: '<c:url value="/p/getProblems.action" />',
+                data: pageRequests,
+                dataType: 'JSON',
+                success: function(result){
+                    return processProblemsResult(result);
+                }
+            });
+        }
+    </script>
+    <script type="text/javascript">
+        function processProblemsResult(result) {
+            if ( result['isSuccessful'] ) {
+                displayProblemsRecords(result['problems'], result['submissionOfProblems']);
+            } else {
+                $('p', '#more-problems').removeClass('availble');
+                $('p', '#more-problems').html('<spring:message code="voj.problems.problems.no-more-problem" text="No more problem" />');
+                $('#more-problems').css('cursor', 'default');
+            }
+            setLoadingStatus(false);
+        }
+    </script>
+    <script type="text/javascript">
+        function displayProblemsRecords(problems, submissionOfProblems) {
+            for ( var i = 0; i < problems.length; ++ i ) {
+                $('table > tbody', '#problems').append(
+                    getProblemContent(problems[i]['problemId'], problems[i]['problemName'], 
+                                      problems[i]['totalSubmission'], problems[i]['acceptedSubmission'], submissionOfProblems)
+                );
+            }
+        }
+    </script>
+    <script type="text/javascript">
+    <c:choose>
+    <c:when test="${isLogin}">
+        function getProblemContent(problemId, problemName, totalSubmission, acceptedSubmission, submissionOfProblems) {
+            var problemTemplate = '<tr data-value="%s">' +
+                                  '    %s' +
+                                  '    <td class="name"><a href="<c:url value="/p/%s" />">P%s %s</a></td>' +
+                                  '    <td>%s</td>' +
+                                  '    <td>%s%</td>' +
+                                  '</tr>';
+
+            return problemTemplate.format(problemId, getSubmissionOfProblemHtml(problemId, submissionOfProblems[problemId]),
+                        problemId, problemId, problemName, totalSubmission, getAcRate(acceptedSubmission, totalSubmission));
+        }
+    </c:when>
+    <c:otherwise>
+        function getProblemContent(problemId, problemName, totalSubmission, acceptedSubmission) {
+            var problemTemplate = '<tr data-value="%s">' +
+                                  '    <td class="name"><a href="<c:url value="/p/%s" />">P%s %s</a></td>' +
+                                  '    <td>%s</td>' +
+                                  '    <td>%s%</td>' +
+                                  '</tr>';
+
+            return problemTemplate.format(problemId, problemId, problemId, problemName, 
+                        totalSubmission, getAcRate(acceptedSubmission, totalSubmission));
+        }
+    </c:otherwise>
+    </c:choose>
+    </script>
+    <script type="text/javascript">
+        function getSubmissionOfProblemHtml(problemId, submissionOfProblem) {
+            if ( typeof(submissionOfProblem) == 'undefined' ) {
+                return '<td></td>';
+            }
+
+            var submissionId        = submissionOfProblem['submissionId'],
+                judgeResultSlug     = submissionOfProblem['judgeResult']['judgeResultSlug'],
+                submissionTemplate  = '<td class="flag-%s">' +
+                                      '    <a href="<c:url value="/submission/%s" />">%s</a>' +
+                                      '</td>';
+
+            return submissionTemplate.format(judgeResultSlug, submissionId, judgeResultSlug);
+        }
+    </script>
+    <script type="text/javascript">
+        function getAcRate(acceptedSubmission, totalSubmission) {
+            if ( totalSubmission == 0 ) {
+                return 0;
+            }
+            return Math.round(acceptedSubmission / totalSubmission) * 100;
+        }
+    </script>
 </body>
 </html>
