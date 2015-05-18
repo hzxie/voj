@@ -2,6 +2,7 @@ package com.trunkshell.voj.controller;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -48,10 +49,10 @@ public class SubmissionController {
 	 * @return 一个包含提交记录列表的HashMap对象
 	 */
 	@RequestMapping(value = "/getSubmissions.action")
-	public @ResponseBody HashMap<String, Object> getSubmissionAction(
+	public @ResponseBody Map<String, Object> getSubmissionAction(
 			@RequestParam(value="startIndex", required=true) long startIndex,
 			HttpServletRequest request) {
-		HashMap<String, Object> result = new HashMap<String, Object>(3, 1);
+		Map<String, Object> result = new HashMap<String, Object>(3, 1);
 
 		List<Submission> submissions = submissionService.getSubmissions(startIndex, NUMBER_OF_SUBMISSION_PER_PAGE);
 		result.put("isSuccessful", submissions != null && submissions.size() > 0);
@@ -67,10 +68,10 @@ public class SubmissionController {
 	 * @return 一个包含提交记录列表的HashMap对象
 	 */
 	@RequestMapping(value = "/getLatestSubmissions.action")
-	public @ResponseBody HashMap<String, Object> getLatestSubmissionsAction(
+	public @ResponseBody Map<String, Object> getLatestSubmissionsAction(
 			@RequestParam(value="startIndex", required=true) long startIndex,
 			HttpServletRequest request) {
-		HashMap<String, Object> result = new HashMap<String, Object>(3, 1);
+		Map<String, Object> result = new HashMap<String, Object>(3, 1);
 
 		List<Submission> submissions = submissionService.getLatestSubmissions(startIndex, NUMBER_OF_SUBMISSION_PER_PAGE);
 		result.put("isSuccessful", submissions != null && submissions.size() > 0);

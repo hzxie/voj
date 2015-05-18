@@ -74,7 +74,7 @@ public interface SubmissionMapper {
      * @param limit - 每次加载评测记录的数量
      * @return 某个范围内的所有试题
      */
-	@Select("SELECT * FROM voj_submissions WHERE submission_id < #{submissionId} ORDER BY submission_id DESC LIMIT #{limit}")
+	@Select("SELECT * FROM voj_submissions WHERE submission_id <= #{submissionId} ORDER BY submission_id DESC LIMIT #{limit}")
 	@Options(useCache = true)
 	@Results({
 		 @Result(property = "submissionId", column = "submission_id"),
@@ -95,7 +95,7 @@ public interface SubmissionMapper {
      * @param limit - 每次加载评测记录的数量
      * @return 某个范围内的所有试题
      */
-	@Select("SELECT * FROM voj_submissions WHERE submission_id > #{submissionId} ORDER BY submission_id LIMIT #{limit}")
+	@Select("SELECT * FROM voj_submissions WHERE submission_id >= #{submissionId} ORDER BY submission_id LIMIT #{limit}")
 	@Options(useCache = true)
 	@Results({
 		 @Result(property = "submissionId", column = "submission_id"),

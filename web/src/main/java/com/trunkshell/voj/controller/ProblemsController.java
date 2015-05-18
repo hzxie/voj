@@ -1,5 +1,6 @@
 package com.trunkshell.voj.controller;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -59,11 +60,38 @@ public class ProblemsController {
         HttpSession session = request.getSession();
         if ( isLoggedIn(session) ) {
         	long userId = (Long)session.getAttribute("uid");
-        	Map<Long, Submission> submissionOfProblems = submissionService.getSubmissionOfProblems(userId, startIndex, startIndex + NUMBER_OF_PROBLEMS_PER_PAGE);
+        	Map<Long, Submission> submissionOfProblems = submissionService.
+        			getSubmissionOfProblems(userId, startIndex, startIndex + NUMBER_OF_PROBLEMS_PER_PAGE);
         	view.addObject("submissionOfProblems", submissionOfProblems);
         }
         return view;
     }
+	
+	/**
+	 * 获取试题列表.
+	 * @param startIndex - 试题的起始下标
+	 * @param request - HttpRequest对象
+	 * @return 一个包含试题列表的HashMap对象
+	 */
+	@RequestMapping(value = "/getProblems.action")
+	public @ResponseBody Map<String, Object> getSubmissionAction(
+			@RequestParam(value="startIndex", required = true) long startIndex,
+			HttpServletRequest request) {
+		HttpSession session = request.getSession();
+		List<Problem> problems = problemService.getProblems(startIndex, NUMBER_OF_PROBLEMS_PER_PAGE);
+		Map<Long, Submission> submissionOfProblems = null;
+		if ( isLoggedIn(session) ) {
+			long userId = (Long)session.getAttribute("uid");
+        	submissionOfProblems = submissionService.
+        			getSubmissionOfProblems(userId, startIndex, startIndex + NUMBER_OF_PROBLEMS_PER_PAGE);
+		}
+		
+		Map<String, Object> result = new HashMap<String, Object>(4, 1);
+		result.put("isSuccessful", problems != null && problems.size() > 0);
+		result.put("problems", problems);
+		result.put("submissionOfProblems", submissionOfProblems);
+		return result;
+	}
 	
 	/**
 	 * 检查用户是否已经登录.
@@ -87,7 +115,7 @@ public class ProblemsController {
 	 */
 	@RequestMapping(value = "/{problemId}")
     public ModelAndView problemView(
-    		@PathVariable("problemId") int problemId,
+    		@PathVariable("problemId") long problemId,
     		HttpServletRequest request, HttpServletResponse response) {
 		Problem problem = problemService.getProblem(problemId);
 		if ( problem == null || !problem.isPublic() ) {

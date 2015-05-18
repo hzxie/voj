@@ -90,9 +90,9 @@
     <script type="text/javascript">
         setInterval(function() {
             var firstSubmissionRecord = $('tr:first-child', '#submission tbody'),
-                firstSubmissionId     = $(firstSubmissionRecord).attr('data-value');
+                firstSubmissionId     = parseInt($(firstSubmissionRecord).attr('data-value'));
             
-            getLatestSubmissions(firstSubmissionId);
+            getLatestSubmissions(firstSubmissionId + 1);
         }, 10000);
     </script>
     <script type="text/javascript">
@@ -142,17 +142,17 @@
             var isLoading            = $('img', this).is(':visible'),
                 hasNextRecord        = $('p', this).hasClass('availble'),
                 lastSubmissionRecord = $('tr:last-child', '#submission tbody'),
-                lastSubmissionId     = $(lastSubmissionRecord).attr('data-value');
+                lastSubmissionId     = parseInt($(lastSubmissionRecord).attr('data-value'));
 
             if ( !isLoading && hasNextRecord ) {
                 setLoadingStatus(true);
-                return getMoreHistorySubmissions(lastSubmissionId);
+                return getMoreHistorySubmissions(lastSubmissionId - 1);
             }
         });
     </script>
     <script type="text/javascript">
         function getMoreHistorySubmissions(startIndex) {
-        	var pageRequests = {
+            var pageRequests = {
                 'startIndex': startIndex
             };
 
