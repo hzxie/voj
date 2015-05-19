@@ -1,7 +1,22 @@
+div#content div#websocket-status {
+	display: none;
+	margin-left: -160px;
+	opacity: .95;
+	filter: alpha(opacity=95);
+	position: fixed;
+	top: 60px;
+	left: 50%;
+	right: 0;
+	width: 320px;
+	-webkit-transition: margin ease-in-out .2s;
+	   -moz-transition: margin ease-in-out .2s;
+	        transition: margin ease-in-out .2s;
+}
+
 div#content div#main-content div.submission {
-	-webkit-box-shadow: 0 0 5px rgba(0,0,0,0.1);
-	   -moz-box-shadow: 0 0 5px rgba(0,0,0,0.1);
-			box-shadow: 0 0 5px rgba(0,0,0,0.1);
+	-webkit-box-shadow: 0 0 5px rgba(0, 0, 0, .1);
+	   -moz-box-shadow: 0 0 5px rgba(0, 0, 0, .1);
+	        box-shadow: 0 0 5px rgba(0, 0, 0, .1);
 }
 
 div#content div#main-content div.submission div.header {
