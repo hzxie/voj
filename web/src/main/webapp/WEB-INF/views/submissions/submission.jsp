@@ -43,6 +43,7 @@
     <%@ include file="/WEB-INF/views/include/header.jsp" %>
     <!-- Content -->
     <div id="content" class="container">
+        <div id="websocket-status" class="alert"></div> <!-- #websocket-status -->
         <div class="row-fluid">
             <div id="main-content" class="span9">
                 <div class="submission">
@@ -146,6 +147,7 @@
             });
         });
     </script>
+    <c:if test="${submission.judgeResult.judgeResultName == 'Pending'}">
     <script type="text/javascript">
         $.when(
             $.getScript('${cdnUrl}/js/sockjs-1.0.0.min.js'),
@@ -154,17 +156,63 @@
                 $(deferred.resolve);
             })
         ).done(function(){
-            var socket      = new SockJS('<c:url value="/websocket/getRealTimeJudgeResult.action/${submission.submissionId}" />'),
+            hasConntected   = false;
+
+            var socket      = new SockJS('<c:url value="/websocket" />'),
                 stompClient = Stomp.over(socket);
 
             stompClient.connect({}, function(frame) {
-                console.log('Connected: ' + frame);
-                stompClient.subscribe('/topic/judgeResult', function(message){
+                hasConntected = true;
+                displayWebSocketConnectionStatus(true, hasConntected);
+
+                stompClient.send('/voj/authorization.action', {}, JSON.stringify({
+                    'key': 'csrfToken',
+                    'value': '${csrfToken}'
+                }));
+                
+                stompClient.subscribe('/user/message/authorization', function(message){
                     console.log(message);
                 });
+
+                stompClient.subscribe('/voj/getRealTimeJudgeResult.action/${submission.submissionId}', function(message){
+                    console.log(message);
+                });
+            }, function() {
+                return displayWebSocketConnectionStatus(false, hasConntected);
             });
         });
     </script>
+    <script type="text/javascript">
+        function displayWebSocketConnectionStatus(isConnected, hasConntected) {
+            var message     = '',
+                alertClass  = '';
+
+            if ( isConnected ) {
+                message     = '<i class="fa fa-smile-o"></i> <spring:message code="voj.submissions.submission.websocket-established" text="WebSocket connection has been established." />';
+                alertClass  = 'alert-success';
+            } else {
+                if ( hasConntected ) {
+                    message     = '<i class="fa fa-exclamation-circle"></i> <spring:message code="voj.submissions.submission.websocket-closed" text="WebSocket connection has been closed." />';
+                    alertClass  = 'alert-info';
+                } else {
+                    message     = '<i class="fa fa-frown-o"></i> <spring:message code="voj.submissions.submission.websocket-not-supported" text="Your browser CANNOT support WebSocket." />';
+                    alertClass  = 'alert-error';
+                }
+            }
+
+            $('#websocket-status').html(message);
+            $("#websocket-status").removeClass (function (index, css) {
+                return (css.match (/(^|\s)alert\-\S+/g) || []).join(' ');
+            });
+            $('#websocket-status').addClass(alertClass);
+            $('#websocket-status').fadeIn();
+
+            setTimeout(function() {
+                $('#websocket-status').fadeOut();
+            }, 5000);
+        }
+    </script>
+    </c:if>
     <script type="text/javascript">
         $.getScript('${cdnUrl}/js/highlight.min.js', function() {
             $('pre code').each(function(i, block) {

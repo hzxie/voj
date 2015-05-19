@@ -21,6 +21,7 @@ import org.springframework.web.servlet.ModelAndView;
 import com.trunkshell.voj.exception.ResourceNotFoundException;
 import com.trunkshell.voj.model.Submission;
 import com.trunkshell.voj.service.SubmissionService;
+import com.trunkshell.voj.util.CsrfProtector;
 
 /**
  * 加载/显示评测的相关信息.
@@ -98,6 +99,7 @@ public class SubmissionController {
 		}
 		ModelAndView view = new ModelAndView("submissions/submission");
         view.addObject("submission", submission);
+        view.addObject("csrfToken", CsrfProtector.getCsrfToken(request.getSession()));
         return view;
 	}
 	

@@ -1,5 +1,7 @@
 package com.trunkshell.voj.util;
 
+import java.util.Map;
+
 import javax.servlet.http.HttpSession;
 
 /**
@@ -22,13 +24,33 @@ public class CsrfProtector {
 	
 	/**
 	 * 验证CSRF的Token是否正确.
-	 * @param csrfToken - CSRF的Token
+	 * @param csrfToken - 待验证的CSRF Token
 	 * @param session - HttpSession对象
 	 * @return CSRF的Token是否正确
 	 */
 	public static boolean isCsrfTokenValid(String csrfToken, HttpSession session) {
 		Object csrfTokenAttribute = session.getAttribute("CsrfToken");
-		
+		return isCsrfTokenValid(csrfToken, csrfTokenAttribute);
+	}
+	
+	/**
+	 * 验证CSRF的Token是否正确.
+	 * @param csrfToken - 待验证的CSRF Token
+	 * @param sessionAttributes - Session中的全部属性
+	 * @return CSRF的Token是否正确
+	 */
+	public static boolean isCsrfTokenValid(String csrfToken, Map<String, Object> sessionAttributes) {
+		Object csrfTokenAttribute = sessionAttributes.get("CsrfToken");
+		return isCsrfTokenValid(csrfToken, csrfTokenAttribute);
+	}
+	
+	/**
+	 * 验证CSRF的Token是否正确.
+	 * @param csrfToken - 待验证的CSRF Token
+	 * @param csrfTokenAttribute - Session中Csrf Token的属性值
+	 * @return CSRF的Token是否正确
+	 */
+	private static boolean isCsrfTokenValid(String csrfToken, Object csrfTokenAttribute) {
 		if ( csrfTokenAttribute == null ) {
 			return false;
 		}
