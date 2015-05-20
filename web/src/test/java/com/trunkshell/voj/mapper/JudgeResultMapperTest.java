@@ -27,7 +27,7 @@ public class JudgeResultMapperTest {
 	 */
 	@Test
 	public void testGetJudgeResultUsingIdExists() {
-		JudgeResult judgeResult = judgeResultMapper.getJudgeResultUsingId(4);
+		JudgeResult judgeResult = judgeResultMapper.getJudgeResultUsingId(2);
 		Assert.assertNotNull(judgeResult);
 		
 		String judgeResultSlug = judgeResult.getJudgeResultSlug();
@@ -56,7 +56,7 @@ public class JudgeResultMapperTest {
 		Assert.assertNotNull(judgeResult);
 		
 		int judgeResultId = judgeResult.getJudgeResultId();
-		Assert.assertEquals(4, judgeResultId);
+		Assert.assertEquals(2, judgeResultId);
 	}
 	
 	/**
