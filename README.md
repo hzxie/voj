@@ -12,15 +12,17 @@ Version: 1.0.0 (Under Development)
 
 ### Introduction
 
-Cross-Platform Online Judge System based on [Spring MVC Framework](http://spring.io).
+Cross-platform online judge system based on [Spring MVC Framework](http://spring.io).
 
 The application used following components:
 
- - [Spring](http://spring.io) MVC Famework
- - [MyBatis](https://mybatis.github.io/mybatis-3/index.html) Persistence Framework.
- - [Druid](https://github.com/alibaba/druid/) Database Connection Pool
+ - [Spring MVC](http://spring.io) famework
+ - [MyBatis](https://mybatis.github.io/mybatis-3/index.html) persistence framework
+ - [Druid](https://github.com/alibaba/druid/) database connection pool
  - [CodeMirror](http://codemirror.net) Editor
- - [Apache ActiveMQ](http://activemq.apache.org/) Message Queue
+ - [Apache ActiveMQ](http://activemq.apache.org/) message queue
+ - [Sock.js](https://github.com/sockjs/sockjs-client) WebSocket client
+ - [Stomp.js](https://github.com/jmesnil/stomp-websocket) STOMP client
 
 ### The Origin of Verwandlung
 
