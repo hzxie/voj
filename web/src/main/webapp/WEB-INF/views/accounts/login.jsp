@@ -74,7 +74,6 @@
     <!-- JavaScript -->
     <!-- Placed at the end of the document so the pages load faster -->
     <script type="text/javascript" src="${cdnUrl}/js/site.js"></script>
-    <script type="text/javascript" src="${cdnUrl}/js/md5.min.js"></script>
     <script type="text/javascript">
         function onSubmit() {
             $('.alert-success').hide();
@@ -111,13 +110,13 @@
     <script type="text/javascript">
         function processLoginResult(result) {
             if ( result['isSuccessful'] ) {
-                window.location.href='<c:url value="/" />';
+                window.location.href = '${forwardUrl}';
             } else {
                 $('#password').val('');
                 $('.alert-error').removeClass('hide');
             }
 
-            $('button[type=submit]').html('Sign in');
+            $('button[type=submit]').html('<spring:message code="voj.accounts.login.sign-in" text="Sign in" />');
             $('button[type=submit]').removeAttr('disabled');
         }
     </script>

@@ -31,6 +31,7 @@ public class AccountsController {
     /**
      * 显示用户的登录页面.
      * @param isLogout - 是否处于登出状态
+     * @param fowardUrl - 登录后跳转的地址(相对路径)
      * @param request - Http Servlet Request对象
      * @param response - HttpResponse对象
      * @return 包含登录页面信息的ModelAndView对象
@@ -38,6 +39,7 @@ public class AccountsController {
     @RequestMapping(value = "/login", method = RequestMethod.GET)
     public ModelAndView loginView(
             @RequestParam(value="logout", required=false, defaultValue="false") boolean isLogout,
+            @RequestParam(value="forward", required=false, defaultValue="/") String forwardUrl,
             HttpServletRequest request, HttpServletResponse response) {
     	HttpSession session = request.getSession();
     	if ( isLogout ) {
@@ -50,6 +52,7 @@ public class AccountsController {
         } else {
             view = new ModelAndView("accounts/login");
             view.addObject("isLogout", isLogout);
+            view.addObject("forwardUrl", forwardUrl);
         }
         return view;
     }
@@ -117,6 +120,24 @@ public class AccountsController {
 		
 		String ipAddress = HttpRequestParser.getRemoteAddr(request);
 		logger.info(String.format("%s logged in at %s", new Object[] {user, ipAddress}));
+	}
+	
+	/**
+	 * 显示用户注册的页面.
+	 * @param request - Http Servlet Request对象
+     * @param response - HttpResponse对象
+     * @return 包含注册页面信息的ModelAndView对象
+	 */
+	@RequestMapping(value = "/register", method = RequestMethod.GET)
+    public ModelAndView registerView(HttpServletRequest request, HttpServletResponse response) {
+		HttpSession session = request.getSession();
+		ModelAndView view = null;
+        if ( isLoggedIn(session) ) {
+            view = new ModelAndView("redirect:/");
+        } else {
+            view = new ModelAndView("accounts/register");
+        }
+        return view;
 	}
     
     /**
