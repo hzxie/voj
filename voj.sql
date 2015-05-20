@@ -3,7 +3,7 @@
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: May 17, 2015 at 06:04 PM
+-- Generation Time: May 20, 2015 at 04:31 AM
 -- Server version: 5.6.21
 -- PHP Version: 5.6.3
 
@@ -75,8 +75,6 @@ CREATE TABLE IF NOT EXISTS `voj_discussion_replies` (
   `discussion_threads_id` bigint(20) NOT NULL,
   `discussion_reply_uid` bigint(20) NOT NULL,
   `discussion_reply_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `discussion_reply_vote_up` bigint(20) NOT NULL DEFAULT '0',
-  `discussion_reply_vote_down` bigint(20) NOT NULL DEFAULT '0',
   `discussion_reply_content` text NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
@@ -118,7 +116,7 @@ CREATE TABLE IF NOT EXISTS `voj_judge_results` (
 `judge_result_id` int(4) NOT NULL,
   `judge_result_slug` varchar(4) NOT NULL,
   `judge_result_name` varchar(32) NOT NULL
-) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8;
 
 --
 -- Dumping data for table `voj_judge_results`
@@ -126,16 +124,14 @@ CREATE TABLE IF NOT EXISTS `voj_judge_results` (
 
 INSERT INTO `voj_judge_results` (`judge_result_id`, `judge_result_slug`, `judge_result_name`) VALUES
 (1, 'PD', 'Pending'),
-(2, 'CPL', 'Compiling'),
-(3, 'JUD', 'Judging'),
-(4, 'AC', 'Accepted'),
-(5, 'WA', 'Wrong Answer'),
-(6, 'TLE', 'Time Limit Exceed'),
-(7, 'OLE', 'Output Limit Exceed'),
-(8, 'MLE', 'Memory Limit Exceed'),
-(9, 'RE', 'Runtime Error'),
-(10, 'PE', 'Presentation Error'),
-(11, 'CE', 'Compile Error');
+(2, 'AC', 'Accepted'),
+(3, 'WA', 'Wrong Answer'),
+(4, 'TLE', 'Time Limit Exceed'),
+(5, 'OLE', 'Output Limit Exceed'),
+(6, 'MLE', 'Memory Limit Exceed'),
+(7, 'RE', 'Runtime Error'),
+(8, 'PE', 'Presentation Error'),
+(9, 'CE', 'Compile Error');
 
 -- --------------------------------------------------------
 
@@ -352,6 +348,19 @@ INSERT INTO `voj_user_groups` (`user_group_id`, `user_group_slug`, `user_group_n
 (2, 'judgers', 'Judgers'),
 (3, 'administrators', 'Administrators');
 
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `voj_user_meta`
+--
+
+CREATE TABLE IF NOT EXISTS `voj_user_meta` (
+`meta_id` bigint(20) NOT NULL,
+  `uid` bigint(20) NOT NULL,
+  `meta_key` varchar(64) NOT NULL,
+  `meta_value` text NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
 --
 -- Indexes for dumped tables
 --
@@ -453,6 +462,12 @@ ALTER TABLE `voj_user_groups`
  ADD PRIMARY KEY (`user_group_id`), ADD UNIQUE KEY `user_group_slug` (`user_group_slug`);
 
 --
+-- Indexes for table `voj_user_meta`
+--
+ALTER TABLE `voj_user_meta`
+ ADD PRIMARY KEY (`meta_id`), ADD KEY `uid` (`uid`);
+
+--
 -- AUTO_INCREMENT for dumped tables
 --
 
@@ -485,7 +500,7 @@ MODIFY `discussion_topic_id` int(8) NOT NULL AUTO_INCREMENT;
 -- AUTO_INCREMENT for table `voj_judge_results`
 --
 ALTER TABLE `voj_judge_results`
-MODIFY `judge_result_id` int(4) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=9;
+MODIFY `judge_result_id` int(4) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=10;
 --
 -- AUTO_INCREMENT for table `voj_languages`
 --
@@ -516,6 +531,11 @@ MODIFY `uid` bigint(20) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=1003;
 --
 ALTER TABLE `voj_user_groups`
 MODIFY `user_group_id` int(4) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=4;
+--
+-- AUTO_INCREMENT for table `voj_user_meta`
+--
+ALTER TABLE `voj_user_meta`
+MODIFY `meta_id` bigint(20) NOT NULL AUTO_INCREMENT;
 --
 -- Constraints for dumped tables
 --
@@ -576,6 +596,12 @@ ADD CONSTRAINT `voj_submissions_ibfk_4` FOREIGN KEY (`submission_judge_result`) 
 ALTER TABLE `voj_users`
 ADD CONSTRAINT `voj_users_ibfk_1` FOREIGN KEY (`user_group_id`) REFERENCES `voj_user_groups` (`user_group_id`),
 ADD CONSTRAINT `voj_users_ibfk_2` FOREIGN KEY (`prefer_language_id`) REFERENCES `voj_languages` (`language_id`);
+
+--
+-- Constraints for table `voj_user_meta`
+--
+ALTER TABLE `voj_user_meta`
+ADD CONSTRAINT `voj_user_meta_ibfk_1` FOREIGN KEY (`uid`) REFERENCES `voj_users` (`uid`);
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
