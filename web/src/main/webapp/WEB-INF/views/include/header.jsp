@@ -40,7 +40,7 @@
             <c:otherwise>
                 <p><spring:message code="voj.include.header.not-logged-in" text="You are not logged in." /></p>
                 <ul class="inline">
-                    <li><a href="<c:url value="/accounts/login" />"><spring:message code="voj.include.header.sign-in" text="Sign in" /></a></li>
+                    <li><a href="<c:url value="/accounts/login?forward=" />${requestScope['javax.servlet.forward.request_uri']}"><spring:message code="voj.include.header.sign-in" text="Sign in" /></a></li>
                     <li><a href="<c:url value="/accounts/register" />"><spring:message code="voj.include.header.sign-up" text="Sign up" /></a></li>
                 </ul>
             </c:otherwise>
