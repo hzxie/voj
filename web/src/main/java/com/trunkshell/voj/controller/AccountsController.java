@@ -88,11 +88,11 @@ public class AccountsController {
 	}
 	
 	/**
-	 * 处理用户的异步登录请求.
+	 * 处理用户的登录请求.
 	 * @param username - 用户名
 	 * @param password - 密码(已使用MD5加密)
 	 * @param request - Http Servlet Request对象
-	 * @return 一个包含若干标志位的JSON对象
+	 * @return 一个包含登录验证结果的Map<String, Boolean>对象
 	 */
 	@RequestMapping(value = "/login.action", method = RequestMethod.POST)
 	public @ResponseBody Map<String, Boolean> loginAction(
@@ -133,7 +133,9 @@ public class AccountsController {
 	 * @return 包含注册页面信息的ModelAndView对象
 	 */
 	@RequestMapping(value = "/register", method = RequestMethod.GET)
-	public ModelAndView registerView(HttpServletRequest request, HttpServletResponse response) {
+	public ModelAndView registerView(
+			@RequestParam(value="forward", required=false, defaultValue="") String forwardUrl,
+			HttpServletRequest request, HttpServletResponse response) {
 		HttpSession session = request.getSession();
 		ModelAndView view = null;
 		if ( isLoggedIn(session) ) {
@@ -146,6 +148,38 @@ public class AccountsController {
 			view.addObject("csrfToken", CsrfProtector.getCsrfToken(session));
 		}
 		return view;
+	}
+	
+	/**
+	 * 处理用户注册的请求.
+	 * @param username - 用户名
+	 * @param password - 密码
+	 * @param email - 电子邮件地址
+	 * @param languageSlug - 偏好语言的唯一英文缩写
+	 * @param csrfToken - Csrf的Token
+	 * @param request - HttpRequest对象
+	 * @return 一个包含账户创建结果的Map<String, Boolean>对象
+	 */
+	@RequestMapping(value = "/register.action", method = RequestMethod.POST)
+	public @ResponseBody Map<String, Boolean> registerAction(
+			@RequestParam(value="username", required=true) String username,
+			@RequestParam(value="password", required=true) String password,
+			@RequestParam(value="email", required=true) String email,
+			@RequestParam(value="languagePreference", required=true) String languageSlug,
+			@RequestParam(value="csrfToken", required=true) String csrfToken,
+			HttpServletRequest request) {
+		boolean isCsrfTokenValid = CsrfProtector.isCsrfTokenValid(csrfToken, request.getSession());
+		Map<String, Boolean> result = userService.createUser(username, password, email, languageSlug, isCsrfTokenValid);
+
+		if ( result.get("isSuccessful") ) {
+			User user = userService.getUserUsingUsernameOrEmail(username);
+			getSession(request, user, false);
+			
+			String ipAddress = HttpRequestParser.getRemoteAddr(request);
+			logger.info(String.format("User: [Username=%s] created at %s.", 
+					new Object[] {username, ipAddress}));
+		}
+		return result;
 	}
 	
 	/**

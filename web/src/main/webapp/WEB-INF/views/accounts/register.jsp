@@ -72,7 +72,7 @@
                         arguments="${termsUrl}, ${privacyUrl}" />
                 </p>
                 <p>
-                    <input type="hidden" value="${csrfToken}" />
+                    <input id="csrf-token" type="hidden" value="${csrfToken}" />
                     <button class="btn btn-primary btn-block" type="submit"><spring:message code="voj.accounts.register.create-account" text="Create Account" /></button>
                 </p>
             </form> <!-- #register-form -->
@@ -88,5 +88,91 @@
     <!-- JavaScript -->
     <!-- Placed at the end of the document so the pages load faster -->
     <script type="text/javascript" src="${cdnUrl}/js/site.js"></script>
+    <script type="text/javascript">
+        function onSubmit() {
+            $('.alert-error').addClass('hide');
+            $('button[type=submit]').attr('disabled', 'disabled');
+            $('button[type=submit]').html('<spring:message code="voj.accounts.register.please-wait" text="Please wait..." />');
+            
+            var username            = $('#username').val(),
+                password            = $('#password').val(),
+                email               = $('#email').val(),
+                languagePreference  = $('#language-preference').val(),
+                csrfToken           = $('#csrf-token').val();
+            
+            return doRegisterAction(username, password, email, languagePreference, csrfToken);
+        };
+    </script>
+    <script type="text/javascript">
+        function doRegisterAction(username, password, email, languagePreference, csrfToken) {
+            var postData = {
+                'username': username,
+                'password': password,
+                'email': email,
+                'languagePreference': languagePreference,
+                'csrfToken': csrfToken
+            };
+
+            $.ajax({
+                type: 'POST',
+                url: '<c:url value="/accounts/register.action" />',
+                data: postData,
+                dataType: 'JSON',
+                success: function(result){
+                    return processRegisterResult(result);
+                }
+            });
+        }
+    </script>
+    <script type="text/javascript">
+        function processRegisterResult(result) {
+            if ( result['isSuccessful'] ) {
+                var forwardUrl = '${forwardUrl}' || '<c:url value="/" />';
+                window.location.href = forwardUrl;
+            } else {
+                var errorMessage  = '';
+
+                if ( !result['isCsrfTokenValid'] ) {
+                    errorMessage += '<spring:message code="voj.accounts.register.invalid-token" text="Invalid token." />';
+                }
+                if ( result['isUsernameEmpty'] ) {
+                    errorMessage += '<spring:message code="voj.accounts.register.empty-username" text="You can&apos;t leave Username empty." /><br>';
+                } else if ( !result['isUsernameLegal'] ) {
+                    var username = $('#username').val();
+
+                    if ( username.length < 6 || username.length > 16 ) {
+                        errorMessage += '<spring:message code="voj.accounts.register.illegal-username-length" text="The length of Username must between 6 and 16 characters." /><br>';
+                    } else if ( !username[0].match(/[a-z]/i) ) {
+                        errorMessage += '<spring:message code="voj.accounts.register.illegal-username-beginning" text="Username must start with a letter(a-z)." /><br>';
+                    } else {
+                        errorMessage += '<spring:message code="voj.accounts.register.illegal-username-character" text="Username can only contain letters(a-z), numbers, and underlines(_)." /><br>';
+                    }
+                } else if ( result['isUsernameExists'] ) {
+                    errorMessage += '<spring:message code="voj.accounts.register.existing-username" text="Someone already has that username." /><br>';
+                }
+                if ( result['isPasswordEmpty'] ) {
+                    errorMessage += '<spring:message code="voj.accounts.register.empty-password" text="You can&apos;t leave Password empty." /><br>';
+                } else if ( !result['isPasswordLegal'] ) {
+                    errorMessage += '<spring:message code="voj.accounts.register.illegal-password" text="The length of Password must between 6 and 16 characters." /><br>';
+                }
+                if ( result['isEmailEmpty'] ) {
+                    errorMessage += '<spring:message code="voj.accounts.register.empty-email" text="You can&apos;t leave Email empty." /><br>';
+                } else if ( !result['isEmailLegal'] ) {
+                    errorMessage += '<spring:message code="voj.accounts.register.illegal-email" text="The Email seems invalid." /><br>';
+                } else if ( result['isEmailExists'] ) {
+                    errorMessage += '<spring:message code="voj.accounts.register.existing-email" text="Someone already use that email." /><br>';
+                }
+                if ( !result['isLanguageLegal'] ) {
+                    errorMessage += '<spring:message code="voj.accounts.register.empty-language" text="You can&apos;t leave Language Preference empty." /><br>';
+                }
+
+                $('.alert-error').html(errorMessage);
+                $('.alert-error').removeClass('hide');
+            }
+
+            $('button[type=submit]').html('<spring:message code="voj.accounts.register.create-account" text="Create Account" />');
+            $('button[type=submit]').removeAttr('disabled');
+        }
+    </script>
 </body>
 </html>
