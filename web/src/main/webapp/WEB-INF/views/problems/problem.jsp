@@ -92,12 +92,9 @@
                             <div class="row-fluid">
                                 <div class="span4">
                                     <select id="languages">
-                                        <option value="text/x-csrc">C</option>
-                                        <option value="text/x-c++src">C++</option>
-                                        <option value="text/x-java">Java</option>
-                                        <option value="text/x-pascal">Pascal</option>
-                                        <option value="text/x-python">Python</option>
-                                        <option value="text/x-ruby">Ruby</option>
+                                    <c:forEach var="language" items="${languages}">
+                                        <option value="${language.languageSlug}">${language.languageName}</option>
+                                    </c:forEach>
                                     </select>
                                 </div> <!-- .span4 -->
                                 <div id="submission-error" class="offset1 span4"></div> <!-- #submission-error -->

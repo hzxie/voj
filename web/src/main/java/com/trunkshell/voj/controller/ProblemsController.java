@@ -20,9 +20,11 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.ModelAndView;
 
 import com.trunkshell.voj.exception.ResourceNotFoundException;
+import com.trunkshell.voj.model.Language;
 import com.trunkshell.voj.model.Problem;
 import com.trunkshell.voj.model.Submission;
 import com.trunkshell.voj.model.User;
+import com.trunkshell.voj.service.LanguageService;
 import com.trunkshell.voj.service.ProblemService;
 import com.trunkshell.voj.service.SubmissionService;
 import com.trunkshell.voj.util.CsrfProtector;
@@ -40,32 +42,32 @@ public class ProblemsController {
 	 * 显示试题库中的全部试题.
 	 * @param startIndex - 试题的起始下标
 	 * @param request - HttpRequest对象
-     * @param response - HttpResponse对象
+	 * @param response - HttpResponse对象
 	 * @return 包含试题库页面信息的ModelAndView对象
 	 */
 	@RequestMapping(value = "", method = RequestMethod.GET)
-    public ModelAndView problemsView(
-            @RequestParam(value="start", required = false, defaultValue = "1") int startIndex,
-            HttpServletRequest request, HttpServletResponse response) {
+	public ModelAndView problemsView(
+			@RequestParam(value="start", required = false, defaultValue = "1") int startIndex,
+			HttpServletRequest request, HttpServletResponse response) {
 		if ( startIndex < START_INDEX_OF_PROBLEMS ) {
 			startIndex = START_INDEX_OF_PROBLEMS;
 		}
-        
+		
 		ModelAndView view = new ModelAndView("problems/problems");
-        view.addObject("problems", problemService.getProblems(startIndex, NUMBER_OF_PROBLEMS_PER_PAGE))
-        	.addObject("startIndexOfProblems", START_INDEX_OF_PROBLEMS)
-        	.addObject("numberOfProblemsPerPage", NUMBER_OF_PROBLEMS_PER_PAGE)
-        	.addObject("totalProblems", problemService.getNumberOfProblems());
-        
-        HttpSession session = request.getSession();
-        if ( isLoggedIn(session) ) {
-        	long userId = (Long)session.getAttribute("uid");
-        	Map<Long, Submission> submissionOfProblems = submissionService.
-        			getSubmissionOfProblems(userId, startIndex, startIndex + NUMBER_OF_PROBLEMS_PER_PAGE);
-        	view.addObject("submissionOfProblems", submissionOfProblems);
-        }
-        return view;
-    }
+		view.addObject("problems", problemService.getProblems(startIndex, NUMBER_OF_PROBLEMS_PER_PAGE))
+			.addObject("startIndexOfProblems", START_INDEX_OF_PROBLEMS)
+			.addObject("numberOfProblemsPerPage", NUMBER_OF_PROBLEMS_PER_PAGE)
+			.addObject("totalProblems", problemService.getNumberOfProblems());
+		
+		HttpSession session = request.getSession();
+		if ( isLoggedIn(session) ) {
+			long userId = (Long)session.getAttribute("uid");
+			Map<Long, Submission> submissionOfProblems = submissionService.
+					getSubmissionOfProblems(userId, startIndex, startIndex + NUMBER_OF_PROBLEMS_PER_PAGE);
+			view.addObject("submissionOfProblems", submissionOfProblems);
+		}
+		return view;
+	}
 	
 	/**
 	 * 获取试题列表.
@@ -82,8 +84,8 @@ public class ProblemsController {
 		Map<Long, Submission> submissionOfProblems = null;
 		if ( isLoggedIn(session) ) {
 			long userId = (Long)session.getAttribute("uid");
-        	submissionOfProblems = submissionService.
-        			getSubmissionOfProblems(userId, startIndex, startIndex + NUMBER_OF_PROBLEMS_PER_PAGE);
+			submissionOfProblems = submissionService.
+					getSubmissionOfProblems(userId, startIndex, startIndex + NUMBER_OF_PROBLEMS_PER_PAGE);
 		}
 		
 		Map<String, Object> result = new HashMap<String, Object>(4, 1);
@@ -110,33 +112,35 @@ public class ProblemsController {
 	 * 加载试题的详细信息.
 	 * @param problemID - 试题的唯一标识符
 	 * @param request - HttpRequest对象
-     * @param response - HttpResponse对象
+	 * @param response - HttpResponse对象
 	 * @return 包含试题详细信息的ModelAndView对象
 	 */
 	@RequestMapping(value = "/{problemId}", method = RequestMethod.GET)
-    public ModelAndView problemView(
-    		@PathVariable("problemId") long problemId,
-    		HttpServletRequest request, HttpServletResponse response) {
+	public ModelAndView problemView(
+			@PathVariable("problemId") long problemId,
+			HttpServletRequest request, HttpServletResponse response) {
 		Problem problem = problemService.getProblem(problemId);
 		if ( problem == null || !problem.isPublic() ) {
 			throw new ResourceNotFoundException();
 		}
 		
 		ModelAndView view = new ModelAndView("problems/problem");
-        view.addObject("problem", problem);
-        
-        HttpSession session = request.getSession();
-        if ( isLoggedIn(session) ) {
-        	long userId = (Long)session.getAttribute("uid");
-        	Map<Long, Submission> submissionOfProblems = submissionService.getSubmissionOfProblems(userId, problemId, problemId + 1);
-        	List<Submission> submissions = submissionService.getSubmissionUsingProblemIdAndUserId(problemId, userId, NUMBER_OF_SUBMISSIONS_PER_PROBLEM);
-        	
-        	view.addObject("latestSubmission", submissionOfProblems);
-        	view.addObject("submissions", submissions);
-        	view.addObject("csrfToken", CsrfProtector.getCsrfToken(session));
-        }
-        return view;
-    }
+		view.addObject("problem", problem);
+		
+		HttpSession session = request.getSession();
+		if ( isLoggedIn(session) ) {
+			long userId = (Long)session.getAttribute("uid");
+			Map<Long, Submission> submissionOfProblems = submissionService.getSubmissionOfProblems(userId, problemId, problemId + 1);
+			List<Submission> submissions = submissionService.getSubmissionUsingProblemIdAndUserId(problemId, userId, NUMBER_OF_SUBMISSIONS_PER_PROBLEM);
+			List<Language> languages = languageService.getAllLanguages();
+			
+			view.addObject("latestSubmission", submissionOfProblems);
+			view.addObject("submissions", submissions);
+			view.addObject("languages", languages);
+			view.addObject("csrfToken", CsrfProtector.getCsrfToken(session));
+		}
+		return view;
+	}
 	
 	/**
 	 * @param problemId - 试题的唯一标识符
@@ -184,19 +188,25 @@ public class ProblemsController {
 	private static final int NUMBER_OF_SUBMISSIONS_PER_PROBLEM = 10;
 	
 	/**
-     * 自动注入的ProblemService对象.
-     */
-    @Autowired
-    private ProblemService problemService;
-    
-    /**
-     * 自动注入的SubmissionService对象.
-     */
-    @Autowired
-    private SubmissionService submissionService;
-    
-    /**
-     * 日志记录器.
-     */
+	 * 自动注入的ProblemService对象.
+	 */
+	@Autowired
+	private ProblemService problemService;
+	
+	/**
+	 * 自动注入的SubmissionService对象.
+	 */
+	@Autowired
+	private SubmissionService submissionService;
+	
+	/**
+	 * 自动注入的LanguageService对象.
+	 */
+	@Autowired
+	private LanguageService languageService;
+	
+	/**
+	 * 日志记录器.
+	 */
 	private Logger logger = LogManager.getLogger(ProblemsController.class);
 }

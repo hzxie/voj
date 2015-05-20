@@ -30,7 +30,7 @@ public class ExceptionHandlingController {
 	public ModelAndView resourceNotFoundView(
 			HttpServletRequest request, HttpServletResponse response) {
 		ModelAndView view = new ModelAndView("errors/404");
-        return view;
+		return view;
 	}
 	
 	/**
@@ -51,7 +51,7 @@ public class ExceptionHandlingController {
 	}
 	
 	/**
-     * 日志记录器.
-     */
-    private Logger logger = LogManager.getLogger(ExceptionHandlingController.class);
+	 * 日志记录器.
+	 */
+	private Logger logger = LogManager.getLogger(ExceptionHandlingController.class);
 }

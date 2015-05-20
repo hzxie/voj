@@ -36,7 +36,6 @@ public class HttpSessionParser {
 		if ( isLoggedInAttribute == null || uidAttribute == null ) {
 			return null;
 		}
-		
 		boolean isLoggedIn = (Boolean)isLoggedInAttribute;
 		long uid = (Long)uidAttribute;
 		
