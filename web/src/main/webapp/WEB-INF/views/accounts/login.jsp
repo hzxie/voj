@@ -85,10 +85,11 @@
     <script type="text/javascript">
         function onSubmit() {
             $('.alert-success').hide();
+            $('.alert-error').addClass('hide');
             $('button[type=submit]').attr('disabled', 'disabled');
-            $('button[type=submit]').html('Please wait...');
+            $('button[type=submit]').html('<spring:message code="voj.accounts.login.please-wait" text="Please wait..." />');
             
-            var username = $('#username').val(),
+            var username   = $('#username').val(),
                 password   = md5($('#password').val()),
                 rememberMe = $('input#remember-me').is(':checked');
             
@@ -118,8 +119,8 @@
     <script type="text/javascript">
         function processLoginResult(result) {
             if ( result['isSuccessful'] ) {
-                var forwardUrl = '${forwardUrl}';
-                window.location.href = forwardUrl || '<c:url value="/" />';
+                var forwardUrl = '${forwardUrl}' || '<c:url value="/" />';
+                window.location.href = forwardUrl;
             } else {
                 $('#password').val('');
                 $('.alert-error').removeClass('hide');
