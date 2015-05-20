@@ -37,8 +37,8 @@ public class SubmissionController {
 	 * @return 包含提交列表的ModelAndView对象 
 	 */
 	@RequestMapping(value = "", method = RequestMethod.GET)
-    public ModelAndView submissionsView(
-    		HttpServletRequest request, HttpServletResponse response) {
+	public ModelAndView submissionsView(
+			HttpServletRequest request, HttpServletResponse response) {
 		List<Submission> submissions = submissionService.getSubmissions(NUMBER_OF_SUBMISSION_PER_PAGE);
 		return new ModelAndView("submissions/submissions")
 					.addObject("submissions", submissions);
@@ -90,17 +90,17 @@ public class SubmissionController {
 	 * @return 包含提交详细信息的ModelAndView对象 
 	 */
 	@RequestMapping(value = "/{submissionId}", method = RequestMethod.GET)
-    public ModelAndView submissionView(
-    		@PathVariable("submissionId") long submissionId,
-    	    HttpServletRequest request, HttpServletResponse response) {
+	public ModelAndView submissionView(
+			@PathVariable("submissionId") long submissionId,
+			HttpServletRequest request, HttpServletResponse response) {
 		Submission submission = submissionService.getSubmission(submissionId);
 		if ( submission == null ) {
 			throw new ResourceNotFoundException();
 		}
 		ModelAndView view = new ModelAndView("submissions/submission");
-        view.addObject("submission", submission);
-        view.addObject("csrfToken", CsrfProtector.getCsrfToken(request.getSession()));
-        return view;
+		view.addObject("submission", submission);
+		view.addObject("csrfToken", CsrfProtector.getCsrfToken(request.getSession()));
+		return view;
 	}
 	
 	/**
@@ -109,14 +109,14 @@ public class SubmissionController {
 	private static final int NUMBER_OF_SUBMISSION_PER_PAGE = 100;
 	
 	/**
-     * 自动注入的SubmissionService对象.
-     */
-    @Autowired
-    private SubmissionService submissionService;
-    
-    /**
-     * 日志记录器.
-     */
+	 * 自动注入的SubmissionService对象.
+	 */
+	@Autowired
+	private SubmissionService submissionService;
+	
+	/**
+	 * 日志记录器.
+	 */
 	@SuppressWarnings("unused")
 	private Logger logger = LogManager.getLogger(SubmissionController.class);
 }

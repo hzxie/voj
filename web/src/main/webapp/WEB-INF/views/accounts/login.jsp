@@ -52,7 +52,14 @@
                     <input id="username" name="username" class="span12" type="text" maxlength="32" />
                 </p>
                 <p class="row-fluid">
-                    <label for="password"><spring:message code="voj.accounts.login.password" text="Password" /></label>
+                    <label for="password">
+                        <spring:message code="voj.accounts.login.password" text="Password" />
+                        <span class="pull-right">
+                            <a href="<c:url value="/accounts/reset-password" />">
+                                <spring:message code="voj.accounts.login.forgot-password" text="Forgot password?" />
+                            </a>
+                        </span>
+                    </label>
                     <input id="password" name="password" class="span12" type="password" maxlength="16" />
                 </p>
                 <p>
@@ -66,7 +73,8 @@
             </form> <!-- #login-form -->
         </div> <!-- #login -->
         <p class="text-center">
-            <spring:message code="voj.accounts.login.dont-have-account" text="Don't have an account?" /><br /><a href="<c:url value="/accounts/register" />"><spring:message code="voj.accounts.login.create-account" text="Create an account" /></a>
+            <spring:message code="voj.accounts.login.dont-have-account" text="Don't have an account?" /><br />
+            <a href="<c:url value="/accounts/register" />"><spring:message code="voj.accounts.login.create-account" text="Create an account" /></a>
         </p>
     </div> <!-- #content -->
     <!-- Footer -->
@@ -110,7 +118,8 @@
     <script type="text/javascript">
         function processLoginResult(result) {
             if ( result['isSuccessful'] ) {
-                window.location.href = '${forwardUrl}';
+                var forwardUrl = '${forwardUrl}';
+                window.location.href = forwardUrl || '<c:url value="/" />';
             } else {
                 $('#password').val('');
                 $('.alert-error').removeClass('hide');

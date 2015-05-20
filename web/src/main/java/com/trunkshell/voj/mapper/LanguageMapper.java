@@ -1,5 +1,7 @@
 package com.trunkshell.voj.mapper;
 
+import java.util.List;
+
 import org.apache.ibatis.annotations.CacheNamespace;
 import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Insert;
@@ -45,6 +47,19 @@ public interface LanguageMapper {
 		 @Result(property = "languageName", column = "language_name")
 	})
 	public Language getLanguageUsingSlug(@Param("languageSlug") String languageSlug);
+	
+	/**
+	 * 获取支持的编程语言.
+	 * @return 编程语言列表(List<Language>对象)
+	 */
+	@Select("SELECT * FROM voj_languages")
+	@Options(useCache = true)
+	@Results({
+		 @Result(property = "languageId", column = "language_id"),
+		 @Result(property = "languageSlug", column = "language_slug"),
+		 @Result(property = "languageName", column = "language_name")
+	})
+	public List<Language> getAllLanguages();
 	
 	/**
 	 * 添加编程语言对象.

@@ -58,7 +58,7 @@
                     <h2><spring:message code="voj.index.slogan" text="Start Your OJ Journey Today!" /></h2>
                     <c:choose>
                     <c:when test="${!isLogin}">
-                        <p><button class="btn btn-success" onclick="window.location.href='<c:url value="/accounts/register" />'"><spring:message code="voj.index.get-started" text="Get Started Now" /></button></p>
+                        <p><button class="btn btn-success" onclick="window.location.href='<c:url value="/accounts/register" />'"><spring:message code="voj.index.create-account" text="Create Account" /></button></p>
                         <p><a href="<c:url value="/accounts/login" />"><spring:message code="voj.index.login" text="Sign In" /></a></p>
                     </c:when>
                     <c:otherwise>
