@@ -1,0 +1,21 @@
+div#content {
+	background-color: #fff;
+	border-top: 5px solid #16a085;
+	margin-top: 20px;
+	-webkit-box-shadow: 0 0 5px rgba(0, 0, 0, .1);
+	   -moz-box-shadow: 0 0 5px rgba(0, 0, 0, .1);
+	        box-shadow: 0 0 5px rgba(0, 0, 0, .1);
+}
+
+div#content div#main-content {
+	padding: 10px;
+}
+
+div#content div#main-content h3 {
+	margin-bottom: 20px;
+}
+
+div#content div#main-content ul.languages {
+	list-style: none;
+	margin: 0;
+}
