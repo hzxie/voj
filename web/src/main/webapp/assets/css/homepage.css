@@ -66,11 +66,6 @@ div#content div#main-content div#discussion table.table tr.discussion-threads {
             transition: background .1s linear;
 }
 
-div#content div#main-content div#contests table.table tr.contest:hover,
-div#content div#main-content div#discussion table.table tr.discussion-threads:hover {
-	background-color: #f6f6f6 !important;
-}
-
 div#content div#main-content div#contests table.table tr.contest > td.overview,
 div#content div#main-content div#discussion table.table tr.discussion-threads > td.overview {
 	padding: 10px;
@@ -81,11 +76,6 @@ div#content div#main-content div#discussion table.table tr.discussion-threads > 
 	color: #999;
 	font-size: 12px;
 	padding-left: 0;
-}
-
-div#content div#main-content div#contests table.table tr.contest:hover > td.status,
-div#content div#main-content div#discussion table.table tr.discussion-threads:hover > td.reply-count {
-	background-color: #eaeaea !important;
 }
 
 div#content div#main-content div#contests table.table tr.contest > td.status,
@@ -105,6 +95,14 @@ div#content div#main-content div#contests table.table tr.contest > td.status {
 	background-color: #eaeaea;
 }
 
+div#content div#main-content div#contests table.table tr.contest:hover {
+	background-color: #f6f6f6 !important;
+}
+
+div#content div#main-content div#contests table.table tr.contest:hover > td.status {
+	background-color: #eaeaea !important;
+}
+
 div#content div#main-content div#contests table.table tr.contest.Done > td.status {
 	color: #444;
 }
@@ -120,6 +118,14 @@ div#content div#main-content div#contests table.table tr.contest.Live {
 div#content div#main-content div#contests table.table tr.contest.Live > td.status {
 	background-color: #fdd;
 	color: #ff8080;	
+}
+
+div#content div#main-content div#discussion table.table tr.discussion-threads:hover {
+	background-color: #fff8df !important;
+}
+
+div#content div#main-content div#discussion table.table tr.discussion-threads:hover > td.reply-count {
+	background-color: #ffe9ca !important;
 }
 
 div#content div#main-content div#discussion table.table tr.discussion-threads > td.avatar {

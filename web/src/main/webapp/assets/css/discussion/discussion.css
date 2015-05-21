@@ -5,7 +5,10 @@ div#content div#main-content {
 div#content div#main-content div#discussion table {
 	background-color: #fff;
 	border-top: 5px solid #16a085;
-
+	margin-bottom: 0;
+	-webkit-box-shadow: 0 0 5px rgba(0,0,0,0.1);
+	   -moz-box-shadow: 0 0 5px rgba(0,0,0,0.1);
+	        box-shadow: 0 0 5px rgba(0,0,0,0.1);
 }
 
 div#content div#main-content div#discussion table tr.viewed {
@@ -13,10 +16,12 @@ div#content div#main-content div#discussion table tr.viewed {
 	opacity: .5;
 }
 
-div#content div#main-content div#discussion table td {
-	padding: 10px;
-	text-align: center;
-	vertical-align: middle;
+div#content div#main-content div#discussion table.table tr.discussion-threads {
+	cursor: pointer;
+	border-bottom: 1px solid #e8e8e8;
+	-webkit-transition: background .1s linear;
+	   -moz-transition: background .1s linear;
+	        transition: background .1s linear;
 }
 
 div#content div#main-content div#discussion table td.avatar,
@@ -27,4 +32,70 @@ div#content div#main-content div#discussion table td.replies {
 div#content div#main-content div#discussion table td.topic {
 	text-align: left;
 	vertical-align: top;
+}
+
+div#content div#main-content div#discussion table.table tr.discussion-threads:hover {
+	background-color: #fff8df !important;
+}
+
+div#content div#main-content div#discussion table.table tr.discussion-threads > td.overview {
+	padding: 10px;
+}
+
+div#content div#main-content div#discussion table.table tr.discussion-threads > td.overview ul.inline li {
+	color: #999;
+	font-size: 12px;
+	padding-left: 0;
+}
+
+div#content div#main-content div#discussion table.table tr.discussion-threads:hover > td.reply-count {
+	background-color: #ffe9ca !important;
+}
+
+div#content div#main-content div#discussion table.table tr.discussion-threads > td.reply-count {
+	font-size: 12px;
+	text-align: center;
+	vertical-align: middle;
+	width: 15%;
+}
+
+div#content div#main-content div#discussion table.table tr.discussion-threads > td.avatar {
+	vertical-align: middle;
+	width: 10%;
+}
+
+div#content div#main-content div#discussion table.table tr.discussion-threads > td.avatar > img {
+	max-width: 100%;
+	width: 100%;
+	-webkit-border-radius: 4px;
+	   -moz-border-radius: 4px;
+	        border-radius: 4px;
+}
+
+div#content div#main-content div#discussion table.table tr.discussion-threads > td.reply-count {
+	background-color: #ffedd5;
+}
+
+div#content div#main-content div#discussion div#more-discussion {
+	background-color: #f9f9f9;
+	border-bottom: 5px solid #1abc9c;
+	cursor: pointer;
+	padding: 10px;
+	text-align: center;
+}
+
+div#content div#main-content div#discussion div#more-discussion p {
+	margin-bottom: 0;
+}
+
+div#content div#main-content div#discussion div#more-discussion img {
+	max-height: 15px;
+	height: 15px;
+}
+
+div#content div#main-content div#sidebar div.widget {
+	background-color: #fff;
+	border-top: 4px solid #16a085;
+	margin-bottom: 20px;
+	padding: 10px;
 }
