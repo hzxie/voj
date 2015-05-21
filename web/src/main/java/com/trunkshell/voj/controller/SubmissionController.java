@@ -118,5 +118,5 @@ public class SubmissionController {
 	 * 日志记录器.
 	 */
 	@SuppressWarnings("unused")
-	private Logger logger = LogManager.getLogger(SubmissionController.class);
+	private static final Logger logger = LogManager.getLogger(SubmissionController.class);
 }

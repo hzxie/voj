@@ -53,5 +53,5 @@ public class ExceptionHandlingController {
 	/**
 	 * 日志记录器.
 	 */
-	private Logger logger = LogManager.getLogger(ExceptionHandlingController.class);
+	private static final Logger logger = LogManager.getLogger(ExceptionHandlingController.class);
 }

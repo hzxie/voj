@@ -106,5 +106,5 @@ public class WebSocketController {
 	 * 日志记录器.
 	 */
 	@SuppressWarnings("unused")
-	private Logger logger = LogManager.getLogger(WebSocketController.class);
+	private static final Logger logger = LogManager.getLogger(WebSocketController.class);
 }

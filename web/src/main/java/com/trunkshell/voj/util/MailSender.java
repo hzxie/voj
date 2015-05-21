@@ -87,5 +87,5 @@ public class MailSender {
 	/**
 	 * 日志记录器.
 	 */
-	private Logger logger = LogManager.getLogger(MailSender.class);
+	private static final Logger logger = LogManager.getLogger(MailSender.class);
 }
