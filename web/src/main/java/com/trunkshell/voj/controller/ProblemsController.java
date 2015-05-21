@@ -208,5 +208,5 @@ public class ProblemsController {
 	/**
 	 * 日志记录器.
 	 */
-	private Logger logger = LogManager.getLogger(ProblemsController.class);
+	private static final Logger logger = LogManager.getLogger(ProblemsController.class);
 }

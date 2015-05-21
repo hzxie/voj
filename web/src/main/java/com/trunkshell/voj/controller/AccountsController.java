@@ -197,5 +197,5 @@ public class AccountsController {
 	/**
 	 * 日志记录器.
 	 */
-	private Logger logger = LogManager.getLogger(AccountsController.class);
+	private static final Logger logger = LogManager.getLogger(AccountsController.class);
 }
