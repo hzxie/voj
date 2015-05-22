@@ -3,7 +3,7 @@
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: May 20, 2015 at 04:31 AM
+-- Generation Time: May 22, 2015 at 03:47 AM
 -- Server version: 5.6.21
 -- PHP Version: 5.6.3
 
@@ -103,7 +103,8 @@ CREATE TABLE IF NOT EXISTS `voj_discussion_threads` (
 CREATE TABLE IF NOT EXISTS `voj_discussion_topics` (
 `discussion_topic_id` int(8) NOT NULL,
   `discussion_topic_slug` varchar(128) NOT NULL,
-  `discussion_topic_name` varchar(128) NOT NULL
+  `discussion_topic_name` varchar(128) NOT NULL,
+  `discussion_parent_topic_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
@@ -399,7 +400,7 @@ ALTER TABLE `voj_discussion_threads`
 -- Indexes for table `voj_discussion_topics`
 --
 ALTER TABLE `voj_discussion_topics`
- ADD PRIMARY KEY (`discussion_topic_id`);
+ ADD PRIMARY KEY (`discussion_topic_id`), ADD KEY `discussion_parent_topic_id` (`discussion_parent_topic_id`);
 
 --
 -- Indexes for table `voj_judge_results`
@@ -551,6 +552,7 @@ ADD CONSTRAINT `voj_contest_problems_ibfk_2` FOREIGN KEY (`problem_id`) REFERENC
 -- Constraints for table `voj_discussion_replies`
 --
 ALTER TABLE `voj_discussion_replies`
+ADD CONSTRAINT `voj_discussion_replies_ibfk_1` FOREIGN KEY (`discussion_threads_id`) REFERENCES `voj_discussion_threads` (`discussion_threads_id`),
 ADD CONSTRAINT `voj_discussion_replies_ibfk_2` FOREIGN KEY (`discussion_reply_uid`) REFERENCES `voj_users` (`uid`);
 
 --
@@ -560,6 +562,12 @@ ALTER TABLE `voj_discussion_threads`
 ADD CONSTRAINT `voj_discussion_threads_ibfk_1` FOREIGN KEY (`disscussion_creator_uid`) REFERENCES `voj_users` (`uid`),
 ADD CONSTRAINT `voj_discussion_threads_ibfk_2` FOREIGN KEY (`discussion_topic_id`) REFERENCES `voj_discussion_topics` (`discussion_topic_id`),
 ADD CONSTRAINT `voj_discussion_threads_ibfk_3` FOREIGN KEY (`problem_id`) REFERENCES `voj_problems` (`problem_id`);
+
+--
+-- Constraints for table `voj_discussion_topics`
+--
+ALTER TABLE `voj_discussion_topics`
+ADD CONSTRAINT `voj_discussion_topics_ibfk_1` FOREIGN KEY (`discussion_parent_topic_id`) REFERENCES `voj_discussion_topics` (`discussion_topic_id`);
 
 --
 -- Constraints for table `voj_problem_categories`
