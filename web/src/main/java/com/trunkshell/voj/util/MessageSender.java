@@ -2,6 +2,8 @@ package com.trunkshell.voj.util;
 
 import java.util.Map;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.stereotype.Component;
@@ -18,6 +20,9 @@ public class MessageSender {
 	 */
 	public void sendMessage(final Map<String, Object> mapMessage) {
 		jmsTemplate.convertAndSend(mapMessage);
+		
+		long submissionId = (Long) mapMessage.get("submissionId");
+		logger.info(String.format("Submission task #%s has been created.", new Object[] {submissionId}));
 	}
 
 	/**
@@ -26,4 +31,9 @@ public class MessageSender {
 	 */
 	@Autowired
 	private JmsTemplate jmsTemplate;
+	
+	/**
+	 * 日志记录器.
+	 */
+	private static final Logger logger = LogManager.getLogger(MessageSender.class);
 }

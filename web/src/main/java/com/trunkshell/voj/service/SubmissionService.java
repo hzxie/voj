@@ -17,6 +17,7 @@ import com.trunkshell.voj.model.Language;
 import com.trunkshell.voj.model.Problem;
 import com.trunkshell.voj.model.Submission;
 import com.trunkshell.voj.model.User;
+import com.trunkshell.voj.util.MessageSender;
 
 /**
  * 提交类(Submission)的业务逻辑层.
@@ -142,6 +143,7 @@ public class SubmissionService {
 			submissionMapper.createSubmission(submission);
 			
 			long submissionId = submission.getSubmissionId();
+			createSubmissionTask(submissionId);
 			result.put("submissionId", submissionId);
 		}
 		return result;
@@ -170,6 +172,17 @@ public class SubmissionService {
 	}
 	
 	/**
+	 * 创建评测任务, 将提交的信息提交至消息队列.
+	 * @param submission - 提交记录对象
+	 */
+	private void createSubmissionTask(long submissionId) {
+		Map<String, Object> mapMessage = new HashMap<String, Object>();
+		mapMessage.put("submissionId", submissionId);
+		
+		messageSender.sendMessage(mapMessage);
+	}
+	
+	/**
 	 * 自动注入的SubmissionMapper对象.
 	 */
 	@Autowired
@@ -188,8 +201,8 @@ public class SubmissionService {
 	private LanguageMapper languageMapper;
 	
 	/**
-     * 日志记录器.
-     */
-	@SuppressWarnings("unused")
-	private Logger logger = LogManager.getLogger(SubmissionService.class);
+	 * 自动注入的MessageSender对象.
+	 */
+	@Autowired
+	private MessageSender messageSender;
 }
