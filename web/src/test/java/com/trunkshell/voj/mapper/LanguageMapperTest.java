@@ -77,7 +77,7 @@ public class LanguageMapperTest {
 	 */
 	@Test
 	public void testCreateLanguageNormal() {
-		Language language = new Language("text/x-php", "PHP");
+		Language language = new Language("text/x-php", "PHP", "php foo.php");
 		languageMapper.createLanguage(language);
 	}
 	
@@ -88,7 +88,7 @@ public class LanguageMapperTest {
 	 */
 	@Test(expected = org.springframework.dao.DataIntegrityViolationException.class)
 	public void testCreateLanguageUsingTooLongSlug() {
-		Language language = new Language("TooLongLanguageSlug", "Invalid Langauge");
+		Language language = new Language("TooLongLanguageSlug", "Invalid Langauge", "Compile Command");
 		languageMapper.createLanguage(language);
 	}
 	
@@ -116,7 +116,7 @@ public class LanguageMapperTest {
 	 */
 	@Test
 	public void testUpdateLanguageNotExists() {
-		Language language = new Language(0, "not-exist", "Not Exist");
+		Language language = new Language(0, "not-exist", "Not Exist", "Not Exist");
 		languageMapper.updateLanguage(language);
 	}
 	

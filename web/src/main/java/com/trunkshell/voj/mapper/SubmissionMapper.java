@@ -172,7 +172,7 @@ public interface SubmissionMapper {
      * @param uid - 用户的唯一标识符
      * @return 某个用户全部提交记录的数量
      */
-	@Select("SELECT COUNT(*) FROM voj_submissions WHERE uid = #{uid}")
+	@Select("SELECT COUNT(*) FROM voj_submissions WHERE uid = #{uid} AND submission_judge_result != 'PD'")
 	@Options(useCache = true)
 	public long getTotalSubmissionUsingUserId(@Param("uid") long uid);
 	

@@ -242,7 +242,7 @@ public class SubmissionMapperTest {
 	public void testCreateSubmissionUsingNotExistingLanguage() {
 		Problem problem = problemMapper.getProblem(1000);
 		User user = userMapper.getUserUsingUid(1000);
-		Language language = new Language(0, "not-exists", "Not Exists");
+		Language language = new Language(0, "not-exists", "Not Exists", "Not Exists");
 		
 		Submission submission = new Submission(problem, user, language, "Code");
 		submissionMapper.createSubmission(submission);

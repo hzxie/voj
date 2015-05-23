@@ -3,7 +3,7 @@
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: May 22, 2015 at 03:47 AM
+-- Generation Time: May 23, 2015 at 01:41 PM
 -- Server version: 5.6.21
 -- PHP Version: 5.6.3
 
@@ -143,20 +143,21 @@ INSERT INTO `voj_judge_results` (`judge_result_id`, `judge_result_slug`, `judge_
 CREATE TABLE IF NOT EXISTS `voj_languages` (
 `language_id` int(4) NOT NULL,
   `language_slug` varchar(16) NOT NULL,
-  `language_name` varchar(16) NOT NULL
+  `language_name` varchar(16) NOT NULL,
+  `language_compile_command` varchar(128) NOT NULL
 ) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8;
 
 --
 -- Dumping data for table `voj_languages`
 --
 
-INSERT INTO `voj_languages` (`language_id`, `language_slug`, `language_name`) VALUES
-(1, 'text/x-csrc', 'C'),
-(2, 'text/x-c++src', 'C++'),
-(3, 'text/x-java', 'Java'),
-(4, 'text/x-pascal', 'Pascal'),
-(5, 'text/x-python', 'Python'),
-(6, 'text/x-ruby', 'Ruby');
+INSERT INTO `voj_languages` (`language_id`, `language_slug`, `language_name`, `language_compile_command`) VALUES
+(1, 'text/x-csrc', 'C', 'gcc -O2 -s -Wall -o foo.exe foo.c -lm'),
+(2, 'text/x-c++src', 'C++', 'g++ -O2 -s -Wall -o foo.exe foo.cpp -lm'),
+(3, 'text/x-java', 'Java', 'javac Main.java'),
+(4, 'text/x-pascal', 'Pascal', 'fpc -O2 -Xs -Sgic -vw -ofoo.exe foo.pas'),
+(5, 'text/x-python', 'Python', 'pypy foo.py'),
+(6, 'text/x-ruby', 'Ruby', 'ruby foo.rb ');
 
 -- --------------------------------------------------------
 

@@ -105,7 +105,7 @@ public class UserMapperTest {
 	@Test
 	public void testCreateUserNormal() {
 		UserGroup userGroup = new UserGroup(1, "users", "Users");
-		Language language = new Language(2, "text/x-c++", "C++");
+		Language language = new Language(2, "text/x-c++", "C++", "g++ foo.cpp -o foo");
 		User user = new User("new-user-0xff", "Password","noreply@zjhzxhz.com", userGroup, language);
 		
 		userMapper.createUser(user);
@@ -119,7 +119,7 @@ public class UserMapperTest {
 	@Test(expected = org.springframework.dao.DuplicateKeyException.class)
 	public void testCreateUserUsingExistingUsername() {
 		UserGroup userGroup = new UserGroup(1, "users", "Users");
-		Language language = new Language(2, "text/x-c++", "C++");
+		Language language = new Language(2, "text/x-c++", "C++", "g++ foo.cpp -o foo");
 		User user = new User("zjhzxhz", "Password","noreply@zjhzxhz.com", userGroup, language);
 		
 		userMapper.createUser(user);
@@ -133,7 +133,7 @@ public class UserMapperTest {
 	@Test(expected = org.springframework.dao.DuplicateKeyException.class)
 	public void testCreateUserUsingExistingEmail() {
 		UserGroup userGroup = new UserGroup(1, "users", "Users");
-		Language language = new Language(2, "text/x-c++", "C++");
+		Language language = new Language(2, "text/x-c++", "C++", "g++ foo.cpp -o foo");
 		User user = new User("new-user-0xfe", "Password","zjhzxhz@gmail.com", userGroup, language);
 		
 		userMapper.createUser(user);
@@ -147,7 +147,7 @@ public class UserMapperTest {
 	@Test(expected = org.springframework.dao.DataIntegrityViolationException.class)
 	public void testCreateUserUsingNotExistsLanguage() {
 		UserGroup userGroup = new UserGroup(1, "users", "Users");
-		Language language = new Language(2, "text/x-c++", "C++");
+		Language language = new Language(2, "text/x-c++", "C++", "g++ foo.cpp -o foo");
 		User user = new User("new-user-0xffffffff", "Password","noreply@zjhzxhz.com", userGroup, language);
 		
 		userMapper.createUser(user);
@@ -161,7 +161,7 @@ public class UserMapperTest {
 	@Test(expected = org.springframework.dao.DataIntegrityViolationException.class)
 	public void testCreateUserUsingTooLongUsername() {
 		UserGroup userGroup = new UserGroup(1, "users", "Users");
-		Language language = new Language(0, "text/x-c++", "C++");
+		Language language = new Language(0, "not-exists", "Not Exists", "Not Exists");
 		User user = new User("new-user-0xfe", "Password","noreply@zjhzxhz.com", userGroup, language);
 		
 		userMapper.createUser(user);
