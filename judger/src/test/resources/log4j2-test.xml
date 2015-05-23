@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="OFF">
+	<Properties>
+		<Property name="patternLayout">[%p] %d [%t] %c - %m%n</Property>
+	</Properties>
+	<Appenders>
+		<Console name="Console" target="SYSTEM_OUT">
+			<PatternLayout pattern="${patternLayout}" />
+		</Console>
+	</Appenders>
+	<Loggers>
+		<Root level="OFF">
+			<AppenderRef ref="Console" />
+		</Root>
+	</Loggers>
+</Configuration>

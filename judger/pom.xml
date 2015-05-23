@@ -10,6 +10,7 @@
 	<properties>
 		<spring.version>4.1.6.RELEASE</spring.version>
 		<spring.batch.version>3.0.4.RELEASE</spring.batch.version>
+		<aspectj.version>1.8.5</aspectj.version>
 		<mybatis.version>3.2.8</mybatis.version>
 		<druid.version>1.0.13</druid.version>
 		<activemq.version>5.11.1</activemq.version>
@@ -50,6 +51,16 @@
 			<groupId>org.springframework</groupId>
 			<artifactId>spring-messaging</artifactId>
 			<version>${spring.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.aspectj</groupId>
+			<artifactId>aspectjrt</artifactId>
+			<version>${aspectj.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.aspectj</groupId>
+			<artifactId>aspectjtools</artifactId>
+			<version>${aspectj.version}</version>
 		</dependency>
 		<!-- MyBatis -->
 		<dependency>
@@ -131,11 +142,14 @@
 			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-compiler-plugin</artifactId>
+				<artifactId>maven-jar-plugin</artifactId>
+				<version>2.6</version>
 				<configuration>
-					<source>1.7</source>
-					<target>1.7</target>
-					<encoding>UTF-8</encoding>
+					<archive>
+						<manifest>
+							<mainClass>com.trunkshell.voj.application.ApplicationBootstrap</mainClass>
+						</manifest>
+					</archive>
 				</configuration>
 			</plugin>
 		</plugins>
