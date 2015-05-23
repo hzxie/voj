@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * 消息发送服务.
+ * 用于发送新的评测任务至消息队列.
  * @author Xie Haozhe
  */
 @Component

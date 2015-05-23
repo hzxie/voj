@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * 消息接收服务.
+ * 用于接收来自评测机的实时评测结果.
  * @author Xie Haozhe
  */
 @Component
