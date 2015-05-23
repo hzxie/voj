@@ -10,3 +10,4 @@ release.properties
 .settings/
 
 bin/
+logs/
