@@ -167,11 +167,11 @@
 
                 stompClient.send('/voj/authorization.action', {}, JSON.stringify({
                     'key': 'csrfToken',
-                    'value': '${csrfToken}'
+                    'value': 'x${csrfToken}'
                 }));
                 
                 stompClient.subscribe('/user/message/authorization', function(message){
-                    console.log(message);
+                	console.log(message);
                 });
 
                 stompClient.subscribe('/voj/getRealTimeJudgeResult.action/${submission.submissionId}', function(message){
@@ -195,7 +195,7 @@
                     message     = '<i class="fa fa-exclamation-circle"></i> <spring:message code="voj.submissions.submission.websocket-closed" text="WebSocket connection has been closed." />';
                     alertClass  = 'alert-info';
                 } else {
-                    message     = '<i class="fa fa-frown-o"></i> <spring:message code="voj.submissions.submission.websocket-not-supported" text="Your browser CANNOT support WebSocket." />';
+                    message     = '<i class="fa fa-frown-o"></i> <spring:message code="voj.submissions.submission.websocket-established-failed" text="Cannot establish WebSocket connection." />';
                     alertClass  = 'alert-error';
                 }
             }
