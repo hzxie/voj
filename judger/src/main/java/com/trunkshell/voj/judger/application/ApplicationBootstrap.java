@@ -26,6 +26,12 @@ public class ApplicationBootstrap {
 		applicationContext = new 
 				ClassPathXmlApplicationContext("application-context.xml");
 	}
+	
+	/**
+	 * 获取当前系统用户的权限.
+	 * 使所有操作在安全的权限下运行.
+	 */
+	private void getUserPrevileges() { }
 
 	/**
 	 * 应用程序配置.

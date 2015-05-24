@@ -27,9 +27,10 @@ public class MessageReceiver implements MessageListener {
 			
 			try {
 				long submissionId = (Long)mapMessage.getObject("submissionId");
-				dispatcher.onSubmissionCreated(submissionId);
 				logger.info(String.format("Received new submission task #%s", 
 								new Object[] {submissionId}));
+				
+				dispatcher.onSubmissionCreated(submissionId);
 			} catch (JMSException ex) {
 				logger.catching(ex);
 			}

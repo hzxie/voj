@@ -49,22 +49,21 @@
 	<!-- JDBC Data Source. It is assumed you have MySQL running on localhost 
 		port 3306 with username root and blank password. Change below if it's not 
 		the case -->
-	<bean id="dataSource" 
-		class="com.alibaba.druid.pool.DruidDataSource"
+	<bean id="dataSource" class="com.alibaba.druid.pool.DruidDataSource"
 		init-method="init" destroy-method="close">
-		<property name="driverClassName" value="com.mysql.jdbc.Driver" />
-		<property name="url" value="jdbc:mysql://127.0.0.1:3306/test?characterEncoding=UTF-8" />
-		<property name="username" value="root" />
-		<property name="password" value="" />
-		<property name="initialSize" value="0" />
-		<property name="maxActive" value="5" />
-		<property name="minIdle" value="3" />
-		<property name="maxIdle" value="10" />
-		<property name="maxWait" value="30000" />
-		<property name="timeBetweenEvictionRunsMillis" value="60000" />
-		<property name="minEvictableIdleTimeMillis" value="25200000" />
-		<property name="removeAbandoned" value="true" />
-		<property name="removeAbandonedTimeout" value="1800" />
+		<property name="driverClassName" value="${jdbc.driverClassName}" />
+		<property name="url" value="${jdbc.url}" />
+		<property name="username" value="${jdbc.username}" />
+		<property name="password" value="${jdbc.password}" />
+		<property name="initialSize" value="${jdbc.initialSize}" />
+		<property name="maxActive" value="${jdbc.maxActive}" />
+		<property name="minIdle" value="${jdbc.minIdle}" />
+		<property name="maxIdle" value="${jdbc.maxIdle}" />
+		<property name="maxWait" value="${jdbc.maxWait}" />
+		<property name="timeBetweenEvictionRunsMillis" value="${jdbc.timeBetweenEvictionRunsMillis}" />
+		<property name="minEvictableIdleTimeMillis" value="${jdbc.minEvictableIdleTimeMillis}" />
+		<property name="removeAbandoned" value="${jdbc.removeAbandoned}" />
+		<property name="removeAbandonedTimeout" value="${jdbc.removeAbandonedTimeout}" />
 		<property name="validationQuery" value="SELECT 1" />
 	</bean>
 	<bean id="sessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
@@ -85,9 +84,9 @@
 		<property name="preferFileSystemAccess" value="false" />
 	</bean>
 	<bean id="mailSender" class="org.springframework.mail.javamail.JavaMailSenderImpl">
-		<property name="host" value="smtp.mailgun.org" />
-		<property name="username" value="postmaster@zjhzxhz.com" />
-		<property name="password" value="" />
+		<property name="host" value="${mail.host}" />
+		<property name="username" value="${mail.username}" />
+		<property name="password" value="${mail.password}" />
 		<property name="javaMailProperties">
 			<props>
 				<prop key="mail.smtp.auth">true</prop>
@@ -101,7 +100,7 @@
 	
 	<!-- Message Service -->
 	<bean id="amqConnectionFactory" class="org.apache.activemq.ActiveMQConnectionFactory">
-		<constructor-arg index="0" value="vm://localhost?broker.persistent=false"/>
+		<constructor-arg index="0" value="${jms.broker.url}" />
 	</bean>
 	<bean id="connectionFactory" class="org.springframework.jms.connection.CachingConnectionFactory">
 		<constructor-arg ref="amqConnectionFactory" />

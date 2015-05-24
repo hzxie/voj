@@ -5,7 +5,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.UUID;
 
 /**
- * MD5加密函数类.
+ * 加密函数类.
  * @author Xie Haozhe
  */
 public class DigestUtils {
