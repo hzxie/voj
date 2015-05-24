@@ -26,7 +26,7 @@
 
 	<!-- Base Components -->
 	<context:annotation-config />
-	<context:component-scan base-package="com.trunkshell.voj" />
+	<context:component-scan base-package="com.trunkshell.voj.web" />
 
 	<!-- Enable @Controller annotation support -->
 	<mvc:annotation-driven />
@@ -71,7 +71,7 @@
 		<property name="dataSource" ref="dataSource" />
 	</bean>
 	<bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
-		<property name="basePackage" value="com.trunkshell.voj.mapper" />
+		<property name="basePackage" value="com.trunkshell.voj.web.mapper" />
 	</bean>
 	<bean id="transactionManager"
 		  class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
@@ -96,7 +96,7 @@
 		</property>
 	</bean>
 	<bean id="vojMailSender" 
-		class="com.trunkshell.voj.util.MailSender">
+		class="com.trunkshell.voj.web.util.MailSender">
 	</bean>
 	
 	<!-- Message Service -->
@@ -118,6 +118,6 @@
 		<property name="destinationName" value="vojMessageQueue" />
 		<property name="messageListener" ref="messageReceiver" />
 	</bean> 
-	<bean id="messageSender" class="com.trunkshell.voj.util.MessageSender"></bean>
-	<bean id="messageReceiver" class="com.trunkshell.voj.util.MessageReceiver"></bean>
+	<bean id="messageSender" class="com.trunkshell.voj.web.util.MessageSender"></bean>
+	<bean id="messageReceiver" class="com.trunkshell.voj.web.util.MessageReceiver"></bean>
 </beans>

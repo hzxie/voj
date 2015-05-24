@@ -29,7 +29,7 @@
 
 	<!-- Base Components -->
 	<context:annotation-config />
-	<context:component-scan base-package="com.trunkshell.voj" />
+	<context:component-scan base-package="com.trunkshell.voj.web" />
 
 	<!-- Enable @Controller annotation support -->
 	<mvc:annotation-driven />
@@ -50,7 +50,7 @@
 
 	<!-- Enable AspectJ style of Spring AOP -->
 	<aop:aspectj-autoproxy />
-	<bean id="viewAspect" class="com.trunkshell.voj.aspect.ViewAspect" />
+	<bean id="viewAspect" class="com.trunkshell.voj.web.aspect.ViewAspect" />
 
 	<!-- Map simple view name such as "test" into /WEB-INF/test.jsp -->
 	<bean
@@ -87,7 +87,7 @@
 		<property name="dataSource" ref="dataSource" />
 	</bean>
 	<bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
-		<property name="basePackage" value="com.trunkshell.voj.mapper" />
+		<property name="basePackage" value="com.trunkshell.voj.web.mapper" />
 	</bean>
 	<bean id="transactionManager"
 		class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
@@ -112,7 +112,7 @@
 			</props>
 		</property>
 	</bean>
-	<bean id="vojMailSender" class="com.trunkshell.voj.util.MailSender"></bean>
+	<bean id="vojMailSender" class="com.trunkshell.voj.web.util.MailSender"></bean>
 
 	<!-- Message Service -->
 	<bean id="amqConnectionFactory" class="org.apache.activemq.ActiveMQConnectionFactory">
@@ -134,8 +134,8 @@
 		<property name="destinationName" value="vojJudgeResultQueue" />
 		<property name="messageListener" ref="messageReceiver" />
 	</bean>
-	<bean id="messageSender" class="com.trunkshell.voj.util.MessageSender"></bean>
-	<bean id="messageReceiver" class="com.trunkshell.voj.util.MessageReceiver"></bean>
+	<bean id="messageSender" class="com.trunkshell.voj.web.util.MessageSender"></bean>
+	<bean id="messageReceiver" class="com.trunkshell.voj.web.util.MessageReceiver"></bean>
 
 	<!-- WebSocket for Message Service -->
 	<websocket:message-broker
