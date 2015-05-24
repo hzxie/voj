@@ -136,7 +136,7 @@
 				<configuration>
 					<archive>
 						<manifest>
-							<mainClass>com.trunkshell.voj.application.ApplicationBootstrap</mainClass>
+							<mainClass>com.trunkshell.voj.judger.application.ApplicationBootstrap</mainClass>
 						</manifest>
 					</archive>
 				</configuration>

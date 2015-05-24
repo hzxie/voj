@@ -6,5 +6,5 @@ package com.trunkshell.voj.judger.core;
  * @author Xie Haozhe
  */
 public class Compiler {
-
+	
 }
