@@ -1,12 +1,13 @@
-<beans xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
-	xmlns="http://www.springframework.org/schema/beans"
-	xmlns:mvc="http://www.springframework.org/schema/mvc" 
-	xmlns:tx="http://www.springframework.org/schema/tx"
+<beans xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns="http://www.springframework.org/schema/beans" 
+	xmlns:mvc="http://www.springframework.org/schema/mvc"
+	xmlns:tx="http://www.springframework.org/schema/tx" 
 	xmlns:context="http://www.springframework.org/schema/context"
 	xmlns:aop="http://www.springframework.org/schema/aop" 
 	xmlns:amq="http://activemq.apache.org/schema/core"
 	xmlns:jms="http://www.springframework.org/schema/jms" 
 	xmlns:websocket="http://www.springframework.org/schema/websocket"
+	xmlns:util="http://www.springframework.org/schema/util"
 	xsi:schemaLocation="http://www.springframework.org/schema/beans
 	http://www.springframework.org/schema/beans/spring-beans-4.1.xsd
 	http://www.springframework.org/schema/mvc
@@ -22,7 +23,9 @@
 	http://www.springframework.org/schema/jms
 	http://www.springframework.org/schema/jms/spring-jms.xsd
 	http://www.springframework.org/schema/websocket
- 	http://www.springframework.org/schema/websocket/spring-websocket-4.1.xsd">
+	http://www.springframework.org/schema/websocket/spring-websocket-4.1.xsd
+	http://www.springframework.org/schema/util 
+	http://www.springframework.org/schema/util/spring-util-4.1.xsd">
 
 	<!-- Base Components -->
 	<context:annotation-config />
@@ -32,6 +35,18 @@
 	<mvc:annotation-driven />
 	<mvc:resources mapping="/assets/**" location="/assets/" />
 	<mvc:resources mapping="/druid/**" location="/WEB-INF/support/http/resources" />
+	
+	<!-- Property File Location -->
+	<bean
+		class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+		<property name="locations">
+			<list>
+				<value>classpath:/voj.properties</value>
+			</list>
+		</property>
+	</bean>
+	<util:properties id="propertyConfigurer" location="classpath:/voj.properties" />
+	<context:property-placeholder properties-ref="propertyConfigurer" />
 	
 	<!-- Enable AspectJ style of Spring AOP -->
 	<aop:aspectj-autoproxy />
