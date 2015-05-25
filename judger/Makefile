@@ -2,9 +2,23 @@ CC=g++
 CFLAGS=-c -std=c++11 -Wall -fPIC -I ${JAVA_HOME}/include
 LDFLAGS=-fPIC -shared
 
-SOURCES_DIR=src/main/cpp
-OBJECTS_DIR=target/cpp
-EXECUTABLE=target/classes/libJudgerCore.so
+ifeq ($(OS), Windows_NT)
+	SOURCES_DIR=src/main/cpp/windows
+	OBJECTS_DIR=target/cpp
+	EXECUTABLE=target/classes/JudgerCore.dll
+else
+	UNAME_S := $(shell uname -s)
+	ifeq ($(UNAME_S), Linux)
+		SOURCES_DIR=src/main/cpp/unix
+		OBJECTS_DIR=target/cpp
+		EXECUTABLE=target/classes/libJudgerCore.so
+	endif
+	ifeq ($(UNAME_S), Darwin)
+		SOURCES_DIR=src/main/cpp/unix
+		OBJECTS_DIR=target/cpp
+		EXECUTABLE=target/classes/libJudgerCore.so
+	endif
+endif
 
 SOURCES=$(shell find '$(SOURCES_DIR)' -type f -name '*.cpp')
 OBJECTS=$(SOURCES:$(SOURCES_DIR)/%.cpp=$(OBJECTS_DIR)/%.o)
