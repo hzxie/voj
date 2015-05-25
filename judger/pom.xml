@@ -141,6 +141,33 @@
 					</archive>
 				</configuration>
 			</plugin>
+			<plugin>
+				<artifactId>maven-antrun-plugin</artifactId>
+				<version>1.7</version>
+				<executions>
+					<execution>
+						<phase>process-classes</phase>
+						<configuration>
+							<target name="jni"
+								description="Generate headers and compile the native code">
+								<echo>Generating JNI headers</echo>
+								<exec executable="javah">
+									<arg value="-d" />
+									<arg value="${project.basedir}/src/main/cpp" />
+									<arg value="-classpath" />
+									<arg value="${project.build.outputDirectory}" />
+									<arg value="-force" />
+									<arg value="com.trunkshell.voj.judger.core.Runner" />
+								</exec>
+								<exec executable="make"></exec>
+							</target>
+						</configuration>
+						<goals>
+							<goal>run</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
 		</plugins>
 	</build>
 </project>
