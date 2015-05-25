@@ -152,12 +152,12 @@ CREATE TABLE IF NOT EXISTS `voj_languages` (
 --
 
 INSERT INTO `voj_languages` (`language_id`, `language_slug`, `language_name`, `language_compile_command`) VALUES
-(1, 'text/x-csrc', 'C', 'gcc -O2 -s -Wall -o foo.exe foo.c -lm'),
-(2, 'text/x-c++src', 'C++', 'g++ -O2 -s -Wall -o foo.exe foo.cpp -lm'),
-(3, 'text/x-java', 'Java', 'javac Main.java'),
-(4, 'text/x-pascal', 'Pascal', 'fpc -O2 -Xs -Sgic -vw -ofoo.exe foo.pas'),
-(5, 'text/x-python', 'Python', 'pypy foo.py'),
-(6, 'text/x-ruby', 'Ruby', 'ruby foo.rb ');
+(1, 'text/x-csrc', 'C', 'gcc -O2 -s -Wall -o {filename}.exe {filename}.c -lm'),
+(2, 'text/x-c++src', 'C++', 'g++ -O2 -s -Wall -std=c++11 -o {filename}.exe {filename}.cpp -lm'),
+(3, 'text/x-java', 'Java', 'javac {filename}.java'),
+(4, 'text/x-pascal', 'Pascal', 'fpc -O2 -Xs -Sgic -vw -o {filename}.exe {filename}.pas'),
+(5, 'text/x-python', 'Python', 'pypy {filename}.py'),
+(6, 'text/x-ruby', 'Ruby', 'ruby {filename}.rb ');
 
 -- --------------------------------------------------------
 
