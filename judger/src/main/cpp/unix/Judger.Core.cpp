@@ -1,4 +1,4 @@
-#include "com_trunkshell_voj_judger_core_Runner.h"
+#include "../com_trunkshell_voj_judger_core_Runner.h"
 
 #include <iostream>
 
