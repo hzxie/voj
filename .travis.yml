@@ -6,12 +6,23 @@ jdk:
 
 services: mysql
 
+before_install:
+# Install gcc 4.8
+  - sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
+  - sudo apt-get update -qq
+# Fix path error on JNI headers
+  - sudo ln -nsf ${JAVA_HOME}/include/linux/jni_md.h ${JAVA_HOME}/include/jni_md.h
+  - sudo ln -nsf ${JAVA_HOME}/include/linux/jawt_md.h ${JAVA_HOME}/include/jawt_md.h
+
+install:
+  - sudo apt-get install -qq g++-4.8
+  - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.8 90
+
 before_script:
   - mysql -e 'CREATE DATABASE test;'
   - mysql test < voj.sql
 
 script: 
-  - mvn test -f web/pom.xml
   - mvn test -f judger/pom.xml
 
 after_script:
