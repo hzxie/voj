@@ -83,6 +83,12 @@
 			<artifactId>activemq-spring</artifactId>
 			<version>${activemq.version}</version>
 		</dependency>
+		<!-- File I/O -->
+		<dependency>
+			<groupId>org.apache.directory.studio</groupId>
+			<artifactId>org.apache.commons.io</artifactId>
+			<version>2.4</version>
+		</dependency>
 		<!-- Logger -->
 		<dependency>
 			<groupId>org.apache.logging.log4j</groupId>

@@ -1,7 +1,5 @@
 package com.trunkshell.voj.judger.core;
 
-import java.util.Map;
-
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,8 +8,11 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.test.context.transaction.TransactionConfiguration;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.trunkshell.voj.judger.mapper.SubmissionMapper;
+import com.trunkshell.voj.judger.model.Submission;
+
 /**
- * 程序执行器的测试类.
+ * 程序编译器的测试类.
  * 
  * @author Xie Haozhe
  */
@@ -19,27 +20,26 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 @TransactionConfiguration(defaultRollback = true)
 @ContextConfiguration({"classpath:test-spring-context.xml"})
-public class RunnerTest {
-	/**
-	 * 测试用例: 
-	 * 测试数据: 
-	 * 预期结果: 
-	 */
+public class CompilerTest {
 	@Test
-	public void testGetRuntimeResult() {
-		String commandLine = "";
-		String inputFilePath = null;
-		String outputFilePath = null;
-		int timeLimit = 1000;
-		int memoryLimit = 32768;
+	public void testGetCompileResult() {
+		String workDirectory = "/tmp/1000/";
+		String baseFileName = "random-name";
+		Submission submission = submissionMapper.getSubmission(1000);
 		
-		Map<String, Object> runtimeResult = runner.getRuntimeResult(commandLine, 
-				inputFilePath, outputFilePath, timeLimit, memoryLimit);
+		compiler.getCompileResult(submission, workDirectory, baseFileName);
 	}
 	
 	/**
-	 * 待测试的Runner对象.
+	 * 待测试的Compiler对象.
 	 */
 	@Autowired
-	private Runner runner;
+	private Compiler compiler;
+	
+	/**
+	 * 自动注入的SubmissionMapper对象.
+	 * 用于构建测试用例.
+	 */
+	@Autowired
+	private SubmissionMapper submissionMapper;
 }

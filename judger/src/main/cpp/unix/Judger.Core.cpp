@@ -5,6 +5,10 @@
 JNIEXPORT jobject JNICALL Java_com_trunkshell_voj_judger_core_Runner_getRuntimeResult(
     JNIEnv* jniEnv, jobject selfReference, jstring commandLine, jstring inputFilePath, 
     jstring outputFilePath, jint timeLimit, jint memoryLimit) {
-    std::cout << "Hello" << std::endl;
+    std::cout << commandLine << std::endl;
+    std::cout << inputFilePath << std::endl;
+    std::cout << outputFilePath << std::endl;
+    std::cout << timeLimit << std::endl;
+    std::cout << memoryLimit << std::endl;
     return nullptr;
 }
