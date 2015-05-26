@@ -5,9 +5,12 @@ pom.xml.versionsBackup
 pom.xml.next
 release.properties
 
+.log
 .classpath
 .project
 .settings/
 
 bin/
 logs/
+cache/
+

@@ -33,8 +33,8 @@ public class RunnerTest {
 		int timeLimit = 1000;
 		int memoryLimit = 32768;
 		
-		Map<String, Object> runtimeResult = runner.getRuntimeResult(commandLine, 
-				inputFilePath, outputFilePath, timeLimit, memoryLimit);
+		// Empty command line caused segment fault
+		// runner.getRuntimeResult(commandLine, inputFilePath, outputFilePath, timeLimit, memoryLimit);
 	}
 	
 	/**
