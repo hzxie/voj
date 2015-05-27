@@ -36,12 +36,26 @@ public class Dispatcher {
 						String.format("Illegal submission #%s", 
 						new Object[] { submissionId }));
 			}
+			
+			preprocess(submission, baseDirectory, baseFileName);
 			compile(submission, baseDirectory, baseFileName);
-			fetchTestPoints(submission.getProblemId());
 			runProgram(baseDirectory, baseFileName);
 			compareOutput(baseDirectory);
 			cleanUp(baseDirectory);
 		}
+	}
+	
+	/**
+	 * 完成评测前的预处理工作.
+	 * 说明: 随机文件名用于防止应用程序自身递归调用.
+	 * 
+	 * @param submission - 评测记录对象
+	 * @param workDirectory - 用于产生编译输出的目录
+	 * @param baseFileName - 随机文件名(不包含后缀)
+	 */
+	private void preprocess(Submission submission, 
+			String workDirectory, String baseFileName) {
+		
 	}
 	
 	/**
@@ -57,15 +71,6 @@ public class Dispatcher {
 		
 	}
 
-	/**
-	 * 从数据库抓取评测数据.
-	 * @param problemId - 试题的唯一标识符
-	 */
-	private void fetchTestPoints(long problemId) {
-		// Check if Exists
-		// Dump Data
-	}
-	
 	/**
 	 * 执行程序.
 	 * @param workDirectory - 编译生成结果的目录以及程序输出的目录
@@ -110,9 +115,4 @@ public class Dispatcher {
 	 */
 	@Value("${judger.workDir}")
     private String workBaseDirectory;
-	
-	/**
-	 * 测试数据目录.
-	 */
-	private static final String TEST_POINTS_DIRECTORY = "testpoints/";
 }
