@@ -4,8 +4,9 @@
 #include <iostream>
 
 JNIEXPORT jobject JNICALL Java_com_trunkshell_voj_judger_core_Runner_getRuntimeResult(
-    JNIEnv* jniEnv, jobject selfReference, jstring commandLine, jstring inputFilePath, 
-    jstring outputFilePath, jint timeLimit, jint memoryLimit) {
+    JNIEnv* jniEnv, jobject selfReference, jstring jCommandLine, jstring username,
+    jstring password, jstring jInputFilePath, jstring jOutputFilePath, jint timeLimit, 
+    jint memoryLimit) {
     
     std::cout << "#1: ";
     std::cout << getStringValue(jniEnv, commandLine) << std::endl;

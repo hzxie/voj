@@ -40,9 +40,9 @@ int killProcess(pid_t& pid, posix_spawn_file_actions_t& fileActions);
  * @return 一个包含运行结果的Map<String, Object>对象
  */
 JNIEXPORT jobject JNICALL Java_com_trunkshell_voj_judger_core_Runner_getRuntimeResult(
-    JNIEnv* jniEnv, jobject selfReference, jstring jCommandLine, jstring jInputFilePath, 
-    jstring jOutputFilePath, jint timeLimit, jint memoryLimit) {
-    
+    JNIEnv* jniEnv, jobject selfReference, jstring jCommandLine, jstring username,
+    jstring password, jstring jInputFilePath, jstring jOutputFilePath, jint timeLimit, 
+    jint memoryLimit) {
     std::string commandLine = getStringValue(jniEnv, jCommandLine);
     std::string inputFilePath = getStringValue(jniEnv, jInputFilePath);
     std::string outputFilePath = getStringValue(jniEnv, jOutputFilePath);
