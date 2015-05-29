@@ -33,6 +33,8 @@ int killProcess(pid_t& pid, posix_spawn_file_actions_t& fileActions);
  * @param  jniEnv          - JNI 运行环境引用
  * @param  selfReference   - 对调用Java的对象的引用
  * @param  jCommandLine    - 待执行的命令行
+ * @param  jUsername       - Unix用户名
+ * @param  jPassword       - Unix密码
  * @param  jInputFilePath  - 执行程序时的输入文件路径(可为NULL)
  * @param  jOutputFilePath - 执行程序后的输出文件路径(可为NULL)
  * @param  timeLimit       - 程序执行时间限制(ms, 0为不限制)
@@ -40,8 +42,8 @@ int killProcess(pid_t& pid, posix_spawn_file_actions_t& fileActions);
  * @return 一个包含运行结果的Map<String, Object>对象
  */
 JNIEXPORT jobject JNICALL Java_com_trunkshell_voj_judger_core_Runner_getRuntimeResult(
-    JNIEnv* jniEnv, jobject selfReference, jstring jCommandLine, jstring username,
-    jstring password, jstring jInputFilePath, jstring jOutputFilePath, jint timeLimit, 
+    JNIEnv* jniEnv, jobject selfReference, jstring jCommandLine, jstring jUsername,
+    jstring jPassword, jstring jInputFilePath, jstring jOutputFilePath, jint timeLimit, 
     jint memoryLimit) {
     std::string commandLine = getStringValue(jniEnv, jCommandLine);
     std::string inputFilePath = getStringValue(jniEnv, jInputFilePath);
