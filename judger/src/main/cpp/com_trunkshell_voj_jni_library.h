@@ -1,3 +1,7 @@
+/**
+ * Utility functions library.
+ * @author Xie Haozhe
+ */
 #include <string>
 
 #include <jni.h>
