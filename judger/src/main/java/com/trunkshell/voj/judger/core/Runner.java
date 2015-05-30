@@ -36,7 +36,7 @@ public class Runner {
 		} catch ( Exception ex ) {
 			logger.catching(ex);
 		}
-		return null;
+		return result;
 	}
 
 	/**
