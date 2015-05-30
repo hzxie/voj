@@ -1,7 +1,9 @@
 #pragma GCC diagnostic ignored "-Wwrite-strings"
 
+#include "../com_trunkshell_voj_jni_hashmap.h"
 #include "../com_trunkshell_voj_jni_library.h"
 #include "../com_trunkshell_voj_judger_core_Runner.h"
+
 
 #include <future>
 #include <iostream>
@@ -62,9 +64,10 @@ JNIEXPORT jobject JNICALL Java_com_trunkshell_voj_judger_core_Runner_getRuntimeR
     PROCESS_INFORMATION processInfo         = {0};
     STARTUPINFOW        startupInfo         = {0};
 
+    JHashMap            result;
     jint                timeUsage           = 0;
     jint                memoryUsage         = 0;
-    DWORD               exitCode            = 0;
+    DWORD               exitCode            = 127;
 
     if ( !setupIoRedirection(inputFilePath, outputFilePath, hInput, hOutput) ) {
         throwStringException(jniEnv, getErrorMessage("SetupIoRedirection"));
@@ -76,11 +79,11 @@ JNIEXPORT jobject JNICALL Java_com_trunkshell_voj_judger_core_Runner_getRuntimeR
     }
 
     exitCode = runProcess(processInfo, timeLimit, memoryLimit, timeUsage, memoryUsage);
-    std::cout << "Running Time: " << timeUsage << std::endl;
-    std::cout << "Memory Usage: " << memoryUsage << std::endl;
-    std::cout << "Exit Code: " << exitCode << std::endl;
+    result.put("timeUsage", timeUsage);
+    result.put("memoryUsage", memoryUsage);
+    result.put("exitCode", exitCode);
 
-    return nullptr;
+    return result.toJObject(jniEnv);
 }
 
 /**

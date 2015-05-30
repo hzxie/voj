@@ -28,13 +28,15 @@ public class RunnerTest {
 	@Test
 	public void testGetRuntimeResult() {
 		String commandLine = "";
-		String inputFilePath = "";
-		String outputFilePath = "";
+		String inputFilePath = null;
+		String outputFilePath = null;
 		int timeLimit = 1000;
 		int memoryLimit = 32768;
 		
-		// Empty command line caused segment fault
-		runner.getRuntimeResult(commandLine, inputFilePath, outputFilePath, timeLimit, memoryLimit);
+		// Map<String, Object> result = runner.getRuntimeResult(commandLine, inputFilePath, outputFilePath, timeLimit, memoryLimit);
+		// System.out.println(result.get("timeUsage"));
+		// System.out.println(result.get("memoryUsage"));
+		// System.out.println(result.get("exitCode"));
 	}
 	
 	/**
