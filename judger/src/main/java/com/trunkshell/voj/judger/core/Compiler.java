@@ -79,18 +79,9 @@ public class Compiler {
 		
 		boolean isSuccessful = false;
 		if ( runningResult != null ) {
-			Object runtimeResultAttribute = runningResult.get("runtimeResult");
-			if ( runtimeResultAttribute != null ) {
-				String runtimeResultSlug = (String)runtimeResultAttribute;
-				if ( runtimeResultSlug.equalsIgnoreCase("AC") ) {
-					isSuccessful = true;
-				}
-			}
+			
 		}
-		Map<String, Object> compileResult = new HashMap<String, Object>(3, 1);
-		compileResult.put("isSuccessful", isSuccessful);
-		compileResult.put("log", getCompileOutput(compileLogPath));
-		return compileResult;
+		return null;
 	}
 	
 	/**
