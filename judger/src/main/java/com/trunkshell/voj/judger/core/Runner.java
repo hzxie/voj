@@ -29,8 +29,14 @@ public class Runner {
 	public Map<String, Object> getRuntimeResult(String commandLine,
 			String inputFilePath, String outputFilePath, int timeLimit,
 			int memoryLimit) {
-		return getRuntimeResult(commandLine, systemUsername, systemPassword,
-				inputFilePath, outputFilePath, timeLimit, memoryLimit);
+		Map<String, Object> result = null;
+		try {
+			result = getRuntimeResult(commandLine, systemUsername, systemPassword,
+						inputFilePath, outputFilePath, timeLimit, memoryLimit);
+		} catch ( Exception ex ) {
+			logger.catching(ex);
+		}
+		return null;
 	}
 
 	/**

@@ -7,7 +7,7 @@ ifeq ($(OS), Windows_NT)
 	SOURCES_DIR=src/main/cpp/windows
 	OBJECTS_DIR=target/cpp
 	EXECUTABLE=target/classes/JudgerCore.dll
-	EXTFLAGS=-luserenv
+	EXTFLAGS=-luserenv -lpsapi
 else
 	UNAME_S := $(shell uname -s)
 	ifeq ($(UNAME_S), Linux)

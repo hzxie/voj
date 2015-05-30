@@ -54,7 +54,7 @@ JNIEXPORT jobject JNICALL Java_com_trunkshell_voj_judger_core_Runner_getRuntimeR
     pid_t pid = -1;
     int processStatus = createProcess(pid, commandLine, fileActions);
     if ( processStatus != 0 ) {
-        throwException(jniEnv, "Cannot create the process.");
+        throwCStringException(jniEnv, "Cannot create the process.");
     }
     
     std::cout << "PID: " << pid << std::endl;
