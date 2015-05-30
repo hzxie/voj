@@ -1,3 +1,5 @@
+#include <string>
+
 #include <jni.h>
 /* Header for class com_trunkshell_voj_jni_library */
 
@@ -14,11 +16,11 @@ extern "C" {
  * @return Java字符串的值
  */
 const char* getStringValue(JNIEnv* JniEnv, jstring jStr) {
-	if ( jStr == nullptr || jStr == NULL ) {
-		return "";
-	}
-	const char* str = JniEnv->GetStringUTFChars(jStr, 0);
-	return str;
+    if ( jStr == nullptr || jStr == NULL ) {
+        return "";
+    }
+    const char* str = JniEnv->GetStringUTFChars(jStr, 0);
+    return str;
 }
 
 /**
@@ -27,12 +29,23 @@ const char* getStringValue(JNIEnv* JniEnv, jstring jStr) {
  * @param  message - 异常信息
  * @return Java.lang.Error对象
  */
-jint throwException(JNIEnv* jniEnv, char* message) {
-	jclass exClass;
+jint throwCStringException(JNIEnv* jniEnv, char* message) {
+    jclass exClass;
     char* className = "java/lang/Error";
     exClass = jniEnv->FindClass(className);
 
     return jniEnv->ThrowNew(exClass, message);
+}
+
+/**
+ * 抛出异常至Java运行环境.
+ * @param  jniEnv  - JNI 运行环境引用
+ * @param  message - 异常信息
+ * @return Java.lang.Error对象
+ */
+jint throwStringException(JNIEnv* jniEnv, std::string message) {
+    char* pMessage = const_cast<char *>(message.c_str());
+    return throwCStringException(jniEnv, pMessage);
 }
 
 #ifdef __cplusplus
