@@ -4,9 +4,9 @@
 #include "../com_trunkshell_voj_jni_library.h"
 #include "../com_trunkshell_voj_judger_core_Runner.h"
 
-
 #include <future>
 #include <iostream>
+#include <limits>
 #include <sstream>
 #include <string>
 #include <thread>
@@ -184,7 +184,6 @@ bool createProcess(const std::wstring& commandLine, const std::wstring& username
 DWORD runProcess(PROCESS_INFORMATION& processInfo, jint timeLimit, 
     jint memoryLimit, jint& timeUsage, jint& memoryUsage) {
     auto feature = std::async(getMaxMemoryUsage, std::ref(processInfo), memoryLimit);
-    memoryUsage  = feature.get();
 
     long long startTime = getMillisecondsNow();
     ResumeThread(processInfo.hThread);
@@ -195,6 +194,7 @@ DWORD runProcess(PROCESS_INFORMATION& processInfo, jint timeLimit,
     if ( getExitCode(processInfo.hProcess) == STILL_ACTIVE ) {
         killProcess(processInfo);
     }
+    memoryUsage  = feature.get();
 
     return getExitCode(processInfo.hProcess);
 }
@@ -210,7 +210,7 @@ jint getMaxMemoryUsage(PROCESS_INFORMATION& processInfo, jint memoryLimit) {
          currentMemoryUsage = 0;
     do {
         currentMemoryUsage = getCurrentMemoryUsage(processInfo.hProcess);
-        if ( memoryLimit != 0 && (currentMemoryUsage < 0 || currentMemoryUsage > memoryLimit) ) {
+        if ( currentMemoryUsage > maxMemoryUsage ) {
             maxMemoryUsage = currentMemoryUsage;
         }
         if ( memoryLimit != 0 && currentMemoryUsage > memoryLimit ) {
@@ -237,7 +237,7 @@ jint getCurrentMemoryUsage(HANDLE& hProcess) {
     currentMemoryUsage = pmc.PeakWorkingSetSize >> 10;
 
     if ( currentMemoryUsage < 0 ) {
-        currentMemoryUsage = std::numeric_limits<int32_t>::max() >> 10;
+        currentMemoryUsage = INT_MAX >> 10;
     }
     return currentMemoryUsage;
 }
