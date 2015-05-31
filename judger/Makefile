@@ -14,6 +14,7 @@ else
 		SOURCES_DIR=src/main/cpp/unix
 		OBJECTS_DIR=target/cpp
 		EXECUTABLE=target/classes/libJudgerCore.so
+		EXTFLAGS=-lpthread
 	endif
 	ifeq ($(UNAME_S), Darwin)
 		SOURCES_DIR=src/main/cpp/unix
