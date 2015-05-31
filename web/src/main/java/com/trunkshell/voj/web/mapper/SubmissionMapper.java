@@ -51,7 +51,7 @@ public interface SubmissionMapper {
 	/**
      * 通过试题唯一标识符获取某个范围内的所有试题.
      * @param limit - 每次加载评测记录的数量
-     * @return 某个范围内的所有试题
+     * @return 某个范围内的所有提交记录
      */
 	@Select("SELECT * FROM voj_submissions ORDER BY submission_id DESC LIMIT #{limit}")
 	@Options(useCache = true)
@@ -72,7 +72,7 @@ public interface SubmissionMapper {
      * 通过试题唯一标识符获取某个范围内的所有试题.
      * @param offset - 试题唯一标识符的起始编号
      * @param limit - 每次加载评测记录的数量
-     * @return 某个范围内的所有试题
+     * @return 某个范围内的所有提交记录
      */
 	@Select("SELECT * FROM voj_submissions WHERE submission_id <= #{submissionId} ORDER BY submission_id DESC LIMIT #{limit}")
 	@Options(useCache = true)
@@ -93,7 +93,7 @@ public interface SubmissionMapper {
      * 通过试题唯一标识符获取某个范围内的所有试题.
      * @param offset - 试题唯一标识符的起始编号
      * @param limit - 每次加载评测记录的数量
-     * @return 某个范围内的所有试题
+     * @return 某个范围内的所有提交记录
      */
 	@Select("SELECT * FROM voj_submissions WHERE submission_id >= #{submissionId} ORDER BY submission_id LIMIT #{limit}")
 	@Options(useCache = true)
