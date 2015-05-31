@@ -27,9 +27,9 @@ public class RunnerTest {
 	 */
 	@Test
 	public void testGetRuntimeResult() {
-		String commandLine = "";
-		String inputFilePath = null;
-		String outputFilePath = null;
+		String commandLine = "D:/Xie Haozhe/Desktop/Test.exe";
+		String inputFilePath = "D:/Xie Haozhe/Desktop/Test.in";
+		String outputFilePath = "D:/Xie Haozhe/Desktop/Test.out";
 		int timeLimit = 1000;
 		int memoryLimit = 32768;
 		
