@@ -183,11 +183,12 @@ bool createProcess(const std::wstring& commandLine, const std::wstring& username
  */
 DWORD runProcess(PROCESS_INFORMATION& processInfo, jint timeLimit, 
     jint memoryLimit, jint& timeUsage, jint& memoryUsage) {
-    auto feature = std::async(getMaxMemoryUsage, std::ref(processInfo), memoryLimit);
+    int  reservedTime = 200;
+    auto feature      = std::async(std::launch::async, getMaxMemoryUsage, std::ref(processInfo), memoryLimit);
 
-    long long startTime = getMillisecondsNow();
     ResumeThread(processInfo.hThread);
-    WaitForSingleObject(processInfo.hProcess, timeLimit + 200);
+    long long startTime = getMillisecondsNow();
+    WaitForSingleObject(processInfo.hProcess, timeLimit + reservedTime);
     long long endTime = getMillisecondsNow();
     timeUsage = endTime - startTime;
 
