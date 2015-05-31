@@ -139,19 +139,20 @@ int runProcess(pid_t pid, const std::string& commandLine, int timeLimit,
 
     // Setup Monitor in Parent Process
     if ( pid > 0 ) {
-        feature     = std::async(getMaxMemoryUsage, pid, memoryLimit);
+        feature     = std::async(std::launch::async, getMaxMemoryUsage, pid, memoryLimit);
         startTime   = getMillisecondsNow();
-        memoryUsage = feature.get();
     }
     // Run Child Process
     if ( pid == 0 ) {
         alarm(timeUsage / 1000);
         _exit(execvp(argv[0], argv));
     }
+
     // Collect information in Parent Process
     waitpid(pid, &exitCode, 0);
     endTime     = getMillisecondsNow();
     timeUsage   = endTime - startTime;
+    memoryUsage = feature.get();
 
     return exitCode;
 }
