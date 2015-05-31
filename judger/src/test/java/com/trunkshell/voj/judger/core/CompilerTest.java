@@ -1,5 +1,7 @@
 package com.trunkshell.voj.judger.core;
 
+import java.util.Map;
+
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,7 +29,10 @@ public class CompilerTest {
 		String baseFileName = "random-name";
 		Submission submission = submissionMapper.getSubmission(1000);
 		
-		compiler.getCompileResult(submission, workDirectory, baseFileName);
+		// Map<String, Object> result = compiler.getCompileResult(submission, workDirectory, baseFileName);
+		// System.out.println(result.get("timeUsage"));
+		// System.out.println(result.get("memoryUsage"));
+		// System.out.println(result.get("exitCode"));
 	}
 	
 	/**

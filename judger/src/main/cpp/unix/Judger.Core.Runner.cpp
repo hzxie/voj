@@ -1,18 +1,28 @@
 #pragma GCC diagnostic ignored "-Wwrite-strings"
 
+#include "../com_trunkshell_voj_jni_hashmap.h"
 #include "../com_trunkshell_voj_jni_library.h"
 #include "../com_trunkshell_voj_judger_core_Runner.h"
 
 #include <algorithm>
+#include <cstdint>
 #include <cstring>
+#include <future>
 #include <iostream>
 #include <iterator>
+#include <limits>
 #include <string>
 #include <sstream>
 
+#include <fcntl.h>
 #include <signal.h>
-#include <spawn.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
+#include <unistd.h>
+
+#define  STDIN  0
+#define  STDOUT 1
+#define  STDERR 2
 
 /**
  * A pointer to an array of character pointers to the environment strings.
@@ -22,10 +32,14 @@ extern char** environ;
 /**
  * Function Prototypes.
  */
-posix_spawn_file_actions_t setupIoRedirection(const std::string& inputFilePath, const std::string& outputFilePath);
-int createProcess(pid_t& pid, const std::string& commandLine, posix_spawn_file_actions_t& fileActions);
+bool createProcess(pid_t& pid);
+void setupIoRedirection(const std::string&, const std::string&);
+int runProcess(pid_t, const std::string&, int, int, int&, int&);
 char** getCommandArgs(const std::string& commandLine);
-int killProcess(pid_t& pid, posix_spawn_file_actions_t& fileActions);
+int getMaxMemoryUsage(pid_t, int);
+int getCurrentMemoryUsage(pid_t);
+long long getMillisecondsNow();
+int killProcess(pid_t& pid);
 
 /**
  * JNI调用入口.
@@ -45,57 +59,101 @@ JNIEXPORT jobject JNICALL Java_com_trunkshell_voj_judger_core_Runner_getRuntimeR
     JNIEnv* jniEnv, jobject selfReference, jstring jCommandLine, jstring jUsername,
     jstring jPassword, jstring jInputFilePath, jstring jOutputFilePath, jint timeLimit, 
     jint memoryLimit) {
-    std::string commandLine = getStringValue(jniEnv, jCommandLine);
-    std::string inputFilePath = getStringValue(jniEnv, jInputFilePath);
-    std::string outputFilePath = getStringValue(jniEnv, jOutputFilePath);
+    std::string commandLine     = getStringValue(jniEnv, jCommandLine);
+    std::string inputFilePath   = getStringValue(jniEnv, jInputFilePath);
+    std::string outputFilePath  = getStringValue(jniEnv, jOutputFilePath);
 
-    posix_spawn_file_actions_t fileActions = setupIoRedirection(inputFilePath, outputFilePath);
+    JHashMap    result;
+    jint        timeUsage       = 0;
+    jint        memoryUsage     = 0;
+    jint        exitCode        = 127;
 
     pid_t pid = -1;
-    int processStatus = createProcess(pid, commandLine, fileActions);
-    if ( processStatus != 0 ) {
-        throwCStringException(jniEnv, "Cannot create the process.");
+    if ( !createProcess(pid) ) {
+        std::cout << "Failed to fork a process." << std::endl;
     }
-    
-    std::cout << "PID: " << pid << std::endl;
-    if ( waitpid(pid, &processStatus, 0) != -1 ) {
-        std::cout << "Child exited with processStatus " << processStatus << std::endl;
+    // Setup I/O Redirection for Child Process
+    if ( pid == 0 ) {
+        setupIoRedirection(inputFilePath, outputFilePath);
     }
 
-    return nullptr;
+    exitCode = runProcess(pid, commandLine, timeLimit, memoryLimit, timeUsage, memoryUsage);
+    result.put("timeUsage", timeUsage);
+    result.put("memoryUsage", memoryUsage);
+    result.put("exitCode", exitCode);
+
+    return result.toJObject(jniEnv);
+}
+
+/**
+ * 创建进程.
+ * @param  pid - 进程ID
+ * @return 运行创建状态(-1表示未成功创建, 0表示子进程)
+ */
+bool createProcess(pid_t& pid) {
+    pid = fork();
+
+    if ( pid == -1 ) {
+        return false;
+    }
+    return true;
 }
 
 /**
  * 设置程序I/O重定向.
  * @param  inputFilePath  - 执行程序时的输入文件路径(可为NULL)
  * @param  outputFilePath - 执行程序后的输出文件路径(可为NULL)
- * @return 包含I/O重定向信息的posix_spawn_file_actions_t对象
  */
-posix_spawn_file_actions_t setupIoRedirection(
+void setupIoRedirection(
     const std::string& inputFilePath, const std::string& outputFilePath) {
-    posix_spawn_file_actions_t fileActions;
-    posix_spawn_file_actions_init(&fileActions);
-
-    /*if ( inputFilePath != "" ) {
-        // do something
+    if ( inputFilePath != "" ) {
+        int inputFileDescriptor = open(inputFilePath.c_str(), O_RDONLY);
+        dup2(inputFileDescriptor, STDIN);
+        close(inputFileDescriptor);
     }
     if ( outputFilePath != "" ) {
-        // do something
-    }*/
-    return fileActions;
+        int outputFileDescriptor = open(outputFilePath.c_str(), O_CREAT | O_WRONLY);
+        chmod(outputFilePath.c_str(), S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+        dup2(outputFileDescriptor, STDOUT);
+        close(outputFileDescriptor);
+    }
 }
 
 /**
- * 创建进程.
+ * 运行进程.
  * @param  pid         - 进程ID
- * @param  commandLine - 待执行的命令行
- * @param  fileActions - I/O重定向信息
- * @return 运行创建状态(0表示成功创建)
+ * @param  commandLine - 命令行
+ * @param  timeLimit   - 运行时时间限制(ms)
+ * @param  memoryLimit - 运行时空间限制(KB)
+ * @param  timeUsage   - 运行时时间占用(ms)
+ * @param  memoryUsage - 运行时空间占用(ms)
+ * @return 进程退出状态
  */
-int createProcess(pid_t& pid, const std::string& commandLine, 
-    posix_spawn_file_actions_t& fileActions) {
-    char** argv = getCommandArgs(commandLine);
-    return posix_spawnp(&pid, argv[0], &fileActions, NULL, argv, environ);
+int runProcess(pid_t pid, const std::string& commandLine, int timeLimit, 
+    int memoryLimit, int& timeUsage, int& memoryUsage) {
+    char**            argv       = getCommandArgs(commandLine);
+    long long         startTime  = 0;
+    long long         endTime    = 0;
+    int               exitCode   = 0;
+    std::future<int>  feature;
+
+    // Setup Monitor in Parent Process
+    if ( pid > 0 ) {
+        feature     = std::async(getMaxMemoryUsage, pid, memoryLimit);
+        startTime   = getMillisecondsNow();
+        memoryUsage = feature.get();
+    }
+    // Run Child Process
+    if ( pid == 0 ) {
+        alarm(timeUsage / 1000);
+        _exit(execvp(argv[0], argv));
+    }
+    // Collect information in Parent Process
+    waitpid(pid, &exitCode, 0);
+    endTime     = getMillisecondsNow();
+    timeUsage   = endTime - startTime;
+
+    return exitCode;
 }
 
 /**
@@ -124,12 +182,77 @@ char** getCommandArgs(const std::string& commandLine) {
 }
 
 /**
+ * 获取运行时内存占用最大值
+ * @param  pid         [description]
+ * @param  memoryLimit - 运行时空间限制(KB)
+ * @return 运行时内存占用最大值
+ */
+int getMaxMemoryUsage(pid_t pid, int memoryLimit) {
+    int  maxMemoryUsage     = 0,
+         currentMemoryUsage = 0;
+    do {
+        currentMemoryUsage = getCurrentMemoryUsage(pid);
+        if ( currentMemoryUsage > maxMemoryUsage ) {
+            maxMemoryUsage = currentMemoryUsage;
+        }
+        if ( memoryLimit != 0 && currentMemoryUsage > memoryLimit ) {
+            killProcess(pid);
+        }
+        usleep(200000);
+    } while ( currentMemoryUsage != 0 );
+
+    return maxMemoryUsage;
+}
+
+/**
+ * 获取内存占用情况.
+ * @param  pid - 进程ID
+ * @return 当前物理内存使用量(KB)
+ */
+int getCurrentMemoryUsage(pid_t pid) {
+    int    currentMemoryUsage   = 0;
+    long   residentSetSize      = 0L;
+    FILE*  fp                   = NULL;
+    
+    std::stringstream stringStream;
+    stringStream << "/proc/" << pid << "/statm";
+    const char* filePath = stringStream.str().c_str();
+
+    if ( (fp = fopen( filePath, "r" )) != NULL ) {
+        if ( fscanf(fp, "%*s%ld", &residentSetSize) == 1 ) {
+            currentMemoryUsage = (int)residentSetSize * (int)sysconf( _SC_PAGESIZE) >> 10;
+            if ( currentMemoryUsage < 0 ) {
+                currentMemoryUsage = std::numeric_limits<int32_t>::max() >> 10;
+            }
+        }
+        fclose(fp);
+    }
+    return currentMemoryUsage;
+}
+
+/**
+ * 获取当前系统时间.
+ * 用于统计程序运行时间.
+ * @return 当前系统时间(以毫秒为单位)
+ */
+long long getMillisecondsNow() {
+    long            milliseconds;
+    time_t          seconds;
+    struct timespec spec;
+
+    clock_gettime(CLOCK_REALTIME, &spec);
+    seconds                 = spec.tv_sec;
+    milliseconds            = round(spec.tv_nsec / 1.0e6);
+    long long currentTime   = seconds * 1000 + milliseconds;
+
+    return currentTime;
+}
+
+/**
  * 强制销毁进程(当触发阈值时).
  * @param  pid         - 进程ID
- * @param  fileActions - I/O重定向信息
  * @return 0, 表示进程被成功结束.
  */
-int killProcess(pid_t& pid, posix_spawn_file_actions_t& fileActions) {
-    posix_spawn_file_actions_destroy(&fileActions);
-    return 0;
+int killProcess(pid_t& pid) {
+    return kill(pid, SIGKILL);
 }
