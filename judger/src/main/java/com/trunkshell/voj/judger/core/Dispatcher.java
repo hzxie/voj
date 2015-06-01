@@ -27,8 +27,8 @@ public class Dispatcher {
 	 */
 	public void createNewTask(long submissionId) throws IllgealSubmissionException {
 		synchronized(this) {
-			String baseDirectory = String.format("%s/%s/", new Object[] {workBaseDirectory, submissionId});
-			String baseFileName = RandomStringGenerator.getRandomString(12, RandomStringGenerator.Mode.ALPHANUMERIC);
+			String baseDirectory = String.format("%s/voj-%s/", new Object[] {workBaseDirectory, submissionId});
+			String baseFileName = RandomStringGenerator.getRandomString(12, RandomStringGenerator.Mode.ALPHA);
 			Submission submission = submissionMapper.getSubmission(submissionId);
 			
 			if ( submission == null ) {
