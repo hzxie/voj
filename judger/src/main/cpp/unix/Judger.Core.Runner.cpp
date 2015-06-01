@@ -70,7 +70,7 @@ JNIEXPORT jobject JNICALL Java_com_trunkshell_voj_judger_core_Runner_getRuntimeR
 
     pid_t pid = -1;
     if ( !createProcess(pid) ) {
-        std::cout << "Failed to fork a process." << std::endl;
+        throwCStringException(jniEnv, "Failed to fork a process.");
     }
     // Setup I/O Redirection for Child Process
     if ( pid == 0 ) {
@@ -115,6 +115,7 @@ void setupIoRedirection(
         int outputFileDescriptor = open(outputFilePath.c_str(), O_CREAT | O_WRONLY);
         chmod(outputFilePath.c_str(), S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
         dup2(outputFileDescriptor, STDOUT);
+        dup2(outputFileDescriptor, STDERR);
         close(outputFileDescriptor);
     }
 }
