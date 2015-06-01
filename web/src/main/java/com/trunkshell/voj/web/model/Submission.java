@@ -165,6 +165,14 @@ public class Submission implements Serializable {
 	public Date getExecuteTime() {
 		return executeTime;
 	}
+
+	/**
+	 * 设置评测开始执行时间.
+	 * @param executeTime - 评测开始执行时间
+	 */
+	public void setExecuteTime(Date executeTime) {
+		this.executeTime = executeTime;
+	}
 	
 	/**
 	 * 获取评测运行总时间.

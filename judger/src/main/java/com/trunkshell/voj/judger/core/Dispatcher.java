@@ -1,5 +1,12 @@
 package com.trunkshell.voj.judger.core;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.Map;
+
+import org.apache.commons.io.FileUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -27,7 +34,7 @@ public class Dispatcher {
 	 */
 	public void createNewTask(long submissionId) throws IllgealSubmissionException {
 		synchronized(this) {
-			String baseDirectory = String.format("%s/voj-%s/", new Object[] {workBaseDirectory, submissionId});
+			String baseDirectory = String.format("%s/voj-%s", new Object[] {workBaseDirectory, submissionId});
 			String baseFileName = RandomStringGenerator.getRandomString(12, RandomStringGenerator.Mode.ALPHA);
 			Submission submission = submissionMapper.getSubmission(submissionId);
 			
@@ -55,7 +62,16 @@ public class Dispatcher {
 	 */
 	private void preprocess(Submission submission, 
 			String workDirectory, String baseFileName) {
-		
+		try {
+			long problemId = submission.getProblemId();
+			preprocessor.createTestCode(submission, workDirectory, baseFileName);
+			preprocessor.fetchTestPoints(problemId);
+		} catch (Exception ex) {
+			logger.catching(ex);
+			
+			long submissionId = submission.getSubmissionId();
+			applicationDispatcher.onErrorOccurred(submissionId);
+		}
 	}
 	
 	/**
@@ -68,7 +84,14 @@ public class Dispatcher {
 	 */
 	private void compile(Submission submission, 
 			String workDirectory, String baseFileName) {
+		long submissionId = submission.getSubmissionId();
+		Map<String, Object> result = 
+				compiler.getCompileResult(submission, workDirectory, baseFileName);
 		
+		if ( (Boolean)result.get("isSuccessful") ) {
+			runProgram(workDirectory, baseFileName);
+		}
+		applicationDispatcher.onCompileFinished(submissionId, result);
 	}
 
 	/**
@@ -93,7 +116,14 @@ public class Dispatcher {
 	 * @param baseDirectory - 用于产生输出结果目录
 	 */
 	private void cleanUp(String baseDirectory) {
-		
+		File baseDirFile = new File(baseDirectory);
+		if ( baseDirFile.exists() ) {
+			try {
+				FileUtils.deleteDirectory(baseDirFile);
+			} catch (IOException ex) {
+				logger.catching(ex);
+			}
+		}
 	}
 	
 	/**
@@ -110,9 +140,28 @@ public class Dispatcher {
 	private ApplicationDispatcher applicationDispatcher;
 	
 	/**
+	 * 自动注入的Preprocessor对象.
+	 * 完成编译前的准备工作.
+	 */
+	@Autowired
+	private Preprocessor preprocessor;
+	
+	/**
+	 * 自动注入的Compiler对象.
+	 * 完成编译工作.
+	 */
+	@Autowired
+	private Compiler compiler;
+	
+	/**
 	 * 评测机的工作目录.
 	 * 用于存储编译结果以及程序输出结果.
 	 */
 	@Value("${judger.workDir}")
     private String workBaseDirectory;
+	
+	/**
+	 * 日志记录器.
+	 */
+	private static final Logger logger = LogManager.getLogger(Dispatcher.class);
 }

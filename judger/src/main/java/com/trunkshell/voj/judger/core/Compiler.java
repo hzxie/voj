@@ -76,12 +76,16 @@ public class Compiler {
 		logger.info("Start compiling with command: " + commandLine);
 		Map<String, Object> runningResult = compilerRunner.getRuntimeResult(
 				commandLine, inputFilePath, compileLogPath, timeLimit, memoryLimit);
+		Map<String, Object> result = new HashMap<String, Object>();
 		
-		boolean isSuccessful = false;
+		boolean isSuccessful = false;	
 		if ( runningResult != null ) {
-			
+			int exitCode = (Integer)runningResult.get("exitCode");
+			isSuccessful = exitCode == 0;
 		}
-		return null;
+		result.put("isSuccessful", isSuccessful);
+		result.put("log", getCompileOutput(compileLogPath));
+		return result;
 	}
 	
 	/**
@@ -91,15 +95,15 @@ public class Compiler {
 	 */
 	private String getCompileOutput(String compileLogPath) {
 		FileInputStream inputStream = null;
-		String compileLog = null;
-	    try {
-	    	inputStream = new FileInputStream(compileLogPath);
-	        compileLog = IOUtils.toString(inputStream);
-	        inputStream.close();
-	    } catch( Exception ex ) {
-	    	// Do nothing
-	    }
-	    return compileLog;
+		String compileLog = "";
+		try {
+			inputStream = new FileInputStream(compileLogPath);
+			compileLog = IOUtils.toString(inputStream);
+			inputStream.close();
+		} catch (Exception ex) {
+			// Do nothing
+		}
+		return compileLog;
 	}
 	
 	/**
@@ -112,5 +116,5 @@ public class Compiler {
 	/**
 	 * 日志记录器.
 	 */
-	private static final Logger logger = LogManager.getLogger(Runner.class);
+	private static final Logger logger = LogManager.getLogger(Compiler.class);
 }
