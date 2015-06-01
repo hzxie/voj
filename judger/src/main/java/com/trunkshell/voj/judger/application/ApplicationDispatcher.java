@@ -27,6 +27,7 @@ public class ApplicationDispatcher {
 	 * @param submissionId - 评测记录的唯一标识符
 	 */
 	public void onSubmissionCreated(long submissionId) {
+		System.out.println(1);
 		try {
 			judgerDispatcher.createNewTask(submissionId);
 		} catch (IllgealSubmissionException ex) {
