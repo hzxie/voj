@@ -1,15 +1,19 @@
 package com.trunkshell.voj.judger.core;
 
 import java.io.File;
-import java.io.IOException;
+import java.io.FileOutputStream;
 import java.io.PrintWriter;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.commons.io.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import com.trunkshell.voj.judger.mapper.CheckpointMapper;
 import com.trunkshell.voj.judger.mapper.LanguageMapper;
+import com.trunkshell.voj.judger.model.Checkpoint;
 import com.trunkshell.voj.judger.model.Language;
 import com.trunkshell.voj.judger.model.Submission;
 
@@ -81,10 +85,37 @@ public class Preprocessor {
 	/**
 	 * 从数据库抓取评测数据.
 	 * @param problemId - 试题的唯一标识符
+	 * @throws Exception 
 	 */
-	public void fetchTestPoints(long problemId) {
-		// Check if Exists
-		// Dump Data
+	public void fetchTestPoints(long problemId) throws Exception {
+		String checkpointsFilePath = String.format("%s/%s", 
+				new Object[] {TEST_POINTS_DIRECTORY, problemId});
+		File checkpointsDirFile = new File(checkpointsFilePath);
+		if ( !checkpointsDirFile.exists() ) {
+			if ( !checkpointsDirFile.mkdirs() ) {
+				throw new Exception("Failed to create the checkpoints directory");
+			}
+		}
+		
+		List<Checkpoint> checkpoints = 
+				checkpointMapper.getCheckpointsUsingProblemId(problemId);
+		for ( Checkpoint checkpoint : checkpoints ) {
+			long checkpointId = checkpoint.getCheckpointId();
+			{ // Standard Input File
+				String filePath = String.format("%s/input#%s.txt", 
+						new Object[] { checkpointsFilePath, checkpointId });
+				FileOutputStream outputStream = new FileOutputStream(new File(filePath));
+				String input = checkpoint.getInput();
+				IOUtils.write(input, outputStream);
+			}
+			{ // Standard Output File
+				String filePath = String.format("%s/output#%s.txt", 
+						new Object[] { checkpointsFilePath, checkpointId });
+				FileOutputStream outputStream = new FileOutputStream(new File(filePath));
+				String output = checkpoint.getOutput();
+				IOUtils.write(output, outputStream);
+			}
+		}
 	}
 	
 	/**
@@ -93,6 +124,13 @@ public class Preprocessor {
 	 */
 	@Autowired
 	private LanguageMapper languageMapper;
+	
+	/**
+	 * 自动注入的CheckpointMapper对象.
+	 * 用于获取试题的测试点.
+	 */
+	@Autowired
+	private CheckpointMapper checkpointMapper;
 	
 	/**
 	 * 测试数据目录.
