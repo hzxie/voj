@@ -61,7 +61,7 @@ public class PreprocessorTest {
 		try {
 			preprocessor.createTestCode(submission, workDirectory, baseFileName);
 			FileInputStream inputStream = new FileInputStream("/tmp/voj-1001/RandomName.java");
-	        String code = IOUtils.toString(inputStream);
+	        String code = IOUtils.toString(inputStream).replace("RandomName", "Main");
 	        inputStream.close();
 	        Assert.assertEquals(submission.getCode(), code);
 		} catch (Exception ex) {
