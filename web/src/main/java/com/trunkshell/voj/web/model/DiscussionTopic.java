@@ -8,8 +8,32 @@ import java.io.Serializable;
  * 
  * @author Luo Guofu
  */
-public class Topic implements Serializable {
+public class DiscussionTopic implements Serializable {
 	
+	public DiscussionTopic() { }
+	
+	/**
+	 * 创建根讨论节点
+	 * @param topicSlug - 讨论节点的英文唯一缩写
+	 * @param topicName - 讨论节点的名称
+	 */
+	public DiscussionTopic(String topicSlug, String topicName) {
+		this(topicSlug, topicName, null);
+	}
+
+	/**
+	 * 创建根讨论节点
+	 * @param topicSlug - 讨论节点的英文唯一缩写
+	 * @param topicName - 讨论节点的名称
+	 * @param topicParentId - 讨论节点的父节点唯一标识符
+	 */
+	public DiscussionTopic(String topicSlug, String topicName,
+			Integer topicParentId) {
+		this.topicSlug = topicSlug;
+		this.topicName = topicName;
+		this.topicParentId = topicParentId;
+	}
+
 	/**
 	 * 获取讨论节点唯一标识符
 	 * @return 讨论节点唯一标识符
@@ -62,7 +86,7 @@ public class Topic implements Serializable {
 	 * 
 	 * @return
 	 */
-	public int getTopicParentId() {
+	public Integer getTopicParentId() {
 		return topicParentId;
 	}
 
@@ -74,13 +98,21 @@ public class Topic implements Serializable {
 		this.topicParentId = topicParentId;
 	}
 	
+	/**
+	 * 判断是否为根讨论节点
+	 * @return 根节点为true, 子节点为false
+	 */
+	public boolean isRootTopic() {
+		return topicParentId == null;
+	}
+	
 	/* (non-Javadoc)
 	 * @see java.lang.Object#toString()
 	 */
 	@Override
 	public String toString() {
-		return String.format("Topic [ID=%d, Slug=%s, Name=%s]",
-				topicId, topicSlug, topicName);
+		return String.format("Topic [ID=%d, Slug=%s, Name=%s, Pid=%d]",
+				topicId, topicSlug, topicName, topicParentId);
 	}
 
 	/**
@@ -99,9 +131,9 @@ public class Topic implements Serializable {
 	private String topicName;
 	
 	/**
-	 * 讨论节点的父节点
+	 * 讨论节点的父节点唯一标识符
 	 */
-	private int topicParentId;
+	private Integer topicParentId;
 
 	/**
 	 * 唯一的序列化标识符.
