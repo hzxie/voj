@@ -30,7 +30,7 @@ public class SubmissionMapperTest {
 		Submission submission = submissionMapper.getSubmission(1000);
 		Assert.assertNotNull(submission);
 		
-		long problemId = submission.getProblemId();
+		long problemId = submission.getProblem().getProblemId();
 		Assert.assertEquals(1000, problemId);
 	}
 	

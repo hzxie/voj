@@ -29,10 +29,10 @@ public interface ProblemMapper {
 	public long getNumberOfProblems();
 	
 	/**
-     * 通过试题唯一标识符获取试题对象.
-     * @param problemId - 试题的唯一标识符
-     * @return 一个试题对象
-     */
+	 * 通过试题唯一标识符获取试题对象.
+	 * @param problemId - 试题的唯一标识符
+	 * @return 一个试题对象
+	 */
 	@Select("SELECT " + ALL_FIELDS + " FROM voj_problems p WHERE problem_id = #{problemId}")
 	@Options(useCache = true)
 	@Results({
@@ -53,11 +53,11 @@ public interface ProblemMapper {
 	public Problem getProblem(@Param("problemId") long problemId);
 	
 	/**
-     * 通过试题唯一标识符获取某个范围内的所有试题.
-     * @param offset - 试题唯一标识符的起始编号
-     * @param limit - 需要获取的试题的数量
-     * @return 某个范围内的所有试题
-     */
+	 * 通过试题唯一标识符获取某个范围内的所有试题.
+	 * @param offset - 试题唯一标识符的起始编号
+	 * @param limit - 需要获取的试题的数量
+	 * @return 某个范围内的所有试题
+	 */
 	@Select("SELECT " + SUMMERY_FIELDS + " FROM voj_problems p WHERE problem_id >= #{problemId} AND problem_is_public = true LIMIT #{limit}")
 	@Options(useCache = true)
 	@Results({
@@ -75,28 +75,28 @@ public interface ProblemMapper {
 	public List<Problem> getProblemsUsingKeyword(String keyword, long offset, int limit);
 	
 	/**
-     * 创建一个新的试题对象.
-     * @param problem - 试题对象
-     * @return 操作是否成功完成
-     */
+	 * 创建一个新的试题对象.
+	 * @param problem - 试题对象
+	 * @return 操作是否成功完成
+	 */
 	@Insert("INSERT INTO voj_problems (problem_is_public, problem_name, problem_time_limit, problem_memory_limit, problem_description, problem_input_format, problem_output_format, problem_sample_input, problem_sample_output, problem_hint) VALUES (#{isPublic}, #{problemName}, #{timeLimit}, #{memoryLimit}, #{description}, #{inputFormat}, #{outputFormat}, #{sampleInput}, #{sampleOutput}, #{hint})")
 	@Options(useGeneratedKeys = true, keyProperty = "problemId", keyColumn = "problem_id", flushCache = true)
 	public void createProblem(Problem problem);
 	
 	/**
-     * 更新试题信息.
-     * @param problem - 试题对象
-     * @return 操作是否成功完成
-     */
+	 * 更新试题信息.
+	 * @param problem - 试题对象
+	 * @return 操作是否成功完成
+	 */
 	@Update("UPDATE voj_problems SET problem_is_public = #{isPublic}, problem_name = #{problemName}, problem_time_limit = #{timeLimit}, problem_memory_limit = #{memoryLimit}, problem_description = #{description}, problem_input_format = #{inputFormat}, problem_output_format = #{outputFormat}, problem_sample_input = #{sampleInput}, problem_sample_output = #{sampleOutput}, problem_hint = #{hint} WHERE problem_id = #{problemId}")
 	@Options(flushCache = true)
 	public void updateProblem(Problem problem);
 	
 	/**
-     * 通过试题的唯一标识符删除一个试题对象.
-     * @param problemId - 试题的唯一标识符
-     * @return 操作是否成功完成
-     */
+	 * 通过试题的唯一标识符删除一个试题对象.
+	 * @param problemId - 试题的唯一标识符
+	 * @return 操作是否成功完成
+	 */
 	@Delete("DELETE FROM voj_problems WHERE problem_id = #{problemId}")
 	@Options(flushCache = true)
 	public void deleteProblem(long problemId);

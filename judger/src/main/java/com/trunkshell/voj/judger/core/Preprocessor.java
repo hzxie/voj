@@ -9,6 +9,7 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.io.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import com.trunkshell.voj.judger.mapper.CheckpointMapper;
@@ -89,7 +90,7 @@ public class Preprocessor {
 	 */
 	public void fetchTestPoints(long problemId) throws Exception {
 		String checkpointsFilePath = String.format("%s/%s", 
-				new Object[] {TEST_POINTS_DIRECTORY, problemId});
+				new Object[] {checkpointDirectory, problemId});
 		File checkpointsDirFile = new File(checkpointsFilePath);
 		if ( !checkpointsDirFile.exists() ) {
 			if ( !checkpointsDirFile.mkdirs() ) {
@@ -133,7 +134,9 @@ public class Preprocessor {
 	private CheckpointMapper checkpointMapper;
 	
 	/**
-	 * 测试数据目录.
+	 * 测试点的存储目录.
+	 * 用于存储测试点的输入输出数据.
 	 */
-	private static final String TEST_POINTS_DIRECTORY = "cache/";
+	@Value("${judger.checkpointDir}")
+    private String checkpointDirectory;
 }

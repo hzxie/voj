@@ -19,11 +19,13 @@ public class Language implements Serializable {
 	 * @param languageSlug - 编程语言的英文缩写
 	 * @param languageName - 编程语言的名称
 	 * @param compileCommand - 编程语言的编译命令
+	 * @param runCommand - 编程语言对应程序执行命令
 	 */
-	public Language(String languageSlug, String languageName, String compileCommand) {
+	public Language(String languageSlug, String languageName, String compileCommand, String runCommand) {
 		this.languageSlug = languageSlug;
 		this.languageName = languageName;
 		this.compileCommand = compileCommand;
+		this.runCommand = runCommand;
 	}
 	
 	/**
@@ -32,9 +34,10 @@ public class Language implements Serializable {
 	 * @param languageSlug - 编程语言的英文缩写
 	 * @param languageName - 编程语言的名称
 	 * @param compileCommand - 编程语言的编译命令
+	 * @param runCommand - 编程语言对应程序执行命令
 	 */
-	public Language(int languageId, String languageSlug, String languageName, String compileCommand) {
-		this(languageSlug, languageName, compileCommand);
+	public Language(int languageId, String languageSlug, String languageName, String compileCommand, String runCommand) {
+		this(languageSlug, languageName, compileCommand, runCommand);
 		this.languageId = languageId;
 	}
 	
@@ -102,13 +105,29 @@ public class Language implements Serializable {
 		this.compileCommand = compileCommand;
 	}
 
+	/**
+	 * 获取编程语言的运行命令.
+	 * @return 编程语言的运行命令
+	 */
+	public String getRunCommand() {
+		return runCommand;
+	}
+
+	/**
+	 * 设置编程语言的运行命令.
+	 * @param runCommand - 编程语言的运行命令
+	 */
+	public void setRunCommand(String runCommand) {
+		this.runCommand = runCommand;
+	}
+
 	/* (non-Javadoc)
 	 * @see java.lang.Object#toString()
 	 */
 	@Override
 	public String toString() {
-		return String.format("Language [ID=%d, Slug=%s, Name=%s, CompileCommand=%s]",
-				new Object[] { languageId, languageSlug, languageName, compileCommand });
+		return String.format("Language [ID=%d, Slug=%s, Name=%s, CompileCommand=%s, runCommand=%s]",
+				new Object[] { languageId, languageSlug, languageName, compileCommand, runCommand });
 	}
 	
 	/**
@@ -132,7 +151,12 @@ public class Language implements Serializable {
 	private String compileCommand;
 	
 	/**
+	 * 编程语言的运行命令.
+	 */
+	private String runCommand;
+	
+	/**
 	 * 唯一的序列化标识符
 	 */
-	private static final long serialVersionUID = 9065824880175832695L;
+	private static final long serialVersionUID = 9065824880175832696L;
 }

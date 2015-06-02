@@ -26,10 +26,10 @@ import com.trunkshell.voj.web.model.User;
 @CacheNamespace(implementation = org.mybatis.caches.ehcache.EhcacheCache.class)
 public interface SubmissionMapper {
 	/**
-     * 通过评测记录唯一标识符获取试题对象.
-     * @param submissionID - 评测记录的唯一标识符
-     * @return 一个评测记录对象
-     */
+	 * 通过评测记录唯一标识符获取试题对象.
+	 * @param submissionID - 评测记录的唯一标识符
+	 * @return 一个评测记录对象
+	 */
 	@Select("SELECT * FROM voj_submissions WHERE submission_id = #{submissionId}")
 	@Options(useCache = true)
 	@Results({
@@ -49,10 +49,10 @@ public interface SubmissionMapper {
 	public Submission getSubmission(@Param("submissionId") long submissionId);
 	
 	/**
-     * 通过试题唯一标识符获取某个范围内的所有试题.
-     * @param limit - 每次加载评测记录的数量
-     * @return 某个范围内的所有提交记录
-     */
+	 * 通过试题唯一标识符获取某个范围内的所有试题.
+	 * @param limit - 每次加载评测记录的数量
+	 * @return 某个范围内的所有提交记录
+	 */
 	@Select("SELECT * FROM voj_submissions ORDER BY submission_id DESC LIMIT #{limit}")
 	@Options(useCache = true)
 	@Results({
@@ -69,11 +69,11 @@ public interface SubmissionMapper {
 	public List<Submission> getSubmissions(@Param("limit") int limit);
 	
 	/**
-     * 通过试题唯一标识符获取某个范围内的所有试题.
-     * @param offset - 试题唯一标识符的起始编号
-     * @param limit - 每次加载评测记录的数量
-     * @return 某个范围内的所有提交记录
-     */
+	 * 通过试题唯一标识符获取某个范围内的所有试题.
+	 * @param offset - 试题唯一标识符的起始编号
+	 * @param limit - 每次加载评测记录的数量
+	 * @return 某个范围内的所有提交记录
+	 */
 	@Select("SELECT * FROM voj_submissions WHERE submission_id <= #{submissionId} ORDER BY submission_id DESC LIMIT #{limit}")
 	@Options(useCache = true)
 	@Results({
@@ -90,11 +90,11 @@ public interface SubmissionMapper {
 	public List<Submission> getSubmissionsUsingOffset(@Param("submissionId") long offset, @Param("limit") int limit);
 	
 	/**
-     * 通过试题唯一标识符获取某个范围内的所有试题.
-     * @param offset - 试题唯一标识符的起始编号
-     * @param limit - 每次加载评测记录的数量
-     * @return 某个范围内的所有提交记录
-     */
+	 * 通过试题唯一标识符获取某个范围内的所有试题.
+	 * @param offset - 试题唯一标识符的起始编号
+	 * @param limit - 每次加载评测记录的数量
+	 * @return 某个范围内的所有提交记录
+	 */
 	@Select("SELECT * FROM voj_submissions WHERE submission_id >= #{submissionId} ORDER BY submission_id LIMIT #{limit}")
 	@Options(useCache = true)
 	@Results({
@@ -111,12 +111,12 @@ public interface SubmissionMapper {
 	public List<Submission> getLatestSubmissionsUsingOffset(@Param("submissionId") long offset, @Param("limit") int limit);
 	
 	/**
-     * 获取某个用户对某个试题的提交记录.
-     * @param problemId - 试题的唯一标识符
-     * @param uid - 用户的唯一标识符
-     * @param limit - 每次加载评测记录的数量
-     * @return 某个用户对某个试题的提交记录
-     */
+	 * 获取某个用户对某个试题的提交记录.
+	 * @param problemId - 试题的唯一标识符
+	 * @param uid - 用户的唯一标识符
+	 * @param limit - 每次加载评测记录的数量
+	 * @return 某个用户对某个试题的提交记录
+	 */
 	@Select("SELECT * FROM voj_submissions WHERE problem_id = #{problemId} AND uid = #{uid} ORDER BY submission_id DESC LIMIT #{limit}")
 	@Options(useCache = true)
 	@Results({
@@ -159,19 +159,19 @@ public interface SubmissionMapper {
 	public List<Submission> getAcceptedSubmissionOfProblems(@Param("uid") long uid, @Param("problemIdLowerBound") long problemIdLowerBound, @Param("problemIdUpperBound") long problemIdUpperBound);
 	
 	/**
-     * 获取某个用户通过(Accpeted)提交记录的数量.
-     * @param uid - 用户的唯一标识符
-     * @return 某个用户通过(Accpeted)提交记录的数量
-     */
+	 * 获取某个用户通过(Accpeted)提交记录的数量.
+	 * @param uid - 用户的唯一标识符
+	 * @return 某个用户通过(Accpeted)提交记录的数量
+	 */
 	@Select("SELECT COUNT(DISTINCT problem_id) FROM voj_submissions WHERE uid = #{uid} AND submission_judge_result = 'AC'")
 	@Options(useCache = true)
 	public long getAcceptedSubmissionUsingUserId(@Param("uid") long uid);
 	
 	/**
-     * 获取某个用户全部提交记录的数量.
-     * @param uid - 用户的唯一标识符
-     * @return 某个用户全部提交记录的数量
-     */
+	 * 获取某个用户全部提交记录的数量.
+	 * @param uid - 用户的唯一标识符
+	 * @return 某个用户全部提交记录的数量
+	 */
 	@Select("SELECT COUNT(*) FROM voj_submissions WHERE uid = #{uid} AND submission_judge_result != 'PD'")
 	@Options(useCache = true)
 	public long getTotalSubmissionUsingUserId(@Param("uid") long uid);

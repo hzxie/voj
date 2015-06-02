@@ -10,6 +10,7 @@ import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 
 import com.trunkshell.voj.judger.model.Language;
+import com.trunkshell.voj.judger.model.Problem;
 import com.trunkshell.voj.judger.model.Submission;
 
 /**
@@ -27,7 +28,7 @@ public interface SubmissionMapper {
 	@Options(useCache = true)
 	@Results({
 		@Result(property = "submissionId", column = "submission_id"),
-		@Result(property = "problemId", column = "problem_id"),
+		@Result(property = "problem", column = "problem_id", javaType = Problem.class, one = @One(select="com.trunkshell.voj.judger.mapper.ProblemMapper.getProblem")),
 		@Result(property = "uid", column = "uid"),
 		@Result(property = "language", column = "language_id", javaType=Language.class, one = @One(select="com.trunkshell.voj.judger.mapper.LanguageMapper.getLanguageUsingId")),
 		@Result(property = "submitTime", column = "submission_submit_time"),
@@ -45,7 +46,7 @@ public interface SubmissionMapper {
 	 * 更新提交记录.
 	 * @param submission - 待更新的提交记录对象
 	 */
-	@Update("UPDATE voj_submissions SET problem_id = #{problemId}, uid = #{uid}, language_id = #{language.languageId}, submission_submit_time = #{submitTime}, submission_execute_time = #{executeTime}, submission_used_time = #{usedTime}, submission_used_memory = #{usedMemory}, submission_judge_result = #{judgeResultSlug}, submission_judge_score = #{judgeScore}, submission_judge_log = #{judgeLog}, submission_code = #{code} WHERE submission_id = #{submissionId}")
+	@Update("UPDATE voj_submissions SET problem_id = #{problem.problemId}, uid = #{uid}, language_id = #{language.languageId}, submission_submit_time = #{submitTime}, submission_execute_time = #{executeTime}, submission_used_time = #{usedTime}, submission_used_memory = #{usedMemory}, submission_judge_result = #{judgeResultSlug}, submission_judge_score = #{judgeScore}, submission_judge_log = #{judgeLog}, submission_code = #{code} WHERE submission_id = #{submissionId}")
 	@Options(flushCache = true)
 	public void updateSubmission(Submission submission);
 }
