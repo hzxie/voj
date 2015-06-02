@@ -18,7 +18,7 @@ public class Submission implements Serializable {
 	/**
 	 * 评测记录类的构造函数.
 	 * @param submissionId - 评测记录的唯一标识符
-	 * @param problemId - 评测对应的试题的唯一标识符
+	 * @param problem - 评测对应的试题对象
 	 * @param uid - 评测提交者的用户的唯一标识符
 	 * @param language - 提交所使用的语言对象
 	 * @param submitTime - 评测提交时间
@@ -30,11 +30,11 @@ public class Submission implements Serializable {
 	 * @param judgeLog - 评测运行日志
 	 * @param code - 评测所执行的代码
 	 */
-	public Submission(long submissionId, long problemId, long uid, Language language, Date submitTime, 
+	public Submission(long submissionId, Problem problem, long uid, Language language, Date submitTime, 
 			Date executeTime, int usedTime, int usedMemory, String judgeResultSlug, int judgeScore, 
 			String judgeLog, String code) { 
 		this.submissionId = submissionId;
-		this.problemId = problemId;
+		this.problem = problem;
 		this.uid = uid;
 		this.language = language;
 		this.submitTime = submitTime;
@@ -64,19 +64,19 @@ public class Submission implements Serializable {
 	}
 	
 	/**
-	 * 获取评测对应的试题的唯一标识符.
-	 * @return 试题的唯一标识符
+	 * 获取评测对应的试题对象.
+	 * @return 试题对象
 	 */
-	public long getProblemId() {
-		return problemId;
+	public Problem getProblem() {
+		return problem;
 	}
 	
 	/**
-	 * 设置评测对应的试题的唯一标识符.
-	 * @param problemId - 试题的唯一标识符
+	 * 设置评测对应的试题对象.
+	 * @param problem - 试题对象
 	 */
-	public void setProblemId(long problemId) {
-		this.problemId = problemId;
+	public void setProblem(Problem problem) {
+		this.problem = problem;
 	}
 	
 	/**
@@ -244,10 +244,10 @@ public class Submission implements Serializable {
 	 */
 	@Override
 	public String toString() {
-		return String.format("Submission [ID=%d, ProblemId={%s}, Uid={%s}, Language={%s}, SubmitTime={%s}, "
+		return String.format("Submission [ID=%d, Problem={%s}, Uid={%s}, Language={%s}, SubmitTime={%s}, "
 				+ "ExecuteTime={%s}, UsedTime=%d, UsedMemory=%d, JudgeResultSlug={%s}, JudgeScore=%d, "
 				+ "JudgeLog=%s, Code=%s]",
-                new Object[] { submissionId, problemId, uid, language, submitTime, executeTime, usedTime, usedMemory,
+                new Object[] { submissionId, problem, uid, language, submitTime, executeTime, usedTime, usedMemory,
 						judgeResultSlug, judgeScore, judgeLog, code});
 	}
 	
@@ -259,7 +259,7 @@ public class Submission implements Serializable {
 	/**
 	 * 评测对应的试题对象.
 	 */
-	private long problemId;
+	private Problem problem;
 	
 	/**
 	 * 评测提交者用户的唯一标识符. 

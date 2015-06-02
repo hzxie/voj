@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 
 import com.trunkshell.voj.judger.application.ApplicationDispatcher;
 import com.trunkshell.voj.judger.exception.IllgealSubmissionException;
+import com.trunkshell.voj.judger.mapper.CheckpointMapper;
 import com.trunkshell.voj.judger.mapper.SubmissionMapper;
 import com.trunkshell.voj.judger.model.Submission;
 import com.trunkshell.voj.judger.util.RandomStringGenerator;
@@ -45,9 +46,9 @@ public class Dispatcher {
 			}
 			
 			preprocess(submission, baseDirectory, baseFileName);
-			compile(submission, baseDirectory, baseFileName);
-			runProgram(baseDirectory, baseFileName);
-			compareOutput(baseDirectory);
+			if ( compile(submission, baseDirectory, baseFileName) ) {
+				runProgram(submission, baseDirectory, baseFileName);
+			}
 			cleanUp(baseDirectory);
 		}
 	}
@@ -63,7 +64,7 @@ public class Dispatcher {
 	private void preprocess(Submission submission, 
 			String workDirectory, String baseFileName) {
 		try {
-			long problemId = submission.getProblemId();
+			long problemId = submission.getProblem().getProblemId();
 			preprocessor.createTestCode(submission, workDirectory, baseFileName);
 			preprocessor.fetchTestPoints(problemId);
 		} catch (Exception ex) {
@@ -82,33 +83,25 @@ public class Dispatcher {
 	 * @param workDirectory - 用于产生编译输出的目录
 	 * @param baseFileName - 随机文件名(不包含后缀)
 	 */
-	private void compile(Submission submission, 
+	private boolean compile(Submission submission, 
 			String workDirectory, String baseFileName) {
 		long submissionId = submission.getSubmissionId();
 		Map<String, Object> result = 
 				compiler.getCompileResult(submission, workDirectory, baseFileName);
 		
-		if ( (Boolean)result.get("isSuccessful") ) {
-			runProgram(workDirectory, baseFileName);
-		}
 		applicationDispatcher.onCompileFinished(submissionId, result);
+		return (Boolean)result.get("isSuccessful");
 	}
 
 	/**
-	 * 执行程序.
+	 * 执行程序并比对输出结果.
+	 * @param submission - 评测记录对象
 	 * @param workDirectory - 编译生成结果的目录以及程序输出的目录
 	 * @param baseFileName - 待执行的应用程序文件名(不包含文件后缀)
 	 */
-	private void runProgram(String workDirectory, String baseFileName) {
-		
-	}
-	
-	/**
-	 * 比对输出结果.
-	 * @param workDirectory
-	 */
-	private void compareOutput(String workDirectory) {
-		
+	private void runProgram(Submission submission, 
+			String workDirectory, String baseFileName) {
+		StringBuilder logBuilder = new StringBuilder();
 	}
 	
 	/**
@@ -154,11 +147,25 @@ public class Dispatcher {
 	private Compiler compiler;
 	
 	/**
+	 * 自动注入的CheckpointMapper对象.
+	 * 用于获取试题的测试点.
+	 */
+	@Autowired
+	private CheckpointMapper checkpointMapper;
+	
+	/**
 	 * 评测机的工作目录.
 	 * 用于存储编译结果以及程序输出结果.
 	 */
 	@Value("${judger.workDir}")
     private String workBaseDirectory;
+	
+	/**
+	 * 测试点的存储目录.
+	 * 用于存储测试点的输入输出数据.
+	 */
+	@Value("${judger.checkpointDir}")
+    private String checkpointDirectory;
 	
 	/**
 	 * 日志记录器.

@@ -6,6 +6,7 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.test.context.transaction.TransactionConfiguration;
@@ -31,7 +32,7 @@ public class CompilerTest {
 	 */
 	@Test
 	public void testGetCompileResultCppWithSuccess() throws Exception {
-		String workDirectory = "/tmp/voj-1000/";
+		String workDirectory = workBaseDirectory + "/voj-1000";
 		String baseFileName = "random-name";
 		Submission submission = submissionMapper.getSubmission(1000);
 		preprocessor.createTestCode(submission, workDirectory, baseFileName);
@@ -47,7 +48,7 @@ public class CompilerTest {
 	 */
 	@Test
 	public void testGetCompileResultJavaWithSuccess() throws Exception {
-		String workDirectory = "/tmp/voj-1001/";
+		String workDirectory = workBaseDirectory + "/voj-1001";
 		String baseFileName = "RandomName";
 		Submission submission = submissionMapper.getSubmission(1001);
 		preprocessor.createTestCode(submission, workDirectory, baseFileName);
@@ -63,7 +64,7 @@ public class CompilerTest {
 	 */
 	@Test
 	public void testGetCompileResultCppWithError() throws Exception {
-		String workDirectory = "/tmp/voj-1002/";
+		String workDirectory = workBaseDirectory + "/voj-1002";
 		String baseFileName = "random-name";
 		Submission submission = submissionMapper.getSubmission(1002);
 		preprocessor.createTestCode(submission, workDirectory, baseFileName);
@@ -91,4 +92,11 @@ public class CompilerTest {
 	 */
 	@Autowired
 	private SubmissionMapper submissionMapper;
+	
+	/**
+	 * 评测机的工作目录.
+	 * 用于存储编译结果以及程序输出结果.
+	 */
+	@Value("${judger.workDir}")
+    private String workBaseDirectory;
 }

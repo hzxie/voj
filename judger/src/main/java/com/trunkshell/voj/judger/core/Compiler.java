@@ -76,7 +76,7 @@ public class Compiler {
 		logger.info("Start compiling with command: " + commandLine);
 		Map<String, Object> runningResult = compilerRunner.getRuntimeResult(
 				commandLine, inputFilePath, compileLogPath, timeLimit, memoryLimit);
-		Map<String, Object> result = new HashMap<String, Object>();
+		Map<String, Object> result = new HashMap<String, Object>(3, 1);
 		
 		boolean isSuccessful = false;	
 		if ( runningResult != null ) {

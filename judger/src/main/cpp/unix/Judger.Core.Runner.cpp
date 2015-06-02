@@ -59,28 +59,39 @@ JNIEXPORT jobject JNICALL Java_com_trunkshell_voj_judger_core_Runner_getRuntimeR
     JNIEnv* jniEnv, jobject selfReference, jstring jCommandLine, jstring jUsername,
     jstring jPassword, jstring jInputFilePath, jstring jOutputFilePath, jint timeLimit, 
     jint memoryLimit) {
-    std::string commandLine     = getStringValue(jniEnv, jCommandLine);
-    std::string inputFilePath   = getStringValue(jniEnv, jInputFilePath);
-    std::string outputFilePath  = getStringValue(jniEnv, jOutputFilePath);
+
+    std::cout << "================START================" << std::endl;
+    std::string commandLine         = getStringValue(jniEnv, jCommandLine);
+    std::string inputFilePath       = getStringValue(jniEnv, jInputFilePath);
+    std::string outputFilePath      = getStringValue(jniEnv, jOutputFilePath);
 
     JHashMap    result;
-    jint        timeUsage       = 0;
-    jint        memoryUsage     = 0;
-    jint        exitCode        = 127;
+    jint        timeUsage           = 0;
+    jint        memoryUsage         = 0;
+    jint        exitCode            = 127;
 
-    pid_t pid = -1;
+    pid_t       pid                 = -1;
     if ( !createProcess(pid) ) {
         throwCStringException(jniEnv, "Failed to fork a process.");
     }
+    std::cout << "1 # getpid(): " << getpid() << std::endl;
+    std::cout << "2 # Child PID: " << pid << std::endl;
     // Setup I/O Redirection for Child Process
     if ( pid == 0 ) {
         setupIoRedirection(inputFilePath, outputFilePath);
     }
+    exitCode = runProcess(pid, commandLine, 10000, 0, timeUsage, memoryUsage);
 
-    exitCode = runProcess(pid, commandLine, timeLimit, memoryLimit, timeUsage, memoryUsage);
+    std::cout << "9 # Command Line: " << commandLine << std::endl;
+    std::cout << "10 # exitCode in JNI: " << exitCode << std::endl;
+    std::cout << "11 # timeUsage in JNI: " << timeUsage << std::endl;
+    std::cout << "12 # memoryUsage in JNI: " << memoryUsage << std::endl;
+
     result.put("timeUsage", timeUsage);
     result.put("memoryUsage", memoryUsage);
     result.put("exitCode", exitCode);
+
+    std::cout << "=================END=================" << std::endl;
 
     return result.toJObject(jniEnv);
 }
@@ -91,7 +102,7 @@ JNIEXPORT jobject JNICALL Java_com_trunkshell_voj_judger_core_Runner_getRuntimeR
  * @return 运行创建状态(-1表示未成功创建, 0表示子进程)
  */
 bool createProcess(pid_t& pid) {
-    pid = fork();
+    pid         = fork();
 
     if ( pid == -1 ) {
         return false;
@@ -122,7 +133,7 @@ void setupIoRedirection(
 
 /**
  * 运行进程.
- * @param  pid         - 进程ID
+ * @param  pid         - 子进程ID
  * @param  commandLine - 命令行
  * @param  timeLimit   - 运行时时间限制(ms)
  * @param  memoryLimit - 运行时空间限制(KB)
@@ -185,7 +196,7 @@ char** getCommandArgs(const std::string& commandLine) {
 
 /**
  * 获取运行时内存占用最大值
- * @param  pid         [description]
+ * @param  pid         - 进程ID
  * @param  memoryLimit - 运行时空间限制(KB)
  * @return 运行时内存占用最大值
  */
@@ -194,13 +205,14 @@ int getMaxMemoryUsage(pid_t pid, int memoryLimit) {
          currentMemoryUsage = 0;
     do {
         currentMemoryUsage = getCurrentMemoryUsage(pid);
+        std::cout << "currentMemoryUsage: [PID #" << pid << "]" << currentMemoryUsage << std::endl;
         if ( currentMemoryUsage > maxMemoryUsage ) {
             maxMemoryUsage = currentMemoryUsage;
         }
         if ( memoryLimit != 0 && currentMemoryUsage > memoryLimit ) {
             killProcess(pid);
         }
-        usleep(200000);
+        usleep(50000);
     } while ( currentMemoryUsage != 0 );
 
     return maxMemoryUsage;

@@ -31,6 +31,8 @@ public class LanguageMapperTest {
 		Language language = languageMapper.getLanguageUsingId(1);
 		Assert.assertNotNull(language);
 		
+		System.out.println(language);
+		
 		String languageName = language.getLanguageName();
 		Assert.assertEquals("C", languageName);
 	}
@@ -78,7 +80,7 @@ public class LanguageMapperTest {
 	 */
 	@Test
 	public void testCreateLanguageNormal() {
-		Language language = new Language("text/x-php", "PHP", "php foo.php");
+		Language language = new Language("text/x-php", "PHP", "php foo.php", "php foo.php");
 		languageMapper.createLanguage(language);
 	}
 	
@@ -89,7 +91,7 @@ public class LanguageMapperTest {
 	 */
 	@Test(expected = org.springframework.dao.DataIntegrityViolationException.class)
 	public void testCreateLanguageUsingTooLongSlug() {
-		Language language = new Language("TooLongLanguageSlug", "Invalid Langauge", "Compile Command");
+		Language language = new Language("TooLongLanguageSlug", "Invalid Langauge", "Compile Command", "Run Command");
 		languageMapper.createLanguage(language);
 	}
 	
@@ -117,7 +119,7 @@ public class LanguageMapperTest {
 	 */
 	@Test
 	public void testUpdateLanguageNotExists() {
-		Language language = new Language(0, "not-exist", "Not Exist", "Not Exist");
+		Language language = new Language(0, "not-exist", "Not Exist", "Not Exist", "Not Exist");
 		languageMapper.updateLanguage(language);
 	}
 	

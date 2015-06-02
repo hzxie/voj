@@ -31,7 +31,8 @@ public interface LanguageMapper {
 		 @Result(property = "languageId", column = "language_id"),
 		 @Result(property = "languageSlug", column = "language_slug"),
 		 @Result(property = "languageName", column = "language_name"),
-		 @Result(property = "compileCommand", column = "language_compile_command")
+		 @Result(property = "compileCommand", column = "language_compile_command"),
+		 @Result(property = "runCommand", column = "language_run_command"),
 	})
 	public Language getLanguageUsingId(@Param("languageId") int languageId);
 	
@@ -46,7 +47,8 @@ public interface LanguageMapper {
 		 @Result(property = "languageId", column = "language_id"),
 		 @Result(property = "languageSlug", column = "language_slug"),
 		 @Result(property = "languageName", column = "language_name"),
-		 @Result(property = "compileCommand", column = "language_compile_command")
+		 @Result(property = "compileCommand", column = "language_compile_command"),
+		 @Result(property = "runCommand", column = "language_run_command"),
 	})
 	public Language getLanguageUsingSlug(@Param("languageSlug") String languageSlug);
 	
@@ -60,7 +62,8 @@ public interface LanguageMapper {
 		 @Result(property = "languageId", column = "language_id"),
 		 @Result(property = "languageSlug", column = "language_slug"),
 		 @Result(property = "languageName", column = "language_name"),
-		 @Result(property = "compileCommand", column = "language_compile_command")
+		 @Result(property = "compileCommand", column = "language_compile_command"),
+		 @Result(property = "runCommand", column = "language_run_command"),
 	})
 	public List<Language> getAllLanguages();
 	
@@ -68,7 +71,7 @@ public interface LanguageMapper {
 	 * 添加编程语言对象.
 	 * @param language - 待添加的编程语言对象 
 	 */
-	@Insert("INSERT INTO voj_languages (language_id, language_slug, language_name, language_compile_command) VALUES (#{languageId}, #{languageSlug}, #{languageName}, #{compileCommand})")
+	@Insert("INSERT INTO voj_languages (language_id, language_slug, language_name, language_compile_command, language_run_command) VALUES (#{languageId}, #{languageSlug}, #{languageName}, #{compileCommand}, #{runCommand})")
 	@Options(useGeneratedKeys = true, keyProperty = "languageId", keyColumn = "language_id", flushCache = true)
 	public void createLanguage(Language language);
 	
@@ -76,7 +79,7 @@ public interface LanguageMapper {
 	 * 更新编程语言对象.
 	 * @param language - 待更新的编程语言对象
 	 */
-	@Update("UPDATE voj_languages SET language_slug = #{languageSlug}, language_name = #{languageName}, language_compile_command = #{compileCommand} WHERE language_id = #{languageId}")
+	@Update("UPDATE voj_languages SET language_slug = #{languageSlug}, language_name = #{languageName}, language_compile_command = #{compileCommand}, language_run_command = #{runCommand} WHERE language_id = #{languageId}")
 	@Options(flushCache = true)
 	public void updateLanguage(Language language);
 	
