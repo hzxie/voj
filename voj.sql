@@ -3,7 +3,7 @@
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: May 23, 2015 at 01:41 PM
+-- Generation Time: Jun 02, 2015 at 03:54 AM
 -- Server version: 5.6.21
 -- PHP Version: 5.6.3
 
@@ -117,7 +117,7 @@ CREATE TABLE IF NOT EXISTS `voj_judge_results` (
 `judge_result_id` int(4) NOT NULL,
   `judge_result_slug` varchar(4) NOT NULL,
   `judge_result_name` varchar(32) NOT NULL
-) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8;
 
 --
 -- Dumping data for table `voj_judge_results`
@@ -145,20 +145,21 @@ CREATE TABLE IF NOT EXISTS `voj_languages` (
 `language_id` int(4) NOT NULL,
   `language_slug` varchar(16) NOT NULL,
   `language_name` varchar(16) NOT NULL,
-  `language_compile_command` varchar(128) NOT NULL
+  `language_compile_command` varchar(128) NOT NULL,
+  `language_run_command` varchar(128) NOT NULL
 ) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8;
 
 --
 -- Dumping data for table `voj_languages`
 --
 
-INSERT INTO `voj_languages` (`language_id`, `language_slug`, `language_name`, `language_compile_command`) VALUES
-(1, 'text/x-csrc', 'C', 'gcc -O2 -s -Wall -o {filename}.exe {filename}.c -lm'),
-(2, 'text/x-c++src', 'C++', 'g++ -O2 -s -Wall -std=c++11 -o {filename}.exe {filename}.cpp -lm'),
-(3, 'text/x-java', 'Java', 'javac {filename}.java'),
-(4, 'text/x-pascal', 'Pascal', 'fpc -O2 -Xs -Sgic -vw -o {filename}.exe {filename}.pas'),
-(5, 'text/x-python', 'Python', 'pypy {filename}.py'),
-(6, 'text/x-ruby', 'Ruby', 'ruby {filename}.rb ');
+INSERT INTO `voj_languages` (`language_id`, `language_slug`, `language_name`, `language_compile_command`, `language_run_command`) VALUES
+(1, 'text/x-csrc', 'C', 'gcc -O2 -s -Wall -o {filename}.exe {filename}.c -lm', '{filename}.exe'),
+(2, 'text/x-c++src', 'C++', 'g++ -O2 -s -Wall -std=c++11 -o {filename}.exe {filename}.cpp -lm', '{filename}.exe'),
+(3, 'text/x-java', 'Java', 'javac {filename}.java', 'java -cp {filename}'),
+(4, 'text/x-pascal', 'Pascal', 'fpc -O2 -Xs -Sgic -vw -o {filename}.exe {filename}.pas', '{filename}.exe'),
+(5, 'text/x-python', 'Python 2', 'python -m py_compile {filename}.py', 'python {filename}.py'),
+(6, 'text/x-ruby', 'Ruby', 'rbx compile {filename}.rb', 'ruby {filename}.rb ');
 
 -- --------------------------------------------------------
 
@@ -503,7 +504,7 @@ MODIFY `discussion_topic_id` int(8) NOT NULL AUTO_INCREMENT;
 -- AUTO_INCREMENT for table `voj_judge_results`
 --
 ALTER TABLE `voj_judge_results`
-MODIFY `judge_result_id` int(4) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=10;
+MODIFY `judge_result_id` int(4) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=11;
 --
 -- AUTO_INCREMENT for table `voj_languages`
 --
