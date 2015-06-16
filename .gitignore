@@ -1,3 +1,9 @@
+.log
+bin/
+logs/
+cache/
+
+# Maven
 target/
 pom.xml.tag
 pom.xml.releaseBackup
@@ -5,12 +11,13 @@ pom.xml.versionsBackup
 pom.xml.next
 release.properties
 
-.log
+
+# Eclipse
 .classpath
 .project
 .settings/
 
-bin/
-logs/
-cache/
-
+# IntelliJ IDEA
+*.iml
+.idea/
+META-INF/
