@@ -16,7 +16,9 @@
 
 #include <fcntl.h>
 #include <signal.h>
+#include <sys/mman.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -28,6 +30,11 @@
  * A pointer to an array of character pointers to the environment strings.
  */
 extern char** environ;
+
+/**
+ * A pointer to a boolean variable which infers whether the new process is started.
+ */
+static bool* isNewProcessStarted;
 
 /**
  * Function Prototypes.
@@ -59,11 +66,17 @@ JNIEXPORT jobject JNICALL Java_com_trunkshell_voj_judger_core_Runner_getRuntimeR
     JNIEnv* jniEnv, jobject selfReference, jstring jCommandLine, jstring jUsername,
     jstring jPassword, jstring jInputFilePath, jstring jOutputFilePath, jint timeLimit, 
     jint memoryLimit) {
-
-    std::cout << "================START================" << std::endl;
     std::string commandLine         = getStringValue(jniEnv, jCommandLine);
     std::string inputFilePath       = getStringValue(jniEnv, jInputFilePath);
     std::string outputFilePath      = getStringValue(jniEnv, jOutputFilePath);
+
+    isNewProcessStarted             = static_cast<bool*>(mmap(NULL, 
+                                                            sizeof *isNewProcessStarted, 
+                                                            PROT_READ | PROT_WRITE, 
+                                                            MAP_SHARED | MAP_ANONYMOUS, 
+                                                            -1, 
+                                                            0));
+    *isNewProcessStarted            = 0;
 
     JHashMap    result;
     jint        timeUsage           = 0;
@@ -74,24 +87,17 @@ JNIEXPORT jobject JNICALL Java_com_trunkshell_voj_judger_core_Runner_getRuntimeR
     if ( !createProcess(pid) ) {
         throwCStringException(jniEnv, "Failed to fork a process.");
     }
-    std::cout << "1 # getpid(): " << getpid() << std::endl;
-    std::cout << "2 # Child PID: " << pid << std::endl;
     // Setup I/O Redirection for Child Process
     if ( pid == 0 ) {
         setupIoRedirection(inputFilePath, outputFilePath);
     }
     exitCode = runProcess(pid, commandLine, 10000, 0, timeUsage, memoryUsage);
-
-    std::cout << "9 # Command Line: " << commandLine << std::endl;
-    std::cout << "10 # exitCode in JNI: " << exitCode << std::endl;
-    std::cout << "11 # timeUsage in JNI: " << timeUsage << std::endl;
-    std::cout << "12 # memoryUsage in JNI: " << memoryUsage << std::endl;
+    
+    munmap(isNewProcessStarted, sizeof *isNewProcessStarted);
 
     result.put("timeUsage", timeUsage);
     result.put("memoryUsage", memoryUsage);
     result.put("exitCode", exitCode);
-
-    std::cout << "=================END=================" << std::endl;
 
     return result.toJObject(jniEnv);
 }
@@ -157,6 +163,7 @@ int runProcess(pid_t pid, const std::string& commandLine, int timeLimit,
     // Run Child Process
     if ( pid == 0 ) {
         alarm(timeUsage / 1000);
+        *isNewProcessStarted = 1;
         _exit(execvp(argv[0], argv));
     }
 
@@ -204,15 +211,15 @@ int getMaxMemoryUsage(pid_t pid, int memoryLimit) {
     int  maxMemoryUsage     = 0,
          currentMemoryUsage = 0;
     do {
+        while ( *isNewProcessStarted == 0 );
+        usleep(50000);
         currentMemoryUsage = getCurrentMemoryUsage(pid);
-        std::cout << "currentMemoryUsage: [PID #" << pid << "]" << currentMemoryUsage << std::endl;
         if ( currentMemoryUsage > maxMemoryUsage ) {
             maxMemoryUsage = currentMemoryUsage;
         }
         if ( memoryLimit != 0 && currentMemoryUsage > memoryLimit ) {
             killProcess(pid);
         }
-        usleep(50000);
     } while ( currentMemoryUsage != 0 );
 
     return maxMemoryUsage;
