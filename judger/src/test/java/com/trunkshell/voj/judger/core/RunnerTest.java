@@ -35,7 +35,7 @@ public class RunnerTest {
 		String workDirectory = workBaseDirectory + "/voj-1000";
 		String baseFileName = "random-name";
 		Submission submission = submissionMapper.getSubmission(1000);
-		
+
 		String inputFilePath = workBaseDirectory + "/testpoints/1000/input#0.txt";
 		String outputFilePath = workBaseDirectory + "/voj-1000/output#0.txt";
 		
@@ -43,8 +43,8 @@ public class RunnerTest {
 		preprocessor.fetchTestPoints(submission.getProblem().getProblemId());
 		compiler.getCompileResult(submission, workDirectory, baseFileName);
 		
-		Map<String, Object> result = 
-				runner.getRuntimeResult(submission, 0, workDirectory, baseFileName, inputFilePath, outputFilePath);
+		Map<String, Object> result =
+				runner.getRuntimeResult(submission, workDirectory, baseFileName, inputFilePath, outputFilePath);
 		Assert.assertEquals("AC", result.get("runtimeResult"));
 	}
 	
@@ -58,16 +58,16 @@ public class RunnerTest {
 		String workDirectory = workBaseDirectory + "/voj-1001";
 		String baseFileName = "RandomName";
 		Submission submission = submissionMapper.getSubmission(1001);
-		
+
 		String inputFilePath = workBaseDirectory + "/testpoints/1001/input#0.txt";
-		String outputFilePath = workBaseDirectory + "/voj-1001/output#0.txt";
+		String outputFilePath = workBaseDirectory + "/voj-1000/output#0.txt";
 		
 		preprocessor.createTestCode(submission, workDirectory, baseFileName);
 		preprocessor.fetchTestPoints(submission.getProblem().getProblemId());
 		compiler.getCompileResult(submission, workDirectory, baseFileName);
 		
 		Map<String, Object> result = 
-				runner.getRuntimeResult(submission, 0, workDirectory, baseFileName, inputFilePath, outputFilePath);
+				runner.getRuntimeResult(submission, workDirectory, baseFileName, inputFilePath, outputFilePath);
 		Assert.assertEquals("AC", result.get("runtimeResult"));
 	}
 	

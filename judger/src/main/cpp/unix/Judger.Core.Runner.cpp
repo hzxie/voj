@@ -91,7 +91,7 @@ JNIEXPORT jobject JNICALL Java_com_trunkshell_voj_judger_core_Runner_getRuntimeR
     if ( pid == 0 ) {
         setupIoRedirection(inputFilePath, outputFilePath);
     }
-    exitCode = runProcess(pid, commandLine, 10000, 0, timeUsage, memoryUsage);
+    exitCode = runProcess(pid, commandLine, timeLimit, memoryLimit, timeUsage, memoryUsage);
     
     munmap(isNewProcessStarted, sizeof *isNewProcessStarted);
 
@@ -162,7 +162,7 @@ int runProcess(pid_t pid, const std::string& commandLine, int timeLimit,
     }
     // Run Child Process
     if ( pid == 0 ) {
-        alarm(timeUsage / 1000);
+        alarm(timeLimit / 1000);
         *isNewProcessStarted = 1;
         _exit(execvp(argv[0], argv));
     }
@@ -214,6 +214,7 @@ int getMaxMemoryUsage(pid_t pid, int memoryLimit) {
         while ( *isNewProcessStarted == 0 );
         usleep(50000);
         currentMemoryUsage = getCurrentMemoryUsage(pid);
+        std::cout << "currentMemoryUsage: [PID #" << pid << "]" << currentMemoryUsage << std::endl;
         if ( currentMemoryUsage > maxMemoryUsage ) {
             maxMemoryUsage = currentMemoryUsage;
         }

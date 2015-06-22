@@ -23,26 +23,25 @@ public class Runner {
 	 * 获取(用户)程序运行结果.
 	 * 
 	 * @param submission - 评测记录对象
-	 * @param checkpointId - 当前测试点编号
 	 * @param workDirectory - 编译生成结果的目录以及程序输出的目录
 	 * @param baseFileName - 待执行的应用程序文件名(不包含文件后缀)
 	 * @param inputFilePath - 输入文件路径
 	 * @param outputFilePath - 输出文件路径
 	 * @return 一个包含程序运行结果的Map<String, Object>对象
 	 */
-	public Map<String, Object> getRuntimeResult(Submission submission, int checkpointId, 
-			String workDirectory, String baseFileName, String inputFilePath, String outputFilePath) {
+	public Map<String, Object> getRuntimeResult(Submission submission, String workDirectory,
+		String baseFileName, String inputFilePath, String outputFilePath) {
 		String commandLine = getCommandLine(submission, workDirectory, baseFileName);
 		int timeLimit = getTimeLimit(submission);
 		int memoryLimit = getMemoryLimit(submission);
-		
+
 		Map<String, Object> result = new HashMap<String, Object>(4, 1);
 		String runtimeResultSlug = "SE";
 		int timeUsed = 0;
 		int memoryUsed = 0;
 		
 		try {
-			logger.info(String.format("[Submission #%d] Start running with command %s. (TimeLimit=%d, MemoryLimit=%s)", 
+			logger.info(String.format("[Submission #%d] Start running with command %s (TimeLimit=%d, MemoryLimit=%s)",
 								new Object[] { submission.getSubmissionId(), commandLine, timeLimit, memoryLimit }));
 			Map<String, Object> runtimeResult = getRuntimeResult(commandLine, 
 					systemUsername, systemPassword, inputFilePath, outputFilePath, 
@@ -56,7 +55,7 @@ public class Runner {
 			ex.printStackTrace();
 			logger.catching(ex);
 		}
-		
+
 		result.put("runtimeResult", runtimeResultSlug);
 		result.put("timeUsed", timeUsed);
 		result.put("memoryUsed", memoryUsed);
@@ -84,18 +83,7 @@ public class Runner {
 		}
 		return runCommand.toString();
 	}
-	
-	/**
-	 * 获取当前测试点输出路径.
-	 * @param workDirectory - 编译生成结果的目录以及程序输出的目录
-	 * @param checkpointId - 当前测试点编号
-	 * @return 当前测试点输出路径
-	 */
-	private String getOutputFilePath(String workDirectory, int checkpointId) {
-		return String.format("%s/output#%s", 
-				new Object[] {workDirectory, checkpointId});
-	}
-	
+
 	/**
 	 * 根据不同语言获取最大时间限制.
 	 * @param submission - 评测记录对象
@@ -146,7 +134,6 @@ public class Runner {
 	
 	/**
 	 * 获取(编译)程序运行结果.
-	 * 
 	 * @param commandLine - 待执行程序的命令行
 	 * @param inputFilePath - 输入文件路径(可为NULL)
 	 * @param outputFilePath - 输出文件路径(可为NULL)
@@ -169,7 +156,6 @@ public class Runner {
 
 	/**
 	 * 获取程序运行结果.
-	 * 
 	 * @param commandLine - 待执行程序的命令行
 	 * @param systemUsername - 登录操作系统的用户名
 	 * @param systemPassword - 登录操作系统的密码
