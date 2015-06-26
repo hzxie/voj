@@ -13,7 +13,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import com.trunkshell.voj.judger.mapper.CheckpointMapper;
-import com.trunkshell.voj.judger.mapper.LanguageMapper;
 import com.trunkshell.voj.judger.model.Checkpoint;
 import com.trunkshell.voj.judger.model.Language;
 import com.trunkshell.voj.judger.model.Submission;
@@ -118,13 +117,6 @@ public class Preprocessor {
 			}
 		}
 	}
-	
-	/**
-	 * 自动注入的LanguageMapper对象.
-	 * 用于获取代码文件的后缀名.
-	 */
-	@Autowired
-	private LanguageMapper languageMapper;
 	
 	/**
 	 * 自动注入的CheckpointMapper对象.
