@@ -133,14 +133,9 @@
     <script type="text/javascript">
         $.getScript('${cdnUrl}/js/markdown.min.js', function() {
             converter = Markdown.getSanitizingConverter();
-            converter.hooks.chain("preBlockGamut", function (text, rbg) {
-                return text.replace(/^ {0,3}""" *\\n((?:.*?\\n)+?) {0,3}""" *$/gm, function (whole, inner) {
-                    return "<blockquote>" + rbg(inner) + "</blockquote>\\n";
-                });
-            });
 
             $('.markdown').each(function() {
-                var plainContent    = $(this).html(),
+                var plainContent    = $(this).text(),
                     markdownContent = converter.makeHtml(plainContent.replace(/\\\n/g, '\\n'));
                 
                 $(this).html(markdownContent);

@@ -192,6 +192,12 @@ div.markdown h6 {
 	font-size: 6px;
 }
 
+div.markdown blockquote,
+div.markdown blockquote p {
+	font-size: 14px;
+	line-height: 120%;
+}
+
 div.markdown code {
 	color: #333;
 	display: block;

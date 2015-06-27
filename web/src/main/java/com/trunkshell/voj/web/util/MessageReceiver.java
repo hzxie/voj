@@ -23,12 +23,8 @@ public class MessageReceiver implements MessageListener {
 			
 			try {
 				long submissionId = (Long)mapMessage.getObject("submissionId");
-				String judgeResult = (String)mapMessage.getObject("judgeResult");
-				
-				System.out.println(submissionId + " / " +judgeResult);
 			} catch (JMSException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				
 			}
 		}
 	}

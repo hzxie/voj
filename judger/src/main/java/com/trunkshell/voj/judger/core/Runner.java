@@ -37,8 +37,8 @@ public class Runner {
 
 		Map<String, Object> result = new HashMap<String, Object>(4, 1);
 		String runtimeResultSlug = "SE";
-		int timeUsed = 0;
-		int memoryUsed = 0;
+		int usedTime = 0;
+		int usedMemory = 0;
 		
 		try {
 			logger.info(String.format("[Submission #%d] Start running with command %s (TimeLimit=%d, MemoryLimit=%s)",
@@ -48,17 +48,16 @@ public class Runner {
 					timeLimit, memoryLimit);
 			
 			int exitCode = (Integer) runtimeResult.get("exitCode");
-			timeUsed = (Integer) runtimeResult.get("timeUsage");
-			memoryUsed = (Integer) runtimeResult.get("memoryUsage");
-			runtimeResultSlug = getRuntimeResultSlug(exitCode, timeLimit, timeUsed, memoryLimit, memoryUsed);
+			usedTime = (Integer) runtimeResult.get("usedTime");
+			usedMemory = (Integer) runtimeResult.get("usedMemory");
+			runtimeResultSlug = getRuntimeResultSlug(exitCode, timeLimit, usedTime, memoryLimit, usedMemory);
 		} catch ( Exception ex ) {
-			ex.printStackTrace();
 			logger.catching(ex);
 		}
 
 		result.put("runtimeResult", runtimeResultSlug);
-		result.put("timeUsed", timeUsed);
-		result.put("memoryUsed", memoryUsed);
+		result.put("usedTime", usedTime);
+		result.put("usedMemory", usedMemory);
 		return result;
 	}
 	

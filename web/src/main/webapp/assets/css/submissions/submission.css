@@ -75,6 +75,10 @@ div#content div#main-content div.submission div.body div.section table td.flag-C
 	color: #49a932;
 }
 
+div#content div#main-content div.submission div.body div.section table td.flag-SE {
+	color: #34495e;
+}
+
 div#content div#main-content div.submission div.body div.section table tr > td:first-child {
 	font-weight: bold;
 }

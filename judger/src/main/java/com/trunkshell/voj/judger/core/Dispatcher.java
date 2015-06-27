@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.trunkshell.voj.judger.model.Checkpoint;
+
 import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -35,13 +36,19 @@ public class Dispatcher {
 	 * 每次只运行一个评测任务.
 	 * @param submissionId - 提交记录的唯一标识符
 	 * @throws IllgealSubmissionException
+	 * @throws InterruptedException 
 	 */
-	public void createNewTask(long submissionId) throws IllgealSubmissionException {
+	public void createNewTask(long submissionId) throws IllgealSubmissionException, InterruptedException {
 		synchronized(this) {
 			String baseDirectory = String.format("%s/voj-%s", new Object[] {workBaseDirectory, submissionId});
 			String baseFileName = RandomStringGenerator.getRandomString(12, RandomStringGenerator.Mode.ALPHA);
-			Submission submission = submissionMapper.getSubmission(submissionId);
-
+			
+			int tryTimes = 0;
+			Submission submission = null;
+			do {
+				Thread.sleep(1000);
+				submission = submissionMapper.getSubmission(submissionId);
+			} while ( submission == null && ++ tryTimes <= 3 );
 			if ( submission == null ) {
 				throw new IllgealSubmissionException(
 						String.format("Illegal submission #%s",
@@ -105,11 +112,13 @@ public class Dispatcher {
 	private void runProgram(Submission submission,
 							String workDirectory, String baseFileName) {
 		List<Map<String, Object>> runtimeResults = new ArrayList<Map<String, Object>>();
+		long submissionId = submission.getSubmissionId();
 		long problemId = submission.getProblem().getProblemId();
 
 		List<Checkpoint> checkpoints = checkpointMapper.getCheckpointsUsingProblemId(problemId);
 		for ( Checkpoint checkpoint : checkpoints ) {
 			int checkpointId = checkpoint.getCheckpointId();
+			int checkpointScore = checkpoint.getScore();
 			String inputFilePath = String.format("%s/%s/input#%s.txt",
 					new Object[] { checkpointDirectory, problemId, checkpointId });
 			String stdOutputFilePath = String.format("%s/%s/output#%s.txt",
@@ -119,10 +128,11 @@ public class Dispatcher {
 			Map<String, Object> runtimeResult = getRuntimeResult(
 					runner.getRuntimeResult(submission, workDirectory, baseFileName, inputFilePath, outputFilePath),
 					stdOutputFilePath, outputFilePath);
-			// ApplicationDispatcher
+			runtimeResult.put("score", checkpointScore);
 			runtimeResults.add(runtimeResult);
+			applicationDispatcher.onOneTestPointFinished(submissionId, checkpointId, runtimeResult);
 		}
-		// ApplicationDispatcher
+		applicationDispatcher.onAllTestPointsFinished(submissionId, runtimeResults);
 	}
 
 	/**
@@ -146,17 +156,17 @@ public class Dispatcher {
 	private Map<String, Object> getRuntimeResult(Map<String, Object> result,
 												 String standardOutputFilePath, String outputFilePath) {
 		String runtimeResultSlug = (String)result.get("runtimeResult");
-		int timeUsed = (Integer)result.get("timeUsed");
-		int memoryUsed = (Integer)result.get("memoryUsed");
+		int usedTime = (Integer)result.get("usedTime");
+		int usedMemory = (Integer)result.get("usedMemory");
 
 		if ( runtimeResultSlug.equals("AC") ) {
 			if ( !isOutputTheSame(standardOutputFilePath, outputFilePath) ) {
 				runtimeResultSlug = "WA";
-				result.put("runtimeResultSlug", runtimeResultSlug);
+				result.put("runtimeResult", runtimeResultSlug);
 			}
 		}
 		logger.info(String.format("RuntimeResult: [%s, Time: %d ms, Memory: %d KB]",
-				new Object[] { runtimeResultSlug, timeUsed, memoryUsed }));
+				new Object[] { runtimeResultSlug, usedTime, usedMemory }));
 
 		return result;
 	}

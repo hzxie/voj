@@ -70,6 +70,8 @@ JNIEXPORT jobject JNICALL Java_com_trunkshell_voj_judger_core_Runner_getRuntimeR
     std::string inputFilePath       = getStringValue(jniEnv, jInputFilePath);
     std::string outputFilePath      = getStringValue(jniEnv, jOutputFilePath);
 
+    std::cout << "Command Line: " << commandLine << std::endl;
+
     isNewProcessStarted             = static_cast<bool*>(mmap(NULL, 
                                                             sizeof *isNewProcessStarted, 
                                                             PROT_READ | PROT_WRITE, 
@@ -95,8 +97,8 @@ JNIEXPORT jobject JNICALL Java_com_trunkshell_voj_judger_core_Runner_getRuntimeR
     
     munmap(isNewProcessStarted, sizeof *isNewProcessStarted);
 
-    result.put("timeUsage", timeUsage);
-    result.put("memoryUsage", memoryUsage);
+    result.put("usedTime", timeUsage);
+    result.put("usedMemory", memoryUsage);
     result.put("exitCode", exitCode);
 
     return result.toJObject(jniEnv);
@@ -211,8 +213,7 @@ int getMaxMemoryUsage(pid_t pid, int memoryLimit) {
     int  maxMemoryUsage     = 0,
          currentMemoryUsage = 0;
     do {
-        while ( *isNewProcessStarted == 0 );
-        usleep(50000);
+        while ( *isNewProcessStarted == 0 ) { usleep(5000); }
         currentMemoryUsage = getCurrentMemoryUsage(pid);
         std::cout << "currentMemoryUsage: [PID #" << pid << "]" << currentMemoryUsage << std::endl;
         if ( currentMemoryUsage > maxMemoryUsage ) {
@@ -221,6 +222,7 @@ int getMaxMemoryUsage(pid_t pid, int memoryLimit) {
         if ( memoryLimit != 0 && currentMemoryUsage > memoryLimit ) {
             killProcess(pid);
         }
+        usleep(50000);
     } while ( currentMemoryUsage != 0 );
 
     return maxMemoryUsage;
@@ -242,7 +244,7 @@ int getCurrentMemoryUsage(pid_t pid) {
 
     if ( (fp = fopen( filePath, "r" )) != NULL ) {
         if ( fscanf(fp, "%*s%ld", &residentSetSize) == 1 ) {
-            currentMemoryUsage = (int)residentSetSize * (int)sysconf( _SC_PAGESIZE) >> 10;
+            currentMemoryUsage = (int)residentSetSize * (int)sysconf(_SC_PAGESIZE) >> 10;
             if ( currentMemoryUsage < 0 ) {
                 currentMemoryUsage = std::numeric_limits<int32_t>::max() >> 10;
             }
