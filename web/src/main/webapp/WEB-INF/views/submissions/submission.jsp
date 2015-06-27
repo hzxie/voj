@@ -58,42 +58,42 @@
                                 <table class="table">
                                     <tr>
                                         <td><spring:message code="voj.submissions.submission.judge-result" text="Judge Result" /></td>
-                                        <td class="flag-${submission.judgeResult.judgeResultSlug}">${submission.judgeResult.judgeResultName}</td>
+                                        <td id="judge-result" class="flag-${submission.judgeResult.judgeResultSlug}">${submission.judgeResult.judgeResultName}</td>
                                     </tr>
                                     <tr>
                                         <td><spring:message code="voj.submissions.submission.problem" text="Problem" /></td>
-                                        <td><a href="<c:url value="/p/${submission.problem.problemId}" />">P${submission.problem.problemId} ${submission.problem.problemName}</a></td>
+                                        <td id="problem-summery"><a href="<c:url value="/p/${submission.problem.problemId}" />">P${submission.problem.problemId} ${submission.problem.problemName}</a></td>
                                     </tr>
                                     <tr>
                                         <td><spring:message code="voj.submissions.submission.submit-time" text="Submit Time" /></td>
-                                        <td><fmt:formatDate value="${submission.submitTime}" type="both" dateStyle="default" timeStyle="default"/></td>
+                                        <td id="submit-time"><fmt:formatDate value="${submission.submitTime}" type="both" dateStyle="default" timeStyle="default"/></td>
                                     </tr>
                                     <tr>
                                         <td><spring:message code="voj.submissions.submission.language" text="Language" /></td>
-                                        <td>${submission.language.languageName}</td>
+                                        <td id="language-name">${submission.language.languageName}</td>
                                     </tr>
                                     <tr>
                                         <td><spring:message code="voj.submissions.submission.judger" text="Judger" /></td>
-                                        <td>Default Judger</td>
+                                        <td id="judger-name">Default Judger</td>
                                     </tr>
                                     <tr>
                                         <td><spring:message code="voj.submissions.submission.used-time" text="Used Time" /></td>
-                                        <td>${submission.usedTime} ms</td>
+                                        <td id="used-time">${submission.usedTime} ms</td>
                                     </tr>
                                     <tr>
                                         <td><spring:message code="voj.submissions.submission.used-memory" text="Used Memory" /></td>
-                                        <td>${submission.usedMemory} K</td>
+                                        <td id="used-memory">${submission.usedMemory} K</td>
                                     </tr>
                                     <tr>
                                         <td><spring:message code="voj.submissions.submission.execute-time" text="Execute Time" /></td>
-                                        <td><fmt:formatDate value="${submission.executeTime}" type="both" dateStyle="default" timeStyle="default"/></td>
+                                        <td id="execute-time"><fmt:formatDate value="${submission.executeTime}" type="both" dateStyle="default" timeStyle="default"/></td>
                                     </tr>
                                 </table>
                             </div> <!-- .description -->
                         </div> <!-- .section -->
                         <div class="section">
                             <h4><spring:message code="voj.submissions.submission.judge-result" text="Judge Result" /></h4>
-                            <div class="description markdown">${submission.judgeLog}</div> <!-- .description -->
+                            <div id="judge-log" class="description markdown">${submission.judgeLog}</div> <!-- .description -->
                         </div> <!-- .section -->
                         <c:if test="${submission.user == user}">
                         <div class="section">
@@ -144,67 +144,58 @@
     </script>
     <c:if test="${submission.judgeResult.judgeResultName == 'Pending'}">
     <script type="text/javascript">
-        $.when(
-            $.getScript('${cdnUrl}/js/sockjs-1.0.0.min.js'),
-            $.getScript('${cdnUrl}/js/stomp-2.3.4.min.js'),
-            $.Deferred(function(deferred){
-                $(deferred.resolve);
-            })
-        ).done(function(){
-            hasConntected   = false;
+        $.getScript('${cdnUrl}/js/date-${language}.min.js', function() {
+            var currentJudgeResult = 'Pending',
+                getterInterval     = setInterval(function() {
+                getRealTimeJudgeResult();
+                currentJudgeResult = $('#judge-result').html();
 
-            var socket      = new SockJS('<c:url value="/websocket" />'),
-                stompClient = Stomp.over(socket);
-
-            stompClient.connect({}, function(frame) {
-                hasConntected = true;
-                displayWebSocketConnectionStatus(true, hasConntected);
-
-                stompClient.send('/voj/authorization.action', {}, JSON.stringify({
-                    'key': 'csrfToken',
-                    'value': 'x${csrfToken}'
-                }));
-                
-                stompClient.subscribe('/user/message/authorization', function(message){
-                	console.log(message);
-                });
-
-                stompClient.subscribe('/voj/getRealTimeJudgeResult.action/${submission.submissionId}', function(message){
-                    console.log(message);
-                });
-            }, function() {
-                return displayWebSocketConnectionStatus(false, hasConntected);
-            });
+                if ( currentJudgeResult != 'Pending' ) {
+                    clearInterval(getterInterval);
+                }
+            }, 10000);
         });
     </script>
     <script type="text/javascript">
-        function displayWebSocketConnectionStatus(isConnected, hasConntected) {
-            var message     = '',
-                alertClass  = '';
+        function getRealTimeJudgeResult() {
+            var pageRequests = {
+                'submissionId': ${submission.submissionId}
+            };
 
-            if ( isConnected ) {
-                message     = '<i class="fa fa-smile-o"></i> <spring:message code="voj.submissions.submission.websocket-established" text="WebSocket connection has been established." />';
-                alertClass  = 'alert-success';
-            } else {
-                if ( hasConntected ) {
-                    message     = '<i class="fa fa-exclamation-circle"></i> <spring:message code="voj.submissions.submission.websocket-closed" text="WebSocket connection has been closed." />';
-                    alertClass  = 'alert-info';
-                } else {
-                    message     = '<i class="fa fa-frown-o"></i> <spring:message code="voj.submissions.submission.websocket-established-failed" text="Cannot establish WebSocket connection." />';
-                    alertClass  = 'alert-error';
+            $.ajax({
+            	type: 'GET',
+                url: '<c:url value="/submission/getSubmission.action" />',
+                data: pageRequests,
+                dataType: 'JSON',
+                success: function(result){
+                    console.log(result);
+                    if ( result['isSuccessful'] ) {
+                        if ( result['submission']['judgeResult']['judgeResultSlug'] != 'PD' ) {
+                            $('#judge-result').removeClass();
+                            $('#judge-result').addClass("flag-" + result['submission']['judgeResult']['judgeResultSlug'])
+                            $('#judge-result').html(result['submission']['judgeResult']['judgeResultName']);
+                            $('#used-time').html(result['submission']['usedTime'] + " ms");
+                            $('#used-memory').html(result['submission']['usedMemory'] + " KB");
+                            $('#execute-time').html(getFormatedDateString(result['submission']['executeTime'], '${language}'));
+                            $('#judge-log').html(converter.makeHtml(result['submission']['judgeLog'].replace(/\\\n/g, '\\n')));
+                        }
+                    }
                 }
+            });
+        }
+    </script>
+    <script type="text/javascript">
+        function getFormatedDateString(dateTime, locale) {
+            var dateObject = new Date(dateTime),
+                dateString = dateObject.toString();
+
+            if ( locale == 'en_US' ) {
+                dateString = dateObject.toString('MMM d, yyyy h:mm:ss tt');
+            } else if ( locale == 'zh_CN' ) {
+                dateString = dateObject.toString('yyyy-M-dd HH:mm:ss');
             }
 
-            $('#websocket-status').html(message);
-            $("#websocket-status").removeClass (function (index, css) {
-                return (css.match (/(^|\s)alert\-\S+/g) || []).join(' ');
-            });
-            $('#websocket-status').addClass(alertClass);
-            $('#websocket-status').fadeIn();
-
-            setTimeout(function() {
-                $('#websocket-status').fadeOut();
-            }, 5000);
+            return dateString;
         }
     </script>
     </c:if>

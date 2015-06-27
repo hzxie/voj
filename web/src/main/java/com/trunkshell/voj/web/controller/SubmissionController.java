@@ -51,7 +51,7 @@ public class SubmissionController {
 	 * @return 一个包含提交记录列表的HashMap对象
 	 */
 	@RequestMapping(value = "/getSubmissions.action", method = RequestMethod.GET)
-	public @ResponseBody Map<String, Object> getSubmissionAction(
+	public @ResponseBody Map<String, Object> getSubmissionsAction(
 			@RequestParam(value="startIndex", required=true) long startIndex,
 			HttpServletRequest request) {
 		Map<String, Object> result = new HashMap<String, Object>(3, 1);
@@ -101,6 +101,25 @@ public class SubmissionController {
 		view.addObject("submission", submission);
 		view.addObject("csrfToken", CsrfProtector.getCsrfToken(request.getSession()));
 		return view;
+	}
+	
+	/**
+	 * 获取提交记录的详细信息.
+	 * @param submissionId - 提交记录的唯一标识符
+	 * @param request - HttpRequest对象
+	 * @return 包含提交记录详细信息的HashMap对象
+	 */
+	@RequestMapping(value = "/getSubmission.action", method = RequestMethod.GET)
+	public @ResponseBody Map<String, Object> getSubmissionAction(
+			@RequestParam(value="submissionId", required = true) long submissionId,
+			HttpServletRequest request) {
+		Map<String, Object> result = new HashMap<String, Object>(3, 1);
+
+		Submission submission = submissionService.getSubmission(submissionId);
+		result.put("isSuccessful", submission != null);
+		result.put("submission", submission);
+		
+		return result;
 	}
 	
 	/**
