@@ -77,7 +77,10 @@ JNIEXPORT jobject JNICALL Java_com_trunkshell_voj_judger_core_Runner_getRuntimeR
     if ( !createProcess(commandLine, username, password, hToken, lpEnvironment, startupInfo, processInfo) ) {
         throwStringException(jniEnv, getErrorMessage("CreateProcess"));
     }
+
     exitCode = runProcess(processInfo, timeLimit, memoryLimit, timeUsage, memoryUsage);
+    CloseHandle(hInput);
+    CloseHandle(hOutput);
 
     result.put("usedTime", timeUsage);
     result.put("usedMemory", memoryUsage);

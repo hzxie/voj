@@ -2,7 +2,6 @@ package com.trunkshell.voj.judger.core;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.PrintWriter;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -46,9 +45,9 @@ public class Preprocessor {
 		String codeFilePath = String.format("%s/%s.%s", 
 				new Object[] {workDirectory, baseFileName, getCodeFileSuffix(language)});
 		
-		PrintWriter writer = new PrintWriter(codeFilePath, "UTF-8");
-		writer.print(code);
-		writer.close();
+		FileOutputStream outputStream = new FileOutputStream(new File(codeFilePath));
+		IOUtils.write(code, outputStream);
+		IOUtils.closeQuietly(outputStream);
 	}
 	
 	/**
@@ -107,6 +106,7 @@ public class Preprocessor {
 				FileOutputStream outputStream = new FileOutputStream(new File(filePath));
 				String input = checkpoint.getInput();
 				IOUtils.write(input, outputStream);
+				IOUtils.closeQuietly(outputStream);
 			}
 			{ // Standard Output File
 				String filePath = String.format("%s/output#%s.txt", 
@@ -114,6 +114,7 @@ public class Preprocessor {
 				FileOutputStream outputStream = new FileOutputStream(new File(filePath));
 				String output = checkpoint.getOutput();
 				IOUtils.write(output, outputStream);
+				IOUtils.closeQuietly(outputStream);
 			}
 		}
 	}
