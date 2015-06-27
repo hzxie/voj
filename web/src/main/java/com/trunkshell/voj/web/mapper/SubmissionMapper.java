@@ -31,7 +31,7 @@ public interface SubmissionMapper {
 	 * @return 一个评测记录对象
 	 */
 	@Select("SELECT * FROM voj_submissions WHERE submission_id = #{submissionId}")
-	@Options(useCache = true)
+	@Options(useCache = false)
 	@Results({
 		@Result(property = "submissionId", column = "submission_id"),
 		@Result(property = "problem", column = "problem_id", javaType=Problem.class, one = @One(select="com.trunkshell.voj.web.mapper.ProblemMapper.getProblem")),

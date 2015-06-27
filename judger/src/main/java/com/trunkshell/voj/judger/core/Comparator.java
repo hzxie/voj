@@ -29,8 +29,11 @@ public class Comparator {
 
 		LineIterator stdFileItr = FileUtils.lineIterator(stdFile, "UTF-8");
 		LineIterator fileItr = FileUtils.lineIterator(file, "UTF-8");
+		boolean isFileOutputTheSame = isFileOutputTheSame(stdFileItr, fileItr);
 		
-		return isFileOutputTheSame(stdFileItr, fileItr);
+		LineIterator.closeQuietly(stdFileItr);
+		LineIterator.closeQuietly(fileItr);
+		return isFileOutputTheSame;
 	}
 	
 	/**
@@ -62,12 +65,8 @@ public class Comparator {
 				}
 			}
 		} catch ( OutOfMemoryError ex ) {
-			ex.printStackTrace();
 			logger.catching(ex);
 			return false;
-		} finally {
-			LineIterator.closeQuietly(stdFileItr);
-			LineIterator.closeQuietly(fileItr);
 		}
 		return true;
 	}

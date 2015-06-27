@@ -65,6 +65,10 @@ div#content div#main-content div#submission table td.flag-CE > a {
 	color: #49a932;
 }
 
+div#content div#main-content div#submission table td.flag-SE > a {
+	color: #34495e;
+}
+
 div#content div#main-content div#submission div#more-submissions {
 	background-color: #f9f9f9;
 	border-bottom: 5px solid #1abc9c;
