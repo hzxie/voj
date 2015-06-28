@@ -30,16 +30,14 @@ function closeDrawerMenu() {
 /* Display the avatar of the user in DrawerMenu */
 $(function() {
     var imageObject       = $('img', '#drawer-nav #profile'),
-        email             = $('p.email', '#drawer-nav #profile').html(),
-        hashCode          = md5(email),
-        gravatarSeriveUrl = 'https://secure.gravatar.com/';
+        email             = $('p.email', '#drawer-nav #profile').html();
     
     if ( typeof(email) == 'undefined' ) {
         return;
     }
     $.ajax({
         type: 'GET',
-        url: gravatarSeriveUrl + hashCode + '.json',
+        url: 'https://secure.gravatar.com/' + md5(email) + '.json',
         dataType: 'jsonp',
         success: function(result){
             if ( result != null ) {

@@ -122,10 +122,10 @@ public class Runner {
 			// Output will be compared in next stage
 			return "AC";
 		}
-		if ( timeUsed > timeLimit ) {
+		if ( timeUsed >= timeLimit ) {
 			return "TLE";
 		}
-		if ( memoryUsed > memoryLimit ) {
+		if ( memoryUsed >= memoryLimit ) {
 			return "MLE";
 		}
 		return "RE";
