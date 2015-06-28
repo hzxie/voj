@@ -43,8 +43,10 @@ public class DefaultController {
 	 */
 	@RequestMapping(value = "/worldwide", method = RequestMethod.GET)
 	public ModelAndView worldwideView(
+			@RequestParam(value="forward", required=false, defaultValue="") String forwardUrl,
 			HttpServletRequest request, HttpServletResponse response) {
 		ModelAndView view = new ModelAndView("misc/worldwide");
+		view.addObject("forwardUrl", forwardUrl);
 		return view;
 	}
 

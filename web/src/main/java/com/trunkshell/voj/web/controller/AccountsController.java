@@ -182,6 +182,13 @@ public class AccountsController {
 		return result;
 	}
 	
+	@RequestMapping(value = "/dashboard", method = RequestMethod.GET)
+	public ModelAndView dashboardView(
+			HttpServletRequest request, HttpServletResponse response) {
+		ModelAndView view = new ModelAndView("accounts/dashboard");
+		return view;
+	}
+	
 	/**
 	 * 自动注入的UserService对象.
 	 */

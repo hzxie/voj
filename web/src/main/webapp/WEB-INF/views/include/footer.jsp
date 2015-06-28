@@ -12,7 +12,7 @@
                 <li><a href="<c:url value="/help" />"><spring:message code="voj.include.footer.help" text="Help" /></a></li>
                 <li><a href="<c:url value="/about" />"><spring:message code="voj.include.footer.about-us" text="About Us" /></a></li>
                 <li>
-                    <a href="<c:url value="/worldwide" />">
+                    <a href="<c:url value="/worldwide?forward=" />${requestScope['javax.servlet.forward.request_uri']}">
                         <i class="fa fa-globe"></i>
                         <span id="current-language">${language}</span>
                     </a>
