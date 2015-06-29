@@ -5,6 +5,28 @@ html, body {
 	padding: 0;
 }
 
+.pace {
+	-webkit-pointer-events: none;
+	pointer-events: none;
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	user-select: none;
+}
+
+.pace-inactive {
+	display: none;
+}
+
+.pace .pace-progress {
+	background: #d6d6d6;
+	position: fixed;
+	z-index: 2000;
+	top: 0;
+	right: 100%;
+	width: 100%;
+	height: 3px;
+}
+
 div#wrapper div#sidebar {
 	background-color: #303641;
 	border-color: #000;
@@ -138,6 +160,39 @@ div#wrapper div#container div#header ul.nav a {
 
 div#wrapper div#container div#header ul.nav a:hover {
 	background-color: #16a085;
+}
+
+div#wrapper div#container div#header ul.dropdown-menu {
+	background-color: #fff;
+	border: 1px solid #ccc;
+	border: 1px solid rgba(0,0,0,.15);
+	color: #000;
+	margin: 12px 0 0;
+	padding: 5px 0;
+	-webkit-border-radius: 0;
+	   -moz-border-radius: 0;
+	        border-radius: 0;
+	-webkit-box-shadow: 0 6px 12px rgba(0,0,0,.175);
+	   -moz-box-shadow: 0 6px 12px rgba(0,0,0,.175);
+	        box-shadow: 0 6px 12px rgba(0,0,0,.175);
+}
+
+div#wrapper div#container div#header ul.dropdown-menu li { 
+	margin-left: 0;
+}
+
+div#wrapper div#container div#header ul.dropdown-menu a {
+	background-color: #fff;
+	color: #000;
+	display: block;
+	padding: 5px 0 5px 15px;
+	-webkit-border-radius: 0;
+	   -moz-border-radius: 0;
+	        border-radius: 0;
+}
+
+div#wrapper div#container div#header ul.dropdown-menu a:hover {
+	background-color: #f8f8f8;
 }
 
 div#wrapper div#container div#content {

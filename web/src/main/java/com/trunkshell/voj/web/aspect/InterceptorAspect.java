@@ -21,9 +21,11 @@ import com.trunkshell.voj.web.service.UserService;
 @Aspect
 public class InterceptorAspect {
 	/**
+	 * 控制板视图的切面.
+	 * 用于检查用户是否有权限加载控制板视图.
 	 * @param proceedingJoinPoint - ProceedingJoinPoint对象
 	 * @param request - HttpRequest对象
-	 * @return
+	 * @return 一个包含预期试图的ModelAndView对象
 	 * @throws Throwable 
 	 */
 	@Around(value = "execution(* com.trunkshell.voj.web.controller.AccountsController.dashboardView(..)) && args(request, ..)")
@@ -55,7 +57,7 @@ public class InterceptorAspect {
 		HttpSession session = request.getSession();
 		
 		if ( !isAllowToAccess(session, new String[] { "administrators" }) ) {
-			view = new ModelAndView("redirect:/accounts/login");
+			view = new ModelAndView("redirect:/accounts/dashboard");
 			return view;
 		}
 		view = (ModelAndView) proceedingJoinPoint.proceed();
