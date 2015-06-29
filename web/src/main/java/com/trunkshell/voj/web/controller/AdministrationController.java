@@ -1,5 +1,7 @@
 package com.trunkshell.voj.web.controller;
 
+import java.lang.reflect.Method;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
@@ -8,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
 
 import com.trunkshell.voj.web.model.User;
@@ -31,6 +34,14 @@ public class AdministrationController {
 	public ModelAndView indexView(
 			HttpServletResponse response, HttpServletRequest request) {
 		ModelAndView view = new ModelAndView("administration/index");
+		view.addObject("user", getAdministratorProfile(request.getSession()));
+		return view;
+	}
+	
+	@RequestMapping(value = "/all-users", method = RequestMethod.GET)
+	public ModelAndView allUsersView(
+			HttpServletResponse response, HttpServletRequest request) {
+		ModelAndView view = new ModelAndView("administration/all-users");
 		view.addObject("user", getAdministratorProfile(request.getSession()));
 		return view;
 	}

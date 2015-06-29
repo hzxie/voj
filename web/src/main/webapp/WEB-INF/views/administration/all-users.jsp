@@ -6,7 +6,7 @@
 <html lang="${language}">
 <head>
     <meta charset="UTF-8">
-    <title><spring:message code="voj.administration.index.title" text="System Administration" /> | Verwandlung Online Judge</title>
+    <title><spring:message code="voj.administration.all-users.title" text="Users" /> | Verwandlung Online Judge</title>
     <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="author" content="谢浩哲">
@@ -18,7 +18,7 @@
     <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/flat-ui.min.css" />
     <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/font-awesome.min.css" />
     <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/administration/style.css" />
-    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/administration/dashboard.css" />
+    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/administration/all-users.css" />
     <!-- JavaScript -->
     <script type="text/javascript" src="${cdnUrl}/js/jquery-1.11.1.min.js"></script>
     <script type="text/javascript" src="${cdnUrl}/js/bootstrap.min.js"></script>
@@ -45,7 +45,7 @@
             <%@ include file="/WEB-INF/views/administration/include/header.jsp" %>
             <!-- Content -->
             <div id="content">
-                Dashboard
+                All Users
             </div> <!-- #content -->
         </div> <!-- #container -->
     </div> <!-- #wrapper -->
