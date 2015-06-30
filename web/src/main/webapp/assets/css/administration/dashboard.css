@@ -1,0 +1,97 @@
+div#content div.widget div.glance {
+	margin-bottom: 15px;
+}
+
+div#content div.widget i.fa {
+	font-size: 48px;
+}
+
+div#content div.widget span.text-uppercase {
+	text-transform: uppercase;
+}
+
+div#content div.widget h2,
+div#content div.widget h4 {
+	margin: 0;
+	line-height: 125%;
+}
+
+div#content div.widget div.border-right {
+	border-right: 1px solid #fff;
+}
+
+div#content div.widget a.more {
+	background-color: #111;
+	border: 1px solid #111;
+	border-left: none !important;
+	color: #fff;
+	display: block;
+	margin: 0 0 10px -15px;
+	padding: 5px 10px 5px 10px;
+	position: relative;
+	text-decoration: none;
+	width: 75%;
+}
+
+div#content div.widget a.more:hover {
+	background-color: #fff;
+	color: #111;
+}
+
+div#content div.widget a.more i.fa {
+	position: absolute;
+	right: 10px;
+	font-size: 16px;
+}
+
+div#content div#overview {
+	margin-bottom: 20px;
+}
+
+div#content div#overview-users.widget {
+	background-color: #3498db;
+	padding: 15px;
+	color: #fff;
+}
+
+div#content div#overview-problems.widget {
+	background-color: #2ecc71;
+	padding: 15px;
+	color: #fff;
+}
+
+div#content div#overview-contests.widget {
+	background-color: #f22613;
+	padding: 15px;
+	color: #fff;
+}
+
+div#content div#overview-submissions.widget {
+	background-color: #303641;
+	padding: 15px;
+	color: #fff;
+}
+
+/* Smaller than standard 960 (devices and browsers) */
+@media only screen and (max-width: 959px) {
+}
+
+/* Tablet Portrait size to standard 960 (devices and browsers) */
+@media only screen and (min-width: 768px) and (max-width: 959px) {
+}
+
+/* All Mobile Sizes (devices and browser) */
+@media only screen and (max-width: 767px) {
+	div#content div.widget {
+		margin-bottom: 10px;
+		text-align: center;
+	}
+}
+
+/* Mobile Landscape Size to Tablet Portrait (devices and browsers) */
+@media only screen and (min-width: 480px) and (max-width: 767px) {
+}
+
+/* Mobile Portrait Size to Mobile Landscape Size (devices and browsers) */
+@media only screen and (max-width: 479px) {
+}

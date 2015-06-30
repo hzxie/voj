@@ -198,7 +198,11 @@ div#wrapper div#container div#header ul.dropdown-menu a:hover {
 div#wrapper div#container div#content {
 	margin-left: 250px;
 	margin-top: 40px;
-	padding: 20px 15px;
+	padding: 5px 15px;
+}
+
+div#wrapper div#container div#content h2.page-header {
+	margin: 12px 0 20px;
 }
 
 /* Smaller than standard 960 (devices and browsers) */

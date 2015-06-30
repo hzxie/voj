@@ -51,7 +51,6 @@
     </div> <!-- #wrapper -->
     <!-- Java Script -->
     <!-- Placed at the end of the document so the pages load faster -->
-    <script type="text/javascript" src="${cdnUrl}/js/site.js"></script>
     <%@ include file="/WEB-INF/views/administration/include/footer-script.jsp" %>
 </body>
 </html>
