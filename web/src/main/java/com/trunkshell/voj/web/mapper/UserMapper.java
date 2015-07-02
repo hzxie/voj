@@ -17,11 +17,8 @@ import com.trunkshell.voj.web.model.UserGroup;
 
 /**
  * User Data Access Object.
+ * 
  * @author Xie Haozhe
- */
-/**
- * @author xiehaozhe
- *
  */
 @CacheNamespace(implementation = org.mybatis.caches.ehcache.EhcacheCache.class)
 public interface UserMapper {
@@ -31,6 +28,7 @@ public interface UserMapper {
 	 * @return 系统中注册用户的总数
 	 */
 	@Select("SELECT COUNT(*) FROM voj_users")
+	@Options(useCache = true)
 	public long getNumberOfUsers();
 	
 	/**
@@ -39,6 +37,7 @@ public interface UserMapper {
 	 * @return 预期的用户对象或空引用
 	 */
 	@Select("SELECT * FROM voj_users WHERE uid = #{uid}")
+	@Options(useCache = true)
 	@Results(value = {
 		@Result(property = "userGroup", column = "user_group_id", javaType=UserGroup.class, one = @One(select="com.trunkshell.voj.web.mapper.UserGroupMapper.getUserGroupUsingId")),
 		@Result(property = "preferLanguage", column = "prefer_language_id", javaType=Language.class, one = @One(select="com.trunkshell.voj.web.mapper.LanguageMapper.getLanguageUsingId"))
@@ -51,6 +50,7 @@ public interface UserMapper {
 	 * @return 预期的用户对象或空引用
 	 */
 	@Select("SELECT * FROM voj_users WHERE username = #{username}")
+	@Options(useCache = true)
 	@Results(value = {
 		@Result(property = "userGroup", column = "user_group_id", javaType=UserGroup.class, one = @One(select="com.trunkshell.voj.web.mapper.UserGroupMapper.getUserGroupUsingId")),
 		@Result(property = "preferLanguage", column = "prefer_language_id", javaType=Language.class, one = @One(select="com.trunkshell.voj.web.mapper.LanguageMapper.getLanguageUsingId"))
@@ -63,6 +63,7 @@ public interface UserMapper {
 	 * @return 预期的用户对象或空引用
 	 */
 	@Select("SELECT * FROM voj_users WHERE email = #{email}")
+	@Options(useCache = true)
 	@Results(value = {
 		@Result(property = "userGroup", column = "user_group_id", javaType=UserGroup.class, one = @One(select="com.trunkshell.voj.web.mapper.UserGroupMapper.getUserGroupUsingId")),
 		@Result(property = "preferLanguage", column = "prefer_language_id", javaType=Language.class, one = @One(select="com.trunkshell.voj.web.mapper.LanguageMapper.getLanguageUsingId"))

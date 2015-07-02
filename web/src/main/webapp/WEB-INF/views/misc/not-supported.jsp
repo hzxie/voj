@@ -7,7 +7,7 @@
 <html lang="${language}">
 <head>
     <meta charset="UTF-8">
-    <title><spring:message code="voj.misc.not-supported.title" text="Browser no longer supported" /> | Verwandlung Online Judge</title>
+    <title><spring:message code="voj.misc.not-supported.title" text="Browser no longer supported" /> | ${WebsiteName}</title>
     <meta name="robots" content="noindex">
     <meta name="author" content="谢浩哲">
     <!-- Icon -->
@@ -84,5 +84,8 @@
         </tbody>
     </table>
     <div class="footer">&copy;<%= new java.text.SimpleDateFormat("yyyy").format(new java.util.Date()) %> <a href="http://zjhzxhz.com/" target="_blank">Trunk Shell</a></div>
+    <c:if test="${GoogleAnalyticsCode != ''}">
+    <script type="text/javascript">${GoogleAnalyticsCode}</script>
+    </c:if>
 </body>
 </html>

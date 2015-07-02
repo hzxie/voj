@@ -23,9 +23,6 @@
 	<listener>
 		<listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
 	</listener>
-	<listener>
-		<listener-class>com.trunkshell.voj.web.util.SessionListener</listener-class>
-	</listener>
 	
 	<!-- Druid -->
 	<servlet>
