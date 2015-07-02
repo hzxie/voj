@@ -26,15 +26,40 @@ public class MessageReceiver implements MessageListener {
 			final MapMessage mapMessage = (MapMessage) message;
 			
 			try {
-				long submissionId = (Long)mapMessage.getObject("submissionId");
-				logger.info(String.format("Received new submission task #%s", 
-								new Object[] {submissionId}));
+				String event = (String)mapMessage.getObject("event");
 				
-				dispatcher.onSubmissionCreated(submissionId);
+				if ( event.equals("SubmissionCreated") ) {
+					newSubmissionHandler(mapMessage);
+				} else if ( event.equals("WhoAreYou") ) {
+					getIdentityHandler();
+				} else {
+					logger.warn(String.format("Unknown Event Received. [Event = %s]", 
+							new Object[] { event }));
+				}
 			} catch (JMSException ex) {
 				logger.catching(ex);
 			}
 		}
+	}
+	
+	/**
+	 * 处理新提交请求.
+	 * @param mapMessage - 消息队列中收到的MapMessage对象
+	 * @throws JMSException
+	 */
+	private void newSubmissionHandler(MapMessage mapMessage) throws JMSException {
+		long submissionId = (Long)mapMessage.getObject("submissionId");
+		logger.info(String.format("Received new submission task #%s", 
+						new Object[] {submissionId}));
+		
+		dispatcher.onSubmissionCreated(submissionId);
+	}
+	
+	/**
+	 * 获取评测机的身份信息.
+	 */
+	private void getIdentityHandler() {
+		
 	}
 	
 	/**

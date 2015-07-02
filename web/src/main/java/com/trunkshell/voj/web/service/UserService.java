@@ -63,7 +63,8 @@ public class UserService {
 
 		if ( !result.get("isUsernameEmpty") && !result.get("isPasswordEmpty") ) {
 			User user = getUserUsingUsernameOrEmail(username);
-			if ( user != null && user.getPassword().equals(password) ) {
+			if ( user != null && user.getPassword().equals(password) && 
+				!user.getUserGroup().getUserGroupSlug().equals("judgers") ) {
 				result.put("isAccountValid", true);
 				result.put("isSuccessful", true);
 			}
@@ -78,15 +79,16 @@ public class UserService {
 	 * @param email - 电子邮件地址
 	 * @param languageSlug - 偏好语言的唯一英文缩写
 	 * @param isCsrfTokenValid - CSRF的Token是否正确
+	 * @param isAllowRegister - 系统是否允许注册新用户
 	 * @return 一个包含账户创建结果的Map<String, Boolean>对象
 	 */
-	public Map<String, Boolean> createUser(String username, String password, 
-			String email, String languageSlug, boolean isCsrfTokenValid) {
+	public Map<String, Boolean> createUser(String username, String password, String email, 
+			String languageSlug, boolean isCsrfTokenValid, boolean isAllowRegister) {
 		UserGroup userGroup = getUserGroup("users");
 		Language languagePreference = languageMapper.getLanguageUsingSlug(languageSlug);
 		User user = new User(username, DigestUtils.md5Hex(password), email, userGroup, languagePreference);
 		
-		Map<String, Boolean> result = getUserCreationResult(user, password, isCsrfTokenValid);
+		Map<String, Boolean> result = getUserCreationResult(user, password, isCsrfTokenValid, isAllowRegister);
 		if ( result.get("isSuccessful") ) {
 			userMapper.createUser(user);
 		}
@@ -98,9 +100,11 @@ public class UserService {
 	 * @param user - 待创建的User对象
 	 * @param password - 密码(未使用MD5加密)
 	 * @param isCsrfTokenValid - CSRF的Token是否正确
+	 * @param isAllowRegister - 系统是否允许注册新用户
 	 * @return 一个包含账户信息验证结果的Map<String, Boolean>对象
 	 */
-	private Map<String, Boolean> getUserCreationResult(User user, String password, boolean isCsrfTokenValid) {
+	private Map<String, Boolean> getUserCreationResult(User user, String password, 
+			boolean isCsrfTokenValid, boolean isAllowRegister) {
 		Map<String, Boolean> result = new HashMap<String, Boolean>();
 		result.put("isUsernameEmpty", user.getUsername().isEmpty());
 		result.put("isUsernameLegal", isUsernameLegal(user.getUsername()));
@@ -112,12 +116,14 @@ public class UserService {
 		result.put("isEmailExists", isEmailExists(user.getEmail()));
 		result.put("isLanguageLegal", user.getPreferLanguage() != null);
 		result.put("isCsrfTokenValid", isCsrfTokenValid);
+		result.put("isAllowRegister", isAllowRegister);
 		
-		boolean isSuccessful = !result.get("isUsernameEmpty")  &&  result.get("isUsernameLegal") &&
-							   !result.get("isUsernameExists") && !result.get("isPasswordEmpty") &&
-							    result.get("isPasswordLegal")  && !result.get("isEmailEmpty")    &&
-							    result.get("isEmailLegal")     && !result.get("isEmailExists")   &&
-							    result.get("isLanguageLegal")  &&  result.get("isCsrfTokenValid");
+		boolean isSuccessful = !result.get("isUsernameEmpty")  &&  result.get("isUsernameLegal")  &&
+							   !result.get("isUsernameExists") && !result.get("isPasswordEmpty")  &&
+							    result.get("isPasswordLegal")  && !result.get("isEmailEmpty")     &&
+							    result.get("isEmailLegal")     && !result.get("isEmailExists")    &&
+							    result.get("isLanguageLegal")  &&  result.get("isCsrfTokenValid") &&
+							    result.get("isAllowRegister");
 		result.put("isSuccessful", isSuccessful);
 		return result;
 	}
