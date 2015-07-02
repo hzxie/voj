@@ -1,6 +1,9 @@
 package com.trunkshell.voj.web.aspect;
 
+import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -12,7 +15,9 @@ import org.aspectj.lang.annotation.Aspect;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.servlet.ModelAndView;
 
+import com.trunkshell.voj.web.model.Option;
 import com.trunkshell.voj.web.model.User;
+import com.trunkshell.voj.web.service.OptionService;
 import com.trunkshell.voj.web.service.SubmissionService;
 import com.trunkshell.voj.web.service.UserService;
 import com.trunkshell.voj.web.util.LocaleUtils;
@@ -39,6 +44,7 @@ public class ViewAspect {
 		HttpSession session = request.getSession();
 		
 		view = (ModelAndView) proceedingJoinPoint.proceed();
+		view.addAllObjects(getSystemOptions());
 		view.addObject("language", getUserLanguage(request, response));
 		
 		boolean isLoggedIn = isLoggedIn(session);
@@ -64,6 +70,22 @@ public class ViewAspect {
 			return false;
 		}
 		return true;
+	}
+	
+	/**
+	 * 加载系统定义的选项(Option).
+	 * @return 包含系统定义选项的键值对列表
+	 */
+	private Map<String, String> getSystemOptions() {
+		List<Option> options = optionService.getAutoloadOptions();
+		Map<String, String> optionMap = new HashMap<String, String>();
+		
+		for ( Option option : options  ) {
+			String key = option.getOptionName();
+			String value = option.getOptionValue();
+			optionMap.put(key, value);
+		}
+		return optionMap;
 	}
 	
 	/**
@@ -125,4 +147,10 @@ public class ViewAspect {
 	 */
 	@Autowired
 	private SubmissionService submissionService;
+	
+	/**
+	 * 自动注入的OptionService对象.
+	 */
+	@Autowired
+	private OptionService optionService;
 }

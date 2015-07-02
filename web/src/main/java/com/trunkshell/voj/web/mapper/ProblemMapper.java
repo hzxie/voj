@@ -117,7 +117,7 @@ public interface ProblemMapper {
 	 */
 	@Delete("DELETE FROM voj_problems WHERE problem_id = #{problemId}")
 	@Options(flushCache = true)
-	public void deleteProblem(long problemId);
+	public void deleteProblem(@Param("problemId") long problemId);
 
 	/**
 	 * 获取试题提交总次数的SQL子查询语句. 

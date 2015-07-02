@@ -3,7 +3,7 @@
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: Jul 02, 2015 at 05:49 上午
+-- Generation Time: Jul 02, 2015 at 07:12 上午
 -- Server version: 5.6.24
 -- PHP Version: 5.6.8
 
@@ -181,10 +181,10 @@ CREATE TABLE IF NOT EXISTS `voj_options` (
 INSERT INTO `voj_options` (`option_id`, `option_name`, `option_value`, `is_autoload`) VALUES
 (1, 'WebsiteName', 'Verwandlung Online Judge', 1),
 (2, 'Description', 'Verwandlung Online Judge is a cross-platform online judge system based on Spring MVC Framework.', 1),
-(3, 'Copyright', 'Copyright&copy; 2005-%year% <a href="http://zjhzxhz.com" target="_blank">Trunk Shell</a>. All rights reserved.', 1),
-(4, 'InternalUsage', '0', 1),
-(5, 'GoogleAnalyticsCode', '', 1),
-(6, 'IcpNumber', '', 1);
+(3, 'Copyright', '<a href="http://zjhzxhz.com/" target="_blank">Trunk Shell</a>', 1),
+(4, 'GoogleAnalyticsCode', '', 1),
+(5, 'IcpNumber', '', 1),
+(6, 'AllowUserRegister', '0', 0);
 
 -- --------------------------------------------------------
 
@@ -444,7 +444,8 @@ ALTER TABLE `voj_languages`
 -- Indexes for table `voj_options`
 --
 ALTER TABLE `voj_options`
-  ADD PRIMARY KEY (`option_id`);
+  ADD PRIMARY KEY (`option_id`),
+  ADD UNIQUE(`option_name`);
 
 --
 -- Indexes for table `voj_problems`

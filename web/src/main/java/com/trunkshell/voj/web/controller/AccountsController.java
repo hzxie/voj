@@ -20,6 +20,7 @@ import org.springframework.web.servlet.ModelAndView;
 import com.trunkshell.voj.web.model.Language;
 import com.trunkshell.voj.web.model.User;
 import com.trunkshell.voj.web.service.LanguageService;
+import com.trunkshell.voj.web.service.OptionService;
 import com.trunkshell.voj.web.service.UserService;
 import com.trunkshell.voj.web.util.CsrfProtector;
 import com.trunkshell.voj.web.util.HttpRequestParser;
@@ -206,6 +207,12 @@ public class AccountsController {
 	 */
 	@Autowired
 	private LanguageService languageService;
+	
+	/**
+	 * 自动注入的OptionService对象.
+	 */
+	@Autowired
+	private OptionService optionService;
 	
 	/**
 	 * 日志记录器.

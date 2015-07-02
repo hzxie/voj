@@ -19,8 +19,9 @@
                 </li>
             </ul>
             <p id="copyright">
-                <spring:message code="voj.include.footer.copyright" text="Copyright" />&copy; 2005-<%= new java.text.SimpleDateFormat("yyyy").format(new java.util.Date()) %> <a href="http://zjhzxhz.com/" target="_blank">Trunk Shell</a>. 
+                <spring:message code="voj.include.footer.copyright" text="Copyright" />&copy; <%= new java.text.SimpleDateFormat("yyyy").format(new java.util.Date()) %> ${Copyright}. 
                 <spring:message code="voj.include.footer.all-rights-reserved" text="All rights reserved." />
+                ${IcpNumber}
             </p>
             <p>
                 <button class="btn-github" onclick="window.location.href='https://github.com/zjhzxhz/voj/'">

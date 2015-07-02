@@ -3,16 +3,10 @@ package com.trunkshell.voj.web.controller;
 import java.util.Calendar;
 import java.util.Date;
 
-import javax.jms.Connection;
-import javax.jms.ConnectionFactory;
-import javax.management.MalformedObjectNameException;
-import javax.management.ObjectName;
-import javax.management.remote.JMXConnector;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
-import org.apache.activemq.spring.ActiveMQConnectionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -20,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.servlet.ModelAndView;
 
 import com.trunkshell.voj.web.model.User;
+import com.trunkshell.voj.web.service.OptionService;
 import com.trunkshell.voj.web.service.ProblemService;
 import com.trunkshell.voj.web.service.SubmissionService;
 import com.trunkshell.voj.web.service.UserService;
@@ -182,6 +177,12 @@ public class AdministrationController {
 	@Autowired
 	private SubmissionService submissionService;
 
+	/**
+	 * 自动注入的OptionService对象.
+	 */
+	@Autowired
+	private OptionService optionService;
+	
 	/**
 	 * 产品版本信息.
 	 */
