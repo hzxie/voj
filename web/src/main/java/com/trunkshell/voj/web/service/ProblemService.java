@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.trunkshell.voj.web.mapper.CheckpointMapper;
 import com.trunkshell.voj.web.mapper.ProblemMapper;
 import com.trunkshell.voj.web.model.Problem;
 
@@ -37,10 +38,32 @@ public class ProblemService {
 	
 	/**
 	 * 获取试题的总数量.
+	 * @param isPublic - 试题是否公开
 	 * @return 试题的总数量
+	 */
+	public long getNumberOfProblems(boolean isPublic) {
+		if ( isPublic ) {
+			return problemMapper.getNumberOfPublicProblems();
+		}
+		return problemMapper.getNumberOfPrivateProblems();
+	}
+	
+	/**
+	 * [此方法仅供管理员使用]
+	 * 获取全部试题的总数量.
+	 * @return 全部试题的总数量
 	 */
 	public long getNumberOfProblems() {
 		return problemMapper.getNumberOfProblems();
+	}
+	
+	/**
+	 * [此方法仅供管理员使用]
+	 * 获取系统中全部试题测试点的数量(包括私有试题).
+	 * @return 系统中全部试题测试点的数量
+	 */
+	public long getNumberOfCheckpoints() {
+		return checkpointMapper.getNumberOfCheckpoints();
 	}
 	
 	/**
@@ -48,4 +71,10 @@ public class ProblemService {
      */
     @Autowired
     private ProblemMapper problemMapper;
+    
+    /**
+     * 自动注入的CheckpointMapper对象.
+     */
+    @Autowired
+    private CheckpointMapper checkpointMapper;
 }

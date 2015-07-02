@@ -182,6 +182,12 @@ public class AccountsController {
 		return result;
 	}
 	
+	/**
+	 * 加载用户控制板页面.
+	 * @param request - Http Servlet Request对象
+	 * @param response - HttpResponse对象
+	 * @return 包含控制板页面信息的ModelAndView对象
+	 */
 	@RequestMapping(value = "/dashboard", method = RequestMethod.GET)
 	public ModelAndView dashboardView(
 			HttpServletRequest request, HttpServletResponse response) {

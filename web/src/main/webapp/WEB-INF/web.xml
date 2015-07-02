@@ -23,7 +23,10 @@
 	<listener>
 		<listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
 	</listener>
-
+	<listener>
+		<listener-class>com.trunkshell.voj.web.util.SessionListener</listener-class>
+	</listener>
+	
 	<!-- Druid -->
 	<servlet>
 		<servlet-name>DruidStatView</servlet-name>
@@ -55,8 +58,9 @@
 		<location>/WEB-INF/views/errors/500.jsp</location>
 	</error-page>
 
-	<!-- Disable URL Rewriting -->
+	<!-- Session Settings -->
 	<session-config>
+		<session-timeout>60</session-timeout>  
 		<tracking-mode>COOKIE</tracking-mode>
 	</session-config>
 </web-app>

@@ -57,7 +57,7 @@ public class ProblemsController {
 		view.addObject("problems", problemService.getProblems(startIndex, NUMBER_OF_PROBLEMS_PER_PAGE))
 			.addObject("startIndexOfProblems", START_INDEX_OF_PROBLEMS)
 			.addObject("numberOfProblemsPerPage", NUMBER_OF_PROBLEMS_PER_PAGE)
-			.addObject("totalProblems", problemService.getNumberOfProblems());
+			.addObject("totalProblems", problemService.getNumberOfProblems(true));
 		
 		HttpSession session = request.getSession();
 		if ( isLoggedIn(session) ) {

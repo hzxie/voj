@@ -1,5 +1,6 @@
 package com.trunkshell.voj.web.service;
 
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,6 +25,17 @@ import com.trunkshell.voj.web.util.MessageSender;
 @Service
 @Transactional
 public class SubmissionService {
+	/**
+	 * [此方法仅供管理员使用]
+	 * 获取指定时间内提交的数量.
+	 * @param startTime - 统计起始时间
+	 * @param endTime - 统计结束时间
+	 * @return 指定时间内提交的数量
+	 */
+	public long getNumberOfSubmissions(Date startTime, Date endTime) {
+		return submissionMapper.getNumberOfSubmissions(startTime, endTime);
+	}
+	
 	/**
 	 * 根据评测记录的唯一标识符获取评测记录对象.
 	 * @param submissionId - 评测记录的唯一标识符
