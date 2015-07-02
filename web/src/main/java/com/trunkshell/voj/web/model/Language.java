@@ -2,6 +2,8 @@ package com.trunkshell.voj.web.model;
 
 import java.io.Serializable;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 /**
  * 编程语言的Model.
  * 对应数据库中的voj_languages数据表.
@@ -148,11 +150,13 @@ public class Language implements Serializable {
 	/**
 	 * 编程语言的编译命令.
 	 */
+	@JsonIgnore
 	private String compileCommand;
 	
 	/**
 	 * 编程语言的运行命令.
 	 */
+	@JsonIgnore
 	private String runCommand;
 	
 	/**

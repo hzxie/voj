@@ -1,11 +1,11 @@
 -- phpMyAdmin SQL Dump
--- version 4.2.11
+-- version 4.4.3
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: Jun 02, 2015 at 03:54 AM
--- Server version: 5.6.21
--- PHP Version: 5.6.3
+-- Generation Time: Jul 02, 2015 at 05:49 上午
+-- Server version: 5.6.24
+-- PHP Version: 5.6.8
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 SET time_zone = "+00:00";
@@ -27,7 +27,7 @@ SET time_zone = "+00:00";
 --
 
 CREATE TABLE IF NOT EXISTS `voj_categories` (
-`category_id` int(4) NOT NULL,
+  `category_id` int(4) NOT NULL,
   `category_slug` varchar(32) NOT NULL,
   `category_name` varchar(32) NOT NULL,
   `category_parent_id` int(4) NOT NULL
@@ -47,7 +47,7 @@ INSERT INTO `voj_categories` (`category_id`, `category_slug`, `category_name`, `
 --
 
 CREATE TABLE IF NOT EXISTS `voj_contests` (
-`contest_id` bigint(20) NOT NULL,
+  `contest_id` bigint(20) NOT NULL,
   `contest_name` varchar(128) NOT NULL,
   `contest_start_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `contest_end_time` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00'
@@ -71,7 +71,7 @@ CREATE TABLE IF NOT EXISTS `voj_contest_problems` (
 --
 
 CREATE TABLE IF NOT EXISTS `voj_discussion_replies` (
-`discussion_reply_id` bigint(20) NOT NULL,
+  `discussion_reply_id` bigint(20) NOT NULL,
   `discussion_threads_id` bigint(20) NOT NULL,
   `discussion_reply_uid` bigint(20) NOT NULL,
   `discussion_reply_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -85,7 +85,7 @@ CREATE TABLE IF NOT EXISTS `voj_discussion_replies` (
 --
 
 CREATE TABLE IF NOT EXISTS `voj_discussion_threads` (
-`discussion_threads_id` bigint(20) NOT NULL,
+  `discussion_threads_id` bigint(20) NOT NULL,
   `discussion_topic_id` int(8) NOT NULL,
   `disscussion_creator_uid` bigint(20) NOT NULL,
   `problem_id` bigint(20) DEFAULT NULL,
@@ -101,7 +101,7 @@ CREATE TABLE IF NOT EXISTS `voj_discussion_threads` (
 --
 
 CREATE TABLE IF NOT EXISTS `voj_discussion_topics` (
-`discussion_topic_id` int(8) NOT NULL,
+  `discussion_topic_id` int(8) NOT NULL,
   `discussion_topic_slug` varchar(128) NOT NULL,
   `discussion_topic_name` varchar(128) NOT NULL,
   `discussion_parent_topic_id` int(11) DEFAULT NULL
@@ -114,7 +114,7 @@ CREATE TABLE IF NOT EXISTS `voj_discussion_topics` (
 --
 
 CREATE TABLE IF NOT EXISTS `voj_judge_results` (
-`judge_result_id` int(4) NOT NULL,
+  `judge_result_id` int(4) NOT NULL,
   `judge_result_slug` varchar(4) NOT NULL,
   `judge_result_name` varchar(32) NOT NULL
 ) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8;
@@ -142,7 +142,7 @@ INSERT INTO `voj_judge_results` (`judge_result_id`, `judge_result_slug`, `judge_
 --
 
 CREATE TABLE IF NOT EXISTS `voj_languages` (
-`language_id` int(4) NOT NULL,
+  `language_id` int(4) NOT NULL,
   `language_slug` varchar(16) NOT NULL,
   `language_name` varchar(16) NOT NULL,
   `language_compile_command` varchar(128) NOT NULL,
@@ -170,8 +170,21 @@ INSERT INTO `voj_languages` (`language_id`, `language_slug`, `language_name`, `l
 CREATE TABLE IF NOT EXISTS `voj_options` (
   `option_id` int(8) NOT NULL,
   `option_name` varchar(32) NOT NULL,
-  `option_value` text NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+  `option_value` text NOT NULL,
+  `is_autoload` tinyint(1) NOT NULL
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8;
+
+--
+-- Dumping data for table `voj_options`
+--
+
+INSERT INTO `voj_options` (`option_id`, `option_name`, `option_value`, `is_autoload`) VALUES
+(1, 'WebsiteName', 'Verwandlung Online Judge', 1),
+(2, 'Description', 'Verwandlung Online Judge is a cross-platform online judge system based on Spring MVC Framework.', 1),
+(3, 'Copyright', 'Copyright&copy; 2005-%year% <a href="http://zjhzxhz.com" target="_blank">Trunk Shell</a>. All rights reserved.', 1),
+(4, 'InternalUsage', '0', 1),
+(5, 'GoogleAnalyticsCode', '', 1),
+(6, 'IcpNumber', '', 1);
 
 -- --------------------------------------------------------
 
@@ -180,7 +193,7 @@ CREATE TABLE IF NOT EXISTS `voj_options` (
 --
 
 CREATE TABLE IF NOT EXISTS `voj_problems` (
-`problem_id` bigint(20) NOT NULL,
+  `problem_id` bigint(20) NOT NULL,
   `problem_is_public` tinyint(1) NOT NULL DEFAULT '1',
   `problem_name` varchar(128) NOT NULL,
   `problem_time_limit` int(8) NOT NULL,
@@ -271,7 +284,7 @@ CREATE TABLE IF NOT EXISTS `voj_problem_tags` (
 --
 
 CREATE TABLE IF NOT EXISTS `voj_submissions` (
-`submission_id` bigint(20) NOT NULL,
+  `submission_id` bigint(20) NOT NULL,
   `problem_id` bigint(20) NOT NULL,
   `uid` bigint(20) NOT NULL,
   `language_id` int(4) NOT NULL,
@@ -302,7 +315,7 @@ INSERT INTO `voj_submissions` (`submission_id`, `problem_id`, `uid`, `language_i
 --
 
 CREATE TABLE IF NOT EXISTS `voj_tags` (
-`tag_id` bigint(20) NOT NULL,
+  `tag_id` bigint(20) NOT NULL,
   `tag_slug` varchar(32) NOT NULL,
   `tag_name` varchar(32) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
@@ -314,7 +327,7 @@ CREATE TABLE IF NOT EXISTS `voj_tags` (
 --
 
 CREATE TABLE IF NOT EXISTS `voj_users` (
-`uid` bigint(20) NOT NULL,
+  `uid` bigint(20) NOT NULL,
   `username` varchar(16) NOT NULL,
   `password` varchar(32) NOT NULL,
   `email` varchar(64) NOT NULL,
@@ -338,7 +351,7 @@ INSERT INTO `voj_users` (`uid`, `username`, `password`, `email`, `user_group_id`
 --
 
 CREATE TABLE IF NOT EXISTS `voj_user_groups` (
-`user_group_id` int(4) NOT NULL,
+  `user_group_id` int(4) NOT NULL,
   `user_group_slug` varchar(16) NOT NULL,
   `user_group_name` varchar(16) NOT NULL
 ) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8;
@@ -359,7 +372,7 @@ INSERT INTO `voj_user_groups` (`user_group_id`, `user_group_slug`, `user_group_n
 --
 
 CREATE TABLE IF NOT EXISTS `voj_user_meta` (
-`meta_id` bigint(20) NOT NULL,
+  `meta_id` bigint(20) NOT NULL,
   `uid` bigint(20) NOT NULL,
   `meta_key` varchar(64) NOT NULL,
   `meta_value` text NOT NULL
@@ -373,103 +386,131 @@ CREATE TABLE IF NOT EXISTS `voj_user_meta` (
 -- Indexes for table `voj_categories`
 --
 ALTER TABLE `voj_categories`
- ADD PRIMARY KEY (`category_id`), ADD UNIQUE KEY `category_slug` (`category_slug`);
+  ADD PRIMARY KEY (`category_id`),
+  ADD UNIQUE KEY `category_slug` (`category_slug`);
 
 --
 -- Indexes for table `voj_contests`
 --
 ALTER TABLE `voj_contests`
- ADD PRIMARY KEY (`contest_id`);
+  ADD PRIMARY KEY (`contest_id`);
 
 --
 -- Indexes for table `voj_contest_problems`
 --
 ALTER TABLE `voj_contest_problems`
- ADD PRIMARY KEY (`contest_id`,`problem_id`), ADD KEY `problem_id` (`problem_id`);
+  ADD PRIMARY KEY (`contest_id`,`problem_id`),
+  ADD KEY `problem_id` (`problem_id`);
 
 --
 -- Indexes for table `voj_discussion_replies`
 --
 ALTER TABLE `voj_discussion_replies`
- ADD PRIMARY KEY (`discussion_reply_id`), ADD KEY `discussion_id` (`discussion_threads_id`,`discussion_reply_uid`), ADD KEY `discussion_reply_uid` (`discussion_reply_uid`);
+  ADD PRIMARY KEY (`discussion_reply_id`),
+  ADD KEY `discussion_id` (`discussion_threads_id`,`discussion_reply_uid`),
+  ADD KEY `discussion_reply_uid` (`discussion_reply_uid`);
 
 --
 -- Indexes for table `voj_discussion_threads`
 --
 ALTER TABLE `voj_discussion_threads`
- ADD PRIMARY KEY (`discussion_threads_id`), ADD KEY `problem_id` (`discussion_topic_id`,`disscussion_creator_uid`), ADD KEY `disscussion_creator_uid` (`disscussion_creator_uid`), ADD KEY `problem_id_2` (`problem_id`);
+  ADD PRIMARY KEY (`discussion_threads_id`),
+  ADD KEY `problem_id` (`discussion_topic_id`,`disscussion_creator_uid`),
+  ADD KEY `disscussion_creator_uid` (`disscussion_creator_uid`),
+  ADD KEY `problem_id_2` (`problem_id`);
 
 --
 -- Indexes for table `voj_discussion_topics`
 --
 ALTER TABLE `voj_discussion_topics`
- ADD PRIMARY KEY (`discussion_topic_id`), ADD KEY `discussion_parent_topic_id` (`discussion_parent_topic_id`);
+  ADD PRIMARY KEY (`discussion_topic_id`),
+  ADD KEY `discussion_parent_topic_id` (`discussion_parent_topic_id`);
 
 --
 -- Indexes for table `voj_judge_results`
 --
 ALTER TABLE `voj_judge_results`
- ADD PRIMARY KEY (`judge_result_id`), ADD UNIQUE KEY `runtime_result_slug` (`judge_result_slug`);
+  ADD PRIMARY KEY (`judge_result_id`),
+  ADD UNIQUE KEY `runtime_result_slug` (`judge_result_slug`);
 
 --
 -- Indexes for table `voj_languages`
 --
 ALTER TABLE `voj_languages`
- ADD PRIMARY KEY (`language_id`), ADD UNIQUE KEY `language_slug` (`language_slug`);
+  ADD PRIMARY KEY (`language_id`),
+  ADD UNIQUE KEY `language_slug` (`language_slug`);
+
+--
+-- Indexes for table `voj_options`
+--
+ALTER TABLE `voj_options`
+  ADD PRIMARY KEY (`option_id`);
 
 --
 -- Indexes for table `voj_problems`
 --
 ALTER TABLE `voj_problems`
- ADD PRIMARY KEY (`problem_id`);
+  ADD PRIMARY KEY (`problem_id`);
 
 --
 -- Indexes for table `voj_problem_categories`
 --
 ALTER TABLE `voj_problem_categories`
- ADD PRIMARY KEY (`problem_id`,`category_id`), ADD KEY `category_id` (`category_id`);
+  ADD PRIMARY KEY (`problem_id`,`category_id`),
+  ADD KEY `category_id` (`category_id`);
 
 --
 -- Indexes for table `voj_problem_checkpoints`
 --
 ALTER TABLE `voj_problem_checkpoints`
- ADD PRIMARY KEY (`problem_id`,`checkpoint_id`);
+  ADD PRIMARY KEY (`problem_id`,`checkpoint_id`);
 
 --
 -- Indexes for table `voj_problem_tags`
 --
 ALTER TABLE `voj_problem_tags`
- ADD PRIMARY KEY (`problem_id`,`tag_id`), ADD KEY `ojs_problem_tags_ibfk_2` (`tag_id`);
+  ADD PRIMARY KEY (`problem_id`,`tag_id`),
+  ADD KEY `ojs_problem_tags_ibfk_2` (`tag_id`);
 
 --
 -- Indexes for table `voj_submissions`
 --
 ALTER TABLE `voj_submissions`
- ADD PRIMARY KEY (`submission_id`), ADD KEY `problem_id` (`problem_id`,`uid`), ADD KEY `uid` (`uid`), ADD KEY `submission_language_id` (`language_id`), ADD KEY `submission_runtime_result` (`submission_judge_result`);
+  ADD PRIMARY KEY (`submission_id`),
+  ADD KEY `problem_id` (`problem_id`,`uid`),
+  ADD KEY `uid` (`uid`),
+  ADD KEY `submission_language_id` (`language_id`),
+  ADD KEY `submission_runtime_result` (`submission_judge_result`);
 
 --
 -- Indexes for table `voj_tags`
 --
 ALTER TABLE `voj_tags`
- ADD PRIMARY KEY (`tag_id`);
+  ADD PRIMARY KEY (`tag_id`);
 
 --
 -- Indexes for table `voj_users`
 --
 ALTER TABLE `voj_users`
- ADD PRIMARY KEY (`uid`), ADD UNIQUE KEY `username` (`username`), ADD UNIQUE KEY `email` (`email`), ADD KEY `user_group_id` (`user_group_id`,`prefer_language_id`), ADD KEY `prefer_language_id` (`prefer_language_id`);
+  ADD PRIMARY KEY (`uid`),
+  ADD UNIQUE KEY `username` (`username`),
+  ADD UNIQUE KEY `email` (`email`),
+  ADD KEY `user_group_id` (`user_group_id`,`prefer_language_id`),
+  ADD KEY `prefer_language_id` (`prefer_language_id`);
 
 --
 -- Indexes for table `voj_user_groups`
 --
 ALTER TABLE `voj_user_groups`
- ADD PRIMARY KEY (`user_group_id`), ADD UNIQUE KEY `user_group_slug` (`user_group_slug`);
+  ADD PRIMARY KEY (`user_group_id`),
+  ADD UNIQUE KEY `user_group_slug` (`user_group_slug`);
 
 --
 -- Indexes for table `voj_user_meta`
 --
 ALTER TABLE `voj_user_meta`
- ADD PRIMARY KEY (`meta_id`), ADD KEY `uid` (`uid`);
+  ADD PRIMARY KEY (`meta_id`),
+  ADD KEY `uid` (`uid`);
 
 --
 -- AUTO_INCREMENT for dumped tables
@@ -479,67 +520,72 @@ ALTER TABLE `voj_user_meta`
 -- AUTO_INCREMENT for table `voj_categories`
 --
 ALTER TABLE `voj_categories`
-MODIFY `category_id` int(4) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=2;
+  MODIFY `category_id` int(4) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=2;
 --
 -- AUTO_INCREMENT for table `voj_contests`
 --
 ALTER TABLE `voj_contests`
-MODIFY `contest_id` bigint(20) NOT NULL AUTO_INCREMENT;
+  MODIFY `contest_id` bigint(20) NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT for table `voj_discussion_replies`
 --
 ALTER TABLE `voj_discussion_replies`
-MODIFY `discussion_reply_id` bigint(20) NOT NULL AUTO_INCREMENT;
+  MODIFY `discussion_reply_id` bigint(20) NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT for table `voj_discussion_threads`
 --
 ALTER TABLE `voj_discussion_threads`
-MODIFY `discussion_threads_id` bigint(20) NOT NULL AUTO_INCREMENT;
+  MODIFY `discussion_threads_id` bigint(20) NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT for table `voj_discussion_topics`
 --
 ALTER TABLE `voj_discussion_topics`
-MODIFY `discussion_topic_id` int(8) NOT NULL AUTO_INCREMENT;
+  MODIFY `discussion_topic_id` int(8) NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT for table `voj_judge_results`
 --
 ALTER TABLE `voj_judge_results`
-MODIFY `judge_result_id` int(4) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=11;
+  MODIFY `judge_result_id` int(4) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=11;
 --
 -- AUTO_INCREMENT for table `voj_languages`
 --
 ALTER TABLE `voj_languages`
-MODIFY `language_id` int(4) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=7;
+  MODIFY `language_id` int(4) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=7;
+--
+-- AUTO_INCREMENT for table `voj_options`
+--
+ALTER TABLE `voj_options`
+  MODIFY `option_id` int(8) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=7;
 --
 -- AUTO_INCREMENT for table `voj_problems`
 --
 ALTER TABLE `voj_problems`
-MODIFY `problem_id` bigint(20) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=1003;
+  MODIFY `problem_id` bigint(20) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=1003;
 --
 -- AUTO_INCREMENT for table `voj_submissions`
 --
 ALTER TABLE `voj_submissions`
-MODIFY `submission_id` bigint(20) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=1004;
+  MODIFY `submission_id` bigint(20) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=1004;
 --
 -- AUTO_INCREMENT for table `voj_tags`
 --
 ALTER TABLE `voj_tags`
-MODIFY `tag_id` bigint(20) NOT NULL AUTO_INCREMENT;
+  MODIFY `tag_id` bigint(20) NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT for table `voj_users`
 --
 ALTER TABLE `voj_users`
-MODIFY `uid` bigint(20) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=1003;
+  MODIFY `uid` bigint(20) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=1003;
 --
 -- AUTO_INCREMENT for table `voj_user_groups`
 --
 ALTER TABLE `voj_user_groups`
-MODIFY `user_group_id` int(4) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=4;
+  MODIFY `user_group_id` int(4) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=4;
 --
 -- AUTO_INCREMENT for table `voj_user_meta`
 --
 ALTER TABLE `voj_user_meta`
-MODIFY `meta_id` bigint(20) NOT NULL AUTO_INCREMENT;
+  MODIFY `meta_id` bigint(20) NOT NULL AUTO_INCREMENT;
 --
 -- Constraints for dumped tables
 --
@@ -548,71 +594,71 @@ MODIFY `meta_id` bigint(20) NOT NULL AUTO_INCREMENT;
 -- Constraints for table `voj_contest_problems`
 --
 ALTER TABLE `voj_contest_problems`
-ADD CONSTRAINT `voj_contest_problems_ibfk_1` FOREIGN KEY (`contest_id`) REFERENCES `voj_contests` (`contest_id`),
-ADD CONSTRAINT `voj_contest_problems_ibfk_2` FOREIGN KEY (`problem_id`) REFERENCES `voj_problems` (`problem_id`);
+  ADD CONSTRAINT `voj_contest_problems_ibfk_1` FOREIGN KEY (`contest_id`) REFERENCES `voj_contests` (`contest_id`),
+  ADD CONSTRAINT `voj_contest_problems_ibfk_2` FOREIGN KEY (`problem_id`) REFERENCES `voj_problems` (`problem_id`);
 
 --
 -- Constraints for table `voj_discussion_replies`
 --
 ALTER TABLE `voj_discussion_replies`
-ADD CONSTRAINT `voj_discussion_replies_ibfk_1` FOREIGN KEY (`discussion_threads_id`) REFERENCES `voj_discussion_threads` (`discussion_threads_id`),
-ADD CONSTRAINT `voj_discussion_replies_ibfk_2` FOREIGN KEY (`discussion_reply_uid`) REFERENCES `voj_users` (`uid`);
+  ADD CONSTRAINT `voj_discussion_replies_ibfk_1` FOREIGN KEY (`discussion_threads_id`) REFERENCES `voj_discussion_threads` (`discussion_threads_id`),
+  ADD CONSTRAINT `voj_discussion_replies_ibfk_2` FOREIGN KEY (`discussion_reply_uid`) REFERENCES `voj_users` (`uid`);
 
 --
 -- Constraints for table `voj_discussion_threads`
 --
 ALTER TABLE `voj_discussion_threads`
-ADD CONSTRAINT `voj_discussion_threads_ibfk_1` FOREIGN KEY (`disscussion_creator_uid`) REFERENCES `voj_users` (`uid`),
-ADD CONSTRAINT `voj_discussion_threads_ibfk_2` FOREIGN KEY (`discussion_topic_id`) REFERENCES `voj_discussion_topics` (`discussion_topic_id`),
-ADD CONSTRAINT `voj_discussion_threads_ibfk_3` FOREIGN KEY (`problem_id`) REFERENCES `voj_problems` (`problem_id`);
+  ADD CONSTRAINT `voj_discussion_threads_ibfk_1` FOREIGN KEY (`disscussion_creator_uid`) REFERENCES `voj_users` (`uid`),
+  ADD CONSTRAINT `voj_discussion_threads_ibfk_2` FOREIGN KEY (`discussion_topic_id`) REFERENCES `voj_discussion_topics` (`discussion_topic_id`),
+  ADD CONSTRAINT `voj_discussion_threads_ibfk_3` FOREIGN KEY (`problem_id`) REFERENCES `voj_problems` (`problem_id`);
 
 --
 -- Constraints for table `voj_discussion_topics`
 --
 ALTER TABLE `voj_discussion_topics`
-ADD CONSTRAINT `voj_discussion_topics_ibfk_1` FOREIGN KEY (`discussion_parent_topic_id`) REFERENCES `voj_discussion_topics` (`discussion_topic_id`);
+  ADD CONSTRAINT `voj_discussion_topics_ibfk_1` FOREIGN KEY (`discussion_parent_topic_id`) REFERENCES `voj_discussion_topics` (`discussion_topic_id`);
 
 --
 -- Constraints for table `voj_problem_categories`
 --
 ALTER TABLE `voj_problem_categories`
-ADD CONSTRAINT `voj_problem_categories_ibfk_1` FOREIGN KEY (`problem_id`) REFERENCES `voj_problems` (`problem_id`),
-ADD CONSTRAINT `voj_problem_categories_ibfk_2` FOREIGN KEY (`category_id`) REFERENCES `voj_categories` (`category_id`);
+  ADD CONSTRAINT `voj_problem_categories_ibfk_1` FOREIGN KEY (`problem_id`) REFERENCES `voj_problems` (`problem_id`),
+  ADD CONSTRAINT `voj_problem_categories_ibfk_2` FOREIGN KEY (`category_id`) REFERENCES `voj_categories` (`category_id`);
 
 --
 -- Constraints for table `voj_problem_checkpoints`
 --
 ALTER TABLE `voj_problem_checkpoints`
-ADD CONSTRAINT `voj_problem_checkpoints_ibfk_1` FOREIGN KEY (`problem_id`) REFERENCES `voj_problems` (`problem_id`);
+  ADD CONSTRAINT `voj_problem_checkpoints_ibfk_1` FOREIGN KEY (`problem_id`) REFERENCES `voj_problems` (`problem_id`);
 
 --
 -- Constraints for table `voj_problem_tags`
 --
 ALTER TABLE `voj_problem_tags`
-ADD CONSTRAINT `voj_problem_tags_ibfk_1` FOREIGN KEY (`problem_id`) REFERENCES `voj_problems` (`problem_id`),
-ADD CONSTRAINT `voj_problem_tags_ibfk_2` FOREIGN KEY (`tag_id`) REFERENCES `voj_tags` (`tag_id`);
+  ADD CONSTRAINT `voj_problem_tags_ibfk_1` FOREIGN KEY (`problem_id`) REFERENCES `voj_problems` (`problem_id`),
+  ADD CONSTRAINT `voj_problem_tags_ibfk_2` FOREIGN KEY (`tag_id`) REFERENCES `voj_tags` (`tag_id`);
 
 --
 -- Constraints for table `voj_submissions`
 --
 ALTER TABLE `voj_submissions`
-ADD CONSTRAINT `voj_submissions_ibfk_1` FOREIGN KEY (`problem_id`) REFERENCES `voj_problems` (`problem_id`),
-ADD CONSTRAINT `voj_submissions_ibfk_2` FOREIGN KEY (`uid`) REFERENCES `voj_users` (`uid`),
-ADD CONSTRAINT `voj_submissions_ibfk_3` FOREIGN KEY (`language_id`) REFERENCES `voj_languages` (`language_id`),
-ADD CONSTRAINT `voj_submissions_ibfk_4` FOREIGN KEY (`submission_judge_result`) REFERENCES `voj_judge_results` (`judge_result_slug`);
+  ADD CONSTRAINT `voj_submissions_ibfk_1` FOREIGN KEY (`problem_id`) REFERENCES `voj_problems` (`problem_id`),
+  ADD CONSTRAINT `voj_submissions_ibfk_2` FOREIGN KEY (`uid`) REFERENCES `voj_users` (`uid`),
+  ADD CONSTRAINT `voj_submissions_ibfk_3` FOREIGN KEY (`language_id`) REFERENCES `voj_languages` (`language_id`),
+  ADD CONSTRAINT `voj_submissions_ibfk_4` FOREIGN KEY (`submission_judge_result`) REFERENCES `voj_judge_results` (`judge_result_slug`);
 
 --
 -- Constraints for table `voj_users`
 --
 ALTER TABLE `voj_users`
-ADD CONSTRAINT `voj_users_ibfk_1` FOREIGN KEY (`user_group_id`) REFERENCES `voj_user_groups` (`user_group_id`),
-ADD CONSTRAINT `voj_users_ibfk_2` FOREIGN KEY (`prefer_language_id`) REFERENCES `voj_languages` (`language_id`);
+  ADD CONSTRAINT `voj_users_ibfk_1` FOREIGN KEY (`user_group_id`) REFERENCES `voj_user_groups` (`user_group_id`),
+  ADD CONSTRAINT `voj_users_ibfk_2` FOREIGN KEY (`prefer_language_id`) REFERENCES `voj_languages` (`language_id`);
 
 --
 -- Constraints for table `voj_user_meta`
 --
 ALTER TABLE `voj_user_meta`
-ADD CONSTRAINT `voj_user_meta_ibfk_1` FOREIGN KEY (`uid`) REFERENCES `voj_users` (`uid`);
+  ADD CONSTRAINT `voj_user_meta_ibfk_1` FOREIGN KEY (`uid`) REFERENCES `voj_users` (`uid`);
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
