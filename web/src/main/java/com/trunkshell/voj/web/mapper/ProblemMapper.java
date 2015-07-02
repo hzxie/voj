@@ -21,12 +21,30 @@ import com.trunkshell.voj.web.model.Problem;
 @CacheNamespace(implementation = org.mybatis.caches.ehcache.EhcacheCache.class)
 public interface ProblemMapper {
 	/**
-	 * 获取试题的总数量.
-	 * @return (公开)试题的总数量
+	 * [此方法仅供管理员使用]
+	 * 获取全部试题的总数量.
+	 * @return 全部试题的总数量
+	 */
+	@Select("SELECT COUNT(*) FROM voj_problems")
+	@Options(useCache = true)
+	public long getNumberOfProblems();
+	
+	/**
+	 * 获取公开试题的总数量.
+	 * @return 公开试题的总数量
 	 */
 	@Select("SELECT COUNT(*) FROM voj_problems WHERE problem_is_public = true")
 	@Options(useCache = true)
-	public long getNumberOfProblems();
+	public long getNumberOfPublicProblems();
+
+	/**
+	 * [此方法仅供管理员使用]
+	 * 获取非公开试题的总数量.
+	 * @return 非公开试题的总数量
+	 */
+	@Select("SELECT COUNT(*) FROM voj_problems WHERE problem_is_public = false")
+	@Options(useCache = true)
+	public long getNumberOfPrivateProblems();
 	
 	/**
 	 * 通过试题唯一标识符获取试题对象.

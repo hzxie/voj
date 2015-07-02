@@ -1,5 +1,6 @@
 package com.trunkshell.voj.web.mapper;
 
+import java.util.Date;
 import java.util.List;
 
 import org.apache.ibatis.annotations.CacheNamespace;
@@ -25,6 +26,17 @@ import com.trunkshell.voj.web.model.User;
  */
 @CacheNamespace(implementation = org.mybatis.caches.ehcache.EhcacheCache.class)
 public interface SubmissionMapper {
+	/**
+	 * [此方法仅供管理员使用]
+	 * 获取指定时间内提交的数量.
+	 * @param startTime - 统计起始时间
+	 * @param endTime - 统计结束时间
+	 * @return 指定时间内提交的数量
+	 */
+	@Select("SELECT COUNT(*) FROM voj_submissions WHERE submission_submit_time >= #{startTime} AND submission_submit_time <= #{endTime}")
+	@Options(useCache = true)
+	public long getNumberOfSubmissions(@Param("startTime") Date startTime, @Param("endTime") Date endTime);
+	
 	/**
 	 * 通过评测记录唯一标识符获取试题对象.
 	 * @param submissionID - 评测记录的唯一标识符

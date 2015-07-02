@@ -214,7 +214,16 @@ public class UserService {
 		UserGroup userGroup = userGroupMapper.getUserGroupUsingSlug(userGroupSlug);
 		return userGroup;
 	}
-		
+	
+	/**
+	 * [此方法仅供管理员使用]
+	 * 获取系统中注册用户的总数.
+	 * @return 系统中注册用户的总数
+	 */
+	public long getNumberOfUsers() {
+		return userMapper.getNumberOfUsers();
+	}
+	
 	/**
 	 * 自动注入的UserMapper对象.
 	 */

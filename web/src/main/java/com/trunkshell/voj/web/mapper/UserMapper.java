@@ -26,6 +26,14 @@ import com.trunkshell.voj.web.model.UserGroup;
 @CacheNamespace(implementation = org.mybatis.caches.ehcache.EhcacheCache.class)
 public interface UserMapper {
 	/**
+	 * [此方法仅供管理员使用]
+	 * 获取系统中注册用户的总数.
+	 * @return 系统中注册用户的总数
+	 */
+	@Select("SELECT COUNT(*) FROM voj_users")
+	public long getNumberOfUsers();
+	
+	/**
 	 * 通过用户唯一标识符获取用户对象.
 	 * @param uid - 用户唯一标识符
 	 * @return 预期的用户对象或空引用

@@ -45,7 +45,7 @@ div#content div.widget a.more i.fa {
 }
 
 div#content div#overview {
-	margin-bottom: 20px;
+	margin-bottom: 40px;
 }
 
 div#content div#overview-users.widget {
@@ -70,6 +70,26 @@ div#content div#overview-submissions.widget {
 	background-color: #303641;
 	padding: 15px;
 	color: #fff;
+}
+
+div#content div.panel {
+	background-color: #fff;
+	-webkit-box-shadow: 0 1px 1px rgba(0,0,0,.05);
+	   -moz-box-shadow: 0 1px 1px rgba(0,0,0,.05);
+	        box-shadow: 0 1px 1px rgba(0,0,0,.05);
+}
+
+div#content div.panel div.header {
+	border-bottom: 1px solid #ddd;
+	padding: 15px 15px 10px;
+}
+
+div#content div.panel div.header h5 {
+	margin: 0;
+}
+
+div#content div.panel div.body {
+	padding: 15px 15px 10px;
 }
 
 /* Smaller than standard 960 (devices and browsers) */

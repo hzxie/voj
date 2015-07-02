@@ -57,7 +57,7 @@
                                 </div> <!-- .span4 -->
                                 <div class="span8">
                                     <span class="text-uppercase"><spring:message code="voj.administration.index.total-users" text="Total Users" /></span>
-                                    <h2>0</h2>
+                                    <h2>${totalUsers}</h2>
                                 </div> <!-- .span8 -->
                             </div> <!-- .row-fluid -->
                             <div class="row-fluid">
@@ -67,7 +67,7 @@
                                 </div> <!-- .span6 -->
                                 <div class="span6">
                                     <span class="text-uppercase"><spring:message code="voj.administration.index.online-users" text="Online Users" /></span>
-                                    <h4>0</h4>
+                                    <h4>${onlineUsers}</h4>
                                 </div> <!-- .span6 -->
                             </div> <!-- .row-fluid -->
                         </div> <!-- #overview-users -->
@@ -80,17 +80,17 @@
                                 </div> <!-- .span4 -->
                                 <div class="span8">
                                     <span class="text-uppercase"><spring:message code="voj.administration.index.total-problems" text="Total Problems" /></span>
-                                    <h2>0</h2>
+                                    <h2>${totalProblems}</h2>
                                 </div> <!-- .span8 -->
                             </div> <!-- .row-fluid -->
                             <div class="row-fluid">
                                 <div class="span6 border-right">
-                                    <span class="text-uppercase"><spring:message code="voj.administration.index.this-month" text="Added this Month" /></span>
-                                    <h4>0</h4>
+                                    <span class="text-uppercase"><spring:message code="voj.administration.index.total-checkpoints" text="Total Checkpoints" /></span>
+                                    <h4>${numberOfCheckpoints}</h4>
                                 </div> <!-- .span6 -->
                                 <div class="span6">
                                     <span class="text-uppercase"><spring:message code="voj.administration.index.private-problems" text="Private Problems" /></span>
-                                    <h4>0</h4>
+                                    <h4>${privateProblems}</h4>
                                 </div> <!-- .span6 -->
                             </div> <!-- .row-fluid -->
                         </div> <!-- #overview-problems -->
@@ -119,7 +119,7 @@
                                 </div> <!-- .span4 -->
                                 <div class="span8 text-right">
                                     <span class="text-uppercase"><spring:message code="voj.administration.index.submissions-today" text="Submissions Today" /></span>
-                                    <h2>0</h2>
+                                    <h2>${submissionsToday}</h2>
                                 </div> <!-- .span8 -->
                             </div> <!-- .row-fluid -->
                             <a href="<c:url value="/administration/all-submissions" />" class="more">
@@ -130,10 +130,41 @@
                 </div> <!-- #overview -->
                 <div class="row-fluid">
                     <div class="span8">
-                        Chart
+                        <div id="submissions-panel" class="panel">
+                            <div class="header">
+                                <h5>
+                                    <i class="fa fa-bar-chart"></i> 
+                                    <spring:message code="voj.administration.index.submissions-stats" text="Submissions Stats" />
+                                </h5>
+                            </div> <!-- .header -->
+                            <div class="body">
+                                
+                            </div> <!-- .body -->
+                        </div> <!-- #submissions-panel -->
                     </div> <!-- .span8 -->
                     <div class="span4">
-                        System Status
+                        <div id="system-panel" class="panel">
+                            <div class="header">
+                                <h5>
+                                    <i class="fa fa-info-circle"></i> 
+                                    <spring:message code="voj.administration.index.system-info" text="System Info" />
+                                </h5>
+                            </div> <!-- .header -->
+                            <div class="body">
+                                <div class="row-fluid">
+                                    <div class="span4"><spring:message code="voj.administration.index.product-version" text="Product Version" /></div> <!-- .span4 -->
+                                    <div class="span8">${productVersion}</div> <!-- .span8 -->
+                                </div> <!-- .row-fluid -->
+                                <div class="row-fluid">
+                                    <div class="span4"><spring:message code="voj.administration.index.memory-usage" text="Memory Usage" /></div> <!-- .span4 -->
+                                    <div class="span8">${memoryUsage} MB</div> <!-- .span8 -->
+                                </div> <!-- .row-fluid -->
+                                <div class="row-fluid">
+                                    <div class="span4"><spring:message code="voj.administration.index.online-judgers" text="Online Judgers" /></div> <!-- .span4 -->
+                                    <div class="span8">${onlineJudgers}</div> <!-- .span8 -->
+                                </div> <!-- .row-fluid -->
+                            </div> <!-- .body -->
+                        </div> <!-- #system-panel -->
                     </div> <!-- .span4 -->
                 </div> <!-- .row-fluid -->
                 </div> <!-- .row-fluid -->
