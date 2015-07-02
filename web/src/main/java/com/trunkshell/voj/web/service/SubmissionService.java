@@ -187,6 +187,7 @@ public class SubmissionService {
 	 */
 	private void createSubmissionTask(long submissionId) {
 		Map<String, Object> mapMessage = new HashMap<String, Object>();
+		mapMessage.put("event", "SubmissionCreated");
 		mapMessage.put("submissionId", submissionId);
 		
 		messageSender.sendMessage(mapMessage);

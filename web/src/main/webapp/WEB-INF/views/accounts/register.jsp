@@ -44,6 +44,14 @@
         <div id="register">
             <h2><spring:message code="voj.accounts.register.create-account" text="Create Account" /></h2>
             <div class="alert alert-error hide"></div>
+        <c:choose>
+        <c:when test="${!isAllowRegister}">
+            <div class="alert alert-warning">
+                <h5><spring:message code="voj.accounts.register.registration-closed" text="Online Registration Closed" /></h5>
+                <p><spring:message code="voj.accounts.register.registration-closed-message" text="Online registration is now closed. If you would like to register onsite or have questions about your registration, please contact webmaster." /></p>
+            </div> <!-- .alert -->
+        </c:when>
+        <c:otherwise>
             <form id="register-form" method="post" onsubmit="onSubmit(); return false;">
                 <p class="row-fluid">
                     <label for="username"><spring:message code="voj.accounts.register.username" text="Username" /></label>
@@ -77,18 +85,22 @@
                     <button class="btn btn-primary btn-block" type="submit"><spring:message code="voj.accounts.register.create-account" text="Create Account" /></button>
                 </p>
             </form> <!-- #register-form -->
+        </c:otherwise>
+        </c:choose>
         </div> <!-- #register -->
         <p class="text-center">
             <spring:message code="voj.accounts.register.already-have-account" text="Already have an account?" /><br />
             <a href="<c:url value="/accounts/login" />"><spring:message code="voj.accounts.register.sign-in" text="Sign in" /></a>
         </p>
         </div> <!-- #register -->
+
     </div> <!-- #content -->
     <!-- Footer -->
     <%@ include file="/WEB-INF/views/include/footer.jsp" %>
     <!-- JavaScript -->
     <!-- Placed at the end of the document so the pages load faster -->
     <script type="text/javascript" src="${cdnUrl}/js/site.js"></script>
+    <c:if test="${isAllowRegister}">
     <script type="text/javascript">
         function onSubmit() {
             $('.alert-error').addClass('hide');
@@ -175,6 +187,7 @@
             $('button[type=submit]').removeAttr('disabled');
         }
     </script>
+    </c:if>
     <c:if test="${GoogleAnalyticsCode != ''}">
     <script type="text/javascript">${GoogleAnalyticsCode}</script>
     </c:if>

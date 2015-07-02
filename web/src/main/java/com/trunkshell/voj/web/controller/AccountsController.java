@@ -143,9 +143,11 @@ public class AccountsController {
 			view = new ModelAndView("redirect:/");
 		} else {
 			List<Language> languages = languageService.getAllLanguages();
+			boolean isAllowRegister = optionService.getOption("AllowUserRegister").getOptionValue().equals("1");
 			
 			view = new ModelAndView("accounts/register");
 			view.addObject("languages", languages);
+			view.addObject("isAllowRegister", isAllowRegister);
 			view.addObject("csrfToken", CsrfProtector.getCsrfToken(session));
 		}
 		return view;
@@ -169,8 +171,10 @@ public class AccountsController {
 			@RequestParam(value="languagePreference", required=true) String languageSlug,
 			@RequestParam(value="csrfToken", required=true) String csrfToken,
 			HttpServletRequest request) {
+		boolean isAllowRegister = optionService.getOption("AllowUserRegister").getOptionValue().equals("1");
 		boolean isCsrfTokenValid = CsrfProtector.isCsrfTokenValid(csrfToken, request.getSession());
-		Map<String, Boolean> result = userService.createUser(username, password, email, languageSlug, isCsrfTokenValid);
+		Map<String, Boolean> result = userService.createUser(username, password, 
+				email, languageSlug, isCsrfTokenValid, isAllowRegister);
 
 		if ( result.get("isSuccessful") ) {
 			User user = userService.getUserUsingUsernameOrEmail(username);
