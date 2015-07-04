@@ -30,6 +30,7 @@ import com.trunkshell.voj.web.util.HttpSessionParser;
 
 /**
  * 处理用户的登录/注册请求.
+ * 
  * @author Xie Haozhe
  */
 @Controller

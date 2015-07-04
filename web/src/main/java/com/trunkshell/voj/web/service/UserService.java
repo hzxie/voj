@@ -1,5 +1,6 @@
 package com.trunkshell.voj.web.service;
 
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
@@ -16,10 +17,12 @@ import com.trunkshell.voj.web.mapper.UserMetaMapper;
 import com.trunkshell.voj.web.model.Language;
 import com.trunkshell.voj.web.model.User;
 import com.trunkshell.voj.web.model.UserGroup;
+import com.trunkshell.voj.web.model.UserMeta;
 import com.trunkshell.voj.web.util.DigestUtils;
 
 /**
  * 用户类(User)的业务逻辑层.
+ * 
  * @author Xie Haozhe
  */
 @Service
@@ -108,7 +111,11 @@ public class UserService {
 	 * @param user - 对应的用户对象
 	 */
 	private void createUserMeta(User user) {
-		
+		SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		Calendar calendar = Calendar.getInstance();
+		String registerTime = formatter.format(calendar.getTime());
+		UserMeta registerTimeMeta = new UserMeta(user, "RegisterTime", registerTime);
+		userMetaMapper.createUserMeta(registerTimeMeta);
 	}
 	
 	/**
