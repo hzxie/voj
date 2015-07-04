@@ -13,6 +13,39 @@ div.container {
 	width: 960px;
 }
 
+div#upgrade-browser {
+    background-color: #fae692;
+    color: #333;
+    font-size: 12px;
+    padding: 15px 0;
+}
+
+div#upgrade-browser h6,
+div#upgrade-browser p {
+    margin: 0;
+}
+
+div#upgrade-browser h6 {
+	font-weight: bold;
+	text-transform: none;
+}
+
+div#upgrade-browser div.span8 {
+    background: url('../img/upgrade-browser.png') no-repeat;
+}
+
+div#upgrade-browser div.span8 div.notice {
+    padding-left: 50px;
+}
+
+div#upgrade-browser div.span4 {
+    text-align: right;
+}
+
+div#upgrade-browser div.span4 button {
+    margin-right: 10px;
+}
+
 div#header {
 	overflow: hidden;
 	padding: 20px 0;
@@ -39,6 +72,12 @@ div#drawer-nav {
 	right: -320px;
 	bottom: 0;
 	z-index: 256;
+}
+
+div#drawer-nav span.close-trigger {
+	position: absolute;
+	right: 40px;
+	top: 30px;
 }
 
 div#drawer-nav div.section {

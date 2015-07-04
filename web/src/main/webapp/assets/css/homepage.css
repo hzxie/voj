@@ -1,3 +1,11 @@
+div#upgrade-browser {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	z-index: 256;
+}
+
 div#header {
 	overflow: hidden;
 	padding: 20px 0;
