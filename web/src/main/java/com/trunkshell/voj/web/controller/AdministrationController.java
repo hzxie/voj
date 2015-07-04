@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.servlet.ModelAndView;
 
 import com.trunkshell.voj.web.model.User;
+import com.trunkshell.voj.web.model.UserGroup;
 import com.trunkshell.voj.web.service.OptionService;
 import com.trunkshell.voj.web.service.ProblemService;
 import com.trunkshell.voj.web.service.SubmissionService;
@@ -30,16 +31,16 @@ import com.trunkshell.voj.web.util.SessionListener;
 public class AdministrationController {
 	/**
 	 * 加载系统管理首页.
-	 * @param response - HttpResponse对象
 	 * @param request - HttpRequest对象
+	 * @param response - HttpResponse对象
 	 * @return 包含系统管理页面信息的ModelAndView对象
 	 */
 	@RequestMapping(value = "", method = RequestMethod.GET)
 	public ModelAndView indexView(
-			HttpServletResponse response, HttpServletRequest request) {
+			HttpServletRequest request, HttpServletResponse response) {
 		ModelAndView view = new ModelAndView("administration/index");
-		view.addObject("user", getAdministratorProfile(request.getSession()));
 		view.addObject("totalUsers", getTotalUsers());
+		view.addObject("newUsersToday", getNumberOfUserRegisteredToday());
 		view.addObject("onlineUsers", getOnlineUsers());
 		view.addObject("totalProblems", getTotalProblems());
 		view.addObject("numberOfCheckpoints", getNumberOfCheckpoints());
@@ -56,7 +57,16 @@ public class AdministrationController {
 	 * @return 系统中注册用户的总数
 	 */
 	private long getTotalUsers() {
-		return userService.getNumberOfUsers();
+		UserGroup userGroup = userService.getUserGroupUsingSlug("users");
+		return userService.getNumberOfUsers(userGroup);
+	}
+	
+	/**
+	 * 获取今日注册的用户数量.
+	 * @return 今日注册的用户数量
+	 */
+	public long getNumberOfUserRegisteredToday() {
+		return userService.getNumberOfUserRegisteredToday();
 	}
 	
 	/**
@@ -131,32 +141,15 @@ public class AdministrationController {
 	
 	/**
 	 * 加载用户列表页面.
-	 * @param response - HttpResponse对象
 	 * @param request - HttpRequest对象
+	 * @param response - HttpResponse对象
 	 * @return 包含用户列表页面信息的ModelAndView对象
 	 */
 	@RequestMapping(value = "/all-users", method = RequestMethod.GET)
 	public ModelAndView allUsersView(
-			HttpServletResponse response, HttpServletRequest request) {
+			HttpServletRequest request, HttpServletResponse response) {
 		ModelAndView view = new ModelAndView("administration/all-users");
-		view.addObject("user", getAdministratorProfile(request.getSession()));
 		return view;
-	}
-	
-	/**
-	 * 获取管理员用户的个人资料.
-	 * @param session - HttpSession对象
-	 * @return 管理员对应的用户对象
-	 */
-	private User getAdministratorProfile(HttpSession session) {
-		Boolean isLoggedIn = (Boolean)session.getAttribute("isLoggedIn");
-		if ( isLoggedIn == null || !isLoggedIn.booleanValue() ) {
-			return null;
-		}
-		
-		long uid = (Long)session.getAttribute("uid");
-		User user = userService.getUserUsingUid(uid);		
-		return user;
 	}
 	
 	/**

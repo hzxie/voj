@@ -213,7 +213,7 @@ CREATE TABLE IF NOT EXISTS `voj_problems` (
 INSERT INTO `voj_problems` (`problem_id`, `problem_is_public`, `problem_name`, `problem_time_limit`, `problem_memory_limit`, `problem_description`, `problem_input_format`, `problem_output_format`, `problem_sample_input`, `problem_sample_output`, `problem_hint`) VALUES
 (1000, 1, 'A+B Problem', 1000, 32768, '输入两个自然数, 输出他们的和', '两个自然数x和y (0<=x, y<=32767).', '一个数, 即x和y的和.', '123 500', '623', '## Free Pascal Code\r\n\r\n```\r\nprogram Plus;\r\nvar a,b:longint;\r\nbegin\r\n  readln(a,b);\r\n  writeln(a+b);\r\nend.\r\n```'),
 (1001, 1, '谁拿了最多奖学金', 1000, 32768, '某校的惯例是在每学期的期末考试之后发放奖学金。发放的奖学金共有五种，获取的条件各自不同：\r\n1) 院士奖学金，每人8000元，期末平均成绩高于80分（>80），并且在本学期内发表1篇或1篇以上论文的学生均可获得；\r\n2) 五四奖学金，每人4000元，期末平均成绩高于85分（>85），并且班级评议成绩高于80分（>80）的学生均可获得；\r\n3) 成绩优秀奖，每人2000元，期末平均成绩高于90分（>90）的学生均可获得；\r\n4) 西部奖学金，每人1000元，期末平均成绩高于85分（>85）的西部省份学生均可获得；\r\n5) 班级贡献奖，每人850元，班级评议成绩高于80分（>80）的学生干部均可获得；\r\n只要符合条件就可以得奖，每项奖学金的获奖人数没有限制，每名学生也可以同时获得多项奖学金。例如姚林的期末平均成绩是87分，班级评议成绩82分，同时他还是一位学生干部，那么他可以同时获得五四奖学金和班级贡献奖，奖金总数是4850元。\r\n现在给出若干学生的相关数据，请计算哪些同学获得的奖金总数最高（假设总有同学能满足获得奖学金的条件）。', '输入的第一行是一个整数N（1 <= N <= 100），表示学生的总数。接下来的N行每行是一位学生的数据，从左向右依次是姓名，期末平均成绩，班级评议成绩，是否是学生干部，是否是西部省份学生，以及发表的论文数。姓名是由大小写英文字母组成的长度不超过20的字符串（不含空格）；期末平均成绩和班级评议成绩都是0到100之间的整数（包括0和100）；是否是学生干部和是否是西部省份学生分别用一个字符表示，Y表示是，N表示不是；发表的论文数是0到10的整数（包括0和10）。每两个相邻数据项之间用一个空格分隔。', '输出包括三行，第一行是获得最多奖金的学生的姓名，第二行是这名学生获得的奖金总数。如果有两位或两位以上的学生获得的奖金最多，输出他们之中在输入文件中出现最早的学生的姓名。第三行是这N个学生获得的奖学金的总数。', '4\r\nYaoLin 87 82 Y N 0\r\nChenRuiyi 88 78 N Y 1\r\nLiXin 92 88 N N 0\r\nZhangQin 83 87 Y N 1', 'ChenRuiyi\r\n9000\r\n28700', NULL),
-(1002, 1, '过河', 1000, 32768, '在河上有一座独木桥, 一只青蛙想沿着独木桥从河的一侧跳到另一侧. 在桥上有一些石子, 青蛙很讨厌踩在这些石子上. 由于桥的长度和青蛙一次跳过的距离都是正整数, 我们可以把独木桥上青蛙可能到达的点看成数轴上的一串整点：0, 1, ……, L(其中L是桥的长度). 坐标为0的点表示桥的起点, 坐标为L的点表示桥的终点. 青蛙从桥的起点开始, 不停的向终点方向跳跃. 一次跳跃的距离是S到T之间的任意正整数(包括S,T). 当青蛙跳到或跳过坐标为L的点时, 就算青蛙已经跳出了独木桥. \r\n题目给出独木桥的长度L, 青蛙跳跃的距离范围S,T, 桥上石子的位置. 你的任务是确定青蛙要想过河, 最少需要踩到的石子数. \r\n对于30%的数据, L <= 10000；\r\n对于全部的数据, L <= 10^9. ', '输入的第一行有一个正整数L(1 <= L <= 10^9), 表示独木桥的长度. 第二行有三个正整数S, T, M, 分别表示青蛙一次跳跃的最小距离, 最大距离, 及桥上石子的个数, 其中1 <= S <= T <= 10, 1 <= M <= 100. 第三行有M个不同的正整数分别表示这M个石子在数轴上的位置(数据保证桥的起点和终点处没有石子). 所有相邻的整数之间用一个空格隔开. ', '输出只包括一个整数, 表示青蛙过河最少需要踩到的石子数.', '10\r\n2 3 5\r\n2 3 5 6 7', '2', NULL);
+(1002, 0, '过河', 1000, 32768, '在河上有一座独木桥, 一只青蛙想沿着独木桥从河的一侧跳到另一侧. 在桥上有一些石子, 青蛙很讨厌踩在这些石子上. 由于桥的长度和青蛙一次跳过的距离都是正整数, 我们可以把独木桥上青蛙可能到达的点看成数轴上的一串整点：0, 1, ……, L(其中L是桥的长度). 坐标为0的点表示桥的起点, 坐标为L的点表示桥的终点. 青蛙从桥的起点开始, 不停的向终点方向跳跃. 一次跳跃的距离是S到T之间的任意正整数(包括S,T). 当青蛙跳到或跳过坐标为L的点时, 就算青蛙已经跳出了独木桥. \r\n题目给出独木桥的长度L, 青蛙跳跃的距离范围S,T, 桥上石子的位置. 你的任务是确定青蛙要想过河, 最少需要踩到的石子数. \r\n对于30%的数据, L <= 10000；\r\n对于全部的数据, L <= 10^9. ', '输入的第一行有一个正整数L(1 <= L <= 10^9), 表示独木桥的长度. 第二行有三个正整数S, T, M, 分别表示青蛙一次跳跃的最小距离, 最大距离, 及桥上石子的个数, 其中1 <= S <= T <= 10, 1 <= M <= 100. 第三行有M个不同的正整数分别表示这M个石子在数轴上的位置(数据保证桥的起点和终点处没有石子). 所有相邻的整数之间用一个空格隔开. ', '输出只包括一个整数, 表示青蛙过河最少需要踩到的石子数.', '10\r\n2 3 5\r\n2 3 5 6 7', '2', NULL);
 
 -- --------------------------------------------------------
 
@@ -368,15 +368,23 @@ INSERT INTO `voj_user_groups` (`user_group_id`, `user_group_slug`, `user_group_n
 -- --------------------------------------------------------
 
 --
--- Table structure for table `voj_user_meta`
+-- Table structure for table `voj_usermeta`
 --
 
-CREATE TABLE IF NOT EXISTS `voj_user_meta` (
+CREATE TABLE IF NOT EXISTS `voj_usermeta` (
   `meta_id` bigint(20) NOT NULL,
   `uid` bigint(20) NOT NULL,
   `meta_key` varchar(64) NOT NULL,
   `meta_value` text NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8;
+
+--
+-- Dumping data for table `voj_usermeta`
+--
+
+INSERT INTO `voj_usermeta` (`meta_id`, `uid`, `meta_key`, `meta_value`) VALUES
+(1, 1000, 'RegisterTime', '2014-10-07 12:35:45'),
+(2, 1001, 'RegisterTime', '2014-10-08 12:35:45');
 
 --
 -- Indexes for dumped tables
@@ -507,9 +515,9 @@ ALTER TABLE `voj_user_groups`
   ADD UNIQUE KEY `user_group_slug` (`user_group_slug`);
 
 --
--- Indexes for table `voj_user_meta`
+-- Indexes for table `voj_usermeta`
 --
-ALTER TABLE `voj_user_meta`
+ALTER TABLE `voj_usermeta`
   ADD PRIMARY KEY (`meta_id`),
   ADD KEY `uid` (`uid`);
 
@@ -583,10 +591,10 @@ ALTER TABLE `voj_users`
 ALTER TABLE `voj_user_groups`
   MODIFY `user_group_id` int(4) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=4;
 --
--- AUTO_INCREMENT for table `voj_user_meta`
+-- AUTO_INCREMENT for table `voj_usermeta`
 --
-ALTER TABLE `voj_user_meta`
-  MODIFY `meta_id` bigint(20) NOT NULL AUTO_INCREMENT;
+ALTER TABLE `voj_usermeta`
+  MODIFY `meta_id` bigint(20) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=3;
 --
 -- Constraints for dumped tables
 --
@@ -656,10 +664,10 @@ ALTER TABLE `voj_users`
   ADD CONSTRAINT `voj_users_ibfk_2` FOREIGN KEY (`prefer_language_id`) REFERENCES `voj_languages` (`language_id`);
 
 --
--- Constraints for table `voj_user_meta`
+-- Constraints for table `voj_usermeta`
 --
-ALTER TABLE `voj_user_meta`
-  ADD CONSTRAINT `voj_user_meta_ibfk_1` FOREIGN KEY (`uid`) REFERENCES `voj_users` (`uid`);
+ALTER TABLE `voj_usermeta`
+  ADD CONSTRAINT `voj_usermeta_ibfk_1` FOREIGN KEY (`uid`) REFERENCES `voj_users` (`uid`);
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;

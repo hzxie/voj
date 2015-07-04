@@ -1,5 +1,7 @@
 package com.trunkshell.voj.web.service;
 
+import java.util.Calendar;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -10,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.trunkshell.voj.web.mapper.LanguageMapper;
 import com.trunkshell.voj.web.mapper.UserGroupMapper;
 import com.trunkshell.voj.web.mapper.UserMapper;
+import com.trunkshell.voj.web.mapper.UserMetaMapper;
 import com.trunkshell.voj.web.model.Language;
 import com.trunkshell.voj.web.model.User;
 import com.trunkshell.voj.web.model.UserGroup;
@@ -29,6 +32,10 @@ public class UserService {
 	 */
 	public User getUserUsingUid(long uid) {
 		return userMapper.getUserUsingUid(uid);
+	}
+	
+	public Map<String, String> getUserMetaUsingUid(long uid) {
+		return null;
 	}
 	
 	/**
@@ -84,15 +91,24 @@ public class UserService {
 	 */
 	public Map<String, Boolean> createUser(String username, String password, String email, 
 			String languageSlug, boolean isCsrfTokenValid, boolean isAllowRegister) {
-		UserGroup userGroup = getUserGroup("users");
+		UserGroup userGroup = getUserGroupUsingSlug("users");
 		Language languagePreference = languageMapper.getLanguageUsingSlug(languageSlug);
 		User user = new User(username, DigestUtils.md5Hex(password), email, userGroup, languagePreference);
 		
 		Map<String, Boolean> result = getUserCreationResult(user, password, isCsrfTokenValid, isAllowRegister);
 		if ( result.get("isSuccessful") ) {
 			userMapper.createUser(user);
+			createUserMeta(user);
 		}
 		return result;
+	}
+	
+	/**
+	 * 创建用户元信息.
+	 * @param user - 对应的用户对象
+	 */
+	private void createUserMeta(User user) {
+		
 	}
 	
 	/**
@@ -165,7 +181,6 @@ public class UserService {
 	 * @param submitedPassword - 所提交进行验证的旧密码(未使用MD5加密)
 	 * @return 用户旧密码是否正确
 	 */
-	@SuppressWarnings("unused")
 	private boolean isOldPasswordCorrect(String oldPassword, String submitedPassword) {
 		if ( submitedPassword.isEmpty() ) {
 			return true;
@@ -202,7 +217,6 @@ public class UserService {
 	 * @param email - 待更新的Email地址
 	 * @return 电子邮件地址是否存在
 	 */
-	@SuppressWarnings("unused")
 	private boolean isEmailExists(String currentEmail, String email) {
 		if ( currentEmail.equals(email) ) {
 			return false;
@@ -216,7 +230,7 @@ public class UserService {
 	 * @param userGroupSlug - 用户组的唯一英文缩写
 	 * @return 用户组对象或空引用
 	 */
-	private UserGroup getUserGroup(String userGroupSlug) {
+	public UserGroup getUserGroupUsingSlug(String userGroupSlug) {
 		UserGroup userGroup = userGroupMapper.getUserGroupUsingSlug(userGroupSlug);
 		return userGroup;
 	}
@@ -224,10 +238,30 @@ public class UserService {
 	/**
 	 * [此方法仅供管理员使用]
 	 * 获取系统中注册用户的总数.
+	 * @param userGroup - 用户所属的用户组对象
 	 * @return 系统中注册用户的总数
 	 */
-	public long getNumberOfUsers() {
-		return userMapper.getNumberOfUsers();
+	public long getNumberOfUsers(UserGroup userGroup) {
+		return userMapper.getNumberOfUsersUsingUserGroup(userGroup);
+	}
+	
+	/**
+	 * [此方法仅供管理员使用]
+	 * 获取今日注册的用户数量.
+	 * @return 今日注册的用户数量
+	 */
+	public long getNumberOfUserRegisteredToday() {
+		Calendar calendar = Calendar.getInstance();
+		int year = calendar.get(Calendar.YEAR);
+		int month = calendar.get(Calendar.MONTH);
+		int date = calendar.get(Calendar.DAY_OF_MONTH);
+		
+		calendar.set(year, month, date, 0, 0, 0);
+		Date startTime = calendar.getTime();
+		calendar.set(year, month, date, 23, 59, 59);
+		Date endTime = calendar.getTime();
+		
+		return userMetaMapper.getNumberOfUserRegistered(startTime, endTime);
 	}
 	
 	/**
@@ -235,6 +269,12 @@ public class UserService {
 	 */
 	@Autowired
 	private UserMapper userMapper;
+	
+	/**
+	 * 自动注入的UserMetaMapper对象.
+	 */
+	@Autowired
+	private UserMetaMapper userMetaMapper;
 	
 	/**
 	 * 自动注入的UserGroupMapper对象.

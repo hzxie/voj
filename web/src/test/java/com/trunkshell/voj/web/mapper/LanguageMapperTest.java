@@ -79,7 +79,7 @@ public class LanguageMapperTest {
 	 * 预期结果: 数据插入操作成功完成
 	 */
 	@Test
-	public void testCreateLanguageNormal() {
+	public void testCreateLanguageNormally() {
 		Language language = new Language("text/x-php", "PHP", "php foo.php", "php foo.php");
 		languageMapper.createLanguage(language);
 	}
@@ -101,7 +101,7 @@ public class LanguageMapperTest {
 	 * 预期结果: 数据更新操作成功完成
 	 */
 	@Test
-	public void testUpdateLanguageNormal() {
+	public void testUpdateLanguageNormally() {
 		Language language = languageMapper.getLanguageUsingId(2);
 		Assert.assertNotNull(language);
 		

@@ -20,6 +20,20 @@ import com.trunkshell.voj.web.model.Option;
 @CacheNamespace(implementation = org.mybatis.caches.ehcache.EhcacheCache.class)
 public interface OptionMapper {
 	/**
+	 * 获取全部系统选项.
+	 * @return 一个包含全部系统选项的列表
+	 */
+	@Select("SELECT * FROM voj_options")
+	@Options(useCache = true)
+	@Results(value = {
+			@Result(property = "optionId", column = "option_id"),
+			@Result(property = "optionName", column = "option_name"),
+			@Result(property = "optionValue", column = "option_value"),
+			@Result(property = "isAutoload", column = "is_autoload")
+	})
+	public List<Option> getOptions();
+	
+	/**
 	 * 获取自动加载的系统选项.
 	 * @return 一个包含自动加载系统选项的列表
 	 */

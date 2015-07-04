@@ -64,7 +64,7 @@
                             <div class="row-fluid">
                                 <div class="span6 border-right">
                                     <span class="text-uppercase"><spring:message code="voj.administration.index.new-users-today" text="New Users Today" /></span>
-                                    <h4>0</h4>
+                                    <h4>${newUsersToday}</h4>
                                 </div> <!-- .span6 -->
                                 <div class="span6">
                                     <span class="text-uppercase"><spring:message code="voj.administration.index.online-users" text="Online Users" /></span>

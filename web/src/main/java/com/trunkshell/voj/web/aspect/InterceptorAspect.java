@@ -1,6 +1,7 @@
 package com.trunkshell.voj.web.aspect;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -29,7 +30,7 @@ public class InterceptorAspect {
 	 * @throws Throwable 
 	 */
 	@Around(value = "execution(* com.trunkshell.voj.web.controller.AccountsController.dashboardView(..)) && args(request, ..)")
-	public ModelAndView dashboardInterceptor(ProceedingJoinPoint proceedingJoinPoint, 
+	public ModelAndView dashboardViewInterceptor(ProceedingJoinPoint proceedingJoinPoint, 
 			HttpServletRequest request) throws Throwable {
 		ModelAndView view = null;
 		HttpSession session = request.getSession();
@@ -50,9 +51,9 @@ public class InterceptorAspect {
 	 * @return 一个包含预期试图的ModelAndView对象
 	 * @throws Throwable 
 	 */
-	@Around(value = "execution(* com.trunkshell.voj.web.controller.AdministrationController.*(..)) && args(.., request)")
-	public ModelAndView administrationInterceptor(ProceedingJoinPoint proceedingJoinPoint, 
-			HttpServletRequest request) throws Throwable {
+	@Around(value = "execution(* com.trunkshell.voj.web.controller.AdministrationController.*View(..)) && args(.., request, response)")
+	public ModelAndView administrationViewInterceptor(ProceedingJoinPoint proceedingJoinPoint, 
+			HttpServletRequest request, HttpServletResponse response) throws Throwable {
 		ModelAndView view = null;
 		HttpSession session = request.getSession();
 		
