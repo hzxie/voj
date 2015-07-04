@@ -19,6 +19,14 @@ import com.trunkshell.voj.web.model.Option;
 @Transactional
 public class OptionService {
 	/**
+	 * 获取全部系统选项.
+	 * @return 一个包含全部系统选项的列表
+	 */
+	public List<Option> getOptions() {
+		return optionMapper.getOptions();
+	}
+	
+	/**
 	 * 获取自动加载的系统选项.
 	 * @return 一个包含自动加载系统选项的列表
 	 */

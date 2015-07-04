@@ -1,5 +1,7 @@
 package com.trunkshell.voj.web.mapper;
 
+import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 
 import org.junit.Assert;
@@ -29,6 +31,23 @@ import com.trunkshell.voj.web.model.User;
 @TransactionConfiguration(defaultRollback = true)
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class SubmissionMapperTest {
+	/**
+	 * 测试用例: 测试getNumberOfSubmissions(Date, Date)方法
+	 * 测试数据: 使用2014年10月17日进行查询
+	 * 预期结果: 返回当天的提交次数(2次)
+	 */
+	@Test
+	public void testGetNumberOfSubmissions() {
+		Calendar calendar = Calendar.getInstance();	
+		calendar.set(2014, 9, 17, 0, 0, 0);
+		Date startTime = calendar.getTime();
+		calendar.set(2014, 9, 17, 23, 59, 59);
+		Date endTime = calendar.getTime();
+		
+		long numberofSubmissions = submissionMapper.getNumberOfSubmissions(startTime, endTime);
+		Assert.assertEquals(2, numberofSubmissions);
+	}
+	
 	/**
 	 * 测试用例: 测试getSubmission(long)方法
 	 * 测试数据: Problem#1000的提交记录的唯一标识符
@@ -228,7 +247,7 @@ public class SubmissionMapperTest {
 	 * 预期结果: 数据插入操作成功完成
 	 */
 	@Test
-	public void testCreateSubmissionNormal() {
+	public void testCreateSubmissionNormally() {
 		Problem problem = problemMapper.getProblem(1000);
 		User user = userMapper.getUserUsingUid(1000);
 		Language language = languageMapper.getLanguageUsingId(1);
@@ -258,7 +277,7 @@ public class SubmissionMapperTest {
 	 * 预期结果: 数据更新操作成功完成
 	 */
 	@Test
-	public void testUpdateSubmissionNormal() {
+	public void testUpdateSubmissionNormally() {
 		Submission submission = submissionMapper.getSubmission(1002);
 		Assert.assertNotNull(submission);
 		

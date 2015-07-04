@@ -11,12 +11,14 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.ModelAndView;
 
+import com.trunkshell.voj.web.exception.ResourceNotFoundException;
 import com.trunkshell.voj.web.model.Language;
 import com.trunkshell.voj.web.model.User;
 import com.trunkshell.voj.web.service.LanguageService;
@@ -185,6 +187,20 @@ public class AccountsController {
 					new Object[] {username, ipAddress}));
 		}
 		return result;
+	}
+	
+	@RequestMapping(value = "/user/{uid}", method = RequestMethod.GET)
+	public ModelAndView userView(
+			@PathVariable("uid") long uid,
+			HttpServletRequest request, HttpServletResponse response) {
+		User user = userService.getUserUsingUid(uid);
+		if ( user == null ) {
+			throw new ResourceNotFoundException();
+		}
+		
+		ModelAndView view = new ModelAndView("accounts/user");
+		view.addObject("user", user);
+		return view;
 	}
 	
 	/**

@@ -1,5 +1,7 @@
 package com.trunkshell.voj.web.mapper;
 
+import java.util.List;
+
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -23,6 +25,19 @@ import com.trunkshell.voj.web.model.UserGroup;
 @TransactionConfiguration(defaultRollback = true)
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class UserMapperTest {
+	/**
+	 * 测试用例: 测试getNumberOfUsers(UserGroup)方法
+	 * 测试数据: 使用用户(Users)的用户组
+	 * 预期结果: 返回该用户组中用户的数量
+	 */
+	@Test
+	public void testGetNumberOfUsers() {
+		UserGroup userGroup = new UserGroup(1, "users", "Users");
+		long totalUsers = userMapper.getNumberOfUsersUsingUserGroup(userGroup);
+		
+		Assert.assertEquals(2, totalUsers);
+	}
+	
 	/**
 	 * 测试用例: 测试getUserUsingUid(long)方法
 	 * 测试数据: 使用用户名为zjhzxhz的用户的唯一标识符
@@ -99,12 +114,28 @@ public class UserMapperTest {
 	}
 	
 	/**
+	 * 测试用例: 测试getUserUsingUserGroup(UserGroup, long, int)方法
+	 * 测试数据: 使用用户(Users)的用户组
+	 * 预期结果: 返回预期的用户列表(共1名用户)
+	 */
+	@Test
+	public void testGetUserUsingUserGroup() {
+		UserGroup userGroup = new UserGroup(1, "users", "Users");
+		List<User> users = userMapper.getUserUsingUserGroup(userGroup, 0, 1);
+		Assert.assertEquals(1, users.size());
+		
+		User firstUser = users.get(0);
+		String username = firstUser.getUsername();
+		Assert.assertEquals("voj-tester", username);
+	}
+	
+	/**
 	 * 测试用例: 测试createUser(User)方法
 	 * 测试数据: 使用合法的数据集, 并且数据表中不存在相同用户名和电子邮件地址
 	 * 预期结果: 数据插入操作成功完成
 	 */
 	@Test
-	public void testCreateUserNormal() {
+	public void testCreateUserNormally() {
 		UserGroup userGroup = new UserGroup(1, "users", "Users");
 		Language language = new Language(2, "text/x-c++", "C++", "g++ foo.cpp -o foo", "./foo");
 		User user = new User("new-user-0xff", "Password","noreply@zjhzxhz.com", userGroup, language);
@@ -171,10 +202,10 @@ public class UserMapperTest {
 	/**
 	 * 测试用例: 测试updateUser(User)方法
 	 * 测试数据: 使用合法的数据集, 并且数据表中不存在相同用户名和电子邮件地址
-	 * 预期结果: 数据插入操作成功完成
+	 * 预期结果: 数据更新操作成功完成
 	 */
 	@Test
-	public void testUpdateUserNormal() {
+	public void testUpdateUserNormally() {
 		User user = userMapper.getUserUsingUid(1000);
 		Assert.assertNotNull(user);
 		
@@ -185,7 +216,7 @@ public class UserMapperTest {
 	/**
 	 * 测试用例: 测试updateUser(User)方法
 	 * 测试数据: 使用合法的数据集, 并且数据表中不存在相同用户名和电子邮件地址
-	 * 预期结果: 数据插入操作成功完成
+	 * 预期结果: 数据更新操作成功完成
 	 */
 	@Test(expected = org.springframework.dao.DuplicateKeyException.class)
 	public void testUpdateUserUsingExistingEmail() {
@@ -198,8 +229,8 @@ public class UserMapperTest {
 	
 	/**
 	 * 测试用例: 测试deleteUser(long)方法
-	 * 测试数据: 不存在的用户唯一标识符
-	 * 预期结果: 方法正常执行, 未影响数据表中的数据
+	 * 测试数据: 存在的用户唯一标识符
+	 * 预期结果: 数据删除操作成功完成
 	 */
 	@Test
 	public void testDeleteUserExists() {

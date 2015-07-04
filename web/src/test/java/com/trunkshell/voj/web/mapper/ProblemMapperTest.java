@@ -26,12 +26,34 @@ public class ProblemMapperTest {
 	/**
 	 * 测试用例: 测试getNumberOfProblems()方法
 	 * 测试数据: N/a
-	 * 预期结果: 返回数据表中公开试题的数量
+	 * 预期结果: 返回数据表中全部试题的数量
 	 */
 	@Test
 	public void testGetNumberOfProblems() {
 		long totalProblems = problemMapper.getNumberOfProblems();
 		Assert.assertEquals(3, totalProblems);
+	}
+	
+	/**
+	 * 测试用例: 测试getNumberOfPublicProblems()方法
+	 * 测试数据: N/a
+	 * 预期结果: 返回数据表中公开试题的数量
+	 */
+	@Test
+	public void testGetNumberOfPublicProblems() {
+		long totalProblems = problemMapper.getNumberOfPublicProblems();
+		Assert.assertEquals(2, totalProblems);
+	}
+	
+	/**
+	 * 测试用例: 测试getNumberOfPrivateProblems()方法
+	 * 测试数据: N/a
+	 * 预期结果: 返回数据表中非公开试题的数量
+	 */
+	@Test
+	public void testGetNumberOfPrivateProblems() {
+		long totalProblems = problemMapper.getNumberOfPrivateProblems();
+		Assert.assertEquals(1, totalProblems);
 	}
 	
 	/**
@@ -70,7 +92,7 @@ public class ProblemMapperTest {
 	@Test
 	public void testGetProblemsFrom1000WithLimit10() {
 		List<Problem> problems = problemMapper.getProblems(1000, 10);
-		Assert.assertEquals(3, problems.size());
+		Assert.assertEquals(2, problems.size());
 		
 		Problem firstProblem = problems.get(0);
 		long problemId = firstProblem.getProblemId();
@@ -118,7 +140,7 @@ public class ProblemMapperTest {
 	 * 预期结果: 数据插入操作成功完成
 	 */
 	@Test
-	public void testCreateProblemNormal() {
+	public void testCreateProblemNormally() {
 		Problem problem = new Problem(false, "Problem Name", 1000, 32768, "Description", 
 										"Input Format", "Output Format", "Sample Input", 
 										"Sample Input", null);
@@ -131,7 +153,7 @@ public class ProblemMapperTest {
 	 * 预期结果: 数据更新操作成功完成
 	 */
 	@Test
-	public void testUpdateProblemNormal() {
+	public void testUpdateProblemNormally() {
 		Problem problem = problemMapper.getProblem(1001);
 		Assert.assertNotNull(problem);
 		

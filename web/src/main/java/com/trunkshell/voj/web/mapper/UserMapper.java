@@ -1,5 +1,7 @@
 package com.trunkshell.voj.web.mapper;
 
+import java.util.List;
+
 import org.apache.ibatis.annotations.CacheNamespace;
 import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Insert;
@@ -24,12 +26,13 @@ import com.trunkshell.voj.web.model.UserGroup;
 public interface UserMapper {
 	/**
 	 * [此方法仅供管理员使用]
-	 * 获取系统中注册用户的总数.
-	 * @return 系统中注册用户的总数
+	 * 获取系统中某个用户组中用户的总数.
+	 * @param userGroup - 用户所属的用户组对象
+	 * @return 系统中某个用户组中用户的总数
 	 */
-	@Select("SELECT COUNT(*) FROM voj_users")
+	@Select("SELECT COUNT(*) FROM voj_users WHERE user_group_id = #{userGroup.userGroupId}")
 	@Options(useCache = true)
-	public long getNumberOfUsers();
+	public long getNumberOfUsersUsingUserGroup(@Param("userGroup") UserGroup userGroup);
 	
 	/**
 	 * 通过用户唯一标识符获取用户对象.
@@ -71,6 +74,22 @@ public interface UserMapper {
 	public User getUserUsingEmail(@Param("email") String email);
 	
 	/**
+	 * [此方法仅供管理员使用]
+	 * 获取某个用户组中的用户列表.
+	 * @param userGroup - 用户所属的用户组对象
+	 * @param offset - 用户唯一标识符的起始编号
+	 * @param limit - 需要获取的用户的数量
+	 * @return 用户列表
+	 */
+	@Select("SELECT * FROM voj_users WHERE user_group_id = #{userGroup.userGroupId} AND uid >= #{uid} LIMIT #{limit}")
+	@Options(useCache = true)
+	@Results(value = {
+		@Result(property = "userGroup", column = "user_group_id", javaType=UserGroup.class, one = @One(select="com.trunkshell.voj.web.mapper.UserGroupMapper.getUserGroupUsingId")),
+		@Result(property = "preferLanguage", column = "prefer_language_id", javaType=Language.class, one = @One(select="com.trunkshell.voj.web.mapper.LanguageMapper.getLanguageUsingId"))
+	})
+	public List<User> getUserUsingUserGroup(@Param("userGroup") UserGroup userGroup, @Param("uid") long offset, @Param("limit") int limit);
+	
+	/**
 	 * 创建新用户对象.
 	 * @param user - 待创建的用户对象
 	 */
@@ -92,5 +111,5 @@ public interface UserMapper {
 	 */
 	@Delete("DELETE FROM voj_users WHERE uid = #{uid}")
 	@Options(flushCache = true)
-	public void deleteUser(long uid);
+	public void deleteUser(@Param("uid") long uid);
 }
