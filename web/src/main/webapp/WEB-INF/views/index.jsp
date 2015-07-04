@@ -123,10 +123,27 @@
     <!-- Placed at the end of the document so the pages load faster -->
     <script type="text/javascript" src="${cdnUrl}/js/site.js"></script>
     <script type="text/javascript">
-        $(document).ready(function() {
+        $(function() {
             $('.carousel').carousel({
                 interval: 5000
             });
+        });
+    </script>
+    <script type="text/javascript">
+        $(function() {
+            var isUpgradeBrowserShown = $('#upgrade-browser').is(':visible'),
+                upgradeBrowserHeight  = $('#upgrade-browser').outerHeight();
+
+            if ( isUpgradeBrowserShown ) {
+                $('#header').css('top', upgradeBrowserHeight);
+                $('#content').css('margin-top', upgradeBrowserHeight);
+            }
+        });
+    </script>
+    <script type="text/javascript">
+        $('.btn-danger', '#upgrade-browser').click(function() {
+            $('#header').css('top', 0);
+            $('#content').css('margin-top', 0);
         });
     </script>
     <c:if test="${GoogleAnalyticsCode != ''}">

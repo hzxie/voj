@@ -2,6 +2,27 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <spring:eval expression="@propertyConfigurer.getProperty('cdn.url')" var="cdnUrl" />
+    <!--[if lte IE 7]>
+    <div id="upgrade-browser">
+        <div class="row-fluid container">
+            <div class="span8">
+                <div class="notice">
+                	<c:url var="WebsiteName" value="${WebsiteName}" />
+                    <h6>
+                        <spring:message code="voj.include.header.browser-not-supported" 
+                            text="Please note that Verwandlung Online Judge no longer supports Internet Explorer 7." 
+                            arguments="${WebsiteName}" />
+                    </h6>
+                    <p><spring:message code="voj.include.header.browser-not-supported-message" text="We recommend upgrading to the latest <a href='http://www.microsoft.com/windows/internet-explorer/default.aspx'>Internet Explorer</a>, <a href='http://www.google.com/chrome/'>Google Chrome</a> or <a href='http://www.mozilla.com/firefox/'>Firefox</a>.<br>If you are using IE 9 or later, make sure you turn off 'Compatibility View'." /></p>
+                </div>
+            </div>
+            <div class="span4">
+                <button class="btn btn-primary" onclick="window.location.href='<c:url value="/help#browsers" />';"><spring:message code="voj.include.header.learn-more" text="Learn More" /></button>
+                <button class="btn btn-danger" onclick="$('#upgrade-browser').fadeOut();"><spring:message code="voj.include.header.ignore" text="Ignore" /></button>
+            </div>
+        </div>
+    </div>
+    <![endif]-->
     <div id="header" class="row-fluid">
         <div class="container">
             <div id="logo" class="span6">
@@ -21,7 +42,7 @@
         </div> <!-- .container -->
     </div> <!-- #header -->
     <div id="drawer-nav">
-        <span class="pull-right"><a href="javascript:closeDrawerMenu();"><spring:message code="voj.include.header.close" text="Close" /> &times;</a></span>
+        <span class="close-trigger"><a href="javascript:closeDrawerMenu();"><spring:message code="voj.include.header.close" text="Close" /> &times;</a></span>
         <div id="accounts" class="section">
             <h4><spring:message code="voj.include.header.my-accounts" text="My Accounts" /></h4>
             <div id="profile">

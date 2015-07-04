@@ -135,6 +135,8 @@ div#wrapper div#container div#header a#sidebar-toggle {
 div#wrapper div#container div#header ul.nav {
 	height: 20px;
 	margin: 10px;
+	position: absolute;
+	right: 0;
 }
 
 div#wrapper div#container div#header ul.nav li {
@@ -167,8 +169,10 @@ div#wrapper div#container div#header ul.dropdown-menu {
 	border: 1px solid #ccc;
 	border: 1px solid rgba(0,0,0,.15);
 	color: #000;
+	*display: inline;
 	margin: 12px 0 0;
 	padding: 5px 0;
+	zoom: 1;
 	-webkit-border-radius: 0;
 	   -moz-border-radius: 0;
 	        border-radius: 0;
