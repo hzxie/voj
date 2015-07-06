@@ -216,9 +216,9 @@ public class ApplicationDispatcher {
 	 */
 	private String getJudgeLog(String compileLog) {
 		StringBuilder formatedLogBuilder = new StringBuilder();
-		formatedLogBuilder.append("Compile Error.\n");
-		formatedLogBuilder.append(compileLog);
-		formatedLogBuilder.append("Compile Error, Time = 0 ms, Memory = 0 KB, Score = 0.");
+		formatedLogBuilder.append("Compile Error.\n\n");
+		formatedLogBuilder.append(compileLog.replace("\n", "\n\n"));
+		formatedLogBuilder.append("\nCompile Error, Time = 0 ms, Memory = 0 KB, Score = 0.\n");
 		return formatedLogBuilder.toString();
 	}
 	
