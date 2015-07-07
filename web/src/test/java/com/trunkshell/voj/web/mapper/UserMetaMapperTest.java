@@ -58,7 +58,7 @@ public class UserMetaMapperTest {
 		
 		UserMeta userMeta = userMetaList.get(0);
 		String metaKey = userMeta.getMetaKey();
-		Assert.assertEquals("RegisterTime", metaKey);
+		Assert.assertEquals("registerTime", metaKey);
 	}
 	
 	/**
@@ -85,7 +85,7 @@ public class UserMetaMapperTest {
 		User user = userMapper.getUserUsingUid(1000);
 		Assert.assertNotNull(user);
 		
-		UserMeta userMeta = userMetaMapper.getUserMetaUsingUserAndMetaKey(user, "RegisterTime");
+		UserMeta userMeta = userMetaMapper.getUserMetaUsingUserAndMetaKey(user, "registerTime");
 		Assert.assertNotNull(userMeta);
 		
 		String metaValue = userMeta.getMetaValue();
@@ -102,7 +102,7 @@ public class UserMetaMapperTest {
 		User user = userMapper.getUserUsingUid(1000);
 		Assert.assertNotNull(user);
 		
-		UserMeta userMeta = userMetaMapper.getUserMetaUsingUserAndMetaKey(user, "NotExistsKey");
+		UserMeta userMeta = userMetaMapper.getUserMetaUsingUserAndMetaKey(user, "notExistsKey");
 		Assert.assertNull(userMeta);
 	}
 	
@@ -114,14 +114,14 @@ public class UserMetaMapperTest {
 	@Test
 	public void testCreateUserMetaNormally() {
 		User user = userMapper.getUserUsingUid(1001);
-		UserMeta userMeta = new UserMeta(user, "MetaKey", "MetaValue");
+		UserMeta userMeta = new UserMeta(user, "metaKey", "metaValue");
 		userMetaMapper.createUserMeta(userMeta);
 		
-		UserMeta insertedUserMeta = userMetaMapper.getUserMetaUsingUserAndMetaKey(user, "MetaKey");
+		UserMeta insertedUserMeta = userMetaMapper.getUserMetaUsingUserAndMetaKey(user, "metaKey");
 		Assert.assertNotNull(insertedUserMeta);
 		
 		String metaValue = insertedUserMeta.getMetaValue();
-		Assert.assertEquals("MetaValue", metaValue);
+		Assert.assertEquals("metaValue", metaValue);
 	}
 	
 	/**
@@ -134,7 +134,7 @@ public class UserMetaMapperTest {
 		User user = userMapper.getUserUsingUid(0);
 		Assert.assertNull(user);
 		
-		UserMeta userMeta = new UserMeta(user, "MetaKey", "MetaValue");
+		UserMeta userMeta = new UserMeta(user, "metaKey", "metaValue");
 		userMetaMapper.createUserMeta(userMeta);
 	}
 	
@@ -146,14 +146,14 @@ public class UserMetaMapperTest {
 	@Test
 	public void testUpdateUserMetaNormally() {
 		User user = userMapper.getUserUsingUid(1001);
-		UserMeta userMeta = userMetaMapper.getUserMetaUsingUserAndMetaKey(user, "RegisterTime");
+		UserMeta userMeta = userMetaMapper.getUserMetaUsingUserAndMetaKey(user, "registerTime");
 		
-		userMeta.setMetaValue("NewMetaValue");
+		userMeta.setMetaValue("newMetaValue");
 		userMetaMapper.updateUserMeta(userMeta);
 		
-		UserMeta updatedUserMeta = userMetaMapper.getUserMetaUsingUserAndMetaKey(user, "RegisterTime");
+		UserMeta updatedUserMeta = userMetaMapper.getUserMetaUsingUserAndMetaKey(user, "registerTime");
 		String metaValue = updatedUserMeta.getMetaValue();
-		Assert.assertEquals("NewMetaValue", metaValue);
+		Assert.assertEquals("newMetaValue", metaValue);
 	}
 	
 	/**
@@ -164,14 +164,14 @@ public class UserMetaMapperTest {
 	@Test
 	public void testUpdateUserMetaTryToUpdateMetaKey() {
 		User user = userMapper.getUserUsingUid(1001);
-		UserMeta userMeta = userMetaMapper.getUserMetaUsingUserAndMetaKey(user, "RegisterTime");
+		UserMeta userMeta = userMetaMapper.getUserMetaUsingUserAndMetaKey(user, "registerTime");
 		
-		userMeta.setMetaKey("NewMetaKey");
+		userMeta.setMetaKey("newMetaKey");
 		userMetaMapper.updateUserMeta(userMeta);
 		
-		UserMeta updatedUserMeta = userMetaMapper.getUserMetaUsingUserAndMetaKey(user, "RegisterTime");
+		UserMeta updatedUserMeta = userMetaMapper.getUserMetaUsingUserAndMetaKey(user, "registerTime");
 		String metaKey = updatedUserMeta.getMetaKey();
-		Assert.assertEquals("RegisterTime", metaKey);
+		Assert.assertEquals("registerTime", metaKey);
 	}
 	
 	/**
@@ -184,7 +184,7 @@ public class UserMetaMapperTest {
 		User user = userMapper.getUserUsingUid(0);
 		Assert.assertNull(user);
 		
-		UserMeta userMeta = userMetaMapper.getUserMetaUsingUserAndMetaKey(user, "RegisterTime");
+		UserMeta userMeta = userMetaMapper.getUserMetaUsingUserAndMetaKey(user, "registerTime");
 		userMetaMapper.updateUserMeta(userMeta);
 	}
 	
