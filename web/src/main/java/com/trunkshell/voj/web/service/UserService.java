@@ -4,12 +4,14 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.alibaba.fastjson.JSON;
 import com.trunkshell.voj.web.mapper.LanguageMapper;
 import com.trunkshell.voj.web.mapper.UserGroupMapper;
 import com.trunkshell.voj.web.mapper.UserMapper;
@@ -37,8 +39,25 @@ public class UserService {
 		return userMapper.getUserUsingUid(uid);
 	}
 	
-	public Map<String, String> getUserMetaUsingUid(long uid) {
-		return null;
+	/**
+	 * 获取用户的元信息.
+	 * @param user
+	 * @return
+	 */
+	public Map<String, Object> getUserMetaUsingUid(User user) {
+		List<UserMeta> userMetaList = userMetaMapper.getUserMetaUsingUser(user);
+		Map<String, Object> userMetaMap = new HashMap<String, Object>(); 
+		
+		for ( UserMeta userMeta : userMetaList ) {
+			String key = userMeta.getMetaKey();
+			Object value = userMeta.getMetaValue();
+			
+			if ( key.equals("socialLinks") ) {
+				value = JSON.parseObject((String)value);
+			}
+			userMetaMap.put(key, value);
+		}
+		return userMetaMap;
 	}
 	
 	/**

@@ -23,6 +23,7 @@ import com.trunkshell.voj.web.model.Language;
 import com.trunkshell.voj.web.model.User;
 import com.trunkshell.voj.web.service.LanguageService;
 import com.trunkshell.voj.web.service.OptionService;
+import com.trunkshell.voj.web.service.SubmissionService;
 import com.trunkshell.voj.web.service.UserService;
 import com.trunkshell.voj.web.util.CsrfProtector;
 import com.trunkshell.voj.web.util.HttpRequestParser;
@@ -146,7 +147,7 @@ public class AccountsController {
 			view = new ModelAndView("redirect:/");
 		} else {
 			List<Language> languages = languageService.getAllLanguages();
-			boolean isAllowRegister = optionService.getOption("AllowUserRegister").getOptionValue().equals("1");
+			boolean isAllowRegister = optionService.getOption("allowUserRegister").getOptionValue().equals("1");
 			
 			view = new ModelAndView("accounts/register");
 			view.addObject("languages", languages);
@@ -174,7 +175,7 @@ public class AccountsController {
 			@RequestParam(value="languagePreference", required=true) String languageSlug,
 			@RequestParam(value="csrfToken", required=true) String csrfToken,
 			HttpServletRequest request) {
-		boolean isAllowRegister = optionService.getOption("AllowUserRegister").getOptionValue().equals("1");
+		boolean isAllowRegister = optionService.getOption("allowUserRegister").getOptionValue().equals("1");
 		boolean isCsrfTokenValid = CsrfProtector.isCsrfTokenValid(csrfToken, request.getSession());
 		Map<String, Boolean> result = userService.createUser(username, password, 
 				email, languageSlug, isCsrfTokenValid, isAllowRegister);
@@ -190,17 +191,26 @@ public class AccountsController {
 		return result;
 	}
 	
-	@RequestMapping(value = "/user/{uid}", method = RequestMethod.GET)
+	/**
+	 * 加载用户的个人信息.
+	 * @param userId - 用户的唯一标识符
+	 * @param request - Http Servlet Request对象
+	 * @param response - HttpResponse对象
+	 * @return 包含用户个人信息的ModelAndView对象
+	 */
+	@RequestMapping(value = "/user/{userId}", method = RequestMethod.GET)
 	public ModelAndView userView(
-			@PathVariable("uid") long uid,
+			@PathVariable("userId") long userId,
 			HttpServletRequest request, HttpServletResponse response) {
-		User user = userService.getUserUsingUid(uid);
+		User user = userService.getUserUsingUid(userId);
 		if ( user == null ) {
 			throw new ResourceNotFoundException();
 		}
 		
 		ModelAndView view = new ModelAndView("accounts/user");
 		view.addObject("user", user);
+		view.addObject("submissionStats", submissionService.getUserSubmissionStats(userId));
+		view.addAllObjects(userService.getUserMetaUsingUid(user));
 		return view;
 	}
 	
@@ -228,6 +238,12 @@ public class AccountsController {
 	 */
 	@Autowired
 	private LanguageService languageService;
+	
+	/**
+	 * 自动注入的SubmissionService对象.
+	 */
+	@Autowired
+	private SubmissionService submissionService;
 	
 	/**
 	 * 自动注入的OptionService对象.

@@ -179,12 +179,12 @@ CREATE TABLE IF NOT EXISTS `voj_options` (
 --
 
 INSERT INTO `voj_options` (`option_id`, `option_name`, `option_value`, `is_autoload`) VALUES
-(1, 'WebsiteName', 'Verwandlung Online Judge', 1),
-(2, 'Description', 'Verwandlung Online Judge is a cross-platform online judge system based on Spring MVC Framework.', 1),
-(3, 'Copyright', '<a href="http://zjhzxhz.com/" target="_blank">Trunk Shell</a>', 1),
-(4, 'GoogleAnalyticsCode', '', 1),
-(5, 'IcpNumber', '', 1),
-(6, 'AllowUserRegister', '0', 0);
+(1, 'websiteName', 'Verwandlung Online Judge', 1),
+(2, 'description', 'Verwandlung Online Judge is a cross-platform online judge system based on Spring MVC Framework.', 1),
+(3, 'copyright', '<a href="http://zjhzxhz.com/" target="_blank">Trunk Shell</a>', 1),
+(4, 'googleAnalyticsCode', '', 1),
+(5, 'icpNumber', '', 1),
+(6, 'allowUserRegister', '0', 0);
 
 -- --------------------------------------------------------
 
@@ -383,8 +383,8 @@ CREATE TABLE IF NOT EXISTS `voj_usermeta` (
 --
 
 INSERT INTO `voj_usermeta` (`meta_id`, `uid`, `meta_key`, `meta_value`) VALUES
-(1, 1000, 'RegisterTime', '2014-10-07 12:35:45'),
-(2, 1001, 'RegisterTime', '2014-10-08 12:35:45');
+(1, 1000, 'registerTime', '2014-10-07 12:35:45'),
+(2, 1001, 'registerTime', '2014-10-08 12:35:45');
 
 --
 -- Indexes for dumped tables

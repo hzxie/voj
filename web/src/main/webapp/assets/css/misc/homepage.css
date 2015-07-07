@@ -29,15 +29,15 @@ div#content div#introduction div.item {
 }
 
 div#content div#introduction div.item.first {
-	background-image: url('../img/sliders/slide-01.jpg');
+	background-image: url('../../img/sliders/slide-01.jpg');
 }
 
 div#content div#introduction div.item.second {
-	background-image: url('../img/sliders/slide-02.jpg');
+	background-image: url('../../img/sliders/slide-02.jpg');
 }
 
 div#content div#introduction div.item.third {
-	background-image: url('../img/sliders/slide-03.jpg');
+	background-image: url('../../img/sliders/slide-03.jpg');
 }
 
 div#content div#slogan {

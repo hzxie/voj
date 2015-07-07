@@ -105,8 +105,8 @@ public class UserMeta implements Serializable {
 	 * @see java.lang.Object#toString()
 	 */
 	public String toString() {
-		return String.format("UserMeta", 
-				new Object[] {});
+		return String.format("UserMeta: [ID=%s, User={%s}, Key=%s, Value=%s]", 
+				new Object[] { metaId, user, metaKey, metaValue});
 	}
 
 	/**
