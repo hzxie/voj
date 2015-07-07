@@ -10,7 +10,7 @@
                         <img src="${cdnUrl}/img/avatar.jpg" alt="avatar">
                     </div> <!-- .span3 -->
                     <div class="offset1 span8">
-                        <spring:message code="voj.administration.include.sidebar.welcome-back" text="Welcome back," /> <br>${user.username} <br>
+                        <spring:message code="voj.administration.include.sidebar.welcome-back" text="Welcome back," /> <br>${myProfile.username} <br>
                         <span class="label label-success"><spring:message code="voj.administration.include.sidebar.online" text="Online" /></span>
                     </div> <!-- .span8 -->
                 </div> <!-- .row-fluid -->

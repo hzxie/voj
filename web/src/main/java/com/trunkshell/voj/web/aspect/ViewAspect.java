@@ -49,12 +49,12 @@ public class ViewAspect {
 		
 		boolean isLoggedIn = isLoggedIn(session);
 		if ( isLoggedIn ) {
-			long uid = (Long)session.getAttribute("uid");
-			User user = userService.getUserUsingUid(uid);
+			long userId = (Long)session.getAttribute("uid");
+			User user = userService.getUserUsingUid(userId);
 			
 			view.addObject("isLogin", isLoggedIn)
-				.addObject("user", user)
-				.addObject("submissionStats", submissionService.getUserSubmissionStats(user.getUid()));
+				.addObject("myProfile", user)
+				.addObject("mySubmissionStats", submissionService.getSubmissionStatsOfUser(userId));
 		}
 		return view;
 	}

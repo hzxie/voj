@@ -32,11 +32,11 @@ import com.trunkshell.voj.web.util.DigestUtils;
 public class UserService {
 	/**
 	 * 通过用户唯一标识符获取用户对象.
-	 * @param uid - 用户唯一标识符
+	 * @param userId - 用户唯一标识符
 	 * @return 预期的用户对象或空引用
 	 */
-	public User getUserUsingUid(long uid) {
-		return userMapper.getUserUsingUid(uid);
+	public User getUserUsingUid(long userId) {
+		return userMapper.getUserUsingUid(userId);
 	}
 	
 	/**

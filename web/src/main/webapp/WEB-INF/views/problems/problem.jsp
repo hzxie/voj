@@ -200,7 +200,7 @@
     </script>
     <script type="text/javascript">
         $(function() {
-            var preferLanguage = '${user.preferLanguage.languageSlug}';
+            var preferLanguage = '${myProfile.preferLanguage.languageSlug}';
             $('select#languages').val(preferLanguage);
         });
     </script>

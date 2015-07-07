@@ -57,6 +57,28 @@ public class ProblemMapperTest {
 	}
 	
 	/**
+	 * 测试用例: 测试getLowerBoundOfProblems()方法
+	 * 测试数据: N/a
+	 * 预期结果: 第一个试题的ID(1000)
+	 */
+	@Test
+	public void testGetLowerBoundOfProblems() {
+		long lowerBoundOfProblems = problemMapper.getLowerBoundOfProblems();
+		Assert.assertEquals(1000, lowerBoundOfProblems);
+	}
+	
+	/**
+	 * 测试用例: 测试getUpperBoundOfProblems()方法
+	 * 测试数据: N/a
+	 * 预期结果: 最后一个试题的ID(1002)
+	 */
+	@Test
+	public void testGetUpperBoundOfProblems() {
+		long upperBoundOfProblems = problemMapper.getUpperBoundOfProblems();
+		Assert.assertEquals(1002, upperBoundOfProblems);
+	}
+	
+	/**
 	 * 测试用例: 测试getProblem()方法
 	 * 测试数据: 使用A+B Problem的试题唯一标识符
 	 * 预期结果: 返回预期的试题对象

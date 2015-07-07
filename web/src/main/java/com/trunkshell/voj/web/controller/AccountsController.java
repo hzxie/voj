@@ -209,8 +209,10 @@ public class AccountsController {
 		
 		ModelAndView view = new ModelAndView("accounts/user");
 		view.addObject("user", user);
-		view.addObject("submissionStats", submissionService.getUserSubmissionStats(userId));
 		view.addAllObjects(userService.getUserMetaUsingUid(user));
+		
+		view.addObject("submissions", submissionService.getSubmissionOfUser(userId));
+		view.addObject("submissionStats", submissionService.getSubmissionStatsOfUser(userId));
 		return view;
 	}
 	

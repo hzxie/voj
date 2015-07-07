@@ -48,7 +48,7 @@
                 <li><a href="#tab-customize" data-toggle="tab"><spring:message code="voj.accounts.dashboard.customize" text="Customize" /></a></li>
                 <li><a href="#tab-messages" data-toggle="tab"><spring:message code="voj.accounts.dashboard.messages" text="Messages" /></a></li>
                 <li><a href="#tab-accounts" data-toggle="tab"><spring:message code="voj.accounts.dashboard.accounts" text="Accounts" /></a></li>
-            <c:if test="${user.userGroup.userGroupSlug == 'administrators'}">
+            <c:if test="${myProfile.userGroup.userGroupSlug == 'administrators'}">
                 <li><a href="<c:url value="/administration" />"><spring:message code="voj.accounts.dashboard.system-administration" text="System Administration" /></a></li>
             </c:if>
             </ul>

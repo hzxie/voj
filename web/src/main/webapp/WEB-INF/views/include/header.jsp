@@ -49,10 +49,10 @@
             <c:choose>
             <c:when test="${isLogin}">
                 <img src="${cdnUrl}/img/avatar.jpg" alt="avatar" class="img-circle" />
-                <h5>${user.username}</h5>
-                <p class="email">${user.email}</p>
-                <p><spring:message code="voj.include.header.accepted" text="Accepted" />/<spring:message code="voj.include.header.submit" text="Submit" />: ${submissionStats.get("acceptedSubmission")}/${submissionStats.get("totalSubmission")}(${submissionStats.get("acRate")}%)</p>
-                <p><spring:message code="voj.include.header.language-preference" text="Language Preference" />: ${user.preferLanguage.languageName}</p>
+                <h5>${myProfile.username}</h5>
+                <p class="email">${myProfile.email}</p>
+                <p><spring:message code="voj.include.header.accepted" text="Accepted" />/<spring:message code="voj.include.header.submit" text="Submit" />: ${mySubmissionStats.get("acceptedSubmission")}/${mySubmissionStats.get("totalSubmission")}(${mySubmissionStats.get("acRate")}%)</p>
+                <p><spring:message code="voj.include.header.language-preference" text="Language Preference" />: ${myProfile.preferLanguage.languageName}</p>
                 <ul class="inline">
                     <li><a href="<c:url value="/accounts/dashboard" />"><spring:message code="voj.include.header.dashboard" text="Dashboard" /></a></li>
                     <li><a href="<c:url value="/accounts/login?logout=true" />"><spring:message code="voj.include.header.sign-out" text="Sign out" /></a></li>
