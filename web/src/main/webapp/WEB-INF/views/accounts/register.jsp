@@ -6,10 +6,10 @@
 <html lang="${language}">
 <head>
     <meta charset="UTF-8">
-    <title><spring:message code="voj.accounts.register.title" text="Create Account" /> | ${WebsiteName}</title>
+    <title><spring:message code="voj.accounts.register.title" text="Create Account" /> | ${websiteName}</title>
     <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="${Description}">
+    <meta name="description" content="${description}">
     <meta name="author" content="谢浩哲">
     <!-- Icon -->
     <link href="${cdnUrl}/img/favicon.ico" rel="shortcut icon" type="image/x-icon">
@@ -189,7 +189,7 @@
     </script>
     </c:if>
     <c:if test="${GoogleAnalyticsCode != ''}">
-    <script type="text/javascript">${GoogleAnalyticsCode}</script>
+    <script type="text/javascript">${googleAnalyticsCode}</script>
     </c:if>
 </body>
 </html>

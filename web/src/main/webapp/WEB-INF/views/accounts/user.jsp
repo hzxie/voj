@@ -1,15 +1,18 @@
 <%@ page language="java" contentType="text/html; charset=utf-8" pageEncoding="utf-8"%>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
+<fmt:setLocale value="${language}" />
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <spring:eval expression="@propertyConfigurer.getProperty('cdn.url')" var="cdnUrl" />
 <!DOCTYPE html>
 <html lang="${language}">
 <head>
     <meta charset="UTF-8">
-    <title><spring:message code="voj.accounts.user.title" text="User" />: ${user.username} | ${WebsiteName}</title>
+    <title><spring:message code="voj.accounts.user.title" text="User" />: ${user.username} | ${websiteName}</title>
     <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="${Description}">
+    <meta name="description" content="${description}">
     <meta name="author" content="谢浩哲">
     <!-- Icon -->
     <link href="${cdnUrl}/img/favicon.ico" rel="shortcut icon" type="image/x-icon">
@@ -40,15 +43,139 @@
     <!-- Header -->
     <%@ include file="/WEB-INF/views/include/header.jsp" %>
     <!-- Content -->
-    <div id="content">
+    <div id="content" class="container">
+        <div class="row-fluid">
+            <div id="sidebar" class="span3">
+                <div id="vcard" class="section">
+                    <img src="${cdnUrl}/img/avatar.jpg" alt="User Avatar" />
+                    <h5>${user.username}</h5>
+                </div> <!-- #vcard -->
+            <c:if test="${not empty socialLinks && fn:length(socialLinks) > 0}">
+                <div id="social-links" class="section">
+                    <ul class="inline">
+                    <c:if test="${not empty socialLinks['Facebook']}">
+                        <li><a href="https://facebook.com/${socialLinks['Facebook']}" class="facebook" title="Facebook"><i class="fa fa-facebook"></i></a></li>
+                    </c:if>
+                    <c:if test="${not empty socialLinks['Twitter']}">
+                        <li><a href="https://twitter.com/${socialLinks['Twitter']}" class="twitter" title="Twitter"><i class="fa fa-twitter"></i></a></li>
+                    </c:if>
+                    <c:if test="${not empty socialLinks['Weibo']}">
+                        <li><a href="http://weibo.com/${socialLinks['Weibo']}" class="weibo" title="Weibo"><i class="fa fa-weibo"></i></a></li>
+                    </c:if>
+                    <c:if test="${not empty socialLinks['Instagram']}">
+                        <li><a href="https://instagram.com/${socialLinks['Instagram']}" class="instagram" title="Instagram"><i class="fa fa-instagram"></i></a></li>
+                    </c:if>
+                    <c:if test="${not empty socialLinks['GitHub']}">
+                        <li><a href="https://github.com/${socialLinks['GitHub']}" class="github" title="GitHub"><i class="fa fa-github"></i></a></li>
+                    </c:if>
+                    <c:if test="${not empty socialLinks['StackOverflow']}">
+                        <li><a href="http://stackoverflow.com/users/${socialLinks['StackOverflow']}" class="stackoverflow" title="StackOverflow"><i class="fa fa-stack-overflow"></i></a></li>
+                    </c:if>
+                    <c:if test="${not empty socialLinks['LinkedIn']}">
+                        <li><a href="https://www.linkedin.com/profile/view?id=${socialLinks['LinkedIn']}" class="linkedin" title="LinkedIn"><i class="fa fa-linkedin-square"></i></a></li>
+                    </c:if>
+                    </ul>
+                </div> <!-- #social-links -->
+            </c:if>
+                <div id="vcard-details" class="section">
+                    <ul>
+                    <c:if test="${not empty location}">
+                        <li><span class="icon"><i class="fa fa-map-marker"></i></span> ${location}</li>
+                    </c:if>
+                        <li><span class="icon"><i class="fa fa-envelope-o"></i></span> ${user.email}</li>
+                    <c:if test="${not empty website}">
+                        <li><span class="icon"><i class="fa fa-link"></i></span> <a href="${website}" target="_blank">${website}</a></li>
+                    </c:if>
+                        <li>
+                            <span class="icon"><i class="fa fa-clock-o"></i></span> 
+                            <spring:message code="voj.accounts.user.joined-on" text="Joined on" />
+                            <fmt:parseDate pattern="yyyy-MM-dd HH:mm:ss" value="${registerTime}" var="parsedDateTime" />
+                            <fmt:formatDate value="${parsedDateTime}" type="date" dateStyle="long" />
+                        </li>
+                    </ul>
+                </div> <!-- vcard-details -->
+                <div id="vcard-stats">
+                    <div class="row-fluid">
+                        <div class="span6">
+                            <h3>${submissionStats.get("acceptedSubmission")}</h3>
+                            <spring:message code="voj.accounts.user.accpeted" text="Accpeted" />
+                        </div> <!-- .span6 -->
+                        <div class="span6">
+                            <h3>${submissionStats.get("totalSubmission")}</h3>
+                            <spring:message code="voj.accounts.user.submit" text="Submit" />
+                        </div> <!-- .span6 -->
+                    </div> <!-- .row-fluid -->
+                </div> <!-- #vcard-stats -->
+            </div> <!-- .span4 -->
+            <div id="main-content" class="span9">
+            <c:if test="${not empty aboutMe}">
+                <div class="section">
+                    <div class="header">
+                        <h4><spring:message code="voj.accounts.user.about-me" text="About Me" /></h4>
+                    </div> <!-- .header -->
+                    <div class="body markdown">${aboutMe}</div> <!-- .body -->
+                </div> <!-- .section -->
+            </c:if>
+                <div class="section">
+                    <div class="header">
+                        <h4><spring:message code="voj.accounts.user.submissions" text="Submissions" /></h4>
+                    </div> <!-- .header -->
+                    <div class="body">
+                        Comming Soon.
+                        <div class="heatmap">
+                        </div> <!-- .heatmap -->
+                    </div> <!-- .body -->
+                </div> <!-- .section -->
+                <div class="section">
+                    <div class="header">
+                        <h4><spring:message code="voj.accounts.user.solved-problems" text="Solved Problems" /></h4>
+                    </div> <!-- .header -->
+                    <div class="body">
+                    </div> <!-- .body -->
+                </div> <!-- .section -->
+            </div> <!-- .span8 -->
+        </div> <!-- .row-fluid -->
     </div> <!-- #content -->
     <!-- Footer -->
     <%@ include file="/WEB-INF/views/include/footer.jsp" %>
     <!-- JavaScript -->
     <!-- Placed at the end of the document so the pages load faster -->
     <script type="text/javascript" src="${cdnUrl}/js/site.js"></script>
+    <script type="text/javascript">
+        $.getScript('${cdnUrl}/js/markdown.min.js', function() {
+            converter = Markdown.getSanitizingConverter();
+
+            $('.markdown').each(function() {
+                var plainContent    = $(this).text(),
+                    markdownContent = converter.makeHtml(plainContent.replace(/\\\n/g, '\\n'));
+                
+                $(this).html(markdownContent);
+            });
+        });
+    </script>
+    <script type="text/javascript">
+    </script>
+    <script type="text/javascript">
+        $(function() {
+            var hash = md5('${user.email}');
+
+            $.ajax({
+                type: 'GET',
+                url: 'https://secure.gravatar.com/' + hash + '.json',
+                dataType: 'jsonp',
+                success: function(result){
+                    if ( result != null ) {
+                        var imageUrl    = result['entry'][0]['thumbnailUrl'],
+                            requrestUrl = imageUrl + '?s=240';
+
+                        $('img', '#vcard').attr('src', requrestUrl);
+                    }
+                }
+            });
+        });
+    </script>
     <c:if test="${GoogleAnalyticsCode != ''}">
-    <script type="text/javascript">${GoogleAnalyticsCode}</script>
+    <script type="text/javascript">${googleAnalyticsCode}</script>
     </c:if>
 </body>
 </html>
