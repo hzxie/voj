@@ -5,7 +5,7 @@
                     <li><a href="javascript:void(0);"><i class="fa fa-bell"></i></a></li>
                     <li class="dropdown">
                         <a class="dropdown-toggle" data-toggle="dropdown" role="button" href="javascript:void(0);">
-                            ${user.username} <img src="${cdnUrl}/img/avatar.jpg" alt="avatar">
+                            ${myProfile.username} <img src="${cdnUrl}/img/avatar.jpg" alt="avatar">
                         </a>
                         <ul class="dropdown-menu" role="menu">
                             <li><a href="<c:url value="/worldwide?forward=${requestScope['javax.servlet.forward.request_uri']}" />"><i class="fa fa-language"></i> <spring:message code="voj.administration.include.header.change-language" text="Change Language" /></a></li>

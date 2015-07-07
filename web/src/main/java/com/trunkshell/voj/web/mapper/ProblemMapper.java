@@ -47,6 +47,22 @@ public interface ProblemMapper {
 	public long getNumberOfPrivateProblems();
 	
 	/**
+	 * 获取第一个试题的ID.
+	 * @return 第一个试题的ID
+	 */
+	@Select("SELECT MIN(problem_id) FROM voj_problems")
+	@Options(useCache = true)
+	public long getLowerBoundOfProblems();
+	
+	/**
+	 * 获取最后一个试题的ID.
+	 * @return 最后一个试题的ID
+	 */
+	@Select("SELECT MAX(problem_id) FROM voj_problems")
+	@Options(useCache = true)
+	public long getUpperBoundOfProblems();
+	
+	/**
 	 * 通过试题唯一标识符获取试题对象.
 	 * @param problemId - 试题的唯一标识符
 	 * @return 一个试题对象

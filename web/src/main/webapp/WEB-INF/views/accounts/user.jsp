@@ -54,25 +54,25 @@
                 <div id="social-links" class="section">
                     <ul class="inline">
                     <c:if test="${not empty socialLinks['Facebook']}">
-                        <li><a href="https://facebook.com/${socialLinks['Facebook']}" class="facebook" title="Facebook"><i class="fa fa-facebook"></i></a></li>
+                        <li><a href="https://facebook.com/${socialLinks['Facebook']}" target="_blank" class="facebook" title="Facebook"><i class="fa fa-facebook"></i></a></li>
                     </c:if>
                     <c:if test="${not empty socialLinks['Twitter']}">
-                        <li><a href="https://twitter.com/${socialLinks['Twitter']}" class="twitter" title="Twitter"><i class="fa fa-twitter"></i></a></li>
+                        <li><a href="https://twitter.com/${socialLinks['Twitter']}" target="_blank" class="twitter" title="Twitter"><i class="fa fa-twitter"></i></a></li>
                     </c:if>
                     <c:if test="${not empty socialLinks['Weibo']}">
-                        <li><a href="http://weibo.com/${socialLinks['Weibo']}" class="weibo" title="Weibo"><i class="fa fa-weibo"></i></a></li>
+                        <li><a href="http://weibo.com/${socialLinks['Weibo']}" target="_blank" class="weibo" title="Weibo"><i class="fa fa-weibo"></i></a></li>
                     </c:if>
                     <c:if test="${not empty socialLinks['Instagram']}">
-                        <li><a href="https://instagram.com/${socialLinks['Instagram']}" class="instagram" title="Instagram"><i class="fa fa-instagram"></i></a></li>
+                        <li><a href="https://instagram.com/${socialLinks['Instagram']}" target="_blank" class="instagram" title="Instagram"><i class="fa fa-instagram"></i></a></li>
                     </c:if>
                     <c:if test="${not empty socialLinks['GitHub']}">
-                        <li><a href="https://github.com/${socialLinks['GitHub']}" class="github" title="GitHub"><i class="fa fa-github"></i></a></li>
+                        <li><a href="https://github.com/${socialLinks['GitHub']}" target="_blank" class="github" title="GitHub"><i class="fa fa-github"></i></a></li>
                     </c:if>
                     <c:if test="${not empty socialLinks['StackOverflow']}">
-                        <li><a href="http://stackoverflow.com/users/${socialLinks['StackOverflow']}" class="stackoverflow" title="StackOverflow"><i class="fa fa-stack-overflow"></i></a></li>
+                        <li><a href="http://stackoverflow.com/users/${socialLinks['StackOverflow']}" target="_blank" class="stackoverflow" title="StackOverflow"><i class="fa fa-stack-overflow"></i></a></li>
                     </c:if>
                     <c:if test="${not empty socialLinks['LinkedIn']}">
-                        <li><a href="https://www.linkedin.com/profile/view?id=${socialLinks['LinkedIn']}" class="linkedin" title="LinkedIn"><i class="fa fa-linkedin-square"></i></a></li>
+                        <li><a href="https://www.linkedin.com/profile/view?id=${socialLinks['LinkedIn']}" target="_blank" class="linkedin" title="LinkedIn"><i class="fa fa-linkedin-square"></i></a></li>
                     </c:if>
                     </ul>
                 </div> <!-- #social-links -->
@@ -121,16 +121,37 @@
                         <h4><spring:message code="voj.accounts.user.submissions" text="Submissions" /></h4>
                     </div> <!-- .header -->
                     <div class="body">
-                        Comming Soon.
-                        <div class="heatmap">
-                        </div> <!-- .heatmap -->
-                    </div> <!-- .body -->
-                </div> <!-- .section -->
-                <div class="section">
-                    <div class="header">
-                        <h4><spring:message code="voj.accounts.user.solved-problems" text="Solved Problems" /></h4>
-                    </div> <!-- .header -->
-                    <div class="body">
+                        <table id="submissions" class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th class="flag"><spring:message code="voj.problems.problems.result" text="Result" /></th>
+                                    <th class="name"><spring:message code="voj.problems.problems.name" text="Name" /></th>
+                                    <th class="submission"><spring:message code="voj.problems.problems.submission" text="Submission" /></th>
+                                    <th class="ac-rate">AC%</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <c:forEach var="submission" items="${submissions}">
+                                <tr>
+                                    <td class="flag-${submission.value.judgeResult.judgeResultSlug}">
+                                        <a href="<c:url value="/submission/${submission.value.submissionId}" />">
+                                            ${submission.value.judgeResult.judgeResultSlug}
+                                        </a>
+                                    </td>
+                                    <td class="name"><a href="<c:url value="/p/${submission.key}" />">P${submission.key} ${submission.value.problem.problemName}</a></td>
+                                    <td>${submission.value.problem.totalSubmission}</td>
+                                    <td>
+                                    <c:choose>
+                                        <c:when test="${submission.value.problem.totalSubmission == 0}">0%</c:when>
+                                        <c:otherwise>
+                                            <fmt:formatNumber type="number"  maxFractionDigits="0" value="${submission.value.problem.acceptedSubmission * 100 / submission.value.problem.totalSubmission}" />%
+                                        </c:otherwise>
+                                    </c:choose>
+                                    </td>
+                                </tr>
+                                </c:forEach>
+                            </tbody>
+                        </table>
                     </div> <!-- .body -->
                 </div> <!-- .section -->
             </div> <!-- .span8 -->

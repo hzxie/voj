@@ -86,6 +86,18 @@ public class SubmissionService {
 	}
 	
 	/**
+	 * 获取某个用户全部试题的评测结果.
+	 * @param userId - 用户的唯一标识符
+	 * @return 某个用户全部试题的评测结果
+	 */
+	public Map<Long, Submission> getSubmissionOfUser(long userId) {
+		long problemIdLowerBound = problemMapper.getLowerBoundOfProblems();
+		long problemIdUpperBound = problemMapper.getUpperBoundOfProblems();
+		
+		return getSubmissionOfProblems(userId, problemIdLowerBound, problemIdUpperBound);
+	}
+	
+	/**
 	 * 获取某个用户在某个试题ID区间段内的评测结果.
 	 * @param userId - 用户的唯一标识符
 	 * @param problemIdLowerBound - 试题ID区间的下界
@@ -93,8 +105,7 @@ public class SubmissionService {
 	 * @return 某个试题ID区间段内的通过的评测结果
 	 */
 	public Map<Long, Submission> getSubmissionOfProblems(long userId, long problemIdLowerBound, long problemIdUpperBound) {
-		int hashMapSize = (int)(problemIdUpperBound - problemIdLowerBound + 1);
-		Map<Long, Submission> submissionOfProblems = new HashMap<Long, Submission>(hashMapSize, 1);
+		Map<Long, Submission> submissionOfProblems = new HashMap<Long, Submission>();
 		List<Submission> latestSubmission = submissionMapper.getLatestSubmissionOfProblems(userId, problemIdLowerBound, problemIdUpperBound);
 		List<Submission> acceptedSubmission = submissionMapper.getAcceptedSubmissionOfProblems(userId, problemIdLowerBound, problemIdUpperBound);
 		
@@ -115,7 +126,7 @@ public class SubmissionService {
 	 * @param userId - 用户的唯一标识符
 	 * @return 一个包含用户评测记录概况的HashMap
 	 */
-	public Map<String, Long> getUserSubmissionStats(long userId) {
+	public Map<String, Long> getSubmissionStatsOfUser(long userId) {
 		long acceptedSubmission = submissionMapper.getAcceptedSubmissionUsingUserId(userId);
 		long totalSubmission = submissionMapper.getTotalSubmissionUsingUserId(userId);
 		long  acRate = 0;
