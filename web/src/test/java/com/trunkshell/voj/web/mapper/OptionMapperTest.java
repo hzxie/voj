@@ -38,7 +38,7 @@ public class OptionMapperTest {
 		Assert.assertEquals(1, optionId);
 		
 		String optionName = firstOption.getOptionName();
-		Assert.assertEquals("WebsiteName", optionName);
+		Assert.assertEquals("websiteName", optionName);
 	}
 	
 	/**
@@ -48,7 +48,7 @@ public class OptionMapperTest {
 	 */
 	@Test
 	public void testGetOptionExists() {
-		Option option = optionMapper.getOption("WebsiteName");
+		Option option = optionMapper.getOption("websiteName");
 		Assert.assertNotNull(option);
 		
 		int optionId = option.getOptionId();
@@ -62,7 +62,7 @@ public class OptionMapperTest {
 	 */
 	@Test
 	public void testGetOptionNotExists() {
-		Option option = optionMapper.getOption("NotExistOption");
+		Option option = optionMapper.getOption("notExistOption");
 		Assert.assertNull(option);
 	}
 	
@@ -73,11 +73,11 @@ public class OptionMapperTest {
 	 */
 	@Test
 	public void testUpdateOptionExists() {
-		Option option = optionMapper.getOption("WebsiteName");
+		Option option = optionMapper.getOption("websiteName");
 		option.setOptionValue("New OJ Platform");
 		optionMapper.updateOption(option);
 		
-		Option newOption = optionMapper.getOption("WebsiteName");
+		Option newOption = optionMapper.getOption("websiteName");
 		String optionValue = newOption.getOptionValue();
 		Assert.assertEquals("New OJ Platform", optionValue);
 	}
@@ -89,7 +89,7 @@ public class OptionMapperTest {
 	 */
 	@Test
 	public void testUpdateOptionNotExists() {
-		Option option = optionMapper.getOption("WebsiteName");
+		Option option = optionMapper.getOption("websiteName");
 		option.setOptionId(0);
 		optionMapper.updateOption(option);
 	}
