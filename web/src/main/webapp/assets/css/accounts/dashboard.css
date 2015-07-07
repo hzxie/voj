@@ -21,3 +21,87 @@ div#content div#main-content {
 	margin: 0 20px;
 	padding: 20px 12px;
 }
+
+div#content div#main-content div.tab-pane {
+	overflow: hidden;
+}
+
+div#content div#main-content div.tab-pane div.section,
+div#content div#main-content div.tab-pane form.section {
+	margin: 0 auto 20px;
+	width: 75%;
+}
+
+div#content div#main-content div.tab-pane label {
+	font-weight: bold;
+	padding-top: 10px;
+}
+
+div#content div#main-content table#submissions {
+	border: 1px solid #e8e8e8;
+	margin-bottom: 0;
+	-webkit-box-shadow: 0 0 5px rgba(0,0,0,0.1);
+	   -moz-box-shadow: 0 0 5px rgba(0,0,0,0.1);
+	        box-shadow: 0 0 5px rgba(0,0,0,0.1);
+}
+
+div#content div#main-content table#submissions thead {
+	background-color: #16a085;
+	color: #fff;
+}
+
+div#content div#main-content table#submissions th {
+	text-align: center;
+	vertical-align: middle;
+}
+
+div#content div#main-content table#submissions th.flag {
+	width: 5%;
+}
+
+div#content div#main-content table#submissions th.name,
+div#content div#main-content table#submissions td.name {
+	text-align: left;
+}
+
+div#content div#main-content table#submissions th.submission {
+	width: 15%;	
+}
+
+div#content div#main-content table#submissions th.ac-rate {
+	width: 5%;
+}
+
+div#content div#main-content table#submissions td {
+	border-left: 1px solid #e8e8e8;
+	color: #666;
+	text-align: center;
+}
+
+div#content div#main-content table#submissions td.flag-PD > a,
+div#content div#main-content table#submissions td.flag-CPL > a,
+div#content div#main-content table#submissions td.flag-JUD > a {
+	color: #ffa500;
+}
+
+div#content div#main-content table#submissions td.flag-AC > a {
+	color: #f00;
+}
+
+div#content div#main-content table#submissions td.flag-PE > a,
+div#content div#main-content table#submissions td.flag-WA > a,
+div#content div#main-content table#submissions td.flag-TLE > a,
+div#content div#main-content table#submissions td.flag-MLE > a,
+div#content div#main-content table#submissions td.flag-OLE > a {
+	color: #4d7aff;
+}
+
+div#content div#main-content table#submissions td.flag-RE > a,
+div#content div#main-content table#submissions td.flag-CE > a {
+	color: #49a932;
+}
+
+div#content div#main-content table#submissions td.name a {
+	color: #333;
+	text-align: left;
+}

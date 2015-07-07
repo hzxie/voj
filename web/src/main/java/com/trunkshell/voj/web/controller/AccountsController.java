@@ -41,7 +41,7 @@ public class AccountsController {
 	 * 显示用户的登录页面.
 	 * @param isLogout - 是否处于登出状态
 	 * @param fowardUrl - 登录后跳转的地址(相对路径)
-	 * @param request - Http Servlet Request对象
+	 * @param request - HttpServletRequest对象
 	 * @param response - HttpResponse对象
 	 * @return 包含登录页面信息的ModelAndView对象
 	 */
@@ -96,7 +96,7 @@ public class AccountsController {
 	 * 处理用户的登录请求.
 	 * @param username - 用户名
 	 * @param password - 密码(已使用MD5加密)
-	 * @param request - Http Servlet Request对象
+	 * @param request - HttpServletRequest对象
 	 * @return 一个包含登录验证结果的Map<String, Boolean>对象
 	 */
 	@RequestMapping(value = "/login.action", method = RequestMethod.POST)
@@ -133,7 +133,7 @@ public class AccountsController {
 	
 	/**
 	 * 显示用户注册的页面.
-	 * @param request - Http Servlet Request对象
+	 * @param request - HttpServletRequest对象
 	 * @param response - HttpResponse对象
 	 * @return 包含注册页面信息的ModelAndView对象
 	 */
@@ -164,7 +164,7 @@ public class AccountsController {
 	 * @param email - 电子邮件地址
 	 * @param languageSlug - 偏好语言的唯一英文缩写
 	 * @param csrfToken - Csrf的Token
-	 * @param request - HttpRequest对象
+	 * @param request - HttpServletRequest对象
 	 * @return 一个包含账户创建结果的Map<String, Boolean>对象
 	 */
 	@RequestMapping(value = "/register.action", method = RequestMethod.POST)
@@ -194,7 +194,7 @@ public class AccountsController {
 	/**
 	 * 加载用户的个人信息.
 	 * @param userId - 用户的唯一标识符
-	 * @param request - Http Servlet Request对象
+	 * @param request - HttpServletRequest对象
 	 * @param response - HttpResponse对象
 	 * @return 包含用户个人信息的ModelAndView对象
 	 */
@@ -218,15 +218,48 @@ public class AccountsController {
 	
 	/**
 	 * 加载用户控制板页面.
-	 * @param request - Http Servlet Request对象
+	 * @param request - HttpServletRequest对象
 	 * @param response - HttpResponse对象
 	 * @return 包含控制板页面信息的ModelAndView对象
 	 */
 	@RequestMapping(value = "/dashboard", method = RequestMethod.GET)
 	public ModelAndView dashboardView(
 			HttpServletRequest request, HttpServletResponse response) {
-		ModelAndView view = new ModelAndView("accounts/dashboard");
+		HttpSession session = request.getSession();
+		ModelAndView view = null;
+		
+		if ( !isLoggedIn(session) ) {
+			view = new ModelAndView("redirect:/accounts/login");
+		}
+		long userId = (Long)session.getAttribute("uid");
+		view = new ModelAndView("accounts/dashboard");
+		view.addObject("submissions", submissionService.getSubmissionOfUser(userId));
 		return view;
+	}
+	
+	/**
+	 * 处理用户修改密码的请求.
+	 * @param user - 待修改密码的用户对象
+	 * @param oldPassword - 旧密码
+	 * @param newPassword - 新密码
+	 * @param confirmPassword - 确认新密码
+	 * @param request - HttpServletRequest对象
+	 * @return 一个包含密码验证结果的Map<String, Boolean>对象
+	 */
+	@RequestMapping(value = "/changePassword.action", method = RequestMethod.POST)
+	public @ResponseBody Map<String, Boolean> changePasswordInDashboardAction(
+			@RequestParam(value="oldPassword", required=true) String oldPassword,
+			@RequestParam(value="newPassword", required=true) String newPassword,
+			@RequestParam(value="confirmPassword", required=true) String confirmPassword,
+			HttpServletRequest request) {
+		User currentUser = HttpSessionParser.getCurrentUser(request.getSession());
+		String ipAddress = HttpRequestParser.getRemoteAddr(request);
+		
+		Map<String, Boolean> result = userService.changePassword(currentUser, oldPassword, newPassword, confirmPassword); 
+		if ( result.get("isSuccessful") ) {
+			logger.info(String.format("%s changed password at %s", new Object[] {currentUser, ipAddress}));
+		}
+		return result;
 	}
 	
 	/**
