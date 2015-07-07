@@ -85,7 +85,7 @@
     <script type="text/javascript" src="${cdnUrl}/js/site.js"></script>
     <script type="text/javascript">
         function onSubmit() {
-            $('.alert-success').hide();
+            $('.alert-success').addClass('hide');
             $('.alert-error').addClass('hide');
             $('button[type=submit]').attr('disabled', 'disabled');
             $('button[type=submit]').html('<spring:message code="voj.accounts.login.please-wait" text="Please wait..." />');

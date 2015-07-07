@@ -147,7 +147,7 @@ public class UserService {
 	 */
 	private Map<String, Boolean> getUserCreationResult(User user, String password, 
 			boolean isCsrfTokenValid, boolean isAllowRegister) {
-		Map<String, Boolean> result = new HashMap<String, Boolean>();
+		Map<String, Boolean> result = new HashMap<String, Boolean>(12, 1);
 		result.put("isUsernameEmpty", user.getUsername().isEmpty());
 		result.put("isUsernameLegal", isUsernameLegal(user.getUsername()));
 		result.put("isUsernameExists", isUsernameExists(user.getUsername()));
@@ -166,6 +166,48 @@ public class UserService {
 							    result.get("isEmailLegal")     && !result.get("isEmailExists")    &&
 							    result.get("isLanguageLegal")  &&  result.get("isCsrfTokenValid") &&
 							    result.get("isAllowRegister");
+		result.put("isSuccessful", isSuccessful);
+		return result;
+	}
+	
+	/**
+	 * 验证旧密码正确性并修改密码.
+	 * @param user - 待修改密码的用户对象
+	 * @param oldPassword - 旧密码
+	 * @param newPassword - 新密码
+	 * @param confirmPassword - 确认新密码
+	 * @return 一个包含密码验证结果的Map<String, Boolean>对象
+	 */
+	public Map<String, Boolean> changePassword(User user, String oldPassword, 
+			String newPassword, String confirmPassword) {
+		Map<String, Boolean> result = getChangePasswordResult(user, oldPassword, newPassword, confirmPassword);
+		
+		if ( result.get("isSuccessful") ) {
+			user.setPassword(DigestUtils.md5Hex(newPassword));
+			userMapper.updateUser(user);
+		}
+		return result;
+	}
+	
+	/**
+	 * 验证旧密码的正确性和新密码的合法性.
+	 * @param user - 待修改密码的用户对象
+	 * @param oldPassword - 旧密码
+	 * @param newPassword - 新密码
+	 * @param confirmPassword - 确认新密码
+	 * @return 一个包含密码验证结果的Map<String, Boolean>对象
+	 */
+	private Map<String, Boolean> getChangePasswordResult(User user, String oldPassword, 
+			String newPassword, String confirmPassword) {
+		Map<String, Boolean> result = new HashMap<String, Boolean>();
+		result.put("isOldPasswordCorrect", isOldPasswordCorrect(user.getPassword(), oldPassword));
+		result.put("isNewPasswordEmpty", newPassword.isEmpty());
+		result.put("isNewPasswordLegal", isPasswordLegal(newPassword));
+		result.put("isConfirmPasswordMatched", newPassword.equals(confirmPassword));
+		
+		boolean isSuccessful = result.get("isOldPasswordCorrect") && !result.get("isNewPasswordEmpty") &&
+							   result.get("isNewPasswordLegal")   &&  result.get("isConfirmPasswordMatched");
+		
 		result.put("isSuccessful", isSuccessful);
 		return result;
 	}

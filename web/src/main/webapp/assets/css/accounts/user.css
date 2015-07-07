@@ -104,6 +104,34 @@ div#content div#main-content table#submissions thead {
 	color: #fff;
 }
 
+div#content div#main-content table#submissions th {
+	text-align: center;
+	vertical-align: middle;
+}
+
+div#content div#main-content table#submissions th.flag {
+	width: 5%;
+}
+
+div#content div#main-content table#submissions th.name,
+div#content div#main-content table#submissions td.name {
+	text-align: left;
+}
+
+div#content div#main-content table#submissions th.submission {
+	width: 15%;	
+}
+
+div#content div#main-content table#submissions th.ac-rate {
+	width: 5%;
+}
+
+div#content div#main-content table#submissions td {
+	border-left: 1px solid #e8e8e8;
+	color: #666;
+	text-align: center;
+}
+
 div#content div#main-content table#submissions td.flag-PD > a,
 div#content div#main-content table#submissions td.flag-CPL > a,
 div#content div#main-content table#submissions td.flag-JUD > a {
@@ -125,4 +153,9 @@ div#content div#main-content table#submissions td.flag-OLE > a {
 div#content div#main-content table#submissions td.flag-RE > a,
 div#content div#main-content table#submissions td.flag-CE > a {
 	color: #49a932;
+}
+
+div#content div#main-content table#submissions td.name a {
+	color: #333;
+	text-align: left;
 }

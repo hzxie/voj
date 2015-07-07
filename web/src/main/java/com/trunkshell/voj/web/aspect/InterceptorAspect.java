@@ -1,5 +1,7 @@
 package com.trunkshell.voj.web.aspect;
 
+import java.util.Map;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
@@ -10,6 +12,7 @@ import org.aspectj.lang.annotation.Aspect;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.servlet.ModelAndView;
 
+import com.trunkshell.voj.web.exception.ResourceNotFoundException;
 import com.trunkshell.voj.web.model.User;
 import com.trunkshell.voj.web.service.UserService;
 
@@ -25,7 +28,7 @@ public class InterceptorAspect {
 	 * 控制板视图的切面.
 	 * 用于检查用户是否有权限加载控制板视图.
 	 * @param proceedingJoinPoint - ProceedingJoinPoint对象
-	 * @param request - HttpRequest对象
+	 * @param request - HttpServletRequest对象
 	 * @return 一个包含预期试图的ModelAndView对象
 	 * @throws Throwable 
 	 */
@@ -41,6 +44,27 @@ public class InterceptorAspect {
 		}
 		view = (ModelAndView) proceedingJoinPoint.proceed();
 		return view;
+	}
+	
+	/**
+	 * 控制板中异步操作请求的切面.
+	 * 检查用户是否有权限执行该操作.
+	 * @param proceedingJoinPoint - ProceedingJoinPoint对象
+	 * @param request - HttpServletRequest对象
+	 * @return 预期的操作结果(Map<String, Boolean>对象)
+	 * @throws Throwable
+	 */
+	@Around(value = "execution(* com.trunkshell.voj.web.controller.AccountsController.*InDashboardAction(..)) && args(.., request)")
+	public Map<String, Boolean> dashboardActionInterceptor(ProceedingJoinPoint proceedingJoinPoint, 
+			HttpServletRequest request) throws Throwable {
+		HttpSession session = request.getSession();
+		
+		if ( !isAllowToAccess(session, new String[] { "users", "administrators" }) ) {
+			throw new ResourceNotFoundException();
+		}
+		@SuppressWarnings("unchecked")
+		Map<String, Boolean> result = (Map<String, Boolean>) proceedingJoinPoint.proceed();
+		return result;
 	}
 	
 	/**

@@ -1,5 +1,7 @@
 <%@ page language="java" contentType="text/html; charset=utf-8" pageEncoding="utf-8"%>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
+<fmt:setLocale value="${language}" />
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <spring:eval expression="@propertyConfigurer.getProperty('cdn.url')" var="cdnUrl" />
 <!DOCTYPE html>
@@ -55,7 +57,44 @@
         </div> <!-- #sub-nav -->
         <div id="main-content" class="tab-content">
             <div class="tab-pane" id="tab-statistics">
-                statistics
+                <div class="section">
+                    <div class="header">
+                        <h4><spring:message code="voj.accounts.dashboard.submissions" text="Submissions" /></h4>
+                    </div> <!-- .header -->
+                    <div class="body">
+                        <table id="submissions" class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th class="flag"><spring:message code="voj.problems.problems.result" text="Result" /></th>
+                                    <th class="name"><spring:message code="voj.problems.problems.name" text="Name" /></th>
+                                    <th class="submission"><spring:message code="voj.problems.problems.submission" text="Submission" /></th>
+                                    <th class="ac-rate">AC%</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <c:forEach var="submission" items="${submissions}">
+                                <tr>
+                                    <td class="flag-${submission.value.judgeResult.judgeResultSlug}">
+                                        <a href="<c:url value="/submission/${submission.value.submissionId}" />">
+                                            ${submission.value.judgeResult.judgeResultSlug}
+                                        </a>
+                                    </td>
+                                    <td class="name"><a href="<c:url value="/p/${submission.key}" />">P${submission.key} ${submission.value.problem.problemName}</a></td>
+                                    <td>${submission.value.problem.totalSubmission}</td>
+                                    <td>
+                                    <c:choose>
+                                        <c:when test="${submission.value.problem.totalSubmission == 0}">0%</c:when>
+                                        <c:otherwise>
+                                            <fmt:formatNumber type="number"  maxFractionDigits="0" value="${submission.value.problem.acceptedSubmission * 100 / submission.value.problem.totalSubmission}" />%
+                                        </c:otherwise>
+                                    </c:choose>
+                                    </td>
+                                </tr>
+                                </c:forEach>
+                            </tbody>
+                        </table>
+                    </div> <!-- .body -->
+                </div> <!-- .section -->
             </div> <!-- #tab-statistics -->
             <div class="tab-pane active" id="tab-notifications">
                 notifications
@@ -67,7 +106,48 @@
                 messages
             </div> <!-- #tab-messages -->
             <div class="tab-pane" id="tab-accounts">
-                accounts
+                <form id="change-password-form" class="section" method="POST" onSubmit="onChangePasswordSubmit(); return false;">
+                    <h4><spring:message code="voj.accounts.dashboard.change-password" text="Change Password" /></h4>
+                    <div class="row-fluid">
+                        <div class="alert alert-error hide"></div>
+                        <div class="alert alert-success hide"><spring:message code="voj.accounts.dashboard.password-changed" text="You've changed your password." /></div>
+                    </div> <!-- .row-fluid -->
+                    <div class="row-fluid">
+                        <div class="span4">
+                            <label for="old-password"><spring:message code="voj.accounts.dashboard.old-password" text="Old Password" /></label>
+                        </div> <!-- .span4 -->
+                        <div class="span8">
+                            <div class="control-group">
+                                <input id="old-password" class="span8" type="password" maxlength="16" />
+                            </div> <!-- .control-group -->
+                        </div> <!-- .span8 -->
+                    </div> <!-- .row-fluid -->
+                    <div class="row-fluid">
+                        <div class="span4">
+                            <label for="new-password"><spring:message code="voj.accounts.dashboard.new-password" text="New Password" /></label>
+                        </div> <!-- .span4 -->
+                        <div class="span8">
+                            <div class="control-group">
+                                <input id="new-password" class="span8" type="password" maxlength="16" />
+                            </div> <!-- .control-group -->
+                        </div> <!-- .span8 -->
+                    </div> <!-- .row-fluid -->
+                    <div class="row-fluid">
+                        <div class="span4">
+                            <label for="confirm-new-password"><spring:message code="voj.accounts.dashboard.confirm-new-password" text="Confirm New Password" /></label>
+                        </div> <!-- .span4 -->
+                        <div class="span8">
+                            <div class="control-group">
+                                <input id="confirm-new-password" class="span8" type="password" maxlength="16" />
+                            </div> <!-- .control-group -->
+                        </div> <!-- .span8 -->
+                    </div> <!-- .row-fluid -->
+                    <div class="row-fluid">
+                        <div class="span12">
+                            <button class="btn btn-primary btn-block" type="submit"><spring:message code="voj.accounts.dashboard.change-password" text="Change Password" /></button>
+                        </div> <!-- .span12 -->
+                    </div> <!-- .row-fluid -->
+                </form>
             </div> <!-- #tab-accounts -->
         </div> <!-- #main-content -->
     </div> <!-- #content -->
@@ -76,6 +156,65 @@
     <!-- JavaScript -->
     <!-- Placed at the end of the document so the pages load faster -->
     <script type="text/javascript" src="${cdnUrl}/js/site.js"></script>
+    <script type="text/javascript">
+        function onChangePasswordSubmit() {
+            $('.alert-success', '#change-password-form').addClass('hide');
+            $('.alert-error', '#change-password-form').addClass('hide');
+            $('button[type=submit]', '#change-password-form').attr('disabled', 'disabled');
+            $('button[type=submit]', '#change-password-form').html('<spring:message code="voj.accounts.dashboard.please-wait" text="Please wait..." />');
+
+            var oldPassword     = $('#old-password').val(),
+                newPassword     = $('#new-password').val(),
+                confirmPassword = $('#confirm-new-password').val();
+
+            return doChangePasswordAction(oldPassword, newPassword, confirmPassword);
+        }
+    </script>
+    <script type="text/javascript">
+        function doChangePasswordAction(oldPassword, newPassword, confirmPassword) {
+            var postData = {
+                'oldPassword': oldPassword,
+                'newPassword': newPassword,
+                'confirmPassword': confirmPassword
+            };
+            
+            $.ajax({
+                type: 'POST',
+                url: '<c:url value="/accounts/changePassword.action" />',
+                data: postData,
+                dataType: 'JSON',
+                success: function(result){
+                    return processChangePasswordResult(result);
+                }
+            });
+        }
+    </script>
+    <script type="text/javascript">
+        function processChangePasswordResult(result) {
+            if ( result['isSuccessful'] ) {
+                $('.alert-success', '#change-password-form').removeClass('hide');
+            } else {
+                var errorMessage  = '';
+
+                if ( !result['isOldPasswordCorrect'] ) {
+                    errorMessage += '<spring:message code="voj.accounts.dashboard.old-password-incorrect" text="Old password is incorrect." /><br>';
+                }
+                if ( result['isNewPasswordEmpty'] ) {
+                    errorMessage += '<spring:message code="voj.accounts.dashboard.new-password-empty" text="You can&acute;t leave new password empty." /><br>';
+                }
+                if ( !result['isNewPasswordLegal'] ) {
+                    errorMessage += '<spring:message code="voj.accounts.dashboard.new-password-illegal" text="The length of password must between 6 and 16 characters." /><br>';
+                }
+                if ( !result['isConfirmPasswordMatched'] ) {
+                    errorMessage += '<spring:message code="voj.accounts.dashboard.new-password-not-matched" text="New passwords don&acute;t match." /><br>';
+                }
+                $('.alert-error', '#change-password-form').html(errorMessage);
+                $('.alert-error', '#change-password-form').removeClass('hide');
+            }
+            $('button[type=submit]', '#change-password-form').html('<spring:message code="voj.accounts.dashboard.change-password" text="Change Password" />');
+            $('button[type=submit]', '#change-password-form').removeAttr('disabled');
+        }
+    </script>
     <c:if test="${GoogleAnalyticsCode != ''}">
     <script type="text/javascript">${googleAnalyticsCode}</script>
     </c:if>
