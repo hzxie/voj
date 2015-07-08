@@ -134,7 +134,7 @@ public class ApplicationDispatcher {
         mapMessage.put("runtimeResult", getRuntimeResultName(runtimeResultSlug));
         mapMessage.put("totalTime", totalTime);
         mapMessage.put("maxMemory", maxMemory);
-        mapMessage.put("score", totalScore);
+        mapMessage.put("totalScore", totalScore);
         
         messageSender.sendMessage(mapMessage);
     }

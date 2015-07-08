@@ -66,7 +66,7 @@ public class SensitiveWordFilter {
      */
     private String filter(String text, int matchType, String replaceChar) {
         //获取txt中所有敏感词的位置
-        ArrayList<Position> sensitiveWordsPosition = getSensitiveWordsPosition(text, matchType);
+        List<Position> sensitiveWordsPosition = getSensitiveWordsPosition(text, matchType);
         //用replaceChar替换txt中的所有敏感词
         StringBuilder resultStringBuilder = new StringBuilder(text);
         
@@ -85,8 +85,8 @@ public class SensitiveWordFilter {
      * @param matchType - 匹配规则 1 为极小匹配,  2 为极大匹配
      * @return 敏感词的位置
      */
-    private ArrayList<Position> getSensitiveWordsPosition(String txt, int matchType) {
-        ArrayList<Position> sensitiveWordsPosition = new ArrayList<Position>();
+    private List<Position> getSensitiveWordsPosition(String txt, int matchType) {
+        List<Position> sensitiveWordsPosition = new ArrayList<Position>();
         // 遍历待过滤字符串,  检查 txt 以 i 开始的子串的前缀, 是否为敏感词
         for ( int i = 0; i < txt.length(); ++ i ) {
             int length = checkSensitiveWord(txt, i, matchType);
@@ -120,7 +120,7 @@ public class SensitiveWordFilter {
         
         char nowWord = 0;
         Map nowMap = sensitiveWordMap;
-        for (int i = beginIndex; i < text.length(); ++ i) {
+        for ( int i = beginIndex; i < text.length(); ++ i ) {
             nowWord = text.charAt(i);
             //当前字的follow集
             nowMap = (Map) nowMap.get(nowWord);
@@ -133,8 +133,7 @@ public class SensitiveWordFilter {
                          break;
                      }
                 }
-            }
-            else {    //当前字的follow集若为空, 则匹配结束, 
+            } else {    //当前字的follow集若为空, 则匹配结束, 
                 break;
             }
         }
@@ -245,12 +244,7 @@ public class SensitiveWordFilter {
      */
     public static final int MIN_MATCH_TYPE = 1;
     public static final int MAX_MATCH_TYPE = 2;
-    
-    /**
-     * 敏感词文件的编码格式 
-     */
-    public static final String ENCODING = "UTF-8";
-    
+        
     /**
      * 敏感词系统设置项. 
      */

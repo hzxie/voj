@@ -44,7 +44,6 @@
     <%@ include file="/WEB-INF/views/include/header.jsp" %>
     <!-- Content -->
     <div id="content" class="container">
-        <div id="websocket-status" class="alert"></div> <!-- #websocket-status -->
         <div class="row-fluid">
             <div id="main-content" class="span9">
                 <div class="submission">
@@ -96,7 +95,7 @@
                             <h4><spring:message code="voj.submissions.submission.judge-result" text="Judge Result" /></h4>
                             <div id="judge-log" class="description markdown">${submission.judgeLog}</div> <!-- .description -->
                         </div> <!-- .section -->
-                        <c:if test="${submission.user == user}">
+                        <c:if test="${submission.user == myProfile}">
                         <div class="section">
                             <h4><spring:message code="voj.submissions.submission.code" text="Code" /></h4>
                             <div class="description">
@@ -148,13 +147,40 @@
         $.getScript('${cdnUrl}/js/date-${language}.min.js', function() {
             var currentJudgeResult = 'Pending',
                 getterInterval     = setInterval(function() {
-                getRealTimeJudgeResult();
-                currentJudgeResult = $('#judge-result').html();
+                    getRealTimeJudgeResult();
+                    currentJudgeResult = $('#judge-result').html();
 
-                if ( currentJudgeResult != 'Pending' ) {
-                    clearInterval(getterInterval);
+                    if ( currentJudgeResult != 'Pending' ) {
+                        clearInterval(getterInterval);
+                    }
+                }, 10000);
+        });
+    </script>
+    <script type="text/javascript">
+        $(function() {
+            var subscriptionUrl = '<c:url value="/submission/getRealTimeJudgeResult.action?submissionId=${submission.submissionId}&csrfToken=${csrfToken}" />',
+            	source          = new EventSource(subscriptionUrl),
+                lastMessage     = '';
+
+			source.onmessage    = function(e) {
+                var message     = e['data'];
+
+                if ( message == lastMessage ) {
+                    return;
                 }
-            }, 10000);
+                lastMessage     = message;
+
+                if ( message == 'Established' ) {
+                    $('#judge-log').append('<p>Connected to Server.</p>');
+                    return;
+                }
+
+                var mapMessage  = JSON.parse(message),
+                    judgeResult = mapMessage['judgeResult'],
+                    judgeLog    = mapMessage['message'];
+                $('#judge-result').html(judgeResult);
+                $('#judge-log').append(converter.makeHtml(judgeLog));
+            }
         });
     </script>
     <script type="text/javascript">
@@ -169,7 +195,6 @@
                 data: pageRequests,
                 dataType: 'JSON',
                 success: function(result){
-                    console.log(result);
                     if ( result['isSuccessful'] ) {
                         if ( result['submission']['judgeResult']['judgeResultSlug'] != 'PD' ) {
                             $('#judge-result').removeClass();

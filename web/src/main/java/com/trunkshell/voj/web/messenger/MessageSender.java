@@ -23,7 +23,7 @@ public class MessageSender {
         long submissionId = (Long) mapMessage.get("submissionId");
         
         jmsTemplate.convertAndSend(mapMessage);
-        LOGGER.info(String.format("Submission task #%s has been created.", new Object[] {submissionId}));
+        LOGGER.info(String.format("Submission task #%d has been created.", new Object[] {submissionId}));
     }
 
     /**

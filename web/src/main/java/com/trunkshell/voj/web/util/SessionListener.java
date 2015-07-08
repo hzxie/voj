@@ -14,11 +14,6 @@ import org.apache.logging.log4j.Logger;
  */
 public class SessionListener implements HttpSessionListener {
     /**
-     * Utility classes should not have a public constructor.
-     */
-    private SessionListener() { }
-    
-    /**
      * 获取在线用户数量.
      * @return 在线用户数量
      */
