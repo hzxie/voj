@@ -10,6 +10,7 @@ import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.servlet.ModelAndView;
 
 import com.trunkshell.voj.web.exception.ResourceNotFoundException;
@@ -21,6 +22,20 @@ import com.trunkshell.voj.web.exception.ResourceNotFoundException;
  */
 @ControllerAdvice
 public class ExceptionHandlingController {
+    /**
+     * 处理MissingServletRequestParameterException异常的方法.
+     * @param request - HttpRequest对象
+     * @param response - HttpResponse对象
+     * @return 返回一个包含异常信息的ModelAndView对象
+     */
+    @ResponseStatus(value=HttpStatus.BAD_REQUEST)
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ModelAndView badRequestView(
+            HttpServletRequest request, HttpServletResponse response) {
+        ModelAndView view = new ModelAndView("errors/404");
+        return view;
+    }
+    
     /**
      * 处理ResourceNotFoundException异常的方法.
      * @param request - HttpRequest对象

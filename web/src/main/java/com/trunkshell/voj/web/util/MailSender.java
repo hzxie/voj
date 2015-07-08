@@ -40,7 +40,7 @@ public class MailSender {
      */
     public String getMailContent(String templateLocation, Map<String, Object> model) {
         return VelocityEngineUtils.
-                mergeTemplateIntoString(velocityEngine, templateLocation, defaultEncoding, model);
+                mergeTemplateIntoString(velocityEngine, templateLocation, DEFAULT_ENCODING, model);
     }
     
     /**
@@ -84,7 +84,7 @@ public class MailSender {
     /**
      * 电子邮件默认编码.
      */
-    private final String defaultEncoding = "UTF-8"; 
+    private static final String DEFAULT_ENCODING = "UTF-8"; 
     
     /**
      * 日志记录器.

@@ -26,7 +26,7 @@ public class MessageReceiver implements MessageListener {
             final MapMessage mapMessage = (MapMessage) message;
             
             try {
-                String event = (String)mapMessage.getObject("event");
+                String event = mapMessage.getString("event");
                 
                 if ( "SubmissionCreated".equals(event) ) {
                     newSubmissionHandler(mapMessage);
@@ -48,8 +48,8 @@ public class MessageReceiver implements MessageListener {
      * @throws JMSException
      */
     private void newSubmissionHandler(MapMessage mapMessage) throws JMSException {
-        long submissionId = (Long)mapMessage.getObject("submissionId");
-        LOGGER.info(String.format("Received new submission task #%s", 
+        long submissionId = mapMessage.getLong("submissionId");
+        LOGGER.info(String.format("Received new submission task #%d", 
                         new Object[] {submissionId}));
         
         dispatcher.onSubmissionCreated(submissionId);

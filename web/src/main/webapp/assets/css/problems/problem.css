@@ -100,11 +100,12 @@ div#content div#main-content div.problem div.body form#code-editor select#langua
 }
 
 div#content div#main-content div.problem div.body form#code-editor div#submission-error {
-	padding-top: 12px;
+	padding-top: 16px;
 }
 
 div#content div#main-content div.problem div.body form#code-editor div#submission-action {
 	text-align: right;
+	padding-top: 5px;
 }
 
 div#content div#main-content div.problem code {
