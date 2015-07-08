@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
 import com.trunkshell.voj.judger.core.Dispatcher;
 import com.trunkshell.voj.judger.mapper.JudgeResultMapper;
 import com.trunkshell.voj.judger.mapper.SubmissionMapper;
-import com.trunkshell.voj.judger.messaging.MessageSender;
+import com.trunkshell.voj.judger.messenger.MessageSender;
 import com.trunkshell.voj.judger.model.JudgeResult;
 import com.trunkshell.voj.judger.model.Submission;
 

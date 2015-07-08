@@ -231,8 +231,13 @@ public class AccountsController {
 		if ( !isLoggedIn(session) ) {
 			view = new ModelAndView("redirect:/accounts/login");
 		}
+		
 		long userId = (Long)session.getAttribute("uid");
+		User user = userService.getUserUsingUid(userId);
+		
 		view = new ModelAndView("accounts/dashboard");
+		view.addObject("user", user);
+		view.addAllObjects(userService.getUserMetaUsingUid(user));
 		view.addObject("submissions", submissionService.getSubmissionOfUser(userId));
 		return view;
 	}
@@ -258,6 +263,34 @@ public class AccountsController {
 		Map<String, Boolean> result = userService.changePassword(currentUser, oldPassword, newPassword, confirmPassword); 
 		if ( result.get("isSuccessful") ) {
 			logger.info(String.format("%s changed password at %s", new Object[] {currentUser, ipAddress}));
+		}
+		return result;
+	}
+	
+	/**
+	 * 处理用户更改个人资料的请求.
+	 * @param email - 用户的电子邮件地址
+	 * @param location - 用户的所在地区
+	 * @param website - 用户的个人主页
+	 * @param socialLinks - 用户的社交网络信息
+	 * @param aboutMe - 用户的个人简介
+	 * @param request - HttpServletRequest对象
+	 * @return 一个包含个人资料修改结果的Map<String, Boolean>对象
+	 */
+	@RequestMapping(value = "/updateProfile.action", method = RequestMethod.POST)
+	public @ResponseBody Map<String, Boolean> updateProfileInDashboardAction(
+			@RequestParam(value="email", required=true) String email,
+			@RequestParam(value="location", required=true) String location,
+			@RequestParam(value="website", required=true) String website,
+			@RequestParam(value="socialLinks", required=true) String socialLinks,
+			@RequestParam(value="aboutMe", required=true) String aboutMe,
+			HttpServletRequest request) {
+		User currentUser = HttpSessionParser.getCurrentUser(request.getSession());
+		String ipAddress = HttpRequestParser.getRemoteAddr(request);
+		
+		Map<String, Boolean> result = userService.updateProfile(currentUser, email, location, website, socialLinks, aboutMe); 
+		if ( result.get("isSuccessful") ) {
+			logger.info(String.format("%s updated profile at %s", new Object[] {currentUser, ipAddress}));
 		}
 		return result;
 	}

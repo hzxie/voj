@@ -135,8 +135,8 @@
 		<property name="destinationName" value="vojJudgeResultQueue" />
 		<property name="messageListener" ref="messageReceiver" />
 	</bean>
-	<bean id="messageSender" class="com.trunkshell.voj.web.util.MessageSender"></bean>
-	<bean id="messageReceiver" class="com.trunkshell.voj.web.util.MessageReceiver"></bean>
+	<bean id="messageSender" class="com.trunkshell.voj.web.messenger.MessageSender"></bean>
+	<bean id="messageReceiver" class="com.trunkshell.voj.web.messenger.MessageReceiver"></bean>
 
 	<!-- WebSocket for Message Service -->
 	<websocket:message-broker

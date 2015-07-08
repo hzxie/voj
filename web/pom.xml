@@ -8,12 +8,18 @@
 	<name>Verwandlung Online Judge WebApp</name>
 	<url>http://maven.apache.org</url>
 	<properties>
-		<spring.version>4.1.6.RELEASE</spring.version>
+		<spring.version>4.2.0.RC2</spring.version>
 		<aspectj.version>1.8.5</aspectj.version>
 		<mybatis.version>3.2.8</mybatis.version>
 		<druid.version>1.0.13</druid.version>
 		<activemq.version>5.11.1</activemq.version>
 	</properties>
+	<repositories>
+		<repository>
+			<id>Springframework Milestone</id>
+			<url>http://repo.spring.io/milestone</url>
+		</repository>
+	</repositories>
 	<dependencies>
 		<!-- Spring -->
 		<dependency>
@@ -177,6 +183,11 @@
 			<groupId>javax.servlet</groupId>
 			<artifactId>javax.servlet-api</artifactId>
 			<version>3.1.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.jsoup</groupId>
+			<artifactId>jsoup</artifactId>
+			<version>1.8.2</version>
 		</dependency>
 	</dependencies>
 	<build>
