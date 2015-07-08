@@ -20,21 +20,21 @@ import com.trunkshell.voj.judger.exception.IllgealSubmissionException;
 @TransactionConfiguration(defaultRollback = true)
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class DispatcherTest {
-	/**
-	 * 测试用例: 测试createNewTask(long)函数
-	 * 测试数据: 正常的A+B Problem测试任务
-	 * 预期结果: 评测机正常执行, 并返回AC
-	 * @throws IllgealSubmissionException 
-	 */
-	@Test
-	public void testCreateNewTaskNormal() throws IllgealSubmissionException {
-		// long submissionId = 1000;
-		// judgerDispatcher.createNewTask(submissionId);
-	}
-	
-	/**
-	 * 待测试的Dispatcher对象.
-	 */
-	@Autowired
-	private Dispatcher judgerDispatcher;
+    /**
+     * 测试用例: 测试createNewTask(long)函数
+     * 测试数据: 正常的A+B Problem测试任务
+     * 预期结果: 评测机正常执行, 并返回AC
+     * @throws IllgealSubmissionException 
+     */
+    @Test
+    public void testCreateNewTaskNormal() throws IllgealSubmissionException {
+        // long submissionId = 1000;
+        // judgerDispatcher.createNewTask(submissionId);
+    }
+    
+    /**
+     * 待测试的Dispatcher对象.
+     */
+    @Autowired
+    private Dispatcher judgerDispatcher;
 }

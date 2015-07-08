@@ -15,58 +15,59 @@ import org.springframework.web.servlet.ModelAndView;
 import com.trunkshell.voj.web.exception.ResourceNotFoundException;
 
 /**
- * 异常处理的Controller.
+ * 异常处理的控制器.
+ * 
  * @author Xie Haozhe
  */
 @ControllerAdvice
 public class ExceptionHandlingController {
-	/**
-	 * 处理ResourceNotFoundException异常的方法.
-	 * @param request - HttpRequest对象
-	 * @param response - HttpResponse对象
-	 * @return 返回一个包含异常信息的ModelAndView对象
-	 */
-	@ResponseStatus(value=HttpStatus.NOT_FOUND)
-	@ExceptionHandler(ResourceNotFoundException.class)
-	public ModelAndView notFoundView(
-			HttpServletRequest request, HttpServletResponse response) {
-		ModelAndView view = new ModelAndView("errors/404");
-		return view;
-	}
-	
-	/**
-	 * 处理HttpRequestMethodNotSupportedException异常的方法.
-	 * @param request - HttpRequest对象
-	 * @param response - HttpResponse对象
-	 * @return 返回一个包含异常信息的ModelAndView对象
-	 */
-	@ResponseStatus(value=HttpStatus.METHOD_NOT_ALLOWED)
-	@ExceptionHandler(HttpRequestMethodNotSupportedException.class)
-	public ModelAndView methodNotAllowedView(
-			HttpServletRequest request, HttpServletResponse response) {
-		ModelAndView view = new ModelAndView("errors/404");
-		return view;
-	}
-	
-	/**
-	 * 处理通用Exception异常的方法.
-	 * @param ex - 抛出的异常对象
-	 * @param request - HttpRequest对象
-	 * @param response - HttpResponse对象
-	 * @return 返回一个包含异常信息的ModelAndView对象
-	 */
-	@ResponseStatus(value=HttpStatus.INTERNAL_SERVER_ERROR)
-	@ExceptionHandler(Exception.class)
-	public ModelAndView internalServerErrorView(
-			Exception ex, HttpServletRequest request, HttpServletResponse response) {
-		logger.catching(ex);
-		
-		ModelAndView view = new ModelAndView("errors/500");
-		return view;
-	}
-	
-	/**
-	 * 日志记录器.
-	 */
-	private static final Logger logger = LogManager.getLogger(ExceptionHandlingController.class);
+    /**
+     * 处理ResourceNotFoundException异常的方法.
+     * @param request - HttpRequest对象
+     * @param response - HttpResponse对象
+     * @return 返回一个包含异常信息的ModelAndView对象
+     */
+    @ResponseStatus(value=HttpStatus.NOT_FOUND)
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ModelAndView notFoundView(
+            HttpServletRequest request, HttpServletResponse response) {
+        ModelAndView view = new ModelAndView("errors/404");
+        return view;
+    }
+    
+    /**
+     * 处理HttpRequestMethodNotSupportedException异常的方法.
+     * @param request - HttpRequest对象
+     * @param response - HttpResponse对象
+     * @return 返回一个包含异常信息的ModelAndView对象
+     */
+    @ResponseStatus(value=HttpStatus.METHOD_NOT_ALLOWED)
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ModelAndView methodNotAllowedView(
+            HttpServletRequest request, HttpServletResponse response) {
+        ModelAndView view = new ModelAndView("errors/404");
+        return view;
+    }
+    
+    /**
+     * 处理通用Exception异常的方法.
+     * @param ex - 抛出的异常对象
+     * @param request - HttpRequest对象
+     * @param response - HttpResponse对象
+     * @return 返回一个包含异常信息的ModelAndView对象
+     */
+    @ResponseStatus(value=HttpStatus.INTERNAL_SERVER_ERROR)
+    @ExceptionHandler(Exception.class)
+    public ModelAndView internalServerErrorView(
+            Exception ex, HttpServletRequest request, HttpServletResponse response) {
+        LOGGER.catching(ex);
+        
+        ModelAndView view = new ModelAndView("errors/500");
+        return view;
+    }
+    
+    /**
+     * 日志记录器.
+     */
+    private static final Logger LOGGER = LogManager.getLogger(ExceptionHandlingController.class);
 }

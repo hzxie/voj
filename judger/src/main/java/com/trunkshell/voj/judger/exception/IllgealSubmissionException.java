@@ -7,16 +7,16 @@ package com.trunkshell.voj.judger.exception;
  * @author Xie Haozhe
  */
 public class IllgealSubmissionException extends Exception {
-	/**
-	 * IllgealSubmissionException的构造函数.
-	 * @param message - 错误消息
-	 */
-	public IllgealSubmissionException(String message) {
-		super(message);
-	}
+    /**
+     * IllgealSubmissionException的构造函数.
+     * @param message - 错误消息
+     */
+    public IllgealSubmissionException(String message) {
+        super(message);
+    }
 
-	/**
-	 * 唯一的序列化标识符.
-	 */
-	private static final long serialVersionUID = -9019235951964656553L;
+    /**
+     * 唯一的序列化标识符.
+     */
+    private static final long serialVersionUID = -9019235951964656553L;
 }

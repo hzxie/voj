@@ -12,7 +12,7 @@
 		</Console>
 		<RollingFile name="RollingFile" fileName="${fileName}" filePattern="${filePattern}">
 			<Policies>
-                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+				<TimeBasedTriggeringPolicy interval="1" modulate="true"/>
 			</Policies>
 			<PatternLayout pattern="${patternLayout}" />
 		</RollingFile>

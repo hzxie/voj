@@ -14,15 +14,15 @@ div.container {
 }
 
 div#upgrade-browser {
-    background-color: #fae692;
-    color: #333;
-    font-size: 12px;
-    padding: 15px 0;
+	background-color: #fae692;
+	color: #333;
+	font-size: 12px;
+	padding: 15px 0;
 }
 
 div#upgrade-browser h6,
 div#upgrade-browser p {
-    margin: 0;
+	margin: 0;
 }
 
 div#upgrade-browser h6 {
@@ -31,19 +31,19 @@ div#upgrade-browser h6 {
 }
 
 div#upgrade-browser div.span8 {
-    background: url('../img/upgrade-browser.png') no-repeat;
+	background: url('../img/upgrade-browser.png') no-repeat;
 }
 
 div#upgrade-browser div.span8 div.notice {
-    padding-left: 50px;
+	padding-left: 50px;
 }
 
 div#upgrade-browser div.span4 {
-    text-align: right;
+	text-align: right;
 }
 
 div#upgrade-browser div.span4 button {
-    margin-right: 10px;
+	margin-right: 10px;
 }
 
 div#header {
@@ -157,8 +157,8 @@ div#wmd-button-bar {
 	margin: 10px 0 0 0;
 	padding: 0 12px;
 	-webkit-border-radius: 6px 6px 0 0;
-       -moz-border-radius: 6px 6px 0 0;
-            border-radius: 6px 6px 0 0;
+	   -moz-border-radius: 6px 6px 0 0;
+	        border-radius: 6px 6px 0 0;
 }
 
 div#wmd-button-bar ul {
@@ -178,14 +178,14 @@ div#wmd-button-bar li.wmd-spacer {
 }
 
 div#wmd-button-bar li.wmd-button > span {
-    background-image: url('../img/wmd-buttons.svg');
-    background-repeat: no-repeat;
-    background-position: 0px 0px;
-    display: inline-block;
-    display: *inline;
-    height: 20px;
-    width: 20px;
-    zoom: 1;
+	background-image: url('../img/wmd-buttons.svg');
+	background-repeat: no-repeat;
+	background-position: 0px 0px;
+	display: inline-block;
+	display: *inline;
+	height: 20px;
+	width: 20px;
+	zoom: 1;
 }
 
 div.wmd-panel textarea.wmd-input {
@@ -194,11 +194,11 @@ div.wmd-panel textarea.wmd-input {
 	padding: 10px;
 	resize: none;
 	-webkit-box-sizing: border-box;
-       -moz-box-sizing: border-box;
-            box-sizing: border-box;
+	   -moz-box-sizing: border-box;
+	        box-sizing: border-box;
 	-webkit-border-radius: 0 0 6px 6px;
-       -moz-border-radius: 0 0 6px 6px;
-            border-radius: 0 0 6px 6px;
+	   -moz-border-radius: 0 0 6px 6px;
+	        border-radius: 0 0 6px 6px;
 }
 
 div.wmd-preview {

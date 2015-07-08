@@ -138,19 +138,6 @@
 	<bean id="messageSender" class="com.trunkshell.voj.web.messenger.MessageSender"></bean>
 	<bean id="messageReceiver" class="com.trunkshell.voj.web.messenger.MessageReceiver"></bean>
 
-	<!-- WebSocket for Message Service -->
-	<websocket:message-broker
-		application-destination-prefix="/voj"
-		user-destination-prefix="/user">
-		<websocket:stomp-endpoint path="/websocket">
-			<websocket:handshake-interceptors>
-				<bean class="org.springframework.web.socket.server.support.HttpSessionHandshakeInterceptor"/>
-			</websocket:handshake-interceptors>
-			<websocket:sockjs session-cookie-needed="true" />
-		</websocket:stomp-endpoint>
-		<websocket:simple-broker prefix="/topic, /message" />
-	</websocket:message-broker>
-
 	<!-- Internationalization and Localization -->
 	<bean id="messageSource"
 		class="org.springframework.context.support.ReloadableResourceBundleMessageSource">

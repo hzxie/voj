@@ -16,17 +16,17 @@ import com.trunkshell.voj.web.model.Language;
 @Service
 @Transactional
 public class LanguageService {
-	/**
-	 * 获取支持的编程语言.
-	 * @return 编程语言列表(List<Language>对象)
-	 */
-	public List<Language> getAllLanguages() {
-		return languageMapper.getAllLanguages();
-	}
-	
-	/**
-	 * 自动注入的LanguageMapper对象.
-	 */
-	@Autowired
-	private LanguageMapper languageMapper;
+    /**
+     * 获取支持的编程语言.
+     * @return 编程语言列表(List<Language>对象)
+     */
+    public List<Language> getAllLanguages() {
+        return languageMapper.getAllLanguages();
+    }
+    
+    /**
+     * 自动注入的LanguageMapper对象.
+     */
+    @Autowired
+    private LanguageMapper languageMapper;
 }

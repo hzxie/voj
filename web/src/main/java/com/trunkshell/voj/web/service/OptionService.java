@@ -18,34 +18,34 @@ import com.trunkshell.voj.web.model.Option;
 @Service
 @Transactional
 public class OptionService {
-	/**
-	 * 获取全部系统选项.
-	 * @return 一个包含全部系统选项的列表
-	 */
-	public List<Option> getOptions() {
-		return optionMapper.getOptions();
-	}
-	
-	/**
-	 * 获取自动加载的系统选项.
-	 * @return 一个包含自动加载系统选项的列表
-	 */
-	public List<Option> getAutoloadOptions() {
-		return optionMapper.getAutoloadOptions();
-	}
-	
-	/**
-	 * 根据系统选项的名称获取选项的值.
-	 * @param optionName - 系统选项的名称 
-	 * @return 对应的Option对象
-	 */
-	public Option getOption(String optionName) {
-		return optionMapper.getOption(optionName);
-	}
-	
-	/**
-	 * 自动注入的OptionMapper对象.
-	 */
-	@Autowired
-	private OptionMapper optionMapper;
+    /**
+     * 获取全部系统选项.
+     * @return 一个包含全部系统选项的列表
+     */
+    public List<Option> getOptions() {
+        return optionMapper.getOptions();
+    }
+    
+    /**
+     * 获取自动加载的系统选项.
+     * @return 一个包含自动加载系统选项的列表
+     */
+    public List<Option> getAutoloadOptions() {
+        return optionMapper.getAutoloadOptions();
+    }
+    
+    /**
+     * 根据系统选项的名称获取选项的值.
+     * @param optionName - 系统选项的名称 
+     * @return 对应的Option对象
+     */
+    public Option getOption(String optionName) {
+        return optionMapper.getOption(optionName);
+    }
+    
+    /**
+     * 自动注入的OptionMapper对象.
+     */
+    @Autowired
+    private OptionMapper optionMapper;
 }

@@ -17,23 +17,23 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class MessageReceiver implements MessageListener {
-	/* (non-Javadoc)
-	 * @see javax.jms.MessageListener#onMessage(javax.jms.Message)
-	 */
-	public void onMessage(Message message) {
-		if ( message instanceof MapMessage ) {
-			final MapMessage mapMessage = (MapMessage) message;
-			
-			try {
-				long submissionId = (Long)mapMessage.getObject("submissionId");
-			} catch (JMSException ex) {
-				logger.catching(ex);
-			}
-		}
-	}
-	
-	/**
-	 * 日志记录器.
-	 */
-	private static final Logger logger = LogManager.getLogger(MessageReceiver.class);
+    /* (non-Javadoc)
+     * @see javax.jms.MessageListener#onMessage(javax.jms.Message)
+     */
+    public void onMessage(Message message) {
+        if ( message instanceof MapMessage ) {
+            final MapMessage mapMessage = (MapMessage) message;
+            
+            try {
+                long submissionId = (Long)mapMessage.getObject("submissionId");
+            } catch (JMSException ex) {
+                LOGGER.catching(ex);
+            }
+        }
+    }
+    
+    /**
+     * 日志记录器.
+     */
+    private static final Logger LOGGER = LogManager.getLogger(MessageReceiver.class);
 }

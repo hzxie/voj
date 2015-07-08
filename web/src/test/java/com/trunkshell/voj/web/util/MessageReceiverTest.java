@@ -18,14 +18,14 @@ import com.trunkshell.voj.web.messenger.MessageReceiver;
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 */
 public class MessageReceiverTest {
-	/* @Test */
-	public void testOnMessage() throws InterruptedException {
-		Thread.sleep(5000);
-	}
-	
-	/**
-	 * 自动注入的MessageReceiver对象.
-	 */
-	@Autowired
-	private MessageReceiver messageReceiver;
+    /* @Test */
+    public void testOnMessage() throws InterruptedException {
+        Thread.sleep(5000);
+    }
+    
+    /**
+     * 自动注入的MessageReceiver对象.
+     */
+    @Autowired
+    private MessageReceiver messageReceiver;
 }

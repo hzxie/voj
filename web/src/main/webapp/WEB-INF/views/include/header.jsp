@@ -7,7 +7,7 @@
         <div class="row-fluid container">
             <div class="span8">
                 <div class="notice">
-                	<c:url var="WebsiteName" value="${websiteName}" />
+                    <c:url var="WebsiteName" value="${websiteName}" />
                     <h6>
                         <spring:message code="voj.include.header.browser-not-supported" 
                             text="Please note that Verwandlung Online Judge no longer supports Internet Explorer 7." 
