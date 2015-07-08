@@ -46,10 +46,10 @@
         <div id="sub-nav">
             <ul class="nav nav-tabs">
                 <li><a href="#tab-statistics" data-toggle="tab"><spring:message code="voj.accounts.dashboard.statistics" text="Statistics" /></a></li>
-                <li class="active"><a href="#tab-notifications" data-toggle="tab"><spring:message code="voj.accounts.dashboard.notifications" text="Notifications" /></a></li>
+                <li><a href="#tab-notifications" data-toggle="tab"><spring:message code="voj.accounts.dashboard.notifications" text="Notifications" /></a></li>
                 <li><a href="#tab-customize" data-toggle="tab"><spring:message code="voj.accounts.dashboard.customize" text="Customize" /></a></li>
                 <li><a href="#tab-messages" data-toggle="tab"><spring:message code="voj.accounts.dashboard.messages" text="Messages" /></a></li>
-                <li><a href="#tab-accounts" data-toggle="tab"><spring:message code="voj.accounts.dashboard.accounts" text="Accounts" /></a></li>
+                <li class="active"><a href="#tab-accounts" data-toggle="tab"><spring:message code="voj.accounts.dashboard.accounts" text="Accounts" /></a></li>
             <c:if test="${myProfile.userGroup.userGroupSlug == 'administrators'}">
                 <li><a href="<c:url value="/administration" />"><spring:message code="voj.accounts.dashboard.system-administration" text="System Administration" /></a></li>
             </c:if>
@@ -96,7 +96,7 @@
                     </div> <!-- .body -->
                 </div> <!-- .section -->
             </div> <!-- #tab-statistics -->
-            <div class="tab-pane active" id="tab-notifications">
+            <div class="tab-pane" id="tab-notifications">
                 notifications
             </div> <!-- #tab-notifications -->
             <div class="tab-pane" id="tab-customize">
@@ -105,8 +105,8 @@
             <div class="tab-pane" id="tab-messages">
                 messages
             </div> <!-- #tab-messages -->
-            <div class="tab-pane" id="tab-accounts">
-                <form id="change-password-form" class="section" method="POST" onSubmit="onChangePasswordSubmit(); return false;">
+            <div class="tab-pane active" id="tab-accounts">
+                <form id="password-form" class="section" method="POST" onSubmit="onChangePasswordSubmit(); return false;">
                     <h4><spring:message code="voj.accounts.dashboard.change-password" text="Change Password" /></h4>
                     <div class="row-fluid">
                         <div class="alert alert-error hide"></div>
@@ -147,7 +147,75 @@
                             <button class="btn btn-primary btn-block" type="submit"><spring:message code="voj.accounts.dashboard.change-password" text="Change Password" /></button>
                         </div> <!-- .span12 -->
                     </div> <!-- .row-fluid -->
-                </form>
+                </form> <!-- #password-form -->
+                <form id="profile-form" class="section" method="POST" onSubmit="onChangeProfileSubmit(); return false;">
+                    <h4><spring:message code="voj.accounts.dashboard.profile" text="Profile" /></h4>
+                    <div class="row-fluid">
+                        <div class="alert alert-error hide"></div>
+                        <div class="alert alert-success hide"><spring:message code="voj.accounts.dashboard.profile-changed" text="You've changed your profile." /></div>
+                    </div> <!-- .row-fluid -->
+                    <div class="row-fluid">
+                        <div class="span4">
+                            <label for="email"><spring:message code="voj.accounts.dashboard.email" text="Email" /></label>
+                        </div> <!-- .span4 -->
+                        <div class="span8">
+                            <div class="control-group">
+                                <input id="email" class="span8" type="text" value="${user.email}" maxlength="64" placeholder="you@example.com" />
+                            </div> <!-- .control-group -->
+                        </div> <!-- .span8 -->
+                    </div> <!-- .row-fluid -->
+                    <div class="row-fluid">
+                        <div class="span4">
+                            <label for="location"><spring:message code="voj.accounts.dashboard.location" text="Location" /></label>
+                        </div> <!-- .span4 -->
+                        <div class="span8">
+                            <div class="control-group">
+                                <input id="location" class="span8" type="text" value="${location}" maxlength="128" placeholder="<spring:message code="voj.accounts.dashboard.location-example" text="New York, USA" />" />
+                            </div> <!-- .control-group -->
+                        </div> <!-- .span8 -->
+                    </div> <!-- .row-fluid -->
+                    <div class="row-fluid">
+                        <div class="span4">
+                            <label for="website"><spring:message code="voj.accounts.dashboard.website" text="Website" /></label>
+                        </div> <!-- .span4 -->
+                        <div class="span8">
+                            <div class="control-group">
+                                <input id="website" class="span8" type="text" value="${website}" maxlength="64" placeholder="http://zjhzxhz.com" />
+                            </div> <!-- .control-group -->
+                        </div> <!-- .span8 -->
+                    </div> <!-- .row-fluid -->
+                    <div class="row-fluid">
+                        <div class="span12">
+                            <label for="social-links">
+                                <spring:message code="voj.accounts.dashboard.social-links" text="Social Links" />
+                                <a id="new-social-link" title="<spring:message code="voj.accounts.dashboard.new-social-link" text="New social link" />" href="javascript:void(0);">
+                                    <i class="fa fa-plus-circle"></i>
+                                </a>
+                            </label>
+                            <div id="social-links">
+                                <p id="no-social-links"><spring:message code="voj.accounts.dashboard.no-social-links" text="No Social Links." /></p>
+                                <ul></ul>
+                            </div> <!-- #social-links -->
+                        </div> <!-- .span12 -->
+                    </div> <!-- .row-fluid -->
+                    <div class="row-fluid">
+                        <div class="span12">
+                            <label for="wmd-input"><spring:message code="voj.accounts.dashboard.about-me" text="About Me" /></label>    
+                            <div id="markdown-editor">
+                                <div class="wmd-panel">
+                                    <div id="wmd-button-bar"></div> <!-- #wmd-button-bar -->
+                                    <textarea id="wmd-input" class="wmd-input" placeholder="<spring:message code="voj.accounts.dashboard.introduce-yourself" text="Write something about yourself." />">${aboutMe}</textarea>
+                                </div> <!-- .wmd-panel -->
+                                <div id="wmd-preview" class="wmd-panel wmd-preview"></div> <!-- .wmd-preview -->
+                            </div> <!-- #markdown-editor -->
+                        </div> <!-- .span12 -->
+                    </div> <!-- .row-fluid -->
+                    <div class="row-fluid">
+                        <div class="span12">
+                            <button class="btn btn-primary btn-block" type="submit"><spring:message code="voj.accounts.dashboard.update-profile" text="Update Profile" /></button>
+                        </div> <!-- .span12 -->
+                    </div> <!-- .row-fluid -->
+                </form> <!-- #profile-form -->
             </div> <!-- #tab-accounts -->
         </div> <!-- #main-content -->
     </div> <!-- #content -->
@@ -157,11 +225,25 @@
     <!-- Placed at the end of the document so the pages load faster -->
     <script type="text/javascript" src="${cdnUrl}/js/site.js"></script>
     <script type="text/javascript">
+        $.getScript('${cdnUrl}/js/markdown.min.js', function() {
+            converter = Markdown.getSanitizingConverter();
+            editor    = new Markdown.Editor(converter);
+            editor.run();
+
+            $('.markdown').each(function() {
+                var plainContent    = $(this).text(),
+                    markdownContent = converter.makeHtml(plainContent.replace(/\\\n/g, '\\n'));
+                
+                $(this).html(markdownContent);
+            });
+        });
+    </script>
+    <script type="text/javascript">
         function onChangePasswordSubmit() {
-            $('.alert-success', '#change-password-form').addClass('hide');
-            $('.alert-error', '#change-password-form').addClass('hide');
-            $('button[type=submit]', '#change-password-form').attr('disabled', 'disabled');
-            $('button[type=submit]', '#change-password-form').html('<spring:message code="voj.accounts.dashboard.please-wait" text="Please wait..." />');
+            $('.alert-success', '#password-form').addClass('hide');
+            $('.alert-error', '#password-form').addClass('hide');
+            $('button[type=submit]', '#password-form').attr('disabled', 'disabled');
+            $('button[type=submit]', '#password-form').html('<spring:message code="voj.accounts.dashboard.please-wait" text="Please wait..." />');
 
             var oldPassword     = $('#old-password').val(),
                 newPassword     = $('#new-password').val(),
@@ -192,7 +274,7 @@
     <script type="text/javascript">
         function processChangePasswordResult(result) {
             if ( result['isSuccessful'] ) {
-                $('.alert-success', '#change-password-form').removeClass('hide');
+                $('.alert-success', '#password-form').removeClass('hide');
             } else {
                 var errorMessage  = '';
 
@@ -200,7 +282,7 @@
                     errorMessage += '<spring:message code="voj.accounts.dashboard.old-password-incorrect" text="Old password is incorrect." /><br>';
                 }
                 if ( result['isNewPasswordEmpty'] ) {
-                    errorMessage += '<spring:message code="voj.accounts.dashboard.new-password-empty" text="You can&acute;t leave new password empty." /><br>';
+                    errorMessage += '<spring:message code="voj.accounts.dashboard.new-password-empty" text="You can&acute;t leave New Password empty." /><br>';
                 }
                 if ( !result['isNewPasswordLegal'] ) {
                     errorMessage += '<spring:message code="voj.accounts.dashboard.new-password-illegal" text="The length of password must between 6 and 16 characters." /><br>';
@@ -208,11 +290,227 @@
                 if ( !result['isConfirmPasswordMatched'] ) {
                     errorMessage += '<spring:message code="voj.accounts.dashboard.new-password-not-matched" text="New passwords don&acute;t match." /><br>';
                 }
-                $('.alert-error', '#change-password-form').html(errorMessage);
-                $('.alert-error', '#change-password-form').removeClass('hide');
+                $('.alert-error', '#password-form').html(errorMessage);
+                $('.alert-error', '#password-form').removeClass('hide');
             }
-            $('button[type=submit]', '#change-password-form').html('<spring:message code="voj.accounts.dashboard.change-password" text="Change Password" />');
-            $('button[type=submit]', '#change-password-form').removeAttr('disabled');
+            $('button[type=submit]', '#password-form').html('<spring:message code="voj.accounts.dashboard.change-password" text="Change Password" />');
+            $('button[type=submit]', '#password-form').removeAttr('disabled');
+        }
+    </script>
+    <script type="text/javascript">
+        socialServices      = {
+            'Facebook'      : 'https://facebook.com/',
+            'Twitter'       : 'https://twitter.com/',
+            'Weibo'         : 'http://weibo.com/',
+            'Instagram'     : 'https://instagram.com/',
+            'GitHub'        : 'https://github.com/',
+            'StackOverflow' : 'http://stackoverflow.com/users/',
+            'LinkedIn'      : 'https://www.linkedin.com/profile/view?id='
+        };
+    </script>
+    <script type="text/javascript">
+        $(function() {
+            var mySocialLinks   = {
+                'Facebook'      : '${socialLinks['Facebook']}',
+                'Twitter'       : '${socialLinks['Twitter']}',
+                'Weibo'         : '${socialLinks['Weibo']}',
+                'Instagram'     : '${socialLinks['Instagram']}',
+                'GitHub'        : '${socialLinks['GitHub']}',
+                'StackOverflow' : '${socialLinks['StackOverflow']}',
+                'LinkedIn'      : '${socialLinks['LinkedIn']}'
+            };
+
+            for ( var serviceName in mySocialLinks ) {
+                var serviceBaseUrl  = socialServices[serviceName],
+                    serviceUsername = mySocialLinks[serviceName],
+                    serviceUrl      = serviceBaseUrl + serviceUsername;
+
+                if ( typeof(serviceUsername) != 'undefined' && serviceUsername != '' ) {
+                    $('#no-social-links').addClass('hide');
+                    $('#social-links > ul').append(getSocialLinkContainer(serviceName, serviceUrl));
+                }
+            }
+        });
+    </script>
+    <script type="text/javascript">
+        $('#new-social-link').click(function() {
+            var serviceName = 'Facebook', 
+                serviceUrl  = socialServices['Facebook'];
+            
+            $('#no-social-links').addClass('hide');
+            $('#social-links > ul').append(getSocialLinkContainer(serviceName, serviceUrl));
+        });
+    </script>
+    <script type="text/javascript">
+        function getSocialLinkContainer(serviceName, serviceUrl) {
+            var containerTemplate = '<li class="social-link">' +
+                                    '    <div class="header">' +
+                                    '        <h5>%s</h5>' +
+                                    '        <ul class="inline">' +
+                                    '            <li><a href="javascript:void(0);"><i class="fa fa-edit"></i></a></li>' +
+                                    '            <li><a href="javascript:void(0);"><i class="fa fa-trash"></i></a></li>' +
+                                    '        </ul>' +
+                                    '    </div> <!-- .header -->' +
+                                    '    <div class="body hide">' +
+                                    '        <div class="row-fluid">' +
+                                    '            <div class="span4">' +
+                                    '                <label><spring:message code="voj.accounts.dashboard.service-name" text="Service Name" /></label>' +
+                                    '            </div> <!-- .span4 -->' +
+                                    '            <div class="span8">' +
+                                    '                <div class="control-group">' +
+                                    '                    <select class="service">' + getSocialLinkOptions(serviceName) + '</select>' +
+                                    '                </div> <!-- .control-group -->' +
+                                    '            </div> <!-- .span8 -->' +
+                                    '        </div> <!-- .row-fluid -->' +
+                                    '        <div class="row-fluid">' +
+                                    '            <div class="span4">' +
+                                    '                <label>URL</label>' +
+                                    '            </div> <!-- .span4 -->' +
+                                    '            <div class="span8">' +
+                                    '                <div class="control-group">' +
+                                    '                    <input class="url span8" type="text" maxlength="128" value="%s" />' +
+                                    '                </div> <!-- .control-group -->' +
+                                    '            </div> <!-- .span8 -->' +
+                                    '        </div> <!-- .row-fluid -->' +
+                                    '    </div> <!-- .body -->' +
+                                    '</li> <!-- .social-link -->';
+
+            return containerTemplate.format(serviceName, serviceUrl);
+        }
+    </script>
+    <script type="text/javascript">
+        function getSocialLinkOptions(selectedServiceName) {
+            var socialLinkOptions       = '',
+                optionTemplate          = '<option value="%s">%s</option>',
+                selectedOptionTemplate  = '<option value="%s" selected>%s</option>';
+
+            for ( var serviceName in socialServices ) {
+                if ( serviceName == selectedServiceName ) {
+                    socialLinkOptions  += selectedOptionTemplate.format(serviceName, serviceName);
+                } else {
+                    socialLinkOptions  += optionTemplate.format(serviceName, serviceName);
+                }
+            }
+            return socialLinkOptions;
+        }
+    </script>
+    <script type="text/javascript">
+        $('#social-links').delegate('i.fa-edit', 'click', function() {
+            var socialLinkContainer = $(this).parent().parent().parent().parent().parent(),
+                isBodyUnfolded      = $('.body', $(socialLinkContainer)).is(':visible');
+
+            if ( isBodyUnfolded ) {
+                $('.body', $(socialLinkContainer)).addClass('hide');
+            } else {
+                $('.body', $(socialLinkContainer)).removeClass('hide');
+            }
+        });
+    </script>
+    <script type="text/javascript">
+        $('#social-links').delegate('i.fa-trash', 'click',function() {
+            var socialLinkContainer = $(this).parent().parent().parent().parent().parent(),
+                socialLinks         = $('li.social-link', '#social-links').length;
+            
+            $(socialLinkContainer).remove();
+
+            if ( socialLinks == 1 ) {
+                $('#no-social-links').removeClass('hide');
+            }
+        });
+    </script>
+    <script type="text/javascript">
+        $('#social-links').delegate('select.service', 'change', function() {
+            var socialLinkContainer = $(this).parent().parent().parent().parent().parent(),
+                serviceName         = $(this).val(),
+                serviceBaseUrl      = socialServices[serviceName];
+            
+            $('h5', $(socialLinkContainer)).html(serviceName);
+            $('input.url', $(socialLinkContainer)).val(serviceBaseUrl);
+        });
+    </script>
+    <script type="text/javascript">
+        function getSocialLinks() {
+            var socialLinks = {};
+
+            $('.social-link').each(function() {
+                var serviceName     = $('select.service', $(this)).val(),
+                    serviceUrl      = $('input.url', $(this)).val(),
+                    serviceBaseUrl  = socialServices[serviceName],
+                    serviceUsername = serviceUrl.substr(serviceBaseUrl.length);
+
+                if ( serviceUrl.indexOf(serviceBaseUrl) != -1 && serviceUsername != '' ) {
+                    socialLinks[serviceName] = serviceUsername;
+                }
+            });
+            return JSON.stringify(socialLinks);
+        }
+    </script>
+    <script type="text/javascript">
+        function onChangeProfileSubmit() {
+            $('.alert-success', '#profile-form').addClass('hide');
+            $('.alert-error', '#profile-form').addClass('hide');
+            $('button[type=submit]', '#profile-form').attr('disabled', 'disabled');
+            $('button[type=submit]', '#profile-form').html('<spring:message code="voj.accounts.dashboard.please-wait" text="Please wait..." />');
+
+            var email       = $('#email').val(),
+                location    = $('#location').val(),
+                website     = $('#website').val(),
+                socialLinks = getSocialLinks(),
+                aboutMe     = $('#wmd-input').val();
+
+            return doUpdateProfileAction(email, location, website, socialLinks, aboutMe);
+        }
+    </script>
+    <script type="text/javascript">
+        function doUpdateProfileAction(email, location, website, socialLinks, aboutMe) {
+            var postData = {
+                'email': email,
+                'location': location,
+                'website': website,
+                'socialLinks': socialLinks,
+                'aboutMe': aboutMe
+            };
+
+            $.ajax({
+                type: 'POST',
+                url: '<c:url value="/accounts/updateProfile.action" />',
+                data: postData,
+                dataType: 'JSON',
+                success: function(result){
+                    return processUpdateProfileResult(result);
+                }
+            });
+        }
+    </script>
+    <script type="text/javascript">
+        function processUpdateProfileResult(result) {
+            if ( result['isSuccessful'] ) {
+                $('.alert-success', '#profile-form').removeClass('hide');
+            } else {
+                var errorMessage  = '';
+
+                if ( result['isEmailEmpty'] ) {
+                    errorMessage += '<spring:message code="voj.accounts.dashboard.email-empty" text="You can&acute;t leave Email empty." /><br>';
+                } else if ( !result['isEmailLegal'] ) {
+                    errorMessage += '<spring:message code="voj.accounts.dashboard.email-illegal" text="The email seems invalid." /><br>';
+                } else if ( result['isEmailExists'] ) {
+                    errorMessage += '<spring:message code="voj.accounts.dashboard.email-existing" text="Someone already has that email address." /><br>';
+                }
+                if ( !result['isLocationLegal'] ) {
+                    errorMessage += '<spring:message code="voj.accounts.dashboard.location-illegal" text="The length of Location CANNOT exceed 128 characters." /><br>';
+                }
+                if ( !result['isWebsiteLegal'] ) {
+                    errorMessage += '<spring:message code="voj.accounts.dashboard.website-legal" text="The url of website seems invalid." /><br>';
+                }
+                if ( !result['isAboutMeLegal'] ) {
+                    errorMessage += '<spring:message code="voj.accounts.dashboard.about-me-legal" text="The length of About Me CANNOT exceed 256 characters." /><br>';
+                }
+
+                $('.alert-error', '#profile-form').html(errorMessage);
+                $('.alert-error', '#profile-form').removeClass('hide');
+            }
+            $('button[type=submit]', '#profile-form').html('<spring:message code="voj.accounts.dashboard.update-profile" text="Update Profile" />');
+            $('button[type=submit]', '#profile-form').removeAttr('disabled');
         }
     </script>
     <c:if test="${GoogleAnalyticsCode != ''}">

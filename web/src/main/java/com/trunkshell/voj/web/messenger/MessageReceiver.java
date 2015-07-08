@@ -1,4 +1,4 @@
-package com.trunkshell.voj.web.util;
+package com.trunkshell.voj.web.messenger;
 
 import javax.jms.JMSException;
 import javax.jms.MapMessage;

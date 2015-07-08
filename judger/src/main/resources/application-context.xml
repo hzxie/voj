@@ -92,6 +92,6 @@
 		<property name="destinationName" value="vojSubmissionTaskQueue" />
 		<property name="messageListener" ref="messageReceiver" />
 	</bean>
-	<bean id="messageSender" class="com.trunkshell.voj.judger.messaging.MessageSender"></bean>
-	<bean id="messageReceiver" class="com.trunkshell.voj.judger.messaging.MessageReceiver"></bean>
+	<bean id="messageSender" class="com.trunkshell.voj.judger.messenger.MessageSender"></bean>
+	<bean id="messageReceiver" class="com.trunkshell.voj.judger.messenger.MessageReceiver"></bean>
 </beans>

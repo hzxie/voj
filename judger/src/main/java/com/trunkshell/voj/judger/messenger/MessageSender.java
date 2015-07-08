@@ -1,4 +1,4 @@
-package com.trunkshell.voj.web.util;
+package com.trunkshell.voj.judger.messenger;
 
 import java.util.Map;
 
@@ -10,7 +10,6 @@ import org.springframework.stereotype.Component;
 
 /**
  * 消息发送服务.
- * 用于发送新的评测任务至消息队列.
  * @author Xie Haozhe
  */
 @Component
@@ -20,10 +19,7 @@ public class MessageSender {
 	 * @param mapMessage - Key-Value格式的消息
 	 */
 	public void sendMessage(final Map<String, Object> mapMessage) {
-		long submissionId = (Long) mapMessage.get("submissionId");
-		
 		jmsTemplate.convertAndSend(mapMessage);
-		logger.info(String.format("Submission task #%s has been created.", new Object[] {submissionId}));
 	}
 
 	/**
@@ -36,5 +32,6 @@ public class MessageSender {
 	/**
 	 * 日志记录器.
 	 */
+	@SuppressWarnings("unused")
 	private static final Logger logger = LogManager.getLogger(MessageSender.class);
 }

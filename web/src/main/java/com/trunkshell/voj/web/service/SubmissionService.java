@@ -12,11 +12,11 @@ import org.springframework.transaction.annotation.Transactional;
 import com.trunkshell.voj.web.mapper.LanguageMapper;
 import com.trunkshell.voj.web.mapper.ProblemMapper;
 import com.trunkshell.voj.web.mapper.SubmissionMapper;
+import com.trunkshell.voj.web.messenger.MessageSender;
 import com.trunkshell.voj.web.model.Language;
 import com.trunkshell.voj.web.model.Problem;
 import com.trunkshell.voj.web.model.Submission;
 import com.trunkshell.voj.web.model.User;
-import com.trunkshell.voj.web.util.MessageSender;
 
 /**
  * 提交类(Submission)的业务逻辑层.

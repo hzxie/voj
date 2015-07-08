@@ -21,6 +21,8 @@ import com.trunkshell.voj.web.model.User;
 import com.trunkshell.voj.web.model.UserGroup;
 import com.trunkshell.voj.web.model.UserMeta;
 import com.trunkshell.voj.web.util.DigestUtils;
+import com.trunkshell.voj.web.util.HtmlTextFilter;
+import com.trunkshell.voj.web.util.SensitiveWordFilter;
 
 /**
  * 用户类(User)的业务逻辑层.
@@ -199,7 +201,7 @@ public class UserService {
 	 */
 	private Map<String, Boolean> getChangePasswordResult(User user, String oldPassword, 
 			String newPassword, String confirmPassword) {
-		Map<String, Boolean> result = new HashMap<String, Boolean>();
+		Map<String, Boolean> result = new HashMap<String, Boolean>(5, 1);
 		result.put("isOldPasswordCorrect", isOldPasswordCorrect(user.getPassword(), oldPassword));
 		result.put("isNewPasswordEmpty", newPassword.isEmpty());
 		result.put("isNewPasswordLegal", isPasswordLegal(newPassword));
@@ -210,6 +212,85 @@ public class UserService {
 		
 		result.put("isSuccessful", isSuccessful);
 		return result;
+	}
+	
+	/**
+	 * 验证新资料的有效性并更新个人资料.
+	 * @param user - 待更改资料的用户
+	 * @param email - 用户的电子邮件地址
+	 * @param location - 用户的所在地区
+	 * @param website - 用户的个人主页
+	 * @param socialLinks - 用户的社交网络信息
+	 * @param aboutMe - 用户的个人简介
+	 * @return 一个包含个人资料修改结果的Map<String, Boolean>对象
+	 */
+	public Map<String, Boolean> updateProfile(User user, String email, 
+			String location, String website, String socialLinks, String aboutMe) {
+		location = HtmlTextFilter.filter(location);
+		website = HtmlTextFilter.filter(website);
+		socialLinks = HtmlTextFilter.filter(socialLinks);
+		aboutMe = sensitiveWordFilter.filter(HtmlTextFilter.filter(aboutMe));
+		Map<String, Boolean> result = getUpdateProfileResult(user, email, location, website, socialLinks, aboutMe);
+		
+		if ( result.get("isSuccessful") ) {
+			user.setEmail(email);
+			userMapper.updateUser(user);
+			
+			updateUserMeta(user, "location", location);
+			updateUserMeta(user, "website", website);
+			updateUserMeta(user, "socialLinks", socialLinks);
+			updateUserMeta(user, "aboutMe", aboutMe);
+		}
+		return result;
+	}
+	
+	/**
+	 * 验证新资料的有效性.
+	 * @param user - 待更改资料的用户
+	 * @param email - 用户的电子邮件地址
+	 * @param location - 用户的所在地区
+	 * @param website - 用户的个人主页
+	 * @param socialLinks - 用户的社交网络信息
+	 * @param aboutMe - 用户的个人简介
+	 * @return 一个包含个人资料修改结果的Map<String, Boolean>对象
+	 */
+	private Map<String, Boolean> getUpdateProfileResult(User user, String email, 
+			String location, String website, String socialLinks, String aboutMe) {
+		Map<String, Boolean> result = new HashMap<String, Boolean>(12, 1);
+		result.put("isEmailEmpty", email.isEmpty());
+		result.put("isEmailLegal", isEmailLegal(email));
+		result.put("isEmailExists", isEmailExists(user.getEmail(), email));
+		result.put("isLocationLegal", location.length() <= 128);
+		result.put("isWebsiteLegal", isWebsiteLegal(website));
+		result.put("isAboutMeLegal", aboutMe.length() <= 256);
+		
+		boolean isSuccessful = !result.get("isEmailEmpty")   && result.get("isEmailLegal")    &&
+							   !result.get("isEmailExists")  && result.get("isLocationLegal") &&
+							    result.get("isWebsiteLegal") && result.get("isAboutMeLegal");
+		
+		result.put("isSuccessful", isSuccessful);
+		return result;
+	}
+	
+	/**
+	 * 更新用户元信息.
+	 * @param user - 待更新元信息的用户
+	 * @param metaKey - 元信息的键
+	 * @param metaValue - 元信息的值
+	 */
+	private void updateUserMeta(User user, String metaKey, String metaValue) {
+		UserMeta userMeta = userMetaMapper.getUserMetaUsingUserAndMetaKey(user, metaKey);
+		
+		if ( userMeta == null ) {
+			if ( metaValue.isEmpty() ) {
+				return;
+			}
+			userMeta = new UserMeta(user, metaKey, metaValue);
+			userMetaMapper.createUserMeta(userMeta);
+		} else {
+			userMeta.setMetaValue(metaValue);
+			userMetaMapper.updateUserMeta(userMeta);
+		}
 	}
 	
 	/**
@@ -294,6 +375,18 @@ public class UserService {
 	}
 	
 	/**
+	 * 检查个人主页的地址是否合法.
+	 * 规则: 合法的HTTP(S)协议URL且长度不超过64个字符.
+	 * @param website - 个人主页的地址
+	 * @return 个人主页的地址是否合法
+	 */
+	private boolean isWebsiteLegal(String website) {
+		int websiteLength = website.length();
+		return website.isEmpty() || 
+			  (websiteLength <= 64 && website.matches("^(http|https):\\/\\/[A-Za-z0-9-]+\\.[A-Za-z0-9_.]+$"));
+	}
+	
+	/**
 	 * 通过用户组的唯一英文缩写获取用户组对象.
 	 * @param userGroupSlug - 用户组的唯一英文缩写
 	 * @return 用户组对象或空引用
@@ -355,4 +448,11 @@ public class UserService {
 	 */
 	@Autowired
 	private LanguageMapper languageMapper;
+	
+	/**
+	 * 自动注入的SensitiveWordFilter对象.
+	 * 用于过滤用户个人信息中的敏感词.
+	 */
+	@Autowired
+	private SensitiveWordFilter sensitiveWordFilter;	
 }

@@ -151,43 +151,54 @@ div#footer button.btn-github i.fa {
 /* Style for Markdown Editor */
 div#wmd-button-bar {
 	background-color: transparent;
-	border: 1px solid #ccc;
+	border: 2px solid #ccc;
 	border-bottom: 0;
 	clear: both;
 	margin: 10px 0 0 0;
 	padding: 0 12px;
+	-webkit-border-radius: 6px 6px 0 0;
+       -moz-border-radius: 6px 6px 0 0;
+            border-radius: 6px 6px 0 0;
 }
 
 div#wmd-button-bar ul {
 	margin: 0;
-	padding: 0.75rem 0;
+	padding: 15px 0;
 }
 
 div#wmd-button-bar li {
 	display: inline-block;
+	display: *inline;
 	list-style: none;
+	zoom: 1;
 }
 
 div#wmd-button-bar li.wmd-spacer {
-	width: 1.5rem;
+	width: 20px;
 }
 
 div#wmd-button-bar li.wmd-button > span {
     background-image: url('../img/wmd-buttons.svg');
     background-repeat: no-repeat;
     background-position: 0px 0px;
-    width: 20px;
-    height: 20px;
     display: inline-block;
+    display: *inline;
+    height: 20px;
+    width: 20px;
+    zoom: 1;
 }
 
 div.wmd-panel textarea.wmd-input {
-	border-radius: 0;
 	height: 240px;
 	line-height: 1.2;
 	padding: 10px;
 	resize: none;
-	width: 100% !important;
+	-webkit-box-sizing: border-box;
+       -moz-box-sizing: border-box;
+            box-sizing: border-box;
+	-webkit-border-radius: 0 0 6px 6px;
+       -moz-border-radius: 0 0 6px 6px;
+            border-radius: 0 0 6px 6px;
 }
 
 div.wmd-preview {

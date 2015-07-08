@@ -184,7 +184,8 @@ INSERT INTO `voj_options` (`option_id`, `option_name`, `option_value`, `is_autol
 (3, 'copyright', '<a href="http://zjhzxhz.com/" target="_blank">Trunk Shell</a>', 1),
 (4, 'googleAnalyticsCode', '', 1),
 (5, 'icpNumber', '', 1),
-(6, 'allowUserRegister', '0', 0);
+(6, 'allowUserRegister', '0', 0),
+(7, 'sensitiveWords', '["法轮","中央","六四","军区","共产党","国民党"]', 0);
 
 -- --------------------------------------------------------
 

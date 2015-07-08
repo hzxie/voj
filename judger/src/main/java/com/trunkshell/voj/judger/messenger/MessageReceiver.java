@@ -1,4 +1,4 @@
-package com.trunkshell.voj.judger.messaging;
+package com.trunkshell.voj.judger.messenger;
 
 import javax.jms.JMSException;
 import javax.jms.MapMessage;
