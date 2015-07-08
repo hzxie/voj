@@ -1,7 +1,7 @@
 div#content div#main-content div.problem {
 	-webkit-box-shadow: 0 0 5px rgba(0,0,0,0.1);
 	   -moz-box-shadow: 0 0 5px rgba(0,0,0,0.1);
-			box-shadow: 0 0 5px rgba(0,0,0,0.1);
+	        box-shadow: 0 0 5px rgba(0,0,0,0.1);
 }
 
 div#content div#main-content div.problem div.header {
@@ -63,15 +63,15 @@ div#content div#main-content div.problem div.body form#code-editor {
 	z-index: 8;
 	-webkit-box-shadow: 1px 1px 10px rgba(0, 0, 0, 0.6);
 	   -moz-box-shadow: 1px 1px 10px rgba(0, 0, 0, 0.6);
-	     -o-box-shadow: 1px 1px 10px rgba(0, 0, 0, 0.6);
+		 -o-box-shadow: 1px 1px 10px rgba(0, 0, 0, 0.6);
 	        box-shadow: 1px 1px 10px rgba(0, 0, 0, 0.6);
 	-webkit-transform: scale(1.2);
 	   -moz-transform: scale(1.2);
-	     -o-transform: scale(1.2);
+		 -o-transform: scale(1.2);
 	        transform: scale(1.2);
 	-webkit-transition: opacity .2s linear, -webkit-transform .2s ease-in-out, visibility 0s linear .2s;
 	   -moz-transition: opacity .2s linear, -moz-transform .2s ease-in-out, visibility 0s linear .2s;
-	     -o-transition: opacity .2s linear, -o-transform .2s ease-in-out, visibility 0s linear .2s;
+		 -o-transition: opacity .2s linear, -o-transform .2s ease-in-out, visibility 0s linear .2s;
 	        transition: opacity .2s linear, transform .2s ease-in-out, visibility 0s linear .2s;
 }
 
@@ -81,18 +81,18 @@ div#content div#main-content div.problem div.body form#code-editor.fade {
 	visibility: visible;
 	-webkit-transform: scale(1);
 	   -moz-transform: scale(1);
-	     -o-transform: scale(1);
+		 -o-transform: scale(1);
 	        transform: scale(1);
 	-webkit-transition-delay: 0s;
 	   -moz-transition-delay: 0s;
-	     -o-transition-delay: 0s;
+		 -o-transition-delay: 0s;
 	        transition-delay: 0s;
 }
 
 div#content div#main-content div.problem div.body form#code-editor textarea#codemirror-editor {
 	-webkit-box-sizing: border-box;
-       -moz-box-sizing: border-box;
-            box-sizing: border-box;
+	   -moz-box-sizing: border-box;
+	        box-sizing: border-box;
 }
 
 div#content div#main-content div.problem div.body form#code-editor select#languages {

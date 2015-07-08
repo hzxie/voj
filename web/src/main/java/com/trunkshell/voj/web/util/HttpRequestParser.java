@@ -7,15 +7,20 @@ import javax.servlet.http.HttpServletRequest;
  * @author Xie Haozhe
  */
 public class HttpRequestParser {
-	/**
-	 * 在使用反向代理情况下解析用户的真实IP.
-	 * @param request - HttpRequest对象
-	 * @return 用户的真实IP
-	 */
-	public static String getRemoteAddr(HttpServletRequest request) {
-		if ( request.getHeader("X-Real-IP") != null ) {
-			return request.getHeader("X-Real-IP");
-		}
-		return request.getRemoteAddr();
-	}
+    /**
+     * Utility classes should not have a public constructor.
+     */
+    private HttpRequestParser() { }
+    
+    /**
+     * 在使用反向代理情况下解析用户的真实IP.
+     * @param request - HttpRequest对象
+     * @return 用户的真实IP
+     */
+    public static String getRemoteAddr(HttpServletRequest request) {
+        if ( request.getHeader("X-Real-IP") != null ) {
+            return request.getHeader("X-Real-IP");
+        }
+        return request.getRemoteAddr();
+    }
 }

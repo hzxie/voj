@@ -164,7 +164,7 @@
             };
 
             $.ajax({
-            	type: 'GET',
+                type: 'GET',
                 url: '<c:url value="/submission/getSubmission.action" />',
                 data: pageRequests,
                 dataType: 'JSON',

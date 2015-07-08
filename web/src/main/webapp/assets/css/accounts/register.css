@@ -25,7 +25,7 @@ div#content div#register form#register-form {
 	padding: 40px;
 	-webkit-border-radius: 2px;
 	   -moz-border-radius: 2px;
-			border-radius: 2px;
+	        border-radius: 2px;
 }
 
 div#content div#register form#register-form label {

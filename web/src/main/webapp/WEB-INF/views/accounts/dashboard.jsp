@@ -97,13 +97,20 @@
                 </div> <!-- .section -->
             </div> <!-- #tab-statistics -->
             <div class="tab-pane" id="tab-notifications">
-                notifications
+                <p>No notifications now.</p>
             </div> <!-- #tab-notifications -->
             <div class="tab-pane" id="tab-customize">
                 customize
             </div> <!-- #tab-customize -->
             <div class="tab-pane" id="tab-messages">
-                messages
+                <div class="row-fluid">
+                    <div class="span8">
+                        123
+                    </div> <!-- .span8 -->
+                    <div class="span4">
+                        456                        
+                    </div> <!-- .span4 -->
+                </div> <!-- .row-fluid -->
             </div> <!-- #tab-messages -->
             <div class="tab-pane active" id="tab-accounts">
                 <form id="password-form" class="section" method="POST" onSubmit="onChangePasswordSubmit(); return false;">

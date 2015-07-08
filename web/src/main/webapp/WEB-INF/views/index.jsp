@@ -89,7 +89,7 @@
                     </table>
                 </div> <!-- #contests -->
                 <div id="discussion">
-                	<table class="table">
+                    <table class="table">
                         <tbody>
                             <tr class="discussion-threads">
                                 <td class="avatar">
