@@ -19,7 +19,7 @@
     <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/flat-ui.min.css" />
     <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/font-awesome.min.css" />
     <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/style.css" />
-    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/misc/worldwide.css" />
+    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/misc/about.css" />
     <!-- JavaScript -->
     <script type="text/javascript" src="${cdnUrl}/js/jquery-1.11.1.min.js"></script>
     <script type="text/javascript" src="${cdnUrl}/js/bootstrap.min.js"></script>
@@ -40,26 +40,29 @@
     <!-- Header -->
     <%@ include file="/WEB-INF/views/include/header.jsp" %>
     <!-- Content -->
-    <div id="content" class="container">
-        <div id="main-content">
-            <h3><spring:message code="voj.misc.worldwide.other-languages" text="This site in other languages:" /></h3>
-            <div class="row-fluid">
-                <div class="span3">
-                    <ul class="languages">
-                        <li><a href="javascript:void(0);" data-value="en_US">English</a></li>
-                    </ul>
-                </div> <!-- .span3 -->
-                <div class="span3">
-                    <ul class="languages">
-                        <li><a href="javascript:void(0);" data-value="zh_CN">简体中文</a></li>
-                    </ul>
-                </div> <!-- .span3 -->
-                <div class="span3">
-                </div> <!-- .span3 -->
-                <div class="span3">
-                </div> <!-- .span3 -->
-            </div> <!-- .row-fluid -->
-        </div> <!-- #main-content -->
+    <div id="content">
+        <div id="ribbon"></div> <!-- #ribbon -->
+        <div class="container">
+            <div id="main-content">
+                <h3><spring:message code="voj.misc.worldwide.other-languages" text="This site in other languages:" /></h3>
+                <div class="row-fluid">
+                    <div class="span3">
+                        <ul class="languages">
+                            <li><a href="javascript:void(0);" data-value="en_US">English</a></li>
+                        </ul>
+                    </div> <!-- .span3 -->
+                    <div class="span3">
+                        <ul class="languages">
+                            <li><a href="javascript:void(0);" data-value="zh_CN">简体中文</a></li>
+                        </ul>
+                    </div> <!-- .span3 -->
+                    <div class="span3">
+                    </div> <!-- .span3 -->
+                    <div class="span3">
+                    </div> <!-- .span3 -->
+                </div> <!-- .row-fluid -->
+            </div> <!-- #main-content -->
+        </div> <!-- .container -->
     </div> <!-- #content -->
     <!-- Footer -->
     <%@ include file="/WEB-INF/views/include/footer.jsp" %>
