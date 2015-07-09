@@ -66,9 +66,9 @@ JNIEXPORT jobject JNICALL Java_com_trunkshell_voj_judger_core_Runner_getRuntimeR
     std::string inputFilePath       = getStringValue(jniEnv, jInputFilePath);
     std::string outputFilePath      = getStringValue(jniEnv, jOutputFilePath);
 
-    std::cout << "Command Line: " << commandLine << std::endl;
-    std::cout << "Time Limit: " << timeLimit << std::endl;
-    std::cout << "Memory Limit: " << memoryLimit << std::endl;
+    std::cout << "[JNI DEBUG] Command Line: " << commandLine << std::endl;
+    std::cout << "[JNI DEBUG] Time Limit: " << timeLimit << " ms" << std::endl;
+    std::cout << "[JNI DEBUG] Memory Limit: " << memoryLimit << " KB" << std::endl;
 
     JHashMap    result;
     jint        usedTime            = 0;
@@ -88,9 +88,9 @@ JNIEXPORT jobject JNICALL Java_com_trunkshell_voj_judger_core_Runner_getRuntimeR
     exitCode = runProcess(pid, timeLimit, memoryLimit, usedTime, usedMemory);
     posix_spawn_file_actions_destroy(&fileActions);
 
-    std::cout << "usedTime: " << usedTime << std::endl;
-    std::cout << "usedMemory: " << usedMemory << std::endl;
-    std::cout << "exitCode: " << exitCode << std::endl;
+    std::cout << "[JNI DEBUG] usedTime: " << usedTime << " ms" << std::endl;
+    std::cout << "[JNI DEBUG] usedMemory: " << usedMemory  << " KB" << std::endl;
+    std::cout << "[JNI DEBUG] exitCode: " << exitCode << std::endl;
 
     result.put("usedTime", usedTime);
     result.put("usedMemory", usedMemory);
@@ -203,7 +203,7 @@ int getMaxMemoryUsage(pid_t pid, int memoryLimit) {
          currentMemoryUsage = 0;
     do {
         currentMemoryUsage = getCurrentMemoryUsage(pid);
-        std::cout << "currentMemoryUsage: [PID #" << pid << "]" << currentMemoryUsage << std::endl;
+        std::cout << "[JNI DEBUG] currentMemoryUsage: [PID #" << pid << "]" << currentMemoryUsage << std::endl;
 
         if ( currentMemoryUsage > maxMemoryUsage && 
             !isCurrentMemoryUsageIgnored(currentMemoryUsage, memoryLimit) ) {

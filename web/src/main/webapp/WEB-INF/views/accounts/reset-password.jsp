@@ -194,7 +194,7 @@
     <script type="text/javascript">
         function processResult(result) {
             if ( result['isSuccessful'] ) {
-                $('.alert-success').html('<spring:message code="voj.accounts.reset-password.mail-sent = An email with password reset instructions has been sent to your email address." />');
+                $('.alert-success').html('<spring:message code="voj.accounts.reset-password.mail-sent" text="An email with password reset instructions has been sent to your email address." />');
                 $('.alert-success').removeClass('hide');
                 $('#reset-password-form').addClass('hide');
             } else {
