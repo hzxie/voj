@@ -33,6 +33,7 @@
 
 	<!-- Enable @Controller annotation support -->
 	<mvc:annotation-driven />
+	<mvc:default-servlet-handler />
 	<mvc:resources mapping="/assets/**" location="/assets/" />
 	<mvc:resources mapping="/druid/**" location="/WEB-INF/support/http/resources" />
 

@@ -23,9 +23,9 @@ div#content div#login form#login-form {
 	font-size: 12px;
 	margin: 20px auto;
 	padding: 40px;
-	-webkit-border-radius: 2px;
-	   -moz-border-radius: 2px;
-	        border-radius: 2px;
+	-webkit-border-radius: 4px;
+	   -moz-border-radius: 4px;
+	        border-radius: 4px;
 }
 
 div#content div#login form#login-form label {

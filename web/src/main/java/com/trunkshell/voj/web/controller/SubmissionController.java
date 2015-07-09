@@ -56,7 +56,7 @@ public class SubmissionController {
      */
     @RequestMapping(value = "/getSubmissions.action", method = RequestMethod.GET)
     public @ResponseBody Map<String, Object> getSubmissionsAction(
-            @RequestParam(value="startIndex", required=true) long startIndex,
+            @RequestParam(value = "startIndex", required = true) long startIndex,
             HttpServletRequest request) {
         Map<String, Object> result = new HashMap<String, Object>(3, 1);
 
@@ -75,7 +75,7 @@ public class SubmissionController {
      */
     @RequestMapping(value = "/getLatestSubmissions.action", method = RequestMethod.GET)
     public @ResponseBody Map<String, Object> getLatestSubmissionsAction(
-            @RequestParam(value="startIndex", required=true) long startIndex,
+            @RequestParam(value = "startIndex", required = true) long startIndex,
             HttpServletRequest request) {
         Map<String, Object> result = new HashMap<String, Object>(3, 1);
 
@@ -115,8 +115,8 @@ public class SubmissionController {
      */
     @RequestMapping("/getRealTimeJudgeResult.action")
     public SseEmitter getRealTimeJudgeResultAction(
-            @RequestParam(value="submissionId", required=true) long submissionId,
-            @RequestParam(value="csrfToken", required=true) String csrfToken,
+            @RequestParam(value = "submissionId", required = true) long submissionId,
+            @RequestParam(value = "csrfToken", required = true) String csrfToken,
             HttpServletRequest request) throws IOException {
         User currentUser = HttpSessionParser.getCurrentUser(request.getSession());
         boolean isCsrfTokenValid = CsrfProtector.isCsrfTokenValid(csrfToken, request.getSession());
@@ -142,7 +142,7 @@ public class SubmissionController {
      */
     @RequestMapping(value = "/getSubmission.action", method = RequestMethod.GET)
     public @ResponseBody Map<String, Object> getSubmissionAction(
-            @RequestParam(value="submissionId", required = true) long submissionId,
+            @RequestParam(value = "submissionId", required = true) long submissionId,
             HttpServletRequest request) {
         Map<String, Object> result = new HashMap<String, Object>(3, 1);
 

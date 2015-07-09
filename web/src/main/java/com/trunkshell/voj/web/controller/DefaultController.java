@@ -44,7 +44,7 @@ public class DefaultController {
      */
     @RequestMapping(value = "/worldwide", method = RequestMethod.GET)
     public ModelAndView worldwideView(
-            @RequestParam(value="forward", required=false, defaultValue="") String forwardUrl,
+            @RequestParam(value = "forward", required = false, defaultValue = "") String forwardUrl,
             HttpServletRequest request, HttpServletResponse response) {
         ModelAndView view = new ModelAndView("misc/worldwide");
         view.addObject("forwardUrl", forwardUrl);
@@ -60,7 +60,7 @@ public class DefaultController {
      */
     @RequestMapping(value = "/worldwide.action", method = RequestMethod.GET)
     public @ResponseBody Map<String, Boolean> localizationAction(
-            @RequestParam(value="language", required=true) String language,
+            @RequestParam(value = "language", required = true) String language,
             HttpServletRequest request, HttpServletResponse response) {
         LocaleUtils.setLocale(request, response, language);
         

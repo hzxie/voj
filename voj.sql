@@ -3,7 +3,7 @@
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: Jul 02, 2015 at 07:12 上午
+-- Generation Time: Jul 09, 2015 at 14:06
 -- Server version: 5.6.24
 -- PHP Version: 5.6.8
 
@@ -105,6 +105,18 @@ CREATE TABLE IF NOT EXISTS `voj_discussion_topics` (
   `discussion_topic_slug` varchar(128) NOT NULL,
   `discussion_topic_name` varchar(128) NOT NULL,
   `discussion_parent_topic_id` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `voj_email_validation`
+--
+
+CREATE TABLE IF NOT EXISTS `voj_email_validation` (
+  `email` varchar(64) NOT NULL,
+  `token` varchar(36) NOT NULL,
+  `expire_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
@@ -434,6 +446,12 @@ ALTER TABLE `voj_discussion_threads`
 ALTER TABLE `voj_discussion_topics`
   ADD PRIMARY KEY (`discussion_topic_id`),
   ADD KEY `discussion_parent_topic_id` (`discussion_parent_topic_id`);
+
+--
+-- Indexes for table `voj_email_validation`
+--
+ALTER TABLE `voj_email_validation`
+  ADD PRIMARY KEY (`email`);
 
 --
 -- Indexes for table `voj_judge_results`
