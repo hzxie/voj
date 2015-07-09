@@ -33,34 +33,34 @@ div#content div#main-content div.submission div.body div.section div.description
 	margin-left: 20px;
 }
 
-div#content div#main-content div.submission div.body div.section  {
+div#content div#main-content div.submission div.body div.section table td {
 	border-top: none;
 }
 
-div#content div#main-content div.submission div.body div.section .flag-PD,
-div#content div#main-content div.submission div.body div.section .flag-CPL,
-div#content div#main-content div.submission div.body div.section .flag-JUD {
+div#content div#main-content div.submission div.body div.section table td.flag-PD,
+div#content div#main-content div.submission div.body div.section table td.flag-CPL,
+div#content div#main-content div.submission div.body div.section table td.flag-JUD {
 	color: #ffa500;
 }
 
-div#content div#main-content div.submission div.body div.section .flag-AC {
+div#content div#main-content div.submission div.body div.section table td.flag-AC {
 	color: #f00;
 }
 
-div#content div#main-content div.submission div.body div.section .flag-PE,
-div#content div#main-content div.submission div.body div.section .flag-WA,
-div#content div#main-content div.submission div.body div.section .flag-TLE,
-div#content div#main-content div.submission div.body div.section .flag-MLE,
-div#content div#main-content div.submission div.body div.section .flag-OLE {
+div#content div#main-content div.submission div.body div.section table td.flag-PE,
+div#content div#main-content div.submission div.body div.section table td.flag-WA,
+div#content div#main-content div.submission div.body div.section table td.flag-TLE,
+div#content div#main-content div.submission div.body div.section table td.flag-MLE,
+div#content div#main-content div.submission div.body div.section table td.flag-OLE {
 	color: #4d7aff;
 }
 
-div#content div#main-content div.submission div.body div.section .flag-RE,
-div#content div#main-content div.submission div.body div.section .flag-CE {
+div#content div#main-content div.submission div.body div.section table td.flag-RE,
+div#content div#main-content div.submission div.body div.section table td.flag-CE {
 	color: #49a932;
 }
 
-div#content div#main-content div.submission div.body div.section .flag-SE {
+div#content div#main-content div.submission div.body div.section table td.flag-SE {
 	color: #34495e;
 }
 
