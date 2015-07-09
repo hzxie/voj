@@ -98,8 +98,8 @@
                                     </c:forEach>
                                     </select>
                                 </div> <!-- .span4 -->
-                                <div id="submission-error" class="offset1 span4"></div> <!-- #submission-error -->
-                                <div id="submission-action" class="span3">
+                                <div id="submission-error" class="offset1 span3"></div> <!-- #submission-error -->
+                                <div id="submission-action" class="span4">
                                     <input type="hidden" id="csrfToken" value="${csrfToken}" />
                                     <button type="submit" class="btn btn-primary"><spring:message code="voj.problems.problem.submit" text="Submit" /></button>
                                     <button id="close-submission" class="btn"><spring:message code="voj.problems.problem.cancel" text="Cancel" /></button>

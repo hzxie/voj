@@ -61,7 +61,7 @@ public class SubmissionController {
         Map<String, Object> result = new HashMap<String, Object>(3, 1);
 
         List<Submission> submissions = submissionService.getSubmissions(startIndex, NUMBER_OF_SUBMISSION_PER_PAGE);
-        result.put("isSuccessful", submissions != null && submissions.isEmpty());
+        result.put("isSuccessful", submissions != null && !submissions.isEmpty());
         result.put("submissions", submissions);
         
         return result;
@@ -80,7 +80,7 @@ public class SubmissionController {
         Map<String, Object> result = new HashMap<String, Object>(3, 1);
 
         List<Submission> submissions = submissionService.getLatestSubmissions(startIndex, NUMBER_OF_SUBMISSION_PER_PAGE);
-        result.put("isSuccessful", submissions != null && submissions.isEmpty());
+        result.put("isSuccessful", submissions != null && !submissions.isEmpty());
         result.put("submissions", submissions);
         
         return result;

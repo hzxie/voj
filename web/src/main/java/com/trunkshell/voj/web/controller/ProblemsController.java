@@ -90,7 +90,7 @@ public class ProblemsController {
         }
         
         Map<String, Object> result = new HashMap<String, Object>(4, 1);
-        result.put("isSuccessful", problems != null && problems.isEmpty());
+        result.put("isSuccessful", problems != null && !problems.isEmpty());
         result.put("problems", problems);
         result.put("submissionOfProblems", submissionOfProblems);
         return result;
