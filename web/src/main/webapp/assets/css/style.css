@@ -202,10 +202,14 @@ div.wmd-panel textarea.wmd-input {
 }
 
 div.wmd-preview {
+	background-image: url('../img/wmd-draft.png');
 	border: 1px dotted #ccc;
 	clear: both;
 	margin-top: 10px;
 	padding: 10px;
+	-webkit-border-radius: 4px;
+	   -moz-border-radius: 4px;
+	        border-radius: 4px;
 }
 
 div.wmd-prompt-background {

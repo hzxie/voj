@@ -48,7 +48,7 @@ public class ProblemsController {
      */
     @RequestMapping(value = "", method = RequestMethod.GET)
     public ModelAndView problemsView(
-            @RequestParam(value="start", required = false, defaultValue = "1") int startIndex,
+            @RequestParam(value = "start", required = false, defaultValue = "1") int startIndex,
             HttpServletRequest request, HttpServletResponse response) {
         if ( startIndex < START_INDEX_OF_PROBLEMS ) {
             startIndex = START_INDEX_OF_PROBLEMS;
@@ -78,7 +78,7 @@ public class ProblemsController {
      */
     @RequestMapping(value = "/getProblems.action", method = RequestMethod.GET)
     public @ResponseBody Map<String, Object> getSubmissionAction(
-            @RequestParam(value="startIndex", required = true) long startIndex,
+            @RequestParam(value = "startIndex", required = true) long startIndex,
             HttpServletRequest request) {
         HttpSession session = request.getSession();
         List<Problem> problems = problemService.getProblems(startIndex, NUMBER_OF_PROBLEMS_PER_PAGE);
@@ -152,10 +152,10 @@ public class ProblemsController {
      */
     @RequestMapping(value = "/createSubmission.action", method = RequestMethod.POST)
     public @ResponseBody Map<String, Object> createSubmissionAction(
-            @RequestParam(value="problemId", required=true) long problemId,
-            @RequestParam(value="languageSlug", required=true) String languageSlug,
-            @RequestParam(value="code", required=true) String code,
-            @RequestParam(value="csrfToken", required=true) String csrfToken,
+            @RequestParam(value = "problemId", required = true) long problemId,
+            @RequestParam(value = "languageSlug", required = true) String languageSlug,
+            @RequestParam(value = "code", required = true) String code,
+            @RequestParam(value = "csrfToken", required = true) String csrfToken,
             HttpServletRequest request) {
         HttpSession session = request.getSession();
         String ipAddress = HttpRequestParser.getRemoteAddr(request);

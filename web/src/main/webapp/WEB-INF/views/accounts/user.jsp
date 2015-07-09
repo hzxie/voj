@@ -86,6 +86,7 @@
                     <c:if test="${not empty website}">
                         <li><span class="icon"><i class="fa fa-link"></i></span> <a href="${website}" target="_blank">${website}</a></li>
                     </c:if>
+                        <li><span class="icon"><i class="fa fa-users"></i></span> ${user.userGroup.userGroupName}</li>
                         <li>
                             <span class="icon"><i class="fa fa-clock-o"></i></span> 
                             <spring:message code="voj.accounts.user.joined-on" text="Joined on" />

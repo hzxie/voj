@@ -64,7 +64,7 @@ div#content div#sidebar div#vcard-details ul {
 }
 
 div#content div#sidebar div#vcard-details li {
-	height: 20px;
+	height: 24px;
 	line-height: 150%;
 	overflow: hidden;
 	  text-overflow: ellipsis;

@@ -47,7 +47,7 @@
             <c:if test="${isLogout}">
             <div class="alert alert-success"><spring:message code="voj.accounts.login.sign-out" text="You are now logged out." /></div>
             </c:if>
-            <form id="login-form" method="post" onsubmit="onSubmit(); return false;">
+            <form id="login-form" method="POST" onsubmit="onSubmit(); return false;">
                 <p class="row-fluid">
                     <label for="username"><spring:message code="voj.accounts.login.username" text="Username or Email" /></label>
                     <input id="username" name="username" class="span12" type="text" maxlength="32" />

@@ -47,8 +47,8 @@ public class AccountsController {
      */
     @RequestMapping(value = "/login", method = RequestMethod.GET)
     public ModelAndView loginView(
-            @RequestParam(value="logout", required=false, defaultValue="false") boolean isLogout,
-            @RequestParam(value="forward", required=false, defaultValue="") String forwardUrl,
+            @RequestParam(value = "logout", required = false, defaultValue = "false") boolean isLogout,
+            @RequestParam(value = "forward", required = false, defaultValue = "") String forwardUrl,
             HttpServletRequest request, HttpServletResponse response) {
         HttpSession session = request.getSession();
         if ( isLogout ) {
@@ -101,9 +101,9 @@ public class AccountsController {
      */
     @RequestMapping(value = "/login.action", method = RequestMethod.POST)
     public @ResponseBody Map<String, Boolean> loginAction(
-            @RequestParam(value="username", required=true) String username,
-            @RequestParam(value="password", required=true) String password,
-            @RequestParam(value="rememberMe", required=true) boolean isAutoLoginAllowed,
+            @RequestParam(value = "username", required = true) String username,
+            @RequestParam(value = "password", required = true) String password,
+            @RequestParam(value = "rememberMe", required = true) boolean isAutoLoginAllowed,
             HttpServletRequest request) {
         String ipAddress = HttpRequestParser.getRemoteAddr(request);
         Map<String, Boolean> result = userService.isAccountValid(username, password);
@@ -139,7 +139,7 @@ public class AccountsController {
      */
     @RequestMapping(value = "/register", method = RequestMethod.GET)
     public ModelAndView registerView(
-            @RequestParam(value="forward", required=false, defaultValue="") String forwardUrl,
+            @RequestParam(value = "forward", required = false, defaultValue = "") String forwardUrl,
             HttpServletRequest request, HttpServletResponse response) {
         HttpSession session = request.getSession();
         ModelAndView view = null;
@@ -169,11 +169,11 @@ public class AccountsController {
      */
     @RequestMapping(value = "/register.action", method = RequestMethod.POST)
     public @ResponseBody Map<String, Boolean> registerAction(
-            @RequestParam(value="username", required=true) String username,
-            @RequestParam(value="password", required=true) String password,
-            @RequestParam(value="email", required=true) String email,
-            @RequestParam(value="languagePreference", required=true) String languageSlug,
-            @RequestParam(value="csrfToken", required=true) String csrfToken,
+            @RequestParam(value = "username", required = true) String username,
+            @RequestParam(value = "password", required = true) String password,
+            @RequestParam(value = "email", required = true) String email,
+            @RequestParam(value = "languagePreference", required = true) String languageSlug,
+            @RequestParam(value = "csrfToken", required = true) String csrfToken,
             HttpServletRequest request) {
         boolean isAllowRegister = optionService.getOption("allowUserRegister").getOptionValue().equals("1");
         boolean isCsrfTokenValid = CsrfProtector.isCsrfTokenValid(csrfToken, request.getSession());
@@ -189,6 +189,76 @@ public class AccountsController {
                     new Object[] {username, ipAddress}));
         }
         return result;
+    }
+    
+    /**
+     * 加载重置密码页面.
+     * @param email - 用户的电子邮件地址
+     * @param hashCode - 用于重置密码的随机字符串
+     * @param request - HttpServletRequest对象
+     * @param response - HttpResponse对象
+     * @return 包含密码重置页面信息的ModelAndView对象
+     */
+    @RequestMapping(value = "/reset-password", method = RequestMethod.GET)
+    public ModelAndView resetPasswordView(
+            @RequestParam(value = "email", required = false) String email,
+            @RequestParam(value = "hashCode", required = false) String hashCode,
+            HttpServletRequest request, HttpServletResponse response) {
+        HttpSession session = request.getSession();
+        ModelAndView view = null;
+        
+        if ( isLoggedIn(session) ) {
+            view = new ModelAndView("redirect:/");
+        } else {
+            view = new ModelAndView("accounts/reset-password");
+            view.addObject("email", email);
+            view.addObject("hashCode", hashCode);
+            view.addObject("isHashCodeValid", false);
+            view.addObject("csrfToken", CsrfProtector.getCsrfToken(session));
+        }
+        return view;
+    }
+    
+    /**
+     * 发送重置密码的电子邮件.
+     * @param username - 用户的用户名
+     * @param email - 用户的电子邮件地址
+     * @param csrfToken - Csrf的Token
+     * @param request - HttpServletRequest对象
+     * @return 一个包含密码重置邮件发送结果的Map<String, Boolean>对象
+     */
+    @RequestMapping(value = "/forgotPassword.action", method = RequestMethod.POST)
+    public @ResponseBody Map<String, Boolean> forgotPasswordAction(
+            @RequestParam(value = "username", required = true) String username,
+            @RequestParam(value = "email", required = true) String email,
+            @RequestParam(value = "csrfToken", required = true) String csrfToken,
+            HttpServletRequest request) {
+        String ipAddress = HttpRequestParser.getRemoteAddr(request);
+        boolean isCsrfTokenValid = CsrfProtector.isCsrfTokenValid(csrfToken, request.getSession());
+        return null;
+    }
+    
+    /**
+     * 重置用户密码.
+     * @param email - 用户的电子邮件地址
+     * @param token - 用于重设密码的Token
+     * @param newPassword - 新密码
+     * @param confirmPassword - 确认的密码
+     * @param csrfToken - Csrf的Token
+     * @param request - HttpServletRequest对象
+     * @return 一个包含密码重置结果的Map<String, Boolean>对象
+     */
+    @RequestMapping(value = "/resetPassword.action", method = RequestMethod.POST)
+    public @ResponseBody Map<String, Boolean> resetPasswordAction(
+            @RequestParam(value = "email", required = true) String email,
+            @RequestParam(value = "token", required = true) String token,
+            @RequestParam(value = "newPassword", required = true) String newPassword,
+            @RequestParam(value = "confirmPassword", required = true) String confirmPassword,
+            @RequestParam(value = "csrfToken", required = true) String csrfToken,
+            HttpServletRequest request) {
+        String ipAddress = HttpRequestParser.getRemoteAddr(request);
+        boolean isCsrfTokenValid = CsrfProtector.isCsrfTokenValid(csrfToken, request.getSession());
+        return null;
     }
     
     /**
@@ -253,9 +323,9 @@ public class AccountsController {
      */
     @RequestMapping(value = "/changePassword.action", method = RequestMethod.POST)
     public @ResponseBody Map<String, Boolean> changePasswordInDashboardAction(
-            @RequestParam(value="oldPassword", required=true) String oldPassword,
-            @RequestParam(value="newPassword", required=true) String newPassword,
-            @RequestParam(value="confirmPassword", required=true) String confirmPassword,
+            @RequestParam(value = "oldPassword", required = true) String oldPassword,
+            @RequestParam(value = "newPassword", required = true) String newPassword,
+            @RequestParam(value = "confirmPassword", required = true) String confirmPassword,
             HttpServletRequest request) {
         User currentUser = HttpSessionParser.getCurrentUser(request.getSession());
         String ipAddress = HttpRequestParser.getRemoteAddr(request);
@@ -279,11 +349,11 @@ public class AccountsController {
      */
     @RequestMapping(value = "/updateProfile.action", method = RequestMethod.POST)
     public @ResponseBody Map<String, Boolean> updateProfileInDashboardAction(
-            @RequestParam(value="email", required=true) String email,
-            @RequestParam(value="location", required=true) String location,
-            @RequestParam(value="website", required=true) String website,
-            @RequestParam(value="socialLinks", required=true) String socialLinks,
-            @RequestParam(value="aboutMe", required=true) String aboutMe,
+            @RequestParam(value = "email", required = true) String email,
+            @RequestParam(value = "location", required = true) String location,
+            @RequestParam(value = "website", required = true) String website,
+            @RequestParam(value = "socialLinks", required = true) String socialLinks,
+            @RequestParam(value = "aboutMe", required = true) String aboutMe,
             HttpServletRequest request) {
         User currentUser = HttpSessionParser.getCurrentUser(request.getSession());
         String ipAddress = HttpRequestParser.getRemoteAddr(request);

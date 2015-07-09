@@ -52,7 +52,7 @@
             </div> <!-- .alert -->
         </c:when>
         <c:otherwise>
-            <form id="register-form" method="post" onsubmit="onSubmit(); return false;">
+            <form id="register-form" method="POST" onsubmit="onSubmit(); return false;">
                 <p class="row-fluid">
                     <label for="username"><spring:message code="voj.accounts.register.username" text="Username" /></label>
                     <input id="username" name="username" class="span12" type="text" maxlength="16" />
@@ -93,7 +93,6 @@
             <a href="<c:url value="/accounts/login" />"><spring:message code="voj.accounts.register.sign-in" text="Sign in" /></a>
         </p>
         </div> <!-- #register -->
-
     </div> <!-- #content -->
     <!-- Footer -->
     <%@ include file="/WEB-INF/views/include/footer.jsp" %>
