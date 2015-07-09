@@ -174,10 +174,10 @@
                     $('#judge-log').append('<p>Connected to Server.</p>');
                     return;
                 }
-
                 var mapMessage  = JSON.parse(message),
                     judgeResult = mapMessage['judgeResult'],
                     judgeLog    = mapMessage['message'];
+                    
                 $('#judge-result').html(judgeResult);
                 $('#judge-log').append(converter.makeHtml(judgeLog));
             }
