@@ -4,7 +4,7 @@
 <fmt:setLocale value="${language}" />
 <%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
-<spring:eval expression="@propertyConfigurer.getProperty('cdn.url')" var="cdnUrl" />
+<spring:eval expression="@propertyConfigurer.getProperty('url.cdn')" var="cdnUrl" />
 <!DOCTYPE html>
 <html lang="${language}">
 <head>
@@ -49,7 +49,7 @@
             <div class="alert alert-error hide"></div> <!-- .alert-error -->
             <div class="alert alert-success hide"></div> <!-- .alert-success -->
         <c:choose>
-        <c:when test="${isHashCodeValid}">
+        <c:when test="${isTokenValid}">
             <form id="reset-password-form" method="POST" onSubmit="onSubmit(); return false;">
                 <p class="row-fluid">
                     <label for="email"><spring:message code="voj.accounts.reset-password.email" text="email" /></label>
@@ -94,7 +94,7 @@
     <!-- Placed at the end of the document so the pages load faster -->
     <script type="text/javascript" src="${cdnUrl}/js/site.js"></script>
 <c:choose>
-<c:when test="${isHashCodeValid}">
+<c:when test="${isTokenValid}">
     <script type="text/javascript">
         function onSubmit() {
             $('.alert-error').addClass('hide');
@@ -103,19 +103,19 @@
 
             var email           = '${email}',
                 token           = '${token}',
-                password        = $('#new-password').val()
+                newPassword     = $('#new-password').val()
                 confirmPassword = $('#confirm-new-password').val(),
                 csrfToken       = $('#csrf-token').val();
 
-            return doResetPasswordAction(email, token, password, confirmPassword, csrfToken);
+            return doResetPasswordAction(email, token, newPassword, confirmPassword, csrfToken);
         }
     </script>
     <script type="text/javascript">
-        function doResetPasswordAction(email, token, password, confirmPassword, csrfToken) {
+        function doResetPasswordAction(email, token, newPassword, confirmPassword, csrfToken) {
             var postData = {
                 'email': email,
                 'token': token,
-                'password': password,
+                'newPassword': newPassword,
                 'confirmPassword': confirmPassword,
                 'csrfToken': csrfToken
             };
@@ -134,12 +134,26 @@
     <script type="text/javascript">
         function processResult(result) {
             if ( result['isSuccessful'] ) {
-                $('.alert-success').html('');
+                $('.alert-success').html('<spring:message code="voj.accounts.reset-password.password-resetted" text="Your password has been resetted." />');
                 $('.alert-success').removeClass('hide');
                 $('#reset-password-form').addClass('hide');
             } else {
                 var errorMessage  = '';
 
+                if ( !result['isCsrfTokenValid'] ) {
+                    errorMessage += '<spring:message code="voj.accounts.reset-password.invalid-csrf-token" text="Invalid CSRF Token." /><br>';
+                }
+                if ( !result['isEmailValidationValid'] ) {
+                    errorMessage += '<spring:message code="voj.accounts.reset-password.invalid-email-token" text="The token of resetting password seems invalid." /><br>';
+                }
+                if ( result['isNewPasswordEmpty'] ) {
+                    errorMessage += '<spring:message code="voj.accounts.reset-password.new-password-empty" text="You can&acute;t leave New Password empty." /><br>';
+                } else if ( !result['isNewPasswordLegal'] ) {
+                    errorMessage += '<spring:message code="voj.accounts.reset-password.new-password-illegal" text="The length of password must between 6 and 16 characters." /><br>';
+                }
+                if ( !result['isConfirmPasswordMatched'] ) {
+                    errorMessage += '<spring:message code="voj.accounts.reset-password.new-password-not-matched" text="New passwords don&acute;t match." /><br>';
+                }
                 $('.alert-error').html(errorMessage);
                 $('.alert-error').removeClass('hide');
             }
@@ -153,7 +167,7 @@
     <c:if test="${not empty token}">
     <script type="text/javascript">
         $(function() {
-            $('.alert-error').html('<spring:message code="voj.accounts.reset-password.invalid-token" text="The token of resetting password seems invalid." />');
+            $('.alert-error').html('<spring:message code="voj.accounts.reset-password.invalid-email-token" text="The token of resetting password seems invalid." />');
             $('.alert-error').removeClass('hide');
             $('#reset-password-form').addClass('hide');
         });
@@ -200,6 +214,11 @@
             } else {
                 var errorMessage  = '';
 
+                if ( !result['isCsrfTokenValid'] ) {
+                    errorMessage += '<spring:message code="voj.accounts.reset-password.invalid-csrf-token" text="Invalid CSRF Token." /><br>';
+                } else if ( !result['isUserExists'] ) {
+                    errorMessage += '<spring:message code="voj.accounts.reset-password.user-not-exists" text="Incorrect username or email." /><br>';
+                }
                 $('.alert-error').html(errorMessage);
                 $('.alert-error').removeClass('hide');
             }

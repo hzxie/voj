@@ -4,7 +4,7 @@
 <fmt:setLocale value="${language}" />
 <%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
-<spring:eval expression="@propertyConfigurer.getProperty('cdn.url')" var="cdnUrl" />
+<spring:eval expression="@propertyConfigurer.getProperty('url.cdn')" var="cdnUrl" />
 <!DOCTYPE html>
 <html lang="${language}">
 <head>

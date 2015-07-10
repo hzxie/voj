@@ -8,20 +8,24 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.alibaba.fastjson.JSON;
+import com.trunkshell.voj.web.mapper.EmailValidationMapper;
 import com.trunkshell.voj.web.mapper.LanguageMapper;
 import com.trunkshell.voj.web.mapper.UserGroupMapper;
 import com.trunkshell.voj.web.mapper.UserMapper;
 import com.trunkshell.voj.web.mapper.UserMetaMapper;
+import com.trunkshell.voj.web.model.EmailValidation;
 import com.trunkshell.voj.web.model.Language;
 import com.trunkshell.voj.web.model.User;
 import com.trunkshell.voj.web.model.UserGroup;
 import com.trunkshell.voj.web.model.UserMeta;
 import com.trunkshell.voj.web.util.DigestUtils;
 import com.trunkshell.voj.web.util.HtmlTextFilter;
+import com.trunkshell.voj.web.util.MailSender;
 import com.trunkshell.voj.web.util.SensitiveWordFilter;
 
 /**
@@ -43,8 +47,8 @@ public class UserService {
     
     /**
      * 获取用户的元信息.
-     * @param user
-     * @return
+     * @param user - 元信息对应的用户对象
+     * @return 用户元信息的键值对
      */
     public Map<String, Object> getUserMetaUsingUid(User user) {
         List<UserMeta> userMetaList = userMetaMapper.getUserMetaUsingUser(user);
@@ -173,6 +177,134 @@ public class UserService {
     }
     
     /**
+     * 检查电子邮件验证凭据是否有效.
+     * @param email - 用户的电子邮件地址
+     * @param token - 用于验证的Token
+     * @return 电子邮件验证凭据是否有效
+     */
+    public boolean isEmailValidationValid(String email, String token) {
+        EmailValidation emailValidation = emailValidationMapper.getEmailValidation(email);
+        Date now = new Date();
+        
+        if ( emailValidation != null && emailValidation.getToken().equals(token) &&
+                now.before(emailValidation.getExpireTime()) ) {
+            return true;
+        }
+        return false;
+    }
+    
+    /**
+     * 验证账户有效性并发送重设密码邮件.
+     * @param username - 用户的用户名
+     * @param email - 用户的电子邮件地址
+     * @param isCsrfTokenValid - CSRF的Token是否正确
+     * @return 包含账户验证结果的Map<String, Boolean>对象
+     */
+    public Map<String, Boolean> sendVerificationEmail(String username, 
+            String email, boolean isCsrfTokenValid) {
+        boolean isUserExists = false;
+        Map<String, Boolean> result = new HashMap<String, Boolean>(4, 1);
+        
+        if ( isCsrfTokenValid ) {
+            User user = userMapper.getUserUsingUsername(username);
+            if ( user != null && user.getEmail().equals(email) ) {
+                isUserExists = true;
+                sendVerificationEmail(username, email);
+            }
+        }
+        result.put("isCsrfTokenValid", isCsrfTokenValid);
+        result.put("isUserExists", isUserExists);
+        result.put("isSuccessful", isUserExists);
+        
+        return result;
+    }
+    
+    /**
+     * 发送重设密码的邮件.
+     * @param username - 用户的用户名
+     * @param email - 用户的电子邮件地
+     */
+    private void sendVerificationEmail(String username, String email) {
+        String token = DigestUtils.getGuid();
+        Date expireTime = getExpireTime();
+        Map<String, Object> model = new HashMap<String, Object>(4, 1);
+        model.put("username", username);
+        model.put("token", token);
+        
+        EmailValidation emailValidation = new EmailValidation(email, token, expireTime);
+        emailValidationMapper.deleteEmailValidation(email);
+        emailValidationMapper.createEmailValidation(emailValidation);
+        
+        String templatePath = "/reset-password.vm";
+        String subject = "Password Reset Request";
+        String body = mailSender.getMailContent(templatePath, model);
+        mailSender.sendMail(email, subject, body);
+    }
+    
+    /**
+     * 获取邮件验证Token的失效时间.
+     * @return 邮件验证Token的失效时间
+     */
+    private Date getExpireTime() {
+        Date date = new Date();
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(date);
+        calendar.add(Calendar.DATE, 1);
+        date = calendar.getTime();
+        
+        return date;
+    }
+    
+    /**
+     * 验证数据并重置用户密码.
+     * @param email - 用户的电子邮件地址
+     * @param token - 用于验证的Token
+     * @param newPassword - 新密码
+     * @param confirmPassword - 确认新密码
+     * @param isCsrfTokenValid - CSRF的Token是否正确
+     * @return 包含密码重置结果的Map<String, Boolean>对象
+     */
+    public Map<String, Boolean> resetPassword(String email, String token, 
+            String newPassword, String confirmPassword, boolean isCsrfTokenValid) {
+        boolean isEmailValidationValid = isEmailValidationValid(email, token);
+        Map<String, Boolean> result = getResetPasswordResult(newPassword, 
+                confirmPassword, isEmailValidationValid, isCsrfTokenValid);
+        
+        if ( result.get("isSuccessful") ) {
+            emailValidationMapper.deleteEmailValidation(email);
+            
+            User user = userMapper.getUserUsingEmail(email);
+            user.setPassword(DigestUtils.md5Hex(newPassword));
+            userMapper.updateUser(user);
+        }
+        return result;
+    }
+    
+    /**
+     * @param newPassword - 新密码
+     * @param confirmPassword - 确认新密码
+     * @param isEmailValidationValid - 电子邮件验证凭据是否有效
+     * @param isCsrfTokenValid - CSRF的Token是否正确
+     * @return 包含密码重置结果的Map<String, Boolean>对象
+     */
+    private Map<String, Boolean> getResetPasswordResult(String newPassword, 
+            String confirmPassword, boolean isEmailValidationValid, 
+            boolean isCsrfTokenValid) {
+        Map<String, Boolean> result = new HashMap<String, Boolean>(7, 1);
+        result.put("isEmailValidationValid", isEmailValidationValid);
+        result.put("isCsrfTokenValid", isCsrfTokenValid);
+        result.put("isNewPasswordEmpty", newPassword.isEmpty());
+        result.put("isNewPasswordLegal", isPasswordLegal(newPassword));
+        result.put("isConfirmPasswordMatched", newPassword.equals(confirmPassword));
+        
+        boolean isSuccessful =  result.get("isEmailValidationValid") && result.get("isCsrfTokenValid")   &&
+                               !result.get("isNewPasswordEmpty")     && result.get("isNewPasswordLegal") &&
+                                result.get("isConfirmPasswordMatched");
+        result.put("isSuccessful", isSuccessful);
+        return result;
+    }
+    
+    /**
      * 验证旧密码正确性并修改密码.
      * @param user - 待修改密码的用户对象
      * @param oldPassword - 旧密码
@@ -209,7 +341,6 @@ public class UserService {
         
         boolean isSuccessful = result.get("isOldPasswordCorrect") && !result.get("isNewPasswordEmpty") &&
                                result.get("isNewPasswordLegal")   &&  result.get("isConfirmPasswordMatched");
-        
         result.put("isSuccessful", isSuccessful);
         return result;
     }
@@ -267,7 +398,6 @@ public class UserService {
         boolean isSuccessful = !result.get("isEmailEmpty")   && result.get("isEmailLegal")    &&
                                !result.get("isEmailExists")  && result.get("isLocationLegal") &&
                                 result.get("isWebsiteLegal") && result.get("isAboutMeLegal");
-        
         result.put("isSuccessful", isSuccessful);
         return result;
     }
@@ -427,32 +557,51 @@ public class UserService {
     
     /**
      * 自动注入的UserMapper对象.
+     * 用于获取用户基本信息.
      */
     @Autowired
     private UserMapper userMapper;
     
     /**
      * 自动注入的UserMetaMapper对象.
+     * 用于获取用户元信息.
      */
     @Autowired
     private UserMetaMapper userMetaMapper;
     
     /**
      * 自动注入的UserGroupMapper对象.
+     * 用于获取用户组信息.
      */
     @Autowired
     private UserGroupMapper userGroupMapper;
     
     /**
      * 自动注入的LanguageMapper对象.
+     * 用于加载注册页面的语言偏好.
      */
     @Autowired
     private LanguageMapper languageMapper;
+    
+    /**
+     * 自动注入的EmailValidationMapper对象.
+     * 用于生成重置密码的Token.
+     */
+    @Autowired
+    private EmailValidationMapper emailValidationMapper;
     
     /**
      * 自动注入的SensitiveWordFilter对象.
      * 用于过滤用户个人信息中的敏感词.
      */
     @Autowired
-    private SensitiveWordFilter sensitiveWordFilter;    
+    private SensitiveWordFilter sensitiveWordFilter;
+    
+    /**
+     * 自动注入的MailSender对象.
+     * 用于发送电子邮件至用户邮箱.
+     */
+    @Autowired
+    @Qualifier("vojMailSender")
+    private MailSender mailSender;
 }

@@ -2,7 +2,7 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/fmt" prefix="fmt" %>
-<spring:eval expression="@propertyConfigurer.getProperty('cdn.url')" var="cdnUrl" />
+<spring:eval expression="@propertyConfigurer.getProperty('url.cdn')" var="cdnUrl" />
 <!DOCTYPE html>
 <html lang="${language}">
 <head>

@@ -9,6 +9,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.velocity.app.VelocityEngine;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.mail.javamail.MimeMessagePreparator;
@@ -16,7 +17,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.ui.velocity.VelocityEngineUtils;
 
 /**
- * 邮件发送服务.
+ * 电子邮件发送服务.
+ * 
  * @author Xie Haozhe
  */
 @Component
@@ -39,6 +41,7 @@ public class MailSender {
      * @return 解析后的电子邮件内容
      */
     public String getMailContent(String templateLocation, Map<String, Object> model) {
+        model.put("baseUrl", baseUrl);
         return VelocityEngineUtils.
                 mergeTemplateIntoString(velocityEngine, templateLocation, DEFAULT_ENCODING, model);
     }
@@ -46,11 +49,10 @@ public class MailSender {
     /**
      * 发送电子邮件到指定收件人.
      * @param recipient - 收件人的电子邮件地址
-     * @param sender - 发送者的电子邮件地址
      * @param subject - 邮件的主题
      * @param body - 邮件的内容
      */
-    public void sendMail(final String recipient, final String sender, final String subject, final String body) { 
+    public void sendMail(final String recipient, final String subject, final String body) { 
         final MimeMessagePreparator preparator = new MimeMessagePreparator() {
             public void prepare(MimeMessage mimeMessage) throws MessagingException {
                 MimeMessageHelper message = new MimeMessageHelper(mimeMessage);
@@ -80,6 +82,19 @@ public class MailSender {
      * 用于发送电子邮件.
      */
     private final JavaMailSender mailSender;
+    
+    /**
+     * 电子邮件发送者的地址. 
+     */
+    @Value("${mail.sender}")
+    private String sender;
+    
+    /**
+     * 网站的URL.
+     * 用于生成电子邮件中的链接.
+     */
+    @Value("${url.base}")
+    private String baseUrl;
     
     /**
      * 电子邮件默认编码.
