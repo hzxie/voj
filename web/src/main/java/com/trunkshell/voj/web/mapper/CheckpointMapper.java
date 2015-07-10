@@ -13,6 +13,7 @@ import com.trunkshell.voj.web.model.Checkpoint;
 
 /**
  * Checkpoint Data Access Object.
+ * 
  * @author Xie Haozhe
  */
 @CacheNamespace(implementation = org.mybatis.caches.ehcache.EhcacheCache.class)

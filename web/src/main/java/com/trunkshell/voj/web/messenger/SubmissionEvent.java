@@ -57,7 +57,7 @@ public class SubmissionEvent extends ApplicationEvent {
     }
 
     /**
-     * 
+     * 评测记录的唯一标识符.
      */
     private final long submissionId;
     

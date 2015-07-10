@@ -11,6 +11,7 @@ import com.trunkshell.voj.web.model.UserGroup;
 
 /**
  * UserGroup Data Access Object.
+ * 
  * @author Xie Haozhe
  */
 @CacheNamespace(implementation = org.mybatis.caches.ehcache.EhcacheCache.class)
