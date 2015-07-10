@@ -16,6 +16,7 @@ import com.trunkshell.voj.web.model.Language;
 
 /**
  * Language Data Access Object.
+ * 
  * @author Xie Haozhe
  */
 @CacheNamespace(implementation = org.mybatis.caches.ehcache.EhcacheCache.class)

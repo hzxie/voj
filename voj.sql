@@ -3,7 +3,7 @@
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: Jul 09, 2015 at 14:06
+-- Generation Time: Jul 10, 2015 at 01:10 下午
 -- Server version: 5.6.24
 -- PHP Version: 5.6.8
 
@@ -119,6 +119,13 @@ CREATE TABLE IF NOT EXISTS `voj_email_validation` (
   `expire_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
+--
+-- Dumping data for table `voj_email_validation`
+--
+
+INSERT INTO `voj_email_validation` (`email`, `token`, `expire_time`) VALUES
+('support@zjhzxhz.com', 'Random-String-Generated', '2015-07-10 01:00:00');
+
 -- --------------------------------------------------------
 
 --
@@ -184,7 +191,7 @@ CREATE TABLE IF NOT EXISTS `voj_options` (
   `option_name` varchar(32) NOT NULL,
   `option_value` text NOT NULL,
   `is_autoload` tinyint(1) NOT NULL
-) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8;
 
 --
 -- Dumping data for table `voj_options`
@@ -336,6 +343,27 @@ CREATE TABLE IF NOT EXISTS `voj_tags` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `voj_usermeta`
+--
+
+CREATE TABLE IF NOT EXISTS `voj_usermeta` (
+  `meta_id` bigint(20) NOT NULL,
+  `uid` bigint(20) NOT NULL,
+  `meta_key` varchar(64) NOT NULL,
+  `meta_value` text NOT NULL
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8;
+
+--
+-- Dumping data for table `voj_usermeta`
+--
+
+INSERT INTO `voj_usermeta` (`meta_id`, `uid`, `meta_key`, `meta_value`) VALUES
+(1, 1000, 'registerTime', '2014-10-07 12:35:45'),
+(2, 1001, 'registerTime', '2014-10-08 12:35:45');
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `voj_users`
 --
 
@@ -377,27 +405,6 @@ INSERT INTO `voj_user_groups` (`user_group_id`, `user_group_slug`, `user_group_n
 (1, 'users', 'Users'),
 (2, 'judgers', 'Judgers'),
 (3, 'administrators', 'Administrators');
-
--- --------------------------------------------------------
-
---
--- Table structure for table `voj_usermeta`
---
-
-CREATE TABLE IF NOT EXISTS `voj_usermeta` (
-  `meta_id` bigint(20) NOT NULL,
-  `uid` bigint(20) NOT NULL,
-  `meta_key` varchar(64) NOT NULL,
-  `meta_value` text NOT NULL
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8;
-
---
--- Dumping data for table `voj_usermeta`
---
-
-INSERT INTO `voj_usermeta` (`meta_id`, `uid`, `meta_key`, `meta_value`) VALUES
-(1, 1000, 'registerTime', '2014-10-07 12:35:45'),
-(2, 1001, 'registerTime', '2014-10-08 12:35:45');
 
 --
 -- Indexes for dumped tables
@@ -472,7 +479,7 @@ ALTER TABLE `voj_languages`
 --
 ALTER TABLE `voj_options`
   ADD PRIMARY KEY (`option_id`),
-  ADD UNIQUE(`option_name`);
+  ADD UNIQUE KEY `option_name` (`option_name`);
 
 --
 -- Indexes for table `voj_problems`
@@ -517,6 +524,13 @@ ALTER TABLE `voj_tags`
   ADD PRIMARY KEY (`tag_id`);
 
 --
+-- Indexes for table `voj_usermeta`
+--
+ALTER TABLE `voj_usermeta`
+  ADD PRIMARY KEY (`meta_id`),
+  ADD KEY `uid` (`uid`);
+
+--
 -- Indexes for table `voj_users`
 --
 ALTER TABLE `voj_users`
@@ -532,13 +546,6 @@ ALTER TABLE `voj_users`
 ALTER TABLE `voj_user_groups`
   ADD PRIMARY KEY (`user_group_id`),
   ADD UNIQUE KEY `user_group_slug` (`user_group_slug`);
-
---
--- Indexes for table `voj_usermeta`
---
-ALTER TABLE `voj_usermeta`
-  ADD PRIMARY KEY (`meta_id`),
-  ADD KEY `uid` (`uid`);
 
 --
 -- AUTO_INCREMENT for dumped tables
@@ -583,7 +590,7 @@ ALTER TABLE `voj_languages`
 -- AUTO_INCREMENT for table `voj_options`
 --
 ALTER TABLE `voj_options`
-  MODIFY `option_id` int(8) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=7;
+  MODIFY `option_id` int(8) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=8;
 --
 -- AUTO_INCREMENT for table `voj_problems`
 --
@@ -600,6 +607,11 @@ ALTER TABLE `voj_submissions`
 ALTER TABLE `voj_tags`
   MODIFY `tag_id` bigint(20) NOT NULL AUTO_INCREMENT;
 --
+-- AUTO_INCREMENT for table `voj_usermeta`
+--
+ALTER TABLE `voj_usermeta`
+  MODIFY `meta_id` bigint(20) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=3;
+--
 -- AUTO_INCREMENT for table `voj_users`
 --
 ALTER TABLE `voj_users`
@@ -609,11 +621,6 @@ ALTER TABLE `voj_users`
 --
 ALTER TABLE `voj_user_groups`
   MODIFY `user_group_id` int(4) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=4;
---
--- AUTO_INCREMENT for table `voj_usermeta`
---
-ALTER TABLE `voj_usermeta`
-  MODIFY `meta_id` bigint(20) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=3;
 --
 -- Constraints for dumped tables
 --
@@ -647,6 +654,12 @@ ALTER TABLE `voj_discussion_topics`
   ADD CONSTRAINT `voj_discussion_topics_ibfk_1` FOREIGN KEY (`discussion_parent_topic_id`) REFERENCES `voj_discussion_topics` (`discussion_topic_id`);
 
 --
+-- Constraints for table `voj_email_validation`
+--
+ALTER TABLE `voj_email_validation`
+  ADD CONSTRAINT `voj_email_validation_ibfk_1` FOREIGN KEY (`email`) REFERENCES `voj_users` (`email`);
+
+--
 -- Constraints for table `voj_problem_categories`
 --
 ALTER TABLE `voj_problem_categories`
@@ -676,17 +689,17 @@ ALTER TABLE `voj_submissions`
   ADD CONSTRAINT `voj_submissions_ibfk_4` FOREIGN KEY (`submission_judge_result`) REFERENCES `voj_judge_results` (`judge_result_slug`);
 
 --
+-- Constraints for table `voj_usermeta`
+--
+ALTER TABLE `voj_usermeta`
+  ADD CONSTRAINT `voj_usermeta_ibfk_1` FOREIGN KEY (`uid`) REFERENCES `voj_users` (`uid`);
+
+--
 -- Constraints for table `voj_users`
 --
 ALTER TABLE `voj_users`
   ADD CONSTRAINT `voj_users_ibfk_1` FOREIGN KEY (`user_group_id`) REFERENCES `voj_user_groups` (`user_group_id`),
   ADD CONSTRAINT `voj_users_ibfk_2` FOREIGN KEY (`prefer_language_id`) REFERENCES `voj_languages` (`language_id`);
-
---
--- Constraints for table `voj_usermeta`
---
-ALTER TABLE `voj_usermeta`
-  ADD CONSTRAINT `voj_usermeta_ibfk_1` FOREIGN KEY (`uid`) REFERENCES `voj_users` (`uid`);
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;

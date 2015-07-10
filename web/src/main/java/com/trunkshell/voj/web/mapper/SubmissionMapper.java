@@ -22,6 +22,7 @@ import com.trunkshell.voj.web.model.User;
 
 /**
  * Submission Data Access Object.
+ * 
  * @author Xie Haozhe
  */
 @CacheNamespace(implementation = org.mybatis.caches.ehcache.EhcacheCache.class)

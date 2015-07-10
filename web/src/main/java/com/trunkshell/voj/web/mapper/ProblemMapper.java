@@ -16,6 +16,7 @@ import com.trunkshell.voj.web.model.Problem;
 
 /**
  * Problem Data Access Object.
+ * 
  * @author Xie Haozhe
  */
 @CacheNamespace(implementation = org.mybatis.caches.ehcache.EhcacheCache.class)
@@ -143,7 +144,7 @@ public interface ProblemMapper {
     /**
      * 获取试题通过提交次数的SQL子查询语句. 
      */
-    final String ACCEPTED_SUBMISSION_FIELD = "(SELECT COUNT(DISTINCT(uid)) FROM voj_submissions s WHERE s.problem_id = p.problem_id AND s.submission_judge_result = 'AC') AS accepted_submission";
+    final String ACCEPTED_SUBMISSION_FIELD = "(SELECT COUNT(*) FROM voj_submissions s WHERE s.problem_id = p.problem_id AND s.submission_judge_result = 'AC') AS accepted_submission";
     
     /**
      * 试题所有属性的SQL表达式.
