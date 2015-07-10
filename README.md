@@ -1,6 +1,6 @@
 ![Verwandlung Online Judge](https://raw.githubusercontent.com/zjhzxhz/voj/master/web/src/main/webapp/assets/img/logo.png)
 
-Version: 1.0.0 (Under Development)
+Version: 0.0.1-SNAPSHOT
 
 [![Build Status](https://travis-ci.org/zjhzxhz/voj.png?branch=master)](https://travis-ci.org/zjhzxhz/voj)
 
@@ -10,19 +10,21 @@ Version: 1.0.0 (Under Development)
 
 ---
 
-### Introduction
+## Introduction
 
 Cross-platform online judge system based on [Spring MVC Framework](http://spring.io).
 
-The application used following components:
+The application used following open-source projects:
 
  - [Spring MVC](http://spring.io) famework
  - [MyBatis](https://mybatis.github.io/mybatis-3/index.html) persistence framework
- - [Druid](https://github.com/alibaba/druid/) database connection pool
- - [CodeMirror](http://codemirror.net) Editor
  - [Apache ActiveMQ](http://activemq.apache.org/) message queue
- - [Sock.js](https://github.com/sockjs/sockjs-client) WebSocket client
- - [Stomp.js](https://github.com/jmesnil/stomp-websocket) STOMP client
+ - [Druid](https://github.com/alibaba/druid/) database connection pool
+ - [Flat UI](http://flat-ui.com)
+ - [jQuery](http://jquery.com)
+ - [FontAwesome](http://fontawesome.io)
+ - [CodeMirror](http://codemirror.net)
+ - [Highlight.js](https://highlightjs.org/)
 
 ### The Origin of Verwandlung
 
@@ -36,13 +38,25 @@ As the message queue is one of the important components in the application, so I
 
 ### Architecture
 
-The application contains three modules:
+The application contains two modules:
 
-- User Interface
-- Message Queue
-- Native Judger(Running Program)
+- Web Application
+- Cross-Platform Judger
 
-As you see, you the Online Judge System can contain multiple judgers. The judgers communicate with the Web application via message queue.
+As you see, the Online Judge System can contain multiple judgers. The judgers communicate with the web application via message queue.
+
+---
+
+### Contribution
+
+We're glad that you want to improve this project. 
+
+- **We NEED TRANSLATOR** for multi-language support(English and Chinese have supported).
+- You can report bugs [here](https://github.com/zjhzxhz/voj/issues).
+- You can also create a pull request if you can fix the bug.
+- If you want to add features to the project, please tell me in the [issues](https://github.com/zjhzxhz/voj/issues) page before developing.
+
+Thanks for your corporation.
 
 ### License
 
