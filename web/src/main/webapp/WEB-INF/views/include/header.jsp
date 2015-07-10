@@ -1,7 +1,7 @@
 <%@ page language="java" contentType="text/html; charset=utf-8" pageEncoding="utf-8"%>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
-<spring:eval expression="@propertyConfigurer.getProperty('cdn.url')" var="cdnUrl" />
+<spring:eval expression="@propertyConfigurer.getProperty('url.cdn')" var="cdnUrl" />
     <!--[if lte IE 7]>
     <div id="upgrade-browser">
         <div class="row-fluid container">

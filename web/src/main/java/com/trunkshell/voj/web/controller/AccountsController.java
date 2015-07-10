@@ -202,7 +202,7 @@ public class AccountsController {
     @RequestMapping(value = "/reset-password", method = RequestMethod.GET)
     public ModelAndView resetPasswordView(
             @RequestParam(value = "email", required = false) String email,
-            @RequestParam(value = "hashCode", required = false) String hashCode,
+            @RequestParam(value = "token", required = false) String token,
             HttpServletRequest request, HttpServletResponse response) {
         HttpSession session = request.getSession();
         ModelAndView view = null;
@@ -210,10 +210,15 @@ public class AccountsController {
         if ( isLoggedIn(session) ) {
             view = new ModelAndView("redirect:/");
         } else {
+            boolean isTokenValid = false;
+            if ( token != null && !token.isEmpty() ) {
+                isTokenValid = userService.isEmailValidationValid(email, token);
+            }
+            
             view = new ModelAndView("accounts/reset-password");
             view.addObject("email", email);
-            view.addObject("hashCode", hashCode);
-            view.addObject("isHashCodeValid", false);
+            view.addObject("token", token);
+            view.addObject("isTokenValid", isTokenValid);
             view.addObject("csrfToken", CsrfProtector.getCsrfToken(session));
         }
         return view;
@@ -235,7 +240,13 @@ public class AccountsController {
             HttpServletRequest request) {
         String ipAddress = HttpRequestParser.getRemoteAddr(request);
         boolean isCsrfTokenValid = CsrfProtector.isCsrfTokenValid(csrfToken, request.getSession());
-        return null;
+        Map<String, Boolean> result = userService.sendVerificationEmail(username, email, isCsrfTokenValid);
+        
+        if ( result.get("isSuccessful") ) {
+            LOGGER.info(String.format("User: [Username=%s] send an email for resetting password at %s.", 
+                            new Object[] {username, ipAddress}));
+        }
+        return result;
     }
     
     /**
@@ -258,7 +269,13 @@ public class AccountsController {
             HttpServletRequest request) {
         String ipAddress = HttpRequestParser.getRemoteAddr(request);
         boolean isCsrfTokenValid = CsrfProtector.isCsrfTokenValid(csrfToken, request.getSession());
-        return null;
+        Map<String, Boolean> result = userService.resetPassword(email, token, newPassword, confirmPassword, isCsrfTokenValid);
+        
+        if ( result.get("isSuccessful") ) {
+            LOGGER.info(String.format("User: [Email=%s] resetted password at %s", 
+                            new Object[] {email, ipAddress}));
+        }
+        return result;
     }
     
     /**
@@ -367,24 +384,28 @@ public class AccountsController {
     
     /**
      * 自动注入的UserService对象.
+     * 用于完成用户业务逻辑操作.
      */
     @Autowired
     private UserService userService;
     
     /**
      * 自动注入的LanguageService对象.
+     * 用于加载注册页面的语言选项.
      */
     @Autowired
     private LanguageService languageService;
     
     /**
      * 自动注入的SubmissionService对象.
+     * 用于加载个人信息页面用户的提交和通过情况.
      */
     @Autowired
     private SubmissionService submissionService;
     
     /**
      * 自动注入的OptionService对象.
+     * 用于查询注册功能是否开放.
      */
     @Autowired
     private OptionService optionService;
