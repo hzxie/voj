@@ -42,6 +42,7 @@ public class MailSender {
      */
     public String getMailContent(String templateLocation, Map<String, Object> model) {
         model.put("baseUrl", baseUrl);
+        
         return VelocityEngineUtils.
                 mergeTemplateIntoString(velocityEngine, templateLocation, DEFAULT_ENCODING, model);
     }

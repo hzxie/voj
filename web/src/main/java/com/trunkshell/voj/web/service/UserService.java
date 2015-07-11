@@ -229,6 +229,7 @@ public class UserService {
         Date expireTime = getExpireTime();
         Map<String, Object> model = new HashMap<String, Object>(4, 1);
         model.put("username", username);
+        model.put("email", email);
         model.put("token", token);
         
         EmailValidation emailValidation = new EmailValidation(email, token, expireTime);
