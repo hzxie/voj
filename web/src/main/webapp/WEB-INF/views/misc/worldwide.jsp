@@ -41,7 +41,7 @@
     <%@ include file="/WEB-INF/views/include/header.jsp" %>
     <!-- Content -->
     <div id="content">
-        <div id="ribbon"></div> <!-- #ribbon -->
+        <div id="ribbon" style="height: 240px;"></div> <!-- #ribbon -->
         <div class="container">
             <div id="main-content">
                 <h3><spring:message code="voj.misc.worldwide.other-languages" text="This site in other languages:" /></h3>

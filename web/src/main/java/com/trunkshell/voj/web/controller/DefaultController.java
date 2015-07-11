@@ -37,6 +37,71 @@ public class DefaultController {
     }
     
     /**
+     * 显示使用条款页面.
+     * @param request - HttpRequest对象
+     * @param response - HttpResponse对象
+     * @return 一个包含使用条款页面内容的ModelAndView对象
+     */
+    @RequestMapping(value = "/terms", method = RequestMethod.GET)
+    public ModelAndView termsView(
+            HttpServletRequest request, HttpServletResponse response) {
+        ModelAndView view = new ModelAndView("misc/terms");
+        return view;
+    }
+
+    /**
+     * 显示隐私页面.
+     * @param request - HttpRequest对象
+     * @param response - HttpResponse对象
+     * @return 一个包含隐私页内面容的ModelAndView对象
+     */
+    @RequestMapping(value = "/privacy", method = RequestMethod.GET)
+    public ModelAndView privacyView(
+            HttpServletRequest request, HttpServletResponse response) {
+        ModelAndView view = new ModelAndView("misc/privacy");
+        return view;
+    }
+
+    /**
+     * 显示评测机信息页面.
+     * @param request - HttpRequest对象
+     * @param response - HttpResponse对象
+     * @return 一个包含评测机信息页面内容的ModelAndView对象
+     */
+    @RequestMapping(value = "/judgers", method = RequestMethod.GET)
+    public ModelAndView judgersView(
+            HttpServletRequest request, HttpServletResponse response) {
+        ModelAndView view = new ModelAndView("misc/judgers");
+        return view;
+    }
+    
+    /**
+     * 显示帮助页面.
+     * @param request - HttpRequest对象
+     * @param response - HttpResponse对象
+     * @return 一个包含帮助页面内容的ModelAndView对象
+     */
+    @RequestMapping(value = "/help", method = RequestMethod.GET)
+    public ModelAndView helpView(
+            HttpServletRequest request, HttpServletResponse response) {
+        ModelAndView view = new ModelAndView("misc/help");
+        return view;
+    }
+    
+    /**
+     * 显示关于页面.
+     * @param request - HttpRequest对象
+     * @param response - HttpResponse对象
+     * @return 一个包含关于页面内容的ModelAndView对象
+     */
+    @RequestMapping(value = "/about", method = RequestMethod.GET)
+    public ModelAndView aboutView(
+            HttpServletRequest request, HttpServletResponse response) {
+        ModelAndView view = new ModelAndView("misc/about");
+        return view;
+    }
+    
+    /**
      * 显示语言切换的页面.
      * @param request - HttpRequest对象
      * @param response - HttpResponse对象
