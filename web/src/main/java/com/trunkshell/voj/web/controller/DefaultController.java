@@ -75,7 +75,7 @@ public class DefaultController {
      * @param response - HttpResponse对象
      * @return 返回一个包含异常信息的ModelAndView对象
      */
-    @RequestMapping(value = "/*", method = RequestMethod.GET)
+    @RequestMapping(value = "/{(?!assets|druid).*$}", method = RequestMethod.GET)
     public ModelAndView notFoundView(
             HttpServletRequest request, HttpServletResponse response) {
         ModelAndView view = new ModelAndView("errors/404");

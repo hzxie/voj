@@ -7,7 +7,7 @@
         <div class="container">
             <ul id="footer-nav" class="inline">
                 <li><a href="<c:url value="/terms" />"><spring:message code="voj.include.footer.terms" text="Terms of Use" /></a></li>
-                <li><a href="<c:url value="/privacy" />"><spring:message code="voj.include.footer.privacy" text="Privacy & Cookies" /></a></li>
+                <li><a href="<c:url value="/privacy" />"><spring:message code="voj.include.footer.privacy" text="Privacy &amp; Cookies" /></a></li>
                 <li><a href="<c:url value="/judgers" />"><spring:message code="voj.include.footer.judgers" text="Judgers" /></a></li>
                 <li><a href="<c:url value="/help" />"><spring:message code="voj.include.footer.help" text="Help" /></a></li>
                 <li><a href="<c:url value="/about" />"><spring:message code="voj.include.footer.about-us" text="About Us" /></a></li>
