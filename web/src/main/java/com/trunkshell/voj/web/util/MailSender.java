@@ -1,5 +1,6 @@
 package com.trunkshell.voj.web.util;
 
+import java.io.UnsupportedEncodingException;
 import java.util.Map;
 
 import javax.mail.MessagingException;
@@ -55,10 +56,11 @@ public class MailSender {
      */
     public void sendMail(final String recipient, final String subject, final String body) { 
         final MimeMessagePreparator preparator = new MimeMessagePreparator() {
-            public void prepare(MimeMessage mimeMessage) throws MessagingException {
+            public void prepare(MimeMessage mimeMessage) 
+                    throws MessagingException, UnsupportedEncodingException {
                 MimeMessageHelper message = new MimeMessageHelper(mimeMessage);
                 message.setTo(recipient);
-                message.setFrom(sender);
+                message.setFrom(senderMail, senderName);
                 message.setSubject(subject);
                 message.setText(body, true);
             }
@@ -87,8 +89,14 @@ public class MailSender {
     /**
      * 电子邮件发送者的地址. 
      */
-    @Value("${mail.sender}")
-    private String sender;
+    @Value("${mail.senderMail}")
+    private String senderMail;
+    
+    /**
+     * 电子邮件发送者的姓名. 
+     */
+    @Value("${mail.senderName}")
+    private String senderName;
     
     /**
      * 网站的URL.
