@@ -109,7 +109,7 @@ div#content div#main-content div.problem div.body form#code-editor div#submissio
 }
 
 div#content div#main-content div.problem code {
-	background-color: #fff;
+	background-color: #f5f5f5;
 	border: none;
 	font-size: 14px;
 	padding: 0;

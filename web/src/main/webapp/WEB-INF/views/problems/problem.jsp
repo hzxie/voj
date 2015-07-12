@@ -85,7 +85,7 @@
                         <c:if test="${problem.hint != null}">
                         <div class="section">
                             <h4><spring:message code="voj.problems.problem.hint" text="Hint" /></h4>
-                            <div class="description markdown">${problem.hint}</div> <!-- .description -->
+                            <div class="description markdown">${problem.hint.replace("<", "&lt;").replace(">", "&gt;")}</div> <!-- .description -->
                         </div> <!-- .section -->
                         </c:if>
                         <form id="code-editor" onsubmit="onSubmit(); return false;" method="POST">
