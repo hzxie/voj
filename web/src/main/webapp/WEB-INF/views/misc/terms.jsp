@@ -41,14 +41,54 @@
     <%@ include file="/WEB-INF/views/include/header.jsp" %>
     <!-- Content -->
     <div id="content">
-        <div id="ribbon"></div> <!-- #ribbon -->
+        <div id="ribbon" style="height: 500px;"></div> <!-- #ribbon -->
         <div class="container">
             <div class="row-fluid">
                 <div class="span9">
                     <div id="main-content">
                         <div class="section">
-                            <h3 id="about-project"></h3>
-                            <div class="markdown"></div> <!-- .markdown -->
+                            <div class="markdown"><spring:message code="voj.misc.terms.introdction-content" text="" arguments="${websiteName}" /></div> <!-- .markdown -->
+                        </div> <!-- .section -->
+                        <div class="section">
+                            <h3 id="using-services"><spring:message code="voj.misc.terms.using-services" text="Using our Services" /></h3>
+                            <div class="markdown"><spring:message code="voj.misc.terms.using-services-content" text="" arguments="${websiteName}" /></div> <!-- .markdown -->
+                        </div> <!-- .section -->
+                        <div class="section">
+                            <h3 id="your-account"><spring:message code="voj.misc.terms.your-account" text="Your Account" /></h3>
+                            <div class="markdown"><spring:message code="voj.misc.terms.your-account-content" text="" arguments="${websiteName}" /></div> <!-- .markdown -->
+                        </div> <!-- .section -->
+                        <div class="section">
+                            <c:url var="privacyUrl" value="/privacy" />
+                            <h3 id="privacy-and-copyright"><spring:message code="voj.misc.terms.privacy-and-copyright" text="Privacy and Copyright Protection" /></h3>
+                            <div class="markdown"><spring:message code="voj.misc.terms.privacy-and-copyright-content" text="" arguments="${websiteName}, ${privacyUrl}" /></div> <!-- .markdown -->
+                        </div> <!-- .section -->
+                        <div class="section">
+                            <h3 id="your-content"><spring:message code="voj.misc.terms.your-content" text="Your Content in our Services" /></h3>
+                            <div class="markdown"><spring:message code="voj.misc.terms.your-content-content" text="" arguments="${websiteName}" /></div> <!-- .markdown -->
+                        </div> <!-- .section -->
+                        <div class="section">
+                            <h3 id="software-in-service"><spring:message code="voj.misc.terms.software-in-service" text="About Software in our Services" /></h3>
+                            <div class="markdown"><spring:message code="voj.misc.terms.software-in-service-content" text="" arguments="${websiteName}" /></div> <!-- .markdown -->
+                        </div> <!-- .section -->
+                        <div class="section">
+                            <h3 id="service-modify-terminate"><spring:message code="voj.misc.terms.service-modify-terminate" text="Modifying and Terminating our Services" /></h3>
+                            <div class="markdown"><spring:message code="voj.misc.terms.service-modify-terminate-content" text="" arguments="${websiteName}" /></div> <!-- .markdown -->
+                        </div> <!-- .section -->
+                        <div class="section">
+                            <h3 id="warranties-and-disclaimers"><spring:message code="voj.misc.terms.warranties-and-disclaimers" text="Our Warranties and Disclaimers" /></h3>
+                            <div class="markdown"><spring:message code="voj.misc.terms.warranties-and-disclaimers-content" text="" arguments="${websiteName}" /></div> <!-- .markdown -->
+                        </div> <!-- .section -->
+                        <div class="section">
+                            <h3 id="liability"><spring:message code="voj.misc.terms.liability" text="Liability for our Services" /></h3>
+                            <div class="markdown"><spring:message code="voj.misc.terms.liability-content" text="" arguments="${websiteName}" /></div> <!-- .markdown -->
+                        </div> <!-- .section -->
+                        <div class="section">
+                            <h3 id="business-use"><spring:message code="voj.misc.terms.business-use" text="Business uses of our Services" /></h3>
+                            <div class="markdown"><spring:message code="voj.misc.terms.business-use-content" text="" arguments="${websiteName}" /></div> <!-- .markdown -->
+                        </div> <!-- .section -->
+                        <div class="section">
+                            <h3 id="about-terms"><spring:message code="voj.misc.terms.about-terms" text="About these Terms" /></h3>
+                            <div class="markdown"><spring:message code="voj.misc.terms.about-terms-content" text="" arguments="${websiteName}" /></div> <!-- .markdown -->
                         </div> <!-- .section -->
                     </div> <!-- #main-content -->
                 </div> <!-- .span9 -->
@@ -56,7 +96,16 @@
                     <div id="sidebar-nav">
                         <h5><spring:message code="voj.misc.terms.terms-of-use" text="Terms of Use" /></h5>
                         <ul class="contents">
-                            <li><a href="#about-project"><spring:message code="voj.misc.about.about-project" text="About the Project" /></a></li>
+                            <li><a href="#using-services"><spring:message code="voj.misc.terms.using-services" text="Using our Services" /></a></li>
+                            <li><a href="#your-account"><spring:message code="voj.misc.terms.your-account" text="Your Account" /></a></li>
+                            <li><a href="#privacy-and-copyright"><spring:message code="voj.misc.terms.privacy-and-copyright" text="Privacy and Copyright Protection" /></a></li>
+                            <li><a href="#your-content"><spring:message code="voj.misc.terms.your-content" text="Your Content in our Services" /></a></li>
+                            <li><a href="#software-in-service"><spring:message code="voj.misc.terms.software-in-service" text="About Software in our Services" /></a></li>
+                            <li><a href="#service-modify-terminate"><spring:message code="voj.misc.terms.service-modify-terminate" text="Modifying and Terminating our Services" /></a></li>
+                            <li><a href="#warranties-and-disclaimers"><spring:message code="voj.misc.terms.warranties-and-disclaimers" text="Our Warranties and Disclaimers" /></a></li>
+                            <li><a href="#liability"><spring:message code="voj.misc.terms.liability" text="Liability for our Services" /></a></li>
+                            <li><a href="#business-use"><spring:message code="voj.misc.terms.business-use" text="Business uses of our Services" /></a></li>
+                            <li><a href="#about-terms"><spring:message code="voj.misc.terms.about-terms" text="About these Terms" /></a></li>
                         </ul>
                     </div> <!-- #sidebar-nav -->
                 </div> <!-- .span3 -->
