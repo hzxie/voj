@@ -143,6 +143,24 @@ public class User implements Serializable {
     public void setPreferLanguage(Language preferLanguage) {
         this.preferLanguage = preferLanguage;
     }
+    
+    /* (non-Javadoc)
+     * @see java.lang.Object#hashCode()
+     */
+    public int hashCode() {
+        return (int) uid;
+    }
+    
+    /* (non-Javadoc)
+     * @see java.lang.Object#equals(java.lang.Object)
+     */
+    public boolean equals(Object obj) {
+        if ( obj instanceof User ) {
+            User anotherUser = (User)obj;
+            return anotherUser.getUid() == uid;
+        }
+        return false;
+    }
 
     /* (non-Javadoc)
      * @see java.lang.Object#toString()

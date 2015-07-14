@@ -128,8 +128,8 @@
 	<insert id="createSubmission" 
 		parameterType="com.trunkshell.voj.web.model.Submission"
 		flushCache="true" 
-		keyProperty="uid" 
-		keyColumn="uid"
+		keyProperty="submissionId" 
+		keyColumn="submission_id"
 		useGeneratedKeys="true">
 		INSERT INTO voj_submissions(problem_id, uid, language_id, submission_code) 
 		VALUES (#{problem.problemId}, #{user.uid}, #{language.languageId}, #{code})
