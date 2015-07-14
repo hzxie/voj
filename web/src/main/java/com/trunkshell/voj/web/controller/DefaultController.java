@@ -1,11 +1,13 @@
 package com.trunkshell.voj.web.controller;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -13,6 +15,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.ModelAndView;
 
+import com.trunkshell.voj.web.model.User;
+import com.trunkshell.voj.web.model.UserGroup;
+import com.trunkshell.voj.web.service.LanguageService;
+import com.trunkshell.voj.web.service.UserService;
 import com.trunkshell.voj.web.util.LocaleUtils;
 
 /**
@@ -72,7 +78,27 @@ public class DefaultController {
     public ModelAndView judgersView(
             HttpServletRequest request, HttpServletResponse response) {
         ModelAndView view = new ModelAndView("misc/judgers");
+        view.addObject("languages", languageService.getAllLanguages());
         return view;
+    }
+    
+    /**
+     * 获取评测机列表.
+     * @param offset - 当前加载评测机的UID
+     * @param request - HttpRequest对象
+     * @return 一个包含评测机列表信息的Map<String, Object>对象
+     */
+    @RequestMapping(value = "/getJudgers.action", method = RequestMethod.GET)
+    public @ResponseBody Map<String, Object> getJudgersAction(
+    		@RequestParam(value = "startIndex", required = false, defaultValue = "0") long offset,
+            HttpServletRequest request) {
+    	Map<String, Object> result = new HashMap<String, Object>();
+    	UserGroup userGroup = userService.getUserGroupUsingSlug("judgers");
+    	List<User> judgers = userService.getUserUsingUserGroup(userGroup, offset, JUDGERS_PER_REQUEST);
+    	
+    	result.put("isSuccessful", judgers != null && !judgers.isEmpty());
+    	result.put("judgers", judgers);
+    	return result;
     }
     
     /**
@@ -159,4 +185,23 @@ public class DefaultController {
         ModelAndView view = new ModelAndView("misc/not-supported");
         return view;
     }
+    
+    /**
+     * 每次加载评测机的数量.
+     */
+    private static final int JUDGERS_PER_REQUEST = 10;
+    
+    /**
+     * 自动注入的UserService对象.
+     * 用于获取评测机页面的评测机列表.
+     */
+    @Autowired
+    private UserService userService;
+    
+    /**
+     * 自动注入的LanguageService对象.
+     * 用于获取评测机页面的编译命令.
+     */
+    @Autowired
+    private LanguageService languageService;
 }

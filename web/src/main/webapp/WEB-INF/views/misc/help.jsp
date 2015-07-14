@@ -100,13 +100,6 @@
             });
         });
     </script>
-    <script type="text/javascript">
-        $.getScript('${cdnUrl}/js/highlight.min.js', function() {
-            $('code').each(function(i, block) {
-                hljs.highlightBlock(block);
-            });
-        });
-    </script>
     <c:if test="${GoogleAnalyticsCode != ''}">
     <script type="text/javascript">${googleAnalyticsCode}</script>
     </c:if>

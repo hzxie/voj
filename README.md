@@ -51,10 +51,10 @@ As you see, the Online Judge System can contain multiple judgers. The judgers co
 
 We're glad that you want to improve this project. 
 
-- **We NEED TRANSLATOR** for multi-language support(English and Chinese have supported).
+- **We NEED TRANSLATORS** for multi-language support(English and Chinese have supported).
 - You can report bugs [here](https://github.com/zjhzxhz/voj/issues).
 - You can also create a pull request if you can fix the bug.
-- If you want to add features to the project, please tell me in the [issues](https://github.com/zjhzxhz/voj/issues) page before developing.
+- If you want to add features to the project, please tell us in the [issues](https://github.com/zjhzxhz/voj/issues) page before developing.
 
 Thanks for your corporation.
 
