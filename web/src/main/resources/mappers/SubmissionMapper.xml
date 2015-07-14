@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper 
+	PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"  
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.trunkshell.voj.web.mapper.SubmissionMapper">
+	<!-- ResultMap -->
+	<resultMap id="SubmissionResultMap" type="com.trunkshell.voj.web.model.Submission">
+		<result property="submissionId" column="submission_id" />
+		<result property="submitTime" column="submission_submit_time" />
+		<result property="executeTime" column="submission_execute_time" />
+		<result property="usedTime" column="submission_used_time" />
+		<result property="usedMemory" column="submission_used_memory" />
+		<result property="judgeScore" column="submission_judge_score" />
+		<result property="judgeLog" column="submission_judge_log" />
+		<result property="code" column="submission_code" />
+		<association property="problem" 
+			javaType="com.trunkshell.voj.web.model.Problem" 
+			column="problem_id"
+			select="com.trunkshell.voj.web.mapper.ProblemMapper.getProblem" />
+		<association property="user" 
+			javaType="com.trunkshell.voj.web.model.User" 
+			column="uid"
+			select="com.trunkshell.voj.web.mapper.UserMapper.getUserUsingUid" />
+		<association property="language" 
+			javaType="com.trunkshell.voj.web.model.Language" 
+			column="language_id"
+			select="com.trunkshell.voj.web.mapper.LanguageMapper.getLanguageUsingId" />
+		<association property="judgeResult" 
+			javaType="com.trunkshell.voj.web.model.JudgeResult" 
+			column="submission_judge_result"
+			select="com.trunkshell.voj.web.mapper.JudgeResultMapper.getJudgeResultUsingSlug" />
+	</resultMap>
+	
+	<!-- Methods -->
+	<select id="getNumberOfSubmissions" 
+		parameterType="map"
+		resultType="long"
+		useCache="true">
+		SELECT COUNT(*) 
+		FROM voj_submissions 
+		WHERE submission_submit_time &gt;= #{startTime} AND submission_submit_time &lt;= #{endTime}
+	</select>
+	<select id="getSubmission" 
+		parameterType="long"
+		resultMap="SubmissionResultMap"
+		useCache="false">
+		SELECT * 
+		FROM voj_submissions 
+		WHERE submission_id = #{submissionId}
+	</select>
+	<select id="getSubmissions" 
+		parameterType="int"
+		resultMap="SubmissionResultMap"
+		useCache="true">
+		SELECT * 
+		FROM voj_submissions 
+		ORDER BY submission_id DESC 
+		LIMIT #{limit}
+	</select>
+	<select id="getSubmissionsUsingOffset" 
+		parameterType="map"
+		resultMap="SubmissionResultMap"
+		useCache="true">
+		SELECT * 
+		FROM voj_submissions 
+		WHERE submission_id &lt;= #{submissionId} 
+		ORDER BY submission_id DESC 
+		LIMIT #{limit}
+	</select>
+	<select id="getLatestSubmissionsUsingOffset" 
+		parameterType="map"
+		resultMap="SubmissionResultMap"
+		useCache="true">
+		SELECT * 
+		FROM voj_submissions 
+		WHERE submission_id &gt;= #{submissionId} 
+		ORDER BY submission_id 
+		LIMIT #{limit}
+	</select>
+	<select id="getSubmissionUsingProblemIdAndUserId" 
+		parameterType="map"
+		resultMap="SubmissionResultMap"
+		useCache="true">
+		SELECT * 
+		FROM voj_submissions 
+		WHERE problem_id = #{problemId} AND uid = #{uid} 
+		ORDER BY submission_id DESC 
+		LIMIT #{limit}
+	</select>
+	<select id="getLatestSubmissionOfProblems" 
+		parameterType="map"
+		resultMap="SubmissionResultMap"
+		useCache="true">
+		SELECT submission_id, s1.problem_id, submission_judge_result 
+		FROM voj_submissions s1 
+		INNER JOIN ( 
+			SELECT MAX(submission_id) AS max_submission_id, problem_id 
+			FROM voj_submissions 
+			WHERE uid = #{uid} AND problem_id &gt;= #{problemIdLowerBound} AND problem_id &lt; #{problemIdUpperBound} 
+			GROUP BY problem_id 
+		) s2 ON s1.problem_id = s2.problem_id AND s1.submission_id = s2.max_submission_id
+	</select>
+	<select id="getAcceptedSubmissionOfProblems" 
+		parameterType="map"
+		resultMap="SubmissionResultMap"
+		useCache="true">
+		SELECT submission_id, problem_id, submission_judge_result 
+		FROM voj_submissions 
+		WHERE uid = #{uid} AND problem_id &gt;= #{problemIdLowerBound} AND problem_id &lt; #{problemIdUpperBound} AND submission_judge_result = 'AC' 
+		GROUP BY problem_id
+	</select>
+	<select id="getAcceptedSubmissionUsingUserId" 
+		parameterType="long"
+		resultType="long"
+		useCache="true">
+		SELECT COUNT(DISTINCT problem_id) 
+		FROM voj_submissions 
+		WHERE uid = #{uid} AND submission_judge_result = 'AC'
+	</select>
+	<select id="getTotalSubmissionUsingUserId" 
+		parameterType="long"
+		resultType="long"
+		useCache="true">
+		SELECT COUNT(*) 
+		FROM voj_submissions 
+		WHERE uid = #{uid} AND submission_judge_result != 'PD' AND submission_judge_result != 'SE'
+	</select>
+	<insert id="createSubmission" 
+		parameterType="com.trunkshell.voj.web.model.Submission"
+		flushCache="true" 
+		keyProperty="uid" 
+		keyColumn="uid"
+		useGeneratedKeys="true">
+		INSERT INTO voj_submissions(problem_id, uid, language_id, submission_code) 
+		VALUES (#{problem.problemId}, #{user.uid}, #{language.languageId}, #{code})
+	</insert>
+	<update id="updateSubmission"
+		parameterType="com.trunkshell.voj.web.model.Submission"
+		flushCache="true">
+		UPDATE voj_submissions 
+		SET problem_id = #{problem.problemId}, uid = #{user.uid}, language_id = #{language.languageId}, submission_submit_time = #{submitTime}, submission_execute_time = #{executeTime}, submission_used_time = #{usedTime}, submission_used_memory = #{usedMemory}, submission_judge_result = #{judgeResult.judgeResultSlug}, submission_judge_score = #{judgeScore}, submission_judge_log = #{judgeLog}, submission_code = #{code} 
+		WHERE submission_id = #{submissionId}
+	</update>
+	<delete id="deleteSubmission"
+		parameterType="long"
+		flushCache="true">
+		DELETE FROM voj_submissions 
+		WHERE submission_id = #{submissionId}
+	</delete>
+</mapper>

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper 
+	PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"  
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.trunkshell.voj.web.mapper.CheckpointMapper">
+	<!-- ResultMap -->
+	<resultMap id="CheckpointResultMap" type="com.trunkshell.voj.web.model.Checkpoint">
+		<id property="problemId" column="problem_id" />
+		<id property="checkpointId" column="checkpoint_id" />
+		<result property="score" column="checkpoint_score" />
+		<result property="input" column="checkpoint_input" />
+		<result property="output" column="checkpoint_output" />
+	</resultMap>
+
+	<!-- Methods -->
+	<select id="getNumberOfCheckpoints" 
+		resultType="long" 
+		useCache="true">
+		SELECT COUNT(*) 
+		FROM voj_problem_checkpoints
+	</select>
+	<select id="getCheckpointsUsingProblemId" 
+		parameterType="long"
+		resultMap="CheckpointResultMap" 
+		useCache="true">
+		SELECT * 
+		FROM voj_problem_checkpoints 
+		WHERE problem_id = #{problemId}
+	</select>
+</mapper>
