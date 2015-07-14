@@ -44,7 +44,7 @@
 <body>
     <img src="${cdnUrl}/img/logo.jpg" alt="Logo" width="218px" height="34px" />
     <h1><spring:message code="voj.misc.not-supported.browser-not-supported" text="Your Browser is no longer supported." /></h1>
-    <p><spring:message code="voj.misc.not-supported.message" text="Verwandlung Online Judge no longer supports your browser. Please upgrade your browser." /></p>
+    <p><spring:message code="voj.misc.not-supported.message" text="Verwandlung Online Judge no longer supports your browser. Please upgrade your browser." arguments="${websiteName}" /></p>
     <table width="650px" cellpadding="5">
         <tbody>
             <tr>

@@ -74,7 +74,6 @@ public interface UserMapper {
     public User getUserUsingEmail(@Param("email") String email);
     
     /**
-     * [此方法仅供管理员使用]
      * 获取某个用户组中的用户列表.
      * @param userGroup - 用户所属的用户组对象
      * @param offset - 用户唯一标识符的起始编号
