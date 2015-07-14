@@ -44,6 +44,17 @@ public class UserService {
     public User getUserUsingUid(long userId) {
         return userMapper.getUserUsingUid(userId);
     }
+
+    /**
+     * 获取某个用户组中的用户列表.
+     * @param userGroup - 用户所属的用户组对象
+     * @param offset - 用户唯一标识符的起始编号
+     * @param limit - 需要获取的用户的数量
+     * @return 用户列表
+     */
+    public List<User> getUserUsingUserGroup(UserGroup userGroup, long offset, int limit) {
+    	return userMapper.getUserUsingUserGroup(userGroup, offset, limit);
+    }
     
     /**
      * 获取用户的元信息.
@@ -82,7 +93,7 @@ public class UserService {
         }
         return user;
     }
-    
+
     /**
      * 验证用户身份是否有效.
      * @param username - 用户名或电子邮件地址
