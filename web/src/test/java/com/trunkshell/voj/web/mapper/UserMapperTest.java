@@ -11,7 +11,6 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.test.context.transaction.TransactionConfiguration;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.trunkshell.voj.web.mapper.UserMapper;
 import com.trunkshell.voj.web.model.Language;
 import com.trunkshell.voj.web.model.User;
 import com.trunkshell.voj.web.model.UserGroup;
