@@ -150,7 +150,7 @@ public class UserService {
         SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         Calendar calendar = Calendar.getInstance();
         String registerTime = formatter.format(calendar.getTime());
-        UserMeta registerTimeMeta = new UserMeta(user, "RegisterTime", registerTime);
+        UserMeta registerTimeMeta = new UserMeta(user, "registerTime", registerTime);
         userMetaMapper.createUserMeta(registerTimeMeta);
     }
     

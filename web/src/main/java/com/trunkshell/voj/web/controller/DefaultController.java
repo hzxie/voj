@@ -90,15 +90,15 @@ public class DefaultController {
      */
     @RequestMapping(value = "/getJudgers.action", method = RequestMethod.GET)
     public @ResponseBody Map<String, Object> getJudgersAction(
-    		@RequestParam(value = "startIndex", required = false, defaultValue = "0") long offset,
+            @RequestParam(value = "startIndex", required = false, defaultValue = "0") long offset,
             HttpServletRequest request) {
-    	Map<String, Object> result = new HashMap<String, Object>();
-    	UserGroup userGroup = userService.getUserGroupUsingSlug("judgers");
-    	List<User> judgers = userService.getUserUsingUserGroup(userGroup, offset, JUDGERS_PER_REQUEST);
-    	
-    	result.put("isSuccessful", judgers != null && !judgers.isEmpty());
-    	result.put("judgers", judgers);
-    	return result;
+        Map<String, Object> result = new HashMap<String, Object>();
+        UserGroup userGroup = userService.getUserGroupUsingSlug("judgers");
+        List<User> judgers = userService.getUserUsingUserGroup(userGroup, offset, JUDGERS_PER_REQUEST);
+        
+        result.put("isSuccessful", judgers != null && !judgers.isEmpty());
+        result.put("judgers", judgers);
+        return result;
     }
     
     /**

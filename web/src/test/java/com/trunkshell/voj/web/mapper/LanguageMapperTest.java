@@ -1,5 +1,7 @@
 package com.trunkshell.voj.web.mapper;
 
+import java.util.List;
+
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -30,8 +32,6 @@ public class LanguageMapperTest {
     public void testGetLanguageUsingIdExists() {
         Language language = languageMapper.getLanguageUsingId(1);
         Assert.assertNotNull(language);
-        
-        System.out.println(language);
         
         String languageName = language.getLanguageName();
         Assert.assertEquals("C", languageName);
@@ -71,6 +71,24 @@ public class LanguageMapperTest {
     public void testGetLanguageUsingSlugNotExists() {
         Language language = languageMapper.getLanguageUsingSlug("Not-Exists");
         Assert.assertNull(language);
+    }
+    
+    /**
+     * 测试用例: 测试getAllLanguages()方法
+     * 测试数据: N/a
+     * 预期结果: 返回全部的编程语言列表(共6种语言)
+     */
+    @Test
+    public void testGetAllLanguages() {
+        List<Language> languages = languageMapper.getAllLanguages();
+        Assert.assertNotNull(languages);
+        Assert.assertEquals(6, languages.size());
+        
+        Language firstLanguage = languages.get(0);
+        Assert.assertNotNull(firstLanguage);
+        
+        String languageName = firstLanguage.getLanguageName();
+        Assert.assertEquals("C", languageName);
     }
     
     /**

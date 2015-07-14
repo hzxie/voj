@@ -1,11 +1,7 @@
 package com.trunkshell.voj.web.mapper;
 
 import org.apache.ibatis.annotations.CacheNamespace;
-import org.apache.ibatis.annotations.Options;
 import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Result;
-import org.apache.ibatis.annotations.Results;
-import org.apache.ibatis.annotations.Select;
 
 import com.trunkshell.voj.web.model.UserGroup;
 
@@ -21,13 +17,6 @@ public interface UserGroupMapper {
      * @param userGroupId - 用户组的唯一标识符
      * @return 预期的用户组对象或空引用
      */
-    @Select("SELECT * FROM voj_user_groups WHERE user_group_id = #{userGroupId}")
-    @Options(useCache = true)
-    @Results({
-         @Result(property = "userGroupId", column = "user_group_id"),
-         @Result(property = "userGroupSlug", column = "user_group_slug"),
-         @Result(property = "userGroupName", column = "user_group_name")
-    })
     public UserGroup getUserGroupUsingId(@Param("userGroupId") int userGroupId);
     
     /**
@@ -35,12 +24,5 @@ public interface UserGroupMapper {
      * @param userGroupSlug - 用户组的唯一英文缩写
      * @return 预期的用户组对象或空引用
      */
-    @Select("SELECT * FROM voj_user_groups WHERE user_group_slug = #{userGroupSlug}")
-    @Options(useCache = true)
-    @Results({
-         @Result(property = "userGroupId", column = "user_group_id"),
-         @Result(property = "userGroupSlug", column = "user_group_slug"),
-         @Result(property = "userGroupName", column = "user_group_name")
-    })
     public UserGroup getUserGroupUsingSlug(@Param("userGroupSlug") String userGroupSlug);
 }
