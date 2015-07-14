@@ -190,18 +190,21 @@ public class ProblemsController {
     
     /**
      * 自动注入的ProblemService对象.
+     * 用于完成试题的逻辑操作.
      */
     @Autowired
     private ProblemService problemService;
     
     /**
      * 自动注入的SubmissionService对象.
+     * 用于处理试题详情页的提交请求.
      */
     @Autowired
     private SubmissionService submissionService;
     
     /**
      * 自动注入的LanguageService对象.
+     * 用于加载试题详情页的语言选项.
      */
     @Autowired
     private LanguageService languageService;
