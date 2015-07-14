@@ -172,7 +172,10 @@
         $.getScript('${cdnUrl}/js/codemirror.min.js', function() {
            $.when(
                 $.getScript('${cdnUrl}/mode/clike.min.js'),
+                $.getScript('${cdnUrl}/mode/go.min.js'),
                 $.getScript('${cdnUrl}/mode/pascal.min.js'),
+                $.getScript('${cdnUrl}/mode/perl.min.js'),
+                $.getScript('${cdnUrl}/mode/php.min.js'),
                 $.getScript('${cdnUrl}/mode/python.min.js'),
                 $.getScript('${cdnUrl}/mode/ruby.min.js'),
                 $.Deferred(function(deferred) {
