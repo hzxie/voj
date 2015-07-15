@@ -128,6 +128,21 @@ public class ApplicationEventListener {
     }
     
     /**
+     * 获取评测机的描述信息.
+     * @param judgerUsername - 评测机的用户名
+     * @return 评测机的描述信息
+     */
+    public String getJudgerDescription(String judgerUsername) {
+        String judgerDescription = "[Offline]";
+        
+        if ( onlineJudgers.containsKey(judgerUsername) ) {
+            String description = (String) onlineJudgers.get(judgerUsername).get("description");
+            judgerDescription = "[Online]" + description;
+        }
+        return judgerDescription;
+    }
+    
+    /**
      * SseEmitter对象的列表.
      * Map中的Key表示提交记录的唯一标识符.
      * Map中的Value表示对应的SseEmitter对象, 用于推送实时评测信息.
