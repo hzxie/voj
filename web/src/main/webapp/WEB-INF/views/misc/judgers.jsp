@@ -21,12 +21,14 @@
     <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/style.css" />
     <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/misc/about.css" />
     <style type="text/css">
+        table th.key,
         table td.key {
-            width: 25%;
+            width: 20%;
         }
 
+        table th.value,
         table td.value {
-            width: 75%;
+            width: 80%;
         }
 
         span.online {
@@ -64,15 +66,15 @@
                             <table class="table table-striped">
                                 <thead>
                                     <tr>
-                                        <th><spring:message code="voj.misc.judgers.language" text="Language" /></th>
-                                        <th><spring:message code="voj.misc.judgers.compile-command" text="Compile Command" /></th>
+                                        <th class="key"><spring:message code="voj.misc.judgers.language" text="Language" /></th>
+                                        <th class="value"><spring:message code="voj.misc.judgers.compile-command" text="Compile Command" /></th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                 <c:forEach var="language" items="${languages}">
                                     <tr>
-                                        <td class="key">${language.languageName}</td>
-                                        <td class="value">${language.compileCommand}</td>
+                                        <td>${language.languageName}</td>
+                                        <td>${language.compileCommand}</td>
                                     </tr>
                                 </c:forEach>
                                 </tbody>
@@ -81,23 +83,14 @@
                         <div class="section">
                             <h3 id="judgers"><spring:message code="voj.misc.judgers.judgers" text="Judgers" /></h3>
                             <p id="no-judgers"><spring:message code="voj.misc.judgers.no-judgers" text="No Judgers." /></p>
-                            <table id="judgers-list" class="table table-striped">
+                            <table id="judgers-list" class="table table-striped hide">
                                 <thead>
                                     <tr>
                                         <th class="key"><spring:message code="voj.misc.judgers.judger-name" text="Name" /></th>
                                         <th class="value"><spring:message code="voj.misc.judgers.judger-description" text="Description" /></th>
                                     </tr>
                                 </thead>
-                                <tbody>
-                                    <tr>
-                                        <td>Demo Judger #1</td>
-                                        <td><span class="online">[Online]</span> Intel Xeon E5-2630 2.30GHz / 256 GB RAM</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Demo Judger #2</td>
-                                        <td><span class="offline">[Offline]</span> Intel Xeon E3-1230 3.30GHz / 32 GB RAM</td>
-                                    </tr>
-                                </tbody>
+                                <tbody></tbody>
                             </table>
                         </div> <!-- .section -->
                     </div> <!-- #main-content -->
@@ -120,17 +113,44 @@
     <!-- Placed at the end of the document so the pages load faster -->
     <script type="text/javascript" src="${cdnUrl}/js/site.js"></script>
     <script type="text/javascript">
-        $.getScript('${cdnUrl}/js/markdown.min.js', function() {
-            converter = Markdown.getSanitizingConverter();
+        $(function() {
+            $.ajax({
+                type: 'GET',
+                url: '<c:url value="/getJudgers.action" />',
+                dataType: 'JSON',
+                success: function(result){
+                    if ( result['isSuccessful'] ) {
+                        processResult(result['judgers']);
 
-            $('.markdown').each(function() {
-                var plainContent    = $(this).text(),
-                    markdownContent = converter.makeHtml(plainContent.replace(/\\\n/g, '\\n'));
-                
-                $(this).html(markdownContent);
+                        $('#no-judgers').addClass('hide');
+                        $('#judgers-list').removeClass('hide');
+                    }
+                }
             });
         });
     </script>
+    <script type="text/javascript">
+        function processResult(judgers) {
+            for ( var i = 0; i < judgers.length; ++ i ) {
+                $('#judgers-list').append(
+                    getJudgerContent(judgers[i]['username'], judgers[i]['description'])
+                );
+            }
+        }
+    </script>
+    <script type="text/javascript">
+        function getJudgerContent(username, description) {
+            var judgerInfoTemplate = '<tr>' + 
+                                     '    <td>%s</td>' +
+                                     '    <td>%s</td>' +
+                                     '</tr>';
+
+            description = description.replace('[Online]', '<span class="online">[Online]</span>');
+            description = description.replace('[Offline]', '<span class="offline">[Offline]</span>');
+            return judgerInfoTemplate.format(username, description);
+        }
+    </script>
+    <script type="text/javascript"></script>
     <c:if test="${GoogleAnalyticsCode != ''}">
     <script type="text/javascript">${googleAnalyticsCode}</script>
     </c:if>

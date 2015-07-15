@@ -105,10 +105,8 @@
             <div class="tab-pane" id="tab-messages">
                 <div class="row-fluid">
                     <div class="span8">
-                        123
                     </div> <!-- .span8 -->
                     <div class="span4">
-                        456                        
                     </div> <!-- .span4 -->
                 </div> <!-- .row-fluid -->
             </div> <!-- #tab-messages -->

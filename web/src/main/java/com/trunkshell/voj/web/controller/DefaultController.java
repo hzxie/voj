@@ -1,5 +1,6 @@
 package com.trunkshell.voj.web.controller;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.ModelAndView;
 
+import com.trunkshell.voj.web.messenger.ApplicationEventListener;
 import com.trunkshell.voj.web.model.User;
 import com.trunkshell.voj.web.model.UserGroup;
 import com.trunkshell.voj.web.service.LanguageService;
@@ -86,19 +88,40 @@ public class DefaultController {
      * 获取评测机列表.
      * @param offset - 当前加载评测机的UID
      * @param request - HttpRequest对象
-     * @return 一个包含评测机列表信息的Map<String, Object>对象
+     * @return 一个包含评测机列表信息的List<Map<String, String>>对象
      */
     @RequestMapping(value = "/getJudgers.action", method = RequestMethod.GET)
     public @ResponseBody Map<String, Object> getJudgersAction(
             @RequestParam(value = "startIndex", required = false, defaultValue = "0") long offset,
             HttpServletRequest request) {
         Map<String, Object> result = new HashMap<String, Object>();
-        UserGroup userGroup = userService.getUserGroupUsingSlug("judgers");
-        List<User> judgers = userService.getUserUsingUserGroup(userGroup, offset, JUDGERS_PER_REQUEST);
+        List<Map<String, String>> judgers = getJudgers(offset);
         
         result.put("isSuccessful", judgers != null && !judgers.isEmpty());
         result.put("judgers", judgers);
         return result;
+    }
+    
+    /**
+     * 获取评测机的详细信息.
+     * @param offset - 当前加载评测机的UID
+     * @return 包含评测机的详细信息的List<Map<String, String>>对象
+     */
+    private List<Map<String, String>> getJudgers(long offset) {
+        UserGroup userGroup = userService.getUserGroupUsingSlug("judgers");
+        List<User> judgersList = userService.getUserUsingUserGroup(userGroup, offset, JUDGERS_PER_REQUEST);
+        List<Map<String, String>> judgers = new ArrayList<Map<String, String>>();
+        
+        for ( User judger : judgersList ) {
+            Map<String, String> judgerInformation = new HashMap<String, String>(3, 1);
+            String username = judger.getUsername();
+            String description = keepAliveEventListener.getJudgerDescription(username);
+            
+            judgerInformation.put("username", username);
+            judgerInformation.put("description", description);
+            judgers.add(judgerInformation);
+        }
+        return judgers;
     }
     
     /**
@@ -204,4 +227,11 @@ public class DefaultController {
      */
     @Autowired
     private LanguageService languageService;
+    
+    /**
+     * 自动注入的ApplicationEventListener对象.
+     * 用于获取评测机的在线状态.
+     */
+    @Autowired
+    private ApplicationEventListener keepAliveEventListener;
 }

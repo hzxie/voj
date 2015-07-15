@@ -290,7 +290,7 @@ public class AccountsController {
             @PathVariable("userId") long userId,
             HttpServletRequest request, HttpServletResponse response) {
         User user = userService.getUserUsingUid(userId);
-        if ( user == null ) {
+        if ( user == null || "judgers".equals(user.getUserGroup().getUserGroupSlug()) ) {
             throw new ResourceNotFoundException();
         }
         
