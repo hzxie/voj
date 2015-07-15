@@ -25,7 +25,7 @@ public interface UserMapper {
      * @return 预期的用户对象或空引用
      */
     @Select("SELECT * FROM voj_users WHERE username = #{username}")
-    @Options(useCache = true)
+    @Options(useCache = false)
     @Results(value = {
         @Result(property = "userGroup", column = "user_group_id", javaType = UserGroup.class, one = @One(select="com.trunkshell.voj.judger.mapper.UserGroupMapper.getUserGroupUsingId")),
         @Result(property = "preferLanguage", column = "prefer_language_id", javaType = Language.class, one = @One(select="com.trunkshell.voj.judger.mapper.LanguageMapper.getLanguageUsingId"))

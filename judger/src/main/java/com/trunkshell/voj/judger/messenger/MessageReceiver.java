@@ -30,13 +30,11 @@ public class MessageReceiver implements MessageListener {
                 
                 if ( "SubmissionCreated".equals(event) ) {
                     newSubmissionHandler(mapMessage);
-                } else if ( "WhoAreYou".equals(event) ) {
-                    getIdentityHandler();
                 } else {
                     LOGGER.warn(String.format("Unknown Event Received. [Event = %s]", 
                             new Object[] { event }));
                 }
-            } catch (JMSException ex) {
+            } catch (Exception ex) {
                 LOGGER.catching(ex);
             }
         }
@@ -53,13 +51,6 @@ public class MessageReceiver implements MessageListener {
                         new Object[] {submissionId}));
         
         dispatcher.onSubmissionCreated(submissionId);
-    }
-    
-    /**
-     * 获取评测机的身份信息.
-     */
-    private void getIdentityHandler() {
-        
     }
     
     /**

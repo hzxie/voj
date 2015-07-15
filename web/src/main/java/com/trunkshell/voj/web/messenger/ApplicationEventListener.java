@@ -1,10 +1,16 @@
 package com.trunkshell.voj.web.messenger;
 
 import java.io.IOException;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Hashtable;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -20,6 +26,38 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
  */
 @Component
 public class ApplicationEventListener {
+    /**
+     * ApplicationEventListener的构造函数.
+     */
+    public ApplicationEventListener() {
+        synchronized (this) {
+            if ( scheduler == null ) {
+                final int INITIAL_DELAY = 0;
+                final int PERIOD = 30;
+                
+                scheduler = Executors.newScheduledThreadPool(1);
+                scheduler.scheduleAtFixedRate(new Runnable() {
+                    @Override
+                    public void run() {
+                        Calendar calendar = Calendar.getInstance();
+                        calendar.add(Calendar.MINUTE, -PERIOD);
+                        Date heartbeatTimeDeadline = calendar.getTime();
+                        
+                        for ( Iterator<Entry<String, Map<String, Object>>> 
+                                itr = onlineJudgers.entrySet().iterator(); itr.hasNext(); ) {
+                            Entry<String, Map<String, Object>> entry = itr.next();
+                            Date lastHeartbeatTime = (Date) entry.getValue().get("heartbeatTime");
+                            
+                            if ( !lastHeartbeatTime.after(heartbeatTimeDeadline) ) {
+                                itr.remove();
+                            }
+                        }
+                    }
+                }, INITIAL_DELAY, PERIOD, TimeUnit.MINUTES);
+            }
+        }
+    }
+    
     /**
      * 提交事件的处理器.
      * @param event - 提交记录事件
@@ -73,11 +111,41 @@ public class ApplicationEventListener {
     }
     
     /**
+     * 处理评测机心跳事件.
+     * @param event - 评测机心跳事件
+     */
+    @EventListener
+    public void keepAliveEventHandler(KeepAliveEvent event) {
+        String judgerUsername = event.getJudgerUsername(); 
+        String judgerDescription = event.getJudgerDescription();
+        Date heartbeatTime = event.getHeartbeatTime();
+        
+        Map<String, Object> judgerInformation = new HashMap<String, Object>();
+        judgerInformation.put("description", judgerDescription);
+        judgerInformation.put("heartbeatTime", heartbeatTime);
+        
+        onlineJudgers.put(judgerUsername, judgerInformation);
+    }
+    
+    /**
      * SseEmitter对象的列表.
      * Map中的Key表示提交记录的唯一标识符.
      * Map中的Value表示对应的SseEmitter对象, 用于推送实时评测信息.
      */
     private static Map<Long, SseEmitter> sseEmitters = new Hashtable<Long, SseEmitter>();
+    
+    /**
+     * 在线评测机的列表.
+     * Map中的Key表示评测机的用户名.
+     * Map中的Value表示对应评测机的信息.
+     */
+    private static Map<String, Map<String, Object>> onlineJudgers = new Hashtable<String, Map<String, Object>>();
+    
+    /**
+     * ScheduledExecutorService对象.
+     * 用于定期移除离线的评测机.
+     */
+    private static ScheduledExecutorService scheduler = null;
     
     /**
      * 日志记录器.
