@@ -10,7 +10,7 @@ import org.springframework.context.ApplicationEvent;
 public class SubmissionEvent extends ApplicationEvent {
     /**
      * SubmissionEvent的构造函数.
-     * @param source - 消息订阅源
+     * @param source - 消息发布源
      * @param submissionId - 提交记录的唯一标识符
      * @param judgeResult - 当前评测结果
      * @param message - 评测消息

@@ -1,5 +1,8 @@
 package com.trunkshell.voj.web.messenger;
 
+import java.util.Calendar;
+import java.util.Date;
+
 import javax.jms.JMSException;
 import javax.jms.MapMessage;
 import javax.jms.Message;
@@ -37,7 +40,7 @@ public class MessageReceiver implements MessageListener {
                     testPointFinishedHandler(mapMessage);
                 } else if ( "AllTestPointsFinished".equals(event) ) {
                     allTestPointsFinishedHandler(mapMessage);
-                } else if ( "WhoAmI".equals(event) ) {
+                } else if ( "KeepAlive".equals(event) ) {
                     receiveFromAliveJudgersHandler(mapMessage);
                 } else {
                     LOGGER.warn(String.format("Unknown Event Received. [Event = %s]", 
@@ -126,8 +129,19 @@ public class MessageReceiver implements MessageListener {
      * 处理来自评测机的Keep-Alive消息.
      * 用于在Web端获取后端评测机的信息.
      * @param mapMessage - 消息队列中收到的MapMessage对象
+     * @throws JMSException 
      */
-    private void receiveFromAliveJudgersHandler(MapMessage mapMessage) {
+    private void receiveFromAliveJudgersHandler(MapMessage mapMessage) throws JMSException {
+        String judgerUsername = mapMessage.getString("username");
+        String judgerDescription = mapMessage.getString("description");
+        long heartbeatTimeInMillis = mapMessage.getLong("heartbeatTime");
+        
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTimeInMillis(heartbeatTimeInMillis);
+        Date heartbeatTime = calendar.getTime();
+                
+        eventPublisher.publishEvent(new KeepAliveEvent(this, judgerUsername, judgerDescription, heartbeatTime));
+        LOGGER.info(String.format("Received heartbeat from Judger[%s]", judgerUsername));
     }
     
     /**

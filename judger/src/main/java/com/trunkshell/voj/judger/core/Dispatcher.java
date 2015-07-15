@@ -20,7 +20,7 @@ import com.trunkshell.voj.judger.exception.IllgealSubmissionException;
 import com.trunkshell.voj.judger.mapper.CheckpointMapper;
 import com.trunkshell.voj.judger.mapper.SubmissionMapper;
 import com.trunkshell.voj.judger.model.Submission;
-import com.trunkshell.voj.judger.util.RandomStringGenerator;
+import com.trunkshell.voj.judger.util.DigestUtils;
 
 /**
  * 评测机调度器.
@@ -41,7 +41,7 @@ public class Dispatcher {
     public void createNewTask(long submissionId) throws IllgealSubmissionException, InterruptedException {
         synchronized(this) {
             String baseDirectory = String.format("%s/voj-%s", new Object[] {workBaseDirectory, submissionId});
-            String baseFileName = RandomStringGenerator.getRandomString(12, RandomStringGenerator.Mode.ALPHA);
+            String baseFileName = DigestUtils.getRandomString(12, DigestUtils.Mode.ALPHA);
             
             // 解决由于未知原因无法获取到数据记录的问题
             int tryTimes = 0;
@@ -56,7 +56,6 @@ public class Dispatcher {
                         String.format("Illegal submission #%s",
                                 new Object[] { submissionId }));
             }
-
             preprocess(submission, baseDirectory, baseFileName);
             if ( compile(submission, baseDirectory, baseFileName) ) {
                 runProgram(submission, baseDirectory, baseFileName);

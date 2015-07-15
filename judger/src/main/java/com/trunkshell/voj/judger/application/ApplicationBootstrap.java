@@ -1,6 +1,9 @@
 package com.trunkshell.voj.judger.application;
 
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
@@ -24,8 +27,10 @@ public class ApplicationBootstrap {
         LOGGER.info("Starting Verwandlung Online Judge Judger...");
         ApplicationBootstrap app = new ApplicationBootstrap();
         app.getApplicationContext();
+        app.setupHeartBeat();
         app.getSystemEnvironment();
-        LOGGER.info("Verwandlung Online Judge Judger Started.");
+        app.setUpShutdownHook();
+        LOGGER.info("Verwandlung Online Judge Judger started.");
     }
 
     /**
@@ -34,15 +39,38 @@ public class ApplicationBootstrap {
     private void getApplicationContext() {
         applicationContext = new 
                 ClassPathXmlApplicationContext("application-context.xml");
-        
-        languageMapper = applicationContext.getBean(LanguageMapper.class);
     }
     
     /**
-     * 获取当前系统用户的权限.
-     * 使所有操作在安全的权限下运行.
+     * 配置与Web模块的心跳连接.
+     * 定时向Web模块发送Keep-Alive信号.
      */
-    private void getUserPrevileges() { }
+    private void setupHeartBeat() {
+        final int INITIAL_DELAY = 0;
+        final int PERIOD = 25;
+        
+        ApplicationHeartbeat heartbeat = applicationContext.getBean(ApplicationHeartbeat.class);
+        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+        scheduler.scheduleAtFixedRate(heartbeat, INITIAL_DELAY, PERIOD, TimeUnit.MINUTES);
+    }
+    
+    /**
+     * 设置ShutdownHook.
+     * 用于完成程序正常退出前的准备工作.
+     */
+    private void setUpShutdownHook() {
+        final Thread mainThread = Thread.currentThread();
+        Runtime.getRuntime().addShutdownHook(new Thread() {
+            public void run() {
+                try {
+                    LOGGER.info("Verwandlung Online Judge Judger is shutting down...");
+                    mainThread.join();
+                } catch (InterruptedException ex) {
+                    LOGGER.catching(ex);
+                }
+            }
+        });
+    }
     
     /**
      * 获取系统环境变量.
@@ -56,6 +84,7 @@ public class ApplicationBootstrap {
         LOGGER.info("\tJava Runtime Version: " + System.getProperty("java.runtime.version"));
         
         LOGGER.info("Compiler Information: " );
+        LanguageMapper languageMapper = applicationContext.getBean(LanguageMapper.class);
         List<Language> languages = languageMapper.getAllLanguages();
         for ( Language language : languages ) {
             String languageName = language.getLanguageName();
@@ -114,12 +143,6 @@ public class ApplicationBootstrap {
         return " --version";
     }
     
-    /**
-     * 自动注入的LanguageMapper对象.
-     * 用于检查编译器的版本信息.
-     */
-    private LanguageMapper languageMapper;
-
     /**
      * 应用程序配置.
      */
