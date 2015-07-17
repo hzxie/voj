@@ -219,7 +219,9 @@
         });
     </script>
     <script type="text/javascript">
-        $('#close-submission').click(function() {
+        $('#close-submission').click(function(e) {
+        	e.preventDefault();
+            
             $('#code-editor').removeClass('fade');
             $('#mask').addClass('hide');
         });
