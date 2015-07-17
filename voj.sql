@@ -176,7 +176,7 @@ INSERT INTO `voj_languages` (`language_id`, `language_slug`, `language_name`, `l
 (1, 'text/x-csrc', 'C', 'gcc -O2 -s -Wall -o {filename}.exe {filename}.c -lm', '{filename}.exe'),
 (2, 'text/x-c++src', 'C++', 'g++ -O2 -s -Wall -std=c++11 -o {filename}.exe {filename}.cpp -lm', '{filename}.exe'),
 (3, 'text/x-java', 'Java', 'javac {filename}.java', 'java -cp {filename}'),
-(4, 'text/x-pascal', 'Pascal', 'fpc -O2 -Xs -Sgic -vw -o {filename}.exe {filename}.pas', '{filename}.exe'),
+(4, 'text/x-pascal', 'Pascal', 'fpc -O2 -Xs -Sgic -vw -o{filename}.exe {filename}.pas', '{filename}.exe'),
 (5, 'text/x-python', 'Python 2', 'python -m py_compile {filename}.py', 'python {filename}.py'),
 (6, 'text/x-ruby', 'Ruby', 'rbx compile {filename}.rb', 'ruby {filename}.rb ');
 
