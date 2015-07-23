@@ -71,7 +71,8 @@ public class InterceptorAspect {
      * 系统管理控制器的切面.
      * 用于检查用户是否有权限执行对应操作.
      * @param proceedingJoinPoint - ProceedingJoinPoint对象
-     * @param request - HttpRequest对象
+     * @param request - HttpServletRequest对象
+     * @param request - HttpServletResponse对象
      * @return 一个包含预期试图的ModelAndView对象
      * @throws Throwable 
      */
@@ -87,6 +88,28 @@ public class InterceptorAspect {
         }
         view = (ModelAndView) proceedingJoinPoint.proceed();
         return view;
+    }
+    
+    /**
+     * 系统管理控制器的切面.
+     * 用于检查用户是否有权限执行对应操作.
+     * @param proceedingJoinPoint - ProceedingJoinPoint对象
+     * @param request - HttpRequest对象
+     * @return 一个包含预期结果的Map<String, Object>对象
+     * @throws Throwable
+     */
+    @SuppressWarnings("unchecked")
+    @Around(value = "execution(* com.trunkshell.voj.web.controller.AdministrationController.*Action(..)) && args(.., request)")
+    public Map<String, Object> AdministrationActionInterceptor(ProceedingJoinPoint proceedingJoinPoint, 
+            HttpServletRequest request) throws Throwable {
+        Map<String, Object> result = null;
+        HttpSession session = request.getSession();
+        
+        if ( !isAllowToAccess(session, new String[] { "administrators" }) ) {
+            return null;
+        }
+        result = (Map<String, Object>) proceedingJoinPoint.proceed();
+        return result;
     }
     
     /**
