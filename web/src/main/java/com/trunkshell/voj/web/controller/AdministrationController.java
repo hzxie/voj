@@ -2,18 +2,23 @@ package com.trunkshell.voj.web.controller;
 
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.ModelAndView;
 
-import com.trunkshell.voj.web.model.User;
+import com.trunkshell.voj.web.messenger.ApplicationEventListener;
+import com.trunkshell.voj.web.model.Option;
 import com.trunkshell.voj.web.model.UserGroup;
 import com.trunkshell.voj.web.service.OptionService;
 import com.trunkshell.voj.web.service.ProblemService;
@@ -135,8 +140,8 @@ public class AdministrationController {
      * 通过获取监听消息队列的Consumer数量.
      * @return 在线的评测机数量
      */
-    private int getOnlineJudgers() {
-        return 0;
+    private long getOnlineJudgers() {
+        return eventListener.getOnlineJudgers();
     }
     
     /**
@@ -150,6 +155,61 @@ public class AdministrationController {
             HttpServletRequest request, HttpServletResponse response) {
         ModelAndView view = new ModelAndView("administration/all-users");
         return view;
+    }
+    
+    /**
+     * 加载常规选项页面.
+     * @param request - HttpRequest对象
+     * @param response - HttpResponse对象
+     * @return 包含常规选项页面信息的ModelAndView对象
+     */
+    @RequestMapping(value = "/general-settings", method = RequestMethod.GET)
+    public ModelAndView generalSettingsView(
+            HttpServletRequest request, HttpServletResponse response) {
+        ModelAndView view = new ModelAndView("administration/general-settings");
+        view.addObject("options", getOptions());
+        return view;
+    }
+    
+    /**
+     * 获取系统全部的选项, 以键值对的形式返回.
+     * @return 键值对形式的系统选项
+     */
+    private Map<String, String> getOptions() {
+        Map<String, String> optionMap = new HashMap<String, String>();
+        List<Option> options = optionService.getOptions();
+        
+        for ( Option option : options ) {
+            optionMap.put(option.getOptionName(), option.getOptionValue());
+        }
+        return optionMap;
+    }
+    
+    /**
+     * 更新网站常规选项.
+     * @param websiteName - 网站名称
+     * @param websiteDescription - 网站描述
+     * @param copyright - 网站版权信息
+     * @param allowUserRegister - 是否允许用户注册
+     * @param icpNumber - 网站备案号
+     * @param googleAnalyticsCode - Google Analytics代码
+     * @param sensitiveWords - 敏感词列表
+     * @param request - HttpRequest对象
+     * @return 网站常规选项的更新结果
+     */
+    @RequestMapping(value = "/updateGeneralSettings.action", method = RequestMethod.POST)
+    public @ResponseBody Map<String, Boolean> updateGeneralSettingsAction(
+            @RequestParam(value = "websiteName", required = true) String websiteName,
+            @RequestParam(value = "websiteDescription", required = true) String websiteDescription,
+            @RequestParam(value = "copyright", required = true) String copyright,
+            @RequestParam(value = "allowUserRegister", required = true) boolean allowUserRegister,
+            @RequestParam(value = "icpNumber", required = true) String icpNumber,
+            @RequestParam(value = "googleAnalyticsCode", required = true) String googleAnalyticsCode,
+            @RequestParam(value = "sensitiveWords", required = true) String sensitiveWords,
+            HttpServletRequest request) {
+        Map<String, Boolean> result = optionService.updateOptions(websiteName, websiteDescription, 
+                copyright, allowUserRegister, icpNumber, googleAnalyticsCode, sensitiveWords);
+        return result;
     }
     
     /**
@@ -172,9 +232,17 @@ public class AdministrationController {
 
     /**
      * 自动注入的OptionService对象.
+     * 用于获取系统中的设置选项.
      */
     @Autowired
     private OptionService optionService;
+    
+    /**
+     * 自动注入的ApplicationEventListener对象.
+     * 用于获取在线评测机的数量.
+     */
+    @Autowired
+    private ApplicationEventListener eventListener;
     
     /**
      * 产品版本信息.

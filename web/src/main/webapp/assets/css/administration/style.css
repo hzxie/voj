@@ -134,9 +134,9 @@ div#wrapper div#container div#header a#sidebar-toggle {
 
 div#wrapper div#container div#header ul.nav {
 	height: 20px;
-	margin: 10px;
 	position: absolute;
-	right: 0;
+	top: 10px;
+	right: 10px;
 }
 
 div#wrapper div#container div#header ul.nav li {

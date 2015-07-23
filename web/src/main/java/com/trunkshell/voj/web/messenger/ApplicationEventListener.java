@@ -137,9 +137,17 @@ public class ApplicationEventListener {
         
         if ( onlineJudgers.containsKey(judgerUsername) ) {
             String description = (String) onlineJudgers.get(judgerUsername).get("description");
-            judgerDescription = "[Online]" + description;
+            judgerDescription = "[Online] " + description;
         }
         return judgerDescription;
+    }
+    
+    /**
+     * 获取在线评测机的数量.
+     * @return 在线评测机的数量
+     */
+    public long getOnlineJudgers() {
+        return onlineJudgers.size();
     }
     
     /**

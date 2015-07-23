@@ -31,7 +31,6 @@ public class ApplicationHeartbeat implements Runnable {
             LOGGER.error("Unauthorized: Please check your username and password.");
             System.exit(-1);
         }
-        
         Calendar calendar = Calendar.getInstance();
         long currentTime = calendar.getTimeInMillis();
         
@@ -41,6 +40,7 @@ public class ApplicationHeartbeat implements Runnable {
         mapMessage.put("description", getDescription());
         mapMessage.put("heartbeatTime", currentTime);
         messageSender.sendMessage(mapMessage);
+        LOGGER.info("Heartbeat sent to the web server.");
     }
     
     /**
