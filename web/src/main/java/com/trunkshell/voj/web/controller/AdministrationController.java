@@ -213,6 +213,19 @@ public class AdministrationController {
     }
     
     /**
+     * 加载编程语言设置页面.
+     * @param request - HttpServletRequest对象
+     * @param response - HttpServletResponse对象
+     * @return 包含编程语言设置信息的ModelAndView对象
+     */
+    @RequestMapping(value = "/language-settings", method = RequestMethod.GET)
+    public ModelAndView languageSettingsView(
+            HttpServletRequest request, HttpServletResponse response) {
+        ModelAndView view = new ModelAndView("administration/language-settings");
+        return view;
+    }
+    
+    /**
      * 自动注入的UserService对象.
      */
     @Autowired

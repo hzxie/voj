@@ -64,6 +64,7 @@
                         <a href="javascript:void(0);"><i class="fa fa-cogs"></i> <spring:message code="voj.administration.include.sidebar.settings" text="Settings" /> <i class="fa fa-caret-right"></i></a>
                         <ul class="sub-nav nav">
                             <li class="nav-item secondary-nav-item"><a href="<c:url value="/administration/general-settings" />"><spring:message code="voj.administration.include.sidebar.general-settings" text="General" /></a></li>
+                            <li class="nav-item secondary-nav-item"><a href="<c:url value="/administration/language-settings" />"><spring:message code="voj.administration.include.sidebar.language-settings" text="Languages" /></a></li>
                         </ul>
                     </li>
                 </ul>

@@ -46,8 +46,8 @@
             <div id="content">
                 <h2 class="page-header"><i class="fa fa-cog"></i> <spring:message code="voj.administration.general-settings.general-settings" text="General Settings" /></h2>
                 <form id="option-form" onSubmit="onSubmit(); return false;">
-                	<div class="alert alert-error hide"></div> <!-- .alert-error -->
-                	<div class="alert alert-success hide"></div> <!-- .alert-success -->
+                    <div class="alert alert-error hide"></div> <!-- .alert-error -->
+                    <div class="alert alert-success hide"><spring:message code="voj.administration.general-settings.settings-saved" text="Settings saved." /></div> <!-- .alert-success -->
                     <div class="control-group row-fluid">
                         <label for="website-name"><spring:message code="voj.administration.general-settings.website-name" text="Website Name" /></label>
                         <input id="website-name" class="span12" type="text" value="${options['websiteName']}" />
@@ -95,19 +95,24 @@
     <%@ include file="/WEB-INF/views/administration/include/footer-script.jsp" %>
     <script type="text/javascript">
         $(function() {
-        	var sensitiveWordsList 	= JSON.parse('${options['sensitiveWords']}'),
-        		sensitiveWordsValue	= '';
-        	for ( var i = 0; i < sensitiveWordsList.length; ++ i ) {
-        		sensitiveWordsValue += sensitiveWordsList[i] + ',';
-        	}
-        	
-        	$('#sensitive-words').val(sensitiveWordsValue);
+            var sensitiveWordsList  = JSON.parse('${options['sensitiveWords']}'),
+                sensitiveWordsValue = '';
+            for ( var i = 0; i < sensitiveWordsList.length; ++ i ) {
+                sensitiveWordsValue += sensitiveWordsList[i] + ',';
+            }
+            
+            $('#sensitive-words').val(sensitiveWordsValue);
             $('.tagsinput').tagsInput();
             $("[data-toggle='switch']").wrap('<div class="switch" />').parent().bootstrapSwitch();
         });
     </script>
     <script type="text/javascript">
         function onSubmit() {
+            $('.alert-success').addClass('hide');
+            $('.alert-error').addClass('hide');
+            $('button[type=submit]').attr('disabled', 'disabled');
+            $('button[type=submit]').html('<spring:message code="voj.administration.general-settings.please-wait" text="Please wait..." />');
+
             var websiteName         = $('#website-name').val(),
                 websiteDescription  = $('#website-description').val(),
                 copyright           = $('#copyright').val(),
@@ -144,11 +149,39 @@
     </script>
     <script type="text/javascript">
         function processResult(result) {
-        	if ( result['isSuccessful'] ) {
-        		
-        	} else {
-        		
-        	}
+            if ( result['isSuccessful'] ) {
+                $('.alert-success').removeClass('hide');
+            } else {
+                var errorMessage  = '';
+
+                if ( result['isWebsiteNameEmpty'] ) {
+                    errorMessage += '<spring:message code="voj.administration.general-settings.website-name-empty" text="You can&apos;t leave Website Name empty." /><br>';
+                } else if ( !result['isWebisteNameLegal'] ) {
+                    errorMessage += '<spring:message code="voj.administration.general-settings.website-name-illegal" text="The length of Website Name CANNOT exceed 32 characters." /><br>';
+                }
+                if ( result['isDescriptionEmpty'] ) {
+                    errorMessage += '<spring:message code="voj.administration.general-settings.website-description-empty" text="You can&apos;t leave Website Description empty." /><br>';
+                } else if ( !result['isDescriptionLegal'] ) {
+                    errorMessage += '<spring:message code="voj.administration.general-settings.website-description-illegal" text="The length of Website Description CANNOT exceed 128 characters." /><br>';
+                }
+                if ( result['isCopyrightEmpty'] ) {
+                    errorMessage += '<spring:message code="voj.administration.general-settings.copyright-empty" text="You can&apos;t leave Copyright empty." /><br>';
+                } else if ( !result['isCopyrightLegal'] ) {
+                    errorMessage += '<spring:message code="voj.administration.general-settings.copyright-illegal" text="The length of Copyright CANNOT exceed 128 characters." /><br>';
+                }
+                if ( !result['isIcpNumberLegal'] ) {
+                    errorMessage += '<spring:message code="voj.administration.general-settings.icp-number-illegal" text="The ICP Number seems invalid." /><br>';
+                } 
+                if ( !result['isAnalyticsCodeLegal'] ) {
+                    errorMessage += '<spring:message code="voj.administration.general-settings.analytics-code-illegal" text="The Google Analytics code seems invalid." /><br>';
+                }
+                $('.alert-error').html(errorMessage);
+                $('.alert-error').removeClass('hide');
+            }
+
+            $('button[type=submit]').html('<spring:message code="voj.administration.general-settings.save-changes" text="Save Changes" />');
+            $('button[type=submit]').removeAttr('disabled');
+            $('html, body').animate({ scrollTop: 0 }, 100);
         }
     </script>
 </body>

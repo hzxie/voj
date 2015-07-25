@@ -206,7 +206,7 @@ public class DefaultController {
     @RequestMapping(value = "/not-supported", method = RequestMethod.GET)
     public ModelAndView notSupportedView(
             HttpServletRequest request, HttpServletResponse response) {
-        ModelAndView view = new ModelAndView("misc/not-supported");
+        ModelAndView view = new ModelAndView("errors/not-supported");
         return view;
     }
     

@@ -184,6 +184,7 @@
 
             $('button[type=submit]').html('<spring:message code="voj.accounts.register.create-account" text="Create Account" />');
             $('button[type=submit]').removeAttr('disabled');
+            $('html, body').animate({ scrollTop: 0 }, 100);
         }
     </script>
     </c:if>
