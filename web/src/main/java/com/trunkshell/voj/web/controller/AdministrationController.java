@@ -20,6 +20,7 @@ import org.springframework.web.servlet.ModelAndView;
 import com.trunkshell.voj.web.messenger.ApplicationEventListener;
 import com.trunkshell.voj.web.model.Option;
 import com.trunkshell.voj.web.model.UserGroup;
+import com.trunkshell.voj.web.service.LanguageService;
 import com.trunkshell.voj.web.service.OptionService;
 import com.trunkshell.voj.web.service.ProblemService;
 import com.trunkshell.voj.web.service.SubmissionService;
@@ -222,6 +223,7 @@ public class AdministrationController {
     public ModelAndView languageSettingsView(
             HttpServletRequest request, HttpServletResponse response) {
         ModelAndView view = new ModelAndView("administration/language-settings");
+        view.addObject("languages", languageService.getAllLanguages());
         return view;
     }
     
@@ -233,12 +235,14 @@ public class AdministrationController {
     
     /**
      * 自动注入的ProblemService对象.
+     * 用于获取试题记录信息.
      */
     @Autowired
     private ProblemService problemService;
     
     /**
      * 自动注入的SubmissionService对象.
+     * 用于获取提交记录信息.
      */
     @Autowired
     private SubmissionService submissionService;
@@ -249,6 +253,13 @@ public class AdministrationController {
      */
     @Autowired
     private OptionService optionService;
+    
+    /**
+     * 自动注入的LanguageService对象.
+     * 用于获取系统中的编程语言选项.
+     */
+    @Autowired
+    private LanguageService languageService;
     
     /**
      * 自动注入的ApplicationEventListener对象.

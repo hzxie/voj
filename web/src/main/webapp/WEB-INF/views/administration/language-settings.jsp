@@ -1,0 +1,293 @@
+<%@ page language="java" contentType="text/html; charset=utf-8" pageEncoding="utf-8"%>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
+<spring:eval expression="@propertyConfigurer.getProperty('url.cdn')" var="cdnUrl" />
+<!DOCTYPE html>
+<html lang="${language}">
+<head>
+    <meta charset="UTF-8">
+    <title><spring:message code="voj.administration.language-settings.title" text="Languages Settings" /> | ${websiteName}</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="${description}">
+    <meta name="author" content="谢浩哲">
+    <!-- Icon -->
+    <link href="${cdnUrl}/img/favicon.ico" rel="shortcut icon" type="image/x-icon">
+    <!-- StyleSheets -->
+    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/bootstrap.min.css" />
+    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/bootstrap-responsive.min.css" />
+    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/flat-ui.min.css" />
+    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/font-awesome.min.css" />
+    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/administration/style.css" />
+    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/administration/language-settings.css" />
+    <!-- JavaScript -->
+    <script type="text/javascript" src="${cdnUrl}/js/jquery-1.11.1.min.js"></script>
+    <script type="text/javascript" src="${cdnUrl}/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="${cdnUrl}/js/flat-ui.min.js"></script>
+    <script type="text/javascript" src="${cdnUrl}/js/md5.min.js"></script>
+    <script type="text/javascript" src="${cdnUrl}/js/pace.min.js"></script>
+    <!--[if lte IE 9]>
+        <script type="text/javascript" src="${cdnUrl}/js/jquery.placeholder.min.js"></script>
+    <![endif]-->
+    <!--[if lte IE 7]>
+        <script type="text/javascript"> 
+            window.location.href='<c:url value="/not-supported" />';
+        </script>
+    <![endif]-->
+</head>
+<body>
+    <div id="wrapper">
+        <!-- Sidebar -->
+        <%@ include file="/WEB-INF/views/administration/include/sidebar.jsp" %>
+        <div id="container">
+            <!-- Header -->
+            <%@ include file="/WEB-INF/views/administration/include/header.jsp" %>
+            <!-- Content -->
+            <div id="content">
+                <h2 class="page-header"><i class="fa fa-code"></i> <spring:message code="voj.administration.language-settings.language-settings" text="Language Settings" /></h2>
+                <form id="language-form" onSubmit="onSubmit(); return false;">
+                    <div class="alert alert-warning">
+                        <button type="button" class="close" data-dismiss="alert">×</button>
+                        <h6><spring:message code="voj.administration.language-settings.be-careful" text="Please be Careful!" /></h6>
+                        <p><spring:message code="voj.administration.language-settings.be-careful-message" text="Please don&acute;t change following settings unless you really know what you&acute;re doing." /></p>
+                    </div> <!-- .alert-warning -->
+                    <div class="alert alert-error hide"></div> <!-- .alert-error -->
+                    <div class="alert alert-success hide"><spring:message code="voj.administration.language-settings.settings-saved" text="Settings saved." /></div> <!-- .alert-success -->
+                    <p>
+                        <a id="new-language" href="javascript:void(0);">
+                            <i class="fa fa-plus-circle"></i> 
+                            <spring:message code="voj.administration.new-language" text="New Language" />
+                        </a>
+                    </p>
+                    <p id="no-languages" class="<c:if test="${languages.size() != 0}">hide</c:if>"><spring:message code="voj.administration.no-languages" text="No languages available." /></p>
+                    <ul id="languages">
+                    <c:forEach items="${languages}" var="language">
+                        <li class="language">
+                            <div class="header">
+                                <h5>${language.languageName}</h5>
+                                <ul class="inline">
+                                    <li><a href="javascript:void(0);"><i class="fa fa-edit"></i></a></li>
+                                    <li><a href="javascript:void(0);"><i class="fa fa-trash"></i></a></li>
+                                </ul>
+                            </div> <!-- .header -->
+                            <div class="body hide">
+                                <div class="row-fluid">
+                                    <div class="span4">
+                                        <label>
+                                            <spring:message code="voj.administration.language-settings.language-mode" text="Language Mode" />
+                                            <a href="https://codemirror.net/mode/" target="_blank">(<spring:message code="voj.administration.language-settings.what-is-this" text="What&acute;s this?" />)</a>
+                                        </label>
+                                    </div> <!-- .span4 -->
+                                    <div class="span8">
+                                        <div class="control-group">
+                                            <input class="language-slug span8" type="text" value="${language.languageSlug}" />
+                                        </div> <!-- .control-group -->
+                                    </div> <!-- .span8 -->
+                                </div> <!-- .row-fluid -->
+                                <div class="row-fluid">
+                                    <div class="span4">
+                                        <label><spring:message code="voj.administration.language-settings.language-name" text="Language Name" /></label>
+                                    </div> <!-- .span4 -->
+                                    <div class="span8">
+                                        <div class="control-group">
+                                            <input class="language-id span8" type="hidden" value="${language.languageId}" />
+                                            <input class="language-name span8" type="text" value="${language.languageName}" />
+                                        </div> <!-- .control-group -->
+                                    </div> <!-- .span8 -->
+                                </div> <!-- .row-fluid -->
+                                <div class="row-fluid">
+                                    <div class="span4">
+                                        <label><spring:message code="voj.administration.language-settings.compile-command" text="Compile Command" /></label>
+                                    </div> <!-- .span4 -->
+                                    <div class="span8">
+                                        <div class="control-group">
+                                            <input class="compile-command span8" type="text" value="${language.compileCommand}" />
+                                        </div> <!-- .control-group -->
+                                    </div> <!-- .span8 -->
+                                </div> <!-- .row-fluid -->
+                                <div class="row-fluid">
+                                    <div class="span4">
+                                        <label><spring:message code="voj.administration.language-settings.run-command" text="Run Command" /></label>
+                                    </div> <!-- .span4 -->
+                                    <div class="span8">
+                                        <div class="control-group">
+                                            <input class="run-command span8" type="text" value="${language.runCommand}" />
+                                        </div> <!-- .control-group -->
+                                    </div> <!-- .span8 -->
+                                </div> <!-- .row-fluid -->
+                            </div> <!-- .body -->
+                        </li>
+                    </c:forEach>
+                    </ul>
+                    <div class="row-fluid">
+                        <button class="btn btn-primary" type="submit"><spring:message code="voj.administration.language-settings.save-changes" text="Save Changes" /></button>
+                    </div> <!-- .row-fluid -->
+                </form> <!-- #language-form -->
+            </div> <!-- #content -->
+        </div> <!-- #container -->
+    </div> <!-- #wrapper -->
+    <!-- Java Script -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <%@ include file="/WEB-INF/views/administration/include/footer-script.jsp" %>
+    <script type="text/javascript">
+        $('#languages').delegate('i.fa-edit', 'click', function() {
+            var languageContainer = $(this).parent().parent().parent().parent().parent(),
+                isBodyUnfolded    = $('.body', $(languageContainer)).is(':visible');
+
+            if ( isBodyUnfolded ) {
+                $('.body', $(languageContainer)).addClass('hide');
+            } else {
+                $('.body', $(languageContainer)).removeClass('hide');
+            }
+        });
+    </script>
+    <script type="text/javascript">
+        $('#languages').delegate('i.fa-trash', 'click',function() {
+            var languageContainer = $(this).parent().parent().parent().parent().parent(),
+                languages         = $('li.language', '#languages').length;
+            
+            $(languageContainer).remove();
+
+            if ( languages == 1 ) {
+                $('#no-languages').removeClass('hide');
+            }
+        });
+    </script>
+    <script type="text/javascript">
+        $('#languages').delegate('input.language-name', 'change', function() {
+            var languageContainer = $(this).parent().parent().parent().parent().parent(),
+                languageName      = $(this).val();
+            
+            $('h5', $(languageContainer)).html(languageName);
+        });
+    </script>
+    <script type="text/javascript">
+        function onSubmit() {
+            $('.alert-success').addClass('hide');
+            $('.alert-error').addClass('hide');
+            $('button[type=submit]').attr('disabled', 'disabled');
+            $('button[type=submit]').html('<spring:message code="voj.administration.language-settings.please-wait" text="Please wait..." />');
+
+            return updateLanguageSettings();
+        }
+    </script>
+    <script type="text/javascript">
+        function updateLanguageSettings(languages) {
+            var postData = {
+                'languages': getLanguages()
+            }
+
+            $.ajax({
+                type: 'POST',
+                url: '<c:url value="/administration/updateLanguageSettings.action" />',
+                data: postData,
+                dataType: 'JSON',
+                success: function(result){
+                    return processResult(result);
+                }
+            });
+        }
+    </script>
+    <script type="text/javascript">
+        function getLanguages() {
+            var languages = [];
+            
+            $('.language').each(function() {
+                var languageId     = $('.language-id', $(this)).val() || 0,
+                    languageSlug   = $('.language-slug', $(this)).val(),
+                    languageName   = $('.language-name', $(this)).val(),
+                    compileCommand = $('.compile-command', $(this)).val(),
+                    runCommand     = $('.run-command', $(this)).val(),
+                    language       = {
+                        'languageId': languageId,
+                        'languageSlug': languageSlug,
+                        'languageName': languageName,
+                        'compileCommand': compileCommand,
+                        'runCommand': runCommand
+                    };
+                languages.push(language);
+            });
+            return JSON.stringify(languages);
+        }
+    </script>
+    <script type="text/javascript">
+        function processResult(result) {
+            if ( result['isSuccessful'] ) {
+                $('.alert-success').removeClass('hide');
+            } else {
+                var errorMessage  = '';
+
+                $('.alert-error').html(errorMessage);
+                $('.alert-error').removeClass('hide');
+            }
+
+            $('button[type=submit]').html('<spring:message code="voj.administration.language-settings.save-changes" text="Save Changes" />');
+            $('button[type=submit]').removeAttr('disabled');
+            $('html, body').animate({ scrollTop: 0 }, 100);
+        }
+    </script>
+    <script type="text/javascript">
+        $('#new-language').click(function() {
+            $('#languages').append(
+                '<li class="language">' + 
+                '    <div class="header">' + 
+                '        <h5></h5>' + 
+                '        <ul class="inline">' + 
+                '            <li><a href="javascript:void(0);"><i class="fa fa-edit"></i></a></li>' + 
+                '            <li><a href="javascript:void(0);"><i class="fa fa-trash"></i></a></li>' + 
+                '        </ul>' + 
+                '    </div> <!-- .header -->' +
+                '    <div class="body">' + 
+                '        <div class="row-fluid">' +
+                '            <div class="span4">' +
+                '                <label>' +
+                '                    <spring:message code="voj.administration.language-settings.language-mode" text="Language Mode" />' +
+                '                    <a href="https://codemirror.net/mode/" target="_blank">(<spring:message code="voj.administration.language-settings.what-is-this" text="What&acute;s this?" />)</a>' +
+                '                </label>' +
+                '            </div> <!-- .span4 -->' +
+                '            <div class="span8">' +
+                '                <div class="control-group">' +
+                '                    <input class="language-slug span8" type="text" />' +
+                '                </div> <!-- .control-group -->' +
+                '            </div> <!-- .span8 -->' +
+                '        </div> <!-- .row-fluid -->' +
+                '        <div class="row-fluid">' +
+                '            <div class="span4">' +
+                '                <label><spring:message code="voj.administration.language-settings.language-name" text="Language Name" /></label>' +
+                '            </div> <!-- .span4 -->' +
+                '            <div class="span8">' +
+                '                <div class="control-group">' +
+                '                    <input class="language-name span8" type="text" />' +
+                '                </div> <!-- .control-group -->' +
+                '            </div> <!-- .span8 -->' +
+                '        </div> <!-- .row-fluid -->' +
+                '        <div class="row-fluid">' +
+                '            <div class="span4">' +
+                '                <label><spring:message code="voj.administration.language-settings.compile-command" text="Compile Command" /></label>' +
+                '            </div> <!-- .span4 -->' +
+                '            <div class="span8">' +
+                '                <div class="control-group">' +
+                '                    <input class="compile-command span8" type="text" />' +
+                '                </div> <!-- .control-group -->' +
+                '            </div> <!-- .span8 -->' +
+                '        </div> <!-- .row-fluid -->' +
+                '        <div class="row-fluid">' +
+                '            <div class="span4">' +
+                '                <label><spring:message code="voj.administration.language-settings.run-command" text="Run Command" /></label>' +
+                '            </div> <!-- .span4 -->' +
+                '            <div class="span8">' +
+                '                <div class="control-group">' +
+                '                    <input class="run-command span8" type="text" />' +
+                '                </div> <!-- .control-group -->' +
+                '            </div> <!-- .span8 -->' +
+                '        </div> <!-- .row-fluid -->' +
+                '    </div> <!-- .body -->' +
+                '</li>'
+            );
+        });
+    </script>
+    <c:if test="${GoogleAnalyticsCode != ''}">
+    <script type="text/javascript">${googleAnalyticsCode}</script>
+    </c:if>
+</body>
+</html>
