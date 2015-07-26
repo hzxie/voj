@@ -24,6 +24,14 @@ public interface UserMapper {
     public long getNumberOfUsersUsingUserGroup(@Param("userGroup") UserGroup userGroup);
     
     /**
+     * [此方法仅供管理员使用]
+     * 获取选取某个语言偏好设置的用户总数.
+     * @param languageId - 编程语言的唯一标识符
+     * @return 选取某个语言偏好设置的用户总数
+     */
+    public long getNumberOfUsersUsingLanguage(@Param("languageId") int languageId);
+    
+    /**
      * 通过用户唯一标识符获取用户对象.
      * @param uid - 用户唯一标识符
      * @return 预期的用户对象或空引用

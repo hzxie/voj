@@ -383,7 +383,7 @@ CREATE TABLE IF NOT EXISTS `voj_users` (
 INSERT INTO `voj_users` (`uid`, `username`, `password`, `email`, `user_group_id`, `prefer_language_id`) VALUES
 (1000, 'zjhzxhz', '785ee107c11dfe36de668b1ae7baacbb', 'zjhzxhz@gmail.com', 3, 2),
 (1001, 'voj-tester', '785ee107c11dfe36de668b1ae7baacbb', 'support@zjhzxhz.com', 1, 2),
-(1002, 'another-user', '785ee107c11dfe36de668b1ae7baacbb', 'voj@zjhzxhz.com', 1, 2);
+(1002, 'another-user', '785ee107c11dfe36de668b1ae7baacbb', 'voj@zjhzxhz.com', 1, 3);
 
 -- --------------------------------------------------------
 

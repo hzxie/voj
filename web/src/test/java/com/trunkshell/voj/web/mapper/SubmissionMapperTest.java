@@ -45,6 +45,30 @@ public class SubmissionMapperTest {
     }
     
     /**
+     * 测试用例: 测试getNumberOfSubmissionsUsingLanguage(int)方法
+     * 测试数据: 使用C++语言的唯一标识符
+     * 预期结果: 返回使用C++语言提交记录的数量(3条)
+     */
+    @Test
+    public void testGetNumberOfSubmissionsUsingLanguageUsingCpp() {
+        int languageId = 2;
+        long numberOfSubmissions = submissionMapper.getNumberOfSubmissionsUsingLanguage(languageId);
+        Assert.assertEquals(3, numberOfSubmissions);
+    }
+    
+    /**
+     * 测试用例: 测试getNumberOfSubmissionsUsingLanguage(int)方法
+     * 测试数据: 使用不存在的唯一标识符
+     * 预期结果: 返回0
+     */
+    @Test
+    public void testGetNumberOfSubmissionsUsingLanguageUsingNotExistingLanguage() {
+        int languageId = 0;
+        long numberOfSubmissions = submissionMapper.getNumberOfSubmissionsUsingLanguage(languageId);
+        Assert.assertEquals(0, numberOfSubmissions);
+    }
+    
+    /**
      * 测试用例: 测试getSubmission(long)方法
      * 测试数据: Problem#1000的提交记录的唯一标识符
      * 预期结果: 返回预期的Submission对象

@@ -25,6 +25,14 @@ public interface SubmissionMapper {
     public long getNumberOfSubmissions(@Param("startTime") Date startTime, @Param("endTime") Date endTime);
     
     /**
+     * [此方法仅供管理员使用]
+     * 获取某种编程语言的提交数量.
+     * @param languageId - 编程语言的唯一标识符
+     * @return 某种编程语言的提交数量
+     */
+    public long getNumberOfSubmissionsUsingLanguage(@Param("languageId") int languageId);
+    
+    /**
      * 通过评测记录唯一标识符获取试题对象.
      * @param submissionID - 评测记录的唯一标识符
      * @return 一个评测记录对象
