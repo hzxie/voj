@@ -38,6 +38,18 @@ public class UserMapperTest {
     }
     
     /**
+     * 测试用例: 测试getNumberOfUsersUsingLanguage(int)方法
+     * 测试数据: 使用C++语言的唯一标识符
+     * 预期结果: 返回使用C++作为偏好语言的用户数量()
+     */
+    @Test
+    public void testGetNumberOfUsersUsingLanguage() {
+        int languageId = 2;
+        long totalUsers = userMapper.getNumberOfUsersUsingLanguage(languageId);
+        Assert.assertEquals(2, totalUsers);
+    }
+    
+    /**
      * 测试用例: 测试getUserUsingUid(long)方法
      * 测试数据: 使用用户名为zjhzxhz的用户的唯一标识符
      * 预期结果: 返回预期的用户对象

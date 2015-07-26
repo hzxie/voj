@@ -45,7 +45,7 @@ public class Language implements Serializable {
      * 获取编程语言的唯一标识符.
      * @return 编程语言的唯一标识符
      */
-    public int getLanguageID() {
+    public int getLanguageId() {
         return languageId;
     }
     
@@ -53,7 +53,7 @@ public class Language implements Serializable {
      * 设置编程语言的唯一标识符.
      * @param languageId - 编程语言的唯一标识符
      */
-    public void setLanguageID(int languageId) {
+    public void setLanguageId(int languageId) {
         this.languageId = languageId;
     }
     

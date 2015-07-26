@@ -52,14 +52,14 @@
                         <p><spring:message code="voj.administration.language-settings.be-careful-message" text="Please don&acute;t change following settings unless you really know what you&acute;re doing." /></p>
                     </div> <!-- .alert-warning -->
                     <div class="alert alert-error hide"></div> <!-- .alert-error -->
-                    <div class="alert alert-success hide"><spring:message code="voj.administration.language-settings.settings-saved" text="Settings saved." /></div> <!-- .alert-success -->
+                    <div class="alert alert-success hide"></div> <!-- .alert-success -->
                     <p>
                         <a id="new-language" href="javascript:void(0);">
                             <i class="fa fa-plus-circle"></i> 
-                            <spring:message code="voj.administration.new-language" text="New Language" />
+                            <spring:message code="voj.administration.language-settings.new-language" text="New Language" />
                         </a>
                     </p>
-                    <p id="no-languages" class="<c:if test="${languages.size() != 0}">hide</c:if>"><spring:message code="voj.administration.no-languages" text="No languages available." /></p>
+                    <p id="no-languages" class="<c:if test="${languages.size() != 0}">hide</c:if>"><spring:message code="voj.administration.language-settings.no-languages" text="No languages available." /></p>
                     <ul id="languages">
                     <c:forEach items="${languages}" var="language">
                         <li class="language">
@@ -80,7 +80,7 @@
                                     </div> <!-- .span4 -->
                                     <div class="span8">
                                         <div class="control-group">
-                                            <input class="language-slug span8" type="text" value="${language.languageSlug}" />
+                                            <input class="language-slug span8" type="text" value="${language.languageSlug}" maxlength="16" />
                                         </div> <!-- .control-group -->
                                     </div> <!-- .span8 -->
                                 </div> <!-- .row-fluid -->
@@ -91,7 +91,7 @@
                                     <div class="span8">
                                         <div class="control-group">
                                             <input class="language-id span8" type="hidden" value="${language.languageId}" />
-                                            <input class="language-name span8" type="text" value="${language.languageName}" />
+                                            <input class="language-name span8" type="text" value="${language.languageName}" maxlength="16" />
                                         </div> <!-- .control-group -->
                                     </div> <!-- .span8 -->
                                 </div> <!-- .row-fluid -->
@@ -101,7 +101,7 @@
                                     </div> <!-- .span4 -->
                                     <div class="span8">
                                         <div class="control-group">
-                                            <input class="compile-command span8" type="text" value="${language.compileCommand}" />
+                                            <input class="compile-command span8" type="text" value="${language.compileCommand}" maxlength="128" />
                                         </div> <!-- .control-group -->
                                     </div> <!-- .span8 -->
                                 </div> <!-- .row-fluid -->
@@ -111,7 +111,7 @@
                                     </div> <!-- .span4 -->
                                     <div class="span8">
                                         <div class="control-group">
-                                            <input class="run-command span8" type="text" value="${language.runCommand}" />
+                                            <input class="run-command span8" type="text" value="${language.runCommand}" maxlength="128" />
                                         </div> <!-- .control-group -->
                                     </div> <!-- .span8 -->
                                 </div> <!-- .row-fluid -->
@@ -213,17 +213,104 @@
     <script type="text/javascript">
         function processResult(result) {
             if ( result['isSuccessful'] ) {
+                var message  = '<p><spring:message code="voj.administration.language-settings.settings-saved" text="Settings saved." /></p>';
+
+                if ( result['languageCreated'].length != 0 ) {
+                    var totalLanguages = result['languageCreated'].length;
+                    
+                    message += '<p style="padding-left: 15px;"><spring:message code="voj.administration.language-settings.language-created" text="Following languages has been created:" /> ';
+                    for ( var i = 0; i < totalLanguages; ++ i ) {
+                        var languageId   = result['languageCreated'][i]['languageId'],
+                            languageSlug = result['languageCreated'][i]['languageSlug'],
+                            languageName = result['languageCreated'][i]['languageName'];
+
+                        message += languageName + ( i != totalLanguages - 1 ? ', ' : '' );
+                        setLanguageId(languageSlug, languageId);
+                    }
+                    message += '</p>';
+                }
+                if ( result['languageUpdated'].length != 0 ) {
+                    var totalLanguages = result['languageUpdated'].length;
+
+                    message += '<p style="padding-left: 15px;"><spring:message code="voj.administration.language-settings.language-updated" text="Following languages has been updated:" /> ';
+                    for ( var i = 0; i < totalLanguages; ++ i ) {
+                        message += result['languageUpdated'][i]['languageName'] + ( i != totalLanguages - 1 ? ', ' : '' );
+                    }
+                    message += '</p>';
+                }
+                if ( result['languageDeleted'].length != 0 ) {
+                    var totalLanguages = result['languageDeleted'].length;
+
+                    message += '<p style="padding-left: 15px;"><spring:message code="voj.administration.language-settings.language-deleted" text="Following languages has been deleted:" /> ';
+                    for ( var i = 0; i < totalLanguages; ++ i ) {
+                        message += result['languageDeleted'][i]['languageName'] + ( i != totalLanguages - 1 ? ', ' : '' );
+                    }
+                    message += '</p>';
+                }
+                $('.alert-success').html(message);
                 $('.alert-success').removeClass('hide');
             } else {
-                var errorMessage  = '';
+                var message  = '';
 
-                $('.alert-error').html(errorMessage);
+                for ( var languageName in result ) {
+                    var languageResult = result[languageName];
+
+                    if ( typeof(languageResult) != 'object' ) {
+                        continue;
+                    }
+                    if ( !languageResult['isSuccessful'] ) {
+                        message += '<p>';
+                        message += '<strong>' + languageName + ' <spring:message code="voj.administration.language-settings.language" text="language" /></strong><br>';
+                        if ( 'isLanguageSlugEmpty' in languageResult && languageResult['isLanguageSlugEmpty'] ) {
+                            message += '<spring:message code="voj.administration.language-settings.language-slug-empty" text="You can&acute;t leave Language Mode empty." /><br>';
+                        } else if ( 'isLanguageSlugLegal' in languageResult && !languageResult['isLanguageSlugLegal'] ) {
+                            message += '<spring:message code="voj.administration.language-settings.language-slug-illegal" text="The length of Language Mode CANNOT execeed 16 characters." /><br>';
+                        } else if ( 'isLanguageSlugExists' in languageResult && languageResult['isLanguageSlugExists'] ) {
+                            message += '<spring:message code="voj.administration.language-settings.language-slug-exists" text="Some other languages has taken the Language Mode." /><br>';
+                        }
+                        if ( 'isLanguageNameEmpty' in languageResult && languageResult['isLanguageNameEmpty'] ) {
+                            message += '<spring:message code="voj.administration.language-settings.language-name-empty" text="You can&acute;t leave Language Name empty." /><br>';
+                        } else if ( 'isLanguageNameLegal' in languageResult && !languageResult['isLanguageNameLegal'] ) {
+                            message += '<spring:message code="voj.administration.language-settings.language-name-illegal" text="The length of Language Name CANNOT execeed 16 characters." /><br>';
+                        }
+                        if ( 'isCompileCommandEmpty' in languageResult && languageResult['isCompileCommandEmpty'] ) {
+                            message += '<spring:message code="voj.administration.language-settings.compile-command-empty" text="You can&acute;t leave Compile Command empty." /><br>';
+                        } else if ( 'isCompileCommandLegal' in languageResult && !languageResult['isCompileCommandLegal'] ) {
+                            message += '<spring:message code="voj.administration.language-settings.compile-command-illegal" text="The Compile Command seems invalid." /><br>';
+                        }
+                        if ( 'isRunCommandEmpty' in languageResult && languageResult['isRunCommandEmpty'] ) {
+                            message += '<spring:message code="voj.administration.language-settings.run-command-empty" text="You can&acute;t leave Run Command empty." /><br>';
+                        } else if ( 'isRunCommandLegal' in languageResult && !languageResult['isRunCommandLegal'] ) {
+                            message += '<spring:message code="voj.administration.language-settings.run-command-illegal" text="The Run Command seems invalid." /><br>';
+                        }
+                        if ( 'isLangaugeInUse' in languageResult && languageResult['isLangaugeInUse'] ) {
+                            message += '<spring:message code="voj.administration.language-settings.language-in-use" text="The language can&acute;t be deleted." /><br>';
+                        }
+                        message += '</p>';
+                    }
+                }
+                $('.alert-error').html(message);
                 $('.alert-error').removeClass('hide');
             }
 
             $('button[type=submit]').html('<spring:message code="voj.administration.language-settings.save-changes" text="Save Changes" />');
             $('button[type=submit]').removeAttr('disabled');
             $('html, body').animate({ scrollTop: 0 }, 100);
+        }
+    </script>
+    <script type="text/javascript">
+        function setLanguageId(languageSlug, languageId) {
+            var languageSlugInput = null;
+            $('.language-slug', '#languages').each(function() {
+                if ( $(this).val() == languageSlug ) {
+                    languageSlugInput = $(this);
+                }
+            });
+
+            var languageContainer = $(languageSlugInput).parent().parent().parent().parent(),
+                languageIdInput   = $('.language-id', $(languageContainer));
+
+            $(languageIdInput).val(languageId);
         }
     </script>
     <script type="text/javascript">
@@ -247,7 +334,7 @@
                 '            </div> <!-- .span4 -->' +
                 '            <div class="span8">' +
                 '                <div class="control-group">' +
-                '                    <input class="language-slug span8" type="text" />' +
+                '                    <input class="language-slug span8" type="text" maxlength="16" />' +
                 '                </div> <!-- .control-group -->' +
                 '            </div> <!-- .span8 -->' +
                 '        </div> <!-- .row-fluid -->' +
@@ -257,7 +344,8 @@
                 '            </div> <!-- .span4 -->' +
                 '            <div class="span8">' +
                 '                <div class="control-group">' +
-                '                    <input class="language-name span8" type="text" />' +
+                '                    <input class="language-id span8" type="hidden" value="0" />' +
+                '                    <input class="language-name span8" type="text" maxlength="16" />' +
                 '                </div> <!-- .control-group -->' +
                 '            </div> <!-- .span8 -->' +
                 '        </div> <!-- .row-fluid -->' +
@@ -267,7 +355,7 @@
                 '            </div> <!-- .span4 -->' +
                 '            <div class="span8">' +
                 '                <div class="control-group">' +
-                '                    <input class="compile-command span8" type="text" />' +
+                '                    <input class="compile-command span8" type="text" maxlength="128" />' +
                 '                </div> <!-- .control-group -->' +
                 '            </div> <!-- .span8 -->' +
                 '        </div> <!-- .row-fluid -->' +
@@ -277,7 +365,7 @@
                 '            </div> <!-- .span4 -->' +
                 '            <div class="span8">' +
                 '                <div class="control-group">' +
-                '                    <input class="run-command span8" type="text" />' +
+                '                    <input class="run-command span8" type="text" maxlength="128" />' +
                 '                </div> <!-- .control-group -->' +
                 '            </div> <!-- .span8 -->' +
                 '        </div> <!-- .row-fluid -->' +

@@ -17,7 +17,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.ModelAndView;
 
+import com.alibaba.fastjson.JSON;
 import com.trunkshell.voj.web.messenger.ApplicationEventListener;
+import com.trunkshell.voj.web.model.Language;
 import com.trunkshell.voj.web.model.Option;
 import com.trunkshell.voj.web.model.UserGroup;
 import com.trunkshell.voj.web.service.LanguageService;
@@ -195,7 +197,7 @@ public class AdministrationController {
      * @param icpNumber - 网站备案号
      * @param googleAnalyticsCode - Google Analytics代码
      * @param sensitiveWords - 敏感词列表
-     * @param request - HttpRequest对象
+     * @param request - HttpServletRequest对象
      * @return 网站常规选项的更新结果
      */
     @RequestMapping(value = "/updateGeneralSettings.action", method = RequestMethod.POST)
@@ -225,6 +227,21 @@ public class AdministrationController {
         ModelAndView view = new ModelAndView("administration/language-settings");
         view.addObject("languages", languageService.getAllLanguages());
         return view;
+    }
+    
+    /**
+     * 更新网站编程语言选项.
+     * @param languages - 包含编程语言设置的数组
+     * @param request - HttpServletRequest对象
+     * @return 编程语言选项的更新结果
+     */
+    @RequestMapping(value = "/updateLanguageSettings.action", method = RequestMethod.POST)
+    public @ResponseBody Map<String, Object> updateLanguageSettingsAction(
+            @RequestParam(value = "languages", required = true) String languages,
+            HttpServletRequest request) {
+        List<Language> languagesList = JSON.parseArray(languages, Language.class);
+        Map<String, Object> result = languageService.updateLanguageSettings(languagesList);
+        return result;
     }
     
     /**

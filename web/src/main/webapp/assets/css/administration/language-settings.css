@@ -2,8 +2,12 @@ form#language-form {
 	max-width: 750px;
 }
 
-form#language-form div.alert-error h6 {
+form#language-form div.alert h6 {
 	font-weight: bold;
+}
+
+form#language-form div.alert p:last-child {
+	margin: 0;
 }
 
 form#language-form a#new-language {

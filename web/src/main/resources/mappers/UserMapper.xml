@@ -29,6 +29,14 @@
 		FROM voj_users 
 		WHERE user_group_id = #{userGroup.userGroupId}
 	</select>
+	<select id="getNumberOfUsersUsingLanguage" 
+		parameterType="int"
+		resultType="long"
+		useCache="true">
+		SELECT COUNT(*) 
+		FROM voj_users 
+		WHERE prefer_language_id = #{languageId}
+	</select>
 	<select id="getUserUsingUid" 
 		parameterType="long"
 		resultMap="UserResultMap"
