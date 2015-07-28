@@ -1,3 +1,10 @@
+div#content form#filter {
+	background-color: #fff;
+	border-top: 0;
+	border-left: 10px solid #ffe6b0;
+	padding: 10px;
+}
+
 div#content div#main-content {
 	margin-top: 20px;
 }

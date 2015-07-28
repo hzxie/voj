@@ -99,6 +99,8 @@
     <script type="text/javascript">
         function getLatestSubmissions(startIndex) {
             var pageRequests = {
+                'problemId': '${param.problemId}',
+                'username': '${param.username}',
                 'startIndex': startIndex
             };
 
@@ -154,6 +156,8 @@
     <script type="text/javascript">
         function getMoreHistorySubmissions(startIndex) {
             var pageRequests = {
+                'problemId': '${param.problemId}',
+                'username': '${param.username}',
                 'startIndex': startIndex
             };
 

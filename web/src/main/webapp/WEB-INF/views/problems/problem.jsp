@@ -118,7 +118,7 @@
                         <li><a id="submit-solution" href="javascript:void(0);"><spring:message code="voj.problems.problem.submit-solution" text="Submit Solution" /></a></li>
                     </c:if>
                         <li><a href="<c:url value="/p/${problem.problemId}/solution" />"><spring:message code="voj.problems.problem.view-solution" text="View Solution" /></a></li>
-                        <li><a href="<c:url value="/submission?pid=${problem.problemId}" />"><spring:message code="voj.problems.problem.view-submission" text="View Submission" /></a></li>
+                        <li><a href="<c:url value="/submission?problemId=${problem.problemId}" />"><spring:message code="voj.problems.problem.view-submission" text="View Submission" /></a></li>
                     </ul>
                 </div> <!-- #actions -->
                 <c:if test="${isLogin}">

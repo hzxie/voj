@@ -36,31 +36,39 @@ import com.trunkshell.voj.web.util.HttpSessionParser;
 public class SubmissionController {
     /**
      * 显示评测列表的页面.
+     * @param problemId - 试题的唯一标识符
+     * @param username - 用户的用户名
      * @param request - HttpRequest对象
      * @param response - HttpResponse对象
      * @return 包含提交列表的ModelAndView对象 
      */
     @RequestMapping(value = "", method = RequestMethod.GET)
     public ModelAndView submissionsView(
+            @RequestParam(value = "problemId", required = false, defaultValue = "0") long problemId,
+            @RequestParam(value = "username", required = false, defaultValue = "") String username,
             HttpServletRequest request, HttpServletResponse response) {
-        List<Submission> submissions = submissionService.getSubmissions(NUMBER_OF_SUBMISSION_PER_PAGE);
+        List<Submission> submissions = submissionService.getSubmissions(problemId, username, NUMBER_OF_SUBMISSION_PER_PAGE);
         return new ModelAndView("submissions/submissions")
                     .addObject("submissions", submissions);
     }
     
     /**
      * 获取历史评测信息的列表.
+     * @param problemId - 试题的唯一标识符
+     * @param username - 用户的用户名
      * @param startIndex - 当前加载的最后一条记录的提交唯一标识符
      * @param request - HttpRequest对象
      * @return 一个包含提交记录列表的HashMap对象
      */
     @RequestMapping(value = "/getSubmissions.action", method = RequestMethod.GET)
     public @ResponseBody Map<String, Object> getSubmissionsAction(
+            @RequestParam(value = "problemId", required = false, defaultValue = "0") long problemId,
+            @RequestParam(value = "username", required = false, defaultValue = "") String username,
             @RequestParam(value = "startIndex", required = true) long startIndex,
             HttpServletRequest request) {
         Map<String, Object> result = new HashMap<String, Object>(3, 1);
 
-        List<Submission> submissions = submissionService.getSubmissions(startIndex, NUMBER_OF_SUBMISSION_PER_PAGE);
+        List<Submission> submissions = submissionService.getSubmissions(problemId, username, startIndex, NUMBER_OF_SUBMISSION_PER_PAGE);
         result.put("isSuccessful", submissions != null && !submissions.isEmpty());
         result.put("submissions", submissions);
         
@@ -69,17 +77,21 @@ public class SubmissionController {
     
     /**
      * 获取最新的评测信息的列表.
+     * @param problemId - 试题的唯一标识符
+     * @param username - 用户的用户名
      * @param startIndex - 当前加载的最新一条记录的提交唯一标识符
      * @param request - HttpRequest对象
      * @return 一个包含提交记录列表的HashMap对象
      */
     @RequestMapping(value = "/getLatestSubmissions.action", method = RequestMethod.GET)
     public @ResponseBody Map<String, Object> getLatestSubmissionsAction(
+            @RequestParam(value = "problemId", required = false, defaultValue = "0") long problemId,
+            @RequestParam(value = "username", required = false, defaultValue = "") String username,
             @RequestParam(value = "startIndex", required = true) long startIndex,
             HttpServletRequest request) {
         Map<String, Object> result = new HashMap<String, Object>(3, 1);
 
-        List<Submission> submissions = submissionService.getLatestSubmissions(startIndex, NUMBER_OF_SUBMISSION_PER_PAGE);
+        List<Submission> submissions = submissionService.getLatestSubmissions(problemId, username, startIndex, NUMBER_OF_SUBMISSION_PER_PAGE);
         result.put("isSuccessful", submissions != null && !submissions.isEmpty());
         result.put("submissions", submissions);
         
