@@ -41,26 +41,32 @@ public interface SubmissionMapper {
     
     /**
      * 通过试题唯一标识符获取某个范围内的所有试题.
+     * @param problemId - 试题的唯一标识符
+     * @param username - 用户的用户名
      * @param limit - 每次加载评测记录的数量
      * @return 某个范围内的所有提交记录
      */
-    public List<Submission> getSubmissions(@Param("limit") int limit);
+    public List<Submission> getSubmissions(@Param("problemId") long problemId, @Param("username") String username, @Param("limit") int limit);
     
     /**
      * 通过试题唯一标识符获取某个范围内的所有试题.
+     * @param problemId - 试题的唯一标识符
+     * @param username - 用户的用户名
      * @param offset - 试题唯一标识符的起始编号
      * @param limit - 每次加载评测记录的数量
      * @return 某个范围内的所有提交记录
      */
-    public List<Submission> getSubmissionsUsingOffset(@Param("submissionId") long offset, @Param("limit") int limit);
+    public List<Submission> getSubmissionsUsingOffset(@Param("problemId") long problemId, @Param("username") String username, @Param("submissionId") long offset, @Param("limit") int limit);
     
     /**
      * 通过试题唯一标识符获取某个范围内的所有试题.
+     * @param problemId - 试题的唯一标识符
+     * @param username - 用户的用户名
      * @param offset - 试题唯一标识符的起始编号
      * @param limit - 每次加载评测记录的数量
      * @return 某个范围内的所有提交记录
      */
-    public List<Submission> getLatestSubmissionsUsingOffset(@Param("submissionId") long offset, @Param("limit") int limit);
+    public List<Submission> getLatestSubmissionsUsingOffset(@Param("problemId") long problemId, @Param("username") String username, @Param("submissionId") long offset, @Param("limit") int limit);
     
     /**
      * 获取某个用户对某个试题的提交记录.

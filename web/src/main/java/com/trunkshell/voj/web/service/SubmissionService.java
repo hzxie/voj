@@ -47,31 +47,39 @@ public class SubmissionService {
     
     /**
      * 获取评测记录列表.
+     * @param problemId - 试题的唯一标识符
+     * @param username - 用户的用户名
      * @param limit - 每次加载评测记录的数量
      * @return 试题列表(List<Submission>对象)
      */
-    public List<Submission> getSubmissions(int limit) {
-        return submissionMapper.getSubmissions(limit);
+    public List<Submission> getSubmissions(long problemId, String username, int limit) {
+        return submissionMapper.getSubmissions(problemId, username, limit);
     }
     
     /**
      * 获取评测记录列表.
+     * 用于异步加载评测记录.
+     * @param problemId - 试题的唯一标识符
+     * @param username - 用户的用户名
      * @param offset - 评测记录唯一标识符的起始序号
      * @param limit - 每次加载评测记录的数量
      * @return 试题列表(List<Submission>对象)
      */
-    public List<Submission> getSubmissions(long offset, int limit) {
-        return submissionMapper.getSubmissionsUsingOffset(offset, limit);
+    public List<Submission> getSubmissions(long problemId, String username, long offset, int limit) {
+        return submissionMapper.getSubmissionsUsingOffset(problemId, username, offset, limit);
     }
     
     /**
      * 获取最新的评测记录列表.
+     * 用于定时获取最新的评测记录.
+     * @param problemId - 试题的唯一标识符
+     * @param username - 用户的用户名
      * @param offset - 评测记录唯一标识符的起始序号
      * @param limit - 每次加载评测记录的数量
      * @return 试题列表(List<Submission>对象)
      */
-    public List<Submission> getLatestSubmissions(long offset, int limit) {
-        return submissionMapper.getLatestSubmissionsUsingOffset(offset, limit);
+    public List<Submission> getLatestSubmissions(long problemId, String username, long offset, int limit) {
+        return submissionMapper.getLatestSubmissionsUsingOffset(problemId, username, offset, limit);
     }
     
     /**

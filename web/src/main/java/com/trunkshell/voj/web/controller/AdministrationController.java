@@ -161,6 +161,19 @@ public class AdministrationController {
     }
     
     /**
+     * 加载提交列表页面.
+     * @param request - HttpRequest对象
+     * @param response - HttpResponse对象
+     * @return 包含提交列表页面信息的ModelAndView对象
+     */
+    @RequestMapping(value = "/all-submissions", method = RequestMethod.GET)
+    public ModelAndView allSubmissionsView(
+            HttpServletRequest request, HttpServletResponse response) {
+        ModelAndView view = new ModelAndView("administration/all-submissions");
+        return view;
+    }
+    
+    /**
      * 加载常规选项页面.
      * @param request - HttpRequest对象
      * @param response - HttpResponse对象

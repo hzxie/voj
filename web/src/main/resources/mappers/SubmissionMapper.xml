@@ -57,11 +57,20 @@
 		WHERE submission_id = #{submissionId}
 	</select>
 	<select id="getSubmissions" 
-		parameterType="int"
+		parameterType="map"
 		resultMap="SubmissionResultMap"
 		useCache="true">
 		SELECT * 
 		FROM voj_submissions 
+		NATURAL JOIN voj_users 
+		<where> 
+    		<if test="problemId != 0">
+         		problem_id = #{problemId}
+			</if>
+			<if test="username != null and username != ''">
+         		AND username = #{username}
+			</if>
+		</where>
 		ORDER BY submission_id DESC 
 		LIMIT #{limit}
 	</select>
@@ -71,7 +80,14 @@
 		useCache="true">
 		SELECT * 
 		FROM voj_submissions 
+		NATURAL JOIN voj_users 
 		WHERE submission_id &lt;= #{submissionId} 
+    	<if test="problemId != 0">
+        	AND problem_id = #{problemId} 
+		</if>
+		<if test="username != null and username != ''">
+        	AND username = #{username} 
+		</if>
 		ORDER BY submission_id DESC 
 		LIMIT #{limit}
 	</select>
@@ -81,7 +97,14 @@
 		useCache="true">
 		SELECT * 
 		FROM voj_submissions 
+		NATURAL JOIN voj_users 
 		WHERE submission_id &gt;= #{submissionId} 
+		<if test="problemId != 0">
+        	AND problem_id = #{problemId} 
+		</if>
+		<if test="username != null and username != ''">
+        	AND username = #{username} 
+		</if>
 		ORDER BY submission_id 
 		LIMIT #{limit}
 	</select>

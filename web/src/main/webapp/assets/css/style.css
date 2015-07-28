@@ -294,4 +294,8 @@ div.markdown code {
 	div.container {
 		width: 300px;
 	}
+
+	div#footer span#icp-number {
+		display: block;
+	}
 }
