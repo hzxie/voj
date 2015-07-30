@@ -37,6 +37,15 @@ public class SubmissionService {
     }
     
     /**
+     * [此方法仅供管理员使用]
+     * 获取最新提交记录的唯一标识符
+     * @return 最新提交记录的唯一标识符
+     */
+    public long getLatestSubmissionId() {
+        return submissionMapper.getLatestSubmissionId();
+    }
+    
+    /**
      * 根据评测记录的唯一标识符获取评测记录对象.
      * @param submissionId - 评测记录的唯一标识符
      * @return 评测记录对象

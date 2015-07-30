@@ -69,6 +69,17 @@ public class SubmissionMapperTest {
     }
     
     /**
+     * 测试用例: 测试getLatestSubmissionId()方法
+     * 测试数据: N/a
+     * 预期结果: 返回最后一条提交的唯一标识符
+     */
+    @Test
+    public void testGetLatestSubmissionId() {
+        long latestSubmissionId = submissionMapper.getLatestSubmissionId();
+        Assert.assertEquals(1003, latestSubmissionId);
+    }
+    
+    /**
      * 测试用例: 测试getSubmission(long)方法
      * 测试数据: Problem#1000的提交记录的唯一标识符
      * 预期结果: 返回预期的Submission对象

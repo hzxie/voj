@@ -33,6 +33,12 @@ public interface SubmissionMapper {
     public long getNumberOfSubmissionsUsingLanguage(@Param("languageId") int languageId);
     
     /**
+     * 获取最新提交记录的唯一标识符
+     * @return 最新提交记录的唯一标识符
+     */
+    public long getLatestSubmissionId();
+    
+    /**
      * 通过评测记录唯一标识符获取试题对象.
      * @param submissionID - 评测记录的唯一标识符
      * @return 一个评测记录对象

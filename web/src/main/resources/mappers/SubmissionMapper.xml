@@ -38,7 +38,14 @@
 		useCache="true">
 		SELECT COUNT(*) 
 		FROM voj_submissions 
-		WHERE submission_submit_time &gt;= #{startTime} AND submission_submit_time &lt;= #{endTime}
+		<where>
+			<if test="startTime != null">
+         		submission_submit_time &gt;= #{startTime}
+			</if>
+			<if test="endTime != null">
+         		AND submission_submit_time &lt;= #{endTime}
+			</if>
+		</where>
 	</select>
 	<select id="getNumberOfSubmissionsUsingLanguage"
 		parameterType="com.trunkshell.voj.web.model.Language"
@@ -47,6 +54,12 @@
 		SELECT COUNT(*)
 		FROM voj_submissions 
 		WHERE language_id = #{languageId}
+	</select>
+	<select id="getLatestSubmissionId"
+		resultType="long"
+		useCache="false">
+		SELECT MAX(submission_id)
+		FROM voj_submissions
 	</select>
 	<select id="getSubmission" 
 		parameterType="long"
