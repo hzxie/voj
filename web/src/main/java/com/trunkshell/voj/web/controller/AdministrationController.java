@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.ModelAndView;
 
 import com.alibaba.fastjson.JSON;
+import com.trunkshell.voj.web.exception.ResourceNotFoundException;
 import com.trunkshell.voj.web.messenger.ApplicationEventListener;
 import com.trunkshell.voj.web.model.Language;
 import com.trunkshell.voj.web.model.Option;
@@ -225,6 +226,26 @@ public class AdministrationController {
         }
         result.put("isSuccessful", true);
         return result;
+    }
+    
+    /**
+     * 查看提交记录.
+     * @param submissionId - 提交记录的唯一标识符
+     * @param request - HttpServletRequest对象
+     * @param response - HttpServletResponse对象
+     * @return 包含提交记录信息的ModelAndView对象
+     */
+    @RequestMapping(value = "/edit-submissions", method = RequestMethod.GET)
+    public ModelAndView editSubmissionView(
+            @RequestParam(value = "submissionId", required = true) long submissionId,
+            HttpServletRequest request, HttpServletResponse response) {
+        Submission submission = submissionService.getSubmission(submissionId);
+        if ( submission == null ) {
+            throw new ResourceNotFoundException();
+        }
+        ModelAndView view = new ModelAndView("administration/edit-submission");
+        view.addObject("submission", submission);
+        return view;
     }
     
     /**
