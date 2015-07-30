@@ -58,7 +58,7 @@
 	<select id="getLatestSubmissionId"
 		resultType="long"
 		useCache="false">
-		SELECT MAX(submission_id)
+		SELECT IFNULL(MAX(submission_id), 0)
 		FROM voj_submissions
 	</select>
 	<select id="getSubmission" 

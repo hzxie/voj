@@ -213,12 +213,20 @@ public class SubmissionService {
      * 创建评测任务, 将提交的信息提交至消息队列.
      * @param submission - 提交记录对象
      */
-    private void createSubmissionTask(long submissionId) {
+    public void createSubmissionTask(long submissionId) {
         Map<String, Object> mapMessage = new HashMap<String, Object>();
         mapMessage.put("event", "SubmissionCreated");
         mapMessage.put("submissionId", submissionId);
         
         messageSender.sendMessage(mapMessage);
+    }
+    
+    /**
+     * 使用提交记录的唯一标识符删除提交记录.
+     * @param submissionId - 提交记录的唯一标识符
+     */
+    public void deleteSubmission(long submissionId) {
+        submissionMapper.deleteSubmission(submissionId);
     }
     
     /**
