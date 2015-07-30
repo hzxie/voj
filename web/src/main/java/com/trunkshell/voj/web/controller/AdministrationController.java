@@ -194,23 +194,37 @@ public class AdministrationController {
      * @return 提交记录的删除结果
      */
     @RequestMapping(value = "/deleteSubmissions.action", method = RequestMethod.POST)
-    public @ResponseBody Map<String, Object> deleteSubmissionsAction(
+    public @ResponseBody Map<String, Boolean> deleteSubmissionsAction(
             @RequestParam(value = "submissions", required = true) String submissions,
             HttpServletRequest request) {
-        return null;
+        Map<String, Boolean> result = new HashMap<String, Boolean>(2, 1);
+        List<Long> submissionList = JSON.parseArray(submissions, Long.class);
+        
+        for ( Long submissionId : submissionList ) {
+            submissionService.deleteSubmission(submissionId);
+        }
+        result.put("isSuccessful", true);
+        return result;
     }
     
     /**
      * 重新评测选定的提交记录.
      * @param submissions - 提交记录ID的集合, 以逗号(, )分割
-     * @param request
+     * @param request - HttpServletRequest对象
      * @return 重新评测请求的执行结果
      */
     @RequestMapping(value = "/restartSubmissions.action", method = RequestMethod.POST)
-    public @ResponseBody Map<String, Object> restartSubmissionsAction(
+    public @ResponseBody Map<String, Boolean> restartSubmissionsAction(
             @RequestParam(value = "submissions", required = true) String submissions,
             HttpServletRequest request) {
-        return null;
+        Map<String, Boolean> result = new HashMap<String, Boolean>(2, 1);
+        List<Long> submissionList = JSON.parseArray(submissions, Long.class);
+        
+        for ( Long submissionId : submissionList ) {
+            submissionService.createSubmissionTask(submissionId);
+        }
+        result.put("isSuccessful", true);
+        return result;
     }
     
     /**

@@ -92,14 +92,15 @@
                                     <input id="all-submissions" type="checkbox" data-toggle="checkbox">
                                 </label>
                             </th>
-                            <th class="flag"><spring:message code="voj.submissions.submissions.result" text="Result" /></th>
-                            <th class="score"><spring:message code="voj.submissions.submissions.score" text="Score" /></th>
-                            <th class="time"><spring:message code="voj.submissions.submissions.time" text="Time" /></th>
-                            <th class="memory"><spring:message code="voj.submissions.submissions.memory" text="Memory" /></th>
-                            <th class="name"><spring:message code="voj.submissions.submissions.problem" text="Problem" /></th>
-                            <th class="user"><spring:message code="voj.submissions.submissions.user" text="User" /></th>
-                            <th class="language"><spring:message code="voj.submissions.submissions.language" text="Language" /></th>
-                            <th class="submit-time"><spring:message code="voj.submissions.submissions.submit-time" text="Submit Time" /></th>
+                            <th class="flag"><spring:message code="voj.administration.all-submissions.result" text="Result" /></th>
+                            <th class="score"><spring:message code="voj.administration.all-submissions.score" text="Score" /></th>
+                            <th class="time"><spring:message code="voj.administration.all-submissions.time" text="Time" /></th>
+                            <th class="memory"><spring:message code="voj.administration.all-submissions.memory" text="Memory" /></th>
+                            <th class="name"><spring:message code="voj.administration.all-submissions.problem" text="Problem" /></th>
+                            <th class="user"><spring:message code="voj.administration.all-submissions.user" text="User" /></th>
+                            <th class="language"><spring:message code="voj.administration.all-submissions.language" text="Language" /></th>
+                            <th class="submit-time"><spring:message code="voj.administration.all-submissions.submit-time" text="Submit Time" /></th>
+                            <th class="execute-time"><spring:message code="voj.administration.all-submissions.execute-time" text="Execute Time" /></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -119,6 +120,9 @@
                             <td class="language">${submission.language.languageName}</td>
                             <td class="submit-time">
                                 <fmt:formatDate value="${submission.submitTime}" type="both" dateStyle="default" timeStyle="default" />
+                            </td>
+                            <td class="execute-time">
+                                <fmt:formatDate value="${submission.executeTime}" type="both" dateStyle="default" timeStyle="default" />
                             </td>
                         </tr>
                         </c:forEach>
@@ -147,10 +151,14 @@
     </script>
     <script type="text/javascript">
         $('button.btn-primary', '#filters').click(function() {
+            $('.alert-error').addClass('hide');
+            $('button.btn-primary', '#filters').attr('disabled', 'disabled');
+            $('button.btn-primary', '#filters').html('<spring:message code="voj.administration.all-submissions.please-wait" text="Please wait..." />');
+
             var submissions = [],
                 action      = $('#actions').val();
 
-            $('label.checkbox').each(function() {
+            $('label.checkbox', 'table tbody').each(function() {
                 if ( $(this).hasClass('checked') ) {
                     var submissionId = $('input[type=checkbox]', $(this)).val();
                     submissions.push(submissionId);
@@ -184,6 +192,8 @@
                         $('.alert').html('<spring:message code="voj.administration.all-submissions.delete-error" text="Some errors occurred while deleting submissions." />');
                         $('.alert').removeClass('hide');
                     }
+                    $('button.btn-primary', '#filters').removeAttr('disabled');
+                    $('button.btn-primary', '#filters').html('<spring:message code="voj.administration.all-submissions.apply" text="Apply" />');
                 }
             });
         }
@@ -213,6 +223,8 @@
                         $('.alert').html('<spring:message code="voj.administration.all-submissions.restart-error" text="Some errors occurred while restarting judging for submissions." />');
                         $('.alert').removeClass('hide');
                     }
+                    $('button.btn-primary', '#filters').removeAttr('disabled');
+                    $('button.btn-primary', '#filters').html('<spring:message code="voj.administration.all-submissions.apply" text="Apply" />');
                 }
             });
         }
