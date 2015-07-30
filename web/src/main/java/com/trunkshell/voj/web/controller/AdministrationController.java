@@ -21,6 +21,7 @@ import com.alibaba.fastjson.JSON;
 import com.trunkshell.voj.web.messenger.ApplicationEventListener;
 import com.trunkshell.voj.web.model.Language;
 import com.trunkshell.voj.web.model.Option;
+import com.trunkshell.voj.web.model.Submission;
 import com.trunkshell.voj.web.model.UserGroup;
 import com.trunkshell.voj.web.service.LanguageService;
 import com.trunkshell.voj.web.service.OptionService;
@@ -162,15 +163,54 @@ public class AdministrationController {
     
     /**
      * 加载提交列表页面.
-     * @param request - HttpRequest对象
-     * @param response - HttpResponse对象
+     * @param request - HttpServletRequest对象
+     * @param response - HttpServletResponse对象
      * @return 包含提交列表页面信息的ModelAndView对象
      */
     @RequestMapping(value = "/all-submissions", method = RequestMethod.GET)
     public ModelAndView allSubmissionsView(
+            @RequestParam(value = "problemId", required = false, defaultValue = "0") long problemId,
+            @RequestParam(value = "username", required = false, defaultValue = "") String username,
+            @RequestParam(value = "page", required = false, defaultValue = "1") long pageNumber,
             HttpServletRequest request, HttpServletResponse response) {
+        final int NUMBER_OF_SUBMISSIONS_PER_PAGE = 100;
+        
+        long totalSubmissions = submissionService.getNumberOfSubmissions(null, null);
+        long latestSubmissionId = submissionService.getLatestSubmissionId();
+        long offset = latestSubmissionId - ( pageNumber >= 1 ? pageNumber - 1 : 0) * NUMBER_OF_SUBMISSIONS_PER_PAGE;
+        List<Submission> submissions = submissionService.getSubmissions(problemId, username, offset, NUMBER_OF_SUBMISSIONS_PER_PAGE);
+        
         ModelAndView view = new ModelAndView("administration/all-submissions");
+        view.addObject("totalPages", (long) Math.ceil(totalSubmissions * 1.0 / NUMBER_OF_SUBMISSIONS_PER_PAGE));
+        view.addObject("currentPage", pageNumber);
+        view.addObject("submissions", submissions);
         return view;
+    }
+    
+    /**
+     * 删除选定的提交记录.
+     * @param submissions - 提交记录ID的集合, 以逗号(, )分割
+     * @param request - HttpServletRequest对象
+     * @return 提交记录的删除结果
+     */
+    @RequestMapping(value = "/deleteSubmissions.action", method = RequestMethod.POST)
+    public @ResponseBody Map<String, Object> deleteSubmissionsAction(
+            @RequestParam(value = "submissions", required = true) String submissions,
+            HttpServletRequest request) {
+        return null;
+    }
+    
+    /**
+     * 重新评测选定的提交记录.
+     * @param submissions - 提交记录ID的集合, 以逗号(, )分割
+     * @param request
+     * @return 重新评测请求的执行结果
+     */
+    @RequestMapping(value = "/restartSubmissions.action", method = RequestMethod.POST)
+    public @ResponseBody Map<String, Object> restartSubmissionsAction(
+            @RequestParam(value = "submissions", required = true) String submissions,
+            HttpServletRequest request) {
+        return null;
     }
     
     /**
