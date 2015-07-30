@@ -50,7 +50,7 @@
                 <div class="alert alert-error hide"></div> <!-- .alert-error -->
                 <div id="filters" class="row-fluid">
                     <div class="span6">
-                    	<select id="actions">
+                        <select id="actions">
                             <option value="delete"><spring:message code="voj.administration.all-submissions.delete" text="Delete" /></option>
                             <option value="restart"><spring:message code="voj.administration.all-submissions.restart" text="Restart" /></option>
                         </select>
@@ -64,8 +64,8 @@
                                 <li class="previous <c:if test="${currentPage <= 1}">disabled</c:if>">
                                 <a href="
                                 <c:choose>
-                                	<c:when test="${currentPage <= 1}">javascript:void(0);</c:when>
-                                	<c:otherwise><c:url value="/administration/all-submissions?page=${currentPage - 1}" /></c:otherwise>
+                                    <c:when test="${currentPage <= 1}">javascript:void(0);</c:when>
+                                    <c:otherwise><c:url value="/administration/all-submissions?page=${currentPage - 1}" /></c:otherwise>
                                 </c:choose>
                                 ">&lt;</a>
                                 </li>
@@ -75,8 +75,8 @@
                                 <li class="next <c:if test="${currentPage >= totalPages}">disabled</c:if>">
                                 <a href="
                                 <c:choose>
-                                	<c:when test="${currentPage >= totalPages}">javascript:void(0);</c:when>
-                                	<c:otherwise><c:url value="/administration/all-submissions?page=${currentPage + 1}" /></c:otherwise>
+                                    <c:when test="${currentPage >= totalPages}">javascript:void(0);</c:when>
+                                    <c:otherwise><c:url value="/administration/all-submissions?page=${currentPage + 1}" /></c:otherwise>
                                 </c:choose>
                                 ">&gt;</a>
                                 </li>
@@ -136,17 +136,17 @@
     <%@ include file="/WEB-INF/views/administration/include/footer-script.jsp" %>
     <script type="text/javascript">
         $('label[for=all-submissions]').click(function() {
-        	// Fix the bug for Checkbox in FlatUI 
-        	var isChecked = false;
-        	setTimeout(function() {
-        		isChecked = $('label[for=all-submissions]').hasClass('checked');
-        		
-        		if ( isChecked ) {
-            		$('label.checkbox').addClass('checked');
-            	} else {
-            		$('label.checkbox').removeClass('checked');
-            	}
-        	}, 100);
+            // Fix the bug for Checkbox in FlatUI 
+            var isChecked = false;
+            setTimeout(function() {
+                isChecked = $('label[for=all-submissions]').hasClass('checked');
+                
+                if ( isChecked ) {
+                    $('label.checkbox').addClass('checked');
+                } else {
+                    $('label.checkbox').removeClass('checked');
+                }
+            }, 100);
         });
     </script>
     <script type="text/javascript">
