@@ -33,7 +33,7 @@
 		class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
 		<property name="locations">
 			<list>
-				<value>classpath:/voj.properties</value>
+				<value>classpath:/voj-test.properties</value>
 			</list>
 		</property>
 	</bean>
