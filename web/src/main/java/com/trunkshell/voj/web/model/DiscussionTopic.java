@@ -1,6 +1,7 @@
 package com.trunkshell.voj.web.model;
 
 import java.io.Serializable;
+import java.util.List;
 
 /**
  * 讨论节点的Model
@@ -10,10 +11,13 @@ import java.io.Serializable;
  */
 public class DiscussionTopic implements Serializable {
 	
+	/**
+	 * 讨论节点的默认构造函数
+	 */
 	public DiscussionTopic() { }
 	
 	/**
-	 * 创建根讨论节点
+	 * 讨论节点的构造函数
 	 * @param topicSlug - 讨论节点的英文唯一缩写
 	 * @param topicName - 讨论节点的名称
 	 */
@@ -22,7 +26,7 @@ public class DiscussionTopic implements Serializable {
 	}
 
 	/**
-	 * 创建根讨论节点
+	 * 讨论节点的构造函数
 	 * @param topicSlug - 讨论节点的英文唯一缩写
 	 * @param topicName - 讨论节点的名称
 	 * @param topicParentId - 讨论节点的父节点唯一标识符
@@ -32,6 +36,20 @@ public class DiscussionTopic implements Serializable {
 		this.topicSlug = topicSlug;
 		this.topicName = topicName;
 		this.topicParentId = topicParentId;
+	}
+
+	
+	/**
+	 * 讨论节点的构造函数
+	 * @param topicId - 讨论节点的唯一标识符
+	 * @param topicSlug - 讨论节点的英文唯一缩写
+	 * @param topicName - 讨论节点的名称
+	 * @param topicParentId - 讨论节点的父节点唯一标识符
+	 */
+	public DiscussionTopic(int topicId, String topicSlug, String topicName,
+			Integer topicParentId) {
+		this(topicSlug, topicName, topicParentId);
+		this.topicId = topicId;
 	}
 
 	/**
@@ -83,21 +101,29 @@ public class DiscussionTopic implements Serializable {
 	}
 
 	/**
-	 * 
-	 * @return
+	 * 获取讨论节点的父节点的唯一标识符
+	 * @return 讨论节点的父节点的唯一标识符，无父节点返回null
 	 */
 	public Integer getTopicParentId() {
 		return topicParentId;
 	}
 
 	/**
-	 * 
-	 * @param topicParentId
+	 * 设置讨论节点的父节点的唯一标识符
+	 * @param topicParentId - 讨论节点的父节点的唯一标识符
 	 */
 	public void setTopicParentId(int topicParentId) {
 		this.topicParentId = topicParentId;
 	}
 	
+	public List<DiscussionTopic> getChildren() {
+		return children;
+	}
+
+	public void setChildren(List<DiscussionTopic> children) {
+		this.children = children;
+	}
+
 	/**
 	 * 判断是否为根讨论节点
 	 * @return 根节点为true, 子节点为false
@@ -134,6 +160,11 @@ public class DiscussionTopic implements Serializable {
 	 * 讨论节点的父节点唯一标识符
 	 */
 	private Integer topicParentId;
+	
+	/**
+	 * 讨论节点的子节点
+	 */
+	private List<DiscussionTopic> children;
 
 	/**
 	 * 唯一的序列化标识符.

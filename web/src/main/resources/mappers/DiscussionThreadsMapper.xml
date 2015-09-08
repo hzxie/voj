@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+	PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.trunkshell.voj.web.mapper.DiscussionTopicMapper">
+	<resultMap id="DiscussionThreadsResultMap"
+		type="com.trunkshell.voj.web.model.DiscussionThreads">
+		<id property="discussionThreadsId" column="discussion_threads_id" />
+		<result property="discussionTopicId" column="discussion_topic_id" />
+		<result property="discussionCreatorUid" column="disscussion_creator_uid" />
+		<result property="problemId" column="problem_id" />
+		<result property="discussionThreadsName" column="discussion_threads_name" />
+		<result property="discussionCreateTime" column="discussion_create_time" />
+		<result property="discussionContent" column="discussion_content" />
+	</resultMap>
+	
+	<select id="getSingleDiscussionThreads"
+	    resultMap="DiscussionThreadsResultMap">
+	    SELECT * FROM voj_discussion_threads WHERE discussion_threads_id = #{discussionThreadsId}
+	</select>
+	
+	<select id="getDiscussionThreads"
+	    resultMap="DiscussionThreadsResultMap">
+	    SELECT * FROM voj_discussion_threads limit #{offset}, #{limit}
+	</select>
+	
+	<select id="getDiscussionThreadsUsingTopicId"
+	    resultMap="DiscussionThreadsResultMap">
+	    SELECT * FROM voj_discussion_threads 
+	    WHERE discussion_topic_id = #{discussionTopicId} limit #{offset}, #{limit}
+	</select>
+	
+	<insert id="createDiscussionThreads"
+	    parameterType="com.trunkshell.voj.web.model.DiscussionThreads"
+	    flushCache="true" 
+		keyProperty="discussionThreadsId" 
+		keyColumn="discussion_threads_id"
+		useGeneratedKeys="true">
+	    INSERT INTO voj_discussion_threads (discussion_topic_id, disscussion_creator_uid, problem_id, discussion_threads_name, discussion_create_time, discussion_content) 
+	    VALUES (#{discussionTopicId}, #{discussionCreatorUid}, #{problemId}, #{discussionThreadsName}, #{discussionCreateTime}, #{discussionContent})
+	</insert>
+	
+	<update id="updateDiscussionThreads"
+	    parameterType="com.trunkshell.voj.web.model.DiscussionThreads"
+	    flushCache="true">
+	    UPDATE voj_discussion_threads 
+	    SET discussion_topic_id = #{discussionTopicId}, disscussion_creator_uid = #{discussionCreatorUid}, problem_id = #{problemId}, discussion_threads_name = #{discussionThreadsName}, discussion_create_time = #{discussionCreateTime}, discussion_content = #{discussionContent} 
+	    WHERE discussion_threads_id = #{discussionThreadsId}
+	</update>
+	
+	<delete id="deleteDiscussionThreads"
+	    flushCache="true">
+	    DELETE FROM voj_discussion_threads WHERE discussion_threads_id = #{discussionThreadsId}
+	</delete>
+</mapper>

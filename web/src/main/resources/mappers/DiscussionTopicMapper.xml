@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+	PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.trunkshell.voj.web.mapper.DiscussionTopicMapper">
+	<resultMap id="DiscussionTopicResultMap" type="com.trunkshell.voj.web.model.DiscussionTopic">
+		<id property="topicId" column="discussion_topic_id" />
+		<result property="topicId" column="discussion_topic_id" />
+		<result property="topicSlug" column="discussion_topic_slug" />
+		<result property="topicName" column="discussion_topic_name" />
+		<result property="topicParentId" column="discussion_parent_topic_id" />
+	</resultMap>
+
+	<select id="getDiscussionTopicUsingTid"
+	    resultMap="DiscussionTopicResultMap">
+		SELECT *
+		FROM voj_discussion_topics
+		WHERE discussion_topic_id = #{topicId}
+	</select>
+	
+	<select id="getDiscussionTopics"
+	    resultMap="DiscussionTopicResultMap">
+	    SELECT * FROM voj_discussion_topics
+	</select>
+	
+	<insert id="createDiscussionTopic"
+	    parameterType="com.trunkshell.voj.web.model.DiscussionTopic"
+	    flushCache="true" 
+		keyProperty="topicId" 
+		keyColumn="discussion_topic_id"
+		useGeneratedKeys="true">
+	    INSERT INTO voj_discussion_topics (discussion_topic_slug, discussion_topic_name, discussion_parent_topic_id) 
+	    VALUES (#{topicSlug}, #{topicName}, #{topicParentId})
+	</insert>
+	
+	<update id="updateDiscussionTopic"
+	    parameterType="com.trunkshell.voj.web.model.DiscussionTopic"
+	    flushCache="true">
+	    UPDATE voj_discussion_topics 
+	    SET discussion_topic_slug = #{topicSlug}, discussion_topic_name = #{topicName}, discussion_parent_topic_id = #{topicParentId} 
+	    WHERE discussion_topic_id = #{topicId}
+	</update>
+	
+	<delete id="deleteDiscussionTopic"
+	    flushCache="true">
+	    DELETE FROM voj_discussion_topics WHERE discussion_topic_id = #{topicId}
+	</delete>
+</mapper>
