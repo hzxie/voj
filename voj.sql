@@ -107,6 +107,17 @@ CREATE TABLE IF NOT EXISTS `voj_discussion_topics` (
   `discussion_parent_topic_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
+INSERT INTO `test`.`voj_discussion_topics` (`discussion_topic_id`, `discussion_topic_slug`, `discussion_topic_name`, `discussion_parent_topic_id`) VALUES 
+('1', 'DFS', '深度优先搜索', NULL);
+
+INSERT INTO `test`.`voj_discussion_threads` (`discussion_threads_id`, `discussion_topic_id`, `disscussion_creator_uid`, `problem_id`, `discussion_threads_name`, `discussion_create_time`, `discussion_content`)
+ VALUES ('1', '1', '1001', '1000', 'test-name-1', '2015-06-21 10:52:30.000000', 'test-content-1'),
+  ('2', '1', '1002', '1000', 'test-name-2', '2015-06-24 22:15:12.000000', 'test-content-2');
+
+INSERT INTO `test`.`voj_discussion_replies` (`discussion_reply_id`, `discussion_threads_id`, `discussion_reply_uid`, `discussion_reply_time`, `discussion_reply_content`) 
+VALUES ('1', '1', '1002', CURRENT_TIMESTAMP, 'reply-content-1'),
+ ('2', '1', '1001', CURRENT_TIMESTAMP, 'reply-content-2');
+
 -- --------------------------------------------------------
 
 --
