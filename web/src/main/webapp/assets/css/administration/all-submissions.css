@@ -7,9 +7,8 @@ div#filters select#actions {
 	width: 40%;
 }
 
-div#filters div.pagination {
+div#filters form {
 	margin: 0;
-	text-align: right;
 }
 
 div#content table {
@@ -120,8 +119,8 @@ div#content div#more-submissions img {
 
 /* All Mobile Sizes (devices and browser) */
 @media only screen and (max-width: 767px) {
-	div#filters div.pagination {
-		text-align: center;
+	div#filters div.span6 {
+		margin-bottom: 10px;
 	}
 
 	div#content table th.time,

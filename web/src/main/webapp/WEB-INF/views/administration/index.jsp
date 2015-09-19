@@ -165,7 +165,6 @@
                         </div> <!-- #system-panel -->
                     </div> <!-- .span4 -->
                 </div> <!-- .row-fluid -->
-                </div> <!-- .row-fluid -->
             </div> <!-- #content -->
         </div> <!-- #container -->
     </div> <!-- #wrapper -->

@@ -54,34 +54,24 @@
                             <option value="delete"><spring:message code="voj.administration.all-submissions.delete" text="Delete" /></option>
                             <option value="restart"><spring:message code="voj.administration.all-submissions.restart" text="Restart" /></option>
                         </select>
-                        <button class="btn btn-primary"><spring:message code="voj.administration.all-submissions.apply" text="Apply" /></button>
+                        <button class="btn btn-danger"><spring:message code="voj.administration.all-submissions.apply" text="Apply" /></button>
                     </div> <!-- .span6 -->
                     <div class="span6">
-                        <div id="pagination" class="pagination">
-                            <c:set var="lowerBound" value="${currentPage - 5 > 0 ? currentPage - 5 : 1}" />
-                            <c:set var="upperBound" value="${currentPage + 5 < totalPages ? currentPage + 5 : totalPages}" />
-                            <ul>
-                                <li class="previous <c:if test="${currentPage <= 1}">disabled</c:if>">
-                                <a href="
-                                <c:choose>
-                                    <c:when test="${currentPage <= 1}">javascript:void(0);</c:when>
-                                    <c:otherwise><c:url value="/administration/all-submissions?page=${currentPage - 1}" /></c:otherwise>
-                                </c:choose>
-                                ">&lt;</a>
-                                </li>
-                                <c:forEach begin="${lowerBound}" end="${upperBound}" var="pageNumber">
-                                <li <c:if test="${pageNumber == currentPage}">class="active"</c:if>><a href="<c:url value="/administration/all-submissions?page=${pageNumber}" />">${pageNumber}</a></li>
-                                </c:forEach>
-                                <li class="next <c:if test="${currentPage >= totalPages}">disabled</c:if>">
-                                <a href="
-                                <c:choose>
-                                    <c:when test="${currentPage >= totalPages}">javascript:void(0);</c:when>
-                                    <c:otherwise><c:url value="/administration/all-submissions?page=${currentPage + 1}" /></c:otherwise>
-                                </c:choose>
-                                ">&gt;</a>
-                                </li>
-                            </ul>
-                        </div> <!-- #pagination-->
+                        <form class="row-fluid text-right" action="<c:url value="/administration/all-submissions" />">
+                            <div class="span5">
+                                <div class="control-group">
+                                    <input id="problem-id" name="problemId" class="span12" value="<c:if test="${problemId != 0}">${problemId}</c:if>" placeholder="<spring:message code="voj.administration.all-submissions.problem-id" text="Problem ID" />" type="text" />
+                                </div> <!-- .control-group -->
+                            </div> <!-- .span5 -->
+                            <div class="span5">
+                                <div class="control-group">
+                                    <input id="username" name="username" class="span12" placeholder="<spring:message code="voj.administration.all-submissions.username" text="Username" />" type="text" />
+                                </div> <!-- .control-group -->
+                            </div> <!-- .span5 -->
+                            <div class="span2">
+                                <button class="btn btn-primary"><spring:message code="voj.administration.all-submissions.filter" text="Filter" /></button>
+                            </div> <!-- .span2 -->
+                        </form> <!-- .row-fluid -->
                     </div> <!-- .span6 -->
                 </div> <!-- .row-fluid -->
                 <table class="table table-striped">
@@ -128,6 +118,31 @@
                         </c:forEach>
                     </tbody>
                 </table>
+                <div id="pagination" class="pagination pagination-centered">
+                    <c:set var="lowerBound" value="${currentPage - 5 > 0 ? currentPage - 5 : 1}" />
+                    <c:set var="upperBound" value="${currentPage + 5 < totalPages ? currentPage + 5 : totalPages}" />
+                    <ul>
+                        <li class="previous <c:if test="${currentPage <= 1}">disabled</c:if>">
+                        <a href="
+                        <c:choose>
+                            <c:when test="${currentPage <= 1}">javascript:void(0);</c:when>
+                            <c:otherwise><c:url value="/administration/all-submissions?${requestScope['javax.servlet.forward.query_string']}&page=${currentPage - 1}" /></c:otherwise>
+                        </c:choose>
+                        ">&lt;</a>
+                        </li>
+                        <c:forEach begin="${lowerBound}" end="${upperBound}" var="pageNumber">
+                        <li <c:if test="${pageNumber == currentPage}">class="active"</c:if>><a href="<c:url value="/administration/all-submissions?${requestScope['javax.servlet.forward.query_string']}&page=${pageNumber}" />">${pageNumber}</a></li>
+                        </c:forEach>
+                        <li class="next <c:if test="${currentPage >= totalPages}">disabled</c:if>">
+                        <a href="
+                        <c:choose>
+                            <c:when test="${currentPage >= totalPages}">javascript:void(0);</c:when>
+                            <c:otherwise><c:url value="/administration/all-submissions?${requestScope['javax.servlet.forward.query_string']}&page=${currentPage + 1}" /></c:otherwise>
+                        </c:choose>
+                        ">&gt;</a>
+                        </li>
+                    </ul>
+                </div> <!-- #pagination-->
             </div> <!-- #content -->
         </div> <!-- #container -->
     </div> <!-- #wrapper -->
@@ -150,10 +165,10 @@
         });
     </script>
     <script type="text/javascript">
-        $('button.btn-primary', '#filters').click(function() {
+        $('button.btn-danger', '#filters').click(function() {
             $('.alert-error').addClass('hide');
-            $('button.btn-primary', '#filters').attr('disabled', 'disabled');
-            $('button.btn-primary', '#filters').html('<spring:message code="voj.administration.all-submissions.please-wait" text="Please wait..." />');
+            $('button.btn-danger', '#filters').attr('disabled', 'disabled');
+            $('button.btn-danger', '#filters').html('<spring:message code="voj.administration.all-submissions.please-wait" text="Please wait..." />');
 
             var submissions = [],
                 action      = $('#actions').val();
@@ -192,8 +207,8 @@
                         $('.alert').html('<spring:message code="voj.administration.all-submissions.delete-error" text="Some errors occurred while deleting submissions." />');
                         $('.alert').removeClass('hide');
                     }
-                    $('button.btn-primary', '#filters').removeAttr('disabled');
-                    $('button.btn-primary', '#filters').html('<spring:message code="voj.administration.all-submissions.apply" text="Apply" />');
+                    $('button.btn-danger', '#filters').removeAttr('disabled');
+                    $('button.btn-danger', '#filters').html('<spring:message code="voj.administration.all-submissions.apply" text="Apply" />');
                 }
             });
         }
