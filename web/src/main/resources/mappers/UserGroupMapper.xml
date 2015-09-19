@@ -12,6 +12,12 @@
 	</resultMap>
 	
 	<!-- Methods -->
+	<select id="getUserGroups"
+		resultMap="UserGroupResultMap"
+		useCache="true">
+		SELECT *
+		FROM voj_user_groups
+	</select>
 	<select id="getUserGroupUsingId" 
 		parameterType="int"
 		resultMap="UserGroupResultMap"

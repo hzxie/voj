@@ -1,5 +1,7 @@
 package com.trunkshell.voj.web.mapper;
 
+import java.util.List;
+
 import org.apache.ibatis.annotations.CacheNamespace;
 import org.apache.ibatis.annotations.Param;
 
@@ -12,6 +14,12 @@ import com.trunkshell.voj.web.model.UserGroup;
  */
 @CacheNamespace(implementation = org.mybatis.caches.ehcache.EhcacheCache.class)
 public interface UserGroupMapper {
+	/**
+	 * 获取全部的用户组对象.
+	 * @return 全部的用户组对象的列表
+	 */
+	public List<UserGroup> getUserGroups();
+	
     /**
      * 通过用户组的唯一标识符获取用户组对象.
      * @param userGroupId - 用户组的唯一标识符

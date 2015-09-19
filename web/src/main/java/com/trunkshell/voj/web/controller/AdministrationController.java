@@ -157,8 +157,16 @@ public class AdministrationController {
      */
     @RequestMapping(value = "/all-users", method = RequestMethod.GET)
     public ModelAndView allUsersView(
+    		@RequestParam(value = "userGroup", required = false, defaultValue = "") String userGroupSlug,
+    		@RequestParam(value = "username", required = false, defaultValue = "") String username,
+    		@RequestParam(value = "page", required = false, defaultValue = "1") long pageNumber,
             HttpServletRequest request, HttpServletResponse response) {
-        ModelAndView view = new ModelAndView("administration/all-users");
+    	final int NUMBER_OF_USERS_PER_PAGE = 100;
+    	List<UserGroup> userGroups = userService.getUserGroups();
+    	
+    	ModelAndView view = new ModelAndView("administration/all-users");
+    	view.addObject("userGroups", userGroups);
+    	view.addObject("username", username);
         return view;
     }
     
