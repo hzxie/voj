@@ -218,6 +218,25 @@
 					<encoding>UTF-8</encoding>
 				</configuration>
 			</plugin>
+			<!-- Coverall Web Service -->
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>cobertura-maven-plugin</artifactId>
+				<version>2.7</version>
+				<configuration>
+					<format>xml</format>
+					<maxmem>512M</maxmem>
+					<aggregate>true</aggregate>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.eluder.coveralls</groupId>
+				<artifactId>coveralls-maven-plugin</artifactId>
+				<version>4.0.0</version>
+				<configuration>
+					<repoToken>fuThSW48q46tonETxgbTXoxDobLdRn6QN</repoToken>
+				</configuration>
+			</plugin>
 		</plugins>
 	</build>
 </project>

@@ -28,3 +28,6 @@ script:
 
 after_script:
   - mysql -e 'DROP DATABASE test;'
+
+after_success:
+  - mvn cobertura:cobertura coveralls:report

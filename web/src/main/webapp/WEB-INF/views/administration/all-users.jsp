@@ -46,7 +46,40 @@
                 <h2 class="page-header"><i class="fa fa-users"></i> <spring:message code="voj.administration.all-users.all-users" text="All Users" /></h2>
                 <div class="alert alert-error hide"></div> <!-- .alert-error -->
                 <div id="filters" class="row-fluid">
+                    <div class="span6">
+                        <select id="actions">
+                            <option value="delete"><spring:message code="voj.administration.all-users.delete" text="Delete" /></option>
+                        </select>
+                    </div> <!-- .span6 -->
+                    <div class="span6">
+                        
+                    </div> <!-- .span6 -->
                 </div> <!-- .row-fluid -->
+                <div id="pagination" class="pagination pagination-centered">
+                    <c:set var="lowerBound" value="${currentPage - 5 > 0 ? currentPage - 5 : 1}" />
+                    <c:set var="upperBound" value="${currentPage + 5 < totalPages ? currentPage + 5 : totalPages}" />
+                    <ul>
+                        <li class="previous <c:if test="${currentPage <= 1}">disabled</c:if>">
+                        <a href="
+                        <c:choose>
+                            <c:when test="${currentPage <= 1}">javascript:void(0);</c:when>
+                            <c:otherwise><c:url value="/administration/all-users?page=${currentPage - 1}" /></c:otherwise>
+                        </c:choose>
+                        ">&lt;</a>
+                        </li>
+                        <c:forEach begin="${lowerBound}" end="${upperBound}" var="pageNumber">
+                        <li <c:if test="${pageNumber == currentPage}">class="active"</c:if>><a href="<c:url value="/administration/all-users?page=${pageNumber}" />">${pageNumber}</a></li>
+                        </c:forEach>
+                        <li class="next <c:if test="${currentPage >= totalPages}">disabled</c:if>">
+                        <a href="
+                        <c:choose>
+                            <c:when test="${currentPage >= totalPages}">javascript:void(0);</c:when>
+                            <c:otherwise><c:url value="/administration/all-users?page=${currentPage + 1}" /></c:otherwise>
+                        </c:choose>
+                        ">&gt;</a>
+                        </li>
+                    </ul>
+                </div> <!-- #pagination-->
             </div> <!-- #content -->
         </div> <!-- #container -->
     </div> <!-- #wrapper -->
