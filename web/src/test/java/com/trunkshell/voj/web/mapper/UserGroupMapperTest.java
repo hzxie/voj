@@ -1,5 +1,7 @@
 package com.trunkshell.voj.web.mapper;
 
+import java.util.List;
+
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -18,10 +20,24 @@ import com.trunkshell.voj.web.model.UserGroup;
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class UserGroupMapperTest {
+	/**
+	 * 测试用例: 测试getUserGroups()方法
+	 * 测试数据: N/a
+	 * 预期结果: 返回全部的用户组对象(包含3个用户组对象) 
+	 */
+	public void testGetUserGroups() {
+		List<UserGroup> userGroups = userGroupMapper.getUserGroups();
+		Assert.assertEquals(3, userGroups.size());
+		
+		UserGroup firstUserGroup = userGroups.get(0);
+		String firstUserGroupSlug = firstUserGroup.getUserGroupSlug();
+		Assert.assertEquals("users", firstUserGroupSlug);
+	}
+	
     /**
      * 测试用例: 测试getUserGroupUsingId(int)方法
-     * 测试数据: 普通用户(User)的用户组唯一标识符
-     * 预期结果: 返回用户(User)的用户组对象
+     * 测试数据: 普通用户组(UserGroup)的用户组唯一标识符
+     * 预期结果: 返回用户组(UserGroup)的用户组对象
      */
     @Test
     public void testGetUserGroupUsingIdExists() {
@@ -45,8 +61,8 @@ public class UserGroupMapperTest {
     
     /**
      * 测试用例: 测试getUserGroupUsingSlug(String)方法
-     * 测试数据: 普通用户(User)的用户组唯一英文缩写
-     * 预期结果: 返回用户(User)的用户组对象
+     * 测试数据: 普通用户组(UserGroup)的用户组唯一英文缩写
+     * 预期结果: 返回用户组(UserGroup)的用户组对象
      */
     @Test
     public void testGetUserGroupUsingSlugExists() {

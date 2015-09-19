@@ -540,6 +540,16 @@ public class UserService {
     
     /**
      * [此方法仅供管理员使用]
+     * 获取全部的用户组对象.
+	 * @return 全部的用户组对象的列表
+     */
+    public List<UserGroup> getUserGroups() {
+    	List<UserGroup> userGroups = userGroupMapper.getUserGroups();
+    	return userGroups;
+    }
+    
+    /**
+     * [此方法仅供管理员使用]
      * 获取系统中注册用户的总数.
      * @param userGroup - 用户所属的用户组对象
      * @return 系统中注册用户的总数

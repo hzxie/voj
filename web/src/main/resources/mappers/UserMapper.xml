@@ -29,6 +29,15 @@
 		FROM voj_users 
 		WHERE user_group_id = #{userGroup.userGroupId}
 	</select>
+	<select id="getNumberOfUsersUsingUserGroupAndUsername"
+		parameterType="map"
+		resultType="long"
+		useCache="true">
+		SELECT COUNT(*)
+		FROM voj_users
+		WHERE user_group_id = #{userGroup.userGroupId}
+		AND username LIKE %#{username}%
+	</select>
 	<select id="getNumberOfUsersUsingLanguage" 
 		parameterType="int"
 		resultType="long"
@@ -67,8 +76,19 @@
 		useCache="true">
 		SELECT * 
 		FROM voj_users 
-		WHERE user_group_id = #{userGroup.userGroupId} AND uid &gt;= #{uid} 
+		WHERE user_group_id = #{userGroup.userGroupId}
+		AND uid > #{uid}
 		LIMIT #{limit}
+	</select>
+	<select id="getUserUsingUserGroupAndUsername" 
+		parameterType="map"
+		resultMap="UserResultMap"
+		useCache="true">
+		SELECT * 
+		FROM voj_users 
+		WHERE user_group_id = #{userGroup.userGroupId}
+		AND username LIKE %#{username}%
+		LIMIT #{offset}, #{limit}
 	</select>
 	<insert id="createUser" 
 		parameterType="com.trunkshell.voj.web.model.User"
