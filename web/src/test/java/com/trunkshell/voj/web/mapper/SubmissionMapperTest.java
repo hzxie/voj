@@ -10,7 +10,6 @@ import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
-import org.springframework.test.context.transaction.TransactionConfiguration;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.trunkshell.voj.web.model.Language;
@@ -24,7 +23,6 @@ import com.trunkshell.voj.web.model.User;
  */
 @RunWith(SpringJUnit4ClassRunner.class)
 @Transactional
-@TransactionConfiguration(defaultRollback = true)
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class SubmissionMapperTest {
     /**
