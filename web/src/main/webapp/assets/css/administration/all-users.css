@@ -65,33 +65,6 @@ div#content table td {
 	vertical-align: middle;
 }
 
-div#content table td.flag-PD > a,
-div#content table td.flag-CPL > a,
-div#content table td.flag-JUD > a {
-	color: #ffa500;
-}
-
-div#content table td.flag-AC > a {
-	color: #f00;
-}
-
-div#content table td.flag-PE > a,
-div#content table td.flag-WA > a,
-div#content table td.flag-TLE > a,
-div#content table td.flag-MLE > a,
-div#content table td.flag-OLE > a {
-	color: #4d7aff;
-}
-
-div#content table td.flag-RE > a,
-div#content table td.flag-CE > a {
-	color: #49a932;
-}
-
-div#content table td.flag-SE > a {
-	color: #34495e;
-}
-
 /* Smaller than standard 960 (devices and browsers) */
 @media only screen and (max-width: 959px) {
 }
@@ -104,15 +77,6 @@ div#content table td.flag-SE > a {
 @media only screen and (max-width: 767px) {
 	div#filters div.span6 {
 		margin-bottom: 10px;
-	}
-
-	div#content table th.time,
-	div#content table td.time,
-	div#content table th.memory,
-	div#content table td.memory,
-	div#content table th.language,
-	div#content table td.language {
-		display: none;
 	}
 }
 
