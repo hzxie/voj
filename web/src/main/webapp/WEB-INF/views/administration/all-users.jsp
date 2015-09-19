@@ -50,6 +50,7 @@
                         <select id="actions">
                             <option value="delete"><spring:message code="voj.administration.all-users.delete" text="Delete" /></option>
                         </select>
+                        <button class="btn btn-danger"><spring:message code="voj.administration.all-submissions.apply" text="Apply" /></button>
                     </div> <!-- .span6 -->
                     <div class="span6">
                         

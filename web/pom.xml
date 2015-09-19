@@ -234,6 +234,7 @@
 				<artifactId>coveralls-maven-plugin</artifactId>
 				<version>4.0.0</version>
 				<configuration>
+					<sourceEncoding>UTF-8</sourceEncoding>
 					<repoToken>fuThSW48q46tonETxgbTXoxDobLdRn6QN</repoToken>
 				</configuration>
 			</plugin>
