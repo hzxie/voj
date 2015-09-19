@@ -1,8 +1,9 @@
 ![Verwandlung Online Judge](https://raw.githubusercontent.com/zjhzxhz/voj/master/web/src/main/webapp/assets/img/logo.png)
 
-Version: 0.0.1-SNAPSHOT
+Version: 0.1.0-SNAPSHOT
 
 [![Build Status](https://travis-ci.org/zjhzxhz/voj.png?branch=master)](https://travis-ci.org/zjhzxhz/voj)
+[![Coverage Status](https://coveralls.io/repos/zjhzxhz/voj/badge.svg?branch=master&service=github)](https://coveralls.io/github/zjhzxhz/voj?branch=master)
 
 [**Official Website**](#) | 
 [**Tech Support**](http://zjhzxhz.com) |
