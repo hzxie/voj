@@ -87,7 +87,6 @@
             </form> <!-- #register-form -->
         </c:otherwise>
         </c:choose>
-        </div> <!-- #register -->
         <p class="text-center">
             <spring:message code="voj.accounts.register.already-have-account" text="Already have an account?" /><br />
             <a href="<c:url value="/accounts/login" />"><spring:message code="voj.accounts.register.sign-in" text="Sign in" /></a>

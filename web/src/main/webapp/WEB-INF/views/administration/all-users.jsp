@@ -6,7 +6,7 @@
 <html lang="${language}">
 <head>
     <meta charset="UTF-8">
-    <title><spring:message code="voj.administration.all-users.title" text="Users" /> | ${websiteName}</title>
+    <title><spring:message code="voj.administration.all-users.title" text="All Users" /> | ${websiteName}</title>
     <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="${description}">
@@ -43,7 +43,10 @@
             <%@ include file="/WEB-INF/views/administration/include/header.jsp" %>
             <!-- Content -->
             <div id="content">
-                All Users
+                <h2 class="page-header"><i class="fa fa-users"></i> <spring:message code="voj.administration.all-users.all-users" text="All Users" /></h2>
+                <div class="alert alert-error hide"></div> <!-- .alert-error -->
+                <div id="filters" class="row-fluid">
+                </div> <!-- .row-fluid -->
             </div> <!-- #content -->
         </div> <!-- #container -->
     </div> <!-- #wrapper -->

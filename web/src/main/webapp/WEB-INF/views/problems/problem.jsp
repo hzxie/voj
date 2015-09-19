@@ -146,7 +146,7 @@
                     <c:if test="${discussion == null || discussion.size() == 0}">
                         <p><spring:message code="voj.problems.problem.no-discussion" text="No discussion" /></p>
                     </c:if>
-                    <ul>
+                    <ul></ul>
                 </div> <!-- discussion -->
             </div> <!-- #sidebar -->
         </div> <!-- .row-fluid -->

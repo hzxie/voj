@@ -182,6 +182,8 @@ public class AdministrationController {
         List<Submission> submissions = submissionService.getSubmissions(problemId, username, offset, NUMBER_OF_SUBMISSIONS_PER_PAGE);
         
         ModelAndView view = new ModelAndView("administration/all-submissions");
+        view.addObject("problemId", problemId);
+        view.addObject("username", username);
         view.addObject("totalPages", (long) Math.ceil(totalSubmissions * 1.0 / NUMBER_OF_SUBMISSIONS_PER_PAGE));
         view.addObject("currentPage", pageNumber);
         view.addObject("submissions", submissions);

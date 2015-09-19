@@ -1,3 +1,4 @@
+        <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
         <div id="sidebar">
             <div id="logo">
                 <a href="<c:url value="/" />">
