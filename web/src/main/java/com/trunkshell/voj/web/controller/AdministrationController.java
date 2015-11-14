@@ -163,10 +163,14 @@ public class AdministrationController {
             HttpServletRequest request, HttpServletResponse response) {
     	final int NUMBER_OF_USERS_PER_PAGE = 100;
     	List<UserGroup> userGroups = userService.getUserGroups();
+    	UserGroup userGroup = userService.getUserGroupUsingSlug(userGroupSlug);
+    	long totalUsers = userService.getNumberOfUsersUsingUserGroupAndUsername(userGroup, username);
     	
     	ModelAndView view = new ModelAndView("administration/all-users");
     	view.addObject("userGroups", userGroups);
     	view.addObject("username", username);
+    	view.addObject("currentPage", pageNumber);
+    	view.addObject("totalPages", (long) Math.ceil(totalUsers * 1.0 / NUMBER_OF_USERS_PER_PAGE));
         return view;
     }
     

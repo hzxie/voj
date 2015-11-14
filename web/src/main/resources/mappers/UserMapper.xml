@@ -35,8 +35,14 @@
 		useCache="true">
 		SELECT COUNT(*)
 		FROM voj_users
-		WHERE user_group_id = #{userGroup.userGroupId}
-		AND username LIKE %#{username}%
+		<where>
+			<if test="userGroup != null">
+         		user_group_id = #{userGroup.userGroupId}
+			</if>
+			<if test="username != null and username != ''">
+         		AND username LIKE #{username}
+			</if>
+		</where>
 	</select>
 	<select id="getNumberOfUsersUsingLanguage" 
 		parameterType="int"
