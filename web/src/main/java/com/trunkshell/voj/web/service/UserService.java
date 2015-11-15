@@ -589,6 +589,19 @@ public class UserService {
     }
     
     /**
+     * [此方法仅供管理员使用]
+     * 根据用户组和用户名筛选用户对象.
+     * @param userGroup - 用户组对象
+     * @param username - 部分或全部用户名
+     * @param offset - 用户唯一标识符的起始编号
+     * @param limit - 需要获取的用户的数量
+     * @return 符合条件的用户列表
+     */
+    public List<User> getUserUsingUserGroupAndUsername(UserGroup userGroup, String username, long offset, int limit) {
+    	return userMapper.getUserUsingUserGroupAndUsername(userGroup, username, offset, limit);
+    }
+    
+    /**
      * 自动注入的UserMapper对象.
      * 用于获取用户基本信息.
      */

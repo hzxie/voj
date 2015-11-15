@@ -71,6 +71,7 @@ public interface UserMapper {
     public List<User> getUserUsingUserGroup(@Param("userGroup") UserGroup userGroup, @Param("uid") long offset, @Param("limit") int limit);
     
     /**
+     * [此方法仅供管理员使用]
      * 根据用户组和用户名筛选用户对象.
      * @param userGroup - 用户组对象
      * @param username - 部分或全部用户名

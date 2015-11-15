@@ -101,7 +101,7 @@
                                     <input id="submission-${submission.submissionId}" type="checkbox" value="${submission.submissionId}" data-toggle="checkbox" />
                                 </label>
                             </td>
-                            <td class="flag flag-${submission.judgeResult.judgeResultSlug}"><a href="<c:url value="/administration/edit-submission?submissionId=${submission.submissionId}" />">${submission.judgeResult.judgeResultName}</a></td>
+                            <td class="flag flag-${submission.judgeResult.judgeResultSlug}"><a href="<c:url value="/administration/edit-submission/${submission.submissionId}" />">${submission.judgeResult.judgeResultName}</a></td>
                             <td class="score">${submission.judgeScore}</td>
                             <td class="time">${submission.usedTime} ms</td>
                             <td class="memory">${submission.usedMemory} K</td>
@@ -121,23 +121,24 @@
                 <div id="pagination" class="pagination pagination-centered">
                     <c:set var="lowerBound" value="${currentPage - 5 > 0 ? currentPage - 5 : 1}" />
                     <c:set var="upperBound" value="${currentPage + 5 < totalPages ? currentPage + 5 : totalPages}" />
+                    <c:set var="baseUrl" value="/administration/all-submissions?${requestScope['javax.servlet.forward.query_string']}" />
                     <ul>
                         <li class="previous <c:if test="${currentPage <= 1}">disabled</c:if>">
                         <a href="
                         <c:choose>
                             <c:when test="${currentPage <= 1}">javascript:void(0);</c:when>
-                            <c:otherwise><c:url value="/administration/all-submissions?${requestScope['javax.servlet.forward.query_string']}&page=${currentPage - 1}" /></c:otherwise>
+                            <c:otherwise><c:url value="${baseUrl}&page=${currentPage - 1}" /></c:otherwise>
                         </c:choose>
                         ">&lt;</a>
                         </li>
                         <c:forEach begin="${lowerBound}" end="${upperBound}" var="pageNumber">
-                        <li <c:if test="${pageNumber == currentPage}">class="active"</c:if>><a href="<c:url value="/administration/all-submissions?${requestScope['javax.servlet.forward.query_string']}&page=${pageNumber}" />">${pageNumber}</a></li>
+                        <li <c:if test="${pageNumber == currentPage}">class="active"</c:if>><a href="<c:url value="${baseUrl}&page=${pageNumber}" />">${pageNumber}</a></li>
                         </c:forEach>
                         <li class="next <c:if test="${currentPage >= totalPages}">disabled</c:if>">
                         <a href="
                         <c:choose>
                             <c:when test="${currentPage >= totalPages}">javascript:void(0);</c:when>
-                            <c:otherwise><c:url value="/administration/all-submissions?${requestScope['javax.servlet.forward.query_string']}&page=${currentPage + 1}" /></c:otherwise>
+                            <c:otherwise><c:url value="${baseUrl}&page=${currentPage + 1}" /></c:otherwise>
                         </c:choose>
                         ">&gt;</a>
                         </li>
