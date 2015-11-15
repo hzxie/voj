@@ -23,15 +23,15 @@ public class UserGroupMapperTest {
 	/**
 	 * 测试用例: 测试getUserGroups()方法
 	 * 测试数据: N/a
-	 * 预期结果: 返回全部的用户组对象(包含3个用户组对象) 
+	 * 预期结果: 返回全部的用户组对象(包含4个用户组对象) 
 	 */
 	public void testGetUserGroups() {
 		List<UserGroup> userGroups = userGroupMapper.getUserGroups();
-		Assert.assertEquals(3, userGroups.size());
+		Assert.assertEquals(4, userGroups.size());
 		
 		UserGroup firstUserGroup = userGroups.get(0);
 		String firstUserGroupSlug = firstUserGroup.getUserGroupSlug();
-		Assert.assertEquals("users", firstUserGroupSlug);
+		Assert.assertEquals("forbidden", firstUserGroupSlug);
 	}
 	
     /**
@@ -41,7 +41,7 @@ public class UserGroupMapperTest {
      */
     @Test
     public void testGetUserGroupUsingIdExists() {
-        UserGroup userGroup = userGroupMapper.getUserGroupUsingId(1);
+        UserGroup userGroup = userGroupMapper.getUserGroupUsingId(2);
         Assert.assertNotNull(userGroup);
         
         String userGroupSlug = userGroup.getUserGroupSlug();
@@ -70,7 +70,7 @@ public class UserGroupMapperTest {
         Assert.assertNotNull(userGroup);
         
         int userGroupId = userGroup.getUserGroupId();
-        Assert.assertEquals(1, userGroupId);
+        Assert.assertEquals(2, userGroupId);
     }
     
     /**

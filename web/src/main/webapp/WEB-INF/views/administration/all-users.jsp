@@ -159,6 +159,48 @@
             }, 100);
         });
     </script>
+    <script type="text/javascript">
+        $('button.btn-danger', '#filters').click(function() {
+            $('.alert-error').addClass('hide');
+            $('button.btn-danger', '#filters').attr('disabled', 'disabled');
+            $('button.btn-danger', '#filters').html('<spring:message code="voj.administration.all-users.please-wait" text="Please wait..." />');
+
+            var users = [];
+            $('label.checkbox', 'table tbody').each(function() {
+                if ( $(this).hasClass('checked') ) {
+                    var uid = $('input[type=checkbox]', $(this)).val();
+                    users.push(uid);
+                }
+            });
+            return doDeleteUsersAction(users);
+        });
+    </script>
+    <script type="text/javascript">
+        function doDeleteUsersAction(users) {
+            var postData = {
+                'users': JSON.stringify(users)
+            };
+
+            $.ajax({
+                type: 'POST',
+                url: '<c:url value="/administration/deleteUsers.action" />',
+                data: postData,
+                dataType: 'JSON',
+                success: function(result){
+                    if ( result['isSuccessful'] ) {
+                        for ( var i = 0; i < users.length; ++ i ) {
+                            $('tr[data-value=%s]'.format(users[i])).remove();
+                        }
+                    } else {
+                        $('.alert').html('<spring:message code="voj.administration.all-users.delete-error" text="Some errors occurred while deleting users." />');
+                        $('.alert').removeClass('hide');
+                    }
+                    $('button.btn-danger', '#filters').removeAttr('disabled');
+                    $('button.btn-danger', '#filters').html('<spring:message code="voj.administration.all-users.apply" text="Apply" />');
+                }
+            });
+        }
+    </script>
     <c:if test="${GoogleAnalyticsCode != ''}">
     <script type="text/javascript">${googleAnalyticsCode}</script>
     </c:if>

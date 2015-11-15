@@ -602,6 +602,15 @@ public class UserService {
     }
     
     /**
+     * [此方法仅供管理员使用]
+     * 根据用户的唯一标识符删除用户.
+     * @param uid - 用户的唯一标识符
+     */
+    public void deleteUser(long uid) {
+    	userMapper.deleteUser(uid);
+    }
+    
+    /**
      * 自动注入的UserMapper对象.
      * 用于获取用户基本信息.
      */
