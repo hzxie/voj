@@ -181,6 +181,26 @@ public class AdministrationController {
     }
     
     /**
+     * 删除选定的提交记录.
+     * @param submissions - 提交记录ID的集合, 以逗号(, )分割
+     * @param request - HttpServletRequest对象
+     * @return 提交记录的删除结果
+     */
+    @RequestMapping(value = "/deleteUsers.action", method = RequestMethod.POST)
+    public @ResponseBody Map<String, Boolean> deleteUsersAction(
+            @RequestParam(value = "users", required = true) String users,
+            HttpServletRequest request) {
+        Map<String, Boolean> result = new HashMap<String, Boolean>(2, 1);
+        List<Long> userList = JSON.parseArray(users, Long.class);
+        
+        for ( Long userId : userList ) {
+            userService.deleteUser(userId);
+        }
+        result.put("isSuccessful", true);
+        return result;
+    }
+    
+    /**
      * 加载提交列表页面.
      * @param request - HttpServletRequest对象
      * @param response - HttpServletResponse对象

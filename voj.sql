@@ -3,7 +3,7 @@
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: Jul 10, 2015 at 01:10 下午
+-- Generation Time: Nov 15, 2015 at 04:34 PM
 -- Server version: 5.6.24
 -- PHP Version: 5.6.8
 
@@ -381,9 +381,9 @@ CREATE TABLE IF NOT EXISTS `voj_users` (
 --
 
 INSERT INTO `voj_users` (`uid`, `username`, `password`, `email`, `user_group_id`, `prefer_language_id`) VALUES
-(1000, 'zjhzxhz', '785ee107c11dfe36de668b1ae7baacbb', 'zjhzxhz@gmail.com', 3, 2),
-(1001, 'voj-tester', '785ee107c11dfe36de668b1ae7baacbb', 'support@zjhzxhz.com', 1, 2),
-(1002, 'another-user', '785ee107c11dfe36de668b1ae7baacbb', 'voj@zjhzxhz.com', 1, 3);
+(1000, 'zjhzxhz', '785ee107c11dfe36de668b1ae7baacbb', 'zjhzxhz@gmail.com', 8, 2),
+(1001, 'voj-tester', '785ee107c11dfe36de668b1ae7baacbb', 'support@zjhzxhz.com', 2, 2),
+(1002, 'another-user', '785ee107c11dfe36de668b1ae7baacbb', 'voj@zjhzxhz.com', 2, 3);
 
 -- --------------------------------------------------------
 
@@ -402,9 +402,10 @@ CREATE TABLE IF NOT EXISTS `voj_user_groups` (
 --
 
 INSERT INTO `voj_user_groups` (`user_group_id`, `user_group_slug`, `user_group_name`) VALUES
-(1, 'users', 'Users'),
-(2, 'judgers', 'Judgers'),
-(3, 'administrators', 'Administrators');
+(1, 'forbidden', 'Forbidden'),
+(2, 'users', 'Users'),
+(4, 'judgers', 'Judgers'),
+(8, 'administrators', 'Administrators');
 
 --
 -- Indexes for dumped tables
@@ -629,70 +630,70 @@ ALTER TABLE `voj_user_groups`
 -- Constraints for table `voj_contest_problems`
 --
 ALTER TABLE `voj_contest_problems`
-  ADD CONSTRAINT `voj_contest_problems_ibfk_1` FOREIGN KEY (`contest_id`) REFERENCES `voj_contests` (`contest_id`),
-  ADD CONSTRAINT `voj_contest_problems_ibfk_2` FOREIGN KEY (`problem_id`) REFERENCES `voj_problems` (`problem_id`);
+  ADD CONSTRAINT `voj_contest_problems_ibfk_1` FOREIGN KEY (`contest_id`) REFERENCES `voj_contests` (`contest_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `voj_contest_problems_ibfk_2` FOREIGN KEY (`problem_id`) REFERENCES `voj_problems` (`problem_id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
 -- Constraints for table `voj_discussion_replies`
 --
 ALTER TABLE `voj_discussion_replies`
-  ADD CONSTRAINT `voj_discussion_replies_ibfk_1` FOREIGN KEY (`discussion_threads_id`) REFERENCES `voj_discussion_threads` (`discussion_threads_id`),
-  ADD CONSTRAINT `voj_discussion_replies_ibfk_2` FOREIGN KEY (`discussion_reply_uid`) REFERENCES `voj_users` (`uid`);
+  ADD CONSTRAINT `voj_discussion_replies_ibfk_1` FOREIGN KEY (`discussion_threads_id`) REFERENCES `voj_discussion_threads` (`discussion_threads_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `voj_discussion_replies_ibfk_2` FOREIGN KEY (`discussion_reply_uid`) REFERENCES `voj_users` (`uid`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
 -- Constraints for table `voj_discussion_threads`
 --
 ALTER TABLE `voj_discussion_threads`
-  ADD CONSTRAINT `voj_discussion_threads_ibfk_1` FOREIGN KEY (`disscussion_creator_uid`) REFERENCES `voj_users` (`uid`),
-  ADD CONSTRAINT `voj_discussion_threads_ibfk_2` FOREIGN KEY (`discussion_topic_id`) REFERENCES `voj_discussion_topics` (`discussion_topic_id`),
-  ADD CONSTRAINT `voj_discussion_threads_ibfk_3` FOREIGN KEY (`problem_id`) REFERENCES `voj_problems` (`problem_id`);
+  ADD CONSTRAINT `voj_discussion_threads_ibfk_1` FOREIGN KEY (`disscussion_creator_uid`) REFERENCES `voj_users` (`uid`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `voj_discussion_threads_ibfk_2` FOREIGN KEY (`discussion_topic_id`) REFERENCES `voj_discussion_topics` (`discussion_topic_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `voj_discussion_threads_ibfk_3` FOREIGN KEY (`problem_id`) REFERENCES `voj_problems` (`problem_id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
 -- Constraints for table `voj_discussion_topics`
 --
 ALTER TABLE `voj_discussion_topics`
-  ADD CONSTRAINT `voj_discussion_topics_ibfk_1` FOREIGN KEY (`discussion_parent_topic_id`) REFERENCES `voj_discussion_topics` (`discussion_topic_id`);
+  ADD CONSTRAINT `voj_discussion_topics_ibfk_1` FOREIGN KEY (`discussion_parent_topic_id`) REFERENCES `voj_discussion_topics` (`discussion_topic_id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
 -- Constraints for table `voj_email_validation`
 --
 ALTER TABLE `voj_email_validation`
-  ADD CONSTRAINT `voj_email_validation_ibfk_1` FOREIGN KEY (`email`) REFERENCES `voj_users` (`email`);
+  ADD CONSTRAINT `voj_email_validation_ibfk_1` FOREIGN KEY (`email`) REFERENCES `voj_users` (`email`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
 -- Constraints for table `voj_problem_categories`
 --
 ALTER TABLE `voj_problem_categories`
-  ADD CONSTRAINT `voj_problem_categories_ibfk_1` FOREIGN KEY (`problem_id`) REFERENCES `voj_problems` (`problem_id`),
-  ADD CONSTRAINT `voj_problem_categories_ibfk_2` FOREIGN KEY (`category_id`) REFERENCES `voj_categories` (`category_id`);
+  ADD CONSTRAINT `voj_problem_categories_ibfk_1` FOREIGN KEY (`problem_id`) REFERENCES `voj_problems` (`problem_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `voj_problem_categories_ibfk_2` FOREIGN KEY (`category_id`) REFERENCES `voj_categories` (`category_id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
 -- Constraints for table `voj_problem_checkpoints`
 --
 ALTER TABLE `voj_problem_checkpoints`
-  ADD CONSTRAINT `voj_problem_checkpoints_ibfk_1` FOREIGN KEY (`problem_id`) REFERENCES `voj_problems` (`problem_id`);
+  ADD CONSTRAINT `voj_problem_checkpoints_ibfk_1` FOREIGN KEY (`problem_id`) REFERENCES `voj_problems` (`problem_id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
 -- Constraints for table `voj_problem_tags`
 --
 ALTER TABLE `voj_problem_tags`
-  ADD CONSTRAINT `voj_problem_tags_ibfk_1` FOREIGN KEY (`problem_id`) REFERENCES `voj_problems` (`problem_id`),
-  ADD CONSTRAINT `voj_problem_tags_ibfk_2` FOREIGN KEY (`tag_id`) REFERENCES `voj_tags` (`tag_id`);
+  ADD CONSTRAINT `voj_problem_tags_ibfk_1` FOREIGN KEY (`problem_id`) REFERENCES `voj_problems` (`problem_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `voj_problem_tags_ibfk_2` FOREIGN KEY (`tag_id`) REFERENCES `voj_tags` (`tag_id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
 -- Constraints for table `voj_submissions`
 --
 ALTER TABLE `voj_submissions`
-  ADD CONSTRAINT `voj_submissions_ibfk_1` FOREIGN KEY (`problem_id`) REFERENCES `voj_problems` (`problem_id`),
-  ADD CONSTRAINT `voj_submissions_ibfk_2` FOREIGN KEY (`uid`) REFERENCES `voj_users` (`uid`),
-  ADD CONSTRAINT `voj_submissions_ibfk_3` FOREIGN KEY (`language_id`) REFERENCES `voj_languages` (`language_id`),
+  ADD CONSTRAINT `voj_submissions_ibfk_1` FOREIGN KEY (`problem_id`) REFERENCES `voj_problems` (`problem_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `voj_submissions_ibfk_2` FOREIGN KEY (`uid`) REFERENCES `voj_users` (`uid`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `voj_submissions_ibfk_3` FOREIGN KEY (`language_id`) REFERENCES `voj_languages` (`language_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   ADD CONSTRAINT `voj_submissions_ibfk_4` FOREIGN KEY (`submission_judge_result`) REFERENCES `voj_judge_results` (`judge_result_slug`);
 
 --
 -- Constraints for table `voj_usermeta`
 --
 ALTER TABLE `voj_usermeta`
-  ADD CONSTRAINT `voj_usermeta_ibfk_1` FOREIGN KEY (`uid`) REFERENCES `voj_users` (`uid`);
+  ADD CONSTRAINT `voj_usermeta_ibfk_1` FOREIGN KEY (`uid`) REFERENCES `voj_users` (`uid`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
 -- Constraints for table `voj_users`

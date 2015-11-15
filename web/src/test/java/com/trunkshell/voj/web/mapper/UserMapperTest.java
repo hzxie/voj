@@ -29,7 +29,7 @@ public class UserMapperTest {
      */
     @Test
     public void testGetNumberOfUsers() {
-        UserGroup userGroup = new UserGroup(1, "users", "Users");
+        UserGroup userGroup = new UserGroup(2, "users", "Users");
         long totalUsers = userMapper.getNumberOfUsersUsingUserGroup(userGroup);
         
         Assert.assertEquals(2, totalUsers);
@@ -129,7 +129,7 @@ public class UserMapperTest {
      */
     @Test
     public void testGetUserUsingUserGroup() {
-        UserGroup userGroup = new UserGroup(1, "users", "Users");
+        UserGroup userGroup = new UserGroup(2, "users", "Users");
         List<User> users = userMapper.getUserUsingUserGroup(userGroup, 0, 1);
         Assert.assertEquals(1, users.size());
         
