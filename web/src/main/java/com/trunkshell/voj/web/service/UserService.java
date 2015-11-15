@@ -100,22 +100,40 @@ public class UserService {
      * @param password - 密码(已使用MD5加密)
      * @return 一个包含登录验证结果的Map<String, Boolean>对象
      */
-    public Map<String, Boolean> isAccountValid(String username, String password) {
-        Map<String, Boolean> result = new HashMap<String, Boolean>(5, 1);
+    public Map<String, Boolean> isAllowedToLogin(String username, String password) {
+        Map<String, Boolean> result = new HashMap<String, Boolean>(6, 1);
         result.put("isUsernameEmpty", username.isEmpty());
         result.put("isPasswordEmpty", password.isEmpty());
         result.put("isAccountValid", false);
+        result.put("isAllowedToAccess", false);
         result.put("isSuccessful", false);
 
         if ( !result.get("isUsernameEmpty") && !result.get("isPasswordEmpty") ) {
             User user = getUserUsingUsernameOrEmail(username);
-            if ( user != null && user.getPassword().equals(password) && 
-                !user.getUserGroup().getUserGroupSlug().equals("judgers") ) {
+            if ( user != null && user.getPassword().equals(password) ) {
                 result.put("isAccountValid", true);
-                result.put("isSuccessful", true);
+                if ( isAllowedToAccess(user.getUserGroup()) ) {
+                	result.put("isAllowedToAccess", true);
+                	result.put("isSuccessful", true);
+                }
             }
         }
         return result;
+    }
+    
+    /**
+     * 验证用户是否被允许登录.
+     * @param userGroup - 用户所属用户组的对象
+     * @return 用户是否被允许登录
+     */
+    private boolean isAllowedToAccess(UserGroup userGroup) {
+    	String[] allowedUserGroups = {"users", "administrators"};
+    	for ( String allowedUserGroup : allowedUserGroups ) {
+    		if ( allowedUserGroup.equals(userGroup.getUserGroupSlug()) ) {
+    			return true;
+    		}
+    	}
+    	return false;
     }
     
     /**
