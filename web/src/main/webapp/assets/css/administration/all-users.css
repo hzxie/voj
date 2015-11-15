@@ -2,11 +2,6 @@ div#content a {
 	text-decoration: none;
 }
 
-div#filters select#actions {
-	margin: 0;
-	width: 40%;
-}
-
 div#filters form {
 	margin: 0;
 }
@@ -77,6 +72,10 @@ div#content table td {
 @media only screen and (max-width: 767px) {
 	div#filters div.span6 {
 		margin-bottom: 10px;
+	}
+
+	div#filters button.btn {
+		width: 100%;
 	}
 }
 

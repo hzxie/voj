@@ -23,6 +23,7 @@
     <!-- JavaScript -->
     <script type="text/javascript" src="${cdnUrl}/js/jquery-1.11.1.min.js"></script>
     <script type="text/javascript" src="${cdnUrl}/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="${cdnUrl}/js/flat-ui.min.js"></script>
     <script type="text/javascript" src="${cdnUrl}/js/md5.min.js"></script>
     <script type="text/javascript" src="${cdnUrl}/js/pace.min.js"></script>
     <!--[if lte IE 9]>
@@ -46,36 +47,92 @@
                 <h2 class="page-header"><i class="fa fa-users"></i> <spring:message code="voj.administration.all-users.all-users" text="All Users" /></h2>
                 <div class="alert alert-error hide"></div> <!-- .alert-error -->
                 <div id="filters" class="row-fluid">
-                    <div class="span6">
-                        <select id="actions">
-                            <option value="delete"><spring:message code="voj.administration.all-users.delete" text="Delete" /></option>
-                        </select>
-                        <button class="btn btn-danger"><spring:message code="voj.administration.all-submissions.apply" text="Apply" /></button>
-                    </div> <!-- .span6 -->
-                    <div class="span6">
-                        
-                    </div> <!-- .span6 -->
+                    <div class="span4">
+                        <div class="row-fluid">
+                            <div class="span8">
+                                <select id="actions">
+                                    <option value="delete"><spring:message code="voj.administration.all-users.delete" text="Delete" /></option>
+                                </select>
+                            </div> <!-- .span8 -->
+                            <div class="span4">
+                                <button class="btn btn-danger btn-block"><spring:message code="voj.administration.all-users.apply" text="Apply" /></button>
+                            </div> <!-- .span4 -->
+                        </div> <!-- .row-fluid -->
+                    </div> <!-- .span4 -->
+                    <div class="span8 text-right">
+                        <form action="<c:url value="/administration/all-users" />" method="GET" class="row-fluid">
+                            <div class="span4">
+                                 <select id="user-group" name="userGroup">
+                                    <option value=""><spring:message code="voj.administration.all-users.all-user-groups" text="All User Groups" /></option>
+                                <c:forEach var="userGroup" items="${userGroups}">
+                                    <option value="${userGroup.userGroupSlug}" <c:if test="${userGroup.userGroupSlug == selectedUserGroup}">selected</c:if> >${userGroup.userGroupName}</option>
+                                </c:forEach>
+                                </select>
+                            </div> <!-- .span4 -->
+                            <div class="span5">
+                                <div class="control-group">
+                                    <input id="username" name="username" class="span12" type="text" value="${username}" placeholder="<spring:message code="voj.administration.all-users.username" text="Username" />" />
+                                </div> <!-- .control-group -->
+                            </div> <!-- .span5 -->
+                            <div class="span3">
+                                <button class="btn btn-primary btn-block"><spring:message code="voj.administration.all-users.filter" text="Filter" /></button>
+                            </div> <!-- .span3 -->
+                        </form> <!-- .row-fluid -->
+                    </div> <!-- .span8 -->
                 </div> <!-- .row-fluid -->
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th class="check-box">
+                                <label class="checkbox" for="all-users">
+                                    <input id="all-users" type="checkbox" data-toggle="checkbox">
+                                </label>
+                            </th>
+                            <th class="username"><spring:message code="voj.administration.all-users.username" text="Username" /></th>
+                            <th class="email"><spring:message code="voj.administration.all-users.email" text="Email" /></th>
+                            <th class="user-group"><spring:message code="voj.administration.all-users.user-group" text="User Group" /></th>
+                            <th class="prefer-language"><spring:message code="voj.administration.all-users.prefer-language" text="Prefer Language" /></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <c:forEach var="user" items="${users}">
+                        <tr data-value="${user.uid}">
+                            <td class="check-box">
+                                <label class="checkbox" for="user-${user.uid}">
+                                    <input id="user-${user.uid}" type="checkbox" value="${user.uid}" data-toggle="checkbox" />
+                                </label>
+                            </td>
+                            <td class="username">
+                                <a href="<c:url value="/administration/edit-user/${user.uid}" />">${user.username}</a>
+                            </td>
+                            <td class="email">${user.email}</td>
+                            <td class="user-group">${user.userGroup.userGroupName}</td>
+                            <td class="prefer-language">${user.preferLanguage.languageName}</td>
+                        </tr>
+                        </c:forEach>
+                    </tbody>
+                </table>
                 <div id="pagination" class="pagination pagination-centered">
                     <c:set var="lowerBound" value="${currentPage - 5 > 0 ? currentPage - 5 : 1}" />
                     <c:set var="upperBound" value="${currentPage + 5 < totalPages ? currentPage + 5 : totalPages}" />
+                    <c:set var="baseUrl" value="/administration/all-users?userGroup=${selectedUserGroup}&username=${username}" />
                     <ul>
                         <li class="previous <c:if test="${currentPage <= 1}">disabled</c:if>">
                         <a href="
                         <c:choose>
                             <c:when test="${currentPage <= 1}">javascript:void(0);</c:when>
-                            <c:otherwise><c:url value="/administration/all-users?page=${currentPage - 1}" /></c:otherwise>
+                            <c:otherwise><c:url value="${baseUrl}&page=${currentPage - 1}" /></c:otherwise>
                         </c:choose>
                         ">&lt;</a>
                         </li>
                         <c:forEach begin="${lowerBound}" end="${upperBound}" var="pageNumber">
-                        <li <c:if test="${pageNumber == currentPage}">class="active"</c:if>><a href="<c:url value="/administration/all-users?page=${pageNumber}" />">${pageNumber}</a></li>
+                        <li <c:if test="${pageNumber == currentPage}">class="active"</c:if>><a href="<c:url value="${baseUrl}&page=${pageNumber}" />">${pageNumber}</a></li>
                         </c:forEach>
                         <li class="next <c:if test="${currentPage >= totalPages}">disabled</c:if>">
                         <a href="
                         <c:choose>
                             <c:when test="${currentPage >= totalPages}">javascript:void(0);</c:when>
-                            <c:otherwise><c:url value="/administration/all-users?page=${currentPage + 1}" /></c:otherwise>
+                            <c:otherwise><c:url value="${baseUrl}&page=${currentPage + 1}" /></c:otherwise>
                         </c:choose>
                         ">&gt;</a>
                         </li>
@@ -87,6 +144,21 @@
     <!-- Java Script -->
     <!-- Placed at the end of the document so the pages load faster -->
     <%@ include file="/WEB-INF/views/administration/include/footer-script.jsp" %>
+    <script type="text/javascript">
+        $('label[for=all-users]').click(function() {
+            // Fix the bug for Checkbox in FlatUI 
+            var isChecked = false;
+            setTimeout(function() {
+                isChecked = $('label[for=all-users]').hasClass('checked');
+                
+                if ( isChecked ) {
+                    $('label.checkbox').addClass('checked');
+                } else {
+                    $('label.checkbox').removeClass('checked');
+                }
+            }, 100);
+        });
+    </script>
     <c:if test="${GoogleAnalyticsCode != ''}">
     <script type="text/javascript">${googleAnalyticsCode}</script>
     </c:if>

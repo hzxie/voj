@@ -11,6 +11,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -23,6 +24,7 @@ import com.trunkshell.voj.web.messenger.ApplicationEventListener;
 import com.trunkshell.voj.web.model.Language;
 import com.trunkshell.voj.web.model.Option;
 import com.trunkshell.voj.web.model.Submission;
+import com.trunkshell.voj.web.model.User;
 import com.trunkshell.voj.web.model.UserGroup;
 import com.trunkshell.voj.web.service.LanguageService;
 import com.trunkshell.voj.web.service.OptionService;
@@ -165,12 +167,16 @@ public class AdministrationController {
     	List<UserGroup> userGroups = userService.getUserGroups();
     	UserGroup userGroup = userService.getUserGroupUsingSlug(userGroupSlug);
     	long totalUsers = userService.getNumberOfUsersUsingUserGroupAndUsername(userGroup, username);
+    	long offset = (pageNumber >= 1 ? pageNumber - 1 : 0) * NUMBER_OF_USERS_PER_PAGE;
+    	List<User> users = userService.getUserUsingUserGroupAndUsername(userGroup, username, offset, NUMBER_OF_USERS_PER_PAGE);
     	
     	ModelAndView view = new ModelAndView("administration/all-users");
     	view.addObject("userGroups", userGroups);
+    	view.addObject("selectedUserGroup", userGroupSlug);
     	view.addObject("username", username);
     	view.addObject("currentPage", pageNumber);
     	view.addObject("totalPages", (long) Math.ceil(totalUsers * 1.0 / NUMBER_OF_USERS_PER_PAGE));
+    	view.addObject("users", users);
         return view;
     }
     
@@ -190,14 +196,14 @@ public class AdministrationController {
         
         long totalSubmissions = submissionService.getNumberOfSubmissions(null, null);
         long latestSubmissionId = submissionService.getLatestSubmissionId();
-        long offset = latestSubmissionId - ( pageNumber >= 1 ? pageNumber - 1 : 0) * NUMBER_OF_SUBMISSIONS_PER_PAGE;
+        long offset = latestSubmissionId - (pageNumber >= 1 ? pageNumber - 1 : 0) * NUMBER_OF_SUBMISSIONS_PER_PAGE;
         List<Submission> submissions = submissionService.getSubmissions(problemId, username, offset, NUMBER_OF_SUBMISSIONS_PER_PAGE);
         
         ModelAndView view = new ModelAndView("administration/all-submissions");
         view.addObject("problemId", problemId);
         view.addObject("username", username);
-        view.addObject("totalPages", (long) Math.ceil(totalSubmissions * 1.0 / NUMBER_OF_SUBMISSIONS_PER_PAGE));
         view.addObject("currentPage", pageNumber);
+        view.addObject("totalPages", (long) Math.ceil(totalSubmissions * 1.0 / NUMBER_OF_SUBMISSIONS_PER_PAGE));
         view.addObject("submissions", submissions);
         return view;
     }
@@ -249,9 +255,9 @@ public class AdministrationController {
      * @param response - HttpServletResponse对象
      * @return 包含提交记录信息的ModelAndView对象
      */
-    @RequestMapping(value = "/edit-submissions", method = RequestMethod.GET)
+    @RequestMapping(value = "/edit-submissions/{submissionId}", method = RequestMethod.GET)
     public ModelAndView editSubmissionView(
-            @RequestParam(value = "submissionId", required = true) long submissionId,
+    		@PathVariable(value = "submissionId") long submissionId,
             HttpServletRequest request, HttpServletResponse response) {
         Submission submission = submissionService.getSubmission(submissionId);
         if ( submission == null ) {
