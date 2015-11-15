@@ -43,7 +43,7 @@
     <div id="content">
         <div id="login">
             <h2><spring:message code="voj.accounts.login.sign-in" text="Sign in" /></h2>
-            <div class="alert alert-error hide"><spring:message code="voj.accounts.login.incorrect-password" text="Incorrect username or password." /></div>
+            <div class="alert alert-error hide"></div>
             <c:if test="${isLogout}">
             <div class="alert alert-success"><spring:message code="voj.accounts.login.sign-out" text="You are now logged out." /></div>
             </c:if>
@@ -123,7 +123,14 @@
                 var forwardUrl = '${forwardUrl}' || '<c:url value="/" />';
                 window.location.href = forwardUrl;
             } else {
+                var errorMessage = '';
+                if ( !result['isAccountValid'] ) {
+                    errorMessage = '<spring:message code="voj.accounts.login.incorrect-password" text="Incorrect username or password." />';
+                } else if ( !result['isAllowedToAccess'] ) {
+                    errorMessage = '<spring:message code="voj.accounts.login.forbidden-user" text="You&acute;re not allowed to sign in." />';
+                }
                 $('#password').val('');
+                $('.alert-error').html(errorMessage);
                 $('.alert-error').removeClass('hide');
             }
 

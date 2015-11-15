@@ -106,7 +106,7 @@ public class AccountsController {
             @RequestParam(value = "rememberMe", required = true) boolean isAutoLoginAllowed,
             HttpServletRequest request) {
         String ipAddress = HttpRequestParser.getRemoteAddr(request);
-        Map<String, Boolean> result = userService.isAccountValid(username, password);
+        Map<String, Boolean> result = userService.isAllowedToLogin(username, password);
         LOGGER.info(String.format("User: [Username=%s] tried to log in at %s", new Object[] {username, ipAddress}));
         if ( result.get("isSuccessful") ) {
             User user = userService.getUserUsingUsernameOrEmail(username);
