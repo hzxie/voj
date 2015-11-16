@@ -62,7 +62,7 @@
                     <div class="span8 text-right">
                         <form action="<c:url value="/administration/all-users" />" method="GET" class="row-fluid">
                             <div class="span4">
-                                 <select id="user-group" name="userGroup">
+                                <select id="user-group" name="userGroup">
                                     <option value=""><spring:message code="voj.administration.all-users.all-user-groups" text="All User Groups" /></option>
                                 <c:forEach var="userGroup" items="${userGroups}">
                                     <option value="${userGroup.userGroupSlug}" <c:if test="${userGroup.userGroupSlug == selectedUserGroup}">selected</c:if> >${userGroup.userGroupName}</option>

@@ -1,0 +1,87 @@
+form#profile-form {
+	max-width: 750px;
+}
+
+form#profile-form label {
+	font-weight: bold;
+}
+
+form#profile-form label > a {
+	font-weight: normal;
+}
+
+form#profile-form input[type=text],
+form#profile-form textarea {
+	resize: none;
+	width: 100%;
+}
+
+form#profile-form a#new-social-link {
+	float: right;
+	font-size: 20px;
+}
+
+form#profile-form div#social-links ul {
+	list-style: none;
+	margin: 0 0 10px;
+}
+
+form#profile-form div#social-links li.social-link {
+	background-color: #fafafa;
+	border: 2px solid #ccc;
+	margin: 5px 0;
+	overflow: hidden;
+	-webkit-border-radius: 4px;
+	   -moz-border-radius: 4px;
+	        border-radius: 4px;
+}
+
+form#profile-form div#social-links li.social-link div.header {
+	height: 40px;
+	overflow: hidden;
+	padding: 0 10px;
+	position: relative;
+}
+
+form#profile-form div#social-links li.social-link div.header h5,
+form#profile-form div#social-links li.social-link div.header ul.inline {
+	display: inline-block;
+	*display: inline;
+	zoom: 1;
+}
+
+form#profile-form div#social-links li.social-link div.header ul.inline {
+	font-size: 20px;
+	margin: 10px 0;
+	position: absolute;
+	right: 10px;
+}
+
+form#profile-form div#social-links li.social-link div.body {
+	border-top: 2px solid #ccc;
+	padding: 10px 10px 0;
+}
+
+form#profile-form div#markdown-editor {
+	margin-bottom: 20px;
+}
+
+/* Smaller than standard 960 (devices and browsers) */
+@media only screen and (max-width: 959px) {
+}
+
+/* Tablet Portrait size to standard 960 (devices and browsers) */
+@media only screen and (min-width: 768px) and (max-width: 959px) {
+}
+
+/* All Mobile Sizes (devices and browser) */
+@media only screen and (max-width: 767px) {
+}
+
+/* Mobile Landscape Size to Tablet Portrait (devices and browsers) */
+@media only screen and (min-width: 480px) and (max-width: 767px) {
+}
+
+/* Mobile Portrait Size to Mobile Landscape Size (devices and browsers) */
+@media only screen and (max-width: 479px) {
+}
