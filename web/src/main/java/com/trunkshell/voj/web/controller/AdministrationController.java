@@ -26,6 +26,7 @@ import com.trunkshell.voj.web.model.Option;
 import com.trunkshell.voj.web.model.Submission;
 import com.trunkshell.voj.web.model.User;
 import com.trunkshell.voj.web.model.UserGroup;
+import com.trunkshell.voj.web.model.UserMeta;
 import com.trunkshell.voj.web.service.LanguageService;
 import com.trunkshell.voj.web.service.OptionService;
 import com.trunkshell.voj.web.service.ProblemService;
@@ -198,6 +199,33 @@ public class AdministrationController {
         }
         result.put("isSuccessful", true);
         return result;
+    }
+    
+    /**
+     * 加载编辑用户信息的页面.
+     * @param userId - 用户的唯一标识符
+     * @param request - HttpServletRequest对象
+     * @param response - HttpServletResponse对象
+     * @return 包含编辑用户信息的ModelAndView对象
+     */
+    @RequestMapping(value = "/edit-user/{userId}", method = RequestMethod.GET)
+    public ModelAndView editUserView(
+    		@PathVariable(value = "userId") long userId,
+            HttpServletRequest request, HttpServletResponse response) {
+        User user = userService.getUserUsingUid(userId);
+        Map<String, Object> userMeta = userService.getUserMetaUsingUid(user);
+        if ( user == null ) {
+            throw new ResourceNotFoundException();
+        }
+        
+        List<UserGroup> userGroups = userService.getUserGroups();
+        List<Language> languages = languageService.getAllLanguages();
+    	ModelAndView view = new ModelAndView("administration/edit-user");
+        view.addObject("user", user);
+        view.addAllObjects(userMeta);
+        view.addObject("userGroups", userGroups);
+        view.addObject("languages", languages);
+        return view;
     }
     
     /**

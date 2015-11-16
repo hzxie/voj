@@ -62,9 +62,11 @@ public class UserService {
      * @return 用户元信息的键值对
      */
     public Map<String, Object> getUserMetaUsingUid(User user) {
-        List<UserMeta> userMetaList = userMetaMapper.getUserMetaUsingUser(user);
         Map<String, Object> userMetaMap = new HashMap<String, Object>(); 
-        
+        if ( user == null ) {
+        	return userMetaMap;
+        }
+        List<UserMeta> userMetaList = userMetaMapper.getUserMetaUsingUser(user);
         for ( UserMeta userMeta : userMetaList ) {
             String key = userMeta.getMetaKey();
             Object value = userMeta.getMetaValue();
