@@ -285,8 +285,70 @@
         }
     </script>
     <script type="text/javascript">
-        function onSubmit() {
+        function getSocialLinks() {
+            var socialLinks = {};
 
+            $('.social-link').each(function() {
+                var serviceName     = $('select.service', $(this)).val(),
+                    serviceUrl      = $('input.url', $(this)).val(),
+                    serviceBaseUrl  = socialServices[serviceName],
+                    serviceUsername = serviceUrl.substr(serviceBaseUrl.length);
+
+                if ( serviceUrl.indexOf(serviceBaseUrl) != -1 && serviceUsername != '' ) {
+                    socialLinks[serviceName] = serviceUsername;
+                }
+            });
+            return JSON.stringify(socialLinks);
+        }
+    </script>
+    <script type="text/javascript">
+        function onSubmit() {
+            $('.alert-success', '#profile-form').addClass('hide');
+            $('.alert-error', '#profile-form').addClass('hide');
+            $('button[type=submit]', '#profile-form').attr('disabled', 'disabled');
+            $('button[type=submit]', '#profile-form').html('<spring:message code="voj.administration.edit-user.please-wait" text="Please wait..." />');
+
+            var uid             = '${user.uid}',
+                password        = $('#password').val(),
+                email           = $('#email').val(),
+                userGroup       = $('#user-group').val(),
+                preferLanguage  = $('#prefer-language').val(),
+                location        = $('#location').val(),
+                website         = $('#website').val(),
+                socialLinks     = getSocialLinks(),
+                aboutMe         = $('#wmd-input').val();
+            
+            return doEditUserAction(uid, password, email, userGroup, preferLanguage, location, website, socialLinks, aboutMe);
+        }
+    </script>
+    <script type="text/javascript">
+        function doEditUserAction(uid, password, email, userGroup, preferLanguage, location, website, socialLinks, aboutMe) {
+            var postData = {
+                'uid': uid,
+                'password': password,
+                'email': email,
+                'userGroup': userGroup,
+                'preferLanguage': preferLanguage,
+                'location': location,
+                'website': website,
+                'socialLinks': socialLinks,
+                'aboutMe': aboutMe
+            };
+            
+            $.ajax({
+                type: 'POST',
+                url: '<c:url value="/administration/editUser.action" />',
+                data: postData,
+                dataType: 'JSON',
+                success: function(result){
+                    return processEditUserResult(result);
+                }
+            });
+        }
+    </script>
+    <script type="text/javascript">
+        function processEditUserResult(result) {
+            console.log(result);
         }
     </script>
     <c:if test="${GoogleAnalyticsCode != ''}">

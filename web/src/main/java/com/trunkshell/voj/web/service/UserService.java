@@ -53,7 +53,7 @@ public class UserService {
      * @return 用户列表
      */
     public List<User> getUserUsingUserGroup(UserGroup userGroup, long offset, int limit) {
-    	return userMapper.getUserUsingUserGroup(userGroup, offset, limit);
+        return userMapper.getUserUsingUserGroup(userGroup, offset, limit);
     }
     
     /**
@@ -64,7 +64,7 @@ public class UserService {
     public Map<String, Object> getUserMetaUsingUid(User user) {
         Map<String, Object> userMetaMap = new HashMap<String, Object>(); 
         if ( user == null ) {
-        	return userMetaMap;
+            return userMetaMap;
         }
         List<UserMeta> userMetaList = userMetaMapper.getUserMetaUsingUser(user);
         for ( UserMeta userMeta : userMetaList ) {
@@ -115,8 +115,8 @@ public class UserService {
             if ( user != null && user.getPassword().equals(password) ) {
                 result.put("isAccountValid", true);
                 if ( isAllowedToAccess(user.getUserGroup()) ) {
-                	result.put("isAllowedToAccess", true);
-                	result.put("isSuccessful", true);
+                    result.put("isAllowedToAccess", true);
+                    result.put("isSuccessful", true);
                 }
             }
         }
@@ -129,13 +129,13 @@ public class UserService {
      * @return 用户是否被允许登录
      */
     private boolean isAllowedToAccess(UserGroup userGroup) {
-    	String[] allowedUserGroups = {"users", "administrators"};
-    	for ( String allowedUserGroup : allowedUserGroups ) {
-    		if ( allowedUserGroup.equals(userGroup.getUserGroupSlug()) ) {
-    			return true;
-    		}
-    	}
-    	return false;
+        String[] allowedUserGroups = {"users", "administrators"};
+        for ( String allowedUserGroup : allowedUserGroups ) {
+            if ( allowedUserGroup.equals(userGroup.getUserGroupSlug()) ) {
+                return true;
+            }
+        }
+        return false;
     }
     
     /**
@@ -337,6 +337,24 @@ public class UserService {
     }
     
     /**
+     * 验证编程语言偏好的有效性并更改编程语言偏好.
+     * @param user - 待更改编程语言偏好的用户对象
+     * @param preferLanguageSlug - 编程语言的唯一英文缩写
+     * @return 一个包含编程语言偏好更改结果的Map<String, Boolean>对象
+     */
+    public Map<String, Boolean> changePreferLanguage(User user, String preferLanguageSlug) {
+        Map<String, Boolean> result = new HashMap<String, Boolean>(2, 1);
+        Language preferLanguage = languageMapper.getLanguageUsingSlug(preferLanguageSlug);
+        
+        if ( preferLanguage != null ) {
+            user.setPreferLanguage(preferLanguage);
+            userMapper.updateUser(user);
+        }
+        result.put("isSuccessful", preferLanguage != null);
+        return result;
+    }
+    
+    /**
      * 验证旧密码正确性并修改密码.
      * @param user - 待修改密码的用户对象
      * @param oldPassword - 旧密码
@@ -419,7 +437,7 @@ public class UserService {
      */
     private Map<String, Boolean> getUpdateProfileResult(User user, String email, 
             String location, String website, String socialLinks, String aboutMe) {
-        Map<String, Boolean> result = new HashMap<String, Boolean>(12, 1);
+        Map<String, Boolean> result = new HashMap<String, Boolean>(7, 1);
         result.put("isEmailEmpty", email.isEmpty());
         result.put("isEmailLegal", isEmailLegal(email));
         result.put("isEmailExists", isEmailExists(user.getEmail(), email));
@@ -561,11 +579,11 @@ public class UserService {
     /**
      * [此方法仅供管理员使用]
      * 获取全部的用户组对象.
-	 * @return 全部的用户组对象的列表
+     * @return 全部的用户组对象的列表
      */
     public List<UserGroup> getUserGroups() {
-    	List<UserGroup> userGroups = userGroupMapper.getUserGroups();
-    	return userGroups;
+        List<UserGroup> userGroups = userGroupMapper.getUserGroups();
+        return userGroups;
     }
     
     /**
@@ -605,7 +623,7 @@ public class UserService {
      * @return 某个用户组中用户名中包含某个字符串的用户的总数
      */
     public long getNumberOfUsersUsingUserGroupAndUsername(UserGroup userGroup, String username) {
-    	return userMapper.getNumberOfUsersUsingUserGroupAndUsername(userGroup, username);
+        return userMapper.getNumberOfUsersUsingUserGroupAndUsername(userGroup, username);
     }
     
     /**
@@ -617,8 +635,54 @@ public class UserService {
      * @param limit - 需要获取的用户的数量
      * @return 符合条件的用户列表
      */
-    public List<User> getUserUsingUserGroupAndUsername(UserGroup userGroup, String username, long offset, int limit) {
-    	return userMapper.getUserUsingUserGroupAndUsername(userGroup, username, offset, limit);
+    public List<User> getUserUsingUserGroupAndUsername(UserGroup userGroup, 
+            String username, long offset, int limit) {
+        return userMapper.getUserUsingUserGroupAndUsername(userGroup, username, offset, limit);
+    }
+    
+    /**
+     * [此方法仅供管理员使用]
+     * @param user - 待更改个人信息的用户.
+     * @param password - 用户的密码
+     * @param userGroupSlug - 用户所属用户组的唯一英文缩写
+     * @param preferLanguageSlug - 用户偏好语言的唯一英文缩写
+     * @return 包含用户个人信息更改结果的Map<String, Boolean>对象
+     */
+    public Map<String, Boolean> updateProfile(User user, String password, String userGroupSlug, String preferLanguageSlug) {
+        UserGroup userGroup = userGroupMapper.getUserGroupUsingSlug(userGroupSlug);
+        Language preferLanguage = languageMapper.getLanguageUsingSlug(preferLanguageSlug);
+        Map<String, Boolean> result = getUpdateProfileResult(password, userGroup, preferLanguage);
+        
+        if ( result.get("isSuccessful") ) {
+            if ( !password.isEmpty() ) {
+                user.setPassword(DigestUtils.md5Hex(password));
+            }
+            user.setUserGroup(userGroup);
+            user.setPreferLanguage(preferLanguage);
+            userMapper.updateUser(user);
+        }
+        return result;
+    }
+    
+    /**
+     * [此方法仅供管理员使用]
+     * 更改用户的基本信息.
+     * @param password - 用户的密码
+     * @param userGroup - 用户所属的用户组
+     * @param preferLanguage - 用户偏爱的编程语言
+     * @return 包含用户个人信息更改结果的Map<String, Boolean>对象
+     */
+    private Map<String, Boolean> getUpdateProfileResult(String password, UserGroup userGroup, Language preferLanguage) {
+        Map<String, Boolean> result = new HashMap<String, Boolean>(6, 1);
+        result.put("isPasswordEmpty", password.isEmpty());
+        result.put("isPasswordLegal", isPasswordLegal(password));
+        result.put("isUserGroupLegal", userGroup != null);
+        result.put("isPreferLanguageLegal", preferLanguage != null);
+        
+        boolean isSuccessful = result.get("isPasswordEmpty")  ^  result.get("isPasswordLegal") &&
+                               result.get("isUserGroupLegal") && result.get("isPreferLanguageLegal");
+        result.put("isSuccessful", isSuccessful);
+        return result;
     }
     
     /**
@@ -627,7 +691,7 @@ public class UserService {
      * @param uid - 用户的唯一标识符
      */
     public void deleteUser(long uid) {
-    	userMapper.deleteUser(uid);
+        userMapper.deleteUser(uid);
     }
     
     /**
