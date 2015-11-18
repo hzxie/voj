@@ -30,7 +30,7 @@ public class UserGroupMapperTest {
         Assert.assertNotNull(userGroup);
         
         String userGroupSlug = userGroup.getUserGroupSlug();
-        Assert.assertEquals("users", userGroupSlug);
+        Assert.assertEquals("forbidden", userGroupSlug);
     }
     
     /**
