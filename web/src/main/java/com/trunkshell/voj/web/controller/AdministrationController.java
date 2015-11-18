@@ -26,7 +26,6 @@ import com.trunkshell.voj.web.model.Option;
 import com.trunkshell.voj.web.model.Submission;
 import com.trunkshell.voj.web.model.User;
 import com.trunkshell.voj.web.model.UserGroup;
-import com.trunkshell.voj.web.model.UserMeta;
 import com.trunkshell.voj.web.service.LanguageService;
 import com.trunkshell.voj.web.service.OptionService;
 import com.trunkshell.voj.web.service.ProblemService;
@@ -160,24 +159,24 @@ public class AdministrationController {
      */
     @RequestMapping(value = "/all-users", method = RequestMethod.GET)
     public ModelAndView allUsersView(
-    		@RequestParam(value = "userGroup", required = false, defaultValue = "") String userGroupSlug,
-    		@RequestParam(value = "username", required = false, defaultValue = "") String username,
-    		@RequestParam(value = "page", required = false, defaultValue = "1") long pageNumber,
+            @RequestParam(value = "userGroup", required = false, defaultValue = "") String userGroupSlug,
+            @RequestParam(value = "username", required = false, defaultValue = "") String username,
+            @RequestParam(value = "page", required = false, defaultValue = "1") long pageNumber,
             HttpServletRequest request, HttpServletResponse response) {
-    	final int NUMBER_OF_USERS_PER_PAGE = 100;
-    	List<UserGroup> userGroups = userService.getUserGroups();
-    	UserGroup userGroup = userService.getUserGroupUsingSlug(userGroupSlug);
-    	long totalUsers = userService.getNumberOfUsersUsingUserGroupAndUsername(userGroup, username);
-    	long offset = (pageNumber >= 1 ? pageNumber - 1 : 0) * NUMBER_OF_USERS_PER_PAGE;
-    	List<User> users = userService.getUserUsingUserGroupAndUsername(userGroup, username, offset, NUMBER_OF_USERS_PER_PAGE);
-    	
-    	ModelAndView view = new ModelAndView("administration/all-users");
-    	view.addObject("userGroups", userGroups);
-    	view.addObject("selectedUserGroup", userGroupSlug);
-    	view.addObject("username", username);
-    	view.addObject("currentPage", pageNumber);
-    	view.addObject("totalPages", (long) Math.ceil(totalUsers * 1.0 / NUMBER_OF_USERS_PER_PAGE));
-    	view.addObject("users", users);
+        final int NUMBER_OF_USERS_PER_PAGE = 100;
+        List<UserGroup> userGroups = userService.getUserGroups();
+        UserGroup userGroup = userService.getUserGroupUsingSlug(userGroupSlug);
+        long totalUsers = userService.getNumberOfUsersUsingUserGroupAndUsername(userGroup, username);
+        long offset = (pageNumber >= 1 ? pageNumber - 1 : 0) * NUMBER_OF_USERS_PER_PAGE;
+        List<User> users = userService.getUserUsingUserGroupAndUsername(userGroup, username, offset, NUMBER_OF_USERS_PER_PAGE);
+        
+        ModelAndView view = new ModelAndView("administration/all-users");
+        view.addObject("userGroups", userGroups);
+        view.addObject("selectedUserGroup", userGroupSlug);
+        view.addObject("username", username);
+        view.addObject("currentPage", pageNumber);
+        view.addObject("totalPages", (long) Math.ceil(totalUsers * 1.0 / NUMBER_OF_USERS_PER_PAGE));
+        view.addObject("users", users);
         return view;
     }
     
@@ -210,7 +209,7 @@ public class AdministrationController {
      */
     @RequestMapping(value = "/edit-user/{userId}", method = RequestMethod.GET)
     public ModelAndView editUserView(
-    		@PathVariable(value = "userId") long userId,
+            @PathVariable(value = "userId") long userId,
             HttpServletRequest request, HttpServletResponse response) {
         User user = userService.getUserUsingUid(userId);
         Map<String, Object> userMeta = userService.getUserMetaUsingUid(user);
@@ -220,12 +219,57 @@ public class AdministrationController {
         
         List<UserGroup> userGroups = userService.getUserGroups();
         List<Language> languages = languageService.getAllLanguages();
-    	ModelAndView view = new ModelAndView("administration/edit-user");
+        ModelAndView view = new ModelAndView("administration/edit-user");
         view.addObject("user", user);
         view.addAllObjects(userMeta);
         view.addObject("userGroups", userGroups);
         view.addObject("languages", languages);
         return view;
+    }
+    
+    /**
+     * 编辑用户个人信息.
+     * @param uid - 用户的唯一标识符.
+     * @param password - 用户的密码(未经MD5加密)
+     * @param email - 用户的电子邮件地址
+     * @param userGroupSlug - 用户组的唯一英文缩写
+     * @param preferLanguageSlug - 用户的偏好语言的唯一英文缩写
+     * @param location - 用户的所在地区
+     * @param website - 用户的个人主页
+     * @param socialLinks - 用户的社交网络信息
+     * @param aboutMe - 用户的个人简介
+     * @param request - HttpServletRequest对象
+     * @return 一个包含个人资料修改结果的Map<String, Boolean>对象
+     */
+    @RequestMapping(value = "/editUser.action", method = RequestMethod.POST)
+    public @ResponseBody Map<String, Boolean> editUserAction(
+            @RequestParam(value = "uid", required = true) long uid,
+            @RequestParam(value = "password", required = true) String password,
+            @RequestParam(value = "email", required = true) String email,
+            @RequestParam(value = "userGroup", required = true) String userGroupSlug,
+            @RequestParam(value = "preferLanguage", required = true) String preferLanguageSlug,
+            @RequestParam(value = "location", required = true) String location,
+            @RequestParam(value = "website", required = true) String website,
+            @RequestParam(value = "socialLinks", required = true) String socialLinks,
+            @RequestParam(value = "aboutMe", required = true) String aboutMe,
+            HttpServletRequest request) {
+        User user = userService.getUserUsingUid(uid);
+        Map<String, Boolean> result = new HashMap<String, Boolean>(12, 1);
+        result.put("isSuccessful", false);
+        result.put("isUserExists", false);
+        
+        if ( user != null ) {
+            Map<String, Boolean> updateProfileResult = userService.updateProfile(user, password, userGroupSlug, preferLanguageSlug);
+            Map<String, Boolean> updateUserMetaResult = userService.updateProfile(user, email, location, website, socialLinks, aboutMe);
+            boolean isUpdateProfileSuccessful = updateProfileResult.get("isSuccessful");
+            boolean isUpdateUserMetaSuccessful = updateUserMetaResult.get("isSuccessful");
+            
+            result.putAll(updateProfileResult);
+            result.putAll(updateUserMetaResult);
+            result.put("isUserExists", true);
+            result.put("isSuccessful", isUpdateProfileSuccessful && isUpdateUserMetaSuccessful);
+        }
+        return result;
     }
     
     /**
@@ -305,7 +349,7 @@ public class AdministrationController {
      */
     @RequestMapping(value = "/edit-submissions/{submissionId}", method = RequestMethod.GET)
     public ModelAndView editSubmissionView(
-    		@PathVariable(value = "submissionId") long submissionId,
+            @PathVariable(value = "submissionId") long submissionId,
             HttpServletRequest request, HttpServletResponse response) {
         Submission submission = submissionService.getSubmission(submissionId);
         if ( submission == null ) {
