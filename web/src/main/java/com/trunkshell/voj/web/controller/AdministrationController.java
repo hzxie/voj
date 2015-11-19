@@ -272,6 +272,17 @@ public class AdministrationController {
         return result;
     }
     
+    @RequestMapping(value = "/new-user", method = RequestMethod.GET)
+    public ModelAndView newUserView(
+            HttpServletRequest request, HttpServletResponse response) {
+    	List<UserGroup> userGroups = userService.getUserGroups();
+        List<Language> languages = languageService.getAllLanguages();
+        ModelAndView view = new ModelAndView("administration/new-user");
+        view.addObject("userGroups", userGroups);
+        view.addObject("languages", languages);
+        return view;
+    }
+    
     /**
      * 加载提交列表页面.
      * @param request - HttpServletRequest对象
