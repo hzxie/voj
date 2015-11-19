@@ -143,18 +143,42 @@ public class UserService {
      * @param username - 用户名
      * @param password - 密码(未使用MD5加密)
      * @param email - 电子邮件地址
+     * @param userGroupSlug - 用户组的唯一英文缩写
      * @param languageSlug - 偏好语言的唯一英文缩写
      * @param isCsrfTokenValid - CSRF的Token是否正确
      * @param isAllowRegister - 系统是否允许注册新用户
      * @return 一个包含账户创建结果的Map<String, Boolean>对象
      */
     public Map<String, Boolean> createUser(String username, String password, String email, 
-            String languageSlug, boolean isCsrfTokenValid, boolean isAllowRegister) {
-        UserGroup userGroup = getUserGroupUsingSlug("users");
+            String userGroupSlug, String languageSlug, boolean isCsrfTokenValid, boolean isAllowRegister) {
+        UserGroup userGroup = userGroupMapper.getUserGroupUsingSlug(userGroupSlug);
         Language languagePreference = languageMapper.getLanguageUsingSlug(languageSlug);
         User user = new User(username, DigestUtils.md5Hex(password), email, userGroup, languagePreference);
         
         Map<String, Boolean> result = getUserCreationResult(user, password, isCsrfTokenValid, isAllowRegister);
+        if ( result.get("isSuccessful") ) {
+            userMapper.createUser(user);
+            createUserMeta(user);
+        }
+        return result;
+    }
+
+    /**
+     * [此方法仅供管理员使用]
+     * 验证账户有效性并创建用户.
+     * @param username - 用户名
+     * @param password - 密码(未使用MD5加密)
+     * @param email - 电子邮件地址
+     * @param userGroupSlug - 用户组的唯一英文缩写
+     * @param languageSlug - 偏好语言的唯一英文缩写
+     * @return 一个包含账户创建结果的Map<String, Boolean>对象
+     */
+    public Map<String, Boolean> createUser(String username, String password, String email, String userGroupSlug, String languageSlug) {
+        UserGroup userGroup = userGroupMapper.getUserGroupUsingSlug(userGroupSlug);
+        Language languagePreference = languageMapper.getLanguageUsingSlug(languageSlug);
+        User user = new User(username, DigestUtils.md5Hex(password), email, userGroup, languagePreference);
+        
+        Map<String, Boolean> result = getUserCreationResult(user, password, true, true);
         if ( result.get("isSuccessful") ) {
             userMapper.createUser(user);
             createUserMeta(user);
@@ -184,7 +208,7 @@ public class UserService {
      */
     private Map<String, Boolean> getUserCreationResult(User user, String password, 
             boolean isCsrfTokenValid, boolean isAllowRegister) {
-        Map<String, Boolean> result = new HashMap<String, Boolean>(12, 1);
+        Map<String, Boolean> result = new HashMap<String, Boolean>(13, 1);
         result.put("isUsernameEmpty", user.getUsername().isEmpty());
         result.put("isUsernameLegal", isUsernameLegal(user.getUsername()));
         result.put("isUsernameExists", isUsernameExists(user.getUsername()));
@@ -193,6 +217,7 @@ public class UserService {
         result.put("isEmailEmpty", user.getEmail().isEmpty());
         result.put("isEmailLegal", isEmailLegal(user.getEmail()));
         result.put("isEmailExists", isEmailExists(user.getEmail()));
+        result.put("isUserGroupLegal", user.getUserGroup() != null);
         result.put("isLanguageLegal", user.getPreferLanguage() != null);
         result.put("isCsrfTokenValid", isCsrfTokenValid);
         result.put("isAllowRegister", isAllowRegister);
@@ -201,8 +226,8 @@ public class UserService {
                                !result.get("isUsernameExists") && !result.get("isPasswordEmpty")  &&
                                 result.get("isPasswordLegal")  && !result.get("isEmailEmpty")     &&
                                 result.get("isEmailLegal")     && !result.get("isEmailExists")    &&
-                                result.get("isLanguageLegal")  &&  result.get("isCsrfTokenValid") &&
-                                result.get("isAllowRegister");
+                                result.get("isUserGroupLegal") &&  result.get("isLanguageLegal")  &&  
+                                result.get("isCsrfTokenValid") &&  result.get("isAllowRegister");
         result.put("isSuccessful", isSuccessful);
         return result;
     }
@@ -645,7 +670,7 @@ public class UserService {
      * @param user - 待更改个人信息的用户.
      * @param password - 用户的密码
      * @param userGroupSlug - 用户所属用户组的唯一英文缩写
-     * @param preferLanguageSlug - 用户偏好语言的唯一英文缩写
+     * @param preferLanguageSlug - 用户偏好编程语言的唯一英文缩写
      * @return 包含用户个人信息更改结果的Map<String, Boolean>对象
      */
     public Map<String, Boolean> updateProfile(User user, String password, String userGroupSlug, String preferLanguageSlug) {

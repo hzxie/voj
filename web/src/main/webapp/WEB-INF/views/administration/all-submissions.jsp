@@ -105,8 +105,8 @@
                             <td class="score">${submission.judgeScore}</td>
                             <td class="time">${submission.usedTime} ms</td>
                             <td class="memory">${submission.usedMemory} K</td>
-                            <td class="name"><a href="<c:url value="/administration/edit-problem?problemId=${submission.problem.problemId}" />">P${submission.problem.problemId} ${submission.problem.problemName}</a></td>
-                            <td class="user"><a href="<c:url value="/administration/edit-user?uid=${submission.user.uid}" />">${submission.user.username}</a></td>
+                            <td class="name"><a href="<c:url value="/administration/edit-problem/${submission.problem.problemId}" />">P${submission.problem.problemId} ${submission.problem.problemName}</a></td>
+                            <td class="user"><a href="<c:url value="/administration/edit-user/${submission.user.uid}" />">${submission.user.username}</a></td>
                             <td class="language">${submission.language.languageName}</td>
                             <td class="submit-time">
                                 <fmt:formatDate value="${submission.submitTime}" type="both" dateStyle="default" timeStyle="default" />
