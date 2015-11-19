@@ -510,7 +510,6 @@
                 if ( !result['isAboutMeLegal'] ) {
                     errorMessage += '<spring:message code="voj.accounts.dashboard.about-me-legal" text="The length of About Me CANNOT exceed 256 characters." /><br>';
                 }
-
                 $('.alert-error', '#profile-form').html(errorMessage);
                 $('.alert-error', '#profile-form').removeClass('hide');
             }

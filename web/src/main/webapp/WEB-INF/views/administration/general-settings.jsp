@@ -150,6 +150,7 @@
     <script type="text/javascript">
         function processResult(result) {
             if ( result['isSuccessful'] ) {
+                $('.alert-error').addClass('hide');
                 $('.alert-success').removeClass('hide');
             } else {
                 var errorMessage  = '';
@@ -176,6 +177,7 @@
                     errorMessage += '<spring:message code="voj.administration.general-settings.analytics-code-illegal" text="The Google Analytics code seems invalid." /><br>';
                 }
                 $('.alert-error').html(errorMessage);
+                $('.alert-success').addClass('hide');
                 $('.alert-error').removeClass('hide');
             }
 
