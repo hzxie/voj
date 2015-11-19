@@ -9,6 +9,8 @@ import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -31,6 +33,7 @@ import com.trunkshell.voj.web.service.OptionService;
 import com.trunkshell.voj.web.service.ProblemService;
 import com.trunkshell.voj.web.service.SubmissionService;
 import com.trunkshell.voj.web.service.UserService;
+import com.trunkshell.voj.web.util.HttpRequestParser;
 import com.trunkshell.voj.web.util.SessionListener;
 
 /**
@@ -259,7 +262,7 @@ public class AdministrationController {
         result.put("isUserExists", false);
         
         if ( user != null ) {
-            Map<String, Boolean> updateProfileResult = userService.updateProfile(user, password, userGroupSlug, preferLanguageSlug);
+        	Map<String, Boolean> updateProfileResult = userService.updateProfile(user, password, userGroupSlug, preferLanguageSlug);
             Map<String, Boolean> updateUserMetaResult = userService.updateProfile(user, email, location, website, socialLinks, aboutMe);
             boolean isUpdateProfileSuccessful = updateProfileResult.get("isSuccessful");
             boolean isUpdateUserMetaSuccessful = updateUserMetaResult.get("isSuccessful");
@@ -272,6 +275,12 @@ public class AdministrationController {
         return result;
     }
     
+    /**
+     * 加载创建用户页面.
+     * @param request - HttpServletRequest对象
+     * @param response - HttpServletResponse对象
+     * @return 包含创建用户页面信息的ModelAndView对象
+     */
     @RequestMapping(value = "/new-user", method = RequestMethod.GET)
     public ModelAndView newUserView(
             HttpServletRequest request, HttpServletResponse response) {
@@ -281,6 +290,34 @@ public class AdministrationController {
         view.addObject("userGroups", userGroups);
         view.addObject("languages", languages);
         return view;
+    }
+
+    /**
+     * 创建新用户.
+     * @param username - 用户名
+     * @param password - 密码
+     * @param email - 电子邮件地址
+     * @param userGroupSlug - 用户组的唯一英文缩写
+     * @param preferLanguageSlug - 偏好语言的唯一英文缩写
+     * @param request - HttpServletRequest对象
+     * @return 一个包含账户创建结果的Map<String, Boolean>对象
+     */
+    @RequestMapping(value = "/newUser.action", method = RequestMethod.POST)
+    public @ResponseBody Map<String, Boolean> newUserAction(
+            @RequestParam(value = "username", required = true) String username,
+            @RequestParam(value = "password", required = true) String password,
+            @RequestParam(value = "email", required = true) String email,
+            @RequestParam(value = "userGroup", required = true) String userGroupSlug,
+            @RequestParam(value = "preferLanguage", required = true) String preferLanguageSlug,
+            HttpServletRequest request) {
+    	Map<String, Boolean> result = userService.createUser(username, password, email, userGroupSlug, preferLanguageSlug);
+
+        if ( result.get("isSuccessful") ) {
+            String ipAddress = HttpRequestParser.getRemoteAddr(request);
+            LOGGER.info(String.format("User: [Username=%s] created by administrator at %s.", 
+                    new Object[] {username, ipAddress}));
+        }
+        return result;
     }
     
     /**
@@ -500,4 +537,9 @@ public class AdministrationController {
      * 产品版本信息.
      */
     private final static String PRODUCT_VERSION = "0.1.0";
+    
+    /**
+     * 日志记录器.
+     */
+    private static final Logger LOGGER = LogManager.getLogger(AdministrationController.class);
 }

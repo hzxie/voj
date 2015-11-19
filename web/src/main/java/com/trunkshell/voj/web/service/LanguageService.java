@@ -30,6 +30,15 @@ public class LanguageService {
     }
     
     /**
+     * 通过编程语言的唯一英文缩写获取编程语言对象.
+     * @param languageSlug - 编程语言的唯一英文缩写
+     * @return 编程语言对象
+     */
+    public Language getLanguageUsingSlug(String languageSlug) {
+    	return languageMapper.getLanguageUsingSlug(languageSlug);
+    }
+    
+    /**
      * 更新编程语言选项.
      * @param languages - 包含编程语言设置的数组
      * @return 编程语言选项的更新结果

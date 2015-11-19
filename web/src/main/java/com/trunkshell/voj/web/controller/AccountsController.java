@@ -177,8 +177,9 @@ public class AccountsController {
             HttpServletRequest request) {
         boolean isAllowRegister = optionService.getOption("allowUserRegister").getOptionValue().equals("1");
         boolean isCsrfTokenValid = CsrfProtector.isCsrfTokenValid(csrfToken, request.getSession());
-        Map<String, Boolean> result = userService.createUser(username, password, 
-                email, languageSlug, isCsrfTokenValid, isAllowRegister);
+        String userGroupSlug = "users";
+        Map<String, Boolean> result = userService.createUser(username, password, email, 
+            userGroupSlug, languageSlug, isCsrfTokenValid, isAllowRegister);
 
         if ( result.get("isSuccessful") ) {
             User user = userService.getUserUsingUsernameOrEmail(username);

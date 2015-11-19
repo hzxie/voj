@@ -50,7 +50,7 @@
                     <div class="alert alert-success hide"><spring:message code="voj.administration.add-user.user-created" text="The user has been created successfully." /></div> <!-- .alert-success -->
                     <div class="control-group row-fluid">
                         <label for="username"><spring:message code="voj.administration.add-user.username" text="Username" /></label>
-                        <input id="username" class="span12" type="text" />
+                        <input id="username" class="span12" type="text" maxlength="16" />
                     </div> <!-- .control-group -->
                     <div class="control-group row-fluid">
                         <label for="password"><spring:message code="voj.administration.add-user.password" text="Password" /></label>
@@ -88,6 +88,48 @@
     <!-- Java Script -->
     <!-- Placed at the end of the document so the pages load faster -->
     <%@ include file="/WEB-INF/views/administration/include/footer-script.jsp" %>
+    <script type="text/javascript">
+        function onSubmit() {
+            $('.alert-success', '#profile-form').addClass('hide');
+            $('.alert-error', '#profile-form').addClass('hide');
+            $('button[type=submit]', '#profile-form').attr('disabled', 'disabled');
+            $('button[type=submit]', '#profile-form').html('<spring:message code="voj.administration.new-user.please-wait" text="Please wait..." />');
+
+            var username        = $('#username').val(),
+                password        = $('#password').val(),
+                email           = $('#email').val(),
+                userGroup       = $('#user-group').val(),
+                preferLanguage  = $('#prefer-language').val();
+            
+            return doCreateUserAction(username, password, email, userGroup, preferLanguage);
+        }
+    </script>
+    <script type="text/javascript">
+        function doCreateUserAction(username, password, email, userGroup, preferLanguage) {
+            var postData = {
+                'username': username,
+                'password': password,
+                'email': email,
+                'userGroup': userGroup,
+                'preferLanguage': preferLanguage
+            };
+            
+            $.ajax({
+                type: 'POST',
+                url: '<c:url value="/administration/newUser.action" />',
+                data: postData,
+                dataType: 'JSON',
+                success: function(result){
+                    return processCreateUserResult(result);
+                }
+            });
+        }
+    </script>
+    <script type="text/javascript">
+        function processCreateUserResult(result) {
+            console.log(result);
+        }
+    </script>
     <c:if test="${GoogleAnalyticsCode != ''}">
     <script type="text/javascript">${googleAnalyticsCode}</script>
     </c:if>
