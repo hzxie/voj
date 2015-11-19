@@ -348,7 +348,46 @@
     </script>
     <script type="text/javascript">
         function processEditUserResult(result) {
-            console.log(result);
+            if ( result['isSuccessful'] ) {
+                $('.alert-error').addClass('hide');
+                $('.alert-success').removeClass('hide');
+            } else {
+                var errorMessage  = '';
+                if ( !result['isPasswordEmpty'] && !result['isPasswordLegal'] ) {
+                    errorMessage += '<spring:message code="voj.administration.edit-user.password-illegal" text="The length of password must between 6 and 16 characters." /><br>';
+                }
+                if ( result['isEmailEmpty'] ) {
+                    errorMessage += '<spring:message code="voj.administration.edit-user.email-empty" text="You can&acute;t leave Email empty." /><br>';
+                } else if ( !result['isEmailLegal'] ) {
+                    errorMessage += '<spring:message code="voj.administration.edit-user.email-illegal" text="The email seems invalid." /><br>';
+                } else if ( result['isEmailExists'] ) {
+                    errorMessage += '<spring:message code="voj.administration.edit-user.email-existing" text="Someone already has that email address." /><br>';
+                }
+                if ( !result['isUserGroupLegal'] ) {
+                    errorMessage += '<spring:message code="voj.administration.edit-user.user-group-not-exists" text="The user group is not exists." /><br>';
+                }
+                if ( !result['isPreferLanguageLegal'] ) {
+                    errorMessage += '<spring:message code="voj.administration.edit-user.prefer-language-not-exists" text="The prefer language is not exists." /><br>';
+                }
+                if ( !result['isLocationLegal'] ) {
+                    errorMessage += '<spring:message code="voj.administration.edit-user.location-illegal" text="The length of Location CANNOT exceed 128 characters." /><br>';
+                }
+                if ( !result['isWebsiteLegal'] ) {
+                    errorMessage += '<spring:message code="voj.administration.edit-user.website-legal" text="The url of website seems invalid." /><br>';
+                }
+                if ( !result['isAboutMeLegal'] ) {
+                    errorMessage += '<spring:message code="voj.administration.edit-user.about-me-legal" text="The length of About Me CANNOT exceed 256 characters." /><br>';
+                }
+                if ( !result['isUserExists'] ) {
+                    errorMessage  = '<spring:message code="voj.administration.edit-user.user-not-exists" text="User not exists." /><br>';
+                }
+                $('.alert-success').addClass('hide');
+                $('.alert-error').html(errorMessage);
+                $('.alert-error').removeClass('hide');
+            }
+            $('button[type=submit]').html('<spring:message code="voj.administration.edit-user.update-profile" text="Update Profile" />');
+            $('button[type=submit]').removeAttr('disabled');
+            $('html, body').animate({ scrollTop: 0 }, 100);
         }
     </script>
     <c:if test="${GoogleAnalyticsCode != ''}">
