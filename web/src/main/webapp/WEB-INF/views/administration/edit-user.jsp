@@ -349,7 +349,6 @@
     <script type="text/javascript">
         function processEditUserResult(result) {
             if ( result['isSuccessful'] ) {
-                $('.alert-error').addClass('hide');
                 $('.alert-success').removeClass('hide');
             } else {
                 var errorMessage  = '';
@@ -381,7 +380,6 @@
                 if ( !result['isUserExists'] ) {
                     errorMessage  = '<spring:message code="voj.administration.edit-user.user-not-exists" text="User not exists." /><br>';
                 }
-                $('.alert-success').addClass('hide');
                 $('.alert-error').html(errorMessage);
                 $('.alert-error').removeClass('hide');
             }
