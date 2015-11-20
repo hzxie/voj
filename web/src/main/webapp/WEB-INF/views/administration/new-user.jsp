@@ -127,7 +127,50 @@
     </script>
     <script type="text/javascript">
         function processCreateUserResult(result) {
-            console.log(result);
+            if ( result['isSuccessful'] ) {
+                $('input').val('');
+                $('.alert-success', '#profile-form').removeClass('hide');
+            } else {
+                var errorMessage  = '';
+
+                if ( result['isUsernameEmpty'] ) {
+                    errorMessage += '<spring:message code="voj.administration.new-user.username-empty" text="You can&apos;t leave Username empty." /><br>';
+                } else if ( !result['isUsernameLegal'] ) {
+                    var username = $('#username').val();
+
+                    if ( username.length < 6 || username.length > 16 ) {
+                        errorMessage += '<spring:message code="voj.administration.new-user.username-length-illegal" text="The length of Username must between 6 and 16 characters." /><br>';
+                    } else if ( !username[0].match(/[a-z]/i) ) {
+                        errorMessage += '<spring:message code="voj.administration.new-user.username-beginning-illegal" text="Username must start with a letter(a-z)." /><br>';
+                    } else {
+                        errorMessage += '<spring:message code="voj.administration.new-user.username-character-illegal" text="Username can only contain letters(a-z), numbers, and underlines(_)." /><br>';
+                    }
+                } else if ( result['isUsernameExists'] ) {
+                    errorMessage += '<spring:message code="voj.administration.new-user.username-existing" text="Someone already has that username." /><br>';
+                }
+                if ( result['isPasswordEmpty'] ) {
+                    errorMessage += '<spring:message code="voj.administration.new-user.password-empty" text="You can&apos;t leave Password empty." /><br>';
+                } else if ( !result['isPasswordLegal'] ) {
+                    errorMessage += '<spring:message code="voj.administration.new-user.password-illegal" text="The length of Password must between 6 and 16 characters." /><br>';
+                }
+                if ( result['isEmailEmpty'] ) {
+                    errorMessage += '<spring:message code="voj.administration.new-user.email-empty" text="You can&apos;t leave Email empty." /><br>';
+                } else if ( !result['isEmailLegal'] ) {
+                    errorMessage += '<spring:message code="voj.administration.new-user.email-illegal" text="The Email seems invalid." /><br>';
+                } else if ( result['isEmailExists'] ) {
+                    errorMessage += '<spring:message code="voj.administration.new-user.email-existing" text="Someone already use that email." /><br>';
+                }
+                if ( !result['isUserGroupLegal'] ) {
+                    errorMessage += '<spring:message code="voj.administration.new-user.user-group-empty" text="You can&apos;t leave User Group empty." /><br>';
+                }
+                if ( !result['isLanguageLegal'] ) {
+                    errorMessage += '<spring:message code="voj.administration.new-user.language-empty" text="You can&apos;t leave Language Preference empty." /><br>';
+                }
+                $('.alert-error', '#profile-form').html(errorMessage);
+                $('.alert-error', '#profile-form').removeClass('hide');
+            }
+            $('button[type=submit]', '#profile-form').removeAttr('disabled');
+            $('button[type=submit]', '#profile-form').html('<spring:message code="voj.administration.new-user.create-account" text="Create Account" />');
         }
     </script>
     <c:if test="${GoogleAnalyticsCode != ''}">
