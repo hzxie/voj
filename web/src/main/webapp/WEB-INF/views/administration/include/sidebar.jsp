@@ -26,7 +26,7 @@
                         <ul class="sub-nav nav">
                             <li class="nav-item secondary-nav-item"><a href="<c:url value="/administration/all-users" />"><spring:message code="voj.administration.include.sidebar.all-users" text="All Users" /></a></li>
                             <li class="nav-item secondary-nav-item"><a href="<c:url value="/administration/new-user" />"><spring:message code="voj.administration.include.sidebar.new-user" text="New User" /></a></li>
-                            <li class="nav-item secondary-nav-item hide"><a href="<c:url value="/administration/edit-use" />"><spring:message code="voj.administration.include.sidebar.edit-user" text="Edit User" /></a></li>
+                            <li class="nav-item secondary-nav-item hide"><a href="<c:url value="/administration/edit-user" />"><spring:message code="voj.administration.include.sidebar.edit-user" text="Edit User" /></a></li>
                         </ul>
                     </li>
                     <li class="nav-item primary-nav-item nav-item-has-children">
