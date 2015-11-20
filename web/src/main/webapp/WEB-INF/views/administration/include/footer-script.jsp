@@ -40,16 +40,22 @@
     </script>
     <script type="text/javascript">
         $(function() {
-            var currentLocation = window.location.pathname;
+            var currentLocation     = window.location.pathname,
+                mostSimilarItem     = null,
+                mostSimilarLength   = 0;
 
             $('.nav-item > a', '#sidebar-nav').each(function() {
                 var navHref = $(this).attr('href');
 
-                if ( currentLocation == navHref ) {
-                    $(this).parent().addClass('active');
+                if ( currentLocation.indexOf(navHref) != -1 ) {
+                    if ( navHref.length > mostSimilarLength ) {
+                        mostSimilarItem   = $(this);
+                        mostSimilarLength = navHref.length;
+                    }
                 }
             });
-            
+            $(mostSimilarItem).parent().addClass('active');
+
             $('li.primary-nav-item', '#sidebar-nav').each(function() {
                 if ( $('li.secondary-nav-item.active', $(this)).length != 0 ) {
                     $(this).addClass('active');
