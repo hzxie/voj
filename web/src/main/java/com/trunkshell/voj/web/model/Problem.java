@@ -1,6 +1,7 @@
 package com.trunkshell.voj.web.model;
 
 import java.io.Serializable;
+import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
@@ -114,6 +115,38 @@ public class Problem implements Serializable {
     }
 
     /**
+     * 获取试题所属分类.
+     * @return 试题所属分类
+     */
+    public List<ProblemCategory> getProblemCategories() {
+		return problemCategories;
+	}
+
+	/**
+	 * 设置试题所属分类.
+	 * @param problemCategories - 试题所属分类
+	 */
+	public void setProblemCategories(List<ProblemCategory> problemCategories) {
+		this.problemCategories = problemCategories;
+	}
+
+	/**
+	 * 获取试题包含的标签.
+	 * @return 试题包含的标签
+	 */
+	public List<ProblemTag> getProblemTags() {
+		return problemTags;
+	}
+
+	/**
+	 * 设置试题包含的标签.
+	 * @param problemTags - 试题包含的标签
+	 */
+	public void setProblemTags(List<ProblemTag> problemTags) {
+		this.problemTags = problemTags;
+	}
+
+	/**
      * 获取试题提交总数.
      * @return 试题提交总数
      */
@@ -278,10 +311,10 @@ public class Problem implements Serializable {
      */
     @Override
     public String toString() {
-        return String.format("Problem: [ProblemID=%s, isPublic=%s, ProblemName=%s, TotalSubmission=%s, "
-                            + "AcceptedSubmission=%s, TimeLimit=%s, MemoryLimit=%s, Description=%s, "
+        return String.format("Problem: [ProblemID=%s, isPublic=%s, ProblemName=%s, problemCategory={%s}, "
+        					+ "TotalSubmission=%s, AcceptedSubmission=%s, TimeLimit=%s, MemoryLimit=%s, Description=%s, "
                             + "InputFormat=%s, OutputFormat=%s, SampleInput=%s, SampleOutput=%s, Hint=%s]", 
-                new Object[] { problemId, isPublic, problemName, totalSubmission, acceptedSubmission, 
+                new Object[] { problemId, isPublic, problemName, problemCategories, totalSubmission, acceptedSubmission, 
                                 timeLimit, memoryLimit, description, inputFormat, outputFormat, sampleInput, 
                                 sampleOutput, hint});
     }
@@ -300,6 +333,16 @@ public class Problem implements Serializable {
      * 试题名称. 
      */
     private String problemName;
+    
+    /**
+     * 试题所属分类.
+     */
+    private List<ProblemCategory> problemCategories;
+    
+    /**
+     * 试题包含的标签.
+     */
+    private List<ProblemTag> problemTags;
     
     /**
      * 试题的总提交总数.

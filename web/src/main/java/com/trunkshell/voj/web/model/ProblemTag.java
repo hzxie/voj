@@ -4,6 +4,8 @@ import java.io.Serializable;
 
 /**
  * 试题标签的 Model.
+ * 对应数据库中的voj_problem_tags数据表.
+ * 
  * @author Xie Haozhe
  */
 public class ProblemTag implements Serializable {

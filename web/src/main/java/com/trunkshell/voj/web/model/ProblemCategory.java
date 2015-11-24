@@ -2,6 +2,12 @@ package com.trunkshell.voj.web.model;
 
 import java.io.Serializable;
 
+/**
+ * 试题分类的Model.
+ * 对应数据库中的voj_problem_categories数据表.
+ * 
+ * @author Xie Haozhe
+ */
 public class ProblemCategory implements Serializable {
 	/**
 	 * ProblemCategory的默认构造函数
@@ -12,16 +18,16 @@ public class ProblemCategory implements Serializable {
 	 * 获取试题分类的唯一标识符.
 	 * @return 试题分类的唯一标识符
 	 */
-	public long getProblemCategoryId() {
-		return ProblemCategoryId;
+	public long getproblemCategoryId() {
+		return problemCategoryId;
 	}
 
 	/**
 	 * 设置试题分类的唯一标识符.
 	 * @param problemCategoryId - 试题分类的唯一标识符
 	 */
-	public void setProblemCategoryId(long problemCategoryId) {
-		ProblemCategoryId = problemCategoryId;
+	public void setproblemCategoryId(long problemCategoryId) {
+		problemCategoryId = problemCategoryId;
 	}
 	
 	/**
@@ -60,23 +66,23 @@ public class ProblemCategory implements Serializable {
 	 * 获取试题分类的父类的唯一标识符.
 	 * @return 试题分类的父类的唯一标识符
 	 */
-	public long getParentProblemCategoryId() {
-		return parentProblemCategoryId;
+	public long getParentproblemCategoryId() {
+		return parentproblemCategoryId;
 	}
 
 	/**
 	 * 设置试题分类的父类的唯一标识符.
 	 * @param parentProblemCategory - 试题分类的父类的唯一标识符
 	 */
-	public void setParentProblemCategory(long parentProblemCategoryId) {
-		this.parentProblemCategoryId = parentProblemCategoryId;
+	public void setParentProblemCategory(long parentproblemCategoryId) {
+		this.parentproblemCategoryId = parentproblemCategoryId;
 	}
 	
 	/* (non-Javadoc)
 	 * @see java.lang.Object#hashCode()
 	 */
 	public int hashCode() {
-		return (int) ProblemCategoryId;
+		return (int) problemCategoryId;
 	}
 	
 	/* (non-Javadoc)
@@ -85,7 +91,7 @@ public class ProblemCategory implements Serializable {
 	public boolean equals(Object obj) {
 		if ( obj instanceof ProblemCategory ) {
 			ProblemCategory anotherCategory = (ProblemCategory)obj;
-            return anotherCategory.getProblemCategoryId() == ProblemCategoryId;
+            return anotherCategory.getproblemCategoryId() == problemCategoryId;
         }
         return false;
 	}
@@ -95,13 +101,13 @@ public class ProblemCategory implements Serializable {
 	 */
 	public String toString() {
 		return String.format("ProblemCategory [ID=%d, Slug=%s, Name=%s, ParentID=%d]", 
-				new Object[] { ProblemCategoryId, problemCategorySlug, problemCategoryName, parentProblemCategoryId });
+				new Object[] { problemCategoryId, problemCategorySlug, problemCategoryName, parentproblemCategoryId });
 	}
 
 	/**
 	 * 试题分类的唯一标识符.
 	 */
-	private long ProblemCategoryId;
+	private long problemCategoryId;
 	
 	/**
 	 * 试题分类的唯一英文缩写.
@@ -116,7 +122,7 @@ public class ProblemCategory implements Serializable {
 	/**
 	 * 试题分类的父类.
 	 */
-	private long parentProblemCategoryId;
+	private long parentproblemCategoryId;
 
 	/**
 	 * 唯一的序列化标识符.
