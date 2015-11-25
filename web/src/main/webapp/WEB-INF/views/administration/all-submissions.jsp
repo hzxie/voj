@@ -239,8 +239,8 @@
                         $('.alert').html('<spring:message code="voj.administration.all-submissions.restart-error" text="Some errors occurred while restarting judging for submissions." />');
                         $('.alert').removeClass('hide');
                     }
-                    $('button.btn-primary', '#filters').removeAttr('disabled');
-                    $('button.btn-primary', '#filters').html('<spring:message code="voj.administration.all-submissions.apply" text="Apply" />');
+                    $('button.btn-danger', '#filters').removeAttr('disabled');
+                    $('button.btn-danger', '#filters').html('<spring:message code="voj.administration.all-submissions.apply" text="Apply" />');
                 }
             });
         }
