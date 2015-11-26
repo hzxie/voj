@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper 
+	PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"  
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.trunkshell.voj.web.mapper.ProblemTagMapper">
+	<!-- ResultMap -->
+	<resultMap id="ProblemTagResultMap" 
+		type="com.trunkshell.voj.web.model.ProblemTag">
+		<id property="problemTagId" column="problem_tag_id" />
+		<result property="problemTagSlug" column="problem_tag_slug" />
+		<result property="problemTagName" column="problem_tag_name" />
+	</resultMap>
+
+	<!-- Methods -->
+	<select id="getProblemTagUsingId"
+		parameterType="int"
+		resultMap="ProblemTagResultMap"
+		useCache="true">
+		SELECT *
+		FROM voj_problem_tags
+		WHERE problem_tag_id = #{problemTagId}
+	</select>
+	<select id="getProblemTagUsingSlug"
+		parameterType="String"
+		resultMap="ProblemTagResultMap"
+		useCache="true">
+		SELECT *
+		FROM voj_problem_tags
+		WHERE problem_tag_slug = #{problemTagSlug}
+	</select>
+	<insert id="createProblemTag" 
+		parameterType="com.trunkshell.voj.web.model.ProblemTag"
+		flushCache="true" 
+		keyProperty="ProblemTagId" 
+		keyColumn="problem_tag_id"
+		useGeneratedKeys="true">
+		INSERT INTO voj_problem_tags (problem_tag_slug, problem_tag_name) 
+		VALUES (#{problemTagSlug}, #{problemTagName})
+	</insert>
+	<update id="updateProblemTag"
+		parameterType="com.trunkshell.voj.web.model.ProblemTag"
+		flushCache="true">
+		UPDATE voj_problem_tags 
+		SET problem_tag_slug = #{problemTagSlug}, problem_tag_name = #{problemTagName}
+		WHERE problem_tag_id = #{problemTagId}
+	</update>
+	<delete id="deleteProblemTag"
+		parameterType="int"
+		flushCache="true">
+		DELETE FROM voj_problem_tags 
+		WHERE problem_tag_id = #{problemTagId}
+	</delete>
+</mapper>
