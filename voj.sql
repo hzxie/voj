@@ -3,7 +3,7 @@
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: Nov 24, 2015 at 04:33 PM
+-- Generation Time: Nov 26, 2015 at 04:43 PM
 -- Server version: 5.6.24
 -- PHP Version: 5.6.8
 
@@ -297,7 +297,15 @@ CREATE TABLE IF NOT EXISTS `voj_problem_tags` (
   `problem_tag_id` bigint(20) NOT NULL,
   `problem_tag_slug` varchar(32) NOT NULL,
   `problem_tag_name` varchar(32) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8;
+
+--
+-- Dumping data for table `voj_problem_tags`
+--
+
+INSERT INTO `voj_problem_tags` (`problem_tag_id`, `problem_tag_slug`, `problem_tag_name`) VALUES
+(1, 'greedy', 'Greedy'),
+(2, 'dynamic-programming', 'Dynamic Programming');
 
 -- --------------------------------------------------------
 
@@ -506,7 +514,8 @@ ALTER TABLE `voj_problem_checkpoints`
 -- Indexes for table `voj_problem_tags`
 --
 ALTER TABLE `voj_problem_tags`
-  ADD PRIMARY KEY (`problem_tag_id`);
+  ADD PRIMARY KEY (`problem_tag_id`),
+  ADD UNIQUE KEY `problem_tag_slug` (`problem_tag_slug`);
 
 --
 -- Indexes for table `voj_problem_tag_relationships`
@@ -602,7 +611,7 @@ ALTER TABLE `voj_problem_categories`
 -- AUTO_INCREMENT for table `voj_problem_tags`
 --
 ALTER TABLE `voj_problem_tags`
-  MODIFY `problem_tag_id` bigint(20) NOT NULL AUTO_INCREMENT;
+  MODIFY `problem_tag_id` bigint(20) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=3;
 --
 -- AUTO_INCREMENT for table `voj_submissions`
 --
