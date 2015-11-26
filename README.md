@@ -48,6 +48,172 @@ As you see, the Online Judge System can contain multiple judgers. The judgers co
 
 ---
 
+## Getting Started
+
+### System Requirements
+
+#### Hardware Requirements
+
+- **CPU**: 2.0 GHz or faster 32-bit (x86) or 64-bit (x64) processor
+
+For Web Application (including Database and Message Queue):
+
+- **RAM**: 2.0 GB RAM on Windows, 1.0 GB RAM on Linux.
+
+For Judger:
+
+- **RAM**: 1.0 GB RAM on Windows, 512 MB RAM on Linux.
+
+#### Software Requirements
+
+For Web Application (including Database and Message Queue):
+
+- **Operating System**: Windows, Linux or Mac
+- **Database**: [MySQL](http://www.mysql.com) 5.5+ or [MariaDB](https://mariadb.org/) 5.5+
+- **Java Runtime**: [JRE](http://java.oracle.com) 1.7+ or JDK 1.7+
+- **Message Queue**: [ActiveMQ](http://activemq.apache.org) 5.11+
+- **Web Server**: [Tomcat](http://tomcat.apache.org) 7.0+
+
+For Judger:
+
+- **Operating System**: Windows or Linux
+- **Java Runtime**: [JRE](http://java.oracle.com) 1.7+ or JDK 1.7+
+
+
+### Installation
+
+#### Binary Releases
+
+There're no binary releases available yet.
+
+#### Source Releases
+
+**NOTE:** 
+
+- [Maven](http://maven.apache.org) 3+ and [GCC](http://gcc.gnu.org/) 4.8+ with POSIX thread model is required.
+- Make sure add the Maven and GCC to the PATH.
+
+After extracting the source, run these commands from a terminal:
+
+For Web Application:
+
+```
+cd web
+mvn package -DskipTests
+```
+
+
+The terminal will return message as following:
+
+
+```
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time: 10.168 s
+[INFO] Finished at: 2015-11-26T13:20:09+08:00
+[INFO] Final Memory: 24M/210M
+[INFO] ------------------------------------------------------------------------
+```
+
+And you'll get a package named `voj.web.war` in the `target` folder.
+
+For Judger:
+
+**Windows**:
+
+```
+cd %JAVA_HOME%\include\win32
+copy jawt_md.h  ..
+copy jni_md.h  ..
+
+cd judger
+mvn package -DskipTests
+```
+
+**Linux**:
+
+```
+cd $JAVA_HOME/include/linux
+cp jawt_md.h jni_md.h ..
+
+cd SOURCE_CODE_PATH/judger
+mvn package -DskipTests
+```
+
+The terminal will return message as following:
+
+```
+[INFO] Executing tasks
+
+jni:
+     [echo] Generating JNI headers
+     [exec] Cannot find type 'org.springframework.beans.factory.annotation.Value' ...
+     [exec] Cannot find type 'org.springframework.beans.factory.annotation.Value' ...
+     [exec] mkdir -p target/cpp
+     [exec] g++ -c -std=c++11 -Wall -fPIC -I ... -o target/cpp/Judger.Core.Runner.o
+[INFO] Executed tasks
+...
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time: 12.432 s
+[INFO] Finished at: 2015-11-26T13:22:46+08:00
+[INFO] Final Memory: 81M/513M
+[INFO] ------------------------------------------------------------------------
+```
+
+And you'll get a package named `voj.judger.jar` in the `target` folder.
+
+### Configuration
+
+#### Setup the ActiveMQ
+
+To reduce the memory of ActiveMQ, you can edit `activemq.xml` in `ACTIVEMQ_HOME\conf`.
+
+Please find following content in this file, and change it to proper values that suitable for your servers.
+
+```
+<systemUsage>
+    <systemUsage>
+        <memoryUsage>
+            <!-- Change this value -->
+            <memoryUsage limit="128 mb" />
+        </memoryUsage>
+        <storeUsage>
+            <!-- Change this value -->
+            <storeUsage limit="4 gb"/>
+        </storeUsage>
+        <tempUsage>
+            <!-- Change this value -->
+            <tempUsage limit="4 gb"/>
+        </tempUsage>
+    </systemUsage>
+</systemUsage>
+```
+
+#### Setup the Web Application
+
+Create a database in MySQL, import `voj.sql`.
+
+Edit the values in `/WEB-INF/classes/voj.properties` of the file `voj.web.war`.
+
+You can open it with archive manager software such as `WinRAR`.
+
+After then, you can copy this file `voj.web.war` to `TOMCAT_HOME/webapps`.
+
+#### Setup the Judger
+
+Edit the values in `/voj.properties` of the file `voj.judger.jar`.
+
+You can run the judger using following command:
+
+```
+javaw -jar voj.judger.jar
+```
+
+---
+
 ### Contribution
 
 We're glad that you want to improve this project. 
