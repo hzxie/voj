@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper 
+	PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"  
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.trunkshell.voj.web.mapper.ProblemCategoryMapper">
+	<!-- ResultMap -->
+	<resultMap id="ProblemCategoryResultMap" 
+		type="com.trunkshell.voj.web.model.ProblemCategory">
+		<id property="problemCategoryId" column="problem_category_id" />
+		<result property="problemCategorySlug" column="problem_category_slug" />
+		<result property="problemCategoryName" column="problem_category_name" />
+		<result property="parentProblemCategoryId" column="problem_category_parent_id" />
+	</resultMap>
+
+	<!-- Methods -->
+	<select id="getProblemCategoryUsingId"
+		parameterType="int"
+		resultMap="ProblemCategoryResultMap"
+		useCache="true">
+		SELECT *
+		FROM voj_problem_categories
+		WHERE problem_category_id = #{problemCategoryId}
+	</select>
+	<select id="getProblemCategoryUsingSlug"
+		parameterType="String"
+		resultMap="ProblemCategoryResultMap"
+		useCache="true">
+		SELECT *
+		FROM voj_problem_categories
+		WHERE problem_category_slug = #{problemCategorySlug}
+	</select>
+	<insert id="createProblemCategory" 
+		parameterType="com.trunkshell.voj.web.model.ProblemCategory"
+		flushCache="true" 
+		keyProperty="ProblemCategoryId" 
+		keyColumn="problem_category_id"
+		useGeneratedKeys="true">
+		INSERT INTO voj_problem_categories (problem_category_slug, problem_category_name, problem_category_parent_id) 
+		VALUES (#{problemCategorySlug}, #{problemCategoryName}, #{parentProblemCategoryId})
+	</insert>
+	<update id="updateProblemCategory"
+		parameterType="com.trunkshell.voj.web.model.ProblemCategory"
+		flushCache="true">
+		UPDATE voj_problem_categories 
+		SET problem_category_slug = #{problemCategorySlug}, problem_category_name = #{problemCategoryName}, problem_category_parent_id = #{parentProblemCategoryId}
+		WHERE problem_category_id = #{problemCategoryId}
+	</update>
+	<delete id="deleteProblemCategory"
+		parameterType="int"
+		flushCache="true">
+		DELETE FROM voj_problem_categories 
+		WHERE problem_category_id = #{problemCategoryId}
+	</delete>
+</mapper>
