@@ -101,11 +101,15 @@
                 <div id="search-widget" class="widget">
                     <h4><spring:message code="voj.problems.problems.search" text="Search" /></h4>
                     <form id="search-form" action="#">
-                    </form>
+                        <div class="control-group">
+                            <input id="keyword" name="keyword" class="span12" type="text" placeholder="<spring:message code="voj.problems.problems.keyword" text="Keyword" />" />
+                        </div>
+                        <button class="btn btn-primary btn-block" type="submit"><spring:message code="voj.problems.problems.search" text="Search" /></button>
+                    </form> <!-- #search-form -->
                 </div> <!-- #search-widget -->
-                <div id="filter-widget" class="widget">
-                    <h4><spring:message code="voj.problems.problems.filter" text="Filter" /></h4>
-                </div> <!-- #filter-widget -->
+                <div id="categories-widget" class="widget">
+                    <h4><spring:message code="voj.problems.problems.categories" text="Categories" /></h4>
+                </div> <!-- #categories-widget -->
             </div> <!-- #sidebar -->
         </div> <!-- #main-content -->
     </div> <!-- #content -->

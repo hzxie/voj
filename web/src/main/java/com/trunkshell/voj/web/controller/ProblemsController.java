@@ -42,23 +42,30 @@ public class ProblemsController {
     /**
      * 显示试题库中的全部试题.
      * @param startIndex - 试题的起始下标
+     * @param keyword - 关键词
+     * @param problemCategorySlug - 试题分类的唯一英文缩写
      * @param request - HttpRequest对象
      * @param response - HttpResponse对象
      * @return 包含试题库页面信息的ModelAndView对象
      */
     @RequestMapping(value = "", method = RequestMethod.GET)
     public ModelAndView problemsView(
-            @RequestParam(value = "start", required = false, defaultValue = "1") int startIndex,
+            @RequestParam(value = "start", required = false, defaultValue = "1") long startIndex,
+            @RequestParam(value = "keyword", required = false) String keyword,
+            @RequestParam(value = "category", required = false) String problemCategorySlug,
             HttpServletRequest request, HttpServletResponse response) {
-        if ( startIndex < START_INDEX_OF_PROBLEMS ) {
-            startIndex = START_INDEX_OF_PROBLEMS;
+    	long startIndexOfProblems = getFirstIndexOfProblems();
+        if ( startIndex < startIndexOfProblems ) {
+            startIndex = startIndexOfProblems;
         }
         
+        List<Problem> problems = problemService.getProblemsUsingFilters(startIndex, keyword, problemCategorySlug, NUMBER_OF_PROBLEMS_PER_PAGE);
+        long totalProblems = problemService.getNumberOfProblemsUsingFilters(keyword, problemCategorySlug, true);
         ModelAndView view = new ModelAndView("problems/problems");
-        view.addObject("problems", problemService.getProblems(startIndex, NUMBER_OF_PROBLEMS_PER_PAGE))
-            .addObject("startIndexOfProblems", START_INDEX_OF_PROBLEMS)
+        view.addObject("problems", problems)
+            .addObject("startIndexOfProblems", startIndexOfProblems)
             .addObject("numberOfProblemsPerPage", NUMBER_OF_PROBLEMS_PER_PAGE)
-            .addObject("totalProblems", problemService.getNumberOfProblems(true));
+            .addObject("totalProblems", totalProblems);
         
         HttpSession session = request.getSession();
         if ( isLoggedIn(session) ) {
@@ -71,17 +78,27 @@ public class ProblemsController {
     }
     
     /**
+     * 获取试题的起始编号.
+     * @return 试题的起始编号
+     */
+    private long getFirstIndexOfProblems() {
+    	return problemService.getFirstIndexOfProblems();
+    }
+    
+    /**
      * 获取试题列表.
      * @param startIndex - 试题的起始下标
      * @param request - HttpRequest对象
      * @return 一个包含试题列表的HashMap对象
      */
     @RequestMapping(value = "/getProblems.action", method = RequestMethod.GET)
-    public @ResponseBody Map<String, Object> getSubmissionAction(
+    public @ResponseBody Map<String, Object> getProblemsAction(
             @RequestParam(value = "startIndex", required = true) long startIndex,
+            @RequestParam(value = "keyword", required = false) String keyword,
+            @RequestParam(value = "category", required = false) String problemCategorySlug,
             HttpServletRequest request) {
         HttpSession session = request.getSession();
-        List<Problem> problems = problemService.getProblems(startIndex, NUMBER_OF_PROBLEMS_PER_PAGE);
+        List<Problem> problems = problemService.getProblemsUsingFilters(startIndex, keyword, problemCategorySlug, NUMBER_OF_PROBLEMS_PER_PAGE);
         Map<Long, Submission> submissionOfProblems = null;
         if ( isLoggedIn(session) ) {
             long userId = (Long)session.getAttribute("uid");
@@ -172,11 +189,6 @@ public class ProblemsController {
         }
         return result;
     }
-    
-    /**
-     * 系统中试题的起始序号.
-     */
-    private static final int START_INDEX_OF_PROBLEMS = 1000;
     
     /**
      * 每次请求所加载试题数量.

@@ -22,17 +22,16 @@ public interface ProblemMapper {
     public long getNumberOfProblems();
     
     /**
-     * 获取公开试题的总数量.
-     * @return 公开试题的总数量
+     * 根据筛选条件获取试题的总数量.
+     * @param keyword - 关键词
+     * @param problemCategoryId - 试题分类的唯一标识符
+     * @param isPublic - 试题是否公开
+     * @return 符合筛选条件试题的总数量
      */
-    public long getNumberOfPublicProblems();
-
-    /**
-     * [此方法仅供管理员使用]
-     * 获取非公开试题的总数量.
-     * @return 非公开试题的总数量
-     */
-    public long getNumberOfPrivateProblems();
+    public long getNumberOfProblemsUsingFilters(
+    		@Param("keyword") String keyword, 
+            @Param("problemCategoryId") int problemCategoryId,
+            @Param("isPublic") boolean isPublic);
     
     /**
      * 获取第一个试题的ID.
@@ -54,18 +53,19 @@ public interface ProblemMapper {
     public Problem getProblem(@Param("problemId") long problemId);
     
     /**
-     * 通过试题唯一标识符获取某个范围内的所有试题.
+     * 通过试题唯一标识符和关键字获取某个范围内的所有试题.
+     * @param keyword - 关键词
+     * @param problemCategoryId - 试题分类的唯一标识符
+     * @param isPublic - 试题是否公开
      * @param offset - 试题唯一标识符的起始编号
      * @param limit - 需要获取的试题的数量
-     * @return 某个范围内的所有试题
+     * @return 某个范围内的符合条件的试题
      */
-    public List<Problem> getProblems(@Param("problemId") long offset, @Param("limit") int limit);
-    
-    public List<Problem> getProblemsUsingCategoryID(int categoryID, long offset, int limit);
-    
-    public List<Problem> getProblemsUsingTagID(int tagID, long offset, int limit);
-    
-    public List<Problem> getProblemsUsingKeyword(String keyword, long offset, int limit);
+    public List<Problem> getProblemsUsingFilters(
+            @Param("keyword") String keyword, 
+            @Param("problemCategoryId") int problemCategoryId,
+            @Param("isPublic") boolean isPublic,
+            @Param("problemId") long offset, @Param("limit") int limit);
     
     /**
      * 创建一个新的试题对象.

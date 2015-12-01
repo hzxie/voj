@@ -37,7 +37,7 @@ public class ProblemCategory implements Serializable {
      * 获取试题分类的唯一标识符.
      * @return 试题分类的唯一标识符
      */
-    public long getProblemCategoryId() {
+    public int getProblemCategoryId() {
         return problemCategoryId;
     }
 
