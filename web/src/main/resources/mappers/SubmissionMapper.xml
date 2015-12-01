@@ -40,10 +40,10 @@
 		FROM voj_submissions 
 		<where>
 			<if test="startTime != null">
-         		submission_submit_time &gt;= #{startTime}
+				submission_submit_time &gt;= #{startTime}
 			</if>
 			<if test="endTime != null">
-         		AND submission_submit_time &lt;= #{endTime}
+				AND submission_submit_time &lt;= #{endTime}
 			</if>
 		</where>
 	</select>
@@ -77,11 +77,11 @@
 		FROM voj_submissions 
 		NATURAL JOIN voj_users 
 		<where> 
-    		<if test="problemId != 0">
-         		problem_id = #{problemId}
+			<if test="problemId != 0">
+				problem_id = #{problemId}
 			</if>
 			<if test="username != null and username != ''">
-         		AND username = #{username}
+				AND username = #{username}
 			</if>
 		</where>
 		ORDER BY submission_id DESC 
@@ -95,11 +95,11 @@
 		FROM voj_submissions 
 		NATURAL JOIN voj_users 
 		WHERE submission_id &lt;= #{submissionId} 
-    	<if test="problemId != 0">
-        	AND problem_id = #{problemId} 
+		<if test="problemId != 0">
+			AND problem_id = #{problemId} 
 		</if>
 		<if test="username != null and username != ''">
-        	AND username = #{username} 
+			AND username = #{username} 
 		</if>
 		ORDER BY submission_id DESC 
 		LIMIT #{limit}
@@ -113,10 +113,10 @@
 		NATURAL JOIN voj_users 
 		WHERE submission_id &gt;= #{submissionId} 
 		<if test="problemId != 0">
-        	AND problem_id = #{problemId} 
+			AND problem_id = #{problemId} 
 		</if>
 		<if test="username != null and username != ''">
-        	AND username = #{username} 
+			AND username = #{username} 
 		</if>
 		ORDER BY submission_id 
 		LIMIT #{limit}

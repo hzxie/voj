@@ -3,7 +3,7 @@
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: Nov 26, 2015 at 04:43 PM
+-- Generation Time: Dec 01, 2015 at 03:12 AM
 -- Server version: 5.6.24
 -- PHP Version: 5.6.8
 
@@ -245,6 +245,14 @@ CREATE TABLE IF NOT EXISTS `voj_problem_category_relationships` (
   `problem_id` bigint(20) NOT NULL,
   `problem_category_id` int(4) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+--
+-- Dumping data for table `voj_problem_category_relationships`
+--
+
+INSERT INTO `voj_problem_category_relationships` (`problem_id`, `problem_category_id`) VALUES
+(1000, 1),
+(1001, 1);
 
 -- --------------------------------------------------------
 

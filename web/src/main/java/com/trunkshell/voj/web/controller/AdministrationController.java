@@ -105,7 +105,7 @@ public class AdministrationController {
      * @return 私有试题的数量
      */
     private long getPrivateProblems() {
-        return problemService.getNumberOfProblems(false);
+        return problemService.getNumberOfProblemsUsingFilters(null, "", false);
     }
     
     /**

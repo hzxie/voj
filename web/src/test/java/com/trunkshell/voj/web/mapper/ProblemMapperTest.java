@@ -32,24 +32,24 @@ public class ProblemMapperTest {
     }
     
     /**
-     * 测试用例: 测试getNumberOfPublicProblems()方法
+     * 测试用例: 测试getNumberOfProblemsUsingFilters(String, int, boolean)方法
      * 测试数据: N/a
      * 预期结果: 返回数据表中公开试题的数量
      */
     @Test
     public void testGetNumberOfPublicProblems() {
-        long totalProblems = problemMapper.getNumberOfPublicProblems();
+        long totalProblems = problemMapper.getNumberOfProblemsUsingFilters(null, 0, true);
         Assert.assertEquals(2, totalProblems);
     }
     
     /**
-     * 测试用例: 测试getNumberOfPrivateProblems()方法
+     * 测试用例: 测试getNumberOfProblemsUsingFilters(String, int, boolean)方法
      * 测试数据: N/a
      * 预期结果: 返回数据表中非公开试题的数量
      */
     @Test
     public void testGetNumberOfPrivateProblems() {
-        long totalProblems = problemMapper.getNumberOfPrivateProblems();
+        long totalProblems = problemMapper.getNumberOfProblemsUsingFilters(null, 0, false);
         Assert.assertEquals(1, totalProblems);
     }
     
@@ -104,13 +104,13 @@ public class ProblemMapperTest {
     }
     
     /**
-     * 测试用例: 测试getProblems(long, int)方法
+     * 测试用例: 测试getProblemsUsingFilters(String, int, boolean, long, int)方法
      * 测试数据: 获取ID从1000起始的10道试题
      * 预期结果: 返回预期的试题列表(共2题)
      */
     @Test
     public void testGetProblemsFrom1000WithLimit10() {
-        List<Problem> problems = problemMapper.getProblems(1000, 10);
+        List<Problem> problems = problemMapper.getProblemsUsingFilters(null, 0, true, 1000, 10);
         Assert.assertEquals(2, problems.size());
         
         Problem firstProblem = problems.get(0);
@@ -125,13 +125,13 @@ public class ProblemMapperTest {
     }
     
     /**
-     * 测试用例: 测试getProblems(long, int)方法
+     * 测试用例: 测试getProblemsUsingFilters(String, int, boolean, long, int)方法
      * 测试数据: 获取ID从1001起始的1道试题
      * 预期结果: 返回预期的试题列表(共1题)
      */
     @Test
     public void testGetProblemsFrom1001WithLimit1() {
-        List<Problem> problems = problemMapper.getProblems(1001, 1);
+        List<Problem> problems = problemMapper.getProblemsUsingFilters("", 0, true, 1001, 1);
         Assert.assertEquals(1, problems.size());
         
         Problem firstProblem = problems.get(0);
@@ -143,13 +143,13 @@ public class ProblemMapperTest {
     }
     
     /**
-     * 测试用例: 测试getProblems(long, int)方法
+     * 测试用例: 测试getProblemsUsingFilters(String, int, boolean, long, int)方法
      * 测试数据: 获取ID从1010起始的10道试题
      * 预期结果: 返回空的试题列表
      */
     @Test
     public void testGetProblemsFrom1010WithLimit10() {
-        List<Problem> problems = problemMapper.getProblems(1010, 10);
+        List<Problem> problems = problemMapper.getProblemsUsingFilters(null, 0, true, 1010, 10);
         Assert.assertEquals(0, problems.size());
     }
     

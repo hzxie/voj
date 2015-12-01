@@ -27,19 +27,19 @@
 		SELECT COUNT(*) 
 		FROM voj_problems
 	</select>
-	<select id="getNumberOfPublicProblems" 
+	<select id="getNumberOfProblemsUsingFilters" 
+		parameterType="map"
 		resultType="long"
 		useCache="true">
 		SELECT COUNT(*) 
 		FROM voj_problems 
-		WHERE problem_is_public = true
-	</select>
-	<select id="getNumberOfPrivateProblems" 
-		resultType="long"
-		useCache="true">
-		SELECT COUNT(*) 
-		FROM voj_problems 
-		WHERE problem_is_public = false
+		WHERE problem_is_public = #{isPublic} 
+		<if test="keyword != null and keyword != ''">
+			AND problem_name LIKE "%"#{keyword}"%"
+		</if>
+		<if test="problemCategoryId != 0">
+			AND problem_category_id = #{problemCategoryId} 
+		</if>
 	</select>
 	<select id="getLowerBoundOfProblems" 
 		resultType="long"
@@ -69,7 +69,7 @@
 		FROM voj_problems p 
 		WHERE problem_id = #{problemId}
 	</select>
-	<select id="getProblems" 
+	<select id="getProblemsUsingFilters" 
 		parameterType="map"
 		resultMap="ProblemResultMap"
 		useCache="true">
@@ -83,7 +83,15 @@
 			WHERE s.problem_id = p.problem_id AND s.submission_judge_result = 'AC'
 		) AS accepted_submission
 		FROM voj_problems p 
-		WHERE problem_id &gt;= #{problemId} AND problem_is_public = true 
+		NATURAL JOIN voj_problem_category_relationships pcr
+		NATURAL JOIN voj_problem_categories pc
+		WHERE problem_id &gt;= #{problemId} AND problem_is_public = #{isPublic} 
+		<if test="keyword != null and keyword != ''">
+			AND problem_name LIKE "%"#{keyword}"%"
+		</if>
+		<if test="problemCategoryId != 0">
+			AND problem_category_id = #{problemCategoryId} 
+		</if>
 		LIMIT #{limit}
 	</select>
 	<insert id="createProblem" 
