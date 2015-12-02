@@ -23,7 +23,7 @@
 	
 	<!-- Base Components -->
 	<context:annotation-config />
-	<context:component-scan base-package="com.trunkshell.voj.judger" />
+	<context:component-scan base-package="org.verwandlung.voj.judger" />
 	
 	<!-- Property File Location -->
 	<bean
@@ -64,7 +64,7 @@
 		<property name="dataSource" ref="dataSource" />
 	</bean>
 	<bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
-		<property name="basePackage" value="com.trunkshell.voj.judger.mapper" />
+		<property name="basePackage" value="org.verwandlung.voj.judger.mapper" />
 	</bean>
 	<bean id="transactionManager"
 		class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
@@ -92,6 +92,6 @@
 		<property name="destinationName" value="vojSubmissionTaskQueue" />
 		<property name="messageListener" ref="messageReceiver" />
 	</bean>
-	<bean id="messageSender" class="com.trunkshell.voj.judger.messenger.MessageSender"></bean>
-	<bean id="messageReceiver" class="com.trunkshell.voj.judger.messenger.MessageReceiver"></bean>
+	<bean id="messageSender" class="org.verwandlung.voj.judger.messenger.MessageSender"></bean>
+	<bean id="messageReceiver" class="org.verwandlung.voj.judger.messenger.MessageReceiver"></bean>
 </beans>

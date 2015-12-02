@@ -2,16 +2,16 @@
 <!DOCTYPE mapper 
 	PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"  
 	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.trunkshell.voj.web.mapper.UserMetaMapper">
+<mapper namespace="org.verwandlung.voj.web.mapper.UserMetaMapper">
 	<!-- ResultMap -->
-	<resultMap id="UserMetaResultMap" type="com.trunkshell.voj.web.model.UserMeta">
+	<resultMap id="UserMetaResultMap" type="org.verwandlung.voj.web.model.UserMeta">
 		<id property="metaId" column="meta_id" />
 		<result property="metaKey" column="meta_key" />
 		<result property="metaValue" column="meta_value" />
 		<association property="user" 
-			javaType="com.trunkshell.voj.web.model.User" 
+			javaType="org.verwandlung.voj.web.model.User" 
 			column="uid"
-			select="com.trunkshell.voj.web.mapper.UserMapper.getUserUsingUid" />
+			select="org.verwandlung.voj.web.mapper.UserMapper.getUserUsingUid" />
 	</resultMap>
 	
 	<!-- Methods -->
@@ -25,7 +25,7 @@
 		AND meta_value &gt;= #{startTime} AND meta_value &lt;= #{endTime}
 	</select>
 	<select id="getUserMetaUsingUser" 
-		parameterType="com.trunkshell.voj.web.model.User"
+		parameterType="org.verwandlung.voj.web.model.User"
 		resultMap="UserMetaResultMap"
 		useCache="true">
 		SELECT * 
@@ -41,7 +41,7 @@
 		WHERE uid = #{user.uid} AND meta_key = #{metaKey}
 	</select>
 	<insert id="createUserMeta" 
-		parameterType="com.trunkshell.voj.web.model.UserMeta"
+		parameterType="org.verwandlung.voj.web.model.UserMeta"
 		flushCache="true" 
 		keyProperty="metaId" 
 		keyColumn="meta_id"
@@ -50,7 +50,7 @@
 		VALUES (#{user.uid}, #{metaKey}, #{metaValue})
 	</insert>
 	<update id="updateUserMeta"
-		parameterType="com.trunkshell.voj.web.model.UserMeta"
+		parameterType="org.verwandlung.voj.web.model.UserMeta"
 		flushCache="true">
 		UPDATE voj_usermeta 
 		SET meta_value = #{metaValue} 

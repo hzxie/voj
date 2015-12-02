@@ -2,10 +2,10 @@
 <!DOCTYPE mapper 
 	PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"  
 	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.trunkshell.voj.web.mapper.ProblemCategoryMapper">
+<mapper namespace="org.verwandlung.voj.web.mapper.ProblemCategoryMapper">
 	<!-- ResultMap -->
 	<resultMap id="ProblemCategoryResultMap" 
-		type="com.trunkshell.voj.web.model.ProblemCategory">
+		type="org.verwandlung.voj.web.model.ProblemCategory">
 		<id property="problemCategoryId" column="problem_category_id" />
 		<result property="problemCategorySlug" column="problem_category_slug" />
 		<result property="problemCategoryName" column="problem_category_name" />
@@ -30,7 +30,7 @@
 		WHERE problem_category_slug = #{problemCategorySlug}
 	</select>
 	<insert id="createProblemCategory" 
-		parameterType="com.trunkshell.voj.web.model.ProblemCategory"
+		parameterType="org.verwandlung.voj.web.model.ProblemCategory"
 		flushCache="true" 
 		keyProperty="ProblemCategoryId" 
 		keyColumn="problem_category_id"
@@ -39,7 +39,7 @@
 		VALUES (#{problemCategorySlug}, #{problemCategoryName}, #{parentProblemCategoryId})
 	</insert>
 	<update id="updateProblemCategory"
-		parameterType="com.trunkshell.voj.web.model.ProblemCategory"
+		parameterType="org.verwandlung.voj.web.model.ProblemCategory"
 		flushCache="true">
 		UPDATE voj_problem_categories 
 		SET problem_category_slug = #{problemCategorySlug}, problem_category_name = #{problemCategoryName}, problem_category_parent_id = #{parentProblemCategoryId}

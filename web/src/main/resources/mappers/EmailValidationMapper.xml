@@ -2,9 +2,9 @@
 <!DOCTYPE mapper 
 	PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"  
 	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.trunkshell.voj.web.mapper.EmailValidationMapper">
+<mapper namespace="org.verwandlung.voj.web.mapper.EmailValidationMapper">
 	<!-- ResultMap -->
-	<resultMap id="EmailValidationResultMap" type="com.trunkshell.voj.web.model.EmailValidation">
+	<resultMap id="EmailValidationResultMap" type="org.verwandlung.voj.web.model.EmailValidation">
 		<id property="email" column="email" />
 		<result property="token" column="token" />
 		<result property="expireTime" column="expire_time" />
@@ -20,7 +20,7 @@
 		WHERE email = #{email}
 	</select>
 	<insert id="createEmailValidation" 
-		parameterType="com.trunkshell.voj.web.model.EmailValidation"
+		parameterType="org.verwandlung.voj.web.model.EmailValidation"
 		flushCache="true">
 		INSERT INTO voj_email_validation (email, token, expire_time) 
 		VALUES (#{email}, #{token}, #{expireTime})

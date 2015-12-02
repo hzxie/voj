@@ -25,7 +25,7 @@
 		<listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
 	</listener>
 	<listener>
-		<listener-class>com.trunkshell.voj.web.util.SessionListener</listener-class>
+		<listener-class>org.verwandlung.voj.web.util.SessionListener</listener-class>
 	</listener>
 	
 	<!-- Druid -->

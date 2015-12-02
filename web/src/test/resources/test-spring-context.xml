@@ -28,7 +28,7 @@
 	http://www.springframework.org/schema/util/spring-util.xsd">
 	<!-- Base Components -->
 	<context:annotation-config />
-	<context:component-scan base-package="com.trunkshell.voj.web" />
+	<context:component-scan base-package="org.verwandlung.voj.web" />
 
 	<!-- Enable @Controller annotation support -->
 	<mvc:annotation-driven />
@@ -85,7 +85,7 @@
 		<property name="mapperLocations" value="classpath:/mappers/*.xml"></property>
 	</bean>
 	<bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
-		<property name="basePackage" value="com.trunkshell.voj.web.mapper" />
+		<property name="basePackage" value="org.verwandlung.voj.web.mapper" />
 		<property name="sqlSessionFactoryBeanName" value="sessionFactory"></property>
 	</bean>
 	<bean id="transactionManager"
@@ -111,7 +111,7 @@
 		</property>
 	</bean>
 	<bean id="vojMailSender" 
-		class="com.trunkshell.voj.web.util.MailSender">
+		class="org.verwandlung.voj.web.util.MailSender">
 	</bean>
 	
 	<!-- Message Service -->
@@ -133,6 +133,6 @@
 		<property name="destinationName" value="vojMessageQueue" />
 		<property name="messageListener" ref="messageReceiver" />
 	</bean> 
-	<bean id="messageSender" class="com.trunkshell.voj.web.messenger.MessageSender"></bean>
-	<bean id="messageReceiver" class="com.trunkshell.voj.web.messenger.MessageReceiver"></bean>
+	<bean id="messageSender" class="org.verwandlung.voj.web.messenger.MessageSender"></bean>
+	<bean id="messageReceiver" class="org.verwandlung.voj.web.messenger.MessageReceiver"></bean>
 </beans>
