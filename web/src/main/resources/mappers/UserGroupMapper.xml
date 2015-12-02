@@ -2,10 +2,10 @@
 <!DOCTYPE mapper 
 	PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"  
 	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.trunkshell.voj.web.mapper.UserGroupMapper">
+<mapper namespace="org.verwandlung.voj.web.mapper.UserGroupMapper">
 	<!-- ResultMap -->
 	<resultMap id="UserGroupResultMap" 
-		type="com.trunkshell.voj.web.model.UserGroup">
+		type="org.verwandlung.voj.web.model.UserGroup">
 		<id property="userGroupId" column="user_group_id" />
 		<result property="userGroupSlug" column="user_group_slug" />
 		<result property="userGroupName" column="user_group_name" />

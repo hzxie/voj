@@ -2,10 +2,10 @@
 <!DOCTYPE mapper 
 	PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"  
 	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.trunkshell.voj.web.mapper.ProblemTagMapper">
+<mapper namespace="org.verwandlung.voj.web.mapper.ProblemTagMapper">
 	<!-- ResultMap -->
 	<resultMap id="ProblemTagResultMap" 
-		type="com.trunkshell.voj.web.model.ProblemTag">
+		type="org.verwandlung.voj.web.model.ProblemTag">
 		<id property="problemTagId" column="problem_tag_id" />
 		<result property="problemTagSlug" column="problem_tag_slug" />
 		<result property="problemTagName" column="problem_tag_name" />
@@ -29,7 +29,7 @@
 		WHERE problem_tag_slug = #{problemTagSlug}
 	</select>
 	<insert id="createProblemTag" 
-		parameterType="com.trunkshell.voj.web.model.ProblemTag"
+		parameterType="org.verwandlung.voj.web.model.ProblemTag"
 		flushCache="true" 
 		keyProperty="ProblemTagId" 
 		keyColumn="problem_tag_id"
@@ -38,7 +38,7 @@
 		VALUES (#{problemTagSlug}, #{problemTagName})
 	</insert>
 	<update id="updateProblemTag"
-		parameterType="com.trunkshell.voj.web.model.ProblemTag"
+		parameterType="org.verwandlung.voj.web.model.ProblemTag"
 		flushCache="true">
 		UPDATE voj_problem_tags 
 		SET problem_tag_slug = #{problemTagSlug}, problem_tag_name = #{problemTagName}

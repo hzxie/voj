@@ -2,9 +2,9 @@
 <!DOCTYPE mapper 
 	PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"  
 	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.trunkshell.voj.web.mapper.LanguageMapper">
+<mapper namespace="org.verwandlung.voj.web.mapper.LanguageMapper">
 	<!-- ResultMap -->
-	<resultMap id="LanguageResultMap" type="com.trunkshell.voj.web.model.Language">
+	<resultMap id="LanguageResultMap" type="org.verwandlung.voj.web.model.Language">
 		<id property="languageId" column="language_id" />
 		<result property="languageSlug" column="language_slug" />
 		<result property="languageName" column="language_name" />
@@ -36,7 +36,7 @@
 		FROM voj_languages
 	</select>
 	<insert id="createLanguage" 
-		parameterType="com.trunkshell.voj.web.model.Language"
+		parameterType="org.verwandlung.voj.web.model.Language"
 		flushCache="true" 
 		keyProperty="languageId" 
 		keyColumn="language_id"
@@ -45,7 +45,7 @@
 		VALUES (#{languageId}, #{languageSlug}, #{languageName}, #{compileCommand}, #{runCommand})
 	</insert>
 	<update id="updateLanguage"
-		parameterType="com.trunkshell.voj.web.model.Language"
+		parameterType="org.verwandlung.voj.web.model.Language"
 		flushCache="true">
 		UPDATE voj_languages 
 		SET language_slug = #{languageSlug}, language_name = #{languageName}, language_compile_command = #{compileCommand}, language_run_command = #{runCommand} 

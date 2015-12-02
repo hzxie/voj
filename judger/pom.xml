@@ -1,7 +1,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-	<groupId>com.trunkshell</groupId>
+	<groupId>org.verwandlung</groupId>
 	<artifactId>voj.judger</artifactId>
 	<packaging>jar</packaging>
 	<version>0.1.0</version>
@@ -149,7 +149,7 @@
 						<configuration>
 							<transformers>
 								<transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-									<mainClass>com.trunkshell.voj.judger.application.ApplicationBootstrap</mainClass>
+									<mainClass>org.verwandlung.voj.judger.application.ApplicationBootstrap</mainClass>
 								</transformer>
 								<transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
 									<resource>META-INF/spring.handlers</resource>
@@ -178,7 +178,7 @@
 									<arg value="-classpath" />
 									<arg value="${project.build.outputDirectory}" />
 									<arg value="-force" />
-									<arg value="com.trunkshell.voj.judger.core.Runner" />
+									<arg value="org.verwandlung.voj.judger.core.Runner" />
 								</exec>
 								<exec executable="make"></exec>
 							</target>
