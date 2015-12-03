@@ -1,5 +1,7 @@
 package org.verwandlung.voj.web.mapper;
 
+import java.util.List;
+
 import org.apache.ibatis.annotations.CacheNamespace;
 
 import org.verwandlung.voj.web.model.ProblemCategory;
@@ -11,6 +13,12 @@ import org.verwandlung.voj.web.model.ProblemCategory;
  */
 @CacheNamespace(implementation = org.mybatis.caches.ehcache.EhcacheCache.class)
 public interface ProblemCategoryMapper {
+	/**
+	 * 获取全部的试题分类.
+	 * @return 包含全部试题分类的列表
+	 */
+	public List<ProblemCategory> getProblemCategories();
+	
     /**
      * 通过试题分类的唯一标识符获取试题分类对象.
      * @param problemCategoryId - 试题分类的唯一标识符

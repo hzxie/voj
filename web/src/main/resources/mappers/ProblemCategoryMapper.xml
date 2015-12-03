@@ -13,6 +13,12 @@
 	</resultMap>
 
 	<!-- Methods -->
+	<select id="getProblemCategories"
+		resultMap="ProblemCategoryResultMap"
+		useCache="true">
+		SELECT *
+		FROM voj_problem_categories
+	</select>
 	<select id="getProblemCategoryUsingId"
 		parameterType="int"
 		resultMap="ProblemCategoryResultMap"

@@ -22,6 +22,7 @@ import org.springframework.web.servlet.ModelAndView;
 import org.verwandlung.voj.web.exception.ResourceNotFoundException;
 import org.verwandlung.voj.web.model.Language;
 import org.verwandlung.voj.web.model.Problem;
+import org.verwandlung.voj.web.model.ProblemCategory;
 import org.verwandlung.voj.web.model.Submission;
 import org.verwandlung.voj.web.model.User;
 import org.verwandlung.voj.web.service.LanguageService;
@@ -54,18 +55,22 @@ public class ProblemsController {
             @RequestParam(value = "keyword", required = false) String keyword,
             @RequestParam(value = "category", required = false) String problemCategorySlug,
             HttpServletRequest request, HttpServletResponse response) {
-    	long startIndexOfProblems = getFirstIndexOfProblems();
+        long startIndexOfProblems = getFirstIndexOfProblems();
         if ( startIndex < startIndexOfProblems ) {
             startIndex = startIndexOfProblems;
         }
         
         List<Problem> problems = problemService.getProblemsUsingFilters(startIndex, keyword, problemCategorySlug, NUMBER_OF_PROBLEMS_PER_PAGE);
+        List<ProblemCategory> problemCategories = problemService.getProblemCategories();
         long totalProblems = problemService.getNumberOfProblemsUsingFilters(keyword, problemCategorySlug, true);
         ModelAndView view = new ModelAndView("problems/problems");
         view.addObject("problems", problems)
             .addObject("startIndexOfProblems", startIndexOfProblems)
             .addObject("numberOfProblemsPerPage", NUMBER_OF_PROBLEMS_PER_PAGE)
-            .addObject("totalProblems", totalProblems);
+            .addObject("totalProblems", totalProblems)
+            .addObject("keyword", keyword)
+            .addObject("problemCategories", problemCategories)
+            .addObject("selectedCategorySlug", problemCategorySlug);
         
         HttpSession session = request.getSession();
         if ( isLoggedIn(session) ) {
@@ -82,7 +87,7 @@ public class ProblemsController {
      * @return 试题的起始编号
      */
     private long getFirstIndexOfProblems() {
-    	return problemService.getFirstIndexOfProblems();
+        return problemService.getFirstIndexOfProblems();
     }
     
     /**

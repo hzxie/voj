@@ -1,5 +1,7 @@
 package org.verwandlung.voj.web.mapper;
 
+import java.util.List;
+
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -19,6 +21,22 @@ import org.verwandlung.voj.web.model.ProblemCategory;
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class ProblemCategoryMapperTest {
+	/**
+	 * 测试用例: 测试getProblemCategoryUsingId()方法
+     * 测试数据: N/a
+     * 预期结果: 返回默认分类的试题分类对象
+	 */
+	@Test
+	public void testGetProblemCategories() {
+		List<ProblemCategory> problemCategories = problemCategoryMapper.getProblemCategories();
+		Assert.assertNotNull(problemCategories);
+		Assert.assertEquals(1, problemCategories.size());
+		
+		ProblemCategory firstProblemCategory = problemCategories.get(0);
+		String problemCategoryName = firstProblemCategory.getProblemCategoryName();
+        Assert.assertEquals("Uncategorized", problemCategoryName);
+	}
+	
     /**
      * 测试用例: 测试getProblemCategoryUsingId(int)方法
      * 测试数据: 默认分类的唯一标识符

@@ -70,6 +70,14 @@ public class ProblemService {
     }
     
     /**
+     * 获取全部的试题分类.
+     * @return 包含全部试题分类的列表
+     */
+    public List<ProblemCategory> getProblemCategories() {
+        return problemCategoryMapper.getProblemCategories();
+    }
+    
+    /**
      * [此方法仅供管理员使用]
      * 获取全部试题的总数量.
      * @return 全部试题的总数量
