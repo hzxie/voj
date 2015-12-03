@@ -100,15 +100,20 @@
             <div id="sidebar" class="span4">
                 <div id="search-widget" class="widget">
                     <h4><spring:message code="voj.problems.problems.search" text="Search" /></h4>
-                    <form id="search-form" action="#">
+                    <form id="search-form" action="<c:url value="/p" />">
                         <div class="control-group">
-                            <input id="keyword" name="keyword" class="span12" type="text" placeholder="<spring:message code="voj.problems.problems.keyword" text="Keyword" />" />
+                            <input id="keyword" name="keyword" class="span12" type="text" placeholder="<spring:message code="voj.problems.problems.keyword" text="Keyword" />" value="${keyword}" />
                         </div>
                         <button class="btn btn-primary btn-block" type="submit"><spring:message code="voj.problems.problems.search" text="Search" /></button>
                     </form> <!-- #search-form -->
                 </div> <!-- #search-widget -->
                 <div id="categories-widget" class="widget">
                     <h4><spring:message code="voj.problems.problems.categories" text="Categories" /></h4>
+                    <ul class="inline">
+                    <c:forEach var="problemCategory" items="${problemCategories}">
+                        <li><a href="<c:url value="/p?category=${problemCategory.problemCategorySlug}" />">${problemCategory.problemCategoryName}</a></li>
+                    </c:forEach>
+                    </ul>
                 </div> <!-- #categories-widget -->
             </div> <!-- #sidebar -->
         </div> <!-- #main-content -->
@@ -136,7 +141,9 @@
                 lastProblemRecord = $('tr:last-child', '#problems tbody'),
                 lastProblemId     = parseInt($(lastProblemRecord).attr('data-value'));
 
-            if ( !isLoading && hasNextRecord ) {
+            if ( isNaN(lastProblemId) ) {
+                return processProblemsResult(false);
+            } else if ( !isLoading && hasNextRecord ) {
                 setLoadingStatus(true);
                 return getMoreProblems(lastProblemId + 1);
             }
@@ -145,7 +152,9 @@
     <script type="text/javascript">
         function getMoreProblems(startIndex) {
             var pageRequests = {
-                'startIndex': startIndex
+                'startIndex': startIndex,
+                'keyword': '${keyword}',
+                'category': '${selectedCategorySlug}'
             };
 
             $.ajax({

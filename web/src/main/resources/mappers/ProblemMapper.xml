@@ -33,6 +33,8 @@
 		useCache="true">
 		SELECT COUNT(*) 
 		FROM voj_problems 
+		NATURAL JOIN voj_problem_category_relationships pcr
+		NATURAL JOIN voj_problem_categories pc
 		WHERE problem_is_public = #{isPublic} 
 		<if test="keyword != null and keyword != ''">
 			AND problem_name LIKE "%"#{keyword}"%"
