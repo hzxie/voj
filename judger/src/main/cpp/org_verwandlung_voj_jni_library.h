@@ -5,10 +5,10 @@
 #include <string>
 
 #include <jni.h>
-/* Header for class com_trunkshell_voj_jni_library */
+/* Header for class org_verwandlung_voj_jni_library */
 
-#ifndef _Included_com_trunkshell_voj_jni_library
-#define _Included_com_trunkshell_voj_jni_library
+#ifndef _Included_org_verwandlung_voj_jni_library
+#define _Included_org_verwandlung_voj_jni_library
 #ifdef __cplusplus
 extern "C" {
 #endif
