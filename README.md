@@ -202,6 +202,14 @@ You can open it with archive manager software such as `WinRAR`.
 
 After then, you can copy this file `voj.web.war` to `TOMCAT_HOME/webapps`.
 
+**IMPORTANT:** For Windows users, please edit `server.xml` of your Tomcat configuration:
+
+```
+<Connector connectionTimeout="20000" port="8080" protocol="HTTP/1.1"
+    redirectPort="8443" useBodyEncodingForURI="true">
+</Connector>
+```
+
 #### Setup the Judger
 
 Edit the values in `/voj.properties` of the file `voj.judger.jar`.
