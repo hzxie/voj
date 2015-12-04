@@ -85,7 +85,7 @@ public class ProblemCategory implements Serializable {
      * 获取试题分类的父类的唯一标识符.
      * @return 试题分类的父类的唯一标识符
      */
-    public long getParentProblemCategoryId() {
+    public int getParentProblemCategoryId() {
         return parentProblemCategoryId;
     }
 

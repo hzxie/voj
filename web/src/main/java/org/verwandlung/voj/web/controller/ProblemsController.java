@@ -1,5 +1,6 @@
 package org.verwandlung.voj.web.controller;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -61,7 +62,6 @@ public class ProblemsController {
         }
         
         List<Problem> problems = problemService.getProblemsUsingFilters(startIndex, keyword, problemCategorySlug, NUMBER_OF_PROBLEMS_PER_PAGE);
-        List<ProblemCategory> problemCategories = problemService.getProblemCategories();
         long totalProblems = problemService.getNumberOfProblemsUsingFilters(keyword, problemCategorySlug, true);
         ModelAndView view = new ModelAndView("problems/problems");
         view.addObject("problems", problems)
@@ -69,7 +69,7 @@ public class ProblemsController {
             .addObject("numberOfProblemsPerPage", NUMBER_OF_PROBLEMS_PER_PAGE)
             .addObject("totalProblems", totalProblems)
             .addObject("keyword", keyword)
-            .addObject("problemCategories", problemCategories)
+            .addObject("problemCategories", getProblemCategories())
             .addObject("selectedCategorySlug", problemCategorySlug);
         
         HttpSession session = request.getSession();
@@ -88,6 +88,36 @@ public class ProblemsController {
      */
     private long getFirstIndexOfProblems() {
         return problemService.getFirstIndexOfProblems();
+    }
+
+    /**
+     * 获得具有层次关系的试题分类列表.
+     * @return 包含试题分类及其继承关系的List对象
+     */
+    private Map<ProblemCategory, List<ProblemCategory>> getProblemCategories() {
+        List<ProblemCategory> problemCategories = problemService.getProblemCategories();
+        Map<Integer, List<ProblemCategory>> problemCategoriesIndexer = new HashMap<Integer, List<ProblemCategory>>();
+        Map<ProblemCategory, List<ProblemCategory>> problemCategoriesHierarchy = new HashMap<ProblemCategory, List<ProblemCategory>>();
+        
+        // 将无父亲的试题分类加入列表
+        for ( ProblemCategory pc : problemCategories ) {
+            if ( pc.getParentProblemCategoryId() == 0 ) {
+                List<ProblemCategory> subProblemCategories = new ArrayList<ProblemCategory>();
+                problemCategoriesHierarchy.put(pc, subProblemCategories);
+                problemCategoriesIndexer.put(pc.getProblemCategoryId(), subProblemCategories);
+            }
+        }
+        // 将其他试题分类加入列表
+        for ( ProblemCategory pc : problemCategories ) {
+            int parentProblemCategoryId = pc.getParentProblemCategoryId() ;
+            if ( parentProblemCategoryId != 0 ) {
+                List<ProblemCategory> subProblemCategories = problemCategoriesIndexer.get(parentProblemCategoryId);
+                if ( subProblemCategories != null ) {
+                    subProblemCategories.add(pc);
+                }
+            }
+        }
+        return problemCategoriesHierarchy;
     }
     
     /**

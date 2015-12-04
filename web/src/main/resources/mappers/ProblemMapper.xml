@@ -31,7 +31,7 @@
 		parameterType="map"
 		resultType="long"
 		useCache="true">
-		SELECT COUNT(*) 
+		SELECT COUNT(DISTINCT(problem_id)) 
 		FROM voj_problems 
 		NATURAL JOIN voj_problem_category_relationships pcr
 		NATURAL JOIN voj_problem_categories pc
@@ -75,7 +75,7 @@
 		parameterType="map"
 		resultMap="ProblemResultMap"
 		useCache="true">
-		SELECT problem_id, problem_name, (
+		SELECT DISTINCT(problem_id), problem_name, (
 			SELECT COUNT(*) 
 			FROM voj_submissions s 
 			WHERE s.problem_id = p.problem_id
