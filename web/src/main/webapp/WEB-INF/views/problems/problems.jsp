@@ -109,10 +109,8 @@
                 </div> <!-- #search-widget -->
                 <div id="categories-widget" class="widget">
                     <h4><spring:message code="voj.problems.problems.categories" text="Categories" /></h4>
+                    ${problemCategories}
                     <ul class="inline">
-                    <c:forEach var="problemCategory" items="${problemCategories}">
-                        <li><a href="<c:url value="/p?category=${problemCategory.problemCategorySlug}" />">${problemCategory.problemCategoryName}</a></li>
-                    </c:forEach>
                     </ul>
                 </div> <!-- #categories-widget -->
             </div> <!-- #sidebar -->
