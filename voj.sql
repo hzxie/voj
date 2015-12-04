@@ -252,7 +252,8 @@ CREATE TABLE IF NOT EXISTS `voj_problem_category_relationships` (
 
 INSERT INTO `voj_problem_category_relationships` (`problem_id`, `problem_category_id`) VALUES
 (1000, 1),
-(1001, 1);
+(1001, 1),
+(1002, 1);
 
 -- --------------------------------------------------------
 

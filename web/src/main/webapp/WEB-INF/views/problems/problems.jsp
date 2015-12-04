@@ -124,6 +124,15 @@
     <!-- Placed at the end of the document so the pages load faster -->
     <script type="text/javascript" src="${cdnUrl}/js/site.js"></script>
     <script type="text/javascript">
+        $(function() {
+            var numberOfProblems = $('tr', '#problems tbody').length;
+
+            if ( numberOfProblems == 0 ) {
+                return processProblemsResult(false);
+            } 
+        });
+    </script>
+    <script type="text/javascript">
         function setLoadingStatus(isLoading) {
             if ( isLoading ) {
                 $('p', '#more-problems').addClass('hide');
@@ -141,9 +150,7 @@
                 lastProblemRecord = $('tr:last-child', '#problems tbody'),
                 lastProblemId     = parseInt($(lastProblemRecord).attr('data-value'));
 
-            if ( isNaN(lastProblemId) ) {
-                return processProblemsResult(false);
-            } else if ( !isLoading && hasNextRecord ) {
+            if ( !isLoading && hasNextRecord ) {
                 setLoadingStatus(true);
                 return getMoreProblems(lastProblemId + 1);
             }
