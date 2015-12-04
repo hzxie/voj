@@ -110,6 +110,37 @@ div#content div#sidebar form {
 	margin-bottom: 10px;
 }
 
+div#content div#sidebar div#categories-widget a {
+	display: block;
+	padding: 5px;
+}
+
+div#content div#sidebar div#categories-widget a.active {
+	background-color: #16a085;
+	color: #fff;
+}
+
+div#content div#sidebar div#categories-widget h6 {
+	font-size: 14px;
+	font-weight: bold;
+	margin: 0;
+	padding: 0;
+	text-transform: none;
+}
+
+div#content div#sidebar div#categories-widget h6 > a {
+	color: #16a085;
+}
+
+div#content div#sidebar div#categories-widget ul.inline {
+	margin: 0;
+}
+
+div#content div#sidebar div#categories-widget ul.inline > li {
+	color: #1abc9c;
+	padding: 0;
+}
+
 /* Smaller than standard 960 (devices and browsers) */
 @media only screen and (max-width: 959px) {
 }

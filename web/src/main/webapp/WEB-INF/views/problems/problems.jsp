@@ -109,9 +109,26 @@
                 </div> <!-- #search-widget -->
                 <div id="categories-widget" class="widget">
                     <h4><spring:message code="voj.problems.problems.categories" text="Categories" /></h4>
-                    ${problemCategories}
-                    <ul class="inline">
-                    </ul>
+                    <c:forEach var="entry" items="${problemCategories}">
+                        <h6>
+                            <a 
+                                <c:if test="${selectedCategorySlug == entry.key.problemCategorySlug}">class="active" </c:if>
+                                href="<c:url value="/p?category=${entry.key.problemCategorySlug}" />">
+                                ${entry.key.problemCategoryName}
+                            </a>
+                        </h6>
+                        <ul class="inline">
+                        <c:forEach var="problemCategory" items="${entry.value}">
+                            <li>
+                                <a 
+                                    <c:if test="${selectedCategorySlug == problemCategory.problemCategorySlug}">class="active" </c:if>
+                                    href="<c:url value="/p?category=${problemCategory.problemCategorySlug}" />">
+                                    ${problemCategory.problemCategoryName}
+                                </a>
+                            </li>
+                        </c:forEach>
+                        </ul>
+                    </c:forEach>
                 </div> <!-- #categories-widget -->
             </div> <!-- #sidebar -->
         </div> <!-- #main-content -->
