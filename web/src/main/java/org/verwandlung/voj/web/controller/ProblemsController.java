@@ -1,5 +1,6 @@
 package org.verwandlung.voj.web.controller;
 
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -49,13 +50,14 @@ public class ProblemsController {
      * @param request - HttpRequest对象
      * @param response - HttpResponse对象
      * @return 包含试题库页面信息的ModelAndView对象
+     * @throws UnsupportedEncodingException 
      */
     @RequestMapping(value = "", method = RequestMethod.GET)
     public ModelAndView problemsView(
             @RequestParam(value = "start", required = false, defaultValue = "1") long startIndex,
             @RequestParam(value = "keyword", required = false) String keyword,
             @RequestParam(value = "category", required = false) String problemCategorySlug,
-            HttpServletRequest request, HttpServletResponse response) {
+            HttpServletRequest request, HttpServletResponse response) throws UnsupportedEncodingException {
         long startIndexOfProblems = getFirstIndexOfProblems();
         if ( startIndex < startIndexOfProblems ) {
             startIndex = startIndexOfProblems;
