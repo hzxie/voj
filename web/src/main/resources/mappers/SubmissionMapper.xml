@@ -43,9 +43,39 @@
 				submission_submit_time &gt;= #{startTime}
 			</if>
 			<if test="endTime != null">
-				AND submission_submit_time &lt;= #{endTime}
+				AND submission_submit_time &lt; #{endTime}
 			</if>
 		</where>
+	</select>
+	<select id="getNumberOfSubmissionsGroupByMonth"
+		parameterType="map"
+		resultType="hashmap"
+		useCache="true">
+		SELECT EXTRACT(YEAR_MONTH FROM submission_submit_time) AS month, COUNT(*) as submissions 
+		FROM `voj_submissions`
+		WHERE submission_submit_time &gt;= #{startTime} AND submission_submit_time &lt; #{endTime}
+		<if test="uid != 0">
+			AND uid = #{uid}
+		</if>
+		<if test="isAcceptedOnly == true">
+			AND submission_judge_result = 'AC'
+		</if>
+		GROUP BY EXTRACT(YEAR_MONTH FROM submission_submit_time)
+	</select>
+	<select id="getNumberOfSubmissionsGroupByDay"
+		parameterType="map"
+		resultType="hashmap"
+		useCache="true">
+		SELECT DATE(submission_submit_time) AS date, COUNT(*) as submissions 
+		FROM `voj_submissions`
+		WHERE submission_submit_time &gt;= #{startTime} AND submission_submit_time &lt; #{endTime}
+		<if test="uid != 0">
+			AND uid = #{uid}
+		</if>
+		<if test="isAcceptedOnly == true">
+			AND submission_judge_result = 'AC'
+		</if>
+		GROUP BY DATE(submission_submit_time)
 	</select>
 	<select id="getNumberOfSubmissionsUsingLanguage"
 		parameterType="org.verwandlung.voj.web.model.Language"

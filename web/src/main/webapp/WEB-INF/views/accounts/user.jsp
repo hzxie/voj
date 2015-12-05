@@ -122,6 +122,7 @@
                         <h4><spring:message code="voj.accounts.user.submissions" text="Submissions" /></h4>
                     </div> <!-- .header -->
                     <div class="body">
+                        <div id="submissions-calendar"></div> <!-- #submissions-calendar -->
                         <table id="submissions" class="table table-striped">
                             <thead>
                                 <tr>
@@ -176,6 +177,46 @@
         });
     </script>
     <script type="text/javascript">
+        $.getScript('${cdnUrl}/js/highcharts.min.js', function() {
+            Highcharts.setOptions({
+                colors: ['#34495e', '#e74c3c']
+            });
+
+            $('#submissions-calendar').highcharts({
+            	chart: {
+            		backgroundColor: null,
+            	},
+                title: {
+                    text: 'Submissions in the Past 30 Days'
+                },
+                xAxis: {
+                    categories: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+                },
+                yAxis: {
+                    title: {
+                        text: 'Number of Submissions'
+                    }
+                },
+                tooltip: {
+                    shared: true,
+                    crosshairs: true
+                },
+                series: [
+                    {
+                        name: 'Total Submissions',
+                        lineWidth: 4,
+                        marker: {
+                            radius: 4
+                        },
+                        "data":[5.7879,6.6286,6.1724,5.3125,7.1481,6.1333,4.5769]
+                    },
+                    {
+                        name: 'Accepted Submissions',
+                        "data":[3.7879,7.86,6.1724,4.3125,2.1481,9.1333,3.5769]
+                    }
+                ]
+            });
+        });
     </script>
     <script type="text/javascript">
         $(function() {

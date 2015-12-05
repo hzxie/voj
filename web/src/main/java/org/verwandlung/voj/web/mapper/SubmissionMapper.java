@@ -1,7 +1,7 @@
 package org.verwandlung.voj.web.mapper;
 
-import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.ibatis.annotations.CacheNamespace;
 import org.apache.ibatis.annotations.Param;
@@ -22,7 +22,27 @@ public interface SubmissionMapper {
      * @param endTime - 统计结束时间
      * @return 指定时间内提交的数量
      */
-    public long getNumberOfSubmissions(@Param("startTime") Date startTime, @Param("endTime") Date endTime);
+    public long getNumberOfSubmissions(@Param("startTime") String startTime, @Param("endTime") String endTime);
+
+    /**
+     * 获取指定时间内提交的数量, 并按月份汇总.
+     * @param  startTime - 统计起始时间
+     * @param  endTime - 统计结束时间
+     * @param  uid - 用户的唯一标识符
+     * @param  isAcceptedOnly - 是否只统计通过的提交记录
+     * @return 包含月份和提交次数的键值对 Map
+     */
+    public List<Map<String, Object>> getNumberOfSubmissionsGroupByMonth(@Param("startTime") String startTime, @Param("endTime") String endTime, @Param("uid") long uid, @Param("isAcceptedOnly") boolean isAcceptedOnly);
+    
+    /**
+     * 获取指定时间内提交的数量, 并按天数汇总.
+     * @param  startTime - 统计起始时间
+     * @param  endTime - 统计结束时间
+     * @param  uid - 用户的唯一标识符
+     * @param  isAcceptedOnly - 是否只统计通过的提交记录
+     * @return 包含日期和提交次数的键值对 Map
+     */
+    public List<Map<String, Object>> getNumberOfSubmissionsGroupByDay(@Param("startTime") String startTime, @Param("endTime") String endTime, @Param("uid") long uid, @Param("isAcceptedOnly") boolean isAcceptedOnly);
     
     /**
      * [此方法仅供管理员使用]

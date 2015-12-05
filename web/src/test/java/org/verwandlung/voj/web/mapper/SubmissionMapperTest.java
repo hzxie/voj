@@ -1,8 +1,8 @@
 package org.verwandlung.voj.web.mapper;
 
-import java.util.Calendar;
-import java.util.Date;
+import java.sql.Date;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -26,20 +26,185 @@ import org.verwandlung.voj.web.model.User;
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class SubmissionMapperTest {
     /**
-     * 测试用例: 测试getNumberOfSubmissions(Date, Date)方法
-     * 测试数据: 使用2014年10月17日进行查询
-     * 预期结果: 返回当天的提交次数(2次)
+     * 测试用例: 测试getNumberOfSubmissions(String, String)方法
+     * 测试数据: 使用2014年10月01日-2014年10月18日进行查询
+     * 预期结果: 返回该时间区间内的提交次数(2次)
      */
     @Test
     public void testGetNumberOfSubmissions() {
-        Calendar calendar = Calendar.getInstance();    
-        calendar.set(2014, 9, 17, 0, 0, 0);
-        Date startTime = calendar.getTime();
-        calendar.set(2014, 9, 17, 23, 59, 59);
-        Date endTime = calendar.getTime();
+        String startTime = "2014-10-01 00:00:00";
+        String endTime = "2014-10-18 00:00:00";
         
-        long numberofSubmissions = submissionMapper.getNumberOfSubmissions(startTime, endTime);
-        Assert.assertEquals(2, numberofSubmissions);
+        long numberOfSubmissions = submissionMapper.getNumberOfSubmissions(startTime, endTime);
+        Assert.assertEquals(2, numberOfSubmissions);
+    }
+
+    /**
+     * 测试用例: 测试getNumberOfSubmissionsGroupByMonth(String, String, int, boolean)方法
+     * 测试数据: 使用2014年10月01日-2015年10月01日进行查询
+     * 预期结果: 返回该年度12个月每个月的提交次数
+     */
+    @Test
+    public void testGetNumberOfTotalSubmissionsGroupByMonthWithoutUser() {
+        String startTime = "2014-10-01 00:00:00";
+        String endTime = "2015-10-01 00:00:00";
+
+        List<Map<String, Object>> numberOfSubmissions = submissionMapper.getNumberOfSubmissionsGroupByMonth(startTime, endTime, 0, false);
+        Assert.assertEquals(3, numberOfSubmissions.size());
+        
+        Map<String, Object> firstEntry = numberOfSubmissions.get(0);
+        int month = (Integer)firstEntry.get("month");
+        long submissions = (Long)firstEntry.get("submissions");
+        
+        Assert.assertEquals(201410, month);
+        Assert.assertEquals(2, submissions);
+    }
+    
+    /**
+     * 测试用例: 测试getNumberOfSubmissionsGroupByMonth(String, String, int, boolean)方法
+     * 测试数据: 使用2014年10月01日-2015年10月01日进行查询通过的提交记录
+     * 预期结果: 返回该年度12个月的每个月通过提交次数
+     */
+    @Test
+    public void testGetNumberOfAccpectedSubmissionsGroupByMonthWithoutUser() {
+        String startTime = "2014-10-01 00:00:00";
+        String endTime = "2015-10-01 00:00:00";
+
+        List<Map<String, Object>> numberOfSubmissions = submissionMapper.getNumberOfSubmissionsGroupByMonth(startTime, endTime, 0, true);
+        Assert.assertEquals(2, numberOfSubmissions.size());
+        
+        Map<String, Object> firstEntry = numberOfSubmissions.get(0);
+        int month = (Integer)firstEntry.get("month");
+        long submissions = (Long)firstEntry.get("submissions");
+        
+        Assert.assertEquals(201410, month);
+        Assert.assertEquals(1, submissions);
+    }
+    
+    /**
+     * 测试用例: 测试getNumberOfSubmissionsGroupByMonth(String, String, int, boolean)方法
+     * 测试数据: 使用2014年10月01日-2015年10月01日进行查询某个用户的提交记录
+     * 预期结果: 返回该用户在该年度12个月每个月的提交次数
+     */
+    @Test
+    public void testGetNumberOfTotalSubmissionsGroupByMonthWithUser() {
+        String startTime = "2014-10-01 00:00:00";
+        String endTime = "2015-10-01 00:00:00";
+
+        List<Map<String, Object>> numberOfSubmissions = submissionMapper.getNumberOfSubmissionsGroupByMonth(startTime, endTime, 1000, false);
+        Assert.assertEquals(2, numberOfSubmissions.size());
+        
+        Map<String, Object> firstEntry = numberOfSubmissions.get(0);
+        int month = (Integer)firstEntry.get("month");
+        long submissions = (Long)firstEntry.get("submissions");
+        
+        Assert.assertEquals(201410, month);
+        Assert.assertEquals(2, submissions);
+    }
+    
+    /**
+     * 测试用例: 测试getNumberOfSubmissionsGroupByMonth(String, String, int, boolean)方法
+     * 测试数据: 使用2014年10月01日-2015年10月01日进行查询某个用户通过的提交记录
+     * 预期结果: 返回该用户在该年度12个月的每个月通过提交次数
+     */
+    @Test
+    public void testGetNumberOfAccpectedSubmissionsGroupByMonthWithUser() {
+        String startTime = "2014-10-01 00:00:00";
+        String endTime = "2015-10-01 00:00:00";
+
+        List<Map<String, Object>> numberOfSubmissions = submissionMapper.getNumberOfSubmissionsGroupByMonth(startTime, endTime, 1000, true);
+        Assert.assertEquals(2, numberOfSubmissions.size());
+        
+        Map<String, Object> firstEntry = numberOfSubmissions.get(0);
+        int month = (Integer)firstEntry.get("month");
+        long submissions = (Long)firstEntry.get("submissions");
+        
+        Assert.assertEquals(201410, month);
+        Assert.assertEquals(1, submissions);
+    }
+    
+    /**
+     * 测试用例: 测试getNumberOfSubmissionsGroupByDay(String, String, int, boolean)方法
+     * 测试数据: 使用2014年10月01日-2014年10月31日进行查询
+     * 预期结果: 返回该月份每天的提交次数
+     */
+    @Test
+    public void testGetNumberOfTotalSubmissionsGroupByDayWithoutUser() {
+        String startTime = "2014-10-01 00:00:00";
+        String endTime = "2014-11-01 00:00:00";
+
+        List<Map<String, Object>> numberOfSubmissions = submissionMapper.getNumberOfSubmissionsGroupByDay(startTime, endTime, 0, false);
+        Assert.assertEquals(2, numberOfSubmissions.size());
+        
+        Map<String, Object> firstEntry = numberOfSubmissions.get(0);
+        Date day = (Date)firstEntry.get("date");
+        long submissions = (Long)firstEntry.get("submissions");
+        
+        Assert.assertEquals("2014-10-01", day.toString());
+        Assert.assertEquals(1, submissions);
+    }
+    
+    /**
+     * 测试用例: 测试getNumberOfSubmissionsGroupByDay(String, String, int, boolean)方法
+     * 测试数据: 使用2014年10月01日-2014年10月31日进行查询通过的提交记录
+     * 预期结果: 返回该月份每天通过的提交次数
+     */
+    @Test
+    public void testGetNumberOfAccpectedSubmissionsGroupByDayWithoutUser() {
+        String startTime = "2014-10-01 00:00:00";
+        String endTime = "2014-11-01 00:00:00";
+
+        List<Map<String, Object>> numberOfSubmissions = submissionMapper.getNumberOfSubmissionsGroupByDay(startTime, endTime, 0, true);
+        Assert.assertEquals(1, numberOfSubmissions.size());
+        
+        Map<String, Object> firstEntry = numberOfSubmissions.get(0);
+        Date day = (Date)firstEntry.get("date");
+        long submissions = (Long)firstEntry.get("submissions");
+        
+        Assert.assertEquals("2014-10-01", day.toString());
+        Assert.assertEquals(1, submissions);
+    }
+    
+    /**
+     * 测试用例: 测试getNumberOfSubmissionsGroupByDay(String, String, int, boolean)方法
+     * 测试数据: 使用2014年10月01日-2014年10月31日进行查询某个用户的提交记录
+     * 预期结果: 返回该用户在该月份每天的提交次数
+     */
+    @Test
+    public void testGetNumberOfTotalSubmissionsGroupByDayWithUser() {
+        String startTime = "2014-10-01 00:00:00";
+        String endTime = "2014-11-01 00:00:00";
+
+        List<Map<String, Object>> numberOfSubmissions = submissionMapper.getNumberOfSubmissionsGroupByDay(startTime, endTime, 1000, false);
+        Assert.assertEquals(2, numberOfSubmissions.size());
+        
+        Map<String, Object> firstEntry = numberOfSubmissions.get(0);
+        Date day = (Date)firstEntry.get("date");
+        long submissions = (Long)firstEntry.get("submissions");
+        
+        Assert.assertEquals("2014-10-01", day.toString());
+        Assert.assertEquals(1, submissions);
+    }
+    
+    /**
+     * 测试用例: 测试getNumberOfSubmissionsGroupByDay(String, String, int, boolean)方法
+     * 测试数据: 使用2014年10月01日-2014年10月31日进行查询某个用户通过的提交记录
+     * 预期结果: 返回该用户在该月份每天通过的提交次数
+     */
+    @Test
+    public void testGetNumberOfAccpectedSubmissionsGroupByDayWithUser() {
+        String startTime = "2014-10-01 00:00:00";
+        String endTime = "2014-11-01 00:00:00";
+
+        List<Map<String, Object>> numberOfSubmissions = submissionMapper.getNumberOfSubmissionsGroupByDay(startTime, endTime, 1000, true);
+        Assert.assertEquals(1, numberOfSubmissions.size());
+        
+        Map<String, Object> firstEntry = numberOfSubmissions.get(0);
+        Date day = (Date)firstEntry.get("date");
+        long submissions = (Long)firstEntry.get("submissions");
+        
+        Assert.assertEquals("2014-10-01", day.toString());
+        Assert.assertEquals(1, submissions);
     }
     
     /**

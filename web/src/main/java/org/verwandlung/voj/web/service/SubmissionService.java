@@ -1,5 +1,6 @@
 package org.verwandlung.voj.web.service;
 
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -33,7 +34,10 @@ public class SubmissionService {
      * @return 指定时间内提交的数量
      */
     public long getNumberOfSubmissions(Date startTime, Date endTime) {
-        return submissionMapper.getNumberOfSubmissions(startTime, endTime);
+    	SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:MM:ss");
+    	String startTimeString = sdf.format(startTime);
+    	String endTimeString = sdf.format(endTime);
+        return submissionMapper.getNumberOfSubmissions(startTimeString, endTimeString);
     }
     
     /**

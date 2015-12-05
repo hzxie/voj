@@ -129,7 +129,7 @@ public class AdministrationController {
         calendar.set(year, month, date, 0, 0, 0);
         Date startTime = calendar.getTime();
         
-        calendar.set(year, month, date, 23, 59, 59);
+        calendar.set(year, month, date + 1, 0, 0, 0);
         Date endTime = calendar.getTime();
         return submissionService.getNumberOfSubmissions(startTime, endTime);
     }
