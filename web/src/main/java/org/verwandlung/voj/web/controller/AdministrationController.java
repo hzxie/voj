@@ -2,6 +2,7 @@ package org.verwandlung.voj.web.controller;
 
 import java.util.Calendar;
 import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -152,6 +153,36 @@ public class AdministrationController {
      */
     private long getOnlineJudgers() {
         return eventListener.getOnlineJudgers();
+    }
+    
+    /**
+     * 获取系统一段时间内的提交次数.
+     * @param period - 时间间隔的天数
+     * @param request - HttpServletRequest对象
+     * @return 包含提交次数与时间的 Map 对象
+     */
+    @RequestMapping(value = "/getNumberOfSubmissions.action", method = RequestMethod.GET)
+    public @ResponseBody Map<String, Object> getNumberOfSubmissionsAction(
+    		@RequestParam(value = "period", required = true) int period,
+    		HttpServletRequest request) {
+    	Map<String, Object> submissions = new HashMap<String, Object>(2, 1);
+    	Date today = new Date();
+    	Calendar calendar = new GregorianCalendar();
+        calendar.setTime(today);
+        if ( period == 7 ) {
+        	calendar.add(Calendar.DATE, -7);
+        } else if ( period == 30 ) {
+        	calendar.add(Calendar.MONTH, -1);
+        } else {
+        	calendar.add(Calendar.YEAR, -1);
+        }
+        Date previousDate = calendar.getTime();
+        Map<String, Long> totalSubmissions = submissionService.getNumberOfSubmissions(previousDate, today, 0, false);
+        Map<String, Long> acceptedSubmissions = submissionService.getNumberOfSubmissions(previousDate, today, 0, true);
+        
+        submissions.put("totalSubmissions", totalSubmissions);
+        submissions.put("acceptedSubmissions", acceptedSubmissions);
+        return submissions;
     }
     
     /**

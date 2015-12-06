@@ -130,13 +130,24 @@
                     <div class="span8">
                         <div id="submissions-panel" class="panel">
                             <div class="header">
-                                <h5>
-                                    <i class="fa fa-bar-chart"></i> 
-                                    <spring:message code="voj.administration.index.submissions-stats" text="Submissions Stats" />
-                                </h5>
+                                <div class="row-fluid">
+                                    <div class="span8">
+                                        <h5>
+                                            <i class="fa fa-bar-chart"></i> 
+                                            <spring:message code="voj.administration.index.submissions-stats" text="Submissions Stats" />
+                                        </h5>
+                                    </div> <!-- .span8 -->
+                                    <div class="span4">
+                                        <select id="submission-period">
+                                            <option value="7"><spring:message code="voj.administration.index.1-week" text="1 Week" /></option>
+                                            <option value="30"><spring:message code="voj.administration.index.1-month" text="1 Month" /></option>
+                                            <option value="365"><spring:message code="voj.administration.index.1-year" text="1 Year" /></option>
+                                        </select>
+                                    </div> <!-- .span4 -->
+                                </div> <!-- .row-fluid -->
                             </div> <!-- .header -->
                             <div class="body">
-                                
+                                <div id="submissions-calendar"></div> <!-- #submissions-calendar -->
                             </div> <!-- .body -->
                         </div> <!-- #submissions-panel -->
                     </div> <!-- .span8 -->
@@ -171,6 +182,93 @@
     <!-- Java Script -->
     <!-- Placed at the end of the document so the pages load faster -->
     <%@ include file="/WEB-INF/views/administration/include/footer-script.jsp" %>
+    <script type="text/javascript">
+        $.getScript('${cdnUrl}/js/highcharts.min.js', function() {
+            return getSubmissionsOfUsers(7);
+        });
+    </script>
+    <script type="text/javascript">
+        $('#submission-period').change(function() {
+            var period = $(this).val();
+            return getSubmissionsOfUsers(period);
+        });
+    </script>
+    <script type="text/javascript">
+        function getSubmissionsOfUsers(period) {
+            var pageRequests = {
+                'period': period
+            };
+
+            $.ajax({
+                type: 'GET',
+                url: '<c:url value="/administration/getNumberOfSubmissions.action" />',
+                data: pageRequests,
+                dataType: 'JSON',
+                success: function(result){
+                    return processSubmissionOfUsers(result['acceptedSubmissions'], result['totalSubmissions']);
+                }
+            });
+        }
+    </script>
+    <script type="text/javascript">
+        function processSubmissionOfUsers(acceptedSubmissionsMap, totalSubmissionsMap) {
+            var categories          = [],
+                totalSubmissions    = [],
+                acceptedSubmissions = [];
+            
+            $.each(totalSubmissionsMap, function(key, value){
+                categories.push(key);
+                totalSubmissions.push(value);
+            });
+            $.each(acceptedSubmissionsMap, function(key, value){
+                acceptedSubmissions.push(value);
+            });
+            displaySubmissionsOfUsers(categories, acceptedSubmissions, totalSubmissions);
+        }
+    </script>
+    <script type="text/javascript">
+        function displaySubmissionsOfUsers(categories, acceptedSubmissions, totalSubmissions) {
+            Highcharts.setOptions({
+                colors: ['#34495e', '#e74c3c']
+            });
+
+            $('#submissions-calendar').highcharts({
+                chart: {
+                    backgroundColor: null,
+                },
+                title: {
+                    text: null
+                },
+                xAxis: {
+                    categories: categories
+                },
+                yAxis: {
+                    allowDecimals: false,
+                    title: {
+                        text: '<spring:message code="voj.administration.index.number-of-submissions" text="Number of Submissions" />'
+                    }
+                },
+                tooltip: {
+                    shared: true,
+                    crosshairs: true
+                },
+                series: [
+                    {
+                        name: '<spring:message code="voj.administration.index.total-submissions" text="Total Submissions" />',
+                        lineWidth: 4,
+                        marker: {
+                            radius: 4
+                        },
+                        data: totalSubmissions
+                    },
+                    {
+                        name: '<spring:message code="voj.administration.index.accepted-submissions" text="Accepted Submissions" />',
+                        data: acceptedSubmissions
+                    }
+                ]
+            });
+        }
+    </script>
     <c:if test="${GoogleAnalyticsCode != ''}">
     <script type="text/javascript">${googleAnalyticsCode}</script>
     </c:if>

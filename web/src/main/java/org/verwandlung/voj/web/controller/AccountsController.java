@@ -308,6 +308,13 @@ public class AccountsController {
         return view;
     }
     
+    /**
+     * 获取某个用户一段时间内的提交次数.
+     * @param userId - 用户的唯一标识符
+     * @param period - 时间间隔的天数
+     * @param request - HttpServletRequest对象
+     * @return 包含某个用户提交次数与时间的 Map 对象
+     */
     @RequestMapping(value = "/getNumberOfSubmissionsOfUsers.action", method = RequestMethod.GET)
     public @ResponseBody Map<String, Object> getNumberOfSubmissionsOfUsersAction(
     		@RequestParam(value = "uid", required = false, defaultValue = "0") long userId,
