@@ -10,7 +10,7 @@
                     <c:url var="WebsiteName" value="${websiteName}" />
                     <h6>
                         <spring:message code="voj.include.header.browser-not-supported" 
-                            text="Please note that Verwandlung Online Judge no longer supports Internet Explorer 7." 
+                            text="Please note that Verwandlung Online Judge no longer supports Internet Explorer 7 and 8." 
                             arguments="${websiteName}" />
                     </h6>
                     <p><spring:message code="voj.include.header.browser-not-supported-message" text="We recommend upgrading to the latest <a href='http://www.microsoft.com/windows/internet-explorer/default.aspx'>Internet Explorer</a>, <a href='http://www.google.com/chrome/'>Google Chrome</a> or <a href='http://www.mozilla.com/firefox/'>Firefox</a>.<br>If you are using IE 9 or later, make sure you turn off 'Compatibility View'." /></p>

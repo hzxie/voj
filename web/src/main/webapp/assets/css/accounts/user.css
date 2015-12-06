@@ -91,6 +91,14 @@ div#content div#main-content div.section {
 	margin-bottom: 20px;
 }
 
+div#content div#main-content select#submission-period {
+	margin: 0;
+}
+
+div#content div#main-content div#submissions-calendar {
+	height: 320px;
+}
+
 div#content div#main-content table#submissions {
 	border: 1px solid #e8e8e8;
 	margin-bottom: 0;
