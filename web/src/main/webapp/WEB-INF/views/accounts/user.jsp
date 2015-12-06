@@ -119,10 +119,28 @@
             </c:if>
                 <div class="section">
                     <div class="header">
-                        <h4><spring:message code="voj.accounts.user.submissions" text="Submissions" /></h4>
+                        <div class="row-fluid">
+                            <div class="span8">
+                                <h4><spring:message code="voj.accounts.user.submission-calendar" text="Submission Calendar" /></h4>
+                            </div> <!-- .span8 -->
+                            <div class="span4">
+                                <select id="submission-period">
+                                    <option value="7"><spring:message code="voj.accounts.user.1-week" text="1 Week" /></option>
+                                    <option value="30"><spring:message code="voj.accounts.user.1-month" text="1 Month" /></option>
+                                    <option value="365"><spring:message code="voj.accounts.user.1-year" text="1 Year" /></option>
+                                </select>
+                            </div> <!-- .span4 -->
+                        </div> <!-- .row-fluid -->
                     </div> <!-- .header -->
                     <div class="body">
                         <div id="submissions-calendar"></div> <!-- #submissions-calendar -->
+                    </div> <!-- .body -->
+                </div> <!-- .section -->
+                <div class="section">
+                    <div class="header">
+                        <h4><spring:message code="voj.accounts.user.submissions" text="submissions" /></h4>
+                    </div> <!-- .header -->
+                    <div class="body">
                         <table id="submissions" class="table table-striped">
                             <thead>
                                 <tr>
@@ -178,23 +196,69 @@
     </script>
     <script type="text/javascript">
         $.getScript('${cdnUrl}/js/highcharts.min.js', function() {
+            return getSubmissionsOfUsers(7);
+        });
+    </script>
+    <script type="text/javascript">
+        $('#submission-period').change(function() {
+            var period = $(this).val();
+            return getSubmissionsOfUsers(period);
+        });
+    </script>
+    <script type="text/javascript">
+        function getSubmissionsOfUsers(period) {
+            var pageRequests = {
+                'uid': '${user.uid}',
+                'period': period
+            };
+
+            $.ajax({
+                type: 'GET',
+                url: '<c:url value="/accounts/getNumberOfSubmissionsOfUsers.action" />',
+                data: pageRequests,
+                dataType: 'JSON',
+                success: function(result){
+                    return processSubmissionOfUsers(result['acceptedSubmissions'], result['totalSubmissions']);
+                }
+            });
+        }
+    </script>
+    <script type="text/javascript">
+        function processSubmissionOfUsers(acceptedSubmissionsMap, totalSubmissionsMap) {
+            var categories          = [],
+                totalSubmissions    = [],
+                acceptedSubmissions = [];
+            
+            $.each(totalSubmissionsMap, function(key, value){
+                categories.push(key);
+                totalSubmissions.push(value);
+            });
+            $.each(acceptedSubmissionsMap, function(key, value){
+                acceptedSubmissions.push(value);
+            });
+            displaySubmissionsOfUsers(categories, acceptedSubmissions, totalSubmissions);
+        }
+    </script>
+    <script type="text/javascript">
+        function displaySubmissionsOfUsers(categories, acceptedSubmissions, totalSubmissions) {
             Highcharts.setOptions({
                 colors: ['#34495e', '#e74c3c']
             });
 
             $('#submissions-calendar').highcharts({
-            	chart: {
-            		backgroundColor: null,
-            	},
+                chart: {
+                    backgroundColor: null,
+                },
                 title: {
-                    text: 'Submissions in the Past 30 Days'
+                    text: null
                 },
                 xAxis: {
-                    categories: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+                    categories: categories
                 },
                 yAxis: {
+                    allowDecimals: false,
                     title: {
-                        text: 'Number of Submissions'
+                        text: '<spring:message code="voj.accounts.user.number-of-submissions" text="Number of Submissions" />'
                     }
                 },
                 tooltip: {
@@ -203,20 +267,20 @@
                 },
                 series: [
                     {
-                        name: 'Total Submissions',
+                        name: '<spring:message code="voj.accounts.user.total-submissions" text="Total Submissions" />',
                         lineWidth: 4,
                         marker: {
                             radius: 4
                         },
-                        "data":[5.7879,6.6286,6.1724,5.3125,7.1481,6.1333,4.5769]
+                        data: totalSubmissions
                     },
                     {
-                        name: 'Accepted Submissions',
-                        "data":[3.7879,7.86,6.1724,4.3125,2.1481,9.1333,3.5769]
+                        name: '<spring:message code="voj.accounts.user.accepted-submissions" text="Accepted Submissions" />',
+                        data: acceptedSubmissions
                     }
                 ]
             });
-        });
+        }
     </script>
     <script type="text/javascript">
         $(function() {

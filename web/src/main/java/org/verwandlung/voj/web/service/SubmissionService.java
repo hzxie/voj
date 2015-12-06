@@ -1,8 +1,11 @@
 package org.verwandlung.voj.web.service;
 
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -47,6 +50,93 @@ public class SubmissionService {
      */
     public long getLatestSubmissionId() {
         return submissionMapper.getLatestSubmissionId();
+    }
+    
+    /**
+     * 获取指定时间内提交的数量.
+     * @param  startTime - 统计起始时间
+     * @param  endTime - 统计结束时间
+     * @param  uid - 用户的唯一标识符
+     * @param  isAcceptedOnly - 是否只统计通过的提交记录
+     * @return 包含时间和提交次数的键值对 Map
+     */
+    public Map<String, Long> getNumberOfSubmissions(Date startTime, Date endTime, long uid, boolean isAcceptedOnly) {
+    	long differenceInSeconds = (endTime.getTime() - startTime.getTime()) / 1000;
+    	if ( differenceInSeconds > 32 * 86400  ) {
+    		return getNumberOfSubmissionsGroupByMonth(startTime, endTime, uid, isAcceptedOnly);
+    	}
+    	return getNumberOfSubmissionsGroupByDay(startTime, endTime, uid, isAcceptedOnly);
+    }
+    
+    /**
+     * 获取指定时间内提交的数量, 并按月份汇总.
+     * @param  startTime - 统计起始时间
+     * @param  endTime - 统计结束时间
+     * @param  uid - 用户的唯一标识符
+     * @param  isAcceptedOnly - 是否只统计通过的提交记录
+     * @return 包含月份和提交次数的键值对 Map
+     */
+    private Map<String, Long> getNumberOfSubmissionsGroupByMonth(Date startTime, Date endTime, long uid, boolean isAcceptedOnly) {
+    	// 获取包含日期区间的空列表
+    	Map<String, Long> numberOfSubmissions = new LinkedHashMap<String, Long>();
+    	Calendar calendar = new GregorianCalendar();
+        calendar.setTime(startTime);
+        while ( calendar.getTime().before(endTime) ) {
+        	SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM");
+            calendar.add(Calendar.MONTH, 1);
+        	Date targetDate = calendar.getTime();
+            numberOfSubmissions.put(sdf.format(targetDate), (long) 0);
+        }
+        
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:MM:ss");
+    	String startTimeString = sdf.format(startTime);
+    	String endTimeString = sdf.format(endTime);
+    	List<Map<String, Object>> submissions = submissionMapper.getNumberOfSubmissionsGroupByMonth(startTimeString, endTimeString, uid, isAcceptedOnly);
+    	
+    	for ( Map<String, Object> e : submissions ) {
+    		// 形如 201512 的数值型数据 
+    		Integer month = (Integer)e.get("month");
+    		String monthString = month.toString();
+    		long submissionTimes = (Long)e.get("submissions");
+            
+            monthString = monthString.substring(0, 4) + "/" + monthString.substring(4);
+            numberOfSubmissions.put(monthString, submissionTimes);
+    	}
+    	return numberOfSubmissions;
+    }
+    
+    /**
+     * 获取指定时间内提交的数量, 并按天数汇总.
+     * @param  startTime - 统计起始时间
+     * @param  endTime - 统计结束时间
+     * @param  uid - 用户的唯一标识符
+     * @param  isAcceptedOnly - 是否只统计通过的提交记录
+     * @return 包含日期和提交次数的键值对 Map
+     */
+    private Map<String, Long> getNumberOfSubmissionsGroupByDay(Date startTime, Date endTime, long uid, boolean isAcceptedOnly) {
+    	// 获取包含日期区间的空列表
+    	Map<String, Long> numberOfSubmissions = new LinkedHashMap<String, Long>();
+    	Calendar calendar = new GregorianCalendar();
+    	calendar.setTime(startTime);
+        while ( calendar.getTime().before(endTime) ) {
+        	SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd");
+            calendar.add(Calendar.DATE, 1);
+        	Date targetDate = calendar.getTime();
+            numberOfSubmissions.put(sdf.format(targetDate), (long) 0);
+        }
+        
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:MM:ss");
+    	String startTimeString = sdf.format(startTime);
+    	String endTimeString = sdf.format(endTime);
+    	List<Map<String, Object>> submissions = submissionMapper.getNumberOfSubmissionsGroupByDay(startTimeString, endTimeString, uid, isAcceptedOnly);
+    	
+    	for ( Map<String, Object> e : submissions ) {
+    		String date = ((java.sql.Date)e.get("date")).toString().replace('-', '/');
+    		System.out.println(date);
+            long submissionTimes = (Long)e.get("submissions");
+            numberOfSubmissions.put(date, submissionTimes);
+    	}
+    	return numberOfSubmissions;
     }
     
     /**

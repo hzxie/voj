@@ -25,6 +25,14 @@ public interface SubmissionMapper {
     public long getNumberOfSubmissions(@Param("startTime") String startTime, @Param("endTime") String endTime);
 
     /**
+     * [此方法仅供管理员使用]
+     * 获取某种编程语言的提交数量.
+     * @param languageId - 编程语言的唯一标识符
+     * @return 某种编程语言的提交数量
+     */
+    public long getNumberOfSubmissionsUsingLanguage(@Param("languageId") int languageId);
+    
+    /**
      * 获取指定时间内提交的数量, 并按月份汇总.
      * @param  startTime - 统计起始时间
      * @param  endTime - 统计结束时间
@@ -43,14 +51,6 @@ public interface SubmissionMapper {
      * @return 包含日期和提交次数的键值对 Map
      */
     public List<Map<String, Object>> getNumberOfSubmissionsGroupByDay(@Param("startTime") String startTime, @Param("endTime") String endTime, @Param("uid") long uid, @Param("isAcceptedOnly") boolean isAcceptedOnly);
-    
-    /**
-     * [此方法仅供管理员使用]
-     * 获取某种编程语言的提交数量.
-     * @param languageId - 编程语言的唯一标识符
-     * @return 某种编程语言的提交数量
-     */
-    public long getNumberOfSubmissionsUsingLanguage(@Param("languageId") int languageId);
     
     /**
      * 获取最新提交记录的唯一标识符
