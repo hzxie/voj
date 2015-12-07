@@ -47,21 +47,21 @@
                 <h2 class="page-header"><i class="fa fa-user"></i> <spring:message code="voj.administration.new-user.new-user" text="New User" /></h2>
                 <form id="profile-form" onSubmit="onSubmit(); return false;">
                     <div class="alert alert-error hide"></div> <!-- .alert-error -->
-                    <div class="alert alert-success hide"><spring:message code="voj.administration.add-user.user-created" text="The user has been created successfully." /></div> <!-- .alert-success -->
+                    <div class="alert alert-success hide"><spring:message code="voj.administration.new-user.user-created" text="The user has been created successfully." /></div> <!-- .alert-success -->
                     <div class="control-group row-fluid">
-                        <label for="username"><spring:message code="voj.administration.add-user.username" text="Username" /></label>
+                        <label for="username"><spring:message code="voj.administration.new-user.username" text="Username" /></label>
                         <input id="username" class="span12" type="text" maxlength="16" />
                     </div> <!-- .control-group -->
                     <div class="control-group row-fluid">
-                        <label for="password"><spring:message code="voj.administration.add-user.password" text="Password" /></label>
+                        <label for="password"><spring:message code="voj.administration.new-user.password" text="Password" /></label>
                         <input id="password" class="span12" type="password" maxlength="16" />
                     </div> <!-- .control-group -->
                     <div class="control-group row-fluid">
-                        <label for="email"><spring:message code="voj.administration.add-user.email" text="Email" /></label>
+                        <label for="email"><spring:message code="voj.administration.new-user.email" text="Email" /></label>
                         <input id="email" class="span12" type="text" maxlength="64" />
                     </div> <!-- .control-group -->
                     <div class="control-group row-fluid">
-                        <label for="user-group"><spring:message code="voj.administration.add-user.user-group" text="User Group" /></label>
+                        <label for="user-group"><spring:message code="voj.administration.new-user.user-group" text="User Group" /></label>
                         <select id="user-group" name="userGroup">
                         <c:forEach var="userGroup" items="${userGroups}">
                             <option value="${userGroup.userGroupSlug}">${userGroup.userGroupName}</option>
@@ -69,7 +69,7 @@
                         </select>
                     </div> <!-- .control-group -->
                     <div class="control-group row-fluid">
-                        <label for="prefer-language"><spring:message code="voj.administration.add-user.prefer-language" text="Prefer Language" /></label>
+                        <label for="prefer-language"><spring:message code="voj.administration.new-user.prefer-language" text="Prefer Language" /></label>
                         <select id="prefer-language" name="preferLanguage">
                         <c:forEach var="language" items="${languages}">
                             <option value="${language.languageSlug}">${language.languageName}</option>
@@ -78,7 +78,7 @@
                     </div> <!-- .control-group -->
                     <div class="row-fluid">
                         <div class="span12">
-                            <button class="btn btn-primary" type="submit"><spring:message code="voj.administration.add-user.create-account" text="Create Account" /></button>
+                            <button class="btn btn-primary" type="submit"><spring:message code="voj.administration.new-user.create-account" text="Create Account" /></button>
                         </div> <!-- .span12 -->
                     </div> <!-- .row-fluid -->
                 </form> <!-- #profile-form -->

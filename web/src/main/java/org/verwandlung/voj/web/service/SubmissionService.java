@@ -38,8 +38,15 @@ public class SubmissionService {
      */
     public long getNumberOfSubmissions(Date startTime, Date endTime) {
     	SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:MM:ss");
-    	String startTimeString = sdf.format(startTime);
-    	String endTimeString = sdf.format(endTime);
+    	String startTimeString = "0000-00-00 00:00:00";
+    	String endTimeString = "9999-12-31 23:59:59";
+    	
+    	if ( startTime != null ) {
+    		startTimeString = sdf.format(startTime);
+    	}
+    	if ( endTime != null ) {
+    		endTimeString = sdf.format(endTime);
+    	}
         return submissionMapper.getNumberOfSubmissions(startTimeString, endTimeString);
     }
     

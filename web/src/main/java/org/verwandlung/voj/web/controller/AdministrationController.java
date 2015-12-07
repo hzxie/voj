@@ -426,7 +426,7 @@ public class AdministrationController {
      * @param response - HttpServletResponse对象
      * @return 包含提交记录信息的ModelAndView对象
      */
-    @RequestMapping(value = "/edit-submissions/{submissionId}", method = RequestMethod.GET)
+    @RequestMapping(value = "/edit-submission/{submissionId}", method = RequestMethod.GET)
     public ModelAndView editSubmissionView(
             @PathVariable(value = "submissionId") long submissionId,
             HttpServletRequest request, HttpServletResponse response) {
