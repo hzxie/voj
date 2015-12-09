@@ -85,7 +85,7 @@
     </table>
     <div class="footer">&copy;<%= new java.text.SimpleDateFormat("yyyy").format(new java.util.Date()) %> <a href="http://zjhzxhz.com/" target="_blank">Trunk Shell</a></div>
     <c:if test="${GoogleAnalyticsCode != ''}">
-    <script type="text/javascript">${googleAnalyticsCode}</script>
+    ${googleAnalyticsCode}
     </c:if>
 </body>
 </html>
