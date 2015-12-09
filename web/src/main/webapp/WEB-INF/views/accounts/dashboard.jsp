@@ -45,18 +45,37 @@
     <div id="content" class="container">
         <div id="sub-nav">
             <ul class="nav nav-tabs">
-                <li><a href="#tab-statistics" data-toggle="tab"><spring:message code="voj.accounts.dashboard.statistics" text="Statistics" /></a></li>
+                <li class="active"><a href="#tab-statistics" data-toggle="tab"><spring:message code="voj.accounts.dashboard.statistics" text="Statistics" /></a></li>
                 <li><a href="#tab-notifications" data-toggle="tab"><spring:message code="voj.accounts.dashboard.notifications" text="Notifications" /></a></li>
                 <li><a href="#tab-customize" data-toggle="tab"><spring:message code="voj.accounts.dashboard.customize" text="Customize" /></a></li>
                 <li><a href="#tab-messages" data-toggle="tab"><spring:message code="voj.accounts.dashboard.messages" text="Messages" /></a></li>
-                <li class="active"><a href="#tab-accounts" data-toggle="tab"><spring:message code="voj.accounts.dashboard.accounts" text="Accounts" /></a></li>
+                <li><a href="#tab-accounts" data-toggle="tab"><spring:message code="voj.accounts.dashboard.accounts" text="Accounts" /></a></li>
             <c:if test="${myProfile.userGroup.userGroupSlug == 'administrators'}">
                 <li><a href="<c:url value="/administration" />"><spring:message code="voj.accounts.dashboard.system-administration" text="System Administration" /></a></li>
             </c:if>
             </ul>
         </div> <!-- #sub-nav -->
         <div id="main-content" class="tab-content">
-            <div class="tab-pane" id="tab-statistics">
+            <div class="tab-pane active" id="tab-statistics">
+                <div class="section">
+                    <div class="header">
+                        <div class="row-fluid">
+                            <div class="span8">
+                                <h4><spring:message code="voj.accounts.dashboard.submission-calendar" text="Submission Calendar" /></h4>
+                            </div> <!-- .span8 -->
+                            <div class="span4">
+                                <select id="submission-period">
+                                    <option value="7"><spring:message code="voj.accounts.dashboard.1-week" text="1 Week" /></option>
+                                    <option value="30"><spring:message code="voj.accounts.dashboard.1-month" text="1 Month" /></option>
+                                    <option value="365"><spring:message code="voj.accounts.dashboard.1-year" text="1 Year" /></option>
+                                </select>
+                            </div> <!-- .span4 -->
+                        </div> <!-- .row-fluid -->
+                    </div> <!-- .header -->
+                    <div class="body">
+                        <div id="submissions-calendar"></div> <!-- #submissions-calendar -->
+                    </div> <!-- .body -->
+                </div> <!-- .section -->
                 <div class="section">
                     <div class="header">
                         <h4><spring:message code="voj.accounts.dashboard.submissions" text="Submissions" /></h4>
@@ -100,7 +119,6 @@
                 <p>No notifications now.</p>
             </div> <!-- #tab-notifications -->
             <div class="tab-pane" id="tab-customize">
-                customize
             </div> <!-- #tab-customize -->
             <div class="tab-pane" id="tab-messages">
                 <div class="row-fluid">
@@ -110,7 +128,7 @@
                     </div> <!-- .span4 -->
                 </div> <!-- .row-fluid -->
             </div> <!-- #tab-messages -->
-            <div class="tab-pane active" id="tab-accounts">
+            <div class="tab-pane" id="tab-accounts">
                 <form id="password-form" class="section" method="POST" onSubmit="onChangePasswordSubmit(); return false;">
                     <h4><spring:message code="voj.accounts.dashboard.change-password" text="Change Password" /></h4>
                     <div class="row-fluid">
@@ -229,6 +247,93 @@
     <!-- JavaScript -->
     <!-- Placed at the end of the document so the pages load faster -->
     <script type="text/javascript" src="${cdnUrl}/js/site.js"></script>
+    <script type="text/javascript">
+        $.getScript('${cdnUrl}/js/highcharts.min.js', function() {
+            return getSubmissionsOfUsers(7);
+        });
+    </script>
+    <script type="text/javascript">
+        $('#submission-period').change(function() {
+            var period = $(this).val();
+            return getSubmissionsOfUsers(period);
+        });
+    </script>
+    <script type="text/javascript">
+        function getSubmissionsOfUsers(period) {
+            var pageRequests = {
+                'period': period
+            };
+
+            $.ajax({
+                type: 'GET',
+                url: '<c:url value="/accounts/getNumberOfSubmissionsOfUsers.action" />',
+                data: pageRequests,
+                dataType: 'JSON',
+                success: function(result){
+                    return processSubmissionOfUsers(result['acceptedSubmissions'], result['totalSubmissions']);
+                }
+            });
+        }
+    </script>
+    <script type="text/javascript">
+        function processSubmissionOfUsers(acceptedSubmissionsMap, totalSubmissionsMap) {
+            var categories          = [],
+                totalSubmissions    = [],
+                acceptedSubmissions = [];
+            
+            $.each(totalSubmissionsMap, function(key, value){
+                categories.push(key);
+                totalSubmissions.push(value);
+            });
+            $.each(acceptedSubmissionsMap, function(key, value){
+                acceptedSubmissions.push(value);
+            });
+            displaySubmissionsOfUsers(categories, acceptedSubmissions, totalSubmissions);
+        }
+    </script>
+    <script type="text/javascript">
+        function displaySubmissionsOfUsers(categories, acceptedSubmissions, totalSubmissions) {
+            Highcharts.setOptions({
+                colors: ['#34495e', '#e74c3c']
+            });
+
+            $('#submissions-calendar').highcharts({
+                chart: {
+                    backgroundColor: null,
+                },
+                title: {
+                    text: null
+                },
+                xAxis: {
+                    categories: categories
+                },
+                yAxis: {
+                    allowDecimals: false,
+                    title: {
+                        text: '<spring:message code="voj.accounts.dashboard.number-of-submissions" text="Number of Submissions" />'
+                    }
+                },
+                tooltip: {
+                    shared: true,
+                    crosshairs: true
+                },
+                series: [
+                    {
+                        name: '<spring:message code="voj.accounts.dashboard.total-submissions" text="Total Submissions" />',
+                        lineWidth: 4,
+                        marker: {
+                            radius: 4
+                        },
+                        data: totalSubmissions
+                    },
+                    {
+                        name: '<spring:message code="voj.accounts.dashboard.accepted-submissions" text="Accepted Submissions" />',
+                        data: acceptedSubmissions
+                    }
+                ]
+            });
+        }
+    </script>
     <script type="text/javascript">
         $.getScript('${cdnUrl}/js/markdown.min.js', function() {
             converter = Markdown.getSanitizingConverter();

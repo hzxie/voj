@@ -118,6 +118,9 @@ div#content div#sidebar div#categories-widget a {
 div#content div#sidebar div#categories-widget a.active {
 	background-color: #16a085;
 	color: #fff;
+	-webkit-border-radius: 4px;
+	   -moz-border-radius: 4px;
+	        border-radius: 4px;
 }
 
 div#content div#sidebar div#categories-widget h6 {
