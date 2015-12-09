@@ -35,13 +35,17 @@
 		FROM voj_problems 
 		NATURAL JOIN voj_problem_category_relationships pcr
 		NATURAL JOIN voj_problem_categories pc
-		WHERE problem_is_public = #{isPublic} 
-		<if test="keyword != null and keyword != ''">
-			AND problem_name LIKE "%"#{keyword}"%"
-		</if>
-		<if test="problemCategoryId != 0">
-			AND problem_category_id = #{problemCategoryId} 
-		</if>
+		<where>
+			<if test="isPublicOnly == true">
+				problem_is_public = 1
+			</if>
+			<if test="keyword != null and keyword != ''">
+				AND problem_name LIKE "%"#{keyword}"%"
+			</if>
+			<if test="problemCategoryId != 0">
+				AND problem_category_id = #{problemCategoryId} 
+			</if>
+		</where>
 	</select>
 	<select id="getLowerBoundOfProblems" 
 		resultType="long"
@@ -75,7 +79,7 @@
 		parameterType="map"
 		resultMap="ProblemResultMap"
 		useCache="true">
-		SELECT DISTINCT(problem_id), problem_name, (
+		SELECT DISTINCT(problem_id), problem_name, problem_is_public, (
 			SELECT COUNT(*) 
 			FROM voj_submissions s 
 			WHERE s.problem_id = p.problem_id
@@ -87,7 +91,10 @@
 		FROM voj_problems p 
 		NATURAL JOIN voj_problem_category_relationships pcr
 		NATURAL JOIN voj_problem_categories pc
-		WHERE problem_id &gt;= #{problemId} AND problem_is_public = #{isPublic} 
+		WHERE problem_id &gt;= #{problemId}
+		<if test="isPublicOnly == true">
+			AND problem_is_public = 1
+		</if>
 		<if test="keyword != null and keyword != ''">
 			AND problem_name LIKE "%"#{keyword}"%"
 		</if>

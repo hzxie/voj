@@ -41,32 +41,33 @@ public class ProblemService {
      * @param offset - 试题唯一标识符的起始序号
      * @param keyword - 关键字
      * @param problemCategorySlug - 试题分类的唯一英文缩写
+     * @param isPublicOnly - 是否只筛选公开试题
      * @param limit - 每次加载试题的数量
      * @return 试题列表(List<Problem>对象)
      */
-    public List<Problem> getProblemsUsingFilters(long offset, String keyword, String problemCategorySlug, int limit) {
+    public List<Problem> getProblemsUsingFilters(long offset, String keyword, String problemCategorySlug, boolean isPublicOnly, int limit) {
         ProblemCategory problemCategory = problemCategoryMapper.getProblemCategoryUsingSlug(problemCategorySlug);
         int problemCategoryId = 0;
         if ( problemCategory != null ) {
             problemCategoryId = problemCategory.getProblemCategoryId();
         }
-        return problemMapper.getProblemsUsingFilters(keyword, problemCategoryId, true, offset, limit);
+        return problemMapper.getProblemsUsingFilters(keyword, problemCategoryId, isPublicOnly, offset, limit);
     }
     
     /**
      * 获取试题的总数量.
      * @param keyword - 关键字
      * @param problemCategorySlug - 试题分类的唯一英文缩写
-     * @param isPublic - 试题是否公开
+     * @param isPublicOnly - 是否只筛选公开试题
      * @return 试题的总数量
      */
-    public long getNumberOfProblemsUsingFilters(String keyword, String problemCategorySlug, boolean isPublic) {
+    public long getNumberOfProblemsUsingFilters(String keyword, String problemCategorySlug, boolean isPublicOnly) {
         ProblemCategory problemCategory = problemCategoryMapper.getProblemCategoryUsingSlug(problemCategorySlug);
         int problemCategoryId = 0;
         if ( problemCategory != null ) {
             problemCategoryId = problemCategory.getProblemCategoryId();
         }
-        return problemMapper.getNumberOfProblemsUsingFilters(keyword, problemCategoryId, isPublic);
+        return problemMapper.getNumberOfProblemsUsingFilters(keyword, problemCategoryId, isPublicOnly);
     }
     
     /**

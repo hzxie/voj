@@ -14,11 +14,15 @@
             if ( isSidebarShown ) {
                 $('#sidebar').css('display', 'none');
                 $('#header').css('padding-left', 0);
+                $('#header').css('padding-right', 0);
                 $('#content').css('margin-left', 0);
+                $('#content').css('margin-right', 0);
             } else {
                 $('#sidebar').css('display', 'block');
                 $('#header').css('padding-left', 250);
+                $('#header').css('padding-right', -250);
                 $('#content').css('margin-left', 250);
+                $('#content').css('margin-right', -250);
             }
         });
     </script>

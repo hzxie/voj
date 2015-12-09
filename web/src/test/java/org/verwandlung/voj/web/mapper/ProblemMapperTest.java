@@ -43,17 +43,6 @@ public class ProblemMapperTest {
     }
     
     /**
-     * 测试用例: 测试getNumberOfProblemsUsingFilters(String, int, boolean)方法
-     * 测试数据: N/a
-     * 预期结果: 返回数据表中非公开试题的数量
-     */
-    @Test
-    public void testGetNumberOfPrivateProblems() {
-        long totalProblems = problemMapper.getNumberOfProblemsUsingFilters(null, 0, false);
-        Assert.assertEquals(1, totalProblems);
-    }
-    
-    /**
      * 测试用例: 测试getLowerBoundOfProblems()方法
      * 测试数据: N/a
      * 预期结果: 第一个试题的ID(1000)
