@@ -188,7 +188,7 @@
     </script>
     </c:if>
     <c:if test="${GoogleAnalyticsCode != ''}">
-    <script type="text/javascript">${googleAnalyticsCode}</script>
+    ${googleAnalyticsCode}
     </c:if>
 </body>
 </html>
