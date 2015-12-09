@@ -26,6 +26,8 @@ import org.verwandlung.voj.web.exception.ResourceNotFoundException;
 import org.verwandlung.voj.web.messenger.ApplicationEventListener;
 import org.verwandlung.voj.web.model.Language;
 import org.verwandlung.voj.web.model.Option;
+import org.verwandlung.voj.web.model.Problem;
+import org.verwandlung.voj.web.model.ProblemCategory;
 import org.verwandlung.voj.web.model.Submission;
 import org.verwandlung.voj.web.model.User;
 import org.verwandlung.voj.web.model.UserGroup;
@@ -163,18 +165,18 @@ public class AdministrationController {
      */
     @RequestMapping(value = "/getNumberOfSubmissions.action", method = RequestMethod.GET)
     public @ResponseBody Map<String, Object> getNumberOfSubmissionsAction(
-    		@RequestParam(value = "period", required = true) int period,
-    		HttpServletRequest request) {
-    	Map<String, Object> submissions = new HashMap<String, Object>(2, 1);
-    	Date today = new Date();
-    	Calendar calendar = new GregorianCalendar();
+            @RequestParam(value = "period", required = true) int period,
+            HttpServletRequest request) {
+        Map<String, Object> submissions = new HashMap<String, Object>(2, 1);
+        Date today = new Date();
+        Calendar calendar = new GregorianCalendar();
         calendar.setTime(today);
         if ( period == 7 ) {
-        	calendar.add(Calendar.DATE, -7);
+            calendar.add(Calendar.DATE, -7);
         } else if ( period == 30 ) {
-        	calendar.add(Calendar.MONTH, -1);
+            calendar.add(Calendar.MONTH, -1);
         } else {
-        	calendar.add(Calendar.YEAR, -1);
+            calendar.add(Calendar.YEAR, -1);
         }
         Date previousDate = calendar.getTime();
         Map<String, Long> totalSubmissions = submissionService.getNumberOfSubmissions(previousDate, today, 0, false);
@@ -293,7 +295,7 @@ public class AdministrationController {
         result.put("isUserExists", false);
         
         if ( user != null ) {
-        	Map<String, Boolean> updateProfileResult = userService.updateProfile(user, password, userGroupSlug, preferLanguageSlug);
+            Map<String, Boolean> updateProfileResult = userService.updateProfile(user, password, userGroupSlug, preferLanguageSlug);
             Map<String, Boolean> updateUserMetaResult = userService.updateProfile(user, email, location, website, socialLinks, aboutMe);
             boolean isUpdateProfileSuccessful = updateProfileResult.get("isSuccessful");
             boolean isUpdateUserMetaSuccessful = updateUserMetaResult.get("isSuccessful");
@@ -315,7 +317,7 @@ public class AdministrationController {
     @RequestMapping(value = "/new-user", method = RequestMethod.GET)
     public ModelAndView newUserView(
             HttpServletRequest request, HttpServletResponse response) {
-    	List<UserGroup> userGroups = userService.getUserGroups();
+        List<UserGroup> userGroups = userService.getUserGroups();
         List<Language> languages = languageService.getAllLanguages();
         ModelAndView view = new ModelAndView("administration/new-user");
         view.addObject("userGroups", userGroups);
@@ -341,7 +343,7 @@ public class AdministrationController {
             @RequestParam(value = "userGroup", required = true) String userGroupSlug,
             @RequestParam(value = "preferLanguage", required = true) String preferLanguageSlug,
             HttpServletRequest request) {
-    	Map<String, Boolean> result = userService.createUser(username, password, email, userGroupSlug, preferLanguageSlug);
+        Map<String, Boolean> result = userService.createUser(username, password, email, userGroupSlug, preferLanguageSlug);
 
         if ( result.get("isSuccessful") ) {
             String ipAddress = HttpRequestParser.getRemoteAddr(request);
@@ -349,6 +351,34 @@ public class AdministrationController {
                     new Object[] {username, ipAddress}));
         }
         return result;
+    }
+    
+    /**
+     * 加载试题列表页面.
+     * @param request - HttpServletRequest对象
+     * @param response - HttpServletResponse对象
+     * @return 包含提交列表页面信息的ModelAndView对象
+     */
+    @RequestMapping(value = "/all-problems", method = RequestMethod.GET)
+    public ModelAndView allProblemsView(
+            @RequestParam(value = "keyword", required = false, defaultValue = "") String keyword,
+            @RequestParam(value = "problemCategory", required = false, defaultValue = "") String problemCategorySlug,
+            @RequestParam(value = "page", required = false, defaultValue = "1") long pageNumber,
+            HttpServletRequest request, HttpServletResponse response) {
+        final int NUMBER_OF_PROBLEMS_PER_PAGE = 100;
+        List<ProblemCategory> problemCategories = problemService.getProblemCategories();
+        long totalProblems = problemService.getNumberOfProblemsUsingFilters(keyword, problemCategorySlug, false);
+        long offset = (pageNumber >= 1 ? pageNumber - 1 : 0) * NUMBER_OF_PROBLEMS_PER_PAGE;
+        List<Problem> problems = problemService.getProblemsUsingFilters(offset, keyword, problemCategorySlug, false, NUMBER_OF_PROBLEMS_PER_PAGE);
+        
+        ModelAndView view = new ModelAndView("administration/all-problems");
+        view.addObject("problemCategories", problemCategories);
+        view.addObject("selectedProblemCategory", problemCategorySlug);
+        view.addObject("keyword", keyword);
+        view.addObject("currentPage", pageNumber);
+        view.addObject("totalPages", (long) Math.ceil(totalProblems * 1.0 / NUMBER_OF_PROBLEMS_PER_PAGE));
+        view.addObject("problems", problems);
+        return view;
     }
     
     /**

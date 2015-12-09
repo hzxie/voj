@@ -63,7 +63,7 @@ public class ProblemsController {
             startIndex = startIndexOfProblems;
         }
         
-        List<Problem> problems = problemService.getProblemsUsingFilters(startIndex, keyword, problemCategorySlug, NUMBER_OF_PROBLEMS_PER_PAGE);
+        List<Problem> problems = problemService.getProblemsUsingFilters(startIndex, keyword, problemCategorySlug, true, NUMBER_OF_PROBLEMS_PER_PAGE);
         long totalProblems = problemService.getNumberOfProblemsUsingFilters(keyword, problemCategorySlug, true);
         ModelAndView view = new ModelAndView("problems/problems");
         view.addObject("problems", problems)
@@ -135,7 +135,7 @@ public class ProblemsController {
             @RequestParam(value = "category", required = false) String problemCategorySlug,
             HttpServletRequest request) {
         HttpSession session = request.getSession();
-        List<Problem> problems = problemService.getProblemsUsingFilters(startIndex, keyword, problemCategorySlug, NUMBER_OF_PROBLEMS_PER_PAGE);
+        List<Problem> problems = problemService.getProblemsUsingFilters(startIndex, keyword, problemCategorySlug, true, NUMBER_OF_PROBLEMS_PER_PAGE);
         Map<Long, Submission> submissionOfProblems = null;
         if ( isLoggedIn(session) ) {
             long userId = (Long)session.getAttribute("uid");
