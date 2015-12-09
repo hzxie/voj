@@ -53,7 +53,7 @@
     <!-- Placed at the end of the document so the pages load faster -->
     <%@ include file="/WEB-INF/views/administration/include/footer-script.jsp" %>
     <c:if test="${GoogleAnalyticsCode != ''}">
-    <script type="text/javascript">${googleAnalyticsCode}</script>
+    ${googleAnalyticsCode}
     </c:if>
 </body>
 </html>
