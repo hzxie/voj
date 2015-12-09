@@ -320,6 +320,10 @@ public class AccountsController {
     		@RequestParam(value = "uid", required = false, defaultValue = "0") long userId,
     		@RequestParam(value = "period", required = true) int period,
     		HttpServletRequest request) {
+    	if ( userId == 0 ) {
+    		HttpSession session = request.getSession();
+    		userId = (Long)session.getAttribute("uid");
+    	}
     	Map<String, Object> submissions = new HashMap<String, Object>(2, 1);
     	Date today = new Date();
     	Calendar calendar = new GregorianCalendar();

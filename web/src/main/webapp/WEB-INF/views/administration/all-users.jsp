@@ -161,6 +161,9 @@
     </script>
     <script type="text/javascript">
         $('button.btn-danger', '#filters').click(function() {
+            if ( !confirm('<spring:message code="voj.administration.all-users.continue-or-not" text="Are you sure to continue?" />') ) {
+                return;
+            }
             $('.alert-error').addClass('hide');
             $('button.btn-danger', '#filters').attr('disabled', 'disabled');
             $('button.btn-danger', '#filters').html('<spring:message code="voj.administration.all-users.please-wait" text="Please wait..." />');

@@ -37,6 +37,14 @@ div#content div#main-content div.tab-pane label {
 	padding-top: 10px;
 }
 
+div#content div#main-content select#submission-period {
+	margin: 0;
+}
+
+div#content div#main-content div#submissions-calendar {
+	height: 240px;
+}
+
 div#content div#main-content table#submissions {
 	border: 1px solid #e8e8e8;
 	margin-bottom: 0;
