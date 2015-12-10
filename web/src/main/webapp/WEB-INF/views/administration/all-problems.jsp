@@ -65,7 +65,7 @@
                         <form action="<c:url value="/administration/all-problems" />" method="GET" class="row-fluid">
                             <div class="span5">
                                 <div class="control-group">
-                                    <input id="keyword" name="keyword" class="span12" type="text" placeholder="Keyword" value="${keyword}" />
+                                    <input id="keyword" name="keyword" class="span12" type="text" placeholder="<spring:message code="voj.administration.all-problems.keyword" text="Keyword" />" value="${keyword}" />
                                 </div> <!-- .control-group -->
                             </div> <!-- .span5 -->
                             <div class="span4">
