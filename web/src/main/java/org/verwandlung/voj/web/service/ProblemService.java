@@ -97,6 +97,15 @@ public class ProblemService {
     }
     
     /**
+     * [此方法仅供管理员使用]
+     * 删除指定的试题.
+     * @param problemId - 试题的唯一标识符
+     */
+    public void deleteProblem(long problemId) {
+    	problemMapper.deleteProblem(problemId);
+    }
+    
+    /**
      * 自动注入的ProblemMapper对象.
      */
     @Autowired

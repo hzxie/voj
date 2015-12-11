@@ -218,7 +218,7 @@ public class AdministrationController {
     
     /**
      * 删除选定的提交记录.
-     * @param submissions - 提交记录ID的集合, 以逗号(, )分割
+     * @param submissions - 提交记录ID的集合, 以逗号(, )分隔
      * @param request - HttpServletRequest对象
      * @return 提交记录的删除结果
      */
@@ -382,6 +382,26 @@ public class AdministrationController {
     }
     
     /**
+     * 删除选定的试题.
+     * @param problems - 试题ID的集合, 以逗号(, )分隔
+     * @param request - HttpServletRequest对象
+     * @return 试题的删除结果
+     */
+    @RequestMapping(value = "/deleteProblems.action", method = RequestMethod.POST)
+    public @ResponseBody Map<String, Boolean> deleteProblemsAction(
+            @RequestParam(value = "problems", required = true) String problems,
+            HttpServletRequest request) {
+        Map<String, Boolean> result = new HashMap<String, Boolean>(2, 1);
+        List<Long> problemList = JSON.parseArray(problems, Long.class);
+        
+        for ( Long problemId : problemList ) {
+            problemService.deleteProblem(problemId);
+        }
+        result.put("isSuccessful", true);
+        return result;
+    }
+    
+    /**
      * 加载提交列表页面.
      * @param request - HttpServletRequest对象
      * @param response - HttpServletResponse对象
@@ -411,7 +431,7 @@ public class AdministrationController {
     
     /**
      * 删除选定的提交记录.
-     * @param submissions - 提交记录ID的集合, 以逗号(, )分割
+     * @param submissions - 提交记录ID的集合, 以逗号(, )分隔
      * @param request - HttpServletRequest对象
      * @return 提交记录的删除结果
      */
@@ -431,7 +451,7 @@ public class AdministrationController {
     
     /**
      * 重新评测选定的提交记录.
-     * @param submissions - 提交记录ID的集合, 以逗号(, )分割
+     * @param submissions - 提交记录ID的集合, 以逗号(, )分隔
      * @param request - HttpServletRequest对象
      * @return 重新评测请求的执行结果
      */

@@ -168,8 +168,58 @@
             }, 100);
         });
     </script>
+    <script type="text/javascript">
+        $('button.btn-danger', '#filters').click(function() {
+            if ( !confirm('<spring:message code="voj.administration.all-problems.continue-or-not" text="Are you sure to continue?" />') ) {
+                return;
+            }
+            $('.alert-error').addClass('hide');
+            $('button.btn-danger', '#filters').attr('disabled', 'disabled');
+            $('button.btn-danger', '#filters').html('<spring:message code="voj.administration.all-problems.please-wait" text="Please wait..." />');
+
+            var problems    = [],
+                action      = $('#actions').val();
+
+            $('label.checkbox', 'table tbody').each(function() {
+                if ( $(this).hasClass('checked') ) {
+                    var problemId = $('input[type=checkbox]', $(this)).val();
+                    problems.push(problemId);
+                }
+            });
+
+            if ( action == 'delete' ) {
+                return doDeleteProblemsAction(problems);
+            }
+        });
+    </script>
+    <script type="text/javascript">
+        function doDeleteProblemsAction(problems) {
+            var postData = {
+                'problems': JSON.stringify(problems)
+            };
+
+            $.ajax({
+                type: 'POST',
+                url: '<c:url value="/administration/deleteProblems.action" />',
+                data: postData,
+                dataType: 'JSON',
+                success: function(result){
+                    if ( result['isSuccessful'] ) {
+                        for ( var i = 0; i < problems.length; ++ i ) {
+                            $('tr[data-value=%s]'.format(problems[i])).remove();
+                        }
+                    } else {
+                        $('.alert').html('<spring:message code="voj.administration.all-problems.delete-error" text="Some errors occurred while deleting problems." />');
+                        $('.alert').removeClass('hide');
+                    }
+                    $('button.btn-danger', '#filters').removeAttr('disabled');
+                    $('button.btn-danger', '#filters').html('<spring:message code="voj.administration.all-problems.apply" text="Apply" />');
+                }
+            });
+        }
+    </script>
     <c:if test="${GoogleAnalyticsCode != ''}">
-    <script type="text/javascript">${googleAnalyticsCode}</script>
+    ${googleAnalyticsCode}
     </c:if>
 </body>
 </html>
