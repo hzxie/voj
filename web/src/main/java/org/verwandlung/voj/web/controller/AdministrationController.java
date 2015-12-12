@@ -36,6 +36,7 @@ import org.verwandlung.voj.web.service.OptionService;
 import org.verwandlung.voj.web.service.ProblemService;
 import org.verwandlung.voj.web.service.SubmissionService;
 import org.verwandlung.voj.web.service.UserService;
+import org.verwandlung.voj.web.util.CsrfProtector;
 import org.verwandlung.voj.web.util.HttpRequestParser;
 import org.verwandlung.voj.web.util.SessionListener;
 
@@ -486,6 +487,7 @@ public class AdministrationController {
         }
         ModelAndView view = new ModelAndView("administration/edit-submission");
         view.addObject("submission", submission);
+        view.addObject("csrfToken", CsrfProtector.getCsrfToken(request.getSession()));
         return view;
     }
     

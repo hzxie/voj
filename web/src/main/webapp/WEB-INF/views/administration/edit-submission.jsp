@@ -97,6 +97,7 @@
                     <div id="judge-log" class="description markdown">${submission.judgeLog}</div> <!-- .description -->
                 </div> <!-- .section -->
                 <div class="section">
+                    <button class="btn btn-warning"><spring:message code="voj.administration.edit-submission.restart-submission" text="Restart Submission" /></button>                    
                     <button class="btn btn-danger"><spring:message code="voj.administration.edit-submission.delete-submission" text="Delete Submission" /></button>                    
                 </div> <!-- .section -->
             </div> <!-- #content -->
@@ -125,13 +126,26 @@
         });
     </script>
     <script type="text/javascript">
+        $('button.btn-warning').click(function() {
+            if ( !confirm('<spring:message code="voj.administration.edit-submission.continue-or-not" text="Are you sure to continue?" />') ) {
+                return;
+            }
+            $('.alert-error').addClass('hide');
+            $('button.btn-warning').attr('disabled', 'disabled');
+            $('button.btn-warning').html('<spring:message code="voj.administration.edit-submission.please-wait" text="Please wait..." />');
+
+            var submissions = [${submission.submissionId}];
+            return doRestartSubmissionsAction(submissions);
+        });
+    </script>
+    <script type="text/javascript">
         $('button.btn-danger').click(function() {
             if ( !confirm('<spring:message code="voj.administration.edit-submission.continue-or-not" text="Are you sure to continue?" />') ) {
                 return;
             }
             $('.alert-error').addClass('hide');
-            $('button.btn-danger', '#filters').attr('disabled', 'disabled');
-            $('button.btn-danger', '#filters').html('<spring:message code="voj.administration.edit-submission.please-wait" text="Please wait..." />');
+            $('button.btn-danger').attr('disabled', 'disabled');
+            $('button.btn-danger').html('<spring:message code="voj.administration.edit-submission.please-wait" text="Please wait..." />');
 
             var submissions = [${submission.submissionId}];
             return doDeleteSubmissionsAction(submissions);
@@ -156,10 +170,118 @@
                     } else {
                         alert('<spring:message code="voj.administration.edit-submission.delete-error" text="Some errors occurred while deleting this submission." />');
                     }
+                    $('button.btn-danger').removeAttr('disabled');
+                    $('button.btn-danger').html('<spring:message code="voj.administration.edit-submission.delete-submission" text="Delete Submission" />');
                 }
             });
         }
     </script>
+    <script type="text/javascript">
+        function doRestartSubmissionsAction(submissions) {
+            var postData = {
+                'submissions': JSON.stringify(submissions)
+            };
+
+            $.ajax({
+                type: 'POST',
+                url: '<c:url value="/administration/restartSubmissions.action" />',
+                data: postData,
+                dataType: 'JSON',
+                success: function(result){
+                    if ( result['isSuccessful'] ) {
+                        window.location.reload();
+                    } else {
+                        alert('<spring:message code="voj.administration.edit-submission.restart-error" text="Some errors occurred while restarting this submission." />');
+                    }
+                    $('button.btn-danger').removeAttr('disabled');
+                    $('button.btn-danger').html('<spring:message code="voj.administration.edit-submission.restart-submission" text="Restart Submission" />');
+                }
+            });
+        }
+    </script>
+    <c:if test="${submission.judgeResult.judgeResultName == 'Pending'}">
+    <script type="text/javascript">
+        $.getScript('${cdnUrl}/js/date-${language}.min.js', function() {
+            var currentJudgeResult = 'Pending',
+                getterInterval     = setInterval(function() {
+                    getRealTimeJudgeResult();
+                    currentJudgeResult = $('#judge-result').html();
+
+                    if ( currentJudgeResult != 'Pending' ) {
+                        clearInterval(getterInterval);
+                    }
+                }, 10000);
+        });
+    </script>
+    <script type="text/javascript">
+        $(function() {
+            var subscriptionUrl = '<c:url value="/submission/getRealTimeJudgeResult.action?submissionId=${submission.submissionId}&csrfToken=${csrfToken}" />',
+                source          = new EventSource(subscriptionUrl),
+                lastMessage     = '';
+
+            source.onmessage    = function(e) {
+                var message     = e['data'];
+
+                if ( message == lastMessage ) {
+                    return;
+                }
+                lastMessage     = message;
+
+                if ( message == 'Established' ) {
+                    $('#judge-log').append('<p>Connected to Server.</p>');
+                    return;
+                }
+                var mapMessage  = JSON.parse(message),
+                    judgeResult = mapMessage['judgeResult'],
+                    judgeLog    = mapMessage['message'];
+                    
+                $('#judge-result').html(judgeResult);
+                $('#judge-log').append(converter.makeHtml(judgeLog));
+            }
+        });
+    </script>
+    <script type="text/javascript">
+        function getRealTimeJudgeResult() {
+            var pageRequests = {
+                'submissionId': ${submission.submissionId}
+            };
+
+            $.ajax({
+                type: 'GET',
+                url: '<c:url value="/submission/getSubmission.action" />',
+                data: pageRequests,
+                dataType: 'JSON',
+                success: function(result){
+                    if ( result['isSuccessful'] ) {
+                        if ( result['submission']['judgeResult']['judgeResultSlug'] != 'PD' ) {
+                            $('#judge-result').removeClass();
+                            $('#judge-result').addClass("flag-" + result['submission']['judgeResult']['judgeResultSlug'])
+                            $('#judge-result').html(result['submission']['judgeResult']['judgeResultName']);
+                            $('#used-time').html(result['submission']['usedTime'] + " ms");
+                            $('#used-memory').html(result['submission']['usedMemory'] + " KB");
+                            $('#execute-time').html(getFormatedDateString(result['submission']['executeTime'], '${language}'));
+                            $('#judge-log').html(converter.makeHtml(result['submission']['judgeLog'].replace(/\\\n/g, '\\n')));
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+    <script type="text/javascript">
+        function getFormatedDateString(dateTime, locale) {
+            var dateObject = new Date(dateTime),
+                dateString = dateObject.toString();
+
+            if ( locale == 'en_US' ) {
+                dateString = dateObject.toString('MMM d, yyyy h:mm:ss tt');
+            } else if ( locale == 'zh_CN' ) {
+                dateString = dateObject.toString('yyyy-M-dd HH:mm:ss');
+            }
+
+            return dateString;
+        }
+    </script>
+    </c:if>
     <c:if test="${GoogleAnalyticsCode != ''}">
     ${googleAnalyticsCode}
     </c:if>
