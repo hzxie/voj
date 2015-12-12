@@ -159,10 +159,10 @@
     <script type="text/javascript">
         $(function() {
             var subscriptionUrl = '<c:url value="/submission/getRealTimeJudgeResult.action?submissionId=${submission.submissionId}&csrfToken=${csrfToken}" />',
-            	source          = new EventSource(subscriptionUrl),
+                source          = new EventSource(subscriptionUrl),
                 lastMessage     = '';
 
-			source.onmessage    = function(e) {
+            source.onmessage    = function(e) {
                 var message     = e['data'];
 
                 if ( message == lastMessage ) {
