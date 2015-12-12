@@ -113,6 +113,7 @@
                     <div class="row-fluid">
                         <div class="span12">
                             <button class="btn btn-primary" type="submit"><spring:message code="voj.administration.edit-user.update-profile" text="Update Profile" /></button>
+                            <button class="btn btn-danger" onclick="return false;"><spring:message code="voj.administration.edit-user.delete-user" text="Delete User" /></button>
                         </div> <!-- .span12 -->
                     </div> <!-- .row-fluid -->
                 </form> <!-- #profile-form -->
@@ -386,6 +387,43 @@
             $('button[type=submit]').html('<spring:message code="voj.administration.edit-user.update-profile" text="Update Profile" />');
             $('button[type=submit]').removeAttr('disabled');
             $('html, body').animate({ scrollTop: 0 }, 100);
+        }
+    </script>
+    <script type="text/javascript">
+        $('button.btn-danger').click(function() {
+            if ( !confirm('<spring:message code="voj.administration.edit-user.continue-or-not" text="Are you sure to continue?" />') ) {
+                return;
+            }
+            $('.alert-error').addClass('hide');
+            $('button.btn-danger').attr('disabled', 'disabled');
+            $('button.btn-danger').html('<spring:message code="voj.administration.edit-user.please-wait" text="Please wait..." />');
+
+            var users = [${user.uid}];
+            return doDeleteUsersAction(users);
+        });
+    </script>
+    <script type="text/javascript">
+        function doDeleteUsersAction(users) {
+            var postData = {
+                'users': JSON.stringify(users)
+            };
+
+            $.ajax({
+                type: 'POST',
+                url: '<c:url value="/administration/deleteUsers.action" />',
+                data: postData,
+                dataType: 'JSON',
+                success: function(result){
+                    if ( result['isSuccessful'] ) {
+                        window.location.href = '<c:url value="/administration/all-users" />';
+                    } else {
+                        $('.alert').html('<spring:message code="voj.administration.edit-user.delete-error" text="Some errors occurred while deleting this user." />');
+                        $('.alert').removeClass('hide');
+                    }
+                    $('button.btn-danger').removeAttr('disabled');
+                    $('button.btn-danger').html('<spring:message code="voj.administration.edit-user.delete-user" text="Delete User" />');
+                }
+            });
         }
     </script>
     <c:if test="${GoogleAnalyticsCode != ''}">
