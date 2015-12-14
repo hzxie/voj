@@ -59,6 +59,9 @@
 		<property name="removeAbandoned" value="${jdbc.removeAbandoned}" />
 		<property name="removeAbandonedTimeout" value="${jdbc.removeAbandonedTimeout}" />
 		<property name="validationQuery" value="SELECT 1" />
+		<property name="testWhileIdle" value="true"></property> 
+		<property name="testOnBorrow" value="true"></property> 
+		<property name="testOnReturn" value="true"></property> 
 	</bean>
 	<bean id="sessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
 		<property name="dataSource" ref="dataSource" />
