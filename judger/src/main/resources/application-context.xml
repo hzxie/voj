@@ -52,7 +52,6 @@
 		<property name="initialSize" value="${jdbc.initialSize}" />
 		<property name="maxActive" value="${jdbc.maxActive}" />
 		<property name="minIdle" value="${jdbc.minIdle}" />
-		<property name="maxIdle" value="${jdbc.maxIdle}" />
 		<property name="maxWait" value="${jdbc.maxWait}" />
 		<property name="timeBetweenEvictionRunsMillis" value="${jdbc.timeBetweenEvictionRunsMillis}" />
 		<property name="minEvictableIdleTimeMillis" value="${jdbc.minEvictableIdleTimeMillis}" />
