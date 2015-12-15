@@ -140,7 +140,6 @@ public class SubmissionController {
             throw new ResourceNotFoundException();
         }
         
-        request.setAttribute("org.apache.catalina.ASYNC_SUPPORTED", true);
         SseEmitter sseEmitter = new SseEmitter();
         submissionEventListener.addSseEmitters(submissionId, sseEmitter);
         sseEmitter.send("Established");
