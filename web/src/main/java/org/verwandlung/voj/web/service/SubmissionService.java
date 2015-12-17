@@ -139,7 +139,6 @@ public class SubmissionService {
     	
     	for ( Map<String, Object> e : submissions ) {
     		String date = ((java.sql.Date)e.get("date")).toString().replace('-', '/');
-    		System.out.println(date);
             long submissionTimes = (Long)e.get("submissions");
             numberOfSubmissions.put(date, submissionTimes);
     	}

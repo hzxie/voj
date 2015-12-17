@@ -192,7 +192,6 @@ public class DefaultController {
     @RequestMapping(value = "/*", method = RequestMethod.GET)
     public ModelAndView notFoundView(
             HttpServletRequest request, HttpServletResponse response) {
-        System.out.println("NOT FOUND!!");
         ModelAndView view = new ModelAndView("errors/404");
         return view;
     }
