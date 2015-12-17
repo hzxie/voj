@@ -8,6 +8,8 @@ import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -129,7 +131,7 @@ public class SubmissionController {
     public SseEmitter getRealTimeJudgeResultAction(
             @RequestParam(value = "submissionId", required = true) long submissionId,
             @RequestParam(value = "csrfToken", required = true) String csrfToken,
-            HttpServletRequest request) throws IOException {
+            HttpServletRequest request, HttpServletResponse response) throws IOException {
         User currentUser = HttpSessionParser.getCurrentUser(request.getSession());
         boolean isCsrfTokenValid = CsrfProtector.isCsrfTokenValid(csrfToken, request.getSession());
         Submission submission = submissionService.getSubmission(submissionId);
@@ -140,6 +142,7 @@ public class SubmissionController {
             throw new ResourceNotFoundException();
         }
         
+        response.addHeader("X-Accel-Buffering", "no");
         SseEmitter sseEmitter = new SseEmitter();
         submissionEventListener.addSseEmitters(submissionId, sseEmitter);
         sseEmitter.send("Established");
@@ -182,4 +185,10 @@ public class SubmissionController {
      */
     @Autowired
     private ApplicationEventListener submissionEventListener;
+    
+    /**
+     * 日志记录器.
+     */
+    @SuppressWarnings("unused")
+	private static final Logger LOGGER = LogManager.getLogger(SubmissionController.class);
 }
