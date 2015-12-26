@@ -22,40 +22,40 @@ import org.verwandlung.voj.web.model.Option;
  * @author Zhou Yihao
  */
 @Component
-public class SensitiveWordFilter {
+public class OffensiveWordFilter {
     /**
-     * SensitiveWordFilter类的构造函数.
+     * OffensiveWordFilter类的构造函数.
      * @param optionMapper - 自动注入的optionMapper对象, 用于从数据库获取敏感词列表 
      */
     @Autowired
-    private SensitiveWordFilter(OptionMapper optionMapper) {
+    private OffensiveWordFilter(OptionMapper optionMapper) {
         this.optionMapper = optionMapper;
         
-        Option sensitiveWordOption = optionMapper.getOption(SENSITIVE_WORD_OPTION_KEY);
-        String optionValue = sensitiveWordOption.getOptionValue();
+        Option offensiveWordOption = optionMapper.getOption(OFFENSIVE_WORD_OPTION_KEY);
+        String optionValue = offensiveWordOption.getOptionValue();
         
-        JSONArray sensitiveWordJson = JSON.parseArray(optionValue);
-        if ( sensitiveWordJson == null ) {
-            sensitiveWordJson = new JSONArray();
+        JSONArray offensiveWordJson = JSON.parseArray(optionValue);
+        if ( offensiveWordJson == null ) {
+            offensiveWordJson = new JSONArray();
         }
         
-        List<String> sensitiveWordList = new ArrayList<String>((int) (sensitiveWordJson.size() * 1.5));
-        for ( Object o : sensitiveWordJson ) {
-            sensitiveWordList.add((String) o);
+        List<String> offensiveWordList = new ArrayList<String>((int) (offensiveWordJson.size() * 1.5));
+        for ( Object o : offensiveWordJson ) {
+            offensiveWordList.add((String) o);
         }
-        Set<String> sensitiveWordSet = new HashSet<String>(sensitiveWordList);
-        this.addSensitiveWordsToHashMap(sensitiveWordSet);
+        Set<String> offensiveWordSet = new HashSet<String>(offensiveWordList);
+        this.addOffensiveWordsToHashMap(offensiveWordSet);
     }
     
     /**
      * 提供敏感词过滤的功能.
-     * 对sensitiveWordFilter(String, int , String)的重载.
+     * 对offensiveWordFilter(String, int , String)的重载.
      * 设置了匹配规则(maxMatchType)和替换字符("*")的默认值.
      * @param text - 待过滤字符串
      * @return 过滤后的字符串
      */
     public String filter(String text) {
-        return filter(text, SensitiveWordFilter.MAX_MATCH_TYPE, "*");
+        return filter(text, OffensiveWordFilter.MAX_MATCH_TYPE, "*");
     }
     
     /**
@@ -66,11 +66,11 @@ public class SensitiveWordFilter {
      */
     private String filter(String text, int matchType, String replaceChar) {
         //获取txt中所有敏感词的位置
-        List<Position> sensitiveWordsPosition = getSensitiveWordsPosition(text, matchType);
+        List<Position> offensiveWordsPosition = getOffensiveWordsPosition(text, matchType);
         //用replaceChar替换txt中的所有敏感词
         StringBuilder resultStringBuilder = new StringBuilder(text);
         
-        Iterator<Position> iterator = sensitiveWordsPosition.iterator();
+        Iterator<Position> iterator = offensiveWordsPosition.iterator();
         while (iterator.hasNext()) {
             Position now = iterator.next();
             resultStringBuilder.replace(now.start, now.start + now.length, 
@@ -85,18 +85,18 @@ public class SensitiveWordFilter {
      * @param matchType - 匹配规则 1 为极小匹配,  2 为极大匹配
      * @return 敏感词的位置
      */
-    private List<Position> getSensitiveWordsPosition(String txt, int matchType) {
-        List<Position> sensitiveWordsPosition = new ArrayList<Position>();
+    private List<Position> getOffensiveWordsPosition(String txt, int matchType) {
+        List<Position> offensiveWordsPosition = new ArrayList<Position>();
         // 遍历待过滤字符串,  检查 txt 以 i 开始的子串的前缀, 是否为敏感词
         for ( int i = 0; i < txt.length(); ++ i ) {
-            int length = checkSensitiveWord(txt, i, matchType);
+            int length = checkOffensiveWord(txt, i, matchType);
             if ( length > 0 ) {
                 Position position = new Position(i, length);
-                sensitiveWordsPosition.add(position);
+                offensiveWordsPosition.add(position);
                 i = i + length - 1; // 跳过已经匹配的敏感词, 因为for中会自增, 所以减一
             }
         }
-        return sensitiveWordsPosition;
+        return offensiveWordsPosition;
     }
     
     /**
@@ -107,7 +107,7 @@ public class SensitiveWordFilter {
      * @return 送存在敏感词, 则返回敏感词的长度, 若不存在, 则返回0
      */
     @SuppressWarnings("rawtypes")
-    private int checkSensitiveWord(String text, int beginIndex, int matchType) {
+    private int checkOffensiveWord(String text, int beginIndex, int matchType) {
         /*
          * matchedLength为当前已匹配的最长敏感词长度
          * matchingLength为正在尝试匹配的敏感词长度, 
@@ -119,7 +119,7 @@ public class SensitiveWordFilter {
         int matchingLength = 0;
         
         char nowWord = 0;
-        Map nowMap = sensitiveWordMap;
+        Map nowMap = offensiveWordMap;
         for ( int i = beginIndex; i < text.length(); ++ i ) {
             nowWord = text.charAt(i);
             //当前字的follow集
@@ -128,7 +128,7 @@ public class SensitiveWordFilter {
                 ++ matchingLength;
                 if ("1".equals(nowMap.get(IS_END))) {    //匹配到终结符, 更新当前已匹配的最大长度
                      matchedLength = matchingLength;
-                     if (SensitiveWordFilter.MIN_MATCH_TYPE == matchType) {
+                     if (OffensiveWordFilter.MIN_MATCH_TYPE == matchType) {
                          //若为极小匹配规则, 那么一旦匹配到终结符, 就结束匹配
                          break;
                      }
@@ -184,23 +184,23 @@ public class SensitiveWordFilter {
      *              }
      *          }
      *      }
-     * @param sensitiveWordSet - 敏感词的Set集
+     * @param offensiveWordSet - 敏感词的Set集
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    private void addSensitiveWordsToHashMap(Set<String> sensitiveWordSet) {
+    private void addOffensiveWordsToHashMap(Set<String> offensiveWordSet) {
         // 初始化敏感词HashMap, 大小与Set相等.
-        sensitiveWordMap = new HashMap((int)(sensitiveWordSet.size() * 1.5));
+        offensiveWordMap = new HashMap((int)(offensiveWordSet.size() * 1.5));
         
         // 在 nowMap状态读过key, 到达新状态, 故创建newWordMap
         String key = null;
         Map nowMap = null;
         Map newWordMap = null;
-        //迭代SensitiveWordSet
-        Iterator<String> iterator = sensitiveWordSet.iterator();
+        //迭代OffensiveWordSet
+        Iterator<String> iterator = offensiveWordSet.iterator();
         while (iterator.hasNext()) {
             key = iterator.next();
             //从最高层的HashMap开始遍历
-            nowMap = sensitiveWordMap;
+            nowMap = offensiveWordMap;
             
             //迭代当前敏感词中的每个字
             for (int i = 0; i < key.length(); ++ i) {
@@ -231,7 +231,7 @@ public class SensitiveWordFilter {
     /**
      * 存储敏感词的HashMap. 
      */
-    private HashMap<?, ?> sensitiveWordMap;
+    private HashMap<?, ?> offensiveWordMap;
     
     /**
      * HashMap中敏感词是否终结的标识. 
@@ -248,7 +248,7 @@ public class SensitiveWordFilter {
     /**
      * 敏感词系统设置项. 
      */
-    public static final String SENSITIVE_WORD_OPTION_KEY = "sensitiveWords";
+    public static final String OFFENSIVE_WORD_OPTION_KEY = "offensiveWords";
     
     /**
      *  自动注入OptionDao对象
