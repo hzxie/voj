@@ -183,7 +183,7 @@ INSERT INTO `voj_options` (`option_id`, `option_name`, `option_value`, `is_autol
 (4, 'googleAnalyticsCode', '', 1),
 (5, 'icpNumber', '', 1),
 (6, 'allowUserRegister', '1', 0),
-(7, 'sensitiveWords', '["法轮","中央","六四","军区","共产党","国民党"]', 0);
+(7, 'offensiveWords', '["法轮","中央","六四","军区","共产党","国民党"]', 0);
 
 -- --------------------------------------------------------
 

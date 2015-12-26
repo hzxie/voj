@@ -26,7 +26,7 @@ import org.verwandlung.voj.web.model.UserMeta;
 import org.verwandlung.voj.web.util.DigestUtils;
 import org.verwandlung.voj.web.util.HtmlTextFilter;
 import org.verwandlung.voj.web.util.MailSender;
-import org.verwandlung.voj.web.util.SensitiveWordFilter;
+import org.verwandlung.voj.web.util.OffensiveWordFilter;
 
 /**
  * 用户类(User)的业务逻辑层.
@@ -759,7 +759,7 @@ public class UserService {
      * 用于过滤用户个人信息中的敏感词.
      */
     @Autowired
-    private SensitiveWordFilter sensitiveWordFilter;
+    private OffensiveWordFilter sensitiveWordFilter;
     
     /**
      * 自动注入的MailSender对象.
