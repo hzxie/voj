@@ -218,8 +218,5 @@
             });
         }
     </script>
-    <c:if test="${GoogleAnalyticsCode != ''}">
-    ${googleAnalyticsCode}
-    </c:if>
 </body>
 </html>

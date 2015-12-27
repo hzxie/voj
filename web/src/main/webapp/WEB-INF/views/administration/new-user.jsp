@@ -173,8 +173,5 @@
             $('button[type=submit]', '#profile-form').html('<spring:message code="voj.administration.new-user.create-account" text="Create Account" />');
         }
     </script>
-    <c:if test="${GoogleAnalyticsCode != ''}">
-    ${googleAnalyticsCode}
-    </c:if>
 </body>
 </html>

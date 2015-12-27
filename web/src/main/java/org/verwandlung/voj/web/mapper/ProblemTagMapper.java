@@ -1,5 +1,7 @@
 package org.verwandlung.voj.web.mapper;
 
+import java.util.List;
+
 import org.apache.ibatis.annotations.CacheNamespace;
 
 import org.verwandlung.voj.web.model.ProblemTag;
@@ -11,19 +13,26 @@ import org.verwandlung.voj.web.model.ProblemTag;
  */
 @CacheNamespace(implementation = org.mybatis.caches.ehcache.EhcacheCache.class)
 public interface ProblemTagMapper {
-    /**
+	/**
      * 通过试题标签的唯一标识符获取试题标签对象.
      * @param problemTagId - 试题标签的唯一标识符
      * @return 预期的试题标签对象或空引用
      */
-    public ProblemTag getProblemTagUsingId(int problemTagId);
+    public ProblemTag getProblemTagUsingTagId(long problemTagId);
+    
+    /**
+     * 通过试题的唯一标识符获取试题标签对象的列表.
+     * @param problemTagId - 试题的唯一标识符
+     * @return 预期的试题标签对象列表
+     */
+    public List<ProblemTag> getProblemTagUsingProblemId(long problemId);
     
     /**
      * 通过试题标签的唯一英文缩写获取试题标签对象.
      * @param problemTagSlug - 试题标签的唯一英文缩写
      * @return 预期的试题标签对象或空引用
      */
-    public ProblemTag getProblemTagUsingSlug(String problemTagSlug);
+    public ProblemTag getProblemTagUsingTagSlug(String problemTagSlug);
     
     /**
      * 创建试题标签对象.
@@ -41,5 +50,5 @@ public interface ProblemTagMapper {
      * 删除试题标签对象.
      * @param problemTagId - 待删除试题标签对象的唯一标识符
      */
-    public void deleteProblemTag(int problemTagId);
+    public void deleteProblemTagUsingTagId(long problemTagId);
 }
