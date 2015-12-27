@@ -1,5 +1,6 @@
 package org.verwandlung.voj.web.controller;
 
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
@@ -403,6 +404,52 @@ public class AdministrationController {
     }
     
     /**
+     * 加载创建试题页面.
+     * @param request - HttpServletRequest对象
+     * @param response - HttpServletResponse对象
+     * @return 包含创建试题页面信息的ModelAndView对象
+     */
+    @RequestMapping(value = "/new-problem", method = RequestMethod.GET)
+    public ModelAndView newProblemView(
+    		HttpServletRequest request, HttpServletResponse response) {
+    	Map<ProblemCategory, List<ProblemCategory>> problemCategories = getProblemCategories();
+    	
+    	ModelAndView view = new ModelAndView("administration/new-problem");
+    	view.addObject("problemCategories", problemCategories);
+    	return view;
+    }
+
+    /**
+     * 获得具有层次关系的试题分类列表.
+     * @return 包含试题分类及其继承关系的List对象
+     */
+    private Map<ProblemCategory, List<ProblemCategory>> getProblemCategories() {
+        List<ProblemCategory> problemCategories = problemService.getProblemCategories();
+        Map<Integer, List<ProblemCategory>> problemCategoriesIndexer = new HashMap<Integer, List<ProblemCategory>>();
+        Map<ProblemCategory, List<ProblemCategory>> problemCategoriesHierarchy = new HashMap<ProblemCategory, List<ProblemCategory>>();
+        
+        // 将无父亲的试题分类加入列表
+        for ( ProblemCategory pc : problemCategories ) {
+            if ( pc.getParentProblemCategoryId() == 0 ) {
+                List<ProblemCategory> subProblemCategories = new ArrayList<ProblemCategory>();
+                problemCategoriesHierarchy.put(pc, subProblemCategories);
+                problemCategoriesIndexer.put(pc.getProblemCategoryId(), subProblemCategories);
+            }
+        }
+        // 将其他试题分类加入列表
+        for ( ProblemCategory pc : problemCategories ) {
+            int parentProblemCategoryId = pc.getParentProblemCategoryId() ;
+            if ( parentProblemCategoryId != 0 ) {
+                List<ProblemCategory> subProblemCategories = problemCategoriesIndexer.get(parentProblemCategoryId);
+                if ( subProblemCategories != null ) {
+                    subProblemCategories.add(pc);
+                }
+            }
+        }
+        return problemCategoriesHierarchy;
+    }
+    
+    /**
      * 加载提交列表页面.
      * @param request - HttpServletRequest对象
      * @param response - HttpServletResponse对象
@@ -539,10 +586,10 @@ public class AdministrationController {
             @RequestParam(value = "allowUserRegister", required = true) boolean allowUserRegister,
             @RequestParam(value = "icpNumber", required = true) String icpNumber,
             @RequestParam(value = "googleAnalyticsCode", required = true) String googleAnalyticsCode,
-            @RequestParam(value = "sensitiveWords", required = true) String sensitiveWords,
+            @RequestParam(value = "offensiveWords", required = true) String offensiveWords,
             HttpServletRequest request) {
         Map<String, Boolean> result = optionService.updateOptions(websiteName, websiteDescription, 
-                copyright, allowUserRegister, icpNumber, googleAnalyticsCode, sensitiveWords);
+                copyright, allowUserRegister, icpNumber, googleAnalyticsCode, offensiveWords);
         return result;
     }
     

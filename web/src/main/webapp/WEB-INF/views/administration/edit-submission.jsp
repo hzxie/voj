@@ -282,8 +282,5 @@
         }
     </script>
     </c:if>
-    <c:if test="${GoogleAnalyticsCode != ''}">
-    ${googleAnalyticsCode}
-    </c:if>
 </body>
 </html>

@@ -1,5 +1,7 @@
 package org.verwandlung.voj.web.mapper;
 
+import java.util.List;
+
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -19,14 +21,14 @@ import org.verwandlung.voj.web.model.ProblemTag;
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class ProblemTagMapperTest {
-    /**
+	/**
      * 测试用例: 测试getProblemTagUsingId(int)方法
      * 测试数据: 默认标签的唯一标识符
      * 预期结果: 返回默认标签的试题标签对象
      */
     @Test
     public void testGetProblemTagUsingIdExists() {
-        ProblemTag problemTag = problemTagMapper.getProblemTagUsingId(1);
+        ProblemTag problemTag = problemTagMapper.getProblemTagUsingTagId(1);
         Assert.assertNotNull(problemTag);
         
         String problemTagName = problemTag.getProblemTagName();
@@ -40,8 +42,35 @@ public class ProblemTagMapperTest {
      */
     @Test
     public void testGetProblemTagUsingIdNotExists() {
-        ProblemTag problemTag = problemTagMapper.getProblemTagUsingId(0);
+        ProblemTag problemTag = problemTagMapper.getProblemTagUsingTagId(0);
         Assert.assertNull(problemTag);
+    }
+    
+    /**
+     * 测试用例: 测试getProblemTagUsingId(int)方法
+     * 测试数据: 默认标签的唯一标识符
+     * 预期结果: 返回某个试题
+     */
+    @Test
+    public void testGetProblemTagUsingProblemIdExists() {
+        List<ProblemTag> problemTags = problemTagMapper.getProblemTagUsingProblemId(1001);
+        Assert.assertNotNull(problemTags);
+        Assert.assertEquals(1, problemTags.size());
+        
+        ProblemTag problemTag = problemTags.get(0);
+        String problemTagName = problemTag.getProblemTagName();
+        Assert.assertEquals("Greedy", problemTagName);
+    }
+    
+    /**
+     * 测试用例: 测试getProblemTagUsingId(int)方法
+     * 测试数据: 不存在的唯一标识符
+     * 预期结果: 空试题标签列表
+     */
+    @Test
+    public void testGetProblemTagUsingProblemIdNotExists() {
+    	List<ProblemTag> problemTags = problemTagMapper.getProblemTagUsingProblemId(0);
+        Assert.assertEquals(0, problemTags.size());
     }
 
     /**
@@ -50,8 +79,8 @@ public class ProblemTagMapperTest {
      * 预期结果: 返回默认标签的试题标签对象
      */
     @Test
-    public void testGetProblemTagUsingSlugExists() {
-        ProblemTag problemTag = problemTagMapper.getProblemTagUsingSlug("greedy");
+    public void testGetProblemTagUsingTagSlugExists() {
+        ProblemTag problemTag = problemTagMapper.getProblemTagUsingTagSlug("greedy");
         Assert.assertNotNull(problemTag);
         
         String problemTagName = problemTag.getProblemTagName();
@@ -64,8 +93,8 @@ public class ProblemTagMapperTest {
      * 预期结果: 空引用
      */
     @Test
-    public void testGetProblemTagUsingSlugNotExists() {
-        ProblemTag problemTag = problemTagMapper.getProblemTagUsingSlug("not-exists");
+    public void testGetProblemTagUsingTagSlugNotExists() {
+        ProblemTag problemTag = problemTagMapper.getProblemTagUsingTagSlug("not-exists");
         Assert.assertNull(problemTag);
     }
     
@@ -109,13 +138,13 @@ public class ProblemTagMapperTest {
      */
     @Test
     public void testUpdateProblemTagNormally() {
-        ProblemTag problemTag = problemTagMapper.getProblemTagUsingSlug("greedy");
+        ProblemTag problemTag = problemTagMapper.getProblemTagUsingTagSlug("greedy");
         Assert.assertNotNull(problemTag);
 
         problemTag.setProblemTagName("New Tag Name");
         problemTagMapper.updateProblemTag(problemTag);
 
-        problemTag = problemTagMapper.getProblemTagUsingSlug("greedy");
+        problemTag = problemTagMapper.getProblemTagUsingTagSlug("greedy");
         String newTagName = problemTag.getProblemTagName();
         Assert.assertEquals("New Tag Name", newTagName);
     }
@@ -127,7 +156,7 @@ public class ProblemTagMapperTest {
      */
     @Test(expected = org.springframework.dao.DataIntegrityViolationException.class)
     public void testUpdateProblemTagUsingTooLongTagName() {
-    	ProblemTag problemTag = problemTagMapper.getProblemTagUsingSlug("greedy");
+    	ProblemTag problemTag = problemTagMapper.getProblemTagUsingTagSlug("greedy");
         Assert.assertNotNull(problemTag);
 
         problemTag.setProblemTagName("New Tag Very Very Very Very Long Name");
@@ -140,12 +169,12 @@ public class ProblemTagMapperTest {
      * 预期结果: 数据删除操作成功完成
      */
     @Test
-    public void testDeleteProblemTagExists() {
-    	ProblemTag problemTag = problemTagMapper.getProblemTagUsingId(1);
+    public void testDeleteProblemTagUsingTagIdExists() {
+    	ProblemTag problemTag = problemTagMapper.getProblemTagUsingTagId(1);
         Assert.assertNotNull(problemTag);
         
-        problemTagMapper.deleteProblemTag(1);
-        problemTag = problemTagMapper.getProblemTagUsingId(1);
+        problemTagMapper.deleteProblemTagUsingTagId(1);
+        problemTag = problemTagMapper.getProblemTagUsingTagId(1);
         Assert.assertNull(problemTag);
     }
     
@@ -155,11 +184,11 @@ public class ProblemTagMapperTest {
      * 预期结果: 方法正常执行, 未影响数据表中的数据
      */
     @Test
-    public void testDeleteProblemTagNotExists() {
-    	ProblemTag problemTag = problemTagMapper.getProblemTagUsingId(0);
+    public void testDeleteProblemTagUsingTagIdNotExists() {
+    	ProblemTag problemTag = problemTagMapper.getProblemTagUsingTagId(0);
         Assert.assertNull(problemTag);
         
-        problemTagMapper.deleteProblemTag(0);
+        problemTagMapper.getProblemTagUsingTagId(0);
     }
     
     /**

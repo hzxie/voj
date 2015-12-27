@@ -12,15 +12,24 @@
 	</resultMap>
 
 	<!-- Methods -->
-	<select id="getProblemTagUsingId"
-		parameterType="int"
+	<select id="getProblemTagUsingTagId"
+		parameterType="long"
 		resultMap="ProblemTagResultMap"
 		useCache="true">
 		SELECT *
 		FROM voj_problem_tags
 		WHERE problem_tag_id = #{problemTagId}
 	</select>
-	<select id="getProblemTagUsingSlug"
+	<select id="getProblemTagUsingProblemId"
+		parameterType="long"
+		resultMap="ProblemTagResultMap"
+		useCache="true">
+		SELECT *
+		FROM voj_problem_tags
+		NATURAL JOIN voj_problem_tag_relationships
+		WHERE problem_id = #{problemId}
+	</select>
+	<select id="getProblemTagUsingTagSlug"
 		parameterType="String"
 		resultMap="ProblemTagResultMap"
 		useCache="true">
@@ -44,8 +53,8 @@
 		SET problem_tag_slug = #{problemTagSlug}, problem_tag_name = #{problemTagName}
 		WHERE problem_tag_id = #{problemTagId}
 	</update>
-	<delete id="deleteProblemTag"
-		parameterType="int"
+	<delete id="deleteProblemTagUsingTagId"
+		parameterType="long"
 		flushCache="true">
 		DELETE FROM voj_problem_tags 
 		WHERE problem_tag_id = #{problemTagId}

@@ -56,12 +56,12 @@ public class OptionService {
      * @param allowUserRegister - 是否允许用户注册
      * @param icpNumber - 网站备案号
      * @param googleAnalyticsCode - Google Analytics代码
-     * @param sensitiveWords - 敏感词列表
+     * @param offensiveWords - 敏感词列表
      * @return 包含选项更新结果的Map对象
      */
     public Map<String, Boolean> updateOptions(String websiteName, 
             String websiteDescription,  String copyright, boolean allowUserRegister, 
-            String icpNumber, String googleAnalyticsCode, String sensitiveWords) {
+            String icpNumber, String googleAnalyticsCode, String offensiveWords) {
         Map<String, Boolean> result = new HashMap<String, Boolean>();
         result.put("isWebsiteNameEmpty", websiteName.isEmpty());
         result.put("isWebisteNameLegal", isWebsiteNameLegal(websiteName));
@@ -84,7 +84,7 @@ public class OptionService {
             optionMap.put("googleAnalyticsCode", googleAnalyticsCode);
             optionMap.put("icpNumber", icpNumber);
             optionMap.put("allowUserRegister", allowUserRegister ? "1" : "0");
-            optionMap.put("sensitiveWords", JSON.toJSONString(sensitiveWords.split(",")));
+            optionMap.put("offensiveWords", JSON.toJSONString(offensiveWords.split(",")));
             updateOptions(optionMap);
         }
         result.put("isSuccessful", isSuccessful);

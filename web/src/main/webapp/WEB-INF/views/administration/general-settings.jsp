@@ -80,8 +80,8 @@
                         <textarea id="google-analytics-code" class="span12" rows="5">${options['googleAnalyticsCode']}</textarea>
                     </div> <!-- .control-group -->
                     <div class="control-group row-fluid">
-                        <label for="sensitive-words"><spring:message code="voj.administration.general-settings.sensitive-words" text="Sensitive Words and Expressions" /></label>
-                        <input id="sensitive-words" class="tagsinput" type="hidden" value="" />
+                        <label for="offensive-words"><spring:message code="voj.administration.general-settings.offensive-words" text="Sensitive Words and Expressions" /></label>
+                        <input id="offensive-words" class="tagsinput" type="hidden" value="" />
                     </div> <!-- .control-group -->
                     <div class="row-fluid">
                         <button class="btn btn-primary" type="submit"><spring:message code="voj.administration.general-settings.save-changes" text="Save Changes" /></button>
@@ -95,13 +95,13 @@
     <%@ include file="/WEB-INF/views/administration/include/footer-script.jsp" %>
     <script type="text/javascript">
         $(function() {
-            var sensitiveWordsList  = JSON.parse('${options['sensitiveWords']}'),
-                sensitiveWordsValue = '';
-            for ( var i = 0; i < sensitiveWordsList.length; ++ i ) {
-                sensitiveWordsValue += sensitiveWordsList[i] + ',';
+            var offensiveWordsList  = JSON.parse('${options['offensiveWords']}'),
+                offensiveWordsValue = '';
+            for ( var i = 0; i < offensiveWordsList.length; ++ i ) {
+                offensiveWordsValue += offensiveWordsList[i] + ',';
             }
             
-            $('#sensitive-words').val(sensitiveWordsValue);
+            $('#offensive-words').val(offensiveWordsValue);
             $('.tagsinput').tagsInput();
             $("[data-toggle='switch']").wrap('<div class="switch" />').parent().bootstrapSwitch();
         });
@@ -119,13 +119,13 @@
                 allowUserRegister   = $('#allow-register').is(':checked'),
                 icpNumber           = $('#icp-number').val(),
                 googleAnalyticsCode = $('#google-analytics-code').val(),
-                sensitiveWords      = $('#sensitive-words').val();
+                offensiveWords      = $('#offensive-words').val();
 
-            return doUpdateGeneralSettingsAction(websiteName, websiteDescription, copyright, allowUserRegister, icpNumber, googleAnalyticsCode, sensitiveWords);
+            return doUpdateGeneralSettingsAction(websiteName, websiteDescription, copyright, allowUserRegister, icpNumber, googleAnalyticsCode, offensiveWords);
         }
     </script>
     <script type="text/javascript">
-        function doUpdateGeneralSettingsAction(websiteName, websiteDescription, copyright, allowUserRegister, icpNumber, googleAnalyticsCode, sensitiveWords) {
+        function doUpdateGeneralSettingsAction(websiteName, websiteDescription, copyright, allowUserRegister, icpNumber, googleAnalyticsCode, offensiveWords) {
             var postData = {
                 'websiteName': websiteName, 
                 'websiteDescription': websiteDescription, 
@@ -133,7 +133,7 @@
                 'allowUserRegister': allowUserRegister, 
                 'icpNumber': icpNumber, 
                 'googleAnalyticsCode': googleAnalyticsCode, 
-                'sensitiveWords': sensitiveWords
+                'offensiveWords': offensiveWords
             };
 
             $.ajax({
