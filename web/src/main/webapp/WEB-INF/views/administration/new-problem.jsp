@@ -147,7 +147,7 @@
                                 </div> <!-- .header -->
                                 <div class="body">
                                     <c:forEach var="entry" items="${problemCategories}">
-                                    <ul>                                        
+                                    <ul id="problem-categories">                                        
                                         <li>
                                             <label class="checkbox" for="${entry.key.problemCategorySlug}">
                                                 <input id="${entry.key.problemCategorySlug}" type="checkbox" data-toggle="checkbox"> ${entry.key.problemCategoryName}

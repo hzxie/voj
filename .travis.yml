@@ -29,4 +29,5 @@ after_script:
   - mysql -e 'DROP DATABASE test;'
 
 after_success:
-  - mvn clean cobertura:cobertura coveralls:report
+  - mvn -f web/pom.xml cobertura:cobertura coveralls:report
+  - mvn -f judger/pom.xml cobertura:cobertura coveralls:report
