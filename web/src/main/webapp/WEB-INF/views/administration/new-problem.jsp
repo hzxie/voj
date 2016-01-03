@@ -147,15 +147,15 @@
                                 </div> <!-- .header -->
                                 <div class="body">
                                     <c:forEach var="entry" items="${problemCategories}">
-                                    <ul id="problem-categories">                                        
+                                    <ul class="parent-categories">                                        
                                         <li>
-                                            <label class="checkbox" for="${entry.key.problemCategorySlug}">
+                                            <label class="checkbox parent-category" for="${entry.key.problemCategorySlug}">
                                                 <input id="${entry.key.problemCategorySlug}" type="checkbox" data-toggle="checkbox"> ${entry.key.problemCategoryName}
                                             </label>
                                             <ul class="sub-categories">
                                             <c:forEach var="problemCategory" items="${entry.value}">
                                                 <li>
-                                                    <label class="checkbox" for="${problemCategory.problemCategorySlug}">
+                                                    <label class="checkbox child-category" for="${problemCategory.problemCategorySlug}">
                                                         <input id="${entry.key.problemCategorySlug}" type="checkbox" data-toggle="checkbox"> ${problemCategory.problemCategoryName}
                                                     </label>
                                                 </li>
@@ -294,6 +294,32 @@
             if ( testCases == 1 ) {
                 $('#no-test-cases').removeClass('hide');
             }
+        });
+    </script>
+    <script type="text/javascript">
+        $('label.checkbox.parent-category').click(function() {
+            var currentControl = $(this);
+            // Fix the bug for Checkbox in FlatUI 
+            setTimeout(function() {
+                var isChecked = $(currentControl).hasClass('checked');
+
+                if ( !isChecked ) {
+                    $('label.checkbox.child-category', $(currentControl).parent()).removeClass('checked');
+                }
+            }, 50);
+        });
+    </script>
+    <script type="text/javascript">
+        $('label.checkbox.child-category').click(function() {
+            var currentControl = $(this);
+            // Fix the bug for Checkbox in FlatUI 
+            setTimeout(function() {
+                var isChecked = $(currentControl).hasClass('checked');
+
+                if ( isChecked ) {
+                    $('label.checkbox.parent-category', $(currentControl).parent().parent().parent()).addClass('checked');
+                }
+            }, 50);
         });
     </script>
 </body>
