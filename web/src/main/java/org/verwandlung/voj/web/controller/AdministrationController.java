@@ -25,6 +25,7 @@ import org.springframework.web.servlet.ModelAndView;
 import com.alibaba.fastjson.JSON;
 import org.verwandlung.voj.web.exception.ResourceNotFoundException;
 import org.verwandlung.voj.web.messenger.ApplicationEventListener;
+import org.verwandlung.voj.web.model.Checkpoint;
 import org.verwandlung.voj.web.model.Language;
 import org.verwandlung.voj.web.model.Option;
 import org.verwandlung.voj.web.model.Problem;
@@ -447,6 +448,32 @@ public class AdministrationController {
             }
         }
         return problemCategoriesHierarchy;
+    }
+    
+    /**
+     * 加载编辑试题页面.
+     * @param problemId - 试题的唯一标识符
+     * @param request - HttpServletRequest对象
+     * @param response - HttpServletResponse对象
+     * @return 包含提交列表页面信息的ModelAndView对象
+     */
+    @RequestMapping(value = "/edit-problem/{problemId}", method = RequestMethod.GET)
+    public ModelAndView editProblemsView(
+    		@PathVariable(value = "problemId") long problemId,
+            HttpServletRequest request, HttpServletResponse response) {
+    	Problem problem = problemService.getProblem(problemId);
+        Map<ProblemCategory, List<ProblemCategory>> problemCategories = getProblemCategories();
+    	
+        if ( problem == null ) {
+        	throw new ResourceNotFoundException();
+        }
+        List<Checkpoint> checkpoints = problemService.getCheckpointsUsingProblemId(problemId);
+        
+        ModelAndView view = new ModelAndView("administration/edit-problem");
+        view.addObject("problem", problem);
+        view.addObject("checkpoints", checkpoints);
+        view.addObject("problemCategories", problemCategories);
+        return view;
     }
     
     /**
