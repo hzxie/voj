@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.verwandlung.voj.web.mapper.CheckpointMapper;
 import org.verwandlung.voj.web.mapper.ProblemCategoryMapper;
 import org.verwandlung.voj.web.mapper.ProblemMapper;
+import org.verwandlung.voj.web.model.Checkpoint;
 import org.verwandlung.voj.web.model.Problem;
 import org.verwandlung.voj.web.model.ProblemCategory;
 
@@ -52,6 +53,16 @@ public class ProblemService {
             problemCategoryId = problemCategory.getProblemCategoryId();
         }
         return problemMapper.getProblemsUsingFilters(keyword, problemCategoryId, isPublicOnly, offset, limit);
+    }
+    
+    /**
+     * 获取某个试题的测试数据集.
+     * @param problemId - 试题的唯一标识符
+     * @return 某个试题的测试数据列表
+     */
+    public List<Checkpoint> getCheckpointsUsingProblemId(long problemId) {
+    	List<Checkpoint> checkpoints = checkpointMapper.getCheckpointsUsingProblemId(problemId);
+    	return checkpoints;
     }
     
     /**

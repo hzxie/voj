@@ -1,12 +1,13 @@
 <%@ page language="java" contentType="text/html; charset=utf-8" pageEncoding="utf-8"%>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <spring:eval expression="@propertyConfigurer.getProperty('url.cdn')" var="cdnUrl" />
 <!DOCTYPE html>
 <html lang="${language}">
 <head>
     <meta charset="UTF-8">
-    <title><spring:message code="voj.administration.new-problem.title" text="New Problem" /> | ${websiteName}</title>
+    <title><spring:message code="voj.administration.edit-problem.title" text="Edit Problem" /> | ${websiteName}</title>
     <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="${description}">
@@ -44,63 +45,64 @@
             <%@ include file="/WEB-INF/views/administration/include/header.jsp" %>
             <!-- Content -->
             <div id="content">
-                <h2 class="page-header"><i class="fa fa-file"></i> <spring:message code="voj.administration.new-problem.new-problem" text="New Problem" /></h2>
+                <h2 class="page-header"><i class="fa fa-file"></i> <spring:message code="voj.administration.edit-problem.edit-problem" text="Edit Problem" /></h2>
                 <form id="problem-form" onSubmit="onSubimt(); return false;">
                     <div class="row-fluid">
                         <div class="span8">
                             <div class="alert alert-error hide"></div> <!-- .alert-error -->
-                            <div class="alert alert-success hide"><spring:message code="voj.administration.new-problem.problem-created" text="The problem has been created successfully." /></div> <!-- .alert-success -->    
+                            <div class="alert alert-success hide"><spring:message code="voj.administration.edit-problem.problem-created" text="The problem has been created successfully." /></div> <!-- .alert-success -->    
                             <div class="control-group row-fluid">
-                                <label for="problem-name"><spring:message code="voj.administration.new-problem.problem-name" text="Problem Name" /></label>
-                                <input id="problem-name" class="span12" type="text" maxlength="128" />
+                                <label for="problem-name"><spring:message code="voj.administration.edit-problem.problem-name" text="Problem Name" /></label>
+                                <input id="problem-name" class="span12" type="text" maxlength="128" value="${problem.problemName}" />
+                                <input id="problem-id" type="hidden" value="${problem.problemId}" />
                             </div> <!-- .control-group -->
                             <div class="control-group row-fluid">
-                                <label for="time-limit"><spring:message code="voj.administration.new-problem.time-limit" text="Time Limit" /> (ms)</label>
-                                <input id="time-limit" class="span12" type="text" maxlength="8" />
+                                <label for="time-limit"><spring:message code="voj.administration.edit-problem.time-limit" text="Time Limit" /> (ms)</label>
+                                <input id="time-limit" class="span12" type="text" maxlength="8" value="${problem.timeLimit}" />
                             </div> <!-- .control-group -->
                             <div class="control-group row-fluid">
-                                <label for="memory-limit"><spring:message code="voj.administration.new-problem.memory-limit" text="Memory Limit" /> (KB)</label>
-                                <input id="memory-limit" class="span12" type="text" maxlength="8" />
+                                <label for="memory-limit"><spring:message code="voj.administration.edit-problem.memory-limit" text="Memory Limit" /> (KB)</label>
+                                <input id="memory-limit" class="span12" type="text" maxlength="8" value="${problem.memoryLimit}" />
                             </div> <!-- .control-group -->
                             <div class="row-fluid">
                                 <div class="span12">
-                                    <label for="wmd-input"><spring:message code="voj.administration.new-problem.problem-description" text="Description" /></label>    
+                                    <label for="wmd-input"><spring:message code="voj.administration.edit-problem.problem-description" text="Description" /></label>    
                                     <div id="markdown-editor">
                                         <div class="wmd-panel">
                                             <div id="wmd-button-bar"></div> <!-- #wmd-button-bar -->
-                                            <textarea id="wmd-input" class="wmd-input"></textarea>
+                                            <textarea id="wmd-input" class="wmd-input">${problem.description}</textarea>
                                         </div> <!-- .wmd-panel -->
                                         <div id="wmd-preview" class="wmd-panel wmd-preview"></div> <!-- .wmd-preview -->
                                     </div> <!-- #markdown-editor -->
                                 </div> <!-- .span12 -->
                             </div> <!-- .row-fluid -->
                             <div class="control-group row-fluid">
-                                <label for="hint"><spring:message code="voj.administration.new-problem.hint" text="Hint" /></label>
-                                <textarea id="hint" class="span12"></textarea>
+                                <label for="hint"><spring:message code="voj.administration.edit-problem.hint" text="Hint" /></label>
+                                <textarea id="hint" class="span12">${problem.hint}</textarea>
                             </div> <!-- .control-group -->
-                            <h4><spring:message code="voj.administration.new-problem.input-output" text="Input / Output" /></h4>
+                            <h4><spring:message code="voj.administration.edit-problem.input-output" text="Input / Output" /></h4>
                             <div class="control-group row-fluid">
-                                <label for="input-format"><spring:message code="voj.administration.new-problem.input-format" text="Input Format" /></label>
-                                <textarea id="input-format" class="span12"></textarea>
-                            </div> <!-- .control-group -->
-                            <div class="control-group row-fluid">
-                                <label for="output-format"><spring:message code="voj.administration.new-problem.output-format" text="Output Format" /></label>
-                                <textarea id="output-format" class="span12"></textarea>
+                                <label for="input-format"><spring:message code="voj.administration.edit-problem.input-format" text="Input Format" /></label>
+                                <textarea id="input-format" class="span12">${problem.inputFormat}</textarea>
                             </div> <!-- .control-group -->
                             <div class="control-group row-fluid">
-                                <label for="input-sample"><spring:message code="voj.administration.new-problem.input-sample" text="Input Sample" /></label>
-                                <textarea id="input-sample" class="span12"></textarea>
+                                <label for="output-format"><spring:message code="voj.administration.edit-problem.output-format" text="Output Format" /></label>
+                                <textarea id="output-format" class="span12">${problem.outputFormat}</textarea>
                             </div> <!-- .control-group -->
                             <div class="control-group row-fluid">
-                                <label for="output-sample"><spring:message code="voj.administration.new-problem.output-sample" text="Output Sample" /></label>
-                                <textarea id="output-sample" class="span12"></textarea>
+                                <label for="input-sample"><spring:message code="voj.administration.edit-problem.input-sample" text="Input Sample" /></label>
+                                <textarea id="input-sample" class="span12">${problem.sampleInput}</textarea>
+                            </div> <!-- .control-group -->
+                            <div class="control-group row-fluid">
+                                <label for="output-sample"><spring:message code="voj.administration.edit-problem.output-sample" text="Output Sample" /></label>
+                                <textarea id="output-sample" class="span12">${problem.sampleOutput}</textarea>
                             </div> <!-- .control-group -->
                             <div class="row-fluid">
                                 <div class="span6">
-                                    <h4><spring:message code="voj.administration.new-problem.test-cases" text="Test Cases" /></h4>
+                                    <h4><spring:message code="voj.administration.edit-problem.test-cases" text="Test Cases" /></h4>
                                 </div> <!-- .span6 -->
                                 <div class="span6 text-right">
-                                    <a id="new-test-case" title="<spring:message code="voj.administration.new-problem.new-test-case" text="New test case" />" href="javascript:void(0);">
+                                    <a id="new-test-case" title="<spring:message code="voj.administration.edit-problem.new-test-case" text="New test case" />" href="javascript:void(0);">
                                         <i class="fa fa-plus-circle"></i>
                                     </a>
                                 </div> <!-- .span6 -->
@@ -108,8 +110,38 @@
                             <div class="row-fluid">
                                 <div class="span12">
                                     <div id="test-cases">
-                                        <p id="no-test-cases"><spring:message code="voj.administration.new-problem.no-test-cases" text="No Test Cases." /></p>
-                                        <ul></ul>
+                                        <p id="no-test-cases"><spring:message code="voj.administration.edit-problem.no-test-cases" text="No Test Cases." /></p>
+                                        <ul>
+                                        <c:forEach var="checkpoint" items="${checkpoints}">
+                                            <li class="test-case">
+                                                <div class="header">
+                                                    <h5><spring:message code="voj.administration.edit-problem.test-case" text="Test Case" /> #${checkpoint.checkpointId}</h5>
+                                                    <ul class="inline">
+                                                        <li><a href="javascript:void(0);"><i class="fa fa-edit"></i></a></li>
+                                                        <li><a href="javascript:void(0);"><i class="fa fa-trash"></i></a></li>
+                                                    </ul>
+                                                </div> <!-- .header -->
+                                                <div class="body">
+                                                    <div class="row-fluid">
+                                                        <div class="span4">
+                                                            <label><spring:message code="voj.administration.edit-problem.standard-input" text="Standard Input" /></label>
+                                                        </div> <!-- .span4 -->
+                                                        <div class="span8">
+                                                            <textarea class="standard-input span12">${checkpoint.input}</textarea>
+                                                        </div> <!-- .span8 -->
+                                                    </div> <!-- .row-fluid -->
+                                                    <div class="row-fluid">
+                                                        <div class="span4">
+                                                            <label><spring:message code="voj.administration.edit-problem.standard-output" text="Standard Output" /></label>
+                                                        </div> <!-- .span4 -->
+                                                        <div class="span8">
+                                                            <textarea class="standard-output span12">${checkpoint.output}</textarea>
+                                                        </div> <!-- .span8 -->
+                                                    </div> <!-- .row-fluid -->
+                                                </div> <!-- .body -->
+                                            </li> <!-- .test-case -->
+                                        </c:forEach>
+                                        </ul>
                                     </div> <!-- #test-cases -->
                                 </div> <!-- .span12 -->
                             </div> <!-- .row-fluid -->
@@ -117,12 +149,12 @@
                         <div class="span4">
                             <div class="section">
                                 <div class="header">
-                                    <h5><spring:message code="voj.administration.new-problem.create-problem" text="Create Problem" /></h5>
+                                    <h5><spring:message code="voj.administration.edit-problem.edit-problem" text="Edit Problem" /></h5>
                                 </div> <!-- .header -->
                                 <div class="body">
                                     <div class="row-fluid">
                                         <div class="span8">
-                                            <spring:message code="voj.administration.new-problem.is-public" text="Public to Users?" />
+                                            <spring:message code="voj.administration.edit-problem.is-public" text="Public to Users?" />
                                         </div> <!--- .span8 -->
                                         <div class="span4 text-right">
                                             <input id="problem-is-public" type="checkbox" data-toggle="switch" checked="checked" />
@@ -130,7 +162,7 @@
                                     </div> <!-- .row-fluid -->
                                     <div class="row-fluid">
                                         <div class="span8">
-                                            <spring:message code="voj.administration.new-problem.test-case-exactly-match" text="Test Case Exactly Match" />
+                                            <spring:message code="voj.administration.edit-problem.test-case-exactly-match" text="Test Case Exactly Match" />
                                         </div> <!--- .span8 -->
                                         <div class="span4 text-right">
                                             <input id="problem-is-exactly-match" type="checkbox" data-toggle="switch" checked="checked" />
@@ -138,12 +170,12 @@
                                     </div> <!-- .row-fluid -->
                                 </div> <!-- .body -->
                                 <div class="footer text-right">
-                                    <button class="btn btn-primary"><spring:message code="voj.administration.new-problem.create-problem" text="Create Problem" /></button>
+                                    <button class="btn btn-primary"><spring:message code="voj.administration.edit-problem.update-problem" text="Update" /></button>
                                 </div> <!-- .footer -->
                             </div> <!-- .section -->
                             <div class="section">
                                 <div class="header">
-                                    <h5><spring:message code="voj.administration.new-problem.problem-categories" text="Categories" /></h5>
+                                    <h5><spring:message code="voj.administration.edit-problem.problem-categories" text="Categories" /></h5>
                                 </div> <!-- .header -->
                                 <div class="body">
                                     <c:forEach var="entry" items="${problemCategories}">
@@ -168,7 +200,7 @@
                             </div> <!-- .section -->
                             <div class="section">
                                 <div class="header">
-                                    <h5><spring:message code="voj.administration.new-problem.problem-tags" text="Tags" /></h5>
+                                    <h5><spring:message code="voj.administration.edit-problem.problem-tags" text="Tags" /></h5>
                                 </div> <!-- .header -->
                                 <div class="body">
                                     <input id="problem-tags" class="tagsinput" type="hidden" value="" />
@@ -185,6 +217,18 @@
     <%@ include file="/WEB-INF/views/administration/include/footer-script.jsp" %>
     <script type="text/javascript">
         $(function() {
+            // TODO: Load Problem Tags
+            var problemTags         = JSON.parse('[]'),
+                problemTagsValue    = '';
+            for ( var i = 0; i < problemTags.length; ++ i ) {
+                problemTagsValue += problemTags[i] + ',';
+            }
+
+        <c:if test="${fn:length(checkpoints) != 0}">
+            $('#no-test-cases').addClass('hide');
+        </c:if>
+
+            $('#problem-tags').val(problemTagsValue);
             $('.tagsinput').tagsInput();
             $('[data-toggle=switch]').wrap('<div class="switch" />').parent().bootstrapSwitch();
         });
@@ -229,10 +273,10 @@
         });
     </script>
     <script type="text/javascript">
-        function getTestCaseContainer(testCaseId) {
+        function getTestCaseContainer(testCaseId, standardInput, standardOutput) {
             var containerTemplate = '<li class="test-case">' +
                                     '    <div class="header">' +
-                                    '        <h5><spring:message code="voj.administration.new-problem.test-case" text="Test Case" /> #%s</h5>' +
+                                    '        <h5><spring:message code="voj.administration.edit-problem.test-case" text="Test Case" /> #%s</h5>' +
                                     '        <ul class="inline">' +
                                     '            <li><a href="javascript:void(0);"><i class="fa fa-edit"></i></a></li>' +
                                     '            <li><a href="javascript:void(0);"><i class="fa fa-trash"></i></a></li>' +
@@ -241,24 +285,26 @@
                                     '    <div class="body">' +
                                     '        <div class="row-fluid">' +
                                     '            <div class="span4">' +
-                                    '                <label><spring:message code="voj.administration.new-problem.standard-input" text="Standard Input" /></label>' +
+                                    '                <label><spring:message code="voj.administration.edit-problem.standard-input" text="Standard Input" /></label>' +
                                     '            </div> <!-- .span4 -->' +
                                     '            <div class="span8">' +
-                                    '                <textarea class="standard-input span12"></textarea>' + 
+                                    '                <textarea class="standard-input span12">%s</textarea>' + 
                                     '            </div> <!-- .span8 -->' +
                                     '        </div> <!-- .row-fluid -->' +
                                     '        <div class="row-fluid">' +
                                     '            <div class="span4">' +
-                                    '                <label><spring:message code="voj.administration.new-problem.standard-output" text="Standard Output" /></label>' +
+                                    '                <label><spring:message code="voj.administration.edit-problem.standard-output" text="Standard Output" /></label>' +
                                     '            </div> <!-- .span4 -->' +
                                     '            <div class="span8">' +
-                                    '                <textarea class="standard-output span12"></textarea>' + 
+                                    '                <textarea class="standard-output span12">%s</textarea>' + 
                                     '            </div> <!-- .span8 -->' +
                                     '        </div> <!-- .row-fluid -->' +
                                     '    </div> <!-- .body -->' +
                                     '</li> <!-- .test-case -->';
 
-            return containerTemplate.format(testCaseId);
+            return containerTemplate.format(testCaseId, 
+                typeof(standardInput) == 'undefined' ? '' : standardInput, 
+                typeof(standardOutput) == 'undefined' ? '' : standardOutput);
         }
     </script>
     <script type="text/javascript">
@@ -277,7 +323,7 @@
         $('#test-cases').delegate('i.fa-trash', 'click',function() {
             var testCaseContainer = $(this).parent().parent().parent().parent().parent(),
                 testCases         = $('li.test-case', '#test-cases').length,
-                testCaseName      = '<spring:message code="voj.administration.new-problem.test-case" text="Test Case" /> #%s';
+                testCaseName      = '<spring:message code="voj.administration.edit-problem.test-case" text="Test Case" /> #%s';
 
             $(testCaseContainer).remove();
             $('li.test-case', '#test-cases').each(function(index) {
