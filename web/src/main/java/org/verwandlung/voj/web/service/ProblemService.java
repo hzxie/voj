@@ -9,9 +9,11 @@ import org.springframework.transaction.annotation.Transactional;
 import org.verwandlung.voj.web.mapper.CheckpointMapper;
 import org.verwandlung.voj.web.mapper.ProblemCategoryMapper;
 import org.verwandlung.voj.web.mapper.ProblemMapper;
+import org.verwandlung.voj.web.mapper.ProblemTagMapper;
 import org.verwandlung.voj.web.model.Checkpoint;
 import org.verwandlung.voj.web.model.Problem;
 import org.verwandlung.voj.web.model.ProblemCategory;
+import org.verwandlung.voj.web.model.ProblemTag;
 
 /**
  * 试题类(Problem)的业务逻辑层.
@@ -56,16 +58,6 @@ public class ProblemService {
     }
     
     /**
-     * 获取某个试题的测试数据集.
-     * @param problemId - 试题的唯一标识符
-     * @return 某个试题的测试数据列表
-     */
-    public List<Checkpoint> getCheckpointsUsingProblemId(long problemId) {
-    	List<Checkpoint> checkpoints = checkpointMapper.getCheckpointsUsingProblemId(problemId);
-    	return checkpoints;
-    }
-    
-    /**
      * 获取试题的总数量.
      * @param keyword - 关键字
      * @param problemCategorySlug - 试题分类的唯一英文缩写
@@ -79,6 +71,24 @@ public class ProblemService {
             problemCategoryId = problemCategory.getProblemCategoryId();
         }
         return problemMapper.getNumberOfProblemsUsingFilters(keyword, problemCategoryId, isPublicOnly);
+    }
+    
+    /**
+     * 获取试题的分类列表.
+     * @param problemId - 试题的唯一标识符.
+     * @return 包含试题分类的列表
+     */
+    public List<ProblemCategory> getProblemCategoriesUsingProblemId(long problemId) {
+    	return problemCategoryMapper.getProblemCategoriesUsingProblemId(problemId);
+    }
+    
+    /**
+     * 获取试题的标签列表.
+     * @param problemId - 试题的唯一标识符.
+     * @return 包含试题标签的列表
+     */
+    public List<ProblemTag> getProblemTagsUsingProblemId(long problemId) {
+    	return problemTagMapper.getProblemTagUsingProblemId(problemId);
     }
     
     /**
@@ -109,6 +119,17 @@ public class ProblemService {
     
     /**
      * [此方法仅供管理员使用]
+     * 获取某个试题的测试数据集.
+     * @param problemId - 试题的唯一标识符
+     * @return 某个试题的测试数据列表
+     */
+    public List<Checkpoint> getCheckpointsUsingProblemId(long problemId) {
+    	List<Checkpoint> checkpoints = checkpointMapper.getCheckpointsUsingProblemId(problemId);
+    	return checkpoints;
+    }
+    
+    /**
+     * [此方法仅供管理员使用]
      * 删除指定的试题.
      * @param problemId - 试题的唯一标识符
      */
@@ -127,6 +148,12 @@ public class ProblemService {
      */
     @Autowired
     private ProblemCategoryMapper problemCategoryMapper;
+    
+    /**
+     * 自动注入的ProblemTagMapper对象.
+     */
+    @Autowired
+    private ProblemTagMapper problemTagMapper;
     
     /**
      * 自动注入的CheckpointMapper对象.
