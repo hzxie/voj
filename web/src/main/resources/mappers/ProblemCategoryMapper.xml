@@ -19,7 +19,7 @@
 		SELECT *
 		FROM voj_problem_categories
 	</select>
-	<select id="getProblemCategoryUsingId"
+	<select id="getProblemCategoryUsingCategoryId"
 		parameterType="int"
 		resultMap="ProblemCategoryResultMap"
 		useCache="true">
@@ -27,7 +27,16 @@
 		FROM voj_problem_categories
 		WHERE problem_category_id = #{problemCategoryId}
 	</select>
-	<select id="getProblemCategoryUsingSlug"
+	<select id="getProblemCategoriesUsingProblemId"
+		parameterType="long"
+		resultMap="ProblemCategoryResultMap"
+		useCache="true">
+		SELECT *
+		FROM voj_problem_category_relationships
+		NATURAL JOIN voj_problem_categories
+		WHERE problem_id = #{problemId}
+	</select>
+	<select id="getProblemCategoryUsingCategorySlug"
 		parameterType="String"
 		resultMap="ProblemCategoryResultMap"
 		useCache="true">

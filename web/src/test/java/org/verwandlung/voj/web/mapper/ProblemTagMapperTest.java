@@ -22,6 +22,20 @@ import org.verwandlung.voj.web.model.ProblemTag;
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class ProblemTagMapperTest {
 	/**
+	 *  测试用例: 测试getProblemTags()方法
+	 *  测试数据: N/a
+	 *  预期结果: 全部的试题标签列表
+	 */
+	public void testGetProblemTags() {
+		List<ProblemTag> problemTags = problemTagMapper.getProblemTags();
+		Assert.assertEquals(2, problemTags.size());
+		
+		ProblemTag firstTag = problemTags.get(0);
+		String tagSlug = firstTag.getProblemTagSlug();
+		Assert.assertEquals("greedy", tagSlug);
+	}
+	
+	/**
      * 测试用例: 测试getProblemTagUsingId(int)方法
      * 测试数据: 默认标签的唯一标识符
      * 预期结果: 返回默认标签的试题标签对象

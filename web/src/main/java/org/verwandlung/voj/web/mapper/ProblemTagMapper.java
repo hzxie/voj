@@ -14,6 +14,12 @@ import org.verwandlung.voj.web.model.ProblemTag;
 @CacheNamespace(implementation = org.mybatis.caches.ehcache.EhcacheCache.class)
 public interface ProblemTagMapper {
 	/**
+	 * 获取全部的试题标签.
+	 * @return 包含试题标签的列表
+	 */
+	public List<ProblemTag> getProblemTags();
+	
+	/**
      * 通过试题标签的唯一标识符获取试题标签对象.
      * @param problemTagId - 试题标签的唯一标识符
      * @return 预期的试题标签对象或空引用

@@ -12,6 +12,12 @@
 	</resultMap>
 
 	<!-- Methods -->
+	<select id="getProblemTags"
+		resultMap="ProblemTagResultMap"
+		useCache="true">
+		SELECT *
+		FROM voj_problem_tags
+	</select>
 	<select id="getProblemTagUsingTagId"
 		parameterType="long"
 		resultMap="ProblemTagResultMap"
