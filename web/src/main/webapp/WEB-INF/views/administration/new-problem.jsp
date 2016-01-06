@@ -156,7 +156,7 @@
                                             <c:forEach var="problemCategory" items="${entry.value}">
                                                 <li>
                                                     <label class="checkbox child-category" for="${problemCategory.problemCategorySlug}">
-                                                        <input id="${entry.key.problemCategorySlug}" type="checkbox" data-toggle="checkbox"> ${problemCategory.problemCategoryName}
+                                                        <input id="${problemCategory.problemCategorySlug}" type="checkbox" data-toggle="checkbox"> ${problemCategory.problemCategoryName}
                                                     </label>
                                                 </li>
                                             </c:forEach>

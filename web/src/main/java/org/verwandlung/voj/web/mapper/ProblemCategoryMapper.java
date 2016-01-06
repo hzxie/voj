@@ -27,7 +27,7 @@ public interface ProblemCategoryMapper {
     public ProblemCategory getProblemCategoryUsingCategoryId(int problemCategoryId);
     
     /**
-     * 获取试题的分类.
+     * 获取试题的分类列表.
      * @param problemId - 试题的唯一标识符.
      * @return 包含试题分类的列表
      */

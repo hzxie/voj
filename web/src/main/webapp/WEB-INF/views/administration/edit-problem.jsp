@@ -188,7 +188,7 @@
                                             <c:forEach var="problemCategory" items="${entry.value}">
                                                 <li>
                                                     <label class="checkbox child-category" for="${problemCategory.problemCategorySlug}">
-                                                        <input id="${entry.key.problemCategorySlug}" type="checkbox" data-toggle="checkbox"> ${problemCategory.problemCategoryName}
+                                                        <input id="${problemCategory.problemCategorySlug}" type="checkbox" data-toggle="checkbox"> ${problemCategory.problemCategoryName}
                                                     </label>
                                                 </li>
                                             </c:forEach>
@@ -203,7 +203,7 @@
                                     <h5><spring:message code="voj.administration.edit-problem.problem-tags" text="Tags" /></h5>
                                 </div> <!-- .header -->
                                 <div class="body">
-                                    <input id="problem-tags" class="tagsinput" type="hidden" value="" />
+                                    <input id="problem-tags" class="tagsinput" type="hidden" value="<c:forEach var="problemTag" items="${problemTags}">${problemTag.problemTagName},</c:forEach>" />
                                 </div> <!-- .body -->
                             </div> <!-- .section -->
                         </div> <!-- .span4 -->
@@ -217,18 +217,14 @@
     <%@ include file="/WEB-INF/views/administration/include/footer-script.jsp" %>
     <script type="text/javascript">
         $(function() {
-            // TODO: Load Problem Tags
-            var problemTags         = JSON.parse('[]'),
-                problemTagsValue    = '';
-            for ( var i = 0; i < problemTags.length; ++ i ) {
-                problemTagsValue += problemTags[i] + ',';
-            }
-
         <c:if test="${fn:length(checkpoints) != 0}">
             $('#no-test-cases').addClass('hide');
         </c:if>
 
-            $('#problem-tags').val(problemTagsValue);
+        <c:forEach var="problemCategory" items="${selectedProblemCategories}">
+            $('#${problemCategory.problemCategorySlug}').parent().addClass('checked');
+        </c:forEach>
+
             $('.tagsinput').tagsInput();
             $('[data-toggle=switch]').wrap('<div class="switch" />').parent().bootstrapSwitch();
         });

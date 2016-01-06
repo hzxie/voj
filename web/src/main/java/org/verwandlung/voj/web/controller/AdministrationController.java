@@ -30,6 +30,7 @@ import org.verwandlung.voj.web.model.Language;
 import org.verwandlung.voj.web.model.Option;
 import org.verwandlung.voj.web.model.Problem;
 import org.verwandlung.voj.web.model.ProblemCategory;
+import org.verwandlung.voj.web.model.ProblemTag;
 import org.verwandlung.voj.web.model.Submission;
 import org.verwandlung.voj.web.model.User;
 import org.verwandlung.voj.web.model.UserGroup;
@@ -462,17 +463,21 @@ public class AdministrationController {
     		@PathVariable(value = "problemId") long problemId,
             HttpServletRequest request, HttpServletResponse response) {
     	Problem problem = problemService.getProblem(problemId);
-        Map<ProblemCategory, List<ProblemCategory>> problemCategories = getProblemCategories();
     	
         if ( problem == null ) {
         	throw new ResourceNotFoundException();
         }
         List<Checkpoint> checkpoints = problemService.getCheckpointsUsingProblemId(problemId);
+        List<ProblemCategory> selectedProblemCategories = problemService.getProblemCategoriesUsingProblemId(problemId);
+        Map<ProblemCategory, List<ProblemCategory>> problemCategories = getProblemCategories();
+        List<ProblemTag> problemTags = problemService.getProblemTagsUsingProblemId(problemId);
         
         ModelAndView view = new ModelAndView("administration/edit-problem");
         view.addObject("problem", problem);
         view.addObject("checkpoints", checkpoints);
         view.addObject("problemCategories", problemCategories);
+        view.addObject("selectedProblemCategories", selectedProblemCategories);
+        view.addObject("problemTags", problemTags);
         return view;
     }
     
