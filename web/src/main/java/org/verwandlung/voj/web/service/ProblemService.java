@@ -47,7 +47,7 @@ public class ProblemService {
      * @return 试题列表(List<Problem>对象)
      */
     public List<Problem> getProblemsUsingFilters(long offset, String keyword, String problemCategorySlug, boolean isPublicOnly, int limit) {
-        ProblemCategory problemCategory = problemCategoryMapper.getProblemCategoryUsingSlug(problemCategorySlug);
+        ProblemCategory problemCategory = problemCategoryMapper.getProblemCategoryUsingCategorySlug(problemCategorySlug);
         int problemCategoryId = 0;
         if ( problemCategory != null ) {
             problemCategoryId = problemCategory.getProblemCategoryId();
@@ -73,7 +73,7 @@ public class ProblemService {
      * @return 试题的总数量
      */
     public long getNumberOfProblemsUsingFilters(String keyword, String problemCategorySlug, boolean isPublicOnly) {
-        ProblemCategory problemCategory = problemCategoryMapper.getProblemCategoryUsingSlug(problemCategorySlug);
+        ProblemCategory problemCategory = problemCategoryMapper.getProblemCategoryUsingCategorySlug(problemCategorySlug);
         int problemCategoryId = 0;
         if ( problemCategory != null ) {
             problemCategoryId = problemCategory.getProblemCategoryId();

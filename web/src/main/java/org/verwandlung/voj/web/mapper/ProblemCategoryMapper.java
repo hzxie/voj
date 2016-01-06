@@ -24,14 +24,21 @@ public interface ProblemCategoryMapper {
      * @param problemCategoryId - 试题分类的唯一标识符
      * @return 预期的试题分类对象或空引用
      */
-    public ProblemCategory getProblemCategoryUsingId(int problemCategoryId);
+    public ProblemCategory getProblemCategoryUsingCategoryId(int problemCategoryId);
+    
+    /**
+     * 获取试题的分类.
+     * @param problemId - 试题的唯一标识符.
+     * @return 包含试题分类的列表
+     */
+    public List<ProblemCategory> getProblemCategoriesUsingProblemId(long problemId);
     
     /**
      * 通过试题分类的唯一英文缩写获取试题分类对象.
      * @param problemCategorySlug - 试题分类的唯一英文缩写
      * @return 预期的试题分类对象或空引用
      */
-    public ProblemCategory getProblemCategoryUsingSlug(String problemCategorySlug);
+    public ProblemCategory getProblemCategoryUsingCategorySlug(String problemCategorySlug);
     
     /**
      * 创建试题分类对象.
