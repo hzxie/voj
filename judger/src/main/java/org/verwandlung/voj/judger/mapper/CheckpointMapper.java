@@ -27,6 +27,7 @@ public interface CheckpointMapper {
     @Results({
         @Result(property = "problemId", column = "problem_id"),
         @Result(property = "checkpointId", column = "checkpoint_id"),
+        @Result(property = "isExactlyMatch", column = "checkpoint_exactly_match"),
         @Result(property = "score", column = "checkpoint_score"),
         @Result(property = "input", column = "checkpoint_input"),
         @Result(property = "output", column = "checkpoint_output"),

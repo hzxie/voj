@@ -18,13 +18,15 @@ public class Checkpoint implements Serializable {
      * CheckPoint的构造函数.
      * @param problemId - 试题的唯一标识符
      * @param checkpointId - 测试点的唯一标识符
+     * @param isExactlyMatch - 是否精确匹配测试点
      * @param score - 测试点的分值
      * @param input - 测试点的标准输入
      * @param output - 测试点的标准输出
      */
-    public Checkpoint(long problemId, int checkpointId, int score, String input, String output) { 
+    public Checkpoint(long problemId, int checkpointId, boolean isExactlyMatch, int score, String input, String output) { 
         this.problemId = problemId;
         this.checkpointId = checkpointId;
+        this.isExactlyMatch = isExactlyMatch;
         this.score = score;
         this.input = input;
         this.output = output;
@@ -60,6 +62,22 @@ public class Checkpoint implements Serializable {
      */
     public void setCheckpointId(int checkpointId) {
         this.checkpointId = checkpointId;
+    }
+
+    /**
+     * 获取是否精确匹配测试点.
+     * @return 是否精确匹配测试点
+     */
+    public boolean isExactlyMatch() {
+        return isExactlyMatch;
+    }
+
+    /**
+     * 设置精确匹配测试点.
+     * @param isExactlyMatch - 是否精确匹配测试点
+     */
+    public void setExactlyMatch(boolean isExactlyMatch) {
+        this.isExactlyMatch = isExactlyMatch;
     }
 
     /**
@@ -127,6 +145,11 @@ public class Checkpoint implements Serializable {
      * 测试点的唯一标识符.
      */
     private int checkpointId;
+    
+    /**
+     * 是否精确匹配测试点.
+     */
+    private boolean isExactlyMatch;
     
     /**
      * 测试点分值.

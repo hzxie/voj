@@ -165,7 +165,7 @@
                                             <spring:message code="voj.administration.edit-problem.test-case-exactly-match" text="Test Case Exactly Match" />
                                         </div> <!--- .span8 -->
                                         <div class="span4 text-right">
-                                            <input id="problem-is-exactly-match" type="checkbox" data-toggle="switch" checked="checked" />
+                                            <input id="problem-is-exactly-match" type="checkbox" data-toggle="switch" />
                                         </div> <!-- .span4 -->
                                     </div> <!-- .row-fluid -->
                                 </div> <!-- .body -->
@@ -229,34 +229,17 @@
             $('[data-toggle=switch]').wrap('<div class="switch" />').parent().bootstrapSwitch();
         });
     </script>
-    <script type='text/x-mathjax-config'>
-        MathJax.Hub.Config({
-            tex2jax: {
-                inlineMath: [
-                    ['$','$'], 
-                    ['\\(','\\)']
-                ]
-            }
-        });
-    </script>
     <script type='text/javascript'>
-        $.getScript('https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML', function() {
-            MathJax.Hub.Register.StartupHook('End', function () {
-                $.getScript('${cdnUrl}/js/markdown.min.js', function() {
-                    converter = Markdown.getSanitizingConverter();
-                    editor    = new Markdown.Editor(converter);
-                    mjpd      = new MJPD();
-                    
-                    mjpd.Editing.prepareWmdForMathJax(editor, '', [['$', '$']]);
-                    editor.run();
+        $.getScript('${cdnUrl}/js/markdown.min.js', function() {
+            converter = Markdown.getSanitizingConverter();
+            editor    = new Markdown.Editor(converter);
+            editor.run();
 
-                    $('.markdown').each(function() {
-                        var plainContent    = $(this).text(),
-                            markdownContent = converter.makeHtml(plainContent.replace(/\\\n/g, '\\n'));
-                        
-                        $(this).html(markdownContent);
-                    });
-                });
+            $('.markdown').each(function() {
+                var plainContent    = $(this).text(),
+                    markdownContent = converter.makeHtml(plainContent.replace(/\\\n/g, '\\n'));
+                
+                $(this).html(markdownContent);
             });
         });
     </script>

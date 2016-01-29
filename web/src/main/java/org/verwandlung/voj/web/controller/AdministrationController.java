@@ -452,6 +452,56 @@ public class AdministrationController {
     }
     
     /**
+     * 处理用户创建试题的请求.
+     * @param problemName - 试题名称
+     * @param timeLimit - 时间限制
+     * @param memoryLimit - 内存占用限制
+     * @param description - 试题描述
+     * @param hint - 试题提示
+     * @param inputFormat - 输入格式
+     * @param outputFormat - 输出格式
+     * @param inputSample - 输入样例
+     * @param outputSample - 输出样例
+     * @param testCases - 测试用例(JSON 格式)
+     * @param problemCategories - 试题分类(JSON 格式)
+     * @param problemTags - 试题标签((JSON 格式)
+     * @param isPublic - 试题是否公开
+     * @param isExactlyMatch - 测试点是否精确匹配
+     * @param request - HttpServletRequest对象
+     * @return 包含试题创建结果的 Map<String, Boolean>对象
+     */
+    @RequestMapping(value = "/createProblem.action", method = RequestMethod.POST)
+    public @ResponseBody Map<String, Object> createProblemAction(
+    		@RequestParam(value = "problemName", required = true) String problemName,
+    		@RequestParam(value = "timeLimit", required = true, defaultValue="0") int timeLimit, 
+    		@RequestParam(value = "memoryLimit", required = true, defaultValue="0") int memoryLimit, 
+    		@RequestParam(value = "description", required = true) String description, 
+    		@RequestParam(value = "hint", required = true) String hint, 
+    		@RequestParam(value = "inputFormat", required = true) String inputFormat, 
+    		@RequestParam(value = "outputFormat", required = true) String outputFormat, 
+    		@RequestParam(value = "inputSample", required = true) String inputSample, 
+    		@RequestParam(value = "outputSample", required = true) String outputSample, 
+    		@RequestParam(value = "testCases", required = true) String testCases, 
+    		@RequestParam(value = "problemCategories", required = true) String problemCategories, 
+    		@RequestParam(value = "problemTags", required = true) String problemTags, 
+    		@RequestParam(value = "isPublic", required = true) boolean isPublic, 
+    		@RequestParam(value = "isExactlyMatch", required = true) boolean isExactlyMatch,
+            HttpServletRequest request) {
+        Map<String, Object> result = problemService.createProblem(problemName, timeLimit, memoryLimit, 
+                description, hint, inputFormat, outputFormat, inputSample, outputSample, testCases, 
+                problemCategories, problemTags, isPublic, isExactlyMatch);
+        
+        if ( (boolean) result.get("isSuccessful") ) {
+            long problemId = (Long) result.get("problemId");
+            String ipAddress = HttpRequestParser.getRemoteAddr(request);
+            
+            LOGGER.info(String.format("Problem: [ProblemId=%s] created by administrator at %s.", 
+                    new Object[] {problemId, ipAddress}));
+        }
+        return result;
+    }
+    
+    /**
      * 加载编辑试题页面.
      * @param problemId - 试题的唯一标识符
      * @param request - HttpServletRequest对象

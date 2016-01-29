@@ -45,7 +45,7 @@
             <!-- Content -->
             <div id="content">
                 <h2 class="page-header"><i class="fa fa-file"></i> <spring:message code="voj.administration.new-problem.new-problem" text="New Problem" /></h2>
-                <form id="problem-form" onSubmit="onSubimt(); return false;">
+                <form id="problem-form" onSubmit="onSubmit(); return false;">
                     <div class="row-fluid">
                         <div class="span8">
                             <div class="alert alert-error hide"></div> <!-- .alert-error -->
@@ -133,12 +133,12 @@
                                             <spring:message code="voj.administration.new-problem.test-case-exactly-match" text="Test Case Exactly Match" />
                                         </div> <!--- .span8 -->
                                         <div class="span4 text-right">
-                                            <input id="problem-is-exactly-match" type="checkbox" data-toggle="switch" checked="checked" />
+                                            <input id="problem-is-exactly-match" type="checkbox" data-toggle="switch" />
                                         </div> <!-- .span4 -->
                                     </div> <!-- .row-fluid -->
                                 </div> <!-- .body -->
                                 <div class="footer text-right">
-                                    <button class="btn btn-primary"><spring:message code="voj.administration.new-problem.create-problem" text="Create Problem" /></button>
+                                    <button class="btn btn-primary" type="submit"><spring:message code="voj.administration.new-problem.create-problem" text="Create Problem" /></button>
                                 </div> <!-- .footer -->
                             </div> <!-- .section -->
                             <div class="section">
@@ -189,34 +189,17 @@
             $('[data-toggle=switch]').wrap('<div class="switch" />').parent().bootstrapSwitch();
         });
     </script>
-    <script type='text/x-mathjax-config'>
-        MathJax.Hub.Config({
-            tex2jax: {
-                inlineMath: [
-                    ['$','$'], 
-                    ['\\(','\\)']
-                ]
-            }
-        });
-    </script>
     <script type='text/javascript'>
-        $.getScript('https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML', function() {
-            MathJax.Hub.Register.StartupHook('End', function () {
-                $.getScript('${cdnUrl}/js/markdown.min.js', function() {
-                    converter = Markdown.getSanitizingConverter();
-                    editor    = new Markdown.Editor(converter);
-                    mjpd      = new MJPD();
-                    
-                    mjpd.Editing.prepareWmdForMathJax(editor, '', [['$', '$']]);
-                    editor.run();
+        $.getScript('${cdnUrl}/js/markdown.min.js', function() {
+            converter = Markdown.getSanitizingConverter();
+            editor    = new Markdown.Editor(converter);
+            editor.run();
 
-                    $('.markdown').each(function() {
-                        var plainContent    = $(this).text(),
-                            markdownContent = converter.makeHtml(plainContent.replace(/\\\n/g, '\\n'));
-                        
-                        $(this).html(markdownContent);
-                    });
-                });
+            $('.markdown').each(function() {
+                var plainContent    = $(this).text(),
+                    markdownContent = converter.makeHtml(plainContent.replace(/\\\n/g, '\\n'));
+                
+                $(this).html(markdownContent);
             });
         });
     </script>
@@ -314,6 +297,117 @@
                 }
             }, 50);
         });
+    </script>
+    <script type="text/javascript">
+        function onSubmit() {
+            var problemName         = $('#problem-name').val(),
+                timeLimit           = $('#time-limit').val(),
+                memoryLimit         = $('#memory-limit').val(),
+                description         = $('#wmd-input').val(),
+                hint                = $('#hint').val(),
+                inputFormat         = $('#input-format').val(),
+                outputFormat        = $('#output-format').val(),
+                inputSample         = $('#input-sample').val(),
+                outputSample        = $('#output-sample').val(),
+                testCases           = getTestCases(),
+                problemCategories   = getProblemCategories(),
+                problemTags         = getProblemTags(),
+                isPublic            = $('#problem-is-public').parent().hasClass('switch-on'),
+                isExactlyMatch      = $('#problem-is-exactly-match').parent().hasClass('switch-on');
+
+            $('.alert-success', '#problem-form').addClass('hide');
+            $('.alert-error', '#problem-form').addClass('hide');
+            $('button[type=submit]', '#problem-form').attr('disabled', 'disabled');
+            $('button[type=submit]', '#problem-form').html('<spring:message code="voj.administration.new-problem.please-wait" text="Please wait..." />');
+
+            return createProblem(problemName, timeLimit, memoryLimit, description, hint, 
+                    inputFormat, outputFormat, inputSample, outputSample, testCases, 
+                    problemCategories, problemTags, isPublic, isExactlyMatch);
+        }
+    </script>
+    <script type="text/javascript">
+        function getTestCases() {
+            var testCases   = [];
+
+            $('li.test-case').each(function() {
+                var input   = $('.standard-input', $(this)).val(),
+                    output  = $('.standard-output', $(this)).val();
+
+                testCases.push({
+                    'input': input,
+                    'output': output
+                });
+            });
+            return JSON.stringify(testCases);
+        }
+    </script>
+    <script type="text/javascript">
+        function getProblemCategories() {
+            var problemCategories = [];
+
+            $('label.checked', '.parent-categories').each(function() {
+                problemCategories.push($(this).attr('for'));
+            });
+            return JSON.stringify(problemCategories);
+        }
+    </script>
+    <script type="text/javascript">
+        function getProblemTags() {
+            var problemTags = $('#problem-tags').val();
+
+            if ( problemTags == '' ) {
+                problemTags = [];
+            } else {
+                problemTags = problemTags.split(',');
+            }
+            return JSON.stringify(problemTags);
+        }
+    </script>
+    <script type="text/javascript">
+        function createProblem(problemName, timeLimit, memoryLimit, description, hint, inputFormat, outputFormat, 
+                    inputSample, outputSample, testCases, problemCategories, problemTags, isPublic, isExactlyMatch) {
+            var postData = {
+                'problemName': problemName,
+                'timeLimit': timeLimit,
+                'memoryLimit': memoryLimit,
+                'description': description,
+                'hint': hint,
+                'inputFormat': inputFormat,
+                'outputFormat': outputFormat,
+                'inputSample': inputSample,
+                'outputSample': outputSample,
+                'testCases': testCases,
+                'problemCategories': problemCategories,
+                'problemTags': problemTags,
+                'isPublic': isPublic,
+                'isExactlyMatch': isExactlyMatch
+            };
+
+            $.ajax({
+                type: 'POST',
+                url: '<c:url value="/administration/createProblem.action" />',
+                data: postData,
+                dataType: 'JSON',
+                success: function(result){
+                    return processCreateProblemResult(result);
+                }
+            });
+        }
+    </script>
+    <script type="text/javascript">
+        function processCreateProblemResult(result) {
+            if ( result['isSuccessful'] ) {
+                var problemId = result['problemId'];
+                window.location.href = '<c:url value="/administration/edit-problem/" />' + problemId;
+            } else {
+                var errorMessage  = '';
+
+                $('.alert-error', '#problem-form').html(errorMessage);
+                $('.alert-error', '#problem-form').removeClass('hide');
+            }
+            $('button[type=submit]', '#problem-form').removeAttr('disabled');
+            $('button[type=submit]', '#problem-form').html('<spring:message code="voj.administration.new-problem.create-problem" text="Create Problem" />');
+        }
     </script>
 </body>
 </html>
