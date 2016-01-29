@@ -32,13 +32,12 @@ public class OffensiveWordFilter {
         this.optionMapper = optionMapper;
         
         Option offensiveWordOption = optionMapper.getOption(OFFENSIVE_WORD_OPTION_KEY);
-        String optionValue = offensiveWordOption.getOptionValue();
+        JSONArray offensiveWordJson = new JSONArray();
         
-        JSONArray offensiveWordJson = JSON.parseArray(optionValue);
-        if ( offensiveWordJson == null ) {
-            offensiveWordJson = new JSONArray();
+        if ( offensiveWordOption != null ) {
+            String optionValue = offensiveWordOption.getOptionValue();
+            offensiveWordJson = JSON.parseArray(optionValue);
         }
-        
         List<String> offensiveWordList = new ArrayList<String>((int) (offensiveWordJson.size() * 1.5));
         for ( Object o : offensiveWordJson ) {
             offensiveWordList.add((String) o);
