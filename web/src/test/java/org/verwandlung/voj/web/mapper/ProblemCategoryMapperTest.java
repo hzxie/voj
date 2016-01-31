@@ -114,7 +114,7 @@ public class ProblemCategoryMapperTest {
     }
     
     /**
-     * 测试用例: createProblemCategory(ProblemCategory)方法
+     * 测试用例: 测试createProblemCategory(ProblemCategory)方法
      * 测试数据: 使用合法的数据集, 并且数据表中不存在相同的英文缩写
      * 预期结果: 数据插入操作成功完成
      */
@@ -125,7 +125,7 @@ public class ProblemCategoryMapperTest {
     }
     
     /**
-     * 测试用例: createProblemCategory(ProblemCategory)方法
+     * 测试用例: 测试createProblemCategory(ProblemCategory)方法
      * 测试数据: 使用不合法的数据集(过长的类别名称)
      * 预期结果: 抛出DataIntegrityViolationException异常
      */
@@ -136,7 +136,7 @@ public class ProblemCategoryMapperTest {
     }
     
     /**
-     * 测试用例: createProblemCategory(ProblemCategory)方法
+     * 测试用例: 测试createProblemCategory(ProblemCategory)方法
      * 测试数据: 使用合法的数据集, 但数据表中存在相同的英文缩写
      * 预期结果: 抛出DuplicateKeyException异常
      */
@@ -147,7 +147,50 @@ public class ProblemCategoryMapperTest {
     }
     
     /**
-     * 测试用例: updateProblemCategory(ProblemCategory)方法
+     * 测试用例: 测试createProblemCategoryRelationship(long, ProblemCategory)方法
+     * 测试数据: 使用存在的试题ID和试题分类对象
+     * 预期结果: 对应试题和试题分类的关系被成功创建
+     */
+    @Test
+    public void testCreateProblemCategoryRelationshipNormally() {
+        ProblemCategory problemCategory = problemCategoryMapper.getProblemCategoryUsingCategoryId(1);
+        problemCategoryMapper.createProblemCategoryRelationship(1002, problemCategory);
+    }
+    
+    /**
+     * 测试用例: 测试createProblemCategoryRelationship(long, ProblemCategory)方法
+     * 测试数据: 使用存在的不存在试题ID和存在的试题分类对象
+     * 预期结果: 抛出DataIntegrityViolationException异常
+     */
+    @Test(expected = org.springframework.dao.DataIntegrityViolationException.class)
+    public void testCreateProblemCategoryRelationshipUsingNotExistingProblemId() {
+        ProblemCategory problemCategory = problemCategoryMapper.getProblemCategoryUsingCategoryId(1);
+        problemCategoryMapper.createProblemCategoryRelationship(0, problemCategory);
+    }
+    
+    /**
+     * 测试用例: 测试createProblemCategoryRelationship(long, ProblemCategory)方法
+     * 测试数据: 使用存在的存在的试题ID和不存在的试题分类对象
+     * 预期结果: 抛出DataIntegrityViolationException异常
+     */
+    @Test(expected = org.springframework.dao.DataIntegrityViolationException.class)
+    public void testCreateProblemCategoryRelationshipUsingNotExistingProblemCategory() {
+        problemCategoryMapper.createProblemCategoryRelationship(1000, null);
+    }
+    
+    /**
+     * 测试用例: 测试createProblemCategoryRelationship(long, ProblemCategory)方法
+     * 测试数据: 使用存在的存在试题ID和存在的试题分类对象
+     * 预期结果: 抛出DuplicateKeyException异常
+     */
+    @Test(expected = org.springframework.dao.DuplicateKeyException.class)
+    public void testCreateProblemCategoryRelationshipUsingExistingProblemIdAndExistingProblemCategory() {
+        ProblemCategory problemCategory = problemCategoryMapper.getProblemCategoryUsingCategoryId(1);
+        problemCategoryMapper.createProblemCategoryRelationship(1000, problemCategory);
+    }
+    
+    /**
+     * 测试用例: 测试updateProblemCategory(ProblemCategory)方法
      * 测试数据: 使用合法的数据集, 且数据库中存在对应的记录
      * 预期结果: 数据更新操作成功完成
      */
@@ -165,7 +208,7 @@ public class ProblemCategoryMapperTest {
     }
     
     /**
-     * 测试用例: updateProblemCategory(ProblemCategory)方法
+     * 测试用例: 测试updateProblemCategory(ProblemCategory)方法
      * 测试数据: 使用不合法的数据集(过长的类别名称)
      * 预期结果: 抛出DataIntegrityViolationException异常
      */
@@ -179,7 +222,7 @@ public class ProblemCategoryMapperTest {
     }
 
     /**
-     * 测试用例: deleteProblemCategory(int)方法
+     * 测试用例: 测试deleteProblemCategory(int)方法
      * 测试数据: 存在的试题分类唯一标识符
      * 预期结果: 数据删除操作成功完成
      */
@@ -194,7 +237,7 @@ public class ProblemCategoryMapperTest {
     }
     
     /**
-     * 测试用例: deleteProblemCategory(int)方法
+     * 测试用例: 测试deleteProblemCategory(int)方法
      * 测试数据: 不存在的试题分类唯一标识符
      * 预期结果: 方法正常执行, 未影响数据表中的数据
      */

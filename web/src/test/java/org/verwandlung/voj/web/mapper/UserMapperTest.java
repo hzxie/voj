@@ -186,7 +186,7 @@ public class UserMapperTest {
      * 预期结果: 抛出org.springframework.dao.DataIntegrityViolationException异常
      */
     @Test(expected = org.springframework.dao.DataIntegrityViolationException.class)
-    public void testCreateUserUsingNotExistsLanguage() {
+    public void testCreateUserUsingTooLongUsername() {
         UserGroup userGroup = new UserGroup(1, "users", "Users");
         Language language = new Language(2, "text/x-c++", "C++", "g++ foo.cpp -o foo", "./foo");
         User user = new User("new-user-0xffffffff", "Password","noreply@zjhzxhz.com", userGroup, language);
@@ -200,7 +200,7 @@ public class UserMapperTest {
      * 预期结果: 抛出org.springframework.dao.DataIntegrityViolationException异常
      */
     @Test(expected = org.springframework.dao.DataIntegrityViolationException.class)
-    public void testCreateUserUsingTooLongUsername() {
+    public void testCreateUserUsingNotExistsLanguage() {
         UserGroup userGroup = new UserGroup(1, "users", "Users");
         Language language = new Language(0, "not-exists", "Not Exists", "Not Exists", "Not Exists");
         User user = new User("new-user-0xfe", "Password","noreply@zjhzxhz.com", userGroup, language);
