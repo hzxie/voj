@@ -48,6 +48,54 @@ public class CheckpointMapperTest {
     }
     
     /**
+     * 测试用例: 测试createCheckpoint(Checkpoint)方法
+     * 测试数据: 使用正常的数据集创建测试点
+     * 预期结果: 测试点被成功创建
+     */
+    @Test
+    public void testCreateCheckpointNormally() {
+         Checkpoint checkpoint = new Checkpoint(1000, 100, false, 10, "input", "output");
+         checkpointMapper.createCheckpoint(checkpoint);
+    }
+    
+    /**
+     * 测试用例: 测试createCheckpoint(Checkpoint)方法
+     * 测试数据: 使用重复的主键创建测试点
+     * 预期结果: 抛出DuplicateKeyException异常
+     */
+    @Test(expected = org.springframework.dao.DuplicateKeyException.class)
+    public void testCreateCheckpointUsingExistingProblemIdAndCheckpointId() {
+         Checkpoint checkpoint = new Checkpoint(1000, 0, false, 10, "input", "output");
+         checkpointMapper.createCheckpoint(checkpoint);
+    }
+    
+    /**
+     * 测试用例: 测试createCheckpoint(Checkpoint)方法
+     * 测试数据: 使用不存在的试题ID创建测试点
+     * 预期结果: 抛出DataIntegrityViolationException异常
+     */
+    @Test(expected = org.springframework.dao.DataIntegrityViolationException.class)
+    public void testCreateCheckpointUsingNotExistingProblemId() {
+         Checkpoint checkpoint = new Checkpoint(0, 100, false, 10, "input", "output");
+         checkpointMapper.createCheckpoint(checkpoint);
+    }
+    
+    /**
+     * 测试用例: 测试deleteCheckpoint(long)方法
+     * 测试数据: 使用存在的试题ID删除测试点
+     * 预期结果: 指定试题的全部测试点被删除
+     */
+    @Test
+    public void testDeleteCheckpointUsingExistsingProblemId() {
+        List<Checkpoint> checkpoints = checkpointMapper.getCheckpointsUsingProblemId(1000);
+        Assert.assertEquals(10, checkpoints.size());
+        
+        checkpointMapper.deleteCheckpoint(1000);
+        checkpoints = checkpointMapper.getCheckpointsUsingProblemId(1000);
+        Assert.assertEquals(0, checkpoints.size());
+    }
+    
+    /**
      * 待测试的CheckpointMapper对象.
      */
     @Autowired

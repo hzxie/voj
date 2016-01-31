@@ -53,6 +53,12 @@
 		INSERT INTO voj_problem_categories (problem_category_slug, problem_category_name, problem_category_parent_id) 
 		VALUES (#{problemCategorySlug}, #{problemCategoryName}, #{parentProblemCategoryId})
 	</insert>
+	<insert id="createProblemCategoryRelationship" 
+		parameterType="map"
+		flushCache="true">
+		INSERT INTO voj_problem_category_relationships (problem_id, problem_category_id) 
+		VALUES (#{problemId}, #{problemCategory.problemCategoryId})
+	</insert>
 	<update id="updateProblemCategory"
 		parameterType="org.verwandlung.voj.web.model.ProblemCategory"
 		flushCache="true">
@@ -65,5 +71,11 @@
 		flushCache="true">
 		DELETE FROM voj_problem_categories 
 		WHERE problem_category_id = #{problemCategoryId}
+	</delete>
+	<delete id="deleteProblemCategoryRelationship"
+		parameterType="long"
+		flushCache="true">
+		DELETE FROM voj_problem_category_relationships 
+		WHERE problem_id = #{problemId}
 	</delete>
 </mapper>

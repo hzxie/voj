@@ -3,7 +3,7 @@ package org.verwandlung.voj.web.mapper;
 import java.util.List;
 
 import org.apache.ibatis.annotations.CacheNamespace;
-
+import org.apache.ibatis.annotations.Param;
 import org.verwandlung.voj.web.model.ProblemCategory;
 
 /**
@@ -47,6 +47,13 @@ public interface ProblemCategoryMapper {
     public void createProblemCategory(ProblemCategory problemCategory);
     
     /**
+     * 创建试题及试题分类的关系.
+     * @param problemId - 试题的唯一标识符
+     * @param problemCategory - 试题分类对象
+     */
+    public void createProblemCategoryRelationship(@Param(value="problemId") long problemId, @Param(value="problemCategory") ProblemCategory problemCategory);
+    
+    /**
      * 更新试题分类对象.
      * @param problemCategory - 待更新的试题分类对象
      */
@@ -57,4 +64,10 @@ public interface ProblemCategoryMapper {
      * @param problemCategoryId - 待删除试题分类对象的唯一标识符
      */
     public void deleteProblemCategory(int problemCategoryId);
+    
+    /**
+     * 删除试题的全部分类关系.
+     * @param problemId - 试题的唯一标识符
+     */
+    public void deleteProblemCategoryRelationship(long problemId);
 }

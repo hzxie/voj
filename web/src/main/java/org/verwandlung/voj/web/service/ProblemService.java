@@ -232,6 +232,16 @@ public class ProblemService {
      */
     private void createProblemCategories(long problemId, String problemCategories) {
         JSONArray jsonArray = JSON.parseArray(problemCategories);
+        
+        if ( jsonArray.size() == 0 ) {
+            jsonArray.add("uncategorized");
+        }
+        for ( int i = 0; i < jsonArray.size(); ++ i ) {
+            String problemCategorySlug = jsonArray.getString(i);
+            ProblemCategory pc = problemCategoryMapper.getProblemCategoryUsingCategorySlug(problemCategorySlug);
+            
+            problemCategoryMapper.createProblemCategoryRelationship(problemId, pc);
+        }
     }
     
     /**
