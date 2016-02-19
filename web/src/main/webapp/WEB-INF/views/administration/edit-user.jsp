@@ -353,6 +353,10 @@
                 $('.alert-success').removeClass('hide');
             } else {
                 var errorMessage  = '';
+                
+                if ( !result['isUserExists'] ) {
+                    errorMessage  = '<spring:message code="voj.administration.edit-user.user-not-exists" text="User not exists." /><br>';
+                }
                 if ( !result['isPasswordEmpty'] && !result['isPasswordLegal'] ) {
                     errorMessage += '<spring:message code="voj.administration.edit-user.password-illegal" text="The length of password must between 6 and 16 characters." /><br>';
                 }
@@ -377,9 +381,6 @@
                 }
                 if ( !result['isAboutMeLegal'] ) {
                     errorMessage += '<spring:message code="voj.administration.edit-user.about-me-legal" text="The length of About Me CANNOT exceed 256 characters." /><br>';
-                }
-                if ( !result['isUserExists'] ) {
-                    errorMessage  = '<spring:message code="voj.administration.edit-user.user-not-exists" text="User not exists." /><br>';
                 }
                 $('.alert-error').html(errorMessage);
                 $('.alert-error').removeClass('hide');
