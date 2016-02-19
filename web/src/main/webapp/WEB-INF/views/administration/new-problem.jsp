@@ -49,7 +49,6 @@
                     <div class="row-fluid">
                         <div class="span8">
                             <div class="alert alert-error hide"></div> <!-- .alert-error -->
-                            <div class="alert alert-success hide"><spring:message code="voj.administration.new-problem.problem-created" text="The problem has been created successfully." /></div> <!-- .alert-success -->    
                             <div class="control-group row-fluid">
                                 <label for="problem-name"><spring:message code="voj.administration.new-problem.problem-name" text="Problem Name" /></label>
                                 <input id="problem-name" class="span12" type="text" maxlength="128" />
@@ -138,7 +137,7 @@
                                     </div> <!-- .row-fluid -->
                                 </div> <!-- .body -->
                                 <div class="footer text-right">
-                                    <button class="btn btn-primary" type="submit"><spring:message code="voj.administration.new-problem.create-problem" text="Create Problem" /></button>
+                                    <button class="btn btn-primary" type="submit"><spring:message code="voj.administration.new-problem.publish-problem" text="Publish" /></button>
                                 </div> <!-- .footer -->
                             </div> <!-- .section -->
                             <div class="section">
@@ -433,7 +432,7 @@
                 $('.alert-error', '#problem-form').removeClass('hide');
             }
             $('button[type=submit]', '#problem-form').removeAttr('disabled');
-            $('button[type=submit]', '#problem-form').html('<spring:message code="voj.administration.new-problem.create-problem" text="Create Problem" />');
+            $('button[type=submit]', '#problem-form').html('<spring:message code="voj.administration.new-problem.publish-problem" text="Publish" />');
         }
     </script>
 </body>

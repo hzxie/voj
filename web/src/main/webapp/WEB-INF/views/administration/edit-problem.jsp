@@ -46,11 +46,11 @@
             <!-- Content -->
             <div id="content">
                 <h2 class="page-header"><i class="fa fa-file"></i> <spring:message code="voj.administration.edit-problem.edit-problem" text="Edit Problem" /></h2>
-                <form id="problem-form" onSubmit="onSubimt(); return false;">
+                <form id="problem-form" onSubmit="onSubmit(); return false;">
                     <div class="row-fluid">
                         <div class="span8">
                             <div class="alert alert-error hide"></div> <!-- .alert-error -->
-                            <div class="alert alert-success hide"><spring:message code="voj.administration.edit-problem.problem-created" text="The problem has been created successfully." /></div> <!-- .alert-success -->    
+                            <div class="alert alert-success hide"><spring:message code="voj.administration.edit-problem.problem-edited" text="Problem updated." /></div> <!-- .alert-success -->    
                             <div class="control-group row-fluid">
                                 <label for="problem-name"><spring:message code="voj.administration.edit-problem.problem-name" text="Problem Name" /></label>
                                 <input id="problem-name" class="span12" type="text" maxlength="128" value="${problem.problemName}" />
@@ -339,6 +339,149 @@
                 }
             }, 50);
         });
+    </script>
+    <script type="text/javascript">
+        function onSubmit() {
+            var problemId           = $('#problem-id').val(),
+                problemName         = $('#problem-name').val(),
+                timeLimit           = $('#time-limit').val(),
+                memoryLimit         = $('#memory-limit').val(),
+                description         = $('#wmd-input').val(),
+                hint                = $('#hint').val(),
+                inputFormat         = $('#input-format').val(),
+                outputFormat        = $('#output-format').val(),
+                inputSample         = $('#input-sample').val(),
+                outputSample        = $('#output-sample').val(),
+                testCases           = getTestCases(),
+                problemCategories   = getProblemCategories(),
+                problemTags         = getProblemTags(),
+                isPublic            = $('#problem-is-public').parent().hasClass('switch-on'),
+                isExactlyMatch      = $('#problem-is-exactly-match').parent().hasClass('switch-on');
+
+            $('.alert-success', '#problem-form').addClass('hide');
+            $('.alert-error', '#problem-form').addClass('hide');
+            $('button[type=submit]', '#problem-form').attr('disabled', 'disabled');
+            $('button[type=submit]', '#problem-form').html('<spring:message code="voj.administration.edit-problem.please-wait" text="Please wait..." />');
+
+            return editProblem(problemId, problemName, timeLimit, memoryLimit, description, 
+                    hint, inputFormat, outputFormat, inputSample, outputSample, testCases, 
+                    problemCategories, problemTags, isPublic, isExactlyMatch);
+        }
+    </script>
+    <script type="text/javascript">
+        function getTestCases() {
+            var testCases   = [];
+
+            $('li.test-case').each(function() {
+                var input   = $('.standard-input', $(this)).val(),
+                    output  = $('.standard-output', $(this)).val();
+
+                testCases.push({
+                    'input': input,
+                    'output': output
+                });
+            });
+            return JSON.stringify(testCases);
+        }
+    </script>
+    <script type="text/javascript">
+        function getProblemCategories() {
+            var problemCategories = [];
+
+            $('label.checked', '.parent-categories').each(function() {
+                problemCategories.push($(this).attr('for'));
+            });
+            return JSON.stringify(problemCategories);
+        }
+    </script>
+    <script type="text/javascript">
+        function getProblemTags() {
+            var problemTags = $('#problem-tags').val();
+
+            if ( problemTags == '' ) {
+                problemTags = [];
+            } else {
+                problemTags = problemTags.split(',');
+            }
+            return JSON.stringify(problemTags);
+        }
+    </script>
+    <script type="text/javascript">
+        function editProblem(problemId, problemName, timeLimit, memoryLimit, description, hint, inputFormat, outputFormat, 
+                    inputSample, outputSample, testCases, problemCategories, problemTags, isPublic, isExactlyMatch) {
+            var postData = {
+                'problemId': problemId,
+                'problemName': problemName,
+                'timeLimit': timeLimit,
+                'memoryLimit': memoryLimit,
+                'description': description,
+                'hint': hint,
+                'inputFormat': inputFormat,
+                'outputFormat': outputFormat,
+                'inputSample': inputSample,
+                'outputSample': outputSample,
+                'testCases': testCases,
+                'problemCategories': problemCategories,
+                'problemTags': problemTags,
+                'isPublic': isPublic,
+                'isExactlyMatch': isExactlyMatch
+            };
+
+            $.ajax({
+                type: 'POST',
+                url: '<c:url value="/administration/editProblem.action" />',
+                data: postData,
+                dataType: 'JSON',
+                success: function(result){
+                    return processEditProblemResult(result);
+                }
+            });
+        }
+    </script>
+    <script type="text/javascript">
+        function processEditProblemResult(result) {
+            if ( result['isSuccessful'] ) {
+                $('.alert-error').addClass('hide');
+                $('.alert-success').removeClass('hide');
+            } else {
+                var errorMessage  = '';
+
+                if ( !result['isProblemExists'] ) {
+                    errorMessage += '<spring:message code="voj.administration.edit-problem.problem-not-exist" text="Problem not exists." /><br>';
+                } 
+                if ( result['isProblemNameEmpty'] ) {
+                    errorMessage += '<spring:message code="voj.administration.edit-problem.problem-name-empty" text="You can&acute;t leave Problem Name empty." /><br>';
+                } else if ( !result['isProblemNameLegal'] ) {
+                    errorMessage += '<spring:message code="voj.administration.edit-problem.problem-name-illegal" text="The length of Problem Name CANNOT exceed 128 characters." /><br>';
+                }
+                if ( !result['isTimeLimitLegal'] ) {
+                    errorMessage += '<spring:message code="voj.administration.edit-problem.time-limit-illegal" text="The Time Limit should be an integer greater than 0." /><br>';
+                } 
+                if ( !result['isMemoryLimitLegal'] ) {
+                    errorMessage += '<spring:message code="voj.administration.edit-problem.memory-limit-illegal" text="The Memory Limit should be an integer greater than 0." /><br>';
+                } 
+                if ( result['isDescriptionEmpty'] ) {
+                    errorMessage += '<spring:message code="voj.administration.edit-problem.description-empty" text="You can&acute;t leave Description empty." /><br>';
+                }
+                if ( result['isInputFormatEmpty'] ) {
+                    errorMessage += '<spring:message code="voj.administration.edit-problem.input-format-empty" text="You can&acute;t leave Input Format empty." /><br>';
+                } 
+                if ( result['isOutputFormatEmpty'] ) {
+                    errorMessage += '<spring:message code="voj.administration.edit-problem.output-format-empty" text="You can&acute;t leave Output Format empty." /><br>';
+                } 
+                if ( result['isInputSampleEmpty'] ) {
+                    errorMessage += '<spring:message code="voj.administration.edit-problem.input-sample-empty" text="You can&acute;t leave Input Sample empty." /><br>';
+                } 
+                if ( result['isOutputSampleEmpty'] ) {
+                    errorMessage += '<spring:message code="voj.administration.edit-problem.output-sample-empty" text="You can&acute;t leave Output Sample empty." /><br>';
+                } 
+
+                $('.alert-error', '#problem-form').html(errorMessage);
+                $('.alert-error', '#problem-form').removeClass('hide');
+            }
+            $('button[type=submit]', '#problem-form').removeAttr('disabled');
+            $('button[type=submit]', '#problem-form').html('<spring:message code="voj.administration.edit-problem.update-problem" text="Update" />');
+        }
     </script>
 </body>
 </html>
