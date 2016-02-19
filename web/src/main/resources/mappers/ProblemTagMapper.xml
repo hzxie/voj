@@ -71,4 +71,10 @@
 		DELETE FROM voj_problem_tags 
 		WHERE problem_tag_id = #{problemTagId}
 	</delete>
+	<delete id="deleteProblemTagRelationship"
+		parameterType="long"
+		flushCache="true">
+		DELETE FROM voj_problem_tag_relationships 
+		WHERE problem_id = #{problemId}
+	</delete>
 </mapper>

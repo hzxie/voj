@@ -64,4 +64,10 @@ public interface ProblemTagMapper {
      * @param problemTagId - 待删除试题标签对象的唯一标识符
      */
     public void deleteProblemTagUsingTagId(long problemTagId);
+
+    /**
+     * 删除试题的全部标签.
+     * @param problemId - 试题的唯一标识符
+     */
+    public void deleteProblemTagRelationship(long problemId);
 }
