@@ -543,6 +543,62 @@ public class AdministrationController {
     }
     
     /**
+     * 处理用户编辑试题的请求.
+     * @param problemName - 试题名称
+     * @param timeLimit - 时间限制
+     * @param memoryLimit - 内存占用限制
+     * @param description - 试题描述
+     * @param hint - 试题提示
+     * @param inputFormat - 输入格式
+     * @param outputFormat - 输出格式
+     * @param inputSample - 输入样例
+     * @param outputSample - 输出样例
+     * @param testCases - 测试用例(JSON 格式)
+     * @param problemCategories - 试题分类(JSON 格式)
+     * @param problemTags - 试题标签((JSON 格式)
+     * @param isPublic - 试题是否公开
+     * @param isExactlyMatch - 测试点是否精确匹配
+     * @param request - HttpServletRequest对象
+     * @return 包含试题编辑结果的 Map<String, Boolean>对象
+     */
+    @RequestMapping(value = "/editProblem.action", method = RequestMethod.POST)
+    public @ResponseBody Map<String, Boolean> editProblemAction(
+            @RequestParam(value = "problemId", required = true) long problemId,
+            @RequestParam(value = "problemName", required = true) String problemName,
+            @RequestParam(value = "timeLimit", required = true) String timeLimit, 
+            @RequestParam(value = "memoryLimit", required = true) String memoryLimit, 
+            @RequestParam(value = "description", required = true) String description, 
+            @RequestParam(value = "hint", required = true) String hint, 
+            @RequestParam(value = "inputFormat", required = true) String inputFormat, 
+            @RequestParam(value = "outputFormat", required = true) String outputFormat, 
+            @RequestParam(value = "inputSample", required = true) String inputSample, 
+            @RequestParam(value = "outputSample", required = true) String outputSample, 
+            @RequestParam(value = "testCases", required = true) String testCases, 
+            @RequestParam(value = "problemCategories", required = true) String problemCategories, 
+            @RequestParam(value = "problemTags", required = true) String problemTags, 
+            @RequestParam(value = "isPublic", required = true) boolean isPublic, 
+            @RequestParam(value = "isExactlyMatch", required = true) boolean isExactlyMatch,
+            HttpServletRequest request) {
+        if ( timeLimit.isEmpty() || !StringUtils.isNumeric(timeLimit) ) {
+            timeLimit = "-1";
+        }
+        if ( memoryLimit.isEmpty() || !StringUtils.isNumeric(memoryLimit) ) {
+            memoryLimit = "-1";
+        }
+        Map<String, Boolean> result = problemService.editProblem(problemId, problemName, Integer.parseInt(timeLimit), 
+                Integer.parseInt(memoryLimit), description, hint, inputFormat, outputFormat, inputSample, 
+                outputSample, testCases, problemCategories, problemTags, isPublic, isExactlyMatch);
+        
+        if ( result.get("isSuccessful") ) {
+            String ipAddress = HttpRequestParser.getRemoteAddr(request);
+            
+            LOGGER.info(String.format("Problem: [ProblemId=%s] edited by administrator at %s.", 
+                    new Object[] {problemId, ipAddress}));
+        }
+        return result;
+    }
+    
+    /**
      * 加载提交列表页面.
      * @param request - HttpServletRequest对象
      * @param response - HttpServletResponse对象

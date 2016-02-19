@@ -170,7 +170,7 @@
                                     </div> <!-- .row-fluid -->
                                 </div> <!-- .body -->
                                 <div class="footer text-right">
-                                    <button class="btn btn-primary"><spring:message code="voj.administration.edit-problem.update-problem" text="Update" /></button>
+                                    <button class="btn btn-primary" type="submit"><spring:message code="voj.administration.edit-problem.update-problem" text="Update" /></button>
                                 </div> <!-- .footer -->
                             </div> <!-- .section -->
                             <div class="section">
