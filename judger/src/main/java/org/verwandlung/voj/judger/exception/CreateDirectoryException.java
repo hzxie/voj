@@ -4,7 +4,7 @@ package org.verwandlung.voj.judger.exception;
  * 创建文件夹失败的IO异常.
  * 当java.io.File.File.mkdirs()返回false时被抛出.
  * 
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 public class CreateDirectoryException extends Exception {
     /**

@@ -7,7 +7,7 @@ import org.jsoup.safety.Whitelist;
 /**
  * HTML文本过滤组件.
  * 
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 public class HtmlTextFilter {
     /**

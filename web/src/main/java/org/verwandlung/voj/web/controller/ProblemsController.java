@@ -37,7 +37,7 @@ import org.verwandlung.voj.web.util.HttpSessionParser;
 /**
  * 处理用户的查看试题/提交评测等请求.
  * 
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 @Controller
 @RequestMapping(value = "/p")

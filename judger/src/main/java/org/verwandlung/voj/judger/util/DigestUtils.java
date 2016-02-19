@@ -6,7 +6,7 @@ import java.util.UUID;
 
 /**
  * 生成随机字符串类.
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 public class DigestUtils {
     /**

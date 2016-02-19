@@ -7,7 +7,7 @@ import org.springframework.context.ApplicationEvent;
 /**
  * 评测机心跳事件消息.
  * 
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 public class KeepAliveEvent extends ApplicationEvent {
     /**

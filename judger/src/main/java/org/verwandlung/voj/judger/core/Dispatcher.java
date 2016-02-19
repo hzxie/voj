@@ -27,7 +27,7 @@ import org.verwandlung.voj.judger.util.DigestUtils;
  * 用于完成评测机的评测流程.
  * 每个阶段结束后推送消息至消息队列; 评测结束后写入数据库.
  *
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 @Component
 public class Dispatcher {

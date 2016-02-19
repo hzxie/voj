@@ -11,7 +11,7 @@ import org.verwandlung.voj.judger.model.Problem;
 
 /**
  * Problem Data Access Object.
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 @CacheNamespace(implementation = org.mybatis.caches.ehcache.EhcacheCache.class)
 public interface ProblemMapper {

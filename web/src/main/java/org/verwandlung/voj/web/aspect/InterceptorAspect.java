@@ -20,7 +20,7 @@ import org.verwandlung.voj.web.service.UserService;
  * 拦截器的切面.
  * 用于完成系统的权限控制.
  * 
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 @Aspect
 public class InterceptorAspect {

@@ -6,7 +6,7 @@ import java.io.Serializable;
  * 试题分类的Model.
  * 对应数据库中的voj_problem_categories数据表.
  * 
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 public class ProblemCategory implements Serializable {
     /**

@@ -6,7 +6,7 @@ import java.util.UUID;
 
 /**
  * 加密函数类.
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 public class DigestUtils {
     /**

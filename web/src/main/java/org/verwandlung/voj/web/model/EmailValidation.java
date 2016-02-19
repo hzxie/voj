@@ -6,7 +6,7 @@ import java.util.Date;
 /**
  * 电子邮件验证类.
  * 
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 public class EmailValidation implements Serializable {
     /**

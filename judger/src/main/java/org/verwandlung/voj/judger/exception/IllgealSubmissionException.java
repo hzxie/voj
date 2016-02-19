@@ -4,7 +4,7 @@ package org.verwandlung.voj.judger.exception;
  * 无效的提交记录异常.
  * 当getSubmission(long)操作返回null时被抛出.
  * 
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 public class IllgealSubmissionException extends Exception {
     /**

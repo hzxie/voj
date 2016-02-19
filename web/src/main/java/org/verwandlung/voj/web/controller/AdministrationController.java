@@ -11,6 +11,7 @@ import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,7 +47,7 @@ import org.verwandlung.voj.web.util.SessionListener;
 /**
  * 用于处理系统管理的请求.
  * 
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 @Controller
 @RequestMapping(value = "/administration")
@@ -400,6 +401,10 @@ public class AdministrationController {
         
         for ( Long problemId : problemList ) {
             problemService.deleteProblem(problemId);
+            
+            String ipAddress = HttpRequestParser.getRemoteAddr(request);
+            LOGGER.info(String.format("Problem: [ProblemId=%s] deleted by administrator at %s.", 
+                    new Object[] {problemId, ipAddress}));
         }
         result.put("isSuccessful", true);
         return result;
@@ -473,8 +478,8 @@ public class AdministrationController {
     @RequestMapping(value = "/createProblem.action", method = RequestMethod.POST)
     public @ResponseBody Map<String, Object> createProblemAction(
     		@RequestParam(value = "problemName", required = true) String problemName,
-    		@RequestParam(value = "timeLimit", required = true, defaultValue="0") int timeLimit, 
-    		@RequestParam(value = "memoryLimit", required = true, defaultValue="0") int memoryLimit, 
+    		@RequestParam(value = "timeLimit", required = true) String timeLimit, 
+    		@RequestParam(value = "memoryLimit", required = true) String memoryLimit, 
     		@RequestParam(value = "description", required = true) String description, 
     		@RequestParam(value = "hint", required = true) String hint, 
     		@RequestParam(value = "inputFormat", required = true) String inputFormat, 
@@ -487,9 +492,15 @@ public class AdministrationController {
     		@RequestParam(value = "isPublic", required = true) boolean isPublic, 
     		@RequestParam(value = "isExactlyMatch", required = true) boolean isExactlyMatch,
             HttpServletRequest request) {
-        Map<String, Object> result = problemService.createProblem(problemName, timeLimit, memoryLimit, 
-                description, hint, inputFormat, outputFormat, inputSample, outputSample, testCases, 
-                problemCategories, problemTags, isPublic, isExactlyMatch);
+        if ( timeLimit.isEmpty() || !StringUtils.isNumeric(timeLimit) ) {
+            timeLimit = "-1";
+        }
+        if ( memoryLimit.isEmpty() || !StringUtils.isNumeric(memoryLimit) ) {
+            memoryLimit = "-1";
+        }
+        Map<String, Object> result = problemService.createProblem(problemName, Integer.parseInt(timeLimit), 
+                Integer.parseInt(memoryLimit), description, hint, inputFormat, outputFormat, inputSample, 
+                outputSample, testCases, problemCategories, problemTags, isPublic, isExactlyMatch);
         
         if ( (boolean) result.get("isSuccessful") ) {
             long problemId = (Long) result.get("problemId");
@@ -574,6 +585,10 @@ public class AdministrationController {
         
         for ( Long submissionId : submissionList ) {
             submissionService.deleteSubmission(submissionId);
+            
+            String ipAddress = HttpRequestParser.getRemoteAddr(request);
+            LOGGER.info(String.format("Submission: [SubmissionId=%s] deleted by administrator at %s.", 
+                    new Object[] {submissionId, ipAddress}));
         }
         result.put("isSuccessful", true);
         return result;

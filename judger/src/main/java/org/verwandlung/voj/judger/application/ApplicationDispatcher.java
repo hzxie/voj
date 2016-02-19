@@ -20,7 +20,7 @@ import org.verwandlung.voj.judger.model.Submission;
 /**
  * 应用程序调度器.
  * 
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 @Component
 public class ApplicationDispatcher {

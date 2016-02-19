@@ -15,7 +15,7 @@ import org.verwandlung.voj.judger.model.Submission;
 /**
  * 程序编译器, 用于编译用户提交的代码.
  * 
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 @Component
 public class Compiler {

@@ -402,6 +402,33 @@
             } else {
                 var errorMessage  = '';
 
+                if ( result['isProblemNameEmpty'] ) {
+                    errorMessage += '<spring:message code="voj.administration.new-problem.problem-name-empty" text="You can&acute;t leave Problem Name empty." /><br>';
+                } else if ( !result['isProblemNameLegal'] ) {
+                    errorMessage += '<spring:message code="voj.administration.new-problem.problem-name-illegal" text="The length of Problem Name CANNOT exceed 128 characters." /><br>';
+                }
+                if ( !result['isTimeLimitLegal'] ) {
+                    errorMessage += '<spring:message code="voj.administration.new-problem.time-limit-illegal" text="The Time Limit should be an integer greater than 0." /><br>';
+                } 
+                if ( !result['isMemoryLimitLegal'] ) {
+                    errorMessage += '<spring:message code="voj.administration.new-problem.memory-limit-illegal" text="The Memory Limit should be an integer greater than 0." /><br>';
+                } 
+                if ( result['isDescriptionEmpty'] ) {
+                    errorMessage += '<spring:message code="voj.administration.new-problem.description-empty" text="You can&acute;t leave Description empty." /><br>';
+                }
+                if ( result['isInputFormatEmpty'] ) {
+                    errorMessage += '<spring:message code="voj.administration.new-problem.input-format-empty" text="You can&acute;t leave Input Format empty." /><br>';
+                } 
+                if ( result['isOutputFormatEmpty'] ) {
+                    errorMessage += '<spring:message code="voj.administration.new-problem.output-format-empty" text="You can&acute;t leave Output Format empty." /><br>';
+                } 
+                if ( result['isInputSampleEmpty'] ) {
+                    errorMessage += '<spring:message code="voj.administration.new-problem.input-sample-empty" text="You can&acute;t leave Input Sample empty." /><br>';
+                } 
+                if ( result['isOutputSampleEmpty'] ) {
+                    errorMessage += '<spring:message code="voj.administration.new-problem.output-sample-empty" text="You can&acute;t leave Output Sample empty." /><br>';
+                } 
+
                 $('.alert-error', '#problem-form').html(errorMessage);
                 $('.alert-error', '#problem-form').removeClass('hide');
             }

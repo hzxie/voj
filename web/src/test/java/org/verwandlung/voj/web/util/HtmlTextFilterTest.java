@@ -5,7 +5,7 @@ import org.junit.Test;
 
 /**
  * TextFilter的测试类.
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 public class HtmlTextFilterTest {
     /**

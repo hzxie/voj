@@ -15,7 +15,7 @@ import org.verwandlung.voj.web.model.Checkpoint;
 /**
  * CheckpointMapper测试类.
  * 
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 @RunWith(SpringJUnit4ClassRunner.class)
 @Transactional

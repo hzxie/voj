@@ -18,7 +18,7 @@ import org.verwandlung.voj.web.exception.ResourceNotFoundException;
 /**
  * 异常处理的控制器.
  * 
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 @ControllerAdvice
 public class ExceptionHandlingController {

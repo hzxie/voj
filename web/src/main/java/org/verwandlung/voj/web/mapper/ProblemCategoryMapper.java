@@ -9,7 +9,7 @@ import org.verwandlung.voj.web.model.ProblemCategory;
 /**
  * ProblemCategory Data Access Object.
  * 
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 @CacheNamespace(implementation = org.mybatis.caches.ehcache.EhcacheCache.class)
 public interface ProblemCategoryMapper {

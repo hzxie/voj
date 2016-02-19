@@ -10,7 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * SensitiveWordFilter的测试类
- * @author Zhou YiHao
+ * @author YiHao Zhou
  */
 @RunWith(SpringJUnit4ClassRunner.class)
 @Transactional

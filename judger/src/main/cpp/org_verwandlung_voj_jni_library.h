@@ -1,6 +1,6 @@
 /**
  * Utility functions library.
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 #include <string>
 

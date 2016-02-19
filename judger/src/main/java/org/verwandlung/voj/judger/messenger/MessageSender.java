@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * 消息发送服务.
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 @Component
 public class MessageSender {

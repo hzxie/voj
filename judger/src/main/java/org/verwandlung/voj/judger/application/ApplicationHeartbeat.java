@@ -19,7 +19,7 @@ import org.verwandlung.voj.judger.util.DigestUtils;
  * 应用程序心跳.
  * 用于向Web模块发送Keep-Alive信息.
  * 
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 @Component
 public class ApplicationHeartbeat implements Runnable {

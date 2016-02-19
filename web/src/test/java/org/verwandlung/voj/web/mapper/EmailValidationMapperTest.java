@@ -15,7 +15,7 @@ import java.util.Date;
 /**
  * EmailValidationMapper的测试类.
  * 
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 @RunWith(SpringJUnit4ClassRunner.class)
 @Transactional

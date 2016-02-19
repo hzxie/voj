@@ -16,6 +16,7 @@ import org.verwandlung.voj.web.model.Checkpoint;
 import org.verwandlung.voj.web.model.Problem;
 import org.verwandlung.voj.web.model.ProblemCategory;
 import org.verwandlung.voj.web.model.ProblemTag;
+import org.verwandlung.voj.web.util.SlugifyUtils;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
@@ -23,7 +24,7 @@ import com.alibaba.fastjson.JSONObject;
 
 /**
  * 试题类(Problem)的业务逻辑层.
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 @Service
 @Transactional
@@ -168,6 +169,8 @@ public class ProblemService {
             long problemId = problem.getProblemId();
             createTestCases(problemId, testCases, isExactlyMatch);
             createProblemCategories(problemId, problemCategories);
+            System.out.println("[DEBUG] " + problemId);
+            System.out.println("[DEBUG] " + problemTags);
             createProblemTags(problemId, problemTags);
             
             result.put("problemId", problemId);
@@ -251,6 +254,19 @@ public class ProblemService {
      */
     private void createProblemTags(long problemId, String problemTags) {
         JSONArray jsonArray = JSON.parseArray(problemTags);
+        
+        for ( int i = 0; i < jsonArray.size(); ++ i ) {
+            String problemTagName = jsonArray.getString(i);
+            String problemTagSlug = SlugifyUtils.getSlug(problemTagName);
+            
+            ProblemTag pt = problemTagMapper.getProblemTagUsingTagSlug(problemTagSlug);
+            if ( pt == null ) {
+                pt = new ProblemTag(problemTagSlug, problemTagName);
+                problemTagMapper.createProblemTag(pt);
+            }
+            System.out.println("[DEBUG]" + pt);
+            problemTagMapper.createProblemTagRelationship(problemId, pt);
+        }
     }
     
     /**

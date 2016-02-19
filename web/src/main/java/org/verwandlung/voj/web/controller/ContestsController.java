@@ -11,7 +11,7 @@ import org.springframework.web.servlet.ModelAndView;
 /**
  * 处理比赛的相关请求.
  * 
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 @Controller
 @RequestMapping(value = "/contests")

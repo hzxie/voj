@@ -10,7 +10,7 @@ import org.springframework.web.servlet.support.RequestContextUtils;
 
 /**
  * Locale相关的辅助函数.
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 public class LocaleUtils {
     /**

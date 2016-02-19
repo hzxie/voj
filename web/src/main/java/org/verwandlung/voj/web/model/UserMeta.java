@@ -5,7 +5,7 @@ import java.io.Serializable;
 /**
  * 用户元信息.
  * 
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 public class UserMeta implements Serializable {
     /**

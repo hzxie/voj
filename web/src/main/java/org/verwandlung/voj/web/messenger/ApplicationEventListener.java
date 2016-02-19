@@ -22,7 +22,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
  * 应用程序事件监听器.
  * 负责将消息队列中的消息转发至控制器.
  * 
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 @Component
 public class ApplicationEventListener {

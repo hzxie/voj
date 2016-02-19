@@ -7,7 +7,7 @@ import java.util.Date;
  * 评测记录的Model.
  * 对应数据库中的voj_submissions数据表.
  * 
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 public class Submission implements Serializable {
     /**
