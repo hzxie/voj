@@ -18,7 +18,7 @@ import org.verwandlung.voj.web.model.Option;
  * 系统管理服务.
  * 用于完成整个系统的管理功能.
  * 
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 @Service
 @Transactional

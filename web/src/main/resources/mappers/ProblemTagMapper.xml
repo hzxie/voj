@@ -46,11 +46,17 @@
 	<insert id="createProblemTag" 
 		parameterType="org.verwandlung.voj.web.model.ProblemTag"
 		flushCache="true" 
-		keyProperty="ProblemTagId" 
+		keyProperty="problemTagId" 
 		keyColumn="problem_tag_id"
 		useGeneratedKeys="true">
 		INSERT INTO voj_problem_tags (problem_tag_slug, problem_tag_name) 
 		VALUES (#{problemTagSlug}, #{problemTagName})
+	</insert>
+	<insert id="createProblemTagRelationship" 
+		parameterType="map"
+		flushCache="true">
+		INSERT INTO voj_problem_tag_relationships (problem_id, problem_tag_id) 
+		VALUES (#{problemId}, #{problemTag.problemTagId})
 	</insert>
 	<update id="updateProblemTag"
 		parameterType="org.verwandlung.voj.web.model.ProblemTag"

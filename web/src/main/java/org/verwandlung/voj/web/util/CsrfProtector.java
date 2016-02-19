@@ -8,7 +8,7 @@ import javax.servlet.http.HttpSession;
  * CSRF防护服务.
  * 说明: Spring Security中所集成的服务过于复杂, 因此没有使用.
  * 
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 public class CsrfProtector {
     /**

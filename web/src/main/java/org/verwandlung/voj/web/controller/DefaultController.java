@@ -26,7 +26,7 @@ import org.verwandlung.voj.web.util.LocaleUtils;
 /**
  * 处理应用程序公共的请求.
  * 
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 @Controller
 @RequestMapping(value = "/")

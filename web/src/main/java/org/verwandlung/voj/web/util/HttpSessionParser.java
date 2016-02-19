@@ -10,7 +10,7 @@ import org.verwandlung.voj.web.service.UserService;
 
 /**
  * HttpSession解析器.
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 @Component
 public class HttpSessionParser {

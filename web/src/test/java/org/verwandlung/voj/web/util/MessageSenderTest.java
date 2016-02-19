@@ -14,7 +14,7 @@ import org.verwandlung.voj.web.messenger.MessageSender;
 /**
  * MessageSender的测试类.
  * 注意: 仅供开发调试使用.
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 /*
 @RunWith(SpringJUnit4ClassRunner.class)

@@ -36,7 +36,7 @@ import org.verwandlung.voj.web.util.HttpSessionParser;
 /**
  * 处理用户的登录/注册请求.
  * 
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 @Controller
 @RequestMapping(value = "/accounts")

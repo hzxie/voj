@@ -6,7 +6,7 @@ import java.io.Serializable;
  * 程序评测结果的Model.
  * 对应数据库中的voj_judge_results数据表.
  * 
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 public class JudgeResult implements Serializable {
     /**

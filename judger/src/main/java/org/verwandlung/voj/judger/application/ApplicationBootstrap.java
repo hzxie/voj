@@ -17,7 +17,7 @@ import org.verwandlung.voj.judger.model.Language;
 /**
  * 程序测评模块的加载器.
  * 
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 public class ApplicationBootstrap {
     /**

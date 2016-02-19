@@ -5,7 +5,7 @@ import java.io.Serializable;
 /**
  * 系统设置选项类.
  * 
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 public class Option implements Serializable {
     /**

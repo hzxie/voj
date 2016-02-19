@@ -8,7 +8,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
  * 用户的Model.
  * 对应数据库中的voj_users数据表.
  * 
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 public class User implements Serializable {
     /**

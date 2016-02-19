@@ -16,7 +16,7 @@ import org.verwandlung.voj.web.model.Language;
 
 /**
  * 编程语言类(Language)的业务逻辑层.
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 @Service
 @Transactional

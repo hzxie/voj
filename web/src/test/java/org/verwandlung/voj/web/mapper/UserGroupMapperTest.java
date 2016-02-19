@@ -14,7 +14,7 @@ import org.verwandlung.voj.web.model.UserGroup;
 
 /**
  * UserGroupMapper测试类.
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 @RunWith(SpringJUnit4ClassRunner.class)
 @Transactional

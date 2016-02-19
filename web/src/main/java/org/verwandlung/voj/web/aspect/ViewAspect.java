@@ -25,7 +25,7 @@ import org.verwandlung.voj.web.util.LocaleUtils;
 /**
  * 视图的切面类.
  * 在加载页面前加载已登录用户的个人信息及答题情况. 
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 @Aspect
 public class ViewAspect {

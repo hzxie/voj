@@ -7,7 +7,7 @@ import org.verwandlung.voj.web.util.DigestUtils;
 
 /**
  * DigestUtils的测试类.
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 public class DigestUtilsTest {
     /**

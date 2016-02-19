@@ -10,7 +10,7 @@ import org.apache.logging.log4j.Logger;
  * Session监听器.
  * 用于统计在线用户数据.
  * 
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 public class SessionListener implements HttpSessionListener {
     /**

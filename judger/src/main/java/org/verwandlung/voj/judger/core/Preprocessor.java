@@ -20,7 +20,7 @@ import org.verwandlung.voj.judger.model.Submission;
 /**
  * 预处理器, 用于完成评测前准备工作.
  * 
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 @Component
 public class Preprocessor {

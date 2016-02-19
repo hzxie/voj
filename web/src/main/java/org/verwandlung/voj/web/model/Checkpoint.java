@@ -6,7 +6,7 @@ import java.io.Serializable;
  * 程序测试点的Model.
  * 对应数据库中的voj_problem_checkpoints数据表.
  * 
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 public class Checkpoint implements Serializable {
     /**

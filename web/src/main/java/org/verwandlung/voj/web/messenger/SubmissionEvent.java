@@ -5,7 +5,7 @@ import org.springframework.context.ApplicationEvent;
 /**
  * 提交记录事件消息.
  * 
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 public class SubmissionEvent extends ApplicationEvent {
     /**

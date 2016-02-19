@@ -14,7 +14,7 @@ import org.verwandlung.voj.judger.application.ApplicationDispatcher;
 
 /**
  * 消息接收服务.
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 @Component
 public class MessageReceiver implements MessageListener {

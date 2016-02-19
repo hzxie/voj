@@ -3,13 +3,13 @@ package org.verwandlung.voj.web.mapper;
 import java.util.List;
 
 import org.apache.ibatis.annotations.CacheNamespace;
-
+import org.apache.ibatis.annotations.Param;
 import org.verwandlung.voj.web.model.ProblemTag;
 
 /**
  * ProblemTag Data Access Object.
  * 
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 @CacheNamespace(implementation = org.mybatis.caches.ehcache.EhcacheCache.class)
 public interface ProblemTagMapper {
@@ -45,6 +45,13 @@ public interface ProblemTagMapper {
      * @param problemTag - 待创建的试题标签对象
      */
     public void createProblemTag(ProblemTag problemTag);
+
+    /**
+     * 创建试题及试题标签的关系.
+     * @param problemId - 试题的唯一标识符
+     * @param problemTag - 试题标签对象
+     */
+    public void createProblemTagRelationship(@Param(value="problemId") long problemId, @Param(value="problemTag") ProblemTag problemTag);
     
     /**
      * 更新试题标签对象.

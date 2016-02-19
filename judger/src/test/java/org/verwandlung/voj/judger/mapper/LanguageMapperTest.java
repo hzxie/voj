@@ -15,7 +15,7 @@ import org.verwandlung.voj.judger.model.Language;
 /**
  * LanguageMapper测试类.
  * 
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 @RunWith(SpringJUnit4ClassRunner.class)
 @Transactional

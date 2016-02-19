@@ -12,7 +12,7 @@ import org.verwandlung.voj.judger.model.Submission;
 
 /**
  * SubmissionMapper测试类.
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 @RunWith(SpringJUnit4ClassRunner.class)
 @Transactional

@@ -12,7 +12,7 @@ import java.io.IOException;
 /**
  * 用于比对用户输出结果和标准结果.
  * 
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 @Component
 public class Comparator {

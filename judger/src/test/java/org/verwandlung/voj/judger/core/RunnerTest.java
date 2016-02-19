@@ -17,7 +17,7 @@ import org.verwandlung.voj.judger.model.Submission;
 /**
  * 程序执行器的测试类.
  * 
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 @RunWith(SpringJUnit4ClassRunner.class)
 @Transactional

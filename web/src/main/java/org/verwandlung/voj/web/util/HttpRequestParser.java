@@ -4,7 +4,7 @@ import javax.servlet.http.HttpServletRequest;
 
 /**
  * Http请求头解析服务.
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 public class HttpRequestParser {
     /**

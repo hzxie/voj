@@ -31,7 +31,7 @@ import org.verwandlung.voj.web.util.HttpSessionParser;
 /**
  * 加载/显示评测的相关信息.
  * 
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 @Controller
 @RequestMapping(value = "/submission")

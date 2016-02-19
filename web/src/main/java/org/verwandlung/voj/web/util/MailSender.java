@@ -20,7 +20,7 @@ import org.springframework.ui.velocity.VelocityEngineUtils;
 /**
  * 电子邮件发送服务.
  * 
- * @author Xie Haozhe
+ * @author Haozhe Xie
  */
 @Component
 public class MailSender {
