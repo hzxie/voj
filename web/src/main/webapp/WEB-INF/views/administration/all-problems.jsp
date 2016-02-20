@@ -93,6 +93,8 @@
                             <th class="problem-id">#</th>
                             <th class="problem-is-public"><spring:message code="voj.administration.all-problems.is-public" text="Public/Private" /></th>
                             <th class="problem-name"><spring:message code="voj.administration.all-problems.problem-name" text="Problem Name" /></th>
+                            <th class="problem-categories"><spring:message code="voj.administration.all-problems.problem-categories" text="Categories" /></th>
+                            <th class="problem-tags"><spring:message code="voj.administration.all-problems.problem-tags" text="Tags" /></th>
                             <th class="total-submission"><spring:message code="voj.administration.all-problems.total-submissions" text="Total Submissions" /></th>
                             <th class="accpeted-submission"><spring:message code="voj.administration.all-problems.accpeted-submissions" text="Accpeted Submissions" /></th>
                         </tr>
@@ -115,6 +117,8 @@
                             </c:choose>
                             </td>
                             <td class="problem-name">${problem.problemName}</td>
+                            <td class="problem-categories"></td>
+                            <td class="problem-tags"></td>
                             <td class="total-submission">${problem.totalSubmission}</td>
                             <td class="accpeted-submission">${problem.acceptedSubmission}</td>
                         </tr>

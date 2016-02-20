@@ -7,7 +7,7 @@
 <html lang="${language}">
 <head>
     <meta charset="UTF-8">
-    <title><spring:message code="voj.administration.edit-problem.title" text="Edit Problem" /> | ${websiteName}</title>
+    <title><spring:message code="voj.administration.edit-problem.title" text="Edit Problem" /> - ${problem.problemName} | ${websiteName}</title>
     <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="${description}">
@@ -50,7 +50,7 @@
                     <div class="row-fluid">
                         <div class="span8">
                             <div class="alert alert-error hide"></div> <!-- .alert-error -->
-                            <div class="alert alert-success hide"><spring:message code="voj.administration.edit-problem.problem-edited" text="Problem updated." /></div> <!-- .alert-success -->    
+                            <div class="alert alert-success hide"><spring:message code="voj.administration.edit-problem.problem-edited" text="Problem updated." /> <a href="<c:url value="/p/" />${problem.problemId}"><spring:message code="voj.administration.edit-problem.view-problem" text="View problem" /></a></div> <!-- .alert-success -->    
                             <div class="control-group row-fluid">
                                 <label for="problem-name"><spring:message code="voj.administration.edit-problem.problem-name" text="Problem Name" /></label>
                                 <input id="problem-name" class="span12" type="text" maxlength="128" value="${problem.problemName}" />

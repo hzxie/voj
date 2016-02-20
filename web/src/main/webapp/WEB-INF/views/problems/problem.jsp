@@ -82,7 +82,7 @@
                                 <p><strong><spring:message code="voj.problems.problem.memory-limit" text="Memory Limit" />: </strong>${problem.memoryLimit} KB</p>
                             </div> <!-- .description -->
                         </div> <!-- .section -->
-                        <c:if test="${problem.hint != null}">
+                        <c:if test="${problem.hint != null and problem.hint != ''}">
                         <div class="section">
                             <h4><spring:message code="voj.problems.problem.hint" text="Hint" /></h4>
                             <div class="description markdown">${problem.hint.replace("<", "&lt;").replace(">", "&gt;")}</div> <!-- .description -->

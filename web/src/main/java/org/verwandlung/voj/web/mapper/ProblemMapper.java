@@ -44,6 +44,17 @@ public interface ProblemMapper {
      * @return 最后一个试题的ID
      */
     public long getUpperBoundOfProblems();
+
+    /**
+     * 获取某个试题区间内最后一个试题的ID.
+     * @param isPublicOnly - 是否只筛选公开试题
+     * @param offset - 试题唯一标识符的起始编号
+     * @param limit - 需要获取的试题的数量
+     * @return 某个试题区间内最后一个试题的ID
+     */
+    public long getUpperBoundOfProblemsWithLimit(
+        @Param("isPublicOnly") boolean isPublicOnly,
+        @Param("problemId") long offset, @Param("limit") int limit);
     
     /**
      * 通过试题唯一标识符获取试题对象.

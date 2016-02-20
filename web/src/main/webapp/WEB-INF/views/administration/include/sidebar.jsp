@@ -35,7 +35,6 @@
                             <li class="nav-item secondary-nav-item"><a href="<c:url value="/administration/all-problems" />"><spring:message code="voj.administration.include.sidebar.all-problems" text="All Problems" /></a></li>
                             <li class="nav-item secondary-nav-item"><a href="<c:url value="/administration/new-problem" />"><spring:message code="voj.administration.include.sidebar.new-problem" text="New Problem" /></a></li>
                             <li class="nav-item secondary-nav-item"><a href="<c:url value="/administration/problem-categories" />"><spring:message code="voj.administration.include.sidebar.problem-categories" text="Categories" /></a></li>
-                            <li class="nav-item secondary-nav-item"><a href="<c:url value="/administration/problem-tags" />"><spring:message code="voj.administration.include.sidebar.problem-tags" text="Tags" /></a></li>
                             <li class="nav-item secondary-nav-item hide"><a href="<c:url value="/administration/edit-problem" />"><spring:message code="voj.administration.include.sidebar.edit-problem" text="Edit Problem" /></a></li>
                         </ul>
                     </li>

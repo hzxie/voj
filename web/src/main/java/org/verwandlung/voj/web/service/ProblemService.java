@@ -40,6 +40,17 @@ public class ProblemService {
     }
     
     /**
+     * 获取试题的结束编号.
+     * @param isPublicOnly - 是否只筛选公开试题
+     * @param offset - 试题唯一标识符的起始序号
+     * @param limit - 每次加载试题的数量
+     * @return 试题的结束编号
+     */
+    public long getLastIndexOfProblems(boolean isPublicOnly, long offset, int limit) {
+        return problemMapper.getUpperBoundOfProblemsWithLimit(isPublicOnly, offset, limit);
+    }
+    
+    /**
      * 通过试题的唯一标识符获取试题的详细信息.
      * @param problemId - 试题的唯一标识符
      * @return 试题的详细信息
