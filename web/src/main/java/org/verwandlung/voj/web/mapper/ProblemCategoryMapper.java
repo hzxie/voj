@@ -32,6 +32,14 @@ public interface ProblemCategoryMapper {
      * @return 包含试题分类的列表
      */
     public List<ProblemCategory> getProblemCategoriesUsingProblemId(long problemId);
+
+    /**
+     * 获取某个区间内各试题的分类.
+     * @param problemIdLowerBound - 试题ID区间的下界
+     * @param problemIdUpperBound - 试题ID区间的上界
+     * @return 包含试题分类信息的列表
+     */
+    public List<ProblemCategory> getProblemCategoriesOfProblems(long problemIdLowerBound, long problemIdUpperBound);
     
     /**
      * 通过试题分类的唯一英文缩写获取试题分类对象.

@@ -59,6 +59,21 @@
 		SELECT MAX(problem_id) 
 		FROM voj_problems
 	</select>
+	<select id="getUpperBoundOfProblemsWithLimit" 
+		parameterType="map"
+		resultType="long"
+		useCache="true">
+		SELECT MAX(problem_id)
+		FROM (
+			SELECT problem_id
+			FROM voj_problems
+			WHERE problem_id >= #{problemId}
+			<if test="isPublicOnly == true">
+				AND problem_is_public = 1
+			</if>
+			LIMIT #{limit}
+		) p
+	</select>
 	<select id="getProblem" 
 		parameterType="long"
 		resultMap="ProblemResultMap"

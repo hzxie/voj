@@ -30,7 +30,7 @@ public class ProblemCategoryMapperTest {
 	public void testGetProblemCategories() {
 		List<ProblemCategory> problemCategories = problemCategoryMapper.getProblemCategories();
 		Assert.assertNotNull(problemCategories);
-		Assert.assertEquals(1, problemCategories.size());
+		Assert.assertEquals(2, problemCategories.size());
 		
 		ProblemCategory firstProblemCategory = problemCategories.get(0);
 		String problemCategoryName = firstProblemCategory.getProblemCategoryName();
@@ -68,9 +68,9 @@ public class ProblemCategoryMapperTest {
      * 预期结果: 返回试题的全部试题标签列表
      */
     @Test
-    public void testGetProblemTagUsingProblemIdExists() {
+    public void testGetProblemCategoriesUsingProblemIdExists() {
     	List<ProblemCategory> problemCategories = problemCategoryMapper.getProblemCategoriesUsingProblemId(1000);
-    	Assert.assertEquals(1, problemCategories.size());
+    	Assert.assertEquals(2, problemCategories.size());
     	
     	ProblemCategory problemCategory = problemCategories.get(0);
     	String problemCategorySlug = problemCategory.getProblemCategorySlug();
@@ -83,7 +83,7 @@ public class ProblemCategoryMapperTest {
      * 预期结果: 返回空的试题标签列表
      */
     @Test
-    public void testGetProblemTagUsingProblemIdNotExists() {
+    public void testGetProblemCategoriesUsingProblemIdNotExists() {
     	List<ProblemCategory> problemCategories = problemCategoryMapper.getProblemCategoriesUsingProblemId(0);
     	Assert.assertEquals(0, problemCategories.size());
     }
@@ -153,7 +153,7 @@ public class ProblemCategoryMapperTest {
      */
     @Test
     public void testCreateProblemCategoryRelationshipNormally() {
-        ProblemCategory problemCategory = problemCategoryMapper.getProblemCategoryUsingCategoryId(1);
+        ProblemCategory problemCategory = problemCategoryMapper.getProblemCategoryUsingCategoryId(2);
         problemCategoryMapper.createProblemCategoryRelationship(1002, problemCategory);
     }
     

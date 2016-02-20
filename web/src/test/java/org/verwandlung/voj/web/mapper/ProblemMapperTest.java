@@ -28,7 +28,7 @@ public class ProblemMapperTest {
     @Test
     public void testGetNumberOfProblems() {
         long totalProblems = problemMapper.getNumberOfProblems();
-        Assert.assertEquals(3, totalProblems);
+        Assert.assertEquals(4, totalProblems);
     }
     
     /**
@@ -39,7 +39,7 @@ public class ProblemMapperTest {
     @Test
     public void testGetNumberOfPublicProblems() {
         long totalProblems = problemMapper.getNumberOfProblemsUsingFilters(null, 0, true);
-        Assert.assertEquals(2, totalProblems);
+        Assert.assertEquals(3, totalProblems);
     }
     
     /**
@@ -61,9 +61,31 @@ public class ProblemMapperTest {
     @Test
     public void testGetUpperBoundOfProblems() {
         long upperBoundOfProblems = problemMapper.getUpperBoundOfProblems();
+        Assert.assertEquals(1003, upperBoundOfProblems);
+    }
+
+    /**
+     * 测试用例: 测试getUpperBoundOfProblemsWithLimit(boolean, long, int)方法
+     * 测试数据: 获取ID从1000起始的3道试题
+     * 预期结果: 最后一题的ID为1002
+     */
+    @Test
+    public void testGetUpperBoundOfProblemsWithLimitFrom1000WithLimit3() {
+        long upperBoundOfProblems = problemMapper.getUpperBoundOfProblemsWithLimit(false, 1000, 3);
         Assert.assertEquals(1002, upperBoundOfProblems);
     }
-    
+
+    /**
+     * 测试用例: 测试getUpperBoundOfProblemsWithLimit(boolean, long, int)方法
+     * 测试数据: 获取ID从1000起始的3道公开试题
+     * 预期结果: 最后一题的ID为1003
+     */
+    @Test
+    public void testGetUpperBoundOfPublicProblemsWithLimitFrom1000WithLimit3() {
+        long upperBoundOfProblems = problemMapper.getUpperBoundOfProblemsWithLimit(true, 1000, 3);
+        Assert.assertEquals(1003, upperBoundOfProblems);
+    }
+
     /**
      * 测试用例: 测试getProblem()方法
      * 测试数据: 使用A+B Problem的试题唯一标识符
@@ -100,7 +122,7 @@ public class ProblemMapperTest {
     @Test
     public void testGetProblemsFrom1000WithLimit10() {
         List<Problem> problems = problemMapper.getProblemsUsingFilters(null, 0, true, 1000, 10);
-        Assert.assertEquals(2, problems.size());
+        Assert.assertEquals(3, problems.size());
         
         Problem firstProblem = problems.get(0);
         long problemId = firstProblem.getProblemId();

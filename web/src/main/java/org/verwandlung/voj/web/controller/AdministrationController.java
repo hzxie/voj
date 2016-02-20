@@ -368,6 +368,7 @@ public class AdministrationController {
     public ModelAndView allProblemsView(
             @RequestParam(value = "keyword", required = false, defaultValue = "") String keyword,
             @RequestParam(value = "problemCategory", required = false, defaultValue = "") String problemCategorySlug,
+            @RequestParam(value = "problemTag", required = false, defaultValue = "") String problemTagSlug,
             @RequestParam(value = "page", required = false, defaultValue = "1") long pageNumber,
             HttpServletRequest request, HttpServletResponse response) {
         final int NUMBER_OF_PROBLEMS_PER_PAGE = 100;

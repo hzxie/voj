@@ -77,8 +77,8 @@ public class ProblemsController {
         HttpSession session = request.getSession();
         if ( isLoggedIn(session) ) {
             long userId = (Long)session.getAttribute("uid");
-            Map<Long, Submission> submissionOfProblems = submissionService.
-                    getSubmissionOfProblems(userId, startIndex, startIndex + NUMBER_OF_PROBLEMS_PER_PAGE);
+            long endIndex = problemService.getLastIndexOfProblems(true, startIndex, NUMBER_OF_PROBLEMS_PER_PAGE);
+            Map<Long, Submission> submissionOfProblems = submissionService.getSubmissionOfProblems(userId, startIndex, endIndex);
             view.addObject("submissionOfProblems", submissionOfProblems);
         }
         return view;
