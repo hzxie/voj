@@ -174,16 +174,30 @@ public class ProblemsController {
     public ModelAndView problemView(
             @PathVariable("problemId") long problemId,
             HttpServletRequest request, HttpServletResponse response) {
+        HttpSession session = request.getSession();
+        boolean isLoggedIn = isLoggedIn(session);
         Problem problem = problemService.getProblem(problemId);
-        if ( problem == null || !problem.isPublic() ) {
+        
+        if ( problem == null ) {
             throw new ResourceNotFoundException();
+        } else if ( !problem.isPublic() ) {
+            boolean isAllowToAccess = false;
+            
+            if ( isLoggedIn ) {
+                User currentUser = HttpSessionParser.getCurrentUser(session);
+                if ( currentUser.getUserGroup().getUserGroupSlug().equals("administrators") ) {
+                    isAllowToAccess = true;
+                }
+            }
+            if ( !isAllowToAccess ) {
+                throw new ResourceNotFoundException();
+            }
         }
         
         ModelAndView view = new ModelAndView("problems/problem");
         view.addObject("problem", problem);
-        
-        HttpSession session = request.getSession();
-        if ( isLoggedIn(session) ) {
+
+        if ( isLoggedIn ) {
             long userId = (Long)session.getAttribute("uid");
             Map<Long, Submission> submissionOfProblems = submissionService.getSubmissionOfProblems(userId, problemId, problemId + 1);
             List<Submission> submissions = submissionService.getSubmissionUsingProblemIdAndUserId(problemId, userId, NUMBER_OF_SUBMISSIONS_PER_PROBLEM);

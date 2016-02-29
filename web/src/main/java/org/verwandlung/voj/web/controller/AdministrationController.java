@@ -600,7 +600,26 @@ public class AdministrationController {
     }
     
     /**
+     * 加载试题分类页面.
+     * @param request - HttpServletRequest对象
+     * @param response - HttpServletResponse对象
+     * @return 包含试题分类页面信息的ModelAndView对象.
+     */
+    @RequestMapping(value = "/problem-categories", method = RequestMethod.GET)
+    public ModelAndView problemCategoriesView(
+            HttpServletRequest request, HttpServletResponse response) {
+        List<ProblemCategory> problemCategories = problemService.getProblemCategories();
+        
+        ModelAndView view = new ModelAndView("administration/problem-categories");
+        view.addObject("problemCategories", problemCategories);
+        return view;
+    }
+    
+    /**
      * 加载提交列表页面.
+     * @param problemId - 提交对应试题的唯一标识符
+     * @param username - 提交者的用户名
+     * @param pageNumber - 当前页面的页码
      * @param request - HttpServletRequest对象
      * @param response - HttpServletResponse对象
      * @return 包含提交列表页面信息的ModelAndView对象
