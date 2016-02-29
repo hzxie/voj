@@ -101,7 +101,9 @@
                                         <input type="hidden" class="parent-category" value="${problemCategory.parentProblemCategoryId}" />
                                         <ul class="actions inline">
                                             <li><a href="javascript:void(0);" class="action-edit"><spring:message code="voj.administration.problem-categories.edit" text="Edit" /></a></li>
+                                        <c:if test="${problemCategory.problemCategorySlug != 'uncategorized'}">
                                             <li><a href="javascript:void(0);" class="action-delete"><spring:message code="voj.administration.problem-categories.delete" text="Delete" /></a></li>
+                                        </c:if>
                                         </ul>
                                     </td>
                                     <td><span class="problem-category-slug">${problemCategory.problemCategorySlug}</span></td>
@@ -164,7 +166,13 @@
             $(currentRowSet).addClass('hide');
 
             $(currentRowSet).after(getEditFieldset(problemCategoryId, problemCategoryName, problemCategorySlug));
+            $('#category-parent-edit option[value=%s]'.format(problemCategorySlug), '.edit-fieldset').remove();
             $('#category-parent-edit', '.edit-fieldset').val(getProblemCategorySlugUsingId(parentProblemCategoryId));
+
+            if ( problemCategorySlug == 'uncategorized' ) {
+                $('#category-slug-edit', '.edit-fieldset').attr('disabled', 'disabled');
+                $('#category-parent-edit', '.edit-fieldset').attr('disabled', 'disabled');
+            }
         });
     </script>
     <script type="text/javascript">
