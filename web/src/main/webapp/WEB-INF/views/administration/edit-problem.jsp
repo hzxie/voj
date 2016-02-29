@@ -157,7 +157,7 @@
                                             <spring:message code="voj.administration.edit-problem.is-public" text="Public to Users?" />
                                         </div> <!--- .span8 -->
                                         <div class="span4 text-right">
-                                            <input id="problem-is-public" type="checkbox" data-toggle="switch" checked="checked" />
+                                            <input id="problem-is-public" type="checkbox" data-toggle="switch" <c:if test="${problem.isPublic()}">checked="checked"</c:if> />
                                         </div> <!-- .span4 -->
                                     </div> <!-- .row-fluid -->
                                     <div class="row-fluid">
