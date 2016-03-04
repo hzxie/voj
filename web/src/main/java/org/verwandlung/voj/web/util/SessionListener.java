@@ -13,49 +13,49 @@ import org.apache.logging.log4j.Logger;
  * @author Haozhe Xie
  */
 public class SessionListener implements HttpSessionListener {
-    /**
-     * 获取在线用户数量.
-     * @return 在线用户数量
-     */
-    public static long getTotalSessions() {
-        return totalSessions;
-    }
-    
-    /* (non-Javadoc)
-     * @see javax.servlet.http.HttpSessionListener#sessionCreated(javax.servlet.http.HttpSessionEvent)
-     */
-    @Override
-    public void sessionCreated(HttpSessionEvent se) {
-        synchronized (this) {
-            ++ totalSessions;
-        }
-        LOGGER.debug("Session Created: " + se.getSession().getId());
-        LOGGER.debug("Total Sessions: " + totalSessions);
-    }
+	/**
+	 * 获取在线用户数量.
+	 * @return 在线用户数量
+	 */
+	public static long getTotalSessions() {
+		return totalSessions;
+	}
+	
+	/* (non-Javadoc)
+	 * @see javax.servlet.http.HttpSessionListener#sessionCreated(javax.servlet.http.HttpSessionEvent)
+	 */
+	@Override
+	public void sessionCreated(HttpSessionEvent se) {
+		synchronized (this) {
+			++ totalSessions;
+		}
+		LOGGER.debug("Session Created: " + se.getSession().getId());
+		LOGGER.debug("Total Sessions: " + totalSessions);
+	}
 
-    /* (non-Javadoc)
-     * @see javax.servlet.http.HttpSessionListener#sessionDestroyed(javax.servlet.http.HttpSessionEvent)
-     */
-    @Override
-    public void sessionDestroyed(HttpSessionEvent se) {
-        synchronized (this) {
-            -- totalSessions;
-            
-            if ( totalSessions < 0 ) {
-                totalSessions = 0;
-            }
-        }
-        LOGGER.debug("Session Destroyed: " + se.getSession().getId());
-        LOGGER.debug("Total Sessions: " + totalSessions);
-    }
+	/* (non-Javadoc)
+	 * @see javax.servlet.http.HttpSessionListener#sessionDestroyed(javax.servlet.http.HttpSessionEvent)
+	 */
+	@Override
+	public void sessionDestroyed(HttpSessionEvent se) {
+		synchronized (this) {
+			-- totalSessions;
+			
+			if ( totalSessions < 0 ) {
+				totalSessions = 0;
+			}
+		}
+		LOGGER.debug("Session Destroyed: " + se.getSession().getId());
+		LOGGER.debug("Total Sessions: " + totalSessions);
+	}
 
-    /**
-     * 活动的Session数量.
-     */
-    private static long totalSessions = 0;
-    
-    /**
-     * 日志记录器.
-     */
-    private static final Logger LOGGER = LogManager.getLogger(SessionListener.class);
+	/**
+	 * 活动的Session数量.
+	 */
+	private static long totalSessions = 0;
+	
+	/**
+	 * 日志记录器.
+	 */
+	private static final Logger LOGGER = LogManager.getLogger(SessionListener.class);
 }

@@ -16,16 +16,16 @@ import org.springframework.web.servlet.ModelAndView;
 @Controller
 @RequestMapping(value = "/contests")
 public class ContestsController {
-    /**
-     * 显示比赛列表页面.
-     * @param request - HttpRequest对象
-     * @param response - HttpResponse对象
-     * @return 一个包含比赛列表页面内容的ModelAndView对象
-     */
-    @RequestMapping(value = "", method = RequestMethod.GET)
-    public ModelAndView contestsView(
-            HttpServletRequest request, HttpServletResponse response) {
-        ModelAndView view = new ModelAndView("contests/contests");
-        return view;
-    }
+	/**
+	 * 显示比赛列表页面.
+	 * @param request - HttpRequest对象
+	 * @param response - HttpResponse对象
+	 * @return 一个包含比赛列表页面内容的ModelAndView对象
+	 */
+	@RequestMapping(value = "", method = RequestMethod.GET)
+	public ModelAndView contestsView(
+			HttpServletRequest request, HttpServletResponse response) {
+		ModelAndView view = new ModelAndView("contests/contests");
+		return view;
+	}
 }
