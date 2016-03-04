@@ -57,7 +57,7 @@
 	<insert id="createProblemCategory" 
 		parameterType="org.verwandlung.voj.web.model.ProblemCategory"
 		flushCache="true" 
-		keyProperty="ProblemCategoryId" 
+		keyProperty="problemCategoryId" 
 		keyColumn="problem_category_id"
 		useGeneratedKeys="true">
 		INSERT INTO voj_problem_categories (problem_category_slug, problem_category_name, problem_category_parent_id) 
