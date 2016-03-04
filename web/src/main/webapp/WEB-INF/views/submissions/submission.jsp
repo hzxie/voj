@@ -95,7 +95,7 @@
                             <h4><spring:message code="voj.submissions.submission.judge-result" text="Judge Result" /></h4>
                             <div id="judge-log" class="description markdown">${submission.judgeLog}</div> <!-- .description -->
                         </div> <!-- .section -->
-                        <c:if test="${submission.user == myProfile}">
+                        <c:if test="${submission.user == myProfile or myProfile.userGroup.userGroupSlug == 'administrators'}">
                         <div class="section">
                             <h4><spring:message code="voj.submissions.submission.code" text="Code" /></h4>
                             <div class="description">
