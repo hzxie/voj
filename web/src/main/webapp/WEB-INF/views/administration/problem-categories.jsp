@@ -52,12 +52,12 @@
                         <form id="new-category-form" onSubmit="onSubmit(); return false;">
                             <div class="control-group row-fluid">
                                 <label for="category-name"><spring:message code="voj.administration.problem-categories.category-name" text="Name" /></label>
-                                <input id="category-name" class="span12" type="text" />
+                                <input id="category-name" class="span12" type="text" maxlength="32" />
                                 <p><spring:message code="voj.administration.problem-categories.category-name-description" text="The name is how it appears on your site." /></p>
                             </div> <!-- .control-group -->
                             <div class="control-group row-fluid">
                                 <label for="category-slug"><spring:message code="voj.administration.problem-categories.category-slug" text="Slug" /></label>
-                                <input id="category-slug" class="span12" type="text" />
+                                <input id="category-slug" class="span12" type="text" maxlength="32" />
                                 <p><spring:message code="voj.administration.problem-categories.category-slug-description" text="The \"slug\" is the URL-friendly version of the name. It is usually all lowercase and contains only letters, numbers, and hyphens." /></p>
                             </div> <!-- .control-group -->
                             <div class="row-fluid">
@@ -131,6 +131,23 @@
     <!-- Placed at the end of the document so the pages load faster -->
     <%@ include file="/WEB-INF/views/administration/include/footer-script.jsp" %>
     <script type="text/javascript">
+        // Global Variable for Problem Categories Store
+        // Key: ID for the ProblemCategory
+        // Value: the ProblemCategory object
+        problemCategoriesOptions = {
+            "0": {
+                "problemCategorySlug": "none",
+                "problemCategoryName": "<spring:message code="voj.administration.problem-categories.none" text="None" />"
+            }
+        <c:forEach items="${problemCategories}" var="problemCategory">
+            , "${problemCategory.problemCategoryId}": {
+                "problemCategorySlug": "${problemCategory.problemCategorySlug}",
+                "problemCategoryName": "${problemCategory.problemCategoryName}"
+            }
+        </c:forEach>
+        };
+    </script>
+    <script type="text/javascript">
         $('label.all-problem-categories').click(function() {
             // Fix the bug for Checkbox in FlatUI 
             var isChecked = false,
@@ -166,6 +183,7 @@
             $(currentRowSet).addClass('hide');
 
             $(currentRowSet).after(getEditFieldset(problemCategoryId, problemCategoryName, problemCategorySlug));
+            $('#category-parent-edit').append(getParentProblemCategoriesOptions());
             $('#category-parent-edit option[value=%s]'.format(problemCategorySlug), '.edit-fieldset').remove();
             $('#category-parent-edit', '.edit-fieldset').val(getProblemCategorySlugUsingId(parentProblemCategoryId));
 
@@ -177,13 +195,15 @@
     </script>
     <script type="text/javascript">
         function getProblemCategorySlugUsingId(problemCategoryId) {
-            var problemCategories = {
-            <c:forEach items="${problemCategories}" var="problemCategory">
-                '${problemCategory.problemCategoryId}': '${problemCategory.problemCategorySlug}',
-            </c:forEach>
-                '0': ''
-            };
-            return problemCategories[problemCategoryId];
+            for (var key in problemCategoriesOptions) {
+                var problemCategory = problemCategoriesOptions[key];
+
+                if ( key == problemCategoryId &&
+                     problemCategoriesOptions.hasOwnProperty(key) ) {
+                    return problemCategory['problemCategorySlug'];
+                }
+            }
+            return 'none';
         }
     </script>
     <script type="text/javascript">
@@ -192,19 +212,15 @@
                        '    <td colspan="3">' +
                        '        <div class="control-group row-fluid">' +
                        '            <label for="category-name-edit"><spring:message code="voj.administration.problem-categories.category-name" text="Name" /></label>' +
-                       '            <input id="category-name-edit" class="span12" type="text" value="%s" />' +
+                       '            <input id="category-name-edit" class="span12" type="text" value="%s" maxlength="32" />' +
                        '        </div> <!-- .control-group -->' +
                        '        <div class="control-group row-fluid">' +
                        '            <label for="category-slug-edit"><spring:message code="voj.administration.problem-categories.category-slug" text="Slug" /></label>' +
-                       '            <input id="category-slug-edit" class="span12" type="text"  value="%s" />' +
+                       '            <input id="category-slug-edit" class="span12" type="text"  value="%s" maxlength="32" />' +
                        '        </div> <!-- .control-group -->' +
                        '        <div class="row-fluid">' +
                        '            <label for="category-parent-edit"><spring:message code="voj.administration.problem-categories.category-parent" text="Parent" /></label>' +
                        '            <select id="category-parent-edit">' +
-                       '                <option value=""><spring:message code="voj.administration.problem-categories.none" text="None" /></option>' +
-                       '            <c:forEach items="${problemCategories}" var="problemCategory">' +
-                       '                <option value="${problemCategory.problemCategorySlug}">${problemCategory.problemCategoryName}</option>' +
-                       '            </c:forEach>' +
                        '            </select>' +
                        '        </div> <!-- .row-fluid -->' +
                        '        <div class="row-fluid">' +
@@ -224,7 +240,6 @@
     </script>
     <script type="text/javascript">
         $('#problem-categories').delegate('.edit-fieldset .btn-primary', 'click', function() {
-
         });
     </script>
     <script type="text/javascript">
@@ -235,6 +250,68 @@
 
             $(currentRowSet).remove();
         });
+    </script>
+    <script type="text/javascript">
+        function onSubmit() {
+            var problemCategorySlug     = $('#category-slug').val(),
+                problemCategoryName     = $('#category-name').val(),
+                parentProblemCategory   = $('#category-parent').val();
+
+            $('.alert-success', '#new-category-form').addClass('hide');
+            $('.alert-error', '#new-category-form').addClass('hide');
+            $('button[type=submit]', '#new-category-form').attr('disabled', 'disabled');
+            $('button[type=submit]', '#new-category-form').html('<spring:message code="voj.administration.problem-categories.please-wait" text="Please wait..." />');
+
+            return doCreateProblemCategoryAction(problemCategorySlug, problemCategoryName, parentProblemCategory);
+        }
+    </script>
+    <script type="text/javascript">
+        function doCreateProblemCategoryAction(problemCategorySlug, problemCategoryName, parentProblemCategory) {
+            var postData = {
+                'problemCategorySlug': problemCategorySlug,
+                'problemCategoryName': problemCategoryName,
+                'parentProblemCategory': parentProblemCategory
+            };
+
+            $.ajax({
+                type: 'POST',
+                url: '<c:url value="/administration/createProblemCategory.action" />',
+                data: postData,
+                dataType: 'JSON',
+                success: function(result){
+                    return processCreateProblemCategoryResult(result, postData);
+                }
+            });
+        }
+    </script>
+    <script type="text/javascript">
+        function processCreateProblemCategoryResult(result, problemCategory) {
+            if ( result['isSuccessful'] ) {
+                window.location.reload();
+            } else {
+
+            }
+
+            $('button[type=submit]', '#new-category-form').removeAttr('disabled');
+            $('button[type=submit]', '#new-category-form').html('<spring:message code="voj.administration.problem-categories.add-new-category" text="Add New Category" />');
+        }
+    </script>
+    <script type="text/javascript">
+        function getParentProblemCategoriesOptions() {
+            var options = '';
+
+            for (var problemCategoryId in problemCategoriesOptions) {
+                var problemCategory = problemCategoriesOptions[problemCategoryId];
+
+                if ( problemCategoriesOptions.hasOwnProperty(problemCategoryId) ) {
+                    options += '<option value="%s">%s</option>'.format(
+                        problemCategory['problemCategorySlug'], 
+                        problemCategory['problemCategoryName']
+                    );
+                }
+            }
+            return options;
+        }
     </script>
 </body>
 </html>
