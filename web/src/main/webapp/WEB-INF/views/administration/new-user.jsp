@@ -90,17 +90,17 @@
     <%@ include file="/WEB-INF/views/administration/include/footer-script.jsp" %>
     <script type="text/javascript">
         function onSubmit() {
-            $('.alert-success', '#profile-form').addClass('hide');
-            $('.alert-error', '#profile-form').addClass('hide');
-            $('button[type=submit]', '#profile-form').attr('disabled', 'disabled');
-            $('button[type=submit]', '#profile-form').html('<spring:message code="voj.administration.new-user.please-wait" text="Please wait..." />');
-
             var username        = $('#username').val(),
                 password        = $('#password').val(),
                 email           = $('#email').val(),
                 userGroup       = $('#user-group').val(),
                 preferLanguage  = $('#prefer-language').val();
             
+            $('.alert-success', '#profile-form').addClass('hide');
+            $('.alert-error', '#profile-form').addClass('hide');
+            $('button[type=submit]', '#profile-form').attr('disabled', 'disabled');
+            $('button[type=submit]', '#profile-form').html('<spring:message code="voj.administration.new-user.please-wait" text="Please wait..." />');
+
             return doCreateUserAction(username, password, email, userGroup, preferLanguage);
         }
     </script>

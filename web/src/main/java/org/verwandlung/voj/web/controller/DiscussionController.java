@@ -16,16 +16,16 @@ import org.springframework.web.servlet.ModelAndView;
 @Controller
 @RequestMapping(value = "/discussion")
 public class DiscussionController {
-    /**
-     * 显示讨论主题列表页面.
-     * @param request - HttpRequest对象
-     * @param response - HttpResponse对象
-     * @return 包含讨论主题列表页面内容的ModelAndView对象
-     */
-    @RequestMapping(value = "", method = RequestMethod.GET)
-    public ModelAndView discussionView(
-            HttpServletRequest request, HttpServletResponse response) {
-        ModelAndView view = new ModelAndView("discussion/discussion");
-        return view;
-    }
+	/**
+	 * 显示讨论主题列表页面.
+	 * @param request - HttpRequest对象
+	 * @param response - HttpResponse对象
+	 * @return 包含讨论主题列表页面内容的ModelAndView对象
+	 */
+	@RequestMapping(value = "", method = RequestMethod.GET)
+	public ModelAndView discussionView(
+			HttpServletRequest request, HttpServletResponse response) {
+		ModelAndView view = new ModelAndView("discussion/discussion");
+		return view;
+	}
 }
