@@ -195,7 +195,7 @@ public class ProblemService {
 	 * @return 包含试题创建结果的Map<String, Boolean>对象
 	 */
 	private Map<String, ? extends Object> getProblemCreationResult(Problem problem) {
-		Map<String, Boolean> result = new HashMap<String, Boolean>();
+		Map<String, Boolean> result = new HashMap<>();
 		result.put("isProblemNameEmpty", problem.getProblemName().isEmpty());
 		result.put("isProblemNameLegal", isProblemNameLegal(problem.getProblemName()));
 		result.put("isTimeLimitLegal", problem.getTimeLimit() > 0);
@@ -344,7 +344,7 @@ public class ProblemService {
 	 * @param problemTags - 试题标签的JSON数组
 	 */
 	private void createProblemTags(long problemId, String problemTags) {
-		Set<String> problemTagSlugs = new HashSet<String>();
+		Set<String> problemTagSlugs = new HashSet<>();
 		JSONArray jsonArray = JSON.parseArray(problemTags);
 		
 		for ( int i = 0; i < jsonArray.size(); ++ i ) {
@@ -399,21 +399,13 @@ public class ProblemService {
 	 * 创建试题分类.
 	 * @param problemCategorySlug - 试题分类的唯一英文缩写
 	 * @param problemCategoryName - 试题分类的名称
-	 * @param problemCategoryParentSlug - 父级试题分类的唯一英文缩写
+	 * @param parentProblemCategorySlug - 父级试题分类的唯一英文缩写
 	 * @return 包含试题分类创建结果的Map<String, Object>对象
 	 */
 	public Map<String, Object> createProblemCategory(
 			String problemCategorySlug, String problemCategoryName,
 			String parentProblemCategorySlug) {
-		int parentProblemCategoryId = 0;
-		if ( !parentProblemCategorySlug.isEmpty() ) {
-			ProblemCategory parentProblemCategory = problemCategoryMapper.
-					getProblemCategoryUsingCategorySlug(parentProblemCategorySlug);
-			
-			if ( parentProblemCategory != null ) {
-				parentProblemCategoryId = parentProblemCategory.getParentProblemCategoryId();
-			}
-		}
+		int parentProblemCategoryId = getProblemCategoryIdUsingSlug(parentProblemCategorySlug);
 		ProblemCategory problemCategory = new ProblemCategory(
 				problemCategorySlug, problemCategoryName, parentProblemCategoryId);
 		@SuppressWarnings("unchecked")
@@ -434,7 +426,7 @@ public class ProblemService {
 	 * @return 包含试题分类对象各字段验证结果的Map<String, Boolean>对象
 	 */
 	private Map<String, ? extends Object> getProblemCategoryCreationResult(ProblemCategory problemCategory) {
-		Map<String, Boolean> result = new HashMap<String, Boolean>();
+		Map<String, Boolean> result = new HashMap<>(6, 1);
 		result.put("isProblemCategorySlugEmpty", problemCategory.getProblemCategorySlug().isEmpty());
 		result.put("isProblemCategorySlugLegal", isProblemCategorySlugLegal(problemCategory.getProblemCategorySlug()));
 		result.put("isProblemCategorySlugExists", isProblemCategorySlugExists(problemCategory.getProblemCategorySlug()));
@@ -446,6 +438,91 @@ public class ProblemService {
 				!result.get("isProblemCategoryNameEmpty") &&  result.get("isProblemCategoryNameLegal");
 		result.put("isSuccessful", isSuccessful);
 		return result;
+	}
+	
+	/**
+	 * [此方法仅供管理员使用]
+	 * 编辑试题分类.
+	 * @param problemCategoryId - 试题分类的唯一标识符
+	 * @param problemCategorySlug - 试题分类的唯一英文缩写
+	 * @param problemCategoryName - 试题分类的名称
+	 * @param parentProblemCategorySlug - 父级试题分类的唯一英文缩写
+	 * @return 包含试题分类编辑结果的Map<String, Boolean>对象
+	 */
+	public Map<String, Boolean> editProblemCategory(
+			int problemCategoryId, String problemCategorySlug, 
+			String problemCategoryName, String parentProblemCategorySlug) {
+		int parentProblemCategoryId = getProblemCategoryIdUsingSlug(parentProblemCategorySlug);
+		ProblemCategory problemCategory = new ProblemCategory(problemCategoryId,
+				problemCategorySlug, problemCategoryName, parentProblemCategoryId);
+
+		Map<String, Boolean> result = getProblemCategoryEditResult(problemCategory);
+
+		if ( result.get("isSuccessful") ) {
+			problemCategoryMapper.updateProblemCategory(problemCategory);
+		}
+		return result;
+	}
+
+	/**
+	 * 获取试题分类的编辑结果.
+	 * @param problemCategory - 待编辑的试题分类对象
+	 * @return 包含试题分类编辑结果的Map<String, Boolean>对象
+	 */
+	private Map<String, Boolean> getProblemCategoryEditResult(ProblemCategory problemCategory) {
+		Map<String, Boolean> result = new HashMap<>();
+		result.put("isProblemCategoryExists", isProblemCategoryExists(problemCategory.getProblemCategoryId()));
+		result.put("isProblemCategoryEditable", isProblemCategoryEditable(problemCategory));
+		result.put("isProblemCategorySlugEmpty", problemCategory.getProblemCategorySlug().isEmpty());
+		result.put("isProblemCategorySlugLegal", isProblemCategorySlugLegal(problemCategory.getProblemCategorySlug()));
+		result.put("isProblemCategorySlugExists", isProblemCategorySlugExists(problemCategory, problemCategory.getProblemCategorySlug()));
+		result.put("isProblemCategoryNameEmpty", problemCategory.getProblemCategoryName().isEmpty());
+		result.put("isProblemCategoryNameLegal", isProblemCategoryNameLegal(problemCategory.getProblemCategoryName()));
+
+		boolean isSuccessful = result.get("isProblemCategoryExists") &&
+				result.get("isProblemCategoryEditable")   && !result.get("isProblemCategorySlugEmpty")  &&
+				result.get("isProblemCategorySlugLegal")  && !result.get("isProblemCategorySlugExists") &&
+				!result.get("isProblemCategoryNameEmpty") &&  result.get("isProblemCategoryNameLegal");
+		result.put("isSuccessful", isSuccessful);
+		return result;
+	}
+
+	/**
+	 * 检查分类目录是否存在.
+	 * @param problemCategoryId - 分类目录的唯一标识符
+	 * @return 分类目录是否存在
+	 */
+	private boolean isProblemCategoryExists(int problemCategoryId) {
+		ProblemCategory problemCategory = problemCategoryMapper.getProblemCategoryUsingCategoryId(problemCategoryId);
+		return problemCategory != null;
+	}
+
+	/**
+	 * 检查试题分类是否可编辑.
+	 * 试题分类的唯一标识符为1的项目是默认分类, 不可编辑.
+	 * @param problemCategory - 待编辑的试题分类
+	 * @return 试题分类是否可编辑
+	 */
+	private boolean isProblemCategoryEditable(ProblemCategory problemCategory) {
+		return problemCategory.getProblemCategoryId() != 1;
+	}
+
+	/**
+	 * 根据试题分类的唯一英文缩写获取试题分类的唯一标识符.
+	 * @param problemCategorySlug - 试题分类的唯一英文缩写
+	 * @return 试题分类的唯一标识符
+	 */
+	private int getProblemCategoryIdUsingSlug(String problemCategorySlug) {
+		int problemCategoryId = 0;
+		if ( !problemCategorySlug.isEmpty() ) {
+			ProblemCategory problemCategory = problemCategoryMapper.
+					getProblemCategoryUsingCategorySlug(problemCategorySlug);
+			
+			if ( problemCategory != null ) {
+				problemCategoryId = problemCategory.getParentProblemCategoryId();
+			}
+		}
+		return problemCategoryId;
 	}
 	
 	/**
@@ -466,6 +543,19 @@ public class ProblemService {
 		ProblemCategory problemCategory = problemCategoryMapper.
 				getProblemCategoryUsingCategorySlug(problemCategorySlug);
 		return problemCategory != null;
+	}
+
+	/**
+	 * 检查试题分类是否存在(检查Slug是否重复)
+	 * @param problemCategory - 当前的试题分类对象
+	 * @param problemCategorySlug - 试题分类的唯一英文缩写
+	 * @return 试题分类是否存在
+	 */
+	private boolean isProblemCategorySlugExists(ProblemCategory problemCategory, String problemCategorySlug) {
+		ProblemCategory anotherProblemCategory = problemCategoryMapper.
+				getProblemCategoryUsingCategorySlug(problemCategorySlug);
+		return anotherProblemCategory != null &&
+				anotherProblemCategory.getProblemCategoryId() != problemCategory.getProblemCategoryId();
 	}
 	
 	/**
