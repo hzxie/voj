@@ -240,7 +240,46 @@
     </script>
     <script type="text/javascript">
         $('#problem-categories').delegate('.edit-fieldset .btn-primary', 'click', function() {
+            var problemCategoryId       = $(this).parent().parent().parent().attr('data-value'),
+                problemCategorySlug     = $('#category-slug-edit', $(this).parent().parent()).val(),
+                problemCategoryName     = $('#category-name-edit', $(this).parent().parent()).val(),
+                parentProblemCategory   = $('#category-parent-edit', $(this).parent().parent()).val();
+
+            $('.edit-fieldset .btn-primary', '#problem-categories').attr('disabled', 'disabled');
+            $('.edit-fieldset .btn-primary', '#problem-categories').html('<spring:message code="voj.administration.problem-categories.please-wait" text="Please wait..." />');
+
+            return doEditProblemCategoryAction(problemCategoryId, problemCategorySlug, 
+                    problemCategoryName, parentProblemCategory);
         });
+    </script>
+    <script type="text/javascript">
+        function doEditProblemCategoryAction(problemCategoryId, problemCategorySlug, 
+            problemCategoryName, parentProblemCategory) {
+            var postData = {
+                'problemCategoryId': problemCategoryId,
+                'problemCategorySlug': problemCategorySlug,
+                'problemCategoryName': problemCategoryName,
+                'parentProblemCategory': parentProblemCategory
+            };
+
+            $.ajax({
+                type: 'POST',
+                url: '<c:url value="/administration/editProblemCategory.action" />',
+                data: postData,
+                dataType: 'JSON',
+                success: function(result){
+                    return processEditProblemCategoryResult(result);
+                }
+            });
+        }
+    </script>
+    <script type="text/javascript">
+        function processEditProblemCategoryResult(result) {
+            console.log(result);
+
+            $('.edit-fieldset .btn-primary', '#problem-categories').removeAttr('disabled');
+            $('.edit-fieldset .btn-primary', '#problem-categories').html('<spring:message code="voj.administration.problem-categories.add-new-category" text="Add New Category" />');
+        }
     </script>
     <script type="text/javascript">
         $('.action-delete').click(function() {
@@ -250,6 +289,11 @@
 
             $(currentRowSet).remove();
         });
+    </script>
+    <script type="text/javascript">
+        function doDeleteProblemCategoryAction() {
+            // TODO
+        }
     </script>
     <script type="text/javascript">
         function onSubmit() {
@@ -279,17 +323,17 @@
                 data: postData,
                 dataType: 'JSON',
                 success: function(result){
-                    return processCreateProblemCategoryResult(result, postData);
+                    return processCreateProblemCategoryResult(result);
                 }
             });
         }
     </script>
     <script type="text/javascript">
-        function processCreateProblemCategoryResult(result, problemCategory) {
+        function processCreateProblemCategoryResult(result) {
             if ( result['isSuccessful'] ) {
                 window.location.reload();
             } else {
-
+                // TODO
             }
 
             $('button[type=submit]', '#new-category-form').removeAttr('disabled');

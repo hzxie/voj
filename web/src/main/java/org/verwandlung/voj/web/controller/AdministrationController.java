@@ -619,7 +619,7 @@ public class AdministrationController {
 	 * 创建试题分类.
 	 * @param problemCategoryName - 试题分类的名称
 	 * @param problemCategorySlug - 试题分类的唯一英文缩写
-	 * @param problemCategoryParentSlug - 父级试题分类的唯一英文缩写
+	 * @param parentProblemCategorySlug - 父级试题分类的唯一英文缩写
 	 * @param request - HttpServletRequest对象
 	 * @return 包含试题分类的创建结果的Map<String, Object>对象
 	 */
@@ -637,6 +637,34 @@ public class AdministrationController {
 			String ipAddress = HttpRequestParser.getRemoteAddr(request);
 			
 			LOGGER.info(String.format("ProblemCategory: [ProblemCategoryId=%s] was created by administrator at %s.", 
+					new Object[] {problemCategoryId, ipAddress}));
+		}
+		return result;
+	}
+	
+	/**
+	 * @param problemCategoryId
+	 * @param problemCategorySlug
+	 * @param problemCategoryName
+	 * @param parentProblemCategorySlug
+	 * @param request
+	 * @return
+	 */
+	@RequestMapping(value = "/editProblemCategory.action", method = RequestMethod.POST)
+	public @ResponseBody Map<String, Boolean> editProblemCategoryAction(
+			@RequestParam(value = "problemCategoryId", required = true) String problemCategoryId,
+			@RequestParam(value = "problemCategorySlug", required = true) String problemCategorySlug,
+			@RequestParam(value = "problemCategoryName", required = true) String problemCategoryName,
+			@RequestParam(value = "parentProblemCategory", required = true) String parentProblemCategorySlug,
+			HttpServletRequest request) {
+		Map<String, Boolean> result = problemService.editProblemCategory(
+				Integer.parseInt(problemCategoryId), problemCategorySlug, 
+				problemCategoryName, parentProblemCategorySlug);
+		
+		if ( (boolean) result.get("isSuccessful") ) {
+			String ipAddress = HttpRequestParser.getRemoteAddr(request);
+			
+			LOGGER.info(String.format("ProblemCategory: [ProblemCategoryId=%s] was edited by administrator at %s.", 
 					new Object[] {problemCategoryId, ipAddress}));
 		}
 		return result;
