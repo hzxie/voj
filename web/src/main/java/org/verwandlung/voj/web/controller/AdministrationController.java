@@ -617,8 +617,8 @@ public class AdministrationController {
 	
 	/**
 	 * 创建试题分类.
-	 * @param problemCategoryName - 试题分类的名称
 	 * @param problemCategorySlug - 试题分类的唯一英文缩写
+	 * @param problemCategoryName - 试题分类的名称
 	 * @param parentProblemCategorySlug - 父级试题分类的唯一英文缩写
 	 * @param request - HttpServletRequest对象
 	 * @return 包含试题分类的创建结果的Map<String, Object>对象
@@ -643,12 +643,13 @@ public class AdministrationController {
 	}
 	
 	/**
-	 * @param problemCategoryId
-	 * @param problemCategorySlug
-	 * @param problemCategoryName
-	 * @param parentProblemCategorySlug
-	 * @param request
-	 * @return
+	 * 编辑试题分类.
+	 * @param problemCategoryId - 试题分类的唯一标识符
+	 * @param problemCategorySlug - 试题分类的唯一英文缩写
+	 * @param problemCategoryName - 试题分类的名称
+	 * @param parentProblemCategorySlug - 父级试题分类的唯一英文缩写
+	 * @param request - HttpServletRequest对象
+	 * @return 包含试题分类的编辑结果的Map<String, Boolean>对象
 	 */
 	@RequestMapping(value = "/editProblemCategory.action", method = RequestMethod.POST)
 	public @ResponseBody Map<String, Boolean> editProblemCategoryAction(
@@ -660,11 +661,32 @@ public class AdministrationController {
 		Map<String, Boolean> result = problemService.editProblemCategory(
 				Integer.parseInt(problemCategoryId), problemCategorySlug, 
 				problemCategoryName, parentProblemCategorySlug);
-		
-		if ( (boolean) result.get("isSuccessful") ) {
+
+		if ( result.get("isSuccessful") ) {
 			String ipAddress = HttpRequestParser.getRemoteAddr(request);
-			
-			LOGGER.info(String.format("ProblemCategory: [ProblemCategoryId=%s] was edited by administrator at %s.", 
+
+			LOGGER.info(String.format("ProblemCategory: [ProblemCategoryId=%s] was edited by administrator at %s.",
+					new Object[] {problemCategoryId, ipAddress}));
+		}
+		return result;
+	}
+
+	/**
+	 * 删除试题分类.
+	 * @param problemCategoryId - 试题分类的唯一标识符
+	 * @param request - HttpServletRequest对象
+	 * @return 包含试题分类的删除结果的Map<String, Boolean>对象
+	 */
+	@RequestMapping(value = "/deleteProblemCategory.action", method = RequestMethod.POST)
+	public @ResponseBody Map<String, Boolean> deleteProblemCategoryAction(
+			@RequestParam(value = "problemCategoryId", required = true) String problemCategoryId,
+			HttpServletRequest request) {
+		Map<String, Boolean> result = problemService.deleteProblemCategory(Integer.parseInt(problemCategoryId));
+
+		if ( result.get("isSuccessful") ) {
+			String ipAddress = HttpRequestParser.getRemoteAddr(request);
+
+			LOGGER.info(String.format("ProblemCategory: [ProblemCategoryId=%s] was deleted by administrator at %s.",
 					new Object[] {problemCategoryId, ipAddress}));
 		}
 		return result;

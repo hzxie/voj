@@ -566,7 +566,20 @@ public class ProblemService {
 	private boolean isProblemCategoryNameLegal(String problemCategoryName) {
 		return problemCategoryName.length() <= 32;
 	}
-	
+
+	/**
+	 * 根据试题分类的唯一标识符删除某个试题分类.
+	 * @param problemCategoryId - 分类目录的唯一标识符
+	 * @return 试题分类的删除结果
+	 */
+	public Map<String, Boolean> deleteProblemCategory(int problemCategoryId) {
+		problemCategoryMapper.deleteProblemCategory(problemCategoryId);
+
+		Map<String, Boolean> result = new HashMap<>();
+		result.put("isSuccessful", true);
+		return result;
+	}
+
 	/**
 	 * 自动注入的ProblemMapper对象.
 	 */
