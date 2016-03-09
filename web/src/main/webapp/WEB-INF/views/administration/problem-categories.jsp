@@ -284,15 +284,31 @@
     <script type="text/javascript">
         $('.action-delete').click(function() {
             var currentRowSet           = $(this).parent().parent().parent().parent(),
-                problemCategorySlug     = $('.problem-category-slug', $(currentRowSet)).html(),
-                parentProblemCategoryId = $('.parent-category', $(currentRowSet)).val();
+                problemCategoryId       = $(currentRowSet).attr('data-value');
 
-            $(currentRowSet).remove();
+            return doDeleteProblemCategoryAction(problemCategoryId);
         });
     </script>
     <script type="text/javascript">
-        function doDeleteProblemCategoryAction() {
-            // TODO
+        function doDeleteProblemCategoryAction(problemCategoryId) {
+            var postData = {
+                'problemCategoryId': problemCategoryId
+            };
+
+            $.ajax({
+                type: 'POST',
+                url: '<c:url value="/administration/deleteProblemCategory.action" />',
+                data: postData,
+                dataType: 'JSON',
+                success: function(result){
+                    return processDeleteProblemCategoryResult(result, problemCategoryId);
+                }
+            });
+        }
+    </script>
+    <script type="text/javascript">
+        function processDeleteProblemCategoryResult(result, problemCategoryId) {
+            $('tr[data-value=%s]'.format(problemCategoryId), '#problem-categories').remove();
         }
     </script>
     <script type="text/javascript">
