@@ -49,6 +49,7 @@
                 <div class="row-fluid">
                     <div class="span4">
                         <h4><spring:message code="voj.administration.problem-categories.add-new-category" text="Add New Category" /></h4>
+                        <div class="alert alert-error hide"></div> <!-- .alert-error -->
                         <form id="new-category-form" onSubmit="onSubmit(); return false;">
                             <div class="control-group row-fluid">
                                 <label for="category-name"><spring:message code="voj.administration.problem-categories.category-name" text="Name" /></label>
@@ -278,7 +279,7 @@
             console.log(result);
 
             $('.edit-fieldset .btn-primary', '#problem-categories').removeAttr('disabled');
-            $('.edit-fieldset .btn-primary', '#problem-categories').html('<spring:message code="voj.administration.problem-categories.add-new-category" text="Add New Category" />');
+            $('.edit-fieldset .btn-primary', '#problem-categories').html('<spring:message code="voj.administration.problem-categories.update-category" text="Update Category" />');
         }
     </script>
     <script type="text/javascript">
@@ -301,13 +302,13 @@
                 data: postData,
                 dataType: 'JSON',
                 success: function(result){
-                    return processDeleteProblemCategoryResult(result, problemCategoryId);
+                    return processDeleteProblemCategoryResult(problemCategoryId);
                 }
             });
         }
     </script>
     <script type="text/javascript">
-        function processDeleteProblemCategoryResult(result, problemCategoryId) {
+        function processDeleteProblemCategoryResult(problemCategoryId) {
             $('tr[data-value=%s]'.format(problemCategoryId), '#problem-categories').remove();
         }
     </script>
@@ -317,7 +318,6 @@
                 problemCategoryName     = $('#category-name').val(),
                 parentProblemCategory   = $('#category-parent').val();
 
-            $('.alert-success', '#new-category-form').addClass('hide');
             $('.alert-error', '#new-category-form').addClass('hide');
             $('button[type=submit]', '#new-category-form').attr('disabled', 'disabled');
             $('button[type=submit]', '#new-category-form').html('<spring:message code="voj.administration.problem-categories.please-wait" text="Please wait..." />');
@@ -349,7 +349,22 @@
             if ( result['isSuccessful'] ) {
                 window.location.reload();
             } else {
-                // TODO
+                var errorMessage  = '';
+
+                if ( result['isProblemCategoryNameEmpty'] ) {
+                    errorMessage += '<br>';
+                } else if ( !result['isProblemCategoryNameLegal'] ) {
+                    errorMessage += '<br>';
+                }
+                if ( result['isProblemCategorySlugEmpty'] ) {
+                    errorMessage += '<br>';
+                } else if ( !result['isProblemCategorySlugLegal'] ) {
+                    errorMessage += '<br>';
+                } else if ( result['isProblemCategorySlugExists'] ) {
+                    errorMessage += '<br>';
+                }
+                $('.alert-error', '#new-category-form').removeClass('hide');
+                $('.alert-error', '#new-category-form').html(errorMessage);
             }
 
             $('button[type=submit]', '#new-category-form').removeAttr('disabled');

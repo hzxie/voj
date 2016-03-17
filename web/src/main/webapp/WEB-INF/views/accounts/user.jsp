@@ -99,7 +99,7 @@
                     <div class="row-fluid">
                         <div class="span6">
                             <h3>${submissionStats.get("acceptedSubmission")}</h3>
-                            <spring:message code="voj.accounts.user.accpeted" text="Accpeted" />
+                            <spring:message code="voj.accounts.user.accepted" text="Accepted" />
                         </div> <!-- .span6 -->
                         <div class="span6">
                             <h3>${submissionStats.get("totalSubmission")}</h3>

@@ -122,9 +122,9 @@ public interface SubmissionMapper {
 	public List<Submission> getAcceptedSubmissionOfProblems(@Param("uid") long uid, @Param("problemIdLowerBound") long problemIdLowerBound, @Param("problemIdUpperBound") long problemIdUpperBound);
 	
 	/**
-	 * 获取某个用户通过(Accpeted)提交记录的数量.
+	 * 获取某个用户通过(Accepted)提交记录的数量.
 	 * @param uid - 用户的唯一标识符
-	 * @return 某个用户通过(Accpeted)提交记录的数量
+	 * @return 某个用户通过(Accepted)提交记录的数量
 	 */
 	public long getAcceptedSubmissionUsingUserId(@Param("uid") long uid);
 	

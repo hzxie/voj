@@ -47,7 +47,7 @@
                 <div class="span9">
                     <div id="main-content">
                         <div class="section">
-                            <div class="markdown"><spring:message code="voj.misc.terms.introdction-content" text="" arguments="${websiteName}" /></div> <!-- .markdown -->
+                            <div class="markdown"><spring:message code="voj.misc.terms.introduction-content" text="" arguments="${websiteName}" /></div> <!-- .markdown -->
                         </div> <!-- .section -->
                         <div class="section">
                             <h3 id="using-services"><spring:message code="voj.misc.terms.using-services" text="Using our Services" /></h3>
