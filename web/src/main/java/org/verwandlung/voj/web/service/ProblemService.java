@@ -453,6 +453,7 @@ public class ProblemService {
 			int problemCategoryId, String problemCategorySlug, 
 			String problemCategoryName, String parentProblemCategorySlug) {
 		int parentProblemCategoryId = getProblemCategoryIdUsingSlug(parentProblemCategorySlug);
+
 		ProblemCategory problemCategory = new ProblemCategory(problemCategoryId,
 				problemCategorySlug, problemCategoryName, parentProblemCategoryId);
 
@@ -519,7 +520,7 @@ public class ProblemService {
 					getProblemCategoryUsingCategorySlug(problemCategorySlug);
 			
 			if ( problemCategory != null ) {
-				problemCategoryId = problemCategory.getParentProblemCategoryId();
+				problemCategoryId = problemCategory.getProblemCategoryId();
 			}
 		}
 		return problemCategoryId;

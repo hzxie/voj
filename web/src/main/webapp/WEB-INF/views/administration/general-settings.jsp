@@ -80,7 +80,7 @@
                         <textarea id="google-analytics-code" class="span12" rows="5">${options['googleAnalyticsCode']}</textarea>
                     </div> <!-- .control-group -->
                     <div class="control-group row-fluid">
-                        <label for="offensive-words"><spring:message code="voj.administration.general-settings.offensive-words" text="Sensitive Words and Expressions" /></label>
+                        <label for="offensive-words"><spring:message code="voj.administration.general-settings.offensive-words" text="Offensive Words and Expressions" /></label>
                         <input id="offensive-words" class="tagsinput" type="hidden" value="" />
                     </div> <!-- .control-group -->
                     <div class="row-fluid">

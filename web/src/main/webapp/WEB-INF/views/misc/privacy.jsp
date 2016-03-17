@@ -47,7 +47,7 @@
                 <div class="span9">
                     <div id="main-content">
                         <div class="section">
-                            <div class="markdown"><spring:message code="voj.misc.privacy.introdction-content" text="" arguments="${websiteName}" /></div> <!-- .markdown -->
+                            <div class="markdown"><spring:message code="voj.misc.privacy.introduction-content" text="" arguments="${websiteName}" /></div> <!-- .markdown -->
                         </div> <!-- .section -->
                         <div class="section">
                             <h3 id="information-gathering-and-usage"><spring:message code="voj.misc.privacy.information-gathering-and-usage" text="Information Gathering and Usage" /></h3>

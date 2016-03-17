@@ -96,7 +96,7 @@
                             <th class="problem-categories"><spring:message code="voj.administration.all-problems.problem-categories" text="Categories" /></th>
                             <th class="problem-tags"><spring:message code="voj.administration.all-problems.problem-tags" text="Tags" /></th>
                             <th class="total-submission"><spring:message code="voj.administration.all-problems.total-submissions" text="Total Submissions" /></th>
-                            <th class="accpeted-submission"><spring:message code="voj.administration.all-problems.accpeted-submissions" text="Accpeted Submissions" /></th>
+                            <th class="accepted-submission"><spring:message code="voj.administration.all-problems.accepted-submissions" text="Accepted Submissions" /></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -120,7 +120,7 @@
                             <td class="problem-categories"></td>
                             <td class="problem-tags"></td>
                             <td class="total-submission">${problem.totalSubmission}</td>
-                            <td class="accpeted-submission">${problem.acceptedSubmission}</td>
+                            <td class="accepted-submission">${problem.acceptedSubmission}</td>
                         </tr>
                         </c:forEach>
                     </tbody>
