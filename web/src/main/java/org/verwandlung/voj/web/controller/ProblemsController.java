@@ -46,7 +46,7 @@ public class ProblemsController {
 	 * 显示试题库中的全部试题.
 	 * @param startIndex - 试题的起始下标
 	 * @param keyword - 关键词
-	 * @param problemCategorySlug - 试题分类的唯一英文缩写
+	 * @param problemCategorySlug - 试题分类的别名
 	 * @param request - HttpRequest对象
 	 * @param response - HttpResponse对象
 	 * @return 包含试题库页面信息的ModelAndView对象
@@ -213,7 +213,7 @@ public class ProblemsController {
 	
 	/**
 	 * @param problemId - 试题的唯一标识符
-	 * @param languageSlug - 编程语言的唯一英文缩写
+	 * @param languageSlug - 编程语言的别名
 	 * @param code - 代码
 	 * @param request - HttpRequest对象
 	 * @return 一个包含提交记录创建结果的Map<String, Object>对象

@@ -30,8 +30,8 @@ public class LanguageService {
 	}
 	
 	/**
-	 * 通过编程语言的唯一英文缩写获取编程语言对象.
-	 * @param languageSlug - 编程语言的唯一英文缩写
+	 * 通过编程语言的别名获取编程语言对象.
+	 * @param languageSlug - 编程语言的别名
 	 * @return 编程语言对象
 	 */
 	public Language getLanguageUsingSlug(String languageSlug) {
@@ -222,20 +222,20 @@ public class LanguageService {
 	}
 
 	/**
-	 * 检查编程语言唯一英文缩写是否合法.
-	 * 规则: 合法的编程语言唯一英文缩写不应该超过16个字符
-	 * @param languageSlug - 编程语言的唯一英文缩写
-	 * @return 编程语言唯一英文缩写的合法性
+	 * 检查编程语言别名是否合法.
+	 * 规则: 合法的编程语言别名不应该超过16个字符
+	 * @param languageSlug - 编程语言的别名
+	 * @return 编程语言别名的合法性
 	 */
 	private boolean isLanguageSlugLegal(String languageSlug) {
 		return languageSlug.length() <= 16;
 	}
 	
 	/**
-	 * 检查编程语言的唯一英文缩写是否存在.
-	 * @param languageSlug - 编程语言的唯一英文缩写
+	 * 检查编程语言的别名是否存在.
+	 * @param languageSlug - 编程语言的别名
 	 * @param languageId - 编程语言的唯一标识符
-	 * @return 编程语言的唯一英文缩写是否存在
+	 * @return 编程语言的别名是否存在
 	 */
 	private boolean isLanguageSlugExists(String languageSlug, int languageId) {
 		Language expectedLanguage = languageMapper.getLanguageUsingSlug(languageSlug);

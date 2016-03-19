@@ -42,8 +42,8 @@ public interface ProblemCategoryMapper {
 	public List<ProblemCategory> getProblemCategoriesOfProblems(long problemIdLowerBound, long problemIdUpperBound);
 	
 	/**
-	 * 通过试题分类的唯一英文缩写获取试题分类对象.
-	 * @param problemCategorySlug - 试题分类的唯一英文缩写
+	 * 通过试题分类的别名获取试题分类对象.
+	 * @param problemCategorySlug - 试题分类的别名
 	 * @return 预期的试题分类对象或空引用
 	 */
 	public ProblemCategory getProblemCategoryUsingCategorySlug(String problemCategorySlug);

@@ -45,7 +45,7 @@ public class JudgeResultMapperTest {
     
     /**
      * 测试用例: 测试getJudgeResultUsingSlug(String)方法
-     * 测试数据: 普通评测结果(JudgeResult)的评测结果组唯一英文缩写
+     * 测试数据: 普通评测结果(JudgeResult)的评测结果组别名
      * 预期结果: 返回评测结果(JudgeResult)的评测结果组对象
      */
     @Test
@@ -59,7 +59,7 @@ public class JudgeResultMapperTest {
     
     /**
      * 测试用例: 测试getJudgeResultUsingSlug(String)方法
-     * 测试数据: 不存在的评测结果组唯一英文缩写
+     * 测试数据: 不存在的评测结果组别名
      * 预期结果: 返回空引用
      */
     @Test

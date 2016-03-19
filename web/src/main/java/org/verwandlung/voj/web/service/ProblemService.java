@@ -63,7 +63,7 @@ public class ProblemService {
 	 * 获取公开的试题列表.
 	 * @param offset - 试题唯一标识符的起始序号
 	 * @param keyword - 关键字
-	 * @param problemCategorySlug - 试题分类的唯一英文缩写
+	 * @param problemCategorySlug - 试题分类的别名
 	 * @param isPublicOnly - 是否只筛选公开试题
 	 * @param limit - 每次加载试题的数量
 	 * @return 试题列表(List<Problem>对象)
@@ -80,7 +80,7 @@ public class ProblemService {
 	/**
 	 * 获取试题的总数量.
 	 * @param keyword - 关键字
-	 * @param problemCategorySlug - 试题分类的唯一英文缩写
+	 * @param problemCategorySlug - 试题分类的别名
 	 * @param isPublicOnly - 是否只筛选公开试题
 	 * @return 试题的总数量
 	 */
@@ -311,7 +311,7 @@ public class ProblemService {
 	/**
 	 * 创建试题所属分类.
 	 * @param problemId - 试题的唯一标识符
-	 * @param problemCategories - 试题分类唯一英文缩写的JSON数组
+	 * @param problemCategories - 试题分类别名的JSON数组
 	 */
 	private void createProblemCategoryRelationships(long problemId, String problemCategories) {
 		JSONArray jsonArray = JSON.parseArray(problemCategories);
@@ -331,7 +331,7 @@ public class ProblemService {
 	 * 更新试题所属分类.
 	 * 首先删除该试题的全部分类, 然后重新创建分类关系.
 	 * @param problemId - 试题的唯一标识符
-	 * @param problemCategories - 试题分类唯一英文缩写的JSON数组
+	 * @param problemCategories - 试题分类别名的JSON数组
 	 */
 	private void updateProblemCategoryRelationships(long problemId, String problemCategories) {
 		problemCategoryMapper.deleteProblemCategoryRelationship(problemId);
@@ -397,9 +397,9 @@ public class ProblemService {
 	/**
 	 * [此方法仅供管理员使用]
 	 * 创建试题分类.
-	 * @param problemCategorySlug - 试题分类的唯一英文缩写
+	 * @param problemCategorySlug - 试题分类的别名
 	 * @param problemCategoryName - 试题分类的名称
-	 * @param parentProblemCategorySlug - 父级试题分类的唯一英文缩写
+	 * @param parentProblemCategorySlug - 父级试题分类的别名
 	 * @return 包含试题分类创建结果的Map<String, Object>对象
 	 */
 	public Map<String, Object> createProblemCategory(
@@ -444,9 +444,9 @@ public class ProblemService {
 	 * [此方法仅供管理员使用]
 	 * 编辑试题分类.
 	 * @param problemCategoryId - 试题分类的唯一标识符
-	 * @param problemCategorySlug - 试题分类的唯一英文缩写
+	 * @param problemCategorySlug - 试题分类的别名
 	 * @param problemCategoryName - 试题分类的名称
-	 * @param parentProblemCategorySlug - 父级试题分类的唯一英文缩写
+	 * @param parentProblemCategorySlug - 父级试题分类的别名
 	 * @return 包含试题分类编辑结果的Map<String, Boolean>对象
 	 */
 	public Map<String, Boolean> editProblemCategory(
@@ -509,8 +509,8 @@ public class ProblemService {
 	}
 
 	/**
-	 * 根据试题分类的唯一英文缩写获取试题分类的唯一标识符.
-	 * @param problemCategorySlug - 试题分类的唯一英文缩写
+	 * 根据试题分类的别名获取试题分类的唯一标识符.
+	 * @param problemCategorySlug - 试题分类的别名
 	 * @return 试题分类的唯一标识符
 	 */
 	private int getProblemCategoryIdUsingSlug(String problemCategorySlug) {
@@ -527,9 +527,9 @@ public class ProblemService {
 	}
 	
 	/**
-	 * 检查试题分类的唯一英文缩写的合法性
-	 * @param problemCategorySlug - 试题分类的唯一英文缩写
-	 * @return 试题分类的唯一英文缩写是否合法
+	 * 检查试题分类的别名的合法性
+	 * @param problemCategorySlug - 试题分类的别名
+	 * @return 试题分类的别名是否合法
 	 */
 	private boolean isProblemCategorySlugLegal(String problemCategorySlug) {
 		return problemCategorySlug.length() <= 32;
@@ -537,7 +537,7 @@ public class ProblemService {
 	
 	/**
 	 * 检查试题分类是否存在(检查Slug是否重复)
-	 * @param problemCategorySlug - 试题分类的唯一英文缩写
+	 * @param problemCategorySlug - 试题分类的别名
 	 * @return 试题分类是否存在
 	 */
 	private boolean isProblemCategorySlugExists(String problemCategorySlug) {
@@ -549,7 +549,7 @@ public class ProblemService {
 	/**
 	 * 检查试题分类是否存在(检查Slug是否重复)
 	 * @param problemCategory - 当前的试题分类对象
-	 * @param problemCategorySlug - 试题分类的唯一英文缩写
+	 * @param problemCategorySlug - 试题分类的别名
 	 * @return 试题分类是否存在
 	 */
 	private boolean isProblemCategorySlugExists(ProblemCategory problemCategory, String problemCategorySlug) {

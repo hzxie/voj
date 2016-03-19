@@ -262,7 +262,7 @@ public class SubmissionService {
 	 * 创建提交记录, 并将评测任务加入消息队列.
 	 * @param user - 已登录的用户对象
 	 * @param problemId - 试题的唯一标识符
-	 * @param languageSlug - 编程语言的唯一英文缩写
+	 * @param languageSlug - 编程语言的别名
 	 * @param code - 代码
 	 * @param isCsrfTokenValid - CSRF的Token是否正确
 	 * @return 一个包含提交记录创建结果的Map<String, Object>对象, 并包含创建的提交记录的唯一标识符.

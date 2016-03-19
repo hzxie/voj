@@ -61,7 +61,7 @@ public class UserGroupMapperTest {
     
     /**
      * 测试用例: 测试getUserGroupUsingSlug(String)方法
-     * 测试数据: 普通用户组(UserGroup)的用户组唯一英文缩写
+     * 测试数据: 普通用户组(UserGroup)的用户组别名
      * 预期结果: 返回用户组(UserGroup)的用户组对象
      */
     @Test
@@ -75,7 +75,7 @@ public class UserGroupMapperTest {
     
     /**
      * 测试用例: 测试getUserGroupUsingSlug(String)方法
-     * 测试数据: 不存在的用户组唯一英文缩写
+     * 测试数据: 不存在的用户组别名
      * 预期结果: 返回空引用
      */
     @Test

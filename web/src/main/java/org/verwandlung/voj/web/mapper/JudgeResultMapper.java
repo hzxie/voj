@@ -20,8 +20,8 @@ public interface JudgeResultMapper {
 	public JudgeResult getJudgeResultUsingId(@Param("judgeResultId") int judgeResultId);
 	
 	/**
-	 * 通过评测结果的唯一英文缩写获取评测结果对象.
-	 * @param judgeResultSlug - 评测结果的唯一英文缩写
+	 * 通过评测结果的别名获取评测结果对象.
+	 * @param judgeResultSlug - 评测结果的别名
 	 * @return 预期的评测结果对象或空引用
 	 */
 	public JudgeResult getJudgeResultUsingSlug(@Param("judgeResultSlug") String judgeResultSlug);

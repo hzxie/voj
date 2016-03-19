@@ -166,7 +166,7 @@ public class AccountsController {
 	 * @param username - 用户名
 	 * @param password - 密码
 	 * @param email - 电子邮件地址
-	 * @param languageSlug - 偏好语言的唯一英文缩写
+	 * @param languageSlug - 偏好语言的别名
 	 * @param csrfToken - Csrf的Token
 	 * @param request - HttpServletRequest对象
 	 * @return 一个包含账户创建结果的Map<String, Boolean>对象

@@ -143,8 +143,8 @@ public class UserService {
 	 * @param username - 用户名
 	 * @param password - 密码(未使用MD5加密)
 	 * @param email - 电子邮件地址
-	 * @param userGroupSlug - 用户组的唯一英文缩写
-	 * @param languageSlug - 偏好语言的唯一英文缩写
+	 * @param userGroupSlug - 用户组的别名
+	 * @param languageSlug - 偏好语言的别名
 	 * @param isCsrfTokenValid - CSRF的Token是否正确
 	 * @param isAllowRegister - 系统是否允许注册新用户
 	 * @return 一个包含账户创建结果的Map<String, Boolean>对象
@@ -169,8 +169,8 @@ public class UserService {
 	 * @param username - 用户名
 	 * @param password - 密码(未使用MD5加密)
 	 * @param email - 电子邮件地址
-	 * @param userGroupSlug - 用户组的唯一英文缩写
-	 * @param languageSlug - 偏好语言的唯一英文缩写
+	 * @param userGroupSlug - 用户组的别名
+	 * @param languageSlug - 偏好语言的别名
 	 * @return 一个包含账户创建结果的Map<String, Boolean>对象
 	 */
 	public Map<String, Boolean> createUser(String username, String password, String email, String userGroupSlug, String languageSlug) {
@@ -364,7 +364,7 @@ public class UserService {
 	/**
 	 * 验证编程语言偏好的有效性并更改编程语言偏好.
 	 * @param user - 待更改编程语言偏好的用户对象
-	 * @param preferLanguageSlug - 编程语言的唯一英文缩写
+	 * @param preferLanguageSlug - 编程语言的别名
 	 * @return 一个包含编程语言偏好更改结果的Map<String, Boolean>对象
 	 */
 	public Map<String, Boolean> changePreferLanguage(User user, String preferLanguageSlug) {
@@ -592,8 +592,8 @@ public class UserService {
 	}
 	
 	/**
-	 * 通过用户组的唯一英文缩写获取用户组对象.
-	 * @param userGroupSlug - 用户组的唯一英文缩写
+	 * 通过用户组的别名获取用户组对象.
+	 * @param userGroupSlug - 用户组的别名
 	 * @return 用户组对象或空引用
 	 */
 	public UserGroup getUserGroupUsingSlug(String userGroupSlug) {
@@ -669,8 +669,8 @@ public class UserService {
 	 * [此方法仅供管理员使用]
 	 * @param user - 待更改个人信息的用户.
 	 * @param password - 用户的密码
-	 * @param userGroupSlug - 用户所属用户组的唯一英文缩写
-	 * @param preferLanguageSlug - 用户偏好编程语言的唯一英文缩写
+	 * @param userGroupSlug - 用户所属用户组的别名
+	 * @param preferLanguageSlug - 用户偏好编程语言的别名
 	 * @return 包含用户个人信息更改结果的Map<String, Boolean>对象
 	 */
 	public Map<String, Boolean> updateProfile(User user, String password, String userGroupSlug, String preferLanguageSlug) {

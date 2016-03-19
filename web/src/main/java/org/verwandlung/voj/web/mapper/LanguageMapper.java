@@ -22,8 +22,8 @@ public interface LanguageMapper {
 	public Language getLanguageUsingId(@Param("languageId") int languageId);
 	
 	/**
-	 * 通过编程语言的唯一英文缩写获取编程语言对象.
-	 * @param languageSlug - 编程语言的唯一英文缩写
+	 * 通过编程语言的别名获取编程语言对象.
+	 * @param languageSlug - 编程语言的别名
 	 * @return 预期的编程语言对象或空引用
 	 */
 	public Language getLanguageUsingSlug(@Param("languageSlug") String languageSlug);

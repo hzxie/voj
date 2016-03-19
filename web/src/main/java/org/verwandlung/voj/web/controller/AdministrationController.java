@@ -273,8 +273,8 @@ public class AdministrationController {
 	 * @param uid - 用户的唯一标识符.
 	 * @param password - 用户的密码(未经MD5加密)
 	 * @param email - 用户的电子邮件地址
-	 * @param userGroupSlug - 用户组的唯一英文缩写
-	 * @param preferLanguageSlug - 用户的偏好语言的唯一英文缩写
+	 * @param userGroupSlug - 用户组的别名
+	 * @param preferLanguageSlug - 用户的偏好语言的别名
 	 * @param location - 用户的所在地区
 	 * @param website - 用户的个人主页
 	 * @param socialLinks - 用户的社交网络信息
@@ -335,8 +335,8 @@ public class AdministrationController {
 	 * @param username - 用户名
 	 * @param password - 密码
 	 * @param email - 电子邮件地址
-	 * @param userGroupSlug - 用户组的唯一英文缩写
-	 * @param preferLanguageSlug - 偏好语言的唯一英文缩写
+	 * @param userGroupSlug - 用户组的别名
+	 * @param preferLanguageSlug - 偏好语言的别名
 	 * @param request - HttpServletRequest对象
 	 * @return 一个包含账户创建结果的Map<String, Boolean>对象
 	 */
@@ -617,9 +617,9 @@ public class AdministrationController {
 	
 	/**
 	 * 创建试题分类.
-	 * @param problemCategorySlug - 试题分类的唯一英文缩写
+	 * @param problemCategorySlug - 试题分类的别名
 	 * @param problemCategoryName - 试题分类的名称
-	 * @param parentProblemCategorySlug - 父级试题分类的唯一英文缩写
+	 * @param parentProblemCategorySlug - 父级试题分类的别名
 	 * @param request - HttpServletRequest对象
 	 * @return 包含试题分类的创建结果的Map<String, Object>对象
 	 */
@@ -645,9 +645,9 @@ public class AdministrationController {
 	/**
 	 * 编辑试题分类.
 	 * @param problemCategoryId - 试题分类的唯一标识符
-	 * @param problemCategorySlug - 试题分类的唯一英文缩写
+	 * @param problemCategorySlug - 试题分类的别名
 	 * @param problemCategoryName - 试题分类的名称
-	 * @param parentProblemCategorySlug - 父级试题分类的唯一英文缩写
+	 * @param parentProblemCategorySlug - 父级试题分类的别名
 	 * @param request - HttpServletRequest对象
 	 * @return 包含试题分类的编辑结果的Map<String, Boolean>对象
 	 */
