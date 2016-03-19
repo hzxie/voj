@@ -92,7 +92,7 @@ public class ViewAspect {
 	 * 获取当前用户的显示语言.
 	 * @param request - HttpRequest对象
 	 * @param response - HttpResponse对象
-	 * @return 当前用户显示语言的唯一英文缩写
+	 * @return 当前用户显示语言的别名
 	 */
 	private String getUserLanguage(HttpServletRequest request, HttpServletResponse response) {
 		HttpSession session = request.getSession();

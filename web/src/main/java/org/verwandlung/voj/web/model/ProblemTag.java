@@ -16,7 +16,7 @@ public class ProblemTag implements Serializable {
 	
 	/**
 	 * ProblemTag的构造函数.
-	 * @param problemTagSlug - 试题标签的唯一英文缩写
+	 * @param problemTagSlug - 试题标签的别名
 	 * @param problemTagName - 试题标签的名称
 	 */
 	public ProblemTag(String problemTagSlug, String problemTagName) {
@@ -27,7 +27,7 @@ public class ProblemTag implements Serializable {
 	/**
 	 * ProblemTag的构造函数.
 	 * @param problemTagId - 试题标签的唯一标识符
-	 * @param problemTagSlug - 试题标签的唯一英文缩写
+	 * @param problemTagSlug - 试题标签的别名
 	 * @param problemTagName - 试题标签的名称
 	 */
 	public ProblemTag(long problemTagId, String problemTagSlug, String problemTagName) { 
@@ -52,16 +52,16 @@ public class ProblemTag implements Serializable {
 	}
 	
 	/**
-	 * 获取试题标签的唯一英文缩写.
-	 * @return 试题标签的唯一英文缩写
+	 * 获取试题标签的别名.
+	 * @return 试题标签的别名
 	 */
 	public String getProblemTagSlug() {
 		return problemTagSlug;
 	}
 
 	/**
-	 * 设置试题标签的唯一英文缩写.
-	 * @param problemTagSlug - 试题标签的唯一英文缩写
+	 * 设置试题标签的别名.
+	 * @param problemTagSlug - 试题标签的别名
 	 */
 	public void setProblemTagSlug(String problemTagSlug) {
 		this.problemTagSlug = problemTagSlug;
@@ -115,7 +115,7 @@ public class ProblemTag implements Serializable {
 	private long problemTagId;
 	
 	/**
-	 * 试题标签的唯一英文缩写.
+	 * 试题标签的别名.
 	 */
 	private String problemTagSlug;
 	

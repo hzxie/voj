@@ -34,8 +34,8 @@ public interface ProblemTagMapper {
 	public List<ProblemTag> getProblemTagUsingProblemId(long problemId);
 	
 	/**
-	 * 通过试题标签的唯一英文缩写获取试题标签对象.
-	 * @param problemTagSlug - 试题标签的唯一英文缩写
+	 * 通过试题标签的别名获取试题标签对象.
+	 * @param problemTagSlug - 试题标签的别名
 	 * @return 预期的试题标签对象或空引用
 	 */
 	public ProblemTag getProblemTagUsingTagSlug(String problemTagSlug);

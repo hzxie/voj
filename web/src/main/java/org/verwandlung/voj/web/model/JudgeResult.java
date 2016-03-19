@@ -17,7 +17,7 @@ public class JudgeResult implements Serializable {
 	/**
 	 * 评测结果类的构造函数.
 	 * @param judgeResultId - 评测结果的唯一标识符
-	 * @param judgeResultSlug - 评测结果的唯一英文缩写
+	 * @param judgeResultSlug - 评测结果的别名
 	 * @param judgeResultName - 评测结果的名称
 	 */
 	public JudgeResult(int judgeResultId, String judgeResultSlug, String judgeResultName) {
@@ -43,16 +43,16 @@ public class JudgeResult implements Serializable {
 	}
 
 	/**
-	 * 获取评测结果的唯一英文缩写.
-	 * @return - 评测结果的唯一英文缩写
+	 * 获取评测结果的别名.
+	 * @return - 评测结果的别名
 	 */
 	public String getJudgeResultSlug() {
 		return judgeResultSlug;
 	}
 
 	/**
-	 * 设置评测结果的唯一英文缩写.
-	 * @param judgeResultSlug - 评测结果的唯一英文缩写
+	 * 设置评测结果的别名.
+	 * @param judgeResultSlug - 评测结果的别名
 	 */
 	public void setJudgeResultSlug(String judgeResultSlug) {
 		this.judgeResultSlug = judgeResultSlug;

@@ -47,7 +47,7 @@ public class LanguageMapperTest {
     
     /**
      * 测试用例: 测试getLanguageUsingSlug(String)方法
-     * 测试数据: C语言的编程语言唯一英文缩写
+     * 测试数据: C语言的编程语言别名
      * 预期结果: 返回C语言的编程语言对象
      */
     @Test
@@ -61,7 +61,7 @@ public class LanguageMapperTest {
     
     /**
      * 测试用例: 测试getLanguageUsingSlug(String)方法
-     * 测试数据: 不存在的编程语言唯一英文缩写
+     * 测试数据: 不存在的编程语言别名
      * 预期结果: 返回空引用
      */
     @Test

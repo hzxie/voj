@@ -50,16 +50,16 @@ public class ProblemCategory implements Serializable {
 	}
 	
 	/**
-	 * 获取试题分类的唯一英文缩写.
-	 * @return 试题分类的唯一英文缩写
+	 * 获取试题分类的别名.
+	 * @return 试题分类的别名
 	 */
 	public String getProblemCategorySlug() {
 		return problemCategorySlug;
 	}
 
 	/**
-	 * 设置试题分类的唯一英文缩写.
-	 * @param problemCategorySlug - 试题分类的唯一英文缩写
+	 * 设置试题分类的别名.
+	 * @param problemCategorySlug - 试题分类的别名
 	 */
 	public void setProblemCategorySlug(String problemCategorySlug) {
 		this.problemCategorySlug = problemCategorySlug;
@@ -129,7 +129,7 @@ public class ProblemCategory implements Serializable {
 	private int problemCategoryId;
 	
 	/**
-	 * 试题分类的唯一英文缩写.
+	 * 试题分类的别名.
 	 */
 	private String problemCategorySlug;
 	

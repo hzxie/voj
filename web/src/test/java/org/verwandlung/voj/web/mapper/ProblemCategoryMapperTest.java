@@ -90,7 +90,7 @@ public class ProblemCategoryMapperTest {
 
     /**
      * 测试用例: 测试getProblemCategoryUsingSlug(String)方法
-     * 测试数据: 默认分类的唯一英文缩写
+     * 测试数据: 默认分类的别名
      * 预期结果: 返回默认分类的试题分类对象
      */
     @Test
@@ -104,7 +104,7 @@ public class ProblemCategoryMapperTest {
     
     /**
      * 测试用例: 测试getProblemCategoryUsingSlug(String)方法
-     * 测试数据: 不存在的唯一英文缩写
+     * 测试数据: 不存在的别名
      * 预期结果: 空引用
      */
     @Test

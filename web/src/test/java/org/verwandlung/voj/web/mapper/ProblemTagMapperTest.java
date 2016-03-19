@@ -89,7 +89,7 @@ public class ProblemTagMapperTest {
 
     /**
      * 测试用例: 测试getProblemTagUsingSlug(String)方法
-     * 测试数据: 默认标签的唯一英文缩写
+     * 测试数据: 默认标签的别名
      * 预期结果: 返回默认标签的试题标签对象
      */
     @Test
@@ -103,7 +103,7 @@ public class ProblemTagMapperTest {
     
     /**
      * 测试用例: 测试getProblemTagUsingSlug(String)方法
-     * 测试数据: 不存在的唯一英文缩写
+     * 测试数据: 不存在的别名
      * 预期结果: 空引用
      */
     @Test
