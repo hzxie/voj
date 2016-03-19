@@ -473,7 +473,7 @@ public class ProblemService {
 	private Map<String, Boolean> getProblemCategoryEditResult(ProblemCategory problemCategory) {
 		Map<String, Boolean> result = new HashMap<>();
 		result.put("isProblemCategoryExists", isProblemCategoryExists(problemCategory.getProblemCategoryId()));
-		result.put("isProblemCategoryEditable", isProblemCategoryEditable(problemCategory));
+		result.put("isProblemCategoryEditable", isProblemCategoryEditable(problemCategory.getProblemCategoryId()));
 		result.put("isProblemCategorySlugEmpty", problemCategory.getProblemCategorySlug().isEmpty());
 		result.put("isProblemCategorySlugLegal", isProblemCategorySlugLegal(problemCategory.getProblemCategorySlug()));
 		result.put("isProblemCategorySlugExists", isProblemCategorySlugExists(problemCategory, problemCategory.getProblemCategorySlug()));
@@ -501,11 +501,11 @@ public class ProblemService {
 	/**
 	 * 检查试题分类是否可编辑.
 	 * 试题分类的唯一标识符为1的项目是默认分类, 不可编辑.
-	 * @param problemCategory - 待编辑的试题分类
+	 * @param problemCategoryId - 待编辑的试题分类对象
 	 * @return 试题分类是否可编辑
 	 */
-	private boolean isProblemCategoryEditable(ProblemCategory problemCategory) {
-		return problemCategory.getProblemCategoryId() != 1;
+	private boolean isProblemCategoryEditable(int problemCategoryId) {
+		return problemCategoryId != 1;
 	}
 
 	/**
@@ -574,10 +574,15 @@ public class ProblemService {
 	 * @return 试题分类的删除结果
 	 */
 	public Map<String, Boolean> deleteProblemCategory(int problemCategoryId) {
-		problemCategoryMapper.deleteProblemCategory(problemCategoryId);
+		boolean isProblemCategoryEditable = false;
+		if ( !isProblemCategoryEditable(problemCategoryId) ) {
+			problemCategoryMapper.deleteProblemCategory(problemCategoryId);
+			isProblemCategoryEditable = true;
+		}
 
 		Map<String, Boolean> result = new HashMap<>();
-		result.put("isSuccessful", true);
+		result.put("isSuccessful", isProblemCategoryEditable);
+		result.put("isProblemCategoryEditable", isProblemCategoryEditable);
 		return result;
 	}
 

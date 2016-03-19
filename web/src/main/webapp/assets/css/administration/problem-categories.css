@@ -55,6 +55,28 @@ table#problem-categories ul.actions a.action-delete {
 	color: #e74c3c;
 }
 
+table#problem-categories tr.edit-fieldset select#category-parent-edit {
+	margin-bottom: 0;
+}
+
+table#problem-categories tr.edit-fieldset p#category-name-error-message,
+table#problem-categories tr.edit-fieldset p#category-slug-error-message,
+table#problem-categories tr.edit-fieldset p#category-parent-error-message {
+	color: #e74c3c;
+	font-size: 12px;
+	margin: 5px 0 0;
+}
+
+table#problem-categories tr.edit-fieldset div#edit-fieldset-controls {
+	margin-top: 20px;
+}
+
+table#problem-categories tr.edit-fieldset input[type=text].error,
+table#problem-categories tr.edit-fieldset select.error {
+	border-color: #e74c3c;
+	color: #e74c3c;
+}
+
 /* Smaller than standard 960 (devices and browsers) */
 @media only screen and (max-width: 959px) {
 }

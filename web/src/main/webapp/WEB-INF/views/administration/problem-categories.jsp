@@ -49,8 +49,8 @@
                 <div class="row-fluid">
                     <div class="span4">
                         <h4><spring:message code="voj.administration.problem-categories.add-new-category" text="Add New Category" /></h4>
-                        <div class="alert alert-error hide"></div> <!-- .alert-error -->
                         <form id="new-category-form" onSubmit="onSubmit(); return false;">
+                            <div class="alert alert-error hide"></div> <!-- .alert-error -->
                             <div class="control-group row-fluid">
                                 <label for="category-name"><spring:message code="voj.administration.problem-categories.category-name" text="Name" /></label>
                                 <input id="category-name" class="span12" type="text" maxlength="32" />
@@ -214,17 +214,20 @@
                        '        <div class="control-group row-fluid">' +
                        '            <label for="category-name-edit"><spring:message code="voj.administration.problem-categories.category-name" text="Name" /></label>' +
                        '            <input id="category-name-edit" class="span12" type="text" value="%s" maxlength="32" />' +
+                       '            <p id="category-name-error-message" class="hide"></p>' +
                        '        </div> <!-- .control-group -->' +
                        '        <div class="control-group row-fluid">' +
                        '            <label for="category-slug-edit"><spring:message code="voj.administration.problem-categories.category-slug" text="Slug" /></label>' +
                        '            <input id="category-slug-edit" class="span12" type="text"  value="%s" maxlength="32" />' +
+                       '            <p id="category-slug-error-message" class="hide"></p>' +
                        '        </div> <!-- .control-group -->' +
                        '        <div class="row-fluid">' +
                        '            <label for="category-parent-edit"><spring:message code="voj.administration.problem-categories.category-parent" text="Parent" /></label>' +
                        '            <select id="category-parent-edit">' +
                        '            </select>' +
+                       '            <p id="category-parent-error-message" class="hide"></p>' +
                        '        </div> <!-- .row-fluid -->' +
-                       '        <div class="row-fluid">' +
+                       '        <div id="edit-fieldset-controls" class="row-fluid">' +
                        '            <button class="btn btn-cancel"><spring:message code="voj.administration.problem-categories.cancel" text="Cancel" /></button>' +
                        '            <button class="btn btn-primary pull-right" type="submit"><spring:message code="voj.administration.problem-categories.update-category" text="Update Category" /></button>' +
                        '        </div> <!-- .row-fluid -->' +
@@ -246,6 +249,8 @@
                 problemCategoryName     = $('#category-name-edit', $(this).parent().parent()).val(),
                 parentProblemCategory   = $('#category-parent-edit', $(this).parent().parent()).val();
 
+            $('#category-name-edit, #category-slug-edit').removeClass('error');
+            $('#category-name-error-message, #category-slug-error-message').addClass('hide');
             $('.edit-fieldset .btn-primary', '#problem-categories').attr('disabled', 'disabled');
             $('.edit-fieldset .btn-primary', '#problem-categories').html('<spring:message code="voj.administration.problem-categories.please-wait" text="Please wait..." />');
 
@@ -276,10 +281,67 @@
     </script>
     <script type="text/javascript">
         function processEditProblemCategoryResult(result) {
-            console.log(result);
+            if ( result['isSuccessful'] ) {
+                // Update Information in List
+                var problemCategoryItem         = $('.hide', '#problem-categories'),
+                    problemCategoryEditor       = $('.edit-fieldset', '#problem-categories'),
+                    problemCategoryName         = $('#category-name-edit', $(problemCategoryEditor)).val(),
+                    problemCategorySlug         = $('#category-slug-edit', $(problemCategoryEditor)).val(),
+                    parentProblemCategorySlug   = $('#category-parent-edit', $(problemCategoryEditor)).val(),
+                    parentProblemCategoryId     = getProblemCategoryIdUsingSlug(parentProblemCategorySlug);
 
+                $('.problem-category-name', $(problemCategoryItem)).html(problemCategoryName);
+                $('.problem-category-slug', $(problemCategoryItem)).html(problemCategorySlug);
+                $('.parent-category', $(problemCategoryItem)).html(parentProblemCategoryId);
+
+                $('.edit-fieldset').remove();
+                $('.hide', '#problem-categories').removeClass('hide');
+            } else {
+                if ( !result['isProblemCategoryEditable']  || !result['isProblemCategoryExists'] ||
+                      result['isProblemCategoryNameEmpty'] || !result['isProblemCategoryNameLegal'] ) {
+                    if ( !result['isProblemCategoryEditable'] ) {
+                        $('#category-name-error-message').html('<spring:message code="voj.administration.problem-categories.problem-category-not-editable" text="You CANNOT edit this item." />');
+                    } else if ( !result['isProblemCategoryExists'] ) {
+                        $('#category-name-error-message').html('<spring:message code="voj.administration.problem-categories.problem-category-not-exists" text="The problem category not exists." />');
+                    } else if ( result['isProblemCategoryNameEmpty'] ) {
+                        $('#category-name-error-message').html('<spring:message code="voj.administration.problem-categories.problem-category-name-empty" text="You can&acute;t leave Problem Category Name empty." />');
+                    } else if ( !result['isProblemCategoryNameLegal'] ) {
+                        $('#category-name-error-message').html('<spring:message code="voj.administration.problem-categories.problem-category-name-illegal" text="The length of Problem Category Name CANNOT exceed 32 characters." />');
+                    }
+
+                    $('#category-name-error-message').removeClass('hide');
+                    $('#category-name-edit').addClass('error');
+                }
+
+                if ( result['isProblemCategorySlugEmpty'] || !result['isProblemCategorySlugLegal'] ||
+                     result['isProblemCategorySlugExists'] ) {
+                    if ( result['isProblemCategorySlugEmpty'] ) {
+                        $('#category-slug-error-message').html('<spring:message code="voj.administration.problem-categories.problem-category-slug-empty" text="You can&acute;t leave Problem Category Slug empty." />');
+                    } else if ( !result['isProblemCategorySlugLegal'] ) {
+                        $('#category-slug-error-message').html('<spring:message code="voj.administration.problem-categories.problem-category-slug-illegal" text="The length of Problem Category Slug CANNOT exceed 32 characters." />');
+                    } else if ( result['isProblemCategorySlugExists'] ) {
+                        $('#category-slug-error-message').html('<spring:message code="voj.administration.problem-categories.problem-category-slug-exists" text="Another problem category has taken this slug." />');
+                    }
+
+                    $('#category-slug-error-message').removeClass('hide');
+                    $('#category-slug-edit').addClass('error');
+                }
+            }
             $('.edit-fieldset .btn-primary', '#problem-categories').removeAttr('disabled');
             $('.edit-fieldset .btn-primary', '#problem-categories').html('<spring:message code="voj.administration.problem-categories.update-category" text="Update Category" />');
+        }
+    </script>
+    <script type="text/javascript">
+        function getProblemCategoryIdUsingSlug(problemCategorySlug) {
+            for (var key in problemCategoriesOptions) {
+                var problemCategory = problemCategoriesOptions[key];
+
+                if ( problemCategoriesOptions.hasOwnProperty(key) &&
+                        problemCategory['problemCategorySlug'] == problemCategorySlug) {
+                    return key;
+                }
+            }
+            return 0;
         }
     </script>
     <script type="text/javascript">
@@ -352,21 +414,20 @@
                 var errorMessage  = '';
 
                 if ( result['isProblemCategoryNameEmpty'] ) {
-                    errorMessage += '<br>';
+                    errorMessage += '<spring:message code="voj.administration.problem-categories.problem-category-name-empty" text="You can&acute;t leave Problem Category Name empty." /><br>';
                 } else if ( !result['isProblemCategoryNameLegal'] ) {
-                    errorMessage += '<br>';
+                    errorMessage += '<spring:message code="voj.administration.problem-categories.problem-category-name-illegal" text="The length of Problem Category Name CANNOT exceed 32 characters." /><br>';
                 }
                 if ( result['isProblemCategorySlugEmpty'] ) {
-                    errorMessage += '<br>';
+                    errorMessage += '<spring:message code="voj.administration.problem-categories.problem-category-slug-empty" text="You can&acute;t leave Problem Category Slug empty." /><br>';
                 } else if ( !result['isProblemCategorySlugLegal'] ) {
-                    errorMessage += '<br>';
+                    errorMessage += '<spring:message code="voj.administration.problem-categories.problem-category-slug-illegal" text="The length of Problem Category Slug CANNOT exceed 32 characters." /><br>';
                 } else if ( result['isProblemCategorySlugExists'] ) {
-                    errorMessage += '<br>';
+                    errorMessage += '<spring:message code="voj.administration.problem-categories.problem-category-slug-exists" text="Another problem category has taken this slug." /><br>';
                 }
-                $('.alert-error', '#new-category-form').removeClass('hide');
                 $('.alert-error', '#new-category-form').html(errorMessage);
+                $('.alert-error', '#new-category-form').removeClass('hide');
             }
-
             $('button[type=submit]', '#new-category-form').removeAttr('disabled');
             $('button[type=submit]', '#new-category-form').html('<spring:message code="voj.administration.problem-categories.add-new-category" text="Add New Category" />');
         }
