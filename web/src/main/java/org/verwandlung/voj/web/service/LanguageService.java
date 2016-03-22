@@ -65,7 +65,8 @@ public class LanguageService {
 	
 	/**
 	 * 检查编程语言设置的正确性.
-	 * @param languages - 包含编程语言设置的数组
+	 * @param previousLanguages - 更新前的语言设置列表
+	 * @param newLanguages - 更新后的语言设置列表
 	 * @return 编程语言设置的验证结果
 	 */
 	private Map<String, Object> getUpdateLanguageSettingsResult(List<Language> previousLanguages, List<Language> newLanguages) {

@@ -311,7 +311,7 @@ public class SubmissionService {
 	
 	/**
 	 * 创建评测任务, 将提交的信息提交至消息队列.
-	 * @param submission - 提交记录对象
+	 * @param submissionId - 提交记录的唯一标识符
 	 */
 	public void createSubmissionTask(long submissionId) {
 		Map<String, Object> mapMessage = new HashMap<String, Object>();

@@ -222,8 +222,8 @@ public class AdministrationController {
 	}
 	
 	/**
-	 * 删除选定的提交记录.
-	 * @param submissions - 提交记录ID的集合, 以逗号(, )分隔
+	 * 删除选定的用户.
+	 * @param users - 用户ID的集合, 以逗号(, )分隔
 	 * @param request - HttpServletRequest对象
 	 * @return 提交记录的删除结果
 	 */
@@ -824,7 +824,7 @@ public class AdministrationController {
 	 * @param allowUserRegister - 是否允许用户注册
 	 * @param icpNumber - 网站备案号
 	 * @param googleAnalyticsCode - Google Analytics代码
-	 * @param sensitiveWords - 敏感词列表
+	 * @param offensiveWords - 敏感词列表
 	 * @param request - HttpServletRequest对象
 	 * @return 网站常规选项的更新结果
 	 */

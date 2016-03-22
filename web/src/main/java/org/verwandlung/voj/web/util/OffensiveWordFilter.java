@@ -59,8 +59,8 @@ public class OffensiveWordFilter {
 	
 	/**
 	 * 提供敏感词过滤的功能.
-	 * @param txt 带过滤字符串
-	 * @param matchType 匹配规则, 1 为极小匹配, 2 为极大匹配
+	 * @param text - 待过滤字符串
+	 * @param matchType - 匹配规则, 1 为极小匹配, 2 为极大匹配
 	 * @return 过滤后的字符串
 	 */
 	private String filter(String text, int matchType, String replaceChar) {
@@ -84,11 +84,11 @@ public class OffensiveWordFilter {
 	 * @param matchType - 匹配规则 1 为极小匹配,  2 为极大匹配
 	 * @return 敏感词的位置
 	 */
-	private List<Position> getOffensiveWordsPosition(String txt, int matchType) {
+	private List<Position> getOffensiveWordsPosition(String text, int matchType) {
 		List<Position> offensiveWordsPosition = new ArrayList<Position>();
 		// 遍历待过滤字符串,  检查 txt 以 i 开始的子串的前缀, 是否为敏感词
-		for ( int i = 0; i < txt.length(); ++ i ) {
-			int length = checkOffensiveWord(txt, i, matchType);
+		for ( int i = 0; i < text.length(); ++ i ) {
+			int length = checkOffensiveWord(text, i, matchType);
 			if ( length > 0 ) {
 				Position position = new Position(i, length);
 				offensiveWordsPosition.add(position);

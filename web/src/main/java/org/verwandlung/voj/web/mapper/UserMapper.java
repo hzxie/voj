@@ -56,7 +56,7 @@ public interface UserMapper {
 	
 	/**
 	 * 通过电子邮件地址获取用户对象.
-	 * @param username - 用户名
+	 * @param email - 电子邮件地址
 	 * @return 预期的用户对象或空引用
 	 */
 	public User getUserUsingEmail(@Param("email") String email);
