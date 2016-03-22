@@ -44,7 +44,7 @@ public class AccountsController {
 	/**
 	 * 显示用户的登录页面.
 	 * @param isLogout - 是否处于登出状态
-	 * @param fowardUrl - 登录后跳转的地址(相对路径)
+	 * @param forwardUrl - 登录后跳转的地址(相对路径)
 	 * @param request - HttpServletRequest对象
 	 * @param response - HttpResponse对象
 	 * @return 包含登录页面信息的ModelAndView对象
@@ -199,7 +199,7 @@ public class AccountsController {
 	/**
 	 * 加载重置密码页面.
 	 * @param email - 用户的电子邮件地址
-	 * @param hashCode - 用于重置密码的随机字符串
+	 * @param token - 用于重置密码的随机字符串
 	 * @param request - HttpServletRequest对象
 	 * @param response - HttpResponse对象
 	 * @return 包含密码重置页面信息的ModelAndView对象
@@ -372,7 +372,6 @@ public class AccountsController {
 	
 	/**
 	 * 处理用户修改密码的请求.
-	 * @param user - 待修改密码的用户对象
 	 * @param oldPassword - 旧密码
 	 * @param newPassword - 新密码
 	 * @param confirmPassword - 确认新密码

@@ -28,7 +28,7 @@ public interface ProblemTagMapper {
 	
 	/**
 	 * 通过试题的唯一标识符获取试题标签对象的列表.
-	 * @param problemTagId - 试题的唯一标识符
+	 * @param problemId - 试题的唯一标识符
 	 * @return 预期的试题标签对象列表
 	 */
 	public List<ProblemTag> getProblemTagUsingProblemId(long problemId);

@@ -17,7 +17,7 @@ public class HtmlTextFilter {
 	
 	/**
 	 * 过滤包含HTML字符串.
-	 * @param str - 待过滤的字符串
+	 * @param text - 待过滤的字符串
 	 * @return 过滤后的字符串.
 	 */
 	public static String filter(String text) {

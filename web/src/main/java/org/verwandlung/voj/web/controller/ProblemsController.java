@@ -165,7 +165,7 @@ public class ProblemsController {
 	
 	/**
 	 * 加载试题的详细信息.
-	 * @param problemID - 试题的唯一标识符
+	 * @param problemId - 试题的唯一标识符
 	 * @param request - HttpRequest对象
 	 * @param response - HttpResponse对象
 	 * @return 包含试题详细信息的ModelAndView对象

@@ -60,7 +60,7 @@ public interface SubmissionMapper {
 	
 	/**
 	 * 通过评测记录唯一标识符获取试题对象.
-	 * @param submissionID - 评测记录的唯一标识符
+	 * @param submissionId - 评测记录的唯一标识符
 	 * @return 一个评测记录对象
 	 */
 	public Submission getSubmission(@Param("submissionId") long submissionId);
