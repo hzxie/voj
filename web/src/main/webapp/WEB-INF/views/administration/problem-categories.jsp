@@ -77,6 +77,14 @@
                         </form> <!-- #new-category-form -->
                     </div> <!-- .span4 -->
                     <div class="span8">
+                        <div id="filters" class="row-fluid">
+                            <div class="span12">
+                                <select id="actions">
+                                    <option value="delete"><spring:message code="voj.administration.problem-categories.delete" text="Delete" /></option>
+                                </select>
+                                <button class="btn btn-danger"><spring:message code="voj.administration.problem-categories.apply" text="Apply" /></button>
+                            </div> <!-- .span12 -->
+                        </div> <!-- .row-fluid -->
                         <table id="problem-categories" class="table table-striped">
                             <thead>
                                 <tr>
@@ -237,6 +245,30 @@
         }
     </script>
     <script type="text/javascript">
+        $('button.btn-danger', '#filters').click(function() {
+            if ( !confirm('<spring:message code="voj.administration.problem-categories.continue-or-not" text="Are you sure to continue?" />') ) {
+                return;
+            }
+            $('.alert-error').addClass('hide');
+            $('button.btn-danger', '#filters').attr('disabled', 'disabled');
+            $('button.btn-danger', '#filters').html('<spring:message code="voj.administration.problem-categories.please-wait" text="Please wait..." />');
+
+            var problemCategories   = [],
+                action              = $('#actions').val();
+
+            $('label.checkbox', 'table tbody').each(function() {
+                if ( $(this).hasClass('checked') ) {
+                    var problemCategoryId = $(this).parent().parent().attr('data-value');
+                    problemCategories.push(problemCategoryId);
+                }
+            });
+
+            if ( action == 'delete' ) {
+                return doDeleteProblemCategoriesAction(problemCategories);
+            }
+        });
+    </script>
+    <script type="text/javascript">
         $('#problem-categories').delegate('.edit-fieldset .btn-cancel', 'click', function() {
             $('.edit-fieldset').remove();
             $('tr.hide', '#problem-categories').removeClass('hide');
@@ -367,8 +399,10 @@
                 dataType: 'JSON',
                 success: function(result){
                     if ( result['isSuccessful'] ) {
-                        return processDeleteProblemCategoryResult(result['deletedProblemCategories']);
+                        processDeleteProblemCategoryResult(result['deletedProblemCategories']);
                     }
+                    $('button.btn-danger', '#filters').html('<spring:message code="voj.administration.problem-categories.apply" text="Apply" />');
+                    $('button.btn-danger', '#filters').removeAttr('disabled');
                 }
             });
         }
