@@ -16,6 +16,15 @@ table#problem-categories label.checkbox {
 	margin: 0;
 }
 
+div#filters {
+	margin-bottom: 20px;
+}
+
+div#filters select#actions {
+    margin: 0;
+    width: 40%;
+}
+
 table#problem-categories {
 	border: 1px solid #e8e8e8;
 	-webkit-box-shadow: 0 0 5px rgba(0,0,0,0.1);
