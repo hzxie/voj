@@ -347,31 +347,38 @@
     <script type="text/javascript">
         $('.action-delete').click(function() {
             var currentRowSet           = $(this).parent().parent().parent().parent(),
-                problemCategoryId       = $(currentRowSet).attr('data-value');
+                problemCategoryId       = $(currentRowSet).attr('data-value'),
+                problemCategories       = [];
 
-            return doDeleteProblemCategoryAction(problemCategoryId);
+            problemCategories.push(problemCategoryId);
+            return doDeleteProblemCategoriesAction(problemCategories);
         });
     </script>
     <script type="text/javascript">
-        function doDeleteProblemCategoryAction(problemCategoryId) {
+        function doDeleteProblemCategoriesAction(problemCategories) {
             var postData = {
-                'problemCategoryId': problemCategoryId
+                'problemCategories': JSON.stringify(problemCategories)
             };
 
             $.ajax({
                 type: 'POST',
-                url: '<c:url value="/administration/deleteProblemCategory.action" />',
+                url: '<c:url value="/administration/deleteProblemCategories.action" />',
                 data: postData,
                 dataType: 'JSON',
                 success: function(result){
-                    return processDeleteProblemCategoryResult(problemCategoryId);
+                    if ( result['isSuccessful'] ) {
+                        return processDeleteProblemCategoryResult(result['deletedProblemCategories']);
+                    }
                 }
             });
         }
     </script>
     <script type="text/javascript">
-        function processDeleteProblemCategoryResult(problemCategoryId) {
-            $('tr[data-value=%s]'.format(problemCategoryId), '#problem-categories').remove();
+        function processDeleteProblemCategoryResult(deletedProblemCategories) {
+            for ( var i = 0; i < deletedProblemCategories.length; ++ i ) {
+                var problemCategoryId = deletedProblemCategories[i];
+                $('tr[data-value=%s]'.format(problemCategoryId), '#problem-categories').remove();
+            }
         }
     </script>
     <script type="text/javascript">

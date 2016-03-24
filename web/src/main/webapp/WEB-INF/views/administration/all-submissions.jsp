@@ -204,8 +204,10 @@
                 dataType: 'JSON',
                 success: function(result){
                     if ( result['isSuccessful'] ) {
-                        for ( var i = 0; i < submissions.length; ++ i ) {
-                            $('tr[data-value=%s]'.format(submissions[i])).remove();
+                        var deletedSubmissions = result['deletedSubmissions'];
+
+                        for ( var i = 0; i < deletedSubmissions.length; ++ i ) {
+                            $('tr[data-value=%s]'.format(deletedSubmissions[i])).remove();
                         }
                     } else {
                         $('.alert').html('<spring:message code="voj.administration.all-submissions.delete-error" text="Some errors occurred while deleting submissions." />');

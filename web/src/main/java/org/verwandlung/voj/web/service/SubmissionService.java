@@ -324,9 +324,11 @@ public class SubmissionService {
 	/**
 	 * 使用提交记录的唯一标识符删除提交记录.
 	 * @param submissionId - 提交记录的唯一标识符
+	 * @return 提交记录是否被删除
 	 */
-	public void deleteSubmission(long submissionId) {
+	public boolean deleteSubmission(long submissionId) {
 		submissionMapper.deleteSubmission(submissionId);
+		return true;
 	}
 	
 	/**

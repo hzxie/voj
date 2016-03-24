@@ -571,19 +571,15 @@ public class ProblemService {
 	/**
 	 * 根据试题分类的唯一标识符删除某个试题分类.
 	 * @param problemCategoryId - 分类目录的唯一标识符
-	 * @return 试题分类的删除结果
+	 * @return 试题分类是否被删除
 	 */
-	public Map<String, Boolean> deleteProblemCategory(int problemCategoryId) {
+	public boolean deleteProblemCategory(int problemCategoryId) {
 		boolean isProblemCategoryEditable = false;
-		if ( !isProblemCategoryEditable(problemCategoryId) ) {
+		if ( isProblemCategoryEditable(problemCategoryId) ) {
 			problemCategoryMapper.deleteProblemCategory(problemCategoryId);
 			isProblemCategoryEditable = true;
 		}
-
-		Map<String, Boolean> result = new HashMap<>();
-		result.put("isSuccessful", isProblemCategoryEditable);
-		result.put("isProblemCategoryEditable", isProblemCategoryEditable);
-		return result;
+		return isProblemCategoryEditable;
 	}
 
 	/**
