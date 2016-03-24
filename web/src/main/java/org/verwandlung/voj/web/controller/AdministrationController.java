@@ -673,22 +673,28 @@ public class AdministrationController {
 
 	/**
 	 * 删除试题分类.
-	 * @param problemCategoryId - 试题分类的唯一标识符
+	 * @param problemCategories - 试题分类的唯一标识符集合
 	 * @param request - HttpServletRequest对象
 	 * @return 包含试题分类的删除结果的Map<String, Boolean>对象
 	 */
-	@RequestMapping(value = "/deleteProblemCategory.action", method = RequestMethod.POST)
-	public @ResponseBody Map<String, Boolean> deleteProblemCategoryAction(
-			@RequestParam(value = "problemCategoryId", required = true) String problemCategoryId,
+	@RequestMapping(value = "/deleteProblemCategories.action", method = RequestMethod.POST)
+	public @ResponseBody Map<String, Object> deleteProblemCategoryAction(
+			@RequestParam(value = "problemCategories", required = true) String problemCategories,
 			HttpServletRequest request) {
-		Map<String, Boolean> result = problemService.deleteProblemCategory(Integer.parseInt(problemCategoryId));
+		Map<String, Object> result = new HashMap<String, Object>(3, 1);
+		List<Integer> problemCategoryList = JSON.parseArray(problemCategories, Integer.class);
+		List<Integer> deletedProblemCategories = new ArrayList<Integer>();
 
-		if ( result.get("isSuccessful") ) {
+		for ( int problemCategoryId : problemCategoryList ) {
+			if ( problemService.deleteProblemCategory(problemCategoryId) ) {
+				deletedProblemCategories.add(problemCategoryId);
+			}
 			String ipAddress = HttpRequestParser.getRemoteAddr(request);
-
 			LOGGER.info(String.format("ProblemCategory: [ProblemCategoryId=%s] was deleted by administrator at %s.",
 					new Object[] {problemCategoryId, ipAddress}));
 		}
+		result.put("isSuccessful", true);
+		result.put("deletedProblemCategories", deletedProblemCategories);
 		return result;
 	}
 	
@@ -730,20 +736,23 @@ public class AdministrationController {
 	 * @return 提交记录的删除结果
 	 */
 	@RequestMapping(value = "/deleteSubmissions.action", method = RequestMethod.POST)
-	public @ResponseBody Map<String, Boolean> deleteSubmissionsAction(
+	public @ResponseBody Map<String, Object> deleteSubmissionsAction(
 			@RequestParam(value = "submissions", required = true) String submissions,
 			HttpServletRequest request) {
-		Map<String, Boolean> result = new HashMap<String, Boolean>(2, 1);
+		Map<String, Object> result = new HashMap<String, Object>(3, 1);
 		List<Long> submissionList = JSON.parseArray(submissions, Long.class);
-		
+		List<Long> deletedSubmissions = new ArrayList<Long>();
+
 		for ( Long submissionId : submissionList ) {
-			submissionService.deleteSubmission(submissionId);
-			
+			if ( submissionService.deleteSubmission(submissionId) ) {
+				deletedSubmissions.add(submissionId);
+			}
 			String ipAddress = HttpRequestParser.getRemoteAddr(request);
 			LOGGER.info(String.format("Submission: [SubmissionId=%s] deleted by administrator at %s.", 
 					new Object[] {submissionId, ipAddress}));
 		}
 		result.put("isSuccessful", true);
+		result.put("deletedSubmissions", deletedSubmissions);
 		return result;
 	}
 	
