@@ -83,7 +83,7 @@ CREATE TABLE IF NOT EXISTS `voj_discussion_topics` (
   `discussion_topic_id` int(8) NOT NULL,
   `discussion_topic_slug` varchar(128) NOT NULL,
   `discussion_topic_name` varchar(128) NOT NULL,
-  `discussion_parent_topic_id` int(11) DEFAULT NULL
+  `discussion_parent_topic_id` int(8) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
