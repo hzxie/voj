@@ -41,6 +41,7 @@ import org.verwandlung.voj.web.service.ProblemService;
 import org.verwandlung.voj.web.service.SubmissionService;
 import org.verwandlung.voj.web.service.UserService;
 import org.verwandlung.voj.web.util.CsrfProtector;
+import org.verwandlung.voj.web.util.DateUtils;
 import org.verwandlung.voj.web.util.HttpRequestParser;
 import org.verwandlung.voj.web.util.SessionListener;
 
@@ -113,7 +114,9 @@ public class AdministrationController {
 	 * @return 私有试题的数量
 	 */
 	private long getPrivateProblems() {
-		return problemService.getNumberOfProblemsUsingFilters(null, "", false);
+		long numberOfTotalProblems = getTotalProblems();
+		long numberOfPublicProblems = problemService.getNumberOfProblemsUsingFilters(null, "", true);
+		return numberOfTotalProblems - numberOfPublicProblems;
 	}
 	
 	/**
@@ -174,16 +177,7 @@ public class AdministrationController {
 			HttpServletRequest request) {
 		Map<String, Object> submissions = new HashMap<String, Object>(2, 1);
 		Date today = new Date();
-		Calendar calendar = new GregorianCalendar();
-		calendar.setTime(today);
-		if ( period == 7 ) {
-			calendar.add(Calendar.DATE, -7);
-		} else if ( period == 30 ) {
-			calendar.add(Calendar.MONTH, -1);
-		} else {
-			calendar.add(Calendar.YEAR, -1);
-		}
-		Date previousDate = calendar.getTime();
+		Date previousDate = DateUtils.getPreviousDate(period);
 		Map<String, Long> totalSubmissions = submissionService.getNumberOfSubmissions(previousDate, today, 0, false);
 		Map<String, Long> acceptedSubmissions = submissionService.getNumberOfSubmissions(previousDate, today, 0, true);
 		

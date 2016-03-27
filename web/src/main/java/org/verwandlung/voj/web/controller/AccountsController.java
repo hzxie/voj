@@ -30,6 +30,7 @@ import org.verwandlung.voj.web.service.OptionService;
 import org.verwandlung.voj.web.service.SubmissionService;
 import org.verwandlung.voj.web.service.UserService;
 import org.verwandlung.voj.web.util.CsrfProtector;
+import org.verwandlung.voj.web.util.DateUtils;
 import org.verwandlung.voj.web.util.HttpRequestParser;
 import org.verwandlung.voj.web.util.HttpSessionParser;
 
@@ -326,16 +327,7 @@ public class AccountsController {
 		}
 		Map<String, Object> submissions = new HashMap<String, Object>(2, 1);
 		Date today = new Date();
-		Calendar calendar = new GregorianCalendar();
-		calendar.setTime(today);
-		if ( period == 7 ) {
-			calendar.add(Calendar.DATE, -7);
-		} else if ( period == 30 ) {
-			calendar.add(Calendar.MONTH, -1);
-		} else {
-			calendar.add(Calendar.YEAR, -1);
-		}
-		Date previousDate = calendar.getTime();
+		Date previousDate = DateUtils.getPreviousDate(period);
 		Map<String, Long> totalSubmissions = submissionService.getNumberOfSubmissions(previousDate, today, userId, false);
 		Map<String, Long> acceptedSubmissions = submissionService.getNumberOfSubmissions(previousDate, today, userId, true);
 		
