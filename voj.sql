@@ -335,7 +335,11 @@ CREATE TABLE IF NOT EXISTS `voj_problem_tag_relationships` (
 --
 
 INSERT INTO `voj_problem_tag_relationships` (`problem_id`, `problem_tag_id`) VALUES
-(1001, 1);
+(1000, 1),
+(1001, 1),
+(1001, 2),
+(1002, 1),
+(1003, 2);
 
 -- --------------------------------------------------------
 

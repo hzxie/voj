@@ -10,6 +10,13 @@
 		<result property="problemTagSlug" column="problem_tag_slug" />
 		<result property="problemTagName" column="problem_tag_name" />
 	</resultMap>
+	<resultMap id="ProblemTagRelationshipResultMap"
+		type="org.verwandlung.voj.web.model.ProblemTagRelationship">
+		<id property="problemId" column="problem_id" />
+		<id property="problemTagId" column="problem_tag_id" />
+		<result property="problemTagSlug" column="problem_tag_slug" />
+		<result property="problemTagName" column="problem_tag_name" />
+	</resultMap>
 
 	<!-- Methods -->
 	<select id="getProblemTags"
@@ -26,7 +33,7 @@
 		FROM voj_problem_tags
 		WHERE problem_tag_id = #{problemTagId}
 	</select>
-	<select id="getProblemTagUsingProblemId"
+	<select id="getProblemTagsUsingProblemId"
 		parameterType="long"
 		resultMap="ProblemTagResultMap"
 		useCache="true">
@@ -34,6 +41,16 @@
 		FROM voj_problem_tags
 		NATURAL JOIN voj_problem_tag_relationships
 		WHERE problem_id = #{problemId}
+	</select>
+	<select id="getProblemTagsOfProblems"
+			parameterType="map"
+			resultMap="ProblemTagRelationshipResultMap"
+			useCache="true">
+		SELECT *
+		FROM voj_problem_tag_relationships
+		NATURAL JOIN voj_problem_tags
+		WHERE problem_id &gt;= #{problemIdLowerBound}
+		AND problem_id &lt;= #{problemIdUpperBound}
 	</select>
 	<select id="getProblemTagUsingTagSlug"
 		parameterType="String"
