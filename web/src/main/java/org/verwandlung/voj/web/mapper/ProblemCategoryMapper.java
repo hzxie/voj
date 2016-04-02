@@ -1,10 +1,12 @@
 package org.verwandlung.voj.web.mapper;
 
 import java.util.List;
+import java.util.Map;
 
 import org.apache.ibatis.annotations.CacheNamespace;
 import org.apache.ibatis.annotations.Param;
 import org.verwandlung.voj.web.model.ProblemCategory;
+import org.verwandlung.voj.web.model.ProblemCategoryRelationship;
 
 /**
  * ProblemCategory Data Access Object.
@@ -39,7 +41,9 @@ public interface ProblemCategoryMapper {
 	 * @param problemIdUpperBound - 试题ID区间的上界
 	 * @return 包含试题分类信息的列表
 	 */
-	public List<ProblemCategory> getProblemCategoriesOfProblems(long problemIdLowerBound, long problemIdUpperBound);
+	public List<ProblemCategoryRelationship> getProblemCategoriesOfProblems(
+			@Param(value = "problemIdLowerBound") long problemIdLowerBound,
+			@Param(value = "problemIdUpperBound") long problemIdUpperBound);
 	
 	/**
 	 * 通过试题分类的别名获取试题分类对象.

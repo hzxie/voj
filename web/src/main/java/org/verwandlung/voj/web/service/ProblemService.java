@@ -108,7 +108,7 @@ public class ProblemService {
 	 * @return 包含试题标签的列表
 	 */
 	public List<ProblemTag> getProblemTagsUsingProblemId(long problemId) {
-		return problemTagMapper.getProblemTagUsingProblemId(problemId);
+		return problemTagMapper.getProblemTagsUsingProblemId(problemId);
 	}
 	
 	/**

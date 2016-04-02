@@ -11,6 +11,13 @@
 		<result property="problemCategoryName" column="problem_category_name" />
 		<result property="parentProblemCategoryId" column="problem_category_parent_id" />
 	</resultMap>
+	<resultMap id="ProblemCategoryRelationshipResultMap"
+		type="org.verwandlung.voj.web.model.ProblemCategoryRelationship">
+		<id property="problemId" column="problem_id" />
+		<id property="problemCategoryId" column="problem_category_id" />
+		<result property="problemCategorySlug" column="problem_category_slug" />
+		<result property="problemCategoryName" column="problem_category_name" />
+	</resultMap>
 
 	<!-- Methods -->
 	<select id="getProblemCategories"
@@ -38,7 +45,7 @@
 	</select>
 	<select id="getProblemCategoriesOfProblems"
 		parameterType="map"
-		resultMap="ProblemCategoryResultMap"
+		resultMap="ProblemCategoryRelationshipResultMap"
 		useCache="true">
 		SELECT *
 		FROM voj_problem_category_relationships
