@@ -121,7 +121,7 @@ public class ProblemMapperTest {
 	 */
 	@Test
 	public void testGetProblemsFrom1000WithLimit10() {
-		List<Problem> problems = problemMapper.getProblemsUsingFilters(null, 0, true, 1000, 10);
+		List<Problem> problems = problemMapper.getProblemsUsingFilters(null, 0, 0, true, 1000, 10);
 		Assert.assertEquals(3, problems.size());
 		
 		Problem firstProblem = problems.get(0);
@@ -142,7 +142,7 @@ public class ProblemMapperTest {
 	 */
 	@Test
 	public void testGetProblemsFrom1001WithLimit1() {
-		List<Problem> problems = problemMapper.getProblemsUsingFilters("", 0, true, 1001, 1);
+		List<Problem> problems = problemMapper.getProblemsUsingFilters("", 0, 0, true, 1001, 1);
 		Assert.assertEquals(1, problems.size());
 		
 		Problem firstProblem = problems.get(0);
@@ -160,7 +160,7 @@ public class ProblemMapperTest {
 	 */
 	@Test
 	public void testGetProblemsFrom1010WithLimit10() {
-		List<Problem> problems = problemMapper.getProblemsUsingFilters(null, 0, true, 1010, 10);
+		List<Problem> problems = problemMapper.getProblemsUsingFilters(null, 0, 0, true, 1010, 10);
 		Assert.assertEquals(0, problems.size());
 	}
 	

@@ -21,7 +21,7 @@ public class ProblemCategoryRelationship implements Serializable {
 	 * @param problemCategorySlug - 试题分类的别名
 	 * @param problemCategoryName - 试题分类的名称
 	 */
-	public ProblemCategoryRelationship(long problemId, long problemCategoryId, String problemCategorySlug, String problemCategoryName) { 
+	public ProblemCategoryRelationship(long problemId, int problemCategoryId, String problemCategorySlug, String problemCategoryName) {
 		this.problemId = problemId;
 		this.problemCategoryId = problemCategoryId;
 		this.problemCategorySlug = problemCategorySlug;
@@ -48,7 +48,7 @@ public class ProblemCategoryRelationship implements Serializable {
 	 * 获取试题分类的唯一标识符.
 	 * @return 试题分类的唯一标识符
 	 */
-	public long getProblemCategoryId() {
+	public int getProblemCategoryId() {
 		return problemCategoryId;
 	}
 
@@ -56,7 +56,7 @@ public class ProblemCategoryRelationship implements Serializable {
 	 * 设置试题分类的唯一标识符.
 	 * @param problemCategoryId - 试题分类的唯一标识符
 	 */
-	public void setProblemCategoryId(long problemCategoryId) {
+	public void setProblemCategoryId(int problemCategoryId) {
 		this.problemCategoryId = problemCategoryId;
 	}
 	
@@ -127,7 +127,7 @@ public class ProblemCategoryRelationship implements Serializable {
 	/**
 	 * 试题分类的唯一标识符.
 	 */
-	private long problemCategoryId;
+	private int problemCategoryId;
 	
 	/**
 	 * 试题分类的别名.
