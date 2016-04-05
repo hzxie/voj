@@ -114,7 +114,7 @@
 			AND problem_name LIKE "%"#{keyword}"%"
 		</if>
 		<if test="problemCategoryId != 0">
-			AND problem_category_id = #{problemCategoryId} 
+			AND problem_category_id = #{problemCategoryId}
 		</if>
 		LIMIT #{limit}
 	</select>

@@ -117,8 +117,30 @@
                             </c:choose>
                             </td>
                             <td class="problem-name">${problem.problemName}</td>
-                            <td class="problem-categories"></td>
-                            <td class="problem-tags"></td>
+                            <td class="problem-categories">
+                            <c:choose>
+                                <c:when test="${problemCategoryRelationships[problem.problemId] == null}"></c:when>
+                                <c:otherwise>
+                                <c:forEach var="problemCategory" items="${problemCategoryRelationships[problem.problemId]}" varStatus="loop">
+                                    <a href="<c:url value="/administration/all-problems?problemCategory=${problemCategory.problemCategorySlug}" />">
+                                        ${problemCategory.problemCategoryName}
+                                    </a><c:if test="${!loop.last}">, </c:if>
+                                </c:forEach>
+                                </c:otherwise>
+                            </c:choose>
+                            </td>
+                            <td class="problem-tags">
+                            <c:choose>
+                                <c:when test="${problemTagRelationships[problem.problemId] == null}"></c:when>
+                                <c:otherwise>
+                                <c:forEach var="problemTag" items="${problemTagRelationships[problem.problemId]}" varStatus="loop">
+                                    <a href="<c:url value="/administration/all-problems?problemTag=${problemTag.problemTagSlug}" />">
+                                        ${problemTag.problemTagName}
+                                    </a><c:if test="${!loop.last}">, </c:if>
+                                </c:forEach>
+                                </c:otherwise>
+                            </c:choose>
+                            </td>
                             <td class="total-submission">${problem.totalSubmission}</td>
                             <td class="accepted-submission">${problem.acceptedSubmission}</td>
                         </tr>
