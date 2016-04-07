@@ -65,7 +65,7 @@ public class ProblemService {
 	public List<Problem> getProblemsUsingFilters(long offset, String keyword, String problemCategorySlug,
 	       String problemTagSlug, boolean isPublicOnly, int limit) {
 		ProblemCategory problemCategory = problemCategoryMapper.getProblemCategoryUsingCategorySlug(problemCategorySlug);
-		ProblemTag problemTag = problemTagMapper.getProblemTagUsingTagSlug(problemTagSlug);
+		ProblemTag problemTag = problemTagMapper.getProblemTagUsingTagSlug(SlugifyUtils.getSlug(problemTagSlug));
 		int problemCategoryId = 0;
 		long problemTagId = 0;
 		if ( problemCategory != null ) {
