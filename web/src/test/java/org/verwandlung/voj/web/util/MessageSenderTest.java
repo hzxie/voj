@@ -21,21 +21,21 @@ import org.verwandlung.voj.web.messenger.MessageSender;
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 */
 public class MessageSenderTest {
-    /**
-     * 测试用例: 测试sendMessage()方法
-     * 测试数据: N/a
-     * 预期结果: ActiveMQ的消息队列中产生预期的消息
-     */
-    /* @Test */
-    public void testSendMessage() {
-        Map<String, Object> mapMessage = new HashMap<String, Object>();
-        mapMessage.put("message", "Hello World");
-        messageSender.sendMessage(mapMessage);
-    }
-    
-    /**
-     * 自动注入的MessageSender对象.
-     */
-    @Autowired
-    private MessageSender messageSender;
+	/**
+	 * 测试用例: 测试sendMessage()方法
+	 * 测试数据: N/a
+	 * 预期结果: ActiveMQ的消息队列中产生预期的消息
+	 */
+	/* @Test */
+	public void testSendMessage() {
+		Map<String, Object> mapMessage = new HashMap<String, Object>();
+		mapMessage.put("message", "Hello World");
+		messageSender.sendMessage(mapMessage);
+	}
+	
+	/**
+	 * 自动注入的MessageSender对象.
+	 */
+	@Autowired
+	private MessageSender messageSender;
 }

@@ -1,10 +1,6 @@
 package org.verwandlung.voj.web.service;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -14,10 +10,7 @@ import org.verwandlung.voj.web.mapper.CheckpointMapper;
 import org.verwandlung.voj.web.mapper.ProblemCategoryMapper;
 import org.verwandlung.voj.web.mapper.ProblemMapper;
 import org.verwandlung.voj.web.mapper.ProblemTagMapper;
-import org.verwandlung.voj.web.model.Checkpoint;
-import org.verwandlung.voj.web.model.Problem;
-import org.verwandlung.voj.web.model.ProblemCategory;
-import org.verwandlung.voj.web.model.ProblemTag;
+import org.verwandlung.voj.web.model.*;
 import org.verwandlung.voj.web.util.SlugifyUtils;
 
 import com.alibaba.fastjson.JSON;
@@ -60,21 +53,28 @@ public class ProblemService {
 	}
 	
 	/**
-	 * 获取公开的试题列表.
+	 * 获取试题列表.
 	 * @param offset - 试题唯一标识符的起始序号
 	 * @param keyword - 关键字
 	 * @param problemCategorySlug - 试题分类的别名
+	 * @param problemTagSlug - 试题标签的别名
 	 * @param isPublicOnly - 是否只筛选公开试题
 	 * @param limit - 每次加载试题的数量
 	 * @return 试题列表(List<Problem>对象)
 	 */
-	public List<Problem> getProblemsUsingFilters(long offset, String keyword, String problemCategorySlug, boolean isPublicOnly, int limit) {
+	public List<Problem> getProblemsUsingFilters(long offset, String keyword, String problemCategorySlug,
+	       String problemTagSlug, boolean isPublicOnly, int limit) {
 		ProblemCategory problemCategory = problemCategoryMapper.getProblemCategoryUsingCategorySlug(problemCategorySlug);
+		ProblemTag problemTag = problemTagMapper.getProblemTagUsingTagSlug(SlugifyUtils.getSlug(problemTagSlug));
 		int problemCategoryId = 0;
+		long problemTagId = 0;
 		if ( problemCategory != null ) {
 			problemCategoryId = problemCategory.getProblemCategoryId();
 		}
-		return problemMapper.getProblemsUsingFilters(keyword, problemCategoryId, isPublicOnly, offset, limit);
+		if ( problemTag != null ) {
+			problemTagId = problemTag.getProblemTagId();
+		}
+		return problemMapper.getProblemsUsingFilters(keyword, problemCategoryId, problemTagId, isPublicOnly, offset, limit);
 	}
 	
 	/**
@@ -92,6 +92,32 @@ public class ProblemService {
 		}
 		return problemMapper.getNumberOfProblemsUsingFilters(keyword, problemCategoryId, isPublicOnly);
 	}
+
+	/**
+	 * 获取某个区间内各试题的分类.
+	 * @param problemIdLowerBound - 试题ID区间的下界
+	 * @param problemIdUpperBound - 试题ID区间的上界
+	 * @return 包含试题分类信息的列表
+	 */
+	public Map<Long, List<ProblemCategory>> getProblemCategoriesOfProblems(
+			long problemIdLowerBound, long problemIdUpperBound) {
+		List<ProblemCategoryRelationship> problemCategoryRelationships =
+				problemCategoryMapper.getProblemCategoriesOfProblems(problemIdLowerBound, problemIdUpperBound);
+
+		Map<Long, List<ProblemCategory>> problemCategoriesOfProblems = new HashMap<>();
+		for ( ProblemCategoryRelationship pcr : problemCategoryRelationships ) {
+			long problemId = pcr.getProblemId();
+			if ( !problemCategoriesOfProblems.containsKey(problemId) ) {
+				problemCategoriesOfProblems.put(problemId, new ArrayList<ProblemCategory>());
+			}
+
+			List<ProblemCategory> problemCategories = problemCategoriesOfProblems.get(problemId);
+			problemCategories.add(new ProblemCategory(
+					pcr.getProblemCategoryId(), pcr.getProblemCategorySlug(),
+					pcr.getProblemCategoryName(), 0));
+		}
+		return problemCategoriesOfProblems;
+	}
 	
 	/**
 	 * 获取试题的分类列表.
@@ -101,6 +127,32 @@ public class ProblemService {
 	public List<ProblemCategory> getProblemCategoriesUsingProblemId(long problemId) {
 		return problemCategoryMapper.getProblemCategoriesUsingProblemId(problemId);
 	}
+
+	/**
+	 * 获取某个区间内各试题的标签.
+	 * @param problemIdLowerBound - 试题ID区间的下界
+	 * @param problemIdUpperBound - 试题ID区间的上界
+	 * @return 包含试题标签信息的列表
+	 */
+	public Map<Long, List<ProblemTag>> getProblemTagsOfProblems(
+			long problemIdLowerBound, long problemIdUpperBound) {
+		List<ProblemTagRelationship> problemTagRelationships =
+				problemTagMapper.getProblemTagsOfProblems(problemIdLowerBound, problemIdUpperBound);
+
+		Map<Long, List<ProblemTag>> problemTagsOfProblems = new HashMap<>();
+		for ( ProblemTagRelationship ptr : problemTagRelationships ) {
+			long problemId = ptr.getProblemId();
+			if ( !problemTagsOfProblems.containsKey(problemId) ) {
+				problemTagsOfProblems.put(problemId, new ArrayList<ProblemTag>());
+			}
+
+			List<ProblemTag> problemTags = problemTagsOfProblems.get(problemId);
+			problemTags.add(new ProblemTag(
+					ptr.getProblemTagId(), ptr.getProblemTagSlug(),
+					ptr.getProblemTagName()));
+		}
+		return problemTagsOfProblems;
+	}
 	
 	/**
 	 * 获取试题的标签列表.
@@ -108,7 +160,37 @@ public class ProblemService {
 	 * @return 包含试题标签的列表
 	 */
 	public List<ProblemTag> getProblemTagsUsingProblemId(long problemId) {
-		return problemTagMapper.getProblemTagUsingProblemId(problemId);
+		return problemTagMapper.getProblemTagsUsingProblemId(problemId);
+	}
+
+	/**
+	 * 获得具有层次关系的试题分类列表.
+	 * @return 包含试题分类及其继承关系的Map<ProblemCategory, List<ProblemCategory>>对象
+	 */
+	public Map<ProblemCategory, List<ProblemCategory>> getProblemCategoriesWithHierarchy() {
+		List<ProblemCategory> problemCategories = getProblemCategories();
+		Map<Integer, List<ProblemCategory>> problemCategoriesIndexer = new HashMap<Integer, List<ProblemCategory>>();
+		Map<ProblemCategory, List<ProblemCategory>> problemCategoriesHierarchy = new HashMap<ProblemCategory, List<ProblemCategory>>();
+
+		// 将无父亲的试题分类加入列表
+		for ( ProblemCategory pc : problemCategories ) {
+			if ( pc.getParentProblemCategoryId() == 0 ) {
+				List<ProblemCategory> subProblemCategories = new ArrayList<ProblemCategory>();
+				problemCategoriesHierarchy.put(pc, subProblemCategories);
+				problemCategoriesIndexer.put(pc.getProblemCategoryId(), subProblemCategories);
+			}
+		}
+		// 将其他试题分类加入列表
+		for ( ProblemCategory pc : problemCategories ) {
+			int parentProblemCategoryId = pc.getParentProblemCategoryId() ;
+			if ( parentProblemCategoryId != 0 ) {
+				List<ProblemCategory> subProblemCategories = problemCategoriesIndexer.get(parentProblemCategoryId);
+				if ( subProblemCategories != null ) {
+					subProblemCategories.add(pc);
+				}
+			}
+		}
+		return problemCategoriesHierarchy;
 	}
 	
 	/**

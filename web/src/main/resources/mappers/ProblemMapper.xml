@@ -94,7 +94,7 @@
 		parameterType="map"
 		resultMap="ProblemResultMap"
 		useCache="true">
-		SELECT DISTINCT(problem_id), problem_name, problem_is_public, (
+		SELECT DISTINCT(p.problem_id), problem_name, problem_is_public, (
 			SELECT COUNT(*) 
 			FROM voj_submissions s 
 			WHERE s.problem_id = p.problem_id
@@ -105,8 +105,10 @@
 		) AS accepted_submission
 		FROM voj_problems p 
 		NATURAL JOIN voj_problem_category_relationships pcr
-		NATURAL JOIN voj_problem_categories pc
-		WHERE problem_id &gt;= #{problemId}
+		<if test="problemTagId != 0">
+			NATURAL JOIN voj_problem_tag_relationships ptr
+		</if>
+		WHERE p.problem_id &gt;= #{problemId}
 		<if test="isPublicOnly == true">
 			AND problem_is_public = 1
 		</if>
@@ -114,7 +116,10 @@
 			AND problem_name LIKE "%"#{keyword}"%"
 		</if>
 		<if test="problemCategoryId != 0">
-			AND problem_category_id = #{problemCategoryId} 
+			AND problem_category_id = #{problemCategoryId}
+		</if>
+		<if test="problemTagId != 0">
+			AND problem_tag_id = #{problemTagId}
 		</if>
 		LIMIT #{limit}
 	</select>

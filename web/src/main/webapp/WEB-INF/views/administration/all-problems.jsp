@@ -57,7 +57,7 @@
                                 </select>
                             </div> <!-- .span8 -->
                             <div class="span4">
-                                <button class="btn btn-danger btn-block"><spring:message code="voj.administration.all-problems.apply" text="Apply" /></button>
+                                <button class="btn btn-danger"><spring:message code="voj.administration.all-problems.apply" text="Apply" /></button>
                             </div> <!-- .span4 -->
                         </div> <!-- .row-fluid -->
                     </div> <!-- .span4 -->
@@ -68,17 +68,17 @@
                                     <input id="keyword" name="keyword" class="span12" type="text" placeholder="<spring:message code="voj.administration.all-problems.keyword" text="Keyword" />" value="${keyword}" />
                                 </div> <!-- .control-group -->
                             </div> <!-- .span5 -->
-                            <div class="span4">
+                            <div class="span5">
                                 <select name="problemCategory" id="problem-category">
                                     <option value=""><spring:message code="voj.administration.all-problems.all-problem-categories" text="All Problem Categories" /></option>
                                 <c:forEach var="problemCategory" items="${problemCategories}">
                                     <option value="${problemCategory.problemCategorySlug}" <c:if test="${problemCategory.problemCategorySlug == selectedProblemCategory}">selected</c:if> >${problemCategory.problemCategoryName}</option>
                                 </c:forEach>
                                 </select>
-                            </div> <!-- .span4 -->
-                            <div class="span3">
-                                <button class="btn btn-primary btn-block"><spring:message code="voj.administration.all-problems.filter" text="Filter" /></button>
-                            </div> <!-- .span3 -->
+                            </div> <!-- .span5 -->
+                            <div class="span2">
+                                <button class="btn btn-primary"><spring:message code="voj.administration.all-problems.filter" text="Filter" /></button>
+                            </div> <!-- .span2 -->
                         </form> <!-- .row-fluid -->
                     </div> <!-- .span8 -->
                 </div> <!-- .row-fluid -->
@@ -117,8 +117,30 @@
                             </c:choose>
                             </td>
                             <td class="problem-name">${problem.problemName}</td>
-                            <td class="problem-categories"></td>
-                            <td class="problem-tags"></td>
+                            <td class="problem-categories">
+                            <c:choose>
+                                <c:when test="${problemCategoryRelationships[problem.problemId] == null}"></c:when>
+                                <c:otherwise>
+                                <c:forEach var="problemCategory" items="${problemCategoryRelationships[problem.problemId]}" varStatus="loop">
+                                    <a href="<c:url value="/administration/all-problems?problemCategory=${problemCategory.problemCategorySlug}" />">
+                                        ${problemCategory.problemCategoryName}
+                                    </a><c:if test="${!loop.last}">, </c:if>
+                                </c:forEach>
+                                </c:otherwise>
+                            </c:choose>
+                            </td>
+                            <td class="problem-tags">
+                            <c:choose>
+                                <c:when test="${problemTagRelationships[problem.problemId] == null}"></c:when>
+                                <c:otherwise>
+                                <c:forEach var="problemTag" items="${problemTagRelationships[problem.problemId]}" varStatus="loop">
+                                    <a href="<c:url value="/administration/all-problems?problemTag=${problemTag.problemTagSlug}" />">
+                                        ${problemTag.problemTagName}
+                                    </a><c:if test="${!loop.last}">, </c:if>
+                                </c:forEach>
+                                </c:otherwise>
+                            </c:choose>
+                            </td>
                             <td class="total-submission">${problem.totalSubmission}</td>
                             <td class="accepted-submission">${problem.acceptedSubmission}</td>
                         </tr>
