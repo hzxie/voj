@@ -162,7 +162,7 @@
                             <div class="body">
                                 <div class="row-fluid">
                                     <div class="span4"><spring:message code="voj.administration.index.product-version" text="Product Version" /></div> <!-- .span4 -->
-                                    <div class="span8">${productVersion}</div> <!-- .span8 -->
+                                    <div id="product-version" class="span8">${productVersion}</div> <!-- .span8 -->
                                 </div> <!-- .row-fluid -->
                                 <div class="row-fluid">
                                     <div class="span4"><spring:message code="voj.administration.index.memory-usage" text="Memory Usage" /></div> <!-- .span4 -->
@@ -268,6 +268,24 @@
                 ]
             });
         }
+    </script>
+    <script type="text/javascript">
+        $(function() {
+            var currentVersion = $('#product-version').html(),
+                newVersion     = '0.0.0';
+
+            $.ajax({
+                type: 'GET',
+                url: 'https://api.github.com/repos/zjhzxhz/voj/releases/latest',
+                dataType: 'jsonp',
+                success: function(result){
+                    newVersion = result['data']['name'];
+                    if ( newVersion > currentVersion ) {
+                        $('#product-version').html('<spring:message code="voj.administration.index.new-version-available" text="New version available" />: ' + newVersion);
+                    }
+                }
+            });
+        });
     </script>
 </body>
 </html>
