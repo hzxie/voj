@@ -16,7 +16,7 @@
 
 #include <fcntl.h>
 #include <signal.h>
-#include <spawn.h>
+#include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -34,15 +34,15 @@ extern char** environ;
 /**
  * Function Prototypes.
  */
-posix_spawn_file_actions_t setupIoRedirection(const std::string&, const std::string&);
-int createProcess(pid_t&, const std::string&, posix_spawn_file_actions_t&);
-int runProcess(pid_t&, int, int, int&, int&);
+bool createProcess(pid_t&, sigset_t&);
+void setupIoRedirection(const std::string&, const std::string&);
+int runProcess(pid_t, sigset_t, const std::string&, int, int, int&, int&);
 char** getCommandArgs(const std::string& commandLine);
-int getMaxMemoryUsage(pid_t, int);
-int getCurrentMemoryUsage(pid_t);
-bool isCurrentMemoryUsageIgnored(int, int);
+bool isCurrentusedMemoryIgnored(int, int);
+int getMaxusedMemory(pid_t, int);
+int getCurrentusedMemory(pid_t);
 long long getMillisecondsNow();
-int killProcess(pid_t& pid);
+int killProcess(pid_t&);
 
 /**
  * JNI调用入口.
@@ -66,32 +66,28 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     std::string inputFilePath       = getStringValue(jniEnv, jInputFilePath);
     std::string outputFilePath      = getStringValue(jniEnv, jOutputFilePath);
 
-    std::cout << "[JNI DEBUG] Command Line: " << commandLine << std::endl;
-    std::cout << "[JNI DEBUG] Time Limit: " << timeLimit << " ms" << std::endl;
-    std::cout << "[JNI DEBUG] Memory Limit: " << memoryLimit << " KB" << std::endl;
+    std::cout << "Command Line: " << commandLine << std::endl;
 
     JHashMap    result;
     jint        usedTime            = 0;
     jint        usedMemory          = 0;
     jint        exitCode            = 127;
 
-    // Setup I/O Redirection for Child Process
-    posix_spawn_file_actions_t fileActions = setupIoRedirection(inputFilePath, outputFilePath);
-
-    // Create Process
     pid_t       pid                 = -1;
-    int         processStatus       = createProcess(pid, commandLine, fileActions);
-    if ( processStatus != 0 ) {
-        std::cout << "Cannot create the process." << std::endl;
+    sigset_t    sigset;
+    if ( !createProcess(pid, sigset) ) {
+        throwCStringException(jniEnv, "Failed to fork a process.");
     }
-
-    exitCode = runProcess(pid, timeLimit, memoryLimit, usedTime, usedMemory);
-    posix_spawn_file_actions_destroy(&fileActions);
+    // Setup I/O Redirection for Child Process
+    if ( pid == 0 ) {
+        setupIoRedirection(inputFilePath, outputFilePath);
+    }
+    exitCode = runProcess(pid, sigset, commandLine, timeLimit, memoryLimit, usedTime, usedMemory);
 
     std::cout << "[JNI DEBUG] usedTime: " << usedTime << " ms" << std::endl;
     std::cout << "[JNI DEBUG] usedMemory: " << usedMemory  << " KB" << std::endl;
     std::cout << "[JNI DEBUG] exitCode: " << exitCode << std::endl;
-
+    
     result.put("usedTime", usedTime);
     result.put("usedMemory", usedMemory);
     result.put("exitCode", exitCode);
@@ -100,69 +96,101 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
 }
 
 /**
+ * 创建进程.
+ * @param  pid    - 进程ID
+ * @param  sigset - 进程的标记
+ * @return 运行创建状态(-1表示未成功创建, 0表示子进程)
+ */
+bool createProcess(pid_t& pid, sigset_t& sigset) {
+    sigset_t originalSigset;
+    sigemptyset (&sigset);
+    sigaddset (&sigset, SIGCHLD);
+    if ( sigprocmask(SIG_BLOCK, &sigset, &originalSigset) < 0 ) {
+        return false;
+    }
+
+    pid         = fork();
+    if ( pid == -1 ) {
+        return false;
+    }
+    return true;
+}
+
+/**
  * 设置程序I/O重定向.
  * @param  inputFilePath  - 执行程序时的输入文件路径(可为NULL)
  * @param  outputFilePath - 执行程序后的输出文件路径(可为NULL)
  */
-posix_spawn_file_actions_t setupIoRedirection(
+void setupIoRedirection(
     const std::string& inputFilePath, const std::string& outputFilePath) {
-    posix_spawn_file_actions_t fileActions;
-    posix_spawn_file_actions_init(&fileActions);
-    
     if ( inputFilePath != "" ) {
         int inputFileDescriptor = open(inputFilePath.c_str(), O_RDONLY);
-        posix_spawn_file_actions_adddup2(&fileActions, inputFileDescriptor, STDIN);
-        posix_spawn_file_actions_addclose(&fileActions, inputFileDescriptor);
+        dup2(inputFileDescriptor, STDIN);
+        close(inputFileDescriptor);
     }
     if ( outputFilePath != "" ) {
         int outputFileDescriptor = open(outputFilePath.c_str(), O_CREAT | O_WRONLY);
         chmod(outputFilePath.c_str(), S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-        posix_spawn_file_actions_adddup2(&fileActions, outputFileDescriptor, STDOUT);
-        posix_spawn_file_actions_adddup2(&fileActions, outputFileDescriptor, STDERR);
-        posix_spawn_file_actions_addclose(&fileActions, outputFileDescriptor);
+        dup2(outputFileDescriptor, STDOUT);
+        dup2(outputFileDescriptor, STDERR);
+        close(outputFileDescriptor);
     }
-
-    return fileActions;
-}
-
-/**
- * 创建进程.
- * @param  pid         - 子进程ID
- * @param  commandLine - 待执行的命令行
- * @param  fileActions - I/O重定向信息
- * @return 运行创建状态(0表示成功创建)
- */
-int createProcess(pid_t& pid, const std::string& commandLine, 
-    posix_spawn_file_actions_t& fileActions) {
-    char** argv = getCommandArgs(commandLine);
-    return posix_spawnp(&pid, argv[0], &fileActions, NULL, argv, environ);
 }
 
 /**
  * 运行进程.
  * @param  pid         - 子进程ID
+ * @param  sigset      - 进程的标记
+ * @param  commandLine - 命令行
  * @param  timeLimit   - 运行时时间限制(ms)
  * @param  memoryLimit - 运行时空间限制(KB)
- * @param  usedTime   - 运行时时间占用(ms)
- * @param  usedMemory - 运行时空间占用(ms)
+ * @param  usedTime    - 运行时时间占用(ms)
+ * @param  usedMemory  - 运行时空间占用(ms)
  * @return 进程退出状态
  */
-int runProcess(pid_t& pid, int timeLimit, int memoryLimit, int& usedTime, int& usedMemory) {
-    std::future<int>  feature    = std::async(std::launch::async, getMaxMemoryUsage, pid, memoryLimit);
-    long long         startTime  = getMillisecondsNow();
+int runProcess(pid_t pid, sigset_t sigset, const std::string& commandLine, int timeLimit, 
+    int memoryLimit, int& usedTime, int& usedMemory) {
+    char**            argv       = getCommandArgs(commandLine);
+    long long         startTime  = 0;
     long long         endTime    = 0;
-    int               exitCode   = 127;
-                      usedMemory = feature.get();
+    int               exitCode   = 0;
+    std::future<int>  feature;
 
-    do {
-        endTime     = getMillisecondsNow();
-        usedTime    = endTime - startTime;
+    // Setup Monitor in Parent Process
+    if ( pid > 0 ) {
+        // Memory Monitor
+        feature     = std::async(std::launch::async, getMaxusedMemory, pid, memoryLimit);
         
-        if ( usedTime > timeLimit ) {
-            killProcess(pid);
-        }
-        usleep(50000);
-    } while ( waitpid(pid, &exitCode, WNOHANG) <= 0 );
+        // Time Monitor
+        struct timespec timeout;
+        timeout.tv_sec  = timeLimit / 1000;
+        timeout.tv_nsec = timeLimit % 1000 * 1000000;
+        
+        startTime       = getMillisecondsNow();
+        do {
+            if ( sigtimedwait(&sigset, NULL, &timeout) < 0 ) {
+                if (errno == EINTR) {
+                    /* Interrupted by a signal other than SIGCHLD. */
+                    continue;
+                } else if (errno == EAGAIN) {
+                    killProcess(pid);
+                } else {
+                    return 127;
+                }
+            }
+            break;
+        } while ( true );
+    }
+    // Run Child Process
+    if ( pid == 0 ) {
+        _exit(execvp(argv[0], argv));
+    }
+
+    // Collect information in Parent Process
+    waitpid(pid, &exitCode, 0);
+    endTime     = getMillisecondsNow();
+    usedTime    = endTime - startTime;
+    usedMemory  = feature.get();
 
     return exitCode;
 }
@@ -193,47 +221,47 @@ char** getCommandArgs(const std::string& commandLine) {
 }
 
 /**
+ * 是否忽略当前获得的内存占用值.
+ * 由于在实际运行过程中, 程序可能会获取到JVM环境中的内存占用.
+ * 对于这种情况, 我们应忽略这个值.
+ * @param  currentusedMemory - 当前获取到的内存占用
+ * @param  memoryLimit        - 运行时空间限制(KB)
+ * @return 是否忽略当前获取到的内存占用
+ */
+bool isCurrentusedMemoryIgnored(int currentusedMemory, int memoryLimit) {
+    int jvmusedMemory = getCurrentusedMemory(getpid());
+
+    if ( currentusedMemory >= jvmusedMemory / 2 &&
+         currentusedMemory <= jvmusedMemory * 2 ) {
+        return true;
+    }
+    return false;
+}
+
+/**
  * 获取运行时内存占用最大值
  * @param  pid         - 进程ID
  * @param  memoryLimit - 运行时空间限制(KB)
  * @return 运行时内存占用最大值
  */
-int getMaxMemoryUsage(pid_t pid, int memoryLimit) {
-    int  maxMemoryUsage     = 0,
-         currentMemoryUsage = 0;
+int getMaxusedMemory(pid_t pid, int memoryLimit) {
+    int  maxusedMemory     = 0,
+         currentusedMemory = 0;
     do {
-        currentMemoryUsage = getCurrentMemoryUsage(pid);
-        std::cout << "[JNI DEBUG] currentMemoryUsage: [PID #" << pid << "]" << currentMemoryUsage << std::endl;
+        currentusedMemory = getCurrentusedMemory(pid);
+        std::cout << "currentusedMemory: [PID #" << pid << "]" << currentusedMemory << std::endl;
 
-        if ( currentMemoryUsage > maxMemoryUsage && 
-            !isCurrentMemoryUsageIgnored(currentMemoryUsage, memoryLimit) ) {
-            maxMemoryUsage = currentMemoryUsage;
+        if ( currentusedMemory > maxusedMemory && 
+            !isCurrentusedMemoryIgnored(currentusedMemory, memoryLimit) ) {
+            maxusedMemory = currentusedMemory;
         }
-        if ( memoryLimit != 0 && maxMemoryUsage > memoryLimit ) {
+        if ( memoryLimit != 0 && maxusedMemory > memoryLimit ) {
             killProcess(pid);
         }
         usleep(5000);
-    } while ( currentMemoryUsage != 0 );
+    } while ( currentusedMemory != 0 );
 
-    return maxMemoryUsage;
-}
-
-/**
- * 是否忽略当前获得的内存占用值.
- * 由于在实际运行过程中, 程序可能会获取到JVM环境中的内存占用.
- * 对于这种情况, 我们应忽略这个值.
- * @param  currentMemoryUsage - 当前获取到的内存占用
- * @param  memoryLimit        - 运行时空间限制(KB)
- * @return 是否忽略当前获取到的内存占用
- */
-bool isCurrentMemoryUsageIgnored(int currentMemoryUsage, int memoryLimit) {
-    int        jvmMemoryUsage      = getCurrentMemoryUsage(getpid());
-
-    if ( currentMemoryUsage >= jvmMemoryUsage / 2 &&
-         currentMemoryUsage <= jvmMemoryUsage * 2 ) {
-        return true;
-    }
-    return false;
+    return maxusedMemory;
 }
 
 /**
@@ -241,8 +269,8 @@ bool isCurrentMemoryUsageIgnored(int currentMemoryUsage, int memoryLimit) {
  * @param  pid - 进程ID
  * @return 当前物理内存使用量(KB)
  */
-int getCurrentMemoryUsage(pid_t pid) {
-    int    currentMemoryUsage   = 0;
+int getCurrentusedMemory(pid_t pid) {
+    int    currentusedMemory   = 0;
     long   residentSetSize      = 0L;
     FILE*  fp                   = NULL;
     
@@ -252,14 +280,14 @@ int getCurrentMemoryUsage(pid_t pid) {
 
     if ( (fp = fopen( filePath, "r" )) != NULL ) {
         if ( fscanf(fp, "%*s%ld", &residentSetSize) == 1 ) {
-            currentMemoryUsage = (int)residentSetSize * (int)sysconf(_SC_PAGESIZE) >> 10;
-            if ( currentMemoryUsage < 0 ) {
-                currentMemoryUsage = std::numeric_limits<int32_t>::max() >> 10;
+            currentusedMemory = (int)residentSetSize * (int)sysconf(_SC_PAGESIZE) >> 10;
+            if ( currentusedMemory < 0 ) {
+                currentusedMemory = std::numeric_limits<int32_t>::max() >> 10;
             }
         }
         fclose(fp);
     }
-    return currentMemoryUsage;
+    return currentusedMemory;
 }
 
 /**
