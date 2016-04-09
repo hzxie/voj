@@ -123,7 +123,7 @@
 	</bean> 
 	<bean id="defaultDestination" class="org.apache.activemq.command.ActiveMQQueue">
 		<constructor-arg index="0" value="vojMessageQueue"/>
-	</bean>        
+	</bean>		
 	<bean id="jmsTemplate" class="org.springframework.jms.core.JmsTemplate">
 		<property name="connectionFactory" ref="connectionFactory" />
 		<property name="defaultDestination" ref="defaultDestination" />

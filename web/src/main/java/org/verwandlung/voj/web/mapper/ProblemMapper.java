@@ -67,6 +67,7 @@ public interface ProblemMapper {
 	 * 通过试题唯一标识符和关键字获取某个范围内的所有试题.
 	 * @param keyword - 关键词
 	 * @param problemCategoryId - 试题分类的唯一标识符
+	 * @param problemTagId - 试题标签的唯一标识符
 	 * @param isPublicOnly - 是否只筛选公开试题
 	 * @param offset - 试题唯一标识符的起始编号
 	 * @param limit - 需要获取的试题的数量
@@ -75,6 +76,7 @@ public interface ProblemMapper {
 	public List<Problem> getProblemsUsingFilters(
 			@Param("keyword") String keyword, 
 			@Param("problemCategoryId") int problemCategoryId,
+			@Param("problemTagId") long problemTagId,
 			@Param("isPublicOnly") boolean isPublicOnly,
 			@Param("problemId") long offset, @Param("limit") int limit);
 	
