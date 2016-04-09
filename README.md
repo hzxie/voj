@@ -84,7 +84,9 @@ For Judger:
 
 #### Binary Releases
 
-There're no binary releases available yet.
+- **Web Application**: [0.1.0](https://github.com/zjhzxhz/voj/releases/download/0.1.0/voj.war)
+- **Judger (Windows, 64 Bit)**: [0.1.0](https://github.com/zjhzxhz/voj/releases/download/0.1.0/voj-judger-windows-x64.jar)
+- **Judger (Linux, 64 Bit)**: [0.1.0](https://github.com/zjhzxhz/voj/releases/download/0.1.0/voj-judger-linux-x64.jar)
 
 #### Source Releases
 
