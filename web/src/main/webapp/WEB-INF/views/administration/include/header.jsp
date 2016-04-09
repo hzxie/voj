@@ -2,8 +2,6 @@
             <div id="header">
                 <a id="sidebar-toggle" href="javascript:void(0);"><i class="fa fa-bars"></i></a>
                 <ul class="nav inline">
-                    <li><a href="javascript:void(0);"><i class="fa fa-tasks"></i></a></li>
-                    <li><a href="javascript:void(0);"><i class="fa fa-bell"></i></a></li>
                     <li class="dropdown">
                         <a class="dropdown-toggle" data-toggle="dropdown" role="button" href="javascript:void(0);">
                             ${myProfile.username} <img src="${cdnUrl}/img/avatar.jpg" alt="avatar">
