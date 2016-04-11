@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS `voj_contest_problems` (
 
 CREATE TABLE IF NOT EXISTS `voj_discussion_replies` (
   `discussion_reply_id` bigint(20) NOT NULL,
-  `discussion_threads_id` bigint(20) NOT NULL,
+  `discussion_thread_id` bigint(20) NOT NULL,
   `discussion_reply_uid` bigint(20) NOT NULL,
   `discussion_reply_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `discussion_reply_content` text NOT NULL,
@@ -63,11 +63,11 @@ CREATE TABLE IF NOT EXISTS `voj_discussion_replies` (
 --
 
 CREATE TABLE IF NOT EXISTS `voj_discussion_threads` (
-  `discussion_threads_id` bigint(20) NOT NULL,
+  `discussion_thread_id` bigint(20) NOT NULL,
   `discussion_topic_id` int(8) NOT NULL,
   `discussion_threads_creator_uid` bigint(20) NOT NULL,
   `problem_id` bigint(20) DEFAULT NULL,
-  `discussion_threads_name` varchar(128) NOT NULL,
+  `discussion_thread_name` varchar(128) NOT NULL,
   `discussion_threads_create_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `discussion_threads_content` text NOT NULL,
   `discussion_threads_votes` text NOT NULL
@@ -461,14 +461,14 @@ ALTER TABLE `voj_contest_problems`
 --
 ALTER TABLE `voj_discussion_replies`
   ADD PRIMARY KEY (`discussion_reply_id`),
-  ADD KEY `discussion_id` (`discussion_threads_id`,`discussion_reply_uid`),
+  ADD KEY `discussion_id` (`discussion_thread_id`,`discussion_reply_uid`),
   ADD KEY `discussion_reply_uid` (`discussion_reply_uid`);
 
 --
 -- Indexes for table `voj_discussion_threads`
 --
 ALTER TABLE `voj_discussion_threads`
-  ADD PRIMARY KEY (`discussion_threads_id`),
+  ADD PRIMARY KEY (`discussion_thread_id`),
   ADD KEY `problem_id` (`discussion_topic_id`,`discussion_threads_creator_uid`),
   ADD KEY `discussion_threads_creator_uid` (`discussion_threads_creator_uid`),
   ADD KEY `problem_id_2` (`problem_id`);
@@ -599,7 +599,7 @@ ALTER TABLE `voj_discussion_replies`
 -- AUTO_INCREMENT for table `voj_discussion_threads`
 --
 ALTER TABLE `voj_discussion_threads`
-  MODIFY `discussion_threads_id` bigint(20) NOT NULL AUTO_INCREMENT;
+  MODIFY `discussion_thread_id` bigint(20) NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT for table `voj_discussion_topics`
 --
@@ -670,7 +670,7 @@ ALTER TABLE `voj_contest_problems`
 -- Constraints for table `voj_discussion_replies`
 --
 ALTER TABLE `voj_discussion_replies`
-  ADD CONSTRAINT `voj_discussion_replies_ibfk_1` FOREIGN KEY (`discussion_threads_id`) REFERENCES `voj_discussion_threads` (`discussion_threads_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `voj_discussion_replies_ibfk_1` FOREIGN KEY (`discussion_thread_id`) REFERENCES `voj_discussion_threads` (`discussion_thread_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   ADD CONSTRAINT `voj_discussion_replies_ibfk_2` FOREIGN KEY (`discussion_reply_uid`) REFERENCES `voj_users` (`uid`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --

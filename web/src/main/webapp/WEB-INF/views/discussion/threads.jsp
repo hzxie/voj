@@ -7,7 +7,7 @@
 <html lang="${language}">
 <head>
     <meta charset="UTF-8">
-    <title>{threads.threadsName} | ${websiteName}</title>
+    <title><spring:message code="voj.discussion.discussion.title" text="Discussion" /> | ${websiteName}</title>
     <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="${description}">
@@ -20,7 +20,7 @@
     <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/flat-ui.min.css" />
     <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/font-awesome.min.css" />
     <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/style.css" />
-    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/discussion/threads.css" />
+    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/discussion/discussion.css" />
     <!-- JavaScript -->
     <script type="text/javascript" src="${cdnUrl}/js/jquery-1.11.1.min.js"></script>
     <script type="text/javascript" src="${cdnUrl}/js/bootstrap.min.js"></script>
@@ -43,7 +43,33 @@
     <!-- Content -->
     <div id="content" class="container">
         <div id="main-content" class="row-fluid">
-            
+            <div id="discussion" class="span8">
+                <table class="table">
+                    <tr class="discussion-threads">
+                        <td class="avatar">
+                            <img src="${cdnUrl}/img/avatar.jpg" alt="avatar" />
+                        </td>
+                        <td class="overview">
+                            <h5><a href="#">Discussion Threads Demo</a></h5>
+                            <ul class="inline">
+                                <li><spring:message code="voj.discussion.discussion.author" text="Author" />: <a href="#">zjhzxhz</a></li>
+                                <li><spring:message code="voj.discussion.discussion.posted-in" text="Posted in" />: <a href="#">Forum #1</a></li>
+                                <li><spring:message code="voj.discussion.discussion.latest-reply" text="Latest reply" />: <a href="#">voj-tester</a> @6 hours ago</li>
+                            </ul>
+                        </td>
+                        <td class="reply-count">0</td>
+                    </tr>
+                </table> <!-- .table -->
+                <div id="more-discussion">
+                    <p class="availble"><spring:message code="voj.discussion.discussion.more-discussion" text="More Discussion..." /></p>
+                    <img src="${cdnUrl}/img/loading.gif" alt="Loading" class="hide" />
+                </div>
+            </div> <!-- #discussion -->
+            <div id="sidebar" class="span4">
+                <div id="topics" class="widget">
+                    <h4><spring:message code="voj.discussion.discussion.topics" text="Discussion Topics" /></h4>
+                </div> <!-- .widgets -->
+            </div> <!-- #sidebar -->
         </div> <!-- #main-content -->
     </div> <!-- #content -->
     <!-- Footer -->
