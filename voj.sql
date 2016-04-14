@@ -62,15 +62,14 @@ CREATE TABLE IF NOT EXISTS `voj_discussion_replies` (
 -- Table structure for table `voj_discussion_threads`
 --
 
-CREATE TABLE IF NOT EXISTS `voj_discussion_threads` (
+CREATE TABLE `voj_discussion_threads` (
   `discussion_thread_id` bigint(20) NOT NULL,
-  `discussion_topic_id` int(8) NOT NULL,
-  `discussion_threads_creator_uid` bigint(20) NOT NULL,
+  `discussion_thread_creator_uid` bigint(20) NOT NULL,
+  `discussion_thread_create_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `problem_id` bigint(20) DEFAULT NULL,
+  `discussion_topic_id` int(8) NOT NULL,
   `discussion_thread_name` varchar(128) NOT NULL,
-  `discussion_threads_create_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `discussion_threads_content` text NOT NULL,
-  `discussion_threads_votes` text NOT NULL
+  `discussion_thread_content` text NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
@@ -469,8 +468,8 @@ ALTER TABLE `voj_discussion_replies`
 --
 ALTER TABLE `voj_discussion_threads`
   ADD PRIMARY KEY (`discussion_thread_id`),
-  ADD KEY `problem_id` (`discussion_topic_id`,`discussion_threads_creator_uid`),
-  ADD KEY `discussion_threads_creator_uid` (`discussion_threads_creator_uid`),
+  ADD KEY `problem_id` (`discussion_topic_id`,`discussion_thread_creator_uid`),
+  ADD KEY `discussion_creator_uid` (`discussion_thread_creator_uid`),
   ADD KEY `problem_id_2` (`problem_id`);
 
 --
@@ -677,9 +676,9 @@ ALTER TABLE `voj_discussion_replies`
 -- Constraints for table `voj_discussion_threads`
 --
 ALTER TABLE `voj_discussion_threads`
-  ADD CONSTRAINT `voj_discussion_threads_ibfk_1` FOREIGN KEY (`discussion_threads_creator_uid`) REFERENCES `voj_users` (`uid`) ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT `voj_discussion_threads_ibfk_2` FOREIGN KEY (`discussion_topic_id`) REFERENCES `voj_discussion_topics` (`discussion_topic_id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT `voj_discussion_threads_ibfk_3` FOREIGN KEY (`problem_id`) REFERENCES `voj_problems` (`problem_id`) ON DELETE CASCADE ON UPDATE CASCADE;
+  ADD CONSTRAINT `voj_discussion_thread_ibfk_1` FOREIGN KEY (`discussion_thread_creator_uid`) REFERENCES `voj_users` (`uid`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `voj_discussion_thread_ibfk_2` FOREIGN KEY (`discussion_topic_id`) REFERENCES `voj_discussion_topics` (`discussion_topic_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `voj_discussion_thread_ibfk_3` FOREIGN KEY (`problem_id`) REFERENCES `voj_problems` (`problem_id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
 -- Constraints for table `voj_discussion_topics`
