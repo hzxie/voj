@@ -17,7 +17,7 @@ public class UserGroup implements Serializable {
 	/**
 	 * 用户组的构造函数.
 	 * @param userGroupId - 用户组的唯一标识符
-	 * @param userGroupSlug - 用户组的唯一英文简称
+	 * @param userGroupSlug - 用户组的别名
 	 * @param userGroupName - 用户组名称
 	 */
 	public UserGroup(int userGroupId, String userGroupSlug, String userGroupName) {
@@ -43,16 +43,16 @@ public class UserGroup implements Serializable {
 	}
 
 	/**
-	 * 获取用户组唯一英文简称.
-	 * @return 用户组唯一英文简称
+	 * 获取用户组的别名.
+	 * @return 用户组别名
 	 */
 	public String getUserGroupSlug() {
 		return userGroupSlug;
 	}
 
 	/**
-	 * 设置用户组唯一英文简称.
-	 * @param userGroupSlug - 用户组唯一英文简称
+	 * 设置用户组的别名.
+	 * @param userGroupSlug - 用户组别名
 	 */
 	public void setUserGroupSlug(String userGroupSlug) {
 		this.userGroupSlug = userGroupSlug;
@@ -89,7 +89,7 @@ public class UserGroup implements Serializable {
 	private int userGroupId;
 
 	/**
-	 * 用户组唯一英文简称.
+	 * 用户组的别名.
 	 */
 	private String userGroupSlug;
 

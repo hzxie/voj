@@ -138,7 +138,7 @@ public class Language implements Serializable {
 	private int languageId;
 	
 	/**
-	 * 编程语言的唯一英文简称.
+	 * 编程语言的别名.
 	 */
 	private String languageSlug;
 	
