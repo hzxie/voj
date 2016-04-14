@@ -109,7 +109,8 @@ public class DiscussionTopic implements Serializable {
 	@Override
 	public String toString() {
 		return String.format("DiscussionTopic [TopicId=%d, Slug=%s, Name=%s, parentId=%d]", 
-				new Object[] {discussionTopicId, discussionTopicSlug, discussionTopicName, parentDiscussionTopicId});
+				new Object[] {discussionTopicId, discussionTopicSlug, 
+						discussionTopicName, parentDiscussionTopicId});
 	}
 
 	/**
