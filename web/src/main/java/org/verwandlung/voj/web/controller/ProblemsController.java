@@ -1,7 +1,6 @@
 package org.verwandlung.voj.web.controller;
 
 import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,7 +23,6 @@ import org.springframework.web.servlet.ModelAndView;
 import org.verwandlung.voj.web.exception.ResourceNotFoundException;
 import org.verwandlung.voj.web.model.Language;
 import org.verwandlung.voj.web.model.Problem;
-import org.verwandlung.voj.web.model.ProblemCategory;
 import org.verwandlung.voj.web.model.Submission;
 import org.verwandlung.voj.web.model.User;
 import org.verwandlung.voj.web.service.LanguageService;
@@ -182,6 +180,22 @@ public class ProblemsController {
 	}
 	
 	/**
+	 * 加载试题题解页面.
+	 * @param problemId - 试题的唯一标识符
+	 * @param request - HttpRequest对象
+	 * @param response - HttpResponse对象
+	 * @return 包含试题题解信息的ModelAndView对象
+	 */
+	@RequestMapping(value = "/{problemId}/solution", method = RequestMethod.GET)
+	public ModelAndView solutionView(
+			@PathVariable("problemId") long problemId,
+			HttpServletRequest request, HttpServletResponse response) {
+		ModelAndView view = new ModelAndView("discussion/thread");
+		return view;
+	}
+	
+	/**
+	 * 创建提交.
 	 * @param problemId - 试题的唯一标识符
 	 * @param languageSlug - 编程语言的别名
 	 * @param code - 代码
