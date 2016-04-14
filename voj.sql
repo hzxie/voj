@@ -69,7 +69,8 @@ CREATE TABLE `voj_discussion_threads` (
   `problem_id` bigint(20) DEFAULT NULL,
   `discussion_topic_id` int(8) NOT NULL,
   `discussion_thread_name` varchar(128) NOT NULL,
-  `discussion_thread_content` text NOT NULL
+  `discussion_thread_content` text NOT NULL,
+  `discussion_thread_votes` text NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------

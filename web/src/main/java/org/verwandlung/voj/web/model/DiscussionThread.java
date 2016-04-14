@@ -22,17 +22,19 @@ public class DiscussionThread implements Serializable {
 	 * @param discussionTopic - 讨论帖子所属的话题
 	 * @param discussionThreadTitle - 讨论帖子的标题
 	 * @param discussionThreadContent - 讨论帖子的内容
+	 * @param discussionThreadVote - 讨论帖子的投票结果
 	 */
 	public DiscussionThread(User discussionThreadCreator, 
 			Date discussionThreadCreateTime, DiscussionTopic discussionTopic,
 			Problem problem, String discussionThreadTitle, 
-			String discussionThreadContent) {
-		this.setDiscussionThreadCreator(discussionThreadCreator);
-		this.setDiscussionThreadCreateTime(discussionThreadCreateTime);
-		this.setDiscussionTopic(discussionTopic);
-		this.setProblem(problem);
-		this.setDiscussionThreadTitle(discussionThreadTitle);
-		this.setDiscussionThreadContent(discussionThreadContent);
+			String discussionThreadContent, String discussionThreadVote) {
+		this.discussionThreadCreator = discussionThreadCreator;
+		this.discussionThreadCreateTime = discussionThreadCreateTime;
+		this.discussionTopic = discussionTopic;
+		this.problem = problem;
+		this.discussionThreadTitle = discussionThreadTitle;
+		this.discussionThreadContent = discussionThreadContent;
+		this.discussionThreadVote = discussionThreadVote;
 	}
 	
 	/**
@@ -44,15 +46,17 @@ public class DiscussionThread implements Serializable {
 	 * @param discussionTopic - 讨论帖子所属的话题
 	 * @param discussionThreadTitle - 讨论帖子的标题
 	 * @param discussionThreadContent - 讨论帖子的内容
+	 * @param discussionThreadVote - 讨论帖子的投票结果
 	 */
 	public DiscussionThread(long discussionThreadId, 
 			User discussionThreadCreator, Date discussionThreadCreateTime,
 			 Problem problem, DiscussionTopic discussionTopic, 
-			String discussionThreadTitle, String discussionThreadContent) {
+			String discussionThreadTitle, String discussionThreadContent, 
+			String discussionThreadVote) {
 		this(discussionThreadCreator, discussionThreadCreateTime, 
 				discussionTopic, problem, discussionThreadTitle,
-				discussionThreadContent);
-		this.setDiscussionThreadId(discussionThreadId);
+				discussionThreadContent, discussionThreadVote);
+		this.discussionThreadId = discussionThreadId;
 	}
 
 	/**
@@ -167,11 +171,27 @@ public class DiscussionThread implements Serializable {
 		this.discussionThreadContent = discussionThreadContent;
 	}
 	
+	/**
+	 * 获取讨论帖子的投票结果.
+	 * @return 讨论帖子的投票结果
+	 */
+	public String getDiscussionThreadVote() {
+		return discussionThreadVote;
+	}
+
+	/**
+	 * 设置讨论帖子的投票结果.
+	 * @param discussionThreadVote - 讨论帖子的投票结果
+	 */
+	public void setDiscussionThreadVote(String discussionThreadVote) {
+		this.discussionThreadVote = discussionThreadVote;
+	}
+
 	public String toString() {
-		return String.format("DiscussionThread [ThreadID=%d, Creator={%s}, CreateTime=%s, Problem={%s}, Title=%s, Content=%s]", 
+		return String.format("DiscussionThread [ThreadID=%d, Creator={%s}, CreateTime=%s, Problem={%s}, Title=%s]", 
 				new Object[] { discussionThreadId, discussionThreadCreator, 
 						discussionThreadCreateTime, problem, 
-						discussionThreadTitle, discussionThreadContent });
+						discussionThreadTitle });
 	}
 
 	/**
@@ -208,6 +228,11 @@ public class DiscussionThread implements Serializable {
 	 * 讨论帖子的内容.
 	 */
 	private String discussionThreadContent;
+	
+	/**
+	 * 讨论帖子的投票结果.
+	 */
+	private String discussionThreadVote;
 	
 	/**
 	 * 唯一的序列化标识符.
