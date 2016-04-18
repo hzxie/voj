@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper 
+	PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"  
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.verwandlung.voj.web.mapper.DiscussionTopicMapper">
+	<!-- ResultMap -->
+	<resultMap id="DiscussionTopicResultMap" type="org.verwandlung.voj.web.model.DiscussionTopic">
+		<id property="discussionTopicId" column="discussion_topic_id" />
+		<result property="discussionTopicSlug" column="discussion_topic_slug" />
+		<result property="discussionTopicName" column="discussion_topic_name" />
+		<result property="parentDiscussionTopicId" column="discussion_parent_topic_id" />
+	</resultMap>
+
+	<!-- Methods -->
+	<select id="getDiscussionTopics" 
+		resultMap="DiscussionTopicResultMap" 
+		useCache="true">
+		SELECT * 
+		FROM voj_discussion_topics
+	</select>
+	<select id="getDiscussionTopicUsingId" 
+		resultMap="DiscussionTopicResultMap" 
+		useCache="true">
+		SELECT * 
+		FROM voj_discussion_topics
+		WHERE discussion_topic_id = #{discussionTopicId}
+	</select>
+	<select id="getDiscussionTopicUsingSlug" 
+		resultMap="DiscussionTopicResultMap" 
+		useCache="true">
+		SELECT * 
+		FROM voj_discussion_topics
+		WHERE discussion_topic_slug = #{discussionTopicSlug}
+	</select>
+	<insert id="createDiscussionTopic" 
+		parameterType="org.verwandlung.voj.web.model.DiscussionTopic"
+		flushCache="true" 
+		keyProperty="discussionTopicId" 
+		keyColumn="discussion_topic_id"
+		useGeneratedKeys="true">
+		INSERT INTO voj_discussion_topics(discussion_topic_slug, discussion_topic_name, discussion_parent_topic_id) 
+		VALUES (#{discussionTopicSlug}, #{discussionTopicName}, #{parentDiscussionTopicId})
+	</insert>
+	<update id="updateDiscussionTopic"
+		parameterType="org.verwandlung.voj.web.model.DiscussionTopic"
+		flushCache="true">
+		UPDATE voj_discussion_topics 
+		SET discussion_topic_slug = #{discussionTopicSlug}, discussion_topic_name = #{discussionTopicName}, discussion_parent_topic_id = #{parentDiscussionTopicId}
+		WHERE discussion_topic_id = #{discussionTopicId}
+	</update>
+	<delete id="deleteDiscussionTopicUsingId"
+		parameterType="int"
+		flushCache="true">
+		DELETE FROM voj_discussion_topics 
+		WHERE discussion_topic_id = #{discussionTopicId}
+	</delete>
+</mapper>

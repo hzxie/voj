@@ -86,6 +86,14 @@ CREATE TABLE IF NOT EXISTS `voj_discussion_topics` (
   `discussion_parent_topic_id` int(8) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
+--
+-- Dumping data for table `voj_discussion_topics`
+--
+
+INSERT INTO `voj_discussion_topics` (`discussion_topic_id`, `discussion_topic_slug`, `discussion_topic_name`, `discussion_parent_topic_id`) VALUES
+(1, 'general', 'General', 0),
+(2, 'support', 'Help & Support', 0);
+
 -- --------------------------------------------------------
 
 --
@@ -478,6 +486,7 @@ ALTER TABLE `voj_discussion_threads`
 --
 ALTER TABLE `voj_discussion_topics`
   ADD PRIMARY KEY (`discussion_topic_id`),
+  ADD UNIQUE(`discussion_topic_slug`),
   ADD KEY `discussion_parent_topic_id` (`discussion_parent_topic_id`);
 
 --
@@ -604,7 +613,7 @@ ALTER TABLE `voj_discussion_threads`
 -- AUTO_INCREMENT for table `voj_discussion_topics`
 --
 ALTER TABLE `voj_discussion_topics`
-  MODIFY `discussion_topic_id` int(8) NOT NULL AUTO_INCREMENT;
+  MODIFY `discussion_topic_id` int(8) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=3;
 --
 -- AUTO_INCREMENT for table `voj_judge_results`
 --
@@ -680,12 +689,6 @@ ALTER TABLE `voj_discussion_threads`
   ADD CONSTRAINT `voj_discussion_thread_ibfk_1` FOREIGN KEY (`discussion_thread_creator_uid`) REFERENCES `voj_users` (`uid`) ON DELETE CASCADE ON UPDATE CASCADE,
   ADD CONSTRAINT `voj_discussion_thread_ibfk_2` FOREIGN KEY (`discussion_topic_id`) REFERENCES `voj_discussion_topics` (`discussion_topic_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   ADD CONSTRAINT `voj_discussion_thread_ibfk_3` FOREIGN KEY (`problem_id`) REFERENCES `voj_problems` (`problem_id`) ON DELETE CASCADE ON UPDATE CASCADE;
-
---
--- Constraints for table `voj_discussion_topics`
---
-ALTER TABLE `voj_discussion_topics`
-  ADD CONSTRAINT `voj_discussion_topics_ibfk_1` FOREIGN KEY (`discussion_parent_topic_id`) REFERENCES `voj_discussion_topics` (`discussion_topic_id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
 -- Constraints for table `voj_email_validation`
