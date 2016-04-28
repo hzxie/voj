@@ -23,25 +23,27 @@ SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 -- Table structure for table `voj_contests`
 --
 
-CREATE TABLE IF NOT EXISTS `voj_contests` (
+CREATE TABLE `voj_contests` (
   `contest_id` bigint(20) NOT NULL,
   `contest_name` varchar(128) NOT NULL,
   `contest_start_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `contest_end_time` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00'
+  `contest_end_time` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
+  `contest_mode` varchar(4) NOT NULL,
+  `contest_problems` text NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `voj_contest_problems`
+-- Table structure for table `voj_contest_contestants`
 --
 
-CREATE TABLE IF NOT EXISTS `voj_contest_problems` (
+CREATE TABLE `voj_contest_contestants` (
   `contest_id` bigint(20) NOT NULL,
-  `problem_id` bigint(20) NOT NULL
+  `contestants_uid` bigint(20) NOT NULL,
+  `contestants_score` int(4) NOT NULL,
+  `code_snippet` text NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-
--- --------------------------------------------------------
 
 --
 -- Table structure for table `voj_discussion_replies`
@@ -458,11 +460,11 @@ ALTER TABLE `voj_contests`
   ADD PRIMARY KEY (`contest_id`);
 
 --
--- Indexes for table `voj_contest_problems`
+-- Indexes for table `voj_contest_contestants`
 --
-ALTER TABLE `voj_contest_problems`
-  ADD PRIMARY KEY (`contest_id`,`problem_id`),
-  ADD KEY `problem_id` (`problem_id`);
+ALTER TABLE `voj_contest_contestants`
+  ADD PRIMARY KEY (`contest_id`,`contestants_uid`),
+  ADD KEY `contestants_uid` (`contestants_uid`);
 
 --
 -- Indexes for table `voj_discussion_replies`
@@ -666,14 +668,13 @@ ALTER TABLE `voj_user_groups`
   MODIFY `user_group_id` int(4) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=9;
 --
 -- Constraints for dumped tables
---
 
 --
--- Constraints for table `voj_contest_problems`
+-- Constraints for table `voj_contest_contestants`
 --
-ALTER TABLE `voj_contest_problems`
-  ADD CONSTRAINT `voj_contest_problems_ibfk_1` FOREIGN KEY (`contest_id`) REFERENCES `voj_contests` (`contest_id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT `voj_contest_problems_ibfk_2` FOREIGN KEY (`problem_id`) REFERENCES `voj_problems` (`problem_id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `voj_contest_contestants`
+  ADD CONSTRAINT `voj_contest_contestants_ibfk_1` FOREIGN KEY (`contest_id`) REFERENCES `voj_contests` (`contest_id`),
+  ADD CONSTRAINT `voj_contest_contestants_ibfk_2` FOREIGN KEY (`contestants_uid`) REFERENCES `voj_users` (`uid`);
 
 --
 -- Constraints for table `voj_discussion_replies`
