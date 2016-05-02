@@ -32,7 +32,7 @@ public class UserMapperTest {
 		UserGroup userGroup = new UserGroup(2, "users", "Users");
 		long totalUsers = userMapper.getNumberOfUsersUsingUserGroup(userGroup);
 		
-		Assert.assertEquals(2, totalUsers);
+		Assert.assertEquals(1, totalUsers);
 	}
 	
 	/**
@@ -135,7 +135,7 @@ public class UserMapperTest {
 		
 		User firstUser = users.get(0);
 		String username = firstUser.getUsername();
-		Assert.assertEquals("voj-tester", username);
+		Assert.assertEquals("another-user", username);
 	}
 	
 	/**
