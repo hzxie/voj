@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper 
+	PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"  
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.verwandlung.voj.web.mapper.DiscussionThreadMapper">
+	<!-- ResultMap -->
+	<resultMap id="DiscussionThreadResultMap" type="org.verwandlung.voj.web.model.DiscussionThread">
+		<id property="discussionThreadId" column="discussion_thread_id" />
+		<result property="discussionThreadCreateTime" column="discussion_thread_create_time" />
+		<result property="discussionThreadTitle" column="discussion_thread_name" />
+		<result property="discussionThreadContent" column="discussion_thread_content" />
+		<result property="discussionThreadVote" column="discussion_thread_votes" />
+		<association property="discussionThreadCreator" 
+			javaType="org.verwandlung.voj.web.model.User" 
+			column="discussion_thread_creator_uid"
+			select="org.verwandlung.voj.web.mapper.UserMapper.getUserUsingUid" />
+		<association property="problem" 
+			javaType="org.verwandlung.voj.web.model.Problem" 
+			column="problem_id"
+			select="org.verwandlung.voj.web.mapper.ProblemMapper.getProblem" />
+		<association property="discussionTopic" 
+			javaType="org.verwandlung.voj.web.model.DiscussionTopic" 
+			column="discussion_topic_id"
+			select="org.verwandlung.voj.web.mapper.DiscussionTopicMapper.getDiscussionTopicUsingId" />
+	</resultMap>
+
+	<!-- Methods -->
+	<select id="getDiscussionThreads" 
+		parameterType="map"
+		resultMap="DiscussionThreadResultMap" 
+		useCache="true">
+		SELECT * 
+		FROM voj_discussion_threads
+		WHERE discussion_thread_id >= #{discussionThreadId}
+		<if test="problemId != 0">
+			AND problemId = #{problemId}
+		</if>
+		<if test="discussionTopicId != 0">
+			AND discussion_topic_id = #{discussionTopicId}
+		</if>
+		LIMIT #{limit}
+	</select>
+	<select id="getDiscussionThreadUsingThreadId" 
+		parameterType="long"
+		resultMap="DiscussionThreadResultMap" 
+		useCache="true">
+		SELECT * 
+		FROM voj_discussion_threads
+		WHERE discussion_thread_id = #{discussionThreadId}
+	</select>
+	<insert id="createDiscussionThread" 
+		parameterType="org.verwandlung.voj.web.model.DiscussionThread"
+		flushCache="true" 
+		keyProperty="discussionThreadId" 
+		keyColumn="discussion_thread_id"
+		useGeneratedKeys="true">
+		INSERT INTO voj_discussion_threads(discussion_thread_creator_uid, discussion_thread_create_time, problem_id, discussion_topic_id, discussion_thread_name, discussion_thread_content, discussion_thread_votes) 
+		VALUES (#{discussionThreadCreator.uid}, #{discussionThreadCreateTime}, #{problem.problem_id}, #{discussionTopic.discussion_topic_id}, #{discussionThreadTitle}, #{discussionThreadContent}, #{discussionThreadVote})
+	</insert>
+	<update id="updateDiscussionThread"
+		parameterType="org.verwandlung.voj.web.model.DiscussionThread"
+		flushCache="true">
+		UPDATE voj_discussion_threads 
+		SET discussion_thread_creator_uid = #{discussionThreadCreator.uid}, discussion_thread_create_time = #{discussionThreadCreateTime}, problem_id = #{problem.problem_id}, discussion_topic_id = #{discussionTopic.discussion_topic_id}, discussion_thread_name = #{discussionThreadTitle}, discussion_thread_content = #{discussionThreadContent}, discussion_thread_votes = #{discussionThreadVote}
+		WHERE discussion_thread_id = #{discussionThreadId}
+	</update>
+	<delete id="deleteDiscussionThreadUsingId"
+		parameterType="int"
+		flushCache="true">
+		DELETE FROM voj_discussion_threads 
+		WHERE discussion_thread_id = #{discussionThreadId}
+	</delete>
+</mapper>
