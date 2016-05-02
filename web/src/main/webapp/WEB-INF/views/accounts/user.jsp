@@ -141,6 +141,7 @@
                         <h4><spring:message code="voj.accounts.user.submissions" text="submissions" /></h4>
                     </div> <!-- .header -->
                     <div class="body">
+                    <c:if test="${submissions == null || submissions.size() == 0}">
                         <table id="submissions" class="table table-striped">
                             <thead>
                                 <tr>
@@ -172,6 +173,7 @@
                                 </c:forEach>
                             </tbody>
                         </table>
+                    </c:if>
                     </div> <!-- .body -->
                 </div> <!-- .section -->
             </div> <!-- .span8 -->
