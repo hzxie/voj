@@ -42,7 +42,8 @@ CREATE TABLE `voj_contest_contestants` (
   `contest_id` bigint(20) NOT NULL,
   `contestants_uid` bigint(20) NOT NULL,
   `contestants_score` int(4) NOT NULL,
-  `code_snippet` text NOT NULL
+  `code_snippet` text NOT NULL,
+  `submissions` text NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 --
