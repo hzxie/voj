@@ -91,6 +91,11 @@ div#content div#main-content div.section {
 	margin-bottom: 20px;
 }
 
+div#content div#main-content div.section p {
+	overflow: hidden;
+	word-wrap: break-word;
+}
+
 div#content div#main-content select#submission-period {
 	margin: 0;
 }
