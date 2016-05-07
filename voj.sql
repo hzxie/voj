@@ -32,6 +32,14 @@ CREATE TABLE `voj_contests` (
   `contest_problems` text NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
+--
+-- Dumping data for table `voj_contests`
+--
+
+INSERT INTO `voj_contests` (`contest_id`, `contest_name`, `contest_start_time`, `contest_end_time`, `contest_mode`, `contest_problems`) VALUES
+(1, 'Contest Test #1', '2016-05-05 09:52:18', '2016-05-05 13:00:00', 'OI', '[1001, 1002]'),
+(2, 'Contest Test #2', '2016-05-08 00:00:00', '2016-05-08 04:00:00', 'ACM', '[1001, 1003]');
+
 -- --------------------------------------------------------
 
 --
