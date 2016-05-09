@@ -1,5 +1,7 @@
 package org.verwandlung.voj.web.model;
 
+import java.util.List;
+
 public class ContestContestant {
 	/**
 	 * ContestContestant的默认构造函数.
@@ -14,7 +16,6 @@ public class ContestContestant {
 	public ContestContestant(Contest contest, User contestant) {
 		this.contest = contest;
 		this.contestant = contestant;
-		this.score = 0;
 	}
 
 	/**
@@ -58,11 +59,11 @@ public class ContestContestant {
 	}
 
 	/**
-	 * 设置得分.
-	 * @param score - 得分
+	 * 获取运行时间(OI)或罚时(ACM).
+	 * @return 运行时间(OI)或罚时(ACM)
 	 */
-	public void setScore(int score) {
-		this.score = score;
+	public int getTime() {
+		return time;
 	}
 
 	/**
@@ -80,29 +81,13 @@ public class ContestContestant {
 	public void setCodeSnippet(String codeSnippet) {
 		this.codeSnippet = codeSnippet;
 	}
-	
-	/**
-	 * 获取对应的提交记录.
-	 * @return 对应的提交记录(JSON格式)
-	 */
-	public String getSubmissions() {
-		return submissions;
-	}
-
-	/**
-	 * 设置对应的提交记录.
-	 * @param submissions - 对应的提交记录
-	 */
-	public void setSubmissions(String submissions) {
-		this.submissions = submissions;
-	}
 
 	/* (non-Javadoc)
 	 * @see java.lang.Object#toString()
 	 */
 	public String toString() {
-		return String.format("ContestContestant [Contest={%s}, Contestant={%s}, Score={%s}]", 
-				new Object[] { contest, contestant, score, codeSnippet });
+		return String.format("ContestContestant [Contest={%s}, Contestant={%s}, Score=%s, Time=%s (ms)]", 
+				new Object[] { contest, contestant, score, time });
 	}
 
 	/**
@@ -119,15 +104,16 @@ public class ContestContestant {
 	 * 得分.
 	 */
 	private int score;
+
+	/**
+	 * OI赛制中的运行时间.
+	 * ACM赛制中的罚时.
+	 */
+	private int time;
 	
 	/**
 	 * 代码片段 (JSON格式).
 	 * 用于OI赛制中中临时保存参赛者的代码.
 	 */
 	private String codeSnippet;
-	
-	/**
-	 * 比赛中代码对应的评测记录 (JSON格式).
-	 */
-	private String submissions;
 }

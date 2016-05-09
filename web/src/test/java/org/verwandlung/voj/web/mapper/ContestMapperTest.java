@@ -30,7 +30,7 @@ public class ContestMapperTest {
 	@Test
 	public void testGetNumberOfContests() {
 		long numberOfContests = contestMapper.getNumberOfContests();
-		Assert.assertEquals(2, numberOfContests);
+		Assert.assertEquals(3, numberOfContests);
 	}
 
 	/**
@@ -45,7 +45,7 @@ public class ContestMapperTest {
 
 		Contest firstContest = contests.get(0);
 		String contestName = firstContest.getContestName();
-		Assert.assertEquals("Contest Test #2", contestName);
+		Assert.assertEquals("Contest Test #3", contestName);
 	}
 
 	/**
@@ -60,17 +60,17 @@ public class ContestMapperTest {
 
 		Contest contest = contests.get(0);
 		String contestName = contest.getContestName();
-		Assert.assertEquals("Contest Test #1", contestName);
+		Assert.assertEquals("Contest Test #2", contestName);
 	}
 
 	/**
 	 * 测试用例: 测试getContests(long, int)方法.
-	 * 测试数据: 获取从第3项开始的1个考试
+	 * 测试数据: 获取从第4项开始的1个考试
 	 * 预期结果: 返回[]形式的List
 	 */
 	@Test
 	public void testGetContestsFrom2WithLimit1() {
-		List<Contest> contests = contestMapper.getContests(2, 1);
+		List<Contest> contests = contestMapper.getContests(3, 1);
 		Assert.assertEquals(0, contests.size());
 	}
 
@@ -162,11 +162,11 @@ public class ContestMapperTest {
 	 */
 	@Test
 	public void testDeleteContestsExists() {
-		Contest contest = contestMapper.getContestsUsingId(2);
+		Contest contest = contestMapper.getContestsUsingId(3);
 		Assert.assertNotNull(contest);
 
-		contestMapper.deleteContest(2);
-		contest = contestMapper.getContestsUsingId(2);
+		contestMapper.deleteContest(3);
+		contest = contestMapper.getContestsUsingId(3);
 		Assert.assertNull(contest);
 	}
 

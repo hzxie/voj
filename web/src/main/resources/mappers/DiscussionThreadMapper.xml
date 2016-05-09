@@ -22,6 +22,9 @@
 			javaType="org.verwandlung.voj.web.model.DiscussionTopic" 
 			column="discussion_topic_id"
 			select="org.verwandlung.voj.web.mapper.DiscussionTopicMapper.getDiscussionTopicUsingId" />
+
+		<!-- TODO: DiscussionReplyCount -->
+
 	</resultMap>
 
 	<!-- Methods -->
