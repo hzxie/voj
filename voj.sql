@@ -26,7 +26,7 @@ SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 CREATE TABLE `voj_contests` (
   `contest_id` bigint(20) NOT NULL,
   `contest_name` varchar(128) NOT NULL,
-  `contest_start_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `contest_start_time` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
   `contest_end_time` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
   `contest_mode` varchar(4) NOT NULL,
   `contest_problems` text NOT NULL
@@ -37,8 +37,9 @@ CREATE TABLE `voj_contests` (
 --
 
 INSERT INTO `voj_contests` (`contest_id`, `contest_name`, `contest_start_time`, `contest_end_time`, `contest_mode`, `contest_problems`) VALUES
-(1, 'Contest Test #1', '2016-05-05 09:52:18', '2016-05-05 13:00:00', 'OI', '[1001, 1002]'),
-(2, 'Contest Test #2', '2016-05-08 00:00:00', '2016-05-08 04:00:00', 'ACM', '[1001, 1003]');
+(1, 'Contest Test #1', '2016-05-05 09:00:00', '2016-05-05 13:00:00', 'OI', '[1001, 1002]'),
+(2, 'Contest Test #2', '2016-05-08 12:00:00', '2016-05-08 14:00:00', 'ACM', '[1001, 1003]'),
+(3, 'Contest Test #3', '2016-05-09 12:00:00', '2016-05-09 14:00:00', 'ACM', '[1000, 1003]');
 
 -- --------------------------------------------------------
 
@@ -48,11 +49,37 @@ INSERT INTO `voj_contests` (`contest_id`, `contest_name`, `contest_start_time`, 
 
 CREATE TABLE `voj_contest_contestants` (
   `contest_id` bigint(20) NOT NULL,
-  `contestants_uid` bigint(20) NOT NULL,
-  `contestants_score` int(4) NOT NULL,
-  `code_snippet` text NOT NULL,
-  `submissions` text NOT NULL
+  `contestant_uid` bigint(20) NOT NULL,
+  `code_snippet` text
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+--
+-- Dumping data for table `voj_contest_contestants`
+--
+
+INSERT INTO `voj_contest_contestants` (`contest_id`, `contestants_uid`, `code_snippet`) VALUES
+(1, 1000, ''),
+(1, 1001, ''),
+(2, 1000, '');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `voj_contest_submissions`
+--
+
+CREATE TABLE `voj_contest_submissions` (
+  `contest_id` bigint(20) NOT NULL,
+  `submission_id` bigint(20) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+--
+-- Dumping data for table `voj_contest_submissions`
+--
+
+INSERT INTO `voj_contest_submissions` (`contest_id`, `submission_id`) VALUES
+(1, 1000),
+(1, 1002);
 
 --
 -- Table structure for table `voj_discussion_replies`
@@ -476,6 +503,13 @@ ALTER TABLE `voj_contest_contestants`
   ADD KEY `contestants_uid` (`contestants_uid`);
 
 --
+-- Indexes for table `voj_contest_submissions`
+--
+ALTER TABLE `voj_contest_submissions`
+  ADD PRIMARY KEY (`submission_id`),
+  ADD KEY `contest_id` (`contest_id`);
+
+--
 -- Indexes for table `voj_discussion_replies`
 --
 ALTER TABLE `voj_discussion_replies`
@@ -684,6 +718,13 @@ ALTER TABLE `voj_user_groups`
 ALTER TABLE `voj_contest_contestants`
   ADD CONSTRAINT `voj_contest_contestants_ibfk_1` FOREIGN KEY (`contest_id`) REFERENCES `voj_contests` (`contest_id`),
   ADD CONSTRAINT `voj_contest_contestants_ibfk_2` FOREIGN KEY (`contestants_uid`) REFERENCES `voj_users` (`uid`);
+
+--
+-- Constraints for table `voj_contest_submissions`
+--
+ALTER TABLE `voj_contest_submissions`
+  ADD CONSTRAINT `voj_contest_submissions_ibfk_1` FOREIGN KEY (`contest_id`) REFERENCES `voj_contests` (`contest_id`),
+  ADD CONSTRAINT `voj_contest_submissions_ibfk_2` FOREIGN KEY (`submission_id`) REFERENCES `voj_submissions` (`submission_id`);
 
 --
 -- Constraints for table `voj_discussion_replies`
