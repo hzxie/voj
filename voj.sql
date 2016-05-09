@@ -57,7 +57,7 @@ CREATE TABLE `voj_contest_contestants` (
 -- Dumping data for table `voj_contest_contestants`
 --
 
-INSERT INTO `voj_contest_contestants` (`contest_id`, `contestants_uid`, `code_snippet`) VALUES
+INSERT INTO `voj_contest_contestants` (`contest_id`, `contestant_uid`, `code_snippet`) VALUES
 (1, 1000, ''),
 (1, 1001, ''),
 (2, 1000, '');
@@ -499,8 +499,8 @@ ALTER TABLE `voj_contests`
 -- Indexes for table `voj_contest_contestants`
 --
 ALTER TABLE `voj_contest_contestants`
-  ADD PRIMARY KEY (`contest_id`,`contestants_uid`),
-  ADD KEY `contestants_uid` (`contestants_uid`);
+  ADD PRIMARY KEY (`contest_id`,`contestant_uid`),
+  ADD KEY `contestant_uid` (`contestant_uid`);
 
 --
 -- Indexes for table `voj_contest_submissions`
@@ -717,7 +717,7 @@ ALTER TABLE `voj_user_groups`
 --
 ALTER TABLE `voj_contest_contestants`
   ADD CONSTRAINT `voj_contest_contestants_ibfk_1` FOREIGN KEY (`contest_id`) REFERENCES `voj_contests` (`contest_id`),
-  ADD CONSTRAINT `voj_contest_contestants_ibfk_2` FOREIGN KEY (`contestants_uid`) REFERENCES `voj_users` (`uid`);
+  ADD CONSTRAINT `voj_contest_contestants_ibfk_2` FOREIGN KEY (`contestant_uid`) REFERENCES `voj_users` (`uid`);
 
 --
 -- Constraints for table `voj_contest_submissions`
