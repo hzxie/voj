@@ -23,6 +23,7 @@
     <!-- JavaScript -->
     <script type="text/javascript" src="${cdnUrl}/js/jquery-1.11.1.min.js"></script>
     <script type="text/javascript" src="${cdnUrl}/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="${cdnUrl}/js/flat-ui.min.js"></script>
     <script type="text/javascript" src="${cdnUrl}/js/md5.min.js"></script>
     <!--[if lte IE 9]>
         <script type="text/javascript" src="${cdnUrl}/js/jquery.placeholder.min.js"></script>
@@ -64,8 +65,8 @@
                     <input id="password" name="password" class="span12" type="password" maxlength="16" />
                 </p>
                 <p>
-                    <label for="remember-me">
-                        <input type="checkbox" /> <spring:message code="voj.accounts.login.remember-me" text="Remember Me" />
+                    <label class="checkbox" for="remember-me">
+                        <input id="remember-me" type="checkbox" data-toggle="checkbox" /> <spring:message code="voj.accounts.login.remember-me" text="Remember Me" />
                     </label>
                 </p>
                 <p>
