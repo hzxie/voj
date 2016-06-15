@@ -23,6 +23,11 @@
         </div>
     </div>
     <![endif]-->
+    
+    <script type="text/javascript" src="http://cdn.bootcss.com/mathjax/2.6.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <!-- 添加MathJax支持 -->
+    
+    
     <div id="header" class="row-fluid">
         <div class="container">
             <div id="logo" class="span6">
