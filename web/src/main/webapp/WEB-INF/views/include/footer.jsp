@@ -21,7 +21,6 @@
             <p id="copyright">
                 <spring:message code="voj.include.footer.copyright" text="Copyright" />&copy; <%= new java.text.SimpleDateFormat("yyyy").format(new java.util.Date()) %> ${copyright}. 
                 <spring:message code="voj.include.footer.all-rights-reserved" text="All rights reserved." />
-                
             </p>
             <p>
                 <span id="icp-number">${icpNumber}</span> 
