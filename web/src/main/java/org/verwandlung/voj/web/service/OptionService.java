@@ -55,13 +55,15 @@ public class OptionService {
 	 * @param copyright - 网站版权信息
 	 * @param allowUserRegister - 是否允许用户注册
 	 * @param icpNumber - 网站备案号
+	 * @param policeIcpNumber - 公安备案号
 	 * @param googleAnalyticsCode - Google Analytics代码
 	 * @param offensiveWords - 敏感词列表
 	 * @return 包含选项更新结果的Map对象
 	 */
 	public Map<String, Boolean> updateOptions(String websiteName, 
 			String websiteDescription,  String copyright, boolean allowUserRegister, 
-			String icpNumber, String googleAnalyticsCode, String offensiveWords) {
+			String icpNumber, String policeIcpNumber, String googleAnalyticsCode, 
+			String offensiveWords) {
 		Map<String, Boolean> result = new HashMap<String, Boolean>();
 		result.put("isWebsiteNameEmpty", websiteName.isEmpty());
 		result.put("isWebisteNameLegal", isWebsiteNameLegal(websiteName));
@@ -70,12 +72,14 @@ public class OptionService {
 		result.put("isCopyrightEmpty", copyright.isEmpty());
 		result.put("isCopyrightLegal", isCopyrightLegal(copyright));
 		result.put("isIcpNumberLegal", isIcpNumberLegal(icpNumber));
+		result.put("isPoliceIcpNumberLegal", isPoliceIcpNumberLegal(policeIcpNumber));
 		result.put("isAnalyticsCodeLegal", isGoogleAnalyticsCodeLegal(googleAnalyticsCode));
 		
-		boolean isSuccessful = !result.get("isWebsiteNameEmpty") && result.get("isWebisteNameLegal") &&
-							   !result.get("isDescriptionEmpty") && result.get("isDescriptionLegal") &&
-							   !result.get("isCopyrightEmpty")   && result.get("isCopyrightLegal")   &&
-								result.get("isIcpNumberLegal")   && result.get("isAnalyticsCodeLegal");
+		boolean isSuccessful = !result.get("isWebsiteNameEmpty") && result.get("isWebisteNameLegal")     &&
+							   !result.get("isDescriptionEmpty") && result.get("isDescriptionLegal")     &&
+							   !result.get("isCopyrightEmpty")   && result.get("isCopyrightLegal")       &&
+								result.get("isIcpNumberLegal")   && result.get("isPoliceIcpNumberLegal") && 
+								result.get("isAnalyticsCodeLegal");
 		if ( isSuccessful ) {
 			Map<String, String> optionMap = new HashMap<String, String>();
 			optionMap.put("websiteName", websiteName);
@@ -83,6 +87,7 @@ public class OptionService {
 			optionMap.put("copyright", copyright);
 			optionMap.put("googleAnalyticsCode", googleAnalyticsCode);
 			optionMap.put("icpNumber", icpNumber);
+			optionMap.put("policeIcpNumber", policeIcpNumber);
 			optionMap.put("allowUserRegister", allowUserRegister ? "1" : "0");
 			optionMap.put("offensiveWords", JSON.toJSONString(offensiveWords.split(",")));
 			updateOptions(optionMap);
@@ -145,6 +150,18 @@ public class OptionService {
 	private boolean isIcpNumberLegal(String icpNumber) {
 		boolean isIcpNumberEmpty = icpNumber.isEmpty();
 		boolean isIcpNumberLegal = icpNumber.matches("^.ICP备[0-9]{8}号$");
+		return isIcpNumberEmpty || isIcpNumberLegal;
+	}
+
+	/**
+	 * 检查公安机关备案号是否合法.
+	 * 规则: 合法的公安机关备案号形如: 浙公网安备33010202000766号
+	 * @param icpNumber - 公安机关备案号 
+	 * @return 公安机关备案号的合法性
+	 */
+	private boolean isPoliceIcpNumberLegal(String policeIcpNumber) {
+		boolean isIcpNumberEmpty = policeIcpNumber.isEmpty();
+		boolean isIcpNumberLegal = policeIcpNumber.matches("^.公网安备[\\s]*[0-9]{14}号$");
 		return isIcpNumberEmpty || isIcpNumberLegal;
 	}
 	

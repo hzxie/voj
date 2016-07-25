@@ -806,6 +806,7 @@ public class AdministrationController {
 	 * @param copyright - 网站版权信息
 	 * @param allowUserRegister - 是否允许用户注册
 	 * @param icpNumber - 网站备案号
+	 * @param policeIcpNumber - 公安备案号
 	 * @param googleAnalyticsCode - Google Analytics代码
 	 * @param offensiveWords - 敏感词列表
 	 * @param request - HttpServletRequest对象
@@ -818,11 +819,12 @@ public class AdministrationController {
 			@RequestParam(value = "copyright", required = true) String copyright,
 			@RequestParam(value = "allowUserRegister", required = true) boolean allowUserRegister,
 			@RequestParam(value = "icpNumber", required = true) String icpNumber,
+			@RequestParam(value = "policeIcpNumber", required = true) String policeIcpNumber,
 			@RequestParam(value = "googleAnalyticsCode", required = true) String googleAnalyticsCode,
 			@RequestParam(value = "offensiveWords", required = true) String offensiveWords,
 			HttpServletRequest request) {
 		Map<String, Boolean> result = optionService.updateOptions(websiteName, websiteDescription, 
-				copyright, allowUserRegister, icpNumber, googleAnalyticsCode, offensiveWords);
+				copyright, allowUserRegister, icpNumber, policeIcpNumber, googleAnalyticsCode, offensiveWords);
 		return result;
 	}
 	

@@ -73,6 +73,10 @@
                         <input id="icp-number" class="span12" type="text" value="${options['icpNumber']}" />
                     </div> <!-- .control-group -->
                     <div class="control-group row-fluid">
+                        <label for="police-icp-number"><spring:message code="voj.administration.general-settings.police-icp-number" text="Police ICP Number (for Chinese users)" /></label>
+                        <input id="police-icp-number" class="span12" type="text" value="${options['policeIcpNumber']}" />
+                    </div> <!-- .control-group -->
+                    <div class="control-group row-fluid">
                         <label for="google-analytics-code">
                             <spring:message code="voj.administration.general-settings.google-analytics-code" text="Google Analytics Code" /> 
                             (<a href="https://www.google.com/analytics" target="_blank"><spring:message code="voj.administration.general-settings.learn-more" text="Learn More" /></a>)
@@ -118,19 +122,21 @@
                 copyright           = $('#copyright').val(),
                 allowUserRegister   = $('#allow-register').is(':checked'),
                 icpNumber           = $('#icp-number').val(),
+                policeIcpNumber     = $('#police-icp-number').val(),
                 googleAnalyticsCode = $('#google-analytics-code').val(),
                 offensiveWords      = $('#offensive-words').val();
 
-            return doUpdateGeneralSettingsAction(websiteName, websiteDescription, copyright, allowUserRegister, icpNumber, googleAnalyticsCode, offensiveWords);
+            return doUpdateGeneralSettingsAction(websiteName, websiteDescription, copyright, allowUserRegister, icpNumber, policeIcpNumber, googleAnalyticsCode, offensiveWords);
         }
     </script>
     <script type="text/javascript">
-        function doUpdateGeneralSettingsAction(websiteName, websiteDescription, copyright, allowUserRegister, icpNumber, googleAnalyticsCode, offensiveWords) {
+        function doUpdateGeneralSettingsAction(websiteName, websiteDescription, copyright, allowUserRegister, icpNumber, policeIcpNumber, googleAnalyticsCode, offensiveWords) {
             var postData = {
                 'websiteName': websiteName, 
                 'websiteDescription': websiteDescription, 
                 'copyright': copyright, 
                 'allowUserRegister': allowUserRegister, 
+                'policeIcpNumber': policeIcpNumber, 
                 'icpNumber': icpNumber, 
                 'googleAnalyticsCode': googleAnalyticsCode, 
                 'offensiveWords': offensiveWords
@@ -171,6 +177,9 @@
                 }
                 if ( !result['isIcpNumberLegal'] ) {
                     errorMessage += '<spring:message code="voj.administration.general-settings.icp-number-illegal" text="The ICP Number seems invalid." /><br>';
+                } 
+                if ( !result['isPoliceIcpNumberLegal'] ) {
+                    errorMessage += '<spring:message code="voj.administration.general-settings.police-icp-number-illegal" text="The Police ICP Number seems invalid." /><br>';
                 } 
                 if ( !result['isAnalyticsCodeLegal'] ) {
                     errorMessage += '<spring:message code="voj.administration.general-settings.analytics-code-illegal" text="The Google Analytics code seems invalid." /><br>';
