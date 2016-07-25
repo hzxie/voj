@@ -298,4 +298,8 @@ div.markdown code {
 	div#footer span#icp-number {
 		display: block;
 	}
+
+	div#footer span#police-icp-number {
+		display: block;
+	}
 }
