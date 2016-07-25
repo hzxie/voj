@@ -25,6 +25,9 @@
     <script type="text/javascript" src="${cdnUrl}/js/bootstrap.min.js"></script>
     <script type="text/javascript" src="${cdnUrl}/js/md5.min.js"></script>
     <script type="text/javascript" src="${cdnUrl}/js/pace.min.js"></script>
+
+    <link rel="stylesheet" href="http://localhost/ArcGIS/arcgis-api/dijit/themes/claro/claro.css" />
+    <link rel="stylesheet" href="http://localhost/ArcGIS/arcgis-api/esri/css/esri.css" />
     <!--[if lte IE 9]>
         <script type="text/javascript" src="${cdnUrl}/js/jquery.placeholder.min.js"></script>
     <![endif]-->

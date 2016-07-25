@@ -228,8 +228,9 @@ INSERT INTO `voj_options` (`option_id`, `option_name`, `option_value`, `is_autol
 (3, 'copyright', '<a href="http://zjhzxhz.com/" target="_blank">Infinite Script</a>', 1),
 (4, 'googleAnalyticsCode', '', 1),
 (5, 'icpNumber', '', 1),
-(6, 'allowUserRegister', '1', 0),
-(7, 'offensiveWords', '["法轮","中央","六四","军区","共产党","国民党"]', 0);
+(6, 'policeIcpNumber', '', 1),
+(7, 'allowUserRegister', '1', 0),
+(8, 'offensiveWords', '["法轮","中央","六四","军区","共产党","国民党"]', 0);
 
 -- --------------------------------------------------------
 

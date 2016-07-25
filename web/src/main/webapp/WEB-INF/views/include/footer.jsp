@@ -21,7 +21,15 @@
             <p id="copyright">
                 <spring:message code="voj.include.footer.copyright" text="Copyright" />&copy; <%= new java.text.SimpleDateFormat("yyyy").format(new java.util.Date()) %> ${copyright}. 
                 <spring:message code="voj.include.footer.all-rights-reserved" text="All rights reserved." />
-                <span id="icp-number">${icpNumber}</span>
+                
+            </p>
+            <p>
+                <span id="icp-number">${icpNumber}</span> 
+                <c:if test="${policeIcpNumber != ''}">
+                <span id="police-icp-number">
+                    <img src="http://www.beian.gov.cn/img/ghs.png" alt="Police Logo"> ${policeIcpNumber}
+                </span>
+                </c:if>
             </p>
             <p>
                 <button class="btn-github" onclick="window.location.href='https://github.com/zjhzxhz/voj/'">
