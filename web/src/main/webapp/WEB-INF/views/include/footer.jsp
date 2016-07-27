@@ -26,7 +26,7 @@
                 <span id="icp-number">${icpNumber}</span> 
                 <c:if test="${policeIcpNumber != ''}">
                 <span id="police-icp-number">
-                    <img src="http://www.beian.gov.cn/img/ghs.png" alt="Police Logo"> ${policeIcpNumber}
+                    <img src="${cdnUrl}/img/police-badge-of-china.png" alt="Police Logo"> ${policeIcpNumber}
                 </span>
                 </c:if>
             </p>
