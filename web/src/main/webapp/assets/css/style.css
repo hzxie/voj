@@ -121,6 +121,7 @@ div#footer {
 div#footer span#police-icp-number img {
 	height: 14px;
 	width: 14px;
+	margin-top: -3px;
 }
 
 div#footer ul#footer-nav a {
