@@ -222,6 +222,15 @@ You can run the judger using following command:
 javaw -jar voj.judger.jar
 ```
 
+**Important:**
+
+If you are using Linux, please run following commands using `root`:
+
+```
+chmod 700 /sbin/init
+chmod 700 /sbin/poweroff
+```
+
 ---
 
 ### Contribution
