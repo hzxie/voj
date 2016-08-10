@@ -316,8 +316,8 @@ CREATE TABLE IF NOT EXISTS `voj_problem_checkpoints` (
   `checkpoint_id` int(4) NOT NULL,
   `checkpoint_exactly_match` tinyint(1) NOT NULL,
   `checkpoint_score` int(4) NOT NULL,
-  `checkpoint_input` text NOT NULL,
-  `checkpoint_output` text NOT NULL
+  `checkpoint_input` longtext NOT NULL,
+  `checkpoint_output` longtext NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 --
