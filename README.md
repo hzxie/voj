@@ -227,8 +227,13 @@ javaw -jar voj.judger.jar
 If you are using Linux, please run following commands using `root`:
 
 ```
+# Shutdown and Kill process is not allowed for non-root user
 chmod 700 /sbin/init
 chmod 700 /sbin/poweroff
+chmod 700 /usr/bin/pkill
+
+# Disable Internet Access for the user running judger
+iptables -A OUTPUT -m owner --uid-owner {Your username here} -j DROP
 ```
 
 ---
