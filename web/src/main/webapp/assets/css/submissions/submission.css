@@ -31,6 +31,8 @@ div#content div#main-content div.submission div.body div.section:first-child {
 div#content div#main-content div.submission div.body div.section div.description {
 	color: #666;
 	margin-left: 20px;
+	overflow: hidden;
+	word-wrap: break-word;
 }
 
 div#content div#main-content div.submission div.body div.section table td {
