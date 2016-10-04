@@ -1,12 +1,12 @@
-![Verwandlung Online Judge](https://raw.githubusercontent.com/zjhzxhz/voj/master/web/src/main/webapp/assets/img/logo.png)
+![Verwandlung Online Judge](https://raw.githubusercontent.com/hzxie/voj/master/web/src/main/webapp/assets/img/logo.png)
 
 Version: 0.1.0-SNAPSHOT
 
-[![Build Status](https://travis-ci.org/zjhzxhz/voj.png?branch=master)](https://travis-ci.org/zjhzxhz/voj)
-[![Coverage Status](https://coveralls.io/repos/zjhzxhz/voj/badge.svg?branch=master&service=github)](https://coveralls.io/github/zjhzxhz/voj?branch=master)
+[![Build Status](https://travis-ci.org/hzxie/voj.png?branch=master)](https://travis-ci.org/hzxie/voj)
+[![Coverage Status](https://coveralls.io/repos/hzxie/voj/badge.svg?branch=master&service=github)](https://coveralls.io/github/hzxie/voj?branch=master)
 
 [**Official Website**](#) | 
-[**Tech Support**](http://zjhzxhz.com) |
+[**Tech Support**](http://haozhexie.com) |
 [**Change Log**](#)
 
 ---
@@ -84,9 +84,9 @@ For Judger:
 
 #### Binary Releases
 
-- **Web Application**: [0.1.0](https://github.com/zjhzxhz/voj/releases/download/0.1.0/voj.war)
-- **Judger (Windows, 64 Bit)**: [0.1.0](https://github.com/zjhzxhz/voj/releases/download/0.1.0/voj-judger-windows-x64.jar)
-- **Judger (Linux, 64 Bit)**: [0.1.0](https://github.com/zjhzxhz/voj/releases/download/0.1.0/voj-judger-linux-x64.jar)
+- **Web Application**: [0.1.0](https://github.com/hzxie/voj/releases/download/0.1.0/voj.war)
+- **Judger (Windows, 64 Bit)**: [0.1.0](https://github.com/hzxie/voj/releases/download/0.1.0/voj-judger-windows-x64.jar)
+- **Judger (Linux, 64 Bit)**: [0.1.0](https://github.com/hzxie/voj/releases/download/0.1.0/voj-judger-linux-x64.jar)
 
 #### Source Releases
 
@@ -227,8 +227,13 @@ javaw -jar voj.judger.jar
 If you are using Linux, please run following commands using `root`:
 
 ```
+# Shutdown and Kill process is not allowed for non-root user
 chmod 700 /sbin/init
 chmod 700 /sbin/poweroff
+chmod 700 /usr/bin/pkill
+
+# Disable Internet Access for the user running judger
+iptables -A OUTPUT -m owner --uid-owner {Your username here} -j DROP
 ```
 
 ---
@@ -238,9 +243,9 @@ chmod 700 /sbin/poweroff
 We're glad that you want to improve this project. 
 
 - **We NEED TRANSLATORS** for multi-language support(English and Chinese have supported).
-- You can report bugs [here](https://github.com/zjhzxhz/voj/issues).
+- You can report bugs [here](https://github.com/hzxie/voj/issues).
 - You can also create a pull request if you can fix the bug.
-- If you want to add features to the project, please tell us in the [issues](https://github.com/zjhzxhz/voj/issues) page before developing.
+- If you want to add features to the project, please tell us in the [issues](https://github.com/hzxie/voj/issues) page before developing.
 
 Thanks for your corporation.
 
