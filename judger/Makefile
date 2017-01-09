@@ -16,14 +16,9 @@ else
 		EXECUTABLE=target/classes/libJudgerCore.so
 		EXTFLAGS=-lpthread -lrt
 	endif
-	ifeq ($(UNAME_S), Darwin)
-		SOURCES_DIR=src/main/cpp/unix
-		OBJECTS_DIR=target/cpp
-		EXECUTABLE=target/classes/libJudgerCore.so
-	endif
 endif
 
-SOURCES=$(shell find '$(SOURCES_DIR)' -type f -name '*.cpp')
+SOURCES=$(wildcard $(SOURCES_DIR)/*.cpp)
 OBJECTS=$(SOURCES:$(SOURCES_DIR)/%.cpp=$(OBJECTS_DIR)/%.o)
 
 all: $(EXECUTABLE)

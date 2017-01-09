@@ -1,11 +1,11 @@
 -- phpMyAdmin SQL Dump
--- version 4.4.3
+-- version 4.5.1
 -- http://www.phpmyadmin.net
 --
--- Host: localhost
--- Generation Time: Dec 26, 2015 at 04:12 PM
--- Server version: 5.6.24
--- PHP Version: 5.6.8
+-- Host: 127.0.0.1
+-- Generation Time: Jan 09, 2017 at 02:02 PM
+-- Server version: 10.1.10-MariaDB
+-- PHP Version: 7.0.4
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 
@@ -13,11 +13,13 @@ SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
 /*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
-/*!40101 SET NAMES utf8 */;
+/*!40101 SET NAMES utf8mb4 */;
 
 --
 -- Database: `voj`
 --
+
+-- --------------------------------------------------------
 
 --
 -- Table structure for table `voj_contests`
@@ -37,9 +39,9 @@ CREATE TABLE `voj_contests` (
 --
 
 INSERT INTO `voj_contests` (`contest_id`, `contest_name`, `contest_start_time`, `contest_end_time`, `contest_mode`, `contest_problems`) VALUES
-(1, 'Contest Test #1', '2016-05-05 09:00:00', '2016-05-05 13:00:00', 'OI', '[1001, 1002]'),
-(2, 'Contest Test #2', '2016-05-08 12:00:00', '2016-05-08 14:00:00', 'ACM', '[1001, 1003]'),
-(3, 'Contest Test #3', '2016-05-09 12:00:00', '2016-05-09 14:00:00', 'ACM', '[1000, 1003]');
+(1, 'Contest Test #1', '2016-05-05 01:00:00', '2016-05-05 05:00:00', 'OI', '[1001, 1002]'),
+(2, 'Contest Test #2', '2016-05-08 04:00:00', '2016-05-08 06:00:00', 'ACM', '[1001, 1003]'),
+(3, 'Contest Test #3', '2016-05-09 04:00:00', '2016-05-09 06:00:00', 'ACM', '[1000, 1003]');
 
 -- --------------------------------------------------------
 
@@ -81,11 +83,13 @@ INSERT INTO `voj_contest_submissions` (`contest_id`, `submission_id`) VALUES
 (1, 1000),
 (1, 1002);
 
+-- --------------------------------------------------------
+
 --
 -- Table structure for table `voj_discussion_replies`
 --
 
-CREATE TABLE IF NOT EXISTS `voj_discussion_replies` (
+CREATE TABLE `voj_discussion_replies` (
   `discussion_reply_id` bigint(20) NOT NULL,
   `discussion_thread_id` bigint(20) NOT NULL,
   `discussion_reply_uid` bigint(20) NOT NULL,
@@ -117,7 +121,7 @@ CREATE TABLE `voj_discussion_threads` (
 -- Table structure for table `voj_discussion_topics`
 --
 
-CREATE TABLE IF NOT EXISTS `voj_discussion_topics` (
+CREATE TABLE `voj_discussion_topics` (
   `discussion_topic_id` int(8) NOT NULL,
   `discussion_topic_slug` varchar(128) NOT NULL,
   `discussion_topic_name` varchar(128) NOT NULL,
@@ -138,7 +142,7 @@ INSERT INTO `voj_discussion_topics` (`discussion_topic_id`, `discussion_topic_sl
 -- Table structure for table `voj_email_validation`
 --
 
-CREATE TABLE IF NOT EXISTS `voj_email_validation` (
+CREATE TABLE `voj_email_validation` (
   `email` varchar(64) NOT NULL,
   `token` varchar(36) NOT NULL,
   `expire_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -149,7 +153,7 @@ CREATE TABLE IF NOT EXISTS `voj_email_validation` (
 --
 
 INSERT INTO `voj_email_validation` (`email`, `token`, `expire_time`) VALUES
-('support@zjhzxhz.com', 'Random-String-Generated', '2015-07-10 01:00:00');
+('support@verwandlung.org', 'Random-String-Generated', '2015-07-09 17:00:00');
 
 -- --------------------------------------------------------
 
@@ -157,11 +161,11 @@ INSERT INTO `voj_email_validation` (`email`, `token`, `expire_time`) VALUES
 -- Table structure for table `voj_judge_results`
 --
 
-CREATE TABLE IF NOT EXISTS `voj_judge_results` (
+CREATE TABLE `voj_judge_results` (
   `judge_result_id` int(4) NOT NULL,
   `judge_result_slug` varchar(4) NOT NULL,
   `judge_result_name` varchar(32) NOT NULL
-) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 --
 -- Dumping data for table `voj_judge_results`
@@ -185,13 +189,13 @@ INSERT INTO `voj_judge_results` (`judge_result_id`, `judge_result_slug`, `judge_
 -- Table structure for table `voj_languages`
 --
 
-CREATE TABLE IF NOT EXISTS `voj_languages` (
+CREATE TABLE `voj_languages` (
   `language_id` int(4) NOT NULL,
   `language_slug` varchar(16) NOT NULL,
   `language_name` varchar(16) NOT NULL,
   `language_compile_command` varchar(128) NOT NULL,
   `language_run_command` varchar(128) NOT NULL
-) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 --
 -- Dumping data for table `voj_languages`
@@ -211,12 +215,12 @@ INSERT INTO `voj_languages` (`language_id`, `language_slug`, `language_name`, `l
 -- Table structure for table `voj_options`
 --
 
-CREATE TABLE IF NOT EXISTS `voj_options` (
+CREATE TABLE `voj_options` (
   `option_id` int(8) NOT NULL,
   `option_name` varchar(32) NOT NULL,
   `option_value` text NOT NULL,
   `is_autoload` tinyint(1) NOT NULL
-) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 --
 -- Dumping data for table `voj_options`
@@ -225,7 +229,7 @@ CREATE TABLE IF NOT EXISTS `voj_options` (
 INSERT INTO `voj_options` (`option_id`, `option_name`, `option_value`, `is_autoload`) VALUES
 (1, 'websiteName', 'Verwandlung Online Judge', 1),
 (2, 'description', 'Verwandlung Online Judge is a cross-platform online judge system based on Spring MVC Framework.', 1),
-(3, 'copyright', '<a href="http://zjhzxhz.com/" target="_blank">Infinite Script</a>', 1),
+(3, 'copyright', '<a href="https://haozhexie.com/" target="_blank">Infinite Script</a>', 1),
 (4, 'googleAnalyticsCode', '', 1),
 (5, 'icpNumber', '', 1),
 (6, 'policeIcpNumber', '', 1),
@@ -238,7 +242,7 @@ INSERT INTO `voj_options` (`option_id`, `option_name`, `option_value`, `is_autol
 -- Table structure for table `voj_problems`
 --
 
-CREATE TABLE IF NOT EXISTS `voj_problems` (
+CREATE TABLE `voj_problems` (
   `problem_id` bigint(20) NOT NULL,
   `problem_is_public` tinyint(1) NOT NULL DEFAULT '1',
   `problem_name` varchar(128) NOT NULL,
@@ -250,7 +254,7 @@ CREATE TABLE IF NOT EXISTS `voj_problems` (
   `problem_sample_input` text NOT NULL,
   `problem_sample_output` text NOT NULL,
   `problem_hint` text
-) ENGINE=InnoDB AUTO_INCREMENT=1003 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 --
 -- Dumping data for table `voj_problems`
@@ -268,12 +272,12 @@ INSERT INTO `voj_problems` (`problem_id`, `problem_is_public`, `problem_name`, `
 -- Table structure for table `voj_problem_categories`
 --
 
-CREATE TABLE IF NOT EXISTS `voj_problem_categories` (
+CREATE TABLE `voj_problem_categories` (
   `problem_category_id` int(4) NOT NULL,
   `problem_category_slug` varchar(32) NOT NULL,
   `problem_category_name` varchar(32) NOT NULL,
   `problem_category_parent_id` int(4) NOT NULL
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 --
 -- Dumping data for table `voj_problem_categories`
@@ -281,7 +285,7 @@ CREATE TABLE IF NOT EXISTS `voj_problem_categories` (
 
 INSERT INTO `voj_problem_categories` (`problem_category_id`, `problem_category_slug`, `problem_category_name`, `problem_category_parent_id`) VALUES
 (1, 'uncategorized', 'Uncategorized', 0),
-(2, 'dynamic-programming', 'Dynamic Programming', '0');
+(2, 'dynamic-programming', 'Dynamic Programming', 0);
 
 -- --------------------------------------------------------
 
@@ -289,7 +293,7 @@ INSERT INTO `voj_problem_categories` (`problem_category_id`, `problem_category_s
 -- Table structure for table `voj_problem_category_relationships`
 --
 
-CREATE TABLE IF NOT EXISTS `voj_problem_category_relationships` (
+CREATE TABLE `voj_problem_category_relationships` (
   `problem_id` bigint(20) NOT NULL,
   `problem_category_id` int(4) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
@@ -311,7 +315,7 @@ INSERT INTO `voj_problem_category_relationships` (`problem_id`, `problem_categor
 -- Table structure for table `voj_problem_checkpoints`
 --
 
-CREATE TABLE IF NOT EXISTS `voj_problem_checkpoints` (
+CREATE TABLE `voj_problem_checkpoints` (
   `problem_id` bigint(20) NOT NULL,
   `checkpoint_id` int(4) NOT NULL,
   `checkpoint_exactly_match` tinyint(1) NOT NULL,
@@ -352,11 +356,11 @@ INSERT INTO `voj_problem_checkpoints` (`problem_id`, `checkpoint_id`, `checkpoin
 -- Table structure for table `voj_problem_tags`
 --
 
-CREATE TABLE IF NOT EXISTS `voj_problem_tags` (
+CREATE TABLE `voj_problem_tags` (
   `problem_tag_id` bigint(20) NOT NULL,
   `problem_tag_slug` varchar(32) NOT NULL,
   `problem_tag_name` varchar(32) NOT NULL
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 --
 -- Dumping data for table `voj_problem_tags`
@@ -372,7 +376,7 @@ INSERT INTO `voj_problem_tags` (`problem_tag_id`, `problem_tag_slug`, `problem_t
 -- Table structure for table `voj_problem_tag_relationships`
 --
 
-CREATE TABLE IF NOT EXISTS `voj_problem_tag_relationships` (
+CREATE TABLE `voj_problem_tag_relationships` (
   `problem_id` bigint(20) NOT NULL,
   `problem_tag_id` bigint(20) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
@@ -394,7 +398,7 @@ INSERT INTO `voj_problem_tag_relationships` (`problem_id`, `problem_tag_id`) VAL
 -- Table structure for table `voj_submissions`
 --
 
-CREATE TABLE IF NOT EXISTS `voj_submissions` (
+CREATE TABLE `voj_submissions` (
   `submission_id` bigint(20) NOT NULL,
   `problem_id` bigint(20) NOT NULL,
   `uid` bigint(20) NOT NULL,
@@ -407,7 +411,7 @@ CREATE TABLE IF NOT EXISTS `voj_submissions` (
   `submission_judge_score` int(4) DEFAULT NULL,
   `submission_judge_log` text,
   `submission_code` text NOT NULL
-) ENGINE=InnoDB AUTO_INCREMENT=1004 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 --
 -- Dumping data for table `voj_submissions`
@@ -425,12 +429,12 @@ INSERT INTO `voj_submissions` (`submission_id`, `problem_id`, `uid`, `language_i
 -- Table structure for table `voj_usermeta`
 --
 
-CREATE TABLE IF NOT EXISTS `voj_usermeta` (
+CREATE TABLE `voj_usermeta` (
   `meta_id` bigint(20) NOT NULL,
   `uid` bigint(20) NOT NULL,
   `meta_key` varchar(64) NOT NULL,
   `meta_value` text NOT NULL
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 --
 -- Dumping data for table `voj_usermeta`
@@ -446,23 +450,23 @@ INSERT INTO `voj_usermeta` (`meta_id`, `uid`, `meta_key`, `meta_value`) VALUES
 -- Table structure for table `voj_users`
 --
 
-CREATE TABLE IF NOT EXISTS `voj_users` (
+CREATE TABLE `voj_users` (
   `uid` bigint(20) NOT NULL,
   `username` varchar(16) NOT NULL,
   `password` varchar(32) NOT NULL,
   `email` varchar(64) NOT NULL,
   `user_group_id` int(4) NOT NULL,
   `prefer_language_id` int(4) NOT NULL
-) ENGINE=InnoDB AUTO_INCREMENT=1003 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 --
 -- Dumping data for table `voj_users`
 --
 
 INSERT INTO `voj_users` (`uid`, `username`, `password`, `email`, `user_group_id`, `prefer_language_id`) VALUES
-(1000, 'zjhzxhz', '785ee107c11dfe36de668b1ae7baacbb', 'zjhzxhz@gmail.com', 8, 2),
-(1001, 'voj@judger', '785ee107c11dfe36de668b1ae7baacbb', 'support@zjhzxhz.com', 4, 2),
-(1002, 'another-user', '785ee107c11dfe36de668b1ae7baacbb', 'voj@zjhzxhz.com', 2, 3);
+(1000, 'zjhzxhz', '785ee107c11dfe36de668b1ae7baacbb', 'cshzxie@gmail.com', 8, 2),
+(1001, 'voj@judger', '785ee107c11dfe36de668b1ae7baacbb', 'support@verwandlung.org', 4, 2),
+(1002, 'another-user', '785ee107c11dfe36de668b1ae7baacbb', 'noreply@verwandlung.org', 2, 3);
 
 -- --------------------------------------------------------
 
@@ -470,11 +474,11 @@ INSERT INTO `voj_users` (`uid`, `username`, `password`, `email`, `user_group_id`
 -- Table structure for table `voj_user_groups`
 --
 
-CREATE TABLE IF NOT EXISTS `voj_user_groups` (
+CREATE TABLE `voj_user_groups` (
   `user_group_id` int(4) NOT NULL,
   `user_group_slug` varchar(16) NOT NULL,
   `user_group_name` varchar(16) NOT NULL
-) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 --
 -- Dumping data for table `voj_user_groups`
@@ -532,7 +536,7 @@ ALTER TABLE `voj_discussion_threads`
 --
 ALTER TABLE `voj_discussion_topics`
   ADD PRIMARY KEY (`discussion_topic_id`),
-  ADD UNIQUE(`discussion_topic_slug`),
+  ADD UNIQUE KEY `discussion_topic_slug` (`discussion_topic_slug`),
   ADD KEY `discussion_parent_topic_id` (`discussion_parent_topic_id`);
 
 --
@@ -644,7 +648,7 @@ ALTER TABLE `voj_user_groups`
 -- AUTO_INCREMENT for table `voj_contests`
 --
 ALTER TABLE `voj_contests`
-  MODIFY `contest_id` bigint(20) NOT NULL AUTO_INCREMENT;
+  MODIFY `contest_id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 --
 -- AUTO_INCREMENT for table `voj_discussion_replies`
 --
@@ -659,59 +663,60 @@ ALTER TABLE `voj_discussion_threads`
 -- AUTO_INCREMENT for table `voj_discussion_topics`
 --
 ALTER TABLE `voj_discussion_topics`
-  MODIFY `discussion_topic_id` int(8) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=3;
+  MODIFY `discussion_topic_id` int(8) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 --
 -- AUTO_INCREMENT for table `voj_judge_results`
 --
 ALTER TABLE `voj_judge_results`
-  MODIFY `judge_result_id` int(4) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=11;
+  MODIFY `judge_result_id` int(4) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 --
 -- AUTO_INCREMENT for table `voj_languages`
 --
 ALTER TABLE `voj_languages`
-  MODIFY `language_id` int(4) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=7;
+  MODIFY `language_id` int(4) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 --
 -- AUTO_INCREMENT for table `voj_options`
 --
 ALTER TABLE `voj_options`
-  MODIFY `option_id` int(8) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=8;
+  MODIFY `option_id` int(8) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 --
 -- AUTO_INCREMENT for table `voj_problems`
 --
 ALTER TABLE `voj_problems`
-  MODIFY `problem_id` bigint(20) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=1004;
+  MODIFY `problem_id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1004;
 --
 -- AUTO_INCREMENT for table `voj_problem_categories`
 --
 ALTER TABLE `voj_problem_categories`
-  MODIFY `problem_category_id` int(4) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=2;
+  MODIFY `problem_category_id` int(4) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 --
 -- AUTO_INCREMENT for table `voj_problem_tags`
 --
 ALTER TABLE `voj_problem_tags`
-  MODIFY `problem_tag_id` bigint(20) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=3;
+  MODIFY `problem_tag_id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 --
 -- AUTO_INCREMENT for table `voj_submissions`
 --
 ALTER TABLE `voj_submissions`
-  MODIFY `submission_id` bigint(20) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=1004;
+  MODIFY `submission_id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1004;
 --
 -- AUTO_INCREMENT for table `voj_usermeta`
 --
 ALTER TABLE `voj_usermeta`
-  MODIFY `meta_id` bigint(20) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=3;
+  MODIFY `meta_id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 --
 -- AUTO_INCREMENT for table `voj_users`
 --
 ALTER TABLE `voj_users`
-  MODIFY `uid` bigint(20) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=1003;
+  MODIFY `uid` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1003;
 --
 -- AUTO_INCREMENT for table `voj_user_groups`
 --
 ALTER TABLE `voj_user_groups`
-  MODIFY `user_group_id` int(4) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=9;
+  MODIFY `user_group_id` int(4) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 --
 -- Constraints for dumped tables
+--
 
 --
 -- Constraints for table `voj_contest_contestants`
