@@ -21,7 +21,7 @@ import org.verwandlung.voj.judger.model.Submission;
 public interface SubmissionMapper {
 	/**
 	 * 通过评测记录唯一标识符获取试题对象.
-	 * @param submissionID - 评测记录的唯一标识符
+	 * @param submissionId - 评测记录的唯一标识符
 	 * @return 一个评测记录对象
 	 */
 	@Select("SELECT * FROM voj_submissions WHERE submission_id = #{submissionId}")
@@ -47,6 +47,6 @@ public interface SubmissionMapper {
 	 * @param submission - 待更新的提交记录对象
 	 */
 	@Update("UPDATE voj_submissions SET problem_id = #{problem.problemId}, uid = #{uid}, language_id = #{language.languageId}, submission_submit_time = #{submitTime}, submission_execute_time = #{executeTime}, submission_used_time = #{usedTime}, submission_used_memory = #{usedMemory}, submission_judge_result = #{judgeResultSlug}, submission_judge_score = #{judgeScore}, submission_judge_log = #{judgeLog}, submission_code = #{code} WHERE submission_id = #{submissionId}")
-	@Options(flushCache = true)
+	@Options(flushCache = Options.FlushCachePolicy.TRUE)
 	public void updateSubmission(Submission submission);
 }

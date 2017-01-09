@@ -30,11 +30,6 @@
 	<context:annotation-config />
 	<context:component-scan base-package="org.verwandlung.voj.web" />
 
-	<!-- Enable @Controller annotation support -->
-	<mvc:annotation-driven />
-	<mvc:resources mapping="/assets/**" location="/assets/" />
-	<mvc:resources mapping="/druid/**" location="/WEB-INF/support/http/resources" />
-	
 	<!-- Property File Location -->
 	<bean
 		class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">

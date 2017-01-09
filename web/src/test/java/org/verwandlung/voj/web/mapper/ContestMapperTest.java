@@ -145,8 +145,6 @@ public class ContestMapperTest {
 		Contest contest = contestMapper.getContestsUsingId(2);
 		Assert.assertNotNull(contest);
 
-		System.out.println(contest.getProblems());
-
 		contest.setContestName("New Contest Name");
 		contestMapper.updateContest(contest);
 

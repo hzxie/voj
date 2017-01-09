@@ -104,7 +104,7 @@ public class UserMapperTest {
 	 */
 	@Test
 	public void testGetUserUsingEmailExists() {
-		User user = userMapper.getUserUsingEmail("Zjhzxhz@gmail.com");
+		User user = userMapper.getUserUsingEmail("cshzxie@gmail.com");
 		Assert.assertNotNull(user);
 		
 		long uid = user.getUid();
@@ -118,7 +118,7 @@ public class UserMapperTest {
 	 */
 	@Test
 	public void testGetUserUsingEmailNotExists() {
-		User user = userMapper.getUserUsingEmail("not-exists@zjhzxhz.com");
+		User user = userMapper.getUserUsingEmail("not-exists@verwandlung.org");
 		Assert.assertNull(user);
 	}
 	
@@ -147,7 +147,7 @@ public class UserMapperTest {
 	public void testCreateUserNormally() {
 		UserGroup userGroup = new UserGroup(1, "users", "Users");
 		Language language = new Language(2, "text/x-c++", "C++", "g++ foo.cpp -o foo", "./foo");
-		User user = new User("new-user-0xff", "Password","noreply@zjhzxhz.com", userGroup, language);
+		User user = new User("new-user-0xff", "Password","new-user-0xff@verwandlung.org", userGroup, language);
 		
 		userMapper.createUser(user);
 	}
@@ -161,7 +161,7 @@ public class UserMapperTest {
 	public void testCreateUserUsingExistingUsername() {
 		UserGroup userGroup = new UserGroup(1, "users", "Users");
 		Language language = new Language(2, "text/x-c++", "C++", "g++ foo.cpp -o foo", "./foo");
-		User user = new User("zjhzxhz", "Password","noreply@zjhzxhz.com", userGroup, language);
+		User user = new User("zjhzxhz", "Password","noreply@verwandlung.org", userGroup, language);
 		
 		userMapper.createUser(user);
 	}
@@ -175,7 +175,7 @@ public class UserMapperTest {
 	public void testCreateUserUsingExistingEmail() {
 		UserGroup userGroup = new UserGroup(1, "users", "Users");
 		Language language = new Language(2, "text/x-c++", "C++", "g++ foo.cpp -o foo", "./foo");
-		User user = new User("new-user-0xfe", "Password","zjhzxhz@gmail.com", userGroup, language);
+		User user = new User("new-user-0xfe", "Password","cshzxie@gmail.com", userGroup, language);
 		
 		userMapper.createUser(user);
 	}
@@ -189,7 +189,7 @@ public class UserMapperTest {
 	public void testCreateUserUsingTooLongUsername() {
 		UserGroup userGroup = new UserGroup(1, "users", "Users");
 		Language language = new Language(2, "text/x-c++", "C++", "g++ foo.cpp -o foo", "./foo");
-		User user = new User("new-user-0xffffffff", "Password","noreply@zjhzxhz.com", userGroup, language);
+		User user = new User("new-user-0xffffffff", "Password","noreply@verwandlung.org", userGroup, language);
 		
 		userMapper.createUser(user);
 	}
@@ -203,7 +203,7 @@ public class UserMapperTest {
 	public void testCreateUserUsingNotExistsLanguage() {
 		UserGroup userGroup = new UserGroup(1, "users", "Users");
 		Language language = new Language(0, "not-exists", "Not Exists", "Not Exists", "Not Exists");
-		User user = new User("new-user-0xfe", "Password","noreply@zjhzxhz.com", userGroup, language);
+		User user = new User("new-user-0xfe", "Password","noreply@verwandlung.org", userGroup, language);
 		
 		userMapper.createUser(user);
 	}
@@ -218,7 +218,7 @@ public class UserMapperTest {
 		User user = userMapper.getUserUsingUid(1000);
 		Assert.assertNotNull(user);
 		
-		user.setEmail("zjhzxhz@hit.edu.cn");
+		user.setEmail("hzxie@hit.edu.cn");
 		userMapper.updateUser(user);
 	}
 	
@@ -232,7 +232,7 @@ public class UserMapperTest {
 		User user = userMapper.getUserUsingUid(1000);
 		Assert.assertNotNull(user);
 		
-		user.setEmail("support@zjhzxhz.com");
+		user.setEmail("support@verwandlung.org");
 		userMapper.updateUser(user);
 	}
 	

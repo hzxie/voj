@@ -28,7 +28,7 @@ public class EmailValidationMapperTest {
 	 */
 	@Test
 	public void testGetEmailValidationExists() {
-		EmailValidation emailValidation = emailValidationMapper.getEmailValidation("support@zjhzxhz.com");
+		EmailValidation emailValidation = emailValidationMapper.getEmailValidation("support@verwandlung.org");
 		Assert.assertNotNull(emailValidation);
 		
 		String token = emailValidation.getToken();
@@ -42,7 +42,7 @@ public class EmailValidationMapperTest {
 	 */
 	@Test
 	public void testGetEmailValidationNotExists() {
-		EmailValidation emailValidation = emailValidationMapper.getEmailValidation("not-exists@zjhzxhz.com");
+		EmailValidation emailValidation = emailValidationMapper.getEmailValidation("not-exists@verwandlung.org");
 		Assert.assertNull(emailValidation);
 	}
 
@@ -53,10 +53,10 @@ public class EmailValidationMapperTest {
 	 */
 	@Test
 	public void testCreateEmailValidationNormally() {
-		EmailValidation emailValidation = new EmailValidation("zjhzxhz@gmail.com", "RandomToken", new Date());
+		EmailValidation emailValidation = new EmailValidation("cshzxie@gmail.com", "RandomToken", new Date());
 		emailValidationMapper.createEmailValidation(emailValidation);
 
-		EmailValidation insertedEmailValidation = emailValidationMapper.getEmailValidation("zjhzxhz@gmail.com");
+		EmailValidation insertedEmailValidation = emailValidationMapper.getEmailValidation("cshzxie@gmail.com");
 		Assert.assertNotNull(insertedEmailValidation);
 
 		String token = emailValidation.getToken();
@@ -70,7 +70,7 @@ public class EmailValidationMapperTest {
 	 */
 	@Test(expected = org.springframework.dao.DuplicateKeyException.class)
 	public void testCreateEmailValidationUsingExistingEmail() {
-		EmailValidation emailValidation = new EmailValidation("support@zjhzxhz.com", "RandomToken", new Date());
+		EmailValidation emailValidation = new EmailValidation("support@verwandlung.org", "RandomToken", new Date());
 		emailValidationMapper.createEmailValidation(emailValidation);
 	}
 
@@ -81,7 +81,7 @@ public class EmailValidationMapperTest {
 	 */
 	@Test(expected = org.springframework.dao.DataIntegrityViolationException.class)
 	public void testCreateEmailValidationUsingNotExistingEmail() {
-		EmailValidation emailValidation = new EmailValidation("not-exists@zjhzxhz.com", "RandomToken", new Date());
+		EmailValidation emailValidation = new EmailValidation("not-exists@verwandlung.org", "RandomToken", new Date());
 		emailValidationMapper.createEmailValidation(emailValidation);
 	}
 
@@ -92,12 +92,12 @@ public class EmailValidationMapperTest {
 	 */
 	@Test
 	public void testDeleteEmailValidationExists() {
-		EmailValidation emailValidation = emailValidationMapper.getEmailValidation("support@zjhzxhz.com");
+		EmailValidation emailValidation = emailValidationMapper.getEmailValidation("support@verwandlung.org");
 		Assert.assertNotNull(emailValidation);
 
-		emailValidationMapper.deleteEmailValidation("support@zjhzxhz.com");
+		emailValidationMapper.deleteEmailValidation("support@verwandlung.org");
 
-		emailValidation = emailValidationMapper.getEmailValidation("support@zjhzxhz.com");
+		emailValidation = emailValidationMapper.getEmailValidation("support@verwandlung.org");
 		Assert.assertNull(emailValidation);
 	}
 
@@ -108,7 +108,7 @@ public class EmailValidationMapperTest {
 	 */
 	@Test
 	public void testDeleteEmailValidationNotExists() {
-		emailValidationMapper.deleteEmailValidation("not-exist@zjhzxhz.com");
+		emailValidationMapper.deleteEmailValidation("not-exist@verwandlung.org");
 	}
 	
 	/**
