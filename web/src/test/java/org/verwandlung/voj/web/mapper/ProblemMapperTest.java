@@ -70,7 +70,7 @@ public class ProblemMapperTest {
 	 * 预期结果: 最后一题的ID为1002
 	 */
 	@Test
-	public void testGetUpperBoundOfProblemsWithLimitFrom1000WithLimit3() {
+	public void testGetUpperBoundOfProblemsWithOffsetFrom1000WithLimit3() {
 		long upperBoundOfProblems = problemMapper.getUpperBoundOfProblemsWithLimit(false, 1000, 3);
 		Assert.assertEquals(1002, upperBoundOfProblems);
 	}
@@ -81,7 +81,7 @@ public class ProblemMapperTest {
 	 * 预期结果: 最后一题的ID为1003
 	 */
 	@Test
-	public void testGetUpperBoundOfPublicProblemsWithLimitFrom1000WithLimit3() {
+	public void testGetUpperBoundOfPublicProblemsWithOffsetFrom1000WithLimit3() {
 		long upperBoundOfProblems = problemMapper.getUpperBoundOfProblemsWithLimit(true, 1000, 3);
 		Assert.assertEquals(1003, upperBoundOfProblems);
 	}
