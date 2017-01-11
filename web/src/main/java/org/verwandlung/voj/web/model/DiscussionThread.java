@@ -180,6 +180,22 @@ public class DiscussionThread implements Serializable {
 	}
 
 	/**
+	 * 获取讨论帖子的回复数.
+	 * @return 讨论帖子的回复数
+	 */
+	public long getNumberOfReplies() {
+		return numberOfReplies;
+	}
+
+	/**
+	 * 设置讨论帖子的回复数
+	 * @param numberOfReplies - 讨论帖子的回复数
+	 */
+	public void setNumberOfReplies(long numberOfReplies) {
+		this.numberOfReplies = numberOfReplies;
+	}
+
+	/**
 	 * 设置讨论帖子的投票结果.
 	 * @param discussionThreadVote - 讨论帖子的投票结果
 	 */
@@ -233,6 +249,11 @@ public class DiscussionThread implements Serializable {
 	 * 讨论帖子的投票结果.
 	 */
 	private String discussionThreadVote;
+
+	/**
+	 * 讨论帖子的回复数量.
+	 */
+	private long numberOfReplies;
 	
 	/**
 	 * 唯一的序列化标识符.
