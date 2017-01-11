@@ -10,6 +10,7 @@
 		<result property="discussionThreadTitle" column="discussion_thread_name" />
 		<result property="discussionThreadContent" column="discussion_thread_content" />
 		<result property="discussionThreadVote" column="discussion_thread_votes" />
+		<result property="numberOfReplies" column="discussion_replies" />
 		<association property="discussionThreadCreator" 
 			javaType="org.verwandlung.voj.web.model.User" 
 			column="discussion_thread_creator_uid"
@@ -22,9 +23,6 @@
 			javaType="org.verwandlung.voj.web.model.DiscussionTopic" 
 			column="discussion_topic_id"
 			select="org.verwandlung.voj.web.mapper.DiscussionTopicMapper.getDiscussionTopicUsingId" />
-
-		<!-- TODO: DiscussionReplyCount -->
-
 	</resultMap>
 
 	<!-- Methods -->
@@ -32,8 +30,12 @@
 		parameterType="map"
 		resultMap="DiscussionThreadResultMap" 
 		useCache="true">
-		SELECT * 
-		FROM voj_discussion_threads
+		SELECT *, (
+			SELECT COUNT(*)
+			FROM voj_discussion_replies dr
+			WHERE dt.discussion_thread_id = dr.discussion_thread_id
+		) AS discussion_replies
+		FROM voj_discussion_threads dt
 		WHERE discussion_thread_id >= #{discussionThreadId}
 		<if test="problemId != 0">
 			AND problem_id = #{problemId}
