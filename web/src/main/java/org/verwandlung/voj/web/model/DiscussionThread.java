@@ -22,19 +22,19 @@ public class DiscussionThread implements Serializable {
 	 * @param discussionTopic - 讨论帖子所属的话题
 	 * @param discussionThreadTitle - 讨论帖子的标题
 	 * @param discussionThreadContent - 讨论帖子的内容
-	 * @param discussionThreadVote - 讨论帖子的投票结果
+	 * @param discussionThreadVotes - 讨论帖子的投票结果
 	 */
 	public DiscussionThread(User discussionThreadCreator, 
 			Date discussionThreadCreateTime, DiscussionTopic discussionTopic,
 			Problem problem, String discussionThreadTitle, 
-			String discussionThreadContent, String discussionThreadVote) {
+			String discussionThreadContent, String discussionThreadVotes) {
 		this.discussionThreadCreator = discussionThreadCreator;
 		this.discussionThreadCreateTime = discussionThreadCreateTime;
 		this.discussionTopic = discussionTopic;
 		this.problem = problem;
 		this.discussionThreadTitle = discussionThreadTitle;
 		this.discussionThreadContent = discussionThreadContent;
-		this.discussionThreadVote = discussionThreadVote;
+		this.discussionThreadVotes = discussionThreadVotes;
 	}
 	
 	/**
@@ -175,8 +175,16 @@ public class DiscussionThread implements Serializable {
 	 * 获取讨论帖子的投票结果.
 	 * @return 讨论帖子的投票结果
 	 */
-	public String getDiscussionThreadVote() {
-		return discussionThreadVote;
+	public String getDiscussionThreadVotes() {
+		return discussionThreadVotes;
+	}
+
+	/**
+	 * 设置讨论帖子的投票结果.
+	 * @param discussionThreadVotes - 讨论帖子的投票结果
+	 */
+	public void setDiscussionThreadVotes(String discussionThreadVotes) {
+		this.discussionThreadVotes = discussionThreadVotes;
 	}
 
 	/**
@@ -193,14 +201,6 @@ public class DiscussionThread implements Serializable {
 	 */
 	public void setNumberOfReplies(long numberOfReplies) {
 		this.numberOfReplies = numberOfReplies;
-	}
-
-	/**
-	 * 设置讨论帖子的投票结果.
-	 * @param discussionThreadVote - 讨论帖子的投票结果
-	 */
-	public void setDiscussionThreadVote(String discussionThreadVote) {
-		this.discussionThreadVote = discussionThreadVote;
 	}
 
 	public String toString() {
@@ -248,7 +248,7 @@ public class DiscussionThread implements Serializable {
 	/**
 	 * 讨论帖子的投票结果.
 	 */
-	private String discussionThreadVote;
+	private String discussionThreadVotes;
 
 	/**
 	 * 讨论帖子的回复数量.
