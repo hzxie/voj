@@ -8,6 +8,7 @@
 	<name>voj.judger</name>
 	<url>http://maven.apache.org</url>
 	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<spring.version>4.3.5.RELEASE</spring.version>
 		<aspectj.version>1.8.10</aspectj.version>
 		<mybatis.version>3.4.2</mybatis.version>

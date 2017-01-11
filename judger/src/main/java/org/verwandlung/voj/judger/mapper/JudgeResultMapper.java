@@ -28,7 +28,7 @@ public interface JudgeResultMapper {
 		 @Result(property = "judgeResultSlug", column = "judge_result_slug"),
 		 @Result(property = "judgeResultName", column = "judge_result_name")
 	})
-	public List<JudgeResult> getAllJudgeResults();
+	List<JudgeResult> getAllJudgeResults();
 	
 	/**
 	 * 通过评测结果的唯一英文缩写获取评测结果对象.
@@ -42,6 +42,6 @@ public interface JudgeResultMapper {
 		 @Result(property = "judgeResultSlug", column = "judge_result_slug"),
 		 @Result(property = "judgeResultName", column = "judge_result_name")
 	})
-	public JudgeResult getJudgeResultUsingSlug(@Param("judgeResultSlug") String judgeResultSlug);
+	JudgeResult getJudgeResultUsingSlug(@Param("judgeResultSlug") String judgeResultSlug);
 
 }

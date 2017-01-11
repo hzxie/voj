@@ -55,7 +55,8 @@ public class CheckpointMapperTest {
 	@Test
 	public void testCreateCheckpointNormally() {
 		 Checkpoint checkpoint = new Checkpoint(1000, 100, false, 10, "input", "output");
-		 checkpointMapper.createCheckpoint(checkpoint);
+		 int numberOfRowsAffected = checkpointMapper.createCheckpoint(checkpoint);
+		 Assert.assertEquals(1, numberOfRowsAffected);
 	}
 	
 	/**

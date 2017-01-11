@@ -30,5 +30,5 @@ public interface UserMapper {
 		@Result(property = "userGroup", column = "user_group_id", javaType = UserGroup.class, one = @One(select="org.verwandlung.voj.judger.mapper.UserGroupMapper.getUserGroupUsingId")),
 		@Result(property = "preferLanguage", column = "prefer_language_id", javaType = Language.class, one = @One(select="org.verwandlung.voj.judger.mapper.LanguageMapper.getLanguageUsingId"))
 	})
-	public User getUserUsingUsername(@Param("username") String username);
+	User getUserUsingUsername(@Param("username") String username);
 }

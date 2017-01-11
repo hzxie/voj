@@ -37,5 +37,5 @@ public interface ProblemMapper {
 		 @Result(property = "sampleOutput", column = "problem_sample_output"),
 		 @Result(property = "hint", column = "problem_hint")
 	})
-	public Problem getProblem(@Param("problemId") long problemId);
+	Problem getProblem(@Param("problemId") long problemId);
 }

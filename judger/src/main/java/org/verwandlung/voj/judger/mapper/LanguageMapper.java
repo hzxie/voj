@@ -31,7 +31,7 @@ public interface LanguageMapper {
 		 @Result(property = "compileCommand", column = "language_compile_command"),
 		 @Result(property = "runCommand", column = "language_run_command"),
 	})
-	public Language getLanguageUsingId(@Param("languageId") int languageId);
+	Language getLanguageUsingId(@Param("languageId") int languageId);
 	
 	/**
 	 * 通过编程语言的唯一英文缩写获取编程语言对象.
@@ -47,7 +47,7 @@ public interface LanguageMapper {
 		 @Result(property = "compileCommand", column = "language_compile_command"),
 		 @Result(property = "runCommand", column = "language_run_command"),
 	})
-	public Language getLanguageUsingSlug(@Param("languageSlug") String languageSlug);
+	Language getLanguageUsingSlug(@Param("languageSlug") String languageSlug);
 	
 	/**
 	 * 获取支持的编程语言.
@@ -62,5 +62,5 @@ public interface LanguageMapper {
 		 @Result(property = "compileCommand", column = "language_compile_command"),
 		 @Result(property = "runCommand", column = "language_run_command"),
 	})
-	public List<Language> getAllLanguages();
+	List<Language> getAllLanguages();
 }

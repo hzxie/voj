@@ -40,7 +40,7 @@ public interface SubmissionMapper {
 		@Result(property = "judgeLog", column = "submission_judge_log"),
 		@Result(property = "code", column = "submission_code"),
 	})
-	public Submission getSubmission(@Param("submissionId") long submissionId);
+	Submission getSubmission(@Param("submissionId") long submissionId);
 	
 	/**
 	 * 更新提交记录.
@@ -48,5 +48,5 @@ public interface SubmissionMapper {
 	 */
 	@Update("UPDATE voj_submissions SET problem_id = #{problem.problemId}, uid = #{uid}, language_id = #{language.languageId}, submission_submit_time = #{submitTime}, submission_execute_time = #{executeTime}, submission_used_time = #{usedTime}, submission_used_memory = #{usedMemory}, submission_judge_result = #{judgeResultSlug}, submission_judge_score = #{judgeScore}, submission_judge_log = #{judgeLog}, submission_code = #{code} WHERE submission_id = #{submissionId}")
 	@Options(flushCache = Options.FlushCachePolicy.TRUE)
-	public void updateSubmission(Submission submission);
+	void updateSubmission(Submission submission);
 }

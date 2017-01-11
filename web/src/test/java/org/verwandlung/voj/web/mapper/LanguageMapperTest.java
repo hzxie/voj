@@ -96,7 +96,8 @@ public class LanguageMapperTest {
 	@Test
 	public void testCreateLanguageNormally() {
 		Language language = new Language("text/x-php", "PHP", "php foo.php", "php foo.php");
-		languageMapper.createLanguage(language);
+		int numberOfRowsAffected = languageMapper.createLanguage(language);
+		Assert.assertEquals(1, numberOfRowsAffected);
 	}
 	
 	/**
@@ -121,7 +122,8 @@ public class LanguageMapperTest {
 		Assert.assertNotNull(language);
 		
 		language.setLanguageName("D");
-		languageMapper.updateLanguage(language);
+		int numberOfRowsAffected = languageMapper.updateLanguage(language);
+		Assert.assertEquals(1, numberOfRowsAffected);
 		
 		language = languageMapper.getLanguageUsingId(2);
 		Assert.assertEquals("D", language.getLanguageName());
@@ -135,7 +137,8 @@ public class LanguageMapperTest {
 	@Test
 	public void testUpdateLanguageNotExists() {
 		Language language = new Language(0, "not-exist", "Not Exist", "Not Exist", "Not Exist");
-		languageMapper.updateLanguage(language);
+		int numberOfRowsAffected = languageMapper.updateLanguage(language);
+		Assert.assertEquals(0, numberOfRowsAffected);
 	}
 	
 	/**
@@ -148,7 +151,8 @@ public class LanguageMapperTest {
 		Language language = languageMapper.getLanguageUsingId(6);
 		Assert.assertNotNull(language);
 		
-		languageMapper.deleteLanguage(6);
+		int numberOfRowsAffected = languageMapper.deleteLanguage(6);
+		Assert.assertEquals(1, numberOfRowsAffected);
 		
 		language = languageMapper.getLanguageUsingId(6);
 		Assert.assertNull(language);
@@ -164,7 +168,8 @@ public class LanguageMapperTest {
 		Language language = languageMapper.getLanguageUsingId(0);
 		Assert.assertNull(language);
 		
-		languageMapper.deleteLanguage(0);
+		int numberOfRowsAffected = languageMapper.deleteLanguage(0);
+		Assert.assertEquals(0, numberOfRowsAffected);
 	}
 	
 	/**

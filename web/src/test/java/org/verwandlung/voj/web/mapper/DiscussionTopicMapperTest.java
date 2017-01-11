@@ -88,7 +88,8 @@ public class DiscussionTopicMapperTest {
 	@Test
 	public void testCreateDiscussionTopicNormally() {
 		DiscussionTopic topic = new DiscussionTopic("new-topic", "New Topic", 0);
-		discussionTopicMapper.createDiscussionTopic(topic);
+		int numberOfRowsAffected = discussionTopicMapper.createDiscussionTopic(topic);
+		Assert.assertEquals(1, numberOfRowsAffected);
 	}
 
 	/**
@@ -129,7 +130,8 @@ public class DiscussionTopicMapperTest {
 		Assert.assertNotNull(topic);
 
 		topic.setGetDiscussionTopicName("New Topic Name");
-		discussionTopicMapper.updateDiscussionTopic(topic);
+		int numberOfRowsAffected = discussionTopicMapper.updateDiscussionTopic(topic);
+		Assert.assertEquals(1, numberOfRowsAffected);
 
 		topic = discussionTopicMapper.getDiscussionTopicUsingSlug("general");
 		Assert.assertEquals("New Topic Name", topic.getGetDiscussionTopicName());
@@ -159,7 +161,9 @@ public class DiscussionTopicMapperTest {
 		DiscussionTopic topic = discussionTopicMapper.getDiscussionTopicUsingId(1);
 		Assert.assertNotNull(topic);
 
-		discussionTopicMapper.deleteDiscussionTopicUsingId(1);
+		int numberOfRowsAffected = discussionTopicMapper.deleteDiscussionTopicUsingId(1);
+		Assert.assertEquals(1, numberOfRowsAffected);
+
 		topic = discussionTopicMapper.getDiscussionTopicUsingId(1);
 		Assert.assertNull(topic);
 	}
@@ -174,7 +178,8 @@ public class DiscussionTopicMapperTest {
 		DiscussionTopic topic = discussionTopicMapper.getDiscussionTopicUsingId(0);
 		Assert.assertNull(topic);
 
-		discussionTopicMapper.deleteDiscussionTopicUsingId(0);
+		int numberOfRowsAffected = discussionTopicMapper.deleteDiscussionTopicUsingId(0);
+		Assert.assertEquals(0, numberOfRowsAffected);
 	}
 
 	/**

@@ -73,7 +73,8 @@ public class OptionMapperTest {
 	public void testUpdateOptionExists() {
 		Option option = optionMapper.getOption("websiteName");
 		option.setOptionValue("New OJ Platform");
-		optionMapper.updateOption(option);
+		int numberOfRowsAffected = optionMapper.updateOption(option);
+		Assert.assertEquals(1, numberOfRowsAffected);
 		
 		Option newOption = optionMapper.getOption("websiteName");
 		String optionValue = newOption.getOptionValue();
@@ -89,7 +90,8 @@ public class OptionMapperTest {
 	public void testUpdateOptionNotExists() {
 		Option option = optionMapper.getOption("websiteName");
 		option.setOptionId(0);
-		optionMapper.updateOption(option);
+		int numberOfRowsAffected = optionMapper.updateOption(option);
+		Assert.assertEquals(0, numberOfRowsAffected);
 	}
 	
 	/**

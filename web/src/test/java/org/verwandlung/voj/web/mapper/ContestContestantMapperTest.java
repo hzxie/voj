@@ -109,7 +109,8 @@ public class ContestContestantMapperTest {
 		User contestant = userMapper.getUserUsingUid(1002);
 
 		ContestContestant cc = new ContestContestant(contest, contestant);
-		contestContestantMapper.createContestContestant(cc);
+		int numberOfRowsAffected = contestContestantMapper.createContestContestant(cc);
+		Assert.assertEquals(1, numberOfRowsAffected);
 	}
 
 	/**
@@ -181,7 +182,8 @@ public class ContestContestantMapperTest {
 		ContestContestant cc = contestContestantMapper.getContestantOfContest(2, 1000);
 		Assert.assertNotNull(cc);
 
-		contestContestantMapper.deleteContestContestant(2, 1000);
+		int numberOfRowsAffected = contestContestantMapper.deleteContestContestant(2, 1000);
+		Assert.assertEquals(1, numberOfRowsAffected);
 		cc = contestContestantMapper.getContestantOfContest(2, 1000);
 		Assert.assertNull(cc);
 	}

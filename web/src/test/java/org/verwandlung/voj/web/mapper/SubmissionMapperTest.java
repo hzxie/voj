@@ -447,7 +447,8 @@ public class SubmissionMapperTest {
 		Language language = languageMapper.getLanguageUsingId(1);
 		
 		Submission submission = new Submission(problem, user, language, "C Code");
-		submissionMapper.createSubmission(submission);
+		int numberOfRowsAffected = submissionMapper.createSubmission(submission);
+		Assert.assertEquals(1, numberOfRowsAffected);
 	}
 	
 	/**
@@ -476,7 +477,8 @@ public class SubmissionMapperTest {
 		Assert.assertNotNull(submission);
 		
 		submission.setJudgeScore(20);
-		submissionMapper.updateSubmission(submission);
+		int numberOfRowsAffected = submissionMapper.updateSubmission(submission);
+		Assert.assertEquals(1, numberOfRowsAffected);
 		
 		/**
 		 * The following Assert CANNOT passed in CI due to 
@@ -500,7 +502,8 @@ public class SubmissionMapperTest {
 		Assert.assertNotNull(submission);
 		
 		submission.setSubmissionId(0);
-		submissionMapper.updateSubmission(submission);
+		int numberOfRowsAffected = submissionMapper.updateSubmission(submission);
+		Assert.assertEquals(0, numberOfRowsAffected);
 	}
 	
 	/**
@@ -513,7 +516,8 @@ public class SubmissionMapperTest {
 		Submission submission = submissionMapper.getSubmission(1003);
 		Assert.assertNotNull(submission);
 		
-		submissionMapper.deleteSubmission(1003);
+		int numberOfRowsAffected = submissionMapper.deleteSubmission(1003);
+		Assert.assertEquals(1, numberOfRowsAffected);
 		
 		submission = submissionMapper.getSubmission(1003);
 		Assert.assertNull(submission);
@@ -529,7 +533,8 @@ public class SubmissionMapperTest {
 		Submission submission = submissionMapper.getSubmission(0);
 		Assert.assertNull(submission);
 		
-		submissionMapper.deleteSubmission(0);
+		int numberOfRowsAffected = submissionMapper.deleteSubmission(0);
+		Assert.assertEquals(0, numberOfRowsAffected);
 	}
 	
 	/**

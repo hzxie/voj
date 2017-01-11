@@ -17,17 +17,17 @@ public interface EmailValidationMapper {
 	 * @param email - 电子邮件地址
 	 * @return 对应的EmailValidation对象
 	 */
-	public EmailValidation getEmailValidation(@Param("email") String email);
+	EmailValidation getEmailValidation(@Param("email") String email);
 	
 	/**
 	 * 创建新的电子邮件验证凭据.
 	 * @param emailValidation - 电子邮件验证凭据
 	 */
-	public void createEmailValidation(EmailValidation emailValidation);
+	int createEmailValidation(EmailValidation emailValidation);
 	
 	/**
 	 * 删除电子邮件验证凭据.
 	 * @param email - 电子邮件地址
 	 */
-	public void deleteEmailValidation(@Param("email") String email);
+	int deleteEmailValidation(@Param("email") String email);
 }

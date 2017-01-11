@@ -18,7 +18,7 @@ public interface DiscussionReplyMapper {
 	 * @param limit 获取回复的数量
 	 * @return 包含评论的List对象
 	 */
-	public List<DiscussionReply> getDiscussionRepliesUsingThreadId(
+	List<DiscussionReply> getDiscussionRepliesUsingThreadId(
 		@Param("discussionThreadId") long discussionThreadId,
 		@Param("offset") long offset, @Param("limit") int limit);
 
@@ -26,17 +26,17 @@ public interface DiscussionReplyMapper {
 	 * 创建讨论回复.
 	 * @param discussionReply - 待创建的DiscussionReply对象
 	 */
-	public int createDiscussionReply(DiscussionReply discussionReply);
+	int createDiscussionReply(DiscussionReply discussionReply);
 
 	/**
 	 * 更新讨论回复.
 	 * @param discussionReply - 待更新的DiscussionReply对象
 	 */
-	public int updateDiscussionReply(DiscussionReply discussionReply);
+	int updateDiscussionReply(DiscussionReply discussionReply);
 
 	/**
 	 * 删除讨论回复.
 	 * @param discussionReplyId - 待删除回复的唯一标识符
 	 */
-	public int deleteDiscussionReplyUsingReplyId(long discussionReplyId);
+	int deleteDiscussionReplyUsingReplyId(long discussionReplyId);
 }
