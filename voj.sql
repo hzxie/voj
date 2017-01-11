@@ -32,7 +32,7 @@ CREATE TABLE `voj_contests` (
   `contest_end_time` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
   `contest_mode` varchar(4) NOT NULL,
   `contest_problems` text NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data for table `voj_contests`
@@ -53,7 +53,7 @@ CREATE TABLE `voj_contest_contestants` (
   `contest_id` bigint(20) NOT NULL,
   `contestant_uid` bigint(20) NOT NULL,
   `code_snippet` text
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data for table `voj_contest_contestants`
@@ -73,7 +73,7 @@ INSERT INTO `voj_contest_contestants` (`contest_id`, `contestant_uid`, `code_sni
 CREATE TABLE `voj_contest_submissions` (
   `contest_id` bigint(20) NOT NULL,
   `submission_id` bigint(20) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data for table `voj_contest_submissions`
@@ -96,7 +96,16 @@ CREATE TABLE `voj_discussion_replies` (
   `discussion_reply_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `discussion_reply_content` text NOT NULL,
   `discussion_reply_votes` text NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+--
+-- Dumping data for table `voj_discussion_replies`
+--
+
+INSERT INTO `voj_discussion_replies` (`discussion_reply_id`, `discussion_thread_id`, `discussion_reply_uid`, `discussion_reply_time`, `discussion_reply_content`, `discussion_reply_votes`) VALUES
+(1, 1, 1001, '2017-01-10 05:42:20', 'Reply content for thread #1', '{"up": [1000], "down": [1002]}'),
+(2, 2, 1002, '2017-01-10 05:42:20', 'Reply content for thread #2', '{"up": [1000], "down": [1001]}'),
+(3, 1, 1001, '2017-01-10 05:42:20', 'Reply content for thread #1', '{"up": [], "down": []}');
 
 -- --------------------------------------------------------
 
@@ -113,7 +122,16 @@ CREATE TABLE `voj_discussion_threads` (
   `discussion_thread_name` varchar(128) NOT NULL,
   `discussion_thread_content` text NOT NULL,
   `discussion_thread_votes` text NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+--
+-- Dumping data for table `voj_discussion_threads`
+--
+
+INSERT INTO `voj_discussion_threads` (`discussion_thread_id`, `discussion_thread_creator_uid`, `discussion_thread_create_time`, `problem_id`, `discussion_topic_id`, `discussion_thread_name`, `discussion_thread_content`, `discussion_thread_votes`) VALUES
+(1, 1000, '2017-01-10 05:35:17', 1000, 1, 'Thread #1', 'The content of Thread #1', '{"up": [1001, 1002], "down": []}'),
+(2, 1000, '2017-01-08 05:35:17', 1000, 2, 'Thread #2', 'The content of Thread #2', '{"up": [1001], "down": [1002]}'),
+(3, 1000, '2017-01-09 21:35:17', NULL, 1, 'Thread #3', 'The content of Thread #3', '{"up": [1001, 1002], "down": []}');
 
 -- --------------------------------------------------------
 
@@ -126,7 +144,7 @@ CREATE TABLE `voj_discussion_topics` (
   `discussion_topic_slug` varchar(128) NOT NULL,
   `discussion_topic_name` varchar(128) NOT NULL,
   `discussion_parent_topic_id` int(8) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data for table `voj_discussion_topics`
@@ -146,7 +164,7 @@ CREATE TABLE `voj_email_validation` (
   `email` varchar(64) NOT NULL,
   `token` varchar(36) NOT NULL,
   `expire_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data for table `voj_email_validation`
@@ -165,7 +183,7 @@ CREATE TABLE `voj_judge_results` (
   `judge_result_id` int(4) NOT NULL,
   `judge_result_slug` varchar(4) NOT NULL,
   `judge_result_name` varchar(32) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data for table `voj_judge_results`
@@ -195,7 +213,7 @@ CREATE TABLE `voj_languages` (
   `language_name` varchar(16) NOT NULL,
   `language_compile_command` varchar(128) NOT NULL,
   `language_run_command` varchar(128) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data for table `voj_languages`
@@ -220,7 +238,7 @@ CREATE TABLE `voj_options` (
   `option_name` varchar(32) NOT NULL,
   `option_value` text NOT NULL,
   `is_autoload` tinyint(1) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data for table `voj_options`
@@ -254,7 +272,7 @@ CREATE TABLE `voj_problems` (
   `problem_sample_input` text NOT NULL,
   `problem_sample_output` text NOT NULL,
   `problem_hint` text
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data for table `voj_problems`
@@ -277,7 +295,7 @@ CREATE TABLE `voj_problem_categories` (
   `problem_category_slug` varchar(32) NOT NULL,
   `problem_category_name` varchar(32) NOT NULL,
   `problem_category_parent_id` int(4) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data for table `voj_problem_categories`
@@ -296,7 +314,7 @@ INSERT INTO `voj_problem_categories` (`problem_category_id`, `problem_category_s
 CREATE TABLE `voj_problem_category_relationships` (
   `problem_id` bigint(20) NOT NULL,
   `problem_category_id` int(4) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data for table `voj_problem_category_relationships`
@@ -322,7 +340,7 @@ CREATE TABLE `voj_problem_checkpoints` (
   `checkpoint_score` int(4) NOT NULL,
   `checkpoint_input` longtext NOT NULL,
   `checkpoint_output` longtext NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data for table `voj_problem_checkpoints`
@@ -360,7 +378,7 @@ CREATE TABLE `voj_problem_tags` (
   `problem_tag_id` bigint(20) NOT NULL,
   `problem_tag_slug` varchar(32) NOT NULL,
   `problem_tag_name` varchar(32) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data for table `voj_problem_tags`
@@ -379,7 +397,7 @@ INSERT INTO `voj_problem_tags` (`problem_tag_id`, `problem_tag_slug`, `problem_t
 CREATE TABLE `voj_problem_tag_relationships` (
   `problem_id` bigint(20) NOT NULL,
   `problem_tag_id` bigint(20) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data for table `voj_problem_tag_relationships`
@@ -411,7 +429,7 @@ CREATE TABLE `voj_submissions` (
   `submission_judge_score` int(4) DEFAULT NULL,
   `submission_judge_log` text,
   `submission_code` text NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data for table `voj_submissions`
@@ -434,7 +452,7 @@ CREATE TABLE `voj_usermeta` (
   `uid` bigint(20) NOT NULL,
   `meta_key` varchar(64) NOT NULL,
   `meta_value` text NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data for table `voj_usermeta`
@@ -457,7 +475,7 @@ CREATE TABLE `voj_users` (
   `email` varchar(64) NOT NULL,
   `user_group_id` int(4) NOT NULL,
   `prefer_language_id` int(4) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data for table `voj_users`
@@ -478,7 +496,7 @@ CREATE TABLE `voj_user_groups` (
   `user_group_id` int(4) NOT NULL,
   `user_group_slug` varchar(16) NOT NULL,
   `user_group_name` varchar(16) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data for table `voj_user_groups`
@@ -527,9 +545,9 @@ ALTER TABLE `voj_discussion_replies`
 --
 ALTER TABLE `voj_discussion_threads`
   ADD PRIMARY KEY (`discussion_thread_id`),
-  ADD KEY `problem_id` (`discussion_topic_id`,`discussion_thread_creator_uid`),
+  ADD KEY `discussion_topic_id` (`discussion_topic_id`),
   ADD KEY `discussion_creator_uid` (`discussion_thread_creator_uid`),
-  ADD KEY `problem_id_2` (`problem_id`);
+  ADD KEY `problem_id` (`problem_id`);
 
 --
 -- Indexes for table `voj_discussion_topics`

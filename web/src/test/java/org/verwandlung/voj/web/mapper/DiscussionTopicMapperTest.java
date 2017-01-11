@@ -12,7 +12,7 @@ import org.verwandlung.voj.web.model.DiscussionTopic;
 import java.util.List;
 
 /**
- * DiscussionTopic的测试类.
+ * DiscussionTopicMapper的测试类.
  *
  * @author Haozhe Xie
  */

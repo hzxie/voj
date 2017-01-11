@@ -36,11 +36,12 @@
 		FROM voj_discussion_threads
 		WHERE discussion_thread_id >= #{discussionThreadId}
 		<if test="problemId != 0">
-			AND problemId = #{problemId}
+			AND problem_id = #{problemId}
 		</if>
 		<if test="discussionTopicId != 0">
 			AND discussion_topic_id = #{discussionTopicId}
 		</if>
+		ORDER BY discussion_thread_id DESC
 		LIMIT #{limit}
 	</select>
 	<select id="getDiscussionThreadUsingThreadId" 
@@ -58,17 +59,17 @@
 		keyColumn="discussion_thread_id"
 		useGeneratedKeys="true">
 		INSERT INTO voj_discussion_threads(discussion_thread_creator_uid, discussion_thread_create_time, problem_id, discussion_topic_id, discussion_thread_name, discussion_thread_content, discussion_thread_votes) 
-		VALUES (#{discussionThreadCreator.uid}, #{discussionThreadCreateTime}, #{problem.problem_id}, #{discussionTopic.discussion_topic_id}, #{discussionThreadTitle}, #{discussionThreadContent}, #{discussionThreadVote})
+		VALUES (#{discussionThreadCreator.uid}, #{discussionThreadCreateTime}, #{problem.problemId}, #{discussionTopic.discussionTopicId}, #{discussionThreadTitle}, #{discussionThreadContent}, #{discussionThreadVote})
 	</insert>
 	<update id="updateDiscussionThread"
 		parameterType="org.verwandlung.voj.web.model.DiscussionThread"
 		flushCache="true">
 		UPDATE voj_discussion_threads 
-		SET discussion_thread_creator_uid = #{discussionThreadCreator.uid}, discussion_thread_create_time = #{discussionThreadCreateTime}, problem_id = #{problem.problem_id}, discussion_topic_id = #{discussionTopic.discussion_topic_id}, discussion_thread_name = #{discussionThreadTitle}, discussion_thread_content = #{discussionThreadContent}, discussion_thread_votes = #{discussionThreadVote}
+		SET discussion_thread_creator_uid = #{discussionThreadCreator.uid}, discussion_thread_create_time = #{discussionThreadCreateTime}, problem_id = #{problem.problemId}, discussion_topic_id = #{discussionTopic.discussionTopicId}, discussion_thread_name = #{discussionThreadTitle}, discussion_thread_content = #{discussionThreadContent}, discussion_thread_votes = #{discussionThreadVote}
 		WHERE discussion_thread_id = #{discussionThreadId}
 	</update>
-	<delete id="deleteDiscussionThreadUsingId"
-		parameterType="int"
+	<delete id="deleteDiscussionThreadUsingThreadId"
+		parameterType="long"
 		flushCache="true">
 		DELETE FROM voj_discussion_threads 
 		WHERE discussion_thread_id = #{discussionThreadId}
