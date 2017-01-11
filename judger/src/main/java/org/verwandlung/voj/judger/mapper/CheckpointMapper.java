@@ -32,5 +32,5 @@ public interface CheckpointMapper {
 		@Result(property = "input", column = "checkpoint_input"),
 		@Result(property = "output", column = "checkpoint_output"),
 	})
-	public List<Checkpoint> getCheckpointsUsingProblemId(@Param("problemId") long problemId);
+	List<Checkpoint> getCheckpointsUsingProblemId(@Param("problemId") long problemId);
 }

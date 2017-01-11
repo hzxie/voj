@@ -54,7 +54,8 @@ public class EmailValidationMapperTest {
 	@Test
 	public void testCreateEmailValidationNormally() {
 		EmailValidation emailValidation = new EmailValidation("cshzxie@gmail.com", "RandomToken", new Date());
-		emailValidationMapper.createEmailValidation(emailValidation);
+		int numberOfRowsAffected = emailValidationMapper.createEmailValidation(emailValidation);
+		Assert.assertEquals(1, numberOfRowsAffected);
 
 		EmailValidation insertedEmailValidation = emailValidationMapper.getEmailValidation("cshzxie@gmail.com");
 		Assert.assertNotNull(insertedEmailValidation);
@@ -95,7 +96,8 @@ public class EmailValidationMapperTest {
 		EmailValidation emailValidation = emailValidationMapper.getEmailValidation("support@verwandlung.org");
 		Assert.assertNotNull(emailValidation);
 
-		emailValidationMapper.deleteEmailValidation("support@verwandlung.org");
+		int numberOfRowsAffected = emailValidationMapper.deleteEmailValidation("support@verwandlung.org");
+		Assert.assertEquals(1, numberOfRowsAffected);
 
 		emailValidation = emailValidationMapper.getEmailValidation("support@verwandlung.org");
 		Assert.assertNull(emailValidation);
@@ -108,7 +110,8 @@ public class EmailValidationMapperTest {
 	 */
 	@Test
 	public void testDeleteEmailValidationNotExists() {
-		emailValidationMapper.deleteEmailValidation("not-exist@verwandlung.org");
+		int numberOfRowsAffected = emailValidationMapper.deleteEmailValidation("not-exist@verwandlung.org");
+		Assert.assertEquals(0, numberOfRowsAffected);
 	}
 	
 	/**

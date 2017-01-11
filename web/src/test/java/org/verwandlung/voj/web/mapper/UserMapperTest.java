@@ -149,7 +149,8 @@ public class UserMapperTest {
 		Language language = new Language(2, "text/x-c++", "C++", "g++ foo.cpp -o foo", "./foo");
 		User user = new User("new-user-0xff", "Password","new-user-0xff@verwandlung.org", userGroup, language);
 		
-		userMapper.createUser(user);
+		int numberOfRowsAffected = userMapper.createUser(user);
+		Assert.assertEquals(1, numberOfRowsAffected);
 	}
 	
 	/**
@@ -219,7 +220,8 @@ public class UserMapperTest {
 		Assert.assertNotNull(user);
 		
 		user.setEmail("hzxie@hit.edu.cn");
-		userMapper.updateUser(user);
+		int numberOfRowsAffected = userMapper.updateUser(user);
+		Assert.assertEquals(1, numberOfRowsAffected);
 	}
 	
 	/**
@@ -246,7 +248,8 @@ public class UserMapperTest {
 		User user = userMapper.getUserUsingUid(1002);
 		Assert.assertNotNull(user);
 		
-		userMapper.deleteUser(1002);
+		int numberOfRowsAffected = userMapper.deleteUser(1002);
+		Assert.assertEquals(1, numberOfRowsAffected);
 		
 		user = userMapper.getUserUsingUid(1002);
 		Assert.assertNull(user);
@@ -262,7 +265,8 @@ public class UserMapperTest {
 		User user = userMapper.getUserUsingUid(0);
 		Assert.assertNull(user);
 		
-		userMapper.deleteUser(0);
+		int numberOfRowsAffected = userMapper.deleteUser(0);
+		Assert.assertEquals(0, numberOfRowsAffected);
 	}
 	
 	/**

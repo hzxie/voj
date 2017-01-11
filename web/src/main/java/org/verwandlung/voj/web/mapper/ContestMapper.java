@@ -16,7 +16,7 @@ public interface ContestMapper {
 	 * 获取考试的总数量.
 	 * @return 考试的总数量
 	 */
-	public long getNumberOfContests();
+	long getNumberOfContests();
 
 	/**
 	 * 获取考试列表.
@@ -24,30 +24,30 @@ public interface ContestMapper {
 	 * @param limit - 需要获取考试的数量
 	 * @return 预期的考试对象
 	 */
-	public List<Contest> getContests(@Param("offset") long offset, @Param("limit") int limit);
+	List<Contest> getContests(@Param("offset") long offset, @Param("limit") int limit);
 
 	/**
 	 * 根据考试的唯一标识符获取考试.
 	 * @param contestId - 考试的唯一标识符
 	 * @return 预期的考试对象
 	 */
-	public Contest getContestsUsingId(long contestId);
+	Contest getContestsUsingId(long contestId);
 
 	/**
 	 * 创建考试.
 	 * @param contest - 待创建的考试对象
 	 */
-	public void createContest(Contest contest);
+	int createContest(Contest contest);
 
 	/**
 	 * 更新考试.
 	 * @param contest - 待更新的考试对象
 	 */
-	public void updateContest(Contest contest);
+	int updateContest(Contest contest);
 
 	/**
 	 * 删除考试.
 	 * @param contestId - 考试的唯一标识符
 	 */
-	public void deleteContest(long contestId);
+	int deleteContest(long contestId);
 }

@@ -101,7 +101,8 @@ public class DiscussionThreadMapperTest {
 		Assert.assertNotNull(problem);
 
 		DiscussionThread thread = new DiscussionThread(creator, createTime, topic, problem, "title", "content", "{}");
-		discussionThreadMapper.createDiscussionThread(thread);
+		int numberOfRowsAffected = discussionThreadMapper.createDiscussionThread(thread);
+		Assert.assertEquals(1, numberOfRowsAffected);
 	}
 
 	/**
@@ -117,7 +118,8 @@ public class DiscussionThreadMapperTest {
 		Assert.assertNotNull(creator);
 
 		DiscussionThread thread = new DiscussionThread(creator, createTime, topic, null, "title", "content", "{}");
-		discussionThreadMapper.createDiscussionThread(thread);
+		int numberOfRowsAffected = discussionThreadMapper.createDiscussionThread(thread);
+		Assert.assertEquals(1, numberOfRowsAffected);
 	}
 
 	/**
@@ -182,7 +184,8 @@ public class DiscussionThreadMapperTest {
 		Assert.assertEquals("Thread #1", thread.getDiscussionThreadTitle());
 
 		thread.setDiscussionThreadTitle("New Thread Title");
-		discussionThreadMapper.updateDiscussionThread(thread);
+		int numberOfRowsAffected = discussionThreadMapper.updateDiscussionThread(thread);
+		Assert.assertEquals(1, numberOfRowsAffected);
 
 		thread = discussionThreadMapper.getDiscussionThreadUsingThreadId(1);
 		Assert.assertNotNull(thread);
@@ -218,7 +221,8 @@ public class DiscussionThreadMapperTest {
 		DiscussionThread thread = discussionThreadMapper.getDiscussionThreadUsingThreadId(1);
 		Assert.assertNotNull(thread);
 
-		discussionThreadMapper.deleteDiscussionThreadUsingThreadId(1);
+		int numberOfRowsAffected = discussionThreadMapper.deleteDiscussionThreadUsingThreadId(1);
+		Assert.assertEquals(1, numberOfRowsAffected);
 
 		thread = discussionThreadMapper.getDiscussionThreadUsingThreadId(1);
 		Assert.assertNull(thread);
@@ -234,7 +238,8 @@ public class DiscussionThreadMapperTest {
 		DiscussionThread thread = discussionThreadMapper.getDiscussionThreadUsingThreadId(0);
 		Assert.assertNull(thread);
 
-		discussionThreadMapper.deleteDiscussionThreadUsingThreadId(0);
+		int numberOfRowsAffected = discussionThreadMapper.deleteDiscussionThreadUsingThreadId(0);
+		Assert.assertEquals(0, numberOfRowsAffected);
 	}
 
 	/**

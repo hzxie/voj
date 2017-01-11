@@ -114,7 +114,8 @@ public class ContestMapperTest {
 		Date endTime = calendar.getTime();
 
 		Contest contest = new Contest("Contest Test", startTime, endTime, "OI", "[]");
-		contestMapper.createContest(contest);
+		int numberOfRowsAffected = contestMapper.createContest(contest);
+		Assert.assertEquals(1, numberOfRowsAffected);
 	}
 
 	/**
@@ -146,7 +147,8 @@ public class ContestMapperTest {
 		Assert.assertNotNull(contest);
 
 		contest.setContestName("New Contest Name");
-		contestMapper.updateContest(contest);
+		int numberOfRowsAffected = contestMapper.updateContest(contest);
+		Assert.assertEquals(1, numberOfRowsAffected);
 
 		contest = contestMapper.getContestsUsingId(2);
 		String contestName = contest.getContestName();
@@ -163,7 +165,9 @@ public class ContestMapperTest {
 		Contest contest = contestMapper.getContestsUsingId(3);
 		Assert.assertNotNull(contest);
 
-		contestMapper.deleteContest(3);
+		int numberOfRowsAffected = contestMapper.deleteContest(3);
+		Assert.assertEquals(1, numberOfRowsAffected);
+
 		contest = contestMapper.getContestsUsingId(3);
 		Assert.assertNull(contest);
 	}
@@ -177,6 +181,9 @@ public class ContestMapperTest {
 	public void testDeleteContestsNotExists() {
 		Contest contest = contestMapper.getContestsUsingId(0);
 		Assert.assertNull(contest);
+
+		int numberOfRowsAffected = contestMapper.deleteContest(0);
+		Assert.assertEquals(0, numberOfRowsAffected);
 	}
 
 	/**

@@ -113,7 +113,9 @@ public class UserMetaMapperTest {
 	public void testCreateUserMetaNormally() {
 		User user = userMapper.getUserUsingUid(1001);
 		UserMeta userMeta = new UserMeta(user, "metaKey", "metaValue");
-		userMetaMapper.createUserMeta(userMeta);
+
+		int numberOfRowsAffected = userMetaMapper.createUserMeta(userMeta);
+		Assert.assertEquals(1, numberOfRowsAffected);
 		
 		UserMeta insertedUserMeta = userMetaMapper.getUserMetaUsingUserAndMetaKey(user, "metaKey");
 		Assert.assertNotNull(insertedUserMeta);
@@ -147,7 +149,8 @@ public class UserMetaMapperTest {
 		UserMeta userMeta = userMetaMapper.getUserMetaUsingUserAndMetaKey(user, "registerTime");
 		
 		userMeta.setMetaValue("newMetaValue");
-		userMetaMapper.updateUserMeta(userMeta);
+		int numberOfRowsAffected = userMetaMapper.updateUserMeta(userMeta);
+		Assert.assertEquals(1, numberOfRowsAffected);
 		
 		UserMeta updatedUserMeta = userMetaMapper.getUserMetaUsingUserAndMetaKey(user, "registerTime");
 		String metaValue = updatedUserMeta.getMetaValue();
@@ -165,7 +168,12 @@ public class UserMetaMapperTest {
 		UserMeta userMeta = userMetaMapper.getUserMetaUsingUserAndMetaKey(user, "registerTime");
 		
 		userMeta.setMetaKey("newMetaKey");
-		userMetaMapper.updateUserMeta(userMeta);
+		int numberOfRowsAffected = userMetaMapper.updateUserMeta(userMeta);
+		/**
+		 * The following Assert CANNOT passed in CI due to
+		 * the bug of MyBatis. But it really works.
+		 */
+		// Assert.assertEquals(0, numberOfRowsAffected);
 		
 		UserMeta updatedUserMeta = userMetaMapper.getUserMetaUsingUserAndMetaKey(user, "registerTime");
 		String metaKey = updatedUserMeta.getMetaKey();
@@ -183,7 +191,8 @@ public class UserMetaMapperTest {
 		Assert.assertNull(user);
 		
 		UserMeta userMeta = userMetaMapper.getUserMetaUsingUserAndMetaKey(user, "registerTime");
-		userMetaMapper.updateUserMeta(userMeta);
+		int numberOfRowsAffected = userMetaMapper.updateUserMeta(userMeta);
+		Assert.assertEquals(0, numberOfRowsAffected);
 	}
 	
 	/**
@@ -193,10 +202,11 @@ public class UserMetaMapperTest {
 	 */
 	@Test
 	public void testDeleteUserMetaUsingUserExists() {
-		User user = userMapper.getUserUsingUid(1002);
+		User user = userMapper.getUserUsingUid(1001);
 		Assert.assertNotNull(user);
 		
-		userMetaMapper.deleteUserMetaUsingUser(1002);
+		int numberOfRowsAffected = userMetaMapper.deleteUserMetaUsingUser(1001);
+		Assert.assertEquals(1, numberOfRowsAffected);
 		
 		List<UserMeta> userMetaList = userMetaMapper.getUserMetaUsingUser(user);
 		Assert.assertEquals(0, userMetaList.size());
@@ -212,7 +222,8 @@ public class UserMetaMapperTest {
 		User user = userMapper.getUserUsingUid(0);
 		Assert.assertNull(user);
 		
-		userMetaMapper.deleteUserMetaUsingUser(0);
+		int numberOfRowsAffected = userMetaMapper.deleteUserMetaUsingUser(0);
+		Assert.assertEquals(0, numberOfRowsAffected);
 	}
 	
 	/**

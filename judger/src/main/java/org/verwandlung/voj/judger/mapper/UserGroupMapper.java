@@ -28,5 +28,5 @@ public interface UserGroupMapper {
 		 @Result(property = "userGroupSlug", column = "user_group_slug"),
 		 @Result(property = "userGroupName", column = "user_group_name")
 	})
-	public UserGroup getUserGroupUsingId(@Param("userGroupId") int userGroupId);
+	UserGroup getUserGroupUsingId(@Param("userGroupId") int userGroupId);
 }

@@ -162,18 +162,19 @@ public class ProblemTagMapperTest {
     }
 	
 	/**
-	 * 测试用例: createProblemTag(ProblemTag)方法
+	 * 测试用例: 测试createProblemTag(ProblemTag)方法
 	 * 测试数据: 使用合法的数据集, 并且数据表中不存在相同的英文缩写
 	 * 预期结果: 数据插入操作成功完成
 	 */
 	@Test
 	public void testCreateProblemTagNormally() {
 		ProblemTag problemTag = new ProblemTag("new- tag", "New Tag");
-		problemTagMapper.createProblemTag(problemTag);
+		int numberOfRowsAffected = problemTagMapper.createProblemTag(problemTag);
+		Assert.assertEquals(1, numberOfRowsAffected);
 	}
 	
 	/**
-	 * 测试用例: createProblemTag(ProblemTag)方法
+	 * 测试用例: 测试createProblemTag(ProblemTag)方法
 	 * 测试数据: 使用不合法的数据集(过长的类别名称)
 	 * 预期结果: 抛出DataIntegrityViolationException异常
 	 */
@@ -184,7 +185,7 @@ public class ProblemTagMapperTest {
 	}
 	
 	/**
-	 * 测试用例: createProblemTag(ProblemTag)方法
+	 * 测试用例: 测试createProblemTag(ProblemTag)方法
 	 * 测试数据: 使用合法的数据集, 但数据表中存在相同的英文缩写
 	 * 预期结果: 抛出DuplicateKeyException异常
 	 */
@@ -195,7 +196,7 @@ public class ProblemTagMapperTest {
 	}
 	
 	/**
-	 * 测试用例: updateProblemTag(ProblemTag)方法
+	 * 测试用例: 测试updateProblemTag(ProblemTag)方法
 	 * 测试数据: 使用合法的数据集, 且数据库中存在对应的记录
 	 * 预期结果: 数据更新操作成功完成
 	 */
@@ -205,7 +206,8 @@ public class ProblemTagMapperTest {
 		Assert.assertNotNull(problemTag);
 
 		problemTag.setProblemTagName("New Tag Name");
-		problemTagMapper.updateProblemTag(problemTag);
+		int numberOfRowsAffected = problemTagMapper.updateProblemTag(problemTag);
+		Assert.assertEquals(1, numberOfRowsAffected);
 
 		problemTag = problemTagMapper.getProblemTagUsingTagSlug("greedy");
 		String newTagName = problemTag.getProblemTagName();
@@ -213,7 +215,7 @@ public class ProblemTagMapperTest {
 	}
 	
 	/**
-	 * 测试用例: updateProblemTag(ProblemTag)方法
+	 * 测试用例: 测试updateProblemTag(ProblemTag)方法
 	 * 测试数据: 使用不合法的数据集(过长的类别名称)
 	 * 预期结果: 抛出DataIntegrityViolationException异常
 	 */
@@ -227,7 +229,7 @@ public class ProblemTagMapperTest {
 	}
 
 	/**
-	 * 测试用例: deleteProblemTag(int)方法
+	 * 测试用例: 测试deleteProblemTag(int)方法
 	 * 测试数据: 存在的试题标签唯一标识符
 	 * 预期结果: 数据删除操作成功完成
 	 */
@@ -235,14 +237,16 @@ public class ProblemTagMapperTest {
 	public void testDeleteProblemTagUsingTagIdExists() {
 		ProblemTag problemTag = problemTagMapper.getProblemTagUsingTagId(1);
 		Assert.assertNotNull(problemTag);
-		
-		problemTagMapper.deleteProblemTagUsingTagId(1);
+
+		int numberOfRowsAffected = problemTagMapper.deleteProblemTagUsingTagId(1);
+		Assert.assertEquals(1, numberOfRowsAffected);
+
 		problemTag = problemTagMapper.getProblemTagUsingTagId(1);
 		Assert.assertNull(problemTag);
 	}
-	
+
 	/**
-	 * 测试用例: deleteProblemTag(int)方法
+	 * 测试用例: 测试deleteProblemTag(int)方法
 	 * 测试数据: 不存在的试题标签唯一标识符
 	 * 预期结果: 方法正常执行, 未影响数据表中的数据
 	 */
@@ -250,8 +254,37 @@ public class ProblemTagMapperTest {
 	public void testDeleteProblemTagUsingTagIdNotExists() {
 		ProblemTag problemTag = problemTagMapper.getProblemTagUsingTagId(0);
 		Assert.assertNull(problemTag);
-		
-		problemTagMapper.getProblemTagUsingTagId(0);
+
+		int numberOfRowsAffected = problemTagMapper.deleteProblemTagUsingTagId(0);
+		Assert.assertEquals(0, numberOfRowsAffected);
+	}
+
+	/**
+	 * 测试用例: 测试deleteProblemTagRelationship(int)方法
+	 * 测试数据: 存在的试题标签唯一标识符
+	 * 预期结果: 数据删除操作成功完成
+	 */
+	@Test
+	public void testDeleteProblemTagUsingProblemIdExists() {
+		List<ProblemTag> problemTags = problemTagMapper.getProblemTagsUsingProblemId(1001);
+		Assert.assertEquals(2, problemTags.size());
+
+		int numberOfRowsAffected = problemTagMapper.deleteProblemTagRelationship(1001);
+		Assert.assertEquals(2, numberOfRowsAffected);
+	}
+
+	/**
+	 * 测试用例: 测试deleteProblemTagRelationship(int)方法
+	 * 测试数据: 不存在的试题标签唯一标识符
+	 * 预期结果: 方法正常执行, 未影响数据表中的数据
+	 */
+	@Test
+	public void testDeleteProblemTagUsingProblemIdNotExists() {
+		List<ProblemTag> problemTags = problemTagMapper.getProblemTagsUsingProblemId(0);
+		Assert.assertEquals(0, problemTags.size());
+
+		int numberOfRowsAffected = problemTagMapper.deleteProblemTagRelationship(0);
+		Assert.assertEquals(0, numberOfRowsAffected);
 	}
 	
 	/**

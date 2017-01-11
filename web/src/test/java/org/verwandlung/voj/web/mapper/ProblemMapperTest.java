@@ -174,7 +174,8 @@ public class ProblemMapperTest {
 		Problem problem = new Problem(false, "Problem Name", 1000, 32768, "Description", 
 										"Input Format", "Output Format", "Sample Input", 
 										"Sample Input", null);
-		problemMapper.createProblem(problem);
+		int numberOfRowsAffected = problemMapper.createProblem(problem);
+		Assert.assertEquals(1, numberOfRowsAffected);
 	}
 	
 	/**
@@ -188,7 +189,8 @@ public class ProblemMapperTest {
 		Assert.assertNotNull(problem);
 		
 		problem.setProblemName("New Problem Name");
-		problemMapper.updateProblem(problem);
+		int numberOfRowsAffected = problemMapper.updateProblem(problem);
+		Assert.assertEquals(1, numberOfRowsAffected);
 		
 		/**
 		 * The following Assert CANNOT passed in CI due to 
@@ -212,7 +214,8 @@ public class ProblemMapperTest {
 		Assert.assertNotNull(problem);
 		
 		problem.setProblemId(0);
-		problemMapper.updateProblem(problem);
+		int numberOfRowsAffected = problemMapper.updateProblem(problem);
+		Assert.assertEquals(0, numberOfRowsAffected);
 	}
 	
 	/**
@@ -225,7 +228,8 @@ public class ProblemMapperTest {
 		Problem problem = problemMapper.getProblem(1002);
 		Assert.assertNotNull(problem);
 		
-		problemMapper.deleteProblem(1002);
+		int numberOfRowsAffected = problemMapper.deleteProblem(1002);
+		Assert.assertEquals(1, numberOfRowsAffected);
 		
 		problem = problemMapper.getProblem(1002);
 		Assert.assertNull(problem);
@@ -241,7 +245,8 @@ public class ProblemMapperTest {
 		Problem problem = problemMapper.getProblem(0);
 		Assert.assertNull(problem);
 		
-		problemMapper.deleteProblem(1002);
+		int numberOfRowsAffected = problemMapper.deleteProblem(0);
+		Assert.assertEquals(0, numberOfRowsAffected);
 	}
 	
 	/**

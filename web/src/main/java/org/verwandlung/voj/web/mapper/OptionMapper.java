@@ -18,24 +18,24 @@ public interface OptionMapper {
 	 * 获取全部系统选项.
 	 * @return 一个包含全部系统选项的列表
 	 */
-	public List<Option> getOptions();
+	List<Option> getOptions();
 	
 	/**
 	 * 获取自动加载的系统选项.
 	 * @return 一个包含自动加载系统选项的列表
 	 */
-	public List<Option> getAutoloadOptions();
+	List<Option> getAutoloadOptions();
 	
 	/**
 	 * 根据系统选项的名称获取选项的值.
 	 * @param optionName - 系统选项的名称 
 	 * @return 对应的Option对象
 	 */
-	public Option getOption(@Param("optionName") String optionName);
+	Option getOption(@Param("optionName") String optionName);
 	
 	/**
 	 * 更新系统选项.
 	 * @param option - 系统选项对象
 	 */
-	public void updateOption(Option option);
+	int updateOption(Option option);
 }

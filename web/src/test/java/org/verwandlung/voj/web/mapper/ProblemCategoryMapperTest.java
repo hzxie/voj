@@ -163,7 +163,8 @@ public class ProblemCategoryMapperTest {
 	@Test
 	public void testCreateProblemCategoryNormally() {
 		ProblemCategory problemCategory = new ProblemCategory("new-category", "New Category", 0);
-		problemCategoryMapper.createProblemCategory(problemCategory);
+		int numberOfRowsAffected = problemCategoryMapper.createProblemCategory(problemCategory);
+		Assert.assertEquals(1, numberOfRowsAffected);
 	}
 
 	/**
@@ -196,7 +197,8 @@ public class ProblemCategoryMapperTest {
 	@Test
 	public void testCreateProblemCategoryRelationshipNormally() {
 		ProblemCategory problemCategory = problemCategoryMapper.getProblemCategoryUsingCategoryId(2);
-		problemCategoryMapper.createProblemCategoryRelationship(1002, problemCategory);
+		int numberOfRowsAffected = problemCategoryMapper.createProblemCategoryRelationship(1002, problemCategory);
+		Assert.assertEquals(1, numberOfRowsAffected);
 	}
 
 	/**
@@ -242,7 +244,8 @@ public class ProblemCategoryMapperTest {
 		Assert.assertNotNull(problemCategory);
 
 		problemCategory.setProblemCategoryName("New Category Name");
-		problemCategoryMapper.updateProblemCategory(problemCategory);
+		int numberOfRowsAffected = problemCategoryMapper.updateProblemCategory(problemCategory);
+		Assert.assertEquals(1, numberOfRowsAffected);
 
 		problemCategory = problemCategoryMapper.getProblemCategoryUsingCategorySlug("uncategorized");
 		String newCategoryName = problemCategory.getProblemCategoryName();
@@ -273,7 +276,9 @@ public class ProblemCategoryMapperTest {
 		ProblemCategory problemCategory = problemCategoryMapper.getProblemCategoryUsingCategoryId(1);
 		Assert.assertNotNull(problemCategory);
 
-		problemCategoryMapper.deleteProblemCategory(1);
+		int numberOfRowsAffected = problemCategoryMapper.deleteProblemCategory(1);
+		Assert.assertEquals(1, numberOfRowsAffected);
+
 		problemCategory = problemCategoryMapper.getProblemCategoryUsingCategoryId(1);
 		Assert.assertNull(problemCategory);
 	}
@@ -288,7 +293,8 @@ public class ProblemCategoryMapperTest {
 		ProblemCategory problemCategory = problemCategoryMapper.getProblemCategoryUsingCategoryId(0);
 		Assert.assertNull(problemCategory);
 
-		problemCategoryMapper.deleteProblemCategory(0);
+		int numberOfRowsAffected = problemCategoryMapper.deleteProblemCategory(0);
+		Assert.assertEquals(0, numberOfRowsAffected);
 	}
 
 	/**

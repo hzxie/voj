@@ -21,7 +21,7 @@ public interface DiscussionThreadMapper {
 	 * @param limit - 要获取帖子的数量
 	 * @return 包含讨论帖子对象的列表
 	 */
-	public List<DiscussionThread> getDiscussionThreads(
+	List<DiscussionThread> getDiscussionThreads(
 			@Param("problemId") long problemId,
 			@Param("discussionTopicId") int discussionTopicId,
 			@Param("discussionThreadId") long offset, @Param("limit") int limit);
@@ -31,23 +31,23 @@ public interface DiscussionThreadMapper {
 	 * @param  discussionThreadId - 讨论帖子的唯一标识符
 	 * @return 对应的讨论帖子对象
 	 */
-	public DiscussionThread getDiscussionThreadUsingThreadId(@Param("discussionThreadId") long discussionThreadId);
+	DiscussionThread getDiscussionThreadUsingThreadId(@Param("discussionThreadId") long discussionThreadId);
 
 	/**
 	 * 创建讨论帖子.
 	 * @param discussionThread - 待创建的讨论帖子
 	 */
-	public void createDiscussionThread(DiscussionThread discussionThread);
+	int createDiscussionThread(DiscussionThread discussionThread);
 
 	/**
 	 * 更新讨论帖子.
 	 * @param discussionThread - 待更新的讨论帖子
 	 */
-	public void updateDiscussionThread(DiscussionThread discussionThread);
+	int updateDiscussionThread(DiscussionThread discussionThread);
 
 	/**
 	 * 删除讨论帖子.
 	 * @param discussionThreadId - 待删除讨论帖子的唯一标识符
 	 */
-	public void deleteDiscussionThreadUsingThreadId(long discussionThreadId);
+	int deleteDiscussionThreadUsingThreadId(long discussionThreadId);
 }
