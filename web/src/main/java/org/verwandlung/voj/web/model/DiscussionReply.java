@@ -20,16 +20,16 @@ public class DiscussionReply implements Serializable {
 	 * @param discussionReplyCreator - 讨论帖子的创建者
 	 * @param discussionReplyCreateTime - 讨论帖子的创建时间
 	 * @param discussionReplyContent - 讨论帖子的内容
-	 * @param discussionReplyVote - 讨论帖子的投票结果
+	 * @param discussionReplyVotes - 讨论帖子的投票结果
 	 */
 	public DiscussionReply(long discussionThreadId, User discussionReplyCreator, 
 			Date discussionReplyCreateTime, String discussionReplyContent,
-			String discussionReplyVote) {
+			String discussionReplyVotes) {
 		this.discussionThreadId = discussionThreadId;
 		this.discussionReplyCreator = discussionReplyCreator;
 		this.discussionReplyCreateTime = discussionReplyCreateTime;
 		this.discussionReplyContent = discussionReplyContent;
-		this.discussionReplyVote = discussionReplyVote;
+		this.discussionReplyVotes = discussionReplyVotes;
 	}
 	
 	/**
@@ -134,16 +134,16 @@ public class DiscussionReply implements Serializable {
 	 * 获取讨论帖子的投票结果.
 	 * @return 讨论帖子的投票结果
 	 */
-	public String getDiscussionReplyVote() {
-		return discussionReplyVote;
+	public String getDiscussionReplyVotes() {
+		return discussionReplyVotes;
 	}
 
 	/**
 	 * 设置讨论帖子的投票结果.
 	 * @param discussionReplyVote - 讨论帖子的投票结果
 	 */
-	public void setDiscussionReplyVote(String discussionReplyVote) {
-		this.discussionReplyVote = discussionReplyVote;
+	public void setDiscussionReplyVotes(String discussionReplyVote) {
+		this.discussionReplyVotes = discussionReplyVote;
 	}
 
 	/* (non-Javadoc)
@@ -183,7 +183,7 @@ public class DiscussionReply implements Serializable {
 	/**
 	 * 讨论帖子的投票结果.
 	 */
-	private String discussionReplyVote;
+	private String discussionReplyVotes;
 	
 	/**
 	 * 唯一的序列化标识符. 

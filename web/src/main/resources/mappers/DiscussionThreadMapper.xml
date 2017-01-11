@@ -9,7 +9,7 @@
 		<result property="discussionThreadCreateTime" column="discussion_thread_create_time" />
 		<result property="discussionThreadTitle" column="discussion_thread_name" />
 		<result property="discussionThreadContent" column="discussion_thread_content" />
-		<result property="discussionThreadVote" column="discussion_thread_votes" />
+		<result property="discussionThreadVotes" column="discussion_thread_votes" />
 		<result property="numberOfReplies" column="discussion_replies" />
 		<association property="discussionThreadCreator" 
 			javaType="org.verwandlung.voj.web.model.User" 
@@ -61,13 +61,13 @@
 		keyColumn="discussion_thread_id"
 		useGeneratedKeys="true">
 		INSERT INTO voj_discussion_threads(discussion_thread_creator_uid, discussion_thread_create_time, problem_id, discussion_topic_id, discussion_thread_name, discussion_thread_content, discussion_thread_votes) 
-		VALUES (#{discussionThreadCreator.uid}, #{discussionThreadCreateTime}, #{problem.problemId}, #{discussionTopic.discussionTopicId}, #{discussionThreadTitle}, #{discussionThreadContent}, #{discussionThreadVote})
+		VALUES (#{discussionThreadCreator.uid}, #{discussionThreadCreateTime}, #{problem.problemId}, #{discussionTopic.discussionTopicId}, #{discussionThreadTitle}, #{discussionThreadContent}, #{discussionThreadVotes})
 	</insert>
 	<update id="updateDiscussionThread"
 		parameterType="org.verwandlung.voj.web.model.DiscussionThread"
 		flushCache="true">
 		UPDATE voj_discussion_threads 
-		SET discussion_thread_creator_uid = #{discussionThreadCreator.uid}, discussion_thread_create_time = #{discussionThreadCreateTime}, problem_id = #{problem.problemId}, discussion_topic_id = #{discussionTopic.discussionTopicId}, discussion_thread_name = #{discussionThreadTitle}, discussion_thread_content = #{discussionThreadContent}, discussion_thread_votes = #{discussionThreadVote}
+		SET discussion_thread_creator_uid = #{discussionThreadCreator.uid}, discussion_thread_create_time = #{discussionThreadCreateTime}, problem_id = #{problem.problemId}, discussion_topic_id = #{discussionTopic.discussionTopicId}, discussion_thread_name = #{discussionThreadTitle}, discussion_thread_content = #{discussionThreadContent}, discussion_thread_votes = #{discussionThreadVotes}
 		WHERE discussion_thread_id = #{discussionThreadId}
 	</update>
 	<delete id="deleteDiscussionThreadUsingThreadId"
