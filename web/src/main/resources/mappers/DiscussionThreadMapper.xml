@@ -23,6 +23,10 @@
 			javaType="org.verwandlung.voj.web.model.DiscussionTopic" 
 			column="discussion_topic_id"
 			select="org.verwandlung.voj.web.mapper.DiscussionTopicMapper.getDiscussionTopicUsingId" />
+		<association property="latestDiscussionReply" 
+			javaType="org.verwandlung.voj.web.model.DiscussionReply"
+			column="latest_discussion_reply_id"
+			select="org.verwandlung.voj.web.mapper.DiscussionReplyMapper.getDiscussionReplyUsingReplyId" />
 	</resultMap>
 
 	<!-- Methods -->
@@ -34,7 +38,13 @@
 			SELECT COUNT(*)
 			FROM voj_discussion_replies dr
 			WHERE dt.discussion_thread_id = dr.discussion_thread_id
-		) AS discussion_replies
+		) AS discussion_replies, (
+			SELECT discussion_reply_id
+			FROM voj_discussion_replies dr
+			WHERE dt.discussion_thread_id = dr.discussion_thread_id
+			ORDER BY discussion_reply_id DESC
+			LIMIT 1
+		) AS latest_discussion_reply_id
 		FROM voj_discussion_threads dt
 		WHERE discussion_thread_id >= #{discussionThreadId}
 		<if test="problemId != 0">
@@ -60,14 +70,14 @@
 		keyProperty="discussionThreadId" 
 		keyColumn="discussion_thread_id"
 		useGeneratedKeys="true">
-		INSERT INTO voj_discussion_threads(discussion_thread_creator_uid, discussion_thread_create_time, problem_id, discussion_topic_id, discussion_thread_name, discussion_thread_content, discussion_thread_votes) 
-		VALUES (#{discussionThreadCreator.uid}, #{discussionThreadCreateTime}, #{problem.problemId}, #{discussionTopic.discussionTopicId}, #{discussionThreadTitle}, #{discussionThreadContent}, #{discussionThreadVotes})
+		INSERT INTO voj_discussion_threads(discussion_thread_creator_uid, problem_id, discussion_topic_id, discussion_thread_name) 
+		VALUES (#{discussionThreadCreator.uid}, #{problem.problemId}, #{discussionTopic.discussionTopicId}, #{discussionThreadTitle})
 	</insert>
 	<update id="updateDiscussionThread"
 		parameterType="org.verwandlung.voj.web.model.DiscussionThread"
 		flushCache="true">
 		UPDATE voj_discussion_threads 
-		SET discussion_thread_creator_uid = #{discussionThreadCreator.uid}, discussion_thread_create_time = #{discussionThreadCreateTime}, problem_id = #{problem.problemId}, discussion_topic_id = #{discussionTopic.discussionTopicId}, discussion_thread_name = #{discussionThreadTitle}, discussion_thread_content = #{discussionThreadContent}, discussion_thread_votes = #{discussionThreadVotes}
+		SET discussion_thread_creator_uid = #{discussionThreadCreator.uid}, problem_id = #{problem.problemId}, discussion_topic_id = #{discussionTopic.discussionTopicId}, discussion_thread_name = #{discussionThreadTitle}
 		WHERE discussion_thread_id = #{discussionThreadId}
 	</update>
 	<delete id="deleteDiscussionThreadUsingThreadId"

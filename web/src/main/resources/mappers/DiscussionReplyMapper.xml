@@ -17,6 +17,14 @@
 	</resultMap>
 
 	<!-- Methods -->
+	<select id="getDiscussionReplyUsingReplyId"
+		parameterType="long"
+		resultMap="DiscussionReplyResultMap"
+		useCache="true">
+		SELECT * 
+		FROM voj_discussion_replies
+		WHERE discussion_reply_id = #{discussionReplyId}
+	</select>
 	<select id="getDiscussionRepliesUsingThreadId" 
 		parameterType="map"
 		resultMap="DiscussionReplyResultMap"
