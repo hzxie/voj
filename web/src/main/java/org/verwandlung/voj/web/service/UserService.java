@@ -435,7 +435,7 @@ public class UserService {
 		location = HtmlTextFilter.filter(location);
 		website = HtmlTextFilter.filter(website);
 		socialLinks = HtmlTextFilter.filter(socialLinks);
-		aboutMe = sensitiveWordFilter.filter(HtmlTextFilter.filter(aboutMe));
+		aboutMe = offensiveWordFilter.filter(HtmlTextFilter.filter(aboutMe));
 		Map<String, Boolean> result = getUpdateProfileResult(user, email, location, website, socialLinks, aboutMe);
 		
 		if ( result.get("isSuccessful") ) {
@@ -755,11 +755,11 @@ public class UserService {
 	private EmailValidationMapper emailValidationMapper;
 	
 	/**
-	 * 自动注入的SensitiveWordFilter对象.
+	 * 自动注入的OffensiveWordFilter对象.
 	 * 用于过滤用户个人信息中的敏感词.
 	 */
 	@Autowired
-	private OffensiveWordFilter sensitiveWordFilter;
+	private OffensiveWordFilter offensiveWordFilter;
 	
 	/**
 	 * 自动注入的MailSender对象.

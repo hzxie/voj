@@ -31,7 +31,7 @@
                 </c:if>
             </p>
             <p>
-                <button class="btn-github" onclick="window.location.href='https://github.com/zjhzxhz/voj/'">
+                <button class="btn-github" onclick="window.location.href='https://github.com/hzxie/voj/'">
                     <i class="fa fa-github"></i> Star
                 </button>
             </p>

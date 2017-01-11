@@ -116,22 +116,19 @@ INSERT INTO `voj_discussion_replies` (`discussion_reply_id`, `discussion_thread_
 CREATE TABLE `voj_discussion_threads` (
   `discussion_thread_id` bigint(20) NOT NULL,
   `discussion_thread_creator_uid` bigint(20) NOT NULL,
-  `discussion_thread_create_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `problem_id` bigint(20) DEFAULT NULL,
   `discussion_topic_id` int(8) NOT NULL,
-  `discussion_thread_name` varchar(128) NOT NULL,
-  `discussion_thread_content` text NOT NULL,
-  `discussion_thread_votes` text NOT NULL
+  `discussion_thread_name` varchar(128) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data for table `voj_discussion_threads`
 --
 
-INSERT INTO `voj_discussion_threads` (`discussion_thread_id`, `discussion_thread_creator_uid`, `discussion_thread_create_time`, `problem_id`, `discussion_topic_id`, `discussion_thread_name`, `discussion_thread_content`, `discussion_thread_votes`) VALUES
-(1, 1000, '2017-01-10 05:35:17', 1000, 1, 'Thread #1', 'The content of Thread #1', '{"up": [1001, 1002], "down": []}'),
-(2, 1000, '2017-01-08 05:35:17', 1000, 2, 'Thread #2', 'The content of Thread #2', '{"up": [1001], "down": [1002]}'),
-(3, 1000, '2017-01-09 21:35:17', NULL, 1, 'Thread #3', 'The content of Thread #3', '{"up": [1001, 1002], "down": []}');
+INSERT INTO `voj_discussion_threads` (`discussion_thread_id`, `discussion_thread_creator_uid`, `problem_id`, `discussion_topic_id`, `discussion_thread_name`) VALUES
+(1, 1000, 1000, 1, 'Thread #1'),
+(2, 1000, 1000, 2, 'Thread #2'),
+(3, 1000, NULL, 1, 'Thread #3');
 
 -- --------------------------------------------------------
 

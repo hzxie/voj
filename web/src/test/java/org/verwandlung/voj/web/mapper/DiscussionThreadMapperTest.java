@@ -93,14 +93,13 @@ public class DiscussionThreadMapperTest {
 	@Test
 	public void testCreateDiscussionThreadNormally() {
 		User creator = userMapper.getUserUsingUid(1000);
-		Date createTime = new Date();
 		DiscussionTopic topic = discussionTopicMapper.getDiscussionTopicUsingId(1);
 		Problem problem = problemMapper.getProblem(1000);
 
 		Assert.assertNotNull(creator);
 		Assert.assertNotNull(problem);
 
-		DiscussionThread thread = new DiscussionThread(creator, createTime, topic, problem, "title", "content", "{}");
+		DiscussionThread thread = new DiscussionThread(creator, topic, problem, "title");
 		int numberOfRowsAffected = discussionThreadMapper.createDiscussionThread(thread);
 		Assert.assertEquals(1, numberOfRowsAffected);
 	}
@@ -113,11 +112,10 @@ public class DiscussionThreadMapperTest {
 	@Test
 	public void testCreateDiscussionThreadWithNullProblem() {
 		User creator = userMapper.getUserUsingUid(1000);
-		Date createTime = new Date();
 		DiscussionTopic topic = discussionTopicMapper.getDiscussionTopicUsingId(2);
 		Assert.assertNotNull(creator);
 
-		DiscussionThread thread = new DiscussionThread(creator, createTime, topic, null, "title", "content", "{}");
+		DiscussionThread thread = new DiscussionThread(creator, topic, null, "title");
 		int numberOfRowsAffected = discussionThreadMapper.createDiscussionThread(thread);
 		Assert.assertEquals(1, numberOfRowsAffected);
 	}
@@ -130,7 +128,6 @@ public class DiscussionThreadMapperTest {
 	@Test(expected = org.springframework.dao.DataIntegrityViolationException.class)
 	public void testCreateDiscussionThreadWithTooLongTitle() {
 		User creator = userMapper.getUserUsingUid(1000);
-		Date createTime = new Date();
 		DiscussionTopic topic = discussionTopicMapper.getDiscussionTopicUsingId(1);
 		Assert.assertNotNull(creator);
 
@@ -138,7 +135,7 @@ public class DiscussionThreadMapperTest {
 		for ( int i = 0; i < 31; ++ i ) {
 			sb.append("Very");
 		}
-		DiscussionThread thread = new DiscussionThread(creator, createTime, topic, null, sb.toString() + "LongTitle", "content", "{}");
+		DiscussionThread thread = new DiscussionThread(creator, topic, null, sb.toString() + "LongTitle");
 		discussionThreadMapper.createDiscussionThread(thread);
 	}
 
@@ -150,10 +147,9 @@ public class DiscussionThreadMapperTest {
 	@Test(expected = org.springframework.dao.DataIntegrityViolationException.class)
 	public void testCreateDiscussionThreadWithNotExistingUser() {
 		User creator = new User(); creator.setUid(0);
-		Date createTime = new Date();
 		DiscussionTopic topic = discussionTopicMapper.getDiscussionTopicUsingId(1);
 
-		DiscussionThread thread = new DiscussionThread(creator, createTime, topic, null, "title", "content", "{}");
+		DiscussionThread thread = new DiscussionThread(creator, topic, null, "title");
 		discussionThreadMapper.createDiscussionThread(thread);
 	}
 
@@ -168,7 +164,7 @@ public class DiscussionThreadMapperTest {
 		Date createTime = new Date();
 		DiscussionTopic topic = new DiscussionTopic(); topic.setDiscussionTopicId(0);
 
-		DiscussionThread thread = new DiscussionThread(creator, createTime, topic, null, "title", "content", "{}");
+		DiscussionThread thread = new DiscussionThread(creator, topic, null, "title");
 		discussionThreadMapper.createDiscussionThread(thread);
 	}
 
