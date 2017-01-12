@@ -57,13 +57,13 @@ public class DiscussionController {
 	public ModelAndView discussionThreadView(
 			@PathVariable("threadId") long threadId,
 			HttpServletRequest request, HttpServletResponse response) {
-		DiscussionThread thread = discussionService.getDiscussionThreadUsingThreadId(threadId);
-		if ( thread == null ) {
+		DiscussionThread discussionThread = discussionService.getDiscussionThreadUsingThreadId(threadId);
+		if ( discussionThread == null ) {
 			throw new ResourceNotFoundException();
 		}
 
 		ModelAndView view = new ModelAndView("discussion/thread");
-		view.addObject(thread);
+		view.addObject("discussionThread", discussionThread);
 		return view;
 	}
 

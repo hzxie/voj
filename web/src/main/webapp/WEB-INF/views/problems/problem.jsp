@@ -129,13 +129,15 @@
                     </c:if>
                     <ul>
                     <c:forEach var="submission" items="${submissions}">
-                        <li>
-                            <span class="pull-right flag-${submission.judgeResult.judgeResultSlug}">
+                        <li class="row-fluid">
+                            <div class="span4">
+                                <a href="<c:url value="/submission/${submission.submissionId}" />">
+                                    <fmt:formatDate value="${submission.submitTime}" type="date" dateStyle="short" timeStyle="short"/>
+                                </a>
+                            </div> <!-- .span4 -->
+                            <div class="span8 flag-${submission.judgeResult.judgeResultSlug}">
                                 ${submission.judgeResult.judgeResultName}
-                            </span>
-                            <a href="<c:url value="/submission/${submission.submissionId}" />">
-                                <fmt:formatDate value="${submission.submitTime}" type="date" dateStyle="short" timeStyle="short"/>
-                            </a>
+                            </div> <!-- .span8 -->
                         </li>
                     </c:forEach>
                     </ul>
@@ -143,10 +145,23 @@
                 </c:if>
                 <div id="discussion" class="section">
                     <h5><spring:message code="voj.problems.problem.discussion" text="Discussion" /></h5>
-                    <c:if test="${discussion == null || discussion.size() == 0}">
+                    <c:if test="${discussionThreads == null || discussionThreads.size() == 0}">
                         <p><spring:message code="voj.problems.problem.no-discussion" text="No discussion" /></p>
                     </c:if>
-                    <ul></ul>
+                    <ul>
+                    <c:forEach var="discussionThread" items="${discussionThreads}">
+                        <li class="row-fluid">
+                            <div class="span4">
+                                <fmt:formatDate value="${discussionThread.latestDiscussionReply.discussionReplyCreateTime}" type="date" dateStyle="short" timeStyle="short"/>
+                            </div> <!-- .span4 -->
+                            <div class="span8">
+                                <a href="<c:url value="/discussion/${discussionThread.discussionThreadId}" />">
+                                    ${discussionThread.discussionThreadTitle}
+                                </a>
+                            </div> <!-- .span8 -->
+                        </li>
+                    </c:forEach>
+                    </ul>
                 </div> <!-- discussion -->
             </div> <!-- #sidebar -->
         </div> <!-- .row-fluid -->

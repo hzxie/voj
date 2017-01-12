@@ -125,26 +125,31 @@ div#content div#sidebar div.section ul {
 	margin-left: 0;
 }
 
-div#content div#sidebar div#submission.section span.flag-PD,
-div#content div#sidebar div#submission.section span.flag-CPL,
-div#content div#sidebar div#submission.section span.flag-JUD {
+div#content div#sidebar div.section .row-fluid .span4,
+div#content div#sidebar div.section .row-fluid .span8 {
+	min-height: 20px;
+}
+
+div#content div#sidebar div#submission.section div.flag-PD,
+div#content div#sidebar div#submission.section div.flag-CPL,
+div#content div#sidebar div#submission.section div.flag-JUD {
 	color: #ffa500;
 }
 
-div#content div#sidebar div#submission.section span.flag-AC {
+div#content div#sidebar div#submission.section div.flag-AC {
 	color: #f00;
 }
 
-div#content div#sidebar div#submission.section span.flag-PE,
-div#content div#sidebar div#submission.section span.flag-WA,
-div#content div#sidebar div#submission.section span.flag-TLE,
-div#content div#sidebar div#submission.section span.flag-MLE,
-div#content div#sidebar div#submission.section span.flag-OLE {
+div#content div#sidebar div#submission.section div.flag-PE,
+div#content div#sidebar div#submission.section div.flag-WA,
+div#content div#sidebar div#submission.section div.flag-TLE,
+div#content div#sidebar div#submission.section div.flag-MLE,
+div#content div#sidebar div#submission.section div.flag-OLE {
 	color: #4d7aff;
 }
 
-div#content div#sidebar div#submission.section span.flag-RE,
-div#content div#sidebar div#submission.section span.flag-CE {
+div#content div#sidebar div#submission.section div.flag-RE,
+div#content div#sidebar div#submission.section div.flag-CE {
 	color: #49a932;
 }
 
