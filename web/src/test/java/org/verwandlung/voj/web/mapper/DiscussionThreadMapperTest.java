@@ -26,12 +26,14 @@ import java.util.List;
 public class DiscussionThreadMapperTest {
 	/**
 	 * 测试用例: 测试getDiscussionThreads(long, int, long, int)方法
-	 * 测试数据: Problem: A+B Problem, DiscussionTopic: null, 获取除第1条外的后2条数据
+	 * 测试数据: Problem: A+B Problem, DiscussionTopic: null, 获取除前2条数据
 	 * 预期结果: 返回最新创建的2个DiscussionThread
 	 */
 	@Test
 	public void testGetDiscussionThreadsOfProblem1000WithOffsetFrom0WithLimit2() {
-		List<DiscussionThread> discussionThreads = discussionThreadMapper.getDiscussionThreads(1000, 0, 1, 2);
+		List<DiscussionThread> discussionThreads = discussionThreadMapper.getDiscussionThreads(1000, 0, 0, 2);
+		Assert.assertEquals(2, discussionThreads.size());
+
 		DiscussionThread firstThread = discussionThreads.get(0);
 		Assert.assertNotNull(firstThread);
 
@@ -56,6 +58,18 @@ public class DiscussionThreadMapperTest {
 		DiscussionThread thread = discussionThreads.get(0);
 		Assert.assertNotNull(thread);
 
+		String threadTitle = thread.getDiscussionThreadTitle();
+		Assert.assertEquals("Thread #1", threadTitle);
+	}
+
+	/**
+	 * 测试用例: 测试getSolutionThreadOfProblem(long)方法.
+	 * 测试数据: Problem: A+B Problem
+	 * 预期结果: 返回Problem A+B Problem相关的第一条讨论
+	 */
+	@Test
+	public void testGetSolutionThreadOfProblemUsingExistingProblemId() {
+		DiscussionThread thread = discussionThreadMapper.getSolutionThreadOfProblem(1000);
 		String threadTitle = thread.getDiscussionThreadTitle();
 		Assert.assertEquals("Thread #1", threadTitle);
 	}

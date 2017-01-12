@@ -6,10 +6,7 @@
 	<!-- ResultMap -->
 	<resultMap id="DiscussionThreadResultMap" type="org.verwandlung.voj.web.model.DiscussionThread">
 		<id property="discussionThreadId" column="discussion_thread_id" />
-		<result property="discussionThreadCreateTime" column="discussion_thread_create_time" />
 		<result property="discussionThreadTitle" column="discussion_thread_name" />
-		<result property="discussionThreadContent" column="discussion_thread_content" />
-		<result property="discussionThreadVotes" column="discussion_thread_votes" />
 		<result property="numberOfReplies" column="discussion_replies" />
 		<association property="discussionThreadCreator" 
 			javaType="org.verwandlung.voj.web.model.User" 
@@ -46,15 +43,26 @@
 			LIMIT 1
 		) AS latest_discussion_reply_id
 		FROM voj_discussion_threads dt
-		WHERE discussion_thread_id >= #{discussionThreadId}
-		<if test="problemId != 0">
-			AND problem_id = #{problemId}
-		</if>
-		<if test="discussionTopicId != 0">
-			AND discussion_topic_id = #{discussionTopicId}
-		</if>
+		<where>
+			<if test="problemId != 0">
+				AND problem_id = #{problemId}
+			</if>
+			<if test="discussionTopicId != 0">
+				AND discussion_topic_id = #{discussionTopicId}
+			</if>
+		</where>
 		ORDER BY latest_discussion_reply_id DESC
-		LIMIT #{limit}
+		LIMIT #{offset}, #{limit}
+	</select>
+	<select id="getSolutionThreadOfProblem"
+		parameterType="long"
+		resultMap="DiscussionThreadResultMap"
+		useCache="true">
+		SELECT *
+		FROM voj_discussion_threads dt
+		WHERE problem_id = #{problemId}
+		ORDER BY discussion_thread_id
+		LIMIT 1
 	</select>
 	<select id="getDiscussionThreadUsingThreadId" 
 		parameterType="long"
