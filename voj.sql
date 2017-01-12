@@ -104,8 +104,8 @@ CREATE TABLE `voj_discussion_replies` (
 
 INSERT INTO `voj_discussion_replies` (`discussion_reply_id`, `discussion_thread_id`, `discussion_reply_uid`, `discussion_reply_time`, `discussion_reply_content`, `discussion_reply_votes`) VALUES
 (1, 1, 1001, '2017-01-10 05:42:20', 'Reply content for thread #1', '{"up": [1000], "down": [1002]}'),
-(2, 2, 1002, '2017-01-10 05:42:20', 'Reply content for thread #2', '{"up": [1000], "down": [1001]}'),
-(3, 1, 1001, '2017-01-10 05:42:20', 'Reply content for thread #1', '{"up": [], "down": []}');
+(2, 2, 1002, '2017-01-11 05:42:20', 'Reply content for thread #2', '{"up": [1000], "down": [1001]}'),
+(3, 2, 1001, '2017-01-12 05:42:20', 'Reply content for thread #2', '{"up": [], "down": []}');
 
 -- --------------------------------------------------------
 

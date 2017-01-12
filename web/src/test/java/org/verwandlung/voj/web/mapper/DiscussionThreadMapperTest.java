@@ -42,22 +42,22 @@ public class DiscussionThreadMapperTest {
 		Assert.assertEquals("Thread #2", firstThreadTitle);
 
 		long threadReplies = firstThread.getNumberOfReplies();
-		Assert.assertEquals(1, threadReplies);
+		Assert.assertEquals(2, threadReplies);
 	}
 
 	/**
 	 * 测试用例: 测试getDiscussionThreads(long, int, long, int)方法
-	 * 测试数据: Problem: null, DiscussionTopic: General, 获取除第1条外的后1条数据
+	 * 测试数据: Problem: null, DiscussionTopic: General, 获取除第1条数据
 	 * 预期结果: 返回最新创建的1个DiscussionThread
 	 */
 	@Test
 	public void testGetDiscussionThreadsOfNoRelatedProblemWithOffsetFrom0WithLimit1() {
-		List<DiscussionThread> discussionThreads = discussionThreadMapper.getDiscussionThreads(0, 1, 1, 1);
+		List<DiscussionThread> discussionThreads = discussionThreadMapper.getDiscussionThreads(0, 1, 0, 1);
 		DiscussionThread thread = discussionThreads.get(0);
 		Assert.assertNotNull(thread);
 
 		String threadTitle = thread.getDiscussionThreadTitle();
-		Assert.assertEquals("Thread #3", threadTitle);
+		Assert.assertEquals("Thread #1", threadTitle);
 	}
 
 	/**

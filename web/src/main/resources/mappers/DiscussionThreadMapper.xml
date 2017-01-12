@@ -53,7 +53,7 @@
 		<if test="discussionTopicId != 0">
 			AND discussion_topic_id = #{discussionTopicId}
 		</if>
-		ORDER BY discussion_thread_id DESC
+		ORDER BY latest_discussion_reply_id DESC
 		LIMIT #{limit}
 	</select>
 	<select id="getDiscussionThreadUsingThreadId" 

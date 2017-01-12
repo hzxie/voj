@@ -24,30 +24,36 @@ import java.util.List;
 public class DiscussionReplyMapperTest {
 	/**
 	 * 测试用例: 测试getDiscussionRepliesUsingThreadId(long, long, int)方法.
-	 * 测试数据: ThreadId: 1, Offset: 0, Limit: 2
-	 * 预期结果: 返回第一个讨论帖子的前2条评论
+	 * 测试数据: ThreadId: 2, Offset: 0, Limit: 2
+	 * 预期结果: 返回第二个讨论帖子的前2条评论
 	 */
 	@Test
-	public void testGetDiscussionRepliesOfThread1WithOffsetFrom0WithLimit2() {
-		List<DiscussionReply> discussionReplies = discussionReplyMapper.getDiscussionRepliesUsingThreadId(1, 0, 2);
+	public void testGetDiscussionRepliesOfThread2WithOffsetFrom0WithLimit2() {
+		List<DiscussionReply> discussionReplies = discussionReplyMapper.getDiscussionRepliesUsingThreadId(2, 0, 2);
 		Assert.assertEquals(2, discussionReplies.size());
 
 		DiscussionReply firstDiscussionReply = discussionReplies.get(0);
+		long replyId = firstDiscussionReply.getDiscussionReplyId();
+		Assert.assertEquals(3, replyId);
+
 		String replyContent = firstDiscussionReply.getDiscussionReplyContent();
-		Assert.assertEquals("Reply content for thread #1", replyContent);
+		Assert.assertEquals("Reply content for thread #2", replyContent);
 	}
 
 	/**
 	 * 测试用例: 测试getDiscussionRepliesUsingThreadId(long, long, int)方法.
-	 * 测试数据: ThreadId: 2, Offset: 0, Limit: 1
-	 * 预期结果: 返回第二个讨论帖子的前1条评论
+	 * 测试数据: ThreadId: 2, Offset: 1, Limit: 1
+	 * 预期结果: 返回第二个讨论帖子的第2条评论
 	 */
 	@Test
-	public void testGetDiscussionRepliesOfThread2WithOffsetFrom0WithLimit1() {
-		List<DiscussionReply> discussionReplies = discussionReplyMapper.getDiscussionRepliesUsingThreadId(2, 0, 1);
+	public void testGetDiscussionRepliesOfThread2WithOffsetFrom1WithLimit1() {
+		List<DiscussionReply> discussionReplies = discussionReplyMapper.getDiscussionRepliesUsingThreadId(2, 1, 1);
 		Assert.assertEquals(1, discussionReplies.size());
 
 		DiscussionReply firstDiscussionReply = discussionReplies.get(0);
+		long replyId = firstDiscussionReply.getDiscussionReplyId();
+		Assert.assertEquals(2, replyId);
+
 		String replyContent = firstDiscussionReply.getDiscussionReplyContent();
 		Assert.assertEquals("Reply content for thread #2", replyContent);
 	}
