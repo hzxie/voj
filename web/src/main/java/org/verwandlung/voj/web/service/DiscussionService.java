@@ -63,7 +63,7 @@ public class DiscussionService {
 	}
 
 	/**
-	 *获取某个讨论话题的回复.
+	 * 获取某个讨论话题的回复.
 	 * @param discussionThreadId - 讨论话题的唯一标识符
 	 * @param @param offset 起始回复的游标
 	 * @param limit 获取回复的数量
