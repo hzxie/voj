@@ -129,12 +129,12 @@ public class DiscussionTopicMapperTest {
 		DiscussionTopic topic = discussionTopicMapper.getDiscussionTopicUsingSlug("general");
 		Assert.assertNotNull(topic);
 
-		topic.setGetDiscussionTopicName("New Topic Name");
+		topic.setDiscussionTopicName("New Topic Name");
 		int numberOfRowsAffected = discussionTopicMapper.updateDiscussionTopic(topic);
 		Assert.assertEquals(1, numberOfRowsAffected);
 
 		topic = discussionTopicMapper.getDiscussionTopicUsingSlug("general");
-		Assert.assertEquals("New Topic Name", topic.getGetDiscussionTopicName());
+		Assert.assertEquals("New Topic Name", topic.getDiscussionTopicName());
 	}
 
 	/**

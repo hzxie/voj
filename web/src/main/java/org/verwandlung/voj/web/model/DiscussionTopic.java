@@ -75,7 +75,7 @@ public class DiscussionTopic implements Serializable {
 	 * 获取讨论话题的名称.
 	 * @return 讨论话题的名称
 	 */
-	public String getGetDiscussionTopicName() {
+	public String getDiscussionTopicName() {
 		return discussionTopicName;
 	}
 
@@ -83,7 +83,7 @@ public class DiscussionTopic implements Serializable {
 	 * 设置讨论话题的名称.
 	 * @param getDiscussionTopicName - 讨论话题的名称
 	 */
-	public void setGetDiscussionTopicName(String getDiscussionTopicName) {
+	public void setDiscussionTopicName(String getDiscussionTopicName) {
 		this.discussionTopicName = getDiscussionTopicName;
 	}
 
