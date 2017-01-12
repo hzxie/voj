@@ -66,7 +66,7 @@ div#content div#main-content div#discussion table.table {
 }
 
 div#content div#main-content div#contests table.table tr.contest,
-div#content div#main-content div#discussion table.table tr.discussion-threads {
+div#content div#main-content div#discussion table.table tr.discussion-thread {
 	cursor: pointer;
 	border-bottom: 1px solid #e8e8e8;
 	-webkit-transition: background .1s linear;
@@ -75,19 +75,19 @@ div#content div#main-content div#discussion table.table tr.discussion-threads {
 }
 
 div#content div#main-content div#contests table.table tr.contest > td.overview,
-div#content div#main-content div#discussion table.table tr.discussion-threads > td.overview {
+div#content div#main-content div#discussion table.table tr.discussion-thread > td.overview {
 	padding: 10px;
 }
 
 div#content div#main-content div#contests table.table tr.contest > td.overview ul.inline li,
-div#content div#main-content div#discussion table.table tr.discussion-threads > td.overview ul.inline li {
+div#content div#main-content div#discussion table.table tr.discussion-thread > td.overview ul.inline li {
 	color: #999;
 	font-size: 12px;
 	padding-left: 0;
 }
 
 div#content div#main-content div#contests table.table tr.contest > td.status,
-div#content div#main-content div#discussion table.table tr.discussion-threads > td.reply-count {
+div#content div#main-content div#discussion table.table tr.discussion-thread > td.reply-count {
 	font-size: 12px;
 	text-align: center;
 	vertical-align: middle;
@@ -128,20 +128,20 @@ div#content div#main-content div#contests table.table tr.contest.Live > td.statu
 	color: #ff8080;    
 }
 
-div#content div#main-content div#discussion table.table tr.discussion-threads:hover {
+div#content div#main-content div#discussion table.table tr.discussion-thread:hover {
 	background-color: #fff8df !important;
 }
 
-div#content div#main-content div#discussion table.table tr.discussion-threads:hover > td.reply-count {
+div#content div#main-content div#discussion table.table tr.discussion-thread:hover > td.reply-count {
 	background-color: #ffe9ca !important;
 }
 
-div#content div#main-content div#discussion table.table tr.discussion-threads > td.avatar {
+div#content div#main-content div#discussion table.table tr.discussion-thread > td.avatar {
 	vertical-align: middle;
-	width: 10%;
+	width: 15%;
 }
 
-div#content div#main-content div#discussion table.table tr.discussion-threads > td.avatar > img {
+div#content div#main-content div#discussion table.table tr.discussion-thread > td.avatar > img {
 	max-width: 100%;
 	width: 100%;
 	-webkit-border-radius: 4px;
@@ -149,7 +149,7 @@ div#content div#main-content div#discussion table.table tr.discussion-threads > 
 	        border-radius: 4px;
 }
 
-div#content div#main-content div#discussion table.table tr.discussion-threads > td.reply-count {
+div#content div#main-content div#discussion table.table tr.discussion-thread > td.reply-count {
 	background-color: #ffedd5;
 }
 

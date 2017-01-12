@@ -68,7 +68,7 @@ public class DiscussionService {
 	 * @return 对应试题的题解讨论DiscussionThread对象
 	 */
 	public DiscussionThread getSolutionThreadOfProblem(long problemId) {
-		return null;
+		return discussionThreadMapper.getSolutionThreadOfProblem(problemId);
 	}
 
 	/**
@@ -91,7 +91,7 @@ public class DiscussionService {
 	 */
 	public List<DiscussionThread> getDiscussionThreadsOfTopic(String discussionTopicSlug, long offset, int limit) {
 		int discussionTopicId = 0;
-		if ( !discussionTopicSlug.isEmpty() ) {
+		if ( discussionTopicSlug != null && !discussionTopicSlug.isEmpty() ) {
 			DiscussionTopic dt = discussionTopicMapper.getDiscussionTopicUsingSlug(discussionTopicSlug);
 			discussionTopicId = dt.getDiscussionTopicId();
 		}
@@ -114,6 +114,15 @@ public class DiscussionService {
 			reply.setDiscussionReplyContent(replyContent);
 		}
 		return replies;
+	}
+
+	/**
+	 * 通过讨论帖子的唯一标识符获取讨论帖子对象.
+	 * @param discussionThreadId - 讨论帖子的唯一标识符
+	 * @return 对应的讨论帖子对象或空引用
+	 */
+	public DiscussionThread getDiscussionThreadUsingThreadId(long discussionThreadId) {
+		return discussionThreadMapper.getDiscussionThreadUsingThreadId(discussionThreadId);
 	}
 
 	/**

@@ -17,8 +17,10 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.ModelAndView;
 
 import org.verwandlung.voj.web.messenger.ApplicationEventListener;
+import org.verwandlung.voj.web.model.DiscussionThread;
 import org.verwandlung.voj.web.model.User;
 import org.verwandlung.voj.web.model.UserGroup;
+import org.verwandlung.voj.web.service.DiscussionService;
 import org.verwandlung.voj.web.service.LanguageService;
 import org.verwandlung.voj.web.service.UserService;
 import org.verwandlung.voj.web.util.LocaleUtils;
@@ -40,7 +42,10 @@ public class DefaultController {
 	@RequestMapping(value = "/", method = RequestMethod.GET)
 	public ModelAndView indexView(
 			HttpServletRequest request, HttpServletResponse response) {
+		List<DiscussionThread> discussionThreads = discussionService.getDiscussionThreadsOfTopic(null, 0, THREADS_PER_REQUEST);
+
 		ModelAndView view = new ModelAndView("index");
+		view.addObject("discussionThreads", discussionThreads);
 		return view;
 	}
 	
@@ -213,6 +218,16 @@ public class DefaultController {
 	 * 每次加载评测机的数量.
 	 */
 	private static final int JUDGERS_PER_REQUEST = 10;
+
+	/**
+	 * 每次加载讨论帖子的数量.
+	 */
+	private static final int THREADS_PER_REQUEST = 10;
+
+	/**
+	 * 每次加载比赛的数量.
+	 */
+	private static final int CONTESTS_PER_REQUEST = 5;
 	
 	/**
 	 * 自动注入的UserService对象.
@@ -227,6 +242,13 @@ public class DefaultController {
 	 */
 	@Autowired
 	private LanguageService languageService;
+
+	/**
+	 * 自动注入的DiscussionService对象.
+	 * 用于在首页获取讨论帖子.
+	 */
+	@Autowired
+	private DiscussionService discussionService;
 	
 	/**
 	 * 自动注入的ApplicationEventListener对象.
