@@ -42,7 +42,7 @@ public class DefaultController {
 	@RequestMapping(value = "/", method = RequestMethod.GET)
 	public ModelAndView indexView(
 			HttpServletRequest request, HttpServletResponse response) {
-		List<DiscussionThread> discussionThreads = discussionService.getDiscussionThreadsOfTopic(null, 0, THREADS_PER_REQUEST);
+		List<DiscussionThread> discussionThreads = discussionService.getDiscussionThreadsOfTopic(null, 0, NUMBER_OF_DISCUSSION_THREADS_PER_REQUEST);
 
 		ModelAndView view = new ModelAndView("index");
 		view.addObject("discussionThreads", discussionThreads);
@@ -114,7 +114,7 @@ public class DefaultController {
 	 */
 	private List<Map<String, String>> getJudgers(long offset) {
 		UserGroup userGroup = userService.getUserGroupUsingSlug("judgers");
-		List<User> judgersList = userService.getUserUsingUserGroup(userGroup, offset, JUDGERS_PER_REQUEST);
+		List<User> judgersList = userService.getUserUsingUserGroup(userGroup, offset, NUMBER_OF_JUDGERS_PER_REQUEST);
 		List<Map<String, String>> judgers = new ArrayList<Map<String, String>>();
 		
 		for ( User judger : judgersList ) {
@@ -217,17 +217,17 @@ public class DefaultController {
 	/**
 	 * 每次加载评测机的数量.
 	 */
-	private static final int JUDGERS_PER_REQUEST = 10;
+	private static final int NUMBER_OF_JUDGERS_PER_REQUEST = 10;
 
 	/**
 	 * 每次加载讨论帖子的数量.
 	 */
-	private static final int THREADS_PER_REQUEST = 10;
+	private static final int NUMBER_OF_DISCUSSION_THREADS_PER_REQUEST = 10;
 
 	/**
 	 * 每次加载比赛的数量.
 	 */
-	private static final int CONTESTS_PER_REQUEST = 5;
+	private static final int NUMBER_OF_CONTESTS_PER_REQUEST = 5;
 	
 	/**
 	 * 自动注入的UserService对象.

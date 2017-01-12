@@ -21,10 +21,8 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.ModelAndView;
 
 import org.verwandlung.voj.web.exception.ResourceNotFoundException;
-import org.verwandlung.voj.web.model.Language;
-import org.verwandlung.voj.web.model.Problem;
-import org.verwandlung.voj.web.model.Submission;
-import org.verwandlung.voj.web.model.User;
+import org.verwandlung.voj.web.model.*;
+import org.verwandlung.voj.web.service.DiscussionService;
 import org.verwandlung.voj.web.service.LanguageService;
 import org.verwandlung.voj.web.service.ProblemService;
 import org.verwandlung.voj.web.service.SubmissionService;
@@ -164,7 +162,7 @@ public class ProblemsController {
 		
 		ModelAndView view = new ModelAndView("problems/problem");
 		view.addObject("problem", problem);
-
+		view.addObject("discussionThreads", discussionService.getDiscussionThreadsOfProblem(problemId, 0, NUMBER_OF_DISCUSSTION_THREADS_PER_PROBLEM));
 		if ( isLoggedIn ) {
 			long userId = (Long)session.getAttribute("uid");
 			Map<Long, Submission> submissionOfProblems = submissionService.getSubmissionOfProblems(userId, problemId, problemId + 1);
@@ -190,7 +188,13 @@ public class ProblemsController {
 	public ModelAndView solutionView(
 			@PathVariable("problemId") long problemId,
 			HttpServletRequest request, HttpServletResponse response) {
+		DiscussionThread discussionThread = discussionService.getSolutionThreadOfProblem(problemId);
+		if ( discussionThread == null ) {
+			throw new ResourceNotFoundException();
+		}
+
 		ModelAndView view = new ModelAndView("discussion/thread");
+		view.addObject("discussionThread", discussionThread);
 		return view;
 	}
 	
@@ -234,6 +238,11 @@ public class ProblemsController {
 	 * 每个试题加载最近提交的数量.
 	 */
 	private static final int NUMBER_OF_SUBMISSIONS_PER_PROBLEM = 10;
+
+	/**
+	 * 每个试题加载讨论的数量.
+	 */
+	private static final int NUMBER_OF_DISCUSSTION_THREADS_PER_PROBLEM = 10;
 	
 	/**
 	 * 自动注入的ProblemService对象.
@@ -255,6 +264,13 @@ public class ProblemsController {
 	 */
 	@Autowired
 	private LanguageService languageService;
+
+	/**
+	 * 自动注入的DiscussionService对象.
+	 * 用于获取试题相关的讨论.
+	 */
+	@Autowired
+	private DiscussionService discussionService;
 	
 	/**
 	 * 日志记录器.
