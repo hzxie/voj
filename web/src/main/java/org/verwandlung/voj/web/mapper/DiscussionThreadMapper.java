@@ -24,7 +24,15 @@ public interface DiscussionThreadMapper {
 	List<DiscussionThread> getDiscussionThreads(
 			@Param("problemId") long problemId,
 			@Param("discussionTopicId") int discussionTopicId,
-			@Param("discussionThreadId") long offset, @Param("limit") int limit);
+			@Param("offset") long offset, @Param("limit") int limit);
+
+	/**
+	 * 获取某个试题的题解讨论.
+	 * 题解讨论在创建试题时自动创建, 即为该试题相关的第1个讨论.
+	 * @param problemId - 试题的唯一标识符
+	 * @return 某个试题的题解讨论DiscussionThread对象
+	 */
+	DiscussionThread getSolutionThreadOfProblem(@Param("problemId") long problemId);
 
 	/**
 	 * 根据讨论帖子的唯一标识符获取讨论帖子对象.
