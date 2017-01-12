@@ -34,7 +34,7 @@ public class DiscussionReplyMapperTest {
 
 		DiscussionReply firstDiscussionReply = discussionReplies.get(0);
 		long replyId = firstDiscussionReply.getDiscussionReplyId();
-		Assert.assertEquals(3, replyId);
+		Assert.assertEquals(2, replyId);
 
 		String replyContent = firstDiscussionReply.getDiscussionReplyContent();
 		Assert.assertEquals("Reply content for thread #2", replyContent);
@@ -52,7 +52,7 @@ public class DiscussionReplyMapperTest {
 
 		DiscussionReply firstDiscussionReply = discussionReplies.get(0);
 		long replyId = firstDiscussionReply.getDiscussionReplyId();
-		Assert.assertEquals(2, replyId);
+		Assert.assertEquals(3, replyId);
 
 		String replyContent = firstDiscussionReply.getDiscussionReplyContent();
 		Assert.assertEquals("Reply content for thread #2", replyContent);
