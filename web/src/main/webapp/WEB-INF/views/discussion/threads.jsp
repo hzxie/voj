@@ -8,7 +8,7 @@
 <html lang="${language}">
 <head>
     <meta charset="UTF-8">
-    <title><spring:message code="voj.discussion.discussion.title" text="Discussion" /> | ${websiteName}</title>
+    <title><spring:message code="voj.discussion.discussions.title" text="Discussion" /> | ${websiteName}</title>
     <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="${description}">
@@ -45,7 +45,7 @@
     <div id="content" class="container">
         <div id="main-content" class="row-fluid">
             <div id="discussion" class="span8">
-                <table class="table">
+                <table id="discussion-threads" class="table">
                 <c:forEach var="discussionThread" items="${discussionThreads}">
                     <tr class="discussion-thread">
                         <td class="avatar" data-value="${fn:toLowerCase(discussionThread.discussionThreadCreator.email)}">
@@ -55,11 +55,11 @@
                             <h5><a href="<c:url value="/discussion/" />${discussionThread.discussionThreadId}">${discussionThread.discussionThreadTitle}</a></h5>
                             <ul class="inline">
                                 <li>
-                                    <spring:message code="voj.index.author" text="Author" />: 
+                                    <spring:message code="voj.discussion.discussions.author" text="Author" />: 
                                     <a href="<c:url value="/accounts/user/" />${discussionThread.discussionThreadCreator.uid}">${discussionThread.discussionThreadCreator.username}</a>
                                 </li>
                                 <li>
-                                    <spring:message code="voj.index.posted-in" text="Posted in" />: 
+                                    <spring:message code="voj.discussion.discussions.posted-in" text="Posted in" />: 
                                 <c:choose>
                                 <c:when test="${discussionThread.problem == null}">
                                     <a href="<c:url value="/discussion?topicSlug=" />${discussionThread.discussionTopic.discussionTopicSlug}">${discussionThread.discussionTopic.discussionTopicName}</a>
@@ -70,7 +70,7 @@
                                 </c:choose>
                                 </li>
                                 <li>
-                                    <spring:message code="voj.index.latest-reply" text="Latest reply" />:
+                                    <spring:message code="voj.discussion.discussions.latest-reply" text="Latest reply" />:
                                     <a href="<c:url value="/accounts/user/" />${discussionThread.latestDiscussionReply.discussionReplyCreator.uid}">${discussionThread.latestDiscussionReply.discussionReplyCreator.username}</a> 
                                     @<span class="reply-datetime"><fmt:formatDate value="${discussionThread.latestDiscussionReply.discussionReplyCreateTime}" type="both" dateStyle="default" timeStyle="default" /></span>
                                 </li>
@@ -80,14 +80,14 @@
                     </tr>
                 </c:forEach>
                 </table> <!-- .table -->
-                <div id="more-discussion">
-                    <p class="availble"><spring:message code="voj.discussion.discussion.more-discussion" text="More Discussion..." /></p>
+                <div id="more-discussion-threads">
+                    <p class="availble"><spring:message code="voj.discussion.discussions.more-discussion" text="More discussion threads..." /></p>
                     <img src="${cdnUrl}/img/loading.gif" alt="Loading" class="hide" />
                 </div>
             </div> <!-- #discussion -->
             <div id="sidebar" class="span4">
                 <div id="topics-widget" class="widget">
-                    <h4><spring:message code="voj.discussion.discussion.topics" text="Discussion Topics" /></h4>
+                    <h4><spring:message code="voj.discussion.discussions.topics" text="Discussion Topics" /></h4>
                     <c:forEach var="entry" items="${discussionTopics}">
                         <h6>
                             <a 
@@ -108,7 +108,6 @@
                         </c:forEach>
                         </ul>
                     </c:forEach>
-
                 </div> <!-- .widgets -->
             </div> <!-- #sidebar -->
         </div> <!-- #main-content -->
@@ -136,23 +135,133 @@
     <script type="text/javascript">
         $(function() {
             $('.avatar', '.discussion-thread').each(function() {
-                var hash    = md5($(this).attr('data-value')),
-                    avatar  = $('img', $(this));
+                var email         = $(this).attr('data-value'),
+                    imgContainer  = $('img', $(this));
 
-                $.ajax({
-                    type: 'GET',
-                    url: 'https://secure.gravatar.com/' + hash + '.json',
-                    dataType: 'jsonp',
-                    success: function(result){
-                        if ( result != null ) {
-                            var imageUrl    = result['entry'][0]['thumbnailUrl'],
-                                requrestUrl = imageUrl + '?s=120';
-                            $(avatar).attr('src', requrestUrl);
-                        }
-                    }
-                });
+                getGravatarUrl(email, imgContainer);
             });
         });
+    </script>
+    <script type="text/javascript">
+        function getGravatarUrl(email, imgContainer) {
+            var hash = md5(email.toLowerCase());
+            $.ajax({
+                type: 'GET',
+                url: 'https://secure.gravatar.com/' + hash + '.json',
+                dataType: 'jsonp',
+                success: function(result){
+                    if ( result != null ) {
+                        var imageUrl    = result['entry'][0]['thumbnailUrl'],
+                            requrestUrl = imageUrl + '?s=120';
+                        $(imgContainer).attr('src', requrestUrl);
+                    }
+                }
+            });
+        }
+    </script>
+    <script type="text/javascript">
+        function setLoadingStatus(isLoading) {
+            if ( isLoading ) {
+                $('p', '#more-discussion-threads').addClass('hide');
+                $('img', '#more-discussion-threads').removeClass('hide');
+            } else {
+                $('img', '#more-discussion-threads').addClass('hide');
+                $('p', '#more-discussion-threads').removeClass('hide');
+            }
+        }
+    </script>
+    <script type="text/javascript">
+        $('#more-discussion-threads').click(function() {
+            var isLoading         = $('img', this).is(':visible'),
+                hasNextRecord     = $('p', this).hasClass('availble'),
+                numberOfThreads   = $('.discussion-thread').length;
+
+            if ( !isLoading && hasNextRecord ) {
+                setLoadingStatus(true);
+                return getMoreDiscussionThreads(numberOfThreads);
+            }
+        });
+    </script>
+    <script type="text/javascript">
+        function getMoreDiscussionThreads(startIndex) {
+            var pageRequests = {
+                'startIndex': startIndex,
+                'category': '${selectedTopicSlug}'
+            };
+
+            $.ajax({
+                type: 'GET',
+                url: '<c:url value="/discussion/getDiscussionThreads.action" />',
+                data: pageRequests,
+                dataType: 'JSON',
+                success: function(result){
+                    return processDiscussionThreadsResult(result);
+                }
+            });
+        }
+    </script>
+    <script type="text/javascript">
+        function processDiscussionThreadsResult(result) {
+            if ( result['isSuccessful'] ) {
+                displayDiscussionThreadRecords(result['discussionThreads']);
+            } else {
+                $('p', '#more-discussion-threads').removeClass('availble');
+                $('p', '#more-discussion-threads').html('<spring:message code="voj.discussion.discussions.no-more-discussion" text="No more discussion threads" />');
+                $('#more-discussion-threads').css('cursor', 'default');
+            }
+            setLoadingStatus(false);
+        }
+    </script>
+    <script type="text/javascript">
+        function displayDiscussionThreadRecords(discussionThreads) {
+            for ( var i = 0; i < discussionThreads.length; ++ i ) {
+                $('table#discussion-threads > tbody').append(
+                    getDiscussionThreadContent(discussionThreads[i]['discussionThreadCreator'], discussionThreads[i]['discussionThreadId'], 
+                        discussionThreads[i]['discussionThreadTitle'], discussionThreads[i]['problem'], discussionThreads[i]['discussionTopic'], 
+                        discussionThreads[i]['latestDiscussionReply'], discussionThreads[i]['numberOfReplies'])
+                );
+                getGravatarUrl(discussionThreads[i]['discussionThreadCreator']['email'], $('img', 'table#discussion-threads tr:last-child'));
+            }
+        }
+    </script>
+    <script type="text/javascript">
+        function getDiscussionThreadContent(discussionThreadCreator, discussionThreadId, discussionThreadTitle, discussionThreadRelatedProblem, discussionTopic, latestDiscussionReply, numberOfReplies) {
+            var latestDiscussionReplyCreatorUid      = latestDiscussionReply ? latestDiscussionReply['discussionReplyCreator']['uid'] : '',
+                latestDiscussionReplyCreatorUsername = latestDiscussionReply ? latestDiscussionReply['discussionReplyCreator']['username'] : '',
+                latestDiscussionReplyCreateTime      = latestDiscussionReply ? latestDiscussionReply['discussionReplyCreateTime'] : '',
+                discussionThreadPostedIn             = '';
+
+            if ( discussionThreadRelatedProblem ) {
+                discussionThreadPostedIn = '<a href="<c:url value="/p/" />%s">P%s: %s</a>'.format(discussionThreadRelatedProblem['problemId'], discussionThreadRelatedProblem['problemId'], discussionThreadRelatedProblem['problemName']);
+            } else {
+                discussionThreadPostedIn = '<a href="<c:url value="/discussion?topicSlug=" />%s">%s</a>'.format(discussionTopic['discussionTopicSlug'], discussionTopic['discussionTopicName']);
+            }
+            var threadHtml = 
+                '<tr class="discussion-thread">' + 
+                '    <td class="avatar" data-value="%s">'.format(discussionThreadCreator['email']) +
+                '        <img src="${cdnUrl}/img/avatar.jpg" alt="avatar" />' + 
+                '    </td>' + 
+                '    <td class="overview">' + 
+                '        <h5><a href="<c:url value="/discussion/" />%s">%s</a></h5>'.format(discussionThreadId, discussionThreadTitle) + 
+                '        <ul class="inline">' + 
+                '            <li>' + 
+                '                <spring:message code="voj.discussion.discussions.author" text="Author" />: ' + 
+                '                <a href="<c:url value="/accounts/user/" />%s">%s</a>'.format(discussionThreadCreator['uid'], discussionThreadCreator['username']) + 
+                '            </li>' + 
+                '            <li>' + 
+                '                <spring:message code="voj.discussion.discussions.posted-in" text="Posted in" />: ' + discussionThreadPostedIn + 
+                '            </li>' + 
+                '            <li>' + 
+                '                <spring:message code="voj.discussion.discussions.latest-reply" text="Latest reply" />:' + 
+                '                <a href="<c:url value="/accounts/user/" />%s">%s</a> '.format(latestDiscussionReplyCreatorUid, latestDiscussionReplyCreatorUsername) + 
+                '                @<span class="reply-datetime">%s</span>'.format(getTimeElapsed(latestDiscussionReplyCreateTime)) + 
+                '            </li>' + 
+                '        </ul>' + 
+                '    </td>' + 
+                '    <td class="reply-count">%s</td>'.format(numberOfReplies < 1 ? 0 : numberOfReplies - 1) + 
+                '</tr>';
+            return threadHtml;
+        }
     </script>
     <c:if test="${GoogleAnalyticsCode != ''}">
     ${googleAnalyticsCode}
