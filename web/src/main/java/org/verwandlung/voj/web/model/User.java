@@ -74,7 +74,7 @@ public class User implements Serializable {
 
 	/**
 	 * 设置用户名.
-	 * @param Username - 用户名
+	 * @param username - 用户名
 	 */
 	public void setUsername(String username) {
 		this.username = username;
@@ -189,7 +189,6 @@ public class User implements Serializable {
 	/**
 	 * 电子邮件地址.
 	 */
-	@JsonIgnore
 	private String email;
 	
 	/**

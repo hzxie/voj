@@ -68,6 +68,9 @@ public class ProblemService {
 		ProblemTag problemTag = problemTagMapper.getProblemTagUsingTagSlug(SlugifyUtils.getSlug(problemTagSlug));
 		int problemCategoryId = 0;
 		long problemTagId = 0;
+		if ( offset < 0 ) {
+			offset = 0;
+		}
 		if ( problemCategory != null ) {
 			problemCategoryId = problemCategory.getProblemCategoryId();
 		}

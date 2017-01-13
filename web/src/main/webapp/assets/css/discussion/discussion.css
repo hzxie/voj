@@ -76,7 +76,7 @@ div#content div#main-content div#discussion table.table tr.discussion-thread > t
 	background-color: #ffedd5;
 }
 
-div#content div#main-content div#discussion div#more-discussion {
+div#content div#main-content div#discussion div#more-discussion-threads {
 	background-color: #f9f9f9;
 	border-bottom: 5px solid #1abc9c;
 	cursor: pointer;
@@ -84,11 +84,11 @@ div#content div#main-content div#discussion div#more-discussion {
 	text-align: center;
 }
 
-div#content div#main-content div#discussion div#more-discussion p {
+div#content div#main-content div#discussion div#more-discussion-threads p {
 	margin-bottom: 0;
 }
 
-div#content div#main-content div#discussion div#more-discussion img {
+div#content div#main-content div#discussion div#more-discussion-threads img {
 	max-height: 15px;
 	height: 15px;
 }
