@@ -86,6 +86,9 @@ public class DiscussionThreadMapperTest {
 
 		String threadTitle = thread.getDiscussionThreadTitle();
 		Assert.assertEquals("Thread #2", threadTitle);
+
+		long numberOfReplies = thread.getNumberOfReplies();
+		Assert.assertEquals(2, numberOfReplies);
 	}
 
 	/**

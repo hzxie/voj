@@ -1,6 +1,6 @@
 ![Verwandlung Online Judge](https://raw.githubusercontent.com/hzxie/voj/master/web/src/main/webapp/assets/img/logo.png)
 
-Version: 0.1.0-SNAPSHOT
+Version: 0.1.0
 
 [![Build Status](https://travis-ci.org/hzxie/voj.png?branch=master)](https://travis-ci.org/hzxie/voj)
 [![Coverage Status](https://coveralls.io/repos/hzxie/voj/badge.svg?branch=master&service=github)](https://coveralls.io/github/hzxie/voj?branch=master)
@@ -231,9 +231,6 @@ If you are using Linux, please run following commands using `root`:
 chmod 700 /sbin/init
 chmod 700 /sbin/poweroff
 chmod 700 /usr/bin/pkill
-
-# Disable Internet Access for the user running judger
-iptables -A OUTPUT -m owner --uid-owner {Your username here} -j DROP
 ```
 
 ---
