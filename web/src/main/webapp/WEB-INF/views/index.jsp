@@ -118,8 +118,16 @@
                                         </li>
                                         <li>
                                             <spring:message code="voj.index.latest-reply" text="Latest reply" />:
+                                        <c:choose>
+                                        <c:when test="${discussionThread.latestDiscussionReply == null}">
+                                            <a href="<c:url value="/accounts/user/" />${discussionThread.discussionThreadCreator.uid}">${discussionThread.discussionThreadCreator.username}</a> 
+                                            @<span class="reply-datetime"><fmt:formatDate value="${discussionThread.discussionThreadCreateTime}" type="both" dateStyle="default" timeStyle="default" /></span>
+                                        </c:when>
+                                        <c:otherwise>
                                             <a href="<c:url value="/accounts/user/" />${discussionThread.latestDiscussionReply.discussionReplyCreator.uid}">${discussionThread.latestDiscussionReply.discussionReplyCreator.username}</a> 
                                             @<span class="reply-datetime"><fmt:formatDate value="${discussionThread.latestDiscussionReply.discussionReplyCreateTime}" type="both" dateStyle="default" timeStyle="default" /></span>
+                                        </c:otherwise>
+                                        </c:choose>
                                         </li>
                                     </ul>
                                 </td>

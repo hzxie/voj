@@ -78,6 +78,22 @@ public class DiscussionThread implements Serializable {
 	}
 
 	/**
+	 * 获取讨论帖子的创建时间.
+	 * @return 讨论帖子的创建时间
+	 */
+	public Date getDiscussionThreadCreateTime() {
+		return discussionThreadCreateTime;
+	}
+
+	/**
+	 * 设置讨论帖子的创建时间.
+	 * @param discussionThreadCreateTime - 讨论帖子的创建时间
+	 */
+	public void setDiscussionThreadCreateTime(Date discussionThreadCreateTime) {
+		this.discussionThreadCreateTime = discussionThreadCreateTime;
+	}
+
+	/**
 	 * 获取讨论帖子对应的试题.
 	 * @return 讨论帖子对应的试题
 	 */
@@ -172,6 +188,11 @@ public class DiscussionThread implements Serializable {
 	 * 讨论帖子的创建用户.
 	 */
 	private User discussionThreadCreator;
+
+	/**
+	 * 讨论帖子的创建时间.
+	 */
+	private Date discussionThreadCreateTime;
 	
 	/**
 	 * 讨论帖子对应的试题. 

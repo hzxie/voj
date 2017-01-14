@@ -152,7 +152,7 @@
                     <c:forEach var="discussionThread" items="${discussionThreads}">
                         <li class="row-fluid">
                             <div class="span4">
-                                <fmt:formatDate value="${discussionThread.latestDiscussionReply.discussionReplyCreateTime}" type="date" dateStyle="short" timeStyle="short"/>
+                                <fmt:formatDate value="${discussionThread.discussionThreadCreateTime}" type="date" dateStyle="short" timeStyle="short"/>
                             </div> <!-- .span4 -->
                             <div class="span8">
                                 <a href="<c:url value="/discussion/${discussionThread.discussionThreadId}" />">
