@@ -287,7 +287,7 @@
         }
     </script>
     <script type="text/javascript">
-        $('#test-cases').delegate('i.fa-edit', 'click', function() {
+        $('#test-cases').on('click', 'i.fa-edit', function() {
             var testCaseContainer = $(this).parent().parent().parent().parent().parent(),
                 isBodyUnfolded      = $('.body', $(testCaseContainer)).is(':visible');
 
@@ -299,7 +299,7 @@
         });
     </script>
     <script type="text/javascript">
-        $('#test-cases').delegate('i.fa-trash', 'click',function() {
+        $('#test-cases').on('click', 'i.fa-trash', function() {
             var testCaseContainer = $(this).parent().parent().parent().parent().parent(),
                 testCases         = $('li.test-case', '#test-cases').length,
                 testCaseName      = '<spring:message code="voj.administration.edit-problem.test-case" text="Test Case" /> #%s';

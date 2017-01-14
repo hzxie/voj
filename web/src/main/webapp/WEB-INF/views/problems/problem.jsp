@@ -100,7 +100,7 @@
                                 </div> <!-- .span4 -->
                                 <div id="submission-error" class="offset1 span3"></div> <!-- #submission-error -->
                                 <div id="submission-action" class="span4">
-                                    <input type="hidden" id="csrfToken" value="${csrfToken}" />
+                                    <input type="hidden" id="csrf-token" value="${csrfToken}" />
                                     <button type="submit" class="btn btn-primary"><spring:message code="voj.problems.problem.submit" text="Submit" /></button>
                                     <button id="close-submission" class="btn"><spring:message code="voj.problems.problem.cancel" text="Cancel" /></button>
                                 </div> <!-- #submission-action -->
@@ -247,7 +247,7 @@
             var problemId   = ${problem.problemId},
                 language    = $('select#languages').val(),
                 code        = window.codeMirrorEditor.getValue(),
-                csrfToken   = $('#csrfToken').val();
+                csrfToken   = $('#csrf-token').val();
 
             $('button[type=submit]', '#code-editor').attr('disabled', 'disabled');
             $('button[type=submit]', '#code-editor').html('<spring:message code="voj.problems.problem.please-wait" text="Please wait..." />');

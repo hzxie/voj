@@ -90,6 +90,7 @@
                         </tbody>
                     </table>
                 </div> <!-- #contests -->
+                <c:if test="${discussionThreads != null and discussionThreads.size() > 0}">
                 <div id="discussion">
                     <table class="table">
                         <tbody>
@@ -137,6 +138,7 @@
                         </tbody>
                     </table>
                 </div> <!-- #discussion -->
+                </c:if>
             </div> <!-- #main-content -->
             <div id="sidebar" class="span4">
                 <div id="bulletin-board" class="widget">

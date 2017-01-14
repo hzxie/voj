@@ -130,7 +130,7 @@
     <!-- Placed at the end of the document so the pages load faster -->
     <%@ include file="/WEB-INF/views/administration/include/footer-script.jsp" %>
     <script type="text/javascript">
-        $('#languages').delegate('i.fa-edit', 'click', function() {
+        $('#languages').on('click', 'i.fa-edit', function() {
             var languageContainer = $(this).parent().parent().parent().parent().parent(),
                 isBodyUnfolded    = $('.body', $(languageContainer)).is(':visible');
 
@@ -142,7 +142,7 @@
         });
     </script>
     <script type="text/javascript">
-        $('#languages').delegate('i.fa-trash', 'click',function() {
+        $('#languages').on('click', 'i.fa-trash', function() {
             var languageContainer = $(this).parent().parent().parent().parent().parent(),
                 languages         = $('li.language', '#languages').length;
             
@@ -154,7 +154,7 @@
         });
     </script>
     <script type="text/javascript">
-        $('#languages').delegate('input.language-name', 'change', function() {
+        $('#languages').on('change', 'input.language-name', function() {
             var languageContainer = $(this).parent().parent().parent().parent().parent(),
                 languageName      = $(this).val();
             

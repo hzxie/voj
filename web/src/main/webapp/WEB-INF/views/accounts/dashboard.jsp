@@ -505,7 +505,7 @@
         }
     </script>
     <script type="text/javascript">
-        $('#social-links').delegate('i.fa-edit', 'click', function() {
+        $('#social-links').on('click', 'i.fa-edit', function() {
             var socialLinkContainer = $(this).parent().parent().parent().parent().parent(),
                 isBodyUnfolded      = $('.body', $(socialLinkContainer)).is(':visible');
 
@@ -517,7 +517,7 @@
         });
     </script>
     <script type="text/javascript">
-        $('#social-links').delegate('i.fa-trash', 'click',function() {
+        $('#social-links').on('click', 'i.fa-trash', function() {
             var socialLinkContainer = $(this).parent().parent().parent().parent().parent(),
                 socialLinks         = $('li.social-link', '#social-links').length;
             
@@ -529,7 +529,7 @@
         });
     </script>
     <script type="text/javascript">
-        $('#social-links').delegate('select.service', 'change', function() {
+        $('#social-links').on('change', 'select.service', function() {
             var socialLinkContainer = $(this).parent().parent().parent().parent().parent(),
                 serviceName         = $(this).val(),
                 serviceBaseUrl      = socialServices[serviceName];

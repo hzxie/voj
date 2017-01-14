@@ -42,7 +42,8 @@ public class DefaultController {
 	@RequestMapping(value = "/", method = RequestMethod.GET)
 	public ModelAndView indexView(
 			HttpServletRequest request, HttpServletResponse response) {
-		List<DiscussionThread> discussionThreads = discussionService.getDiscussionThreadsOfTopic(null, 0, NUMBER_OF_DISCUSSION_THREADS_PER_REQUEST);
+		List<DiscussionThread> discussionThreads = discussionService.getDiscussionThreadsOfTopic(
+				null, 0, NUMBER_OF_DISCUSSION_THREADS_PER_REQUEST);
 
 		ModelAndView view = new ModelAndView("index");
 		view.addObject("discussionThreads", discussionThreads);

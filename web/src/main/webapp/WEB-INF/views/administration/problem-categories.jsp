@@ -269,13 +269,13 @@
         });
     </script>
     <script type="text/javascript">
-        $('#problem-categories').delegate('.edit-fieldset .btn-cancel', 'click', function() {
+        $('#problem-categories').on('click', '.edit-fieldset .btn-cancel', function() {
             $('.edit-fieldset').remove();
             $('tr.hide', '#problem-categories').removeClass('hide');
         });
     </script>
     <script type="text/javascript">
-        $('#problem-categories').delegate('.edit-fieldset .btn-primary', 'click', function() {
+        $('#problem-categories').on('click', '.edit-fieldset .btn-primary', function() {
             var problemCategoryId       = $(this).parent().parent().parent().attr('data-value'),
                 problemCategorySlug     = $('#category-slug-edit', $(this).parent().parent()).val(),
                 problemCategoryName     = $('#category-name-edit', $(this).parent().parent()).val(),
