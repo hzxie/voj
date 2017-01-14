@@ -69,8 +69,12 @@
 		parameterType="long"
 		resultMap="DiscussionThreadResultMap" 
 		useCache="true">
-		SELECT * 
-		FROM voj_discussion_threads
+		SELECT *, (
+			SELECT COUNT(*)
+			FROM voj_discussion_replies dr
+			WHERE dt.discussion_thread_id = dr.discussion_thread_id
+		) AS discussion_replies 
+		FROM voj_discussion_threads dt
 		WHERE discussion_thread_id = #{discussionThreadId}
 	</select>
 	<insert id="createDiscussionThread" 

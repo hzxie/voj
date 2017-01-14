@@ -116,6 +116,7 @@ INSERT INTO `voj_discussion_replies` (`discussion_reply_id`, `discussion_thread_
 CREATE TABLE `voj_discussion_threads` (
   `discussion_thread_id` bigint(20) NOT NULL,
   `discussion_thread_creator_uid` bigint(20) NOT NULL,
+  `discussion_thread_create_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `problem_id` bigint(20) DEFAULT NULL,
   `discussion_topic_id` int(8) NOT NULL,
   `discussion_thread_name` varchar(128) NOT NULL
@@ -125,10 +126,10 @@ CREATE TABLE `voj_discussion_threads` (
 -- Dumping data for table `voj_discussion_threads`
 --
 
-INSERT INTO `voj_discussion_threads` (`discussion_thread_id`, `discussion_thread_creator_uid`, `problem_id`, `discussion_topic_id`, `discussion_thread_name`) VALUES
-(1, 1000, 1000, 1, 'Thread #1'),
-(2, 1000, 1000, 2, 'Thread #2'),
-(3, 1000, NULL, 1, 'Thread #3');
+INSERT INTO `voj_discussion_threads` (`discussion_thread_id`, `discussion_thread_creator_uid`, `discussion_thread_create_time`, `problem_id`, `discussion_topic_id`, `discussion_thread_name`) VALUES
+(1, 1000, '2017-01-14 04:31:09', 1000, 1, 'Thread #1'),
+(2, 1000, '2017-01-14 04:31:09', 1000, 2, 'Thread #2'),
+(3, 1000, '2017-01-14 04:31:09', NULL, 1, 'Thread #3');
 
 -- --------------------------------------------------------
 
