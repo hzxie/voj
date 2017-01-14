@@ -8,7 +8,7 @@
 <html lang="${language}">
 <head>
     <meta charset="UTF-8">
-    <title><spring:message code="voj.discussion.discussions.title" text="Discussion" /> | ${websiteName}</title>
+    <title><spring:message code="voj.discussion.threads.title" text="Discussion" /> | ${websiteName}</title>
     <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="${description}">
@@ -21,7 +21,7 @@
     <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/flat-ui.min.css" />
     <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/font-awesome.min.css" />
     <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/style.css" />
-    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/discussion/discussion.css" />
+    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/discussion/threads.css" />
     <!-- JavaScript -->
     <script type="text/javascript" src="${cdnUrl}/js/jquery-1.11.1.min.js"></script>
     <script type="text/javascript" src="${cdnUrl}/js/bootstrap.min.js"></script>
@@ -55,11 +55,11 @@
                             <h5><a href="<c:url value="/discussion/" />${discussionThread.discussionThreadId}">${discussionThread.discussionThreadTitle}</a></h5>
                             <ul class="inline">
                                 <li>
-                                    <spring:message code="voj.discussion.discussions.author" text="Author" />: 
+                                    <spring:message code="voj.discussion.threads.author" text="Author" />: 
                                     <a href="<c:url value="/accounts/user/" />${discussionThread.discussionThreadCreator.uid}">${discussionThread.discussionThreadCreator.username}</a>
                                 </li>
                                 <li>
-                                    <spring:message code="voj.discussion.discussions.posted-in" text="Posted in" />: 
+                                    <spring:message code="voj.discussion.threads.posted-in" text="Posted in" />: 
                                 <c:choose>
                                 <c:when test="${discussionThread.problem == null}">
                                     <a href="<c:url value="/discussion?topicSlug=" />${discussionThread.discussionTopic.discussionTopicSlug}">${discussionThread.discussionTopic.discussionTopicName}</a>
@@ -70,9 +70,17 @@
                                 </c:choose>
                                 </li>
                                 <li>
-                                    <spring:message code="voj.discussion.discussions.latest-reply" text="Latest reply" />:
-                                    <a href="<c:url value="/accounts/user/" />${discussionThread.latestDiscussionReply.discussionReplyCreator.uid}">${discussionThread.latestDiscussionReply.discussionReplyCreator.username}</a> 
-                                    @<span class="reply-datetime"><fmt:formatDate value="${discussionThread.latestDiscussionReply.discussionReplyCreateTime}" type="both" dateStyle="default" timeStyle="default" /></span>
+                                    <spring:message code="voj.discussion.threads.latest-reply" text="Latest reply" />:
+                                    <c:choose>
+                                    <c:when test="${discussionThread.latestDiscussionReply == null}">
+                                        <a href="<c:url value="/accounts/user/" />${discussionThread.discussionThreadCreator.uid}">${discussionThread.discussionThreadCreator.username}</a> 
+                                        @<span class="reply-datetime"><fmt:formatDate value="${discussionThread.discussionThreadCreateTime}" type="both" dateStyle="default" timeStyle="default" /></span>
+                                    </c:when>
+                                    <c:otherwise>
+                                        <a href="<c:url value="/accounts/user/" />${discussionThread.latestDiscussionReply.discussionReplyCreator.uid}">${discussionThread.latestDiscussionReply.discussionReplyCreator.username}</a> 
+                                        @<span class="reply-datetime"><fmt:formatDate value="${discussionThread.latestDiscussionReply.discussionReplyCreateTime}" type="both" dateStyle="default" timeStyle="default" /></span>
+                                    </c:otherwise>
+                                    </c:choose>
                                 </li>
                             </ul>
                         </td>
@@ -81,13 +89,13 @@
                 </c:forEach>
                 </table> <!-- .table -->
                 <div id="more-discussion-threads">
-                    <p class="availble"><spring:message code="voj.discussion.discussions.more-discussion" text="More discussion threads..." /></p>
+                    <p class="availble"><spring:message code="voj.discussion.threads.more-discussion" text="More discussion threads..." /></p>
                     <img src="${cdnUrl}/img/loading.gif" alt="Loading" class="hide" />
                 </div>
             </div> <!-- #discussion -->
             <div id="sidebar" class="span4">
                 <div id="topics-widget" class="widget">
-                    <h4><spring:message code="voj.discussion.discussions.topics" text="Discussion Topics" /></h4>
+                    <h4><spring:message code="voj.discussion.threads.topics" text="Discussion Topics" /></h4>
                     <c:forEach var="entry" items="${discussionTopics}">
                         <h6>
                             <a 
@@ -206,7 +214,7 @@
                 displayDiscussionThreadRecords(result['discussionThreads']);
             } else {
                 $('p', '#more-discussion-threads').removeClass('availble');
-                $('p', '#more-discussion-threads').html('<spring:message code="voj.discussion.discussions.no-more-discussion" text="No more discussion threads" />');
+                $('p', '#more-discussion-threads').html('<spring:message code="voj.discussion.threads.no-more-discussion" text="No more discussion threads" />');
                 $('#more-discussion-threads').css('cursor', 'default');
             }
             setLoadingStatus(false);
@@ -217,7 +225,8 @@
             for ( var i = 0; i < discussionThreads.length; ++ i ) {
                 $('table#discussion-threads > tbody').append(
                     getDiscussionThreadContent(discussionThreads[i]['discussionThreadCreator'], discussionThreads[i]['discussionThreadId'], 
-                        discussionThreads[i]['discussionThreadTitle'], discussionThreads[i]['problem'], discussionThreads[i]['discussionTopic'], 
+                        discussionThreads[i]['discussionThreadTitle'], discussionThreads[i]['discussionThreadCreateTime'], 
+                        discussionThreads[i]['problem'], discussionThreads[i]['discussionTopic'], 
                         discussionThreads[i]['latestDiscussionReply'], discussionThreads[i]['numberOfReplies'])
                 );
                 getGravatarUrl(discussionThreads[i]['discussionThreadCreator']['email'], $('img', 'table#discussion-threads tr:last-child'));
@@ -225,10 +234,10 @@
         }
     </script>
     <script type="text/javascript">
-        function getDiscussionThreadContent(discussionThreadCreator, discussionThreadId, discussionThreadTitle, discussionThreadRelatedProblem, discussionTopic, latestDiscussionReply, numberOfReplies) {
-            var latestDiscussionReplyCreatorUid      = latestDiscussionReply ? latestDiscussionReply['discussionReplyCreator']['uid'] : '',
-                latestDiscussionReplyCreatorUsername = latestDiscussionReply ? latestDiscussionReply['discussionReplyCreator']['username'] : '',
-                latestDiscussionReplyCreateTime      = latestDiscussionReply ? latestDiscussionReply['discussionReplyCreateTime'] : '',
+        function getDiscussionThreadContent(discussionThreadCreator, discussionThreadId, discussionThreadTitle, discussionThreadCreateTime, discussionThreadRelatedProblem, discussionTopic, latestDiscussionReply, numberOfReplies) {
+            var latestDiscussionReplyCreatorUid      = latestDiscussionReply ? latestDiscussionReply['discussionReplyCreator']['uid'] : discussionThreadCreator['uid'],
+                latestDiscussionReplyCreatorUsername = latestDiscussionReply ? latestDiscussionReply['discussionReplyCreator']['username'] : discussionThreadCreator['username'],
+                latestDiscussionReplyCreateTime      = latestDiscussionReply ? latestDiscussionReply['discussionReplyCreateTime'] : discussionThreadCreateTime,
                 discussionThreadPostedIn             = '';
 
             if ( discussionThreadRelatedProblem ) {
@@ -245,14 +254,14 @@
                 '        <h5><a href="<c:url value="/discussion/" />%s">%s</a></h5>'.format(discussionThreadId, discussionThreadTitle) + 
                 '        <ul class="inline">' + 
                 '            <li>' + 
-                '                <spring:message code="voj.discussion.discussions.author" text="Author" />: ' + 
+                '                <spring:message code="voj.discussion.threads.author" text="Author" />: ' + 
                 '                <a href="<c:url value="/accounts/user/" />%s">%s</a>'.format(discussionThreadCreator['uid'], discussionThreadCreator['username']) + 
                 '            </li>' + 
                 '            <li>' + 
-                '                <spring:message code="voj.discussion.discussions.posted-in" text="Posted in" />: ' + discussionThreadPostedIn + 
+                '                <spring:message code="voj.discussion.threads.posted-in" text="Posted in" />: ' + discussionThreadPostedIn + 
                 '            </li>' + 
                 '            <li>' + 
-                '                <spring:message code="voj.discussion.discussions.latest-reply" text="Latest reply" />:' + 
+                '                <spring:message code="voj.discussion.threads.latest-reply" text="Latest reply" />:' + 
                 '                <a href="<c:url value="/accounts/user/" />%s">%s</a> '.format(latestDiscussionReplyCreatorUid, latestDiscussionReplyCreatorUsername) + 
                 '                @<span class="reply-datetime">%s</span>'.format(getTimeElapsed(latestDiscussionReplyCreateTime)) + 
                 '            </li>' + 

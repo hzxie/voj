@@ -147,6 +147,9 @@
                 lastSubmissionRecord = $('tr:last-child', '#submission tbody'),
                 lastSubmissionId     = parseInt($(lastSubmissionRecord).attr('data-value'));
 
+            if ( isNaN(lastSubmissionId) ) {
+                lastSubmissionId = 0;
+            }
             if ( !isLoading && hasNextRecord ) {
                 setLoadingStatus(true);
                 return getMoreHistorySubmissions(lastSubmissionId - 1);
