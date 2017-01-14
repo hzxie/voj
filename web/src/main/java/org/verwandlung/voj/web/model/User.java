@@ -166,8 +166,8 @@ public class User implements Serializable {
 	 * @see java.lang.Object#toString()
 	 */
 	public String toString() {
-		return String.format("User: [Uid=%s, Username=%s, Password=%s, Email=%s, UserGroup={%s}, Language={%s}]", 
-				new Object[] { uid, username, password, email, userGroup, preferLanguage });
+		return String.format("User: [Uid=%s, Username=%s, Email=%s, UserGroup={%s}]",
+				new Object[] { uid, username, email, userGroup });
 	}
 	
 	/**

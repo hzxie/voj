@@ -1,5 +1,9 @@
 package org.verwandlung.voj.web.service;
 
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
+import jdk.nashorn.api.scripting.JSObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -101,19 +105,63 @@ public class DiscussionService {
 	/**
 	 * 获取某个讨论话题的回复.
 	 * @param discussionThreadId - 讨论话题的唯一标识符
+	 * @param currentUserUid - 当前登录用户的用户唯一标识符(-1表示未登录)
 	 * @param offset - 起始回复的游标
 	 * @param limit - 获取回复的数量
 	 * @return 包含讨论话题回复的List对象
 	 */
-	public List<DiscussionReply> getDiscussionRepliesOfThread(long discussionThreadId, long offset, int limit) {
+	public List<DiscussionReply> getDiscussionRepliesOfThread(long discussionThreadId, long currentUserUid, long offset, int limit) {
 		List<DiscussionReply> replies = discussionReplyMapper.getDiscussionRepliesUsingThreadId(discussionThreadId, offset, limit);
-		// 过滤回复中的敏感内容
-		for ( DiscussionReply reply : replies ) {
-			String replyContent = reply.getDiscussionReplyContent();
+		for ( DiscussionReply dr : replies ) {
+			// 过滤回复中的敏感内容
+			String replyContent = dr.getDiscussionReplyContent();
 			replyContent = offensiveWordFilter.filter(HtmlTextFilter.filter(replyContent));
-			reply.setDiscussionReplyContent(replyContent);
+			dr.setDiscussionReplyContent(replyContent);
+			// 获取回复中的投票信息
+			Map<String, Object> votesStatistics = getVoteStatisticsOfDiscussionReply(
+					dr.getDiscussionReplyVotes(), currentUserUid);
+			dr.setDiscussionReplyVotes(JSON.toJSONString(votesStatistics));
 		}
 		return replies;
+	}
+
+	/**
+	 * 统计讨论回复中投票信息.
+	 * @param votes - 原始讨论回复中投票信息的JSON格式字符串
+	 * @param currentUserUid - 当前登录用户的用户唯一标识符(-1表示未登录)
+	 * @return 包含讨论回复投票信息的Map对象
+	 */
+	private Map<String, Object> getVoteStatisticsOfDiscussionReply(String votes, long currentUserUid) {
+		Map<String, Object> votesStatistics = new HashMap<String, Object>(5, 1);
+		JSONObject voteUsers = JSON.parseObject(votes);
+
+		JSONArray voteUpUsers = voteUsers.getJSONArray("up");
+		JSONArray voteDownUsers = voteUsers.getJSONArray("down");
+		boolean isVotedUp = currentUserUid == -1 ? false : contains(voteUpUsers, currentUserUid);
+		boolean isVotedDown = currentUserUid == -1 ? false : contains(voteDownUsers, currentUserUid);
+
+		votesStatistics.put("isVotedUp", isVotedUp);
+		votesStatistics.put("isVotedDown", isVotedDown);
+		votesStatistics.put("numberOfVoteUp", voteUpUsers.size());
+		votesStatistics.put("numberOfVoteDown", voteDownUsers.size());
+		return votesStatistics;
+	}
+
+	/**
+	 * 判断一个值是否存在于一个JSONArray对象中.
+	 * 为了修复JSONArray自带contains方法的Bug.
+	 * 使用场景: 判断一个用户的UID是否存在于Vote列表中.
+	 * @param jsonArray - 待判断的JSONArray对象
+	 * @param value - 待检查的值
+	 * @return 一个值是否存在于一个JSONArray对象中
+	 */
+	private boolean contains(JSONArray jsonArray, long value) {
+		for ( int i = 0; i < jsonArray.size(); ++ i ) {
+			if ( jsonArray.getLong(i) == value ) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/**
@@ -123,6 +171,81 @@ public class DiscussionService {
 	 */
 	public DiscussionThread getDiscussionThreadUsingThreadId(long discussionThreadId) {
 		return discussionThreadMapper.getDiscussionThreadUsingThreadId(discussionThreadId);
+	}
+
+	/**
+	 * 通过讨论回复的唯一标识符获取讨论帖子对象.
+	 * @param discussionReplyId - 讨论回复的唯一标识符
+	 * @return 对应的讨论回复对象或空引用
+	 */
+	public DiscussionReply getDiscussionReplyUsingReplyId(long discussionReplyId) {
+		return discussionReplyMapper.getDiscussionReplyUsingReplyId(discussionReplyId);
+	}
+
+	/**
+	 * 对讨论回复进行投票.
+	 * @param discussionThreadId - 讨论帖子的唯一标识符
+	 * @param discussionReplyId - 讨论回复的唯一标识符
+	 * @param currentUserUid - 当前登录用户的用户唯一标识符(-1表示未登录)
+	 * @param voteUp - Vote Up状态 (+1 表示用户赞了这个回答, -1 表示用户取消赞了这个回答, 0表示没有操作)
+	 * @param voteDown - Vote Up状态 (+1 表示用户踩了这个回答, -1 表示用户取消踩了这个回答, 0表示没有操作)
+	 * @param isCsrfTokenValid - CSRF Token是否有效
+	 * @return 讨论回复的投票结果
+	 */
+	public Map<String, Boolean> voteDiscussionReply(long discussionThreadId, long discussionReplyId,
+	    long currentUserUid, int voteUp, int voteDown, boolean isCsrfTokenValid) {
+		DiscussionReply discussionReply = discussionReplyMapper.getDiscussionReplyUsingReplyId(discussionReplyId);
+		Map<String, Boolean> result = new HashMap<String, Boolean>();
+		result.put("isDiscussionReplyExists", discussionReply != null && discussionReply.getDiscussionThreadId() == discussionThreadId);
+		result.put("isVoteValid", voteUp >= -1 && voteUp <= 1 && voteDown >=-1 && voteDown <= 1);
+		result.put("isCsrfTokenValid", isCsrfTokenValid);
+		result.put("isLoggedIn", currentUserUid != -1);
+
+		boolean isSuccessful = result.get("isDiscussionReplyExists") && result.get("isVoteValid") &&
+				               result.get("isCsrfTokenValid")        && result.get("isLoggedIn");
+		result.put("isSuccessful", isSuccessful);
+
+		if ( result.get("isSuccessful") ) {
+			synchronized ( this ) {
+				// 设置新的投票结果
+				JSONObject voteUsers = JSON.parseObject(discussionReply.getDiscussionReplyVotes());
+				JSONArray voteUpUsers = voteUsers.getJSONArray("up");
+				JSONArray voteDownUsers = voteUsers.getJSONArray("down");
+				boolean isVotedUp = contains(voteUpUsers, currentUserUid);
+				boolean isVotedDown = contains(voteDownUsers, currentUserUid);
+
+				if ( voteUp == 1 && !isVotedUp ) {
+					if ( isVotedDown ) remove(voteDownUsers, currentUserUid);
+					voteUpUsers.add(currentUserUid);
+				} else if ( voteUp == -1 ) {
+					remove(voteUpUsers, currentUserUid);
+				}
+				if ( voteDown == 1 && !isVotedDown ) {
+					if ( isVotedUp ) remove(voteUpUsers, currentUserUid);
+					voteDownUsers.add(currentUserUid);
+				} else if ( voteDown == -1 ) {
+					remove(voteDownUsers, currentUserUid);
+				}
+				discussionReply.setDiscussionReplyVotes(JSON.toJSONString(voteUsers));
+				discussionReplyMapper.updateDiscussionReply(discussionReply);
+			}
+		}
+		return result;
+	}
+
+	/**
+	 * 移除JSONArray对象中的一个值.
+	 * 为了修复JSONArray自带contains方法的Bug.
+	 * 使用场景: 从Vote列表中移除某个用户的UID.
+	 * @param jsonArray - 待移除值的JSONArray对象
+	 * @param value - 待移除的值
+	 */
+	private void remove(JSONArray jsonArray, long value) {
+		for ( int i = 0; i < jsonArray.size(); ++ i ) {
+			if ( jsonArray.getLong(i) == value ) {
+				jsonArray.remove(i);
+			}
+		}
 	}
 
 	/**

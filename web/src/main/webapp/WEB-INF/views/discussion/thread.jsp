@@ -72,6 +72,36 @@
                         <p class="availble"><a href="javascript:void(0);"><spring:message code="voj.discussion.thread.more-replies" text="More Replies..." /></a></p>
                         <img src="${cdnUrl}/img/loading.gif" alt="Loading" class="hide" />
                     </div> <!-- #more-discussion-replies -->
+                    <c:if test="${isLogin}">
+                    <div id="editor" class="row-fluid">
+                        <div class="span2">
+                            <div class="avatar">
+                                <img src="${cdnUrl}/img/avatar.jpg" alt="gravatar">
+                            </div> <!-- .avatar -->
+                        </div> <!-- .span2 -->
+                        <div class="span10">
+                            <div class="discussion-reply current-user">
+                                <div class="reply-header">
+                                    <label for="wmd-input">
+                                        <spring:message code="voj.discussion.thread.leave-a-comment" text="Leave a comment" />
+                                        <input type="hidden" id="csrf-token" value="${csrfToken}" />
+                                        <button id="create-discussion-reply" class="btn btn-primary"><spring:message code="voj.discussion.thread.comment" text="Comment" /></button>
+                                    </label>
+                                </div> <!-- .reply-header -->
+                                <div class="reply-body">
+                                    <div class="alert alert-error hide"></div> <!-- .alert-error -->
+                                    <div id="markdown-editor">
+                                        <div class="wmd-panel">
+                                            <div id="wmd-button-bar"></div> <!-- #wmd-button-bar -->
+                                            <textarea id="wmd-input" class="wmd-input"></textarea>
+                                        </div> <!-- .wmd-panel -->
+                                        <div id="wmd-preview" class="wmd-panel wmd-preview"></div> <!-- .wmd-preview -->
+                                    </div> <!-- #markdown-editor -->
+                                </div> <!-- .reply-body -->
+                            </div> <!-- .discussion-reply -->
+                        </div> <!-- .span10 -->
+                    </div> <!-- .#editor -->
+                    </c:if>
                 </div> <!-- .span9 -->
                 <div class="span3">
                     <div class="section">
@@ -107,6 +137,11 @@
             })
         ).done(function() {
             converter = Markdown.getSanitizingConverter();
+        <c:if test="${isLogin}">
+            editor    = new Markdown.Editor(converter);
+            editor.run();
+            getGravatarUrl('${myProfile.email}', $('img', 'div#editor div.avatar'));
+        </c:if>
             moment.locale('${language}');
             $('span.datetime').html(getTimeElapsed($('span.datetime').html()));
 
@@ -192,26 +227,27 @@
         function displayDiscussionReplyRecords(discussionReplies) {
             for ( var i = 0; i < discussionReplies.length; ++ i ) {
                 $('ul#discussion-replies').append(
-                    getDiscussionReplyContent(discussionReplies[i]['discussionReplyCreator'], discussionReplies[i]['discussionReplyCreateTime'], 
-                        discussionReplies[i]['discussionReplyContent'], discussionReplies[i]['discussionReplyVotes'])
+                    getDiscussionReplyContent(discussionReplies[i]['discussionReplyId'], discussionReplies[i]['discussionReplyCreator'],
+                        discussionReplies[i]['discussionReplyCreateTime'], discussionReplies[i]['discussionReplyContent'],
+                        discussionReplies[i]['discussionReplyVotes'])
                 );
                 getGravatarUrl(discussionReplies[i]['discussionReplyCreator']['email'], $('img', 'ul#discussion-replies li:last-child div.avatar'));
             }
         }
     </script>
     <script type="text/javascript">
-        function getDiscussionReplyContent(discussionReplyCreator, discussionReplyCreateTime, discussionReplyContent, discussionReplyVotes) {
+        function getDiscussionReplyContent(discussionReplyId, discussionReplyCreator, discussionReplyCreateTime, discussionReplyContent, discussionReplyVotes) {
             discussionReplyVotes = JSON.parse(discussionReplyVotes);
             var replyHtml =
                 '<li class="row-fluid">' + 
                 '    <div class="span2">' + 
                 '        <div class="avatar" data-value="%s">'.format(discussionReplyCreator['email']) + 
-                '            <img src="${cdnUrl}/img/avatar.jpg" alt="avatar" />' + 
+                '            <img src="${cdnUrl}/img/avatar.jpg" alt="gravatar" />' +
                 '        </div> <!-- .avatar -->' + 
                 '    </div> <!-- .span2 -->' + 
                 '    <div class="span10">' + 
-                '        <div class="discussion-reply">' + 
-                '            <div class="reply-header %s">'.format('') + 
+                '        <div class="discussion-reply" data-value="%s">'.format(discussionReplyId) +
+                '            <div class="reply-header %s">'.format(discussionReplyCreator['uid'] == '${myProfile.uid}' ? 'current-user' : '') +
                 '                <a href="<c:url value="/accounts/user/" />%s">%s</a> @ %s'.format(discussionReplyCreator['uid'], discussionReplyCreator['username'], getTimeElapsed(discussionReplyCreateTime)) + 
                 '            </div> <!-- .reply-header -->' + 
                 '            <div class="reply-body">' + 
@@ -239,6 +275,75 @@
             return replyHtml;
         }
     </script>
+    <c:if test="${isLogin}">
+    <script type="text/javascript">
+        $('#discussion-replies').on('click', 'i.fa-thumbs-up', function() {
+            var discussionReplyId = $(this).parent().parent().parent().parent().parent().attr('data-value'),
+                csrfToken         = $('#csrf-token').val(),
+                isVotedUp         = $(this).parent().hasClass('active'),
+                isVotedDown       = $('i.fa-thumbs-down', $(this).parent().parent().parent()).parent().hasClass('active'),
+                voteUp            = isVotedUp ? -1 : 1,
+                voteDown          = isVotedDown ? -1 : 0;
+            
+            return voteDiscussionReply(discussionReplyId, voteUp, voteDown, csrfToken);
+        });
+
+        $('#discussion-replies').on('click', 'i.fa-thumbs-down', function() {
+            var discussionReplyId = $(this).parent().parent().parent().parent().parent().attr('data-value'),
+                csrfToken         = $('#csrf-token').val(),
+                isVotedUp         = $('i.fa-thumbs-up', $(this).parent().parent().parent()).parent().hasClass('active'),
+                isVotedDown       = $(this).parent().hasClass('active'),
+                voteUp            = isVotedUp ? -1 : 0,
+                voteDown          = isVotedDown ? -1 : 1;
+
+            return voteDiscussionReply(discussionReplyId, voteUp, voteDown, csrfToken);
+        });
+    </script>
+    <script type="text/javascript">
+        function voteDiscussionReply(discussionReplyId, voteUp, voteDown, csrfToken) {
+            var postData = {
+                'discussionReplyId': discussionReplyId,
+                'voteUp': voteUp,
+                'voteDown': voteDown,
+                'csrfToken': csrfToken
+            };
+
+            $.ajax({
+                type: 'POST',
+                url: '<c:url value="/discussion/${discussionThread.discussionThreadId}/voteDiscussionReply.action" />',
+                data: postData,
+                dataType: 'JSON',
+                success: function(result){
+                    if ( result['isSuccessful'] ) {
+                        var thumbUpButton   = $('.fa-thumbs-up', 'div[data-value=%s]'.format(discussionReplyId)).parent(),
+                            thumbDownButton = $('.fa-thumbs-down', 'div[data-value=%s]'.format(discussionReplyId)).parent(),
+                            voteUpDisplay   = $('.vote-ups', 'div[data-value=%s]'.format(discussionReplyId)),
+                            voteDownDisplay = $('.vote-downs', 'div[data-value=%s]'.format(discussionReplyId)),
+                            voteUps         = parseInt($('.vote-ups', 'div[data-value=%s]'.format(discussionReplyId)).html()),
+                            voteDowns       = parseInt($('.vote-downs', 'div[data-value=%s]'.format(discussionReplyId)).html());
+
+                        // Setup vote up thumbs
+                        if ( voteUp == 1 ) {
+                            $(thumbUpButton).addClass('active');
+                        } else if ( voteUp == -1 ) {
+                            $(thumbUpButton).removeClass('active');
+                        }
+                        // Setup vote down thumbs
+                        if ( voteDown == 1 ) {
+                            $(thumbDownButton).addClass('active');
+                        } else if ( voteDown == -1 ) {
+                            $(thumbDownButton).removeClass('active');
+                        }
+                        $(voteUpDisplay).html(voteUps + voteUp);
+                        $(voteDownDisplay).html(voteDowns + voteDown);
+                    } else {
+                        alert('<spring:message code="voj.discussion.thread.failed-to-vote" text="Failed to vote this reply, please try again." />');
+                    }
+                }
+            });
+        }
+    </script>
+    </c:if>
     <c:if test="${GoogleAnalyticsCode != ''}">
         ${googleAnalyticsCode}
     </c:if>

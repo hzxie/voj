@@ -203,6 +203,7 @@ public class ProblemsController {
 	 * @param problemId - 试题的唯一标识符
 	 * @param languageSlug - 编程语言的别名
 	 * @param code - 代码
+	 * @param csrfToken - 用于防止CSRF攻击的Token
 	 * @param request - HttpRequest对象
 	 * @return 一个包含提交记录创建结果的Map<String, Object>对象
 	 */
