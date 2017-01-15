@@ -3,6 +3,7 @@
 Version: 0.1.0
 
 [![Build Status](https://travis-ci.org/hzxie/voj.png?branch=master)](https://travis-ci.org/hzxie/voj)
+[![Build status](https://ci.appveyor.com/api/projects/status/j62ns9p8whttittm?svg=true)](https://ci.appveyor.com/project/hzxie/voj)
 [![Coverage Status](https://coveralls.io/repos/hzxie/voj/badge.svg?branch=master&service=github)](https://coveralls.io/github/hzxie/voj?branch=master)
 
 [**Official Website**](#) | 
