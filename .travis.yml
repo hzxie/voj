@@ -12,6 +12,8 @@ before_install:
 # Fix path error on JNI headers
   - sudo ln -nsf ${JAVA_HOME}/include/linux/jni_md.h ${JAVA_HOME}/include/jni_md.h
   - sudo ln -nsf ${JAVA_HOME}/include/linux/jawt_md.h ${JAVA_HOME}/include/jawt_md.h
+# Setup test environment for Linux
+  - cp judger/src/test/resources/voj-test-linux.properties judger/src/test/resources/voj-test.properties
 
 install:
   - sudo apt-get install -qq g++-4.8

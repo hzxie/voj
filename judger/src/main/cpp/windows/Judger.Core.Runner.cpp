@@ -1,9 +1,7 @@
 #pragma GCC diagnostic ignored "-Wwrite-strings"
+#define INT_MAX 2147483647
 
-#include "../org_verwandlung_voj_jni_hashmap.h"
-#include "../org_verwandlung_voj_jni_library.h"
-#include "../org_verwandlung_voj_judger_core_Runner.h"
-
+#include <cstdint> 
 #include <future>
 #include <iostream>
 #include <limits>
@@ -15,6 +13,10 @@
 #include <userenv.h>
 #include <psapi.h>
 #include <tlhelp32.h>
+
+#include "../org_verwandlung_voj_jni_hashmap.h"
+#include "../org_verwandlung_voj_jni_library.h"
+#include "../org_verwandlung_voj_judger_core_Runner.h"
 
 /**
  * Function Prototypes.
