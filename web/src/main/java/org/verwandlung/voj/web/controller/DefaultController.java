@@ -31,7 +31,7 @@ import org.verwandlung.voj.web.util.LocaleUtils;
  * @author Haozhe Xie
  */
 @Controller
-@RequestMapping(value = "/")
+@RequestMapping(value="/")
 public class DefaultController {
 	/**
 	 * 显示应用程序的首页.
@@ -39,7 +39,7 @@ public class DefaultController {
 	 * @param response - HttpResponse对象
 	 * @return 一个包含首页内容的ModelAndView对象
 	 */
-	@RequestMapping(value = "/", method = RequestMethod.GET)
+	@RequestMapping(value="/", method=RequestMethod.GET)
 	public ModelAndView indexView(
 			HttpServletRequest request, HttpServletResponse response) {
 		List<DiscussionThread> discussionThreads = discussionService.getDiscussionThreadsOfTopic(
@@ -56,7 +56,7 @@ public class DefaultController {
 	 * @param response - HttpResponse对象
 	 * @return 一个包含使用条款页面内容的ModelAndView对象
 	 */
-	@RequestMapping(value = "/terms", method = RequestMethod.GET)
+	@RequestMapping(value="/terms", method=RequestMethod.GET)
 	public ModelAndView termsView(
 			HttpServletRequest request, HttpServletResponse response) {
 		ModelAndView view = new ModelAndView("misc/terms");
@@ -69,7 +69,7 @@ public class DefaultController {
 	 * @param response - HttpResponse对象
 	 * @return 一个包含隐私页内面容的ModelAndView对象
 	 */
-	@RequestMapping(value = "/privacy", method = RequestMethod.GET)
+	@RequestMapping(value="/privacy", method=RequestMethod.GET)
 	public ModelAndView privacyView(
 			HttpServletRequest request, HttpServletResponse response) {
 		ModelAndView view = new ModelAndView("misc/privacy");
@@ -82,7 +82,7 @@ public class DefaultController {
 	 * @param response - HttpResponse对象
 	 * @return 一个包含评测机信息页面内容的ModelAndView对象
 	 */
-	@RequestMapping(value = "/judgers", method = RequestMethod.GET)
+	@RequestMapping(value="/judgers", method=RequestMethod.GET)
 	public ModelAndView judgersView(
 			HttpServletRequest request, HttpServletResponse response) {
 		ModelAndView view = new ModelAndView("misc/judgers");
@@ -96,9 +96,9 @@ public class DefaultController {
 	 * @param request - HttpRequest对象
 	 * @return 一个包含评测机列表信息的List<Map<String, String>>对象
 	 */
-	@RequestMapping(value = "/getJudgers.action", method = RequestMethod.GET)
+	@RequestMapping(value="/getJudgers.action", method=RequestMethod.GET)
 	public @ResponseBody Map<String, Object> getJudgersAction(
-			@RequestParam(value = "startIndex", required = false, defaultValue = "0") long offset,
+			@RequestParam(value="startIndex", required=false, defaultValue="0") long offset,
 			HttpServletRequest request) {
 		Map<String, Object> result = new HashMap<String, Object>();
 		List<Map<String, String>> judgers = getJudgers(offset);
@@ -136,7 +136,7 @@ public class DefaultController {
 	 * @param response - HttpResponse对象
 	 * @return 一个包含帮助页面内容的ModelAndView对象
 	 */
-	@RequestMapping(value = "/help", method = RequestMethod.GET)
+	@RequestMapping(value="/help", method=RequestMethod.GET)
 	public ModelAndView helpView(
 			HttpServletRequest request, HttpServletResponse response) {
 		ModelAndView view = new ModelAndView("misc/help");
@@ -149,7 +149,7 @@ public class DefaultController {
 	 * @param response - HttpResponse对象
 	 * @return 一个包含关于页面内容的ModelAndView对象
 	 */
-	@RequestMapping(value = "/about", method = RequestMethod.GET)
+	@RequestMapping(value="/about", method=RequestMethod.GET)
 	public ModelAndView aboutView(
 			HttpServletRequest request, HttpServletResponse response) {
 		ModelAndView view = new ModelAndView("misc/about");
@@ -162,9 +162,9 @@ public class DefaultController {
 	 * @param response - HttpResponse对象
 	 * @return 一个包含语言切换页面内容的ModelAndView对象
 	 */
-	@RequestMapping(value = "/worldwide", method = RequestMethod.GET)
+	@RequestMapping(value="/worldwide", method=RequestMethod.GET)
 	public ModelAndView worldwideView(
-			@RequestParam(value = "forward", required = false, defaultValue = "") String forwardUrl,
+			@RequestParam(value="forward", required=false, defaultValue="") String forwardUrl,
 			HttpServletRequest request, HttpServletResponse response) {
 		ModelAndView view = new ModelAndView("misc/worldwide");
 		view.addObject("forwardUrl", forwardUrl);
@@ -178,9 +178,9 @@ public class DefaultController {
 	 * @param response - HttpResponse对象
 	 * @return 语言切换操作结果的HashMap<String, Boolean>对象
 	 */
-	@RequestMapping(value = "/worldwide.action", method = RequestMethod.GET)
+	@RequestMapping(value="/worldwide.action", method=RequestMethod.GET)
 	public @ResponseBody Map<String, Boolean> localizationAction(
-			@RequestParam(value = "language", required = true) String language,
+			@RequestParam(value="language") String language,
 			HttpServletRequest request, HttpServletResponse response) {
 		LocaleUtils.setLocale(request, response, language);
 		
@@ -195,7 +195,7 @@ public class DefaultController {
 	 * @param response - HttpResponse对象
 	 * @return 返回一个包含异常信息的ModelAndView对象
 	 */
-	@RequestMapping(value = "/*", method = RequestMethod.GET)
+	@RequestMapping(value="/*", method=RequestMethod.GET)
 	public ModelAndView notFoundView(
 			HttpServletRequest request, HttpServletResponse response) {
 		ModelAndView view = new ModelAndView("errors/404");
@@ -208,7 +208,7 @@ public class DefaultController {
 	 * @param response - HttpResponse对象
 	 * @return 一个包含升级浏览器页面内容的ModelAndView对象
 	 */
-	@RequestMapping(value = "/not-supported", method = RequestMethod.GET)
+	@RequestMapping(value="/not-supported", method=RequestMethod.GET)
 	public ModelAndView notSupportedView(
 			HttpServletRequest request, HttpServletResponse response) {
 		ModelAndView view = new ModelAndView("errors/not-supported");

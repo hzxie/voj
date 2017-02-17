@@ -51,7 +51,7 @@ import org.verwandlung.voj.web.util.SessionListener;
  * @author Haozhe Xie
  */
 @Controller
-@RequestMapping(value = "/administration")
+@RequestMapping(value="/administration")
 public class AdministrationController {
 	/**
 	 * 加载系统管理首页.
@@ -59,7 +59,7 @@ public class AdministrationController {
 	 * @param response - HttpResponse对象
 	 * @return 包含系统管理页面信息的ModelAndView对象
 	 */
-	@RequestMapping(value = "", method = RequestMethod.GET)
+	@RequestMapping(value="", method=RequestMethod.GET)
 	public ModelAndView indexView(
 			HttpServletRequest request, HttpServletResponse response) {
 		ModelAndView view = new ModelAndView("administration/index");
@@ -171,9 +171,9 @@ public class AdministrationController {
 	 * @param request - HttpServletRequest对象
 	 * @return 包含提交次数与时间的 Map 对象
 	 */
-	@RequestMapping(value = "/getNumberOfSubmissions.action", method = RequestMethod.GET)
+	@RequestMapping(value="/getNumberOfSubmissions.action", method=RequestMethod.GET)
 	public @ResponseBody Map<String, Object> getNumberOfSubmissionsAction(
-			@RequestParam(value = "period", required = true) int period,
+			@RequestParam(value="period") int period,
 			HttpServletRequest request) {
 		Map<String, Object> submissions = new HashMap<String, Object>(2, 1);
 		Date today = new Date();
@@ -192,11 +192,11 @@ public class AdministrationController {
 	 * @param response - HttpResponse对象
 	 * @return 包含用户列表页面信息的ModelAndView对象
 	 */
-	@RequestMapping(value = "/all-users", method = RequestMethod.GET)
+	@RequestMapping(value="/all-users", method=RequestMethod.GET)
 	public ModelAndView allUsersView(
-			@RequestParam(value = "userGroup", required = false, defaultValue = "") String userGroupSlug,
-			@RequestParam(value = "username", required = false, defaultValue = "") String username,
-			@RequestParam(value = "page", required = false, defaultValue = "1") long pageNumber,
+			@RequestParam(value="userGroup", required=false, defaultValue="") String userGroupSlug,
+			@RequestParam(value="username", required=false, defaultValue="") String username,
+			@RequestParam(value="page", required=false, defaultValue="1") long pageNumber,
 			HttpServletRequest request, HttpServletResponse response) {
 		final int NUMBER_OF_USERS_PER_PAGE = 100;
 		List<UserGroup> userGroups = userService.getUserGroups();
@@ -221,9 +221,9 @@ public class AdministrationController {
 	 * @param request - HttpServletRequest对象
 	 * @return 提交记录的删除结果
 	 */
-	@RequestMapping(value = "/deleteUsers.action", method = RequestMethod.POST)
+	@RequestMapping(value="/deleteUsers.action", method=RequestMethod.POST)
 	public @ResponseBody Map<String, Boolean> deleteUsersAction(
-			@RequestParam(value = "users", required = true) String users,
+			@RequestParam(value="users") String users,
 			HttpServletRequest request) {
 		Map<String, Boolean> result = new HashMap<String, Boolean>(2, 1);
 		List<Long> userList = JSON.parseArray(users, Long.class);
@@ -242,7 +242,7 @@ public class AdministrationController {
 	 * @param response - HttpServletResponse对象
 	 * @return 包含编辑用户信息的ModelAndView对象
 	 */
-	@RequestMapping(value = "/edit-user/{userId}", method = RequestMethod.GET)
+	@RequestMapping(value="/edit-user/{userId}", method=RequestMethod.GET)
 	public ModelAndView editUserView(
 			@PathVariable(value = "userId") long userId,
 			HttpServletRequest request, HttpServletResponse response) {
@@ -276,17 +276,17 @@ public class AdministrationController {
 	 * @param request - HttpServletRequest对象
 	 * @return 一个包含个人资料修改结果的Map<String, Boolean>对象
 	 */
-	@RequestMapping(value = "/editUser.action", method = RequestMethod.POST)
+	@RequestMapping(value="/editUser.action", method=RequestMethod.POST)
 	public @ResponseBody Map<String, Boolean> editUserAction(
-			@RequestParam(value = "uid", required = true) long uid,
-			@RequestParam(value = "password", required = true) String password,
-			@RequestParam(value = "email", required = true) String email,
-			@RequestParam(value = "userGroup", required = true) String userGroupSlug,
-			@RequestParam(value = "preferLanguage", required = true) String preferLanguageSlug,
-			@RequestParam(value = "location", required = true) String location,
-			@RequestParam(value = "website", required = true) String website,
-			@RequestParam(value = "socialLinks", required = true) String socialLinks,
-			@RequestParam(value = "aboutMe", required = true) String aboutMe,
+			@RequestParam(value="uid") long uid,
+			@RequestParam(value="password") String password,
+			@RequestParam(value="email") String email,
+			@RequestParam(value="userGroup") String userGroupSlug,
+			@RequestParam(value="preferLanguage") String preferLanguageSlug,
+			@RequestParam(value="location") String location,
+			@RequestParam(value="website") String website,
+			@RequestParam(value="socialLinks") String socialLinks,
+			@RequestParam(value="aboutMe") String aboutMe,
 			HttpServletRequest request) {
 		User user = userService.getUserUsingUid(uid);
 		Map<String, Boolean> result = new HashMap<String, Boolean>(12, 1);
@@ -313,7 +313,7 @@ public class AdministrationController {
 	 * @param response - HttpServletResponse对象
 	 * @return 包含创建用户页面信息的ModelAndView对象
 	 */
-	@RequestMapping(value = "/new-user", method = RequestMethod.GET)
+	@RequestMapping(value="/new-user", method=RequestMethod.GET)
 	public ModelAndView newUserView(
 			HttpServletRequest request, HttpServletResponse response) {
 		List<UserGroup> userGroups = userService.getUserGroups();
@@ -334,13 +334,13 @@ public class AdministrationController {
 	 * @param request - HttpServletRequest对象
 	 * @return 一个包含账户创建结果的Map<String, Boolean>对象
 	 */
-	@RequestMapping(value = "/newUser.action", method = RequestMethod.POST)
+	@RequestMapping(value="/newUser.action", method=RequestMethod.POST)
 	public @ResponseBody Map<String, Boolean> newUserAction(
-			@RequestParam(value = "username", required = true) String username,
-			@RequestParam(value = "password", required = true) String password,
-			@RequestParam(value = "email", required = true) String email,
-			@RequestParam(value = "userGroup", required = true) String userGroupSlug,
-			@RequestParam(value = "preferLanguage", required = true) String preferLanguageSlug,
+			@RequestParam(value="username") String username,
+			@RequestParam(value="password") String password,
+			@RequestParam(value="email") String email,
+			@RequestParam(value="userGroup") String userGroupSlug,
+			@RequestParam(value="preferLanguage") String preferLanguageSlug,
 			HttpServletRequest request) {
 		Map<String, Boolean> result = userService.createUser(username, password, email, userGroupSlug, preferLanguageSlug);
 
@@ -358,12 +358,12 @@ public class AdministrationController {
 	 * @param response - HttpServletResponse对象
 	 * @return 包含提交列表页面信息的ModelAndView对象
 	 */
-	@RequestMapping(value = "/all-problems", method = RequestMethod.GET)
+	@RequestMapping(value="/all-problems", method=RequestMethod.GET)
 	public ModelAndView allProblemsView(
-			@RequestParam(value = "keyword", required = false, defaultValue = "") String keyword,
-			@RequestParam(value = "problemCategory", required = false, defaultValue = "") String problemCategorySlug,
-			@RequestParam(value = "problemTag", required = false, defaultValue = "") String problemTagSlug,
-			@RequestParam(value = "page", required = false, defaultValue = "1") long pageNumber,
+			@RequestParam(value="keyword", required=false, defaultValue="") String keyword,
+			@RequestParam(value="problemCategory", required=false, defaultValue="") String problemCategorySlug,
+			@RequestParam(value="problemTag", required=false, defaultValue="") String problemTagSlug,
+			@RequestParam(value="page", required=false, defaultValue="1") long pageNumber,
 			HttpServletRequest request, HttpServletResponse response) {
 		final int NUMBER_OF_PROBLEMS_PER_PAGE = 100;
 		List<ProblemCategory> problemCategories = problemService.getProblemCategories();
@@ -397,9 +397,9 @@ public class AdministrationController {
 	 * @param request - HttpServletRequest对象
 	 * @return 试题的删除结果
 	 */
-	@RequestMapping(value = "/deleteProblems.action", method = RequestMethod.POST)
+	@RequestMapping(value="/deleteProblems.action", method=RequestMethod.POST)
 	public @ResponseBody Map<String, Boolean> deleteProblemsAction(
-			@RequestParam(value = "problems", required = true) String problems,
+			@RequestParam(value="problems") String problems,
 			HttpServletRequest request) {
 		Map<String, Boolean> result = new HashMap<String, Boolean>(2, 1);
 		List<Long> problemList = JSON.parseArray(problems, Long.class);
@@ -421,7 +421,7 @@ public class AdministrationController {
 	 * @param response - HttpServletResponse对象
 	 * @return 包含创建试题页面信息的ModelAndView对象
 	 */
-	@RequestMapping(value = "/new-problem", method = RequestMethod.GET)
+	@RequestMapping(value="/new-problem", method=RequestMethod.GET)
 	public ModelAndView newProblemView(
 			HttpServletRequest request, HttpServletResponse response) {
 		Map<ProblemCategory, List<ProblemCategory>> problemCategories = problemService.getProblemCategoriesWithHierarchy();
@@ -450,22 +450,22 @@ public class AdministrationController {
 	 * @param request - HttpServletRequest对象
 	 * @return 包含试题创建结果的 Map<String, Boolean>对象
 	 */
-	@RequestMapping(value = "/createProblem.action", method = RequestMethod.POST)
+	@RequestMapping(value="/createProblem.action", method=RequestMethod.POST)
 	public @ResponseBody Map<String, Object> createProblemAction(
-			@RequestParam(value = "problemName", required = true) String problemName,
-			@RequestParam(value = "timeLimit", required = true) String timeLimit, 
-			@RequestParam(value = "memoryLimit", required = true) String memoryLimit, 
-			@RequestParam(value = "description", required = true) String description, 
-			@RequestParam(value = "hint", required = true) String hint, 
-			@RequestParam(value = "inputFormat", required = true) String inputFormat, 
-			@RequestParam(value = "outputFormat", required = true) String outputFormat, 
-			@RequestParam(value = "inputSample", required = true) String inputSample, 
-			@RequestParam(value = "outputSample", required = true) String outputSample, 
-			@RequestParam(value = "testCases", required = true) String testCases, 
-			@RequestParam(value = "problemCategories", required = true) String problemCategories, 
-			@RequestParam(value = "problemTags", required = true) String problemTags, 
-			@RequestParam(value = "isPublic", required = true) boolean isPublic, 
-			@RequestParam(value = "isExactlyMatch", required = true) boolean isExactlyMatch,
+			@RequestParam(value="problemName") String problemName,
+			@RequestParam(value="timeLimit") String timeLimit, 
+			@RequestParam(value="memoryLimit") String memoryLimit, 
+			@RequestParam(value="description") String description, 
+			@RequestParam(value="hint") String hint, 
+			@RequestParam(value="inputFormat") String inputFormat, 
+			@RequestParam(value="outputFormat") String outputFormat, 
+			@RequestParam(value="inputSample") String inputSample, 
+			@RequestParam(value="outputSample") String outputSample, 
+			@RequestParam(value="testCases") String testCases, 
+			@RequestParam(value="problemCategories") String problemCategories, 
+			@RequestParam(value="problemTags") String problemTags, 
+			@RequestParam(value="isPublic") boolean isPublic, 
+			@RequestParam(value="isExactlyMatch") boolean isExactlyMatch,
 			HttpServletRequest request) {
 		if ( timeLimit.isEmpty() || !StringUtils.isNumeric(timeLimit) ) {
 			timeLimit = "-1";
@@ -494,7 +494,7 @@ public class AdministrationController {
 	 * @param response - HttpServletResponse对象
 	 * @return 包含提交列表页面信息的ModelAndView对象
 	 */
-	@RequestMapping(value = "/edit-problem/{problemId}", method = RequestMethod.GET)
+	@RequestMapping(value="/edit-problem/{problemId}", method=RequestMethod.GET)
 	public ModelAndView editProblemsView(
 			@PathVariable(value = "problemId") long problemId,
 			HttpServletRequest request, HttpServletResponse response) {
@@ -536,23 +536,23 @@ public class AdministrationController {
 	 * @param request - HttpServletRequest对象
 	 * @return 包含试题编辑结果的 Map<String, Boolean>对象
 	 */
-	@RequestMapping(value = "/editProblem.action", method = RequestMethod.POST)
+	@RequestMapping(value="/editProblem.action", method=RequestMethod.POST)
 	public @ResponseBody Map<String, Boolean> editProblemAction(
-			@RequestParam(value = "problemId", required = true) long problemId,
-			@RequestParam(value = "problemName", required = true) String problemName,
-			@RequestParam(value = "timeLimit", required = true) String timeLimit, 
-			@RequestParam(value = "memoryLimit", required = true) String memoryLimit, 
-			@RequestParam(value = "description", required = true) String description, 
-			@RequestParam(value = "hint", required = true) String hint, 
-			@RequestParam(value = "inputFormat", required = true) String inputFormat, 
-			@RequestParam(value = "outputFormat", required = true) String outputFormat, 
-			@RequestParam(value = "inputSample", required = true) String inputSample, 
-			@RequestParam(value = "outputSample", required = true) String outputSample, 
-			@RequestParam(value = "testCases", required = true) String testCases, 
-			@RequestParam(value = "problemCategories", required = true) String problemCategories, 
-			@RequestParam(value = "problemTags", required = true) String problemTags, 
-			@RequestParam(value = "isPublic", required = true) boolean isPublic, 
-			@RequestParam(value = "isExactlyMatch", required = true) boolean isExactlyMatch,
+			@RequestParam(value="problemId") long problemId,
+			@RequestParam(value="problemName") String problemName,
+			@RequestParam(value="timeLimit") String timeLimit, 
+			@RequestParam(value="memoryLimit") String memoryLimit, 
+			@RequestParam(value="description") String description, 
+			@RequestParam(value="hint") String hint, 
+			@RequestParam(value="inputFormat") String inputFormat, 
+			@RequestParam(value="outputFormat") String outputFormat, 
+			@RequestParam(value="inputSample") String inputSample, 
+			@RequestParam(value="outputSample") String outputSample, 
+			@RequestParam(value="testCases") String testCases, 
+			@RequestParam(value="problemCategories") String problemCategories, 
+			@RequestParam(value="problemTags") String problemTags, 
+			@RequestParam(value="isPublic") boolean isPublic, 
+			@RequestParam(value="isExactlyMatch") boolean isExactlyMatch,
 			HttpServletRequest request) {
 		if ( timeLimit.isEmpty() || !StringUtils.isNumeric(timeLimit) ) {
 			timeLimit = "-1";
@@ -579,7 +579,7 @@ public class AdministrationController {
 	 * @param response - HttpServletResponse对象
 	 * @return 包含试题分类页面信息的ModelAndView对象.
 	 */
-	@RequestMapping(value = "/problem-categories", method = RequestMethod.GET)
+	@RequestMapping(value="/problem-categories", method=RequestMethod.GET)
 	public ModelAndView problemCategoriesView(
 			HttpServletRequest request, HttpServletResponse response) {
 		List<ProblemCategory> problemCategories = problemService.getProblemCategories();
@@ -597,11 +597,11 @@ public class AdministrationController {
 	 * @param request - HttpServletRequest对象
 	 * @return 包含试题分类的创建结果的Map<String, Object>对象
 	 */
-	@RequestMapping(value = "/createProblemCategory.action", method = RequestMethod.POST)
+	@RequestMapping(value="/createProblemCategory.action", method=RequestMethod.POST)
 	public @ResponseBody Map<String, Object> createProblemCategoryAction(
-			@RequestParam(value = "problemCategorySlug", required = true) String problemCategorySlug,
-			@RequestParam(value = "problemCategoryName", required = true) String problemCategoryName,
-			@RequestParam(value = "parentProblemCategory", required = true) String parentProblemCategorySlug,
+			@RequestParam(value="problemCategorySlug") String problemCategorySlug,
+			@RequestParam(value="problemCategoryName") String problemCategoryName,
+			@RequestParam(value="parentProblemCategory") String parentProblemCategorySlug,
 			HttpServletRequest request) {
 		Map<String, Object> result = problemService.createProblemCategory(
 				problemCategorySlug, problemCategoryName, parentProblemCategorySlug);
@@ -625,12 +625,12 @@ public class AdministrationController {
 	 * @param request - HttpServletRequest对象
 	 * @return 包含试题分类的编辑结果的Map<String, Boolean>对象
 	 */
-	@RequestMapping(value = "/editProblemCategory.action", method = RequestMethod.POST)
+	@RequestMapping(value="/editProblemCategory.action", method=RequestMethod.POST)
 	public @ResponseBody Map<String, Boolean> editProblemCategoryAction(
-			@RequestParam(value = "problemCategoryId", required = true) String problemCategoryId,
-			@RequestParam(value = "problemCategorySlug", required = true) String problemCategorySlug,
-			@RequestParam(value = "problemCategoryName", required = true) String problemCategoryName,
-			@RequestParam(value = "parentProblemCategory", required = true) String parentProblemCategorySlug,
+			@RequestParam(value="problemCategoryId") String problemCategoryId,
+			@RequestParam(value="problemCategorySlug") String problemCategorySlug,
+			@RequestParam(value="problemCategoryName") String problemCategoryName,
+			@RequestParam(value="parentProblemCategory") String parentProblemCategorySlug,
 			HttpServletRequest request) {
 		Map<String, Boolean> result = problemService.editProblemCategory(
 				Integer.parseInt(problemCategoryId), problemCategorySlug, 
@@ -651,9 +651,9 @@ public class AdministrationController {
 	 * @param request - HttpServletRequest对象
 	 * @return 包含试题分类的删除结果的Map<String, Boolean>对象
 	 */
-	@RequestMapping(value = "/deleteProblemCategories.action", method = RequestMethod.POST)
+	@RequestMapping(value="/deleteProblemCategories.action", method=RequestMethod.POST)
 	public @ResponseBody Map<String, Object> deleteProblemCategoryAction(
-			@RequestParam(value = "problemCategories", required = true) String problemCategories,
+			@RequestParam(value="problemCategories") String problemCategories,
 			HttpServletRequest request) {
 		Map<String, Object> result = new HashMap<String, Object>(3, 1);
 		List<Integer> problemCategoryList = JSON.parseArray(problemCategories, Integer.class);
@@ -681,11 +681,11 @@ public class AdministrationController {
 	 * @param response - HttpServletResponse对象
 	 * @return 包含提交列表页面信息的ModelAndView对象
 	 */
-	@RequestMapping(value = "/all-submissions", method = RequestMethod.GET)
+	@RequestMapping(value="/all-submissions", method=RequestMethod.GET)
 	public ModelAndView allSubmissionsView(
-			@RequestParam(value = "problemId", required = false, defaultValue = "0") long problemId,
-			@RequestParam(value = "username", required = false, defaultValue = "") String username,
-			@RequestParam(value = "page", required = false, defaultValue = "1") long pageNumber,
+			@RequestParam(value="problemId", required=false, defaultValue="0") long problemId,
+			@RequestParam(value="username", required=false, defaultValue="") String username,
+			@RequestParam(value="page", required=false, defaultValue="1") long pageNumber,
 			HttpServletRequest request, HttpServletResponse response) {
 		final int NUMBER_OF_SUBMISSIONS_PER_PAGE = 100;
 		
@@ -709,9 +709,9 @@ public class AdministrationController {
 	 * @param request - HttpServletRequest对象
 	 * @return 提交记录的删除结果
 	 */
-	@RequestMapping(value = "/deleteSubmissions.action", method = RequestMethod.POST)
+	@RequestMapping(value="/deleteSubmissions.action", method=RequestMethod.POST)
 	public @ResponseBody Map<String, Object> deleteSubmissionsAction(
-			@RequestParam(value = "submissions", required = true) String submissions,
+			@RequestParam(value="submissions") String submissions,
 			HttpServletRequest request) {
 		Map<String, Object> result = new HashMap<String, Object>(3, 1);
 		List<Long> submissionList = JSON.parseArray(submissions, Long.class);
@@ -736,9 +736,9 @@ public class AdministrationController {
 	 * @param request - HttpServletRequest对象
 	 * @return 重新评测请求的执行结果
 	 */
-	@RequestMapping(value = "/restartSubmissions.action", method = RequestMethod.POST)
+	@RequestMapping(value="/restartSubmissions.action", method=RequestMethod.POST)
 	public @ResponseBody Map<String, Boolean> restartSubmissionsAction(
-			@RequestParam(value = "submissions", required = true) String submissions,
+			@RequestParam(value="submissions") String submissions,
 			HttpServletRequest request) {
 		Map<String, Boolean> result = new HashMap<String, Boolean>(2, 1);
 		List<Long> submissionList = JSON.parseArray(submissions, Long.class);
@@ -757,7 +757,7 @@ public class AdministrationController {
 	 * @param response - HttpServletResponse对象
 	 * @return 包含提交记录信息的ModelAndView对象
 	 */
-	@RequestMapping(value = "/edit-submission/{submissionId}", method = RequestMethod.GET)
+	@RequestMapping(value="/edit-submission/{submissionId}", method=RequestMethod.GET)
 	public ModelAndView editSubmissionView(
 			@PathVariable(value = "submissionId") long submissionId,
 			HttpServletRequest request, HttpServletResponse response) {
@@ -777,7 +777,7 @@ public class AdministrationController {
 	 * @param response - HttpResponse对象
 	 * @return 包含常规选项页面信息的ModelAndView对象
 	 */
-	@RequestMapping(value = "/general-settings", method = RequestMethod.GET)
+	@RequestMapping(value="/general-settings", method=RequestMethod.GET)
 	public ModelAndView generalSettingsView(
 			HttpServletRequest request, HttpServletResponse response) {
 		ModelAndView view = new ModelAndView("administration/general-settings");
@@ -812,16 +812,16 @@ public class AdministrationController {
 	 * @param request - HttpServletRequest对象
 	 * @return 网站常规选项的更新结果
 	 */
-	@RequestMapping(value = "/updateGeneralSettings.action", method = RequestMethod.POST)
+	@RequestMapping(value="/updateGeneralSettings.action", method=RequestMethod.POST)
 	public @ResponseBody Map<String, Boolean> updateGeneralSettingsAction(
-			@RequestParam(value = "websiteName", required = true) String websiteName,
-			@RequestParam(value = "websiteDescription", required = true) String websiteDescription,
-			@RequestParam(value = "copyright", required = true) String copyright,
-			@RequestParam(value = "allowUserRegister", required = true) boolean allowUserRegister,
-			@RequestParam(value = "icpNumber", required = true) String icpNumber,
-			@RequestParam(value = "policeIcpNumber", required = true) String policeIcpNumber,
-			@RequestParam(value = "googleAnalyticsCode", required = true) String googleAnalyticsCode,
-			@RequestParam(value = "offensiveWords", required = true) String offensiveWords,
+			@RequestParam(value="websiteName") String websiteName,
+			@RequestParam(value="websiteDescription") String websiteDescription,
+			@RequestParam(value="copyright") String copyright,
+			@RequestParam(value="allowUserRegister") boolean allowUserRegister,
+			@RequestParam(value="icpNumber") String icpNumber,
+			@RequestParam(value="policeIcpNumber") String policeIcpNumber,
+			@RequestParam(value="googleAnalyticsCode") String googleAnalyticsCode,
+			@RequestParam(value="offensiveWords") String offensiveWords,
 			HttpServletRequest request) {
 		Map<String, Boolean> result = optionService.updateOptions(websiteName, websiteDescription, 
 				copyright, allowUserRegister, icpNumber, policeIcpNumber, googleAnalyticsCode, offensiveWords);
@@ -834,7 +834,7 @@ public class AdministrationController {
 	 * @param response - HttpServletResponse对象
 	 * @return 包含编程语言设置信息的ModelAndView对象
 	 */
-	@RequestMapping(value = "/language-settings", method = RequestMethod.GET)
+	@RequestMapping(value="/language-settings", method=RequestMethod.GET)
 	public ModelAndView languageSettingsView(
 			HttpServletRequest request, HttpServletResponse response) {
 		ModelAndView view = new ModelAndView("administration/language-settings");
@@ -848,9 +848,9 @@ public class AdministrationController {
 	 * @param request - HttpServletRequest对象
 	 * @return 编程语言选项的更新结果
 	 */
-	@RequestMapping(value = "/updateLanguageSettings.action", method = RequestMethod.POST)
+	@RequestMapping(value="/updateLanguageSettings.action", method=RequestMethod.POST)
 	public @ResponseBody Map<String, Object> updateLanguageSettingsAction(
-			@RequestParam(value = "languages", required = true) String languages,
+			@RequestParam(value="languages") String languages,
 			HttpServletRequest request) {
 		List<Language> languagesList = JSON.parseArray(languages, Language.class);
 		Map<String, Object> result = languageService.updateLanguageSettings(languagesList);

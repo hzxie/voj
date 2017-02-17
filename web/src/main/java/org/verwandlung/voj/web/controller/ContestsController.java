@@ -14,7 +14,7 @@ import org.springframework.web.servlet.ModelAndView;
  * @author Haozhe Xie
  */
 @Controller
-@RequestMapping(value = "/contests")
+@RequestMapping(value="/contests")
 public class ContestsController {
 	/**
 	 * 显示比赛列表页面.
@@ -22,7 +22,7 @@ public class ContestsController {
 	 * @param response - HttpResponse对象
 	 * @return 一个包含比赛列表页面内容的ModelAndView对象
 	 */
-	@RequestMapping(value = "", method = RequestMethod.GET)
+	@RequestMapping(value="", method=RequestMethod.GET)
 	public ModelAndView contestsView(
 			HttpServletRequest request, HttpServletResponse response) {
 		ModelAndView view = new ModelAndView("contests/contests");
