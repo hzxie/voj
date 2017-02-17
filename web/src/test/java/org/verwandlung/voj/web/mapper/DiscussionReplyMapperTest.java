@@ -67,11 +67,9 @@ public class DiscussionReplyMapperTest {
 	public void testCreateDiscussionReplyNormally() {
 		long threadId = 1;
 		User creator = userMapper.getUserUsingUid(1000);
-		Date createTime = new Date();
-
 		Assert.assertNotNull(creator);
 
-		DiscussionReply discussionReply = new DiscussionReply(threadId, creator, createTime, "Content", "{}");
+		DiscussionReply discussionReply = new DiscussionReply(threadId, creator, "Content", "{}");
 		int numberOfRowsAffected = discussionReplyMapper.createDiscussionReply(discussionReply);
 		Assert.assertEquals(1, numberOfRowsAffected);
 	}
@@ -85,9 +83,8 @@ public class DiscussionReplyMapperTest {
 	public void testCreateDiscussionReplyWithNotExistingUser() {
 		long threadId = 1;
 		User creator = new User(); creator.setUid(0);
-		Date createTime = new Date();
 
-		DiscussionReply discussionReply = new DiscussionReply(threadId, creator, createTime, "Content", "{}");
+		DiscussionReply discussionReply = new DiscussionReply(threadId, creator, "Content", "{}");
 		discussionReplyMapper.createDiscussionReply(discussionReply);
 	}
 

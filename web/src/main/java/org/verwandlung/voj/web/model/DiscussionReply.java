@@ -18,16 +18,13 @@ public class DiscussionReply implements Serializable {
 	 * DiscussionReply的构造函数.
 	 * @param discussionThreadId - 讨论帖子的唯一标识符
 	 * @param discussionReplyCreator - 讨论帖子的创建者
-	 * @param discussionReplyCreateTime - 讨论帖子的创建时间
 	 * @param discussionReplyContent - 讨论帖子的内容
 	 * @param discussionReplyVotes - 讨论帖子的投票结果
 	 */
 	public DiscussionReply(long discussionThreadId, User discussionReplyCreator, 
-			Date discussionReplyCreateTime, String discussionReplyContent,
-			String discussionReplyVotes) {
+			String discussionReplyContent, String discussionReplyVotes) {
 		this.discussionThreadId = discussionThreadId;
 		this.discussionReplyCreator = discussionReplyCreator;
-		this.discussionReplyCreateTime = discussionReplyCreateTime;
 		this.discussionReplyContent = discussionReplyContent;
 		this.discussionReplyVotes = discussionReplyVotes;
 	}
@@ -37,16 +34,14 @@ public class DiscussionReply implements Serializable {
 	 * @param discussionReplyId - 讨论回复的唯一标识符.
 	 * @param discussionThreadId - 讨论帖子的唯一标识符
 	 * @param discussionReplyCreator - 讨论帖子的创建者
-	 * @param discussionReplyCreateTime - 讨论帖子的创建时间
 	 * @param discussionReplyContent - 讨论帖子的内容
 	 * @param discussionReplyVote - 讨论帖子的投票结果
 	 */
 	public DiscussionReply(long discussionReplyId, long discussionThreadId, 
-			User discussionReplyCreator, Date discussionReplyCreateTime,
-			String discussionReplyContent, String discussionReplyVote) {
+			User discussionReplyCreator, String discussionReplyContent,
+			String discussionReplyVote) {
 		this(discussionThreadId, discussionReplyCreator, 
-				discussionReplyCreateTime, discussionReplyContent, 
-				discussionReplyVote);
+				discussionReplyContent, discussionReplyVote);
 		this.discussionReplyId = discussionReplyId;
 	}
 	
