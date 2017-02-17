@@ -34,7 +34,7 @@ import org.verwandlung.voj.web.util.HttpSessionParser;
  * @author Haozhe Xie
  */
 @Controller
-@RequestMapping(value = "/submission")
+@RequestMapping(value="/submission")
 public class SubmissionController {
 	/**
 	 * 显示评测列表的页面.
@@ -44,10 +44,10 @@ public class SubmissionController {
 	 * @param response - HttpResponse对象
 	 * @return 包含提交列表的ModelAndView对象 
 	 */
-	@RequestMapping(value = "", method = RequestMethod.GET)
+	@RequestMapping(value="", method=RequestMethod.GET)
 	public ModelAndView submissionsView(
-			@RequestParam(value = "problemId", required = false, defaultValue = "0") long problemId,
-			@RequestParam(value = "username", required = false, defaultValue = "") String username,
+			@RequestParam(value="problemId", required=false, defaultValue="0") long problemId,
+			@RequestParam(value="username", required=false, defaultValue="") String username,
 			HttpServletRequest request, HttpServletResponse response) {
 		List<Submission> submissions = submissionService.getSubmissions(problemId, username, NUMBER_OF_SUBMISSION_PER_PAGE);
 		return new ModelAndView("submissions/submissions")
@@ -62,11 +62,11 @@ public class SubmissionController {
 	 * @param request - HttpRequest对象
 	 * @return 一个包含提交记录列表的HashMap对象
 	 */
-	@RequestMapping(value = "/getSubmissions.action", method = RequestMethod.GET)
+	@RequestMapping(value="/getSubmissions.action", method=RequestMethod.GET)
 	public @ResponseBody Map<String, Object> getSubmissionsAction(
-			@RequestParam(value = "problemId", required = false, defaultValue = "0") long problemId,
-			@RequestParam(value = "username", required = false, defaultValue = "") String username,
-			@RequestParam(value = "startIndex", required = true) long startIndex,
+			@RequestParam(value="problemId", required=false, defaultValue="0") long problemId,
+			@RequestParam(value="username", required=false, defaultValue="") String username,
+			@RequestParam(value="startIndex") long startIndex,
 			HttpServletRequest request) {
 		Map<String, Object> result = new HashMap<String, Object>(3, 1);
 
@@ -85,11 +85,11 @@ public class SubmissionController {
 	 * @param request - HttpRequest对象
 	 * @return 一个包含提交记录列表的HashMap对象
 	 */
-	@RequestMapping(value = "/getLatestSubmissions.action", method = RequestMethod.GET)
+	@RequestMapping(value="/getLatestSubmissions.action", method=RequestMethod.GET)
 	public @ResponseBody Map<String, Object> getLatestSubmissionsAction(
-			@RequestParam(value = "problemId", required = false, defaultValue = "0") long problemId,
-			@RequestParam(value = "username", required = false, defaultValue = "") String username,
-			@RequestParam(value = "startIndex", required = true) long startIndex,
+			@RequestParam(value="problemId", required=false, defaultValue="0") long problemId,
+			@RequestParam(value="username", required=false, defaultValue="") String username,
+			@RequestParam(value="startIndex") long startIndex,
 			HttpServletRequest request) {
 		Map<String, Object> result = new HashMap<String, Object>(3, 1);
 
@@ -107,7 +107,7 @@ public class SubmissionController {
 	 * @param response - HttpResponse对象
 	 * @return 包含提交详细信息的ModelAndView对象 
 	 */
-	@RequestMapping(value = "/{submissionId}", method = RequestMethod.GET)
+	@RequestMapping(value="/{submissionId}", method=RequestMethod.GET)
 	public ModelAndView submissionView(
 			@PathVariable("submissionId") long submissionId,
 			HttpServletRequest request, HttpServletResponse response) {
@@ -129,8 +129,8 @@ public class SubmissionController {
 	 */
 	@RequestMapping("/getRealTimeJudgeResult.action")
 	public SseEmitter getRealTimeJudgeResultAction(
-			@RequestParam(value = "submissionId", required = true) long submissionId,
-			@RequestParam(value = "csrfToken", required = true) String csrfToken,
+			@RequestParam(value="submissionId") long submissionId,
+			@RequestParam(value="csrfToken") String csrfToken,
 			HttpServletRequest request, HttpServletResponse response) throws IOException {
 		User currentUser = HttpSessionParser.getCurrentUser(request.getSession());
 		boolean isCsrfTokenValid = CsrfProtector.isCsrfTokenValid(csrfToken, request.getSession());
@@ -155,9 +155,9 @@ public class SubmissionController {
 	 * @param request - HttpRequest对象
 	 * @return 包含提交记录详细信息的HashMap对象
 	 */
-	@RequestMapping(value = "/getSubmission.action", method = RequestMethod.GET)
+	@RequestMapping(value="/getSubmission.action", method=RequestMethod.GET)
 	public @ResponseBody Map<String, Object> getSubmissionAction(
-			@RequestParam(value = "submissionId", required = true) long submissionId,
+			@RequestParam(value="submissionId") long submissionId,
 			HttpServletRequest request) {
 		Map<String, Object> result = new HashMap<String, Object>(3, 1);
 

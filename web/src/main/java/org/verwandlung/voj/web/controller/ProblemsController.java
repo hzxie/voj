@@ -36,7 +36,7 @@ import org.verwandlung.voj.web.util.HttpSessionParser;
  * @author Haozhe Xie
  */
 @Controller
-@RequestMapping(value = "/p")
+@RequestMapping(value="/p")
 public class ProblemsController {
 	/**
 	 * 显示试题库中的全部试题.
@@ -48,11 +48,11 @@ public class ProblemsController {
 	 * @return 包含试题库页面信息的ModelAndView对象
 	 * @throws UnsupportedEncodingException 
 	 */
-	@RequestMapping(value = "", method = RequestMethod.GET)
+	@RequestMapping(value="", method=RequestMethod.GET)
 	public ModelAndView problemsView(
-			@RequestParam(value = "start", required = false, defaultValue = "1") long startIndex,
-			@RequestParam(value = "keyword", required = false) String keyword,
-			@RequestParam(value = "category", required = false) String problemCategorySlug,
+			@RequestParam(value="start", required=false, defaultValue="1") long startIndex,
+			@RequestParam(value="keyword", required = false) String keyword,
+			@RequestParam(value="category", required = false) String problemCategorySlug,
 			HttpServletRequest request, HttpServletResponse response) throws UnsupportedEncodingException {
 		long startIndexOfProblems = getFirstIndexOfProblems();
 		if ( startIndex < startIndexOfProblems ) {
@@ -94,11 +94,11 @@ public class ProblemsController {
 	 * @param request - HttpRequest对象
 	 * @return 一个包含试题列表的HashMap对象
 	 */
-	@RequestMapping(value = "/getProblems.action", method = RequestMethod.GET)
+	@RequestMapping(value="/getProblems.action", method=RequestMethod.GET)
 	public @ResponseBody Map<String, Object> getProblemsAction(
-			@RequestParam(value = "startIndex", required = true) long startIndex,
-			@RequestParam(value = "keyword", required = false) String keyword,
-			@RequestParam(value = "category", required = false) String problemCategorySlug,
+			@RequestParam(value="startIndex") long startIndex,
+			@RequestParam(value="keyword", required = false) String keyword,
+			@RequestParam(value="category", required = false) String problemCategorySlug,
 			HttpServletRequest request) {
 		HttpSession session = request.getSession();
 		List<Problem> problems = problemService.getProblemsUsingFilters(startIndex, keyword, problemCategorySlug, null, true, NUMBER_OF_PROBLEMS_PER_PAGE);
@@ -136,7 +136,7 @@ public class ProblemsController {
 	 * @param response - HttpResponse对象
 	 * @return 包含试题详细信息的ModelAndView对象
 	 */
-	@RequestMapping(value = "/{problemId}", method = RequestMethod.GET)
+	@RequestMapping(value="/{problemId}", method=RequestMethod.GET)
 	public ModelAndView problemView(
 			@PathVariable("problemId") long problemId,
 			HttpServletRequest request, HttpServletResponse response) {
@@ -184,7 +184,7 @@ public class ProblemsController {
 	 * @param response - HttpResponse对象
 	 * @return 包含试题题解信息的ModelAndView对象
 	 */
-	@RequestMapping(value = "/{problemId}/solution", method = RequestMethod.GET)
+	@RequestMapping(value="/{problemId}/solution", method=RequestMethod.GET)
 	public ModelAndView solutionView(
 			@PathVariable("problemId") long problemId,
 			HttpServletRequest request, HttpServletResponse response) {
@@ -207,12 +207,12 @@ public class ProblemsController {
 	 * @param request - HttpRequest对象
 	 * @return 一个包含提交记录创建结果的Map<String, Object>对象
 	 */
-	@RequestMapping(value = "/createSubmission.action", method = RequestMethod.POST)
+	@RequestMapping(value="/createSubmission.action", method=RequestMethod.POST)
 	public @ResponseBody Map<String, Object> createSubmissionAction(
-			@RequestParam(value = "problemId", required = true) long problemId,
-			@RequestParam(value = "languageSlug", required = true) String languageSlug,
-			@RequestParam(value = "code", required = true) String code,
-			@RequestParam(value = "csrfToken", required = true) String csrfToken,
+			@RequestParam(value="problemId") long problemId,
+			@RequestParam(value="languageSlug") String languageSlug,
+			@RequestParam(value="code") String code,
+			@RequestParam(value="csrfToken") String csrfToken,
 			HttpServletRequest request) {
 		HttpSession session = request.getSession();
 		String ipAddress = HttpRequestParser.getRemoteAddr(request);
