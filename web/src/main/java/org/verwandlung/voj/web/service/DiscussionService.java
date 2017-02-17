@@ -6,12 +6,11 @@ import com.alibaba.fastjson.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.verwandlung.voj.web.mapper.DiscussionReplyMapper;
 import org.verwandlung.voj.web.mapper.DiscussionThreadMapper;
 import org.verwandlung.voj.web.mapper.DiscussionTopicMapper;
-import org.verwandlung.voj.web.model.DiscussionReply;
-import org.verwandlung.voj.web.model.DiscussionThread;
-import org.verwandlung.voj.web.model.DiscussionTopic;
+import org.verwandlung.voj.web.model.*;
 import org.verwandlung.voj.web.util.HtmlTextFilter;
 import org.verwandlung.voj.web.util.OffensiveWordFilter;
 
@@ -192,7 +191,7 @@ public class DiscussionService {
 	 * @return 讨论回复的投票结果
 	 */
 	public Map<String, Boolean> voteDiscussionReply(long discussionThreadId, long discussionReplyId,
-	    long currentUserUid, int voteUp, int voteDown, boolean isCsrfTokenValid) {
+			long currentUserUid, int voteUp, int voteDown, boolean isCsrfTokenValid) {
 		DiscussionReply discussionReply = discussionReplyMapper.getDiscussionReplyUsingReplyId(discussionReplyId);
 		Map<String, Boolean> result = new HashMap<String, Boolean>();
 		result.put("isDiscussionReplyExists", discussionReply != null && discussionReply.getDiscussionThreadId() == discussionThreadId);
@@ -245,6 +244,252 @@ public class DiscussionService {
 				jsonArray.remove(i);
 			}
 		}
+	}
+
+	/**
+	 * [仅限管理员使用]
+	 * 创建讨论主题.
+	 * @param discussionTopicSlug - 讨论主题的唯一英文缩写
+	 * @param discussionTopicName - 讨论主题的名称
+	 * @param parentDiscussionTopic - 父级讨论主题对象 (可为空)
+	 * @return 包含讨论主题创建结果的Map对象
+	 */
+	public Map<String, Boolean> createDiscussionTopic(String discussionTopicSlug,
+			String discussionTopicName, DiscussionTopic parentDiscussionTopic) {
+		Map<String, Boolean> result = new HashMap<String, Boolean>(6, 1);
+		result.put("isDiscussionTopicSlugEmpty", discussionTopicSlug.isEmpty());
+		result.put("isDiscussionTopicSlugLegal", discussionTopicSlug.length() <= 128);
+		result.put("isDiscussionTopicNameEmpty", discussionTopicName.isEmpty());
+		result.put("isDiscussionTopicNameLegal", discussionTopicName.length() <= 128);
+
+		boolean isSuccessful = !result.get("isDiscussionTopicSlugEmpty") && result.get("isDiscussionTopicSlugLegal") &&
+							   !result.get("isDiscussionTopicNameEmpty") && result.get("isDiscussionTopicNameLegal");
+		result.put("isSuccessful", isSuccessful);
+		if ( result.get("isSuccessful") ) {
+			int parentDiscussionTopicId = parentDiscussionTopic == null  ? 0 : parentDiscussionTopic.getParentDiscussionTopicId();
+			DiscussionTopic dt = new DiscussionTopic(discussionTopicSlug, discussionTopicName, parentDiscussionTopicId);
+			discussionTopicMapper.createDiscussionTopic(dt);
+		}
+		return result;
+	}
+
+	/**
+	 * [仅限管理员使用]
+	 * 编辑讨论主题.
+	 * @param discussionTopicId - 讨论主题的唯一标识符
+	 * @param discussionTopicSlug - 讨论主题的唯一英文缩写
+	 * @param discussionTopicName - 讨论主题的名称
+	 * @param parentDiscussionTopic - 父级讨论主题对象 (可为空)
+	 * @return 包含讨论主题编辑结果的Map对象
+	 */
+	public Map<String, Boolean> updateDiscussionTopic(int discussionTopicId,
+			String discussionTopicSlug, String discussionTopicName,
+			DiscussionTopic parentDiscussionTopic) {
+		DiscussionTopic dt = discussionTopicMapper.getDiscussionTopicUsingId(discussionTopicId);
+		Map<String, Boolean> result = new HashMap<String, Boolean>(7, 1);
+		result.put("isDiscussionTopicExists", dt != null);
+		result.put("isDiscussionTopicSlugEmpty", discussionTopicSlug.isEmpty());
+		result.put("isDiscussionTopicSlugLegal", discussionTopicSlug.length() <= 128);
+		result.put("isDiscussionTopicNameEmpty", discussionTopicName.isEmpty());
+		result.put("isDiscussionTopicNameLegal", discussionTopicName.length() <= 128);
+
+		boolean isSuccessful = result.get("isDiscussionTopicExists")    && !result.get("isDiscussionTopicSlugEmpty") &&
+							   result.get("isDiscussionTopicSlugLegal") && !result.get("isDiscussionTopicNameEmpty") &&
+							   result.get("isDiscussionTopicNameLegal");
+		result.put("isSuccessful", isSuccessful);
+		if ( result.get("isSuccessful") ) {
+			int parentDiscussionTopicId = parentDiscussionTopic == null ? 0 : parentDiscussionTopic.getParentDiscussionTopicId();
+			dt.setDiscussionTopicSlug(discussionTopicSlug);
+			dt.setDiscussionTopicName(discussionTopicName);
+			dt.setParentDiscussionTopicId(parentDiscussionTopicId);
+			discussionTopicMapper.updateDiscussionTopic(dt);
+		}
+		return result;
+	}
+
+	/**
+	 * [仅限管理员使用]
+	 * 删除讨论主题.
+	 * @param discussionTopicId - 讨论主题的唯一标识符.
+	 * @return 包含讨论主题删除结果的Map对象
+	 */
+	public Map<String, Boolean> deleteDiscussionTopic(int discussionTopicId) {
+		Map<String, Boolean> result = new HashMap<String, Boolean>(2, 1);
+		long numberOfRowsAffected = discussionTopicMapper.deleteDiscussionTopicUsingId(discussionTopicId);
+		result.put("isSuccessful", numberOfRowsAffected > 0);
+		return result;
+	}
+
+	/**
+	 * 创建讨论帖子.
+	 * @param threadCreator - 讨论帖子的创建者
+	 * @param relatedProblem - 讨论帖子所关联的问题 (可为空)
+	 * @param discussionTopic - 讨论帖子关联的主题
+	 * @param discussionThreadTitle - 讨论帖子的标题
+	 * @param isCsrfTokenValid - CSRF Token是否合法
+	 * @return 包含讨论帖子创建结果的Map对象
+	 */
+	public Map<String, Boolean> createDiscussionThread(User threadCreator,
+			DiscussionTopic discussionTopic, Problem relatedProblem,
+			String discussionThreadTitle, boolean isCsrfTokenValid) {
+		Map<String, Boolean> result = new HashMap<String, Boolean>(6, 1);
+		result.put("isThreadCreatorExists", threadCreator != null);
+		result.put("isThreadCreatorLegal", threadCreator != null && !threadCreator.getUserGroup().getUserGroupSlug().equals("forbidden"));
+		result.put("isDiscussionTopicExists", discussionTopic != null);
+		result.put("isThreadTitleEmpty", discussionThreadTitle.isEmpty());
+		result.put("isThreadTitleLegal", discussionThreadTitle.length() <= 128);
+		result.put("isCsrfTokenValid", isCsrfTokenValid);
+
+		boolean isSuccessful = !result.get("isThreadCreatorExists")   &&  result.get("isThreadCreatorLegal") &&
+							    result.get("isDiscussionTopicExists") && !result.get("isThreadTitleEmpty")   &&
+							    result.get("isThreadTitleLegal")      &&  result.get("isCsrfTokenValid");
+		result.put("isSuccessful", isSuccessful);
+		if ( result.get("isSuccessful") ) {
+			DiscussionThread dt = new DiscussionThread(threadCreator, discussionTopic,
+					relatedProblem, HtmlTextFilter.filter(discussionThreadTitle));
+			discussionThreadMapper.createDiscussionThread(dt);
+		}
+		return result;
+	}
+
+	/**
+	 * 编辑讨论帖子.
+	 * 编辑条件: 当前用户为管理员或该帖子由用户自己创建.
+	 * @param discussionThreadId - 讨论帖子的唯一标识符
+	 * @param currentEditor - 当前的编辑者
+	 * @param discussionTopic -讨论帖子关联的主题
+	 * @param discussionThreadTitle - 讨论帖子的标题
+	 * @param isCsrfTokenValid - CSRF Token是否合法
+	 * @return 包含讨论帖子编辑结果的Map对象
+	 */
+	public Map<String, Boolean> updateDiscussionThread(long discussionThreadId,
+			User currentEditor, DiscussionTopic discussionTopic,
+			String discussionThreadTitle, boolean isCsrfTokenValid) {
+		DiscussionThread dt = discussionThreadMapper.getDiscussionThreadUsingThreadId(discussionThreadId);;
+		Map<String, Boolean> result = new HashMap<String, Boolean>(7, 1);
+		result.put("isDiscussionThreadExists", dt != null);
+		result.put("isDiscussionTopicExists", discussionTopic != null);
+		result.put("isThreadTitleEmpty", discussionThreadTitle.isEmpty());
+		result.put("isThreadTitleLegal", discussionThreadTitle.length() <= 128);
+		result.put("isCsrfTokenValid", isCsrfTokenValid);
+
+		boolean isSuccessful =  result.get("isDiscussionThreadExists") && result.get("isDiscussionTopicExists") &&
+							   !result.get("isThreadTitleEmpty")       && result.get("isThreadTitleLegal")      &&
+							    result.get("isCsrfTokenValid");
+		result.put("isSuccessful", isSuccessful);
+		if ( result.get("isSuccessful") ) {
+			if ( dt.getDiscussionThreadCreator().equals(currentEditor) ||
+					currentEditor.getUserGroup().getUserGroupSlug().equals("administrators") ) {
+				dt.setDiscussionTopic(discussionTopic);
+				dt.setDiscussionThreadTitle(HtmlTextFilter.filter(discussionThreadTitle));
+				discussionThreadMapper.updateDiscussionThread(dt);
+			}
+		}
+		return result;
+	}
+
+	/**
+	 * [仅限管理员使用]
+	 * 删除讨论帖子.
+	 * @param discussionThreadId - 讨论帖子的唯一标识符.
+	 * @return 讨论帖子的删除结果
+	 */
+	public Map<String, Boolean> deleteDiscussionThread(long discussionThreadId) {
+		Map<String, Boolean> result = new HashMap<String, Boolean>(2, 1);
+		long numberOfRowsAffected = discussionThreadMapper.deleteDiscussionThreadUsingThreadId(discussionThreadId);
+
+		result.put("isSuccessful", numberOfRowsAffected > 0);
+		return result;
+	}
+
+	/**
+	 * 创建讨论回复.
+	 * @param discussionThread - 回复对应的讨论主题
+	 * @param replyCreator - 回复的创建者
+	 * @param replyContent - 回复内容
+	 * @param isCsrfTokenValid - CSRF Token是否合法
+	 * @return 包含讨论回复创建结果的Map对象.
+	 */
+	public Map<String, Boolean> createDiscussionReply(
+			DiscussionThread discussionThread, User replyCreator,
+			String replyContent, boolean isCsrfTokenValid) {
+		Map<String, Boolean> result = new HashMap<String, Boolean>(6, 1);
+		result.put("isDiscussionThreadExists", discussionThread != null);
+		result.put("isReplyCreatorExists", replyCreator != null);
+		result.put("isReplyCreatorLegal", replyCreator != null && !replyCreator.getUserGroup().getUserGroupSlug().equals("forbidden"));
+		result.put("isReplyContentEmpty", replyContent.isEmpty());
+		result.put("isCsrfTokenValid", isCsrfTokenValid);
+
+		boolean isSuccessful = result.get("isDiscussionThreadExists") &&  result.get("isReplyCreatorExists")  &&
+				               result.get("isReplyCreatorLegal")      && !result.get("isReplyContentEmpty")   &&
+							   result.get("isCsrfTokenValid");
+		result.put("isSuccessful", isSuccessful);
+		if ( result.get("isSuccessful") ) {
+			long discussionThreadId = discussionThread.getDiscussionThreadId();
+			String discussionReplyVotes = "{ \"up\": [], \"down\": [] }";
+			DiscussionReply dr = new DiscussionReply(discussionThreadId, replyCreator,
+					HtmlTextFilter.filter(replyContent), discussionReplyVotes);
+			discussionReplyMapper.createDiscussionReply(dr);
+		}
+		return result;
+	}
+
+	/**
+	 * 编辑讨论回复.
+	 * 编辑条件: 当前用户为管理员或该回复由用户自己创建.
+	 * @param discussionReplyId - 讨论回复的唯一标识符
+	 * @param currentEditor - 当前的编辑者
+	 * @param discussionReplyContent - 更新后讨论回复的内容
+	 * @param isCsrfTokenValid - CSRF Token是否合法
+	 * @return 包含讨论回复编辑结果的Map对象
+	 */
+	public Map<String, Boolean> editDiscussionReply(long discussionReplyId,
+		User currentEditor, String discussionReplyContent, boolean isCsrfTokenValid) {
+		Map<String, Boolean> result = new HashMap<String, Boolean>(2, 1);
+		boolean isSuccessful = false;
+		DiscussionReply dr = null;
+
+		if ( isCsrfTokenValid ) {
+			dr = discussionReplyMapper.getDiscussionReplyUsingReplyId(discussionReplyId);
+		}
+		if ( dr != null ) {
+			if ( dr.getDiscussionReplyCreator().equals(currentEditor) ||
+					currentEditor.getUserGroup().getUserGroupSlug().equals("administrators") ) {
+				dr.setDiscussionReplyContent(HtmlTextFilter.filter(discussionReplyContent));
+				discussionReplyMapper.updateDiscussionReply(dr);
+				isSuccessful = true;
+			}
+		}
+		result.put("isSuccessful", isSuccessful);
+		return result;
+	}
+
+	/**
+	 * 删除讨论回复.
+	 * 删除条件: 当前用户为管理员或该回复由用户自己创建.
+	 * @param discussionReplyId - 讨论回复的唯一标识符
+	 * @param currentEditor - 当前的编辑者
+	 * @param isCsrfTokenValid - CSRF Token是否合法
+	 * @return 包含讨论回复删除结果的Map对象.
+	 */
+	public Map<String, Boolean> deleteDiscussionReply(long discussionReplyId,
+			User currentEditor, boolean isCsrfTokenValid) {
+		Map<String, Boolean> result = new HashMap<String, Boolean>(2, 1);
+		boolean isSuccessful = false;
+		DiscussionReply dr = null;
+
+		if ( isCsrfTokenValid ) {
+			dr = discussionReplyMapper.getDiscussionReplyUsingReplyId(discussionReplyId);
+		}
+		if ( dr != null ) {
+			if ( dr.getDiscussionReplyCreator().equals(currentEditor) ||
+					currentEditor.getUserGroup().getUserGroupSlug().equals("administrators") ) {
+				discussionReplyMapper.deleteDiscussionReplyUsingReplyId(discussionReplyId);
+				isSuccessful = true;
+			}
+		}
+		result.put("isSuccessful", isSuccessful);
+		return result;
 	}
 
 	/**
