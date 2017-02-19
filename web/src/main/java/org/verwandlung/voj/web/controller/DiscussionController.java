@@ -256,7 +256,7 @@ public class DiscussionController {
 	 * @return 包含讨论回复创建结果的JSON对象
 	 */
 	@RequestMapping(value="/{threadId}/createDiscussionReply.action", method=RequestMethod.POST)
-	public @ResponseBody Map<String, Boolean> createDiscussionReplyAction(
+	public @ResponseBody Map<String, Object> createDiscussionReplyAction(
 			@PathVariable("threadId") long discussionThreadId,
 			@RequestParam(value="replyContent") String replyContent,
 			@RequestParam(value="csrfToken") String csrfToken,
@@ -266,9 +266,9 @@ public class DiscussionController {
 		User currentUser = HttpSessionParser.getCurrentUser(session);
 		boolean isCsrfTokenValid = CsrfProtector.isCsrfTokenValid(csrfToken, session);
 
-		Map<String, Boolean> result = discussionService.createDiscussionReply(
+		Map<String, Object> result = discussionService.createDiscussionReply(
 				discussionThreadId, currentUser, replyContent, isCsrfTokenValid);
-		if ( result.get("isSuccessful") ) {
+		if ( (Boolean) result.get("isSuccessful") ) {
 			LOGGER.info(String.format("User: {%s} created discussion reply for thread #%d at %s",
 					new Object[] {currentUser, discussionThreadId, ipAddress}));
 		}

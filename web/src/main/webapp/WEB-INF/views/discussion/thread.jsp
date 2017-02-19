@@ -57,13 +57,16 @@
                         </li>
                         <li>
                             <i class="fa fa-comments"></i>
-                            ${discussionThread.numberOfReplies <= 1 ?  0 : discussionThread.numberOfReplies - 1} <spring:message code="voj.discussion.thread.comments" text="Comment(s)" />
+                            <span id="number-of-comments">${discussionThread.numberOfReplies <= 1 ?  0 : discussionThread.numberOfReplies - 1}</span>
+                            <spring:message code="voj.discussion.thread.comments" text="Comment(s)" />
                         </li>
                     </ul>
                 </div> <!-- .span9 -->
+                <c:if test="${isLogin}">
                 <div class="span3 text-right">
                     <button class="btn btn-primary"><spring:message code="voj.discussion.thread.new-discussion" text="New Discussion" /></button>
                 </div> <!-- .span3 -->
+                </c:if>
             </div> <!-- .row-fluid -->
             <div class="body row-fluid">
                 <div class="span9">
@@ -246,8 +249,8 @@
                 '        </div> <!-- .avatar -->' + 
                 '    </div> <!-- .span2 -->' + 
                 '    <div class="span10">' + 
-                '        <div class="discussion-reply" data-value="%s">'.format(discussionReplyId) +
-                '            <div class="reply-header %s">'.format(discussionReplyCreator['uid'] == '${myProfile.uid}' ? 'current-user' : '') +
+                '        <div class="discussion-reply %s" data-value="%s">'.format(discussionReplyCreator['uid'] == '${myProfile.uid}' ? 'current-user' : '', discussionReplyId) +
+                '            <div class="reply-header">' +
                 '                <a href="<c:url value="/accounts/user/" />%s">%s</a> @ %s'.format(discussionReplyCreator['uid'], discussionReplyCreator['username'], getTimeElapsed(discussionReplyCreateTime)) + 
                 '            </div> <!-- .reply-header -->' + 
                 '            <div class="reply-body">' + 
@@ -259,13 +262,13 @@
                 '                        <a href="javascript:void(0);" class="%s" title="<spring:message code="voj.discussion.thread.useful-reply" text="This reply is useful" />">'.format(discussionReplyVotes['isVotedUp'] ? 'active': '') + 
                 '                            <i class="fa fa-thumbs-up"></i>' + 
                 '                        </a>' + 
-                '                        <span class="vote-ups">%s</span>'.format(discussionReplyVotes['numberOfVoteUp']) + 
+                '                        <span class="vote-ups">%s</span>'.format(discussionReplyVotes['numberOfVoteUp'] || 0) + 
                 '                    </li>' + 
                 '                    <li>' + 
                 '                        <a href="javascript:void(0);" class="%s" title="<spring:message code="voj.discussion.thread.useless-reply" text="This reply is not useful" />">'.format(discussionReplyVotes['isVotedDown'] ? 'active': '') + 
                 '                            <i class="fa fa-thumbs-down"></i>' + 
                 '                        </a>' + 
-                '                        <span class="vote-downs">%s</span>'.format(discussionReplyVotes['numberOfVoteDown']) + 
+                '                        <span class="vote-downs">%s</span>'.format(discussionReplyVotes['numberOfVoteDown'] || 0) + 
                 '                    </li>' + 
                 '                </ul>' + 
                 '            </div> <!-- .reply-footer -->' + 
@@ -341,6 +344,61 @@
                     }
                 }
             });
+        }
+    </script>
+    <script type="text/javascript">
+        $('.btn-primary', '#editor').click(function() {
+            var postData = {
+                'replyContent': $('#wmd-input').val(),
+                'csrfToken': $('#csrf-token').val()
+            };
+
+            $('.btn-primary', '#editor').attr('disabled', 'disabled');
+            $('.btn-primary', '#editor').html('<spring:message code="voj.discussion.thread.please-wait" text="Please wait..." />');
+            $.ajax({
+                type: 'POST',
+                url: '<c:url value="/discussion/${discussionThread.discussionThreadId}/createDiscussionReply.action" />',
+                data: postData,
+                dataType: 'JSON',
+                success: function(result){
+                    processDiscussionReplyCreationResult(result);
+                }
+            });
+        });
+    </script>
+    <script type="text/javascript">
+        function processDiscussionReplyCreationResult(result) {
+            if ( result['isSuccessful'] ) {
+                var discussionReply   = result['discussionReply'],
+                    discussionReplies = [discussionReply],
+                    numberOfComments  = parseInt($('#number-of-comments').html());
+                
+                $('#wmd-input').val('');
+                $('#wmd-preview').html('');
+                $('#number-of-comments').html(numberOfComments + 1);
+                displayDiscussionReplyRecords(discussionReplies);
+            } else {
+                var errorMessage  = '';
+                
+                if ( result['isCsrfTokenValid'] ) {
+                    errorMessage += '<spring:message code="voj.discussion.thread.csrf-token-invalid" text="Invalid token." /><br>';
+                }
+                if ( !result['isDiscussionThreadExists'] ) {
+                    errorMessage += '<spring:message code="voj.discussion.thread.thread-not-exists" text="The discussion thread doesn&acute;t exist." /><br>';
+                }
+                if ( !result['isReplyCreatorExists'] ) {
+                    errorMessage += '<spring:message code="voj.discussion.thread.user-not-login" text="Please sign in first." /><br>';
+                } else if ( !result['isReplyCreatorLegal'] ) {
+                    errorMessage += '<spring:message code="voj.discussion.thread.user-not-permitted" text="You&acute;tre not allowed to post a reply." /><br>';
+                }
+                if ( result['isReplyContentEmpty'] ) {
+                    errorMessage += '<spring:message code="voj.discussion.thread.empty-reply" text="Please enter reply content." /><br>';
+                }
+                $('.alert-error', '#editor').html(errorMessage);
+                $('.alert-error', '#editor').removeClass('hide');
+            }
+            $('.btn-primary', '#editor').removeAttr('disabled');
+            $('.btn-primary', '#editor').html('<spring:message code="voj.discussion.thread.comment" text="Comment" />');
         }
     </script>
     </c:if>
