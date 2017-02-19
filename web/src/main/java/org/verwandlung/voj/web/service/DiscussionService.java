@@ -420,27 +420,46 @@ public class DiscussionService {
 	 * @param isCsrfTokenValid - CSRF Token是否合法
 	 * @return 包含讨论回复创建结果的Map对象.
 	 */
-	public Map<String, Boolean> createDiscussionReply(
+	public Map<String, Object> createDiscussionReply(
 			long discussionThreadId, User replyCreator,
 			String replyContent, boolean isCsrfTokenValid) {
+		String discussionReplyVotes = "{ \"up\": [], \"down\": [] }";
+		DiscussionReply dr = new DiscussionReply(discussionThreadId, replyCreator,
+				HtmlTextFilter.filter(replyContent), discussionReplyVotes);
+
+		Map<String, Object> result = (Map<String, Object>) getDiscussionReplyCreationResult(dr, isCsrfTokenValid);
+		if ( (Boolean) result.get("isSuccessful") ) {
+			discussionReplyMapper.createDiscussionReply(dr);
+			result.put("discussionReply", dr);
+		}
+		return result;
+	}
+
+	/**
+	 * 验证讨论回复数据有效性.
+	 * @param discussionReply - 待创建的讨论回复对象
+	 * @param isCsrfTokenValid -  CSRF Token是否合法
+	 * @return 包含讨论回复数据有效性的Map对象
+	 */
+	private Map<String, ? extends Object> getDiscussionReplyCreationResult(
+			DiscussionReply discussionReply, boolean isCsrfTokenValid) {
+		long discussionThreadId = discussionReply.getDiscussionThreadId();
+		User replyCreator = discussionReply.getDiscussionReplyCreator();
+		String replyContent = discussionReply.getDiscussionReplyContent();
+
 		DiscussionThread discussionThread = discussionThreadMapper.getDiscussionThreadUsingThreadId(discussionThreadId);
 		Map<String, Boolean> result = new HashMap<String, Boolean>(6, 1);
 		result.put("isDiscussionThreadExists", discussionThread != null);
 		result.put("isReplyCreatorExists", replyCreator != null);
-		result.put("isReplyCreatorLegal", replyCreator != null && !replyCreator.getUserGroup().getUserGroupSlug().equals("forbidden"));
+		result.put("isReplyCreatorLegal", replyCreator != null &&
+				!replyCreator.getUserGroup().getUserGroupSlug().equals("forbidden"));
 		result.put("isReplyContentEmpty", replyContent.isEmpty());
 		result.put("isCsrfTokenValid", isCsrfTokenValid);
 
 		boolean isSuccessful = result.get("isDiscussionThreadExists") &&  result.get("isReplyCreatorExists")  &&
-				               result.get("isReplyCreatorLegal")      && !result.get("isReplyContentEmpty")   &&
+							   result.get("isReplyCreatorLegal")      && !result.get("isReplyContentEmpty")   &&
 							   result.get("isCsrfTokenValid");
 		result.put("isSuccessful", isSuccessful);
-		if ( isSuccessful ) {
-			String discussionReplyVotes = "{ \"up\": [], \"down\": [] }";
-			DiscussionReply dr = new DiscussionReply(discussionThreadId, replyCreator,
-					HtmlTextFilter.filter(replyContent), discussionReplyVotes);
-			discussionReplyMapper.createDiscussionReply(dr);
-		}
 		return result;
 	}
 

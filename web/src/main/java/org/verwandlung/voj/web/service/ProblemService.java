@@ -280,7 +280,7 @@ public class ProblemService {
 	 * @return 包含试题创建结果的Map<String, Boolean>对象
 	 */
 	private Map<String, ? extends Object> getProblemCreationResult(Problem problem) {
-		Map<String, Boolean> result = new HashMap<>();
+		Map<String, Boolean> result = new HashMap<String, Boolean>();
 		result.put("isProblemNameEmpty", problem.getProblemName().isEmpty());
 		result.put("isProblemNameLegal", isProblemNameLegal(problem.getProblemName()));
 		result.put("isTimeLimitLegal", problem.getTimeLimit() > 0);
