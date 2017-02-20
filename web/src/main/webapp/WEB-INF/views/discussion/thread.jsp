@@ -130,6 +130,11 @@
     <!-- Java Script -->
     <!-- Placed at the end of the document so the pages load faster -->
     <script type="text/javascript" src="${cdnUrl}/js/site.js"></script>
+    <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({
+            tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
+        });
+    </script>
     <script type="text/javascript" async src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <script type="text/javascript">
         $.when(
@@ -252,6 +257,10 @@
                 '        <div class="discussion-reply %s" data-value="%s">'.format(discussionReplyCreator['uid'] == '${myProfile.uid}' ? 'current-user' : '', discussionReplyId) +
                 '            <div class="reply-header">' +
                 '                <a href="<c:url value="/accounts/user/" />%s">%s</a> @ %s'.format(discussionReplyCreator['uid'], discussionReplyCreator['username'], getTimeElapsed(discussionReplyCreateTime)) + 
+                '                <ul class="inline pull-right %s">'.format(discussionReplyCreator['uid'] == '${myProfile.uid}' || '${myProfile.userGroup.userGroupSlug}' == 'administrators' ? '' : 'hide') +
+                '                    <li><a href="javascript:void(0);"><i class="fa fa-pencil"></i></a></li>' +
+                '                    <li><a href="javascript:void(0);"><i class="fa fa-times"></i></a></li>' +
+                '                </ul> ' +
                 '            </div> <!-- .reply-header -->' + 
                 '            <div class="reply-body">' + 
                 '                <div class="markdown">%s</div> <!-- .markdown -->'.format(converter.makeHtml(discussionReplyContent.replace(/\\\n/g, '\\n'))) +
@@ -316,7 +325,7 @@
                 url: '<c:url value="/discussion/${discussionThread.discussionThreadId}/voteDiscussionReply.action" />',
                 data: postData,
                 dataType: 'JSON',
-                success: function(result){
+                success: function(result) {
                     if ( result['isSuccessful'] ) {
                         var thumbUpButton   = $('.fa-thumbs-up', 'div[data-value=%s]'.format(discussionReplyId)).parent(),
                             thumbDownButton = $('.fa-thumbs-down', 'div[data-value=%s]'.format(discussionReplyId)).parent(),
@@ -347,6 +356,40 @@
         }
     </script>
     <script type="text/javascript">
+        $('#discussion-replies').on('click', 'i.fa-pencil', function() {
+        });
+    </script>
+
+    <script type="text/javascript">
+        $('#discussion-replies').on('click', 'i.fa-times', function() {
+            if ( !confirm('<spring:message code="voj.discussion.thread.continue-or-not" text="Are you sure to continue?" />') ) {
+                return;
+            }
+
+            var discussionReplyId = $(this).parent().parent().parent().parent().parent().attr('data-value'),
+                replyObject       = $(this).parent().parent().parent().parent().parent().parent().parent(),
+                numberOfComments  = parseInt($('#number-of-comments').html());
+                postData          = {
+                    'discussionReplyId': discussionReplyId,
+                    'csrfToken': $('#csrf-token').val()
+                };
+            $.ajax({
+                type: 'POST',
+                url: '<c:url value="/discussion/deleteDiscussionReply.action" />',
+                data: postData,
+                dataType: 'JSON',
+                success: function(result) {
+                    if ( result['isSuccessful'] ) {
+                        $(replyObject).remove();
+                        $('#number-of-comments').html(numberOfComments - 1);
+                    } else {
+                        alert('<spring:message code="voj.discussion.thread.failed-to-delete" text="Failed to delete this reply, please try again." />');
+                    }
+                }
+            });
+        });
+    </script>
+    <script type="text/javascript">
         $('.btn-primary', '#editor').click(function() {
             var postData = {
                 'replyContent': $('#wmd-input').val(),
@@ -360,7 +403,7 @@
                 url: '<c:url value="/discussion/${discussionThread.discussionThreadId}/createDiscussionReply.action" />',
                 data: postData,
                 dataType: 'JSON',
-                success: function(result){
+                success: function(result) {
                     processDiscussionReplyCreationResult(result);
                 }
             });
