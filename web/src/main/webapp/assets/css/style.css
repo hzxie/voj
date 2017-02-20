@@ -155,7 +155,7 @@ div#footer button.btn-github i.fa {
 }
 
 /* Style for Markdown Editor */
-div#wmd-button-bar {
+div.wmd-button-bar {
 	background-color: transparent;
 	border: 2px solid #ccc;
 	border-bottom: 0;
@@ -167,23 +167,23 @@ div#wmd-button-bar {
 	        border-radius: 6px 6px 0 0;
 }
 
-div#wmd-button-bar ul {
+div.wmd-button-bar ul {
 	margin: 0;
 	padding: 15px 0;
 }
 
-div#wmd-button-bar li {
+div.wmd-button-bar li {
 	display: inline-block;
 	display: *inline;
 	list-style: none;
 	zoom: 1;
 }
 
-div#wmd-button-bar li.wmd-spacer {
+div.wmd-button-bar li.wmd-spacer {
 	width: 20px;
 }
 
-div#wmd-button-bar li.wmd-button > span {
+div.wmd-button-bar li.wmd-button > span {
 	background-image: url('../img/wmd-buttons.svg');
 	background-repeat: no-repeat;
 	background-position: 0px 0px;

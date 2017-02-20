@@ -283,8 +283,9 @@ public class DiscussionController {
 	 * @param request - HttpServletRequest对象
 	 * @return 包含讨论回复编辑结果的JSON对象
 	 */
-	@RequestMapping(value="/editDiscussionReply.action", method=RequestMethod.POST)
+	@RequestMapping(value="/{threadId}/editDiscussionReply.action", method=RequestMethod.POST)
 	public @ResponseBody Map<String, Boolean> editDiscussionReplyAction(
+			@PathVariable("threadId") long discussionThreadId,
 			@RequestParam(value="discussionReplyId") long discussionReplyId,
 			@RequestParam(value="replyContent") String replyContent,
 			@RequestParam(value="csrfToken") String csrfToken,
@@ -310,8 +311,9 @@ public class DiscussionController {
 	 * @param request - HttpServletRequest对象
 	 * @return 包含讨论回复删除结果的JSON对象
 	 */
-	@RequestMapping(value="/deleteDiscussionReply.action", method=RequestMethod.POST)
-	public @ResponseBody Map<String, Boolean> editDiscussionReplyAction(
+	@RequestMapping(value="/{threadId}/deleteDiscussionReply.action", method=RequestMethod.POST)
+	public @ResponseBody Map<String, Boolean> deleteDiscussionReplyAction(
+			@PathVariable("threadId") long discussionThreadId,
 			@RequestParam(value="discussionReplyId") long discussionReplyId,
 			@RequestParam(value="csrfToken") String csrfToken,
 			HttpServletRequest request) {

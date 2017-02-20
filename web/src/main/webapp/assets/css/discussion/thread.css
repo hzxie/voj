@@ -90,8 +90,17 @@ div#discussion-thread div.body div.discussion-reply div.markdown p:last-child {
 	margin-bottom: 0;
 }
 
+div#discussion-thread div.body div.discussion-reply div.markdown-editor ul.inline {
+	margin: 10px 0;
+}
+
+div#discussion-thread div.body div.discussion-reply div.markdown-editor ul.inline li {
+	padding: 0 0 0 10px;
+}
+
 div#discussion-thread div.body div.discussion-reply div.reply-footer {
 	border-top: 1px solid #eee;
+	position: relative;
 }
 
 div#discussion-thread div.body div.discussion-reply div.reply-footer li {
@@ -138,13 +147,13 @@ div#discussion-thread div.body div#editor button#create-discussion-reply {
 	right: 0;
 }
 
-div#discussion-thread div.body div#markdown-editor,
+div#discussion-thread div.body div.markdown-editor,
 div#discussion-thread div.body div.alert {
 	margin: 10px 15px;
 }
 
-div#discussion-thread div.body div#markdown-editor div#wmd-button-bar,
-div#discussion-thread div.body div#markdown-editor textarea#wmd-input {
+div#discussion-thread div.body div.markdown-editor div.wmd-button-bar,
+div#discussion-thread div.body div.markdown-editor textarea.wmd-input {
 	border-width: 1px;
 }
 

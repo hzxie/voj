@@ -93,9 +93,9 @@
                                 </div> <!-- .reply-header -->
                                 <div class="reply-body">
                                     <div class="alert alert-error hide"></div> <!-- .alert-error -->
-                                    <div id="markdown-editor">
+                                    <div class="markdown-editor">
                                         <div class="wmd-panel">
-                                            <div id="wmd-button-bar"></div> <!-- #wmd-button-bar -->
+                                            <div id="wmd-button-bar" class="wmd-button-bar"></div> <!-- #wmd-button-bar -->
                                             <textarea id="wmd-input" class="wmd-input"></textarea>
                                         </div> <!-- .wmd-panel -->
                                         <div id="wmd-preview" class="wmd-panel wmd-preview"></div> <!-- .wmd-preview -->
@@ -240,6 +240,9 @@
                         discussionReplies[i]['discussionReplyVotes'])
                 );
                 getGravatarUrl(discussionReplies[i]['discussionReplyCreator']['email'], $('img', 'ul#discussion-replies li:last-child div.avatar'));
+            <c:if test="${isLogin}">
+                initializeMarkdownEditor(discussionReplies[i]['discussionReplyId']);
+            </c:if>
             }
         }
     </script>
@@ -264,6 +267,19 @@
                 '            </div> <!-- .reply-header -->' + 
                 '            <div class="reply-body">' + 
                 '                <div class="markdown">%s</div> <!-- .markdown -->'.format(converter.makeHtml(discussionReplyContent.replace(/\\\n/g, '\\n'))) +
+                <c:if test="${isLogin}">
+                '                <div class="markdown-editor hide">' + 
+                '                    <div class="wmd-panel">' + 
+                '                        <div id="wmd-button-bar-%s" class="wmd-button-bar"></div>'.format(discussionReplyId) + 
+                '                        <textarea id="wmd-input-%s" class="wmd-input">%s</textarea>'.format(discussionReplyId, discussionReplyContent) + 
+                '                    </div> <!-- .wmd-panel -->' + 
+                '                    <div id="wmd-preview-%s" class="wmd-panel wmd-preview"></div>'.format(discussionReplyId) + 
+                '                    <ul class="inline text-right">' + 
+                '                        <li><button class="btn btn-primary"><spring:message code="voj.discussion.thread.update-reply" text="Update reply" /></button></li>' + 
+                '                        <li><button class="btn btn-default"><spring:message code="voj.discussion.thread.cancel" text="Cancel" /></button></li>' + 
+                '                    </ul>' + 
+                '                </div> <!-- .markdown-editor -->' + 
+                </c:if>
                 '            </div> <!-- .reply-body -->' + 
                 '            <div class="reply-footer">' + 
                 '                <ul class="inline">' + 
@@ -288,6 +304,12 @@
         }
     </script>
     <c:if test="${isLogin}">
+    <script type="text/javascript">
+        function initializeMarkdownEditor(discussionReplyId) {
+            editor    = new Markdown.Editor(converter, '-%s'.format(discussionReplyId));
+            editor.run();
+        }
+    </script>
     <script type="text/javascript">
         $('#discussion-replies').on('click', 'i.fa-thumbs-up', function() {
             var discussionReplyId = $(this).parent().parent().parent().parent().parent().attr('data-value'),
@@ -357,9 +379,64 @@
     </script>
     <script type="text/javascript">
         $('#discussion-replies').on('click', 'i.fa-pencil', function() {
+            var discussionReplyId = $(this).parent().parent().parent().parent().parent().attr('data-value'),
+                replyObject       = $(this).parent().parent().parent().parent().parent().parent().parent(),
+                markdownEditor    = $('.markdown-editor', replyObject);
+
+            if ( $(markdownEditor).is(':visible') ) {
+                $(markdownEditor).addClass('hide');
+                $('.markdown', replyObject).removeClass('hide');
+            } else {
+                $('.markdown', replyObject).addClass('hide');
+                $(markdownEditor).removeClass('hide');
+            }
         });
     </script>
+    <script type="text/javascript">
+        $('#discussion-replies').on('click', '.markdown-editor .btn-primary', function() {
+            var discussionReplyId = $(this).parent().parent().parent().parent().parent().attr('data-value'),
+                replyObject       = $(this).parent().parent().parent().parent().parent().parent().parent(),
+                markdownEditor    = $('.markdown-editor', replyObject),
+                replyContent      = $('.wmd-input', replyObject).val(),
+                postData          = {
+                    'discussionReplyId': discussionReplyId,
+                    'replyContent': replyContent,
+                    'csrfToken': $('#csrf-token').val()
+                };
 
+            $('.btn-primary', replyObject).attr('disabled', 'disabled');
+            $('.btn-primary', replyObject).html('<spring:message code="voj.discussion.thread.please-wait" text="Please wait..." />');
+            $.ajax({
+                type: 'POST',
+                url: '<c:url value="/discussion/${discussionThread.discussionThreadId}/editDiscussionReply.action" />',
+                data: postData,
+                dataType: 'JSON',
+                success: function(result) {
+                    if ( result['isSuccessful'] ) {
+                        $(markdownEditor).addClass('hide');
+                        $('.markdown', replyObject).html(converter.makeHtml(replyContent.replace(/\\\n/g, '\\n')));
+                        $('.markdown', replyObject).removeClass('hide');
+                    } else {
+                        alert('<spring:message code="voj.discussion.thread.failed-to-update" text="Failed to update this reply, please try again." />');
+                    }
+                    $('.btn-primary', replyObject).removeAttr('disabled');
+                    $('.btn-primary', replyObject).html('<spring:message code="voj.discussion.thread.update-reply" text="Update Reply" />');
+                }
+            });
+        });
+    </script>
+    <script type="text/javascript">
+        $('#discussion-replies').on('click', '.markdown-editor .btn-default', function() {
+            var discussionReplyId = $(this).parent().parent().parent().parent().parent().attr('data-value'),
+                replyObject       = $(this).parent().parent().parent().parent().parent().parent().parent(),
+                markdownEditor    = $('.markdown-editor', replyObject);
+
+            if ( $(markdownEditor).is(':visible') ) {
+                $(markdownEditor).addClass('hide');
+                $('.markdown', replyObject).removeClass('hide');
+            }
+        });
+    </script>
     <script type="text/javascript">
         $('#discussion-replies').on('click', 'i.fa-times', function() {
             if ( !confirm('<spring:message code="voj.discussion.thread.continue-or-not" text="Are you sure to continue?" />') ) {
@@ -375,7 +452,7 @@
                 };
             $.ajax({
                 type: 'POST',
-                url: '<c:url value="/discussion/deleteDiscussionReply.action" />',
+                url: '<c:url value="/discussion/${discussionThread.discussionThreadId}/deleteDiscussionReply.action" />',
                 data: postData,
                 dataType: 'JSON',
                 success: function(result) {
