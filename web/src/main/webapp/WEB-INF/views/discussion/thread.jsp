@@ -57,7 +57,12 @@
                         </li>
                         <li>
                             <i class="fa fa-comments"></i>
-                            <span id="number-of-comments">${discussionThread.numberOfReplies <= 1 ?  0 : discussionThread.numberOfReplies - 1}</span>
+                            <span id="number-of-comments">
+                                <c:choose>
+                                <c:when test="${discussionThread.discussionTopic.discussionTopicSlug == 'solutions'}">${discussionThread.numberOfReplies}</c:when>
+                                <c:otherwise>${discussionThread.numberOfReplies <= 1 ?  0 : discussionThread.numberOfReplies - 1}</c:otherwise>
+                                </c:choose>
+                            </span>
                             <spring:message code="voj.discussion.thread.comments" text="Comment(s)" />
                         </li>
                     </ul>
