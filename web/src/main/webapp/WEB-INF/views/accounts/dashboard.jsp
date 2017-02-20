@@ -226,7 +226,7 @@
                             <label for="wmd-input"><spring:message code="voj.accounts.dashboard.about-me" text="About Me" /></label>    
                             <div id="markdown-editor">
                                 <div class="wmd-panel">
-                                    <div id="wmd-button-bar"></div> <!-- #wmd-button-bar -->
+                                    <div id="wmd-button-bar" class="wmd-button-bar"></div> <!-- #wmd-button-bar -->
                                     <textarea id="wmd-input" class="wmd-input" placeholder="<spring:message code="voj.accounts.dashboard.introduce-yourself" text="Write something about yourself." />">${aboutMe}</textarea>
                                 </div> <!-- .wmd-panel -->
                                 <div id="wmd-preview" class="wmd-panel wmd-preview"></div> <!-- .wmd-preview -->

@@ -66,7 +66,7 @@
                                     <label for="wmd-input"><spring:message code="voj.administration.new-problem.problem-description" text="Description" /></label>    
                                     <div id="markdown-editor">
                                         <div class="wmd-panel">
-                                            <div id="wmd-button-bar"></div> <!-- #wmd-button-bar -->
+                                            <div id="wmd-button-bar" class="wmd-button-bar"></div> <!-- #wmd-button-bar -->
                                             <textarea id="wmd-input" class="wmd-input"></textarea>
                                         </div> <!-- .wmd-panel -->
                                         <div id="wmd-preview" class="wmd-panel wmd-preview"></div> <!-- .wmd-preview -->
