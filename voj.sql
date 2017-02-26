@@ -149,8 +149,10 @@ CREATE TABLE `voj_discussion_topics` (
 --
 
 INSERT INTO `voj_discussion_topics` (`discussion_topic_id`, `discussion_topic_slug`, `discussion_topic_name`, `discussion_parent_topic_id`) VALUES
-(1, 'general', 'General', 0),
-(2, 'support', 'Help & Support', 0);
+(1, 'solutions', 'Solutions', 0),
+(2, 'qa', 'Q & A', 0),
+(3, 'general', 'General', 0),
+(4, 'support', 'Help & Support', 0);
 
 -- --------------------------------------------------------
 
@@ -679,7 +681,7 @@ ALTER TABLE `voj_discussion_threads`
 -- AUTO_INCREMENT for table `voj_discussion_topics`
 --
 ALTER TABLE `voj_discussion_topics`
-  MODIFY `discussion_topic_id` int(8) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `discussion_topic_id` int(8) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 --
 -- AUTO_INCREMENT for table `voj_judge_results`
 --

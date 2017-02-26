@@ -16,6 +16,7 @@ import org.springframework.web.servlet.ModelAndView;
 import org.verwandlung.voj.web.exception.ResourceNotFoundException;
 import org.verwandlung.voj.web.model.DiscussionReply;
 import org.verwandlung.voj.web.model.DiscussionThread;
+import org.verwandlung.voj.web.model.DiscussionTopic;
 import org.verwandlung.voj.web.model.User;
 import org.verwandlung.voj.web.service.DiscussionService;
 import org.verwandlung.voj.web.util.CsrfProtector;
@@ -37,6 +38,7 @@ public class DiscussionController {
 	/**
 	 * 显示讨论列表页面.
 	 * @param discussionTopicSlug - 讨论话题的唯一英文缩写
+	 * @param problemId - 试题的唯一标识符
 	 * @param request - HttpRequest对象
 	 * @param response - HttpResponse对象
 	 * @return 包含讨论列表页面内容的ModelAndView对象
@@ -44,12 +46,20 @@ public class DiscussionController {
 	@RequestMapping(value="", method=RequestMethod.GET)
 	public ModelAndView discussionThreadsView(
 			@RequestParam(value="topicSlug", required=false, defaultValue="") String discussionTopicSlug,
+			@RequestParam(value="problemId", required=false, defaultValue="-1") long problemId,
 			HttpServletRequest request, HttpServletResponse response) {
-		List<DiscussionThread> discussionThreads = discussionService.
-				getDiscussionThreadsOfTopic(discussionTopicSlug, 0, NUMBER_OF_THREADS_PER_REQUEST);
+		List<DiscussionThread> discussionThreads = null;
+		if ( problemId != -1 ) {
+			discussionThreads = discussionService.getDiscussionThreadsOfProblem(
+					problemId, 0, NUMBER_OF_THREADS_PER_REQUEST);
+		} else {
+			discussionThreads = discussionService.getDiscussionThreadsOfTopic(
+					discussionTopicSlug, 0, NUMBER_OF_THREADS_PER_REQUEST);
+		}
 
 		ModelAndView view = new ModelAndView("discussion/threads");
 		view.addObject("selectedTopicSlug", discussionTopicSlug);
+		view.addObject("problemId", problemId);
 		view.addObject("discussionThreads", discussionThreads);
 		view.addObject("discussionTopics", discussionService.getDiscussionTopicsWithHierarchy());
 		return view;
@@ -59,18 +69,26 @@ public class DiscussionController {
 	 * 获取讨论帖子列表.
 	 * @param startIndex - 获取讨论帖子的Offset
 	 * @param discussionTopicSlug - 讨论话题的唯一英文缩写
+	 * @param problemId - 试题的唯一标识符
 	 * @return 一个包含讨论帖子列表的HashMap对象
 	 */
 	@RequestMapping(value="/getDiscussionThreads.action", method=RequestMethod.GET)
 	public @ResponseBody Map<String, Object> getDiscussionThreadsAction(
 			@RequestParam(value="startIndex") long startIndex,
-			@RequestParam(value="topicSlug", required = false) String discussionTopicSlug,
+			@RequestParam(value="topicSlug", required=false, defaultValue="") String discussionTopicSlug,
+			@RequestParam(value="problemId", required=false, defaultValue="-1") long problemId,
 			HttpServletRequest request) {
 		if ( startIndex < 0 ) {
 			startIndex = 0;
 		}
-		List<DiscussionThread> discussionThreads = discussionService.getDiscussionThreadsOfTopic(
-				discussionTopicSlug, startIndex, NUMBER_OF_THREADS_PER_REQUEST);
+		List<DiscussionThread> discussionThreads = null;
+		if ( problemId != -1 ) {
+			discussionThreads = discussionService.getDiscussionThreadsOfProblem(
+					problemId, startIndex, NUMBER_OF_THREADS_PER_REQUEST);
+		} else {
+			discussionThreads = discussionService.getDiscussionThreadsOfTopic(
+					discussionTopicSlug, startIndex, NUMBER_OF_THREADS_PER_REQUEST);
+		}
 
 		Map<String, Object> result = new HashMap<String, Object>(3, 1);
 		result.put("isSuccessful", discussionThreads != null && !discussionThreads.isEmpty());
@@ -98,6 +116,30 @@ public class DiscussionController {
 		ModelAndView view = new ModelAndView("discussion/thread");
 		view.addObject("discussionThread", discussionThread);
 		if ( isLoggedIn(session) ) {
+			List<DiscussionTopic> discussionTopics = discussionService.getDiscussionTopics();
+			view.addObject("discussionTopics", discussionTopics);
+			view.addObject("csrfToken", CsrfProtector.getCsrfToken(session));
+		}
+		return view;
+	}
+
+	/**
+	 * 显示创建讨论页面.
+	 * @param request - HttpRequest对象
+	 * @param response - HttpResponse对象
+	 * @return 包含创建讨论页面内容的ModelAndView对象
+	 */
+	@RequestMapping(value="/new", method=RequestMethod.GET)
+	public ModelAndView newDiscussionThreadView(
+			HttpServletRequest request, HttpServletResponse response) {
+		HttpSession session = request.getSession();
+		ModelAndView view = null;
+		if ( !isLoggedIn(session) ) {
+			view = new ModelAndView("redirect:/accounts/login?forward=/discussion/new");
+		} else {
+			List<DiscussionTopic> discussionTopics = discussionService.getDiscussionTopics();
+			view = new ModelAndView("discussion/new-thread");
+			view.addObject("discussionTopics", discussionTopics);
 			view.addObject("csrfToken", CsrfProtector.getCsrfToken(session));
 		}
 		return view;
