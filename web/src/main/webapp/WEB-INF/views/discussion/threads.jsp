@@ -194,7 +194,8 @@
         function getMoreDiscussionThreads(startIndex) {
             var pageRequests = {
                 'startIndex': startIndex,
-                'category': '${selectedTopicSlug}'
+                'category': '${selectedTopicSlug}',
+                'problemId': ${problemId},
             };
 
             $.ajax({

@@ -46,6 +46,7 @@
             <div class="header row-fluid">
                 <div class="span9">
                     <h3>${discussionThread.discussionThreadTitle}</h3>
+                    <p class="hide"><input id="discussion-thread-title" type="text" /></p>
                     <ul class="inline">
                         <li>
                             <i class="fa fa-clock-o"></i>
@@ -67,11 +68,14 @@
                         </li>
                     </ul>
                 </div> <!-- .span9 -->
-                <c:if test="${isLogin}">
                 <div class="span3 text-right">
-                    <button class="btn btn-primary"><spring:message code="voj.discussion.thread.new-discussion" text="New Discussion" /></button>
-                </div> <!-- .span3 -->
+                <c:if test="${myProfile.uid == discussionThread.discussionThreadCreator.uid}">
+                    <button class="btn btn-default" onclick="javascript:editDiscussion();"><spring:message code="voj.discussion.thread.edit-discussion" text="Edit" /></button>
                 </c:if>
+                <c:if test="${isLogin}">
+                    <button class="btn btn-primary" onclick="window.location.href='<c:url value="/discussion/new" />'"><spring:message code="voj.discussion.thread.new-discussion" text="New Discussion" /></button>
+                </c:if>
+                </div> <!-- .span3 -->
             </div> <!-- .row-fluid -->
             <div class="body row-fluid">
                 <div class="span9">
@@ -524,6 +528,38 @@
             }
             $('.btn-primary', '#editor').removeAttr('disabled');
             $('.btn-primary', '#editor').html('<spring:message code="voj.discussion.thread.comment" text="Comment" />');
+        }
+    </script>
+    </c:if>
+    <c:if test="${myProfile.uid == discussionThread.discussionThreadCreator.uid}">
+    <script type="text/javascript">
+        function editDiscussion() {
+            if ( !$('#discussion-thread-title').is(':visible') ) {
+                setEditControlsVisibility(true);
+            } else {
+            }
+        }
+    </script>
+    <script type="text/javascript">
+        function setEditControlsVisibility(isVisible) {
+            if ( isVisible ) {
+
+            } else {
+                var discussionThreadTitle = $('#discussion-thread > .header h3').html();
+                $('#discussion-thread-title').val(discussionThreadTitle);
+                $('#discussion-thread > .header h3').addClass('hide');
+                $('#discussion-thread-title').removeClass('hide');
+            }
+        }
+    </script>
+    <script type="text/javascript">
+        function doEditDiscussionThreadAction() {
+            var discussionThreadTitle     = '',
+                discussionThreadTopicSlug = '';
+
+            $.ajax({
+
+            });
         }
     </script>
     </c:if>
