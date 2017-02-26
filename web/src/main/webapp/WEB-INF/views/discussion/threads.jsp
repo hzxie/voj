@@ -84,7 +84,12 @@
                                 </li>
                             </ul>
                         </td>
-                        <td class="reply-count">${discussionThread.numberOfReplies <= 1 ?  0 : discussionThread.numberOfReplies - 1}</td>
+                        <td class="reply-count">
+                            <c:choose>
+                            <c:when test="${discussionThread.discussionTopic.discussionTopicSlug == 'solutions'}">${discussionThread.numberOfReplies}</c:when>
+                            <c:otherwise>${discussionThread.numberOfReplies <= 1 ?  0 : discussionThread.numberOfReplies - 1}</c:otherwise>
+                            </c:choose>
+                        </td>
                     </tr>
                 </c:forEach>
                 </table> <!-- .table -->
