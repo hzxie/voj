@@ -28,10 +28,10 @@ public class DiscussionTopicMapperTest {
 	@Test
 	public void testGetDiscussionTopics() {
 		List<DiscussionTopic> topics = discussionTopicMapper.getDiscussionTopics();
-		Assert.assertEquals(2, topics.size());
+		Assert.assertEquals(4, topics.size());
 
 		DiscussionTopic firstTopic = topics.get(0);
-		Assert.assertEquals("general", firstTopic.getDiscussionTopicSlug());
+		Assert.assertEquals("solutions", firstTopic.getDiscussionTopicSlug());
 	}
 
 	/**
@@ -43,7 +43,7 @@ public class DiscussionTopicMapperTest {
 	public void testGetDiscussionTopicUsingIdExists() {
 		DiscussionTopic topic = discussionTopicMapper.getDiscussionTopicUsingId(1);
 		Assert.assertNotNull(topic);
-		Assert.assertEquals("general", topic.getDiscussionTopicSlug());
+		Assert.assertEquals("solutions", topic.getDiscussionTopicSlug());
 	}
 
 	/**
@@ -64,7 +64,7 @@ public class DiscussionTopicMapperTest {
 	 */
 	@Test
 	public void testGetDiscussionTopicUsingSlugExists() {
-		DiscussionTopic topic = discussionTopicMapper.getDiscussionTopicUsingSlug("general");
+		DiscussionTopic topic = discussionTopicMapper.getDiscussionTopicUsingSlug("solutions");
 		Assert.assertNotNull(topic);
 		Assert.assertEquals(1, topic.getDiscussionTopicId());
 	}
