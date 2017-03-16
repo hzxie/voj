@@ -5,8 +5,7 @@
 	xmlns:context="http://www.springframework.org/schema/context"
 	xmlns:aop="http://www.springframework.org/schema/aop" 
 	xmlns:amq="http://activemq.apache.org/schema/core"
-	xmlns:jms="http://www.springframework.org/schema/jms" 
-	xmlns:websocket="http://www.springframework.org/schema/websocket"
+	xmlns:jms="http://www.springframework.org/schema/jms"
 	xmlns:util="http://www.springframework.org/schema/util"
 	xsi:schemaLocation="http://www.springframework.org/schema/beans
 	http://www.springframework.org/schema/beans/spring-beans.xsd
@@ -22,8 +21,6 @@
 	http://activemq.apache.org/schema/core/activemq-core.xsd
 	http://www.springframework.org/schema/jms
 	http://www.springframework.org/schema/jms/spring-jms.xsd
-	http://www.springframework.org/schema/websocket
-	http://www.springframework.org/schema/websocket/spring-websocket.xsd
 	http://www.springframework.org/schema/util 
 	http://www.springframework.org/schema/util/spring-util.xsd">
 	<!-- Base Components -->
@@ -101,10 +98,9 @@
 	<tx:annotation-driven transaction-manager="transactionManager" />
 
 	<!-- Mail Service -->
-	<bean id="velocityEngine"
-		class="org.springframework.ui.velocity.VelocityEngineFactoryBean">
-		<property name="resourceLoaderPath" value="classpath:/mails" />
-		<property name="preferFileSystemAccess" value="false" />
+	<bean id="freeMarkerConfigurer"
+		class="org.springframework.web.servlet.view.freemarker.FreeMarkerConfigurer">
+		<property name="templateLoaderPath" value="classpath:/mails"/>
 	</bean>
 	<bean id="mailSender" class="org.springframework.mail.javamail.JavaMailSenderImpl">
 		<property name="host" value="${mail.host}" />

@@ -1,5 +1,6 @@
 package org.verwandlung.voj.web.service;
 
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
@@ -13,6 +14,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.alibaba.fastjson.JSON;
+
+import freemarker.template.TemplateException;
+
 import org.verwandlung.voj.web.mapper.EmailValidationMapper;
 import org.verwandlung.voj.web.mapper.LanguageMapper;
 import org.verwandlung.voj.web.mapper.UserGroupMapper;
@@ -258,6 +262,7 @@ public class UserService {
 	 */
 	public Map<String, Boolean> sendVerificationEmail(String username, 
 			String email, boolean isCsrfTokenValid) {
+		boolean isSuccessful = true;
 		boolean isUserExists = false;
 		Map<String, Boolean> result = new HashMap<String, Boolean>(4, 1);
 		
@@ -265,12 +270,17 @@ public class UserService {
 			User user = userMapper.getUserUsingUsername(username);
 			if ( user != null && user.getEmail().equals(email) ) {
 				isUserExists = true;
-				sendVerificationEmail(username, email);
+				try {
+					sendVerificationEmail(username, email);
+				} catch (IOException | TemplateException e) {
+					e.printStackTrace();
+					isSuccessful = false;
+				}
 			}
 		}
 		result.put("isCsrfTokenValid", isCsrfTokenValid);
 		result.put("isUserExists", isUserExists);
-		result.put("isSuccessful", isUserExists);
+		result.put("isSuccessful", isSuccessful && isUserExists);
 		
 		return result;
 	}
@@ -279,8 +289,11 @@ public class UserService {
 	 * 发送重设密码的邮件.
 	 * @param username - 用户的用户名
 	 * @param email - 用户的电子邮件地
+	 * @throws TemplateException 
+	 * @throws IOException
 	 */
-	private void sendVerificationEmail(String username, String email) {
+	private void sendVerificationEmail(String username, String email) 
+			throws IOException, TemplateException {
 		String token = DigestUtils.getGuid();
 		Date expireTime = getExpireTime();
 		Map<String, Object> model = new HashMap<String, Object>(4, 1);
@@ -292,7 +305,7 @@ public class UserService {
 		emailValidationMapper.deleteEmailValidation(email);
 		emailValidationMapper.createEmailValidation(emailValidation);
 		
-		String templatePath = "/reset-password.vm";
+		String templatePath = "/reset-password.ftl";
 		String subject = "Password Reset Request";
 		String body = mailSender.getMailContent(templatePath, model);
 		mailSender.sendMail(email, subject, body);

@@ -1,27 +1,30 @@
 language: java
-jdk:
-  - oraclejdk8
-  - oraclejdk7
+dist: trusty
+env:
+  - JDK=oraclejdk8
+  - JDK=oraclejdk9
+
+matrix:
+  allow_failures:
+    - JDK: oraclejdk9
 
 services: mysql
 
-before_install:
-# Install gcc 4.8
-  - sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
-  - sudo apt-get update -qq
-# Fix path error on JNI headers
-  - sudo ln -nsf ${JAVA_HOME}/include/linux/jni_md.h ${JAVA_HOME}/include/jni_md.h
-  - sudo ln -nsf ${JAVA_HOME}/include/linux/jawt_md.h ${JAVA_HOME}/include/jawt_md.h
-# Setup test environment for Linux
-  - cp judger/src/test/resources/voj-test-linux.properties judger/src/test/resources/voj-test.properties
-
-install:
-  - sudo apt-get install -qq g++-4.8
-  - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.8 90
-
 before_script:
+# Switch JDK
+  - jdk_switcher use $JDK
+# Import Database
   - mysql -e 'CREATE DATABASE test;'
   - mysql test < voj.sql
+
+before_install:
+# Fix path error on JNI headers
+  - sudo ln -nsf $JAVA_HOME/include/linux/jni_md.h $JAVA_HOME/include/jni_md.h
+  - sudo ln -nsf $JAVA_HOME/include/linux/jawt_md.h $JAVA_HOME/include/jawt_md.h
+# Setup test environment for Linux
+  - cp judger/src/test/resources/voj-test-linux.properties judger/src/test/resources/voj-test.properties
+# Setup Maven for Oracle JDK 9
+  - export MAVEN_SKIP_RC=true
 
 script: 
   - mvn test -f web/pom.xml
@@ -29,6 +32,10 @@ script:
 
 after_script:
   - mysql -e 'DROP DATABASE test;'
+
+after_success:
+  - mvn -f web/pom.xml cobertura:cobertura coveralls:report
+  - mvn -f judger/pom.xml cobertura:cobertura coveralls:reportTABASE test;'
 
 after_success:
   - mvn -f web/pom.xml cobertura:cobertura coveralls:report
