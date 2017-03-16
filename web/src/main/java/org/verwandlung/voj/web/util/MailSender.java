@@ -1,5 +1,6 @@
 package org.verwandlung.voj.web.util;
 
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.Map;
 
@@ -8,14 +9,19 @@ import javax.mail.internet.MimeMessage;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.velocity.app.VelocityEngine;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.mail.javamail.MimeMessagePreparator;
 import org.springframework.stereotype.Component;
-import org.springframework.ui.velocity.VelocityEngineUtils;
+import org.springframework.ui.freemarker.FreeMarkerTemplateUtils;
+
+import freemarker.core.ParseException;
+import freemarker.template.MalformedTemplateNameException;
+import freemarker.template.TemplateException;
+import freemarker.template.TemplateNotFoundException;
+import org.springframework.web.servlet.view.freemarker.FreeMarkerConfigurer;
 
 /**
  * 电子邮件发送服务.
@@ -26,12 +32,12 @@ import org.springframework.ui.velocity.VelocityEngineUtils;
 public class MailSender {
 	/**
 	 * MailSender的构造函数.
-	 * @param velocityEngine - Velocity模板解析引擎对象
+	 * @param freeMarkerConfigurer - FreeMarker的配置器
 	 * @param mailSender - JavaMailSender对象
 	 */
 	@Autowired
-	private MailSender(VelocityEngine velocityEngine, JavaMailSender mailSender) {
-		this.velocityEngine = velocityEngine;
+	private MailSender(FreeMarkerConfigurer freeMarkerConfigurer, JavaMailSender mailSender) {
+		this.freeMarkerConfigurer = freeMarkerConfigurer;
 		this.mailSender = mailSender;
 	}
 	
@@ -40,12 +46,19 @@ public class MailSender {
 	 * @param templateLocation - 电子邮件模板相对路径
 	 * @param model - 电子邮件的附加信息
 	 * @return 解析后的电子邮件内容
+	 * @throws TemplateException 
+	 * @throws IOException 
+	 * @throws ParseException 
+	 * @throws MalformedTemplateNameException 
+	 * @throws TemplateNotFoundException 
 	 */
-	public String getMailContent(String templateLocation, Map<String, Object> model) {
+	public String getMailContent(String templateLocation, Map<String, Object> model)
+			throws TemplateNotFoundException, MalformedTemplateNameException, 
+				ParseException, IOException, TemplateException {
 		model.put("baseUrl", baseUrl);
-		
-		return VelocityEngineUtils.
-				mergeTemplateIntoString(velocityEngine, templateLocation, DEFAULT_ENCODING, model);
+
+		return FreeMarkerTemplateUtils.processTemplateIntoString(
+				freeMarkerConfigurer.getConfiguration().getTemplate(templateLocation), model);
 	}
 	
 	/**
@@ -75,10 +88,9 @@ public class MailSender {
 	}
 
 	/**
-	 * 自动注入的VelocityEngine对象.
-	 * 用于解析Email模板.
+	 * 自动注入的Configuration对象.
 	 */
-	private final VelocityEngine velocityEngine;
+	private final FreeMarkerConfigurer freeMarkerConfigurer;
 	
 	/**
 	 * 自动注入的JavaMailSender对象.
@@ -104,11 +116,6 @@ public class MailSender {
 	 */
 	@Value("${url.base}")
 	private String baseUrl;
-	
-	/**
-	 * 电子邮件默认编码.
-	 */
-	private static final String DEFAULT_ENCODING = "UTF-8"; 
 	
 	/**
 	 * 日志记录器.

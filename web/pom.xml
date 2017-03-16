@@ -9,12 +9,18 @@
 	<url>http://maven.apache.org</url>
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<spring.version>4.3.5.RELEASE</spring.version>
+		<spring.version>5.0.0.M5</spring.version>
 		<aspectj.version>1.8.10</aspectj.version>
 		<mybatis.version>3.4.2</mybatis.version>
-		<druid.version>1.0.27</druid.version>
+		<druid.version>1.0.29</druid.version>
 		<activemq.version>5.14.2</activemq.version>
 	</properties>
+	<repositories>
+		<repository>
+			<id>Springframework Milestone</id>
+			<url>http://repo.spring.io/milestone</url>
+		</repository>
+	</repositories>
 	<dependencies>
 		<!-- Spring -->
 		<dependency>
@@ -53,11 +59,6 @@
 			<version>${spring.version}</version>
 		</dependency>
 		<dependency>
-			<groupId>org.springframework</groupId>
-			<artifactId>spring-websocket</artifactId>
-			<version>${spring.version}</version>
-		</dependency>
-		<dependency>
 			<groupId>org.aspectj</groupId>
 			<artifactId>aspectjrt</artifactId>
 			<version>${aspectj.version}</version>
@@ -76,7 +77,7 @@
 		<dependency>
 			<groupId>org.mybatis</groupId>
 			<artifactId>mybatis-spring</artifactId>
-			<version>1.3.0</version>
+			<version>1.3.1</version>
 		</dependency>
 		<dependency>
 			<groupId>org.mybatis.caches</groupId>
@@ -97,12 +98,12 @@
 		<dependency>
 			<groupId>com.alibaba</groupId>
 			<artifactId>fastjson</artifactId>
-			<version>1.2.23</version>
+			<version>1.2.28</version>
 		</dependency>
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
 			<artifactId>jackson-databind</artifactId>
-			<version>2.8.5</version>
+			<version>2.8.7</version>
 		</dependency>
 		<!-- JSTL Tags -->
 		<dependency>
@@ -110,11 +111,11 @@
 			<artifactId>jstl-api</artifactId>
 			<version>1.2</version>
 		</dependency>
-	<dependency>
-		<groupId>org.apache.taglibs</groupId>
-		<artifactId>taglibs-standard-impl</artifactId>
-		<version>1.2.5</version>
-	</dependency>
+		<dependency>
+			<groupId>org.apache.taglibs</groupId>
+			<artifactId>taglibs-standard-impl</artifactId>
+			<version>1.2.5</version>
+		</dependency>
 		<!-- Mail Service -->
 		<dependency>
 			<groupId>com.sun.mail</groupId>
@@ -127,20 +128,25 @@
 			<version>1.5.6</version>
 		</dependency>
 		<dependency>
+			<groupId>org.freemarker</groupId>
+			<artifactId>freemarker</artifactId>
+			<version>2.3.23</version>
+		</dependency>
+		<dependency>
 			<groupId>org.springframework</groupId>
 			<artifactId>spring-context-support</artifactId>
 			<version>${spring.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>org.apache.velocity</groupId>
-			<artifactId>velocity</artifactId>
-			<version>1.7</version>
 		</dependency>
 		<!-- Message Service -->
 		<dependency>
 			<groupId>org.apache.activemq</groupId>
 			<artifactId>activemq-spring</artifactId>
 			<version>${activemq.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>javax.jms</groupId>
+			<artifactId>javax.jms-api</artifactId>
+			<version>2.0.1</version>
 		</dependency>
 		<!-- Logger -->
 		<dependency>
@@ -184,6 +190,11 @@
 			<artifactId>jsoup</artifactId>
 			<version>1.10.2</version>
 		</dependency>
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-lang3</artifactId>
+			<version>3.5</version>
+		</dependency>
 	</dependencies>
 	<build>
 		<finalName>voj.web</finalName>
@@ -204,8 +215,8 @@
 			<!-- For Maven Tomcat Plugin -->
 			<plugin>
 				<groupId>org.apache.tomcat.maven</groupId>
-				<artifactId>tomcat7-maven-plugin</artifactId>
-				<version>2.2</version>
+				<artifactId>tomcat8-maven-plugin</artifactId>
+				<version>3.0-r1655215</version>
 				<configuration>
 					<path>/voj</path>
 				</configuration>
@@ -215,8 +226,8 @@
 				<artifactId>maven-compiler-plugin</artifactId>
 				<version>3.6.0</version>
 				<configuration>
-					<source>1.7</source>
-					<target>1.7</target>
+					<source>1.8</source>
+					<target>1.8</target>
 					<encoding>UTF-8</encoding>
 				</configuration>
 			</plugin>

@@ -71,15 +71,14 @@ For Web Application (including Database and Message Queue):
 
 - **Operating System**: Windows, Linux or Mac
 - **Database**: [MySQL](http://www.mysql.com) 5.5+ or [MariaDB](https://mariadb.org/) 5.5+
-- **Java Runtime**: [JRE](http://java.oracle.com) 1.7+ or JDK 1.7+
+- **Java Runtime**: [JRE](http://java.oracle.com) 1.8+ or JDK 1.8+
 - **Message Queue**: [ActiveMQ](http://activemq.apache.org) 5.11+
-- **Web Server**: [Tomcat](http://tomcat.apache.org) 7.0+
+- **Web Server**: [Tomcat](http://tomcat.apache.org) 8.5+
 
 For Judger:
 
 - **Operating System**: Windows or Linux
 - **Java Runtime**: [JRE](http://java.oracle.com) 1.7+ or JDK 1.7+
-
 
 ### Installation
 
