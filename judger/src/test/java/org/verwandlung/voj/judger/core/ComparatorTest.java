@@ -121,11 +121,12 @@ public class ComparatorTest {
 	}
 
 	/**
+	 * Disabled this test case for faster build.
+	 * 
 	 * 测试用例: 测试isOutputTheSame(String, String)方法 
 	 * 测试数据: 过长的输出文件流 
 	 * 测试结果: 返回false, 表示输出结果不正确
 	 */
-	@Test
 	public void testMatchWithOutOfMemory() throws IOException {
 		String outputFilePath = "/tmp/voj-matcher-tests/match-out-of-memory.txt";
 		Assert.assertFalse(comparator.isOutputTheSame(outputFilePath, outputFilePath));

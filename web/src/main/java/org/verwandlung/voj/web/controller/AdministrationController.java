@@ -174,7 +174,7 @@ public class AdministrationController {
 	public @ResponseBody Map<String, Object> getNumberOfSubmissionsAction(
 			@RequestParam(value="period") int period,
 			HttpServletRequest request) {
-		Map<String, Object> submissions = new HashMap<String, Object>(2, 1);
+		Map<String, Object> submissions = new HashMap<>(2, 1);
 		Date today = new Date();
 		Date previousDate = DateUtils.getPreviousDate(period);
 		Map<String, Long> totalSubmissions = submissionService.getNumberOfSubmissions(previousDate, today, 0, false);
@@ -224,7 +224,7 @@ public class AdministrationController {
 	public @ResponseBody Map<String, Boolean> deleteUsersAction(
 			@RequestParam(value="users") String users,
 			HttpServletRequest request) {
-		Map<String, Boolean> result = new HashMap<String, Boolean>(2, 1);
+		Map<String, Boolean> result = new HashMap<>(2, 1);
 		List<Long> userList = JSON.parseArray(users, Long.class);
 		
 		for ( Long userId : userList ) {
@@ -288,7 +288,7 @@ public class AdministrationController {
 			@RequestParam(value="aboutMe") String aboutMe,
 			HttpServletRequest request) {
 		User user = userService.getUserUsingUid(uid);
-		Map<String, Boolean> result = new HashMap<String, Boolean>(12, 1);
+		Map<String, Boolean> result = new HashMap<>(12, 1);
 		result.put("isSuccessful", false);
 		result.put("isUserExists", false);
 		
@@ -400,7 +400,7 @@ public class AdministrationController {
 	public @ResponseBody Map<String, Boolean> deleteProblemsAction(
 			@RequestParam(value="problems") String problems,
 			HttpServletRequest request) {
-		Map<String, Boolean> result = new HashMap<String, Boolean>(2, 1);
+		Map<String, Boolean> result = new HashMap<>(2, 1);
 		List<Long> problemList = JSON.parseArray(problems, Long.class);
 		
 		for ( Long problemId : problemList ) {
@@ -654,9 +654,9 @@ public class AdministrationController {
 	public @ResponseBody Map<String, Object> deleteProblemCategoryAction(
 			@RequestParam(value="problemCategories") String problemCategories,
 			HttpServletRequest request) {
-		Map<String, Object> result = new HashMap<String, Object>(3, 1);
+		Map<String, Object> result = new HashMap<>(3, 1);
 		List<Integer> problemCategoryList = JSON.parseArray(problemCategories, Integer.class);
-		List<Integer> deletedProblemCategories = new ArrayList<Integer>();
+		List<Integer> deletedProblemCategories = new ArrayList<>();
 
 		for ( int problemCategoryId : problemCategoryList ) {
 			if ( problemService.deleteProblemCategory(problemCategoryId) ) {
@@ -712,9 +712,9 @@ public class AdministrationController {
 	public @ResponseBody Map<String, Object> deleteSubmissionsAction(
 			@RequestParam(value="submissions") String submissions,
 			HttpServletRequest request) {
-		Map<String, Object> result = new HashMap<String, Object>(3, 1);
+		Map<String, Object> result = new HashMap<>(3, 1);
 		List<Long> submissionList = JSON.parseArray(submissions, Long.class);
-		List<Long> deletedSubmissions = new ArrayList<Long>();
+		List<Long> deletedSubmissions = new ArrayList<>();
 
 		for ( Long submissionId : submissionList ) {
 			if ( submissionService.deleteSubmission(submissionId) ) {
@@ -739,7 +739,7 @@ public class AdministrationController {
 	public @ResponseBody Map<String, Boolean> restartSubmissionsAction(
 			@RequestParam(value="submissions") String submissions,
 			HttpServletRequest request) {
-		Map<String, Boolean> result = new HashMap<String, Boolean>(2, 1);
+		Map<String, Boolean> result = new HashMap<>(2, 1);
 		List<Long> submissionList = JSON.parseArray(submissions, Long.class);
 		
 		for ( Long submissionId : submissionList ) {
@@ -789,7 +789,7 @@ public class AdministrationController {
 	 * @return 键值对形式的系统选项
 	 */
 	private Map<String, String> getOptions() {
-		Map<String, String> optionMap = new HashMap<String, String>();
+		Map<String, String> optionMap = new HashMap<>();
 		List<Option> options = optionService.getOptions();
 		
 		for ( Option option : options ) {

@@ -222,7 +222,7 @@ public class SubmissionService {
 	 * @return 某个试题ID区间段内的通过的评测结果
 	 */
 	public Map<Long, Submission> getSubmissionOfProblems(long userId, long problemIdLowerBound, long problemIdUpperBound) {
-		Map<Long, Submission> submissionOfProblems = new HashMap<Long, Submission>();
+		Map<Long, Submission> submissionOfProblems = new HashMap<>();
 		List<Submission> latestSubmission = submissionMapper.getLatestSubmissionOfProblems(userId, problemIdLowerBound, problemIdUpperBound);
 		List<Submission> acceptedSubmission = submissionMapper.getAcceptedSubmissionOfProblems(userId, problemIdLowerBound, problemIdUpperBound);
 		
@@ -251,7 +251,7 @@ public class SubmissionService {
 			acRate = acceptedSubmission * 100 / totalSubmission;
 		}
 		
-		Map<String, Long> submissionStats = new HashMap<String, Long>(4, 1);
+		Map<String, Long> submissionStats = new HashMap<>(4, 1);
 		submissionStats.put("acceptedSubmission", acceptedSubmission);
 		submissionStats.put("totalSubmission", totalSubmission);
 		submissionStats.put("acRate", acRate);
@@ -294,7 +294,7 @@ public class SubmissionService {
 	 * @return 一个包含提交记录的验证结果的Map<String, Boolean>对象
 	 */
 	private Map<String, ? extends Object> getSubmissionCreationResult(Submission submission, boolean isCsrfTokenValid) {
-		Map<String, Boolean> result = new HashMap<String, Boolean>(6, 1);
+		Map<String, Boolean> result = new HashMap<>(6, 1);
 		String code = submission.getCode();
 		result.put("isUserLogined", submission.getUser() != null);
 		result.put("isProblemExists", submission.getProblem() != null);
@@ -314,7 +314,7 @@ public class SubmissionService {
 	 * @param submissionId - 提交记录的唯一标识符
 	 */
 	public void createSubmissionTask(long submissionId) {
-		Map<String, Object> mapMessage = new HashMap<String, Object>();
+		Map<String, Object> mapMessage = new HashMap<>();
 		mapMessage.put("event", "SubmissionCreated");
 		mapMessage.put("submissionId", submissionId);
 		

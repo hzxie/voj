@@ -1,5 +1,5 @@
 CC=g++
-CFLAGS=-c -std=c++11 -Wall -fPIC -I "${JAVA_HOME}/include"
+CFLAGS=-c -std=c++11 -Wall -fPIC -I "${JAVA_HOME}/include" -I "${JAVA_HOME}/include/linux"
 LDFLAGS=-fPIC -shared
 EXTFLAGS=
 

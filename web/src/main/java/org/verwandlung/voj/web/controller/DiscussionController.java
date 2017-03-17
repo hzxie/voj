@@ -87,7 +87,7 @@ public class DiscussionController {
 					discussionTopicSlug, startIndex, NUMBER_OF_THREADS_PER_REQUEST);
 		}
 
-		Map<String, Object> result = new HashMap<String, Object>(3, 1);
+		Map<String, Object> result = new HashMap<>(3, 1);
 		result.put("isSuccessful", discussionThreads != null && !discussionThreads.isEmpty());
 		result.put("discussionThreads", discussionThreads);
 		return result;
@@ -174,7 +174,7 @@ public class DiscussionController {
 
 		List<DiscussionReply> discussionReplies = discussionService.getDiscussionRepliesOfThread(
 				discussionThreadId, currentUserUid, startIndex, NUMBER_OF_REPLIES_PER_REQUEST);
-		Map<String, Object> result = new HashMap<String, Object>(3, 1);
+		Map<String, Object> result = new HashMap<>(3, 1);
 		result.put("isSuccessful", discussionReplies != null && !discussionReplies.isEmpty());
 		result.put("discussionReplies", discussionReplies);
 		return result;

@@ -45,7 +45,7 @@ public class LanguageService {
 	 */
 	public Map<String, Object> updateLanguageSettings(List<Language> languages) {
 		List<Language> previousLanguages = languageMapper.getAllLanguages();
-		Map<String, Object> result = new HashMap<String, Object>();
+		Map<String, Object> result = new HashMap<>();
 		Map<String, Object> validationResult = getUpdateLanguageSettingsResult(previousLanguages, languages);
 		boolean isSuccessful = (Boolean) validationResult.get("isSuccessful");
 		
@@ -71,10 +71,10 @@ public class LanguageService {
 	 */
 	private Map<String, Object> getUpdateLanguageSettingsResult(List<Language> previousLanguages, List<Language> newLanguages) {
 		boolean isSuccessful = true;
-		Map<String, Object> result = new HashMap<String, Object>();
+		Map<String, Object> result = new HashMap<>();
 		
 		for ( Language language : previousLanguages ) {
-			Map<String, Boolean> languageResult = new HashMap<String, Boolean>(4, 1);
+			Map<String, Boolean> languageResult = new HashMap<>(4, 1);
 			languageResult.put("isLanguageDeleted", isLanguageDeleted(newLanguages, language));
 			languageResult.put("isLangaugeInUse", isLanguageInUse(language));
 			
@@ -85,7 +85,7 @@ public class LanguageService {
 			isSuccessful &= isLanguageSuccessful;
 		}
 		for ( Language language : newLanguages ) {
-			Map<String, Boolean> languageResult = new HashMap<String, Boolean>(10, 1);
+			Map<String, Boolean> languageResult = new HashMap<>(10, 1);
 			languageResult.put("isLanguageSlugEmpty", language.getLanguageSlug().isEmpty());
 			languageResult.put("isLanguageSlugLegal", isLanguageSlugLegal(language.getLanguageSlug()));
 			languageResult.put("isLanguageSlugExists", isLanguageSlugExists(language.getLanguageSlug(), language.getLanguageId()));
@@ -117,9 +117,9 @@ public class LanguageService {
 	 * @return 包含编程语言设置的更改情况的Map<String, List<Language>>对象
 	 */
 	private Map<String, List<Language>> getLanguageChanges(List<Language> previousLanguages, List<Language> newLanguages) {
-		List<Language> languageCreated = new ArrayList<Language>();
-		List<Language> languageUpdated = new ArrayList<Language>();
-		List<Language> languageDeleted = new ArrayList<Language>();
+		List<Language> languageCreated = new ArrayList<>();
+		List<Language> languageUpdated = new ArrayList<>();
+		List<Language> languageDeleted = new ArrayList<>();
 		
 		for ( Language language : newLanguages ) {
 			int languageId = language.getLanguageId();

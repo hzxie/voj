@@ -111,7 +111,7 @@ public class ProblemService {
 		for ( ProblemCategoryRelationship pcr : problemCategoryRelationships ) {
 			long problemId = pcr.getProblemId();
 			if ( !problemCategoriesOfProblems.containsKey(problemId) ) {
-				problemCategoriesOfProblems.put(problemId, new ArrayList<ProblemCategory>());
+				problemCategoriesOfProblems.put(problemId, new ArrayList<>());
 			}
 
 			List<ProblemCategory> problemCategories = problemCategoriesOfProblems.get(problemId);
@@ -146,7 +146,7 @@ public class ProblemService {
 		for ( ProblemTagRelationship ptr : problemTagRelationships ) {
 			long problemId = ptr.getProblemId();
 			if ( !problemTagsOfProblems.containsKey(problemId) ) {
-				problemTagsOfProblems.put(problemId, new ArrayList<ProblemTag>());
+				problemTagsOfProblems.put(problemId, new ArrayList<>());
 			}
 
 			List<ProblemTag> problemTags = problemTagsOfProblems.get(problemId);
@@ -178,7 +178,7 @@ public class ProblemService {
 		// 将无父亲的试题分类加入列表
 		for ( ProblemCategory pc : problemCategories ) {
 			if ( pc.getParentProblemCategoryId() == 0 ) {
-				List<ProblemCategory> subProblemCategories = new ArrayList<ProblemCategory>();
+				List<ProblemCategory> subProblemCategories = new ArrayList<>();
 				problemCategoriesHierarchy.put(pc, subProblemCategories);
 				problemCategoriesIndexer.put(pc.getProblemCategoryId(), subProblemCategories);
 			}
@@ -280,7 +280,7 @@ public class ProblemService {
 	 * @return 包含试题创建结果的Map<String, Boolean>对象
 	 */
 	private Map<String, ? extends Object> getProblemCreationResult(Problem problem) {
-		Map<String, Boolean> result = new HashMap<String, Boolean>();
+		Map<String, Boolean> result = new HashMap<>();
 		result.put("isProblemNameEmpty", problem.getProblemName().isEmpty());
 		result.put("isProblemNameLegal", isProblemNameLegal(problem.getProblemName()));
 		result.put("isTimeLimitLegal", problem.getTimeLimit() > 0);

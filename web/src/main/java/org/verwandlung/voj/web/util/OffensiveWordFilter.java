@@ -38,11 +38,11 @@ public class OffensiveWordFilter {
 			String optionValue = offensiveWordOption.getOptionValue();
 			offensiveWordJson = JSON.parseArray(optionValue);
 		}
-		List<String> offensiveWordList = new ArrayList<String>((int) (offensiveWordJson.size() * 1.5));
+		List<String> offensiveWordList = new ArrayList<>((int) (offensiveWordJson.size() * 1.5));
 		for ( Object o : offensiveWordJson ) {
 			offensiveWordList.add((String) o);
 		}
-		Set<String> offensiveWordSet = new HashSet<String>(offensiveWordList);
+		Set<String> offensiveWordSet = new HashSet<>(offensiveWordList);
 		this.addOffensiveWordsToHashMap(offensiveWordSet);
 	}
 	
@@ -85,7 +85,7 @@ public class OffensiveWordFilter {
 	 * @return 敏感词的位置
 	 */
 	private List<Position> getOffensiveWordsPosition(String text, int matchType) {
-		List<Position> offensiveWordsPosition = new ArrayList<Position>();
+		List<Position> offensiveWordsPosition = new ArrayList<>();
 		// 遍历待过滤字符串,  检查 txt 以 i 开始的子串的前缀, 是否为敏感词
 		for ( int i = 0; i < text.length(); ++ i ) {
 			int length = checkOffensiveWord(text, i, matchType);

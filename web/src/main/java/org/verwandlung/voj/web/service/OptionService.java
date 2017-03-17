@@ -64,7 +64,7 @@ public class OptionService {
 			String websiteDescription,  String copyright, boolean allowUserRegister, 
 			String icpNumber, String policeIcpNumber, String googleAnalyticsCode, 
 			String offensiveWords) {
-		Map<String, Boolean> result = new HashMap<String, Boolean>();
+		Map<String, Boolean> result = new HashMap<>();
 		result.put("isWebsiteNameEmpty", websiteName.isEmpty());
 		result.put("isWebisteNameLegal", isWebsiteNameLegal(websiteName));
 		result.put("isDescriptionEmpty", websiteDescription.isEmpty());
@@ -81,7 +81,7 @@ public class OptionService {
 								result.get("isIcpNumberLegal")   && result.get("isPoliceIcpNumberLegal") && 
 								result.get("isAnalyticsCodeLegal");
 		if ( isSuccessful ) {
-			Map<String, String> optionMap = new HashMap<String, String>();
+			Map<String, String> optionMap = new HashMap<>();
 			optionMap.put("websiteName", websiteName);
 			optionMap.put("description", websiteDescription);
 			optionMap.put("copyright", copyright);

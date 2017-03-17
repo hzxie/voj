@@ -68,7 +68,7 @@ public class SubmissionController {
 			@RequestParam(value="username", required=false, defaultValue="") String username,
 			@RequestParam(value="startIndex") long startIndex,
 			HttpServletRequest request) {
-		Map<String, Object> result = new HashMap<String, Object>(3, 1);
+		Map<String, Object> result = new HashMap<>(3, 1);
 
 		List<Submission> submissions = submissionService.getSubmissions(problemId, username, startIndex, NUMBER_OF_SUBMISSION_PER_PAGE);
 		result.put("isSuccessful", submissions != null && !submissions.isEmpty());
@@ -91,7 +91,7 @@ public class SubmissionController {
 			@RequestParam(value="username", required=false, defaultValue="") String username,
 			@RequestParam(value="startIndex") long startIndex,
 			HttpServletRequest request) {
-		Map<String, Object> result = new HashMap<String, Object>(3, 1);
+		Map<String, Object> result = new HashMap<>(3, 1);
 
 		List<Submission> submissions = submissionService.getLatestSubmissions(problemId, username, startIndex, NUMBER_OF_SUBMISSION_PER_PAGE);
 		result.put("isSuccessful", submissions != null && !submissions.isEmpty());
@@ -159,7 +159,7 @@ public class SubmissionController {
 	public @ResponseBody Map<String, Object> getSubmissionAction(
 			@RequestParam(value="submissionId") long submissionId,
 			HttpServletRequest request) {
-		Map<String, Object> result = new HashMap<String, Object>(3, 1);
+		Map<String, Object> result = new HashMap<>(3, 1);
 
 		Submission submission = submissionService.getSubmission(submissionId);
 		result.put("isSuccessful", submission != null);

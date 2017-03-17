@@ -323,7 +323,7 @@ public class AccountsController {
 			HttpSession session = request.getSession();
 			userId = (Long)session.getAttribute("uid");
 		}
-		Map<String, Object> submissions = new HashMap<String, Object>(2, 1);
+		Map<String, Object> submissions = new HashMap<>(2, 1);
 		Date today = new Date();
 		Date previousDate = DateUtils.getPreviousDate(period);
 		Map<String, Long> totalSubmissions = submissionService.getNumberOfSubmissions(previousDate, today, userId, false);
