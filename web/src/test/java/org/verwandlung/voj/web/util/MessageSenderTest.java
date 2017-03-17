@@ -28,7 +28,7 @@ public class MessageSenderTest {
 	 */
 	/* @Test */
 	public void testSendMessage() {
-		Map<String, Object> mapMessage = new HashMap<String, Object>();
+		Map<String, Object> mapMessage = new HashMap<>();
 		mapMessage.put("message", "Hello World");
 		messageSender.sendMessage(mapMessage);
 	}

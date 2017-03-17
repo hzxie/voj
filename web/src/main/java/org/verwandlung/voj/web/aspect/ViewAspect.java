@@ -78,7 +78,7 @@ public class ViewAspect {
 	 */
 	private Map<String, String> getSystemOptions() {
 		List<Option> options = optionService.getAutoloadOptions();
-		Map<String, String> optionMap = new HashMap<String, String>();
+		Map<String, String> optionMap = new HashMap<>();
 		
 		for ( Option option : options  ) {
 			String key = option.getOptionName();

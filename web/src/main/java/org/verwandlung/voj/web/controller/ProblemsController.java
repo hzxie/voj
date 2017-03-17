@@ -109,7 +109,7 @@ public class ProblemsController {
 					getSubmissionOfProblems(userId, startIndex, startIndex + NUMBER_OF_PROBLEMS_PER_PAGE);
 		}
 		
-		Map<String, Object> result = new HashMap<String, Object>(4, 1);
+		Map<String, Object> result = new HashMap<>(4, 1);
 		result.put("isSuccessful", problems != null && !problems.isEmpty());
 		result.put("problems", problems);
 		result.put("submissionOfProblems", submissionOfProblems);

@@ -2,11 +2,8 @@ language: java
 dist: trusty
 env:
   - JDK=oraclejdk8
+  - JDK=openjdk8
   - JDK=oraclejdk9
-
-matrix:
-  allow_failures:
-    - JDK: oraclejdk9
 
 services: mysql
 

@@ -78,7 +78,7 @@ For Web Application (including Database and Message Queue):
 For Judger:
 
 - **Operating System**: Windows or Linux
-- **Java Runtime**: [JRE](http://java.oracle.com) 1.7+ or JDK 1.7+
+- **Java Runtime**: [JRE](http://java.oracle.com) 1.8+ or JDK 1.8+
 
 ### Installation
 

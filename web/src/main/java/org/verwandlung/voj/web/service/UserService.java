@@ -66,7 +66,7 @@ public class UserService {
 	 * @return 用户元信息的键值对
 	 */
 	public Map<String, Object> getUserMetaUsingUid(User user) {
-		Map<String, Object> userMetaMap = new HashMap<String, Object>(); 
+		Map<String, Object> userMetaMap = new HashMap<>(); 
 		if ( user == null ) {
 			return userMetaMap;
 		}
@@ -107,7 +107,7 @@ public class UserService {
 	 * @return 一个包含登录验证结果的Map<String, Boolean>对象
 	 */
 	public Map<String, Boolean> isAllowedToLogin(String username, String password) {
-		Map<String, Boolean> result = new HashMap<String, Boolean>(6, 1);
+		Map<String, Boolean> result = new HashMap<>(6, 1);
 		result.put("isUsernameEmpty", username.isEmpty());
 		result.put("isPasswordEmpty", password.isEmpty());
 		result.put("isAccountValid", false);
@@ -212,7 +212,7 @@ public class UserService {
 	 */
 	private Map<String, Boolean> getUserCreationResult(User user, String password, 
 			boolean isCsrfTokenValid, boolean isAllowRegister) {
-		Map<String, Boolean> result = new HashMap<String, Boolean>(13, 1);
+		Map<String, Boolean> result = new HashMap<>(13, 1);
 		result.put("isUsernameEmpty", user.getUsername().isEmpty());
 		result.put("isUsernameLegal", isUsernameLegal(user.getUsername()));
 		result.put("isUsernameExists", isUsernameExists(user.getUsername()));
@@ -264,7 +264,7 @@ public class UserService {
 			String email, boolean isCsrfTokenValid) {
 		boolean isSuccessful = true;
 		boolean isUserExists = false;
-		Map<String, Boolean> result = new HashMap<String, Boolean>(4, 1);
+		Map<String, Boolean> result = new HashMap<>(4, 1);
 		
 		if ( isCsrfTokenValid ) {
 			User user = userMapper.getUserUsingUsername(username);
@@ -296,7 +296,7 @@ public class UserService {
 			throws IOException, TemplateException {
 		String token = DigestUtils.getGuid();
 		Date expireTime = getExpireTime();
-		Map<String, Object> model = new HashMap<String, Object>(4, 1);
+		Map<String, Object> model = new HashMap<>(4, 1);
 		model.put("username", username);
 		model.put("email", email);
 		model.put("token", token);
@@ -360,7 +360,7 @@ public class UserService {
 	private Map<String, Boolean> getResetPasswordResult(String newPassword, 
 			String confirmPassword, boolean isEmailValidationValid, 
 			boolean isCsrfTokenValid) {
-		Map<String, Boolean> result = new HashMap<String, Boolean>(7, 1);
+		Map<String, Boolean> result = new HashMap<>(7, 1);
 		result.put("isEmailValidationValid", isEmailValidationValid);
 		result.put("isCsrfTokenValid", isCsrfTokenValid);
 		result.put("isNewPasswordEmpty", newPassword.isEmpty());
@@ -381,7 +381,7 @@ public class UserService {
 	 * @return 一个包含编程语言偏好更改结果的Map<String, Boolean>对象
 	 */
 	public Map<String, Boolean> changePreferLanguage(User user, String preferLanguageSlug) {
-		Map<String, Boolean> result = new HashMap<String, Boolean>(2, 1);
+		Map<String, Boolean> result = new HashMap<>(2, 1);
 		Language preferLanguage = languageMapper.getLanguageUsingSlug(preferLanguageSlug);
 		
 		if ( preferLanguage != null ) {
@@ -421,7 +421,7 @@ public class UserService {
 	 */
 	private Map<String, Boolean> getChangePasswordResult(User user, String oldPassword, 
 			String newPassword, String confirmPassword) {
-		Map<String, Boolean> result = new HashMap<String, Boolean>(5, 1);
+		Map<String, Boolean> result = new HashMap<>(5, 1);
 		result.put("isOldPasswordCorrect", isOldPasswordCorrect(user.getPassword(), oldPassword));
 		result.put("isNewPasswordEmpty", newPassword.isEmpty());
 		result.put("isNewPasswordLegal", isPasswordLegal(newPassword));
@@ -475,7 +475,7 @@ public class UserService {
 	 */
 	private Map<String, Boolean> getUpdateProfileResult(User user, String email, 
 			String location, String website, String socialLinks, String aboutMe) {
-		Map<String, Boolean> result = new HashMap<String, Boolean>(7, 1);
+		Map<String, Boolean> result = new HashMap<>(7, 1);
 		result.put("isEmailEmpty", email.isEmpty());
 		result.put("isEmailLegal", isEmailLegal(email));
 		result.put("isEmailExists", isEmailExists(user.getEmail(), email));
@@ -711,7 +711,7 @@ public class UserService {
 	 * @return 包含用户个人信息更改结果的Map<String, Boolean>对象
 	 */
 	private Map<String, Boolean> getUpdateProfileResult(String password, UserGroup userGroup, Language preferLanguage) {
-		Map<String, Boolean> result = new HashMap<String, Boolean>(6, 1);
+		Map<String, Boolean> result = new HashMap<>(6, 1);
 		result.put("isPasswordEmpty", password.isEmpty());
 		result.put("isPasswordLegal", isPasswordLegal(password));
 		result.put("isUserGroupLegal", userGroup != null);

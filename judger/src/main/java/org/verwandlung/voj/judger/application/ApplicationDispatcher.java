@@ -43,7 +43,7 @@ public class ApplicationDispatcher {
 	public void onErrorOccurred(long submissionId) {
 		updateSubmission(submissionId, 0, 0, 0, "SE", "Internal error occured.");
 		
-		Map<String, Object> mapMessage = new HashMap<String, Object>();
+		Map<String, Object> mapMessage = new HashMap<>();
 		mapMessage.put("event", "ErrorOccurred");
 		mapMessage.put("submissionId", submissionId);
 		
@@ -62,7 +62,7 @@ public class ApplicationDispatcher {
 		if ( !isSuccessful ) {
 			updateSubmission(submissionId, 0, 0, 0, "CE", log);
 		}
-		Map<String, Object> mapMessage = new HashMap<String, Object>();
+		Map<String, Object> mapMessage = new HashMap<>();
 		mapMessage.put("event", "CompileFinished");
 		mapMessage.put("submissionId", submissionId);
 		mapMessage.put("isSuccessful", isSuccessful);
@@ -84,7 +84,7 @@ public class ApplicationDispatcher {
 		int usedMemory = getUsedMemory(runtimeResult);
 		int score = getScore(runtimeResult);
 		
-		Map<String, Object> mapMessage = new HashMap<String, Object>();
+		Map<String, Object> mapMessage = new HashMap<>();
 		mapMessage.put("event", "TestPointFinished");
 		mapMessage.put("submissionId", submissionId);
 		mapMessage.put("checkpointId", checkpointId);
@@ -128,7 +128,7 @@ public class ApplicationDispatcher {
 		log = getJudgeLog(runtimeResults, runtimeResultSlug, totalTime, maxMemory, totalScore);
 		updateSubmission(submissionId, totalTime, maxMemory, totalScore, runtimeResultSlug, log);
 		
-		Map<String, Object> mapMessage = new HashMap<String, Object>();
+		Map<String, Object> mapMessage = new HashMap<>();
 		mapMessage.put("event", "AllTestPointsFinished");
 		mapMessage.put("submissionId", submissionId);
 		mapMessage.put("runtimeResult", getRuntimeResultName(runtimeResultSlug));

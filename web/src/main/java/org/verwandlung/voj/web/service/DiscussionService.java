@@ -47,7 +47,7 @@ public class DiscussionService {
 		// 将无父亲的讨论话题加入列表
 		for ( DiscussionTopic dt : DiscussionTopics ) {
 			if ( dt.getParentDiscussionTopicId() == 0 ) {
-				List<DiscussionTopic> subDiscussionTopics = new ArrayList<DiscussionTopic>();
+				List<DiscussionTopic> subDiscussionTopics = new ArrayList<>();
 				DiscussionTopicsHierarchy.put(dt, subDiscussionTopics);
 				DiscussionTopicsIndexer.put(dt.getDiscussionTopicId(), subDiscussionTopics);
 			}
@@ -131,7 +131,7 @@ public class DiscussionService {
 	 * @return 包含讨论回复投票信息的Map对象
 	 */
 	private Map<String, Object> getVoteStatisticsOfDiscussionReply(String votes, long currentUserUid) {
-		Map<String, Object> votesStatistics = new HashMap<String, Object>(5, 1);
+		Map<String, Object> votesStatistics = new HashMap<>(5, 1);
 		JSONObject voteUsers = JSON.parseObject(votes);
 
 		JSONArray voteUpUsers = voteUsers.getJSONArray("up");
@@ -194,7 +194,7 @@ public class DiscussionService {
 	public Map<String, Boolean> voteDiscussionReply(long discussionThreadId, long discussionReplyId,
 			long currentUserUid, int voteUp, int voteDown, boolean isCsrfTokenValid) {
 		DiscussionReply discussionReply = discussionReplyMapper.getDiscussionReplyUsingReplyId(discussionReplyId);
-		Map<String, Boolean> result = new HashMap<String, Boolean>();
+		Map<String, Boolean> result = new HashMap<>();
 		result.put("isDiscussionReplyExists", discussionReply != null && discussionReply.getDiscussionThreadId() == discussionThreadId);
 		result.put("isVoteValid", voteUp >= -1 && voteUp <= 1 && voteDown >=-1 && voteDown <= 1);
 		result.put("isCsrfTokenValid", isCsrfTokenValid);
@@ -257,7 +257,7 @@ public class DiscussionService {
 	 */
 	public Map<String, Boolean> createDiscussionTopic(String discussionTopicSlug,
 			String discussionTopicName, DiscussionTopic parentDiscussionTopic) {
-		Map<String, Boolean> result = new HashMap<String, Boolean>(6, 1);
+		Map<String, Boolean> result = new HashMap<>(6, 1);
 		result.put("isDiscussionTopicSlugEmpty", discussionTopicSlug.isEmpty());
 		result.put("isDiscussionTopicSlugLegal", discussionTopicSlug.length() <= 128);
 		result.put("isDiscussionTopicNameEmpty", discussionTopicName.isEmpty());
@@ -287,7 +287,7 @@ public class DiscussionService {
 			String discussionTopicSlug, String discussionTopicName,
 			DiscussionTopic parentDiscussionTopic) {
 		DiscussionTopic dt = discussionTopicMapper.getDiscussionTopicUsingId(discussionTopicId);
-		Map<String, Boolean> result = new HashMap<String, Boolean>(7, 1);
+		Map<String, Boolean> result = new HashMap<>(7, 1);
 		result.put("isDiscussionTopicExists", dt != null);
 		result.put("isDiscussionTopicSlugEmpty", discussionTopicSlug.isEmpty());
 		result.put("isDiscussionTopicSlugLegal", discussionTopicSlug.length() <= 128);
@@ -315,7 +315,7 @@ public class DiscussionService {
 	 * @return 包含讨论主题删除结果的Map对象
 	 */
 	public Map<String, Boolean> deleteDiscussionTopic(int discussionTopicId) {
-		Map<String, Boolean> result = new HashMap<String, Boolean>(2, 1);
+		Map<String, Boolean> result = new HashMap<>(2, 1);
 		long numberOfRowsAffected = discussionTopicMapper.deleteDiscussionTopicUsingId(discussionTopicId);
 		result.put("isSuccessful", numberOfRowsAffected > 0);
 		return result;
@@ -334,7 +334,7 @@ public class DiscussionService {
 			String discussionTopicSlug, long relatedProblemId,
 			String discussionThreadTitle, boolean isCsrfTokenValid) {
 		DiscussionTopic discussionTopic = null;
-		Map<String, Boolean> result = new HashMap<String, Boolean>(6, 1);
+		Map<String, Boolean> result = new HashMap<>(6, 1);
 		result.put("isThreadCreatorExists", threadCreator != null);
 		result.put("isThreadCreatorLegal", threadCreator != null && !threadCreator.getUserGroup().getUserGroupSlug().equals("forbidden"));
 		result.put("isThreadTitleEmpty", discussionThreadTitle.isEmpty());
@@ -373,7 +373,7 @@ public class DiscussionService {
 			String discussionThreadTitle, boolean isCsrfTokenValid) {
 		DiscussionTopic discussionTopic = null;
 		DiscussionThread dt = discussionThreadMapper.getDiscussionThreadUsingThreadId(discussionThreadId);;
-		Map<String, Boolean> result = new HashMap<String, Boolean>(7, 1);
+		Map<String, Boolean> result = new HashMap<>(7, 1);
 		result.put("isDiscussionThreadExists", dt != null);
 		result.put("isThreadTitleEmpty", discussionThreadTitle.isEmpty());
 		result.put("isThreadTitleLegal", discussionThreadTitle.length() <= 128);
@@ -405,7 +405,7 @@ public class DiscussionService {
 	 * @return 讨论帖子的删除结果
 	 */
 	public Map<String, Boolean> deleteDiscussionThread(long discussionThreadId) {
-		Map<String, Boolean> result = new HashMap<String, Boolean>(2, 1);
+		Map<String, Boolean> result = new HashMap<>(2, 1);
 		long numberOfRowsAffected = discussionThreadMapper.deleteDiscussionThreadUsingThreadId(discussionThreadId);
 
 		result.put("isSuccessful", numberOfRowsAffected > 0);
@@ -448,7 +448,7 @@ public class DiscussionService {
 		String replyContent = discussionReply.getDiscussionReplyContent();
 
 		DiscussionThread discussionThread = discussionThreadMapper.getDiscussionThreadUsingThreadId(discussionThreadId);
-		Map<String, Boolean> result = new HashMap<String, Boolean>(6, 1);
+		Map<String, Boolean> result = new HashMap<>(6, 1);
 		result.put("isDiscussionThreadExists", discussionThread != null);
 		result.put("isReplyCreatorExists", replyCreator != null);
 		result.put("isReplyCreatorLegal", replyCreator != null &&
@@ -474,7 +474,7 @@ public class DiscussionService {
 	 */
 	public Map<String, Boolean> editDiscussionReply(long discussionReplyId,
 		User currentEditor, String discussionReplyContent, boolean isCsrfTokenValid) {
-		Map<String, Boolean> result = new HashMap<String, Boolean>(2, 1);
+		Map<String, Boolean> result = new HashMap<>(2, 1);
 		boolean isSuccessful = false;
 		DiscussionReply dr = null;
 
@@ -503,7 +503,7 @@ public class DiscussionService {
 	 */
 	public Map<String, Boolean> deleteDiscussionReply(long discussionReplyId,
 			User currentEditor, boolean isCsrfTokenValid) {
-		Map<String, Boolean> result = new HashMap<String, Boolean>(2, 1);
+		Map<String, Boolean> result = new HashMap<>(2, 1);
 		boolean isSuccessful = false;
 		DiscussionReply dr = null;
 

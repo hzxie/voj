@@ -100,7 +100,7 @@ public class DefaultController {
 	public @ResponseBody Map<String, Object> getJudgersAction(
 			@RequestParam(value="startIndex", required=false, defaultValue="0") long offset,
 			HttpServletRequest request) {
-		Map<String, Object> result = new HashMap<String, Object>();
+		Map<String, Object> result = new HashMap<>();
 		List<Map<String, String>> judgers = getJudgers(offset);
 		
 		result.put("isSuccessful", judgers != null && !judgers.isEmpty());
@@ -119,7 +119,7 @@ public class DefaultController {
 		List<Map<String, String>> judgers = new ArrayList<Map<String, String>>();
 		
 		for ( User judger : judgersList ) {
-			Map<String, String> judgerInformation = new HashMap<String, String>(3, 1);
+			Map<String, String> judgerInformation = new HashMap<>(3, 1);
 			String username = judger.getUsername();
 			String description = keepAliveEventListener.getJudgerDescription(username);
 			
@@ -184,7 +184,7 @@ public class DefaultController {
 			HttpServletRequest request, HttpServletResponse response) {
 		LocaleUtils.setLocale(request, response, language);
 		
-		Map<String, Boolean> result = new HashMap<String, Boolean>(2, 1);
+		Map<String, Boolean> result = new HashMap<>(2, 1);
 		result.put("isSuccessful", true);
 		return result;
 	}

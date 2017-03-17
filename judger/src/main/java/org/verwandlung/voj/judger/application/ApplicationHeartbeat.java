@@ -34,7 +34,7 @@ public class ApplicationHeartbeat implements Runnable {
 		Calendar calendar = Calendar.getInstance();
 		long currentTime = calendar.getTimeInMillis();
 		
-		Map<String, Object> mapMessage = new HashMap<String, Object>();
+		Map<String, Object> mapMessage = new HashMap<>();
 		mapMessage.put("event", "KeepAlive");
 		mapMessage.put("username", judgerUsername);
 		mapMessage.put("description", getDescription());

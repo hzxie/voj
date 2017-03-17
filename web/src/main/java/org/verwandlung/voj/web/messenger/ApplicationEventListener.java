@@ -75,7 +75,7 @@ public class ApplicationEventListener {
 			LOGGER.warn(String.format("CANNOT get the SseEmitter for submission #%d.", submissionId));
 			return;
 		}
-		Map<String, String> mapMessage = new HashMap<String, String>(3, 1);
+		Map<String, String> mapMessage = new HashMap<>(3, 1);
 		mapMessage.put("judgeResult", judgeResult);
 		mapMessage.put("message", message);
 		sseEmitter.send(mapMessage);
@@ -120,7 +120,7 @@ public class ApplicationEventListener {
 		String judgerDescription = event.getJudgerDescription();
 		Date heartbeatTime = event.getHeartbeatTime();
 		
-		Map<String, Object> judgerInformation = new HashMap<String, Object>();
+		Map<String, Object> judgerInformation = new HashMap<>();
 		judgerInformation.put("description", judgerDescription);
 		judgerInformation.put("heartbeatTime", heartbeatTime);
 		
@@ -155,7 +155,7 @@ public class ApplicationEventListener {
 	 * Map中的Key表示提交记录的唯一标识符.
 	 * Map中的Value表示对应的SseEmitter对象, 用于推送实时评测信息.
 	 */
-	private static Map<Long, SseEmitter> sseEmitters = new Hashtable<Long, SseEmitter>();
+	private static Map<Long, SseEmitter> sseEmitters = new Hashtable<>();
 	
 	/**
 	 * 在线评测机的列表.

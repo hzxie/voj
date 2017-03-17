@@ -35,7 +35,7 @@ public class Runner {
 		int timeLimit = getTimeLimit(submission);
 		int memoryLimit = getMemoryLimit(submission);
 
-		Map<String, Object> result = new HashMap<String, Object>(4, 1);
+		Map<String, Object> result = new HashMap<>(4, 1);
 		String runtimeResultSlug = "SE";
 		int usedTime = 0;
 		int usedMemory = 0;
