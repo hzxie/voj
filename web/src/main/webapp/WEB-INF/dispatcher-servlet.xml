@@ -79,6 +79,7 @@
 		<property name="removeAbandoned" value="${jdbc.removeAbandoned}" />
 		<property name="removeAbandonedTimeout" value="${jdbc.removeAbandonedTimeout}" />
 		<property name="validationQuery" value="SELECT 1" />
+		<property name="connectionInitSqls" value="SET NAMES utf8mb4;"/>
 		<property name="testWhileIdle" value="true"></property> 
 		<property name="testOnBorrow" value="true"></property> 
 		<property name="testOnReturn" value="true"></property> 
