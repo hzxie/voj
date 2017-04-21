@@ -218,13 +218,13 @@ Edit the values in `/voj.properties` of the file `voj.judger.jar`.
 
 You can run the judger using following command :
 
-For Windows:
+**Windows**:
 
 ```
 javaw -jar voj.judger.jar
 ```
 
-For Linux (you are supposed to run the program as root):
+**Linux**:
 
 ```
 sudo java -jar voj.judger.jar
