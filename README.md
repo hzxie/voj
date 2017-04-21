@@ -216,10 +216,18 @@ After then, you can copy this file `voj.web.war` to `TOMCAT_HOME/webapps`.
 
 Edit the values in `/voj.properties` of the file `voj.judger.jar`.
 
-You can run the judger using following command:
+You can run the judger using following command :
+
+For Windows:
 
 ```
 javaw -jar voj.judger.jar
+```
+
+For Linux (you are supposed to run the program as root):
+
+```
+sudo java -jar voj.judger.jar
 ```
 
 **Important:**
