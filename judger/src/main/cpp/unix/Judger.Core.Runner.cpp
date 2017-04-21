@@ -5,6 +5,7 @@
 #include "../org_verwandlung_voj_judger_core_Runner.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <cstring>
 #include <future>
@@ -13,6 +14,7 @@
 #include <limits>
 #include <string>
 #include <sstream>
+#include <vector>
 
 #include <fcntl.h>
 #include <signal.h>
@@ -36,11 +38,12 @@ extern char** environ;
  */
 bool createProcess(pid_t&, sigset_t&);
 void setupIoRedirection(const std::string&, const std::string&);
+void setupRunUser();
 int runProcess(pid_t, sigset_t, const std::string&, int, int, int&, int&);
 char** getCommandArgs(const std::string& commandLine);
-bool isCurrentusedMemoryIgnored(int, int);
-int getMaxusedMemory(pid_t, int);
-int getCurrentusedMemory(pid_t);
+bool isCurrentUsedMemoryIgnored(int, int);
+int getMaxUsedMemory(pid_t, int);
+int getCurrentUsedMemory(pid_t);
 long long getMillisecondsNow();
 int killProcess(pid_t&);
 
@@ -69,8 +72,8 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     std::cout << "Command Line: " << commandLine << std::endl;
 
     JHashMap    result;
-    jint        usedTime            = 0;
-    jint        usedMemory          = 0;
+    jint        UsedTime            = 0;
+    jint        UsedMemory          = 0;
     jint        exitCode            = 127;
 
     pid_t       pid                 = -1;
@@ -80,16 +83,17 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     }
     // Setup I/O Redirection for Child Process
     if ( pid == 0 ) {
+        setupRunUser();
         setupIoRedirection(inputFilePath, outputFilePath);
     }
-    exitCode = runProcess(pid, sigset, commandLine, timeLimit, memoryLimit, usedTime, usedMemory);
+    exitCode = runProcess(pid, sigset, commandLine, timeLimit, memoryLimit, UsedTime, UsedMemory);
 
-    std::cout << "[JNI DEBUG] usedTime: " << usedTime << " ms" << std::endl;
-    std::cout << "[JNI DEBUG] usedMemory: " << usedMemory  << " KB" << std::endl;
+    std::cout << "[JNI DEBUG] UsedTime: " << UsedTime << " ms" << std::endl;
+    std::cout << "[JNI DEBUG] UsedMemory: " << UsedMemory  << " KB" << std::endl;
     std::cout << "[JNI DEBUG] exitCode: " << exitCode << std::endl;
     
-    result.put("usedTime", usedTime);
-    result.put("usedMemory", usedMemory);
+    result.put("usedTime", UsedTime);
+    result.put("usedMemory", UsedMemory);
     result.put("exitCode", exitCode);
 
     return result.toJObject(jniEnv);
@@ -137,6 +141,21 @@ void setupIoRedirection(
     }
 }
 
+void setupRunUser() {
+    while ( setgid(1536) != 0 ) { 
+        std::cout <<  "[WARN] setgid(1536) failed." << std::endl;
+        sleep(1); 
+    }
+    while ( setuid(1536) != 0 ) { 
+        std::cout <<  "[WARN] setuid(1536) failed." << std::endl;
+        sleep(1); 
+    }
+    while ( setresuid(1536, 1536, 1536) != 0 ) {
+        std::cout <<  "[WARN] setresuid(1536, 1536, 1536) failed." << std::endl;
+        sleep(1);
+    }
+}
+
 /**
  * 运行进程.
  * @param  pid         - 子进程ID
@@ -144,12 +163,12 @@ void setupIoRedirection(
  * @param  commandLine - 命令行
  * @param  timeLimit   - 运行时时间限制(ms)
  * @param  memoryLimit - 运行时空间限制(KB)
- * @param  usedTime    - 运行时时间占用(ms)
- * @param  usedMemory  - 运行时空间占用(ms)
+ * @param  UsedTime    - 运行时时间占用(ms)
+ * @param  UsedMemory  - 运行时空间占用(ms)
  * @return 进程退出状态
  */
 int runProcess(pid_t pid, sigset_t sigset, const std::string& commandLine, int timeLimit, 
-    int memoryLimit, int& usedTime, int& usedMemory) {
+    int memoryLimit, int& UsedTime, int& UsedMemory) {
     char**            argv       = getCommandArgs(commandLine);
     long long         startTime  = 0;
     long long         endTime    = 0;
@@ -159,7 +178,7 @@ int runProcess(pid_t pid, sigset_t sigset, const std::string& commandLine, int t
     // Setup Monitor in Parent Process
     if ( pid > 0 ) {
         // Memory Monitor
-        feature     = std::async(std::launch::async, getMaxusedMemory, pid, memoryLimit);
+        feature     = std::async(std::launch::async, getMaxUsedMemory, pid, memoryLimit);
         
         // Time Monitor
         struct timespec timeout;
@@ -169,7 +188,7 @@ int runProcess(pid_t pid, sigset_t sigset, const std::string& commandLine, int t
         startTime       = getMillisecondsNow();
         do {
             if ( sigtimedwait(&sigset, NULL, &timeout) < 0 ) {
-                if (errno == EINTR) {
+                if ( errno == EINTR ) {
                     /* Interrupted by a signal other than SIGCHLD. */
                     continue;
                 } else if (errno == EAGAIN) {
@@ -189,8 +208,8 @@ int runProcess(pid_t pid, sigset_t sigset, const std::string& commandLine, int t
     // Collect information in Parent Process
     waitpid(pid, &exitCode, 0);
     endTime     = getMillisecondsNow();
-    usedTime    = endTime - startTime;
-    usedMemory  = feature.get();
+    UsedTime    = endTime - startTime;
+    UsedMemory  = feature.get();
 
     return exitCode;
 }
@@ -224,15 +243,15 @@ char** getCommandArgs(const std::string& commandLine) {
  * 是否忽略当前获得的内存占用值.
  * 由于在实际运行过程中, 程序可能会获取到JVM环境中的内存占用.
  * 对于这种情况, 我们应忽略这个值.
- * @param  currentusedMemory - 当前获取到的内存占用
+ * @param  currentUsedMemory - 当前获取到的内存占用
  * @param  memoryLimit        - 运行时空间限制(KB)
  * @return 是否忽略当前获取到的内存占用
  */
-bool isCurrentusedMemoryIgnored(int currentusedMemory, int memoryLimit) {
-    int jvmusedMemory = getCurrentusedMemory(getpid());
+bool isCurrentUsedMemoryIgnored(int currentUsedMemory, int memoryLimit) {
+    int jvmUsedMemory = getCurrentUsedMemory(getpid());
 
-    if ( currentusedMemory >= jvmusedMemory / 2 &&
-         currentusedMemory <= jvmusedMemory * 2 ) {
+    if ( currentUsedMemory >= jvmUsedMemory / 2 &&
+         currentUsedMemory <= jvmUsedMemory * 2 ) {
         return true;
     }
     return false;
@@ -244,24 +263,24 @@ bool isCurrentusedMemoryIgnored(int currentusedMemory, int memoryLimit) {
  * @param  memoryLimit - 运行时空间限制(KB)
  * @return 运行时内存占用最大值
  */
-int getMaxusedMemory(pid_t pid, int memoryLimit) {
-    int  maxusedMemory     = 0,
-         currentusedMemory = 0;
+int getMaxUsedMemory(pid_t pid, int memoryLimit) {
+    int  maxUsedMemory     = 0,
+         currentUsedMemory = 0;
     do {
-        currentusedMemory = getCurrentusedMemory(pid);
-        std::cout << "currentusedMemory: [PID #" << pid << "]" << currentusedMemory << std::endl;
+        currentUsedMemory = getCurrentUsedMemory(pid);
+        std::cout << "currentUsedMemory: [PID #" << pid << "]" << currentUsedMemory << std::endl;
 
-        if ( currentusedMemory > maxusedMemory && 
-            !isCurrentusedMemoryIgnored(currentusedMemory, memoryLimit) ) {
-            maxusedMemory = currentusedMemory;
+        if ( currentUsedMemory > maxUsedMemory && 
+            !isCurrentUsedMemoryIgnored(currentUsedMemory, memoryLimit) ) {
+            maxUsedMemory = currentUsedMemory;
         }
-        if ( memoryLimit != 0 && maxusedMemory > memoryLimit ) {
+        if ( memoryLimit != 0 && maxUsedMemory > memoryLimit ) {
             killProcess(pid);
         }
         usleep(5000);
-    } while ( currentusedMemory != 0 );
+    } while ( currentUsedMemory != 0 );
 
-    return maxusedMemory;
+    return maxUsedMemory;
 }
 
 /**
@@ -269,8 +288,8 @@ int getMaxusedMemory(pid_t pid, int memoryLimit) {
  * @param  pid - 进程ID
  * @return 当前物理内存使用量(KB)
  */
-int getCurrentusedMemory(pid_t pid) {
-    int    currentusedMemory   = 0;
+int getCurrentUsedMemory(pid_t pid) {
+    int    currentUsedMemory   = 0;
     long   residentSetSize      = 0L;
     FILE*  fp                   = NULL;
     
@@ -280,14 +299,14 @@ int getCurrentusedMemory(pid_t pid) {
 
     if ( (fp = fopen( filePath, "r" )) != NULL ) {
         if ( fscanf(fp, "%*s%ld", &residentSetSize) == 1 ) {
-            currentusedMemory = (int)residentSetSize * (int)sysconf(_SC_PAGESIZE) >> 10;
-            if ( currentusedMemory < 0 ) {
-                currentusedMemory = std::numeric_limits<int32_t>::max() >> 10;
+            currentUsedMemory = (int)residentSetSize * (int)sysconf(_SC_PAGESIZE) >> 10;
+            if ( currentUsedMemory < 0 ) {
+                currentUsedMemory = std::numeric_limits<int32_t>::max() >> 10;
             }
         }
         fclose(fp);
     }
-    return currentusedMemory;
+    return currentUsedMemory;
 }
 
 /**

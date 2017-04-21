@@ -2,7 +2,12 @@ package org.verwandlung.voj.judger.core;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.attribute.PosixFilePermission;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -38,6 +43,7 @@ public class Preprocessor {
 		if ( !workDirFile.exists() && !workDirFile.mkdirs() ) {
 			throw new CreateDirectoryException("Failed to create directory: " + workDirectory);
 		}
+		setWorkDirectoryPermission(workDirFile);
 		
 		Language language = submission.getLanguage();
 		String code = replaceClassName(language, submission.getCode(), baseFileName);
@@ -78,6 +84,27 @@ public class Preprocessor {
 			return code;
 		}
 		return code.replaceAll("class[ \n]+Main", "class " + newClassName);
+	}
+
+	/**
+	 * [setWorkDirectoryPermission description]
+	 * @param workDirectory [description]
+	 */
+	private void setWorkDirectoryPermission(File workDirectory) throws IOException {
+		Set<PosixFilePermission> permissions = new HashSet<>();
+
+		permissions.add(PosixFilePermission.OWNER_READ);
+		permissions.add(PosixFilePermission.OWNER_WRITE);
+		permissions.add(PosixFilePermission.OWNER_EXECUTE);
+
+		permissions.add(PosixFilePermission.GROUP_READ);
+		permissions.add(PosixFilePermission.GROUP_WRITE);
+		permissions.add(PosixFilePermission.GROUP_EXECUTE);
+
+		permissions.add(PosixFilePermission.OTHERS_READ);
+		permissions.add(PosixFilePermission.OTHERS_WRITE);
+		permissions.add(PosixFilePermission.OTHERS_EXECUTE);
+		Files.setPosixFilePermissions(workDirectory.toPath(), permissions);
 	}
 	
 	/**
