@@ -87,8 +87,9 @@ public class Preprocessor {
 	}
 
 	/**
-	 * [setWorkDirectoryPermission description]
-	 * @param workDirectory [description]
+	 * 设置代码文件所在目录的读写权限.
+	 * 在Linux下, 代码以UID=1536的用户运行, 因此需要为Others用户组分配写权限.
+	 * @param workDirectory 用于产生编译输出的目录
 	 */
 	private void setWorkDirectoryPermission(File workDirectory) throws IOException {
 		Set<PosixFilePermission> permissions = new HashSet<>();
