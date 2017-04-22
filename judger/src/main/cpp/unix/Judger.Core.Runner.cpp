@@ -72,8 +72,8 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     std::cout << "Command Line: " << commandLine << std::endl;
 
     JHashMap    result;
-    jint        UsedTime            = 0;
-    jint        UsedMemory          = 0;
+    jint        usedTime            = 0;
+    jint        usedMemory          = 0;
     jint        exitCode            = 127;
 
     pid_t       pid                 = -1;
@@ -86,14 +86,14 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
         setupRunUser();
         setupIoRedirection(inputFilePath, outputFilePath);
     }
-    exitCode = runProcess(pid, sigset, commandLine, timeLimit, memoryLimit, UsedTime, UsedMemory);
+    exitCode = runProcess(pid, sigset, commandLine, timeLimit, memoryLimit, usedTime, usedMemory);
 
-    std::cout << "[JNI DEBUG] UsedTime: " << UsedTime << " ms" << std::endl;
-    std::cout << "[JNI DEBUG] UsedMemory: " << UsedMemory  << " KB" << std::endl;
+    std::cout << "[JNI DEBUG] usedTime: " << usedTime << " ms" << std::endl;
+    std::cout << "[JNI DEBUG] usedMemory: " << usedMemory  << " KB" << std::endl;
     std::cout << "[JNI DEBUG] exitCode: " << exitCode << std::endl;
     
-    result.put("usedTime", UsedTime);
-    result.put("usedMemory", UsedMemory);
+    result.put("usedTime", usedTime);
+    result.put("usedMemory", usedMemory);
     result.put("exitCode", exitCode);
 
     return result.toJObject(jniEnv);
