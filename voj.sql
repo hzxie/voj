@@ -1,11 +1,11 @@
 -- phpMyAdmin SQL Dump
--- version 4.5.1
+-- version 4.5.2
 -- http://www.phpmyadmin.net
 --
--- Host: 127.0.0.1
--- Generation Time: Jan 09, 2017 at 02:02 PM
+-- Host: localhost
+-- Generation Time: Apr 22, 2017 at 04:34 PM
 -- Server version: 10.1.10-MariaDB
--- PHP Version: 7.0.4
+-- PHP Version: 7.0.3
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 
@@ -22,25 +22,39 @@ SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `voj_bulletin_board_messages`
+--
+
+CREATE TABLE `voj_bulletin_board_messages` (
+  `message_id` bigint(20) NOT NULL,
+  `message_title` varchar(128) NOT NULL,
+  `message_body` text NOT NULL,
+  `message_create_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `voj_contests`
 --
 
 CREATE TABLE `voj_contests` (
   `contest_id` bigint(20) NOT NULL,
-  `contest_name` varchar(128) NOT NULL,
+  `contest_name` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL,
   `contest_start_time` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
   `contest_end_time` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
-  `contest_mode` varchar(4) NOT NULL,
-  `contest_problems` text NOT NULL
+  `contest_mode` varchar(4) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `contest_problems` text COLLATE utf8mb4_unicode_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 --
 -- Dumping data for table `voj_contests`
 --
 
 INSERT INTO `voj_contests` (`contest_id`, `contest_name`, `contest_start_time`, `contest_end_time`, `contest_mode`, `contest_problems`) VALUES
-(1, 'Contest Test #1', '2016-05-05 01:00:00', '2016-05-05 05:00:00', 'OI', '[1001, 1002]'),
-(2, 'Contest Test #2', '2016-05-08 04:00:00', '2016-05-08 06:00:00', 'ACM', '[1001, 1003]'),
-(3, 'Contest Test #3', '2016-05-09 04:00:00', '2016-05-09 06:00:00', 'ACM', '[1000, 1003]');
+(1, 'Contest Test #1', '2016-05-04 17:00:00', '2016-05-04 21:00:00', 'OI', '[1001, 1002]'),
+(2, 'Contest Test #2', '2016-05-07 20:00:00', '2016-05-07 22:00:00', 'ACM', '[1001, 1003]'),
+(3, 'Contest Test #3', '2016-05-08 20:00:00', '2016-05-08 22:00:00', 'ACM', '[1000, 1003]');
 
 -- --------------------------------------------------------
 
@@ -51,7 +65,7 @@ INSERT INTO `voj_contests` (`contest_id`, `contest_name`, `contest_start_time`, 
 CREATE TABLE `voj_contest_contestants` (
   `contest_id` bigint(20) NOT NULL,
   `contestant_uid` bigint(20) NOT NULL,
-  `code_snippet` text
+  `code_snippet` text COLLATE utf8mb4_unicode_ci
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -93,8 +107,8 @@ CREATE TABLE `voj_discussion_replies` (
   `discussion_thread_id` bigint(20) NOT NULL,
   `discussion_reply_uid` bigint(20) NOT NULL,
   `discussion_reply_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `discussion_reply_content` text NOT NULL,
-  `discussion_reply_votes` text NOT NULL
+  `discussion_reply_content` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `discussion_reply_votes` text COLLATE utf8mb4_unicode_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -102,9 +116,9 @@ CREATE TABLE `voj_discussion_replies` (
 --
 
 INSERT INTO `voj_discussion_replies` (`discussion_reply_id`, `discussion_thread_id`, `discussion_reply_uid`, `discussion_reply_time`, `discussion_reply_content`, `discussion_reply_votes`) VALUES
-(1, 1, 1001, '2017-01-10 05:42:20', 'Reply content for thread #1', '{"up": [1000], "down": [1002]}'),
-(2, 2, 1002, '2017-01-11 05:42:20', 'Reply content for thread #2', '{"up": [1000], "down": [1001]}'),
-(3, 2, 1001, '2017-01-12 05:42:20', 'Reply content for thread #2', '{"up": [], "down": []}');
+(1, 1, 1001, '2017-01-09 21:42:20', 'Reply content for thread #1', '{"up": [1000], "down": [1002]}'),
+(2, 2, 1002, '2017-01-10 21:42:20', 'Reply content for thread #2', '{"up": [1000], "down": [1001]}'),
+(3, 2, 1001, '2017-01-11 21:42:20', 'Reply content for thread #2', '{"up": [], "down": []}');
 
 -- --------------------------------------------------------
 
@@ -118,7 +132,7 @@ CREATE TABLE `voj_discussion_threads` (
   `discussion_thread_create_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `problem_id` bigint(20) DEFAULT NULL,
   `discussion_topic_id` int(8) NOT NULL,
-  `discussion_thread_name` varchar(128) NOT NULL
+  `discussion_thread_name` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -126,9 +140,9 @@ CREATE TABLE `voj_discussion_threads` (
 --
 
 INSERT INTO `voj_discussion_threads` (`discussion_thread_id`, `discussion_thread_creator_uid`, `discussion_thread_create_time`, `problem_id`, `discussion_topic_id`, `discussion_thread_name`) VALUES
-(1, 1000, '2017-01-14 04:31:09', 1000, 1, 'Thread #1'),
-(2, 1000, '2017-01-14 04:31:09', 1000, 2, 'Thread #2'),
-(3, 1000, '2017-01-14 04:31:09', NULL, 1, 'Thread #3');
+(1, 1000, '2017-01-13 20:31:09', 1000, 1, 'Thread #1'),
+(2, 1000, '2017-01-13 20:31:09', 1000, 2, 'Thread #2'),
+(3, 1000, '2017-01-13 20:31:09', NULL, 1, 'Thread #3');
 
 -- --------------------------------------------------------
 
@@ -138,8 +152,8 @@ INSERT INTO `voj_discussion_threads` (`discussion_thread_id`, `discussion_thread
 
 CREATE TABLE `voj_discussion_topics` (
   `discussion_topic_id` int(8) NOT NULL,
-  `discussion_topic_slug` varchar(128) NOT NULL,
-  `discussion_topic_name` varchar(128) NOT NULL,
+  `discussion_topic_slug` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `discussion_topic_name` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL,
   `discussion_parent_topic_id` int(8) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -160,8 +174,8 @@ INSERT INTO `voj_discussion_topics` (`discussion_topic_id`, `discussion_topic_sl
 --
 
 CREATE TABLE `voj_email_validation` (
-  `email` varchar(64) NOT NULL,
-  `token` varchar(36) NOT NULL,
+  `email` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `token` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
   `expire_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -170,7 +184,7 @@ CREATE TABLE `voj_email_validation` (
 --
 
 INSERT INTO `voj_email_validation` (`email`, `token`, `expire_time`) VALUES
-('support@verwandlung.org', 'Random-String-Generated', '2015-07-09 17:00:00');
+('support@verwandlung.org', 'Random-String-Generated', '2015-07-09 09:00:00');
 
 -- --------------------------------------------------------
 
@@ -180,8 +194,8 @@ INSERT INTO `voj_email_validation` (`email`, `token`, `expire_time`) VALUES
 
 CREATE TABLE `voj_judge_results` (
   `judge_result_id` int(4) NOT NULL,
-  `judge_result_slug` varchar(4) NOT NULL,
-  `judge_result_name` varchar(32) NOT NULL
+  `judge_result_slug` varchar(4) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `judge_result_name` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -208,10 +222,10 @@ INSERT INTO `voj_judge_results` (`judge_result_id`, `judge_result_slug`, `judge_
 
 CREATE TABLE `voj_languages` (
   `language_id` int(4) NOT NULL,
-  `language_slug` varchar(16) NOT NULL,
-  `language_name` varchar(16) NOT NULL,
-  `language_compile_command` varchar(128) NOT NULL,
-  `language_run_command` varchar(128) NOT NULL
+  `language_slug` varchar(16) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `language_name` varchar(16) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `language_compile_command` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `language_run_command` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -234,8 +248,8 @@ INSERT INTO `voj_languages` (`language_id`, `language_slug`, `language_name`, `l
 
 CREATE TABLE `voj_options` (
   `option_id` int(8) NOT NULL,
-  `option_name` varchar(32) NOT NULL,
-  `option_value` text NOT NULL,
+  `option_name` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `option_value` text COLLATE utf8mb4_unicode_ci NOT NULL,
   `is_autoload` tinyint(1) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -262,15 +276,15 @@ INSERT INTO `voj_options` (`option_id`, `option_name`, `option_value`, `is_autol
 CREATE TABLE `voj_problems` (
   `problem_id` bigint(20) NOT NULL,
   `problem_is_public` tinyint(1) NOT NULL DEFAULT '1',
-  `problem_name` varchar(128) NOT NULL,
+  `problem_name` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL,
   `problem_time_limit` int(8) NOT NULL,
   `problem_memory_limit` int(8) NOT NULL,
-  `problem_description` text NOT NULL,
-  `problem_input_format` text NOT NULL,
-  `problem_output_format` text NOT NULL,
-  `problem_sample_input` text NOT NULL,
-  `problem_sample_output` text NOT NULL,
-  `problem_hint` text
+  `problem_description` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `problem_input_format` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `problem_output_format` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `problem_sample_input` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `problem_sample_output` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `problem_hint` text COLLATE utf8mb4_unicode_ci
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -291,8 +305,8 @@ INSERT INTO `voj_problems` (`problem_id`, `problem_is_public`, `problem_name`, `
 
 CREATE TABLE `voj_problem_categories` (
   `problem_category_id` int(4) NOT NULL,
-  `problem_category_slug` varchar(32) NOT NULL,
-  `problem_category_name` varchar(32) NOT NULL,
+  `problem_category_slug` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `problem_category_name` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL,
   `problem_category_parent_id` int(4) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -337,8 +351,8 @@ CREATE TABLE `voj_problem_checkpoints` (
   `checkpoint_id` int(4) NOT NULL,
   `checkpoint_exactly_match` tinyint(1) NOT NULL,
   `checkpoint_score` int(4) NOT NULL,
-  `checkpoint_input` longtext NOT NULL,
-  `checkpoint_output` longtext NOT NULL
+  `checkpoint_input` longtext COLLATE utf8mb4_unicode_ci NOT NULL,
+  `checkpoint_output` longtext COLLATE utf8mb4_unicode_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -375,8 +389,8 @@ INSERT INTO `voj_problem_checkpoints` (`problem_id`, `checkpoint_id`, `checkpoin
 
 CREATE TABLE `voj_problem_tags` (
   `problem_tag_id` bigint(20) NOT NULL,
-  `problem_tag_slug` varchar(32) NOT NULL,
-  `problem_tag_name` varchar(32) NOT NULL
+  `problem_tag_slug` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `problem_tag_name` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -424,10 +438,10 @@ CREATE TABLE `voj_submissions` (
   `submission_execute_time` timestamp NULL DEFAULT NULL,
   `submission_used_time` int(8) DEFAULT NULL,
   `submission_used_memory` int(8) DEFAULT NULL,
-  `submission_judge_result` varchar(8) NOT NULL DEFAULT 'PD',
+  `submission_judge_result` varchar(8) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'PD',
   `submission_judge_score` int(4) DEFAULT NULL,
-  `submission_judge_log` text,
-  `submission_code` text NOT NULL
+  `submission_judge_log` text COLLATE utf8mb4_unicode_ci,
+  `submission_code` text COLLATE utf8mb4_unicode_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -449,8 +463,8 @@ INSERT INTO `voj_submissions` (`submission_id`, `problem_id`, `uid`, `language_i
 CREATE TABLE `voj_usermeta` (
   `meta_id` bigint(20) NOT NULL,
   `uid` bigint(20) NOT NULL,
-  `meta_key` varchar(64) NOT NULL,
-  `meta_value` text NOT NULL
+  `meta_key` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `meta_value` text COLLATE utf8mb4_unicode_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -469,9 +483,9 @@ INSERT INTO `voj_usermeta` (`meta_id`, `uid`, `meta_key`, `meta_value`) VALUES
 
 CREATE TABLE `voj_users` (
   `uid` bigint(20) NOT NULL,
-  `username` varchar(16) NOT NULL,
-  `password` varchar(32) NOT NULL,
-  `email` varchar(64) NOT NULL,
+  `username` varchar(16) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `password` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `email` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL,
   `user_group_id` int(4) NOT NULL,
   `prefer_language_id` int(4) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -493,8 +507,8 @@ INSERT INTO `voj_users` (`uid`, `username`, `password`, `email`, `user_group_id`
 
 CREATE TABLE `voj_user_groups` (
   `user_group_id` int(4) NOT NULL,
-  `user_group_slug` varchar(16) NOT NULL,
-  `user_group_name` varchar(16) NOT NULL
+  `user_group_slug` varchar(16) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `user_group_name` varchar(16) COLLATE utf8mb4_unicode_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -510,6 +524,12 @@ INSERT INTO `voj_user_groups` (`user_group_id`, `user_group_slug`, `user_group_n
 --
 -- Indexes for dumped tables
 --
+
+--
+-- Indexes for table `voj_bulletin_board_messages`
+--
+ALTER TABLE `voj_bulletin_board_messages`
+  ADD PRIMARY KEY (`message_id`);
 
 --
 -- Indexes for table `voj_contests`
@@ -662,6 +682,11 @@ ALTER TABLE `voj_user_groups`
 --
 
 --
+-- AUTO_INCREMENT for table `voj_bulletin_board_messages`
+--
+ALTER TABLE `voj_bulletin_board_messages`
+  MODIFY `message_id` bigint(20) NOT NULL AUTO_INCREMENT;
+--
 -- AUTO_INCREMENT for table `voj_contests`
 --
 ALTER TABLE `voj_contests`
@@ -670,12 +695,12 @@ ALTER TABLE `voj_contests`
 -- AUTO_INCREMENT for table `voj_discussion_replies`
 --
 ALTER TABLE `voj_discussion_replies`
-  MODIFY `discussion_reply_id` bigint(20) NOT NULL AUTO_INCREMENT;
+  MODIFY `discussion_reply_id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 --
 -- AUTO_INCREMENT for table `voj_discussion_threads`
 --
 ALTER TABLE `voj_discussion_threads`
-  MODIFY `discussion_thread_id` bigint(20) NOT NULL AUTO_INCREMENT;
+  MODIFY `discussion_thread_id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 --
 -- AUTO_INCREMENT for table `voj_discussion_topics`
 --
