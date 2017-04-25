@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.verwandlung.voj.web.mapper.BulletinBoardMessageMapper">
+    <!-- ResultMap -->
+    <resultMap id="BulletinBoardMessageResultMap" type="org.verwandlung.voj.web.model.BulletinBoardMessage">
+        <id property="messageId" column="message_id" />
+        <result property="messageTitle" column="message_title" />
+        <result property="messageBody" column="message_body" />
+        <result property="messageCreateTime" column="message_create_time" />
+    </resultMap>
+
+    <!-- Methods -->
+    <select id="getNumberOfBulletinBoardMessages"
+            resultType="long"
+            useCache="true">
+        SELECT COUNT(*)
+        FROM voj_bulletin_board_messages
+    </select>
+    <select id="getBulletinBoardMessages"
+            parameterType="map"
+            resultMap="BulletinBoardMessageResultMap"
+            useCache="true">
+        SELECT *
+        FROM voj_bulletin_board_messages
+        ORDER BY message_id DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+    <select id="getBulletinBoardMessageUsingId"
+            parameterType="long"
+            resultMap="BulletinBoardMessageResultMap"
+            useCache="true">
+        SELECT *
+        FROM voj_bulletin_board_messages
+        WHERE message_id = #{messageId}
+    </select>
+    <insert id="createBulletinBoardMessage"
+            parameterType="org.verwandlung.voj.web.model.BulletinBoardMessage"
+            flushCache="true">
+        INSERT INTO voj_bulletin_board_messages(message_title, message_body, message_create_time)
+        VALUES (messageTitle, messageBody, messageCreateTime)
+    </insert>
+    <update id="updateBulletinBoardMessage"
+            parameterType="org.verwandlung.voj.web.model.BulletinBoardMessage"
+            flushCache="true">
+        UPDATE voj_bulletin_board_messages
+        SET message_title = #{messageTitle}, message_body = #{messageBody}, message_create_time = #{messageCreateTime}
+        WHERE message_id = #{messageId}
+    </update>
+    <delete id="deleteBulletinBoardMessage"
+            parameterType="long"
+            flushCache="true">
+        DELETE FROM voj_bulletin_board_messages
+        WHERE message_id = #{messageId}
+    </delete>
+</mapper>
