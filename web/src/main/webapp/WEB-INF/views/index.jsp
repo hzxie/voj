@@ -148,7 +148,23 @@
             <div id="sidebar" class="span4">
                 <div id="bulletin-board" class="widget">
                     <h4><spring:message code="voj.index.bulletin-board" text="Bulletin Board" /></h4>
+                <c:choose>
+                <c:when test="${bulletinBoardMessages != null and bulletinBoardMessages.size() > 0}">
+                    <ul id="bulletin-board-messages">
+                    <c:forEach var="bulletinBoardMessage" items="${bulletinBoardMessages}">
+                        <li>
+                            <a href="javascript:void(0);">
+                                <span class="message-create-time">[<fmt:formatDate value="${bulletinBoardMessage.messageCreateTime}" type="date" dateStyle="short" />]</span>
+                                ${bulletinBoardMessage.messageTitle}
+                            </a>
+                        </li>
+                    </c:forEach>
+                    </ul>
+                </c:when>
+                <c:otherwise>
                     <p><spring:message code="voj.index.no-notification" text="No notification now." /></p>
+                </c:otherwise>
+                </c:choose>
                 </div> <!-- #kanban -->
             </div> <!-- #sidebar -->
         </div> <!-- .row-fluid -->
