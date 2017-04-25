@@ -17,9 +17,11 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.ModelAndView;
 
 import org.verwandlung.voj.web.messenger.ApplicationEventListener;
+import org.verwandlung.voj.web.model.BulletinBoardMessage;
 import org.verwandlung.voj.web.model.DiscussionThread;
 import org.verwandlung.voj.web.model.User;
 import org.verwandlung.voj.web.model.UserGroup;
+import org.verwandlung.voj.web.service.BulletinBoardService;
 import org.verwandlung.voj.web.service.DiscussionService;
 import org.verwandlung.voj.web.service.LanguageService;
 import org.verwandlung.voj.web.service.UserService;
@@ -44,9 +46,12 @@ public class DefaultController {
 			HttpServletRequest request, HttpServletResponse response) {
 		List<DiscussionThread> discussionThreads = discussionService.getDiscussionThreadsOfTopic(
 				null, 0, NUMBER_OF_DISCUSSION_THREADS_PER_REQUEST);
+		List<BulletinBoardMessage> bulletinBoardMessages = bulletinBoardService.getBulletinBoardMessages(
+				0, NUMBER_OF_BULLETIN_MESSAGES_PER_REQUEST);
 
 		ModelAndView view = new ModelAndView("index");
 		view.addObject("discussionThreads", discussionThreads);
+		view.addObject("bulletinBoardMessages", bulletinBoardMessages);
 		return view;
 	}
 	
@@ -229,6 +234,11 @@ public class DefaultController {
 	 * 每次加载比赛的数量.
 	 */
 	private static final int NUMBER_OF_CONTESTS_PER_REQUEST = 5;
+
+	/**
+	 * 每次加载布告栏消息的数量.
+	 */
+	private static final int NUMBER_OF_BULLETIN_MESSAGES_PER_REQUEST = 10;
 	
 	/**
 	 * 自动注入的UserService对象.
@@ -250,6 +260,13 @@ public class DefaultController {
 	 */
 	@Autowired
 	private DiscussionService discussionService;
+
+	/**
+	 * 自动注入的BulletinBoardService对象.
+	 * 用于获取布告板的最新消息.
+	 */
+	@Autowired
+	private BulletinBoardService bulletinBoardService;
 	
 	/**
 	 * 自动注入的ApplicationEventListener对象.
