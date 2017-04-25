@@ -183,3 +183,28 @@ div#content div#sidebar div#bulletin-board.widget li > a {
 div#content div#sidebar div#bulletin-board.widget span.message-create-time {
 	float: right;
 }
+
+div#bulletin-board-message-modal {
+	top: 15%;
+	width: 320px;
+	margin-left: -160px;
+}
+
+div#bulletin-board-message-modal div.modal-header {
+	background-color: #16a085;
+	height: 120px;
+	text-align: center;
+	-webkit-border-radius: 6px 6px 0 0;
+	   -moz-border-radius: 6px 6px 0 0;
+	        border-radius: 6px 6px 0 0;
+}
+
+div#bulletin-board-message-modal div.modal-header i.fa {
+	color: #fff;
+	font-size: 80px;
+	margin-top: 25px;
+}
+
+div#bulletin-board-message-modal div.modal-body {
+	line-height: 120%;
+}

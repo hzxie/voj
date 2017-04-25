@@ -155,7 +155,8 @@
                         <li>
                             <a href="javascript:void(0);">
                                 <span class="message-create-time">[<fmt:formatDate value="${bulletinBoardMessage.messageCreateTime}" type="date" dateStyle="short" />]</span>
-                                ${bulletinBoardMessage.messageTitle}
+                                <span class="message-title">${bulletinBoardMessage.messageTitle}</span>
+                                <p class="message-body hide">${bulletinBoardMessage.messageBody}</p>
                             </a>
                         </li>
                     </c:forEach>
@@ -169,6 +170,16 @@
             </div> <!-- #sidebar -->
         </div> <!-- .row-fluid -->
     </div> <!-- #content -->
+    <div id="bulletin-board-message-modal" class="modal hide fade">
+        <div class="modal-header">
+            <i class="fa fa-info-circle"></i>
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        </div> <!-- .modal-header -->
+        <div class="modal-body">
+            <h5 class="message-title"></h5>
+            <div class="message-body"></div> <!-- .message-body -->
+        </div> <!-- .modal-body -->
+    </div> <!-- #bulletin-board-message-modal -->
     <!-- Footer -->
     <%@ include file="/WEB-INF/views/include/footer.jsp" %>
     <!-- Java Script -->
@@ -212,6 +223,16 @@
                     }
                 });
             });
+        });
+    </script>
+    <script type="text/javascript">
+        $('li', '#bulletin-board-messages').click(function() {
+            var messageTitle = $('.message-title', this).html(),
+                messageBody  = $('.message-body', this).html();
+
+            $('.message-title', '#bulletin-board-message-modal').html(messageTitle);
+            $('.message-body', '#bulletin-board-message-modal').html(messageBody.replace('\n', '<br><br>'));
+            $('#bulletin-board-message-modal').modal();
         });
     </script>
     <script type="text/javascript">
