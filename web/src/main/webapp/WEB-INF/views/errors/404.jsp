@@ -43,7 +43,7 @@
     <div id="content" class="container">
         <div class="row-fluid">
             <div class="span6">
-                <img src="<c:url value="/assets/img/error.png" />" alt="Error" />
+                <img src="${cdnUrl}/img/error.png" alt="Error" />
             </div> <!-- .span6 -->
             <div id="error-message" class="span6">
                 <h4><spring:message code="voj.error.404.page-not-found" text="Page not found!" /></h4>
