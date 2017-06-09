@@ -14,7 +14,7 @@ Version: 0.1.0
 
 ## Introduction
 
-Cross-platform online judge system based on [Spring MVC Framework](http://spring.io).
+It is a cross-platform online judge system based on [Spring MVC Framework](http://spring.io).
 
 The application used following open-source projects:
 
@@ -45,7 +45,11 @@ The application contains two modules:
 - Web Application
 - Cross-Platform Judger
 
-As you see, the Online Judge System can contain multiple judgers. The judgers communicate with the web application via message queue.
+which can be described as following:
+
+![Software-Architecture](https://infinitescript.com/wordpress/wp-content/uploads/2015/04/Software-Architecture.png)
+
+As you see, the Online Judge System can contain multiple judgers. The judgers communicate with the web application through a message queue.
 
 ---
 
@@ -104,9 +108,7 @@ cd web
 mvn package -DskipTests
 ```
 
-
 The terminal will return message as following:
-
 
 ```
 [INFO] ------------------------------------------------------------------------
