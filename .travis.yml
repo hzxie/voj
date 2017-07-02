@@ -2,7 +2,8 @@ language: java
 dist: trusty
 env:
   - JDK=oraclejdk8
-  - JDK=oraclejdk9
+  # Temperorily disable JDK 9 because of the bug of Travis CI
+  # - JDK=oraclejdk9
 
 services: mysql
 
@@ -27,7 +28,7 @@ before_install:
 script: 
   - sudo find / -name mvn
   - mvn test -f web/pom.xml
-  - sudo /usr/local/maven-3.1.1/bin/mvn test -f judger/pom.xml
+  - sudo /usr/local/maven-3.3.9/bin/mvn test -f judger/pom.xml
 
 after_script:
   - mysql -e 'DROP DATABASE test;'
