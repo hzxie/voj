@@ -100,12 +100,29 @@ div#content div#main-content div#sidebar div.widget {
 	padding: 10px;
 }
 
-div#content div#sidebar div#topics-widget a {
+div#content div#main-content div#sidebar div#create-thread-widget {
+	border-top: none;
+	padding: 0;
+}
+
+div#content div#main-content div#sidebar div#create-thread-widget div.header {
+	background-image: url('../../img/discussion.png');
+	background-repeat: no-repeat;
+	background-position: center;
+	background-size: cover;
+	height: 120px;
+}
+
+div#content div#main-content div#sidebar div#create-thread-widget div.body {
+	padding: 10px;
+}
+
+div#content div#main-content div#sidebar div#topics-widget a {
 	display: block;
 	padding: 5px;
 }
 
-div#content div#sidebar div#topics-widget a.active {
+div#content div#main-content div#sidebar div#topics-widget a.active {
 	background-color: #16a085;
 	color: #fff;
 	-webkit-border-radius: 4px;
@@ -113,7 +130,7 @@ div#content div#sidebar div#topics-widget a.active {
 	        border-radius: 4px;
 }
 
-div#content div#sidebar div#topics-widget h6 {
+div#content div#main-content div#sidebar div#topics-widget h6 {
 	font-size: 14px;
 	font-weight: bold;
 	margin: 0;
@@ -121,15 +138,15 @@ div#content div#sidebar div#topics-widget h6 {
 	text-transform: none;
 }
 
-div#content div#sidebar div#topics-widget h6 > a {
+div#content div#main-content div#sidebar div#topics-widget h6 > a {
 	color: #16a085;
 }
 
-div#content div#sidebar div#topics-widget ul.inline {
+div#content div#main-content div#sidebar div#topics-widget ul.inline {
 	margin: 0;
 }
 
-div#content div#sidebar div#topics-widget ul.inline > li {
+div#content div#main-content div#sidebar div#topics-widget ul.inline > li {
 	color: #1abc9c;
 	padding: 0;
 }
@@ -146,6 +163,15 @@ div#content div#sidebar div#topics-widget ul.inline > li {
 @media only screen and (max-width: 767px) {
 	div#content div#main-content div#sidebar {
 		margin-top: 20px;
+	}
+
+	div#content div#main-content div#sidebar div#create-thread-widget {
+		border-top: 4px solid #16a085;
+	}
+
+	div#content div#main-content div#sidebar div#create-thread-widget div.header {
+		background-image: none;
+		height: 0;
 	}
 }
 
