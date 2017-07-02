@@ -99,8 +99,19 @@
                 </div>
             </div> <!-- #discussion -->
             <div id="sidebar" class="span4">
+                <c:if test="${isLogin}">
+                <div id="create-thread-widget" class="widget">
+                    <div class="header"></div> <!-- .header -->
+                    <div class="body">
+                        <button class="btn btn-primary btn-block" onclick="window.location.href='<c:url value="/discussion/new" />'"><spring:message code="voj.discussion.threads.new-discussion" text="New Discussion" /></button>
+                    </div> <!-- .body -->
+                </div> <!-- .widget -->
+                </c:if>
                 <div id="topics-widget" class="widget">
-                    <h4><spring:message code="voj.discussion.threads.topics" text="Discussion Topics" /></h4>
+                    <div class="header">
+                        <h4><spring:message code="voj.discussion.threads.topics" text="Discussion Topics" /></h4>
+                    </div> <!-- .header -->
+                    <div class="body">
                     <c:forEach var="entry" items="${discussionTopics}">
                         <h6>
                             <a 
@@ -121,7 +132,8 @@
                         </c:forEach>
                         </ul>
                     </c:forEach>
-                </div> <!-- .widgets -->
+                    </div> <!-- .body -->
+                </div> <!-- .widget -->
             </div> <!-- #sidebar -->
         </div> <!-- #main-content -->
     </div> <!-- #content -->
