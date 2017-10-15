@@ -158,7 +158,7 @@ public class ProblemTagMapperTest {
     @Test
     public void testGetProblemTagsOfProblems() {
         List<ProblemTagRelationship> problemTagRelationships = problemTagMapper.getProblemTagsOfProblems(1000, 1010);
-        System.out.println(problemTagRelationships);
+        // TODO
     }
 	
 	/**

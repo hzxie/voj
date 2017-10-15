@@ -32,11 +32,11 @@ public class UserMetaMapperTest {
 	@Test
 	public void testGetNumberOfUserRegistered() {
 		Calendar calendar = Calendar.getInstance();
-		calendar.set(2014, 9, 7, 0, 0, 0);
+		calendar.set(2014, 9, 8, 0, 0, 0);
 		Date startTime = calendar.getTime();
-		calendar.set(2014, 9, 7, 23, 59, 59);
+		calendar.set(2014, 9, 8, 23, 59, 59);
 		Date endTime = calendar.getTime();
-		
+
 		long numberOfUsers = userMetaMapper.getNumberOfUserRegistered(startTime, endTime);
 		Assert.assertEquals(1, numberOfUsers);
 	}
