@@ -1,4 +1,5 @@
-version: "{branch} {build}"
+
+# # version: "{branch} {build}"
 
 environment:
   matrix:
