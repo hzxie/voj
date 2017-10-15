@@ -39,6 +39,11 @@
 		</dependency>
 		<dependency>
 			<groupId>org.springframework</groupId>
+			<artifactId>spring-context</artifactId>
+			<version>${spring.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework</groupId>
 			<artifactId>spring-messaging</artifactId>
 			<version>${spring.version}</version>
 		</dependency>
@@ -76,7 +81,7 @@
 		<dependency>
 			<groupId>mysql</groupId>
 			<artifactId>mysql-connector-java</artifactId>
-			<version>8.0.8-dmr</version>
+			<version>5.1.44</version>
 		</dependency>
 		<!-- Message Service -->
 		<dependency>
@@ -196,6 +201,7 @@
 									<arg value="-force" />
 									<arg value="org.verwandlung.voj.judger.core.Runner" />
 								</exec>
+								<echo>Generating dynamic-link library</echo>
 								<exec executable="make"></exec>
 							</target>
 						</configuration>
