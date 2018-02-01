@@ -21,13 +21,14 @@ before_install:
   - cp judger/src/test/resources/voj-test-linux.properties judger/src/test/resources/voj-test.properties
 # Find Maven Installation Path for root user
   - sudo find / -name mvn
+  - export MVN_EXEC=`sudo find / -name mvn`
 # Setup Maven for Oracle JDK 9
   - export MAVEN_SKIP_RC=true
 
 script: 
   - sudo find / -name mvn
   - mvn test -f web/pom.xml
-  - sudo /usr/local/maven-3.5.0/bin/mvn test -f judger/pom.xml
+  - sudo $MVN_EXEC test -f judger/pom.xml
 
 after_script:
   - mysql -e 'DROP DATABASE test;'
