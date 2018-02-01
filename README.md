@@ -6,8 +6,8 @@ Version: 0.1.0
 [![Build status](https://ci.appveyor.com/api/projects/status/j62ns9p8whttittm?svg=true)](https://ci.appveyor.com/project/hzxie/voj)
 [![Coverage Status](https://coveralls.io/repos/hzxie/voj/badge.svg?branch=master&service=github)](https://coveralls.io/github/hzxie/voj?branch=master)
 
-[**Official Website**](#) | 
-[**Tech Support**](http://haozhexie.com) |
+[**Official Website**](https://verwandlung.org) | 
+[**Tech Support**](https://haozhexie.com) |
 [**Change Log**](#)
 
 ---
@@ -97,7 +97,7 @@ For Judger:
 **NOTE:** 
 
 - [Maven](http://maven.apache.org) 3+ and [GCC](http://gcc.gnu.org/) 4.8+ with POSIX thread model is required.
-- Make sure add the Maven and GCC to the PATH.
+- Make sure Maven and GCC are added to the PATH.
 
 After extracting the source, run these commands from a terminal:
 
