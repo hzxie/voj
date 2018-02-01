@@ -5,7 +5,6 @@
 #include "../org_verwandlung_voj_judger_core_Runner.h"
 
 #include <algorithm>
-#include <array>
 #include <cmath>
 #include <cstdint>
 #include <cstring>
@@ -19,22 +18,15 @@
 
 #include <fcntl.h>
 #include <signal.h>
-#include <sys/ptrace.h>
+#include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <sys/user.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
 #define  STDIN  0
 #define  STDOUT 1
 #define  STDERR 2
-
-#if __WORDSIZE == 64
-#define REG(reg) reg.orig_rax
-#else
-#define REG(reg) reg.orig_eax
-#endif
 
 /**
  * A pointer to an array of character pointers to the environment strings.
@@ -53,8 +45,7 @@ bool isCurrentUsedMemoryIgnored(int, int);
 int getMaxUsedMemory(pid_t, int);
 int getCurrentUsedMemory(pid_t);
 long long getMillisecondsNow();
-long killProcess(pid_t&);
-bool isAllowedSystemCalls(int);
+int killProcess(pid_t&);
 
 /**
  * JNI调用入口.
@@ -172,66 +163,54 @@ void setupRunUser() {
  * @param  commandLine - 命令行
  * @param  timeLimit   - 运行时时间限制(ms)
  * @param  memoryLimit - 运行时空间限制(KB)
- * @param  usedTime    - 运行时时间占用(ms)
- * @param  usedMemory  - 运行时空间占用(KB)
+ * @param  UsedTime    - 运行时时间占用(ms)
+ * @param  UsedMemory  - 运行时空间占用(ms)
  * @return 进程退出状态
  */
 int runProcess(pid_t pid, sigset_t sigset, const std::string& commandLine, int timeLimit, 
-    int memoryLimit, int& usedTime, int& usedMemory) {
+    int memoryLimit, int& UsedTime, int& UsedMemory) {
     char**            argv       = getCommandArgs(commandLine);
     long long         startTime  = 0;
     long long         endTime    = 0;
     int               exitCode   = 0;
+    std::future<int>  feature;
 
-    // Run Child Process
-    if ( pid == 0 ) {
-        ptrace(PTRACE_TRACEME, 0, NULL, NULL);
-        execvp(argv[0], argv);
-    }
     // Setup Monitor in Parent Process
     if ( pid > 0 ) {
-        startTime = getMillisecondsNow();
-        while ( waitpid(pid, &exitCode, WNOHANG) != -1 ) {
-            usleep(5000);
-
-            // Check time limit
-            endTime     = getMillisecondsNow();
-            usedTime    = endTime - startTime;
-            if ( usedTime > timeLimit * 1.5 ) {
-                killProcess(pid);
-                break;
-            }
-
-            // Check memory limit
-            int currentUsedMemory = getCurrentUsedMemory(pid);
-            if ( currentUsedMemory > usedMemory &&
-                !isCurrentUsedMemoryIgnored(currentUsedMemory, memoryLimit) ) {
-                usedMemory = currentUsedMemory;
-            }
-            if ( memoryLimit != 0 && currentUsedMemory > memoryLimit && 
-                !isCurrentUsedMemoryIgnored(currentUsedMemory, memoryLimit) ) {
-                killProcess(pid);
-                break;
-            }
-
-            // Detect system calls
-            if ( memoryLimit != 0 ) {
-                struct user_regs_struct regs;
-                ptrace(PTRACE_GETREGS, pid, NULL, &regs);
-                if ( REG(regs) >= 0 && REG(regs) <= 328 &&
-                    !isAllowedSystemCalls(REG(regs)) ) {
-                    std::cout << "[DEBUG] System call " << REG(regs) << " is detected." << std::endl;
+        // Memory Monitor
+        feature     = std::async(std::launch::async, getMaxUsedMemory, pid, memoryLimit);
+        
+        // Time Monitor
+        struct timespec timeout;
+        timeout.tv_sec  = timeLimit / 1000;
+        timeout.tv_nsec = timeLimit % 1000 * 1000000;
+        
+        startTime       = getMillisecondsNow();
+        do {
+            if ( sigtimedwait(&sigset, NULL, &timeout) < 0 ) {
+                if ( errno == EINTR ) {
+                    /* Interrupted by a signal other than SIGCHLD. */
+                    continue;
+                } else if (errno == EAGAIN) {
                     killProcess(pid);
+                } else {
                     return 127;
                 }
-                ptrace(PTRACE_SYSCALL, pid, NULL, NULL);
             }
-            
-            if ( WIFSTOPPED(exitCode) && WSTOPSIG(exitCode) == SIGTRAP ) {
-                ptrace(PTRACE_CONT, pid, NULL, NULL);
-            }
-        }
+            break;
+        } while ( true );
     }
+    // Run Child Process
+    if ( pid == 0 ) {
+        _exit(execvp(argv[0], argv));
+    }
+
+    // Collect information in Parent Process
+    waitpid(pid, &exitCode, 0);
+    endTime     = getMillisecondsNow();
+    UsedTime    = endTime - startTime;
+    UsedMemory  = feature.get();
+
     return exitCode;
 }
 
@@ -251,7 +230,7 @@ char** getCommandArgs(const std::string& commandLine) {
     char** argv = new char*[numberOfArguments + 1]();
 
     for ( size_t i = 0; i < numberOfArguments; ++ i ) {
-        char* arg = new char[args[i].size() + 1];
+        char* arg = new char[ args[i].size() + 1 ];
         strcpy(arg, args[i].c_str());
         argv[i] = arg;
     }
@@ -279,25 +258,48 @@ bool isCurrentUsedMemoryIgnored(int currentUsedMemory, int memoryLimit) {
 }
 
 /**
+ * 获取运行时内存占用最大值
+ * @param  pid         - 进程ID
+ * @param  memoryLimit - 运行时空间限制(KB)
+ * @return 运行时内存占用最大值
+ */
+int getMaxUsedMemory(pid_t pid, int memoryLimit) {
+    int  maxUsedMemory     = 0,
+         currentUsedMemory = 0;
+    do {
+        currentUsedMemory = getCurrentUsedMemory(pid);
+        std::cout << "currentUsedMemory: [PID #" << pid << "]" << currentUsedMemory << std::endl;
+
+        if ( currentUsedMemory > maxUsedMemory && 
+            !isCurrentUsedMemoryIgnored(currentUsedMemory, memoryLimit) ) {
+            maxUsedMemory = currentUsedMemory;
+        }
+        if ( memoryLimit != 0 && maxUsedMemory > memoryLimit ) {
+            killProcess(pid);
+        }
+        usleep(5000);
+    } while ( currentUsedMemory != 0 );
+
+    return maxUsedMemory;
+}
+
+/**
  * 获取内存占用情况.
  * @param  pid - 进程ID
  * @return 当前物理内存使用量(KB)
  */
 int getCurrentUsedMemory(pid_t pid) {
     int    currentUsedMemory   = 0;
-    long   residentSetSize     = 0L;
-    FILE*  fp                  = NULL;
+    long   residentSetSize      = 0L;
+    FILE*  fp                   = NULL;
+    
     std::stringstream stringStream;
-
     stringStream << "/proc/" << pid << "/statm";
-    const std::string tmp = stringStream.str();
-    const char* filePath = tmp.c_str();
+    const char* filePath = stringStream.str().c_str();
 
-    if ( (fp = fopen(filePath, "r")) != NULL ) {
+    if ( (fp = fopen( filePath, "r" )) != NULL ) {
         if ( fscanf(fp, "%*s%ld", &residentSetSize) == 1 ) {
             currentUsedMemory = (int)residentSetSize * (int)sysconf(_SC_PAGESIZE) >> 10;
-            // std::cout << "[DEBUG] currentUsedMemory = " << currentUsedMemory << std::endl;
-
             if ( currentUsedMemory < 0 ) {
                 currentUsedMemory = std::numeric_limits<int32_t>::max() >> 10;
             }
@@ -327,24 +329,9 @@ long long getMillisecondsNow() {
 
 /**
  * 强制销毁进程(当触发阈值时).
- * @param  pid - 进程ID
+ * @param  pid         - 进程ID
  * @return 0, 表示进程被成功结束.
  */
-long killProcess(pid_t& pid) {
-    std::cout << "[DEBUG]" << "Process [PID=" << pid << "] is going to be killed." << std::endl;
-
-    ptrace(PTRACE_KILL, pid, NULL, NULL);
+int killProcess(pid_t& pid) {
     return kill(pid, SIGKILL);
-}
-
-/**
- * 检查系统调用是否被允许.
- * Ref: 
- * - http://blog.rchapman.org/posts/Linux_System_Call_Table_for_x86_64/
- * 
- * @param  systemCallId - 系统调用的ID
- * @return 系统调用是否被允许
- */
-bool isAllowedSystemCalls(int systemCallId) {
-    return true;
 }
