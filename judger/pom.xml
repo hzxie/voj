@@ -185,17 +185,19 @@
 					<execution>
 						<phase>process-classes</phase>
 						<configuration>
-							<target name="jni"
+							<target name="Compile JNI C Library"
 								description="Generate headers and compile the native code">
-								<echo>Generating JNI headers</echo>
-								<exec executable="javah">
-									<arg value="-d" />
-									<arg value="${project.basedir}/src/main/cpp" />
-									<arg value="-classpath" />
-									<arg value="${project.build.outputDirectory}" />
-									<arg value="-force" />
-									<arg value="org.verwandlung.voj.judger.core.Runner" />
-								</exec>
+								<!-- 
+									<echo>Generating JNI headers</echo>
+									<exec executable="javah">
+										<arg value="-d" />
+										<arg value="${project.basedir}/src/main/cpp" />
+										<arg value="-classpath" />
+										<arg value="${project.build.outputDirectory}" />
+										<arg value="-force" />
+										<arg value="org.verwandlung.voj.judger.core.Runner" />
+									</exec>
+								-->
 								<echo>Generating dynamic-link library</echo>
 								<exec executable="make"></exec>
 							</target>
