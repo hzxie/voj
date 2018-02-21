@@ -65,7 +65,7 @@ public class Compiler {
 	/**
 	 * 获取编译输出结果.
 	 * @param commandLine - 编译命令
-	 * @param outputFilePath - 编译日志输出路径
+	 * @param compileLogPath - 编译日志输出路径
 	 * @return 包含编译输出结果的Map<String, Object>对象
 	 */
 	private Map<String, Object> getCompileResult(String commandLine, String compileLogPath) {

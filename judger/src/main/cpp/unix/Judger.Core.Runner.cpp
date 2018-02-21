@@ -268,7 +268,7 @@ int getMaxUsedMemory(pid_t pid, int memoryLimit) {
          currentUsedMemory = 0;
     do {
         currentUsedMemory = getCurrentUsedMemory(pid);
-        std::cout << "currentUsedMemory: [PID #" << pid << "]" << currentUsedMemory << std::endl;
+        std::cout << "[JNI DEBUG] Current Memory of PID# " << pid << ": " << currentUsedMemory << " KB" << std::endl;
 
         if ( currentUsedMemory > maxUsedMemory && 
             !isCurrentUsedMemoryIgnored(currentUsedMemory, memoryLimit) ) {
