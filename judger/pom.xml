@@ -9,10 +9,10 @@
 	<url>http://maven.apache.org</url>
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<spring.version>5.0.0.RELEASE</spring.version>
-		<aspectj.version>1.8.11</aspectj.version>
+		<spring.version>5.0.4.RELEASE</spring.version>
+		<aspectj.version>1.8.13</aspectj.version>
 		<mybatis.version>3.4.5</mybatis.version>
-		<druid.version>1.1.4</druid.version>
+		<druid.version>1.1.8</druid.version>
 		<activemq.version>5.15.0</activemq.version>
 	</properties>
 	<dependencies>
@@ -46,11 +46,6 @@
 			<groupId>org.springframework</groupId>
 			<artifactId>spring-messaging</artifactId>
 			<version>${spring.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>org.aspectj</groupId>
-			<artifactId>aspectjrt</artifactId>
-			<version>${aspectj.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.aspectj</groupId>
