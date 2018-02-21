@@ -12,8 +12,8 @@
 #include <iostream>
 #include <iterator>
 #include <limits>
-#include <string>
 #include <sstream>
+#include <string>
 #include <vector>
 
 #include <fcntl.h>
@@ -69,7 +69,7 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     std::string inputFilePath       = getStringValue(jniEnv, jInputFilePath);
     std::string outputFilePath      = getStringValue(jniEnv, jOutputFilePath);
 
-    std::cout << "Command Line: " << commandLine << std::endl;
+    std::cout << "[INFO] Command Line: " << commandLine << std::endl;
 
     JHashMap    result;
     jint        usedTime            = 0;
@@ -88,9 +88,9 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     }
     exitCode = runProcess(pid, sigset, commandLine, timeLimit, memoryLimit, usedTime, usedMemory);
 
-    std::cout << "[JNI DEBUG] usedTime: " << usedTime << " ms" << std::endl;
-    std::cout << "[JNI DEBUG] usedMemory: " << usedMemory  << " KB" << std::endl;
-    std::cout << "[JNI DEBUG] exitCode: " << exitCode << std::endl;
+    std::cout << "[DEBUG] usedTime: " << usedTime << " ms" << std::endl;
+    std::cout << "[DEBUG] usedMemory: " << usedMemory  << " KB" << std::endl;
+    std::cout << "[DEBUG] exitCode: " << exitCode << std::endl;
     
     result.put("usedTime", usedTime);
     result.put("usedMemory", usedMemory);
@@ -244,11 +244,11 @@ char** getCommandArgs(const std::string& commandLine) {
  * 由于在实际运行过程中, 程序可能会获取到JVM环境中的内存占用.
  * 对于这种情况, 我们应忽略这个值.
  * @param  currentUsedMemory - 当前获取到的内存占用
- * @param  memoryLimit        - 运行时空间限制(KB)
  * @return 是否忽略当前获取到的内存占用
  */
-bool isCurrentUsedMemoryIgnored(int currentUsedMemory, int memoryLimit) {
+bool isCurrentUsedMemoryIgnored(int currentUsedMemory) {
     int jvmUsedMemory = getCurrentUsedMemory(getpid());
+    std::cout << "[DEBUG] Current Memory of JVM: " << jvmUsedMemory << " KB" << std::endl;
 
     if ( currentUsedMemory >= jvmUsedMemory / 2 &&
          currentUsedMemory <= jvmUsedMemory * 2 ) {
@@ -268,10 +268,10 @@ int getMaxUsedMemory(pid_t pid, int memoryLimit) {
          currentUsedMemory = 0;
     do {
         currentUsedMemory = getCurrentUsedMemory(pid);
-        std::cout << "[JNI DEBUG] Current Memory of PID# " << pid << ": " << currentUsedMemory << " KB" << std::endl;
+        std::cout << "[DEBUG] Current Memory of PID# " << pid << ": " << currentUsedMemory << " KB" << std::endl;
 
         if ( currentUsedMemory > maxUsedMemory && 
-            !isCurrentUsedMemoryIgnored(currentUsedMemory, memoryLimit) ) {
+            !isCurrentUsedMemoryIgnored(currentUsedMemory) ) {
             maxUsedMemory = currentUsedMemory;
         }
         if ( memoryLimit != 0 && maxUsedMemory > memoryLimit ) {
@@ -289,15 +289,15 @@ int getMaxUsedMemory(pid_t pid, int memoryLimit) {
  * @return 当前物理内存使用量(KB)
  */
 int getCurrentUsedMemory(pid_t pid) {
-    int    currentUsedMemory   = 0;
+    int    currentUsedMemory    = 0;
     long   residentSetSize      = 0L;
-    FILE*  fp                   = NULL;
-    
-    std::stringstream stringStream;
-    stringStream << "/proc/" << pid << "/statm";
-    const char* filePath = stringStream.str().c_str();
 
-    if ( (fp = fopen( filePath, "r" )) != NULL ) {
+    std::string filePath("/proc/");
+    filePath += std::to_string(pid) + "/statm";
+    const char* cFilePath = filePath.c_str();
+    
+    FILE* fp = fopen(cFilePath, "r");
+    if ( fp != NULL ) {
         if ( fscanf(fp, "%*s%ld", &residentSetSize) == 1 ) {
             currentUsedMemory = (int)residentSetSize * (int)sysconf(_SC_PAGESIZE) >> 10;
             if ( currentUsedMemory < 0 ) {
@@ -305,6 +305,9 @@ int getCurrentUsedMemory(pid_t pid) {
             }
         }
         fclose(fp);
+    } else {
+        std::cout << "[DEBUG] Memory file path = " << cFilePath << std::endl;
+        std::cout << "[DEBUG] fp == NULL in getCurrentUsedMemory(pid_t)" << std::endl;
     }
     return currentUsedMemory;
 }
