@@ -57,8 +57,8 @@ public class ApplicationDispatcher {
 	 */
 	public void onCompileFinished(long submissionId, Map<String, Object> result) {
 		boolean isSuccessful = (Boolean)result.get("isSuccessful");
-		String log = getJudgeLog((String)result.get("log"));
-		
+		String log = log = getJudgeLog(result);
+
 		if ( !isSuccessful ) {
 			updateSubmission(submissionId, 0, 0, 0, "CE", log);
 		}
@@ -211,14 +211,19 @@ public class ApplicationDispatcher {
 	
 	/**
 	 * 格式化编译时日志.
-	 * @param compileLog - 编译器输出的日志
+	 * @param result - 包含编译状态的Map<String, Object>对象
 	 * @return 格式化后的日志
 	 */
-	private String getJudgeLog(String compileLog) {
+	private String getJudgeLog(Map<String, Object> result) {
+		boolean isSuccessful = (Boolean)result.get("isSuccessful");
+		String compileLog = (String)result.get("log");
+
 		StringBuilder formatedLogBuilder = new StringBuilder();
-		formatedLogBuilder.append("Compile Error.\n\n");
-		formatedLogBuilder.append(compileLog.replace("\n", "\n\n"));
-		formatedLogBuilder.append("\nCompile Error, Time = 0 ms, Memory = 0 KB, Score = 0.\n");
+		formatedLogBuilder.append(String.format("Compile %s.\n\n", new Object[] { isSuccessful ? "Successful" : "Error" }));
+		if ( !isSuccessful ) {
+			formatedLogBuilder.append(compileLog.replace("\n", "\n\n"));
+			formatedLogBuilder.append("\nCompile Error, Time = 0 ms, Memory = 0 KB, Score = 0.\n");
+		}
 		return formatedLogBuilder.toString();
 	}
 	
