@@ -115,6 +115,7 @@
                     <h5><spring:message code="voj.problems.problem.actions" text="Actions" /></h5>
                     <ul>
                     <c:if test="${isLogin}">
+                        <li><a href="<c:url value="/discussion/new?problemId=${problem.problemId}" />"><spring:message code="voj.problems.problem.create-discussion" text="Create Discussion" /></a></li>
                         <li><a id="submit-solution" href="javascript:void(0);"><spring:message code="voj.problems.problem.submit-solution" text="Submit Solution" /></a></li>
                     </c:if>
                         <li><a href="<c:url value="/p/${problem.problemId}/solution" />"><spring:message code="voj.problems.problem.view-solution" text="View Solution" /></a></li>
@@ -176,7 +177,7 @@
             tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
         });
     </script>
-    <script type="text/javascript" async src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/javascript" async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <script type="text/javascript">
         $.getScript('${cdnUrl}/js/markdown.min.js', function() {
             converter = Markdown.getSanitizingConverter();
@@ -311,7 +312,7 @@
             }
         });
     </script>
-    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <c:if test="${GoogleAnalyticsCode != ''}">
     ${googleAnalyticsCode}
     </c:if>

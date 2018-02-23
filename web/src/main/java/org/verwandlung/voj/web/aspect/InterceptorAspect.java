@@ -12,6 +12,7 @@ import org.aspectj.lang.annotation.Aspect;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.servlet.ModelAndView;
 
+import org.springframework.web.servlet.view.RedirectView;
 import org.verwandlung.voj.web.exception.ResourceNotFoundException;
 import org.verwandlung.voj.web.model.User;
 import org.verwandlung.voj.web.service.UserService;
@@ -39,8 +40,9 @@ public class InterceptorAspect {
 		HttpSession session = request.getSession();
 		
 		if ( !isAllowToAccess(session, new String[] { "users", "administrators" }) ) {
-			view = new ModelAndView("redirect:/accounts/login");
-			return view;
+			RedirectView redirectView = new RedirectView(request.getContextPath() + "/accounts/login");
+			redirectView.setExposeModelAttributes(false);
+			return new ModelAndView(redirectView);
 		}
 		view = (ModelAndView) proceedingJoinPoint.proceed();
 		return view;
@@ -83,8 +85,9 @@ public class InterceptorAspect {
 		HttpSession session = request.getSession();
 		
 		if ( !isAllowToAccess(session, new String[] { "administrators" }) ) {
-			view = new ModelAndView("redirect:/accounts/dashboard");
-			return view;
+			RedirectView redirectView = new RedirectView(request.getContextPath() + "/accounts/dashboard");
+			redirectView.setExposeModelAttributes(false);
+			return new ModelAndView(redirectView);
 		}
 		view = (ModelAndView) proceedingJoinPoint.proceed();
 		return view;

@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.ModelAndView;
 
+import org.springframework.web.servlet.view.RedirectView;
 import org.verwandlung.voj.web.exception.ResourceNotFoundException;
 import org.verwandlung.voj.web.model.Language;
 import org.verwandlung.voj.web.model.User;
@@ -60,7 +61,9 @@ public class AccountsController {
 		
 		ModelAndView view = null;
 		if ( isLoggedIn(session) ) {
-			view = new ModelAndView("redirect:/");
+			RedirectView redirectView = new RedirectView(request.getContextPath());
+			redirectView.setExposeModelAttributes(false);
+			view = new ModelAndView(redirectView);
 		} else {
 			view = new ModelAndView("accounts/login");
 			view.addObject("isLogout", isLogout);
@@ -147,7 +150,9 @@ public class AccountsController {
 		HttpSession session = request.getSession();
 		ModelAndView view = null;
 		if ( isLoggedIn(session) ) {
-			view = new ModelAndView("redirect:/");
+			RedirectView redirectView = new RedirectView(request.getContextPath());
+			redirectView.setExposeModelAttributes(false);
+			view = new ModelAndView(redirectView);
 		} else {
 			List<Language> languages = languageService.getAllLanguages();
 			boolean isAllowRegister = optionService.getOption("allowUserRegister").getOptionValue().equals("1");
@@ -212,7 +217,9 @@ public class AccountsController {
 		ModelAndView view = null;
 		
 		if ( isLoggedIn(session) ) {
-			view = new ModelAndView("redirect:/");
+			RedirectView redirectView = new RedirectView(request.getContextPath());
+			redirectView.setExposeModelAttributes(false);
+			view = new ModelAndView(redirectView);
 		} else {
 			boolean isTokenValid = false;
 			if ( token != null && !token.isEmpty() ) {
@@ -347,12 +354,13 @@ public class AccountsController {
 		ModelAndView view = null;
 		
 		if ( !isLoggedIn(session) ) {
-			view = new ModelAndView("redirect:/accounts/login");
+			RedirectView redirectView = new RedirectView(request.getContextPath() + "/accounts/login");
+			redirectView.setExposeModelAttributes(false);
+			view = new ModelAndView(redirectView);
 		}
 		
 		long userId = (Long)session.getAttribute("uid");
 		User user = userService.getUserUsingUid(userId);
-		
 		view = new ModelAndView("accounts/dashboard");
 		view.addObject("user", user);
 		view.addAllObjects(userService.getUserMetaUsingUid(user));

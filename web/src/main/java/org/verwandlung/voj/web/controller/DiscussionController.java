@@ -10,12 +10,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.view.RedirectView;
 import org.verwandlung.voj.web.exception.ResourceNotFoundException;
-import org.verwandlung.voj.web.model.DiscussionReply;
-import org.verwandlung.voj.web.model.DiscussionThread;
-import org.verwandlung.voj.web.model.DiscussionTopic;
-import org.verwandlung.voj.web.model.User;
+import org.verwandlung.voj.web.model.*;
 import org.verwandlung.voj.web.service.DiscussionService;
+import org.verwandlung.voj.web.service.ProblemService;
 import org.verwandlung.voj.web.util.CsrfProtector;
 import org.verwandlung.voj.web.util.HttpRequestParser;
 import org.verwandlung.voj.web.util.HttpSessionParser;
@@ -128,15 +127,24 @@ public class DiscussionController {
 	 */
 	@RequestMapping(value="/new", method=RequestMethod.GET)
 	public ModelAndView newDiscussionThreadView(
+			@RequestParam(value="problemId", required=false, defaultValue="-1") long problemId,
 			HttpServletRequest request, HttpServletResponse response) {
 		HttpSession session = request.getSession();
 		ModelAndView view = null;
 		if ( !isLoggedIn(session) ) {
-			view = new ModelAndView("redirect:/accounts/login?forward=/discussion/new");
+			RedirectView redirectView = new RedirectView(request.getContextPath() + "/accounts/login");
+			redirectView.setExposeModelAttributes(false);
+			view = new ModelAndView(redirectView);
 		} else {
 			List<DiscussionTopic> discussionTopics = discussionService.getDiscussionTopics();
+			Problem problem = null;
+			if ( problemId != -1 ) {
+				problem = problemService.getProblem(problemId);
+			}
+
 			view = new ModelAndView("discussion/new-thread");
 			view.addObject("discussionTopics", discussionTopics);
+			view.addObject("relatedProblem", problem);
 			view.addObject("csrfToken", CsrfProtector.getCsrfToken(session));
 		}
 		return view;
@@ -229,27 +237,30 @@ public class DiscussionController {
 	/**
 	 * 处理用户创建讨论帖子的请求.
 	 * @param discussionTopicSlug - 讨论帖子对应主题的唯一英文缩写
-	 * @param relatedProblemId - 讨论帖子所关联问题的唯一标识符
+	 * @param relatedProblemIdString - 讨论帖子所关联问题的唯一标识符
 	 * @param discussionThreadTitle - 讨论帖子的标题
 	 * @param csrfToken 用于防止CSRF攻击的Token
 	 * @param request - HttpServletRequest对象
 	 * @return 包含讨论帖子创建结果的JSON对象
 	 */
 	@RequestMapping(value="/createDiscussionThread.action", method=RequestMethod.POST)
-	public @ResponseBody Map<String, Boolean> createDiscussionThreadAction(
+	public @ResponseBody Map<String, Object> createDiscussionThreadAction(
 			@RequestParam(value="discussionTopicSlug") String discussionTopicSlug,
-			@RequestParam(value="relatedProblemId") long relatedProblemId,
-			@RequestParam(value="discussionThreadTitle") String discussionThreadTitle,
+			@RequestParam(value="relatedProblemId") String relatedProblemIdString,
+			@RequestParam(value="threadTitle") String discussionThreadTitle,
+			@RequestParam(value="threadContent") String discussionThreadContent,
 			@RequestParam(value="csrfToken") String csrfToken,
 			HttpServletRequest request) {
 		HttpSession session = request.getSession();
 		String ipAddress = HttpRequestParser.getRemoteAddr(request);
 		User currentUser = HttpSessionParser.getCurrentUser(session);
+		long relatedProblemId = relatedProblemIdString.isEmpty() ? -1 : Integer.parseInt(relatedProblemIdString);
 		boolean isCsrfTokenValid = CsrfProtector.isCsrfTokenValid(csrfToken, session);
 
-		Map<String, Boolean> result = discussionService.createDiscussionThread(
-				currentUser, discussionTopicSlug, relatedProblemId, discussionThreadTitle, isCsrfTokenValid);
-		if ( result.get("isSuccessful") ) {
+		Map<String, Object> result = discussionService.createDiscussionThread(
+				currentUser, discussionTopicSlug, relatedProblemId, discussionThreadTitle,
+				discussionThreadContent, isCsrfTokenValid);
+		if ( (Boolean) result.get("isSuccessful") ) {
 			LOGGER.info(String.format("User: {%s} created discussion thread[Title=%s] at %s",
 					new Object[] {currentUser, discussionThreadTitle, ipAddress}));
 		}
@@ -385,6 +396,12 @@ public class DiscussionController {
 	 */
 	@Autowired
 	private DiscussionService discussionService;
+
+	/**
+	 * 自动注入的ProblemService对象.
+	 */
+	@Autowired
+	private ProblemService problemService;
 
 	/**
 	 * 日志记录器.
