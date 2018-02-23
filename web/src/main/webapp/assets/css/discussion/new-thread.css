@@ -8,7 +8,6 @@ div#discussion-thread div.header {
 
 div#discussion-thread select, 
 div#discussion-thread input[type="text"] {
-	border-width: 1px;
 	height: auto;
 	-webkit-box-sizing:border-box;
 	   -moz-box-sizing: border-box;
