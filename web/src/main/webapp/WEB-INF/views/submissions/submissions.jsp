@@ -43,43 +43,62 @@
     <%@ include file="/WEB-INF/views/include/header.jsp" %>
     <!-- Content -->
     <div id="content" class="container">
-        <div id="main-content" class="row-fluid">
-            <div id="submission" class="span12">
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th class="flag"><spring:message code="voj.submissions.submissions.result" text="Result" /></th>
-                            <th class="score"><spring:message code="voj.submissions.submissions.score" text="Score" /></th>
-                            <th class="time"><spring:message code="voj.submissions.submissions.time" text="Time" /></th>
-                            <th class="memory"><spring:message code="voj.submissions.submissions.memory" text="Memory" /></th>
-                            <th class="name"><spring:message code="voj.submissions.submissions.problem" text="Problem" /></th>
-                            <th class="user"><spring:message code="voj.submissions.submissions.user" text="User" /></th>
-                            <th class="language"><spring:message code="voj.submissions.submissions.language" text="Language" /></th>
-                            <th class="submit-time"><spring:message code="voj.submissions.submissions.submit-time" text="Submit Time" /></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <c:forEach var="submission" items="${submissions}">
-                        <tr data-value="${submission.submissionId}">
-                            <td class="flag-${submission.judgeResult.judgeResultSlug}"><a href="<c:url value="/submission/${submission.submissionId}" />">${submission.judgeResult.judgeResultName}</a></td>
-                            <td class="score">${submission.judgeScore}</td>
-                            <td class="time">${submission.usedTime} ms</td>
-                            <td class="memory">${submission.usedMemory} K</td>
-                            <td class="name"><a href="<c:url value="/p/${submission.problem.problemId}" />">P${submission.problem.problemId} ${submission.problem.problemName}</a></td>
-                            <td class="user"><a href="<c:url value="/accounts/user/${submission.user.uid}" />">${submission.user.username}</a></td>
-                            <td class="language">${submission.language.languageName}</td>
-                            <td class="submit-time">
-                                <fmt:formatDate value="${submission.submitTime}" type="both" dateStyle="default" timeStyle="default" />
-                            </td>
-                        </tr>
-                        </c:forEach>
-                    </tbody>
-                </table>
-                <div id="more-submissions">
-                    <p class="availble"><spring:message code="voj.submissions.submissions.more-submission" text="More Submission..." /></p>
-                    <img src="${cdnUrl}/img/loading.gif" alt="Loading" class="hide" />
-                </div>
-            </div> <!-- #submission -->
+        <form id="filter" action="<c:url value="/submission" />">
+            <div class="row-fluid">
+                <div class="span5">
+                    <div class="form-group">
+                        <input name="username" type="text" value="${param.username}" placeholder="<spring:message code="voj.submissions.submissions.submitter-username" text="Submitter's Username" />" class="form-control span12">
+                    </div> <!-- .form-group -->
+                </div> <!-- .span5 -->
+                <div class="span5">
+                    <div class="form-group">
+                        <input name="problemId" type="text" value="${param.problemId}" placeholder="<spring:message code="voj.submissions.submissions.problem-id" text="Problem ID" />" class="form-control span12">
+                    </div> <!-- .form-group -->
+                </div> <!-- .span5 -->
+                <div class="span2">
+                    <button class="btn btn-primary btn-block" type="submit"><spring:message code="voj.submissions.submissions.filter" text="Filter" /></button>
+                </div> <!-- .span2 -->
+            </div> <!-- .row-fluid -->
+        </form> <!-- #filter -->
+        <div id="main-content">
+            <div class="row-fluid">
+                <div id="submission" class="span12">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th class="flag"><spring:message code="voj.submissions.submissions.result" text="Result" /></th>
+                                <th class="score"><spring:message code="voj.submissions.submissions.score" text="Score" /></th>
+                                <th class="time"><spring:message code="voj.submissions.submissions.time" text="Time" /></th>
+                                <th class="memory"><spring:message code="voj.submissions.submissions.memory" text="Memory" /></th>
+                                <th class="name"><spring:message code="voj.submissions.submissions.problem" text="Problem" /></th>
+                                <th class="user"><spring:message code="voj.submissions.submissions.user" text="User" /></th>
+                                <th class="language"><spring:message code="voj.submissions.submissions.language" text="Language" /></th>
+                                <th class="submit-time"><spring:message code="voj.submissions.submissions.submit-time" text="Submit Time" /></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <c:forEach var="submission" items="${submissions}">
+                            <tr data-value="${submission.submissionId}">
+                                <td class="flag-${submission.judgeResult.judgeResultSlug}"><a href="<c:url value="/submission/${submission.submissionId}" />">${submission.judgeResult.judgeResultName}</a></td>
+                                <td class="score">${submission.judgeScore}</td>
+                                <td class="time">${submission.usedTime} ms</td>
+                                <td class="memory">${submission.usedMemory} K</td>
+                                <td class="name"><a href="<c:url value="/p/${submission.problem.problemId}" />">P${submission.problem.problemId} ${submission.problem.problemName}</a></td>
+                                <td class="user"><a href="<c:url value="/accounts/user/${submission.user.uid}" />">${submission.user.username}</a></td>
+                                <td class="language">${submission.language.languageName}</td>
+                                <td class="submit-time">
+                                    <fmt:formatDate value="${submission.submitTime}" type="both" dateStyle="default" timeStyle="default" />
+                                </td>
+                            </tr>
+                            </c:forEach>
+                        </tbody>
+                    </table>
+                    <div id="more-submissions">
+                        <p class="availble"><spring:message code="voj.submissions.submissions.more-submission" text="More Submission..." /></p>
+                        <img src="${cdnUrl}/img/loading.gif" alt="Loading" class="hide" />
+                    </div>
+                </div> <!-- #submission -->
+            </div> <!-- .row-fluid -->
         </div> <!-- #main-content -->
     </div> <!-- #content -->
     <!-- Footer -->

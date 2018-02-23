@@ -5,6 +5,10 @@ div#content form#filter {
 	padding: 10px;
 }
 
+div#content form#filter input[type=text] {
+	margin-bottom: 0;
+}
+
 div#content div#main-content {
 	margin-top: 20px;
 }
@@ -103,6 +107,9 @@ div#content div#main-content div#submission div#more-submissions img {
 
 /* All Mobile Sizes (devices and browser) */
 @media only screen and (max-width: 767px) {
+	div#content form#filter div.span5 {
+		margin-bottom: 10px;
+	}
 }
 
 /* Mobile Landscape Size to Tablet Portrait (devices and browsers) */

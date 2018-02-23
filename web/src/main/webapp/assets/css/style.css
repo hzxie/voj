@@ -9,6 +9,12 @@ a {
 	text-decoration: none;
 }
 
+select, 
+input[type=text], 
+input[type=password] {
+	border-width: 1px;
+}
+
 div.container {
 	width: 960px;
 }
