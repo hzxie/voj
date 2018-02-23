@@ -102,7 +102,7 @@
                     <h4><spring:message code="voj.problems.problems.search" text="Search" /></h4>
                     <form id="search-form" action="<c:url value="/p" />">
                         <div class="control-group">
-                            <input id="keyword" name="keyword" class="span12" type="text" placeholder="<spring:message code="voj.problems.problems.keyword" text="Keyword" />" value="${keyword}" />
+                            <input id="keyword" name="keyword" class="span12" type="text" placeholder="<spring:message code="voj.problems.problems.keyword" text="Keyword" />" value="${param.keyword}" />
                         </div>
                         <button class="btn btn-primary btn-block" type="submit"><spring:message code="voj.problems.problems.search" text="Search" /></button>
                     </form> <!-- #search-form -->
@@ -112,7 +112,7 @@
                     <c:forEach var="entry" items="${problemCategories}">
                         <h6>
                             <a 
-                                <c:if test="${selectedCategorySlug == entry.key.problemCategorySlug}">class="active" </c:if>
+                                <c:if test="${param.category == entry.key.problemCategorySlug}">class="active" </c:if>
                                 href="<c:url value="/p?category=${entry.key.problemCategorySlug}" />">
                                 ${entry.key.problemCategoryName}
                             </a>
@@ -121,7 +121,7 @@
                         <c:forEach var="problemCategory" items="${entry.value}">
                             <li>
                                 <a 
-                                    <c:if test="${selectedCategorySlug == problemCategory.problemCategorySlug}">class="active" </c:if>
+                                    <c:if test="${param.category == problemCategory.problemCategorySlug}">class="active" </c:if>
                                     href="<c:url value="/p?category=${problemCategory.problemCategorySlug}" />">
                                     ${problemCategory.problemCategoryName}
                                 </a>
@@ -175,8 +175,8 @@
         function getMoreProblems(startIndex) {
             var pageRequests = {
                 'startIndex': startIndex,
-                'keyword': '${keyword}',
-                'category': '${selectedCategorySlug}'
+                'keyword': '${param.keyword}',
+                'category': '${param.category}'
             };
 
             $.ajax({
