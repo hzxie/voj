@@ -70,7 +70,8 @@
                 </div> <!-- .span9 -->
                 <div class="span3 text-right">
                 <c:if test="${myProfile.uid == discussionThread.discussionThreadCreator.uid}">
-                    <button class="btn btn-default" onclick="javascript:editDiscussion();"><spring:message code="voj.discussion.thread.edit-discussion" text="Edit" /></button>
+                    <!-- TODO -->
+                    <button class="btn btn-default hide" onclick="javascript:editDiscussion();"><spring:message code="voj.discussion.thread.edit-discussion" text="Edit" /></button>
                 </c:if>
                 <c:if test="${isLogin}">
                     <button class="btn btn-primary" onclick="window.location.href='<c:url value="/discussion/new" />'"><spring:message code="voj.discussion.thread.new-discussion" text="New Discussion" /></button>
@@ -144,7 +145,7 @@
             tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
         });
     </script>
-    <script type="text/javascript" async src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/javascript" async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <script type="text/javascript">
         $.when(
             $.getScript('${cdnUrl}/js/markdown.min.js'),

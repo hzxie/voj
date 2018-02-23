@@ -327,34 +327,56 @@ public class DiscussionService {
 	 * @param discussionTopicSlug - 讨论帖子对应主题的唯一英文缩写
 	 * @param relatedProblemId - 讨论帖子所关联的问题 (可为空)
 	 * @param discussionThreadTitle - 讨论帖子的标题
+	 * @param discussionThreadContent - 讨论帖子中第一个回复的内容
 	 * @param isCsrfTokenValid - CSRF Token是否合法
 	 * @return 包含讨论帖子创建结果的Map对象
 	 */
-	public Map<String, Boolean> createDiscussionThread(User threadCreator,
+	public Map<String, Object> createDiscussionThread(User threadCreator,
 			String discussionTopicSlug, long relatedProblemId,
-			String discussionThreadTitle, boolean isCsrfTokenValid) {
-		DiscussionTopic discussionTopic = null;
-		Map<String, Boolean> result = new HashMap<>(6, 1);
-		result.put("isThreadCreatorExists", threadCreator != null);
-		result.put("isThreadCreatorLegal", threadCreator != null && !threadCreator.getUserGroup().getUserGroupSlug().equals("forbidden"));
-		result.put("isThreadTitleEmpty", discussionThreadTitle.isEmpty());
-		result.put("isThreadTitleLegal", discussionThreadTitle.length() <= 128);
+			String discussionThreadTitle, String discussionThreadContent,
+			boolean isCsrfTokenValid) {
+		DiscussionTopic discussionTopic = discussionTopicMapper.getDiscussionTopicUsingSlug(discussionTopicSlug);
+		DiscussionThread dt = new DiscussionThread(threadCreator, discussionTopic,
+				null, HtmlTextFilter.filter(discussionThreadTitle));
+		Map<String, Object> result = (Map<String, Object>) getDiscussionThreadCreationResult(dt,
+										discussionThreadContent, isCsrfTokenValid);
+		if ( (Boolean) result.get("isSuccessful") ) {
+			if ( relatedProblemId != 0 ) {
+				Problem relatedProblem = problemMapper.getProblem(relatedProblemId);
+				dt.setProblem(relatedProblem);
+			}
+			discussionThreadMapper.createDiscussionThread(dt);
+			createDiscussionReply(dt.getDiscussionThreadId(), threadCreator, discussionThreadContent, isCsrfTokenValid);
+			result.put("discussionThreadId", dt.getDiscussionThreadId());
+		}
+		return result;
+	}
+
+	/**
+	 * 获取讨论帖子的创建结果.
+	 * @param dt - 待创建的讨论帖
+	 * @param discussionThreadContent - 待创建讨论帖中的内容 (内容以DiscussionReply对象存储)
+	 * @param isCsrfTokenValid - CSRF Token是否合法
+	 * @return 包含讨论帖子创建结果的Map<String, Boolean>对象
+	 */
+	private Map<String, ? extends Object> getDiscussionThreadCreationResult(
+			DiscussionThread dt, String discussionThreadContent, boolean isCsrfTokenValid) {
+		Map<String, Boolean> result = new HashMap<>(9, 1);
+		result.put("isThreadCreatorExists", dt.getDiscussionThreadCreator() != null);
+		result.put("isThreadCreatorLegal", dt.getDiscussionThreadCreator() != null &&
+											!dt.getDiscussionThreadCreator().getUserGroup()
+													.getUserGroupSlug().equals("forbidden"));
+		result.put("isDiscussionTopicExists", dt.getDiscussionTopic() != null);
+		result.put("isThreadTitleEmpty", dt.getDiscussionThreadTitle().isEmpty());
+		result.put("isThreadTitleLegal", dt.getDiscussionThreadTitle().length() <= 128);
+		result.put("isThreadContentEmpty", discussionThreadContent.isEmpty());
 		result.put("isCsrfTokenValid", isCsrfTokenValid);
 
-		if ( isCsrfTokenValid ) {
-			discussionTopic = discussionTopicMapper.getDiscussionTopicUsingSlug(discussionTopicSlug);
-			result.put("isDiscussionTopicExists", discussionTopic != null);
-		}
-		boolean isSuccessful = !result.get("isThreadCreatorExists")   &&  result.get("isThreadCreatorLegal") &&
-							    result.get("isDiscussionTopicExists") && !result.get("isThreadTitleEmpty")   &&
-							    result.get("isThreadTitleLegal")      &&  result.get("isCsrfTokenValid");
+		boolean isSuccessful =  result.get("isThreadCreatorExists")   &&  result.get("isThreadCreatorLegal") &&
+								result.get("isDiscussionTopicExists") && !result.get("isThreadTitleEmpty")   &&
+								result.get("isThreadTitleLegal")      && !result.get("isThreadContentEmpty") &&
+								result.get("isCsrfTokenValid");
 		result.put("isSuccessful", isSuccessful);
-		if ( isSuccessful ) {
-			Problem relatedProblem = problemMapper.getProblem(relatedProblemId);
-			DiscussionThread dt = new DiscussionThread(threadCreator, discussionTopic,
-					relatedProblem, HtmlTextFilter.filter(discussionThreadTitle));
-			discussionThreadMapper.createDiscussionThread(dt);
-		}
 		return result;
 	}
 
