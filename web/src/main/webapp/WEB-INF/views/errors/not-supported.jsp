@@ -9,7 +9,7 @@
     <meta charset="UTF-8">
     <title><spring:message code="voj.misc.not-supported.title" text="Browser no longer supported" /> | ${websiteName}</title>
     <meta name="robots" content="noindex">
-    <meta name="author" content="谢浩哲">
+    <meta name="author" content="Haozhe Xie">
     <!-- Icon -->
     <link href="${cdnUrl}/img/favicon.ico" rel="shortcut icon" type="image/x-icon">
     <!-- StyleSheets -->
