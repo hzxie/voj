@@ -1,9 +1,6 @@
 package org.verwandlung.voj.web.controller;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -17,14 +14,8 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.ModelAndView;
 
 import org.verwandlung.voj.web.messenger.ApplicationEventListener;
-import org.verwandlung.voj.web.model.BulletinBoardMessage;
-import org.verwandlung.voj.web.model.DiscussionThread;
-import org.verwandlung.voj.web.model.User;
-import org.verwandlung.voj.web.model.UserGroup;
-import org.verwandlung.voj.web.service.BulletinBoardService;
-import org.verwandlung.voj.web.service.DiscussionService;
-import org.verwandlung.voj.web.service.LanguageService;
-import org.verwandlung.voj.web.service.UserService;
+import org.verwandlung.voj.web.model.*;
+import org.verwandlung.voj.web.service.*;
 import org.verwandlung.voj.web.util.LocaleUtils;
 
 /**
@@ -44,12 +35,15 @@ public class DefaultController {
 	@RequestMapping(value="/", method=RequestMethod.GET)
 	public ModelAndView indexView(
 			HttpServletRequest request, HttpServletResponse response) {
+		List<Contest> contests = contestService.getContests(null, 0, NUMBER_OF_CONTESTS_PER_REQUEST);
 		List<DiscussionThread> discussionThreads = discussionService.getDiscussionThreadsOfTopic(
 				null, 0, NUMBER_OF_DISCUSSION_THREADS_PER_REQUEST);
 		List<BulletinBoardMessage> bulletinBoardMessages = bulletinBoardService.getBulletinBoardMessages(
 				0, NUMBER_OF_BULLETIN_MESSAGES_PER_REQUEST);
 
 		ModelAndView view = new ModelAndView("index");
+		view.addObject("currentTime", new Date());
+		view.addObject("contests", contests);
 		view.addObject("discussionThreads", discussionThreads);
 		view.addObject("bulletinBoardMessages", bulletinBoardMessages);
 		return view;
@@ -253,6 +247,13 @@ public class DefaultController {
 	 */
 	@Autowired
 	private LanguageService languageService;
+
+	/**
+	 * 自动注入的ContestService对象.
+	 * 用于获取最新的竞赛信息.
+	 */
+	@Autowired
+	private ContestService contestService;
 
 	/**
 	 * 自动注入的DiscussionService对象.

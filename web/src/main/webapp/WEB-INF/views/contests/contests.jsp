@@ -1,6 +1,7 @@
 <%@ page language="java" contentType="text/html; charset=utf-8" pageEncoding="utf-8"%>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
+<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/fmt" prefix="fmt" %>
 <spring:eval expression="@propertyConfigurer.getProperty('url.cdn')" var="cdnUrl" />
 <!DOCTYPE html>
@@ -45,17 +46,30 @@
         <div id="main-content" class="row-fluid">
             <div id="contests" class="span8">
                 <table class="table">
-                    <tr class="contest Live">
+                <c:forEach var="contest" items="${contests}">
+                    <c:choose>
+                        <c:when test="${currentTime.before(contest.startTime)}">
+                            <c:set var="contestStatus" value="Ready" />
+                        </c:when>
+                        <c:when test="${currentTime.after(contest.endTime)}">
+                            <c:set var="contestStatus" value="Done" />
+                        </c:when>
+                        <c:when test="${currentTime.after(contest.startTime) and currentTime.before(contest.endTime)}">
+                            <c:set var="contestStatus" value="Live" />
+                        </c:when>
+                    </c:choose>
+                    <tr class="contest ${contestStatus}">
                         <td class="overview">
-                            <h5><a href="#">Contest Demo</a></h5>
+                            <h5><a href="<c:url value="/contests/${contest.contestId}" />">${contest.contestName}</a></h5>
                             <ul class="inline">
-                                <li>ACM</li>
-                                <li><spring:message code="voj.contests.contests.start-time" text="Start Time" />: 2015/05/07 22:00</li>
-                                <li><spring:message code="voj.contests.contests.end-time" text="End Time" />: 2015/05/08 0:00</li>
+                                <li>${contest.contestMode}</li>
+                                <li><spring:message code="voj.contests.contests.start-time" text="Start Time" />: <fmt:formatDate value="${contest.startTime}" type="both" dateStyle="default" timeStyle="default" /></li>
+                                <li><spring:message code="voj.contests.contests.end-time" text="End Time" />: <fmt:formatDate value="${contest.endTime}" type="both" dateStyle="default" timeStyle="default" /></li>
                             </ul>
                         </td>
-                        <td class="status">Live</td>
+                        <td class="status">${contestStatus}</td>
                     </tr>
+                </c:forEach>
                 </table> <!-- .table -->
                 <div id="more-contests">
                     <p class="availble"><spring:message code="voj.contests.contests.more-contests" text="More Contests..." /></p>
@@ -63,6 +77,15 @@
                 </div>
             </div> <!-- #contests -->
             <div id="sidebar" class="span4">
+                <div id="search-widget" class="widget">
+                    <h4><spring:message code="voj.contests.contests.search" text="Search" /></h4>
+                    <form id="search-form" action="<c:url value="/contests" />">
+                        <div class="control-group">
+                            <input name="keyword" class="span12" type="text" placeholder="<spring:message code="voj.contests.contests.keyword" text="Keyword" />" value="${param.keyword}" />
+                        </div>
+                        <button class="btn btn-primary btn-block" type="submit"><spring:message code="voj.contests.contests.search" text="Search" /></button>
+                    </form> <!-- #search-form -->
+                </div> <!-- #search-widget -->
             </div> <!-- #sidebar -->
         </div> <!-- #main-content -->
     </div> <!-- #content -->

@@ -63,7 +63,7 @@ div#content div#main-content div#contests table.table tr.contest.Done > td.statu
 }
 
 div#content div#main-content div#contests table.table tr.contest.Ready > td.status {
-	color: #279c33;
+	color: #16a085;
 }
 
 div#content div#main-content div#contests table.table tr.contest.Live {

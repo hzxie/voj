@@ -76,17 +76,30 @@
                 <div id="contests">
                     <table class="table">
                         <tbody>
-                            <tr class="contest Live">
+                            <c:forEach var="contest" items="${contests}">
+                            <c:choose>
+                                <c:when test="${currentTime.before(contest.startTime)}">
+                                    <c:set var="contestStatus" value="Ready" />
+                                </c:when>
+                                <c:when test="${currentTime.after(contest.endTime)}">
+                                    <c:set var="contestStatus" value="Done" />
+                                </c:when>
+                                <c:when test="${currentTime.after(contest.startTime) and currentTime.before(contest.endTime)}">
+                                    <c:set var="contestStatus" value="Live" />
+                                </c:when>
+                            </c:choose>
+                            <tr class="contest ${contestStatus}">
                                 <td class="overview">
-                                    <h5><a href="#">Contest Demo</a></h5>
+                                    <h5><a href="<c:url value="/contests/${contest.contestId}" />">${contest.contestName}</a></h5>
                                     <ul class="inline">
-                                        <li>ACM</li>
-                                        <li><spring:message code="voj.index.start-time" text="Start Time" />: 2015/05/07 22:00</li>
-                                        <li><spring:message code="voj.index.end-time" text="End Time" />: 2015/05/08 0:00</li>
+                                        <li>${contest.contestMode}</li>
+                                        <li><spring:message code="voj.index.start-time" text="Start Time" />: <fmt:formatDate value="${contest.startTime}" type="both" dateStyle="default" timeStyle="default" /></li>
+                                        <li><spring:message code="voj.index.end-time" text="End Time" />: <fmt:formatDate value="${contest.endTime}" type="both" dateStyle="default" timeStyle="default" /></li>
                                     </ul>
                                 </td>
-                                <td class="status">Live</td>
+                                <td class="status">${contestStatus}</td>
                             </tr>
+                        </c:forEach>
                         </tbody>
                     </table>
                 </div> <!-- #contests -->

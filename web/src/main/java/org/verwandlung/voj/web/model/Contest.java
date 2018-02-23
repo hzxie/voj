@@ -82,7 +82,7 @@ public class Contest {
 
 	/**
 	 * 设置比赛的开始时间.
-	 * @param contestName - 比赛的开始时间
+	 * @param startTime - 比赛的开始时间
 	 */
 	public void setStartTime(Date startTime) {
 		this.startTime = startTime;
@@ -98,7 +98,7 @@ public class Contest {
 
 	/**
 	 * 设置比赛的结束时间.
-	 * @param startTime - 比赛的结束时间
+	 * @param endTime - 比赛的结束时间
 	 */
 	public void setEndTime(Date endTime) {
 		this.endTime = endTime;

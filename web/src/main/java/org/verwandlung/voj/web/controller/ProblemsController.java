@@ -66,9 +66,7 @@ public class ProblemsController {
 			.addObject("startIndexOfProblems", startIndexOfProblems)
 			.addObject("numberOfProblemsPerPage", NUMBER_OF_PROBLEMS_PER_PAGE)
 			.addObject("totalProblems", totalProblems)
-			.addObject("keyword", keyword)
-			.addObject("problemCategories", problemService.getProblemCategoriesWithHierarchy())
-			.addObject("selectedCategorySlug", problemCategorySlug);
+			.addObject("problemCategories", problemService.getProblemCategoriesWithHierarchy());
 		
 		HttpSession session = request.getSession();
 		if ( isLoggedIn(session) ) {
