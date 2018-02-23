@@ -94,6 +94,87 @@
     <!-- Java Script -->
     <!-- Placed at the end of the document so the pages load faster -->
     <script type="text/javascript" src="${cdnUrl}/js/site.js"></script>
+    <script type="text/javascript" src="${cdnUrl}/js/date-${language}.min.js"></script>
+    <script type="text/javascript">
+        function setLoadingStatus(isLoading) {
+            if ( isLoading ) {
+                $('p', '#more-contests').addClass('hide');
+                $('img', '#more-contests').removeClass('hide');
+            } else {
+                $('img', '#more-contests').addClass('hide');
+                $('p', '#more-contests').removeClass('hide');
+            }
+        }
+    </script>
+    <script type="text/javascript">
+        $('#more-contests').click(function() {
+            var isLoading         = $('img', this).is(':visible'),
+                hasNextRecord     = $('p', this).hasClass('availble'),
+                numberOfContests  = $('tr.contest').length;
+
+            if ( !isLoading && hasNextRecord ) {
+                setLoadingStatus(true);
+                return getMoreContests(numberOfContests);
+            }
+        });
+    </script>
+    <script type="text/javascript">
+        function getMoreContests(startIndex) {
+            var pageRequests = {
+                'keyword': '${param.keyword}',
+                'startIndex': startIndex
+            };
+
+            $.ajax({
+                type: 'GET',
+                url: '<c:url value="/contests/getContests.action" />',
+                data: pageRequests,
+                dataType: 'JSON',
+                success: function(result){
+                    return processContestsResult(result);
+                }
+            });
+        }
+    </script>
+    <script type="text/javascript">
+        function processContestsResult(result) {
+            if ( result['isSuccessful'] ) {
+                displayContests(result['contests']);
+            } else {
+                $('p', '#more-contests').removeClass('availble');
+                $('p', '#more-contests').html('<spring:message code="voj.contests.contests.no-more-contests" text="No more contests" />');
+                $('#more-contests').css('cursor', 'default');
+            }
+            setLoadingStatus(false);
+        }
+    </script>
+    <script type="text/javascript">
+        function displayContests(contests) {
+            for ( var i = 0; i < contests.length; ++ i ) {
+                var contestStatus    = 'Done',
+                    currentTime      = new Date(),
+                    contestStartTime = new Date(contests[i]['startTime']),
+                    contestEndTime   = new Date(contests[i]['endTime']);
+                
+                if ( currentTime < contestStartTime ) {
+                    contestStatus = 'Ready';
+                } else if ( currentTime >= contestStartTime && currentTime <= contestEndTime ) {
+                    contestStatus = 'Live';
+                }
+                $('#contests tbody').append('<tr class="contest %s">'.format(contestStatus) + 
+                    '    <td class="overview">' + 
+                    '        <h5><a href="<c:url value="/contests/" />%s">%s</a></h5>'.format(contests[i]['contestId'], contests[i]['contestName']) + 
+                    '        <ul class="inline">' + 
+                    '            <li>%s</li>'.format(contests[i]['contestMode']) + 
+                    '            <li><spring:message code="voj.contests.contests.start-time" text="Start Time" />: %s</li>'.format(getFormatedDateString(contests[i]['startTime'], '${language}')) + 
+                    '            <li><spring:message code="voj.contests.contests.end-time" text="End Time" />: %s</li>'.format(getFormatedDateString(contests[i]['endTime'], '${language}')) + 
+                    '        </ul>' + 
+                    '    </td>' + 
+                    '    <td class="status">%s</td>'.format(contestStatus) + 
+                    '</tr>');
+            }
+        }
+    </script>
     <c:if test="${GoogleAnalyticsCode != ''}">
     ${googleAnalyticsCode}
     </c:if>
