@@ -237,20 +237,6 @@
                                              user['uid'], user['username'], language['languageName'], getFormatedDateString(submitTime, '${language}'));
         }
     </script>
-    <script type="text/javascript">
-        function getFormatedDateString(dateTime, locale) {
-            var dateObject = new Date(dateTime),
-                dateString = dateObject.toString();
-
-            if ( locale == 'en_US' ) {
-                dateString = dateObject.toString('MMM d, yyyy h:mm:ss tt');
-            } else if ( locale == 'zh_CN' ) {
-                dateString = dateObject.toString('yyyy-M-dd HH:mm:ss');
-            }
-
-            return dateString;
-        }
-    </script>
     <c:if test="${GoogleAnalyticsCode != ''}">
     ${googleAnalyticsCode}
     </c:if>
