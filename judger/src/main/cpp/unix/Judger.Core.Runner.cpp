@@ -277,7 +277,7 @@ int getMaxUsedMemory(pid_t pid, int memoryLimit) {
         if ( memoryLimit != 0 && maxUsedMemory > memoryLimit ) {
             killProcess(pid);
         }
-        usleep(5000);
+        usleep(500);
     } while ( currentUsedMemory != 0 );
 
     return maxUsedMemory;
