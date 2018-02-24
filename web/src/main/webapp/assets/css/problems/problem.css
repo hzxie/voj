@@ -12,6 +12,7 @@ div#content div#main-content div.problem div.header {
 
 div#content div#main-content div.problem div.body {
 	background-color: #fff;
+	margin-bottom: 20px;
 	position: relative;
 	padding: 20px;
 }
@@ -116,8 +117,10 @@ div#content div#main-content div.problem code {
 }
 
 div#content div#sidebar div.section {
-	margin-bottom: 10px;
-	padding-bottom: 10px;
+	background-color: #fff;
+	border-top: 4px solid #16a085;
+	margin-bottom: 20px;
+	padding: 10px;
 }
 
 div#content div#sidebar div.section ul {

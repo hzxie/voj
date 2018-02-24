@@ -3,6 +3,7 @@
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/fmt" prefix="fmt" %>
 <spring:eval expression="@propertyConfigurer.getProperty('url.cdn')" var="cdnUrl" />
+<spring:eval expression="@propertyConfigurer.getProperty('build.version')" var="version" />
 <!DOCTYPE html>
 <html lang="${language}">
 <head>
@@ -13,23 +14,23 @@
     <meta name="description" content="${description}">
     <meta name="author" content="Haozhe Xie">
     <!-- Icon -->
-    <link href="${cdnUrl}/img/favicon.ico" rel="shortcut icon" type="image/x-icon">
+    <link href="${cdnUrl}/img/favicon.ico?v=${version}" rel="shortcut icon" type="image/x-icon">
     <!-- StyleSheets -->
-    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/bootstrap.min.css" />
-    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/bootstrap-responsive.min.css" />
-    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/flat-ui.min.css" />
-    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/font-awesome.min.css" />
-    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/style.css" />
-    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/discussion/thread.css" />
+    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/bootstrap.min.css?v=${version}" />
+    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/bootstrap-responsive.min.css?v=${version}" />
+    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/flat-ui.min.css?v=${version}" />
+    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/font-awesome.min.css?v=${version}" />
+    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/style.css?v=${version}" />
+    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/discussion/thread.css?v=${version}" />
     <!-- JavaScript -->
-    <script type="text/javascript" src="${cdnUrl}/js/jquery-1.11.1.min.js"></script>
-    <script type="text/javascript" src="${cdnUrl}/js/bootstrap.min.js"></script>
-    <script type="text/javascript" src="${cdnUrl}/js/md5.min.js"></script>
+    <script type="text/javascript" src="${cdnUrl}/js/jquery-1.11.1.min.js?v=${version}"></script>
+    <script type="text/javascript" src="${cdnUrl}/js/bootstrap.min.js?v=${version}"></script>
+    <script type="text/javascript" src="${cdnUrl}/js/md5.min.js?v=${version}"></script>
     <!--[if lte IE 9]>
-    <script type="text/javascript" src="${cdnUrl}/js/jquery.placeholder.min.js"></script>
+    <script type="text/javascript" src="${cdnUrl}/js/jquery.placeholder.min.js?v=${version}"></script>
     <![endif]-->
     <!--[if lte IE 7]>
-    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/font-awesome-ie7.min.css" />
+    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/font-awesome-ie7.min.css?v=${version}" />
     <![endif]-->
     <!--[if lte IE 6]>
     <script type="text/javascript">
@@ -83,13 +84,13 @@
                     <ul id="discussion-replies"></ul>
                     <div id="more-discussion-replies" class="text-center">
                         <p class="availble"><a href="javascript:void(0);"><spring:message code="voj.discussion.thread.more-replies" text="More Replies..." /></a></p>
-                        <img src="${cdnUrl}/img/loading.gif" alt="Loading" class="hide" />
+                        <img src="${cdnUrl}/img/loading.gif?v=${version}" alt="Loading" class="hide" />
                     </div> <!-- #more-discussion-replies -->
                     <c:if test="${isLogin}">
                     <div id="editor" class="row-fluid">
                         <div class="span2">
                             <div class="avatar">
-                                <img src="${cdnUrl}/img/avatar.jpg" alt="gravatar">
+                                <img src="${cdnUrl}/img/avatar.jpg?v=${version}" alt="gravatar">
                             </div> <!-- .avatar -->
                         </div> <!-- .span2 -->
                         <div class="span10">
@@ -139,17 +140,17 @@
     <%@ include file="/WEB-INF/views/include/footer.jsp" %>
     <!-- Java Script -->
     <!-- Placed at the end of the document so the pages load faster -->
-    <script type="text/javascript" src="${cdnUrl}/js/site.js"></script>
+    <script type="text/javascript" src="${cdnUrl}/js/site.js?v=${version}"></script>
     <script type="text/x-mathjax-config">
         MathJax.Hub.Config({
             tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
         });
     </script>
-    <script type="text/javascript" async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/javascript" async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <script type="text/javascript">
         $.when(
-            $.getScript('${cdnUrl}/js/markdown.min.js'),
-            $.getScript('${cdnUrl}/js/moment.min.js'),
+            $.getScript('${cdnUrl}/js/markdown.min.js?v=${version}'),
+            $.getScript('${cdnUrl}/js/moment.min.js?v=${version}'),
             $.Deferred(function(deferred) {
                 $(deferred.resolve);
             })
@@ -263,7 +264,7 @@
                 '<li class="row-fluid">' + 
                 '    <div class="span2">' + 
                 '        <div class="avatar" data-value="%s">'.format(discussionReplyCreator['email']) + 
-                '            <img src="${cdnUrl}/img/avatar.jpg" alt="gravatar" />' +
+                '            <img src="${cdnUrl}/img/avatar.jpg?v=${version}" alt="gravatar" />' +
                 '        </div> <!-- .avatar -->' + 
                 '    </div> <!-- .span2 -->' + 
                 '    <div class="span10">' + 

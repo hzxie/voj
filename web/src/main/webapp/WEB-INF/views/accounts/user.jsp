@@ -5,6 +5,7 @@
 <%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <spring:eval expression="@propertyConfigurer.getProperty('url.cdn')" var="cdnUrl" />
+<spring:eval expression="@propertyConfigurer.getProperty('build.version')" var="version" />
 <!DOCTYPE html>
 <html lang="${language}">
 <head>
@@ -15,23 +16,23 @@
     <meta name="description" content="${description}">
     <meta name="author" content="Haozhe Xie">
     <!-- Icon -->
-    <link href="${cdnUrl}/img/favicon.ico" rel="shortcut icon" type="image/x-icon">
+    <link href="${cdnUrl}/img/favicon.ico?v=${version}" rel="shortcut icon" type="image/x-icon">
     <!-- StyleSheets -->
-    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/bootstrap.min.css" />
-    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/bootstrap-responsive.min.css" />
-    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/flat-ui.min.css" />
-    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/font-awesome.min.css" />
-    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/style.css" />
-    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/accounts/user.css" />
+    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/bootstrap.min.css?v=${version}" />
+    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/bootstrap-responsive.min.css?v=${version}" />
+    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/flat-ui.min.css?v=${version}" />
+    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/font-awesome.min.css?v=${version}" />
+    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/style.css?v=${version}" />
+    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/accounts/user.css?v=${version}" />
     <!-- JavaScript -->
-    <script type="text/javascript" src="${cdnUrl}/js/jquery-1.11.1.min.js"></script>
-    <script type="text/javascript" src="${cdnUrl}/js/bootstrap.min.js"></script>
-    <script type="text/javascript" src="${cdnUrl}/js/md5.min.js"></script>
+    <script type="text/javascript" src="${cdnUrl}/js/jquery-1.11.1.min.js?v=${version}"></script>
+    <script type="text/javascript" src="${cdnUrl}/js/bootstrap.min.js?v=${version}"></script>
+    <script type="text/javascript" src="${cdnUrl}/js/md5.min.js?v=${version}"></script>
     <!--[if lte IE 9]>
-        <script type="text/javascript" src="${cdnUrl}/js/jquery.placeholder.min.js"></script>
+        <script type="text/javascript" src="${cdnUrl}/js/jquery.placeholder.min.js?v=${version}"></script>
     <![endif]-->
     <!--[if lte IE 7]>
-        <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/font-awesome-ie7.min.css" />
+        <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/font-awesome-ie7.min.css?v=${version}" />
     <![endif]-->
     <!--[if lte IE 6]>
         <script type="text/javascript"> 
@@ -47,7 +48,7 @@
         <div class="row-fluid">
             <div id="sidebar" class="span3">
                 <div id="vcard" class="section">
-                    <img src="${cdnUrl}/img/avatar.jpg" alt="User Avatar" />
+                    <img src="${cdnUrl}/img/avatar.jpg?v=${version}" alt="User Avatar" />
                     <h5>${user.username}</h5>
                 </div> <!-- #vcard -->
             <c:if test="${not empty socialLinks && fn:length(socialLinks) > 0}">
@@ -188,10 +189,10 @@
     <%@ include file="/WEB-INF/views/include/footer.jsp" %>
     <!-- JavaScript -->
     <!-- Placed at the end of the document so the pages load faster -->
-    <script type="text/javascript" src="${cdnUrl}/js/site.js"></script>
-    <script type="text/javascript" async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/javascript" src="${cdnUrl}/js/site.js?v=${version}"></script>
+    <script type="text/javascript" async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <script type="text/javascript">
-        $.getScript('${cdnUrl}/js/markdown.min.js', function() {
+        $.getScript('${cdnUrl}/js/markdown.min.js?v=${version}', function() {
             converter = Markdown.getSanitizingConverter();
 
             $('.markdown').each(function() {
@@ -203,7 +204,7 @@
         });
     </script>
     <script type="text/javascript">
-        $.getScript('${cdnUrl}/js/highcharts.min.js', function() {
+        $.getScript('${cdnUrl}/js/highcharts.min.js?v=${version}', function() {
             return getSubmissionsOfUsers(7);
         });
     </script>

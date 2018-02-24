@@ -10,15 +10,17 @@ public class Contest {
 	
 	/**
 	 * Contest的构造函数.
-	 * @param contestName - 比赛的名称
-	 * @param startTime - 比赛开始时间
-	 * @param endTime - 比赛结束时间
-	 * @param mode - 比赛的赛制
-	 * @param problems - 比赛包含的试题
+	 * @param contestName - 竞赛的名称
+	 * @param contestNotes -  竞赛的说明
+	 * @param startTime - 竞赛开始时间
+	 * @param endTime - 竞赛结束时间
+	 * @param mode - 竞赛的赛制
+	 * @param problems - 竞赛包含的试题
 	 */
-	public Contest(String contestName, Date startTime, Date endTime, 
-			String mode, String problems) {
+	public Contest(String contestName, String contestNotes, 
+		Date startTime, Date endTime, String mode, String problems) {
 		this.contestName = contestName;
+		this.contestNotes = contestNotes;
 		this.startTime = startTime;
 		this.endTime = endTime;
 		this.contestMode = mode;
@@ -27,94 +29,111 @@ public class Contest {
 
 	/**
 	 * Contest的构造函数.
-	 * @param contestId - 比赛的唯一标识符
-	 * @param contestName - 比赛的名称
-	 * @param startTime - 比赛开始时间
-	 * @param endTime - 比赛结束时间
-	 * @param mode - 比赛的赛制
-	 * @param problems - 比赛中包含的试题
+	 * @param contestId - 竞赛的唯一标识符
+	 * @param contestName - 竞赛的名称
+	 * @param contestNotes -  竞赛的说明
+	 * @param startTime - 竞赛开始时间
+	 * @param endTime - 竞赛结束时间
+	 * @param mode - 竞赛的赛制
+	 * @param problems - 竞赛中包含的试题
 	 */
-	public Contest(long contestId, String contestName, Date startTime, 
-			Date endTime, String mode, String problems) {
-		this(contestName, startTime, endTime, mode, problems);
+	public Contest(long contestId, String contestNotes, String contestName, 
+		Date startTime, Date endTime, String mode, String problems) {
+		this(contestName, contestNotes, startTime, endTime, mode, problems);
 		this.contestId = contestId;
 	}
 
 	/**
-	 * 获取比赛的唯一标识符.
-	 * @return 比赛的唯一标识符
+	 * 获取竞赛的唯一标识符.
+	 * @return 竞赛的唯一标识符
 	 */
 	public long getContestId() {
 		return contestId;
 	}
 
 	/**
-	 * 设置比赛的唯一标识符.
-	 * @param contestId - 比赛的唯一标识符
+	 * 设置竞赛的唯一标识符.
+	 * @param contestId - 竞赛的唯一标识符
 	 */
 	public void setContestId(long contestId) {
 		this.contestId = contestId;
 	}
 	
 	/**
-	 * 获取比赛的名称.
-	 * @return 比赛的名称
+	 * 获取竞赛的名称.
+	 * @return 竞赛的名称
 	 */
 	public String getContestName() {
 		return contestName;
 	}
 
 	/**
-	 * 设置比赛的名称.
-	 * @param contestName - 比赛的名称
+	 * 设置竞赛的名称.
+	 * @param contestName - 竞赛的名称
 	 */
 	public void setContestName(String contestName) {
 		this.contestName = contestName;
 	}
 
 	/**
-	 * 获取比赛的开始时间.
-	 * @return 比赛的开始时间
+	 * 获取竞赛说明.
+	 * @return 竞赛的说明
+	 */
+	public String getContestNotes() {
+		return contestNotes;
+	}
+
+	/**
+	 * 设置竞赛说明.
+	 * @param contestNotes - 竞赛的说明
+	 */
+	public void setContestNotes(String contestNotes) {
+		this.contestNotes = contestNotes;
+	}
+
+	/**
+	 * 获取竞赛的开始时间.
+	 * @return 竞赛的开始时间
 	 */
 	public Date getStartTime() {
 		return startTime;
 	}
 
 	/**
-	 * 设置比赛的开始时间.
-	 * @param startTime - 比赛的开始时间
+	 * 设置竞赛的开始时间.
+	 * @param startTime - 竞赛的开始时间
 	 */
 	public void setStartTime(Date startTime) {
 		this.startTime = startTime;
 	}
 
 	/**
-	 * 获取比赛的结束时间.
-	 * @return 比赛的结束时间
+	 * 获取竞赛的结束时间.
+	 * @return 竞赛的结束时间
 	 */
 	public Date getEndTime() {
 		return endTime;
 	}
 
 	/**
-	 * 设置比赛的结束时间.
-	 * @param endTime - 比赛的结束时间
+	 * 设置竞赛的结束时间.
+	 * @param endTime - 竞赛的结束时间
 	 */
 	public void setEndTime(Date endTime) {
 		this.endTime = endTime;
 	}
 
 	/**
-	 * 获取比赛的赛制.
-	 * @return 比赛的赛制
+	 * 获取竞赛的赛制.
+	 * @return 竞赛的赛制
 	 */
 	public String getContestMode() {
 		return contestMode;
 	}
 
 	/**
-	 * 设置比赛的赛制.
-	 * @param contestMode - 比赛的赛制
+	 * 设置竞赛的赛制.
+	 * @param contestMode - 竞赛的赛制
 	 */
 	public void setContestMode(String contestMode) {
 		this.contestMode = contestMode;
@@ -147,49 +166,54 @@ public class Contest {
 	}
 
 	/**
-	 * 获取比赛中包含的试题.
-	 * @return 比赛中包含的试题
+	 * 获取竞赛中包含的试题.
+	 * @return 竞赛中包含的试题
 	 */
 	public String getProblems() {
 		return problems;
 	}
 
 	/**
-	 * 设置比赛中包含的试题.
-	 * @param problems - 比赛中包含的试题
+	 * 设置竞赛中包含的试题.
+	 * @param problems - 竞赛中包含的试题
 	 */
 	public void setProblems(String problems) {
 		this.problems = problems;
 	}
 
 	/**
-	 * 比赛的唯一标识符.
+	 * 竞赛的唯一标识符.
 	 */
 	private long contestId;
 	
 	/**
-	 * 比赛的名称.
+	 * 竞赛的名称.
 	 */
 	private String contestName;
+
+	/**
+	 * 竞赛的说明.
+	 */
+	private String contestNotes;
 	
 	/**
-	 * 比赛的开始时间.
+	 * 竞赛的开始时间.
 	 */
 	private Date startTime;
 	
 	/**
-	 * 比赛的结束时间.
+	 * 竞赛的结束时间.
 	 */
 	private Date endTime;
 	
 	/**
-	 * 比赛的赛制.
+	 * 竞赛的赛制.
 	 * 可选择的赛制有: ACM和OI.
 	 */
 	private String contestMode;
 	
 	/**
-	 * 比赛中包含的试题 (JSON格式的字符串).
+	 * 竞赛中包含的试题 (JSON格式的字符串).
 	 */
 	private String problems;
 }

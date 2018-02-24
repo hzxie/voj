@@ -4,6 +4,7 @@
 <fmt:setLocale value="${language}" />
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <spring:eval expression="@propertyConfigurer.getProperty('url.cdn')" var="cdnUrl" />
+<spring:eval expression="@propertyConfigurer.getProperty('build.version')" var="version" />
 <!DOCTYPE html>
 <html lang="${language}">
 <head>
@@ -14,24 +15,24 @@
     <meta name="description" content="${description}">
     <meta name="author" content="Haozhe Xie">
     <!-- Icon -->
-    <link href="${cdnUrl}/img/favicon.ico" rel="shortcut icon" type="image/x-icon">
+    <link href="${cdnUrl}/img/favicon.ico?v=${version}" rel="shortcut icon" type="image/x-icon">
     <!-- StyleSheets -->
-    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/bootstrap.min.css" />
-    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/bootstrap-responsive.min.css" />
-    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/flat-ui.min.css" />
-    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/font-awesome.min.css" />
-    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/style.css" />
-    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/submissions/submission.css" />
-    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/highlight.min.css" />
+    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/bootstrap.min.css?v=${version}" />
+    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/bootstrap-responsive.min.css?v=${version}" />
+    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/flat-ui.min.css?v=${version}" />
+    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/font-awesome.min.css?v=${version}" />
+    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/style.css?v=${version}" />
+    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/submissions/submission.css?v=${version}" />
+    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/highlight.min.css?v=${version}" />
     <!-- JavaScript -->
-    <script type="text/javascript" src="${cdnUrl}/js/jquery-1.11.1.min.js"></script>
-    <script type="text/javascript" src="${cdnUrl}/js/bootstrap.min.js"></script>
-    <script type="text/javascript" src="${cdnUrl}/js/md5.min.js"></script>
+    <script type="text/javascript" src="${cdnUrl}/js/jquery-1.11.1.min.js?v=${version}"></script>
+    <script type="text/javascript" src="${cdnUrl}/js/bootstrap.min.js?v=${version}"></script>
+    <script type="text/javascript" src="${cdnUrl}/js/md5.min.js?v=${version}"></script>
     <!--[if lte IE 9]>
-        <script type="text/javascript" src="${cdnUrl}/js/jquery.placeholder.min.js"></script>
+        <script type="text/javascript" src="${cdnUrl}/js/jquery.placeholder.min.js?v=${version}"></script>
     <![endif]-->
     <!--[if lte IE 7]>
-        <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/font-awesome-ie7.min.css" />
+        <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/font-awesome-ie7.min.css?v=${version}" />
     <![endif]-->
     <!--[if lte IE 6]>
         <script type="text/javascript"> 
@@ -109,7 +110,7 @@
             <div id="sidebar" class="span3">
                 <div id="submit-user" class="section">
                     <h5><spring:message code="voj.submissions.submission.user" text="User" /></h5>
-                    <img src="${cdnUrl}/img/avatar.jpg" alt="User Avatar" class="img-circle" />
+                    <img src="${cdnUrl}/img/avatar.jpg?v=${version}" alt="User Avatar" class="img-circle" />
                     <p>
                         <spring:message code="voj.submissions.submission.submitted-by" text="Submitted by" /> <a href="<c:url value="/accounts/user/${submission.user.uid}" />">${submission.user.username}</a>
                     </p>
@@ -129,9 +130,9 @@
     <%@ include file="/WEB-INF/views/include/footer.jsp" %>
     <!-- Java Script -->
     <!-- Placed at the end of the document so the pages load faster -->
-    <script type="text/javascript" src="${cdnUrl}/js/site.js"></script>
+    <script type="text/javascript" src="${cdnUrl}/js/site.js?v=${version}"></script>
     <script type="text/javascript">
-        $.getScript('${cdnUrl}/js/markdown.min.js', function() {
+        $.getScript('${cdnUrl}/js/markdown.min.js?v=${version}', function() {
             converter = Markdown.getSanitizingConverter();
 
             $('.markdown').each(function() {
@@ -144,7 +145,7 @@
     </script>
     <c:if test="${submission.judgeResult.judgeResultName == 'Pending'}">
     <script type="text/javascript">
-        $.getScript('${cdnUrl}/js/date-${language}.min.js', function() {
+        $.getScript('${cdnUrl}/js/date-${language}.min.js?v=${version}', function() {
             var currentJudgeResult = 'Pending',
                 getterInterval     = setInterval(function() {
                     getRealTimeJudgeResult();
@@ -226,7 +227,7 @@
     </script>
     </c:if>
     <script type="text/javascript">
-        $.getScript('${cdnUrl}/js/highlight.min.js', function() {
+        $.getScript('${cdnUrl}/js/highlight.min.js?v=${version}', function() {
             $('pre code').each(function(i, block) {
                 hljs.highlightBlock(block);
             });

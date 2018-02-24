@@ -4,6 +4,7 @@
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <spring:eval expression="@propertyConfigurer.getProperty('url.cdn')" var="cdnUrl" />
+<spring:eval expression="@propertyConfigurer.getProperty('build.version')" var="version" />
 <!DOCTYPE html>
 <html lang="${language}">
 <head>
@@ -14,23 +15,23 @@
     <meta name="description" content="${description}">
     <meta name="author" content="Haozhe Xie">
     <!-- Icon -->
-    <link href="${cdnUrl}/img/favicon.ico" rel="shortcut icon" type="image/x-icon">
+    <link href="${cdnUrl}/img/favicon.ico?v=${version}" rel="shortcut icon" type="image/x-icon">
     <!-- StyleSheets -->
-    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/bootstrap.min.css" />
-    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/bootstrap-responsive.min.css" />
-    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/flat-ui.min.css" />
-    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/font-awesome.min.css" />
-    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/style.css" />
-    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/discussion/threads.css" />
+    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/bootstrap.min.css?v=${version}" />
+    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/bootstrap-responsive.min.css?v=${version}" />
+    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/flat-ui.min.css?v=${version}" />
+    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/font-awesome.min.css?v=${version}" />
+    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/style.css?v=${version}" />
+    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/discussion/threads.css?v=${version}" />
     <!-- JavaScript -->
-    <script type="text/javascript" src="${cdnUrl}/js/jquery-1.11.1.min.js"></script>
-    <script type="text/javascript" src="${cdnUrl}/js/bootstrap.min.js"></script>
-    <script type="text/javascript" src="${cdnUrl}/js/md5.min.js"></script>
+    <script type="text/javascript" src="${cdnUrl}/js/jquery-1.11.1.min.js?v=${version}"></script>
+    <script type="text/javascript" src="${cdnUrl}/js/bootstrap.min.js?v=${version}"></script>
+    <script type="text/javascript" src="${cdnUrl}/js/md5.min.js?v=${version}"></script>
     <!--[if lte IE 9]>
-        <script type="text/javascript" src="${cdnUrl}/js/jquery.placeholder.min.js"></script>
+        <script type="text/javascript" src="${cdnUrl}/js/jquery.placeholder.min.js?v=${version}"></script>
     <![endif]-->
     <!--[if lte IE 7]>
-        <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/font-awesome-ie7.min.css" />
+        <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/font-awesome-ie7.min.css?v=${version}" />
     <![endif]-->
     <!--[if lte IE 6]>
         <script type="text/javascript"> 
@@ -49,7 +50,7 @@
                 <c:forEach var="discussionThread" items="${discussionThreads}">
                     <tr class="discussion-thread">
                         <td class="avatar" data-value="${fn:toLowerCase(discussionThread.discussionThreadCreator.email)}">
-                            <img src="${cdnUrl}/img/avatar.jpg" alt="avatar" />
+                            <img src="${cdnUrl}/img/avatar.jpg?v=${version}" alt="avatar" />
                         </td>
                         <td class="overview">
                             <h5><a href="<c:url value="/discussion/" />${discussionThread.discussionThreadId}">${discussionThread.discussionThreadTitle}</a></h5>
@@ -95,7 +96,7 @@
                 </table> <!-- .table -->
                 <div id="more-discussion-threads">
                     <p class="availble"><spring:message code="voj.discussion.threads.more-discussion" text="More discussion threads..." /></p>
-                    <img src="${cdnUrl}/img/loading.gif" alt="Loading" class="hide" />
+                    <img src="${cdnUrl}/img/loading.gif?v=${version}" alt="Loading" class="hide" />
                 </div>
             </div> <!-- #discussion -->
             <div id="sidebar" class="span4">
@@ -141,9 +142,9 @@
     <%@ include file="/WEB-INF/views/include/footer.jsp" %>
     <!-- Java Script -->
     <!-- Placed at the end of the document so the pages load faster -->
-    <script type="text/javascript" src="${cdnUrl}/js/site.js"></script>
+    <script type="text/javascript" src="${cdnUrl}/js/site.js?v=${version}"></script>
     <script type="text/javascript">
-        $.getScript('${cdnUrl}/js/moment.min.js', function() {
+        $.getScript('${cdnUrl}/js/moment.min.js?v=${version}', function() {
             moment.locale('${language}');
             $('span.reply-datetime').each(function() {
                 var dateTime = $(this).html();
@@ -266,7 +267,7 @@
             var threadHtml = 
                 '<tr class="discussion-thread">' + 
                 '    <td class="avatar" data-value="%s">'.format(discussionThreadCreator['email']) +
-                '        <img src="${cdnUrl}/img/avatar.jpg" alt="avatar" />' + 
+                '        <img src="${cdnUrl}/img/avatar.jpg?v=${version}" alt="avatar" />' + 
                 '    </td>' + 
                 '    <td class="overview">' + 
                 '        <h5><a href="<c:url value="/discussion/" />%s">%s</a></h5>'.format(discussionThreadId, discussionThreadTitle) + 
