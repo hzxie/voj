@@ -61,7 +61,7 @@
                     </c:choose>
                     <tr class="contest ${contestStatus}">
                         <td class="overview">
-                            <h5><a href="<c:url value="/contests/${contest.contestId}" />">${contest.contestName}</a></h5>
+                            <h5><a href="<c:url value="/contest/${contest.contestId}" />">${contest.contestName}</a></h5>
                             <ul class="inline">
                                 <li>${contest.contestMode}</li>
                                 <li><spring:message code="voj.contests.contests.start-time" text="Start Time" />: <fmt:formatDate value="${contest.startTime}" type="both" dateStyle="default" timeStyle="default" /></li>
@@ -128,7 +128,7 @@
 
             $.ajax({
                 type: 'GET',
-                url: '<c:url value="/contests/getContests.action" />',
+                url: '<c:url value="/contest/getContests.action" />',
                 data: pageRequests,
                 dataType: 'JSON',
                 success: function(result){
@@ -164,7 +164,7 @@
                 }
                 $('#contests tbody').append('<tr class="contest %s">'.format(contestStatus) + 
                     '    <td class="overview">' + 
-                    '        <h5><a href="<c:url value="/contests/" />%s">%s</a></h5>'.format(contests[i]['contestId'], contests[i]['contestName']) + 
+                    '        <h5><a href="<c:url value="/contest/" />%s">%s</a></h5>'.format(contests[i]['contestId'], contests[i]['contestName']) + 
                     '        <ul class="inline">' + 
                     '            <li>%s</li>'.format(contests[i]['contestMode']) + 
                     '            <li><spring:message code="voj.contests.contests.start-time" text="Start Time" />: %s</li>'.format(getFormatedDateString(contests[i]['startTime'], '${language}')) + 

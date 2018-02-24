@@ -2,7 +2,8 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <spring:eval expression="@propertyConfigurer.getProperty('url.cdn')" var="cdnUrl" />
-<spring:eval expression="@propertyConfigurer.getProperty('build.version')" var="version" />
+<spring:eval expression="@propertyConfigurer.getProperty('build.version')" var="build" />
+<spring:eval expression="@propertyConfigurer.getProperty('product.version')" var="version" />
 <!DOCTYPE html>
 <html lang="${language}">
 <head>
@@ -13,21 +14,21 @@
     <meta name="description" content="${description}">
     <meta name="author" content="Haozhe Xie">
     <!-- Icon -->
-    <link href="${cdnUrl}/img/favicon.ico?v=${version}" rel="shortcut icon" type="image/x-icon">
+    <link href="${cdnUrl}/img/favicon.ico?v=${build}" rel="shortcut icon" type="image/x-icon">
     <!-- StyleSheets -->
-    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/bootstrap.min.css?v=${version}" />
-    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/bootstrap-responsive.min.css?v=${version}" />
-    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/flat-ui.min.css?v=${version}" />
-    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/font-awesome.min.css?v=${version}" />
-    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/administration/style.css?v=${version}" />
-    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/administration/dashboard.css?v=${version}" />
+    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/bootstrap.min.css?v=${build}" />
+    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/bootstrap-responsive.min.css?v=${build}" />
+    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/flat-ui.min.css?v=${build}" />
+    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/font-awesome.min.css?v=${build}" />
+    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/administration/style.css?v=${build}" />
+    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/administration/dashboard.css?v=${build}" />
     <!-- JavaScript -->
-    <script type="text/javascript" src="${cdnUrl}/js/jquery-1.11.1.min.js?v=${version}"></script>
-    <script type="text/javascript" src="${cdnUrl}/js/bootstrap.min.js?v=${version}"></script>
-    <script type="text/javascript" src="${cdnUrl}/js/md5.min.js?v=${version}"></script>
-    <script type="text/javascript" src="${cdnUrl}/js/pace.min.js?v=${version}"></script>
+    <script type="text/javascript" src="${cdnUrl}/js/jquery-1.11.1.min.js?v=${build}"></script>
+    <script type="text/javascript" src="${cdnUrl}/js/bootstrap.min.js?v=${build}"></script>
+    <script type="text/javascript" src="${cdnUrl}/js/md5.min.js?v=${build}"></script>
+    <script type="text/javascript" src="${cdnUrl}/js/pace.min.js?v=${build}"></script>
     <!--[if lte IE 9]>
-        <script type="text/javascript" src="${cdnUrl}/js/jquery.placeholder.min.js?v=${version}"></script>
+        <script type="text/javascript" src="${cdnUrl}/js/jquery.placeholder.min.js?v=${build}"></script>
     <![endif]-->
     <!--[if lte IE 7]>
         <script type="text/javascript"> 
@@ -163,7 +164,7 @@
                             <div class="body">
                                 <div class="row-fluid">
                                     <div class="span4"><spring:message code="voj.administration.index.product-version" text="Product Version" /></div> <!-- .span4 -->
-                                    <div id="product-version" class="span8">${productVersion}</div> <!-- .span8 -->
+                                    <div id="product-version" class="span8">${version} (Build: <a href="https://github.com/hzxie/voj/commit/${build}" target="_blank">${build}</a>)</div> <!-- .span8 -->
                                 </div> <!-- .row-fluid -->
                                 <div class="row-fluid">
                                     <div class="span4"><spring:message code="voj.administration.index.memory-usage" text="Memory Usage" /></div> <!-- .span4 -->
@@ -184,7 +185,7 @@
     <!-- Placed at the end of the document so the pages load faster -->
     <%@ include file="/WEB-INF/views/administration/include/footer-script.jsp" %>
     <script type="text/javascript">
-        $.getScript('${cdnUrl}/js/highcharts.min.js?v=${version}', function() {
+        $.getScript('${cdnUrl}/js/highcharts.min.js?v=${build}', function() {
             return getSubmissionsOfUsers(7);
         });
     </script>
