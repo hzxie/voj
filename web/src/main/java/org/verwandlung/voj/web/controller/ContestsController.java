@@ -2,7 +2,9 @@ package org.verwandlung.voj.web.controller;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 
+import com.alibaba.fastjson.JSON;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,8 +13,12 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.ModelAndView;
 import org.verwandlung.voj.web.exception.ResourceNotFoundException;
 import org.verwandlung.voj.web.model.Contest;
+import org.verwandlung.voj.web.model.Problem;
+import org.verwandlung.voj.web.model.User;
 import org.verwandlung.voj.web.service.ContestService;
 import org.verwandlung.voj.web.util.CsrfProtector;
+import org.verwandlung.voj.web.util.HttpRequestParser;
+import org.verwandlung.voj.web.util.HttpSessionParser;
 
 import java.util.Date;
 import java.util.HashMap;
@@ -25,7 +31,7 @@ import java.util.Map;
  * @author Haozhe Xie
  */
 @Controller
-@RequestMapping(value="/contests")
+@RequestMapping(value="/contest")
 public class ContestsController {
 	/**
 	 * 显示竞赛列表页面.
@@ -78,19 +84,52 @@ public class ContestsController {
 	public ModelAndView contestView(
 			@PathVariable("contestId") long contestId,
 			HttpServletRequest request, HttpServletResponse response) {
-		
+		HttpSession session = request.getSession();
+		User currentUser = HttpSessionParser.getCurrentUser(session);
 		Contest contest = contestService.getContest(contestId);
 		if ( contest == null ) {
 			throw new ResourceNotFoundException();
 		}
 
+		boolean isAttended = contestService.isAttendContest(contestId, currentUser);
 		long numberOfContestants = contestService.getNumberOfContestantsOfContest(contestId);
+		List<Long> problemIdList = JSON.parseArray(contest.getProblems(), Long.class);
+		List<Problem> problems = contestService.getProblemsOfContests(problemIdList);
+
 		ModelAndView view = new ModelAndView("contests/contest");
 		view.addObject("currentTime", new Date())
 			.addObject("contest", contest)
+			.addObject("problems", problems)
+			.addObject("isAttended", isAttended)
 			.addObject("numberOfContestants", numberOfContestants)
 			.addObject("csrfToken", CsrfProtector.getCsrfToken(request.getSession()));
 		return view;
+	}
+
+	/**
+	 * 处理用户参加竞赛的请求.
+	 * @param contestId - 竞赛的唯一标识符
+	 * @param csrfToken - 用于防止CSRF攻击的Token
+	 * @param request - HttpRequest对象
+	 * @param response - HttpResponse对象
+	 * @return 包含是否成功参加竞赛状态信息的Map对象
+	 */
+	@RequestMapping(value="/{contestId}/attend.action", method=RequestMethod.POST)
+	public @ResponseBody Map<String, Boolean> attendContestAction(
+			@PathVariable("contestId") long contestId,
+			@RequestParam(value="csrfToken") String csrfToken,
+			HttpServletRequest request, HttpServletResponse response) {
+		HttpSession session = request.getSession();
+		String ipAddress = HttpRequestParser.getRemoteAddr(request);
+		User currentUser = HttpSessionParser.getCurrentUser(session);
+		boolean isCsrfTokenValid = CsrfProtector.isCsrfTokenValid(csrfToken, session);
+
+		Map<String, Boolean> result = contestService.attendContest(contestId, currentUser, isCsrfTokenValid);
+		if ( result.get("isSuccessful") ) {
+			LOGGER.info(String.format("User: {%s} attended contest #%d at %s",
+					new Object[] {currentUser, contestId, ipAddress}));
+		}
+		return result;
 	}
 
 	/**

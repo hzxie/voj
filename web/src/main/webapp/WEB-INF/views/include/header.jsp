@@ -35,7 +35,7 @@
                 <ul class="inline">
                     <li><a href="<c:url value="/p" />"><spring:message code="voj.include.header.problems" text="Problems" /></a></li>
                     <li><a href="<c:url value="/discussion" />"><spring:message code="voj.include.header.discussion" text="Discussion" /></a></li>
-                    <li><a href="<c:url value="/contests" />"><spring:message code="voj.include.header.contests" text="Contests" /></a></li>
+                    <li><a href="<c:url value="/contest" />"><spring:message code="voj.include.header.contests" text="Contests" /></a></li>
                     <li><a href="<c:url value="/submission" />"><spring:message code="voj.include.header.submission" text="Submission" /></a></li>
                     <li><a href="javascript:openDrawerMenu()"><spring:message code="voj.include.header.more" text="More" /></a></li>
                 </ul>

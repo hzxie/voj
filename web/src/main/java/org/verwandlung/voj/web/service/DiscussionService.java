@@ -185,20 +185,20 @@ public class DiscussionService {
 	 * 对讨论回复进行投票.
 	 * @param discussionThreadId - 讨论帖子的唯一标识符
 	 * @param discussionReplyId - 讨论回复的唯一标识符
-	 * @param currentUserUid - 当前登录用户的用户唯一标识符(-1表示未登录)
+	 * @param currentUser - 当前登录用户的用户
 	 * @param voteUp - Vote Up状态 (+1 表示用户赞了这个回答, -1 表示用户取消赞了这个回答, 0表示没有操作)
 	 * @param voteDown - Vote Up状态 (+1 表示用户踩了这个回答, -1 表示用户取消踩了这个回答, 0表示没有操作)
 	 * @param isCsrfTokenValid - CSRF Token是否有效
 	 * @return 讨论回复的投票结果
 	 */
 	public Map<String, Boolean> voteDiscussionReply(long discussionThreadId, long discussionReplyId,
-			long currentUserUid, int voteUp, int voteDown, boolean isCsrfTokenValid) {
+			User currentUser, int voteUp, int voteDown, boolean isCsrfTokenValid) {
 		DiscussionReply discussionReply = discussionReplyMapper.getDiscussionReplyUsingReplyId(discussionReplyId);
 		Map<String, Boolean> result = new HashMap<>();
 		result.put("isDiscussionReplyExists", discussionReply != null && discussionReply.getDiscussionThreadId() == discussionThreadId);
 		result.put("isVoteValid", voteUp >= -1 && voteUp <= 1 && voteDown >=-1 && voteDown <= 1);
 		result.put("isCsrfTokenValid", isCsrfTokenValid);
-		result.put("isLoggedIn", currentUserUid != -1);
+		result.put("isLoggedIn", currentUser != null);
 
 		boolean isSuccessful = result.get("isDiscussionReplyExists") && result.get("isVoteValid") &&
 				               result.get("isCsrfTokenValid")        && result.get("isLoggedIn");
@@ -210,20 +210,20 @@ public class DiscussionService {
 				JSONObject voteUsers = JSON.parseObject(discussionReply.getDiscussionReplyVotes());
 				JSONArray voteUpUsers = voteUsers.getJSONArray("up");
 				JSONArray voteDownUsers = voteUsers.getJSONArray("down");
-				boolean isVotedUp = contains(voteUpUsers, currentUserUid);
-				boolean isVotedDown = contains(voteDownUsers, currentUserUid);
+				boolean isVotedUp = contains(voteUpUsers, currentUser.getUid());
+				boolean isVotedDown = contains(voteDownUsers, currentUser.getUid());
 
 				if ( voteUp == 1 && !isVotedUp ) {
-					if ( isVotedDown ) remove(voteDownUsers, currentUserUid);
-					voteUpUsers.add(currentUserUid);
+					if ( isVotedDown ) remove(voteDownUsers, currentUser.getUid());
+					voteUpUsers.add(currentUser.getUid());
 				} else if ( voteUp == -1 ) {
-					remove(voteUpUsers, currentUserUid);
+					remove(voteUpUsers, currentUser.getUid());
 				}
 				if ( voteDown == 1 && !isVotedDown ) {
-					if ( isVotedUp ) remove(voteUpUsers, currentUserUid);
-					voteDownUsers.add(currentUserUid);
+					if ( isVotedUp ) remove(voteUpUsers, currentUser.getUid());
+					voteDownUsers.add(currentUser.getUid());
 				} else if ( voteDown == -1 ) {
-					remove(voteDownUsers, currentUserUid);
+					remove(voteDownUsers, currentUser.getUid());
 				}
 				discussionReply.setDiscussionReplyVotes(JSON.toJSONString(voteUsers));
 				discussionReplyMapper.updateDiscussionReply(discussionReply);

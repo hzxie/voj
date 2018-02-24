@@ -226,7 +226,7 @@ public class DiscussionController {
 		boolean isCsrfTokenValid = CsrfProtector.isCsrfTokenValid(csrfToken, session);
 
 		Map<String, Boolean> result = discussionService.voteDiscussionReply(discussionThreadId,
-				discussionReplyId, currentUser.getUid(), voteUp, voteDown, isCsrfTokenValid);
+				discussionReplyId, currentUser, voteUp, voteDown, isCsrfTokenValid);
 		if ( result.get("isSuccessful") ) {
 			LOGGER.info(String.format("User: {%s} voted discussion reply #%d {Up: %d, Down: %d} at %s",
 					new Object[] {currentUser, discussionReplyId, voteUp, voteDown, ipAddress}));

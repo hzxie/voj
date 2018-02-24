@@ -69,7 +69,6 @@ public class AdministrationController {
 		view.addObject("numberOfCheckpoints", getNumberOfCheckpoints());
 		view.addObject("privateProblems", getPrivateProblems());
 		view.addObject("submissionsToday", getSubmissionsToday());
-		view.addObject("productVersion", PRODUCT_VERSION);
 		view.addObject("memoryUsage", getCurrentMemoryUsage());
 		view.addObject("onlineJudgers", getOnlineJudgers());
 		return view;
@@ -896,11 +895,6 @@ public class AdministrationController {
 	 */
 	@Autowired
 	private ApplicationEventListener eventListener;
-	
-	/**
-	 * 产品版本信息.
-	 */
-	private final static String PRODUCT_VERSION = "0.1.0";
 	
 	/**
 	 * 日志记录器.

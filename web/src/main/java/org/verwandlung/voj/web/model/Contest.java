@@ -216,4 +216,10 @@ public class Contest {
 	 * 竞赛中包含的试题 (JSON格式的字符串).
 	 */
 	private String problems;
+
+	/**
+	 * 竞赛状态.
+	 * 分别表示未开始、进行中和已结束.
+	 */
+	public enum CONTEST_STATUS { READY, LIVE, DONE }
 }

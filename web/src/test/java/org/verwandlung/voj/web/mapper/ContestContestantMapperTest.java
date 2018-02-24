@@ -70,7 +70,7 @@ public class ContestContestantMapperTest {
 	 */
 	@Test
 	public void testGetContestantsOfFirstContestForOiFrom0WithLimit2() {
-		List<ContestContestant> contestants = contestContestantMapper.getContestantsOfContestForOi(1, 0, 2);
+		List<ContestContestant> contestants = contestContestantMapper.getContestantsOfContest(1, 0, 2);
 		Assert.assertEquals(2, contestants.size());
 
 		ContestContestant firstContestant = contestants.get(0);
@@ -90,7 +90,7 @@ public class ContestContestantMapperTest {
 	 */
 	@Test
 	public void testGetContestantsOfSecondContestForOiFrom1WithLimit1() {
-		List<ContestContestant> contestants = contestContestantMapper.getContestantsOfContestForOi(2, 0, 1);
+		List<ContestContestant> contestants = contestContestantMapper.getContestantsOfContest(2, 0, 1);
 		Assert.assertEquals(1, contestants.size());
 
 		ContestContestant firstContestant = contestants.get(0);

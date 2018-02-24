@@ -50,7 +50,7 @@
 		WHERE contest_id = #{contestId}
 		AND contestant_uid = #{contestantUid}
 	</select>
-	<select id="getContestantsOfContestForOi"
+	<select id="getContestantsOfContest"
 		parameterType="map"
 		resultMap="ContestContestantResultMap" 
 		useCache="true">

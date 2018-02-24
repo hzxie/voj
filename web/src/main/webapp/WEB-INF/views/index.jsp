@@ -91,7 +91,7 @@
                             </c:choose>
                             <tr class="contest ${contestStatus}">
                                 <td class="overview">
-                                    <h5><a href="<c:url value="/contests/${contest.contestId}" />">${contest.contestName}</a></h5>
+                                    <h5><a href="<c:url value="/contest/${contest.contestId}" />">${contest.contestName}</a></h5>
                                     <ul class="inline">
                                         <li>${contest.contestMode}</li>
                                         <li><spring:message code="voj.index.start-time" text="Start Time" />: <fmt:formatDate value="${contest.startTime}" type="both" dateStyle="default" timeStyle="default" /></li>

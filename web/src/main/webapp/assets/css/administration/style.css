@@ -5,6 +5,12 @@ html, body {
 	padding: 0;
 }
 
+select, 
+input[type=text], 
+input[type=password] {
+	border-width: 1px;
+}
+
 .pace {
 	-webkit-pointer-events: none;
 	pointer-events: none;

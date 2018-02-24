@@ -23,7 +23,7 @@ public class DiscussionThread implements Serializable {
 	 */
 	public DiscussionThread(User discussionThreadCreator, 
 			DiscussionTopic discussionTopic, Problem problem,
-			                String discussionThreadTitle) {
+			String discussionThreadTitle) {
 		this.discussionThreadCreator = discussionThreadCreator;
 		this.discussionTopic = discussionTopic;
 		this.problem = problem;
