@@ -84,8 +84,10 @@ div#content div#main-content div.submission code {
 }
 
 div#content div#sidebar div.section {
-	margin-bottom: 10px;
-	padding-bottom: 10px;
+	background-color: #fff;
+	border-top: 4px solid #16a085;
+	margin-bottom: 20px;
+	padding: 10px;
 }
 
 div#content div#sidebar div.section ul {

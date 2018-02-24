@@ -7,13 +7,12 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.ModelAndView;
+import org.verwandlung.voj.web.exception.ResourceNotFoundException;
 import org.verwandlung.voj.web.model.Contest;
 import org.verwandlung.voj.web.service.ContestService;
+import org.verwandlung.voj.web.util.CsrfProtector;
 
 import java.util.Date;
 import java.util.HashMap;
@@ -67,11 +66,37 @@ public class ContestsController {
 
 		return result;
 	}
+	
+	/**
+	 * 显示竞赛详细信息的页面.
+	 * @param contestId - 竞赛的唯一标识符
+	 * @param request - HttpRequest对象
+	 * @param response - HttpResponse对象
+	 * @return 包含提交详细信息的ModelAndView对象 
+	 */
+	@RequestMapping(value="/{contestId}", method=RequestMethod.GET)
+	public ModelAndView contestView(
+			@PathVariable("contestId") long contestId,
+			HttpServletRequest request, HttpServletResponse response) {
+		
+		Contest contest = contestService.getContest(contestId);
+		if ( contest == null ) {
+			throw new ResourceNotFoundException();
+		}
+
+		long numberOfContestants = contestService.getNumberOfContestantsOfContest(contestId);
+		ModelAndView view = new ModelAndView("contests/contest");
+		view.addObject("currentTime", new Date())
+			.addObject("contest", contest)
+			.addObject("numberOfContestants", numberOfContestants)
+			.addObject("csrfToken", CsrfProtector.getCsrfToken(request.getSession()));
+		return view;
+	}
 
 	/**
 	 * 每次查询需要加载竞赛的数量.
 	 */
-	private static final int NUMBER_OF_CONTESTS_PER_PAGE = 20;
+	private static final int NUMBER_OF_CONTESTS_PER_PAGE = 10;
 
 	/**
 	 * 自动注入的ContestService对象.

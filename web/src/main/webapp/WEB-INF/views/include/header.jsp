@@ -2,6 +2,7 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <spring:eval expression="@propertyConfigurer.getProperty('url.cdn')" var="cdnUrl" />
+<spring:eval expression="@propertyConfigurer.getProperty('build.version')" var="version" />
     <!--[if lte IE 7]>
     <div id="upgrade-browser">
         <div class="row-fluid container">
@@ -27,7 +28,7 @@
         <div class="container">
             <div id="logo" class="span6">
                 <a href="<c:url value="/" />">
-                    <img src="${cdnUrl}/img/logo.png" alt="Logo" />
+                    <img src="${cdnUrl}/img/logo.png?v=${version}" alt="Logo" />
                 </a>
             </div> <!-- #logo -->
             <div id="nav" class="span6">
@@ -48,7 +49,7 @@
             <div id="profile">
             <c:choose>
             <c:when test="${isLogin}">
-                <img src="${cdnUrl}/img/avatar.jpg" alt="avatar" class="img-circle" />
+                <img src="${cdnUrl}/img/avatar.jpg?v=${version}" alt="avatar" class="img-circle" />
                 <h5>${myProfile.username}</h5>
                 <p class="email">${myProfile.email}</p>
                 <p><spring:message code="voj.include.header.accepted" text="Accepted" />/<spring:message code="voj.include.header.submit" text="Submit" />: ${mySubmissionStats.get("acceptedSubmission")}/${mySubmissionStats.get("totalSubmission")}(${mySubmissionStats.get("acRate")}%)</p>

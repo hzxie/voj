@@ -3,6 +3,7 @@
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/fmt" prefix="fmt" %>
 <spring:eval expression="@propertyConfigurer.getProperty('url.cdn')" var="cdnUrl" />
+<spring:eval expression="@propertyConfigurer.getProperty('build.version')" var="version" />
 <!DOCTYPE html>
 <html lang="${language}">
 <head>
@@ -13,23 +14,23 @@
     <meta name="description" content="${description}">
     <meta name="author" content="Haozhe Xie">
     <!-- Icon -->
-    <link href="${cdnUrl}/img/favicon.ico" rel="shortcut icon" type="image/x-icon">
+    <link href="${cdnUrl}/img/favicon.ico?v=${version}" rel="shortcut icon" type="image/x-icon">
     <!-- StyleSheets -->
-    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/bootstrap.min.css" />
-    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/bootstrap-responsive.min.css" />
-    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/flat-ui.min.css" />
-    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/font-awesome.min.css" />
-    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/style.css" />
-    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/discussion/new-thread.css" />
+    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/bootstrap.min.css?v=${version}" />
+    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/bootstrap-responsive.min.css?v=${version}" />
+    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/flat-ui.min.css?v=${version}" />
+    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/font-awesome.min.css?v=${version}" />
+    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/style.css?v=${version}" />
+    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/discussion/new-thread.css?v=${version}" />
     <!-- JavaScript -->
-    <script type="text/javascript" src="${cdnUrl}/js/jquery-1.11.1.min.js"></script>
-    <script type="text/javascript" src="${cdnUrl}/js/bootstrap.min.js"></script>
-    <script type="text/javascript" src="${cdnUrl}/js/md5.min.js"></script>
+    <script type="text/javascript" src="${cdnUrl}/js/jquery-1.11.1.min.js?v=${version}"></script>
+    <script type="text/javascript" src="${cdnUrl}/js/bootstrap.min.js?v=${version}"></script>
+    <script type="text/javascript" src="${cdnUrl}/js/md5.min.js?v=${version}"></script>
     <!--[if lte IE 9]>
-    <script type="text/javascript" src="${cdnUrl}/js/jquery.placeholder.min.js"></script>
+    <script type="text/javascript" src="${cdnUrl}/js/jquery.placeholder.min.js?v=${version}"></script>
     <![endif]-->
     <!--[if lte IE 7]>
-    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/font-awesome-ie7.min.css" />
+    <link rel="stylesheet" type="text/css" href="${cdnUrl}/css/font-awesome-ie7.min.css?v=${version}" />
     <![endif]-->
     <!--[if lte IE 6]>
     <script type="text/javascript">
@@ -81,7 +82,9 @@
                     <c:if test="${relatedProblem != null}">
                     <div class="section">
                         <h5><spring:message code="voj.discussion.new-thread.related-problem" text="Related Problem" /></h5>
-                        <a href="<c:url value="/p/${relatedProblem.problemId}" />">P<span id="related-problem">${relatedProblem.problemId} </span>${relatedProblem.problemName}</a>
+                        <p>
+                            <a href="<c:url value="/p/${relatedProblem.problemId}" />">P<span id="related-problem">${relatedProblem.problemId} </span>${relatedProblem.problemName}</a>
+                        </p>
                     </div> <!-- .section -->
                     </c:if>
                 </div> <!-- .span3 -->
@@ -92,10 +95,10 @@
     <%@ include file="/WEB-INF/views/include/footer.jsp" %>
     <!-- Java Script -->
     <!-- Placed at the end of the document so the pages load faster -->
-    <script type="text/javascript" src="${cdnUrl}/js/site.js"></script>
+    <script type="text/javascript" src="${cdnUrl}/js/site.js?v=${version}"></script>
     <script type="text/javascript">
         $.when(
-            $.getScript('${cdnUrl}/js/markdown.min.js'),
+            $.getScript('${cdnUrl}/js/markdown.min.js?v=${version}'),
             $.Deferred(function(deferred) {
                 $(deferred.resolve);
             })

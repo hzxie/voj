@@ -28,7 +28,7 @@ SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 CREATE TABLE `voj_bulletin_board_messages` (
   `message_id` bigint(20) NOT NULL,
   `message_title` varchar(128) NOT NULL,
-  `message_body` text NOT NULL,
+  `message_body` text COLLATE utf8mb4_unicode_ci NOT NULL,
   `message_create_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -41,6 +41,7 @@ CREATE TABLE `voj_bulletin_board_messages` (
 CREATE TABLE `voj_contests` (
   `contest_id` bigint(20) NOT NULL,
   `contest_name` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `contest_notes` text COLLATE utf8mb4_unicode_ci NOT NULL,
   `contest_start_time` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
   `contest_end_time` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
   `contest_mode` varchar(4) COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -51,10 +52,10 @@ CREATE TABLE `voj_contests` (
 -- Dumping data for table `voj_contests`
 --
 
-INSERT INTO `voj_contests` (`contest_id`, `contest_name`, `contest_start_time`, `contest_end_time`, `contest_mode`, `contest_problems`) VALUES
-(1, 'Contest #1', '2018-02-23 00:00:00', '2018-02-23 23:59:59', 'OI', '[1001, 1002]'),
-(2, 'Contest #2', '1970-01-02 00:00:01', '2038-01-18 03:14:07', 'ACM', '[1001, 1003]'),
-(3, 'Contest #3', '2038-01-18 00:00:00', '2038-01-18 02:00:00', 'ACM', '[1000, 1003]');
+INSERT INTO `voj_contests` (`contest_id`, `contest_name`, `contest_notes`, `contest_start_time`, `contest_end_time`, `contest_mode`, `contest_problems`) VALUES
+(1, 'Contest #1', '', '2018-02-23 00:00:00', '2018-02-23 23:59:59', 'OI', '[1001, 1002]'),
+(2, 'Contest #2', '', '1970-01-02 00:00:01', '2038-01-18 03:14:07', 'ACM', '[1001, 1003]'),
+(3, 'Contest #3', '', '2038-01-18 00:00:00', '2038-01-18 02:00:00', 'ACM', '[1000, 1003]');
 
 -- --------------------------------------------------------
 

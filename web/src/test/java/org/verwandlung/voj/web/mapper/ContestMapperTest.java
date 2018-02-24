@@ -150,7 +150,7 @@ public class ContestMapperTest {
 		calendar.set(2016, Calendar.MAY, 7, 20, 0, 0);
 		Date endTime = calendar.getTime();
 
-		Contest contest = new Contest("Contest", startTime, endTime, "OI", "[]");
+		Contest contest = new Contest("Contest", "Contest Notes", startTime, endTime, "OI", "[]");
 		int numberOfRowsAffected = contestMapper.createContest(contest);
 		Assert.assertEquals(1, numberOfRowsAffected);
 	}
@@ -169,7 +169,7 @@ public class ContestMapperTest {
 		calendar.set(2016, Calendar.MAY, 7, 20, 0, 0);
 		Date endTime = calendar.getTime();
 
-		Contest contest = new Contest("Contest", startTime, endTime, "OOOOI", "[1000]");
+		Contest contest = new Contest("Contest", "Contest Notes", startTime, endTime, "OOOOI", "[1000]");
 		contestMapper.createContest(contest);
 	}
 
