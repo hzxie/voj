@@ -5,11 +5,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.verwandlung.voj.web.mapper.ContestContestantMapper;
 import org.verwandlung.voj.web.mapper.ContestMapper;
+import org.verwandlung.voj.web.mapper.ContestSubmissionMapper;
 import org.verwandlung.voj.web.mapper.ProblemMapper;
-import org.verwandlung.voj.web.model.Contest;
-import org.verwandlung.voj.web.model.ContestContestant;
-import org.verwandlung.voj.web.model.Problem;
-import org.verwandlung.voj.web.model.User;
+import org.verwandlung.voj.web.model.*;
 
 import java.util.*;
 
@@ -37,7 +35,7 @@ public class ContestService {
 	 * @return 包含竞赛信息的Contest对象
 	 */
 	public Contest getContest(long contestId) {
-		return contestMapper.getContestsUsingId(contestId);
+		return contestMapper.getContest(contestId);
 	}
 
 	/**
@@ -107,9 +105,9 @@ public class ContestService {
 	 * @return 包含是否成功参加竞赛状态信息的Map对象
 	 */
 	public Map<String, Boolean> attendContest(long contestId, User currentUser, boolean isCsrfTokenValid) {
-		Contest contest = contestMapper.getContestsUsingId(contestId);
+		Contest contest = contestMapper.getContest(contestId);
 
-		Map<String, Boolean> result = new HashMap<>();
+		Map<String, Boolean> result = new HashMap<>(6, 1);
 		result.put("isContestExists", contest != null);
 		result.put("isContestReady", getContestStatus(contest) == Contest.CONTEST_STATUS.READY);
 		result.put("isUserLogin", currentUser != null);
@@ -119,13 +117,72 @@ public class ContestService {
 		boolean isSuccessful = result.get("isContestExists") &&  result.get("isContestReady")    &&
 				               result.get("isUserLogin")     && !result.get("isAttendedContest") &&
 							   result.get("isCsrfTokenValid");
-
 		if ( isSuccessful ) {
 			ContestContestant contestContestant = new ContestContestant(contest, currentUser);
 			contestContestantMapper.createContestContestant(contestContestant);
 		}
 		result.put("isSuccessful", isSuccessful);
 		return result;
+	}
+
+	/**
+	 * 获取OI赛制的排行榜.
+	 * @param contestId - 竞赛的唯一标识符
+	 * @return 包含参赛者和提交记录信息的Map对象
+	 */
+	public Map<String, Object> getLeaderBoardForOi(long contestId) {
+		Map<String, Object> result = new HashMap<>(3, 1);
+		List<ContestContestant> contestants = contestContestantMapper.
+				getContestantsOfContestForOi(contestId, 0, Integer.MAX_VALUE);
+		List<ContestSubmission> submissions = contestSubmissionMapper.getSubmissionsOfContest(contestId);
+		rankingContestantsForOi(contestants);
+
+		result.put("contestants", contestants);
+		result.put("submissions", getSubmissionsGroupByContestant(submissions));
+		return result;
+	}
+
+	/**
+	 * 获取参赛者的排名.
+	 * @param contestants - 竞赛参赛者列表
+	 */
+	public void rankingContestantsForOi(List<ContestContestant> contestants) {
+		int currentRank = 1;
+		if ( contestants.size() == 0 ) {
+			return;
+		}
+
+		contestants.get(0).setRank(currentRank);
+		for ( int i = 1; i < contestants.size(); ++ i ) {
+			ContestContestant contestant = contestants.get(i);
+			ContestContestant prevContestant = contestants.get(i - 1);
+
+			if ( contestant.getScore() != prevContestant.getScore() || contestant.getTime() != prevContestant.getTime() ) {
+				currentRank = i + 1;
+			}
+			contestant.setRank(currentRank);
+		}
+	}
+
+	/**
+	 * 建立竞赛提交记录的索引 (参赛者UID - 试题ID).
+	 * @param contestSubmissions 包含全部竞赛提交记录的列表
+	 * @return 组织后的竞赛提交记录
+	 */
+	private Map<Long, Map<Long, Submission>> getSubmissionsGroupByContestant(List<ContestSubmission> contestSubmissions) {
+		Map<Long, Map<Long, Submission>> submissions = new HashMap<>();
+
+		for ( ContestSubmission cs : contestSubmissions ) {
+			long problemId = cs.getSubmission().getProblem().getProblemId();
+			long contestantUid = cs.getSubmission().getUser().getUid();
+
+			if ( !submissions.containsKey(contestantUid) ) {
+				submissions.put(contestantUid, new HashMap<>());
+			}
+			Map<Long, Submission> submissionsOfContestant = submissions.get(contestantUid);
+			submissionsOfContestant.put(problemId, cs.getSubmission());
+		}
+		return submissions;
 	}
 
 	/**
@@ -139,6 +196,12 @@ public class ContestService {
 	 */
 	@Autowired
 	private ContestContestantMapper contestContestantMapper;
+
+	/**
+	 * 自动注入的ContestSubmissionMapper对象.
+	 */
+	@Autowired
+	private ContestSubmissionMapper contestSubmissionMapper;
 
 	/**
 	 * 自动注入的ProblemMapper对象.

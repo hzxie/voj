@@ -80,7 +80,7 @@
             <div id="sidebar" class="span4">
                 <div id="search-widget" class="widget">
                     <h4><spring:message code="voj.contests.contests.search" text="Search" /></h4>
-                    <form id="search-form" action="<c:url value="/contests" />">
+                    <form id="search-form" action="<c:url value="/contest" />">
                         <div class="control-group">
                             <input name="keyword" class="span12" type="text" placeholder="<spring:message code="voj.contests.contests.keyword" text="Keyword" />" value="${param.keyword}" />
                         </div>

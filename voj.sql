@@ -73,10 +73,10 @@ CREATE TABLE `voj_contest_contestants` (
 -- Dumping data for table `voj_contest_contestants`
 --
 
-INSERT INTO `voj_contest_contestants` (`contest_id`, `contestant_uid`, `code_snippet`) VALUES
-(1, 1000, ''),
-(1, 1001, ''),
-(2, 1000, '');
+INSERT INTO `voj_contest_contestants` (`contest_id`, `contestant_uid`) VALUES
+(1, 1000),
+(1, 1001),
+(2, 1000);
 
 -- --------------------------------------------------------
 
@@ -95,6 +95,7 @@ CREATE TABLE `voj_contest_submissions` (
 
 INSERT INTO `voj_contest_submissions` (`contest_id`, `submission_id`) VALUES
 (1, 1000),
+(1, 1001),
 (1, 1002);
 
 -- --------------------------------------------------------

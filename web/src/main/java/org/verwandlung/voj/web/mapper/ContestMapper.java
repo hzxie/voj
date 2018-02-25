@@ -34,7 +34,7 @@ public interface ContestMapper {
 	 * @param contestId - 竞赛的唯一标识符
 	 * @return 预期的竞赛对象
 	 */
-	Contest getContestsUsingId(long contestId);
+	Contest getContest(long contestId);
 
 	/**
 	 * 创建竞赛.
