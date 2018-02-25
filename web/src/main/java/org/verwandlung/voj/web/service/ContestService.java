@@ -161,14 +161,14 @@ public class ContestService {
 		// 计算罚时
 		for ( ContestContestant cc : contestants ) {
 			int numberOfRejected = cc.getTime();
-			int penalty = numberOfRejected * 20;
+			int penalty = numberOfRejected * 1200;
 			if ( submissions.containsKey(cc.getContestant().getUid()) ) {
 				Map<Long, Submission> submissionsOfContestant = submissions.get(cc.getContestant().getUid());
 
 				for ( Map.Entry<Long, Submission> e : submissionsOfContestant.entrySet() ) {
 					Submission s = e.getValue();
 					long usedTimeInMilliseconds = s.getSubmitTime().getTime() - contest.getStartTime().getTime();
-					s.setUsedTime((int) usedTimeInMilliseconds / 60000);
+					s.setUsedTime((int) usedTimeInMilliseconds / 1000);
 					penalty += s.getUsedTime();
 				}
 				cc.setTime(penalty);
