@@ -19,13 +19,26 @@ public interface ContestContestantMapper {
 	long getNumberOfContestantsOfContest(long contestId);
 
 	/**
-	 * 获取某个竞赛的参赛者列表(按得分由高到底排列).
+	 * 获取某个竞赛的参赛者列表 (OI赛制).
 	 * @param contestId - 竞赛的唯一标识符
 	 * @param offset - 起始参赛者的偏移量(offset)
 	 * @param limit - 需要获取参赛者的数量
 	 * @return 某个竞赛的参赛者列表
 	 */
 	List<ContestContestant> getContestantsOfContestForOi(
+			@Param("contestId") long contestId,
+			@Param("offset") long offset, @Param("limit") int limit);
+
+	/**
+	 * 获取某个竞赛的参赛者列表 (ACM赛制).
+	 * 其中, ContestContestant中的Score字段用于存储Accepted的试题数,
+	 * Time字段用于存储Rejcted的试题数 (Rejected试题数与罚时相关).
+	 * @param contestId - 竞赛的唯一标识符
+	 * @param offset - 起始参赛者的偏移量(offset)
+	 * @param limit - 需要获取参赛者的数量
+	 * @return 某个竞赛的参赛者列表
+	 */
+	List<ContestContestant> getContestantsOfContestForAcm(
 			@Param("contestId") long contestId,
 			@Param("offset") long offset, @Param("limit") int limit);
 

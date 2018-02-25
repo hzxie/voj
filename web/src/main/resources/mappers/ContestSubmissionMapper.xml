@@ -25,6 +25,16 @@
 		NATURAL JOIN voj_submissions
 		WHERE contest_id = #{contestId}
 	</select>
+	<select id="getAcceptedSubmissionsOfContest"
+		parameterType="long"
+		resultMap="ContestSubmissionResultMap"
+		useCache="true">
+		SELECT * 
+		FROM voj_contest_submissions
+		NATURAL JOIN voj_submissions
+		WHERE contest_id = #{contestId}
+		AND submission_judge_result = 'AC'
+	</select>
 	<insert id="createContestSubmission" 
 		parameterType="org.verwandlung.voj.web.model.ContestSubmission"
 		flushCache="true">

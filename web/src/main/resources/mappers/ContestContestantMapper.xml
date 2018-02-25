@@ -52,6 +52,40 @@
 		ORDER BY contestant_score DESC, contestant_time
 		LIMIT #{offset}, #{limit}
 	</select>
+	<select id="getContestantsOfContestForAcm"
+		parameterType="map"
+		resultMap="ContestContestantResultMap" 
+		useCache="true">
+		SELECT *, (
+			SELECT COUNT(DISTINCT(uid))
+			FROM voj_contest_submissions cs
+			NATURAL JOIN voj_submissions
+			WHERE uid = cc.contestant_uid
+			AND submission_judge_result = 'AC'
+			AND submission_id = cs.submission_id
+			AND cs.contest_id = cc.contest_id
+		) AS contestant_score, (
+			SELECT COUNT(*)
+			FROM voj_contest_submissions cs
+			NATURAL JOIN voj_submissions
+			WHERE uid = cc.contestant_uid
+			AND submission_judge_result != 'AC'
+			AND submission_id = cs.submission_id
+			AND cs.contest_id = cc.contest_id
+			AND problem_id IN (
+				SELECT problem_id
+				FROM voj_contest_submissions cs
+				NATURAL JOIN voj_submissions
+				WHERE uid = cc.contestant_uid
+				AND submission_judge_result = 'AC'
+				AND submission_id = cs.submission_id
+				AND cs.contest_id = cc.contest_id
+			)
+		) AS contestant_time
+		FROM voj_contest_contestants cc
+		WHERE contest_id = #{contestId}
+		LIMIT #{offset}, #{limit}
+	</select>
 	<select id="getContestantOfContest"
 			parameterType="map"
 			resultMap="ContestContestantResultMap"

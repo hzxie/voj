@@ -35,14 +35,14 @@ div#content div.leaderboard div.body td.contestant {
 div#content div.leaderboard div.body th.score,
 div#content div.leaderboard div.body td.score {
 	text-align: center;
-	width: 40px;
+	width: 60px;
 }
 
 div#content div.leaderboard div.body th.time,
 div#content div.leaderboard div.body td.time {
 	border-right: 1px solid #ddd;
 	text-align: center;
-	width: 40px;
+	width: 80px;
 }
 
 div#content div.leaderboard div.body th.submission,

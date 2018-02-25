@@ -135,28 +135,26 @@ public class ContestsController {
 			@PathVariable("contestId") long contestId,
 			HttpServletRequest request, HttpServletResponse response) {
 		Contest contest = contestService.getContest(contestId);
-		if ( contest == null ) {
+		if ( contest == null || !(contest.getContestMode().equals("OI") || contest.getContestMode().equals("ACM")) ) {
 			throw new ResourceNotFoundException();
 		}
 
 		List<Long> problemIdList = JSON.parseArray(contest.getProblems(), Long.class);
 		List<Problem> problems = contestService.getProblemsOfContests(problemIdList);
 		ModelAndView view = null;
+		Map<String, Object> result = null;
 
 		if ( contest.getContestMode().equals("OI") ) {
-			Map<String, Object> result = contestService.getLeaderBoardForOi(contestId);
-			List<ContestContestant> contestants = (List<ContestContestant>) result.get("contestants");
-			Map<Long, Map<Long, Submission>> submissions = (Map<Long, Map<Long, Submission>>) result.get("submissions");
-
-			view = new ModelAndView("contests/oi-leaderboard");
-			view.addObject("contestants", contestants);
-			view.addObject("submissions", submissions);
+			view = new ModelAndView("contests/leaderboard-oi");
+			result = contestService.getLeaderBoardForOi(contestId);
 		} else if ( contest.getContestMode().equals("ACM") ) {
-			// TODO
-			throw new ResourceNotFoundException();
-		} else {
-			throw new ResourceNotFoundException();
+			view = new ModelAndView("contests/leaderboard-acm");
+			result = contestService.getLeaderBoardForAcm(contestId);
 		}
+		List<ContestContestant> contestants = (List<ContestContestant>) result.get("contestants");
+		Map<Long, Map<Long, Submission>> submissions = (Map<Long, Map<Long, Submission>>) result.get("submissions");
+		view.addObject("contestants", contestants);
+		view.addObject("submissions", submissions);
 		view.addObject("contest", contest);
 		view.addObject("problems", problems);
 		return view;

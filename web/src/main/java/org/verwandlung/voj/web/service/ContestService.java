@@ -134,11 +134,50 @@ public class ContestService {
 		Map<String, Object> result = new HashMap<>(3, 1);
 		List<ContestContestant> contestants = contestContestantMapper.
 				getContestantsOfContestForOi(contestId, 0, Integer.MAX_VALUE);
-		List<ContestSubmission> submissions = contestSubmissionMapper.getSubmissionsOfContest(contestId);
-		rankingContestantsForOi(contestants);
+		Map<Long, Map<Long, Submission>> submissions = getSubmissionsGroupByContestant(
+				contestSubmissionMapper.getAcceptedSubmissionsOfContest(contestId), true);
+		rankingContestants(contestants);
 
 		result.put("contestants", contestants);
-		result.put("submissions", getSubmissionsGroupByContestant(submissions));
+		result.put("submissions", submissions);
+		return result;
+	}
+
+	/**
+	 * 获取ACM赛制的排行榜.
+	 * @param contestId - 竞赛的唯一标识符
+	 * @return 包含参赛者和提交记录信息的Map对象
+	 */
+	public Map<String, Object> getLeaderBoardForAcm(long contestId) {
+		Contest contest = contestMapper.getContest(contestId);
+
+		Map<String, Object> result = new HashMap<>(3, 1);
+		List<ContestContestant> contestants = contestContestantMapper.
+				getContestantsOfContestForAcm(contestId, 0, Integer.MAX_VALUE);
+		Map<Long, Map<Long, Submission>> submissions = getSubmissionsGroupByContestant(
+				contestSubmissionMapper.getAcceptedSubmissionsOfContest(contestId), false);
+		Collections.sort(contestants);
+
+		// 计算罚时
+		for ( ContestContestant cc : contestants ) {
+			int numberOfRejected = cc.getTime();
+			int penalty = numberOfRejected * 20;
+			if ( submissions.containsKey(cc.getContestant().getUid()) ) {
+				Map<Long, Submission> submissionsOfContestant = submissions.get(cc.getContestant().getUid());
+
+				for ( Map.Entry<Long, Submission> e : submissionsOfContestant.entrySet() ) {
+					Submission s = e.getValue();
+					long usedTimeInMilliseconds = s.getSubmitTime().getTime() - contest.getStartTime().getTime();
+					s.setUsedTime((int) usedTimeInMilliseconds / 60000);
+					penalty += s.getUsedTime();
+				}
+				cc.setTime(penalty);
+			}
+		}
+		rankingContestants(contestants);
+
+		result.put("contestants", contestants);
+		result.put("submissions", submissions);
 		return result;
 	}
 
@@ -146,7 +185,7 @@ public class ContestService {
 	 * 获取参赛者的排名.
 	 * @param contestants - 竞赛参赛者列表
 	 */
-	public void rankingContestantsForOi(List<ContestContestant> contestants) {
+	public void rankingContestants(List<ContestContestant> contestants) {
 		int currentRank = 1;
 		if ( contestants.size() == 0 ) {
 			return;
@@ -167,9 +206,11 @@ public class ContestService {
 	/**
 	 * 建立竞赛提交记录的索引 (参赛者UID - 试题ID).
 	 * @param contestSubmissions 包含全部竞赛提交记录的列表
+	 * @param override - 当同一题出现多次提交时, 是否覆盖已有的提交记录
 	 * @return 组织后的竞赛提交记录
 	 */
-	private Map<Long, Map<Long, Submission>> getSubmissionsGroupByContestant(List<ContestSubmission> contestSubmissions) {
+	private Map<Long, Map<Long, Submission>> getSubmissionsGroupByContestant(
+			List<ContestSubmission> contestSubmissions, boolean override) {
 		Map<Long, Map<Long, Submission>> submissions = new HashMap<>();
 
 		for ( ContestSubmission cs : contestSubmissions ) {
@@ -180,6 +221,10 @@ public class ContestService {
 				submissions.put(contestantUid, new HashMap<>());
 			}
 			Map<Long, Submission> submissionsOfContestant = submissions.get(contestantUid);
+
+			if ( !override && submissionsOfContestant.containsKey(problemId) ) {
+				continue;
+			}
 			submissionsOfContestant.put(problemId, cs.getSubmission());
 		}
 		return submissions;

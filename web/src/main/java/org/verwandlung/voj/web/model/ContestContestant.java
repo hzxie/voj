@@ -1,6 +1,6 @@
 package org.verwandlung.voj.web.model;
 
-public class ContestContestant {
+public class ContestContestant implements Comparable {
 	/**
 	 * ContestContestant的默认构造函数.
 	 */
@@ -65,6 +65,14 @@ public class ContestContestant {
 	}
 
 	/**
+	 * 设置罚时(ACM).
+	 * @param time 罚时(ACM)
+	 */
+	public void setTime(int time) {
+		this.time = time;
+	}
+
+	/**
 	 * 设置竞赛中的排名.
 	 * @param rank - 竞赛中的排名
 	 */
@@ -94,6 +102,21 @@ public class ContestContestant {
 	 */
 	public void setCodeSnippet(String codeSnippet) {
 		this.codeSnippet = codeSnippet;
+	}
+
+	/* (non-Javadoc)
+	 * @see java.lang.Object#compareTo(Object)
+	 */
+	public int compareTo(Object o) {
+		if ( !(o instanceof ContestContestant) ) {
+			throw new ClassCastException("A ContestContestant object expected.");
+		}
+
+		ContestContestant occ = (ContestContestant) o;
+		if ( occ.getScore() == this.score ) {
+			return this.time - occ.getTime();
+		}
+		return this.score - occ.getScore();
 	}
 
 	/* (non-Javadoc)
