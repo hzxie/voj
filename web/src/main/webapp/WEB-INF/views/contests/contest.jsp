@@ -91,7 +91,15 @@
                                 <c:forEach var="problem" items="${problems}">
                                     <tr>
                                     <c:if test="${isLogin}">
+                                    <c:set var="submission" value="${submissions[problem.problemId]}" />
+                                    <c:choose>
+                                    <c:when test="${submission != null}">
+                                        <td class="flag-${submission.submission.judgeResult.judgeResultSlug}"><a href="<c:url value="/submission/${submission.submission.submissionId}" />">${submission.submission.judgeResult.judgeResultName}</a></td>
+                                    </c:when>
+                                    <c:otherwise>
                                         <td><spring:message code="voj.contests.contest.no-submissions" text="No submissions" /></td>
+                                    </c:otherwise>
+                                    </c:choose>
                                     </c:if>
                                         <td>
                                             <a href="<c:url value="/contest/${contest.contestId}/p/${problem.problemId}" />">P${problem.problemId} ${problem.problemName}</a>
