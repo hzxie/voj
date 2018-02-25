@@ -225,7 +225,7 @@ public class DefaultController {
 	private static final int NUMBER_OF_DISCUSSION_THREADS_PER_REQUEST = 10;
 
 	/**
-	 * 每次加载比赛的数量.
+	 * 每次加载竞赛的数量.
 	 */
 	private static final int NUMBER_OF_CONTESTS_PER_REQUEST = 5;
 

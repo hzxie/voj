@@ -25,7 +25,7 @@ public interface ContestContestantMapper {
 	 * @param limit - 需要获取参赛者的数量
 	 * @return 某个竞赛的参赛者列表
 	 */
-	List<ContestContestant> getContestantsOfContest(
+	List<ContestContestant> getContestantsOfContestForOi(
 			@Param("contestId") long contestId,
 			@Param("offset") long offset, @Param("limit") int limit);
 
@@ -40,14 +40,15 @@ public interface ContestContestantMapper {
 			@Param("contestantUid") long contestantUid);
 
 	/**
-	 * 创建参赛记录(用于参加比赛).
-	 * @param contestContestant - 待创建参赛记录
+	 * 创建参赛记录(用于参加竞赛).
+	 * @param contestContestant - 待创建的参赛记录
 	 */
 	int createContestContestant(ContestContestant contestContestant);
 
 	/**
-	 * 更新参赛记录(用于参加比赛).
-	 * @param contestContestant - 待更新参赛记录
+	 * 更新参赛记录.
+	 * 用于参加OI竞赛, 更新提交的源代码.
+	 * @param contestContestant - 待更新的参赛记录
 	 */
 	int updateContestContestant(ContestContestant contestContestant);
 

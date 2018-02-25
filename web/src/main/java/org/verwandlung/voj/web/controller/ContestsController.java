@@ -12,9 +12,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.ModelAndView;
 import org.verwandlung.voj.web.exception.ResourceNotFoundException;
-import org.verwandlung.voj.web.model.Contest;
-import org.verwandlung.voj.web.model.Problem;
-import org.verwandlung.voj.web.model.User;
+import org.verwandlung.voj.web.model.*;
 import org.verwandlung.voj.web.service.ContestService;
 import org.verwandlung.voj.web.util.CsrfProtector;
 import org.verwandlung.voj.web.util.HttpRequestParser;
@@ -130,6 +128,38 @@ public class ContestsController {
 					new Object[] {currentUser, contestId, ipAddress}));
 		}
 		return result;
+	}
+
+	@RequestMapping(value="/{contestId}/leaderboard", method=RequestMethod.GET)
+	public ModelAndView leaderboardView(
+			@PathVariable("contestId") long contestId,
+			HttpServletRequest request, HttpServletResponse response) {
+		Contest contest = contestService.getContest(contestId);
+		if ( contest == null ) {
+			throw new ResourceNotFoundException();
+		}
+
+		List<Long> problemIdList = JSON.parseArray(contest.getProblems(), Long.class);
+		List<Problem> problems = contestService.getProblemsOfContests(problemIdList);
+		ModelAndView view = null;
+
+		if ( contest.getContestMode().equals("OI") ) {
+			Map<String, Object> result = contestService.getLeaderBoardForOi(contestId);
+			List<ContestContestant> contestants = (List<ContestContestant>) result.get("contestants");
+			Map<Long, Map<Long, Submission>> submissions = (Map<Long, Map<Long, Submission>>) result.get("submissions");
+
+			view = new ModelAndView("contests/oi-leaderboard");
+			view.addObject("contestants", contestants);
+			view.addObject("submissions", submissions);
+		} else if ( contest.getContestMode().equals("ACM") ) {
+			// TODO
+			throw new ResourceNotFoundException();
+		} else {
+			throw new ResourceNotFoundException();
+		}
+		view.addObject("contest", contest);
+		view.addObject("problems", problems);
+		return view;
 	}
 
 	/**

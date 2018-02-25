@@ -1,7 +1,5 @@
 package org.verwandlung.voj.web.model;
 
-import java.util.List;
-
 public class ContestContestant {
 	/**
 	 * ContestContestant的默认构造函数.
@@ -10,7 +8,7 @@ public class ContestContestant {
 	
 	/**
 	 * ContestContestant的构造函数.
-	 * @param contest - 比赛
+	 * @param contest - 竞赛
 	 * @param contestant - 参赛者
 	 */
 	public ContestContestant(Contest contest, User contestant) {
@@ -19,16 +17,16 @@ public class ContestContestant {
 	}
 
 	/**
-	 * 获取比赛对象.
-	 * @return 比赛对象
+	 * 获取竞赛对象.
+	 * @return 竞赛对象
 	 */
 	public Contest getContest() {
 		return contest;
 	}
 
 	/**
-	 * 设置比赛对象.
-	 * @param contest - 比赛对象
+	 * 设置竞赛对象.
+	 * @param contest - 竞赛对象
 	 */
 	public void setContest(Contest contest) {
 		this.contest = contest;
@@ -67,6 +65,22 @@ public class ContestContestant {
 	}
 
 	/**
+	 * 设置竞赛中的排名.
+	 * @param rank - 竞赛中的排名
+	 */
+	public void setRank(long rank) {
+		this.rank = rank;
+	}
+
+	/**
+	 * 获取竞赛中的排名.
+	 * @return 竞赛中的排名
+	 */
+	public long getRank() {
+		return rank;
+	}
+
+	/**
 	 * 获取代码片段.
 	 * @return 代码片段
 	 */
@@ -91,7 +105,7 @@ public class ContestContestant {
 	}
 
 	/**
-	 * 比赛.
+	 * 竞赛.
 	 */
 	private Contest contest;
 	
@@ -110,6 +124,11 @@ public class ContestContestant {
 	 * ACM赛制中的罚时.
 	 */
 	private int time;
+
+	/**
+	 * 竞赛中的排名.
+	 */
+	private long rank;
 	
 	/**
 	 * 代码片段 (JSON格式).

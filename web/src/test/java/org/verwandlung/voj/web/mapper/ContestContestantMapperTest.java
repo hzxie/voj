@@ -70,7 +70,7 @@ public class ContestContestantMapperTest {
 	 */
 	@Test
 	public void testGetContestantsOfFirstContestForOiFrom0WithLimit2() {
-		List<ContestContestant> contestants = contestContestantMapper.getContestantsOfContest(1, 0, 2);
+		List<ContestContestant> contestants = contestContestantMapper.getContestantsOfContestForOi(1, 0, 2);
 		Assert.assertEquals(2, contestants.size());
 
 		ContestContestant firstContestant = contestants.get(0);
@@ -78,9 +78,9 @@ public class ContestContestantMapperTest {
 		Assert.assertEquals("zjhzxhz", usernameOfFirstContestant);
 
 		int score = firstContestant.getScore();
-		Assert.assertEquals(100, score);
+		Assert.assertEquals(110, score);
 		int time = firstContestant.getTime();
-		Assert.assertEquals(30, time);
+		Assert.assertEquals(60, time);
 	}
 
 	/**
@@ -90,7 +90,7 @@ public class ContestContestantMapperTest {
 	 */
 	@Test
 	public void testGetContestantsOfSecondContestForOiFrom1WithLimit1() {
-		List<ContestContestant> contestants = contestContestantMapper.getContestantsOfContest(2, 0, 1);
+		List<ContestContestant> contestants = contestContestantMapper.getContestantsOfContestForOi(2, 0, 1);
 		Assert.assertEquals(1, contestants.size());
 
 		ContestContestant firstContestant = contestants.get(0);
@@ -105,7 +105,7 @@ public class ContestContestantMapperTest {
 	 */
 	@Test
 	public void testCreateContestContestantNormally() {
-		Contest contest = contestMapper.getContestsUsingId(2);
+		Contest contest = contestMapper.getContest(2);
 		User contestant = userMapper.getUserUsingUid(1002);
 
 		ContestContestant cc = new ContestContestant(contest, contestant);
@@ -120,7 +120,7 @@ public class ContestContestantMapperTest {
 	 */
 	@Test(expected = org.springframework.dao.DuplicateKeyException.class)
 	public void testCreateContestContestantWithExistingRecord() {
-		Contest contest = contestMapper.getContestsUsingId(1);
+		Contest contest = contestMapper.getContest(1);
 		User contestant = userMapper.getUserUsingUid(1001);
 
 		ContestContestant cc = new ContestContestant(contest, contestant);
@@ -134,7 +134,7 @@ public class ContestContestantMapperTest {
 	 */
 	@Test(expected = org.springframework.dao.DataIntegrityViolationException.class)
 	public void testCreateContestContestantWithContestContestant被成功更新NotExistingContest() {
-		Contest contest = contestMapper.getContestsUsingId(0);
+		Contest contest = contestMapper.getContest(0);
 		User contestant = userMapper.getUserUsingUid(1001);
 
 		ContestContestant cc = new ContestContestant(contest, contestant);
@@ -148,7 +148,7 @@ public class ContestContestantMapperTest {
 	 */
 	@Test(expected = org.springframework.dao.DataIntegrityViolationException.class)
 	public void testCreateContestContestantWithNotExistingContestant() {
-		Contest contest = contestMapper.getContestsUsingId(1);
+		Contest contest = contestMapper.getContest(1);
 		User contestant = userMapper.getUserUsingUid(0);
 
 		ContestContestant cc = new ContestContestant(contest, contestant);

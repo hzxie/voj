@@ -40,7 +40,7 @@
 		ORDER BY contest_id DESC
 		LIMIT #{offset}, #{limit}
 	</select>
-	<select id="getContestsUsingId" 
+	<select id="getContest" 
 		parameterType="long"
 		resultMap="ContestResultMap" 
 		useCache="true">

@@ -112,13 +112,13 @@ public class ContestMapperTest {
 	}
 
 	/**
-	 * 测试用例: 测试getContestsUsingId(long)方法.
+	 * 测试用例: 测试getContest(long)方法.
 	 * 测试数据: 获取第1个竞赛对象
 	 * 预期结果: 第1个竞赛对象
 	 */
 	@Test
 	public void testGetContestsUsingIdExists() {
-		Contest contest = contestMapper.getContestsUsingId(1);
+		Contest contest = contestMapper.getContest(1);
 		Assert.assertNotNull(contest);
 
 		String contestName = contest.getContestName();
@@ -126,13 +126,13 @@ public class ContestMapperTest {
 	}
 
 	/**
-	 * 测试用例: 测试getContestsUsingId(long)方法.
+	 * 测试用例: 测试getContest(long)方法.
 	 * 测试数据: 获取第0个竞赛对象
 	 * 预期结果: 空引用
 	 */
 	@Test
 	public void testGetContestsUsingIdNotExists() {
-		Contest contest = contestMapper.getContestsUsingId(0);
+		Contest contest = contestMapper.getContest(0);
 		Assert.assertNull(contest);
 	}
 
@@ -180,14 +180,14 @@ public class ContestMapperTest {
 	 */
 	@Test
 	public void testUpdateContestsNormally() {
-		Contest contest = contestMapper.getContestsUsingId(2);
+		Contest contest = contestMapper.getContest(2);
 		Assert.assertNotNull(contest);
 
 		contest.setContestName("New Contest Name");
 		int numberOfRowsAffected = contestMapper.updateContest(contest);
 		Assert.assertEquals(1, numberOfRowsAffected);
 
-		contest = contestMapper.getContestsUsingId(2);
+		contest = contestMapper.getContest(2);
 		String contestName = contest.getContestName();
 		Assert.assertEquals("New Contest Name", contestName);
 	}
@@ -199,13 +199,13 @@ public class ContestMapperTest {
 	 */
 	@Test
 	public void testDeleteContestsExists() {
-		Contest contest = contestMapper.getContestsUsingId(3);
+		Contest contest = contestMapper.getContest(3);
 		Assert.assertNotNull(contest);
 
 		int numberOfRowsAffected = contestMapper.deleteContest(3);
 		Assert.assertEquals(1, numberOfRowsAffected);
 
-		contest = contestMapper.getContestsUsingId(3);
+		contest = contestMapper.getContest(3);
 		Assert.assertNull(contest);
 	}
 
@@ -216,7 +216,7 @@ public class ContestMapperTest {
 	 */
 	@Test
 	public void testDeleteContestsNotExists() {
-		Contest contest = contestMapper.getContestsUsingId(0);
+		Contest contest = contestMapper.getContest(0);
 		Assert.assertNull(contest);
 
 		int numberOfRowsAffected = contestMapper.deleteContest(0);
