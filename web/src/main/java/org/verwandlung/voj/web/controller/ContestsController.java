@@ -135,7 +135,9 @@ public class ContestsController {
 			@PathVariable("contestId") long contestId,
 			HttpServletRequest request, HttpServletResponse response) {
 		Contest contest = contestService.getContest(contestId);
-		if ( contest == null || !(contest.getContestMode().equals("OI") || contest.getContestMode().equals("ACM")) ) {
+		Date currentTime = new Date();
+		if ( contest == null || contest.getStartTime().after(currentTime) ||
+				!(contest.getContestMode().equals("OI") || contest.getContestMode().equals("ACM")) ) {
 			throw new ResourceNotFoundException();
 		}
 
