@@ -141,7 +141,12 @@
                     <c:if test="${not isAttended and contestStatus == 'Ready'}">
                         <li><a id="attend-contest-button" href="javascript:attendContest();"><spring:message code="voj.contests.contest.attend-contest" text="Attend the contest" /></a></li>
                     </c:if>
+                    <c:if test="${contestStatus != 'Ready'}">
                         <li><a href="<c:url value="/contest/${contest.contestId}/leaderboard" />"><spring:message code="voj.contests.contest.view-leaderboard" text="View leaderboard" /></a></li>
+                    </c:if>
+                    <c:if test="${isAttended and contestStatus == 'Ready'}">
+                        <li><spring:message code="voj.contests.contest.no-actions" text="No actions are available." /></li>
+                    </c:if>
                     </ul>
                 </div> <!-- .section -->
             </div> <!-- #sidebar -->
