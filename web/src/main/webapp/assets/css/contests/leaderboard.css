@@ -15,6 +15,11 @@ div#content div.leaderboard div.body {
 	position: relative;
 }
 
+div#content div.leaderboard div.body thead {
+	background: #fff;
+	top: 0;
+}
+
 div#content div.leaderboard div.body th.rank,
 div#content div.leaderboard div.body td.rank {
 	border-right: 1px solid #ddd;

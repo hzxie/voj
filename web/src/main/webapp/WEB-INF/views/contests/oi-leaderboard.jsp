@@ -58,7 +58,7 @@
                                 <th class="score"><spring:message code="voj.contests.leaderboard.score" text="Score" /></th>
                                 <th class="time"><spring:message code="voj.contests.leaderboard.time" text="Time" /></th>
                             <c:forEach var="problem" items="${problems}">
-                                <th class="submission"><a href="<c:url value="/contest/${contest.contestId}/p/${problem.problemId}" />" target="_blank">P${problem.problemId}</a></th>
+                                <th class="submission problem-${problem.problemId}"><a href="<c:url value="/contest/${contest.contestId}/p/${problem.problemId}" />" target="_blank">P${problem.problemId}</a></th>
                             </c:forEach>
                             </thead>
                             <tbody>
@@ -69,7 +69,7 @@
                                     <td class="score">${contestant.score}</td>
                                     <td class="time">${contestant.time} ms</td>
                                 <c:forEach var="problem" items="${problems}">
-                                    <td class="submission">
+                                    <td class="submission problem-${problem.problemId}">
                                     <c:set var="submission" value="${submissions[contestant.contestant.uid][problem.problemId]}" />
                                     <c:choose>
                                     <c:when test="${submission == null}">-</c:when>
@@ -93,6 +93,20 @@
     <!-- Java Script -->
     <!-- Placed at the end of the document so the pages load faster -->
     <script type="text/javascript" src="${cdnUrl}/js/site.js?v=${version}"></script>
+    <script type="text/javascript">
+        $(window).scroll(function() {
+            var offset = $('table').offset().top - $('thead').outerHeight() - $(window).scrollTop();
+
+            if ( offset <= 0 ) {
+                $('thead').css('position', 'fixed');
+            <c:forEach var="problem" items="${problems}">
+                $('th.problem-${problem.problemId}').width($('td.problem-${problem.problemId}').width());
+            </c:forEach>
+            } else {
+                $('thead').css('position', 'relative');
+            }
+        });
+    </script>
     <c:if test="${GoogleAnalyticsCode != ''}">
     ${googleAnalyticsCode}
     </c:if>

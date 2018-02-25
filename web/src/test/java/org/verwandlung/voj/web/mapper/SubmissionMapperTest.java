@@ -216,7 +216,7 @@ public class SubmissionMapperTest {
 	public void testGetNumberOfSubmissionsUsingLanguageUsingCpp() {
 		int languageId = 2;
 		long numberOfSubmissions = submissionMapper.getNumberOfSubmissionsUsingLanguage(languageId);
-		Assert.assertEquals(3, numberOfSubmissions);
+		Assert.assertEquals(4, numberOfSubmissions);
 	}
 	
 	/**
@@ -239,7 +239,7 @@ public class SubmissionMapperTest {
 	@Test
 	public void testGetLatestSubmissionId() {
 		long latestSubmissionId = submissionMapper.getLatestSubmissionId();
-		Assert.assertEquals(1003, latestSubmissionId);
+		Assert.assertEquals(1004, latestSubmissionId);
 	}
 	
 	/**
@@ -276,11 +276,11 @@ public class SubmissionMapperTest {
 	@Test
 	public void testGetSubmissionsFrom1010WithLimit10() {
 		List<Submission> submissions = submissionMapper.getSubmissionsUsingOffset(0, "", 1010, 10);
-		Assert.assertEquals(4, submissions.size());
+		Assert.assertEquals(5, submissions.size());
 		
 		Submission firstSubmission = submissions.get(0);
 		long submissionId = firstSubmission.getSubmissionId();
-		Assert.assertEquals(1003, submissionId);
+		Assert.assertEquals(1004, submissionId);
 	}
 	
 	/**
@@ -513,13 +513,13 @@ public class SubmissionMapperTest {
 	 */
 	@Test
 	public void testDeleteSubmissionExists() {
-		Submission submission = submissionMapper.getSubmission(1003);
+		Submission submission = submissionMapper.getSubmission(1004);
 		Assert.assertNotNull(submission);
 		
-		int numberOfRowsAffected = submissionMapper.deleteSubmission(1003);
+		int numberOfRowsAffected = submissionMapper.deleteSubmission(1004);
 		Assert.assertEquals(1, numberOfRowsAffected);
 		
-		submission = submissionMapper.getSubmission(1003);
+		submission = submissionMapper.getSubmission(1004);
 		Assert.assertNull(submission);
 	}
 	

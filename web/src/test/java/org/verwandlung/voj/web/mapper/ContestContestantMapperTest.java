@@ -56,11 +56,6 @@ public class ContestContestantMapperTest {
 
 		String usernameOfFirstContestant = cc.getContestant().getUsername();
 		Assert.assertEquals("zjhzxhz", usernameOfFirstContestant);
-
-		int score = cc.getScore();
-		Assert.assertEquals(100, score);
-		int time = cc.getTime();
-		Assert.assertEquals(30, time);
 	}
 
 	/**
@@ -78,7 +73,7 @@ public class ContestContestantMapperTest {
 		Assert.assertEquals("zjhzxhz", usernameOfFirstContestant);
 
 		int score = firstContestant.getScore();
-		Assert.assertEquals(110, score);
+		Assert.assertEquals(200, score);
 		int time = firstContestant.getTime();
 		Assert.assertEquals(60, time);
 	}
