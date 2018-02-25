@@ -63,12 +63,14 @@ public class ComparatorTest {
 		IOUtils.write(mismatchString1, stdOutputStream);
 		IOUtils.write(mismatchString2, outputStream);
 		// TestCase: OutOfMemoryException
+		/*
 		File outOfMemoryOutFile = new File(
 				"/tmp/voj-matcher-tests/match-out-of-memory.txt");
 		String outOfMemoryString = "A line of output causes out of memory exception. ";
 		for ( int i = 0; i < 10000000; ++ i ) {
 			FileUtils.writeStringToFile(outOfMemoryOutFile, outOfMemoryString, true); 
 		}
+		*/
 	}
 
 	/**

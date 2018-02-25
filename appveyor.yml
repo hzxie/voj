@@ -4,6 +4,7 @@
 environment:
   matrix:
   - JAVA_HOME: C:\Program Files\Java\jdk1.8.0
+  - JAVA_HOME: C:\Program Files\Java\jdk9
 
 services:
   - mysql
@@ -19,6 +20,8 @@ install:
 # Fix path error on JNI headers
   - copy "C:\Program Files\Java\jdk1.8.0\include\win32\jni_md.h" "C:\Program Files\Java\jdk1.8.0\include\jni_md.h"
   - copy "C:\Program Files\Java\jdk1.8.0\include\win32\jawt_md.h" "C:\Program Files\Java\jdk1.8.0\include\jawt_md.h"
+  - copy "C:\Program Files\Java\jdk9\include\win32\jni_md.h" "C:\Program Files\Java\jdk9\include\jni_md.h"
+  - copy "C:\Program Files\Java\jdk9\include\win32\jawt_md.h" "C:\Program Files\Java\jdk9\include\jawt_md.h"
 # Setup test environment for Windows
   - copy "judger\src\test\resources\voj-test-windows.properties" "judger\src\test\resources\voj-test.properties"
 
@@ -31,8 +34,8 @@ before_test:
 
 test_script:
   - mvn test -f web\pom.xml --batch-mode
-# Temporarily disable CI for judgers for bug of JVMs
-# - mvn test -f judger\pom.xml --batch-mode
+  # Disable tests for judger because of crash of JVM
+  # - mvn test -f judger\pom.xml --batch-mode
 
 after_test:
   - mysql -e "DROP DATABASE test;" --user=root
