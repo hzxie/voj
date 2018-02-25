@@ -56,6 +56,36 @@ public class ContestService {
 	}
 
 	/**
+	 * 获取某竞赛中某个用户各试题的提交记录.
+	 * @param contestId - 竞赛的唯一标识符
+	 * @param contestant - 参赛者
+	 * @return 包含用户提交信息的Map对象, 按试题ID索引
+	 */
+	public Map<Long, ContestSubmission> getSubmissionsOfContestantOfContest(long contestId, User contestant) {
+		if ( contestant == null ) {
+			return null;
+		}
+		Map<Long, ContestSubmission> submissionsGroupByProblems = new HashMap<>();
+		List<ContestSubmission> submissions = contestSubmissionMapper.
+				getSubmissionOfContestOfContest(contestId, contestant.getUid());
+
+		for ( ContestSubmission cs : submissions ) {
+			long problemId = cs.getSubmission().getProblem().getProblemId();
+
+			if ( submissionsGroupByProblems.containsKey(problemId) ) {
+				ContestSubmission prevSubmission = submissionsGroupByProblems.get(problemId);
+
+				if ( prevSubmission.getSubmission().getJudgeResult().equals("AC") &&
+						!cs.getSubmission().getJudgeResult().equals("AC") ) {
+					continue;
+				}
+			}
+			submissionsGroupByProblems.put(problemId, cs);
+		}
+		return submissionsGroupByProblems;
+	}
+
+	/**
 	 * 获取某竞赛的参赛人数.
 	 * @param contestId - 竞赛的唯一标识符
 	 * @return 某竞赛的参赛人数

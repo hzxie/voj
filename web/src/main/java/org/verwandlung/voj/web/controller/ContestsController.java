@@ -93,11 +93,13 @@ public class ContestsController {
 		long numberOfContestants = contestService.getNumberOfContestantsOfContest(contestId);
 		List<Long> problemIdList = JSON.parseArray(contest.getProblems(), Long.class);
 		List<Problem> problems = contestService.getProblemsOfContests(problemIdList);
+		Map<Long, ContestSubmission> submissions = contestService.getSubmissionsOfContestantOfContest(contestId, currentUser);
 
 		ModelAndView view = new ModelAndView("contests/contest");
 		view.addObject("currentTime", new Date())
 			.addObject("contest", contest)
 			.addObject("problems", problems)
+			.addObject("submissions", submissions)
 			.addObject("isAttended", isAttended)
 			.addObject("numberOfContestants", numberOfContestants)
 			.addObject("csrfToken", CsrfProtector.getCsrfToken(request.getSession()));

@@ -33,6 +33,33 @@ div#content div#main-content div.contest div.body table#problems {
     margin-bottom: 10px;
 }
 
+div#content div#main-content div.contest div.body table#problems td.flag-PD > a,
+div#content div#main-content div.contest div.body table#problems td.flag-CPL > a,
+div#content div#main-content div.contest div.body table#problems td.flag-JUD > a {
+	color: #ffa500;
+}
+
+div#content div#main-content div.contest div.body table#problems td.flag-AC > a {
+	color: #f00;
+}
+
+div#content div#main-content div.contest div.body table#problems td.flag-PE > a,
+div#content div#main-content div.contest div.body table#problems td.flag-WA > a,
+div#content div#main-content div.contest div.body table#problems td.flag-TLE > a,
+div#content div#main-content div.contest div.body table#problems td.flag-MLE > a,
+div#content div#main-content div.contest div.body table#problems td.flag-OLE > a {
+	color: #4d7aff;
+}
+
+div#content div#main-content div.contest div.body table#problems td.flag-RE > a,
+div#content div#main-content div.contest div.body table#problems td.flag-CE > a {
+	color: #49a932;
+}
+
+div#content div#main-content div.contest div.body table#problems td.flag-SE > a {
+	color: #34495e;
+}
+
 div#content div#sidebar div.section {
 	background-color: #fff;
 	border-top: 4px solid #16a085;
