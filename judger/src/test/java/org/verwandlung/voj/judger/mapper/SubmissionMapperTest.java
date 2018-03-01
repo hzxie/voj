@@ -1,11 +1,11 @@
 package org.verwandlung.voj.judger.mapper;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.Transactional;
 
 import org.verwandlung.voj.judger.model.Submission;
@@ -14,7 +14,7 @@ import org.verwandlung.voj.judger.model.Submission;
  * SubmissionMapper测试类.
  * @author Haozhe Xie
  */
-@RunWith(SpringJUnit4ClassRunner.class)
+@ExtendWith(SpringExtension.class)
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class SubmissionMapperTest {
@@ -26,10 +26,10 @@ public class SubmissionMapperTest {
 	@Test
 	public void testGetSubmissionExists() {
 		Submission submission = submissionMapper.getSubmission(1000);
-		Assert.assertNotNull(submission);
+		Assertions.assertNotNull(submission);
 		
 		long problemId = submission.getProblem().getProblemId();
-		Assert.assertEquals(1000, problemId);
+		Assertions.assertEquals(1000, problemId);
 	}
 	
 	/**
@@ -40,7 +40,7 @@ public class SubmissionMapperTest {
 	@Test
 	public void testGetSubmissionNotExists() {
 		Submission submission = submissionMapper.getSubmission(0);
-		Assert.assertNull(submission);
+		Assertions.assertNull(submission);
 	}
 	
 	/**

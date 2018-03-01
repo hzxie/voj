@@ -1,11 +1,11 @@
 package org.verwandlung.voj.judger.mapper;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.Transactional;
 
 import org.verwandlung.voj.judger.model.User;
@@ -15,7 +15,7 @@ import org.verwandlung.voj.judger.model.User;
  * 
  * @author Haozhe Xie
  */
-@RunWith(SpringJUnit4ClassRunner.class)
+@ExtendWith(SpringExtension.class)
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class UserMapperTest {
@@ -27,10 +27,10 @@ public class UserMapperTest {
 	@Test
 	public void testGetUserUsingUsernameExists() {
 		User user = userMapper.getUserUsingUsername("Zjhzxhz");
-		Assert.assertNotNull(user);
+		Assertions.assertNotNull(user);
 		
 		long uid = user.getUid();
-		Assert.assertEquals(1000, uid);
+		Assertions.assertEquals(1000, uid);
 	}
 	
 	/**
@@ -41,7 +41,7 @@ public class UserMapperTest {
 	@Test
 	public void testGetUserUsingUsernameNotExists() {
 		User user = userMapper.getUserUsingUsername("Not-Exists");
-		Assert.assertNull(user);
+		Assertions.assertNull(user);
 	}
 	
 	/**

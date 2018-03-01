@@ -1,11 +1,11 @@
 package org.verwandlung.voj.judger.mapper;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.Transactional;
 
 import org.verwandlung.voj.judger.model.UserGroup;
@@ -15,7 +15,7 @@ import org.verwandlung.voj.judger.model.UserGroup;
  * 
  * @author Haozhe Xie
  */
-@RunWith(SpringJUnit4ClassRunner.class)
+@ExtendWith(SpringExtension.class)
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class UserGroupMapperTest {
@@ -27,10 +27,10 @@ public class UserGroupMapperTest {
 	@Test
 	public void testGetUserGroupUsingIdExists() {
 		UserGroup userGroup = userGroupMapper.getUserGroupUsingId(1);
-		Assert.assertNotNull(userGroup);
+		Assertions.assertNotNull(userGroup);
 		
 		String userGroupSlug = userGroup.getUserGroupSlug();
-		Assert.assertEquals("forbidden", userGroupSlug);
+		Assertions.assertEquals("forbidden", userGroupSlug);
 	}
 	
 	/**
@@ -41,7 +41,7 @@ public class UserGroupMapperTest {
 	@Test
 	public void testGetUserGroupUsingIdNotExists() {
 		UserGroup userGroup = userGroupMapper.getUserGroupUsingId(0);
-		Assert.assertNull(userGroup);
+		Assertions.assertNull(userGroup);
 	}
 	
 	/**

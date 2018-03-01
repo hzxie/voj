@@ -2,12 +2,12 @@ package org.verwandlung.voj.judger.mapper;
 
 import java.util.List;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.Transactional;
 
 import org.verwandlung.voj.judger.model.Checkpoint;
@@ -17,7 +17,7 @@ import org.verwandlung.voj.judger.model.Checkpoint;
  * 
  * @author Haozhe Xie
  */
-@RunWith(SpringJUnit4ClassRunner.class)
+@ExtendWith(SpringExtension.class)
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class CheckpointMapperTest {
@@ -29,11 +29,11 @@ public class CheckpointMapperTest {
 	@Test
 	public void testGetCheckpointsUsingProblemIdExists() {
 		List<Checkpoint> checkpoints = checkpointMapper.getCheckpointsUsingProblemId(1000);
-		Assert.assertEquals(10, checkpoints.size());
+		Assertions.assertEquals(10, checkpoints.size());
 		
 		Checkpoint firstCheckpoint = checkpoints.get(0);
 		String output = firstCheckpoint.getOutput();
-		Assert.assertEquals("45652\r\n", output);
+		Assertions.assertEquals("45652\r\n", output);
 	}
 	
 	/**
@@ -44,7 +44,7 @@ public class CheckpointMapperTest {
 	@Test
 	public void testGetCheckpointsUsingProblemIdNotExists() {
 		List<Checkpoint> checkpoints = checkpointMapper.getCheckpointsUsingProblemId(0);
-		Assert.assertEquals(0, checkpoints.size());
+		Assertions.assertEquals(0, checkpoints.size());
 	}
 	
 	/**
