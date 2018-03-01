@@ -2,12 +2,12 @@ package org.verwandlung.voj.web.mapper;
 
 import java.util.List;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.Transactional;
 
 import org.verwandlung.voj.web.model.Option;
@@ -17,7 +17,7 @@ import org.verwandlung.voj.web.model.Option;
  * 
  * @author Haozhe Xie
  */
-@RunWith(SpringJUnit4ClassRunner.class)
+@ExtendWith(SpringExtension.class)
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class OptionMapperTest {
@@ -29,14 +29,14 @@ public class OptionMapperTest {
 	@Test
 	public void testGetAutoloadOptions() {
 		List<Option> options = optionMapper.getAutoloadOptions();
-		Assert.assertEquals(6, options.size());
+		Assertions.assertEquals(6, options.size());
 		
 		Option firstOption = options.get(0);
 		int optionId = firstOption.getOptionId();
-		Assert.assertEquals(1, optionId);
+		Assertions.assertEquals(1, optionId);
 		
 		String optionName = firstOption.getOptionName();
-		Assert.assertEquals("websiteName", optionName);
+		Assertions.assertEquals("websiteName", optionName);
 	}
 	
 	/**
@@ -47,10 +47,10 @@ public class OptionMapperTest {
 	@Test
 	public void testGetOptionExists() {
 		Option option = optionMapper.getOption("websiteName");
-		Assert.assertNotNull(option);
+		Assertions.assertNotNull(option);
 		
 		int optionId = option.getOptionId();
-		Assert.assertEquals(1, optionId);
+		Assertions.assertEquals(1, optionId);
 	}
 	
 	/**
@@ -61,7 +61,7 @@ public class OptionMapperTest {
 	@Test
 	public void testGetOptionNotExists() {
 		Option option = optionMapper.getOption("notExistOption");
-		Assert.assertNull(option);
+		Assertions.assertNull(option);
 	}
 	
 	/**
@@ -74,11 +74,11 @@ public class OptionMapperTest {
 		Option option = optionMapper.getOption("websiteName");
 		option.setOptionValue("New OJ Platform");
 		int numberOfRowsAffected = optionMapper.updateOption(option);
-		Assert.assertEquals(1, numberOfRowsAffected);
+		Assertions.assertEquals(1, numberOfRowsAffected);
 		
 		Option newOption = optionMapper.getOption("websiteName");
 		String optionValue = newOption.getOptionValue();
-		Assert.assertEquals("New OJ Platform", optionValue);
+		Assertions.assertEquals("New OJ Platform", optionValue);
 	}
 	
 	/**
@@ -91,7 +91,7 @@ public class OptionMapperTest {
 		Option option = optionMapper.getOption("websiteName");
 		option.setOptionId(0);
 		int numberOfRowsAffected = optionMapper.updateOption(option);
-		Assert.assertEquals(0, numberOfRowsAffected);
+		Assertions.assertEquals(0, numberOfRowsAffected);
 	}
 	
 	/**

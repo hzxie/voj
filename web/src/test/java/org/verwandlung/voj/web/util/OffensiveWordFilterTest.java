@@ -1,18 +1,18 @@
 package org.verwandlung.voj.web.util;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
  * SensitiveWordFilter的测试类
  * @author YiHao Zhou
  */
-@RunWith(SpringJUnit4ClassRunner.class)
+@ExtendWith(SpringExtension.class)
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class OffensiveWordFilterTest {
@@ -23,8 +23,8 @@ public class OffensiveWordFilterTest {
 	 */
 	@Test
 	public void testFilterUsingOffensiveWord() {
-		Assert.assertNotNull(filter);
-		Assert.assertEquals("**大法好 你好", filter.filter("法轮大法好 你好"));
+		Assertions.assertNotNull(filter);
+		Assertions.assertEquals("**大法好 你好", filter.filter("法轮大法好 你好"));
 	}
 	
 	/**

@@ -1,11 +1,12 @@
 package org.verwandlung.voj.web.mapper;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.function.Executable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.Transactional;
 
 import org.verwandlung.voj.web.model.EmailValidation;
@@ -17,7 +18,7 @@ import java.util.Date;
  * 
  * @author Haozhe Xie
  */
-@RunWith(SpringJUnit4ClassRunner.class)
+@ExtendWith(SpringExtension.class)
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class EmailValidationMapperTest {
@@ -29,10 +30,10 @@ public class EmailValidationMapperTest {
 	@Test
 	public void testGetEmailValidationExists() {
 		EmailValidation emailValidation = emailValidationMapper.getEmailValidation("support@verwandlung.org");
-		Assert.assertNotNull(emailValidation);
+		Assertions.assertNotNull(emailValidation);
 		
 		String token = emailValidation.getToken();
-		Assert.assertEquals("Random-String-Generated", token);
+		Assertions.assertEquals("Random-String-Generated", token);
 	}
 
 	/**
@@ -43,7 +44,7 @@ public class EmailValidationMapperTest {
 	@Test
 	public void testGetEmailValidationNotExists() {
 		EmailValidation emailValidation = emailValidationMapper.getEmailValidation("not-exists@verwandlung.org");
-		Assert.assertNull(emailValidation);
+		Assertions.assertNull(emailValidation);
 	}
 
 	/**
@@ -55,13 +56,13 @@ public class EmailValidationMapperTest {
 	public void testCreateEmailValidationNormally() {
 		EmailValidation emailValidation = new EmailValidation("cshzxie@gmail.com", "RandomToken", new Date());
 		int numberOfRowsAffected = emailValidationMapper.createEmailValidation(emailValidation);
-		Assert.assertEquals(1, numberOfRowsAffected);
+		Assertions.assertEquals(1, numberOfRowsAffected);
 
 		EmailValidation insertedEmailValidation = emailValidationMapper.getEmailValidation("cshzxie@gmail.com");
-		Assert.assertNotNull(insertedEmailValidation);
+		Assertions.assertNotNull(insertedEmailValidation);
 
 		String token = emailValidation.getToken();
-		Assert.assertEquals("RandomToken", token);
+		Assertions.assertEquals("RandomToken", token);
 	}
 
 	/**
@@ -69,10 +70,13 @@ public class EmailValidationMapperTest {
 	 * 测试数据: 使用合法的数据集, 但已存在该电子邮件地址对应的记录
 	 * 预期结果: 抛出DuplicateKeyException异常
 	 */
-	@Test(expected = org.springframework.dao.DuplicateKeyException.class)
+	@Test
 	public void testCreateEmailValidationUsingExistingEmail() {
 		EmailValidation emailValidation = new EmailValidation("support@verwandlung.org", "RandomToken", new Date());
-		emailValidationMapper.createEmailValidation(emailValidation);
+		Executable e = () -> {
+			emailValidationMapper.createEmailValidation(emailValidation);
+		};
+		Assertions.assertThrows(org.springframework.dao.DuplicateKeyException.class, e);
 	}
 
 	/**
@@ -80,10 +84,13 @@ public class EmailValidationMapperTest {
 	 * 测试数据: 使用合法的数据集, 但该电子邮件地址无用户使用(不满足外键参照完整性)
 	 * 预期结果: 抛出DataIntegrityViolationException异常
 	 */
-	@Test(expected = org.springframework.dao.DataIntegrityViolationException.class)
+	@Test
 	public void testCreateEmailValidationUsingNotExistingEmail() {
 		EmailValidation emailValidation = new EmailValidation("not-exists@verwandlung.org", "RandomToken", new Date());
-		emailValidationMapper.createEmailValidation(emailValidation);
+		Executable e = () -> {
+			emailValidationMapper.createEmailValidation(emailValidation);
+		};
+		Assertions.assertThrows(org.springframework.dao.DataIntegrityViolationException.class, e);
 	}
 
 	/**
@@ -94,13 +101,13 @@ public class EmailValidationMapperTest {
 	@Test
 	public void testDeleteEmailValidationExists() {
 		EmailValidation emailValidation = emailValidationMapper.getEmailValidation("support@verwandlung.org");
-		Assert.assertNotNull(emailValidation);
+		Assertions.assertNotNull(emailValidation);
 
 		int numberOfRowsAffected = emailValidationMapper.deleteEmailValidation("support@verwandlung.org");
-		Assert.assertEquals(1, numberOfRowsAffected);
+		Assertions.assertEquals(1, numberOfRowsAffected);
 
 		emailValidation = emailValidationMapper.getEmailValidation("support@verwandlung.org");
-		Assert.assertNull(emailValidation);
+		Assertions.assertNull(emailValidation);
 	}
 
 	/**
@@ -111,7 +118,7 @@ public class EmailValidationMapperTest {
 	@Test
 	public void testDeleteEmailValidationNotExists() {
 		int numberOfRowsAffected = emailValidationMapper.deleteEmailValidation("not-exist@verwandlung.org");
-		Assert.assertEquals(0, numberOfRowsAffected);
+		Assertions.assertEquals(0, numberOfRowsAffected);
 	}
 	
 	/**

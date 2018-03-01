@@ -2,12 +2,13 @@ package org.verwandlung.voj.web.mapper;
 
 import java.util.List;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.function.Executable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.Transactional;
 
 import org.verwandlung.voj.web.model.Language;
@@ -16,7 +17,7 @@ import org.verwandlung.voj.web.model.Language;
  * LanguageMapper测试类.
  * @author Haozhe Xie
  */
-@RunWith(SpringJUnit4ClassRunner.class)
+@ExtendWith(SpringExtension.class)
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class LanguageMapperTest {
@@ -28,10 +29,10 @@ public class LanguageMapperTest {
 	@Test
 	public void testGetLanguageUsingIdExists() {
 		Language language = languageMapper.getLanguageUsingId(1);
-		Assert.assertNotNull(language);
+		Assertions.assertNotNull(language);
 		
 		String languageName = language.getLanguageName();
-		Assert.assertEquals("C", languageName);
+		Assertions.assertEquals("C", languageName);
 	}
 	
 	/**
@@ -42,7 +43,7 @@ public class LanguageMapperTest {
 	@Test
 	public void testGetLanguageUsingIdNotExists() {
 		Language language = languageMapper.getLanguageUsingId(0);
-		Assert.assertNull(language);
+		Assertions.assertNull(language);
 	}
 	
 	/**
@@ -53,10 +54,10 @@ public class LanguageMapperTest {
 	@Test
 	public void testGetLanguageUsingSlugExists() {
 		Language language = languageMapper.getLanguageUsingSlug("text/x-csrc");
-		Assert.assertNotNull(language);
+		Assertions.assertNotNull(language);
 		
 		String languageName = language.getLanguageName();
-		Assert.assertEquals("C", languageName);
+		Assertions.assertEquals("C", languageName);
 	}
 	
 	/**
@@ -67,7 +68,7 @@ public class LanguageMapperTest {
 	@Test
 	public void testGetLanguageUsingSlugNotExists() {
 		Language language = languageMapper.getLanguageUsingSlug("Not-Exists");
-		Assert.assertNull(language);
+		Assertions.assertNull(language);
 	}
 	
 	/**
@@ -78,14 +79,14 @@ public class LanguageMapperTest {
 	@Test
 	public void testGetAllLanguages() {
 		List<Language> languages = languageMapper.getAllLanguages();
-		Assert.assertNotNull(languages);
-		Assert.assertEquals(6, languages.size());
+		Assertions.assertNotNull(languages);
+		Assertions.assertEquals(6, languages.size());
 		
 		Language firstLanguage = languages.get(0);
-		Assert.assertNotNull(firstLanguage);
+		Assertions.assertNotNull(firstLanguage);
 		
 		String languageName = firstLanguage.getLanguageName();
-		Assert.assertEquals("C", languageName);
+		Assertions.assertEquals("C", languageName);
 	}
 	
 	/**
@@ -97,7 +98,7 @@ public class LanguageMapperTest {
 	public void testCreateLanguageNormally() {
 		Language language = new Language("text/x-php", "PHP", "php foo.php", "php foo.php");
 		int numberOfRowsAffected = languageMapper.createLanguage(language);
-		Assert.assertEquals(1, numberOfRowsAffected);
+		Assertions.assertEquals(1, numberOfRowsAffected);
 	}
 	
 	/**
@@ -105,10 +106,13 @@ public class LanguageMapperTest {
 	 * 测试数据: 不合法的数据集(过长的编程语言英文缩写)
 	 * 预期结果: 抛出DataIntegrityViolationException异常
 	 */
-	@Test(expected = org.springframework.dao.DataIntegrityViolationException.class)
+	@Test
 	public void testCreateLanguageUsingTooLongSlug() {
 		Language language = new Language("TooLongLanguageSlug", "Invalid Langauge", "Compile Command", "Run Command");
-		languageMapper.createLanguage(language);
+		Executable e = () -> {
+			languageMapper.createLanguage(language);
+		};
+		Assertions.assertThrows(org.springframework.dao.DataIntegrityViolationException.class, e);
 	}
 	
 	/**
@@ -119,14 +123,14 @@ public class LanguageMapperTest {
 	@Test
 	public void testUpdateLanguageNormally() {
 		Language language = languageMapper.getLanguageUsingId(2);
-		Assert.assertNotNull(language);
+		Assertions.assertNotNull(language);
 		
 		language.setLanguageName("D");
 		int numberOfRowsAffected = languageMapper.updateLanguage(language);
-		Assert.assertEquals(1, numberOfRowsAffected);
+		Assertions.assertEquals(1, numberOfRowsAffected);
 		
 		language = languageMapper.getLanguageUsingId(2);
-		Assert.assertEquals("D", language.getLanguageName());
+		Assertions.assertEquals("D", language.getLanguageName());
 	}
 	
 	/**
@@ -138,7 +142,7 @@ public class LanguageMapperTest {
 	public void testUpdateLanguageNotExists() {
 		Language language = new Language(0, "not-exist", "Not Exist", "Not Exist", "Not Exist");
 		int numberOfRowsAffected = languageMapper.updateLanguage(language);
-		Assert.assertEquals(0, numberOfRowsAffected);
+		Assertions.assertEquals(0, numberOfRowsAffected);
 	}
 	
 	/**
@@ -149,13 +153,13 @@ public class LanguageMapperTest {
 	@Test
 	public void testDeleteLanguageExists() {
 		Language language = languageMapper.getLanguageUsingId(6);
-		Assert.assertNotNull(language);
+		Assertions.assertNotNull(language);
 		
 		int numberOfRowsAffected = languageMapper.deleteLanguage(6);
-		Assert.assertEquals(1, numberOfRowsAffected);
+		Assertions.assertEquals(1, numberOfRowsAffected);
 		
 		language = languageMapper.getLanguageUsingId(6);
-		Assert.assertNull(language);
+		Assertions.assertNull(language);
 	}
 	
 	/**
@@ -166,10 +170,10 @@ public class LanguageMapperTest {
 	@Test
 	public void testDeleteLanguageNotExists() {
 		Language language = languageMapper.getLanguageUsingId(0);
-		Assert.assertNull(language);
+		Assertions.assertNull(language);
 		
 		int numberOfRowsAffected = languageMapper.deleteLanguage(0);
-		Assert.assertEquals(0, numberOfRowsAffected);
+		Assertions.assertEquals(0, numberOfRowsAffected);
 	}
 	
 	/**

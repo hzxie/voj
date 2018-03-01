@@ -2,12 +2,12 @@ package org.verwandlung.voj.web.mapper;
 
 import java.util.List;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.Transactional;
 
 import org.verwandlung.voj.web.model.UserGroup;
@@ -16,7 +16,7 @@ import org.verwandlung.voj.web.model.UserGroup;
  * UserGroupMapper测试类.
  * @author Haozhe Xie
  */
-@RunWith(SpringJUnit4ClassRunner.class)
+@ExtendWith(SpringExtension.class)
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class UserGroupMapperTest {
@@ -27,11 +27,11 @@ public class UserGroupMapperTest {
 	 */
 	public void testGetUserGroups() {
 		List<UserGroup> userGroups = userGroupMapper.getUserGroups();
-		Assert.assertEquals(4, userGroups.size());
+		Assertions.assertEquals(4, userGroups.size());
 		
 		UserGroup firstUserGroup = userGroups.get(0);
 		String firstUserGroupSlug = firstUserGroup.getUserGroupSlug();
-		Assert.assertEquals("forbidden", firstUserGroupSlug);
+		Assertions.assertEquals("forbidden", firstUserGroupSlug);
 	}
 	
 	/**
@@ -42,10 +42,10 @@ public class UserGroupMapperTest {
 	@Test
 	public void testGetUserGroupUsingIdExists() {
 		UserGroup userGroup = userGroupMapper.getUserGroupUsingId(2);
-		Assert.assertNotNull(userGroup);
+		Assertions.assertNotNull(userGroup);
 		
 		String userGroupSlug = userGroup.getUserGroupSlug();
-		Assert.assertEquals("users", userGroupSlug);
+		Assertions.assertEquals("users", userGroupSlug);
 	}
 	
 	/**
@@ -56,7 +56,7 @@ public class UserGroupMapperTest {
 	@Test
 	public void testGetUserGroupUsingIdNotExists() {
 		UserGroup userGroup = userGroupMapper.getUserGroupUsingId(0);
-		Assert.assertNull(userGroup);
+		Assertions.assertNull(userGroup);
 	}
 	
 	/**
@@ -67,10 +67,10 @@ public class UserGroupMapperTest {
 	@Test
 	public void testGetUserGroupUsingSlugExists() {
 		UserGroup userGroup = userGroupMapper.getUserGroupUsingSlug("users");
-		Assert.assertNotNull(userGroup);
+		Assertions.assertNotNull(userGroup);
 		
 		int userGroupId = userGroup.getUserGroupId();
-		Assert.assertEquals(2, userGroupId);
+		Assertions.assertEquals(2, userGroupId);
 	}
 	
 	/**
@@ -81,7 +81,7 @@ public class UserGroupMapperTest {
 	@Test
 	public void testGetUserGroupUsingSlugNotExists() {
 		UserGroup userGroup = userGroupMapper.getUserGroupUsingSlug("Not-Exists");
-		Assert.assertNull(userGroup);
+		Assertions.assertNull(userGroup);
 	}
 	
 	/**

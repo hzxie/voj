@@ -2,12 +2,12 @@ package org.verwandlung.voj.web.mapper;
 
 import java.util.List;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.Transactional;
 
 import org.verwandlung.voj.web.model.Problem;
@@ -16,7 +16,7 @@ import org.verwandlung.voj.web.model.Problem;
  * ProblemMapper测试类.
  * @author Haozhe Xie
  */
-@RunWith(SpringJUnit4ClassRunner.class)
+@ExtendWith(SpringExtension.class)
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class ProblemMapperTest {
@@ -28,7 +28,7 @@ public class ProblemMapperTest {
 	@Test
 	public void testGetNumberOfProblems() {
 		long totalProblems = problemMapper.getNumberOfProblems();
-		Assert.assertEquals(4, totalProblems);
+		Assertions.assertEquals(4, totalProblems);
 	}
 	
 	/**
@@ -39,7 +39,7 @@ public class ProblemMapperTest {
 	@Test
 	public void testGetNumberOfPublicProblems() {
 		long totalProblems = problemMapper.getNumberOfProblemsUsingFilters(null, 0, true);
-		Assert.assertEquals(3, totalProblems);
+		Assertions.assertEquals(3, totalProblems);
 	}
 	
 	/**
@@ -50,7 +50,7 @@ public class ProblemMapperTest {
 	@Test
 	public void testGetLowerBoundOfProblems() {
 		long lowerBoundOfProblems = problemMapper.getLowerBoundOfProblems();
-		Assert.assertEquals(1000, lowerBoundOfProblems);
+		Assertions.assertEquals(1000, lowerBoundOfProblems);
 	}
 	
 	/**
@@ -61,7 +61,7 @@ public class ProblemMapperTest {
 	@Test
 	public void testGetUpperBoundOfProblems() {
 		long upperBoundOfProblems = problemMapper.getUpperBoundOfProblems();
-		Assert.assertEquals(1003, upperBoundOfProblems);
+		Assertions.assertEquals(1003, upperBoundOfProblems);
 	}
 
 	/**
@@ -72,7 +72,7 @@ public class ProblemMapperTest {
 	@Test
 	public void testGetUpperBoundOfProblemsWithOffsetFrom1000WithLimit3() {
 		long upperBoundOfProblems = problemMapper.getUpperBoundOfProblemsWithLimit(false, 1000, 3);
-		Assert.assertEquals(1002, upperBoundOfProblems);
+		Assertions.assertEquals(1002, upperBoundOfProblems);
 	}
 
 	/**
@@ -83,7 +83,7 @@ public class ProblemMapperTest {
 	@Test
 	public void testGetUpperBoundOfPublicProblemsWithOffsetFrom1000WithLimit3() {
 		long upperBoundOfProblems = problemMapper.getUpperBoundOfProblemsWithLimit(true, 1000, 3);
-		Assert.assertEquals(1003, upperBoundOfProblems);
+		Assertions.assertEquals(1003, upperBoundOfProblems);
 	}
 
 	/**
@@ -94,13 +94,13 @@ public class ProblemMapperTest {
 	@Test
 	public void testGetProblemExists() {
 		Problem problem = problemMapper.getProblem(1000);
-		Assert.assertNotNull(problem);
+		Assertions.assertNotNull(problem);
 		
 		String problemName = problem.getProblemName();
-		Assert.assertEquals("A+B Problem", problemName);
+		Assertions.assertEquals("A+B Problem", problemName);
 		
 		long acceptedSubmission = problem.getAcceptedSubmission();
-		Assert.assertEquals(1, acceptedSubmission);
+		Assertions.assertEquals(1, acceptedSubmission);
 	}
 	
 	/**
@@ -111,7 +111,7 @@ public class ProblemMapperTest {
 	@Test
 	public void testGetProblemNotExists() {
 		Problem problem = problemMapper.getProblem(0);
-		Assert.assertNull(problem);
+		Assertions.assertNull(problem);
 	}
 	
 	/**
@@ -122,17 +122,17 @@ public class ProblemMapperTest {
 	@Test
 	public void testGetProblemsFrom1000WithLimit10() {
 		List<Problem> problems = problemMapper.getProblemsUsingFilters(null, 0, 0, true, 1000, 10);
-		Assert.assertEquals(3, problems.size());
+		Assertions.assertEquals(3, problems.size());
 		
 		Problem firstProblem = problems.get(0);
 		long problemId = firstProblem.getProblemId();
-		Assert.assertEquals(1000, problemId);
+		Assertions.assertEquals(1000, problemId);
 		
 		String problemName = firstProblem.getProblemName();
-		Assert.assertEquals("A+B Problem", problemName);
+		Assertions.assertEquals("A+B Problem", problemName);
 		
 		long acceptedSubmission = firstProblem.getAcceptedSubmission();
-		Assert.assertEquals(1, acceptedSubmission);
+		Assertions.assertEquals(1, acceptedSubmission);
 	}
 	
 	/**
@@ -143,14 +143,14 @@ public class ProblemMapperTest {
 	@Test
 	public void testGetProblemsFrom1001WithLimit1() {
 		List<Problem> problems = problemMapper.getProblemsUsingFilters("", 0, 0, true, 1001, 1);
-		Assert.assertEquals(1, problems.size());
+		Assertions.assertEquals(1, problems.size());
 		
 		Problem firstProblem = problems.get(0);
 		long problemId = firstProblem.getProblemId();
-		Assert.assertEquals(1001, problemId);
+		Assertions.assertEquals(1001, problemId);
 		
 		long acceptedSubmission = firstProblem.getAcceptedSubmission();
-		Assert.assertEquals(1, acceptedSubmission);
+		Assertions.assertEquals(1, acceptedSubmission);
 	}
 	
 	/**
@@ -161,7 +161,7 @@ public class ProblemMapperTest {
 	@Test
 	public void testGetProblemsFrom1010WithLimit10() {
 		List<Problem> problems = problemMapper.getProblemsUsingFilters(null, 0, 0, true, 1010, 10);
-		Assert.assertEquals(0, problems.size());
+		Assertions.assertEquals(0, problems.size());
 	}
 	
 	/**
@@ -175,7 +175,7 @@ public class ProblemMapperTest {
 										"Input Format", "Output Format", "Sample Input", 
 										"Sample Input", null);
 		int numberOfRowsAffected = problemMapper.createProblem(problem);
-		Assert.assertEquals(1, numberOfRowsAffected);
+		Assertions.assertEquals(1, numberOfRowsAffected);
 	}
 	
 	/**
@@ -186,11 +186,11 @@ public class ProblemMapperTest {
 	@Test
 	public void testUpdateProblemNormally() {
 		Problem problem = problemMapper.getProblem(1001);
-		Assert.assertNotNull(problem);
+		Assertions.assertNotNull(problem);
 		
 		problem.setProblemName("New Problem Name");
 		int numberOfRowsAffected = problemMapper.updateProblem(problem);
-		Assert.assertEquals(1, numberOfRowsAffected);
+		Assertions.assertEquals(1, numberOfRowsAffected);
 		
 		/**
 		 * The following Assert CANNOT passed in CI due to 
@@ -199,7 +199,7 @@ public class ProblemMapperTest {
 		/*
 		 * Problem updatedProblem = problemMapper.getProblem(1001);
 		 * String problemName = updatedProblem.getProblemName();
-		 * Assert.assertEquals("New Problem Name", problemName);
+		 * Assertions.assertEquals("New Problem Name", problemName);
 		 */
 	}
 	
@@ -211,11 +211,11 @@ public class ProblemMapperTest {
 	@Test
 	public void testUpdateProblemNotExists() {
 		Problem problem = problemMapper.getProblem(1001);
-		Assert.assertNotNull(problem);
+		Assertions.assertNotNull(problem);
 		
 		problem.setProblemId(0);
 		int numberOfRowsAffected = problemMapper.updateProblem(problem);
-		Assert.assertEquals(0, numberOfRowsAffected);
+		Assertions.assertEquals(0, numberOfRowsAffected);
 	}
 	
 	/**
@@ -226,13 +226,13 @@ public class ProblemMapperTest {
 	@Test
 	public void testDeleteProblemExists() {
 		Problem problem = problemMapper.getProblem(1002);
-		Assert.assertNotNull(problem);
+		Assertions.assertNotNull(problem);
 		
 		int numberOfRowsAffected = problemMapper.deleteProblem(1002);
-		Assert.assertEquals(1, numberOfRowsAffected);
+		Assertions.assertEquals(1, numberOfRowsAffected);
 		
 		problem = problemMapper.getProblem(1002);
-		Assert.assertNull(problem);
+		Assertions.assertNull(problem);
 	}
 	
 	/**
@@ -243,10 +243,10 @@ public class ProblemMapperTest {
 	@Test
 	public void testDeleteProblemNotExists() {
 		Problem problem = problemMapper.getProblem(0);
-		Assert.assertNull(problem);
+		Assertions.assertNull(problem);
 		
 		int numberOfRowsAffected = problemMapper.deleteProblem(0);
-		Assert.assertEquals(0, numberOfRowsAffected);
+		Assertions.assertEquals(0, numberOfRowsAffected);
 	}
 	
 	/**

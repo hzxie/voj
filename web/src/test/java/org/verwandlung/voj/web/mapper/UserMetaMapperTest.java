@@ -4,12 +4,13 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.function.Executable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.Transactional;
 
 import org.verwandlung.voj.web.model.User;
@@ -20,7 +21,7 @@ import org.verwandlung.voj.web.model.UserMeta;
  * 
  * @author Haozhe Xie
  */
-@RunWith(SpringJUnit4ClassRunner.class)
+@ExtendWith(SpringExtension.class)
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class UserMetaMapperTest {
@@ -38,7 +39,7 @@ public class UserMetaMapperTest {
 		Date endTime = calendar.getTime();
 
 		long numberOfUsers = userMetaMapper.getNumberOfUserRegistered(startTime, endTime);
-		Assert.assertEquals(1, numberOfUsers);
+		Assertions.assertEquals(1, numberOfUsers);
 	}
 	
 	/**
@@ -49,14 +50,14 @@ public class UserMetaMapperTest {
 	@Test
 	public void testGetUserMetaUsingUserExists() {
 		User user = userMapper.getUserUsingUid(1000);
-		Assert.assertNotNull(user);
+		Assertions.assertNotNull(user);
 		
 		List<UserMeta> userMetaList = userMetaMapper.getUserMetaUsingUser(user);
-		Assert.assertEquals(1, userMetaList.size());
+		Assertions.assertEquals(1, userMetaList.size());
 		
 		UserMeta userMeta = userMetaList.get(0);
 		String metaKey = userMeta.getMetaKey();
-		Assert.assertEquals("registerTime", metaKey);
+		Assertions.assertEquals("registerTime", metaKey);
 	}
 	
 	/**
@@ -67,10 +68,10 @@ public class UserMetaMapperTest {
 	@Test
 	public void testGetUserMetaUsingUserNotExists() {
 		User user = userMapper.getUserUsingUid(0);
-		Assert.assertNull(user);
+		Assertions.assertNull(user);
 		
 		List<UserMeta> userMetaList = userMetaMapper.getUserMetaUsingUser(user);
-		Assert.assertEquals(0, userMetaList.size());
+		Assertions.assertEquals(0, userMetaList.size());
 	}
 	
 	/**
@@ -81,13 +82,13 @@ public class UserMetaMapperTest {
 	@Test
 	public void testGetUserMetaUsingUserAndMetaKeyExists() {
 		User user = userMapper.getUserUsingUid(1000);
-		Assert.assertNotNull(user);
+		Assertions.assertNotNull(user);
 		
 		UserMeta userMeta = userMetaMapper.getUserMetaUsingUserAndMetaKey(user, "registerTime");
-		Assert.assertNotNull(userMeta);
+		Assertions.assertNotNull(userMeta);
 		
 		String metaValue = userMeta.getMetaValue();
-		Assert.assertEquals("2014-10-07 12:35:45", metaValue);
+		Assertions.assertEquals("2014-10-07 12:35:45", metaValue);
 	}
 	
 	/**
@@ -98,10 +99,10 @@ public class UserMetaMapperTest {
 	@Test
 	public void testGetUserMetaUsingUserAndMetaKeyNotExists() {
 		User user = userMapper.getUserUsingUid(1000);
-		Assert.assertNotNull(user);
+		Assertions.assertNotNull(user);
 		
 		UserMeta userMeta = userMetaMapper.getUserMetaUsingUserAndMetaKey(user, "notExistsKey");
-		Assert.assertNull(userMeta);
+		Assertions.assertNull(userMeta);
 	}
 	
 	/**
@@ -115,13 +116,13 @@ public class UserMetaMapperTest {
 		UserMeta userMeta = new UserMeta(user, "metaKey", "metaValue");
 
 		int numberOfRowsAffected = userMetaMapper.createUserMeta(userMeta);
-		Assert.assertEquals(1, numberOfRowsAffected);
+		Assertions.assertEquals(1, numberOfRowsAffected);
 		
 		UserMeta insertedUserMeta = userMetaMapper.getUserMetaUsingUserAndMetaKey(user, "metaKey");
-		Assert.assertNotNull(insertedUserMeta);
+		Assertions.assertNotNull(insertedUserMeta);
 		
 		String metaValue = insertedUserMeta.getMetaValue();
-		Assert.assertEquals("metaValue", metaValue);
+		Assertions.assertEquals("metaValue", metaValue);
 	}
 	
 	/**
@@ -129,13 +130,16 @@ public class UserMetaMapperTest {
 	 * 测试数据: 使用不存在的用户
 	 * 预期结果: 抛出DataIntegrityViolationException异常
 	 */
-	@Test(expected = org.springframework.dao.DataIntegrityViolationException.class)
+	@Test
 	public void testCreateUserMetaUsingUserNotExists() {
 		User user = userMapper.getUserUsingUid(0);
-		Assert.assertNull(user);
+		Assertions.assertNull(user);
 		
 		UserMeta userMeta = new UserMeta(user, "metaKey", "metaValue");
-		userMetaMapper.createUserMeta(userMeta);
+		Executable e = () -> {
+			userMetaMapper.createUserMeta(userMeta);
+		};
+		Assertions.assertThrows(org.springframework.dao.DataIntegrityViolationException.class, e);
 	}
 	
 	/**
@@ -150,11 +154,11 @@ public class UserMetaMapperTest {
 		
 		userMeta.setMetaValue("newMetaValue");
 		int numberOfRowsAffected = userMetaMapper.updateUserMeta(userMeta);
-		Assert.assertEquals(1, numberOfRowsAffected);
+		Assertions.assertEquals(1, numberOfRowsAffected);
 		
 		UserMeta updatedUserMeta = userMetaMapper.getUserMetaUsingUserAndMetaKey(user, "registerTime");
 		String metaValue = updatedUserMeta.getMetaValue();
-		Assert.assertEquals("newMetaValue", metaValue);
+		Assertions.assertEquals("newMetaValue", metaValue);
 	}
 	
 	/**
@@ -173,11 +177,11 @@ public class UserMetaMapperTest {
 		 * The following Assert CANNOT passed in CI due to
 		 * the bug of MyBatis. But it really works.
 		 */
-		// Assert.assertEquals(0, numberOfRowsAffected);
+		// Assertions.assertEquals(0, numberOfRowsAffected);
 		
 		UserMeta updatedUserMeta = userMetaMapper.getUserMetaUsingUserAndMetaKey(user, "registerTime");
 		String metaKey = updatedUserMeta.getMetaKey();
-		Assert.assertEquals("registerTime", metaKey);
+		Assertions.assertEquals("registerTime", metaKey);
 	}
 	
 	/**
@@ -188,11 +192,11 @@ public class UserMetaMapperTest {
 	@Test
 	public void testUpdateUserMetaUsingUserNotExists() {
 		User user = userMapper.getUserUsingUid(0);
-		Assert.assertNull(user);
+		Assertions.assertNull(user);
 		
 		UserMeta userMeta = userMetaMapper.getUserMetaUsingUserAndMetaKey(user, "registerTime");
 		int numberOfRowsAffected = userMetaMapper.updateUserMeta(userMeta);
-		Assert.assertEquals(0, numberOfRowsAffected);
+		Assertions.assertEquals(0, numberOfRowsAffected);
 	}
 	
 	/**
@@ -203,13 +207,13 @@ public class UserMetaMapperTest {
 	@Test
 	public void testDeleteUserMetaUsingUserExists() {
 		User user = userMapper.getUserUsingUid(1001);
-		Assert.assertNotNull(user);
+		Assertions.assertNotNull(user);
 		
 		int numberOfRowsAffected = userMetaMapper.deleteUserMetaUsingUser(1001);
-		Assert.assertEquals(1, numberOfRowsAffected);
+		Assertions.assertEquals(1, numberOfRowsAffected);
 		
 		List<UserMeta> userMetaList = userMetaMapper.getUserMetaUsingUser(user);
-		Assert.assertEquals(0, userMetaList.size());
+		Assertions.assertEquals(0, userMetaList.size());
 	}
 	
 	/**
@@ -220,10 +224,10 @@ public class UserMetaMapperTest {
 	@Test
 	public void testDeleteUserMetaUsingUserNotExists() {
 		User user = userMapper.getUserUsingUid(0);
-		Assert.assertNull(user);
+		Assertions.assertNull(user);
 		
 		int numberOfRowsAffected = userMetaMapper.deleteUserMetaUsingUser(0);
-		Assert.assertEquals(0, numberOfRowsAffected);
+		Assertions.assertEquals(0, numberOfRowsAffected);
 	}
 	
 	/**

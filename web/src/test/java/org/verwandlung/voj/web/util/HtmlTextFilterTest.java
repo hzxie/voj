@@ -1,7 +1,7 @@
 package org.verwandlung.voj.web.util;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 /**
  * TextFilter的测试类.
@@ -16,7 +16,7 @@ public class HtmlTextFilterTest {
 	@Test
 	public void testFilterHtmlUsingMatchedHtml() {
 		String text = "XSS <script type=\"text/javascript\">alert('XSS')</script>.";
-		Assert.assertEquals("XSS .", HtmlTextFilter.filter(text));
+		Assertions.assertEquals("XSS .", HtmlTextFilter.filter(text));
 	}
 	
 	/**
@@ -27,6 +27,6 @@ public class HtmlTextFilterTest {
 	@Test
 	public void testFilterHtmlUsingUnmatchedHtml() {
 		String text = "XSS <a href=\"http://zjhzxhz.com\">alert('XSS')</script>.";
-		Assert.assertEquals("XSS alert('XSS').", HtmlTextFilter.filter(text));
+		Assertions.assertEquals("XSS alert('XSS').", HtmlTextFilter.filter(text));
 	}
 }
