@@ -1,7 +1,7 @@
 package org.verwandlung.voj.web.util;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import org.verwandlung.voj.web.util.DigestUtils;
 
@@ -21,7 +21,7 @@ public class DigestUtilsTest {
 		String runtimeValue = DigestUtils.md5Hex(password);
 		String expectedValue = "785ee107c11dfe36de668b1ae7baacbb";
 		
-		Assert.assertEquals(expectedValue, runtimeValue);
+		Assertions.assertEquals(expectedValue, runtimeValue);
 	}
 	
 	/**
@@ -35,7 +35,7 @@ public class DigestUtilsTest {
 		String runtimeValue = DigestUtils.md5Hex(password);
 		String expectedValue = "0adb82835139278edb78d1e8c4548600";
 		
-		Assert.assertEquals(expectedValue, runtimeValue);
+		Assertions.assertEquals(expectedValue, runtimeValue);
 	}
 	
 	/**
@@ -49,6 +49,6 @@ public class DigestUtilsTest {
 		String runtimeValue = DigestUtils.md5Hex(password);
 		String expectedValue = "";
 		
-		Assert.assertEquals(expectedValue, runtimeValue);
+		Assertions.assertEquals(expectedValue, runtimeValue);
 	}
 }

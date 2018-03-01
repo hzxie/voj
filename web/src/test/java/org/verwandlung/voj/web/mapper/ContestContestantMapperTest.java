@@ -1,11 +1,12 @@
 package org.verwandlung.voj.web.mapper;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.function.Executable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.Transactional;
 import org.verwandlung.voj.web.model.Contest;
 import org.verwandlung.voj.web.model.ContestContestant;
@@ -18,7 +19,7 @@ import java.util.List;
  *
  * @author Haozhe Xie
  */
-@RunWith(SpringJUnit4ClassRunner.class)
+@ExtendWith(SpringExtension.class)
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class ContestContestantMapperTest {
@@ -30,7 +31,7 @@ public class ContestContestantMapperTest {
 	@Test
 	public void testGetNumberOfContestantsOfContestUsingExistingContest() {
 		long numberOfContestants = contestContestantMapper.getNumberOfContestantsOfContest(1);
-		Assert.assertEquals(2, numberOfContestants);
+		Assertions.assertEquals(2, numberOfContestants);
 	}
 
 	/**
@@ -41,7 +42,7 @@ public class ContestContestantMapperTest {
 	@Test
 	public void testGetNumberOfContestantsOfContestUsingNotExistingContest() {
 		long numberOfContestants = contestContestantMapper.getNumberOfContestantsOfContest(0);
-		Assert.assertEquals(0, numberOfContestants);
+		Assertions.assertEquals(0, numberOfContestants);
 	}
 
 	/**
@@ -52,10 +53,10 @@ public class ContestContestantMapperTest {
 	@Test
 	public void testGetContestantOfContestExists() {
 		ContestContestant cc = contestContestantMapper.getContestantOfContest(1, 1000);
-		Assert.assertNotNull(cc);
+		Assertions.assertNotNull(cc);
 
 		String usernameOfFirstContestant = cc.getContestant().getUsername();
-		Assert.assertEquals("zjhzxhz", usernameOfFirstContestant);
+		Assertions.assertEquals("zjhzxhz", usernameOfFirstContestant);
 	}
 
 	/**
@@ -66,16 +67,16 @@ public class ContestContestantMapperTest {
 	@Test
 	public void testGetContestantsOfFirstContestForOiFrom0WithLimit2() {
 		List<ContestContestant> contestants = contestContestantMapper.getContestantsOfContestForOi(1, 0, 2);
-		Assert.assertEquals(2, contestants.size());
+		Assertions.assertEquals(2, contestants.size());
 
 		ContestContestant firstContestant = contestants.get(0);
 		String usernameOfFirstContestant = firstContestant.getContestant().getUsername();
-		Assert.assertEquals("zjhzxhz", usernameOfFirstContestant);
+		Assertions.assertEquals("zjhzxhz", usernameOfFirstContestant);
 
 		int score = firstContestant.getScore();
-		Assert.assertEquals(200, score);
+		Assertions.assertEquals(200, score);
 		int time = firstContestant.getTime();
-		Assert.assertEquals(60, time);
+		Assertions.assertEquals(60, time);
 	}
 
 	/**
@@ -86,11 +87,11 @@ public class ContestContestantMapperTest {
 	@Test
 	public void testGetContestantsOfSecondContestForOiFrom1WithLimit1() {
 		List<ContestContestant> contestants = contestContestantMapper.getContestantsOfContestForOi(2, 0, 1);
-		Assert.assertEquals(1, contestants.size());
+		Assertions.assertEquals(1, contestants.size());
 
 		ContestContestant firstContestant = contestants.get(0);
 		String usernameOfFirstContestant = firstContestant.getContestant().getUsername();
-		Assert.assertEquals("zjhzxhz", usernameOfFirstContestant);
+		Assertions.assertEquals("zjhzxhz", usernameOfFirstContestant);
 	}
 
 	/**
@@ -105,7 +106,7 @@ public class ContestContestantMapperTest {
 
 		ContestContestant cc = new ContestContestant(contest, contestant);
 		int numberOfRowsAffected = contestContestantMapper.createContestContestant(cc);
-		Assert.assertEquals(1, numberOfRowsAffected);
+		Assertions.assertEquals(1, numberOfRowsAffected);
 	}
 
 	/**
@@ -113,13 +114,16 @@ public class ContestContestantMapperTest {
 	 * 测试数据: 使用合法的数据, 但数据库中存在相同的记录.
 	 * 预期结果: 抛出DuplicateKeyException异常
 	 */
-	@Test(expected = org.springframework.dao.DuplicateKeyException.class)
+	@Test
 	public void testCreateContestContestantWithExistingRecord() {
 		Contest contest = contestMapper.getContest(1);
 		User contestant = userMapper.getUserUsingUid(1001);
 
 		ContestContestant cc = new ContestContestant(contest, contestant);
-		contestContestantMapper.createContestContestant(cc);
+		Executable e = () -> {
+			contestContestantMapper.createContestContestant(cc);
+		};
+		Assertions.assertThrows(org.springframework.dao.DuplicateKeyException.class, e);
 	}
 
 	/**
@@ -127,13 +131,16 @@ public class ContestContestantMapperTest {
 	 * 测试数据: 使用不存在的考试ID
 	 * 预期结果: DataIntegrityViolationException
 	 */
-	@Test(expected = org.springframework.dao.DataIntegrityViolationException.class)
-	public void testCreateContestContestantWithContestContestant被成功更新NotExistingContest() {
+	@Test
+	public void testCreateContestContestantWithContestContestantNotExistingContest() {
 		Contest contest = contestMapper.getContest(0);
 		User contestant = userMapper.getUserUsingUid(1001);
 
 		ContestContestant cc = new ContestContestant(contest, contestant);
-		contestContestantMapper.createContestContestant(cc);
+		Executable e = () -> {
+			contestContestantMapper.createContestContestant(cc);
+		};
+		Assertions.assertThrows(org.springframework.dao.DataIntegrityViolationException.class, e);
 	}
 
 	/**
@@ -141,13 +148,16 @@ public class ContestContestantMapperTest {
 	 * 测试数据: 使用不存在的用户ID
 	 * 预期结果: DataIntegrityViolationException
 	 */
-	@Test(expected = org.springframework.dao.DataIntegrityViolationException.class)
+	@Test
 	public void testCreateContestContestantWithNotExistingContestant() {
 		Contest contest = contestMapper.getContest(1);
 		User contestant = userMapper.getUserUsingUid(0);
 
 		ContestContestant cc = new ContestContestant(contest, contestant);
-		contestContestantMapper.createContestContestant(cc);
+		Executable e = () -> {
+			contestContestantMapper.createContestContestant(cc);
+		};
+		Assertions.assertThrows(org.springframework.dao.DataIntegrityViolationException.class, e);
 	}
 
 	/**
@@ -158,13 +168,13 @@ public class ContestContestantMapperTest {
 	@Test
 	public void testUpdateContestContestantNormally() {
 		ContestContestant cc = contestContestantMapper.getContestantOfContest(1, 1001);
-		Assert.assertNotNull(cc);
+		Assertions.assertNotNull(cc);
 		cc.setCodeSnippet("Test Code Snippet");
 
 		contestContestantMapper.updateContestContestant(cc);
 		cc = contestContestantMapper.getContestantOfContest(1, 1001);
 		String codeSnippet = cc.getCodeSnippet();
-		Assert.assertEquals("Test Code Snippet", codeSnippet);
+		Assertions.assertEquals("Test Code Snippet", codeSnippet);
 	}
 
 	/**
@@ -175,12 +185,12 @@ public class ContestContestantMapperTest {
 	@Test
 	public void testDeleteContestContestantExists() {
 		ContestContestant cc = contestContestantMapper.getContestantOfContest(2, 1000);
-		Assert.assertNotNull(cc);
+		Assertions.assertNotNull(cc);
 
 		int numberOfRowsAffected = contestContestantMapper.deleteContestContestant(2, 1000);
-		Assert.assertEquals(1, numberOfRowsAffected);
+		Assertions.assertEquals(1, numberOfRowsAffected);
 		cc = contestContestantMapper.getContestantOfContest(2, 1000);
-		Assert.assertNull(cc);
+		Assertions.assertNull(cc);
 	}
 
 	/**

@@ -1,16 +1,16 @@
 package org.verwandlung.voj.web.mapper;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.function.Executable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.Transactional;
 import org.verwandlung.voj.web.model.DiscussionReply;
 import org.verwandlung.voj.web.model.User;
 
-import java.util.Date;
 import java.util.List;
 
 /**
@@ -18,7 +18,7 @@ import java.util.List;
  *
  * @author Haozhe Xie
  */
-@RunWith(SpringJUnit4ClassRunner.class)
+@ExtendWith(SpringExtension.class)
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class DiscussionReplyMapperTest {
@@ -30,14 +30,14 @@ public class DiscussionReplyMapperTest {
 	@Test
 	public void testGetDiscussionRepliesOfThread2WithOffsetFrom0WithLimit2() {
 		List<DiscussionReply> discussionReplies = discussionReplyMapper.getDiscussionRepliesUsingThreadId(2, 0, 2);
-		Assert.assertEquals(2, discussionReplies.size());
+		Assertions.assertEquals(2, discussionReplies.size());
 
 		DiscussionReply firstDiscussionReply = discussionReplies.get(0);
 		long replyId = firstDiscussionReply.getDiscussionReplyId();
-		Assert.assertEquals(2, replyId);
+		Assertions.assertEquals(2, replyId);
 
 		String replyContent = firstDiscussionReply.getDiscussionReplyContent();
-		Assert.assertEquals("Reply content for thread #2", replyContent);
+		Assertions.assertEquals("Reply content for thread #2", replyContent);
 	}
 
 	/**
@@ -48,14 +48,14 @@ public class DiscussionReplyMapperTest {
 	@Test
 	public void testGetDiscussionRepliesOfThread2WithOffsetFrom1WithLimit1() {
 		List<DiscussionReply> discussionReplies = discussionReplyMapper.getDiscussionRepliesUsingThreadId(2, 1, 1);
-		Assert.assertEquals(1, discussionReplies.size());
+		Assertions.assertEquals(1, discussionReplies.size());
 
 		DiscussionReply firstDiscussionReply = discussionReplies.get(0);
 		long replyId = firstDiscussionReply.getDiscussionReplyId();
-		Assert.assertEquals(3, replyId);
+		Assertions.assertEquals(3, replyId);
 
 		String replyContent = firstDiscussionReply.getDiscussionReplyContent();
-		Assert.assertEquals("Reply content for thread #2", replyContent);
+		Assertions.assertEquals("Reply content for thread #2", replyContent);
 	}
 
 	/**
@@ -67,11 +67,11 @@ public class DiscussionReplyMapperTest {
 	public void testCreateDiscussionReplyNormally() {
 		long threadId = 1;
 		User creator = userMapper.getUserUsingUid(1000);
-		Assert.assertNotNull(creator);
+		Assertions.assertNotNull(creator);
 
 		DiscussionReply discussionReply = new DiscussionReply(threadId, creator, "Content", "{}");
 		int numberOfRowsAffected = discussionReplyMapper.createDiscussionReply(discussionReply);
-		Assert.assertEquals(1, numberOfRowsAffected);
+		Assertions.assertEquals(1, numberOfRowsAffected);
 	}
 
 	/**
@@ -79,13 +79,16 @@ public class DiscussionReplyMapperTest {
 	 * 测试数据: 使用不存在的用户
 	 * 预期结果: 抛出DataIntegrityViolationException异常
 	 */
-	@Test(expected = org.springframework.dao.DataIntegrityViolationException.class)
+	@Test
 	public void testCreateDiscussionReplyWithNotExistingUser() {
 		long threadId = 1;
 		User creator = new User(); creator.setUid(0);
 
 		DiscussionReply discussionReply = new DiscussionReply(threadId, creator, "Content", "{}");
-		discussionReplyMapper.createDiscussionReply(discussionReply);
+		Executable e = () -> {
+			discussionReplyMapper.createDiscussionReply(discussionReply);
+		};
+		Assertions.assertThrows(org.springframework.dao.DataIntegrityViolationException.class, e);
 	}
 
 	/**
@@ -96,12 +99,12 @@ public class DiscussionReplyMapperTest {
 	@Test
 	public void testUpdateDiscussionReplyNormally() {
 		List<DiscussionReply> discussionReplies = discussionReplyMapper.getDiscussionRepliesUsingThreadId(1, 0, 1);
-		Assert.assertEquals(1, discussionReplies.size());
+		Assertions.assertEquals(1, discussionReplies.size());
 
 		DiscussionReply discussionReply = discussionReplies.get(0);
 		discussionReply.setDiscussionReplyContent("New Reply Content");
 		int numberOfRowsAffected = discussionReplyMapper.updateDiscussionReply(discussionReply);
-		Assert.assertEquals(1, numberOfRowsAffected);
+		Assertions.assertEquals(1, numberOfRowsAffected);
 	}
 
 	/**
@@ -112,7 +115,7 @@ public class DiscussionReplyMapperTest {
 	@Test
 	public void testDeleteDiscussionReplyUsingExistingReplyId() {
 		int numberOfRowsAffected = discussionReplyMapper.deleteDiscussionReplyUsingReplyId(1);
-		Assert.assertEquals(1, numberOfRowsAffected);
+		Assertions.assertEquals(1, numberOfRowsAffected);
 	}
 
 	/**
@@ -123,7 +126,7 @@ public class DiscussionReplyMapperTest {
 	@Test
 	public void testDeleteDiscussionReplyUsingReplyIdNotExists() {
 		int numberOfRowsAffected = discussionReplyMapper.deleteDiscussionReplyUsingReplyId(0);
-		Assert.assertEquals(0, numberOfRowsAffected);
+		Assertions.assertEquals(0, numberOfRowsAffected);
 	}
 
 	/**

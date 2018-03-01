@@ -2,12 +2,13 @@ package org.verwandlung.voj.web.mapper;
 
 import java.util.List;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.function.Executable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.Transactional;
 
 import org.verwandlung.voj.web.model.ProblemTag;
@@ -18,7 +19,7 @@ import org.verwandlung.voj.web.model.ProblemTagRelationship;
  * 
  * @author Haozhe Xie
  */
-@RunWith(SpringJUnit4ClassRunner.class)
+@ExtendWith(SpringExtension.class)
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class ProblemTagMapperTest {
@@ -30,11 +31,11 @@ public class ProblemTagMapperTest {
     @Test
 	public void testGetProblemTags() {
 		List<ProblemTag> problemTags = problemTagMapper.getProblemTags();
-		Assert.assertEquals(2, problemTags.size());
+		Assertions.assertEquals(2, problemTags.size());
 		
 		ProblemTag firstTag = problemTags.get(0);
 		String tagSlug = firstTag.getProblemTagSlug();
-		Assert.assertEquals("greedy", tagSlug);
+		Assertions.assertEquals("greedy", tagSlug);
 	}
 	
 	/**
@@ -45,10 +46,10 @@ public class ProblemTagMapperTest {
 	@Test
 	public void testGetProblemTagUsingIdExists() {
 		ProblemTag problemTag = problemTagMapper.getProblemTagUsingTagId(1);
-		Assert.assertNotNull(problemTag);
+		Assertions.assertNotNull(problemTag);
 		
 		String problemTagName = problemTag.getProblemTagName();
-		Assert.assertEquals("Greedy", problemTagName);
+		Assertions.assertEquals("Greedy", problemTagName);
 	}
 	
 	/**
@@ -59,7 +60,7 @@ public class ProblemTagMapperTest {
 	@Test
 	public void testGetProblemTagUsingIdNotExists() {
 		ProblemTag problemTag = problemTagMapper.getProblemTagUsingTagId(0);
-		Assert.assertNull(problemTag);
+		Assertions.assertNull(problemTag);
 	}
 	
 	/**
@@ -70,12 +71,12 @@ public class ProblemTagMapperTest {
 	@Test
 	public void testGetProblemTagUsingProblemIdExists() {
 		List<ProblemTag> problemTags = problemTagMapper.getProblemTagsUsingProblemId(1001);
-		Assert.assertNotNull(problemTags);
-		Assert.assertEquals(2, problemTags.size());
+		Assertions.assertNotNull(problemTags);
+		Assertions.assertEquals(2, problemTags.size());
 		
 		ProblemTag problemTag = problemTags.get(0);
 		String problemTagName = problemTag.getProblemTagName();
-		Assert.assertEquals("Greedy", problemTagName);
+		Assertions.assertEquals("Greedy", problemTagName);
 	}
 	
 	/**
@@ -86,7 +87,7 @@ public class ProblemTagMapperTest {
 	@Test
 	public void testGetProblemTagUsingProblemIdNotExists() {
 		List<ProblemTag> problemTags = problemTagMapper.getProblemTagsUsingProblemId(0);
-		Assert.assertEquals(0, problemTags.size());
+		Assertions.assertEquals(0, problemTags.size());
 	}
 
 	/**
@@ -97,11 +98,11 @@ public class ProblemTagMapperTest {
 	@Test
 	public void testGetProblemTagsOfProblemsFrom1000WithLimit3() {
 		List<ProblemTagRelationship> problemTagRelationships = problemTagMapper.getProblemTagsOfProblems(1000, 1002);
-		Assert.assertEquals(4, problemTagRelationships.size());
+		Assertions.assertEquals(4, problemTagRelationships.size());
 
 		ProblemTagRelationship ptr = problemTagRelationships.get(1);
-		Assert.assertEquals(1001, ptr.getProblemId());
-		Assert.assertEquals(1, ptr.getProblemTagId());
+		Assertions.assertEquals(1001, ptr.getProblemId());
+		Assertions.assertEquals(1, ptr.getProblemTagId());
 	}
 
 	/**
@@ -112,11 +113,11 @@ public class ProblemTagMapperTest {
 	@Test
 	public void testGetProblemTagsOfProblemsFrom999WithLimit2() {
 		List<ProblemTagRelationship> problemTagRelationships = problemTagMapper.getProblemTagsOfProblems(999, 1000);
-		Assert.assertEquals(1, problemTagRelationships.size());
+		Assertions.assertEquals(1, problemTagRelationships.size());
 
 		ProblemTagRelationship ptr = problemTagRelationships.get(0);
-		Assert.assertEquals(1000, ptr.getProblemId());
-		Assert.assertEquals(1, ptr.getProblemTagId());
+		Assertions.assertEquals(1000, ptr.getProblemId());
+		Assertions.assertEquals(1, ptr.getProblemTagId());
 	}
 
 	/**
@@ -127,7 +128,7 @@ public class ProblemTagMapperTest {
 	@Test
 	public void testGetProblemTagsOfProblemsFrom999WithLimit1() {
 		List<ProblemTagRelationship> problemTagRelationships = problemTagMapper.getProblemTagsOfProblems(999, 999);
-		Assert.assertEquals(0, problemTagRelationships.size());
+		Assertions.assertEquals(0, problemTagRelationships.size());
 	}
 
 	/**
@@ -138,10 +139,10 @@ public class ProblemTagMapperTest {
 	@Test
 	public void testGetProblemTagUsingTagSlugExists() {
 		ProblemTag problemTag = problemTagMapper.getProblemTagUsingTagSlug("greedy");
-		Assert.assertNotNull(problemTag);
+		Assertions.assertNotNull(problemTag);
 		
 		String problemTagName = problemTag.getProblemTagName();
-		Assert.assertEquals("Greedy", problemTagName);
+		Assertions.assertEquals("Greedy", problemTagName);
 	}
 	
 	/**
@@ -152,13 +153,22 @@ public class ProblemTagMapperTest {
 	@Test
 	public void testGetProblemTagUsingTagSlugNotExists() {
 		ProblemTag problemTag = problemTagMapper.getProblemTagUsingTagSlug("not-exists");
-		Assert.assertNull(problemTag);
+		Assertions.assertNull(problemTag);
 	}
 
+    /**
+     * 测试用例: 测试getProblemTagsOfProblems(long, long)方法
+	 * 测试数据: 试题编号1000-1010
+	 * 预期结果: 对应试题的试题标签
+     */
     @Test
     public void testGetProblemTagsOfProblems() {
         List<ProblemTagRelationship> problemTagRelationships = problemTagMapper.getProblemTagsOfProblems(1000, 1010);
-        // TODO
+        Assertions.assertEquals(5, problemTagRelationships.size());
+        
+        ProblemTagRelationship ptr = problemTagRelationships.get(0);
+        Assertions.assertEquals(ptr.getProblemId(), 1000);
+        Assertions.assertEquals(ptr.getProblemTagId(), 1);
     }
 	
 	/**
@@ -170,7 +180,7 @@ public class ProblemTagMapperTest {
 	public void testCreateProblemTagNormally() {
 		ProblemTag problemTag = new ProblemTag("new- tag", "New Tag");
 		int numberOfRowsAffected = problemTagMapper.createProblemTag(problemTag);
-		Assert.assertEquals(1, numberOfRowsAffected);
+		Assertions.assertEquals(1, numberOfRowsAffected);
 	}
 	
 	/**
@@ -178,10 +188,14 @@ public class ProblemTagMapperTest {
 	 * 测试数据: 使用不合法的数据集(过长的类别名称)
 	 * 预期结果: 抛出DataIntegrityViolationException异常
 	 */
-	@Test(expected = org.springframework.dao.DataIntegrityViolationException.class)
+	@Test
 	public void testCreateProblemTagUsingTooLongTagName() {
 		ProblemTag problemTag = new ProblemTag("new-tag", "New Tag Very Very Very Very Long Name");
-		problemTagMapper.createProblemTag(problemTag);
+		Executable e = () -> {
+			problemTagMapper.createProblemTag(problemTag);
+		};
+		Assertions.assertThrows(org.springframework.dao.DataIntegrityViolationException.class, e);
+		
 	}
 	
 	/**
@@ -189,10 +203,13 @@ public class ProblemTagMapperTest {
 	 * 测试数据: 使用合法的数据集, 但数据表中存在相同的英文缩写
 	 * 预期结果: 抛出DuplicateKeyException异常
 	 */
-	@Test(expected = org.springframework.dao.DuplicateKeyException.class)
+	@Test
 	public void testCreateProblemTagUsingExistingSlug() {
 		ProblemTag problemTag = new ProblemTag("greedy", "New Tag");
-		problemTagMapper.createProblemTag(problemTag);
+		Executable e = () -> {
+			problemTagMapper.createProblemTag(problemTag);
+		};
+		Assertions.assertThrows(org.springframework.dao.DuplicateKeyException.class, e);
 	}
 	
 	/**
@@ -203,15 +220,15 @@ public class ProblemTagMapperTest {
 	@Test
 	public void testUpdateProblemTagNormally() {
 		ProblemTag problemTag = problemTagMapper.getProblemTagUsingTagSlug("greedy");
-		Assert.assertNotNull(problemTag);
+		Assertions.assertNotNull(problemTag);
 
 		problemTag.setProblemTagName("New Tag Name");
 		int numberOfRowsAffected = problemTagMapper.updateProblemTag(problemTag);
-		Assert.assertEquals(1, numberOfRowsAffected);
+		Assertions.assertEquals(1, numberOfRowsAffected);
 
 		problemTag = problemTagMapper.getProblemTagUsingTagSlug("greedy");
 		String newTagName = problemTag.getProblemTagName();
-		Assert.assertEquals("New Tag Name", newTagName);
+		Assertions.assertEquals("New Tag Name", newTagName);
 	}
 	
 	/**
@@ -219,13 +236,16 @@ public class ProblemTagMapperTest {
 	 * 测试数据: 使用不合法的数据集(过长的类别名称)
 	 * 预期结果: 抛出DataIntegrityViolationException异常
 	 */
-	@Test(expected = org.springframework.dao.DataIntegrityViolationException.class)
+	@Test
 	public void testUpdateProblemTagUsingTooLongTagName() {
 		ProblemTag problemTag = problemTagMapper.getProblemTagUsingTagSlug("greedy");
-		Assert.assertNotNull(problemTag);
+		Assertions.assertNotNull(problemTag);
 
 		problemTag.setProblemTagName("New Tag Very Very Very Very Long Name");
-		problemTagMapper.updateProblemTag(problemTag);
+		Executable e = () -> {
+			problemTagMapper.updateProblemTag(problemTag);
+		};
+		Assertions.assertThrows(org.springframework.dao.DataIntegrityViolationException.class, e);	
 	}
 
 	/**
@@ -236,13 +256,13 @@ public class ProblemTagMapperTest {
 	@Test
 	public void testDeleteProblemTagUsingTagIdExists() {
 		ProblemTag problemTag = problemTagMapper.getProblemTagUsingTagId(1);
-		Assert.assertNotNull(problemTag);
+		Assertions.assertNotNull(problemTag);
 
 		int numberOfRowsAffected = problemTagMapper.deleteProblemTagUsingTagId(1);
-		Assert.assertEquals(1, numberOfRowsAffected);
+		Assertions.assertEquals(1, numberOfRowsAffected);
 
 		problemTag = problemTagMapper.getProblemTagUsingTagId(1);
-		Assert.assertNull(problemTag);
+		Assertions.assertNull(problemTag);
 	}
 
 	/**
@@ -253,10 +273,10 @@ public class ProblemTagMapperTest {
 	@Test
 	public void testDeleteProblemTagUsingTagIdNotExists() {
 		ProblemTag problemTag = problemTagMapper.getProblemTagUsingTagId(0);
-		Assert.assertNull(problemTag);
+		Assertions.assertNull(problemTag);
 
 		int numberOfRowsAffected = problemTagMapper.deleteProblemTagUsingTagId(0);
-		Assert.assertEquals(0, numberOfRowsAffected);
+		Assertions.assertEquals(0, numberOfRowsAffected);
 	}
 
 	/**
@@ -267,10 +287,10 @@ public class ProblemTagMapperTest {
 	@Test
 	public void testDeleteProblemTagUsingProblemIdExists() {
 		List<ProblemTag> problemTags = problemTagMapper.getProblemTagsUsingProblemId(1001);
-		Assert.assertEquals(2, problemTags.size());
+		Assertions.assertEquals(2, problemTags.size());
 
 		int numberOfRowsAffected = problemTagMapper.deleteProblemTagRelationship(1001);
-		Assert.assertEquals(2, numberOfRowsAffected);
+		Assertions.assertEquals(2, numberOfRowsAffected);
 	}
 
 	/**
@@ -281,10 +301,10 @@ public class ProblemTagMapperTest {
 	@Test
 	public void testDeleteProblemTagUsingProblemIdNotExists() {
 		List<ProblemTag> problemTags = problemTagMapper.getProblemTagsUsingProblemId(0);
-		Assert.assertEquals(0, problemTags.size());
+		Assertions.assertEquals(0, problemTags.size());
 
 		int numberOfRowsAffected = problemTagMapper.deleteProblemTagRelationship(0);
-		Assert.assertEquals(0, numberOfRowsAffected);
+		Assertions.assertEquals(0, numberOfRowsAffected);
 	}
 	
 	/**

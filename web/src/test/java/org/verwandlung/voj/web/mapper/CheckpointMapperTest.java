@@ -2,12 +2,13 @@ package org.verwandlung.voj.web.mapper;
 
 import java.util.List;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.function.Executable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.Transactional;
 
 import org.verwandlung.voj.web.model.Checkpoint;
@@ -17,7 +18,7 @@ import org.verwandlung.voj.web.model.Checkpoint;
  * 
  * @author Haozhe Xie
  */
-@RunWith(SpringJUnit4ClassRunner.class)
+@ExtendWith(SpringExtension.class)
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class CheckpointMapperTest {
@@ -29,11 +30,11 @@ public class CheckpointMapperTest {
 	@Test
 	public void testGetCheckpointsUsingProblemIdExists() {
 		List<Checkpoint> checkpoints = checkpointMapper.getCheckpointsUsingProblemId(1000);
-		Assert.assertEquals(10, checkpoints.size());
+		Assertions.assertEquals(10, checkpoints.size());
 		
 		Checkpoint firstCheckpoint = checkpoints.get(0);
 		String output = firstCheckpoint.getOutput();
-		Assert.assertEquals("45652\r\n", output);
+		Assertions.assertEquals("45652\r\n", output);
 	}
 	
 	/**
@@ -44,7 +45,7 @@ public class CheckpointMapperTest {
 	@Test
 	public void testGetCheckpointsUsingProblemIdNotExists() {
 		List<Checkpoint> checkpoints = checkpointMapper.getCheckpointsUsingProblemId(0);
-		Assert.assertEquals(0, checkpoints.size());
+		Assertions.assertEquals(0, checkpoints.size());
 	}
 	
 	/**
@@ -56,7 +57,7 @@ public class CheckpointMapperTest {
 	public void testCreateCheckpointNormally() {
 		 Checkpoint checkpoint = new Checkpoint(1000, 100, false, 10, "input", "output");
 		 int numberOfRowsAffected = checkpointMapper.createCheckpoint(checkpoint);
-		 Assert.assertEquals(1, numberOfRowsAffected);
+		 Assertions.assertEquals(1, numberOfRowsAffected);
 	}
 	
 	/**
@@ -64,10 +65,13 @@ public class CheckpointMapperTest {
 	 * 测试数据: 使用重复的主键创建测试点
 	 * 预期结果: 抛出DuplicateKeyException异常
 	 */
-	@Test(expected = org.springframework.dao.DuplicateKeyException.class)
+	@Test
 	public void testCreateCheckpointUsingExistingProblemIdAndCheckpointId() {
 		 Checkpoint checkpoint = new Checkpoint(1000, 0, false, 10, "input", "output");
-		 checkpointMapper.createCheckpoint(checkpoint);
+		 Executable e = () -> {
+			 checkpointMapper.createCheckpoint(checkpoint);
+		 };
+		 Assertions.assertThrows(org.springframework.dao.DuplicateKeyException.class, e);
 	}
 	
 	/**
@@ -75,10 +79,13 @@ public class CheckpointMapperTest {
 	 * 测试数据: 使用不存在的试题ID创建测试点
 	 * 预期结果: 抛出DataIntegrityViolationException异常
 	 */
-	@Test(expected = org.springframework.dao.DataIntegrityViolationException.class)
+	@Test
 	public void testCreateCheckpointUsingNotExistingProblemId() {
 		 Checkpoint checkpoint = new Checkpoint(0, 100, false, 10, "input", "output");
-		 checkpointMapper.createCheckpoint(checkpoint);
+		 Executable e = () -> {
+			 checkpointMapper.createCheckpoint(checkpoint);
+		 };
+		 Assertions.assertThrows(org.springframework.dao.DataIntegrityViolationException.class, e);
 	}
 	
 	/**
@@ -89,11 +96,11 @@ public class CheckpointMapperTest {
 	@Test
 	public void testDeleteCheckpointUsingExistsingProblemId() {
 		List<Checkpoint> checkpoints = checkpointMapper.getCheckpointsUsingProblemId(1000);
-		Assert.assertEquals(10, checkpoints.size());
+		Assertions.assertEquals(10, checkpoints.size());
 		
 		checkpointMapper.deleteCheckpoint(1000);
 		checkpoints = checkpointMapper.getCheckpointsUsingProblemId(1000);
-		Assert.assertEquals(0, checkpoints.size());
+		Assertions.assertEquals(0, checkpoints.size());
 	}
 	
 	/**

@@ -3,11 +3,11 @@ package org.verwandlung.voj.web.util;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import org.verwandlung.voj.web.messenger.MessageSender;
 
@@ -17,7 +17,7 @@ import org.verwandlung.voj.web.messenger.MessageSender;
  * @author Haozhe Xie
  */
 /*
-@RunWith(SpringJUnit4ClassRunner.class)
+@ExtendWith(SpringExtension.class)
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 */
 public class MessageSenderTest {

@@ -2,12 +2,13 @@ package org.verwandlung.voj.web.mapper;
 
 import java.util.List;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.function.Executable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.Transactional;
 
 import org.verwandlung.voj.web.model.ProblemCategory;
@@ -18,7 +19,7 @@ import org.verwandlung.voj.web.model.ProblemCategoryRelationship;
  *
  * @author Haozhe Xie
  */
-@RunWith(SpringJUnit4ClassRunner.class)
+@ExtendWith(SpringExtension.class)
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class ProblemCategoryMapperTest {
@@ -30,12 +31,12 @@ public class ProblemCategoryMapperTest {
 	@Test
 	public void testGetProblemCategories() {
 		List<ProblemCategory> problemCategories = problemCategoryMapper.getProblemCategories();
-		Assert.assertNotNull(problemCategories);
-		Assert.assertEquals(2, problemCategories.size());
+		Assertions.assertNotNull(problemCategories);
+		Assertions.assertEquals(2, problemCategories.size());
 
 		ProblemCategory firstProblemCategory = problemCategories.get(0);
 		String problemCategoryName = firstProblemCategory.getProblemCategoryName();
-		Assert.assertEquals("Uncategorized", problemCategoryName);
+		Assertions.assertEquals("Uncategorized", problemCategoryName);
 	}
 
 	/**
@@ -46,10 +47,10 @@ public class ProblemCategoryMapperTest {
 	@Test
 	public void testGetProblemCategoryUsingIdExists() {
 		ProblemCategory problemCategory = problemCategoryMapper.getProblemCategoryUsingCategoryId(1);
-		Assert.assertNotNull(problemCategory);
+		Assertions.assertNotNull(problemCategory);
 
 		String problemCategoryName = problemCategory.getProblemCategoryName();
-		Assert.assertEquals("Uncategorized", problemCategoryName);
+		Assertions.assertEquals("Uncategorized", problemCategoryName);
 	}
 
 	/**
@@ -60,7 +61,7 @@ public class ProblemCategoryMapperTest {
 	@Test
 	public void testGetProblemCategoryUsingIdNotExists() {
 		ProblemCategory problemCategory = problemCategoryMapper.getProblemCategoryUsingCategoryId(0);
-		Assert.assertNull(problemCategory);
+		Assertions.assertNull(problemCategory);
 	}
 
 	/**
@@ -71,11 +72,11 @@ public class ProblemCategoryMapperTest {
 	@Test
 	public void testGetProblemCategoriesUsingProblemIdExists() {
 		List<ProblemCategory> problemCategories = problemCategoryMapper.getProblemCategoriesUsingProblemId(1000);
-		Assert.assertEquals(2, problemCategories.size());
+		Assertions.assertEquals(2, problemCategories.size());
 
 		ProblemCategory problemCategory = problemCategories.get(0);
 		String problemCategorySlug = problemCategory.getProblemCategorySlug();
-		Assert.assertEquals("uncategorized", problemCategorySlug);
+		Assertions.assertEquals("uncategorized", problemCategorySlug);
 	}
 
 	/**
@@ -86,7 +87,7 @@ public class ProblemCategoryMapperTest {
 	@Test
 	public void testGetProblemCategoriesUsingProblemIdNotExists() {
 		List<ProblemCategory> problemCategories = problemCategoryMapper.getProblemCategoriesUsingProblemId(0);
-		Assert.assertEquals(0, problemCategories.size());
+		Assertions.assertEquals(0, problemCategories.size());
 	}
 
 	/**
@@ -97,11 +98,11 @@ public class ProblemCategoryMapperTest {
 	@Test
 	public void testGetProblemCategoriesOfProblemsFrom1000WithLimit3() {
 		List<ProblemCategoryRelationship> problemCategoryRelationships = problemCategoryMapper.getProblemCategoriesOfProblems(1000, 1002);
-		Assert.assertEquals(4, problemCategoryRelationships.size());
+		Assertions.assertEquals(4, problemCategoryRelationships.size());
 
 		ProblemCategoryRelationship pcr = problemCategoryRelationships.get(0);
-		Assert.assertEquals(1000, pcr.getProblemId());
-		Assert.assertEquals(1, pcr.getProblemCategoryId());
+		Assertions.assertEquals(1000, pcr.getProblemId());
+		Assertions.assertEquals(1, pcr.getProblemCategoryId());
 	}
 
 	/**
@@ -112,11 +113,11 @@ public class ProblemCategoryMapperTest {
 	@Test
 	public void testGetProblemCategoriesOfProblemsFrom999WithLimit2() {
 		List<ProblemCategoryRelationship> problemCategoryRelationships = problemCategoryMapper.getProblemCategoriesOfProblems(999, 1000);
-		Assert.assertEquals(2, problemCategoryRelationships.size());
+		Assertions.assertEquals(2, problemCategoryRelationships.size());
 
 		ProblemCategoryRelationship pcr = problemCategoryRelationships.get(0);
-		Assert.assertEquals(1000, pcr.getProblemId());
-		Assert.assertEquals(1, pcr.getProblemCategoryId());
+		Assertions.assertEquals(1000, pcr.getProblemId());
+		Assertions.assertEquals(1, pcr.getProblemCategoryId());
 	}
 
 	/**
@@ -127,7 +128,7 @@ public class ProblemCategoryMapperTest {
 	@Test
 	public void testGetProblemCategoriesOfProblemsFrom999WithLimit1() {
 		List<ProblemCategoryRelationship> problemCategoryRelationships = problemCategoryMapper.getProblemCategoriesOfProblems(999, 999);
-		Assert.assertEquals(0, problemCategoryRelationships.size());
+		Assertions.assertEquals(0, problemCategoryRelationships.size());
 	}
 
 	/**
@@ -138,10 +139,10 @@ public class ProblemCategoryMapperTest {
 	@Test
 	public void testGetProblemCategoryUsingSlugExists() {
 		ProblemCategory problemCategory = problemCategoryMapper.getProblemCategoryUsingCategorySlug("uncategorized");
-		Assert.assertNotNull(problemCategory);
+		Assertions.assertNotNull(problemCategory);
 
 		String problemCategoryName = problemCategory.getProblemCategoryName();
-		Assert.assertEquals("Uncategorized", problemCategoryName);
+		Assertions.assertEquals("Uncategorized", problemCategoryName);
 	}
 
 	/**
@@ -152,7 +153,7 @@ public class ProblemCategoryMapperTest {
 	@Test
 	public void testGetProblemCategoryUsingSlugNotExists() {
 		ProblemCategory problemCategory = problemCategoryMapper.getProblemCategoryUsingCategorySlug("not-exists");
-		Assert.assertNull(problemCategory);
+		Assertions.assertNull(problemCategory);
 	}
 
 	/**
@@ -164,7 +165,7 @@ public class ProblemCategoryMapperTest {
 	public void testCreateProblemCategoryNormally() {
 		ProblemCategory problemCategory = new ProblemCategory("new-category", "New Category", 0);
 		int numberOfRowsAffected = problemCategoryMapper.createProblemCategory(problemCategory);
-		Assert.assertEquals(1, numberOfRowsAffected);
+		Assertions.assertEquals(1, numberOfRowsAffected);
 	}
 
 	/**
@@ -172,10 +173,13 @@ public class ProblemCategoryMapperTest {
 	 * 测试数据: 使用不合法的数据集(过长的类别名称)
 	 * 预期结果: 抛出DataIntegrityViolationException异常
 	 */
-	@Test(expected = org.springframework.dao.DataIntegrityViolationException.class)
+	@Test
 	public void testCreateProblemCategoryUsingTooLongCategoryName() {
 		ProblemCategory problemCategory = new ProblemCategory("new-category", "New Category Very Very Very Long Name", 0);
-		problemCategoryMapper.createProblemCategory(problemCategory);
+		Executable e = () -> {
+			problemCategoryMapper.createProblemCategory(problemCategory);
+		};
+		Assertions.assertThrows(org.springframework.dao.DataIntegrityViolationException.class, e);
 	}
 
 	/**
@@ -183,10 +187,13 @@ public class ProblemCategoryMapperTest {
 	 * 测试数据: 使用合法的数据集, 但数据表中存在相同的英文缩写
 	 * 预期结果: 抛出DuplicateKeyException异常
 	 */
-	@Test(expected = org.springframework.dao.DuplicateKeyException.class)
+	@Test
 	public void testCreateProblemCategoryUsingExistingSlug() {
 		ProblemCategory problemCategory = new ProblemCategory("uncategorized", "New Category", 0);
-		problemCategoryMapper.createProblemCategory(problemCategory);
+		Executable e = () -> {
+			problemCategoryMapper.createProblemCategory(problemCategory);
+		};
+		Assertions.assertThrows(org.springframework.dao.DuplicateKeyException.class, e);
 	}
 
 	/**
@@ -198,7 +205,7 @@ public class ProblemCategoryMapperTest {
 	public void testCreateProblemCategoryRelationshipNormally() {
 		ProblemCategory problemCategory = problemCategoryMapper.getProblemCategoryUsingCategoryId(2);
 		int numberOfRowsAffected = problemCategoryMapper.createProblemCategoryRelationship(1002, problemCategory);
-		Assert.assertEquals(1, numberOfRowsAffected);
+		Assertions.assertEquals(1, numberOfRowsAffected);
 	}
 
 	/**
@@ -206,10 +213,13 @@ public class ProblemCategoryMapperTest {
 	 * 测试数据: 使用存在的不存在试题ID和存在的试题分类对象
 	 * 预期结果: 抛出DataIntegrityViolationException异常
 	 */
-	@Test(expected = org.springframework.dao.DataIntegrityViolationException.class)
+	@Test
 	public void testCreateProblemCategoryRelationshipUsingNotExistingProblemId() {
 		ProblemCategory problemCategory = problemCategoryMapper.getProblemCategoryUsingCategoryId(1);
-		problemCategoryMapper.createProblemCategoryRelationship(0, problemCategory);
+		Executable e = () -> {
+			problemCategoryMapper.createProblemCategoryRelationship(0, problemCategory);
+		};
+		Assertions.assertThrows(org.springframework.dao.DataIntegrityViolationException.class, e);
 	}
 
 	/**
@@ -217,9 +227,12 @@ public class ProblemCategoryMapperTest {
 	 * 测试数据: 使用存在的存在的试题ID和不存在的试题分类对象
 	 * 预期结果: 抛出DataIntegrityViolationException异常
 	 */
-	@Test(expected = org.springframework.dao.DataIntegrityViolationException.class)
+	@Test
 	public void testCreateProblemCategoryRelationshipUsingNotExistingProblemCategory() {
-		problemCategoryMapper.createProblemCategoryRelationship(1000, null);
+		Executable e = () -> {
+			problemCategoryMapper.createProblemCategoryRelationship(1000, null);
+		};
+		Assertions.assertThrows(org.springframework.dao.DataIntegrityViolationException.class, e);
 	}
 
 	/**
@@ -227,10 +240,13 @@ public class ProblemCategoryMapperTest {
 	 * 测试数据: 使用存在的存在试题ID和存在的试题分类对象
 	 * 预期结果: 抛出DuplicateKeyException异常
 	 */
-	@Test(expected = org.springframework.dao.DuplicateKeyException.class)
+	@Test
 	public void testCreateProblemCategoryRelationshipUsingExistingProblemIdAndExistingProblemCategory() {
 		ProblemCategory problemCategory = problemCategoryMapper.getProblemCategoryUsingCategoryId(1);
-		problemCategoryMapper.createProblemCategoryRelationship(1000, problemCategory);
+		Executable e = () -> {
+			problemCategoryMapper.createProblemCategoryRelationship(1000, problemCategory);
+		};
+		Assertions.assertThrows(org.springframework.dao.DuplicateKeyException.class, e);
 	}
 
 	/**
@@ -241,15 +257,15 @@ public class ProblemCategoryMapperTest {
 	@Test
 	public void testUpdateProblemCategoryNormally() {
 		ProblemCategory problemCategory = problemCategoryMapper.getProblemCategoryUsingCategorySlug("uncategorized");
-		Assert.assertNotNull(problemCategory);
+		Assertions.assertNotNull(problemCategory);
 
 		problemCategory.setProblemCategoryName("New Category Name");
 		int numberOfRowsAffected = problemCategoryMapper.updateProblemCategory(problemCategory);
-		Assert.assertEquals(1, numberOfRowsAffected);
+		Assertions.assertEquals(1, numberOfRowsAffected);
 
 		problemCategory = problemCategoryMapper.getProblemCategoryUsingCategorySlug("uncategorized");
 		String newCategoryName = problemCategory.getProblemCategoryName();
-		Assert.assertEquals("New Category Name", newCategoryName);
+		Assertions.assertEquals("New Category Name", newCategoryName);
 	}
 
 	/**
@@ -257,13 +273,16 @@ public class ProblemCategoryMapperTest {
 	 * 测试数据: 使用不合法的数据集(过长的类别名称)
 	 * 预期结果: 抛出DataIntegrityViolationException异常
 	 */
-	@Test(expected = org.springframework.dao.DataIntegrityViolationException.class)
+	@Test
 	public void testUpdateProblemCategoryUsingTooLongCategoryName() {
 		ProblemCategory problemCategory = problemCategoryMapper.getProblemCategoryUsingCategorySlug("uncategorized");
-		Assert.assertNotNull(problemCategory);
+		Assertions.assertNotNull(problemCategory);
 
 		problemCategory.setProblemCategoryName("New Category Very Very Very Long Name");
-		problemCategoryMapper.updateProblemCategory(problemCategory);
+		Executable e = () -> {
+			problemCategoryMapper.updateProblemCategory(problemCategory);
+		};
+		Assertions.assertThrows(org.springframework.dao.DataIntegrityViolationException.class, e);
 	}
 
 	/**
@@ -274,13 +293,13 @@ public class ProblemCategoryMapperTest {
 	@Test
 	public void testDeleteProblemCategoryExists() {
 		ProblemCategory problemCategory = problemCategoryMapper.getProblemCategoryUsingCategoryId(1);
-		Assert.assertNotNull(problemCategory);
+		Assertions.assertNotNull(problemCategory);
 
 		int numberOfRowsAffected = problemCategoryMapper.deleteProblemCategory(1);
-		Assert.assertEquals(1, numberOfRowsAffected);
+		Assertions.assertEquals(1, numberOfRowsAffected);
 
 		problemCategory = problemCategoryMapper.getProblemCategoryUsingCategoryId(1);
-		Assert.assertNull(problemCategory);
+		Assertions.assertNull(problemCategory);
 	}
 
 	/**
@@ -291,10 +310,10 @@ public class ProblemCategoryMapperTest {
 	@Test
 	public void testDeleteProblemCategoryNotExists() {
 		ProblemCategory problemCategory = problemCategoryMapper.getProblemCategoryUsingCategoryId(0);
-		Assert.assertNull(problemCategory);
+		Assertions.assertNull(problemCategory);
 
 		int numberOfRowsAffected = problemCategoryMapper.deleteProblemCategory(0);
-		Assert.assertEquals(0, numberOfRowsAffected);
+		Assertions.assertEquals(0, numberOfRowsAffected);
 	}
 
 	/**

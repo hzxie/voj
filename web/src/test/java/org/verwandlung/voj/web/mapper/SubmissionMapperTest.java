@@ -4,12 +4,13 @@ import java.sql.Date;
 import java.util.List;
 import java.util.Map;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.function.Executable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.Transactional;
 
 import org.verwandlung.voj.web.model.Language;
@@ -21,7 +22,7 @@ import org.verwandlung.voj.web.model.User;
  * SubmissionMapper测试类.
  * @author Haozhe Xie
  */
-@RunWith(SpringJUnit4ClassRunner.class)
+@ExtendWith(SpringExtension.class)
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class SubmissionMapperTest {
@@ -36,7 +37,7 @@ public class SubmissionMapperTest {
 		String endTime = "2014-10-18 00:00:00";
 		
 		long numberOfSubmissions = submissionMapper.getNumberOfSubmissions(startTime, endTime);
-		Assert.assertEquals(2, numberOfSubmissions);
+		Assertions.assertEquals(2, numberOfSubmissions);
 	}
 
 	/**
@@ -50,14 +51,14 @@ public class SubmissionMapperTest {
 		String endTime = "2015-10-01 00:00:00";
 
 		List<Map<String, Object>> numberOfSubmissions = submissionMapper.getNumberOfSubmissionsGroupByMonth(startTime, endTime, 0, false);
-		Assert.assertEquals(3, numberOfSubmissions.size());
+		Assertions.assertEquals(3, numberOfSubmissions.size());
 		
 		Map<String, Object> firstEntry = numberOfSubmissions.get(0);
 		int month = (Integer)firstEntry.get("month");
 		long submissions = (Long)firstEntry.get("submissions");
 		
-		Assert.assertEquals(201410, month);
-		Assert.assertEquals(2, submissions);
+		Assertions.assertEquals(201410, month);
+		Assertions.assertEquals(2, submissions);
 	}
 	
 	/**
@@ -71,14 +72,14 @@ public class SubmissionMapperTest {
 		String endTime = "2015-10-01 00:00:00";
 
 		List<Map<String, Object>> numberOfSubmissions = submissionMapper.getNumberOfSubmissionsGroupByMonth(startTime, endTime, 0, true);
-		Assert.assertEquals(2, numberOfSubmissions.size());
+		Assertions.assertEquals(2, numberOfSubmissions.size());
 		
 		Map<String, Object> firstEntry = numberOfSubmissions.get(0);
 		int month = (Integer)firstEntry.get("month");
 		long submissions = (Long)firstEntry.get("submissions");
 		
-		Assert.assertEquals(201410, month);
-		Assert.assertEquals(1, submissions);
+		Assertions.assertEquals(201410, month);
+		Assertions.assertEquals(1, submissions);
 	}
 	
 	/**
@@ -92,14 +93,14 @@ public class SubmissionMapperTest {
 		String endTime = "2015-10-01 00:00:00";
 
 		List<Map<String, Object>> numberOfSubmissions = submissionMapper.getNumberOfSubmissionsGroupByMonth(startTime, endTime, 1000, false);
-		Assert.assertEquals(2, numberOfSubmissions.size());
+		Assertions.assertEquals(2, numberOfSubmissions.size());
 		
 		Map<String, Object> firstEntry = numberOfSubmissions.get(0);
 		int month = (Integer)firstEntry.get("month");
 		long submissions = (Long)firstEntry.get("submissions");
 		
-		Assert.assertEquals(201410, month);
-		Assert.assertEquals(2, submissions);
+		Assertions.assertEquals(201410, month);
+		Assertions.assertEquals(2, submissions);
 	}
 	
 	/**
@@ -113,14 +114,14 @@ public class SubmissionMapperTest {
 		String endTime = "2015-10-01 00:00:00";
 
 		List<Map<String, Object>> numberOfSubmissions = submissionMapper.getNumberOfSubmissionsGroupByMonth(startTime, endTime, 1000, true);
-		Assert.assertEquals(2, numberOfSubmissions.size());
+		Assertions.assertEquals(2, numberOfSubmissions.size());
 		
 		Map<String, Object> firstEntry = numberOfSubmissions.get(0);
 		int month = (Integer)firstEntry.get("month");
 		long submissions = (Long)firstEntry.get("submissions");
 		
-		Assert.assertEquals(201410, month);
-		Assert.assertEquals(1, submissions);
+		Assertions.assertEquals(201410, month);
+		Assertions.assertEquals(1, submissions);
 	}
 	
 	/**
@@ -134,14 +135,14 @@ public class SubmissionMapperTest {
 		String endTime = "2014-11-01 00:00:00";
 
 		List<Map<String, Object>> numberOfSubmissions = submissionMapper.getNumberOfSubmissionsGroupByDay(startTime, endTime, 0, false);
-		Assert.assertEquals(2, numberOfSubmissions.size());
+		Assertions.assertEquals(2, numberOfSubmissions.size());
 		
 		Map<String, Object> firstEntry = numberOfSubmissions.get(0);
 		Date day = (Date)firstEntry.get("date");
 		long submissions = (Long)firstEntry.get("submissions");
 		
-		Assert.assertEquals("2014-10-01", day.toString());
-		Assert.assertEquals(1, submissions);
+		Assertions.assertEquals("2014-10-01", day.toString());
+		Assertions.assertEquals(1, submissions);
 	}
 	
 	/**
@@ -155,14 +156,14 @@ public class SubmissionMapperTest {
 		String endTime = "2014-11-01 00:00:00";
 
 		List<Map<String, Object>> numberOfSubmissions = submissionMapper.getNumberOfSubmissionsGroupByDay(startTime, endTime, 0, true);
-		Assert.assertEquals(1, numberOfSubmissions.size());
+		Assertions.assertEquals(1, numberOfSubmissions.size());
 		
 		Map<String, Object> firstEntry = numberOfSubmissions.get(0);
 		Date day = (Date)firstEntry.get("date");
 		long submissions = (Long)firstEntry.get("submissions");
 		
-		Assert.assertEquals("2014-10-01", day.toString());
-		Assert.assertEquals(1, submissions);
+		Assertions.assertEquals("2014-10-01", day.toString());
+		Assertions.assertEquals(1, submissions);
 	}
 	
 	/**
@@ -176,14 +177,14 @@ public class SubmissionMapperTest {
 		String endTime = "2014-11-01 00:00:00";
 
 		List<Map<String, Object>> numberOfSubmissions = submissionMapper.getNumberOfSubmissionsGroupByDay(startTime, endTime, 1000, false);
-		Assert.assertEquals(2, numberOfSubmissions.size());
+		Assertions.assertEquals(2, numberOfSubmissions.size());
 		
 		Map<String, Object> firstEntry = numberOfSubmissions.get(0);
 		Date day = (Date)firstEntry.get("date");
 		long submissions = (Long)firstEntry.get("submissions");
 		
-		Assert.assertEquals("2014-10-01", day.toString());
-		Assert.assertEquals(1, submissions);
+		Assertions.assertEquals("2014-10-01", day.toString());
+		Assertions.assertEquals(1, submissions);
 	}
 	
 	/**
@@ -197,14 +198,14 @@ public class SubmissionMapperTest {
 		String endTime = "2014-11-01 00:00:00";
 
 		List<Map<String, Object>> numberOfSubmissions = submissionMapper.getNumberOfSubmissionsGroupByDay(startTime, endTime, 1000, true);
-		Assert.assertEquals(1, numberOfSubmissions.size());
+		Assertions.assertEquals(1, numberOfSubmissions.size());
 		
 		Map<String, Object> firstEntry = numberOfSubmissions.get(0);
 		Date day = (Date)firstEntry.get("date");
 		long submissions = (Long)firstEntry.get("submissions");
 		
-		Assert.assertEquals("2014-10-01", day.toString());
-		Assert.assertEquals(1, submissions);
+		Assertions.assertEquals("2014-10-01", day.toString());
+		Assertions.assertEquals(1, submissions);
 	}
 	
 	/**
@@ -216,7 +217,7 @@ public class SubmissionMapperTest {
 	public void testGetNumberOfSubmissionsUsingLanguageUsingCpp() {
 		int languageId = 2;
 		long numberOfSubmissions = submissionMapper.getNumberOfSubmissionsUsingLanguage(languageId);
-		Assert.assertEquals(4, numberOfSubmissions);
+		Assertions.assertEquals(4, numberOfSubmissions);
 	}
 	
 	/**
@@ -228,7 +229,7 @@ public class SubmissionMapperTest {
 	public void testGetNumberOfSubmissionsUsingLanguageUsingNotExistingLanguage() {
 		int languageId = 0;
 		long numberOfSubmissions = submissionMapper.getNumberOfSubmissionsUsingLanguage(languageId);
-		Assert.assertEquals(0, numberOfSubmissions);
+		Assertions.assertEquals(0, numberOfSubmissions);
 	}
 	
 	/**
@@ -239,7 +240,7 @@ public class SubmissionMapperTest {
 	@Test
 	public void testGetLatestSubmissionId() {
 		long latestSubmissionId = submissionMapper.getLatestSubmissionId();
-		Assert.assertEquals(1004, latestSubmissionId);
+		Assertions.assertEquals(1004, latestSubmissionId);
 	}
 	
 	/**
@@ -250,11 +251,11 @@ public class SubmissionMapperTest {
 	@Test
 	public void testGetSubmissionExists() {
 		Submission submission = submissionMapper.getSubmission(1000);
-		Assert.assertNotNull(submission);
+		Assertions.assertNotNull(submission);
 		
 		Problem problem = submission.getProblem();
 		long problemId = problem.getProblemId();
-		Assert.assertEquals(1000, problemId);
+		Assertions.assertEquals(1000, problemId);
 	}
 	
 	/**
@@ -265,7 +266,7 @@ public class SubmissionMapperTest {
 	@Test
 	public void testGetSubmissionNotExists() {
 		Submission submission = submissionMapper.getSubmission(0);
-		Assert.assertNull(submission);
+		Assertions.assertNull(submission);
 	}
 	
 	/**
@@ -276,11 +277,11 @@ public class SubmissionMapperTest {
 	@Test
 	public void testGetSubmissionsFrom1010WithLimit10() {
 		List<Submission> submissions = submissionMapper.getSubmissionsUsingOffset(0, "", 1010, 10);
-		Assert.assertEquals(5, submissions.size());
+		Assertions.assertEquals(5, submissions.size());
 		
 		Submission firstSubmission = submissions.get(0);
 		long submissionId = firstSubmission.getSubmissionId();
-		Assert.assertEquals(1004, submissionId);
+		Assertions.assertEquals(1004, submissionId);
 	}
 	
 	/**
@@ -291,11 +292,11 @@ public class SubmissionMapperTest {
 	@Test
 	public void testGetSubmissionsFrom1003WithLimit2() {
 		List<Submission> submissions = submissionMapper.getSubmissionsUsingOffset(0, "", 1003, 2);
-		Assert.assertEquals(2, submissions.size());
+		Assertions.assertEquals(2, submissions.size());
 		
 		Submission firstSubmission = submissions.get(0);
 		long submissionId = firstSubmission.getSubmissionId();
-		Assert.assertEquals(1003, submissionId);
+		Assertions.assertEquals(1003, submissionId);
 	}
 	
 	/**
@@ -306,7 +307,7 @@ public class SubmissionMapperTest {
 	@Test
 	public void testGetSubmissionsFrom100WithLimit10() {
 		List<Submission> submissions = submissionMapper.getSubmissionsUsingOffset(0, "", 100, 10);
-		Assert.assertEquals(0, submissions.size());
+		Assertions.assertEquals(0, submissions.size());
 	}
 	
 	/**
@@ -317,14 +318,14 @@ public class SubmissionMapperTest {
 	@Test
 	public void testGetSubmissionUsingExistingProblemIdAndExistingUserId() {
 		List<Submission> submissions = submissionMapper.getSubmissionUsingProblemIdAndUserId(1000, 1000, 1);
-		Assert.assertEquals(1, submissions.size());
+		Assertions.assertEquals(1, submissions.size());
 		
 		Submission firstSubmission = submissions.get(0);
 		long submissionId = firstSubmission.getSubmissionId();
-		Assert.assertEquals(1001, submissionId);
+		Assertions.assertEquals(1001, submissionId);
 		
 		String judgeResultSlug = firstSubmission.getJudgeResult().getJudgeResultSlug();
-		Assert.assertEquals("WA", judgeResultSlug);
+		Assertions.assertEquals("WA", judgeResultSlug);
 	}
 	
 	/**
@@ -335,7 +336,7 @@ public class SubmissionMapperTest {
 	@Test
 	public void testGetSubmissionUsingNotExistingProblemIdAndExistingUserId() {
 		List<Submission> submissions = submissionMapper.getSubmissionUsingProblemIdAndUserId(0, 1000, 10);
-		Assert.assertEquals(0, submissions.size());
+		Assertions.assertEquals(0, submissions.size());
 	}
 	
 	/**
@@ -346,7 +347,7 @@ public class SubmissionMapperTest {
 	@Test
 	public void testGetSubmissionUsingExistingProblemIdAndNotExistingUserId() {
 		List<Submission> submissions = submissionMapper.getSubmissionUsingProblemIdAndUserId(1000, 0, 10);
-		Assert.assertEquals(0, submissions.size());
+		Assertions.assertEquals(0, submissions.size());
 	}
 	
 	/**
@@ -357,15 +358,15 @@ public class SubmissionMapperTest {
 	@Test
 	public void testGetLatestSubmissionOfProblemsWithUser1000() {
 		List<Submission> submissions = submissionMapper.getLatestSubmissionOfProblems(1000, 1000, 1010);
-		Assert.assertEquals(2, submissions.size());
+		Assertions.assertEquals(2, submissions.size());
 		
 		Submission firstSubmission = submissions.get(0);
 		String firstJudgeResultSlug = firstSubmission.getJudgeResult().getJudgeResultSlug();
-		Assert.assertEquals("WA", firstJudgeResultSlug);
+		Assertions.assertEquals("WA", firstJudgeResultSlug);
 		
 		Submission secondSubmission = submissions.get(1);
 		String secondJudgeResultSlug = secondSubmission.getJudgeResult().getJudgeResultSlug();
-		Assert.assertEquals("AC", secondJudgeResultSlug);
+		Assertions.assertEquals("AC", secondJudgeResultSlug);
 	}
 	
 	/**
@@ -376,11 +377,11 @@ public class SubmissionMapperTest {
 	@Test
 	public void testGetLatestSubmissionOfProblemsWithUser1001() {
 		List<Submission> submissions = submissionMapper.getLatestSubmissionOfProblems(1001, 1000, 1010);
-		Assert.assertEquals(1, submissions.size());
+		Assertions.assertEquals(1, submissions.size());
 		
 		Submission firstSubmission = submissions.get(0);
 		String firstJudgeResultSlug = firstSubmission.getJudgeResult().getJudgeResultSlug();
-		Assert.assertEquals("CE", firstJudgeResultSlug);
+		Assertions.assertEquals("CE", firstJudgeResultSlug);
 	}
 	
 	/**
@@ -391,15 +392,15 @@ public class SubmissionMapperTest {
 	@Test
 	public void testGetAcceptedSubmissionOfProblemsWithUser1000() {
 		List<Submission> submissions = submissionMapper.getAcceptedSubmissionOfProblems(1000, 1000, 1010);
-		Assert.assertEquals(2, submissions.size());
+		Assertions.assertEquals(2, submissions.size());
 		
 		Submission firstSubmission = submissions.get(0);
 		String firstJudgeResultSlug = firstSubmission.getJudgeResult().getJudgeResultSlug();
-		Assert.assertEquals("AC", firstJudgeResultSlug);
+		Assertions.assertEquals("AC", firstJudgeResultSlug);
 		
 		Submission secondSubmission = submissions.get(1);
 		String secondJudgeResultSlug = secondSubmission.getJudgeResult().getJudgeResultSlug();
-		Assert.assertEquals("AC", secondJudgeResultSlug);
+		Assertions.assertEquals("AC", secondJudgeResultSlug);
 	}
 	
 	/**
@@ -410,7 +411,7 @@ public class SubmissionMapperTest {
 	@Test
 	public void testGetAcceptedSubmissionOfProblemsWithUser1001() {
 		List<Submission> submissions = submissionMapper.getAcceptedSubmissionOfProblems(1001, 1000, 1010);
-		Assert.assertEquals(0, submissions.size());
+		Assertions.assertEquals(0, submissions.size());
 	}
 	
 	/**
@@ -421,7 +422,7 @@ public class SubmissionMapperTest {
 	@Test
 	public void testGetAcceptedSubmissionUsingUserIdWithUser1000() {
 		long acceptedSubmission = submissionMapper.getAcceptedSubmissionUsingUserId(1000);
-		Assert.assertEquals(2, acceptedSubmission);
+		Assertions.assertEquals(2, acceptedSubmission);
 	}
 	
 	/**
@@ -432,7 +433,7 @@ public class SubmissionMapperTest {
 	@Test
 	public void testGetTotalSubmissionUsingUserIdWithUser1000() {
 		long acceptedSubmission = submissionMapper.getTotalSubmissionUsingUserId(1000);
-		Assert.assertEquals(3, acceptedSubmission);
+		Assertions.assertEquals(3, acceptedSubmission);
 	}
 	
 	/**
@@ -448,7 +449,7 @@ public class SubmissionMapperTest {
 		
 		Submission submission = new Submission(problem, user, language, "C Code");
 		int numberOfRowsAffected = submissionMapper.createSubmission(submission);
-		Assert.assertEquals(1, numberOfRowsAffected);
+		Assertions.assertEquals(1, numberOfRowsAffected);
 	}
 	
 	/**
@@ -456,14 +457,17 @@ public class SubmissionMapperTest {
 	 * 测试数据: 使用不存在的外键值(编程语言对象)
 	 * 预期结果: 抛出DataIntegrityViolationException异常
 	 */
-	@Test(expected = org.springframework.dao.DataIntegrityViolationException.class)
+	@Test
 	public void testCreateSubmissionUsingNotExistingLanguage() {
 		Problem problem = problemMapper.getProblem(1000);
 		User user = userMapper.getUserUsingUid(1000);
 		Language language = new Language(0, "not-exists", "Not Exists", "Not Exists", "Not Exists");
 		
 		Submission submission = new Submission(problem, user, language, "Code");
-		submissionMapper.createSubmission(submission);
+		Executable e = () -> {
+			submissionMapper.createSubmission(submission);
+		};
+		Assertions.assertThrows(org.springframework.dao.DataIntegrityViolationException.class, e);
 	}
 	
 	/**
@@ -474,11 +478,11 @@ public class SubmissionMapperTest {
 	@Test
 	public void testUpdateSubmissionNormally() {
 		Submission submission = submissionMapper.getSubmission(1002);
-		Assert.assertNotNull(submission);
+		Assertions.assertNotNull(submission);
 		
 		submission.setJudgeScore(20);
 		int numberOfRowsAffected = submissionMapper.updateSubmission(submission);
-		Assert.assertEquals(1, numberOfRowsAffected);
+		Assertions.assertEquals(1, numberOfRowsAffected);
 		
 		/**
 		 * The following Assert CANNOT passed in CI due to 
@@ -487,7 +491,7 @@ public class SubmissionMapperTest {
 		/*
 		 * Submission updatedSubmission = submissionMapper.getSubmission(1002);
 		 * int judgeScore = updatedSubmission.getJudgeScore();
-		 * Assert.assertEquals(20, judgeScore);
+		 * Assertions.assertEquals(20, judgeScore);
 		 */
 	}
 	
@@ -499,11 +503,11 @@ public class SubmissionMapperTest {
 	@Test
 	public void testUpdateSubmissionNotExists() {
 		Submission submission = submissionMapper.getSubmission(1000);
-		Assert.assertNotNull(submission);
+		Assertions.assertNotNull(submission);
 		
 		submission.setSubmissionId(0);
 		int numberOfRowsAffected = submissionMapper.updateSubmission(submission);
-		Assert.assertEquals(0, numberOfRowsAffected);
+		Assertions.assertEquals(0, numberOfRowsAffected);
 	}
 	
 	/**
@@ -514,13 +518,13 @@ public class SubmissionMapperTest {
 	@Test
 	public void testDeleteSubmissionExists() {
 		Submission submission = submissionMapper.getSubmission(1004);
-		Assert.assertNotNull(submission);
+		Assertions.assertNotNull(submission);
 		
 		int numberOfRowsAffected = submissionMapper.deleteSubmission(1004);
-		Assert.assertEquals(1, numberOfRowsAffected);
+		Assertions.assertEquals(1, numberOfRowsAffected);
 		
 		submission = submissionMapper.getSubmission(1004);
-		Assert.assertNull(submission);
+		Assertions.assertNull(submission);
 	}
 	
 	/**
@@ -531,10 +535,10 @@ public class SubmissionMapperTest {
 	@Test
 	public void testDeleteSubmissionNotExists() {
 		Submission submission = submissionMapper.getSubmission(0);
-		Assert.assertNull(submission);
+		Assertions.assertNull(submission);
 		
 		int numberOfRowsAffected = submissionMapper.deleteSubmission(0);
-		Assert.assertEquals(0, numberOfRowsAffected);
+		Assertions.assertEquals(0, numberOfRowsAffected);
 	}
 	
 	/**

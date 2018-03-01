@@ -2,12 +2,13 @@ package org.verwandlung.voj.web.mapper;
 
 import java.util.List;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.function.Executable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.Transactional;
 
 import org.verwandlung.voj.web.model.Language;
@@ -18,7 +19,7 @@ import org.verwandlung.voj.web.model.UserGroup;
  * UserMapper测试类.
  * @author Haozhe Xie
  */
-@RunWith(SpringJUnit4ClassRunner.class)
+@ExtendWith(SpringExtension.class)
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class UserMapperTest {
@@ -32,7 +33,7 @@ public class UserMapperTest {
 		UserGroup userGroup = new UserGroup(2, "users", "Users");
 		long totalUsers = userMapper.getNumberOfUsersUsingUserGroup(userGroup);
 		
-		Assert.assertEquals(1, totalUsers);
+		Assertions.assertEquals(1, totalUsers);
 	}
 	
 	/**
@@ -44,7 +45,7 @@ public class UserMapperTest {
 	public void testGetNumberOfUsersUsingLanguage() {
 		int languageId = 2;
 		long totalUsers = userMapper.getNumberOfUsersUsingLanguage(languageId);
-		Assert.assertEquals(2, totalUsers);
+		Assertions.assertEquals(2, totalUsers);
 	}
 	
 	/**
@@ -55,10 +56,10 @@ public class UserMapperTest {
 	@Test
 	public void testGetUserUsingUidExists() {
 		User user = userMapper.getUserUsingUid(1000);
-		Assert.assertNotNull(user);
+		Assertions.assertNotNull(user);
 		
 		String username = user.getUsername();
-		Assert.assertEquals("zjhzxhz", username);
+		Assertions.assertEquals("zjhzxhz", username);
 	}
 	
 	/**
@@ -69,7 +70,7 @@ public class UserMapperTest {
 	@Test
 	public void testGetUserUsingUidNotExists() {
 		User user = userMapper.getUserUsingUid(0);
-		Assert.assertNull(user);
+		Assertions.assertNull(user);
 	}
 	
 	/**
@@ -80,10 +81,10 @@ public class UserMapperTest {
 	@Test
 	public void testGetUserUsingUsernameExists() {
 		User user = userMapper.getUserUsingUsername("Zjhzxhz");
-		Assert.assertNotNull(user);
+		Assertions.assertNotNull(user);
 		
 		long uid = user.getUid();
-		Assert.assertEquals(1000, uid);
+		Assertions.assertEquals(1000, uid);
 	}
 	
 	/**
@@ -94,7 +95,7 @@ public class UserMapperTest {
 	@Test
 	public void testGetUserUsingUsernameNotExists() {
 		User user = userMapper.getUserUsingUsername("Not-Exists");
-		Assert.assertNull(user);
+		Assertions.assertNull(user);
 	}
 	
 	/**
@@ -105,10 +106,10 @@ public class UserMapperTest {
 	@Test
 	public void testGetUserUsingEmailExists() {
 		User user = userMapper.getUserUsingEmail("cshzxie@gmail.com");
-		Assert.assertNotNull(user);
+		Assertions.assertNotNull(user);
 		
 		long uid = user.getUid();
-		Assert.assertEquals(1000, uid);
+		Assertions.assertEquals(1000, uid);
 	}
 	
 	/**
@@ -119,7 +120,7 @@ public class UserMapperTest {
 	@Test
 	public void testGetUserUsingEmailNotExists() {
 		User user = userMapper.getUserUsingEmail("not-exists@verwandlung.org");
-		Assert.assertNull(user);
+		Assertions.assertNull(user);
 	}
 	
 	/**
@@ -131,11 +132,11 @@ public class UserMapperTest {
 	public void testGetUserUsingUserGroup() {
 		UserGroup userGroup = new UserGroup(2, "users", "Users");
 		List<User> users = userMapper.getUserUsingUserGroup(userGroup, 0, 1);
-		Assert.assertEquals(1, users.size());
+		Assertions.assertEquals(1, users.size());
 		
 		User firstUser = users.get(0);
 		String username = firstUser.getUsername();
-		Assert.assertEquals("another-user", username);
+		Assertions.assertEquals("another-user", username);
 	}
 	
 	/**
@@ -150,7 +151,7 @@ public class UserMapperTest {
 		User user = new User("new-user-0xff", "Password","new-user-0xff@verwandlung.org", userGroup, language);
 		
 		int numberOfRowsAffected = userMapper.createUser(user);
-		Assert.assertEquals(1, numberOfRowsAffected);
+		Assertions.assertEquals(1, numberOfRowsAffected);
 	}
 	
 	/**
@@ -158,13 +159,15 @@ public class UserMapperTest {
 	 * 测试数据: 使用合法的数据集, 但数据表中已存在相同的用户名
 	 * 预期结果: 抛出org.springframework.dao.DuplicateKeyException异常
 	 */
-	@Test(expected = org.springframework.dao.DuplicateKeyException.class)
+	@Test
 	public void testCreateUserUsingExistingUsername() {
 		UserGroup userGroup = new UserGroup(1, "users", "Users");
 		Language language = new Language(2, "text/x-c++", "C++", "g++ foo.cpp -o foo", "./foo");
 		User user = new User("zjhzxhz", "Password","noreply@verwandlung.org", userGroup, language);
-		
-		userMapper.createUser(user);
+		Executable e = () -> {
+			userMapper.createUser(user);
+		};
+		Assertions.assertThrows(org.springframework.dao.DuplicateKeyException.class, e);
 	}
 	
 	/**
@@ -172,13 +175,15 @@ public class UserMapperTest {
 	 * 测试数据: 使用合法的数据集, 但数据表中已存在相同的电子邮件地址
 	 * 预期结果: 抛出org.springframework.dao.DuplicateKeyException异常
 	 */
-	@Test(expected = org.springframework.dao.DuplicateKeyException.class)
+	@Test
 	public void testCreateUserUsingExistingEmail() {
 		UserGroup userGroup = new UserGroup(1, "users", "Users");
 		Language language = new Language(2, "text/x-c++", "C++", "g++ foo.cpp -o foo", "./foo");
 		User user = new User("new-user-0xfe", "Password","cshzxie@gmail.com", userGroup, language);
-		
-		userMapper.createUser(user);
+		Executable e = () -> {
+			userMapper.createUser(user);
+		};
+		Assertions.assertThrows(org.springframework.dao.DuplicateKeyException.class, e);
 	}
 	
 	/**
@@ -186,13 +191,15 @@ public class UserMapperTest {
 	 * 测试数据: 使用不合法的数据集(过长的用户名)
 	 * 预期结果: 抛出org.springframework.dao.DataIntegrityViolationException异常
 	 */
-	@Test(expected = org.springframework.dao.DataIntegrityViolationException.class)
+	@Test
 	public void testCreateUserUsingTooLongUsername() {
 		UserGroup userGroup = new UserGroup(1, "users", "Users");
 		Language language = new Language(2, "text/x-c++", "C++", "g++ foo.cpp -o foo", "./foo");
 		User user = new User("new-user-0xffffffff", "Password","noreply@verwandlung.org", userGroup, language);
-		
-		userMapper.createUser(user);
+		Executable e = () -> {
+			userMapper.createUser(user);
+		};
+		Assertions.assertThrows(org.springframework.dao.DataIntegrityViolationException.class, e);
 	}
 	
 	/**
@@ -200,13 +207,15 @@ public class UserMapperTest {
 	 * 测试数据: 使用不合法的数据集(不存在的编程语言)
 	 * 预期结果: 抛出org.springframework.dao.DataIntegrityViolationException异常
 	 */
-	@Test(expected = org.springframework.dao.DataIntegrityViolationException.class)
+	@Test
 	public void testCreateUserUsingNotExistsLanguage() {
 		UserGroup userGroup = new UserGroup(1, "users", "Users");
 		Language language = new Language(0, "not-exists", "Not Exists", "Not Exists", "Not Exists");
 		User user = new User("new-user-0xfe", "Password","noreply@verwandlung.org", userGroup, language);
-		
-		userMapper.createUser(user);
+		Executable e = () -> {
+			userMapper.createUser(user);
+		};
+		Assertions.assertThrows(org.springframework.dao.DataIntegrityViolationException.class, e);
 	}
 	
 	/**
@@ -217,11 +226,11 @@ public class UserMapperTest {
 	@Test
 	public void testUpdateUserNormally() {
 		User user = userMapper.getUserUsingUid(1000);
-		Assert.assertNotNull(user);
+		Assertions.assertNotNull(user);
 		
 		user.setEmail("hzxie@hit.edu.cn");
 		int numberOfRowsAffected = userMapper.updateUser(user);
-		Assert.assertEquals(1, numberOfRowsAffected);
+		Assertions.assertEquals(1, numberOfRowsAffected);
 	}
 	
 	/**
@@ -229,13 +238,16 @@ public class UserMapperTest {
 	 * 测试数据: 使用合法的数据集, 并且数据表中不存在相同用户名和电子邮件地址
 	 * 预期结果: 数据更新操作成功完成
 	 */
-	@Test(expected = org.springframework.dao.DuplicateKeyException.class)
+	@Test
 	public void testUpdateUserUsingExistingEmail() {
 		User user = userMapper.getUserUsingUid(1000);
-		Assert.assertNotNull(user);
+		Assertions.assertNotNull(user);
 		
 		user.setEmail("support@verwandlung.org");
-		userMapper.updateUser(user);
+		Executable e = () -> {
+			userMapper.updateUser(user);
+		};
+		Assertions.assertThrows(org.springframework.dao.DuplicateKeyException.class, e);
 	}
 	
 	/**
@@ -246,13 +258,13 @@ public class UserMapperTest {
 	@Test
 	public void testDeleteUserExists() {
 		User user = userMapper.getUserUsingUid(1002);
-		Assert.assertNotNull(user);
+		Assertions.assertNotNull(user);
 		
 		int numberOfRowsAffected = userMapper.deleteUser(1002);
-		Assert.assertEquals(1, numberOfRowsAffected);
+		Assertions.assertEquals(1, numberOfRowsAffected);
 		
 		user = userMapper.getUserUsingUid(1002);
-		Assert.assertNull(user);
+		Assertions.assertNull(user);
 	}
 	
 	/**
@@ -263,10 +275,10 @@ public class UserMapperTest {
 	@Test
 	public void testDeleteUserNotExists() {
 		User user = userMapper.getUserUsingUid(0);
-		Assert.assertNull(user);
+		Assertions.assertNull(user);
 		
 		int numberOfRowsAffected = userMapper.deleteUser(0);
-		Assert.assertEquals(0, numberOfRowsAffected);
+		Assertions.assertEquals(0, numberOfRowsAffected);
 	}
 	
 	/**

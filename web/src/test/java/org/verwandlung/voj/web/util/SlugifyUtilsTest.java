@@ -1,7 +1,7 @@
 package org.verwandlung.voj.web.util;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 /**
  * SlugifyUtils测试类.
@@ -16,7 +16,7 @@ public class SlugifyUtilsTest {
 	 */
 	@Test
 	public void testGetSlugWithAsciiChars() {
-		Assert.assertEquals("a-b--c", SlugifyUtils.getSlug("a b -C"));
+		Assertions.assertEquals("a-b--c", SlugifyUtils.getSlug("a b -C"));
 	}
 	
 	/**
@@ -26,6 +26,6 @@ public class SlugifyUtilsTest {
 	 */
 	@Test
 	public void testGetSlugWithChineseCharacters() {
-		Assert.assertEquals("a%e4%b8%ad%e6%96%87-b", SlugifyUtils.getSlug("a中文 b"));
+		Assertions.assertEquals("a%e4%b8%ad%e6%96%87-b", SlugifyUtils.getSlug("a中文 b"));
 	}
 }

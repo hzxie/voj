@@ -1,18 +1,18 @@
 package org.verwandlung.voj.web.mapper;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.function.Executable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.Transactional;
 import org.verwandlung.voj.web.model.DiscussionThread;
 import org.verwandlung.voj.web.model.DiscussionTopic;
 import org.verwandlung.voj.web.model.Problem;
 import org.verwandlung.voj.web.model.User;
 
-import java.util.Date;
 import java.util.List;
 
 /**
@@ -20,7 +20,7 @@ import java.util.List;
  *
  * @author Haozhe Xie
  */
-@RunWith(SpringJUnit4ClassRunner.class)
+@ExtendWith(SpringExtension.class)
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class DiscussionThreadMapperTest {
@@ -32,19 +32,19 @@ public class DiscussionThreadMapperTest {
 	@Test
 	public void testGetDiscussionThreadsOfProblem1000WithOffsetFrom0WithLimit2() {
 		List<DiscussionThread> discussionThreads = discussionThreadMapper.getDiscussionThreads(1000, 0, 0, 2);
-		Assert.assertEquals(2, discussionThreads.size());
+		Assertions.assertEquals(2, discussionThreads.size());
 
 		DiscussionThread firstThread = discussionThreads.get(0);
-		Assert.assertNotNull(firstThread);
+		Assertions.assertNotNull(firstThread);
 
 		long problemId = firstThread.getProblem().getProblemId();
-		Assert.assertEquals(1000, problemId);
+		Assertions.assertEquals(1000, problemId);
 
 		String firstThreadTitle = firstThread.getDiscussionThreadTitle();
-		Assert.assertEquals("Thread #2", firstThreadTitle);
+		Assertions.assertEquals("Thread #2", firstThreadTitle);
 
 		long threadReplies = firstThread.getNumberOfReplies();
-		Assert.assertEquals(2, threadReplies);
+		Assertions.assertEquals(2, threadReplies);
 	}
 
 	/**
@@ -56,10 +56,10 @@ public class DiscussionThreadMapperTest {
 	public void testGetDiscussionThreadsOfNoRelatedProblemWithOffsetFrom0WithLimit1() {
 		List<DiscussionThread> discussionThreads = discussionThreadMapper.getDiscussionThreads(0, 1, 0, 1);
 		DiscussionThread thread = discussionThreads.get(0);
-		Assert.assertNotNull(thread);
+		Assertions.assertNotNull(thread);
 
 		String threadTitle = thread.getDiscussionThreadTitle();
-		Assert.assertEquals("Thread #1", threadTitle);
+		Assertions.assertEquals("Thread #1", threadTitle);
 	}
 
 	/**
@@ -71,7 +71,7 @@ public class DiscussionThreadMapperTest {
 	public void testGetSolutionThreadOfProblemUsingExistingProblemId() {
 		DiscussionThread thread = discussionThreadMapper.getSolutionThreadOfProblem(1000);
 		String threadTitle = thread.getDiscussionThreadTitle();
-		Assert.assertEquals("Thread #1", threadTitle);
+		Assertions.assertEquals("Thread #1", threadTitle);
 	}
 
 	/**
@@ -82,13 +82,13 @@ public class DiscussionThreadMapperTest {
 	@Test
 	public void testGetDiscussionThreadUsingThreadIdExists() {
 		DiscussionThread thread = discussionThreadMapper.getDiscussionThreadUsingThreadId(2);
-		Assert.assertNotNull(thread);
+		Assertions.assertNotNull(thread);
 
 		String threadTitle = thread.getDiscussionThreadTitle();
-		Assert.assertEquals("Thread #2", threadTitle);
+		Assertions.assertEquals("Thread #2", threadTitle);
 
 		long numberOfReplies = thread.getNumberOfReplies();
-		Assert.assertEquals(2, numberOfReplies);
+		Assertions.assertEquals(2, numberOfReplies);
 	}
 
 	/**
@@ -99,7 +99,7 @@ public class DiscussionThreadMapperTest {
 	@Test
 	public void testGetDiscussionThreadUsingThreadIdNotExists() {
 		DiscussionThread thread = discussionThreadMapper.getDiscussionThreadUsingThreadId(0);
-		Assert.assertNull(thread);
+		Assertions.assertNull(thread);
 	}
 
 	/**
@@ -113,12 +113,12 @@ public class DiscussionThreadMapperTest {
 		DiscussionTopic topic = discussionTopicMapper.getDiscussionTopicUsingId(1);
 		Problem problem = problemMapper.getProblem(1000);
 
-		Assert.assertNotNull(creator);
-		Assert.assertNotNull(problem);
+		Assertions.assertNotNull(creator);
+		Assertions.assertNotNull(problem);
 
 		DiscussionThread thread = new DiscussionThread(creator, topic, problem, "title");
 		int numberOfRowsAffected = discussionThreadMapper.createDiscussionThread(thread);
-		Assert.assertEquals(1, numberOfRowsAffected);
+		Assertions.assertEquals(1, numberOfRowsAffected);
 	}
 
 	/**
@@ -130,11 +130,11 @@ public class DiscussionThreadMapperTest {
 	public void testCreateDiscussionThreadWithNullProblem() {
 		User creator = userMapper.getUserUsingUid(1000);
 		DiscussionTopic topic = discussionTopicMapper.getDiscussionTopicUsingId(2);
-		Assert.assertNotNull(creator);
+		Assertions.assertNotNull(creator);
 
 		DiscussionThread thread = new DiscussionThread(creator, topic, null, "title");
 		int numberOfRowsAffected = discussionThreadMapper.createDiscussionThread(thread);
-		Assert.assertEquals(1, numberOfRowsAffected);
+		Assertions.assertEquals(1, numberOfRowsAffected);
 	}
 
 	/**
@@ -142,18 +142,21 @@ public class DiscussionThreadMapperTest {
 	 * 测试数据: 使用过长的标题
 	 * 预期结果: 抛出DataIntegrityViolationException异常
 	 */
-	@Test(expected = org.springframework.dao.DataIntegrityViolationException.class)
+	@Test
 	public void testCreateDiscussionThreadWithTooLongTitle() {
 		User creator = userMapper.getUserUsingUid(1000);
 		DiscussionTopic topic = discussionTopicMapper.getDiscussionTopicUsingId(1);
-		Assert.assertNotNull(creator);
+		Assertions.assertNotNull(creator);
 
 		StringBuilder sb = new StringBuilder();
 		for ( int i = 0; i < 31; ++ i ) {
 			sb.append("Very");
 		}
 		DiscussionThread thread = new DiscussionThread(creator, topic, null, sb.toString() + "LongTitle");
-		discussionThreadMapper.createDiscussionThread(thread);
+		Executable e = () -> {
+			discussionThreadMapper.createDiscussionThread(thread);
+		};
+		Assertions.assertThrows(org.springframework.dao.DataIntegrityViolationException.class, e);
 	}
 
 	/**
@@ -161,13 +164,16 @@ public class DiscussionThreadMapperTest {
 	 * 测试数据: 使用不存在的用户
 	 * 预期结果: 抛出DataIntegrityViolationException异常
 	 */
-	@Test(expected = org.springframework.dao.DataIntegrityViolationException.class)
+	@Test
 	public void testCreateDiscussionThreadWithNotExistingUser() {
 		User creator = new User(); creator.setUid(0);
 		DiscussionTopic topic = discussionTopicMapper.getDiscussionTopicUsingId(1);
 
 		DiscussionThread thread = new DiscussionThread(creator, topic, null, "title");
-		discussionThreadMapper.createDiscussionThread(thread);
+		Executable e = () -> {
+			discussionThreadMapper.createDiscussionThread(thread);
+		};
+		Assertions.assertThrows(org.springframework.dao.DataIntegrityViolationException.class, e);
 	}
 
 	/**
@@ -175,14 +181,16 @@ public class DiscussionThreadMapperTest {
 	 * 测试数据: 使用不存在的讨论话题
  	 * 预期结果: 抛出DataIntegrityViolationException异常
 	 */
-	@Test(expected = org.springframework.dao.DataIntegrityViolationException.class)
+	@Test
 	public void testCreateDiscussionThreadWithNotExistingThreadTopic() {
 		User creator = userMapper.getUserUsingUid(1000);
-		Date createTime = new Date();
 		DiscussionTopic topic = new DiscussionTopic(); topic.setDiscussionTopicId(0);
 
 		DiscussionThread thread = new DiscussionThread(creator, topic, null, "title");
-		discussionThreadMapper.createDiscussionThread(thread);
+		Executable e = () -> {
+			discussionThreadMapper.createDiscussionThread(thread);
+		};
+		Assertions.assertThrows(org.springframework.dao.DataIntegrityViolationException.class, e);
 	}
 
 	/**
@@ -193,16 +201,16 @@ public class DiscussionThreadMapperTest {
 	@Test
 	public void testUpdateDiscussionThreadNormally() {
 		DiscussionThread thread = discussionThreadMapper.getDiscussionThreadUsingThreadId(1);
-		Assert.assertNotNull(thread);
-		Assert.assertEquals("Thread #1", thread.getDiscussionThreadTitle());
+		Assertions.assertNotNull(thread);
+		Assertions.assertEquals("Thread #1", thread.getDiscussionThreadTitle());
 
 		thread.setDiscussionThreadTitle("New Thread Title");
 		int numberOfRowsAffected = discussionThreadMapper.updateDiscussionThread(thread);
-		Assert.assertEquals(1, numberOfRowsAffected);
+		Assertions.assertEquals(1, numberOfRowsAffected);
 
 		thread = discussionThreadMapper.getDiscussionThreadUsingThreadId(1);
-		Assert.assertNotNull(thread);
-		Assert.assertEquals("New Thread Title", thread.getDiscussionThreadTitle());
+		Assertions.assertNotNull(thread);
+		Assertions.assertEquals("New Thread Title", thread.getDiscussionThreadTitle());
 	}
 
 	/**
@@ -210,18 +218,21 @@ public class DiscussionThreadMapperTest {
 	 * 测试数据: 使用过长的标题
 	 * 预期结果: 抛出DataIntegrityViolationException异常
 	 */
-	@Test(expected = org.springframework.dao.DataIntegrityViolationException.class)
+	@Test
 	public void testUpdateDiscussionThreadWithTooLongTitle() {
 		DiscussionThread thread = discussionThreadMapper.getDiscussionThreadUsingThreadId(1);
-		Assert.assertNotNull(thread);
-		Assert.assertEquals("Thread #1", thread.getDiscussionThreadTitle());
+		Assertions.assertNotNull(thread);
+		Assertions.assertEquals("Thread #1", thread.getDiscussionThreadTitle());
 
 		StringBuilder sb = new StringBuilder();
 		for ( int i = 0; i < 31; ++ i ) {
 			sb.append("Very");
 		}
 		thread.setDiscussionThreadTitle(sb.toString() + "Long Title");
-		discussionThreadMapper.updateDiscussionThread(thread);
+		Executable e = () -> {
+			discussionThreadMapper.updateDiscussionThread(thread);
+		};
+		Assertions.assertThrows(org.springframework.dao.DataIntegrityViolationException.class, e);
 	}
 
 	/**
@@ -232,13 +243,13 @@ public class DiscussionThreadMapperTest {
 	@Test
 	public void testDeleteDiscussionThreadUsingExistingThreadId() {
 		DiscussionThread thread = discussionThreadMapper.getDiscussionThreadUsingThreadId(1);
-		Assert.assertNotNull(thread);
+		Assertions.assertNotNull(thread);
 
 		int numberOfRowsAffected = discussionThreadMapper.deleteDiscussionThreadUsingThreadId(1);
-		Assert.assertEquals(1, numberOfRowsAffected);
+		Assertions.assertEquals(1, numberOfRowsAffected);
 
 		thread = discussionThreadMapper.getDiscussionThreadUsingThreadId(1);
-		Assert.assertNull(thread);
+		Assertions.assertNull(thread);
 	}
 
 	/**
@@ -249,10 +260,10 @@ public class DiscussionThreadMapperTest {
 	@Test
 	public void testDeleteDiscussionThreadUsingNotExistingThreadId() {
 		DiscussionThread thread = discussionThreadMapper.getDiscussionThreadUsingThreadId(0);
-		Assert.assertNull(thread);
+		Assertions.assertNull(thread);
 
 		int numberOfRowsAffected = discussionThreadMapper.deleteDiscussionThreadUsingThreadId(0);
-		Assert.assertEquals(0, numberOfRowsAffected);
+		Assertions.assertEquals(0, numberOfRowsAffected);
 	}
 
 	/**

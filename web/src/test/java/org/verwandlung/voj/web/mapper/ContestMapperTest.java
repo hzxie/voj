@@ -1,11 +1,12 @@
 package org.verwandlung.voj.web.mapper;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.function.Executable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.Transactional;
 import org.verwandlung.voj.web.model.Contest;
 
@@ -18,7 +19,7 @@ import java.util.List;
  *
  * @author Haozhe Xie
  */
-@RunWith(SpringJUnit4ClassRunner.class)
+@ExtendWith(SpringExtension.class)
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class ContestMapperTest {
@@ -30,7 +31,7 @@ public class ContestMapperTest {
 	@Test
 	public void testGetNumberOfContests() {
 		long numberOfContests = contestMapper.getNumberOfContests(null);
-		Assert.assertEquals(3, numberOfContests);
+		Assertions.assertEquals(3, numberOfContests);
 	}
 
 	/**
@@ -41,7 +42,7 @@ public class ContestMapperTest {
 	@Test
 	public void testGetNumberOfContestsUsingKeywordSharp1() {
 		long numberOfContests = contestMapper.getNumberOfContests("#1");
-		Assert.assertEquals(1, numberOfContests);
+		Assertions.assertEquals(1, numberOfContests);
 	}
 
 	/**
@@ -52,7 +53,7 @@ public class ContestMapperTest {
 	@Test
 	public void testGetNumberOfContestsUsingKeywordTestSharp() {
 		long numberOfContests = contestMapper.getNumberOfContests("test #");
-		Assert.assertEquals(3, numberOfContests);
+		Assertions.assertEquals(3, numberOfContests);
 	}
 
 	/**
@@ -63,11 +64,11 @@ public class ContestMapperTest {
 	@Test
 	public void testGetContestsFrom0WithLimit2() {
 		List<Contest> contests = contestMapper.getContests("test #", 0, 2);
-		Assert.assertEquals(2, contests.size());
+		Assertions.assertEquals(2, contests.size());
 
 		Contest firstContest = contests.get(0);
 		String contestName = firstContest.getContestName();
-		Assert.assertEquals("Contest #3", contestName);
+		Assertions.assertEquals("Contest #3", contestName);
 	}
 
 	/**
@@ -78,11 +79,11 @@ public class ContestMapperTest {
 	@Test
 	public void testGetContestsFrom1WithLimit1() {
 		List<Contest> contests = contestMapper.getContests(null, 1, 1);
-		Assert.assertEquals(1, contests.size());
+		Assertions.assertEquals(1, contests.size());
 
 		Contest contest = contests.get(0);
 		String contestName = contest.getContestName();
-		Assert.assertEquals("Contest #2", contestName);
+		Assertions.assertEquals("Contest #2", contestName);
 	}
 
 	/**
@@ -93,7 +94,7 @@ public class ContestMapperTest {
 	@Test
 	public void testGetContestsFrom2WithLimit1() {
 		List<Contest> contests = contestMapper.getContests(null, 3, 1);
-		Assert.assertEquals(0, contests.size());
+		Assertions.assertEquals(0, contests.size());
 	}
 
 	/**
@@ -104,11 +105,11 @@ public class ContestMapperTest {
 	@Test
 	public void testGetContestsFrom0WithLimit2WithKeywordSharp2() {
 		List<Contest> contests = contestMapper.getContests("#2", 0, 2);
-		Assert.assertEquals(1, contests.size());
+		Assertions.assertEquals(1, contests.size());
 
 		Contest firstContest = contests.get(0);
 		String contestName = firstContest.getContestName();
-		Assert.assertEquals("Contest #2", contestName);
+		Assertions.assertEquals("Contest #2", contestName);
 	}
 
 	/**
@@ -119,10 +120,10 @@ public class ContestMapperTest {
 	@Test
 	public void testGetContestsUsingIdExists() {
 		Contest contest = contestMapper.getContest(1);
-		Assert.assertNotNull(contest);
+		Assertions.assertNotNull(contest);
 
 		String contestName = contest.getContestName();
-		Assert.assertEquals("Contest #1", contestName);
+		Assertions.assertEquals("Contest #1", contestName);
 	}
 
 	/**
@@ -133,7 +134,7 @@ public class ContestMapperTest {
 	@Test
 	public void testGetContestsUsingIdNotExists() {
 		Contest contest = contestMapper.getContest(0);
-		Assert.assertNull(contest);
+		Assertions.assertNull(contest);
 	}
 
 	/**
@@ -152,7 +153,7 @@ public class ContestMapperTest {
 
 		Contest contest = new Contest("Contest", "Contest Notes", startTime, endTime, "OI", "[]");
 		int numberOfRowsAffected = contestMapper.createContest(contest);
-		Assert.assertEquals(1, numberOfRowsAffected);
+		Assertions.assertEquals(1, numberOfRowsAffected);
 	}
 
 	/**
@@ -160,7 +161,7 @@ public class ContestMapperTest {
 	 * 测试数据: 包含过长的竞赛赛制的字符串
 	 * 预期结果: 抛出DataIntegrityViolationException异常
 	 */
-	@Test(expected = org.springframework.dao.DataIntegrityViolationException.class)
+	@Test
 	public void testCreateContestUsingTooLongContestMode() {
 		Calendar calendar = Calendar.getInstance();
 		calendar.set(2016, Calendar.MAY, 7, 18, 0, 0);
@@ -170,7 +171,11 @@ public class ContestMapperTest {
 		Date endTime = calendar.getTime();
 
 		Contest contest = new Contest("Contest", "Contest Notes", startTime, endTime, "OOOOI", "[1000]");
-		contestMapper.createContest(contest);
+		Executable e = () -> {
+			contestMapper.createContest(contest);
+		};
+		Assertions.assertThrows(org.springframework.dao.DataIntegrityViolationException.class, e);
+		
 	}
 
 	/**
@@ -181,15 +186,15 @@ public class ContestMapperTest {
 	@Test
 	public void testUpdateContestsNormally() {
 		Contest contest = contestMapper.getContest(2);
-		Assert.assertNotNull(contest);
+		Assertions.assertNotNull(contest);
 
 		contest.setContestName("New Contest Name");
 		int numberOfRowsAffected = contestMapper.updateContest(contest);
-		Assert.assertEquals(1, numberOfRowsAffected);
+		Assertions.assertEquals(1, numberOfRowsAffected);
 
 		contest = contestMapper.getContest(2);
 		String contestName = contest.getContestName();
-		Assert.assertEquals("New Contest Name", contestName);
+		Assertions.assertEquals("New Contest Name", contestName);
 	}
 
 	/**
@@ -200,13 +205,13 @@ public class ContestMapperTest {
 	@Test
 	public void testDeleteContestsExists() {
 		Contest contest = contestMapper.getContest(3);
-		Assert.assertNotNull(contest);
+		Assertions.assertNotNull(contest);
 
 		int numberOfRowsAffected = contestMapper.deleteContest(3);
-		Assert.assertEquals(1, numberOfRowsAffected);
+		Assertions.assertEquals(1, numberOfRowsAffected);
 
 		contest = contestMapper.getContest(3);
-		Assert.assertNull(contest);
+		Assertions.assertNull(contest);
 	}
 
 	/**
@@ -217,10 +222,10 @@ public class ContestMapperTest {
 	@Test
 	public void testDeleteContestsNotExists() {
 		Contest contest = contestMapper.getContest(0);
-		Assert.assertNull(contest);
+		Assertions.assertNull(contest);
 
 		int numberOfRowsAffected = contestMapper.deleteContest(0);
-		Assert.assertEquals(0, numberOfRowsAffected);
+		Assertions.assertEquals(0, numberOfRowsAffected);
 	}
 
 	/**
