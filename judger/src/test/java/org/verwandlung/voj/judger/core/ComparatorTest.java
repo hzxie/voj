@@ -2,14 +2,14 @@ package org.verwandlung.voj.judger.core;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.File;
@@ -21,14 +21,14 @@ import java.io.IOException;
  *
  * @author Haozhe Xie
  */
-@RunWith(SpringJUnit4ClassRunner.class)
+@ExtendWith(SpringExtension.class)
 @Transactional
 @ContextConfiguration({ "classpath:test-spring-context.xml" })
 public class ComparatorTest {
 	/**
 	 * 构建测试用例.
 	 */
-	@BeforeClass
+	@BeforeAll
 	public static void setUp() throws IOException {
 		FileOutputStream stdOutputStream = null;
 		FileOutputStream outputStream = null;
@@ -62,21 +62,12 @@ public class ComparatorTest {
 		String mismatchString2 = "24334";
 		IOUtils.write(mismatchString1, stdOutputStream);
 		IOUtils.write(mismatchString2, outputStream);
-		// TestCase: OutOfMemoryException
-		/*
-		File outOfMemoryOutFile = new File(
-				"/tmp/voj-matcher-tests/match-out-of-memory.txt");
-		String outOfMemoryString = "A line of output causes out of memory exception. ";
-		for ( int i = 0; i < 10000000; ++ i ) {
-			FileUtils.writeStringToFile(outOfMemoryOutFile, outOfMemoryString, true); 
-		}
-		*/
 	}
 
 	/**
 	 * 清除测试用例.
 	 */
-	@AfterClass
+	@AfterAll
 	public static void tearDown() {
 		File checkpointsDirFile = new File("/tmp/voj-matcher-tests");
 		if (checkpointsDirFile.exists()) {
@@ -93,7 +84,7 @@ public class ComparatorTest {
 	public void testMatchExactly() throws IOException {
 		String standardOutputFilePath = "/tmp/voj-matcher-tests/match-exactly-std.txt";
 		String outputFilePath = "/tmp/voj-matcher-tests/match-exactly.txt";
-		Assert.assertTrue(comparator.isOutputTheSame(standardOutputFilePath, outputFilePath));
+		Assertions.assertTrue(comparator.isOutputTheSame(standardOutputFilePath, outputFilePath));
 	}
 
 	/**
@@ -105,9 +96,9 @@ public class ComparatorTest {
 	public void testMatchWithSpaces() throws IOException {
 		String standardOutputFilePath = "/tmp/voj-matcher-tests/match-with-spaces-std.txt";
 		String outputFilePath = "/tmp/voj-matcher-tests/match-with-spaces.txt";
-		Assert.assertTrue(comparator.isOutputTheSame(standardOutputFilePath,
+		Assertions.assertTrue(comparator.isOutputTheSame(standardOutputFilePath,
 				outputFilePath));
-		Assert.assertTrue(comparator.isOutputTheSame(outputFilePath, standardOutputFilePath));
+		Assertions.assertTrue(comparator.isOutputTheSame(outputFilePath, standardOutputFilePath));
 	}
 
 	/**
@@ -119,19 +110,17 @@ public class ComparatorTest {
 	public void testMismatch() throws IOException {
 		String standardOutputFilePath = "/tmp/voj-matcher-tests/mimatch-std.txt";
 		String outputFilePath = "/tmp/voj-matcher-tests/mimatch.txt";
-		Assert.assertFalse(comparator.isOutputTheSame(standardOutputFilePath, outputFilePath));
+		Assertions.assertFalse(comparator.isOutputTheSame(standardOutputFilePath, outputFilePath));
 	}
 
 	/**
-	 * Disabled this test case for faster build.
-	 * 
 	 * 测试用例: 测试isOutputTheSame(String, String)方法 
 	 * 测试数据: 过长的输出文件流 
 	 * 测试结果: 返回false, 表示输出结果不正确
 	 */
 	public void testMatchWithOutOfMemory() throws IOException {
 		String outputFilePath = "/tmp/voj-matcher-tests/match-out-of-memory.txt";
-		Assert.assertFalse(comparator.isOutputTheSame(outputFilePath, outputFilePath));
+		Assertions.assertFalse(comparator.isOutputTheSame(outputFilePath, outputFilePath));
 	}
 
 	/**

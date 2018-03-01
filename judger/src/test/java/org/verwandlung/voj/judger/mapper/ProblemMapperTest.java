@@ -1,11 +1,11 @@
 package org.verwandlung.voj.judger.mapper;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.Transactional;
 
 import org.verwandlung.voj.judger.model.Problem;
@@ -14,7 +14,7 @@ import org.verwandlung.voj.judger.model.Problem;
  * ProblemMapper测试类.
  * @author Haozhe Xie
  */
-@RunWith(SpringJUnit4ClassRunner.class)
+@ExtendWith(SpringExtension.class)
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class ProblemMapperTest {
@@ -26,10 +26,10 @@ public class ProblemMapperTest {
 	@Test
 	public void testGetProblemExists() {
 		Problem problem = problemMapper.getProblem(1000);
-		Assert.assertNotNull(problem);
+		Assertions.assertNotNull(problem);
 		
 		String problemName = problem.getProblemName();
-		Assert.assertEquals("A+B Problem", problemName);
+		Assertions.assertEquals("A+B Problem", problemName);
 	}
 	
 	/**
@@ -40,7 +40,7 @@ public class ProblemMapperTest {
 	@Test
 	public void testGetProblemNotExists() {
 		Problem problem = problemMapper.getProblem(0);
-		Assert.assertNull(problem);
+		Assertions.assertNull(problem);
 	}
 	
 	/**

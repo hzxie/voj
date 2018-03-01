@@ -1,11 +1,11 @@
 package org.verwandlung.voj.judger.mapper;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.Transactional;
 
 import org.verwandlung.voj.judger.model.JudgeResult;
@@ -14,7 +14,7 @@ import org.verwandlung.voj.judger.model.JudgeResult;
  * JudgeResultMapper测试类.
  * @author Haozhe Xie
  */
-@RunWith(SpringJUnit4ClassRunner.class)
+@ExtendWith(SpringExtension.class)
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class JudgeResultMapperTest {
@@ -26,10 +26,10 @@ public class JudgeResultMapperTest {
 	@Test
 	public void testGetJudgeResultUsingSlugExists() {
 		JudgeResult judgeResult = judgeResultMapper.getJudgeResultUsingSlug("AC");
-		Assert.assertNotNull(judgeResult);
+		Assertions.assertNotNull(judgeResult);
 		
 		int judgeResultId = judgeResult.getJudgeResultId();
-		Assert.assertEquals(2, judgeResultId);
+		Assertions.assertEquals(2, judgeResultId);
 	}
 	
 	/**
@@ -40,7 +40,7 @@ public class JudgeResultMapperTest {
 	@Test
 	public void testGetJudgeResultUsingSlugNotExists() {
 		JudgeResult judgeResult = judgeResultMapper.getJudgeResultUsingSlug("Not-Exists");
-		Assert.assertNull(judgeResult);
+		Assertions.assertNull(judgeResult);
 	}
 	
 	/**

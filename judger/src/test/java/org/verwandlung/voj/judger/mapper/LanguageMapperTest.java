@@ -2,12 +2,12 @@ package org.verwandlung.voj.judger.mapper;
 
 import java.util.List;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.Transactional;
 
 import org.verwandlung.voj.judger.model.Language;
@@ -17,7 +17,7 @@ import org.verwandlung.voj.judger.model.Language;
  * 
  * @author Haozhe Xie
  */
-@RunWith(SpringJUnit4ClassRunner.class)
+@ExtendWith(SpringExtension.class)
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class LanguageMapperTest {
@@ -29,10 +29,10 @@ public class LanguageMapperTest {
 	@Test
 	public void testGetLanguageUsingIdExists() {
 		Language language = languageMapper.getLanguageUsingId(1);
-		Assert.assertNotNull(language);
+		Assertions.assertNotNull(language);
 		
 		String languageName = language.getLanguageName();
-		Assert.assertEquals("C", languageName);
+		Assertions.assertEquals("C", languageName);
 	}
 	
 	/**
@@ -43,7 +43,7 @@ public class LanguageMapperTest {
 	@Test
 	public void testGetLanguageUsingIdNotExists() {
 		Language language = languageMapper.getLanguageUsingId(0);
-		Assert.assertNull(language);
+		Assertions.assertNull(language);
 	}
 	
 	/**
@@ -54,10 +54,10 @@ public class LanguageMapperTest {
 	@Test
 	public void testGetLanguageUsingSlugExists() {
 		Language language = languageMapper.getLanguageUsingSlug("text/x-csrc");
-		Assert.assertNotNull(language);
+		Assertions.assertNotNull(language);
 		
 		String languageName = language.getLanguageName();
-		Assert.assertEquals("C", languageName);
+		Assertions.assertEquals("C", languageName);
 	}
 	
 	/**
@@ -68,7 +68,7 @@ public class LanguageMapperTest {
 	@Test
 	public void testGetLanguageUsingSlugNotExists() {
 		Language language = languageMapper.getLanguageUsingSlug("Not-Exists");
-		Assert.assertNull(language);
+		Assertions.assertNull(language);
 	}
 
 	/**
@@ -79,14 +79,14 @@ public class LanguageMapperTest {
 	@Test
 	public void testGetAllLanguages() {
 		List<Language> languages = languageMapper.getAllLanguages();
-		Assert.assertNotNull(languages);
-		Assert.assertEquals(6, languages.size());
+		Assertions.assertNotNull(languages);
+		Assertions.assertEquals(6, languages.size());
 		
 		Language firstLanguage = languages.get(0);
-		Assert.assertNotNull(firstLanguage);
+		Assertions.assertNotNull(firstLanguage);
 		
 		String languageName = firstLanguage.getLanguageName();
-		Assert.assertEquals("C", languageName);
+		Assertions.assertEquals("C", languageName);
 	}
 	/**
 	 * 待测试的LanguageMapper对象.

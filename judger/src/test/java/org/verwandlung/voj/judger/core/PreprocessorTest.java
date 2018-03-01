@@ -3,12 +3,12 @@ package org.verwandlung.voj.judger.core;
 import java.io.FileInputStream;
 
 import org.apache.commons.io.IOUtils;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.Transactional;
 
 import org.verwandlung.voj.judger.mapper.SubmissionMapper;
@@ -19,7 +19,7 @@ import org.verwandlung.voj.judger.model.Submission;
  * 
  * @author Haozhe Xie
  */
-@RunWith(SpringJUnit4ClassRunner.class)
+@ExtendWith(SpringExtension.class)
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class PreprocessorTest {
@@ -39,7 +39,7 @@ public class PreprocessorTest {
 		FileInputStream inputStream = new FileInputStream("/tmp/voj-1000/random-name.cpp");
 		String code = IOUtils.toString(inputStream);
 		inputStream.close();
-		Assert.assertEquals(submission.getCode(), code);
+		Assertions.assertEquals(submission.getCode(), code);
 	}
 	
 	/**
@@ -58,7 +58,7 @@ public class PreprocessorTest {
 		FileInputStream inputStream = new FileInputStream("/tmp/voj-1001/RandomName.java");
 		String code = IOUtils.toString(inputStream).replace("RandomName", "Main");
 		inputStream.close();
-		Assert.assertEquals(submission.getCode(), code);
+		Assertions.assertEquals(submission.getCode(), code);
 	}
 	
 	/**

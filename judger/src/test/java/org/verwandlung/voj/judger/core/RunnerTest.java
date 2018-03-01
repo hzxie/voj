@@ -2,13 +2,13 @@ package org.verwandlung.voj.judger.core;
 
 import java.util.Map;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.Transactional;
 
 import org.verwandlung.voj.judger.mapper.SubmissionMapper;
@@ -19,7 +19,7 @@ import org.verwandlung.voj.judger.model.Submission;
  * 
  * @author Haozhe Xie
  */
-@RunWith(SpringJUnit4ClassRunner.class)
+@ExtendWith(SpringExtension.class)
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class RunnerTest {
@@ -43,7 +43,7 @@ public class RunnerTest {
 		
 		Map<String, Object> result =
 				runner.getRuntimeResult(submission, workDirectory, baseFileName, inputFilePath, outputFilePath);
-		Assert.assertEquals("AC", result.get("runtimeResult"));
+		Assertions.assertEquals("AC", result.get("runtimeResult"));
 	}
 	
 	/**
@@ -66,7 +66,7 @@ public class RunnerTest {
 		
 		Map<String, Object> result = 
 				runner.getRuntimeResult(submission, workDirectory, baseFileName, inputFilePath, outputFilePath);
-		Assert.assertEquals("AC", result.get("runtimeResult"));
+		Assertions.assertEquals("AC", result.get("runtimeResult"));
 	}
 	
 	/**
