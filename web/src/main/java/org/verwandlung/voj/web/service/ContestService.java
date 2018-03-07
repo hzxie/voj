@@ -114,8 +114,8 @@ public class ContestService {
 			if ( submissionsGroupByProblems.containsKey(problemId) ) {
 				ContestSubmission prevSubmission = submissionsGroupByProblems.get(problemId);
 
-				if ( prevSubmission.getSubmission().getJudgeResult().equals("AC") &&
-						!cs.getSubmission().getJudgeResult().equals("AC") ) {
+				if ( prevSubmission.getSubmission().getJudgeResult().getJudgeResultSlug().equals("AC") &&
+						!cs.getSubmission().getJudgeResult().getJudgeResultSlug().equals("AC") ) {
 					continue;
 				}
 			}
