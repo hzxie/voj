@@ -67,14 +67,14 @@
                                     <td class="rank">${contestant.rank}</td>
                                     <td class="contestant"><a href="<c:url value="/accounts/user/${contestant.contestant.uid}" />" target="_blank">${contestant.contestant.username}</a></td>
                                     <td class="score">${contestant.score}</td>
-                                    <td class="time"><fmt:formatNumber pattern="00" value="${contestant.time / 3600}" />:<fmt:formatNumber pattern="00" value="${contestant.time / 60}" />:<fmt:formatNumber pattern="00" value="${contestant.time % 60}" /></td>
+                                    <td class="time"><fmt:formatNumber pattern="00" value="${contestant.time / 3600}" />:<fmt:formatNumber pattern="00" value="${contestant.time / 60 % 60}" />:<fmt:formatNumber pattern="00" value="${contestant.time % 60}" /></td>
                                 <c:forEach var="problem" items="${problems}">
                                     <td class="submission problem-${problem.problemId}">
                                     <c:set var="submission" value="${submissions[contestant.contestant.uid][problem.problemId]}" />
                                     <c:choose>
                                     <c:when test="${submission == null}">-</c:when>
                                     <c:otherwise>
-                                        <a href="<c:url value="/submission/${submission.submissionId}" />" target="_blank"><fmt:formatNumber pattern="00" value="${submission.usedTime / 3600}" />:<fmt:formatNumber pattern="00" value="${submission.usedTime / 60}" />:<fmt:formatNumber pattern="00" value="${submission.usedTime % 60}" /></a>
+                                        <a href="<c:url value="/submission/${submission.submissionId}" />" target="_blank"><fmt:formatNumber pattern="00" value="${submission.usedTime / 3600}" />:<fmt:formatNumber pattern="00" value="${submission.usedTime / 60 % 60}" />:<fmt:formatNumber pattern="00" value="${submission.usedTime % 60}" /></a>
                                     </c:otherwise>
                                     </c:choose>
                                     </td>

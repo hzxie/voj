@@ -217,7 +217,7 @@ public class Submission implements Serializable {
 	 * 获取评测运行总时间.
 	 * @return 评测运行总时间
 	 */
-	public int getUsedTime() {
+	public long getUsedTime() {
 		return usedTime;
 	}
 	
@@ -225,7 +225,7 @@ public class Submission implements Serializable {
 	 * 设置评测运行总时间.
 	 * @param usedTime - 评测运行总时间
 	 */
-	public void setUsedTime(int usedTime) {
+	public void setUsedTime(long usedTime) {
 		this.usedTime = usedTime;
 	}
 	
@@ -354,7 +354,7 @@ public class Submission implements Serializable {
 	/**
 	 * 评测运行总时间.
 	 */
-	private int usedTime;
+	private long usedTime;
 	
 	/**
 	 * 评测运行占用最大内存.
