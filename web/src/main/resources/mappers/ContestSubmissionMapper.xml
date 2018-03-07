@@ -36,18 +36,18 @@
 		AND submission_judge_result = 'AC'
 	</select>
 	<select id="getSubmissionOfContestOfContest"
-			parameterType="map"
-			resultMap="ContestSubmissionResultMap"
-			useCache="true">
+		parameterType="map"
+		resultMap="ContestSubmissionResultMap"
+		useCache="true">
 		SELECT * 
 		FROM voj_contest_submissions
 		NATURAL JOIN voj_submissions
 		WHERE contest_id = #{contestId}
 	</select>
 	<select id="getSubmissionOfContestOfContestProblem"
-			parameterType="map"
-			resultMap="ContestSubmissionResultMap"
-			useCache="true">
+		parameterType="map"
+		resultMap="ContestSubmissionResultMap"
+		useCache="true">
 		SELECT *
 		FROM voj_contest_submissions
 		NATURAL JOIN voj_submissions
