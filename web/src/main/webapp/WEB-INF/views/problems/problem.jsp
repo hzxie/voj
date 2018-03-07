@@ -112,6 +112,24 @@
                 </div> <!-- .problem -->
             </div> <!-- #main-content -->
             <div id="sidebar" class="span3">
+            <c:choose>
+                <c:when test="${isContest}">
+                <div id="actions" class="section">
+                    <h5><spring:message code="voj.problems.problem.actions" text="Actions" /></h5>
+                    <ul>
+                    <c:choose>
+                        <c:when test="${currentTime.after(contest.endTime)}">
+                        <li><a href="<c:url value="/p/${problem.problemId}" />"><spring:message code="voj.problems.problem.view-in-problem-mode" text="View in Problem Mode" /></a></li>
+                        </c:when>
+                        <c:otherwise>
+                        <li><a id="submit-solution" href="javascript:void(0);"><spring:message code="voj.problems.problem.submit-solution" text="Submit Solution" /></a></li>
+                        </c:otherwise>
+                    </c:choose>
+                        <li><a href="<c:url value="/contest/${contest.contestId}" />"><spring:message code="voj.problems.problem.back-to-contest" text="Back to Contest" /></a></li>
+                    </ul>
+                </div> <!-- #actions -->
+                </c:when>
+                <c:otherwise>
                 <div id="actions" class="section">
                     <h5><spring:message code="voj.problems.problem.actions" text="Actions" /></h5>
                     <ul>
@@ -123,6 +141,8 @@
                         <li><a href="<c:url value="/submission?problemId=${problem.problemId}" />"><spring:message code="voj.problems.problem.view-submission" text="View Submission" /></a></li>
                     </ul>
                 </div> <!-- #actions -->
+                </c:otherwise>
+            </c:choose>
                 <c:if test="${isLogin}">
                 <div id="submission" class="section">
                     <h5><spring:message code="voj.problems.problem.submission" text="My Submission" /></h5>
@@ -145,6 +165,7 @@
                     </ul>
                 </div> <!-- submission -->
                 </c:if>
+                <c:if test="${not isContest}">
                 <div id="discussion" class="section">
                     <h5><spring:message code="voj.problems.problem.discussion" text="Discussion" /></h5>
                     <c:if test="${discussionThreads == null || discussionThreads.size() == 0}">
@@ -165,6 +186,7 @@
                     </c:forEach>
                     </ul>
                 </div> <!-- discussion -->
+                </c:if>
             </div> <!-- #sidebar -->
         </div> <!-- .row-fluid -->
     </div> <!-- #content -->
@@ -262,6 +284,29 @@
             return createSubmissionAction(problemId, language, code, csrfToken);
         }
     </script>
+<c:choose>
+<c:when test="${isContest}">
+    <script type="text/javascript">
+        function createSubmissionAction(problemId, languageSlug, code, csrfToken) {
+            var postData = {
+                'problemId': problemId,
+                'languageSlug': languageSlug,
+                'code': code,
+                'csrfToken': csrfToken
+            };
+
+            $.ajax({
+                type: 'POST',
+                url: '<c:url value="/contest/${contest.contestId}/createSubmission.action" />',
+                data: postData,
+                dataType: 'JSON',
+                success: function(result) {
+                }
+            });
+        }
+    </script>
+</c:when>
+<c:otherwise>
     <script type="text/javascript">
         function createSubmissionAction(problemId, languageSlug, code, csrfToken) {
             var postData = {
@@ -276,7 +321,7 @@
                 url: '<c:url value="/p/createSubmission.action" />',
                 data: postData,
                 dataType: 'JSON',
-                success: function(result){
+                success: function(result) {
                     if ( result['isSuccessful'] ) {
                         var submissionId = result['submissionId'];
                         window.location.href = '<c:url value="/submission/" />' + submissionId;
@@ -303,6 +348,8 @@
             });
         }
     </script>
+</c:otherwise>
+</c:choose>
     <c:if test="${GoogleAnalyticsCode != ''}">
     ${googleAnalyticsCode}
     </c:if>

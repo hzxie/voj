@@ -98,7 +98,7 @@ public class ContestService {
 	 * 获取某竞赛中某个用户各试题的提交记录.
 	 * @param contestId - 竞赛的唯一标识符
 	 * @param contestant - 参赛者
-	 * @return 包含用户提交信息的Map对象, 按试题ID索引
+	 * @return 包含用户提交记录的Map对象, 按试题ID索引
 	 */
 	public Map<Long, ContestSubmission> getSubmissionsOfContestantOfContest(long contestId, User contestant) {
 		if ( contestant == null ) {
@@ -122,6 +122,35 @@ public class ContestService {
 			submissionsGroupByProblems.put(problemId, cs);
 		}
 		return submissionsGroupByProblems;
+	}
+
+	/**
+	 * 获取某竞赛中某个用户某试题的提交记录.
+	 * @param contest - 竞赛对象
+	 * @param problemId - 试题的唯一标识符
+	 * @param contestant - 参赛者对象
+	 * @return 包含提交记录的List对象
+	 */
+	public List<Submission> getSubmissionsOfContestantOfContestProblem(
+			Contest contest, long problemId, User contestant) {
+		if ( contest == null || contestant == null ) {
+			return null;
+		}
+		List<Submission> submissions = new ArrayList<>();
+		if ( contest.getContestMode().equals("OI") ) {
+			// For OI mode, return fake submissions
+			ContestContestant cc = contestContestantMapper
+					.getContestantOfContest(contest.getContestId(), contestant.getUid());
+			// TBD: cc.getCodeSnippet();
+		} else if ( contest.getContestMode().equals("ACM") ) {
+			// For ACM mode, return submissions
+			List<ContestSubmission> css =  contestSubmissionMapper.getSubmissionOfContestOfContestProblem(
+					contest.getContestId(), problemId, contestant.getUid());
+			for ( ContestSubmission cs : css ) {
+				submissions.add(cs.getSubmission());
+			}
+		}
+		return submissions;
 	}
 
 	/**
@@ -204,7 +233,7 @@ public class ContestService {
 		List<ContestContestant> contestants = contestContestantMapper.
 				getContestantsOfContestForOi(contestId, 0, Integer.MAX_VALUE);
 		Map<Long, Map<Long, Submission>> submissions = getSubmissionsGroupByContestant(
-				contestSubmissionMapper.getAcceptedSubmissionsOfContest(contestId), true);
+				contestSubmissionMapper.getSubmissionsOfContest(contestId), true);
 		rankingContestants(contestants);
 
 		result.put("contestants", contestants);
@@ -229,15 +258,15 @@ public class ContestService {
 
 		// 计算罚时
 		for ( ContestContestant cc : contestants ) {
-			int numberOfRejected = cc.getTime();
-			int penalty = numberOfRejected * 1200;
+			long numberOfRejected = cc.getTime();
+			long penalty = numberOfRejected * 1200;
 			if ( submissions.containsKey(cc.getContestant().getUid()) ) {
 				Map<Long, Submission> submissionsOfContestant = submissions.get(cc.getContestant().getUid());
 
 				for ( Map.Entry<Long, Submission> e : submissionsOfContestant.entrySet() ) {
 					Submission s = e.getValue();
 					long usedTimeInMilliseconds = s.getSubmitTime().getTime() - contest.getStartTime().getTime();
-					s.setUsedTime((int) usedTimeInMilliseconds / 1000);
+					s.setUsedTime(usedTimeInMilliseconds / 1000);
 					penalty += s.getUsedTime();
 				}
 				cc.setTime(penalty);

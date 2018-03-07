@@ -53,6 +53,9 @@ import org.springframework.web.servlet.ModelAndView;
 import org.verwandlung.voj.web.exception.ResourceNotFoundException;
 import org.verwandlung.voj.web.model.*;
 import org.verwandlung.voj.web.service.ContestService;
+import org.verwandlung.voj.web.service.LanguageService;
+import org.verwandlung.voj.web.service.ProblemService;
+import org.verwandlung.voj.web.service.SubmissionService;
 import org.verwandlung.voj.web.util.CsrfProtector;
 import org.verwandlung.voj.web.util.HttpRequestParser;
 import org.verwandlung.voj.web.util.HttpSessionParser;
@@ -171,6 +174,13 @@ public class ContestsController {
 		return result;
 	}
 
+	/**
+	 * 显示排行榜.
+	 * @param contestId - 竞赛的唯一标识符
+	 * @param request - HttpRequest对象
+	 * @param response - HttpResponse对象
+	 * @return 包含竞赛排行榜的ModelAndView对象
+	 */
 	@RequestMapping(value="/{contestId}/leaderboard", method=RequestMethod.GET)
 	public ModelAndView leaderboardView(
 			@PathVariable("contestId") long contestId,
@@ -204,6 +214,50 @@ public class ContestsController {
 	}
 
 	/**
+	 * 显示竞赛中的试题信息.
+	 * @param contestId - 竞赛的唯一标识符
+	 * @param problemId - 试题的唯一标识符
+	 * @param request - HttpRequest对象
+	 * @param response - HttpResponse对象
+	 * @return 包含竞赛试题信息的ModelAndView对象
+	 */
+	@RequestMapping(value="/{contestId}/p/{problemId}", method=RequestMethod.GET)
+	public ModelAndView problemView(
+			@PathVariable("contestId") long contestId,
+			@PathVariable("problemId") long problemId,
+			HttpServletRequest request, HttpServletResponse response) {
+		HttpSession session = request.getSession();
+		User currentUser = HttpSessionParser.getCurrentUser(session);
+		Contest contest = contestService.getContest(contestId);
+		if ( contest == null ) {
+			throw new ResourceNotFoundException();
+		}
+		// 试题不存在于竞赛试题列表中
+		List<Long> problems = JSON.parseArray(contest.getProblems(), Long.class);
+		if ( !problems.contains(problemId) ) {
+			throw new ResourceNotFoundException();
+		}
+		// 未参加竞赛者在竞赛结束前无法查看试题
+		Date currentTime = new Date();
+		boolean isAttended = contestService.isAttendContest(contestId, currentUser);
+		if ( contest.getEndTime().after(currentTime) && !isAttended ) {
+			throw new ResourceNotFoundException();
+		}
+
+		Problem problem = problemService.getProblem(problemId);
+		List<Language> languages = languageService.getAllLanguages();
+		List<Submission> submissions = contestService.getSubmissionsOfContestantOfContestProblem(contest, problemId, currentUser);
+		ModelAndView view = new ModelAndView("problems/problem");
+		view.addObject("contest", contest);
+		view.addObject("problem", problem);
+		view.addObject("languages", languages);
+		view.addObject("submissions", submissions);
+		view.addObject("currentTime", currentTime);
+		view.addObject("isContest", true);
+		return view;
+	}
+
+	/**
 	 * 每次查询需要加载竞赛的数量.
 	 */
 	private static final int NUMBER_OF_CONTESTS_PER_PAGE = 10;
@@ -213,6 +267,27 @@ public class ContestsController {
 	 */
 	@Autowired
 	private ContestService contestService;
+
+	/**
+	 * 自动注入的ProblemService对象.
+	 * 用于查询试题信息.
+	 */
+	@Autowired
+	private ProblemService problemService;
+
+	/**
+	 * 自动注入的LanguageService对象.
+	 * 用于加载试题详情页的语言选项.
+	 */
+	@Autowired
+	private LanguageService languageService;
+
+	/**
+	 * 自动注入的SubmissionService对象.
+	 * 用于创建提交记录.
+	 */
+	@Autowired
+	private SubmissionService subsmissionService;
 
 	/**
 	 * 日志记录器.

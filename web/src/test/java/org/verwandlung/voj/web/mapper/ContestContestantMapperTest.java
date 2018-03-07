@@ -114,7 +114,7 @@ public class ContestContestantMapperTest {
 
 		int score = firstContestant.getScore();
 		Assertions.assertEquals(200, score);
-		int time = firstContestant.getTime();
+		long time = firstContestant.getTime();
 		Assertions.assertEquals(60, time);
 	}
 

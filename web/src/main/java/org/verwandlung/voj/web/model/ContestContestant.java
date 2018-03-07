@@ -99,7 +99,7 @@ public class ContestContestant implements Comparable {
 	 * 获取运行时间(OI)或罚时(ACM).
 	 * @return 运行时间(OI)或罚时(ACM)
 	 */
-	public int getTime() {
+	public long getTime() {
 		return time;
 	}
 
@@ -107,7 +107,7 @@ public class ContestContestant implements Comparable {
 	 * 设置罚时(ACM).
 	 * @param time 罚时(ACM)
 	 */
-	public void setTime(int time) {
+	public void setTime(long time) {
 		this.time = time;
 	}
 
@@ -153,7 +153,7 @@ public class ContestContestant implements Comparable {
 
 		ContestContestant occ = (ContestContestant) o;
 		if ( occ.getScore() == this.score ) {
-			return this.time - occ.getTime();
+			return this.time > occ.getTime() ? 1 : -1;
 		}
 		return this.score - occ.getScore();
 	}
@@ -185,7 +185,7 @@ public class ContestContestant implements Comparable {
 	 * OI赛制中的运行时间.
 	 * ACM赛制中的罚时.
 	 */
-	private int time;
+	private long time;
 
 	/**
 	 * 竞赛中的排名.

@@ -36,14 +36,23 @@
 		AND submission_judge_result = 'AC'
 	</select>
 	<select id="getSubmissionOfContestOfContest"
-		parameterType="map"
-		resultMap="ContestSubmissionResultMap"
-		useCache="true">
+			parameterType="map"
+			resultMap="ContestSubmissionResultMap"
+			useCache="true">
 		SELECT * 
 		FROM voj_contest_submissions
 		NATURAL JOIN voj_submissions
 		WHERE contest_id = #{contestId}
-		AND submission_judge_result = 'AC'
+	</select>
+	<select id="getSubmissionOfContestOfContestProblem"
+			parameterType="map"
+			resultMap="ContestSubmissionResultMap"
+			useCache="true">
+		SELECT *
+		FROM voj_contest_submissions
+		NATURAL JOIN voj_submissions
+		WHERE contest_id = #{contestId}
+		AND problem_id = #{problemId}
 	</select>
 	<insert id="createContestSubmission" 
 		parameterType="org.verwandlung.voj.web.model.ContestSubmission"

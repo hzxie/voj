@@ -75,7 +75,7 @@
                                 <c:otherwise><div class="markdown">${contest.contestNotes}</div> <!-- .markdown --></c:otherwise>
                             </c:choose>
                         </div> <!-- .section -->
-                    <c:if test="${currentTime.after(contest.startTime)}">
+                    <c:if test="${(currentTime.after(contest.startTime) and isAttended) or currentTime.after(contest.endTime)}">
                         <div class="section">
                             <h4><spring:message code="voj.contests.contest.problems" text="Problems" /></h4>
                             <table id="problems" class="table table-striped">
@@ -146,13 +146,14 @@
                 <div class="section">
                     <h5><spring:message code="voj.contests.contest.actions" text="Actions" /></h5>
                     <ul>
-                    <c:if test="${not isAttended and contestStatus == 'Ready'}">
+                    <c:if test="${not isAttended and contestStatus != 'Done'}">
                         <li><a id="attend-contest-button" href="javascript:attendContest();"><spring:message code="voj.contests.contest.attend-contest" text="Attend the contest" /></a></li>
                     </c:if>
                     <c:if test="${contestStatus != 'Ready'}">
                         <li><a href="<c:url value="/contest/${contest.contestId}/leaderboard" />"><spring:message code="voj.contests.contest.view-leaderboard" text="View leaderboard" /></a></li>
                     </c:if>
                     <c:if test="${isAttended and contestStatus == 'Ready'}">
+                        <li><spring:message code="voj.contests.contest.already-attended" text="You have already attended the contest." /></li>
                         <li><spring:message code="voj.contests.contest.no-actions" text="No actions are available." /></li>
                     </c:if>
                     </ul>
@@ -183,7 +184,7 @@
             });
         });
     </script>
-<c:if test="${not isAttended and contestStatus == 'Ready'}">
+<c:if test="${not isAttended and contestStatus != 'Done'}">
 <c:choose>
     <c:when test="${isLogin}">
     <script type="text/javascript">
