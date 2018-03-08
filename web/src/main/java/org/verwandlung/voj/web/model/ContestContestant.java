@@ -153,9 +153,9 @@ public class ContestContestant implements Comparable {
 
 		ContestContestant occ = (ContestContestant) o;
 		if ( occ.getScore() == this.score ) {
-			return this.time > occ.getTime() ? 1 : -1;
+			return this.time < occ.getTime() ? -1 : 1;
 		}
-		return this.score - occ.getScore();
+		return occ.getScore() - this.score;
 	}
 
 	/* (non-Javadoc)
