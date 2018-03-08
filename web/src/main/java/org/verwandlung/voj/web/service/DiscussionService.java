@@ -54,10 +54,7 @@ import org.verwandlung.voj.web.model.*;
 import org.verwandlung.voj.web.util.HtmlTextFilter;
 import org.verwandlung.voj.web.util.OffensiveWordFilter;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * 讨论(Discussion)的业务逻辑层.
@@ -80,8 +77,8 @@ public class DiscussionService {
 	 */
 	public Map<DiscussionTopic, List<DiscussionTopic>> getDiscussionTopicsWithHierarchy() {
 		List<DiscussionTopic> DiscussionTopics = getDiscussionTopics();
-		Map<Integer, List<DiscussionTopic>> DiscussionTopicsIndexer = new HashMap<Integer, List<DiscussionTopic>>();
-		Map<DiscussionTopic, List<DiscussionTopic>> DiscussionTopicsHierarchy = new HashMap<DiscussionTopic, List<DiscussionTopic>>();
+		Map<Integer, List<DiscussionTopic>> DiscussionTopicsIndexer = new HashMap<>();
+		Map<DiscussionTopic, List<DiscussionTopic>> DiscussionTopicsHierarchy = new LinkedHashMap<>();
 
 		// 将无父亲的讨论话题加入列表
 		for ( DiscussionTopic dt : DiscussionTopics ) {
