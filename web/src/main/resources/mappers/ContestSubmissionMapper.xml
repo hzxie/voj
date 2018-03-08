@@ -53,6 +53,7 @@
 		NATURAL JOIN voj_submissions
 		WHERE contest_id = #{contestId}
 		AND problem_id = #{problemId}
+		ORDER BY submission_id DESC
 	</select>
 	<insert id="createContestSubmission" 
 		parameterType="org.verwandlung.voj.web.model.ContestSubmission"

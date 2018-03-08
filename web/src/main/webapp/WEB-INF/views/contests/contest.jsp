@@ -60,10 +60,12 @@
                 <div class="contest">
                     <div class="header">
                         <span class="pull-right">
+                        <c:if test="${isLogin}">
                         <c:choose>
                             <c:when test="${isAttended}"><spring:message code="voj.contests.contest.attended" text="Attended" /></c:when>
                             <c:otherwise><spring:message code="voj.contests.contest.not-attended" text="Not attended" /></c:otherwise>
                         </c:choose>
+                        </c:if>
                         </span>
                         <span class="name">${contest.contestName}</span>
                     </div> <!-- .header -->

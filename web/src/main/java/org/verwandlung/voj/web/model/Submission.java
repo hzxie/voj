@@ -59,7 +59,6 @@ public class Submission implements Serializable {
 	 * @param problem - 评测对应的试题对象
 	 * @param user - 评测提交者的用户对象
 	 * @param language - 提交所使用的语言对象
-	 * @param submitTime - 评测提交时间
 	 * @param code - 评测所执行的代码
 	 */
 	public Submission(Problem problem, User user, Language language, String code) { 
