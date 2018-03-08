@@ -275,7 +275,6 @@ public class ContestService {
 				getContestantsOfContestForAcm(contestId, 0, Integer.MAX_VALUE);
 		Map<Long, Map<Long, Submission>> submissions = getSubmissionsGroupByContestant(
 				contestSubmissionMapper.getAcceptedSubmissionsOfContest(contestId), false);
-		Collections.sort(contestants);
 
 		// 计算罚时
 		for ( ContestContestant cc : contestants ) {
@@ -293,6 +292,7 @@ public class ContestService {
 				cc.setTime(penalty);
 			}
 		}
+		Collections.sort(contestants);
 		rankingContestants(contestants);
 
 		result.put("contestants", contestants);
