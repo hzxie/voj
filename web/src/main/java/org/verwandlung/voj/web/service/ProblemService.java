@@ -211,8 +211,8 @@ public class ProblemService {
 	 */
 	public Map<ProblemCategory, List<ProblemCategory>> getProblemCategoriesWithHierarchy() {
 		List<ProblemCategory> problemCategories = getProblemCategories();
-		Map<Integer, List<ProblemCategory>> problemCategoriesIndexer = new HashMap<Integer, List<ProblemCategory>>();
-		Map<ProblemCategory, List<ProblemCategory>> problemCategoriesHierarchy = new HashMap<ProblemCategory, List<ProblemCategory>>();
+		Map<Integer, List<ProblemCategory>> problemCategoriesIndexer = new HashMap<>();
+		Map<ProblemCategory, List<ProblemCategory>> problemCategoriesHierarchy = new LinkedHashMap<>();
 
 		// 将无父亲的试题分类加入列表
 		for ( ProblemCategory pc : problemCategories ) {

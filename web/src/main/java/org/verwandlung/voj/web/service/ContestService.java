@@ -39,6 +39,8 @@
  */
 package org.verwandlung.voj.web.service;
 
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.TypeReference;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -136,14 +138,9 @@ public class ContestService {
 		if ( contest == null || contestant == null ) {
 			return null;
 		}
+
 		List<Submission> submissions = new ArrayList<>();
-		if ( contest.getContestMode().equals("OI") ) {
-			// For OI mode, return fake submissions
-			ContestContestant cc = contestContestantMapper
-					.getContestantOfContest(contest.getContestId(), contestant.getUid());
-			// TBD: cc.getCodeSnippet();
-		} else if ( contest.getContestMode().equals("ACM") ) {
-			// For ACM mode, return submissions
+		if ( getContestStatus(contest) != Contest.CONTEST_STATUS.READY ) {
 			List<ContestSubmission> css =  contestSubmissionMapper.getSubmissionOfContestOfContestProblem(
 					contest.getContestId(), problemId, contestant.getUid());
 			for ( ContestSubmission cs : css ) {
@@ -151,6 +148,30 @@ public class ContestService {
 			}
 		}
 		return submissions;
+	}
+
+	/**
+	 * 获取用户在比赛中临时保存的代码 (一般用于保存OI赛制中的代码).
+	 * @param contest - 竞赛对象
+	 * @param problemId - 试题的唯一标识符
+	 * @param contestant - 参赛者对象
+	 * @return 包含对应试题的代码
+	 */
+	public Map<String, String> getCodeSnippetOfContestProblem(Contest contest, long problemId, User contestant) {
+		if ( contest == null || contestant == null ) {
+			return null;
+		}
+		if ( contest.getContestMode().equals("OI") && getContestStatus(contest) == Contest.CONTEST_STATUS.LIVE ) {
+			ContestContestant cc = contestContestantMapper
+					.getContestantOfContest(contest.getContestId(), contestant.getUid());
+			Map<Long, Map<String, String>> codeSnippet = JSON.parseObject(cc.getCodeSnippet(),
+					new TypeReference<Map<Long, Map<String, String>>>() {});
+
+			if ( codeSnippet.containsKey(problemId) ) {
+				return codeSnippet.get(problemId);
+			}
+		}
+		return null;
 	}
 
 	/**

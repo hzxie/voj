@@ -90,7 +90,7 @@
                         </div> <!-- .section -->
                         </c:if>
                         <form id="code-editor" onsubmit="onSubmit(); return false;" method="POST">
-                            <textarea name="codemirror-editor" id="codemirror-editor"></textarea>
+                            <textarea name="codemirror-editor" id="codemirror-editor"><c:if test="${isContest and codeSnippet != null}">${codeSnippet['code']}</c:if></textarea>
                             <div class="row-fluid">
                                 <div class="span4">
                                     <select id="languages">
@@ -250,6 +250,9 @@
         $(function() {
             var preferLanguage = '${myProfile.preferLanguage.languageSlug}';
             $('select#languages').val(preferLanguage);
+        <c:if test="${isContest and codeSnippet != null}">
+            $('select#languages').val('${codeSnippet['language']}');
+        </c:if>
         });
     </script>
     <script type="text/javascript">
