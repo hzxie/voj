@@ -134,32 +134,6 @@ div#footer ul#footer-nav a {
 	color: #333;
 }
 
-div#footer button.btn-github {
-	background-color: #eee;
-	background-image: -moz-linear-gradient(#fcfcfc,#eee);
-	background-image: -webkit-linear-gradient(#fcfcfc,#eee);
-	background-image: linear-gradient(#fcfcfc,#eee);
-	background-repeat: no-repeat;
-	border: 1px solid #d5d5d5;
-	color: #333;
-	font-size: 11px;
-	font-weight: bold;
-	height: 20px;
-	overflow: hidden;
-	padding: 0 4px;
-	text-decoration: none;
-	text-shadow: 0 1px 0 #fff;
-	white-space: nowrap;
-	-webkit-border-radius: 3px;
-	   -moz-border-radius: 3px;
-	        border-radius: 3px;
-}
-
-div#footer button.btn-github i.fa {
-	font-size: 14px;
-	font-weight: normal;
-}
-
 /* Style for Markdown Editor */
 div.wmd-button-bar {
 	background-color: transparent;
