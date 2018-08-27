@@ -1,19 +1,26 @@
 language: java
 dist: trusty
-env:
-  - JDK=oraclejdk8
-  - JDK=oraclejdk9
+matrix:
+  include:
+    - env: JDK='Oracle JDK 8'
+      jdk: oraclejdk8
+
+    - env: JDK='Oracle JDK 9'
+      jdk: oraclejdk9
+
+    - env: JDK='Oracle JDK 10'
+      jdk: oraclejdk10
 
 services: mysql
 
 before_script:
-# Switch JDK
-  - jdk_switcher use $JDK
 # Import Database
   - mysql -e 'CREATE DATABASE test;'
   - mysql test < voj.sql
 
 before_install:
+# Download JDK installer
+  - wget https://github.com/sormuras/bach/raw/master/install-jdk.sh
 # Fix path error on JNI headers
   - sudo ln -nsf $JAVA_HOME/include/linux/jni_md.h $JAVA_HOME/include/jni_md.h
   - sudo ln -nsf $JAVA_HOME/include/linux/jawt_md.h $JAVA_HOME/include/jawt_md.h
@@ -26,7 +33,9 @@ before_install:
   - export MAVEN_SKIP_RC=true
 
 script: 
-  - sudo find / -name mvn
+  - echo PATH = ${PATH}
+  - echo JAVA_HOME = ${JAVA_HOME}
+  - java -version
   - mvn test -f web/pom.xml
   - sudo $MVN_EXEC test -f judger/pom.xml
 
