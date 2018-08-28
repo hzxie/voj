@@ -131,20 +131,22 @@ public class Preprocessor {
 	 * @param workDirectory 用于产生编译输出的目录
 	 */
 	private void setWorkDirectoryPermission(File workDirectory) throws IOException {
-		Set<PosixFilePermission> permissions = new HashSet<>();
+		if ( !System.getProperty("os.name").contains("Windows") ) {
+			Set<PosixFilePermission> permissions = new HashSet<>();
 
-		permissions.add(PosixFilePermission.OWNER_READ);
-		permissions.add(PosixFilePermission.OWNER_WRITE);
-		permissions.add(PosixFilePermission.OWNER_EXECUTE);
+			permissions.add(PosixFilePermission.OWNER_READ);
+			permissions.add(PosixFilePermission.OWNER_WRITE);
+			permissions.add(PosixFilePermission.OWNER_EXECUTE);
 
-		permissions.add(PosixFilePermission.GROUP_READ);
-		permissions.add(PosixFilePermission.GROUP_WRITE);
-		permissions.add(PosixFilePermission.GROUP_EXECUTE);
+			permissions.add(PosixFilePermission.GROUP_READ);
+			permissions.add(PosixFilePermission.GROUP_WRITE);
+			permissions.add(PosixFilePermission.GROUP_EXECUTE);
 
-		permissions.add(PosixFilePermission.OTHERS_READ);
-		permissions.add(PosixFilePermission.OTHERS_WRITE);
-		permissions.add(PosixFilePermission.OTHERS_EXECUTE);
-		Files.setPosixFilePermissions(workDirectory.toPath(), permissions);
+			permissions.add(PosixFilePermission.OTHERS_READ);
+			permissions.add(PosixFilePermission.OTHERS_WRITE);
+			permissions.add(PosixFilePermission.OTHERS_EXECUTE);
+			Files.setPosixFilePermissions(workDirectory.toPath(), permissions);
+		}
 	}
 	
 	/**

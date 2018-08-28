@@ -209,7 +209,7 @@ bool createProcess(const std::wstring& commandLine, const std::wstring& username
     }
     if ( !CreateProcessWithLogonW(lpUsername, lpDomain, lpPassword,
             LOGON_WITH_PROFILE, NULL, lpCommandLine, 
-            CREATE_UNICODE_ENVIRONMENT | CREATE_SUSPENDED,
+            CREATE_UNICODE_ENVIRONMENT | CREATE_SUSPENDED | CREATE_NO_WINDOW,
             lpEnvironment, szUserProfile, &startupInfo, &processInfo) ) {
         return false;
     }
