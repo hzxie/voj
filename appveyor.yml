@@ -4,7 +4,8 @@ image:
 # Windows Server 2012
 - Visual Studio 2015
 # Windows Server 2016
-- Visual Studio 2017
+# Disable CI for Windows Server 2016 due to a bug of AppVeyor.
+# - Visual Studio 2017
 
 environment:
   appveyor_build_worker_cloud: gce
@@ -45,8 +46,8 @@ before_test:
   - mysql test < voj.sql --user=root
 
 test_script:
-  - mvn test -f web\pom.xml -Djava.net.preferIPv4Stack=true
-  - mvn test -f judger\pom.xml -Djava.net.preferIPv4Stack=true
+  - mvn test -f web\pom.xml
+  - mvn test -f judger\pom.xml
 
 after_test:
   - mysql -e "DROP DATABASE test;" --user=root
