@@ -1,10 +1,19 @@
 
 # # version: "{branch} {build}"
+image:
+# Windows Server 2012
+- Visual Studio 2015
+# Windows Server 2016
+# Disable CI for Windows Server 2016 due to a bug of AppVeyor.
+# - Visual Studio 2017
 
 environment:
+  appveyor_build_worker_cloud: gce
+  appveyor_rdp_password: Fx8eHPNesxhpmdru
   matrix:
   - JAVA_HOME: C:\Program Files\Java\jdk1.8.0
   - JAVA_HOME: C:\Program Files\Java\jdk9
+  - JAVA_HOME: C:\Program Files\Java\jdk10
 
 services:
   - mysql
@@ -13,15 +22,19 @@ init:
   - ps: iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
 
 install:
-  - set PATH=%PATH%;C:\Program Files\MySql\MySQL Server 5.7\bin;C:\cygwin64\bin
-  - net user /add "hzxie" "@AppVeyor"
+  - set MINGW_HOME=C:\mingw-w64\x86_64-7.2.0-posix-seh-rt_v5-rev1\mingw64
+  - set PATH=%MINGW_HOME%\bin;C:\cygwin64\bin;C:\Program Files\MySql\MySQL Server 5.7\bin;%PATH%
 # Fix bug for mkdir in AppVeyor
   - del "C:\Program Files\Git\usr\bin\mkdir.exe"
+# Fix path error for make
+  - copy "C:\mingw-w64\x86_64-7.3.0-posix-seh-rt_v5-rev0\mingw64\bin\mingw32-make.exe" "C:\mingw-w64\x86_64-7.3.0-posix-seh-rt_v5-rev0\mingw64\bin\make.exe"
 # Fix path error on JNI headers
   - copy "C:\Program Files\Java\jdk1.8.0\include\win32\jni_md.h" "C:\Program Files\Java\jdk1.8.0\include\jni_md.h"
   - copy "C:\Program Files\Java\jdk1.8.0\include\win32\jawt_md.h" "C:\Program Files\Java\jdk1.8.0\include\jawt_md.h"
   - copy "C:\Program Files\Java\jdk9\include\win32\jni_md.h" "C:\Program Files\Java\jdk9\include\jni_md.h"
   - copy "C:\Program Files\Java\jdk9\include\win32\jawt_md.h" "C:\Program Files\Java\jdk9\include\jawt_md.h"
+  - copy "C:\Program Files\Java\jdk10\include\win32\jni_md.h" "C:\Program Files\Java\jdk10\include\jni_md.h"
+  - copy "C:\Program Files\Java\jdk10\include\win32\jawt_md.h" "C:\Program Files\Java\jdk10\include\jawt_md.h"
 # Setup test environment for Windows
   - copy "judger\src\test\resources\voj-test-windows.properties" "judger\src\test\resources\voj-test.properties"
 
@@ -33,9 +46,8 @@ before_test:
   - mysql test < voj.sql --user=root
 
 test_script:
-  - mvn test -f web\pom.xml --batch-mode
-  # Disable tests for judger because of crash of JVM
-  # - mvn test -f judger\pom.xml --batch-mode
+  - mvn test -f web\pom.xml
+  - mvn test -f judger\pom.xml
 
 after_test:
   - mysql -e "DROP DATABASE test;" --user=root
@@ -44,7 +56,7 @@ on_finish:
   - ps: $blockRdp = $false; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
 
 matrix:
-  fast_finish: true
+  fast_finish: false
 
 cache:
   - C:\maven\
