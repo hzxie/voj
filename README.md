@@ -11,7 +11,7 @@ Version: 0.2.0 (Released on August 30, 2018)
 [**Tech Support**](https://infinitescript.com/project/verwandlung-online-judge/) |
 [**Change Log**](https://github.com/hzxie/voj/commits/master)
 
-**Update:** Verwandlung Online Judge now support Docker. 
+**Update:** Verwandlung Online Judge now supports Docker. 
 You can use Verwandlung Online Judge with ONLY 4 bash commands.
 
 ```
