@@ -5,10 +5,14 @@ Version: 0.1.0
 [![Build Status](https://travis-ci.org/hzxie/voj.png?branch=master)](https://travis-ci.org/hzxie/voj)
 [![Build status](https://ci.appveyor.com/api/projects/status/j62ns9p8whttittm?svg=true)](https://ci.appveyor.com/project/hzxie/voj)
 [![Coverage Status](https://coveralls.io/repos/hzxie/voj/badge.svg?branch=master&service=github)](https://coveralls.io/github/hzxie/voj?branch=master)
+[![Docker Automated build](https://img.shields.io/docker/automated/jrottenberg/ffmpeg.svg)](http://hub.docker.com/r/zjhzxhz)
 
 [**Official Website**](https://verwandlung.org) | 
-[**Tech Support**](https://haozhexie.com) |
-[**Change Log**](#)
+[**Tech Support**](https://infinitescript.com/project/verwandlung-online-judge/) |
+[**Change Log**](https://github.com/hzxie/voj/commits/master)
+
+**Update:** Verwandlung Online Judge now support Docker. 
+[Tell me more](https://github.com/hzxie/voj/tree/master/docker) about voj@Docker.
 
 ---
 
