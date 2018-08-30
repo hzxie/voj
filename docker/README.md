@@ -16,8 +16,10 @@ docker pull zjhzxhz/voj.web
 ## Run Web Application
 
 ```
-docker run -d -p 3306:3306 -p 8080:8080 -p 61616:61616 zjhzxhz/voj.web
+docker run -d --name voj.web -p 8080:8080 zjhzxhz/voj.web
 ```
+
+The web application is available at [http://localhost:8080/voj](http://localhost:8080/voj).
 
 ## Build Docker Image for Judger Application
 
@@ -35,5 +37,5 @@ docker pull zjhzxhz/voj.judger
 ## Run Judger Application
 
 ```
-docker run -d zjhzxhz/voj.judger
+docker run -d --name voj.judger --link voj.web zjhzxhz/voj.judger
 ```

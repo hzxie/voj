@@ -5,7 +5,10 @@ MAINTAINER Haozhe Xie "cshzxie@gmail.com"
 # User Settings
 ARG MYSQL_ROOT_PASS=dBuZNz6tDKhgZjHX
 ARG MYSQL_USER_PASS=U3bEwhRHnD6xNVpb
-ARG ACTIVEMQ_ADDR=localhost:61616
+ARG MYSQL_HOST=voj.web
+ARG MYSQL_PORT=3306
+ARG ACTIVEMQ_HOST=voj.web
+ARG ACTIVEMQ_PORT=61616
 
 # Set environment variables.
 ENV HOME          /root
@@ -33,9 +36,10 @@ RUN rm apache-maven-3.5.4-bin.tar.gz
 # Setup Judger Project
 RUN apt-get install -y git gcc g++ make
 RUN git clone https://github.com/hzxie/voj.git
+RUN sed -i "s@jdbc.url = jdbc:mysql://localhost:3306@jdbc.url = jdbc:mysql://${MYSQL_HOST}:${MYSQL_PORT}@g" voj/judger/src/main/resources/voj.properties
 RUN sed -i "s/jdbc.username = root/jdbc.username = voj/g" voj/judger/src/main/resources/voj.properties
 RUN sed -i "s/jdbc.password = /jdbc.password = ${MYSQL_USER_PASS}/g" voj/judger/src/main/resources/voj.properties
-RUN sed -i "s/localhost:61616/${ACTIVEMQ_ADDR}/g" voj/judger/src/main/resources/voj.properties
+RUN sed -i "s/localhost:61616/${ACTIVEMQ_HOST}:${ACTIVEMQ_PORT}/g" voj/judger/src/main/resources/voj.properties
 RUN mkdir -p voj/target/classes
 RUN $M2_HOME/bin/mvn package -DskipTests -f voj/judger/pom.xml
 
