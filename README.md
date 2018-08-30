@@ -12,6 +12,15 @@ Version: 0.1.0
 [**Change Log**](https://github.com/hzxie/voj/commits/master)
 
 **Update:** Verwandlung Online Judge now support Docker. 
+You can use Verwandlung Online Judge with ONLY 4 bash commands.
+
+```
+docker pull zjhzxhz/voj.web
+docker pull zjhzxhz/voj.judger
+docker run -d --name voj.web -p 8080:8080 zjhzxhz/voj.web
+docker run -d --name voj.judger --link voj.web zjhzxhz/voj.judger
+```
+
 [Tell me more](https://github.com/hzxie/voj/tree/master/docker) about voj@Docker.
 
 ---
@@ -34,9 +43,11 @@ The application used following open-source projects:
 
 ### The Origin of Verwandlung
 
-In 2011, the LinkedIn Inc. published a message queue product called [Kafka](http://kafka.apache.org/). It's implemented in Scala and open-sourced.
+In 2011, LinkedIn Inc. released a message queue named [Kafka](http://kafka.apache.org/). 
+It's implemented in Scala and open-sourced.
 
-In 2012, Alibaba Inc. published a message queue product called [MetaQ](https://github.com/killme2008/Metamorphosis), which is based on Kafka. It's implemented in Java.
+In 2012, Alibaba Inc. released a message queue named [MetaQ](https://github.com/killme2008/Metamorphosis), which is based on Kafka. 
+It's implemented in Java.
 
 MetaQ stands for *Metamorphosis*, which is a famous literature written by the author Franz Kafka.
 
@@ -44,16 +55,17 @@ As the message queue is one of the important components in the application, so I
 
 ### Architecture
 
-The application contains two modules:
+The application contains two components:
 
 - Web Application
-- Cross-Platform Judger
+- Judger (Support both Windows and Linux)
 
-which can be described as following:
+The architecture can be described as the figure below.
 
 ![Software-Architecture](https://infinitescript.com/wordpress/wp-content/uploads/2015/04/Software-Architecture.png)
 
-As you see, the Online Judge System can contain multiple judgers. The judgers communicate with the web application through a message queue.
+As you see, Verwandling Online Judge supports multiple judgers. 
+The judgers communicate with the web application through ActiveMQ.
 
 ---
 
@@ -79,31 +91,37 @@ For Web Application (including Database and Message Queue):
 
 - **Operating System**: Windows, Linux or Mac
 - **Database**: [MySQL](http://www.mysql.com) 5.5+ or [MariaDB](https://mariadb.org/) 5.5+
-- **Java Runtime**: [JRE](http://java.oracle.com) 1.8+ or JDK 1.8+
+- **Java Runtime**: [Oracle JRE](http://java.oracle.com) 1.8+ or [Oracle JDK](http://java.oracle.com) 1.8+
 - **Message Queue**: [ActiveMQ](http://activemq.apache.org) 5.11+
 - **Web Server**: [Tomcat](http://tomcat.apache.org) 8.5+
 
 For Judger:
 
 - **Operating System**: Windows or Linux
-- **Java Runtime**: [JRE](http://java.oracle.com) 1.8+ or JDK 1.8+
+- **Java Runtime**: [Oracle JRE](http://java.oracle.com) 1.8+ or [Oracle JDK](http://java.oracle.com) 1.8+
 
 ### Installation
 
+#### Docker Releases (Recommended)
+
+Now you can easily use Verwandlung Online Judge with Docker.
+
+See the installation instructions [here](https://github.com/hzxie/voj/tree/master/docker).
+
 #### Binary Releases
 
-- **Web Application**: [0.1.0](https://github.com/hzxie/voj/releases/download/0.1.0/voj.war)
-- **Judger (Windows, 64 Bit)**: [0.1.0](https://github.com/hzxie/voj/releases/download/0.1.0/voj-judger-windows-x64.jar)
-- **Judger (Linux, 64 Bit)**: [0.1.0](https://github.com/hzxie/voj/releases/download/0.1.0/voj-judger-linux-x64.jar)
+- **Web Application**: [0.2.0](https://github.com/hzxie/voj/releases/download/0.2.0/voj.war)
+- **Judger (Windows, 64 Bit)**: [0.2.0](https://github.com/hzxie/voj/releases/download/0.2.0/voj-judger-windows-x64.jar)
+- **Judger (Linux, 64 Bit)**: [0.2.0](https://github.com/hzxie/voj/releases/download/0.2.0/voj-judger-linux-x64.jar)
 
 #### Source Releases
 
 **NOTE:** 
 
-- [Maven](http://maven.apache.org) 3+ and [GCC](http://gcc.gnu.org/) 4.8+ with POSIX thread model is required.
-- Make sure Maven and GCC are added to the PATH.
+- [Maven](http://maven.apache.org) 3+ and [GCC](http://gcc.gnu.org/) 4.8+ with **POSIX thread model** is required.
+- Make sure `mvn` (Maven), `g++` and `make` are added to the PATH.
 
-After extracting the source, run these commands from a terminal:
+After download source code from this repository, run following commands from a terminal:
 
 For Web Application:
 
@@ -112,7 +130,7 @@ cd web
 mvn package -DskipTests
 ```
 
-The terminal will return message as following:
+If the build is successful, the terminal will display a message as following:
 
 ```
 [INFO] ------------------------------------------------------------------------
@@ -149,15 +167,13 @@ cd SOURCE_CODE_PATH/judger
 mvn package -DskipTests
 ```
 
-The terminal will return message as following:
+If the build is successful, the terminal will display a message as following:
 
 ```
 [INFO] Executing tasks
 
 jni:
      [echo] Generating JNI headers
-     [exec] Cannot find type 'org.springframework.beans.factory.annotation.Value' ...
-     [exec] Cannot find type 'org.springframework.beans.factory.annotation.Value' ...
      [exec] mkdir -p target/cpp
      [exec] g++ -c -std=c++11 -Wall -fPIC -I ... -o target/cpp/Judger.Core.Runner.o
 [INFO] Executed tasks
