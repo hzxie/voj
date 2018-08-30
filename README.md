@@ -1,6 +1,6 @@
 ![Verwandlung Online Judge](https://raw.githubusercontent.com/hzxie/voj/master/web/src/main/webapp/assets/img/logo.png)
 
-Version: 0.1.0
+Version: 0.2.0 (Released on August 30, 2018)
 
 [![Build Status](https://travis-ci.org/hzxie/voj.png?branch=master)](https://travis-ci.org/hzxie/voj)
 [![Build status](https://ci.appveyor.com/api/projects/status/j62ns9p8whttittm?svg=true)](https://ci.appveyor.com/project/hzxie/voj)
