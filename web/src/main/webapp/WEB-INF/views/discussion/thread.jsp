@@ -51,7 +51,7 @@
                     <ul class="inline">
                         <li>
                             <i class="fa fa-clock-o"></i>
-                            <span class="datetime"><fmt:formatDate value="${discussionThread.discussionThreadCreateTime}" type="both" dateStyle="default" timeStyle="default" /></span>
+                            <span class="datetime"><fmt:formatDate value="${discussionThread.discussionThreadCreateTime}" pattern="yyyy-MM-dd HH:mm:ss" /></span>
                         </li>
                         <li>
                             <i class="fa fa-user"></i>
