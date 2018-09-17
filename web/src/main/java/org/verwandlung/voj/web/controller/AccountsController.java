@@ -372,8 +372,8 @@ public class AccountsController {
 		Map<String, Object> submissions = new HashMap<>(2, 1);
 		Date today = new Date();
 		Date previousDate = DateUtils.getPreviousDate(period);
-		Map<String, Long> totalSubmissions = submissionService.getNumberOfSubmissions(previousDate, today, userId, false);
-		Map<String, Long> acceptedSubmissions = submissionService.getNumberOfSubmissions(previousDate, today, userId, true);
+		Map<String, Long> totalSubmissions = submissionService.getNumberOfSubmissionsUsingDate(previousDate, today, userId, false);
+		Map<String, Long> acceptedSubmissions = submissionService.getNumberOfSubmissionsUsingDate(previousDate, today, userId, true);
 		
 		submissions.put("totalSubmissions", totalSubmissions);
 		submissions.put("acceptedSubmissions", acceptedSubmissions);

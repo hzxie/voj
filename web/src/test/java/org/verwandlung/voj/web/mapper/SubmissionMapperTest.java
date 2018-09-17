@@ -71,11 +71,11 @@ public class SubmissionMapperTest {
 	 * 预期结果: 返回该时间区间内的提交次数(2次)
 	 */
 	@Test
-	public void testGetNumberOfSubmissions() {
+	public void testGetNumberOfSubmissionsUsingDate() {
 		String startTime = "2014-10-01 00:00:00";
 		String endTime = "2014-10-18 00:00:00";
 		
-		long numberOfSubmissions = submissionMapper.getNumberOfSubmissions(startTime, endTime);
+		long numberOfSubmissions = submissionMapper.getNumberOfSubmissionsUsingDate(startTime, endTime);
 		Assertions.assertEquals(2, numberOfSubmissions);
 	}
 
