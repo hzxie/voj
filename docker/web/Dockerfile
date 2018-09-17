@@ -54,11 +54,11 @@ RUN rm apache-activemq-5.15.5-bin.tar.gz
 
 # Install Tomcat
 RUN useradd tomcat -s /usr/sbin/nologin
-RUN wget https://www-us.apache.org/dist/tomcat/tomcat-9/v9.0.11/bin/apache-tomcat-9.0.11.tar.gz
-RUN tar -xf apache-tomcat-9.0.11.tar.gz -C /opt
-RUN mv /opt/apache-tomcat-9.0.11 /opt/tomcat/
+RUN wget https://www-us.apache.org/dist/tomcat/tomcat-9/v9.0.12/bin/apache-tomcat-9.0.12.tar.gz
+RUN tar -xf apache-tomcat-9.0.12.tar.gz -C /opt
+RUN mv /opt/apache-tomcat-9.0.12 /opt/tomcat/
 RUN chown -R tomcat:tomcat /opt/tomcat/
-RUN rm apache-tomcat-9.0.11.tar.gz
+RUN rm apache-tomcat-9.0.12.tar.gz
 
 # Setup Web Project
 RUN apt-get install -y git

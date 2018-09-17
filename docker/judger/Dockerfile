@@ -3,7 +3,6 @@ FROM ubuntu:18.04
 MAINTAINER Haozhe Xie "cshzxie@gmail.com"
 
 # User Settings
-ARG MYSQL_ROOT_PASS=dBuZNz6tDKhgZjHX
 ARG MYSQL_USER_PASS=U3bEwhRHnD6xNVpb
 ARG MYSQL_HOST=voj.web
 ARG MYSQL_PORT=3306
