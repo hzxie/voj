@@ -66,7 +66,7 @@
                             </div> <!-- .span5 -->
                             <div class="span5">
                                 <div class="control-group">
-                                    <input id="username" name="username" class="span12" placeholder="<spring:message code="voj.administration.all-submissions.username" text="Username" />" type="text" />
+                                    <input id="username" name="username" class="span12" value="${username}" placeholder="<spring:message code="voj.administration.all-submissions.username" text="Username" />" type="text" />
                                 </div> <!-- .control-group -->
                             </div> <!-- .span5 -->
                             <div class="span2">
@@ -122,7 +122,7 @@
                 <div id="pagination" class="pagination pagination-centered">
                     <c:set var="lowerBound" value="${currentPage - 5 > 0 ? currentPage - 5 : 1}" />
                     <c:set var="upperBound" value="${currentPage + 5 < totalPages ? currentPage + 5 : totalPages}" />
-                    <c:set var="baseUrl" value="/administration/all-submissions?${requestScope['javax.servlet.forward.query_string']}" />
+                    <c:set var="baseUrl" value="/administration/all-submissions?problemId=${problemId}&username=${username}" />
                     <ul>
                         <li class="previous <c:if test="${currentPage <= 1}">disabled</c:if>">
                         <a href="
