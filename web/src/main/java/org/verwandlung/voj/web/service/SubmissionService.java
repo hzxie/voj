@@ -75,7 +75,7 @@ public class SubmissionService {
 	 * @param endTime - 统计结束时间
 	 * @return 指定时间内提交的数量
 	 */
-	public long getNumberOfSubmissions(Date startTime, Date endTime) {
+	public long getNumberOfSubmissionsUsingDate(Date startTime, Date endTime) {
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:MM:ss");
 		String startTimeString = "0000-00-00 00:00:00";
 		String endTimeString = "9999-12-31 23:59:59";
@@ -86,7 +86,17 @@ public class SubmissionService {
 		if ( endTime != null ) {
 			endTimeString = sdf.format(endTime);
 		}
-		return submissionMapper.getNumberOfSubmissions(startTimeString, endTimeString);
+		return submissionMapper.getNumberOfSubmissionsUsingDate(startTimeString, endTimeString);
+	}
+
+	/**
+	 * 获取某个用户对某个试题的提交记录的数量.
+	 * @param problemId - 试题的唯一标识符
+	 * @param username - 用户的用户名
+	 * @return 某个用户对某个试题提交的数量
+	 */
+	public long getNumberOfSubmissionsUsingProblemIdAndUsername(long problemId, String username) {
+		return submissionMapper.getNumberOfSubmissionsUsingProblemIdAndUsername(problemId, username);
 	}
 	
 	/**
@@ -106,7 +116,7 @@ public class SubmissionService {
 	 * @param  isAcceptedOnly - 是否只统计通过的提交记录
 	 * @return 包含时间和提交次数的键值对 Map
 	 */
-	public Map<String, Long> getNumberOfSubmissions(Date startTime, Date endTime, long uid, boolean isAcceptedOnly) {
+	public Map<String, Long> getNumberOfSubmissionsUsingDate(Date startTime, Date endTime, long uid, boolean isAcceptedOnly) {
 		long differenceInSeconds = (endTime.getTime() - startTime.getTime()) / 1000;
 		if ( differenceInSeconds > 32 * 86400  ) {
 			return getNumberOfSubmissionsGroupByMonth(startTime, endTime, uid, isAcceptedOnly);

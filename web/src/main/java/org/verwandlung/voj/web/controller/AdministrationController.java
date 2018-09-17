@@ -179,7 +179,7 @@ public class AdministrationController {
 		
 		calendar.set(year, month, date + 1, 0, 0, 0);
 		Date endTime = calendar.getTime();
-		return submissionService.getNumberOfSubmissions(startTime, endTime);
+		return submissionService.getNumberOfSubmissionsUsingDate(startTime, endTime);
 	}
 	
 	/**
@@ -215,8 +215,8 @@ public class AdministrationController {
 		Map<String, Object> submissions = new HashMap<>(2, 1);
 		Date today = new Date();
 		Date previousDate = DateUtils.getPreviousDate(period);
-		Map<String, Long> totalSubmissions = submissionService.getNumberOfSubmissions(previousDate, today, 0, false);
-		Map<String, Long> acceptedSubmissions = submissionService.getNumberOfSubmissions(previousDate, today, 0, true);
+		Map<String, Long> totalSubmissions = submissionService.getNumberOfSubmissionsUsingDate(previousDate, today, 0, false);
+		Map<String, Long> acceptedSubmissions = submissionService.getNumberOfSubmissionsUsingDate(previousDate, today, 0, true);
 		
 		submissions.put("totalSubmissions", totalSubmissions);
 		submissions.put("acceptedSubmissions", acceptedSubmissions);
@@ -726,7 +726,7 @@ public class AdministrationController {
 			HttpServletRequest request, HttpServletResponse response) {
 		final int NUMBER_OF_SUBMISSIONS_PER_PAGE = 100;
 		
-		long totalSubmissions = submissionService.getNumberOfSubmissions(null, null);
+		long totalSubmissions = submissionService.getNumberOfSubmissionsUsingProblemIdAndUsername(problemId, username);
 		long latestSubmissionId = submissionService.getLatestSubmissionId();
 		long offset = latestSubmissionId - (pageNumber >= 1 ? pageNumber - 1 : 0) * NUMBER_OF_SUBMISSIONS_PER_PAGE;
 		List<Submission> submissions = submissionService.getSubmissions(problemId, username, offset, NUMBER_OF_SUBMISSIONS_PER_PAGE);

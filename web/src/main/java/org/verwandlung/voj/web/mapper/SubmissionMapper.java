@@ -61,7 +61,15 @@ public interface SubmissionMapper {
 	 * @param endTime - 统计结束时间
 	 * @return 指定时间内提交的数量
 	 */
-	long getNumberOfSubmissions(@Param("startTime") String startTime, @Param("endTime") String endTime);
+	long getNumberOfSubmissionsUsingDate(@Param("startTime") String startTime, @Param("endTime") String endTime);
+
+	/**
+	 * 获取某个用户对某个试题的提交记录的数量.
+	 * @param problemId - 试题的唯一标识符
+	 * @param username - 用户的用户名
+	 * @return 某个用户对某个试题提交的数量
+	 */
+	long getNumberOfSubmissionsUsingProblemIdAndUsername(@Param("problemId") long problemId, @Param("username") String username);
 
 	/**
 	 * [此方法仅供管理员使用]
@@ -105,7 +113,7 @@ public interface SubmissionMapper {
 	Submission getSubmission(@Param("submissionId") long submissionId);
 	
 	/**
-	 * 通过试题唯一标识符获取某个范围内的所有试题.
+	 * 获取某个用户对某个试题的提交记录.
 	 * @param problemId - 试题的唯一标识符
 	 * @param username - 用户的用户名
 	 * @param limit - 每次加载评测记录的数量
@@ -114,7 +122,7 @@ public interface SubmissionMapper {
 	List<Submission> getSubmissions(@Param("problemId") long problemId, @Param("username") String username, @Param("limit") int limit);
 	
 	/**
-	 * 通过试题唯一标识符获取某个范围内的所有试题.
+	 * 获取某个用户对某个试题的提交记录.
 	 * @param problemId - 试题的唯一标识符
 	 * @param username - 用户的用户名
 	 * @param offset - 试题唯一标识符的起始编号
@@ -124,7 +132,7 @@ public interface SubmissionMapper {
 	List<Submission> getSubmissionsUsingOffset(@Param("problemId") long problemId, @Param("username") String username, @Param("submissionId") long offset, @Param("limit") int limit);
 	
 	/**
-	 * 通过试题唯一标识符获取某个范围内的所有试题.
+	 * 获取某个用户对某个试题的提交记录.
 	 * @param problemId - 试题的唯一标识符
 	 * @param username - 用户的用户名
 	 * @param offset - 试题唯一标识符的起始编号

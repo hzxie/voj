@@ -32,7 +32,7 @@
 	</resultMap>
 	
 	<!-- Methods -->
-	<select id="getNumberOfSubmissions" 
+	<select id="getNumberOfSubmissionsUsingDate" 
 		parameterType="map"
 		resultType="long"
 		useCache="true">
@@ -46,6 +46,23 @@
 				AND submission_submit_time &lt; #{endTime}
 			</if>
 		</where>
+	</select>
+	<select id="getNumberOfSubmissionsUsingProblemIdAndUsername" 
+		parameterType="map"
+		resultType="long"
+		useCache="true">
+		SELECT COUNT(*) 
+		FROM voj_submissions 
+		NATURAL JOIN voj_users 
+		<where>
+			<if test="problemId != 0">
+				problem_id = #{problemId}
+			</if>
+			<if test="username != null and username != ''">
+				AND username = #{username} 
+			</if>
+		</where>
+		
 	</select>
 	<select id="getNumberOfSubmissionsGroupByMonth"
 		parameterType="map"
