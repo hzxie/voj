@@ -27,7 +27,7 @@ RUN apt-get install -y oracle-java10-installer oracle-java10-set-default
 
 # Install Maven
 RUN apt-get install -y wget
-RUN wget https://www-us.apache.org/dist/maven/maven-3/3.5.4/binaries/apache-maven-3.5.4-bin.tar.gz
+RUN wget https://archive.apache.org/dist/maven/maven-3/3.5.4/binaries/apache-maven-3.5.4-bin.tar.gz
 RUN tar -xf apache-maven-3.5.4-bin.tar.gz -C /opt
 RUN mv /opt/apache-maven-3.5.4 /opt/maven
 RUN rm apache-maven-3.5.4-bin.tar.gz
