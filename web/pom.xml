@@ -9,10 +9,10 @@
 	<url>http://maven.apache.org</url>
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<spring.version>5.0.4.RELEASE</spring.version>
-		<aspectj.version>1.8.13</aspectj.version>
-		<mybatis.version>3.4.5</mybatis.version>
-		<druid.version>1.1.8</druid.version>
+		<spring.version>5.1.1.RELEASE</spring.version>
+		<aspectj.version>1.9.1</aspectj.version>
+		<mybatis.version>3.4.6</mybatis.version>
+		<druid.version>1.1.12</druid.version>
 		<activemq.version>5.15.2</activemq.version>
 	</properties>
 	<repositories>
@@ -103,7 +103,7 @@
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
 			<artifactId>jackson-databind</artifactId>
-			<version>2.9.4</version>
+			<version>2.9.7</version>
 		</dependency>
 		<!-- JSTL Tags -->
 		<dependency>
