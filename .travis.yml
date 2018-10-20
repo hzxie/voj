@@ -1,15 +1,5 @@
 language: java
 dist: trusty
-matrix:
-  include:
-    - env: JDK='Oracle JDK 8'
-      jdk: oraclejdk8
-
-    - env: JDK='Oracle JDK 9'
-      jdk: oraclejdk9
-
-    - env: JDK='Oracle JDK 10'
-      jdk: oraclejdk10
 
 services: mysql
 
@@ -31,6 +21,20 @@ before_install:
   - export MVN_EXEC=`sudo find / -name mvn`
 # Setup Maven for Oracle JDK 9
   - export MAVEN_SKIP_RC=true
+
+matrix:
+  include:
+    - env: JDK='Oracle JDK 8'
+      jdk: oraclejdk8
+
+    - env: JDK='Oracle JDK 9'
+      jdk: oraclejdk9
+
+    - env: JDK='Oracle JDK 11'
+      install: . ./install-jdk.sh -F 11 -L BCL
+
+  allow_failures:
+  - env: JDK='Oracle JDK 11'
 
 script: 
   - echo PATH = ${PATH}
