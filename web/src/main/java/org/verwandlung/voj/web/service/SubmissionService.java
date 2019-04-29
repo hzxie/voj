@@ -181,7 +181,7 @@ public class SubmissionService {
 			numberOfSubmissions.put(sdf.format(targetDate), (long) 0);
 		}
 		
-		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:MM:ss");
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd 00:00:00");
 		String startTimeString = sdf.format(startTime);
 		String endTimeString = sdf.format(endTime);
 		List<Map<String, Object>> submissions = submissionMapper.getNumberOfSubmissionsGroupByDay(startTimeString, endTimeString, uid, isAcceptedOnly);
