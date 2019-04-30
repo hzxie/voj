@@ -27,13 +27,18 @@ matrix:
     - env: JDK='Oracle JDK 8'
       jdk: oraclejdk8
 
-    - env: JDK='Oracle JDK 9'
-      jdk: oraclejdk9
+    - env: JDK='Open JDK 8'
+      jdk: openjdk8
 
     - env: JDK='Oracle JDK 11'
       install: . ./install-jdk.sh -F 11 -L BCL
 
+    - env: JDK='Open JDK 11'
+      jdk: openjdk11
+
+
   allow_failures:
+  - env: JDK='Open JDK 8'
   - env: JDK='Oracle JDK 11'
 
 script: 
