@@ -94,13 +94,18 @@ public class ComparatorTest {
 		IOUtils.write(matchWithSpacesString + " \n  \n", outputStream);
 		// TestCase: Mismatch
 		stdOutputStream = new FileOutputStream(new File(
-				"/tmp/voj-matcher-tests/mimatch-std.txt"));
+				"/tmp/voj-matcher-tests/mismatch-std.txt"));
 		outputStream = new FileOutputStream(new File(
-				"/tmp/voj-matcher-tests/mimatch.txt"));
+				"/tmp/voj-matcher-tests/mismatch.txt"));
 		String mismatchString1 = "45652  \n\n";
 		String mismatchString2 = "24334";
 		IOUtils.write(mismatchString1, stdOutputStream);
 		IOUtils.write(mismatchString2, outputStream);
+		// TestCase: MismatchEmptyString
+		outputStream = new FileOutputStream(new File(
+				"/tmp/voj-matcher-tests/mismatch-empty.txt"));
+		String mismatchString3 = "\n";
+		IOUtils.write(mismatchString3, outputStream);
 	}
 
 	/**
@@ -147,8 +152,20 @@ public class ComparatorTest {
 	 */
 	@Test
 	public void testMismatch() throws IOException {
-		String standardOutputFilePath = "/tmp/voj-matcher-tests/mimatch-std.txt";
-		String outputFilePath = "/tmp/voj-matcher-tests/mimatch.txt";
+		String standardOutputFilePath = "/tmp/voj-matcher-tests/mismatch-std.txt";
+		String outputFilePath = "/tmp/voj-matcher-tests/mismatch.txt";
+		Assertions.assertFalse(comparator.isOutputTheSame(standardOutputFilePath, outputFilePath));
+	}
+
+	/**
+	 * 测试用例: 测试isOutputTheSame(String, String)方法 
+	 * 测试数据: 输入和输出不完全相同 
+	 * 测试结果: 返回false, 表示输出结果不正确
+	 */
+	@Test
+	public void testMismatchEmptyString() throws IOException {
+		String standardOutputFilePath = "/tmp/voj-matcher-tests/mismatch-std.txt";
+		String outputFilePath = "/tmp/voj-matcher-tests/mismatch-empty.txt";
 		Assertions.assertFalse(comparator.isOutputTheSame(standardOutputFilePath, outputFilePath));
 	}
 

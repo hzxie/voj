@@ -117,7 +117,8 @@ public class Comparator {
 	 * @return 某行的标准输出和用户输出是否相同
 	 */
 	private boolean isLineOutputTheSame(String stdLine, String line) {
-		for ( int i = 0, j = 0; i < stdLine.length() && j < line.length(); ++ i, ++ j ) {
+		int i = 0, j = 0;
+		for ( ; i < stdLine.length() && j < line.length(); ++ i, ++ j ) {
 			if (  stdLine.charAt(i) != line.charAt(j) ) {
 				if ( stdLine.charAt(i) == '\n' ) {
 					if ( !isLineEmpty(line, j) ) {
@@ -133,6 +134,18 @@ public class Comparator {
 				return false;
 			}
 		}
+		while ( i < stdLine.length() ) {
+			if ( !isLineEmpty(stdLine, i) ) {
+				return false;
+			}
+			++ i;
+		}
+		while ( j < line.length() ) {
+			if ( !isLineEmpty(line, j) ) {
+				return false;
+			}
+			++ j;
+		}
 		return true;
 	}
 	
@@ -143,7 +156,7 @@ public class Comparator {
 	 * @return 该行内容中是否只包含空格和换行符
 	 */
 	private boolean isLineEmpty(String line, int startIndex) {
-		for ( int i = 0; i < line.length(); ++ i ) {
+		for ( int i = startIndex; i < line.length(); ++ i ) {
 			if ( !(line.charAt(i) == ' ' || line.charAt(i) == '\n') ) {
 				return false;
 			}
