@@ -14,6 +14,8 @@ environment:
   - JAVA_HOME: C:\Program Files\Java\jdk1.8.0
   - JAVA_HOME: C:\Program Files\Java\jdk9
   - JAVA_HOME: C:\Program Files\Java\jdk10
+  - JAVA_HOME: C:\Program Files\Java\jdk11
+  - JAVA_HOME: C:\Program Files\Java\jdk12
 
 services:
   - mysql
@@ -35,6 +37,10 @@ install:
   - copy "C:\Program Files\Java\jdk9\include\win32\jawt_md.h" "C:\Program Files\Java\jdk9\include\jawt_md.h"
   - copy "C:\Program Files\Java\jdk10\include\win32\jni_md.h" "C:\Program Files\Java\jdk10\include\jni_md.h"
   - copy "C:\Program Files\Java\jdk10\include\win32\jawt_md.h" "C:\Program Files\Java\jdk10\include\jawt_md.h"
+  - copy "C:\Program Files\Java\jdk11\include\win32\jni_md.h" "C:\Program Files\Java\jdk11\include\jni_md.h"
+  - copy "C:\Program Files\Java\jdk11\include\win32\jawt_md.h" "C:\Program Files\Java\jdk11\include\jawt_md.h"
+  - copy "C:\Program Files\Java\jdk12\include\win32\jni_md.h" "C:\Program Files\Java\jdk12\include\jni_md.h"
+  - copy "C:\Program Files\Java\jdk12\include\win32\jawt_md.h" "C:\Program Files\Java\jdk12\include\jawt_md.h"
 # Setup test environment for Windows
   - copy "judger\src\test\resources\voj-test-windows.properties" "judger\src\test\resources\voj-test.properties"
 
