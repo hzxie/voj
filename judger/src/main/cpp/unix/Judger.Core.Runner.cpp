@@ -287,8 +287,7 @@ char** getCommandArgs(const std::string& commandLine) {
  */
 bool isCurrentUsedMemoryIgnored(int currentUsedMemory) {
     int jvmUsedMemory = getCurrentUsedMemory(getpid());
-    std::cout << "[DEBUG] Current Memory of JVM: " << jvmUsedMemory << " KB" << std::endl;
-
+    // std::cout << "[DEBUG] Current Memory of JVM: " << jvmUsedMemory << " KB" << std::endl;
     if ( currentUsedMemory >= jvmUsedMemory / 2 &&
          currentUsedMemory <= jvmUsedMemory * 2 ) {
         return true;
@@ -307,8 +306,7 @@ int getMaxUsedMemory(pid_t pid, int memoryLimit) {
          currentUsedMemory = 0;
     do {
         currentUsedMemory = getCurrentUsedMemory(pid);
-        std::cout << "[DEBUG] Current Memory of PID# " << pid << ": " << currentUsedMemory << " KB" << std::endl;
-
+        // std::cout << "[DEBUG] Current Memory of PID# " << pid << ": " << currentUsedMemory << " KB" << std::endl;
         if ( currentUsedMemory > maxUsedMemory && 
             !isCurrentUsedMemoryIgnored(currentUsedMemory) ) {
             maxUsedMemory = currentUsedMemory;
@@ -344,9 +342,6 @@ int getCurrentUsedMemory(pid_t pid) {
             }
         }
         fclose(fp);
-    } else {
-        std::cout << "[DEBUG] Memory file path = " << cFilePath << std::endl;
-        std::cout << "[DEBUG] fp == NULL in getCurrentUsedMemory(pid_t)" << std::endl;
     }
     return currentUsedMemory;
 }
