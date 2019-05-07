@@ -64,8 +64,8 @@
                             <h5><a href="<c:url value="/contest/${contest.contestId}" />">${contest.contestName}</a></h5>
                             <ul class="inline">
                                 <li>${contest.contestMode}</li>
-                                <li><spring:message code="voj.contests.contests.start-time" text="Start Time" />: <fmt:formatDate value="${contest.startTime}" type="both" dateStyle="default" timeStyle="default" /></li>
-                                <li><spring:message code="voj.contests.contests.end-time" text="End Time" />: <fmt:formatDate value="${contest.endTime}" type="both" dateStyle="default" timeStyle="default" /></li>
+                                <li><spring:message code="voj.contests.contests.start-time" text="Start Time" />: <fmt:formatDate value="${contest.startTime}" type="both" dateStyle="long" timeStyle="medium" /></li>
+                                <li><spring:message code="voj.contests.contests.end-time" text="End Time" />: <fmt:formatDate value="${contest.endTime}" type="both" dateStyle="long" timeStyle="medium" /></li>
                             </ul>
                         </td>
                         <td class="status">${contestStatus}</td>
