@@ -12,7 +12,7 @@ ARG MAIL_PASSWORD=passwd
 
 # Set environment variables.
 ENV HOME          /root
-ENV JAVA_HOME     /usr/lib/jvm/java-10-oracle
+ENV JAVA_HOME     /usr/lib/jvm/java-11-openjdk-amd64
 ENV M2_HOME       /opt/maven
 
 # Define working directory.
@@ -28,11 +28,7 @@ RUN /etc/init.d/mysql start && \
     mysql -e "GRANT SELECT, INSERT, UPDATE, DELETE ON voj.* TO 'voj'@'%' IDENTIFIED BY '${MYSQL_USER_PASS}'"
 
 # Install Java
-RUN echo oracle-java10-installer shared/accepted-oracle-license-v1-1 select true | /usr/bin/debconf-set-selections
-RUN apt-get -y install software-properties-common
-RUN add-apt-repository -y ppa:linuxuprising/java
-RUN apt-get update
-RUN apt-get install -y oracle-java10-installer oracle-java10-set-default
+RUN apt-get install -y openjdk-11-jdk
 
 # Install Maven
 RUN apt-get install -y wget
