@@ -22,7 +22,7 @@ function getFormatedDateString(dateTime, locale) {
     if ( locale == 'en_US' ) {
         dateString = dateObject.toString('MMM d, yyyy h:mm:ss tt');
     } else if ( locale == 'zh_CN' ) {
-        dateString = dateObject.toString('yyyy-M-dd HH:mm:ss');
+        dateString = dateObject.toString('yyyy年M月d日 HH:mm:ss');
     }
     return dateString;
 }

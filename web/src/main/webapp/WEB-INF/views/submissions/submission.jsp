@@ -67,7 +67,7 @@
                                     </tr>
                                     <tr>
                                         <td><spring:message code="voj.submissions.submission.submit-time" text="Submit Time" /></td>
-                                        <td id="submit-time"><fmt:formatDate value="${submission.submitTime}" type="both" dateStyle="default" timeStyle="default"/></td>
+                                        <td id="submit-time"><fmt:formatDate value="${submission.submitTime}" type="both" dateStyle="long" timeStyle="medium"/></td>
                                     </tr>
                                     <tr>
                                         <td><spring:message code="voj.submissions.submission.language" text="Language" /></td>
@@ -87,7 +87,7 @@
                                     </tr>
                                     <tr>
                                         <td><spring:message code="voj.submissions.submission.execute-time" text="Execute Time" /></td>
-                                        <td id="execute-time"><fmt:formatDate value="${submission.executeTime}" type="both" dateStyle="default" timeStyle="default"/></td>
+                                        <td id="execute-time"><fmt:formatDate value="${submission.executeTime}" type="both" dateStyle="long" timeStyle="medium"/></td>
                                     </tr>
                                 </table>
                             </div> <!-- .description -->

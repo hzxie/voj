@@ -110,10 +110,10 @@
                             <td class="user"><a href="<c:url value="/administration/edit-user/${submission.user.uid}" />">${submission.user.username}</a></td>
                             <td class="language">${submission.language.languageName}</td>
                             <td class="submit-time">
-                                <fmt:formatDate value="${submission.submitTime}" type="both" dateStyle="default" timeStyle="default" />
+                                <fmt:formatDate value="${submission.submitTime}" type="both" dateStyle="long" timeStyle="medium" />
                             </td>
                             <td class="execute-time">
-                                <fmt:formatDate value="${submission.executeTime}" type="both" dateStyle="default" timeStyle="default" />
+                                <fmt:formatDate value="${submission.executeTime}" type="both" dateStyle="long" timeStyle="medium" />
                             </td>
                         </tr>
                         </c:forEach>
