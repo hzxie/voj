@@ -36,7 +36,7 @@ The application used following open-source projects:
  - [MyBatis](https://mybatis.github.io/mybatis-3/index.html) persistence framework
  - [Apache ActiveMQ](http://activemq.apache.org/) message queue
  - [Druid](https://github.com/alibaba/druid/) database connection pool
- - [Flat UI](http://flat-ui.com)
+ - [Flat UI](http://designmodo.github.io/Flat-UI/)
  - [jQuery](http://jquery.com)
  - [FontAwesome](http://fontawesome.io)
  - [CodeMirror](http://codemirror.net)
