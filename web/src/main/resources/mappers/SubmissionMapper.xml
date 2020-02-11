@@ -187,7 +187,7 @@
 		INNER JOIN ( 
 			SELECT MAX(submission_id) AS max_submission_id, problem_id 
 			FROM voj_submissions 
-			WHERE uid = #{uid} AND problem_id &gt;= #{problemIdLowerBound} AND problem_id &lt; #{problemIdUpperBound} 
+			WHERE uid = #{uid} AND problem_id &gt;= #{problemIdLowerBound} AND problem_id &lt;= #{problemIdUpperBound}
 			GROUP BY problem_id 
 		) s2 ON s1.problem_id = s2.problem_id AND s1.submission_id = s2.max_submission_id
 	</select>
@@ -197,7 +197,7 @@
 		useCache="true">
 		SELECT submission_id, problem_id, submission_judge_result 
 		FROM voj_submissions 
-		WHERE uid = #{uid} AND problem_id &gt;= #{problemIdLowerBound} AND problem_id &lt; #{problemIdUpperBound} AND submission_judge_result = 'AC' 
+		WHERE uid = #{uid} AND problem_id &gt;= #{problemIdLowerBound} AND problem_id &lt;= #{problemIdUpperBound} AND submission_judge_result = 'AC'
 		GROUP BY problem_id
 	</select>
 	<select id="getAcceptedSubmissionUsingUserId" 
