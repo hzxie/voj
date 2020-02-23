@@ -1,0 +1,7 @@
+extraction:
+  java:
+    index:
+      build_command:
+      - "mvn package -DskipTests -f web/pom.xml"
+      - "mvn package -DskipTests -f judger/pom.xml"
+
