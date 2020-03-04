@@ -130,7 +130,7 @@ public class ProblemCategory implements Serializable {
 
 	/**
 	 * 设置试题分类的父类的唯一标识符.
-	 * @param parentProblemCategory - 试题分类的父类的唯一标识符
+	 * @param parentProblemCategoryId - 试题分类的父类的唯一标识符
 	 */
 	public void setParentProblemCategory(int parentProblemCategoryId) {
 		this.parentProblemCategoryId = parentProblemCategoryId;

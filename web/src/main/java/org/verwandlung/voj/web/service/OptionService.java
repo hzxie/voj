@@ -195,7 +195,7 @@ public class OptionService {
 	/**
 	 * 检查公安机关备案号是否合法.
 	 * 规则: 合法的公安机关备案号形如: 浙公网安备33010202000766号
-	 * @param icpNumber - 公安机关备案号 
+	 * @param policeIcpNumber - 公安机关备案号 
 	 * @return 公安机关备案号的合法性
 	 */
 	private boolean isPoliceIcpNumberLegal(String policeIcpNumber) {

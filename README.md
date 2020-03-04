@@ -6,7 +6,8 @@ Version: 0.2.0 (Released on August 30, 2018)
 [![Build status](https://ci.appveyor.com/api/projects/status/j62ns9p8whttittm?svg=true)](https://ci.appveyor.com/project/hzxie/voj)
 [![Coverage Status](https://coveralls.io/repos/hzxie/voj/badge.svg?branch=master&service=github)](https://coveralls.io/github/hzxie/voj?branch=master)
 [![Docker Automated build](https://img.shields.io/docker/automated/jrottenberg/ffmpeg.svg)](http://hub.docker.com/r/zjhzxhz)
-[![996.icu](https://img.shields.io/badge/link-996.icu-red.svg)](https://996.icu)
+[![Language grade: Java](https://img.shields.io/lgtm/grade/java/g/hzxie/voj.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/hzxie/voj/context:java)
+[![Total alerts](https://img.shields.io/lgtm/alerts/g/hzxie/voj.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/hzxie/voj/alerts/)
 
 [**Official Website**](https://verwandlung.org) | 
 [**Tech Support**](https://infinitescript.com/project/verwandlung-online-judge/) |
