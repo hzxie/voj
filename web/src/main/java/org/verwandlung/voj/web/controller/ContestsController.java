@@ -203,6 +203,8 @@ public class ContestsController {
 		} else if ( contest.getContestMode().equals("ACM") ) {
 			view = new ModelAndView("contests/leaderboard-acm");
 			result = contestService.getLeaderBoardForAcm(contestId);
+		} else {
+			throw new ResourceNotFoundException();
 		}
 		List<ContestContestant> contestants = (List<ContestContestant>) result.get("contestants");
 		Map<Long, Map<Long, Submission>> submissions = (Map<Long, Map<Long, Submission>>) result.get("submissions");

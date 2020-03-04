@@ -54,7 +54,7 @@ public class UserMeta implements Serializable {
 	
 	/**
 	 * UserMeta类的构造函数.
-	 * @param uid - 用户的唯一标识符
+	 * @param user - 用户对象
 	 * @param metaKey - 元信息的键
 	 * @param metaValue - 元信息的值
 	 */
@@ -67,7 +67,7 @@ public class UserMeta implements Serializable {
 	/**
 	 * UserMeta类的构造函数.
 	 * @param metaId - 用户元信息的唯一标识符
-	 * @param uid - 用户的唯一标识符
+	 * @param user - 用户对象
 	 * @param metaKey - 元信息的键
 	 * @param metaValue - 元信息的值
 	 */
