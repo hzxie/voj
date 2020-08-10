@@ -1,0 +1,74 @@
+div#content a {
+	text-decoration: none;
+}
+
+div#filters form {
+	margin: 0;
+}
+
+div#content table {
+	border: 1px solid #e8e8e8;
+	margin: 20px 0 0;
+	-webkit-box-shadow: 0 0 5px rgba(0,0,0,0.1);
+	   -moz-box-shadow: 0 0 5px rgba(0,0,0,0.1);
+	        box-shadow: 0 0 5px rgba(0,0,0,0.1);
+}
+
+div#content table thead {
+	background-color: #16a085;
+	color: #fff;
+}
+
+div#content table thead label.checkbox.checked span.icons {
+	color: #fff;
+}
+
+div#content table label.checkbox {
+	margin: 0;
+	padding: 0;
+}
+
+div#content table th {
+	border-left: 1px solid #e8e8e8;
+	text-align: center;
+	vertical-align: middle;
+}
+
+div#content table th.check-box,
+div#content table td.check-box {
+	width: 20px;
+}
+
+div#content table td {
+	border-left: 1px solid #e8e8e8;
+	color: #666;
+	text-align: center;
+	vertical-align: middle;
+}
+
+/* Smaller than standard 960 (devices and browsers) */
+@media only screen and (max-width: 959px) {
+}
+
+/* Tablet Portrait size to standard 960 (devices and browsers) */
+@media only screen and (min-width: 768px) and (max-width: 959px) {
+}
+
+/* All Mobile Sizes (devices and browser) */
+@media only screen and (max-width: 767px) {
+	div#filters button.btn-danger {
+		margin-bottom: 10px;
+	}
+
+	div#filters button.btn {
+		width: 100%;
+	}
+}
+
+/* Mobile Landscape Size to Tablet Portrait (devices and browsers) */
+@media only screen and (min-width: 480px) and (max-width: 767px) {
+}
+
+/* Mobile Portrait Size to Mobile Landscape Size (devices and browsers) */
+@media only screen and (max-width: 479px) {
+}

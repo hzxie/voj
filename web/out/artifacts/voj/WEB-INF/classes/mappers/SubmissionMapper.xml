@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper 
+	PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"  
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.verwandlung.voj.web.mapper.SubmissionMapper">
+	<!-- ResultMap -->
+	<resultMap id="SubmissionResultMap" type="org.verwandlung.voj.web.model.Submission">
+		<result property="submissionId" column="submission_id" />
+		<result property="submitTime" column="submission_submit_time" />
+		<result property="executeTime" column="submission_execute_time" />
+		<result property="usedTime" column="submission_used_time" />
+		<result property="usedMemory" column="submission_used_memory" />
+		<result property="judgeScore" column="submission_judge_score" />
+		<result property="judgeLog" column="submission_judge_log" />
+		<result property="code" column="submission_code" />
+		<association property="problem" 
+			javaType="org.verwandlung.voj.web.model.Problem" 
+			column="problem_id"
+			select="org.verwandlung.voj.web.mapper.ProblemMapper.getProblem" />
+		<association property="user" 
+			javaType="org.verwandlung.voj.web.model.User" 
+			column="uid"
+			select="org.verwandlung.voj.web.mapper.UserMapper.getUserUsingUid" />
+		<association property="language" 
+			javaType="org.verwandlung.voj.web.model.Language" 
+			column="language_id"
+			select="org.verwandlung.voj.web.mapper.LanguageMapper.getLanguageUsingId" />
+		<association property="judgeResult" 
+			javaType="org.verwandlung.voj.web.model.JudgeResult" 
+			column="submission_judge_result"
+			select="org.verwandlung.voj.web.mapper.JudgeResultMapper.getJudgeResultUsingSlug" />
+	</resultMap>
+	
+	<!-- Methods -->
+	<select id="getNumberOfSubmissionsUsingDate" 
+		parameterType="map"
+		resultType="long"
+		useCache="true">
+		SELECT COUNT(*) 
+		FROM voj_submissions 
+		<where>
+			<if test="startTime != null">
+				submission_submit_time &gt;= #{startTime}
+			</if>
+			<if test="endTime != null">
+				AND submission_submit_time &lt; #{endTime}
+			</if>
+		</where>
+	</select>
+	<select id="getNumberOfSubmissionsUsingProblemIdAndUsername" 
+		parameterType="map"
+		resultType="long"
+		useCache="true">
+		SELECT COUNT(*) 
+		FROM voj_submissions 
+		NATURAL JOIN voj_users 
+		<where>
+			<if test="problemId != 0">
+				problem_id = #{problemId}
+			</if>
+			<if test="username != null and username != ''">
+				AND username = #{username} 
+			</if>
+		</where>
+		
+	</select>
+	<select id="getNumberOfSubmissionsGroupByMonth"
+		parameterType="map"
+		resultType="hashmap"
+		useCache="true">
+		SELECT EXTRACT(YEAR_MONTH FROM submission_submit_time) AS month, COUNT(*) as submissions 
+		FROM `voj_submissions`
+		WHERE submission_submit_time &gt;= #{startTime} AND submission_submit_time &lt; #{endTime}
+		<if test="uid != 0">
+			AND uid = #{uid}
+		</if>
+		<if test="isAcceptedOnly == true">
+			AND submission_judge_result = 'AC'
+		</if>
+		GROUP BY EXTRACT(YEAR_MONTH FROM submission_submit_time)
+	</select>
+	<select id="getNumberOfSubmissionsGroupByDay"
+		parameterType="map"
+		resultType="hashmap"
+		useCache="true">
+		SELECT DATE(submission_submit_time) AS date, COUNT(*) as submissions 
+		FROM `voj_submissions`
+		WHERE submission_submit_time &gt;= #{startTime} AND submission_submit_time &lt; #{endTime}
+		<if test="uid != 0">
+			AND uid = #{uid}
+		</if>
+		<if test="isAcceptedOnly == true">
+			AND submission_judge_result = 'AC'
+		</if>
+		GROUP BY DATE(submission_submit_time)
+	</select>
+	<select id="getNumberOfSubmissionsUsingLanguage"
+		parameterType="org.verwandlung.voj.web.model.Language"
+		resultType="long"
+		useCache="true">
+		SELECT COUNT(*)
+		FROM voj_submissions 
+		WHERE language_id = #{languageId}
+	</select>
+	<select id="getLatestSubmissionId"
+		resultType="long"
+		useCache="false">
+		SELECT IFNULL(MAX(submission_id), 0)
+		FROM voj_submissions
+	</select>
+	<select id="getSubmission" 
+		parameterType="long"
+		resultMap="SubmissionResultMap"
+		useCache="false">
+		SELECT * 
+		FROM voj_submissions 
+		WHERE submission_id = #{submissionId}
+	</select>
+	<select id="getSubmissions" 
+		parameterType="map"
+		resultMap="SubmissionResultMap"
+		useCache="true">
+		SELECT * 
+		FROM voj_submissions 
+		NATURAL JOIN voj_users 
+		<where> 
+			<if test="problemId != 0">
+				problem_id = #{problemId}
+			</if>
+			<if test="username != null and username != ''">
+				AND username = #{username}
+			</if>
+		</where>
+		ORDER BY submission_id DESC 
+		LIMIT #{limit}
+	</select>
+	<select id="getSubmissionsUsingOffset" 
+		parameterType="map"
+		resultMap="SubmissionResultMap"
+		useCache="true">
+		SELECT * 
+		FROM voj_submissions 
+		NATURAL JOIN voj_users 
+		WHERE submission_id &lt;= #{submissionId} 
+		<if test="problemId != 0">
+			AND problem_id = #{problemId} 
+		</if>
+		<if test="username != null and username != ''">
+			AND username = #{username} 
+		</if>
+		ORDER BY submission_id DESC 
+		LIMIT #{limit}
+	</select>
+	<select id="getLatestSubmissionsUsingOffset" 
+		parameterType="map"
+		resultMap="SubmissionResultMap"
+		useCache="true">
+		SELECT * 
+		FROM voj_submissions 
+		NATURAL JOIN voj_users 
+		WHERE submission_id &gt;= #{submissionId} 
+		<if test="problemId != 0">
+			AND problem_id = #{problemId} 
+		</if>
+		<if test="username != null and username != ''">
+			AND username = #{username} 
+		</if>
+		ORDER BY submission_id 
+		LIMIT #{limit}
+	</select>
+	<select id="getSubmissionUsingProblemIdAndUserId" 
+		parameterType="map"
+		resultMap="SubmissionResultMap"
+		useCache="true">
+		SELECT * 
+		FROM voj_submissions 
+		WHERE problem_id = #{problemId} AND uid = #{uid} 
+		ORDER BY submission_id DESC 
+		LIMIT #{limit}
+	</select>
+	<select id="getLatestSubmissionOfProblems" 
+		parameterType="map"
+		resultMap="SubmissionResultMap"
+		useCache="true">
+		SELECT submission_id, s1.problem_id, submission_judge_result 
+		FROM voj_submissions s1 
+		INNER JOIN ( 
+			SELECT MAX(submission_id) AS max_submission_id, problem_id 
+			FROM voj_submissions 
+			WHERE uid = #{uid} AND problem_id &gt;= #{problemIdLowerBound} AND problem_id &lt;= #{problemIdUpperBound}
+			GROUP BY problem_id 
+		) s2 ON s1.problem_id = s2.problem_id AND s1.submission_id = s2.max_submission_id
+	</select>
+	<select id="getAcceptedSubmissionOfProblems" 
+		parameterType="map"
+		resultMap="SubmissionResultMap"
+		useCache="true">
+		SELECT submission_id, problem_id, submission_judge_result 
+		FROM voj_submissions 
+		WHERE uid = #{uid} AND problem_id &gt;= #{problemIdLowerBound} AND problem_id &lt;= #{problemIdUpperBound} AND submission_judge_result = 'AC'
+		GROUP BY problem_id
+	</select>
+	<select id="getAcceptedSubmissionUsingUserId" 
+		parameterType="long"
+		resultType="long"
+		useCache="true">
+		SELECT COUNT(DISTINCT problem_id) 
+		FROM voj_submissions 
+		WHERE uid = #{uid} AND submission_judge_result = 'AC'
+	</select>
+	<select id="getTotalSubmissionUsingUserId" 
+		parameterType="long"
+		resultType="long"
+		useCache="true">
+		SELECT COUNT(*) 
+		FROM voj_submissions 
+		WHERE uid = #{uid} AND submission_judge_result != 'PD' AND submission_judge_result != 'SE'
+	</select>
+	<insert id="createSubmission" 
+		parameterType="org.verwandlung.voj.web.model.Submission"
+		flushCache="true" 
+		keyProperty="submissionId" 
+		keyColumn="submission_id"
+		useGeneratedKeys="true">
+		INSERT INTO voj_submissions(problem_id, uid, language_id, submission_code) 
+		VALUES (#{problem.problemId}, #{user.uid}, #{language.languageId}, #{code})
+	</insert>
+	<update id="updateSubmission"
+		parameterType="org.verwandlung.voj.web.model.Submission"
+		flushCache="true">
+		UPDATE voj_submissions 
+		SET problem_id = #{problem.problemId}, uid = #{user.uid}, language_id = #{language.languageId}, submission_submit_time = #{submitTime}, submission_execute_time = #{executeTime}, submission_used_time = #{usedTime}, submission_used_memory = #{usedMemory}, submission_judge_result = #{judgeResult.judgeResultSlug}, submission_judge_score = #{judgeScore}, submission_judge_log = #{judgeLog}, submission_code = #{code} 
+		WHERE submission_id = #{submissionId}
+	</update>
+	<delete id="deleteSubmission"
+		parameterType="long"
+		flushCache="true">
+		DELETE FROM voj_submissions 
+		WHERE submission_id = #{submissionId}
+	</delete>
+</mapper>

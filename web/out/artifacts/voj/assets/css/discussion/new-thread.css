@@ -1,0 +1,34 @@
+div#discussion-thread {
+	margin-bottom: 60px;
+}
+
+div#discussion-thread div.header {
+	border-bottom: 1px solid #dedede;
+}
+
+div#discussion-thread select, 
+div#discussion-thread input[type="text"] {
+	height: auto;
+	-webkit-box-sizing:border-box;
+	   -moz-box-sizing: border-box;
+	        box-sizing: border-box;
+}
+
+div#discussion-thread div.body div.markdown-editor div.wmd-button-bar,
+div#discussion-thread div.body div.markdown-editor textarea.wmd-input {
+	border-width: 1px;
+}
+
+div#discussion-thread div.body div.section {
+	border-bottom: 1px solid #dedede;
+	font-size: 13px;
+	padding: 10px 0 10px;
+}
+
+div#discussion-thread div.body div.section:last-child {
+	border-bottom: none;
+}
+
+div#discussion-thread div.body div.section p {
+	padding-left: 15px;
+}

@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper 
+	PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"  
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.verwandlung.voj.web.mapper.UserMapper">
+	<!-- ResultMap -->
+	<resultMap id="UserResultMap" 
+		type="org.verwandlung.voj.web.model.User">
+		<id property="uid" column="uid" />
+		<result property="username" column="username" />
+		<result property="password" column="password" />
+		<result property="email" column="email" />
+		<association property="userGroup" 
+			javaType="org.verwandlung.voj.web.model.UserGroup" 
+			column="user_group_id"
+			select="org.verwandlung.voj.web.mapper.UserGroupMapper.getUserGroupUsingId" />
+		<association property="preferLanguage" 
+			javaType="org.verwandlung.voj.web.model.Language" 
+			column="prefer_language_id"
+			select="org.verwandlung.voj.web.mapper.LanguageMapper.getLanguageUsingId" />
+	</resultMap>
+	
+	<!-- Methods -->
+	<select id="getNumberOfUsersUsingUserGroup" 
+		parameterType="org.verwandlung.voj.web.model.UserGroup"
+		resultType="long"
+		useCache="true">
+		SELECT COUNT(*) 
+		FROM voj_users 
+		WHERE user_group_id = #{userGroup.userGroupId}
+	</select>
+	<select id="getNumberOfUsersUsingUserGroupAndUsername"
+		parameterType="map"
+		resultType="long"
+		useCache="true">
+		SELECT COUNT(*)
+		FROM voj_users
+		<where>
+			<if test="userGroup != null">
+         		user_group_id = #{userGroup.userGroupId}
+			</if>
+			<if test="username != null and username != ''">
+         		AND username LIKE "%"#{username}"%"
+			</if>
+		</where>
+	</select>
+	<select id="getNumberOfUsersUsingLanguage" 
+		parameterType="int"
+		resultType="long"
+		useCache="true">
+		SELECT COUNT(*) 
+		FROM voj_users 
+		WHERE prefer_language_id = #{languageId}
+	</select>
+	<select id="getUserUsingUid" 
+		parameterType="long"
+		resultMap="UserResultMap"
+		useCache="true">
+		SELECT * 
+		FROM voj_users 
+		WHERE uid = #{uid}
+	</select>
+	<select id="getUserUsingUsername" 
+		parameterType="String"
+		resultMap="UserResultMap"
+		useCache="true">
+		SELECT * 
+		FROM voj_users 
+		WHERE username = #{username}
+	</select>
+	<select id="getUserUsingEmail" 
+		parameterType="String"
+		resultMap="UserResultMap"
+		useCache="true">
+		SELECT * 
+		FROM voj_users 
+		WHERE email = #{email}
+	</select>
+	<select id="getUserUsingUserGroup" 
+		parameterType="map"
+		resultMap="UserResultMap"
+		useCache="true">
+		SELECT * 
+		FROM voj_users 
+		WHERE user_group_id = #{userGroup.userGroupId}
+		AND uid > #{uid}
+		LIMIT #{limit}
+	</select>
+	<select id="getUserUsingUserGroupAndUsername" 
+		parameterType="map"
+		resultMap="UserResultMap"
+		useCache="true">
+		SELECT * 
+		FROM voj_users 
+		<where>
+			<if test="userGroup != null">
+         		user_group_id = #{userGroup.userGroupId}
+			</if>
+			<if test="username != null and username != ''">
+         		AND username LIKE "%"#{username}"%"
+			</if>
+		</where>
+		LIMIT #{offset}, #{limit}
+	</select>
+	<insert id="createUser" 
+		parameterType="org.verwandlung.voj.web.model.User"
+		flushCache="true" 
+		keyProperty="uid" 
+		keyColumn="uid"
+		useGeneratedKeys="true">
+		INSERT INTO voj_users (username, password, email, user_group_id, prefer_language_id) 
+		VALUES (#{username}, #{password}, #{email}, #{userGroup.userGroupId}, #{preferLanguage.languageId})
+	</insert>
+	<update id="updateUser"
+		parameterType="org.verwandlung.voj.web.model.User"
+		flushCache="true">
+		UPDATE voj_users 
+		SET username = #{username}, password = #{password}, email = #{email}, user_group_id = #{userGroup.userGroupId}, prefer_language_id = #{preferLanguage.languageId} 
+		WHERE uid = #{uid}
+	</update>
+	<delete id="deleteUser"
+		parameterType="long"
+		flushCache="true">
+		DELETE FROM voj_users 
+		WHERE uid = #{uid}
+	</delete>
+</mapper>

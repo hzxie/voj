@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper 
+	PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"  
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.verwandlung.voj.web.mapper.ContestSubmissionMapper">
+	<!-- ResultMap -->
+	<resultMap id="ContestSubmissionResultMap" type="org.verwandlung.voj.web.model.ContestSubmission">
+		<association property="contest" 
+			javaType="org.verwandlung.voj.web.model.Contest" 
+			column="contest_id"
+			select="org.verwandlung.voj.web.mapper.ContestMapper.getContest" />
+		<association property="submission" 
+			javaType="org.verwandlung.voj.web.model.Submission" 
+			column="submission_id"
+			select="org.verwandlung.voj.web.mapper.SubmissionMapper.getSubmission" />
+	</resultMap>
+
+	<!-- Methods -->
+	<select id="getSubmissionsOfContest"
+		parameterType="long"
+		resultMap="ContestSubmissionResultMap"
+		useCache="true">
+		SELECT * 
+		FROM voj_contest_submissions
+		NATURAL JOIN voj_submissions
+		WHERE contest_id = #{contestId}
+	</select>
+	<select id="getAcceptedSubmissionsOfContest"
+		parameterType="long"
+		resultMap="ContestSubmissionResultMap"
+		useCache="true">
+		SELECT * 
+		FROM voj_contest_submissions
+		NATURAL JOIN voj_submissions
+		WHERE contest_id = #{contestId}
+		AND submission_judge_result = 'AC'
+	</select>
+	<select id="getSubmissionOfContestOfContest"
+		parameterType="map"
+		resultMap="ContestSubmissionResultMap"
+		useCache="true">
+		SELECT * 
+		FROM voj_contest_submissions
+		NATURAL JOIN voj_submissions
+		WHERE contest_id = #{contestId}
+	</select>
+	<select id="getSubmissionOfContestOfContestProblem"
+		parameterType="map"
+		resultMap="ContestSubmissionResultMap"
+		useCache="true">
+		SELECT *
+		FROM voj_contest_submissions
+		NATURAL JOIN voj_submissions
+		WHERE contest_id = #{contestId}
+		AND problem_id = #{problemId}
+		ORDER BY submission_id DESC
+	</select>
+	<insert id="createContestSubmission" 
+		parameterType="org.verwandlung.voj.web.model.ContestSubmission"
+		flushCache="true">
+		INSERT INTO voj_contest_submissions (contest_id, submission_id)
+		VALUES (#{contest.contestId}, #{submission.submissionId})
+	</insert>
+	<delete id="deleteContestSubmission"
+		parameterType="map"
+		flushCache="true">
+		DELETE FROM voj_contest_submissions 
+		WHERE contest_id = #{contestId} 
+		AND submission_id = #{submissionId}
+	</delete>
+</mapper>

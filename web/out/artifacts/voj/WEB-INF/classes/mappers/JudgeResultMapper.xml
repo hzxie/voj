@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper 
+	PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"  
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.verwandlung.voj.web.mapper.JudgeResultMapper">
+	<!-- ResultMap -->
+	<resultMap id="JudgeResultResultMap" type="org.verwandlung.voj.web.model.JudgeResult">
+		<id property="judgeResultId" column="judge_result_id" />
+		<result property="judgeResultSlug" column="judge_result_slug" />
+		<result property="judgeResultName" column="judge_result_name" />
+	</resultMap>
+	
+	<!-- Methods -->
+	<select id="getJudgeResultUsingId" 
+		parameterType="int"
+		resultMap="JudgeResultResultMap" 
+		useCache="true">
+		SELECT * 
+		FROM voj_judge_results 
+		WHERE judge_result_id = #{judgeResultId}
+	</select>
+	<select id="getJudgeResultUsingSlug" 
+		parameterType="String"
+		resultMap="JudgeResultResultMap" 
+		useCache="true">
+		SELECT * 
+		FROM voj_judge_results 
+		WHERE judge_result_slug = #{judgeResultSlug}
+	</select>
+</mapper>

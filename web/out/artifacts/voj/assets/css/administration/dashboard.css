@@ -1,0 +1,135 @@
+div#content div.widget div.glance {
+	margin-bottom: 15px;
+}
+
+div#content div.widget i.fa {
+	font-size: 48px;
+}
+
+div#content div.widget span.text-uppercase {
+	text-transform: uppercase;
+}
+
+div#content div.widget h2,
+div#content div.widget h4 {
+	margin: 0;
+	line-height: 125%;
+}
+
+div#content div.widget div.border-right {
+	border-right: 1px solid #fff;
+}
+
+div#content div.widget a.more {
+	background-color: #111;
+	border: 1px solid #111;
+	border-left: none !important;
+	color: #fff;
+	display: block;
+	margin: 0 0 10px -15px;
+	padding: 5px 10px 5px 10px;
+	position: relative;
+	text-decoration: none;
+	width: 75%;
+}
+
+div#content div.widget a.more:hover {
+	background-color: #fff;
+	color: #111;
+}
+
+div#content div.widget a.more i.fa {
+	position: absolute;
+	right: 10px;
+	font-size: 16px;
+}
+
+div#content div#overview {
+	margin-bottom: 40px;
+}
+
+div#content div#overview-users.widget {
+	background-color: #3498db;
+	padding: 15px;
+	color: #fff;
+}
+
+div#content div#overview-problems.widget {
+	background-color: #2ecc71;
+	padding: 15px;
+	color: #fff;
+}
+
+div#content div#overview-contests.widget {
+	background-color: #f22613;
+	padding: 15px;
+	color: #fff;
+}
+
+div#content div#overview-submissions.widget {
+	background-color: #303641;
+	padding: 15px;
+	color: #fff;
+}
+
+div#content div.panel {
+	background-color: #fff;
+	-webkit-box-shadow: 0 1px 1px rgba(0,0,0,.05);
+	   -moz-box-shadow: 0 1px 1px rgba(0,0,0,.05);
+	        box-shadow: 0 1px 1px rgba(0,0,0,.05);
+}
+
+div#content div.panel div.header {
+	border-bottom: 1px solid #ddd;
+	padding: 15px 15px 10px;
+}
+
+div#content div.panel div.header h5 {
+	margin: 0;
+}
+
+div#content div.panel div.body {
+	padding: 15px 15px 10px;
+}
+
+div#content div#submissions-panel.panel div.header {
+	padding: 10px 15px 5px;
+}
+
+div#content div#submissions-panel.panel div.header  h5 {
+	margin-top: 5px;
+}
+
+div#content div#submissions-panel.panel div.header select#submission-period {
+	height: 30px;
+	margin-bottom: 0;
+	padding: 0px 5px;
+}
+
+div#content div#submissions-panel.panel div#submissions-calendar {
+	height: 240px;
+}
+
+/* Smaller than standard 960 (devices and browsers) */
+@media only screen and (max-width: 959px) {
+}
+
+/* Tablet Portrait size to standard 960 (devices and browsers) */
+@media only screen and (min-width: 768px) and (max-width: 959px) {
+}
+
+/* All Mobile Sizes (devices and browser) */
+@media only screen and (max-width: 767px) {
+	div#content div.widget {
+		margin-bottom: 10px;
+		text-align: center;
+	}
+}
+
+/* Mobile Landscape Size to Tablet Portrait (devices and browsers) */
+@media only screen and (min-width: 480px) and (max-width: 767px) {
+}
+
+/* Mobile Portrait Size to Mobile Landscape Size (devices and browsers) */
+@media only screen and (max-width: 479px) {
+}

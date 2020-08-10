@@ -1,0 +1,90 @@
+div#content div#main-content div.contest {
+	-webkit-box-shadow: 0 0 5px rgba(0,0,0,0.1);
+	   -moz-box-shadow: 0 0 5px rgba(0,0,0,0.1);
+	        box-shadow: 0 0 5px rgba(0,0,0,0.1);
+}
+
+div#content div#main-content div.contest div.header {
+	background-color: #16a085;
+	color: #fff;
+	padding: 10px;
+}
+
+div#content div#main-content div.contest div.body {
+	background-color: #fff;
+	position: relative;
+	padding: 20px;
+}
+
+div#content div#main-content div.contest div.body div.section {
+	border-top: 5px solid #16a085;
+	padding-top: 20px;
+	margin-top: 20px;
+}
+
+div#content div#main-content div.contest div.body div.section:first-child {
+	border-top: none;
+	padding-top: 0;
+	margin-top: 0;
+}
+
+div#content div#main-content div.contest div.body table#problems {
+    border-bottom: 1px solid #ddd;
+    margin-bottom: 10px;
+}
+
+div#content div#main-content div.contest div.body table#problems td.flag-PD > a,
+div#content div#main-content div.contest div.body table#problems td.flag-CPL > a,
+div#content div#main-content div.contest div.body table#problems td.flag-JUD > a {
+	color: #ffa500;
+}
+
+div#content div#main-content div.contest div.body table#problems td.flag-AC > a {
+	color: #f00;
+}
+
+div#content div#main-content div.contest div.body table#problems td.flag-PE > a,
+div#content div#main-content div.contest div.body table#problems td.flag-WA > a,
+div#content div#main-content div.contest div.body table#problems td.flag-TLE > a,
+div#content div#main-content div.contest div.body table#problems td.flag-MLE > a,
+div#content div#main-content div.contest div.body table#problems td.flag-OLE > a {
+	color: #4d7aff;
+}
+
+div#content div#main-content div.contest div.body table#problems td.flag-RE > a,
+div#content div#main-content div.contest div.body table#problems td.flag-CE > a {
+	color: #49a932;
+}
+
+div#content div#main-content div.contest div.body table#problems td.flag-SE > a {
+	color: #34495e;
+}
+
+div#content div#sidebar div.section {
+	background-color: #fff;
+	border-top: 4px solid #16a085;
+	margin-bottom: 20px;
+	padding: 10px;
+}
+
+div#content div#sidebar div.section ul {
+	list-style: none;
+	margin-left: 0;
+}
+
+div#content div#sidebar div#basic-info div.span5,
+div#content div#sidebar div#basic-info div.span7 {
+	min-height: 24px;
+}
+
+div#content div#sidebar div#basic-info div.Live {
+	color: #ff8080;
+}
+
+div#content div#sidebar div#basic-info div.Done {
+	color: #444;
+}
+
+div#content div#sidebar div#basic-info div.Ready {
+	color: #16a085;
+}

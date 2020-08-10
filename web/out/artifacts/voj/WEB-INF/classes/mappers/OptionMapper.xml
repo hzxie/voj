@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper 
+	PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"  
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.verwandlung.voj.web.mapper.OptionMapper">
+	<!-- ResultMap -->
+	<resultMap id="OptionResultMap" type="org.verwandlung.voj.web.model.Option">
+		<id property="optionId" column="option_id" />
+		<result property="optionName" column="option_name" />
+		<result property="optionValue" column="option_value" />
+		<result property="isAutoload" column="is_autoload" />
+	</resultMap>
+	
+	<!-- Methods -->
+	<select id="getOptions" 
+		resultMap="OptionResultMap" 
+		useCache="true">
+		SELECT * 
+		FROM voj_options
+	</select>
+	<select id="getAutoloadOptions" 
+		resultMap="OptionResultMap" 
+		useCache="true">
+		SELECT * 
+		FROM voj_options 
+		WHERE is_autoload = true
+	</select>
+	<select id="getOption" 
+		parameterType="String"
+		resultMap="OptionResultMap" 
+		useCache="true">
+		SELECT * 
+		FROM voj_options 
+		WHERE option_name = #{optionName}
+	</select>
+	<update id="updateOption"
+		parameterType="org.verwandlung.voj.web.model.Option"
+		flushCache="true">
+		UPDATE voj_options 
+		SET option_name = #{optionName}, option_value = #{optionValue}, is_autoload = #{isAutoload} 
+		WHERE option_id = #{optionId}
+	</update>
+</mapper>

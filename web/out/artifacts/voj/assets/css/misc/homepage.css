@@ -1,0 +1,233 @@
+div#upgrade-browser {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	z-index: 256;
+}
+
+div#header {
+	overflow: hidden;
+	padding: 20px 0;
+	position: absolute;
+	top: 0;
+	z-index: 4;
+}
+
+div#content {
+	position: relative;
+}
+
+div#content div#introduction {
+	height: 600px;
+}
+
+div#content div#introduction div.item {
+	background-repeat: no-repeat;
+	background-position: center;
+	height: 600px;
+}
+
+div#content div#introduction div.item.first {
+	background-image: url('../../img/sliders/slide-01.jpg');
+}
+
+div#content div#introduction div.item.second {
+	background-image: url('../../img/sliders/slide-02.jpg');
+}
+
+div#content div#introduction div.item.third {
+	background-image: url('../../img/sliders/slide-03.jpg');
+}
+
+div#content div#slogan {
+	position: absolute;
+	top: 300px;
+	left: 0;
+	right: 0;
+	text-align: center;
+	z-index: 128;
+}
+
+div#content div#main-content div#contests {
+	border-top: 4px solid #ff7373;
+}
+
+div#content div#main-content div#discussion {
+	border-top: 4px solid #16a085;
+}
+
+div#content div#main-content div#contests table.table,
+div#content div#main-content div#discussion table.table {
+	background-color: #fff;
+	-webkit-box-shadow: 0 0 5px rgba(0,0,0,0.1);
+	   -moz-box-shadow: 0 0 5px rgba(0,0,0,0.1);
+	        box-shadow: 0 0 5px rgba(0,0,0,0.1);
+}
+
+div#content div#main-content div#contests table.table tr.contest,
+div#content div#main-content div#discussion table.table tr.discussion-thread {
+	cursor: pointer;
+	border-bottom: 1px solid #e8e8e8;
+	-webkit-transition: background .1s linear;
+	   -moz-transition: background .1s linear;
+	        transition: background .1s linear;
+}
+
+div#content div#main-content div#contests table.table tr.contest > td.overview,
+div#content div#main-content div#discussion table.table tr.discussion-thread > td.overview {
+	padding: 10px;
+}
+
+div#content div#main-content div#contests table.table tr.contest > td.overview ul.inline li,
+div#content div#main-content div#discussion table.table tr.discussion-thread > td.overview ul.inline li {
+	color: #999;
+	font-size: 12px;
+	padding-left: 0;
+}
+
+div#content div#main-content div#contests table.table tr.contest > td.status,
+div#content div#main-content div#discussion table.table tr.discussion-thread > td.reply-count {
+	font-size: 12px;
+	text-align: center;
+	vertical-align: middle;
+	width: 15%;
+}
+
+div#content div#main-content div#contests table.table tr.contest > td.overview h5 {
+	height: 20px;
+	overflow: hidden;
+}
+
+div#content div#main-content div#contests table.table tr.contest > td.status {
+	background-color: #eaeaea;
+}
+
+div#content div#main-content div#contests table.table tr.contest:hover {
+	background-color: #f6f6f6 !important;
+}
+
+div#content div#main-content div#contests table.table tr.contest:hover > td.status {
+	background-color: #eaeaea !important;
+}
+
+div#content div#main-content div#contests table.table tr.contest.Done > td.status {
+	color: #444;
+}
+
+div#content div#main-content div#contests table.table tr.contest.Ready > td.status {
+	color: #279c33;
+}
+
+div#content div#main-content div#contests table.table tr.contest.Live {
+	background-color: #fff0f0;
+}
+
+div#content div#main-content div#contests table.table tr.contest.Live > td.status {
+	background-color: #fdd;
+	color: #ff8080;    
+}
+
+div#content div#main-content div#discussion table.table tr.discussion-thread:hover {
+	background-color: #fff8df !important;
+}
+
+div#content div#main-content div#discussion table.table tr.discussion-thread:hover > td.reply-count {
+	background-color: #ffe9ca !important;
+}
+
+div#content div#main-content div#discussion table.table tr.discussion-thread > td.avatar {
+	vertical-align: middle;
+	width: 15%;
+}
+
+div#content div#main-content div#discussion table.table tr.discussion-thread > td.avatar > img {
+	max-width: 100%;
+	width: 100%;
+	-webkit-border-radius: 4px;
+	   -moz-border-radius: 4px;
+	        border-radius: 4px;
+}
+
+div#content div#main-content div#discussion table.table tr.discussion-thread > td.reply-count {
+	background-color: #ffedd5;
+}
+
+div#content div#sidebar div.widget {
+	background-color: #fff;
+	border-top: 4px solid #16a085;
+	margin-bottom: 20px;
+	padding: 10px;
+	-webkit-box-shadow: 0 0 5px rgba(0,0,0,0.1);
+	   -moz-box-shadow: 0 0 5px rgba(0,0,0,0.1);
+	        box-shadow: 0 0 5px rgba(0,0,0,0.1);
+}
+
+div#content div#sidebar div#bulletin-board.widget ul {
+	margin: 0 0 10px;
+	padding-left: 10px;
+}
+
+div#content div#sidebar div#bulletin-board.widget li {
+	height: 20px;
+	list-style-position:inside;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+div#content div#sidebar div#bulletin-board.widget li > a {
+	margin-left: -10px;
+}
+
+div#content div#sidebar div#bulletin-board.widget span.message-create-time {
+	float: right;
+}
+
+div#bulletin-board-message-modal {
+	top: 15%;
+	width: 320px;
+	margin-left: -160px;
+}
+
+div#bulletin-board-message-modal div.modal-header {
+	background-color: #16a085;
+	height: 120px;
+	text-align: center;
+	-webkit-border-radius: 6px 6px 0 0;
+	   -moz-border-radius: 6px 6px 0 0;
+	        border-radius: 6px 6px 0 0;
+}
+
+div#bulletin-board-message-modal div.modal-header i.fa {
+	color: #fff;
+	font-size: 80px;
+	margin-top: 25px;
+}
+
+div#bulletin-board-message-modal div.modal-body {
+	line-height: 120%;
+}
+
+/* Smaller than standard 960 (devices and browsers) */
+@media only screen and (max-width: 959px) {
+}
+
+/* Tablet Portrait size to standard 960 (devices and browsers) */
+@media only screen and (min-width: 768px) and (max-width: 959px) {
+}
+
+/* All Mobile Sizes (devices and browser) */
+@media only screen and (max-width: 767px) {
+	div#bulletin-board-message-modal {
+		margin: 0 auto;
+	}
+}
+
+/* Mobile Landscape Size to Tablet Portrait (devices and browsers) */
+@media only screen and (min-width: 480px) and (max-width: 767px) {
+}
+
+/* Mobile Portrait Size to Mobile Landscape Size (devices and browsers) */
+@media only screen and (max-width: 479px) {
+}

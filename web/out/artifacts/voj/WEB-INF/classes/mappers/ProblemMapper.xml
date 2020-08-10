@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper 
+	PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"  
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.verwandlung.voj.web.mapper.ProblemMapper">
+	<!-- ResultMap -->
+	<resultMap id="ProblemResultMap" type="org.verwandlung.voj.web.model.Problem">
+		<id property="problemId" column="problem_id" />
+		<result property="isPublic" column="problem_is_public" />
+		<result property="problemName" column="problem_name" />
+		<result property="totalSubmission" column="total_submission" />
+		<result property="acceptedSubmission" column="accepted_submission" />
+		<result property="timeLimit" column="problem_time_limit" />
+		<result property="memoryLimit" column="problem_memory_limit" />
+		<result property="description" column="problem_description" />
+		<result property="inputFormat" column="problem_input_format" />
+		<result property="outputFormat" column="problem_output_format" />
+		<result property="sampleInput" column="problem_sample_input" />
+		<result property="sampleOutput" column="problem_sample_output" />
+		<result property="hint" column="problem_hint" />
+	</resultMap>
+
+	<!-- Methods -->
+	<select id="getNumberOfProblems" 
+		resultType="long"
+		useCache="true">
+		SELECT COUNT(*) 
+		FROM voj_problems
+	</select>
+	<select id="getNumberOfProblemsUsingFilters" 
+		parameterType="map"
+		resultType="long"
+		useCache="true">
+		SELECT COUNT(DISTINCT(problem_id)) 
+		FROM voj_problems 
+		NATURAL JOIN voj_problem_category_relationships pcr
+		NATURAL JOIN voj_problem_categories pc
+		<where>
+			<if test="isPublicOnly == true">
+				problem_is_public = 1
+			</if>
+			<if test="keyword != null and keyword != ''">
+				AND problem_name LIKE "%"#{keyword}"%"
+			</if>
+			<if test="problemCategoryId != 0">
+				AND problem_category_id = #{problemCategoryId} 
+			</if>
+		</where>
+	</select>
+	<select id="getLowerBoundOfProblems" 
+		resultType="long"
+		useCache="true">
+		SELECT MIN(problem_id) 
+		FROM voj_problems
+	</select>
+	<select id="getUpperBoundOfProblems" 
+		resultType="long"
+		useCache="true">
+		SELECT MAX(problem_id) 
+		FROM voj_problems
+	</select>
+	<select id="getUpperBoundOfProblemsWithLimit" 
+		parameterType="map"
+		resultType="long"
+		useCache="true">
+		SELECT MAX(problem_id)
+		FROM (
+			SELECT problem_id
+			FROM voj_problems
+			WHERE problem_id >= #{problemId}
+			<if test="isPublicOnly == true">
+				AND problem_is_public = 1
+			</if>
+			LIMIT #{limit}
+		) p
+	</select>
+	<select id="getProblem" 
+		parameterType="long"
+		resultMap="ProblemResultMap"
+		useCache="true">
+		SELECT *, (
+			SELECT COUNT(*) 
+			FROM voj_submissions s 
+			WHERE s.problem_id = p.problem_id
+		) AS total_submission, (
+			SELECT COUNT(*) 
+			FROM voj_submissions s 
+			WHERE s.problem_id = p.problem_id AND s.submission_judge_result = 'AC'
+		) AS accepted_submission
+		FROM voj_problems p 
+		WHERE problem_id = #{problemId}
+	</select>
+	<select id="getProblemsUsingFilters" 
+		parameterType="map"
+		resultMap="ProblemResultMap"
+		useCache="true">
+		SELECT DISTINCT(p.problem_id), problem_name, problem_is_public, (
+			SELECT COUNT(*) 
+			FROM voj_submissions s 
+			WHERE s.problem_id = p.problem_id
+		) AS total_submission, (
+			SELECT COUNT(*) 
+			FROM voj_submissions s 
+			WHERE s.problem_id = p.problem_id AND s.submission_judge_result = 'AC'
+		) AS accepted_submission
+		FROM voj_problems p 
+		NATURAL JOIN voj_problem_category_relationships pcr
+		<if test="problemTagId != 0">
+			NATURAL JOIN voj_problem_tag_relationships ptr
+		</if>
+		WHERE p.problem_id &gt;= #{problemId}
+		<if test="isPublicOnly == true">
+			AND problem_is_public = 1
+		</if>
+		<if test="keyword != null and keyword != ''">
+			AND problem_name LIKE "%"#{keyword}"%"
+		</if>
+		<if test="problemCategoryId != 0">
+			AND problem_category_id = #{problemCategoryId}
+		</if>
+		<if test="problemTagId != 0">
+			AND problem_tag_id = #{problemTagId}
+		</if>
+		LIMIT #{limit}
+	</select>
+	<insert id="createProblem" 
+		parameterType="org.verwandlung.voj.web.model.Problem"
+		flushCache="true" 
+		keyProperty="problemId" 
+		keyColumn="problem_id"
+		useGeneratedKeys="true">
+		INSERT INTO voj_problems (problem_is_public, problem_name, problem_time_limit, problem_memory_limit, problem_description, problem_input_format, problem_output_format, problem_sample_input, problem_sample_output, problem_hint) 
+		VALUES (#{isPublic}, #{problemName}, #{timeLimit}, #{memoryLimit}, #{description}, #{inputFormat}, #{outputFormat}, #{sampleInput}, #{sampleOutput}, #{hint})
+	</insert>
+	<update id="updateProblem"
+		parameterType="org.verwandlung.voj.web.model.Problem"
+		flushCache="true">
+		UPDATE voj_problems 
+		SET problem_is_public = #{isPublic}, problem_name = #{problemName}, problem_time_limit = #{timeLimit}, problem_memory_limit = #{memoryLimit}, problem_description = #{description}, problem_input_format = #{inputFormat}, problem_output_format = #{outputFormat}, problem_sample_input = #{sampleInput}, problem_sample_output = #{sampleOutput}, problem_hint = #{hint} 
+		WHERE problem_id = #{problemId}
+	</update>
+	<delete id="deleteProblem"
+		parameterType="long"
+		flushCache="true">
+		DELETE FROM voj_problems 
+		WHERE problem_id = #{problemId}
+	</delete>
+</mapper>

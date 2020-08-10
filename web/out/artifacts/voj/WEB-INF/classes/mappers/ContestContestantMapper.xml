@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper 
+	PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"  
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.verwandlung.voj.web.mapper.ContestContestantMapper">
+	<!-- ResultMap -->
+	<resultMap id="ContestContestantResultMap" type="org.verwandlung.voj.web.model.ContestContestant">
+		<result property="score" column="contestant_score" />
+		<result property="time" column="contestant_time" />
+		<result property="rank" column="contestant_rank" />
+		<result property="codeSnippet" column="code_snippet" />
+		<association property="contest" 
+			javaType="org.verwandlung.voj.web.model.Contest" 
+			column="contest_id"
+			select="org.verwandlung.voj.web.mapper.ContestMapper.getContest" />
+		<association property="contestant" 
+			javaType="org.verwandlung.voj.web.model.User" 
+			column="contestant_uid"
+			select="org.verwandlung.voj.web.mapper.UserMapper.getUserUsingUid" />
+	</resultMap>
+
+	<!-- Methods -->
+	<select id="getNumberOfContestantsOfContest"
+			parameterType="long"
+			resultType="long"
+			useCache="true">
+		SELECT COUNT(*) 
+		FROM voj_contest_contestants
+		WHERE contest_id = #{contestId}
+	</select>
+	<select id="getContestantsOfContestForOi"
+		parameterType="map"
+		resultMap="ContestContestantResultMap" 
+		useCache="true">
+		SELECT *, (
+			SELECT SUM(submission_judge_score)
+			FROM voj_contest_submissions cs
+			NATURAL JOIN voj_submissions
+			WHERE uid = cc.contestant_uid
+			AND submission_id = cs.submission_id
+			AND cs.contest_id = cc.contest_id
+		) AS contestant_score, (
+			SELECT SUM(submission_used_time)
+			FROM voj_contest_submissions cs
+			NATURAL JOIN voj_submissions
+			WHERE uid = cc.contestant_uid
+			AND submission_id = cs.submission_id
+			AND cs.contest_id = cc.contest_id
+		) AS contestant_time
+		FROM voj_contest_contestants cc
+		WHERE contest_id = #{contestId}
+		ORDER BY contestant_score DESC, contestant_time
+		LIMIT #{offset}, #{limit}
+	</select>
+	<select id="getContestantsOfContestForAcm"
+		parameterType="map"
+		resultMap="ContestContestantResultMap" 
+		useCache="true">
+		SELECT *, (
+			SELECT COUNT(DISTINCT(uid))
+			FROM voj_contest_submissions cs
+			NATURAL JOIN voj_submissions
+			WHERE uid = cc.contestant_uid
+			AND submission_judge_result = 'AC'
+			AND submission_id = cs.submission_id
+			AND cs.contest_id = cc.contest_id
+		) AS contestant_score, (
+			SELECT COUNT(*)
+			FROM voj_contest_submissions cs
+			NATURAL JOIN voj_submissions
+			WHERE uid = cc.contestant_uid
+			AND submission_judge_result != 'AC'
+			AND submission_id = cs.submission_id
+			AND cs.contest_id = cc.contest_id
+			AND problem_id IN (
+				SELECT problem_id
+				FROM voj_contest_submissions cs
+				NATURAL JOIN voj_submissions
+				WHERE uid = cc.contestant_uid
+				AND submission_judge_result = 'AC'
+				AND submission_id = cs.submission_id
+				AND cs.contest_id = cc.contest_id
+			)
+		) AS contestant_time
+		FROM voj_contest_contestants cc
+		WHERE contest_id = #{contestId}
+		LIMIT #{offset}, #{limit}
+	</select>
+	<select id="getContestantOfContest"
+			parameterType="map"
+			resultMap="ContestContestantResultMap"
+			useCache="true">
+		SELECT *
+		FROM voj_contest_contestants
+		WHERE contest_id = #{contestId}
+		AND contestant_uid = #{contestantUid}
+	</select>
+	<insert id="createContestContestant" 
+		parameterType="org.verwandlung.voj.web.model.ContestContestant"
+		flushCache="true">
+		INSERT INTO voj_contest_contestants (contest_id, contestant_uid)
+		VALUES (#{contest.contestId}, #{contestant.uid})
+	</insert>
+	<update id="updateContestContestant" 
+		parameterType="org.verwandlung.voj.web.model.ContestContestant"
+		flushCache="true">
+		UPDATE voj_contest_contestants 
+		SET code_snippet = #{codeSnippet}
+		WHERE contest_id = #{contest.contestId}
+		AND contestant_uid = #{contestant.uid}
+	</update>
+	<delete id="deleteContestContestant"
+		parameterType="map"
+		flushCache="true">
+		DELETE FROM voj_contest_contestants 
+		WHERE contest_id = #{contestId} 
+		AND contestant_uid = #{contestantUid}
+	</delete>
+</mapper>

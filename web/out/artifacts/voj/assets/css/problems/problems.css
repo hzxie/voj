@@ -1,0 +1,168 @@
+div#content div#locator {
+	background-color: #fff;
+	border-top: 0;
+	border-left: 10px solid #ffe6b0;
+	padding: 10px;
+}
+
+div#content div#locator ul.inline {
+	margin-bottom: 0;
+}
+
+div#content div#main-content {
+	margin-top: 20px;
+}
+
+div#content div#main-content div#problems table {
+	border: 1px solid #e8e8e8;
+	margin-bottom: 0;
+	-webkit-box-shadow: 0 0 5px rgba(0,0,0,0.1);
+	   -moz-box-shadow: 0 0 5px rgba(0,0,0,0.1);
+	        box-shadow: 0 0 5px rgba(0,0,0,0.1);
+}
+
+div#content div#main-content div#problems table thead {
+	background-color: #16a085;
+	color: #fff;
+}
+
+div#content div#main-content div#problems table th {
+	text-align: center;
+	vertical-align: middle;
+}
+
+div#content div#main-content div#problems table th.flag {
+	width: 5%;
+}
+
+div#content div#main-content div#problems table th.name,
+div#content div#main-content div#problems table td.name {
+	text-align: left;
+}
+
+div#content div#main-content div#problems table th.submission {
+	width: 15%;    
+}
+
+div#content div#main-content div#problems table th.ac-rate {
+	width: 5%;
+}
+
+div#content div#main-content div#problems table td {
+	border-left: 1px solid #e8e8e8;
+	color: #666;
+	text-align: center;
+}
+
+div#content div#main-content div#problems table td.flag-PD > a,
+div#content div#main-content div#problems table td.flag-CPL > a,
+div#content div#main-content div#problems table td.flag-JUD > a {
+	color: #ffa500;
+}
+
+div#content div#main-content div#problems table td.flag-AC > a {
+	color: #f00;
+}
+
+div#content div#main-content div#problems table td.flag-PE > a,
+div#content div#main-content div#problems table td.flag-WA > a,
+div#content div#main-content div#problems table td.flag-TLE > a,
+div#content div#main-content div#problems table td.flag-MLE > a,
+div#content div#main-content div#problems table td.flag-OLE > a {
+	color: #4d7aff;
+}
+
+div#content div#main-content div#problems table td.flag-RE > a,
+div#content div#main-content div#problems table td.flag-CE > a {
+	color: #49a932;
+}
+
+div#content div#main-content div#problems table td.name a {
+	color: #333;
+	text-align: left;
+}
+
+div#content div#main-content div#problems div#more-problems {
+	background-color: #f9f9f9;
+	border-bottom: 5px solid #1abc9c;
+	cursor: pointer;
+	padding: 10px;
+	text-align: center;
+}
+
+div#content div#main-content div#problems div#more-problems p {
+	margin-bottom: 0;
+}
+
+div#content div#main-content div#problems div#more-problems img {
+	max-height: 15px;
+	height: 15px;
+}
+
+div#content div#sidebar div.widget {
+	background-color: #fff;
+	border-top: 4px solid #16a085;
+	margin-bottom: 20px;
+	padding: 10px;
+}
+
+div#content div#sidebar form {
+	margin-bottom: 10px;
+}
+
+div#content div#sidebar div#categories-widget a {
+	display: block;
+	padding: 5px;
+}
+
+div#content div#sidebar div#categories-widget a.active {
+	background-color: #16a085;
+	color: #fff;
+	-webkit-border-radius: 4px;
+	   -moz-border-radius: 4px;
+	        border-radius: 4px;
+}
+
+div#content div#sidebar div#categories-widget h6 {
+	font-size: 14px;
+	font-weight: bold;
+	margin: 0;
+	padding: 0;
+	text-transform: none;
+}
+
+div#content div#sidebar div#categories-widget h6 > a {
+	color: #16a085;
+}
+
+div#content div#sidebar div#categories-widget ul.inline {
+	margin: 0;
+}
+
+div#content div#sidebar div#categories-widget ul.inline > li {
+	color: #1abc9c;
+	padding: 0;
+}
+
+/* Smaller than standard 960 (devices and browsers) */
+@media only screen and (max-width: 959px) {
+}
+
+/* Tablet Portrait size to standard 960 (devices and browsers) */
+@media only screen and (min-width: 768px) and (max-width: 959px) {
+}
+
+/* All Mobile Sizes (devices and browser) */
+@media only screen and (max-width: 767px) {
+	div#content div#main-content div#sidebar {
+		margin-top: 20px;
+	}
+}
+
+/* Mobile Landscape Size to Tablet Portrait (devices and browsers) */
+@media only screen and (min-width: 480px) and (max-width: 767px) {
+}
+
+/* Mobile Portrait Size to Mobile Landscape Size (devices and browsers) */
+@media only screen and (max-width: 479px) {
+}

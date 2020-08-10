@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper 
+	PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"  
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.verwandlung.voj.web.mapper.DiscussionThreadMapper">
+	<!-- ResultMap -->
+	<resultMap id="DiscussionThreadResultMap" type="org.verwandlung.voj.web.model.DiscussionThread">
+		<id property="discussionThreadId" column="discussion_thread_id" />
+		<result property="discussionThreadTitle" column="discussion_thread_name" />
+		<result property="discussionThreadCreateTime" column="discussion_thread_create_time" />
+		<result property="numberOfReplies" column="discussion_replies" />
+		<association property="discussionThreadCreator" 
+			javaType="org.verwandlung.voj.web.model.User" 
+			column="discussion_thread_creator_uid"
+			select="org.verwandlung.voj.web.mapper.UserMapper.getUserUsingUid" />
+		<association property="problem" 
+			javaType="org.verwandlung.voj.web.model.Problem" 
+			column="problem_id"
+			select="org.verwandlung.voj.web.mapper.ProblemMapper.getProblem" />
+		<association property="discussionTopic" 
+			javaType="org.verwandlung.voj.web.model.DiscussionTopic" 
+			column="discussion_topic_id"
+			select="org.verwandlung.voj.web.mapper.DiscussionTopicMapper.getDiscussionTopicUsingId" />
+		<association property="latestDiscussionReply" 
+			javaType="org.verwandlung.voj.web.model.DiscussionReply"
+			column="latest_discussion_reply_id"
+			select="org.verwandlung.voj.web.mapper.DiscussionReplyMapper.getDiscussionReplyUsingReplyId" />
+	</resultMap>
+
+	<!-- Methods -->
+	<select id="getDiscussionThreads" 
+		parameterType="map"
+		resultMap="DiscussionThreadResultMap" 
+		useCache="true">
+		SELECT *, (
+			SELECT COUNT(*)
+			FROM voj_discussion_replies dr
+			WHERE dt.discussion_thread_id = dr.discussion_thread_id
+		) AS discussion_replies, (
+			SELECT discussion_reply_id
+			FROM voj_discussion_replies dr
+			WHERE dt.discussion_thread_id = dr.discussion_thread_id
+			ORDER BY discussion_reply_id DESC
+			LIMIT 1
+		) AS latest_discussion_reply_id
+		FROM voj_discussion_threads dt
+		<where>
+			<if test="problemId != 0">
+				AND problem_id = #{problemId}
+			</if>
+			<if test="discussionTopicId != 0">
+				AND discussion_topic_id = #{discussionTopicId}
+			</if>
+		</where>
+		ORDER BY latest_discussion_reply_id DESC
+		LIMIT #{offset}, #{limit}
+	</select>
+	<select id="getSolutionThreadOfProblem"
+		parameterType="long"
+		resultMap="DiscussionThreadResultMap"
+		useCache="true">
+		SELECT *
+		FROM voj_discussion_threads dt
+		WHERE problem_id = #{problemId}
+		ORDER BY discussion_thread_id
+		LIMIT 1
+	</select>
+	<select id="getDiscussionThreadUsingThreadId" 
+		parameterType="long"
+		resultMap="DiscussionThreadResultMap" 
+		useCache="true">
+		SELECT *, (
+			SELECT COUNT(*)
+			FROM voj_discussion_replies dr
+			WHERE dt.discussion_thread_id = dr.discussion_thread_id
+		) AS discussion_replies 
+		FROM voj_discussion_threads dt
+		WHERE discussion_thread_id = #{discussionThreadId}
+	</select>
+	<insert id="createDiscussionThread" 
+		parameterType="org.verwandlung.voj.web.model.DiscussionThread"
+		flushCache="true" 
+		keyProperty="discussionThreadId" 
+		keyColumn="discussion_thread_id"
+		useGeneratedKeys="true">
+		INSERT INTO voj_discussion_threads(discussion_thread_creator_uid, discussion_thread_create_time, problem_id, discussion_topic_id, discussion_thread_name) 
+		VALUES (#{discussionThreadCreator.uid}, #{discussionThreadCreateTime}, #{problem.problemId}, #{discussionTopic.discussionTopicId}, #{discussionThreadTitle})
+	</insert>
+	<update id="updateDiscussionThread"
+		parameterType="org.verwandlung.voj.web.model.DiscussionThread"
+		flushCache="true">
+		UPDATE voj_discussion_threads 
+		SET discussion_thread_creator_uid = #{discussionThreadCreator.uid}, discussion_thread_create_time = #{discussionThreadCreateTime}, problem_id = #{problem.problemId}, discussion_topic_id = #{discussionTopic.discussionTopicId}, discussion_thread_name = #{discussionThreadTitle}
+		WHERE discussion_thread_id = #{discussionThreadId}
+	</update>
+	<delete id="deleteDiscussionThreadUsingThreadId"
+		parameterType="long"
+		flushCache="true">
+		DELETE FROM voj_discussion_threads 
+		WHERE discussion_thread_id = #{discussionThreadId}
+	</delete>
+</mapper>

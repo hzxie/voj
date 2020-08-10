@@ -1,0 +1,174 @@
+div#content div#sidebar div.section {
+	border-bottom: 1px solid #ddd;
+	color: #666;
+	margin-bottom: 10px;
+}
+
+div#content div#sidebar div#vcard img {
+	display: block;
+	max-width: 100%;
+	-webkit-border-radius: 4px;
+	   -moz-border-radius: 4px;
+	        border-radius: 4px;
+}
+
+div#content div#sidebar div#vcard h5 {
+	height: 20px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	text-transform: none;
+}
+
+div#content div#sidebar div#social-links li:first-child {
+	padding-left: 0;
+}
+
+div#content div#sidebar div#social-links a {
+	color: #999;
+	font-size: 18px;
+	text-decoration: none;
+}
+
+div#content div#sidebar div#social-links a.facebook:hover {
+	color: #3a5795;
+}
+
+div#content div#sidebar div#social-links a.twitter:hover {
+	color: #55acee;
+}
+
+div#content div#sidebar div#social-links a.weibo:hover {
+	color: #e6162d;
+}
+
+div#content div#sidebar div#social-links a.instagram:hover {
+	color: #125688;
+}
+
+div#content div#sidebar div#social-links a.github:hover {
+	color: #333;
+}
+
+div#content div#sidebar div#social-links a.stackoverflow:hover {
+	color: #f68a1f;
+}
+
+div#content div#sidebar div#social-links a.linkedin:hover {
+	color: #1a84bc;
+}
+
+div#content div#sidebar div#vcard-details ul {
+	color: #666;
+	list-style: none;
+	margin: 0 0 10px;
+}
+
+div#content div#sidebar div#vcard-details li {
+	height: 24px;
+	line-height: 150%;
+	overflow: hidden;
+	  text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+div#content div#sidebar div#vcard-details span.icon {
+	display: inline-block;
+	*display: inline;
+	width: 20px;
+	zoom: 1;
+}
+
+div#content div#sidebar div#vcard-stats {
+	color: #767676;
+	text-align: center;
+}
+
+div#content div#sidebar div#vcard-stats h3 {
+	color: #16a085;
+}
+
+div#content div#main-content div.section {
+	margin-bottom: 20px;
+}
+
+div#content div#main-content div.section p {
+	overflow: hidden;
+	word-wrap: break-word;
+}
+
+div#content div#main-content select#submission-period {
+	margin: 0;
+}
+
+div#content div#main-content div#submissions-calendar {
+	height: 240px;
+}
+
+div#content div#main-content table#submissions {
+	border: 1px solid #e8e8e8;
+	margin-bottom: 0;
+	-webkit-box-shadow: 0 0 5px rgba(0,0,0,0.1);
+	   -moz-box-shadow: 0 0 5px rgba(0,0,0,0.1);
+	        box-shadow: 0 0 5px rgba(0,0,0,0.1);
+}
+
+div#content div#main-content table#submissions thead {
+	background-color: #16a085;
+	color: #fff;
+}
+
+div#content div#main-content table#submissions th {
+	text-align: center;
+	vertical-align: middle;
+}
+
+div#content div#main-content table#submissions th.flag {
+	width: 5%;
+}
+
+div#content div#main-content table#submissions th.name,
+div#content div#main-content table#submissions td.name {
+	text-align: left;
+}
+
+div#content div#main-content table#submissions th.submission {
+	width: 15%;    
+}
+
+div#content div#main-content table#submissions th.ac-rate {
+	width: 5%;
+}
+
+div#content div#main-content table#submissions td {
+	border-left: 1px solid #e8e8e8;
+	color: #666;
+	text-align: center;
+}
+
+div#content div#main-content table#submissions td.flag-PD > a,
+div#content div#main-content table#submissions td.flag-CPL > a,
+div#content div#main-content table#submissions td.flag-JUD > a {
+	color: #ffa500;
+}
+
+div#content div#main-content table#submissions td.flag-AC > a {
+	color: #f00;
+}
+
+div#content div#main-content table#submissions td.flag-PE > a,
+div#content div#main-content table#submissions td.flag-WA > a,
+div#content div#main-content table#submissions td.flag-TLE > a,
+div#content div#main-content table#submissions td.flag-MLE > a,
+div#content div#main-content table#submissions td.flag-OLE > a {
+	color: #4d7aff;
+}
+
+div#content div#main-content table#submissions td.flag-RE > a,
+div#content div#main-content table#submissions td.flag-CE > a {
+	color: #49a932;
+}
+
+div#content div#main-content table#submissions td.name a {
+	color: #333;
+	text-align: left;
+}

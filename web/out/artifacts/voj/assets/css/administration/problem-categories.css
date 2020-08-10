@@ -1,0 +1,107 @@
+form#new-category-form p {
+	color: #666;
+	font-size: 12px;
+	margin: 5px 0;
+}
+
+form#new-category-form select {
+	margin-bottom: 0;
+}
+
+form#new-category-form button {
+	margin-top: 20px;
+}
+
+table#problem-categories label.checkbox {
+	margin: 0;
+}
+
+div#filters {
+	margin-bottom: 20px;
+}
+
+div#filters select#actions {
+    margin: 0;
+    width: 40%;
+}
+
+table#problem-categories {
+	border: 1px solid #e8e8e8;
+	-webkit-box-shadow: 0 0 5px rgba(0,0,0,0.1);
+	   -moz-box-shadow: 0 0 5px rgba(0,0,0,0.1);
+	        box-shadow: 0 0 5px rgba(0,0,0,0.1);
+}
+
+table#problem-categories thead {
+	background-color: #16a085;
+	color: #fff;
+}
+
+table#problem-categories tfoot {
+	background-color: #fff;
+	color: #666;
+}
+
+table#problem-categories tbody td {
+	line-height: 1.5em;
+}
+
+table#problem-categories ul.actions {
+	font-size: 13px;
+	margin: 0;
+	visibility: hidden;
+}
+
+table#problem-categories ul.actions li {
+	padding-left: 0;
+}
+
+table#problem-categories ul.actions a {
+	text-decoration: none;
+}
+
+table#problem-categories ul.actions a.action-delete {
+	color: #e74c3c;
+}
+
+table#problem-categories tr.edit-fieldset select#category-parent-edit {
+	margin-bottom: 0;
+}
+
+table#problem-categories tr.edit-fieldset p#category-name-error-message,
+table#problem-categories tr.edit-fieldset p#category-slug-error-message,
+table#problem-categories tr.edit-fieldset p#category-parent-error-message {
+	color: #e74c3c;
+	font-size: 12px;
+	margin: 5px 0 0;
+}
+
+table#problem-categories tr.edit-fieldset div#edit-fieldset-controls {
+	margin-top: 20px;
+}
+
+table#problem-categories tr.edit-fieldset input[type=text].error,
+table#problem-categories tr.edit-fieldset select.error {
+	border-color: #e74c3c;
+	color: #e74c3c;
+}
+
+/* Smaller than standard 960 (devices and browsers) */
+@media only screen and (max-width: 959px) {
+}
+
+/* Tablet Portrait size to standard 960 (devices and browsers) */
+@media only screen and (min-width: 768px) and (max-width: 959px) {
+}
+
+/* All Mobile Sizes (devices and browser) */
+@media only screen and (max-width: 767px) {
+}
+
+/* Mobile Landscape Size to Tablet Portrait (devices and browsers) */
+@media only screen and (min-width: 480px) and (max-width: 767px) {
+}
+
+/* Mobile Portrait Size to Mobile Landscape Size (devices and browsers) */
+@media only screen and (max-width: 479px) {
+}

@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper 
+	PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"  
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.verwandlung.voj.web.mapper.ProblemCategoryMapper">
+	<!-- ResultMap -->
+	<resultMap id="ProblemCategoryResultMap" 
+		type="org.verwandlung.voj.web.model.ProblemCategory">
+		<id property="problemCategoryId" column="problem_category_id" />
+		<result property="problemCategorySlug" column="problem_category_slug" />
+		<result property="problemCategoryName" column="problem_category_name" />
+		<result property="parentProblemCategoryId" column="problem_category_parent_id" />
+	</resultMap>
+	<resultMap id="ProblemCategoryRelationshipResultMap"
+		type="org.verwandlung.voj.web.model.ProblemCategoryRelationship">
+		<id property="problemId" column="problem_id" />
+		<id property="problemCategoryId" column="problem_category_id" />
+		<result property="problemCategorySlug" column="problem_category_slug" />
+		<result property="problemCategoryName" column="problem_category_name" />
+	</resultMap>
+
+	<!-- Methods -->
+	<select id="getProblemCategories"
+		resultMap="ProblemCategoryResultMap"
+		useCache="true">
+		SELECT *
+		FROM voj_problem_categories
+	</select>
+	<select id="getProblemCategoryUsingCategoryId"
+		parameterType="int"
+		resultMap="ProblemCategoryResultMap"
+		useCache="true">
+		SELECT *
+		FROM voj_problem_categories
+		WHERE problem_category_id = #{problemCategoryId}
+	</select>
+	<select id="getProblemCategoriesUsingProblemId"
+		parameterType="long"
+		resultMap="ProblemCategoryResultMap"
+		useCache="true">
+		SELECT *
+		FROM voj_problem_category_relationships
+		NATURAL JOIN voj_problem_categories
+		WHERE problem_id = #{problemId}
+	</select>
+	<select id="getProblemCategoriesOfProblems"
+		parameterType="map"
+		resultMap="ProblemCategoryRelationshipResultMap"
+		useCache="true">
+		SELECT *
+		FROM voj_problem_category_relationships
+		NATURAL JOIN voj_problem_categories
+		WHERE problem_id &gt;= #{problemIdLowerBound}
+		AND problem_id &lt;= #{problemIdUpperBound}
+	</select>
+	<select id="getProblemCategoryUsingCategorySlug"
+		parameterType="String"
+		resultMap="ProblemCategoryResultMap"
+		useCache="true">
+		SELECT *
+		FROM voj_problem_categories
+		WHERE problem_category_slug = #{problemCategorySlug}
+	</select>
+	<insert id="createProblemCategory" 
+		parameterType="org.verwandlung.voj.web.model.ProblemCategory"
+		flushCache="true" 
+		keyProperty="problemCategoryId" 
+		keyColumn="problem_category_id"
+		useGeneratedKeys="true">
+		INSERT INTO voj_problem_categories (problem_category_slug, problem_category_name, problem_category_parent_id) 
+		VALUES (#{problemCategorySlug}, #{problemCategoryName}, #{parentProblemCategoryId})
+	</insert>
+	<insert id="createProblemCategoryRelationship" 
+		parameterType="map"
+		flushCache="true">
+		INSERT INTO voj_problem_category_relationships (problem_id, problem_category_id) 
+		VALUES (#{problemId}, #{problemCategory.problemCategoryId})
+	</insert>
+	<update id="updateProblemCategory"
+		parameterType="org.verwandlung.voj.web.model.ProblemCategory"
+		flushCache="true">
+		UPDATE voj_problem_categories 
+		SET problem_category_slug = #{problemCategorySlug}, problem_category_name = #{problemCategoryName}, problem_category_parent_id = #{parentProblemCategoryId}
+		WHERE problem_category_id = #{problemCategoryId}
+	</update>
+	<delete id="deleteProblemCategory"
+		parameterType="int"
+		flushCache="true">
+		DELETE FROM voj_problem_categories 
+		WHERE problem_category_id = #{problemCategoryId}
+	</delete>
+	<delete id="deleteProblemCategoryRelationship"
+		parameterType="long"
+		flushCache="true">
+		DELETE FROM voj_problem_category_relationships 
+		WHERE problem_id = #{problemId}
+	</delete>
+</mapper>

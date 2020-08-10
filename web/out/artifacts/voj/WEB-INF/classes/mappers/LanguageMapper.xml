@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper 
+	PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"  
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.verwandlung.voj.web.mapper.LanguageMapper">
+	<!-- ResultMap -->
+	<resultMap id="LanguageResultMap" type="org.verwandlung.voj.web.model.Language">
+		<id property="languageId" column="language_id" />
+		<result property="languageSlug" column="language_slug" />
+		<result property="languageName" column="language_name" />
+		<result property="compileCommand" column="language_compile_command" />
+		<result property="runCommand" column="language_run_command" />
+	</resultMap>
+
+	<!-- Methods -->
+	<select id="getLanguageUsingId" 
+		parameterType="int"
+		resultMap="LanguageResultMap" 
+		useCache="true">
+		SELECT *
+		FROM voj_languages
+		WHERE language_id = #{languageId}
+	</select>
+	<select id="getLanguageUsingSlug" 
+		parameterType="String"
+		resultMap="LanguageResultMap" 
+		useCache="true">
+		SELECT *
+		FROM voj_languages
+		WHERE language_slug = #{languageSlug}
+	</select>
+	<select id="getAllLanguages" 
+		resultMap="LanguageResultMap"
+		useCache="true">
+		SELECT *
+		FROM voj_languages
+	</select>
+	<insert id="createLanguage" 
+		parameterType="org.verwandlung.voj.web.model.Language"
+		flushCache="true" 
+		keyProperty="languageId" 
+		keyColumn="language_id"
+		useGeneratedKeys="true">
+		INSERT INTO voj_languages (language_id, language_slug, language_name, language_compile_command, language_run_command) 
+		VALUES (#{languageId}, #{languageSlug}, #{languageName}, #{compileCommand}, #{runCommand})
+	</insert>
+	<update id="updateLanguage"
+		parameterType="org.verwandlung.voj.web.model.Language"
+		flushCache="true">
+		UPDATE voj_languages 
+		SET language_slug = #{languageSlug}, language_name = #{languageName}, language_compile_command = #{compileCommand}, language_run_command = #{runCommand} 
+		WHERE language_id = #{languageId}
+	</update>
+	<delete id="deleteLanguage"
+		parameterType="int"
+		flushCache="true">
+		DELETE FROM voj_languages 
+		WHERE language_id = #{languageId}
+	</delete>
+</mapper>

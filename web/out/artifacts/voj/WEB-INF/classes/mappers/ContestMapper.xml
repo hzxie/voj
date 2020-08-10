@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper 
+	PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"  
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.verwandlung.voj.web.mapper.ContestMapper">
+	<!-- ResultMap -->
+	<resultMap id="ContestResultMap" type="org.verwandlung.voj.web.model.Contest">
+		<id property="contestId" column="contest_id" />
+		<result property="contestName" column="contest_name" />
+		<result property="contestNotes" column="contest_notes" />
+		<result property="startTime" column="contest_start_time" />
+		<result property="endTime" column="contest_end_time" />
+		<result property="contestMode" column="contest_mode" />
+		<result property="problems" column="contest_problems" />
+	</resultMap>
+
+	<!-- Methods -->
+	<select id="getNumberOfContests" 
+		resultType="long" 
+		useCache="true">
+		SELECT COUNT(*) 
+		FROM voj_contests
+		<where>
+			<if test="keyword != null and keyword != ''">
+				contest_name LIKE "%"#{keyword}"%"
+			</if>
+		</where>
+	</select>
+	<select id="getContests" 
+		parameterType="map"
+		resultMap="ContestResultMap" 
+		useCache="true">
+		SELECT * 
+		FROM voj_contests
+		<where>
+			<if test="keyword != null and keyword != ''">
+				contest_name LIKE "%"#{keyword}"%"
+			</if>
+		</where>
+		ORDER BY contest_id DESC
+		LIMIT #{offset}, #{limit}
+	</select>
+	<select id="getContest" 
+		parameterType="long"
+		resultMap="ContestResultMap" 
+		useCache="true">
+		SELECT * 
+		FROM voj_contests 
+		WHERE contest_id = #{contestId}
+	</select>
+	<insert id="createContest" 
+		parameterType="org.verwandlung.voj.web.model.Contest"
+		flushCache="true">
+		INSERT INTO voj_contests (contest_name, contest_notes, contest_start_time, contest_end_time, contest_mode, contest_problems) 
+		VALUES (#{contestName}, #{contestNotes}, #{startTime}, #{endTime}, #{contestMode}, #{problems})
+	</insert>
+	<update id="updateContest" 
+		parameterType="org.verwandlung.voj.web.model.Contest"
+		flushCache="true">
+		UPDATE voj_contests 
+		SET contest_name = #{contestName}, contest_notes = #{contestNotes}, contest_start_time = #{startTime}, contest_end_time = #{endTime}, contest_mode = #{contestMode}, contest_problems = #{problems}
+		WHERE contest_id = #{contestId}
+	</update>
+	<delete id="deleteContest"
+		parameterType="long"
+		flushCache="true">
+		DELETE FROM voj_contests 
+		WHERE contest_id = #{contestId}
+	</delete>
+</mapper>

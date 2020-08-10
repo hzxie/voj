@@ -1,0 +1,139 @@
+div#content form#filter {
+	background-color: #fff;
+	border-top: 0;
+	border-left: 10px solid #ffe6b0;
+	padding: 10px;
+}
+
+div#content form#filter input[type=text] {
+	margin-bottom: 0;
+}
+
+div#content div#main-content {
+	margin-top: 20px;
+}
+
+div#content div#main-content div#submission table {
+	border: 1px solid #e8e8e8;
+	margin-bottom: 0;
+	-webkit-box-shadow: 0 0 5px rgba(0,0,0,0.1);
+	   -moz-box-shadow: 0 0 5px rgba(0,0,0,0.1);
+	        box-shadow: 0 0 5px rgba(0,0,0,0.1);
+}
+
+div#content div#main-content div#submission table thead {
+	background-color: #16a085;
+	color: #fff;
+}
+
+div#content div#main-content div#submission table th {
+	border-left: 1px solid #e8e8e8;
+	text-align: center;
+	vertical-align: middle;
+}
+
+div#content div#main-content div#submission table th.time,
+div#content div#main-content div#submission table td.time,
+div#content div#main-content div#submission table th.memory,
+div#content div#main-content div#submission table td.memory,
+div#content div#main-content div#submission table th.user,
+div#content div#main-content div#submission table td.user {
+	border-left: none;
+}
+
+div#content div#main-content div#submission table th.name,
+div#content div#main-content div#submission table td.name {
+	text-align: left;
+}
+
+div#content div#main-content div#submission table td {
+	border-left: 1px solid #e8e8e8;
+	color: #666;
+	text-align: center;
+	vertical-align: middle;
+}
+
+div#content div#main-content div#submission table td.flag-PD > a,
+div#content div#main-content div#submission table td.flag-CPL > a,
+div#content div#main-content div#submission table td.flag-JUD > a {
+	color: #ffa500;
+}
+
+div#content div#main-content div#submission table td.flag-AC > a {
+	color: #f00;
+}
+
+div#content div#main-content div#submission table td.flag-PE > a,
+div#content div#main-content div#submission table td.flag-WA > a,
+div#content div#main-content div#submission table td.flag-TLE > a,
+div#content div#main-content div#submission table td.flag-MLE > a,
+div#content div#main-content div#submission table td.flag-OLE > a {
+	color: #4d7aff;
+}
+
+div#content div#main-content div#submission table td.flag-RE > a,
+div#content div#main-content div#submission table td.flag-CE > a {
+	color: #49a932;
+}
+
+div#content div#main-content div#submission table td.flag-SE > a {
+	color: #34495e;
+}
+
+div#content div#main-content div#submission div#more-submissions {
+	background-color: #f9f9f9;
+	border-bottom: 5px solid #1abc9c;
+	cursor: pointer;
+	padding: 10px;
+	text-align: center;
+}
+
+div#content div#main-content div#submission div#more-submissions p {
+	margin-bottom: 0;
+}
+
+div#content div#main-content div#submission div#more-submissions img {
+	max-height: 15px;
+	height: 15px;
+}
+
+/* Smaller than standard 960 (devices and browsers) */
+@media only screen and (max-width: 959px) {
+}
+
+/* Tablet Portrait size to standard 960 (devices and browsers) */
+@media only screen and (min-width: 768px) and (max-width: 959px) {
+}
+
+/* All Mobile Sizes (devices and browser) */
+@media only screen and (max-width: 767px) {
+	div#content form#filter div.span5 {
+		margin-bottom: 10px;
+	}
+}
+
+/* Mobile Landscape Size to Tablet Portrait (devices and browsers) */
+@media only screen and (min-width: 480px) and (max-width: 767px) {
+	div#content div#main-content div#submission table th.time,
+	div#content div#main-content div#submission table td.time,
+	div#content div#main-content div#submission table th.memory,
+	div#content div#main-content div#submission table td.memory,
+	div#content div#main-content div#submission table th.language,
+	div#content div#main-content div#submission table td.language {
+		display: none;
+	}
+}
+
+/* Mobile Portrait Size to Mobile Landscape Size (devices and browsers) */
+@media only screen and (max-width: 479px) {
+	div#content div#main-content div#submission table th.time,
+	div#content div#main-content div#submission table td.time,
+	div#content div#main-content div#submission table th.memory,
+	div#content div#main-content div#submission table td.memory,
+	div#content div#main-content div#submission table th.language,
+	div#content div#main-content div#submission table td.language,
+	div#content div#main-content div#submission table th.submit-time, 
+	div#content div#main-content div#submission table td.submit-time {
+		display: none;
+	}
+}

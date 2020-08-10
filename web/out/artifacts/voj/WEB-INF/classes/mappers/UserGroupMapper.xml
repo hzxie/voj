@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper 
+	PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"  
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.verwandlung.voj.web.mapper.UserGroupMapper">
+	<!-- ResultMap -->
+	<resultMap id="UserGroupResultMap" 
+		type="org.verwandlung.voj.web.model.UserGroup">
+		<id property="userGroupId" column="user_group_id" />
+		<result property="userGroupSlug" column="user_group_slug" />
+		<result property="userGroupName" column="user_group_name" />
+	</resultMap>
+	
+	<!-- Methods -->
+	<select id="getUserGroups"
+		resultMap="UserGroupResultMap"
+		useCache="true">
+		SELECT *
+		FROM voj_user_groups
+	</select>
+	<select id="getUserGroupUsingId" 
+		parameterType="int"
+		resultMap="UserGroupResultMap"
+		useCache="true">
+		SELECT * 
+		FROM voj_user_groups 
+		WHERE user_group_id = #{userGroupId}
+	</select>
+	<select id="getUserGroupUsingSlug" 
+		parameterType="String"
+		resultMap="UserGroupResultMap"
+		useCache="true">
+		SELECT * 
+		FROM voj_user_groups 
+		WHERE user_group_slug = #{userGroupSlug}
+	</select>
+</mapper>

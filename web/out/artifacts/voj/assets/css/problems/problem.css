@@ -1,0 +1,184 @@
+div#content div#main-content div.problem {
+	-webkit-box-shadow: 0 0 5px rgba(0,0,0,0.1);
+	   -moz-box-shadow: 0 0 5px rgba(0,0,0,0.1);
+	        box-shadow: 0 0 5px rgba(0,0,0,0.1);
+}
+
+div#content div#main-content div.problem div.header {
+	background-color: #16a085;
+	color: #fff;
+	padding: 10px;
+}
+
+div#content div#main-content div.problem div.body {
+	background-color: #fff;
+	margin-bottom: 20px;
+	position: relative;
+	padding: 20px;
+}
+
+div#content div#main-content div.problem div.body div.section {
+	border-top: 5px solid #16a085;
+	padding-top: 10px;
+	margin-top: 20px;
+}
+
+div#content div#main-content div.problem div.body div.section:first-child {
+	border-top: none;
+	padding-top: 0;
+	margin-top: 0;
+}
+
+div#content div#main-content div.problem div.body div#io-sample.section {
+	border-top-color: #ff7373;
+}
+
+div#content div#main-content div.problem div.body div.section div.description {
+	color: #666;
+	margin-left: 20px;
+}
+
+div#content div#main-content div.problem div.body div#mask {
+	background-color: #fff;
+	filter: alpha(opacity=80);
+	height: 100%;
+	opacity: .8;
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	z-index: 4;
+}
+
+div#content div#main-content div.problem div.body form#code-editor {
+	background: #fff;
+	background: rgba(255, 255, 255, 0.3);
+	padding: 10px;
+	position: absolute;
+	top: 10px;
+	left: 10px;
+	right: 10px;
+	filter: alpha(opacity=0);
+	opacity: 0;
+	visibility: hidden;
+	z-index: 8;
+	-webkit-box-shadow: 1px 1px 10px rgba(0, 0, 0, 0.6);
+	   -moz-box-shadow: 1px 1px 10px rgba(0, 0, 0, 0.6);
+		 -o-box-shadow: 1px 1px 10px rgba(0, 0, 0, 0.6);
+	        box-shadow: 1px 1px 10px rgba(0, 0, 0, 0.6);
+	-webkit-transform: scale(1.2);
+	   -moz-transform: scale(1.2);
+		 -o-transform: scale(1.2);
+	        transform: scale(1.2);
+	-webkit-transition: opacity .2s linear, -webkit-transform .2s ease-in-out, visibility 0s linear .2s;
+	   -moz-transition: opacity .2s linear, -moz-transform .2s ease-in-out, visibility 0s linear .2s;
+		 -o-transition: opacity .2s linear, -o-transform .2s ease-in-out, visibility 0s linear .2s;
+	        transition: opacity .2s linear, transform .2s ease-in-out, visibility 0s linear .2s;
+}
+
+div#content div#main-content div.problem div.body form#code-editor.fade {
+	filter: alpha(opacity=80);
+	opacity: .8;
+	visibility: visible;
+	-webkit-transform: scale(1);
+	   -moz-transform: scale(1);
+		 -o-transform: scale(1);
+	        transform: scale(1);
+	-webkit-transition-delay: 0s;
+	   -moz-transition-delay: 0s;
+		 -o-transition-delay: 0s;
+	        transition-delay: 0s;
+}
+
+div#content div#main-content div.problem div.body form#code-editor textarea#codemirror-editor {
+	-webkit-box-sizing: border-box;
+	   -moz-box-sizing: border-box;
+	        box-sizing: border-box;
+}
+
+div#content div#main-content div.problem div.body form#code-editor select#languages {
+	margin-top: 5px;
+}
+
+div#content div#main-content div.problem div.body form#code-editor div#submission-error {
+	padding-top: 16px;
+}
+
+div#content div#main-content div.problem div.body form#code-editor div#submission-action {
+	text-align: right;
+	padding-top: 5px;
+}
+
+div#content div#main-content div.problem code {
+	background-color: #f5f5f5;
+	border: none;
+	font-size: 14px;
+	padding: 0;
+}
+
+div#content div#sidebar div.section {
+	background-color: #fff;
+	border-top: 4px solid #16a085;
+	margin-bottom: 20px;
+	padding: 10px;
+}
+
+div#content div#sidebar div.section ul {
+	list-style: none;
+	margin-left: 0;
+}
+
+div#content div#sidebar div.section .row-fluid .span4,
+div#content div#sidebar div.section .row-fluid .span8 {
+	min-height: 20px;
+}
+
+div#content div#sidebar div#submission.section div.flag-PD,
+div#content div#sidebar div#submission.section div.flag-CPL,
+div#content div#sidebar div#submission.section div.flag-JUD {
+	color: #ffa500;
+}
+
+div#content div#sidebar div#submission.section div.flag-AC {
+	color: #f00;
+}
+
+div#content div#sidebar div#submission.section div.flag-PE,
+div#content div#sidebar div#submission.section div.flag-WA,
+div#content div#sidebar div#submission.section div.flag-TLE,
+div#content div#sidebar div#submission.section div.flag-MLE,
+div#content div#sidebar div#submission.section div.flag-OLE {
+	color: #4d7aff;
+}
+
+div#content div#sidebar div#submission.section div.flag-RE,
+div#content div#sidebar div#submission.section div.flag-CE {
+	color: #49a932;
+}
+
+/* Smaller than standard 960 (devices and browsers) */
+@media only screen and (max-width: 959px) {
+}
+
+/* Tablet Portrait size to standard 960 (devices and browsers) */
+@media only screen and (min-width: 768px) and (max-width: 959px) {
+}
+
+/* All Mobile Sizes (devices and browser) */
+@media only screen and (max-width: 767px) {
+	div#content div#main-content div.problem div.body form#code-editor div#submission-action {
+		text-align: left;
+	}
+	
+	div#content div#main-content div#sidebar {
+		margin-top: 20px;
+	}
+}
+
+/* Mobile Landscape Size to Tablet Portrait (devices and browsers) */
+@media only screen and (min-width: 480px) and (max-width: 767px) {
+}
+
+/* Mobile Portrait Size to Mobile Landscape Size (devices and browsers) */
+@media only screen and (max-width: 479px) {
+}

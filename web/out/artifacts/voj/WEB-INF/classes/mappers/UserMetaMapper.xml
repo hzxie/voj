@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper 
+	PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"  
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.verwandlung.voj.web.mapper.UserMetaMapper">
+	<!-- ResultMap -->
+	<resultMap id="UserMetaResultMap" type="org.verwandlung.voj.web.model.UserMeta">
+		<id property="metaId" column="meta_id" />
+		<result property="metaKey" column="meta_key" />
+		<result property="metaValue" column="meta_value" />
+		<association property="user" 
+			javaType="org.verwandlung.voj.web.model.User" 
+			column="uid"
+			select="org.verwandlung.voj.web.mapper.UserMapper.getUserUsingUid" />
+	</resultMap>
+	
+	<!-- Methods -->
+	<select id="getNumberOfUserRegistered" 
+		parameterType="map"
+		resultType="long"
+		useCache="true">
+		SELECT COUNT(*) 
+		FROM voj_usermeta 
+		WHERE meta_key = 'registerTime' 
+		AND meta_value &gt;= #{startTime} AND meta_value &lt;= #{endTime}
+	</select>
+	<select id="getUserMetaUsingUser" 
+		parameterType="org.verwandlung.voj.web.model.User"
+		resultMap="UserMetaResultMap"
+		useCache="true">
+		SELECT * 
+		FROM voj_usermeta 
+		WHERE uid = #{user.uid}
+	</select>
+	<select id="getUserMetaUsingUserAndMetaKey" 
+		parameterType="map"
+		resultMap="UserMetaResultMap"
+		useCache="true">
+		SELECT * 
+		FROM voj_usermeta 
+		WHERE uid = #{user.uid} AND meta_key = #{metaKey}
+	</select>
+	<insert id="createUserMeta" 
+		parameterType="org.verwandlung.voj.web.model.UserMeta"
+		flushCache="true" 
+		keyProperty="metaId" 
+		keyColumn="meta_id"
+		useGeneratedKeys="true">
+		INSERT INTO voj_usermeta (uid, meta_key, meta_value) 
+		VALUES (#{user.uid}, #{metaKey}, #{metaValue})
+	</insert>
+	<update id="updateUserMeta"
+		parameterType="org.verwandlung.voj.web.model.UserMeta"
+		flushCache="true">
+		UPDATE voj_usermeta 
+		SET meta_value = #{metaValue} 
+		WHERE meta_id = #{metaId}
+	</update>
+	<delete id="deleteUserMetaUsingUser"
+		parameterType="long"
+		flushCache="true">
+		DELETE FROM voj_usermeta 
+		WHERE uid = #{uid}
+	</delete>
+</mapper>

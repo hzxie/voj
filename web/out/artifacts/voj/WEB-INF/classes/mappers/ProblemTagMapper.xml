@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE mapper 
+	PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"  
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.verwandlung.voj.web.mapper.ProblemTagMapper">
+	<!-- ResultMap -->
+	<resultMap id="ProblemTagResultMap" 
+		type="org.verwandlung.voj.web.model.ProblemTag">
+		<id property="problemTagId" column="problem_tag_id" />
+		<result property="problemTagSlug" column="problem_tag_slug" />
+		<result property="problemTagName" column="problem_tag_name" />
+	</resultMap>
+	<resultMap id="ProblemTagRelationshipResultMap"
+		type="org.verwandlung.voj.web.model.ProblemTagRelationship">
+		<id property="problemId" column="problem_id" />
+		<id property="problemTagId" column="problem_tag_id" />
+		<result property="problemTagSlug" column="problem_tag_slug" />
+		<result property="problemTagName" column="problem_tag_name" />
+	</resultMap>
+
+	<!-- Methods -->
+	<select id="getProblemTags"
+		resultMap="ProblemTagResultMap"
+		useCache="true">
+		SELECT *
+		FROM voj_problem_tags
+	</select>
+	<select id="getProblemTagUsingTagId"
+		parameterType="long"
+		resultMap="ProblemTagResultMap"
+		useCache="true">
+		SELECT *
+		FROM voj_problem_tags
+		WHERE problem_tag_id = #{problemTagId}
+	</select>
+	<select id="getProblemTagsUsingProblemId"
+		parameterType="long"
+		resultMap="ProblemTagResultMap"
+		useCache="true">
+		SELECT *
+		FROM voj_problem_tags
+		NATURAL JOIN voj_problem_tag_relationships
+		WHERE problem_id = #{problemId}
+	</select>
+	<select id="getProblemTagsOfProblems"
+			parameterType="map"
+			resultMap="ProblemTagRelationshipResultMap"
+			useCache="true">
+		SELECT *
+		FROM voj_problem_tag_relationships
+		NATURAL JOIN voj_problem_tags
+		WHERE problem_id &gt;= #{problemIdLowerBound}
+		AND problem_id &lt;= #{problemIdUpperBound}
+	</select>
+	<select id="getProblemTagUsingTagSlug"
+		parameterType="String"
+		resultMap="ProblemTagResultMap"
+		useCache="true">
+		SELECT *
+		FROM voj_problem_tags
+		WHERE problem_tag_slug = #{problemTagSlug}
+	</select>
+	<insert id="createProblemTag" 
+		parameterType="org.verwandlung.voj.web.model.ProblemTag"
+		flushCache="true" 
+		keyProperty="problemTagId" 
+		keyColumn="problem_tag_id"
+		useGeneratedKeys="true">
+		INSERT INTO voj_problem_tags (problem_tag_slug, problem_tag_name) 
+		VALUES (#{problemTagSlug}, #{problemTagName})
+	</insert>
+	<insert id="createProblemTagRelationship" 
+		parameterType="map"
+		flushCache="true">
+		INSERT INTO voj_problem_tag_relationships (problem_id, problem_tag_id) 
+		VALUES (#{problemId}, #{problemTag.problemTagId})
+	</insert>
+	<update id="updateProblemTag"
+		parameterType="org.verwandlung.voj.web.model.ProblemTag"
+		flushCache="true">
+		UPDATE voj_problem_tags 
+		SET problem_tag_slug = #{problemTagSlug}, problem_tag_name = #{problemTagName}
+		WHERE problem_tag_id = #{problemTagId}
+	</update>
+	<delete id="deleteProblemTagUsingTagId"
+		parameterType="long"
+		flushCache="true">
+		DELETE FROM voj_problem_tags 
+		WHERE problem_tag_id = #{problemTagId}
+	</delete>
+	<delete id="deleteProblemTagRelationship"
+		parameterType="long"
+		flushCache="true">
+		DELETE FROM voj_problem_tag_relationships 
+		WHERE problem_id = #{problemId}
+	</delete>
+</mapper>
