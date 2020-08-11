@@ -167,7 +167,7 @@ public class ContestService {
 			Map<Long, Map<String, String>> codeSnippet = JSON.parseObject(cc.getCodeSnippet(),
 					new TypeReference<Map<Long, Map<String, String>>>() {});
 
-			if ( codeSnippet.containsKey(problemId) ) {
+			if ( codeSnippet != null && codeSnippet.containsKey(problemId) ) {
 				return codeSnippet.get(problemId);
 			}
 		}
