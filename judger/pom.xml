@@ -11,7 +11,7 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<spring.version>5.1.6.RELEASE</spring.version>
 		<aspectj.version>1.9.2</aspectj.version>
-		<mybatis.version>3.5.0</mybatis.version>
+		<mybatis.version>3.5.6</mybatis.version>
 		<druid.version>1.1.15</druid.version>
 		<activemq.version>5.15.2</activemq.version>
 	</properties>
