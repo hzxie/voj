@@ -15,24 +15,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  *
- *                              _ooOoo_  
- *                             o8888888o  
- *                             88" . "88  
- *                             (| -_- |)  
- *                             O\  =  /O  
- *                          ____/`---'\____  
- *                        .'  \\|     |//  `.  
- *                       /  \\|||  :  |||//  \  
- *                      /  _||||| -:- |||||-  \  
- *                      |   | \\\  -  /// |   |  
- *                      | \_|  ''\---/''  |   |  
- *                      \  .-\__  `-`  ___/-. /  
- *                    ___`. .'  /--.--\  `. . __  
- *                 ."" '<  `.___\_<|>_/___.'  >'"".  
- *                | | :  `- \`.;`\ _ /`;.`/ - ` : | |  
- *                \  \ `-.   \_ __\ /__ _/   .-` /  /  
- *           ======`-.____`-.___\_____/___.-`____.-'======  
- *                              `=---=' 
+ *                              _ooOoo_
+ *                             o8888888o
+ *                             88" . "88
+ *                             (| -_- |)
+ *                             O\  =  /O
+ *                          ____/`---'\____
+ *                        .'  \\|     |//  `.
+ *                       /  \\|||  :  |||//  \
+ *                      /  _||||| -:- |||||-  \
+ *                      |   | \\\  -  /// |   |
+ *                      | \_|  ''\---/''  |   |
+ *                      \  .-\__  `-`  ___/-. /
+ *                    ___`. .'  /--.--\  `. . __
+ *                 ."" '<  `.___\_<|>_/___.'  >'"".
+ *                | | :  `- \`.;`\ _ /`;.`/ - ` : | |
+ *                \  \ `-.   \_ __\ /__ _/   .-` /  /
+ *           ======`-.____`-.___\_____/___.-`____.-'======
+ *                              `=---='
  *
  *                          HERE BE BUDDHA
  *
@@ -53,21 +53,36 @@ import org.verwandlung.voj.judger.model.UserGroup;
 
 /**
  * User Data Access Object.
- * 
+ *
  * @author Haozhe Xie
  */
 @CacheNamespace(implementation = org.mybatis.caches.ehcache.EhcacheCache.class)
 public interface UserMapper {
-	/**
-	 * 通过用户名获取用户对象.
-	 * @param username - 用户名
-	 * @return 预期的用户对象或空引用
-	 */
-	@Select("SELECT * FROM voj_users WHERE username = #{username}")
-	@Options(useCache = false)
-	@Results(value = {
-		@Result(property = "userGroup", column = "user_group_id", javaType = UserGroup.class, one = @One(select="org.verwandlung.voj.judger.mapper.UserGroupMapper.getUserGroupUsingId")),
-		@Result(property = "preferLanguage", column = "prefer_language_id", javaType = Language.class, one = @One(select="org.verwandlung.voj.judger.mapper.LanguageMapper.getLanguageUsingId"))
-	})
-	User getUserUsingUsername(@Param("username") String username);
+  /**
+   * 通过用户名获取用户对象.
+   *
+   * @param username - 用户名
+   * @return 预期的用户对象或空引用
+   */
+  @Select("SELECT * FROM voj_users WHERE username = #{username}")
+  @Options(useCache = false)
+  @Results(
+      value = {
+        @Result(
+            property = "userGroup",
+            column = "user_group_id",
+            javaType = UserGroup.class,
+            one =
+                @One(
+                    select =
+                        "org.verwandlung.voj.judger.mapper.UserGroupMapper.getUserGroupUsingId")),
+        @Result(
+            property = "preferLanguage",
+            column = "prefer_language_id",
+            javaType = Language.class,
+            one =
+                @One(
+                    select = "org.verwandlung.voj.judger.mapper.LanguageMapper.getLanguageUsingId"))
+      })
+  User getUserUsingUsername(@Param("username") String username);
 }

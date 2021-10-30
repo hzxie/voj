@@ -15,24 +15,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  *
- *                              _ooOoo_  
- *                             o8888888o  
- *                             88" . "88  
- *                             (| -_- |)  
- *                             O\  =  /O  
- *                          ____/`---'\____  
- *                        .'  \\|     |//  `.  
- *                       /  \\|||  :  |||//  \  
- *                      /  _||||| -:- |||||-  \  
- *                      |   | \\\  -  /// |   |  
- *                      | \_|  ''\---/''  |   |  
- *                      \  .-\__  `-`  ___/-. /  
- *                    ___`. .'  /--.--\  `. . __  
- *                 ."" '<  `.___\_<|>_/___.'  >'"".  
- *                | | :  `- \`.;`\ _ /`;.`/ - ` : | |  
- *                \  \ `-.   \_ __\ /__ _/   .-` /  /  
- *           ======`-.____`-.___\_____/___.-`____.-'======  
- *                              `=---=' 
+ *                              _ooOoo_
+ *                             o8888888o
+ *                             88" . "88
+ *                             (| -_- |)
+ *                             O\  =  /O
+ *                          ____/`---'\____
+ *                        .'  \\|     |//  `.
+ *                       /  \\|||  :  |||//  \
+ *                      /  _||||| -:- |||||-  \
+ *                      |   | \\\  -  /// |   |
+ *                      | \_|  ''\---/''  |   |
+ *                      \  .-\__  `-`  ___/-. /
+ *                    ___`. .'  /--.--\  `. . __
+ *                 ."" '<  `.___\_<|>_/___.'  >'"".
+ *                | | :  `- \`.;`\ _ /`;.`/ - ` : | |
+ *                \  \ `-.   \_ __\ /__ _/   .-` /  /
+ *           ======`-.____`-.___\_____/___.-`____.-'======
+ *                              `=---='
  *
  *                          HERE BE BUDDHA
  *
@@ -48,46 +48,52 @@ import org.verwandlung.voj.web.model.Language;
 
 /**
  * Language Data Access Object.
- * 
+ *
  * @author Haozhe Xie
  */
 @CacheNamespace(implementation = org.mybatis.caches.ehcache.EhcacheCache.class)
 public interface LanguageMapper {
-	/**
-	 * 通过编程语言的唯一标识符获取编程语言对象.
-	 * @param languageId - 编程语言的唯一标识符
-	 * @return 预期的编程语言对象或空引用
-	 */
-	Language getLanguageUsingId(@Param("languageId") int languageId);
-	
-	/**
-	 * 通过编程语言的别名获取编程语言对象.
-	 * @param languageSlug - 编程语言的别名
-	 * @return 预期的编程语言对象或空引用
-	 */
-	Language getLanguageUsingSlug(@Param("languageSlug") String languageSlug);
-	
-	/**
-	 * 获取支持的编程语言.
-	 * @return 编程语言列表(List<Language>对象)
-	 */
-	List<Language> getAllLanguages();
-	
-	/**
-	 * 添加编程语言对象.
-	 * @param language - 待添加的编程语言对象 
-	 */
-	int createLanguage(Language language);
-	
-	/**
-	 * 更新编程语言对象.
-	 * @param language - 待更新的编程语言对象
-	 */
-	int updateLanguage(Language language);
-	
-	/**
-	 * 删除编程语言对象.
-	 * @param languageId - 编程语言的唯一标识符
-	 */
-	int deleteLanguage(@Param("languageId") int languageId);
+  /**
+   * 通过编程语言的唯一标识符获取编程语言对象.
+   *
+   * @param languageId - 编程语言的唯一标识符
+   * @return 预期的编程语言对象或空引用
+   */
+  Language getLanguageUsingId(@Param("languageId") int languageId);
+
+  /**
+   * 通过编程语言的别名获取编程语言对象.
+   *
+   * @param languageSlug - 编程语言的别名
+   * @return 预期的编程语言对象或空引用
+   */
+  Language getLanguageUsingSlug(@Param("languageSlug") String languageSlug);
+
+  /**
+   * 获取支持的编程语言.
+   *
+   * @return 编程语言列表(List<Language>对象)
+   */
+  List<Language> getAllLanguages();
+
+  /**
+   * 添加编程语言对象.
+   *
+   * @param language - 待添加的编程语言对象
+   */
+  int createLanguage(Language language);
+
+  /**
+   * 更新编程语言对象.
+   *
+   * @param language - 待更新的编程语言对象
+   */
+  int updateLanguage(Language language);
+
+  /**
+   * 删除编程语言对象.
+   *
+   * @param languageId - 编程语言的唯一标识符
+   */
+  int deleteLanguage(@Param("languageId") int languageId);
 }

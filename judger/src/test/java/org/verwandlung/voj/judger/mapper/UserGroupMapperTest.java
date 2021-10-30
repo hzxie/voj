@@ -15,24 +15,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  *
- *                              _ooOoo_  
- *                             o8888888o  
- *                             88" . "88  
- *                             (| -_- |)  
- *                             O\  =  /O  
- *                          ____/`---'\____  
- *                        .'  \\|     |//  `.  
- *                       /  \\|||  :  |||//  \  
- *                      /  _||||| -:- |||||-  \  
- *                      |   | \\\  -  /// |   |  
- *                      | \_|  ''\---/''  |   |  
- *                      \  .-\__  `-`  ___/-. /  
- *                    ___`. .'  /--.--\  `. . __  
- *                 ."" '<  `.___\_<|>_/___.'  >'"".  
- *                | | :  `- \`.;`\ _ /`;.`/ - ` : | |  
- *                \  \ `-.   \_ __\ /__ _/   .-` /  /  
- *           ======`-.____`-.___\_____/___.-`____.-'======  
- *                              `=---=' 
+ *                              _ooOoo_
+ *                             o8888888o
+ *                             88" . "88
+ *                             (| -_- |)
+ *                             O\  =  /O
+ *                          ____/`---'\____
+ *                        .'  \\|     |//  `.
+ *                       /  \\|||  :  |||//  \
+ *                      /  _||||| -:- |||||-  \
+ *                      |   | \\\  -  /// |   |
+ *                      | \_|  ''\---/''  |   |
+ *                      \  .-\__  `-`  ___/-. /
+ *                    ___`. .'  /--.--\  `. . __
+ *                 ."" '<  `.___\_<|>_/___.'  >'"".
+ *                | | :  `- \`.;`\ _ /`;.`/ - ` : | |
+ *                \  \ `-.   \_ __\ /__ _/   .-` /  /
+ *           ======`-.____`-.___\_____/___.-`____.-'======
+ *                              `=---='
  *
  *                          HERE BE BUDDHA
  *
@@ -51,41 +51,30 @@ import org.verwandlung.voj.judger.model.UserGroup;
 
 /**
  * UserGroupMapper测试类.
- * 
+ *
  * @author Haozhe Xie
  */
 @ExtendWith(SpringExtension.class)
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class UserGroupMapperTest {
-	/**
-	 * 测试用例: 测试getUserGroupUsingId(int)方法
-	 * 测试数据: 普通用户(User)的用户组唯一标识符
-	 * 预期结果: 返回用户(User)的用户组对象
-	 */
-	@Test
-	public void testGetUserGroupUsingIdExists() {
-		UserGroup userGroup = userGroupMapper.getUserGroupUsingId(1);
-		Assertions.assertNotNull(userGroup);
-		
-		String userGroupSlug = userGroup.getUserGroupSlug();
-		Assertions.assertEquals("forbidden", userGroupSlug);
-	}
-	
-	/**
-	 * 测试用例: 测试getUserGroupUsingId(int)方法
-	 * 测试数据: 不存在的用户组唯一标识符
-	 * 预期结果: 返回空引用
-	 */
-	@Test
-	public void testGetUserGroupUsingIdNotExists() {
-		UserGroup userGroup = userGroupMapper.getUserGroupUsingId(0);
-		Assertions.assertNull(userGroup);
-	}
-	
-	/**
-	 * 待测试的UserGroupMapper对象.
-	 */
-	@Autowired
-	private UserGroupMapper userGroupMapper;
+  /** 测试用例: 测试getUserGroupUsingId(int)方法 测试数据: 普通用户(User)的用户组唯一标识符 预期结果: 返回用户(User)的用户组对象 */
+  @Test
+  public void testGetUserGroupUsingIdExists() {
+    UserGroup userGroup = userGroupMapper.getUserGroupUsingId(1);
+    Assertions.assertNotNull(userGroup);
+
+    String userGroupSlug = userGroup.getUserGroupSlug();
+    Assertions.assertEquals("forbidden", userGroupSlug);
+  }
+
+  /** 测试用例: 测试getUserGroupUsingId(int)方法 测试数据: 不存在的用户组唯一标识符 预期结果: 返回空引用 */
+  @Test
+  public void testGetUserGroupUsingIdNotExists() {
+    UserGroup userGroup = userGroupMapper.getUserGroupUsingId(0);
+    Assertions.assertNull(userGroup);
+  }
+
+  /** 待测试的UserGroupMapper对象. */
+  @Autowired private UserGroupMapper userGroupMapper;
 }

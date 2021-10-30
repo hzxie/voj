@@ -15,24 +15,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  *
- *                              _ooOoo_  
- *                             o8888888o  
- *                             88" . "88  
- *                             (| -_- |)  
- *                             O\  =  /O  
- *                          ____/`---'\____  
- *                        .'  \\|     |//  `.  
- *                       /  \\|||  :  |||//  \  
- *                      /  _||||| -:- |||||-  \  
- *                      |   | \\\  -  /// |   |  
- *                      | \_|  ''\---/''  |   |  
- *                      \  .-\__  `-`  ___/-. /  
- *                    ___`. .'  /--.--\  `. . __  
- *                 ."" '<  `.___\_<|>_/___.'  >'"".  
- *                | | :  `- \`.;`\ _ /`;.`/ - ` : | |  
- *                \  \ `-.   \_ __\ /__ _/   .-` /  /  
- *           ======`-.____`-.___\_____/___.-`____.-'======  
- *                              `=---=' 
+ *                              _ooOoo_
+ *                             o8888888o
+ *                             88" . "88
+ *                             (| -_- |)
+ *                             O\  =  /O
+ *                          ____/`---'\____
+ *                        .'  \\|     |//  `.
+ *                       /  \\|||  :  |||//  \
+ *                      /  _||||| -:- |||||-  \
+ *                      |   | \\\  -  /// |   |
+ *                      | \_|  ''\---/''  |   |
+ *                      \  .-\__  `-`  ___/-. /
+ *                    ___`. .'  /--.--\  `. . __
+ *                 ."" '<  `.___\_<|>_/___.'  >'"".
+ *                | | :  `- \`.;`\ _ /`;.`/ - ` : | |
+ *                \  \ `-.   \_ __\ /__ _/   .-` /  /
+ *           ======`-.____`-.___\_____/___.-`____.-'======
+ *                              `=---='
  *
  *                          HERE BE BUDDHA
  *
@@ -51,41 +51,30 @@ import org.verwandlung.voj.judger.model.User;
 
 /**
  * UserMapper测试类.
- * 
+ *
  * @author Haozhe Xie
  */
 @ExtendWith(SpringExtension.class)
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class UserMapperTest {
-	/**
-	 * 测试用例: 测试getUserUsingUsername(String)方法
-	 * 测试数据: 使用用户名为zjhzxhz的用户
-	 * 预期结果: 返回预期的用户对象
-	 */
-	@Test
-	public void testGetUserUsingUsernameExists() {
-		User user = userMapper.getUserUsingUsername("Zjhzxhz");
-		Assertions.assertNotNull(user);
-		
-		long uid = user.getUid();
-		Assertions.assertEquals(1000, uid);
-	}
-	
-	/**
-	 * 测试用例: 测试getUserUsingUsername(String)方法
-	 * 测试数据: 使用不存在的用户名
-	 * 预期结果: 返回空引用
-	 */
-	@Test
-	public void testGetUserUsingUsernameNotExists() {
-		User user = userMapper.getUserUsingUsername("Not-Exists");
-		Assertions.assertNull(user);
-	}
-	
-	/**
-	 * 待测试的UserMapper对象.
-	 */
-	@Autowired
-	private UserMapper userMapper;
+  /** 测试用例: 测试getUserUsingUsername(String)方法 测试数据: 使用用户名为zjhzxhz的用户 预期结果: 返回预期的用户对象 */
+  @Test
+  public void testGetUserUsingUsernameExists() {
+    User user = userMapper.getUserUsingUsername("Zjhzxhz");
+    Assertions.assertNotNull(user);
+
+    long uid = user.getUid();
+    Assertions.assertEquals(1000, uid);
+  }
+
+  /** 测试用例: 测试getUserUsingUsername(String)方法 测试数据: 使用不存在的用户名 预期结果: 返回空引用 */
+  @Test
+  public void testGetUserUsingUsernameNotExists() {
+    User user = userMapper.getUserUsingUsername("Not-Exists");
+    Assertions.assertNull(user);
+  }
+
+  /** 待测试的UserMapper对象. */
+  @Autowired private UserMapper userMapper;
 }

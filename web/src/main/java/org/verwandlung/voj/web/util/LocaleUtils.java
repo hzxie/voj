@@ -15,24 +15,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  *
- *                              _ooOoo_  
- *                             o8888888o  
- *                             88" . "88  
- *                             (| -_- |)  
- *                             O\  =  /O  
- *                          ____/`---'\____  
- *                        .'  \\|     |//  `.  
- *                       /  \\|||  :  |||//  \  
- *                      /  _||||| -:- |||||-  \  
- *                      |   | \\\  -  /// |   |  
- *                      | \_|  ''\---/''  |   |  
- *                      \  .-\__  `-`  ___/-. /  
- *                    ___`. .'  /--.--\  `. . __  
- *                 ."" '<  `.___\_<|>_/___.'  >'"".  
- *                | | :  `- \`.;`\ _ /`;.`/ - ` : | |  
- *                \  \ `-.   \_ __\ /__ _/   .-` /  /  
- *           ======`-.____`-.___\_____/___.-`____.-'======  
- *                              `=---=' 
+ *                              _ooOoo_
+ *                             o8888888o
+ *                             88" . "88
+ *                             (| -_- |)
+ *                             O\  =  /O
+ *                          ____/`---'\____
+ *                        .'  \\|     |//  `.
+ *                       /  \\|||  :  |||//  \
+ *                      /  _||||| -:- |||||-  \
+ *                      |   | \\\  -  /// |   |
+ *                      | \_|  ''\---/''  |   |
+ *                      \  .-\__  `-`  ___/-. /
+ *                    ___`. .'  /--.--\  `. . __
+ *                 ."" '<  `.___\_<|>_/___.'  >'"".
+ *                | | :  `- \`.;`\ _ /`;.`/ - ` : | |
+ *                \  \ `-.   \_ __\ /__ _/   .-` /  /
+ *           ======`-.____`-.___\_____/___.-`____.-'======
+ *                              `=---='
  *
  *                          HERE BE BUDDHA
  *
@@ -49,37 +49,39 @@ import org.springframework.web.servlet.support.RequestContextUtils;
 
 /**
  * Locale相关的辅助函数.
+ *
  * @author Haozhe Xie
  */
 public class LocaleUtils {
-	/**
-	 * Utility classes should not have a public constructor.
-	 */
-	private LocaleUtils() { }
-	
-	/**
-	 * 根据IETF Language Tag获取对应的Locale对象.
-	 * @param languageName - 语言的名称(例如zh_CN)
-	 * @return 预期的Locale对象
-	 */
-	public static Locale getLocaleOfLanguage(String languageName) {
-		String[] localeMeta = languageName.split("_");
-		String language = localeMeta[0];
-		String country = localeMeta[1];
-		
-		return new Locale(language, country);
-	}
+  /** Utility classes should not have a public constructor. */
+  private LocaleUtils() {}
 
-	/**
-	 * 根据用户语言设置Locale信息.
-	 * @param request - HttpRequest对象
-	 * @param response - HttpResponse对象
-	 * @param language - 语言的名称(例如zh_CN)
-	 */
-	public static void setLocale(HttpServletRequest request, HttpServletResponse response, String language) {
-		Locale locale = LocaleUtils.getLocaleOfLanguage(language);
-		LocaleResolver localeResolver = RequestContextUtils.getLocaleResolver(request);
-		localeResolver.setLocale(request, response, locale);
-		request.getSession().setAttribute("language", language);
-	}
+  /**
+   * 根据IETF Language Tag获取对应的Locale对象.
+   *
+   * @param languageName - 语言的名称(例如zh_CN)
+   * @return 预期的Locale对象
+   */
+  public static Locale getLocaleOfLanguage(String languageName) {
+    String[] localeMeta = languageName.split("_");
+    String language = localeMeta[0];
+    String country = localeMeta[1];
+
+    return new Locale(language, country);
+  }
+
+  /**
+   * 根据用户语言设置Locale信息.
+   *
+   * @param request - HttpRequest对象
+   * @param response - HttpResponse对象
+   * @param language - 语言的名称(例如zh_CN)
+   */
+  public static void setLocale(
+      HttpServletRequest request, HttpServletResponse response, String language) {
+    Locale locale = LocaleUtils.getLocaleOfLanguage(language);
+    LocaleResolver localeResolver = RequestContextUtils.getLocaleResolver(request);
+    localeResolver.setLocale(request, response, locale);
+    request.getSession().setAttribute("language", language);
+  }
 }

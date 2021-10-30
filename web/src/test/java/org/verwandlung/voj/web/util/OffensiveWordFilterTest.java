@@ -15,24 +15,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  *
- *                              _ooOoo_  
- *                             o8888888o  
- *                             88" . "88  
- *                             (| -_- |)  
- *                             O\  =  /O  
- *                          ____/`---'\____  
- *                        .'  \\|     |//  `.  
- *                       /  \\|||  :  |||//  \  
- *                      /  _||||| -:- |||||-  \  
- *                      |   | \\\  -  /// |   |  
- *                      | \_|  ''\---/''  |   |  
- *                      \  .-\__  `-`  ___/-. /  
- *                    ___`. .'  /--.--\  `. . __  
- *                 ."" '<  `.___\_<|>_/___.'  >'"".  
- *                | | :  `- \`.;`\ _ /`;.`/ - ` : | |  
- *                \  \ `-.   \_ __\ /__ _/   .-` /  /  
- *           ======`-.____`-.___\_____/___.-`____.-'======  
- *                              `=---=' 
+ *                              _ooOoo_
+ *                             o8888888o
+ *                             88" . "88
+ *                             (| -_- |)
+ *                             O\  =  /O
+ *                          ____/`---'\____
+ *                        .'  \\|     |//  `.
+ *                       /  \\|||  :  |||//  \
+ *                      /  _||||| -:- |||||-  \
+ *                      |   | \\\  -  /// |   |
+ *                      | \_|  ''\---/''  |   |
+ *                      \  .-\__  `-`  ___/-. /
+ *                    ___`. .'  /--.--\  `. . __
+ *                 ."" '<  `.___\_<|>_/___.'  >'"".
+ *                | | :  `- \`.;`\ _ /`;.`/ - ` : | |
+ *                \  \ `-.   \_ __\ /__ _/   .-` /  /
+ *           ======`-.____`-.___\_____/___.-`____.-'======
+ *                              `=---='
  *
  *                          HERE BE BUDDHA
  *
@@ -49,26 +49,20 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * SensitiveWordFilter的测试类
+ *
  * @author YiHao Zhou
  */
 @ExtendWith(SpringExtension.class)
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class OffensiveWordFilterTest {
-	/**
-	 * 测试用例：测试filter()方法
-	 * 测试数据: 包含敏感词的数据(法轮大法)
-	 * 预期结果: 过滤敏感词后的数据
-	 */
-	@Test
-	public void testFilterUsingOffensiveWord() {
-		Assertions.assertNotNull(filter);
-		Assertions.assertEquals("**大法好 你好", filter.filter("法轮大法好 你好"));
-	}
-	
-	/**
-	 * 自动注入的SensitiveWordFilter对象.
-	 */
-	@Autowired
-	private OffensiveWordFilter filter;
+  /** 测试用例：测试filter()方法 测试数据: 包含敏感词的数据(法轮大法) 预期结果: 过滤敏感词后的数据 */
+  @Test
+  public void testFilterUsingOffensiveWord() {
+    Assertions.assertNotNull(filter);
+    Assertions.assertEquals("**大法好 你好", filter.filter("法轮大法好 你好"));
+  }
+
+  /** 自动注入的SensitiveWordFilter对象. */
+  @Autowired private OffensiveWordFilter filter;
 }

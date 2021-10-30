@@ -15,24 +15,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  *
- *                              _ooOoo_  
- *                             o8888888o  
- *                             88" . "88  
- *                             (| -_- |)  
- *                             O\  =  /O  
- *                          ____/`---'\____  
- *                        .'  \\|     |//  `.  
- *                       /  \\|||  :  |||//  \  
- *                      /  _||||| -:- |||||-  \  
- *                      |   | \\\  -  /// |   |  
- *                      | \_|  ''\---/''  |   |  
- *                      \  .-\__  `-`  ___/-. /  
- *                    ___`. .'  /--.--\  `. . __  
- *                 ."" '<  `.___\_<|>_/___.'  >'"".  
- *                | | :  `- \`.;`\ _ /`;.`/ - ` : | |  
- *                \  \ `-.   \_ __\ /__ _/   .-` /  /  
- *           ======`-.____`-.___\_____/___.-`____.-'======  
- *                              `=---=' 
+ *                              _ooOoo_
+ *                             o8888888o
+ *                             88" . "88
+ *                             (| -_- |)
+ *                             O\  =  /O
+ *                          ____/`---'\____
+ *                        .'  \\|     |//  `.
+ *                       /  \\|||  :  |||//  \
+ *                      /  _||||| -:- |||||-  \
+ *                      |   | \\\  -  /// |   |
+ *                      | \_|  ''\---/''  |   |
+ *                      \  .-\__  `-`  ___/-. /
+ *                    ___`. .'  /--.--\  `. . __
+ *                 ."" '<  `.___\_<|>_/___.'  >'"".
+ *                | | :  `- \`.;`\ _ /`;.`/ - ` : | |
+ *                \  \ `-.   \_ __\ /__ _/   .-` /  /
+ *           ======`-.____`-.___\_____/___.-`____.-'======
+ *                              `=---='
  *
  *                          HERE BE BUDDHA
  *
@@ -46,27 +46,30 @@ import org.verwandlung.voj.web.model.EmailValidation;
 
 /**
  * EmailValidation Data Access Object.
- * 
+ *
  * @author Haozhe Xie
  */
 @CacheNamespace(implementation = org.mybatis.caches.ehcache.EhcacheCache.class)
 public interface EmailValidationMapper {
-	/**
-	 * 获取某个电子邮件地址对应的EmailValidation对象.
-	 * @param email - 电子邮件地址
-	 * @return 对应的EmailValidation对象
-	 */
-	EmailValidation getEmailValidation(@Param("email") String email);
-	
-	/**
-	 * 创建新的电子邮件验证凭据.
-	 * @param emailValidation - 电子邮件验证凭据
-	 */
-	int createEmailValidation(EmailValidation emailValidation);
-	
-	/**
-	 * 删除电子邮件验证凭据.
-	 * @param email - 电子邮件地址
-	 */
-	int deleteEmailValidation(@Param("email") String email);
+  /**
+   * 获取某个电子邮件地址对应的EmailValidation对象.
+   *
+   * @param email - 电子邮件地址
+   * @return 对应的EmailValidation对象
+   */
+  EmailValidation getEmailValidation(@Param("email") String email);
+
+  /**
+   * 创建新的电子邮件验证凭据.
+   *
+   * @param emailValidation - 电子邮件验证凭据
+   */
+  int createEmailValidation(EmailValidation emailValidation);
+
+  /**
+   * 删除电子邮件验证凭据.
+   *
+   * @param email - 电子邮件地址
+   */
+  int deleteEmailValidation(@Param("email") String email);
 }

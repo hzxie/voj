@@ -15,24 +15,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  *
- *                              _ooOoo_  
- *                             o8888888o  
- *                             88" . "88  
- *                             (| -_- |)  
- *                             O\  =  /O  
- *                          ____/`---'\____  
- *                        .'  \\|     |//  `.  
- *                       /  \\|||  :  |||//  \  
- *                      /  _||||| -:- |||||-  \  
- *                      |   | \\\  -  /// |   |  
- *                      | \_|  ''\---/''  |   |  
- *                      \  .-\__  `-`  ___/-. /  
- *                    ___`. .'  /--.--\  `. . __  
- *                 ."" '<  `.___\_<|>_/___.'  >'"".  
- *                | | :  `- \`.;`\ _ /`;.`/ - ` : | |  
- *                \  \ `-.   \_ __\ /__ _/   .-` /  /  
- *           ======`-.____`-.___\_____/___.-`____.-'======  
- *                              `=---=' 
+ *                              _ooOoo_
+ *                             o8888888o
+ *                             88" . "88
+ *                             (| -_- |)
+ *                             O\  =  /O
+ *                          ____/`---'\____
+ *                        .'  \\|     |//  `.
+ *                       /  \\|||  :  |||//  \
+ *                      /  _||||| -:- |||||-  \
+ *                      |   | \\\  -  /// |   |
+ *                      | \_|  ''\---/''  |   |
+ *                      \  .-\__  `-`  ___/-. /
+ *                    ___`. .'  /--.--\  `. . __
+ *                 ."" '<  `.___\_<|>_/___.'  >'"".
+ *                | | :  `- \`.;`\ _ /`;.`/ - ` : | |
+ *                \  \ `-.   \_ __\ /__ _/   .-` /  /
+ *           ======`-.____`-.___\_____/___.-`____.-'======
+ *                              `=---='
  *
  *                          HERE BE BUDDHA
  *
@@ -46,40 +46,36 @@ import java.text.Normalizer.Form;
 import java.util.regex.Pattern;
 
 /**
- * 字符串Slug处理类.
- * Ref: 
- * - https://github.com/slugify/slugify
- * - http://slugify.net/libraries
- * 
+ * 字符串Slug处理类. Ref: - https://github.com/slugify/slugify - http://slugify.net/libraries
+ *
  * @author Haozhe Xie
  */
 public class SlugifyUtils {
-	/**
-	 * 获取字符串的Slug.
-	 * @param str - 待获取Slug的字符串
-	 * @return 字符串对应的Slug
-	 */
-	public static String getSlug(String str) {
-		if ( str == null ) {
-			return "";
-		}
-		
-		// Rid of White Spaces
-		String noWhiteSpace = WHITESPACE.matcher(str.trim()).replaceAll("-");
-		// Processing Non-ASCII Characters
-		try {
-			noWhiteSpace = URLEncoder.encode(noWhiteSpace, "UTF-8");
-		} catch (UnsupportedEncodingException e) {
-			// Never reach here
-		}
-		// Slugify String
-		String normalized = Normalizer.normalize(noWhiteSpace, Form.NFD);
-		
-		return normalized.toLowerCase();
-	}
-	
-	/**
-	 * 空格的正则表达式模式. 
-	 */
-	private static final Pattern WHITESPACE = Pattern.compile("[\\s]");
+  /**
+   * 获取字符串的Slug.
+   *
+   * @param str - 待获取Slug的字符串
+   * @return 字符串对应的Slug
+   */
+  public static String getSlug(String str) {
+    if (str == null) {
+      return "";
+    }
+
+    // Rid of White Spaces
+    String noWhiteSpace = WHITESPACE.matcher(str.trim()).replaceAll("-");
+    // Processing Non-ASCII Characters
+    try {
+      noWhiteSpace = URLEncoder.encode(noWhiteSpace, "UTF-8");
+    } catch (UnsupportedEncodingException e) {
+      // Never reach here
+    }
+    // Slugify String
+    String normalized = Normalizer.normalize(noWhiteSpace, Form.NFD);
+
+    return normalized.toLowerCase();
+  }
+
+  /** 空格的正则表达式模式. */
+  private static final Pattern WHITESPACE = Pattern.compile("[\\s]");
 }

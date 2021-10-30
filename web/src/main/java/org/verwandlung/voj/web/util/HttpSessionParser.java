@@ -15,24 +15,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  *
- *                              _ooOoo_  
- *                             o8888888o  
- *                             88" . "88  
- *                             (| -_- |)  
- *                             O\  =  /O  
- *                          ____/`---'\____  
- *                        .'  \\|     |//  `.  
- *                       /  \\|||  :  |||//  \  
- *                      /  _||||| -:- |||||-  \  
- *                      |   | \\\  -  /// |   |  
- *                      | \_|  ''\---/''  |   |  
- *                      \  .-\__  `-`  ___/-. /  
- *                    ___`. .'  /--.--\  `. . __  
- *                 ."" '<  `.___\_<|>_/___.'  >'"".  
- *                | | :  `- \`.;`\ _ /`;.`/ - ` : | |  
- *                \  \ `-.   \_ __\ /__ _/   .-` /  /  
- *           ======`-.____`-.___\_____/___.-`____.-'======  
- *                              `=---=' 
+ *                              _ooOoo_
+ *                             o8888888o
+ *                             88" . "88
+ *                             (| -_- |)
+ *                             O\  =  /O
+ *                          ____/`---'\____
+ *                        .'  \\|     |//  `.
+ *                       /  \\|||  :  |||//  \
+ *                      /  _||||| -:- |||||-  \
+ *                      |   | \\\  -  /// |   |
+ *                      | \_|  ''\---/''  |   |
+ *                      \  .-\__  `-`  ___/-. /
+ *                    ___`. .'  /--.--\  `. . __
+ *                 ."" '<  `.___\_<|>_/___.'  >'"".
+ *                | | :  `- \`.;`\ _ /`;.`/ - ` : | |
+ *                \  \ `-.   \_ __\ /__ _/   .-` /  /
+ *           ======`-.____`-.___\_____/___.-`____.-'======
+ *                              `=---='
  *
  *                          HERE BE BUDDHA
  *
@@ -49,43 +49,44 @@ import org.verwandlung.voj.web.service.UserService;
 
 /**
  * HttpSession解析器.
+ *
  * @author Haozhe Xie
  */
 @Component
 public class HttpSessionParser {
-	/**
-	 * HttpSessionParser的构造函数.
-	 * @param userService - 自动注入的UserService对象
-	 */
-	@Autowired
-	private HttpSessionParser(UserService userService) {
-		HttpSessionParser.userService = userService;
-	}
-	
-	/**
-	 * 获取Session中的用户对象.
-	 * @param session - HttpSession对象
-	 * @return Session中的用户对象
-	 */
-	public static User getCurrentUser(HttpSession session) {
-		Object isLoggedInAttribute = session.getAttribute("isLoggedIn");
-		Object uidAttribute = session.getAttribute("uid");
-		User user = null;
-		
-		if ( isLoggedInAttribute == null || uidAttribute == null ) {
-			return null;
-		}
-		boolean isLoggedIn = (Boolean)isLoggedInAttribute;
-		long uid = (Long)uidAttribute;
-		
-		if ( isLoggedIn ) {
-			user = userService.getUserUsingUid(uid);
-		}
-		return user;
-	}
-	
-	/**
-	 * 自动注入的UserService对象.
-	 */
-	private static UserService userService;
+  /**
+   * HttpSessionParser的构造函数.
+   *
+   * @param userService - 自动注入的UserService对象
+   */
+  @Autowired
+  private HttpSessionParser(UserService userService) {
+    HttpSessionParser.userService = userService;
+  }
+
+  /**
+   * 获取Session中的用户对象.
+   *
+   * @param session - HttpSession对象
+   * @return Session中的用户对象
+   */
+  public static User getCurrentUser(HttpSession session) {
+    Object isLoggedInAttribute = session.getAttribute("isLoggedIn");
+    Object uidAttribute = session.getAttribute("uid");
+    User user = null;
+
+    if (isLoggedInAttribute == null || uidAttribute == null) {
+      return null;
+    }
+    boolean isLoggedIn = (Boolean) isLoggedInAttribute;
+    long uid = (Long) uidAttribute;
+
+    if (isLoggedIn) {
+      user = userService.getUserUsingUid(uid);
+    }
+    return user;
+  }
+
+  /** 自动注入的UserService对象. */
+  private static UserService userService;
 }

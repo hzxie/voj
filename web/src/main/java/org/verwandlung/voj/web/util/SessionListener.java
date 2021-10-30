@@ -15,24 +15,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  *
- *                              _ooOoo_  
- *                             o8888888o  
- *                             88" . "88  
- *                             (| -_- |)  
- *                             O\  =  /O  
- *                          ____/`---'\____  
- *                        .'  \\|     |//  `.  
- *                       /  \\|||  :  |||//  \  
- *                      /  _||||| -:- |||||-  \  
- *                      |   | \\\  -  /// |   |  
- *                      | \_|  ''\---/''  |   |  
- *                      \  .-\__  `-`  ___/-. /  
- *                    ___`. .'  /--.--\  `. . __  
- *                 ."" '<  `.___\_<|>_/___.'  >'"".  
- *                | | :  `- \`.;`\ _ /`;.`/ - ` : | |  
- *                \  \ `-.   \_ __\ /__ _/   .-` /  /  
- *           ======`-.____`-.___\_____/___.-`____.-'======  
- *                              `=---=' 
+ *                              _ooOoo_
+ *                             o8888888o
+ *                             88" . "88
+ *                             (| -_- |)
+ *                             O\  =  /O
+ *                          ____/`---'\____
+ *                        .'  \\|     |//  `.
+ *                       /  \\|||  :  |||//  \
+ *                      /  _||||| -:- |||||-  \
+ *                      |   | \\\  -  /// |   |
+ *                      | \_|  ''\---/''  |   |
+ *                      \  .-\__  `-`  ___/-. /
+ *                    ___`. .'  /--.--\  `. . __
+ *                 ."" '<  `.___\_<|>_/___.'  >'"".
+ *                | | :  `- \`.;`\ _ /`;.`/ - ` : | |
+ *                \  \ `-.   \_ __\ /__ _/   .-` /  /
+ *           ======`-.____`-.___\_____/___.-`____.-'======
+ *                              `=---='
  *
  *                          HERE BE BUDDHA
  *
@@ -46,55 +46,51 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 /**
- * Session监听器.
- * 用于统计在线用户数据.
- * 
+ * Session监听器. 用于统计在线用户数据.
+ *
  * @author Haozhe Xie
  */
 public class SessionListener implements HttpSessionListener {
-	/**
-	 * 获取在线用户数量.
-	 * @return 在线用户数量
-	 */
-	public static long getTotalSessions() {
-		return totalSessions;
-	}
-	
-	/* (non-Javadoc)
-	 * @see javax.servlet.http.HttpSessionListener#sessionCreated(javax.servlet.http.HttpSessionEvent)
-	 */
-	@Override
-	public void sessionCreated(HttpSessionEvent se) {
-		synchronized (this) {
-			++ totalSessions;
-		}
-		LOGGER.debug("Session Created: " + se.getSession().getId());
-		LOGGER.debug("Total Sessions: " + totalSessions);
-	}
+  /**
+   * 获取在线用户数量.
+   *
+   * @return 在线用户数量
+   */
+  public static long getTotalSessions() {
+    return totalSessions;
+  }
 
-	/* (non-Javadoc)
-	 * @see javax.servlet.http.HttpSessionListener#sessionDestroyed(javax.servlet.http.HttpSessionEvent)
-	 */
-	@Override
-	public void sessionDestroyed(HttpSessionEvent se) {
-		synchronized (this) {
-			-- totalSessions;
-			
-			if ( totalSessions < 0 ) {
-				totalSessions = 0;
-			}
-		}
-		LOGGER.debug("Session Destroyed: " + se.getSession().getId());
-		LOGGER.debug("Total Sessions: " + totalSessions);
-	}
+  /* (non-Javadoc)
+   * @see javax.servlet.http.HttpSessionListener#sessionCreated(javax.servlet.http.HttpSessionEvent)
+   */
+  @Override
+  public void sessionCreated(HttpSessionEvent se) {
+    synchronized (this) {
+      ++totalSessions;
+    }
+    LOGGER.debug("Session Created: " + se.getSession().getId());
+    LOGGER.debug("Total Sessions: " + totalSessions);
+  }
 
-	/**
-	 * 活动的Session数量.
-	 */
-	private static long totalSessions = 0;
-	
-	/**
-	 * 日志记录器.
-	 */
-	private static final Logger LOGGER = LogManager.getLogger(SessionListener.class);
+  /* (non-Javadoc)
+   * @see javax.servlet.http.HttpSessionListener#sessionDestroyed(javax.servlet.http.HttpSessionEvent)
+   */
+  @Override
+  public void sessionDestroyed(HttpSessionEvent se) {
+    synchronized (this) {
+      --totalSessions;
+
+      if (totalSessions < 0) {
+        totalSessions = 0;
+      }
+    }
+    LOGGER.debug("Session Destroyed: " + se.getSession().getId());
+    LOGGER.debug("Total Sessions: " + totalSessions);
+  }
+
+  /** 活动的Session数量. */
+  private static long totalSessions = 0;
+
+  /** 日志记录器. */
+  private static final Logger LOGGER = LogManager.getLogger(SessionListener.class);
 }

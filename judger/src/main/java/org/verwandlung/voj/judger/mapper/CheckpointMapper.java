@@ -15,24 +15,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  *
- *                              _ooOoo_  
- *                             o8888888o  
- *                             88" . "88  
- *                             (| -_- |)  
- *                             O\  =  /O  
- *                          ____/`---'\____  
- *                        .'  \\|     |//  `.  
- *                       /  \\|||  :  |||//  \  
- *                      /  _||||| -:- |||||-  \  
- *                      |   | \\\  -  /// |   |  
- *                      | \_|  ''\---/''  |   |  
- *                      \  .-\__  `-`  ___/-. /  
- *                    ___`. .'  /--.--\  `. . __  
- *                 ."" '<  `.___\_<|>_/___.'  >'"".  
- *                | | :  `- \`.;`\ _ /`;.`/ - ` : | |  
- *                \  \ `-.   \_ __\ /__ _/   .-` /  /  
- *           ======`-.____`-.___\_____/___.-`____.-'======  
- *                              `=---=' 
+ *                              _ooOoo_
+ *                             o8888888o
+ *                             88" . "88
+ *                             (| -_- |)
+ *                             O\  =  /O
+ *                          ____/`---'\____
+ *                        .'  \\|     |//  `.
+ *                       /  \\|||  :  |||//  \
+ *                      /  _||||| -:- |||||-  \
+ *                      |   | \\\  -  /// |   |
+ *                      | \_|  ''\---/''  |   |
+ *                      \  .-\__  `-`  ___/-. /
+ *                    ___`. .'  /--.--\  `. . __
+ *                 ."" '<  `.___\_<|>_/___.'  >'"".
+ *                | | :  `- \`.;`\ _ /`;.`/ - ` : | |
+ *                \  \ `-.   \_ __\ /__ _/   .-` /  /
+ *           ======`-.____`-.___\_____/___.-`____.-'======
+ *                              `=---='
  *
  *                          HERE BE BUDDHA
  *
@@ -52,24 +52,26 @@ import org.verwandlung.voj.judger.model.Checkpoint;
 
 /**
  * Checkpoint Data Access Object.
+ *
  * @author Haozhe Xie
  */
 @CacheNamespace(implementation = org.mybatis.caches.ehcache.EhcacheCache.class)
 public interface CheckpointMapper {
-	/**
-	 * 获取某个试题的全部测试点.
-	 * @param problemId - 试题的唯一标识符
-	 * @return 某个试题的全部测试点
-	 */
-	@Select("SELECT * FROM voj_problem_checkpoints WHERE problem_id = #{problemId}")
-	@Options(useCache = true)
-	@Results({
-		@Result(property = "problemId", column = "problem_id"),
-		@Result(property = "checkpointId", column = "checkpoint_id"),
-		@Result(property = "isExactlyMatch", column = "checkpoint_exactly_match"),
-		@Result(property = "score", column = "checkpoint_score"),
-		@Result(property = "input", column = "checkpoint_input"),
-		@Result(property = "output", column = "checkpoint_output"),
-	})
-	List<Checkpoint> getCheckpointsUsingProblemId(@Param("problemId") long problemId);
+  /**
+   * 获取某个试题的全部测试点.
+   *
+   * @param problemId - 试题的唯一标识符
+   * @return 某个试题的全部测试点
+   */
+  @Select("SELECT * FROM voj_problem_checkpoints WHERE problem_id = #{problemId}")
+  @Options(useCache = true)
+  @Results({
+    @Result(property = "problemId", column = "problem_id"),
+    @Result(property = "checkpointId", column = "checkpoint_id"),
+    @Result(property = "isExactlyMatch", column = "checkpoint_exactly_match"),
+    @Result(property = "score", column = "checkpoint_score"),
+    @Result(property = "input", column = "checkpoint_input"),
+    @Result(property = "output", column = "checkpoint_output"),
+  })
+  List<Checkpoint> getCheckpointsUsingProblemId(@Param("problemId") long problemId);
 }
