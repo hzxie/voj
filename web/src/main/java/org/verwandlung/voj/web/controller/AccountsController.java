@@ -438,8 +438,8 @@ public class AccountsController {
     view.addObject("user", user);
     view.addAllObjects(userService.getUserMetaUsingUid(user));
     view.addObject("submissions", submissionService.getSubmissionOfUser(userId));
-	view.addObject("csrfToken", CsrfProtector.getCsrfToken(session));
-	
+    view.addObject("csrfToken", CsrfProtector.getCsrfToken(session));
+
     return view;
   }
 
