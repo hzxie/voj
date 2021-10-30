@@ -42,7 +42,6 @@ package org.verwandlung.voj.web.util;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-
 /**
  * DigestUtils的测试类.
  *
