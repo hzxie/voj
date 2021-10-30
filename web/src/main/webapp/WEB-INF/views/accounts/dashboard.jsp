@@ -236,6 +236,7 @@
                     </div> <!-- .row-fluid -->
                     <div class="row-fluid">
                         <div class="span12">
+                            <input id="csrf-token" type="hidden" value="${csrfToken}" />
                             <button class="btn btn-primary btn-block" type="submit"><spring:message code="voj.accounts.dashboard.update-profile" text="Update Profile" /></button>
                         </div> <!-- .span12 -->
                     </div> <!-- .row-fluid -->
@@ -567,19 +568,21 @@
                 location    = $('#location').val(),
                 website     = $('#website').val(),
                 socialLinks = getSocialLinks(),
-                aboutMe     = $('#wmd-input').val();
+                aboutMe     = $('#wmd-input').val(),
+                csrfToken   = $('#csrf-token').val();
 
-            return doUpdateProfileAction(email, location, website, socialLinks, aboutMe);
+            return doUpdateProfileAction(email, location, website, socialLinks, aboutMe, csrfToken);
         }
     </script>
     <script type="text/javascript">
-        function doUpdateProfileAction(email, location, website, socialLinks, aboutMe) {
+        function doUpdateProfileAction(email, location, website, socialLinks, aboutMe, csrfToken) {
             var postData = {
                 'email': email,
                 'location': location,
                 'website': website,
                 'socialLinks': socialLinks,
-                'aboutMe': aboutMe
+                'aboutMe': aboutMe,
+                'csrfToken': csrfToken
             };
 
             $.ajax({
@@ -600,6 +603,9 @@
             } else {
                 var errorMessage  = '';
 
+                if ( !result['isCsrfTokenValid'] ) {
+                    errorMessage += '<spring:message code="voj.accounts.dashboard.invalid-token" text="Invalid token." />';
+                }
                 if ( result['isEmailEmpty'] ) {
                     errorMessage += '<spring:message code="voj.accounts.dashboard.email-empty" text="You can&acute;t leave Email empty." /><br>';
                 } else if ( !result['isEmailLegal'] ) {

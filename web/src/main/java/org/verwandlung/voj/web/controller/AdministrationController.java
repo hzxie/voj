@@ -332,7 +332,7 @@ public class AdministrationController {
 		
 		if ( user != null ) {
 			Map<String, Boolean> updateProfileResult = userService.updateProfile(user, password, userGroupSlug, preferLanguageSlug);
-			Map<String, Boolean> updateUserMetaResult = userService.updateProfile(user, email, location, website, socialLinks, aboutMe);
+			Map<String, Boolean> updateUserMetaResult = userService.updateProfile(user, email, location, website, socialLinks, aboutMe, true);
 			boolean isUpdateProfileSuccessful = updateProfileResult.get("isSuccessful");
 			boolean isUpdateUserMetaSuccessful = updateUserMetaResult.get("isSuccessful");
 			
