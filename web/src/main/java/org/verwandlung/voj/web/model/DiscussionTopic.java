@@ -15,24 +15,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  *
- *                              _ooOoo_  
- *                             o8888888o  
- *                             88" . "88  
- *                             (| -_- |)  
- *                             O\  =  /O  
- *                          ____/`---'\____  
- *                        .'  \\|     |//  `.  
- *                       /  \\|||  :  |||//  \  
- *                      /  _||||| -:- |||||-  \  
- *                      |   | \\\  -  /// |   |  
- *                      | \_|  ''\---/''  |   |  
- *                      \  .-\__  `-`  ___/-. /  
- *                    ___`. .'  /--.--\  `. . __  
- *                 ."" '<  `.___\_<|>_/___.'  >'"".  
- *                | | :  `- \`.;`\ _ /`;.`/ - ` : | |  
- *                \  \ `-.   \_ __\ /__ _/   .-` /  /  
- *           ======`-.____`-.___\_____/___.-`____.-'======  
- *                              `=---=' 
+ *                              _ooOoo_
+ *                             o8888888o
+ *                             88" . "88
+ *                             (| -_- |)
+ *                             O\  =  /O
+ *                          ____/`---'\____
+ *                        .'  \\|     |//  `.
+ *                       /  \\|||  :  |||//  \
+ *                      /  _||||| -:- |||||-  \
+ *                      |   | \\\  -  /// |   |
+ *                      | \_|  ''\---/''  |   |
+ *                      \  .-\__  `-`  ___/-. /
+ *                    ___`. .'  /--.--\  `. . __
+ *                 ."" '<  `.___\_<|>_/___.'  >'"".
+ *                | | :  `- \`.;`\ _ /`;.`/ - ` : | |
+ *                \  \ `-.   \_ __\ /__ _/   .-` /  /
+ *           ======`-.____`-.___\_____/___.-`____.-'======
+ *                              `=---='
  *
  *                          HERE BE BUDDHA
  *
@@ -47,133 +47,136 @@ import java.io.Serializable;
  * @author Haozhe Xie
  */
 public class DiscussionTopic implements Serializable {
-	/**
-	 * DiscussionTopic的默认构造函数.
-	 */
-	public DiscussionTopic() { }
-	
-	/**
-	 * DiscussionTopic的构造函数.
-	 * @param discussionTopicSlug - 讨论话题的别名
-	 * @param discussionTopicName - 讨论话题的名称
-	 * @param parentDiscussionTopicId - 父级讨论话题的唯一标识符
-	 */
-	public DiscussionTopic(String discussionTopicSlug, 
-			String discussionTopicName, int parentDiscussionTopicId) {
-		this.discussionTopicSlug = discussionTopicSlug;
-		this.discussionTopicName = discussionTopicName;
-		this.parentDiscussionTopicId = parentDiscussionTopicId;
-	}
-	
-	/**
-	 * DiscussionTopic的构造函数.
-	 * @param discussionTopicId - 讨论话题的唯一标识符
-	 * @param discussionTopicSlug - 讨论话题的别名
-	 * @param discussionTopicName - 讨论话题的名称
-	 * @param parentDiscussionTopicId - 父级讨论话题的唯一标识符
-	 */
-	public DiscussionTopic(int discussionTopicId, String discussionTopicSlug, 
-			String discussionTopicName, int parentDiscussionTopicId) {
-		this(discussionTopicSlug, discussionTopicName, parentDiscussionTopicId);
-		this.discussionTopicId = discussionTopicId;
-	}
-	
-	/**
-	 * 获取讨论话题的唯一标识符.
-	 * @return 讨论话题的唯一标识符
-	 */
-	public int getDiscussionTopicId() {
-		return discussionTopicId;
-	}
+  /** DiscussionTopic的默认构造函数. */
+  public DiscussionTopic() {}
 
-	/**
-	 * 设置讨论话题的唯一标识符.
-	 * @param discussionTopicId - 讨论话题的唯一标识符
-	 */
-	public void setDiscussionTopicId(int discussionTopicId) {
-		this.discussionTopicId = discussionTopicId;
-	}
+  /**
+   * DiscussionTopic的构造函数.
+   *
+   * @param discussionTopicSlug - 讨论话题的别名
+   * @param discussionTopicName - 讨论话题的名称
+   * @param parentDiscussionTopicId - 父级讨论话题的唯一标识符
+   */
+  public DiscussionTopic(
+      String discussionTopicSlug, String discussionTopicName, int parentDiscussionTopicId) {
+    this.discussionTopicSlug = discussionTopicSlug;
+    this.discussionTopicName = discussionTopicName;
+    this.parentDiscussionTopicId = parentDiscussionTopicId;
+  }
 
-	/**
-	 * 获取讨论话题的别名.
-	 * @return 讨论话题的别名
-	 */
-	public String getDiscussionTopicSlug() {
-		return discussionTopicSlug;
-	}
+  /**
+   * DiscussionTopic的构造函数.
+   *
+   * @param discussionTopicId - 讨论话题的唯一标识符
+   * @param discussionTopicSlug - 讨论话题的别名
+   * @param discussionTopicName - 讨论话题的名称
+   * @param parentDiscussionTopicId - 父级讨论话题的唯一标识符
+   */
+  public DiscussionTopic(
+      int discussionTopicId,
+      String discussionTopicSlug,
+      String discussionTopicName,
+      int parentDiscussionTopicId) {
+    this(discussionTopicSlug, discussionTopicName, parentDiscussionTopicId);
+    this.discussionTopicId = discussionTopicId;
+  }
 
-	/**
-	 * 设置讨论话题的别名.
-	 * @param discussionTopicSlug - 讨论话题的别名
-	 */
-	public void setDiscussionTopicSlug(String discussionTopicSlug) {
-		this.discussionTopicSlug = discussionTopicSlug;
-	}
+  /**
+   * 获取讨论话题的唯一标识符.
+   *
+   * @return 讨论话题的唯一标识符
+   */
+  public int getDiscussionTopicId() {
+    return discussionTopicId;
+  }
 
-	/**
-	 * 获取讨论话题的名称.
-	 * @return 讨论话题的名称
-	 */
-	public String getDiscussionTopicName() {
-		return discussionTopicName;
-	}
+  /**
+   * 设置讨论话题的唯一标识符.
+   *
+   * @param discussionTopicId - 讨论话题的唯一标识符
+   */
+  public void setDiscussionTopicId(int discussionTopicId) {
+    this.discussionTopicId = discussionTopicId;
+  }
 
-	/**
-	 * 设置讨论话题的名称.
-	 * @param getDiscussionTopicName - 讨论话题的名称
-	 */
-	public void setDiscussionTopicName(String getDiscussionTopicName) {
-		this.discussionTopicName = getDiscussionTopicName;
-	}
+  /**
+   * 获取讨论话题的别名.
+   *
+   * @return 讨论话题的别名
+   */
+  public String getDiscussionTopicSlug() {
+    return discussionTopicSlug;
+  }
 
-	/**
-	 * 获取父级讨论话题的唯一标识符.
-	 * @return 父级讨论话题的唯一标识符
-	 */
-	public int getParentDiscussionTopicId() {
-		return parentDiscussionTopicId;
-	}
+  /**
+   * 设置讨论话题的别名.
+   *
+   * @param discussionTopicSlug - 讨论话题的别名
+   */
+  public void setDiscussionTopicSlug(String discussionTopicSlug) {
+    this.discussionTopicSlug = discussionTopicSlug;
+  }
 
-	/**
-	 * 设置父级讨论话题的唯一标识符.
-	 * @param parentDiscussionTopicId - 父级讨论话题的唯一标识符
-	 */
-	public void setParentDiscussionTopicId(int parentDiscussionTopicId) {
-		this.parentDiscussionTopicId = parentDiscussionTopicId;
-	}
+  /**
+   * 获取讨论话题的名称.
+   *
+   * @return 讨论话题的名称
+   */
+  public String getDiscussionTopicName() {
+    return discussionTopicName;
+  }
 
-	/* (non-Javadoc)
-	 * @see java.lang.Object#toString()
-	 */
-	@Override
-	public String toString() {
-		return String.format("DiscussionTopic [TopicId=%d, Slug=%s, Name=%s, parentId=%d]", 
-				new Object[] {discussionTopicId, discussionTopicSlug, 
-						discussionTopicName, parentDiscussionTopicId});
-	}
+  /**
+   * 设置讨论话题的名称.
+   *
+   * @param getDiscussionTopicName - 讨论话题的名称
+   */
+  public void setDiscussionTopicName(String getDiscussionTopicName) {
+    this.discussionTopicName = getDiscussionTopicName;
+  }
 
-	/**
-	 * 讨论话题的唯一标识符.
-	 */
-	private int discussionTopicId;
+  /**
+   * 获取父级讨论话题的唯一标识符.
+   *
+   * @return 父级讨论话题的唯一标识符
+   */
+  public int getParentDiscussionTopicId() {
+    return parentDiscussionTopicId;
+  }
 
-	/**
-	 * 讨论话题的别名.
-	 */
-	private String discussionTopicSlug;
+  /**
+   * 设置父级讨论话题的唯一标识符.
+   *
+   * @param parentDiscussionTopicId - 父级讨论话题的唯一标识符
+   */
+  public void setParentDiscussionTopicId(int parentDiscussionTopicId) {
+    this.parentDiscussionTopicId = parentDiscussionTopicId;
+  }
 
-	/**
-	 * 讨论话题的名称.
-	 */
-	private String discussionTopicName;
+  /* (non-Javadoc)
+   * @see java.lang.Object#toString()
+   */
+  @Override
+  public String toString() {
+    return String.format(
+        "DiscussionTopic [TopicId=%d, Slug=%s, Name=%s, parentId=%d]",
+        new Object[] {
+          discussionTopicId, discussionTopicSlug, discussionTopicName, parentDiscussionTopicId
+        });
+  }
 
-	/**
-	 * 父级讨论话题的唯一标识符.
-	 */
-	private int parentDiscussionTopicId;
-	
-	/**
-	 * 唯一的序列化标识符.
-	 */
-	private static final long serialVersionUID = 3905550118246821324L;
+  /** 讨论话题的唯一标识符. */
+  private int discussionTopicId;
+
+  /** 讨论话题的别名. */
+  private String discussionTopicSlug;
+
+  /** 讨论话题的名称. */
+  private String discussionTopicName;
+
+  /** 父级讨论话题的唯一标识符. */
+  private int parentDiscussionTopicId;
+
+  /** 唯一的序列化标识符. */
+  private static final long serialVersionUID = 3905550118246821324L;
 }

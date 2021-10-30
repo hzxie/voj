@@ -15,24 +15,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  *
- *                              _ooOoo_  
- *                             o8888888o  
- *                             88" . "88  
- *                             (| -_- |)  
- *                             O\  =  /O  
- *                          ____/`---'\____  
- *                        .'  \\|     |//  `.  
- *                       /  \\|||  :  |||//  \  
- *                      /  _||||| -:- |||||-  \  
- *                      |   | \\\  -  /// |   |  
- *                      | \_|  ''\---/''  |   |  
- *                      \  .-\__  `-`  ___/-. /  
- *                    ___`. .'  /--.--\  `. . __  
- *                 ."" '<  `.___\_<|>_/___.'  >'"".  
- *                | | :  `- \`.;`\ _ /`;.`/ - ` : | |  
- *                \  \ `-.   \_ __\ /__ _/   .-` /  /  
- *           ======`-.____`-.___\_____/___.-`____.-'======  
- *                              `=---=' 
+ *                              _ooOoo_
+ *                             o8888888o
+ *                             88" . "88
+ *                             (| -_- |)
+ *                             O\  =  /O
+ *                          ____/`---'\____
+ *                        .'  \\|     |//  `.
+ *                       /  \\|||  :  |||//  \
+ *                      /  _||||| -:- |||||-  \
+ *                      |   | \\\  -  /// |   |
+ *                      | \_|  ''\---/''  |   |
+ *                      \  .-\__  `-`  ___/-. /
+ *                    ___`. .'  /--.--\  `. . __
+ *                 ."" '<  `.___\_<|>_/___.'  >'"".
+ *                | | :  `- \`.;`\ _ /`;.`/ - ` : | |
+ *                \  \ `-.   \_ __\ /__ _/   .-` /  /
+ *           ======`-.____`-.___\_____/___.-`____.-'======
+ *                              `=---='
  *
  *                          HERE BE BUDDHA
  *
@@ -48,33 +48,37 @@ import org.verwandlung.voj.web.model.Option;
 
 /**
  * Opton Data Access Object.
- * 
+ *
  * @author Haozhe Xie
  */
 @CacheNamespace(implementation = org.mybatis.caches.ehcache.EhcacheCache.class)
 public interface OptionMapper {
-	/**
-	 * 获取全部系统选项.
-	 * @return 一个包含全部系统选项的列表
-	 */
-	List<Option> getOptions();
-	
-	/**
-	 * 获取自动加载的系统选项.
-	 * @return 一个包含自动加载系统选项的列表
-	 */
-	List<Option> getAutoloadOptions();
-	
-	/**
-	 * 根据系统选项的名称获取选项的值.
-	 * @param optionName - 系统选项的名称 
-	 * @return 对应的Option对象
-	 */
-	Option getOption(@Param("optionName") String optionName);
-	
-	/**
-	 * 更新系统选项.
-	 * @param option - 系统选项对象
-	 */
-	int updateOption(Option option);
+  /**
+   * 获取全部系统选项.
+   *
+   * @return 一个包含全部系统选项的列表
+   */
+  List<Option> getOptions();
+
+  /**
+   * 获取自动加载的系统选项.
+   *
+   * @return 一个包含自动加载系统选项的列表
+   */
+  List<Option> getAutoloadOptions();
+
+  /**
+   * 根据系统选项的名称获取选项的值.
+   *
+   * @param optionName - 系统选项的名称
+   * @return 对应的Option对象
+   */
+  Option getOption(@Param("optionName") String optionName);
+
+  /**
+   * 更新系统选项.
+   *
+   * @param option - 系统选项对象
+   */
+  int updateOption(Option option);
 }

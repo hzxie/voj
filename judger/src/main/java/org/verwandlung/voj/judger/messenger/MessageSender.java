@@ -15,24 +15,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  *
- *                              _ooOoo_  
- *                             o8888888o  
- *                             88" . "88  
- *                             (| -_- |)  
- *                             O\  =  /O  
- *                          ____/`---'\____  
- *                        .'  \\|     |//  `.  
- *                       /  \\|||  :  |||//  \  
- *                      /  _||||| -:- |||||-  \  
- *                      |   | \\\  -  /// |   |  
- *                      | \_|  ''\---/''  |   |  
- *                      \  .-\__  `-`  ___/-. /  
- *                    ___`. .'  /--.--\  `. . __  
- *                 ."" '<  `.___\_<|>_/___.'  >'"".  
- *                | | :  `- \`.;`\ _ /`;.`/ - ` : | |  
- *                \  \ `-.   \_ __\ /__ _/   .-` /  /  
- *           ======`-.____`-.___\_____/___.-`____.-'======  
- *                              `=---=' 
+ *                              _ooOoo_
+ *                             o8888888o
+ *                             88" . "88
+ *                             (| -_- |)
+ *                             O\  =  /O
+ *                          ____/`---'\____
+ *                        .'  \\|     |//  `.
+ *                       /  \\|||  :  |||//  \
+ *                      /  _||||| -:- |||||-  \
+ *                      |   | \\\  -  /// |   |
+ *                      | \_|  ''\---/''  |   |
+ *                      \  .-\__  `-`  ___/-. /
+ *                    ___`. .'  /--.--\  `. . __
+ *                 ."" '<  `.___\_<|>_/___.'  >'"".
+ *                | | :  `- \`.;`\ _ /`;.`/ - ` : | |
+ *                \  \ `-.   \_ __\ /__ _/   .-` /  /
+ *           ======`-.____`-.___\_____/___.-`____.-'======
+ *                              `=---='
  *
  *                          HERE BE BUDDHA
  *
@@ -47,22 +47,20 @@ import org.springframework.stereotype.Component;
 
 /**
  * 消息发送服务.
+ *
  * @author Haozhe Xie
  */
 @Component
 public class MessageSender {
-	/**
-	 * 发送消息至消息队列.
-	 * @param mapMessage - Key-Value格式的消息
-	 */
-	public void sendMessage(final Map<String, Object> mapMessage) {
-		jmsTemplate.convertAndSend(mapMessage);
-	}
+  /**
+   * 发送消息至消息队列.
+   *
+   * @param mapMessage - Key-Value格式的消息
+   */
+  public void sendMessage(final Map<String, Object> mapMessage) {
+    jmsTemplate.convertAndSend(mapMessage);
+  }
 
-	/**
-	 * 自动注入的JmsTemplate对象.
-	 * 用于发送消息至消息队列.
-	 */
-	@Autowired
-	private JmsTemplate jmsTemplate;
+  /** 自动注入的JmsTemplate对象. 用于发送消息至消息队列. */
+  @Autowired private JmsTemplate jmsTemplate;
 }

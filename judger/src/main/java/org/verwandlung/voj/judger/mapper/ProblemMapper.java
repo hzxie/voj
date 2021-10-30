@@ -15,24 +15,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  *
- *                              _ooOoo_  
- *                             o8888888o  
- *                             88" . "88  
- *                             (| -_- |)  
- *                             O\  =  /O  
- *                          ____/`---'\____  
- *                        .'  \\|     |//  `.  
- *                       /  \\|||  :  |||//  \  
- *                      /  _||||| -:- |||||-  \  
- *                      |   | \\\  -  /// |   |  
- *                      | \_|  ''\---/''  |   |  
- *                      \  .-\__  `-`  ___/-. /  
- *                    ___`. .'  /--.--\  `. . __  
- *                 ."" '<  `.___\_<|>_/___.'  >'"".  
- *                | | :  `- \`.;`\ _ /`;.`/ - ` : | |  
- *                \  \ `-.   \_ __\ /__ _/   .-` /  /  
- *           ======`-.____`-.___\_____/___.-`____.-'======  
- *                              `=---=' 
+ *                              _ooOoo_
+ *                             o8888888o
+ *                             88" . "88
+ *                             (| -_- |)
+ *                             O\  =  /O
+ *                          ____/`---'\____
+ *                        .'  \\|     |//  `.
+ *                       /  \\|||  :  |||//  \
+ *                      /  _||||| -:- |||||-  \
+ *                      |   | \\\  -  /// |   |
+ *                      | \_|  ''\---/''  |   |
+ *                      \  .-\__  `-`  ___/-. /
+ *                    ___`. .'  /--.--\  `. . __
+ *                 ."" '<  `.___\_<|>_/___.'  >'"".
+ *                | | :  `- \`.;`\ _ /`;.`/ - ` : | |
+ *                \  \ `-.   \_ __\ /__ _/   .-` /  /
+ *           ======`-.____`-.___\_____/___.-`____.-'======
+ *                              `=---='
  *
  *                          HERE BE BUDDHA
  *
@@ -50,31 +50,33 @@ import org.verwandlung.voj.judger.model.Problem;
 
 /**
  * Problem Data Access Object.
+ *
  * @author Haozhe Xie
  */
 @CacheNamespace(implementation = org.mybatis.caches.ehcache.EhcacheCache.class)
 public interface ProblemMapper {
-	/**
-	 * 通过试题唯一标识符获取试题对象.
-	 * @param problemId - 试题的唯一标识符
-	 * @return 一个试题对象
-	 */
-	@Select("SELECT * FROM voj_problems WHERE problem_id = #{problemId}")
-	@Options(useCache = true)
-	@Results({
-		 @Result(property = "problemId", column = "problem_id"),
-		 @Result(property = "isPublic", column = "problem_is_public"),
-		 @Result(property = "problemName", column = "problem_name"),
-		 @Result(property = "totalSubmission", column = "total_submission"),
-		 @Result(property = "acceptedSubmission", column = "accepted_submission"),
-		 @Result(property = "timeLimit", column = "problem_time_limit"),
-		 @Result(property = "memoryLimit", column = "problem_memory_limit"),
-		 @Result(property = "description", column = "problem_description"),
-		 @Result(property = "inputFormat", column = "problem_input_format"),
-		 @Result(property = "outputFormat", column = "problem_output_format"),
-		 @Result(property = "sampleInput", column = "problem_sample_input"),
-		 @Result(property = "sampleOutput", column = "problem_sample_output"),
-		 @Result(property = "hint", column = "problem_hint")
-	})
-	Problem getProblem(@Param("problemId") long problemId);
+  /**
+   * 通过试题唯一标识符获取试题对象.
+   *
+   * @param problemId - 试题的唯一标识符
+   * @return 一个试题对象
+   */
+  @Select("SELECT * FROM voj_problems WHERE problem_id = #{problemId}")
+  @Options(useCache = true)
+  @Results({
+    @Result(property = "problemId", column = "problem_id"),
+    @Result(property = "isPublic", column = "problem_is_public"),
+    @Result(property = "problemName", column = "problem_name"),
+    @Result(property = "totalSubmission", column = "total_submission"),
+    @Result(property = "acceptedSubmission", column = "accepted_submission"),
+    @Result(property = "timeLimit", column = "problem_time_limit"),
+    @Result(property = "memoryLimit", column = "problem_memory_limit"),
+    @Result(property = "description", column = "problem_description"),
+    @Result(property = "inputFormat", column = "problem_input_format"),
+    @Result(property = "outputFormat", column = "problem_output_format"),
+    @Result(property = "sampleInput", column = "problem_sample_input"),
+    @Result(property = "sampleOutput", column = "problem_sample_output"),
+    @Result(property = "hint", column = "problem_hint")
+  })
+  Problem getProblem(@Param("problemId") long problemId);
 }

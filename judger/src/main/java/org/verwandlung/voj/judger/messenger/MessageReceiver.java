@@ -15,24 +15,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  *
- *                              _ooOoo_  
- *                             o8888888o  
- *                             88" . "88  
- *                             (| -_- |)  
- *                             O\  =  /O  
- *                          ____/`---'\____  
- *                        .'  \\|     |//  `.  
- *                       /  \\|||  :  |||//  \  
- *                      /  _||||| -:- |||||-  \  
- *                      |   | \\\  -  /// |   |  
- *                      | \_|  ''\---/''  |   |  
- *                      \  .-\__  `-`  ___/-. /  
- *                    ___`. .'  /--.--\  `. . __  
- *                 ."" '<  `.___\_<|>_/___.'  >'"".  
- *                | | :  `- \`.;`\ _ /`;.`/ - ` : | |  
- *                \  \ `-.   \_ __\ /__ _/   .-` /  /  
- *           ======`-.____`-.___\_____/___.-`____.-'======  
- *                              `=---=' 
+ *                              _ooOoo_
+ *                             o8888888o
+ *                             88" . "88
+ *                             (| -_- |)
+ *                             O\  =  /O
+ *                          ____/`---'\____
+ *                        .'  \\|     |//  `.
+ *                       /  \\|||  :  |||//  \
+ *                      /  _||||| -:- |||||-  \
+ *                      |   | \\\  -  /// |   |
+ *                      | \_|  ''\---/''  |   |
+ *                      \  .-\__  `-`  ___/-. /
+ *                    ___`. .'  /--.--\  `. . __
+ *                 ."" '<  `.___\_<|>_/___.'  >'"".
+ *                | | :  `- \`.;`\ _ /`;.`/ - ` : | |
+ *                \  \ `-.   \_ __\ /__ _/   .-` /  /
+ *           ======`-.____`-.___\_____/___.-`____.-'======
+ *                              `=---='
  *
  *                          HERE BE BUDDHA
  *
@@ -53,54 +53,48 @@ import org.verwandlung.voj.judger.application.ApplicationDispatcher;
 
 /**
  * 消息接收服务.
+ *
  * @author Haozhe Xie
  */
 @Component
 public class MessageReceiver implements MessageListener {
-	/* (non-Javadoc)
-	 * @see javax.jms.MessageListener#onMessage(javax.jms.Message)
-	 */
-	public void onMessage(Message message) {
-		if ( message instanceof MapMessage ) {
-			final MapMessage mapMessage = (MapMessage) message;
-			
-			try {
-				String event = mapMessage.getString("event");
-				
-				if ( "SubmissionCreated".equals(event) ) {
-					newSubmissionHandler(mapMessage);
-				} else {
-					LOGGER.warn(String.format("Unknown Event Received. [Event = %s]", 
-							new Object[] { event }));
-				}
-			} catch (Exception ex) {
-				LOGGER.catching(ex);
-			}
-		}
-	}
-	
-	/**
-	 * 处理新提交请求.
-	 * @param mapMessage - 消息队列中收到的MapMessage对象
-	 * @throws JMSException
-	 */
-	private void newSubmissionHandler(MapMessage mapMessage) throws JMSException {
-		long submissionId = mapMessage.getLong("submissionId");
-		LOGGER.info(String.format("Received new submission task #%d", 
-						new Object[] {submissionId}));
-		
-		dispatcher.onSubmissionCreated(submissionId);
-	}
-	
-	/**
-	 * 自动注入的ApplicationDispatcher对象.
-	 * 用于完成接收消息后的回调操作.
-	 */
-	@Autowired
-	private ApplicationDispatcher dispatcher;
-	
-	/**
-	 * 日志记录器.
-	 */
-	private static final Logger LOGGER = LogManager.getLogger(MessageReceiver.class);
+  /* (non-Javadoc)
+   * @see javax.jms.MessageListener#onMessage(javax.jms.Message)
+   */
+  public void onMessage(Message message) {
+    if (message instanceof MapMessage) {
+      final MapMessage mapMessage = (MapMessage) message;
+
+      try {
+        String event = mapMessage.getString("event");
+
+        if ("SubmissionCreated".equals(event)) {
+          newSubmissionHandler(mapMessage);
+        } else {
+          LOGGER.warn(String.format("Unknown Event Received. [Event = %s]", new Object[] {event}));
+        }
+      } catch (Exception ex) {
+        LOGGER.catching(ex);
+      }
+    }
+  }
+
+  /**
+   * 处理新提交请求.
+   *
+   * @param mapMessage - 消息队列中收到的MapMessage对象
+   * @throws JMSException
+   */
+  private void newSubmissionHandler(MapMessage mapMessage) throws JMSException {
+    long submissionId = mapMessage.getLong("submissionId");
+    LOGGER.info(String.format("Received new submission task #%d", new Object[] {submissionId}));
+
+    dispatcher.onSubmissionCreated(submissionId);
+  }
+
+  /** 自动注入的ApplicationDispatcher对象. 用于完成接收消息后的回调操作. */
+  @Autowired private ApplicationDispatcher dispatcher;
+
+  /** 日志记录器. */
+  private static final Logger LOGGER = LogManager.getLogger(MessageReceiver.class);
 }

@@ -15,24 +15,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  *
- *                              _ooOoo_  
- *                             o8888888o  
- *                             88" . "88  
- *                             (| -_- |)  
- *                             O\  =  /O  
- *                          ____/`---'\____  
- *                        .'  \\|     |//  `.  
- *                       /  \\|||  :  |||//  \  
- *                      /  _||||| -:- |||||-  \  
- *                      |   | \\\  -  /// |   |  
- *                      | \_|  ''\---/''  |   |  
- *                      \  .-\__  `-`  ___/-. /  
- *                    ___`. .'  /--.--\  `. . __  
- *                 ."" '<  `.___\_<|>_/___.'  >'"".  
- *                | | :  `- \`.;`\ _ /`;.`/ - ` : | |  
- *                \  \ `-.   \_ __\ /__ _/   .-` /  /  
- *           ======`-.____`-.___\_____/___.-`____.-'======  
- *                              `=---=' 
+ *                              _ooOoo_
+ *                             o8888888o
+ *                             88" . "88
+ *                             (| -_- |)
+ *                             O\  =  /O
+ *                          ____/`---'\____
+ *                        .'  \\|     |//  `.
+ *                       /  \\|||  :  |||//  \
+ *                      /  _||||| -:- |||||-  \
+ *                      |   | \\\  -  /// |   |
+ *                      | \_|  ''\---/''  |   |
+ *                      \  .-\__  `-`  ___/-. /
+ *                    ___`. .'  /--.--\  `. . __
+ *                 ."" '<  `.___\_<|>_/___.'  >'"".
+ *                | | :  `- \`.;`\ _ /`;.`/ - ` : | |
+ *                \  \ `-.   \_ __\ /__ _/   .-` /  /
+ *           ======`-.____`-.___\_____/___.-`____.-'======
+ *                              `=---='
  *
  *                          HERE BE BUDDHA
  *
@@ -49,23 +49,24 @@ import java.util.GregorianCalendar;
  * @author Haozhe Xie
  */
 public class DateUtils {
-	/**
-	 * 获取几天前的某一天的Date对象.
-	 * @param period - 与当前时间的间隔(以天为单位)
-	 * @return 几天前的某一天的Date对象
-	 */
-	public static Date getPreviousDate(int period) {
-		Date today = new Date();
-		Calendar calendar = new GregorianCalendar();
-		calendar.setTime(today);
+  /**
+   * 获取几天前的某一天的Date对象.
+   *
+   * @param period - 与当前时间的间隔(以天为单位)
+   * @return 几天前的某一天的Date对象
+   */
+  public static Date getPreviousDate(int period) {
+    Date today = new Date();
+    Calendar calendar = new GregorianCalendar();
+    calendar.setTime(today);
 
-		if ( period == 7 ) {
-			calendar.add(Calendar.DATE, -7);
-		} else if ( period == 30 ) {
-			calendar.add(Calendar.MONTH, -1);
-		} else {
-			calendar.add(Calendar.YEAR, -1);
-		}
-		return calendar.getTime();
-	}
+    if (period == 7) {
+      calendar.add(Calendar.DATE, -7);
+    } else if (period == 30) {
+      calendar.add(Calendar.MONTH, -1);
+    } else {
+      calendar.add(Calendar.YEAR, -1);
+    }
+    return calendar.getTime();
+  }
 }
