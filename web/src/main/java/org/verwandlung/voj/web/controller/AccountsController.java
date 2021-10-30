@@ -448,11 +448,13 @@ public class AccountsController {
 			@RequestParam(value="website") String website,
 			@RequestParam(value="socialLinks") String socialLinks,
 			@RequestParam(value="aboutMe") String aboutMe,
+			@RequestParam(value="csrfToken") String csrfToken,
 			HttpServletRequest request) {
 		User currentUser = HttpSessionParser.getCurrentUser(request.getSession());
 		String ipAddress = HttpRequestParser.getRemoteAddr(request);
+		boolean isCsrfTokenValid = CsrfProtector.isCsrfTokenValid(csrfToken, request.getSession());
 		
-		Map<String, Boolean> result = userService.updateProfile(currentUser, email, location, website, socialLinks, aboutMe); 
+		Map<String, Boolean> result = userService.updateProfile(currentUser, email, location, website, socialLinks, aboutMe, isCsrfTokenValid); 
 		if ( result.get("isSuccessful") ) {
 			LOGGER.info(String.format("%s updated profile at %s", new Object[] {currentUser, ipAddress}));
 		}

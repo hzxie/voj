@@ -480,15 +480,16 @@ public class UserService {
 	 * @param website - 用户的个人主页
 	 * @param socialLinks - 用户的社交网络信息
 	 * @param aboutMe - 用户的个人简介
+	 * @param isCsrfTokenValid - CSRF的Token是否正确
 	 * @return 一个包含个人资料修改结果的Map<String, Boolean>对象
 	 */
 	public Map<String, Boolean> updateProfile(User user, String email, 
-			String location, String website, String socialLinks, String aboutMe) {
+			String location, String website, String socialLinks, String aboutMe, boolean isCsrfTokenValid) {
 		location = HtmlTextFilter.filter(location);
 		website = HtmlTextFilter.filter(website);
 		socialLinks = HtmlTextFilter.filter(socialLinks);
 		aboutMe = offensiveWordFilter.filter(HtmlTextFilter.filter(aboutMe));
-		Map<String, Boolean> result = getUpdateProfileResult(user, email, location, website, socialLinks, aboutMe);
+		Map<String, Boolean> result = getUpdateProfileResult(user, email, location, website, socialLinks, aboutMe, isCsrfTokenValid);
 		
 		if ( result.get("isSuccessful") ) {
 			user.setEmail(email);
@@ -510,10 +511,11 @@ public class UserService {
 	 * @param website - 用户的个人主页
 	 * @param socialLinks - 用户的社交网络信息
 	 * @param aboutMe - 用户的个人简介
+	 * @param isCsrfTokenValid - CSRF的Token是否正确
 	 * @return 一个包含个人资料修改结果的Map<String, Boolean>对象
 	 */
 	private Map<String, Boolean> getUpdateProfileResult(User user, String email, 
-			String location, String website, String socialLinks, String aboutMe) {
+			String location, String website, String socialLinks, String aboutMe, boolean isCsrfTokenValid) {
 		Map<String, Boolean> result = new HashMap<>(7, 1);
 		result.put("isEmailEmpty", email.isEmpty());
 		result.put("isEmailLegal", isEmailLegal(email));
@@ -521,10 +523,12 @@ public class UserService {
 		result.put("isLocationLegal", location.length() <= 128);
 		result.put("isWebsiteLegal", isWebsiteLegal(website));
 		result.put("isAboutMeLegal", aboutMe.length() <= 256);
+		result.put("isCsrfTokenValid", isCsrfTokenValid);
 		
 		boolean isSuccessful = !result.get("isEmailEmpty")   && result.get("isEmailLegal")	&&
 							   !result.get("isEmailExists")  && result.get("isLocationLegal") &&
-								result.get("isWebsiteLegal") && result.get("isAboutMeLegal");
+								result.get("isWebsiteLegal") && result.get("isAboutMeLegal")  && 
+								result.get("isCsrfTokenValid");
 		result.put("isSuccessful", isSuccessful);
 		return result;
 	}
