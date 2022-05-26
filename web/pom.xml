@@ -9,7 +9,7 @@
 	<url>http://maven.apache.org</url>
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<spring.version>5.3.19</spring.version>
+		<spring.version>5.3.20</spring.version>
 		<aspectj.version>1.9.2</aspectj.version>
 		<mybatis.version>3.5.6</mybatis.version>
 		<druid.version>1.2.8</druid.version>
