@@ -1,5 +1,5 @@
 # Dockerfile for Verwandlung Online Judge - Judger
-FROM ubuntu:18.04
+FROM ubuntu:22.04
 MAINTAINER Haozhe Xie "cshzxie@gmail.com"
 
 # User Settings
@@ -22,21 +22,19 @@ RUN apt-get update
 RUN apt-get install -y openjdk-11-jdk
 
 # Install Maven
-RUN apt-get install -y wget
-RUN wget https://archive.apache.org/dist/maven/maven-3/3.5.4/binaries/apache-maven-3.5.4-bin.tar.gz
-RUN tar -xf apache-maven-3.5.4-bin.tar.gz -C /opt
-RUN mv /opt/apache-maven-3.5.4 /opt/maven
-RUN rm apache-maven-3.5.4-bin.tar.gz
+RUN wget http://mirrors.tencent.com/apache/maven/maven-3/3.8.5/binaries/apache-maven-3.8.5-bin.tar.gz && \
+    tar -xf apache-maven-3.8.5-bin.tar.gz -C /opt && \
+    rm apache-maven-3.8.5-bin.tar.gz
+RUN mv /opt/apache-maven-3.8.5 /opt/maven
 
 # Setup Judger Project
-RUN apt-get install -y git gcc g++ make
-RUN git clone https://github.com/hzxie/voj.git
-RUN sed -i "s@jdbc.url = jdbc:mysql://localhost:3306@jdbc.url = jdbc:mysql://${MYSQL_HOST}:${MYSQL_PORT}@g" voj/judger/src/main/resources/voj.properties
-RUN sed -i "s/jdbc.username = root/jdbc.username = voj/g" voj/judger/src/main/resources/voj.properties
-RUN sed -i "s/jdbc.password = /jdbc.password = ${MYSQL_USER_PASS}/g" voj/judger/src/main/resources/voj.properties
-RUN sed -i "s/localhost:61616/${ACTIVEMQ_HOST}:${ACTIVEMQ_PORT}/g" voj/judger/src/main/resources/voj.properties
-RUN mkdir -p voj/target/classes
-RUN $M2_HOME/bin/mvn package -DskipTests -f voj/judger/pom.xml
+RUN git clone https://github.com/hzxie/voj.git && \
+    sed -i "s@jdbc.url = jdbc:mysql://localhost:3306@jdbc.url = jdbc:mysql://${MYSQL_HOST}:${MYSQL_PORT}@g" voj/judger/src/main/resources/voj.properties && \
+    sed -i "s/jdbc.username = root/jdbc.username = voj/g" voj/judger/src/main/resources/voj.properties && \
+    sed -i "s/jdbc.password = /jdbc.password = ${MYSQL_USER_PASS}/g" voj/judger/src/main/resources/voj.properties && \
+    sed -i "s/localhost:61616/${ACTIVEMQ_HOST}:${ACTIVEMQ_PORT}/g" voj/judger/src/main/resources/voj.properties && \
+    mkdir -p voj/target/classes && \
+    $M2_HOME/bin/mvn package -DskipTests -f voj/judger/pom.xml
 
 # Setup Compliers
 RUN apt-get install -y python3
