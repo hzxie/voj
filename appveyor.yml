@@ -41,6 +41,7 @@ build: off
 before_test:
   - mysql -e "SET PASSWORD FOR 'root'@'localhost' = PASSWORD('');" --user=root --password=Password12!
   - mysql -e "CREATE DATABASE test;" --user=root
+  - mysql -e "SET GLOBAL sql_mode=(SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY',''));" --user=root
   - mysql test < voj.sql --user=root
 
 test_script:
