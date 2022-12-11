@@ -1,21 +1,17 @@
-
 # # version: "{branch} {build}"
 image:
 # Windows Server 2012
-- Visual Studio 2015
-# Windows Server 2016
-# Disable CI for Windows Server 2016 due to a bug of AppVeyor.
-# - Visual Studio 2017
+# - Visual Studio 2015
+# Windows Server 2019
+- Visual Studio 2019
 
 environment:
   appveyor_build_worker_cloud: gce
   appveyor_rdp_password: Fx8eHPNesxhpmdru
   matrix:
-  - JAVA_HOME: C:\Program Files\Java\jdk1.8.0
-  - JAVA_HOME: C:\Program Files\Java\jdk9
-  - JAVA_HOME: C:\Program Files\Java\jdk10
-  - JAVA_HOME: C:\Program Files\Java\jdk11
-  - JAVA_HOME: C:\Program Files\Java\jdk12
+  # - JAVA_HOME: C:\Program Files\Java\jdk1.8.0
+  # - JAVA_HOME: C:\Program Files\Java\jdk11
+  - JAVA_HOME: C:\Program Files\Java\jdk17
 
 services:
   - mysql
@@ -24,23 +20,19 @@ init:
   - ps: iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
 
 install:
-  - set MINGW_HOME=C:\mingw-w64\x86_64-7.2.0-posix-seh-rt_v5-rev1\mingw64
+  - set MINGW_HOME=C:\mingw-w64\x86_64-8.1.0-posix-seh-rt_v6-rev0\mingw64
   - set PATH=%MINGW_HOME%\bin;C:\cygwin64\bin;C:\Program Files\MySql\MySQL Server 5.7\bin;%PATH%
 # Fix bug for mkdir in AppVeyor
   - del "C:\Program Files\Git\usr\bin\mkdir.exe"
 # Fix path error for make
-  - copy "C:\mingw-w64\x86_64-7.3.0-posix-seh-rt_v5-rev0\mingw64\bin\mingw32-make.exe" "C:\mingw-w64\x86_64-7.3.0-posix-seh-rt_v5-rev0\mingw64\bin\make.exe"
+  - copy "C:\mingw-w64\x86_64-8.1.0-posix-seh-rt_v6-rev0\mingw64\bin\mingw32-make.exe" "C:\mingw-w64\x86_64-8.1.0-posix-seh-rt_v6-rev0\mingw64\bin\make.exe"
 # Fix path error on JNI headers
   - copy "C:\Program Files\Java\jdk1.8.0\include\win32\jni_md.h" "C:\Program Files\Java\jdk1.8.0\include\jni_md.h"
   - copy "C:\Program Files\Java\jdk1.8.0\include\win32\jawt_md.h" "C:\Program Files\Java\jdk1.8.0\include\jawt_md.h"
-  - copy "C:\Program Files\Java\jdk9\include\win32\jni_md.h" "C:\Program Files\Java\jdk9\include\jni_md.h"
-  - copy "C:\Program Files\Java\jdk9\include\win32\jawt_md.h" "C:\Program Files\Java\jdk9\include\jawt_md.h"
-  - copy "C:\Program Files\Java\jdk10\include\win32\jni_md.h" "C:\Program Files\Java\jdk10\include\jni_md.h"
-  - copy "C:\Program Files\Java\jdk10\include\win32\jawt_md.h" "C:\Program Files\Java\jdk10\include\jawt_md.h"
   - copy "C:\Program Files\Java\jdk11\include\win32\jni_md.h" "C:\Program Files\Java\jdk11\include\jni_md.h"
   - copy "C:\Program Files\Java\jdk11\include\win32\jawt_md.h" "C:\Program Files\Java\jdk11\include\jawt_md.h"
-  - copy "C:\Program Files\Java\jdk12\include\win32\jni_md.h" "C:\Program Files\Java\jdk12\include\jni_md.h"
-  - copy "C:\Program Files\Java\jdk12\include\win32\jawt_md.h" "C:\Program Files\Java\jdk12\include\jawt_md.h"
+  - copy "C:\Program Files\Java\jdk17\include\win32\jni_md.h" "C:\Program Files\Java\jdk17\include\jni_md.h"
+  - copy "C:\Program Files\Java\jdk17\include\win32\jawt_md.h" "C:\Program Files\Java\jdk17\include\jawt_md.h"
 # Setup test environment for Windows
   - copy "judger\src\test\resources\voj-test-windows.properties" "judger\src\test\resources\voj-test.properties"
 
@@ -49,6 +41,7 @@ build: off
 before_test:
   - mysql -e "SET PASSWORD FOR 'root'@'localhost' = PASSWORD('');" --user=root --password=Password12!
   - mysql -e "CREATE DATABASE test;" --user=root
+  - mysql -e "SET GLOBAL sql_mode=(SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY',''));" --user=root
   - mysql test < voj.sql --user=root
 
 test_script:

@@ -39,8 +39,8 @@
  */
 package org.verwandlung.voj.web.util;
 
-import javax.servlet.http.HttpSessionEvent;
-import javax.servlet.http.HttpSessionListener;
+import jakarta.servlet.http.HttpSessionEvent;
+import jakarta.servlet.http.HttpSessionListener;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -61,7 +61,7 @@ public class SessionListener implements HttpSessionListener {
   }
 
   /* (non-Javadoc)
-   * @see javax.servlet.http.HttpSessionListener#sessionCreated(javax.servlet.http.HttpSessionEvent)
+   * @see jakarta.servlet.http.HttpSessionListener#sessionCreated(jakarta.servlet.http.HttpSessionEvent)
    */
   @Override
   public void sessionCreated(HttpSessionEvent se) {
@@ -73,7 +73,7 @@ public class SessionListener implements HttpSessionListener {
   }
 
   /* (non-Javadoc)
-   * @see javax.servlet.http.HttpSessionListener#sessionDestroyed(javax.servlet.http.HttpSessionEvent)
+   * @see jakarta.servlet.http.HttpSessionListener#sessionDestroyed(jakarta.servlet.http.HttpSessionEvent)
    */
   @Override
   public void sessionDestroyed(HttpSessionEvent se) {

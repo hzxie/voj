@@ -117,14 +117,14 @@
 	<bean id="vojMailSender" class="org.verwandlung.voj.web.util.MailSender"></bean>
 
 	<!-- Message Service -->
-	<bean id="amqConnectionFactory" class="org.apache.activemq.ActiveMQConnectionFactory">
+	<bean id="amqConnectionFactory" class="org.apache.activemq.artemis.jms.client.ActiveMQConnectionFactory">
 		<constructor-arg index="0" value="${jms.broker.url}" />
 	</bean>
 	<bean id="connectionFactory"
 		class="org.springframework.jms.connection.CachingConnectionFactory">
 		<constructor-arg ref="amqConnectionFactory" />
 	</bean>
-	<bean id="defaultDestination" class="org.apache.activemq.command.ActiveMQQueue">
+	<bean id="defaultDestination" class="org.apache.activemq.artemis.jms.client.ActiveMQQueue">
 		<constructor-arg index="0" value="vojSubmissionTaskQueue" />
 	</bean>
 	<bean id="jmsTemplate" class="org.springframework.jms.core.JmsTemplate">

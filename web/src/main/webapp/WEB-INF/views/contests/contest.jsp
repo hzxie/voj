@@ -238,7 +238,7 @@
     <c:otherwise>
     <script type="text/javascript">
         function attendContest() {
-            window.location.href = '<c:url value="/accounts/login?forward=" />${requestScope['javax.servlet.forward.request_uri']}';
+            window.location.href = '<c:url value="/accounts/login?forward=" />${requestScope['jakarta.servlet.forward.request_uri']}';
         }
     </script>
     </c:otherwise>

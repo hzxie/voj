@@ -9,11 +9,11 @@
 	<url>http://maven.apache.org</url>
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<spring.version>5.3.20</spring.version>
+		<spring.version>6.0.0</spring.version>
 		<aspectj.version>1.9.2</aspectj.version>
-		<mybatis.version>3.5.6</mybatis.version>
-		<druid.version>1.1.15</druid.version>
-		<activemq.version>5.15.2</activemq.version>
+		<mybatis.version>3.5.11</mybatis.version>
+		<druid.version>1.2.15</druid.version>
+		<activemq-artemis.version>2.27.1</activemq-artemis.version>
 	</properties>
 	<repositories>
 		<repository>
@@ -67,12 +67,12 @@
 		<dependency>
 			<groupId>org.mybatis</groupId>
 			<artifactId>mybatis-spring</artifactId>
-			<version>1.3.1</version>
+			<version>3.0.1</version>
 		</dependency>
 		<dependency>
 			<groupId>org.mybatis.caches</groupId>
 			<artifactId>mybatis-ehcache</artifactId>
-			<version>1.1.0</version>
+			<version>1.2.3</version>
 		</dependency>
 		<dependency>
 			<groupId>com.alibaba</groupId>
@@ -87,13 +87,18 @@
 		<!-- Message Service -->
 		<dependency>
 			<groupId>org.apache.activemq</groupId>
-			<artifactId>activemq-spring</artifactId>
-			<version>${activemq.version}</version>
+			<artifactId>artemis-server</artifactId>
+			<version>${activemq-artemis.version}</version>
 		</dependency>
 		<dependency>
-			<groupId>javax.jms</groupId>
-			<artifactId>javax.jms-api</artifactId>
-			<version>2.0.1</version>
+			<groupId>org.apache.activemq</groupId>
+			<artifactId>artemis-jakarta-client</artifactId>
+			<version>${activemq-artemis.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>jakarta.jms</groupId>
+			<artifactId>jakarta.jms-api</artifactId>
+			<version>3.1.0</version>
 		</dependency>
 		<!-- File I/O -->
 		<dependency>
