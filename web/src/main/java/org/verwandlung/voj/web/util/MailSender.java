@@ -94,7 +94,10 @@ public class MailSender {
    * @throws TemplateNotFoundException
    */
   public String getMailContent(String templateLocation, Map<String, Object> model)
-      throws TemplateNotFoundException, MalformedTemplateNameException, ParseException, IOException,
+      throws TemplateNotFoundException,
+          MalformedTemplateNameException,
+          ParseException,
+          IOException,
           TemplateException {
     model.put("baseUrl", baseUrl);
 
