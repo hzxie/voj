@@ -2,12 +2,10 @@
 
 Version: 0.2.0 (Released on August 30, 2018)
 
-[![Build Status](https://travis-ci.org/hzxie/voj.png?branch=master)](https://travis-ci.org/hzxie/voj)
 [![Build status](https://ci.appveyor.com/api/projects/status/j62ns9p8whttittm?svg=true)](https://ci.appveyor.com/project/hzxie/voj)
 [![Coverage Status](https://coveralls.io/repos/hzxie/voj/badge.svg?branch=master&service=github)](https://coveralls.io/github/hzxie/voj?branch=master)
 [![Docker Automated build](https://img.shields.io/docker/automated/jrottenberg/ffmpeg.svg)](http://hub.docker.com/r/zjhzxhz)
-[![Language grade: Java](https://img.shields.io/lgtm/grade/java/g/hzxie/voj.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/hzxie/voj/context:java)
-[![Total alerts](https://img.shields.io/lgtm/alerts/g/hzxie/voj.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/hzxie/voj/alerts/)
+![badgegen](https://badge.haozhexie.com/count?name=voj)
 
 [**Official Website**](https://verwandlung.org) | 
 [**Tech Support**](https://infinitescript.com/project/verwandlung-online-judge/) |
@@ -45,29 +43,24 @@ The application used following open-source projects:
 
 ### The Origin of Verwandlung
 
-In 2011, LinkedIn Inc. released a message queue named [Kafka](http://kafka.apache.org/). 
-It's implemented in Scala and open-sourced.
+In 2011, LinkedIn Inc. launched a message queue called [Kafka](http://kafka.apache.org/), which is written in Scala and available as open-source software.
 
-In 2012, Alibaba Inc. released a message queue named [MetaQ](https://github.com/killme2008/Metamorphosis), which is based on Kafka. 
-It's implemented in Java.
+A year later, Alibaba Inc. introduced a message queue named [MetaQ](https://github.com/killme2008/Metamorphosis) which is built on top of Kafka and implemented in Java. The name "MetaQ" is derived from the title of a renowned literary work, "Metamorphosis", authored by Franz Kafka.
 
-MetaQ stands for *Metamorphosis*, which is a famous literature written by the author Franz Kafka.
-
-As the message queue is one of the important components in the application, so I named the application *Verwandlung*, which is the German name of *Metamorphosis*.
+Since message queues are vital components in an application, the name of the application was chosen as "Verwandlung", which is the German translation for "*Metamorphosis*".
 
 ### Architecture
 
-The application contains two components:
+The Verwandlung application consists of two primary components:
 
 - Web Application
-- Judger (Support both Windows and Linux)
+- Judger (compatible with both Windows and Linux operating systems)
 
-The architecture can be described as the figure below.
+The overall architecture of the application can be illustrated by the diagram provided below:
 
 ![Software-Architecture](https://infinitescript.com/wordpress/wp-content/uploads/2015/04/Software-Architecture.png)
 
-As you see, Verwandling Online Judge supports multiple judgers. 
-The judgers communicate with the web application through ActiveMQ.
+As depicted in the diagram, the Verwandlung Online Judge features support for multiple judgers. These judgers are responsible for communicating with the web application through the use of ActiveMQ.
 
 ---
 
@@ -93,14 +86,14 @@ For Web Application (including Database and Message Queue):
 
 - **Operating System**: Windows, Linux or Mac
 - **Database**: [MySQL](http://www.mysql.com) 5.5+ or [MariaDB](https://mariadb.org/) 5.5+
-- **Java Runtime**: [Oracle JRE](http://java.oracle.com) 1.8+ or [Oracle JDK](http://java.oracle.com) 1.8+
-- **Message Queue**: [ActiveMQ](http://activemq.apache.org) 5.11+
-- **Web Server**: [Tomcat](http://tomcat.apache.org) 8.5+
+- **Java Runtime**: [Oracle JRE](http://java.oracle.com) 17+ or [Oracle JDK](http://java.oracle.com) 17+
+- **Message Queue**: [ActiveMQ](http://activemq.apache.org) 5.18+
+- **Web Server**: [Tomcat](http://tomcat.apache.org) 10+
 
 For Judger:
 
 - **Operating System**: Windows or Linux
-- **Java Runtime**: [Oracle JRE](http://java.oracle.com) 1.8+ or [Oracle JDK](http://java.oracle.com) 1.8+
+- **Java Runtime**: [Oracle JRE](http://java.oracle.com) 17+ or [Oracle JDK](http://java.oracle.com) 17+
 
 ### Installation
 
