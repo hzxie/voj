@@ -1,5 +1,5 @@
 <%@ page language="java" contentType="text/html; charset=utf-8" pageEncoding="utf-8"%>
-<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/fmt" prefix="fmt" %>
@@ -238,7 +238,7 @@
     <c:otherwise>
     <script type="text/javascript">
         function attendContest() {
-            window.location.href = '<c:url value="/accounts/login?forward=" />${requestScope['javax.servlet.forward.request_uri']}';
+            window.location.href = '<c:url value="/accounts/login?forward=" />${requestScope['jakarta.servlet.forward.request_uri']}';
         }
     </script>
     </c:otherwise>

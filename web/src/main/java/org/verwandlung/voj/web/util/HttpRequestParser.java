@@ -39,7 +39,7 @@
  */
 package org.verwandlung.voj.web.util;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * Http请求头解析服务.

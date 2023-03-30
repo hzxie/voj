@@ -42,10 +42,10 @@ package org.verwandlung.voj.web.messenger;
 import java.util.Calendar;
 import java.util.Date;
 
-import javax.jms.JMSException;
-import javax.jms.MapMessage;
-import javax.jms.Message;
-import javax.jms.MessageListener;
+import jakarta.jms.JMSException;
+import jakarta.jms.MapMessage;
+import jakarta.jms.Message;
+import jakarta.jms.MessageListener;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -61,7 +61,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class MessageReceiver implements MessageListener {
   /* (non-Javadoc)
-   * @see javax.jms.MessageListener#onMessage(javax.jms.Message)
+   * @see jakarta.jms.MessageListener#onMessage(jakarta.jms.Message)
    */
   public void onMessage(Message message) {
     if (message instanceof MapMessage) {

@@ -41,7 +41,7 @@ package org.verwandlung.voj.web.util;
 
 import java.util.Map;
 
-import javax.servlet.http.HttpSession;
+import jakarta.servlet.http.HttpSession;
 
 /**
  * CSRF防护服务. 说明: Spring Security中所集成的服务过于复杂, 因此没有使用.

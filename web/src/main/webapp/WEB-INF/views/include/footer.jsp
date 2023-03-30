@@ -1,5 +1,5 @@
 <%@ page language="java" contentType="text/html; charset=utf-8" pageEncoding="utf-8"%>
-<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <spring:eval expression="@propertyConfigurer.getProperty('url.cdn')" var="cdnUrl" />
 <spring:eval expression="@propertyConfigurer.getProperty('build.version')" var="version" />
@@ -13,7 +13,7 @@
                 <li><a href="<c:url value="/help" />"><spring:message code="voj.include.footer.help" text="Help" /></a></li>
                 <li><a href="<c:url value="/about" />"><spring:message code="voj.include.footer.about-us" text="About Us" /></a></li>
                 <li>
-                    <a href="<c:url value="/worldwide?forward=" />${requestScope['javax.servlet.forward.request_uri']}">
+                    <a href="<c:url value="/worldwide?forward=" />${requestScope['jakarta.servlet.forward.request_uri']}">
                         <i class="fa fa-globe"></i>
                         <span id="current-language">${language}</span>
                     </a>

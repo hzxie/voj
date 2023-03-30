@@ -1,5 +1,5 @@
 <%@ page language="java" contentType="text/html; charset=utf-8" pageEncoding="utf-8"%>
-<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
 <spring:eval expression="@propertyConfigurer.getProperty('url.cdn')" var="cdnUrl" />
 <spring:eval expression="@propertyConfigurer.getProperty('build.version')" var="version" />
@@ -62,8 +62,8 @@
             <c:otherwise>
                 <p><spring:message code="voj.include.header.not-logged-in" text="You are not logged in." /></p>
                 <ul class="inline">
-                    <li><a href="<c:url value="/accounts/login?forward=" />${requestScope['javax.servlet.forward.request_uri']}"><spring:message code="voj.include.header.sign-in" text="Sign in" /></a></li>
-                    <li><a href="<c:url value="/accounts/register?forward=" />${requestScope['javax.servlet.forward.request_uri']}"><spring:message code="voj.include.header.sign-up" text="Sign up" /></a></li>
+                    <li><a href="<c:url value="/accounts/login?forward=" />${requestScope['jakarta.servlet.forward.request_uri']}"><spring:message code="voj.include.header.sign-in" text="Sign in" /></a></li>
+                    <li><a href="<c:url value="/accounts/register?forward=" />${requestScope['jakarta.servlet.forward.request_uri']}"><spring:message code="voj.include.header.sign-up" text="Sign up" /></a></li>
                 </ul>
             </c:otherwise>
             </c:choose>
