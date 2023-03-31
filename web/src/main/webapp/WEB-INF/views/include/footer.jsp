@@ -35,6 +35,7 @@
                 <a href="https://github.com/hzxie/voj/">
                    <img src="https://img.shields.io/github/stars/hzxie/voj.svg?style=social&label=Stars" alt="GitHub-Stars"> 
                 </a>
+                <img src="https://badge.haozhexie.com/count?name=voj" alt="Visitors"> 
             </p>
         </div> <!-- .container -->
     </div> <!-- #footer -->
