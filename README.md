@@ -11,6 +11,8 @@ Version: 0.2.0 (Released on August 30, 2018)
 [**Tech Support**](https://infinitescript.com/project/verwandlung-online-judge/) |
 [**Change Log**](https://github.com/hzxie/voj/commits/master)
 
+**Note:** The continuous integration (CI) process is facing challenges as a result of bugs in the upstream `activemq-broker`.
+
 **Update:** Verwandlung Online Judge now supports Docker. 
 You can use Verwandlung Online Judge with ONLY 4 bash commands.
 
@@ -18,7 +20,7 @@ You can use Verwandlung Online Judge with ONLY 4 bash commands.
 docker pull zjhzxhz/voj.web
 docker pull zjhzxhz/voj.judger
 docker run -d --name voj.web -p 8080:8080 zjhzxhz/voj.web
-docker run -d --name voj.judger --link voj.web zjhzxhz/voj.judger
+docker run -d --name voj.judger voj.web zjhzxhz/voj.judger
 ```
 
 [Tell me more](https://github.com/hzxie/voj/tree/master/docker) about voj@Docker.
