@@ -108,7 +108,7 @@ CREATE TABLE `voj_discussion_replies` (
   `discussion_reply_id` bigint(20) NOT NULL,
   `discussion_thread_id` bigint(20) NOT NULL,
   `discussion_reply_uid` bigint(20) NOT NULL,
-  `discussion_reply_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `discussion_reply_time` timestamp DEFAULT CURRENT_TIMESTAMP,
   `discussion_reply_content` text COLLATE utf8mb4_unicode_ci NOT NULL,
   `discussion_reply_votes` text COLLATE utf8mb4_unicode_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -131,7 +131,7 @@ INSERT INTO `voj_discussion_replies` (`discussion_reply_id`, `discussion_thread_
 CREATE TABLE `voj_discussion_threads` (
   `discussion_thread_id` bigint(20) NOT NULL,
   `discussion_thread_creator_uid` bigint(20) NOT NULL,
-  `discussion_thread_create_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `discussion_thread_create_time` timestamp DEFAULT CURRENT_TIMESTAMP,
   `problem_id` bigint(20) DEFAULT NULL,
   `discussion_topic_id` int(8) NOT NULL,
   `discussion_thread_name` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL
