@@ -1,7 +1,5 @@
 # # version: "{branch} {build}"
 image:
-# Windows Server 2012
-# - Visual Studio 2015
 # Windows Server 2019
 - Visual Studio 2019
 
@@ -9,15 +7,11 @@ environment:
   appveyor_build_worker_cloud: gce
   appveyor_rdp_password: Fx8eHPNesxhpmdru
   matrix:
-  - JAVA_HOME: C:\Program Files\Java\jdk1.8.0
-  - JAVA_HOME: C:\Program Files\Java\jdk11
   - JAVA_HOME: C:\Program Files\Java\jdk17
-
-services:
-  - mysql
 
 init:
   - ps: iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+  - ps: Start-Service MySQL80
 
 install:
   - set MINGW_HOME=C:\mingw-w64\x86_64-8.1.0-posix-seh-rt_v6-rev0\mingw64
@@ -27,10 +21,6 @@ install:
 # Fix path error for make
   - copy "C:\mingw-w64\x86_64-8.1.0-posix-seh-rt_v6-rev0\mingw64\bin\mingw32-make.exe" "C:\mingw-w64\x86_64-8.1.0-posix-seh-rt_v6-rev0\mingw64\bin\make.exe"
 # Fix path error on JNI headers
-  - copy "C:\Program Files\Java\jdk1.8.0\include\win32\jni_md.h" "C:\Program Files\Java\jdk1.8.0\include\jni_md.h"
-  - copy "C:\Program Files\Java\jdk1.8.0\include\win32\jawt_md.h" "C:\Program Files\Java\jdk1.8.0\include\jawt_md.h"
-  - copy "C:\Program Files\Java\jdk11\include\win32\jni_md.h" "C:\Program Files\Java\jdk11\include\jni_md.h"
-  - copy "C:\Program Files\Java\jdk11\include\win32\jawt_md.h" "C:\Program Files\Java\jdk11\include\jawt_md.h"
   - copy "C:\Program Files\Java\jdk17\include\win32\jni_md.h" "C:\Program Files\Java\jdk17\include\jni_md.h"
   - copy "C:\Program Files\Java\jdk17\include\win32\jawt_md.h" "C:\Program Files\Java\jdk17\include\jawt_md.h"
 # Setup test environment for Windows
@@ -39,7 +29,7 @@ install:
 build: off
 
 before_test:
-  - mysql -e "SET PASSWORD FOR 'root'@'localhost' = PASSWORD('');" --user=root --password=Password12!
+  - mysql -e "SET PASSWORD FOR 'root'@'localhost' = '';" --user=root --password=Password12!
   - mysql -e "CREATE DATABASE test;" --user=root
   - mysql -e "SET GLOBAL sql_mode=(SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY',''));" --user=root
   - mysql test < voj.sql --user=root
