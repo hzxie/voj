@@ -1,5 +1,5 @@
 # Dockerfile for Verwandlung Online Judge - Web
-FROM ubuntu:22.04
+FROM ubuntu:24.04
 MAINTAINER Haozhe Xie "root@haozhexie.com"
 
 # User Settings
@@ -29,27 +29,27 @@ RUN /etc/init.d/mariadb start && \
 
 # Install Java and Maven
 RUN apt-get install -y openjdk-17-jdk wget && \
-    wget https://archive.apache.org/dist/maven/maven-3/3.9.1/binaries/apache-maven-3.9.1-bin.tar.gz && \
-    tar -xf apache-maven-3.9.1-bin.tar.gz -C /opt && \
-    mv /opt/apache-maven-3.9.1 /opt/maven && \
-    rm apache-maven-3.9.1-bin.tar.gz && \
+    wget https://archive.apache.org/dist/maven/maven-3/3.9.6/binaries/apache-maven-3.9.6-bin.tar.gz && \
+    tar -xf apache-maven-3.9.6-bin.tar.gz -C /opt && \
+    mv /opt/apache-maven-3.9.6 /opt/maven && \
+    rm apache-maven-3.9.6-bin.tar.gz && \
 # Install ActiveMQ
     useradd activemq -s /usr/sbin/nologin && \
-    wget https://archive.apache.org/dist/activemq/5.18.0/apache-activemq-5.18.0-bin.tar.gz && \
-    tar -xf apache-activemq-5.18.0-bin.tar.gz -C /opt && \
-    mv /opt/apache-activemq-5.18.0 /opt/activemq && \
+    wget https://archive.apache.org/dist/activemq/6.1.2/apache-activemq-6.1.2-bin.tar.gz && \
+    tar -xf apache-activemq-6.1.2-bin.tar.gz -C /opt && \
+    mv /opt/apache-activemq-6.1.2 /opt/activemq && \
     chown -R activemq:activemq /opt/activemq && \
     sed -i 's/memoryUsage percentOfJvmHeap="70"/memoryUsage limit="256 mb"/g' /opt/activemq/conf/activemq.xml && \
     sed -i 's/storeUsage limit="100 gb"/storeUsage limit="1 gb"/g' /opt/activemq/conf/activemq.xml && \
     sed -i 's/tempUsage limit="50 gb"/tempUsage limit="1 gb"/g' /opt/activemq/conf/activemq.xml && \
-    rm apache-activemq-5.18.0-bin.tar.gz && \
+    rm apache-activemq-6.1.2-bin.tar.gz && \
 # Install Tomcat
     useradd tomcat -s /usr/sbin/nologin && \
-    wget https://archive.apache.org/dist/tomcat/tomcat-10/v10.1.7/bin/apache-tomcat-10.1.7.tar.gz && \
-    tar -xf apache-tomcat-10.1.7.tar.gz -C /opt && \
-    mv /opt/apache-tomcat-10.1.7 /opt/tomcat/ && \
+    wget https://archive.apache.org/dist/tomcat/tomcat-10/v10.1.24/bin/apache-tomcat-10.1.24.tar.gz && \
+    tar -xf apache-tomcat-10.1.24.tar.gz -C /opt && \
+    mv /opt/apache-tomcat-10.1.24 /opt/tomcat/ && \
     chown -R tomcat:tomcat /opt/tomcat/ && \
-    rm apache-tomcat-10.1.7.tar.gz
+    rm apache-tomcat-10.1.24.tar.gz
 
 # Setup Web Project
 RUN apt-get install -y git && \

@@ -1,5 +1,5 @@
 # Dockerfile for Verwandlung Online Judge - Judger
-FROM ubuntu:22.04
+FROM ubuntu:24.04
 MAINTAINER Haozhe Xie "root@haozhexie.com"
 
 # User Settings
@@ -23,10 +23,10 @@ RUN apt-get update && \
 # Setup Python3 as the default Python
     ln -s /usr/bin/python3 /usr/bin/python && \
 # Install Maven
-    wget http://mirrors.tencent.com/apache/maven/maven-3/3.9.1/binaries/apache-maven-3.9.1-bin.tar.gz && \
-    tar -xf apache-maven-3.9.1-bin.tar.gz -C /opt && \
-    rm apache-maven-3.9.1-bin.tar.gz && \
-    mv /opt/apache-maven-3.9.1 /opt/maven
+    wget http://mirrors.tencent.com/apache/maven/maven-3/3.9.6/binaries/apache-maven-3.9.6-bin.tar.gz && \
+    tar -xf apache-maven-3.9.6-bin.tar.gz -C /opt && \
+    rm apache-maven-3.9.6-bin.tar.gz && \
+    mv /opt/apache-maven-3.9.6 /opt/maven
 
 # Setup Judger Project
 RUN git clone https://github.com/hzxie/voj.git && \

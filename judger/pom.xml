@@ -9,11 +9,11 @@
 	<url>http://maven.apache.org</url>
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<spring.version>6.0.16</spring.version>
-		<aspectj.version>1.9.19</aspectj.version>
-		<mybatis.version>3.5.13</mybatis.version>
-		<druid.version>1.2.16</druid.version>
-		<activemq.version>5.18.0</activemq.version>
+		<spring.version>6.0.21</spring.version>
+		<aspectj.version>1.9.22.1</aspectj.version>
+		<mybatis.version>3.5.16</mybatis.version>
+		<druid.version>1.2.23</druid.version>
+		<activemq.version>6.1.2</activemq.version>
 	</properties>
 	<repositories>
 		<repository>
@@ -87,7 +87,7 @@
 		<!-- Message Service -->
 		<dependency>
 			<groupId>org.apache.activemq</groupId>
-			<artifactId>activemq-client-jakarta</artifactId>
+			<artifactId>activemq-client</artifactId>
 			<version>${activemq.version}</version>
 		</dependency>
 		<dependency>
