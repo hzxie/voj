@@ -148,7 +148,7 @@ public class ApplicationBootstrap {
     StringBuilder compilerVersion = new StringBuilder();
 
     try {
-      String[] command = {compileProgram, versionCommand};
+      String command = compileProgram + versionCommand;
       Process process = Runtime.getRuntime().exec(command);
 
       compilerVersion.append("Command Line: " + command + "\n");
