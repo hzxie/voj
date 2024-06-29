@@ -339,7 +339,6 @@ bool isProcessRunning(pid_t& pid) {
     if ( fp != NULL ) {
         char state;
         if (fscanf(fp, "%*d %*s %c", &state) == 1) {
-            std::cout << state << std::endl;
             return state != 'Z';
         }
         fclose(fp);

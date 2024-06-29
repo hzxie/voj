@@ -9,7 +9,7 @@
 	<url>http://maven.apache.org</url>
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<spring.version>6.0.21</spring.version>
+		<spring.version>6.0.22</spring.version>
 		<aspectj.version>1.9.22.1</aspectj.version>
 		<mybatis.version>3.5.16</mybatis.version>
 		<druid.version>1.2.23</druid.version>
@@ -77,7 +77,7 @@
 		<dependency>
 			<groupId>org.mybatis</groupId>
 			<artifactId>mybatis-spring</artifactId>
-			<version>3.0.1</version>
+			<version>3.0.3</version>
 		</dependency>
 		<dependency>
 			<groupId>org.mybatis.caches</groupId>
@@ -205,7 +205,7 @@
 		<dependency>
 			<groupId>org.jsoup</groupId>
 			<artifactId>jsoup</artifactId>
-			<version>1.14.2</version>
+			<version>1.15.3</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.commons</groupId>
@@ -248,7 +248,6 @@
 					</dependency>
 				</dependencies>
 			</plugin>
-			<!-- Maven Tomcat -->
 			<plugin>
 				<groupId>org.apache.tomcat.maven</groupId>
 				<artifactId>tomcat8-maven-plugin</artifactId>
@@ -260,7 +259,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
-				<version>3.11.0</version>
+				<version>3.13.0</version>
 				<configuration>
 					<source>17</source>
 					<target>17</target>
@@ -270,7 +269,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-war-plugin</artifactId>
-				<version>3.3.1</version>
+				<version>3.4.0</version>
 			</plugin>
 		</plugins>
 	</build>

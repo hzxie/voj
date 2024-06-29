@@ -9,7 +9,7 @@
 	<url>http://maven.apache.org</url>
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<spring.version>6.0.21</spring.version>
+		<spring.version>6.0.22</spring.version>
 		<aspectj.version>1.9.22.1</aspectj.version>
 		<mybatis.version>3.5.16</mybatis.version>
 		<druid.version>1.2.23</druid.version>
@@ -67,7 +67,7 @@
 		<dependency>
 			<groupId>org.mybatis</groupId>
 			<artifactId>mybatis-spring</artifactId>
-			<version>3.0.1</version>
+			<version>3.0.3</version>
 		</dependency>
 		<dependency>
 			<groupId>org.mybatis.caches</groupId>
