@@ -9,7 +9,7 @@
 	<url>http://maven.apache.org</url>
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<spring.version>6.1.13</spring.version>
+		<spring.version>6.1.14</spring.version>
 		<aspectj.version>1.9.22.1</aspectj.version>
 		<mybatis.version>3.5.16</mybatis.version>
 		<druid.version>1.2.23</druid.version>
@@ -82,7 +82,7 @@
 		<dependency>
 			<groupId>org.mybatis.caches</groupId>
 			<artifactId>mybatis-ehcache</artifactId>
-			<version>1.2.3</version>
+			<version>1.3.0</version>
 		</dependency>
 		<dependency>
 			<groupId>com.alibaba</groupId>
@@ -90,31 +90,31 @@
 			<version>${druid.version}</version>
 		</dependency>
 		<dependency>
-			<groupId>mysql</groupId>
-			<artifactId>mysql-connector-java</artifactId>
-			<version>8.0.28</version>
+			<groupId>com.mysql</groupId>
+			<artifactId>mysql-connector-j</artifactId>
+			<version>9.1.0</version>
 		</dependency>
 		<!-- JSON Support -->
 		<dependency>
 			<groupId>com.alibaba</groupId>
 			<artifactId>fastjson</artifactId>
-			<version>1.2.83</version>
+			<version>2.0.53</version>
 		</dependency>
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
 			<artifactId>jackson-databind</artifactId>
-			<version>2.13.4.2</version>
+			<version>2.18.1</version>
 		</dependency>
 		<!-- JSTL Tags -->
 		<dependency>
 			<groupId>jakarta.servlet.jsp.jstl</groupId>
 			<artifactId>jakarta.servlet.jsp.jstl-api</artifactId>
-			<version>3.0.0</version>
+			<version>3.0.2</version>
 		</dependency>
 		<dependency>
 			<groupId>org.glassfish.web</groupId>
 			<artifactId>jakarta.servlet.jsp.jstl</artifactId>
-			<version>3.0.0</version>
+			<version>3.0.1</version>
 		</dependency>
 		<!-- Mail Service -->
 		<dependency>
@@ -157,19 +157,19 @@
 		<dependency>
 			<groupId>org.apache.logging.log4j</groupId>
 			<artifactId>log4j-core</artifactId>
-			<version>2.17.1</version>
+			<version>2.24.1</version>
 		</dependency>
 		<!-- Unit Test -->
 		<dependency>
 			<groupId>org.junit.jupiter</groupId>
 			<artifactId>junit-jupiter-engine</artifactId>
-			<version>5.1.0</version>
+			<version>5.11.3</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.junit.platform</groupId>
 			<artifactId>junit-platform-launcher</artifactId>
-			<version>1.1.0</version>
+			<version>1.11.3</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
@@ -181,7 +181,7 @@
 		<dependency>
 			<groupId>com.github.sbrannen</groupId>
 			<artifactId>spring-test-junit5</artifactId>
-			<version>1.0.3</version>
+			<version>1.5.0</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
@@ -244,7 +244,7 @@
 					<dependency>
 						<groupId>org.junit.jupiter</groupId>
 						<artifactId>junit-jupiter-engine</artifactId>
-						<version>5.1.0</version>
+						<version>5.11.3</version>
 					</dependency>
 				</dependencies>
 			</plugin>
