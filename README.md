@@ -11,8 +11,6 @@ Version: 0.2.0 (Released on August 30, 2018)
 [**Tech Support**](https://infinitescript.com/project/verwandlung-online-judge/) |
 [**Change Log**](https://github.com/hzxie/voj/commits/master)
 
-**Note:** The continuous integration (CI) process is facing challenges as a result of bugs in the upstream `activemq-broker`.
-
 **Update:** Verwandlung Online Judge now supports Docker. 
 You can use Verwandlung Online Judge with ONLY 4 bash commands.
 
@@ -23,7 +21,7 @@ docker run -d --name voj.web -p 8080:8080 zjhzxhz/voj.web
 docker run -d --name voj.judger --link voj.web zjhzxhz/voj.judger
 ```
 
-[Tell me more](https://github.com/hzxie/voj/tree/master/docker) about voj@Docker.
+For more information, please refer to [this documentation](https://github.com/hzxie/voj/tree/master/docker).
 
 ---
 
@@ -60,7 +58,7 @@ The Verwandlung application consists of two primary components:
 
 The overall architecture of the application can be illustrated by the diagram provided below:
 
-![Software-Architecture](https://infinitescript.com/wordpress/wp-content/uploads/2015/04/Software-Architecture.png)
+![Software-Architecture](https://www.infinitescript.com/projects/Verwandlung/Software-Architecture.png)
 
 As depicted in the diagram, the Verwandlung Online Judge features support for multiple judgers. These judgers are responsible for communicating with the web application through the use of ActiveMQ.
 
