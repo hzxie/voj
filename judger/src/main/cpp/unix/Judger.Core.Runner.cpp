@@ -249,6 +249,23 @@ int getRunningTime(pid_t pid, int timeLimit) {
 }
 
 /**
+ * 是否忽略当前获得的内存占用值.
+ * 由于在实际运行过程中, 程序可能会获取到JVM环境中的内存占用.
+ * 对于这种情况, 我们应忽略这个值.
+ * @param  currentUsedMemory - 当前获取到的内存占用
+ * @return 是否忽略当前获取到的内存占用
+ */
+bool isCurrentUsedMemoryIgnored(int currentUsedMemory) {
+    int jvmUsedMemory = getCurrentUsedMemory(getpid());
+    // std::cout << "[DEBUG] Current Memory of JVM: " << jvmUsedMemory << " KB" << std::endl;
+    if ( currentUsedMemory >= jvmUsedMemory / 2 &&
+         currentUsedMemory <= jvmUsedMemory * 2 ) {
+        return true;
+    }
+    return false;
+}
+
+/**
  * 获取运行时内存占用最大值
  * @param  pid         - 进程ID
  * @param  memoryLimit - 运行时空间限制(KB)
@@ -259,8 +276,10 @@ int getMaxUsedMemory(pid_t pid, int memoryLimit) {
          currentUsedMemory = 0;
     do {
         currentUsedMemory = getCurrentUsedMemory(pid);
-        std::cout << "[DEBUG] Current Memory of PID# " << pid << ": " << currentUsedMemory << " KB" << std::endl;
-        if ( currentUsedMemory > maxUsedMemory ) {
+        std::cout << "[DEBUG] Current Memory of PID# " << pid << ": "
+                  << currentUsedMemory << " KB" << std::endl;
+        if ( currentUsedMemory > maxUsedMemory && 
+             !isCurrentUsedMemoryIgnored(currentUsedMemory) ) {
             maxUsedMemory = currentUsedMemory;
         }
         if ( memoryLimit != 0 && maxUsedMemory > memoryLimit ) {
