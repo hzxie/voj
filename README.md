@@ -2,6 +2,7 @@
 
 Version: 0.2.0 (Released on August 30, 2018)
 
+[![codefactor badge](https://www.codefactor.io/repository/github/hzxie/voj/badge)](https://www.codefactor.io/repository/github/hzxie/voj)
 [![Build status](https://ci.appveyor.com/api/projects/status/j62ns9p8whttittm?svg=true)](https://ci.appveyor.com/project/hzxie/voj)
 [![Coverage Status](https://coveralls.io/repos/hzxie/voj/badge.svg?branch=master&service=github)](https://coveralls.io/github/hzxie/voj?branch=master)
 [![Docker Automated build](https://img.shields.io/docker/automated/jrottenberg/ffmpeg.svg)](http://hub.docker.com/r/zjhzxhz)
