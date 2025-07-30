@@ -1,0 +1,71 @@
+version: 2.1
+
+executors:
+  java-executor:
+    docker:
+      - image: cimg/openjdk:24.0.2
+    working_directory: ~/project
+
+jobs:
+  test:
+    parameters:
+      java_version:
+        type: string
+        default: "24.0.2"
+    docker:
+      - image: cimg/openjdk:<< parameters.java_version >>
+    working_directory: ~/project
+    steps:
+      - checkout
+
+      - run:
+          name: Install MySQL Server
+          command: |
+            sudo apt-get update
+            sudo apt-get install -y mysql-server
+            sudo service mysql start
+            sudo mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '';"
+            sudo mysql -e "FLUSH PRIVILEGES;"
+
+      - run:
+          name: Fix JNI headers on Linux
+          command: |
+            sudo cp $JAVA_HOME/include/linux/jni_md.h $JAVA_HOME/include/jni_md.h
+            sudo cp $JAVA_HOME/include/linux/jawt_md.h $JAVA_HOME/include/jawt_md.h
+
+      - run:
+          name: Initialize test database
+          command: |
+            sudo mysql -e "CREATE DATABASE test;"
+            sudo mysql -e "SET GLOBAL sql_mode=(SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY',''));"
+            sudo mysql test < voj.sql
+
+      - run:
+          name: Setup test environment for Linux
+          command: cp judger/src/test/resources/voj-test-linux.properties judger/src/test/resources/voj-test.properties
+
+      - run:
+          name: Run Maven tests (web)
+          command: mvn test -f web/pom.xml
+
+      - run:
+          name: Run Maven tests (judger)
+          command: mvn test -f judger/pom.xml
+
+      - run:
+          name: Drop test database
+          command: sudo mysql -e "DROP DATABASE test;"
+
+workflows:
+  test-matrix:
+    jobs:
+      - test:
+          name: test-java17
+          java_version: "17.0"
+      - test:
+          name: test-java21
+          java_version: "21.0"
+      - test:
+          name: test-java24
+          java_version: "24.0"
+
