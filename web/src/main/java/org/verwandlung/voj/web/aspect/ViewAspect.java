@@ -79,8 +79,10 @@ public class ViewAspect {
    */
   @Around(
       value =
-          "execution(* org.verwandlung.voj.web.controller.*.*View(..)) && args(.., request,"
-              + " response)")
+          "execution(* org.verwandlung.voj.web.controller.*.*View(..)) &&"
+              + "args(.., request, response)",
+      argNames = "proceedingJoinPoint,request,response"
+  )
   public ModelAndView getUserProfile(
       ProceedingJoinPoint proceedingJoinPoint,
       HttpServletRequest request,

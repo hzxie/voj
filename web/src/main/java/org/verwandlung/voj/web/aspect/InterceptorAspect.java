@@ -73,8 +73,11 @@ public class InterceptorAspect {
    */
   @Around(
       value =
-          "execution(* org.verwandlung.voj.web.controller.AccountsController.dashboardView(..)) &&"
-              + " args(request, ..)")
+          "execution(*"
+              + " org.verwandlung.voj.web.controller.AccountsController.dashboardView(..)) &&"
+              + " args(request, ..)",
+      argNames = "proceedingJoinPoint,request"
+  )
   public ModelAndView dashboardViewInterceptor(
       ProceedingJoinPoint proceedingJoinPoint, HttpServletRequest request) throws Throwable {
     ModelAndView view = null;
@@ -101,7 +104,9 @@ public class InterceptorAspect {
       value =
           "execution(*"
               + " org.verwandlung.voj.web.controller.AccountsController.*InDashboardAction(..)) &&"
-              + " args(.., request)")
+              + " args(.., request)",
+      argNames = "proceedingJoinPoint,request"
+  )
   public Map<String, Boolean> dashboardActionInterceptor(
       ProceedingJoinPoint proceedingJoinPoint, HttpServletRequest request) throws Throwable {
     HttpSession session = request.getSession();
@@ -126,7 +131,9 @@ public class InterceptorAspect {
   @Around(
       value =
           "execution(* org.verwandlung.voj.web.controller.AdministrationController.*View(..)) &&"
-              + " args(.., request, response)")
+              + " args(.., request, response)",
+      argNames = "proceedingJoinPoint,request,response"
+  )
   public ModelAndView administrationViewInterceptor(
       ProceedingJoinPoint proceedingJoinPoint,
       HttpServletRequest request,
@@ -157,7 +164,9 @@ public class InterceptorAspect {
   @Around(
       value =
           "execution(* org.verwandlung.voj.web.controller.AdministrationController.*Action(..)) &&"
-              + " args(.., request)")
+              + " args(.., request)",
+      argNames = "proceedingJoinPoint,request"
+  )
   public Map<String, Object> AdministrationActionInterceptor(
       ProceedingJoinPoint proceedingJoinPoint, HttpServletRequest request) throws Throwable {
     Map<String, Object> result = null;
