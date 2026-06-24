@@ -182,8 +182,8 @@
 	<select id="getAcceptedSubmissionOfProblems" 
 		parameterType="map"
 		resultMap="SubmissionResultMap">
-		SELECT submission_id, problem_id, submission_judge_result 
-		FROM voj_submissions 
+		SELECT MAX(submission_id) AS submission_id, problem_id, MAX(submission_judge_result) AS submission_judge_result
+		FROM voj_submissions
 		WHERE uid = #{uid} AND problem_id &gt;= #{problemIdLowerBound} AND problem_id &lt;= #{problemIdUpperBound} AND submission_judge_result = 'AC'
 		GROUP BY problem_id
 	</select>

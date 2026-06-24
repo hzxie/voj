@@ -47,6 +47,7 @@
 		NATURAL JOIN voj_problem_tags
 		WHERE problem_id &gt;= #{problemIdLowerBound}
 		AND problem_id &lt;= #{problemIdUpperBound}
+		ORDER BY problem_id, problem_tag_id
 	</select>
 	<select id="getProblemTagUsingTagSlug"
 		parameterType="String"

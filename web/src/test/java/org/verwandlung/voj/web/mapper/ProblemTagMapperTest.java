@@ -143,8 +143,8 @@ public class ProblemTagMapperTest {
     Assertions.assertEquals(5, problemTagRelationships.size());
 
     ProblemTagRelationship ptr = problemTagRelationships.get(0);
-    Assertions.assertEquals(ptr.getProblemId(), 1000);
-    Assertions.assertEquals(ptr.getProblemTagId(), 1);
+    Assertions.assertEquals(1000, ptr.getProblemId());
+    Assertions.assertEquals(1, ptr.getProblemTagId());
   }
 
   /** 测试用例: 测试createProblemTag(ProblemTag)方法 测试数据: 使用合法的数据集, 并且数据表中不存在相同的英文缩写 预期结果: 数据插入操作成功完成 */
