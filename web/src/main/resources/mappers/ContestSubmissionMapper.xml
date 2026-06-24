@@ -36,10 +36,11 @@
 	<select id="getSubmissionOfContestOfContest"
 		parameterType="map"
 		resultMap="ContestSubmissionResultMap">
-		SELECT * 
+		SELECT *
 		FROM voj_contest_submissions
 		NATURAL JOIN voj_submissions
 		WHERE contest_id = #{contestId}
+		AND uid = #{contestantUid}
 	</select>
 	<select id="getSubmissionOfContestOfContestProblem"
 		parameterType="map"
@@ -49,6 +50,7 @@
 		NATURAL JOIN voj_submissions
 		WHERE contest_id = #{contestId}
 		AND problem_id = #{problemId}
+		AND uid = #{contestantUid}
 		ORDER BY submission_id DESC
 	</select>
 	<insert id="createContestSubmission" 

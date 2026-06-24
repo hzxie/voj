@@ -28,38 +28,38 @@ import java.util.List;
  */
 public interface ContestSubmissionMapper {
   /**
-   * 获取某场竞赛的提交记录.
+   * Gets the submissions of a contest.
    *
-   * @param contestId - 竞赛的唯一标识符
-   * @return 包含竞赛提交记录(ContestSubmission)的List对象
+   * @param contestId - the unique identifier of the contest
+   * @return a List object containing the contest submissions (ContestSubmission)
    */
   List<ContestSubmission> getSubmissionsOfContest(@Param("contestId") long contestId);
 
   /**
-   * 获取某场竞赛AC的提交记录.
+   * Gets the accepted submissions of a contest.
    *
-   * @param contestId - 竞赛的唯一标识符
-   * @return 包含AC竞赛提交记录(ContestSubmission)的List对象
+   * @param contestId - the unique identifier of the contest
+   * @return a List object containing the accepted contest submissions (ContestSubmission)
    */
   List<ContestSubmission> getAcceptedSubmissionsOfContest(@Param("contestId") long contestId);
 
   /**
-   * 获取某场竞赛某个参赛者的提交记录.
+   * Gets the submissions of a contestant in a contest.
    *
-   * @param contestId - 竞赛的唯一标识符
-   * @param contestantUid - 参赛者用户的唯一标识符
-   * @return 包含某竞赛某参赛者提交记录(ContestSubmission)的List对象
+   * @param contestId - the unique identifier of the contest
+   * @param contestantUid - the unique identifier of the contestant
+   * @return a List object containing the contest submissions (ContestSubmission) of the contestant
    */
   List<ContestSubmission> getSubmissionOfContestOfContest(
       @Param("contestId") long contestId, @Param("contestantUid") long contestantUid);
 
   /**
-   * 获取某场竞赛某个参赛者对某个试题的提交记录.
+   * Gets the submissions of a contestant for a problem in a contest.
    *
-   * @param contestId - 竞赛的唯一标识符
-   * @param problemId - 试题的唯一标识符
-   * @param contestantUid - 参赛者用户的唯一标识符
-   * @return 包含某竞赛某参赛者提交记录(ContestSubmission)的List对象
+   * @param contestId - the unique identifier of the contest
+   * @param problemId - the unique identifier of the problem
+   * @param contestantUid - the unique identifier of the contestant
+   * @return a List object containing the contest submissions (ContestSubmission) of the contestant
    */
   List<ContestSubmission> getSubmissionOfContestOfContestProblem(
       @Param("contestId") long contestId,
@@ -67,18 +67,18 @@ public interface ContestSubmissionMapper {
       @Param("contestantUid") long contestantUid);
 
   /**
-   * 创建提交记录.
+   * Creates a submission.
    *
-   * @param contestSubmission - 待创建的提交记录
+   * @param contestSubmission - the submission to create
    */
   int createContestSubmission(ContestSubmission contestSubmission);
 
   /**
-   * 删除竞赛提交记录.
+   * Deletes a contest submission.
    *
-   * @param contestId - 竞赛的唯一标识符
-   * @param submissionId - 提交记录的唯一标识符
+   * @param contestId - the unique identifier of the contest
+   * @param submissionId - the unique identifier of the submission
    */
-  int deleteContestSubssion(
+  int deleteContestSubmission(
       @Param("contestId") long contestId, @Param("submissionId") long submissionId);
 }

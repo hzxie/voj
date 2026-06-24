@@ -33,9 +33,10 @@
         WHERE message_id = #{messageId}
     </select>
     <insert id="createBulletinBoardMessage"
-            parameterType="org.verwandlung.voj.web.model.BulletinBoardMessage">
+            parameterType="org.verwandlung.voj.web.model.BulletinBoardMessage"
+            useGeneratedKeys="true" keyProperty="messageId">
         INSERT INTO voj_bulletin_board_messages(message_title, message_body, message_create_time)
-        VALUES (messageTitle, messageBody, messageCreateTime)
+        VALUES (#{messageTitle}, #{messageBody}, #{messageCreateTime})
     </insert>
     <update id="updateBulletinBoardMessage"
             parameterType="org.verwandlung.voj.web.model.BulletinBoardMessage">
