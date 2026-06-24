@@ -29,6 +29,7 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.ModelAndView;
 
 import org.verwandlung.voj.web.model.Option;
@@ -44,6 +45,7 @@ import org.verwandlung.voj.web.util.LocaleUtils;
  * @author Haozhe Xie
  */
 @Aspect
+@Component
 public class ViewAspect {
   /**
    * 加载已登录用户的个人信息及答题情况.

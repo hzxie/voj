@@ -26,6 +26,7 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.ModelAndView;
 
 import org.springframework.web.servlet.view.RedirectView;
@@ -39,6 +40,7 @@ import org.verwandlung.voj.web.service.UserService;
  * @author Haozhe Xie
  */
 @Aspect
+@Component
 public class InterceptorAspect {
   /**
    * 控制板视图的切面. 用于检查用户是否有权限加载控制板视图.

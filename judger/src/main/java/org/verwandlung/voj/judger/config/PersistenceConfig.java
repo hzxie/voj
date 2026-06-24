@@ -1,0 +1,67 @@
+/* Verwandlung Online Judge - A cross-platform judge online system
+ * Copyright (C) 2014-2026 Haozhe Xie <root@haozhexie.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+package org.verwandlung.voj.judger.config;
+
+import javax.sql.DataSource;
+
+import com.alibaba.druid.pool.DruidDataSource;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+/**
+ * 持久层配置. 取代原 application-context.xml 中的 Druid 数据源定义.
+ *
+ * @author Haozhe Xie
+ */
+@Configuration
+public class PersistenceConfig {
+  /** Druid 数据库连接池. MyBatis 自动配置会复用此数据源. */
+  @Bean(initMethod = "init", destroyMethod = "close")
+  public DataSource dataSource(
+      @Value("${jdbc.driverClassName}") String driverClassName,
+      @Value("${jdbc.url}") String url,
+      @Value("${jdbc.username}") String username,
+      @Value("${jdbc.password}") String password,
+      @Value("${jdbc.initialSize}") int initialSize,
+      @Value("${jdbc.maxActive}") int maxActive,
+      @Value("${jdbc.minIdle}") int minIdle,
+      @Value("${jdbc.maxWait}") long maxWait,
+      @Value("${jdbc.timeBetweenEvictionRunsMillis}") long timeBetweenEvictionRunsMillis,
+      @Value("${jdbc.minEvictableIdleTimeMillis}") long minEvictableIdleTimeMillis,
+      @Value("${jdbc.removeAbandoned}") boolean removeAbandoned,
+      @Value("${jdbc.removeAbandonedTimeout}") int removeAbandonedTimeout) {
+    DruidDataSource dataSource = new DruidDataSource();
+    dataSource.setDriverClassName(driverClassName);
+    dataSource.setUrl(url);
+    dataSource.setUsername(username);
+    dataSource.setPassword(password);
+    dataSource.setInitialSize(initialSize);
+    dataSource.setMaxActive(maxActive);
+    dataSource.setMinIdle(minIdle);
+    dataSource.setMaxWait(maxWait);
+    dataSource.setTimeBetweenEvictionRunsMillis(timeBetweenEvictionRunsMillis);
+    dataSource.setMinEvictableIdleTimeMillis(minEvictableIdleTimeMillis);
+    dataSource.setRemoveAbandoned(removeAbandoned);
+    dataSource.setRemoveAbandonedTimeout(removeAbandonedTimeout);
+    dataSource.setValidationQuery("SELECT 1");
+    dataSource.setTestWhileIdle(true);
+    dataSource.setTestOnBorrow(true);
+    dataSource.setTestOnReturn(true);
+    return dataSource;
+  }
+}

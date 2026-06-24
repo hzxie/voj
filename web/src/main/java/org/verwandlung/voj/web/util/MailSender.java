@@ -44,7 +44,7 @@ import org.springframework.web.servlet.view.freemarker.FreeMarkerConfigurer;
  *
  * @author Haozhe Xie
  */
-@Component
+@Component("vojMailSender")
 public class MailSender {
   /**
    * MailSender的构造函数.

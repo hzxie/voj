@@ -95,7 +95,7 @@ For Web Application (including Database and Message Queue):
 - **Database**: [MySQL](http://www.mysql.com) 8.0+ or [MariaDB](https://mariadb.org/) 10.4+
 - **Java Runtime**: [JDK](https://adoptium.net) 17+ (Spring Framework 7 supports JDK 17–25)
 - **Message Queue**: [ActiveMQ](http://activemq.apache.org) 6.0+ (Jakarta JMS)
-- **Web Server**: [Tomcat](http://tomcat.apache.org) 11+ (Jakarta Servlet 6.1)
+- **Web Server**: none required — the web application is a Spring Boot executable WAR with an embedded [Tomcat](http://tomcat.apache.org) 11 (Jakarta Servlet 6.1). It can still be deployed to a standalone Tomcat 11+ if preferred.
 
 For Judger:
 
@@ -226,15 +226,19 @@ Edit the values in `/WEB-INF/classes/voj.properties` of the file `voj.web.war`.
 
 You can open it with archive manager software such as `WinRAR`.
 
-After then, you can copy this file `voj.web.war` to `TOMCAT_HOME/webapps`.
-
-**IMPORTANT:** For Windows users, please edit `server.xml` of your Tomcat configuration:
+`voj.web.war` is a self-contained Spring Boot executable WAR (embedded Tomcat),
+so you can simply run it:
 
 ```
-<Connector connectionTimeout="20000" port="8080" protocol="HTTP/1.1"
-    redirectPort="8443" useBodyEncodingForURI="true">
-</Connector>
+java -jar voj.web.war
 ```
+
+The application listens on `http://localhost:8080/voj` by default. Configuration
+files placed next to the WAR (e.g. an external `application.properties` or
+`voj.properties`) override the bundled defaults.
+
+If you would rather deploy to a standalone servlet container, the same WAR can be
+dropped into `TOMCAT_HOME/webapps` of a Tomcat 11+ instance.
 
 #### Setup the Judger
 

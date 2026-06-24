@@ -41,7 +41,7 @@ network instead.
 # Create a network once
 docker network create voj
 
-# Web (MySQL + Tomcat + ActiveMQ live here)
+# Web (MySQL + ActiveMQ + the Spring Boot web app with embedded Tomcat live here)
 docker run -d --name voj.web --network voj -p 8080:8080 zjhzxhz/voj.web
 
 # Judger (resolves "voj.web" over the shared network)
