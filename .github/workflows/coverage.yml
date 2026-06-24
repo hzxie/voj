@@ -1,0 +1,69 @@
+name: Coverage
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+          MYSQL_DATABASE: test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+
+      - name: Import test database schema
+        run: mysql -h 127.0.0.1 -P 3306 -u root test < voj.sql
+
+      - name: Prepare judger test configuration
+        run: cp judger/src/test/resources/voj-test-linux.properties judger/src/test/resources/voj-test.properties
+
+      - name: Create sandbox system user
+        # The judger Runner lowers privileges to this account (see
+        # system.username / system.password in the test properties).
+        run: |
+          sudo useradd -m appveyor
+          echo 'appveyor:Fx8eHPNesxhpmdru' | sudo chpasswd
+
+      - name: Run tests with coverage
+        # judger compiles its JNI library and uses setuid to drop privileges,
+        # so the reactor runs as root. HOME/JAVA_HOME/PATH are preserved so the
+        # cached ~/.m2 repository and the selected JDK are reused.
+        run: |
+          sudo env \
+            "HOME=$HOME" \
+            "JAVA_HOME=$JAVA_HOME" \
+            "PATH=$PATH" \
+            mvn -B test -Dmaven.repo.local="$HOME/.m2/repository"
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: web/target/site/jacoco/jacoco.xml,judger/target/site/jacoco/jacoco.xml
+          fail_ci_if_error: false

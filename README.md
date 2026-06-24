@@ -3,7 +3,7 @@
 [![codefactor badge](https://www.codefactor.io/repository/github/hzxie/voj/badge)](https://www.codefactor.io/repository/github/hzxie/voj)
 [![Build status](https://ci.appveyor.com/api/projects/status/j62ns9p8whttittm?svg=true)](https://ci.appveyor.com/project/hzxie/voj)
 [![CircleCI](https://dl.circleci.com/status-badge/img/circleci/SxfxeEFFqyS3JM5ftpk7cK/DNyawsGdEXznk4GzmBs8dx/tree/master.svg?style=shield)](https://dl.circleci.com/status-badge/redirect/circleci/SxfxeEFFqyS3JM5ftpk7cK/DNyawsGdEXznk4GzmBs8dx/tree/master)
-[![Coverage Status](https://coveralls.io/repos/hzxie/voj/badge.svg?branch=master&service=github)](https://coveralls.io/github/hzxie/voj?branch=master)
+[![codecov](https://codecov.io/gh/hzxie/voj/branch/master/graph/badge.svg)](https://codecov.io/gh/hzxie/voj)
 [![Docker Pulls](https://img.shields.io/docker/pulls/zjhzxhz/voj.web.svg)](https://hub.docker.com/r/zjhzxhz/voj.web)
 ![badgegen](https://api.infinitescript.com/badgen/count.svg?name=hzxie/voj)
 

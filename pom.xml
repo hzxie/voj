@@ -32,6 +32,7 @@
 		<druid.version>1.2.28</druid.version>
 		<jsoup.version>1.22.2</jsoup.version>
 		<commons-io.version>2.22.0</commons-io.version>
+		<jacoco.version>0.8.13</jacoco.version>
 	</properties>
 
 	<dependencyManagement>
@@ -58,4 +59,32 @@
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
+
+	<build>
+		<plugins>
+			<!-- Collect test coverage (jacoco.exec) and emit an XML report under
+			     each module's target/site/jacoco/ for upload to Codecov. Spring
+			     Boot 4 no longer manages the plugin version, so it is pinned. -->
+			<plugin>
+				<groupId>org.jacoco</groupId>
+				<artifactId>jacoco-maven-plugin</artifactId>
+				<version>${jacoco.version}</version>
+				<executions>
+					<execution>
+						<id>prepare-agent</id>
+						<goals>
+							<goal>prepare-agent</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>report</id>
+						<phase>test</phase>
+						<goals>
+							<goal>report</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
 </project>
