@@ -14,8 +14,6 @@
 		<mybatis.version>3.5.19</mybatis.version>
 		<druid.version>1.2.28</druid.version>
 		<activemq.version>6.2.6</activemq.version>
-		<sonar.organization>hzxie</sonar.organization>
-		<sonar.host.url>https://sonarcloud.io</sonar.host.url>
 	</properties>
 	<dependencies>
 		<!-- Spring -->
