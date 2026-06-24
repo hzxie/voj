@@ -1,0 +1,14 @@
+# Keep the Docker build context small and reproducible.
+.git
+.github
+.circleci
+appveyor.yml
+
+# Build artifacts
+**/target
+
+# Editor / OS noise
+**/.idea
+**/*.iml
+**/node_modules
+**/.DS_Store

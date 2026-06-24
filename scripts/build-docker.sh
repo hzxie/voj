@@ -2,10 +2,8 @@
 #
 # Build Docker images for Verwandlung Online Judge (web + judger).
 #
-# NOTE: the Dockerfiles under docker/ clone the source from GitHub
-# (github.com/hzxie/voj) at build time, so they build the published branch,
-# NOT your local working tree. Push your changes before building if you want
-# them included.
+# The Dockerfiles build from this repository as the build context (your local
+# working tree), so local changes are included without pushing first.
 #
 # Usage:
 #   scripts/build-docker.sh            # build both images
@@ -32,12 +30,12 @@ fi
 
 build_web() {
   echo "==> Building web image: ${WEB_IMAGE}"
-  docker build -t "${WEB_IMAGE}" -f docker/web/Dockerfile docker/web
+  docker build -t "${WEB_IMAGE}" -f docker/web/Dockerfile .
 }
 
 build_judger() {
   echo "==> Building judger image: ${JUDGER_IMAGE}"
-  docker build -t "${JUDGER_IMAGE}" -f docker/judger/Dockerfile docker/judger
+  docker build -t "${JUDGER_IMAGE}" -f docker/judger/Dockerfile .
 }
 
 case "$TARGET" in

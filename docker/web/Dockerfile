@@ -1,6 +1,9 @@
 # Dockerfile for Verwandlung Online Judge - Web
-FROM ubuntu:24.04
-MAINTAINER Haozhe Xie "root@haozhexie.com"
+#
+# Build context is the repository root, e.g.:
+#   docker build -t zjhzxhz/voj.web -f docker/web/Dockerfile .
+FROM ubuntu:26.04
+LABEL org.opencontainers.image.authors="Haozhe Xie <root@haozhexie.com>"
 
 # User Settings
 ARG MYSQL_ROOT_PASS=dBuZNz6tDKhgZjHX
@@ -11,26 +14,34 @@ ARG MAIL_USERNAME=postmaster@verwandlung.org
 ARG MAIL_PASSWORD=passwd
 
 # Set environment variables.
-ENV HOME          /root
-ENV JAVA_HOME     /usr/lib/jvm/java-21-openjdk-amd64
-ENV M2_HOME       /opt/maven
+# TARGETARCH is provided by BuildKit (amd64 / arm64) and matches the Ubuntu
+# OpenJDK directory suffix, so the image builds natively on both.
+ARG TARGETARCH
+ENV HOME=/root
+ENV JAVA_HOME=/usr/lib/jvm/java-25-openjdk-${TARGETARCH}
+ENV M2_HOME=/opt/maven
 
 # Define working directory.
-WORKDIR           /root
+WORKDIR /root
 
-# Install MySQL and Set up MySQL
+# Install system packages in a single layer and drop the apt cache.
 RUN apt-get update && \
-    apt-get install -y mariadb-server mariadb-client && \
-    sed -i "s/127\.0\.0\.1/0.0.0.0/g" /etc/mysql/mariadb.conf.d/50-server.cnf
-RUN /etc/init.d/mariadb start && \
-    /usr/bin/mysqladmin -u root password '${MYSQL_ROOT_PASS}' && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        ca-certificates wget curl \
+        mariadb-server mariadb-client \
+        openjdk-25-jdk \
+        supervisor && \
+    rm -rf /var/lib/apt/lists/*
+
+# Set up MariaDB
+RUN sed -i "s/127\.0\.0\.1/0.0.0.0/g" /etc/mysql/mariadb.conf.d/50-server.cnf && \
+    /etc/init.d/mariadb start && \
+    mysqladmin -u root password "${MYSQL_ROOT_PASS}" && \
     mysql -e "CREATE DATABASE voj" && \
     mysql -e "GRANT SELECT, INSERT, UPDATE, DELETE ON voj.* TO 'voj'@'%' IDENTIFIED BY '${MYSQL_USER_PASS}'"
 
-# Install Java
-RUN apt-get install -y openjdk-21-jdk wget curl && \
-# Determine the versions of dependencies
-    MAVEN_VERSION=$(curl -s https://maven.apache.org/download.cgi | grep -oP 'apache-maven-\K[0-9]+\.[0-9]+\.[0-9]+' | head -1) && \
+# Install Maven, ActiveMQ and Tomcat
+RUN MAVEN_VERSION=$(curl -s https://maven.apache.org/download.cgi | grep -oP 'apache-maven-\K[0-9]+\.[0-9]+\.[0-9]+' | head -1) && \
     ACTIVEMQ_VERSION=$(curl -s https://activemq.apache.org/components/classic/download/ | grep -oP 'apache-activemq-\K[0-9]+\.[0-9]+\.[0-9]+' | head -1) && \
     TOMCAT_VERSION=$(curl -s https://tomcat.apache.org/download-11.cgi | grep -oP 'apache-tomcat-\K[0-9]+\.[0-9]+\.[0-9]+' | head -1) && \
     TOMCAT_MAJOR=$(echo $TOMCAT_VERSION | cut -d. -f1) && \
@@ -57,10 +68,9 @@ RUN apt-get install -y openjdk-21-jdk wget curl && \
     chown -R tomcat:tomcat /opt/tomcat && \
     rm apache-tomcat-${TOMCAT_VERSION}.tar.gz
 
-# Setup Web Project
-RUN apt-get install -y git && \
-    git clone https://github.com/hzxie/voj.git && \
-    $M2_HOME/bin/mvn package -DskipTests -f voj/web/pom.xml && \
+# Build the web project from the build context (no network checkout).
+COPY . /root/voj
+RUN $M2_HOME/bin/mvn package -DskipTests -f voj/web/pom.xml && \
     cp -R voj/web/target/voj.web /opt/tomcat/webapps/voj && \
     sed -i "s@localhost:8080/voj@${WEBSITE_URL}@g" /opt/tomcat/webapps/voj/WEB-INF/classes/voj.properties && \
     sed -i "s/jdbc.username = root/jdbc.username = voj/g" /opt/tomcat/webapps/voj/WEB-INF/classes/voj.properties && \
@@ -77,7 +87,6 @@ EXPOSE 8080
 EXPOSE 61616
 
 # Run MySQL, Tomcat and ActiveMQ
-RUN apt-get install -y supervisor
 RUN mkdir -p /var/log/supervisor
-COPY supervisord.conf /etc/supervisord.conf 
+COPY docker/web/supervisord.conf /etc/supervisord.conf
 CMD ["/usr/bin/supervisord"]
