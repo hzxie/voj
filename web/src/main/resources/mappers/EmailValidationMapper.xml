@@ -13,21 +13,18 @@
 	<!-- Methods -->
 	<select id="getEmailValidation" 
 		parameterType="String"
-		resultMap="EmailValidationResultMap" 
-		useCache="true">
+		resultMap="EmailValidationResultMap">
 		SELECT * 
 		FROM voj_email_validation 
 		WHERE email = #{email}
 	</select>
 	<insert id="createEmailValidation" 
-		parameterType="org.verwandlung.voj.web.model.EmailValidation"
-		flushCache="true">
+		parameterType="org.verwandlung.voj.web.model.EmailValidation">
 		INSERT INTO voj_email_validation (email, token, expire_time) 
 		VALUES (#{email}, #{token}, #{expireTime})
 	</insert>
 	<delete id="deleteEmailValidation"
-		parameterType="String"
-		flushCache="true">
+		parameterType="String">
 		DELETE FROM voj_email_validation 
 		WHERE email = #{email}
 	</delete>

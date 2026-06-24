@@ -16,7 +16,6 @@
  */
 package org.verwandlung.voj.web.mapper;
 
-import org.apache.ibatis.annotations.CacheNamespace;
 import org.apache.ibatis.annotations.Param;
 import org.verwandlung.voj.web.model.DiscussionThread;
 
@@ -27,7 +26,6 @@ import java.util.List;
  *
  * @author Haozhe Xie
  */
-@CacheNamespace(implementation = org.mybatis.caches.ehcache.EhcacheCache.class)
 public interface DiscussionThreadMapper {
   /**
    * 获取全部的讨论帖子

@@ -13,23 +13,20 @@
 	
 	<!-- Methods -->
 	<select id="getUserGroups"
-		resultMap="UserGroupResultMap"
-		useCache="true">
+		resultMap="UserGroupResultMap">
 		SELECT *
 		FROM voj_user_groups
 	</select>
 	<select id="getUserGroupUsingId" 
 		parameterType="int"
-		resultMap="UserGroupResultMap"
-		useCache="true">
+		resultMap="UserGroupResultMap">
 		SELECT * 
 		FROM voj_user_groups 
 		WHERE user_group_id = #{userGroupId}
 	</select>
 	<select id="getUserGroupUsingSlug" 
 		parameterType="String"
-		resultMap="UserGroupResultMap"
-		useCache="true">
+		resultMap="UserGroupResultMap">
 		SELECT * 
 		FROM voj_user_groups 
 		WHERE user_group_slug = #{userGroupSlug}

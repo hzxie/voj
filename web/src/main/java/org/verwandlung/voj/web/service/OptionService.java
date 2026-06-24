@@ -26,9 +26,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.alibaba.fastjson.JSON;
 import org.verwandlung.voj.web.mapper.OptionMapper;
 import org.verwandlung.voj.web.model.Option;
+import org.verwandlung.voj.web.util.JsonUtils;
 
 /**
  * 系统管理服务. 用于完成整个系统的管理功能.
@@ -118,7 +118,7 @@ public class OptionService {
       optionMap.put("icpNumber", icpNumber);
       optionMap.put("policeIcpNumber", policeIcpNumber);
       optionMap.put("allowUserRegister", allowUserRegister ? "1" : "0");
-      optionMap.put("offensiveWords", JSON.toJSONString(offensiveWords.split(",")));
+      optionMap.put("offensiveWords", JsonUtils.toJsonString(offensiveWords.split(",")));
       updateOptions(optionMap);
     }
     result.put("isSuccessful", isSuccessful);

@@ -21,23 +21,20 @@
 
 	<!-- Methods -->
 	<select id="getProblemCategories"
-		resultMap="ProblemCategoryResultMap"
-		useCache="true">
+		resultMap="ProblemCategoryResultMap">
 		SELECT *
 		FROM voj_problem_categories
 	</select>
 	<select id="getProblemCategoryUsingCategoryId"
 		parameterType="int"
-		resultMap="ProblemCategoryResultMap"
-		useCache="true">
+		resultMap="ProblemCategoryResultMap">
 		SELECT *
 		FROM voj_problem_categories
 		WHERE problem_category_id = #{problemCategoryId}
 	</select>
 	<select id="getProblemCategoriesUsingProblemId"
 		parameterType="long"
-		resultMap="ProblemCategoryResultMap"
-		useCache="true">
+		resultMap="ProblemCategoryResultMap">
 		SELECT *
 		FROM voj_problem_category_relationships
 		NATURAL JOIN voj_problem_categories
@@ -45,8 +42,7 @@
 	</select>
 	<select id="getProblemCategoriesOfProblems"
 		parameterType="map"
-		resultMap="ProblemCategoryRelationshipResultMap"
-		useCache="true">
+		resultMap="ProblemCategoryRelationshipResultMap">
 		SELECT *
 		FROM voj_problem_category_relationships
 		NATURAL JOIN voj_problem_categories
@@ -55,15 +51,13 @@
 	</select>
 	<select id="getProblemCategoryUsingCategorySlug"
 		parameterType="String"
-		resultMap="ProblemCategoryResultMap"
-		useCache="true">
+		resultMap="ProblemCategoryResultMap">
 		SELECT *
 		FROM voj_problem_categories
 		WHERE problem_category_slug = #{problemCategorySlug}
 	</select>
 	<insert id="createProblemCategory" 
 		parameterType="org.verwandlung.voj.web.model.ProblemCategory"
-		flushCache="true" 
 		keyProperty="problemCategoryId" 
 		keyColumn="problem_category_id"
 		useGeneratedKeys="true">
@@ -71,27 +65,23 @@
 		VALUES (#{problemCategorySlug}, #{problemCategoryName}, #{parentProblemCategoryId})
 	</insert>
 	<insert id="createProblemCategoryRelationship" 
-		parameterType="map"
-		flushCache="true">
+		parameterType="map">
 		INSERT INTO voj_problem_category_relationships (problem_id, problem_category_id) 
 		VALUES (#{problemId}, #{problemCategory.problemCategoryId})
 	</insert>
 	<update id="updateProblemCategory"
-		parameterType="org.verwandlung.voj.web.model.ProblemCategory"
-		flushCache="true">
+		parameterType="org.verwandlung.voj.web.model.ProblemCategory">
 		UPDATE voj_problem_categories 
 		SET problem_category_slug = #{problemCategorySlug}, problem_category_name = #{problemCategoryName}, problem_category_parent_id = #{parentProblemCategoryId}
 		WHERE problem_category_id = #{problemCategoryId}
 	</update>
 	<delete id="deleteProblemCategory"
-		parameterType="int"
-		flushCache="true">
+		parameterType="int">
 		DELETE FROM voj_problem_categories 
 		WHERE problem_category_id = #{problemCategoryId}
 	</delete>
 	<delete id="deleteProblemCategoryRelationship"
-		parameterType="long"
-		flushCache="true">
+		parameterType="long">
 		DELETE FROM voj_problem_category_relationships 
 		WHERE problem_id = #{problemId}
 	</delete>

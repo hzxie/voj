@@ -18,7 +18,6 @@ package org.verwandlung.voj.web.mapper;
 
 import java.util.List;
 
-import org.apache.ibatis.annotations.CacheNamespace;
 import org.apache.ibatis.annotations.Param;
 import org.verwandlung.voj.web.model.ProblemTag;
 import org.verwandlung.voj.web.model.ProblemTagRelationship;
@@ -28,7 +27,6 @@ import org.verwandlung.voj.web.model.ProblemTagRelationship;
  *
  * @author Haozhe Xie
  */
-@CacheNamespace(implementation = org.mybatis.caches.ehcache.EhcacheCache.class)
 public interface ProblemTagMapper {
   /**
    * 获取全部的试题标签.

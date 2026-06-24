@@ -23,16 +23,14 @@
 	<!-- Methods -->
 	<select id="getNumberOfUsersUsingUserGroup" 
 		parameterType="org.verwandlung.voj.web.model.UserGroup"
-		resultType="long"
-		useCache="true">
+		resultType="long">
 		SELECT COUNT(*) 
 		FROM voj_users 
 		WHERE user_group_id = #{userGroup.userGroupId}
 	</select>
 	<select id="getNumberOfUsersUsingUserGroupAndUsername"
 		parameterType="map"
-		resultType="long"
-		useCache="true">
+		resultType="long">
 		SELECT COUNT(*)
 		FROM voj_users
 		<where>
@@ -46,40 +44,35 @@
 	</select>
 	<select id="getNumberOfUsersUsingLanguage" 
 		parameterType="int"
-		resultType="long"
-		useCache="true">
+		resultType="long">
 		SELECT COUNT(*) 
 		FROM voj_users 
 		WHERE prefer_language_id = #{languageId}
 	</select>
 	<select id="getUserUsingUid" 
 		parameterType="long"
-		resultMap="UserResultMap"
-		useCache="true">
+		resultMap="UserResultMap">
 		SELECT * 
 		FROM voj_users 
 		WHERE uid = #{uid}
 	</select>
 	<select id="getUserUsingUsername" 
 		parameterType="String"
-		resultMap="UserResultMap"
-		useCache="true">
+		resultMap="UserResultMap">
 		SELECT * 
 		FROM voj_users 
 		WHERE username = #{username}
 	</select>
 	<select id="getUserUsingEmail" 
 		parameterType="String"
-		resultMap="UserResultMap"
-		useCache="true">
+		resultMap="UserResultMap">
 		SELECT * 
 		FROM voj_users 
 		WHERE email = #{email}
 	</select>
 	<select id="getUserUsingUserGroup" 
 		parameterType="map"
-		resultMap="UserResultMap"
-		useCache="true">
+		resultMap="UserResultMap">
 		SELECT * 
 		FROM voj_users 
 		WHERE user_group_id = #{userGroup.userGroupId}
@@ -88,8 +81,7 @@
 	</select>
 	<select id="getUserUsingUserGroupAndUsername" 
 		parameterType="map"
-		resultMap="UserResultMap"
-		useCache="true">
+		resultMap="UserResultMap">
 		SELECT * 
 		FROM voj_users 
 		<where>
@@ -104,7 +96,6 @@
 	</select>
 	<insert id="createUser" 
 		parameterType="org.verwandlung.voj.web.model.User"
-		flushCache="true" 
 		keyProperty="uid" 
 		keyColumn="uid"
 		useGeneratedKeys="true">
@@ -112,15 +103,13 @@
 		VALUES (#{username}, #{password}, #{email}, #{userGroup.userGroupId}, #{preferLanguage.languageId})
 	</insert>
 	<update id="updateUser"
-		parameterType="org.verwandlung.voj.web.model.User"
-		flushCache="true">
+		parameterType="org.verwandlung.voj.web.model.User">
 		UPDATE voj_users 
 		SET username = #{username}, password = #{password}, email = #{email}, user_group_id = #{userGroup.userGroupId}, prefer_language_id = #{preferLanguage.languageId} 
 		WHERE uid = #{uid}
 	</update>
 	<delete id="deleteUser"
-		parameterType="long"
-		flushCache="true">
+		parameterType="long">
 		DELETE FROM voj_users 
 		WHERE uid = #{uid}
 	</delete>

@@ -18,7 +18,6 @@ package org.verwandlung.voj.web.mapper;
 
 import java.util.List;
 
-import org.apache.ibatis.annotations.CacheNamespace;
 import org.apache.ibatis.annotations.Param;
 
 import org.verwandlung.voj.web.model.Problem;
@@ -28,7 +27,6 @@ import org.verwandlung.voj.web.model.Problem;
  *
  * @author Haozhe Xie
  */
-@CacheNamespace(implementation = org.mybatis.caches.ehcache.EhcacheCache.class)
 public interface ProblemMapper {
   /**
    * [此方法仅供管理员使用] 获取全部试题的总数量.

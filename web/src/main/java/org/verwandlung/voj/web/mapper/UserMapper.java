@@ -18,7 +18,6 @@ package org.verwandlung.voj.web.mapper;
 
 import java.util.List;
 
-import org.apache.ibatis.annotations.CacheNamespace;
 import org.apache.ibatis.annotations.Param;
 
 import org.verwandlung.voj.web.model.User;
@@ -29,7 +28,6 @@ import org.verwandlung.voj.web.model.UserGroup;
  *
  * @author Haozhe Xie
  */
-@CacheNamespace(implementation = org.mybatis.caches.ehcache.EhcacheCache.class)
 public interface UserMapper {
   /**
    * [此方法仅供管理员使用] 获取系统中某个用户组中用户的总数.

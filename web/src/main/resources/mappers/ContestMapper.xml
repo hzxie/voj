@@ -16,8 +16,7 @@
 
 	<!-- Methods -->
 	<select id="getNumberOfContests" 
-		resultType="long" 
-		useCache="true">
+		resultType="long">
 		SELECT COUNT(*) 
 		FROM voj_contests
 		<where>
@@ -28,8 +27,7 @@
 	</select>
 	<select id="getContests" 
 		parameterType="map"
-		resultMap="ContestResultMap" 
-		useCache="true">
+		resultMap="ContestResultMap">
 		SELECT * 
 		FROM voj_contests
 		<where>
@@ -42,28 +40,24 @@
 	</select>
 	<select id="getContest" 
 		parameterType="long"
-		resultMap="ContestResultMap" 
-		useCache="true">
+		resultMap="ContestResultMap">
 		SELECT * 
 		FROM voj_contests 
 		WHERE contest_id = #{contestId}
 	</select>
 	<insert id="createContest" 
-		parameterType="org.verwandlung.voj.web.model.Contest"
-		flushCache="true">
+		parameterType="org.verwandlung.voj.web.model.Contest">
 		INSERT INTO voj_contests (contest_name, contest_notes, contest_start_time, contest_end_time, contest_mode, contest_problems) 
 		VALUES (#{contestName}, #{contestNotes}, #{startTime}, #{endTime}, #{contestMode}, #{problems})
 	</insert>
 	<update id="updateContest" 
-		parameterType="org.verwandlung.voj.web.model.Contest"
-		flushCache="true">
+		parameterType="org.verwandlung.voj.web.model.Contest">
 		UPDATE voj_contests 
 		SET contest_name = #{contestName}, contest_notes = #{contestNotes}, contest_start_time = #{startTime}, contest_end_time = #{endTime}, contest_mode = #{contestMode}, contest_problems = #{problems}
 		WHERE contest_id = #{contestId}
 	</update>
 	<delete id="deleteContest"
-		parameterType="long"
-		flushCache="true">
+		parameterType="long">
 		DELETE FROM voj_contests 
 		WHERE contest_id = #{contestId}
 	</delete>

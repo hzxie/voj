@@ -16,7 +16,6 @@
  */
 package org.verwandlung.voj.web.mapper;
 
-import org.apache.ibatis.annotations.CacheNamespace;
 import org.verwandlung.voj.web.model.DiscussionTopic;
 
 import java.util.List;
@@ -26,7 +25,6 @@ import java.util.List;
  *
  * @author Haozhe Xie
  */
-@CacheNamespace(implementation = org.mybatis.caches.ehcache.EhcacheCache.class)
 public interface DiscussionTopicMapper {
   /**
    * 获取全部的讨论话题.

@@ -16,7 +16,6 @@
  */
 package org.verwandlung.voj.judger.mapper;
 
-import org.apache.ibatis.annotations.CacheNamespace;
 import org.apache.ibatis.annotations.One;
 import org.apache.ibatis.annotations.Options;
 import org.apache.ibatis.annotations.Param;
@@ -33,7 +32,6 @@ import org.verwandlung.voj.judger.model.UserGroup;
  *
  * @author Haozhe Xie
  */
-@CacheNamespace(implementation = org.mybatis.caches.ehcache.EhcacheCache.class)
 public interface UserMapper {
   /**
    * 通过用户名获取用户对象.

@@ -18,8 +18,7 @@
 	<!-- Methods -->
 	<select id="getSubmissionsOfContest"
 		parameterType="long"
-		resultMap="ContestSubmissionResultMap"
-		useCache="true">
+		resultMap="ContestSubmissionResultMap">
 		SELECT * 
 		FROM voj_contest_submissions
 		NATURAL JOIN voj_submissions
@@ -27,8 +26,7 @@
 	</select>
 	<select id="getAcceptedSubmissionsOfContest"
 		parameterType="long"
-		resultMap="ContestSubmissionResultMap"
-		useCache="true">
+		resultMap="ContestSubmissionResultMap">
 		SELECT * 
 		FROM voj_contest_submissions
 		NATURAL JOIN voj_submissions
@@ -37,8 +35,7 @@
 	</select>
 	<select id="getSubmissionOfContestOfContest"
 		parameterType="map"
-		resultMap="ContestSubmissionResultMap"
-		useCache="true">
+		resultMap="ContestSubmissionResultMap">
 		SELECT * 
 		FROM voj_contest_submissions
 		NATURAL JOIN voj_submissions
@@ -46,8 +43,7 @@
 	</select>
 	<select id="getSubmissionOfContestOfContestProblem"
 		parameterType="map"
-		resultMap="ContestSubmissionResultMap"
-		useCache="true">
+		resultMap="ContestSubmissionResultMap">
 		SELECT *
 		FROM voj_contest_submissions
 		NATURAL JOIN voj_submissions
@@ -56,14 +52,12 @@
 		ORDER BY submission_id DESC
 	</select>
 	<insert id="createContestSubmission" 
-		parameterType="org.verwandlung.voj.web.model.ContestSubmission"
-		flushCache="true">
+		parameterType="org.verwandlung.voj.web.model.ContestSubmission">
 		INSERT INTO voj_contest_submissions (contest_id, submission_id)
 		VALUES (#{contest.contestId}, #{submission.submissionId})
 	</insert>
 	<delete id="deleteContestSubmission"
-		parameterType="map"
-		flushCache="true">
+		parameterType="map">
 		DELETE FROM voj_contest_submissions 
 		WHERE contest_id = #{contestId} 
 		AND submission_id = #{submissionId}

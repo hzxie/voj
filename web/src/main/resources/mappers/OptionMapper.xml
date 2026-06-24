@@ -13,29 +13,25 @@
 	
 	<!-- Methods -->
 	<select id="getOptions" 
-		resultMap="OptionResultMap" 
-		useCache="true">
+		resultMap="OptionResultMap">
 		SELECT * 
 		FROM voj_options
 	</select>
 	<select id="getAutoloadOptions" 
-		resultMap="OptionResultMap" 
-		useCache="true">
+		resultMap="OptionResultMap">
 		SELECT * 
 		FROM voj_options 
 		WHERE is_autoload = true
 	</select>
 	<select id="getOption" 
 		parameterType="String"
-		resultMap="OptionResultMap" 
-		useCache="true">
+		resultMap="OptionResultMap">
 		SELECT * 
 		FROM voj_options 
 		WHERE option_name = #{optionName}
 	</select>
 	<update id="updateOption"
-		parameterType="org.verwandlung.voj.web.model.Option"
-		flushCache="true">
+		parameterType="org.verwandlung.voj.web.model.Option">
 		UPDATE voj_options 
 		SET option_name = #{optionName}, option_value = #{optionValue}, is_autoload = #{isAutoload} 
 		WHERE option_id = #{optionId}

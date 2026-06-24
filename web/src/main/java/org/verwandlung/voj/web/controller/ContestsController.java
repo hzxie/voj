@@ -20,7 +20,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 
-import com.alibaba.fastjson.JSON;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,6 +35,7 @@ import org.verwandlung.voj.web.service.SubmissionService;
 import org.verwandlung.voj.web.util.CsrfProtector;
 import org.verwandlung.voj.web.util.HttpRequestParser;
 import org.verwandlung.voj.web.util.HttpSessionParser;
+import org.verwandlung.voj.web.util.JsonUtils;
 
 import java.util.Date;
 import java.util.HashMap;
@@ -116,7 +116,7 @@ public class ContestsController {
 
     boolean isAttended = contestService.isAttendContest(contestId, currentUser);
     long numberOfContestants = contestService.getNumberOfContestantsOfContest(contestId);
-    List<Long> problemIdList = JSON.parseArray(contest.getProblems(), Long.class);
+    List<Long> problemIdList = JsonUtils.toList(contest.getProblems(), Long.class);
     List<Problem> problems = contestService.getProblemsOfContests(problemIdList);
     Map<Long, ContestSubmission> submissions =
         contestService.getSubmissionsOfContestantOfContest(contestId, currentUser);
@@ -184,7 +184,7 @@ public class ContestsController {
       throw new ResourceNotFoundException();
     }
 
-    List<Long> problemIdList = JSON.parseArray(contest.getProblems(), Long.class);
+    List<Long> problemIdList = JsonUtils.toList(contest.getProblems(), Long.class);
     List<Problem> problems = contestService.getProblemsOfContests(problemIdList);
     ModelAndView view = null;
     Map<String, Object> result = null;
@@ -230,7 +230,7 @@ public class ContestsController {
       throw new ResourceNotFoundException();
     }
     // 试题不存在于竞赛试题列表中
-    List<Long> problems = JSON.parseArray(contest.getProblems(), Long.class);
+    List<Long> problems = JsonUtils.toList(contest.getProblems(), Long.class);
     if (!problems.contains(problemId)) {
       throw new ResourceNotFoundException();
     }

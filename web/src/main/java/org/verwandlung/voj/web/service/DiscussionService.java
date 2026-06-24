@@ -16,9 +16,7 @@
  */
 package org.verwandlung.voj.web.service;
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONArray;
-import com.alibaba.fastjson.JSONObject;
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +26,7 @@ import org.verwandlung.voj.web.mapper.DiscussionTopicMapper;
 import org.verwandlung.voj.web.mapper.ProblemMapper;
 import org.verwandlung.voj.web.model.*;
 import org.verwandlung.voj.web.util.HtmlTextFilter;
+import org.verwandlung.voj.web.util.JsonUtils;
 import org.verwandlung.voj.web.util.OffensiveWordFilter;
 
 import java.util.*;
@@ -143,7 +142,7 @@ public class DiscussionService {
       // 获取回复中的投票信息
       Map<String, Object> votesStatistics =
           getVoteStatisticsOfDiscussionReply(dr.getDiscussionReplyVotes(), currentUserUid);
-      dr.setDiscussionReplyVotes(JSON.toJSONString(votesStatistics));
+      dr.setDiscussionReplyVotes(JsonUtils.toJsonString(votesStatistics));
     }
     return replies;
   }
@@ -158,12 +157,12 @@ public class DiscussionService {
   private Map<String, Object> getVoteStatisticsOfDiscussionReply(
       String votes, long currentUserUid) {
     Map<String, Object> votesStatistics = new HashMap<>(5, 1);
-    JSONObject voteUsers = JSON.parseObject(votes);
+    Map<String, List<Long>> voteUsers = parseVoteUsers(votes);
 
-    JSONArray voteUpUsers = voteUsers.getJSONArray("up");
-    JSONArray voteDownUsers = voteUsers.getJSONArray("down");
-    boolean isVotedUp = currentUserUid == -1 ? false : contains(voteUpUsers, currentUserUid);
-    boolean isVotedDown = currentUserUid == -1 ? false : contains(voteDownUsers, currentUserUid);
+    List<Long> voteUpUsers = voteUsers.get("up");
+    List<Long> voteDownUsers = voteUsers.get("down");
+    boolean isVotedUp = currentUserUid != -1 && voteUpUsers.contains(currentUserUid);
+    boolean isVotedDown = currentUserUid != -1 && voteDownUsers.contains(currentUserUid);
 
     votesStatistics.put("isVotedUp", isVotedUp);
     votesStatistics.put("isVotedDown", isVotedDown);
@@ -173,19 +172,13 @@ public class DiscussionService {
   }
 
   /**
-   * 判断一个值是否存在于一个JSONArray对象中. 为了修复JSONArray自带contains方法的Bug. 使用场景: 判断一个用户的UID是否存在于Vote列表中.
+   * 将讨论回复投票信息的JSON字符串解析为投票用户列表. 投票信息的格式为{"up": [uid, ...], "down": [uid, ...]}.
    *
-   * @param jsonArray - 待判断的JSONArray对象
-   * @param value - 待检查的值
-   * @return 一个值是否存在于一个JSONArray对象中
+   * @param votes - 讨论回复投票信息的JSON格式字符串
+   * @return 包含"up"和"down"两个键的投票用户UID列表的Map对象
    */
-  private boolean contains(JSONArray jsonArray, long value) {
-    for (int i = 0; i < jsonArray.size(); ++i) {
-      if (jsonArray.getLong(i) == value) {
-        return true;
-      }
-    }
-    return false;
+  private Map<String, List<Long>> parseVoteUsers(String votes) {
+    return JsonUtils.toObject(votes, new TypeReference<Map<String, List<Long>>>() {});
   }
 
   /**
@@ -246,43 +239,30 @@ public class DiscussionService {
     if (result.get("isSuccessful")) {
       synchronized (this) {
         // 设置新的投票结果
-        JSONObject voteUsers = JSON.parseObject(discussionReply.getDiscussionReplyVotes());
-        JSONArray voteUpUsers = voteUsers.getJSONArray("up");
-        JSONArray voteDownUsers = voteUsers.getJSONArray("down");
-        boolean isVotedUp = contains(voteUpUsers, currentUser.getUid());
-        boolean isVotedDown = contains(voteDownUsers, currentUser.getUid());
+        Map<String, List<Long>> voteUsers =
+            parseVoteUsers(discussionReply.getDiscussionReplyVotes());
+        List<Long> voteUpUsers = voteUsers.get("up");
+        List<Long> voteDownUsers = voteUsers.get("down");
+        boolean isVotedUp = voteUpUsers.contains(currentUser.getUid());
+        boolean isVotedDown = voteDownUsers.contains(currentUser.getUid());
 
         if (voteUp == 1 && !isVotedUp) {
-          if (isVotedDown) remove(voteDownUsers, currentUser.getUid());
+          if (isVotedDown) voteDownUsers.remove(currentUser.getUid());
           voteUpUsers.add(currentUser.getUid());
         } else if (voteUp == -1) {
-          remove(voteUpUsers, currentUser.getUid());
+          voteUpUsers.remove(currentUser.getUid());
         }
         if (voteDown == 1 && !isVotedDown) {
-          if (isVotedUp) remove(voteUpUsers, currentUser.getUid());
+          if (isVotedUp) voteUpUsers.remove(currentUser.getUid());
           voteDownUsers.add(currentUser.getUid());
         } else if (voteDown == -1) {
-          remove(voteDownUsers, currentUser.getUid());
+          voteDownUsers.remove(currentUser.getUid());
         }
-        discussionReply.setDiscussionReplyVotes(JSON.toJSONString(voteUsers));
+        discussionReply.setDiscussionReplyVotes(JsonUtils.toJsonString(voteUsers));
         discussionReplyMapper.updateDiscussionReply(discussionReply);
       }
     }
     return result;
-  }
-
-  /**
-   * 移除JSONArray对象中的一个值. 为了修复JSONArray自带contains方法的Bug. 使用场景: 从Vote列表中移除某个用户的UID.
-   *
-   * @param jsonArray - 待移除值的JSONArray对象
-   * @param value - 待移除的值
-   */
-  private void remove(JSONArray jsonArray, long value) {
-    for (int i = 0; i < jsonArray.size(); ++i) {
-      if (jsonArray.getLong(i) == value) {
-        jsonArray.remove(i);
-      }
-    }
   }
 
   /**

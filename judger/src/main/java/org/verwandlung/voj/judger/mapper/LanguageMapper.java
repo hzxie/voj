@@ -18,7 +18,6 @@ package org.verwandlung.voj.judger.mapper;
 
 import java.util.List;
 
-import org.apache.ibatis.annotations.CacheNamespace;
 import org.apache.ibatis.annotations.Options;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Result;
@@ -32,7 +31,6 @@ import org.verwandlung.voj.judger.model.Language;
  *
  * @author Haozhe Xie
  */
-@CacheNamespace(implementation = org.mybatis.caches.ehcache.EhcacheCache.class)
 public interface LanguageMapper {
   /**
    * 通过编程语言的唯一标识符获取编程语言对象.

@@ -18,7 +18,6 @@ package org.verwandlung.voj.web.mapper;
 
 import java.util.List;
 
-import org.apache.ibatis.annotations.CacheNamespace;
 import org.apache.ibatis.annotations.Param;
 import org.verwandlung.voj.web.model.ProblemCategory;
 import org.verwandlung.voj.web.model.ProblemCategoryRelationship;
@@ -28,7 +27,6 @@ import org.verwandlung.voj.web.model.ProblemCategoryRelationship;
  *
  * @author Haozhe Xie
  */
-@CacheNamespace(implementation = org.mybatis.caches.ehcache.EhcacheCache.class)
 public interface ProblemCategoryMapper {
   /**
    * 获取全部的试题分类.

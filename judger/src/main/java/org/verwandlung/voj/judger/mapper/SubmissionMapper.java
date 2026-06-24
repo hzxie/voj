@@ -16,7 +16,6 @@
  */
 package org.verwandlung.voj.judger.mapper;
 
-import org.apache.ibatis.annotations.CacheNamespace;
 import org.apache.ibatis.annotations.One;
 import org.apache.ibatis.annotations.Options;
 import org.apache.ibatis.annotations.Param;
@@ -34,7 +33,6 @@ import org.verwandlung.voj.judger.model.Submission;
  *
  * @author Haozhe Xie
  */
-@CacheNamespace(implementation = org.mybatis.caches.ehcache.EhcacheCache.class)
 public interface SubmissionMapper {
   /**
    * 通过评测记录唯一标识符获取试题对象.

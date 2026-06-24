@@ -19,7 +19,6 @@ package org.verwandlung.voj.web.mapper;
 import java.util.Date;
 import java.util.List;
 
-import org.apache.ibatis.annotations.CacheNamespace;
 import org.apache.ibatis.annotations.Param;
 
 import org.verwandlung.voj.web.model.User;
@@ -30,7 +29,6 @@ import org.verwandlung.voj.web.model.UserMeta;
  *
  * @author Haozhe Xie
  */
-@CacheNamespace(implementation = org.mybatis.caches.ehcache.EhcacheCache.class)
 public interface UserMetaMapper {
   /**
    * [此方法仅供管理员使用] 获取系统中某段时间内注册用户的总数.

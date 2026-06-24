@@ -17,8 +17,7 @@
 	<!-- Methods -->
 	<select id="getNumberOfUserRegistered" 
 		parameterType="map"
-		resultType="long"
-		useCache="true">
+		resultType="long">
 		SELECT COUNT(*) 
 		FROM voj_usermeta 
 		WHERE meta_key = 'registerTime' 
@@ -26,23 +25,20 @@
 	</select>
 	<select id="getUserMetaUsingUser" 
 		parameterType="org.verwandlung.voj.web.model.User"
-		resultMap="UserMetaResultMap"
-		useCache="true">
+		resultMap="UserMetaResultMap">
 		SELECT * 
 		FROM voj_usermeta 
 		WHERE uid = #{user.uid}
 	</select>
 	<select id="getUserMetaUsingUserAndMetaKey" 
 		parameterType="map"
-		resultMap="UserMetaResultMap"
-		useCache="true">
+		resultMap="UserMetaResultMap">
 		SELECT * 
 		FROM voj_usermeta 
 		WHERE uid = #{user.uid} AND meta_key = #{metaKey}
 	</select>
 	<insert id="createUserMeta" 
 		parameterType="org.verwandlung.voj.web.model.UserMeta"
-		flushCache="true" 
 		keyProperty="metaId" 
 		keyColumn="meta_id"
 		useGeneratedKeys="true">
@@ -50,15 +46,13 @@
 		VALUES (#{user.uid}, #{metaKey}, #{metaValue})
 	</insert>
 	<update id="updateUserMeta"
-		parameterType="org.verwandlung.voj.web.model.UserMeta"
-		flushCache="true">
+		parameterType="org.verwandlung.voj.web.model.UserMeta">
 		UPDATE voj_usermeta 
 		SET meta_value = #{metaValue} 
 		WHERE meta_id = #{metaId}
 	</update>
 	<delete id="deleteUserMetaUsingUser"
-		parameterType="long"
-		flushCache="true">
+		parameterType="long">
 		DELETE FROM voj_usermeta 
 		WHERE uid = #{uid}
 	</delete>

@@ -19,16 +19,14 @@
 	<!-- Methods -->
 	<select id="getDiscussionReplyUsingReplyId"
 		parameterType="long"
-		resultMap="DiscussionReplyResultMap"
-		useCache="true">
+		resultMap="DiscussionReplyResultMap">
 		SELECT * 
 		FROM voj_discussion_replies
 		WHERE discussion_reply_id = #{discussionReplyId}
 	</select>
 	<select id="getDiscussionRepliesUsingThreadId" 
 		parameterType="map"
-		resultMap="DiscussionReplyResultMap"
-		useCache="true">
+		resultMap="DiscussionReplyResultMap">
 		SELECT * 
 		FROM voj_discussion_replies
 		WHERE discussion_thread_id = #{discussionThreadId}
@@ -37,7 +35,6 @@
 	</select>
 	<insert id="createDiscussionReply" 
 		parameterType="org.verwandlung.voj.web.model.DiscussionReply"
-		flushCache="true" 
 		keyProperty="discussionReplyId" 
 		keyColumn="discussion_reply_id"
 		useGeneratedKeys="true">
@@ -45,15 +42,13 @@
 		VALUES (#{discussionThreadId}, #{discussionReplyCreator.uid}, #{discussionReplyCreateTime}, #{discussionReplyContent}, #{discussionReplyVotes})
 	</insert>
 	<update id="updateDiscussionReply"
-		parameterType="org.verwandlung.voj.web.model.DiscussionThread"
-		flushCache="true">
+		parameterType="org.verwandlung.voj.web.model.DiscussionThread">
 		UPDATE voj_discussion_replies 
 		SET discussion_thread_id = #{discussionThreadId}, discussion_reply_uid = #{discussionReplyCreator.uid}, discussion_reply_time = #{discussionReplyCreateTime}, discussion_reply_content = #{discussionReplyContent}, discussion_reply_votes = #{discussionReplyVotes}
 		WHERE discussion_reply_id = #{discussionReplyId}
 	</update>
 	<delete id="deleteDiscussionReplyUsingReplyId"
-		parameterType="long"
-		flushCache="true">
+		parameterType="long">
 		DELETE FROM voj_discussion_replies 
 		WHERE discussion_reply_id = #{discussionReplyId}
 	</delete>

@@ -13,28 +13,24 @@
 
 	<!-- Methods -->
 	<select id="getDiscussionTopics" 
-		resultMap="DiscussionTopicResultMap" 
-		useCache="true">
+		resultMap="DiscussionTopicResultMap">
 		SELECT * 
 		FROM voj_discussion_topics
 	</select>
 	<select id="getDiscussionTopicUsingId" 
-		resultMap="DiscussionTopicResultMap" 
-		useCache="true">
+		resultMap="DiscussionTopicResultMap">
 		SELECT * 
 		FROM voj_discussion_topics
 		WHERE discussion_topic_id = #{discussionTopicId}
 	</select>
 	<select id="getDiscussionTopicUsingSlug" 
-		resultMap="DiscussionTopicResultMap" 
-		useCache="true">
+		resultMap="DiscussionTopicResultMap">
 		SELECT * 
 		FROM voj_discussion_topics
 		WHERE discussion_topic_slug = #{discussionTopicSlug}
 	</select>
 	<insert id="createDiscussionTopic" 
 		parameterType="org.verwandlung.voj.web.model.DiscussionTopic"
-		flushCache="true" 
 		keyProperty="discussionTopicId" 
 		keyColumn="discussion_topic_id"
 		useGeneratedKeys="true">
@@ -42,15 +38,13 @@
 		VALUES (#{discussionTopicSlug}, #{discussionTopicName}, #{parentDiscussionTopicId})
 	</insert>
 	<update id="updateDiscussionTopic"
-		parameterType="org.verwandlung.voj.web.model.DiscussionTopic"
-		flushCache="true">
+		parameterType="org.verwandlung.voj.web.model.DiscussionTopic">
 		UPDATE voj_discussion_topics 
 		SET discussion_topic_slug = #{discussionTopicSlug}, discussion_topic_name = #{discussionTopicName}, discussion_parent_topic_id = #{parentDiscussionTopicId}
 		WHERE discussion_topic_id = #{discussionTopicId}
 	</update>
 	<delete id="deleteDiscussionTopicUsingId"
-		parameterType="int"
-		flushCache="true">
+		parameterType="int">
 		DELETE FROM voj_discussion_topics 
 		WHERE discussion_topic_id = #{discussionTopicId}
 	</delete>

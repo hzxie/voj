@@ -27,8 +27,6 @@ import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONArray;
 import org.verwandlung.voj.web.mapper.OptionMapper;
 import org.verwandlung.voj.web.model.Option;
 
@@ -49,15 +47,11 @@ public class OffensiveWordFilter {
     this.optionMapper = optionMapper;
 
     Option offensiveWordOption = optionMapper.getOption(OFFENSIVE_WORD_OPTION_KEY);
-    JSONArray offensiveWordJson = new JSONArray();
+    List<String> offensiveWordList = new ArrayList<>();
 
     if (offensiveWordOption != null) {
       String optionValue = offensiveWordOption.getOptionValue();
-      offensiveWordJson = JSON.parseArray(optionValue);
-    }
-    List<String> offensiveWordList = new ArrayList<>((int) (offensiveWordJson.size() * 1.5));
-    for (Object o : offensiveWordJson) {
-      offensiveWordList.add((String) o);
+      offensiveWordList = JsonUtils.toList(optionValue, String.class);
     }
     Set<String> offensiveWordSet = new HashSet<>(offensiveWordList);
     this.addOffensiveWordsToHashMap(offensiveWordSet);

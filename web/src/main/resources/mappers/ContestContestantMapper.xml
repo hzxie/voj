@@ -22,16 +22,14 @@
 	<!-- Methods -->
 	<select id="getNumberOfContestantsOfContest"
 			parameterType="long"
-			resultType="long"
-			useCache="true">
+			resultType="long">
 		SELECT COUNT(*) 
 		FROM voj_contest_contestants
 		WHERE contest_id = #{contestId}
 	</select>
 	<select id="getContestantsOfContestForOi"
 		parameterType="map"
-		resultMap="ContestContestantResultMap" 
-		useCache="true">
+		resultMap="ContestContestantResultMap">
 		SELECT *, (
 			SELECT SUM(submission_judge_score)
 			FROM voj_contest_submissions cs
@@ -54,8 +52,7 @@
 	</select>
 	<select id="getContestantsOfContestForAcm"
 		parameterType="map"
-		resultMap="ContestContestantResultMap" 
-		useCache="true">
+		resultMap="ContestContestantResultMap">
 		SELECT *, (
 			SELECT COUNT(DISTINCT(uid))
 			FROM voj_contest_submissions cs
@@ -88,30 +85,26 @@
 	</select>
 	<select id="getContestantOfContest"
 			parameterType="map"
-			resultMap="ContestContestantResultMap"
-			useCache="true">
+			resultMap="ContestContestantResultMap">
 		SELECT *
 		FROM voj_contest_contestants
 		WHERE contest_id = #{contestId}
 		AND contestant_uid = #{contestantUid}
 	</select>
 	<insert id="createContestContestant" 
-		parameterType="org.verwandlung.voj.web.model.ContestContestant"
-		flushCache="true">
+		parameterType="org.verwandlung.voj.web.model.ContestContestant">
 		INSERT INTO voj_contest_contestants (contest_id, contestant_uid)
 		VALUES (#{contest.contestId}, #{contestant.uid})
 	</insert>
 	<update id="updateContestContestant" 
-		parameterType="org.verwandlung.voj.web.model.ContestContestant"
-		flushCache="true">
+		parameterType="org.verwandlung.voj.web.model.ContestContestant">
 		UPDATE voj_contest_contestants 
 		SET code_snippet = #{codeSnippet}
 		WHERE contest_id = #{contest.contestId}
 		AND contestant_uid = #{contestant.uid}
 	</update>
 	<delete id="deleteContestContestant"
-		parameterType="map"
-		flushCache="true">
+		parameterType="map">
 		DELETE FROM voj_contest_contestants 
 		WHERE contest_id = #{contestId} 
 		AND contestant_uid = #{contestantUid}

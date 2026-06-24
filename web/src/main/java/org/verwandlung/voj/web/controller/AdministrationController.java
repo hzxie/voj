@@ -38,7 +38,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.ModelAndView;
 
-import com.alibaba.fastjson.JSON;
 import org.verwandlung.voj.web.exception.ResourceNotFoundException;
 import org.verwandlung.voj.web.messenger.ApplicationEventListener;
 import org.verwandlung.voj.web.model.Checkpoint;
@@ -58,6 +57,7 @@ import org.verwandlung.voj.web.service.UserService;
 import org.verwandlung.voj.web.util.CsrfProtector;
 import org.verwandlung.voj.web.util.DateUtils;
 import org.verwandlung.voj.web.util.HttpRequestParser;
+import org.verwandlung.voj.web.util.JsonUtils;
 import org.verwandlung.voj.web.util.SessionListener;
 
 /**
@@ -254,7 +254,7 @@ public class AdministrationController {
   public @ResponseBody Map<String, Boolean> deleteUsersAction(
       @RequestParam(value = "users") String users, HttpServletRequest request) {
     Map<String, Boolean> result = new HashMap<>(2, 1);
-    List<Long> userList = JSON.parseArray(users, Long.class);
+    List<Long> userList = JsonUtils.toList(users, Long.class);
 
     for (Long userId : userList) {
       userService.deleteUser(userId);
@@ -452,7 +452,7 @@ public class AdministrationController {
   public @ResponseBody Map<String, Boolean> deleteProblemsAction(
       @RequestParam(value = "problems") String problems, HttpServletRequest request) {
     Map<String, Boolean> result = new HashMap<>(2, 1);
-    List<Long> problemList = JSON.parseArray(problems, Long.class);
+    List<Long> problemList = JsonUtils.toList(problems, Long.class);
 
     for (Long problemId : problemList) {
       problemService.deleteProblem(problemId);
@@ -758,7 +758,7 @@ public class AdministrationController {
       @RequestParam(value = "problemCategories") String problemCategories,
       HttpServletRequest request) {
     Map<String, Object> result = new HashMap<>(3, 1);
-    List<Integer> problemCategoryList = JSON.parseArray(problemCategories, Integer.class);
+    List<Integer> problemCategoryList = JsonUtils.toList(problemCategories, Integer.class);
     List<Integer> deletedProblemCategories = new ArrayList<>();
 
     for (int problemCategoryId : problemCategoryList) {
@@ -826,7 +826,7 @@ public class AdministrationController {
   public @ResponseBody Map<String, Object> deleteSubmissionsAction(
       @RequestParam(value = "submissions") String submissions, HttpServletRequest request) {
     Map<String, Object> result = new HashMap<>(3, 1);
-    List<Long> submissionList = JSON.parseArray(submissions, Long.class);
+    List<Long> submissionList = JsonUtils.toList(submissions, Long.class);
     List<Long> deletedSubmissions = new ArrayList<>();
 
     for (Long submissionId : submissionList) {
@@ -855,7 +855,7 @@ public class AdministrationController {
   public @ResponseBody Map<String, Boolean> restartSubmissionsAction(
       @RequestParam(value = "submissions") String submissions, HttpServletRequest request) {
     Map<String, Boolean> result = new HashMap<>(2, 1);
-    List<Long> submissionList = JSON.parseArray(submissions, Long.class);
+    List<Long> submissionList = JsonUtils.toList(submissions, Long.class);
 
     for (Long submissionId : submissionList) {
       submissionService.createSubmissionTask(submissionId);
@@ -980,7 +980,7 @@ public class AdministrationController {
   @RequestMapping(value = "/updateLanguageSettings.action", method = RequestMethod.POST)
   public @ResponseBody Map<String, Object> updateLanguageSettingsAction(
       @RequestParam(value = "languages") String languages, HttpServletRequest request) {
-    List<Language> languagesList = JSON.parseArray(languages, Language.class);
+    List<Language> languagesList = JsonUtils.toList(languages, Language.class);
     Map<String, Object> result = languageService.updateLanguageSettings(languagesList);
     return result;
   }

@@ -19,7 +19,6 @@ package org.verwandlung.voj.web.mapper;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.ibatis.annotations.CacheNamespace;
 import org.apache.ibatis.annotations.Param;
 
 import org.verwandlung.voj.web.model.Submission;
@@ -29,7 +28,6 @@ import org.verwandlung.voj.web.model.Submission;
  *
  * @author Haozhe Xie
  */
-@CacheNamespace(implementation = org.mybatis.caches.ehcache.EhcacheCache.class)
 public interface SubmissionMapper {
   /**
    * [此方法仅供管理员使用] 获取指定时间内提交的数量.

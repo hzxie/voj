@@ -16,7 +16,6 @@
  */
 package org.verwandlung.voj.web.mapper;
 
-import org.apache.ibatis.annotations.CacheNamespace;
 import org.apache.ibatis.annotations.Param;
 
 import org.verwandlung.voj.web.model.EmailValidation;
@@ -26,7 +25,6 @@ import org.verwandlung.voj.web.model.EmailValidation;
  *
  * @author Haozhe Xie
  */
-@CacheNamespace(implementation = org.mybatis.caches.ehcache.EhcacheCache.class)
 public interface EmailValidationMapper {
   /**
    * 获取某个电子邮件地址对应的EmailValidation对象.

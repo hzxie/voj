@@ -16,7 +16,6 @@
  */
 package org.verwandlung.voj.web.mapper;
 
-import org.apache.ibatis.annotations.CacheNamespace;
 import org.apache.ibatis.annotations.Param;
 
 import org.verwandlung.voj.web.model.JudgeResult;
@@ -26,7 +25,6 @@ import org.verwandlung.voj.web.model.JudgeResult;
  *
  * @author Haozhe Xie
  */
-@CacheNamespace(implementation = org.mybatis.caches.ehcache.EhcacheCache.class)
 public interface JudgeResultMapper {
   /**
    * 通过评测结果的唯一标识符获取评测结果对象.

@@ -29,8 +29,6 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.alibaba.fastjson.JSON;
-
 import freemarker.template.TemplateException;
 
 import org.verwandlung.voj.web.mapper.EmailValidationMapper;
@@ -45,6 +43,7 @@ import org.verwandlung.voj.web.model.UserGroup;
 import org.verwandlung.voj.web.model.UserMeta;
 import org.verwandlung.voj.web.util.DigestUtils;
 import org.verwandlung.voj.web.util.HtmlTextFilter;
+import org.verwandlung.voj.web.util.JsonUtils;
 import org.verwandlung.voj.web.util.MailSender;
 import org.verwandlung.voj.web.util.OffensiveWordFilter;
 
@@ -95,7 +94,7 @@ public class UserService {
       Object value = userMeta.getMetaValue();
 
       if ("socialLinks".equals(key)) {
-        value = JSON.parseObject((String) value);
+        value = JsonUtils.toMap((String) value);
       }
       userMetaMap.put(key, value);
     }

@@ -15,29 +15,25 @@
 	<!-- Methods -->
 	<select id="getLanguageUsingId" 
 		parameterType="int"
-		resultMap="LanguageResultMap" 
-		useCache="true">
+		resultMap="LanguageResultMap">
 		SELECT *
 		FROM voj_languages
 		WHERE language_id = #{languageId}
 	</select>
 	<select id="getLanguageUsingSlug" 
 		parameterType="String"
-		resultMap="LanguageResultMap" 
-		useCache="true">
+		resultMap="LanguageResultMap">
 		SELECT *
 		FROM voj_languages
 		WHERE language_slug = #{languageSlug}
 	</select>
 	<select id="getAllLanguages" 
-		resultMap="LanguageResultMap"
-		useCache="true">
+		resultMap="LanguageResultMap">
 		SELECT *
 		FROM voj_languages
 	</select>
 	<insert id="createLanguage" 
 		parameterType="org.verwandlung.voj.web.model.Language"
-		flushCache="true" 
 		keyProperty="languageId" 
 		keyColumn="language_id"
 		useGeneratedKeys="true">
@@ -45,15 +41,13 @@
 		VALUES (#{languageId}, #{languageSlug}, #{languageName}, #{compileCommand}, #{runCommand})
 	</insert>
 	<update id="updateLanguage"
-		parameterType="org.verwandlung.voj.web.model.Language"
-		flushCache="true">
+		parameterType="org.verwandlung.voj.web.model.Language">
 		UPDATE voj_languages 
 		SET language_slug = #{languageSlug}, language_name = #{languageName}, language_compile_command = #{compileCommand}, language_run_command = #{runCommand} 
 		WHERE language_id = #{languageId}
 	</update>
 	<delete id="deleteLanguage"
-		parameterType="int"
-		flushCache="true">
+		parameterType="int">
 		DELETE FROM voj_languages 
 		WHERE language_id = #{languageId}
 	</delete>

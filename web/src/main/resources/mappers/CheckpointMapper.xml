@@ -15,28 +15,24 @@
 
 	<!-- Methods -->
 	<select id="getNumberOfCheckpoints" 
-		resultType="long" 
-		useCache="true">
+		resultType="long">
 		SELECT COUNT(*) 
 		FROM voj_problem_checkpoints
 	</select>
 	<select id="getCheckpointsUsingProblemId" 
 		parameterType="long"
-		resultMap="CheckpointResultMap" 
-		useCache="true">
+		resultMap="CheckpointResultMap">
 		SELECT * 
 		FROM voj_problem_checkpoints 
 		WHERE problem_id = #{problemId}
 	</select>
 	<insert id="createCheckpoint" 
-		parameterType="org.verwandlung.voj.web.model.Checkpoint"
-		flushCache="true">
+		parameterType="org.verwandlung.voj.web.model.Checkpoint">
 		INSERT INTO voj_problem_checkpoints (problem_id, checkpoint_id, checkpoint_exactly_match, checkpoint_score, checkpoint_input, checkpoint_output) 
 		VALUES (#{problemId}, #{checkpointId}, #{isExactlyMatch}, #{score}, #{input}, #{output})
 	</insert>
 	<delete id="deleteCheckpoint"
-		parameterType="long"
-		flushCache="true">
+		parameterType="long">
 		DELETE FROM voj_problem_checkpoints 
 		WHERE problem_id = #{problemId}
 	</delete>

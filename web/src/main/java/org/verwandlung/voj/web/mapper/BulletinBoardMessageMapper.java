@@ -16,7 +16,6 @@
  */
 package org.verwandlung.voj.web.mapper;
 
-import org.apache.ibatis.annotations.CacheNamespace;
 import org.apache.ibatis.annotations.Param;
 import org.verwandlung.voj.web.model.BulletinBoardMessage;
 
@@ -27,7 +26,6 @@ import java.util.List;
  *
  * @author Haozhe Xie
  */
-@CacheNamespace(implementation = org.mybatis.caches.ehcache.EhcacheCache.class)
 public interface BulletinBoardMessageMapper {
   /**
    * 获取布告栏消息的数量.

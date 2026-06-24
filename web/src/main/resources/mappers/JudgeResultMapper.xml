@@ -13,16 +13,14 @@
 	<!-- Methods -->
 	<select id="getJudgeResultUsingId" 
 		parameterType="int"
-		resultMap="JudgeResultResultMap" 
-		useCache="true">
+		resultMap="JudgeResultResultMap">
 		SELECT * 
 		FROM voj_judge_results 
 		WHERE judge_result_id = #{judgeResultId}
 	</select>
 	<select id="getJudgeResultUsingSlug" 
 		parameterType="String"
-		resultMap="JudgeResultResultMap" 
-		useCache="true">
+		resultMap="JudgeResultResultMap">
 		SELECT * 
 		FROM voj_judge_results 
 		WHERE judge_result_slug = #{judgeResultSlug}

@@ -27,11 +27,9 @@ import org.verwandlung.voj.web.mapper.ProblemCategoryMapper;
 import org.verwandlung.voj.web.mapper.ProblemMapper;
 import org.verwandlung.voj.web.mapper.ProblemTagMapper;
 import org.verwandlung.voj.web.model.*;
+import com.fasterxml.jackson.core.type.TypeReference;
+import org.verwandlung.voj.web.util.JsonUtils;
 import org.verwandlung.voj.web.util.SlugifyUtils;
-
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONArray;
-import com.alibaba.fastjson.JSONObject;
 
 /**
  * 试题类(Problem)的业务逻辑层.
@@ -458,17 +456,18 @@ public class ProblemService {
    * @param isExactlyMatch - 是否精确匹配测试用例
    */
   private void createTestCases(long problemId, String testCases, boolean isExactlyMatch) {
-    JSONArray jsonArray = JSON.parseArray(testCases);
+    List<Map<String, String>> testCaseList =
+        JsonUtils.toObject(testCases, new TypeReference<List<Map<String, String>>>() {});
 
-    for (int i = 0; i < jsonArray.size(); ++i) {
-      JSONObject testCase = jsonArray.getJSONObject(i);
+    for (int i = 0; i < testCaseList.size(); ++i) {
+      Map<String, String> testCase = testCaseList.get(i);
 
-      int score = 100 / jsonArray.size();
-      if (i == jsonArray.size() - 1) {
+      int score = 100 / testCaseList.size();
+      if (i == testCaseList.size() - 1) {
         score = 100 - score * i;
       }
-      String input = testCase.getString("input");
-      String output = testCase.getString("output");
+      String input = testCase.get("input");
+      String output = testCase.get("output");
 
       Checkpoint checkpoint = new Checkpoint(problemId, i, isExactlyMatch, score, input, output);
       checkpointMapper.createCheckpoint(checkpoint);
@@ -494,13 +493,12 @@ public class ProblemService {
    * @param problemCategories - 试题分类别名的JSON数组
    */
   private void createProblemCategoryRelationships(long problemId, String problemCategories) {
-    JSONArray jsonArray = JSON.parseArray(problemCategories);
+    List<String> categorySlugs = JsonUtils.toList(problemCategories, String.class);
 
-    if (jsonArray.size() == 0) {
-      jsonArray.add("uncategorized");
+    if (categorySlugs.isEmpty()) {
+      categorySlugs.add("uncategorized");
     }
-    for (int i = 0; i < jsonArray.size(); ++i) {
-      String problemCategorySlug = jsonArray.getString(i);
+    for (String problemCategorySlug : categorySlugs) {
       ProblemCategory pc =
           problemCategoryMapper.getProblemCategoryUsingCategorySlug(problemCategorySlug);
 
@@ -527,10 +525,9 @@ public class ProblemService {
    */
   private void createProblemTags(long problemId, String problemTags) {
     Set<String> problemTagSlugs = new HashSet<>();
-    JSONArray jsonArray = JSON.parseArray(problemTags);
+    List<String> problemTagNames = JsonUtils.toList(problemTags, String.class);
 
-    for (int i = 0; i < jsonArray.size(); ++i) {
-      String problemTagName = jsonArray.getString(i);
+    for (String problemTagName : problemTagNames) {
       String problemTagSlug = SlugifyUtils.getSlug(problemTagName);
 
       ProblemTag pt = problemTagMapper.getProblemTagUsingTagSlug(problemTagSlug);
