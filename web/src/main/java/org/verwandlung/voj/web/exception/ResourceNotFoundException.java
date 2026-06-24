@@ -1,5 +1,5 @@
 /* Verwandlung Online Judge - A cross-platform judge online system
- * Copyright (C) 2018 Haozhe Xie <cshzxie@gmail.com>
+ * Copyright (C) 2014-2026 Haozhe Xie <root@haozhexie.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -13,29 +13,6 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *
- *                              _ooOoo_
- *                             o8888888o
- *                             88" . "88
- *                             (| -_- |)
- *                             O\  =  /O
- *                          ____/`---'\____
- *                        .'  \\|     |//  `.
- *                       /  \\|||  :  |||//  \
- *                      /  _||||| -:- |||||-  \
- *                      |   | \\\  -  /// |   |
- *                      | \_|  ''\---/''  |   |
- *                      \  .-\__  `-`  ___/-. /
- *                    ___`. .'  /--.--\  `. . __
- *                 ."" '<  `.___\_<|>_/___.'  >'"".
- *                | | :  `- \`.;`\ _ /`;.`/ - ` : | |
- *                \  \ `-.   \_ __\ /__ _/   .-` /  /
- *           ======`-.____`-.___\_____/___.-`____.-'======
- *                              `=---='
- *
- *                          HERE BE BUDDHA
- *
  */
 package org.verwandlung.voj.web.exception;
 

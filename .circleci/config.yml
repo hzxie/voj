@@ -68,4 +68,7 @@ workflows:
       - test:
           name: test-java24
           java_version: "24.0"
+      - test:
+          name: test-java25
+          java_version: "25.0"
 
