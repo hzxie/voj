@@ -27,11 +27,18 @@ For more information, please refer to [this documentation](https://github.com/hz
 
 ## Introduction
 
-It is a cross-platform online judge system based on [Spring MVC Framework](http://spring.io).
+Verwandlung Online Judge is a self-hostable, open-source online judge system for competitive programming. It presents algorithmic problems, accepts code submissions in multiple programming languages, then automatically compiles, runs, and evaluates them against predefined test cases — giving submitters immediate feedback on correctness, run time, and memory usage.
 
-The application used following open-source projects:
+Unlike most open-source judges that only run on Linux, Verwandlung judges submissions **natively on both Windows and Linux** by calling operating-system APIs through JNI, instead of relying on Linux-specific sandboxing. Other highlights include:
 
- - [Spring MVC](http://spring.io) famework
+ - **Real-time judging feedback** streamed to the browser with Server-Sent Events (SSE), so results appear progressively as each test case finishes.
+ - **Horizontally scalable judging** — the web application and the judgers are decoupled through an [Apache ActiveMQ](http://activemq.apache.org/) message queue, so you can run as many judgers in parallel as you need.
+ - **Contest support** for running and administering programming contests.
+ - **Internationalization** with built-in English and Chinese support.
+
+It is built on the [Spring Framework](https://spring.io) and uses the following open-source projects:
+
+ - [Spring MVC](https://spring.io) framework
  - [MyBatis](https://mybatis.github.io/mybatis-3/index.html) persistence framework
  - [Apache ActiveMQ](http://activemq.apache.org/) message queue
  - [Druid](https://github.com/alibaba/druid/) database connection pool
@@ -58,7 +65,7 @@ The Verwandlung application consists of two primary components:
 
 The overall architecture of the application can be illustrated by the diagram provided below:
 
-![Software-Architecture](https://www.infinitescript.com/projects/Verwandlung/Software-Architecture.png)
+![Software-Architecture](https://www.infinitescript.com/projects/Verwandlung/Software-Architecture.webp)
 
 As depicted in the diagram, the Verwandlung Online Judge features support for multiple judgers. These judgers are responsible for communicating with the web application through the use of ActiveMQ.
 
@@ -85,15 +92,15 @@ For Judger:
 For Web Application (including Database and Message Queue):
 
 - **Operating System**: Windows, Linux or Mac
-- **Database**: [MySQL](http://www.mysql.com) 5.5+ or [MariaDB](https://mariadb.org/) 5.5+
-- **Java Runtime**: [Oracle JRE](http://java.oracle.com) 17+ or [Oracle JDK](http://java.oracle.com) 17+
-- **Message Queue**: [ActiveMQ](http://activemq.apache.org) 5.18+
-- **Web Server**: [Tomcat](http://tomcat.apache.org) 10+
+- **Database**: [MySQL](http://www.mysql.com) 8.0+ or [MariaDB](https://mariadb.org/) 10.4+
+- **Java Runtime**: [JDK](https://adoptium.net) 17+ (Spring Framework 7 supports JDK 17–25)
+- **Message Queue**: [ActiveMQ](http://activemq.apache.org) 6.0+ (Jakarta JMS)
+- **Web Server**: [Tomcat](http://tomcat.apache.org) 11+ (Jakarta Servlet 6.1)
 
 For Judger:
 
 - **Operating System**: Windows or Linux
-- **Java Runtime**: [Oracle JRE](http://java.oracle.com) 17+ or [Oracle JDK](http://java.oracle.com) 17+
+- **Java Runtime**: [JDK](https://adoptium.net) 17+ (Spring Framework 7 supports JDK 17–25)
 
 ### Installation
 
