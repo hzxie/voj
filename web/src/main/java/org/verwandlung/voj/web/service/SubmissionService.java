@@ -39,7 +39,7 @@ import org.verwandlung.voj.web.model.Submission;
 import org.verwandlung.voj.web.model.User;
 
 /**
- * 提交类(Submission)的业务逻辑层.
+ * The business logic layer of the Submission class.
  *
  * @author Haozhe Xie
  */
@@ -47,54 +47,47 @@ import org.verwandlung.voj.web.model.User;
 @Transactional
 public class SubmissionService {
   /**
-   * [此方法仅供管理员使用] 获取指定时间内提交的数量.
+   * [For administrators only] Gets the number of submissions within a specified time period.
    *
-   * @param startTime - 统计起始时间
-   * @param endTime - 统计结束时间
-   * @return 指定时间内提交的数量
+   * @param startTime - the start time of the statistics
+   * @param endTime - the end time of the statistics
+   * @return the number of submissions within the specified time period
    */
   public long getNumberOfSubmissionsUsingDate(Date startTime, Date endTime) {
-    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:MM:ss");
-    String startTimeString = "0000-00-00 00:00:00";
-    String endTimeString = "9999-12-31 23:59:59";
-
-    if (startTime != null) {
-      startTimeString = sdf.format(startTime);
-    }
-    if (endTime != null) {
-      endTimeString = sdf.format(endTime);
-    }
+    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    String startTimeString = startTime != null ? sdf.format(startTime) : null;
+    String endTimeString = endTime != null ? sdf.format(endTime) : null;
     return submissionMapper.getNumberOfSubmissionsUsingDate(startTimeString, endTimeString);
   }
 
   /**
-   * 获取某个用户对某个试题的提交记录的数量.
+   * Gets the number of submissions by a user for a problem.
    *
-   * @param problemId - 试题的唯一标识符
-   * @param username - 用户的用户名
-   * @return 某个用户对某个试题提交的数量
+   * @param problemId - the unique identifier of the problem
+   * @param username - the username of the user
+   * @return the number of submissions by the user for the problem
    */
   public long getNumberOfSubmissionsUsingProblemIdAndUsername(long problemId, String username) {
     return submissionMapper.getNumberOfSubmissionsUsingProblemIdAndUsername(problemId, username);
   }
 
   /**
-   * [此方法仅供管理员使用] 获取最新提交记录的唯一标识符
+   * [For administrators only] Gets the unique identifier of the latest submission.
    *
-   * @return 最新提交记录的唯一标识符
+   * @return the unique identifier of the latest submission
    */
   public long getLatestSubmissionId() {
     return submissionMapper.getLatestSubmissionId();
   }
 
   /**
-   * 获取指定时间内提交的数量.
+   * Gets the number of submissions within a specified time period.
    *
-   * @param startTime - 统计起始时间
-   * @param endTime - 统计结束时间
-   * @param uid - 用户的唯一标识符
-   * @param isAcceptedOnly - 是否只统计通过的提交记录
-   * @return 包含时间和提交次数的键值对 Map
+   * @param startTime - the start time of the statistics
+   * @param endTime - the end time of the statistics
+   * @param uid - the unique identifier of the user
+   * @param isAcceptedOnly - whether to count only accepted submissions
+   * @return a Map of key-value pairs containing the time and the number of submissions
    */
   public Map<String, Long> getNumberOfSubmissionsUsingDate(
       Date startTime, Date endTime, long uid, boolean isAcceptedOnly) {
@@ -106,17 +99,17 @@ public class SubmissionService {
   }
 
   /**
-   * 获取指定时间内提交的数量, 并按月份汇总.
+   * Gets the number of submissions within a specified time period, grouped by month.
    *
-   * @param startTime - 统计起始时间
-   * @param endTime - 统计结束时间
-   * @param uid - 用户的唯一标识符
-   * @param isAcceptedOnly - 是否只统计通过的提交记录
-   * @return 包含月份和提交次数的键值对 Map
+   * @param startTime - the start time of the statistics
+   * @param endTime - the end time of the statistics
+   * @param uid - the unique identifier of the user
+   * @param isAcceptedOnly - whether to count only accepted submissions
+   * @return a Map of key-value pairs containing the month and the number of submissions
    */
   private Map<String, Long> getNumberOfSubmissionsGroupByMonth(
       Date startTime, Date endTime, long uid, boolean isAcceptedOnly) {
-    // 获取包含日期区间的空列表
+    // Build an empty list covering the date range
     Map<String, Long> numberOfSubmissions = new LinkedHashMap<String, Long>();
     Calendar calendar = new GregorianCalendar();
     calendar.setTime(startTime);
@@ -135,7 +128,7 @@ public class SubmissionService {
             startTimeString, endTimeString, uid, isAcceptedOnly);
 
     for (Map<String, Object> e : submissions) {
-      // 形如 201512 的数值型数据
+      // A numeric value such as 201512
       Integer month = (Integer) e.get("month");
       String monthString = month.toString();
       long submissionTimes = (Long) e.get("submissions");
@@ -147,17 +140,17 @@ public class SubmissionService {
   }
 
   /**
-   * 获取指定时间内提交的数量, 并按天数汇总.
+   * Gets the number of submissions within a specified time period, grouped by day.
    *
-   * @param startTime - 统计起始时间
-   * @param endTime - 统计结束时间
-   * @param uid - 用户的唯一标识符
-   * @param isAcceptedOnly - 是否只统计通过的提交记录
-   * @return 包含日期和提交次数的键值对 Map
+   * @param startTime - the start time of the statistics
+   * @param endTime - the end time of the statistics
+   * @param uid - the unique identifier of the user
+   * @param isAcceptedOnly - whether to count only accepted submissions
+   * @return a Map of key-value pairs containing the date and the number of submissions
    */
   private Map<String, Long> getNumberOfSubmissionsGroupByDay(
       Date startTime, Date endTime, long uid, boolean isAcceptedOnly) {
-    // 获取包含日期区间的空列表
+    // Build an empty list covering the date range
     Map<String, Long> numberOfSubmissions = new LinkedHashMap<String, Long>();
     Calendar calendar = new GregorianCalendar();
     calendar.setTime(startTime);
@@ -184,48 +177,48 @@ public class SubmissionService {
   }
 
   /**
-   * 根据评测记录的唯一标识符获取评测记录对象.
+   * Gets a submission object by its unique identifier.
    *
-   * @param submissionId - 评测记录的唯一标识符
-   * @return 评测记录对象
+   * @param submissionId - the unique identifier of the submission
+   * @return the submission object
    */
   public Submission getSubmission(long submissionId) {
     return submissionMapper.getSubmission(submissionId);
   }
 
   /**
-   * 获取评测记录列表.
+   * Gets the list of submissions.
    *
-   * @param problemId - 试题的唯一标识符
-   * @param username - 用户的用户名
-   * @param limit - 每次加载评测记录的数量
-   * @return 试题列表(List<Submission>对象)
+   * @param problemId - the unique identifier of the problem
+   * @param username - the username of the user
+   * @param limit - the number of submissions to load each time
+   * @return the list of submissions (a List<Submission> object)
    */
   public List<Submission> getSubmissions(long problemId, String username, int limit) {
     return submissionMapper.getSubmissions(problemId, username, limit);
   }
 
   /**
-   * 获取评测记录列表. 用于异步加载评测记录.
+   * Gets the list of submissions. Used to load submissions asynchronously.
    *
-   * @param problemId - 试题的唯一标识符
-   * @param username - 用户的用户名
-   * @param offset - 评测记录唯一标识符的起始序号
-   * @param limit - 每次加载评测记录的数量
-   * @return 试题列表(List<Submission>对象)
+   * @param problemId - the unique identifier of the problem
+   * @param username - the username of the user
+   * @param offset - the starting number of the submission identifier
+   * @param limit - the number of submissions to load each time
+   * @return the list of submissions (a List<Submission> object)
    */
   public List<Submission> getSubmissions(long problemId, String username, long offset, int limit) {
     return submissionMapper.getSubmissionsUsingOffset(problemId, username, offset, limit);
   }
 
   /**
-   * 获取最新的评测记录列表. 用于定时获取最新的评测记录.
+   * Gets the list of latest submissions. Used to periodically fetch the latest submissions.
    *
-   * @param problemId - 试题的唯一标识符
-   * @param username - 用户的用户名
-   * @param offset - 评测记录唯一标识符的起始序号
-   * @param limit - 每次加载评测记录的数量
-   * @return 试题列表(List<Submission>对象)
+   * @param problemId - the unique identifier of the problem
+   * @param username - the username of the user
+   * @param offset - the starting number of the submission identifier
+   * @param limit - the number of submissions to load each time
+   * @return the list of submissions (a List<Submission> object)
    */
   public List<Submission> getLatestSubmissions(
       long problemId, String username, long offset, int limit) {
@@ -233,12 +226,12 @@ public class SubmissionService {
   }
 
   /**
-   * 获取某个用户对某个试题的提交记录.
+   * Gets the submissions of a user for a problem.
    *
-   * @param problemId - 试题的唯一标识符
-   * @param userId - 用户的唯一标识符
-   * @param limit - 每次加载评测记录的数量
-   * @return 某个用户对某个试题的提交记录
+   * @param problemId - the unique identifier of the problem
+   * @param userId - the unique identifier of the user
+   * @param limit - the number of submissions to load each time
+   * @return the submissions of the user for the problem
    */
   public List<Submission> getSubmissionUsingProblemIdAndUserId(
       long problemId, long userId, int limit) {
@@ -246,10 +239,10 @@ public class SubmissionService {
   }
 
   /**
-   * 获取某个用户全部试题的评测结果.
+   * Gets the judging results of all problems for a user.
    *
-   * @param userId - 用户的唯一标识符
-   * @return 某个用户全部试题的评测结果
+   * @param userId - the unique identifier of the user
+   * @return the judging results of all problems for the user
    */
   public Map<Long, Submission> getSubmissionOfUser(long userId) {
     long problemIdLowerBound = problemMapper.getLowerBoundOfProblems();
@@ -259,12 +252,12 @@ public class SubmissionService {
   }
 
   /**
-   * 获取某个用户在某个试题ID区间段内的评测结果.
+   * Gets the judging results of a user within a problem ID range.
    *
-   * @param userId - 用户的唯一标识符
-   * @param problemIdLowerBound - 试题ID区间的下界
-   * @param problemIdUpperBound - 试题ID区间的上界
-   * @return 某个试题ID区间段内的通过的评测结果
+   * @param userId - the unique identifier of the user
+   * @param problemIdLowerBound - the lower bound of the problem ID range
+   * @param problemIdUpperBound - the upper bound of the problem ID range
+   * @return the judging results within the problem ID range
    */
   public Map<Long, Submission> getSubmissionOfProblems(
       long userId, long problemIdLowerBound, long problemIdUpperBound) {
@@ -280,7 +273,7 @@ public class SubmissionService {
       long problemId = s.getProblem().getProblemId();
       submissionOfProblems.put(problemId, s);
     }
-    // 使用已通过的评测记录更新部分值
+    // Update some values with the accepted submissions
     for (Submission s : acceptedSubmission) {
       long problemId = s.getProblem().getProblemId();
       submissionOfProblems.put(problemId, s);
@@ -289,10 +282,10 @@ public class SubmissionService {
   }
 
   /**
-   * 获取用户评测记录概况.
+   * Gets the submission statistics overview of a user.
    *
-   * @param userId - 用户的唯一标识符
-   * @return 一个包含用户评测记录概况的HashMap
+   * @param userId - the unique identifier of the user
+   * @return a HashMap containing the user's submission statistics overview
    */
   public Map<String, Long> getSubmissionStatsOfUser(long userId) {
     long acceptedSubmission = submissionMapper.getAcceptedSubmissionUsingUserId(userId);
@@ -310,14 +303,15 @@ public class SubmissionService {
   }
 
   /**
-   * 创建提交记录, 并将评测任务加入消息队列.
+   * Creates a submission and adds the judging task to the message queue.
    *
-   * @param user - 已登录的用户对象
-   * @param problemId - 试题的唯一标识符
-   * @param languageSlug - 编程语言的别名
-   * @param code - 代码
-   * @param isCsrfTokenValid - CSRF的Token是否正确
-   * @return 一个包含提交记录创建结果的Map<String, Object>对象, 并包含创建的提交记录的唯一标识符.
+   * @param user - the logged-in user object
+   * @param problemId - the unique identifier of the problem
+   * @param languageSlug - the alias of the programming language
+   * @param code - the code
+   * @param isCsrfTokenValid - whether the CSRF token is valid
+   * @return a Map<String, Object> object containing the submission creation result, including the
+   *     unique identifier of the created submission.
    */
   public Map<String, Object> createSubmission(
       User user, long problemId, String languageSlug, String code, boolean isCsrfTokenValid) {
@@ -341,11 +335,11 @@ public class SubmissionService {
   }
 
   /**
-   * 验证提交记录数据.
+   * Validates the submission data.
    *
-   * @param submission - 待创建的提交记录对象
-   * @param isCsrfTokenValid - CSRF的Token是否正确
-   * @return 一个包含提交记录的验证结果的Map<String, Boolean>对象
+   * @param submission - the submission object to create
+   * @param isCsrfTokenValid - whether the CSRF token is valid
+   * @return a Map<String, Boolean> object containing the validation result of the submission
    */
   private Map<String, ? extends Object> getSubmissionCreationResult(
       Submission submission, boolean isCsrfTokenValid) {
@@ -368,9 +362,9 @@ public class SubmissionService {
   }
 
   /**
-   * 创建评测任务, 将提交的信息提交至消息队列.
+   * Creates a judging task and submits the submission information to the message queue.
    *
-   * @param submissionId - 提交记录的唯一标识符
+   * @param submissionId - the unique identifier of the submission
    */
   public void createSubmissionTask(long submissionId) {
     Map<String, Object> mapMessage = new HashMap<>();
@@ -381,25 +375,25 @@ public class SubmissionService {
   }
 
   /**
-   * 使用提交记录的唯一标识符删除提交记录.
+   * Deletes a submission by its unique identifier.
    *
-   * @param submissionId - 提交记录的唯一标识符
-   * @return 提交记录是否被删除
+   * @param submissionId - the unique identifier of the submission
+   * @return whether the submission was deleted
    */
   public boolean deleteSubmission(long submissionId) {
     submissionMapper.deleteSubmission(submissionId);
     return true;
   }
 
-  /** 自动注入的SubmissionMapper对象. */
+  /** The autowired SubmissionMapper object. */
   @Autowired private SubmissionMapper submissionMapper;
 
-  /** 自动注入的ProblemMapper对象. */
+  /** The autowired ProblemMapper object. */
   @Autowired private ProblemMapper problemMapper;
 
-  /** 自动注入的LanguageMapper对象. */
+  /** The autowired LanguageMapper object. */
   @Autowired private LanguageMapper languageMapper;
 
-  /** 自动注入的MessageSender对象. */
+  /** The autowired MessageSender object. */
   @Autowired private MessageSender messageSender;
 }

@@ -32,7 +32,7 @@ import org.verwandlung.voj.web.util.OffensiveWordFilter;
 import java.util.*;
 
 /**
- * 讨论(Discussion)的业务逻辑层.
+ * The business logic layer of the discussion.
  *
  * @author Haozhe Xie
  */
@@ -40,25 +40,25 @@ import java.util.*;
 @Transactional
 public class DiscussionService {
   /**
-   * 获取全部的讨论话题.
+   * Gets all discussion topics.
    *
-   * @return 包含全部讨论话题的List对象.
+   * @return a List object containing all discussion topics
    */
   public List<DiscussionTopic> getDiscussionTopics() {
     return discussionTopicMapper.getDiscussionTopics();
   }
 
   /**
-   * 获得具有层次关系的讨论话题列表.
+   * Gets the hierarchical list of discussion topics.
    *
-   * @return 包含讨论话题及其继承关系的Map对象
+   * @return a Map object containing discussion topics and their inheritance relationships
    */
   public Map<DiscussionTopic, List<DiscussionTopic>> getDiscussionTopicsWithHierarchy() {
     List<DiscussionTopic> DiscussionTopics = getDiscussionTopics();
     Map<Integer, List<DiscussionTopic>> DiscussionTopicsIndexer = new HashMap<>();
     Map<DiscussionTopic, List<DiscussionTopic>> DiscussionTopicsHierarchy = new LinkedHashMap<>();
 
-    // 将无父亲的讨论话题加入列表
+    // Add the top-level discussion topics (without a parent) to the list
     for (DiscussionTopic dt : DiscussionTopics) {
       if (dt.getParentDiscussionTopicId() == 0) {
         List<DiscussionTopic> subDiscussionTopics = new ArrayList<>();
@@ -66,7 +66,7 @@ public class DiscussionService {
         DiscussionTopicsIndexer.put(dt.getDiscussionTopicId(), subDiscussionTopics);
       }
     }
-    // 将其他讨论话题加入列表
+    // Add the remaining discussion topics to the list
     for (DiscussionTopic dt : DiscussionTopics) {
       int parentDiscussionTopicId = dt.getParentDiscussionTopicId();
       if (parentDiscussionTopicId != 0) {
@@ -81,22 +81,22 @@ public class DiscussionService {
   }
 
   /**
-   * 获取某个试题的题解讨论.
+   * Gets the solution discussion of a problem.
    *
-   * @param problemId - 试题的唯一标识符
-   * @return 对应试题的题解讨论DiscussionThread对象
+   * @param problemId - the unique identifier of the problem
+   * @return the DiscussionThread object of the problem's solution discussion
    */
   public DiscussionThread getSolutionThreadOfProblem(long problemId) {
     return discussionThreadMapper.getSolutionThreadOfProblem(problemId);
   }
 
   /**
-   * 获取某个主题下的全部讨论(DiscussionThread).
+   * Gets all discussion threads under a problem.
    *
-   * @param problemId - 试题的唯一标识符
-   * @param offset - 起始讨论的游标
-   * @param limit - 获取讨论的数量
-   * @return 包含DiscussionThread对象的List对象
+   * @param problemId - the unique identifier of the problem
+   * @param offset - the cursor of the first thread
+   * @param limit - the number of threads to fetch
+   * @return a List object containing DiscussionThread objects
    */
   public List<DiscussionThread> getDiscussionThreadsOfProblem(
       long problemId, long offset, int limit) {
@@ -104,12 +104,12 @@ public class DiscussionService {
   }
 
   /**
-   * 获取某个讨论主题中的全部讨论(DiscussionThread).
+   * Gets all discussion threads within a discussion topic.
    *
-   * @param discussionTopicSlug - 讨论主题的唯一英文缩写
-   * @param offset - 起始讨论的游标
-   * @param limit - 获取讨论的数量
-   * @return 包含DiscussionThread对象的List对象
+   * @param discussionTopicSlug - the unique English abbreviation of the discussion topic
+   * @param offset - the cursor of the first thread
+   * @param limit - the number of threads to fetch
+   * @return a List object containing DiscussionThread objects
    */
   public List<DiscussionThread> getDiscussionThreadsOfTopic(
       String discussionTopicSlug, long offset, int limit) {
@@ -122,24 +122,25 @@ public class DiscussionService {
   }
 
   /**
-   * 获取某个讨论话题的回复.
+   * Gets the replies of a discussion thread.
    *
-   * @param discussionThreadId - 讨论话题的唯一标识符
-   * @param currentUserUid - 当前登录用户的用户唯一标识符(-1表示未登录)
-   * @param offset - 起始回复的游标
-   * @param limit - 获取回复的数量
-   * @return 包含讨论话题回复的List对象
+   * @param discussionThreadId - the unique identifier of the discussion thread
+   * @param currentUserUid - the unique identifier of the currently logged-in user (-1 means not
+   *     logged in)
+   * @param offset - the cursor of the first reply
+   * @param limit - the number of replies to fetch
+   * @return a List object containing the discussion thread replies
    */
   public List<DiscussionReply> getDiscussionRepliesOfThread(
       long discussionThreadId, long currentUserUid, long offset, int limit) {
     List<DiscussionReply> replies =
         discussionReplyMapper.getDiscussionRepliesUsingThreadId(discussionThreadId, offset, limit);
     for (DiscussionReply dr : replies) {
-      // 过滤回复中的敏感内容
+      // Filter offensive content in the reply
       String replyContent = dr.getDiscussionReplyContent();
       replyContent = offensiveWordFilter.filter(HtmlTextFilter.filter(replyContent));
       dr.setDiscussionReplyContent(replyContent);
-      // 获取回复中的投票信息
+      // Get the voting information in the reply
       Map<String, Object> votesStatistics =
           getVoteStatisticsOfDiscussionReply(dr.getDiscussionReplyVotes(), currentUserUid);
       dr.setDiscussionReplyVotes(JsonUtils.toJsonString(votesStatistics));
@@ -148,11 +149,13 @@ public class DiscussionService {
   }
 
   /**
-   * 统计讨论回复中投票信息.
+   * Aggregates the voting information in a discussion reply.
    *
-   * @param votes - 原始讨论回复中投票信息的JSON格式字符串
-   * @param currentUserUid - 当前登录用户的用户唯一标识符(-1表示未登录)
-   * @return 包含讨论回复投票信息的Map对象
+   * @param votes - the JSON-formatted string of the original voting information in the discussion
+   *     reply
+   * @param currentUserUid - the unique identifier of the currently logged-in user (-1 means not
+   *     logged in)
+   * @return a Map object containing the discussion reply voting information
    */
   private Map<String, Object> getVoteStatisticsOfDiscussionReply(
       String votes, long currentUserUid) {
@@ -172,45 +175,48 @@ public class DiscussionService {
   }
 
   /**
-   * 将讨论回复投票信息的JSON字符串解析为投票用户列表. 投票信息的格式为{"up": [uid, ...], "down": [uid, ...]}.
+   * Parses the JSON string of the discussion reply voting information into voting user lists. The
+   * voting information has the format {"up": [uid, ...], "down": [uid, ...]}.
    *
-   * @param votes - 讨论回复投票信息的JSON格式字符串
-   * @return 包含"up"和"down"两个键的投票用户UID列表的Map对象
+   * @param votes - the JSON-formatted string of the discussion reply voting information
+   * @return a Map object containing the lists of voting user UIDs under the "up" and "down" keys
    */
   private Map<String, List<Long>> parseVoteUsers(String votes) {
     return JsonUtils.toObject(votes, new TypeReference<Map<String, List<Long>>>() {});
   }
 
   /**
-   * 通过讨论帖子的唯一标识符获取讨论帖子对象.
+   * Gets a discussion thread object by its unique identifier.
    *
-   * @param discussionThreadId - 讨论帖子的唯一标识符
-   * @return 对应的讨论帖子对象或空引用
+   * @param discussionThreadId - the unique identifier of the discussion thread
+   * @return the corresponding discussion thread object, or a null reference
    */
   public DiscussionThread getDiscussionThreadUsingThreadId(long discussionThreadId) {
     return discussionThreadMapper.getDiscussionThreadUsingThreadId(discussionThreadId);
   }
 
   /**
-   * 通过讨论回复的唯一标识符获取讨论帖子对象.
+   * Gets a discussion reply object by its unique identifier.
    *
-   * @param discussionReplyId - 讨论回复的唯一标识符
-   * @return 对应的讨论回复对象或空引用
+   * @param discussionReplyId - the unique identifier of the discussion reply
+   * @return the corresponding discussion reply object, or a null reference
    */
   public DiscussionReply getDiscussionReplyUsingReplyId(long discussionReplyId) {
     return discussionReplyMapper.getDiscussionReplyUsingReplyId(discussionReplyId);
   }
 
   /**
-   * 对讨论回复进行投票.
+   * Votes on a discussion reply.
    *
-   * @param discussionThreadId - 讨论帖子的唯一标识符
-   * @param discussionReplyId - 讨论回复的唯一标识符
-   * @param currentUser - 当前登录用户的用户
-   * @param voteUp - Vote Up状态 (+1 表示用户赞了这个回答, -1 表示用户取消赞了这个回答, 0表示没有操作)
-   * @param voteDown - Vote Up状态 (+1 表示用户踩了这个回答, -1 表示用户取消踩了这个回答, 0表示没有操作)
-   * @param isCsrfTokenValid - CSRF Token是否有效
-   * @return 讨论回复的投票结果
+   * @param discussionThreadId - the unique identifier of the discussion thread
+   * @param discussionReplyId - the unique identifier of the discussion reply
+   * @param currentUser - the currently logged-in user
+   * @param voteUp - the vote up status (+1 means the user upvoted the reply, -1 means the user
+   *     cancelled the upvote, 0 means no action)
+   * @param voteDown - the vote down status (+1 means the user downvoted the reply, -1 means the
+   *     user cancelled the downvote, 0 means no action)
+   * @param isCsrfTokenValid - whether the CSRF token is valid
+   * @return the voting result of the discussion reply
    */
   public Map<String, Boolean> voteDiscussionReply(
       long discussionThreadId,
@@ -238,7 +244,7 @@ public class DiscussionService {
 
     if (result.get("isSuccessful")) {
       synchronized (this) {
-        // 设置新的投票结果
+        // Set the new voting result
         Map<String, List<Long>> voteUsers =
             parseVoteUsers(discussionReply.getDiscussionReplyVotes());
         List<Long> voteUpUsers = voteUsers.get("up");
@@ -266,12 +272,12 @@ public class DiscussionService {
   }
 
   /**
-   * [仅限管理员使用] 创建讨论主题.
+   * [For administrators only] Creates a discussion topic.
    *
-   * @param discussionTopicSlug - 讨论主题的唯一英文缩写
-   * @param discussionTopicName - 讨论主题的名称
-   * @param parentDiscussionTopic - 父级讨论主题对象 (可为空)
-   * @return 包含讨论主题创建结果的Map对象
+   * @param discussionTopicSlug - the unique English abbreviation of the discussion topic
+   * @param discussionTopicName - the name of the discussion topic
+   * @param parentDiscussionTopic - the parent discussion topic object (may be null)
+   * @return a Map object containing the discussion topic creation result
    */
   public Map<String, Boolean> createDiscussionTopic(
       String discussionTopicSlug,
@@ -300,13 +306,13 @@ public class DiscussionService {
   }
 
   /**
-   * [仅限管理员使用] 编辑讨论主题.
+   * [For administrators only] Edits a discussion topic.
    *
-   * @param discussionTopicId - 讨论主题的唯一标识符
-   * @param discussionTopicSlug - 讨论主题的唯一英文缩写
-   * @param discussionTopicName - 讨论主题的名称
-   * @param parentDiscussionTopic - 父级讨论主题对象 (可为空)
-   * @return 包含讨论主题编辑结果的Map对象
+   * @param discussionTopicId - the unique identifier of the discussion topic
+   * @param discussionTopicSlug - the unique English abbreviation of the discussion topic
+   * @param discussionTopicName - the name of the discussion topic
+   * @param parentDiscussionTopic - the parent discussion topic object (may be null)
+   * @return a Map object containing the discussion topic editing result
    */
   public Map<String, Boolean> updateDiscussionTopic(
       int discussionTopicId,
@@ -340,10 +346,10 @@ public class DiscussionService {
   }
 
   /**
-   * [仅限管理员使用] 删除讨论主题.
+   * [For administrators only] Deletes a discussion topic.
    *
-   * @param discussionTopicId - 讨论主题的唯一标识符.
-   * @return 包含讨论主题删除结果的Map对象
+   * @param discussionTopicId - the unique identifier of the discussion topic
+   * @return a Map object containing the discussion topic deletion result
    */
   public Map<String, Boolean> deleteDiscussionTopic(int discussionTopicId) {
     Map<String, Boolean> result = new HashMap<>(2, 1);
@@ -354,15 +360,15 @@ public class DiscussionService {
   }
 
   /**
-   * 创建讨论帖子.
+   * Creates a discussion thread.
    *
-   * @param threadCreator - 讨论帖子的创建者
-   * @param discussionTopicSlug - 讨论帖子对应主题的唯一英文缩写
-   * @param relatedProblemId - 讨论帖子所关联的问题 (可为空)
-   * @param discussionThreadTitle - 讨论帖子的标题
-   * @param discussionThreadContent - 讨论帖子中第一个回复的内容
-   * @param isCsrfTokenValid - CSRF Token是否合法
-   * @return 包含讨论帖子创建结果的Map对象
+   * @param threadCreator - the creator of the discussion thread
+   * @param discussionTopicSlug - the unique English abbreviation of the thread's topic
+   * @param relatedProblemId - the problem the thread is related to (may be null)
+   * @param discussionThreadTitle - the title of the discussion thread
+   * @param discussionThreadContent - the content of the first reply in the discussion thread
+   * @param isCsrfTokenValid - whether the CSRF token is valid
+   * @return a Map object containing the discussion thread creation result
    */
   public Map<String, Object> createDiscussionThread(
       User threadCreator,
@@ -393,12 +399,13 @@ public class DiscussionService {
   }
 
   /**
-   * 获取讨论帖子的创建结果.
+   * Gets the creation result of a discussion thread.
    *
-   * @param dt - 待创建的讨论帖
-   * @param discussionThreadContent - 待创建讨论帖中的内容 (内容以DiscussionReply对象存储)
-   * @param isCsrfTokenValid - CSRF Token是否合法
-   * @return 包含讨论帖子创建结果的Map<String, Boolean>对象
+   * @param dt - the discussion thread to create
+   * @param discussionThreadContent - the content of the thread to create (stored as a
+   *     DiscussionReply object)
+   * @param isCsrfTokenValid - whether the CSRF token is valid
+   * @return a Map<String, Boolean> object containing the discussion thread creation result
    */
   private Map<String, ? extends Object> getDiscussionThreadCreationResult(
       DiscussionThread dt, String discussionThreadContent, boolean isCsrfTokenValid) {
@@ -430,14 +437,15 @@ public class DiscussionService {
   }
 
   /**
-   * 编辑讨论帖子. 编辑条件: 当前用户为管理员或该帖子由用户自己创建.
+   * Edits a discussion thread. Editing condition: the current user is an administrator or the thread
+   * was created by the user themselves.
    *
-   * @param discussionThreadId - 讨论帖子的唯一标识符
-   * @param currentEditor - 当前的编辑者
-   * @param discussionTopicSlug - 讨论帖子对应主题的唯一英文缩写
-   * @param discussionThreadTitle - 讨论帖子的标题
-   * @param isCsrfTokenValid - CSRF Token是否合法
-   * @return 包含讨论帖子编辑结果的Map对象
+   * @param discussionThreadId - the unique identifier of the discussion thread
+   * @param currentEditor - the current editor
+   * @param discussionTopicSlug - the unique English abbreviation of the thread's topic
+   * @param discussionThreadTitle - the title of the discussion thread
+   * @param isCsrfTokenValid - whether the CSRF token is valid
+   * @return a Map object containing the discussion thread editing result
    */
   public Map<String, Boolean> editDiscussionThread(
       long discussionThreadId,
@@ -454,6 +462,7 @@ public class DiscussionService {
     result.put("isThreadTitleEmpty", discussionThreadTitle.isEmpty());
     result.put("isThreadTitleLegal", discussionThreadTitle.length() <= 128);
     result.put("isCsrfTokenValid", isCsrfTokenValid);
+    result.put("isDiscussionTopicExists", false);
 
     if (isCsrfTokenValid) {
       discussionTopic = discussionTopicMapper.getDiscussionTopicUsingSlug(discussionTopicSlug);
@@ -478,10 +487,10 @@ public class DiscussionService {
   }
 
   /**
-   * [仅限管理员使用] 删除讨论帖子.
+   * [For administrators only] Deletes a discussion thread.
    *
-   * @param discussionThreadId - 讨论帖子的唯一标识符.
-   * @return 讨论帖子的删除结果
+   * @param discussionThreadId - the unique identifier of the discussion thread
+   * @return the discussion thread deletion result
    */
   public Map<String, Boolean> deleteDiscussionThread(long discussionThreadId) {
     Map<String, Boolean> result = new HashMap<>(2, 1);
@@ -493,13 +502,13 @@ public class DiscussionService {
   }
 
   /**
-   * 创建讨论回复.
+   * Creates a discussion reply.
    *
-   * @param discussionThreadId - 回复对应讨论主题的唯一标识符
-   * @param replyCreator - 回复的创建者
-   * @param replyContent - 回复内容
-   * @param isCsrfTokenValid - CSRF Token是否合法
-   * @return 包含讨论回复创建结果的Map对象.
+   * @param discussionThreadId - the unique identifier of the discussion thread the reply belongs to
+   * @param replyCreator - the creator of the reply
+   * @param replyContent - the content of the reply
+   * @param isCsrfTokenValid - whether the CSRF token is valid
+   * @return a Map object containing the discussion reply creation result
    */
   public Map<String, Object> createDiscussionReply(
       long discussionThreadId, User replyCreator, String replyContent, boolean isCsrfTokenValid) {
@@ -521,11 +530,11 @@ public class DiscussionService {
   }
 
   /**
-   * 验证讨论回复数据有效性.
+   * Validates the discussion reply data.
    *
-   * @param discussionReply - 待创建的讨论回复对象
-   * @param isCsrfTokenValid - CSRF Token是否合法
-   * @return 包含讨论回复数据有效性的Map对象
+   * @param discussionReply - the discussion reply object to create
+   * @param isCsrfTokenValid - whether the CSRF token is valid
+   * @return a Map object containing the validity of the discussion reply data
    */
   private Map<String, ? extends Object> getDiscussionReplyCreationResult(
       DiscussionReply discussionReply, boolean isCsrfTokenValid) {
@@ -556,13 +565,14 @@ public class DiscussionService {
   }
 
   /**
-   * 编辑讨论回复. 编辑条件: 当前用户为管理员或该回复由用户自己创建.
+   * Edits a discussion reply. Editing condition: the current user is an administrator or the reply
+   * was created by the user themselves.
    *
-   * @param discussionReplyId - 讨论回复的唯一标识符
-   * @param currentEditor - 当前的编辑者
-   * @param discussionReplyContent - 更新后讨论回复的内容
-   * @param isCsrfTokenValid - CSRF Token是否合法
-   * @return 包含讨论回复编辑结果的Map对象
+   * @param discussionReplyId - the unique identifier of the discussion reply
+   * @param currentEditor - the current editor
+   * @param discussionReplyContent - the updated content of the discussion reply
+   * @param isCsrfTokenValid - whether the CSRF token is valid
+   * @return a Map object containing the discussion reply editing result
    */
   public Map<String, Boolean> editDiscussionReply(
       long discussionReplyId,
@@ -589,12 +599,13 @@ public class DiscussionService {
   }
 
   /**
-   * 删除讨论回复. 删除条件: 当前用户为管理员或该回复由用户自己创建.
+   * Deletes a discussion reply. Deletion condition: the current user is an administrator or the
+   * reply was created by the user themselves.
    *
-   * @param discussionReplyId - 讨论回复的唯一标识符
-   * @param currentEditor - 当前的编辑者
-   * @param isCsrfTokenValid - CSRF Token是否合法
-   * @return 包含讨论回复删除结果的Map对象.
+   * @param discussionReplyId - the unique identifier of the discussion reply
+   * @param currentEditor - the current editor
+   * @param isCsrfTokenValid - whether the CSRF token is valid
+   * @return a Map object containing the discussion reply deletion result
    */
   public Map<String, Boolean> deleteDiscussionReply(
       long discussionReplyId, User currentEditor, boolean isCsrfTokenValid) {
@@ -616,18 +627,18 @@ public class DiscussionService {
     return result;
   }
 
-  /** 自动注入的DiscussionTopicMapper对象. 用于获取讨论主题. */
+  /** The autowired DiscussionTopicMapper object, used to obtain discussion topics. */
   @Autowired private DiscussionTopicMapper discussionTopicMapper;
 
-  /** 自动注入的DiscussionThreadMapper对象. 用于获取讨论帖子. */
+  /** The autowired DiscussionThreadMapper object, used to obtain discussion threads. */
   @Autowired private DiscussionThreadMapper discussionThreadMapper;
 
-  /** 自动注入的DiscussionReplyMapper对象. 用于获取讨论回复. */
+  /** The autowired DiscussionReplyMapper object, used to obtain discussion replies. */
   @Autowired private DiscussionReplyMapper discussionReplyMapper;
 
-  /** 自动注入的ProblemMapper对象. 用于获取试题. */
+  /** The autowired ProblemMapper object, used to obtain problems. */
   @Autowired private ProblemMapper problemMapper;
 
-  /** 自动注入的SensitiveWordFilter对象. 用于过滤用户个人信息中的敏感词. */
+  /** The autowired OffensiveWordFilter object, used to filter offensive words in user content. */
   @Autowired private OffensiveWordFilter offensiveWordFilter;
 }
