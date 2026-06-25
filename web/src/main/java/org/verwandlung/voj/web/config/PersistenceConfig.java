@@ -74,14 +74,16 @@ public class PersistenceConfig {
   }
 
   /**
-   * Exposes voj.properties as a {@link java.util.Properties} Bean named {@code propertyConfigurer},
-   * so that the SpEL expression {@code @propertyConfigurer.getProperty('...')} in JSPs remains
-   * usable.
+   * Exposes voj.properties (plus the build-time version.properties) as a {@link
+   * java.util.Properties} Bean named {@code propertyConfigurer}, so that the SpEL expression {@code
+   * @propertyConfigurer.getProperty('...')} in JSPs remains usable. version.properties carries
+   * build.version / product.version, filled in by Maven resource filtering at build time.
    */
   @Bean(name = "propertyConfigurer")
   public PropertiesFactoryBean propertyConfigurer() {
     PropertiesFactoryBean propertiesFactoryBean = new PropertiesFactoryBean();
-    propertiesFactoryBean.setLocation(new ClassPathResource("voj.properties"));
+    propertiesFactoryBean.setLocations(
+        new ClassPathResource("voj.properties"), new ClassPathResource("version.properties"));
     return propertiesFactoryBean;
   }
 }

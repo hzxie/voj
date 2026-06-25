@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.verwandlung</groupId>
 		<artifactId>voj-parent</artifactId>
-		<version>0.2.0</version>
+		<version>0.9.0</version>
 	</parent>
 
 	<artifactId>voj.web</artifactId>
@@ -137,6 +137,26 @@
 
 	<build>
 		<finalName>voj.web</finalName>
+		<resources>
+			<!-- Filter only version.properties, which carries the @...@ build
+			     placeholders. Everything else - notably voj.properties, which
+			     contains a literal @ in an e-mail address - is copied verbatim,
+			     so the @-delimited filtering cannot corrupt it. -->
+			<resource>
+				<directory>src/main/resources</directory>
+				<filtering>false</filtering>
+				<excludes>
+					<exclude>version.properties</exclude>
+				</excludes>
+			</resource>
+			<resource>
+				<directory>src/main/resources</directory>
+				<filtering>true</filtering>
+				<includes>
+					<include>version.properties</include>
+				</includes>
+			</resource>
+		</resources>
 		<plugins>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>

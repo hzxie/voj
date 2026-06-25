@@ -4,7 +4,7 @@
 
 	<groupId>org.verwandlung</groupId>
 	<artifactId>voj-parent</artifactId>
-	<version>0.2.0</version>
+	<version>0.9.0</version>
 	<packaging>pom</packaging>
 	<name>Verwandlung Online Judge</name>
 	<url>https://verwandlung.org</url>
@@ -62,6 +62,33 @@
 
 	<build>
 		<plugins>
+			<!-- Expose the current git commit hash as ${git.commit.id.abbrev} so
+			     web/src/main/resources/voj.properties can derive build.version
+			     automatically (used as the static-asset cache-busting key),
+			     instead of it being maintained by hand. -->
+			<plugin>
+				<groupId>io.github.git-commit-id</groupId>
+				<artifactId>git-commit-id-maven-plugin</artifactId>
+				<version>10.0.0</version>
+				<executions>
+					<execution>
+						<id>get-the-git-infos</id>
+						<phase>initialize</phase>
+						<goals>
+							<goal>revision</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<abbrevLength>7</abbrevLength>
+					<!-- Don't fail builds made from an exported tree without a .git
+					     directory; build.version just resolves empty there. -->
+					<failOnNoGitDirectory>false</failOnNoGitDirectory>
+					<includeOnlyProperties>
+						<includeOnlyProperty>^git\.commit\.id\.abbrev$</includeOnlyProperty>
+					</includeOnlyProperties>
+				</configuration>
+			</plugin>
 			<!-- Collect test coverage (jacoco.exec) and emit an XML report under
 			     each module's target/site/jacoco/ for upload to Codecov. Spring
 			     Boot 4 no longer manages the plugin version, so it is pinned. -->
