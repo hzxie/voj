@@ -96,6 +96,12 @@ public class UserService {
       }
       userMetaMap.put(key, value);
     }
+    // Ensure socialLinks is always present as a (possibly empty) map. New users
+    // have no socialLinks meta row, leaving the attribute null; the JSP views
+    // tolerated indexing a null map, but Thymeleaf's SpEL throws EL1012E
+    // ("Cannot index into a null value"). Defaulting to an empty map keeps
+    // socialLinks['Facebook'] et al. resolving to null as the templates expect.
+    userMetaMap.putIfAbsent("socialLinks", new HashMap<String, Object>());
     return userMetaMap;
   }
 

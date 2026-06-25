@@ -97,6 +97,13 @@ public class ViewAspect {
       view.addObject("isLogin", true)
           .addObject("myProfile", user)
           .addObject("mySubmissionStats", submissionService.getSubmissionStatsOfUser(userId));
+    } else {
+      // Always expose isLogin so templates can use it inside compound boolean
+      // expressions (e.g. ${isLogin and ...}). The JSP views relied on EL
+      // coercing a missing/null value to false; Thymeleaf's SpEL instead throws
+      // EL1001E ("cannot convert from null to boolean") for null operands of
+      // 'and'/'or', so an explicit false is required for anonymous users.
+      view.addObject("isLogin", false);
     }
     return view;
   }

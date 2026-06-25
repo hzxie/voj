@@ -3,7 +3,7 @@
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layouts/main}" lang="en">
 <head>
-    <title th:text="|P${problem.problemId} ${problem.problemName} | ${websiteName}|">Problem</title>
+    <title th:text="'P' + ${problem.problemId} + ' ' + ${problem.problemName} + ' | ' + ${websiteName}">Problem</title>
     <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/codemirror.min.css?v=${version}|" />
     <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/problems/problem.css?v=${version}|" />
     <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/highlight.min.css?v=${version}|" />
@@ -116,7 +116,7 @@
     </div> <!-- #content -->
 
     <th:block layout:fragment="scripts">
-    <script type="text/x-mathjax-config">
+    <script type="text/x-mathjax-config" th:inline="none">
         MathJax.Hub.Config({
             tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
         });
@@ -169,7 +169,7 @@
     </script>
     <script type="text/javascript" th:inline="javascript">
         $(function() {
-            var preferLanguage = [[${myProfile.preferLanguage.languageSlug}]];
+            var preferLanguage = [[${myProfile?.preferLanguage?.languageSlug}]];
             $('select#languages').val(preferLanguage);
             /*[# th:if="${isContest and codeSnippet != null}"]*/
             $('select#languages').val([[${codeSnippet != null ? codeSnippet['language'] : ''}]]);

@@ -187,6 +187,10 @@ public class ProblemsController {
 
     ModelAndView view = new ModelAndView("pages/problems/problem");
     view.addObject("problem", problem);
+    // Standard (non-contest) problem view. The problem template is shared with
+    // the contest problem view, which sets isContest=true; here it must be set
+    // to false so ${isContest and ...} resolves rather than failing on a null.
+    view.addObject("isContest", false);
     view.addObject(
         "discussionThreads",
         discussionService.getDiscussionThreadsOfProblem(
