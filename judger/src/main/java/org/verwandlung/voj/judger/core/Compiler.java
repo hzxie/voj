@@ -95,16 +95,11 @@ public class Compiler {
     int memoryLimit = 0;
 
     LOGGER.info("Start compiling with command: " + commandLine);
-    Map<String, Object> runningResult =
-        compilerRunner.getRuntimeResult(
-            commandLine, inputFilePath, compileLogPath, timeLimit, memoryLimit);
+    RunResult runResult =
+        compilerRunner.run(commandLine, inputFilePath, compileLogPath, timeLimit, memoryLimit);
     Map<String, Object> result = new HashMap<>(3, 1);
 
-    boolean isSuccessful = false;
-    if (runningResult != null) {
-      int exitCode = (Integer) runningResult.get("exitCode");
-      isSuccessful = exitCode == 0;
-    }
+    boolean isSuccessful = runResult.getVerdict() == Verdict.NORMAL;
     result.put("isSuccessful", isSuccessful);
     result.put("log", getCompileOutput(compileLogPath));
     return result;

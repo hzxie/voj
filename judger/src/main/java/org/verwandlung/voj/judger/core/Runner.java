@@ -29,15 +29,90 @@ import org.verwandlung.voj.judger.model.Submission;
 import org.verwandlung.voj.judger.util.NativeLibraryLoader;
 
 /**
- * The native program runner, used to execute native applications, including the compiler (gcc) and
- * the program compiled from the code submitted by users.
+ * The legacy native program runner, used to execute native applications, including the compiler
+ * (gcc) and the program compiled from the code submitted by users.
+ *
+ * <p>This is the transitional {@link SandboxRunner} implementation backed by the existing JNI runner
+ * ({@code posix_spawn} on Unix, {@code CreateProcess} on Windows). It does not have first-class
+ * resource accounting, so it <em>infers</em> the {@link Verdict} from the exit code and the measured
+ * time/memory. That inference is best-effort and goes away once the platform-native runners
+ * (isolate on Linux, Job Objects on Windows) replace it.
  *
  * @author Haozhe Xie
  */
 @Component
-public class Runner {
+public class Runner implements SandboxRunner {
   /**
-   * Gets the runtime result of the (user's) program.
+   * Runs a command under the legacy native sandbox.
+   *
+   * @param commandLine - the command line to execute
+   * @param inputFilePath - the file to redirect to standard input, or {@code null} for none
+   * @param outputFilePath - the file to capture standard output/error into, or {@code null} for none
+   * @param timeLimitMs - the time limit in milliseconds (0 means no limit)
+   * @param memoryLimitKb - the memory limit in kilobytes (0 means no limit)
+   * @return the structured run result; never {@code null}
+   */
+  @Override
+  public RunResult run(
+      String commandLine,
+      String inputFilePath,
+      String outputFilePath,
+      int timeLimitMs,
+      int memoryLimitKb) {
+    try {
+      Map<String, Object> nativeResult =
+          getRuntimeResult(
+              commandLine,
+              systemUsername,
+              systemPassword,
+              inputFilePath,
+              outputFilePath,
+              timeLimitMs,
+              memoryLimitKb);
+      if (nativeResult == null) {
+        return RunResult.internalError();
+      }
+
+      int exitCode = (Integer) nativeResult.get("exitCode");
+      int usedTime = (Integer) nativeResult.get("usedTime");
+      int usedMemory = (Integer) nativeResult.get("usedMemory");
+      Verdict verdict = inferVerdict(exitCode, usedTime, usedMemory, timeLimitMs, memoryLimitKb);
+      return new RunResult(verdict, usedTime, usedMemory, exitCode);
+    } catch (Exception ex) {
+      LOGGER.catching(ex);
+      return RunResult.internalError();
+    }
+  }
+
+  /**
+   * Infers the verdict from the legacy runner's output. The native runner only reports an exit code
+   * and the measured time/memory, so this reproduces the historical heuristic: an exit code of 0 is
+   * a normal run; otherwise we attribute the failure to the limit that was reached, falling back to
+   * a runtime error.
+   *
+   * @param exitCode - the raw exit code reported by the native runner
+   * @param usedTime - the measured time used (ms)
+   * @param usedMemory - the measured memory used (KB)
+   * @param timeLimitMs - the time limit (ms, 0 means no limit)
+   * @param memoryLimitKb - the memory limit (KB, 0 means no limit)
+   * @return the inferred verdict
+   */
+  private Verdict inferVerdict(
+      int exitCode, int usedTime, int usedMemory, int timeLimitMs, int memoryLimitKb) {
+    if (exitCode == 0) {
+      return Verdict.NORMAL;
+    }
+    if (timeLimitMs != 0 && usedTime >= timeLimitMs) {
+      return Verdict.TIME_LIMIT_EXCEEDED;
+    }
+    if (memoryLimitKb != 0 && usedMemory >= memoryLimitKb) {
+      return Verdict.MEMORY_LIMIT_EXCEEDED;
+    }
+    return Verdict.RUNTIME_ERROR;
+  }
+
+  /**
+   * Gets the runtime result of the (user's) program for a single checkpoint.
    *
    * @param submission - the submission object
    * @param workDirectory - the directory of the compilation result and the program output
@@ -56,38 +131,16 @@ public class Runner {
     int timeLimit = getTimeLimit(submission);
     int memoryLimit = getMemoryLimit(submission);
 
+    LOGGER.info(
+        String.format(
+            "[Submission #%d] Start running with command %s (TimeLimit=%d, MemoryLimit=%s)",
+            new Object[] {submission.getSubmissionId(), commandLine, timeLimit, memoryLimit}));
+    RunResult runResult = run(commandLine, inputFilePath, outputFilePath, timeLimit, memoryLimit);
+
     Map<String, Object> result = new HashMap<>(4, 1);
-    String runtimeResultSlug = "SE";
-    int usedTime = 0;
-    int usedMemory = 0;
-
-    try {
-      LOGGER.info(
-          String.format(
-              "[Submission #%d] Start running with command %s (TimeLimit=%d, MemoryLimit=%s)",
-              new Object[] {submission.getSubmissionId(), commandLine, timeLimit, memoryLimit}));
-      Map<String, Object> runtimeResult =
-          getRuntimeResult(
-              commandLine,
-              systemUsername,
-              systemPassword,
-              inputFilePath,
-              outputFilePath,
-              timeLimit,
-              memoryLimit);
-
-      int exitCode = (Integer) runtimeResult.get("exitCode");
-      usedTime = (Integer) runtimeResult.get("usedTime");
-      usedMemory = (Integer) runtimeResult.get("usedMemory");
-      runtimeResultSlug =
-          getRuntimeResultSlug(exitCode, timeLimit, usedTime, memoryLimit, usedMemory);
-    } catch (Exception ex) {
-      LOGGER.catching(ex);
-    }
-
-    result.put("runtimeResult", runtimeResultSlug);
-    result.put("usedTime", usedTime);
-    result.put("usedMemory", usedMemory);
+    result.put("runtimeResult", getRuntimeResultSlug(runResult.getVerdict()));
+    result.put("usedTime", runResult.getCpuTimeMs());
+    result.put("usedMemory", runResult.getPeakMemoryKb());
     return result;
   }
 
@@ -142,65 +195,32 @@ public class Runner {
   }
 
   /**
-   * Wraps the judging result based on the result returned by JNI.
+   * Maps a {@link Verdict} to the unique English abbreviation used by the rest of the system.
    *
-   * @param exitCode - the program's exit status code
-   * @param timeLimit - the maximum time limit
-   * @param timeUsed - the time used by the program
-   * @param memoryLimit - the maximum memory limit
-   * @param memoryUsed - the memory used by the program (maximum)
-   * @return the unique English abbreviation of the program's runtime result
+   * <p>{@link Verdict#NORMAL} maps to {@code "AC"}; whether the run is really Accepted is decided
+   * later by the output comparison (a normal run with mismatching output becomes {@code "WA"}).
+   *
+   * @param verdict - the verdict to map
+   * @return the unique English abbreviation of the runtime result
    */
-  private String getRuntimeResultSlug(
-      int exitCode, int timeLimit, int timeUsed, int memoryLimit, int memoryUsed) {
-    if (exitCode == 0) {
-      // Output will be compared in next stage
-      return "AC";
+  private String getRuntimeResultSlug(Verdict verdict) {
+    switch (verdict) {
+      case NORMAL:
+        return "AC";
+      case TIME_LIMIT_EXCEEDED:
+        return "TLE";
+      case MEMORY_LIMIT_EXCEEDED:
+        return "MLE";
+      case RUNTIME_ERROR:
+        return "RE";
+      case INTERNAL_ERROR:
+      default:
+        return "SE";
     }
-    if (timeUsed >= timeLimit) {
-      return "TLE";
-    }
-    if (memoryUsed >= memoryLimit) {
-      return "MLE";
-    }
-    return "RE";
   }
 
   /**
-   * Gets the runtime result of the (compilation) program.
-   *
-   * @param commandLine - the command line of the program to execute
-   * @param inputFilePath - the input file path (may be NULL)
-   * @param outputFilePath - the output file path (may be NULL)
-   * @param timeLimit - the time limit (in ms, 0 means no limit)
-   * @param memoryLimit - the memory limit (in KB, 0 means no limit)
-   * @return a Map<String, Object> object containing the program's runtime result
-   */
-  public Map<String, Object> getRuntimeResult(
-      String commandLine,
-      String inputFilePath,
-      String outputFilePath,
-      int timeLimit,
-      int memoryLimit) {
-    Map<String, Object> result = null;
-    try {
-      result =
-          getRuntimeResult(
-              commandLine,
-              systemUsername,
-              systemPassword,
-              inputFilePath,
-              outputFilePath,
-              timeLimit,
-              memoryLimit);
-    } catch (Exception ex) {
-      LOGGER.catching(ex);
-    }
-    return result;
-  }
-
-  /**
-   * Gets the program's runtime result.
+   * Gets the program's runtime result via JNI.
    *
    * @param commandLine - the command line of the program to execute
    * @param systemUsername - the username for logging into the operating system
