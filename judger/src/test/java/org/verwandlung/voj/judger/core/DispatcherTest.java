@@ -93,7 +93,7 @@ public class DispatcherTest {
     checkpoints.add(new Checkpoint(1000L, 1, true, 100, "input", "output"));
     when(checkpointMapper.getCheckpointsUsingProblemId(1000L)).thenReturn(checkpoints);
 
-    when(runner.getRuntimeResult(any(), anyString(), anyString(), anyString(), anyString()))
+    when(programRunner.getRuntimeResult(any(), anyString(), anyString(), anyString(), anyString()))
         .thenReturn(runtimeResult("AC"));
     when(comparator.isOutputTheSame(anyString(), anyString())).thenReturn(true);
 
@@ -126,7 +126,7 @@ public class DispatcherTest {
     checkpoints.add(new Checkpoint(1000L, 1, true, 100, "input", "output"));
     when(checkpointMapper.getCheckpointsUsingProblemId(1000L)).thenReturn(checkpoints);
 
-    when(runner.getRuntimeResult(any(), anyString(), anyString(), anyString(), anyString()))
+    when(programRunner.getRuntimeResult(any(), anyString(), anyString(), anyString(), anyString()))
         .thenReturn(runtimeResult("AC"));
     when(comparator.isOutputTheSame(anyString(), anyString())).thenReturn(false);
 
@@ -153,7 +153,7 @@ public class DispatcherTest {
     dispatcher.createNewTask(100L);
 
     verify(applicationDispatcher).onCompileFinished(eq(100L), any());
-    verify(runner, never())
+    verify(programRunner, never())
         .getRuntimeResult(any(), anyString(), anyString(), anyString(), anyString());
     verify(applicationDispatcher, never()).onAllTestPointsFinished(anyLong(), any());
   }
@@ -207,8 +207,8 @@ public class DispatcherTest {
   /** The mocked Compiler object. */
   @Mock private Compiler compiler;
 
-  /** The mocked Runner object. */
-  @Mock private Runner runner;
+  /** The mocked ProgramRunner object. */
+  @Mock private ProgramRunner programRunner;
 
   /** The mocked Comparator object. */
   @Mock private Comparator comparator;

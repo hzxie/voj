@@ -96,7 +96,7 @@ public class Compiler {
 
     LOGGER.info("Start compiling with command: " + commandLine);
     RunResult runResult =
-        compilerRunner.run(commandLine, inputFilePath, compileLogPath, timeLimit, memoryLimit);
+        sandboxRunner.run(commandLine, inputFilePath, compileLogPath, timeLimit, memoryLimit);
     Map<String, Object> result = new HashMap<>(3, 1);
 
     boolean isSuccessful = runResult.getVerdict() == Verdict.NORMAL;
@@ -124,8 +124,8 @@ public class Compiler {
     return compileLog;
   }
 
-  /** The autowired Runner object, used to execute the compile command. */
-  @Autowired private Runner compilerRunner;
+  /** The configured sandbox runner, used to execute the compile command. */
+  @Autowired private SandboxRunner sandboxRunner;
 
   /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(Compiler.class);

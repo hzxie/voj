@@ -33,16 +33,19 @@ import org.verwandlung.voj.judger.model.Submission;
 /**
  * Test class for the program runner.
  *
+ * <p>The test context does not set {@code judger.sandbox}, so it exercises the default native
+ * sandbox runner end to end.
+ *
  * @author Haozhe Xie
  */
 @ExtendWith(SpringExtension.class)
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
-public class RunnerTest {
+public class ProgramRunnerTest {
   /**
-   * Test case: tests the getRuntimeResult(Submission, int, String, String, String, String) method.
-   * Test data: C++ code that compiles successfully. Expected result: compiles successfully and
-   * produces output when run.
+   * Test case: tests the getRuntimeResult(Submission, String, String, String, String) method. Test
+   * data: C++ code that compiles successfully. Expected result: compiles successfully and produces
+   * output when run.
    */
   @Test
   public void testGetRuntimeResultCpp() throws Exception {
@@ -58,15 +61,15 @@ public class RunnerTest {
     compiler.getCompileResult(submission, workDirectory, baseFileName);
 
     Map<String, Object> result =
-        runner.getRuntimeResult(
+        programRunner.getRuntimeResult(
             submission, workDirectory, baseFileName, inputFilePath, outputFilePath);
     Assertions.assertEquals("AC", result.get("runtimeResult"));
   }
 
   /**
-   * Test case: tests the getRuntimeResult(Submission, int, String, String, String, String) method.
-   * Test data: Java code that compiles successfully. Expected result: compiles successfully and
-   * produces output when run.
+   * Test case: tests the getRuntimeResult(Submission, String, String, String, String) method. Test
+   * data: Java code that compiles successfully. Expected result: compiles successfully and produces
+   * output when run.
    *
    * <p>The test case is disabled for passing CI on AppVeyor.
    */
@@ -83,13 +86,13 @@ public class RunnerTest {
     compiler.getCompileResult(submission, workDirectory, baseFileName);
 
     Map<String, Object> result =
-        runner.getRuntimeResult(
+        programRunner.getRuntimeResult(
             submission, workDirectory, baseFileName, inputFilePath, outputFilePath);
     Assertions.assertEquals("AC", result.get("runtimeResult"));
   }
 
-  /** The Runner object under test. */
-  @Autowired private Runner runner;
+  /** The ProgramRunner object under test. */
+  @Autowired private ProgramRunner programRunner;
 
   /** The autowired Compiler object, used to set up the test cases. */
   @Autowired private Compiler compiler;

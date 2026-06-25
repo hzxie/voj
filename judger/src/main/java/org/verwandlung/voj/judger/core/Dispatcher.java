@@ -144,7 +144,7 @@ public class Dispatcher {
 
       Map<String, Object> runtimeResult =
           getRuntimeResult(
-              runner.getRuntimeResult(
+              programRunner.getRuntimeResult(
                   submission, workDirectory, baseFileName, inputFilePath, outputFilePath),
               stdOutputFilePath,
               outputFilePath);
@@ -237,8 +237,8 @@ public class Dispatcher {
   /** The autowired Compiler object, which performs the compilation work. */
   @Autowired private Compiler compiler;
 
-  /** The autowired Runner object, which performs the program execution work. */
-  @Autowired private Runner runner;
+  /** The autowired ProgramRunner object, which performs the program execution work. */
+  @Autowired private ProgramRunner programRunner;
 
   /** The autowired Comparator object, which performs the output comparison work. */
   @Autowired private Comparator comparator;
