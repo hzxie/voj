@@ -87,6 +87,15 @@
 					<mainClass>org.verwandlung.voj.judger.VojJudgerApplication</mainClass>
 				</configuration>
 			</plugin>
+			<!-- Exclude the destructive sandbox stress tests (e.g. fork bombs) from the
+			     default build; run them with -Psandbox-stress against a trusted sandbox. -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<excludedGroups>sandbox-stress</excludedGroups>
+				</configuration>
+			</plugin>
 			<!-- Build the JNI native library (compiled into target/classes so it
 			     ships on the classpath inside the Boot jar). -->
 			<plugin>
@@ -112,4 +121,24 @@
 			</plugin>
 		</plugins>
 	</build>
+
+	<profiles>
+		<!-- Runs ONLY the destructive sandbox stress tests (fork bombs, etc.). Use this against a
+		     sandbox you trust to contain them (e.g. isolate), never on a shared CI runner. -->
+		<profile>
+			<id>sandbox-stress</id>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-surefire-plugin</artifactId>
+						<configuration>
+							<groups>sandbox-stress</groups>
+							<excludedGroups></excludedGroups>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
 </project>
