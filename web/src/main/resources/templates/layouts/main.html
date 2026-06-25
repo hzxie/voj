@@ -7,7 +7,8 @@
 
   The CDN base URL (cdnUrl), the cache-busting key (version), the display
   language, the logged-in profile and the system options (websiteName, ...) are
-  all injected into the model by ViewAspect, so every page can rely on them.
+  all injected into the model by CommonModelInterceptor (and, for the error
+  pages, by ExceptionHandlingController), so every page can rely on them.
 */-->
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"

@@ -20,6 +20,7 @@ import java.util.Locale;
 
 import nz.net.ultraq.thymeleaf.layoutdialect.LayoutDialect;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -29,6 +30,8 @@ import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.i18n.LocaleChangeInterceptor;
 import org.springframework.web.servlet.i18n.SessionLocaleResolver;
+
+import org.verwandlung.voj.web.interceptor.CommonModelInterceptor;
 
 /**
  * The Spring MVC configuration. Replaces the internationalization and localization configuration
@@ -43,12 +46,17 @@ import org.springframework.web.servlet.i18n.SessionLocaleResolver;
  */
 @Configuration
 public class WebMvcConfig implements WebMvcConfigurer {
+  /** The interceptor that injects the shared page model attributes. */
+  @Autowired private CommonModelInterceptor commonModelInterceptor;
+
   /* (non-Javadoc)
-   * Registers the language switching interceptor (switches the display language via ?language=xx_XX).
+   * Registers the language switching interceptor (switches the display language via ?language=xx_XX)
+   * and the interceptor that injects the shared page model attributes (formerly ViewAspect).
    */
   @Override
   public void addInterceptors(InterceptorRegistry registry) {
     registry.addInterceptor(localeChangeInterceptor());
+    registry.addInterceptor(commonModelInterceptor);
   }
 
   /**

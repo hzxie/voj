@@ -21,6 +21,7 @@ import jakarta.servlet.http.HttpServletResponse;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -30,6 +31,7 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.servlet.ModelAndView;
 
 import org.verwandlung.voj.web.exception.ResourceNotFoundException;
+import org.verwandlung.voj.web.interceptor.CommonModelPopulator;
 
 /**
  * The controller for handling exceptions.
@@ -49,6 +51,7 @@ public class ExceptionHandlingController {
   @ExceptionHandler(MissingServletRequestParameterException.class)
   public ModelAndView badRequestView(HttpServletRequest request, HttpServletResponse response) {
     ModelAndView view = new ModelAndView("pages/errors/404");
+    commonModelPopulator.populate(view, request, response);
     return view;
   }
 
@@ -63,6 +66,7 @@ public class ExceptionHandlingController {
   @ExceptionHandler(ResourceNotFoundException.class)
   public ModelAndView notFoundView(HttpServletRequest request, HttpServletResponse response) {
     ModelAndView view = new ModelAndView("pages/errors/404");
+    commonModelPopulator.populate(view, request, response);
     return view;
   }
 
@@ -78,6 +82,7 @@ public class ExceptionHandlingController {
   public ModelAndView methodNotAllowedView(
       HttpServletRequest request, HttpServletResponse response) {
     ModelAndView view = new ModelAndView("pages/errors/404");
+    commonModelPopulator.populate(view, request, response);
     return view;
   }
 
@@ -96,8 +101,12 @@ public class ExceptionHandlingController {
     LOGGER.catching(ex);
 
     ModelAndView view = new ModelAndView("pages/errors/500");
+    commonModelPopulator.populate(view, request, response);
     return view;
   }
+
+  /** The autowired CommonModelPopulator object. */
+  @Autowired private CommonModelPopulator commonModelPopulator;
 
   /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(ExceptionHandlingController.class);

@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.verwandlung.voj.web.aspect;
+package org.verwandlung.voj.web.interceptor;
 
 import java.util.HashMap;
 import java.util.List;
@@ -26,9 +26,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 
-import org.aspectj.lang.ProceedingJoinPoint;
-import org.aspectj.lang.annotation.Around;
-import org.aspectj.lang.annotation.Aspect;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
@@ -42,37 +39,28 @@ import org.verwandlung.voj.web.util.HttpSessionParser;
 import org.verwandlung.voj.web.util.LocaleUtils;
 
 /**
- * The aspect class of the views. Loads the profile information and answering status of the
- * logged-in user before loading the page.
+ * Populates a page's {@link ModelAndView} with the attributes every page shares: the system options,
+ * the display language, the asset CDN/version metadata and the logged-in user's profile and
+ * answering status.
+ *
+ * <p>This used to live in an {@code @Around} aspect (ViewAspect) whose pointcut matched controller
+ * {@code *View} methods. It is now a plain component invoked from {@link CommonModelInterceptor} for
+ * regular page handlers, and directly from {@code ExceptionHandlingController} for the error pages
+ * (whose {@code @ExceptionHandler} dispatch never reaches a {@code HandlerInterceptor.postHandle}).
  *
  * @author Haozhe Xie
  */
-@Aspect
 @Component
-public class ViewAspect {
+public class CommonModelPopulator {
   /**
-   * Loads the profile information and answering status of the logged-in user.
+   * Adds the shared attributes to the given view.
    *
-   * @param proceedingJoinPoint - the ProceedingJoinPoint object
+   * @param view - the ModelAndView object to populate
    * @param request - the HttpRequest object
    * @param response - the HttpResponse object
-   * @return a ModelAndView object containing the expected view
-   * @throws Throwable - the ResourceNotFound exception
    */
-  @Around(
-      value =
-          "execution(* org.verwandlung.voj.web.controller.*.*View(..)) &&"
-              + "args(.., request, response)",
-      argNames = "proceedingJoinPoint,request,response"
-  )
-  public ModelAndView getUserProfile(
-      ProceedingJoinPoint proceedingJoinPoint,
-      HttpServletRequest request,
-      HttpServletResponse response)
-      throws Throwable {
-    ModelAndView view = null;
-
-    view = (ModelAndView) proceedingJoinPoint.proceed();
+  public void populate(
+      ModelAndView view, HttpServletRequest request, HttpServletResponse response) {
     view.addAllObjects(getSystemOptions());
     view.addObject("language", getUserLanguage(request, response));
 
@@ -105,7 +93,6 @@ public class ViewAspect {
       // 'and'/'or', so an explicit false is required for anonymous users.
       view.addObject("isLogin", false);
     }
-    return view;
   }
 
   /**
