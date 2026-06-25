@@ -15,37 +15,43 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #pragma GCC diagnostic ignored "-Wwrite-strings"
-#define INT_MAX 2147483647
 
-#include <cstdint> 
-#include <future>
+#include <cstdint>
 #include <iostream>
-#include <limits>
 #include <sstream>
 #include <string>
-#include <thread>
 
 #include <windows.h>
 #include <userenv.h>
-#include <psapi.h>
-#include <tlhelp32.h>
 
 #include "../org_verwandlung_voj_jni_hashmap.h"
 #include "../org_verwandlung_voj_jni_library.h"
 #include "../org_verwandlung_voj_judger_core_Runner.h"
 
 /**
+ * The maximum number of processes a sandboxed program (or compiler) may have running at once. This
+ * is enforced by the Job Object and primarily blocks fork bombs; it must stay high enough for the
+ * compiler's helper-process chain (cc1, as, ld, ...).
+ */
+#define ACTIVE_PROCESS_LIMIT 64
+
+/**
+ * Extra wall-clock time (ms) granted on top of the CPU time limit, so a process that blocks/sleeps
+ * without consuming CPU is still terminated.
+ */
+#define WALL_TIME_BUFFER_MS 1000
+
+/**
  * Function Prototypes.
  */
-bool setupIoRedirection(std::wstring, std::wstring, HANDLE&, HANDLE&);
+bool setupIoRedirection(const std::wstring&, const std::wstring&, HANDLE&, HANDLE&);
 void setupStartupInfo(STARTUPINFOW&, HANDLE&, HANDLE&);
-bool createProcess(const std::wstring&, const std::wstring&, const std::wstring&, HANDLE&, LPVOID, STARTUPINFOW&, PROCESS_INFORMATION&);
-DWORD runProcess(PROCESS_INFORMATION&, jint, jint, jint&, jint&);
-jint getMaxMemoryUsage(PROCESS_INFORMATION&, jint);
-jint getCurrentMemoryUsage(HANDLE&);
-long long getMillisecondsNow();
-bool killProcess(PROCESS_INFORMATION&);
-DWORD getExitCode(HANDLE&);
+HANDLE createJobObject(jint memoryLimit);
+bool createProcess(const std::wstring&, const std::wstring&, const std::wstring&, HANDLE&, LPVOID&, STARTUPINFOW&, PROCESS_INFORMATION&);
+jint getPeakMemoryUsage(HANDLE& hJob);
+jint getCpuTimeUsage(HANDLE& hProcess);
+DWORD getExitCode(HANDLE& hProcess);
+unsigned long long fileTimeToUll(const FILETIME&);
 std::string getErrorMessage(const std::string&);
 std::wstring getWideString(const std::string&);
 LPWSTR getWideStringPointer(const std::wstring&);
@@ -67,7 +73,7 @@ LPCWSTR getConstWideStringPointer(const std::wstring&);
  */
 JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntimeResult(
     JNIEnv* jniEnv, jobject selfReference, jstring jCommandLine, jstring jUsername,
-    jstring jPassword, jstring jInputFilePath, jstring jOutputFilePath, jint timeLimit, 
+    jstring jPassword, jstring jInputFilePath, jstring jOutputFilePath, jint timeLimit,
     jint memoryLimit) {
     std::wstring        commandLine         = getWideString(getStringValue(jniEnv, jCommandLine));
     std::wstring        username            = getWideString(getStringValue(jniEnv, jUsername));
@@ -75,9 +81,10 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     std::wstring        inputFilePath       = getWideString(getStringValue(jniEnv, jInputFilePath));
     std::wstring        outputFilePath      = getWideString(getStringValue(jniEnv, jOutputFilePath));
 
-    HANDLE              hInput              = {0};
-    HANDLE              hOutput             = {0};
-    HANDLE              hToken              = {0};
+    HANDLE              hInput              = NULL;
+    HANDLE              hOutput             = NULL;
+    HANDLE              hToken              = NULL;
+    HANDLE              hJob                = NULL;
     LPVOID              lpEnvironment       = NULL;
     PROCESS_INFORMATION processInfo         = {0};
     STARTUPINFOW        startupInfo         = {0};
@@ -92,17 +99,66 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     }
     setupStartupInfo(startupInfo, hInput, hOutput);
 
+    // The Job Object enforces the hard memory limit, the active-process limit (anti fork bomb) and
+    // kills the whole process tree atomically when it is closed.
+    hJob = createJobObject(memoryLimit);
+
+    // The process is created suspended, assigned to the Job Object before it runs a single
+    // instruction, and only then resumed - so the limits are in force from the very beginning.
     if ( !createProcess(commandLine, username, password, hToken, lpEnvironment, startupInfo, processInfo) ) {
         throwStringException(jniEnv, getErrorMessage("CreateProcess"));
     }
+    if ( hJob != NULL ) {
+        AssignProcessToJobObject(hJob, processInfo.hProcess);
+    }
+    ResumeThread(processInfo.hThread);
 
-    exitCode = runProcess(processInfo, timeLimit, memoryLimit, timeUsage, memoryUsage);
-    CloseHandle(hInput);
-    CloseHandle(hOutput);
+    // Wall-clock guard: kill the process if it does not finish within the CPU time limit plus a
+    // buffer (it may be blocked/sleeping while consuming little CPU).
+    DWORD waitTimeout = ( timeLimit > 0 ) ? (DWORD)(timeLimit + WALL_TIME_BUFFER_MS) : INFINITE;
+    bool  killedByWallTimeout = false;
+    if ( WaitForSingleObject(processInfo.hProcess, waitTimeout) == WAIT_TIMEOUT ) {
+        killedByWallTimeout = true;
+        if ( hJob != NULL ) {
+            TerminateJobObject(hJob, 1);
+        } else {
+            TerminateProcess(processInfo.hProcess, 1);
+        }
+        WaitForSingleObject(processInfo.hProcess, INFINITE);
+    }
+
+    exitCode    = getExitCode(processInfo.hProcess);
+    timeUsage   = getCpuTimeUsage(processInfo.hProcess);
+    memoryUsage = getPeakMemoryUsage(hJob);
+
+    // A process killed for exceeding the wall-clock guard consumes little CPU, so force the reported
+    // time to the limit, ensuring the Java side classifies it as a Time Limit Exceeded.
+    if ( killedByWallTimeout && timeLimit > 0 && timeUsage < timeLimit ) {
+        timeUsage = timeLimit;
+    }
+
+    if ( lpEnvironment != NULL ) {
+        DestroyEnvironmentBlock(lpEnvironment);
+    }
+    if ( hToken != NULL ) {
+        CloseHandle(hToken);
+    }
+    CloseHandle(processInfo.hThread);
+    CloseHandle(processInfo.hProcess);
+    // Closing the job kills any surviving processes in it (JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE).
+    if ( hJob != NULL ) {
+        CloseHandle(hJob);
+    }
+    if ( hInput != NULL ) {
+        CloseHandle(hInput);
+    }
+    if ( hOutput != NULL ) {
+        CloseHandle(hOutput);
+    }
 
     result.put("usedTime", timeUsage);
     result.put("usedMemory", memoryUsage);
-    result.put("exitCode", exitCode);
+    result.put("exitCode", (jint)exitCode);
 
     return result.toJObject(jniEnv);
 }
@@ -111,10 +167,11 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
  * Redirects the child process's I/O.
  * @param inputFilePath  - the input file path
  * @param outputFilePath - the output file path
- * @param hInput         - the input file handle
- * @param hOutput        - the output file handle
+ * @param hInput         - the input file handle (output parameter)
+ * @param hOutput        - the output file handle (output parameter)
+ * @return whether the redirection was set up successfully
  */
-bool setupIoRedirection(std::wstring inputFilePath, std::wstring outputFilePath, 
+bool setupIoRedirection(const std::wstring& inputFilePath, const std::wstring& outputFilePath,
         HANDLE& hInput, HANDLE& hOutput) {
     SECURITY_ATTRIBUTES sa;
     sa.nLength                  = sizeof(sa);
@@ -122,16 +179,18 @@ bool setupIoRedirection(std::wstring inputFilePath, std::wstring outputFilePath,
     sa.bInheritHandle           = TRUE;
 
     if ( !inputFilePath.empty() ) {
-        hInput = CreateFileW(inputFilePath.c_str(), GENERIC_READ, 0, &sa,
+        hInput = CreateFileW(inputFilePath.c_str(), GENERIC_READ, FILE_SHARE_READ, &sa,
                     OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
         if ( hInput == INVALID_HANDLE_VALUE )  {
+            hInput = NULL;
             return false;
         }
     }
     if ( !outputFilePath.empty() ) {
-        hOutput = CreateFileW(outputFilePath.c_str(), GENERIC_WRITE, 0, &sa,
+        hOutput = CreateFileW(outputFilePath.c_str(), GENERIC_WRITE, FILE_SHARE_READ, &sa,
                     CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-        if ( hInput == INVALID_HANDLE_VALUE )  {
+        if ( hOutput == INVALID_HANDLE_VALUE )  {
+            hOutput = NULL;
             return false;
         }
     }
@@ -153,24 +212,62 @@ void setupStartupInfo(STARTUPINFOW& startupInfo, HANDLE& hInput, HANDLE& hOutput
 }
 
 /**
- * Creates a process.
+ * Creates a Job Object that enforces the resource limits.
+ * @param  memoryLimit - the runtime memory limit (KB, 0 means no limit)
+ * @return the Job Object handle, or NULL on failure
+ */
+HANDLE createJobObject(jint memoryLimit) {
+    HANDLE hJob = CreateJobObjectW(NULL, NULL);
+    if ( hJob == NULL ) {
+        return NULL;
+    }
+
+    JOBOBJECT_EXTENDED_LIMIT_INFORMATION jeli = {0};
+    jeli.BasicLimitInformation.LimitFlags =
+        JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE | JOB_OBJECT_LIMIT_DIE_ON_UNHANDLED_EXCEPTION |
+        JOB_OBJECT_LIMIT_ACTIVE_PROCESS;
+    jeli.BasicLimitInformation.ActiveProcessLimit = ACTIVE_PROCESS_LIMIT;
+    if ( memoryLimit > 0 ) {
+        jeli.BasicLimitInformation.LimitFlags |= JOB_OBJECT_LIMIT_PROCESS_MEMORY;
+        jeli.ProcessMemoryLimit = (SIZE_T)memoryLimit * 1024;
+    }
+    SetInformationJobObject(hJob, JobObjectExtendedLimitInformation, &jeli, sizeof(jeli));
+
+    // Cut the sandboxed program off from the interactive desktop (clipboard, global atoms, etc.).
+    JOBOBJECT_BASIC_UI_RESTRICTIONS uiRestrictions = {0};
+    uiRestrictions.UIRestrictionsClass =
+        JOB_OBJECT_UILIMIT_DESKTOP | JOB_OBJECT_UILIMIT_DISPLAYSETTINGS |
+        JOB_OBJECT_UILIMIT_EXITWINDOWS | JOB_OBJECT_UILIMIT_GLOBALATOMS |
+        JOB_OBJECT_UILIMIT_READCLIPBOARD | JOB_OBJECT_UILIMIT_WRITECLIPBOARD |
+        JOB_OBJECT_UILIMIT_SYSTEMPARAMETERS;
+    SetInformationJobObject(hJob, JobObjectBasicUIRestrictions, &uiRestrictions, sizeof(uiRestrictions));
+
+    return hJob;
+}
+
+/**
+ * Creates a process running as the given (low-privilege) user.
+ *
+ * CreateProcessWithLogonW is used (rather than CreateProcessAsUser) because it does not require the
+ * judger process to hold SE_ASSIGNPRIMARYTOKEN/SE_INCREASE_QUOTA. The process is created suspended so
+ * the caller can assign it to a Job Object before it runs.
+ *
  * @param  commandLine   - the command line to execute
  * @param  username      - the Windows username
  * @param  password      - the Windows password
- * @param  hToken        - a token that represents the specified user
- * @param  lpEnvironment - an environment block for the new process
+ * @param  hToken        - receives a token that represents the specified user
+ * @param  lpEnvironment - receives the environment block for the new process
  * @param  startupInfo   - a STARTUPINFO structure
- * @param  processInfo   - a PROCESS_INFORMATION structure that receives identification
- *                         information for the new process, including a handle to the process
+ * @param  processInfo   - receives identification information for the new process
  * @return whether the process was created successfully
  */
-bool createProcess(const std::wstring& commandLine, const std::wstring& username, 
-        const std::wstring& password, HANDLE& hToken, LPVOID lpEnvironment,  
+bool createProcess(const std::wstring& commandLine, const std::wstring& username,
+        const std::wstring& password, HANDLE& hToken, LPVOID& lpEnvironment,
         STARTUPINFOW& startupInfo, PROCESS_INFORMATION& processInfo) {
     WCHAR   szUserProfile[256]  = L"";
     DWORD   dwSize              = sizeof(szUserProfile) / sizeof(WCHAR);
     LPCWSTR lpUsername          = getConstWideStringPointer(username);
-    LPCWSTR lpDomain            = getConstWideStringPointer(L".");
+    LPCWSTR lpDomain            = L".";
     LPCWSTR lpPassword          = getConstWideStringPointer(password);
     LPWSTR  lpCommandLine       = getWideStringPointer(commandLine);
 
@@ -185,7 +282,7 @@ bool createProcess(const std::wstring& commandLine, const std::wstring& username
         return false;
     }
     if ( !CreateProcessWithLogonW(lpUsername, lpDomain, lpPassword,
-            LOGON_WITH_PROFILE, NULL, lpCommandLine, 
+            LOGON_WITH_PROFILE, NULL, lpCommandLine,
             CREATE_UNICODE_ENVIRONMENT | CREATE_SUSPENDED | CREATE_NO_WINDOW,
             lpEnvironment, szUserProfile, &startupInfo, &processInfo) ) {
         return false;
@@ -194,142 +291,66 @@ bool createProcess(const std::wstring& commandLine, const std::wstring& username
 }
 
 /**
- * Runs the process.
- * @param  processInfo - the PROCESS_INFORMATION structure containing the process information
- * @param  timeLimit   - the runtime time limit (ms)
- * @param  memoryLimit - the runtime memory limit (KB)
- * @param  timeUsage   - the runtime time used (ms)
- * @param  memoryUsage - the runtime memory used (KB)
- * @return the process exit status
+ * Gets the peak memory usage from the Job Object's accounting.
+ * @param  hJob - the Job Object handle
+ * @return the peak physical memory usage (KB)
  */
-DWORD runProcess(PROCESS_INFORMATION& processInfo, jint timeLimit, 
-    jint memoryLimit, jint& timeUsage, jint& memoryUsage) {
-    int  reservedTime = 200;
-    auto feature      = std::async(std::launch::async, getMaxMemoryUsage, std::ref(processInfo), memoryLimit);
-
-    ResumeThread(processInfo.hThread);
-    long long startTime = getMillisecondsNow();
-    WaitForSingleObject(processInfo.hProcess, timeLimit + reservedTime);
-    long long endTime = getMillisecondsNow();
-    timeUsage = endTime - startTime;
-
-    if ( getExitCode(processInfo.hProcess) == STILL_ACTIVE ) {
-        killProcess(processInfo);
-    }
-    memoryUsage  = feature.get();
-
-    return getExitCode(processInfo.hProcess);
-}
-
-/**
- * Gets the maximum runtime memory usage.
- * @param  processInfo - the PROCESS_INFORMATION structure containing the process information
- * @param  memoryLimit - the runtime memory limit (KB)
- * @return the maximum runtime memory usage
- */
-jint getMaxMemoryUsage(PROCESS_INFORMATION& processInfo, jint memoryLimit) {
-    jint maxMemoryUsage     = 0,
-         currentMemoryUsage = 0;
-    do {
-        currentMemoryUsage = getCurrentMemoryUsage(processInfo.hProcess);
-        if ( currentMemoryUsage > maxMemoryUsage ) {
-            maxMemoryUsage = currentMemoryUsage;
-        }
-        if ( memoryLimit != 0 && currentMemoryUsage > memoryLimit ) {
-            killProcess(processInfo);
-        }
-        Sleep(200);
-    } while ( getExitCode(processInfo.hProcess) == STILL_ACTIVE );
-
-    return maxMemoryUsage;
-}
-
-/**
- * Gets the memory usage.
- * @param  hProcess - the process handle
- * @return the current physical memory usage (KB)
- */
-jint getCurrentMemoryUsage(HANDLE& hProcess) {
-    PROCESS_MEMORY_COUNTERS pmc;
-    jint  currentMemoryUsage = 0;
-
-    if ( !GetProcessMemoryInfo(hProcess, &pmc, sizeof(pmc)) ) {
+jint getPeakMemoryUsage(HANDLE& hJob) {
+    if ( hJob == NULL ) {
         return 0;
     }
-    currentMemoryUsage = pmc.PeakWorkingSetSize >> 10;
-
-    if ( currentMemoryUsage < 0 ) {
-        currentMemoryUsage = INT_MAX >> 10;
+    JOBOBJECT_EXTENDED_LIMIT_INFORMATION jeli = {0};
+    if ( !QueryInformationJobObject(hJob, JobObjectExtendedLimitInformation,
+            &jeli, sizeof(jeli), NULL) ) {
+        return 0;
     }
-    return currentMemoryUsage;
+    unsigned long long peakKb = (unsigned long long)jeli.PeakProcessMemoryUsed >> 10;
+    if ( peakKb > (unsigned long long)INT32_MAX ) {
+        return INT32_MAX;
+    }
+    return (jint)peakKb;
 }
 
 /**
- * Gets the current system time.
- * Used to measure the program's running time.
- * @return the current system time (in milliseconds)
+ * Gets the CPU time (user + kernel) used by the process.
+ * @param  hProcess - the process handle
+ * @return the CPU time used (ms)
  */
-long long getMillisecondsNow() {
-    static LARGE_INTEGER frequency;
-    static BOOL useQpf = QueryPerformanceFrequency(&frequency);
-    if ( useQpf ) {
-        LARGE_INTEGER now;
-        QueryPerformanceCounter(&now);
-        return (1000LL * now.QuadPart) / frequency.QuadPart;
-    } else {
-        return GetTickCount();
+jint getCpuTimeUsage(HANDLE& hProcess) {
+    FILETIME creationTime, exitTime, kernelTime, userTime;
+    if ( !GetProcessTimes(hProcess, &creationTime, &exitTime, &kernelTime, &userTime) ) {
+        return 0;
     }
-}
-
-/**
- * Forcibly destroys the process (when a threshold is triggered).
- * @param  processInfo - the PROCESS_INFORMATION structure containing the process information
- * @return whether the process destruction completed successfully
- */
-bool killProcess(PROCESS_INFORMATION& processInfo) {
-    DWORD           processId   = processInfo.dwProcessId;
-    PROCESSENTRY32 processEntry = {0};
-    processEntry.dwSize         = sizeof(PROCESSENTRY32);
-    HANDLE handleSnap           = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-    
-    if ( Process32First(handleSnap, &processEntry) ) {
-        BOOL isContinue = TRUE;
-
-        do {
-            if ( processEntry.th32ParentProcessID == processId ) {
-                HANDLE hChildProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, processEntry.th32ProcessID);
-                if ( hChildProcess ) {
-                    TerminateProcess(hChildProcess, 1);
-                    CloseHandle(hChildProcess);
-                }
-            }
-            isContinue = Process32Next(handleSnap, &processEntry);
-        } while ( isContinue );
-        
-        HANDLE hBaseProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, processId);
-        if ( hBaseProcess ) {
-            TerminateProcess(hBaseProcess, 1);
-            CloseHandle(hBaseProcess);
-        }
+    // FILETIME is measured in 100-nanosecond intervals.
+    unsigned long long cpu100ns = fileTimeToUll(kernelTime) + fileTimeToUll(userTime);
+    unsigned long long cpuMs = cpu100ns / 10000ULL;
+    if ( cpuMs > (unsigned long long)INT32_MAX ) {
+        return INT32_MAX;
     }
-
-    if ( getExitCode(processInfo.hProcess) == STILL_ACTIVE )  {
-        return false;
-    }
-    return true;
+    return (jint)cpuMs;
 }
 
 /**
  * Gets the application's exit status.
- * 0 means a normal exit, 259 means still running.
  * @param  hProcess - the process handle
  * @return the exit status
  */
 DWORD getExitCode(HANDLE& hProcess) {
     DWORD exitCode = 0;
     GetExitCodeProcess(hProcess, &exitCode);
-
     return exitCode;
+}
+
+/**
+ * Converts a FILETIME to a 64-bit integer.
+ * @param  fileTime - the FILETIME structure
+ * @return the corresponding 64-bit value
+ */
+unsigned long long fileTimeToUll(const FILETIME& fileTime) {
+    ULARGE_INTEGER uli;
+    uli.LowPart  = fileTime.dwLowDateTime;
+    uli.HighPart = fileTime.dwHighDateTime;
+    return uli.QuadPart;
 }
 
 /**
@@ -339,10 +360,11 @@ DWORD getExitCode(HANDLE& hProcess) {
  */
 std::string getErrorMessage(const std::string& apiName) {
     LPVOID lpvMessageBuffer;
+    DWORD  errorCode = GetLastError();
 
     FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER |
         FORMAT_MESSAGE_FROM_SYSTEM,
-        NULL, GetLastError(),
+        NULL, errorCode,
         MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
         (LPSTR)&lpvMessageBuffer, 0, NULL);
 
@@ -350,7 +372,7 @@ std::string getErrorMessage(const std::string& apiName) {
     std::string errorMessage((LPSTR)lpvMessageBuffer);
 
     stringStream << "API:     " << apiName << std::endl
-                 << "Code:    " << GetLastError() << std::endl
+                 << "Code:    " << errorCode << std::endl
                  << "Message: " << errorMessage << std::endl;
     LocalFree(lpvMessageBuffer);
 
@@ -358,12 +380,17 @@ std::string getErrorMessage(const std::string& apiName) {
 }
 
 /**
- * Gets a std::wstring string.
- * @param  str - a std::string string
- * @return a std::wstring string
+ * Converts a (UTF-8) std::string to a std::wstring.
+ * @param  str - a UTF-8 std::string
+ * @return the corresponding std::wstring
  */
 std::wstring getWideString(const std::string& str) {
-    std::wstring wstr(str.begin(), str.end());
+    if ( str.empty() ) {
+        return std::wstring();
+    }
+    int length = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), (int)str.size(), NULL, 0);
+    std::wstring wstr(length, 0);
+    MultiByteToWideChar(CP_UTF8, 0, str.c_str(), (int)str.size(), &wstr[0], length);
     return wstr;
 }
 
