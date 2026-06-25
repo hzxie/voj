@@ -70,7 +70,9 @@ public class SandboxBehaviorTest {
    */
   @Test
   public void testTimeLimitExceeded() throws Exception {
-    Assertions.assertEquals("TLE", judge(900002L, INFINITE_LOOP_CODE, 1000, 262144));
+    // No memory limit: this case is purely about the time limit, so it must not depend on the
+    // sandbox's memory measurement.
+    Assertions.assertEquals("TLE", judge(900002L, INFINITE_LOOP_CODE, 1000, 0));
   }
 
   /**
@@ -78,7 +80,8 @@ public class SandboxBehaviorTest {
    */
   @Test
   public void testRuntimeError() throws Exception {
-    Assertions.assertEquals("RE", judge(900003L, RUNTIME_ERROR_CODE, 5000, 262144));
+    // No memory limit: a non-zero exit must be a Runtime Error, independent of memory measurement.
+    Assertions.assertEquals("RE", judge(900003L, RUNTIME_ERROR_CODE, 5000, 0));
   }
 
   /**
