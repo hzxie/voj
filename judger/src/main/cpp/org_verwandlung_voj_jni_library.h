@@ -26,10 +26,10 @@ extern "C" {
 #endif
 
 /**
- * 获取Java中String的值.
- * @param  jniEnv - JNI 运行环境引用
- * @param  jStr   - 待获取值的Java字符串
- * @return Java字符串的值
+ * Gets the value of a Java String.
+ * @param  jniEnv - a reference to the JNI runtime environment
+ * @param  jStr   - the Java string whose value is to be retrieved
+ * @return the value of the Java string
  */
 const char* getStringValue(JNIEnv* JniEnv, jstring jStr) {
     if ( jStr == nullptr || jStr == NULL ) {
@@ -40,10 +40,10 @@ const char* getStringValue(JNIEnv* JniEnv, jstring jStr) {
 }
 
 /**
- * 抛出异常至Java运行环境.
- * @param  jniEnv  - JNI 运行环境引用
- * @param  message - 异常信息
- * @return Java.lang.Error对象
+ * Throws an exception into the Java runtime environment.
+ * @param  jniEnv  - a reference to the JNI runtime environment
+ * @param  message - the exception message
+ * @return a Java.lang.Error object
  */
 jint throwCStringException(JNIEnv* jniEnv, char* message) {
     jclass exClass;
@@ -54,10 +54,10 @@ jint throwCStringException(JNIEnv* jniEnv, char* message) {
 }
 
 /**
- * 抛出异常至Java运行环境.
- * @param  jniEnv  - JNI 运行环境引用
- * @param  message - 异常信息
- * @return Java.lang.Error对象
+ * Throws an exception into the Java runtime environment.
+ * @param  jniEnv  - a reference to the JNI runtime environment
+ * @param  message - the exception message
+ * @return a Java.lang.Error object
  */
 jint throwStringException(JNIEnv* jniEnv, std::string message) {
     char* pMessage = const_cast<char *>(message.c_str());

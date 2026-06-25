@@ -21,7 +21,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.UUID;
 
 /**
- * 生成随机字符串类.
+ * Utility class for generating random strings.
  *
  * @author Haozhe Xie
  */
@@ -30,19 +30,19 @@ public class DigestUtils {
   private DigestUtils() {}
 
   /**
-   * 生成GUID.
+   * Generates a GUID.
    *
-   * @return GUID
+   * @return a GUID
    */
   public static String getGuid() {
     return UUID.randomUUID().toString();
   }
 
   /**
-   * 获取MD5加密后的密码.
+   * Gets the MD5-encrypted password.
    *
-   * @param password - 未经MD5加密的密码
-   * @return MD5加密后的密码
+   * @param password - the password before MD5 encryption
+   * @return the MD5-encrypted password
    */
   public static String md5Hex(String password) {
     String md5 = "";
@@ -66,11 +66,11 @@ public class DigestUtils {
   }
 
   /**
-   * 生成随机字符串.
+   * Generates a random string.
    *
-   * @param length - 字符串长度
-   * @param mode - 字符串生成模式
-   * @return 随机字符串
+   * @param length - the length of the string
+   * @param mode - the string generation mode
+   * @return a random string
    */
   public static String getRandomString(int length, Mode mode) {
     StringBuffer buffer = new StringBuffer();
@@ -96,7 +96,7 @@ public class DigestUtils {
     return buffer.toString();
   }
 
-  /** 字符串生成模式枚举类. */
+  /** Enumeration of string generation modes. */
   public static enum Mode {
     ALPHA,
     ALPHANUMERIC,

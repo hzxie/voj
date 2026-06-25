@@ -31,7 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.verwandlung.voj.web.model.Option;
 
 /**
- * OptionService测试类.
+ * The test class for OptionService.
  *
  * @author Haozhe Xie
  */
@@ -39,21 +39,21 @@ import org.verwandlung.voj.web.model.Option;
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class OptionServiceTest {
-  /** 测试用例: 测试getOptions()方法 测试数据: N/a 预期结果: 返回全部系统选项 */
+  /** Test case: tests the getOptions() method. Test data: N/a. Expected: all system options. */
   @Test
   public void testGetOptions() {
     List<Option> options = optionService.getOptions();
     Assertions.assertEquals(8, options.size());
   }
 
-  /** 测试用例: 测试getAutoloadOptions()方法 测试数据: N/a 预期结果: 仅返回自动加载的系统选项 */
+  /** Test case: tests the getAutoloadOptions() method. Test data: N/a. Expected: only the auto-loaded system options. */
   @Test
   public void testGetAutoloadOptions() {
     List<Option> options = optionService.getAutoloadOptions();
     Assertions.assertEquals(6, options.size());
   }
 
-  /** 测试用例: 测试getOption(String)方法 测试数据: 存在的选项名称 预期结果: 返回对应的Option对象 */
+  /** Test case: tests the getOption(String) method. Test data: an existing option name. Expected: the corresponding Option object. */
   @Test
   public void testGetOptionExists() {
     Option option = optionService.getOption("websiteName");
@@ -61,13 +61,13 @@ public class OptionServiceTest {
     Assertions.assertEquals(1, option.getOptionId());
   }
 
-  /** 测试用例: 测试getOption(String)方法 测试数据: 不存在的选项名称 预期结果: 返回空引用 */
+  /** Test case: tests the getOption(String) method. Test data: a non-existing option name. Expected: a null reference. */
   @Test
   public void testGetOptionNotExists() {
     Assertions.assertNull(optionService.getOption("notExistOption"));
   }
 
-  /** 测试用例: 测试updateOptions(Map)方法 测试数据: 合法的键值对 预期结果: 系统选项被更新 */
+  /** Test case: tests the updateOptions(Map) method. Test data: valid key-value pairs. Expected: the system options are updated. */
   @Test
   public void testUpdateOptionsUsingMap() {
     Map<String, String> optionMap = new HashMap<>();
@@ -77,7 +77,7 @@ public class OptionServiceTest {
     Assertions.assertEquals("New OJ Platform", optionService.getOption("websiteName").getOptionValue());
   }
 
-  /** 测试用例: 测试updateOptions(...)方法 测试数据: 全部合法的系统选项 预期结果: 更新成功, 并持久化网站名称 */
+  /** Test case: tests the updateOptions(...) method. Test data: all valid system options. Expected: the update succeeds and the website name is persisted. */
   @Test
   public void testUpdateOptionsWithLegalArguments() {
     Map<String, Boolean> result =
@@ -94,7 +94,7 @@ public class OptionServiceTest {
     Assertions.assertEquals("Verwandlung OJ", optionService.getOption("websiteName").getOptionValue());
   }
 
-  /** 测试用例: 测试updateOptions(...)方法 测试数据: 空的网站名称 预期结果: 更新失败 (isWebsiteNameEmpty) */
+  /** Test case: tests the updateOptions(...) method. Test data: an empty website name. Expected: the update fails (isWebsiteNameEmpty). */
   @Test
   public void testUpdateOptionsWithEmptyWebsiteName() {
     Map<String, Boolean> result =
@@ -104,7 +104,7 @@ public class OptionServiceTest {
     Assertions.assertFalse(result.get("isSuccessful"));
   }
 
-  /** 测试用例: 测试updateOptions(...)方法 测试数据: 过长的网站名称 (超过32字符) 预期结果: 更新失败 (isWebisteNameLegal为false) */
+  /** Test case: tests the updateOptions(...) method. Test data: a website name that is too long (over 32 characters). Expected: the update fails (isWebisteNameLegal is false). */
   @Test
   public void testUpdateOptionsWithTooLongWebsiteName() {
     String tooLongName = "x".repeat(33);
@@ -115,7 +115,7 @@ public class OptionServiceTest {
     Assertions.assertFalse(result.get("isSuccessful"));
   }
 
-  /** 测试用例: 测试updateOptions(...)方法 测试数据: 过长的网站描述 (超过128字符) 预期结果: 更新失败 (isDescriptionLegal为false) */
+  /** Test case: tests the updateOptions(...) method. Test data: a website description that is too long (over 128 characters). Expected: the update fails (isDescriptionLegal is false). */
   @Test
   public void testUpdateOptionsWithTooLongDescription() {
     String tooLongDescription = "x".repeat(129);
@@ -126,7 +126,7 @@ public class OptionServiceTest {
     Assertions.assertFalse(result.get("isSuccessful"));
   }
 
-  /** 测试用例: 测试updateOptions(...)方法 测试数据: 非法的网站备案号 预期结果: 更新失败 (isIcpNumberLegal为false) */
+  /** Test case: tests the updateOptions(...) method. Test data: an illegal ICP filing number. Expected: the update fails (isIcpNumberLegal is false). */
   @Test
   public void testUpdateOptionsWithIllegalIcpNumber() {
     Map<String, Boolean> result =
@@ -136,7 +136,7 @@ public class OptionServiceTest {
     Assertions.assertFalse(result.get("isSuccessful"));
   }
 
-  /** 测试用例: 测试updateOptions(...)方法 测试数据: 非法的Google Analytics代码 预期结果: 更新失败 (isAnalyticsCodeLegal为false) */
+  /** Test case: tests the updateOptions(...) method. Test data: an illegal Google Analytics code. Expected: the update fails (isAnalyticsCodeLegal is false). */
   @Test
   public void testUpdateOptionsWithIllegalAnalyticsCode() {
     Map<String, Boolean> result =
@@ -146,6 +146,6 @@ public class OptionServiceTest {
     Assertions.assertFalse(result.get("isSuccessful"));
   }
 
-  /** 待测试的OptionService对象. */
+  /** The OptionService object under test. */
   @Autowired private OptionService optionService;
 }

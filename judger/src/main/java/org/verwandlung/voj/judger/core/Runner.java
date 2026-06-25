@@ -29,21 +29,22 @@ import org.verwandlung.voj.judger.model.Submission;
 import org.verwandlung.voj.judger.util.NativeLibraryLoader;
 
 /**
- * 本地程序执行器, 用于执行本地应用程序. 包括编译器(gcc)以及用户提交的代码所编译出的程序.
+ * The native program runner, used to execute native applications, including the compiler (gcc) and
+ * the program compiled from the code submitted by users.
  *
  * @author Haozhe Xie
  */
 @Component
 public class Runner {
   /**
-   * 获取(用户)程序运行结果.
+   * Gets the runtime result of the (user's) program.
    *
-   * @param submission - 评测记录对象
-   * @param workDirectory - 编译生成结果的目录以及程序输出的目录
-   * @param baseFileName - 待执行的应用程序文件名(不包含文件后缀)
-   * @param inputFilePath - 输入文件路径
-   * @param outputFilePath - 输出文件路径
-   * @return 一个包含程序运行结果的Map<String, Object>对象
+   * @param submission - the submission object
+   * @param workDirectory - the directory of the compilation result and the program output
+   * @param baseFileName - the file name of the application to run (without file suffix)
+   * @param inputFilePath - the input file path
+   * @param outputFilePath - the output file path
+   * @return a Map<String, Object> object containing the program's runtime result
    */
   public Map<String, Object> getRuntimeResult(
       Submission submission,
@@ -91,12 +92,12 @@ public class Runner {
   }
 
   /**
-   * 获取待执行的命令行.
+   * Gets the command line to execute.
    *
-   * @param submission - 评测记录对象
-   * @param workDirectory - 编译生成结果的目录以及程序输出的目录
-   * @param baseFileName - 待执行的应用程序文件名(不包含文件后缀)
-   * @return 待执行的命令行
+   * @param submission - the submission object
+   * @param workDirectory - the directory of the compilation result and the program output
+   * @param baseFileName - the file name of the application to run (without file suffix)
+   * @return the command line to execute
    */
   private String getCommandLine(Submission submission, String workDirectory, String baseFileName) {
     Language language = submission.getLanguage();
@@ -114,10 +115,10 @@ public class Runner {
   }
 
   /**
-   * 根据不同语言获取最大时间限制.
+   * Gets the maximum time limit depending on the language.
    *
-   * @param submission - 评测记录对象
-   * @return 最大时间限制
+   * @param submission - the submission object
+   * @return the maximum time limit
    */
   private int getTimeLimit(Submission submission) {
     Language language = submission.getLanguage();
@@ -130,10 +131,10 @@ public class Runner {
   }
 
   /**
-   * 根据不同语言获取最大空间限制.
+   * Gets the maximum memory limit depending on the language.
    *
-   * @param submission - 评测记录对象
-   * @return 最大空间限制
+   * @param submission - the submission object
+   * @return the maximum memory limit
    */
   private int getMemoryLimit(Submission submission) {
     int memoryLimit = submission.getProblem().getMemoryLimit();
@@ -141,14 +142,14 @@ public class Runner {
   }
 
   /**
-   * 根据JNI返回的结果封装评测结果.
+   * Wraps the judging result based on the result returned by JNI.
    *
-   * @param exitCode - 程序退出状态位
-   * @param timeLimit - 最大时间限制
-   * @param timeUsed - 程序运行所用时间
-   * @param memoryLimit - 最大空间限制
-   * @param memoryUsed - 程序运行所用空间(最大值)
-   * @return 程序运行结果的唯一英文缩写
+   * @param exitCode - the program's exit status code
+   * @param timeLimit - the maximum time limit
+   * @param timeUsed - the time used by the program
+   * @param memoryLimit - the maximum memory limit
+   * @param memoryUsed - the memory used by the program (maximum)
+   * @return the unique English abbreviation of the program's runtime result
    */
   private String getRuntimeResultSlug(
       int exitCode, int timeLimit, int timeUsed, int memoryLimit, int memoryUsed) {
@@ -166,14 +167,14 @@ public class Runner {
   }
 
   /**
-   * 获取(编译)程序运行结果.
+   * Gets the runtime result of the (compilation) program.
    *
-   * @param commandLine - 待执行程序的命令行
-   * @param inputFilePath - 输入文件路径(可为NULL)
-   * @param outputFilePath - 输出文件路径(可为NULL)
-   * @param timeLimit - 时间限制(单位ms, 0表示不限制)
-   * @param memoryLimit - 内存限制(单位KB, 0表示不限制)
-   * @return 一个包含程序运行结果的Map<String, Object>对象
+   * @param commandLine - the command line of the program to execute
+   * @param inputFilePath - the input file path (may be NULL)
+   * @param outputFilePath - the output file path (may be NULL)
+   * @param timeLimit - the time limit (in ms, 0 means no limit)
+   * @param memoryLimit - the memory limit (in KB, 0 means no limit)
+   * @return a Map<String, Object> object containing the program's runtime result
    */
   public Map<String, Object> getRuntimeResult(
       String commandLine,
@@ -199,16 +200,16 @@ public class Runner {
   }
 
   /**
-   * 获取程序运行结果.
+   * Gets the program's runtime result.
    *
-   * @param commandLine - 待执行程序的命令行
-   * @param systemUsername - 登录操作系统的用户名
-   * @param systemPassword - 登录操作系统的密码
-   * @param inputFilePath - 输入文件路径(可为NULL)
-   * @param outputFilePath - 输出文件路径(可为NULL)
-   * @param timeLimit - 时间限制(单位ms, 0表示不限制)
-   * @param memoryLimit - 内存限制(单位KB, 0表示不限制)
-   * @return 一个包含程序运行结果的Map<String, Object>对象
+   * @param commandLine - the command line of the program to execute
+   * @param systemUsername - the username for logging into the operating system
+   * @param systemPassword - the password for logging into the operating system
+   * @param inputFilePath - the input file path (may be NULL)
+   * @param outputFilePath - the output file path (may be NULL)
+   * @param timeLimit - the time limit (in ms, 0 means no limit)
+   * @param memoryLimit - the memory limit (in KB, 0 means no limit)
+   * @return a Map<String, Object> object containing the program's runtime result
    */
   public native Map<String, Object> getRuntimeResult(
       String commandLine,
@@ -219,15 +220,21 @@ public class Runner {
       int timeLimit,
       int memoryLimit);
 
-  /** 登录操作系统的用户名. 为了安全, 我们建议评测程序以低权限的用户运行. */
+  /**
+   * The username for logging into the operating system. For security, we recommend running the
+   * judging program as a low-privilege user.
+   */
   @Value("${system.username}")
   private String systemUsername;
 
-  /** 登录操作系统的密码. 为了安全, 我们建议评测程序以低权限的用户运行. */
+  /**
+   * The password for logging into the operating system. For security, we recommend running the
+   * judging program as a low-privilege user.
+   */
   @Value("${system.password}")
   private String systemPassword;
 
-  /** 日志记录器. */
+  /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(Runner.class);
 
   /** Load Native Library. */

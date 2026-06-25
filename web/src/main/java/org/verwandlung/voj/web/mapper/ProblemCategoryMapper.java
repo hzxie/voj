@@ -29,82 +29,82 @@ import org.verwandlung.voj.web.model.ProblemCategoryRelationship;
  */
 public interface ProblemCategoryMapper {
   /**
-   * 获取全部的试题分类.
+   * Gets all problem categories.
    *
-   * @return 包含全部试题分类的列表
+   * @return a list containing all problem categories
    */
   List<ProblemCategory> getProblemCategories();
 
   /**
-   * 通过试题分类的唯一标识符获取试题分类对象.
+   * Gets a problem category object by its unique identifier.
    *
-   * @param problemCategoryId - 试题分类的唯一标识符
-   * @return 预期的试题分类对象或空引用
+   * @param problemCategoryId - the unique identifier of the problem category
+   * @return the expected problem category object, or a null reference
    */
   ProblemCategory getProblemCategoryUsingCategoryId(int problemCategoryId);
 
   /**
-   * 获取试题的分类列表.
+   * Gets the category list of a problem.
    *
-   * @param problemId - 试题的唯一标识符.
-   * @return 包含试题分类的列表
+   * @param problemId - the unique identifier of the problem
+   * @return a list containing the problem categories
    */
   List<ProblemCategory> getProblemCategoriesUsingProblemId(long problemId);
 
   /**
-   * 获取某个区间内各试题的分类.
+   * Gets the categories of problems within a range.
    *
-   * @param problemIdLowerBound - 试题ID区间的下界
-   * @param problemIdUpperBound - 试题ID区间的上界
-   * @return 包含试题分类信息的列表
+   * @param problemIdLowerBound - the lower bound of the problem ID range
+   * @param problemIdUpperBound - the upper bound of the problem ID range
+   * @return a list containing the problem category information
    */
   List<ProblemCategoryRelationship> getProblemCategoriesOfProblems(
       @Param(value = "problemIdLowerBound") long problemIdLowerBound,
       @Param(value = "problemIdUpperBound") long problemIdUpperBound);
 
   /**
-   * 通过试题分类的别名获取试题分类对象.
+   * Gets a problem category object by its alias.
    *
-   * @param problemCategorySlug - 试题分类的别名
-   * @return 预期的试题分类对象或空引用
+   * @param problemCategorySlug - the alias of the problem category
+   * @return the expected problem category object, or a null reference
    */
   ProblemCategory getProblemCategoryUsingCategorySlug(String problemCategorySlug);
 
   /**
-   * 创建试题分类对象.
+   * Creates a problem category object.
    *
-   * @param problemCategory - 待创建的试题分类对象
+   * @param problemCategory - the problem category object to create
    */
   int createProblemCategory(ProblemCategory problemCategory);
 
   /**
-   * 创建试题及试题分类的关系.
+   * Creates the relationship between a problem and a problem category.
    *
-   * @param problemId - 试题的唯一标识符
-   * @param problemCategory - 试题分类对象
+   * @param problemId - the unique identifier of the problem
+   * @param problemCategory - the problem category object
    */
   int createProblemCategoryRelationship(
       @Param(value = "problemId") long problemId,
       @Param(value = "problemCategory") ProblemCategory problemCategory);
 
   /**
-   * 更新试题分类对象.
+   * Updates a problem category object.
    *
-   * @param problemCategory - 待更新的试题分类对象
+   * @param problemCategory - the problem category object to update
    */
   int updateProblemCategory(ProblemCategory problemCategory);
 
   /**
-   * 删除试题分类对象.
+   * Deletes a problem category object.
    *
-   * @param problemCategoryId - 待删除试题分类对象的唯一标识符
+   * @param problemCategoryId - the unique identifier of the problem category object to delete
    */
   int deleteProblemCategory(int problemCategoryId);
 
   /**
-   * 删除试题的全部分类关系.
+   * Deletes all category relationships of a problem.
    *
-   * @param problemId - 试题的唯一标识符
+   * @param problemId - the unique identifier of the problem
    */
   int deleteProblemCategoryRelationship(long problemId);
 }

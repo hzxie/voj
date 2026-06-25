@@ -21,17 +21,17 @@ import java.util.Date;
 import org.springframework.context.ApplicationEvent;
 
 /**
- * 评测机心跳事件消息.
+ * The judger heartbeat event message.
  *
  * @author Haozhe Xie
  */
 public class KeepAliveEvent extends ApplicationEvent {
   /**
-   * KeepAliveEvent的构造函数.
+   * The constructor of KeepAliveEvent.
    *
-   * @param source - 消息发布源
-   * @param judgerUsername - 评测机的用户名
-   * @param judgerDescription - 评测机的描述信息
+   * @param source - the message publishing source
+   * @param judgerUsername - the username of the judger
+   * @param judgerDescription - the description information of the judger
    */
   public KeepAliveEvent(
       Object source, String judgerUsername, String judgerDescription, Date heartbeatTime) {
@@ -42,41 +42,41 @@ public class KeepAliveEvent extends ApplicationEvent {
   }
 
   /**
-   * 获取评测机的用户名.
+   * Gets the username of the judger.
    *
-   * @return 评测机的用户名
+   * @return the username of the judger
    */
   public String getJudgerUsername() {
     return judgerUsername;
   }
 
   /**
-   * 获取评测机的描述信息.
+   * Gets the description information of the judger.
    *
-   * @return 评测机的描述信息
+   * @return the description information of the judger
    */
   public String getJudgerDescription() {
     return judgerDescription;
   }
 
   /**
-   * 获取评测机发送心跳的时间.
+   * Gets the time when the judger sent the heartbeat.
    *
-   * @return 评测机发送心跳的时间
+   * @return the time when the judger sent the heartbeat
    */
   public Date getHeartbeatTime() {
     return heartbeatTime;
   }
 
-  /** 评测机的用户名. */
+  /** The username of the judger. */
   private final String judgerUsername;
 
-  /** 评测机的描述信息. */
+  /** The description information of the judger. */
   private final String judgerDescription;
 
-  /** 评测机心跳的时间. */
+  /** The time of the judger's heartbeat. */
   private final Date heartbeatTime;
 
-  /** 唯一的序列化标识符. */
+  /** The unique serialization identifier. */
   private static final long serialVersionUID = -9218788192064705664L;
 }

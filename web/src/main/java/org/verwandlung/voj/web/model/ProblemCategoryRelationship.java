@@ -19,21 +19,22 @@ package org.verwandlung.voj.web.model;
 import java.io.Serializable;
 
 /**
- * 试题分类关系的 Model. 对应数据库中的voj_problem_category_relationships数据表.
+ * The model of a problem category relationship. Maps to the voj_problem_category_relationships
+ * table in the database.
  *
  * @author Haozhe Xie
  */
 public class ProblemCategoryRelationship implements Serializable {
-  /** ProblemCategoryRelationship的默认构造函数. */
+  /** Default constructor of the problem category relationship. */
   public ProblemCategoryRelationship() {}
 
   /**
-   * ProblemCategoryRelationship的构造函数.
+   * Constructor of the problem category relationship.
    *
-   * @param problemId - 试题的唯一标识符
-   * @param problemCategoryId - 试题分类的唯一标识符
-   * @param problemCategorySlug - 试题分类的别名
-   * @param problemCategoryName - 试题分类的名称
+   * @param problemId - the unique identifier of the problem
+   * @param problemCategoryId - the unique identifier of the problem category
+   * @param problemCategorySlug - the alias of the problem category
+   * @param problemCategoryName - the name of the problem category
    */
   public ProblemCategoryRelationship(
       long problemId,
@@ -47,72 +48,72 @@ public class ProblemCategoryRelationship implements Serializable {
   }
 
   /**
-   * 获取试题的唯一标识符.
+   * Gets the unique identifier of the problem.
    *
-   * @return 试题的唯一标识符
+   * @return the unique identifier of the problem
    */
   public long getProblemId() {
     return problemId;
   }
 
   /**
-   * 设置试题的唯一标识符.
+   * Sets the unique identifier of the problem.
    *
-   * @param problemId - 试题的唯一标识符
+   * @param problemId - the unique identifier of the problem
    */
   public void setProblemId(long problemId) {
     this.problemId = problemId;
   }
 
   /**
-   * 获取试题分类的唯一标识符.
+   * Gets the unique identifier of the problem category.
    *
-   * @return 试题分类的唯一标识符
+   * @return the unique identifier of the problem category
    */
   public int getProblemCategoryId() {
     return problemCategoryId;
   }
 
   /**
-   * 设置试题分类的唯一标识符.
+   * Sets the unique identifier of the problem category.
    *
-   * @param problemCategoryId - 试题分类的唯一标识符
+   * @param problemCategoryId - the unique identifier of the problem category
    */
   public void setProblemCategoryId(int problemCategoryId) {
     this.problemCategoryId = problemCategoryId;
   }
 
   /**
-   * 获取试题分类的别名.
+   * Gets the alias of the problem category.
    *
-   * @return 试题分类的别名
+   * @return the alias of the problem category
    */
   public String getProblemCategorySlug() {
     return problemCategorySlug;
   }
 
   /**
-   * 设置试题分类的别名.
+   * Sets the alias of the problem category.
    *
-   * @param problemCategorySlug - 试题分类的别名
+   * @param problemCategorySlug - the alias of the problem category
    */
   public void setProblemCategorySlug(String problemCategorySlug) {
     this.problemCategorySlug = problemCategorySlug;
   }
 
   /**
-   * 获取试题分类的名称.
+   * Gets the name of the problem category.
    *
-   * @return 试题分类的名称
+   * @return the name of the problem category
    */
   public String getProblemCategoryName() {
     return problemCategoryName;
   }
 
   /**
-   * 设置试题分类的名称.
+   * Sets the name of the problem category.
    *
-   * @param problemCategoryName - 试题分类的名称
+   * @param problemCategoryName - the name of the problem category
    */
   public void setProblemCategoryName(String problemCategoryName) {
     this.problemCategoryName = problemCategoryName;
@@ -146,18 +147,18 @@ public class ProblemCategoryRelationship implements Serializable {
         new Object[] {problemId, problemCategoryId, problemCategorySlug, problemCategoryName});
   }
 
-  /** 试题的唯一标识符. */
+  /** The unique identifier of the problem. */
   private long problemId;
 
-  /** 试题分类的唯一标识符. */
+  /** The unique identifier of the problem category. */
   private int problemCategoryId;
 
-  /** 试题分类的别名. */
+  /** The alias of the problem category. */
   private String problemCategorySlug;
 
-  /** 试题分类的名称. */
+  /** The name of the problem category. */
   private String problemCategoryName;
 
-  /** 唯一的序列化标识符. */
+  /** The unique serialization identifier. */
   private static final long serialVersionUID = 5108958918621777517L;
 }

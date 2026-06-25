@@ -19,19 +19,19 @@ package org.verwandlung.voj.web.model;
 import java.io.Serializable;
 
 /**
- * 试题标签的 Model. 对应数据库中的voj_problem_tags数据表.
+ * The model of a problem tag. Maps to the voj_problem_tags table in the database.
  *
  * @author Haozhe Xie
  */
 public class ProblemTag implements Serializable {
-  /** ProblemTag的默认构造函数. */
+  /** Default constructor of the problem tag. */
   public ProblemTag() {}
 
   /**
-   * ProblemTag的构造函数.
+   * Constructor of the problem tag.
    *
-   * @param problemTagSlug - 试题标签的别名
-   * @param problemTagName - 试题标签的名称
+   * @param problemTagSlug - the alias of the problem tag
+   * @param problemTagName - the name of the problem tag
    */
   public ProblemTag(String problemTagSlug, String problemTagName) {
     this.problemTagSlug = problemTagSlug;
@@ -39,11 +39,11 @@ public class ProblemTag implements Serializable {
   }
 
   /**
-   * ProblemTag的构造函数.
+   * Constructor of the problem tag.
    *
-   * @param problemTagId - 试题标签的唯一标识符
-   * @param problemTagSlug - 试题标签的别名
-   * @param problemTagName - 试题标签的名称
+   * @param problemTagId - the unique identifier of the problem tag
+   * @param problemTagSlug - the alias of the problem tag
+   * @param problemTagName - the name of the problem tag
    */
   public ProblemTag(long problemTagId, String problemTagSlug, String problemTagName) {
     this(problemTagSlug, problemTagName);
@@ -51,54 +51,54 @@ public class ProblemTag implements Serializable {
   }
 
   /**
-   * 获取试题标签的唯一标识符.
+   * Gets the unique identifier of the problem tag.
    *
-   * @return 试题标签的唯一标识符
+   * @return the unique identifier of the problem tag
    */
   public long getProblemTagId() {
     return problemTagId;
   }
 
   /**
-   * 设置试题标签的唯一标识符.
+   * Sets the unique identifier of the problem tag.
    *
-   * @param problemTagId - 试题标签的唯一标识符
+   * @param problemTagId - the unique identifier of the problem tag
    */
   public void setProblemTagId(long problemTagId) {
     this.problemTagId = problemTagId;
   }
 
   /**
-   * 获取试题标签的别名.
+   * Gets the alias of the problem tag.
    *
-   * @return 试题标签的别名
+   * @return the alias of the problem tag
    */
   public String getProblemTagSlug() {
     return problemTagSlug;
   }
 
   /**
-   * 设置试题标签的别名.
+   * Sets the alias of the problem tag.
    *
-   * @param problemTagSlug - 试题标签的别名
+   * @param problemTagSlug - the alias of the problem tag
    */
   public void setProblemTagSlug(String problemTagSlug) {
     this.problemTagSlug = problemTagSlug;
   }
 
   /**
-   * 获取试题标签的名称.
+   * Gets the name of the problem tag.
    *
-   * @return 试题标签的名称
+   * @return the name of the problem tag
    */
   public String getProblemTagName() {
     return problemTagName;
   }
 
   /**
-   * 设置试题标签的名称.
+   * Sets the name of the problem tag.
    *
-   * @param problemTagName - 试题标签的名称
+   * @param problemTagName - the name of the problem tag
    */
   public void setProblemTagName(String problemTagName) {
     this.problemTagName = problemTagName;
@@ -131,15 +131,15 @@ public class ProblemTag implements Serializable {
         new Object[] {problemTagId, problemTagSlug, problemTagName});
   }
 
-  /** 试题标签的唯一标识符. */
+  /** The unique identifier of the problem tag. */
   private long problemTagId;
 
-  /** 试题标签的别名. */
+  /** The alias of the problem tag. */
   private String problemTagSlug;
 
-  /** 试题标签的名称. */
+  /** The name of the problem tag. */
   private String problemTagName;
 
-  /** 唯一的序列化标识符. */
+  /** The unique serialization identifier. */
   private static final long serialVersionUID = 1636220984815816993L;
 }

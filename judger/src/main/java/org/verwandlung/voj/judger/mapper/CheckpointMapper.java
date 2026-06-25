@@ -33,10 +33,10 @@ import org.verwandlung.voj.judger.model.Checkpoint;
  */
 public interface CheckpointMapper {
   /**
-   * 获取某个试题的全部测试点.
+   * Gets all checkpoints of a problem.
    *
-   * @param problemId - 试题的唯一标识符
-   * @return 某个试题的全部测试点
+   * @param problemId - the unique identifier of the problem
+   * @return all checkpoints of the problem
    */
   @Select("SELECT * FROM voj_problem_checkpoints WHERE problem_id = #{problemId}")
   @Options(useCache = true)

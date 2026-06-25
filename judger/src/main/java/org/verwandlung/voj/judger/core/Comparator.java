@@ -26,18 +26,18 @@ import java.io.File;
 import java.io.IOException;
 
 /**
- * 用于比对用户输出结果和标准结果.
+ * Compares the user's output against the standard output.
  *
  * @author Haozhe Xie
  */
 @Component
 public class Comparator {
   /**
-   * 获取用户输出和标准输出的比对结果.
+   * Gets the comparison result between the user's output and the standard output.
    *
-   * @param standardOutputFilePath - 标准输出文件路径
-   * @param outputFilePath - 用户输出文件路径
-   * @return 用户输出和标准输出是否相同
+   * @param standardOutputFilePath - the path of the standard output file
+   * @param outputFilePath - the path of the user's output file
+   * @return whether the user's output and the standard output are the same
    */
   public boolean isOutputTheSame(String standardOutputFilePath, String outputFilePath)
       throws IOException {
@@ -54,11 +54,11 @@ public class Comparator {
   }
 
   /**
-   * 比对标准输出和用户输出是否相同.
+   * Compares whether the standard output and the user's output are the same.
    *
-   * @param stdFileItr - 标准输出文件的迭代器
-   * @param fileItr - 用户输出文件的迭代器
-   * @return 标准输出和用户输出是否相同
+   * @param stdFileItr - the iterator over the standard output file
+   * @param fileItr - the iterator over the user's output file
+   * @return whether the standard output and the user's output are the same
    */
   private boolean isFileOutputTheSame(LineIterator stdFileItr, LineIterator fileItr) {
     try {
@@ -90,11 +90,11 @@ public class Comparator {
   }
 
   /**
-   * 比对某行的标准输出和用户输出(忽略行尾空格).
+   * Compares a line of the standard output against the user's output (trailing spaces ignored).
    *
-   * @param stdLine - 标准输出中的某一行
-   * @param line - 用户输出中的某一行
-   * @return 某行的标准输出和用户输出是否相同
+   * @param stdLine - a line of the standard output
+   * @param line - a line of the user's output
+   * @return whether the line of the standard output and the user's output are the same
    */
   private boolean isLineOutputTheSame(String stdLine, String line) {
     int i = 0, j = 0;
@@ -130,11 +130,11 @@ public class Comparator {
   }
 
   /**
-   * 忽略文件结尾的空行与空格.
+   * Ignores blank lines and spaces at the end of the file.
    *
-   * @param line - 某行文件内容
-   * @param startIndex - 开始检查位置的索引
-   * @return 该行内容中是否只包含空格和换行符
+   * @param line - the content of a line
+   * @param startIndex - the index at which to start checking
+   * @return whether the line contains only spaces and newline characters
    */
   private boolean isLineEmpty(String line, int startIndex) {
     for (int i = startIndex; i < line.length(); ++i) {
@@ -145,6 +145,6 @@ public class Comparator {
     return true;
   }
 
-  /** 日志记录器. */
+  /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(Comparator.class);
 }

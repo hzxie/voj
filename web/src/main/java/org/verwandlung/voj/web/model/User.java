@@ -21,22 +21,22 @@ import java.io.Serializable;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 /**
- * 用户的Model. 对应数据库中的voj_users数据表.
+ * The model of a user. Maps to the voj_users table in the database.
  *
  * @author Haozhe Xie
  */
 public class User implements Serializable {
-  /** 用户的默认构造函数. */
+  /** Default constructor of the user. */
   public User() {}
 
   /**
-   * 用户的构造函数.
+   * Constructor of the user.
    *
-   * @param username - 用户名
-   * @param password - 密码
-   * @param email - 电子邮件地址
-   * @param userGroup - 用户组
-   * @param preferLanguage - 用户偏好语言
+   * @param username - the username
+   * @param password - the password
+   * @param email - the email address
+   * @param userGroup - the user group
+   * @param preferLanguage - the user's preferred language
    */
   public User(
       String username,
@@ -52,14 +52,14 @@ public class User implements Serializable {
   }
 
   /**
-   * User类的构造函数.
+   * Constructor of the User class.
    *
-   * @param uid - 用户唯一标识符
-   * @param username - 用户名
-   * @param password - 密码
-   * @param email - 电子邮件地址
-   * @param userGroup - 用户组
-   * @param preferLanguage - 用户偏好语言
+   * @param uid - the unique identifier of the user
+   * @param username - the username
+   * @param password - the password
+   * @param email - the email address
+   * @param userGroup - the user group
+   * @param preferLanguage - the user's preferred language
    */
   public User(
       int uid,
@@ -73,108 +73,108 @@ public class User implements Serializable {
   }
 
   /**
-   * 获取用户唯一标识符.
+   * Gets the unique identifier of the user.
    *
-   * @return 用户唯一标识符
+   * @return the unique identifier of the user
    */
   public long getUid() {
     return uid;
   }
 
   /**
-   * 设置用户唯一标识符.
+   * Sets the unique identifier of the user.
    *
-   * @param uid - 用户唯一标识符
+   * @param uid - the unique identifier of the user
    */
   public void setUid(long uid) {
     this.uid = uid;
   }
 
   /**
-   * 获取用户名.
+   * Gets the username.
    *
-   * @return 用户名
+   * @return the username
    */
   public String getUsername() {
     return username;
   }
 
   /**
-   * 设置用户名.
+   * Sets the username.
    *
-   * @param username - 用户名
+   * @param username - the username
    */
   public void setUsername(String username) {
     this.username = username;
   }
 
   /**
-   * 获取密码(已采用MD5加密).
+   * Gets the password (encrypted with MD5).
    *
-   * @return 密码
+   * @return the password
    */
   public String getPassword() {
     return password;
   }
 
   /**
-   * 设置密码.
+   * Sets the password.
    *
-   * @param password - 密码
+   * @param password - the password
    */
   public void setPassword(String password) {
     this.password = password;
   }
 
   /**
-   * 获取电子邮件地址.
+   * Gets the email address.
    *
-   * @return 电子邮件地址
+   * @return the email address
    */
   public String getEmail() {
     return email;
   }
 
   /**
-   * 设置电子邮件地址
+   * Sets the email address.
    *
-   * @param email - 电子邮件地址
+   * @param email - the email address
    */
   public void setEmail(String email) {
     this.email = email;
   }
 
   /**
-   * 获取用户组.
+   * Gets the user group.
    *
-   * @return 用户组对象
+   * @return the user group object
    */
   public UserGroup getUserGroup() {
     return userGroup;
   }
 
   /**
-   * 设置用户组.
+   * Sets the user group.
    *
-   * @param userGroup - 用户组对象
+   * @param userGroup - the user group object
    */
   public void setUserGroup(UserGroup userGroup) {
     this.userGroup = userGroup;
   }
 
   /**
-   * 获取用户偏好语言对象.
+   * Gets the user's preferred language object.
    *
-   * @return 用户偏好语言对象
+   * @return the user's preferred language object
    */
   public Language getPreferLanguage() {
     return preferLanguage;
   }
 
   /**
-   * 设置用户偏好语言对象
+   * Sets the user's preferred language object.
    *
-   * @param preferLanguage - 用户偏好语言对象
+   * @param preferLanguage - the user's preferred language object
    */
   public void setPreferLanguage(Language preferLanguage) {
     this.preferLanguage = preferLanguage;
@@ -207,24 +207,24 @@ public class User implements Serializable {
         new Object[] {uid, username, email, userGroup});
   }
 
-  /** 用户的唯一标识符. */
+  /** The unique identifier of the user. */
   private long uid;
 
-  /** 用户名. */
+  /** The username. */
   private String username;
 
-  /** 密码(已采用MD5加密). */
+  /** The password (encrypted with MD5). */
   @JsonIgnore private String password;
 
-  /** 电子邮件地址. */
+  /** The email address. */
   private String email;
 
-  /** 用户组对象. */
+  /** The user group object. */
   @JsonIgnore private UserGroup userGroup;
 
-  /** 用户偏好语言对象. */
+  /** The user's preferred language object. */
   @JsonIgnore private Language preferLanguage;
 
-  /** 唯一的序列化标识符. */
+  /** The unique serialization identifier. */
   private static final long serialVersionUID = 2264535351943252507L;
 }

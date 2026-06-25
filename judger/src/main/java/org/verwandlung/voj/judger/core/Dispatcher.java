@@ -39,16 +39,18 @@ import org.verwandlung.voj.judger.model.Submission;
 import org.verwandlung.voj.judger.util.DigestUtils;
 
 /**
- * 评测机调度器. 用于完成评测机的评测流程. 每个阶段结束后推送消息至消息队列; 评测结束后写入数据库.
+ * The judger dispatcher. Drives the judging workflow of the judger. After each stage finishes, a
+ * message is pushed to the message queue; after judging completes, the result is written to the
+ * database.
  *
  * @author Haozhe Xie
  */
 @Component
 public class Dispatcher {
   /**
-   * 创建新的评测任务. 每次只运行一个评测任务.
+   * Creates a new judging task. Only one judging task runs at a time.
    *
-   * @param submissionId - 提交记录的唯一标识符
+   * @param submissionId - the unique identifier of the submission
    * @throws IllgealSubmissionException
    * @throws InterruptedException
    */
@@ -59,7 +61,7 @@ public class Dispatcher {
           String.format("%s/voj-%s", new Object[] {workBaseDirectory, submissionId});
       String baseFileName = DigestUtils.getRandomString(12, DigestUtils.Mode.ALPHA);
 
-      // 解决由于未知原因无法获取到数据记录的问题
+      // Work around the issue where the record cannot be fetched for unknown reasons
       int tryTimes = 0;
       Submission submission = null;
       do {
@@ -80,11 +82,12 @@ public class Dispatcher {
   }
 
   /**
-   * 完成评测前的预处理工作. 说明: 随机文件名用于防止应用程序自身递归调用.
+   * Performs preprocessing work before judging. Note: the random file name is used to prevent the
+   * application from recursively invoking itself.
    *
-   * @param submission - 评测记录对象
-   * @param workDirectory - 用于产生编译输出的目录
-   * @param baseFileName - 随机文件名(不包含后缀)
+   * @param submission - the submission object
+   * @param workDirectory - the directory used for producing compilation output
+   * @param baseFileName - the random file name (without suffix)
    */
   private void preprocess(Submission submission, String workDirectory, String baseFileName) {
     try {
@@ -100,11 +103,12 @@ public class Dispatcher {
   }
 
   /**
-   * 创建编译任务. 说明: 随机文件名用于防止应用程序自身递归调用.
+   * Creates a compilation task. Note: the random file name is used to prevent the application from
+   * recursively invoking itself.
    *
-   * @param submission - 评测记录对象
-   * @param workDirectory - 用于产生编译输出的目录
-   * @param baseFileName - 随机文件名(不包含后缀)
+   * @param submission - the submission object
+   * @param workDirectory - the directory used for producing compilation output
+   * @param baseFileName - the random file name (without suffix)
    */
   private boolean compile(Submission submission, String workDirectory, String baseFileName) {
     long submissionId = submission.getSubmissionId();
@@ -115,11 +119,11 @@ public class Dispatcher {
   }
 
   /**
-   * 执行程序.
+   * Runs the program.
    *
-   * @param submission - 评测记录对象
-   * @param workDirectory - 编译生成结果的目录以及程序输出的目录
-   * @param baseFileName - 待执行的应用程序文件名(不包含文件后缀)
+   * @param submission - the submission object
+   * @param workDirectory - the directory of the compilation result and the program output
+   * @param baseFileName - the file name of the application to run (without file suffix)
    */
   private void runProgram(Submission submission, String workDirectory, String baseFileName) {
     List<Map<String, Object>> runtimeResults = new ArrayList<Map<String, Object>>();
@@ -152,23 +156,23 @@ public class Dispatcher {
   }
 
   /**
-   * 获取当前测试点输出路径.
+   * Gets the output path of the current checkpoint.
    *
-   * @param workDirectory - 编译生成结果的目录以及程序输出的目录
-   * @param checkpointId - 当前测试点编号
-   * @return 当前测试点输出路径
+   * @param workDirectory - the directory of the compilation result and the program output
+   * @param checkpointId - the number of the current checkpoint
+   * @return the output path of the current checkpoint
    */
   private String getOutputFilePath(String workDirectory, int checkpointId) {
     return String.format("%s/output#%s.txt", new Object[] {workDirectory, checkpointId});
   }
 
   /**
-   * 获取程序运行结果(及答案比对结果).
+   * Gets the program's runtime result (and the answer comparison result).
    *
-   * @param result - 包含程序运行结果的Map对象
-   * @param standardOutputFilePath - 标准输出文件路径
-   * @param outputFilePath - 用户输出文件路径
-   * @return 包含程序运行结果的Map对象
+   * @param result - the Map object containing the program's runtime result
+   * @param standardOutputFilePath - the path of the standard output file
+   * @param outputFilePath - the path of the user's output file
+   * @return the Map object containing the program's runtime result
    */
   private Map<String, Object> getRuntimeResult(
       Map<String, Object> result, String standardOutputFilePath, String outputFilePath) {
@@ -190,11 +194,11 @@ public class Dispatcher {
   }
 
   /**
-   * 获取用户输出和标准输出的比对结果.
+   * Gets the comparison result between the user's output and the standard output.
    *
-   * @param standardOutputFilePath - 标准输出文件路径
-   * @param outputFilePath - 用户输出文件路径
-   * @return 用户输出和标准输出是否相同
+   * @param standardOutputFilePath - the path of the standard output file
+   * @param outputFilePath - the path of the user's output file
+   * @return whether the user's output and the standard output are the same
    */
   private boolean isOutputTheSame(String standardOutputFilePath, String outputFilePath) {
     try {
@@ -206,9 +210,9 @@ public class Dispatcher {
   }
 
   /**
-   * 评测完成后, 清理所生成的文件.
+   * Cleans up the generated files after judging completes.
    *
-   * @param baseDirectory - 用于产生输出结果目录
+   * @param baseDirectory - the directory used for producing output results
    */
   private void cleanUp(String baseDirectory) {
     File baseDirFile = new File(baseDirectory);
@@ -221,35 +225,38 @@ public class Dispatcher {
     }
   }
 
-  /** 自动注入的ApplicationDispatcher对象. 完成每个阶段的任务后推送消息至消息队列. */
+  /**
+   * The autowired ApplicationDispatcher object, which pushes a message to the message queue after
+   * each stage's task completes.
+   */
   @Autowired private ApplicationDispatcher applicationDispatcher;
 
-  /** 自动注入的Preprocessor对象. 完成编译前的准备工作. */
+  /** The autowired Preprocessor object, which performs the preparation work before compilation. */
   @Autowired private Preprocessor preprocessor;
 
-  /** 自动注入的Compiler对象. 完成编译工作. */
+  /** The autowired Compiler object, which performs the compilation work. */
   @Autowired private Compiler compiler;
 
-  /** 自动注入的Runner对象. 完成程序运行工作. */
+  /** The autowired Runner object, which performs the program execution work. */
   @Autowired private Runner runner;
 
-  /** 自动注入的Matcher对象. 完成输出结果比对工作. */
+  /** The autowired Comparator object, which performs the output comparison work. */
   @Autowired private Comparator comparator;
 
-  /** 自动注入的SubmissionMapper对象. */
+  /** The autowired SubmissionMapper object. */
   @Autowired private SubmissionMapper submissionMapper;
 
-  /** 自动注入的CheckpointMapper对象. 用于获取试题的测试点. */
+  /** The autowired CheckpointMapper object, used to obtain a problem's checkpoints. */
   @Autowired private CheckpointMapper checkpointMapper;
 
-  /** 评测机的工作目录. 用于存储编译结果以及程序输出结果. */
+  /** The working directory of the judger, used to store compilation results and program output. */
   @Value("${judger.workDir}")
   private String workBaseDirectory;
 
-  /** 测试点的存储目录. 用于存储测试点的输入输出数据. */
+  /** The storage directory of checkpoints, used to store the input/output data of checkpoints. */
   @Value("${judger.checkpointDir}")
   private String checkpointDirectory;
 
-  /** 日志记录器. */
+  /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(Dispatcher.class);
 }

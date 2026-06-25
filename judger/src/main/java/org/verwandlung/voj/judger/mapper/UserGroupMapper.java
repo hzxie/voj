@@ -31,10 +31,10 @@ import org.verwandlung.voj.judger.model.UserGroup;
  */
 public interface UserGroupMapper {
   /**
-   * 通过用户组的唯一标识符获取用户组对象.
+   * Gets a user group object by its unique identifier.
    *
-   * @param userGroupId - 用户组的唯一标识符
-   * @return 预期的用户组对象或空引用
+   * @param userGroupId - the unique identifier of the user group
+   * @return the expected user group object, or a null reference
    */
   @Select("SELECT * FROM voj_user_groups WHERE user_group_id = #{userGroupId}")
   @Options(useCache = true)

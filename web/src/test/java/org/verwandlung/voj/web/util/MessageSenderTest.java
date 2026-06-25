@@ -24,7 +24,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.verwandlung.voj.web.messenger.MessageSender;
 
 /**
- * MessageSender的测试类. 注意: 仅供开发调试使用.
+ * The test class for MessageSender. Note: for development and debugging use only.
  *
  * @author Haozhe Xie
  */
@@ -33,7 +33,7 @@ import org.verwandlung.voj.web.messenger.MessageSender;
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 */
 public class MessageSenderTest {
-  /** 测试用例: 测试sendMessage()方法 测试数据: N/a 预期结果: ActiveMQ的消息队列中产生预期的消息 */
+  /** Test case: tests the sendMessage() method. Test data: N/a. Expected: the expected message is produced in the ActiveMQ message queue. */
   /* @Test */
   public void testSendMessage() {
     Map<String, Object> mapMessage = new HashMap<>();
@@ -41,6 +41,6 @@ public class MessageSenderTest {
     messageSender.sendMessage(mapMessage);
   }
 
-  /** 自动注入的MessageSender对象. */
+  /** The autowired MessageSender object. */
   @Autowired private MessageSender messageSender;
 }

@@ -45,7 +45,7 @@ import org.verwandlung.voj.web.util.CsrfProtector;
 import org.verwandlung.voj.web.util.HttpSessionParser;
 
 /**
- * 加载/显示评测的相关信息.
+ * Loads/displays information related to submissions.
  *
  * @author Haozhe Xie
  */
@@ -53,13 +53,13 @@ import org.verwandlung.voj.web.util.HttpSessionParser;
 @RequestMapping(value = "/submission")
 public class SubmissionController {
   /**
-   * 显示评测列表的页面.
+   * Displays the page of the submission list.
    *
-   * @param problemId - 试题的唯一标识符
-   * @param username - 用户的用户名
-   * @param request - HttpRequest对象
-   * @param response - HttpResponse对象
-   * @return 包含提交列表的ModelAndView对象
+   * @param problemId - the unique identifier of the problem
+   * @param username - the username of the user
+   * @param request - the HttpRequest object
+   * @param response - the HttpResponse object
+   * @return a ModelAndView object containing the submission list
    */
   @RequestMapping(value = "", method = RequestMethod.GET)
   public ModelAndView submissionsView(
@@ -73,13 +73,13 @@ public class SubmissionController {
   }
 
   /**
-   * 获取历史评测信息的列表.
+   * Gets the list of historical submissions.
    *
-   * @param problemId - 试题的唯一标识符
-   * @param username - 用户的用户名
-   * @param startIndex - 当前加载的最后一条记录的提交唯一标识符
-   * @param request - HttpRequest对象
-   * @return 一个包含提交记录列表的HashMap对象
+   * @param problemId - the unique identifier of the problem
+   * @param username - the username of the user
+   * @param startIndex - the submission unique identifier of the last currently-loaded record
+   * @param request - the HttpRequest object
+   * @return a HashMap object containing the list of submission records
    */
   @RequestMapping(value = "/getSubmissions.action", method = RequestMethod.GET)
   public @ResponseBody Map<String, Object> getSubmissionsAction(
@@ -99,13 +99,13 @@ public class SubmissionController {
   }
 
   /**
-   * 获取最新的评测信息的列表.
+   * Gets the list of the latest submissions.
    *
-   * @param problemId - 试题的唯一标识符
-   * @param username - 用户的用户名
-   * @param startIndex - 当前加载的最新一条记录的提交唯一标识符
-   * @param request - HttpRequest对象
-   * @return 一个包含提交记录列表的HashMap对象
+   * @param problemId - the unique identifier of the problem
+   * @param username - the username of the user
+   * @param startIndex - the submission unique identifier of the latest currently-loaded record
+   * @param request - the HttpRequest object
+   * @return a HashMap object containing the list of submission records
    */
   @RequestMapping(value = "/getLatestSubmissions.action", method = RequestMethod.GET)
   public @ResponseBody Map<String, Object> getLatestSubmissionsAction(
@@ -125,12 +125,12 @@ public class SubmissionController {
   }
 
   /**
-   * 显示提交记录详细信息的页面.
+   * Displays the page of the detailed information of a submission record.
    *
-   * @param submissionId - 提交记录的唯一标识符
-   * @param request - HttpRequest对象
-   * @param response - HttpResponse对象
-   * @return 包含提交详细信息的ModelAndView对象
+   * @param submissionId - the unique identifier of the submission record
+   * @param request - the HttpRequest object
+   * @param response - the HttpResponse object
+   * @return a ModelAndView object containing the detailed information of the submission
    */
   @RequestMapping(value = "/{submissionId}", method = RequestMethod.GET)
   public ModelAndView submissionView(
@@ -148,10 +148,10 @@ public class SubmissionController {
   }
 
   /**
-   * 获取实时的评测结果.
+   * Gets the real-time judge result.
    *
-   * @param submissionId - 提交记录的唯一标识符
-   * @return 包含评测结果信息的StreamingResponseBody对象
+   * @param submissionId - the unique identifier of the submission record
+   * @return an SseEmitter object containing the judge result information
    * @throws IOException
    */
   @RequestMapping("/getRealTimeJudgeResult.action")
@@ -180,11 +180,11 @@ public class SubmissionController {
   }
 
   /**
-   * 获取提交记录的详细信息.
+   * Gets the detailed information of a submission record.
    *
-   * @param submissionId - 提交记录的唯一标识符
-   * @param request - HttpRequest对象
-   * @return 包含提交记录详细信息的HashMap对象
+   * @param submissionId - the unique identifier of the submission record
+   * @param request - the HttpRequest object
+   * @return a HashMap object containing the detailed information of the submission record
    */
   @RequestMapping(value = "/getSubmission.action", method = RequestMethod.GET)
   public @ResponseBody Map<String, Object> getSubmissionAction(
@@ -198,16 +198,16 @@ public class SubmissionController {
     return result;
   }
 
-  /** 每次请求所加载评测记录的数量. */
+  /** The number of submission records to load per request. */
   private static final int NUMBER_OF_SUBMISSION_PER_PAGE = 100;
 
-  /** 自动注入的SubmissionService对象. */
+  /** The autowired SubmissionService object. */
   @Autowired private SubmissionService submissionService;
 
-  /** 自动注入的ApplicationEventListener对象. 用于向其中注册sseEmitter. */
+  /** The autowired ApplicationEventListener object. Used for registering the sseEmitter. */
   @Autowired private ApplicationEventListener submissionEventListener;
 
-  /** 日志记录器. */
+  /** The logger. */
   @SuppressWarnings("unused")
   private static final Logger LOGGER = LogManager.getLogger(SubmissionController.class);
 }

@@ -52,18 +52,18 @@ LPWSTR getWideStringPointer(const std::wstring&);
 LPCWSTR getConstWideStringPointer(const std::wstring&);
 
 /**
- * JNI调用入口.
- * 获取程序运行结果.
- * @param  jniEnv          - JNI 运行环境引用
- * @param  selfReference   - 对调用Java的对象的引用
- * @param  jCommandLine    - 待执行的命令行
- * @param  jUsername       - Windows用户名
- * @param  jPassword       - Windows密码
- * @param  jInputFilePath  - 执行程序时的输入文件路径(可为NULL)
- * @param  jOutputFilePath - 执行程序后的输出文件路径(可为NULL)
- * @param  timeLimit       - 程序执行时间限制(ms, 0为不限制)
- * @param  memoryLimit     - 程序执行内存限制(KB, 0为不限制)
- * @return 一个包含运行结果的Map<String, Object>对象
+ * JNI call entry point.
+ * Gets the program's runtime result.
+ * @param  jniEnv          - a reference to the JNI runtime environment
+ * @param  selfReference   - a reference to the calling Java object
+ * @param  jCommandLine    - the command line to execute
+ * @param  jUsername       - the Windows username
+ * @param  jPassword       - the Windows password
+ * @param  jInputFilePath  - the input file path when running the program (may be NULL)
+ * @param  jOutputFilePath - the output file path after running the program (may be NULL)
+ * @param  timeLimit       - the program execution time limit (ms, 0 means no limit)
+ * @param  memoryLimit     - the program execution memory limit (KB, 0 means no limit)
+ * @return a Map<String, Object> object containing the runtime result
  */
 JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntimeResult(
     JNIEnv* jniEnv, jobject selfReference, jstring jCommandLine, jstring jUsername,
@@ -108,11 +108,11 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
 }
 
 /**
- * 重定向子进程的I/O.
- * @param inputFilePath  - 输入文件路径
- * @param outputFilePath - 输出文件路径
- * @param hInput         - 输入文件句柄
- * @param hOutput        - 输出文件句柄
+ * Redirects the child process's I/O.
+ * @param inputFilePath  - the input file path
+ * @param outputFilePath - the output file path
+ * @param hInput         - the input file handle
+ * @param hOutput        - the output file handle
  */
 bool setupIoRedirection(std::wstring inputFilePath, std::wstring outputFilePath, 
         HANDLE& hInput, HANDLE& hOutput) {
@@ -139,10 +139,10 @@ bool setupIoRedirection(std::wstring inputFilePath, std::wstring outputFilePath,
 }
 
 /**
- * 根据I/O重定向信息重新设置startupInfo.
- * @param startupInfo - STARTUPINFOW结构体
- * @param hInput      - 文件输入句柄
- * @param hOutput     - 文件输出句柄
+ * Reconfigures startupInfo based on the I/O redirection information.
+ * @param startupInfo - the STARTUPINFOW structure
+ * @param hInput      - the file input handle
+ * @param hOutput     - the file output handle
  */
 void setupStartupInfo(STARTUPINFOW& startupInfo, HANDLE& hInput, HANDLE& hOutput) {
     startupInfo.cb              = sizeof(STARTUPINFOW);
@@ -153,16 +153,16 @@ void setupStartupInfo(STARTUPINFOW& startupInfo, HANDLE& hInput, HANDLE& hOutput
 }
 
 /**
- * 创建进程.
- * @param  commandLine   - 待执行的命令行
- * @param  username      - Windows用户名
- * @param  password      - Windows密码
+ * Creates a process.
+ * @param  commandLine   - the command line to execute
+ * @param  username      - the Windows username
+ * @param  password      - the Windows password
  * @param  hToken        - a token that represents the specified user
  * @param  lpEnvironment - an environment block for the new process
  * @param  startupInfo   - a STARTUPINFO structure
- * @param  processInfo   - a PROCESS_INFORMATION structure that receives identification 
+ * @param  processInfo   - a PROCESS_INFORMATION structure that receives identification
  *                         information for the new process, including a handle to the process
- * @return 进程是否创建成功
+ * @return whether the process was created successfully
  */
 bool createProcess(const std::wstring& commandLine, const std::wstring& username, 
         const std::wstring& password, HANDLE& hToken, LPVOID lpEnvironment,  
@@ -194,13 +194,13 @@ bool createProcess(const std::wstring& commandLine, const std::wstring& username
 }
 
 /**
- * 运行进程.
- * @param  processInfo - 包含进程信息的PROCESS_INFORMATION结构体
- * @param  timeLimit   - 运行时时间限制(ms)
- * @param  memoryLimit - 运行时空间限制(KB)
- * @param  timeUsage   - 运行时时间占用(ms)
- * @param  memoryUsage - 运行时空间占用(ms)
- * @return 进程退出状态
+ * Runs the process.
+ * @param  processInfo - the PROCESS_INFORMATION structure containing the process information
+ * @param  timeLimit   - the runtime time limit (ms)
+ * @param  memoryLimit - the runtime memory limit (KB)
+ * @param  timeUsage   - the runtime time used (ms)
+ * @param  memoryUsage - the runtime memory used (KB)
+ * @return the process exit status
  */
 DWORD runProcess(PROCESS_INFORMATION& processInfo, jint timeLimit, 
     jint memoryLimit, jint& timeUsage, jint& memoryUsage) {
@@ -222,10 +222,10 @@ DWORD runProcess(PROCESS_INFORMATION& processInfo, jint timeLimit,
 }
 
 /**
- * 获取运行时内存占用最大值
- * @param  processInfo - 包含进程信息的PROCESS_INFORMATION结构体
- * @param  memoryLimit - 运行时空间限制(KB)
- * @return 运行时内存占用最大值
+ * Gets the maximum runtime memory usage.
+ * @param  processInfo - the PROCESS_INFORMATION structure containing the process information
+ * @param  memoryLimit - the runtime memory limit (KB)
+ * @return the maximum runtime memory usage
  */
 jint getMaxMemoryUsage(PROCESS_INFORMATION& processInfo, jint memoryLimit) {
     jint maxMemoryUsage     = 0,
@@ -245,9 +245,9 @@ jint getMaxMemoryUsage(PROCESS_INFORMATION& processInfo, jint memoryLimit) {
 }
 
 /**
- * 获取内存占用情况.
- * @param  hProcess - 进程句柄
- * @return 当前物理内存使用量(KB)
+ * Gets the memory usage.
+ * @param  hProcess - the process handle
+ * @return the current physical memory usage (KB)
  */
 jint getCurrentMemoryUsage(HANDLE& hProcess) {
     PROCESS_MEMORY_COUNTERS pmc;
@@ -265,9 +265,9 @@ jint getCurrentMemoryUsage(HANDLE& hProcess) {
 }
 
 /**
- * 获取当前系统时间.
- * 用于统计程序运行时间.
- * @return 当前系统时间(以毫秒为单位)
+ * Gets the current system time.
+ * Used to measure the program's running time.
+ * @return the current system time (in milliseconds)
  */
 long long getMillisecondsNow() {
     static LARGE_INTEGER frequency;
@@ -282,9 +282,9 @@ long long getMillisecondsNow() {
 }
 
 /**
- * 强制销毁进程(当触发阈值时).
- * @param  processInfo - 包含进程信息的PROCESS_INFORMATION结构体
- * @return 销毁进程操作是否成功完成
+ * Forcibly destroys the process (when a threshold is triggered).
+ * @param  processInfo - the PROCESS_INFORMATION structure containing the process information
+ * @return whether the process destruction completed successfully
  */
 bool killProcess(PROCESS_INFORMATION& processInfo) {
     DWORD           processId   = processInfo.dwProcessId;
@@ -320,10 +320,10 @@ bool killProcess(PROCESS_INFORMATION& processInfo) {
 }
 
 /**
- * 获取应用程序退出状态.
- * 0表示正常退出, 259表示仍在运行.
- * @param  hProcess - 进程的句柄
- * @return 退出状态
+ * Gets the application's exit status.
+ * 0 means a normal exit, 259 means still running.
+ * @param  hProcess - the process handle
+ * @return the exit status
  */
 DWORD getExitCode(HANDLE& hProcess) {
     DWORD exitCode = 0;
@@ -333,9 +333,9 @@ DWORD getExitCode(HANDLE& hProcess) {
 }
 
 /**
- * 获取Windows API异常信息.
- * @param  apiName - Windows API名称
- * @return Windows API异常信息
+ * Gets the Windows API error message.
+ * @param  apiName - the Windows API name
+ * @return the Windows API error message
  */
 std::string getErrorMessage(const std::string& apiName) {
     LPVOID lpvMessageBuffer;
@@ -358,9 +358,9 @@ std::string getErrorMessage(const std::string& apiName) {
 }
 
 /**
- * 获取std::wstring类型的字符串.
- * @param  str - std::string类型的字符串
- * @return wstring类型的字符串
+ * Gets a std::wstring string.
+ * @param  str - a std::string string
+ * @return a std::wstring string
  */
 std::wstring getWideString(const std::string& str) {
     std::wstring wstr(str.begin(), str.end());
@@ -368,18 +368,18 @@ std::wstring getWideString(const std::string& str) {
 }
 
 /**
- * 获取std::wstring对应LPWSTR类型的指针.
- * @param  str - std::wstring类型的字符串
- * @return 对应LPWSTR类型的指针
+ * Gets the LPWSTR pointer corresponding to a std::wstring.
+ * @param  str - a std::wstring string
+ * @return the corresponding LPWSTR pointer
  */
 LPWSTR getWideStringPointer(const std::wstring& str) {
     return const_cast<LPWSTR>(str.c_str());
 }
 
 /**
- * 获取std::wstring对应LPCWSTR类型的指针.
- * @param  str - std::wstring类型的字符串
- * @return 对应LPCWSTR类型的指针
+ * Gets the LPCWSTR pointer corresponding to a std::wstring.
+ * @param  str - a std::wstring string
+ * @return the corresponding LPCWSTR pointer
  */
 LPCWSTR getConstWideStringPointer(const std::wstring& str) {
     return str.c_str();

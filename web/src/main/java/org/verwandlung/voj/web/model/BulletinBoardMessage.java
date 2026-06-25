@@ -20,20 +20,21 @@ import java.io.Serializable;
 import java.util.Date;
 
 /**
- * 布告栏消息的Model. 对应数据库中的voj_bulletin_board_messages数据表.
+ * The model of a bulletin board message. Maps to the voj_bulletin_board_messages table in the
+ * database.
  *
  * @author Haozhe Xie
  */
 public class BulletinBoardMessage implements Serializable {
-  /** BulletinBoardMessage的默认构造函数. */
+  /** Default constructor of the bulletin board message. */
   public BulletinBoardMessage() {}
 
   /**
-   * BulletinBoardMessage的构造函数.
+   * Constructor of the bulletin board message.
    *
-   * @param messageTitle - 布告栏消息的标题
-   * @param messageBody - 布告栏消息的内容
-   * @param messageCreateTime - 布告栏消息的创建时间
+   * @param messageTitle - the title of the bulletin board message
+   * @param messageBody - the content of the bulletin board message
+   * @param messageCreateTime - the creation time of the bulletin board message
    */
   public BulletinBoardMessage(String messageTitle, String messageBody, Date messageCreateTime) {
     this.messageTitle = messageTitle;
@@ -42,12 +43,12 @@ public class BulletinBoardMessage implements Serializable {
   }
 
   /**
-   * BulletinBoardMessage的构造函数.
+   * Constructor of the bulletin board message.
    *
-   * @param messageId - 布告栏消息的唯一标识符
-   * @param messageTitle - 布告栏消息的标题
-   * @param messageBody - 布告栏消息的内容
-   * @param messageCreateTime - 布告栏消息的创建时间
+   * @param messageId - the unique identifier of the bulletin board message
+   * @param messageTitle - the title of the bulletin board message
+   * @param messageBody - the content of the bulletin board message
+   * @param messageCreateTime - the creation time of the bulletin board message
    */
   public BulletinBoardMessage(
       long messageId, String messageTitle, String messageBody, Date messageCreateTime) {
@@ -56,72 +57,72 @@ public class BulletinBoardMessage implements Serializable {
   }
 
   /**
-   * 获取布告栏消息的唯一标识符.
+   * Gets the unique identifier of the bulletin board message.
    *
-   * @return 布告栏消息的唯一标识符
+   * @return the unique identifier of the bulletin board message
    */
   public long getMessageId() {
     return messageId;
   }
 
   /**
-   * 设置布告栏消息的唯一标识符.
+   * Sets the unique identifier of the bulletin board message.
    *
-   * @param messageId - 布告栏消息的唯一标识符
+   * @param messageId - the unique identifier of the bulletin board message
    */
   public void setMessageId(long messageId) {
     this.messageId = messageId;
   }
 
   /**
-   * 获取布告栏消息的标题.
+   * Gets the title of the bulletin board message.
    *
-   * @return 布告栏消息的标题
+   * @return the title of the bulletin board message
    */
   public String getMessageTitle() {
     return messageTitle;
   }
 
   /**
-   * 设置布告栏消息的标题.
+   * Sets the title of the bulletin board message.
    *
-   * @param messageTitle - 布告栏消息的标题
+   * @param messageTitle - the title of the bulletin board message
    */
   public void setMessageTitle(String messageTitle) {
     this.messageTitle = messageTitle;
   }
 
   /**
-   * 获取布告栏消息的内容.
+   * Gets the content of the bulletin board message.
    *
-   * @return 布告栏消息的内容
+   * @return the content of the bulletin board message
    */
   public String getMessageBody() {
     return messageBody;
   }
 
   /**
-   * 设置布告栏消息的内容.
+   * Sets the content of the bulletin board message.
    *
-   * @param messageBody - 布告栏消息的内容
+   * @param messageBody - the content of the bulletin board message
    */
   public void setMessageBody(String messageBody) {
     this.messageBody = messageBody;
   }
 
   /**
-   * 获取布告栏消息的创建时间.
+   * Gets the creation time of the bulletin board message.
    *
-   * @return 布告栏消息的创建时间
+   * @return the creation time of the bulletin board message
    */
   public Date getMessageCreateTime() {
     return messageCreateTime;
   }
 
   /**
-   * 设置布告栏消息的创建时间.
+   * Sets the creation time of the bulletin board message.
    *
-   * @param messageCreateTime - 布告栏消息的创建时间
+   * @param messageCreateTime - the creation time of the bulletin board message
    */
   public void setMessageCreateTime(Date messageCreateTime) {
     this.messageCreateTime = messageCreateTime;
@@ -136,15 +137,15 @@ public class BulletinBoardMessage implements Serializable {
         new Object[] {messageId, messageTitle, messageBody, messageCreateTime});
   }
 
-  /** 布告栏消息的唯一标识符. */
+  /** The unique identifier of the bulletin board message. */
   private long messageId;
 
-  /** 布告栏消息的标题. */
+  /** The title of the bulletin board message. */
   private String messageTitle;
 
-  /** 布告栏消息的内容. */
+  /** The content of the bulletin board message. */
   private String messageBody;
 
-  /** 布告栏消息的创建时间. */
+  /** The creation time of the bulletin board message. */
   private Date messageCreateTime;
 }

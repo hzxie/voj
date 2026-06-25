@@ -29,29 +29,30 @@ import org.springframework.jms.core.JmsTemplate;
 import org.springframework.jms.listener.SimpleMessageListenerContainer;
 
 /**
- * 消息队列配置. 取代原 dispatcher-servlet.xml 中的 ActiveMQ / JMS 定义.
+ * The message queue configuration. Replaces the ActiveMQ / JMS definitions in the original
+ * dispatcher-servlet.xml.
  *
- * <p>Web 模块将待评测任务投递到 {@code vojSubmissionTaskQueue}, 并监听
- * {@code vojJudgeResultQueue} 以接收评测结果.
+ * <p>The web module dispatches pending judge tasks to {@code vojSubmissionTaskQueue}, and listens to
+ * {@code vojJudgeResultQueue} to receive judge results.
  *
  * @author Haozhe Xie
  */
 @Configuration
 public class JmsConfig {
-  /** 评测任务队列名称 (Web -> Judger). */
+  /** The name of the judge task queue (Web -> Judger). */
   private static final String SUBMISSION_TASK_QUEUE = "vojSubmissionTaskQueue";
 
-  /** 评测结果队列名称 (Judger -> Web). */
+  /** The name of the judge result queue (Judger -> Web). */
   private static final String JUDGE_RESULT_QUEUE = "vojJudgeResultQueue";
 
-  /** 带连接缓存的 JMS 连接工厂. */
+  /** The JMS connection factory with connection caching. */
   @Bean
   public ConnectionFactory connectionFactory(@Value("${jms.broker.url}") String brokerUrl) {
     ActiveMQConnectionFactory amqConnectionFactory = new ActiveMQConnectionFactory(brokerUrl);
     return new CachingConnectionFactory(amqConnectionFactory);
   }
 
-  /** 用于向评测任务队列投递消息的 JmsTemplate. */
+  /** The JmsTemplate used to dispatch messages to the judge task queue. */
   @Bean
   public JmsTemplate jmsTemplate(ConnectionFactory connectionFactory) {
     JmsTemplate jmsTemplate = new JmsTemplate(connectionFactory);
@@ -59,7 +60,7 @@ public class JmsConfig {
     return jmsTemplate;
   }
 
-  /** 监听评测结果队列的消息监听容器. */
+  /** The message listener container that listens to the judge result queue. */
   @Bean
   public SimpleMessageListenerContainer judgeResultListenerContainer(
       ConnectionFactory connectionFactory, MessageListener messageReceiver) {

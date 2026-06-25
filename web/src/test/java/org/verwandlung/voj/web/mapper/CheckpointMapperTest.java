@@ -30,7 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.verwandlung.voj.web.model.Checkpoint;
 
 /**
- * CheckpointMapper测试类.
+ * The test class for CheckpointMapper.
  *
  * @author Haozhe Xie
  */
@@ -39,7 +39,8 @@ import org.verwandlung.voj.web.model.Checkpoint;
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class CheckpointMapperTest {
   /**
-   * 测试用例: 测试getCheckpointsUsingProblemId(long)方法 测试数据: 使用存在的试题唯一标识符(1000) 预期结果: 返回对应的测试点列表(10个项目)
+   * Test case: tests the getCheckpointsUsingProblemId(long) method. Test data: an existing problem
+   * unique identifier (1000). Expected: the corresponding checkpoint list (10 items).
    */
   @Test
   public void testGetCheckpointsUsingProblemIdExists() {
@@ -51,14 +52,14 @@ public class CheckpointMapperTest {
     Assertions.assertEquals("45652\r\n", output);
   }
 
-  /** 测试用例: 测试getCheckpointsUsingProblemId(long)方法 测试数据: 使用不存在的试题唯一标识符(0) 预期结果: 返回对应的测试点列表(0个项目) */
+  /** Test case: tests the getCheckpointsUsingProblemId(long) method. Test data: a non-existing problem unique identifier (0). Expected: the corresponding checkpoint list (0 items). */
   @Test
   public void testGetCheckpointsUsingProblemIdNotExists() {
     List<Checkpoint> checkpoints = checkpointMapper.getCheckpointsUsingProblemId(0);
     Assertions.assertEquals(0, checkpoints.size());
   }
 
-  /** 测试用例: 测试createCheckpoint(Checkpoint)方法 测试数据: 使用正常的数据集创建测试点 预期结果: 测试点被成功创建 */
+  /** Test case: tests the createCheckpoint(Checkpoint) method. Test data: creates a checkpoint with a normal data set. Expected: the checkpoint is created successfully. */
   @Test
   public void testCreateCheckpointNormally() {
     Checkpoint checkpoint = new Checkpoint(1000, 100, false, 10, "input", "output");
@@ -66,7 +67,7 @@ public class CheckpointMapperTest {
     Assertions.assertEquals(1, numberOfRowsAffected);
   }
 
-  /** 测试用例: 测试createCheckpoint(Checkpoint)方法 测试数据: 使用重复的主键创建测试点 预期结果: 抛出DuplicateKeyException异常 */
+  /** Test case: tests the createCheckpoint(Checkpoint) method. Test data: creates a checkpoint with a duplicate primary key. Expected: a DuplicateKeyException is thrown. */
   @Test
   public void testCreateCheckpointUsingExistingProblemIdAndCheckpointId() {
     Checkpoint checkpoint = new Checkpoint(1000, 0, false, 10, "input", "output");
@@ -78,8 +79,8 @@ public class CheckpointMapperTest {
   }
 
   /**
-   * 测试用例: 测试createCheckpoint(Checkpoint)方法 测试数据: 使用不存在的试题ID创建测试点 预期结果:
-   * 抛出DataIntegrityViolationException异常
+   * Test case: tests the createCheckpoint(Checkpoint) method. Test data: creates a checkpoint with a
+   * non-existing problem ID. Expected: a DataIntegrityViolationException is thrown.
    */
   @Test
   public void testCreateCheckpointUsingNotExistingProblemId() {
@@ -91,7 +92,7 @@ public class CheckpointMapperTest {
     Assertions.assertThrows(org.springframework.dao.DataIntegrityViolationException.class, e);
   }
 
-  /** 测试用例: 测试deleteCheckpoint(long)方法 测试数据: 使用存在的试题ID删除测试点 预期结果: 指定试题的全部测试点被删除 */
+  /** Test case: tests the deleteCheckpoint(long) method. Test data: deletes checkpoints with an existing problem ID. Expected: all checkpoints of the specified problem are deleted. */
   @Test
   public void testDeleteCheckpointUsingExistsingProblemId() {
     List<Checkpoint> checkpoints = checkpointMapper.getCheckpointsUsingProblemId(1000);
@@ -102,6 +103,6 @@ public class CheckpointMapperTest {
     Assertions.assertEquals(0, checkpoints.size());
   }
 
-  /** 待测试的CheckpointMapper对象. */
+  /** The CheckpointMapper object under test. */
   @Autowired private CheckpointMapper checkpointMapper;
 }

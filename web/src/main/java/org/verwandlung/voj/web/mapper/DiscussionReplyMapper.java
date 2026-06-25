@@ -28,21 +28,21 @@ import java.util.List;
  */
 public interface DiscussionReplyMapper {
   /**
-   * 根据讨论回复的唯一标识符获取DiscussionReply对象.
+   * Gets a DiscussionReply object by the unique identifier of the discussion reply.
    *
-   * @param discussionReplyId - 讨论回复的唯一标识符
-   * @return 预期的DiscussionReply对象或空引用
+   * @param discussionReplyId - the unique identifier of the discussion reply
+   * @return the expected DiscussionReply object, or a null reference
    */
   DiscussionReply getDiscussionReplyUsingReplyId(
       @Param("discussionReplyId") long discussionReplyId);
 
   /**
-   * 获取某个讨论帖子下的全部回复, 并分页显示.
+   * Gets all replies of a discussion thread, with pagination.
    *
-   * @param discussionThreadId - 讨论帖子的唯一标识符
-   * @param offset 起始回复的游标
-   * @param limit 获取回复的数量
-   * @return 包含讨论话题回复的List对象
+   * @param discussionThreadId - the unique identifier of the discussion thread
+   * @param offset the cursor of the first reply
+   * @param limit the number of replies to fetch
+   * @return a List object containing the discussion replies
    */
   List<DiscussionReply> getDiscussionRepliesUsingThreadId(
       @Param("discussionThreadId") long discussionThreadId,
@@ -50,23 +50,23 @@ public interface DiscussionReplyMapper {
       @Param("limit") int limit);
 
   /**
-   * 创建讨论回复.
+   * Creates a discussion reply.
    *
-   * @param discussionReply - 待创建的DiscussionReply对象
+   * @param discussionReply - the DiscussionReply object to create
    */
   int createDiscussionReply(DiscussionReply discussionReply);
 
   /**
-   * 更新讨论回复.
+   * Updates a discussion reply.
    *
-   * @param discussionReply - 待更新的DiscussionReply对象
+   * @param discussionReply - the DiscussionReply object to update
    */
   int updateDiscussionReply(DiscussionReply discussionReply);
 
   /**
-   * 删除讨论回复.
+   * Deletes a discussion reply.
    *
-   * @param discussionReplyId - 待删除回复的唯一标识符
+   * @param discussionReplyId - the unique identifier of the reply to delete
    */
   int deleteDiscussionReplyUsingReplyId(long discussionReplyId);
 }

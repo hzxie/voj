@@ -17,20 +17,21 @@
 package org.verwandlung.voj.judger.exception;
 
 /**
- * 创建文件夹失败的IO异常. 当java.io.File.File.mkdirs()返回false时被抛出.
+ * The IO exception thrown when creating a directory fails. Thrown when java.io.File.mkdirs() returns
+ * false.
  *
  * @author Haozhe Xie
  */
 public class CreateDirectoryException extends Exception {
   /**
-   * IOException的构造函数.
+   * Constructor of the exception.
    *
-   * @param message - 错误消息
+   * @param message - the error message
    */
   public CreateDirectoryException(String message) {
     super(message);
   }
 
-  /** 唯一的序列化标识符. */
+  /** The unique serialization identifier. */
   private static final long serialVersionUID = 7430055519184434330L;
 }

@@ -34,10 +34,10 @@ import org.verwandlung.voj.judger.model.UserGroup;
  */
 public interface UserMapper {
   /**
-   * 通过用户名获取用户对象.
+   * Gets a user object by username.
    *
-   * @param username - 用户名
-   * @return 预期的用户对象或空引用
+   * @param username - the username
+   * @return the expected user object, or a null reference
    */
   @Select("SELECT * FROM voj_users WHERE username = #{username}")
   @Options(useCache = false)

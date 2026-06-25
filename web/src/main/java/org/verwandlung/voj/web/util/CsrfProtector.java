@@ -21,7 +21,8 @@ import java.util.Map;
 import jakarta.servlet.http.HttpSession;
 
 /**
- * CSRF防护服务. 说明: Spring Security中所集成的服务过于复杂, 因此没有使用.
+ * The CSRF protection service. Note: the service integrated in Spring Security is too complex, so it
+ * is not used.
  *
  * @author Haozhe Xie
  */
@@ -30,10 +31,10 @@ public class CsrfProtector {
   private CsrfProtector() {}
 
   /**
-   * 生成CSRF的Token, 并存放于Session中以作验证.
+   * Generates a CSRF token, and stores it in the session for verification.
    *
-   * @param session - HttpSession对象
-   * @return 生成CSRF的Token
+   * @param session - the HttpSession object
+   * @return the generated CSRF token
    */
   public static String getCsrfToken(HttpSession session) {
     String csrfToken = DigestUtils.getGuid();
@@ -43,11 +44,11 @@ public class CsrfProtector {
   }
 
   /**
-   * 验证CSRF的Token是否正确.
+   * Verifies whether the CSRF token is correct.
    *
-   * @param csrfToken - 待验证的CSRF Token
-   * @param session - HttpSession对象
-   * @return CSRF的Token是否正确
+   * @param csrfToken - the CSRF token to verify
+   * @param session - the HttpSession object
+   * @return whether the CSRF token is correct
    */
   public static boolean isCsrfTokenValid(String csrfToken, HttpSession session) {
     Object csrfTokenAttribute = session.getAttribute("CsrfToken");
@@ -55,11 +56,11 @@ public class CsrfProtector {
   }
 
   /**
-   * 验证CSRF的Token是否正确.
+   * Verifies whether the CSRF token is correct.
    *
-   * @param csrfToken - 待验证的CSRF Token
-   * @param sessionAttributes - Session中的全部属性
-   * @return CSRF的Token是否正确
+   * @param csrfToken - the CSRF token to verify
+   * @param sessionAttributes - all the attributes in the session
+   * @return whether the CSRF token is correct
    */
   public static boolean isCsrfTokenValid(String csrfToken, Map<String, Object> sessionAttributes) {
     Object csrfTokenAttribute = sessionAttributes.get("CsrfToken");
@@ -67,11 +68,11 @@ public class CsrfProtector {
   }
 
   /**
-   * 验证CSRF的Token是否正确.
+   * Verifies whether the CSRF token is correct.
    *
-   * @param csrfToken - 待验证的CSRF Token
-   * @param csrfTokenAttribute - Session中Csrf Token的属性值
-   * @return CSRF的Token是否正确
+   * @param csrfToken - the CSRF token to verify
+   * @param csrfTokenAttribute - the value of the CSRF token attribute in the session
+   * @return whether the CSRF token is correct
    */
   private static boolean isCsrfTokenValid(String csrfToken, Object csrfTokenAttribute) {
     if (csrfTokenAttribute == null) {

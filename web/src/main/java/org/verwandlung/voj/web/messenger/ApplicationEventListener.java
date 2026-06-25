@@ -35,13 +35,14 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 /**
- * 应用程序事件监听器. 负责将消息队列中的消息转发至控制器.
+ * The application event listener. Responsible for forwarding the messages in the message queue to
+ * the controllers.
  *
  * @author Haozhe Xie
  */
 @Component
 public class ApplicationEventListener {
-  /** ApplicationEventListener的构造函数. */
+  /** The constructor of ApplicationEventListener. */
   public ApplicationEventListener() {
     synchronized (this) {
       if (scheduler == null) {
@@ -77,9 +78,9 @@ public class ApplicationEventListener {
   }
 
   /**
-   * 提交事件的处理器.
+   * The handler for submission events.
    *
-   * @param event - 提交记录事件
+   * @param event - the submission record event
    * @throws IOException
    */
   @EventListener
@@ -106,19 +107,19 @@ public class ApplicationEventListener {
   }
 
   /**
-   * 注册Server Sent Event的发送者对象.
+   * Registers a Server-Sent Event emitter object.
    *
-   * @param submissionId - 提交记录的唯一标识符
-   * @param sseEmitter - Server Sent Event的发送者对象
+   * @param submissionId - the unique identifier of the submission record
+   * @param sseEmitter - the Server-Sent Event emitter object
    */
   public void addSseEmitters(long submissionId, SseEmitter sseEmitter) {
     sseEmitters.put(submissionId, sseEmitter);
   }
 
   /**
-   * 移除Server Sent Event的发送者对象.
+   * Removes a Server-Sent Event emitter object.
    *
-   * @param submissionId - 提交记录的唯一标识符
+   * @param submissionId - the unique identifier of the submission record
    */
   private void removeSseEmitters(long submissionId) {
     sseEmitters.remove(submissionId);
@@ -132,9 +133,9 @@ public class ApplicationEventListener {
   }
 
   /**
-   * 处理评测机心跳事件.
+   * Handles judger heartbeat events.
    *
-   * @param event - 评测机心跳事件
+   * @param event - the judger heartbeat event
    */
   @EventListener
   public void keepAliveEventHandler(KeepAliveEvent event) {
@@ -150,10 +151,10 @@ public class ApplicationEventListener {
   }
 
   /**
-   * 获取评测机的描述信息.
+   * Gets the description information of a judger.
    *
-   * @param judgerUsername - 评测机的用户名
-   * @return 评测机的描述信息
+   * @param judgerUsername - the username of the judger
+   * @return the description information of the judger
    */
   public String getJudgerDescription(String judgerUsername) {
     String judgerDescription = "[Offline]";
@@ -166,24 +167,31 @@ public class ApplicationEventListener {
   }
 
   /**
-   * 获取在线评测机的数量.
+   * Gets the number of online judgers.
    *
-   * @return 在线评测机的数量
+   * @return the number of online judgers
    */
   public long getOnlineJudgers() {
     return onlineJudgers.size();
   }
 
-  /** SseEmitter对象的列表. Map中的Key表示提交记录的唯一标识符. Map中的Value表示对应的SseEmitter对象, 用于推送实时评测信息. */
+  /**
+   * The list of SseEmitter objects. The Key in the Map represents the unique identifier of the
+   * submission record. The Value in the Map represents the corresponding SseEmitter object, used to
+   * push real-time judge information.
+   */
   private static Map<Long, SseEmitter> sseEmitters = new Hashtable<>();
 
-  /** 在线评测机的列表. Map中的Key表示评测机的用户名. Map中的Value表示对应评测机的信息. */
+  /**
+   * The list of online judgers. The Key in the Map represents the username of the judger. The Value
+   * in the Map represents the information of the corresponding judger.
+   */
   private static Map<String, Map<String, Object>> onlineJudgers =
       new Hashtable<String, Map<String, Object>>();
 
-  /** ScheduledExecutorService对象. 用于定期移除离线的评测机. */
+  /** The ScheduledExecutorService object. Used to periodically remove offline judgers. */
   private static ScheduledExecutorService scheduler = null;
 
-  /** 日志记录器. */
+  /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(ApplicationEventListener.class);
 }

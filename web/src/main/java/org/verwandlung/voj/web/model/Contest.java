@@ -19,18 +19,18 @@ package org.verwandlung.voj.web.model;
 import java.util.Date;
 
 public class Contest {
-  /** Contest的默认构造函数. */
+  /** Default constructor of the contest. */
   public Contest() {}
 
   /**
-   * Contest的构造函数.
+   * Constructor of the contest.
    *
-   * @param contestName - 竞赛的名称
-   * @param contestNotes - 竞赛的说明
-   * @param startTime - 竞赛开始时间
-   * @param endTime - 竞赛结束时间
-   * @param mode - 竞赛的赛制
-   * @param problems - 竞赛包含的试题
+   * @param contestName - the name of the contest
+   * @param contestNotes - the notes of the contest
+   * @param startTime - the start time of the contest
+   * @param endTime - the end time of the contest
+   * @param mode - the mode of the contest
+   * @param problems - the problems included in the contest
    */
   public Contest(
       String contestName,
@@ -48,15 +48,15 @@ public class Contest {
   }
 
   /**
-   * Contest的构造函数.
+   * Constructor of the contest.
    *
-   * @param contestId - 竞赛的唯一标识符
-   * @param contestName - 竞赛的名称
-   * @param contestNotes - 竞赛的说明
-   * @param startTime - 竞赛开始时间
-   * @param endTime - 竞赛结束时间
-   * @param mode - 竞赛的赛制
-   * @param problems - 竞赛中包含的试题
+   * @param contestId - the unique identifier of the contest
+   * @param contestName - the name of the contest
+   * @param contestNotes - the notes of the contest
+   * @param startTime - the start time of the contest
+   * @param endTime - the end time of the contest
+   * @param mode - the mode of the contest
+   * @param problems - the problems included in the contest
    */
   public Contest(
       long contestId,
@@ -71,108 +71,108 @@ public class Contest {
   }
 
   /**
-   * 获取竞赛的唯一标识符.
+   * Gets the unique identifier of the contest.
    *
-   * @return 竞赛的唯一标识符
+   * @return the unique identifier of the contest
    */
   public long getContestId() {
     return contestId;
   }
 
   /**
-   * 设置竞赛的唯一标识符.
+   * Sets the unique identifier of the contest.
    *
-   * @param contestId - 竞赛的唯一标识符
+   * @param contestId - the unique identifier of the contest
    */
   public void setContestId(long contestId) {
     this.contestId = contestId;
   }
 
   /**
-   * 获取竞赛的名称.
+   * Gets the name of the contest.
    *
-   * @return 竞赛的名称
+   * @return the name of the contest
    */
   public String getContestName() {
     return contestName;
   }
 
   /**
-   * 设置竞赛的名称.
+   * Sets the name of the contest.
    *
-   * @param contestName - 竞赛的名称
+   * @param contestName - the name of the contest
    */
   public void setContestName(String contestName) {
     this.contestName = contestName;
   }
 
   /**
-   * 获取竞赛说明.
+   * Gets the notes of the contest.
    *
-   * @return 竞赛的说明
+   * @return the notes of the contest
    */
   public String getContestNotes() {
     return contestNotes;
   }
 
   /**
-   * 设置竞赛说明.
+   * Sets the notes of the contest.
    *
-   * @param contestNotes - 竞赛的说明
+   * @param contestNotes - the notes of the contest
    */
   public void setContestNotes(String contestNotes) {
     this.contestNotes = contestNotes;
   }
 
   /**
-   * 获取竞赛的开始时间.
+   * Gets the start time of the contest.
    *
-   * @return 竞赛的开始时间
+   * @return the start time of the contest
    */
   public Date getStartTime() {
     return startTime;
   }
 
   /**
-   * 设置竞赛的开始时间.
+   * Sets the start time of the contest.
    *
-   * @param startTime - 竞赛的开始时间
+   * @param startTime - the start time of the contest
    */
   public void setStartTime(Date startTime) {
     this.startTime = startTime;
   }
 
   /**
-   * 获取竞赛的结束时间.
+   * Gets the end time of the contest.
    *
-   * @return 竞赛的结束时间
+   * @return the end time of the contest
    */
   public Date getEndTime() {
     return endTime;
   }
 
   /**
-   * 设置竞赛的结束时间.
+   * Sets the end time of the contest.
    *
-   * @param endTime - 竞赛的结束时间
+   * @param endTime - the end time of the contest
    */
   public void setEndTime(Date endTime) {
     this.endTime = endTime;
   }
 
   /**
-   * 获取竞赛的赛制.
+   * Gets the mode of the contest.
    *
-   * @return 竞赛的赛制
+   * @return the mode of the contest
    */
   public String getContestMode() {
     return contestMode;
   }
 
   /**
-   * 设置竞赛的赛制.
+   * Sets the mode of the contest.
    *
-   * @param contestMode - 竞赛的赛制
+   * @param contestMode - the mode of the contest
    */
   public void setContestMode(String contestMode) {
     this.contestMode = contestMode;
@@ -206,45 +206,45 @@ public class Contest {
   }
 
   /**
-   * 获取竞赛中包含的试题.
+   * Gets the problems included in the contest.
    *
-   * @return 竞赛中包含的试题
+   * @return the problems included in the contest
    */
   public String getProblems() {
     return problems;
   }
 
   /**
-   * 设置竞赛中包含的试题.
+   * Sets the problems included in the contest.
    *
-   * @param problems - 竞赛中包含的试题
+   * @param problems - the problems included in the contest
    */
   public void setProblems(String problems) {
     this.problems = problems;
   }
 
-  /** 竞赛的唯一标识符. */
+  /** The unique identifier of the contest. */
   private long contestId;
 
-  /** 竞赛的名称. */
+  /** The name of the contest. */
   private String contestName;
 
-  /** 竞赛的说明. */
+  /** The notes of the contest. */
   private String contestNotes;
 
-  /** 竞赛的开始时间. */
+  /** The start time of the contest. */
   private Date startTime;
 
-  /** 竞赛的结束时间. */
+  /** The end time of the contest. */
   private Date endTime;
 
-  /** 竞赛的赛制. 可选择的赛制有: ACM和OI. */
+  /** The mode of the contest. The available modes are: ACM and OI. */
   private String contestMode;
 
-  /** 竞赛中包含的试题 (JSON格式的字符串). */
+  /** The problems included in the contest (a JSON-formatted string). */
   private String problems;
 
-  /** 竞赛状态. 分别表示未开始、进行中和已结束. */
+  /** The contest status, representing not started, in progress, and finished respectively. */
   public enum CONTEST_STATUS {
     READY,
     LIVE,

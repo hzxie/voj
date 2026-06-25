@@ -30,7 +30,7 @@ import org.verwandlung.voj.web.model.User;
 import java.util.List;
 
 /**
- * DiscussionThreadMapper的测试类.
+ * The test class for DiscussionReplyMapper.
  *
  * @author Haozhe Xie
  */
@@ -39,8 +39,8 @@ import java.util.List;
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class DiscussionReplyMapperTest {
   /**
-   * 测试用例: 测试getDiscussionRepliesUsingThreadId(long, long, int)方法. 测试数据: ThreadId: 2, Offset: 0,
-   * Limit: 2 预期结果: 返回第二个讨论帖子的前2条评论
+   * Test case: tests the getDiscussionRepliesUsingThreadId(long, long, int) method. Test data:
+   * ThreadId: 2, Offset: 0, Limit: 2. Expected: the first 2 replies of the second discussion thread.
    */
   @Test
   public void testGetDiscussionRepliesOfThread2WithOffsetFrom0WithLimit2() {
@@ -57,8 +57,8 @@ public class DiscussionReplyMapperTest {
   }
 
   /**
-   * 测试用例: 测试getDiscussionRepliesUsingThreadId(long, long, int)方法. 测试数据: ThreadId: 2, Offset: 1,
-   * Limit: 1 预期结果: 返回第二个讨论帖子的第2条评论
+   * Test case: tests the getDiscussionRepliesUsingThreadId(long, long, int) method. Test data:
+   * ThreadId: 2, Offset: 1, Limit: 1. Expected: the 2nd reply of the second discussion thread.
    */
   @Test
   public void testGetDiscussionRepliesOfThread2WithOffsetFrom1WithLimit1() {
@@ -74,7 +74,7 @@ public class DiscussionReplyMapperTest {
     Assertions.assertEquals("Reply content for thread #2", replyContent);
   }
 
-  /** 测试用例: 测试createDiscussionReply(DiscussionReply)方法. 测试数据: 合法数据集 预期结果: 数据插入操作成功完成 */
+  /** Test case: tests the createDiscussionReply(DiscussionReply) method. Test data: a valid data set. Expected: the data insertion operation completes successfully. */
   @Test
   public void testCreateDiscussionReplyNormally() {
     long threadId = 1;
@@ -87,8 +87,8 @@ public class DiscussionReplyMapperTest {
   }
 
   /**
-   * 测试用例: 测试createDiscussionReply(DiscussionReply)方法. 测试数据: 使用不存在的用户 预期结果:
-   * 抛出DataIntegrityViolationException异常
+   * Test case: tests the createDiscussionReply(DiscussionReply) method. Test data: a non-existing user.
+   * Expected: a DataIntegrityViolationException is thrown.
    */
   @Test
   public void testCreateDiscussionReplyWithNotExistingUser() {
@@ -104,7 +104,7 @@ public class DiscussionReplyMapperTest {
     Assertions.assertThrows(org.springframework.dao.DataIntegrityViolationException.class, e);
   }
 
-  /** 测试用例: 测试updateDiscussionReply(DiscussionReply)方法. 测试数据: 使用合法数据更新 预期结果: 数据更新操作成功完成 */
+  /** Test case: tests the updateDiscussionReply(DiscussionReply) method. Test data: updates with valid data. Expected: the data update operation completes successfully. */
   @Test
   public void testUpdateDiscussionReplyNormally() {
     List<DiscussionReply> discussionReplies =
@@ -117,7 +117,7 @@ public class DiscussionReplyMapperTest {
     Assertions.assertEquals(1, numberOfRowsAffected);
   }
 
-  /** 测试用例: 测试deleteDiscussionReplyUsingReplyId(long)方法. 测试数据: 存在的讨论回复唯一标识符 预期结果: 数据删除操作成功完成 */
+  /** Test case: tests the deleteDiscussionReplyUsingReplyId(long) method. Test data: an existing discussion reply unique identifier. Expected: the data deletion operation completes successfully. */
   @Test
   public void testDeleteDiscussionReplyUsingExistingReplyId() {
     int numberOfRowsAffected = discussionReplyMapper.deleteDiscussionReplyUsingReplyId(1);
@@ -125,7 +125,7 @@ public class DiscussionReplyMapperTest {
   }
 
   /**
-   * 测试用例: 测试deleteDiscussionReplyUsingReplyId(long)方法. 测试数据: 不存在的讨论回复唯一标识符 预期结果: 方法正常执行, 未影响数据表中的数据
+   * Test case: tests the deleteDiscussionReplyUsingReplyId(long) method. Test data: a non-existing discussion reply unique identifier. Expected: the method executes normally without affecting the data in the table.
    */
   @Test
   public void testDeleteDiscussionReplyUsingReplyIdNotExists() {
@@ -133,9 +133,9 @@ public class DiscussionReplyMapperTest {
     Assertions.assertEquals(0, numberOfRowsAffected);
   }
 
-  /** 待测试的DiscussionReplyMapper对象. */
+  /** The DiscussionReplyMapper object under test. */
   @Autowired private DiscussionReplyMapper discussionReplyMapper;
 
-  /** 待测试的UserMapper对象. */
+  /** The UserMapper object under test. */
   @Autowired private UserMapper userMapper;
 }

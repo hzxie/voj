@@ -35,10 +35,10 @@ import org.verwandlung.voj.judger.model.Submission;
  */
 public interface SubmissionMapper {
   /**
-   * 通过评测记录唯一标识符获取试题对象.
+   * Gets a submission object by its unique identifier.
    *
-   * @param submissionId - 评测记录的唯一标识符
-   * @return 一个评测记录对象
+   * @param submissionId - the unique identifier of the submission
+   * @return a submission object
    */
   @Select("SELECT * FROM voj_submissions WHERE submission_id = #{submissionId}")
   @Options(useCache = true)
@@ -67,9 +67,9 @@ public interface SubmissionMapper {
   Submission getSubmission(@Param("submissionId") long submissionId);
 
   /**
-   * 更新提交记录.
+   * Updates a submission.
    *
-   * @param submission - 待更新的提交记录对象
+   * @param submission - the submission object to update
    */
   @Update(
       "UPDATE voj_submissions SET problem_id = #{problem.problemId}, uid = #{uid}, language_id ="

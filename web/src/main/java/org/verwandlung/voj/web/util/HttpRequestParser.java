@@ -19,7 +19,7 @@ package org.verwandlung.voj.web.util;
 import jakarta.servlet.http.HttpServletRequest;
 
 /**
- * Http请求头解析服务.
+ * The HTTP request header parsing service.
  *
  * @author Haozhe Xie
  */
@@ -28,10 +28,10 @@ public class HttpRequestParser {
   private HttpRequestParser() {}
 
   /**
-   * 在使用反向代理情况下解析用户的真实IP.
+   * Parses the user's real IP when a reverse proxy is used.
    *
-   * @param request - HttpRequest对象
-   * @return 用户的真实IP
+   * @param request - the HttpRequest object
+   * @return the user's real IP
    */
   public static String getRemoteAddr(HttpServletRequest request) {
     if (request.getHeader("X-Real-IP") != null) {

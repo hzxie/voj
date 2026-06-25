@@ -17,14 +17,14 @@
 package org.verwandlung.voj.web.model;
 
 public class ContestSubmission {
-  /** ContestSubmission的默认构造函数. */
+  /** Default constructor of the contest submission. */
   public ContestSubmission() {}
 
   /**
-   * ContestSubmission的构造函数.
+   * Constructor of the contest submission.
    *
-   * @param contest - 竞赛
-   * @param submission - 提交记录
+   * @param contest - the contest
+   * @param submission - the submission
    */
   public ContestSubmission(Contest contest, Submission submission) {
     this.contest = contest;
@@ -32,35 +32,36 @@ public class ContestSubmission {
   }
 
   /**
-   * 获取竞赛.
+   * Gets the contest.
    *
-   * @return 竞赛
+   * @return the contest
    */
   public Contest getContest() {
     return contest;
   }
 
   /**
-   * 设置竞赛.
+   * Sets the contest.
    *
-   * @param contest - 竞赛
+   * @param contest - the contest
    */
   public void setContest(Contest contest) {
     this.contest = contest;
   }
+
   /**
-   * 获取参提交记录.
+   * Gets the submission.
    *
-   * @return 提交记录
+   * @return the submission
    */
   public Submission getSubmission() {
     return submission;
   }
 
   /**
-   * 设置提交记录.
+   * Sets the submission.
    *
-   * @param submission - 提交记录
+   * @param submission - the submission
    */
   public void setSubmission(Submission submission) {
     this.submission = submission;
@@ -74,9 +75,9 @@ public class ContestSubmission {
         "ContestSubmission [Contest={%s}, Submission={%s}]", new Object[] {contest, submission});
   }
 
-  /** 竞赛. */
+  /** The contest. */
   private Contest contest;
 
-  /** 提交记录. */
+  /** The submission. */
   private Submission submission;
 }

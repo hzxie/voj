@@ -32,7 +32,7 @@ import org.verwandlung.voj.web.model.User;
 import java.util.List;
 
 /**
- * DiscussionThreadMapper的测试类.
+ * The test class for DiscussionThreadMapper.
  *
  * @author Haozhe Xie
  */
@@ -41,8 +41,9 @@ import java.util.List;
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class DiscussionThreadMapperTest {
   /**
-   * 测试用例: 测试getDiscussionThreads(long, int, long, int)方法 测试数据: Problem: A+B Problem,
-   * DiscussionTopic: null, 获取除前2条数据 预期结果: 返回最新创建的2个DiscussionThread
+   * Test case: tests the getDiscussionThreads(long, int, long, int) method. Test data: Problem: A+B
+   * Problem, DiscussionTopic: null, get the first 2 records. Expected: the 2 most recently created
+   * DiscussionThread objects.
    */
   @Test
   public void testGetDiscussionThreadsOfProblem1000WithOffsetFrom0WithLimit2() {
@@ -64,8 +65,9 @@ public class DiscussionThreadMapperTest {
   }
 
   /**
-   * 测试用例: 测试getDiscussionThreads(long, int, long, int)方法 测试数据: Problem: null, DiscussionTopic:
-   * General, 获取除第1条数据 预期结果: 返回最新创建的1个DiscussionThread
+   * Test case: tests the getDiscussionThreads(long, int, long, int) method. Test data: Problem: null,
+   * DiscussionTopic: General, get the first record. Expected: the most recently created
+   * DiscussionThread object.
    */
   @Test
   public void testGetDiscussionThreadsOfNoRelatedProblemWithOffsetFrom0WithLimit1() {
@@ -79,8 +81,8 @@ public class DiscussionThreadMapperTest {
   }
 
   /**
-   * 测试用例: 测试getSolutionThreadOfProblem(long)方法. 测试数据: Problem: A+B Problem 预期结果: 返回Problem A+B
-   * Problem相关的第一条讨论
+   * Test case: tests the getSolutionThreadOfProblem(long) method. Test data: Problem: A+B Problem.
+   * Expected: the first discussion related to Problem A+B Problem.
    */
   @Test
   public void testGetSolutionThreadOfProblemUsingExistingProblemId() {
@@ -90,8 +92,9 @@ public class DiscussionThreadMapperTest {
   }
 
   /**
-   * 测试用例: getDiscussionThreadUsingThreadId(long)方法 测试数据: 存在的讨论帖子唯一标识符 预期结果: 标题为"Thread
-   * #2"的DiscussionThread对象
+   * Test case: tests the getDiscussionThreadUsingThreadId(long) method. Test data: an existing
+   * discussion thread unique identifier. Expected: the DiscussionThread object with the title
+   * "Thread #2".
    */
   @Test
   public void testGetDiscussionThreadUsingThreadIdExists() {
@@ -106,7 +109,7 @@ public class DiscussionThreadMapperTest {
   }
 
   /**
-   * 测试用例: getDiscussionThreadUsingThreadId(long)方法 测试数据: 不存在的讨论帖子唯一标识符 预期结果: 空的DiscussionThread引用
+   * Test case: tests the getDiscussionThreadUsingThreadId(long) method. Test data: a non-existing discussion thread unique identifier. Expected: a null DiscussionThread reference.
    */
   @Test
   public void testGetDiscussionThreadUsingThreadIdNotExists() {
@@ -115,8 +118,8 @@ public class DiscussionThreadMapperTest {
   }
 
   /**
-   * 测试用例: 测试createDiscussionThread(DiscussionThread)方法 测试数据: 使用满足条件的数据集 (Problem: A+B Problem)
-   * 预期结果: 数据插入操作成功完成
+   * Test case: tests the createDiscussionThread(DiscussionThread) method. Test data: a valid data set
+   * (Problem: A+B Problem). Expected: the data insertion operation completes successfully.
    */
   @Test
   public void testCreateDiscussionThreadNormally() {
@@ -133,8 +136,8 @@ public class DiscussionThreadMapperTest {
   }
 
   /**
-   * 测试用例: 测试createDiscussionThread(DiscussionThread)方法 测试数据: 使用满足条件的数据集 (Problem: null) 预期结果:
-   * 数据插入操作成功完成
+   * Test case: tests the createDiscussionThread(DiscussionThread) method. Test data: a valid data set
+   * (Problem: null). Expected: the data insertion operation completes successfully.
    */
   @Test
   public void testCreateDiscussionThreadWithNullProblem() {
@@ -148,8 +151,8 @@ public class DiscussionThreadMapperTest {
   }
 
   /**
-   * 测试用例: 测试createDiscussionThread(DiscussionThread)方法 测试数据: 使用过长的标题 预期结果:
-   * 抛出DataIntegrityViolationException异常
+   * Test case: tests the createDiscussionThread(DiscussionThread) method. Test data: a title that is
+   * too long. Expected: a DataIntegrityViolationException is thrown.
    */
   @Test
   public void testCreateDiscussionThreadWithTooLongTitle() {
@@ -171,8 +174,8 @@ public class DiscussionThreadMapperTest {
   }
 
   /**
-   * 测试用例: 测试createDiscussionThread(DiscussionThread)方法 测试数据: 使用不存在的用户 预期结果:
-   * 抛出DataIntegrityViolationException异常
+   * Test case: tests the createDiscussionThread(DiscussionThread) method. Test data: a non-existing
+   * user. Expected: a DataIntegrityViolationException is thrown.
    */
   @Test
   public void testCreateDiscussionThreadWithNotExistingUser() {
@@ -189,8 +192,8 @@ public class DiscussionThreadMapperTest {
   }
 
   /**
-   * 测试用例: 测试createDiscussionThread(DiscussionThread)方法 测试数据: 使用不存在的讨论话题 预期结果:
-   * 抛出DataIntegrityViolationException异常
+   * Test case: tests the createDiscussionThread(DiscussionThread) method. Test data: a non-existing
+   * discussion topic. Expected: a DataIntegrityViolationException is thrown.
    */
   @Test
   public void testCreateDiscussionThreadWithNotExistingThreadTopic() {
@@ -207,8 +210,9 @@ public class DiscussionThreadMapperTest {
   }
 
   /**
-   * 测试用例: 测试createDiscussionThread(DiscussionThread)方法 测试数据: 使用正常的数据更新DiscussionThread对象 预期结果:
-   * 数据更新操作成功完成
+   * Test case: tests the updateDiscussionThread(DiscussionThread) method. Test data: update a
+   * DiscussionThread object with normal data. Expected: the data update operation completes
+   * successfully.
    */
   @Test
   public void testUpdateDiscussionThreadNormally() {
@@ -226,8 +230,8 @@ public class DiscussionThreadMapperTest {
   }
 
   /**
-   * 测试用例: 测试createDiscussionThread(DiscussionThread)方法 测试数据: 使用过长的标题 预期结果:
-   * 抛出DataIntegrityViolationException异常
+   * Test case: tests the updateDiscussionThread(DiscussionThread) method. Test data: a title that is
+   * too long. Expected: a DataIntegrityViolationException is thrown.
    */
   @Test
   public void testUpdateDiscussionThreadWithTooLongTitle() {
@@ -247,7 +251,7 @@ public class DiscussionThreadMapperTest {
     Assertions.assertThrows(org.springframework.dao.DataIntegrityViolationException.class, e);
   }
 
-  /** 测试用例: 测试getDiscussionThreadUsingThreadId(long)方法 测试数据: 存在的讨论帖子唯一标识符 预期结果: 数据删除操作成功完成 */
+  /** Test case: tests the deleteDiscussionThreadUsingThreadId(long) method. Test data: an existing discussion thread unique identifier. Expected: the data deletion operation completes successfully. */
   @Test
   public void testDeleteDiscussionThreadUsingExistingThreadId() {
     DiscussionThread thread = discussionThreadMapper.getDiscussionThreadUsingThreadId(1);
@@ -261,7 +265,7 @@ public class DiscussionThreadMapperTest {
   }
 
   /**
-   * 测试用例: 测试getDiscussionThreadUsingThreadId(long)方法 测试数据: 不存在的讨论帖子唯一标识符 预期结果: 方法正常执行, 未影响数据表中的数据
+   * Test case: tests the deleteDiscussionThreadUsingThreadId(long) method. Test data: a non-existing discussion thread unique identifier. Expected: the method executes normally without affecting the data in the table.
    */
   @Test
   public void testDeleteDiscussionThreadUsingNotExistingThreadId() {
@@ -272,15 +276,15 @@ public class DiscussionThreadMapperTest {
     Assertions.assertEquals(0, numberOfRowsAffected);
   }
 
-  /** 待测试的DiscussionThreadMapper对象. */
+  /** The DiscussionThreadMapper object under test. */
   @Autowired private DiscussionThreadMapper discussionThreadMapper;
 
-  /** 用于构建测试用例的UserMapper对象. */
+  /** The UserMapper object used to build test cases. */
   @Autowired private UserMapper userMapper;
 
-  /** 用于构建测试用例的DiscussionTopicMapper对象. */
+  /** The DiscussionTopicMapper object used to build test cases. */
   @Autowired private DiscussionTopicMapper discussionTopicMapper;
 
-  /** 用于构建测试用例的ProblemMapper对象. */
+  /** The ProblemMapper object used to build test cases. */
   @Autowired private ProblemMapper problemMapper;
 }

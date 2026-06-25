@@ -19,20 +19,20 @@ package org.verwandlung.voj.web.model;
 import java.io.Serializable;
 
 /**
- * 用户组的Model. 对应数据库中的voj_user_groups数据表.
+ * The model of a user group. Maps to the voj_user_groups table in the database.
  *
  * @author Haozhe Xie
  */
 public class UserGroup implements Serializable {
-  /** 用户组的默认构造函数. */
+  /** Default constructor of the user group. */
   public UserGroup() {}
 
   /**
-   * 用户组的构造函数.
+   * Constructor of the user group.
    *
-   * @param userGroupId - 用户组的唯一标识符
-   * @param userGroupSlug - 用户组的别名
-   * @param userGroupName - 用户组名称
+   * @param userGroupId - the unique identifier of the user group
+   * @param userGroupSlug - the alias of the user group
+   * @param userGroupName - the name of the user group
    */
   public UserGroup(int userGroupId, String userGroupSlug, String userGroupName) {
     this.userGroupId = userGroupId;
@@ -41,54 +41,54 @@ public class UserGroup implements Serializable {
   }
 
   /**
-   * 获取用户组唯一标识符.
+   * Gets the unique identifier of the user group.
    *
-   * @return 用户组唯一标识符
+   * @return the unique identifier of the user group
    */
   public int getUserGroupId() {
     return userGroupId;
   }
 
   /**
-   * 设置用户组唯一标识符.
+   * Sets the unique identifier of the user group.
    *
-   * @param userGroupId - 用户组唯一标识符
+   * @param userGroupId - the unique identifier of the user group
    */
   public void setUserGroupId(int userGroupId) {
     this.userGroupId = userGroupId;
   }
 
   /**
-   * 获取用户组的别名.
+   * Gets the alias of the user group.
    *
-   * @return 用户组别名
+   * @return the alias of the user group
    */
   public String getUserGroupSlug() {
     return userGroupSlug;
   }
 
   /**
-   * 设置用户组的别名.
+   * Sets the alias of the user group.
    *
-   * @param userGroupSlug - 用户组别名
+   * @param userGroupSlug - the alias of the user group
    */
   public void setUserGroupSlug(String userGroupSlug) {
     this.userGroupSlug = userGroupSlug;
   }
 
   /**
-   * 获取用户组名称.
+   * Gets the name of the user group.
    *
-   * @return 用户组名称
+   * @return the name of the user group
    */
   public String getUserGroupName() {
     return userGroupName;
   }
 
   /**
-   * 设置用户组名称.
+   * Sets the name of the user group.
    *
-   * @param userGroupName - 用户组名称
+   * @param userGroupName - the name of the user group
    */
   public void setUserGroupName(String userGroupName) {
     this.userGroupName = userGroupName;
@@ -104,15 +104,15 @@ public class UserGroup implements Serializable {
         new Object[] {userGroupId, userGroupSlug, userGroupName});
   }
 
-  /** 用户组唯一标识符. */
+  /** The unique identifier of the user group. */
   private int userGroupId;
 
-  /** 用户组的别名. */
+  /** The alias of the user group. */
   private String userGroupSlug;
 
-  /** 用户组名称. */
+  /** The name of the user group. */
   private String userGroupName;
 
-  /** 唯一的序列化标识符. */
+  /** The unique serialization identifier. */
   private static final long serialVersionUID = -4267702283058634035L;
 }

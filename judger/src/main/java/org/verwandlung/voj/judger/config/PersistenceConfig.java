@@ -24,13 +24,14 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * 持久层配置. 取代原 application-context.xml 中的 Druid 数据源定义.
+ * The persistence layer configuration. Replaces the Druid data source definition from the original
+ * application-context.xml.
  *
  * @author Haozhe Xie
  */
 @Configuration
 public class PersistenceConfig {
-  /** Druid 数据库连接池. MyBatis 自动配置会复用此数据源. */
+  /** The Druid database connection pool. The MyBatis auto-configuration reuses this data source. */
   @Bean(initMethod = "init", destroyMethod = "close")
   public DataSource dataSource(
       @Value("${jdbc.driverClassName}") String driverClassName,

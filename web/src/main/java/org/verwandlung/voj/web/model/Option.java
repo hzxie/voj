@@ -19,20 +19,20 @@ package org.verwandlung.voj.web.model;
 import java.io.Serializable;
 
 /**
- * 系统设置选项类.
+ * The model of a system setting option.
  *
  * @author Haozhe Xie
  */
 public class Option implements Serializable {
-  /** Option类的默认构造函数. */
+  /** Default constructor of the Option class. */
   public Option() {}
 
   /**
-   * Option类的构造函数.
+   * Constructor of the Option class.
    *
-   * @param optionName - 选项的名称
-   * @param optionValue - 选项的值
-   * @param isAutoload - 选项是否自动加载
+   * @param optionName - the name of the option
+   * @param optionValue - the value of the option
+   * @param isAutoload - whether the option is loaded automatically
    */
   public Option(String optionName, String optionValue, boolean isAutoload) {
     this.optionName = optionName;
@@ -41,12 +41,12 @@ public class Option implements Serializable {
   }
 
   /**
-   * Option类的构造函数.
+   * Constructor of the Option class.
    *
-   * @param optionId - 选项的唯一标识符
-   * @param optionName - 选项的名称
-   * @param optionValue - 选项的值
-   * @param isAutoload - 选项是否自动加载
+   * @param optionId - the unique identifier of the option
+   * @param optionName - the name of the option
+   * @param optionValue - the value of the option
+   * @param isAutoload - whether the option is loaded automatically
    */
   public Option(int optionId, String optionName, String optionValue, boolean isAutoload) {
     this(optionName, optionValue, isAutoload);
@@ -54,72 +54,72 @@ public class Option implements Serializable {
   }
 
   /**
-   * 获取选项的唯一标识符.
+   * Gets the unique identifier of the option.
    *
-   * @return 选项的唯一标识符
+   * @return the unique identifier of the option
    */
   public int getOptionId() {
     return optionId;
   }
 
   /**
-   * 设置选项的唯一标识符.
+   * Sets the unique identifier of the option.
    *
-   * @param optionId - 选项的唯一标识符
+   * @param optionId - the unique identifier of the option
    */
   public void setOptionId(int optionId) {
     this.optionId = optionId;
   }
 
   /**
-   * 获取选项的名称.
+   * Gets the name of the option.
    *
-   * @return 选项的名称
+   * @return the name of the option
    */
   public String getOptionName() {
     return optionName;
   }
 
   /**
-   * 设置选项的名称.
+   * Sets the name of the option.
    *
-   * @param optionName - 选项的名称
+   * @param optionName - the name of the option
    */
   public void setOptionName(String optionName) {
     this.optionName = optionName;
   }
 
   /**
-   * 获取选项的值.
+   * Gets the value of the option.
    *
-   * @return 选项的值
+   * @return the value of the option
    */
   public String getOptionValue() {
     return optionValue;
   }
 
   /**
-   * 设置选项的值.
+   * Sets the value of the option.
    *
-   * @param optionValue - 选项的值
+   * @param optionValue - the value of the option
    */
   public void setOptionValue(String optionValue) {
     this.optionValue = optionValue;
   }
 
   /**
-   * 获取选项是否自动加载.
+   * Gets whether the option is loaded automatically.
    *
-   * @return 选项是否自动加载
+   * @return whether the option is loaded automatically
    */
   public boolean isAutoload() {
     return isAutoload;
   }
 
   /**
-   * 设置选项是否自动加载.
+   * Sets whether the option is loaded automatically.
    *
-   * @param isAutoload - 选项是否自动加载
+   * @param isAutoload - whether the option is loaded automatically
    */
   public void setAutoload(boolean isAutoload) {
     this.isAutoload = isAutoload;
@@ -134,18 +134,18 @@ public class Option implements Serializable {
         new Object[] {optionId, optionName, optionValue, isAutoload});
   }
 
-  /** 选项的唯一标识符. */
+  /** The unique identifier of the option. */
   private int optionId;
 
-  /** 选项的名称. */
+  /** The name of the option. */
   private String optionName;
 
-  /** 选项的值. */
+  /** The value of the option. */
   private String optionValue;
 
-  /** 是否自动加载该选项. */
+  /** Whether the option is loaded automatically. */
   private boolean isAutoload;
 
-  /** 唯一的序列化标识符. */
+  /** The unique serialization identifier. */
   private static final long serialVersionUID = -1533277464247886659L;
 }

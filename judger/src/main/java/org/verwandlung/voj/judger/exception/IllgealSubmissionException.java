@@ -17,20 +17,20 @@
 package org.verwandlung.voj.judger.exception;
 
 /**
- * 无效的提交记录异常. 当getSubmission(long)操作返回null时被抛出.
+ * The illegal submission exception. Thrown when the getSubmission(long) operation returns null.
  *
  * @author Haozhe Xie
  */
 public class IllgealSubmissionException extends Exception {
   /**
-   * IllgealSubmissionException的构造函数.
+   * Constructor of IllgealSubmissionException.
    *
-   * @param message - 错误消息
+   * @param message - the error message
    */
   public IllgealSubmissionException(String message) {
     super(message);
   }
 
-  /** 唯一的序列化标识符. */
+  /** The unique serialization identifier. */
   private static final long serialVersionUID = -9019235951964656553L;
 }

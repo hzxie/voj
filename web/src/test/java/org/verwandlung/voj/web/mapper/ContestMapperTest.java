@@ -31,7 +31,7 @@ import java.util.Date;
 import java.util.List;
 
 /**
- * ContestMapper的测试类.
+ * The test class for ContestMapper.
  *
  * @author Haozhe Xie
  */
@@ -39,7 +39,7 @@ import java.util.List;
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class ContestMapperTest {
-  /** 测试用例: 测试getNumberOfContests(String)方法. 测试数据: Keyword = null 预期结果: 返回数据库中竞赛的总数量(3) */
+  /** Test case: tests the getNumberOfContests(String) method. Test data: Keyword = null. Expected: the total number of contests in the database (3). */
   @Test
   public void testGetNumberOfContests() {
     long numberOfContests = contestMapper.getNumberOfContests(null);
@@ -47,7 +47,7 @@ public class ContestMapperTest {
   }
 
   /**
-   * 测试用例: 测试getNumberOfContests(String)方法. 测试数据: Keyword = "#1" 预期结果: 返回数据库中符合条件竞赛的数量("Contest #1")
+   * Test case: tests the getNumberOfContests(String) method. Test data: Keyword = "#1". Expected: the number of matching contests in the database ("Contest #1").
    */
   @Test
   public void testGetNumberOfContestsUsingKeywordSharp1() {
@@ -56,8 +56,8 @@ public class ContestMapperTest {
   }
 
   /**
-   * 测试用例: 测试getNumberOfContests(String)方法. 测试数据: Keyword = "test #" 预期结果: 返回数据库中符合条件竞赛的数量("Contest
-   * #{1, 2, 3}")
+   * Test case: tests the getNumberOfContests(String) method. Test data: Keyword = "test #". Expected:
+   * the number of matching contests in the database ("Contest #{1, 2, 3}").
    */
   @Test
   public void testGetNumberOfContestsUsingKeywordTestSharp() {
@@ -65,7 +65,7 @@ public class ContestMapperTest {
     Assertions.assertEquals(3, numberOfContests);
   }
 
-  /** 测试用例: 测试getContests(String, long, int)方法. 测试数据: 获取从第1项开始的2个竞赛 预期结果: 返回[竞赛对象2, 竞赛对象1]形式的List */
+  /** Test case: tests the getContests(String, long, int) method. Test data: get 2 contests starting from item 1. Expected: a List in the form [contest 2, contest 1]. */
   @Test
   public void testGetContestsFrom0WithLimit2() {
     List<Contest> contests = contestMapper.getContests("test #", 0, 2);
@@ -76,7 +76,7 @@ public class ContestMapperTest {
     Assertions.assertEquals("Contest #3", contestName);
   }
 
-  /** 测试用例: 测试getContests(String, long, int)方法. 测试数据: 获取从第2项开始的1个竞赛 预期结果: 返回[竞赛对象1]形式的List */
+  /** Test case: tests the getContests(String, long, int) method. Test data: get 1 contest starting from item 2. Expected: a List in the form [contest 1]. */
   @Test
   public void testGetContestsFrom1WithLimit1() {
     List<Contest> contests = contestMapper.getContests(null, 1, 1);
@@ -87,14 +87,14 @@ public class ContestMapperTest {
     Assertions.assertEquals("Contest #2", contestName);
   }
 
-  /** 测试用例: 测试getContests(String, long, int)方法. 测试数据: 获取从第4项开始的1个竞赛 预期结果: 返回[]形式的List */
+  /** Test case: tests the getContests(String, long, int) method. Test data: get 1 contest starting from item 4. Expected: a List in the form []. */
   @Test
   public void testGetContestsFrom2WithLimit1() {
     List<Contest> contests = contestMapper.getContests(null, 3, 1);
     Assertions.assertEquals(0, contests.size());
   }
 
-  /** 测试用例: 测试getContests(String, long, int)方法. 测试数据: 获取从第1项开始的2个竞赛 预期结果: 返回[竞赛对象2, 竞赛对象1]形式的List */
+  /** Test case: tests the getContests(String, long, int) method. Test data: get 2 contests starting from item 1. Expected: a List in the form [contest 2, contest 1]. */
   @Test
   public void testGetContestsFrom0WithLimit2WithKeywordSharp2() {
     List<Contest> contests = contestMapper.getContests("#2", 0, 2);
@@ -105,7 +105,7 @@ public class ContestMapperTest {
     Assertions.assertEquals("Contest #2", contestName);
   }
 
-  /** 测试用例: 测试getContest(long)方法. 测试数据: 获取第1个竞赛对象 预期结果: 第1个竞赛对象 */
+  /** Test case: tests the getContest(long) method. Test data: get the 1st contest object. Expected: the 1st contest object. */
   @Test
   public void testGetContestsUsingIdExists() {
     Contest contest = contestMapper.getContest(1);
@@ -115,14 +115,14 @@ public class ContestMapperTest {
     Assertions.assertEquals("Contest #1", contestName);
   }
 
-  /** 测试用例: 测试getContest(long)方法. 测试数据: 获取第0个竞赛对象 预期结果: 空引用 */
+  /** Test case: tests the getContest(long) method. Test data: get the 0th contest object. Expected: a null reference. */
   @Test
   public void testGetContestsUsingIdNotExists() {
     Contest contest = contestMapper.getContest(0);
     Assertions.assertNull(contest);
   }
 
-  /** 测试用例: 测试createContest(Contest)方法. 测试数据: 包含正常数据值的Contest对象 预期结果: 竞赛被成功创建 */
+  /** Test case: tests the createContest(Contest) method. Test data: a Contest object with normal data values. Expected: the contest is created successfully. */
   @Test
   public void testCreateContestNormally() {
     Calendar calendar = Calendar.getInstance();
@@ -138,7 +138,7 @@ public class ContestMapperTest {
   }
 
   /**
-   * 测试用例: 测试createContest(Contest)方法. 测试数据: 包含过长的竞赛赛制的字符串 预期结果: 抛出DataIntegrityViolationException异常
+   * Test case: tests the createContest(Contest) method. Test data: a string with a contest mode that is too long. Expected: a DataIntegrityViolationException is thrown.
    */
   @Test
   public void testCreateContestUsingTooLongContestMode() {
@@ -158,7 +158,7 @@ public class ContestMapperTest {
     Assertions.assertThrows(org.springframework.dao.DataIntegrityViolationException.class, e);
   }
 
-  /** 测试用例: 测试updateContest(Contest)方法. 测试数据: 包含正常数据的Contest对象, 更新竞赛名称 预期结果: 竞赛对象被成功更新 */
+  /** Test case: tests the updateContest(Contest) method. Test data: a Contest object with normal data, updating the contest name. Expected: the contest object is updated successfully. */
   @Test
   public void testUpdateContestsNormally() {
     Contest contest = contestMapper.getContest(2);
@@ -173,7 +173,7 @@ public class ContestMapperTest {
     Assertions.assertEquals("New Contest Name", contestName);
   }
 
-  /** 测试用例: 测试deleteContest(long)方法. 测试数据: 删除第2个竞赛对象 预期结果: 第2个竞赛对象被成功删除 */
+  /** Test case: tests the deleteContest(long) method. Test data: delete a contest object. Expected: the contest object is deleted successfully. */
   @Test
   public void testDeleteContestsExists() {
     Contest contest = contestMapper.getContest(3);
@@ -186,7 +186,7 @@ public class ContestMapperTest {
     Assertions.assertNull(contest);
   }
 
-  /** 测试用例: 测试deleteContest(long)方法. 测试数据: 删除第0个竞赛对象 预期结果: 程序正常执行, 没有竞赛被删除 */
+  /** Test case: tests the deleteContest(long) method. Test data: delete the 0th contest object. Expected: the program executes normally and no contest is deleted. */
   @Test
   public void testDeleteContestsNotExists() {
     Contest contest = contestMapper.getContest(0);
@@ -196,6 +196,6 @@ public class ContestMapperTest {
     Assertions.assertEquals(0, numberOfRowsAffected);
   }
 
-  /** 待测试的ContestMapper对象. */
+  /** The ContestMapper object under test. */
   @Autowired private ContestMapper contestMapper;
 }

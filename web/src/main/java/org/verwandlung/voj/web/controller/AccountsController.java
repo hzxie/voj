@@ -50,7 +50,7 @@ import org.verwandlung.voj.web.util.HttpRequestParser;
 import org.verwandlung.voj.web.util.HttpSessionParser;
 
 /**
- * 处理用户的登录/注册请求.
+ * Handles users' login/registration requests.
  *
  * @author Haozhe Xie
  */
@@ -58,13 +58,13 @@ import org.verwandlung.voj.web.util.HttpSessionParser;
 @RequestMapping(value = "/accounts")
 public class AccountsController {
   /**
-   * 显示用户的登录页面.
+   * Displays the user's login page.
    *
-   * @param isLogout - 是否处于登出状态
-   * @param forwardUrl - 登录后跳转的地址(相对路径)
-   * @param request - HttpServletRequest对象
-   * @param response - HttpResponse对象
-   * @return 包含登录页面信息的ModelAndView对象
+   * @param isLogout - whether the user is in the logout state
+   * @param forwardUrl - the address to redirect to after login (relative path)
+   * @param request - the HttpServletRequest object
+   * @param response - the HttpResponse object
+   * @return a ModelAndView object containing the information of the login page
    */
   @RequestMapping(value = "/login", method = RequestMethod.GET)
   public ModelAndView loginView(
@@ -91,10 +91,10 @@ public class AccountsController {
   }
 
   /**
-   * 为注销的用户销毁Session.
+   * Destroys the session for a logged-out user.
    *
-   * @param request - HttpServletRequest对象
-   * @param session - HttpSession 对象
+   * @param request - the HttpServletRequest object
+   * @param session - the HttpSession object
    */
   private void destroySession(HttpServletRequest request, HttpSession session) {
     User currentUser = HttpSessionParser.getCurrentUser(request.getSession());
@@ -105,10 +105,10 @@ public class AccountsController {
   }
 
   /**
-   * 检查用户是否已经登录.
+   * Checks whether the user has logged in.
    *
-   * @param session - HttpSession 对象
-   * @return 用户是否已经登录
+   * @param session - the HttpSession object
+   * @return whether the user has logged in
    */
   private boolean isLoggedIn(HttpSession session) {
     Boolean isLoggedIn = (Boolean) session.getAttribute("isLoggedIn");
@@ -119,12 +119,12 @@ public class AccountsController {
   }
 
   /**
-   * 处理用户的登录请求.
+   * Handles the user's login request.
    *
-   * @param username - 用户名
-   * @param password - 密码(已使用MD5加密)
-   * @param request - HttpServletRequest对象
-   * @return 一个包含登录验证结果的Map<String, Boolean>对象
+   * @param username - the username
+   * @param password - the password (already encrypted with MD5)
+   * @param request - the HttpServletRequest object
+   * @return a Map<String, Boolean> object containing the login verification result
    */
   @RequestMapping(value = "/login.action", method = RequestMethod.POST)
   public @ResponseBody Map<String, Boolean> loginAction(
@@ -145,11 +145,11 @@ public class AccountsController {
   }
 
   /**
-   * 为登录的用户创建Session.
+   * Creates the session for a logged-in user.
    *
-   * @param request - HttpServletRequest对象
-   * @param user - 一个User对象, 包含用户的基本信息
-   * @param isAutoLoginAllowed - 是否保存登录状态
+   * @param request - the HttpServletRequest object
+   * @param user - a User object containing the basic information of the user
+   * @param isAutoLoginAllowed - whether to keep the login state
    */
   private void getSession(HttpServletRequest request, User user, boolean isAutoLoginAllowed) {
     HttpSession session = request.getSession();
@@ -162,11 +162,11 @@ public class AccountsController {
   }
 
   /**
-   * 显示用户注册的页面.
+   * Displays the user registration page.
    *
-   * @param request - HttpServletRequest对象
-   * @param response - HttpResponse对象
-   * @return 包含注册页面信息的ModelAndView对象
+   * @param request - the HttpServletRequest object
+   * @param response - the HttpResponse object
+   * @return a ModelAndView object containing the information of the registration page
    */
   @RequestMapping(value = "/register", method = RequestMethod.GET)
   public ModelAndView registerView(
@@ -193,15 +193,15 @@ public class AccountsController {
   }
 
   /**
-   * 处理用户注册的请求.
+   * Handles the user registration request.
    *
-   * @param username - 用户名
-   * @param password - 密码
-   * @param email - 电子邮件地址
-   * @param languageSlug - 偏好语言的别名
-   * @param csrfToken - Csrf的Token
-   * @param request - HttpServletRequest对象
-   * @return 一个包含账户创建结果的Map<String, Boolean>对象
+   * @param username - the username
+   * @param password - the password
+   * @param email - the email address
+   * @param languageSlug - the slug of the preferred language
+   * @param csrfToken - the CSRF token
+   * @param request - the HttpServletRequest object
+   * @return a Map<String, Boolean> object containing the account creation result
    */
   @RequestMapping(value = "/register.action", method = RequestMethod.POST)
   public @ResponseBody Map<String, Boolean> registerAction(
@@ -237,13 +237,13 @@ public class AccountsController {
   }
 
   /**
-   * 加载重置密码页面.
+   * Loads the reset password page.
    *
-   * @param email - 用户的电子邮件地址
-   * @param token - 用于重置密码的随机字符串
-   * @param request - HttpServletRequest对象
-   * @param response - HttpResponse对象
-   * @return 包含密码重置页面信息的ModelAndView对象
+   * @param email - the user's email address
+   * @param token - the random string used to reset the password
+   * @param request - the HttpServletRequest object
+   * @param response - the HttpResponse object
+   * @return a ModelAndView object containing the information of the password reset page
    */
   @RequestMapping(value = "/reset-password", method = RequestMethod.GET)
   public ModelAndView resetPasswordView(
@@ -274,13 +274,13 @@ public class AccountsController {
   }
 
   /**
-   * 发送重置密码的电子邮件.
+   * Sends the password reset email.
    *
-   * @param username - 用户的用户名
-   * @param email - 用户的电子邮件地址
-   * @param csrfToken - Csrf的Token
-   * @param request - HttpServletRequest对象
-   * @return 一个包含密码重置邮件发送结果的Map<String, Boolean>对象
+   * @param username - the user's username
+   * @param email - the user's email address
+   * @param csrfToken - the CSRF token
+   * @param request - the HttpServletRequest object
+   * @return a Map<String, Boolean> object containing the result of sending the password reset email
    */
   @RequestMapping(value = "/forgotPassword.action", method = RequestMethod.POST)
   public @ResponseBody Map<String, Boolean> forgotPasswordAction(
@@ -303,15 +303,15 @@ public class AccountsController {
   }
 
   /**
-   * 重置用户密码.
+   * Resets the user's password.
    *
-   * @param email - 用户的电子邮件地址
-   * @param token - 用于重设密码的Token
-   * @param newPassword - 新密码
-   * @param confirmPassword - 确认的密码
-   * @param csrfToken - Csrf的Token
-   * @param request - HttpServletRequest对象
-   * @return 一个包含密码重置结果的Map<String, Boolean>对象
+   * @param email - the user's email address
+   * @param token - the token used to reset the password
+   * @param newPassword - the new password
+   * @param confirmPassword - the confirmed password
+   * @param csrfToken - the CSRF token
+   * @param request - the HttpServletRequest object
+   * @return a Map<String, Boolean> object containing the password reset result
    */
   @RequestMapping(value = "/resetPassword.action", method = RequestMethod.POST)
   public @ResponseBody Map<String, Boolean> resetPasswordAction(
@@ -335,12 +335,12 @@ public class AccountsController {
   }
 
   /**
-   * 加载用户的个人信息.
+   * Loads the user's profile information.
    *
-   * @param userId - 用户的唯一标识符
-   * @param request - HttpServletRequest对象
-   * @param response - HttpResponse对象
-   * @return 包含用户个人信息的ModelAndView对象
+   * @param userId - the unique identifier of the user
+   * @param request - the HttpServletRequest object
+   * @param response - the HttpResponse object
+   * @return a ModelAndView object containing the user's profile information
    */
   @RequestMapping(value = "/user/{userId}", method = RequestMethod.GET)
   public ModelAndView userView(
@@ -362,12 +362,12 @@ public class AccountsController {
   }
 
   /**
-   * 获取某个用户一段时间内的提交次数.
+   * Gets the number of submissions of a user over a period of time.
    *
-   * @param userId - 用户的唯一标识符
-   * @param period - 时间间隔的天数
-   * @param request - HttpServletRequest对象
-   * @return 包含某个用户提交次数与时间的 Map 对象
+   * @param userId - the unique identifier of the user
+   * @param period - the number of days of the time interval
+   * @param request - the HttpServletRequest object
+   * @return a Map object containing a user's submission counts by date
    */
   @RequestMapping(value = "/getNumberOfSubmissionsOfUsers.action", method = RequestMethod.GET)
   public @ResponseBody Map<String, Object> getNumberOfSubmissionsOfUsersAction(
@@ -392,11 +392,11 @@ public class AccountsController {
   }
 
   /**
-   * 加载用户控制板页面.
+   * Loads the user dashboard page.
    *
-   * @param request - HttpServletRequest对象
-   * @param response - HttpResponse对象
-   * @return 包含控制板页面信息的ModelAndView对象
+   * @param request - the HttpServletRequest object
+   * @param response - the HttpResponse object
+   * @return a ModelAndView object containing the information of the dashboard page
    */
   @RequestMapping(value = "/dashboard", method = RequestMethod.GET)
   public ModelAndView dashboardView(HttpServletRequest request, HttpServletResponse response) {
@@ -421,13 +421,13 @@ public class AccountsController {
   }
 
   /**
-   * 处理用户修改密码的请求.
+   * Handles the user's password change request.
    *
-   * @param oldPassword - 旧密码
-   * @param newPassword - 新密码
-   * @param confirmPassword - 确认新密码
-   * @param request - HttpServletRequest对象
-   * @return 一个包含密码验证结果的Map<String, Boolean>对象
+   * @param oldPassword - the old password
+   * @param newPassword - the new password
+   * @param confirmPassword - the confirmed new password
+   * @param request - the HttpServletRequest object
+   * @return a Map<String, Boolean> object containing the password verification result
    */
   @RequestMapping(value = "/changePassword.action", method = RequestMethod.POST)
   public @ResponseBody Map<String, Boolean> changePasswordInDashboardAction(
@@ -448,15 +448,15 @@ public class AccountsController {
   }
 
   /**
-   * 处理用户更改个人资料的请求.
+   * Handles the user's request to change their profile.
    *
-   * @param email - 用户的电子邮件地址
-   * @param location - 用户的所在地区
-   * @param website - 用户的个人主页
-   * @param socialLinks - 用户的社交网络信息
-   * @param aboutMe - 用户的个人简介
-   * @param request - HttpServletRequest对象
-   * @return 一个包含个人资料修改结果的Map<String, Boolean>对象
+   * @param email - the user's email address
+   * @param location - the user's location
+   * @param website - the user's personal homepage
+   * @param socialLinks - the user's social network information
+   * @param aboutMe - the user's personal bio
+   * @param request - the HttpServletRequest object
+   * @return a Map<String, Boolean> object containing the profile update result
    */
   @RequestMapping(value = "/updateProfile.action", method = RequestMethod.POST)
   public @ResponseBody Map<String, Boolean> updateProfileInDashboardAction(
@@ -480,18 +480,26 @@ public class AccountsController {
     return result;
   }
 
-  /** 自动注入的UserService对象. 用于完成用户业务逻辑操作. */
+  /** The autowired UserService object. Used for completing the business logic operations of users. */
   @Autowired private UserService userService;
 
-  /** 自动注入的LanguageService对象. 用于加载注册页面的语言选项. */
+  /**
+   * The autowired LanguageService object. Used for loading the language options of the registration
+   * page.
+   */
   @Autowired private LanguageService languageService;
 
-  /** 自动注入的SubmissionService对象. 用于加载个人信息页面用户的提交和通过情况. */
+  /**
+   * The autowired SubmissionService object. Used for loading the user's submission and acceptance
+   * status on the profile page.
+   */
   @Autowired private SubmissionService submissionService;
 
-  /** 自动注入的OptionService对象. 用于查询注册功能是否开放. */
+  /**
+   * The autowired OptionService object. Used for querying whether the registration feature is open.
+   */
   @Autowired private OptionService optionService;
 
-  /** 日志记录器. */
+  /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(AccountsController.class);
 }

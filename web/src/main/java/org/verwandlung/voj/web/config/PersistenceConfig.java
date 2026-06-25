@@ -28,15 +28,16 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
 
 /**
- * 持久层配置. 取代原 dispatcher-servlet.xml 中的 Druid 数据源定义,
- * 并以 Spring Bean 形式暴露 voj.properties, 供 JSP 通过
- * {@code @propertyConfigurer.getProperty('...')} 读取构建版本号、CDN 地址等信息.
+ * The persistence layer configuration. Replaces the Druid data source definition in the original
+ * dispatcher-servlet.xml, and exposes voj.properties as a Spring Bean, so that JSPs can read
+ * information such as the build version number and CDN address via {@code
+ * @propertyConfigurer.getProperty('...')}.
  *
  * @author Haozhe Xie
  */
 @Configuration
 public class PersistenceConfig {
-  /** Druid 数据库连接池. MyBatis 自动配置会复用此数据源. */
+  /** The Druid database connection pool. The MyBatis auto-configuration reuses this data source. */
   @Bean(initMethod = "init", destroyMethod = "close")
   public DataSource dataSource(
       @Value("${jdbc.driverClassName}") String driverClassName,
@@ -73,8 +74,9 @@ public class PersistenceConfig {
   }
 
   /**
-   * 将 voj.properties 暴露为名为 {@code propertyConfigurer} 的 {@link java.util.Properties}
-   * Bean, 以便 JSP 中的 SpEL 表达式 {@code @propertyConfigurer.getProperty('...')} 继续可用.
+   * Exposes voj.properties as a {@link java.util.Properties} Bean named {@code propertyConfigurer},
+   * so that the SpEL expression {@code @propertyConfigurer.getProperty('...')} in JSPs remains
+   * usable.
    */
   @Bean(name = "propertyConfigurer")
   public PropertiesFactoryBean propertyConfigurer() {

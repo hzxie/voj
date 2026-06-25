@@ -21,7 +21,7 @@ import org.jsoup.nodes.Document;
 import org.jsoup.safety.Safelist;
 
 /**
- * HTML文本过滤组件.
+ * The HTML text filtering component.
  *
  * @author Haozhe Xie
  */
@@ -30,10 +30,10 @@ public class HtmlTextFilter {
   private HtmlTextFilter() {}
 
   /**
-   * 过滤包含HTML字符串.
+   * Filters a string containing HTML.
    *
-   * @param text - 待过滤的字符串
-   * @return 过滤后的字符串.
+   * @param text - the string to filter
+   * @return the filtered string
    */
   public static String filter(String text) {
     if (text == null) {

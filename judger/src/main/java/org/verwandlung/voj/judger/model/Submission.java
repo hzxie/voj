@@ -20,29 +20,29 @@ import java.io.Serializable;
 import java.util.Date;
 
 /**
- * 评测记录的Model. 对应数据库中的voj_submissions数据表.
+ * The model of a submission. Maps to the voj_submissions table in the database.
  *
  * @author Haozhe Xie
  */
 public class Submission implements Serializable {
-  /** 评测记录类的默认构造函数. */
+  /** Default constructor of the submission. */
   public Submission() {}
 
   /**
-   * 评测记录类的构造函数.
+   * Constructor of the submission.
    *
-   * @param submissionId - 评测记录的唯一标识符
-   * @param problem - 评测对应的试题对象
-   * @param uid - 评测提交者的用户的唯一标识符
-   * @param language - 提交所使用的语言对象
-   * @param submitTime - 评测提交时间
-   * @param executeTime - 评测开始执行时间
-   * @param usedTime - 评测运行总时间
-   * @param usedMemory - 评测运行占用最大内存
-   * @param judgeResultSlug - 评测结果的唯一标识符
-   * @param judgeScore - 评测运行得分
-   * @param judgeLog - 评测运行日志
-   * @param code - 评测所执行的代码
+   * @param submissionId - the unique identifier of the submission
+   * @param problem - the problem object the submission corresponds to
+   * @param uid - the unique identifier of the user who made the submission
+   * @param language - the language object used by the submission
+   * @param submitTime - the time the submission was submitted
+   * @param executeTime - the time the judging started
+   * @param usedTime - the total running time of the judging
+   * @param usedMemory - the maximum memory used during judging
+   * @param judgeResultSlug - the unique identifier of the judge result
+   * @param judgeScore - the score of the judging
+   * @param judgeLog - the log of the judging
+   * @param code - the code executed during judging
    */
   public Submission(
       long submissionId,
@@ -72,216 +72,216 @@ public class Submission implements Serializable {
   }
 
   /**
-   * 获取评测记录的唯一标识符.
+   * Gets the unique identifier of the submission.
    *
-   * @return 评测记录的唯一标识符
+   * @return the unique identifier of the submission
    */
   public long getSubmissionId() {
     return submissionId;
   }
 
   /**
-   * 设置评测记录的唯一标识符.
+   * Sets the unique identifier of the submission.
    *
-   * @param submissionId - 评测记录的唯一标识符.
+   * @param submissionId - the unique identifier of the submission
    */
   public void setSubmissionId(long submissionId) {
     this.submissionId = submissionId;
   }
 
   /**
-   * 获取评测对应的试题对象.
+   * Gets the problem object the submission corresponds to.
    *
-   * @return 试题对象
+   * @return the problem object
    */
   public Problem getProblem() {
     return problem;
   }
 
   /**
-   * 设置评测对应的试题对象.
+   * Sets the problem object the submission corresponds to.
    *
-   * @param problem - 试题对象
+   * @param problem - the problem object
    */
   public void setProblem(Problem problem) {
     this.problem = problem;
   }
 
   /**
-   * 获取评测提交者的用户唯一标识符.
+   * Gets the unique identifier of the user who made the submission.
    *
-   * @return 用户的唯一标识符
+   * @return the unique identifier of the user
    */
   public long getUid() {
     return uid;
   }
 
   /**
-   * 设置评测提交者的用户唯一标识符.
+   * Sets the unique identifier of the user who made the submission.
    *
-   * @param uid - 用户唯一标识符
+   * @param uid - the unique identifier of the user
    */
   public void setUid(long uid) {
     this.uid = uid;
   }
 
   /**
-   * 获取提交所使用的语言对象.
+   * Gets the language object used by the submission.
    *
-   * @return 提交所使用的语言对象
+   * @return the language object used by the submission
    */
   public Language getLanguage() {
     return language;
   }
 
   /**
-   * 设置提交所使用的语言对象.
+   * Sets the language object used by the submission.
    *
-   * @param language - 提交所使用的语言对象
+   * @param language - the language object used by the submission
    */
   public void setLanguage(Language language) {
     this.language = language;
   }
 
   /**
-   * 获取评测提交时间.
+   * Gets the time the submission was submitted.
    *
-   * @return 评测提交时间
+   * @return the time the submission was submitted
    */
   public Date getSubmitTime() {
     return submitTime;
   }
 
   /**
-   * 设置评测提交时间.
+   * Sets the time the submission was submitted.
    *
-   * @param submitTime - 评测提交时间
+   * @param submitTime - the time the submission was submitted
    */
   public void setSubmitTime(Date submitTime) {
     this.submitTime = submitTime;
   }
 
   /**
-   * 获取评测开始执行时间.
+   * Gets the time the judging started.
    *
-   * @return 评测开始执行时间
+   * @return the time the judging started
    */
   public Date getExecuteTime() {
     return executeTime;
   }
 
   /**
-   * 设置评测开始执行时间.
+   * Sets the time the judging started.
    *
-   * @param executeTime - 评测开始执行时间
+   * @param executeTime - the time the judging started
    */
   public void setExecuteTime(Date executeTime) {
     this.executeTime = executeTime;
   }
 
   /**
-   * 获取评测运行总时间.
+   * Gets the total running time of the judging.
    *
-   * @return 评测运行总时间
+   * @return the total running time of the judging
    */
   public int getUsedTime() {
     return usedTime;
   }
 
   /**
-   * 设置评测运行总时间.
+   * Sets the total running time of the judging.
    *
-   * @param usedTime - 评测运行总时间
+   * @param usedTime - the total running time of the judging
    */
   public void setUsedTime(int usedTime) {
     this.usedTime = usedTime;
   }
 
   /**
-   * 获取评测运行占用最大内存.
+   * Gets the maximum memory used during judging.
    *
-   * @return 评测运行占用最大内存
+   * @return the maximum memory used during judging
    */
   public int getUsedMemory() {
     return usedMemory;
   }
 
   /**
-   * 设置评测运行占用最大内存.
+   * Sets the maximum memory used during judging.
    *
-   * @param usedMemory - 评测运行占用最大内存
+   * @param usedMemory - the maximum memory used during judging
    */
   public void setUsedMemory(int usedMemory) {
     this.usedMemory = usedMemory;
   }
 
   /**
-   * 获取评测结果的唯一英文缩写.
+   * Gets the unique English abbreviation of the judge result.
    *
-   * @return 评测结果的唯一英文缩写
+   * @return the unique English abbreviation of the judge result
    */
   public String getJudgeResultSlug() {
     return judgeResultSlug;
   }
 
   /**
-   * 设置评测结果.
+   * Sets the judge result.
    *
-   * @param judgeResultSlug - 评测结果的唯一英文缩写
+   * @param judgeResultSlug - the unique English abbreviation of the judge result
    */
   public void setJudgeResultSlug(String judgeResultSlug) {
     this.judgeResultSlug = judgeResultSlug;
   }
 
   /**
-   * 获取评测运行得分.
+   * Gets the score of the judging.
    *
-   * @return 评测运行得分
+   * @return the score of the judging
    */
   public int getJudgeScore() {
     return judgeScore;
   }
 
   /**
-   * 设置评测运行得分.
+   * Sets the score of the judging.
    *
-   * @param judgeScore - 评测运行得分
+   * @param judgeScore - the score of the judging
    */
   public void setJudgeScore(int judgeScore) {
     this.judgeScore = judgeScore;
   }
 
   /**
-   * 获取评测运行日志.
+   * Gets the log of the judging.
    *
-   * @return 评测运行日志
+   * @return the log of the judging
    */
   public String getJudgeLog() {
     return judgeLog;
   }
 
   /**
-   * 设置评测运行日志
+   * Sets the log of the judging.
    *
-   * @param judgeLog - 评测运行日志
+   * @param judgeLog - the log of the judging
    */
   public void setJudgeLog(String judgeLog) {
     this.judgeLog = judgeLog;
   }
 
   /**
-   * 设置评测所执行的代码.
+   * Gets the code executed during judging.
    *
-   * @return 评测所执行的代码
+   * @return the code executed during judging
    */
   public String getCode() {
     return code;
   }
 
   /**
-   * 设置评测所执行的代码.
+   * Sets the code executed during judging.
    *
-   * @param code - 评测所执行的代码
+   * @param code - the code executed during judging
    */
   public void setCode(String code) {
     this.code = code;
@@ -312,42 +312,42 @@ public class Submission implements Serializable {
         });
   }
 
-  /** 评测记录的唯一标识符. */
+  /** The unique identifier of the submission. */
   private long submissionId;
 
-  /** 评测对应的试题对象. */
+  /** The problem object the submission corresponds to. */
   private Problem problem;
 
-  /** 评测提交者用户的唯一标识符. */
+  /** The unique identifier of the user who made the submission. */
   private long uid;
 
-  /** 提交所使用的语言对象. */
+  /** The language object used by the submission. */
   private Language language;
 
-  /** 评测提交时间. */
+  /** The time the submission was submitted. */
   private Date submitTime;
 
-  /** 评测开始执行时间. */
+  /** The time the judging started. */
   private Date executeTime;
 
-  /** 评测运行总时间. */
+  /** The total running time of the judging. */
   private int usedTime;
 
-  /** 评测运行占用最大内存. */
+  /** The maximum memory used during judging. */
   private int usedMemory;
 
-  /** 评测结果. */
+  /** The judge result. */
   private String judgeResultSlug;
 
-  /** 评测运行得分. */
+  /** The score of the judging. */
   private int judgeScore;
 
-  /** 评测运行日志. */
+  /** The log of the judging. */
   private String judgeLog;
 
-  /** 评测所执行的代码. */
+  /** The code executed during judging. */
   private String code;
 
-  /** 唯一的序列化标识符. */
+  /** The unique serialization identifier. */
   private static final long serialVersionUID = -6017296127470986766L;
 }

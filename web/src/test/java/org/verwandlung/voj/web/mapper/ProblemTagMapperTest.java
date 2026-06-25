@@ -31,7 +31,7 @@ import org.verwandlung.voj.web.model.ProblemTag;
 import org.verwandlung.voj.web.model.ProblemTagRelationship;
 
 /**
- * ProblemTagMapper测试类.
+ * The test class for ProblemTagMapper.
  *
  * @author Haozhe Xie
  */
@@ -39,7 +39,7 @@ import org.verwandlung.voj.web.model.ProblemTagRelationship;
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class ProblemTagMapperTest {
-  /** 测试用例: 测试getProblemTags()方法 测试数据: N/a 预期结果: 全部的试题标签列表 */
+  /** Test case: tests the getProblemTags() method. Test data: N/a. Expected: the list of all problem tags. */
   @Test
   public void testGetProblemTags() {
     List<ProblemTag> problemTags = problemTagMapper.getProblemTags();
@@ -50,7 +50,7 @@ public class ProblemTagMapperTest {
     Assertions.assertEquals("greedy", tagSlug);
   }
 
-  /** 测试用例: 测试getProblemTagUsingId(int)方法 测试数据: 默认标签的唯一标识符 预期结果: 返回默认标签的试题标签对象 */
+  /** Test case: tests the getProblemTagUsingId(int) method. Test data: the unique identifier of a default tag. Expected: the problem tag object of the default tag. */
   @Test
   public void testGetProblemTagUsingIdExists() {
     ProblemTag problemTag = problemTagMapper.getProblemTagUsingTagId(1);
@@ -60,14 +60,14 @@ public class ProblemTagMapperTest {
     Assertions.assertEquals("Greedy", problemTagName);
   }
 
-  /** 测试用例: 测试getProblemTagUsingId(int)方法 测试数据: 不存在的唯一标识符 预期结果: 空引用 */
+  /** Test case: tests the getProblemTagUsingId(int) method. Test data: a non-existing unique identifier. Expected: a null reference. */
   @Test
   public void testGetProblemTagUsingIdNotExists() {
     ProblemTag problemTag = problemTagMapper.getProblemTagUsingTagId(0);
     Assertions.assertNull(problemTag);
   }
 
-  /** 测试用例: 测试getProblemTagUsingId(int)方法 测试数据: 默认标签的唯一标识符 预期结果: 返回某个试题 */
+  /** Test case: tests the getProblemTagsUsingProblemId(long) method. Test data: an existing problem ID. Expected: the problem tags of the problem. */
   @Test
   public void testGetProblemTagUsingProblemIdExists() {
     List<ProblemTag> problemTags = problemTagMapper.getProblemTagsUsingProblemId(1001);
@@ -79,14 +79,14 @@ public class ProblemTagMapperTest {
     Assertions.assertEquals("Greedy", problemTagName);
   }
 
-  /** 测试用例: 测试getProblemTagUsingId(int)方法 测试数据: 不存在的唯一标识符 预期结果: 空试题标签列表 */
+  /** Test case: tests the getProblemTagsUsingProblemId(long) method. Test data: a non-existing unique identifier. Expected: an empty problem tag list. */
   @Test
   public void testGetProblemTagUsingProblemIdNotExists() {
     List<ProblemTag> problemTags = problemTagMapper.getProblemTagsUsingProblemId(0);
     Assertions.assertEquals(0, problemTags.size());
   }
 
-  /** 测试用例: 测试getProblemTagsOfProblems()方法 测试数据: 试题ID的范围从1000到1002 预期结果: 返回全部的试题标签信息(总计4条记录) */
+  /** Test case: tests the getProblemTagsOfProblems() method. Test data: a problem ID range from 1000 to 1002. Expected: all the problem tag information (4 records in total). */
   @Test
   public void testGetProblemTagsOfProblemsFrom1000WithLimit3() {
     List<ProblemTagRelationship> problemTagRelationships =
@@ -98,7 +98,7 @@ public class ProblemTagMapperTest {
     Assertions.assertEquals(1, ptr.getProblemTagId());
   }
 
-  /** 测试用例: 测试getProblemTagsOfProblems()方法 测试数据: 试题ID的范围从999到1000 预期结果: 返回全部的试题标签信息(总计2条记录) */
+  /** Test case: tests the getProblemTagsOfProblems() method. Test data: a problem ID range from 999 to 1000. Expected: all the problem tag information (1 record in total). */
   @Test
   public void testGetProblemTagsOfProblemsFrom999WithLimit2() {
     List<ProblemTagRelationship> problemTagRelationships =
@@ -110,7 +110,7 @@ public class ProblemTagMapperTest {
     Assertions.assertEquals(1, ptr.getProblemTagId());
   }
 
-  /** 测试用例: 测试getProblemTagsOfProblems()方法 测试数据: 试题ID的范围从999到999 预期结果: 返回全部的试题标签信息(总计0条记录) */
+  /** Test case: tests the getProblemTagsOfProblems() method. Test data: a problem ID range from 999 to 999. Expected: all the problem tag information (0 records in total). */
   @Test
   public void testGetProblemTagsOfProblemsFrom999WithLimit1() {
     List<ProblemTagRelationship> problemTagRelationships =
@@ -118,7 +118,7 @@ public class ProblemTagMapperTest {
     Assertions.assertEquals(0, problemTagRelationships.size());
   }
 
-  /** 测试用例: 测试getProblemTagUsingSlug(String)方法 测试数据: 默认标签的别名 预期结果: 返回默认标签的试题标签对象 */
+  /** Test case: tests the getProblemTagUsingSlug(String) method. Test data: the slug of a default tag. Expected: the problem tag object of the default tag. */
   @Test
   public void testGetProblemTagUsingTagSlugExists() {
     ProblemTag problemTag = problemTagMapper.getProblemTagUsingTagSlug("greedy");
@@ -128,14 +128,14 @@ public class ProblemTagMapperTest {
     Assertions.assertEquals("Greedy", problemTagName);
   }
 
-  /** 测试用例: 测试getProblemTagUsingSlug(String)方法 测试数据: 不存在的别名 预期结果: 空引用 */
+  /** Test case: tests the getProblemTagUsingSlug(String) method. Test data: a non-existing slug. Expected: a null reference. */
   @Test
   public void testGetProblemTagUsingTagSlugNotExists() {
     ProblemTag problemTag = problemTagMapper.getProblemTagUsingTagSlug("not-exists");
     Assertions.assertNull(problemTag);
   }
 
-  /** 测试用例: 测试getProblemTagsOfProblems(long, long)方法 测试数据: 试题编号1000-1010 预期结果: 对应试题的试题标签 */
+  /** Test case: tests the getProblemTagsOfProblems(long, long) method. Test data: problem IDs 1000-1010. Expected: the problem tags of the corresponding problems. */
   @Test
   public void testGetProblemTagsOfProblems() {
     List<ProblemTagRelationship> problemTagRelationships =
@@ -147,7 +147,7 @@ public class ProblemTagMapperTest {
     Assertions.assertEquals(1, ptr.getProblemTagId());
   }
 
-  /** 测试用例: 测试createProblemTag(ProblemTag)方法 测试数据: 使用合法的数据集, 并且数据表中不存在相同的英文缩写 预期结果: 数据插入操作成功完成 */
+  /** Test case: tests the createProblemTag(ProblemTag) method. Test data: a valid data set, and no identical slug exists in the table. Expected: the data insertion operation completes successfully. */
   @Test
   public void testCreateProblemTagNormally() {
     ProblemTag problemTag = new ProblemTag("new- tag", "New Tag");
@@ -156,8 +156,8 @@ public class ProblemTagMapperTest {
   }
 
   /**
-   * 测试用例: 测试createProblemTag(ProblemTag)方法 测试数据: 使用不合法的数据集(过长的类别名称) 预期结果:
-   * 抛出DataIntegrityViolationException异常
+   * Test case: tests the createProblemTag(ProblemTag) method. Test data: an invalid data set (a tag
+   * name that is too long). Expected: a DataIntegrityViolationException is thrown.
    */
   @Test
   public void testCreateProblemTagUsingTooLongTagName() {
@@ -170,8 +170,8 @@ public class ProblemTagMapperTest {
   }
 
   /**
-   * 测试用例: 测试createProblemTag(ProblemTag)方法 测试数据: 使用合法的数据集, 但数据表中存在相同的英文缩写 预期结果:
-   * 抛出DuplicateKeyException异常
+   * Test case: tests the createProblemTag(ProblemTag) method. Test data: a valid data set, but an
+   * identical slug exists in the table. Expected: a DuplicateKeyException is thrown.
    */
   @Test
   public void testCreateProblemTagUsingExistingSlug() {
@@ -183,7 +183,7 @@ public class ProblemTagMapperTest {
     Assertions.assertThrows(org.springframework.dao.DuplicateKeyException.class, e);
   }
 
-  /** 测试用例: 测试updateProblemTag(ProblemTag)方法 测试数据: 使用合法的数据集, 且数据库中存在对应的记录 预期结果: 数据更新操作成功完成 */
+  /** Test case: tests the updateProblemTag(ProblemTag) method. Test data: a valid data set, and a corresponding record exists in the database. Expected: the data update operation completes successfully. */
   @Test
   public void testUpdateProblemTagNormally() {
     ProblemTag problemTag = problemTagMapper.getProblemTagUsingTagSlug("greedy");
@@ -199,8 +199,8 @@ public class ProblemTagMapperTest {
   }
 
   /**
-   * 测试用例: 测试updateProblemTag(ProblemTag)方法 测试数据: 使用不合法的数据集(过长的类别名称) 预期结果:
-   * 抛出DataIntegrityViolationException异常
+   * Test case: tests the updateProblemTag(ProblemTag) method. Test data: an invalid data set (a tag
+   * name that is too long). Expected: a DataIntegrityViolationException is thrown.
    */
   @Test
   public void testUpdateProblemTagUsingTooLongTagName() {
@@ -215,7 +215,7 @@ public class ProblemTagMapperTest {
     Assertions.assertThrows(org.springframework.dao.DataIntegrityViolationException.class, e);
   }
 
-  /** 测试用例: 测试deleteProblemTag(int)方法 测试数据: 存在的试题标签唯一标识符 预期结果: 数据删除操作成功完成 */
+  /** Test case: tests the deleteProblemTag(int) method. Test data: an existing problem tag unique identifier. Expected: the data deletion operation completes successfully. */
   @Test
   public void testDeleteProblemTagUsingTagIdExists() {
     ProblemTag problemTag = problemTagMapper.getProblemTagUsingTagId(1);
@@ -228,7 +228,7 @@ public class ProblemTagMapperTest {
     Assertions.assertNull(problemTag);
   }
 
-  /** 测试用例: 测试deleteProblemTag(int)方法 测试数据: 不存在的试题标签唯一标识符 预期结果: 方法正常执行, 未影响数据表中的数据 */
+  /** Test case: tests the deleteProblemTag(int) method. Test data: a non-existing problem tag unique identifier. Expected: the method executes normally without affecting the data in the table. */
   @Test
   public void testDeleteProblemTagUsingTagIdNotExists() {
     ProblemTag problemTag = problemTagMapper.getProblemTagUsingTagId(0);
@@ -238,7 +238,7 @@ public class ProblemTagMapperTest {
     Assertions.assertEquals(0, numberOfRowsAffected);
   }
 
-  /** 测试用例: 测试deleteProblemTagRelationship(int)方法 测试数据: 存在的试题标签唯一标识符 预期结果: 数据删除操作成功完成 */
+  /** Test case: tests the deleteProblemTagRelationship(int) method. Test data: an existing problem tag unique identifier. Expected: the data deletion operation completes successfully. */
   @Test
   public void testDeleteProblemTagUsingProblemIdExists() {
     List<ProblemTag> problemTags = problemTagMapper.getProblemTagsUsingProblemId(1001);
@@ -248,7 +248,7 @@ public class ProblemTagMapperTest {
     Assertions.assertEquals(2, numberOfRowsAffected);
   }
 
-  /** 测试用例: 测试deleteProblemTagRelationship(int)方法 测试数据: 不存在的试题标签唯一标识符 预期结果: 方法正常执行, 未影响数据表中的数据 */
+  /** Test case: tests the deleteProblemTagRelationship(int) method. Test data: a non-existing problem tag unique identifier. Expected: the method executes normally without affecting the data in the table. */
   @Test
   public void testDeleteProblemTagUsingProblemIdNotExists() {
     List<ProblemTag> problemTags = problemTagMapper.getProblemTagsUsingProblemId(0);
@@ -258,6 +258,6 @@ public class ProblemTagMapperTest {
     Assertions.assertEquals(0, numberOfRowsAffected);
   }
 
-  /** 待测试的ProblemTagMapper对象. */
+  /** The ProblemTagMapper object under test. */
   @Autowired private ProblemTagMapper problemTagMapper;
 }

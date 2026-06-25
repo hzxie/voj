@@ -34,16 +34,16 @@ import org.verwandlung.voj.judger.model.JudgeResult;
 import org.verwandlung.voj.judger.model.Submission;
 
 /**
- * 应用程序调度器.
+ * The application dispatcher.
  *
  * @author Haozhe Xie
  */
 @Component
 public class ApplicationDispatcher {
   /**
-   * 收到消息队列的新的评测请求时的回调函数.
+   * Callback invoked when a new judging request is received from the message queue.
    *
-   * @param submissionId - 评测记录的唯一标识符
+   * @param submissionId - the unique identifier of the submission
    */
   public void onSubmissionCreated(long submissionId) {
     try {
@@ -54,9 +54,9 @@ public class ApplicationDispatcher {
   }
 
   /**
-   * 当系统错误发生时通知用户.
+   * Notifies the user when a system error occurs.
    *
-   * @param submissionId - 评测记录的唯一标识符
+   * @param submissionId - the unique identifier of the submission
    */
   public void onErrorOccurred(long submissionId) {
     updateSubmission(submissionId, 0, 0, 0, "SE", "Internal error occured.");
@@ -69,10 +69,10 @@ public class ApplicationDispatcher {
   }
 
   /**
-   * 当编译阶段结束时通知用户.
+   * Notifies the user when the compilation stage finishes.
    *
-   * @param submissionId - 评测记录的唯一标识符
-   * @param result - 编译结果
+   * @param submissionId - the unique identifier of the submission
+   * @param result - the compilation result
    */
   public void onCompileFinished(long submissionId, Map<String, Object> result) {
     boolean isSuccessful = (Boolean) result.get("isSuccessful");
@@ -91,11 +91,11 @@ public class ApplicationDispatcher {
   }
 
   /**
-   * 实时返回评测结果.
+   * Returns the judging result in real time.
    *
-   * @param submissionId - 提交记录的编号
-   * @param checkpointId - 测试点的编号
-   * @param runtimeResult - 某个测试点的程序运行结果
+   * @param submissionId - the number of the submission
+   * @param checkpointId - the number of the checkpoint
+   * @param runtimeResult - the program's runtime result for a checkpoint
    */
   public void onOneTestPointFinished(
       long submissionId, int checkpointId, Map<String, Object> runtimeResult) {
@@ -118,10 +118,10 @@ public class ApplicationDispatcher {
   }
 
   /**
-   * 持久化程序评测结果
+   * Persists the program's judging result.
    *
-   * @param submissionId - 提交记录的编号
-   * @param runtimeResults - 对各个测试点的评测结果集
+   * @param submissionId - the number of the submission
+   * @param runtimeResults - the set of judging results for all checkpoints
    */
   public void onAllTestPointsFinished(long submissionId, List<Map<String, Object>> runtimeResults) {
     int totalTime = 0;
@@ -162,10 +162,10 @@ public class ApplicationDispatcher {
   }
 
   /**
-   * 从评测结果集中获取程序评测结果的唯一英文缩写.
+   * Gets the unique English abbreviation of the program's judging result from the result set.
    *
-   * @param runtimeResult - 程序评测结果
-   * @return 程序评测结果的唯一英文缩写
+   * @param runtimeResult - the program's judging result
+   * @return the unique English abbreviation of the program's judging result
    */
   private String getRuntimeResultSlug(Map<String, Object> runtimeResult) {
     Object runtimeResultObject = runtimeResult.get("runtimeResult");
@@ -177,10 +177,10 @@ public class ApplicationDispatcher {
   }
 
   /**
-   * 获取评测结果的全称.
+   * Gets the full name of the judging result.
    *
-   * @param runtimeResultSlug - 评测结果的唯一英文缩写
-   * @return 评测结果的全称
+   * @param runtimeResultSlug - the unique English abbreviation of the judging result
+   * @return the full name of the judging result
    */
   private String getRuntimeResultName(String runtimeResultSlug) {
     JudgeResult judgeResult = judgeResultMapper.getJudgeResultUsingSlug(runtimeResultSlug);
@@ -192,10 +192,10 @@ public class ApplicationDispatcher {
   }
 
   /**
-   * 从评测结果集中获取程序运行时间(ms).
+   * Gets the program's running time (ms) from the judging result set.
    *
-   * @param runtimeResult - 程序评测结果
-   * @return 程序运行时间(ms)
+   * @param runtimeResult - the program's judging result
+   * @return the program's running time (ms)
    */
   private int getUsedTime(Map<String, Object> runtimeResult) {
     Object usedTimeObject = runtimeResult.get("usedTime");
@@ -207,10 +207,10 @@ public class ApplicationDispatcher {
   }
 
   /**
-   * 从评测结果集中获取内存使用量(KB).
+   * Gets the memory usage (KB) from the judging result set.
    *
-   * @param runtimeResult - 程序评测结果
-   * @return 内存使用量(KB)
+   * @param runtimeResult - the program's judging result
+   * @return the memory usage (KB)
    */
   private int getUsedMemory(Map<String, Object> runtimeResult) {
     Object usedMemoryObject = runtimeResult.get("usedMemory");
@@ -222,10 +222,10 @@ public class ApplicationDispatcher {
   }
 
   /**
-   * 从评测结果集中获取测试点对应的分值
+   * Gets the score corresponding to the checkpoint from the judging result set.
    *
-   * @param runtimeResult - 程序评测结果
-   * @return 测试点对应的分值
+   * @param runtimeResult - the program's judging result
+   * @return the score corresponding to the checkpoint
    */
   private int getScore(Map<String, Object> runtimeResult) {
     Object scoreObject = runtimeResult.get("score");
@@ -237,10 +237,10 @@ public class ApplicationDispatcher {
   }
 
   /**
-   * 格式化编译时日志.
+   * Formats the compile-time log.
    *
-   * @param result - 包含编译状态的Map<String, Object>对象
-   * @return 格式化后的日志
+   * @param result - the Map<String, Object> object containing the compilation status
+   * @return the formatted log
    */
   private String getJudgeLog(Map<String, Object> result) {
     boolean isSuccessful = (Boolean) result.get("isSuccessful");
@@ -257,14 +257,14 @@ public class ApplicationDispatcher {
   }
 
   /**
-   * 格式化运行时日志.
+   * Formats the runtime log.
    *
-   * @param runtimeResults - 对各个测试点的评测结果集
-   * @param runtimeResultSlug
-   * @param totalTime
-   * @param maxMemory
-   * @param totalScore
-   * @return
+   * @param runtimeResults - the set of judging results for all checkpoints
+   * @param runtimeResultSlug - the unique English abbreviation of the overall judging result
+   * @param totalTime - the total running time
+   * @param maxMemory - the maximum memory used
+   * @param totalScore - the total score
+   * @return the formatted log
    */
   private String getJudgeLog(
       List<Map<String, Object>> runtimeResults,
@@ -302,14 +302,14 @@ public class ApplicationDispatcher {
   }
 
   /**
-   * 更新提交记录信息.
+   * Updates the submission information.
    *
-   * @param submissionId - 提交记录的唯一标识符
-   * @param usedTime - 提交运行使用时间(所有时间之和)
-   * @param usedMemory - 提交运行使用内存(最大内存占用)
-   * @param score - 运行得分
-   * @param judgeResult - 运行结果(JudgeResultSlug)
-   * @param log - 运行日志记录
+   * @param submissionId - the unique identifier of the submission
+   * @param usedTime - the running time of the submission (sum of all times)
+   * @param usedMemory - the memory used by the submission (maximum memory usage)
+   * @param score - the score of the run
+   * @param judgeResult - the judging result (JudgeResultSlug)
+   * @param log - the judging log
    */
   private void updateSubmission(
       long submissionId, int usedTime, int usedMemory, int score, String judgeResult, String log) {
@@ -324,18 +324,18 @@ public class ApplicationDispatcher {
     submissionMapper.updateSubmission(submission);
   }
 
-  /** 自动注入的Dispatcher对象. 用于完成评测作业的任务调度. */
+  /** The autowired Dispatcher object, used to schedule judging jobs. */
   @Autowired private Dispatcher judgerDispatcher;
 
-  /** 自动注入的MessageSender对象. 用于向消息队列发送消息. */
+  /** The autowired MessageSender object, used to send messages to the message queue. */
   @Autowired private MessageSender messageSender;
 
-  /** 自动注入的SubmissionMapper对象. 用于查询/更新提交记录的相关信息. */
+  /** The autowired SubmissionMapper object, used to query/update submission information. */
   @Autowired private SubmissionMapper submissionMapper;
 
-  /** 自动注入的JudgeResultMapper对象. 用于全部评测结果的信息. */
+  /** The autowired JudgeResultMapper object, used to access information about all judge results. */
   @Autowired private JudgeResultMapper judgeResultMapper;
 
-  /** 日志记录器. */
+  /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(ApplicationDispatcher.class);
 }

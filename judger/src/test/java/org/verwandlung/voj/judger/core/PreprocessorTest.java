@@ -31,7 +31,7 @@ import org.verwandlung.voj.judger.mapper.SubmissionMapper;
 import org.verwandlung.voj.judger.model.Submission;
 
 /**
- * 预处理器的测试类.
+ * Test class for the preprocessor.
  *
  * @author Haozhe Xie
  */
@@ -40,8 +40,9 @@ import org.verwandlung.voj.judger.model.Submission;
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class PreprocessorTest {
   /**
-   * 测试用例: 测试createTestCode(Submission, String, String)方法 测试数据: 使用存在的提交记录(Submission#1000) 预期结果:
-   * 在指定位置创建源代码文件
+   * Test case: tests the createTestCode(Submission, String, String) method. Test data: an existing
+   * submission (Submission#1000). Expected result: the source code file is created at the specified
+   * location.
    *
    * @throws Exception
    */
@@ -59,8 +60,9 @@ public class PreprocessorTest {
   }
 
   /**
-   * 测试用例: 测试createTestCode(Submission, String, String)方法 测试数据: 使用存在的提交记录(Submission#1001) 预期结果:
-   * 在指定位置创建源代码文件
+   * Test case: tests the createTestCode(Submission, String, String) method. Test data: an existing
+   * submission (Submission#1001). Expected result: the source code file is created at the specified
+   * location.
    *
    * @throws Exception
    */
@@ -77,9 +79,9 @@ public class PreprocessorTest {
     Assertions.assertEquals(submission.getCode(), code);
   }
 
-  /** 待测试的Preprocessor对象. */
+  /** The Preprocessor object under test. */
   @Autowired private Preprocessor preprocessor;
 
-  /** 自动注入的SubmissionMapper对象. 用于构造测试用例. */
+  /** The autowired SubmissionMapper object, used to set up the test cases. */
   @Autowired private SubmissionMapper submissionMapper;
 }

@@ -47,7 +47,7 @@ import org.verwandlung.voj.web.util.HttpRequestParser;
 import org.verwandlung.voj.web.util.HttpSessionParser;
 
 /**
- * 处理用户的查看试题/提交评测等请求.
+ * Handles users' requests of viewing problems / making submissions, etc.
  *
  * @author Haozhe Xie
  */
@@ -55,14 +55,14 @@ import org.verwandlung.voj.web.util.HttpSessionParser;
 @RequestMapping(value = "/p")
 public class ProblemsController {
   /**
-   * 显示试题库中的全部试题.
+   * Displays all the problems in the problem bank.
    *
-   * @param startIndex - 试题的起始下标
-   * @param keyword - 关键词
-   * @param problemCategorySlug - 试题分类的别名
-   * @param request - HttpRequest对象
-   * @param response - HttpResponse对象
-   * @return 包含试题库页面信息的ModelAndView对象
+   * @param startIndex - the start index of the problems
+   * @param keyword - the keyword
+   * @param problemCategorySlug - the slug of the problem category
+   * @param request - the HttpRequest object
+   * @param response - the HttpResponse object
+   * @return a ModelAndView object containing the information of the problem bank page
    * @throws UnsupportedEncodingException
    */
   @RequestMapping(value = "", method = RequestMethod.GET)
@@ -103,20 +103,20 @@ public class ProblemsController {
   }
 
   /**
-   * 获取试题的起始编号.
+   * Gets the start index of the problems.
    *
-   * @return 试题的起始编号
+   * @return the start index of the problems
    */
   private long getFirstIndexOfProblems() {
     return problemService.getFirstIndexOfProblems();
   }
 
   /**
-   * 获取试题列表.
+   * Gets the list of problems.
    *
-   * @param startIndex - 试题的起始下标
-   * @param request - HttpRequest对象
-   * @return 一个包含试题列表的HashMap对象
+   * @param startIndex - the start index of the problems
+   * @param request - the HttpRequest object
+   * @return a HashMap object containing the list of problems
    */
   @RequestMapping(value = "/getProblems.action", method = RequestMethod.GET)
   public @ResponseBody Map<String, Object> getProblemsAction(
@@ -144,10 +144,10 @@ public class ProblemsController {
   }
 
   /**
-   * 检查用户是否已经登录.
+   * Checks whether the user has logged in.
    *
-   * @param session - HttpSession 对象
-   * @return 用户是否已经登录
+   * @param session - the HttpSession object
+   * @return whether the user has logged in
    */
   private boolean isLoggedIn(HttpSession session) {
     Boolean isLoggedIn = (Boolean) session.getAttribute("isLoggedIn");
@@ -158,12 +158,12 @@ public class ProblemsController {
   }
 
   /**
-   * 加载试题的详细信息.
+   * Loads the detailed information of a problem.
    *
-   * @param problemId - 试题的唯一标识符
-   * @param request - HttpRequest对象
-   * @param response - HttpResponse对象
-   * @return 包含试题详细信息的ModelAndView对象
+   * @param problemId - the unique identifier of the problem
+   * @param request - the HttpRequest object
+   * @param response - the HttpResponse object
+   * @return a ModelAndView object containing the detailed information of the problem
    */
   @RequestMapping(value = "/{problemId}", method = RequestMethod.GET)
   public ModelAndView problemView(
@@ -214,12 +214,12 @@ public class ProblemsController {
   }
 
   /**
-   * 加载试题题解页面.
+   * Loads the problem solution page.
    *
-   * @param problemId - 试题的唯一标识符
-   * @param request - HttpRequest对象
-   * @param response - HttpResponse对象
-   * @return 包含试题题解信息的ModelAndView对象
+   * @param problemId - the unique identifier of the problem
+   * @param request - the HttpRequest object
+   * @param response - the HttpResponse object
+   * @return a ModelAndView object containing the problem solution information
    */
   @RequestMapping(value = "/{problemId}/solution", method = RequestMethod.GET)
   public ModelAndView solutionView(
@@ -237,14 +237,14 @@ public class ProblemsController {
   }
 
   /**
-   * 创建提交.
+   * Creates a submission.
    *
-   * @param problemId - 试题的唯一标识符
-   * @param languageSlug - 编程语言的别名
-   * @param code - 代码
-   * @param csrfToken - 用于防止CSRF攻击的Token
-   * @param request - HttpRequest对象
-   * @return 一个包含提交记录创建结果的Map<String, Object>对象
+   * @param problemId - the unique identifier of the problem
+   * @param languageSlug - the slug of the programming language
+   * @param code - the code
+   * @param csrfToken - the token used to prevent CSRF attacks
+   * @param request - the HttpRequest object
+   * @return a Map<String, Object> object containing the result of the submission record creation
    */
   @RequestMapping(value = "/createSubmission.action", method = RequestMethod.POST)
   public @ResponseBody Map<String, Object> createSubmissionAction(
@@ -272,27 +272,33 @@ public class ProblemsController {
     return result;
   }
 
-  /** 每次请求所加载试题数量. */
+  /** The number of problems to load per request. */
   private static final int NUMBER_OF_PROBLEMS_PER_PAGE = 100;
 
-  /** 每个试题加载最近提交的数量. */
+  /** The number of recent submissions to load per problem. */
   private static final int NUMBER_OF_SUBMISSIONS_PER_PROBLEM = 10;
 
-  /** 每个试题加载讨论的数量. */
+  /** The number of discussions to load per problem. */
   private static final int NUMBER_OF_DISCUSSTION_THREADS_PER_PROBLEM = 10;
 
-  /** 自动注入的ProblemService对象. 用于完成试题的逻辑操作. */
+  /** The autowired ProblemService object. Used for completing the logic operations of problems. */
   @Autowired private ProblemService problemService;
 
-  /** 自动注入的SubmissionService对象. 用于处理试题详情页的提交请求. */
+  /**
+   * The autowired SubmissionService object. Used for handling the submission requests of the problem
+   * detail page.
+   */
   @Autowired private SubmissionService submissionService;
 
-  /** 自动注入的LanguageService对象. 用于加载试题详情页的语言选项. */
+  /**
+   * The autowired LanguageService object. Used for loading the language options of the problem
+   * detail page.
+   */
   @Autowired private LanguageService languageService;
 
-  /** 自动注入的DiscussionService对象. 用于获取试题相关的讨论. */
+  /** The autowired DiscussionService object. Used for getting the discussions related to problems. */
   @Autowired private DiscussionService discussionService;
 
-  /** 日志记录器. */
+  /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(ProblemsController.class);
 }

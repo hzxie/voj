@@ -19,20 +19,20 @@ package org.verwandlung.voj.web.model;
 import java.io.Serializable;
 
 /**
- * 用户元信息.
+ * The user meta information.
  *
  * @author Haozhe Xie
  */
 public class UserMeta implements Serializable {
-  /** UserMeta类的默认构造函数. */
+  /** Default constructor of the UserMeta class. */
   public UserMeta() {}
 
   /**
-   * UserMeta类的构造函数.
+   * Constructor of the UserMeta class.
    *
-   * @param user - 用户对象
-   * @param metaKey - 元信息的键
-   * @param metaValue - 元信息的值
+   * @param user - the user object
+   * @param metaKey - the key of the meta information
+   * @param metaValue - the value of the meta information
    */
   public UserMeta(User user, String metaKey, String metaValue) {
     this.user = user;
@@ -41,12 +41,12 @@ public class UserMeta implements Serializable {
   }
 
   /**
-   * UserMeta类的构造函数.
+   * Constructor of the UserMeta class.
    *
-   * @param metaId - 用户元信息的唯一标识符
-   * @param user - 用户对象
-   * @param metaKey - 元信息的键
-   * @param metaValue - 元信息的值
+   * @param metaId - the unique identifier of the user meta information
+   * @param user - the user object
+   * @param metaKey - the key of the meta information
+   * @param metaValue - the value of the meta information
    */
   public UserMeta(long metaId, User user, String metaKey, String metaValue) {
     this(user, metaKey, metaValue);
@@ -54,72 +54,72 @@ public class UserMeta implements Serializable {
   }
 
   /**
-   * 获取用户元信息的唯一标识符.
+   * Gets the unique identifier of the user meta information.
    *
-   * @return 用户元信息的唯一标识符
+   * @return the unique identifier of the user meta information
    */
   public long getMetaId() {
     return metaId;
   }
 
   /**
-   * 设置用户元信息的唯一标识符.
+   * Sets the unique identifier of the user meta information.
    *
-   * @param metaId - 用户元信息的唯一标识符
+   * @param metaId - the unique identifier of the user meta information
    */
   public void setMetaId(long metaId) {
     this.metaId = metaId;
   }
 
   /**
-   * 获取元信息对应的用户对象.
+   * Gets the user object the meta information corresponds to.
    *
-   * @return 元信息对应的用户对象
+   * @return the user object the meta information corresponds to
    */
   public User getUser() {
     return user;
   }
 
   /**
-   * 设置元信息对应的用户对象.
+   * Sets the user object the meta information corresponds to.
    *
-   * @param user - 元信息对应的用户对象
+   * @param user - the user object the meta information corresponds to
    */
   public void setUser(User user) {
     this.user = user;
   }
 
   /**
-   * 获取元信息的键.
+   * Gets the key of the meta information.
    *
-   * @return 元信息的键
+   * @return the key of the meta information
    */
   public String getMetaKey() {
     return metaKey;
   }
 
   /**
-   * 设置元信息的键.
+   * Sets the key of the meta information.
    *
-   * @param metaKey - 元信息的键
+   * @param metaKey - the key of the meta information
    */
   public void setMetaKey(String metaKey) {
     this.metaKey = metaKey;
   }
 
   /**
-   * 获取元信息的值.
+   * Gets the value of the meta information.
    *
-   * @return 元信息的值
+   * @return the value of the meta information
    */
   public String getMetaValue() {
     return metaValue;
   }
 
   /**
-   * 设置元信息的值.
+   * Sets the value of the meta information.
    *
-   * @param metaValue - 元信息的值
+   * @param metaValue - the value of the meta information
    */
   public void setMetaValue(String metaValue) {
     this.metaValue = metaValue;
@@ -134,18 +134,18 @@ public class UserMeta implements Serializable {
         new Object[] {metaId, user, metaKey, metaValue});
   }
 
-  /** 用户元信息的唯一标识符. */
+  /** The unique identifier of the user meta information. */
   private long metaId;
 
-  /** 元信息对应的用户对象. */
+  /** The user object the meta information corresponds to. */
   private User user;
 
-  /** 元信息的键. */
+  /** The key of the meta information. */
   private String metaKey;
 
-  /** 元信息的值. */
+  /** The value of the meta information. */
   private String metaValue;
 
-  /** 唯一的序列化标识符. */
+  /** The unique serialization identifier. */
   private static final long serialVersionUID = 1362748371508853051L;
 }

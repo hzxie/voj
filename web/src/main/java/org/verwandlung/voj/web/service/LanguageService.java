@@ -31,7 +31,7 @@ import org.verwandlung.voj.web.mapper.UserMapper;
 import org.verwandlung.voj.web.model.Language;
 
 /**
- * 编程语言类(Language)的业务逻辑层.
+ * The business logic layer of the Language class.
  *
  * @author Haozhe Xie
  */
@@ -39,29 +39,29 @@ import org.verwandlung.voj.web.model.Language;
 @Transactional
 public class LanguageService {
   /**
-   * 获取支持的编程语言.
+   * Gets the supported programming languages.
    *
-   * @return 编程语言列表(List<Language>对象)
+   * @return the list of programming languages (a List<Language> object)
    */
   public List<Language> getAllLanguages() {
     return languageMapper.getAllLanguages();
   }
 
   /**
-   * 通过编程语言的别名获取编程语言对象.
+   * Gets a programming language object by its alias.
    *
-   * @param languageSlug - 编程语言的别名
-   * @return 编程语言对象
+   * @param languageSlug - the alias of the programming language
+   * @return the programming language object
    */
   public Language getLanguageUsingSlug(String languageSlug) {
     return languageMapper.getLanguageUsingSlug(languageSlug);
   }
 
   /**
-   * 更新编程语言选项.
+   * Updates the programming language options.
    *
-   * @param languages - 包含编程语言设置的数组
-   * @return 编程语言选项的更新结果
+   * @param languages - the array containing the programming language settings
+   * @return the update result of the programming language options
    */
   public Map<String, Object> updateLanguageSettings(List<Language> languages) {
     List<Language> previousLanguages = languageMapper.getAllLanguages();
@@ -86,11 +86,11 @@ public class LanguageService {
   }
 
   /**
-   * 检查编程语言设置的正确性.
+   * Checks the correctness of the programming language settings.
    *
-   * @param previousLanguages - 更新前的语言设置列表
-   * @param newLanguages - 更新后的语言设置列表
-   * @return 编程语言设置的验证结果
+   * @param previousLanguages - the list of language settings before the update
+   * @param newLanguages - the list of language settings after the update
+   * @return the validation result of the programming language settings
    */
   private Map<String, Object> getUpdateLanguageSettingsResult(
       List<Language> previousLanguages, List<Language> newLanguages) {
@@ -144,11 +144,11 @@ public class LanguageService {
   }
 
   /**
-   * 检查编程语言设置的更改情况.
+   * Checks the changes in the programming language settings.
    *
-   * @param previousLanguages - 更新前的编程语言设置
-   * @param newLanguages - 更新后的编程语言设置
-   * @return 包含编程语言设置的更改情况的Map<String, List<Language>>对象
+   * @param previousLanguages - the programming language settings before the update
+   * @param newLanguages - the programming language settings after the update
+   * @return a Map<String, List<Language>> object containing the changes in the language settings
    */
   private Map<String, List<Language>> getLanguageChanges(
       List<Language> previousLanguages, List<Language> newLanguages) {
@@ -178,11 +178,11 @@ public class LanguageService {
   }
 
   /**
-   * 检查编程语言是否被更新.
+   * Checks whether a programming language has been updated.
    *
-   * @param previousLanguages - 更新前的编程语言列表
-   * @param language - 需要被检查的编程语言对象
-   * @return 编程语言是否被更新
+   * @param previousLanguages - the list of programming languages before the update
+   * @param language - the programming language object to check
+   * @return whether the programming language has been updated
    */
   private boolean isLanguageUpdated(List<Language> previousLanguages, Language language) {
     Language previousLanguage = null;
@@ -203,11 +203,11 @@ public class LanguageService {
   }
 
   /**
-   * 检查编程语言是否已从列表中删除.
+   * Checks whether a programming language has been deleted from the list.
    *
-   * @param newLanguages - 更新后的编程语言列表
-   * @param language - 需要被检查的编程语言对象
-   * @return 编程语言是否已从列表中删除
+   * @param newLanguages - the list of programming languages after the update
+   * @param language - the programming language object to check
+   * @return whether the programming language has been deleted from the list
    */
   private boolean isLanguageDeleted(List<Language> newLanguages, Language language) {
     int languageId = language.getLanguageId();
@@ -220,9 +220,9 @@ public class LanguageService {
   }
 
   /**
-   * 创建编程语言.
+   * Creates programming languages.
    *
-   * @param languages - 待创建的编程语言
+   * @param languages - the programming languages to create
    */
   private void createLanguages(List<Language> languages) {
     if (languages == null || languages.isEmpty()) {
@@ -234,9 +234,9 @@ public class LanguageService {
   }
 
   /**
-   * 更新编程语言.
+   * Updates programming languages.
    *
-   * @param languages - 待更新的编程语言
+   * @param languages - the programming languages to update
    */
   private void updateLanguages(List<Language> languages) {
     if (languages == null || languages.isEmpty()) {
@@ -248,9 +248,9 @@ public class LanguageService {
   }
 
   /**
-   * 删除编程语言.
+   * Deletes programming languages.
    *
-   * @param languages - 待删除的编程语言
+   * @param languages - the programming languages to delete
    */
   private void deleteLanguages(List<Language> languages) {
     if (languages == null || languages.isEmpty()) {
@@ -263,21 +263,22 @@ public class LanguageService {
   }
 
   /**
-   * 检查编程语言别名是否合法. 规则: 合法的编程语言别名不应该超过16个字符
+   * Checks whether a programming language alias is legal. Rule: a legal programming language alias
+   * should not exceed 16 characters.
    *
-   * @param languageSlug - 编程语言的别名
-   * @return 编程语言别名的合法性
+   * @param languageSlug - the alias of the programming language
+   * @return whether the programming language alias is legal
    */
   private boolean isLanguageSlugLegal(String languageSlug) {
     return languageSlug.length() <= 16;
   }
 
   /**
-   * 检查编程语言的别名是否存在.
+   * Checks whether a programming language alias already exists.
    *
-   * @param languageSlug - 编程语言的别名
-   * @param languageId - 编程语言的唯一标识符
-   * @return 编程语言的别名是否存在
+   * @param languageSlug - the alias of the programming language
+   * @param languageId - the unique identifier of the programming language
+   * @return whether the programming language alias already exists
    */
   private boolean isLanguageSlugExists(String languageSlug, int languageId) {
     Language expectedLanguage = languageMapper.getLanguageUsingSlug(languageSlug);
@@ -286,40 +287,44 @@ public class LanguageService {
   }
 
   /**
-   * 检查编程语言名称是否合法. 规则: 合法的编程语言名称不应该超过16个字符
+   * Checks whether a programming language name is legal. Rule: a legal programming language name
+   * should not exceed 16 characters.
    *
-   * @param languageName - 编程语言的名称
-   * @return 编程语言名称的合法性
+   * @param languageName - the name of the programming language
+   * @return whether the programming language name is legal
    */
   private boolean isLanguageNameLegal(String languageName) {
     return languageName.length() <= 16;
   }
 
   /**
-   * 检查编程语言的编译命令是否合法. 规则: 编程语言的编译命令不应该超过128个字符, 且应包含{filename}字段
+   * Checks whether a programming language's compile command is legal. Rule: the compile command
+   * should not exceed 128 characters and should contain the {filename} field.
    *
-   * @param compileCommand - 编程语言的编译命令
-   * @return 编程语言编译命令的合法性
+   * @param compileCommand - the compile command of the programming language
+   * @return whether the programming language's compile command is legal
    */
   private boolean isCompileCommandLegal(String compileCommand) {
     return compileCommand.length() <= 128 && compileCommand.matches(".*\\{filename\\}.*");
   }
 
   /**
-   * 检查编程语言的运行命令是否合法. 规则: 编程语言的运行命令不应该超过128个字符, 且应包含{filename}字段
+   * Checks whether a programming language's run command is legal. Rule: the run command should not
+   * exceed 128 characters and should contain the {filename} field.
    *
-   * @param runCommand - 编程语言的运行命令
-   * @return 编程语言运行命令的合法性
+   * @param runCommand - the run command of the programming language
+   * @return whether the programming language's run command is legal
    */
   private boolean isRunCommandLegal(String runCommand) {
     return runCommand.length() <= 128 && runCommand.matches(".*\\{filename\\}.*");
   }
 
   /**
-   * 检查是否存在该语言的其他记录, 若存在, 由于数据库外键完整性约束则无法删除.
+   * Checks whether other records reference this language; if so, it cannot be deleted due to the
+   * database foreign key integrity constraints.
    *
-   * @param language - 待检查的编程语言
-   * @return 是否存在该语言的提交记录
+   * @param language - the programming language to check
+   * @return whether there are submissions referencing this language
    */
   private boolean isLanguageInUse(Language language) {
     if (language == null) {
@@ -331,12 +336,15 @@ public class LanguageService {
         || submissionMapper.getNumberOfSubmissionsUsingLanguage(languageId) != 0;
   }
 
-  /** 自动注入的LanguageMapper对象. */
+  /** The autowired LanguageMapper object. */
   @Autowired private LanguageMapper languageMapper;
 
-  /** 自动注入的SubmissionMapper对象. 用于查询和语言相关联的提交记录. */
+  /** The autowired SubmissionMapper object, used to query submissions associated with a language. */
   @Autowired private SubmissionMapper submissionMapper;
 
-  /** 自动注入的UserMapper对象. 用于查询和语言相关联的用户偏好语言. */
+  /**
+   * The autowired UserMapper object, used to query users whose preferred language is associated with
+   * a language.
+   */
   @Autowired private UserMapper userMapper;
 }

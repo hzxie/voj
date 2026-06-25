@@ -23,15 +23,15 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 /**
- * Session监听器. 用于统计在线用户数据.
+ * The session listener. Used to count online user data.
  *
  * @author Haozhe Xie
  */
 public class SessionListener implements HttpSessionListener {
   /**
-   * 获取在线用户数量.
+   * Gets the number of online users.
    *
-   * @return 在线用户数量
+   * @return the number of online users
    */
   public static long getTotalSessions() {
     return totalSessions;
@@ -65,9 +65,9 @@ public class SessionListener implements HttpSessionListener {
     LOGGER.debug("Total Sessions: " + totalSessions);
   }
 
-  /** 活动的Session数量. */
+  /** The number of active sessions. */
   private static long totalSessions = 0;
 
-  /** 日志记录器. */
+  /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(SessionListener.class);
 }

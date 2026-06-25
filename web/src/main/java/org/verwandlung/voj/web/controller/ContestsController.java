@@ -43,7 +43,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 处理竞赛的相关请求.
+ * Handles the requests related to contests.
  *
  * @author Haozhe Xie
  */
@@ -51,12 +51,12 @@ import java.util.Map;
 @RequestMapping(value = "/contest")
 public class ContestsController {
   /**
-   * 显示竞赛列表页面.
+   * Displays the contest list page.
    *
-   * @param keyword - 竞赛的关键词
-   * @param request - HttpRequest对象
-   * @param response - HttpResponse对象
-   * @return 一个包含竞赛列表页面内容的ModelAndView对象
+   * @param keyword - the keyword of the contest
+   * @param request - the HttpRequest object
+   * @param response - the HttpResponse object
+   * @return a ModelAndView object containing the content of the contest list page
    */
   @RequestMapping(value = "", method = RequestMethod.GET)
   public ModelAndView contestsView(
@@ -72,12 +72,12 @@ public class ContestsController {
   }
 
   /**
-   * 获取竞赛的列表.
+   * Gets the list of contests.
    *
-   * @param keyword - 竞赛的关键词
-   * @param startIndex - 当前加载的最后一条记录的索引值 (Index)
-   * @param request - HttpRequest对象
-   * @return 一个包含竞赛列表的HashMap对象
+   * @param keyword - the keyword of the contest
+   * @param startIndex - the index value of the last currently-loaded record
+   * @param request - the HttpRequest object
+   * @return a HashMap object containing the list of contests
    */
   @RequestMapping(value = "/getContests.action", method = RequestMethod.GET)
   public @ResponseBody Map<String, Object> getContestsAction(
@@ -95,12 +95,12 @@ public class ContestsController {
   }
 
   /**
-   * 显示竞赛详细信息的页面.
+   * Displays the page of the detailed information of a contest.
    *
-   * @param contestId - 竞赛的唯一标识符
-   * @param request - HttpRequest对象
-   * @param response - HttpResponse对象
-   * @return 包含提交详细信息的ModelAndView对象
+   * @param contestId - the unique identifier of the contest
+   * @param request - the HttpRequest object
+   * @param response - the HttpResponse object
+   * @return a ModelAndView object containing the detailed information of the contest
    */
   @RequestMapping(value = "/{contestId}", method = RequestMethod.GET)
   public ModelAndView contestView(
@@ -133,13 +133,14 @@ public class ContestsController {
   }
 
   /**
-   * 处理用户参加竞赛的请求.
+   * Handles the request of a user attending a contest.
    *
-   * @param contestId - 竞赛的唯一标识符
-   * @param csrfToken - 用于防止CSRF攻击的Token
-   * @param request - HttpRequest对象
-   * @param response - HttpResponse对象
-   * @return 包含是否成功参加竞赛状态信息的Map对象
+   * @param contestId - the unique identifier of the contest
+   * @param csrfToken - the token used to prevent CSRF attacks
+   * @param request - the HttpRequest object
+   * @param response - the HttpResponse object
+   * @return a Map object containing the status information of whether the contest was attended
+   *     successfully
    */
   @RequestMapping(value = "/{contestId}/attend.action", method = RequestMethod.POST)
   public @ResponseBody Map<String, Boolean> attendContestAction(
@@ -164,12 +165,12 @@ public class ContestsController {
   }
 
   /**
-   * 显示排行榜.
+   * Displays the leaderboard.
    *
-   * @param contestId - 竞赛的唯一标识符
-   * @param request - HttpRequest对象
-   * @param response - HttpResponse对象
-   * @return 包含竞赛排行榜的ModelAndView对象
+   * @param contestId - the unique identifier of the contest
+   * @param request - the HttpRequest object
+   * @param response - the HttpResponse object
+   * @return a ModelAndView object containing the contest leaderboard
    */
   @RequestMapping(value = "/{contestId}/leaderboard", method = RequestMethod.GET)
   public ModelAndView leaderboardView(
@@ -209,13 +210,13 @@ public class ContestsController {
   }
 
   /**
-   * 显示竞赛中的试题信息.
+   * Displays the information of a problem in a contest.
    *
-   * @param contestId - 竞赛的唯一标识符
-   * @param problemId - 试题的唯一标识符
-   * @param request - HttpRequest对象
-   * @param response - HttpResponse对象
-   * @return 包含竞赛试题信息的ModelAndView对象
+   * @param contestId - the unique identifier of the contest
+   * @param problemId - the unique identifier of the problem
+   * @param request - the HttpRequest object
+   * @param response - the HttpResponse object
+   * @return a ModelAndView object containing the information of the contest problem
    */
   @RequestMapping(value = "/{contestId}/p/{problemId}", method = RequestMethod.GET)
   public ModelAndView problemView(
@@ -229,12 +230,12 @@ public class ContestsController {
     if (contest == null) {
       throw new ResourceNotFoundException();
     }
-    // 试题不存在于竞赛试题列表中
+    // The problem does not exist in the contest's problem list
     List<Long> problems = JsonUtils.toList(contest.getProblems(), Long.class);
     if (!problems.contains(problemId)) {
       throw new ResourceNotFoundException();
     }
-    // 未参加竞赛者在竞赛结束前无法查看试题
+    // Users who have not attended the contest cannot view the problem before the contest ends
     Date currentTime = new Date();
     boolean isAttended = contestService.isAttendContest(contestId, currentUser);
     if (contest.getEndTime().after(currentTime) && !isAttended) {
@@ -258,21 +259,24 @@ public class ContestsController {
     return view;
   }
 
-  /** 每次查询需要加载竞赛的数量. */
+  /** The number of contests to load per query. */
   private static final int NUMBER_OF_CONTESTS_PER_PAGE = 10;
 
-  /** 自动注入的ContestService对象. */
+  /** The autowired ContestService object. */
   @Autowired private ContestService contestService;
 
-  /** 自动注入的ProblemService对象. 用于查询试题信息. */
+  /** The autowired ProblemService object. Used for querying problem information. */
   @Autowired private ProblemService problemService;
 
-  /** 自动注入的LanguageService对象. 用于加载试题详情页的语言选项. */
+  /**
+   * The autowired LanguageService object. Used for loading the language options of the problem
+   * detail page.
+   */
   @Autowired private LanguageService languageService;
 
-  /** 自动注入的SubmissionService对象. 用于创建提交记录. */
+  /** The autowired SubmissionService object. Used for creating submission records. */
   @Autowired private SubmissionService subsmissionService;
 
-  /** 日志记录器. */
+  /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(ContestsController.class);
 }

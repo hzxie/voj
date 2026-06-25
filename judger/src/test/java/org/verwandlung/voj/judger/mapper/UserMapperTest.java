@@ -27,7 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.verwandlung.voj.judger.model.User;
 
 /**
- * UserMapper测试类.
+ * Test class for UserMapper.
  *
  * @author Haozhe Xie
  */
@@ -35,7 +35,10 @@ import org.verwandlung.voj.judger.model.User;
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class UserMapperTest {
-  /** 测试用例: 测试getUserUsingUsername(String)方法 测试数据: 使用用户名为zjhzxhz的用户 预期结果: 返回预期的用户对象 */
+  /**
+   * Test case: tests the getUserUsingUsername(String) method. Test data: the user with username
+   * "zjhzxhz". Expected result: returns the expected user object.
+   */
   @Test
   public void testGetUserUsingUsernameExists() {
     User user = userMapper.getUserUsingUsername("Zjhzxhz");
@@ -45,13 +48,16 @@ public class UserMapperTest {
     Assertions.assertEquals(1000, uid);
   }
 
-  /** 测试用例: 测试getUserUsingUsername(String)方法 测试数据: 使用不存在的用户名 预期结果: 返回空引用 */
+  /**
+   * Test case: tests the getUserUsingUsername(String) method. Test data: a non-existent username.
+   * Expected result: returns a null reference.
+   */
   @Test
   public void testGetUserUsingUsernameNotExists() {
     User user = userMapper.getUserUsingUsername("Not-Exists");
     Assertions.assertNull(user);
   }
 
-  /** 待测试的UserMapper对象. */
+  /** The UserMapper object under test. */
   @Autowired private UserMapper userMapper;
 }

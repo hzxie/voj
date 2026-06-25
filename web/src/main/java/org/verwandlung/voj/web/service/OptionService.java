@@ -31,7 +31,8 @@ import org.verwandlung.voj.web.model.Option;
 import org.verwandlung.voj.web.util.JsonUtils;
 
 /**
- * 系统管理服务. 用于完成整个系统的管理功能.
+ * The system administration service, used to perform the administration functions of the whole
+ * system.
  *
  * @author Haozhe Xie
  */
@@ -39,45 +40,45 @@ import org.verwandlung.voj.web.util.JsonUtils;
 @Transactional
 public class OptionService {
   /**
-   * 获取全部系统选项.
+   * Gets all system options.
    *
-   * @return 一个包含全部系统选项的列表
+   * @return a list containing all system options
    */
   public List<Option> getOptions() {
     return optionMapper.getOptions();
   }
 
   /**
-   * 获取自动加载的系统选项.
+   * Gets the system options that are loaded automatically.
    *
-   * @return 一个包含自动加载系统选项的列表
+   * @return a list containing the auto-loaded system options
    */
   public List<Option> getAutoloadOptions() {
     return optionMapper.getAutoloadOptions();
   }
 
   /**
-   * 根据系统选项的名称获取选项的值.
+   * Gets the value of a system option by its name.
    *
-   * @param optionName - 系统选项的名称
-   * @return 对应的Option对象
+   * @param optionName - the name of the system option
+   * @return the corresponding Option object
    */
   public Option getOption(String optionName) {
     return optionMapper.getOption(optionName);
   }
 
   /**
-   * 更新系统选项.
+   * Updates the system options.
    *
-   * @param websiteName - 网站名称
-   * @param websiteDescription - 网站描述
-   * @param copyright - 网站版权信息
-   * @param allowUserRegister - 是否允许用户注册
-   * @param icpNumber - 网站备案号
-   * @param policeIcpNumber - 公安备案号
-   * @param googleAnalyticsCode - Google Analytics代码
-   * @param offensiveWords - 敏感词列表
-   * @return 包含选项更新结果的Map对象
+   * @param websiteName - the website name
+   * @param websiteDescription - the website description
+   * @param copyright - the website copyright information
+   * @param allowUserRegister - whether to allow user registration
+   * @param icpNumber - the website ICP registration number
+   * @param policeIcpNumber - the police ICP registration number
+   * @param googleAnalyticsCode - the Google Analytics code
+   * @param offensiveWords - the list of offensive words
+   * @return a Map object containing the option update result
    */
   public Map<String, Boolean> updateOptions(
       String websiteName,
@@ -126,9 +127,9 @@ public class OptionService {
   }
 
   /**
-   * 更新系统选项.
+   * Updates the system options.
    *
-   * @param optionMap - 包含系统选项的键值对
+   * @param optionMap - the key-value pairs containing the system options
    */
   public void updateOptions(Map<String, String> optionMap) {
     for (Entry<String, String> e : optionMap.entrySet()) {
@@ -142,40 +143,45 @@ public class OptionService {
   }
 
   /**
-   * 检查网站名称是否合法. 规则: 合法的网站名称长度不应该超过32个字符
+   * Checks whether the website name is legal. Rule: a legal website name should not exceed 32
+   * characters.
    *
-   * @param websiteName - 网站名称
-   * @return 网站名称的合法性
+   * @param websiteName - the website name
+   * @return whether the website name is legal
    */
   private boolean isWebsiteNameLegal(String websiteName) {
     return websiteName.length() <= 32;
   }
 
   /**
-   * 检查网站的描述信息是否合法. 规则: 合法的网站描述信息不应该超过128个字符
+   * Checks whether the website description is legal. Rule: a legal website description should not
+   * exceed 128 characters.
    *
-   * @param websiteDescription - 网站的描述信息
-   * @return 网站描述信息的合法性
+   * @param websiteDescription - the website description
+   * @return whether the website description is legal
    */
   private boolean isWebsiteDescriptionLegal(String websiteDescription) {
     return websiteDescription.length() <= 128;
   }
 
   /**
-   * 检查网站版权信息是否合法. 规则: 合法的版权信息的长度不应该超过128个字符
+   * Checks whether the website copyright information is legal. Rule: legal copyright information
+   * should not exceed 128 characters.
    *
-   * @param copyright - 网站的版权信息
-   * @return 版权信息的合法性
+   * @param copyright - the website copyright information
+   * @return whether the copyright information is legal
    */
   private boolean isCopyrightLegal(String copyright) {
     return copyright.length() <= 128;
   }
 
   /**
-   * 检查网站备案号是否合法. 规则: 合法的网站备案号形如: 浙ICP备15017174号
+   * Checks whether the website ICP registration number is legal. Rule: a legal ICP registration
+   * number is a Chinese ICP filing number consisting of a province character, the "ICP" filing
+   * prefix and an 8-digit number.
    *
-   * @param icpNumber - 网站备案号
-   * @return 网站备案号的合法性
+   * @param icpNumber - the website ICP registration number
+   * @return whether the website ICP registration number is legal
    */
   private boolean isIcpNumberLegal(String icpNumber) {
     boolean isIcpNumberEmpty = icpNumber.isEmpty();
@@ -184,10 +190,12 @@ public class OptionService {
   }
 
   /**
-   * 检查公安机关备案号是否合法. 规则: 合法的公安机关备案号形如: 浙公网安备33010202000766号
+   * Checks whether the police ICP registration number is legal. Rule: a legal police ICP
+   * registration number is a Chinese public-security filing number consisting of a province
+   * character, the public-security filing prefix and a 14-digit number.
    *
-   * @param policeIcpNumber - 公安机关备案号
-   * @return 公安机关备案号的合法性
+   * @param policeIcpNumber - the police ICP registration number
+   * @return whether the police ICP registration number is legal
    */
   private boolean isPoliceIcpNumberLegal(String policeIcpNumber) {
     boolean isIcpNumberEmpty = policeIcpNumber.isEmpty();
@@ -196,10 +204,11 @@ public class OptionService {
   }
 
   /**
-   * 检查GoogleAnalytics代码是否合法. 规则: 合法的GoogleAnalyticsCode应该被<script>标签所包括
+   * Checks whether the Google Analytics code is legal. Rule: a legal Google Analytics code should be
+   * wrapped in a &lt;script&gt; tag.
    *
-   * @param googleAnalyticsCode - GoogleAnalytics代码
-   * @return GoogleAnalytics代码的合法性
+   * @param googleAnalyticsCode - the Google Analytics code
+   * @return whether the Google Analytics code is legal
    */
   private boolean isGoogleAnalyticsCodeLegal(String googleAnalyticsCode) {
     boolean isAnalyticsCodeEmpty = googleAnalyticsCode.isEmpty();
@@ -208,6 +217,6 @@ public class OptionService {
     return isAnalyticsCodeEmpty || isAnalyticsCodeLegal;
   }
 
-  /** 自动注入的OptionMapper对象. */
+  /** The autowired OptionMapper object. */
   @Autowired private OptionMapper optionMapper;
 }

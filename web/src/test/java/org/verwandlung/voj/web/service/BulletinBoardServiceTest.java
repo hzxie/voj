@@ -31,7 +31,7 @@ import org.verwandlung.voj.web.mapper.BulletinBoardMessageMapper;
 import org.verwandlung.voj.web.model.BulletinBoardMessage;
 
 /**
- * BulletinBoardService测试类.
+ * The test class for BulletinBoardService.
  *
  * @author Haozhe Xie
  */
@@ -39,13 +39,13 @@ import org.verwandlung.voj.web.model.BulletinBoardMessage;
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class BulletinBoardServiceTest {
-  /** 测试用例: 测试getNumberOfBulletinBoardMessages()方法 测试数据: 数据表为空 预期结果: 返回0 */
+  /** Test case: tests the getNumberOfBulletinBoardMessages() method. Test data: the table is empty. Expected: returns 0. */
   @Test
   public void testGetNumberOfBulletinBoardMessagesWhenEmpty() {
     Assertions.assertEquals(0, bulletinBoardService.getNumberOfBulletinBoardMessages());
   }
 
-  /** 测试用例: 测试getNumberOfBulletinBoardMessages()方法 测试数据: 创建两条消息 预期结果: 返回2 */
+  /** Test case: tests the getNumberOfBulletinBoardMessages() method. Test data: create two messages. Expected: returns 2. */
   @Test
   public void testGetNumberOfBulletinBoardMessagesAfterCreate() {
     createMessage("First");
@@ -53,7 +53,7 @@ public class BulletinBoardServiceTest {
     Assertions.assertEquals(2, bulletinBoardService.getNumberOfBulletinBoardMessages());
   }
 
-  /** 测试用例: 测试getBulletinBoardMessages(long, int)方法 测试数据: 创建多条消息 预期结果: 按messageId降序分页返回 */
+  /** Test case: tests the getBulletinBoardMessages(long, int) method. Test data: create multiple messages. Expected: paginated results ordered by messageId descending. */
   @Test
   public void testGetBulletinBoardMessages() {
     createMessage("First");
@@ -64,7 +64,7 @@ public class BulletinBoardServiceTest {
     Assertions.assertEquals("Second", messages.get(0).getMessageTitle());
   }
 
-  /** 测试用例: 测试getBulletinBoardMessage(long)方法 测试数据: 存在的消息标识符 预期结果: 返回对应的布告栏消息 */
+  /** Test case: tests the getBulletinBoardMessage(long) method. Test data: an existing message identifier. Expected: the corresponding bulletin board message. */
   @Test
   public void testGetBulletinBoardMessageExists() {
     BulletinBoardMessage created = createMessage("Title");
@@ -74,22 +74,22 @@ public class BulletinBoardServiceTest {
     Assertions.assertEquals("Title", message.getMessageTitle());
   }
 
-  /** 测试用例: 测试getBulletinBoardMessage(long)方法 测试数据: 不存在的消息标识符 预期结果: 返回空引用 */
+  /** Test case: tests the getBulletinBoardMessage(long) method. Test data: a non-existing message identifier. Expected: a null reference. */
   @Test
   public void testGetBulletinBoardMessageNotExists() {
     Assertions.assertNull(bulletinBoardService.getBulletinBoardMessage(0));
   }
 
-  /** 通过Mapper创建一条布告栏消息以便测试Service的读取逻辑. */
+  /** Creates a bulletin board message through the Mapper in order to test the read logic of the Service. */
   private BulletinBoardMessage createMessage(String title) {
     BulletinBoardMessage message = new BulletinBoardMessage(title, title + " Body", new Date());
     bulletinBoardMessageMapper.createBulletinBoardMessage(message);
     return message;
   }
 
-  /** 待测试的BulletinBoardService对象. */
+  /** The BulletinBoardService object under test. */
   @Autowired private BulletinBoardService bulletinBoardService;
 
-  /** 用于在测试事务内构造布告栏消息数据的Mapper. */
+  /** The Mapper used to construct bulletin board message data within the test transaction. */
   @Autowired private BulletinBoardMessageMapper bulletinBoardMessageMapper;
 }

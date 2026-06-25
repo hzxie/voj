@@ -31,7 +31,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
 /**
- * 消息接收服务. 用于接收来自评测机的实时评测结果.
+ * The message receiving service. Used to receive real-time judge results from the judgers.
  *
  * @author Haozhe Xie
  */
@@ -67,9 +67,9 @@ public class MessageReceiver implements MessageListener {
   }
 
   /**
-   * 处理评测机发生内部错误的消息.
+   * Handles the message of an internal error occurring in the judger.
    *
-   * @param mapMessage - 消息队列中收到的MapMessage对象
+   * @param mapMessage - the MapMessage object received from the message queue
    * @throws JMSException
    */
   private void errorHandler(MapMessage mapMessage) throws JMSException {
@@ -80,9 +80,9 @@ public class MessageReceiver implements MessageListener {
   }
 
   /**
-   * 处理评测机编译完成时的消息.
+   * Handles the message of the judger finishing compilation.
    *
-   * @param mapMessage - 消息队列中收到的MapMessage对象
+   * @param mapMessage - the MapMessage object received from the message queue
    * @throws JMSException
    */
   private void compileFinishedHandler(MapMessage mapMessage) throws JMSException {
@@ -106,9 +106,9 @@ public class MessageReceiver implements MessageListener {
   }
 
   /**
-   * 处理评测机完成单个测试点的消息.
+   * Handles the message of the judger finishing a single test point.
    *
-   * @param mapMessage - 消息队列中收到的MapMessage对象
+   * @param mapMessage - the MapMessage object received from the message queue
    * @throws JMSException
    */
   private void testPointFinishedHandler(MapMessage mapMessage) throws JMSException {
@@ -133,9 +133,9 @@ public class MessageReceiver implements MessageListener {
   }
 
   /**
-   * 处理评测机完成全部测试点的消息.
+   * Handles the message of the judger finishing all test points.
    *
-   * @param mapMessage - 消息队列中收到的MapMessage对象
+   * @param mapMessage - the MapMessage object received from the message queue
    * @throws JMSException
    */
   private void allTestPointsFinishedHandler(MapMessage mapMessage) throws JMSException {
@@ -160,9 +160,10 @@ public class MessageReceiver implements MessageListener {
   }
 
   /**
-   * 处理来自评测机的Keep-Alive消息. 用于在Web端获取后端评测机的信息.
+   * Handles the Keep-Alive message from the judger. Used to obtain the information of backend
+   * judgers on the web side.
    *
-   * @param mapMessage - 消息队列中收到的MapMessage对象
+   * @param mapMessage - the MapMessage object received from the message queue
    * @throws JMSException
    */
   private void receiveFromAliveJudgersHandler(MapMessage mapMessage) throws JMSException {
@@ -179,9 +180,12 @@ public class MessageReceiver implements MessageListener {
     LOGGER.info(String.format("Received heartbeat from Judger[%s]", judgerUsername));
   }
 
-  /** 自动注入的ApplicationEventPublisher对象. 用于完成接收到来自评测机的消息后的消息分发操作. */
+  /**
+   * The autowired ApplicationEventPublisher object. Used for dispatching messages after receiving
+   * them from the judgers.
+   */
   @Autowired private ApplicationEventPublisher eventPublisher;
 
-  /** 日志记录器. */
+  /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(MessageReceiver.class);
 }

@@ -33,10 +33,10 @@ import org.verwandlung.voj.judger.model.Language;
  */
 public interface LanguageMapper {
   /**
-   * 通过编程语言的唯一标识符获取编程语言对象.
+   * Gets a programming language object by its unique identifier.
    *
-   * @param languageId - 编程语言的唯一标识符
-   * @return 预期的编程语言对象或空引用
+   * @param languageId - the unique identifier of the programming language
+   * @return the expected programming language object, or a null reference
    */
   @Select("SELECT * FROM voj_languages WHERE language_id = #{languageId}")
   @Options(useCache = true)
@@ -50,10 +50,10 @@ public interface LanguageMapper {
   Language getLanguageUsingId(@Param("languageId") int languageId);
 
   /**
-   * 通过编程语言的唯一英文缩写获取编程语言对象.
+   * Gets a programming language object by its unique English abbreviation.
    *
-   * @param languageSlug - 编程语言的唯一英文缩写
-   * @return 预期的编程语言对象或空引用
+   * @param languageSlug - the unique English abbreviation of the programming language
+   * @return the expected programming language object, or a null reference
    */
   @Select("SELECT * FROM voj_languages WHERE language_slug = #{languageSlug}")
   @Options(useCache = true)
@@ -67,9 +67,9 @@ public interface LanguageMapper {
   Language getLanguageUsingSlug(@Param("languageSlug") String languageSlug);
 
   /**
-   * 获取支持的编程语言.
+   * Gets the supported programming languages.
    *
-   * @return 编程语言列表(List<Language>对象)
+   * @return the list of programming languages (a List<Language> object)
    */
   @Select("SELECT * FROM voj_languages")
   @Options(useCache = true)

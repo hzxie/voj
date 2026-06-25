@@ -27,7 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.verwandlung.voj.judger.model.JudgeResult;
 
 /**
- * JudgeResultMapper测试类.
+ * Test class for JudgeResultMapper.
  *
  * @author Haozhe Xie
  */
@@ -36,8 +36,9 @@ import org.verwandlung.voj.judger.model.JudgeResult;
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class JudgeResultMapperTest {
   /**
-   * 测试用例: 测试getJudgeResultUsingSlug(String)方法 测试数据: 普通评测结果(JudgeResult)的评测结果组唯一英文缩写 预期结果:
-   * 返回评测结果(JudgeResult)的评测结果组对象
+   * Test case: tests the getJudgeResultUsingSlug(String) method. Test data: the unique English
+   * abbreviation of an ordinary judge result. Expected result: returns the corresponding
+   * JudgeResult object.
    */
   @Test
   public void testGetJudgeResultUsingSlugExists() {
@@ -48,13 +49,16 @@ public class JudgeResultMapperTest {
     Assertions.assertEquals(2, judgeResultId);
   }
 
-  /** 测试用例: 测试getJudgeResultUsingSlug(String)方法 测试数据: 不存在的评测结果组唯一英文缩写 预期结果: 返回空引用 */
+  /**
+   * Test case: tests the getJudgeResultUsingSlug(String) method. Test data: a non-existent unique
+   * English abbreviation of a judge result. Expected result: returns a null reference.
+   */
   @Test
   public void testGetJudgeResultUsingSlugNotExists() {
     JudgeResult judgeResult = judgeResultMapper.getJudgeResultUsingSlug("Not-Exists");
     Assertions.assertNull(judgeResult);
   }
 
-  /** 待测试的JudgeResultMapper对象. */
+  /** The JudgeResultMapper object under test. */
   @Autowired private JudgeResultMapper judgeResultMapper;
 }

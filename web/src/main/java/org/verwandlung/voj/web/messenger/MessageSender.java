@@ -25,16 +25,16 @@ import org.springframework.jms.core.JmsTemplate;
 import org.springframework.stereotype.Component;
 
 /**
- * 消息发送服务. 用于发送新的评测任务至消息队列.
+ * The message sending service. Used to send new judge tasks to the message queue.
  *
  * @author Haozhe Xie
  */
 @Component
 public class MessageSender {
   /**
-   * 发送消息至消息队列.
+   * Sends a message to the message queue.
    *
-   * @param mapMessage - Key-Value格式的消息
+   * @param mapMessage - the message in Key-Value format
    */
   public void sendMessage(final Map<String, Object> mapMessage) {
     long submissionId = (Long) mapMessage.get("submissionId");
@@ -44,9 +44,9 @@ public class MessageSender {
         String.format("Submission task #%d has been created.", new Object[] {submissionId}));
   }
 
-  /** 自动注入的JmsTemplate对象. 用于发送消息至消息队列. */
+  /** The autowired JmsTemplate object. Used to send messages to the message queue. */
   @Autowired private JmsTemplate jmsTemplate;
 
-  /** 日志记录器. */
+  /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(MessageSender.class);
 }

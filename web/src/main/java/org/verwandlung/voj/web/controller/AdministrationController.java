@@ -61,7 +61,7 @@ import org.verwandlung.voj.web.util.JsonUtils;
 import org.verwandlung.voj.web.util.SessionListener;
 
 /**
- * 用于处理系统管理的请求.
+ * Handles the requests for system administration.
  *
  * @author Haozhe Xie
  */
@@ -69,11 +69,11 @@ import org.verwandlung.voj.web.util.SessionListener;
 @RequestMapping(value = "/administration")
 public class AdministrationController {
   /**
-   * 加载系统管理首页.
+   * Loads the system administration home page.
    *
-   * @param request - HttpRequest对象
-   * @param response - HttpResponse对象
-   * @return 包含系统管理页面信息的ModelAndView对象
+   * @param request - the HttpRequest object
+   * @param response - the HttpResponse object
+   * @return a ModelAndView object containing the information of the system administration page
    */
   @RequestMapping(value = "", method = RequestMethod.GET)
   public ModelAndView indexView(HttpServletRequest request, HttpServletResponse response) {
@@ -91,9 +91,9 @@ public class AdministrationController {
   }
 
   /**
-   * 获取系统中注册用户的总数.
+   * Gets the total number of registered users in the system.
    *
-   * @return 系统中注册用户的总数
+   * @return the total number of registered users in the system
    */
   private long getTotalUsers() {
     UserGroup userGroup = userService.getUserGroupUsingSlug("users");
@@ -101,36 +101,36 @@ public class AdministrationController {
   }
 
   /**
-   * 获取今日注册的用户数量.
+   * Gets the number of users registered today.
    *
-   * @return 今日注册的用户数量
+   * @return the number of users registered today
    */
   public long getNumberOfUserRegisteredToday() {
     return userService.getNumberOfUserRegisteredToday();
   }
 
   /**
-   * 获取在线用户的数量.
+   * Gets the number of online users.
    *
-   * @return 在线用户的数量
+   * @return the number of online users
    */
   private long getOnlineUsers() {
     return SessionListener.getTotalSessions();
   }
 
   /**
-   * 获取全部试题的总数量.
+   * Gets the total number of all problems.
    *
-   * @return 全部试题的总数量
+   * @return the total number of all problems
    */
   private long getTotalProblems() {
     return problemService.getNumberOfProblems();
   }
 
   /**
-   * 获取私有试题的数量.
+   * Gets the number of private problems.
    *
-   * @return 私有试题的数量
+   * @return the number of private problems
    */
   private long getPrivateProblems() {
     long numberOfTotalProblems = getTotalProblems();
@@ -139,18 +139,18 @@ public class AdministrationController {
   }
 
   /**
-   * 获取全部试题测试点的数量(包括私有试题).
+   * Gets the total number of checkpoints of all problems (including private problems).
    *
-   * @return 全部试题测试点的数量
+   * @return the total number of checkpoints of all problems
    */
   private long getNumberOfCheckpoints() {
     return problemService.getNumberOfCheckpoints();
   }
 
   /**
-   * 获取今日的提交数量.
+   * Gets the number of submissions today.
    *
-   * @return 今日的提交数量
+   * @return the number of submissions today
    */
   private long getSubmissionsToday() {
     Calendar calendar = Calendar.getInstance();
@@ -167,9 +167,9 @@ public class AdministrationController {
   }
 
   /**
-   * 获取Web应用当前内存占用情况.
+   * Gets the current memory usage of the web application.
    *
-   * @return Web应用当前内存占用(MB)
+   * @return the current memory usage of the web application (MB)
    */
   private long getCurrentMemoryUsage() {
     long totalMemory = Runtime.getRuntime().totalMemory();
@@ -179,20 +179,21 @@ public class AdministrationController {
   }
 
   /**
-   * 获取在线的评测机数量. 通过获取监听消息队列的Consumer数量.
+   * Gets the number of online judgers, by getting the number of consumers listening to the message
+   * queue.
    *
-   * @return 在线的评测机数量
+   * @return the number of online judgers
    */
   private long getOnlineJudgers() {
     return eventListener.getOnlineJudgers();
   }
 
   /**
-   * 获取系统一段时间内的提交次数.
+   * Gets the number of submissions of the system over a period of time.
    *
-   * @param period - 时间间隔的天数
-   * @param request - HttpServletRequest对象
-   * @return 包含提交次数与时间的 Map 对象
+   * @param period - the number of days of the time interval
+   * @param request - the HttpServletRequest object
+   * @return a Map object containing the submission counts by date
    */
   @RequestMapping(value = "/getNumberOfSubmissions.action", method = RequestMethod.GET)
   public @ResponseBody Map<String, Object> getNumberOfSubmissionsAction(
@@ -211,11 +212,11 @@ public class AdministrationController {
   }
 
   /**
-   * 加载用户列表页面.
+   * Loads the user list page.
    *
-   * @param request - HttpRequest对象
-   * @param response - HttpResponse对象
-   * @return 包含用户列表页面信息的ModelAndView对象
+   * @param request - the HttpRequest object
+   * @param response - the HttpResponse object
+   * @return a ModelAndView object containing the information of the user list page
    */
   @RequestMapping(value = "/all-users", method = RequestMethod.GET)
   public ModelAndView allUsersView(
@@ -244,11 +245,11 @@ public class AdministrationController {
   }
 
   /**
-   * 删除选定的用户.
+   * Deletes the selected users.
    *
-   * @param users - 用户ID的集合, 以逗号(, )分隔
-   * @param request - HttpServletRequest对象
-   * @return 提交记录的删除结果
+   * @param users - the set of user IDs, separated by commas (, )
+   * @param request - the HttpServletRequest object
+   * @return the deletion result
    */
   @RequestMapping(value = "/deleteUsers.action", method = RequestMethod.POST)
   public @ResponseBody Map<String, Boolean> deleteUsersAction(
@@ -264,12 +265,12 @@ public class AdministrationController {
   }
 
   /**
-   * 加载编辑用户信息的页面.
+   * Loads the page for editing user information.
    *
-   * @param userId - 用户的唯一标识符
-   * @param request - HttpServletRequest对象
-   * @param response - HttpServletResponse对象
-   * @return 包含编辑用户信息的ModelAndView对象
+   * @param userId - the unique identifier of the user
+   * @param request - the HttpServletRequest object
+   * @param response - the HttpServletResponse object
+   * @return a ModelAndView object containing the user information to edit
    */
   @RequestMapping(value = "/edit-user/{userId}", method = RequestMethod.GET)
   public ModelAndView editUserView(
@@ -293,19 +294,19 @@ public class AdministrationController {
   }
 
   /**
-   * 编辑用户个人信息.
+   * Edits a user's profile information.
    *
-   * @param uid - 用户的唯一标识符.
-   * @param password - 用户的密码(未经MD5加密)
-   * @param email - 用户的电子邮件地址
-   * @param userGroupSlug - 用户组的别名
-   * @param preferLanguageSlug - 用户的偏好语言的别名
-   * @param location - 用户的所在地区
-   * @param website - 用户的个人主页
-   * @param socialLinks - 用户的社交网络信息
-   * @param aboutMe - 用户的个人简介
-   * @param request - HttpServletRequest对象
-   * @return 一个包含个人资料修改结果的Map<String, Boolean>对象
+   * @param uid - the unique identifier of the user
+   * @param password - the user's password (not encrypted with MD5)
+   * @param email - the user's email address
+   * @param userGroupSlug - the slug of the user group
+   * @param preferLanguageSlug - the slug of the user's preferred language
+   * @param location - the user's location
+   * @param website - the user's personal homepage
+   * @param socialLinks - the user's social network information
+   * @param aboutMe - the user's personal bio
+   * @param request - the HttpServletRequest object
+   * @return a Map<String, Boolean> object containing the profile update result
    */
   @RequestMapping(value = "/editUser.action", method = RequestMethod.POST)
   public @ResponseBody Map<String, Boolean> editUserAction(
@@ -341,11 +342,11 @@ public class AdministrationController {
   }
 
   /**
-   * 加载创建用户页面.
+   * Loads the create user page.
    *
-   * @param request - HttpServletRequest对象
-   * @param response - HttpServletResponse对象
-   * @return 包含创建用户页面信息的ModelAndView对象
+   * @param request - the HttpServletRequest object
+   * @param response - the HttpServletResponse object
+   * @return a ModelAndView object containing the information of the create user page
    */
   @RequestMapping(value = "/new-user", method = RequestMethod.GET)
   public ModelAndView newUserView(HttpServletRequest request, HttpServletResponse response) {
@@ -358,15 +359,15 @@ public class AdministrationController {
   }
 
   /**
-   * 创建新用户.
+   * Creates a new user.
    *
-   * @param username - 用户名
-   * @param password - 密码
-   * @param email - 电子邮件地址
-   * @param userGroupSlug - 用户组的别名
-   * @param preferLanguageSlug - 偏好语言的别名
-   * @param request - HttpServletRequest对象
-   * @return 一个包含账户创建结果的Map<String, Boolean>对象
+   * @param username - the username
+   * @param password - the password
+   * @param email - the email address
+   * @param userGroupSlug - the slug of the user group
+   * @param preferLanguageSlug - the slug of the preferred language
+   * @param request - the HttpServletRequest object
+   * @return a Map<String, Boolean> object containing the account creation result
    */
   @RequestMapping(value = "/newUser.action", method = RequestMethod.POST)
   public @ResponseBody Map<String, Boolean> newUserAction(
@@ -390,11 +391,11 @@ public class AdministrationController {
   }
 
   /**
-   * 加载试题列表页面.
+   * Loads the problem list page.
    *
-   * @param request - HttpServletRequest对象
-   * @param response - HttpServletResponse对象
-   * @return 包含提交列表页面信息的ModelAndView对象
+   * @param request - the HttpServletRequest object
+   * @param response - the HttpServletResponse object
+   * @return a ModelAndView object containing the information of the problem list page
    */
   @RequestMapping(value = "/all-problems", method = RequestMethod.GET)
   public ModelAndView allProblemsView(
@@ -442,11 +443,11 @@ public class AdministrationController {
   }
 
   /**
-   * 删除选定的试题.
+   * Deletes the selected problems.
    *
-   * @param problems - 试题ID的集合, 以逗号(, )分隔
-   * @param request - HttpServletRequest对象
-   * @return 试题的删除结果
+   * @param problems - the set of problem IDs, separated by commas (, )
+   * @param request - the HttpServletRequest object
+   * @return the deletion result of the problems
    */
   @RequestMapping(value = "/deleteProblems.action", method = RequestMethod.POST)
   public @ResponseBody Map<String, Boolean> deleteProblemsAction(
@@ -468,11 +469,11 @@ public class AdministrationController {
   }
 
   /**
-   * 加载创建试题页面.
+   * Loads the create problem page.
    *
-   * @param request - HttpServletRequest对象
-   * @param response - HttpServletResponse对象
-   * @return 包含创建试题页面信息的ModelAndView对象
+   * @param request - the HttpServletRequest object
+   * @param response - the HttpServletResponse object
+   * @return a ModelAndView object containing the information of the create problem page
    */
   @RequestMapping(value = "/new-problem", method = RequestMethod.GET)
   public ModelAndView newProblemView(HttpServletRequest request, HttpServletResponse response) {
@@ -485,24 +486,24 @@ public class AdministrationController {
   }
 
   /**
-   * 处理用户创建试题的请求.
+   * Handles the user's request to create a problem.
    *
-   * @param problemName - 试题名称
-   * @param timeLimit - 时间限制
-   * @param memoryLimit - 内存占用限制
-   * @param description - 试题描述
-   * @param hint - 试题提示
-   * @param inputFormat - 输入格式
-   * @param outputFormat - 输出格式
-   * @param inputSample - 输入样例
-   * @param outputSample - 输出样例
-   * @param testCases - 测试用例(JSON 格式)
-   * @param problemCategories - 试题分类(JSON 格式)
-   * @param problemTags - 试题标签((JSON 格式)
-   * @param isPublic - 试题是否公开
-   * @param isExactlyMatch - 测试点是否精确匹配
-   * @param request - HttpServletRequest对象
-   * @return 包含试题创建结果的 Map<String, Boolean>对象
+   * @param problemName - the name of the problem
+   * @param timeLimit - the time limit
+   * @param memoryLimit - the memory usage limit
+   * @param description - the description of the problem
+   * @param hint - the hint of the problem
+   * @param inputFormat - the input format
+   * @param outputFormat - the output format
+   * @param inputSample - the input sample
+   * @param outputSample - the output sample
+   * @param testCases - the test cases (in JSON format)
+   * @param problemCategories - the problem categories (in JSON format)
+   * @param problemTags - the problem tags (in JSON format)
+   * @param isPublic - whether the problem is public
+   * @param isExactlyMatch - whether the checkpoints are matched exactly
+   * @param request - the HttpServletRequest object
+   * @return a Map<String, Boolean> object containing the problem creation result
    */
   @RequestMapping(value = "/createProblem.action", method = RequestMethod.POST)
   public @ResponseBody Map<String, Object> createProblemAction(
@@ -557,12 +558,12 @@ public class AdministrationController {
   }
 
   /**
-   * 加载编辑试题页面.
+   * Loads the edit problem page.
    *
-   * @param problemId - 试题的唯一标识符
-   * @param request - HttpServletRequest对象
-   * @param response - HttpServletResponse对象
-   * @return 包含提交列表页面信息的ModelAndView对象
+   * @param problemId - the unique identifier of the problem
+   * @param request - the HttpServletRequest object
+   * @param response - the HttpServletResponse object
+   * @return a ModelAndView object containing the information of the edit problem page
    */
   @RequestMapping(value = "/edit-problem/{problemId}", method = RequestMethod.GET)
   public ModelAndView editProblemsView(
@@ -591,24 +592,24 @@ public class AdministrationController {
   }
 
   /**
-   * 处理用户编辑试题的请求.
+   * Handles the user's request to edit a problem.
    *
-   * @param problemName - 试题名称
-   * @param timeLimit - 时间限制
-   * @param memoryLimit - 内存占用限制
-   * @param description - 试题描述
-   * @param hint - 试题提示
-   * @param inputFormat - 输入格式
-   * @param outputFormat - 输出格式
-   * @param inputSample - 输入样例
-   * @param outputSample - 输出样例
-   * @param testCases - 测试用例(JSON 格式)
-   * @param problemCategories - 试题分类(JSON 格式)
-   * @param problemTags - 试题标签((JSON 格式)
-   * @param isPublic - 试题是否公开
-   * @param isExactlyMatch - 测试点是否精确匹配
-   * @param request - HttpServletRequest对象
-   * @return 包含试题编辑结果的 Map<String, Boolean>对象
+   * @param problemName - the name of the problem
+   * @param timeLimit - the time limit
+   * @param memoryLimit - the memory usage limit
+   * @param description - the description of the problem
+   * @param hint - the hint of the problem
+   * @param inputFormat - the input format
+   * @param outputFormat - the output format
+   * @param inputSample - the input sample
+   * @param outputSample - the output sample
+   * @param testCases - the test cases (in JSON format)
+   * @param problemCategories - the problem categories (in JSON format)
+   * @param problemTags - the problem tags (in JSON format)
+   * @param isPublic - whether the problem is public
+   * @param isExactlyMatch - whether the checkpoints are matched exactly
+   * @param request - the HttpServletRequest object
+   * @return a Map<String, Boolean> object containing the problem edit result
    */
   @RequestMapping(value = "/editProblem.action", method = RequestMethod.POST)
   public @ResponseBody Map<String, Boolean> editProblemAction(
@@ -664,11 +665,11 @@ public class AdministrationController {
   }
 
   /**
-   * 加载试题分类页面.
+   * Loads the problem categories page.
    *
-   * @param request - HttpServletRequest对象
-   * @param response - HttpServletResponse对象
-   * @return 包含试题分类页面信息的ModelAndView对象.
+   * @param request - the HttpServletRequest object
+   * @param response - the HttpServletResponse object
+   * @return a ModelAndView object containing the information of the problem categories page
    */
   @RequestMapping(value = "/problem-categories", method = RequestMethod.GET)
   public ModelAndView problemCategoriesView(
@@ -681,13 +682,13 @@ public class AdministrationController {
   }
 
   /**
-   * 创建试题分类.
+   * Creates a problem category.
    *
-   * @param problemCategorySlug - 试题分类的别名
-   * @param problemCategoryName - 试题分类的名称
-   * @param parentProblemCategorySlug - 父级试题分类的别名
-   * @param request - HttpServletRequest对象
-   * @return 包含试题分类的创建结果的Map<String, Object>对象
+   * @param problemCategorySlug - the slug of the problem category
+   * @param problemCategoryName - the name of the problem category
+   * @param parentProblemCategorySlug - the slug of the parent problem category
+   * @param request - the HttpServletRequest object
+   * @return a Map<String, Object> object containing the problem category creation result
    */
   @RequestMapping(value = "/createProblemCategory.action", method = RequestMethod.POST)
   public @ResponseBody Map<String, Object> createProblemCategoryAction(
@@ -712,14 +713,14 @@ public class AdministrationController {
   }
 
   /**
-   * 编辑试题分类.
+   * Edits a problem category.
    *
-   * @param problemCategoryId - 试题分类的唯一标识符
-   * @param problemCategorySlug - 试题分类的别名
-   * @param problemCategoryName - 试题分类的名称
-   * @param parentProblemCategorySlug - 父级试题分类的别名
-   * @param request - HttpServletRequest对象
-   * @return 包含试题分类的编辑结果的Map<String, Boolean>对象
+   * @param problemCategoryId - the unique identifier of the problem category
+   * @param problemCategorySlug - the slug of the problem category
+   * @param problemCategoryName - the name of the problem category
+   * @param parentProblemCategorySlug - the slug of the parent problem category
+   * @param request - the HttpServletRequest object
+   * @return a Map<String, Boolean> object containing the problem category edit result
    */
   @RequestMapping(value = "/editProblemCategory.action", method = RequestMethod.POST)
   public @ResponseBody Map<String, Boolean> editProblemCategoryAction(
@@ -747,11 +748,11 @@ public class AdministrationController {
   }
 
   /**
-   * 删除试题分类.
+   * Deletes problem categories.
    *
-   * @param problemCategories - 试题分类的唯一标识符集合
-   * @param request - HttpServletRequest对象
-   * @return 包含试题分类的删除结果的Map<String, Boolean>对象
+   * @param problemCategories - the set of unique identifiers of the problem categories
+   * @param request - the HttpServletRequest object
+   * @return a Map<String, Boolean> object containing the problem category deletion result
    */
   @RequestMapping(value = "/deleteProblemCategories.action", method = RequestMethod.POST)
   public @ResponseBody Map<String, Object> deleteProblemCategoryAction(
@@ -777,14 +778,14 @@ public class AdministrationController {
   }
 
   /**
-   * 加载提交列表页面.
+   * Loads the submission list page.
    *
-   * @param problemId - 提交对应试题的唯一标识符
-   * @param username - 提交者的用户名
-   * @param pageNumber - 当前页面的页码
-   * @param request - HttpServletRequest对象
-   * @param response - HttpServletResponse对象
-   * @return 包含提交列表页面信息的ModelAndView对象
+   * @param problemId - the unique identifier of the problem the submission corresponds to
+   * @param username - the username of the submitter
+   * @param pageNumber - the page number of the current page
+   * @param request - the HttpServletRequest object
+   * @param response - the HttpServletResponse object
+   * @return a ModelAndView object containing the information of the submission list page
    */
   @RequestMapping(value = "/all-submissions", method = RequestMethod.GET)
   public ModelAndView allSubmissionsView(
@@ -816,11 +817,11 @@ public class AdministrationController {
   }
 
   /**
-   * 删除选定的提交记录.
+   * Deletes the selected submission records.
    *
-   * @param submissions - 提交记录ID的集合, 以逗号(, )分隔
-   * @param request - HttpServletRequest对象
-   * @return 提交记录的删除结果
+   * @param submissions - the set of submission record IDs, separated by commas (, )
+   * @param request - the HttpServletRequest object
+   * @return the deletion result of the submission records
    */
   @RequestMapping(value = "/deleteSubmissions.action", method = RequestMethod.POST)
   public @ResponseBody Map<String, Object> deleteSubmissionsAction(
@@ -845,11 +846,11 @@ public class AdministrationController {
   }
 
   /**
-   * 重新评测选定的提交记录.
+   * Rejudges the selected submission records.
    *
-   * @param submissions - 提交记录ID的集合, 以逗号(, )分隔
-   * @param request - HttpServletRequest对象
-   * @return 重新评测请求的执行结果
+   * @param submissions - the set of submission record IDs, separated by commas (, )
+   * @param request - the HttpServletRequest object
+   * @return the execution result of the rejudge request
    */
   @RequestMapping(value = "/restartSubmissions.action", method = RequestMethod.POST)
   public @ResponseBody Map<String, Boolean> restartSubmissionsAction(
@@ -865,12 +866,12 @@ public class AdministrationController {
   }
 
   /**
-   * 查看提交记录.
+   * Views a submission record.
    *
-   * @param submissionId - 提交记录的唯一标识符
-   * @param request - HttpServletRequest对象
-   * @param response - HttpServletResponse对象
-   * @return 包含提交记录信息的ModelAndView对象
+   * @param submissionId - the unique identifier of the submission record
+   * @param request - the HttpServletRequest object
+   * @param response - the HttpServletResponse object
+   * @return a ModelAndView object containing the submission record information
    */
   @RequestMapping(value = "/edit-submission/{submissionId}", method = RequestMethod.GET)
   public ModelAndView editSubmissionView(
@@ -888,11 +889,11 @@ public class AdministrationController {
   }
 
   /**
-   * 加载常规选项页面.
+   * Loads the general settings page.
    *
-   * @param request - HttpRequest对象
-   * @param response - HttpResponse对象
-   * @return 包含常规选项页面信息的ModelAndView对象
+   * @param request - the HttpRequest object
+   * @param response - the HttpResponse object
+   * @return a ModelAndView object containing the information of the general settings page
    */
   @RequestMapping(value = "/general-settings", method = RequestMethod.GET)
   public ModelAndView generalSettingsView(
@@ -903,9 +904,9 @@ public class AdministrationController {
   }
 
   /**
-   * 获取系统全部的选项, 以键值对的形式返回.
+   * Gets all the options of the system, returned as key-value pairs.
    *
-   * @return 键值对形式的系统选项
+   * @return the system options as key-value pairs
    */
   private Map<String, String> getOptions() {
     Map<String, String> optionMap = new HashMap<>();
@@ -918,18 +919,18 @@ public class AdministrationController {
   }
 
   /**
-   * 更新网站常规选项.
+   * Updates the general settings of the website.
    *
-   * @param websiteName - 网站名称
-   * @param websiteDescription - 网站描述
-   * @param copyright - 网站版权信息
-   * @param allowUserRegister - 是否允许用户注册
-   * @param icpNumber - 网站备案号
-   * @param policeIcpNumber - 公安备案号
-   * @param googleAnalyticsCode - Google Analytics代码
-   * @param offensiveWords - 敏感词列表
-   * @param request - HttpServletRequest对象
-   * @return 网站常规选项的更新结果
+   * @param websiteName - the name of the website
+   * @param websiteDescription - the description of the website
+   * @param copyright - the copyright information of the website
+   * @param allowUserRegister - whether user registration is allowed
+   * @param icpNumber - the ICP filing number of the website
+   * @param policeIcpNumber - the public security filing number
+   * @param googleAnalyticsCode - the Google Analytics code
+   * @param offensiveWords - the list of offensive words
+   * @param request - the HttpServletRequest object
+   * @return the update result of the general settings of the website
    */
   @RequestMapping(value = "/updateGeneralSettings.action", method = RequestMethod.POST)
   public @ResponseBody Map<String, Boolean> updateGeneralSettingsAction(
@@ -956,11 +957,11 @@ public class AdministrationController {
   }
 
   /**
-   * 加载编程语言设置页面.
+   * Loads the programming language settings page.
    *
-   * @param request - HttpServletRequest对象
-   * @param response - HttpServletResponse对象
-   * @return 包含编程语言设置信息的ModelAndView对象
+   * @param request - the HttpServletRequest object
+   * @param response - the HttpServletResponse object
+   * @return a ModelAndView object containing the programming language settings information
    */
   @RequestMapping(value = "/language-settings", method = RequestMethod.GET)
   public ModelAndView languageSettingsView(
@@ -971,11 +972,11 @@ public class AdministrationController {
   }
 
   /**
-   * 更新网站编程语言选项.
+   * Updates the programming language settings of the website.
    *
-   * @param languages - 包含编程语言设置的数组
-   * @param request - HttpServletRequest对象
-   * @return 编程语言选项的更新结果
+   * @param languages - the array containing the programming language settings
+   * @param request - the HttpServletRequest object
+   * @return the update result of the programming language settings
    */
   @RequestMapping(value = "/updateLanguageSettings.action", method = RequestMethod.POST)
   public @ResponseBody Map<String, Object> updateLanguageSettingsAction(
@@ -985,24 +986,29 @@ public class AdministrationController {
     return result;
   }
 
-  /** 自动注入的UserService对象. */
+  /** The autowired UserService object. */
   @Autowired private UserService userService;
 
-  /** 自动注入的ProblemService对象. 用于获取试题记录信息. */
+  /** The autowired ProblemService object. Used for getting problem record information. */
   @Autowired private ProblemService problemService;
 
-  /** 自动注入的SubmissionService对象. 用于获取提交记录信息. */
+  /** The autowired SubmissionService object. Used for getting submission record information. */
   @Autowired private SubmissionService submissionService;
 
-  /** 自动注入的OptionService对象. 用于获取系统中的设置选项. */
+  /** The autowired OptionService object. Used for getting the settings options of the system. */
   @Autowired private OptionService optionService;
 
-  /** 自动注入的LanguageService对象. 用于获取系统中的编程语言选项. */
+  /**
+   * The autowired LanguageService object. Used for getting the programming language options of the
+   * system.
+   */
   @Autowired private LanguageService languageService;
 
-  /** 自动注入的ApplicationEventListener对象. 用于获取在线评测机的数量. */
+  /**
+   * The autowired ApplicationEventListener object. Used for getting the number of online judgers.
+   */
   @Autowired private ApplicationEventListener eventListener;
 
-  /** 日志记录器. */
+  /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(AdministrationController.class);
 }

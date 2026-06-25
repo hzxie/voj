@@ -29,31 +29,31 @@ import org.verwandlung.voj.web.model.Option;
  */
 public interface OptionMapper {
   /**
-   * 获取全部系统选项.
+   * Gets all system options.
    *
-   * @return 一个包含全部系统选项的列表
+   * @return a list containing all system options
    */
   List<Option> getOptions();
 
   /**
-   * 获取自动加载的系统选项.
+   * Gets the system options that are loaded automatically.
    *
-   * @return 一个包含自动加载系统选项的列表
+   * @return a list containing the auto-loaded system options
    */
   List<Option> getAutoloadOptions();
 
   /**
-   * 根据系统选项的名称获取选项的值.
+   * Gets the value of a system option by its name.
    *
-   * @param optionName - 系统选项的名称
-   * @return 对应的Option对象
+   * @param optionName - the name of the system option
+   * @return the corresponding Option object
    */
   Option getOption(@Param("optionName") String optionName);
 
   /**
-   * 更新系统选项.
+   * Updates a system option.
    *
-   * @param option - 系统选项对象
+   * @param option - the system option object
    */
   int updateOption(Option option);
 }

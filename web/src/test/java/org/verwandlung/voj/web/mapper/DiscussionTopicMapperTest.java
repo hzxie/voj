@@ -29,7 +29,7 @@ import org.verwandlung.voj.web.model.DiscussionTopic;
 import java.util.List;
 
 /**
- * DiscussionTopicMapper的测试类.
+ * The test class for DiscussionTopicMapper.
  *
  * @author Haozhe Xie
  */
@@ -37,7 +37,7 @@ import java.util.List;
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class DiscussionTopicMapperTest {
-  /** 测试用例: 测试getDiscussionTopics()方法 测试数据: N/a 预期结果: 返回一个包含两个DiscussionTopic的列表 */
+  /** Test case: tests the getDiscussionTopics() method. Test data: N/a. Expected: a list containing the DiscussionTopic objects. */
   @Test
   public void testGetDiscussionTopics() {
     List<DiscussionTopic> topics = discussionTopicMapper.getDiscussionTopics();
@@ -48,8 +48,8 @@ public class DiscussionTopicMapperTest {
   }
 
   /**
-   * 测试用例: 测试getDiscussionTopicUsingId(int)方法 测试数据: 数据库中存在的DiscussionTopic的唯一标识符 预期结果:
-   * 返回预期的DiscussionTopic对象
+   * Test case: tests the getDiscussionTopicUsingId(int) method. Test data: the unique identifier of a
+   * DiscussionTopic that exists in the database. Expected: the expected DiscussionTopic object.
    */
   @Test
   public void testGetDiscussionTopicUsingIdExists() {
@@ -58,7 +58,7 @@ public class DiscussionTopicMapperTest {
     Assertions.assertEquals("solutions", topic.getDiscussionTopicSlug());
   }
 
-  /** 测试用例: 测试getDiscussionTopicUsingId(int)方法 测试数据: 数据库中不存在的DiscussionTopic的唯一标识符 预期结果: 返回空引用 */
+  /** Test case: tests the getDiscussionTopicUsingId(int) method. Test data: the unique identifier of a DiscussionTopic that does not exist in the database. Expected: a null reference. */
   @Test
   public void testGetDiscussionTopicUsingIdNotExists() {
     DiscussionTopic topic = discussionTopicMapper.getDiscussionTopicUsingId(0);
@@ -66,8 +66,8 @@ public class DiscussionTopicMapperTest {
   }
 
   /**
-   * 测试用例: getDiscussionTopicUsingSlug(String)方法 测试数据: 数据库中存在的DiscussionTopic的别名 预期结果:
-   * 返回预期的DiscussionTopic对象
+   * Test case: tests the getDiscussionTopicUsingSlug(String) method. Test data: the slug of a
+   * DiscussionTopic that exists in the database. Expected: the expected DiscussionTopic object.
    */
   @Test
   public void testGetDiscussionTopicUsingSlugExists() {
@@ -76,7 +76,7 @@ public class DiscussionTopicMapperTest {
     Assertions.assertEquals(1, topic.getDiscussionTopicId());
   }
 
-  /** 测试用例: getDiscussionTopicUsingSlug(String)方法 测试数据: 数据库中不存在的DiscussionTopic的别名 预期结果: 返回空引用 */
+  /** Test case: tests the getDiscussionTopicUsingSlug(String) method. Test data: the slug of a DiscussionTopic that does not exist in the database. Expected: a null reference. */
   @Test
   public void testGetDiscussionTopicUsingSlugNotExists() {
     DiscussionTopic topic = discussionTopicMapper.getDiscussionTopicUsingSlug("NotExistingTopic");
@@ -84,8 +84,8 @@ public class DiscussionTopicMapperTest {
   }
 
   /**
-   * 测试用例: 测试createDiscussionTopic(DiscussionTopic)方法 测试数据: 使用合法的数据集, 并且该别名不存在相应的记录 预期结果:
-   * DiscussionTopic被成功创建
+   * Test case: tests the createDiscussionTopic(DiscussionTopic) method. Test data: a valid data set,
+   * and no record exists for this slug. Expected: the DiscussionTopic is created successfully.
    */
   @Test
   public void testCreateDiscussionTopicNormally() {
@@ -95,8 +95,8 @@ public class DiscussionTopicMapperTest {
   }
 
   /**
-   * 测试用例: 测试createDiscussionTopic(DiscussionTopic)方法 测试数据: 使用合法的数据集, 但是该别名存在相应的记录 预期结果:
-   * 抛出DuplicateKeyException异常
+   * Test case: tests the createDiscussionTopic(DiscussionTopic) method. Test data: a valid data set,
+   * but a record exists for this slug. Expected: a DuplicateKeyException is thrown.
    */
   @Test
   public void testCreateDiscussionTopicWithDupliateSlug() {
@@ -109,8 +109,8 @@ public class DiscussionTopicMapperTest {
   }
 
   /**
-   * 测试用例: 测试createDiscussionTopic(DiscussionTopic)方法 测试数据: 使用不合法的数据集, 别名的长度过长 预期结果:
-   * DataIntegrityViolationException
+   * Test case: tests the createDiscussionTopic(DiscussionTopic) method. Test data: an invalid data
+   * set, the slug is too long. Expected: a DataIntegrityViolationException is thrown.
    */
   @Test
   public void testCreateDiscussionTopicWithTooLongSlug() {
@@ -127,7 +127,7 @@ public class DiscussionTopicMapperTest {
   }
 
   /**
-   * 测试用例: 测试updateDiscussionTopic(DiscussionTopic) 测试数据: 使用合法的数据集, 并且该别名不存在相应的记录 预期结果: 数据插入操作成功完成
+   * Test case: tests the updateDiscussionTopic(DiscussionTopic) method. Test data: a valid data set, and no record exists for this slug. Expected: the data update operation completes successfully.
    */
   @Test
   public void testUpdateDiscussionTopicNormally() {
@@ -143,8 +143,8 @@ public class DiscussionTopicMapperTest {
   }
 
   /**
-   * 测试用例: 测试updateDiscussionTopic(DiscussionTopic) 测试数据: 使用合法的数据集, 但是该别名存在相应的记录 预期结果:
-   * 抛出DuplicateKeyException异常
+   * Test case: tests the updateDiscussionTopic(DiscussionTopic) method. Test data: a valid data set,
+   * but a record exists for this slug. Expected: a DuplicateKeyException is thrown.
    */
   @Test
   public void testUpdateDiscussionTopicWithDupliateSlug() {
@@ -159,7 +159,7 @@ public class DiscussionTopicMapperTest {
     Assertions.assertThrows(org.springframework.dao.DuplicateKeyException.class, e);
   }
 
-  /** 测试用例: deleteDiscussionTopicUsingId(int) 测试数据: 使用存在的DiscussionTopic的唯一标识符 预期结果: 数据删除操作成功完成 */
+  /** Test case: tests the deleteDiscussionTopicUsingId(int) method. Test data: the unique identifier of an existing DiscussionTopic. Expected: the data deletion operation completes successfully. */
   @Test
   public void testDeleteDiscussionTopicExists() {
     DiscussionTopic topic = discussionTopicMapper.getDiscussionTopicUsingId(1);
@@ -173,8 +173,9 @@ public class DiscussionTopicMapperTest {
   }
 
   /**
-   * 测试用例: deleteDiscussionTopicUsingId(int) 测试数据: 使用不存在的DiscussionTopic的唯一标识符 预期结果: 方法正常执行,
-   * 未影响数据表中的数据
+   * Test case: tests the deleteDiscussionTopicUsingId(int) method. Test data: the unique identifier of
+   * a non-existing DiscussionTopic. Expected: the method executes normally without affecting the
+   * data in the table.
    */
   @Test
   public void testDeleteDiscussionTopicNotExists() {
@@ -185,6 +186,6 @@ public class DiscussionTopicMapperTest {
     Assertions.assertEquals(0, numberOfRowsAffected);
   }
 
-  /** 待测试的DiscussionTopicMapper对象. */
+  /** The DiscussionTopicMapper object under test. */
   @Autowired private DiscussionTopicMapper discussionTopicMapper;
 }

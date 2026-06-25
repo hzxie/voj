@@ -30,7 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.verwandlung.voj.web.model.BulletinBoardMessage;
 
 /**
- * BulletinBoardMessageMapper测试类.
+ * The test class for BulletinBoardMessageMapper.
  *
  * @author Haozhe Xie
  */
@@ -38,14 +38,14 @@ import org.verwandlung.voj.web.model.BulletinBoardMessage;
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class BulletinBoardMessageMapperTest {
-  /** 测试用例: 测试getNumberOfBulletinBoardMessages()方法 测试数据: N/a 预期结果: 数据表中布告栏消息为空, 返回0 */
+  /** Test case: tests the getNumberOfBulletinBoardMessages() method. Test data: N/a. Expected: the bulletin board messages in the table are empty, returns 0. */
   @Test
   public void testGetNumberOfBulletinBoardMessagesWhenEmpty() {
     long numberOfMessages = bulletinBoardMessageMapper.getNumberOfBulletinBoardMessages();
     Assertions.assertEquals(0, numberOfMessages);
   }
 
-  /** 测试用例: 测试getNumberOfBulletinBoardMessages()方法 测试数据: 创建一条布告栏消息 预期结果: 返回1 */
+  /** Test case: tests the getNumberOfBulletinBoardMessages() method. Test data: creates one bulletin board message. Expected: returns 1. */
   @Test
   public void testGetNumberOfBulletinBoardMessagesAfterCreate() {
     bulletinBoardMessageMapper.createBulletinBoardMessage(
@@ -55,7 +55,7 @@ public class BulletinBoardMessageMapperTest {
     Assertions.assertEquals(1, numberOfMessages);
   }
 
-  /** 测试用例: 测试getBulletinBoardMessages(long, int)方法 测试数据: N/a 预期结果: 数据表为空, 返回空列表 */
+  /** Test case: tests the getBulletinBoardMessages(long, int) method. Test data: N/a. Expected: the table is empty, returns an empty list. */
   @Test
   public void testGetBulletinBoardMessagesWhenEmpty() {
     List<BulletinBoardMessage> messages =
@@ -64,7 +64,7 @@ public class BulletinBoardMessageMapperTest {
     Assertions.assertTrue(messages.isEmpty());
   }
 
-  /** 测试用例: 测试getBulletinBoardMessages(long, int)方法 测试数据: 创建多条消息 预期结果: 按messageId降序返回 */
+  /** Test case: tests the getBulletinBoardMessages(long, int) method. Test data: creates multiple messages. Expected: returns them ordered by messageId descending. */
   @Test
   public void testGetBulletinBoardMessagesOrderedByIdDesc() {
     bulletinBoardMessageMapper.createBulletinBoardMessage(
@@ -79,7 +79,7 @@ public class BulletinBoardMessageMapperTest {
     Assertions.assertEquals("First", messages.get(1).getMessageTitle());
   }
 
-  /** 测试用例: 测试getBulletinBoardMessages(long, int)方法 测试数据: 创建两条消息, 使用limit=1 预期结果: 仅返回1条消息 */
+  /** Test case: tests the getBulletinBoardMessages(long, int) method. Test data: creates two messages, with limit=1. Expected: returns only 1 message. */
   @Test
   public void testGetBulletinBoardMessagesWithLimit() {
     bulletinBoardMessageMapper.createBulletinBoardMessage(
@@ -93,14 +93,14 @@ public class BulletinBoardMessageMapperTest {
     Assertions.assertEquals("Second", messages.get(0).getMessageTitle());
   }
 
-  /** 测试用例: 测试getBulletinBoardMessageUsingId(long)方法 测试数据: 使用不存在的消息标识符 预期结果: 返回空引用 */
+  /** Test case: tests the getBulletinBoardMessageUsingId(long) method. Test data: a non-existing message identifier. Expected: a null reference. */
   @Test
   public void testGetBulletinBoardMessageUsingIdNotExists() {
     BulletinBoardMessage message = bulletinBoardMessageMapper.getBulletinBoardMessageUsingId(0);
     Assertions.assertNull(message);
   }
 
-  /** 测试用例: 测试getBulletinBoardMessageUsingId(long)方法 测试数据: 使用存在的消息标识符 预期结果: 返回预期的布告栏消息 */
+  /** Test case: tests the getBulletinBoardMessageUsingId(long) method. Test data: an existing message identifier. Expected: the expected bulletin board message. */
   @Test
   public void testGetBulletinBoardMessageUsingIdExists() {
     BulletinBoardMessage newMessage = new BulletinBoardMessage("Title", "Body", new Date());
@@ -113,7 +113,7 @@ public class BulletinBoardMessageMapperTest {
     Assertions.assertEquals("Body", message.getMessageBody());
   }
 
-  /** 测试用例: 测试createBulletinBoardMessage(BulletinBoardMessage)方法 测试数据: 合法的布告栏消息 预期结果: 数据创建操作成功完成, 并回填自增主键 */
+  /** Test case: tests the createBulletinBoardMessage(BulletinBoardMessage) method. Test data: a valid bulletin board message. Expected: the data creation operation completes successfully, and the auto-increment primary key is filled back. */
   @Test
   public void testCreateBulletinBoardMessage() {
     BulletinBoardMessage message = new BulletinBoardMessage("New Message", "Message Body", new Date());
@@ -122,7 +122,7 @@ public class BulletinBoardMessageMapperTest {
     Assertions.assertTrue(message.getMessageId() > 0);
   }
 
-  /** 测试用例: 测试updateBulletinBoardMessage(BulletinBoardMessage)方法 测试数据: 存在的消息标识符 预期结果: 数据更新操作成功完成 */
+  /** Test case: tests the updateBulletinBoardMessage(BulletinBoardMessage) method. Test data: an existing message identifier. Expected: the data update operation completes successfully. */
   @Test
   public void testUpdateBulletinBoardMessageExists() {
     BulletinBoardMessage message = new BulletinBoardMessage("Title", "Body", new Date());
@@ -139,7 +139,7 @@ public class BulletinBoardMessageMapperTest {
     Assertions.assertEquals("Updated Body", updatedMessage.getMessageBody());
   }
 
-  /** 测试用例: 测试updateBulletinBoardMessage(BulletinBoardMessage)方法 测试数据: 不存在的消息标识符 预期结果: 方法正常执行, 未影响数据表中的数据 */
+  /** Test case: tests the updateBulletinBoardMessage(BulletinBoardMessage) method. Test data: a non-existing message identifier. Expected: the method executes normally without affecting the data in the table. */
   @Test
   public void testUpdateBulletinBoardMessageNotExists() {
     BulletinBoardMessage message = new BulletinBoardMessage(0, "Title", "Body", new Date());
@@ -147,7 +147,7 @@ public class BulletinBoardMessageMapperTest {
     Assertions.assertEquals(0, numberOfRowsAffected);
   }
 
-  /** 测试用例: 测试deleteBulletinBoardMessage(long)方法 测试数据: 存在的消息标识符 预期结果: 数据删除操作成功完成 */
+  /** Test case: tests the deleteBulletinBoardMessage(long) method. Test data: an existing message identifier. Expected: the data deletion operation completes successfully. */
   @Test
   public void testDeleteBulletinBoardMessageExists() {
     BulletinBoardMessage message = new BulletinBoardMessage("Title", "Body", new Date());
@@ -160,13 +160,13 @@ public class BulletinBoardMessageMapperTest {
         bulletinBoardMessageMapper.getBulletinBoardMessageUsingId(message.getMessageId()));
   }
 
-  /** 测试用例: 测试deleteBulletinBoardMessage(long)方法 测试数据: 不存在的消息标识符 预期结果: 方法正常执行, 未影响数据表中的数据 */
+  /** Test case: tests the deleteBulletinBoardMessage(long) method. Test data: a non-existing message identifier. Expected: the method executes normally without affecting the data in the table. */
   @Test
   public void testDeleteBulletinBoardMessageNotExists() {
     int numberOfRowsAffected = bulletinBoardMessageMapper.deleteBulletinBoardMessage(0);
     Assertions.assertEquals(0, numberOfRowsAffected);
   }
 
-  /** 待测试的BulletinBoardMessageMapper对象. */
+  /** The BulletinBoardMessageMapper object under test. */
   @Autowired private BulletinBoardMessageMapper bulletinBoardMessageMapper;
 }

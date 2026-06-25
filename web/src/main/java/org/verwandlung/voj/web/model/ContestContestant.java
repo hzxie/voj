@@ -17,14 +17,14 @@
 package org.verwandlung.voj.web.model;
 
 public class ContestContestant implements Comparable {
-  /** ContestContestant的默认构造函数. */
+  /** Default constructor of the contest contestant. */
   public ContestContestant() {}
 
   /**
-   * ContestContestant的构造函数.
+   * Constructor of the contest contestant.
    *
-   * @param contest - 竞赛
-   * @param contestant - 参赛者
+   * @param contest - the contest
+   * @param contestant - the contestant
    */
   public ContestContestant(Contest contest, User contestant) {
     this.contest = contest;
@@ -32,99 +32,99 @@ public class ContestContestant implements Comparable {
   }
 
   /**
-   * 获取竞赛对象.
+   * Gets the contest object.
    *
-   * @return 竞赛对象
+   * @return the contest object
    */
   public Contest getContest() {
     return contest;
   }
 
   /**
-   * 设置竞赛对象.
+   * Sets the contest object.
    *
-   * @param contest - 竞赛对象
+   * @param contest - the contest object
    */
   public void setContest(Contest contest) {
     this.contest = contest;
   }
 
   /**
-   * 获取参赛者对象.
+   * Gets the contestant object.
    *
-   * @return 参赛者对象
+   * @return the contestant object
    */
   public User getContestant() {
     return contestant;
   }
 
   /**
-   * 设置参赛者对象.
+   * Sets the contestant object.
    *
-   * @param contestant - 参赛者对象
+   * @param contestant - the contestant object
    */
   public void setContestant(User contestant) {
     this.contestant = contestant;
   }
 
   /**
-   * 获取得分.
+   * Gets the score.
    *
-   * @return 得分
+   * @return the score
    */
   public int getScore() {
     return score;
   }
 
   /**
-   * 获取运行时间(OI)或罚时(ACM).
+   * Gets the running time (OI) or penalty time (ACM).
    *
-   * @return 运行时间(OI)或罚时(ACM)
+   * @return the running time (OI) or penalty time (ACM)
    */
   public long getTime() {
     return time;
   }
 
   /**
-   * 设置罚时(ACM).
+   * Sets the penalty time (ACM).
    *
-   * @param time 罚时(ACM)
+   * @param time the penalty time (ACM)
    */
   public void setTime(long time) {
     this.time = time;
   }
 
   /**
-   * 设置竞赛中的排名.
+   * Sets the rank in the contest.
    *
-   * @param rank - 竞赛中的排名
+   * @param rank - the rank in the contest
    */
   public void setRank(long rank) {
     this.rank = rank;
   }
 
   /**
-   * 获取竞赛中的排名.
+   * Gets the rank in the contest.
    *
-   * @return 竞赛中的排名
+   * @return the rank in the contest
    */
   public long getRank() {
     return rank;
   }
 
   /**
-   * 获取代码片段.
+   * Gets the code snippet.
    *
-   * @return 代码片段
+   * @return the code snippet
    */
   public String getCodeSnippet() {
     return codeSnippet;
   }
 
   /**
-   * 设置代码片段.
+   * Sets the code snippet.
    *
-   * @param codeSnippet - 代码片段
+   * @param codeSnippet - the code snippet
    */
   public void setCodeSnippet(String codeSnippet) {
     this.codeSnippet = codeSnippet;
@@ -154,21 +154,21 @@ public class ContestContestant implements Comparable {
         new Object[] {contest, contestant, score, time});
   }
 
-  /** 竞赛. */
+  /** The contest. */
   private Contest contest;
 
-  /** 参赛者. */
+  /** The contestant. */
   private User contestant;
 
-  /** 得分. */
+  /** The score. */
   private int score;
 
-  /** OI赛制中的运行时间. ACM赛制中的罚时. */
+  /** The running time in the OI mode. The penalty time in the ACM mode. */
   private long time;
 
-  /** 竞赛中的排名. */
+  /** The rank in the contest. */
   private long rank;
 
-  /** 代码片段 (JSON格式). 用于OI赛制中中临时保存参赛者的代码. */
+  /** The code snippet (in JSON format), used to temporarily save the contestant's code in the OI mode. */
   private String codeSnippet;
 }

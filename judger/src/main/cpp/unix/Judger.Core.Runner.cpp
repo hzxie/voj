@@ -65,18 +65,18 @@ int killProcess(pid_t&);
 bool isProcessRunning(pid_t&);
 
 /**
- * JNI调用入口.
- * 获取程序运行结果.
- * @param  jniEnv          - JNI 运行环境引用
- * @param  selfReference   - 对调用Java的对象的引用
- * @param  jCommandLine    - 待执行的命令行
- * @param  jUsername       - Unix用户名
- * @param  jPassword       - Unix密码
- * @param  jInputFilePath  - 执行程序时的输入文件路径(可为NULL)
- * @param  jOutputFilePath - 执行程序后的输出文件路径(可为NULL)
- * @param  timeLimit       - 程序执行时间限制(ms, 0为不限制)
- * @param  memoryLimit     - 程序执行内存限制(KB, 0为不限制)
- * @return 一个包含运行结果的Map<String, Object>对象
+ * JNI call entry point.
+ * Gets the program's runtime result.
+ * @param  jniEnv          - a reference to the JNI runtime environment
+ * @param  selfReference   - a reference to the calling Java object
+ * @param  jCommandLine    - the command line to execute
+ * @param  jUsername       - the Unix username
+ * @param  jPassword       - the Unix password
+ * @param  jInputFilePath  - the input file path when running the program (may be NULL)
+ * @param  jOutputFilePath - the output file path after running the program (may be NULL)
+ * @param  timeLimit       - the program execution time limit (ms, 0 means no limit)
+ * @param  memoryLimit     - the program execution memory limit (KB, 0 means no limit)
+ * @return a Map<String, Object> object containing the runtime result
  */
 JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntimeResult(
     JNIEnv* jniEnv, jobject selfReference, jstring jCommandLine, jstring jUsername,
@@ -117,12 +117,11 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
 }
 
 /**
- * 创建进程.
- * @param  pid         - 子进程ID
- * @param  commandLine - 待执行的命令行
- * @param  fileActions - I/O重定向信息
- * @param  procAttrs   - 进程RunUser信息
- * @return 运行创建状态(0表示成功创建)
+ * Creates a process.
+ * @param  pid         - the child process ID
+ * @param  commandLine - the command line to execute
+ * @param  fileActions - the I/O redirection information
+ * @return the process creation status (0 means created successfully)
  */
 int createProcess(pid_t& pid, const std::string& commandLine, 
     posix_spawn_file_actions_t& fileActions) {
@@ -131,9 +130,9 @@ int createProcess(pid_t& pid, const std::string& commandLine,
 }
 
 /**
- * 设置程序I/O重定向.
- * @param  inputFilePath  - 执行程序时的输入文件路径(可为NULL)
- * @param  outputFilePath - 执行程序后的输出文件路径(可为NULL)
+ * Sets up the program's I/O redirection.
+ * @param  inputFilePath  - the input file path when running the program (may be NULL)
+ * @param  outputFilePath - the output file path after running the program (may be NULL)
  */
 posix_spawn_file_actions_t setupIoRedirection(
     const std::string& inputFilePath, const std::string& outputFilePath) {
@@ -156,13 +155,13 @@ posix_spawn_file_actions_t setupIoRedirection(
 }
 
 /**
- * 运行进程.
- * @param  pid         - 子进程ID
- * @param  timeLimit   - 运行时时间限制(ms)
- * @param  memoryLimit - 运行时空间限制(KB)
- * @param  UsedTime    - 运行时时间占用(ms)
- * @param  UsedMemory  - 运行时空间占用(ms)
- * @return 进程退出状态
+ * Runs the process.
+ * @param  pid         - the child process ID
+ * @param  timeLimit   - the runtime time limit (ms)
+ * @param  memoryLimit - the runtime memory limit (KB)
+ * @param  usedTime    - the runtime time used (ms)
+ * @param  usedMemory  - the runtime memory used (KB)
+ * @return the process exit status
  */
 int runProcess(pid_t& pid, int timeLimit, int memoryLimit, int& usedTime, int& usedMemory) {
     std::future<int> memFeature = std::async(std::launch::async, getMaxUsedMemory, pid, memoryLimit);
@@ -178,9 +177,9 @@ int runProcess(pid_t& pid, int timeLimit, int memoryLimit, int& usedTime, int& u
 }
 
 /**
- * 获取命令行参数列表.
- * @param  commandLine - 命令行
- * @return 命令行参数列表
+ * Gets the list of command-line arguments.
+ * @param  commandLine - the command line
+ * @return the list of command-line arguments
  */
 char** getCommandArgs(const std::string& commandLine) {
     std::istringstream iss(commandLine);
@@ -203,10 +202,10 @@ char** getCommandArgs(const std::string& commandLine) {
 }
 
 /**
- * 获取运行时时间
- * @param  pid         - 进程ID
- * @param  timeLimit - 运行时时间限制(ms)
- * @return 运行时时间
+ * Gets the runtime time.
+ * @param  pid       - the process ID
+ * @param  timeLimit - the runtime time limit (ms)
+ * @return the runtime time
  */
 int getRunningTime(pid_t pid, int timeLimit) {
     long long  startTime = getMillisecondsNow(),
@@ -226,11 +225,11 @@ int getRunningTime(pid_t pid, int timeLimit) {
 }
 
 /**
- * 是否忽略当前获得的内存占用值.
- * 由于在实际运行过程中, 程序可能会获取到JVM环境中的内存占用.
- * 对于这种情况, 我们应忽略这个值.
- * @param  currentUsedMemory - 当前获取到的内存占用
- * @return 是否忽略当前获取到的内存占用
+ * Whether the currently obtained memory usage value should be ignored.
+ * During actual execution, the program may read the memory usage of the JVM environment.
+ * In that case, we should ignore this value.
+ * @param  currentUsedMemory - the currently obtained memory usage
+ * @return whether the currently obtained memory usage should be ignored
  */
 bool isCurrentUsedMemoryIgnored(int currentUsedMemory) {
     int jvmUsedMemory = getCurrentUsedMemory(getpid());
@@ -243,10 +242,10 @@ bool isCurrentUsedMemoryIgnored(int currentUsedMemory) {
 }
 
 /**
- * 获取运行时内存占用最大值
- * @param  pid         - 进程ID
- * @param  memoryLimit - 运行时空间限制(KB)
- * @return 运行时内存占用最大值
+ * Gets the maximum runtime memory usage.
+ * @param  pid         - the process ID
+ * @param  memoryLimit - the runtime memory limit (KB)
+ * @return the maximum runtime memory usage
  */
 int getMaxUsedMemory(pid_t pid, int memoryLimit) {
     int  maxUsedMemory     = 0,
@@ -269,9 +268,9 @@ int getMaxUsedMemory(pid_t pid, int memoryLimit) {
 }
 
 /**
- * 获取内存占用情况.
- * @param  pid - 进程ID
- * @return 当前物理内存使用量(KB)
+ * Gets the memory usage.
+ * @param  pid - the process ID
+ * @return the current physical memory usage (KB)
  */
 int getCurrentUsedMemory(pid_t pid) {
     int    currentUsedMemory    = 0;
@@ -295,9 +294,9 @@ int getCurrentUsedMemory(pid_t pid) {
 }
 
 /**
- * 获取当前系统时间.
- * 用于统计程序运行时间.
- * @return 当前系统时间(以毫秒为单位)
+ * Gets the current system time.
+ * Used to measure the program's running time.
+ * @return the current system time (in milliseconds)
  */
 long long getMillisecondsNow() {
     long            milliseconds;
@@ -313,18 +312,18 @@ long long getMillisecondsNow() {
 }
 
 /**
- * 强制销毁进程(当触发阈值时).
- * @param  pid         - 进程ID
- * @return 0, 表示进程被成功结束.
+ * Forcibly destroys the process (when a threshold is triggered).
+ * @param  pid - the process ID
+ * @return 0, indicating the process was terminated successfully.
  */
 int killProcess(pid_t& pid) {
     return kill(pid, SIGKILL);
 }
 
 /**
- * 检查进程是否仍在运行.
- * @param  pid         - 进程ID
- * @return 进程是否仍在运行.
+ * Checks whether the process is still running.
+ * @param  pid - the process ID
+ * @return whether the process is still running.
  */
 bool isProcessRunning(pid_t& pid) {
     std::string filePath("/proc/");

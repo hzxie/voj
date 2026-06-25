@@ -25,16 +25,16 @@ import org.verwandlung.voj.web.model.User;
 import org.verwandlung.voj.web.service.UserService;
 
 /**
- * HttpSession解析器.
+ * The HttpSession parser.
  *
  * @author Haozhe Xie
  */
 @Component
 public class HttpSessionParser {
   /**
-   * HttpSessionParser的构造函数.
+   * The constructor of HttpSessionParser.
    *
-   * @param userService - 自动注入的UserService对象
+   * @param userService - the autowired UserService object
    */
   @Autowired
   private HttpSessionParser(UserService userService) {
@@ -42,10 +42,10 @@ public class HttpSessionParser {
   }
 
   /**
-   * 获取Session中的用户对象.
+   * Gets the user object in the session.
    *
-   * @param session - HttpSession对象
-   * @return Session中的用户对象
+   * @param session - the HttpSession object
+   * @return the user object in the session
    */
   public static User getCurrentUser(HttpSession session) {
     Object isLoggedInAttribute = session.getAttribute("isLoggedIn");
@@ -64,6 +64,6 @@ public class HttpSessionParser {
     return user;
   }
 
-  /** 自动注入的UserService对象. */
+  /** The autowired UserService object. */
   private static UserService userService;
 }

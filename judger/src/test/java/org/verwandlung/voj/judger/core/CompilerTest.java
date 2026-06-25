@@ -31,7 +31,7 @@ import org.verwandlung.voj.judger.mapper.SubmissionMapper;
 import org.verwandlung.voj.judger.model.Submission;
 
 /**
- * 程序编译器的测试类.
+ * Test class for the program compiler.
  *
  * @author Haozhe Xie
  */
@@ -39,7 +39,10 @@ import org.verwandlung.voj.judger.model.Submission;
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class CompilerTest {
-  /** 测试用例: 测试getCompileResult()方法 测试数据: 使用可以编译通过的C++代码 预期结果: 编译通过 */
+  /**
+   * Test case: tests the getCompileResult() method. Test data: C++ code that compiles successfully.
+   * Expected result: compilation succeeds.
+   */
   @Test
   public void testGetCompileResultCppWithSuccess() throws Exception {
     String workDirectory = workBaseDirectory + "/voj-1000";
@@ -51,7 +54,10 @@ public class CompilerTest {
     Assertions.assertEquals(true, result.get("isSuccessful"));
   }
 
-  /** 测试用例: 测试getCompileResult()方法 测试数据: 使用可以编译通过的Java代码 预期结果: 编译通过 */
+  /**
+   * Test case: tests the getCompileResult() method. Test data: Java code that compiles
+   * successfully. Expected result: compilation succeeds.
+   */
   @Test
   public void testGetCompileResultJavaWithSuccess() throws Exception {
     String workDirectory = workBaseDirectory + "/voj-1001";
@@ -63,7 +69,10 @@ public class CompilerTest {
     Assertions.assertEquals(true, result.get("isSuccessful"));
   }
 
-  /** 测试用例: 测试getCompileResult()方法 测试数据: 使用可以无法编译通过的C++代码 预期结果: 编译失败 */
+  /**
+   * Test case: tests the getCompileResult() method. Test data: C++ code that fails to compile.
+   * Expected result: compilation fails.
+   */
   @Test
   public void testGetCompileResultCppWithError() throws Exception {
     String workDirectory = workBaseDirectory + "/voj-1002";
@@ -75,16 +84,16 @@ public class CompilerTest {
     Assertions.assertEquals(false, result.get("isSuccessful"));
   }
 
-  /** 待测试的Compiler对象. */
+  /** The Compiler object under test. */
   @Autowired private Compiler compiler;
 
-  /** 自动注入的Preprocessor对象. 用于构建测试用例. */
+  /** The autowired Preprocessor object, used to set up the test cases. */
   @Autowired private Preprocessor preprocessor;
 
-  /** 自动注入的SubmissionMapper对象. 用于构建测试用例. */
+  /** The autowired SubmissionMapper object, used to set up the test cases. */
   @Autowired private SubmissionMapper submissionMapper;
 
-  /** 评测机的工作目录. 用于存储编译结果以及程序输出结果. */
+  /** The working directory of the judger, used to store compilation results and program output. */
   @Value("${judger.workDir}")
   private String workBaseDirectory;
 }

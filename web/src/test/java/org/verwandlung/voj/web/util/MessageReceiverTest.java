@@ -21,7 +21,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.verwandlung.voj.web.messenger.MessageReceiver;
 
 /**
- * MessageReceiver的测试类. 注意: 仅供开发调试使用.
+ * The test class for MessageReceiver. Note: for development and debugging use only.
  *
  * @author Haozhe Xie
  */
@@ -35,6 +35,6 @@ public class MessageReceiverTest {
     Thread.sleep(5000);
   }
 
-  /** 自动注入的MessageReceiver对象. */
+  /** The autowired MessageReceiver object. */
   @Autowired private MessageReceiver messageReceiver;
 }

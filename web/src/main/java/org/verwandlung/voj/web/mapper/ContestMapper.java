@@ -28,50 +28,50 @@ import java.util.List;
  */
 public interface ContestMapper {
   /**
-   * [此方法仅供管理员使用] 获取竞赛的总数量.
+   * [For administrators only] Gets the total number of contests.
    *
-   * @param keyword - 竞赛的关键词
-   * @return 竞赛的总数量
+   * @param keyword - the keyword of the contest
+   * @return the total number of contests
    */
   long getNumberOfContests(@Param("keyword") String keyword);
 
   /**
-   * 获取竞赛列表.
+   * Gets the list of contests.
    *
-   * @param keyword - 竞赛的关键词
-   * @param offset - 起始竞赛的偏移量(offset)
-   * @param limit - 需要获取竞赛的数量
-   * @return 预期的竞赛对象
+   * @param keyword - the keyword of the contest
+   * @param offset - the offset of the first contest
+   * @param limit - the number of contests to fetch
+   * @return the expected contest objects
    */
   List<Contest> getContests(
       @Param("keyword") String keyword, @Param("offset") long offset, @Param("limit") int limit);
 
   /**
-   * 根据竞赛的唯一标识符获取竞赛.
+   * Gets a contest by its unique identifier.
    *
-   * @param contestId - 竞赛的唯一标识符
-   * @return 预期的竞赛对象
+   * @param contestId - the unique identifier of the contest
+   * @return the expected contest object
    */
   Contest getContest(long contestId);
 
   /**
-   * 创建竞赛.
+   * Creates a contest.
    *
-   * @param contest - 待创建的竞赛对象
+   * @param contest - the contest object to create
    */
   int createContest(Contest contest);
 
   /**
-   * 更新竞赛.
+   * Updates a contest.
    *
-   * @param contest - 待更新的竞赛对象
+   * @param contest - the contest object to update
    */
   int updateContest(Contest contest);
 
   /**
-   * 删除竞赛.
+   * Deletes a contest.
    *
-   * @param contestId - 竞赛的唯一标识符
+   * @param contestId - the unique identifier of the contest
    */
   int deleteContest(long contestId);
 }

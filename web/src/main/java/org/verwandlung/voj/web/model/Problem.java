@@ -22,27 +22,27 @@ import java.util.List;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 /**
- * 试题的Model. 对应数据库中的voj_problems数据表.
+ * The model of a problem. Maps to the voj_problems table in the database.
  *
  * @author Haozhe Xie
  */
 public class Problem implements Serializable {
-  /** Problem的默认构造函数. */
+  /** Default constructor of the problem. */
   public Problem() {}
 
   /**
-   * Problem的构造函数.
+   * Constructor of the problem.
    *
-   * @param isPublic - 试题是否公开
-   * @param problemName - 试题的名称
-   * @param timeLimit - 最大运行时间
-   * @param memoryLimit - 最大运行内存
-   * @param description - 试题描述
-   * @param inputFormat - 试题输入格式描述
-   * @param outputFormat - 试题输出描述
-   * @param sampleInput - 试题样例输入
-   * @param sampleOutput - 试题样例输出
-   * @param hint - 试题提示
+   * @param isPublic - whether the problem is public
+   * @param problemName - the name of the problem
+   * @param timeLimit - the maximum running time
+   * @param memoryLimit - the maximum running memory
+   * @param description - the description of the problem
+   * @param inputFormat - the description of the problem's input format
+   * @param outputFormat - the description of the problem's output format
+   * @param sampleInput - the sample input of the problem
+   * @param sampleOutput - the sample output of the problem
+   * @param hint - the hint of the problem
    */
   public Problem(
       boolean isPublic,
@@ -68,19 +68,19 @@ public class Problem implements Serializable {
   }
 
   /**
-   * Problem类的构造函数.
+   * Constructor of the Problem class.
    *
-   * @param problemId - 试题唯一标识符
-   * @param isPublic - 试题是否公开
-   * @param problemName - 试题的名称
-   * @param timeLimit - 最大运行时间
-   * @param memoryLimit - 最大运行内存
-   * @param description - 试题描述
-   * @param inputFormat - 试题输入描述
-   * @param outputFormat - 试题输出描述
-   * @param sampleInput - 试题样例输入
-   * @param sampleOutput - 试题样例输出
-   * @param hint - 试题提示
+   * @param problemId - the unique identifier of the problem
+   * @param isPublic - whether the problem is public
+   * @param problemName - the name of the problem
+   * @param timeLimit - the maximum running time
+   * @param memoryLimit - the maximum running memory
+   * @param description - the description of the problem
+   * @param inputFormat - the description of the problem's input format
+   * @param outputFormat - the description of the problem's output format
+   * @param sampleInput - the sample input of the problem
+   * @param sampleOutput - the sample output of the problem
+   * @param hint - the hint of the problem
    */
   public Problem(
       long problemId,
@@ -109,252 +109,252 @@ public class Problem implements Serializable {
   }
 
   /**
-   * 获取试题唯一标识符.
+   * Gets the unique identifier of the problem.
    *
-   * @return 试题唯一标识符
+   * @return the unique identifier of the problem
    */
   public long getProblemId() {
     return problemId;
   }
 
   /**
-   * 设置试题唯一标识符.
+   * Sets the unique identifier of the problem.
    *
-   * @param problemId - 试题唯一标识符
+   * @param problemId - the unique identifier of the problem
    */
   public void setProblemId(long problemId) {
     this.problemId = problemId;
   }
 
   /**
-   * 获取试题是否公开的.
+   * Gets whether the problem is public.
    *
-   * @return 试题是否公开
+   * @return whether the problem is public
    */
   public boolean isPublic() {
     return isPublic;
   }
 
   /**
-   * 设置试题是否公开.
+   * Sets whether the problem is public.
    *
-   * @param isPublic - 试题是否公开
+   * @param isPublic - whether the problem is public
    */
   public void setPublic(boolean isPublic) {
     this.isPublic = isPublic;
   }
 
   /**
-   * 获取试题名称.
+   * Gets the name of the problem.
    *
-   * @return 试题名称
+   * @return the name of the problem
    */
   public String getProblemName() {
     return problemName;
   }
 
   /**
-   * 设置试题名称.
+   * Sets the name of the problem.
    *
-   * @param problemName - 试题名称
+   * @param problemName - the name of the problem
    */
   public void setProblemName(String problemName) {
     this.problemName = problemName;
   }
 
   /**
-   * 获取试题包含的标签.
+   * Gets the tags of the problem.
    *
-   * @return 试题包含的标签
+   * @return the tags of the problem
    */
   public List<ProblemTag> getProblemTags() {
     return problemTags;
   }
 
   /**
-   * 设置试题包含的标签.
+   * Sets the tags of the problem.
    *
-   * @param problemTags - 试题包含的标签
+   * @param problemTags - the tags of the problem
    */
   public void setProblemTags(List<ProblemTag> problemTags) {
     this.problemTags = problemTags;
   }
 
   /**
-   * 获取试题提交总数.
+   * Gets the total number of submissions for the problem.
    *
-   * @return 试题提交总数
+   * @return the total number of submissions for the problem
    */
   public long getTotalSubmission() {
     return totalSubmission;
   }
 
   /**
-   * 设置试题提交总数.
+   * Sets the total number of submissions for the problem.
    *
-   * @param totalSubmission - 试题提交总数
+   * @param totalSubmission - the total number of submissions for the problem
    */
   public void setTotalSubmission(long totalSubmission) {
     this.totalSubmission = totalSubmission;
   }
 
   /**
-   * 获取试题提交通过总数.
+   * Gets the total number of accepted submissions for the problem.
    *
-   * @return 试题提交通过总数
+   * @return the total number of accepted submissions for the problem
    */
   public long getAcceptedSubmission() {
     return acceptedSubmission;
   }
 
   /**
-   * 设置试题提交通过总数
+   * Sets the total number of accepted submissions for the problem.
    *
-   * @param acceptedSubmission - 试题提交通过总数
+   * @param acceptedSubmission - the total number of accepted submissions for the problem
    */
   public void setAcceptedSubmission(long acceptedSubmission) {
     this.acceptedSubmission = acceptedSubmission;
   }
 
   /**
-   * 获取最大运行时间.
+   * Gets the maximum running time.
    *
-   * @return 最大运行时间
+   * @return the maximum running time
    */
   public int getTimeLimit() {
     return timeLimit;
   }
 
   /**
-   * 设置最大运行时间.
+   * Sets the maximum running time.
    *
-   * @param timeLimit - 最大运行时间
+   * @param timeLimit - the maximum running time
    */
   public void setTimeLimit(int timeLimit) {
     this.timeLimit = timeLimit;
   }
 
   /**
-   * 获取最大运行内存.
+   * Gets the maximum running memory.
    *
-   * @return 最大运行内存
+   * @return the maximum running memory
    */
   public int getMemoryLimit() {
     return memoryLimit;
   }
 
   /**
-   * 设置最大运行内存.
+   * Sets the maximum running memory.
    *
-   * @param memoryLimit
+   * @param memoryLimit - the maximum running memory
    */
   public void setMemoryLimit(int memoryLimit) {
     this.memoryLimit = memoryLimit;
   }
 
   /**
-   * 获取试题描述.
+   * Gets the description of the problem.
    *
-   * @return 试题描述
+   * @return the description of the problem
    */
   public String getDescription() {
     return description;
   }
 
   /**
-   * 设置试题描述.
+   * Sets the description of the problem.
    *
-   * @param description - 试题描述
+   * @param description - the description of the problem
    */
   public void setDescription(String description) {
     this.description = description;
   }
 
   /**
-   * 获取输入格式描述.
+   * Gets the description of the input format.
    *
-   * @return 输入格式描述
+   * @return the description of the input format
    */
   public String getInputFormat() {
     return inputFormat;
   }
 
   /**
-   * 设置输入格式描述.
+   * Sets the description of the input format.
    *
-   * @param inputFormat - 输入格式描述
+   * @param inputFormat - the description of the input format
    */
   public void setInpuFormatt(String inputFormat) {
     this.inputFormat = inputFormat;
   }
 
   /**
-   * 获取输出格式描述.
+   * Gets the description of the output format.
    *
-   * @return 输出格式描述
+   * @return the description of the output format
    */
   public String getOutputFormat() {
     return outputFormat;
   }
 
   /**
-   * 设置输出格式描述.
+   * Sets the description of the output format.
    *
-   * @param outputFormat - 输出格式描述
+   * @param outputFormat - the description of the output format
    */
   public void setOutputFormat(String outputFormat) {
     this.outputFormat = outputFormat;
   }
 
   /**
-   * 获取样例输入.
+   * Gets the sample input.
    *
-   * @return 样例输入
+   * @return the sample input
    */
   public String getSampleInput() {
     return sampleInput;
   }
 
   /**
-   * 设置样例输入.
+   * Sets the sample input.
    *
-   * @param sampleInput - 样例输入
+   * @param sampleInput - the sample input
    */
   public void setSampleInput(String sampleInput) {
     this.sampleInput = sampleInput;
   }
 
   /**
-   * 获取样例输出.
+   * Gets the sample output.
    *
-   * @return 样例输出
+   * @return the sample output
    */
   public String getSampleOutput() {
     return sampleOutput;
   }
 
   /**
-   * 设置样例输出.
+   * Sets the sample output.
    *
-   * @param sampleOutput - 样例输出
+   * @param sampleOutput - the sample output
    */
   public void setSampleOutput(String sampleOutput) {
     this.sampleOutput = sampleOutput;
   }
 
   /**
-   * 获取试题提示.
+   * Gets the hint of the problem.
    *
-   * @return 试题提示
+   * @return the hint of the problem
    */
   public String getHint() {
     return hint;
   }
 
   /**
-   * 设置试题提示.
+   * Sets the hint of the problem.
    *
-   * @param hint - 试题提示
+   * @param hint - the hint of the problem
    */
   public void setHint(String hint) {
     this.hint = hint;
@@ -386,48 +386,48 @@ public class Problem implements Serializable {
         });
   }
 
-  /** 试题的唯一标识符. */
+  /** The unique identifier of the problem. */
   private long problemId;
 
-  /** 试题是否公开. */
+  /** Whether the problem is public. */
   private boolean isPublic;
 
-  /** 试题名称. */
+  /** The name of the problem. */
   private String problemName;
 
-  /** 试题包含的标签. */
+  /** The tags of the problem. */
   private List<ProblemTag> problemTags;
 
-  /** 试题的总提交总数. */
+  /** The total number of submissions for the problem. */
   private long totalSubmission;
 
-  /** 试题的提交通过总数. */
+  /** The total number of accepted submissions for the problem. */
   private long acceptedSubmission;
 
-  /** 最大运行时间. */
+  /** The maximum running time. */
   @JsonIgnore private int timeLimit;
 
-  /** 最大运行内存. */
+  /** The maximum running memory. */
   @JsonIgnore private int memoryLimit;
 
-  /** 试题描述. */
+  /** The description of the problem. */
   @JsonIgnore private String description;
 
-  /** 输入格式. */
+  /** The input format. */
   @JsonIgnore private String inputFormat;
 
-  /** 输出格式. */
+  /** The output format. */
   @JsonIgnore private String outputFormat;
 
-  /** 样例输入. */
+  /** The sample input. */
   @JsonIgnore private String sampleInput;
 
-  /** 样例输出. */
+  /** The sample output. */
   @JsonIgnore private String sampleOutput;
 
-  /** 试题提示. */
+  /** The hint of the problem. */
   @JsonIgnore private String hint;
 
-  /** 唯一的序列化标识符. */
+  /** The unique serialization identifier. */
   private static final long serialVersionUID = 4703482016721365341L;
 }

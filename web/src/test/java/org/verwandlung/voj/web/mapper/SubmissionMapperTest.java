@@ -35,7 +35,7 @@ import org.verwandlung.voj.web.model.Submission;
 import org.verwandlung.voj.web.model.User;
 
 /**
- * SubmissionMapper测试类.
+ * The test class for SubmissionMapper.
  *
  * @author Haozhe Xie
  */
@@ -44,8 +44,8 @@ import org.verwandlung.voj.web.model.User;
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class SubmissionMapperTest {
   /**
-   * 测试用例: 测试getNumberOfSubmissions(String, String)方法 测试数据: 使用2014年10月01日-2014年10月18日进行查询 预期结果:
-   * 返回该时间区间内的提交次数(2次)
+   * Test case: tests the getNumberOfSubmissionsUsingDate(String, String) method. Test data: query
+   * using 2014-10-01 to 2014-10-18. Expected: the number of submissions within this time range (2).
    */
   @Test
   public void testGetNumberOfSubmissionsUsingDate() {
@@ -57,8 +57,9 @@ public class SubmissionMapperTest {
   }
 
   /**
-   * 测试用例: 测试getNumberOfSubmissionsGroupByMonth(String, String, int, boolean)方法 测试数据:
-   * 使用2014年10月01日-2015年10月01日进行查询 预期结果: 返回该年度12个月每个月的提交次数
+   * Test case: tests the getNumberOfSubmissionsGroupByMonth(String, String, int, boolean) method. Test
+   * data: query using 2014-10-01 to 2015-10-01. Expected: the number of submissions per month for
+   * the year.
    */
   @Test
   public void testGetNumberOfTotalSubmissionsGroupByMonthWithoutUser() {
@@ -78,8 +79,9 @@ public class SubmissionMapperTest {
   }
 
   /**
-   * 测试用例: 测试getNumberOfSubmissionsGroupByMonth(String, String, int, boolean)方法 测试数据:
-   * 使用2014年10月01日-2015年10月01日进行查询通过的提交记录 预期结果: 返回该年度12个月的每个月通过提交次数
+   * Test case: tests the getNumberOfSubmissionsGroupByMonth(String, String, int, boolean) method. Test
+   * data: query the accepted submissions using 2014-10-01 to 2015-10-01. Expected: the number of
+   * accepted submissions per month for the year.
    */
   @Test
   public void testGetNumberOfAccpectedSubmissionsGroupByMonthWithoutUser() {
@@ -99,8 +101,9 @@ public class SubmissionMapperTest {
   }
 
   /**
-   * 测试用例: 测试getNumberOfSubmissionsGroupByMonth(String, String, int, boolean)方法 测试数据:
-   * 使用2014年10月01日-2015年10月01日进行查询某个用户的提交记录 预期结果: 返回该用户在该年度12个月每个月的提交次数
+   * Test case: tests the getNumberOfSubmissionsGroupByMonth(String, String, int, boolean) method. Test
+   * data: query a user's submissions using 2014-10-01 to 2015-10-01. Expected: the number of the
+   * user's submissions per month for the year.
    */
   @Test
   public void testGetNumberOfTotalSubmissionsGroupByMonthWithUser() {
@@ -120,8 +123,9 @@ public class SubmissionMapperTest {
   }
 
   /**
-   * 测试用例: 测试getNumberOfSubmissionsGroupByMonth(String, String, int, boolean)方法 测试数据:
-   * 使用2014年10月01日-2015年10月01日进行查询某个用户通过的提交记录 预期结果: 返回该用户在该年度12个月的每个月通过提交次数
+   * Test case: tests the getNumberOfSubmissionsGroupByMonth(String, String, int, boolean) method. Test
+   * data: query a user's accepted submissions using 2014-10-01 to 2015-10-01. Expected: the number
+   * of the user's accepted submissions per month for the year.
    */
   @Test
   public void testGetNumberOfAccpectedSubmissionsGroupByMonthWithUser() {
@@ -141,8 +145,9 @@ public class SubmissionMapperTest {
   }
 
   /**
-   * 测试用例: 测试getNumberOfSubmissionsGroupByDay(String, String, int, boolean)方法 测试数据:
-   * 使用2014年10月01日-2014年10月31日进行查询 预期结果: 返回该月份每天的提交次数
+   * Test case: tests the getNumberOfSubmissionsGroupByDay(String, String, int, boolean) method. Test
+   * data: query using 2014-10-01 to 2014-10-31. Expected: the number of submissions per day for the
+   * month.
    */
   @Test
   public void testGetNumberOfTotalSubmissionsGroupByDayWithoutUser() {
@@ -162,8 +167,9 @@ public class SubmissionMapperTest {
   }
 
   /**
-   * 测试用例: 测试getNumberOfSubmissionsGroupByDay(String, String, int, boolean)方法 测试数据:
-   * 使用2014年10月01日-2014年10月31日进行查询通过的提交记录 预期结果: 返回该月份每天通过的提交次数
+   * Test case: tests the getNumberOfSubmissionsGroupByDay(String, String, int, boolean) method. Test
+   * data: query the accepted submissions using 2014-10-01 to 2014-10-31. Expected: the number of
+   * accepted submissions per day for the month.
    */
   @Test
   public void testGetNumberOfAccpectedSubmissionsGroupByDayWithoutUser() {
@@ -183,8 +189,9 @@ public class SubmissionMapperTest {
   }
 
   /**
-   * 测试用例: 测试getNumberOfSubmissionsGroupByDay(String, String, int, boolean)方法 测试数据:
-   * 使用2014年10月01日-2014年10月31日进行查询某个用户的提交记录 预期结果: 返回该用户在该月份每天的提交次数
+   * Test case: tests the getNumberOfSubmissionsGroupByDay(String, String, int, boolean) method. Test
+   * data: query a user's submissions using 2014-10-01 to 2014-10-31. Expected: the number of the
+   * user's submissions per day for the month.
    */
   @Test
   public void testGetNumberOfTotalSubmissionsGroupByDayWithUser() {
@@ -204,8 +211,9 @@ public class SubmissionMapperTest {
   }
 
   /**
-   * 测试用例: 测试getNumberOfSubmissionsGroupByDay(String, String, int, boolean)方法 测试数据:
-   * 使用2014年10月01日-2014年10月31日进行查询某个用户通过的提交记录 预期结果: 返回该用户在该月份每天通过的提交次数
+   * Test case: tests the getNumberOfSubmissionsGroupByDay(String, String, int, boolean) method. Test
+   * data: query a user's accepted submissions using 2014-10-01 to 2014-10-31. Expected: the number
+   * of the user's accepted submissions per day for the month.
    */
   @Test
   public void testGetNumberOfAccpectedSubmissionsGroupByDayWithUser() {
@@ -225,8 +233,8 @@ public class SubmissionMapperTest {
   }
 
   /**
-   * 测试用例: 测试getNumberOfSubmissionsUsingLanguage(int)方法 测试数据: 使用C++语言的唯一标识符 预期结果:
-   * 返回使用C++语言提交记录的数量(3条)
+   * Test case: tests the getNumberOfSubmissionsUsingLanguage(int) method. Test data: the unique
+   * identifier of the C++ language. Expected: the number of submissions using the C++ language.
    */
   @Test
   public void testGetNumberOfSubmissionsUsingLanguageUsingCpp() {
@@ -235,7 +243,7 @@ public class SubmissionMapperTest {
     Assertions.assertEquals(4, numberOfSubmissions);
   }
 
-  /** 测试用例: 测试getNumberOfSubmissionsUsingLanguage(int)方法 测试数据: 使用不存在的唯一标识符 预期结果: 返回0 */
+  /** Test case: tests the getNumberOfSubmissionsUsingLanguage(int) method. Test data: a non-existing unique identifier. Expected: returns 0. */
   @Test
   public void testGetNumberOfSubmissionsUsingLanguageUsingNotExistingLanguage() {
     int languageId = 0;
@@ -243,14 +251,14 @@ public class SubmissionMapperTest {
     Assertions.assertEquals(0, numberOfSubmissions);
   }
 
-  /** 测试用例: 测试getLatestSubmissionId()方法 测试数据: N/a 预期结果: 返回最后一条提交的唯一标识符 */
+  /** Test case: tests the getLatestSubmissionId() method. Test data: N/a. Expected: the unique identifier of the last submission. */
   @Test
   public void testGetLatestSubmissionId() {
     long latestSubmissionId = submissionMapper.getLatestSubmissionId();
     Assertions.assertEquals(1004, latestSubmissionId);
   }
 
-  /** 测试用例: 测试getSubmission(long)方法 测试数据: Problem#1000的提交记录的唯一标识符 预期结果: 返回预期的Submission对象 */
+  /** Test case: tests the getSubmission(long) method. Test data: the unique identifier of a submission record of Problem #1000. Expected: the expected Submission object. */
   @Test
   public void testGetSubmissionExists() {
     Submission submission = submissionMapper.getSubmission(1000);
@@ -261,7 +269,7 @@ public class SubmissionMapperTest {
     Assertions.assertEquals(1000, problemId);
   }
 
-  /** 测试用例: 测试getSubmission(long)方法 测试数据: 不存在的的提交记录唯一标识符 预期结果: 返回空引用 */
+  /** Test case: tests the getSubmission(long) method. Test data: a non-existing submission record unique identifier. Expected: a null reference. */
   @Test
   public void testGetSubmissionNotExists() {
     Submission submission = submissionMapper.getSubmission(0);
@@ -269,8 +277,8 @@ public class SubmissionMapperTest {
   }
 
   /**
-   * 测试用例: 测试getSubmissionsUsingOffset(long, String, long, int)方法 测试数据: 获取ID从1010起始的10次提交(ID From
-   * 1010 to 1000) 预期结果: 返回提交列表(共4次提交)
+   * Test case: tests the getSubmissionsUsingOffset(long, String, long, int) method. Test data: get 10
+   * submissions with IDs starting from 1010 (ID From 1010 to 1000). Expected: the submission list.
    */
   @Test
   public void testGetSubmissionsFrom1010WithLimit10() {
@@ -283,8 +291,8 @@ public class SubmissionMapperTest {
   }
 
   /**
-   * 测试用例: 测试getSubmissionsUsingOffset(long, String, long, int)方法 测试数据: 获取ID从1003起始的2次提交 预期结果:
-   * 返回提交列表(共2次提交)
+   * Test case: tests the getSubmissionsUsingOffset(long, String, long, int) method. Test data: get 2
+   * submissions with IDs starting from 1003. Expected: the submission list (2 submissions).
    */
   @Test
   public void testGetSubmissionsFrom1003WithLimit2() {
@@ -297,8 +305,8 @@ public class SubmissionMapperTest {
   }
 
   /**
-   * 测试用例: 测试getSubmissionsUsingOffset(long, String, long, int)方法 测试数据: 获取ID从100起始的10次提交(ID From 100
-   * to 90) 预期结果: 返回空提交列表
+   * Test case: tests the getSubmissionsUsingOffset(long, String, long, int) method. Test data: get 10
+   * submissions with IDs starting from 100 (ID From 100 to 90). Expected: an empty submission list.
    */
   @Test
   public void testGetSubmissionsFrom100WithLimit10() {
@@ -307,8 +315,9 @@ public class SubmissionMapperTest {
   }
 
   /**
-   * 测试用例: 测试getSubmissionUsingProblemIdAndUserId(long, long, int)方法 测试数据:
-   * 获取试题ID#1000和用户ID#1000的最新1次提交 预期结果: 返回预期的提交列表(共1次提交)
+   * Test case: tests the getSubmissionUsingProblemIdAndUserId(long, long, int) method. Test data: get
+   * the latest 1 submission of problem ID #1000 and user ID #1000. Expected: the expected submission
+   * list (1 submission).
    */
   @Test
   public void testGetSubmissionUsingExistingProblemIdAndExistingUserId() {
@@ -325,8 +334,8 @@ public class SubmissionMapperTest {
   }
 
   /**
-   * 测试用例: 测试getSubmissionUsingProblemIdAndUserId(long, long, int)方法 测试数据: 使用不存在的试题唯一标识符 预期结果:
-   * 返回空提交列表
+   * Test case: tests the getSubmissionUsingProblemIdAndUserId(long, long, int) method. Test data: a
+   * non-existing problem unique identifier. Expected: an empty submission list.
    */
   @Test
   public void testGetSubmissionUsingNotExistingProblemIdAndExistingUserId() {
@@ -336,8 +345,8 @@ public class SubmissionMapperTest {
   }
 
   /**
-   * 测试用例: 测试getSubmissionUsingProblemIdAndUserId(long, long, int)方法 测试数据: 使用不存在的用户唯一标识符 预期结果:
-   * 返回空提交列表
+   * Test case: tests the getSubmissionUsingProblemIdAndUserId(long, long, int) method. Test data: a
+   * non-existing user unique identifier. Expected: an empty submission list.
    */
   @Test
   public void testGetSubmissionUsingExistingProblemIdAndNotExistingUserId() {
@@ -347,8 +356,9 @@ public class SubmissionMapperTest {
   }
 
   /**
-   * 测试用例: 测试getLatestSubmissionOfProblems(long, long, long)方法 测试数据: 获取用户ID#1000在试题ID区间[1000,
-   * 1010)的最新评测结果 预期结果: 返回预期的提交列表(试题ID#1000 - WA, 试题ID#1001 - AC)
+   * Test case: tests the getLatestSubmissionOfProblems(long, long, long) method. Test data: get the
+   * latest judge results of user ID #1000 in the problem ID range [1000, 1010). Expected: the
+   * expected submission list (problem ID #1000 - WA, problem ID #1001 - AC).
    */
   @Test
   public void testGetLatestSubmissionOfProblemsWithUser1000() {
@@ -365,8 +375,9 @@ public class SubmissionMapperTest {
   }
 
   /**
-   * 测试用例: 测试getLatestSubmissionOfProblems(long, long, long)方法 测试数据: 获取用户ID#1001在试题ID区间[1000,
-   * 1010)的最新评测结果 预期结果: 返回预期的提交列表(试题ID#1000 - CE)
+   * Test case: tests the getLatestSubmissionOfProblems(long, long, long) method. Test data: get the
+   * latest judge results of user ID #1001 in the problem ID range [1000, 1010). Expected: the
+   * expected submission list (problem ID #1000 - CE).
    */
   @Test
   public void testGetLatestSubmissionOfProblemsWithUser1001() {
@@ -379,8 +390,9 @@ public class SubmissionMapperTest {
   }
 
   /**
-   * 测试用例: 测试getAcceptedSubmissionOfProblems(long, long, long)方法 测试数据: 获取用户ID#1000在试题ID区间[1000,
-   * 1010)的通过评测结果 预期结果: 返回预期的提交列表(试题ID#1000 - AC, 试题ID#1001 - AC)
+   * Test case: tests the getAcceptedSubmissionOfProblems(long, long, long) method. Test data: get the
+   * accepted judge results of user ID #1000 in the problem ID range [1000, 1010). Expected: the
+   * expected submission list (problem ID #1000 - AC, problem ID #1001 - AC).
    */
   @Test
   public void testGetAcceptedSubmissionOfProblemsWithUser1000() {
@@ -398,8 +410,9 @@ public class SubmissionMapperTest {
   }
 
   /**
-   * 测试用例: 测试getAcceptedSubmissionOfProblems(long, long, long)方法 测试数据: 获取用户ID#1001在试题ID区间[1000,
-   * 1010)的通过评测结果 预期结果: 返回空提交列表
+   * Test case: tests the getAcceptedSubmissionOfProblems(long, long, long) method. Test data: get the
+   * accepted judge results of user ID #1001 in the problem ID range [1000, 1010). Expected: an empty
+   * submission list.
    */
   @Test
   public void testGetAcceptedSubmissionOfProblemsWithUser1001() {
@@ -409,8 +422,9 @@ public class SubmissionMapperTest {
   }
 
   /**
-   * 测试用例: 测试getAcceptedSubmissionUsingUserId(long)方法 测试数据: 获取用户ID#1001通过的提交次数 预期结果:
-   * 返回用户ID#1001通过的提交次数(共2次)
+   * Test case: tests the getAcceptedSubmissionUsingUserId(long) method. Test data: get the number of
+   * accepted submissions of user ID #1000. Expected: the number of accepted submissions of user ID
+   * #1000 (2).
    */
   @Test
   public void testGetAcceptedSubmissionUsingUserIdWithUser1000() {
@@ -419,8 +433,8 @@ public class SubmissionMapperTest {
   }
 
   /**
-   * 测试用例: 测试getTotalSubmissionUsingUserId(long)方法 测试数据: 获取用户ID#1001总提交次数 预期结果:
-   * 返回用户ID#1001总提交次数(共4次)
+   * Test case: tests the getTotalSubmissionUsingUserId(long) method. Test data: get the total number
+   * of submissions of user ID #1000. Expected: the total number of submissions of user ID #1000 (3).
    */
   @Test
   public void testGetTotalSubmissionUsingUserIdWithUser1000() {
@@ -428,7 +442,7 @@ public class SubmissionMapperTest {
     Assertions.assertEquals(3, acceptedSubmission);
   }
 
-  /** 测试用例: 测试createSubmission(Submission)方法 测试数据: 使用合法的数据集 预期结果: 数据插入操作成功完成 */
+  /** Test case: tests the createSubmission(Submission) method. Test data: a valid data set. Expected: the data insertion operation completes successfully. */
   @Test
   public void testCreateSubmissionNormally() {
     Problem problem = problemMapper.getProblem(1000);
@@ -441,8 +455,8 @@ public class SubmissionMapperTest {
   }
 
   /**
-   * 测试用例: 测试createSubmission(Submission)方法 测试数据: 使用不存在的外键值(编程语言对象) 预期结果:
-   * 抛出DataIntegrityViolationException异常
+   * Test case: tests the createSubmission(Submission) method. Test data: a non-existing foreign-key
+   * value (a programming language object). Expected: a DataIntegrityViolationException is thrown.
    */
   @Test
   public void testCreateSubmissionUsingNotExistingLanguage() {
@@ -458,7 +472,7 @@ public class SubmissionMapperTest {
     Assertions.assertThrows(org.springframework.dao.DataIntegrityViolationException.class, e);
   }
 
-  /** 测试用例: 测试updateSubmission(Submission)方法 测试数据: 使用合法的数据集, 且数据表中存在对应ID的记录 预期结果: 数据更新操作成功完成 */
+  /** Test case: tests the updateSubmission(Submission) method. Test data: a valid data set, and a record with the corresponding ID exists in the table. Expected: the data update operation completes successfully. */
   @Test
   public void testUpdateSubmissionNormally() {
     Submission submission = submissionMapper.getSubmission(1002);
@@ -480,7 +494,7 @@ public class SubmissionMapperTest {
   }
 
   /**
-   * 测试用例: 测试updateSubmission(Submission)方法 测试数据: 使用合法的数据集, 但数据表中不存在对应ID的记录 预期结果: 方法正常执行, 未影响数据表中的数据
+   * Test case: tests the updateSubmission(Submission) method. Test data: a valid data set, but no record with the corresponding ID exists in the table. Expected: the method executes normally without affecting the data in the table.
    */
   @Test
   public void testUpdateSubmissionNotExists() {
@@ -492,7 +506,7 @@ public class SubmissionMapperTest {
     Assertions.assertEquals(0, numberOfRowsAffected);
   }
 
-  /** 测试用例: 测试deleteSubmission(long)方法 测试数据: 提交记录#1003的唯一标识符 预期结果: 数据删除操作成功完成 */
+  /** Test case: tests the deleteSubmission(long) method. Test data: the unique identifier of submission record #1004. Expected: the data deletion operation completes successfully. */
   @Test
   public void testDeleteSubmissionExists() {
     Submission submission = submissionMapper.getSubmission(1004);
@@ -505,7 +519,7 @@ public class SubmissionMapperTest {
     Assertions.assertNull(submission);
   }
 
-  /** 测试用例: 测试deleteSubmission(long)方法 测试数据: 不存在的提交记录唯一标识符 预期结果: 方法正常执行, 未影响数据表中的数据 */
+  /** Test case: tests the deleteSubmission(long) method. Test data: a non-existing submission record unique identifier. Expected: the method executes normally without affecting the data in the table. */
   @Test
   public void testDeleteSubmissionNotExists() {
     Submission submission = submissionMapper.getSubmission(0);
@@ -515,15 +529,15 @@ public class SubmissionMapperTest {
     Assertions.assertEquals(0, numberOfRowsAffected);
   }
 
-  /** 待测试的SubmissionMapper对象. */
+  /** The SubmissionMapper object under test. */
   @Autowired private SubmissionMapper submissionMapper;
 
-  /** ProblemMapper对象, 用于构建单元测试用例. */
+  /** The ProblemMapper object, used to build the unit test cases. */
   @Autowired private ProblemMapper problemMapper;
 
-  /** UserMapper对象, 用于构建单元测试用例. */
+  /** The UserMapper object, used to build the unit test cases. */
   @Autowired private UserMapper userMapper;
 
-  /** LanguageMapper对象, 用于构建单元测试用例. */
+  /** The LanguageMapper object, used to build the unit test cases. */
   @Autowired private LanguageMapper languageMapper;
 }

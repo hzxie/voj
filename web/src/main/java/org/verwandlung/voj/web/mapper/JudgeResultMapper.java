@@ -27,18 +27,18 @@ import org.verwandlung.voj.web.model.JudgeResult;
  */
 public interface JudgeResultMapper {
   /**
-   * 通过评测结果的唯一标识符获取评测结果对象.
+   * Gets a judge result object by its unique identifier.
    *
-   * @param judgeResultId - 评测结果的唯一标识符
-   * @return 预期的评测结果对象或空引用
+   * @param judgeResultId - the unique identifier of the judge result
+   * @return the expected judge result object, or a null reference
    */
   JudgeResult getJudgeResultUsingId(@Param("judgeResultId") int judgeResultId);
 
   /**
-   * 通过评测结果的别名获取评测结果对象.
+   * Gets a judge result object by its alias.
    *
-   * @param judgeResultSlug - 评测结果的别名
-   * @return 预期的评测结果对象或空引用
+   * @param judgeResultSlug - the alias of the judge result
+   * @return the expected judge result object, or a null reference
    */
   JudgeResult getJudgeResultUsingSlug(@Param("judgeResultSlug") String judgeResultSlug);
 }

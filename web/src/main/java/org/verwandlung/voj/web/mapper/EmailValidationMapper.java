@@ -27,24 +27,24 @@ import org.verwandlung.voj.web.model.EmailValidation;
  */
 public interface EmailValidationMapper {
   /**
-   * 获取某个电子邮件地址对应的EmailValidation对象.
+   * Gets the EmailValidation object corresponding to an email address.
    *
-   * @param email - 电子邮件地址
-   * @return 对应的EmailValidation对象
+   * @param email - the email address
+   * @return the corresponding EmailValidation object
    */
   EmailValidation getEmailValidation(@Param("email") String email);
 
   /**
-   * 创建新的电子邮件验证凭据.
+   * Creates a new email validation credential.
    *
-   * @param emailValidation - 电子邮件验证凭据
+   * @param emailValidation - the email validation credential
    */
   int createEmailValidation(EmailValidation emailValidation);
 
   /**
-   * 删除电子邮件验证凭据.
+   * Deletes an email validation credential.
    *
-   * @param email - 电子邮件地址
+   * @param email - the email address
    */
   int deleteEmailValidation(@Param("email") String email);
 }

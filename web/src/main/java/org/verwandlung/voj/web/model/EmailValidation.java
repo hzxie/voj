@@ -20,20 +20,20 @@ import java.io.Serializable;
 import java.util.Date;
 
 /**
- * 电子邮件验证类.
+ * The email validation model.
  *
  * @author Haozhe Xie
  */
 public class EmailValidation implements Serializable {
-  /** EmailValidation类的默认构造函数. */
+  /** Default constructor of the EmailValidation class. */
   public EmailValidation() {}
 
   /**
-   * EmailValidation类的构造函数.
+   * Constructor of the EmailValidation class.
    *
-   * @param email - 待验证的电子邮件地址
-   * @param token - 验证所用的Token
-   * @param expireTime - Token的过期时间
+   * @param email - the email address to be validated
+   * @param token - the token used for validation
+   * @param expireTime - the expiration time of the token
    */
   public EmailValidation(String email, String token, Date expireTime) {
     this.email = email;
@@ -42,54 +42,54 @@ public class EmailValidation implements Serializable {
   }
 
   /**
-   * 获取待验证的电子邮件地址.
+   * Gets the email address to be validated.
    *
-   * @return 待验证的电子邮件地址
+   * @return the email address to be validated
    */
   public String getEmail() {
     return email;
   }
 
   /**
-   * 设置待验证的电子邮件地址.
+   * Sets the email address to be validated.
    *
-   * @param email - 待验证的电子邮件地址
+   * @param email - the email address to be validated
    */
   public void setEmail(String email) {
     this.email = email;
   }
 
   /**
-   * 获取验证所用的Token.
+   * Gets the token used for validation.
    *
-   * @return 验证所用的Token
+   * @return the token used for validation
    */
   public String getToken() {
     return token;
   }
 
   /**
-   * 设置验证所用的Token.
+   * Sets the token used for validation.
    *
-   * @param token - 验证所用的Token
+   * @param token - the token used for validation
    */
   public void setToken(String token) {
     this.token = token;
   }
 
   /**
-   * 获取Token的过期时间.
+   * Gets the expiration time of the token.
    *
-   * @return Token的过期时间
+   * @return the expiration time of the token
    */
   public Date getExpireTime() {
     return expireTime;
   }
 
   /**
-   * 设置Token的过期时间.
+   * Sets the expiration time of the token.
    *
-   * @param expireTime - Token的过期时间
+   * @param expireTime - the expiration time of the token
    */
   public void setExpireTime(Date expireTime) {
     this.expireTime = expireTime;
@@ -104,15 +104,15 @@ public class EmailValidation implements Serializable {
         new Object[] {email, token, expireTime});
   }
 
-  /** 待验证的电子邮件地址. */
+  /** The email address to be validated. */
   private String email;
 
-  /** 验证所用的Token. */
+  /** The token used for validation. */
   private String token;
 
-  /** Token的过期时间. */
+  /** The expiration time of the token. */
   private Date expireTime;
 
-  /** 唯一的序列化标识符. */
+  /** The unique serialization identifier. */
   private static final long serialVersionUID = -2452767046421078474L;
 }

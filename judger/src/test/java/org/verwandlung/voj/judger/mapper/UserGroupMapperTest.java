@@ -27,7 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.verwandlung.voj.judger.model.UserGroup;
 
 /**
- * UserGroupMapper测试类.
+ * Test class for UserGroupMapper.
  *
  * @author Haozhe Xie
  */
@@ -35,7 +35,10 @@ import org.verwandlung.voj.judger.model.UserGroup;
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class UserGroupMapperTest {
-  /** 测试用例: 测试getUserGroupUsingId(int)方法 测试数据: 普通用户(User)的用户组唯一标识符 预期结果: 返回用户(User)的用户组对象 */
+  /**
+   * Test case: tests the getUserGroupUsingId(int) method. Test data: the unique identifier of a
+   * user's user group. Expected result: returns the user's user group object.
+   */
   @Test
   public void testGetUserGroupUsingIdExists() {
     UserGroup userGroup = userGroupMapper.getUserGroupUsingId(1);
@@ -45,13 +48,16 @@ public class UserGroupMapperTest {
     Assertions.assertEquals("forbidden", userGroupSlug);
   }
 
-  /** 测试用例: 测试getUserGroupUsingId(int)方法 测试数据: 不存在的用户组唯一标识符 预期结果: 返回空引用 */
+  /**
+   * Test case: tests the getUserGroupUsingId(int) method. Test data: a non-existent user group
+   * identifier. Expected result: returns a null reference.
+   */
   @Test
   public void testGetUserGroupUsingIdNotExists() {
     UserGroup userGroup = userGroupMapper.getUserGroupUsingId(0);
     Assertions.assertNull(userGroup);
   }
 
-  /** 待测试的UserGroupMapper对象. */
+  /** The UserGroupMapper object under test. */
   @Autowired private UserGroupMapper userGroupMapper;
 }

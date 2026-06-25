@@ -20,21 +20,21 @@ import java.io.Serializable;
 import java.util.Date;
 
 /**
- * 讨论帖子的Model.
+ * The model of a discussion thread.
  *
  * @author Haozhe Xie
  */
 public class DiscussionThread implements Serializable {
-  /** DiscussionThread的默认构造函数. */
+  /** Default constructor of the discussion thread. */
   public DiscussionThread() {}
 
   /**
-   * DiscussionThread的构造函数.
+   * Constructor of the discussion thread.
    *
-   * @param discussionThreadCreator - 讨论帖子的创建用户
-   * @param problem - 讨论帖子对应的试题
-   * @param discussionTopic - 讨论帖子所属的话题
-   * @param discussionThreadTitle - 讨论帖子的标题
+   * @param discussionThreadCreator - the user who created the discussion thread
+   * @param problem - the problem the discussion thread corresponds to
+   * @param discussionTopic - the topic the discussion thread belongs to
+   * @param discussionThreadTitle - the title of the discussion thread
    */
   public DiscussionThread(
       User discussionThreadCreator,
@@ -48,13 +48,13 @@ public class DiscussionThread implements Serializable {
   }
 
   /**
-   * DiscussionThread的构造函数.
+   * Constructor of the discussion thread.
    *
-   * @param discussionThreadId - 讨论帖子的唯一标识符
-   * @param discussionThreadCreator - 讨论帖子的创建用户
-   * @param problem - 讨论帖子对应的试题
-   * @param discussionTopic - 讨论帖子所属的话题
-   * @param discussionThreadTitle - 讨论帖子的标题
+   * @param discussionThreadId - the unique identifier of the discussion thread
+   * @param discussionThreadCreator - the user who created the discussion thread
+   * @param problem - the problem the discussion thread corresponds to
+   * @param discussionTopic - the topic the discussion thread belongs to
+   * @param discussionThreadTitle - the title of the discussion thread
    */
   public DiscussionThread(
       long discussionThreadId,
@@ -67,144 +67,144 @@ public class DiscussionThread implements Serializable {
   }
 
   /**
-   * 获取讨论帖子的唯一标识符.
+   * Gets the unique identifier of the discussion thread.
    *
-   * @return 讨论帖子的唯一标识符
+   * @return the unique identifier of the discussion thread
    */
   public long getDiscussionThreadId() {
     return discussionThreadId;
   }
 
   /**
-   * 设置讨论帖子的唯一标识符.
+   * Sets the unique identifier of the discussion thread.
    *
-   * @param discussionThreadId - 讨论帖子的唯一标识符
+   * @param discussionThreadId - the unique identifier of the discussion thread
    */
   public void setDiscussionThreadId(long discussionThreadId) {
     this.discussionThreadId = discussionThreadId;
   }
 
   /**
-   * 获取讨论帖子的创建用户.
+   * Gets the user who created the discussion thread.
    *
-   * @return 讨论帖子的创建用户
+   * @return the user who created the discussion thread
    */
   public User getDiscussionThreadCreator() {
     return discussionThreadCreator;
   }
 
   /**
-   * 设置讨论帖子的创建用户.
+   * Sets the user who created the discussion thread.
    *
-   * @param discussionThreadCreator - 讨论帖子的创建用户
+   * @param discussionThreadCreator - the user who created the discussion thread
    */
   public void setDiscussionThreadCreator(User discussionThreadCreator) {
     this.discussionThreadCreator = discussionThreadCreator;
   }
 
   /**
-   * 获取讨论帖子的创建时间.
+   * Gets the creation time of the discussion thread.
    *
-   * @return 讨论帖子的创建时间
+   * @return the creation time of the discussion thread
    */
   public Date getDiscussionThreadCreateTime() {
     return discussionThreadCreateTime;
   }
 
   /**
-   * 设置讨论帖子的创建时间.
+   * Sets the creation time of the discussion thread.
    *
-   * @param discussionThreadCreateTime - 讨论帖子的创建时间
+   * @param discussionThreadCreateTime - the creation time of the discussion thread
    */
   public void setDiscussionThreadCreateTime(Date discussionThreadCreateTime) {
     this.discussionThreadCreateTime = discussionThreadCreateTime;
   }
 
   /**
-   * 获取讨论帖子对应的试题.
+   * Gets the problem the discussion thread corresponds to.
    *
-   * @return 讨论帖子对应的试题
+   * @return the problem the discussion thread corresponds to
    */
   public Problem getProblem() {
     return problem;
   }
 
   /**
-   * 设置讨论帖子对应的试题.
+   * Sets the problem the discussion thread corresponds to.
    *
-   * @param problem - 讨论帖子对应的试题
+   * @param problem - the problem the discussion thread corresponds to
    */
   public void setProblem(Problem problem) {
     this.problem = problem;
   }
 
   /**
-   * 获取讨论帖子所属的话题.
+   * Gets the topic the discussion thread belongs to.
    *
-   * @return 讨论帖子所属的话题
+   * @return the topic the discussion thread belongs to
    */
   public DiscussionTopic getDiscussionTopic() {
     return discussionTopic;
   }
 
   /**
-   * 设置讨论帖子所属的话题.
+   * Sets the topic the discussion thread belongs to.
    *
-   * @param discussionTopic - 讨论帖子所属的话题
+   * @param discussionTopic - the topic the discussion thread belongs to
    */
   public void setDiscussionTopic(DiscussionTopic discussionTopic) {
     this.discussionTopic = discussionTopic;
   }
 
   /**
-   * 获取讨论帖子的标题.
+   * Gets the title of the discussion thread.
    *
-   * @return 讨论帖子的标题
+   * @return the title of the discussion thread
    */
   public String getDiscussionThreadTitle() {
     return discussionThreadTitle;
   }
 
   /**
-   * 设置讨论帖子的标题.
+   * Sets the title of the discussion thread.
    *
-   * @param discussionThreadTitle - 讨论帖子的标题
+   * @param discussionThreadTitle - the title of the discussion thread
    */
   public void setDiscussionThreadTitle(String discussionThreadTitle) {
     this.discussionThreadTitle = discussionThreadTitle;
   }
 
   /**
-   * 获取最后一个讨论回复.
+   * Gets the latest discussion reply.
    *
-   * @return 最后一个讨论回复
+   * @return the latest discussion reply
    */
   public DiscussionReply getLatestDiscussionReply() {
     return latestDiscussionReply;
   }
 
   /**
-   * 设置最新的讨论回复.
+   * Sets the latest discussion reply.
    *
-   * @param latestDiscussionReply - 最新的讨论回复
+   * @param latestDiscussionReply - the latest discussion reply
    */
   public void setLatestDiscussionReply(DiscussionReply latestDiscussionReply) {
     this.latestDiscussionReply = latestDiscussionReply;
   }
 
   /**
-   * 获取讨论帖子的回复数.
+   * Gets the number of replies of the discussion thread.
    *
-   * @return 讨论帖子的回复数
+   * @return the number of replies of the discussion thread
    */
   public long getNumberOfReplies() {
     return numberOfReplies;
   }
 
   /**
-   * 设置讨论帖子的回复数
+   * Sets the number of replies of the discussion thread.
    *
-   * @param numberOfReplies - 讨论帖子的回复数
+   * @param numberOfReplies - the number of replies of the discussion thread
    */
   public void setNumberOfReplies(long numberOfReplies) {
     this.numberOfReplies = numberOfReplies;
@@ -216,30 +216,30 @@ public class DiscussionThread implements Serializable {
         new Object[] {discussionThreadId, discussionThreadCreator, problem, discussionThreadTitle});
   }
 
-  /** 讨论帖子的唯一标识符. */
+  /** The unique identifier of the discussion thread. */
   private long discussionThreadId;
 
-  /** 讨论帖子的创建用户. */
+  /** The user who created the discussion thread. */
   private User discussionThreadCreator;
 
-  /** 讨论帖子的创建时间. */
+  /** The creation time of the discussion thread. */
   private Date discussionThreadCreateTime;
 
-  /** 讨论帖子对应的试题. */
+  /** The problem the discussion thread corresponds to. */
   private Problem problem;
 
-  /** 讨论帖子所属的话题. */
+  /** The topic the discussion thread belongs to. */
   private DiscussionTopic discussionTopic;
 
-  /** 讨论帖子的标题. */
+  /** The title of the discussion thread. */
   private String discussionThreadTitle;
 
-  /** 讨论帖子最新的回复. */
+  /** The latest reply of the discussion thread. */
   private DiscussionReply latestDiscussionReply;
 
-  /** 讨论帖子的回复数量. */
+  /** The number of replies of the discussion thread. */
   private long numberOfReplies;
 
-  /** 唯一的序列化标识符. */
+  /** The unique serialization identifier. */
   private static final long serialVersionUID = -616554199104563280L;
 }

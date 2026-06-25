@@ -31,16 +31,17 @@ import org.verwandlung.voj.web.mapper.OptionMapper;
 import org.verwandlung.voj.web.model.Option;
 
 /**
- * 敏感词过滤类.
+ * The offensive word filtering class.
  *
  * @author Zhou Yihao
  */
 @Component
 public class OffensiveWordFilter {
   /**
-   * OffensiveWordFilter类的构造函数.
+   * The constructor of the OffensiveWordFilter class.
    *
-   * @param optionMapper - 自动注入的optionMapper对象, 用于从数据库获取敏感词列表
+   * @param optionMapper - the autowired optionMapper object, used to get the offensive word list
+   *     from the database
    */
   @Autowired
   private OffensiveWordFilter(OptionMapper optionMapper) {
@@ -58,26 +59,28 @@ public class OffensiveWordFilter {
   }
 
   /**
-   * 提供敏感词过滤的功能. 对offensiveWordFilter(String, int , String)的重载. 设置了匹配规则(maxMatchType)和替换字符("*")的默认值.
+   * Provides the offensive word filtering function. An overload of offensiveWordFilter(String, int,
+   * String). Sets the default values of the match rule (maxMatchType) and the replacement character
+   * ("*").
    *
-   * @param text - 待过滤字符串
-   * @return 过滤后的字符串
+   * @param text - the string to filter
+   * @return the filtered string
    */
   public String filter(String text) {
     return filter(text, OffensiveWordFilter.MAX_MATCH_TYPE, "*");
   }
 
   /**
-   * 提供敏感词过滤的功能.
+   * Provides the offensive word filtering function.
    *
-   * @param text - 待过滤字符串
-   * @param matchType - 匹配规则, 1 为极小匹配, 2 为极大匹配
-   * @return 过滤后的字符串
+   * @param text - the string to filter
+   * @param matchType - the match rule, 1 for minimum match, 2 for maximum match
+   * @return the filtered string
    */
   private String filter(String text, int matchType, String replaceChar) {
-    // 获取txt中所有敏感词的位置
+    // Get the positions of all offensive words in the text
     List<Position> offensiveWordsPosition = getOffensiveWordsPosition(text, matchType);
-    // 用replaceChar替换txt中的所有敏感词
+    // Replace all offensive words in the text with replaceChar
     StringBuilder resultStringBuilder = new StringBuilder(text);
 
     Iterator<Position> iterator = offensiveWordsPosition.iterator();
@@ -90,42 +93,45 @@ public class OffensiveWordFilter {
   }
 
   /**
-   * 获取敏感词的位置.
+   * Gets the positions of the offensive words.
    *
-   * @param text - 待过滤字符串
-   * @param matchType - 匹配规则 1 为极小匹配, 2 为极大匹配
-   * @return 敏感词的位置
+   * @param text - the string to filter
+   * @param matchType - the match rule, 1 for minimum match, 2 for maximum match
+   * @return the positions of the offensive words
    */
   private List<Position> getOffensiveWordsPosition(String text, int matchType) {
     List<Position> offensiveWordsPosition = new ArrayList<>();
-    // 遍历待过滤字符串,  检查 txt 以 i 开始的子串的前缀, 是否为敏感词
+    // Traverse the string to be filtered, and check whether the prefix of the substring of text
+    // starting at i is an offensive word
     for (int i = 0; i < text.length(); ++i) {
       int length = checkOffensiveWord(text, i, matchType);
       if (length > 0) {
         Position position = new Position(i, length);
         offensiveWordsPosition.add(position);
-        i = i + length - 1; // 跳过已经匹配的敏感词, 因为for中会自增, 所以减一
+        // Skip the already-matched offensive word; subtract one because the for loop increments
+        i = i + length - 1;
       }
     }
     return offensiveWordsPosition;
   }
 
   /**
-   * 检查以benginIndex开始的字符串的前缀, 是否为敏感词.
+   * Checks whether the prefix of the string starting at beginIndex is an offensive word.
    *
-   * @param text - 待过滤文本
-   * @param beginIndex - 此次检查的开始处
-   * @param matchType 匹配模式, 1 为极小匹配, 2 为极大匹配
-   * @return 送存在敏感词, 则返回敏感词的长度, 若不存在, 则返回0
+   * @param text - the text to filter
+   * @param beginIndex - the start position of this check
+   * @param matchType the match mode, 1 for minimum match, 2 for maximum match
+   * @return the length of the offensive word if one exists, or 0 if none exists
    */
   @SuppressWarnings("rawtypes")
   private int checkOffensiveWord(String text, int beginIndex, int matchType) {
     /*
-     * matchedLength为当前已匹配的最长敏感词长度
-     * matchingLength为正在尝试匹配的敏感词长度,
-     * 当匹配到终结符时, 将matchingLength赋给matchedLength,
-     * 若为极大匹配, 则继续匹配, 检查当前已匹配到的敏感词是否属于更长的敏感词中, 此时, 若匹配失败,
-     * 则回退到matchedLength, 并结束匹配.
+     * matchedLength is the length of the longest offensive word matched so far.
+     * matchingLength is the length of the offensive word currently being matched.
+     * When a terminal symbol is matched, matchingLength is assigned to matchedLength.
+     * For a maximum match, matching continues to check whether the currently matched offensive word
+     * is part of a longer offensive word; if the match fails at this point, it falls back to
+     * matchedLength and ends the match.
      */
     int matchedLength = 0;
     int matchingLength = 0;
@@ -134,18 +140,18 @@ public class OffensiveWordFilter {
     Map nowMap = offensiveWordMap;
     for (int i = beginIndex; i < text.length(); ++i) {
       nowWord = text.charAt(i);
-      // 当前字的follow集
+      // The follow set of the current character
       nowMap = (Map) nowMap.get(nowWord);
       if (nowMap != null) {
         ++matchingLength;
-        if ("1".equals(nowMap.get(IS_END))) { // 匹配到终结符, 更新当前已匹配的最大长度
+        if ("1".equals(nowMap.get(IS_END))) { // Matched a terminal symbol; update the current max matched length
           matchedLength = matchingLength;
           if (OffensiveWordFilter.MIN_MATCH_TYPE == matchType) {
-            // 若为极小匹配规则, 那么一旦匹配到终结符, 就结束匹配
+            // For the minimum match rule, end the match as soon as a terminal symbol is matched
             break;
           }
         }
-      } else { // 当前字的follow集若为空, 则匹配结束,
+      } else { // If the follow set of the current character is empty, the match ends
         break;
       }
     }
@@ -153,11 +159,12 @@ public class OffensiveWordFilter {
   }
 
   /**
-   * 获取用以替换敏感词的字符串 , 敏感词中的所有字都被替换成replaceChar, 根据长度和字符生成, 例如"****"
+   * Gets the string used to replace an offensive word. All the characters in the offensive word are
+   * replaced with replaceChar, generated based on the length and character, e.g. "****".
    *
-   * @param replaceChar 用来替换敏感词的字符
-   * @param length 敏感词的长度
-   * @return 用来替换敏感词的字符串
+   * @param replaceChar the character used to replace the offensive word
+   * @param length the length of the offensive word
+   * @return the string used to replace the offensive word
    */
   private static String getReplaceChars(String replaceChar, int length) {
     String resultChars = "";
@@ -168,44 +175,44 @@ public class OffensiveWordFilter {
   }
 
   /**
-   * 读取敏感词库, 将敏感词放入HashSet中, 构建一个DFA算法模型: 中 = { isEnd = 0 国 = { isEnd = 1 人 = {isEnd = 0 民 = {isEnd
-   * = 1} } 男 = { isEnd = 0 人 = { isEnd = 1 } } } } 五 = { isEnd = 0 星 = { isEnd = 0 红 = { isEnd = 0
-   * 旗 = { isEnd = 1 } } } }
+   * Reads the offensive word library, puts the offensive words into a HashSet, and builds a DFA
+   * algorithm model. For example, for the words "ab", "abc" and "ade", the model is: a = { isEnd = 0
+   * b = { isEnd = 1 c = { isEnd = 1 } } d = { isEnd = 0 e = { isEnd = 1 } } }.
    *
-   * @param offensiveWordSet - 敏感词的Set集
+   * @param offensiveWordSet - the Set of offensive words
    */
   @SuppressWarnings({"unchecked", "rawtypes"})
   private void addOffensiveWordsToHashMap(Set<String> offensiveWordSet) {
-    // 初始化敏感词HashMap, 大小与Set相等.
+    // Initialize the offensive word HashMap, with a size equal to the Set.
     offensiveWordMap = new HashMap((int) (offensiveWordSet.size() * 1.5));
 
-    // 在 nowMap状态读过key, 到达新状态, 故创建newWordMap
+    // After reading a key from the nowMap state and reaching a new state, create newWordMap
     String key = null;
     Map nowMap = null;
     Map newWordMap = null;
-    // 迭代OffensiveWordSet
+    // Iterate over the OffensiveWordSet
     Iterator<String> iterator = offensiveWordSet.iterator();
     while (iterator.hasNext()) {
       key = iterator.next();
-      // 从最高层的HashMap开始遍历
+      // Start traversal from the top-level HashMap
       nowMap = offensiveWordMap;
 
-      // 迭代当前敏感词中的每个字
+      // Iterate over each character in the current offensive word
       for (int i = 0; i < key.length(); ++i) {
         char keyChar = key.charAt(i);
         Object wordMap = nowMap.get(keyChar);
 
         if (wordMap != null) {
-          // 当前敏感词的当前字已存在,进入下一个状态
+          // The current character of the current offensive word already exists; go to the next state
           nowMap = (Map) wordMap;
         } else {
-          // 当前敏感词的当前字不存在, 创建一个新Map(状态)
+          // The current character of the current offensive word does not exist; create a new Map (state)
           newWordMap = new HashMap();
-          // 默认当前敏感词的当前字不是终结符
+          // By default, the current character of the current offensive word is not a terminal symbol
           newWordMap.put(IS_END, "0");
-          // 将新建的Map(状态)添加到当前Map(状态)中
+          // Add the newly created Map (state) to the current Map (state)
           nowMap.put(keyChar, newWordMap);
-          // 读取当前字后进入下一个状态
+          // Go to the next state after reading the current character
           nowMap = newWordMap;
         }
         if (i == key.length() - 1) {
@@ -215,39 +222,41 @@ public class OffensiveWordFilter {
     }
   }
 
-  /** 存储敏感词的HashMap. */
+  /** The HashMap that stores the offensive words. */
   private HashMap<?, ?> offensiveWordMap;
 
-  /** HashMap中敏感词是否终结的标识. */
+  /** The flag in the HashMap indicating whether an offensive word terminates. */
   private static final String IS_END = "isEnd";
 
   /**
-   * minMatchType 极小匹配规则 1 若找到敏感词的终结符, 则不再继续寻找其是否包含在一个更长的敏感词中 maxMatchType 极大匹配规则 2 若找到敏感词的终结符,
-   * 则仍需继续寻找其是否包含在一个更长的敏感词中
+   * minMatchType: the minimum match rule (1). Once the terminal symbol of an offensive word is
+   * found, it no longer continues to look for whether it is contained in a longer offensive word.
+   * maxMatchType: the maximum match rule (2). Once the terminal symbol of an offensive word is
+   * found, it still continues to look for whether it is contained in a longer offensive word.
    */
   public static final int MIN_MATCH_TYPE = 1;
 
   public static final int MAX_MATCH_TYPE = 2;
 
-  /** 敏感词系统设置项. */
+  /** The system setting key for offensive words. */
   public static final String OFFENSIVE_WORD_OPTION_KEY = "offensiveWords";
 
-  /** 自动注入OptionDao对象 */
+  /** The autowired OptionDao object. */
   @SuppressWarnings("unused")
   private OptionMapper optionMapper;
 }
 
 /**
- * 存储敏感词的位置(开始位置和长度)
+ * Stores the position of an offensive word (start position and length).
  *
  * @author Zhou YiHao
  */
 class Position {
   /**
-   * Position的构造函数.
+   * The constructor of Position.
    *
-   * @param start - 敏感词开始位置
-   * @param length - 敏感词长度
+   * @param start - the start position of the offensive word
+   * @param length - the length of the offensive word
    */
   public Position(int start, int length) {
     this.start = start;

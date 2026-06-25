@@ -31,7 +31,7 @@ import org.verwandlung.voj.web.model.User;
 import java.util.List;
 
 /**
- * ContestMapper的测试类.
+ * The test class for ContestContestantMapper.
  *
  * @author Haozhe Xie
  */
@@ -39,14 +39,14 @@ import java.util.List;
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class ContestContestantMapperTest {
-  /** 测试用例: 测试getNumberOfContestantsOfContest(long)方法. 测试数据: 使用存在的考试唯一标识符. 预期结果: 返回对应的考试参加的人数. */
+  /** Test case: tests the getNumberOfContestantsOfContest(long) method. Test data: an existing contest unique identifier. Expected: the number of participants of the corresponding contest. */
   @Test
   public void testGetNumberOfContestantsOfContestUsingExistingContest() {
     long numberOfContestants = contestContestantMapper.getNumberOfContestantsOfContest(1);
     Assertions.assertEquals(2, numberOfContestants);
   }
 
-  /** 测试用例: 测试getNumberOfContestantsOfContest(long)方法. 测试数据: 使用不存在的考试唯一标识符. 预期结果: 返回0 */
+  /** Test case: tests the getNumberOfContestantsOfContest(long) method. Test data: a non-existing contest unique identifier. Expected: returns 0. */
   @Test
   public void testGetNumberOfContestantsOfContestUsingNotExistingContest() {
     long numberOfContestants = contestContestantMapper.getNumberOfContestantsOfContest(0);
@@ -54,8 +54,9 @@ public class ContestContestantMapperTest {
   }
 
   /**
-   * 测试用例: 测试getContestantOfContest(long, long)方法. 测试数据: ContestID = 1, ContestantUid = 1000 预期结果:
-   * 返回UID = 1000的用户在第1场考试的ContestContestant对象.
+   * Test case: tests the getContestantOfContest(long, long) method. Test data: ContestID = 1,
+   * ContestantUid = 1000. Expected: the ContestContestant object of the user with UID = 1000 in the
+   * 1st contest.
    */
   @Test
   public void testGetContestantOfContestExists() {
@@ -67,8 +68,8 @@ public class ContestContestantMapperTest {
   }
 
   /**
-   * 测试用例: 测试getContestantsOfContestForOi(long, long ,int)方法. 测试数据: ContestID = 1, offset = 0, limit
-   * = 2 预期结果: 返回第1场考试的从0开始的2个参赛者.
+   * Test case: tests the getContestantsOfContestForOi(long, long, int) method. Test data: ContestID =
+   * 1, offset = 0, limit = 2. Expected: 2 contestants of the 1st contest starting from 0.
    */
   @Test
   public void testGetContestantsOfFirstContestForOiFrom0WithLimit2() {
@@ -87,8 +88,8 @@ public class ContestContestantMapperTest {
   }
 
   /**
-   * 测试用例: 测试getContestantsOfContestForOi(long, long ,int)方法. 测试数据: ContestID = 2, offset = 0, limit
-   * = 1 预期结果: 返回第2场考试的从0开始的1个参赛者.
+   * Test case: tests the getContestantsOfContestForOi(long, long, int) method. Test data: ContestID =
+   * 2, offset = 0, limit = 1. Expected: 1 contestant of the 2nd contest starting from 0.
    */
   @Test
   public void testGetContestantsOfSecondContestForOiFrom1WithLimit1() {
@@ -102,8 +103,9 @@ public class ContestContestantMapperTest {
   }
 
   /**
-   * 测试用例: 测试createContestContestant(Contest, User)方法. 测试数据: 使用合法的数据, 并且数据库中不存在相同的记录. 预期结果:
-   * 参赛记录被成功创建.
+   * Test case: tests the createContestContestant(Contest, User) method. Test data: valid data, and no
+   * identical record exists in the database. Expected: the participation record is created
+   * successfully.
    */
   @Test
   public void testCreateContestContestantNormally() {
@@ -116,8 +118,8 @@ public class ContestContestantMapperTest {
   }
 
   /**
-   * 测试用例: 测试createContestContestant(Contest, User)方法. 测试数据: 使用合法的数据, 但数据库中存在相同的记录. 预期结果:
-   * 抛出DuplicateKeyException异常
+   * Test case: tests the createContestContestant(Contest, User) method. Test data: valid data, but an
+   * identical record exists in the database. Expected: a DuplicateKeyException is thrown.
    */
   @Test
   public void testCreateContestContestantWithExistingRecord() {
@@ -133,8 +135,8 @@ public class ContestContestantMapperTest {
   }
 
   /**
-   * 测试用例: 测试createContestContestant(Contest, User)方法. 测试数据: 使用不存在的考试ID 预期结果:
-   * DataIntegrityViolationException
+   * Test case: tests the createContestContestant(Contest, User) method. Test data: a non-existing
+   * contest ID. Expected: a DataIntegrityViolationException is thrown.
    */
   @Test
   public void testCreateContestContestantWithContestContestantNotExistingContest() {
@@ -150,8 +152,8 @@ public class ContestContestantMapperTest {
   }
 
   /**
-   * 测试用例: 测试createContestContestant(Contest, User)方法. 测试数据: 使用不存在的用户ID 预期结果:
-   * DataIntegrityViolationException
+   * Test case: tests the createContestContestant(Contest, User) method. Test data: a non-existing user
+   * ID. Expected: a DataIntegrityViolationException is thrown.
    */
   @Test
   public void testCreateContestContestantWithNotExistingContestant() {
@@ -167,8 +169,8 @@ public class ContestContestantMapperTest {
   }
 
   /**
-   * 测试用例: 测试updateContestContestant(ContestContestant). 测试数据: 使用合法的数据集. 预期结果:
-   * ContestContestant被成功更新.
+   * Test case: tests the updateContestContestant(ContestContestant) method. Test data: a valid data
+   * set. Expected: the ContestContestant is updated successfully.
    */
   @Test
   public void testUpdateContestContestantNormally() {
@@ -183,8 +185,8 @@ public class ContestContestantMapperTest {
   }
 
   /**
-   * 测试用例: deleteContestContestant(long, long) 测试数据: ContestID = 2, UserID = 1000 预期结果:
-   * ContestContestant被成功删除
+   * Test case: tests the deleteContestContestant(long, long) method. Test data: ContestID = 2, UserID
+   * = 1000. Expected: the ContestContestant is deleted successfully.
    */
   @Test
   public void testDeleteContestContestantExists() {
@@ -197,12 +199,12 @@ public class ContestContestantMapperTest {
     Assertions.assertNull(cc);
   }
 
-  /** 待测试的ContestContestantMapper对象. */
+  /** The ContestContestantMapper object under test. */
   @Autowired private ContestContestantMapper contestContestantMapper;
 
-  /** 自动注入的ContestMapper对象. 用于构建测试用例. */
+  /** The autowired ContestMapper object. Used to build test cases. */
   @Autowired private ContestMapper contestMapper;
 
-  /** 自动注入的UserMapper对象. 用于构建测试用例. */
+  /** The autowired UserMapper object. Used to build test cases. */
   @Autowired private UserMapper userMapper;
 }

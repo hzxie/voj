@@ -30,7 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.verwandlung.voj.web.model.Language;
 
 /**
- * LanguageMapper测试类.
+ * The test class for LanguageMapper.
  *
  * @author Haozhe Xie
  */
@@ -38,7 +38,7 @@ import org.verwandlung.voj.web.model.Language;
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class LanguageMapperTest {
-  /** 测试用例: 测试getLanguageUsingId(int)方法 测试数据: C语言的编程语言唯一标识符 预期结果: 返回C语言的编程语言对象 */
+  /** Test case: tests the getLanguageUsingId(int) method. Test data: the unique identifier of the C language. Expected: the C language object. */
   @Test
   public void testGetLanguageUsingIdExists() {
     Language language = languageMapper.getLanguageUsingId(1);
@@ -48,14 +48,14 @@ public class LanguageMapperTest {
     Assertions.assertEquals("C", languageName);
   }
 
-  /** 测试用例: 测试getLanguageUsingId(int)方法 测试数据: 不存在的编程语言唯一标识符 预期结果: 返回空引用 */
+  /** Test case: tests the getLanguageUsingId(int) method. Test data: a non-existing language unique identifier. Expected: a null reference. */
   @Test
   public void testGetLanguageUsingIdNotExists() {
     Language language = languageMapper.getLanguageUsingId(0);
     Assertions.assertNull(language);
   }
 
-  /** 测试用例: 测试getLanguageUsingSlug(String)方法 测试数据: C语言的编程语言别名 预期结果: 返回C语言的编程语言对象 */
+  /** Test case: tests the getLanguageUsingSlug(String) method. Test data: the slug of the C language. Expected: the C language object. */
   @Test
   public void testGetLanguageUsingSlugExists() {
     Language language = languageMapper.getLanguageUsingSlug("text/x-csrc");
@@ -65,14 +65,14 @@ public class LanguageMapperTest {
     Assertions.assertEquals("C", languageName);
   }
 
-  /** 测试用例: 测试getLanguageUsingSlug(String)方法 测试数据: 不存在的编程语言别名 预期结果: 返回空引用 */
+  /** Test case: tests the getLanguageUsingSlug(String) method. Test data: a non-existing language slug. Expected: a null reference. */
   @Test
   public void testGetLanguageUsingSlugNotExists() {
     Language language = languageMapper.getLanguageUsingSlug("Not-Exists");
     Assertions.assertNull(language);
   }
 
-  /** 测试用例: 测试getAllLanguages()方法 测试数据: N/a 预期结果: 返回全部的编程语言列表(共6种语言) */
+  /** Test case: tests the getAllLanguages() method. Test data: N/a. Expected: the list of all programming languages (6 languages in total). */
   @Test
   public void testGetAllLanguages() {
     List<Language> languages = languageMapper.getAllLanguages();
@@ -86,7 +86,7 @@ public class LanguageMapperTest {
     Assertions.assertEquals("C", languageName);
   }
 
-  /** 测试用例: 测试createLanguage(Language)方法 测试数据: 合法的数据集 预期结果: 数据插入操作成功完成 */
+  /** Test case: tests the createLanguage(Language) method. Test data: a valid data set. Expected: the data insertion operation completes successfully. */
   @Test
   public void testCreateLanguageNormally() {
     Language language = new Language("text/x-php", "PHP", "php foo.php", "php foo.php");
@@ -95,8 +95,8 @@ public class LanguageMapperTest {
   }
 
   /**
-   * 测试用例: 测试createLanguage(Language)方法 测试数据: 不合法的数据集(过长的编程语言英文缩写) 预期结果:
-   * 抛出DataIntegrityViolationException异常
+   * Test case: tests the createLanguage(Language) method. Test data: an invalid data set (a language
+   * slug that is too long). Expected: a DataIntegrityViolationException is thrown.
    */
   @Test
   public void testCreateLanguageUsingTooLongSlug() {
@@ -109,7 +109,7 @@ public class LanguageMapperTest {
     Assertions.assertThrows(org.springframework.dao.DataIntegrityViolationException.class, e);
   }
 
-  /** 测试用例: 测试updateLanguage(Language)方法 测试数据: 合法的数据集, 且数据表中存在对应ID的记录 预期结果: 数据更新操作成功完成 */
+  /** Test case: tests the updateLanguage(Language) method. Test data: a valid data set, and a record with the corresponding ID exists in the table. Expected: the data update operation completes successfully. */
   @Test
   public void testUpdateLanguageNormally() {
     Language language = languageMapper.getLanguageUsingId(2);
@@ -123,7 +123,7 @@ public class LanguageMapperTest {
     Assertions.assertEquals("D", language.getLanguageName());
   }
 
-  /** 测试用例: 测试updateLanguage(Language)方法 测试数据: 合法的数据集, 但数据表中不存在该编程语言 预期结果: 方法正常执行, 未影响数据表中的数据 */
+  /** Test case: tests the updateLanguage(Language) method. Test data: a valid data set, but the language does not exist in the table. Expected: the method executes normally without affecting the data in the table. */
   @Test
   public void testUpdateLanguageNotExists() {
     Language language = new Language(0, "not-exist", "Not Exist", "Not Exist", "Not Exist");
@@ -131,7 +131,7 @@ public class LanguageMapperTest {
     Assertions.assertEquals(0, numberOfRowsAffected);
   }
 
-  /** 测试用例: 测试deleteLanguage(int)方法 测试数据: Ruby语言的编程语言唯一标识符 预期结果: 数据删除操作成功完成 */
+  /** Test case: tests the deleteLanguage(int) method. Test data: the unique identifier of the Ruby language. Expected: the data deletion operation completes successfully. */
   @Test
   public void testDeleteLanguageExists() {
     Language language = languageMapper.getLanguageUsingId(6);
@@ -144,7 +144,7 @@ public class LanguageMapperTest {
     Assertions.assertNull(language);
   }
 
-  /** 测试用例: 测试deleteLanguage(int)方法 测试数据: 不存在的编程语言唯一标识符 预期结果: 方法正常执行, 未影响数据表中的数据 */
+  /** Test case: tests the deleteLanguage(int) method. Test data: a non-existing language unique identifier. Expected: the method executes normally without affecting the data in the table. */
   @Test
   public void testDeleteLanguageNotExists() {
     Language language = languageMapper.getLanguageUsingId(0);
@@ -154,6 +154,6 @@ public class LanguageMapperTest {
     Assertions.assertEquals(0, numberOfRowsAffected);
   }
 
-  /** 待测试的LanguageMapper对象. */
+  /** The LanguageMapper object under test. */
   @Autowired private LanguageMapper languageMapper;
 }

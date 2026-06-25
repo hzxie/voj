@@ -48,7 +48,7 @@ import org.verwandlung.voj.web.util.MailSender;
 import org.verwandlung.voj.web.util.OffensiveWordFilter;
 
 /**
- * 用户类(User)的业务逻辑层.
+ * The business logic layer of the User class.
  *
  * @author Haozhe Xie
  */
@@ -56,32 +56,32 @@ import org.verwandlung.voj.web.util.OffensiveWordFilter;
 @Transactional
 public class UserService {
   /**
-   * 通过用户唯一标识符获取用户对象.
+   * Gets a user object by its unique identifier.
    *
-   * @param userId - 用户唯一标识符
-   * @return 预期的用户对象或空引用
+   * @param userId - the unique identifier of the user
+   * @return the expected user object, or a null reference
    */
   public User getUserUsingUid(long userId) {
     return userMapper.getUserUsingUid(userId);
   }
 
   /**
-   * 获取某个用户组中的用户列表.
+   * Gets the list of users in a user group.
    *
-   * @param userGroup - 用户所属的用户组对象
-   * @param offset - 用户唯一标识符的起始编号
-   * @param limit - 需要获取的用户的数量
-   * @return 用户列表
+   * @param userGroup - the user group object the users belong to
+   * @param offset - the starting number of the user identifier
+   * @param limit - the number of users to fetch
+   * @return the list of users
    */
   public List<User> getUserUsingUserGroup(UserGroup userGroup, long offset, int limit) {
     return userMapper.getUserUsingUserGroup(userGroup, offset, limit);
   }
 
   /**
-   * 获取用户的元信息.
+   * Gets the meta information of a user.
    *
-   * @param user - 元信息对应的用户对象
-   * @return 用户元信息的键值对
+   * @param user - the user object the meta information corresponds to
+   * @return the key-value pairs of the user's meta information
    */
   public Map<String, Object> getUserMetaUsingUid(User user) {
     Map<String, Object> userMetaMap = new HashMap<>();
@@ -102,10 +102,10 @@ public class UserService {
   }
 
   /**
-   * 通过用户名或电子邮件地址获取用户对象.
+   * Gets a user object by username or email address.
    *
-   * @param username - 用户名或电子邮件地址
-   * @return 一个User对象或空引用
+   * @param username - the username or email address
+   * @return a User object, or a null reference
    */
   public User getUserUsingUsernameOrEmail(String username) {
     boolean isUsingEmail = username.indexOf('@') != -1;
@@ -120,11 +120,11 @@ public class UserService {
   }
 
   /**
-   * 验证用户身份是否有效.
+   * Verifies whether the user's identity is valid.
    *
-   * @param username - 用户名或电子邮件地址
-   * @param password - 密码(已使用MD5加密)
-   * @return 一个包含登录验证结果的Map<String, Boolean>对象
+   * @param username - the username or email address
+   * @param password - the password (encrypted with MD5)
+   * @return a Map<String, Boolean> object containing the login verification result
    */
   public Map<String, Boolean> isAllowedToLogin(String username, String password) {
     Map<String, Boolean> result = new HashMap<>(6, 1);
@@ -148,10 +148,10 @@ public class UserService {
   }
 
   /**
-   * 验证用户是否被允许登录.
+   * Verifies whether the user is allowed to log in.
    *
-   * @param userGroup - 用户所属用户组的对象
-   * @return 用户是否被允许登录
+   * @param userGroup - the object of the user group the user belongs to
+   * @return whether the user is allowed to log in
    */
   private boolean isAllowedToAccess(UserGroup userGroup) {
     String[] allowedUserGroups = {"users", "administrators"};
@@ -164,16 +164,16 @@ public class UserService {
   }
 
   /**
-   * 验证账户有效性并创建用户.
+   * Validates the account and creates a user.
    *
-   * @param username - 用户名
-   * @param password - 密码(未使用MD5加密)
-   * @param email - 电子邮件地址
-   * @param userGroupSlug - 用户组的别名
-   * @param languageSlug - 偏好语言的别名
-   * @param isCsrfTokenValid - CSRF的Token是否正确
-   * @param isAllowRegister - 系统是否允许注册新用户
-   * @return 一个包含账户创建结果的Map<String, Boolean>对象
+   * @param username - the username
+   * @param password - the password (not encrypted with MD5)
+   * @param email - the email address
+   * @param userGroupSlug - the alias of the user group
+   * @param languageSlug - the alias of the preferred language
+   * @param isCsrfTokenValid - whether the CSRF token is valid
+   * @param isAllowRegister - whether the system allows new user registration
+   * @return a Map<String, Boolean> object containing the account creation result
    */
   public Map<String, Boolean> createUser(
       String username,
@@ -198,14 +198,14 @@ public class UserService {
   }
 
   /**
-   * [此方法仅供管理员使用] 验证账户有效性并创建用户.
+   * [For administrators only] Validates the account and creates a user.
    *
-   * @param username - 用户名
-   * @param password - 密码(未使用MD5加密)
-   * @param email - 电子邮件地址
-   * @param userGroupSlug - 用户组的别名
-   * @param languageSlug - 偏好语言的别名
-   * @return 一个包含账户创建结果的Map<String, Boolean>对象
+   * @param username - the username
+   * @param password - the password (not encrypted with MD5)
+   * @param email - the email address
+   * @param userGroupSlug - the alias of the user group
+   * @param languageSlug - the alias of the preferred language
+   * @return a Map<String, Boolean> object containing the account creation result
    */
   public Map<String, Boolean> createUser(
       String username, String password, String email, String userGroupSlug, String languageSlug) {
@@ -223,9 +223,9 @@ public class UserService {
   }
 
   /**
-   * 创建用户元信息.
+   * Creates the user meta information.
    *
-   * @param user - 对应的用户对象
+   * @param user - the corresponding user object
    */
   private void createUserMeta(User user) {
     SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -236,13 +236,13 @@ public class UserService {
   }
 
   /**
-   * 验证待创建用户信息的合法性.
+   * Validates the legality of the user information to be created.
    *
-   * @param user - 待创建的User对象
-   * @param password - 密码(未使用MD5加密)
-   * @param isCsrfTokenValid - CSRF的Token是否正确
-   * @param isAllowRegister - 系统是否允许注册新用户
-   * @return 一个包含账户信息验证结果的Map<String, Boolean>对象
+   * @param user - the User object to create
+   * @param password - the password (not encrypted with MD5)
+   * @param isCsrfTokenValid - whether the CSRF token is valid
+   * @param isAllowRegister - whether the system allows new user registration
+   * @return a Map<String, Boolean> object containing the account information validation result
    */
   private Map<String, Boolean> getUserCreationResult(
       User user, String password, boolean isCsrfTokenValid, boolean isAllowRegister) {
@@ -278,11 +278,11 @@ public class UserService {
   }
 
   /**
-   * 检查电子邮件验证凭据是否有效.
+   * Checks whether the email validation credential is valid.
    *
-   * @param email - 用户的电子邮件地址
-   * @param token - 用于验证的Token
-   * @return 电子邮件验证凭据是否有效
+   * @param email - the user's email address
+   * @param token - the token used for validation
+   * @return whether the email validation credential is valid
    */
   public boolean isEmailValidationValid(String email, String token) {
     EmailValidation emailValidation = emailValidationMapper.getEmailValidation(email);
@@ -297,12 +297,12 @@ public class UserService {
   }
 
   /**
-   * 验证账户有效性并发送重设密码邮件.
+   * Validates the account and sends a password reset email.
    *
-   * @param username - 用户的用户名
-   * @param email - 用户的电子邮件地址
-   * @param isCsrfTokenValid - CSRF的Token是否正确
-   * @return 包含账户验证结果的Map<String, Boolean>对象
+   * @param username - the user's username
+   * @param email - the user's email address
+   * @param isCsrfTokenValid - whether the CSRF token is valid
+   * @return a Map<String, Boolean> object containing the account validation result
    */
   public Map<String, Boolean> sendVerificationEmail(
       String username, String email, boolean isCsrfTokenValid) {
@@ -330,10 +330,10 @@ public class UserService {
   }
 
   /**
-   * 发送重设密码的邮件.
+   * Sends the password reset email.
    *
-   * @param username - 用户的用户名
-   * @param email - 用户的电子邮件地
+   * @param username - the user's username
+   * @param email - the user's email address
    * @throws TemplateException
    * @throws IOException
    */
@@ -357,9 +357,9 @@ public class UserService {
   }
 
   /**
-   * 获取邮件验证Token的失效时间.
+   * Gets the expiration time of the email validation token.
    *
-   * @return 邮件验证Token的失效时间
+   * @return the expiration time of the email validation token
    */
   private Date getExpireTime() {
     Date date = new Date();
@@ -372,14 +372,14 @@ public class UserService {
   }
 
   /**
-   * 验证数据并重置用户密码.
+   * Validates the data and resets the user's password.
    *
-   * @param email - 用户的电子邮件地址
-   * @param token - 用于验证的Token
-   * @param newPassword - 新密码
-   * @param confirmPassword - 确认新密码
-   * @param isCsrfTokenValid - CSRF的Token是否正确
-   * @return 包含密码重置结果的Map<String, Boolean>对象
+   * @param email - the user's email address
+   * @param token - the token used for validation
+   * @param newPassword - the new password
+   * @param confirmPassword - the confirmation of the new password
+   * @param isCsrfTokenValid - whether the CSRF token is valid
+   * @return a Map<String, Boolean> object containing the password reset result
    */
   public Map<String, Boolean> resetPassword(
       String email,
@@ -403,11 +403,13 @@ public class UserService {
   }
 
   /**
-   * @param newPassword - 新密码
-   * @param confirmPassword - 确认新密码
-   * @param isEmailValidationValid - 电子邮件验证凭据是否有效
-   * @param isCsrfTokenValid - CSRF的Token是否正确
-   * @return 包含密码重置结果的Map<String, Boolean>对象
+   * Validates the reset-password data.
+   *
+   * @param newPassword - the new password
+   * @param confirmPassword - the confirmation of the new password
+   * @param isEmailValidationValid - whether the email validation credential is valid
+   * @param isCsrfTokenValid - whether the CSRF token is valid
+   * @return a Map<String, Boolean> object containing the password reset result
    */
   private Map<String, Boolean> getResetPasswordResult(
       String newPassword,
@@ -432,11 +434,12 @@ public class UserService {
   }
 
   /**
-   * 验证编程语言偏好的有效性并更改编程语言偏好.
+   * Validates the programming language preference and changes it.
    *
-   * @param user - 待更改编程语言偏好的用户对象
-   * @param preferLanguageSlug - 编程语言的别名
-   * @return 一个包含编程语言偏好更改结果的Map<String, Boolean>对象
+   * @param user - the user object whose programming language preference is to be changed
+   * @param preferLanguageSlug - the alias of the programming language
+   * @return a Map<String, Boolean> object containing the programming language preference change
+   *     result
    */
   public Map<String, Boolean> changePreferLanguage(User user, String preferLanguageSlug) {
     Map<String, Boolean> result = new HashMap<>(2, 1);
@@ -451,13 +454,13 @@ public class UserService {
   }
 
   /**
-   * 验证旧密码正确性并修改密码.
+   * Validates the old password and changes the password.
    *
-   * @param user - 待修改密码的用户对象
-   * @param oldPassword - 旧密码
-   * @param newPassword - 新密码
-   * @param confirmPassword - 确认新密码
-   * @return 一个包含密码验证结果的Map<String, Boolean>对象
+   * @param user - the user object whose password is to be changed
+   * @param oldPassword - the old password
+   * @param newPassword - the new password
+   * @param confirmPassword - the confirmation of the new password
+   * @return a Map<String, Boolean> object containing the password validation result
    */
   public Map<String, Boolean> changePassword(
       User user, String oldPassword, String newPassword, String confirmPassword) {
@@ -472,13 +475,13 @@ public class UserService {
   }
 
   /**
-   * 验证旧密码的正确性和新密码的合法性.
+   * Validates the correctness of the old password and the legality of the new password.
    *
-   * @param user - 待修改密码的用户对象
-   * @param oldPassword - 旧密码
-   * @param newPassword - 新密码
-   * @param confirmPassword - 确认新密码
-   * @return 一个包含密码验证结果的Map<String, Boolean>对象
+   * @param user - the user object whose password is to be changed
+   * @param oldPassword - the old password
+   * @param newPassword - the new password
+   * @param confirmPassword - the confirmation of the new password
+   * @return a Map<String, Boolean> object containing the password validation result
    */
   private Map<String, Boolean> getChangePasswordResult(
       User user, String oldPassword, String newPassword, String confirmPassword) {
@@ -498,16 +501,16 @@ public class UserService {
   }
 
   /**
-   * 验证新资料的有效性并更新个人资料.
+   * Validates the new profile and updates the personal profile.
    *
-   * @param user - 待更改资料的用户
-   * @param email - 用户的电子邮件地址
-   * @param location - 用户的所在地区
-   * @param website - 用户的个人主页
-   * @param socialLinks - 用户的社交网络信息
-   * @param aboutMe - 用户的个人简介
-   * @param isCsrfTokenValid - CSRF的Token是否正确
-   * @return 一个包含个人资料修改结果的Map<String, Boolean>对象
+   * @param user - the user whose profile is to be changed
+   * @param email - the user's email address
+   * @param location - the user's location
+   * @param website - the user's personal homepage
+   * @param socialLinks - the user's social network information
+   * @param aboutMe - the user's personal bio
+   * @param isCsrfTokenValid - whether the CSRF token is valid
+   * @return a Map<String, Boolean> object containing the personal profile update result
    */
   public Map<String, Boolean> updateProfile(
       User user,
@@ -538,16 +541,16 @@ public class UserService {
   }
 
   /**
-   * 验证新资料的有效性.
+   * Validates the new profile.
    *
-   * @param user - 待更改资料的用户
-   * @param email - 用户的电子邮件地址
-   * @param location - 用户的所在地区
-   * @param website - 用户的个人主页
-   * @param socialLinks - 用户的社交网络信息
-   * @param aboutMe - 用户的个人简介
-   * @param isCsrfTokenValid - CSRF的Token是否正确
-   * @return 一个包含个人资料修改结果的Map<String, Boolean>对象
+   * @param user - the user whose profile is to be changed
+   * @param email - the user's email address
+   * @param location - the user's location
+   * @param website - the user's personal homepage
+   * @param socialLinks - the user's social network information
+   * @param aboutMe - the user's personal bio
+   * @param isCsrfTokenValid - whether the CSRF token is valid
+   * @return a Map<String, Boolean> object containing the personal profile update result
    */
   private Map<String, Boolean> getUpdateProfileResult(
       User user,
@@ -579,11 +582,11 @@ public class UserService {
   }
 
   /**
-   * 更新用户元信息.
+   * Updates the user meta information.
    *
-   * @param user - 待更新元信息的用户
-   * @param metaKey - 元信息的键
-   * @param metaValue - 元信息的值
+   * @param user - the user whose meta information is to be updated
+   * @param metaKey - the key of the meta information
+   * @param metaValue - the value of the meta information
    */
   private void updateUserMeta(User user, String metaKey, String metaValue) {
     UserMeta userMeta = userMetaMapper.getUserMetaUsingUserAndMetaKey(user, metaKey);
@@ -601,20 +604,21 @@ public class UserService {
   }
 
   /**
-   * 验证用户名的合法性: 规则: 用户名应由[A-Za-z0-9_]组成, 以字母起始且长度在6-16个字符.
+   * Validates the legality of a username. Rule: the username should consist of [A-Za-z0-9_], start
+   * with a letter, and be 6-16 characters long.
    *
-   * @param username - 用户名
-   * @return 用户名是否合法
+   * @param username - the username
+   * @return whether the username is legal
    */
   private boolean isUsernameLegal(String username) {
     return username.matches("^[A-Za-z][A-Za-z0-9_]{5,15}$");
   }
 
   /**
-   * 检查用户名是否存在.
+   * Checks whether a username exists.
    *
-   * @param username - 用户名
-   * @return 用户名是否存在
+   * @param username - the username
+   * @return whether the username exists
    */
   private boolean isUsernameExists(String username) {
     User user = userMapper.getUserUsingUsername(username);
@@ -622,10 +626,10 @@ public class UserService {
   }
 
   /**
-   * 检查密码是否合法. 规则: 密码的长度在6-16个字符.
+   * Checks whether a password is legal. Rule: the password should be 6-16 characters long.
    *
-   * @param password - 密码(未经MD5加密)
-   * @return 密码是否合法
+   * @param password - the password (not encrypted with MD5)
+   * @return whether the password is legal
    */
   private boolean isPasswordLegal(String password) {
     int passwordLength = password.length();
@@ -633,11 +637,11 @@ public class UserService {
   }
 
   /**
-   * 更改密码时, 验证用户的旧密码是否正确.
+   * Verifies whether the user's old password is correct when changing the password.
    *
-   * @param oldPassword - 用户的旧密码(已使用MD5加密)
-   * @param submitedPassword - 所提交进行验证的旧密码(未使用MD5加密)
-   * @return 用户旧密码是否正确
+   * @param oldPassword - the user's old password (encrypted with MD5)
+   * @param submitedPassword - the old password submitted for verification (not encrypted with MD5)
+   * @return whether the user's old password is correct
    */
   private boolean isOldPasswordCorrect(String oldPassword, String submitedPassword) {
     if (submitedPassword.isEmpty()) {
@@ -647,10 +651,11 @@ public class UserService {
   }
 
   /**
-   * 检查电子邮件地址是否合法. 规则: 合法的电子邮件地址且长度不超过64个字符.
+   * Checks whether an email address is legal. Rule: a valid email address not exceeding 64
+   * characters.
    *
-   * @param email - 电子邮件地址
-   * @return 电子邮件地址是否合法
+   * @param email - the email address
+   * @return whether the email address is legal
    */
   private boolean isEmailLegal(String email) {
     int emailLength = email.length();
@@ -659,10 +664,10 @@ public class UserService {
   }
 
   /**
-   * 检查电子邮件地址是否存在. 说明: 仅用于用户创建新账户
+   * Checks whether an email address exists. Note: only used when a user creates a new account.
    *
-   * @param email - 电子邮件地址
-   * @return 电子邮件地址是否存在
+   * @param email - the email address
+   * @return whether the email address exists
    */
   private boolean isEmailExists(String email) {
     User user = userMapper.getUserUsingEmail(email);
@@ -670,11 +675,11 @@ public class UserService {
   }
 
   /**
-   * 检查电子邮件地址是否存在. 说明: 仅用于用户编辑个人资料
+   * Checks whether an email address exists. Note: only used when a user edits their profile.
    *
-   * @param currentEmail - 之前所使用的Email地址
-   * @param email - 待更新的Email地址
-   * @return 电子邮件地址是否存在
+   * @param currentEmail - the email address previously used
+   * @param email - the email address to update to
+   * @return whether the email address exists
    */
   private boolean isEmailExists(String currentEmail, String email) {
     if (currentEmail.equals(email)) {
@@ -685,10 +690,11 @@ public class UserService {
   }
 
   /**
-   * 检查个人主页的地址是否合法. 规则: 合法的HTTP(S)协议URL且长度不超过64个字符.
+   * Checks whether a personal homepage address is legal. Rule: a valid HTTP(S) protocol URL not
+   * exceeding 64 characters.
    *
-   * @param website - 个人主页的地址
-   * @return 个人主页的地址是否合法
+   * @param website - the personal homepage address
+   * @return whether the personal homepage address is legal
    */
   private boolean isWebsiteLegal(String website) {
     int websiteLength = website.length();
@@ -698,10 +704,10 @@ public class UserService {
   }
 
   /**
-   * 通过用户组的别名获取用户组对象.
+   * Gets a user group object by its alias.
    *
-   * @param userGroupSlug - 用户组的别名
-   * @return 用户组对象或空引用
+   * @param userGroupSlug - the alias of the user group
+   * @return the user group object, or a null reference
    */
   public UserGroup getUserGroupUsingSlug(String userGroupSlug) {
     UserGroup userGroup = userGroupMapper.getUserGroupUsingSlug(userGroupSlug);
@@ -709,9 +715,9 @@ public class UserService {
   }
 
   /**
-   * [此方法仅供管理员使用] 获取全部的用户组对象.
+   * [For administrators only] Gets all user group objects.
    *
-   * @return 全部的用户组对象的列表
+   * @return a list of all user group objects
    */
   public List<UserGroup> getUserGroups() {
     List<UserGroup> userGroups = userGroupMapper.getUserGroups();
@@ -719,19 +725,19 @@ public class UserService {
   }
 
   /**
-   * [此方法仅供管理员使用] 获取系统中注册用户的总数.
+   * [For administrators only] Gets the total number of registered users in the system.
    *
-   * @param userGroup - 用户所属的用户组对象
-   * @return 系统中注册用户的总数
+   * @param userGroup - the user group object the users belong to
+   * @return the total number of registered users in the system
    */
   public long getNumberOfUsers(UserGroup userGroup) {
     return userMapper.getNumberOfUsersUsingUserGroup(userGroup);
   }
 
   /**
-   * [此方法仅供管理员使用] 获取今日注册的用户数量.
+   * [For administrators only] Gets the number of users registered today.
    *
-   * @return 今日注册的用户数量
+   * @return the number of users registered today
    */
   public long getNumberOfUserRegisteredToday() {
     Calendar calendar = Calendar.getInstance();
@@ -748,24 +754,24 @@ public class UserService {
   }
 
   /**
-   * [此方法仅供管理员使用] 使用用户组和用户名获取符合条件的用户的总数.
+   * [For administrators only] Gets the total number of matching users by user group and username.
    *
-   * @param userGroup - 用户组对象
-   * @param username - 部分或全部用户名
-   * @return 某个用户组中用户名中包含某个字符串的用户的总数
+   * @param userGroup - the user group object
+   * @param username - part or all of the username
+   * @return the total number of users in the user group whose username contains the given string
    */
   public long getNumberOfUsersUsingUserGroupAndUsername(UserGroup userGroup, String username) {
     return userMapper.getNumberOfUsersUsingUserGroupAndUsername(userGroup, username);
   }
 
   /**
-   * [此方法仅供管理员使用] 根据用户组和用户名筛选用户对象.
+   * [For administrators only] Filters user objects by user group and username.
    *
-   * @param userGroup - 用户组对象
-   * @param username - 部分或全部用户名
-   * @param offset - 用户唯一标识符的起始编号
-   * @param limit - 需要获取的用户的数量
-   * @return 符合条件的用户列表
+   * @param userGroup - the user group object
+   * @param username - part or all of the username
+   * @param offset - the starting number of the user identifier
+   * @param limit - the number of users to fetch
+   * @return the list of matching users
    */
   public List<User> getUserUsingUserGroupAndUsername(
       UserGroup userGroup, String username, long offset, int limit) {
@@ -773,13 +779,13 @@ public class UserService {
   }
 
   /**
-   * [此方法仅供管理员使用]
+   * [For administrators only] Updates a user's profile.
    *
-   * @param user - 待更改个人信息的用户.
-   * @param password - 用户的密码
-   * @param userGroupSlug - 用户所属用户组的别名
-   * @param preferLanguageSlug - 用户偏好编程语言的别名
-   * @return 包含用户个人信息更改结果的Map<String, Boolean>对象
+   * @param user - the user whose profile is to be changed
+   * @param password - the user's password
+   * @param userGroupSlug - the alias of the user group the user belongs to
+   * @param preferLanguageSlug - the alias of the user's preferred programming language
+   * @return a Map<String, Boolean> object containing the user profile update result
    */
   public Map<String, Boolean> updateProfile(
       User user, String password, String userGroupSlug, String preferLanguageSlug) {
@@ -799,12 +805,12 @@ public class UserService {
   }
 
   /**
-   * [此方法仅供管理员使用] 更改用户的基本信息.
+   * [For administrators only] Changes a user's basic information.
    *
-   * @param password - 用户的密码
-   * @param userGroup - 用户所属的用户组
-   * @param preferLanguage - 用户偏爱的编程语言
-   * @return 包含用户个人信息更改结果的Map<String, Boolean>对象
+   * @param password - the user's password
+   * @param userGroup - the user group the user belongs to
+   * @param preferLanguage - the user's preferred programming language
+   * @return a Map<String, Boolean> object containing the user profile update result
    */
   private Map<String, Boolean> getUpdateProfileResult(
       String password, UserGroup userGroup, Language preferLanguage) {
@@ -823,33 +829,33 @@ public class UserService {
   }
 
   /**
-   * [此方法仅供管理员使用] 根据用户的唯一标识符删除用户.
+   * [For administrators only] Deletes a user by their unique identifier.
    *
-   * @param uid - 用户的唯一标识符
+   * @param uid - the unique identifier of the user
    */
   public void deleteUser(long uid) {
     userMapper.deleteUser(uid);
   }
 
-  /** 自动注入的UserMapper对象. 用于获取用户基本信息. */
+  /** The autowired UserMapper object, used to obtain basic user information. */
   @Autowired private UserMapper userMapper;
 
-  /** 自动注入的UserMetaMapper对象. 用于获取用户元信息. */
+  /** The autowired UserMetaMapper object, used to obtain user meta information. */
   @Autowired private UserMetaMapper userMetaMapper;
 
-  /** 自动注入的UserGroupMapper对象. 用于获取用户组信息. */
+  /** The autowired UserGroupMapper object, used to obtain user group information. */
   @Autowired private UserGroupMapper userGroupMapper;
 
-  /** 自动注入的LanguageMapper对象. 用于加载注册页面的语言偏好. */
+  /** The autowired LanguageMapper object, used to load the language preferences on the registration page. */
   @Autowired private LanguageMapper languageMapper;
 
-  /** 自动注入的EmailValidationMapper对象. 用于生成重置密码的Token. */
+  /** The autowired EmailValidationMapper object, used to generate password reset tokens. */
   @Autowired private EmailValidationMapper emailValidationMapper;
 
-  /** 自动注入的OffensiveWordFilter对象. 用于过滤用户个人信息中的敏感词. */
+  /** The autowired OffensiveWordFilter object, used to filter offensive words in user content. */
   @Autowired private OffensiveWordFilter offensiveWordFilter;
 
-  /** 自动注入的MailSender对象. 用于发送电子邮件至用户邮箱. */
+  /** The autowired MailSender object, used to send emails to users' mailboxes. */
   @Autowired
   @Qualifier("vojMailSender")
   private MailSender mailSender;

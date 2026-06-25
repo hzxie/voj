@@ -39,18 +39,18 @@ import org.verwandlung.voj.judger.model.Language;
 import org.verwandlung.voj.judger.model.Submission;
 
 /**
- * 预处理器, 用于完成评测前准备工作.
+ * The preprocessor, used to perform preparation work before judging.
  *
  * @author Haozhe Xie
  */
 @Component
 public class Preprocessor {
   /**
-   * 创建测试代码至本地磁盘.
+   * Writes the code to be tested to the local disk.
    *
-   * @param submission - 评测记录对象
-   * @param workDirectory - 用于产生编译输出的目录
-   * @param baseFileName - 随机文件名(不包含后缀)
+   * @param submission - the submission object
+   * @param workDirectory - the directory used for producing compilation output
+   * @param baseFileName - the random file name (without suffix)
    * @throws Exception
    */
   public void createTestCode(Submission submission, String workDirectory, String baseFileName)
@@ -73,10 +73,10 @@ public class Preprocessor {
   }
 
   /**
-   * 获取代码文件的后缀名.
+   * Gets the suffix of the code file.
    *
-   * @param language - 编程语言对象
-   * @return 代码文件的后缀名
+   * @param language - the programming language object
+   * @return the suffix of the code file
    */
   private String getCodeFileSuffix(Language language) {
     String compileCommand = language.getCompileCommand();
@@ -92,11 +92,11 @@ public class Preprocessor {
   }
 
   /**
-   * 替换部分语言中的类名(如Java), 以保证正常通过编译.
+   * Replaces the class name in certain languages (such as Java) to ensure compilation succeeds.
    *
-   * @param language - 编程语言对象
-   * @param code - 待替换的代码
-   * @param newClassName - 新的类名
+   * @param language - the programming language object
+   * @param code - the code in which to perform the replacement
+   * @param newClassName - the new class name
    */
   private String replaceClassName(Language language, String code, String newClassName) {
     if (!language.getLanguageName().equalsIgnoreCase("Java")) {
@@ -106,9 +106,10 @@ public class Preprocessor {
   }
 
   /**
-   * 设置代码文件所在目录的读写权限. 在Linux下, 代码以UID=1536的用户运行, 因此需要为Others用户组分配写权限.
+   * Sets the read/write permissions of the directory containing the code file. On Linux, the code
+   * runs as the user with UID=1536, so write permission must be granted to the Others group.
    *
-   * @param workDirectory 用于产生编译输出的目录
+   * @param workDirectory the directory used for producing compilation output
    */
   private void setWorkDirectoryPermission(File workDirectory) throws IOException {
     if (!System.getProperty("os.name").contains("Windows")) {
@@ -130,9 +131,9 @@ public class Preprocessor {
   }
 
   /**
-   * 从数据库抓取评测数据.
+   * Fetches the judging data from the database.
    *
-   * @param problemId - 试题的唯一标识符
+   * @param problemId - the unique identifier of the problem
    * @throws Exception
    */
   public void fetchTestPoints(long problemId) throws Exception {
@@ -166,10 +167,10 @@ public class Preprocessor {
     }
   }
 
-  /** 自动注入的CheckpointMapper对象. 用于获取试题的测试点. */
+  /** The autowired CheckpointMapper object, used to obtain a problem's checkpoints. */
   @Autowired private CheckpointMapper checkpointMapper;
 
-  /** 测试点的存储目录. 用于存储测试点的输入输出数据. */
+  /** The storage directory of checkpoints, used to store the input/output data of checkpoints. */
   @Value("${judger.checkpointDir}")
   private String checkpointDirectory;
 }

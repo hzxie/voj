@@ -31,10 +31,10 @@ import org.verwandlung.voj.judger.model.Problem;
  */
 public interface ProblemMapper {
   /**
-   * 通过试题唯一标识符获取试题对象.
+   * Gets a problem object by its unique identifier.
    *
-   * @param problemId - 试题的唯一标识符
-   * @return 一个试题对象
+   * @param problemId - the unique identifier of the problem
+   * @return a problem object
    */
   @Select("SELECT * FROM voj_problems WHERE problem_id = #{problemId}")
   @Options(useCache = true)

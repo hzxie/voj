@@ -19,15 +19,15 @@ package org.verwandlung.voj.web.model;
 import java.io.Serializable;
 
 /**
- * 试题分类的Model. 对应数据库中的voj_problem_categories数据表.
+ * The model of a problem category. Maps to the voj_problem_categories table in the database.
  *
  * @author Haozhe Xie
  */
 public class ProblemCategory implements Serializable {
-  /** ProblemCategory的默认构造函数 */
+  /** Default constructor of the problem category. */
   public ProblemCategory() {}
 
-  /** ProblemCategory的构造函数 */
+  /** Constructor of the problem category. */
   public ProblemCategory(
       String problemCategorySlug, String problemCategoryName, int parentProblemCategoryId) {
     this.problemCategorySlug = problemCategorySlug;
@@ -35,7 +35,7 @@ public class ProblemCategory implements Serializable {
     this.parentProblemCategoryId = parentProblemCategoryId;
   }
 
-  /** ProblemCategory的构造函数 */
+  /** Constructor of the problem category. */
   public ProblemCategory(
       int problemCategoryId,
       String problemCategorySlug,
@@ -46,72 +46,72 @@ public class ProblemCategory implements Serializable {
   }
 
   /**
-   * 获取试题分类的唯一标识符.
+   * Gets the unique identifier of the problem category.
    *
-   * @return 试题分类的唯一标识符
+   * @return the unique identifier of the problem category
    */
   public int getProblemCategoryId() {
     return problemCategoryId;
   }
 
   /**
-   * 设置试题分类的唯一标识符.
+   * Sets the unique identifier of the problem category.
    *
-   * @param problemCategoryId - 试题分类的唯一标识符
+   * @param problemCategoryId - the unique identifier of the problem category
    */
   public void setProblemCategoryId(int problemCategoryId) {
     this.problemCategoryId = problemCategoryId;
   }
 
   /**
-   * 获取试题分类的别名.
+   * Gets the alias of the problem category.
    *
-   * @return 试题分类的别名
+   * @return the alias of the problem category
    */
   public String getProblemCategorySlug() {
     return problemCategorySlug;
   }
 
   /**
-   * 设置试题分类的别名.
+   * Sets the alias of the problem category.
    *
-   * @param problemCategorySlug - 试题分类的别名
+   * @param problemCategorySlug - the alias of the problem category
    */
   public void setProblemCategorySlug(String problemCategorySlug) {
     this.problemCategorySlug = problemCategorySlug;
   }
 
   /**
-   * 获取试题分类的名称.
+   * Gets the name of the problem category.
    *
-   * @return 试题分类的名称
+   * @return the name of the problem category
    */
   public String getProblemCategoryName() {
     return problemCategoryName;
   }
 
   /**
-   * 设置试题分类的名称.
+   * Sets the name of the problem category.
    *
-   * @param problemCategoryName - 试题分类的名称
+   * @param problemCategoryName - the name of the problem category
    */
   public void setProblemCategoryName(String problemCategoryName) {
     this.problemCategoryName = problemCategoryName;
   }
 
   /**
-   * 获取试题分类的父类的唯一标识符.
+   * Gets the unique identifier of the parent problem category.
    *
-   * @return 试题分类的父类的唯一标识符
+   * @return the unique identifier of the parent problem category
    */
   public int getParentProblemCategoryId() {
     return parentProblemCategoryId;
   }
 
   /**
-   * 设置试题分类的父类的唯一标识符.
+   * Sets the unique identifier of the parent problem category.
    *
-   * @param parentProblemCategoryId - 试题分类的父类的唯一标识符
+   * @param parentProblemCategoryId - the unique identifier of the parent problem category
    */
   public void setParentProblemCategory(int parentProblemCategoryId) {
     this.parentProblemCategoryId = parentProblemCategoryId;
@@ -146,18 +146,18 @@ public class ProblemCategory implements Serializable {
         });
   }
 
-  /** 试题分类的唯一标识符. */
+  /** The unique identifier of the problem category. */
   private int problemCategoryId;
 
-  /** 试题分类的别名. */
+  /** The alias of the problem category. */
   private String problemCategorySlug;
 
-  /** 试题分类的名称. */
+  /** The name of the problem category. */
   private String problemCategoryName;
 
-  /** 试题分类的父类. */
+  /** The unique identifier of the parent problem category. */
   private int parentProblemCategoryId;
 
-  /** 唯一的序列化标识符. */
+  /** The unique serialization identifier. */
   private static final long serialVersionUID = 7093703712360669823L;
 }

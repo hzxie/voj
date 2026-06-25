@@ -30,17 +30,18 @@ import org.springframework.web.servlet.i18n.LocaleChangeInterceptor;
 import org.springframework.web.servlet.i18n.SessionLocaleResolver;
 
 /**
- * Spring MVC 配置. 替代原先 dispatcher-servlet.xml 中关于静态资源、国际化与本地化的配置.
+ * The Spring MVC configuration. Replaces the configuration of static resources, internationalization
+ * and localization in the original dispatcher-servlet.xml.
  *
- * <p>视图解析器 (JSP 的 prefix/suffix) 改由 application.properties 中的
- * {@code spring.mvc.view.*} 属性配置.
+ * <p>The view resolver (the JSP prefix/suffix) is instead configured by the {@code
+ * spring.mvc.view.*} properties in application.properties.
  *
  * @author Haozhe Xie
  */
 @Configuration
 public class WebMvcConfig implements WebMvcConfigurer {
   /* (non-Javadoc)
-   * 将 /assets/** 映射到 Web 应用根目录下的 /assets/ 目录.
+   * Maps /assets/** to the /assets/ directory under the web application root.
    */
   @Override
   public void addResourceHandlers(ResourceHandlerRegistry registry) {
@@ -48,14 +49,14 @@ public class WebMvcConfig implements WebMvcConfigurer {
   }
 
   /* (non-Javadoc)
-   * 注册语言切换拦截器 (通过 ?language=xx_XX 切换显示语言).
+   * Registers the language switching interceptor (switches the display language via ?language=xx_XX).
    */
   @Override
   public void addInterceptors(InterceptorRegistry registry) {
     registry.addInterceptor(localeChangeInterceptor());
   }
 
-  /** 国际化资源. */
+  /** The internationalization resources. */
   @Bean
   public MessageSource messageSource() {
     ReloadableResourceBundleMessageSource messageSource =
@@ -65,7 +66,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
     return messageSource;
   }
 
-  /** 基于 Session 的 Locale 解析器, 默认语言为 en_US. */
+  /** The Session-based Locale resolver, with the default language being en_US. */
   @Bean
   public LocaleResolver localeResolver() {
     SessionLocaleResolver localeResolver = new SessionLocaleResolver();
@@ -73,7 +74,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
     return localeResolver;
   }
 
-  /** 语言切换拦截器. */
+  /** The language switching interceptor. */
   @Bean
   public LocaleChangeInterceptor localeChangeInterceptor() {
     LocaleChangeInterceptor localeChangeInterceptor = new LocaleChangeInterceptor();

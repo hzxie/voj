@@ -32,7 +32,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 
 /**
- * 输出比对器的测试类.
+ * Test class for the output comparator.
  *
  * @author Haozhe Xie
  */
@@ -40,7 +40,7 @@ import java.io.IOException;
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class ComparatorTest {
-  /** 构建测试用例. */
+  /** Sets up the test cases. */
   @BeforeAll
   public static void setUp() throws IOException {
     FileOutputStream stdOutputStream = null;
@@ -77,7 +77,7 @@ public class ComparatorTest {
     IOUtils.write(mismatchString3, outputStream);
   }
 
-  /** 清除测试用例. */
+  /** Cleans up the test cases. */
   @AfterAll
   public static void tearDown() {
     File checkpointsDirFile = new File("/tmp/voj-matcher-tests");
@@ -86,7 +86,10 @@ public class ComparatorTest {
     }
   }
 
-  /** 测试用例: 测试isOutputTheSame(String, String)方法 测试数据: 输入和输出完全相同 测试结果: 返回true, 表示输出结果正确 */
+  /**
+   * Test case: tests the isOutputTheSame(String, String) method. Test data: the input and output
+   * are exactly the same. Expected result: returns true, indicating the output is correct.
+   */
   @Test
   public void testMatchExactly() throws IOException {
     String standardOutputFilePath = "/tmp/voj-matcher-tests/match-exactly-std.txt";
@@ -95,7 +98,9 @@ public class ComparatorTest {
   }
 
   /**
-   * 测试用例: 测试isOutputTheSame(String, String)方法 测试数据: 输入和输出基本相同, 在行尾存在多余的空白字符 测试结果: 返回true, 表示输出结果正确
+   * Test case: tests the isOutputTheSame(String, String) method. Test data: the input and output
+   * are essentially the same, with extra whitespace at the end of lines. Expected result: returns
+   * true, indicating the output is correct.
    */
   @Test
   public void testMatchWithSpaces() throws IOException {
@@ -105,7 +110,10 @@ public class ComparatorTest {
     Assertions.assertTrue(comparator.isOutputTheSame(outputFilePath, standardOutputFilePath));
   }
 
-  /** 测试用例: 测试isOutputTheSame(String, String)方法 测试数据: 输入和输出不完全相同 测试结果: 返回false, 表示输出结果不正确 */
+  /**
+   * Test case: tests the isOutputTheSame(String, String) method. Test data: the input and output
+   * are not exactly the same. Expected result: returns false, indicating the output is incorrect.
+   */
   @Test
   public void testMismatch() throws IOException {
     String standardOutputFilePath = "/tmp/voj-matcher-tests/mismatch-std.txt";
@@ -113,7 +121,10 @@ public class ComparatorTest {
     Assertions.assertFalse(comparator.isOutputTheSame(standardOutputFilePath, outputFilePath));
   }
 
-  /** 测试用例: 测试isOutputTheSame(String, String)方法 测试数据: 输入和输出不完全相同 测试结果: 返回false, 表示输出结果不正确 */
+  /**
+   * Test case: tests the isOutputTheSame(String, String) method. Test data: the input and output
+   * are not exactly the same. Expected result: returns false, indicating the output is incorrect.
+   */
   @Test
   public void testMismatchEmptyString() throws IOException {
     String standardOutputFilePath = "/tmp/voj-matcher-tests/mismatch-std.txt";
@@ -121,6 +132,6 @@ public class ComparatorTest {
     Assertions.assertFalse(comparator.isOutputTheSame(standardOutputFilePath, outputFilePath));
   }
 
-  /** 待测试的Matcher对象. */
+  /** The Comparator object under test. */
   @Autowired private Comparator comparator;
 }

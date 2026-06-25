@@ -29,7 +29,7 @@ import org.springframework.stereotype.Component;
 import org.verwandlung.voj.judger.application.ApplicationDispatcher;
 
 /**
- * 消息接收服务.
+ * The message receiving service.
  *
  * @author Haozhe Xie
  */
@@ -57,9 +57,9 @@ public class MessageReceiver implements MessageListener {
   }
 
   /**
-   * 处理新提交请求.
+   * Handles a new submission request.
    *
-   * @param mapMessage - 消息队列中收到的MapMessage对象
+   * @param mapMessage - the MapMessage object received from the message queue
    * @throws JMSException
    */
   private void newSubmissionHandler(MapMessage mapMessage) throws JMSException {
@@ -69,9 +69,9 @@ public class MessageReceiver implements MessageListener {
     dispatcher.onSubmissionCreated(submissionId);
   }
 
-  /** 自动注入的ApplicationDispatcher对象. 用于完成接收消息后的回调操作. */
+  /** The autowired ApplicationDispatcher object, used to perform the callback after a message is received. */
   @Autowired private ApplicationDispatcher dispatcher;
 
-  /** 日志记录器. */
+  /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(MessageReceiver.class);
 }

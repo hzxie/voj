@@ -31,7 +31,7 @@ import org.verwandlung.voj.web.model.ProblemCategory;
 import org.verwandlung.voj.web.model.ProblemCategoryRelationship;
 
 /**
- * ProblemCategoryMapper测试类.
+ * The test class for ProblemCategoryMapper.
  *
  * @author Haozhe Xie
  */
@@ -39,7 +39,7 @@ import org.verwandlung.voj.web.model.ProblemCategoryRelationship;
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class ProblemCategoryMapperTest {
-  /** 测试用例: 测试getProblemCategoryUsingId()方法 测试数据: N/a 预期结果: 返回默认分类的试题分类对象 */
+  /** Test case: tests the getProblemCategories() method. Test data: N/a. Expected: the list of all problem categories, with the default category first. */
   @Test
   public void testGetProblemCategories() {
     List<ProblemCategory> problemCategories = problemCategoryMapper.getProblemCategories();
@@ -51,7 +51,7 @@ public class ProblemCategoryMapperTest {
     Assertions.assertEquals("Uncategorized", problemCategoryName);
   }
 
-  /** 测试用例: 测试getProblemCategoryUsingId(int)方法 测试数据: 默认分类的唯一标识符 预期结果: 返回默认分类的试题分类对象 */
+  /** Test case: tests the getProblemCategoryUsingCategoryId(int) method. Test data: the unique identifier of the default category. Expected: the problem category object of the default category. */
   @Test
   public void testGetProblemCategoryUsingIdExists() {
     ProblemCategory problemCategory = problemCategoryMapper.getProblemCategoryUsingCategoryId(1);
@@ -61,14 +61,14 @@ public class ProblemCategoryMapperTest {
     Assertions.assertEquals("Uncategorized", problemCategoryName);
   }
 
-  /** 测试用例: 测试getProblemCategoryUsingId(int)方法 测试数据: 不存在的唯一标识符 预期结果: 空引用 */
+  /** Test case: tests the getProblemCategoryUsingCategoryId(int) method. Test data: a non-existing unique identifier. Expected: a null reference. */
   @Test
   public void testGetProblemCategoryUsingIdNotExists() {
     ProblemCategory problemCategory = problemCategoryMapper.getProblemCategoryUsingCategoryId(0);
     Assertions.assertNull(problemCategory);
   }
 
-  /** 测试用例: 测试getProblemCategoriesUsingProblemId(long)方法 测试数据: 存在的某个试题的唯一标识符 预期结果: 返回试题的全部试题标签列表 */
+  /** Test case: tests the getProblemCategoriesUsingProblemId(long) method. Test data: the unique identifier of an existing problem. Expected: the list of all problem categories of the problem. */
   @Test
   public void testGetProblemCategoriesUsingProblemIdExists() {
     List<ProblemCategory> problemCategories =
@@ -80,7 +80,7 @@ public class ProblemCategoryMapperTest {
     Assertions.assertEquals("uncategorized", problemCategorySlug);
   }
 
-  /** 测试用例: 测试getProblemCategoriesUsingProblemId(long)方法 测试数据: 不存在试题的唯一标识符 预期结果: 返回空的试题标签列表 */
+  /** Test case: tests the getProblemCategoriesUsingProblemId(long) method. Test data: a non-existing problem unique identifier. Expected: an empty problem category list. */
   @Test
   public void testGetProblemCategoriesUsingProblemIdNotExists() {
     List<ProblemCategory> problemCategories =
@@ -89,7 +89,7 @@ public class ProblemCategoryMapperTest {
   }
 
   /**
-   * 测试用例: 测试getProblemCategoriesOfProblems()方法 测试数据: 试题ID的范围从1000到1002 预期结果: 返回全部的试题分类信息(总计4条记录)
+   * Test case: tests the getProblemCategoriesOfProblems() method. Test data: a problem ID range from 1000 to 1002. Expected: all the problem category information (4 records in total).
    */
   @Test
   public void testGetProblemCategoriesOfProblemsFrom1000WithLimit3() {
@@ -102,7 +102,7 @@ public class ProblemCategoryMapperTest {
     Assertions.assertEquals(1, pcr.getProblemCategoryId());
   }
 
-  /** 测试用例: 测试getProblemCategoriesOfProblems()方法 测试数据: 试题ID的范围从999到1000 预期结果: 返回全部的试题分类信息(总计2条记录) */
+  /** Test case: tests the getProblemCategoriesOfProblems() method. Test data: a problem ID range from 999 to 1000. Expected: all the problem category information (2 records in total). */
   @Test
   public void testGetProblemCategoriesOfProblemsFrom999WithLimit2() {
     List<ProblemCategoryRelationship> problemCategoryRelationships =
@@ -114,7 +114,7 @@ public class ProblemCategoryMapperTest {
     Assertions.assertEquals(1, pcr.getProblemCategoryId());
   }
 
-  /** 测试用例: 测试getProblemCategoriesOfProblems()方法 测试数据: 试题ID的范围从999到999 预期结果: 返回全部的试题分类信息(总计0条记录) */
+  /** Test case: tests the getProblemCategoriesOfProblems() method. Test data: a problem ID range from 999 to 999. Expected: all the problem category information (0 records in total). */
   @Test
   public void testGetProblemCategoriesOfProblemsFrom999WithLimit1() {
     List<ProblemCategoryRelationship> problemCategoryRelationships =
@@ -122,7 +122,7 @@ public class ProblemCategoryMapperTest {
     Assertions.assertEquals(0, problemCategoryRelationships.size());
   }
 
-  /** 测试用例: 测试getProblemCategoryUsingSlug(String)方法 测试数据: 默认分类的别名 预期结果: 返回默认分类的试题分类对象 */
+  /** Test case: tests the getProblemCategoryUsingCategorySlug(String) method. Test data: the slug of the default category. Expected: the problem category object of the default category. */
   @Test
   public void testGetProblemCategoryUsingSlugExists() {
     ProblemCategory problemCategory =
@@ -133,7 +133,7 @@ public class ProblemCategoryMapperTest {
     Assertions.assertEquals("Uncategorized", problemCategoryName);
   }
 
-  /** 测试用例: 测试getProblemCategoryUsingSlug(String)方法 测试数据: 不存在的别名 预期结果: 空引用 */
+  /** Test case: tests the getProblemCategoryUsingCategorySlug(String) method. Test data: a non-existing slug. Expected: a null reference. */
   @Test
   public void testGetProblemCategoryUsingSlugNotExists() {
     ProblemCategory problemCategory =
@@ -142,8 +142,9 @@ public class ProblemCategoryMapperTest {
   }
 
   /**
-   * 测试用例: 测试createProblemCategory(ProblemCategory)方法 测试数据: 使用合法的数据集, 并且数据表中不存在相同的英文缩写 预期结果:
-   * 数据插入操作成功完成
+   * Test case: tests the createProblemCategory(ProblemCategory) method. Test data: a valid data set,
+   * and no identical slug exists in the table. Expected: the data insertion operation completes
+   * successfully.
    */
   @Test
   public void testCreateProblemCategoryNormally() {
@@ -153,8 +154,8 @@ public class ProblemCategoryMapperTest {
   }
 
   /**
-   * 测试用例: 测试createProblemCategory(ProblemCategory)方法 测试数据: 使用不合法的数据集(过长的类别名称) 预期结果:
-   * 抛出DataIntegrityViolationException异常
+   * Test case: tests the createProblemCategory(ProblemCategory) method. Test data: an invalid data set
+   * (a category name that is too long). Expected: a DataIntegrityViolationException is thrown.
    */
   @Test
   public void testCreateProblemCategoryUsingTooLongCategoryName() {
@@ -168,8 +169,8 @@ public class ProblemCategoryMapperTest {
   }
 
   /**
-   * 测试用例: 测试createProblemCategory(ProblemCategory)方法 测试数据: 使用合法的数据集, 但数据表中存在相同的英文缩写 预期结果:
-   * 抛出DuplicateKeyException异常
+   * Test case: tests the createProblemCategory(ProblemCategory) method. Test data: a valid data set,
+   * but an identical slug exists in the table. Expected: a DuplicateKeyException is thrown.
    */
   @Test
   public void testCreateProblemCategoryUsingExistingSlug() {
@@ -182,8 +183,9 @@ public class ProblemCategoryMapperTest {
   }
 
   /**
-   * 测试用例: 测试createProblemCategoryRelationship(long, ProblemCategory)方法 测试数据: 使用存在的试题ID和试题分类对象 预期结果:
-   * 对应试题和试题分类的关系被成功创建
+   * Test case: tests the createProblemCategoryRelationship(long, ProblemCategory) method. Test data:
+   * an existing problem ID and a problem category object. Expected: the relationship between the
+   * corresponding problem and problem category is created successfully.
    */
   @Test
   public void testCreateProblemCategoryRelationshipNormally() {
@@ -194,8 +196,9 @@ public class ProblemCategoryMapperTest {
   }
 
   /**
-   * 测试用例: 测试createProblemCategoryRelationship(long, ProblemCategory)方法 测试数据: 使用存在的不存在试题ID和存在的试题分类对象
-   * 预期结果: 抛出DataIntegrityViolationException异常
+   * Test case: tests the createProblemCategoryRelationship(long, ProblemCategory) method. Test data: a
+   * non-existing problem ID and an existing problem category object. Expected: a
+   * DataIntegrityViolationException is thrown.
    */
   @Test
   public void testCreateProblemCategoryRelationshipUsingNotExistingProblemId() {
@@ -208,8 +211,9 @@ public class ProblemCategoryMapperTest {
   }
 
   /**
-   * 测试用例: 测试createProblemCategoryRelationship(long, ProblemCategory)方法 测试数据:
-   * 使用存在的存在的试题ID和不存在的试题分类对象 预期结果: 抛出DataIntegrityViolationException异常
+   * Test case: tests the createProblemCategoryRelationship(long, ProblemCategory) method. Test data:
+   * an existing problem ID and a non-existing problem category object. Expected: a
+   * DataIntegrityViolationException is thrown.
    */
   @Test
   public void testCreateProblemCategoryRelationshipUsingNotExistingProblemCategory() {
@@ -221,8 +225,9 @@ public class ProblemCategoryMapperTest {
   }
 
   /**
-   * 测试用例: 测试createProblemCategoryRelationship(long, ProblemCategory)方法 测试数据: 使用存在的存在试题ID和存在的试题分类对象
-   * 预期结果: 抛出DuplicateKeyException异常
+   * Test case: tests the createProblemCategoryRelationship(long, ProblemCategory) method. Test data:
+   * an existing problem ID and an existing problem category object. Expected: a
+   * DuplicateKeyException is thrown.
    */
   @Test
   public void
@@ -236,7 +241,7 @@ public class ProblemCategoryMapperTest {
   }
 
   /**
-   * 测试用例: 测试updateProblemCategory(ProblemCategory)方法 测试数据: 使用合法的数据集, 且数据库中存在对应的记录 预期结果: 数据更新操作成功完成
+   * Test case: tests the updateProblemCategory(ProblemCategory) method. Test data: a valid data set, and a corresponding record exists in the database. Expected: the data update operation completes successfully.
    */
   @Test
   public void testUpdateProblemCategoryNormally() {
@@ -254,8 +259,8 @@ public class ProblemCategoryMapperTest {
   }
 
   /**
-   * 测试用例: 测试updateProblemCategory(ProblemCategory)方法 测试数据: 使用不合法的数据集(过长的类别名称) 预期结果:
-   * 抛出DataIntegrityViolationException异常
+   * Test case: tests the updateProblemCategory(ProblemCategory) method. Test data: an invalid data set
+   * (a category name that is too long). Expected: a DataIntegrityViolationException is thrown.
    */
   @Test
   public void testUpdateProblemCategoryUsingTooLongCategoryName() {
@@ -271,7 +276,7 @@ public class ProblemCategoryMapperTest {
     Assertions.assertThrows(org.springframework.dao.DataIntegrityViolationException.class, e);
   }
 
-  /** 测试用例: 测试deleteProblemCategory(int)方法 测试数据: 存在的试题分类唯一标识符 预期结果: 数据删除操作成功完成 */
+  /** Test case: tests the deleteProblemCategory(int) method. Test data: an existing problem category unique identifier. Expected: the data deletion operation completes successfully. */
   @Test
   public void testDeleteProblemCategoryExists() {
     ProblemCategory problemCategory = problemCategoryMapper.getProblemCategoryUsingCategoryId(1);
@@ -284,7 +289,7 @@ public class ProblemCategoryMapperTest {
     Assertions.assertNull(problemCategory);
   }
 
-  /** 测试用例: 测试deleteProblemCategory(int)方法 测试数据: 不存在的试题分类唯一标识符 预期结果: 方法正常执行, 未影响数据表中的数据 */
+  /** Test case: tests the deleteProblemCategory(int) method. Test data: a non-existing problem category unique identifier. Expected: the method executes normally without affecting the data in the table. */
   @Test
   public void testDeleteProblemCategoryNotExists() {
     ProblemCategory problemCategory = problemCategoryMapper.getProblemCategoryUsingCategoryId(0);
@@ -294,6 +299,6 @@ public class ProblemCategoryMapperTest {
     Assertions.assertEquals(0, numberOfRowsAffected);
   }
 
-  /** 待测试的ProblemCategoryMapper对象. */
+  /** The ProblemCategoryMapper object under test. */
   @Autowired private ProblemCategoryMapper problemCategoryMapper;
 }

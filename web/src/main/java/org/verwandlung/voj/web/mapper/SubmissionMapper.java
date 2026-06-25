@@ -30,41 +30,41 @@ import org.verwandlung.voj.web.model.Submission;
  */
 public interface SubmissionMapper {
   /**
-   * [此方法仅供管理员使用] 获取指定时间内提交的数量.
+   * [For administrators only] Gets the number of submissions within a specified time period.
    *
-   * @param startTime - 统计起始时间
-   * @param endTime - 统计结束时间
-   * @return 指定时间内提交的数量
+   * @param startTime - the start time of the statistics
+   * @param endTime - the end time of the statistics
+   * @return the number of submissions within the specified time period
    */
   long getNumberOfSubmissionsUsingDate(
       @Param("startTime") String startTime, @Param("endTime") String endTime);
 
   /**
-   * 获取某个用户对某个试题的提交记录的数量.
+   * Gets the number of submissions by a user for a problem.
    *
-   * @param problemId - 试题的唯一标识符
-   * @param username - 用户的用户名
-   * @return 某个用户对某个试题提交的数量
+   * @param problemId - the unique identifier of the problem
+   * @param username - the username of the user
+   * @return the number of submissions by the user for the problem
    */
   long getNumberOfSubmissionsUsingProblemIdAndUsername(
       @Param("problemId") long problemId, @Param("username") String username);
 
   /**
-   * [此方法仅供管理员使用] 获取某种编程语言的提交数量.
+   * [For administrators only] Gets the number of submissions for a programming language.
    *
-   * @param languageId - 编程语言的唯一标识符
-   * @return 某种编程语言的提交数量
+   * @param languageId - the unique identifier of the programming language
+   * @return the number of submissions for the programming language
    */
   long getNumberOfSubmissionsUsingLanguage(@Param("languageId") int languageId);
 
   /**
-   * 获取指定时间内提交的数量, 并按月份汇总.
+   * Gets the number of submissions within a specified time period, grouped by month.
    *
-   * @param startTime - 统计起始时间
-   * @param endTime - 统计结束时间
-   * @param uid - 用户的唯一标识符
-   * @param isAcceptedOnly - 是否只统计通过的提交记录
-   * @return 包含月份和提交次数的键值对 Map
+   * @param startTime - the start time of the statistics
+   * @param endTime - the end time of the statistics
+   * @param uid - the unique identifier of the user
+   * @param isAcceptedOnly - whether to count only accepted submissions
+   * @return a Map of key-value pairs containing the month and the number of submissions
    */
   List<Map<String, Object>> getNumberOfSubmissionsGroupByMonth(
       @Param("startTime") String startTime,
@@ -73,13 +73,13 @@ public interface SubmissionMapper {
       @Param("isAcceptedOnly") boolean isAcceptedOnly);
 
   /**
-   * 获取指定时间内提交的数量, 并按天数汇总.
+   * Gets the number of submissions within a specified time period, grouped by day.
    *
-   * @param startTime - 统计起始时间
-   * @param endTime - 统计结束时间
-   * @param uid - 用户的唯一标识符
-   * @param isAcceptedOnly - 是否只统计通过的提交记录
-   * @return 包含日期和提交次数的键值对 Map
+   * @param startTime - the start time of the statistics
+   * @param endTime - the end time of the statistics
+   * @param uid - the unique identifier of the user
+   * @param isAcceptedOnly - whether to count only accepted submissions
+   * @return a Map of key-value pairs containing the date and the number of submissions
    */
   List<Map<String, Object>> getNumberOfSubmissionsGroupByDay(
       @Param("startTime") String startTime,
@@ -88,27 +88,27 @@ public interface SubmissionMapper {
       @Param("isAcceptedOnly") boolean isAcceptedOnly);
 
   /**
-   * 获取最新提交记录的唯一标识符
+   * Gets the unique identifier of the latest submission.
    *
-   * @return 最新提交记录的唯一标识符
+   * @return the unique identifier of the latest submission
    */
   long getLatestSubmissionId();
 
   /**
-   * 通过评测记录唯一标识符获取试题对象.
+   * Gets a submission object by its unique identifier.
    *
-   * @param submissionId - 评测记录的唯一标识符
-   * @return 一个评测记录对象
+   * @param submissionId - the unique identifier of the submission
+   * @return a submission object
    */
   Submission getSubmission(@Param("submissionId") long submissionId);
 
   /**
-   * 获取某个用户对某个试题的提交记录.
+   * Gets the submissions of a user for a problem.
    *
-   * @param problemId - 试题的唯一标识符
-   * @param username - 用户的用户名
-   * @param limit - 每次加载评测记录的数量
-   * @return 某个范围内的所有提交记录
+   * @param problemId - the unique identifier of the problem
+   * @param username - the username of the user
+   * @param limit - the number of submissions to load each time
+   * @return all submissions within a range
    */
   List<Submission> getSubmissions(
       @Param("problemId") long problemId,
@@ -116,13 +116,13 @@ public interface SubmissionMapper {
       @Param("limit") int limit);
 
   /**
-   * 获取某个用户对某个试题的提交记录.
+   * Gets the submissions of a user for a problem.
    *
-   * @param problemId - 试题的唯一标识符
-   * @param username - 用户的用户名
-   * @param offset - 试题唯一标识符的起始编号
-   * @param limit - 每次加载评测记录的数量
-   * @return 某个范围内的所有提交记录
+   * @param problemId - the unique identifier of the problem
+   * @param username - the username of the user
+   * @param offset - the starting number of the submission identifier
+   * @param limit - the number of submissions to load each time
+   * @return all submissions within a range
    */
   List<Submission> getSubmissionsUsingOffset(
       @Param("problemId") long problemId,
@@ -131,13 +131,13 @@ public interface SubmissionMapper {
       @Param("limit") int limit);
 
   /**
-   * 获取某个用户对某个试题的提交记录.
+   * Gets the submissions of a user for a problem.
    *
-   * @param problemId - 试题的唯一标识符
-   * @param username - 用户的用户名
-   * @param offset - 试题唯一标识符的起始编号
-   * @param limit - 每次加载评测记录的数量
-   * @return 某个范围内的所有提交记录
+   * @param problemId - the unique identifier of the problem
+   * @param username - the username of the user
+   * @param offset - the starting number of the submission identifier
+   * @param limit - the number of submissions to load each time
+   * @return all submissions within a range
    */
   List<Submission> getLatestSubmissionsUsingOffset(
       @Param("problemId") long problemId,
@@ -146,23 +146,23 @@ public interface SubmissionMapper {
       @Param("limit") int limit);
 
   /**
-   * 获取某个用户对某个试题的提交记录.
+   * Gets the submissions of a user for a problem.
    *
-   * @param problemId - 试题的唯一标识符
-   * @param uid - 用户的唯一标识符
-   * @param limit - 每次加载评测记录的数量
-   * @return 某个用户对某个试题的提交记录
+   * @param problemId - the unique identifier of the problem
+   * @param uid - the unique identifier of the user
+   * @param limit - the number of submissions to load each time
+   * @return the submissions of the user for the problem
    */
   List<Submission> getSubmissionUsingProblemIdAndUserId(
       @Param("problemId") long problemId, @Param("uid") long uid, @Param("limit") int limit);
 
   /**
-   * 获取某个用户在某个试题ID区间段内的最新的评测结果.
+   * Gets the latest judging results of a user within a problem ID range.
    *
-   * @param uid - 用户的唯一标识符
-   * @param problemIdLowerBound - 试题ID区间的下界
-   * @param problemIdUpperBound - 试题ID区间的上界
-   * @return 某个试题ID区间段内的最新的评测结果
+   * @param uid - the unique identifier of the user
+   * @param problemIdLowerBound - the lower bound of the problem ID range
+   * @param problemIdUpperBound - the upper bound of the problem ID range
+   * @return the latest judging results within the problem ID range
    */
   List<Submission> getLatestSubmissionOfProblems(
       @Param("uid") long uid,
@@ -170,12 +170,12 @@ public interface SubmissionMapper {
       @Param("problemIdUpperBound") long problemIdUpperBound);
 
   /**
-   * 获取某个用户在某个试题ID区间段内的通过的评测结果.
+   * Gets the accepted judging results of a user within a problem ID range.
    *
-   * @param uid - 用户的唯一标识符
-   * @param problemIdLowerBound - 试题ID区间的下界
-   * @param problemIdUpperBound - 试题ID区间的上界
-   * @return 某个试题ID区间段内的通过的评测结果
+   * @param uid - the unique identifier of the user
+   * @param problemIdLowerBound - the lower bound of the problem ID range
+   * @param problemIdUpperBound - the upper bound of the problem ID range
+   * @return the accepted judging results within the problem ID range
    */
   List<Submission> getAcceptedSubmissionOfProblems(
       @Param("uid") long uid,
@@ -183,39 +183,39 @@ public interface SubmissionMapper {
       @Param("problemIdUpperBound") long problemIdUpperBound);
 
   /**
-   * 获取某个用户通过(Accepted)提交记录的数量.
+   * Gets the number of accepted submissions of a user.
    *
-   * @param uid - 用户的唯一标识符
-   * @return 某个用户通过(Accepted)提交记录的数量
+   * @param uid - the unique identifier of the user
+   * @return the number of accepted submissions of the user
    */
   long getAcceptedSubmissionUsingUserId(@Param("uid") long uid);
 
   /**
-   * 获取某个用户全部提交记录的数量.
+   * Gets the total number of submissions of a user.
    *
-   * @param uid - 用户的唯一标识符
-   * @return 某个用户全部提交记录的数量
+   * @param uid - the unique identifier of the user
+   * @return the total number of submissions of the user
    */
   long getTotalSubmissionUsingUserId(@Param("uid") long uid);
 
   /**
-   * 创建提交记录.
+   * Creates a submission.
    *
-   * @param submission - 待创建的提交记录对象
+   * @param submission - the submission object to create
    */
   int createSubmission(Submission submission);
 
   /**
-   * 更新提交记录.
+   * Updates a submission.
    *
-   * @param submission - 待更新的提交记录对象
+   * @param submission - the submission object to update
    */
   int updateSubmission(Submission submission);
 
   /**
-   * 通过提交记录的唯一标识符删除提交记录.
+   * Deletes a submission by its unique identifier.
    *
-   * @param submissionId - 提交记录的唯一标识符
+   * @param submissionId - the unique identifier of the submission
    */
   int deleteSubmission(@Param("submissionId") long submissionId);
 }

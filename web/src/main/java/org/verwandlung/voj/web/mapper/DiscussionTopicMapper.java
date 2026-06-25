@@ -27,46 +27,46 @@ import java.util.List;
  */
 public interface DiscussionTopicMapper {
   /**
-   * 获取全部的讨论话题.
+   * Gets all discussion topics.
    *
-   * @return 包含全部讨论话题的List<DiscussionTopic>对象
+   * @return a List<DiscussionTopic> object containing all discussion topics
    */
   List<DiscussionTopic> getDiscussionTopics();
 
   /**
-   * 根据讨论话题的唯一标识符获取讨论话题对象.
+   * Gets a discussion topic object by the unique identifier of the discussion topic.
    *
-   * @param discussionTopicId - 讨论话题的唯一标识符
-   * @return 一个讨论话题对象
+   * @param discussionTopicId - the unique identifier of the discussion topic
+   * @return a discussion topic object
    */
   DiscussionTopic getDiscussionTopicUsingId(int discussionTopicId);
 
   /**
-   * 根据讨论话题的唯一别名获取讨论话题对象.
+   * Gets a discussion topic object by the unique alias of the discussion topic.
    *
-   * @param discussionTopicSlug - 讨论话题的别名
-   * @return 一个讨论话题对象
+   * @param discussionTopicSlug - the alias of the discussion topic
+   * @return a discussion topic object
    */
   DiscussionTopic getDiscussionTopicUsingSlug(String discussionTopicSlug);
 
   /**
-   * 创建讨论话题.
+   * Creates a discussion topic.
    *
-   * @param discussionTopic - 待创建的讨论话题对象
+   * @param discussionTopic - the discussion topic object to create
    */
   int createDiscussionTopic(DiscussionTopic discussionTopic);
 
   /**
-   * 更新讨论话题.
+   * Updates a discussion topic.
    *
-   * @param discussionTopic - 待更新的讨论话题对象
+   * @param discussionTopic - the discussion topic object to update
    */
   int updateDiscussionTopic(DiscussionTopic discussionTopic);
 
   /**
-   * 删除讨论话题.
+   * Deletes a discussion topic.
    *
-   * @param discussionTopicId - 待删除讨论话题的唯一标识符
+   * @param discussionTopicId - the unique identifier of the discussion topic to delete
    */
   int deleteDiscussionTopicUsingId(int discussionTopicId);
 }

@@ -31,7 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.verwandlung.voj.web.model.Language;
 
 /**
- * LanguageService测试类.
+ * The test class for LanguageService.
  *
  * @author Haozhe Xie
  */
@@ -39,14 +39,14 @@ import org.verwandlung.voj.web.model.Language;
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class LanguageServiceTest {
-  /** 测试用例: 测试getAllLanguages()方法 测试数据: N/a 预期结果: 返回全部支持的编程语言 */
+  /** Test case: tests the getAllLanguages() method. Test data: N/a. Expected: all supported programming languages. */
   @Test
   public void testGetAllLanguages() {
     List<Language> languages = languageService.getAllLanguages();
     Assertions.assertEquals(6, languages.size());
   }
 
-  /** 测试用例: 测试getLanguageUsingSlug(String)方法 测试数据: 存在的编程语言别名 预期结果: 返回对应的编程语言对象 */
+  /** Test case: tests the getLanguageUsingSlug(String) method. Test data: an existing language slug. Expected: the corresponding programming language object. */
   @Test
   public void testGetLanguageUsingSlugExists() {
     Language language = languageService.getLanguageUsingSlug("text/x-java");
@@ -54,13 +54,13 @@ public class LanguageServiceTest {
     Assertions.assertEquals("Java", language.getLanguageName());
   }
 
-  /** 测试用例: 测试getLanguageUsingSlug(String)方法 测试数据: 不存在的编程语言别名 预期结果: 返回空引用 */
+  /** Test case: tests the getLanguageUsingSlug(String) method. Test data: a non-existing language slug. Expected: a null reference. */
   @Test
   public void testGetLanguageUsingSlugNotExists() {
     Assertions.assertNull(languageService.getLanguageUsingSlug("text/x-not-exist"));
   }
 
-  /** 测试用例: 测试updateLanguageSettings(List)方法 测试数据: 在现有语言基础上新增一门合法语言 预期结果: 更新成功, 语言总数加一 */
+  /** Test case: tests the updateLanguageSettings(List) method. Test data: add a valid language on top of the existing ones. Expected: the update succeeds and the total number of languages increases by one. */
   @Test
   @SuppressWarnings("unchecked")
   public void testUpdateLanguageSettingsCreateLanguage() {
@@ -73,7 +73,7 @@ public class LanguageServiceTest {
     Assertions.assertEquals(7, languageService.getAllLanguages().size());
   }
 
-  /** 测试用例: 测试updateLanguageSettings(List)方法 测试数据: 新增语言的别名为空 预期结果: 更新失败 */
+  /** Test case: tests the updateLanguageSettings(List) method. Test data: the slug of the new language is empty. Expected: the update fails. */
   @Test
   public void testUpdateLanguageSettingsCreateLanguageWithEmptySlug() {
     List<Language> newLanguages = currentLanguages();
@@ -84,7 +84,7 @@ public class LanguageServiceTest {
     Assertions.assertEquals(6, languageService.getAllLanguages().size());
   }
 
-  /** 测试用例: 测试updateLanguageSettings(List)方法 测试数据: 新增语言的别名已存在 预期结果: 更新失败 */
+  /** Test case: tests the updateLanguageSettings(List) method. Test data: the slug of the new language already exists. Expected: the update fails. */
   @Test
   public void testUpdateLanguageSettingsCreateLanguageWithDuplicatedSlug() {
     List<Language> newLanguages = currentLanguages();
@@ -94,7 +94,7 @@ public class LanguageServiceTest {
     Assertions.assertFalse((Boolean) result.get("isSuccessful"));
   }
 
-  /** 测试用例: 测试updateLanguageSettings(List)方法 测试数据: 新增语言的编译命令缺少{filename}占位符 预期结果: 更新失败 */
+  /** Test case: tests the updateLanguageSettings(List) method. Test data: the compile command of the new language lacks the {filename} placeholder. Expected: the update fails. */
   @Test
   public void testUpdateLanguageSettingsCreateLanguageWithIllegalCompileCommand() {
     List<Language> newLanguages = currentLanguages();
@@ -104,12 +104,12 @@ public class LanguageServiceTest {
     Assertions.assertFalse((Boolean) result.get("isSuccessful"));
   }
 
-  /** 测试用例: 测试updateLanguageSettings(List)方法 测试数据: 修改一门现有语言的名称 预期结果: 更新成功, 语言名称被持久化 */
+  /** Test case: tests the updateLanguageSettings(List) method. Test data: modify the name of an existing language. Expected: the update succeeds and the language name is persisted. */
   @Test
   @SuppressWarnings("unchecked")
   public void testUpdateLanguageSettingsUpdateLanguage() {
     List<Language> newLanguages = currentLanguages();
-    // 修改 C 语言 (language_id = 1) 的名称.
+    // Modify the name of the C language (language_id = 1).
     for (Language language : newLanguages) {
       if (language.getLanguageId() == 1) {
         language.setLanguageName("C11");
@@ -122,12 +122,12 @@ public class LanguageServiceTest {
     Assertions.assertEquals("C11", languageService.getLanguageUsingSlug("text/x-csrc").getLanguageName());
   }
 
-  /** 测试用例: 测试updateLanguageSettings(List)方法 测试数据: 删除一门未被使用的语言 预期结果: 更新成功, 语言总数减一 */
+  /** Test case: tests the updateLanguageSettings(List) method. Test data: delete a language that is not in use. Expected: the update succeeds and the total number of languages decreases by one. */
   @Test
   @SuppressWarnings("unchecked")
   public void testUpdateLanguageSettingsDeleteUnusedLanguage() {
     List<Language> newLanguages = currentLanguages();
-    // Pascal (language_id = 4) 未被任何提交记录或用户使用.
+    // Pascal (language_id = 4) is not used by any submission record or user.
     newLanguages.removeIf(language -> language.getLanguageId() == 4);
 
     Map<String, Object> result = languageService.updateLanguageSettings(newLanguages);
@@ -136,11 +136,11 @@ public class LanguageServiceTest {
     Assertions.assertEquals(5, languageService.getAllLanguages().size());
   }
 
-  /** 测试用例: 测试updateLanguageSettings(List)方法 测试数据: 删除一门正在被使用的语言 预期结果: 更新失败, 语言不被删除 */
+  /** Test case: tests the updateLanguageSettings(List) method. Test data: delete a language that is in use. Expected: the update fails and the language is not deleted. */
   @Test
   public void testUpdateLanguageSettingsDeleteLanguageInUse() {
     List<Language> newLanguages = currentLanguages();
-    // C++ (language_id = 2) 被提交记录和用户偏好使用, 不允许删除.
+    // C++ (language_id = 2) is used by submission records and user preferences, and cannot be deleted.
     newLanguages.removeIf(language -> language.getLanguageId() == 2);
 
     Map<String, Object> result = languageService.updateLanguageSettings(newLanguages);
@@ -148,7 +148,7 @@ public class LanguageServiceTest {
     Assertions.assertEquals(6, languageService.getAllLanguages().size());
   }
 
-  /** 返回当前全部语言的可变副本, 用于构造updateLanguageSettings的输入. */
+  /** Returns a mutable copy of all current languages, used to construct the input of updateLanguageSettings. */
   private List<Language> currentLanguages() {
     List<Language> languages = new ArrayList<>();
     for (Language language : languageService.getAllLanguages()) {
@@ -163,6 +163,6 @@ public class LanguageServiceTest {
     return languages;
   }
 
-  /** 待测试的LanguageService对象. */
+  /** The LanguageService object under test. */
   @Autowired private LanguageService languageService;
 }

@@ -21,21 +21,21 @@ import java.io.Serializable;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 /**
- * 编程语言的Model. 对应数据库中的voj_languages数据表.
+ * The model of a programming language. Maps to the voj_languages table in the database.
  *
  * @author Haozhe Xie
  */
 public class Language implements Serializable {
-  /** 编程语言的默认构造函数. */
+  /** Default constructor of the programming language. */
   public Language() {}
 
   /**
-   * 编程语言的构造函数.
+   * Constructor of the programming language.
    *
-   * @param languageSlug - 编程语言的英文缩写
-   * @param languageName - 编程语言的名称
-   * @param compileCommand - 编程语言的编译命令
-   * @param runCommand - 编程语言对应程序执行命令
+   * @param languageSlug - the English abbreviation of the programming language
+   * @param languageName - the name of the programming language
+   * @param compileCommand - the compile command of the programming language
+   * @param runCommand - the command used to run programs of the programming language
    */
   public Language(
       String languageSlug, String languageName, String compileCommand, String runCommand) {
@@ -46,13 +46,13 @@ public class Language implements Serializable {
   }
 
   /**
-   * 编程语言的构造函数.
+   * Constructor of the programming language.
    *
-   * @param languageId - 编程语言的唯一标识符
-   * @param languageSlug - 编程语言的英文缩写
-   * @param languageName - 编程语言的名称
-   * @param compileCommand - 编程语言的编译命令
-   * @param runCommand - 编程语言对应程序执行命令
+   * @param languageId - the unique identifier of the programming language
+   * @param languageSlug - the English abbreviation of the programming language
+   * @param languageName - the name of the programming language
+   * @param compileCommand - the compile command of the programming language
+   * @param runCommand - the command used to run programs of the programming language
    */
   public Language(
       int languageId,
@@ -65,90 +65,90 @@ public class Language implements Serializable {
   }
 
   /**
-   * 获取编程语言的唯一标识符.
+   * Gets the unique identifier of the programming language.
    *
-   * @return 编程语言的唯一标识符
+   * @return the unique identifier of the programming language
    */
   public int getLanguageId() {
     return languageId;
   }
 
   /**
-   * 设置编程语言的唯一标识符.
+   * Sets the unique identifier of the programming language.
    *
-   * @param languageId - 编程语言的唯一标识符
+   * @param languageId - the unique identifier of the programming language
    */
   public void setLanguageId(int languageId) {
     this.languageId = languageId;
   }
 
   /**
-   * 获取编程语言的英文缩写
+   * Gets the English abbreviation of the programming language.
    *
-   * @return 编程语言的英文缩写
+   * @return the English abbreviation of the programming language
    */
   public String getLanguageSlug() {
     return languageSlug;
   }
 
   /**
-   * 设置编程语言的英文缩写.
+   * Sets the English abbreviation of the programming language.
    *
-   * @param languageSlug - 编程语言的英文缩写
+   * @param languageSlug - the English abbreviation of the programming language
    */
   public void setLanguageSlug(String languageSlug) {
     this.languageSlug = languageSlug;
   }
 
   /**
-   * 获取编程语言的名称.
+   * Gets the name of the programming language.
    *
-   * @return 编程语言的名称
+   * @return the name of the programming language
    */
   public String getLanguageName() {
     return languageName;
   }
 
   /**
-   * 设置编程语言的名称.
+   * Sets the name of the programming language.
    *
-   * @param languageName - 编程语言的名称
+   * @param languageName - the name of the programming language
    */
   public void setLanguageName(String languageName) {
     this.languageName = languageName;
   }
 
   /**
-   * 获取编程语言的编译命令.
+   * Gets the compile command of the programming language.
    *
-   * @return
+   * @return the compile command of the programming language
    */
   public String getCompileCommand() {
     return compileCommand;
   }
 
   /**
-   * 设置编程语言的编译命令.
+   * Sets the compile command of the programming language.
    *
-   * @param compileCommand
+   * @param compileCommand - the compile command of the programming language
    */
   public void setCompileCommand(String compileCommand) {
     this.compileCommand = compileCommand;
   }
 
   /**
-   * 获取编程语言的运行命令.
+   * Gets the run command of the programming language.
    *
-   * @return 编程语言的运行命令
+   * @return the run command of the programming language
    */
   public String getRunCommand() {
     return runCommand;
   }
 
   /**
-   * 设置编程语言的运行命令.
+   * Sets the run command of the programming language.
    *
-   * @param runCommand - 编程语言的运行命令
+   * @param runCommand - the run command of the programming language
    */
   public void setRunCommand(String runCommand) {
     this.runCommand = runCommand;
@@ -164,21 +164,21 @@ public class Language implements Serializable {
         new Object[] {languageId, languageSlug, languageName, compileCommand, runCommand});
   }
 
-  /** 编程语言的唯一标识符. */
+  /** The unique identifier of the programming language. */
   private int languageId;
 
-  /** 编程语言的别名. */
+  /** The alias of the programming language. */
   private String languageSlug;
 
-  /** 编程语言的名称. */
+  /** The name of the programming language. */
   private String languageName;
 
-  /** 编程语言的编译命令. */
+  /** The compile command of the programming language. */
   @JsonIgnore private String compileCommand;
 
-  /** 编程语言的运行命令. */
+  /** The run command of the programming language. */
   @JsonIgnore private String runCommand;
 
-  /** 唯一的序列化标识符 */
+  /** The unique serialization identifier. */
   private static final long serialVersionUID = 9065824880175832696L;
 }

@@ -29,29 +29,30 @@ import org.springframework.jms.core.JmsTemplate;
 import org.springframework.jms.listener.SimpleMessageListenerContainer;
 
 /**
- * 消息队列配置. 取代原 application-context.xml 中的 ActiveMQ / JMS 定义.
+ * The message queue configuration. Replaces the ActiveMQ / JMS definitions from the original
+ * application-context.xml.
  *
- * <p>评测机监听 {@code vojSubmissionTaskQueue} 以接收待评测任务, 并将评测结果发送到
- * {@code vojJudgeResultQueue}.
+ * <p>The judger listens on {@code vojSubmissionTaskQueue} to receive tasks to be judged, and sends
+ * judging results to {@code vojJudgeResultQueue}.
  *
  * @author Haozhe Xie
  */
 @Configuration
 public class JmsConfig {
-  /** 评测任务队列名称 (Web -> Judger). */
+  /** The name of the judging task queue (Web -> Judger). */
   private static final String SUBMISSION_TASK_QUEUE = "vojSubmissionTaskQueue";
 
-  /** 评测结果队列名称 (Judger -> Web). */
+  /** The name of the judging result queue (Judger -> Web). */
   private static final String JUDGE_RESULT_QUEUE = "vojJudgeResultQueue";
 
-  /** 带连接缓存的 JMS 连接工厂. */
+  /** The JMS connection factory with connection caching. */
   @Bean
   public ConnectionFactory connectionFactory(@Value("${jms.broker.url}") String brokerUrl) {
     ActiveMQConnectionFactory amqConnectionFactory = new ActiveMQConnectionFactory(brokerUrl);
     return new CachingConnectionFactory(amqConnectionFactory);
   }
 
-  /** 用于向评测结果队列发送消息的 JmsTemplate. */
+  /** The JmsTemplate used to send messages to the judging result queue. */
   @Bean
   public JmsTemplate jmsTemplate(ConnectionFactory connectionFactory) {
     JmsTemplate jmsTemplate = new JmsTemplate(connectionFactory);
@@ -59,7 +60,7 @@ public class JmsConfig {
     return jmsTemplate;
   }
 
-  /** 监听评测任务队列的消息监听容器. */
+  /** The message listener container that listens on the judging task queue. */
   @Bean
   public SimpleMessageListenerContainer submissionTaskListenerContainer(
       ConnectionFactory connectionFactory, MessageListener messageReceiver) {

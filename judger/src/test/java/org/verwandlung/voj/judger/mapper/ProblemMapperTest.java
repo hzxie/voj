@@ -27,7 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.verwandlung.voj.judger.model.Problem;
 
 /**
- * ProblemMapper测试类.
+ * Test class for ProblemMapper.
  *
  * @author Haozhe Xie
  */
@@ -35,7 +35,10 @@ import org.verwandlung.voj.judger.model.Problem;
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class ProblemMapperTest {
-  /** 测试用例: 测试getProblem()方法 测试数据: 使用A+B Problem的试题唯一标识符 预期结果: 返回预期的试题对象 */
+  /**
+   * Test case: tests the getProblem() method. Test data: the unique identifier of the "A+B Problem".
+   * Expected result: returns the expected problem object.
+   */
   @Test
   public void testGetProblemExists() {
     Problem problem = problemMapper.getProblem(1000);
@@ -45,13 +48,16 @@ public class ProblemMapperTest {
     Assertions.assertEquals("A+B Problem", problemName);
   }
 
-  /** 测试用例: 测试getProblem()方法 测试数据: 使用不存在的试题唯一标识符 预期结果: 返回空引用 */
+  /**
+   * Test case: tests the getProblem() method. Test data: a non-existent problem identifier.
+   * Expected result: returns a null reference.
+   */
   @Test
   public void testGetProblemNotExists() {
     Problem problem = problemMapper.getProblem(0);
     Assertions.assertNull(problem);
   }
 
-  /** 待测试的ProblemMapper对象. */
+  /** The ProblemMapper object under test. */
   @Autowired private ProblemMapper problemMapper;
 }

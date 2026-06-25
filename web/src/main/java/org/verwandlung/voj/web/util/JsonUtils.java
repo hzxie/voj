@@ -22,7 +22,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 基于Jackson的JSON序列化与反序列化工具类.
+ * The JSON serialization and deserialization utility class based on Jackson.
  *
  * @author Haozhe Xie
  */
@@ -31,11 +31,11 @@ public class JsonUtils {
   private JsonUtils() {}
 
   /**
-   * 将JSON数组字符串反序列化为指定元素类型的List对象.
+   * Deserializes a JSON array string into a List object of the specified element type.
    *
-   * @param json - JSON数组字符串
-   * @param elementType - List中元素的类型
-   * @return 反序列化后的List对象
+   * @param json - the JSON array string
+   * @param elementType - the type of the elements in the List
+   * @return the deserialized List object
    */
   public static <T> List<T> toList(String json, Class<T> elementType) {
     try {
@@ -47,21 +47,21 @@ public class JsonUtils {
   }
 
   /**
-   * 将JSON对象字符串反序列化为Map对象.
+   * Deserializes a JSON object string into a Map object.
    *
-   * @param json - JSON对象字符串
-   * @return 反序列化后的Map对象
+   * @param json - the JSON object string
+   * @return the deserialized Map object
    */
   public static Map<String, Object> toMap(String json) {
     return toObject(json, new TypeReference<Map<String, Object>>() {});
   }
 
   /**
-   * 将JSON字符串反序列化为指定泛型类型的对象.
+   * Deserializes a JSON string into an object of the specified generic type.
    *
-   * @param json - JSON字符串
-   * @param typeReference - 目标类型的TypeReference
-   * @return 反序列化后的对象
+   * @param json - the JSON string
+   * @param typeReference - the TypeReference of the target type
+   * @return the deserialized object
    */
   public static <T> T toObject(String json, TypeReference<T> typeReference) {
     try {
@@ -72,10 +72,10 @@ public class JsonUtils {
   }
 
   /**
-   * 将对象序列化为JSON字符串.
+   * Serializes an object into a JSON string.
    *
-   * @param object - 待序列化的对象
-   * @return 序列化后的JSON字符串
+   * @param object - the object to serialize
+   * @return the serialized JSON string
    */
   public static String toJsonString(Object object) {
     try {
@@ -85,6 +85,6 @@ public class JsonUtils {
     }
   }
 
-  /** 共享的Jackson ObjectMapper对象, 线程安全. */
+  /** The shared Jackson ObjectMapper object, which is thread-safe. */
   private static final ObjectMapper MAPPER = new ObjectMapper();
 }

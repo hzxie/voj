@@ -29,82 +29,82 @@ import org.verwandlung.voj.web.model.ProblemTagRelationship;
  */
 public interface ProblemTagMapper {
   /**
-   * 获取全部的试题标签.
+   * Gets all problem tags.
    *
-   * @return 包含试题标签的列表
+   * @return a list containing the problem tags
    */
   List<ProblemTag> getProblemTags();
 
   /**
-   * 通过试题标签的唯一标识符获取试题标签对象.
+   * Gets a problem tag object by its unique identifier.
    *
-   * @param problemTagId - 试题标签的唯一标识符
-   * @return 预期的试题标签对象或空引用
+   * @param problemTagId - the unique identifier of the problem tag
+   * @return the expected problem tag object, or a null reference
    */
   ProblemTag getProblemTagUsingTagId(long problemTagId);
 
   /**
-   * 通过试题的唯一标识符获取试题标签对象的列表.
+   * Gets the list of problem tag objects by the unique identifier of a problem.
    *
-   * @param problemId - 试题的唯一标识符
-   * @return 预期的试题标签对象列表
+   * @param problemId - the unique identifier of the problem
+   * @return the expected list of problem tag objects
    */
   List<ProblemTag> getProblemTagsUsingProblemId(long problemId);
 
   /**
-   * 获取某个区间内各试题的标签.
+   * Gets the tags of problems within a range.
    *
-   * @param problemIdLowerBound - 试题ID区间的下界
-   * @param problemIdUpperBound - 试题ID区间的上界
-   * @return 包含试题标签信息的列表
+   * @param problemIdLowerBound - the lower bound of the problem ID range
+   * @param problemIdUpperBound - the upper bound of the problem ID range
+   * @return a list containing the problem tag information
    */
   List<ProblemTagRelationship> getProblemTagsOfProblems(
       @Param(value = "problemIdLowerBound") long problemIdLowerBound,
       @Param(value = "problemIdUpperBound") long problemIdUpperBound);
 
   /**
-   * 通过试题标签的别名获取试题标签对象.
+   * Gets a problem tag object by its alias.
    *
-   * @param problemTagSlug - 试题标签的别名
-   * @return 预期的试题标签对象或空引用
+   * @param problemTagSlug - the alias of the problem tag
+   * @return the expected problem tag object, or a null reference
    */
   ProblemTag getProblemTagUsingTagSlug(String problemTagSlug);
 
   /**
-   * 创建试题标签对象.
+   * Creates a problem tag object.
    *
-   * @param problemTag - 待创建的试题标签对象
+   * @param problemTag - the problem tag object to create
    */
   int createProblemTag(ProblemTag problemTag);
 
   /**
-   * 创建试题及试题标签的关系.
+   * Creates the relationship between a problem and a problem tag.
    *
-   * @param problemId - 试题的唯一标识符
-   * @param problemTag - 试题标签对象
+   * @param problemId - the unique identifier of the problem
+   * @param problemTag - the problem tag object
    */
   int createProblemTagRelationship(
       @Param(value = "problemId") long problemId,
       @Param(value = "problemTag") ProblemTag problemTag);
 
   /**
-   * 更新试题标签对象.
+   * Updates a problem tag object.
    *
-   * @param problemTag - 待更新的试题标签对象
+   * @param problemTag - the problem tag object to update
    */
   int updateProblemTag(ProblemTag problemTag);
 
   /**
-   * 删除试题标签对象.
+   * Deletes a problem tag object.
    *
-   * @param problemTagId - 待删除试题标签对象的唯一标识符
+   * @param problemTagId - the unique identifier of the problem tag object to delete
    */
   int deleteProblemTagUsingTagId(long problemTagId);
 
   /**
-   * 删除试题的全部标签.
+   * Deletes all tags of a problem.
    *
-   * @param problemId - 试题的唯一标识符
+   * @param problemId - the unique identifier of the problem
    */
   int deleteProblemTagRelationship(long problemId);
 }

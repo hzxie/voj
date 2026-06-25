@@ -19,20 +19,20 @@ package org.verwandlung.voj.web.model;
 import java.io.Serializable;
 
 /**
- * 程序评测结果的Model. 对应数据库中的voj_judge_results数据表.
+ * The model of a judge result. Maps to the voj_judge_results table in the database.
  *
  * @author Haozhe Xie
  */
 public class JudgeResult implements Serializable {
-  /** 评测结果类的默认构造函数. */
+  /** Default constructor of the judge result. */
   public JudgeResult() {}
 
   /**
-   * 评测结果类的构造函数.
+   * Constructor of the judge result.
    *
-   * @param judgeResultId - 评测结果的唯一标识符
-   * @param judgeResultSlug - 评测结果的别名
-   * @param judgeResultName - 评测结果的名称
+   * @param judgeResultId - the unique identifier of the judge result
+   * @param judgeResultSlug - the alias of the judge result
+   * @param judgeResultName - the name of the judge result
    */
   public JudgeResult(int judgeResultId, String judgeResultSlug, String judgeResultName) {
     this.judgeResultId = judgeResultId;
@@ -41,54 +41,54 @@ public class JudgeResult implements Serializable {
   }
 
   /**
-   * 获取评测结果的唯一标识符.
+   * Gets the unique identifier of the judge result.
    *
-   * @return 评测结果的唯一标识符
+   * @return the unique identifier of the judge result
    */
   public int getJudgeResultId() {
     return judgeResultId;
   }
 
   /**
-   * 设置评测结果的唯一标识符.
+   * Sets the unique identifier of the judge result.
    *
-   * @param judgeResultId - 评测结果的唯一标识符
+   * @param judgeResultId - the unique identifier of the judge result
    */
   public void setJudgeResultId(int judgeResultId) {
     this.judgeResultId = judgeResultId;
   }
 
   /**
-   * 获取评测结果的别名.
+   * Gets the alias of the judge result.
    *
-   * @return - 评测结果的别名
+   * @return the alias of the judge result
    */
   public String getJudgeResultSlug() {
     return judgeResultSlug;
   }
 
   /**
-   * 设置评测结果的别名.
+   * Sets the alias of the judge result.
    *
-   * @param judgeResultSlug - 评测结果的别名
+   * @param judgeResultSlug - the alias of the judge result
    */
   public void setJudgeResultSlug(String judgeResultSlug) {
     this.judgeResultSlug = judgeResultSlug;
   }
 
   /**
-   * 获取评测结果的名称.
+   * Gets the name of the judge result.
    *
-   * @return 评测结果的名称
+   * @return the name of the judge result
    */
   public String getJudgeResultName() {
     return judgeResultName;
   }
 
   /**
-   * 设置评测结果的名称.
+   * Sets the name of the judge result.
    *
-   * @param judgeResultName - 评测结果的名称
+   * @param judgeResultName - the name of the judge result
    */
   public void setJudgeResultName(String judgeResultName) {
     this.judgeResultName = judgeResultName;
@@ -104,15 +104,15 @@ public class JudgeResult implements Serializable {
         new Object[] {judgeResultId, judgeResultSlug, judgeResultName});
   }
 
-  /** 评测结果的唯一标识符. */
+  /** The unique identifier of the judge result. */
   private int judgeResultId;
 
-  /** 评测结果的英文唯一缩写. */
+  /** The unique English abbreviation of the judge result. */
   private String judgeResultSlug;
 
-  /** 评测结果的名称. */
+  /** The name of the judge result. */
   private String judgeResultName;
 
-  /** 唯一的序列化标识符. */
+  /** The unique serialization identifier. */
   private static final long serialVersionUID = -1572920076997918781L;
 }

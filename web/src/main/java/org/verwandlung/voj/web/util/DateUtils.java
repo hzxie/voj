@@ -21,16 +21,16 @@ import java.util.Date;
 import java.util.GregorianCalendar;
 
 /**
- * Calendar和Date的辅助类.
+ * The helper class for Calendar and Date.
  *
  * @author Haozhe Xie
  */
 public class DateUtils {
   /**
-   * 获取几天前的某一天的Date对象.
+   * Gets the Date object of a day several days ago.
    *
-   * @param period - 与当前时间的间隔(以天为单位)
-   * @return 几天前的某一天的Date对象
+   * @param period - the interval from the current time (in days)
+   * @return the Date object of a day several days ago
    */
   public static Date getPreviousDate(int period) {
     Date today = new Date();

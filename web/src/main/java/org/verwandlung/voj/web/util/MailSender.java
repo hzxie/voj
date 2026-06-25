@@ -40,17 +40,17 @@ import freemarker.template.TemplateNotFoundException;
 import org.springframework.web.servlet.view.freemarker.FreeMarkerConfigurer;
 
 /**
- * 电子邮件发送服务.
+ * The email sending service.
  *
  * @author Haozhe Xie
  */
 @Component("vojMailSender")
 public class MailSender {
   /**
-   * MailSender的构造函数.
+   * The constructor of MailSender.
    *
-   * @param freeMarkerConfigurer - FreeMarker的配置器
-   * @param mailSender - JavaMailSender对象
+   * @param freeMarkerConfigurer - the FreeMarker configurer
+   * @param mailSender - the JavaMailSender object
    */
   @Autowired
   private MailSender(FreeMarkerConfigurer freeMarkerConfigurer, JavaMailSender mailSender) {
@@ -59,11 +59,11 @@ public class MailSender {
   }
 
   /**
-   * 解析电子邮件模板内容.
+   * Parses the content of an email template.
    *
-   * @param templateLocation - 电子邮件模板相对路径
-   * @param model - 电子邮件的附加信息
-   * @return 解析后的电子邮件内容
+   * @param templateLocation - the relative path of the email template
+   * @param model - the additional information of the email
+   * @return the parsed email content
    * @throws TemplateException
    * @throws IOException
    * @throws ParseException
@@ -83,11 +83,11 @@ public class MailSender {
   }
 
   /**
-   * 发送电子邮件到指定收件人.
+   * Sends an email to the specified recipient.
    *
-   * @param recipient - 收件人的电子邮件地址
-   * @param subject - 邮件的主题
-   * @param body - 邮件的内容
+   * @param recipient - the email address of the recipient
+   * @param subject - the subject of the email
+   * @param body - the content of the email
    */
   public void sendMail(final String recipient, final String subject, final String body) {
     final MimeMessagePreparator preparator =
@@ -114,24 +114,24 @@ public class MailSender {
         .start();
   }
 
-  /** 自动注入的Configuration对象. */
+  /** The autowired Configuration object. */
   private final FreeMarkerConfigurer freeMarkerConfigurer;
 
-  /** 自动注入的JavaMailSender对象. 用于发送电子邮件. */
+  /** The autowired JavaMailSender object. Used to send emails. */
   private final JavaMailSender mailSender;
 
-  /** 电子邮件发送者的地址. */
+  /** The email address of the sender. */
   @Value("${mail.senderMail}")
   private String senderMail;
 
-  /** 电子邮件发送者的姓名. */
+  /** The name of the email sender. */
   @Value("${mail.senderName}")
   private String senderName;
 
-  /** 网站的URL. 用于生成电子邮件中的链接. */
+  /** The URL of the website. Used to generate the links in emails. */
   @Value("${url.base}")
   private String baseUrl;
 
-  /** 日志记录器. */
+  /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(MailSender.class);
 }

@@ -31,7 +31,7 @@ import org.verwandlung.voj.web.model.ContestSubmission;
 import org.verwandlung.voj.web.model.Submission;
 
 /**
- * ContestSubmissionMapper测试类.
+ * The test class for ContestSubmissionMapper.
  *
  * @author Haozhe Xie
  */
@@ -39,7 +39,7 @@ import org.verwandlung.voj.web.model.Submission;
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class ContestSubmissionMapperTest {
-  /** 测试用例: 测试getSubmissionsOfContest(long)方法 测试数据: 使用存在提交记录的竞赛唯一标识符 预期结果: 返回该竞赛全部提交记录的列表 */
+  /** Test case: tests the getSubmissionsOfContest(long) method. Test data: the unique identifier of a contest that has submission records. Expected: the list of all submission records of the contest. */
   @Test
   public void testGetSubmissionsOfContestExists() {
     List<ContestSubmission> submissions =
@@ -51,7 +51,7 @@ public class ContestSubmissionMapperTest {
     Assertions.assertNotNull(firstSubmission.getSubmission());
   }
 
-  /** 测试用例: 测试getSubmissionsOfContest(long)方法 测试数据: 使用不存在提交记录的竞赛唯一标识符 预期结果: 返回空列表 */
+  /** Test case: tests the getSubmissionsOfContest(long) method. Test data: the unique identifier of a contest that has no submission records. Expected: an empty list. */
   @Test
   public void testGetSubmissionsOfContestNotExists() {
     List<ContestSubmission> submissions =
@@ -59,7 +59,7 @@ public class ContestSubmissionMapperTest {
     Assertions.assertTrue(submissions.isEmpty());
   }
 
-  /** 测试用例: 测试getAcceptedSubmissionsOfContest(long)方法 测试数据: 使用存在AC提交记录的竞赛唯一标识符 预期结果: 仅返回判定为AC的提交记录 */
+  /** Test case: tests the getAcceptedSubmissionsOfContest(long) method. Test data: the unique identifier of a contest that has AC submission records. Expected: only the submissions judged as AC. */
   @Test
   public void testGetAcceptedSubmissionsOfContestExists() {
     List<ContestSubmission> submissions =
@@ -71,7 +71,7 @@ public class ContestSubmissionMapperTest {
     }
   }
 
-  /** 测试用例: 测试getAcceptedSubmissionsOfContest(long)方法 测试数据: 使用不存在的竞赛唯一标识符 预期结果: 返回空列表 */
+  /** Test case: tests the getAcceptedSubmissionsOfContest(long) method. Test data: a non-existing contest unique identifier. Expected: an empty list. */
   @Test
   public void testGetAcceptedSubmissionsOfContestNotExists() {
     List<ContestSubmission> submissions =
@@ -79,7 +79,7 @@ public class ContestSubmissionMapperTest {
     Assertions.assertTrue(submissions.isEmpty());
   }
 
-  /** 测试用例: 测试getSubmissionOfContestOfContest(long, long)方法 测试数据: 使用提交过的参赛者 预期结果: 仅返回该参赛者在该竞赛中的提交记录 */
+  /** Test case: tests the getSubmissionOfContestOfContest(long, long) method. Test data: a contestant who has made submissions. Expected: only the submission records of this contestant in this contest. */
   @Test
   public void testGetSubmissionOfContestOfContestForContestant() {
     List<ContestSubmission> submissions =
@@ -91,7 +91,7 @@ public class ContestSubmissionMapperTest {
     }
   }
 
-  /** 测试用例: 测试getSubmissionOfContestOfContest(long, long)方法 测试数据: 使用另一名参赛者 预期结果: 仅返回该参赛者的提交记录 */
+  /** Test case: tests the getSubmissionOfContestOfContest(long, long) method. Test data: another contestant. Expected: only the submission records of this contestant. */
   @Test
   public void testGetSubmissionOfContestOfContestForAnotherContestant() {
     List<ContestSubmission> submissions =
@@ -100,7 +100,7 @@ public class ContestSubmissionMapperTest {
     Assertions.assertEquals(1001, submissions.get(0).getSubmission().getUser().getUid());
   }
 
-  /** 测试用例: 测试getSubmissionOfContestOfContest(long, long)方法 测试数据: 使用未提交的参赛者 预期结果: 返回空列表 */
+  /** Test case: tests the getSubmissionOfContestOfContest(long, long) method. Test data: a contestant who has not made any submission. Expected: an empty list. */
   @Test
   public void testGetSubmissionOfContestOfContestForNonContestant() {
     List<ContestSubmission> submissions =
@@ -108,7 +108,7 @@ public class ContestSubmissionMapperTest {
     Assertions.assertTrue(submissions.isEmpty());
   }
 
-  /** 测试用例: 测试getSubmissionOfContestOfContestProblem(long, long, long)方法 测试数据: 参赛者提交过该试题 预期结果: 返回该参赛者对该试题的提交记录 */
+  /** Test case: tests the getSubmissionOfContestOfContestProblem(long, long, long) method. Test data: the contestant has submitted this problem. Expected: the contestant's submission records for this problem. */
   @Test
   public void testGetSubmissionOfContestOfContestProblemExists() {
     List<ContestSubmission> submissions =
@@ -120,7 +120,7 @@ public class ContestSubmissionMapperTest {
     Assertions.assertEquals(1000, submission.getUser().getUid());
   }
 
-  /** 测试用例: 测试getSubmissionOfContestOfContestProblem(long, long, long)方法 测试数据: 参赛者未提交过该试题 预期结果: 返回空列表 */
+  /** Test case: tests the getSubmissionOfContestOfContestProblem(long, long, long) method. Test data: the contestant has not submitted this problem. Expected: an empty list. */
   @Test
   public void testGetSubmissionOfContestOfContestProblemNotExists() {
     List<ContestSubmission> submissions =
@@ -128,7 +128,7 @@ public class ContestSubmissionMapperTest {
     Assertions.assertTrue(submissions.isEmpty());
   }
 
-  /** 测试用例: 测试createContestSubmission(ContestSubmission)方法 测试数据: 合法的竞赛提交记录 预期结果: 数据创建操作成功完成 */
+  /** Test case: tests the createContestSubmission(ContestSubmission) method. Test data: a valid contest submission record. Expected: the data creation operation completes successfully. */
   @Test
   public void testCreateContestSubmission() {
     Contest contest = new Contest();
@@ -142,7 +142,7 @@ public class ContestSubmissionMapperTest {
     Assertions.assertEquals(4, contestSubmissionMapper.getSubmissionsOfContest(1).size());
   }
 
-  /** 测试用例: 测试deleteContestSubmission(long, long)方法 测试数据: 存在的竞赛提交记录 预期结果: 数据删除操作成功完成 */
+  /** Test case: tests the deleteContestSubmission(long, long) method. Test data: an existing contest submission record. Expected: the data deletion operation completes successfully. */
   @Test
   public void testDeleteContestSubmissionExists() {
     int numberOfRowsAffected = contestSubmissionMapper.deleteContestSubmission(1, 1000);
@@ -150,13 +150,13 @@ public class ContestSubmissionMapperTest {
     Assertions.assertEquals(2, contestSubmissionMapper.getSubmissionsOfContest(1).size());
   }
 
-  /** 测试用例: 测试deleteContestSubmission(long, long)方法 测试数据: 不存在的竞赛提交记录 预期结果: 方法正常执行, 未影响数据表中的数据 */
+  /** Test case: tests the deleteContestSubmission(long, long) method. Test data: a non-existing contest submission record. Expected: the method executes normally without affecting the data in the table. */
   @Test
   public void testDeleteContestSubmissionNotExists() {
     int numberOfRowsAffected = contestSubmissionMapper.deleteContestSubmission(1, 9999);
     Assertions.assertEquals(0, numberOfRowsAffected);
   }
 
-  /** 待测试的ContestSubmissionMapper对象. */
+  /** The ContestSubmissionMapper object under test. */
   @Autowired private ContestSubmissionMapper contestSubmissionMapper;
 }

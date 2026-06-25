@@ -27,7 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.verwandlung.voj.judger.model.Submission;
 
 /**
- * SubmissionMapper测试类.
+ * Test class for SubmissionMapper.
  *
  * @author Haozhe Xie
  */
@@ -35,7 +35,10 @@ import org.verwandlung.voj.judger.model.Submission;
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class SubmissionMapperTest {
-  /** 测试用例: 测试getSubmission(long)方法 测试数据: Problem#1000的提交记录的唯一标识符 预期结果: 返回预期的Submission对象 */
+  /**
+   * Test case: tests the getSubmission(long) method. Test data: the unique identifier of a
+   * submission for Problem#1000. Expected result: returns the expected Submission object.
+   */
   @Test
   public void testGetSubmissionExists() {
     Submission submission = submissionMapper.getSubmission(1000);
@@ -45,13 +48,16 @@ public class SubmissionMapperTest {
     Assertions.assertEquals(1000, problemId);
   }
 
-  /** 测试用例: 测试getSubmission(long)方法 测试数据: 不存在的的提交记录唯一标识符 预期结果: 返回空引用 */
+  /**
+   * Test case: tests the getSubmission(long) method. Test data: a non-existent submission
+   * identifier. Expected result: returns a null reference.
+   */
   @Test
   public void testGetSubmissionNotExists() {
     Submission submission = submissionMapper.getSubmission(0);
     Assertions.assertNull(submission);
   }
 
-  /** 待测试的SubmissionMapper对象. */
+  /** The SubmissionMapper object under test. */
   @Autowired private SubmissionMapper submissionMapper;
 }

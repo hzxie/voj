@@ -25,7 +25,7 @@ import org.springframework.web.servlet.LocaleResolver;
 import org.springframework.web.servlet.support.RequestContextUtils;
 
 /**
- * Locale相关的辅助函数.
+ * The Locale-related helper functions.
  *
  * @author Haozhe Xie
  */
@@ -34,10 +34,10 @@ public class LocaleUtils {
   private LocaleUtils() {}
 
   /**
-   * 根据IETF Language Tag获取对应的Locale对象.
+   * Gets the corresponding Locale object based on an IETF Language Tag.
    *
-   * @param languageName - 语言的名称(例如zh_CN)
-   * @return 预期的Locale对象
+   * @param languageName - the name of the language (e.g. zh_CN)
+   * @return the expected Locale object
    */
   public static Locale getLocaleOfLanguage(String languageName) {
     String[] localeMeta = languageName.split("_");
@@ -48,11 +48,11 @@ public class LocaleUtils {
   }
 
   /**
-   * 根据用户语言设置Locale信息.
+   * Sets the Locale information based on the user's language.
    *
-   * @param request - HttpRequest对象
-   * @param response - HttpResponse对象
-   * @param language - 语言的名称(例如zh_CN)
+   * @param request - the HttpRequest object
+   * @param response - the HttpResponse object
+   * @param language - the name of the language (e.g. zh_CN)
    */
   public static void setLocale(
       HttpServletRequest request, HttpServletResponse response, String language) {

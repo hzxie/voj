@@ -26,17 +26,18 @@ import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.web.servlet.view.freemarker.FreeMarkerConfigurer;
 
 /**
- * 邮件服务配置. 取代原 dispatcher-servlet.xml 中的 JavaMailSender 与 FreeMarker 定义.
+ * The mail service configuration. Replaces the JavaMailSender and FreeMarker definitions in the
+ * original dispatcher-servlet.xml.
  *
- * <p>邮件正文使用位于 classpath:/mails 下的 FreeMarker 模板渲染. Spring Boot 自带的
- * FreeMarker MVC 视图解析器通过 {@code spring.freemarker.enabled=false} 关闭, 以免与
- * JSP 视图解析器冲突.
+ * <p>The mail body is rendered using FreeMarker templates located under classpath:/mails. Spring
+ * Boot's built-in FreeMarker MVC view resolver is disabled via {@code spring.freemarker.enabled=
+ * false} to avoid conflicts with the JSP view resolver.
  *
  * @author Haozhe Xie
  */
 @Configuration
 public class MailConfig {
-  /** 用于渲染邮件模板的 FreeMarker 配置. */
+  /** The FreeMarker configuration used to render mail templates. */
   @Bean
   public FreeMarkerConfigurer freeMarkerConfigurer() {
     FreeMarkerConfigurer freeMarkerConfigurer = new FreeMarkerConfigurer();
@@ -44,7 +45,7 @@ public class MailConfig {
     return freeMarkerConfigurer;
   }
 
-  /** 基于 SMTP 的邮件发送器. */
+  /** The SMTP-based mail sender. */
   @Bean
   public JavaMailSender javaMailSender(
       @Value("${mail.host}") String host,

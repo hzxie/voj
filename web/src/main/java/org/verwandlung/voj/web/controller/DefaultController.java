@@ -35,7 +35,7 @@ import org.verwandlung.voj.web.service.*;
 import org.verwandlung.voj.web.util.LocaleUtils;
 
 /**
- * 处理应用程序公共的请求.
+ * Handles the common requests of the application.
  *
  * @author Haozhe Xie
  */
@@ -43,11 +43,11 @@ import org.verwandlung.voj.web.util.LocaleUtils;
 @RequestMapping(value = "/")
 public class DefaultController {
   /**
-   * 显示应用程序的首页.
+   * Displays the home page of the application.
    *
-   * @param request - HttpRequest对象
-   * @param response - HttpResponse对象
-   * @return 一个包含首页内容的ModelAndView对象
+   * @param request - the HttpRequest object
+   * @param response - the HttpResponse object
+   * @return a ModelAndView object containing the content of the home page
    */
   @RequestMapping(value = "/", method = RequestMethod.GET)
   public ModelAndView indexView(HttpServletRequest request, HttpServletResponse response) {
@@ -67,11 +67,11 @@ public class DefaultController {
   }
 
   /**
-   * 显示使用条款页面.
+   * Displays the terms of use page.
    *
-   * @param request - HttpRequest对象
-   * @param response - HttpResponse对象
-   * @return 一个包含使用条款页面内容的ModelAndView对象
+   * @param request - the HttpRequest object
+   * @param response - the HttpResponse object
+   * @return a ModelAndView object containing the content of the terms of use page
    */
   @RequestMapping(value = "/terms", method = RequestMethod.GET)
   public ModelAndView termsView(HttpServletRequest request, HttpServletResponse response) {
@@ -80,11 +80,11 @@ public class DefaultController {
   }
 
   /**
-   * 显示隐私页面.
+   * Displays the privacy page.
    *
-   * @param request - HttpRequest对象
-   * @param response - HttpResponse对象
-   * @return 一个包含隐私页内面容的ModelAndView对象
+   * @param request - the HttpRequest object
+   * @param response - the HttpResponse object
+   * @return a ModelAndView object containing the content of the privacy page
    */
   @RequestMapping(value = "/privacy", method = RequestMethod.GET)
   public ModelAndView privacyView(HttpServletRequest request, HttpServletResponse response) {
@@ -93,11 +93,11 @@ public class DefaultController {
   }
 
   /**
-   * 显示评测机信息页面.
+   * Displays the judger information page.
    *
-   * @param request - HttpRequest对象
-   * @param response - HttpResponse对象
-   * @return 一个包含评测机信息页面内容的ModelAndView对象
+   * @param request - the HttpRequest object
+   * @param response - the HttpResponse object
+   * @return a ModelAndView object containing the content of the judger information page
    */
   @RequestMapping(value = "/judgers", method = RequestMethod.GET)
   public ModelAndView judgersView(HttpServletRequest request, HttpServletResponse response) {
@@ -107,11 +107,11 @@ public class DefaultController {
   }
 
   /**
-   * 获取评测机列表.
+   * Gets the list of judgers.
    *
-   * @param offset - 当前加载评测机的UID
-   * @param request - HttpRequest对象
-   * @return 一个包含评测机列表信息的List<Map<String, String>>对象
+   * @param offset - the UID of the currently-loaded judger
+   * @param request - the HttpRequest object
+   * @return a List<Map<String, String>> object containing the list of judgers
    */
   @RequestMapping(value = "/getJudgers.action", method = RequestMethod.GET)
   public @ResponseBody Map<String, Object> getJudgersAction(
@@ -126,10 +126,10 @@ public class DefaultController {
   }
 
   /**
-   * 获取评测机的详细信息.
+   * Gets the detailed information of judgers.
    *
-   * @param offset - 当前加载评测机的UID
-   * @return 包含评测机的详细信息的List<Map<String, String>>对象
+   * @param offset - the UID of the currently-loaded judger
+   * @return a List<Map<String, String>> object containing the detailed information of judgers
    */
   private List<Map<String, String>> getJudgers(long offset) {
     UserGroup userGroup = userService.getUserGroupUsingSlug("judgers");
@@ -150,11 +150,11 @@ public class DefaultController {
   }
 
   /**
-   * 显示帮助页面.
+   * Displays the help page.
    *
-   * @param request - HttpRequest对象
-   * @param response - HttpResponse对象
-   * @return 一个包含帮助页面内容的ModelAndView对象
+   * @param request - the HttpRequest object
+   * @param response - the HttpResponse object
+   * @return a ModelAndView object containing the content of the help page
    */
   @RequestMapping(value = "/help", method = RequestMethod.GET)
   public ModelAndView helpView(HttpServletRequest request, HttpServletResponse response) {
@@ -163,11 +163,11 @@ public class DefaultController {
   }
 
   /**
-   * 显示关于页面.
+   * Displays the about page.
    *
-   * @param request - HttpRequest对象
-   * @param response - HttpResponse对象
-   * @return 一个包含关于页面内容的ModelAndView对象
+   * @param request - the HttpRequest object
+   * @param response - the HttpResponse object
+   * @return a ModelAndView object containing the content of the about page
    */
   @RequestMapping(value = "/about", method = RequestMethod.GET)
   public ModelAndView aboutView(HttpServletRequest request, HttpServletResponse response) {
@@ -176,11 +176,11 @@ public class DefaultController {
   }
 
   /**
-   * 显示语言切换的页面.
+   * Displays the language switching page.
    *
-   * @param request - HttpRequest对象
-   * @param response - HttpResponse对象
-   * @return 一个包含语言切换页面内容的ModelAndView对象
+   * @param request - the HttpRequest object
+   * @param response - the HttpResponse object
+   * @return a ModelAndView object containing the content of the language switching page
    */
   @RequestMapping(value = "/worldwide", method = RequestMethod.GET)
   public ModelAndView worldwideView(
@@ -193,12 +193,12 @@ public class DefaultController {
   }
 
   /**
-   * 处理用户切换语言的请求.
+   * Handles the request of a user switching the language.
    *
-   * @param language - 需要切换的语言代码
-   * @param request - HttpRequest对象
-   * @param response - HttpResponse对象
-   * @return 语言切换操作结果的HashMap<String, Boolean>对象
+   * @param language - the language code to switch to
+   * @param request - the HttpRequest object
+   * @param response - the HttpResponse object
+   * @return a HashMap<String, Boolean> object containing the result of the language switch operation
    */
   @RequestMapping(value = "/worldwide.action", method = RequestMethod.GET)
   public @ResponseBody Map<String, Boolean> localizationAction(
@@ -213,11 +213,11 @@ public class DefaultController {
   }
 
   /**
-   * 对于所有未正常映射URL的页面, 显示页面未找到.
+   * For all pages whose URLs are not properly mapped, displays the page not found.
    *
-   * @param request - HttpRequest对象
-   * @param response - HttpResponse对象
-   * @return 返回一个包含异常信息的ModelAndView对象
+   * @param request - the HttpRequest object
+   * @param response - the HttpResponse object
+   * @return a ModelAndView object containing the exception information
    */
   @RequestMapping(value = "/*", method = RequestMethod.GET)
   public ModelAndView notFoundView(HttpServletRequest request, HttpServletResponse response) {
@@ -226,11 +226,11 @@ public class DefaultController {
   }
 
   /**
-   * 显示升级浏览器页面.
+   * Displays the browser upgrade page.
    *
-   * @param request - HttpRequest对象
-   * @param response - HttpResponse对象
-   * @return 一个包含升级浏览器页面内容的ModelAndView对象
+   * @param request - the HttpRequest object
+   * @param response - the HttpResponse object
+   * @return a ModelAndView object containing the content of the browser upgrade page
    */
   @RequestMapping(value = "/not-supported", method = RequestMethod.GET)
   public ModelAndView notSupportedView(HttpServletRequest request, HttpServletResponse response) {
@@ -238,33 +238,43 @@ public class DefaultController {
     return view;
   }
 
-  /** 每次加载评测机的数量. */
+  /** The number of judgers to load per request. */
   private static final int NUMBER_OF_JUDGERS_PER_REQUEST = 10;
 
-  /** 每次加载讨论帖子的数量. */
+  /** The number of discussion threads to load per request. */
   private static final int NUMBER_OF_DISCUSSION_THREADS_PER_REQUEST = 10;
 
-  /** 每次加载竞赛的数量. */
+  /** The number of contests to load per request. */
   private static final int NUMBER_OF_CONTESTS_PER_REQUEST = 5;
 
-  /** 每次加载布告栏消息的数量. */
+  /** The number of bulletin board messages to load per request. */
   private static final int NUMBER_OF_BULLETIN_MESSAGES_PER_REQUEST = 10;
 
-  /** 自动注入的UserService对象. 用于获取评测机页面的评测机列表. */
+  /** The autowired UserService object. Used for getting the judger list of the judger page. */
   @Autowired private UserService userService;
 
-  /** 自动注入的LanguageService对象. 用于获取评测机页面的编译命令. */
+  /**
+   * The autowired LanguageService object. Used for getting the compile commands of the judger page.
+   */
   @Autowired private LanguageService languageService;
 
-  /** 自动注入的ContestService对象. 用于获取最新的竞赛信息. */
+  /** The autowired ContestService object. Used for getting the latest contest information. */
   @Autowired private ContestService contestService;
 
-  /** 自动注入的DiscussionService对象. 用于在首页获取讨论帖子. */
+  /**
+   * The autowired DiscussionService object. Used for getting the discussion threads on the home
+   * page.
+   */
   @Autowired private DiscussionService discussionService;
 
-  /** 自动注入的BulletinBoardService对象. 用于获取布告板的最新消息. */
+  /**
+   * The autowired BulletinBoardService object. Used for getting the latest messages of the bulletin
+   * board.
+   */
   @Autowired private BulletinBoardService bulletinBoardService;
 
-  /** 自动注入的ApplicationEventListener对象. 用于获取评测机的在线状态. */
+  /**
+   * The autowired ApplicationEventListener object. Used for getting the online status of judgers.
+   */
   @Autowired private ApplicationEventListener keepAliveEventListener;
 }

@@ -20,21 +20,21 @@ import java.io.Serializable;
 import java.util.Date;
 
 /**
- * 讨论回复的Model.
+ * The model of a discussion reply.
  *
  * @author Haozhe Xie
  */
 public class DiscussionReply implements Serializable {
-  /** DiscussionReply的默认构造函数. */
+  /** Default constructor of the discussion reply. */
   public DiscussionReply() {}
 
   /**
-   * DiscussionReply的构造函数.
+   * Constructor of the discussion reply.
    *
-   * @param discussionThreadId - 讨论帖子的唯一标识符
-   * @param discussionReplyCreator - 讨论帖子的创建者
-   * @param discussionReplyContent - 讨论帖子的内容
-   * @param discussionReplyVotes - 讨论帖子的投票结果
+   * @param discussionThreadId - the unique identifier of the discussion thread
+   * @param discussionReplyCreator - the creator of the discussion reply
+   * @param discussionReplyContent - the content of the discussion reply
+   * @param discussionReplyVotes - the voting result of the discussion reply
    */
   public DiscussionReply(
       long discussionThreadId,
@@ -48,13 +48,13 @@ public class DiscussionReply implements Serializable {
   }
 
   /**
-   * DiscussionReply的构造函数.
+   * Constructor of the discussion reply.
    *
-   * @param discussionReplyId - 讨论回复的唯一标识符.
-   * @param discussionThreadId - 讨论帖子的唯一标识符
-   * @param discussionReplyCreator - 讨论帖子的创建者
-   * @param discussionReplyContent - 讨论帖子的内容
-   * @param discussionReplyVote - 讨论帖子的投票结果
+   * @param discussionReplyId - the unique identifier of the discussion reply
+   * @param discussionThreadId - the unique identifier of the discussion thread
+   * @param discussionReplyCreator - the creator of the discussion reply
+   * @param discussionReplyContent - the content of the discussion reply
+   * @param discussionReplyVote - the voting result of the discussion reply
    */
   public DiscussionReply(
       long discussionReplyId,
@@ -67,108 +67,108 @@ public class DiscussionReply implements Serializable {
   }
 
   /**
-   * 获取讨论回复的唯一标识符..
+   * Gets the unique identifier of the discussion reply.
    *
-   * @return 讨论回复的唯一标识符
+   * @return the unique identifier of the discussion reply
    */
   public long getDiscussionReplyId() {
     return discussionReplyId;
   }
 
   /**
-   * 设置讨论回复的唯一标识符.
+   * Sets the unique identifier of the discussion reply.
    *
-   * @param discussionReplyId - 讨论回复的唯一标识符
+   * @param discussionReplyId - the unique identifier of the discussion reply
    */
   public void setDiscussionReplyId(long discussionReplyId) {
     this.discussionReplyId = discussionReplyId;
   }
 
   /**
-   * 获取讨论帖子的唯一标识符.
+   * Gets the unique identifier of the discussion thread.
    *
-   * @return 讨论帖子的唯一标识符
+   * @return the unique identifier of the discussion thread
    */
   public long getDiscussionThreadId() {
     return discussionThreadId;
   }
 
   /**
-   * 设置讨论帖子的唯一标识符.
+   * Sets the unique identifier of the discussion thread.
    *
-   * @param discussionThreadId - 讨论帖子的唯一标识符
+   * @param discussionThreadId - the unique identifier of the discussion thread
    */
   public void setDiscussionThreadId(long discussionThreadId) {
     this.discussionThreadId = discussionThreadId;
   }
 
   /**
-   * 获取讨论帖子的创建者.
+   * Gets the creator of the discussion reply.
    *
-   * @return 讨论帖子的创建者
+   * @return the creator of the discussion reply
    */
   public User getDiscussionReplyCreator() {
     return discussionReplyCreator;
   }
 
   /**
-   * 设置讨论帖子的创建者.
+   * Sets the creator of the discussion reply.
    *
-   * @param discussionReplyCreator - 讨论帖子的创建者
+   * @param discussionReplyCreator - the creator of the discussion reply
    */
   public void setDiscussionReplyCreator(User discussionReplyCreator) {
     this.discussionReplyCreator = discussionReplyCreator;
   }
 
   /**
-   * 获取讨论帖子的创建时间.
+   * Gets the creation time of the discussion reply.
    *
-   * @return 讨论帖子的创建时间
+   * @return the creation time of the discussion reply
    */
   public Date getDiscussionReplyCreateTime() {
     return discussionReplyCreateTime;
   }
 
   /**
-   * 设置讨论帖子的创建时间.
+   * Sets the creation time of the discussion reply.
    *
-   * @param discussionReplyCreateTime - 讨论帖子的创建时间
+   * @param discussionReplyCreateTime - the creation time of the discussion reply
    */
   public void setDiscussionReplyCreateTime(Date discussionReplyCreateTime) {
     this.discussionReplyCreateTime = discussionReplyCreateTime;
   }
 
   /**
-   * 获取讨论帖子的内容.
+   * Gets the content of the discussion reply.
    *
-   * @return 讨论帖子的内容
+   * @return the content of the discussion reply
    */
   public String getDiscussionReplyContent() {
     return discussionReplyContent;
   }
 
   /**
-   * 设置讨论帖子的内容.
+   * Sets the content of the discussion reply.
    *
-   * @param discussionReplyContent - 讨论帖子的内容
+   * @param discussionReplyContent - the content of the discussion reply
    */
   public void setDiscussionReplyContent(String discussionReplyContent) {
     this.discussionReplyContent = discussionReplyContent;
   }
 
   /**
-   * 获取讨论帖子的投票结果.
+   * Gets the voting result of the discussion reply.
    *
-   * @return 讨论帖子的投票结果
+   * @return the voting result of the discussion reply
    */
   public String getDiscussionReplyVotes() {
     return discussionReplyVotes;
   }
 
   /**
-   * 设置讨论帖子的投票结果.
+   * Sets the voting result of the discussion reply.
    *
-   * @param discussionReplyVote - 讨论帖子的投票结果
+   * @param discussionReplyVote - the voting result of the discussion reply
    */
   public void setDiscussionReplyVotes(String discussionReplyVote) {
     this.discussionReplyVotes = discussionReplyVote;
@@ -185,24 +185,24 @@ public class DiscussionReply implements Serializable {
         });
   }
 
-  /** 讨论回复的唯一标识符. */
+  /** The unique identifier of the discussion reply. */
   private long discussionReplyId;
 
-  /** 讨论帖子的唯一标识符. */
+  /** The unique identifier of the discussion thread. */
   private long discussionThreadId;
 
-  /** 讨论帖子的创建者. */
+  /** The creator of the discussion reply. */
   private User discussionReplyCreator;
 
-  /** 讨论帖子的创建时间. */
+  /** The creation time of the discussion reply. */
   private Date discussionReplyCreateTime;
 
-  /** 讨论帖子的内容. */
+  /** The content of the discussion reply. */
   private String discussionReplyContent;
 
-  /** 讨论帖子的投票结果. */
+  /** The voting result of the discussion reply. */
   private String discussionReplyVotes;
 
-  /** 唯一的序列化标识符. */
+  /** The unique serialization identifier. */
   private static final long serialVersionUID = 3380540873295113998L;
 }

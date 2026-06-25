@@ -35,7 +35,7 @@ import org.verwandlung.voj.web.model.User;
 import org.verwandlung.voj.web.service.UserService;
 
 /**
- * 拦截器的切面. 用于完成系统的权限控制.
+ * The aspect of the interceptors. Used to perform the permission control of the system.
  *
  * @author Haozhe Xie
  */
@@ -43,11 +43,12 @@ import org.verwandlung.voj.web.service.UserService;
 @Component
 public class InterceptorAspect {
   /**
-   * 控制板视图的切面. 用于检查用户是否有权限加载控制板视图.
+   * The aspect of the dashboard view. Used to check whether the user has permission to load the
+   * dashboard view.
    *
-   * @param proceedingJoinPoint - ProceedingJoinPoint对象
-   * @param request - HttpServletRequest对象
-   * @return 一个包含预期试图的ModelAndView对象
+   * @param proceedingJoinPoint - the ProceedingJoinPoint object
+   * @param request - the HttpServletRequest object
+   * @return a ModelAndView object containing the expected view
    * @throws Throwable
    */
   @Around(
@@ -72,11 +73,12 @@ public class InterceptorAspect {
   }
 
   /**
-   * 控制板中异步操作请求的切面. 检查用户是否有权限执行该操作.
+   * The aspect of the asynchronous operation requests in the dashboard. Checks whether the user has
+   * permission to perform the operation.
    *
-   * @param proceedingJoinPoint - ProceedingJoinPoint对象
-   * @param request - HttpServletRequest对象
-   * @return 预期的操作结果(Map<String, Boolean>对象)
+   * @param proceedingJoinPoint - the ProceedingJoinPoint object
+   * @param request - the HttpServletRequest object
+   * @return the expected operation result (a Map<String, Boolean> object)
    * @throws Throwable
    */
   @Around(
@@ -99,12 +101,13 @@ public class InterceptorAspect {
   }
 
   /**
-   * 系统管理控制器的切面. 用于检查用户是否有权限执行对应操作.
+   * The aspect of the system administration controller. Used to check whether the user has
+   * permission to perform the corresponding operation.
    *
-   * @param proceedingJoinPoint - ProceedingJoinPoint对象
-   * @param request - HttpServletRequest对象
-   * @param request - HttpServletResponse对象
-   * @return 一个包含预期试图的ModelAndView对象
+   * @param proceedingJoinPoint - the ProceedingJoinPoint object
+   * @param request - the HttpServletRequest object
+   * @param response - the HttpServletResponse object
+   * @return a ModelAndView object containing the expected view
    * @throws Throwable
    */
   @Around(
@@ -132,11 +135,12 @@ public class InterceptorAspect {
   }
 
   /**
-   * 系统管理控制器的切面. 用于检查用户是否有权限执行对应操作.
+   * The aspect of the system administration controller. Used to check whether the user has
+   * permission to perform the corresponding operation.
    *
-   * @param proceedingJoinPoint - ProceedingJoinPoint对象
-   * @param request - HttpRequest对象
-   * @return 一个包含预期结果的Map<String, Object>对象
+   * @param proceedingJoinPoint - the ProceedingJoinPoint object
+   * @param request - the HttpRequest object
+   * @return a Map<String, Object> object containing the expected result
    * @throws Throwable
    */
   @SuppressWarnings("unchecked")
@@ -159,11 +163,11 @@ public class InterceptorAspect {
   }
 
   /**
-   * 检查用户是否有权限执行该操作.
+   * Checks whether the user has permission to perform the operation.
    *
-   * @param session - HttpSession对象
-   * @param expectedUserGroupSlugs - 允许执行该操作对应的用户组
-   * @return 用户是否有权限执行该操作
+   * @param session - the HttpSession object
+   * @param expectedUserGroupSlugs - the user groups allowed to perform the operation
+   * @return whether the user has permission to perform the operation
    */
   private boolean isAllowToAccess(HttpSession session, String[] expectedUserGroupSlugs) {
     Boolean isLoggedIn = (Boolean) session.getAttribute("isLoggedIn");
@@ -183,6 +187,6 @@ public class InterceptorAspect {
     return false;
   }
 
-  /** 自动注入的UserService对象. 用于查询用户所属的用户组. */
+  /** The autowired UserService object. Used to query the user group the user belongs to. */
   @Autowired private UserService userService;
 }

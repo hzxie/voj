@@ -37,9 +37,10 @@ import org.verwandlung.voj.web.model.Submission;
 import org.verwandlung.voj.web.model.User;
 
 /**
- * ContestService测试类.
+ * The test class for ContestService.
  *
- * <p>种子数据中竞赛的状态 (相对于当前时间): 竞赛#1 (OI, 已结束), 竞赛#2 (ACM, 进行中), 竞赛#3 (ACM, 未开始).
+ * <p>The status of the contests in the seed data (relative to the current time): Contest #1 (OI,
+ * ended), Contest #2 (ACM, ongoing), Contest #3 (ACM, not started).
  *
  * @author Haozhe Xie
  */
@@ -47,14 +48,14 @@ import org.verwandlung.voj.web.model.User;
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class ContestServiceTest {
-  /** 测试用例: 测试getContests(String, long, int)方法 测试数据: 空关键词 预期结果: 返回全部竞赛 */
+  /** Test case: tests the getContests(String, long, int) method. Test data: an empty keyword. Expected: all contests. */
   @Test
   public void testGetContests() {
     List<Contest> contests = contestService.getContests("", 0, 10);
     Assertions.assertEquals(3, contests.size());
   }
 
-  /** 测试用例: 测试getContest(long)方法 测试数据: 存在的竞赛标识符 预期结果: 返回对应的竞赛对象 */
+  /** Test case: tests the getContest(long) method. Test data: an existing contest identifier. Expected: the corresponding contest object. */
   @Test
   public void testGetContestExists() {
     Contest contest = contestService.getContest(1);
@@ -62,13 +63,13 @@ public class ContestServiceTest {
     Assertions.assertEquals("OI", contest.getContestMode());
   }
 
-  /** 测试用例: 测试getContest(long)方法 测试数据: 不存在的竞赛标识符 预期结果: 返回空引用 */
+  /** Test case: tests the getContest(long) method. Test data: a non-existing contest identifier. Expected: a null reference. */
   @Test
   public void testGetContestNotExists() {
     Assertions.assertNull(contestService.getContest(0));
   }
 
-  /** 测试用例: 测试getProblemsOfContests(List)方法 测试数据: 包含存在与不存在的试题ID 预期结果: 仅返回存在的试题 */
+  /** Test case: tests the getProblemsOfContests(List) method. Test data: a mix of existing and non-existing problem IDs. Expected: only the existing problems. */
   @Test
   public void testGetProblemsOfContests() {
     List<Problem> problems =
@@ -76,24 +77,24 @@ public class ContestServiceTest {
     Assertions.assertEquals(2, problems.size());
   }
 
-  /** 测试用例: 测试getSubmissionsOfContestantOfContest(long, User)方法 测试数据: 参赛者为null 预期结果: 返回null */
+  /** Test case: tests the getSubmissionsOfContestantOfContest(long, User) method. Test data: the contestant is null. Expected: returns null. */
   @Test
   public void testGetSubmissionsOfContestantOfContestWithNullContestant() {
     Assertions.assertNull(contestService.getSubmissionsOfContestantOfContest(1, null));
   }
 
-  /** 测试用例: 测试getSubmissionsOfContestantOfContest(long, User)方法 测试数据: 参赛者1000参加了竞赛#1 预期结果: 按试题分组返回提交记录 */
+  /** Test case: tests the getSubmissionsOfContestantOfContest(long, User) method. Test data: contestant 1000 attended Contest #1. Expected: the submission records grouped by problem. */
   @Test
   public void testGetSubmissionsOfContestantOfContest() {
     Map<Long, ContestSubmission> submissions =
         contestService.getSubmissionsOfContestantOfContest(1, userWithUid(1000));
-    // 参赛者1000在竞赛#1中分别对试题1000和1001有提交记录.
+    // Contestant 1000 has submission records for problems 1000 and 1001 in Contest #1.
     Assertions.assertEquals(2, submissions.size());
     Assertions.assertTrue(submissions.containsKey(1000L));
     Assertions.assertTrue(submissions.containsKey(1001L));
   }
 
-  /** 测试用例: 测试getSubmissionsOfContestantOfContestProblem(...)方法 测试数据: 竞赛或参赛者为null 预期结果: 返回null */
+  /** Test case: tests the getSubmissionsOfContestantOfContestProblem(...) method. Test data: the contest or the contestant is null. Expected: returns null. */
   @Test
   public void testGetSubmissionsOfContestantOfContestProblemWithNullArguments() {
     Assertions.assertNull(
@@ -103,7 +104,7 @@ public class ContestServiceTest {
             contestService.getContest(1), 1000, null));
   }
 
-  /** 测试用例: 测试getSubmissionsOfContestantOfContestProblem(...)方法 测试数据: 已结束的竞赛#1 预期结果: 返回参赛者对该试题的提交记录 */
+  /** Test case: tests the getSubmissionsOfContestantOfContestProblem(...) method. Test data: the ended Contest #1. Expected: the contestant's submission records for the problem. */
   @Test
   public void testGetSubmissionsOfContestantOfContestProblem() {
     List<Submission> submissions =
@@ -112,7 +113,7 @@ public class ContestServiceTest {
     Assertions.assertEquals(1, submissions.size());
   }
 
-  /** 测试用例: 测试getSubmissionsOfContestantOfContestProblem(...)方法 测试数据: 未开始的竞赛#3 预期结果: 返回空列表 */
+  /** Test case: tests the getSubmissionsOfContestantOfContestProblem(...) method. Test data: the not-started Contest #3. Expected: an empty list. */
   @Test
   public void testGetSubmissionsOfContestantOfContestProblemForReadyContest() {
     List<Submission> submissions =
@@ -121,18 +122,18 @@ public class ContestServiceTest {
     Assertions.assertTrue(submissions.isEmpty());
   }
 
-  /** 测试用例: 测试getCodeSnippetOfContestProblem(...)方法 测试数据: 竞赛为null或非OI进行中竞赛 预期结果: 返回null */
+  /** Test case: tests the getCodeSnippetOfContestProblem(...) method. Test data: the contest is null or is not an ongoing OI contest. Expected: returns null. */
   @Test
   public void testGetCodeSnippetOfContestProblemReturnsNull() {
     Assertions.assertNull(
         contestService.getCodeSnippetOfContestProblem(null, 1000, userWithUid(1000)));
-    // 竞赛#2为ACM赛制, 不会返回代码快照.
+    // Contest #2 uses the ACM mode, so no code snapshot is returned.
     Assertions.assertNull(
         contestService.getCodeSnippetOfContestProblem(
             contestService.getContest(2), 1001, userWithUid(1000)));
   }
 
-  /** 测试用例: 测试getNumberOfContestantsOfContest(long)方法 测试数据: 各竞赛 预期结果: 返回正确的参赛人数 */
+  /** Test case: tests the getNumberOfContestantsOfContest(long) method. Test data: each contest. Expected: the correct number of participants. */
   @Test
   public void testGetNumberOfContestantsOfContest() {
     Assertions.assertEquals(2, contestService.getNumberOfContestantsOfContest(1));
@@ -140,7 +141,7 @@ public class ContestServiceTest {
     Assertions.assertEquals(0, contestService.getNumberOfContestantsOfContest(3));
   }
 
-  /** 测试用例: 测试isAttendContest(long, User)方法 测试数据: 已参加/未参加/未登录 预期结果: 返回正确的参加状态 */
+  /** Test case: tests the isAttendContest(long, User) method. Test data: attended / not attended / not logged in. Expected: the correct attendance status. */
   @Test
   public void testIsAttendContest() {
     Assertions.assertTrue(contestService.isAttendContest(1, userWithUid(1000)));
@@ -148,7 +149,7 @@ public class ContestServiceTest {
     Assertions.assertFalse(contestService.isAttendContest(1, null));
   }
 
-  /** 测试用例: 测试attendContest(...)方法 测试数据: 满足全部条件参加未开始的竞赛#3 预期结果: 参加成功, 参赛人数加一 */
+  /** Test case: tests the attendContest(...) method. Test data: all conditions are met to attend the not-started Contest #3. Expected: attendance succeeds and the number of participants increases by one. */
   @Test
   public void testAttendContestSuccessfully() {
     Map<String, Boolean> result = contestService.attendContest(3, userWithUid(1000), true);
@@ -156,7 +157,7 @@ public class ContestServiceTest {
     Assertions.assertEquals(1, contestService.getNumberOfContestantsOfContest(3));
   }
 
-  /** 测试用例: 测试attendContest(...)方法 测试数据: CSRF令牌无效 预期结果: 参加失败 */
+  /** Test case: tests the attendContest(...) method. Test data: an invalid CSRF token. Expected: attendance fails. */
   @Test
   public void testAttendContestWithInvalidCsrfToken() {
     Map<String, Boolean> result = contestService.attendContest(3, userWithUid(1000), false);
@@ -164,7 +165,7 @@ public class ContestServiceTest {
     Assertions.assertFalse(result.get("isCsrfTokenValid"));
   }
 
-  /** 测试用例: 测试attendContest(...)方法 测试数据: 竞赛已结束 (非未开始状态) 预期结果: 参加失败 */
+  /** Test case: tests the attendContest(...) method. Test data: the contest has ended (not in the not-started state). Expected: attendance fails. */
   @Test
   public void testAttendContestThatIsNotReady() {
     Map<String, Boolean> result = contestService.attendContest(1, userWithUid(1000), true);
@@ -172,7 +173,7 @@ public class ContestServiceTest {
     Assertions.assertFalse(result.get("isSuccessful"));
   }
 
-  /** 测试用例: 测试attendContest(...)方法 测试数据: 用户未登录 预期结果: 参加失败 */
+  /** Test case: tests the attendContest(...) method. Test data: the user is not logged in. Expected: attendance fails. */
   @Test
   public void testAttendContestWithoutLogin() {
     Map<String, Boolean> result = contestService.attendContest(3, null, true);
@@ -180,7 +181,7 @@ public class ContestServiceTest {
     Assertions.assertFalse(result.get("isSuccessful"));
   }
 
-  /** 测试用例: 测试attendContest(...)方法 测试数据: 重复参加同一竞赛 预期结果: 第二次参加失败 */
+  /** Test case: tests the attendContest(...) method. Test data: attending the same contest again. Expected: the second attendance fails. */
   @Test
   public void testAttendContestThatIsAlreadyAttended() {
     contestService.attendContest(3, userWithUid(1000), true);
@@ -190,7 +191,7 @@ public class ContestServiceTest {
     Assertions.assertFalse(result.get("isSuccessful"));
   }
 
-  /** 测试用例: 测试getLeaderBoardForOi(long)方法 测试数据: OI赛制竞赛#1 预期结果: 返回参赛者与提交记录, 并完成排名 */
+  /** Test case: tests the getLeaderBoardForOi(long) method. Test data: the OI-mode Contest #1. Expected: the contestants and submission records, with rankings completed. */
   @Test
   @SuppressWarnings("unchecked")
   public void testGetLeaderBoardForOi() {
@@ -203,7 +204,7 @@ public class ContestServiceTest {
     Assertions.assertEquals(1, contestants.get(0).getRank());
   }
 
-  /** 测试用例: 测试getLeaderBoardForAcm(long)方法 测试数据: ACM赛制竞赛#2 预期结果: 返回参赛者与提交记录, 并完成排名 */
+  /** Test case: tests the getLeaderBoardForAcm(long) method. Test data: the ACM-mode Contest #2. Expected: the contestants and submission records, with rankings completed. */
   @Test
   @SuppressWarnings("unchecked")
   public void testGetLeaderBoardForAcm() {
@@ -216,11 +217,12 @@ public class ContestServiceTest {
     Assertions.assertEquals(1, contestants.get(0).getRank());
   }
 
-  /** 测试用例: 测试rankingContestants(List)方法 测试数据: 含并列名次的参赛者列表 预期结果: 相同成绩并列, 后续名次跳过 */
+  /** Test case: tests the rankingContestants(List) method. Test data: a list of contestants with tied ranks. Expected: equal scores are tied, and the subsequent ranks are skipped. */
   @Test
   public void testRankingContestants() {
     List<ContestContestant> contestants = new ArrayList<>();
-    // 分数默认均为0, 通过罚时区分名次: 前两名罚时相同 (并列第1), 第三名罚时不同 (第3名).
+    // Scores all default to 0; ranks are distinguished by penalty time: the first two have the
+    // same penalty time (tied for 1st), and the third has a different penalty time (3rd).
     contestants.add(contestantWithTime(10));
     contestants.add(contestantWithTime(10));
     contestants.add(contestantWithTime(20));
@@ -231,27 +233,27 @@ public class ContestServiceTest {
     Assertions.assertEquals(3, contestants.get(2).getRank());
   }
 
-  /** 测试用例: 测试rankingContestants(List)方法 测试数据: 空列表 预期结果: 方法正常返回, 不抛出异常 */
+  /** Test case: tests the rankingContestants(List) method. Test data: an empty list. Expected: the method returns normally without throwing an exception. */
   @Test
   public void testRankingContestantsWithEmptyList() {
     List<ContestContestant> contestants = new ArrayList<>();
     Assertions.assertDoesNotThrow(() -> contestService.rankingContestants(contestants));
   }
 
-  /** 构造一个仅设置UID的User对象, 用作参赛者参数. */
+  /** Constructs a User object with only the UID set, used as a contestant argument. */
   private User userWithUid(long uid) {
     User user = new User();
     user.setUid(uid);
     return user;
   }
 
-  /** 构造一个仅设置罚时的ContestContestant对象, 用于排名测试. */
+  /** Constructs a ContestContestant object with only the penalty time set, used for ranking tests. */
   private ContestContestant contestantWithTime(long time) {
     ContestContestant contestant = new ContestContestant();
     contestant.setTime(time);
     return contestant;
   }
 
-  /** 待测试的ContestService对象. */
+  /** The ContestService object under test. */
   @Autowired private ContestService contestService;
 }

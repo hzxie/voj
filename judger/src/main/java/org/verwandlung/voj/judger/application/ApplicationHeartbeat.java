@@ -32,7 +32,7 @@ import org.verwandlung.voj.judger.model.User;
 import org.verwandlung.voj.judger.util.DigestUtils;
 
 /**
- * 应用程序心跳. 用于向Web模块发送Keep-Alive信息.
+ * The application heartbeat, used to send Keep-Alive messages to the web module.
  *
  * @author Haozhe Xie
  */
@@ -59,9 +59,9 @@ public class ApplicationHeartbeat implements Runnable {
   }
 
   /**
-   * 检查评测机的身份信息是否有效.
+   * Checks whether the judger's identity information is valid.
    *
-   * @return 评测机的身份信息是否有效
+   * @return whether the judger's identity information is valid
    */
   private boolean isIdentityValid() {
     User user = userMapper.getUserUsingUsername(judgerUsername);
@@ -75,32 +75,32 @@ public class ApplicationHeartbeat implements Runnable {
   }
 
   /**
-   * 获取评测机的描述信息. TODO 使用JNI获取计算机的硬件信息
+   * Gets the judger's description. TODO use JNI to obtain the computer's hardware information.
    *
-   * @return 评测机的描述信息
+   * @return the judger's description
    */
   private String getDescription() {
     return judgerDescription;
   }
 
-  /** 评测机身份信息. 评测机的用户名. */
+  /** The judger's identity information: the judger's username. */
   @Value("${judger.username}")
   private String judgerUsername;
 
-  /** 评测机身份信息. 评测机的密码. */
+  /** The judger's identity information: the judger's password. */
   @Value("${judger.password}")
   private String judgerPassword;
 
-  /** 评测机身份信息. 评测机的密码. */
+  /** The judger's identity information: the judger's description. */
   @Value("${judger.description}")
   private String judgerDescription;
 
-  /** 自动注入的MessageSender对象. 用于向消息队列发送消息. */
+  /** The autowired MessageSender object, used to send messages to the message queue. */
   @Autowired private MessageSender messageSender;
 
-  /** 自动注入的UserMapper对象. 用于验证评测机的身份信息. */
+  /** The autowired UserMapper object, used to verify the judger's identity information. */
   @Autowired private UserMapper userMapper;
 
-  /** 日志记录器. */
+  /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(ApplicationHeartbeat.class);
 }

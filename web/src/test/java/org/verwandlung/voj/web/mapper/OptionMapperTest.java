@@ -29,7 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.verwandlung.voj.web.model.Option;
 
 /**
- * OptionMapper测试类.
+ * The test class for OptionMapper.
  *
  * @author Haozhe Xie
  */
@@ -37,7 +37,7 @@ import org.verwandlung.voj.web.model.Option;
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class OptionMapperTest {
-  /** 测试用例: 测试getAutoloadOptions()方法 测试数据: N/a 预期结果: 返回自动加载的系统选项的列表 */
+  /** Test case: tests the getAutoloadOptions() method. Test data: N/a. Expected: the list of auto-loaded system options. */
   @Test
   public void testGetAutoloadOptions() {
     List<Option> options = optionMapper.getAutoloadOptions();
@@ -51,7 +51,7 @@ public class OptionMapperTest {
     Assertions.assertEquals("websiteName", optionName);
   }
 
-  /** 测试用例: 测试getOption(String)方法 测试数据: 使用存在的选项名称 预期结果: 返回预期的Option对象 */
+  /** Test case: tests the getOption(String) method. Test data: an existing option name. Expected: the expected Option object. */
   @Test
   public void testGetOptionExists() {
     Option option = optionMapper.getOption("websiteName");
@@ -61,14 +61,14 @@ public class OptionMapperTest {
     Assertions.assertEquals(1, optionId);
   }
 
-  /** 测试用例: 测试getOption(String)方法 测试数据: 使用不存在的选项名称 预期结果: 返回空引用 */
+  /** Test case: tests the getOption(String) method. Test data: a non-existing option name. Expected: a null reference. */
   @Test
   public void testGetOptionNotExists() {
     Option option = optionMapper.getOption("notExistOption");
     Assertions.assertNull(option);
   }
 
-  /** 测试用例: 测试updateOption(Option)方法 测试数据: 存在的OptionId 预期结果: 数据更新操作成功完成 */
+  /** Test case: tests the updateOption(Option) method. Test data: an existing OptionId. Expected: the data update operation completes successfully. */
   @Test
   public void testUpdateOptionExists() {
     Option option = optionMapper.getOption("websiteName");
@@ -81,7 +81,7 @@ public class OptionMapperTest {
     Assertions.assertEquals("New OJ Platform", optionValue);
   }
 
-  /** 测试用例: 测试updateOption(Option)方法 测试数据: 不存在的OptionId 预期结果: 方法正常执行, 未影响数据表中的数据 */
+  /** Test case: tests the updateOption(Option) method. Test data: a non-existing OptionId. Expected: the method executes normally without affecting the data in the table. */
   @Test
   public void testUpdateOptionNotExists() {
     Option option = optionMapper.getOption("websiteName");
@@ -90,6 +90,6 @@ public class OptionMapperTest {
     Assertions.assertEquals(0, numberOfRowsAffected);
   }
 
-  /** 待测试的OptionMapper对象. */
+  /** The OptionMapper object under test. */
   @Autowired private OptionMapper optionMapper;
 }

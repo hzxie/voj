@@ -29,19 +29,19 @@ import org.springframework.stereotype.Component;
 import org.verwandlung.voj.judger.model.Submission;
 
 /**
- * 程序编译器, 用于编译用户提交的代码.
+ * The program compiler, used to compile the code submitted by users.
  *
  * @author Haozhe Xie
  */
 @Component
 public class Compiler {
   /**
-   * 获取编译输出结果.
+   * Gets the compilation result.
    *
-   * @param submission - 提交记录对象
-   * @param workDirectory - 编译输出目录
-   * @param baseFileName - 编译输出文件名
-   * @return 包含编译输出结果的Map<String, Object>对象
+   * @param submission - the submission object
+   * @param workDirectory - the compilation output directory
+   * @param baseFileName - the compilation output file name
+   * @return a Map<String, Object> object containing the compilation result
    */
   public Map<String, Object> getCompileResult(
       Submission submission, String workDirectory, String baseFileName) {
@@ -52,12 +52,12 @@ public class Compiler {
   }
 
   /**
-   * 获取编译命令.
+   * Gets the compile command.
    *
-   * @param submission - 提交记录对象
-   * @param workDirectory - 编译输出目录
-   * @param baseFileName - 编译输出文件名
-   * @return 编译命令
+   * @param submission - the submission object
+   * @param workDirectory - the compilation output directory
+   * @param baseFileName - the compilation output file name
+   * @return the compile command
    */
   private String getCompileCommandLine(
       Submission submission, String workDirectory, String baseFileName) {
@@ -72,22 +72,22 @@ public class Compiler {
   }
 
   /**
-   * 获取编译日志输出的文件路径.
+   * Gets the file path of the compilation log output.
    *
-   * @param workDirectory - 编译输出目录
-   * @param baseFileName - 编译输出文件名
-   * @return 编译日志输出的文件路径
+   * @param workDirectory - the compilation output directory
+   * @param baseFileName - the compilation output file name
+   * @return the file path of the compilation log output
    */
   private String getCompileLogPath(String workDirectory, String baseFileName) {
     return String.format("%s/%s-compile.log", new Object[] {workDirectory, baseFileName});
   }
 
   /**
-   * 获取编译输出结果.
+   * Gets the compilation result.
    *
-   * @param commandLine - 编译命令
-   * @param compileLogPath - 编译日志输出路径
-   * @return 包含编译输出结果的Map<String, Object>对象
+   * @param commandLine - the compile command
+   * @param compileLogPath - the path of the compilation log output
+   * @return a Map<String, Object> object containing the compilation result
    */
   private Map<String, Object> getCompileResult(String commandLine, String compileLogPath) {
     String inputFilePath = null;
@@ -111,10 +111,10 @@ public class Compiler {
   }
 
   /**
-   * 获取编译日志内容.
+   * Gets the content of the compilation log.
    *
-   * @param compileLogPath - 编译日志路径
-   * @return 编译日志内容
+   * @param compileLogPath - the path of the compilation log
+   * @return the content of the compilation log
    */
   private String getCompileOutput(String compileLogPath) {
     FileInputStream inputStream = null;
@@ -129,9 +129,9 @@ public class Compiler {
     return compileLog;
   }
 
-  /** 自动注入的Runner对象. 用于执行编译命令. */
+  /** The autowired Runner object, used to execute the compile command. */
   @Autowired private Runner compilerRunner;
 
-  /** 日志记录器. */
+  /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(Compiler.class);
 }

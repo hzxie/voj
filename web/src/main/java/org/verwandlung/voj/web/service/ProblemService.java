@@ -32,7 +32,7 @@ import org.verwandlung.voj.web.util.JsonUtils;
 import org.verwandlung.voj.web.util.SlugifyUtils;
 
 /**
- * 试题类(Problem)的业务逻辑层.
+ * The business logic layer of the Problem class.
  *
  * @author Haozhe Xie
  */
@@ -40,46 +40,46 @@ import org.verwandlung.voj.web.util.SlugifyUtils;
 @Transactional
 public class ProblemService {
   /**
-   * 获取试题的起始编号.
+   * Gets the starting number of the problems.
    *
-   * @return 试题的起始编号
+   * @return the starting number of the problems
    */
   public long getFirstIndexOfProblems() {
     return problemMapper.getLowerBoundOfProblems();
   }
 
   /**
-   * 获取试题的结束编号.
+   * Gets the ending number of the problems.
    *
-   * @param isPublicOnly - 是否只筛选公开试题
-   * @param offset - 试题唯一标识符的起始序号
-   * @param limit - 每次加载试题的数量
-   * @return 试题的结束编号
+   * @param isPublicOnly - whether to filter only public problems
+   * @param offset - the starting number of the problem identifier
+   * @param limit - the number of problems to load each time
+   * @return the ending number of the problems
    */
   public long getLastIndexOfProblems(boolean isPublicOnly, long offset, int limit) {
     return problemMapper.getUpperBoundOfProblemsWithLimit(isPublicOnly, offset, limit);
   }
 
   /**
-   * 通过试题的唯一标识符获取试题的详细信息.
+   * Gets the detailed information of a problem by its unique identifier.
    *
-   * @param problemId - 试题的唯一标识符
-   * @return 试题的详细信息
+   * @param problemId - the unique identifier of the problem
+   * @return the detailed information of the problem
    */
   public Problem getProblem(long problemId) {
     return problemMapper.getProblem(problemId);
   }
 
   /**
-   * 获取试题列表.
+   * Gets the list of problems.
    *
-   * @param offset - 试题唯一标识符的起始序号
-   * @param keyword - 关键字
-   * @param problemCategorySlug - 试题分类的别名
-   * @param problemTagSlug - 试题标签的别名
-   * @param isPublicOnly - 是否只筛选公开试题
-   * @param limit - 每次加载试题的数量
-   * @return 试题列表(List<Problem>对象)
+   * @param offset - the starting number of the problem identifier
+   * @param keyword - the keyword
+   * @param problemCategorySlug - the alias of the problem category
+   * @param problemTagSlug - the alias of the problem tag
+   * @param isPublicOnly - whether to filter only public problems
+   * @param limit - the number of problems to load each time
+   * @return the list of problems (a List<Problem> object)
    */
   public List<Problem> getProblemsUsingFilters(
       long offset,
@@ -108,12 +108,12 @@ public class ProblemService {
   }
 
   /**
-   * 获取试题的总数量.
+   * Gets the total number of problems.
    *
-   * @param keyword - 关键字
-   * @param problemCategorySlug - 试题分类的别名
-   * @param isPublicOnly - 是否只筛选公开试题
-   * @return 试题的总数量
+   * @param keyword - the keyword
+   * @param problemCategorySlug - the alias of the problem category
+   * @param isPublicOnly - whether to filter only public problems
+   * @return the total number of problems
    */
   public long getNumberOfProblemsUsingFilters(
       String keyword, String problemCategorySlug, boolean isPublicOnly) {
@@ -127,11 +127,11 @@ public class ProblemService {
   }
 
   /**
-   * 获取某个区间内各试题的分类.
+   * Gets the categories of problems within a range.
    *
-   * @param problemIdLowerBound - 试题ID区间的下界
-   * @param problemIdUpperBound - 试题ID区间的上界
-   * @return 包含试题分类信息的列表
+   * @param problemIdLowerBound - the lower bound of the problem ID range
+   * @param problemIdUpperBound - the upper bound of the problem ID range
+   * @return a list containing the problem category information
    */
   public Map<Long, List<ProblemCategory>> getProblemCategoriesOfProblems(
       long problemIdLowerBound, long problemIdUpperBound) {
@@ -158,21 +158,21 @@ public class ProblemService {
   }
 
   /**
-   * 获取试题的分类列表.
+   * Gets the category list of a problem.
    *
-   * @param problemId - 试题的唯一标识符.
-   * @return 包含试题分类的列表
+   * @param problemId - the unique identifier of the problem
+   * @return a list containing the problem categories
    */
   public List<ProblemCategory> getProblemCategoriesUsingProblemId(long problemId) {
     return problemCategoryMapper.getProblemCategoriesUsingProblemId(problemId);
   }
 
   /**
-   * 获取某个区间内各试题的标签.
+   * Gets the tags of problems within a range.
    *
-   * @param problemIdLowerBound - 试题ID区间的下界
-   * @param problemIdUpperBound - 试题ID区间的上界
-   * @return 包含试题标签信息的列表
+   * @param problemIdLowerBound - the lower bound of the problem ID range
+   * @param problemIdUpperBound - the upper bound of the problem ID range
+   * @return a list containing the problem tag information
    */
   public Map<Long, List<ProblemTag>> getProblemTagsOfProblems(
       long problemIdLowerBound, long problemIdUpperBound) {
@@ -194,26 +194,27 @@ public class ProblemService {
   }
 
   /**
-   * 获取试题的标签列表.
+   * Gets the tag list of a problem.
    *
-   * @param problemId - 试题的唯一标识符.
-   * @return 包含试题标签的列表
+   * @param problemId - the unique identifier of the problem
+   * @return a list containing the problem tags
    */
   public List<ProblemTag> getProblemTagsUsingProblemId(long problemId) {
     return problemTagMapper.getProblemTagsUsingProblemId(problemId);
   }
 
   /**
-   * 获得具有层次关系的试题分类列表.
+   * Gets the hierarchical list of problem categories.
    *
-   * @return 包含试题分类及其继承关系的Map<ProblemCategory, List<ProblemCategory>>对象
+   * @return a Map<ProblemCategory, List<ProblemCategory>> object containing problem categories and
+   *     their inheritance relationships
    */
   public Map<ProblemCategory, List<ProblemCategory>> getProblemCategoriesWithHierarchy() {
     List<ProblemCategory> problemCategories = getProblemCategories();
     Map<Integer, List<ProblemCategory>> problemCategoriesIndexer = new HashMap<>();
     Map<ProblemCategory, List<ProblemCategory>> problemCategoriesHierarchy = new LinkedHashMap<>();
 
-    // 将无父亲的试题分类加入列表
+    // Add the top-level problem categories (without a parent) to the list
     for (ProblemCategory pc : problemCategories) {
       if (pc.getParentProblemCategoryId() == 0) {
         List<ProblemCategory> subProblemCategories = new ArrayList<>();
@@ -221,7 +222,7 @@ public class ProblemService {
         problemCategoriesIndexer.put(pc.getProblemCategoryId(), subProblemCategories);
       }
     }
-    // 将其他试题分类加入列表
+    // Add the remaining problem categories to the list
     for (ProblemCategory pc : problemCategories) {
       int parentProblemCategoryId = pc.getParentProblemCategoryId();
       if (parentProblemCategoryId != 0) {
@@ -236,37 +237,38 @@ public class ProblemService {
   }
 
   /**
-   * 获取全部的试题分类.
+   * Gets all problem categories.
    *
-   * @return 包含全部试题分类的列表
+   * @return a list containing all problem categories
    */
   public List<ProblemCategory> getProblemCategories() {
     return problemCategoryMapper.getProblemCategories();
   }
 
   /**
-   * [此方法仅供管理员使用] 获取全部试题的总数量.
+   * [For administrators only] Gets the total number of all problems.
    *
-   * @return 全部试题的总数量
+   * @return the total number of all problems
    */
   public long getNumberOfProblems() {
     return problemMapper.getNumberOfProblems();
   }
 
   /**
-   * [此方法仅供管理员使用] 获取系统中全部试题测试点的数量(包括私有试题).
+   * [For administrators only] Gets the total number of all problem checkpoints in the system
+   * (including private problems).
    *
-   * @return 系统中全部试题测试点的数量
+   * @return the total number of all problem checkpoints in the system
    */
   public long getNumberOfCheckpoints() {
     return checkpointMapper.getNumberOfCheckpoints();
   }
 
   /**
-   * [此方法仅供管理员使用] 获取某个试题的测试数据集.
+   * [For administrators only] Gets the test data set of a problem.
    *
-   * @param problemId - 试题的唯一标识符
-   * @return 某个试题的测试数据列表
+   * @param problemId - the unique identifier of the problem
+   * @return the test data list of the problem
    */
   public List<Checkpoint> getCheckpointsUsingProblemId(long problemId) {
     List<Checkpoint> checkpoints = checkpointMapper.getCheckpointsUsingProblemId(problemId);
@@ -274,23 +276,23 @@ public class ProblemService {
   }
 
   /**
-   * [此方法仅供管理员使用] 创建试题.
+   * [For administrators only] Creates a problem.
    *
-   * @param problemName - 试题名称
-   * @param timeLimit - 时间限制
-   * @param memoryLimit - 内存占用限制
-   * @param description - 试题描述
-   * @param hint - 试题提示
-   * @param inputFormat - 输入格式
-   * @param outputFormat - 输出格式
-   * @param inputSample - 输入样例
-   * @param outputSample - 输出样例
-   * @param testCases - 测试用例(JSON 格式)
-   * @param problemCategories - 试题分类(JSON 格式)
-   * @param problemTags - 试题标签((JSON 格式)
-   * @param isPublic - 试题是否公开
-   * @param isExactlyMatch - 测试点是否精确匹配
-   * @return 包含试题创建结果的Map<String, Object>对象
+   * @param problemName - the name of the problem
+   * @param timeLimit - the time limit
+   * @param memoryLimit - the memory usage limit
+   * @param description - the description of the problem
+   * @param hint - the hint of the problem
+   * @param inputFormat - the input format
+   * @param outputFormat - the output format
+   * @param inputSample - the input sample
+   * @param outputSample - the output sample
+   * @param testCases - the test cases (JSON format)
+   * @param problemCategories - the problem categories (JSON format)
+   * @param problemTags - the problem tags (JSON format)
+   * @param isPublic - whether the problem is public
+   * @param isExactlyMatch - whether the checkpoints require an exact match
+   * @return a Map<String, Object> object containing the problem creation result
    */
   public Map<String, Object> createProblem(
       String problemName,
@@ -336,10 +338,10 @@ public class ProblemService {
   }
 
   /**
-   * 检查试题信息是否合法.
+   * Checks whether the problem information is legal.
    *
-   * @param problem - 待创建的试题
-   * @return 包含试题创建结果的Map<String, Boolean>对象
+   * @param problem - the problem to create
+   * @return a Map<String, Boolean> object containing the problem creation result
    */
   private Map<String, ? extends Object> getProblemCreationResult(Problem problem) {
     Map<String, Boolean> result = new HashMap<>();
@@ -368,24 +370,24 @@ public class ProblemService {
   }
 
   /**
-   * [此方法仅供管理员使用] 编辑试题.
+   * [For administrators only] Edits a problem.
    *
-   * @param problemId - 试题唯一标识符
-   * @param problemName - 试题名称
-   * @param timeLimit - 时间限制
-   * @param memoryLimit - 内存占用限制
-   * @param description - 试题描述
-   * @param hint - 试题提示
-   * @param inputFormat - 输入格式
-   * @param outputFormat - 输出格式
-   * @param inputSample - 输入样例
-   * @param outputSample - 输出样例
-   * @param testCases - 测试用例(JSON 格式)
-   * @param problemCategories - 试题分类(JSON 格式)
-   * @param problemTags - 试题标签((JSON 格式)
-   * @param isPublic - 试题是否公开
-   * @param isExactlyMatch - 测试点是否精确匹配
-   * @return 包含试题创建结果的Map<String, Object>对象
+   * @param problemId - the unique identifier of the problem
+   * @param problemName - the name of the problem
+   * @param timeLimit - the time limit
+   * @param memoryLimit - the memory usage limit
+   * @param description - the description of the problem
+   * @param hint - the hint of the problem
+   * @param inputFormat - the input format
+   * @param outputFormat - the output format
+   * @param inputSample - the input sample
+   * @param outputSample - the output sample
+   * @param testCases - the test cases (JSON format)
+   * @param problemCategories - the problem categories (JSON format)
+   * @param problemTags - the problem tags (JSON format)
+   * @param isPublic - whether the problem is public
+   * @param isExactlyMatch - whether the checkpoints require an exact match
+   * @return a Map<String, Object> object containing the problem editing result
    */
   public Map<String, Boolean> editProblem(
       long problemId,
@@ -429,10 +431,10 @@ public class ProblemService {
   }
 
   /**
-   * 检查试题信息是否合法.
+   * Checks whether the problem information is legal.
    *
-   * @param problem - 待编辑的试题
-   * @return 包含试题编辑结果的Map<String, Boolean>对象
+   * @param problem - the problem to edit
+   * @return a Map<String, Boolean> object containing the problem editing result
    */
   private Map<String, Boolean> getProblemEditResult(Problem problem) {
     @SuppressWarnings("unchecked")
@@ -449,11 +451,11 @@ public class ProblemService {
   }
 
   /**
-   * 创建测试用例.
+   * Creates the test cases.
    *
-   * @param problemId - 试题的唯一标识符
-   * @param testCases - 测试用例 (JSON格式)
-   * @param isExactlyMatch - 是否精确匹配测试用例
+   * @param problemId - the unique identifier of the problem
+   * @param testCases - the test cases (JSON format)
+   * @param isExactlyMatch - whether the test cases require an exact match
    */
   private void createTestCases(long problemId, String testCases, boolean isExactlyMatch) {
     List<Map<String, String>> testCaseList =
@@ -475,11 +477,12 @@ public class ProblemService {
   }
 
   /**
-   * 更新测试用例. 首先删除该试题的全部的测试用例, 然后创建测试用例.
+   * Updates the test cases. First deletes all test cases of the problem, then creates the test
+   * cases.
    *
-   * @param problemId - 试题的唯一标识符
-   * @param testCases - 测试用例 (JSON格式)
-   * @param isExactlyMatch - 是否精确匹配测试用例
+   * @param problemId - the unique identifier of the problem
+   * @param testCases - the test cases (JSON format)
+   * @param isExactlyMatch - whether the test cases require an exact match
    */
   private void updateTestCases(long problemId, String testCases, boolean isExactlyMatch) {
     checkpointMapper.deleteCheckpoint(problemId);
@@ -487,10 +490,10 @@ public class ProblemService {
   }
 
   /**
-   * 创建试题所属分类.
+   * Creates the categories a problem belongs to.
    *
-   * @param problemId - 试题的唯一标识符
-   * @param problemCategories - 试题分类别名的JSON数组
+   * @param problemId - the unique identifier of the problem
+   * @param problemCategories - a JSON array of problem category aliases
    */
   private void createProblemCategoryRelationships(long problemId, String problemCategories) {
     List<String> categorySlugs = JsonUtils.toList(problemCategories, String.class);
@@ -507,10 +510,11 @@ public class ProblemService {
   }
 
   /**
-   * 更新试题所属分类. 首先删除该试题的全部分类, 然后重新创建分类关系.
+   * Updates the categories a problem belongs to. First deletes all categories of the problem, then
+   * recreates the category relationships.
    *
-   * @param problemId - 试题的唯一标识符
-   * @param problemCategories - 试题分类别名的JSON数组
+   * @param problemId - the unique identifier of the problem
+   * @param problemCategories - a JSON array of problem category aliases
    */
   private void updateProblemCategoryRelationships(long problemId, String problemCategories) {
     problemCategoryMapper.deleteProblemCategoryRelationship(problemId);
@@ -518,10 +522,10 @@ public class ProblemService {
   }
 
   /**
-   * 创建试题标签.
+   * Creates the problem tags.
    *
-   * @param problemId - 试题的唯一标识符
-   * @param problemTags - 试题标签的JSON数组
+   * @param problemId - the unique identifier of the problem
+   * @param problemTags - a JSON array of problem tags
    */
   private void createProblemTags(long problemId, String problemTags) {
     Set<String> problemTagSlugs = new HashSet<>();
@@ -545,10 +549,11 @@ public class ProblemService {
   }
 
   /**
-   * 更新试题标签. 首先删除该试题的全部标签, 然后重新创建标签与试题的关系.
+   * Updates the problem tags. First deletes all tags of the problem, then recreates the
+   * tag-to-problem relationships.
    *
-   * @param problemId - 试题的唯一标识符
-   * @param problemTags - 试题标签的JSON数组
+   * @param problemId - the unique identifier of the problem
+   * @param problemTags - a JSON array of problem tags
    */
   private void updateProblemTags(long problemId, String problemTags) {
     problemTagMapper.deleteProblemTagRelationship(problemId);
@@ -556,31 +561,31 @@ public class ProblemService {
   }
 
   /**
-   * 检查试题名称的合法性.
+   * Checks whether the problem name is legal.
    *
-   * @param problemName - 试题名称
-   * @return 试题名称是否合法
+   * @param problemName - the name of the problem
+   * @return whether the problem name is legal
    */
   private boolean isProblemNameLegal(String problemName) {
     return problemName.length() <= 128;
   }
 
   /**
-   * [此方法仅供管理员使用] 删除指定的试题.
+   * [For administrators only] Deletes the specified problem.
    *
-   * @param problemId - 试题的唯一标识符
+   * @param problemId - the unique identifier of the problem
    */
   public void deleteProblem(long problemId) {
     problemMapper.deleteProblem(problemId);
   }
 
   /**
-   * [此方法仅供管理员使用] 创建试题分类.
+   * [For administrators only] Creates a problem category.
    *
-   * @param problemCategorySlug - 试题分类的别名
-   * @param problemCategoryName - 试题分类的名称
-   * @param parentProblemCategorySlug - 父级试题分类的别名
-   * @return 包含试题分类创建结果的Map<String, Object>对象
+   * @param problemCategorySlug - the alias of the problem category
+   * @param problemCategoryName - the name of the problem category
+   * @param parentProblemCategorySlug - the alias of the parent problem category
+   * @return a Map<String, Object> object containing the problem category creation result
    */
   public Map<String, Object> createProblemCategory(
       String problemCategorySlug, String problemCategoryName, String parentProblemCategorySlug) {
@@ -601,10 +606,11 @@ public class ProblemService {
   }
 
   /**
-   * 检查欲创建的试题分类对象各字段的合法性.
+   * Checks the legality of each field of the problem category object to be created.
    *
-   * @param problemCategory - 欲创建的试题分类对象
-   * @return 包含试题分类对象各字段验证结果的Map<String, Boolean>对象
+   * @param problemCategory - the problem category object to be created
+   * @return a Map<String, Boolean> object containing the validation result of each field of the
+   *     problem category object
    */
   private Map<String, ? extends Object> getProblemCategoryCreationResult(
       ProblemCategory problemCategory) {
@@ -632,13 +638,13 @@ public class ProblemService {
   }
 
   /**
-   * [此方法仅供管理员使用] 编辑试题分类.
+   * [For administrators only] Edits a problem category.
    *
-   * @param problemCategoryId - 试题分类的唯一标识符
-   * @param problemCategorySlug - 试题分类的别名
-   * @param problemCategoryName - 试题分类的名称
-   * @param parentProblemCategorySlug - 父级试题分类的别名
-   * @return 包含试题分类编辑结果的Map<String, Boolean>对象
+   * @param problemCategoryId - the unique identifier of the problem category
+   * @param problemCategorySlug - the alias of the problem category
+   * @param problemCategoryName - the name of the problem category
+   * @param parentProblemCategorySlug - the alias of the parent problem category
+   * @return a Map<String, Boolean> object containing the problem category editing result
    */
   public Map<String, Boolean> editProblemCategory(
       int problemCategoryId,
@@ -660,10 +666,10 @@ public class ProblemService {
   }
 
   /**
-   * 获取试题分类的编辑结果.
+   * Gets the editing result of a problem category.
    *
-   * @param problemCategory - 待编辑的试题分类对象
-   * @return 包含试题分类编辑结果的Map<String, Boolean>对象
+   * @param problemCategory - the problem category object to edit
+   * @return a Map<String, Boolean> object containing the problem category editing result
    */
   private Map<String, Boolean> getProblemCategoryEditResult(ProblemCategory problemCategory) {
     Map<String, Boolean> result = new HashMap<>();
@@ -697,10 +703,10 @@ public class ProblemService {
   }
 
   /**
-   * 检查分类目录是否存在.
+   * Checks whether a problem category exists.
    *
-   * @param problemCategoryId - 分类目录的唯一标识符
-   * @return 分类目录是否存在
+   * @param problemCategoryId - the unique identifier of the problem category
+   * @return whether the problem category exists
    */
   private boolean isProblemCategoryExists(int problemCategoryId) {
     ProblemCategory problemCategory =
@@ -709,20 +715,21 @@ public class ProblemService {
   }
 
   /**
-   * 检查试题分类是否可编辑. 试题分类的唯一标识符为1的项目是默认分类, 不可编辑.
+   * Checks whether a problem category is editable. The category with the unique identifier 1 is the
+   * default category and is not editable.
    *
-   * @param problemCategoryId - 待编辑的试题分类对象
-   * @return 试题分类是否可编辑
+   * @param problemCategoryId - the unique identifier of the problem category to edit
+   * @return whether the problem category is editable
    */
   private boolean isProblemCategoryEditable(int problemCategoryId) {
     return problemCategoryId != 1;
   }
 
   /**
-   * 根据试题分类的别名获取试题分类的唯一标识符.
+   * Gets the unique identifier of a problem category by its alias.
    *
-   * @param problemCategorySlug - 试题分类的别名
-   * @return 试题分类的唯一标识符
+   * @param problemCategorySlug - the alias of the problem category
+   * @return the unique identifier of the problem category
    */
   private int getProblemCategoryIdUsingSlug(String problemCategorySlug) {
     int problemCategoryId = 0;
@@ -738,20 +745,20 @@ public class ProblemService {
   }
 
   /**
-   * 检查试题分类的别名的合法性
+   * Checks the legality of a problem category alias.
    *
-   * @param problemCategorySlug - 试题分类的别名
-   * @return 试题分类的别名是否合法
+   * @param problemCategorySlug - the alias of the problem category
+   * @return whether the problem category alias is legal
    */
   private boolean isProblemCategorySlugLegal(String problemCategorySlug) {
     return problemCategorySlug.length() <= 32;
   }
 
   /**
-   * 检查试题分类是否存在(检查Slug是否重复)
+   * Checks whether a problem category exists (checks for a duplicate slug).
    *
-   * @param problemCategorySlug - 试题分类的别名
-   * @return 试题分类是否存在
+   * @param problemCategorySlug - the alias of the problem category
+   * @return whether the problem category exists
    */
   private boolean isProblemCategorySlugExists(String problemCategorySlug) {
     ProblemCategory problemCategory =
@@ -760,11 +767,11 @@ public class ProblemService {
   }
 
   /**
-   * 检查试题分类是否存在(检查Slug是否重复)
+   * Checks whether a problem category exists (checks for a duplicate slug).
    *
-   * @param problemCategory - 当前的试题分类对象
-   * @param problemCategorySlug - 试题分类的别名
-   * @return 试题分类是否存在
+   * @param problemCategory - the current problem category object
+   * @param problemCategorySlug - the alias of the problem category
+   * @return whether the problem category exists
    */
   private boolean isProblemCategorySlugExists(
       ProblemCategory problemCategory, String problemCategorySlug) {
@@ -775,20 +782,20 @@ public class ProblemService {
   }
 
   /**
-   * 检查试题分类名称的合法性
+   * Checks the legality of a problem category name.
    *
-   * @param problemCategoryName - 试题分类的名称
-   * @return 试题分类名称是否合法
+   * @param problemCategoryName - the name of the problem category
+   * @return whether the problem category name is legal
    */
   private boolean isProblemCategoryNameLegal(String problemCategoryName) {
     return problemCategoryName.length() <= 32;
   }
 
   /**
-   * 根据试题分类的唯一标识符删除某个试题分类.
+   * Deletes a problem category by its unique identifier.
    *
-   * @param problemCategoryId - 分类目录的唯一标识符
-   * @return 试题分类是否被删除
+   * @param problemCategoryId - the unique identifier of the problem category
+   * @return whether the problem category was deleted
    */
   public boolean deleteProblemCategory(int problemCategoryId) {
     boolean isProblemCategoryEditable = false;
@@ -799,15 +806,15 @@ public class ProblemService {
     return isProblemCategoryEditable;
   }
 
-  /** 自动注入的ProblemMapper对象. */
+  /** The autowired ProblemMapper object. */
   @Autowired private ProblemMapper problemMapper;
 
-  /** 自动注入的ProblemCategoryMapper对象. */
+  /** The autowired ProblemCategoryMapper object. */
   @Autowired private ProblemCategoryMapper problemCategoryMapper;
 
-  /** 自动注入的ProblemTagMapper对象. */
+  /** The autowired ProblemTagMapper object. */
   @Autowired private ProblemTagMapper problemTagMapper;
 
-  /** 自动注入的CheckpointMapper对象. */
+  /** The autowired CheckpointMapper object. */
   @Autowired private CheckpointMapper checkpointMapper;
 }

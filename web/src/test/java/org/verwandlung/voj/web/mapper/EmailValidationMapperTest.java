@@ -30,7 +30,7 @@ import org.verwandlung.voj.web.model.EmailValidation;
 import java.util.Date;
 
 /**
- * EmailValidationMapper的测试类.
+ * The test class for EmailValidationMapper.
  *
  * @author Haozhe Xie
  */
@@ -38,7 +38,7 @@ import java.util.Date;
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class EmailValidationMapperTest {
-  /** 测试用例: 测试getEmailValidation(String)方法 测试数据: 使用存在的电子邮件地址 预期结果: 返回预期的EmailValidation对象 */
+  /** Test case: tests the getEmailValidation(String) method. Test data: an existing email address. Expected: the expected EmailValidation object. */
   @Test
   public void testGetEmailValidationExists() {
     EmailValidation emailValidation =
@@ -49,7 +49,7 @@ public class EmailValidationMapperTest {
     Assertions.assertEquals("Random-String-Generated", token);
   }
 
-  /** 测试用例: 测试getEmailValidation(String)方法 测试数据: 使用不存在的电子邮件地址 预期结果: 返回空引用 */
+  /** Test case: tests the getEmailValidation(String) method. Test data: a non-existing email address. Expected: a null reference. */
   @Test
   public void testGetEmailValidationNotExists() {
     EmailValidation emailValidation =
@@ -58,8 +58,9 @@ public class EmailValidationMapperTest {
   }
 
   /**
-   * 测试用例: 测试createEmailValidation(EmailValidation)方法 测试数据: 使用合法的数据集, 并且该电子邮件地址不存在相应的记录 预期结果:
-   * 数据插入操作成功完成
+   * Test case: tests the createEmailValidation(EmailValidation) method. Test data: a valid data set,
+   * and no record exists for this email address. Expected: the data insertion operation completes
+   * successfully.
    */
   @Test
   public void testCreateEmailValidationNormally() {
@@ -77,8 +78,8 @@ public class EmailValidationMapperTest {
   }
 
   /**
-   * 测试用例: 测试createEmailValidation(EmailValidation)方法 测试数据: 使用合法的数据集, 但已存在该电子邮件地址对应的记录 预期结果:
-   * 抛出DuplicateKeyException异常
+   * Test case: tests the createEmailValidation(EmailValidation) method. Test data: a valid data set,
+   * but a record already exists for this email address. Expected: a DuplicateKeyException is thrown.
    */
   @Test
   public void testCreateEmailValidationUsingExistingEmail() {
@@ -92,8 +93,9 @@ public class EmailValidationMapperTest {
   }
 
   /**
-   * 测试用例: 测试createEmailValidation(EmailValidation)方法 测试数据: 使用合法的数据集, 但该电子邮件地址无用户使用(不满足外键参照完整性)
-   * 预期结果: 抛出DataIntegrityViolationException异常
+   * Test case: tests the createEmailValidation(EmailValidation) method. Test data: a valid data set,
+   * but no user uses this email address (violating foreign-key referential integrity). Expected: a
+   * DataIntegrityViolationException is thrown.
    */
   @Test
   public void testCreateEmailValidationUsingNotExistingEmail() {
@@ -106,7 +108,7 @@ public class EmailValidationMapperTest {
     Assertions.assertThrows(org.springframework.dao.DataIntegrityViolationException.class, e);
   }
 
-  /** 测试用例: 测试deleteEmailValidation(String)方法 测试数据: 存在的电子邮件地址 预期结果: 数据删除操作成功完成 */
+  /** Test case: tests the deleteEmailValidation(String) method. Test data: an existing email address. Expected: the data deletion operation completes successfully. */
   @Test
   public void testDeleteEmailValidationExists() {
     EmailValidation emailValidation =
@@ -121,7 +123,7 @@ public class EmailValidationMapperTest {
     Assertions.assertNull(emailValidation);
   }
 
-  /** 测试用例: 测试deleteEmailValidation(String)方法 测试数据: 不存在的电子邮件地址 预期结果: 方法正常执行, 未影响数据表中的数据 */
+  /** Test case: tests the deleteEmailValidation(String) method. Test data: a non-existing email address. Expected: the method executes normally without affecting the data in the table. */
   @Test
   public void testDeleteEmailValidationNotExists() {
     int numberOfRowsAffected =
@@ -129,6 +131,6 @@ public class EmailValidationMapperTest {
     Assertions.assertEquals(0, numberOfRowsAffected);
   }
 
-  /** 待测试的EmailValidationMapper对象. */
+  /** The EmailValidationMapper object under test. */
   @Autowired private EmailValidationMapper emailValidationMapper;
 }

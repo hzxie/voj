@@ -19,19 +19,19 @@ package org.verwandlung.voj.web.messenger;
 import org.springframework.context.ApplicationEvent;
 
 /**
- * 提交记录事件消息.
+ * The submission record event message.
  *
  * @author Haozhe Xie
  */
 public class SubmissionEvent extends ApplicationEvent {
   /**
-   * SubmissionEvent的构造函数.
+   * The constructor of SubmissionEvent.
    *
-   * @param source - 消息发布源
-   * @param submissionId - 提交记录的唯一标识符
-   * @param judgeResult - 当前评测结果
-   * @param message - 评测消息
-   * @param isCompleted - 评测是否完成
+   * @param source - the message publishing source
+   * @param submissionId - the unique identifier of the submission record
+   * @param judgeResult - the current judge result
+   * @param message - the judge message
+   * @param isCompleted - whether the judging is completed
    */
   public SubmissionEvent(
       Object source, long submissionId, String judgeResult, String message, boolean isCompleted) {
@@ -43,53 +43,53 @@ public class SubmissionEvent extends ApplicationEvent {
   }
 
   /**
-   * 获取提交记录的唯一标识符.
+   * Gets the unique identifier of the submission record.
    *
-   * @return 提交记录的唯一标识符
+   * @return the unique identifier of the submission record
    */
   public long getSubmissionId() {
     return submissionId;
   }
 
   /**
-   * 获取当前评测结果.
+   * Gets the current judge result.
    *
-   * @return 当前评测结果
+   * @return the current judge result
    */
   public String getJudgeResult() {
     return judgeResult;
   }
 
   /**
-   * 获取评测消息.
+   * Gets the judge message.
    *
-   * @return 评测消息
+   * @return the judge message
    */
   public String getMessage() {
     return message;
   }
 
   /**
-   * 获取评测是否已完成.
+   * Gets whether the judging is completed.
    *
-   * @return 评测是否已完成
+   * @return whether the judging is completed
    */
   public boolean isCompleted() {
     return isCompleted;
   }
 
-  /** 评测记录的唯一标识符. */
+  /** The unique identifier of the submission record. */
   private final long submissionId;
 
-  /** 当前评测结果. */
+  /** The current judge result. */
   private final String judgeResult;
 
-  /** 评测消息. */
+  /** The judge message. */
   private final String message;
 
-  /** 评测是否完成. */
+  /** Whether the judging is completed. */
   private final boolean isCompleted;
 
-  /** 唯一的序列化标识符. */
+  /** The unique serialization identifier. */
   private static final long serialVersionUID = 4808514481370058683L;
 }

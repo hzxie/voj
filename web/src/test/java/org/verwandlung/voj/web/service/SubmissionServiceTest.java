@@ -31,9 +31,10 @@ import org.verwandlung.voj.web.model.Submission;
 import org.verwandlung.voj.web.model.User;
 
 /**
- * SubmissionService测试类.
+ * The test class for SubmissionService.
  *
- * <p>种子数据: 用户1000 (zjhzxhz) 共有3条提交记录 (2条AC), 用户1001共有2条提交记录 (均为CE), 合计5条提交记录 (最大ID为1004).
+ * <p>Seed data: user 1000 (zjhzxhz) has 3 submission records (2 AC), user 1001 has 2 submission
+ * records (both CE), for a total of 5 submission records (the maximum ID is 1004).
  *
  * @author Haozhe Xie
  */
@@ -41,13 +42,13 @@ import org.verwandlung.voj.web.model.User;
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class SubmissionServiceTest {
-  /** 测试用例: 测试getNumberOfSubmissionsUsingDate(Date, Date)方法 测试数据: 起止时间均为null 预期结果: 返回全部提交记录的数量 */
+  /** Test case: tests the getNumberOfSubmissionsUsingDate(Date, Date) method. Test data: both the start and end times are null. Expected: the number of all submission records. */
   @Test
   public void testGetNumberOfSubmissionsUsingDate() {
     Assertions.assertEquals(5, submissionService.getNumberOfSubmissionsUsingDate(null, null));
   }
 
-  /** 测试用例: 测试getNumberOfSubmissionsUsingProblemIdAndUsername(long, String)方法 测试数据: 用户zjhzxhz对试题1000的提交 预期结果: 返回2 */
+  /** Test case: tests the getNumberOfSubmissionsUsingProblemIdAndUsername(long, String) method. Test data: the submissions of user zjhzxhz for problem 1000. Expected: returns 2. */
   @Test
   public void testGetNumberOfSubmissionsUsingProblemIdAndUsername() {
     Assertions.assertEquals(
@@ -55,13 +56,13 @@ public class SubmissionServiceTest {
         submissionService.getNumberOfSubmissionsUsingProblemIdAndUsername(1000, "zjhzxhz"));
   }
 
-  /** 测试用例: 测试getLatestSubmissionId()方法 测试数据: N/a 预期结果: 返回最新提交记录的唯一标识符 */
+  /** Test case: tests the getLatestSubmissionId() method. Test data: N/a. Expected: the unique identifier of the latest submission record. */
   @Test
   public void testGetLatestSubmissionId() {
     Assertions.assertEquals(1004, submissionService.getLatestSubmissionId());
   }
 
-  /** 测试用例: 测试getSubmission(long)方法 测试数据: 存在的提交记录标识符 预期结果: 返回对应的提交记录 */
+  /** Test case: tests the getSubmission(long) method. Test data: an existing submission record identifier. Expected: the corresponding submission record. */
   @Test
   public void testGetSubmissionExists() {
     Submission submission = submissionService.getSubmission(1000);
@@ -69,20 +70,20 @@ public class SubmissionServiceTest {
     Assertions.assertEquals(1000, submission.getSubmissionId());
   }
 
-  /** 测试用例: 测试getSubmission(long)方法 测试数据: 不存在的提交记录标识符 预期结果: 返回空引用 */
+  /** Test case: tests the getSubmission(long) method. Test data: a non-existing submission record identifier. Expected: a null reference. */
   @Test
   public void testGetSubmissionNotExists() {
     Assertions.assertNull(submissionService.getSubmission(0));
   }
 
-  /** 测试用例: 测试getSubmissions(long, String, int)方法 测试数据: 用户zjhzxhz对试题1000的提交 预期结果: 返回该用户对该试题的全部提交 */
+  /** Test case: tests the getSubmissions(long, String, int) method. Test data: the submissions of user zjhzxhz for problem 1000. Expected: all the submissions of this user for this problem. */
   @Test
   public void testGetSubmissions() {
     List<Submission> submissions = submissionService.getSubmissions(1000, "zjhzxhz", 10);
     Assertions.assertEquals(2, submissions.size());
   }
 
-  /** 测试用例: 测试getSubmissionUsingProblemIdAndUserId(long, long, int)方法 测试数据: 用户1000对试题1000的提交 预期结果: 返回非空列表 */
+  /** Test case: tests the getSubmissionUsingProblemIdAndUserId(long, long, int) method. Test data: the submissions of user 1000 for problem 1000. Expected: a non-empty list. */
   @Test
   public void testGetSubmissionUsingProblemIdAndUserId() {
     List<Submission> submissions =
@@ -90,7 +91,7 @@ public class SubmissionServiceTest {
     Assertions.assertEquals(2, submissions.size());
   }
 
-  /** 测试用例: 测试getSubmissionStatsOfUser(long)方法 测试数据: 用户1000 预期结果: 返回正确的通过数, 总数及通过率 */
+  /** Test case: tests the getSubmissionStatsOfUser(long) method. Test data: user 1000. Expected: the correct accepted count, total count and acceptance rate. */
   @Test
   public void testGetSubmissionStatsOfUser() {
     Map<String, Long> stats = submissionService.getSubmissionStatsOfUser(1000);
@@ -99,7 +100,7 @@ public class SubmissionServiceTest {
     Assertions.assertEquals(66L, stats.get("acRate"));
   }
 
-  /** 测试用例: 测试getSubmissionStatsOfUser(long)方法 测试数据: 无提交记录的用户 预期结果: 通过率为0且不抛出除零异常 */
+  /** Test case: tests the getSubmissionStatsOfUser(long) method. Test data: a user with no submission records. Expected: the acceptance rate is 0 and no division-by-zero exception is thrown. */
   @Test
   public void testGetSubmissionStatsOfUserWithoutSubmissions() {
     Map<String, Long> stats = submissionService.getSubmissionStatsOfUser(9999);
@@ -108,25 +109,26 @@ public class SubmissionServiceTest {
     Assertions.assertEquals(0L, stats.get("acRate"));
   }
 
-  /** 测试用例: 测试getSubmissionOfUser(long)方法 测试数据: 用户1000 预期结果: 返回按试题索引的最新提交记录 */
+  /** Test case: tests the getSubmissionOfUser(long) method. Test data: user 1000. Expected: the latest submission records indexed by problem. */
   @Test
   public void testGetSubmissionOfUser() {
     Map<Long, Submission> submissions = submissionService.getSubmissionOfUser(1000);
     Assertions.assertNotNull(submissions);
-    // 用户1000对试题1000和1001均有提交记录.
+    // User 1000 has submission records for both problems 1000 and 1001.
     Assertions.assertTrue(submissions.containsKey(1000L));
     Assertions.assertTrue(submissions.containsKey(1001L));
   }
 
-  /** 测试用例: 测试getSubmissionOfProblems(long, long, long)方法 测试数据: 用户1000在试题区间[1000, 1001] 预期结果: AC提交记录覆盖最新提交记录 */
+  /** Test case: tests the getSubmissionOfProblems(long, long, long) method. Test data: user 1000 in the problem range [1000, 1001]. Expected: the AC submission record overrides the latest submission record. */
   @Test
   public void testGetSubmissionOfProblems() {
     Map<Long, Submission> submissions = submissionService.getSubmissionOfProblems(1000, 1000, 1001);
-    // 试题1000虽有WA(1001)的最新提交, 但应被AC(1000)的提交覆盖.
+    // Although problem 1000 has a latest WA (1001) submission, it should be overridden by the AC
+    // (1000) submission.
     Assertions.assertEquals("AC", submissions.get(1000L).getJudgeResult().getJudgeResultSlug());
   }
 
-  /** 测试用例: 测试createSubmission(...)方法 测试数据: 合法的提交数据 预期结果: 创建成功并返回提交记录标识符 */
+  /** Test case: tests the createSubmission(...) method. Test data: valid submission data. Expected: creation succeeds and the submission record identifier is returned. */
   @Test
   public void testCreateSubmissionSuccessfully() {
     Map<String, Object> result =
@@ -137,7 +139,7 @@ public class SubmissionServiceTest {
     Assertions.assertEquals(6, submissionService.getNumberOfSubmissionsUsingDate(null, null));
   }
 
-  /** 测试用例: 测试createSubmission(...)方法 测试数据: 用户未登录 预期结果: 创建失败 */
+  /** Test case: tests the createSubmission(...) method. Test data: the user is not logged in. Expected: creation fails. */
   @Test
   public void testCreateSubmissionWithoutLogin() {
     Map<String, Object> result =
@@ -146,7 +148,7 @@ public class SubmissionServiceTest {
     Assertions.assertFalse((Boolean) result.get("isSuccessful"));
   }
 
-  /** 测试用例: 测试createSubmission(...)方法 测试数据: 试题不存在 预期结果: 创建失败 */
+  /** Test case: tests the createSubmission(...) method. Test data: the problem does not exist. Expected: creation fails. */
   @Test
   public void testCreateSubmissionWithNonExistentProblem() {
     Map<String, Object> result =
@@ -155,7 +157,7 @@ public class SubmissionServiceTest {
     Assertions.assertFalse((Boolean) result.get("isSuccessful"));
   }
 
-  /** 测试用例: 测试createSubmission(...)方法 测试数据: 编程语言不存在 预期结果: 创建失败 */
+  /** Test case: tests the createSubmission(...) method. Test data: the programming language does not exist. Expected: creation fails. */
   @Test
   public void testCreateSubmissionWithNonExistentLanguage() {
     Map<String, Object> result =
@@ -164,7 +166,7 @@ public class SubmissionServiceTest {
     Assertions.assertFalse((Boolean) result.get("isSuccessful"));
   }
 
-  /** 测试用例: 测试createSubmission(...)方法 测试数据: 代码为空 预期结果: 创建失败 */
+  /** Test case: tests the createSubmission(...) method. Test data: the code is empty. Expected: creation fails. */
   @Test
   public void testCreateSubmissionWithEmptyCode() {
     Map<String, Object> result =
@@ -173,7 +175,7 @@ public class SubmissionServiceTest {
     Assertions.assertFalse((Boolean) result.get("isSuccessful"));
   }
 
-  /** 测试用例: 测试createSubmission(...)方法 测试数据: CSRF令牌无效 预期结果: 创建失败 */
+  /** Test case: tests the createSubmission(...) method. Test data: an invalid CSRF token. Expected: creation fails. */
   @Test
   public void testCreateSubmissionWithInvalidCsrfToken() {
     Map<String, Object> result =
@@ -182,27 +184,27 @@ public class SubmissionServiceTest {
     Assertions.assertFalse((Boolean) result.get("isSuccessful"));
   }
 
-  /** 测试用例: 测试deleteSubmission(long)方法 测试数据: 未被竞赛引用的提交记录 预期结果: 删除成功, 提交记录不再存在 */
+  /** Test case: tests the deleteSubmission(long) method. Test data: a submission record not referenced by any contest. Expected: deletion succeeds and the submission record no longer exists. */
   @Test
   public void testDeleteSubmission() {
-    // 提交记录1004未被voj_contest_submissions引用, 可安全删除.
+    // Submission record 1004 is not referenced by voj_contest_submissions and can be safely deleted.
     Assertions.assertTrue(submissionService.deleteSubmission(1004));
     Assertions.assertNull(submissionService.getSubmission(1004));
   }
 
-  /** 测试用例: 测试createSubmissionTask(long)方法 测试数据: 任意提交标识符 预期结果: 消息发送不抛出异常 */
+  /** Test case: tests the createSubmissionTask(long) method. Test data: an arbitrary submission identifier. Expected: sending the message does not throw an exception. */
   @Test
   public void testCreateSubmissionTask() {
     Assertions.assertDoesNotThrow(() -> submissionService.createSubmissionTask(1000));
   }
 
-  /** 构造一个仅设置UID的User对象, 用作提交用户参数. */
+  /** Constructs a User object with only the UID set, used as the submitting user argument. */
   private User userWithUid(long uid) {
     User user = new User();
     user.setUid(uid);
     return user;
   }
 
-  /** 待测试的SubmissionService对象. */
+  /** The SubmissionService object under test. */
   @Autowired private SubmissionService submissionService;
 }

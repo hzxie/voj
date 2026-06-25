@@ -31,7 +31,7 @@ import org.verwandlung.voj.judger.mapper.SubmissionMapper;
 import org.verwandlung.voj.judger.model.Submission;
 
 /**
- * 程序执行器的测试类.
+ * Test class for the program runner.
  *
  * @author Haozhe Xie
  */
@@ -40,8 +40,9 @@ import org.verwandlung.voj.judger.model.Submission;
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class RunnerTest {
   /**
-   * 测试用例: 测试getRuntimeResult(Submission, int, String, String, String, String)方法 测试数据:
-   * 使用可以编译通过的C++代码 预期结果: 编译成功并运行产生输出
+   * Test case: tests the getRuntimeResult(Submission, int, String, String, String, String) method.
+   * Test data: C++ code that compiles successfully. Expected result: compiles successfully and
+   * produces output when run.
    */
   @Test
   public void testGetRuntimeResultCpp() throws Exception {
@@ -63,8 +64,9 @@ public class RunnerTest {
   }
 
   /**
-   * 测试用例: 测试getRuntimeResult(Submission, int, String, String, String, String)方法 测试数据:
-   * 使用可以编译通过的Java代码 预期结果: 编译成功并运行产生输出
+   * Test case: tests the getRuntimeResult(Submission, int, String, String, String, String) method.
+   * Test data: Java code that compiles successfully. Expected result: compiles successfully and
+   * produces output when run.
    *
    * <p>The test case is disabled for passing CI on AppVeyor.
    */
@@ -86,19 +88,19 @@ public class RunnerTest {
     Assertions.assertEquals("AC", result.get("runtimeResult"));
   }
 
-  /** 待测试的Runner对象. */
+  /** The Runner object under test. */
   @Autowired private Runner runner;
 
-  /** 自动注入的Compiler对象. 用于构建测试用例. */
+  /** The autowired Compiler object, used to set up the test cases. */
   @Autowired private Compiler compiler;
 
-  /** 自动注入的Preprocessor对象. 用于构建测试用例. */
+  /** The autowired Preprocessor object, used to set up the test cases. */
   @Autowired private Preprocessor preprocessor;
 
-  /** 自动注入的SubmissionMapper对象. 用于构建测试用例. */
+  /** The autowired SubmissionMapper object, used to set up the test cases. */
   @Autowired private SubmissionMapper submissionMapper;
 
-  /** 评测机的工作目录. 用于存储编译结果以及程序输出结果. */
+  /** The working directory of the judger, used to store compilation results and program output. */
   @Value("${judger.workDir}")
   private String workBaseDirectory;
 }

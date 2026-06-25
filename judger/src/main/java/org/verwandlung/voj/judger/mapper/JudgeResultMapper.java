@@ -33,9 +33,9 @@ import org.verwandlung.voj.judger.model.JudgeResult;
  */
 public interface JudgeResultMapper {
   /**
-   * 通过评测结果的唯一标识符获取评测结果对象.
+   * Gets all judge result objects.
    *
-   * @return 预期的评测结果对象或空引用
+   * @return a list of all judge result objects
    */
   @Select("SELECT * FROM voj_judge_results")
   @Options(useCache = true)
@@ -47,10 +47,10 @@ public interface JudgeResultMapper {
   List<JudgeResult> getAllJudgeResults();
 
   /**
-   * 通过评测结果的唯一英文缩写获取评测结果对象.
+   * Gets a judge result object by its unique English abbreviation.
    *
-   * @param judgeResultSlug - 评测结果的唯一英文缩写
-   * @return 预期的评测结果对象或空引用
+   * @param judgeResultSlug - the unique English abbreviation of the judge result
+   * @return the expected judge result object, or a null reference
    */
   @Select("SELECT * FROM voj_judge_results WHERE judge_result_slug = #{judgeResultSlug}")
   @Options(useCache = true)

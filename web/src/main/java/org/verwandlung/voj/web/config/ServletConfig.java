@@ -23,17 +23,19 @@ import org.springframework.context.annotation.Configuration;
 import org.verwandlung.voj.web.util.SessionListener;
 
 /**
- * Servlet 监听器注册. 取代原 web.xml 中的会话监听器声明.
+ * The Servlet listener registration. Replaces the session listener declaration in the original
+ * web.xml.
  *
- * <p>原 web.xml 中挂载于 /druid/* 的 Druid 监控 Servlet 已移除: 该 Servlet 仍基于
- * {@code javax.servlet} 命名空间, 与 Jakarta Servlet 容器不兼容, 且会将连接池监控页暴露在
- * 公网上.
+ * <p>The Druid monitoring Servlet mounted at /druid/* in the original web.xml has been removed: that
+ * Servlet is still based on the {@code javax.servlet} namespace, which is incompatible with the
+ * Jakarta Servlet container, and it would expose the connection pool monitoring page to the public
+ * internet.
  *
  * @author Haozhe Xie
  */
 @Configuration
 public class ServletConfig {
-  /** 统计在线用户数量的会话监听器. */
+  /** The session listener that counts the number of online users. */
   @Bean
   public ServletListenerRegistrationBean<SessionListener> sessionListener() {
     return new ServletListenerRegistrationBean<>(new SessionListener());

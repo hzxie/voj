@@ -28,13 +28,13 @@ import java.util.List;
  */
 public interface DiscussionThreadMapper {
   /**
-   * 获取全部的讨论帖子
+   * Gets all discussion threads.
    *
-   * @param problemId - 试题的唯一标识符
-   * @param discussionTopicId - 讨论话题的唯一标识符
-   * @param offset - 讨论帖子的起始ID
-   * @param limit - 要获取帖子的数量
-   * @return 包含讨论帖子对象的列表
+   * @param problemId - the unique identifier of the problem
+   * @param discussionTopicId - the unique identifier of the discussion topic
+   * @param offset - the starting ID of the discussion threads
+   * @param limit - the number of threads to fetch
+   * @return a list containing discussion thread objects
    */
   List<DiscussionThread> getDiscussionThreads(
       @Param("problemId") long problemId,
@@ -43,40 +43,41 @@ public interface DiscussionThreadMapper {
       @Param("limit") int limit);
 
   /**
-   * 获取某个试题的题解讨论. 题解讨论在创建试题时自动创建, 即为该试题相关的第1个讨论.
+   * Gets the solution discussion of a problem. The solution discussion is created automatically
+   * when the problem is created, i.e. it is the first discussion related to that problem.
    *
-   * @param problemId - 试题的唯一标识符
-   * @return 某个试题的题解讨论DiscussionThread对象
+   * @param problemId - the unique identifier of the problem
+   * @return the DiscussionThread object of the problem's solution discussion
    */
   DiscussionThread getSolutionThreadOfProblem(@Param("problemId") long problemId);
 
   /**
-   * 根据讨论帖子的唯一标识符获取讨论帖子对象.
+   * Gets a discussion thread object by the unique identifier of the discussion thread.
    *
-   * @param discussionThreadId - 讨论帖子的唯一标识符
-   * @return 对应的讨论帖子对象
+   * @param discussionThreadId - the unique identifier of the discussion thread
+   * @return the corresponding discussion thread object
    */
   DiscussionThread getDiscussionThreadUsingThreadId(
       @Param("discussionThreadId") long discussionThreadId);
 
   /**
-   * 创建讨论帖子.
+   * Creates a discussion thread.
    *
-   * @param discussionThread - 待创建的讨论帖子
+   * @param discussionThread - the discussion thread to create
    */
   int createDiscussionThread(DiscussionThread discussionThread);
 
   /**
-   * 更新讨论帖子.
+   * Updates a discussion thread.
    *
-   * @param discussionThread - 待更新的讨论帖子
+   * @param discussionThread - the discussion thread to update
    */
   int updateDiscussionThread(DiscussionThread discussionThread);
 
   /**
-   * 删除讨论帖子.
+   * Deletes a discussion thread.
    *
-   * @param discussionThreadId - 待删除讨论帖子的唯一标识符
+   * @param discussionThreadId - the unique identifier of the discussion thread to delete
    */
   int deleteDiscussionThreadUsingThreadId(long discussionThreadId);
 }

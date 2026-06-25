@@ -29,7 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.verwandlung.voj.web.model.Problem;
 
 /**
- * ProblemMapper测试类.
+ * The test class for ProblemMapper.
  *
  * @author Haozhe Xie
  */
@@ -37,7 +37,7 @@ import org.verwandlung.voj.web.model.Problem;
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class ProblemMapperTest {
-  /** 测试用例: 测试getNumberOfProblems()方法 测试数据: N/a 预期结果: 返回数据表中全部试题的数量 */
+  /** Test case: tests the getNumberOfProblems() method. Test data: N/a. Expected: the number of all problems in the table. */
   @Test
   public void testGetNumberOfProblems() {
     long totalProblems = problemMapper.getNumberOfProblems();
@@ -45,7 +45,7 @@ public class ProblemMapperTest {
   }
 
   /**
-   * 测试用例: 测试getNumberOfProblemsUsingFilters(String, int, boolean)方法 测试数据: N/a 预期结果: 返回数据表中公开试题的数量
+   * Test case: tests the getNumberOfProblemsUsingFilters(String, int, boolean) method. Test data: N/a. Expected: the number of public problems in the table.
    */
   @Test
   public void testGetNumberOfPublicProblems() {
@@ -53,14 +53,14 @@ public class ProblemMapperTest {
     Assertions.assertEquals(3, totalProblems);
   }
 
-  /** 测试用例: 测试getLowerBoundOfProblems()方法 测试数据: N/a 预期结果: 第一个试题的ID(1000) */
+  /** Test case: tests the getLowerBoundOfProblems() method. Test data: N/a. Expected: the ID of the first problem (1000). */
   @Test
   public void testGetLowerBoundOfProblems() {
     long lowerBoundOfProblems = problemMapper.getLowerBoundOfProblems();
     Assertions.assertEquals(1000, lowerBoundOfProblems);
   }
 
-  /** 测试用例: 测试getUpperBoundOfProblems()方法 测试数据: N/a 预期结果: 最后一个试题的ID(1002) */
+  /** Test case: tests the getUpperBoundOfProblems() method. Test data: N/a. Expected: the ID of the last problem (1002). */
   @Test
   public void testGetUpperBoundOfProblems() {
     long upperBoundOfProblems = problemMapper.getUpperBoundOfProblems();
@@ -68,8 +68,8 @@ public class ProblemMapperTest {
   }
 
   /**
-   * 测试用例: 测试getUpperBoundOfProblemsWithLimit(boolean, long, int)方法 测试数据: 获取ID从1000起始的3道试题 预期结果:
-   * 最后一题的ID为1002
+   * Test case: tests the getUpperBoundOfProblemsWithLimit(boolean, long, int) method. Test data: get 3
+   * problems with IDs starting from 1000. Expected: the ID of the last problem is 1002.
    */
   @Test
   public void testGetUpperBoundOfProblemsWithOffsetFrom1000WithLimit3() {
@@ -78,8 +78,8 @@ public class ProblemMapperTest {
   }
 
   /**
-   * 测试用例: 测试getUpperBoundOfProblemsWithLimit(boolean, long, int)方法 测试数据: 获取ID从1000起始的3道公开试题 预期结果:
-   * 最后一题的ID为1003
+   * Test case: tests the getUpperBoundOfProblemsWithLimit(boolean, long, int) method. Test data: get 3
+   * public problems with IDs starting from 1000. Expected: the ID of the last problem is 1003.
    */
   @Test
   public void testGetUpperBoundOfPublicProblemsWithOffsetFrom1000WithLimit3() {
@@ -87,7 +87,7 @@ public class ProblemMapperTest {
     Assertions.assertEquals(1003, upperBoundOfProblems);
   }
 
-  /** 测试用例: 测试getProblem()方法 测试数据: 使用A+B Problem的试题唯一标识符 预期结果: 返回预期的试题对象 */
+  /** Test case: tests the getProblem() method. Test data: the problem unique identifier of A+B Problem. Expected: the expected problem object. */
   @Test
   public void testGetProblemExists() {
     Problem problem = problemMapper.getProblem(1000);
@@ -100,7 +100,7 @@ public class ProblemMapperTest {
     Assertions.assertEquals(1, acceptedSubmission);
   }
 
-  /** 测试用例: 测试getProblem()方法 测试数据: 使用不存在的试题唯一标识符 预期结果: 返回空引用 */
+  /** Test case: tests the getProblem() method. Test data: a non-existing problem unique identifier. Expected: a null reference. */
   @Test
   public void testGetProblemNotExists() {
     Problem problem = problemMapper.getProblem(0);
@@ -108,8 +108,8 @@ public class ProblemMapperTest {
   }
 
   /**
-   * 测试用例: 测试getProblemsUsingFilters(String, int, boolean, long, int)方法 测试数据: 获取ID从1000起始的10道试题
-   * 预期结果: 返回预期的试题列表(共2题)
+   * Test case: tests the getProblemsUsingFilters(String, int, boolean, long, int) method. Test data:
+   * get 10 problems with IDs starting from 1000. Expected: the expected problem list (3 problems).
    */
   @Test
   public void testGetProblemsFrom1000WithLimit10() {
@@ -128,8 +128,8 @@ public class ProblemMapperTest {
   }
 
   /**
-   * 测试用例: 测试getProblemsUsingFilters(String, int, boolean, long, int)方法 测试数据: 获取ID从1001起始的1道试题 预期结果:
-   * 返回预期的试题列表(共1题)
+   * Test case: tests the getProblemsUsingFilters(String, int, boolean, long, int) method. Test data:
+   * get 1 problem with ID starting from 1001. Expected: the expected problem list (1 problem).
    */
   @Test
   public void testGetProblemsFrom1001WithLimit1() {
@@ -145,8 +145,8 @@ public class ProblemMapperTest {
   }
 
   /**
-   * 测试用例: 测试getProblemsUsingFilters(String, int, boolean, long, int)方法 测试数据: 获取ID从1010起始的10道试题
-   * 预期结果: 返回空的试题列表
+   * Test case: tests the getProblemsUsingFilters(String, int, boolean, long, int) method. Test data:
+   * get 10 problems with IDs starting from 1010. Expected: an empty problem list.
    */
   @Test
   public void testGetProblemsFrom1010WithLimit10() {
@@ -154,7 +154,7 @@ public class ProblemMapperTest {
     Assertions.assertEquals(0, problems.size());
   }
 
-  /** 测试用例: 测试createProblem(Problem)方法 测试数据: 使用合法的数据集 预期结果: 数据插入操作成功完成 */
+  /** Test case: tests the createProblem(Problem) method. Test data: a valid data set. Expected: the data insertion operation completes successfully. */
   @Test
   public void testCreateProblemNormally() {
     Problem problem =
@@ -173,7 +173,7 @@ public class ProblemMapperTest {
     Assertions.assertEquals(1, numberOfRowsAffected);
   }
 
-  /** 测试用例: 测试updateProblem(Problem)方法 测试数据: 使用合法的数据集, 且数据表中存在对应ID的记录 预期结果: 数据更新操作成功完成 */
+  /** Test case: tests the updateProblem(Problem) method. Test data: a valid data set, and a record with the corresponding ID exists in the table. Expected: the data update operation completes successfully. */
   @Test
   public void testUpdateProblemNormally() {
     Problem problem = problemMapper.getProblem(1001);
@@ -194,7 +194,7 @@ public class ProblemMapperTest {
      */
   }
 
-  /** 测试用例: 测试updateProblem(Problem)方法 测试数据: 合法的数据集, 但数据表中不存在对应ID的记录 预期结果: 方法正常执行, 未影响数据表中的数据 */
+  /** Test case: tests the updateProblem(Problem) method. Test data: a valid data set, but no record with the corresponding ID exists in the table. Expected: the method executes normally without affecting the data in the table. */
   @Test
   public void testUpdateProblemNotExists() {
     Problem problem = problemMapper.getProblem(1001);
@@ -205,7 +205,7 @@ public class ProblemMapperTest {
     Assertions.assertEquals(0, numberOfRowsAffected);
   }
 
-  /** 测试用例: 测试deleteProblem(long)方法 测试数据: 试题#1002的唯一标识符 预期结果: 数据删除操作成功完成 */
+  /** Test case: tests the deleteProblem(long) method. Test data: the unique identifier of problem #1002. Expected: the data deletion operation completes successfully. */
   @Test
   public void testDeleteProblemExists() {
     Problem problem = problemMapper.getProblem(1002);
@@ -218,7 +218,7 @@ public class ProblemMapperTest {
     Assertions.assertNull(problem);
   }
 
-  /** 测试用例: 测试deleteProblem(long)方法 测试数据: 不存在的试题唯一标识符 预期结果: 方法正常执行, 未影响数据表中的数据 */
+  /** Test case: tests the deleteProblem(long) method. Test data: a non-existing problem unique identifier. Expected: the method executes normally without affecting the data in the table. */
   @Test
   public void testDeleteProblemNotExists() {
     Problem problem = problemMapper.getProblem(0);
@@ -228,6 +228,6 @@ public class ProblemMapperTest {
     Assertions.assertEquals(0, numberOfRowsAffected);
   }
 
-  /** 待测试的ProblemMapper对象. */
+  /** The ProblemMapper object under test. */
   @Autowired private ProblemMapper problemMapper;
 }

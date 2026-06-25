@@ -29,7 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.verwandlung.voj.judger.model.Checkpoint;
 
 /**
- * CheckpointMapper测试类.
+ * Test class for CheckpointMapper.
  *
  * @author Haozhe Xie
  */
@@ -38,7 +38,8 @@ import org.verwandlung.voj.judger.model.Checkpoint;
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class CheckpointMapperTest {
   /**
-   * 测试用例: 测试getCheckpointsUsingProblemId(long)方法 测试数据: 使用存在的试题唯一标识符(1000) 预期结果: 返回对应的测试点列表(10个项目)
+   * Test case: tests the getCheckpointsUsingProblemId(long) method. Test data: an existing problem
+   * identifier (1000). Expected result: returns the corresponding list of checkpoints (10 items).
    */
   @Test
   public void testGetCheckpointsUsingProblemIdExists() {
@@ -50,13 +51,17 @@ public class CheckpointMapperTest {
     Assertions.assertEquals("45652\r\n", output);
   }
 
-  /** 测试用例: 测试getCheckpointsUsingProblemId(long)方法 测试数据: 使用不存在的试题唯一标识符(0) 预期结果: 返回对应的测试点列表(0个项目) */
+  /**
+   * Test case: tests the getCheckpointsUsingProblemId(long) method. Test data: a non-existent
+   * problem identifier (0). Expected result: returns the corresponding list of checkpoints (0
+   * items).
+   */
   @Test
   public void testGetCheckpointsUsingProblemIdNotExists() {
     List<Checkpoint> checkpoints = checkpointMapper.getCheckpointsUsingProblemId(0);
     Assertions.assertEquals(0, checkpoints.size());
   }
 
-  /** 待测试的CheckpointMapper对象. */
+  /** The CheckpointMapper object under test. */
   @Autowired private CheckpointMapper checkpointMapper;
 }

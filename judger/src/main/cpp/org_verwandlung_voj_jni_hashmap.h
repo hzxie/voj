@@ -37,18 +37,18 @@ class JHashMap {
 };
 
 /**
- * 向JHashMap中存入数值.
- * @param key   - HashMap的Key
- * @param value - HashMap的Value
+ * Stores a value into the JHashMap.
+ * @param key   - the key of the HashMap
+ * @param value - the value of the HashMap
  */
 void JHashMap::put(std::string key, jint value) {
     _hashMap.insert(std::pair<std::string, jint>(key, value));
 }
 
 /**
- * 将C++中的Map转换为Java中的HashMap对象.
- * @param  jniEnv - JNI 运行环境引用
- * @return 对应HashMap对象的jobject对象
+ * Converts a C++ Map into a Java HashMap object.
+ * @param  jniEnv - a reference to the JNI runtime environment
+ * @return the jobject corresponding to the HashMap object
  */
 jobject JHashMap::toJObject(JNIEnv* jniEnv) {
     jclass    mapClass  = jniEnv->FindClass("java/util/HashMap");
@@ -76,10 +76,10 @@ jobject JHashMap::toJObject(JNIEnv* jniEnv) {
 }
 
 /**
- * 将jint转换为java/lang/Integer对象.
- * @param  jniEnv - JNI 运行环境引用
- * @param  value  - 待转换的值
- * @return 对应的java/lang/Integer对象
+ * Converts a jint into a java/lang/Integer object.
+ * @param  jniEnv - a reference to the JNI runtime environment
+ * @param  value  - the value to convert
+ * @return the corresponding java/lang/Integer object
  */
 jobject JHashMap::getJIntegerObject(JNIEnv* jniEnv, jint value) {
     jclass    intClass = jniEnv->FindClass("java/lang/Integer");

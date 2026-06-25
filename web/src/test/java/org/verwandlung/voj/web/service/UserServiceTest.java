@@ -37,10 +37,12 @@ import org.verwandlung.voj.web.model.User;
 import org.verwandlung.voj.web.model.UserGroup;
 
 /**
- * UserService测试类.
+ * The test class for UserService.
  *
- * <p>种子数据: 用户1000 zjhzxhz (管理员, 邮箱cshzxie@gmail.com), 用户1001 voj@judger (评测者, 邮箱support@verwandlung.org),
- * 用户1002 another-user (普通用户, 邮箱noreply@verwandlung.org); 三者密码哈希相同. 用户组: forbidden/users/judgers/administrators.
+ * <p>Seed data: user 1000 zjhzxhz (administrator, email cshzxie@gmail.com), user 1001 voj@judger
+ * (judger, email support@verwandlung.org), user 1002 another-user (regular user, email
+ * noreply@verwandlung.org); all three have the same password hash. User groups:
+ * forbidden/users/judgers/administrators.
  *
  * @author Haozhe Xie
  */
@@ -48,17 +50,17 @@ import org.verwandlung.voj.web.model.UserGroup;
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class UserServiceTest {
-  /** 用户1000的密码哈希 (用于免去明文密码的登录验证). */
+  /** The password hash of user 1000 (used to avoid the plaintext password in login verification). */
   private static final String PASSWORD_HASH = "785ee107c11dfe36de668b1ae7baacbb";
 
-  /** 测试用例: 测试getUserUsingUid(long)方法 测试数据: 存在/不存在的用户标识符 预期结果: 返回对应用户或空引用 */
+  /** Test case: tests the getUserUsingUid(long) method. Test data: an existing / non-existing user identifier. Expected: the corresponding user or a null reference. */
   @Test
   public void testGetUserUsingUid() {
     Assertions.assertNotNull(userService.getUserUsingUid(1000));
     Assertions.assertNull(userService.getUserUsingUid(0));
   }
 
-  /** 测试用例: 测试getUserUsingUsernameOrEmail(String)方法 测试数据: 用户名/邮箱/不存在 预期结果: 返回对应用户或空引用 */
+  /** Test case: tests the getUserUsingUsernameOrEmail(String) method. Test data: a username / email / non-existing value. Expected: the corresponding user or a null reference. */
   @Test
   public void testGetUserUsingUsernameOrEmail() {
     Assertions.assertNotNull(userService.getUserUsingUsernameOrEmail("zjhzxhz"));
@@ -66,7 +68,7 @@ public class UserServiceTest {
     Assertions.assertNull(userService.getUserUsingUsernameOrEmail("nonexistent"));
   }
 
-  /** 测试用例: 测试getUserMetaUsingUid(User)方法 测试数据: 存在元信息的用户/空用户 预期结果: 返回元信息或空Map */
+  /** Test case: tests the getUserMetaUsingUid(User) method. Test data: a user with meta information / a null user. Expected: the meta information or an empty Map. */
   @Test
   public void testGetUserMetaUsingUid() {
     Map<String, Object> userMeta = userService.getUserMetaUsingUid(userService.getUserUsingUid(1000));
@@ -74,33 +76,33 @@ public class UserServiceTest {
     Assertions.assertTrue(userService.getUserMetaUsingUid(null).isEmpty());
   }
 
-  /** 测试用例: 测试getUserGroupUsingSlug(String)方法 测试数据: 存在/不存在的用户组别名 预期结果: 返回用户组或空引用 */
+  /** Test case: tests the getUserGroupUsingSlug(String) method. Test data: an existing / non-existing user group slug. Expected: the user group or a null reference. */
   @Test
   public void testGetUserGroupUsingSlug() {
     Assertions.assertNotNull(userService.getUserGroupUsingSlug("administrators"));
     Assertions.assertNull(userService.getUserGroupUsingSlug("nonexistent"));
   }
 
-  /** 测试用例: 测试getUserGroups()方法 测试数据: N/a 预期结果: 返回全部用户组 */
+  /** Test case: tests the getUserGroups() method. Test data: N/a. Expected: all user groups. */
   @Test
   public void testGetUserGroups() {
     Assertions.assertEquals(4, userService.getUserGroups().size());
   }
 
-  /** 测试用例: 测试getNumberOfUsers(UserGroup)方法 测试数据: users用户组 预期结果: 返回该组用户数量 */
+  /** Test case: tests the getNumberOfUsers(UserGroup) method. Test data: the users user group. Expected: the number of users in this group. */
   @Test
   public void testGetNumberOfUsers() {
     UserGroup userGroup = userService.getUserGroupUsingSlug("users");
     Assertions.assertEquals(1, userService.getNumberOfUsers(userGroup));
   }
 
-  /** 测试用例: 测试getNumberOfUserRegisteredToday()方法 测试数据: 种子数据注册时间均为历史 预期结果: 返回0 */
+  /** Test case: tests the getNumberOfUserRegisteredToday() method. Test data: all seed data register times are in the past. Expected: returns 0. */
   @Test
   public void testGetNumberOfUserRegisteredToday() {
     Assertions.assertEquals(0, userService.getNumberOfUserRegisteredToday());
   }
 
-  /** 测试用例: 测试getNumberOfUsersUsingUserGroupAndUsername(...)方法 测试数据: users用户组+部分用户名 预期结果: 返回匹配数量 */
+  /** Test case: tests the getNumberOfUsersUsingUserGroupAndUsername(...) method. Test data: the users user group + a partial username. Expected: the number of matches. */
   @Test
   public void testGetNumberOfUsersUsingUserGroupAndUsername() {
     UserGroup userGroup = userService.getUserGroupUsingSlug("users");
@@ -108,7 +110,7 @@ public class UserServiceTest {
         1, userService.getNumberOfUsersUsingUserGroupAndUsername(userGroup, "another"));
   }
 
-  /** 测试用例: 测试getUserUsingUserGroupAndUsername(...)方法 测试数据: users用户组+部分用户名 预期结果: 返回匹配用户列表 */
+  /** Test case: tests the getUserUsingUserGroupAndUsername(...) method. Test data: the users user group + a partial username. Expected: the list of matching users. */
   @Test
   public void testGetUserUsingUserGroupAndUsername() {
     UserGroup userGroup = userService.getUserGroupUsingSlug("users");
@@ -116,14 +118,14 @@ public class UserServiceTest {
     Assertions.assertEquals(1, users.size());
   }
 
-  /** 测试用例: 测试getUserUsingUserGroup(...)方法 测试数据: users用户组 预期结果: 返回该组用户列表 */
+  /** Test case: tests the getUserUsingUserGroup(...) method. Test data: the users user group. Expected: the list of users in this group. */
   @Test
   public void testGetUserUsingUserGroup() {
     UserGroup userGroup = userService.getUserGroupUsingSlug("users");
     Assertions.assertEquals(1, userService.getUserUsingUserGroup(userGroup, 0, 10).size());
   }
 
-  /** 测试用例: 测试isAllowedToLogin(...)方法 测试数据: 管理员账户及正确密码 预期结果: 允许登录 */
+  /** Test case: tests the isAllowedToLogin(...) method. Test data: an administrator account with the correct password. Expected: login is allowed. */
   @Test
   public void testIsAllowedToLoginSuccessfully() {
     Map<String, Boolean> result = userService.isAllowedToLogin("zjhzxhz", PASSWORD_HASH);
@@ -131,7 +133,7 @@ public class UserServiceTest {
     Assertions.assertTrue(result.get("isSuccessful"));
   }
 
-  /** 测试用例: 测试isAllowedToLogin(...)方法 测试数据: 评测者账户 (不允许登录的用户组) 预期结果: 账户有效但不允许访问 */
+  /** Test case: tests the isAllowedToLogin(...) method. Test data: a judger account (a user group not allowed to log in). Expected: the account is valid but access is not allowed. */
   @Test
   public void testIsAllowedToLoginWithDisallowedUserGroup() {
     Map<String, Boolean> result =
@@ -141,7 +143,7 @@ public class UserServiceTest {
     Assertions.assertFalse(result.get("isSuccessful"));
   }
 
-  /** 测试用例: 测试isAllowedToLogin(...)方法 测试数据: 错误的密码 预期结果: 账户无效 */
+  /** Test case: tests the isAllowedToLogin(...) method. Test data: a wrong password. Expected: the account is invalid. */
   @Test
   public void testIsAllowedToLoginWithWrongPassword() {
     Map<String, Boolean> result = userService.isAllowedToLogin("zjhzxhz", "wrong-password-hash");
@@ -149,7 +151,7 @@ public class UserServiceTest {
     Assertions.assertFalse(result.get("isSuccessful"));
   }
 
-  /** 测试用例: 测试isAllowedToLogin(...)方法 测试数据: 空用户名 预期结果: 登录失败 */
+  /** Test case: tests the isAllowedToLogin(...) method. Test data: an empty username. Expected: login fails. */
   @Test
   public void testIsAllowedToLoginWithEmptyUsername() {
     Map<String, Boolean> result = userService.isAllowedToLogin("", PASSWORD_HASH);
@@ -157,7 +159,7 @@ public class UserServiceTest {
     Assertions.assertFalse(result.get("isSuccessful"));
   }
 
-  /** 测试用例: 测试createUser(7参数)方法 测试数据: 合法的注册信息 预期结果: 创建成功 */
+  /** Test case: tests the createUser (7-argument) method. Test data: valid registration information. Expected: creation succeeds. */
   @Test
   public void testCreateUserSuccessfully() {
     Map<String, Boolean> result =
@@ -167,7 +169,7 @@ public class UserServiceTest {
     Assertions.assertNotNull(userService.getUserUsingUsernameOrEmail("newuser01"));
   }
 
-  /** 测试用例: 测试createUser(7参数)方法 测试数据: 用户名已存在 预期结果: 创建失败 */
+  /** Test case: tests the createUser (7-argument) method. Test data: the username already exists. Expected: creation fails. */
   @Test
   public void testCreateUserWithExistingUsername() {
     Map<String, Boolean> result =
@@ -177,7 +179,7 @@ public class UserServiceTest {
     Assertions.assertFalse(result.get("isSuccessful"));
   }
 
-  /** 测试用例: 测试createUser(7参数)方法 测试数据: 非法的用户名 预期结果: 创建失败 */
+  /** Test case: tests the createUser (7-argument) method. Test data: an illegal username. Expected: creation fails. */
   @Test
   public void testCreateUserWithIllegalUsername() {
     Map<String, Boolean> result =
@@ -187,7 +189,7 @@ public class UserServiceTest {
     Assertions.assertFalse(result.get("isSuccessful"));
   }
 
-  /** 测试用例: 测试createUser(7参数)方法 测试数据: 邮箱已存在 预期结果: 创建失败 */
+  /** Test case: tests the createUser (7-argument) method. Test data: the email already exists. Expected: creation fails. */
   @Test
   public void testCreateUserWithExistingEmail() {
     Map<String, Boolean> result =
@@ -197,7 +199,7 @@ public class UserServiceTest {
     Assertions.assertFalse(result.get("isSuccessful"));
   }
 
-  /** 测试用例: 测试createUser(7参数)方法 测试数据: 系统不允许注册 预期结果: 创建失败 */
+  /** Test case: tests the createUser (7-argument) method. Test data: the system does not allow registration. Expected: creation fails. */
   @Test
   public void testCreateUserWhenRegisterDisallowed() {
     Map<String, Boolean> result =
@@ -207,7 +209,7 @@ public class UserServiceTest {
     Assertions.assertFalse(result.get("isSuccessful"));
   }
 
-  /** 测试用例: 测试createUser(5参数, 管理员)方法 测试数据: 合法的信息 预期结果: 创建成功 */
+  /** Test case: tests the createUser (5-argument, administrator) method. Test data: valid information. Expected: creation succeeds. */
   @Test
   public void testCreateUserByAdministrator() {
     Map<String, Boolean> result =
@@ -216,7 +218,7 @@ public class UserServiceTest {
     Assertions.assertTrue(result.get("isSuccessful"));
   }
 
-  /** 测试用例: 测试changePreferLanguage(...)方法 测试数据: 合法/非法的语言别名 预期结果: 对应成功或失败 */
+  /** Test case: tests the changePreferLanguage(...) method. Test data: a legal / illegal language slug. Expected: success or failure accordingly. */
   @Test
   public void testChangePreferLanguage() {
     User user = userService.getUserUsingUid(1000);
@@ -224,7 +226,7 @@ public class UserServiceTest {
     Assertions.assertFalse(userService.changePreferLanguage(user, "no-lang").get("isSuccessful"));
   }
 
-  /** 测试用例: 测试changePassword(...)方法 测试数据: 旧密码留空 (视为正确) 且新密码合法 预期结果: 修改成功 */
+  /** Test case: tests the changePassword(...) method. Test data: the old password is left empty (treated as correct) and the new password is valid. Expected: the change succeeds. */
   @Test
   public void testChangePasswordSuccessfully() {
     User user = userService.getUserUsingUid(1000);
@@ -232,7 +234,7 @@ public class UserServiceTest {
     Assertions.assertTrue(result.get("isSuccessful"));
   }
 
-  /** 测试用例: 测试changePassword(...)方法 测试数据: 旧密码错误 预期结果: 修改失败 */
+  /** Test case: tests the changePassword(...) method. Test data: the old password is wrong. Expected: the change fails. */
   @Test
   public void testChangePasswordWithWrongOldPassword() {
     User user = userService.getUserUsingUid(1000);
@@ -242,7 +244,7 @@ public class UserServiceTest {
     Assertions.assertFalse(result.get("isSuccessful"));
   }
 
-  /** 测试用例: 测试changePassword(...)方法 测试数据: 两次新密码不一致 预期结果: 修改失败 */
+  /** Test case: tests the changePassword(...) method. Test data: the two new passwords do not match. Expected: the change fails. */
   @Test
   public void testChangePasswordWithMismatchedConfirmPassword() {
     User user = userService.getUserUsingUid(1000);
@@ -252,7 +254,7 @@ public class UserServiceTest {
     Assertions.assertFalse(result.get("isSuccessful"));
   }
 
-  /** 测试用例: 测试updateProfile(个人资料)方法 测试数据: 合法的个人资料 预期结果: 更新成功 */
+  /** Test case: tests the updateProfile (profile) method. Test data: a valid profile. Expected: the update succeeds. */
   @Test
   public void testUpdateProfileSuccessfully() {
     User user = userService.getUserUsingUid(1000);
@@ -262,7 +264,7 @@ public class UserServiceTest {
     Assertions.assertTrue(result.get("isSuccessful"));
   }
 
-  /** 测试用例: 测试updateProfile(个人资料)方法 测试数据: 邮箱已被其他用户占用 预期结果: 更新失败 */
+  /** Test case: tests the updateProfile (profile) method. Test data: the email is already taken by another user. Expected: the update fails. */
   @Test
   public void testUpdateProfileWithExistingEmail() {
     User user = userService.getUserUsingUid(1000);
@@ -273,7 +275,7 @@ public class UserServiceTest {
     Assertions.assertFalse(result.get("isSuccessful"));
   }
 
-  /** 测试用例: 测试updateProfile(个人资料)方法 测试数据: 非法的个人主页地址 预期结果: 更新失败 */
+  /** Test case: tests the updateProfile (profile) method. Test data: an illegal homepage address. Expected: the update fails. */
   @Test
   public void testUpdateProfileWithIllegalWebsite() {
     User user = userService.getUserUsingUid(1000);
@@ -283,7 +285,7 @@ public class UserServiceTest {
     Assertions.assertFalse(result.get("isSuccessful"));
   }
 
-  /** 测试用例: 测试updateProfile(管理员)方法 测试数据: 合法的密码/用户组/语言 预期结果: 更新成功 */
+  /** Test case: tests the updateProfile (administrator) method. Test data: a valid password / user group / language. Expected: the update succeeds. */
   @Test
   public void testUpdateProfileByAdministratorSuccessfully() {
     User user = userService.getUserUsingUid(1002);
@@ -292,7 +294,7 @@ public class UserServiceTest {
     Assertions.assertTrue(result.get("isSuccessful"));
   }
 
-  /** 测试用例: 测试updateProfile(管理员)方法 测试数据: 不存在的用户组 预期结果: 更新失败 */
+  /** Test case: tests the updateProfile (administrator) method. Test data: a non-existing user group. Expected: the update fails. */
   @Test
   public void testUpdateProfileByAdministratorWithIllegalUserGroup() {
     User user = userService.getUserUsingUid(1002);
@@ -302,10 +304,11 @@ public class UserServiceTest {
     Assertions.assertFalse(result.get("isSuccessful"));
   }
 
-  /** 测试用例: 测试isEmailValidationValid(...)方法 测试数据: 有效的验证凭据 预期结果: 返回true */
+  /** Test case: tests the isEmailValidationValid(...) method. Test data: valid validation credentials. Expected: returns true. */
   @Test
   public void testIsEmailValidationValid() {
-    // voj_email_validation.email 外键引用真实用户邮箱; 使用尚无验证凭据的用户1002邮箱.
+    // voj_email_validation.email is a foreign key referencing a real user email; use the email of
+    // user 1002, who has no validation credentials yet.
     emailValidationMapper.createEmailValidation(
         new EmailValidation("noreply@verwandlung.org", "valid-token", tomorrow()));
     Assertions.assertTrue(
@@ -314,13 +317,13 @@ public class UserServiceTest {
         userService.isEmailValidationValid("noreply@verwandlung.org", "wrong-token"));
   }
 
-  /** 测试用例: 测试isEmailValidationValid(...)方法 测试数据: 不存在的验证凭据 预期结果: 返回false */
+  /** Test case: tests the isEmailValidationValid(...) method. Test data: non-existing validation credentials. Expected: returns false. */
   @Test
   public void testIsEmailValidationValidWhenNotExists() {
     Assertions.assertFalse(userService.isEmailValidationValid("nobody@example.com", "token"));
   }
 
-  /** 测试用例: 测试resetPassword(...)方法 测试数据: 有效凭据且新密码合法一致 预期结果: 重置成功 */
+  /** Test case: tests the resetPassword(...) method. Test data: valid credentials and a valid, matching new password. Expected: the reset succeeds. */
   @Test
   public void testResetPasswordSuccessfully() {
     emailValidationMapper.createEmailValidation(
@@ -331,7 +334,7 @@ public class UserServiceTest {
     Assertions.assertTrue(result.get("isSuccessful"));
   }
 
-  /** 测试用例: 测试resetPassword(...)方法 测试数据: 无效的验证凭据 预期结果: 重置失败 */
+  /** Test case: tests the resetPassword(...) method. Test data: invalid validation credentials. Expected: the reset fails. */
   @Test
   public void testResetPasswordWithInvalidToken() {
     Map<String, Boolean> result =
@@ -341,7 +344,7 @@ public class UserServiceTest {
     Assertions.assertFalse(result.get("isSuccessful"));
   }
 
-  /** 测试用例: 测试sendVerificationEmail(...)方法 测试数据: CSRF令牌无效 预期结果: 不发送邮件且失败 */
+  /** Test case: tests the sendVerificationEmail(...) method. Test data: an invalid CSRF token. Expected: no email is sent and it fails. */
   @Test
   public void testSendVerificationEmailWithInvalidCsrfToken() {
     Map<String, Boolean> result =
@@ -350,7 +353,7 @@ public class UserServiceTest {
     Assertions.assertFalse(result.get("isSuccessful"));
   }
 
-  /** 测试用例: 测试sendVerificationEmail(...)方法 测试数据: 用户名与邮箱不匹配 预期结果: 用户不存在且失败 */
+  /** Test case: tests the sendVerificationEmail(...) method. Test data: the username and email do not match. Expected: the user does not exist and it fails. */
   @Test
   public void testSendVerificationEmailWithMismatchedEmail() {
     Map<String, Boolean> result =
@@ -359,10 +362,11 @@ public class UserServiceTest {
     Assertions.assertFalse(result.get("isSuccessful"));
   }
 
-  /** 测试用例: 测试deleteUser(long)方法 测试数据: 无关联数据的用户 预期结果: 用户被删除 */
+  /** Test case: tests the deleteUser(long) method. Test data: a user with no associated data. Expected: the user is deleted. */
   @Test
   public void testDeleteUser() {
-    // 通过Mapper直接插入一个没有任何关联数据 (提交记录/元信息等) 的用户, 以避免外键约束.
+    // Insert a user with no associated data (submission records, meta information, etc.) directly
+    // through the Mapper, to avoid foreign-key constraints.
     UserGroup userGroup = userService.getUserGroupUsingSlug("users");
     Language language = new Language();
     language.setLanguageId(1);
@@ -374,19 +378,19 @@ public class UserServiceTest {
     Assertions.assertNull(userService.getUserUsingUid(user.getUid()));
   }
 
-  /** 返回明天此刻的时间, 用于构造未过期的邮箱验证凭据. */
+  /** Returns the time at this moment tomorrow, used to construct non-expired email validation credentials. */
   private Date tomorrow() {
     Calendar calendar = Calendar.getInstance();
     calendar.add(Calendar.DATE, 1);
     return calendar.getTime();
   }
 
-  /** 待测试的UserService对象. */
+  /** The UserService object under test. */
   @Autowired private UserService userService;
 
-  /** 用于在测试事务内构造无关联用户数据的Mapper. */
+  /** The Mapper used to construct unassociated user data within the test transaction. */
   @Autowired private UserMapper userMapper;
 
-  /** 用于在测试事务内构造邮箱验证凭据的Mapper. */
+  /** The Mapper used to construct email validation credentials within the test transaction. */
   @Autowired private EmailValidationMapper emailValidationMapper;
 }

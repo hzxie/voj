@@ -27,7 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.verwandlung.voj.web.model.JudgeResult;
 
 /**
- * JudgeResultMapper测试类.
+ * The test class for JudgeResultMapper.
  *
  * @author Haozhe Xie
  */
@@ -36,8 +36,9 @@ import org.verwandlung.voj.web.model.JudgeResult;
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class JudgeResultMapperTest {
   /**
-   * 测试用例: 测试getJudgeResultUsingId(int)方法 测试数据: Accept评测结果(JudgeResult)的评测结果组唯一标识符 预期结果:
-   * 返回评测结果(JudgeResult)的评测结果组对象
+   * Test case: tests the getJudgeResultUsingId(int) method. Test data: the unique identifier of the
+   * Accepted judge result (JudgeResult). Expected: the corresponding judge result (JudgeResult)
+   * object.
    */
   @Test
   public void testGetJudgeResultUsingIdExists() {
@@ -48,7 +49,7 @@ public class JudgeResultMapperTest {
     Assertions.assertEquals("AC", judgeResultSlug);
   }
 
-  /** 测试用例: 测试getJudgeResultUsingId(int)方法 测试数据: 不存在的评测结果组唯一标识符 预期结果: 返回空引用 */
+  /** Test case: tests the getJudgeResultUsingId(int) method. Test data: a non-existing judge result unique identifier. Expected: a null reference. */
   @Test
   public void testGetJudgeResultUsingIdNotExists() {
     JudgeResult judgeResult = judgeResultMapper.getJudgeResultUsingId(0);
@@ -56,8 +57,8 @@ public class JudgeResultMapperTest {
   }
 
   /**
-   * 测试用例: 测试getJudgeResultUsingSlug(String)方法 测试数据: 普通评测结果(JudgeResult)的评测结果组别名 预期结果:
-   * 返回评测结果(JudgeResult)的评测结果组对象
+   * Test case: tests the getJudgeResultUsingSlug(String) method. Test data: the slug of a normal
+   * judge result (JudgeResult). Expected: the corresponding judge result (JudgeResult) object.
    */
   @Test
   public void testGetJudgeResultUsingSlugExists() {
@@ -68,13 +69,13 @@ public class JudgeResultMapperTest {
     Assertions.assertEquals(2, judgeResultId);
   }
 
-  /** 测试用例: 测试getJudgeResultUsingSlug(String)方法 测试数据: 不存在的评测结果组别名 预期结果: 返回空引用 */
+  /** Test case: tests the getJudgeResultUsingSlug(String) method. Test data: a non-existing judge result slug. Expected: a null reference. */
   @Test
   public void testGetJudgeResultUsingSlugNotExists() {
     JudgeResult judgeResult = judgeResultMapper.getJudgeResultUsingSlug("Not-Exists");
     Assertions.assertNull(judgeResult);
   }
 
-  /** 待测试的JudgeResultMapper对象. */
+  /** The JudgeResultMapper object under test. */
   @Autowired private JudgeResultMapper judgeResultMapper;
 }

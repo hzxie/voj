@@ -30,62 +30,63 @@ import org.verwandlung.voj.web.model.UserGroup;
  */
 public interface UserMapper {
   /**
-   * [此方法仅供管理员使用] 获取系统中某个用户组中用户的总数.
+   * [For administrators only] Gets the total number of users in a user group in the system.
    *
-   * @param userGroup - 用户所属的用户组对象
-   * @return 系统中某个用户组中用户的总数
+   * @param userGroup - the user group object the users belong to
+   * @return the total number of users in the user group in the system
    */
   long getNumberOfUsersUsingUserGroup(@Param("userGroup") UserGroup userGroup);
 
   /**
-   * [此方法仅供管理员使用] 使用用户组和用户名获取符合条件的用户的总数.
+   * [For administrators only] Gets the total number of matching users by user group and username.
    *
-   * @param userGroup - 用户组对象
-   * @param username - 部分或全部用户名
-   * @return 某个用户组中用户名中包含某个字符串的用户的总数
+   * @param userGroup - the user group object
+   * @param username - part or all of the username
+   * @return the total number of users in the user group whose username contains the given string
    */
   long getNumberOfUsersUsingUserGroupAndUsername(
       @Param("userGroup") UserGroup userGroup, @Param("username") String username);
 
   /**
-   * [此方法仅供管理员使用] 获取选取某个语言偏好设置的用户总数.
+   * [For administrators only] Gets the total number of users who selected a certain preferred
+   * language.
    *
-   * @param languageId - 编程语言的唯一标识符
-   * @return 选取某个语言偏好设置的用户总数
+   * @param languageId - the unique identifier of the programming language
+   * @return the total number of users who selected the preferred language
    */
   long getNumberOfUsersUsingLanguage(@Param("languageId") int languageId);
 
   /**
-   * 通过用户唯一标识符获取用户对象.
+   * Gets a user object by its unique identifier.
    *
-   * @param uid - 用户唯一标识符
-   * @return 预期的用户对象或空引用
+   * @param uid - the unique identifier of the user
+   * @return the expected user object, or a null reference
    */
   User getUserUsingUid(@Param("uid") long uid);
 
   /**
-   * 通过用户名获取用户对象.
+   * Gets a user object by username.
    *
-   * @param username - 用户名
-   * @return 预期的用户对象或空引用
+   * @param username - the username
+   * @return the expected user object, or a null reference
    */
   User getUserUsingUsername(@Param("username") String username);
 
   /**
-   * 通过电子邮件地址获取用户对象.
+   * Gets a user object by email address.
    *
-   * @param email - 电子邮件地址
-   * @return 预期的用户对象或空引用
+   * @param email - the email address
+   * @return the expected user object, or a null reference
    */
   User getUserUsingEmail(@Param("email") String email);
 
   /**
-   * 获取某个用户组中的用户列表.
+   * Gets the list of users in a user group.
    *
-   * @param userGroup - 用户所属的用户组对象
-   * @param offset - 用户唯一标识符的起始编号
-   * @param limit - 需要获取的用户的数量
-   * @return 符合条件的用户列表
+   * @param userGroup - the user group object the users belong to
+   * @param offset - the starting number of the user identifier
+   * @param limit - the number of users to fetch
+   * @return the list of matching users
    */
   List<User> getUserUsingUserGroup(
       @Param("userGroup") UserGroup userGroup,
@@ -93,13 +94,13 @@ public interface UserMapper {
       @Param("limit") int limit);
 
   /**
-   * [此方法仅供管理员使用] 根据用户组和用户名筛选用户对象.
+   * [For administrators only] Filters user objects by user group and username.
    *
-   * @param userGroup - 用户组对象
-   * @param username - 部分或全部用户名
-   * @param offset - 用户唯一标识符的起始编号
-   * @param limit - 需要获取的用户的数量
-   * @return 符合条件的用户列表
+   * @param userGroup - the user group object
+   * @param username - part or all of the username
+   * @param offset - the starting number of the user identifier
+   * @param limit - the number of users to fetch
+   * @return the list of matching users
    */
   List<User> getUserUsingUserGroupAndUsername(
       @Param("userGroup") UserGroup userGroup,
@@ -108,23 +109,23 @@ public interface UserMapper {
       @Param("limit") int limit);
 
   /**
-   * 创建新用户对象.
+   * Creates a new user object.
    *
-   * @param user - 待创建的用户对象
+   * @param user - the user object to create
    */
   int createUser(User user);
 
   /**
-   * 更新用户对象.
+   * Updates a user object.
    *
-   * @param user - 待更新信息的用户对象
+   * @param user - the user object whose information is to be updated
    */
   int updateUser(User user);
 
   /**
-   * 删除用户对象.
+   * Deletes a user object.
    *
-   * @param uid - 待删除用户的用户唯一标识符
+   * @param uid - the unique identifier of the user to delete
    */
   int deleteUser(@Param("uid") long uid);
 }

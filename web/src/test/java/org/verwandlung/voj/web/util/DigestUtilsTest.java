@@ -20,12 +20,12 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 /**
- * DigestUtils的测试类.
+ * The test class for DigestUtils.
  *
  * @author Haozhe Xie
  */
 public class DigestUtilsTest {
-  /** 测试用例: 测试md5Hex方法 测试数据: 有效的密码 测试用例: 返回MD5加密后的密码 */
+  /** Test case: tests the md5Hex method. Test data: a valid password. Expected: the MD5-encrypted password. */
   @Test
   public void testMd5HexCase1() {
     String password = "zjhzxhz";
@@ -35,7 +35,7 @@ public class DigestUtilsTest {
     Assertions.assertEquals(expectedValue, runtimeValue);
   }
 
-  /** 测试用例: 测试md5Hex方法 测试数据: 有效的密码 测试用例: 返回MD5加密后的密码 */
+  /** Test case: tests the md5Hex method. Test data: a valid password. Expected: the MD5-encrypted password. */
   @Test
   public void testMd5HexCase2() {
     String password = "meigaofei0926";
@@ -45,7 +45,7 @@ public class DigestUtilsTest {
     Assertions.assertEquals(expectedValue, runtimeValue);
   }
 
-  /** 测试用例: 测试md5Hex方法 测试数据: 空密码 测试用例: 返回空字符串 */
+  /** Test case: tests the md5Hex method. Test data: an empty password. Expected: an empty string. */
   @Test
   public void testMd5HexEmpty() {
     String password = "";

@@ -40,7 +40,8 @@ import org.verwandlung.voj.web.service.UserService;
 import org.verwandlung.voj.web.util.LocaleUtils;
 
 /**
- * 视图的切面类. 在加载页面前加载已登录用户的个人信息及答题情况.
+ * The aspect class of the views. Loads the profile information and answering status of the
+ * logged-in user before loading the page.
  *
  * @author Haozhe Xie
  */
@@ -48,13 +49,13 @@ import org.verwandlung.voj.web.util.LocaleUtils;
 @Component
 public class ViewAspect {
   /**
-   * 加载已登录用户的个人信息及答题情况.
+   * Loads the profile information and answering status of the logged-in user.
    *
-   * @param proceedingJoinPoint - ProceedingJoinPoint对象
-   * @param request - HttpRequest对象
-   * @param response - HttpResponse对象
-   * @return 一个包含预期视图的ModelAndView对象
-   * @throws Throwable - ResourceNotFound异常
+   * @param proceedingJoinPoint - the ProceedingJoinPoint object
+   * @param request - the HttpRequest object
+   * @param response - the HttpResponse object
+   * @return a ModelAndView object containing the expected view
+   * @throws Throwable - the ResourceNotFound exception
    */
   @Around(
       value =
@@ -87,10 +88,10 @@ public class ViewAspect {
   }
 
   /**
-   * 检查用户是否已经登录.
+   * Checks whether the user has logged in.
    *
-   * @param session - HttpSession 对象
-   * @return 用户是否已经登录
+   * @param session - the HttpSession object
+   * @return whether the user has logged in
    */
   private boolean isLoggedIn(HttpSession session) {
     Boolean isLoggedIn = (Boolean) session.getAttribute("isLoggedIn");
@@ -101,9 +102,9 @@ public class ViewAspect {
   }
 
   /**
-   * 加载系统定义的选项(Option).
+   * Loads the system-defined options (Option).
    *
-   * @return 包含系统定义选项的键值对列表
+   * @return a list of key-value pairs containing the system-defined options
    */
   private Map<String, String> getSystemOptions() {
     List<Option> options = optionService.getAutoloadOptions();
@@ -118,11 +119,11 @@ public class ViewAspect {
   }
 
   /**
-   * 获取当前用户的显示语言.
+   * Gets the display language of the current user.
    *
-   * @param request - HttpRequest对象
-   * @param response - HttpResponse对象
-   * @return 当前用户显示语言的别名
+   * @param request - the HttpRequest object
+   * @param response - the HttpResponse object
+   * @return the slug of the display language of the current user
    */
   private String getUserLanguage(HttpServletRequest request, HttpServletResponse response) {
     HttpSession session = request.getSession();
@@ -137,11 +138,12 @@ public class ViewAspect {
   }
 
   /**
-   * 根据用户浏览器语言和系统支持的语言推荐默认语言.
+   * Recommends the default language based on the user's browser language and the languages supported
+   * by the system.
    *
-   * @param request - HttpRequest对象
-   * @param response - HttpResponse对象
-   * @return 推荐语言的代码(例如zh_CN)
+   * @param request - the HttpRequest object
+   * @param response - the HttpResponse object
+   * @return the code of the recommended language (e.g. zh_CN)
    */
   private String getPreferNaturalLanguage(
       HttpServletRequest request, HttpServletResponse response) {
@@ -159,22 +161,22 @@ public class ViewAspect {
   }
 
   /**
-   * 根据浏览器语言获取用户所在地区.
+   * Gets the user's locale based on the browser language.
    *
-   * @param request - HttpRequest对象
-   * @return 一个包含用户所在地区信息的Locale对象
+   * @param request - the HttpRequest object
+   * @return a Locale object containing the user's locale information
    */
   private Locale getBrowserLocale(HttpServletRequest request) {
     Locale locale = request.getLocale();
     return locale;
   }
 
-  /** 自动注入的UserService对象. */
+  /** The autowired UserService object. */
   @Autowired private UserService userService;
 
-  /** 自动注入的SubmissionService对象. */
+  /** The autowired SubmissionService object. */
   @Autowired private SubmissionService submissionService;
 
-  /** 自动注入的OptionService对象. */
+  /** The autowired OptionService object. */
   @Autowired private OptionService optionService;
 }

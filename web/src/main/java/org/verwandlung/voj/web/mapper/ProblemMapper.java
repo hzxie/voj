@@ -29,19 +29,19 @@ import org.verwandlung.voj.web.model.Problem;
  */
 public interface ProblemMapper {
   /**
-   * [此方法仅供管理员使用] 获取全部试题的总数量.
+   * [For administrators only] Gets the total number of all problems.
    *
-   * @return 全部试题的总数量
+   * @return the total number of all problems
    */
   long getNumberOfProblems();
 
   /**
-   * 根据筛选条件获取试题的总数量.
+   * Gets the total number of problems matching the filter conditions.
    *
-   * @param keyword - 关键词
-   * @param problemCategoryId - 试题分类的唯一标识符
-   * @param isPublicOnly - 是否只筛选公开试题
-   * @return 符合筛选条件试题的总数量
+   * @param keyword - the keyword
+   * @param problemCategoryId - the unique identifier of the problem category
+   * @param isPublicOnly - whether to filter only public problems
+   * @return the total number of problems matching the filter conditions
    */
   long getNumberOfProblemsUsingFilters(
       @Param("keyword") String keyword,
@@ -49,26 +49,26 @@ public interface ProblemMapper {
       @Param("isPublicOnly") boolean isPublicOnly);
 
   /**
-   * 获取第一个试题的ID.
+   * Gets the ID of the first problem.
    *
-   * @return 第一个试题的ID
+   * @return the ID of the first problem
    */
   long getLowerBoundOfProblems();
 
   /**
-   * 获取最后一个试题的ID.
+   * Gets the ID of the last problem.
    *
-   * @return 最后一个试题的ID
+   * @return the ID of the last problem
    */
   long getUpperBoundOfProblems();
 
   /**
-   * 获取某个试题区间内最后一个试题的ID.
+   * Gets the ID of the last problem within a problem range.
    *
-   * @param isPublicOnly - 是否只筛选公开试题
-   * @param offset - 试题唯一标识符的起始编号
-   * @param limit - 需要获取的试题的数量
-   * @return 某个试题区间内最后一个试题的ID
+   * @param isPublicOnly - whether to filter only public problems
+   * @param offset - the starting number of the problem identifier
+   * @param limit - the number of problems to fetch
+   * @return the ID of the last problem within the problem range
    */
   long getUpperBoundOfProblemsWithLimit(
       @Param("isPublicOnly") boolean isPublicOnly,
@@ -76,23 +76,23 @@ public interface ProblemMapper {
       @Param("limit") int limit);
 
   /**
-   * 通过试题唯一标识符获取试题对象.
+   * Gets a problem object by its unique identifier.
    *
-   * @param problemId - 试题的唯一标识符
-   * @return 一个试题对象
+   * @param problemId - the unique identifier of the problem
+   * @return a problem object
    */
   Problem getProblem(@Param("problemId") long problemId);
 
   /**
-   * 通过试题唯一标识符和关键字获取某个范围内的所有试题.
+   * Gets all problems within a range by problem identifier and keyword.
    *
-   * @param keyword - 关键词
-   * @param problemCategoryId - 试题分类的唯一标识符
-   * @param problemTagId - 试题标签的唯一标识符
-   * @param isPublicOnly - 是否只筛选公开试题
-   * @param offset - 试题唯一标识符的起始编号
-   * @param limit - 需要获取的试题的数量
-   * @return 某个范围内的符合条件的试题
+   * @param keyword - the keyword
+   * @param problemCategoryId - the unique identifier of the problem category
+   * @param problemTagId - the unique identifier of the problem tag
+   * @param isPublicOnly - whether to filter only public problems
+   * @param offset - the starting number of the problem identifier
+   * @param limit - the number of problems to fetch
+   * @return the matching problems within the range
    */
   List<Problem> getProblemsUsingFilters(
       @Param("keyword") String keyword,
@@ -103,26 +103,26 @@ public interface ProblemMapper {
       @Param("limit") int limit);
 
   /**
-   * 创建一个新的试题对象.
+   * Creates a new problem object.
    *
-   * @param problem - 试题对象
-   * @return 操作是否成功完成
+   * @param problem - the problem object
+   * @return whether the operation completed successfully
    */
   int createProblem(Problem problem);
 
   /**
-   * 更新试题信息.
+   * Updates problem information.
    *
-   * @param problem - 试题对象
-   * @return 操作是否成功完成
+   * @param problem - the problem object
+   * @return whether the operation completed successfully
    */
   int updateProblem(Problem problem);
 
   /**
-   * 通过试题的唯一标识符删除一个试题对象.
+   * Deletes a problem object by its unique identifier.
    *
-   * @param problemId - 试题的唯一标识符
-   * @return 操作是否成功完成
+   * @param problemId - the unique identifier of the problem
+   * @return whether the operation completed successfully
    */
   int deleteProblem(@Param("problemId") long problemId);
 }

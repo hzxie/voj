@@ -30,7 +30,7 @@ import org.verwandlung.voj.web.util.JsonUtils;
 import java.util.*;
 
 /**
- * 竞赛(Contest)的业务逻辑层.
+ * The business logic layer of the contest.
  *
  * @author Haozhe Xie
  */
@@ -38,32 +38,32 @@ import java.util.*;
 @Transactional
 public class ContestService {
   /**
-   * 获取竞赛列表.
+   * Gets the list of contests.
    *
-   * @param keyword - 竞赛的关键词
-   * @param offset - 起始竞赛的游标
-   * @param limit - 获取竞赛的数量
-   * @return 包含Contest的List对象
+   * @param keyword - the keyword of the contest
+   * @param offset - the cursor of the first contest
+   * @param limit - the number of contests to fetch
+   * @return a List object containing Contest objects
    */
   public List<Contest> getContests(String keyword, long offset, int limit) {
     return contestMapper.getContests(keyword, offset, limit);
   }
 
   /**
-   * 通过竞赛的唯一标识符获取竞赛的详细信息.
+   * Gets the detailed information of a contest by its unique identifier.
    *
-   * @param contestId - 竞赛的唯一标识符
-   * @return 包含竞赛信息的Contest对象
+   * @param contestId - the unique identifier of the contest
+   * @return a Contest object containing the contest information
    */
   public Contest getContest(long contestId) {
     return contestMapper.getContest(contestId);
   }
 
   /**
-   * 获取竞赛的试题列表.
+   * Gets the problem list of a contest.
    *
-   * @param problemIdList - 包含竞赛试题ID列表的List对象
-   * @return 包含试题信息的List对象
+   * @param problemIdList - a List object containing the list of contest problem IDs
+   * @return a List object containing the problem information
    */
   public List<Problem> getProblemsOfContests(List<Long> problemIdList) {
     List<Problem> problems = new ArrayList<>();
@@ -78,11 +78,11 @@ public class ContestService {
   }
 
   /**
-   * 获取某竞赛中某个用户各试题的提交记录.
+   * Gets a contestant's submissions for each problem in a contest.
    *
-   * @param contestId - 竞赛的唯一标识符
-   * @param contestant - 参赛者
-   * @return 包含用户提交记录的Map对象, 按试题ID索引
+   * @param contestId - the unique identifier of the contest
+   * @param contestant - the contestant
+   * @return a Map object containing the user's submissions, indexed by problem ID
    */
   public Map<Long, ContestSubmission> getSubmissionsOfContestantOfContest(
       long contestId, User contestant) {
@@ -110,12 +110,12 @@ public class ContestService {
   }
 
   /**
-   * 获取某竞赛中某个用户某试题的提交记录.
+   * Gets a contestant's submissions for a problem in a contest.
    *
-   * @param contest - 竞赛对象
-   * @param problemId - 试题的唯一标识符
-   * @param contestant - 参赛者对象
-   * @return 包含提交记录的List对象
+   * @param contest - the contest object
+   * @param problemId - the unique identifier of the problem
+   * @param contestant - the contestant object
+   * @return a List object containing the submissions
    */
   public List<Submission> getSubmissionsOfContestantOfContestProblem(
       Contest contest, long problemId, User contestant) {
@@ -136,12 +136,13 @@ public class ContestService {
   }
 
   /**
-   * 获取用户在比赛中临时保存的代码 (一般用于保存OI赛制中的代码).
+   * Gets the code a user temporarily saved during a contest (generally used to save code in the OI
+   * mode).
    *
-   * @param contest - 竞赛对象
-   * @param problemId - 试题的唯一标识符
-   * @param contestant - 参赛者对象
-   * @return 包含对应试题的代码
+   * @param contest - the contest object
+   * @param problemId - the unique identifier of the problem
+   * @param contestant - the contestant object
+   * @return the code for the corresponding problem
    */
   public Map<String, String> getCodeSnippetOfContestProblem(
       Contest contest, long problemId, User contestant) {
@@ -165,21 +166,21 @@ public class ContestService {
   }
 
   /**
-   * 获取某竞赛的参赛人数.
+   * Gets the number of contestants of a contest.
    *
-   * @param contestId - 竞赛的唯一标识符
-   * @return 某竞赛的参赛人数
+   * @param contestId - the unique identifier of the contest
+   * @return the number of contestants of the contest
    */
   public long getNumberOfContestantsOfContest(long contestId) {
     return contestContestantMapper.getNumberOfContestantsOfContest(contestId);
   }
 
   /**
-   * 获取某个用户是否加入了某场竞赛.
+   * Gets whether a user has joined a contest.
    *
-   * @param contestId - 竞赛的唯一标识符
-   * @param currentUser - 当前登录的用户对象
-   * @return 某个用户是否加入了某场竞赛
+   * @param contestId - the unique identifier of the contest
+   * @param currentUser - the currently logged-in user object
+   * @return whether the user has joined the contest
    */
   public boolean isAttendContest(long contestId, User currentUser) {
     if (currentUser == null) {
@@ -189,10 +190,10 @@ public class ContestService {
   }
 
   /**
-   * 获取竞赛的当前状态 (未开始/进行中/已结束).
+   * Gets the current status of a contest (not started / in progress / finished).
    *
-   * @param contest - 待查询的竞赛
-   * @return 竞赛的当前状态
+   * @param contest - the contest to query
+   * @return the current status of the contest
    */
   private Contest.CONTEST_STATUS getContestStatus(Contest contest) {
     if (contest == null) {
@@ -212,11 +213,12 @@ public class ContestService {
   }
 
   /**
-   * 参加竞赛.
+   * Joins a contest.
    *
-   * @param contestId - 竞赛的唯一标识符
-   * @param currentUser - 当前登录的用户对象
-   * @return 包含是否成功参加竞赛状态信息的Map对象
+   * @param contestId - the unique identifier of the contest
+   * @param currentUser - the currently logged-in user object
+   * @return a Map object containing the status information of whether the contest was joined
+   *     successfully
    */
   public Map<String, Boolean> attendContest(
       long contestId, User currentUser, boolean isCsrfTokenValid) {
@@ -244,10 +246,10 @@ public class ContestService {
   }
 
   /**
-   * 获取OI赛制的排行榜.
+   * Gets the leaderboard for the OI mode.
    *
-   * @param contestId - 竞赛的唯一标识符
-   * @return 包含参赛者和提交记录信息的Map对象
+   * @param contestId - the unique identifier of the contest
+   * @return a Map object containing the contestant and submission information
    */
   public Map<String, Object> getLeaderBoardForOi(long contestId) {
     Map<String, Object> result = new HashMap<>(3, 1);
@@ -264,10 +266,10 @@ public class ContestService {
   }
 
   /**
-   * 获取ACM赛制的排行榜.
+   * Gets the leaderboard for the ACM mode.
    *
-   * @param contestId - 竞赛的唯一标识符
-   * @return 包含参赛者和提交记录信息的Map对象
+   * @param contestId - the unique identifier of the contest
+   * @return a Map object containing the contestant and submission information
    */
   public Map<String, Object> getLeaderBoardForAcm(long contestId) {
     Contest contest = contestMapper.getContest(contestId);
@@ -279,7 +281,7 @@ public class ContestService {
         getSubmissionsGroupByContestant(
             contestSubmissionMapper.getAcceptedSubmissionsOfContest(contestId), false);
 
-    // 计算罚时
+    // Calculate the penalty time
     for (ContestContestant cc : contestants) {
       long numberOfRejected = cc.getTime();
       long penalty = numberOfRejected * 1200;
@@ -306,9 +308,9 @@ public class ContestService {
   }
 
   /**
-   * 获取参赛者的排名.
+   * Ranks the contestants.
    *
-   * @param contestants - 竞赛参赛者列表
+   * @param contestants - the list of contest contestants
    */
   public void rankingContestants(List<ContestContestant> contestants) {
     int currentRank = 1;
@@ -330,11 +332,12 @@ public class ContestService {
   }
 
   /**
-   * 建立竞赛提交记录的索引 (参赛者UID - 试题ID).
+   * Builds an index of contest submissions (contestant UID - problem ID).
    *
-   * @param contestSubmissions 包含全部竞赛提交记录的列表
-   * @param override - 当同一题出现多次提交时, 是否覆盖已有的提交记录
-   * @return 组织后的竞赛提交记录
+   * @param contestSubmissions the list containing all contest submissions
+   * @param override - whether to override an existing submission when the same problem has multiple
+   *     submissions
+   * @return the organized contest submissions
    */
   private Map<Long, Map<Long, Submission>> getSubmissionsGroupByContestant(
       List<ContestSubmission> contestSubmissions, boolean override) {
@@ -357,15 +360,15 @@ public class ContestService {
     return submissions;
   }
 
-  /** 自动注入的ContestMapper对象. */
+  /** The autowired ContestMapper object. */
   @Autowired private ContestMapper contestMapper;
 
-  /** 自动注入的ContestContestantMapper对象. */
+  /** The autowired ContestContestantMapper object. */
   @Autowired private ContestContestantMapper contestContestantMapper;
 
-  /** 自动注入的ContestSubmissionMapper对象. */
+  /** The autowired ContestSubmissionMapper object. */
   @Autowired private ContestSubmissionMapper contestSubmissionMapper;
 
-  /** 自动注入的ProblemMapper对象. 用于获取竞赛中的试题信息. */
+  /** The autowired ProblemMapper object, used to obtain the problem information in a contest. */
   @Autowired private ProblemMapper problemMapper;
 }

@@ -19,23 +19,23 @@ package org.verwandlung.voj.judger.model;
 import java.io.Serializable;
 
 /**
- * 程序测试点的Model. 对应数据库中的voj_problem_checkpoints数据表.
+ * The model of a checkpoint. Maps to the voj_problem_checkpoints table in the database.
  *
  * @author Haozhe Xie
  */
 public class Checkpoint implements Serializable {
-  /** CheckPoint的默认构造函数. */
+  /** Default constructor of the checkpoint. */
   public Checkpoint() {}
 
   /**
-   * CheckPoint的构造函数.
+   * Constructor of the checkpoint.
    *
-   * @param problemId - 试题的唯一标识符
-   * @param checkpointId - 测试点的唯一标识符
-   * @param isExactlyMatch - 是否精确匹配测试点
-   * @param score - 测试点的分值
-   * @param input - 测试点的标准输入
-   * @param output - 测试点的标准输出
+   * @param problemId - the unique identifier of the problem
+   * @param checkpointId - the unique identifier of the checkpoint
+   * @param isExactlyMatch - whether the checkpoint requires an exact match
+   * @param score - the score of the checkpoint
+   * @param input - the standard input of the checkpoint
+   * @param output - the standard output of the checkpoint
    */
   public Checkpoint(
       long problemId,
@@ -53,108 +53,108 @@ public class Checkpoint implements Serializable {
   }
 
   /**
-   * 获取试题的唯一标识符.
+   * Gets the unique identifier of the problem.
    *
-   * @return 试题的唯一标识符
+   * @return the unique identifier of the problem
    */
   public long getProblemId() {
     return problemId;
   }
 
   /**
-   * 设置试题的唯一标识符.
+   * Sets the unique identifier of the problem.
    *
-   * @param problemId - 试题的唯一标识符
+   * @param problemId - the unique identifier of the problem
    */
   public void setProblemId(long problemId) {
     this.problemId = problemId;
   }
 
   /**
-   * 获取测试点的唯一标识符.
+   * Gets the unique identifier of the checkpoint.
    *
-   * @return 测试点的唯一标识符
+   * @return the unique identifier of the checkpoint
    */
   public int getCheckpointId() {
     return checkpointId;
   }
 
   /**
-   * 设置测试点的唯一标识符.
+   * Sets the unique identifier of the checkpoint.
    *
-   * @param checkpointId - 测试点的唯一标识符
+   * @param checkpointId - the unique identifier of the checkpoint
    */
   public void setCheckpointId(int checkpointId) {
     this.checkpointId = checkpointId;
   }
 
   /**
-   * 获取是否精确匹配测试点.
+   * Gets whether the checkpoint requires an exact match.
    *
-   * @return 是否精确匹配测试点
+   * @return whether the checkpoint requires an exact match
    */
   public boolean isExactlyMatch() {
     return isExactlyMatch;
   }
 
   /**
-   * 设置精确匹配测试点.
+   * Sets whether the checkpoint requires an exact match.
    *
-   * @param isExactlyMatch - 是否精确匹配测试点
+   * @param isExactlyMatch - whether the checkpoint requires an exact match
    */
   public void setExactlyMatch(boolean isExactlyMatch) {
     this.isExactlyMatch = isExactlyMatch;
   }
 
   /**
-   * 获取测试点的分值.
+   * Gets the score of the checkpoint.
    *
-   * @return 测试点的分值
+   * @return the score of the checkpoint
    */
   public int getScore() {
     return score;
   }
 
   /**
-   * 设置测试点的分值.
+   * Sets the score of the checkpoint.
    *
-   * @param score - 测试点的分值
+   * @param score - the score of the checkpoint
    */
   public void setScore(int score) {
     this.score = score;
   }
 
   /**
-   * 获取测试点的输入.
+   * Gets the input of the checkpoint.
    *
-   * @return 测试点的输入
+   * @return the input of the checkpoint
    */
   public String getInput() {
     return input;
   }
 
   /**
-   * 设置测试点的输入.
+   * Sets the input of the checkpoint.
    *
-   * @param input - 测试点的输入
+   * @param input - the input of the checkpoint
    */
   public void setInput(String input) {
     this.input = input;
   }
 
   /**
-   * 获取测试点的输出.
+   * Gets the output of the checkpoint.
    *
-   * @return 测试点的输出
+   * @return the output of the checkpoint
    */
   public String getOutput() {
     return output;
   }
 
   /**
-   * 设置测试点的输出.
+   * Sets the output of the checkpoint.
    *
-   * @param output - 测试点的输出
+   * @param output - the output of the checkpoint
    */
   public void setOutput(String output) {
     this.output = output;
@@ -169,24 +169,24 @@ public class Checkpoint implements Serializable {
         new Object[] {problemId, checkpointId, score});
   }
 
-  /** 试题的唯一标识符. */
+  /** The unique identifier of the problem. */
   private long problemId;
 
-  /** 测试点的唯一标识符. */
+  /** The unique identifier of the checkpoint. */
   private int checkpointId;
 
-  /** 是否精确匹配测试点. */
+  /** Whether the checkpoint requires an exact match. */
   private boolean isExactlyMatch;
 
-  /** 测试点分值. */
+  /** The score of the checkpoint. */
   private int score;
 
-  /** 测试点的标准输入. */
+  /** The standard input of the checkpoint. */
   private String input;
 
-  /** 测试点的标准输出. */
+  /** The standard output of the checkpoint. */
   private String output;
 
-  /** 唯一的序列化标识符. */
+  /** The unique serialization identifier. */
   private static final long serialVersionUID = -8129670699537187948L;
 }

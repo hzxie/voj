@@ -24,10 +24,10 @@ import org.springframework.boot.web.servlet.support.SpringBootServletInitializer
 import org.springframework.context.annotation.PropertySource;
 
 /**
- * Verwandlung Online Judge 的 Web 应用程序入口.
+ * The entry point of the web application of Verwandlung Online Judge.
  *
- * <p>该应用打包为可执行 WAR: 既能通过 {@code java -jar voj.web.war} 独立运行(内嵌 Tomcat),
- * 也能部署到外部的 Servlet 容器中.
+ * <p>The application is packaged as an executable WAR: it can run standalone via {@code java -jar
+ * voj.web.war} (with embedded Tomcat), and can also be deployed to an external Servlet container.
  *
  * @author Haozhe Xie
  */
@@ -35,13 +35,14 @@ import org.springframework.context.annotation.PropertySource;
 @MapperScan("org.verwandlung.voj.web.mapper")
 @PropertySource("classpath:voj.properties")
 public class VojWebApplication extends SpringBootServletInitializer {
-  /** 应用程序入口. */
+  /** The entry point of the application. */
   public static void main(String[] args) {
     SpringApplication.run(VojWebApplication.class, args);
   }
 
   /* (non-Javadoc)
-   * 当部署到外部 Servlet 容器时, 由容器调用此方法装配应用.
+   * When deployed to an external Servlet container, this method is invoked by the container to
+   * assemble the application.
    */
   @Override
   protected SpringApplicationBuilder configure(SpringApplicationBuilder builder) {

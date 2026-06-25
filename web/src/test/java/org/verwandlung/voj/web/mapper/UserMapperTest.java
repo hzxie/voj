@@ -32,7 +32,7 @@ import org.verwandlung.voj.web.model.User;
 import org.verwandlung.voj.web.model.UserGroup;
 
 /**
- * UserMapper测试类.
+ * The test class for UserMapper.
  *
  * @author Haozhe Xie
  */
@@ -40,7 +40,7 @@ import org.verwandlung.voj.web.model.UserGroup;
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class UserMapperTest {
-  /** 测试用例: 测试getNumberOfUsers(UserGroup)方法 测试数据: 使用用户(Users)的用户组 预期结果: 返回该用户组中用户的数量 */
+  /** Test case: tests the getNumberOfUsersUsingUserGroup(UserGroup) method. Test data: the Users user group. Expected: the number of users in this user group. */
   @Test
   public void testGetNumberOfUsers() {
     UserGroup userGroup = new UserGroup(2, "users", "Users");
@@ -49,7 +49,7 @@ public class UserMapperTest {
     Assertions.assertEquals(1, totalUsers);
   }
 
-  /** 测试用例: 测试getNumberOfUsersUsingLanguage(int)方法 测试数据: 使用C++语言的唯一标识符 预期结果: 返回使用C++作为偏好语言的用户数量() */
+  /** Test case: tests the getNumberOfUsersUsingLanguage(int) method. Test data: the unique identifier of the C++ language. Expected: the number of users using C++ as their preferred language. */
   @Test
   public void testGetNumberOfUsersUsingLanguage() {
     int languageId = 2;
@@ -57,7 +57,7 @@ public class UserMapperTest {
     Assertions.assertEquals(2, totalUsers);
   }
 
-  /** 测试用例: 测试getUserUsingUid(long)方法 测试数据: 使用用户名为zjhzxhz的用户的唯一标识符 预期结果: 返回预期的用户对象 */
+  /** Test case: tests the getUserUsingUid(long) method. Test data: the unique identifier of the user with username zjhzxhz. Expected: the expected user object. */
   @Test
   public void testGetUserUsingUidExists() {
     User user = userMapper.getUserUsingUid(1000);
@@ -67,14 +67,14 @@ public class UserMapperTest {
     Assertions.assertEquals("zjhzxhz", username);
   }
 
-  /** 测试用例: 测试getUserUsingUid(long)方法 测试数据: 使用不存在的用户唯一标识符 预期结果: 返回空引用 */
+  /** Test case: tests the getUserUsingUid(long) method. Test data: a non-existing user unique identifier. Expected: a null reference. */
   @Test
   public void testGetUserUsingUidNotExists() {
     User user = userMapper.getUserUsingUid(0);
     Assertions.assertNull(user);
   }
 
-  /** 测试用例: 测试getUserUsingUsername(String)方法 测试数据: 使用用户名为zjhzxhz的用户 预期结果: 返回预期的用户对象 */
+  /** Test case: tests the getUserUsingUsername(String) method. Test data: the user with username zjhzxhz. Expected: the expected user object. */
   @Test
   public void testGetUserUsingUsernameExists() {
     User user = userMapper.getUserUsingUsername("Zjhzxhz");
@@ -84,14 +84,14 @@ public class UserMapperTest {
     Assertions.assertEquals(1000, uid);
   }
 
-  /** 测试用例: 测试getUserUsingUsername(String)方法 测试数据: 使用不存在的用户名 预期结果: 返回空引用 */
+  /** Test case: tests the getUserUsingUsername(String) method. Test data: a non-existing username. Expected: a null reference. */
   @Test
   public void testGetUserUsingUsernameNotExists() {
     User user = userMapper.getUserUsingUsername("Not-Exists");
     Assertions.assertNull(user);
   }
 
-  /** 测试用例: 测试getUserUsingEmail(String)方法 测试数据: 使用用户名为zjhzxhz的用户的电子邮件地址 预期结果: 返回预期的用户对象 */
+  /** Test case: tests the getUserUsingEmail(String) method. Test data: the email address of the user with username zjhzxhz. Expected: the expected user object. */
   @Test
   public void testGetUserUsingEmailExists() {
     User user = userMapper.getUserUsingEmail("cshzxie@gmail.com");
@@ -101,7 +101,7 @@ public class UserMapperTest {
     Assertions.assertEquals(1000, uid);
   }
 
-  /** 测试用例: 测试getUserUsingEmail(String)方法 测试数据: 使用不存在的电子邮件地址 预期结果: 返回空引用 */
+  /** Test case: tests the getUserUsingEmail(String) method. Test data: a non-existing email address. Expected: a null reference. */
   @Test
   public void testGetUserUsingEmailNotExists() {
     User user = userMapper.getUserUsingEmail("not-exists@verwandlung.org");
@@ -109,8 +109,8 @@ public class UserMapperTest {
   }
 
   /**
-   * 测试用例: 测试getUserUsingUserGroup(UserGroup, long, int)方法 测试数据: 使用用户(Users)的用户组 预期结果:
-   * 返回预期的用户列表(共1名用户)
+   * Test case: tests the getUserUsingUserGroup(UserGroup, long, int) method. Test data: the Users user
+   * group. Expected: the expected user list (1 user in total).
    */
   @Test
   public void testGetUserUsingUserGroup() {
@@ -123,7 +123,7 @@ public class UserMapperTest {
     Assertions.assertEquals("another-user", username);
   }
 
-  /** 测试用例: 测试createUser(User)方法 测试数据: 使用合法的数据集, 并且数据表中不存在相同用户名和电子邮件地址 预期结果: 数据插入操作成功完成 */
+  /** Test case: tests the createUser(User) method. Test data: a valid data set, and no identical username or email address exists in the table. Expected: the data insertion operation completes successfully. */
   @Test
   public void testCreateUserNormally() {
     UserGroup userGroup = new UserGroup(1, "users", "Users");
@@ -136,8 +136,9 @@ public class UserMapperTest {
   }
 
   /**
-   * 测试用例: 测试createUser(User)方法 测试数据: 使用合法的数据集, 但数据表中已存在相同的用户名 预期结果:
-   * 抛出org.springframework.dao.DuplicateKeyException异常
+   * Test case: tests the createUser(User) method. Test data: a valid data set, but an identical
+   * username already exists in the table. Expected: an org.springframework.dao.DuplicateKeyException
+   * is thrown.
    */
   @Test
   public void testCreateUserUsingExistingUsername() {
@@ -152,8 +153,9 @@ public class UserMapperTest {
   }
 
   /**
-   * 测试用例: 测试createUser(User)方法 测试数据: 使用合法的数据集, 但数据表中已存在相同的电子邮件地址 预期结果:
-   * 抛出org.springframework.dao.DuplicateKeyException异常
+   * Test case: tests the createUser(User) method. Test data: a valid data set, but an identical email
+   * address already exists in the table. Expected: an
+   * org.springframework.dao.DuplicateKeyException is thrown.
    */
   @Test
   public void testCreateUserUsingExistingEmail() {
@@ -168,8 +170,8 @@ public class UserMapperTest {
   }
 
   /**
-   * 测试用例: 测试createUser(User)方法 测试数据: 使用不合法的数据集(过长的用户名) 预期结果:
-   * 抛出org.springframework.dao.DataIntegrityViolationException异常
+   * Test case: tests the createUser(User) method. Test data: an invalid data set (a username that is
+   * too long). Expected: an org.springframework.dao.DataIntegrityViolationException is thrown.
    */
   @Test
   public void testCreateUserUsingTooLongUsername() {
@@ -185,8 +187,9 @@ public class UserMapperTest {
   }
 
   /**
-   * 测试用例: 测试createUser(User)方法 测试数据: 使用不合法的数据集(不存在的编程语言) 预期结果:
-   * 抛出org.springframework.dao.DataIntegrityViolationException异常
+   * Test case: tests the createUser(User) method. Test data: an invalid data set (a non-existing
+   * programming language). Expected: an org.springframework.dao.DataIntegrityViolationException is
+   * thrown.
    */
   @Test
   public void testCreateUserUsingNotExistsLanguage() {
@@ -201,7 +204,7 @@ public class UserMapperTest {
     Assertions.assertThrows(org.springframework.dao.DataIntegrityViolationException.class, e);
   }
 
-  /** 测试用例: 测试updateUser(User)方法 测试数据: 使用合法的数据集, 并且数据表中不存在相同用户名和电子邮件地址 预期结果: 数据更新操作成功完成 */
+  /** Test case: tests the updateUser(User) method. Test data: a valid data set, and no identical username or email address exists in the table. Expected: the data update operation completes successfully. */
   @Test
   public void testUpdateUserNormally() {
     User user = userMapper.getUserUsingUid(1000);
@@ -212,7 +215,7 @@ public class UserMapperTest {
     Assertions.assertEquals(1, numberOfRowsAffected);
   }
 
-  /** 测试用例: 测试updateUser(User)方法 测试数据: 使用合法的数据集, 并且数据表中不存在相同用户名和电子邮件地址 预期结果: 数据更新操作成功完成 */
+  /** Test case: tests the updateUser(User) method. Test data: a valid data set, and no identical username or email address exists in the table. Expected: the data update operation completes successfully. */
   @Test
   public void testUpdateUserUsingExistingEmail() {
     User user = userMapper.getUserUsingUid(1000);
@@ -226,7 +229,7 @@ public class UserMapperTest {
     Assertions.assertThrows(org.springframework.dao.DuplicateKeyException.class, e);
   }
 
-  /** 测试用例: 测试deleteUser(long)方法 测试数据: 存在的用户唯一标识符 预期结果: 数据删除操作成功完成 */
+  /** Test case: tests the deleteUser(long) method. Test data: an existing user unique identifier. Expected: the data deletion operation completes successfully. */
   @Test
   public void testDeleteUserExists() {
     User user = userMapper.getUserUsingUid(1002);
@@ -239,7 +242,7 @@ public class UserMapperTest {
     Assertions.assertNull(user);
   }
 
-  /** 测试用例: 测试deleteUser(long)方法 测试数据: 不存在的用户唯一标识符 预期结果: 方法正常执行, 未影响数据表中的数据 */
+  /** Test case: tests the deleteUser(long) method. Test data: a non-existing user unique identifier. Expected: the method executes normally without affecting the data in the table. */
   @Test
   public void testDeleteUserNotExists() {
     User user = userMapper.getUserUsingUid(0);
@@ -249,6 +252,6 @@ public class UserMapperTest {
     Assertions.assertEquals(0, numberOfRowsAffected);
   }
 
-  /** 待测试的UserMapper对象. */
+  /** The UserMapper object under test. */
   @Autowired private UserMapper userMapper;
 }

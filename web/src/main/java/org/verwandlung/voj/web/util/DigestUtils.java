@@ -21,7 +21,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.UUID;
 
 /**
- * 加密函数类.
+ * The cryptographic functions class.
  *
  * @author Haozhe Xie
  */
@@ -30,10 +30,10 @@ public class DigestUtils {
   private DigestUtils() {}
 
   /**
-   * 获取MD5加密后的密码.
+   * Gets the MD5-encrypted password.
    *
-   * @param password - 未经MD5加密的密码
-   * @return MD5加密后的密码
+   * @param password - the password not encrypted with MD5
+   * @return the MD5-encrypted password
    */
   public static String md5Hex(String password) {
     String md5 = "";
@@ -57,9 +57,9 @@ public class DigestUtils {
   }
 
   /**
-   * 生成GUID.
+   * Generates a GUID.
    *
-   * @return GUID
+   * @return the GUID
    */
   public static String getGuid() {
     return UUID.randomUUID().toString();

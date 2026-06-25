@@ -37,10 +37,11 @@ import org.verwandlung.voj.judger.mapper.LanguageMapper;
 import org.verwandlung.voj.judger.model.Language;
 
 /**
- * Verwandlung Online Judge 评测机的应用程序入口.
+ * The application entry point of the Verwandlung Online Judge judger.
  *
- * <p>评测机是一个非 Web 的 Spring Boot 应用, 启动后通过 ActiveMQ 监听评测任务. 由于 JMS
- * 监听容器持有非守护线程, JVM 在监听期间不会退出.
+ * <p>The judger is a non-web Spring Boot application that, once started, listens for judging tasks
+ * via ActiveMQ. Because the JMS listener container holds non-daemon threads, the JVM does not exit
+ * while it is listening.
  *
  * @author Haozhe Xie
  */
@@ -48,7 +49,7 @@ import org.verwandlung.voj.judger.model.Language;
 @MapperScan("org.verwandlung.voj.judger.mapper")
 @PropertySource("classpath:voj.properties")
 public class VojJudgerApplication {
-  /** 应用程序入口. */
+  /** The application entry point. */
   public static void main(String[] args) {
     LOGGER.info("Starting Verwandlung Online Judge Judger...");
     new SpringApplicationBuilder(VojJudgerApplication.class)
@@ -58,11 +59,12 @@ public class VojJudgerApplication {
   }
 
   /**
-   * 应用启动后执行的初始化任务: 输出运行环境信息并启动与 Web 模块的心跳.
+   * Initialization task executed after the application starts: logs runtime environment information
+   * and starts the heartbeat with the web module.
    *
-   * @param languageMapper - 编程语言数据访问对象
-   * @param heartbeat - 心跳任务
-   * @return 一个 ApplicationRunner 实例
+   * @param languageMapper - the data access object for programming languages
+   * @param heartbeat - the heartbeat task
+   * @return an ApplicationRunner instance
    */
   @Bean
   public ApplicationRunner startupRunner(
@@ -73,7 +75,7 @@ public class VojJudgerApplication {
     };
   }
 
-  /** 配置与 Web 模块的心跳连接. 定时向 Web 模块发送 Keep-Alive 信号. */
+  /** Configures the heartbeat connection with the web module, periodically sending Keep-Alive signals to it. */
   private void setupHeartBeat(ApplicationHeartbeat heartbeat) {
     final int INITIAL_DELAY = 0;
     final int PERIOD = 25;
@@ -82,7 +84,7 @@ public class VojJudgerApplication {
     scheduler.scheduleAtFixedRate(heartbeat, INITIAL_DELAY, PERIOD, TimeUnit.MINUTES);
   }
 
-  /** 获取系统环境变量. 以便进行 Bug 的复现. */
+  /** Logs the system environment variables to make bug reproduction easier. */
   private void logSystemEnvironment(LanguageMapper languageMapper) {
     LOGGER.info("System Information: ");
     LOGGER.info("\tOperating System Name: " + System.getProperty("os.name"));
@@ -100,10 +102,10 @@ public class VojJudgerApplication {
   }
 
   /**
-   * 获取编译程序的命令行.
+   * Gets the compiler program from the compile command line.
    *
-   * @param compileCommand - 编译命令的命令行
-   * @return 编译程序的命令行
+   * @param compileCommand - the command line of the compile command
+   * @return the compiler program
    */
   private String getCompileProgram(String compileCommand) {
     int firstSpaceIndex = compileCommand.indexOf(" ");
@@ -116,11 +118,11 @@ public class VojJudgerApplication {
   }
 
   /**
-   * 获取编译器的版本信息.
+   * Gets the compiler's version information.
    *
-   * @param languageName - 编程语言名称
-   * @param compileProgram - 编译所使用的命令
-   * @return 编译器的版本信息
+   * @param languageName - the name of the programming language
+   * @param compileProgram - the command used for compilation
+   * @return the compiler's version information
    */
   private String getCompilerVersion(String languageName, String compileProgram) {
     String versionCommand = getVersionCommand(languageName);
@@ -140,10 +142,10 @@ public class VojJudgerApplication {
   }
 
   /**
-   * 获取编译器版本的命令行参数.
+   * Gets the command-line argument used to obtain the compiler version.
    *
-   * @param languageName - 编程语言名称
-   * @return 获取编译器版本的命令行参数
+   * @param languageName - the name of the programming language
+   * @return the command-line argument used to obtain the compiler version
    */
   private String getVersionCommand(String languageName) {
     if ("Java".equalsIgnoreCase(languageName)) {
@@ -152,6 +154,6 @@ public class VojJudgerApplication {
     return " --version";
   }
 
-  /** 日志记录器. */
+  /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(VojJudgerApplication.class);
 }

@@ -40,7 +40,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 处理讨论的相关请求.
+ * Handles the requests related to discussions.
  *
  * @author Haozhe Xie
  */
@@ -48,13 +48,13 @@ import java.util.Map;
 @RequestMapping(value = "/discussion")
 public class DiscussionController {
   /**
-   * 显示讨论列表页面.
+   * Displays the discussion list page.
    *
-   * @param discussionTopicSlug - 讨论话题的唯一英文缩写
-   * @param problemId - 试题的唯一标识符
-   * @param request - HttpRequest对象
-   * @param response - HttpResponse对象
-   * @return 包含讨论列表页面内容的ModelAndView对象
+   * @param discussionTopicSlug - the unique slug of the discussion topic
+   * @param problemId - the unique identifier of the problem
+   * @param request - the HttpRequest object
+   * @param response - the HttpResponse object
+   * @return a ModelAndView object containing the content of the discussion list page
    */
   @RequestMapping(value = "", method = RequestMethod.GET)
   public ModelAndView discussionThreadsView(
@@ -83,12 +83,12 @@ public class DiscussionController {
   }
 
   /**
-   * 获取讨论帖子列表.
+   * Gets the list of discussion threads.
    *
-   * @param startIndex - 获取讨论帖子的Offset
-   * @param discussionTopicSlug - 讨论话题的唯一英文缩写
-   * @param problemId - 试题的唯一标识符
-   * @return 一个包含讨论帖子列表的HashMap对象
+   * @param startIndex - the offset for getting the discussion threads
+   * @param discussionTopicSlug - the unique slug of the discussion topic
+   * @param problemId - the unique identifier of the problem
+   * @return a HashMap object containing the list of discussion threads
    */
   @RequestMapping(value = "/getDiscussionThreads.action", method = RequestMethod.GET)
   public @ResponseBody Map<String, Object> getDiscussionThreadsAction(
@@ -118,12 +118,12 @@ public class DiscussionController {
   }
 
   /**
-   * 显示讨论详情页面.
+   * Displays the discussion detail page.
    *
-   * @param discussionThreadId - 讨论帖子的唯一标识符
-   * @param request - HttpRequest对象
-   * @param response - HttpResponse对象
-   * @return 包含讨论详情页面内容的ModelAndView对象
+   * @param discussionThreadId - the unique identifier of the discussion thread
+   * @param request - the HttpRequest object
+   * @param response - the HttpResponse object
+   * @return a ModelAndView object containing the content of the discussion detail page
    */
   @RequestMapping(value = "/{threadId}", method = RequestMethod.GET)
   public ModelAndView discussionThreadView(
@@ -148,11 +148,11 @@ public class DiscussionController {
   }
 
   /**
-   * 显示创建讨论页面.
+   * Displays the create discussion page.
    *
-   * @param request - HttpRequest对象
-   * @param response - HttpResponse对象
-   * @return 包含创建讨论页面内容的ModelAndView对象
+   * @param request - the HttpRequest object
+   * @param response - the HttpResponse object
+   * @return a ModelAndView object containing the content of the create discussion page
    */
   @RequestMapping(value = "/new", method = RequestMethod.GET)
   public ModelAndView newDiscussionThreadView(
@@ -181,10 +181,10 @@ public class DiscussionController {
   }
 
   /**
-   * 检查用户是否已经登录.
+   * Checks whether the user has logged in.
    *
-   * @param session - HttpSession 对象
-   * @return 用户是否已经登录
+   * @param session - the HttpSession object
+   * @return whether the user has logged in
    */
   private boolean isLoggedIn(HttpSession session) {
     Boolean isLoggedIn = (Boolean) session.getAttribute("isLoggedIn");
@@ -195,12 +195,13 @@ public class DiscussionController {
   }
 
   /**
-   * 获取讨论回复.
+   * Gets the discussion replies.
    *
-   * @param discussionThreadId - 讨论帖子的唯一标识符
-   * @param startIndex - 讨论回复的起始Offset(已经获取的回复的数量).
-   * @param request - HttpServletRequest对象
-   * @return 包含讨论回复列表(DiscussionReply)的Map对象
+   * @param discussionThreadId - the unique identifier of the discussion thread
+   * @param startIndex - the start offset of the discussion replies (the number of replies already
+   *     fetched)
+   * @param request - the HttpServletRequest object
+   * @return a Map object containing the list of discussion replies (DiscussionReply)
    */
   @RequestMapping(value = "/{threadId}/getDiscussionReplies.action", method = RequestMethod.GET)
   public @ResponseBody Map<String, Object> getDiscussionRepliesAction(
@@ -222,10 +223,10 @@ public class DiscussionController {
   }
 
   /**
-   * 获取当前登录用户的用户唯一标识符.
+   * Gets the unique user identifier of the currently logged-in user.
    *
-   * @param session - HttpSession 对象
-   * @return 当前登录用户的用户唯一标识符
+   * @param session - the HttpSession object
+   * @return the unique user identifier of the currently logged-in user
    */
   private long getUidOfUserLoggedIn(HttpSession session) {
     Boolean isLoggedIn = (Boolean) session.getAttribute("isLoggedIn");
@@ -237,15 +238,17 @@ public class DiscussionController {
   }
 
   /**
-   * 处理用户对讨论回复投票的请求.
+   * Handles the request of a user voting on a discussion reply.
    *
-   * @param discussionThreadId - 讨论帖子的唯一标识符
-   * @param discussionReplyId - 讨论回复的唯一标识符
-   * @param voteUp - Vote Up状态 (+1 表示用户赞了这个回答, -1 表示用户取消赞了这个回答, 0表示没有操作)
-   * @param voteDown - Vote Up状态 (+1 表示用户踩了这个回答, -1 表示用户取消踩了这个回答, 0表示没有操作)
-   * @param csrfToken - 用于防止CSRF攻击的Token
-   * @param request - HttpServletRequest对象
-   * @return 包含讨论回复投票请求处理结果的JSON对象
+   * @param discussionThreadId - the unique identifier of the discussion thread
+   * @param discussionReplyId - the unique identifier of the discussion reply
+   * @param voteUp - the vote-up status (+1 means the user upvoted this reply, -1 means the user
+   *     canceled the upvote, 0 means no operation)
+   * @param voteDown - the vote-down status (+1 means the user downvoted this reply, -1 means the user
+   *     canceled the downvote, 0 means no operation)
+   * @param csrfToken - the token used to prevent CSRF attacks
+   * @param request - the HttpServletRequest object
+   * @return a JSON object containing the result of handling the discussion reply vote request
    */
   @RequestMapping(value = "/{threadId}/voteDiscussionReply.action", method = RequestMethod.POST)
   public @ResponseBody Map<String, Boolean> voteDiscussionReplyAction(
@@ -273,14 +276,15 @@ public class DiscussionController {
   }
 
   /**
-   * 处理用户创建讨论帖子的请求.
+   * Handles the request of a user creating a discussion thread.
    *
-   * @param discussionTopicSlug - 讨论帖子对应主题的唯一英文缩写
-   * @param relatedProblemIdString - 讨论帖子所关联问题的唯一标识符
-   * @param discussionThreadTitle - 讨论帖子的标题
-   * @param csrfToken 用于防止CSRF攻击的Token
-   * @param request - HttpServletRequest对象
-   * @return 包含讨论帖子创建结果的JSON对象
+   * @param discussionTopicSlug - the unique slug of the topic the discussion thread belongs to
+   * @param relatedProblemIdString - the unique identifier of the problem the discussion thread is
+   *     related to
+   * @param discussionThreadTitle - the title of the discussion thread
+   * @param csrfToken the token used to prevent CSRF attacks
+   * @param request - the HttpServletRequest object
+   * @return a JSON object containing the result of the discussion thread creation
    */
   @RequestMapping(value = "/createDiscussionThread.action", method = RequestMethod.POST)
   public @ResponseBody Map<String, Object> createDiscussionThreadAction(
@@ -315,14 +319,14 @@ public class DiscussionController {
   }
 
   /**
-   * 处理用户编辑讨论帖子的请求.
+   * Handles the request of a user editing a discussion thread.
    *
-   * @param discussionThreadId - 讨论帖子的唯一标识符
-   * @param discussionTopicSlug - 讨论帖子对应主题的唯一英文缩写
-   * @param discussionThreadTitle - 讨论帖子的标题
-   * @param csrfToken 用于防止CSRF攻击的Token
-   * @param request - HttpServletRequest对象
-   * @return 包含讨论帖子编辑结果的JSON对象
+   * @param discussionThreadId - the unique identifier of the discussion thread
+   * @param discussionTopicSlug - the unique slug of the topic the discussion thread belongs to
+   * @param discussionThreadTitle - the title of the discussion thread
+   * @param csrfToken the token used to prevent CSRF attacks
+   * @param request - the HttpServletRequest object
+   * @return a JSON object containing the result of the discussion thread edit
    */
   @RequestMapping(value = "/editDiscussionThread.action", method = RequestMethod.POST)
   public @ResponseBody Map<String, Boolean> editDiscussionThreadAction(
@@ -353,13 +357,13 @@ public class DiscussionController {
   }
 
   /**
-   * 处理用户创建讨论回复的请求.
+   * Handles the request of a user creating a discussion reply.
    *
-   * @param discussionThreadId - 讨论帖子的唯一标识符
-   * @param replyContent - 讨论回复的内容
-   * @param csrfToken - 用于防止CSRF攻击的Token
-   * @param request - HttpServletRequest对象
-   * @return 包含讨论回复创建结果的JSON对象
+   * @param discussionThreadId - the unique identifier of the discussion thread
+   * @param replyContent - the content of the discussion reply
+   * @param csrfToken - the token used to prevent CSRF attacks
+   * @param request - the HttpServletRequest object
+   * @return a JSON object containing the result of the discussion reply creation
    */
   @RequestMapping(value = "/{threadId}/createDiscussionReply.action", method = RequestMethod.POST)
   public @ResponseBody Map<String, Object> createDiscussionReplyAction(
@@ -385,13 +389,13 @@ public class DiscussionController {
   }
 
   /**
-   * 处理用户编辑讨论回复的请求.
+   * Handles the request of a user editing a discussion reply.
    *
-   * @param discussionReplyId - 讨论回复的唯一标识符
-   * @param replyContent - 讨论回复的内容
-   * @param csrfToken - 用于防止CSRF攻击的Token
-   * @param request - HttpServletRequest对象
-   * @return 包含讨论回复编辑结果的JSON对象
+   * @param discussionReplyId - the unique identifier of the discussion reply
+   * @param replyContent - the content of the discussion reply
+   * @param csrfToken - the token used to prevent CSRF attacks
+   * @param request - the HttpServletRequest object
+   * @return a JSON object containing the result of the discussion reply edit
    */
   @RequestMapping(value = "/{threadId}/editDiscussionReply.action", method = RequestMethod.POST)
   public @ResponseBody Map<String, Boolean> editDiscussionReplyAction(
@@ -418,12 +422,12 @@ public class DiscussionController {
   }
 
   /**
-   * 处理用户删除讨论回复的请求.
+   * Handles the request of a user deleting a discussion reply.
    *
-   * @param discussionReplyId - 讨论回复的唯一标识符
-   * @param csrfToken - 用于防止CSRF攻击的Token
-   * @param request - HttpServletRequest对象
-   * @return 包含讨论回复删除结果的JSON对象
+   * @param discussionReplyId - the unique identifier of the discussion reply
+   * @param csrfToken - the token used to prevent CSRF attacks
+   * @param request - the HttpServletRequest object
+   * @return a JSON object containing the result of the discussion reply deletion
    */
   @RequestMapping(value = "/{threadId}/deleteDiscussionReply.action", method = RequestMethod.POST)
   public @ResponseBody Map<String, Boolean> deleteDiscussionReplyAction(
@@ -447,18 +451,18 @@ public class DiscussionController {
     return result;
   }
 
-  /** 每一次请求的讨论帖子数量. */
+  /** The number of discussion threads per request. */
   private static final int NUMBER_OF_THREADS_PER_REQUEST = 25;
 
-  /** 每一次请求的讨论回复数量. */
+  /** The number of discussion replies per request. */
   private static final int NUMBER_OF_REPLIES_PER_REQUEST = 50;
 
-  /** 自动注入的DiscussionService对象. */
+  /** The autowired DiscussionService object. */
   @Autowired private DiscussionService discussionService;
 
-  /** 自动注入的ProblemService对象. */
+  /** The autowired ProblemService object. */
   @Autowired private ProblemService problemService;
 
-  /** 日志记录器. */
+  /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(DiscussionController.class);
 }
