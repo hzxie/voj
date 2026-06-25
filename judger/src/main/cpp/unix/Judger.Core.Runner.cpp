@@ -91,7 +91,7 @@ static std::string resolveExecutable(const std::string&);
 static std::string buildSeccompProgram();
 static long long getMonotonicMillis();
 static int  readCpuTimeMillis(pid_t);
-static int  readResidentMemoryKb(pid_t);
+static int  readPeakMemoryKb(pid_t);
 static void runChild(const ChildPlan&, int syncWriteFd) __attribute__((noreturn));
 
 /**
@@ -200,6 +200,7 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     std::atomic<bool> finished(false);
     std::atomic<bool> timedOut(false);
     std::atomic<bool> memoryExceeded(false);
+    std::atomic<int>  peakMemoryKb(0);
     long long startMillis = getMonotonicMillis();
 
     std::thread watchdog([&]() {
@@ -218,12 +219,16 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
                     kill(-pid, SIGKILL);
                 }
             }
-            if ( memoryLimit > 0 ) {
-                int rssKb = readResidentMemoryKb(pid);
-                if ( rssKb > memoryLimit ) {
-                    memoryExceeded.store(true);
-                    kill(-pid, SIGKILL);
-                }
+            // Sample peak RSS from /proc (VmHWM). The watchdog only runs after the child has exec'd
+            // (the parent blocks on the sync pipe until then), so this never sees the JVM image the
+            // freshly forked child briefly shared before exec.
+            int peakKb = readPeakMemoryKb(pid);
+            if ( peakKb > peakMemoryKb.load() ) {
+                peakMemoryKb.store(peakKb);
+            }
+            if ( memoryLimit > 0 && peakKb > memoryLimit ) {
+                memoryExceeded.store(true);
+                kill(-pid, SIGKILL);
             }
             usleep(POLL_INTERVAL_US);
         }
@@ -241,12 +246,16 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     // Reap any leftover children (e.g. from a fork bomb) still in the group.
     kill(-pid, SIGKILL);
 
-    // Accurate, kernel-accounted CPU time and peak resident memory.
+    // Kernel-accounted CPU time (user + system).
     long long cpuMillis =
         (long long) usage.ru_utime.tv_sec * 1000 + usage.ru_utime.tv_usec / 1000 +
         (long long) usage.ru_stime.tv_sec * 1000 + usage.ru_stime.tv_usec / 1000;
     usedTime   = (int) cpuMillis;
-    usedMemory = (int) usage.ru_maxrss; // ru_maxrss is in KB on Linux
+    // Peak RSS sampled from /proc (VmHWM) after exec. rusage's ru_maxrss is deliberately NOT used:
+    // for a child forked from the multi-threaded JVM it can include the parent's resident pages,
+    // briefly shared through the fork/exec window, hugely over-reporting memory on some
+    // architectures (e.g. a trivial program measured as the whole JVM heap).
+    usedMemory = peakMemoryKb.load();
 
     if ( syncBytes > 0 ) {
         // The child never reached the program: exec failed.
@@ -511,11 +520,13 @@ static int readCpuTimeMillis(pid_t pid) {
 }
 
 /**
- * Reads the current resident set size (physical memory) of a process from /proc.
+ * Reads the peak resident set size (high-water mark) of a process from /proc. VmHWM is reset by
+ * exec, so - unlike rusage's ru_maxrss - it reflects only the program's own memory, not the JVM
+ * image briefly shared with the child across the fork/exec window.
  * @param  pid - the process ID
- * @return the resident set size in KB, or -1 if it cannot be read
+ * @return the peak resident set size in KB, or -1 if it cannot be read
  */
-static int readResidentMemoryKb(pid_t pid) {
+static int readPeakMemoryKb(pid_t pid) {
     char path[64];
     snprintf(path, sizeof(path), "/proc/%d/status", (int) pid);
 
@@ -524,13 +535,13 @@ static int readResidentMemoryKb(pid_t pid) {
         return -1;
     }
     char line[256];
-    int  residentMemoryKb = -1;
+    int  peakMemoryKb = -1;
     while ( fgets(line, sizeof(line), fp) != nullptr ) {
-        if ( strncmp(line, "VmRSS:", 6) == 0 ) {
-            residentMemoryKb = atoi(line + 6);
+        if ( strncmp(line, "VmHWM:", 6) == 0 ) {
+            peakMemoryKb = atoi(line + 6);
             break;
         }
     }
     fclose(fp);
-    return residentMemoryKb;
+    return peakMemoryKb;
 }

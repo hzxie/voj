@@ -87,8 +87,11 @@ public class SandboxBehaviorTest {
    */
   @Test
   public void testRuntimeError() throws Exception {
-    // No memory limit: a non-zero exit must be a Runtime Error, independent of memory measurement.
-    Assertions.assertEquals("RE", judge(900003L, RUNTIME_ERROR_CODE, 5000, 0));
+    // Regression test for the memory-measurement pollution bug: a program that exits non-zero while
+    // using little memory must be a Runtime Error, not MLE, even with a memory limit set. It used to
+    // be reported with the JVM's resident memory (shared across the fork/exec window) and so was
+    // misclassified MLE whenever the limit was below the judger JVM's footprint.
+    Assertions.assertEquals("RE", judge(900003L, RUNTIME_ERROR_CODE, 5000, 262144));
   }
 
   /**
