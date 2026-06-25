@@ -215,7 +215,6 @@ public class DiscussionService {
    *     cancelled the upvote, 0 means no action)
    * @param voteDown - the vote down status (+1 means the user downvoted the reply, -1 means the
    *     user cancelled the downvote, 0 means no action)
-   * @param isCsrfTokenValid - whether the CSRF token is valid
    * @return the voting result of the discussion reply
    */
   public Map<String, Boolean> voteDiscussionReply(
@@ -223,8 +222,7 @@ public class DiscussionService {
       long discussionReplyId,
       User currentUser,
       int voteUp,
-      int voteDown,
-      boolean isCsrfTokenValid) {
+      int voteDown) {
     DiscussionReply discussionReply =
         discussionReplyMapper.getDiscussionReplyUsingReplyId(discussionReplyId);
     Map<String, Boolean> result = new HashMap<>();
@@ -232,13 +230,11 @@ public class DiscussionService {
         "isDiscussionReplyExists",
         discussionReply != null && discussionReply.getDiscussionThreadId() == discussionThreadId);
     result.put("isVoteValid", voteUp >= -1 && voteUp <= 1 && voteDown >= -1 && voteDown <= 1);
-    result.put("isCsrfTokenValid", isCsrfTokenValid);
     result.put("isLoggedIn", currentUser != null);
 
     boolean isSuccessful =
         result.get("isDiscussionReplyExists")
             && result.get("isVoteValid")
-            && result.get("isCsrfTokenValid")
             && result.get("isLoggedIn");
     result.put("isSuccessful", isSuccessful);
 
@@ -367,7 +363,6 @@ public class DiscussionService {
    * @param relatedProblemId - the problem the thread is related to (may be null)
    * @param discussionThreadTitle - the title of the discussion thread
    * @param discussionThreadContent - the content of the first reply in the discussion thread
-   * @param isCsrfTokenValid - whether the CSRF token is valid
    * @return a Map object containing the discussion thread creation result
    */
   public Map<String, Object> createDiscussionThread(
@@ -375,24 +370,21 @@ public class DiscussionService {
       String discussionTopicSlug,
       long relatedProblemId,
       String discussionThreadTitle,
-      String discussionThreadContent,
-      boolean isCsrfTokenValid) {
+      String discussionThreadContent) {
     DiscussionTopic discussionTopic =
         discussionTopicMapper.getDiscussionTopicUsingSlug(discussionTopicSlug);
     DiscussionThread dt =
         new DiscussionThread(
             threadCreator, discussionTopic, null, HtmlTextFilter.filter(discussionThreadTitle));
     Map<String, Object> result =
-        (Map<String, Object>)
-            getDiscussionThreadCreationResult(dt, discussionThreadContent, isCsrfTokenValid);
+        (Map<String, Object>) getDiscussionThreadCreationResult(dt, discussionThreadContent);
     if ((Boolean) result.get("isSuccessful")) {
       if (relatedProblemId != 0) {
         Problem relatedProblem = problemMapper.getProblem(relatedProblemId);
         dt.setProblem(relatedProblem);
       }
       discussionThreadMapper.createDiscussionThread(dt);
-      createDiscussionReply(
-          dt.getDiscussionThreadId(), threadCreator, discussionThreadContent, isCsrfTokenValid);
+      createDiscussionReply(dt.getDiscussionThreadId(), threadCreator, discussionThreadContent);
       result.put("discussionThreadId", dt.getDiscussionThreadId());
     }
     return result;
@@ -404,11 +396,10 @@ public class DiscussionService {
    * @param dt - the discussion thread to create
    * @param discussionThreadContent - the content of the thread to create (stored as a
    *     DiscussionReply object)
-   * @param isCsrfTokenValid - whether the CSRF token is valid
    * @return a Map<String, Boolean> object containing the discussion thread creation result
    */
   private Map<String, ? extends Object> getDiscussionThreadCreationResult(
-      DiscussionThread dt, String discussionThreadContent, boolean isCsrfTokenValid) {
+      DiscussionThread dt, String discussionThreadContent) {
     Map<String, Boolean> result = new HashMap<>(9, 1);
     result.put("isThreadCreatorExists", dt.getDiscussionThreadCreator() != null);
     result.put(
@@ -422,7 +413,6 @@ public class DiscussionService {
     result.put("isThreadTitleEmpty", dt.getDiscussionThreadTitle().isEmpty());
     result.put("isThreadTitleLegal", dt.getDiscussionThreadTitle().length() <= 128);
     result.put("isThreadContentEmpty", discussionThreadContent.isEmpty());
-    result.put("isCsrfTokenValid", isCsrfTokenValid);
 
     boolean isSuccessful =
         result.get("isThreadCreatorExists")
@@ -430,8 +420,7 @@ public class DiscussionService {
             && result.get("isDiscussionTopicExists")
             && !result.get("isThreadTitleEmpty")
             && result.get("isThreadTitleLegal")
-            && !result.get("isThreadContentEmpty")
-            && result.get("isCsrfTokenValid");
+            && !result.get("isThreadContentEmpty");
     result.put("isSuccessful", isSuccessful);
     return result;
   }
@@ -444,36 +433,29 @@ public class DiscussionService {
    * @param currentEditor - the current editor
    * @param discussionTopicSlug - the unique English abbreviation of the thread's topic
    * @param discussionThreadTitle - the title of the discussion thread
-   * @param isCsrfTokenValid - whether the CSRF token is valid
    * @return a Map object containing the discussion thread editing result
    */
   public Map<String, Boolean> editDiscussionThread(
       long discussionThreadId,
       User currentEditor,
       String discussionTopicSlug,
-      String discussionThreadTitle,
-      boolean isCsrfTokenValid) {
-    DiscussionTopic discussionTopic = null;
+      String discussionThreadTitle) {
     DiscussionThread dt =
         discussionThreadMapper.getDiscussionThreadUsingThreadId(discussionThreadId);
-    ;
     Map<String, Boolean> result = new HashMap<>(7, 1);
     result.put("isDiscussionThreadExists", dt != null);
     result.put("isThreadTitleEmpty", discussionThreadTitle.isEmpty());
     result.put("isThreadTitleLegal", discussionThreadTitle.length() <= 128);
-    result.put("isCsrfTokenValid", isCsrfTokenValid);
-    result.put("isDiscussionTopicExists", false);
 
-    if (isCsrfTokenValid) {
-      discussionTopic = discussionTopicMapper.getDiscussionTopicUsingSlug(discussionTopicSlug);
-      result.put("isDiscussionTopicExists", discussionTopic != null);
-    }
+    DiscussionTopic discussionTopic =
+        discussionTopicMapper.getDiscussionTopicUsingSlug(discussionTopicSlug);
+    result.put("isDiscussionTopicExists", discussionTopic != null);
+
     boolean isSuccessful =
         result.get("isDiscussionThreadExists")
             && result.get("isDiscussionTopicExists")
             && !result.get("isThreadTitleEmpty")
-            && result.get("isThreadTitleLegal")
-            && result.get("isCsrfTokenValid");
+            && result.get("isThreadTitleLegal");
     result.put("isSuccessful", isSuccessful);
     if (isSuccessful) {
       if (dt.getDiscussionThreadCreator().equals(currentEditor)
@@ -507,11 +489,10 @@ public class DiscussionService {
    * @param discussionThreadId - the unique identifier of the discussion thread the reply belongs to
    * @param replyCreator - the creator of the reply
    * @param replyContent - the content of the reply
-   * @param isCsrfTokenValid - whether the CSRF token is valid
    * @return a Map object containing the discussion reply creation result
    */
   public Map<String, Object> createDiscussionReply(
-      long discussionThreadId, User replyCreator, String replyContent, boolean isCsrfTokenValid) {
+      long discussionThreadId, User replyCreator, String replyContent) {
     String discussionReplyVotes = "{ \"up\": [], \"down\": [] }";
     DiscussionReply dr =
         new DiscussionReply(
@@ -521,7 +502,7 @@ public class DiscussionService {
             discussionReplyVotes);
 
     Map<String, Object> result =
-        (Map<String, Object>) getDiscussionReplyCreationResult(dr, isCsrfTokenValid);
+        (Map<String, Object>) getDiscussionReplyCreationResult(dr);
     if ((Boolean) result.get("isSuccessful")) {
       discussionReplyMapper.createDiscussionReply(dr);
       result.put("discussionReply", dr);
@@ -533,11 +514,10 @@ public class DiscussionService {
    * Validates the discussion reply data.
    *
    * @param discussionReply - the discussion reply object to create
-   * @param isCsrfTokenValid - whether the CSRF token is valid
    * @return a Map object containing the validity of the discussion reply data
    */
   private Map<String, ? extends Object> getDiscussionReplyCreationResult(
-      DiscussionReply discussionReply, boolean isCsrfTokenValid) {
+      DiscussionReply discussionReply) {
     long discussionThreadId = discussionReply.getDiscussionThreadId();
     User replyCreator = discussionReply.getDiscussionReplyCreator();
     String replyContent = discussionReply.getDiscussionReplyContent();
@@ -552,14 +532,12 @@ public class DiscussionService {
         replyCreator != null
             && !replyCreator.getUserGroup().getUserGroupSlug().equals("forbidden"));
     result.put("isReplyContentEmpty", replyContent.isEmpty());
-    result.put("isCsrfTokenValid", isCsrfTokenValid);
 
     boolean isSuccessful =
         result.get("isDiscussionThreadExists")
             && result.get("isReplyCreatorExists")
             && result.get("isReplyCreatorLegal")
-            && !result.get("isReplyContentEmpty")
-            && result.get("isCsrfTokenValid");
+            && !result.get("isReplyContentEmpty");
     result.put("isSuccessful", isSuccessful);
     return result;
   }
@@ -571,21 +549,14 @@ public class DiscussionService {
    * @param discussionReplyId - the unique identifier of the discussion reply
    * @param currentEditor - the current editor
    * @param discussionReplyContent - the updated content of the discussion reply
-   * @param isCsrfTokenValid - whether the CSRF token is valid
    * @return a Map object containing the discussion reply editing result
    */
   public Map<String, Boolean> editDiscussionReply(
-      long discussionReplyId,
-      User currentEditor,
-      String discussionReplyContent,
-      boolean isCsrfTokenValid) {
+      long discussionReplyId, User currentEditor, String discussionReplyContent) {
     Map<String, Boolean> result = new HashMap<>(2, 1);
     boolean isSuccessful = false;
-    DiscussionReply dr = null;
+    DiscussionReply dr = discussionReplyMapper.getDiscussionReplyUsingReplyId(discussionReplyId);
 
-    if (isCsrfTokenValid) {
-      dr = discussionReplyMapper.getDiscussionReplyUsingReplyId(discussionReplyId);
-    }
     if (dr != null) {
       if (dr.getDiscussionReplyCreator().equals(currentEditor)
           || currentEditor.getUserGroup().getUserGroupSlug().equals("administrators")) {
@@ -604,18 +575,13 @@ public class DiscussionService {
    *
    * @param discussionReplyId - the unique identifier of the discussion reply
    * @param currentEditor - the current editor
-   * @param isCsrfTokenValid - whether the CSRF token is valid
    * @return a Map object containing the discussion reply deletion result
    */
-  public Map<String, Boolean> deleteDiscussionReply(
-      long discussionReplyId, User currentEditor, boolean isCsrfTokenValid) {
+  public Map<String, Boolean> deleteDiscussionReply(long discussionReplyId, User currentEditor) {
     Map<String, Boolean> result = new HashMap<>(2, 1);
     boolean isSuccessful = false;
-    DiscussionReply dr = null;
+    DiscussionReply dr = discussionReplyMapper.getDiscussionReplyUsingReplyId(discussionReplyId);
 
-    if (isCsrfTokenValid) {
-      dr = discussionReplyMapper.getDiscussionReplyUsingReplyId(discussionReplyId);
-    }
     if (dr != null) {
       if (dr.getDiscussionReplyCreator().equals(currentEditor)
           || currentEditor.getUserGroup().getUserGroupSlug().equals("administrators")) {

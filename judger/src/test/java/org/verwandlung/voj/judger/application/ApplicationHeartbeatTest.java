@@ -29,6 +29,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import org.verwandlung.voj.judger.mapper.UserMapper;
@@ -36,7 +37,6 @@ import org.verwandlung.voj.judger.messenger.MessageSender;
 import org.verwandlung.voj.judger.model.Language;
 import org.verwandlung.voj.judger.model.User;
 import org.verwandlung.voj.judger.model.UserGroup;
-import org.verwandlung.voj.judger.util.DigestUtils;
 
 /**
  * Test class for ApplicationHeartbeat.
@@ -62,9 +62,9 @@ public class ApplicationHeartbeatTest {
   public void testRunWithValidIdentity() {
     UserGroup userGroup = new UserGroup(4, "judgers", "Judgers");
     Language language = new Language("cpp", "C++", "g++", "./a.out");
-    User user =
-        new User("judger", DigestUtils.md5Hex("secret"), "judger@voj.org", userGroup, language);
+    User user = new User("judger", "{bcrypt}stored-hash", "judger@voj.org", userGroup, language);
     when(userMapper.getUserUsingUsername("judger")).thenReturn(user);
+    when(passwordEncoder.matches("secret", "{bcrypt}stored-hash")).thenReturn(true);
 
     applicationHeartbeat.run();
 
@@ -82,6 +82,9 @@ public class ApplicationHeartbeatTest {
 
   /** The mocked UserMapper object. */
   @Mock private UserMapper userMapper;
+
+  /** The mocked password encoder. */
+  @Mock private PasswordEncoder passwordEncoder;
 
   /** The ApplicationHeartbeat object under test. */
   @InjectMocks private ApplicationHeartbeat applicationHeartbeat;

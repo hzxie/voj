@@ -50,8 +50,11 @@ import org.verwandlung.voj.web.model.UserGroup;
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class UserServiceTest {
-  /** The password hash of user 1000 (used to avoid the plaintext password in login verification). */
+  /** The stored (legacy MD5) password of the seed users; equals {@code md5("zjhzxhz")}. */
   private static final String PASSWORD_HASH = "785ee107c11dfe36de668b1ae7baacbb";
+
+  /** The plaintext password of the seed users (the password encoder verifies the plaintext). */
+  private static final String PLAINTEXT_PASSWORD = "zjhzxhz";
 
   /** Test case: tests the getUserUsingUid(long) method. Test data: an existing / non-existing user identifier. Expected: the corresponding user or a null reference. */
   @Test
@@ -128,7 +131,7 @@ public class UserServiceTest {
   /** Test case: tests the isAllowedToLogin(...) method. Test data: an administrator account with the correct password. Expected: login is allowed. */
   @Test
   public void testIsAllowedToLoginSuccessfully() {
-    Map<String, Boolean> result = userService.isAllowedToLogin("zjhzxhz", PASSWORD_HASH);
+    Map<String, Boolean> result = userService.isAllowedToLogin("zjhzxhz", PLAINTEXT_PASSWORD);
     Assertions.assertTrue(result.get("isAccountValid"));
     Assertions.assertTrue(result.get("isSuccessful"));
   }
@@ -137,7 +140,7 @@ public class UserServiceTest {
   @Test
   public void testIsAllowedToLoginWithDisallowedUserGroup() {
     Map<String, Boolean> result =
-        userService.isAllowedToLogin("support@verwandlung.org", PASSWORD_HASH);
+        userService.isAllowedToLogin("support@verwandlung.org", PLAINTEXT_PASSWORD);
     Assertions.assertTrue(result.get("isAccountValid"));
     Assertions.assertFalse(result.get("isAllowedToAccess"));
     Assertions.assertFalse(result.get("isSuccessful"));
@@ -159,52 +162,52 @@ public class UserServiceTest {
     Assertions.assertFalse(result.get("isSuccessful"));
   }
 
-  /** Test case: tests the createUser (7-argument) method. Test data: valid registration information. Expected: creation succeeds. */
+  /** Test case: tests the createUser (6-argument) method. Test data: valid registration information. Expected: creation succeeds. */
   @Test
   public void testCreateUserSuccessfully() {
     Map<String, Boolean> result =
         userService.createUser(
-            "newuser01", "password", "newuser01@example.com", "users", "text/x-java", true, true);
+            "newuser01", "password", "newuser01@example.com", "users", "text/x-java", true);
     Assertions.assertTrue(result.get("isSuccessful"));
     Assertions.assertNotNull(userService.getUserUsingUsernameOrEmail("newuser01"));
   }
 
-  /** Test case: tests the createUser (7-argument) method. Test data: the username already exists. Expected: creation fails. */
+  /** Test case: tests the createUser (6-argument) method. Test data: the username already exists. Expected: creation fails. */
   @Test
   public void testCreateUserWithExistingUsername() {
     Map<String, Boolean> result =
         userService.createUser(
-            "zjhzxhz", "password", "unique@example.com", "users", "text/x-java", true, true);
+            "zjhzxhz", "password", "unique@example.com", "users", "text/x-java", true);
     Assertions.assertTrue(result.get("isUsernameExists"));
     Assertions.assertFalse(result.get("isSuccessful"));
   }
 
-  /** Test case: tests the createUser (7-argument) method. Test data: an illegal username. Expected: creation fails. */
+  /** Test case: tests the createUser (6-argument) method. Test data: an illegal username. Expected: creation fails. */
   @Test
   public void testCreateUserWithIllegalUsername() {
     Map<String, Boolean> result =
         userService.createUser(
-            "ab1", "password", "unique@example.com", "users", "text/x-java", true, true);
+            "ab1", "password", "unique@example.com", "users", "text/x-java", true);
     Assertions.assertFalse(result.get("isUsernameLegal"));
     Assertions.assertFalse(result.get("isSuccessful"));
   }
 
-  /** Test case: tests the createUser (7-argument) method. Test data: the email already exists. Expected: creation fails. */
+  /** Test case: tests the createUser (6-argument) method. Test data: the email already exists. Expected: creation fails. */
   @Test
   public void testCreateUserWithExistingEmail() {
     Map<String, Boolean> result =
         userService.createUser(
-            "uniqueuser", "password", "cshzxie@gmail.com", "users", "text/x-java", true, true);
+            "uniqueuser", "password", "cshzxie@gmail.com", "users", "text/x-java", true);
     Assertions.assertTrue(result.get("isEmailExists"));
     Assertions.assertFalse(result.get("isSuccessful"));
   }
 
-  /** Test case: tests the createUser (7-argument) method. Test data: the system does not allow registration. Expected: creation fails. */
+  /** Test case: tests the createUser (6-argument) method. Test data: the system does not allow registration. Expected: creation fails. */
   @Test
   public void testCreateUserWhenRegisterDisallowed() {
     Map<String, Boolean> result =
         userService.createUser(
-            "newuser02", "password", "newuser02@example.com", "users", "text/x-java", true, false);
+            "newuser02", "password", "newuser02@example.com", "users", "text/x-java", false);
     Assertions.assertFalse(result.get("isAllowRegister"));
     Assertions.assertFalse(result.get("isSuccessful"));
   }
@@ -260,7 +263,7 @@ public class UserServiceTest {
     User user = userService.getUserUsingUid(1000);
     Map<String, Boolean> result =
         userService.updateProfile(
-            user, "cshzxie@gmail.com", "Beijing", "https://haozhexie.com", "{}", "About me", true);
+            user, "cshzxie@gmail.com", "Beijing", "https://haozhexie.com", "{}", "About me");
     Assertions.assertTrue(result.get("isSuccessful"));
   }
 
@@ -270,7 +273,7 @@ public class UserServiceTest {
     User user = userService.getUserUsingUid(1000);
     Map<String, Boolean> result =
         userService.updateProfile(
-            user, "support@verwandlung.org", "", "", "{}", "About me", true);
+            user, "support@verwandlung.org", "", "", "{}", "About me");
     Assertions.assertTrue(result.get("isEmailExists"));
     Assertions.assertFalse(result.get("isSuccessful"));
   }
@@ -280,7 +283,7 @@ public class UserServiceTest {
   public void testUpdateProfileWithIllegalWebsite() {
     User user = userService.getUserUsingUid(1000);
     Map<String, Boolean> result =
-        userService.updateProfile(user, "cshzxie@gmail.com", "", "ftp://invalid", "{}", "Me", true);
+        userService.updateProfile(user, "cshzxie@gmail.com", "", "ftp://invalid", "{}", "Me");
     Assertions.assertFalse(result.get("isWebsiteLegal"));
     Assertions.assertFalse(result.get("isSuccessful"));
   }
@@ -330,7 +333,7 @@ public class UserServiceTest {
         new EmailValidation("cshzxie@gmail.com", "reset-token", tomorrow()));
     Map<String, Boolean> result =
         userService.resetPassword(
-            "cshzxie@gmail.com", "reset-token", "new-password", "new-password", true);
+            "cshzxie@gmail.com", "reset-token", "new-password", "new-password");
     Assertions.assertTrue(result.get("isSuccessful"));
   }
 
@@ -339,17 +342,8 @@ public class UserServiceTest {
   public void testResetPasswordWithInvalidToken() {
     Map<String, Boolean> result =
         userService.resetPassword(
-            "cshzxie@gmail.com", "invalid-token", "new-password", "new-password", true);
+            "cshzxie@gmail.com", "invalid-token", "new-password", "new-password");
     Assertions.assertFalse(result.get("isEmailValidationValid"));
-    Assertions.assertFalse(result.get("isSuccessful"));
-  }
-
-  /** Test case: tests the sendVerificationEmail(...) method. Test data: an invalid CSRF token. Expected: no email is sent and it fails. */
-  @Test
-  public void testSendVerificationEmailWithInvalidCsrfToken() {
-    Map<String, Boolean> result =
-        userService.sendVerificationEmail("zjhzxhz", "cshzxie@gmail.com", false);
-    Assertions.assertFalse(result.get("isCsrfTokenValid"));
     Assertions.assertFalse(result.get("isSuccessful"));
   }
 
@@ -357,7 +351,7 @@ public class UserServiceTest {
   @Test
   public void testSendVerificationEmailWithMismatchedEmail() {
     Map<String, Boolean> result =
-        userService.sendVerificationEmail("zjhzxhz", "wrong@example.com", true);
+        userService.sendVerificationEmail("zjhzxhz", "wrong@example.com");
     Assertions.assertFalse(result.get("isUserExists"));
     Assertions.assertFalse(result.get("isSuccessful"));
   }

@@ -41,7 +41,6 @@ import org.verwandlung.voj.web.messenger.ApplicationEventListener;
 import org.verwandlung.voj.web.model.Submission;
 import org.verwandlung.voj.web.model.User;
 import org.verwandlung.voj.web.service.SubmissionService;
-import org.verwandlung.voj.web.util.CsrfProtector;
 import org.verwandlung.voj.web.util.HttpSessionParser;
 
 /**
@@ -143,7 +142,6 @@ public class SubmissionController {
     }
     ModelAndView view = new ModelAndView("submissions/submission");
     view.addObject("submission", submission);
-    view.addObject("csrfToken", CsrfProtector.getCsrfToken(request.getSession()));
     return view;
   }
 
@@ -157,16 +155,13 @@ public class SubmissionController {
   @RequestMapping("/getRealTimeJudgeResult.action")
   public SseEmitter getRealTimeJudgeResultAction(
       @RequestParam(value = "submissionId") long submissionId,
-      @RequestParam(value = "csrfToken") String csrfToken,
       HttpServletRequest request,
       HttpServletResponse response)
       throws IOException {
     User currentUser = HttpSessionParser.getCurrentUser(request.getSession());
-    boolean isCsrfTokenValid = CsrfProtector.isCsrfTokenValid(csrfToken, request.getSession());
     Submission submission = submissionService.getSubmission(submissionId);
 
-    if (!isCsrfTokenValid
-        || submission == null
+    if (submission == null
         || !submission.getUser().equals(currentUser)
         || !submission.getJudgeResult().getJudgeResultSlug().equals("PD")) {
       throw new ResourceNotFoundException();

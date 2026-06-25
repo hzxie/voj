@@ -488,7 +488,7 @@ INSERT INTO `voj_usermeta` (`meta_id`, `uid`, `meta_key`, `meta_value`) VALUES
 CREATE TABLE `voj_users` (
   `uid` bigint(20) NOT NULL,
   `username` varchar(16) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `password` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `password` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `email` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL,
   `user_group_id` int(4) NOT NULL,
   `prefer_language_id` int(4) NOT NULL

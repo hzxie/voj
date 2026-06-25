@@ -36,7 +36,7 @@ import org.verwandlung.voj.web.model.Option;
 import org.verwandlung.voj.web.model.User;
 import org.verwandlung.voj.web.service.OptionService;
 import org.verwandlung.voj.web.service.SubmissionService;
-import org.verwandlung.voj.web.service.UserService;
+import org.verwandlung.voj.web.util.HttpSessionParser;
 import org.verwandlung.voj.web.util.LocaleUtils;
 
 /**
@@ -69,36 +69,20 @@ public class ViewAspect {
       HttpServletResponse response)
       throws Throwable {
     ModelAndView view = null;
-    HttpSession session = request.getSession();
 
     view = (ModelAndView) proceedingJoinPoint.proceed();
     view.addAllObjects(getSystemOptions());
     view.addObject("language", getUserLanguage(request, response));
 
-    boolean isLoggedIn = isLoggedIn(session);
-    if (isLoggedIn) {
-      long userId = (Long) session.getAttribute("uid");
-      User user = userService.getUserUsingUid(userId);
+    User user = HttpSessionParser.getCurrentUser();
+    if (user != null) {
+      long userId = user.getUid();
 
-      view.addObject("isLogin", isLoggedIn)
+      view.addObject("isLogin", true)
           .addObject("myProfile", user)
           .addObject("mySubmissionStats", submissionService.getSubmissionStatsOfUser(userId));
     }
     return view;
-  }
-
-  /**
-   * Checks whether the user has logged in.
-   *
-   * @param session - the HttpSession object
-   * @return whether the user has logged in
-   */
-  private boolean isLoggedIn(HttpSession session) {
-    Boolean isLoggedIn = (Boolean) session.getAttribute("isLoggedIn");
-    if (isLoggedIn == null || !isLoggedIn.booleanValue()) {
-      return false;
-    }
-    return true;
   }
 
   /**
@@ -170,9 +154,6 @@ public class ViewAspect {
     Locale locale = request.getLocale();
     return locale;
   }
-
-  /** The autowired UserService object. */
-  @Autowired private UserService userService;
 
   /** The autowired SubmissionService object. */
   @Autowired private SubmissionService submissionService;

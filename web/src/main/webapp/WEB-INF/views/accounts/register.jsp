@@ -82,7 +82,7 @@
                         arguments="${termsUrl}, ${privacyUrl}" />
                 </p>
                 <p>
-                    <input id="csrf-token" type="hidden" value="${csrfToken}" />
+                    <input id="csrf-token" type="hidden" value="${_csrf.token}" />
                     <button class="btn btn-primary btn-block" type="submit"><spring:message code="voj.accounts.register.create-account" text="Create Account" /></button>
                 </p>
             </form> <!-- #register-form -->

@@ -309,12 +309,11 @@ public class SubmissionService {
    * @param problemId - the unique identifier of the problem
    * @param languageSlug - the alias of the programming language
    * @param code - the code
-   * @param isCsrfTokenValid - whether the CSRF token is valid
    * @return a Map<String, Object> object containing the submission creation result, including the
    *     unique identifier of the created submission.
    */
   public Map<String, Object> createSubmission(
-      User user, long problemId, String languageSlug, String code, boolean isCsrfTokenValid) {
+      User user, long problemId, String languageSlug, String code) {
     Problem problem = problemMapper.getProblem(problemId);
     Language language = languageMapper.getLanguageUsingSlug(languageSlug);
 
@@ -322,7 +321,7 @@ public class SubmissionService {
 
     @SuppressWarnings("unchecked")
     Map<String, Object> result =
-        (Map<String, Object>) getSubmissionCreationResult(submission, isCsrfTokenValid);
+        (Map<String, Object>) getSubmissionCreationResult(submission);
     boolean isSuccessful = (Boolean) result.get("isSuccessful");
     if (isSuccessful) {
       submissionMapper.createSubmission(submission);
@@ -338,25 +337,21 @@ public class SubmissionService {
    * Validates the submission data.
    *
    * @param submission - the submission object to create
-   * @param isCsrfTokenValid - whether the CSRF token is valid
    * @return a Map<String, Boolean> object containing the validation result of the submission
    */
-  private Map<String, ? extends Object> getSubmissionCreationResult(
-      Submission submission, boolean isCsrfTokenValid) {
+  private Map<String, ? extends Object> getSubmissionCreationResult(Submission submission) {
     Map<String, Boolean> result = new HashMap<>(6, 1);
     String code = submission.getCode();
     result.put("isUserLogined", submission.getUser() != null);
     result.put("isProblemExists", submission.getProblem() != null);
     result.put("isLanguageExists", submission.getLanguage() != null);
     result.put("isCodeEmpty", code == null || code.length() == 0);
-    result.put("isCsrfTokenValid", isCsrfTokenValid);
 
     boolean isSuccessful =
         result.get("isUserLogined")
             && result.get("isProblemExists")
             && result.get("isLanguageExists")
-            && !result.get("isCodeEmpty")
-            && result.get("isCsrfTokenValid");
+            && !result.get("isCodeEmpty");
     result.put("isSuccessful", isSuccessful);
     return result;
   }

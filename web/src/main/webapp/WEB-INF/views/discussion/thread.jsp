@@ -98,7 +98,7 @@
                                 <div class="reply-header">
                                     <label for="wmd-input">
                                         <spring:message code="voj.discussion.thread.leave-a-comment" text="Leave a comment" />
-                                        <input type="hidden" id="csrf-token" value="${csrfToken}" />
+                                        <input type="hidden" id="csrf-token" value="${_csrf.token}" />
                                         <button id="create-discussion-reply" class="btn btn-primary"><spring:message code="voj.discussion.thread.comment" text="Comment" /></button>
                                     </label>
                                 </div> <!-- .reply-header -->

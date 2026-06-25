@@ -4,6 +4,9 @@
 <spring:eval expression="@propertyConfigurer.getProperty('url.cdn')" var="cdnUrl" />
 <spring:eval expression="@propertyConfigurer.getProperty('build.version')" var="version" />
 <jsp:useBean id="date" class="java.util.Date" />
+    <!-- CSRF token for AJAX requests (consumed by the ajaxSend hook in site.js). -->
+    <meta name="_csrf" content="${_csrf.token}" />
+    <meta name="_csrf_header" content="${_csrf.headerName}" />
     <div id="footer">
         <div class="container">
             <ul id="footer-nav" class="inline">

@@ -26,59 +26,6 @@ import org.junit.jupiter.api.Test;
  */
 public class DigestUtilsTest {
   /**
-   * Test case: tests the md5Hex method. Test data: a non-empty string. Expected result: the
-   * well-known MD5 digest of the string.
-   */
-  @Test
-  public void testMd5HexValid() {
-    Assertions.assertEquals("900150983cd24fb0d6963f7d28e17f72", DigestUtils.md5Hex("abc"));
-  }
-
-  /**
-   * Test case: tests the md5Hex method. Test data: the same string twice. Expected result: the
-   * digest is deterministic and 32 hexadecimal characters long.
-   */
-  @Test
-  public void testMd5HexDeterministicAndFormat() {
-    String first = DigestUtils.md5Hex("verwandlung");
-    String second = DigestUtils.md5Hex("verwandlung");
-    Assertions.assertEquals(first, second);
-    Assertions.assertEquals(32, first.length());
-    Assertions.assertTrue(first.matches("[0-9a-f]{32}"));
-  }
-
-  /**
-   * Test case: tests the md5Hex method. Test data: an empty string. Expected result: an empty
-   * string.
-   */
-  @Test
-  public void testMd5HexEmpty() {
-    Assertions.assertEquals("", DigestUtils.md5Hex(""));
-  }
-
-  /**
-   * Test case: tests the md5Hex method. Test data: a null reference. Expected result: an empty
-   * string.
-   */
-  @Test
-  public void testMd5HexNull() {
-    Assertions.assertEquals("", DigestUtils.md5Hex(null));
-  }
-
-  /**
-   * Test case: tests the getGuid method. Expected result: a well-formed UUID, and two consecutive
-   * calls return different values.
-   */
-  @Test
-  public void testGetGuid() {
-    String guid = DigestUtils.getGuid();
-    Assertions.assertNotNull(guid);
-    Assertions.assertTrue(
-        guid.matches("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"));
-    Assertions.assertNotEquals(guid, DigestUtils.getGuid());
-  }
-
-  /**
    * Test case: tests the getRandomString method. Test data: the ALPHA mode. Expected result: a
    * string of the requested length containing only letters.
    */

@@ -32,7 +32,6 @@ import org.verwandlung.voj.web.service.ContestService;
 import org.verwandlung.voj.web.service.LanguageService;
 import org.verwandlung.voj.web.service.ProblemService;
 import org.verwandlung.voj.web.service.SubmissionService;
-import org.verwandlung.voj.web.util.CsrfProtector;
 import org.verwandlung.voj.web.util.HttpRequestParser;
 import org.verwandlung.voj.web.util.HttpSessionParser;
 import org.verwandlung.voj.web.util.JsonUtils;
@@ -127,8 +126,7 @@ public class ContestsController {
         .addObject("problems", problems)
         .addObject("submissions", submissions)
         .addObject("isAttended", isAttended)
-        .addObject("numberOfContestants", numberOfContestants)
-        .addObject("csrfToken", CsrfProtector.getCsrfToken(request.getSession()));
+        .addObject("numberOfContestants", numberOfContestants);
     return view;
   }
 
@@ -136,7 +134,6 @@ public class ContestsController {
    * Handles the request of a user attending a contest.
    *
    * @param contestId - the unique identifier of the contest
-   * @param csrfToken - the token used to prevent CSRF attacks
    * @param request - the HttpRequest object
    * @param response - the HttpResponse object
    * @return a Map object containing the status information of whether the contest was attended
@@ -145,16 +142,12 @@ public class ContestsController {
   @RequestMapping(value = "/{contestId}/attend.action", method = RequestMethod.POST)
   public @ResponseBody Map<String, Boolean> attendContestAction(
       @PathVariable("contestId") long contestId,
-      @RequestParam(value = "csrfToken") String csrfToken,
       HttpServletRequest request,
       HttpServletResponse response) {
-    HttpSession session = request.getSession();
     String ipAddress = HttpRequestParser.getRemoteAddr(request);
-    User currentUser = HttpSessionParser.getCurrentUser(session);
-    boolean isCsrfTokenValid = CsrfProtector.isCsrfTokenValid(csrfToken, session);
+    User currentUser = HttpSessionParser.getCurrentUser();
 
-    Map<String, Boolean> result =
-        contestService.attendContest(contestId, currentUser, isCsrfTokenValid);
+    Map<String, Boolean> result = contestService.attendContest(contestId, currentUser);
     if (result.get("isSuccessful")) {
       LOGGER.info(
           String.format(

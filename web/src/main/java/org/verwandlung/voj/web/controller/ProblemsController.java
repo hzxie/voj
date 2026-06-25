@@ -42,7 +42,6 @@ import org.verwandlung.voj.web.service.DiscussionService;
 import org.verwandlung.voj.web.service.LanguageService;
 import org.verwandlung.voj.web.service.ProblemService;
 import org.verwandlung.voj.web.service.SubmissionService;
-import org.verwandlung.voj.web.util.CsrfProtector;
 import org.verwandlung.voj.web.util.HttpRequestParser;
 import org.verwandlung.voj.web.util.HttpSessionParser;
 
@@ -92,7 +91,7 @@ public class ProblemsController {
 
     HttpSession session = request.getSession();
     if (isLoggedIn(session)) {
-      long userId = (Long) session.getAttribute("uid");
+      long userId = HttpSessionParser.getCurrentUser().getUid();
       long endIndex =
           problemService.getLastIndexOfProblems(true, startIndex, NUMBER_OF_PROBLEMS_PER_PAGE);
       Map<Long, Submission> submissionOfProblems =
@@ -130,7 +129,7 @@ public class ProblemsController {
             startIndex, keyword, problemCategorySlug, null, true, NUMBER_OF_PROBLEMS_PER_PAGE);
     Map<Long, Submission> submissionOfProblems = null;
     if (isLoggedIn(session)) {
-      long userId = (Long) session.getAttribute("uid");
+      long userId = HttpSessionParser.getCurrentUser().getUid();
       submissionOfProblems =
           submissionService.getSubmissionOfProblems(
               userId, startIndex, startIndex + NUMBER_OF_PROBLEMS_PER_PAGE);
@@ -150,11 +149,7 @@ public class ProblemsController {
    * @return whether the user has logged in
    */
   private boolean isLoggedIn(HttpSession session) {
-    Boolean isLoggedIn = (Boolean) session.getAttribute("isLoggedIn");
-    if (isLoggedIn == null || !isLoggedIn.booleanValue()) {
-      return false;
-    }
-    return true;
+    return HttpSessionParser.getCurrentUser() != null;
   }
 
   /**
@@ -197,7 +192,7 @@ public class ProblemsController {
         discussionService.getDiscussionThreadsOfProblem(
             problemId, 0, NUMBER_OF_DISCUSSTION_THREADS_PER_PROBLEM));
     if (isLoggedIn) {
-      long userId = (Long) session.getAttribute("uid");
+      long userId = HttpSessionParser.getCurrentUser().getUid();
       Map<Long, Submission> submissionOfProblems =
           submissionService.getSubmissionOfProblems(userId, problemId, problemId + 1);
       List<Submission> submissions =
@@ -208,7 +203,6 @@ public class ProblemsController {
       view.addObject("latestSubmission", submissionOfProblems);
       view.addObject("submissions", submissions);
       view.addObject("languages", languages);
-      view.addObject("csrfToken", CsrfProtector.getCsrfToken(session));
     }
     return view;
   }
@@ -242,7 +236,6 @@ public class ProblemsController {
    * @param problemId - the unique identifier of the problem
    * @param languageSlug - the slug of the programming language
    * @param code - the code
-   * @param csrfToken - the token used to prevent CSRF attacks
    * @param request - the HttpRequest object
    * @return a Map<String, Object> object containing the result of the submission record creation
    */
@@ -251,16 +244,12 @@ public class ProblemsController {
       @RequestParam(value = "problemId") long problemId,
       @RequestParam(value = "languageSlug") String languageSlug,
       @RequestParam(value = "code") String code,
-      @RequestParam(value = "csrfToken") String csrfToken,
       HttpServletRequest request) {
-    HttpSession session = request.getSession();
     String ipAddress = HttpRequestParser.getRemoteAddr(request);
-    User currentUser = HttpSessionParser.getCurrentUser(session);
-    boolean isCsrfTokenValid = CsrfProtector.isCsrfTokenValid(csrfToken, session);
+    User currentUser = HttpSessionParser.getCurrentUser();
 
     Map<String, Object> result =
-        submissionService.createSubmission(
-            currentUser, problemId, languageSlug, code, isCsrfTokenValid);
+        submissionService.createSubmission(currentUser, problemId, languageSlug, code);
     boolean isSuccessful = (Boolean) result.get("isSuccessful");
     if (isSuccessful) {
       long submissionId = (Long) result.get("submissionId");

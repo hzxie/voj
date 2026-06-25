@@ -25,7 +25,6 @@
     <script type="text/javascript" src="${cdnUrl}/js/jquery-1.11.1.min.js?v=${version}"></script>
     <script type="text/javascript" src="${cdnUrl}/js/bootstrap.min.js?v=${version}"></script>
     <script type="text/javascript" src="${cdnUrl}/js/flat-ui.min.js?v=${version}"></script>
-    <script type="text/javascript" src="${cdnUrl}/js/md5.min.js?v=${version}"></script>
     <!--[if lte IE 9]>
         <script type="text/javascript" src="${cdnUrl}/js/jquery.placeholder.min.js?v=${version}"></script>
     <![endif]-->
@@ -93,10 +92,9 @@
             $('button[type=submit]').html('<spring:message code="voj.accounts.login.please-wait" text="Please wait..." />');
             
             var username   = $('#username').val(),
-                password   = md5($('#password').val()),
+                password   = $('#password').val(),
                 rememberMe = $('input#remember-me').is(':checked');
-            
-            $('#password').val(password);
+
             return doLoginAction(username, password, rememberMe);
         };
     </script>

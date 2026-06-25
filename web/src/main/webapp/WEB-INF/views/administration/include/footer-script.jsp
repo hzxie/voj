@@ -1,4 +1,14 @@
     <script type="text/javascript">
+        /* Attach the Spring Security CSRF token to every state-changing AJAX request. */
+        $(document).ajaxSend(function(event, jqXHR, settings) {
+            var method = (settings.type || 'GET').toUpperCase();
+            if ( !settings.crossDomain &&
+                 method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS' && method !== 'TRACE' ) {
+                jqXHR.setRequestHeader('${_csrf.headerName}', '${_csrf.token}');
+            }
+        });
+    </script>
+    <script type="text/javascript">
         String.prototype.format = function() {
             var newStr = this, i = 0;
             while (/%s/.test(newStr)) {

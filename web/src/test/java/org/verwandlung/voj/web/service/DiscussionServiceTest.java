@@ -127,7 +127,7 @@ public class DiscussionServiceTest {
   public void testVoteDiscussionReplySuccessfully() {
     // Reply 3 belongs to thread 2 and initially has no votes. User 1002 upvotes it.
     Map<String, Boolean> result =
-        discussionService.voteDiscussionReply(2, 3, userWithUid(1002), 1, 0, true);
+        discussionService.voteDiscussionReply(2, 3, userWithUid(1002), 1, 0);
     Assertions.assertTrue(result.get("isSuccessful"));
 
     DiscussionReply reply = discussionService.getDiscussionReplyUsingReplyId(3);
@@ -139,7 +139,7 @@ public class DiscussionServiceTest {
   public void testVoteDiscussionReplyWithMismatchedThread() {
     // Reply 1 belongs to thread 1, but thread 2 is passed in here.
     Map<String, Boolean> result =
-        discussionService.voteDiscussionReply(2, 1, userWithUid(1002), 1, 0, true);
+        discussionService.voteDiscussionReply(2, 1, userWithUid(1002), 1, 0);
     Assertions.assertFalse(result.get("isDiscussionReplyExists"));
     Assertions.assertFalse(result.get("isSuccessful"));
   }
@@ -148,7 +148,7 @@ public class DiscussionServiceTest {
   @Test
   public void testVoteDiscussionReplyWithInvalidVote() {
     Map<String, Boolean> result =
-        discussionService.voteDiscussionReply(2, 3, userWithUid(1002), 2, 0, true);
+        discussionService.voteDiscussionReply(2, 3, userWithUid(1002), 2, 0);
     Assertions.assertFalse(result.get("isVoteValid"));
     Assertions.assertFalse(result.get("isSuccessful"));
   }
@@ -156,7 +156,7 @@ public class DiscussionServiceTest {
   /** Test case: tests the voteDiscussionReply(...) method. Test data: the user is not logged in. Expected: the vote fails. */
   @Test
   public void testVoteDiscussionReplyWithoutLogin() {
-    Map<String, Boolean> result = discussionService.voteDiscussionReply(2, 3, null, 1, 0, true);
+    Map<String, Boolean> result = discussionService.voteDiscussionReply(2, 3, null, 1, 0);
     Assertions.assertFalse(result.get("isLoggedIn"));
     Assertions.assertFalse(result.get("isSuccessful"));
   }
@@ -216,7 +216,7 @@ public class DiscussionServiceTest {
   public void testCreateDiscussionThreadSuccessfully() {
     Map<String, Object> result =
         discussionService.createDiscussionThread(
-            adminUser(), "qa", 0, "How to solve this?", "Any hints?", true);
+            adminUser(), "qa", 0, "How to solve this?", "Any hints?");
     Assertions.assertTrue((Boolean) result.get("isSuccessful"));
     Assertions.assertTrue(result.containsKey("discussionThreadId"));
   }
@@ -225,7 +225,7 @@ public class DiscussionServiceTest {
   @Test
   public void testCreateDiscussionThreadWithEmptyTitle() {
     Map<String, Object> result =
-        discussionService.createDiscussionThread(adminUser(), "qa", 0, "", "Content", true);
+        discussionService.createDiscussionThread(adminUser(), "qa", 0, "", "Content");
     Assertions.assertFalse((Boolean) result.get("isSuccessful"));
   }
 
@@ -234,7 +234,7 @@ public class DiscussionServiceTest {
   public void testCreateDiscussionThreadWithNonExistentTopic() {
     Map<String, Object> result =
         discussionService.createDiscussionThread(
-            adminUser(), "not-a-topic", 0, "Title", "Content", true);
+            adminUser(), "not-a-topic", 0, "Title", "Content");
     Assertions.assertFalse((Boolean) result.get("isDiscussionTopicExists"));
     Assertions.assertFalse((Boolean) result.get("isSuccessful"));
   }
@@ -243,23 +243,15 @@ public class DiscussionServiceTest {
   @Test
   public void testEditDiscussionThreadSuccessfully() {
     Map<String, Boolean> result =
-        discussionService.editDiscussionThread(1, adminUser(), "qa", "Edited Title", true);
+        discussionService.editDiscussionThread(1, adminUser(), "qa", "Edited Title");
     Assertions.assertTrue(result.get("isSuccessful"));
-  }
-
-  /** Test case: tests the editDiscussionThread(...) method. Test data: an invalid CSRF token. Expected: editing fails without throwing an exception. */
-  @Test
-  public void testEditDiscussionThreadWithInvalidCsrfToken() {
-    Map<String, Boolean> result =
-        discussionService.editDiscussionThread(1, adminUser(), "qa", "Edited Title", false);
-    Assertions.assertFalse(result.get("isSuccessful"));
   }
 
   /** Test case: tests the editDiscussionThread(...) method. Test data: the thread does not exist. Expected: editing fails. */
   @Test
   public void testEditDiscussionThreadNotExists() {
     Map<String, Boolean> result =
-        discussionService.editDiscussionThread(99999, adminUser(), "qa", "Title", true);
+        discussionService.editDiscussionThread(99999, adminUser(), "qa", "Title");
     Assertions.assertFalse(result.get("isDiscussionThreadExists"));
     Assertions.assertFalse(result.get("isSuccessful"));
   }
@@ -268,7 +260,7 @@ public class DiscussionServiceTest {
   @Test
   public void testCreateDiscussionReplySuccessfully() {
     Map<String, Object> result =
-        discussionService.createDiscussionReply(1, adminUser(), "A helpful reply.", true);
+        discussionService.createDiscussionReply(1, adminUser(), "A helpful reply.");
     Assertions.assertTrue((Boolean) result.get("isSuccessful"));
     Assertions.assertTrue(result.containsKey("discussionReply"));
   }
@@ -276,7 +268,7 @@ public class DiscussionServiceTest {
   /** Test case: tests the createDiscussionReply(...) method. Test data: the reply content is empty. Expected: creation fails. */
   @Test
   public void testCreateDiscussionReplyWithEmptyContent() {
-    Map<String, Object> result = discussionService.createDiscussionReply(1, adminUser(), "", true);
+    Map<String, Object> result = discussionService.createDiscussionReply(1, adminUser(), "");
     Assertions.assertFalse((Boolean) result.get("isSuccessful"));
   }
 
@@ -284,7 +276,7 @@ public class DiscussionServiceTest {
   @Test
   public void testCreateDiscussionReplyWithNonExistentThread() {
     Map<String, Object> result =
-        discussionService.createDiscussionReply(99999, adminUser(), "Reply", true);
+        discussionService.createDiscussionReply(99999, adminUser(), "Reply");
     Assertions.assertFalse((Boolean) result.get("isDiscussionThreadExists"));
     Assertions.assertFalse((Boolean) result.get("isSuccessful"));
   }
@@ -294,22 +286,14 @@ public class DiscussionServiceTest {
   public void testEditDiscussionReplyByAdministrator() {
     // Reply 1 was created by user 1001; the administrator (user 1000) has permission to edit it.
     Map<String, Boolean> result =
-        discussionService.editDiscussionReply(1, adminUser(), "Edited reply content.", true);
+        discussionService.editDiscussionReply(1, adminUser(), "Edited reply content.");
     Assertions.assertTrue(result.get("isSuccessful"));
-  }
-
-  /** Test case: tests the editDiscussionReply(...) method. Test data: an invalid CSRF token. Expected: editing fails. */
-  @Test
-  public void testEditDiscussionReplyWithInvalidCsrfToken() {
-    Map<String, Boolean> result =
-        discussionService.editDiscussionReply(1, adminUser(), "Content", false);
-    Assertions.assertFalse(result.get("isSuccessful"));
   }
 
   /** Test case: tests the deleteDiscussionReply(...) method. Test data: deleted by an administrator. Expected: deletion succeeds. */
   @Test
   public void testDeleteDiscussionReplyByAdministrator() {
-    Map<String, Boolean> result = discussionService.deleteDiscussionReply(3, adminUser(), true);
+    Map<String, Boolean> result = discussionService.deleteDiscussionReply(3, adminUser());
     Assertions.assertTrue(result.get("isSuccessful"));
     Assertions.assertNull(discussionService.getDiscussionReplyUsingReplyId(3));
   }
@@ -319,7 +303,7 @@ public class DiscussionServiceTest {
   public void testDeleteDiscussionReplyByUnauthorizedUser() {
     // Reply 1 was created by user 1001; regular user 1002 has no permission to delete it.
     Map<String, Boolean> result =
-        discussionService.deleteDiscussionReply(1, userMapper.getUserUsingUid(1002), true);
+        discussionService.deleteDiscussionReply(1, userMapper.getUserUsingUid(1002));
     Assertions.assertFalse(result.get("isSuccessful"));
   }
 

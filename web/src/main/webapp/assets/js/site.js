@@ -5,6 +5,21 @@
  * Released under the GPL v3 license
  * http://opensource.org/licenses/GPL-3.0
  */
+/* Attach the Spring Security CSRF token to every state-changing AJAX request.
+ * The token and header name are rendered into <meta> tags by footer.jsp. */
+$(function() {
+    var csrfToken  = $('meta[name="_csrf"]').attr('content'),
+        csrfHeader = $('meta[name="_csrf_header"]').attr('content');
+
+    $(document).ajaxSend(function(event, jqXHR, settings) {
+        var method = (settings.type || 'GET').toUpperCase();
+        if ( csrfToken && csrfHeader && !settings.crossDomain &&
+             method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS' && method !== 'TRACE' ) {
+            jqXHR.setRequestHeader(csrfHeader, csrfToken);
+        }
+    });
+});
+
 /* String Protorype Extension */
 String.prototype.format = function() {
     var newStr = this, i = 0;

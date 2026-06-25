@@ -31,7 +31,6 @@ import org.verwandlung.voj.web.exception.ResourceNotFoundException;
 import org.verwandlung.voj.web.model.*;
 import org.verwandlung.voj.web.service.DiscussionService;
 import org.verwandlung.voj.web.service.ProblemService;
-import org.verwandlung.voj.web.util.CsrfProtector;
 import org.verwandlung.voj.web.util.HttpRequestParser;
 import org.verwandlung.voj.web.util.HttpSessionParser;
 
@@ -142,7 +141,6 @@ public class DiscussionController {
     if (isLoggedIn(session)) {
       List<DiscussionTopic> discussionTopics = discussionService.getDiscussionTopics();
       view.addObject("discussionTopics", discussionTopics);
-      view.addObject("csrfToken", CsrfProtector.getCsrfToken(session));
     }
     return view;
   }
@@ -175,7 +173,6 @@ public class DiscussionController {
       view = new ModelAndView("discussion/new-thread");
       view.addObject("discussionTopics", discussionTopics);
       view.addObject("relatedProblem", problem);
-      view.addObject("csrfToken", CsrfProtector.getCsrfToken(session));
     }
     return view;
   }
@@ -187,11 +184,7 @@ public class DiscussionController {
    * @return whether the user has logged in
    */
   private boolean isLoggedIn(HttpSession session) {
-    Boolean isLoggedIn = (Boolean) session.getAttribute("isLoggedIn");
-    if (isLoggedIn == null || !isLoggedIn.booleanValue()) {
-      return false;
-    }
-    return true;
+    return HttpSessionParser.getCurrentUser() != null;
   }
 
   /**
@@ -229,12 +222,11 @@ public class DiscussionController {
    * @return the unique user identifier of the currently logged-in user
    */
   private long getUidOfUserLoggedIn(HttpSession session) {
-    Boolean isLoggedIn = (Boolean) session.getAttribute("isLoggedIn");
-    Long userId = (Long) session.getAttribute("uid");
-    if (isLoggedIn == null || !isLoggedIn.booleanValue() || userId == null) {
+    User currentUser = HttpSessionParser.getCurrentUser();
+    if (currentUser == null) {
       return -1;
     }
-    return userId;
+    return currentUser.getUid();
   }
 
   /**
@@ -246,7 +238,6 @@ public class DiscussionController {
    *     canceled the upvote, 0 means no operation)
    * @param voteDown - the vote-down status (+1 means the user downvoted this reply, -1 means the user
    *     canceled the downvote, 0 means no operation)
-   * @param csrfToken - the token used to prevent CSRF attacks
    * @param request - the HttpServletRequest object
    * @return a JSON object containing the result of handling the discussion reply vote request
    */
@@ -256,16 +247,13 @@ public class DiscussionController {
       @RequestParam(value = "discussionReplyId") long discussionReplyId,
       @RequestParam(value = "voteUp") int voteUp,
       @RequestParam(value = "voteDown") int voteDown,
-      @RequestParam(value = "csrfToken") String csrfToken,
       HttpServletRequest request) {
-    HttpSession session = request.getSession();
     String ipAddress = HttpRequestParser.getRemoteAddr(request);
-    User currentUser = HttpSessionParser.getCurrentUser(session);
-    boolean isCsrfTokenValid = CsrfProtector.isCsrfTokenValid(csrfToken, session);
+    User currentUser = HttpSessionParser.getCurrentUser();
 
     Map<String, Boolean> result =
         discussionService.voteDiscussionReply(
-            discussionThreadId, discussionReplyId, currentUser, voteUp, voteDown, isCsrfTokenValid);
+            discussionThreadId, discussionReplyId, currentUser, voteUp, voteDown);
     if (result.get("isSuccessful")) {
       LOGGER.info(
           String.format(
@@ -282,7 +270,6 @@ public class DiscussionController {
    * @param relatedProblemIdString - the unique identifier of the problem the discussion thread is
    *     related to
    * @param discussionThreadTitle - the title of the discussion thread
-   * @param csrfToken the token used to prevent CSRF attacks
    * @param request - the HttpServletRequest object
    * @return a JSON object containing the result of the discussion thread creation
    */
@@ -292,14 +279,10 @@ public class DiscussionController {
       @RequestParam(value = "relatedProblemId") String relatedProblemIdString,
       @RequestParam(value = "threadTitle") String discussionThreadTitle,
       @RequestParam(value = "threadContent") String discussionThreadContent,
-      @RequestParam(value = "csrfToken") String csrfToken,
       HttpServletRequest request) {
-    HttpSession session = request.getSession();
     String ipAddress = HttpRequestParser.getRemoteAddr(request);
-    User currentUser = HttpSessionParser.getCurrentUser(session);
-    long relatedProblemId =
-        relatedProblemIdString.isEmpty() ? -1 : Integer.parseInt(relatedProblemIdString);
-    boolean isCsrfTokenValid = CsrfProtector.isCsrfTokenValid(csrfToken, session);
+    User currentUser = HttpSessionParser.getCurrentUser();
+    long relatedProblemId = parseRelatedProblemId(relatedProblemIdString);
 
     Map<String, Object> result =
         discussionService.createDiscussionThread(
@@ -307,8 +290,7 @@ public class DiscussionController {
             discussionTopicSlug,
             relatedProblemId,
             discussionThreadTitle,
-            discussionThreadContent,
-            isCsrfTokenValid);
+            discussionThreadContent);
     if ((Boolean) result.get("isSuccessful")) {
       LOGGER.info(
           String.format(
@@ -319,12 +301,34 @@ public class DiscussionController {
   }
 
   /**
+   * Parses the optional related problem identifier submitted with a new discussion thread. The value
+   * may be empty (no related problem) or contain surrounding whitespace, so it is trimmed before
+   * parsing; any non-numeric value is treated as "no related problem".
+   *
+   * @param relatedProblemIdString - the raw {@code relatedProblemId} request parameter
+   * @return the related problem identifier, or {@code -1} if absent or malformed
+   */
+  private long parseRelatedProblemId(String relatedProblemIdString) {
+    if (relatedProblemIdString == null) {
+      return -1;
+    }
+    String trimmed = relatedProblemIdString.trim();
+    if (trimmed.isEmpty()) {
+      return -1;
+    }
+    try {
+      return Long.parseLong(trimmed);
+    } catch (NumberFormatException e) {
+      return -1;
+    }
+  }
+
+  /**
    * Handles the request of a user editing a discussion thread.
    *
    * @param discussionThreadId - the unique identifier of the discussion thread
    * @param discussionTopicSlug - the unique slug of the topic the discussion thread belongs to
    * @param discussionThreadTitle - the title of the discussion thread
-   * @param csrfToken the token used to prevent CSRF attacks
    * @param request - the HttpServletRequest object
    * @return a JSON object containing the result of the discussion thread edit
    */
@@ -333,20 +337,13 @@ public class DiscussionController {
       @RequestParam(value = "discussionThreadId") long discussionThreadId,
       @RequestParam(value = "discussionTopicSlug") String discussionTopicSlug,
       @RequestParam(value = "discussionThreadTitle") String discussionThreadTitle,
-      @RequestParam(value = "csrfToken") String csrfToken,
       HttpServletRequest request) {
-    HttpSession session = request.getSession();
     String ipAddress = HttpRequestParser.getRemoteAddr(request);
-    User currentUser = HttpSessionParser.getCurrentUser(session);
-    boolean isCsrfTokenValid = CsrfProtector.isCsrfTokenValid(csrfToken, session);
+    User currentUser = HttpSessionParser.getCurrentUser();
 
     Map<String, Boolean> result =
         discussionService.editDiscussionThread(
-            discussionThreadId,
-            currentUser,
-            discussionTopicSlug,
-            discussionThreadTitle,
-            isCsrfTokenValid);
+            discussionThreadId, currentUser, discussionTopicSlug, discussionThreadTitle);
     if (result.get("isSuccessful")) {
       LOGGER.info(
           String.format(
@@ -361,7 +358,6 @@ public class DiscussionController {
    *
    * @param discussionThreadId - the unique identifier of the discussion thread
    * @param replyContent - the content of the discussion reply
-   * @param csrfToken - the token used to prevent CSRF attacks
    * @param request - the HttpServletRequest object
    * @return a JSON object containing the result of the discussion reply creation
    */
@@ -369,16 +365,12 @@ public class DiscussionController {
   public @ResponseBody Map<String, Object> createDiscussionReplyAction(
       @PathVariable("threadId") long discussionThreadId,
       @RequestParam(value = "replyContent") String replyContent,
-      @RequestParam(value = "csrfToken") String csrfToken,
       HttpServletRequest request) {
-    HttpSession session = request.getSession();
     String ipAddress = HttpRequestParser.getRemoteAddr(request);
-    User currentUser = HttpSessionParser.getCurrentUser(session);
-    boolean isCsrfTokenValid = CsrfProtector.isCsrfTokenValid(csrfToken, session);
+    User currentUser = HttpSessionParser.getCurrentUser();
 
     Map<String, Object> result =
-        discussionService.createDiscussionReply(
-            discussionThreadId, currentUser, replyContent, isCsrfTokenValid);
+        discussionService.createDiscussionReply(discussionThreadId, currentUser, replyContent);
     if ((Boolean) result.get("isSuccessful")) {
       LOGGER.info(
           String.format(
@@ -393,7 +385,6 @@ public class DiscussionController {
    *
    * @param discussionReplyId - the unique identifier of the discussion reply
    * @param replyContent - the content of the discussion reply
-   * @param csrfToken - the token used to prevent CSRF attacks
    * @param request - the HttpServletRequest object
    * @return a JSON object containing the result of the discussion reply edit
    */
@@ -402,16 +393,12 @@ public class DiscussionController {
       @PathVariable("threadId") long discussionThreadId,
       @RequestParam(value = "discussionReplyId") long discussionReplyId,
       @RequestParam(value = "replyContent") String replyContent,
-      @RequestParam(value = "csrfToken") String csrfToken,
       HttpServletRequest request) {
-    HttpSession session = request.getSession();
     String ipAddress = HttpRequestParser.getRemoteAddr(request);
-    User currentUser = HttpSessionParser.getCurrentUser(session);
-    boolean isCsrfTokenValid = CsrfProtector.isCsrfTokenValid(csrfToken, session);
+    User currentUser = HttpSessionParser.getCurrentUser();
 
     Map<String, Boolean> result =
-        discussionService.editDiscussionReply(
-            discussionReplyId, currentUser, replyContent, isCsrfTokenValid);
+        discussionService.editDiscussionReply(discussionReplyId, currentUser, replyContent);
     if (result.get("isSuccessful")) {
       LOGGER.info(
           String.format(
@@ -425,7 +412,6 @@ public class DiscussionController {
    * Handles the request of a user deleting a discussion reply.
    *
    * @param discussionReplyId - the unique identifier of the discussion reply
-   * @param csrfToken - the token used to prevent CSRF attacks
    * @param request - the HttpServletRequest object
    * @return a JSON object containing the result of the discussion reply deletion
    */
@@ -433,15 +419,12 @@ public class DiscussionController {
   public @ResponseBody Map<String, Boolean> deleteDiscussionReplyAction(
       @PathVariable("threadId") long discussionThreadId,
       @RequestParam(value = "discussionReplyId") long discussionReplyId,
-      @RequestParam(value = "csrfToken") String csrfToken,
       HttpServletRequest request) {
-    HttpSession session = request.getSession();
     String ipAddress = HttpRequestParser.getRemoteAddr(request);
-    User currentUser = HttpSessionParser.getCurrentUser(session);
-    boolean isCsrfTokenValid = CsrfProtector.isCsrfTokenValid(csrfToken, session);
+    User currentUser = HttpSessionParser.getCurrentUser();
 
     Map<String, Boolean> result =
-        discussionService.deleteDiscussionReply(discussionReplyId, currentUser, isCsrfTokenValid);
+        discussionService.deleteDiscussionReply(discussionReplyId, currentUser);
     if (result.get("isSuccessful")) {
       LOGGER.info(
           String.format(

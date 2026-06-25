@@ -236,7 +236,7 @@
                     </div> <!-- .row-fluid -->
                     <div class="row-fluid">
                         <div class="span12">
-                            <input id="csrf-token" type="hidden" value="${csrfToken}" />
+                            <input id="csrf-token" type="hidden" value="${_csrf.token}" />
                             <button class="btn btn-primary btn-block" type="submit"><spring:message code="voj.accounts.dashboard.update-profile" text="Update Profile" /></button>
                         </div> <!-- .span12 -->
                     </div> <!-- .row-fluid -->

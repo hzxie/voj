@@ -192,7 +192,7 @@
     <script type="text/javascript">
         function attendContest() {
             var postData = {
-                'csrfToken': '${csrfToken}'
+                'csrfToken': '${_csrf.token}'
             };
 
             $.ajax({                

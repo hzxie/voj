@@ -24,12 +24,12 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import org.verwandlung.voj.judger.mapper.UserMapper;
 import org.verwandlung.voj.judger.messenger.MessageSender;
 import org.verwandlung.voj.judger.model.User;
-import org.verwandlung.voj.judger.util.DigestUtils;
 
 /**
  * The application heartbeat, used to send Keep-Alive messages to the web module.
@@ -68,7 +68,7 @@ public class ApplicationHeartbeat implements Runnable {
 
     if (user != null
         && "judgers".equals(user.getUserGroup().getUserGroupSlug())
-        && user.getPassword().equals(DigestUtils.md5Hex(judgerPassword))) {
+        && passwordEncoder.matches(judgerPassword, user.getPassword())) {
       return true;
     }
     return false;
@@ -100,6 +100,9 @@ public class ApplicationHeartbeat implements Runnable {
 
   /** The autowired UserMapper object, used to verify the judger's identity information. */
   @Autowired private UserMapper userMapper;
+
+  /** The autowired password encoder, used to verify the judger's password against the stored hash. */
+  @Autowired private PasswordEncoder passwordEncoder;
 
   /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(ApplicationHeartbeat.class);

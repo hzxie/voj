@@ -30,6 +30,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.session.SessionRegistry;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -54,11 +55,9 @@ import org.verwandlung.voj.web.service.OptionService;
 import org.verwandlung.voj.web.service.ProblemService;
 import org.verwandlung.voj.web.service.SubmissionService;
 import org.verwandlung.voj.web.service.UserService;
-import org.verwandlung.voj.web.util.CsrfProtector;
 import org.verwandlung.voj.web.util.DateUtils;
 import org.verwandlung.voj.web.util.HttpRequestParser;
 import org.verwandlung.voj.web.util.JsonUtils;
-import org.verwandlung.voj.web.util.SessionListener;
 
 /**
  * Handles the requests for system administration.
@@ -115,7 +114,7 @@ public class AdministrationController {
    * @return the number of online users
    */
   private long getOnlineUsers() {
-    return SessionListener.getTotalSessions();
+    return sessionRegistry.getAllPrincipals().size();
   }
 
   /**
@@ -329,7 +328,7 @@ public class AdministrationController {
       Map<String, Boolean> updateProfileResult =
           userService.updateProfile(user, password, userGroupSlug, preferLanguageSlug);
       Map<String, Boolean> updateUserMetaResult =
-          userService.updateProfile(user, email, location, website, socialLinks, aboutMe, true);
+          userService.updateProfile(user, email, location, website, socialLinks, aboutMe);
       boolean isUpdateProfileSuccessful = updateProfileResult.get("isSuccessful");
       boolean isUpdateUserMetaSuccessful = updateUserMetaResult.get("isSuccessful");
 
@@ -884,7 +883,6 @@ public class AdministrationController {
     }
     ModelAndView view = new ModelAndView("administration/edit-submission");
     view.addObject("submission", submission);
-    view.addObject("csrfToken", CsrfProtector.getCsrfToken(request.getSession()));
     return view;
   }
 
@@ -988,6 +986,9 @@ public class AdministrationController {
 
   /** The autowired UserService object. */
   @Autowired private UserService userService;
+
+  /** The autowired session registry. Used for counting the number of online users. */
+  @Autowired private SessionRegistry sessionRegistry;
 
   /** The autowired ProblemService object. Used for getting problem record information. */
   @Autowired private ProblemService problemService;

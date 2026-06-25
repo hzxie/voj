@@ -52,7 +52,7 @@
                     </p>
                 </div> <!-- .span9 -->
                 <div class="span3 text-right">
-                    <input type="hidden" id="csrf-token" value="${csrfToken}" />
+                    <input type="hidden" id="csrf-token" value="${_csrf.token}" />
                     <button class="btn btn-primary" onclick="javascript:void(0);"><spring:message code="voj.discussion.new-thread.create-discussion" text="Create Discussion" /></button>
                 </div> <!-- .span3 -->
             </div> <!-- .row-fluid -->

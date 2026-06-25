@@ -26,6 +26,7 @@ import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -123,7 +124,7 @@ public class UserService {
    * Verifies whether the user's identity is valid.
    *
    * @param username - the username or email address
-   * @param password - the password (encrypted with MD5)
+   * @param password - the plain-text password
    * @return a Map<String, Boolean> object containing the login verification result
    */
   public Map<String, Boolean> isAllowedToLogin(String username, String password) {
@@ -136,7 +137,8 @@ public class UserService {
 
     if (!result.get("isUsernameEmpty") && !result.get("isPasswordEmpty")) {
       User user = getUserUsingUsernameOrEmail(username);
-      if (user != null && user.getPassword().equals(password)) {
+      if (user != null && passwordEncoder.matches(password, user.getPassword())) {
+        upgradePasswordEncodingIfNeeded(user, password);
         result.put("isAccountValid", true);
         if (isAllowedToAccess(user.getUserGroup())) {
           result.put("isAllowedToAccess", true);
@@ -145,6 +147,20 @@ public class UserService {
       }
     }
     return result;
+  }
+
+  /**
+   * Re-encodes the user's password with the preferred encoder (bcrypt) when the stored value uses a
+   * weaker, legacy encoding (e.g. a bare MD5 digest). Called after a successful credential match.
+   *
+   * @param user - the authenticated user
+   * @param rawPassword - the plain-text password the user just authenticated with
+   */
+  private void upgradePasswordEncodingIfNeeded(User user, String rawPassword) {
+    if (passwordEncoder.upgradeEncoding(user.getPassword())) {
+      user.setPassword(passwordEncoder.encode(rawPassword));
+      userMapper.updateUser(user);
+    }
   }
 
   /**
@@ -171,7 +187,6 @@ public class UserService {
    * @param email - the email address
    * @param userGroupSlug - the alias of the user group
    * @param languageSlug - the alias of the preferred language
-   * @param isCsrfTokenValid - whether the CSRF token is valid
    * @param isAllowRegister - whether the system allows new user registration
    * @return a Map<String, Boolean> object containing the account creation result
    */
@@ -181,15 +196,13 @@ public class UserService {
       String email,
       String userGroupSlug,
       String languageSlug,
-      boolean isCsrfTokenValid,
       boolean isAllowRegister) {
     UserGroup userGroup = userGroupMapper.getUserGroupUsingSlug(userGroupSlug);
     Language languagePreference = languageMapper.getLanguageUsingSlug(languageSlug);
     User user =
-        new User(username, DigestUtils.md5Hex(password), email, userGroup, languagePreference);
+        new User(username, passwordEncoder.encode(password), email, userGroup, languagePreference);
 
-    Map<String, Boolean> result =
-        getUserCreationResult(user, password, isCsrfTokenValid, isAllowRegister);
+    Map<String, Boolean> result = getUserCreationResult(user, password, isAllowRegister);
     if (result.get("isSuccessful")) {
       userMapper.createUser(user);
       createUserMeta(user);
@@ -212,9 +225,9 @@ public class UserService {
     UserGroup userGroup = userGroupMapper.getUserGroupUsingSlug(userGroupSlug);
     Language languagePreference = languageMapper.getLanguageUsingSlug(languageSlug);
     User user =
-        new User(username, DigestUtils.md5Hex(password), email, userGroup, languagePreference);
+        new User(username, passwordEncoder.encode(password), email, userGroup, languagePreference);
 
-    Map<String, Boolean> result = getUserCreationResult(user, password, true, true);
+    Map<String, Boolean> result = getUserCreationResult(user, password, true);
     if (result.get("isSuccessful")) {
       userMapper.createUser(user);
       createUserMeta(user);
@@ -240,12 +253,11 @@ public class UserService {
    *
    * @param user - the User object to create
    * @param password - the password (not encrypted with MD5)
-   * @param isCsrfTokenValid - whether the CSRF token is valid
    * @param isAllowRegister - whether the system allows new user registration
    * @return a Map<String, Boolean> object containing the account information validation result
    */
   private Map<String, Boolean> getUserCreationResult(
-      User user, String password, boolean isCsrfTokenValid, boolean isAllowRegister) {
+      User user, String password, boolean isAllowRegister) {
     Map<String, Boolean> result = new HashMap<>(13, 1);
     result.put("isUsernameEmpty", user.getUsername().isEmpty());
     result.put("isUsernameLegal", isUsernameLegal(user.getUsername()));
@@ -257,7 +269,6 @@ public class UserService {
     result.put("isEmailExists", isEmailExists(user.getEmail()));
     result.put("isUserGroupLegal", user.getUserGroup() != null);
     result.put("isLanguageLegal", user.getPreferLanguage() != null);
-    result.put("isCsrfTokenValid", isCsrfTokenValid);
     result.put("isAllowRegister", isAllowRegister);
 
     boolean isSuccessful =
@@ -271,7 +282,6 @@ public class UserService {
             && !result.get("isEmailExists")
             && result.get("isUserGroupLegal")
             && result.get("isLanguageLegal")
-            && result.get("isCsrfTokenValid")
             && result.get("isAllowRegister");
     result.put("isSuccessful", isSuccessful);
     return result;
@@ -301,28 +311,23 @@ public class UserService {
    *
    * @param username - the user's username
    * @param email - the user's email address
-   * @param isCsrfTokenValid - whether the CSRF token is valid
    * @return a Map<String, Boolean> object containing the account validation result
    */
-  public Map<String, Boolean> sendVerificationEmail(
-      String username, String email, boolean isCsrfTokenValid) {
+  public Map<String, Boolean> sendVerificationEmail(String username, String email) {
     boolean isSuccessful = true;
     boolean isUserExists = false;
     Map<String, Boolean> result = new HashMap<>(4, 1);
 
-    if (isCsrfTokenValid) {
-      User user = userMapper.getUserUsingUsername(username);
-      if (user != null && user.getEmail().equals(email)) {
-        isUserExists = true;
-        try {
-          sendVerificationEmail(username, email);
-        } catch (IOException | TemplateException e) {
-          e.printStackTrace();
-          isSuccessful = false;
-        }
+    User user = userMapper.getUserUsingUsername(username);
+    if (user != null && user.getEmail().equals(email)) {
+      isUserExists = true;
+      try {
+        dispatchVerificationEmail(username, email);
+      } catch (IOException | TemplateException e) {
+        e.printStackTrace();
+        isSuccessful = false;
       }
     }
-    result.put("isCsrfTokenValid", isCsrfTokenValid);
     result.put("isUserExists", isUserExists);
     result.put("isSuccessful", isSuccessful && isUserExists);
 
@@ -337,7 +342,7 @@ public class UserService {
    * @throws TemplateException
    * @throws IOException
    */
-  private void sendVerificationEmail(String username, String email)
+  private void dispatchVerificationEmail(String username, String email)
       throws IOException, TemplateException {
     String token = DigestUtils.getGuid();
     Date expireTime = getExpireTime();
@@ -378,25 +383,19 @@ public class UserService {
    * @param token - the token used for validation
    * @param newPassword - the new password
    * @param confirmPassword - the confirmation of the new password
-   * @param isCsrfTokenValid - whether the CSRF token is valid
    * @return a Map<String, Boolean> object containing the password reset result
    */
   public Map<String, Boolean> resetPassword(
-      String email,
-      String token,
-      String newPassword,
-      String confirmPassword,
-      boolean isCsrfTokenValid) {
+      String email, String token, String newPassword, String confirmPassword) {
     boolean isEmailValidationValid = isEmailValidationValid(email, token);
     Map<String, Boolean> result =
-        getResetPasswordResult(
-            newPassword, confirmPassword, isEmailValidationValid, isCsrfTokenValid);
+        getResetPasswordResult(newPassword, confirmPassword, isEmailValidationValid);
 
     if (result.get("isSuccessful")) {
       emailValidationMapper.deleteEmailValidation(email);
 
       User user = userMapper.getUserUsingEmail(email);
-      user.setPassword(DigestUtils.md5Hex(newPassword));
+      user.setPassword(passwordEncoder.encode(newPassword));
       userMapper.updateUser(user);
     }
     return result;
@@ -408,24 +407,18 @@ public class UserService {
    * @param newPassword - the new password
    * @param confirmPassword - the confirmation of the new password
    * @param isEmailValidationValid - whether the email validation credential is valid
-   * @param isCsrfTokenValid - whether the CSRF token is valid
    * @return a Map<String, Boolean> object containing the password reset result
    */
   private Map<String, Boolean> getResetPasswordResult(
-      String newPassword,
-      String confirmPassword,
-      boolean isEmailValidationValid,
-      boolean isCsrfTokenValid) {
+      String newPassword, String confirmPassword, boolean isEmailValidationValid) {
     Map<String, Boolean> result = new HashMap<>(7, 1);
     result.put("isEmailValidationValid", isEmailValidationValid);
-    result.put("isCsrfTokenValid", isCsrfTokenValid);
     result.put("isNewPasswordEmpty", newPassword.isEmpty());
     result.put("isNewPasswordLegal", isPasswordLegal(newPassword));
     result.put("isConfirmPasswordMatched", newPassword.equals(confirmPassword));
 
     boolean isSuccessful =
         result.get("isEmailValidationValid")
-            && result.get("isCsrfTokenValid")
             && !result.get("isNewPasswordEmpty")
             && result.get("isNewPasswordLegal")
             && result.get("isConfirmPasswordMatched");
@@ -468,7 +461,7 @@ public class UserService {
         getChangePasswordResult(user, oldPassword, newPassword, confirmPassword);
 
     if (result.get("isSuccessful")) {
-      user.setPassword(DigestUtils.md5Hex(newPassword));
+      user.setPassword(passwordEncoder.encode(newPassword));
       userMapper.updateUser(user);
     }
     return result;
@@ -509,7 +502,6 @@ public class UserService {
    * @param website - the user's personal homepage
    * @param socialLinks - the user's social network information
    * @param aboutMe - the user's personal bio
-   * @param isCsrfTokenValid - whether the CSRF token is valid
    * @return a Map<String, Boolean> object containing the personal profile update result
    */
   public Map<String, Boolean> updateProfile(
@@ -518,15 +510,13 @@ public class UserService {
       String location,
       String website,
       String socialLinks,
-      String aboutMe,
-      boolean isCsrfTokenValid) {
+      String aboutMe) {
     location = HtmlTextFilter.filter(location);
     website = HtmlTextFilter.filter(website);
     socialLinks = HtmlTextFilter.filter(socialLinks);
     aboutMe = offensiveWordFilter.filter(HtmlTextFilter.filter(aboutMe));
     Map<String, Boolean> result =
-        getUpdateProfileResult(
-            user, email, location, website, socialLinks, aboutMe, isCsrfTokenValid);
+        getUpdateProfileResult(user, email, location, website, socialLinks, aboutMe);
 
     if (result.get("isSuccessful")) {
       user.setEmail(email);
@@ -549,7 +539,6 @@ public class UserService {
    * @param website - the user's personal homepage
    * @param socialLinks - the user's social network information
    * @param aboutMe - the user's personal bio
-   * @param isCsrfTokenValid - whether the CSRF token is valid
    * @return a Map<String, Boolean> object containing the personal profile update result
    */
   private Map<String, Boolean> getUpdateProfileResult(
@@ -558,8 +547,7 @@ public class UserService {
       String location,
       String website,
       String socialLinks,
-      String aboutMe,
-      boolean isCsrfTokenValid) {
+      String aboutMe) {
     Map<String, Boolean> result = new HashMap<>(7, 1);
     result.put("isEmailEmpty", email.isEmpty());
     result.put("isEmailLegal", isEmailLegal(email));
@@ -567,7 +555,6 @@ public class UserService {
     result.put("isLocationLegal", location.length() <= 128);
     result.put("isWebsiteLegal", isWebsiteLegal(website));
     result.put("isAboutMeLegal", aboutMe.length() <= 256);
-    result.put("isCsrfTokenValid", isCsrfTokenValid);
 
     boolean isSuccessful =
         !result.get("isEmailEmpty")
@@ -575,8 +562,7 @@ public class UserService {
             && !result.get("isEmailExists")
             && result.get("isLocationLegal")
             && result.get("isWebsiteLegal")
-            && result.get("isAboutMeLegal")
-            && result.get("isCsrfTokenValid");
+            && result.get("isAboutMeLegal");
     result.put("isSuccessful", isSuccessful);
     return result;
   }
@@ -639,15 +625,15 @@ public class UserService {
   /**
    * Verifies whether the user's old password is correct when changing the password.
    *
-   * @param oldPassword - the user's old password (encrypted with MD5)
-   * @param submitedPassword - the old password submitted for verification (not encrypted with MD5)
+   * @param oldPassword - the user's stored (encoded) password
+   * @param submitedPassword - the plain-text old password submitted for verification
    * @return whether the user's old password is correct
    */
   private boolean isOldPasswordCorrect(String oldPassword, String submitedPassword) {
     if (submitedPassword.isEmpty()) {
       return true;
     }
-    return oldPassword.equals(DigestUtils.md5Hex(submitedPassword));
+    return passwordEncoder.matches(submitedPassword, oldPassword);
   }
 
   /**
@@ -795,7 +781,7 @@ public class UserService {
 
     if (result.get("isSuccessful")) {
       if (!password.isEmpty()) {
-        user.setPassword(DigestUtils.md5Hex(password));
+        user.setPassword(passwordEncoder.encode(password));
       }
       user.setUserGroup(userGroup);
       user.setPreferLanguage(preferLanguage);
@@ -851,6 +837,9 @@ public class UserService {
 
   /** The autowired EmailValidationMapper object, used to generate password reset tokens. */
   @Autowired private EmailValidationMapper emailValidationMapper;
+
+  /** The autowired password encoder, used to encode and verify user passwords. */
+  @Autowired private PasswordEncoder passwordEncoder;
 
   /** The autowired OffensiveWordFilter object, used to filter offensive words in user content. */
   @Autowired private OffensiveWordFilter offensiveWordFilter;

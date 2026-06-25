@@ -133,7 +133,7 @@ public class SubmissionServiceTest {
   public void testCreateSubmissionSuccessfully() {
     Map<String, Object> result =
         submissionService.createSubmission(
-            userWithUid(1000), 1000, "text/x-java", "public class Main {}", true);
+            userWithUid(1000), 1000, "text/x-java", "public class Main {}");
     Assertions.assertTrue((Boolean) result.get("isSuccessful"));
     Assertions.assertTrue(result.containsKey("submissionId"));
     Assertions.assertEquals(6, submissionService.getNumberOfSubmissionsUsingDate(null, null));
@@ -143,7 +143,7 @@ public class SubmissionServiceTest {
   @Test
   public void testCreateSubmissionWithoutLogin() {
     Map<String, Object> result =
-        submissionService.createSubmission(null, 1000, "text/x-java", "Code", true);
+        submissionService.createSubmission(null, 1000, "text/x-java", "Code");
     Assertions.assertFalse((Boolean) result.get("isUserLogined"));
     Assertions.assertFalse((Boolean) result.get("isSuccessful"));
   }
@@ -152,7 +152,7 @@ public class SubmissionServiceTest {
   @Test
   public void testCreateSubmissionWithNonExistentProblem() {
     Map<String, Object> result =
-        submissionService.createSubmission(userWithUid(1000), 99999, "text/x-java", "Code", true);
+        submissionService.createSubmission(userWithUid(1000), 99999, "text/x-java", "Code");
     Assertions.assertFalse((Boolean) result.get("isProblemExists"));
     Assertions.assertFalse((Boolean) result.get("isSuccessful"));
   }
@@ -161,7 +161,7 @@ public class SubmissionServiceTest {
   @Test
   public void testCreateSubmissionWithNonExistentLanguage() {
     Map<String, Object> result =
-        submissionService.createSubmission(userWithUid(1000), 1000, "not-a-language", "Code", true);
+        submissionService.createSubmission(userWithUid(1000), 1000, "not-a-language", "Code");
     Assertions.assertFalse((Boolean) result.get("isLanguageExists"));
     Assertions.assertFalse((Boolean) result.get("isSuccessful"));
   }
@@ -170,17 +170,8 @@ public class SubmissionServiceTest {
   @Test
   public void testCreateSubmissionWithEmptyCode() {
     Map<String, Object> result =
-        submissionService.createSubmission(userWithUid(1000), 1000, "text/x-java", "", true);
+        submissionService.createSubmission(userWithUid(1000), 1000, "text/x-java", "");
     Assertions.assertTrue((Boolean) result.get("isCodeEmpty"));
-    Assertions.assertFalse((Boolean) result.get("isSuccessful"));
-  }
-
-  /** Test case: tests the createSubmission(...) method. Test data: an invalid CSRF token. Expected: creation fails. */
-  @Test
-  public void testCreateSubmissionWithInvalidCsrfToken() {
-    Map<String, Object> result =
-        submissionService.createSubmission(userWithUid(1000), 1000, "text/x-java", "Code", false);
-    Assertions.assertFalse((Boolean) result.get("isCsrfTokenValid"));
     Assertions.assertFalse((Boolean) result.get("isSuccessful"));
   }
 

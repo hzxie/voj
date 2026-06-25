@@ -152,23 +152,15 @@ public class ContestServiceTest {
   /** Test case: tests the attendContest(...) method. Test data: all conditions are met to attend the not-started Contest #3. Expected: attendance succeeds and the number of participants increases by one. */
   @Test
   public void testAttendContestSuccessfully() {
-    Map<String, Boolean> result = contestService.attendContest(3, userWithUid(1000), true);
+    Map<String, Boolean> result = contestService.attendContest(3, userWithUid(1000));
     Assertions.assertTrue(result.get("isSuccessful"));
     Assertions.assertEquals(1, contestService.getNumberOfContestantsOfContest(3));
-  }
-
-  /** Test case: tests the attendContest(...) method. Test data: an invalid CSRF token. Expected: attendance fails. */
-  @Test
-  public void testAttendContestWithInvalidCsrfToken() {
-    Map<String, Boolean> result = contestService.attendContest(3, userWithUid(1000), false);
-    Assertions.assertFalse(result.get("isSuccessful"));
-    Assertions.assertFalse(result.get("isCsrfTokenValid"));
   }
 
   /** Test case: tests the attendContest(...) method. Test data: the contest has ended (not in the not-started state). Expected: attendance fails. */
   @Test
   public void testAttendContestThatIsNotReady() {
-    Map<String, Boolean> result = contestService.attendContest(1, userWithUid(1000), true);
+    Map<String, Boolean> result = contestService.attendContest(1, userWithUid(1000));
     Assertions.assertFalse(result.get("isContestReady"));
     Assertions.assertFalse(result.get("isSuccessful"));
   }
@@ -176,7 +168,7 @@ public class ContestServiceTest {
   /** Test case: tests the attendContest(...) method. Test data: the user is not logged in. Expected: attendance fails. */
   @Test
   public void testAttendContestWithoutLogin() {
-    Map<String, Boolean> result = contestService.attendContest(3, null, true);
+    Map<String, Boolean> result = contestService.attendContest(3, null);
     Assertions.assertFalse(result.get("isUserLogin"));
     Assertions.assertFalse(result.get("isSuccessful"));
   }
@@ -184,9 +176,9 @@ public class ContestServiceTest {
   /** Test case: tests the attendContest(...) method. Test data: attending the same contest again. Expected: the second attendance fails. */
   @Test
   public void testAttendContestThatIsAlreadyAttended() {
-    contestService.attendContest(3, userWithUid(1000), true);
+    contestService.attendContest(3, userWithUid(1000));
 
-    Map<String, Boolean> result = contestService.attendContest(3, userWithUid(1000), true);
+    Map<String, Boolean> result = contestService.attendContest(3, userWithUid(1000));
     Assertions.assertTrue(result.get("isAttendedContest"));
     Assertions.assertFalse(result.get("isSuccessful"));
   }

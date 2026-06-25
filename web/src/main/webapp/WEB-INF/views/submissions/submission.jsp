@@ -159,7 +159,7 @@
     </script>
     <script type="text/javascript">
         $(function() {
-            var subscriptionUrl = '<c:url value="/submission/getRealTimeJudgeResult.action?submissionId=${submission.submissionId}&csrfToken=${csrfToken}" />',
+            var subscriptionUrl = '<c:url value="/submission/getRealTimeJudgeResult.action?submissionId=${submission.submissionId}&csrfToken=${_csrf.token}" />',
                 source          = new EventSource(subscriptionUrl),
                 lastMessage     = '';
 

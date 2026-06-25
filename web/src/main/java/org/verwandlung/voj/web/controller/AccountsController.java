@@ -28,6 +28,14 @@ import jakarta.servlet.http.HttpSession;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.session.SessionRegistry;
+import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -40,11 +48,11 @@ import org.springframework.web.servlet.view.RedirectView;
 import org.verwandlung.voj.web.exception.ResourceNotFoundException;
 import org.verwandlung.voj.web.model.Language;
 import org.verwandlung.voj.web.model.User;
+import org.verwandlung.voj.web.model.VojUserDetails;
 import org.verwandlung.voj.web.service.LanguageService;
 import org.verwandlung.voj.web.service.OptionService;
 import org.verwandlung.voj.web.service.SubmissionService;
 import org.verwandlung.voj.web.service.UserService;
-import org.verwandlung.voj.web.util.CsrfProtector;
 import org.verwandlung.voj.web.util.DateUtils;
 import org.verwandlung.voj.web.util.HttpRequestParser;
 import org.verwandlung.voj.web.util.HttpSessionParser;
@@ -74,7 +82,7 @@ public class AccountsController {
       HttpServletResponse response) {
     HttpSession session = request.getSession();
     if (isLogout) {
-      destroySession(request, session);
+      destroySession(request, response);
     }
 
     ModelAndView view = null;
@@ -91,31 +99,28 @@ public class AccountsController {
   }
 
   /**
-   * Destroys the session for a logged-out user.
+   * Logs the current user out: clears the Spring Security context and invalidates the session.
    *
    * @param request - the HttpServletRequest object
-   * @param session - the HttpSession object
+   * @param response - the HttpServletResponse object
    */
-  private void destroySession(HttpServletRequest request, HttpSession session) {
-    User currentUser = HttpSessionParser.getCurrentUser(request.getSession());
+  private void destroySession(HttpServletRequest request, HttpServletResponse response) {
+    User currentUser = HttpSessionParser.getCurrentUser();
     String ipAddress = HttpRequestParser.getRemoteAddr(request);
     LOGGER.info(String.format("%s logged out at %s", new Object[] {currentUser, ipAddress}));
 
-    session.setAttribute("isLoggedIn", false);
+    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    new SecurityContextLogoutHandler().logout(request, response, authentication);
   }
 
   /**
    * Checks whether the user has logged in.
    *
-   * @param session - the HttpSession object
+   * @param session - the HttpSession object (unused)
    * @return whether the user has logged in
    */
   private boolean isLoggedIn(HttpSession session) {
-    Boolean isLoggedIn = (Boolean) session.getAttribute("isLoggedIn");
-    if (isLoggedIn == null || !isLoggedIn.booleanValue()) {
-      return false;
-    }
-    return true;
+    return HttpSessionParser.getCurrentUser() != null;
   }
 
   /**
@@ -131,7 +136,8 @@ public class AccountsController {
       @RequestParam(value = "username") String username,
       @RequestParam(value = "password") String password,
       @RequestParam(value = "rememberMe") boolean isAutoLoginAllowed,
-      HttpServletRequest request) {
+      HttpServletRequest request,
+      HttpServletResponse response) {
     String ipAddress = HttpRequestParser.getRemoteAddr(request);
     Map<String, Boolean> result = userService.isAllowedToLogin(username, password);
     LOGGER.info(
@@ -139,23 +145,31 @@ public class AccountsController {
             "User: [Username=%s] tried to log in at %s", new Object[] {username, ipAddress}));
     if (result.get("isSuccessful")) {
       User user = userService.getUserUsingUsernameOrEmail(username);
-      getSession(request, user, isAutoLoginAllowed);
+      establishSecurityContext(request, response, user);
     }
     return result;
   }
 
   /**
-   * Creates the session for a logged-in user.
+   * Establishes the Spring Security context for a logged-in user, persists it to the session and
+   * registers the session for online-user tracking.
    *
    * @param request - the HttpServletRequest object
+   * @param response - the HttpServletResponse object
    * @param user - a User object containing the basic information of the user
-   * @param isAutoLoginAllowed - whether to keep the login state
    */
-  private void getSession(HttpServletRequest request, User user, boolean isAutoLoginAllowed) {
-    HttpSession session = request.getSession();
-    session.setAttribute("isLoggedIn", true);
-    session.setAttribute("isAutoLoginAllowed", isAutoLoginAllowed);
-    session.setAttribute("uid", user.getUid());
+  private void establishSecurityContext(
+      HttpServletRequest request, HttpServletResponse response, User user) {
+    VojUserDetails userDetails = new VojUserDetails(user);
+    Authentication authentication =
+        UsernamePasswordAuthenticationToken.authenticated(
+            userDetails, null, userDetails.getAuthorities());
+
+    SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
+    securityContext.setAuthentication(authentication);
+    SecurityContextHolder.setContext(securityContext);
+    securityContextRepository.saveContext(securityContext, request, response);
+    sessionRegistry.registerNewSession(request.getSession().getId(), userDetails);
 
     String ipAddress = HttpRequestParser.getRemoteAddr(request);
     LOGGER.info(String.format("%s logged in at %s", new Object[] {user, ipAddress}));
@@ -187,7 +201,6 @@ public class AccountsController {
       view = new ModelAndView("accounts/register");
       view.addObject("languages", languages);
       view.addObject("isAllowRegister", isAllowRegister);
-      view.addObject("csrfToken", CsrfProtector.getCsrfToken(session));
     }
     return view;
   }
@@ -199,7 +212,6 @@ public class AccountsController {
    * @param password - the password
    * @param email - the email address
    * @param languageSlug - the slug of the preferred language
-   * @param csrfToken - the CSRF token
    * @param request - the HttpServletRequest object
    * @return a Map<String, Boolean> object containing the account creation result
    */
@@ -209,25 +221,18 @@ public class AccountsController {
       @RequestParam(value = "password") String password,
       @RequestParam(value = "email") String email,
       @RequestParam(value = "languagePreference") String languageSlug,
-      @RequestParam(value = "csrfToken") String csrfToken,
-      HttpServletRequest request) {
+      HttpServletRequest request,
+      HttpServletResponse response) {
     boolean isAllowRegister =
         optionService.getOption("allowUserRegister").getOptionValue().equals("1");
-    boolean isCsrfTokenValid = CsrfProtector.isCsrfTokenValid(csrfToken, request.getSession());
     String userGroupSlug = "users";
     Map<String, Boolean> result =
         userService.createUser(
-            username,
-            password,
-            email,
-            userGroupSlug,
-            languageSlug,
-            isCsrfTokenValid,
-            isAllowRegister);
+            username, password, email, userGroupSlug, languageSlug, isAllowRegister);
 
     if (result.get("isSuccessful")) {
       User user = userService.getUserUsingUsernameOrEmail(username);
-      getSession(request, user, false);
+      establishSecurityContext(request, response, user);
 
       String ipAddress = HttpRequestParser.getRemoteAddr(request);
       LOGGER.info(
@@ -268,7 +273,6 @@ public class AccountsController {
       view.addObject("email", email);
       view.addObject("token", token);
       view.addObject("isTokenValid", isTokenValid);
-      view.addObject("csrfToken", CsrfProtector.getCsrfToken(session));
     }
     return view;
   }
@@ -278,7 +282,6 @@ public class AccountsController {
    *
    * @param username - the user's username
    * @param email - the user's email address
-   * @param csrfToken - the CSRF token
    * @param request - the HttpServletRequest object
    * @return a Map<String, Boolean> object containing the result of sending the password reset email
    */
@@ -286,12 +289,9 @@ public class AccountsController {
   public @ResponseBody Map<String, Boolean> forgotPasswordAction(
       @RequestParam(value = "username") String username,
       @RequestParam(value = "email") String email,
-      @RequestParam(value = "csrfToken") String csrfToken,
       HttpServletRequest request) {
     String ipAddress = HttpRequestParser.getRemoteAddr(request);
-    boolean isCsrfTokenValid = CsrfProtector.isCsrfTokenValid(csrfToken, request.getSession());
-    Map<String, Boolean> result =
-        userService.sendVerificationEmail(username, email, isCsrfTokenValid);
+    Map<String, Boolean> result = userService.sendVerificationEmail(username, email);
 
     if (result.get("isSuccessful")) {
       LOGGER.info(
@@ -309,7 +309,6 @@ public class AccountsController {
    * @param token - the token used to reset the password
    * @param newPassword - the new password
    * @param confirmPassword - the confirmed password
-   * @param csrfToken - the CSRF token
    * @param request - the HttpServletRequest object
    * @return a Map<String, Boolean> object containing the password reset result
    */
@@ -319,12 +318,10 @@ public class AccountsController {
       @RequestParam(value = "token") String token,
       @RequestParam(value = "newPassword") String newPassword,
       @RequestParam(value = "confirmPassword") String confirmPassword,
-      @RequestParam(value = "csrfToken") String csrfToken,
       HttpServletRequest request) {
     String ipAddress = HttpRequestParser.getRemoteAddr(request);
-    boolean isCsrfTokenValid = CsrfProtector.isCsrfTokenValid(csrfToken, request.getSession());
     Map<String, Boolean> result =
-        userService.resetPassword(email, token, newPassword, confirmPassword, isCsrfTokenValid);
+        userService.resetPassword(email, token, newPassword, confirmPassword);
 
     if (result.get("isSuccessful")) {
       LOGGER.info(
@@ -375,8 +372,7 @@ public class AccountsController {
       @RequestParam(value = "period") int period,
       HttpServletRequest request) {
     if (userId == 0) {
-      HttpSession session = request.getSession();
-      userId = (Long) session.getAttribute("uid");
+      userId = HttpSessionParser.getCurrentUser().getUid();
     }
     Map<String, Object> submissions = new HashMap<>(2, 1);
     Date today = new Date();
@@ -400,22 +396,13 @@ public class AccountsController {
    */
   @RequestMapping(value = "/dashboard", method = RequestMethod.GET)
   public ModelAndView dashboardView(HttpServletRequest request, HttpServletResponse response) {
-    HttpSession session = request.getSession();
-    ModelAndView view = null;
+    User user = HttpSessionParser.getCurrentUser();
+    long userId = user.getUid();
 
-    if (!isLoggedIn(session)) {
-      RedirectView redirectView = new RedirectView(request.getContextPath() + "/accounts/login");
-      redirectView.setExposeModelAttributes(false);
-      view = new ModelAndView(redirectView);
-    }
-
-    long userId = (Long) session.getAttribute("uid");
-    User user = userService.getUserUsingUid(userId);
-    view = new ModelAndView("accounts/dashboard");
+    ModelAndView view = new ModelAndView("accounts/dashboard");
     view.addObject("user", user);
     view.addAllObjects(userService.getUserMetaUsingUid(user));
     view.addObject("submissions", submissionService.getSubmissionOfUser(userId));
-    view.addObject("csrfToken", CsrfProtector.getCsrfToken(session));
 
     return view;
   }
@@ -465,15 +452,12 @@ public class AccountsController {
       @RequestParam(value = "website") String website,
       @RequestParam(value = "socialLinks") String socialLinks,
       @RequestParam(value = "aboutMe") String aboutMe,
-      @RequestParam(value = "csrfToken") String csrfToken,
       HttpServletRequest request) {
-    User currentUser = HttpSessionParser.getCurrentUser(request.getSession());
+    User currentUser = HttpSessionParser.getCurrentUser();
     String ipAddress = HttpRequestParser.getRemoteAddr(request);
-    boolean isCsrfTokenValid = CsrfProtector.isCsrfTokenValid(csrfToken, request.getSession());
 
     Map<String, Boolean> result =
-        userService.updateProfile(
-            currentUser, email, location, website, socialLinks, aboutMe, isCsrfTokenValid);
+        userService.updateProfile(currentUser, email, location, website, socialLinks, aboutMe);
     if (result.get("isSuccessful")) {
       LOGGER.info(String.format("%s updated profile at %s", new Object[] {currentUser, ipAddress}));
     }
@@ -499,6 +483,13 @@ public class AccountsController {
    * The autowired OptionService object. Used for querying whether the registration feature is open.
    */
   @Autowired private OptionService optionService;
+
+  /** The registry of authenticated sessions, used to track logged-in users. */
+  @Autowired private SessionRegistry sessionRegistry;
+
+  /** Persists the security context to the HTTP session after a programmatic login. */
+  private final SecurityContextRepository securityContextRepository =
+      new HttpSessionSecurityContextRepository();
 
   /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(AccountsController.class);

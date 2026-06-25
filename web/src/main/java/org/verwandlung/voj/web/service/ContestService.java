@@ -220,8 +220,7 @@ public class ContestService {
    * @return a Map object containing the status information of whether the contest was joined
    *     successfully
    */
-  public Map<String, Boolean> attendContest(
-      long contestId, User currentUser, boolean isCsrfTokenValid) {
+  public Map<String, Boolean> attendContest(long contestId, User currentUser) {
     Contest contest = contestMapper.getContest(contestId);
 
     Map<String, Boolean> result = new HashMap<>(6, 1);
@@ -229,14 +228,12 @@ public class ContestService {
     result.put("isContestReady", getContestStatus(contest) == Contest.CONTEST_STATUS.READY);
     result.put("isUserLogin", currentUser != null);
     result.put("isAttendedContest", isAttendContest(contestId, currentUser));
-    result.put("isCsrfTokenValid", isCsrfTokenValid);
 
     boolean isSuccessful =
         result.get("isContestExists")
             && result.get("isContestReady")
             && result.get("isUserLogin")
-            && !result.get("isAttendedContest")
-            && result.get("isCsrfTokenValid");
+            && !result.get("isAttendedContest");
     if (isSuccessful) {
       ContestContestant contestContestant = new ContestContestant(contest, currentUser);
       contestContestantMapper.createContestContestant(contestContestant);

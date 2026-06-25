@@ -18,52 +18,49 @@ package org.verwandlung.voj.web.util;
 
 import jakarta.servlet.http.HttpSession;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import org.verwandlung.voj.web.model.User;
-import org.verwandlung.voj.web.service.UserService;
+import org.verwandlung.voj.web.model.VojUserDetails;
 
 /**
- * The HttpSession parser.
+ * The HttpSession parser. Resolves the currently authenticated user from the Spring Security
+ * context.
  *
  * @author Haozhe Xie
  */
-@Component
-public class HttpSessionParser {
-  /**
-   * The constructor of HttpSessionParser.
-   *
-   * @param userService - the autowired UserService object
-   */
-  @Autowired
-  private HttpSessionParser(UserService userService) {
-    HttpSessionParser.userService = userService;
-  }
+public final class HttpSessionParser {
+  /** Utility classes should not have a public constructor. */
+  private HttpSessionParser() {}
 
   /**
-   * Gets the user object in the session.
+   * Gets the currently authenticated user.
    *
-   * @param session - the HttpSession object
-   * @return the user object in the session
+   * <p>The {@code session} argument is retained for source compatibility with existing callers; the
+   * user is now resolved from the {@link SecurityContextHolder} rather than session attributes.
+   *
+   * @param session - the HttpSession object (unused)
+   * @return the authenticated user object, or a {@code null} reference if no user is logged in
    */
   public static User getCurrentUser(HttpSession session) {
-    Object isLoggedInAttribute = session.getAttribute("isLoggedIn");
-    Object uidAttribute = session.getAttribute("uid");
-    User user = null;
-
-    if (isLoggedInAttribute == null || uidAttribute == null) {
-      return null;
-    }
-    boolean isLoggedIn = (Boolean) isLoggedInAttribute;
-    long uid = (Long) uidAttribute;
-
-    if (isLoggedIn) {
-      user = userService.getUserUsingUid(uid);
-    }
-    return user;
+    return getCurrentUser();
   }
 
-  /** The autowired UserService object. */
-  private static UserService userService;
+  /**
+   * Gets the currently authenticated user from the Spring Security context.
+   *
+   * @return the authenticated user object, or a {@code null} reference if no user is logged in
+   */
+  public static User getCurrentUser() {
+    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    if (authentication == null) {
+      return null;
+    }
+    Object principal = authentication.getPrincipal();
+    if (principal instanceof VojUserDetails) {
+      return ((VojUserDetails) principal).getUser();
+    }
+    return null;
+  }
 }

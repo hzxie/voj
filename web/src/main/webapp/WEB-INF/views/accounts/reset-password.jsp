@@ -65,7 +65,7 @@
                     <input id="confirm-new-password" name="confirm-new-password" class="span12" type="password" maxlength="16" />
                 </p>
                 <p>
-                    <input id="csrf-token" type="hidden" value="${csrfToken}" />
+                    <input id="csrf-token" type="hidden" value="${_csrf.token}" />
                     <button class="btn btn-primary btn-block" type="submit"><spring:message code="voj.accounts.reset-password.reset-password" text="Reset Password" /></button>
                 </p>
             </form> <!-- #reset-password-form -->
@@ -81,7 +81,7 @@
                     <input id="email" name="email" class="span12" type="text" maxlength="64" />
                 </p>
                 <p>
-                    <input id="csrf-token" type="hidden" value="${csrfToken}" />
+                    <input id="csrf-token" type="hidden" value="${_csrf.token}" />
                     <button class="btn btn-primary btn-block" type="submit"><spring:message code="voj.accounts.reset-password.send-verification-email" text="Send Verification Email" /></button>
                 </p>
             </form> <!-- #reset-password-form -->
