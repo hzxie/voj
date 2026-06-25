@@ -26,7 +26,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <iostream>
 #include <iterator>
 #include <sstream>
 #include <string>
@@ -37,42 +36,70 @@
 #include <grp.h>
 #include <pwd.h>
 #include <sched.h>
-#include <seccomp.h>
 #include <signal.h>
+#include <sys/mman.h>
+#include <sys/prctl.h>
 #include <sys/resource.h>
 #include <sys/stat.h>
+#include <sys/syscall.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
 
+#include <linux/filter.h>
+#include <seccomp.h>
+
+// SECCOMP_SET_MODE_FILTER lives in <linux/seccomp.h>, but that header can clash with libseccomp's
+// <seccomp.h> on some distributions, so define it here instead of including the kernel header.
+#ifndef SECCOMP_SET_MODE_FILTER
+#define SECCOMP_SET_MODE_FILTER 1
+#endif
+
 /**
  * Tunables for the sandbox.
  */
-static const mode_t OUTPUT_FILE_MODE          = 0644;
-static const int    POLL_INTERVAL_US          = 1000;        // watchdog poll (1 ms)
-static const int    WALL_TIME_FACTOR          = 3;           // wall-clock backstop multiplier
+static const mode_t    OUTPUT_FILE_MODE       = 0644;
+static const int       POLL_INTERVAL_US       = 1000;        // watchdog poll (1 ms)
+static const int       WALL_TIME_FACTOR       = 3;           // wall-clock backstop multiplier
 static const long long WALL_TIME_SLACK_MS     = 1000;        // wall-clock backstop slack
-static const rlim_t OUTPUT_FILE_SIZE_LIMIT    = (rlim_t)256 * 1024 * 1024; // RLIMIT_FSIZE (256 MB)
-static const rlim_t PROCESS_NUMBER_LIMIT      = 64;          // RLIMIT_NPROC (anti fork-bomb)
+static const rlim_t    OUTPUT_FILE_SIZE_LIMIT = (rlim_t)256 * 1024 * 1024; // RLIMIT_FSIZE (256 MB)
+static const rlim_t    PROCESS_NUMBER_LIMIT   = 64;          // RLIMIT_NPROC (anti fork-bomb)
+
+/**
+ * Everything the (async-signal-safe) child needs is resolved in the parent before fork, so that
+ * the child never has to call malloc, NSS or the C++ runtime while the rest of the JVM's threads
+ * are frozen by fork.
+ */
+struct ChildPlan {
+  std::string              executable;     // absolute path or PATH-resolved program to exec
+  std::vector<char*>       argv;           // NULL-terminated argument vector
+  std::string              inputFilePath;  // stdin redirect (empty = none)
+  std::string              outputFilePath; // stdout/stderr redirect (empty = none)
+  int                      timeLimit;      // ms (0 = no limit)
+  bool                     dropPrivileges; // whether to setuid/setgid
+  uid_t                    dropUid;
+  gid_t                    dropGid;
+  std::string              seccompProgram; // exported classic BPF bytes (empty = no filter)
+};
 
 /**
  * Function Prototypes.
  */
 static std::vector<std::string> splitCommandLine(const std::string&);
+static std::string resolveExecutable(const std::string&);
+static std::string buildSeccompProgram();
 static long long getMonotonicMillis();
 static int  readCpuTimeMillis(pid_t);
 static int  readResidentMemoryKb(pid_t);
-static void applyResourceLimits(int timeLimit);
-static void dropPrivileges(const std::string& username);
-static void applySeccompFilter();
+static void runChild(const ChildPlan&, int syncWriteFd) __attribute__((noreturn));
 
 /**
  * JNI call entry point.
- * Runs the given command in a sandboxed child process and measures its CPU time and peak
- * memory usage. Time and memory limits are enforced both by the kernel (setrlimit) and by a
- * fine-grained watchdog; isolation is layered and best-effort (network namespace, privilege
- * drop and a seccomp syscall filter are applied when the environment permits).
+ * Runs the given command in a sandboxed child process and measures its CPU time and peak memory
+ * usage. Limits are enforced both by the kernel (setrlimit) and by a fine-grained watchdog;
+ * isolation is layered and best-effort (network namespace, privilege drop and a seccomp syscall
+ * filter are applied when the environment permits).
  *
  * @param  jniEnv          - a reference to the JNI runtime environment
  * @param  selfReference   - a reference to the calling Java object
@@ -91,18 +118,15 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     jint memoryLimit) {
     (void) selfReference;
     (void) jPassword;
-    std::string commandLine    = getStringValue(jniEnv, jCommandLine);
-    std::string username       = getStringValue(jniEnv, jUsername);
-    std::string inputFilePath  = getStringValue(jniEnv, jInputFilePath);
-    std::string outputFilePath = getStringValue(jniEnv, jOutputFilePath);
-
-    std::cout << "[INFO] Command Line: " << commandLine << std::endl;
+    std::string commandLine = getStringValue(jniEnv, jCommandLine);
+    std::string username    = getStringValue(jniEnv, jUsername);
 
     JHashMap result;
     int usedTime   = 0;
     int usedMemory = 0;
     int exitCode   = 127;
 
+    // ----- Resolve everything the child needs while still single-threaded-safe -----
     std::vector<std::string> args = splitCommandLine(commandLine);
     if ( args.empty() ) {
         result.put("usedTime", 0);
@@ -111,59 +135,67 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
         return result.toJObject(jniEnv);
     }
 
-    pid_t pid = fork();
-    if ( pid < 0 ) {
-        throwStringException(jniEnv, std::string("Judger: fork() failed: ") + strerror(errno));
+    ChildPlan plan;
+    plan.executable     = resolveExecutable(args[0]);
+    plan.inputFilePath  = getStringValue(jniEnv, jInputFilePath);
+    plan.outputFilePath = getStringValue(jniEnv, jOutputFilePath);
+    plan.timeLimit      = timeLimit;
+    plan.dropPrivileges = false;
+    plan.dropUid        = 0;
+    plan.dropGid        = 0;
+    for ( std::string& arg : args ) {
+        plan.argv.push_back(const_cast<char*>(arg.c_str()));
+    }
+    plan.argv.push_back(nullptr);
+
+    // When running as root, dropping privileges is mandatory and fails closed.
+    if ( geteuid() == 0 ) {
+        struct passwd* pw = username.empty() ? nullptr : getpwnam(username.c_str());
+        if ( pw == nullptr || pw->pw_uid == 0 ) {
+            result.put("usedTime", 0);
+            result.put("usedMemory", 0);
+            result.put("exitCode", 127); // never run untrusted code as root
+            return result.toJObject(jniEnv);
+        }
+        plan.dropPrivileges = true;
+        plan.dropUid        = pw->pw_uid;
+        plan.dropGid        = pw->pw_gid;
+    }
+
+    plan.seccompProgram = buildSeccompProgram();
+
+    // A close-on-exec pipe: it stays open until execvp succeeds (then it auto-closes, the parent's
+    // read sees EOF) or the child reports an errno on failure. The parent blocks on it so the
+    // watchdog only starts once the real program is running, avoiding measuring the JVM image that
+    // the freshly forked child still shares before exec.
+    int syncPipe[2];
+    if ( pipe2(syncPipe, O_CLOEXEC) != 0 ) {
+        throwStringException(jniEnv, std::string("Judger: pipe2() failed: ") + strerror(errno));
         return NULL;
     }
 
+    pid_t pid = fork();
+    if ( pid < 0 ) {
+        close(syncPipe[0]);
+        close(syncPipe[1]);
+        throwStringException(jniEnv, std::string("Judger: fork() failed: ") + strerror(errno));
+        return NULL;
+    }
     if ( pid == 0 ) {
-        // ----- Child process -----
-        // I/O redirection.
-        if ( !inputFilePath.empty() ) {
-            int inputFd = open(inputFilePath.c_str(), O_RDONLY);
-            if ( inputFd < 0 ) {
-                _exit(127);
-            }
-            dup2(inputFd, STDIN_FILENO);
-            close(inputFd);
-        }
-        if ( !outputFilePath.empty() ) {
-            int outputFd = open(outputFilePath.c_str(), O_CREAT | O_WRONLY | O_TRUNC, OUTPUT_FILE_MODE);
-            if ( outputFd < 0 ) {
-                _exit(127);
-            }
-            dup2(outputFd, STDOUT_FILENO);
-            dup2(outputFd, STDERR_FILENO);
-            close(outputFd);
-        }
-
-        // Run in a dedicated process group so the watchdog can signal the whole tree.
-        setpgid(0, 0);
-
-        // Tier 1: kernel-enforced resource limits.
-        applyResourceLimits(timeLimit);
-
-        // Tier 2 (best-effort): cut off the network, drop privileges, restrict syscalls.
-        unshare(CLONE_NEWNET);
-        dropPrivileges(username);
-        applySeccompFilter();
-
-        // Execute the target program.
-        std::vector<char*> argv;
-        argv.reserve(args.size() + 1);
-        for ( std::string& arg : args ) {
-            argv.push_back(const_cast<char*>(arg.c_str()));
-        }
-        argv.push_back(nullptr);
-        execvp(argv[0], argv.data());
-
-        // execvp only returns on failure.
-        _exit(127);
+        close(syncPipe[0]);
+        runChild(plan, syncPipe[1]); // never returns
     }
 
     // ----- Parent process -----
     setpgid(pid, pid); // close the setpgid race with the child
+    close(syncPipe[1]);
+
+    int     childErrno = 0;
+    ssize_t syncBytes  = 0;
+    while ( (syncBytes = read(syncPipe[0], &childErrno, sizeof(childErrno))) < 0 && errno == EINTR ) {
+        // Retry on interrupted read.
+    }
+    close(syncPipe[0]);
 
     std::atomic<bool> finished(false);
     std::atomic<bool> timedOut(false);
@@ -216,7 +248,10 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     usedTime   = (int) cpuMillis;
     usedMemory = (int) usage.ru_maxrss; // ru_maxrss is in KB on Linux
 
-    if ( WIFEXITED(status) ) {
+    if ( syncBytes > 0 ) {
+        // The child never reached the program: exec failed.
+        exitCode = 127;
+    } else if ( WIFEXITED(status) ) {
         exitCode = WEXITSTATUS(status);
     } else if ( WIFSIGNALED(status) ) {
         exitCode = 128 + WTERMSIG(status);
@@ -235,14 +270,94 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
         exitCode = 1; // a killed program must never be reported as a clean exit
     }
 
-    std::cout << "[DEBUG] usedTime: "   << usedTime   << " ms" << std::endl;
-    std::cout << "[DEBUG] usedMemory: " << usedMemory << " KB" << std::endl;
-    std::cout << "[DEBUG] exitCode: "   << exitCode   << std::endl;
-
     result.put("usedTime", usedTime);
     result.put("usedMemory", usedMemory);
     result.put("exitCode", exitCode);
     return result.toJObject(jniEnv);
+}
+
+/**
+ * The body of the forked child. Runs only async-signal-safe operations (no malloc, NSS or C++
+ * runtime), because the surrounding JVM is multi-threaded and fork leaves its locks frozen.
+ * Everything else was resolved into the ChildPlan before fork. On any failure it reports the
+ * errno through the sync pipe and exits; on success execvp replaces the image and closes the
+ * close-on-exec pipe, which the parent observes as EOF.
+ *
+ * @param  plan        - the pre-resolved execution plan
+ * @param  syncWriteFd - the write end of the close-on-exec sync pipe
+ */
+static void runChild(const ChildPlan& plan, int syncWriteFd) {
+    // I/O redirection.
+    if ( !plan.inputFilePath.empty() ) {
+        int inputFd = open(plan.inputFilePath.c_str(), O_RDONLY);
+        if ( inputFd < 0 ) {
+            _exit(127);
+        }
+        dup2(inputFd, STDIN_FILENO);
+        close(inputFd);
+    }
+    if ( !plan.outputFilePath.empty() ) {
+        int outputFd = open(plan.outputFilePath.c_str(), O_CREAT | O_WRONLY | O_TRUNC, OUTPUT_FILE_MODE);
+        if ( outputFd < 0 ) {
+            _exit(127);
+        }
+        dup2(outputFd, STDOUT_FILENO);
+        dup2(outputFd, STDERR_FILENO);
+        close(outputFd);
+    }
+
+    // Run in a dedicated process group so the watchdog can signal the whole tree.
+    setpgid(0, 0);
+
+    // Tier 1: kernel-enforced resource limits.
+    struct rlimit limit;
+    if ( plan.timeLimit > 0 ) {
+        rlim_t seconds = (rlim_t) ((plan.timeLimit + 999) / 1000) + 1;
+        limit.rlim_cur = seconds;
+        limit.rlim_max = seconds + 1;
+        setrlimit(RLIMIT_CPU, &limit);
+    }
+    limit.rlim_cur = OUTPUT_FILE_SIZE_LIMIT;
+    limit.rlim_max = OUTPUT_FILE_SIZE_LIMIT;
+    setrlimit(RLIMIT_FSIZE, &limit);
+
+    // Tier 2 (best-effort): cut off the network.
+    unshare(CLONE_NEWNET);
+
+    // Drop privileges to the unprivileged sandbox user (only when running as root). The process
+    // count cap is applied only here, because RLIMIT_NPROC is per real-UID: enforcing it without a
+    // dedicated user would count, and throttle, every process owned by the shared account.
+    if ( plan.dropPrivileges ) {
+        limit.rlim_cur = PROCESS_NUMBER_LIMIT;
+        limit.rlim_max = PROCESS_NUMBER_LIMIT;
+        setrlimit(RLIMIT_NPROC, &limit);
+
+        setgroups(0, nullptr);
+        if ( setgid(plan.dropGid) != 0 ) {
+            _exit(127);
+        }
+        if ( setuid(plan.dropUid) != 0 ) {
+            _exit(127);
+        }
+    }
+
+    // Tier 2 (best-effort): install the pre-built seccomp syscall filter via the raw syscall, so
+    // the child does not have to call into libseccomp (which would allocate).
+    if ( !plan.seccompProgram.empty() ) {
+        struct sock_fprog prog;
+        prog.len    = (unsigned short) (plan.seccompProgram.size() / sizeof(struct sock_filter));
+        prog.filter = (struct sock_filter*) plan.seccompProgram.data();
+        prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0);
+        syscall(SYS_seccomp, SECCOMP_SET_MODE_FILTER, 0, &prog);
+    }
+
+    execv(plan.executable.c_str(), plan.argv.data());
+
+    // execv only returns on failure: report the errno and exit.
+    int execErrno = errno;
+    ssize_t ignored = write(syncWriteFd, &execErrno, sizeof(execErrno));
+    (void) ignored;
+    _exit(127);
 }
 
 /**
@@ -256,6 +371,90 @@ static std::vector<std::string> splitCommandLine(const std::string& commandLine)
         std::istream_iterator<std::string>{iss},
         std::istream_iterator<std::string>{}
     };
+}
+
+/**
+ * Resolves a program name to an executable path. Names containing a slash are used verbatim;
+ * otherwise PATH is searched, so the child can call execv (which does not search PATH and so does
+ * not allocate) instead of execvp.
+ * @param  file - the program name from the command line
+ * @return the resolved path (or the original name if nothing matched)
+ */
+static std::string resolveExecutable(const std::string& file) {
+    if ( file.find('/') != std::string::npos ) {
+        return file;
+    }
+    const char* path = getenv("PATH");
+    if ( path == nullptr ) {
+        path = "/usr/local/bin:/usr/bin:/bin";
+    }
+    std::string pathValue(path);
+    size_t start = 0;
+    while ( start <= pathValue.size() ) {
+        size_t colon = pathValue.find(':', start);
+        std::string dir =
+            (colon == std::string::npos) ? pathValue.substr(start) : pathValue.substr(start, colon - start);
+        if ( !dir.empty() ) {
+            std::string candidate = dir + "/" + file;
+            if ( access(candidate.c_str(), X_OK) == 0 ) {
+                return candidate;
+            }
+        }
+        if ( colon == std::string::npos ) {
+            break;
+        }
+        start = colon + 1;
+    }
+    return file;
+}
+
+/**
+ * Builds the seccomp syscall filter and exports it as a classic BPF program. Uses a default-allow
+ * policy and denies a curated set of syscalls that a competitive-programming submission never
+ * legitimately needs but that are useful for sandbox escape, host tampering or persistence. Rules
+ * are added by syscall name through libseccomp, so the filter is portable across architectures
+ * (amd64/arm64). The program is exported here, in the parent, so the child can install it without
+ * calling into libseccomp.
+ * @return the exported BPF bytes, or an empty string if the filter could not be built
+ */
+static std::string buildSeccompProgram() {
+    scmp_filter_ctx ctx = seccomp_init(SCMP_ACT_ALLOW);
+    if ( ctx == nullptr ) {
+        return std::string();
+    }
+    const int deniedSyscalls[] = {
+        SCMP_SYS(ptrace),            SCMP_SYS(process_vm_readv), SCMP_SYS(process_vm_writev),
+        SCMP_SYS(mount),             SCMP_SYS(umount2),          SCMP_SYS(pivot_root),
+        SCMP_SYS(chroot),            SCMP_SYS(reboot),           SCMP_SYS(kexec_load),
+        SCMP_SYS(init_module),       SCMP_SYS(finit_module),     SCMP_SYS(delete_module),
+        SCMP_SYS(swapon),            SCMP_SYS(swapoff),          SCMP_SYS(settimeofday),
+        SCMP_SYS(clock_settime),     SCMP_SYS(adjtimex),         SCMP_SYS(setns),
+        SCMP_SYS(unshare),
+    };
+    for ( int syscallNr : deniedSyscalls ) {
+        if ( syscallNr >= 0 ) {
+            seccomp_rule_add(ctx, SCMP_ACT_ERRNO(EPERM), syscallNr, 0);
+        }
+    }
+
+    std::string program;
+    int memFd = memfd_create("voj-seccomp", 0);
+    if ( memFd >= 0 ) {
+        if ( seccomp_export_bpf(ctx, memFd) == 0 ) {
+            off_t size = lseek(memFd, 0, SEEK_END);
+            if ( size > 0 ) {
+                lseek(memFd, 0, SEEK_SET);
+                program.resize((size_t) size);
+                ssize_t got = read(memFd, &program[0], (size_t) size);
+                if ( got != size ) {
+                    program.clear();
+                }
+            }
+        }
+        close(memFd);
+    }
+    seccomp_release(ctx);
+    return program;
 }
 
 /**
@@ -334,95 +533,4 @@ static int readResidentMemoryKb(pid_t pid) {
     }
     fclose(fp);
     return residentMemoryKb;
-}
-
-/**
- * Applies kernel-enforced resource limits to the calling (child) process.
- * Note: memory is intentionally NOT capped through RLIMIT_AS, because managed runtimes
- * (the JVM, Go, ...) reserve a huge virtual address space while using little physical
- * memory; MLE is enforced on the resident set size by the watchdog instead.
- * @param  timeLimit - the CPU time limit (ms, 0 means no limit)
- */
-static void applyResourceLimits(int timeLimit) {
-    struct rlimit limit;
-
-    // CPU time: a coarse (whole-second) kernel backstop; the watchdog enforces ms precision.
-    if ( timeLimit > 0 ) {
-        rlim_t seconds = (rlim_t) ((timeLimit + 999) / 1000) + 1;
-        limit.rlim_cur = seconds;
-        limit.rlim_max = seconds + 1;
-        setrlimit(RLIMIT_CPU, &limit);
-    }
-
-    // Output file size: guard against output bombs.
-    limit.rlim_cur = OUTPUT_FILE_SIZE_LIMIT;
-    limit.rlim_max = OUTPUT_FILE_SIZE_LIMIT;
-    setrlimit(RLIMIT_FSIZE, &limit);
-
-    // Process count: guard against fork bombs (effective once dropped to the sandbox user).
-    limit.rlim_cur = PROCESS_NUMBER_LIMIT;
-    limit.rlim_max = PROCESS_NUMBER_LIMIT;
-    setrlimit(RLIMIT_NPROC, &limit);
-}
-
-/**
- * Drops privileges to the given unprivileged user.
- *
- * When the judger is not running as root there is nothing to drop, and the submission simply
- * runs as the (already unprivileged) current user — this is the normal development and CI path.
- *
- * When the judger IS running as root, dropping is mandatory and fails closed: any problem
- * (no user configured, user not found, the configured user is root itself, or a failed
- * setgid/setuid) aborts the child so that untrusted code is NEVER executed with root privileges.
- *
- * @param  username - the unprivileged user to switch to
- */
-static void dropPrivileges(const std::string& username) {
-    if ( geteuid() != 0 ) {
-        return;
-    }
-    if ( username.empty() ) {
-        _exit(127);
-    }
-    struct passwd* pw = getpwnam(username.c_str());
-    if ( pw == nullptr || pw->pw_uid == 0 ) {
-        _exit(127);
-    }
-    if ( setgid(pw->pw_gid) != 0 ) {
-        _exit(127);
-    }
-    initgroups(username.c_str(), pw->pw_gid);
-    if ( setuid(pw->pw_uid) != 0 ) {
-        _exit(127);
-    }
-}
-
-/**
- * Installs a seccomp syscall filter (best-effort). Uses a default-allow policy and denies a
- * curated set of syscalls that a competitive-programming submission never legitimately needs
- * but that are useful for sandbox escape, host tampering or persistence. Rules are added by
- * syscall name through libseccomp, so the filter is portable across architectures (amd64/arm64).
- * Denied calls return EPERM rather than killing the process, to avoid spurious runtime errors.
- */
-static void applySeccompFilter() {
-    scmp_filter_ctx ctx = seccomp_init(SCMP_ACT_ALLOW);
-    if ( ctx == nullptr ) {
-        return;
-    }
-    const int deniedSyscalls[] = {
-        SCMP_SYS(ptrace),            SCMP_SYS(process_vm_readv), SCMP_SYS(process_vm_writev),
-        SCMP_SYS(mount),             SCMP_SYS(umount2),          SCMP_SYS(pivot_root),
-        SCMP_SYS(chroot),            SCMP_SYS(reboot),           SCMP_SYS(kexec_load),
-        SCMP_SYS(init_module),       SCMP_SYS(finit_module),     SCMP_SYS(delete_module),
-        SCMP_SYS(swapon),            SCMP_SYS(swapoff),          SCMP_SYS(settimeofday),
-        SCMP_SYS(clock_settime),     SCMP_SYS(adjtimex),         SCMP_SYS(setns),
-        SCMP_SYS(unshare),
-    };
-    for ( int syscallNr : deniedSyscalls ) {
-        if ( syscallNr >= 0 ) {
-            seccomp_rule_add(ctx, SCMP_ACT_ERRNO(EPERM), syscallNr, 0);
-        }
-    }
-    seccomp_load(ctx);
-    seccomp_release(ctx);
 }
