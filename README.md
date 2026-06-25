@@ -1,287 +1,154 @@
 ![Verwandlung Online Judge](https://raw.githubusercontent.com/hzxie/voj/master/web/src/main/webapp/assets/img/logo.png)
 
-[![codefactor badge](https://www.codefactor.io/repository/github/hzxie/voj/badge)](https://www.codefactor.io/repository/github/hzxie/voj)
-[![Build status](https://ci.appveyor.com/api/projects/status/j62ns9p8whttittm?svg=true)](https://ci.appveyor.com/project/hzxie/voj)
 [![CircleCI](https://dl.circleci.com/status-badge/img/circleci/SxfxeEFFqyS3JM5ftpk7cK/DNyawsGdEXznk4GzmBs8dx/tree/master.svg?style=shield)](https://dl.circleci.com/status-badge/redirect/circleci/SxfxeEFFqyS3JM5ftpk7cK/DNyawsGdEXznk4GzmBs8dx/tree/master)
+[![Build status](https://ci.appveyor.com/api/projects/status/j62ns9p8whttittm?svg=true)](https://ci.appveyor.com/project/hzxie/voj)
 [![codecov](https://codecov.io/gh/hzxie/voj/branch/master/graph/badge.svg)](https://codecov.io/gh/hzxie/voj)
 [![Docker Pulls](https://img.shields.io/docker/pulls/zjhzxhz/voj.web.svg)](https://hub.docker.com/r/zjhzxhz/voj.web)
-![badgegen](https://api.infinitescript.com/badgen/count.svg?name=hzxie/voj)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
-[**Official Website**](https://verwandlung.org) | 
-[**Tech Support**](https://infinitescript.com/project/verwandlung-online-judge/) |
+[**Official Website**](https://verwandlung.org) ·
+[**Tech Support**](https://infinitescript.com/project/verwandlung-online-judge/) ·
 [**Change Log**](https://github.com/hzxie/voj/commits/master)
-
-**Update:** Verwandlung Online Judge now supports Docker. 
-You can use Verwandlung Online Judge with ONLY 4 bash commands.
-
-```
-docker pull zjhzxhz/voj.web
-docker pull zjhzxhz/voj.judger
-docker run -d --name voj.web -p 8080:8080 zjhzxhz/voj.web
-docker run -d --name voj.judger --link voj.web zjhzxhz/voj.judger
-```
-
-For more information, please refer to [this documentation](https://github.com/hzxie/voj/tree/master/docker).
-
----
 
 ## Introduction
 
-Verwandlung Online Judge is a self-hostable, open-source online judge system for competitive programming. It presents algorithmic problems, accepts code submissions in multiple programming languages, then automatically compiles, runs, and evaluates them against predefined test cases — giving submitters immediate feedback on correctness, run time, and memory usage.
+Verwandlung Online Judge is a self-hostable, open-source online judge for
+competitive programming. It presents algorithmic problems, accepts submissions in
+multiple languages, then compiles, runs and evaluates them against predefined test
+cases, reporting correctness, run time and memory usage.
 
-Unlike most open-source judges that only run on Linux, Verwandlung judges submissions **natively on both Windows and Linux** by calling operating-system APIs through JNI, instead of relying on Linux-specific sandboxing. Other highlights include:
+Highlights:
 
- - **Real-time judging feedback** streamed to the browser with Server-Sent Events (SSE), so results appear progressively as each test case finishes.
- - **Horizontally scalable judging** — the web application and the judgers are decoupled through an [Apache ActiveMQ](http://activemq.apache.org/) message queue, so you can run as many judgers in parallel as you need.
- - **Contest support** for running and administering programming contests.
- - **Internationalization** with built-in English and Chinese support.
+- **Cross-platform native judging.** Submissions are judged natively on **Linux**
+  and **Windows** through JNI, rather than relying on a Linux-only runtime.
+- **Sandboxed execution.** On Linux each submission runs under kernel-enforced
+  resource limits, a private network namespace and a seccomp syscall filter, as an
+  unprivileged user; on Windows it runs under a separate low-privilege account.
+- **Real-time feedback** streamed to the browser with Server-Sent Events (SSE), so
+  results appear progressively as each test case finishes.
+- **Horizontally scalable judging.** The web app and the judgers are decoupled
+  through an [Apache ActiveMQ](https://activemq.apache.org/) queue, so you can run
+  as many judgers in parallel as you need.
+- **Contests** and **internationalization** (English and Chinese) out of the box.
 
-It is built on the [Spring Framework](https://spring.io) and uses the following open-source projects:
-
- - [Spring MVC](https://spring.io) framework
- - [MyBatis](https://mybatis.github.io/mybatis-3/index.html) persistence framework
- - [Apache ActiveMQ](http://activemq.apache.org/) message queue
- - [Druid](https://github.com/alibaba/druid/) database connection pool
- - [Flat UI](http://designmodo.github.io/Flat-UI/)
- - [jQuery](http://jquery.com)
- - [FontAwesome](http://fontawesome.io)
- - [CodeMirror](http://codemirror.net)
- - [Highlight.js](https://highlightjs.org/)
-
-### The Origin of Verwandlung
-
-In 2011, LinkedIn Inc. launched a message queue called [Kafka](http://kafka.apache.org/), which is written in Scala and available as open-source software.
-
-A year later, Alibaba Inc. introduced a message queue named [MetaQ](https://github.com/killme2008/Metamorphosis) which is built on top of Kafka and implemented in Java. The name "MetaQ" is derived from the title of a renowned literary work, "Metamorphosis", authored by Franz Kafka.
-
-Since message queues are vital components in an application, the name of the application was chosen as "Verwandlung", which is the German translation for "*Metamorphosis*".
+It is built on the [Spring Framework](https://spring.io) with
+[Spring MVC](https://docs.spring.io/spring-framework/reference/web/webmvc.html) and
+the [MyBatis](https://mybatis.org/mybatis-3/) persistence framework.
 
 ### Architecture
 
-The Verwandlung application consists of two primary components:
+Verwandlung has two components, the **web application** and one or more
+**judgers**, communicating over ActiveMQ:
 
-- Web Application
-- Judger (compatible with both Windows and Linux operating systems)
-
-The overall architecture of the application can be illustrated by the diagram provided below:
-
-![Software-Architecture](https://www.infinitescript.com/projects/Verwandlung/Software-Architecture.webp)
-
-As depicted in the diagram, the Verwandlung Online Judge features support for multiple judgers. These judgers are responsible for communicating with the web application through the use of ActiveMQ.
-
----
+![Software Architecture](https://www.infinitescript.com/projects/Verwandlung/Software-Architecture.webp)
 
 ## Getting Started
 
-### System Requirements
+### Run with Docker (recommended)
 
-#### Hardware Requirements
+The fastest way to stand up the whole stack (database, message queue, web app and a
+judger):
 
-- **CPU**: 2.0 GHz or faster 32-bit (x86) or 64-bit (x64) processor
-
-For Web Application (including Database and Message Queue):
-
-- **RAM**: 2.0 GB RAM on Windows, 1.0 GB RAM on Linux.
-
-For Judger:
-
-- **RAM**: 1.0 GB RAM on Windows, 512 MB RAM on Linux.
-
-#### Software Requirements
-
-For Web Application (including Database and Message Queue):
-
-- **Operating System**: Windows, Linux or Mac
-- **Database**: [MySQL](http://www.mysql.com) 8.0+ or [MariaDB](https://mariadb.org/) 10.4+
-- **Java Runtime**: [JDK](https://adoptium.net) 17+ (Spring Framework 7 supports JDK 17–25)
-- **Message Queue**: [ActiveMQ](http://activemq.apache.org) 6.0+ (Jakarta JMS)
-- **Web Server**: none required — the web application is a Spring Boot executable WAR with an embedded [Tomcat](http://tomcat.apache.org) 11 (Jakarta Servlet 6.1). It can still be deployed to a standalone Tomcat 11+ if preferred.
-
-For Judger:
-
-- **Operating System**: Windows or Linux
-- **Java Runtime**: [JDK](https://adoptium.net) 17+ (Spring Framework 7 supports JDK 17–25)
-
-### Installation
-
-#### Docker Releases (Recommended)
-
-Now you can easily use Verwandlung Online Judge with Docker.
-
-See the installation instructions [here](https://github.com/hzxie/voj/tree/master/docker).
-
-#### Binary Releases
-
-- **Web Application**: [0.2.0](https://github.com/hzxie/voj/releases/download/0.2.0/voj.war)
-- **Judger (Windows, 64 Bit)**: [0.2.0](https://github.com/hzxie/voj/releases/download/0.2.0/voj-judger-windows-x64.jar)
-- **Judger (Linux, 64 Bit)**: [0.2.0](https://github.com/hzxie/voj/releases/download/0.2.0/voj-judger-linux-x64.jar)
-
-#### Source Releases
-
-**NOTE:** 
-
-- [Maven](http://maven.apache.org) 3+ and [GCC](http://gcc.gnu.org/) 4.8+ with **POSIX thread model** is required.
-- Make sure `mvn` (Maven), `g++` and `make` are added to the PATH.
-
-After download source code from this repository, run following commands from a terminal:
-
-For Web Application:
-
+```bash
+git clone https://github.com/hzxie/voj.git
+cd voj
+scripts/run-docker.sh
 ```
+
+`run-docker.sh` generates strong random database passwords, builds both images and
+starts the `voj.web` and `voj.judger` containers on a shared network. The web UI is
+then available at <http://localhost:8080/voj>.
+
+To run the prebuilt images from Docker Hub instead of building locally:
+
+```bash
+VOJ_PULL=1 scripts/run-docker.sh
+```
+
+See [`docker/README.md`](docker/README.md) for image and configuration details.
+
+### Build from source
+
+**Web application** produces a self-contained executable WAR (embedded Tomcat):
+
+```bash
 cd web
-mvn package -DskipTests
+mvn package -DskipTests        # -> web/target/voj.web.war
+java -jar target/voj.web.war
 ```
 
-If the build is successful, the terminal will display a message as following:
+**Judger** builds a Spring Boot jar plus the JNI native library, so a C++
+toolchain is required:
 
-```
-[INFO] ------------------------------------------------------------------------
-[INFO] BUILD SUCCESS
-[INFO] ------------------------------------------------------------------------
-[INFO] Total time: 10.168 s
-[INFO] Finished at: 2015-11-26T13:20:09+08:00
-[INFO] Final Memory: 24M/210M
-[INFO] ------------------------------------------------------------------------
-```
-
-And you'll get a package named `voj.web.war` in the `target` folder.
-
-For Judger:
-
-**Windows**:
-
-```
-cd %JAVA_HOME%\include\win32
-copy jawt_md.h  ..
-copy jni_md.h  ..
+```bash
+# Linux build prerequisites: g++, make and libseccomp
+sudo apt-get install -y g++ make libseccomp-dev
 
 cd judger
-mvn package -DskipTests
+mvn package -DskipTests        # -> judger/target/voj.judger.jar
 ```
 
-**Linux**:
+> On some JDK layouts the JNI build needs `jni_md.h` / `jawt_md.h` copied from
+> `$JAVA_HOME/include/linux` (or `.../win32`) up into `$JAVA_HOME/include`.
 
-```
-cd $JAVA_HOME/include/linux
-cp jawt_md.h jni_md.h ..
+Convenience wrappers live in [`scripts/`](scripts/): `build-jars.sh`,
+`build-docker.sh`, `run-web.sh` and `run-judger.sh` (the run scripts preflight
+MySQL/ActiveMQ and import `voj.sql` on first launch).
 
-cd SOURCE_CODE_PATH/judger
-mvn package -DskipTests
-```
+### Requirements
 
-If the build is successful, the terminal will display a message as following:
+| Component | Requirement |
+| --- | --- |
+| Java | [JDK](https://adoptium.net) 17+ (tested through JDK 25) |
+| Database | [MySQL](https://www.mysql.com) 8.0+ or [MariaDB](https://mariadb.org/) 10.4+ |
+| Message queue | [ActiveMQ](https://activemq.apache.org) 6.0+ (Jakarta JMS) |
+| Judger (Linux build) | GCC/g++, make, libseccomp |
+| Judger OS | Linux or Windows |
 
-```
-[INFO] Executing tasks
+## Security model
 
-jni:
-     [echo] Generating JNI headers
-     [exec] mkdir -p target/cpp
-     [exec] g++ -c -std=c++11 -Wall -fPIC -I ... -o target/cpp/Judger.Core.Runner.o
-[INFO] Executed tasks
-...
-[INFO] ------------------------------------------------------------------------
-[INFO] BUILD SUCCESS
-[INFO] ------------------------------------------------------------------------
-[INFO] Total time: 12.432 s
-[INFO] Finished at: 2015-11-26T13:22:46+08:00
-[INFO] Final Memory: 81M/513M
-[INFO] ------------------------------------------------------------------------
-```
+Untrusted submissions run inside a sandbox so they cannot harm the judging host:
 
-And you'll get a package named `voj.judger.jar` in the `target` folder.
+- **Linux (native).** Each submission runs in a forked child with `setrlimit`
+  (CPU time, output size and process-count caps), accurate CPU-time and peak-memory
+  accounting via `wait4`/`getrusage`, a private network namespace, a seccomp syscall
+  filter (blocking `ptrace`, `mount`, module loading, etc.) and privileges dropped to
+  an unprivileged user (`system.username`, defaulting to `nobody`). If the judger
+  runs as root and cannot drop privileges, the submission is refused rather than run
+  as root.
+- **Linux (isolate).** Optionally set `judger.sandbox = isolate` to delegate to the
+  external [isolate](https://github.com/ioi/isolate) tool instead.
+- **Windows (native).** Each submission runs under a separate low-privilege Windows
+  account via `CreateProcessWithLogonW`.
 
-### Configuration
+The native sandbox does not provide full filesystem isolation. Reference answers
+and configuration are protected by file permissions (the work directory is handed
+to the sandbox user, while the checkpoint directory stays readable only by the
+judger), but a submission can still read world-readable host files. For complete
+filesystem isolation, run the judger as root with `judger.sandbox = isolate`, which
+confines each submission to its own mount namespace.
 
-#### Setup the ActiveMQ
+For shared, multi-tenant hosts, create a dedicated unprivileged account for
+`system.username` instead of reusing `nobody`. See
+[`docs/deployment.md`](docs/deployment.md) for the filesystem layout and
+permissions a root deployment expects.
 
-To reduce the memory of ActiveMQ, you can edit `activemq.xml` in `ACTIVEMQ_HOME\conf`.
+## The origin of "Verwandlung"
 
-Please find following content in this file, and change it to proper values that suitable for your servers.
+In 2011, LinkedIn released the [Kafka](https://kafka.apache.org/) message queue,
+named after the author Franz Kafka. A year later, Alibaba introduced
+[MetaQ](https://github.com/killme2008/Metamorphosis), built on Kafka, a nod to
+Kafka's novella *Metamorphosis*. Since the message queue is central to this
+application, it took the name "Verwandlung", the German title of *Metamorphosis*.
 
-```
-<systemUsage>
-    <systemUsage>
-        <memoryUsage>
-            <!-- Change this value -->
-            <memoryUsage limit="128 mb" />
-        </memoryUsage>
-        <storeUsage>
-            <!-- Change this value -->
-            <storeUsage limit="4 gb"/>
-        </storeUsage>
-        <tempUsage>
-            <!-- Change this value -->
-            <tempUsage limit="4 gb"/>
-        </tempUsage>
-    </systemUsage>
-</systemUsage>
-```
+## Contributing
 
-#### Setup the Web Application
+Contributions are welcome:
 
-Create a database in MySQL, import `voj.sql`.
+- Report bugs and request features on the [issues](https://github.com/hzxie/voj/issues) page.
+- For new features, please open an issue to discuss before sending a pull request.
+- Translators for additional languages are especially appreciated.
 
-Edit the values in `/WEB-INF/classes/voj.properties` of the file `voj.web.war`.
+## License
 
-You can open it with archive manager software such as `WinRAR`.
-
-`voj.web.war` is a self-contained Spring Boot executable WAR (embedded Tomcat),
-so you can simply run it:
-
-```
-java -jar voj.web.war
-```
-
-The application listens on `http://localhost:8080/voj` by default. Configuration
-files placed next to the WAR (e.g. an external `application.properties` or
-`voj.properties`) override the bundled defaults.
-
-If you would rather deploy to a standalone servlet container, the same WAR can be
-dropped into `TOMCAT_HOME/webapps` of a Tomcat 11+ instance.
-
-#### Setup the Judger
-
-Edit the values in `/voj.properties` of the file `voj.judger.jar`.
-
-You can run the judger using following command :
-
-**Windows**:
-
-```
-javaw -jar voj.judger.jar
-```
-
-**Linux**:
-
-```
-sudo java -jar voj.judger.jar
-```
-
-**Important:**
-
-If you are using Linux, please run following commands using `root`:
-
-```
-# Shutdown and Kill process is not allowed for non-root user
-chmod 700 /sbin/init
-chmod 700 /sbin/poweroff
-chmod 700 /usr/bin/pkill
-```
-
----
-
-### Contribution
-
-We're glad that you want to improve this project. 
-
-- **We NEED TRANSLATORS** for multi-language support(English and Chinese have supported).
-- You can report bugs [here](https://github.com/hzxie/voj/issues).
-- You can also create a pull request if you can fix the bug.
-- If you want to add features to the project, please tell us in the [issues](https://github.com/hzxie/voj/issues) page before developing.
-
-Thanks for your corporation.
-
-### License
-
-This project is open sourced under GNU GPL v3.
+This project is open-sourced under the [GNU GPL v3](LICENSE).

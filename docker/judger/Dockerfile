@@ -5,8 +5,10 @@
 FROM ubuntu:26.04
 LABEL org.opencontainers.image.authors="Haozhe Xie <root@haozhexie.com>"
 
-# User Settings
-ARG MYSQL_USER_PASS=U3bEwhRHnD6xNVpb
+# Deployment settings. Must match the web image's MYSQL_USER_PASS. Pass it at
+# build time with --build-arg (or use scripts/run-docker.sh). The placeholder
+# default below is NOT a secret — override it.
+ARG MYSQL_USER_PASS=changeme
 ARG MYSQL_HOST=voj.web
 ARG MYSQL_PORT=3306
 ARG ACTIVEMQ_HOST=voj.web
@@ -28,6 +30,7 @@ RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         ca-certificates wget curl \
         make g++ python3 \
+        libseccomp-dev \
         openjdk-25-jdk && \
     rm -rf /var/lib/apt/lists/* && \
 # Setup Python3 as the default Python

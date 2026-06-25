@@ -40,20 +40,17 @@ jobs:
       - name: Import test database schema
         run: mysql -h 127.0.0.1 -P 3306 -u root test < voj.sql
 
+      - name: Install judger native build dependencies
+        run: sudo apt-get update && sudo apt-get install -y libseccomp-dev
+
       - name: Prepare judger test configuration
         run: cp judger/src/test/resources/voj-test-linux.properties judger/src/test/resources/voj-test.properties
 
-      - name: Create sandbox system user
-        # The judger Runner lowers privileges to this account (see
-        # system.username / system.password in the test properties).
-        run: |
-          sudo useradd -m appveyor
-          echo 'appveyor:Fx8eHPNesxhpmdru' | sudo chpasswd
-
       - name: Run tests with coverage
-        # judger compiles its JNI library and uses setuid to drop privileges,
-        # so the reactor runs as root. HOME/JAVA_HOME/PATH are preserved so the
-        # cached ~/.m2 repository and the selected JDK are reused.
+        # judger compiles its JNI library and uses setuid to drop privileges to
+        # the "nobody" account (system.username in the test properties), so the
+        # reactor runs as root. HOME/JAVA_HOME/PATH are preserved so the cached
+        # ~/.m2 repository and the selected JDK are reused.
         run: |
           sudo env \
             "HOME=$HOME" \

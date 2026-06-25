@@ -28,6 +28,10 @@ jobs:
             sudo mysql -e "FLUSH PRIVILEGES;"
 
       - run:
+          name: Install judger native build dependencies
+          command: sudo apt-get install -y libseccomp-dev
+
+      - run:
           name: Fix JNI headers on Linux
           command: |
             sudo cp $JAVA_HOME/include/linux/jni_md.h $JAVA_HOME/include/jni_md.h

@@ -5,13 +5,15 @@
 FROM ubuntu:26.04
 LABEL org.opencontainers.image.authors="Haozhe Xie <root@haozhexie.com>"
 
-# User Settings
-ARG MYSQL_ROOT_PASS=dBuZNz6tDKhgZjHX
-ARG MYSQL_USER_PASS=U3bEwhRHnD6xNVpb
+# Deployment settings. Pass real values at build time with --build-arg (or use
+# scripts/run-docker.sh, which generates strong random database passwords). The
+# placeholder password defaults below are NOT secrets — override them.
+ARG MYSQL_ROOT_PASS=changeme
+ARG MYSQL_USER_PASS=changeme
 ARG WEBSITE_URL=localhost:8080/voj
-ARG MAIL_HOST=smtp.mailgun.org
-ARG MAIL_USERNAME=postmaster@verwandlung.org
-ARG MAIL_PASSWORD=passwd
+ARG MAIL_HOST=
+ARG MAIL_USERNAME=
+ARG MAIL_PASSWORD=
 
 # Set environment variables.
 # TARGETARCH is provided by BuildKit (amd64 / arm64) and matches the Ubuntu
