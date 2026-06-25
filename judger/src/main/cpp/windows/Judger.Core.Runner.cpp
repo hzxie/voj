@@ -42,11 +42,21 @@
 #define WALL_TIME_BUFFER_MS 1000
 
 /**
+ * How often (ms) the parent samples the child's peak memory while it runs. The memory limit is
+ * enforced by polling the Job's peak accounting (a soft limit) rather than the Job's hard
+ * ProcessMemoryLimit, so that an offending peak rises just above the limit before the process is
+ * killed and the run is classified as MLE - matching the Linux runner. The hard cap is intentionally
+ * not used: under it an allocation simply fails and the program crashes, which is indistinguishable
+ * from a plain runtime error.
+ */
+#define MEMORY_POLL_INTERVAL_MS 2
+
+/**
  * Function Prototypes.
  */
 bool setupIoRedirection(const std::wstring&, const std::wstring&, HANDLE&, HANDLE&);
 void setupStartupInfo(STARTUPINFOW&, HANDLE&, HANDLE&);
-HANDLE createJobObject(jint memoryLimit);
+HANDLE createJobObject();
 bool createProcess(const std::wstring&, const std::wstring&, const std::wstring&, HANDLE&, LPVOID&, STARTUPINFOW&, PROCESS_INFORMATION&);
 jint getPeakMemoryUsage(HANDLE& hJob);
 jint getCpuTimeUsage(HANDLE& hProcess);
@@ -99,9 +109,10 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     }
     setupStartupInfo(startupInfo, hInput, hOutput);
 
-    // The Job Object enforces the hard memory limit, the active-process limit (anti fork bomb) and
-    // kills the whole process tree atomically when it is closed.
-    hJob = createJobObject(memoryLimit);
+    // The Job Object enforces the active-process limit (anti fork bomb) and the UI restrictions, and
+    // kills the whole process tree atomically when it is closed. The memory limit is enforced below
+    // by polling the Job's peak accounting (a soft limit), not the Job's hard ProcessMemoryLimit.
+    hJob = createJobObject();
 
     // The process is created suspended, assigned to the Job Object before it runs a single
     // instruction, and only then resumed - so the limits are in force from the very beginning.
@@ -113,28 +124,52 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     }
     ResumeThread(processInfo.hThread);
 
-    // Wall-clock guard: kill the process if it does not finish within the CPU time limit plus a
-    // buffer (it may be blocked/sleeping while consuming little CPU).
-    DWORD waitTimeout = ( timeLimit > 0 ) ? (DWORD)(timeLimit + WALL_TIME_BUFFER_MS) : INFINITE;
-    bool  killedByWallTimeout = false;
-    if ( WaitForSingleObject(processInfo.hProcess, waitTimeout) == WAIT_TIMEOUT ) {
-        killedByWallTimeout = true;
-        if ( hJob != NULL ) {
-            TerminateJobObject(hJob, 1);
-        } else {
-            TerminateProcess(processInfo.hProcess, 1);
+    // Poll while the child runs: enforce the memory limit as a soft limit (let the peak rise just
+    // above the limit, then kill, so the run is classified as MLE) and apply a wall-clock guard for a
+    // process that blocks/sleeps while consuming little CPU.
+    DWORD     waitTimeout         = ( timeLimit > 0 ) ? (DWORD)(timeLimit + WALL_TIME_BUFFER_MS) : INFINITE;
+    bool      killedByWallTimeout = false;
+    bool      memoryExceeded      = false;
+    ULONGLONG startTick           = GetTickCount64();
+    for ( ;; ) {
+        if ( WaitForSingleObject(processInfo.hProcess, MEMORY_POLL_INTERVAL_MS) == WAIT_OBJECT_0 ) {
+            break; // the process exited on its own
         }
-        WaitForSingleObject(processInfo.hProcess, INFINITE);
+        if ( memoryLimit > 0 && getPeakMemoryUsage(hJob) > memoryLimit ) {
+            memoryExceeded = true;
+            if ( hJob != NULL ) {
+                TerminateJobObject(hJob, 1);
+            } else {
+                TerminateProcess(processInfo.hProcess, 1);
+            }
+            WaitForSingleObject(processInfo.hProcess, INFINITE);
+            break;
+        }
+        if ( waitTimeout != INFINITE && GetTickCount64() - startTick > (ULONGLONG) waitTimeout ) {
+            killedByWallTimeout = true;
+            if ( hJob != NULL ) {
+                TerminateJobObject(hJob, 1);
+            } else {
+                TerminateProcess(processInfo.hProcess, 1);
+            }
+            WaitForSingleObject(processInfo.hProcess, INFINITE);
+            break;
+        }
     }
 
     exitCode    = getExitCode(processInfo.hProcess);
     timeUsage   = getCpuTimeUsage(processInfo.hProcess);
-    memoryUsage = getPeakMemoryUsage(hJob);
+    memoryUsage = getPeakMemoryUsage(hJob); // the Job's peak accounting persists after the process exits
 
     // A process killed for exceeding the wall-clock guard consumes little CPU, so force the reported
     // time to the limit, ensuring the Java side classifies it as a Time Limit Exceeded.
     if ( killedByWallTimeout && timeLimit > 0 && timeUsage < timeLimit ) {
         timeUsage = timeLimit;
+    }
+    // A process killed for exceeding the memory limit must report at least the limit, so the Java
+    // side classifies it as a Memory Limit Exceeded.
+    if ( memoryExceeded && memoryLimit > 0 && memoryUsage < memoryLimit ) {
+        memoryUsage = memoryLimit;
     }
 
     if ( lpEnvironment != NULL ) {
@@ -212,11 +247,12 @@ void setupStartupInfo(STARTUPINFOW& startupInfo, HANDLE& hInput, HANDLE& hOutput
 }
 
 /**
- * Creates a Job Object that enforces the resource limits.
- * @param  memoryLimit - the runtime memory limit (KB, 0 means no limit)
+ * Creates a Job Object that enforces the active-process limit and UI restrictions and kills the
+ * whole tree when closed. No hard memory limit is set: memory is enforced by polling the Job's peak
+ * accounting (see the run loop), which the Job tracks regardless of whether a memory limit is set.
  * @return the Job Object handle, or NULL on failure
  */
-HANDLE createJobObject(jint memoryLimit) {
+HANDLE createJobObject() {
     HANDLE hJob = CreateJobObjectW(NULL, NULL);
     if ( hJob == NULL ) {
         return NULL;
@@ -227,10 +263,6 @@ HANDLE createJobObject(jint memoryLimit) {
         JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE | JOB_OBJECT_LIMIT_DIE_ON_UNHANDLED_EXCEPTION |
         JOB_OBJECT_LIMIT_ACTIVE_PROCESS;
     jeli.BasicLimitInformation.ActiveProcessLimit = ACTIVE_PROCESS_LIMIT;
-    if ( memoryLimit > 0 ) {
-        jeli.BasicLimitInformation.LimitFlags |= JOB_OBJECT_LIMIT_PROCESS_MEMORY;
-        jeli.ProcessMemoryLimit = (SIZE_T)memoryLimit * 1024;
-    }
     SetInformationJobObject(hJob, JobObjectExtendedLimitInformation, &jeli, sizeof(jeli));
 
     // Cut the sandboxed program off from the interactive desktop (clipboard, global atoms, etc.).

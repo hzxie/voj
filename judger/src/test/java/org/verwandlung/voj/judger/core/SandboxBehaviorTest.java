@@ -62,13 +62,6 @@ public class SandboxBehaviorTest {
    */
   @Test
   public void testMemoryLimitExceeded() throws Exception {
-    // On Windows the Job Object's ProcessMemoryLimit is a hard cap: a program exceeding it has its
-    // allocation fail (and crashes) rather than being killed at the limit, so the peak never reaches
-    // the limit and the run surfaces as a Runtime Error. Reporting it as MLE there needs the Job
-    // memory-limit-violation notification and is a follow-up; for now this case is Linux/isolate only.
-    Assumptions.assumeFalse(
-        System.getProperty("os.name").contains("Windows"),
-        "Windows reports an out-of-memory run as RE (hard Job memory cap); MLE reporting is a follow-up.");
     Assertions.assertEquals("MLE", judge(900001L, MEMORY_BOMB_CODE, 5000, 65536));
   }
 
