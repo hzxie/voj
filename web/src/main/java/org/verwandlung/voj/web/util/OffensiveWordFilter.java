@@ -16,13 +16,9 @@
  */
 package org.verwandlung.voj.web.util;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -31,7 +27,12 @@ import org.verwandlung.voj.web.mapper.OptionMapper;
 import org.verwandlung.voj.web.model.Option;
 
 /**
- * The offensive word filtering class.
+ * Filters offensive words out of user supplied text.
+ *
+ * <p>The offensive words are organized into a trie (prefix tree) built once at construction time.
+ * Filtering performs a single left-to-right scan of the text, greedily matching the longest
+ * offensive word starting at each position, which runs in {@code O(n * L)} time where {@code n} is
+ * the text length and {@code L} the length of the longest offensive word.
  *
  * @author Zhou Yihao
  */
@@ -45,225 +46,103 @@ public class OffensiveWordFilter {
    */
   @Autowired
   private OffensiveWordFilter(OptionMapper optionMapper) {
-    this.optionMapper = optionMapper;
-
     Option offensiveWordOption = optionMapper.getOption(OFFENSIVE_WORD_OPTION_KEY);
-    List<String> offensiveWordList = new ArrayList<>();
-
     if (offensiveWordOption != null) {
-      String optionValue = offensiveWordOption.getOptionValue();
-      offensiveWordList = JsonUtils.toList(optionValue, String.class);
+      List<String> offensiveWords =
+          JsonUtils.toList(offensiveWordOption.getOptionValue(), String.class);
+      for (String offensiveWord : offensiveWords) {
+        addOffensiveWord(offensiveWord);
+      }
     }
-    Set<String> offensiveWordSet = new HashSet<>(offensiveWordList);
-    this.addOffensiveWordsToHashMap(offensiveWordSet);
   }
 
   /**
-   * Provides the offensive word filtering function. An overload of offensiveWordFilter(String, int,
-   * String). Sets the default values of the match rule (maxMatchType) and the replacement character
-   * ("*").
+   * Replaces every offensive word found in the text with asterisks.
    *
    * @param text - the string to filter
    * @return the filtered string
    */
   public String filter(String text) {
-    return filter(text, OffensiveWordFilter.MAX_MATCH_TYPE, "*");
+    return filter(text, '*');
   }
 
   /**
-   * Provides the offensive word filtering function.
+   * Replaces every offensive word found in the text with the given character.
    *
    * @param text - the string to filter
-   * @param matchType - the match rule, 1 for minimum match, 2 for maximum match
+   * @param replaceChar - the character used to mask each offensive character
    * @return the filtered string
    */
-  private String filter(String text, int matchType, String replaceChar) {
-    // Get the positions of all offensive words in the text
-    List<Position> offensiveWordsPosition = getOffensiveWordsPosition(text, matchType);
-    // Replace all offensive words in the text with replaceChar
-    StringBuilder resultStringBuilder = new StringBuilder(text);
-
-    Iterator<Position> iterator = offensiveWordsPosition.iterator();
-    while (iterator.hasNext()) {
-      Position now = iterator.next();
-      resultStringBuilder.replace(
-          now.start, now.start + now.length, getReplaceChars(replaceChar, now.length));
-    }
-    return resultStringBuilder.toString();
-  }
-
-  /**
-   * Gets the positions of the offensive words.
-   *
-   * @param text - the string to filter
-   * @param matchType - the match rule, 1 for minimum match, 2 for maximum match
-   * @return the positions of the offensive words
-   */
-  private List<Position> getOffensiveWordsPosition(String text, int matchType) {
-    List<Position> offensiveWordsPosition = new ArrayList<>();
-    // Traverse the string to be filtered, and check whether the prefix of the substring of text
-    // starting at i is an offensive word
-    for (int i = 0; i < text.length(); ++i) {
-      int length = checkOffensiveWord(text, i, matchType);
+  private String filter(String text, char replaceChar) {
+    StringBuilder result = new StringBuilder(text.length());
+    for (int i = 0; i < text.length(); ) {
+      int length = matchLength(text, i);
       if (length > 0) {
-        Position position = new Position(i, length);
-        offensiveWordsPosition.add(position);
-        // Skip the already-matched offensive word; subtract one because the for loop increments
-        i = i + length - 1;
+        for (int j = 0; j < length; ++j) {
+          result.append(replaceChar);
+        }
+        i += length;
+      } else {
+        result.append(text.charAt(i));
+        ++i;
       }
     }
-    return offensiveWordsPosition;
+    return result.toString();
   }
 
   /**
-   * Checks whether the prefix of the string starting at beginIndex is an offensive word.
+   * Returns the length of the longest offensive word that starts at {@code beginIndex}, or 0 if no
+   * offensive word starts there.
    *
-   * @param text - the text to filter
-   * @param beginIndex - the start position of this check
-   * @param matchType the match mode, 1 for minimum match, 2 for maximum match
-   * @return the length of the offensive word if one exists, or 0 if none exists
+   * @param text - the text being filtered
+   * @param beginIndex - the position to match from
+   * @return the length of the matched offensive word, or 0 if there is no match
    */
-  @SuppressWarnings("rawtypes")
-  private int checkOffensiveWord(String text, int beginIndex, int matchType) {
-    /*
-     * matchedLength is the length of the longest offensive word matched so far.
-     * matchingLength is the length of the offensive word currently being matched.
-     * When a terminal symbol is matched, matchingLength is assigned to matchedLength.
-     * For a maximum match, matching continues to check whether the currently matched offensive word
-     * is part of a longer offensive word; if the match fails at this point, it falls back to
-     * matchedLength and ends the match.
-     */
+  private int matchLength(String text, int beginIndex) {
+    TrieNode node = root;
     int matchedLength = 0;
-    int matchingLength = 0;
-
-    char nowWord = 0;
-    Map nowMap = offensiveWordMap;
     for (int i = beginIndex; i < text.length(); ++i) {
-      nowWord = text.charAt(i);
-      // The follow set of the current character
-      nowMap = (Map) nowMap.get(nowWord);
-      if (nowMap != null) {
-        ++matchingLength;
-        if ("1".equals(nowMap.get(IS_END))) { // Matched a terminal symbol; update the current max matched length
-          matchedLength = matchingLength;
-          if (OffensiveWordFilter.MIN_MATCH_TYPE == matchType) {
-            // For the minimum match rule, end the match as soon as a terminal symbol is matched
-            break;
-          }
-        }
-      } else { // If the follow set of the current character is empty, the match ends
+      node = node.children.get(text.charAt(i));
+      if (node == null) {
         break;
+      }
+      if (node.isEnd) {
+        // Keep going to greedily prefer the longest offensive word (e.g. "ab" over "abc").
+        matchedLength = i - beginIndex + 1;
       }
     }
     return matchedLength;
   }
 
   /**
-   * Gets the string used to replace an offensive word. All the characters in the offensive word are
-   * replaced with replaceChar, generated based on the length and character, e.g. "****".
+   * Inserts a single offensive word into the trie. For the words "ab", "abc" and "ade" the resulting
+   * trie is: a -&gt; (b[end] -&gt; c[end]), (d -&gt; e[end]).
    *
-   * @param replaceChar the character used to replace the offensive word
-   * @param length the length of the offensive word
-   * @return the string used to replace the offensive word
+   * @param offensiveWord - the offensive word to insert
    */
-  private static String getReplaceChars(String replaceChar, int length) {
-    String resultChars = "";
-    for (int i = 0; i < length; ++i) {
-      resultChars += replaceChar;
+  private void addOffensiveWord(String offensiveWord) {
+    if (offensiveWord == null || offensiveWord.isEmpty()) {
+      return;
     }
-    return resultChars;
+    TrieNode node = root;
+    for (int i = 0; i < offensiveWord.length(); ++i) {
+      node = node.children.computeIfAbsent(offensiveWord.charAt(i), key -> new TrieNode());
+    }
+    node.isEnd = true;
   }
 
-  /**
-   * Reads the offensive word library, puts the offensive words into a HashSet, and builds a DFA
-   * algorithm model. For example, for the words "ab", "abc" and "ade", the model is: a = { isEnd = 0
-   * b = { isEnd = 1 c = { isEnd = 1 } } d = { isEnd = 0 e = { isEnd = 1 } } }.
-   *
-   * @param offensiveWordSet - the Set of offensive words
-   */
-  @SuppressWarnings({"unchecked", "rawtypes"})
-  private void addOffensiveWordsToHashMap(Set<String> offensiveWordSet) {
-    // Initialize the offensive word HashMap, with a size equal to the Set.
-    offensiveWordMap = new HashMap((int) (offensiveWordSet.size() * 1.5));
+  /** A node of the offensive word trie. */
+  private static final class TrieNode {
+    /** The child nodes keyed by their character. */
+    private final Map<Character, TrieNode> children = new HashMap<>();
 
-    // After reading a key from the nowMap state and reaching a new state, create newWordMap
-    String key = null;
-    Map nowMap = null;
-    Map newWordMap = null;
-    // Iterate over the OffensiveWordSet
-    Iterator<String> iterator = offensiveWordSet.iterator();
-    while (iterator.hasNext()) {
-      key = iterator.next();
-      // Start traversal from the top-level HashMap
-      nowMap = offensiveWordMap;
-
-      // Iterate over each character in the current offensive word
-      for (int i = 0; i < key.length(); ++i) {
-        char keyChar = key.charAt(i);
-        Object wordMap = nowMap.get(keyChar);
-
-        if (wordMap != null) {
-          // The current character of the current offensive word already exists; go to the next state
-          nowMap = (Map) wordMap;
-        } else {
-          // The current character of the current offensive word does not exist; create a new Map (state)
-          newWordMap = new HashMap();
-          // By default, the current character of the current offensive word is not a terminal symbol
-          newWordMap.put(IS_END, "0");
-          // Add the newly created Map (state) to the current Map (state)
-          nowMap.put(keyChar, newWordMap);
-          // Go to the next state after reading the current character
-          nowMap = newWordMap;
-        }
-        if (i == key.length() - 1) {
-          nowMap.put(IS_END, "1");
-        }
-      }
-    }
+    /** Whether the path from the root to this node spells a complete offensive word. */
+    private boolean isEnd;
   }
 
-  /** The HashMap that stores the offensive words. */
-  private HashMap<?, ?> offensiveWordMap;
-
-  /** The flag in the HashMap indicating whether an offensive word terminates. */
-  private static final String IS_END = "isEnd";
-
-  /**
-   * minMatchType: the minimum match rule (1). Once the terminal symbol of an offensive word is
-   * found, it no longer continues to look for whether it is contained in a longer offensive word.
-   * maxMatchType: the maximum match rule (2). Once the terminal symbol of an offensive word is
-   * found, it still continues to look for whether it is contained in a longer offensive word.
-   */
-  public static final int MIN_MATCH_TYPE = 1;
-
-  public static final int MAX_MATCH_TYPE = 2;
+  /** The root of the offensive word trie. */
+  private final TrieNode root = new TrieNode();
 
   /** The system setting key for offensive words. */
   public static final String OFFENSIVE_WORD_OPTION_KEY = "offensiveWords";
-
-  /** The autowired OptionDao object. */
-  @SuppressWarnings("unused")
-  private OptionMapper optionMapper;
-}
-
-/**
- * Stores the position of an offensive word (start position and length).
- *
- * @author Zhou YiHao
- */
-class Position {
-  /**
-   * The constructor of Position.
-   *
-   * @param start - the start position of the offensive word
-   * @param length - the length of the offensive word
-   */
-  public Position(int start, int length) {
-    this.start = start;
-    this.length = length;
-  }
-
-  int start;
-
-  int length;
 }
