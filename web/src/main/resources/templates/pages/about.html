@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/main}" lang="en">
+<head>
+    <title th:text="#{voj.misc.about.title} + ' | ' + ${websiteName}">About Us</title>
+    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/misc/about.css?v=${version}|" />
+</head>
+<body>
+    <div id="content" layout:fragment="content">
+        <div id="ribbon"></div> <!-- #ribbon -->
+        <div class="container">
+            <div class="row-fluid">
+                <div class="span9">
+                    <div id="main-content">
+                        <div class="section">
+                            <h3 id="about-project" th:text="#{voj.misc.about.about-project}">About the Project</h3>
+                            <div class="markdown" th:utext="#{voj.misc.about.about-project-content}"></div> <!-- .markdown -->
+                        </div> <!-- .section -->
+                        <div class="section">
+                            <h3 id="how-to-contribute" th:text="#{voj.misc.about.how-to-contribute}">How to Contribute</h3>
+                            <div class="markdown" th:utext="#{voj.misc.about.how-to-contribute-content}"></div> <!-- .markdown -->
+                        </div> <!-- .section -->
+                        <div class="section" th:with="termsUrl=@{/terms}">
+                            <h3 id="license" th:text="#{voj.misc.about.license}">License</h3>
+                            <div class="markdown" th:utext="#{voj.misc.about.license-content(${termsUrl})}"></div> <!-- .markdown -->
+                        </div> <!-- .section -->
+                    </div> <!-- #main-content -->
+                </div> <!-- .span9 -->
+                <div class="span3">
+                    <div id="sidebar-nav">
+                        <h5 th:text="#{voj.misc.about.about-us}">About Us</h5>
+                        <ul class="contents">
+                            <li><a href="#about-project" th:text="#{voj.misc.about.about-project}">About the Project</a></li>
+                            <li><a href="#how-to-contribute" th:text="#{voj.misc.about.how-to-contribute}">How to Contribute</a></li>
+                            <li><a href="#license" th:text="#{voj.misc.about.license}">License</a></li>
+                        </ul>
+                    </div> <!-- #sidebar-nav -->
+                </div> <!-- .span3 -->
+            </div> <!-- .row-fluid -->
+        </div> <!-- .container -->
+    </div> <!-- #content -->
+
+    <th:block layout:fragment="scripts">
+    <script type="text/javascript" th:inline="javascript">
+        $.getScript([[|${cdnUrl}/js/markdown.min.js?v=${version}|]], function() {
+            converter = Markdown.getSanitizingConverter();
+
+            $('.markdown').each(function() {
+                var plainContent    = $(this).text(),
+                    markdownContent = converter.makeHtml(plainContent.replace(/\\\n/g, '\\n'));
+
+                $(this).html(markdownContent);
+            });
+        });
+    </script>
+    </th:block>
+</body>
+</html>

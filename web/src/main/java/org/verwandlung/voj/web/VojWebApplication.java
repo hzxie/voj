@@ -26,8 +26,8 @@ import org.springframework.context.annotation.PropertySource;
 /**
  * The entry point of the web application of Verwandlung Online Judge.
  *
- * <p>The application is packaged as an executable WAR: it can run standalone via {@code java -jar
- * voj.web.war} (with embedded Tomcat), and can also be deployed to an external Servlet container.
+ * <p>The application is packaged as a self-contained executable JAR and runs standalone via {@code
+ * java -jar voj.web.jar} with embedded Tomcat.
  *
  * @author Haozhe Xie
  */

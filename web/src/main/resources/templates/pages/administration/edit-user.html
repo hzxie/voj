@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/admin}" lang="en">
+<head>
+    <title th:text="#{voj.administration.edit-user.title} + ': ' + ${user.username} + ' | ' + ${websiteName}">Edit User</title>
+    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/administration/edit-user.css?v=${version}|" />
+</head>
+<body>
+    <div id="content" layout:fragment="content">
+        <h2 class="page-header"><i class="fa fa-user"></i> <span th:text="#{voj.administration.edit-user.edit-user}">Edit User</span></h2>
+        <form id="profile-form" onSubmit="onSubmit(); return false;">
+            <div class="alert alert-error hide"></div> <!-- .alert-error -->
+            <div class="alert alert-success hide" th:text="#{voj.administration.edit-user.profile-updated}">Profile updated.</div> <!-- .alert-success -->
+            <div class="control-group row-fluid">
+                <label for="username" th:text="#{voj.administration.edit-user.username}">Username</label>
+                <input id="username" class="span12" type="text" th:value="${user.username}" disabled="disabled" />
+            </div> <!-- .control-group -->
+            <div class="control-group row-fluid">
+                <label for="password" th:text="#{voj.administration.edit-user.password}">Password</label>
+                <input id="password" class="span12" type="password" maxlength="16" />
+            </div> <!-- .control-group -->
+            <div class="control-group row-fluid">
+                <label for="email" th:text="#{voj.administration.edit-user.email}">Email</label>
+                <input id="email" class="span12" type="text" maxlength="64" th:value="${user.email}" />
+            </div> <!-- .control-group -->
+            <div class="control-group row-fluid">
+                <label for="user-group" th:text="#{voj.administration.edit-user.user-group}">User Group</label>
+                <select id="user-group" name="userGroup">
+                    <option th:each="userGroup : ${userGroups}" th:value="${userGroup.userGroupSlug}" th:selected="${userGroup.userGroupSlug == user.userGroup.userGroupSlug}" th:text="${userGroup.userGroupName}">Group</option>
+                </select>
+            </div> <!-- .control-group -->
+            <div class="control-group row-fluid">
+                <label for="prefer-language" th:text="#{voj.administration.edit-user.prefer-language}">Prefer Language</label>
+                <select id="prefer-language" name="preferLanguage">
+                    <option th:each="language : ${languages}" th:value="${language.languageSlug}" th:selected="${language.languageId == user.preferLanguage.languageId}" th:text="${language.languageName}">Language</option>
+                </select>
+            </div> <!-- .control-group -->
+            <div class="control-group row-fluid">
+                <label for="location" th:text="#{voj.administration.edit-user.location}">Location</label>
+                <input id="location" class="span12" type="text" th:value="${location}" maxlength="128" />
+            </div> <!-- .control-group -->
+            <div class="control-group row-fluid">
+                <label for="website" th:text="#{voj.administration.edit-user.website}">Website</label>
+                <input id="website" class="span12" type="text" th:value="${website}" maxlength="64" />
+            </div> <!-- .control-group -->
+            <div class="row-fluid">
+                <div class="span12">
+                    <label for="social-links">
+                        <span th:text="#{voj.administration.edit-user.social-links}">Social Links</span>
+                        <a id="new-social-link" th:title="#{voj.administration.edit-user.new-social-link}" href="javascript:void(0);">
+                            <i class="fa fa-plus-circle"></i>
+                        </a>
+                    </label>
+                    <div id="social-links">
+                        <p id="no-social-links" th:text="#{voj.administration.edit-user.no-social-links}">No Social Links.</p>
+                        <ul></ul>
+                    </div> <!-- #social-links -->
+                </div> <!-- .span12 -->
+            </div> <!-- .row-fluid -->
+            <div class="row-fluid">
+                <div class="span12">
+                    <label for="wmd-input" th:text="#{voj.administration.edit-user.about-me}">About Me</label>
+                    <div id="markdown-editor">
+                        <div class="wmd-panel">
+                            <div id="wmd-button-bar" class="wmd-button-bar"></div> <!-- #wmd-button-bar -->
+                            <textarea id="wmd-input" class="wmd-input" th:text="${aboutMe}"></textarea>
+                        </div> <!-- .wmd-panel -->
+                        <div id="wmd-preview" class="wmd-panel wmd-preview"></div> <!-- .wmd-preview -->
+                    </div> <!-- #markdown-editor -->
+                </div> <!-- .span12 -->
+            </div> <!-- .row-fluid -->
+            <div class="row-fluid">
+                <div class="span12">
+                    <button class="btn btn-primary" type="submit" th:text="#{voj.administration.edit-user.update-profile}">Update Profile</button>
+                    <button class="btn btn-danger" onclick="return false;" th:text="#{voj.administration.edit-user.delete-user}">Delete User</button>
+                </div> <!-- .span12 -->
+            </div> <!-- .row-fluid -->
+        </form> <!-- #profile-form -->
+    </div> <!-- #content -->
+
+    <th:block layout:fragment="scripts">
+    <script type="text/javascript" th:inline="javascript">
+        $.getScript([[|${cdnUrl}/js/markdown.min.js?v=${version}|]], function() {
+            converter = Markdown.getSanitizingConverter();
+            editor    = new Markdown.Editor(converter);
+            editor.run();
+
+            $('.markdown').each(function() {
+                var plainContent    = $(this).text(),
+                    markdownContent = converter.makeHtml(plainContent.replace(/\\\n/g, '\\n'));
+
+                $(this).html(markdownContent);
+            });
+        });
+    </script>
+    <script type="text/javascript">
+        socialServices      = {
+            'Facebook'      : 'https://facebook.com/',
+            'Twitter'       : 'https://twitter.com/',
+            'Weibo'         : 'http://weibo.com/',
+            'Instagram'     : 'https://instagram.com/',
+            'GitHub'        : 'https://github.com/',
+            'StackOverflow' : 'http://stackoverflow.com/users/',
+            'LinkedIn'      : 'https://www.linkedin.com/profile/view?id='
+        };
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        $(function() {
+            var mySocialLinks   = {
+                'Facebook'      : [[${socialLinks['Facebook']} ?: '']],
+                'Twitter'       : [[${socialLinks['Twitter']} ?: '']],
+                'Weibo'         : [[${socialLinks['Weibo']} ?: '']],
+                'Instagram'     : [[${socialLinks['Instagram']} ?: '']],
+                'GitHub'        : [[${socialLinks['GitHub']} ?: '']],
+                'StackOverflow' : [[${socialLinks['StackOverflow']} ?: '']],
+                'LinkedIn'      : [[${socialLinks['LinkedIn']} ?: '']]
+            };
+
+            for ( var serviceName in mySocialLinks ) {
+                var serviceBaseUrl  = socialServices[serviceName],
+                    serviceUsername = mySocialLinks[serviceName],
+                    serviceUrl      = serviceBaseUrl + serviceUsername;
+
+                if ( typeof(serviceUsername) != 'undefined' && serviceUsername != '' ) {
+                    $('#no-social-links').addClass('hide');
+                    $('#social-links > ul').append(getSocialLinkContainer(serviceName, serviceUrl));
+                }
+            }
+        });
+    </script>
+    <script type="text/javascript">
+        $('#new-social-link').click(function() {
+            var serviceName = 'Facebook',
+                serviceUrl  = socialServices['Facebook'];
+
+            $('#no-social-links').addClass('hide');
+            $('#social-links > ul').append(getSocialLinkContainer(serviceName, serviceUrl));
+        });
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function getSocialLinkContainer(serviceName, serviceUrl) {
+            var containerTemplate = '<li class="social-link">' +
+                                    '    <div class="header">' +
+                                    '        <h5>%s</h5>' +
+                                    '        <ul class="inline">' +
+                                    '            <li><a href="javascript:void(0);"><i class="fa fa-edit"></i></a></li>' +
+                                    '            <li><a href="javascript:void(0);"><i class="fa fa-trash"></i></a></li>' +
+                                    '        </ul>' +
+                                    '    </div> <!-- .header -->' +
+                                    '    <div class="body hide">' +
+                                    '        <div class="row-fluid">' +
+                                    '            <div class="span4">' +
+                                    '                <label>' + [[#{voj.administration.edit-user.service-name}]] + '</label>' +
+                                    '            </div> <!-- .span4 -->' +
+                                    '            <div class="span8">' +
+                                    '                <div class="control-group">' +
+                                    '                    <select class="service">' + getSocialLinkOptions(serviceName) + '</select>' +
+                                    '                </div> <!-- .control-group -->' +
+                                    '            </div> <!-- .span8 -->' +
+                                    '        </div> <!-- .row-fluid -->' +
+                                    '        <div class="row-fluid">' +
+                                    '            <div class="span4">' +
+                                    '                <label>URL</label>' +
+                                    '            </div> <!-- .span4 -->' +
+                                    '            <div class="span8">' +
+                                    '                <div class="control-group">' +
+                                    '                    <input class="url span8" type="text" maxlength="128" value="%s" />' +
+                                    '                </div> <!-- .control-group -->' +
+                                    '            </div> <!-- .span8 -->' +
+                                    '        </div> <!-- .row-fluid -->' +
+                                    '    </div> <!-- .body -->' +
+                                    '</li> <!-- .social-link -->';
+
+            return containerTemplate.format(serviceName, serviceUrl);
+        }
+    </script>
+    <script type="text/javascript">
+        function getSocialLinkOptions(selectedServiceName) {
+            var socialLinkOptions       = '',
+                optionTemplate          = '<option value="%s">%s</option>',
+                selectedOptionTemplate  = '<option value="%s" selected>%s</option>';
+
+            for ( var serviceName in socialServices ) {
+                if ( serviceName == selectedServiceName ) {
+                    socialLinkOptions  += selectedOptionTemplate.format(serviceName, serviceName);
+                } else {
+                    socialLinkOptions  += optionTemplate.format(serviceName, serviceName);
+                }
+            }
+            return socialLinkOptions;
+        }
+    </script>
+    <script type="text/javascript">
+        $('#social-links').on('click', 'i.fa-edit', function() {
+            var socialLinkContainer = $(this).parent().parent().parent().parent().parent(),
+                isBodyUnfolded      = $('.body', $(socialLinkContainer)).is(':visible');
+
+            if ( isBodyUnfolded ) {
+                $('.body', $(socialLinkContainer)).addClass('hide');
+            } else {
+                $('.body', $(socialLinkContainer)).removeClass('hide');
+            }
+        });
+    </script>
+    <script type="text/javascript">
+        $('#social-links').on('click', 'i.fa-trash', function() {
+            var socialLinkContainer = $(this).parent().parent().parent().parent().parent(),
+                socialLinks         = $('li.social-link', '#social-links').length;
+
+            $(socialLinkContainer).remove();
+
+            if ( socialLinks == 1 ) {
+                $('#no-social-links').removeClass('hide');
+            }
+        });
+    </script>
+    <script type="text/javascript">
+        $('#social-links').on('change', 'select.service', function() {
+            var socialLinkContainer = $(this).parent().parent().parent().parent().parent(),
+                serviceName         = $(this).val(),
+                serviceBaseUrl      = socialServices[serviceName];
+
+            $('h5', $(socialLinkContainer)).html(serviceName);
+            $('input.url', $(socialLinkContainer)).val(serviceBaseUrl);
+        });
+    </script>
+    <script type="text/javascript">
+        function getSocialLinks() {
+            var socialLinks = {};
+
+            $('.social-link').each(function() {
+                var serviceName     = $('select.service', $(this)).val(),
+                    serviceUrl      = $('input.url', $(this)).val(),
+                    serviceBaseUrl  = socialServices[serviceName],
+                    serviceUsername = serviceUrl.substr(serviceBaseUrl.length);
+
+                if ( serviceUrl.indexOf(serviceBaseUrl) != -1 && serviceUsername != '' ) {
+                    socialLinks[serviceName] = serviceUsername;
+                }
+            });
+            return JSON.stringify(socialLinks);
+        }
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function onSubmit() {
+            $('.alert-success', '#profile-form').addClass('hide');
+            $('.alert-error', '#profile-form').addClass('hide');
+            $('button[type=submit]', '#profile-form').attr('disabled', 'disabled');
+            $('button[type=submit]', '#profile-form').html([[#{voj.administration.edit-user.please-wait}]]);
+
+            var uid             = [[${user.uid}]],
+                password        = $('#password').val(),
+                email           = $('#email').val(),
+                userGroup       = $('#user-group').val(),
+                preferLanguage  = $('#prefer-language').val(),
+                location        = $('#location').val(),
+                website         = $('#website').val(),
+                socialLinks     = getSocialLinks(),
+                aboutMe         = $('#wmd-input').val();
+
+            return doEditUserAction(uid, password, email, userGroup, preferLanguage, location, website, socialLinks, aboutMe);
+        }
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function doEditUserAction(uid, password, email, userGroup, preferLanguage, location, website, socialLinks, aboutMe) {
+            var postData = {
+                'uid': uid,
+                'password': password,
+                'email': email,
+                'userGroup': userGroup,
+                'preferLanguage': preferLanguage,
+                'location': location,
+                'website': website,
+                'socialLinks': socialLinks,
+                'aboutMe': aboutMe
+            };
+
+            $.ajax({
+                type: 'POST',
+                url: [[@{/administration/editUser.action}]],
+                data: postData,
+                dataType: 'JSON',
+                success: function(result){
+                    return processEditUserResult(result);
+                }
+            });
+        }
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function processEditUserResult(result) {
+            if ( result['isSuccessful'] ) {
+                $('.alert-success').removeClass('hide');
+            } else {
+                var errorMessage  = '';
+
+                if ( !result['isUserExists'] ) {
+                    errorMessage  = [[#{voj.administration.edit-user.user-not-exists}]] + '<br>';
+                }
+                if ( !result['isPasswordEmpty'] && !result['isPasswordLegal'] ) {
+                    errorMessage += [[#{voj.administration.edit-user.password-illegal}]] + '<br>';
+                }
+                if ( result['isEmailEmpty'] ) {
+                    errorMessage += [[#{voj.administration.edit-user.email-empty}]] + '<br>';
+                } else if ( !result['isEmailLegal'] ) {
+                    errorMessage += [[#{voj.administration.edit-user.email-illegal}]] + '<br>';
+                } else if ( result['isEmailExists'] ) {
+                    errorMessage += [[#{voj.administration.edit-user.email-existing}]] + '<br>';
+                }
+                if ( !result['isUserGroupLegal'] ) {
+                    errorMessage += [[#{voj.administration.edit-user.user-group-not-exists}]] + '<br>';
+                }
+                if ( !result['isPreferLanguageLegal'] ) {
+                    errorMessage += [[#{voj.administration.edit-user.prefer-language-not-exists}]] + '<br>';
+                }
+                if ( !result['isLocationLegal'] ) {
+                    errorMessage += [[#{voj.administration.edit-user.location-illegal}]] + '<br>';
+                }
+                if ( !result['isWebsiteLegal'] ) {
+                    errorMessage += [[#{voj.administration.edit-user.website-legal}]] + '<br>';
+                }
+                if ( !result['isAboutMeLegal'] ) {
+                    errorMessage += [[#{voj.administration.edit-user.about-me-legal}]] + '<br>';
+                }
+                $('.alert-error').html(errorMessage);
+                $('.alert-error').removeClass('hide');
+            }
+            $('button[type=submit]').html([[#{voj.administration.edit-user.update-profile}]]);
+            $('button[type=submit]').removeAttr('disabled');
+            $('html, body').animate({ scrollTop: 0 }, 100);
+        }
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        $('button.btn-danger').click(function() {
+            if ( !confirm([[#{voj.administration.edit-user.continue-or-not}]]) ) {
+                return;
+            }
+            $('.alert-error').addClass('hide');
+            $('button.btn-danger').attr('disabled', 'disabled');
+            $('button.btn-danger').html([[#{voj.administration.edit-user.please-wait}]]);
+
+            var users = [[[${user.uid}]]];
+            return doDeleteUsersAction(users);
+        });
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function doDeleteUsersAction(users) {
+            var postData = {
+                'users': JSON.stringify(users)
+            };
+
+            $.ajax({
+                type: 'POST',
+                url: [[@{/administration/deleteUsers.action}]],
+                data: postData,
+                dataType: 'JSON',
+                success: function(result){
+                    if ( result['isSuccessful'] ) {
+                        window.location.href = [[@{/administration/all-users}]];
+                    } else {
+                        $('.alert').html([[#{voj.administration.edit-user.delete-error}]]);
+                        $('.alert').removeClass('hide');
+                    }
+                    $('button.btn-danger').removeAttr('disabled');
+                    $('button.btn-danger').html([[#{voj.administration.edit-user.delete-user}]]);
+                }
+            });
+        }
+    </script>
+    </th:block>
+</body>
+</html>

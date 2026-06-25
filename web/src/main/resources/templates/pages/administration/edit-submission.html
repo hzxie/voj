@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/admin}" lang="en">
+<head>
+    <title th:text="#{voj.administration.edit-submission.title} + ' #' + ${submission.submissionId} + ' | ' + ${websiteName}">Edit Submission</title>
+    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/administration/edit-submission.css?v=${version}|" />
+    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/highlight.min.css?v=${version}|" />
+</head>
+<body>
+    <div id="content" layout:fragment="content">
+        <h2 class="page-header"><i class="fa fa-edit"></i> <span th:text="#{voj.administration.edit-submission.edit-submission}">Edit Submission</span></h2>
+        <div class="section">
+            <h4 th:text="#{voj.administration.edit-submission.overview}">Overview</h4>
+            <div class="description">
+                <table class="table">
+                    <tr>
+                        <td th:text="#{voj.administration.edit-submission.judge-result}">Judge Result</td>
+                        <td id="judge-result" th:class="|flag-${submission.judgeResult.judgeResultSlug}|" th:text="${submission.judgeResult.judgeResultName}">Result</td>
+                    </tr>
+                    <tr>
+                        <td th:text="#{voj.administration.edit-submission.problem}">Problem</td>
+                        <td id="problem-summery"><a th:href="@{/administration/edit-problem/{id}(id=${submission.problem.problemId})}" th:text="|P${submission.problem.problemId} ${submission.problem.problemName}|">Problem</a></td>
+                    </tr>
+                    <tr>
+                        <td th:text="#{voj.administration.edit-submission.submit-time}">Submit Time</td>
+                        <td id="submit-time" th:text="${@dateFormatter.dateTimeLongMedium(submission.submitTime, language)}">time</td>
+                    </tr>
+                    <tr>
+                        <td th:text="#{voj.administration.edit-submission.language}">Language</td>
+                        <td id="language-name" th:text="${submission.language.languageName}">Language</td>
+                    </tr>
+                    <tr>
+                        <td th:text="#{voj.administration.edit-submission.submit-user}">Submit User</td>
+                        <td id="submit-user"><a th:href="@{/administration/edit-user/{id}(id=${submission.user.uid})}" th:text="${submission.user.username}">user</a></td>
+                    </tr>
+                    <tr>
+                        <td th:text="#{voj.administration.edit-submission.used-time}">Used Time</td>
+                        <td id="used-time" th:text="|${submission.usedTime} ms|">0 ms</td>
+                    </tr>
+                    <tr>
+                        <td th:text="#{voj.administration.edit-submission.used-memory}">Used Memory</td>
+                        <td id="used-memory" th:text="|${submission.usedMemory} K|">0 K</td>
+                    </tr>
+                    <tr>
+                        <td th:text="#{voj.administration.edit-submission.execute-time}">Execute Time</td>
+                        <td id="execute-time" th:text="${@dateFormatter.dateTimeLongMedium(submission.executeTime, language)}">time</td>
+                    </tr>
+                </table>
+            </div> <!-- .description -->
+        </div> <!-- .section -->
+        <div class="section">
+            <h4 th:text="#{voj.administration.edit-submission.code}">Code</h4>
+            <div class="description">
+                <pre><code th:text="${submission.code}">code</code></pre>
+            </div> <!-- .description -->
+        </div> <!-- .section -->
+        <div class="section">
+            <h4 th:text="#{voj.administration.edit-submission.judge-result}">Judge Result</h4>
+            <div id="judge-log" class="description markdown" th:utext="${submission.judgeLog}">judge log</div> <!-- .description -->
+        </div> <!-- .section -->
+        <div class="section">
+            <button class="btn btn-warning" th:text="#{voj.administration.edit-submission.restart-submission}">Restart Submission</button>
+            <button class="btn btn-danger" th:text="#{voj.administration.edit-submission.delete-submission}">Delete Submission</button>
+        </div> <!-- .section -->
+    </div> <!-- #content -->
+
+    <th:block layout:fragment="scripts">
+    <script type="text/javascript" th:inline="javascript">
+        $.getScript([[|${cdnUrl}/js/markdown.min.js?v=${version}|]], function() {
+            converter = Markdown.getSanitizingConverter();
+
+            $('.markdown').each(function() {
+                var plainContent    = $(this).text(),
+                    markdownContent = converter.makeHtml(plainContent.replace(/\\\n/g, '\\n'));
+
+                $(this).html(markdownContent);
+            });
+        });
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        $.getScript([[|${cdnUrl}/js/highlight.min.js?v=${version}|]], function() {
+            $('code').each(function(i, block) {
+                hljs.highlightBlock(block);
+            });
+        });
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        $('button.btn-warning').click(function() {
+            if ( !confirm([[#{voj.administration.edit-submission.continue-or-not}]]) ) {
+                return;
+            }
+            $('.alert-error').addClass('hide');
+            $('button.btn-warning').attr('disabled', 'disabled');
+            $('button.btn-warning').html([[#{voj.administration.edit-submission.please-wait}]]);
+
+            var submissions = [[[${submission.submissionId}]]];
+            return doRestartSubmissionsAction(submissions);
+        });
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        $('button.btn-danger').click(function() {
+            if ( !confirm([[#{voj.administration.edit-submission.continue-or-not}]]) ) {
+                return;
+            }
+            $('.alert-error').addClass('hide');
+            $('button.btn-danger').attr('disabled', 'disabled');
+            $('button.btn-danger').html([[#{voj.administration.edit-submission.please-wait}]]);
+
+            var submissions = [[[${submission.submissionId}]]];
+            return doDeleteSubmissionsAction(submissions);
+        });
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function doDeleteSubmissionsAction(submissions) {
+            var postData = {
+                'submissions': JSON.stringify(submissions)
+            };
+
+            $.ajax({
+                type: 'POST',
+                url: [[@{/administration/deleteSubmissions.action}]],
+                data: postData,
+                dataType: 'JSON',
+                success: function(result){
+                    if ( result['isSuccessful'] ) {
+                        for ( var i = 0; i < submissions.length; ++ i ) {
+                            window.location.href = [[@{/administration/all-submissions}]];
+                        }
+                    } else {
+                        alert([[#{voj.administration.edit-submission.delete-error}]]);
+                    }
+                    $('button.btn-danger').removeAttr('disabled');
+                    $('button.btn-danger').html([[#{voj.administration.edit-submission.delete-submission}]]);
+                }
+            });
+        }
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function doRestartSubmissionsAction(submissions) {
+            var postData = {
+                'submissions': JSON.stringify(submissions)
+            };
+
+            $.ajax({
+                type: 'POST',
+                url: [[@{/administration/restartSubmissions.action}]],
+                data: postData,
+                dataType: 'JSON',
+                success: function(result){
+                    if ( result['isSuccessful'] ) {
+                        window.location.reload();
+                    } else {
+                        alert([[#{voj.administration.edit-submission.restart-error}]]);
+                    }
+                    $('button.btn-danger').removeAttr('disabled');
+                    $('button.btn-danger').html([[#{voj.administration.edit-submission.restart-submission}]]);
+                }
+            });
+        }
+    </script>
+    <th:block th:if="${submission.judgeResult.judgeResultName == 'Pending'}">
+    <script type="text/javascript" th:inline="javascript">
+        $.getScript([[|${cdnUrl}/js/date-${language}.min.js?v=${version}|]], function() {
+            var currentJudgeResult = 'Pending',
+                getterInterval     = setInterval(function() {
+                    getRealTimeJudgeResult();
+                    currentJudgeResult = $('#judge-result').html();
+
+                    if ( currentJudgeResult != 'Pending' ) {
+                        clearInterval(getterInterval);
+                    }
+                }, 10000);
+        });
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        $(function() {
+            var subscriptionUrl = [[@{/submission/getRealTimeJudgeResult.action(submissionId=${submission.submissionId},csrfToken=${_csrf.token})}]],
+                source          = new EventSource(subscriptionUrl),
+                lastMessage     = '';
+
+            source.onmessage    = function(e) {
+                var message     = e['data'];
+
+                if ( message == lastMessage ) {
+                    return;
+                }
+                lastMessage     = message;
+
+                if ( message == 'Established' ) {
+                    $('#judge-log').append('<p>Connected to Server.</p>');
+                    return;
+                }
+                var mapMessage  = JSON.parse(message),
+                    judgeResult = mapMessage['judgeResult'],
+                    judgeLog    = mapMessage['message'];
+
+                $('#judge-result').html(judgeResult);
+                $('#judge-log').append(converter.makeHtml(judgeLog));
+            }
+        });
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function getRealTimeJudgeResult() {
+            var pageRequests = {
+                'submissionId': [[${submission.submissionId}]]
+            };
+
+            $.ajax({
+                type: 'GET',
+                url: [[@{/submission/getSubmission.action}]],
+                data: pageRequests,
+                dataType: 'JSON',
+                success: function(result){
+                    if ( result['isSuccessful'] ) {
+                        if ( result['submission']['judgeResult']['judgeResultSlug'] != 'PD' ) {
+                            $('#judge-result').removeClass();
+                            $('#judge-result').addClass("flag-" + result['submission']['judgeResult']['judgeResultSlug'])
+                            $('#judge-result').html(result['submission']['judgeResult']['judgeResultName']);
+                            $('#used-time').html(result['submission']['usedTime'] + " ms");
+                            $('#used-memory').html(result['submission']['usedMemory'] + " KB");
+                            $('#execute-time').html(getFormatedDateString(result['submission']['executeTime'], [[${language}]]));
+                            $('#judge-log').html(converter.makeHtml(result['submission']['judgeLog'].replace(/\\\n/g, '\\n')));
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+    <script type="text/javascript">
+        function getFormatedDateString(dateTime, locale) {
+            var dateObject = new Date(dateTime),
+                dateString = dateObject.toString();
+
+            if ( locale == 'en_US' ) {
+                dateString = dateObject.toString('MMM d, yyyy h:mm:ss tt');
+            } else if ( locale == 'zh_CN' ) {
+                dateString = dateObject.toString('yyyy-M-dd HH:mm:ss');
+            }
+
+            return dateString;
+        }
+    </script>
+    </th:block>
+    </th:block>
+</body>
+</html>

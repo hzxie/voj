@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/main}" lang="en">
+<head>
+    <title th:text="#{voj.misc.privacy.title} + ' | ' + ${websiteName}">Privacy &amp; Cookie</title>
+    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/misc/about.css?v=${version}|" />
+</head>
+<body>
+    <div id="content" layout:fragment="content">
+        <div id="ribbon" style="height: 500px;"></div> <!-- #ribbon -->
+        <div class="container">
+            <div class="row-fluid">
+                <div class="span9">
+                    <div id="main-content">
+                        <div class="section">
+                            <div class="markdown" th:utext="#{voj.misc.privacy.introduction-content(${websiteName})}"></div> <!-- .markdown -->
+                        </div> <!-- .section -->
+                        <div class="section">
+                            <h3 id="information-gathering-and-usage" th:text="#{voj.misc.privacy.information-gathering-and-usage}">Information Gathering and Usage</h3>
+                            <div class="markdown" th:utext="#{voj.misc.privacy.information-gathering-and-usage-content(${websiteName})}"></div> <!-- .markdown -->
+                        </div> <!-- .section -->
+                        <div class="section">
+                            <h3 id="cookies" th:text="#{voj.misc.privacy.cookies}">Cookies</h3>
+                            <div class="markdown" th:utext="#{voj.misc.privacy.cookies-content(${websiteName})}"></div> <!-- .markdown -->
+                        </div> <!-- .section -->
+                        <div class="section">
+                            <h3 id="information-protection" th:text="#{voj.misc.privacy.information-protection}">Protection of Personal Information</h3>
+                            <div class="markdown" th:utext="#{voj.misc.privacy.information-protection-content(${websiteName})}"></div> <!-- .markdown -->
+                        </div> <!-- .section -->
+                        <div class="section">
+                            <h3 id="information-integrity-and-retention" th:text="#{voj.misc.privacy.information-integrity-and-retention}">Integrity and Retention of Personal Information</h3>
+                            <div class="markdown" th:utext="#{voj.misc.privacy.information-integrity-and-retention-content(${websiteName})}"></div> <!-- .markdown -->
+                        </div> <!-- .section -->
+                        <div class="section">
+                            <h3 id="information-access" th:text="#{voj.misc.privacy.information-access}">Access to Personal Information</h3>
+                            <div class="markdown" th:utext="#{voj.misc.privacy.information-access-content(${websiteName})}"></div> <!-- .markdown -->
+                        </div> <!-- .section -->
+                        <div class="section">
+                            <h3 id="children" th:text="#{voj.misc.privacy.children}">Children</h3>
+                            <div class="markdown" th:utext="#{voj.misc.privacy.children-content(${websiteName})}"></div> <!-- .markdown -->
+                        </div> <!-- .section -->
+                        <div class="section">
+                            <h3 id="disclosure" th:text="#{voj.misc.privacy.disclosure}">Disclosure to Third Parties</h3>
+                            <div class="markdown" th:utext="#{voj.misc.privacy.disclosure-content(${websiteName})}"></div> <!-- .markdown -->
+                        </div> <!-- .section -->
+                        <div class="section">
+                            <h3 id="commitment" th:text="#{voj.misc.privacy.commitment}">Commitment to Your Privacy</h3>
+                            <div class="markdown" th:utext="#{voj.misc.privacy.commitment-content(${websiteName})}"></div> <!-- .markdown -->
+                        </div> <!-- .section -->
+                        <div class="section">
+                            <h3 id="changes" th:text="#{voj.misc.privacy.changes}">Changes</h3>
+                            <div class="markdown" th:utext="#{voj.misc.privacy.changes-content(${websiteName})}"></div> <!-- .markdown -->
+                        </div> <!-- .section -->
+                    </div> <!-- #main-content -->
+                </div> <!-- .span9 -->
+                <div class="span3">
+                    <div id="sidebar-nav">
+                        <h5 th:text="#{voj.misc.privacy.privacy-and-cookie}">Privacy &amp; Cookie</h5>
+                        <ul class="contents">
+                            <li><a href="#information-gathering-and-usage" th:text="#{voj.misc.privacy.information-gathering-and-usage}">Information Gathering and Usage</a></li>
+                            <li><a href="#cookies" th:text="#{voj.misc.privacy.cookies}">Cookies</a></li>
+                            <li><a href="#information-protection" th:text="#{voj.misc.privacy.information-protection}">Protection of Personal Information</a></li>
+                            <li><a href="#information-integrity-and-retention" th:text="#{voj.misc.privacy.information-integrity-and-retention}">Integrity and Retention of Personal Information</a></li>
+                            <li><a href="#information-access" th:text="#{voj.misc.privacy.information-access}">Access to Personal Information</a></li>
+                            <li><a href="#children" th:text="#{voj.misc.privacy.children}">Children</a></li>
+                            <li><a href="#disclosure" th:text="#{voj.misc.privacy.disclosure}">Disclosure to Third Parties</a></li>
+                            <li><a href="#commitment" th:text="#{voj.misc.privacy.commitment}">Commitment to Your Privacy</a></li>
+                            <li><a href="#changes" th:text="#{voj.misc.privacy.changes}">Changes</a></li>
+                        </ul>
+                    </div> <!-- #sidebar-nav -->
+                </div> <!-- .span3 -->
+            </div> <!-- .row-fluid -->
+        </div> <!-- .container -->
+    </div> <!-- #content -->
+
+    <th:block layout:fragment="scripts">
+    <script type="text/javascript" th:inline="javascript">
+        $.getScript([[|${cdnUrl}/js/markdown.min.js?v=${version}|]], function() {
+            converter = Markdown.getSanitizingConverter();
+
+            $('.markdown').each(function() {
+                var plainContent    = $(this).text(),
+                    markdownContent = converter.makeHtml(plainContent.replace(/\\\n/g, '\\n'));
+
+                $(this).html(markdownContent);
+            });
+        });
+    </script>
+    </th:block>
+</body>
+</html>

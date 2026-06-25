@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/main}" lang="en">
+<head>
+    <title th:text="#{voj.discussion.new-thread.create-discussion} + ' | ' + ${websiteName}">Create Discussion</title>
+    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/discussion/new-thread.css?v=${version}|" />
+</head>
+<body>
+    <div id="content" class="container" layout:fragment="content">
+        <div id="discussion-thread">
+            <div class="alert alert-error hide"></div> <!-- .alert-error -->
+            <div class="header row-fluid">
+                <div class="span9">
+                    <p>
+                        <input id="discussion-thread-title" th:placeholder="#{voj.discussion.new-thread.thread-title}" type="text" maxlength="128" />
+                    </p>
+                </div> <!-- .span9 -->
+                <div class="span3 text-right">
+                    <input type="hidden" id="csrf-token" th:value="${_csrf.token}" />
+                    <button class="btn btn-primary" onclick="javascript:void(0);" th:text="#{voj.discussion.new-thread.create-discussion}">Create Discussion</button>
+                </div> <!-- .span3 -->
+            </div> <!-- .row-fluid -->
+            <div class="body row-fluid">
+                <div class="span9">
+                    <div id="editor">
+                        <div class="markdown-editor">
+                            <div class="wmd-panel">
+                                <div id="wmd-button-bar" class="wmd-button-bar"></div> <!-- #wmd-button-bar -->
+                                <textarea id="wmd-input" class="wmd-input"></textarea>
+                            </div> <!-- .wmd-panel -->
+                            <div id="wmd-preview" class="wmd-panel wmd-preview"></div> <!-- .wmd-preview -->
+                        </div> <!-- #markdown-editor -->
+                    </div> <!-- .#editor -->
+                </div> <!-- .span9 -->
+                <div class="span3">
+                    <div class="section">
+                        <h5 th:text="#{voj.discussion.new-thread.discussion-topic}">Discussion Topic</h5>
+                        <select id="discussion-topic">
+                            <option th:each="discussionTopic : ${discussionTopics}"
+                                    th:if="${relatedProblem != null or discussionTopic.discussionTopicSlug != 'solutions'}"
+                                    th:value="${discussionTopic.discussionTopicSlug}" th:text="${discussionTopic.discussionTopicName}">Topic</option>
+                        </select>
+                    </div> <!-- .section -->
+                    <div class="section" th:if="${relatedProblem != null}">
+                        <h5 th:text="#{voj.discussion.new-thread.related-problem}">Related Problem</h5>
+                        <p>
+                            <a th:href="@{/p/{id}(id=${relatedProblem.problemId})}">P<span id="related-problem" th:text="|${relatedProblem.problemId} |">1 </span><span th:text="${relatedProblem.problemName}">Problem</span></a>
+                        </p>
+                    </div> <!-- .section -->
+                </div> <!-- .span3 -->
+            </div> <!-- .row-fluid -->
+        </div> <!-- #discussion-thread -->
+    </div> <!-- #content -->
+
+    <th:block layout:fragment="scripts">
+    <script type="text/javascript" th:inline="javascript">
+        $.when(
+            $.getScript([[|${cdnUrl}/js/markdown.min.js?v=${version}|]]),
+            $.Deferred(function(deferred) {
+                $(deferred.resolve);
+            })
+        ).done(function() {
+            converter = Markdown.getSanitizingConverter();
+            editor    = new Markdown.Editor(converter);
+            editor.run();
+        });
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        $('.btn-primary').click(function() {
+            var relatedProblemId = $('#related-problem').html() || '',
+                discussionTopic  = $('#discussion-topic').val(),
+                threadTitle      = $('#discussion-thread-title').val(),
+                threadContent    = $('#wmd-input').val(),
+                csrfToken        = $('#csrf-token').val();
+
+            $('.alert-error').addClass('hide');
+            $('.btn-primary').attr('disabled', 'disabled');
+            $('.btn-primary').html([[#{voj.discussion.new-thread.please-wait}]]);
+            return createDiscussionThread(relatedProblemId, discussionTopic, threadTitle, threadContent, csrfToken);
+        });
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function createDiscussionThread(relatedProblemId, discussionTopic, threadTitle, threadContent, csrfToken) {
+            var postData         = {
+                'relatedProblemId': relatedProblemId,
+                'discussionTopicSlug': discussionTopic,
+                'threadTitle': threadTitle,
+                'threadContent': threadContent,
+                'csrfToken': csrfToken
+            };
+
+            $.ajax({
+                type: 'POST',
+                url: [[@{/discussion/createDiscussionThread.action}]],
+                data: postData,
+                dataType: 'JSON',
+                success: function(result){
+                    return processResult(result);
+                }
+            });
+        }
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function processResult(result) {
+            if ( result['isSuccessful'] ) {
+                var threadId = result['discussionThreadId'];
+                window.location.href = [[@{/discussion/}]] + threadId;
+            } else {
+                var errorMessage = '';
+
+                if ( !result['isCsrfTokenValid'] ) {
+                    errorMessage += [[#{voj.discussion.new-thread.csrf-token-invalid}]] + '<br>';
+                }
+                if ( !result['isThreadCreatorExists'] || !result['isThreadCreatorLegal'] ) {
+                    errorMessage += [[#{voj.discussion.new-thread.not-allow-to-create-discussion}]] + '<br>';
+                }
+                if ( !result['isDiscussionTopicExists'] ) {
+                    errorMessage += [[#{voj.discussion.new-thread.discussion-topic-invalid}]] + '<br>';
+                }
+                if ( result['isThreadTitleEmpty'] ) {
+                    errorMessage += [[#{voj.discussion.new-thread.discussion-thread-title-empty}]] + '<br>';
+                } else if ( !result['isThreadTitleLegal'] ) {
+                    errorMessage += [[#{voj.discussion.new-thread.discussion-thread-title-too-long}]] + '<br>';
+                }
+                if ( result['isThreadContentEmpty'] ) {
+                    errorMessage += [[#{voj.discussion.new-thread.discussion-thread-content-empty}]] + '<br>';
+                }
+                $('.alert-error').html(errorMessage);
+                $('.alert-error').removeClass('hide');
+            }
+            $('.btn-primary').html([[#{voj.discussion.new-thread.create-discussion}]]);
+            $('.btn-primary').removeAttr('disabled');
+        }
+    </script>
+    </th:block>
+</body>
+</html>

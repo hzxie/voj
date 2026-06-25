@@ -18,42 +18,47 @@ package org.verwandlung.voj.web.config;
 
 import java.util.Locale;
 
+import nz.net.ultraq.thymeleaf.layoutdialect.LayoutDialect;
+
 import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
 import org.springframework.web.servlet.LocaleResolver;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
-import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.i18n.LocaleChangeInterceptor;
 import org.springframework.web.servlet.i18n.SessionLocaleResolver;
 
 /**
- * The Spring MVC configuration. Replaces the configuration of static resources, internationalization
- * and localization in the original dispatcher-servlet.xml.
+ * The Spring MVC configuration. Replaces the internationalization and localization configuration
+ * from the original dispatcher-servlet.xml.
  *
- * <p>The view resolver (the JSP prefix/suffix) is instead configured by the {@code
- * spring.mvc.view.*} properties in application.properties.
+ * <p>Static assets live under {@code classpath:/static/assets} and are served at {@code /assets/**}
+ * by Spring Boot's default static-resource handling, so no explicit resource handler is needed. The
+ * views are rendered by Thymeleaf (auto-configured by Spring Boot) from {@code
+ * classpath:/templates}.
  *
  * @author Haozhe Xie
  */
 @Configuration
 public class WebMvcConfig implements WebMvcConfigurer {
   /* (non-Javadoc)
-   * Maps /assets/** to the /assets/ directory under the web application root.
-   */
-  @Override
-  public void addResourceHandlers(ResourceHandlerRegistry registry) {
-    registry.addResourceHandler("/assets/**").addResourceLocations("/assets/");
-  }
-
-  /* (non-Javadoc)
    * Registers the language switching interceptor (switches the display language via ?language=xx_XX).
    */
   @Override
   public void addInterceptors(InterceptorRegistry registry) {
     registry.addInterceptor(localeChangeInterceptor());
+  }
+
+  /**
+   * Enables the Thymeleaf Layout Dialect, which provides the {@code
+   * layout:decorate} / {@code layout:fragment} decorator model used by the page
+   * templates to share a single master layout.
+   */
+  @Bean
+  public LayoutDialect layoutDialect() {
+    return new LayoutDialect();
   }
 
   /** The internationalization resources. */

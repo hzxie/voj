@@ -5,7 +5,7 @@ REM ===========================================================================
 REM Build the Spring Boot artifacts for Verwandlung Online Judge (Windows).
 REM
 REM Produces two self-contained, executable artifacts:
-REM   web\target\voj.web.war        - the web application (embedded Tomcat)
+REM   web\target\voj.web.jar        - the web application (embedded Tomcat)
 REM   judger\target\voj.judger.jar  - the judger (bundles its JNI native DLL)
 REM
 REM Run them with scripts\run-web.bat and scripts\run-judger.bat.
@@ -18,7 +18,7 @@ REM them.
 REM
 REM Usage:
 REM   scripts\build-jars.bat            build both artifacts
-REM   scripts\build-jars.bat web        build only the web WAR
+REM   scripts\build-jars.bat web        build only the web JAR
 REM   scripts\build-jars.bat judger     build only the judger JAR
 REM
 REM Overridable environment variables (defaults shown):
@@ -74,13 +74,13 @@ set "MVN_ARGS="
 if "%SKIP_TESTS%"=="1" set "MVN_ARGS=-DskipTests"
 
 if /I "%TARGET%"=="web" (
-  echo ==^> Building web WAR ...
+  echo ==^> Building web JAR ...
   call mvn %MVN_ARGS% clean package -pl web
 ) else if /I "%TARGET%"=="judger" (
   echo ==^> Building judger JAR ...
   call mvn %MVN_ARGS% clean package -pl judger
 ) else (
-  echo ==^> Building web WAR + judger JAR ...
+  echo ==^> Building web JAR + judger JAR ...
   call mvn %MVN_ARGS% clean package
 )
 set "RC=%ERRORLEVEL%"
@@ -90,7 +90,7 @@ if not "%RC%"=="0" (
 )
 
 echo ==^> Done. Artifacts:
-if exist "web\target\voj.web.war"        dir /b "web\target\voj.web.war"
+if exist "web\target\voj.web.jar"        dir /b "web\target\voj.web.jar"
 if exist "judger\target\voj.judger.jar"  dir /b "judger\target\voj.judger.jar"
 popd
 exit /b 0

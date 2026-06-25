@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/main}" lang="en">
+<head>
+    <title th:text="#{voj.accounts.user.title} + ': ' + ${user.username} + ' | ' + ${websiteName}">User</title>
+    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/accounts/user.css?v=${version}|" />
+</head>
+<body>
+    <div id="content" class="container" layout:fragment="content">
+        <div class="row-fluid">
+            <div id="sidebar" class="span3">
+                <div id="vcard" class="section">
+                    <img th:src="|${cdnUrl}/img/avatar.jpg?v=${version}|" alt="User Avatar" />
+                    <h5 th:text="${user.username}">username</h5>
+                </div> <!-- #vcard -->
+                <div id="social-links" class="section" th:if="${socialLinks != null and !socialLinks.isEmpty()}">
+                    <ul class="inline">
+                        <li th:if="${!#strings.isEmpty(socialLinks['Facebook'])}"><a th:href="|https://facebook.com/${socialLinks['Facebook']}|" target="_blank" class="facebook" title="Facebook"><i class="fa fa-facebook"></i></a></li>
+                        <li th:if="${!#strings.isEmpty(socialLinks['Twitter'])}"><a th:href="|https://twitter.com/${socialLinks['Twitter']}|" target="_blank" class="twitter" title="Twitter"><i class="fa fa-twitter"></i></a></li>
+                        <li th:if="${!#strings.isEmpty(socialLinks['Weibo'])}"><a th:href="|http://weibo.com/${socialLinks['Weibo']}|" target="_blank" class="weibo" title="Weibo"><i class="fa fa-weibo"></i></a></li>
+                        <li th:if="${!#strings.isEmpty(socialLinks['Instagram'])}"><a th:href="|https://instagram.com/${socialLinks['Instagram']}|" target="_blank" class="instagram" title="Instagram"><i class="fa fa-instagram"></i></a></li>
+                        <li th:if="${!#strings.isEmpty(socialLinks['GitHub'])}"><a th:href="|https://github.com/${socialLinks['GitHub']}|" target="_blank" class="github" title="GitHub"><i class="fa fa-github"></i></a></li>
+                        <li th:if="${!#strings.isEmpty(socialLinks['StackOverflow'])}"><a th:href="|http://stackoverflow.com/users/${socialLinks['StackOverflow']}|" target="_blank" class="stackoverflow" title="StackOverflow"><i class="fa fa-stack-overflow"></i></a></li>
+                        <li th:if="${!#strings.isEmpty(socialLinks['LinkedIn'])}"><a th:href="|https://www.linkedin.com/profile/view?id=${socialLinks['LinkedIn']}|" target="_blank" class="linkedin" title="LinkedIn"><i class="fa fa-linkedin-square"></i></a></li>
+                    </ul>
+                </div> <!-- #social-links -->
+                <div id="vcard-details" class="section">
+                    <ul>
+                        <li th:if="${!#strings.isEmpty(location)}"><span class="icon"><i class="fa fa-map-marker"></i></span> <span th:text="${location}">location</span></li>
+                        <li><span class="icon"><i class="fa fa-envelope-o"></i></span> <span th:text="${user.email}">email</span></li>
+                        <li th:if="${!#strings.isEmpty(website)}"><span class="icon"><i class="fa fa-link"></i></span> <a th:href="${website}" target="_blank" th:text="${website}">website</a></li>
+                        <li><span class="icon"><i class="fa fa-users"></i></span> <span th:text="${user.userGroup.userGroupName}">group</span></li>
+                        <li>
+                            <span class="icon"><i class="fa fa-clock-o"></i></span>
+                            <span th:text="#{voj.accounts.user.joined-on}">Joined on</span>
+                            <span th:text="${@dateFormatter.parseDateLong(registerTime, language)}">date</span>
+                        </li>
+                    </ul>
+                </div> <!-- vcard-details -->
+                <div id="vcard-stats">
+                    <div class="row-fluid">
+                        <div class="span6">
+                            <h3 th:text="${submissionStats.get('acceptedSubmission')}">0</h3>
+                            <span th:text="#{voj.accounts.user.accepted}">Accepted</span>
+                        </div> <!-- .span6 -->
+                        <div class="span6">
+                            <h3 th:text="${submissionStats.get('totalSubmission')}">0</h3>
+                            <span th:text="#{voj.accounts.user.submit}">Submit</span>
+                        </div> <!-- .span6 -->
+                    </div> <!-- .row-fluid -->
+                </div> <!-- #vcard-stats -->
+            </div> <!-- .span4 -->
+            <div id="main-content" class="span9">
+                <div class="section" th:if="${!#strings.isEmpty(aboutMe)}">
+                    <div class="header">
+                        <h4 th:text="#{voj.accounts.user.about-me}">About Me</h4>
+                    </div> <!-- .header -->
+                    <div class="body markdown" th:utext="${aboutMe}">about me</div> <!-- .body -->
+                </div> <!-- .section -->
+                <div class="section">
+                    <div class="header">
+                        <div class="row-fluid">
+                            <div class="span8">
+                                <h4 th:text="#{voj.accounts.user.submission-calendar}">Submission Calendar</h4>
+                            </div> <!-- .span8 -->
+                            <div class="span4">
+                                <select id="submission-period">
+                                    <option value="7" th:text="#{voj.accounts.user.1-week}">1 Week</option>
+                                    <option value="30" th:text="#{voj.accounts.user.1-month}">1 Month</option>
+                                    <option value="365" th:text="#{voj.accounts.user.1-year}">1 Year</option>
+                                </select>
+                            </div> <!-- .span4 -->
+                        </div> <!-- .row-fluid -->
+                    </div> <!-- .header -->
+                    <div class="body">
+                        <div id="submissions-calendar"></div> <!-- #submissions-calendar -->
+                    </div> <!-- .body -->
+                </div> <!-- .section -->
+                <div class="section">
+                    <div class="header">
+                        <h4 th:text="#{voj.accounts.user.submissions}">submissions</h4>
+                    </div> <!-- .header -->
+                    <div class="body">
+                        <p th:if="${submissions == null or submissions.size() == 0}" th:text="#{voj.accounts.user.no-submissions}">No Submissions.</p>
+                        <table id="submissions" class="table table-striped" th:unless="${submissions == null or submissions.size() == 0}">
+                            <thead>
+                                <tr>
+                                    <th class="flag" th:text="#{voj.problems.problems.result}">Result</th>
+                                    <th class="name" th:text="#{voj.problems.problems.name}">Name</th>
+                                    <th class="submission" th:text="#{voj.problems.problems.submission}">Submission</th>
+                                    <th class="ac-rate">AC%</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="submission : ${submissions}">
+                                    <td th:class="|flag-${submission.value.judgeResult.judgeResultSlug}|">
+                                        <a th:href="@{/submission/{id}(id=${submission.value.submissionId})}" th:text="${submission.value.judgeResult.judgeResultSlug}">AC</a>
+                                    </td>
+                                    <td class="name"><a th:href="@{/p/{id}(id=${submission.key})}" th:text="|P${submission.key} ${submission.value.problem.problemName}|">Problem</a></td>
+                                    <td th:text="${submission.value.problem.totalSubmission}">0</td>
+                                    <td>
+                                        <span th:if="${submission.value.problem.totalSubmission == 0}">0%</span>
+                                        <span th:unless="${submission.value.problem.totalSubmission == 0}" th:text="${#numbers.formatDecimal(submission.value.problem.acceptedSubmission * 100.0 / submission.value.problem.totalSubmission, 1, 0)} + '%'">0%</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div> <!-- .body -->
+                </div> <!-- .section -->
+            </div> <!-- .span8 -->
+        </div> <!-- .row-fluid -->
+    </div> <!-- #content -->
+
+    <th:block layout:fragment="scripts">
+    <script type="text/javascript" async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/javascript" th:inline="javascript">
+        $.getScript([[|${cdnUrl}/js/markdown.min.js?v=${version}|]], function() {
+            converter = Markdown.getSanitizingConverter();
+
+            $('.markdown').each(function() {
+                var plainContent    = $(this).text(),
+                    markdownContent = converter.makeHtml(plainContent.replace(/\\\n/g, '\\n'));
+
+                $(this).html(markdownContent);
+            });
+        });
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        $.getScript([[|${cdnUrl}/js/highcharts.min.js?v=${version}|]], function() {
+            return getSubmissionsOfUsers(7);
+        });
+    </script>
+    <script type="text/javascript">
+        $('#submission-period').change(function() {
+            var period = $(this).val();
+            return getSubmissionsOfUsers(period);
+        });
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function getSubmissionsOfUsers(period) {
+            var pageRequests = {
+                'uid': [[${user.uid}]],
+                'period': period
+            };
+
+            $.ajax({
+                type: 'GET',
+                url: [[@{/accounts/getNumberOfSubmissionsOfUsers.action}]],
+                data: pageRequests,
+                dataType: 'JSON',
+                success: function(result){
+                    return processSubmissionOfUsers(result['acceptedSubmissions'], result['totalSubmissions']);
+                }
+            });
+        }
+    </script>
+    <script type="text/javascript">
+        function processSubmissionOfUsers(acceptedSubmissionsMap, totalSubmissionsMap) {
+            var categories          = [],
+                totalSubmissions    = [],
+                acceptedSubmissions = [];
+
+            $.each(totalSubmissionsMap, function(key, value){
+                categories.push(key);
+                totalSubmissions.push(value);
+            });
+            $.each(acceptedSubmissionsMap, function(key, value){
+                acceptedSubmissions.push(value);
+            });
+            displaySubmissionsOfUsers(categories, acceptedSubmissions, totalSubmissions);
+        }
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function displaySubmissionsOfUsers(categories, acceptedSubmissions, totalSubmissions) {
+            Highcharts.setOptions({
+                colors: ['#34495e', '#e74c3c']
+            });
+
+            $('#submissions-calendar').highcharts({
+                chart: {
+                    backgroundColor: null,
+                },
+                title: {
+                    text: null
+                },
+                xAxis: {
+                    categories: categories
+                },
+                yAxis: {
+                    allowDecimals: false,
+                    title: {
+                        text: [[#{voj.accounts.user.number-of-submissions}]]
+                    }
+                },
+                tooltip: {
+                    shared: true,
+                    crosshairs: true
+                },
+                series: [
+                    {
+                        name: [[#{voj.accounts.user.total-submissions}]],
+                        lineWidth: 4,
+                        marker: {
+                            radius: 4
+                        },
+                        data: totalSubmissions
+                    },
+                    {
+                        name: [[#{voj.accounts.user.accepted-submissions}]],
+                        data: acceptedSubmissions
+                    }
+                ]
+            });
+        }
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        $(function() {
+            var hash = md5([[${user.email}]]);
+
+            $.ajax({
+                type: 'GET',
+                url: 'https://secure.gravatar.com/' + hash + '.json',
+                dataType: 'jsonp',
+                success: function(result){
+                    if ( result != null ) {
+                        var imageUrl    = result['entry'][0]['thumbnailUrl'],
+                            requrestUrl = imageUrl + '?s=240';
+
+                        $('img', '#vcard').attr('src', requrestUrl);
+                    }
+                }
+            });
+        });
+    </script>
+    </th:block>
+</body>
+</html>

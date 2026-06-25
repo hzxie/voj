@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/admin}" lang="en">
+<head>
+    <title th:text="#{voj.administration.new-user.title} + ' | ' + ${websiteName}">New User</title>
+    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/administration/new-user.css?v=${version}|" />
+</head>
+<body>
+    <div id="content" layout:fragment="content">
+        <h2 class="page-header"><i class="fa fa-user"></i> <span th:text="#{voj.administration.new-user.new-user}">New User</span></h2>
+        <form id="profile-form" onSubmit="onSubmit(); return false;">
+            <div class="alert alert-error hide"></div> <!-- .alert-error -->
+            <div class="alert alert-success hide" th:text="#{voj.administration.new-user.user-created}">The user has been created successfully.</div> <!-- .alert-success -->
+            <div class="control-group row-fluid">
+                <label for="username" th:text="#{voj.administration.new-user.username}">Username</label>
+                <input id="username" class="span12" type="text" maxlength="16" />
+            </div> <!-- .control-group -->
+            <div class="control-group row-fluid">
+                <label for="password" th:text="#{voj.administration.new-user.password}">Password</label>
+                <input id="password" class="span12" type="password" maxlength="16" />
+            </div> <!-- .control-group -->
+            <div class="control-group row-fluid">
+                <label for="email" th:text="#{voj.administration.new-user.email}">Email</label>
+                <input id="email" class="span12" type="text" maxlength="64" />
+            </div> <!-- .control-group -->
+            <div class="control-group row-fluid">
+                <label for="user-group" th:text="#{voj.administration.new-user.user-group}">User Group</label>
+                <select id="user-group" name="userGroup">
+                    <option th:each="userGroup : ${userGroups}" th:value="${userGroup.userGroupSlug}" th:text="${userGroup.userGroupName}">Group</option>
+                </select>
+            </div> <!-- .control-group -->
+            <div class="control-group row-fluid">
+                <label for="prefer-language" th:text="#{voj.administration.new-user.prefer-language}">Prefer Language</label>
+                <select id="prefer-language" name="preferLanguage">
+                    <option th:each="language : ${languages}" th:value="${language.languageSlug}" th:text="${language.languageName}">Language</option>
+                </select>
+            </div> <!-- .control-group -->
+            <div class="row-fluid">
+                <div class="span12">
+                    <button class="btn btn-primary" type="submit" th:text="#{voj.administration.new-user.create-account}">Create Account</button>
+                </div> <!-- .span12 -->
+            </div> <!-- .row-fluid -->
+        </form> <!-- #profile-form -->
+    </div> <!-- #content -->
+
+    <th:block layout:fragment="scripts">
+    <script type="text/javascript" th:inline="javascript">
+        function onSubmit() {
+            var username        = $('#username').val(),
+                password        = $('#password').val(),
+                email           = $('#email').val(),
+                userGroup       = $('#user-group').val(),
+                preferLanguage  = $('#prefer-language').val();
+
+            $('.alert-success', '#profile-form').addClass('hide');
+            $('.alert-error', '#profile-form').addClass('hide');
+            $('button[type=submit]', '#profile-form').attr('disabled', 'disabled');
+            $('button[type=submit]', '#profile-form').html([[#{voj.administration.new-user.please-wait}]]);
+
+            return doCreateUserAction(username, password, email, userGroup, preferLanguage);
+        }
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function doCreateUserAction(username, password, email, userGroup, preferLanguage) {
+            var postData = {
+                'username': username,
+                'password': password,
+                'email': email,
+                'userGroup': userGroup,
+                'preferLanguage': preferLanguage
+            };
+
+            $.ajax({
+                type: 'POST',
+                url: [[@{/administration/newUser.action}]],
+                data: postData,
+                dataType: 'JSON',
+                success: function(result){
+                    return processCreateUserResult(result);
+                }
+            });
+        }
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function processCreateUserResult(result) {
+            if ( result['isSuccessful'] ) {
+                $('input').val('');
+                $('.alert-success', '#profile-form').removeClass('hide');
+            } else {
+                var errorMessage  = '';
+
+                if ( result['isUsernameEmpty'] ) {
+                    errorMessage += [[#{voj.administration.new-user.username-empty}]] + '<br>';
+                } else if ( !result['isUsernameLegal'] ) {
+                    var username = $('#username').val();
+
+                    if ( username.length < 6 || username.length > 16 ) {
+                        errorMessage += [[#{voj.administration.new-user.username-length-illegal}]] + '<br>';
+                    } else if ( !username[0].match(/[a-z]/i) ) {
+                        errorMessage += [[#{voj.administration.new-user.username-beginning-illegal}]] + '<br>';
+                    } else {
+                        errorMessage += [[#{voj.administration.new-user.username-character-illegal}]] + '<br>';
+                    }
+                } else if ( result['isUsernameExists'] ) {
+                    errorMessage += [[#{voj.administration.new-user.username-existing}]] + '<br>';
+                }
+                if ( result['isPasswordEmpty'] ) {
+                    errorMessage += [[#{voj.administration.new-user.password-empty}]] + '<br>';
+                } else if ( !result['isPasswordLegal'] ) {
+                    errorMessage += [[#{voj.administration.new-user.password-illegal}]] + '<br>';
+                }
+                if ( result['isEmailEmpty'] ) {
+                    errorMessage += [[#{voj.administration.new-user.email-empty}]] + '<br>';
+                } else if ( !result['isEmailLegal'] ) {
+                    errorMessage += [[#{voj.administration.new-user.email-illegal}]] + '<br>';
+                } else if ( result['isEmailExists'] ) {
+                    errorMessage += [[#{voj.administration.new-user.email-existing}]] + '<br>';
+                }
+                if ( !result['isUserGroupLegal'] ) {
+                    errorMessage += [[#{voj.administration.new-user.user-group-empty}]] + '<br>';
+                }
+                if ( !result['isLanguageLegal'] ) {
+                    errorMessage += [[#{voj.administration.new-user.language-empty}]] + '<br>';
+                }
+                $('.alert-error', '#profile-form').html(errorMessage);
+                $('.alert-error', '#profile-form').removeClass('hide');
+            }
+            $('button[type=submit]', '#profile-form').removeAttr('disabled');
+            $('button[type=submit]', '#profile-form').html([[#{voj.administration.new-user.create-account}]]);
+        }
+    </script>
+    </th:block>
+</body>
+</html>

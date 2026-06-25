@@ -4,7 +4,7 @@ setlocal EnableExtensions
 REM ===========================================================================
 REM Run the Verwandlung Online Judge web application (Windows).
 REM
-REM Launches the self-contained Spring Boot executable WAR (embedded Tomcat).
+REM Launches the self-contained Spring Boot executable JAR (embedded Tomcat).
 REM By default it serves http://localhost:8080/voj and expects MySQL and ActiveMQ
 REM to be reachable (see web\src\main\resources\voj.properties).
 REM
@@ -52,9 +52,9 @@ if not defined JAVA_BIN (
   popd & exit /b 1
 )
 
-set "WAR=%PROJECT_ROOT%\web\target\voj.web.war"
-if not exist "%WAR%" (
-  echo ERROR: %WAR% not found. Build it first: scripts\build-jars.bat web 1>&2
+set "JAR=%PROJECT_ROOT%\web\target\voj.web.jar"
+if not exist "%JAR%" (
+  echo ERROR: %JAR% not found. Build it first: scripts\build-jars.bat web 1>&2
   popd & exit /b 1
 )
 
@@ -66,7 +66,7 @@ echo ==^> Java:
 "%JAVA_BIN%" -version
 
 echo ==^> Starting voj.web ^(http://localhost:8080/voj^) ...
-"%JAVA_BIN%" %JAVA_OPTS% -jar "%WAR%" %*
+"%JAVA_BIN%" %JAVA_OPTS% -jar "%JAR%" %*
 set "RC=%ERRORLEVEL%"
 popd
 exit /b %RC%

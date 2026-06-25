@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/main}" lang="en">
+<head>
+    <title th:text="#{voj.accounts.register.title} + ' | ' + ${websiteName}">Create Account</title>
+    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/accounts/register.css?v=${version}|" />
+</head>
+<body>
+    <div id="content" layout:fragment="content">
+        <div id="register">
+            <h2 th:text="#{voj.accounts.register.create-account}">Create Account</h2>
+            <div class="alert alert-error hide"></div>
+            <div class="alert alert-warning" th:unless="${isAllowRegister}">
+                <h5 th:text="#{voj.accounts.register.registration-closed}">Online Registration Closed</h5>
+                <p th:text="#{voj.accounts.register.registration-closed-message}">Online registration is now closed. If you would like to register onsite or have questions about your registration, please contact webmaster.</p>
+            </div> <!-- .alert -->
+            <form id="register-form" method="POST" onsubmit="onSubmit(); return false;" th:if="${isAllowRegister}">
+                <p class="row-fluid">
+                    <label for="username" th:text="#{voj.accounts.register.username}">Username</label>
+                    <input id="username" name="username" class="span12" type="text" maxlength="16" />
+                </p>
+                <p class="row-fluid">
+                    <label for="email" th:text="#{voj.accounts.register.email}">Email</label>
+                    <input id="email" name="email" class="span12" type="text" maxlength="64" />
+                </p>
+                <p class="row-fluid">
+                    <label for="password" th:text="#{voj.accounts.register.password}">Password</label>
+                    <input id="password" name="password" class="span12" type="password" maxlength="16" />
+                </p>
+                <p class="row-fluid">
+                    <label for="language-preference" th:text="#{voj.accounts.register.language-preference}">Language Preference</label>
+                    <select id="language-preference" class="span12">
+                        <option th:each="language : ${languages}" th:value="${language.languageSlug}" th:text="${language.languageName}">Language</option>
+                    </select>
+                </p>
+                <p th:with="termsUrl=@{/terms},privacyUrl=@{/privacy}">
+                    <span th:utext="#{voj.accounts.register.agree-terms(${termsUrl}, ${privacyUrl})}">By clicking Create Account, I agree to the Terms of Service and Privacy Policy.</span>
+                </p>
+                <p>
+                    <input id="csrf-token" type="hidden" th:value="${_csrf.token}" />
+                    <button class="btn btn-primary btn-block" type="submit" th:text="#{voj.accounts.register.create-account}">Create Account</button>
+                </p>
+            </form> <!-- #register-form -->
+            <p class="text-center">
+                <span th:text="#{voj.accounts.register.already-have-account}">Already have an account?</span><br />
+                <a th:href="@{/accounts/login}" th:text="#{voj.accounts.register.sign-in}">Sign in</a>
+            </p>
+        </div> <!-- #register -->
+    </div> <!-- #content -->
+
+    <th:block layout:fragment="scripts">
+    <th:block th:if="${isAllowRegister}">
+    <script type="text/javascript" th:inline="javascript">
+        function onSubmit() {
+            $('.alert-error').addClass('hide');
+            $('button[type=submit]').attr('disabled', 'disabled');
+            $('button[type=submit]').html([[#{voj.accounts.register.please-wait}]]);
+
+            var username            = $('#username').val(),
+                password            = $('#password').val(),
+                email               = $('#email').val(),
+                languagePreference  = $('#language-preference').val(),
+                csrfToken           = $('#csrf-token').val();
+
+            return doRegisterAction(username, password, email, languagePreference, csrfToken);
+        };
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function doRegisterAction(username, password, email, languagePreference, csrfToken) {
+            var postData = {
+                'username': username,
+                'password': password,
+                'email': email,
+                'languagePreference': languagePreference,
+                'csrfToken': csrfToken
+            };
+
+            $.ajax({
+                type: 'POST',
+                url: [[@{/accounts/register.action}]],
+                data: postData,
+                dataType: 'JSON',
+                success: function(result){
+                    return processRegisterResult(result);
+                }
+            });
+        }
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function processRegisterResult(result) {
+            if ( result['isSuccessful'] ) {
+                var forwardUrl = [[${forwardUrl} ?: '']] || [[@{/}]];
+                window.location.href = forwardUrl;
+            } else {
+                var errorMessage  = '';
+
+                if ( !result['isCsrfTokenValid'] ) {
+                    errorMessage += [[#{voj.accounts.register.invalid-token}]];
+                }
+                if ( result['isUsernameEmpty'] ) {
+                    errorMessage += [[#{voj.accounts.register.username-empty}]] + '<br>';
+                } else if ( !result['isUsernameLegal'] ) {
+                    var username = $('#username').val();
+
+                    if ( username.length < 6 || username.length > 16 ) {
+                        errorMessage += [[#{voj.accounts.register.username-length-illegal}]] + '<br>';
+                    } else if ( !username[0].match(/[a-z]/i) ) {
+                        errorMessage += [[#{voj.accounts.register.username-beginning-illegal}]] + '<br>';
+                    } else {
+                        errorMessage += [[#{voj.accounts.register.username-character-illegal}]] + '<br>';
+                    }
+                } else if ( result['isUsernameExists'] ) {
+                    errorMessage += [[#{voj.accounts.register.username-existing}]] + '<br>';
+                }
+                if ( result['isPasswordEmpty'] ) {
+                    errorMessage += [[#{voj.accounts.register.password-empty}]] + '<br>';
+                } else if ( !result['isPasswordLegal'] ) {
+                    errorMessage += [[#{voj.accounts.register.password-illegal}]] + '<br>';
+                }
+                if ( result['isEmailEmpty'] ) {
+                    errorMessage += [[#{voj.accounts.register.email-empty}]] + '<br>';
+                } else if ( !result['isEmailLegal'] ) {
+                    errorMessage += [[#{voj.accounts.register.email-illegal}]] + '<br>';
+                } else if ( result['isEmailExists'] ) {
+                    errorMessage += [[#{voj.accounts.register.email-existing}]] + '<br>';
+                }
+                if ( !result['isLanguageLegal'] ) {
+                    errorMessage += [[#{voj.accounts.register.language-empty}]] + '<br>';
+                }
+
+                $('.alert-error').html(errorMessage);
+                $('.alert-error').removeClass('hide');
+            }
+
+            $('button[type=submit]').html([[#{voj.accounts.register.create-account}]]);
+            $('button[type=submit]').removeAttr('disabled');
+            $('html, body').animate({ scrollTop: 0 }, 100);
+        }
+    </script>
+    </th:block>
+    </th:block>
+</body>
+</html>

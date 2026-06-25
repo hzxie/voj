@@ -16,7 +16,6 @@
  */
 package org.verwandlung.voj.web.service;
 
-import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
@@ -29,8 +28,6 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import freemarker.template.TemplateException;
 
 import org.verwandlung.voj.web.mapper.EmailValidationMapper;
 import org.verwandlung.voj.web.mapper.LanguageMapper;
@@ -323,7 +320,7 @@ public class UserService {
       isUserExists = true;
       try {
         dispatchVerificationEmail(username, email);
-      } catch (IOException | TemplateException e) {
+      } catch (Exception e) {
         e.printStackTrace();
         isSuccessful = false;
       }
@@ -339,11 +336,8 @@ public class UserService {
    *
    * @param username - the user's username
    * @param email - the user's email address
-   * @throws TemplateException
-   * @throws IOException
    */
-  private void dispatchVerificationEmail(String username, String email)
-      throws IOException, TemplateException {
+  private void dispatchVerificationEmail(String username, String email) {
     String token = DigestUtils.getGuid();
     Date expireTime = getExpireTime();
     Map<String, Object> model = new HashMap<>(4, 1);
@@ -355,9 +349,9 @@ public class UserService {
     emailValidationMapper.deleteEmailValidation(email);
     emailValidationMapper.createEmailValidation(emailValidation);
 
-    String templatePath = "/reset-password.ftl";
+    String templateName = "mail/reset-password";
     String subject = "Password Reset Request";
-    String body = mailSender.getMailContent(templatePath, model);
+    String body = mailSender.getMailContent(templateName, model);
     mailSender.sendMail(email, subject, body);
   }
 

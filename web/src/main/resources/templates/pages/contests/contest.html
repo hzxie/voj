@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/main}" lang="en">
+<head>
+    <title th:text="${contest.contestName} + ' | ' + ${websiteName}">Contest</title>
+    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/contests/contest.css?v=${version}|" />
+</head>
+<body>
+    <div id="content" class="container" layout:fragment="content"
+         th:with="contestStatus=${currentTime.before(contest.startTime) ? 'Ready' : (currentTime.after(contest.endTime) ? 'Done' : 'Live')}">
+        <div class="row-fluid">
+            <div id="main-content" class="span8">
+                <div class="contest">
+                    <div class="header">
+                        <span class="pull-right">
+                            <th:block th:if="${isLogin}">
+                                <span th:if="${isAttended}" th:text="#{voj.contests.contest.attended}">Attended</span>
+                                <span th:unless="${isAttended}" th:text="#{voj.contests.contest.not-attended}">Not attended</span>
+                            </th:block>
+                        </span>
+                        <span class="name" th:text="${contest.contestName}">Contest</span>
+                    </div> <!-- .header -->
+                    <div class="body">
+                        <div class="section">
+                            <h4 th:text="#{voj.contests.contest.instruction}">Instruction</h4>
+                            <p th:if="${contest.contestNotes == ''}" th:text="#{voj.contests.contest.no-instruction}">No instruction available.</p>
+                            <div class="markdown" th:unless="${contest.contestNotes == ''}" th:utext="${contest.contestNotes}">notes</div> <!-- .markdown -->
+                        </div> <!-- .section -->
+                        <div class="section" th:if="${(currentTime.after(contest.startTime) and isAttended) or currentTime.after(contest.endTime)}">
+                            <h4 th:text="#{voj.contests.contest.problems}">Problems</h4>
+                            <table id="problems" class="table table-striped">
+                                <thead th:if="${isLogin}">
+                                    <tr>
+                                        <th th:text="#{voj.contests.contest.status}">Status</th>
+                                        <th th:text="#{voj.contests.contest.problem}">Problem</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:each="problem : ${problems}" th:with="submission=${submissions[problem.problemId]}">
+                                        <th:block th:if="${isLogin}">
+                                            <td th:if="${submission != null}" th:class="|flag-${submission.submission.judgeResult.judgeResultSlug}|"><a th:href="@{/submission/{id}(id=${submission.submission.submissionId})}" th:text="${submission.submission.judgeResult.judgeResultName}">Result</a></td>
+                                            <td th:unless="${submission != null}" th:text="#{voj.contests.contest.no-submissions}">No submissions</td>
+                                        </th:block>
+                                        <td>
+                                            <a th:href="@{/contest/{cid}/p/{pid}(cid=${contest.contestId},pid=${problem.problemId})}" th:text="|P${problem.problemId} ${problem.problemName}|">Problem</a>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div> <!-- .section -->
+                    </div> <!-- .body -->
+                </div> <!-- .contest -->
+            </div> <!-- #main-content -->
+            <div id="sidebar" class="span4">
+                <div class="section">
+                    <h5 th:text="#{voj.contests.contest.basic-information}">Basic Information</h5>
+                    <div id="basic-info">
+                        <div class="row-fluid">
+                            <div class="span5" th:text="#{voj.contests.contest.status}">Status</div> <!-- .span5 -->
+                            <div class="span7" th:classappend="${contestStatus}" th:text="${contestStatus}">Status</div> <!-- .span7 -->
+                        </div> <!-- .row-fluid -->
+                        <div class="row-fluid">
+                            <div class="span5" th:text="#{voj.contests.contest.start-time}">Start Time</div> <!-- .span5 -->
+                            <div class="span7" th:text="${#dates.format(contest.startTime, 'yyyy-MM-dd HH:mm:ss')}">time</div> <!-- .span7 -->
+                        </div> <!-- .row-fluid -->
+                        <div class="row-fluid">
+                            <div class="span5" th:text="#{voj.contests.contest.end-time}">End Time</div> <!-- .span5 -->
+                            <div class="span7" th:text="${#dates.format(contest.endTime, 'yyyy-MM-dd HH:mm:ss')}">time</div> <!-- .span7 -->
+                        </div> <!-- .row-fluid -->
+                        <div class="row-fluid">
+                            <div class="span5" th:text="#{voj.contests.contest.rule}">Rule</div> <!-- .span5 -->
+                            <div class="span7" th:text="${contest.contestMode}">Mode</div> <!-- .span7 -->
+                        </div> <!-- .row-fluid -->
+                        <div class="row-fluid">
+                            <div class="span5" th:text="#{voj.contests.contest.number-of-problems}"># Problems</div> <!-- .span5 -->
+                            <div class="span7" th:text="${problems.size()}">0</div> <!-- .span7 -->
+                        </div> <!-- .row-fluid -->
+                        <div class="row-fluid">
+                            <div class="span5" th:text="#{voj.contests.contest.number-of-contestants}"># Contestants</div> <!-- .span5 -->
+                            <div id="number-of-contestants" class="span7" th:text="${numberOfContestants}">0</div> <!-- .span7 -->
+                        </div> <!-- .row-fluid -->
+                    </div> <!-- #basic-info -->
+                </div> <!-- .section -->
+                <div class="section">
+                    <h5 th:text="#{voj.contests.contest.actions}">Actions</h5>
+                    <ul>
+                        <li th:if="${not isAttended and contestStatus != 'Done'}"><a id="attend-contest-button" href="javascript:attendContest();" th:text="#{voj.contests.contest.attend-contest}">Attend the contest</a></li>
+                        <li th:if="${contestStatus != 'Ready'}"><a th:href="@{/contest/{id}/leaderboard(id=${contest.contestId})}" th:text="#{voj.contests.contest.view-leaderboard}">View leaderboard</a></li>
+                        <th:block th:if="${isAttended and contestStatus == 'Ready'}">
+                            <li th:text="#{voj.contests.contest.already-attended}">You have already attended the contest.</li>
+                            <li th:text="#{voj.contests.contest.no-actions}">No actions are available.</li>
+                        </th:block>
+                    </ul>
+                </div> <!-- .section -->
+            </div> <!-- #sidebar -->
+        </div> <!-- .row-fluid -->
+    </div> <!-- #content -->
+
+    <th:block layout:fragment="scripts">
+    <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({
+            tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
+        });
+    </script>
+    <script type="text/javascript" async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/javascript" th:inline="javascript">
+        $.getScript([[|${cdnUrl}/js/markdown.min.js?v=${version}|]], function() {
+            converter = Markdown.getSanitizingConverter();
+
+            $('.markdown').each(function() {
+                var plainContent    = $(this).text(),
+                    markdownContent = converter.makeHtml(plainContent.replace(/\\\n/g, '\\n'));
+
+                $(this).html(markdownContent);
+            });
+        });
+    </script>
+    <th:block th:if="${not isAttended and !currentTime.after(contest.endTime)}">
+    <th:block th:if="${isLogin}">
+    <script type="text/javascript" th:inline="javascript">
+        function attendContest() {
+            var postData = {
+                'csrfToken': [[${_csrf.token}]]
+            };
+
+            $.ajax({
+                type: 'POST',
+                url: [[@{/contest/{id}/attend.action(id=${contest.contestId})}]],
+                data: postData,
+                dataType: 'JSON',
+                success: function(result) {
+                    if ( result['isSuccessful'] ) {
+                        $('#attend-contest-button').removeAttr('href');
+                        setContestAttended();
+                    } else {
+                        if ( !result['isCsrfTokenValid'] ) {
+                            alert([[#{voj.contests.contest.invalid-token}]]);
+                        } else if ( !result['isContestExists'] ) {
+                            alert([[#{voj.contests.contest.contest-not-exists}]]);
+                        } else if ( !result['isContestReady'] ) {
+                            alert([[#{voj.contests.contest.contest-not-ready}]]);
+                        } else if ( !result['isUserLogin'] ) {
+                            alert([[#{voj.contests.contest.user-not-login}]]);
+                        } else if ( result['isAttendedContest'] ) {
+                            alert([[#{voj.contests.contest.already-attended}]]);
+                            setContestAttended();
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function setContestAttended() {
+            var numberOfContestants = parseInt($('#number-of-contestants').html());
+
+            $('.pull-right', '.contest .header').html([[#{voj.contests.contest.attended}]]);
+            $('#number-of-contestants').html(numberOfContestants + 1);
+            $('#attend-contest-button').html([[#{voj.contests.contest.attended-contest}]]);
+            setTimeout(function(){
+                $('#attend-contest-button').remove();
+            }, 1500);
+        }
+    </script>
+    </th:block>
+    <th:block th:unless="${isLogin}">
+    <script type="text/javascript" th:inline="javascript">
+        function attendContest() {
+            window.location.href = [[@{/accounts/login(forward=${forwardUri})}]];
+        }
+    </script>
+    </th:block>
+    </th:block>
+    </th:block>
+</body>
+</html>

@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/admin}" lang="en">
+<head>
+    <title th:text="#{voj.administration.new-problem.title} + ' | ' + ${websiteName}">New Problem</title>
+    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/administration/new-problem.css?v=${version}|" />
+</head>
+<body>
+    <div id="content" layout:fragment="content">
+        <h2 class="page-header"><i class="fa fa-file"></i> <span th:text="#{voj.administration.new-problem.new-problem}">New Problem</span></h2>
+        <form id="problem-form" onSubmit="onSubmit(); return false;">
+            <div class="row-fluid">
+                <div class="span8">
+                    <div class="alert alert-error hide"></div> <!-- .alert-error -->
+                    <div class="control-group row-fluid">
+                        <label for="problem-name" th:text="#{voj.administration.new-problem.problem-name}">Problem Name</label>
+                        <input id="problem-name" class="span12" type="text" maxlength="128" />
+                    </div> <!-- .control-group -->
+                    <div class="control-group row-fluid">
+                        <label for="time-limit"><span th:text="#{voj.administration.new-problem.time-limit}">Time Limit</span> (ms)</label>
+                        <input id="time-limit" class="span12" type="text" maxlength="8" />
+                    </div> <!-- .control-group -->
+                    <div class="control-group row-fluid">
+                        <label for="memory-limit"><span th:text="#{voj.administration.new-problem.memory-limit}">Memory Limit</span> (KB)</label>
+                        <input id="memory-limit" class="span12" type="text" maxlength="8" />
+                    </div> <!-- .control-group -->
+                    <div class="row-fluid">
+                        <div class="span12">
+                            <label for="wmd-input" th:text="#{voj.administration.new-problem.problem-description}">Description</label>
+                            <div id="markdown-editor">
+                                <div class="wmd-panel">
+                                    <div id="wmd-button-bar" class="wmd-button-bar"></div> <!-- #wmd-button-bar -->
+                                    <textarea id="wmd-input" class="wmd-input"></textarea>
+                                </div> <!-- .wmd-panel -->
+                                <div id="wmd-preview" class="wmd-panel wmd-preview"></div> <!-- .wmd-preview -->
+                            </div> <!-- #markdown-editor -->
+                        </div> <!-- .span12 -->
+                    </div> <!-- .row-fluid -->
+                    <div class="control-group row-fluid">
+                        <label for="hint" th:text="#{voj.administration.new-problem.hint}">Hint</label>
+                        <textarea id="hint" class="span12"></textarea>
+                    </div> <!-- .control-group -->
+                    <h4 th:text="#{voj.administration.new-problem.input-output}">Input / Output</h4>
+                    <div class="control-group row-fluid">
+                        <label for="input-format" th:text="#{voj.administration.new-problem.input-format}">Input Format</label>
+                        <textarea id="input-format" class="span12"></textarea>
+                    </div> <!-- .control-group -->
+                    <div class="control-group row-fluid">
+                        <label for="output-format" th:text="#{voj.administration.new-problem.output-format}">Output Format</label>
+                        <textarea id="output-format" class="span12"></textarea>
+                    </div> <!-- .control-group -->
+                    <div class="control-group row-fluid">
+                        <label for="input-sample" th:text="#{voj.administration.new-problem.input-sample}">Input Sample</label>
+                        <textarea id="input-sample" class="span12"></textarea>
+                    </div> <!-- .control-group -->
+                    <div class="control-group row-fluid">
+                        <label for="output-sample" th:text="#{voj.administration.new-problem.output-sample}">Output Sample</label>
+                        <textarea id="output-sample" class="span12"></textarea>
+                    </div> <!-- .control-group -->
+                    <div class="row-fluid">
+                        <div class="span6">
+                            <h4 th:text="#{voj.administration.new-problem.test-cases}">Test Cases</h4>
+                        </div> <!-- .span6 -->
+                        <div class="span6 text-right">
+                            <a id="new-test-case" th:title="#{voj.administration.new-problem.new-test-case}" href="javascript:void(0);">
+                                <i class="fa fa-plus-circle"></i>
+                            </a>
+                        </div> <!-- .span6 -->
+                    </div> <!-- .row-fluid -->
+                    <div class="row-fluid">
+                        <div class="span12">
+                            <div id="test-cases">
+                                <p id="no-test-cases" th:text="#{voj.administration.new-problem.no-test-cases}">No Test Cases.</p>
+                                <ul></ul>
+                            </div> <!-- #test-cases -->
+                        </div> <!-- .span12 -->
+                    </div> <!-- .row-fluid -->
+                </div> <!-- .span8 -->
+                <div class="span4">
+                    <div class="section">
+                        <div class="header">
+                            <h5 th:text="#{voj.administration.new-problem.create-problem}">Create Problem</h5>
+                        </div> <!-- .header -->
+                        <div class="body">
+                            <div class="row-fluid">
+                                <div class="span8" th:text="#{voj.administration.new-problem.is-public}">Public to Users?</div> <!--- .span8 -->
+                                <div class="span4 text-right">
+                                    <input id="problem-is-public" type="checkbox" data-toggle="switch" checked="checked" />
+                                </div> <!-- .span4 -->
+                            </div> <!-- .row-fluid -->
+                            <div class="row-fluid">
+                                <div class="span8" th:text="#{voj.administration.new-problem.test-case-exactly-match}">Test Case Exactly Match</div> <!--- .span8 -->
+                                <div class="span4 text-right">
+                                    <input id="problem-is-exactly-match" type="checkbox" data-toggle="switch" />
+                                </div> <!-- .span4 -->
+                            </div> <!-- .row-fluid -->
+                        </div> <!-- .body -->
+                        <div class="footer text-right">
+                            <button class="btn btn-primary" type="submit" th:text="#{voj.administration.new-problem.publish-problem}">Publish</button>
+                        </div> <!-- .footer -->
+                    </div> <!-- .section -->
+                    <div class="section">
+                        <div class="header">
+                            <h5 th:text="#{voj.administration.new-problem.problem-categories}">Categories</h5>
+                        </div> <!-- .header -->
+                        <div class="body">
+                            <ul class="parent-categories" th:each="entry : ${problemCategories}">
+                                <li>
+                                    <label class="checkbox parent-category" th:for="${entry.key.problemCategorySlug}">
+                                        <input th:id="${entry.key.problemCategorySlug}" type="checkbox" data-toggle="checkbox" /> <span th:text="${entry.key.problemCategoryName}">Category</span>
+                                    </label>
+                                    <ul class="sub-categories">
+                                        <li th:each="problemCategory : ${entry.value}">
+                                            <label class="checkbox child-category" th:for="${problemCategory.problemCategorySlug}">
+                                                <input th:id="${problemCategory.problemCategorySlug}" type="checkbox" data-toggle="checkbox" /> <span th:text="${problemCategory.problemCategoryName}">Subcategory</span>
+                                            </label>
+                                        </li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </div> <!-- .body -->
+                    </div> <!-- .section -->
+                    <div class="section">
+                        <div class="header">
+                            <h5 th:text="#{voj.administration.new-problem.problem-tags}">Tags</h5>
+                        </div> <!-- .header -->
+                        <div class="body">
+                            <input id="problem-tags" class="tagsinput" type="hidden" value="" />
+                        </div> <!-- .body -->
+                    </div> <!-- .section -->
+                </div> <!-- .span4 -->
+            </div> <!-- .row-fluid -->
+        </form>
+    </div> <!-- #content -->
+
+    <th:block layout:fragment="scripts">
+    <script type="text/javascript">
+        $(function() {
+            $('.tagsinput').tagsInput();
+            $('[data-toggle=switch]').wrap('<div class="switch" />').parent().bootstrapSwitch();
+        });
+    </script>
+    <script type='text/javascript' th:inline="javascript">
+        $.getScript([[|${cdnUrl}/js/markdown.min.js?v=${version}|]], function() {
+            converter = Markdown.getSanitizingConverter();
+            editor    = new Markdown.Editor(converter);
+            editor.run();
+
+            $('.markdown').each(function() {
+                var plainContent    = $(this).text(),
+                    markdownContent = converter.makeHtml(plainContent.replace(/\\\n/g, '\\n'));
+
+                $(this).html(markdownContent);
+            });
+        });
+    </script>
+    <script type="text/javascript">
+        $('#new-test-case').click(function() {
+            var testCaseId = $('li.test-case', '#test-cases').length;
+
+            $('#no-test-cases').addClass('hide');
+            $('#test-cases > ul').append(getTestCaseContainer(testCaseId));
+        });
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function getTestCaseContainer(testCaseId) {
+            var containerTemplate = '<li class="test-case">' +
+                                    '    <div class="header">' +
+                                    '        <h5>' + [[#{voj.administration.new-problem.test-case}]] + ' #%s</h5>' +
+                                    '        <ul class="inline">' +
+                                    '            <li><a href="javascript:void(0);"><i class="fa fa-edit"></i></a></li>' +
+                                    '            <li><a href="javascript:void(0);"><i class="fa fa-trash"></i></a></li>' +
+                                    '        </ul>' +
+                                    '    </div> <!-- .header -->' +
+                                    '    <div class="body">' +
+                                    '        <div class="row-fluid">' +
+                                    '            <div class="span4">' +
+                                    '                <label>' + [[#{voj.administration.new-problem.standard-input}]] + '</label>' +
+                                    '            </div> <!-- .span4 -->' +
+                                    '            <div class="span8">' +
+                                    '                <textarea class="standard-input span12"></textarea>' +
+                                    '            </div> <!-- .span8 -->' +
+                                    '        </div> <!-- .row-fluid -->' +
+                                    '        <div class="row-fluid">' +
+                                    '            <div class="span4">' +
+                                    '                <label>' + [[#{voj.administration.new-problem.standard-output}]] + '</label>' +
+                                    '            </div> <!-- .span4 -->' +
+                                    '            <div class="span8">' +
+                                    '                <textarea class="standard-output span12"></textarea>' +
+                                    '            </div> <!-- .span8 -->' +
+                                    '        </div> <!-- .row-fluid -->' +
+                                    '    </div> <!-- .body -->' +
+                                    '</li> <!-- .test-case -->';
+
+            return containerTemplate.format(testCaseId);
+        }
+    </script>
+    <script type="text/javascript">
+        $('#test-cases').on('click', 'i.fa-edit', function() {
+            var testCaseContainer = $(this).parent().parent().parent().parent().parent(),
+                isBodyUnfolded      = $('.body', $(testCaseContainer)).is(':visible');
+
+            if ( isBodyUnfolded ) {
+                $('.body', $(testCaseContainer)).addClass('hide');
+            } else {
+                $('.body', $(testCaseContainer)).removeClass('hide');
+            }
+        });
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        $('#test-cases').on('click', 'i.fa-trash', function() {
+            var testCaseContainer = $(this).parent().parent().parent().parent().parent(),
+                testCases         = $('li.test-case', '#test-cases').length,
+                testCaseName      = [[#{voj.administration.new-problem.test-case}]] + ' #%s';
+
+            $(testCaseContainer).remove();
+            $('li.test-case', '#test-cases').each(function(index) {
+                $('h5', this).html(testCaseName.format(index));
+            });
+
+            if ( testCases == 1 ) {
+                $('#no-test-cases').removeClass('hide');
+            }
+        });
+    </script>
+    <script type="text/javascript">
+        $('label.checkbox.parent-category').click(function() {
+            var currentControl = $(this);
+            // Fix the bug for Checkbox in FlatUI
+            setTimeout(function() {
+                var isChecked = $(currentControl).hasClass('checked');
+
+                if ( !isChecked ) {
+                    $('label.checkbox.child-category', $(currentControl).parent()).removeClass('checked');
+                }
+            }, 50);
+        });
+    </script>
+    <script type="text/javascript">
+        $('label.checkbox.child-category').click(function() {
+            var currentControl = $(this);
+            // Fix the bug for Checkbox in FlatUI
+            setTimeout(function() {
+                var isChecked = $(currentControl).hasClass('checked');
+
+                if ( isChecked ) {
+                    $('label.checkbox.parent-category', $(currentControl).parent().parent().parent()).addClass('checked');
+                }
+            }, 50);
+        });
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function onSubmit() {
+            var problemName         = $('#problem-name').val(),
+                timeLimit           = $('#time-limit').val(),
+                memoryLimit         = $('#memory-limit').val(),
+                description         = $('#wmd-input').val(),
+                hint                = $('#hint').val(),
+                inputFormat         = $('#input-format').val(),
+                outputFormat        = $('#output-format').val(),
+                inputSample         = $('#input-sample').val(),
+                outputSample        = $('#output-sample').val(),
+                testCases           = getTestCases(),
+                problemCategories   = getProblemCategories(),
+                problemTags         = getProblemTags(),
+                isPublic            = $('#problem-is-public').parent().hasClass('switch-on'),
+                isExactlyMatch      = $('#problem-is-exactly-match').parent().hasClass('switch-on');
+
+            $('.alert-success', '#problem-form').addClass('hide');
+            $('.alert-error', '#problem-form').addClass('hide');
+            $('button[type=submit]', '#problem-form').attr('disabled', 'disabled');
+            $('button[type=submit]', '#problem-form').html([[#{voj.administration.new-problem.please-wait}]]);
+
+            return createProblem(problemName, timeLimit, memoryLimit, description, hint,
+                    inputFormat, outputFormat, inputSample, outputSample, testCases,
+                    problemCategories, problemTags, isPublic, isExactlyMatch);
+        }
+    </script>
+    <script type="text/javascript">
+        function getTestCases() {
+            var testCases   = [];
+
+            $('li.test-case').each(function() {
+                var input   = $('.standard-input', $(this)).val(),
+                    output  = $('.standard-output', $(this)).val();
+
+                testCases.push({
+                    'input': input,
+                    'output': output
+                });
+            });
+            return JSON.stringify(testCases);
+        }
+    </script>
+    <script type="text/javascript">
+        function getProblemCategories() {
+            var problemCategories = [];
+
+            $('label.checked', '.parent-categories').each(function() {
+                problemCategories.push($(this).attr('for'));
+            });
+            return JSON.stringify(problemCategories);
+        }
+    </script>
+    <script type="text/javascript">
+        function getProblemTags() {
+            var problemTags = $('#problem-tags').val();
+
+            if ( problemTags == '' ) {
+                problemTags = [];
+            } else {
+                problemTags = problemTags.split(',');
+            }
+            return JSON.stringify(problemTags);
+        }
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function createProblem(problemName, timeLimit, memoryLimit, description, hint, inputFormat, outputFormat,
+                    inputSample, outputSample, testCases, problemCategories, problemTags, isPublic, isExactlyMatch) {
+            var postData = {
+                'problemName': problemName,
+                'timeLimit': timeLimit,
+                'memoryLimit': memoryLimit,
+                'description': description,
+                'hint': hint,
+                'inputFormat': inputFormat,
+                'outputFormat': outputFormat,
+                'inputSample': inputSample,
+                'outputSample': outputSample,
+                'testCases': testCases,
+                'problemCategories': problemCategories,
+                'problemTags': problemTags,
+                'isPublic': isPublic,
+                'isExactlyMatch': isExactlyMatch
+            };
+
+            $.ajax({
+                type: 'POST',
+                url: [[@{/administration/createProblem.action}]],
+                data: postData,
+                dataType: 'JSON',
+                success: function(result){
+                    return processCreateProblemResult(result);
+                }
+            });
+        }
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function processCreateProblemResult(result) {
+            if ( result['isSuccessful'] ) {
+                var problemId = result['problemId'];
+                window.location.href = [[@{/administration/edit-problem/}]] + problemId;
+            } else {
+                var errorMessage  = '';
+
+                if ( result['isProblemNameEmpty'] ) {
+                    errorMessage += [[#{voj.administration.new-problem.problem-name-empty}]] + '<br>';
+                } else if ( !result['isProblemNameLegal'] ) {
+                    errorMessage += [[#{voj.administration.new-problem.problem-name-illegal}]] + '<br>';
+                }
+                if ( !result['isTimeLimitLegal'] ) {
+                    errorMessage += [[#{voj.administration.new-problem.time-limit-illegal}]] + '<br>';
+                }
+                if ( !result['isMemoryLimitLegal'] ) {
+                    errorMessage += [[#{voj.administration.new-problem.memory-limit-illegal}]] + '<br>';
+                }
+                if ( result['isDescriptionEmpty'] ) {
+                    errorMessage += [[#{voj.administration.new-problem.description-empty}]] + '<br>';
+                }
+                if ( result['isInputFormatEmpty'] ) {
+                    errorMessage += [[#{voj.administration.new-problem.input-format-empty}]] + '<br>';
+                }
+                if ( result['isOutputFormatEmpty'] ) {
+                    errorMessage += [[#{voj.administration.new-problem.output-format-empty}]] + '<br>';
+                }
+                if ( result['isInputSampleEmpty'] ) {
+                    errorMessage += [[#{voj.administration.new-problem.input-sample-empty}]] + '<br>';
+                }
+                if ( result['isOutputSampleEmpty'] ) {
+                    errorMessage += [[#{voj.administration.new-problem.output-sample-empty}]] + '<br>';
+                }
+
+                $('.alert-error', '#problem-form').html(errorMessage);
+                $('.alert-error', '#problem-form').removeClass('hide');
+            }
+            $('button[type=submit]', '#problem-form').removeAttr('disabled');
+            $('button[type=submit]', '#problem-form').html([[#{voj.administration.new-problem.publish-problem}]]);
+        }
+    </script>
+    </th:block>
+</body>
+</html>

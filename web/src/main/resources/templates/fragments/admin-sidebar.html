@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<!--/* Administration sidebar navigation. Used via ~{fragments/admin-sidebar :: sidebar}. */-->
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<body>
+    <div th:fragment="sidebar" id="sidebar">
+        <div id="logo">
+            <a th:href="@{/}">
+                <img th:src="|${cdnUrl}/img/logo-light.png|" alt="Logo" />
+            </a>
+        </div> <!-- #logo -->
+        <div id="sidebar-user">
+            <div class="row-fluid">
+                <div class="span3">
+                    <img th:src="|${cdnUrl}/img/avatar.jpg|" alt="avatar" />
+                </div> <!-- .span3 -->
+                <div class="offset1 span8">
+                    <span th:text="#{voj.administration.include.sidebar.welcome-back}">Welcome back,</span> <br /><span th:text="${myProfile.username}">username</span> <br />
+                    <span class="label label-success" th:text="#{voj.administration.include.sidebar.online}">Online</span>
+                </div> <!-- .span8 -->
+            </div> <!-- .row-fluid -->
+        </div> <!-- #sidebar-user -->
+        <div id="sidebar-nav">
+            <ul class="nav">
+                <li class="nav-item primary-nav-item">
+                    <a th:href="@{/administration}"><i class="fa fa-dashboard"></i> <span th:text="#{voj.administration.include.sidebar.dashboard}">Dashboard</span></a>
+                </li>
+                <li class="nav-item primary-nav-item nav-item-has-children">
+                    <a href="javascript:void(0);"><i class="fa fa-users"></i> <span th:text="#{voj.administration.include.sidebar.users}">Users</span> <i class="fa fa-caret-right"></i></a>
+                    <ul class="sub-nav nav">
+                        <li class="nav-item secondary-nav-item"><a th:href="@{/administration/all-users}" th:text="#{voj.administration.include.sidebar.all-users}">All Users</a></li>
+                        <li class="nav-item secondary-nav-item"><a th:href="@{/administration/new-user}" th:text="#{voj.administration.include.sidebar.new-user}">New User</a></li>
+                        <li class="nav-item secondary-nav-item hide"><a th:href="@{/administration/edit-user}" th:text="#{voj.administration.include.sidebar.edit-user}">Edit User</a></li>
+                    </ul>
+                </li>
+                <li class="nav-item primary-nav-item nav-item-has-children">
+                    <a href="javascript:void(0);"><i class="fa fa-question-circle"></i> <span th:text="#{voj.administration.include.sidebar.problems}">Problems</span> <i class="fa fa-caret-right"></i></a>
+                    <ul class="sub-nav nav">
+                        <li class="nav-item secondary-nav-item"><a th:href="@{/administration/all-problems}" th:text="#{voj.administration.include.sidebar.all-problems}">All Problems</a></li>
+                        <li class="nav-item secondary-nav-item"><a th:href="@{/administration/new-problem}" th:text="#{voj.administration.include.sidebar.new-problem}">New Problem</a></li>
+                        <li class="nav-item secondary-nav-item"><a th:href="@{/administration/problem-categories}" th:text="#{voj.administration.include.sidebar.problem-categories}">Categories</a></li>
+                        <li class="nav-item secondary-nav-item hide"><a th:href="@{/administration/edit-problem}" th:text="#{voj.administration.include.sidebar.edit-problem}">Edit Problem</a></li>
+                    </ul>
+                </li>
+                <li class="nav-item primary-nav-item nav-item-has-children">
+                    <a href="javascript:void(0);"><i class="fa fa-comment"></i> <span th:text="#{voj.administration.include.sidebar.discussion}">Discussion</span> <i class="fa fa-caret-right"></i></a>
+                    <ul class="sub-nav nav">
+                        <li class="nav-item secondary-nav-item"><a th:href="@{/administration/all-discussion}" th:text="#{voj.administration.include.sidebar.all-discussion}">All Discussion</a></li>
+                        <li class="nav-item secondary-nav-item"><a th:href="@{/administration/discussion-topics}" th:text="#{voj.administration.include.sidebar.discussion-topics}">Topics</a></li>
+                    </ul>
+                </li>
+                <li class="nav-item primary-nav-item nav-item-has-children">
+                    <a href="javascript:void(0);"><i class="fa fa-paperclip"></i> <span th:text="#{voj.administration.include.sidebar.contests}">Contests</span> <i class="fa fa-caret-right"></i></a>
+                    <ul class="sub-nav nav">
+                        <li class="nav-item secondary-nav-item"><a th:href="@{/administration/all-contests}" th:text="#{voj.administration.include.sidebar.all-contests}">All Contests</a></li>
+                        <li class="nav-item secondary-nav-item"><a th:href="@{/administration/new-contest}" th:text="#{voj.administration.include.sidebar.new-contest}">New Contest</a></li>
+                        <li class="nav-item secondary-nav-item hide"><a th:href="@{/administration/edit-contest}" th:text="#{voj.administration.include.sidebar.edit-contest}">Edit Contest</a></li>
+                    </ul>
+                </li>
+                <li class="nav-item primary-nav-item nav-item-has-children">
+                    <a href="javascript:void(0);"><i class="fa fa-code"></i> <span th:text="#{voj.administration.include.sidebar.submissions}">Submissions</span> <i class="fa fa-caret-right"></i></a>
+                    <ul class="sub-nav nav">
+                        <li class="nav-item secondary-nav-item"><a th:href="@{/administration/all-submissions}" th:text="#{voj.administration.include.sidebar.all-submissions}">All Submissions</a></li>
+                        <li class="nav-item secondary-nav-item hide"><a th:href="@{/administration/edit-submission}" th:text="#{voj.administration.include.sidebar.edit-submission}">Edit Submission</a></li>
+                    </ul>
+                </li>
+                <li class="nav-item primary-nav-item nav-item-has-children">
+                    <a href="javascript:void(0);"><i class="fa fa-cogs"></i> <span th:text="#{voj.administration.include.sidebar.settings}">Settings</span> <i class="fa fa-caret-right"></i></a>
+                    <ul class="sub-nav nav">
+                        <li class="nav-item secondary-nav-item"><a th:href="@{/administration/general-settings}" th:text="#{voj.administration.include.sidebar.general-settings}">General</a></li>
+                        <li class="nav-item secondary-nav-item"><a th:href="@{/administration/language-settings}" th:text="#{voj.administration.include.sidebar.language-settings}">Languages</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </div> <!-- #sidebar-nav -->
+    </div> <!-- #sidebar -->
+</body>
+</html>

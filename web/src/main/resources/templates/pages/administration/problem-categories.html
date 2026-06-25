@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/admin}" lang="en">
+<head>
+    <title th:text="#{voj.administration.problem-categories.title} + ' | ' + ${websiteName}">Problem Categories</title>
+    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/administration/problem-categories.css?v=${version}|" />
+</head>
+<body>
+    <div id="content" layout:fragment="content">
+        <h2 class="page-header"><i class="fa fa-th-list"></i> <span th:text="#{voj.administration.problem-categories.problem-categories}">Problem Categories</span></h2>
+        <div class="row-fluid">
+            <div class="span4">
+                <h4 th:text="#{voj.administration.problem-categories.add-new-category}">Add New Category</h4>
+                <form id="new-category-form" onSubmit="onSubmit(); return false;">
+                    <div class="alert alert-error hide"></div> <!-- .alert-error -->
+                    <div class="control-group row-fluid">
+                        <label for="category-name" th:text="#{voj.administration.problem-categories.category-name}">Name</label>
+                        <input id="category-name" class="span12" type="text" maxlength="32" />
+                        <p th:text="#{voj.administration.problem-categories.category-name-description}">The name is how it appears on your site.</p>
+                    </div> <!-- .control-group -->
+                    <div class="control-group row-fluid">
+                        <label for="category-slug" th:text="#{voj.administration.problem-categories.category-slug}">Slug</label>
+                        <input id="category-slug" class="span12" type="text" maxlength="32" />
+                        <p th:text="#{voj.administration.problem-categories.category-slug-description}">The "slug" is the URL-friendly version of the name.</p>
+                    </div> <!-- .control-group -->
+                    <div class="row-fluid">
+                        <label for="category-parent" th:text="#{voj.administration.problem-categories.category-parent}">Parent</label>
+                        <select id="category-parent">
+                            <option value="" th:text="#{voj.administration.problem-categories.none}">None</option>
+                            <option th:each="problemCategory : ${problemCategories}" th:value="${problemCategory.problemCategorySlug}" th:text="${problemCategory.problemCategoryName}">Category</option>
+                        </select>
+                        <p th:text="#{voj.administration.problem-categories.category-parent-description}">Categories, unlike tags, can have a hierarchy.</p>
+                    </div> <!-- .row-fluid -->
+                    <div class="row-fluid">
+                        <button class="btn btn-primary" type="submit" th:text="#{voj.administration.problem-categories.add-new-category}">Add New Category</button>
+                    </div> <!-- .row-fluid -->
+                </form> <!-- #new-category-form -->
+            </div> <!-- .span4 -->
+            <div class="span8">
+                <div id="filters" class="row-fluid">
+                    <div class="span12">
+                        <select id="actions">
+                            <option value="delete" th:text="#{voj.administration.problem-categories.delete}">Delete</option>
+                        </select>
+                        <button class="btn btn-danger" th:text="#{voj.administration.problem-categories.apply}">Apply</button>
+                    </div> <!-- .span12 -->
+                </div> <!-- .row-fluid -->
+                <table id="problem-categories" class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th class="check-box">
+                                <label class="checkbox all-problem-categories" for="all-problem-categories-thead">
+                                    <input id="all-problem-categories-thead" type="checkbox" data-toggle="checkbox" />
+                                </label>
+                            </th>
+                            <th th:text="#{voj.administration.problem-categories.category-name}">Name</th>
+                            <th th:text="#{voj.administration.problem-categories.category-slug}">Slug</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="problemCategory : ${problemCategories}" th:attr="data-value=${problemCategory.problemCategoryId}">
+                            <td class="check-box">
+                                <label class="checkbox" th:for="|problem-category-${problemCategory.problemCategorySlug}|">
+                                    <input th:id="|problem-category-${problemCategory.problemCategorySlug}|" type="checkbox" th:value="|problem-category-${problemCategory.problemCategorySlug}|" data-toggle="checkbox" />
+                                </label>
+                            </td>
+                            <td>
+                                <span class="problem-category-name" th:text="${problemCategory.problemCategoryName}">Name</span>
+                                <input type="hidden" class="parent-category" th:value="${problemCategory.parentProblemCategoryId}" />
+                                <ul class="actions inline">
+                                    <li><a href="javascript:void(0);" class="action-edit" th:text="#{voj.administration.problem-categories.edit}">Edit</a></li>
+                                    <li th:if="${problemCategory.problemCategorySlug != 'uncategorized'}"><a href="javascript:void(0);" class="action-delete" th:text="#{voj.administration.problem-categories.delete}">Delete</a></li>
+                                </ul>
+                            </td>
+                            <td><span class="problem-category-slug" th:text="${problemCategory.problemCategorySlug}">slug</span></td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <th class="check-box">
+                                <label class="checkbox all-problem-categories" for="all-problem-categories-tfoot">
+                                    <input id="all-problem-categories-tfoot" type="checkbox" data-toggle="checkbox" />
+                                </label>
+                            </th>
+                            <th th:text="#{voj.administration.problem-categories.category-name}">Name</th>
+                            <th th:text="#{voj.administration.problem-categories.category-slug}">Slug</th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div> <!-- .span8 -->
+        </div> <!-- .row-fluid -->
+    </div> <!-- #content -->
+
+    <th:block layout:fragment="scripts">
+    <script type="text/javascript" th:inline="javascript">
+        // Global Variable for Problem Categories Store
+        problemCategoriesOptions = {
+            "0": {
+                "problemCategorySlug": "none",
+                "problemCategoryName": [[#{voj.administration.problem-categories.none}]]
+            }
+            /*[# th:each="problemCategory : ${problemCategories}"]*/
+            , "[(${problemCategory.problemCategoryId})]": {
+                "problemCategorySlug": "[(${problemCategory.problemCategorySlug})]",
+                "problemCategoryName": "[(${problemCategory.problemCategoryName})]"
+            }
+            /*[/]*/
+        };
+    </script>
+    <script type="text/javascript">
+        $('label.all-problem-categories').click(function() {
+            // Fix the bug for Checkbox in FlatUI
+            var isChecked = false,
+                trigger   = $(this);
+            setTimeout(function() {
+                isChecked = $(trigger).hasClass('checked');
+
+                if ( isChecked ) {
+                    $('label.checkbox').addClass('checked');
+                } else {
+                    $('label.checkbox').removeClass('checked');
+                }
+            }, 100);
+        });
+    </script>
+    <script type="text/javascript">
+        $('tr', '#problem-categories').hover(function() {
+            $('ul.actions', $(this)).css('visibility', 'visible');
+        }, function() {
+            $('ul.actions', $(this)).css('visibility', 'hidden');
+        });
+    </script>
+    <script type="text/javascript">
+        $('.action-edit').click(function() {
+            var currentRowSet           = $(this).parent().parent().parent().parent(),
+                problemCategoryId       = $(currentRowSet).attr('data-value'),
+                problemCategoryName     = $('.problem-category-name', $(currentRowSet)).html(),
+                problemCategorySlug     = $('.problem-category-slug', $(currentRowSet)).html(),
+                parentProblemCategoryId = $('.parent-category', $(currentRowSet)).val();
+
+            $('.edit-fieldset').remove();
+            $('tr.hide', '#problem-categories').removeClass('hide');
+            $(currentRowSet).addClass('hide');
+
+            $(currentRowSet).after(getEditFieldset(problemCategoryId, problemCategoryName, problemCategorySlug));
+            $('#category-parent-edit').append(getParentProblemCategoriesOptions());
+            $('#category-parent-edit option[value=%s]'.format(problemCategorySlug), '.edit-fieldset').remove();
+            $('#category-parent-edit', '.edit-fieldset').val(getProblemCategorySlugUsingId(parentProblemCategoryId));
+
+            if ( problemCategorySlug == 'uncategorized' ) {
+                $('#category-slug-edit', '.edit-fieldset').attr('disabled', 'disabled');
+                $('#category-parent-edit', '.edit-fieldset').attr('disabled', 'disabled');
+            }
+        });
+    </script>
+    <script type="text/javascript">
+        function getProblemCategorySlugUsingId(problemCategoryId) {
+            for (var key in problemCategoriesOptions) {
+                var problemCategory = problemCategoriesOptions[key];
+
+                if ( key == problemCategoryId &&
+                     problemCategoriesOptions.hasOwnProperty(key) ) {
+                    return problemCategory['problemCategorySlug'];
+                }
+            }
+            return 'none';
+        }
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function getEditFieldset(problemCategoryId, problemCategoryName, problemCategorySlug) {
+            var tpl =  '<tr class="edit-fieldset" data-value="%s">' +
+                       '    <td colspan="3">' +
+                       '        <div class="control-group row-fluid">' +
+                       '            <label for="category-name-edit">' + [[#{voj.administration.problem-categories.category-name}]] + '</label>' +
+                       '            <input id="category-name-edit" class="span12" type="text" value="%s" maxlength="32" />' +
+                       '            <p id="category-name-error-message" class="hide"></p>' +
+                       '        </div> <!-- .control-group -->' +
+                       '        <div class="control-group row-fluid">' +
+                       '            <label for="category-slug-edit">' + [[#{voj.administration.problem-categories.category-slug}]] + '</label>' +
+                       '            <input id="category-slug-edit" class="span12" type="text"  value="%s" maxlength="32" />' +
+                       '            <p id="category-slug-error-message" class="hide"></p>' +
+                       '        </div> <!-- .control-group -->' +
+                       '        <div class="row-fluid">' +
+                       '            <label for="category-parent-edit">' + [[#{voj.administration.problem-categories.category-parent}]] + '</label>' +
+                       '            <select id="category-parent-edit">' +
+                       '            </select>' +
+                       '            <p id="category-parent-error-message" class="hide"></p>' +
+                       '        </div> <!-- .row-fluid -->' +
+                       '        <div id="edit-fieldset-controls" class="row-fluid">' +
+                       '            <button class="btn btn-cancel">' + [[#{voj.administration.problem-categories.cancel}]] + '</button>' +
+                       '            <button class="btn btn-primary pull-right" type="submit">' + [[#{voj.administration.problem-categories.update-category}]] + '</button>' +
+                       '        </div> <!-- .row-fluid -->' +
+                       '    </td>' +
+                       '</tr>';
+            return tpl.format(problemCategoryId, problemCategoryName, problemCategorySlug);
+        }
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        $('button.btn-danger', '#filters').click(function() {
+            if ( !confirm([[#{voj.administration.problem-categories.continue-or-not}]]) ) {
+                return;
+            }
+            $('.alert-error').addClass('hide');
+            $('button.btn-danger', '#filters').attr('disabled', 'disabled');
+            $('button.btn-danger', '#filters').html([[#{voj.administration.problem-categories.please-wait}]]);
+
+            var problemCategories   = [],
+                action              = $('#actions').val();
+
+            $('label.checkbox', 'table tbody').each(function() {
+                if ( $(this).hasClass('checked') ) {
+                    var problemCategoryId = $(this).parent().parent().attr('data-value');
+                    problemCategories.push(problemCategoryId);
+                }
+            });
+
+            if ( action == 'delete' ) {
+                return doDeleteProblemCategoriesAction(problemCategories);
+            }
+        });
+    </script>
+    <script type="text/javascript">
+        $('#problem-categories').on('click', '.edit-fieldset .btn-cancel', function() {
+            $('.edit-fieldset').remove();
+            $('tr.hide', '#problem-categories').removeClass('hide');
+        });
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        $('#problem-categories').on('click', '.edit-fieldset .btn-primary', function() {
+            var problemCategoryId       = $(this).parent().parent().parent().attr('data-value'),
+                problemCategorySlug     = $('#category-slug-edit', $(this).parent().parent()).val(),
+                problemCategoryName     = $('#category-name-edit', $(this).parent().parent()).val(),
+                parentProblemCategory   = $('#category-parent-edit', $(this).parent().parent()).val();
+
+            $('#category-name-edit, #category-slug-edit').removeClass('error');
+            $('#category-name-error-message, #category-slug-error-message').addClass('hide');
+            $('.edit-fieldset .btn-primary', '#problem-categories').attr('disabled', 'disabled');
+            $('.edit-fieldset .btn-primary', '#problem-categories').html([[#{voj.administration.problem-categories.please-wait}]]);
+
+            return doEditProblemCategoryAction(problemCategoryId, problemCategorySlug,
+                    problemCategoryName, parentProblemCategory);
+        });
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function doEditProblemCategoryAction(problemCategoryId, problemCategorySlug,
+            problemCategoryName, parentProblemCategory) {
+            var postData = {
+                'problemCategoryId': problemCategoryId,
+                'problemCategorySlug': problemCategorySlug,
+                'problemCategoryName': problemCategoryName,
+                'parentProblemCategory': parentProblemCategory
+            };
+
+            $.ajax({
+                type: 'POST',
+                url: [[@{/administration/editProblemCategory.action}]],
+                data: postData,
+                dataType: 'JSON',
+                success: function(result){
+                    return processEditProblemCategoryResult(result);
+                }
+            });
+        }
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function processEditProblemCategoryResult(result) {
+            if ( result['isSuccessful'] ) {
+                // Update Information in List
+                var problemCategoryItem         = $('.hide', '#problem-categories'),
+                    problemCategoryEditor       = $('.edit-fieldset', '#problem-categories'),
+                    problemCategoryName         = $('#category-name-edit', $(problemCategoryEditor)).val(),
+                    problemCategorySlug         = $('#category-slug-edit', $(problemCategoryEditor)).val(),
+                    parentProblemCategorySlug   = $('#category-parent-edit', $(problemCategoryEditor)).val(),
+                    parentProblemCategoryId     = getProblemCategoryIdUsingSlug(parentProblemCategorySlug);
+
+                $('.problem-category-name', $(problemCategoryItem)).html(problemCategoryName);
+                $('.problem-category-slug', $(problemCategoryItem)).html(problemCategorySlug);
+                $('.parent-category', $(problemCategoryItem)).html(parentProblemCategoryId);
+
+                $('.edit-fieldset').remove();
+                $('.hide', '#problem-categories').removeClass('hide');
+            } else {
+                if ( !result['isProblemCategoryEditable']  || !result['isProblemCategoryExists'] ||
+                      result['isProblemCategoryNameEmpty'] || !result['isProblemCategoryNameLegal'] ) {
+                    if ( !result['isProblemCategoryEditable'] ) {
+                        $('#category-name-error-message').html([[#{voj.administration.problem-categories.problem-category-not-editable}]]);
+                    } else if ( !result['isProblemCategoryExists'] ) {
+                        $('#category-name-error-message').html([[#{voj.administration.problem-categories.problem-category-not-exists}]]);
+                    } else if ( result['isProblemCategoryNameEmpty'] ) {
+                        $('#category-name-error-message').html([[#{voj.administration.problem-categories.problem-category-name-empty}]]);
+                    } else if ( !result['isProblemCategoryNameLegal'] ) {
+                        $('#category-name-error-message').html([[#{voj.administration.problem-categories.problem-category-name-illegal}]]);
+                    }
+
+                    $('#category-name-error-message').removeClass('hide');
+                    $('#category-name-edit').addClass('error');
+                }
+
+                if ( result['isProblemCategorySlugEmpty'] || !result['isProblemCategorySlugLegal'] ||
+                     result['isProblemCategorySlugExists'] ) {
+                    if ( result['isProblemCategorySlugEmpty'] ) {
+                        $('#category-slug-error-message').html([[#{voj.administration.problem-categories.problem-category-slug-empty}]]);
+                    } else if ( !result['isProblemCategorySlugLegal'] ) {
+                        $('#category-slug-error-message').html([[#{voj.administration.problem-categories.problem-category-slug-illegal}]]);
+                    } else if ( result['isProblemCategorySlugExists'] ) {
+                        $('#category-slug-error-message').html([[#{voj.administration.problem-categories.problem-category-slug-exists}]]);
+                    }
+
+                    $('#category-slug-error-message').removeClass('hide');
+                    $('#category-slug-edit').addClass('error');
+                }
+            }
+            $('.edit-fieldset .btn-primary', '#problem-categories').removeAttr('disabled');
+            $('.edit-fieldset .btn-primary', '#problem-categories').html([[#{voj.administration.problem-categories.update-category}]]);
+        }
+    </script>
+    <script type="text/javascript">
+        function getProblemCategoryIdUsingSlug(problemCategorySlug) {
+            for (var key in problemCategoriesOptions) {
+                var problemCategory = problemCategoriesOptions[key];
+
+                if ( problemCategoriesOptions.hasOwnProperty(key) &&
+                        problemCategory['problemCategorySlug'] == problemCategorySlug) {
+                    return key;
+                }
+            }
+            return 0;
+        }
+    </script>
+    <script type="text/javascript">
+        $('.action-delete').click(function() {
+            var currentRowSet           = $(this).parent().parent().parent().parent(),
+                problemCategoryId       = $(currentRowSet).attr('data-value'),
+                problemCategories       = [];
+
+            problemCategories.push(problemCategoryId);
+            return doDeleteProblemCategoriesAction(problemCategories);
+        });
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function doDeleteProblemCategoriesAction(problemCategories) {
+            var postData = {
+                'problemCategories': JSON.stringify(problemCategories)
+            };
+
+            $.ajax({
+                type: 'POST',
+                url: [[@{/administration/deleteProblemCategories.action}]],
+                data: postData,
+                dataType: 'JSON',
+                success: function(result){
+                    if ( result['isSuccessful'] ) {
+                        processDeleteProblemCategoryResult(result['deletedProblemCategories']);
+                    }
+                    $('button.btn-danger', '#filters').html([[#{voj.administration.problem-categories.apply}]]);
+                    $('button.btn-danger', '#filters').removeAttr('disabled');
+                }
+            });
+        }
+    </script>
+    <script type="text/javascript">
+        function processDeleteProblemCategoryResult(deletedProblemCategories) {
+            for ( var i = 0; i < deletedProblemCategories.length; ++ i ) {
+                var problemCategoryId = deletedProblemCategories[i];
+                $('tr[data-value=%s]'.format(problemCategoryId), '#problem-categories').remove();
+            }
+        }
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function onSubmit() {
+            var problemCategorySlug     = $('#category-slug').val(),
+                problemCategoryName     = $('#category-name').val(),
+                parentProblemCategory   = $('#category-parent').val();
+
+            $('.alert-error', '#new-category-form').addClass('hide');
+            $('button[type=submit]', '#new-category-form').attr('disabled', 'disabled');
+            $('button[type=submit]', '#new-category-form').html([[#{voj.administration.problem-categories.please-wait}]]);
+
+            return doCreateProblemCategoryAction(problemCategorySlug, problemCategoryName, parentProblemCategory);
+        }
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function doCreateProblemCategoryAction(problemCategorySlug, problemCategoryName, parentProblemCategory) {
+            var postData = {
+                'problemCategorySlug': problemCategorySlug,
+                'problemCategoryName': problemCategoryName,
+                'parentProblemCategory': parentProblemCategory
+            };
+
+            $.ajax({
+                type: 'POST',
+                url: [[@{/administration/createProblemCategory.action}]],
+                data: postData,
+                dataType: 'JSON',
+                success: function(result){
+                    return processCreateProblemCategoryResult(result);
+                }
+            });
+        }
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function processCreateProblemCategoryResult(result) {
+            if ( result['isSuccessful'] ) {
+                window.location.reload();
+            } else {
+                var errorMessage  = '';
+
+                if ( result['isProblemCategoryNameEmpty'] ) {
+                    errorMessage += [[#{voj.administration.problem-categories.problem-category-name-empty}]] + '<br>';
+                } else if ( !result['isProblemCategoryNameLegal'] ) {
+                    errorMessage += [[#{voj.administration.problem-categories.problem-category-name-illegal}]] + '<br>';
+                }
+                if ( result['isProblemCategorySlugEmpty'] ) {
+                    errorMessage += [[#{voj.administration.problem-categories.problem-category-slug-empty}]] + '<br>';
+                } else if ( !result['isProblemCategorySlugLegal'] ) {
+                    errorMessage += [[#{voj.administration.problem-categories.problem-category-slug-illegal}]] + '<br>';
+                } else if ( result['isProblemCategorySlugExists'] ) {
+                    errorMessage += [[#{voj.administration.problem-categories.problem-category-slug-exists}]] + '<br>';
+                }
+                $('.alert-error', '#new-category-form').html(errorMessage);
+                $('.alert-error', '#new-category-form').removeClass('hide');
+            }
+            $('button[type=submit]', '#new-category-form').removeAttr('disabled');
+            $('button[type=submit]', '#new-category-form').html([[#{voj.administration.problem-categories.add-new-category}]]);
+        }
+    </script>
+    <script type="text/javascript">
+        function getParentProblemCategoriesOptions() {
+            var options = '';
+
+            for (var problemCategoryId in problemCategoriesOptions) {
+                var problemCategory = problemCategoriesOptions[problemCategoryId];
+
+                if ( problemCategoriesOptions.hasOwnProperty(problemCategoryId) ) {
+                    options += '<option value="%s">%s</option>'.format(
+                        problemCategory['problemCategorySlug'],
+                        problemCategory['problemCategoryName']
+                    );
+                }
+            }
+            return options;
+        }
+    </script>
+    </th:block>
+</body>
+</html>

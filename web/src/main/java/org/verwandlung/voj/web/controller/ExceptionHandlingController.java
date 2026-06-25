@@ -48,7 +48,7 @@ public class ExceptionHandlingController {
   @ResponseStatus(value = HttpStatus.BAD_REQUEST)
   @ExceptionHandler(MissingServletRequestParameterException.class)
   public ModelAndView badRequestView(HttpServletRequest request, HttpServletResponse response) {
-    ModelAndView view = new ModelAndView("errors/404");
+    ModelAndView view = new ModelAndView("pages/errors/404");
     return view;
   }
 
@@ -62,7 +62,7 @@ public class ExceptionHandlingController {
   @ResponseStatus(value = HttpStatus.NOT_FOUND)
   @ExceptionHandler(ResourceNotFoundException.class)
   public ModelAndView notFoundView(HttpServletRequest request, HttpServletResponse response) {
-    ModelAndView view = new ModelAndView("errors/404");
+    ModelAndView view = new ModelAndView("pages/errors/404");
     return view;
   }
 
@@ -77,7 +77,7 @@ public class ExceptionHandlingController {
   @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
   public ModelAndView methodNotAllowedView(
       HttpServletRequest request, HttpServletResponse response) {
-    ModelAndView view = new ModelAndView("errors/404");
+    ModelAndView view = new ModelAndView("pages/errors/404");
     return view;
   }
 
@@ -95,7 +95,7 @@ public class ExceptionHandlingController {
       Exception ex, HttpServletRequest request, HttpServletResponse response) {
     LOGGER.catching(ex);
 
-    ModelAndView view = new ModelAndView("errors/500");
+    ModelAndView view = new ModelAndView("pages/errors/500");
     return view;
   }
 

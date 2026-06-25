@@ -64,7 +64,7 @@ public class ContestsController {
       HttpServletResponse response) {
     List<Contest> contests = contestService.getContests(keyword, 0, NUMBER_OF_CONTESTS_PER_PAGE);
 
-    ModelAndView view = new ModelAndView("contests/contests");
+    ModelAndView view = new ModelAndView("pages/contests/contests");
     view.addObject("contests", contests);
     view.addObject("currentTime", new Date());
     return view;
@@ -120,7 +120,7 @@ public class ContestsController {
     Map<Long, ContestSubmission> submissions =
         contestService.getSubmissionsOfContestantOfContest(contestId, currentUser);
 
-    ModelAndView view = new ModelAndView("contests/contest");
+    ModelAndView view = new ModelAndView("pages/contests/contest");
     view.addObject("currentTime", new Date())
         .addObject("contest", contest)
         .addObject("problems", problems)
@@ -184,10 +184,10 @@ public class ContestsController {
     Map<String, Object> result = null;
 
     if (contest.getContestMode().equals("OI")) {
-      view = new ModelAndView("contests/leaderboard-oi");
+      view = new ModelAndView("pages/contests/leaderboard-oi");
       result = contestService.getLeaderBoardForOi(contestId);
     } else if (contest.getContestMode().equals("ACM")) {
-      view = new ModelAndView("contests/leaderboard-acm");
+      view = new ModelAndView("pages/contests/leaderboard-acm");
       result = contestService.getLeaderBoardForAcm(contestId);
     } else {
       throw new ResourceNotFoundException();
@@ -241,7 +241,7 @@ public class ContestsController {
         contestService.getCodeSnippetOfContestProblem(contest, problemId, currentUser);
     List<Submission> submissions =
         contestService.getSubmissionsOfContestantOfContestProblem(contest, problemId, currentUser);
-    ModelAndView view = new ModelAndView("problems/problem");
+    ModelAndView view = new ModelAndView("pages/problems/problem");
     view.addObject("contest", contest);
     view.addObject("problem", problem);
     view.addObject("languages", languages);

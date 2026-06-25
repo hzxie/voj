@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/main}" lang="en">
+<head>
+    <title th:text="#{voj.misc.worldwide.title} + ' | ' + ${websiteName}">Change Language</title>
+    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/misc/about.css?v=${version}|" />
+</head>
+<body>
+    <div id="content" layout:fragment="content">
+        <div id="ribbon" style="height: 240px;"></div> <!-- #ribbon -->
+        <div class="container">
+            <div id="main-content">
+                <h3 th:text="#{voj.misc.worldwide.other-languages}">This site in other languages:</h3>
+                <div class="row-fluid">
+                    <div class="span3">
+                        <ul class="languages">
+                            <li><a href="javascript:void(0);" data-value="en_US">English</a></li>
+                        </ul>
+                    </div> <!-- .span3 -->
+                    <div class="span3">
+                        <ul class="languages">
+                            <li><a href="javascript:void(0);" data-value="zh_CN">简体中文</a></li>
+                        </ul>
+                    </div> <!-- .span3 -->
+                    <div class="span3">
+                    </div> <!-- .span3 -->
+                    <div class="span3">
+                    </div> <!-- .span3 -->
+                </div> <!-- .row-fluid -->
+            </div> <!-- #main-content -->
+        </div> <!-- .container -->
+    </div> <!-- #content -->
+
+    <th:block layout:fragment="scripts">
+    <script type="text/javascript" th:inline="javascript">
+        $('a', '.languages').click(function() {
+            var languageCode = $(this).attr('data-value');
+
+            var request = {
+                'language': languageCode
+            };
+            $.ajax({
+                type: 'GET',
+                url: [[@{/worldwide.action}]],
+                data: request,
+                dataType: 'JSON',
+                success: function(result) {
+                    if ( result['isSuccessful'] ) {
+                        var forwardUrl = [[${forwardUrl} ?: '']] || [[@{/}]];
+                        window.location.href = forwardUrl;
+                    }
+                }
+            });
+        });
+    </script>
+    </th:block>
+</body>
+</html>

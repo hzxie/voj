@@ -76,7 +76,7 @@ public class AdministrationController {
    */
   @RequestMapping(value = "", method = RequestMethod.GET)
   public ModelAndView indexView(HttpServletRequest request, HttpServletResponse response) {
-    ModelAndView view = new ModelAndView("administration/index");
+    ModelAndView view = new ModelAndView("pages/administration/index");
     view.addObject("totalUsers", getTotalUsers());
     view.addObject("newUsersToday", getNumberOfUserRegisteredToday());
     view.addObject("onlineUsers", getOnlineUsers());
@@ -233,7 +233,7 @@ public class AdministrationController {
         userService.getUserUsingUserGroupAndUsername(
             userGroup, username, offset, NUMBER_OF_USERS_PER_PAGE);
 
-    ModelAndView view = new ModelAndView("administration/all-users");
+    ModelAndView view = new ModelAndView("pages/administration/all-users");
     view.addObject("userGroups", userGroups);
     view.addObject("selectedUserGroup", userGroupSlug);
     view.addObject("username", username);
@@ -284,7 +284,7 @@ public class AdministrationController {
 
     List<UserGroup> userGroups = userService.getUserGroups();
     List<Language> languages = languageService.getAllLanguages();
-    ModelAndView view = new ModelAndView("administration/edit-user");
+    ModelAndView view = new ModelAndView("pages/administration/edit-user");
     view.addObject("user", user);
     view.addAllObjects(userMeta);
     view.addObject("userGroups", userGroups);
@@ -351,7 +351,7 @@ public class AdministrationController {
   public ModelAndView newUserView(HttpServletRequest request, HttpServletResponse response) {
     List<UserGroup> userGroups = userService.getUserGroups();
     List<Language> languages = languageService.getAllLanguages();
-    ModelAndView view = new ModelAndView("administration/new-user");
+    ModelAndView view = new ModelAndView("pages/administration/new-user");
     view.addObject("userGroups", userGroups);
     view.addObject("languages", languages);
     return view;
@@ -428,7 +428,7 @@ public class AdministrationController {
     Map<Long, List<ProblemTag>> problemTagRelationships =
         problemService.getProblemTagsOfProblems(problemIdLowerBound, problemIdUpperBound);
 
-    ModelAndView view = new ModelAndView("administration/all-problems");
+    ModelAndView view = new ModelAndView("pages/administration/all-problems");
     view.addObject("problemCategories", problemCategories);
     view.addObject("selectedProblemCategory", problemCategorySlug);
     view.addObject("keyword", keyword);
@@ -479,7 +479,7 @@ public class AdministrationController {
     Map<ProblemCategory, List<ProblemCategory>> problemCategories =
         problemService.getProblemCategoriesWithHierarchy();
 
-    ModelAndView view = new ModelAndView("administration/new-problem");
+    ModelAndView view = new ModelAndView("pages/administration/new-problem");
     view.addObject("problemCategories", problemCategories);
     return view;
   }
@@ -581,7 +581,7 @@ public class AdministrationController {
         problemService.getProblemCategoriesWithHierarchy();
     List<ProblemTag> problemTags = problemService.getProblemTagsUsingProblemId(problemId);
 
-    ModelAndView view = new ModelAndView("administration/edit-problem");
+    ModelAndView view = new ModelAndView("pages/administration/edit-problem");
     view.addObject("problem", problem);
     view.addObject("checkpoints", checkpoints);
     view.addObject("problemCategories", problemCategories);
@@ -675,7 +675,7 @@ public class AdministrationController {
       HttpServletRequest request, HttpServletResponse response) {
     List<ProblemCategory> problemCategories = problemService.getProblemCategories();
 
-    ModelAndView view = new ModelAndView("administration/problem-categories");
+    ModelAndView view = new ModelAndView("pages/administration/problem-categories");
     view.addObject("problemCategories", problemCategories);
     return view;
   }
@@ -805,7 +805,7 @@ public class AdministrationController {
         submissionService.getSubmissions(
             problemId, username, offset, NUMBER_OF_SUBMISSIONS_PER_PAGE);
 
-    ModelAndView view = new ModelAndView("administration/all-submissions");
+    ModelAndView view = new ModelAndView("pages/administration/all-submissions");
     view.addObject("problemId", problemId);
     view.addObject("username", username);
     view.addObject("currentPage", pageNumber);
@@ -881,7 +881,7 @@ public class AdministrationController {
     if (submission == null) {
       throw new ResourceNotFoundException();
     }
-    ModelAndView view = new ModelAndView("administration/edit-submission");
+    ModelAndView view = new ModelAndView("pages/administration/edit-submission");
     view.addObject("submission", submission);
     return view;
   }
@@ -896,7 +896,7 @@ public class AdministrationController {
   @RequestMapping(value = "/general-settings", method = RequestMethod.GET)
   public ModelAndView generalSettingsView(
       HttpServletRequest request, HttpServletResponse response) {
-    ModelAndView view = new ModelAndView("administration/general-settings");
+    ModelAndView view = new ModelAndView("pages/administration/general-settings");
     view.addObject("options", getOptions());
     return view;
   }
@@ -964,7 +964,7 @@ public class AdministrationController {
   @RequestMapping(value = "/language-settings", method = RequestMethod.GET)
   public ModelAndView languageSettingsView(
       HttpServletRequest request, HttpServletResponse response) {
-    ModelAndView view = new ModelAndView("administration/language-settings");
+    ModelAndView view = new ModelAndView("pages/administration/language-settings");
     view.addObject("languages", languageService.getAllLanguages());
     return view;
   }

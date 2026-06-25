@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/main}" lang="en">
+<head>
+    <title th:text="|P${problem.problemId} ${problem.problemName} | ${websiteName}|">Problem</title>
+    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/codemirror.min.css?v=${version}|" />
+    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/problems/problem.css?v=${version}|" />
+    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/highlight.min.css?v=${version}|" />
+</head>
+<body>
+    <div id="content" class="container" layout:fragment="content">
+        <div class="row-fluid">
+            <div id="main-content" class="span9">
+                <div class="problem">
+                    <div class="header">
+                        <span class="pull-right" th:if="${isLogin and latestSubmission[problem.problemId] != null}" th:text="${latestSubmission[problem.problemId].judgeResult.judgeResultName}">Result</span>
+                        <span class="name" th:text="|P${problem.problemId} ${problem.problemName}|">Problem</span>
+                    </div> <!-- .header -->
+                    <div class="body">
+                        <div class="section">
+                            <h4 th:text="#{voj.problems.problem.description}">Description</h4>
+                            <div class="description markdown" th:utext="${problem.description}">description</div> <!-- .description -->
+                        </div> <!-- .section -->
+                        <div class="section">
+                            <h4 th:text="#{voj.problems.problem.format}">Format</h4>
+                            <h5 th:text="#{voj.problems.problem.input}">Input</h5>
+                            <div class="description" th:utext="${problem.inputFormat}">input format</div> <!-- .description -->
+                            <h5 th:text="#{voj.problems.problem.output}">Output</h5>
+                            <div class="description" th:utext="${problem.outputFormat}">output format</div> <!-- .description -->
+                        </div> <!-- .section -->
+                        <div id="io-sample" class="section">
+                            <h4 th:text="#{voj.problems.problem.samples}">Samples</h4>
+                            <h5 th:text="#{voj.problems.problem.sample-input}">Sample Input</h5>
+                            <div class="description"><pre th:utext="${problem.sampleInput}">sample input</pre></div> <!-- .description -->
+                            <h5 th:text="#{voj.problems.problem.sample-output}">Sample Output</h5>
+                            <div class="description"><pre th:utext="${problem.sampleOutput}">sample output</pre></div> <!-- .description -->
+                        </div> <!-- .section -->
+                        <div class="section">
+                            <h4 th:text="#{voj.problems.problem.restrictions}">Restrictions</h4>
+                            <div class="description">
+                                <p><strong><span th:text="#{voj.problems.problem.time-limit}">Time Limit</span>: </strong><span th:text="${problem.timeLimit}">0</span> ms</p>
+                                <p><strong><span th:text="#{voj.problems.problem.memory-limit}">Memory Limit</span>: </strong><span th:text="${problem.memoryLimit}">0</span> KB</p>
+                            </div> <!-- .description -->
+                        </div> <!-- .section -->
+                        <div class="section" th:if="${problem.hint != null and problem.hint != ''}">
+                            <h4 th:text="#{voj.problems.problem.hint}">Hint</h4>
+                            <div class="description markdown" th:text="${problem.hint}">hint</div> <!-- .description -->
+                        </div> <!-- .section -->
+                        <form id="code-editor" onsubmit="onSubmit(); return false;" method="POST">
+                            <textarea name="codemirror-editor" id="codemirror-editor" th:text="${isContest and codeSnippet != null ? codeSnippet['code'] : ''}"></textarea>
+                            <div class="row-fluid">
+                                <div class="span4">
+                                    <select id="languages">
+                                        <option th:each="language : ${languages}" th:value="${language.languageSlug}" th:text="${language.languageName}">Language</option>
+                                    </select>
+                                </div> <!-- .span4 -->
+                                <div id="submission-error" class="offset1 span3"></div> <!-- #submission-error -->
+                                <div id="submission-action" class="span4">
+                                    <input type="hidden" id="csrf-token" th:value="${_csrf.token}" />
+                                    <button type="submit" class="btn btn-primary" th:text="#{voj.problems.problem.submit}">Submit</button>
+                                    <button id="close-submission" class="btn" th:text="#{voj.problems.problem.cancel}">Cancel</button>
+                                </div> <!-- #submission-action -->
+                            </div> <!-- .row-fluid -->
+                        </form> <!-- #code-editor-->
+                        <div id="mask" class="hide"></div> <!-- #mask -->
+                    </div> <!-- .body -->
+                </div> <!-- .problem -->
+            </div> <!-- #main-content -->
+            <div id="sidebar" class="span3">
+                <div id="actions" class="section" th:if="${isContest}">
+                    <h5 th:text="#{voj.problems.problem.actions}">Actions</h5>
+                    <ul>
+                        <li th:if="${currentTime.after(contest.endTime)}"><a th:href="@{/p/{id}(id=${problem.problemId})}" th:text="#{voj.problems.problem.view-in-problem-mode}">View in Problem Mode</a></li>
+                        <li th:unless="${currentTime.after(contest.endTime)}"><a id="submit-solution" href="javascript:void(0);" th:text="#{voj.problems.problem.submit-solution}">Submit Solution</a></li>
+                        <li><a th:href="@{/contest/{id}(id=${contest.contestId})}" th:text="#{voj.problems.problem.back-to-contest}">Back to Contest</a></li>
+                    </ul>
+                </div> <!-- #actions -->
+                <div id="actions" class="section" th:unless="${isContest}">
+                    <h5 th:text="#{voj.problems.problem.actions}">Actions</h5>
+                    <ul>
+                        <th:block th:if="${isLogin}">
+                            <li><a th:href="@{/discussion/new(problemId=${problem.problemId})}" th:text="#{voj.problems.problem.create-discussion}">Create Discussion</a></li>
+                            <li><a id="submit-solution" href="javascript:void(0);" th:text="#{voj.problems.problem.submit-solution}">Submit Solution</a></li>
+                        </th:block>
+                        <li><a th:href="@{/p/{id}/solution(id=${problem.problemId})}" th:text="#{voj.problems.problem.view-solution}">View Solution</a></li>
+                        <li><a th:href="@{/submission(problemId=${problem.problemId})}" th:text="#{voj.problems.problem.view-submission}">View Submission</a></li>
+                    </ul>
+                </div> <!-- #actions -->
+                <div id="submission" class="section" th:if="${isLogin}">
+                    <h5 th:text="#{voj.problems.problem.submission}">My Submission</h5>
+                    <p th:if="${submissions == null || submissions.size() == 0}" th:text="#{voj.problems.problem.no-submission}">No submission</p>
+                    <ul>
+                        <li class="row-fluid" th:each="submission : ${submissions}">
+                            <div class="span4">
+                                <a th:href="@{/submission/{id}(id=${submission.submissionId})}" th:text="${@dateFormatter.dateShort(submission.submitTime, language)}">date</a>
+                            </div> <!-- .span4 -->
+                            <div class="span8" th:classappend="|flag-${submission.judgeResult.judgeResultSlug}|" th:text="${submission.judgeResult.judgeResultName}">Result</div> <!-- .span8 -->
+                        </li>
+                    </ul>
+                </div> <!-- submission -->
+                <div id="discussion" class="section" th:unless="${isContest}">
+                    <h5 th:text="#{voj.problems.problem.discussion}">Discussion</h5>
+                    <p th:if="${discussionThreads == null || discussionThreads.size() == 0}" th:text="#{voj.problems.problem.no-discussion}">No discussion</p>
+                    <ul>
+                        <li class="row-fluid" th:each="discussionThread : ${discussionThreads}">
+                            <div class="span4" th:text="${@dateFormatter.dateShort(discussionThread.discussionThreadCreateTime, language)}">date</div> <!-- .span4 -->
+                            <div class="span8">
+                                <a th:href="@{/discussion/{id}(id=${discussionThread.discussionThreadId})}" th:text="${discussionThread.discussionThreadTitle}">Title</a>
+                            </div> <!-- .span8 -->
+                        </li>
+                    </ul>
+                </div> <!-- discussion -->
+            </div> <!-- #sidebar -->
+        </div> <!-- .row-fluid -->
+    </div> <!-- #content -->
+
+    <th:block layout:fragment="scripts">
+    <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({
+            tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
+        });
+    </script>
+    <script type="text/javascript" async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/javascript" th:inline="javascript">
+        $.getScript([[|${cdnUrl}/js/markdown.min.js?v=${version}|]], function() {
+            converter = Markdown.getSanitizingConverter();
+
+            $('.markdown').each(function() {
+                var plainContent    = $(this).text(),
+                    markdownContent = converter.makeHtml(plainContent.replace(/\\\n/g, '\\n'));
+
+                $(this).html(markdownContent);
+            });
+        });
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        $.getScript([[|${cdnUrl}/js/codemirror.min.js?v=${version}|]], function() {
+           $.when(
+                $.getScript([[|${cdnUrl}/mode/clike.min.js?v=${version}|]]),
+                $.getScript([[|${cdnUrl}/mode/go.min.js?v=${version}|]]),
+                $.getScript([[|${cdnUrl}/mode/pascal.min.js?v=${version}|]]),
+                $.getScript([[|${cdnUrl}/mode/perl.min.js?v=${version}|]]),
+                $.getScript([[|${cdnUrl}/mode/php.min.js?v=${version}|]]),
+                $.getScript([[|${cdnUrl}/mode/python.min.js?v=${version}|]]),
+                $.getScript([[|${cdnUrl}/mode/ruby.min.js?v=${version}|]]),
+                $.Deferred(function(deferred) {
+                    $(deferred.resolve);
+                })
+            ).done(function() {
+                window.codeMirrorEditor = CodeMirror.fromTextArea(document.getElementById('codemirror-editor'), {
+                    mode: $('select#languages').val(),
+                    tabMode: 'indent',
+                    theme: 'neat',
+                    tabSize: 4,
+                    indentUnit: 4,
+                    lineNumbers: true,
+                    lineWrapping: true
+                });
+            });
+        });
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        $.getScript([[|${cdnUrl}/js/highlight.min.js?v=${version}|]], function() {
+            $('code').each(function(i, block) {
+                hljs.highlightBlock(block);
+            });
+        });
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        $(function() {
+            var preferLanguage = [[${myProfile.preferLanguage.languageSlug}]];
+            $('select#languages').val(preferLanguage);
+            /*[# th:if="${isContest and codeSnippet != null}"]*/
+            $('select#languages').val([[${codeSnippet != null ? codeSnippet['language'] : ''}]]);
+            /*[/]*/
+        });
+    </script>
+    <script type="text/javascript">
+        $('select#languages').change(function() {
+            window.codeMirrorEditor.setOption('mode', $(this).val());
+        });
+    </script>
+    <script type="text/javascript">
+        $('#submit-solution').click(function() {
+            $('#mask').removeClass('hide');
+            $('#code-editor').addClass('fade');
+        });
+    </script>
+    <script type="text/javascript">
+        $('#close-submission').click(function(e) {
+            e.preventDefault();
+
+            $('#code-editor').removeClass('fade');
+            $('#mask').addClass('hide');
+        });
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function onSubmit() {
+            var problemId   = [[${problem.problemId}]],
+                language    = $('select#languages').val(),
+                code        = window.codeMirrorEditor.getValue(),
+                csrfToken   = $('#csrf-token').val();
+
+            $('button[type=submit]', '#code-editor').attr('disabled', 'disabled');
+            $('button[type=submit]', '#code-editor').html([[#{voj.problems.problem.please-wait}]]);
+
+            return createSubmissionAction(problemId, language, code, csrfToken);
+        }
+    </script>
+    <script type="text/javascript" th:inline="javascript" th:if="${isContest}">
+        function createSubmissionAction(problemId, languageSlug, code, csrfToken) {
+            var postData = {
+                'problemId': problemId,
+                'languageSlug': languageSlug,
+                'code': code,
+                'csrfToken': csrfToken
+            };
+
+            $.ajax({
+                type: 'POST',
+                url: [[@{/contest/{id}/createSubmission.action(id=${contest.contestId})}]],
+                data: postData,
+                dataType: 'JSON',
+                success: function(result) {
+                }
+            });
+        }
+    </script>
+    <script type="text/javascript" th:inline="javascript" th:unless="${isContest}">
+        function createSubmissionAction(problemId, languageSlug, code, csrfToken) {
+            var postData = {
+                'problemId': problemId,
+                'languageSlug': languageSlug,
+                'code': code,
+                'csrfToken': csrfToken
+            };
+
+            $.ajax({
+                type: 'POST',
+                url: [[@{/p/createSubmission.action}]],
+                data: postData,
+                dataType: 'JSON',
+                success: function(result) {
+                    if ( result['isSuccessful'] ) {
+                        var submissionId = result['submissionId'];
+                        window.location.href = [[@{/submission/}]] + submissionId;
+                    } else {
+                        var errorMessage = '';
+
+                        if ( !result['isCsrfTokenValid'] ) {
+                            errorMessage = [[#{voj.problems.problem.invalid-token}]];
+                        } else if ( !result['isUserLogined'] ) {
+                            errorMessage = [[#{voj.problems.problem.user-not-login}]];
+                        } else if ( !result['isProblemExists'] ) {
+                            errorMessage = [[#{voj.problems.problem.problem-not-exists}]];
+                        } else if ( !result['isLanguageExists'] ) {
+                            errorMessage = [[#{voj.problems.problem.language-not-exists}]];
+                        } else if ( result['isCodeEmpty'] ) {
+                            errorMessage = [[#{voj.problems.problem.empty-code}]];
+                        }
+                        $('#submission-error').html(errorMessage);
+                    }
+
+                    $('button[type=submit]', '#code-editor').removeAttr('disabled');
+                    $('button[type=submit]', '#code-editor').html([[#{voj.problems.problem.submit}]]);
+                }
+            });
+        }
+    </script>
+    </th:block>
+</body>
+</html>

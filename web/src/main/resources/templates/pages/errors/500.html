@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/main}" lang="en">
+<head>
+    <title th:text="#{voj.error.500.title} + ' | ' + ${websiteName}">Internal Server Error</title>
+    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/misc/error.css?v=${version}|" />
+</head>
+<body>
+    <div id="content" class="container" layout:fragment="content">
+        <div class="row-fluid">
+            <div class="span6">
+                <img th:src="|${cdnUrl}/img/error.png?v=${version}|" alt="Error" />
+            </div> <!-- .span6 -->
+            <div id="error-message" class="span6">
+                <h4 th:text="#{voj.error.500.internal-server-error}">Internal Server Error Occurred!</h4>
+                <p th:text="#{voj.error.500.message}">The requested URL caused an internal server error.</p>
+                <button class="btn btn-primary" onclick="history.go(-1);" th:text="#{voj.error.500.go-back}">Go back</button>
+            </div> <!-- .span6 -->
+        </div> <!-- .row-fluid -->
+    </div> <!-- #content -->
+</body>
+</html>

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<!--/* Public site footer. Used via ~{fragments/footer :: footer}. */-->
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<body>
+    <div th:fragment="footer" id="footer">
+        <div class="container">
+            <ul id="footer-nav" class="inline">
+                <li><a th:href="@{/terms}" th:text="#{voj.include.footer.terms}">Terms of Use</a></li>
+                <li><a th:href="@{/privacy}" th:text="#{voj.include.footer.privacy}">Privacy &amp; Cookies</a></li>
+                <li><a th:href="@{/judgers}" th:text="#{voj.include.footer.judgers}">Judgers</a></li>
+                <li><a th:href="@{/help}" th:text="#{voj.include.footer.help}">Help</a></li>
+                <li><a th:href="@{/about}" th:text="#{voj.include.footer.about-us}">About Us</a></li>
+                <li>
+                    <a th:href="@{/worldwide(forward=${forwardUri})}">
+                        <i class="fa fa-globe"></i>
+                        <span id="current-language" th:text="${language}">en_US</span>
+                    </a>
+                </li>
+            </ul>
+            <p id="copyright">
+                <span th:text="#{voj.include.footer.copyright}">Copyright</span>&copy; <span th:text="${#dates.year(#dates.createNow())}">2026</span> <span th:utext="${copyright}">copyright</span>.
+                <span th:text="#{voj.include.footer.all-rights-reserved}">All rights reserved.</span>
+            </p>
+            <p>
+                <span id="icp-number" th:text="${icpNumber}">icp</span>
+                <span id="police-icp-number" th:if="${policeIcpNumber != null and policeIcpNumber != ''}">
+                    <img th:src="|${cdnUrl}/img/police-badge-of-china.png?v=${version}|" alt="Police Logo" /> <span th:text="${policeIcpNumber}">police-icp</span>
+                </span>
+            </p>
+            <p>
+                <a href="https://github.com/hzxie/voj/">
+                   <img src="https://img.shields.io/github/stars/hzxie/voj.svg?style=social&amp;label=Stars" alt="GitHub-Stars" />
+                </a>
+                <img src="https://api.infinitescript.com/badgen/count.svg?name=hzxie/voj" alt="Visitors" />
+            </p>
+        </div> <!-- .container -->
+    </div> <!-- #footer -->
+</body>
+</html>

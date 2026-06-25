@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/admin}" lang="en">
+<head>
+    <title th:text="#{voj.administration.all-submissions.title} + ' | ' + ${websiteName}">Submissions</title>
+    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/administration/all-submissions.css?v=${version}|" />
+</head>
+<body>
+    <div id="content" layout:fragment="content">
+        <h2 class="page-header"><i class="fa fa-code"></i> <span th:text="#{voj.administration.all-submissions.all-submissions}">Submissions</span></h2>
+        <div class="alert alert-error hide"></div> <!-- .alert-error -->
+        <div id="filters" class="row-fluid">
+            <div class="span6">
+                <select id="actions">
+                    <option value="delete" th:text="#{voj.administration.all-submissions.delete}">Delete</option>
+                    <option value="restart" th:text="#{voj.administration.all-submissions.restart}">Restart</option>
+                </select>
+                <button class="btn btn-danger" th:text="#{voj.administration.all-submissions.apply}">Apply</button>
+            </div> <!-- .span6 -->
+            <div class="span6">
+                <form class="row-fluid text-right" th:action="@{/administration/all-submissions}">
+                    <div class="span5">
+                        <div class="control-group">
+                            <input id="problem-id" name="problemId" class="span12" th:value="${problemId != 0 ? problemId : ''}" th:placeholder="#{voj.administration.all-submissions.problem-id}" type="text" />
+                        </div> <!-- .control-group -->
+                    </div> <!-- .span5 -->
+                    <div class="span5">
+                        <div class="control-group">
+                            <input id="username" name="username" class="span12" th:value="${username}" th:placeholder="#{voj.administration.all-submissions.username}" type="text" />
+                        </div> <!-- .control-group -->
+                    </div> <!-- .span5 -->
+                    <div class="span2">
+                        <button class="btn btn-primary" th:text="#{voj.administration.all-submissions.filter}">Filter</button>
+                    </div> <!-- .span2 -->
+                </form> <!-- .row-fluid -->
+            </div> <!-- .span6 -->
+        </div> <!-- .row-fluid -->
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th class="check-box">
+                        <label class="checkbox" for="all-submissions">
+                            <input id="all-submissions" type="checkbox" data-toggle="checkbox" />
+                        </label>
+                    </th>
+                    <th class="flag" th:text="#{voj.administration.all-submissions.result}">Result</th>
+                    <th class="score" th:text="#{voj.administration.all-submissions.score}">Score</th>
+                    <th class="time" th:text="#{voj.administration.all-submissions.time}">Time</th>
+                    <th class="memory" th:text="#{voj.administration.all-submissions.memory}">Memory</th>
+                    <th class="name" th:text="#{voj.administration.all-submissions.problem}">Problem</th>
+                    <th class="user" th:text="#{voj.administration.all-submissions.user}">User</th>
+                    <th class="language" th:text="#{voj.administration.all-submissions.language}">Language</th>
+                    <th class="submit-time" th:text="#{voj.administration.all-submissions.submit-time}">Submit Time</th>
+                    <th class="execute-time" th:text="#{voj.administration.all-submissions.execute-time}">Execute Time</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="submission : ${submissions}" th:attr="data-value=${submission.submissionId}">
+                    <td class="check-box">
+                        <label class="checkbox" th:for="|submission-${submission.submissionId}|">
+                            <input th:id="|submission-${submission.submissionId}|" type="checkbox" th:value="${submission.submissionId}" data-toggle="checkbox" />
+                        </label>
+                    </td>
+                    <td th:class="|flag flag-${submission.judgeResult.judgeResultSlug}|"><a th:href="@{/administration/edit-submission/{id}(id=${submission.submissionId})}" th:text="${submission.judgeResult.judgeResultName}">Result</a></td>
+                    <td class="score" th:text="${submission.judgeScore}">0</td>
+                    <td class="time" th:text="|${submission.usedTime} ms|">0 ms</td>
+                    <td class="memory" th:text="|${submission.usedMemory} K|">0 K</td>
+                    <td class="name"><a th:href="@{/administration/edit-problem/{id}(id=${submission.problem.problemId})}" th:text="|P${submission.problem.problemId} ${submission.problem.problemName}|">Problem</a></td>
+                    <td class="user"><a th:href="@{/administration/edit-user/{id}(id=${submission.user.uid})}" th:text="${submission.user.username}">user</a></td>
+                    <td class="language" th:text="${submission.language.languageName}">Language</td>
+                    <td class="submit-time" th:text="${@dateFormatter.dateTimeLongMedium(submission.submitTime, language)}">time</td>
+                    <td class="execute-time" th:text="${@dateFormatter.dateTimeLongMedium(submission.executeTime, language)}">time</td>
+                </tr>
+            </tbody>
+        </table>
+        <div id="pagination" class="pagination pagination-centered"
+             th:with="lowerBound=${currentPage - 5 > 0 ? currentPage - 5 : 1},upperBound=${currentPage + 5 < totalPages ? currentPage + 5 : totalPages}">
+            <ul>
+                <li th:classappend="${currentPage <= 1} ? 'disabled' : ''" class="previous">
+                    <a th:if="${currentPage <= 1}" href="javascript:void(0);">&lt;</a>
+                    <a th:unless="${currentPage <= 1}" th:href="@{/administration/all-submissions(problemId=${problemId},username=${username},page=${currentPage - 1})}">&lt;</a>
+                </li>
+                <li th:each="pageNumber : ${#numbers.sequence(lowerBound, upperBound)}" th:classappend="${pageNumber == currentPage} ? 'active' : ''"><a th:href="@{/administration/all-submissions(problemId=${problemId},username=${username},page=${pageNumber})}" th:text="${pageNumber}">1</a></li>
+                <li th:classappend="${currentPage >= totalPages} ? 'disabled' : ''" class="next">
+                    <a th:if="${currentPage >= totalPages}" href="javascript:void(0);">&gt;</a>
+                    <a th:unless="${currentPage >= totalPages}" th:href="@{/administration/all-submissions(problemId=${problemId},username=${username},page=${currentPage + 1})}">&gt;</a>
+                </li>
+            </ul>
+        </div> <!-- #pagination-->
+    </div> <!-- #content -->
+
+    <th:block layout:fragment="scripts">
+    <script type="text/javascript">
+        $('label[for=all-submissions]').click(function() {
+            // Fix the bug for Checkbox in FlatUI
+            var isChecked = false;
+            setTimeout(function() {
+                isChecked = $('label[for=all-submissions]').hasClass('checked');
+
+                if ( isChecked ) {
+                    $('label.checkbox').addClass('checked');
+                } else {
+                    $('label.checkbox').removeClass('checked');
+                }
+            }, 100);
+        });
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        $('button.btn-danger', '#filters').click(function() {
+            if ( !confirm([[#{voj.administration.all-submissions.continue-or-not}]]) ) {
+                return;
+            }
+            $('.alert-error').addClass('hide');
+            $('button.btn-danger', '#filters').attr('disabled', 'disabled');
+            $('button.btn-danger', '#filters').html([[#{voj.administration.all-submissions.please-wait}]]);
+
+            var submissions = [],
+                action      = $('#actions').val();
+
+            $('label.checkbox', 'table tbody').each(function() {
+                if ( $(this).hasClass('checked') ) {
+                    var submissionId = $('input[type=checkbox]', $(this)).val();
+                    submissions.push(submissionId);
+                }
+            });
+
+            if ( action == 'delete' ) {
+                return doDeleteSubmissionsAction(submissions);
+            } else if ( action == 'restart' ) {
+                return doRestartSubmissionsAction(submissions);
+            }
+        });
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function doDeleteSubmissionsAction(submissions) {
+            var postData = {
+                'submissions': JSON.stringify(submissions)
+            };
+
+            $.ajax({
+                type: 'POST',
+                url: [[@{/administration/deleteSubmissions.action}]],
+                data: postData,
+                dataType: 'JSON',
+                success: function(result){
+                    if ( result['isSuccessful'] ) {
+                        var deletedSubmissions = result['deletedSubmissions'];
+
+                        for ( var i = 0; i < deletedSubmissions.length; ++ i ) {
+                            $('tr[data-value=%s]'.format(deletedSubmissions[i])).remove();
+                        }
+                    } else {
+                        $('.alert').html([[#{voj.administration.all-submissions.delete-error}]]);
+                        $('.alert').removeClass('hide');
+                    }
+                    $('button.btn-danger', '#filters').removeAttr('disabled');
+                    $('button.btn-danger', '#filters').html([[#{voj.administration.all-submissions.apply}]]);
+                }
+            });
+        }
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function doRestartSubmissionsAction(submissions) {
+            var postData = {
+                'submissions': JSON.stringify(submissions)
+            };
+
+            $.ajax({
+                type: 'POST',
+                url: [[@{/administration/restartSubmissions.action}]],
+                data: postData,
+                dataType: 'JSON',
+                success: function(result){
+                    if ( result['isSuccessful'] ) {
+                        for ( var i = 0; i < submissions.length; ++ i ) {
+                            var submission  = $('tr[data-value=%s]'.format(submissions[i])),
+                                judgeResult = $('td.flag', $(submission));
+
+                            $(judgeResult).removeClass();
+                            $(judgeResult).addClass('flag flag-PD');
+                            $('a', $(judgeResult)).html('Pending');
+                        }
+                    } else {
+                        $('.alert').html([[#{voj.administration.all-submissions.restart-error}]]);
+                        $('.alert').removeClass('hide');
+                    }
+                    $('button.btn-danger', '#filters').removeAttr('disabled');
+                    $('button.btn-danger', '#filters').html([[#{voj.administration.all-submissions.apply}]]);
+                }
+            });
+        }
+    </script>
+    </th:block>
+</body>
+</html>

@@ -91,7 +91,7 @@ public class AccountsController {
       redirectView.setExposeModelAttributes(false);
       view = new ModelAndView(redirectView);
     } else {
-      view = new ModelAndView("accounts/login");
+      view = new ModelAndView("pages/accounts/login");
       view.addObject("isLogout", isLogout);
       view.addObject("forwardUrl", forwardUrl);
     }
@@ -198,7 +198,7 @@ public class AccountsController {
       boolean isAllowRegister =
           optionService.getOption("allowUserRegister").getOptionValue().equals("1");
 
-      view = new ModelAndView("accounts/register");
+      view = new ModelAndView("pages/accounts/register");
       view.addObject("languages", languages);
       view.addObject("isAllowRegister", isAllowRegister);
     }
@@ -269,7 +269,7 @@ public class AccountsController {
         isTokenValid = userService.isEmailValidationValid(email, token);
       }
 
-      view = new ModelAndView("accounts/reset-password");
+      view = new ModelAndView("pages/accounts/reset-password");
       view.addObject("email", email);
       view.addObject("token", token);
       view.addObject("isTokenValid", isTokenValid);
@@ -349,7 +349,7 @@ public class AccountsController {
       throw new ResourceNotFoundException();
     }
 
-    ModelAndView view = new ModelAndView("accounts/user");
+    ModelAndView view = new ModelAndView("pages/accounts/user");
     view.addObject("user", user);
     view.addAllObjects(userService.getUserMetaUsingUid(user));
 
@@ -399,7 +399,7 @@ public class AccountsController {
     User user = HttpSessionParser.getCurrentUser();
     long userId = user.getUid();
 
-    ModelAndView view = new ModelAndView("accounts/dashboard");
+    ModelAndView view = new ModelAndView("pages/accounts/dashboard");
     view.addObject("user", user);
     view.addAllObjects(userService.getUserMetaUsingUid(user));
     view.addObject("submissions", submissionService.getSubmissionOfUser(userId));

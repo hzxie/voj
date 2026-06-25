@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/main}" lang="en">
+<head>
+    <title th:text="#{voj.submissions.submission.title} + ${submission.submissionId} + ' | ' + ${websiteName}">Submission</title>
+    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/submissions/submission.css?v=${version}|" />
+    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/highlight.min.css?v=${version}|" />
+</head>
+<body>
+    <div id="content" class="container" layout:fragment="content">
+        <div class="row-fluid">
+            <div id="main-content" class="span9">
+                <div class="submission">
+                    <div class="header">
+                        <span class="pull-right"></span>
+                        <span class="name" th:text="|P${submission.problem.problemId} ${submission.problem.problemName}|">Problem</span>
+                    </div> <!-- .header -->
+                    <div class="body">
+                        <div class="section">
+                            <h4 th:text="#{voj.submissions.submission.overview}">Overview</h4>
+                            <div class="description">
+                                <table class="table">
+                                    <tr>
+                                        <td th:text="#{voj.submissions.submission.judge-result}">Judge Result</td>
+                                        <td id="judge-result" th:class="|flag-${submission.judgeResult.judgeResultSlug}|" th:text="${submission.judgeResult.judgeResultName}">Result</td>
+                                    </tr>
+                                    <tr>
+                                        <td th:text="#{voj.submissions.submission.problem}">Problem</td>
+                                        <td id="problem-summery"><a th:href="@{/p/{id}(id=${submission.problem.problemId})}" th:text="|P${submission.problem.problemId} ${submission.problem.problemName}|">Problem</a></td>
+                                    </tr>
+                                    <tr>
+                                        <td th:text="#{voj.submissions.submission.submit-time}">Submit Time</td>
+                                        <td id="submit-time" th:text="${@dateFormatter.dateTimeLongMedium(submission.submitTime, language)}">time</td>
+                                    </tr>
+                                    <tr>
+                                        <td th:text="#{voj.submissions.submission.language}">Language</td>
+                                        <td id="language-name" th:text="${submission.language.languageName}">Language</td>
+                                    </tr>
+                                    <tr>
+                                        <td th:text="#{voj.submissions.submission.judger}">Judger</td>
+                                        <td id="judger-name">Default Judger</td>
+                                    </tr>
+                                    <tr>
+                                        <td th:text="#{voj.submissions.submission.used-time}">Used Time</td>
+                                        <td id="used-time" th:text="|${submission.usedTime} ms|">0 ms</td>
+                                    </tr>
+                                    <tr>
+                                        <td th:text="#{voj.submissions.submission.used-memory}">Used Memory</td>
+                                        <td id="used-memory" th:text="|${submission.usedMemory} K|">0 K</td>
+                                    </tr>
+                                    <tr>
+                                        <td th:text="#{voj.submissions.submission.execute-time}">Execute Time</td>
+                                        <td id="execute-time" th:text="${@dateFormatter.dateTimeLongMedium(submission.executeTime, language)}">time</td>
+                                    </tr>
+                                </table>
+                            </div> <!-- .description -->
+                        </div> <!-- .section -->
+                        <div class="section">
+                            <h4 th:text="#{voj.submissions.submission.judge-result}">Judge Result</h4>
+                            <div id="judge-log" class="description markdown" th:utext="${submission.judgeLog}">judge log</div> <!-- .description -->
+                        </div> <!-- .section -->
+                        <div class="section" th:if="${submission.user == myProfile or myProfile?.userGroup?.userGroupSlug == 'administrators'}">
+                            <h4 th:text="#{voj.submissions.submission.code}">Code</h4>
+                            <div class="description">
+                                <pre><code th:text="${submission.code}">code</code></pre>
+                            </div> <!-- .description -->
+                        </div> <!-- .section -->
+                    </div> <!-- .body -->
+                </div> <!-- .submission -->
+            </div> <!-- #main-content -->
+            <div id="sidebar" class="span3">
+                <div id="submit-user" class="section">
+                    <h5 th:text="#{voj.submissions.submission.user}">User</h5>
+                    <img th:src="|${cdnUrl}/img/avatar.jpg?v=${version}|" alt="User Avatar" class="img-circle" />
+                    <p>
+                        <span th:text="#{voj.submissions.submission.submitted-by}">Submitted by</span> <a th:href="@{/accounts/user/{id}(id=${submission.user.uid})}" th:text="${submission.user.username}">user</a>
+                    </p>
+                </div> <!-- #profile -->
+                <div id="problem" class="section">
+                    <h5 th:text="#{voj.submissions.submission.action}">Action</h5>
+                    <ul>
+                        <li><a th:href="@{/p/{id}(id=${submission.problem.problemId})}" th:text="#{voj.submissions.submission.view-problem}">View Problem</a></li>
+                        <li><a th:href="@{/p/{id}/solution(id=${submission.problem.problemId})}" th:text="#{voj.submissions.submission.view-solution}">View Solution</a></li>
+                        <li><a th:href="@{/submission(pid=${submission.problem.problemId})}" th:text="#{voj.submissions.submission.view-submission}">View Submission</a></li>
+                    </ul>
+                </div> <!-- problem -->
+            </div> <!-- #sidebar -->
+        </div> <!-- .row-fluid -->
+    </div> <!-- #content -->
+
+    <th:block layout:fragment="scripts">
+    <script type="text/javascript" th:inline="javascript">
+        $.getScript([[|${cdnUrl}/js/markdown.min.js?v=${version}|]], function() {
+            converter = Markdown.getSanitizingConverter();
+
+            $('.markdown').each(function() {
+                var plainContent    = $(this).text(),
+                    markdownContent = converter.makeHtml(plainContent.replace(/\\\n/g, '\\n'));
+
+                $(this).html(markdownContent);
+            });
+        });
+    </script>
+    <th:block th:if="${submission.judgeResult.judgeResultName == 'Pending'}">
+    <script type="text/javascript" th:inline="javascript">
+        $.getScript([[|${cdnUrl}/js/date-${language}.min.js?v=${version}|]], function() {
+            var currentJudgeResult = 'Pending',
+                getterInterval     = setInterval(function() {
+                    getRealTimeJudgeResult();
+                    currentJudgeResult = $('#judge-result').html();
+
+                    if ( currentJudgeResult != 'Pending' ) {
+                        clearInterval(getterInterval);
+                    }
+                }, 10000);
+        });
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        $(function() {
+            var subscriptionUrl = [[@{/submission/getRealTimeJudgeResult.action(submissionId=${submission.submissionId},csrfToken=${_csrf.token})}]],
+                source          = new EventSource(subscriptionUrl),
+                lastMessage     = '';
+
+            source.onmessage    = function(e) {
+                var message     = e['data'];
+
+                if ( message == lastMessage ) {
+                    return;
+                }
+                lastMessage     = message;
+
+                if ( message == 'Established' ) {
+                    $('#judge-log').append('<p>Connected to Server.</p>');
+                    return;
+                }
+                var mapMessage  = JSON.parse(message),
+                    judgeResult = mapMessage['judgeResult'],
+                    judgeLog    = mapMessage['message'];
+
+                $('#judge-result').html(judgeResult);
+                $('#judge-log').append(converter.makeHtml(judgeLog));
+            }
+        });
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function getRealTimeJudgeResult() {
+            var pageRequests = {
+                'submissionId': [[${submission.submissionId}]]
+            };
+
+            $.ajax({
+                type: 'GET',
+                url: [[@{/submission/getSubmission.action}]],
+                data: pageRequests,
+                dataType: 'JSON',
+                success: function(result){
+                    if ( result['isSuccessful'] ) {
+                        if ( result['submission']['judgeResult']['judgeResultSlug'] != 'PD' ) {
+                            $('#judge-result').removeClass();
+                            $('#judge-result').addClass("flag-" + result['submission']['judgeResult']['judgeResultSlug'])
+                            $('#judge-result').html(result['submission']['judgeResult']['judgeResultName']);
+                            $('#used-time').html(result['submission']['usedTime'] + " ms");
+                            $('#used-memory').html(result['submission']['usedMemory'] + " KB");
+                            $('#execute-time').html(getFormatedDateString(result['submission']['executeTime'], [[${language}]]));
+                            $('#judge-log').html(converter.makeHtml(result['submission']['judgeLog'].replace(/\\\n/g, '\\n')));
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+    <script type="text/javascript">
+        function getFormatedDateString(dateTime, locale) {
+            var dateObject = new Date(dateTime),
+                dateString = dateObject.toString();
+
+            if ( locale == 'en_US' ) {
+                dateString = dateObject.toString('MMM d, yyyy h:mm:ss tt');
+            } else if ( locale == 'zh_CN' ) {
+                dateString = dateObject.toString('yyyy-M-dd HH:mm:ss');
+            }
+
+            return dateString;
+        }
+    </script>
+    </th:block>
+    <script type="text/javascript" th:inline="javascript">
+        $.getScript([[|${cdnUrl}/js/highlight.min.js?v=${version}|]], function() {
+            $('pre code').each(function(i, block) {
+                hljs.highlightBlock(block);
+            });
+        });
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        $(function() {
+            var imageObject       = $('img', '#submit-user'),
+                hashCode          = md5([[${submission.user.email}]]),
+                gravatarSeriveUrl = 'https://secure.gravatar.com/';
+
+            $.ajax({
+                type: 'GET',
+                url: gravatarSeriveUrl + hashCode + '.json',
+                dataType: 'jsonp',
+                success: function(result){
+                    if ( result != null ) {
+                        var imageUrl    = result['entry'][0]['thumbnailUrl'],
+                            requrestUrl = imageUrl + '?s=200';
+                        $(imageObject).attr('src', requrestUrl);
+                    }
+                }
+            });
+        });
+    </script>
+    </th:block>
+</body>
+</html>

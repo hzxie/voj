@@ -16,7 +16,6 @@
  */
 package org.verwandlung.voj.web.util;
 
-import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.Map;
 
@@ -31,13 +30,8 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.mail.javamail.MimeMessagePreparator;
 import org.springframework.stereotype.Component;
-import org.springframework.ui.freemarker.FreeMarkerTemplateUtils;
-
-import freemarker.core.ParseException;
-import freemarker.template.MalformedTemplateNameException;
-import freemarker.template.TemplateException;
-import freemarker.template.TemplateNotFoundException;
-import org.springframework.web.servlet.view.freemarker.FreeMarkerConfigurer;
+import org.thymeleaf.ITemplateEngine;
+import org.thymeleaf.context.Context;
 
 /**
  * The email sending service.
@@ -49,37 +43,29 @@ public class MailSender {
   /**
    * The constructor of MailSender.
    *
-   * @param freeMarkerConfigurer - the FreeMarker configurer
+   * @param templateEngine - the shared Thymeleaf template engine
    * @param mailSender - the JavaMailSender object
    */
   @Autowired
-  private MailSender(FreeMarkerConfigurer freeMarkerConfigurer, JavaMailSender mailSender) {
-    this.freeMarkerConfigurer = freeMarkerConfigurer;
+  private MailSender(ITemplateEngine templateEngine, JavaMailSender mailSender) {
+    this.templateEngine = templateEngine;
     this.mailSender = mailSender;
   }
 
   /**
-   * Parses the content of an email template.
+   * Renders the content of an email template.
    *
-   * @param templateLocation - the relative path of the email template
+   * @param templateName - the name of the email template, resolved against
+   *     classpath:/templates/ (e.g. {@code mail/reset-password})
    * @param model - the additional information of the email
-   * @return the parsed email content
-   * @throws TemplateException
-   * @throws IOException
-   * @throws ParseException
-   * @throws MalformedTemplateNameException
-   * @throws TemplateNotFoundException
+   * @return the rendered email content
    */
-  public String getMailContent(String templateLocation, Map<String, Object> model)
-      throws TemplateNotFoundException,
-          MalformedTemplateNameException,
-          ParseException,
-          IOException,
-          TemplateException {
+  public String getMailContent(String templateName, Map<String, Object> model) {
     model.put("baseUrl", baseUrl);
 
-    return FreeMarkerTemplateUtils.processTemplateIntoString(
-        freeMarkerConfigurer.getConfiguration().getTemplate(templateLocation), model);
+    Context context = new Context();
+    context.setVariables(model);
+    return templateEngine.process(templateName, context);
   }
 
   /**
@@ -114,8 +100,8 @@ public class MailSender {
         .start();
   }
 
-  /** The autowired Configuration object. */
-  private final FreeMarkerConfigurer freeMarkerConfigurer;
+  /** The shared Thymeleaf engine, used to render the HTML mail bodies. */
+  private final ITemplateEngine templateEngine;
 
   /** The autowired JavaMailSender object. Used to send emails. */
   private final JavaMailSender mailSender;

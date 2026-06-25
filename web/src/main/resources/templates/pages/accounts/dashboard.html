@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/main}" lang="en">
+<head>
+    <title th:text="#{voj.accounts.dashboard.title} + ' | ' + ${websiteName}">Dashboard</title>
+    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/accounts/dashboard.css?v=${version}|" />
+</head>
+<body>
+    <div id="content" class="container" layout:fragment="content">
+        <div id="sub-nav">
+            <ul class="nav nav-tabs">
+                <li class="active"><a href="#tab-statistics" data-toggle="tab" th:text="#{voj.accounts.dashboard.statistics}">Statistics</a></li>
+                <li><a href="#tab-notifications" data-toggle="tab" th:text="#{voj.accounts.dashboard.notifications}">Notifications</a></li>
+                <li><a href="#tab-customize" data-toggle="tab" th:text="#{voj.accounts.dashboard.customize}">Customize</a></li>
+                <li><a href="#tab-messages" data-toggle="tab" th:text="#{voj.accounts.dashboard.messages}">Messages</a></li>
+                <li><a href="#tab-accounts" data-toggle="tab" th:text="#{voj.accounts.dashboard.accounts}">Accounts</a></li>
+                <li th:if="${myProfile.userGroup.userGroupSlug == 'administrators'}"><a th:href="@{/administration}" th:text="#{voj.accounts.dashboard.system-administration}">System Administration</a></li>
+            </ul>
+        </div> <!-- #sub-nav -->
+        <div id="main-content" class="tab-content">
+            <div class="tab-pane active" id="tab-statistics">
+                <div class="section">
+                    <div class="header">
+                        <div class="row-fluid">
+                            <div class="span8">
+                                <h4 th:text="#{voj.accounts.dashboard.submission-calendar}">Submission Calendar</h4>
+                            </div> <!-- .span8 -->
+                            <div class="span4">
+                                <select id="submission-period">
+                                    <option value="7" th:text="#{voj.accounts.dashboard.1-week}">1 Week</option>
+                                    <option value="30" th:text="#{voj.accounts.dashboard.1-month}">1 Month</option>
+                                    <option value="365" th:text="#{voj.accounts.dashboard.1-year}">1 Year</option>
+                                </select>
+                            </div> <!-- .span4 -->
+                        </div> <!-- .row-fluid -->
+                    </div> <!-- .header -->
+                    <div class="body">
+                        <div id="submissions-calendar"></div> <!-- #submissions-calendar -->
+                    </div> <!-- .body -->
+                </div> <!-- .section -->
+                <div class="section">
+                    <div class="header">
+                        <h4 th:text="#{voj.accounts.dashboard.submissions}">Submissions</h4>
+                    </div> <!-- .header -->
+                    <div class="body">
+                        <table id="submissions" class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th class="flag" th:text="#{voj.problems.problems.result}">Result</th>
+                                    <th class="name" th:text="#{voj.problems.problems.name}">Name</th>
+                                    <th class="submission" th:text="#{voj.problems.problems.submission}">Submission</th>
+                                    <th class="ac-rate">AC%</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="submission : ${submissions}">
+                                    <td th:class="|flag-${submission.value.judgeResult.judgeResultSlug}|">
+                                        <a th:href="@{/submission/{id}(id=${submission.value.submissionId})}" th:text="${submission.value.judgeResult.judgeResultSlug}">AC</a>
+                                    </td>
+                                    <td class="name"><a th:href="@{/p/{id}(id=${submission.key})}" th:text="|P${submission.key} ${submission.value.problem.problemName}|">Problem</a></td>
+                                    <td th:text="${submission.value.problem.totalSubmission}">0</td>
+                                    <td>
+                                        <span th:if="${submission.value.problem.totalSubmission == 0}">0%</span>
+                                        <span th:unless="${submission.value.problem.totalSubmission == 0}" th:text="${#numbers.formatDecimal(submission.value.problem.acceptedSubmission * 100.0 / submission.value.problem.totalSubmission, 1, 0)} + '%'">0%</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div> <!-- .body -->
+                </div> <!-- .section -->
+            </div> <!-- #tab-statistics -->
+            <div class="tab-pane" id="tab-notifications">
+                <p>No notifications now.</p>
+            </div> <!-- #tab-notifications -->
+            <div class="tab-pane" id="tab-customize">
+            </div> <!-- #tab-customize -->
+            <div class="tab-pane" id="tab-messages">
+                <div class="row-fluid">
+                    <div class="span8">
+                    </div> <!-- .span8 -->
+                    <div class="span4">
+                    </div> <!-- .span4 -->
+                </div> <!-- .row-fluid -->
+            </div> <!-- #tab-messages -->
+            <div class="tab-pane" id="tab-accounts">
+                <form id="password-form" class="section" method="POST" onSubmit="onChangePasswordSubmit(); return false;">
+                    <h4 th:text="#{voj.accounts.dashboard.change-password}">Change Password</h4>
+                    <div class="row-fluid">
+                        <div class="alert alert-error hide"></div>
+                        <div class="alert alert-success hide" th:text="#{voj.accounts.dashboard.password-changed}">You've changed your password.</div>
+                    </div> <!-- .row-fluid -->
+                    <div class="row-fluid">
+                        <div class="span4">
+                            <label for="old-password" th:text="#{voj.accounts.dashboard.old-password}">Old Password</label>
+                        </div> <!-- .span4 -->
+                        <div class="span8">
+                            <div class="control-group">
+                                <input id="old-password" class="span8" type="password" maxlength="16" />
+                            </div> <!-- .control-group -->
+                        </div> <!-- .span8 -->
+                    </div> <!-- .row-fluid -->
+                    <div class="row-fluid">
+                        <div class="span4">
+                            <label for="new-password" th:text="#{voj.accounts.dashboard.new-password}">New Password</label>
+                        </div> <!-- .span4 -->
+                        <div class="span8">
+                            <div class="control-group">
+                                <input id="new-password" class="span8" type="password" maxlength="16" />
+                            </div> <!-- .control-group -->
+                        </div> <!-- .span8 -->
+                    </div> <!-- .row-fluid -->
+                    <div class="row-fluid">
+                        <div class="span4">
+                            <label for="confirm-new-password" th:text="#{voj.accounts.dashboard.confirm-new-password}">Confirm New Password</label>
+                        </div> <!-- .span4 -->
+                        <div class="span8">
+                            <div class="control-group">
+                                <input id="confirm-new-password" class="span8" type="password" maxlength="16" />
+                            </div> <!-- .control-group -->
+                        </div> <!-- .span8 -->
+                    </div> <!-- .row-fluid -->
+                    <div class="row-fluid">
+                        <div class="span12">
+                            <button class="btn btn-primary btn-block" type="submit" th:text="#{voj.accounts.dashboard.change-password}">Change Password</button>
+                        </div> <!-- .span12 -->
+                    </div> <!-- .row-fluid -->
+                </form> <!-- #password-form -->
+                <form id="profile-form" class="section" method="POST" onSubmit="onChangeProfileSubmit(); return false;">
+                    <h4 th:text="#{voj.accounts.dashboard.profile}">Profile</h4>
+                    <div class="row-fluid">
+                        <div class="alert alert-error hide"></div>
+                        <div class="alert alert-success hide" th:text="#{voj.accounts.dashboard.profile-changed}">You've changed your profile.</div>
+                    </div> <!-- .row-fluid -->
+                    <div class="row-fluid">
+                        <div class="span4">
+                            <label for="email" th:text="#{voj.accounts.dashboard.email}">Email</label>
+                        </div> <!-- .span4 -->
+                        <div class="span8">
+                            <div class="control-group">
+                                <input id="email" class="span8" type="text" th:value="${user.email}" maxlength="64" placeholder="you@example.com" />
+                            </div> <!-- .control-group -->
+                        </div> <!-- .span8 -->
+                    </div> <!-- .row-fluid -->
+                    <div class="row-fluid">
+                        <div class="span4">
+                            <label for="location" th:text="#{voj.accounts.dashboard.location}">Location</label>
+                        </div> <!-- .span4 -->
+                        <div class="span8">
+                            <div class="control-group">
+                                <input id="location" class="span8" type="text" th:value="${location}" maxlength="128" th:placeholder="#{voj.accounts.dashboard.location-example}" />
+                            </div> <!-- .control-group -->
+                        </div> <!-- .span8 -->
+                    </div> <!-- .row-fluid -->
+                    <div class="row-fluid">
+                        <div class="span4">
+                            <label for="website" th:text="#{voj.accounts.dashboard.website}">Website</label>
+                        </div> <!-- .span4 -->
+                        <div class="span8">
+                            <div class="control-group">
+                                <input id="website" class="span8" type="text" th:value="${website}" maxlength="64" placeholder="http://zjhzxhz.com" />
+                            </div> <!-- .control-group -->
+                        </div> <!-- .span8 -->
+                    </div> <!-- .row-fluid -->
+                    <div class="row-fluid">
+                        <div class="span12">
+                            <label for="social-links">
+                                <span th:text="#{voj.accounts.dashboard.social-links}">Social Links</span>
+                                <a id="new-social-link" th:title="#{voj.accounts.dashboard.new-social-link}" href="javascript:void(0);">
+                                    <i class="fa fa-plus-circle"></i>
+                                </a>
+                            </label>
+                            <div id="social-links">
+                                <p id="no-social-links" th:text="#{voj.accounts.dashboard.no-social-links}">No Social Links.</p>
+                                <ul></ul>
+                            </div> <!-- #social-links -->
+                        </div> <!-- .span12 -->
+                    </div> <!-- .row-fluid -->
+                    <div class="row-fluid">
+                        <div class="span12">
+                            <label for="wmd-input" th:text="#{voj.accounts.dashboard.about-me}">About Me</label>
+                            <div id="markdown-editor">
+                                <div class="wmd-panel">
+                                    <div id="wmd-button-bar" class="wmd-button-bar"></div> <!-- #wmd-button-bar -->
+                                    <textarea id="wmd-input" class="wmd-input" th:placeholder="#{voj.accounts.dashboard.introduce-yourself}" th:text="${aboutMe}"></textarea>
+                                </div> <!-- .wmd-panel -->
+                                <div id="wmd-preview" class="wmd-panel wmd-preview"></div> <!-- .wmd-preview -->
+                            </div> <!-- #markdown-editor -->
+                        </div> <!-- .span12 -->
+                    </div> <!-- .row-fluid -->
+                    <div class="row-fluid">
+                        <div class="span12">
+                            <input id="csrf-token" type="hidden" th:value="${_csrf.token}" />
+                            <button class="btn btn-primary btn-block" type="submit" th:text="#{voj.accounts.dashboard.update-profile}">Update Profile</button>
+                        </div> <!-- .span12 -->
+                    </div> <!-- .row-fluid -->
+                </form> <!-- #profile-form -->
+            </div> <!-- #tab-accounts -->
+        </div> <!-- #main-content -->
+    </div> <!-- #content -->
+
+    <th:block layout:fragment="scripts">
+    <script type="text/javascript" th:inline="javascript">
+        $.getScript([[|${cdnUrl}/js/highcharts.min.js?v=${version}|]], function() {
+            return getSubmissionsOfUsers(7);
+        });
+    </script>
+    <script type="text/javascript">
+        $('#submission-period').change(function() {
+            var period = $(this).val();
+            return getSubmissionsOfUsers(period);
+        });
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function getSubmissionsOfUsers(period) {
+            var pageRequests = {
+                'period': period
+            };
+
+            $.ajax({
+                type: 'GET',
+                url: [[@{/accounts/getNumberOfSubmissionsOfUsers.action}]],
+                data: pageRequests,
+                dataType: 'JSON',
+                success: function(result){
+                    return processSubmissionOfUsers(result['acceptedSubmissions'], result['totalSubmissions']);
+                }
+            });
+        }
+    </script>
+    <script type="text/javascript">
+        function processSubmissionOfUsers(acceptedSubmissionsMap, totalSubmissionsMap) {
+            var categories          = [],
+                totalSubmissions    = [],
+                acceptedSubmissions = [];
+
+            $.each(totalSubmissionsMap, function(key, value){
+                categories.push(key);
+                totalSubmissions.push(value);
+            });
+            $.each(acceptedSubmissionsMap, function(key, value){
+                acceptedSubmissions.push(value);
+            });
+            displaySubmissionsOfUsers(categories, acceptedSubmissions, totalSubmissions);
+        }
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function displaySubmissionsOfUsers(categories, acceptedSubmissions, totalSubmissions) {
+            Highcharts.setOptions({
+                colors: ['#34495e', '#e74c3c']
+            });
+
+            $('#submissions-calendar').highcharts({
+                chart: {
+                    backgroundColor: null,
+                },
+                title: {
+                    text: null
+                },
+                xAxis: {
+                    categories: categories
+                },
+                yAxis: {
+                    allowDecimals: false,
+                    title: {
+                        text: [[#{voj.accounts.dashboard.number-of-submissions}]]
+                    }
+                },
+                tooltip: {
+                    shared: true,
+                    crosshairs: true
+                },
+                series: [
+                    {
+                        name: [[#{voj.accounts.dashboard.total-submissions}]],
+                        lineWidth: 4,
+                        marker: {
+                            radius: 4
+                        },
+                        data: totalSubmissions
+                    },
+                    {
+                        name: [[#{voj.accounts.dashboard.accepted-submissions}]],
+                        data: acceptedSubmissions
+                    }
+                ]
+            });
+        }
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        $.getScript([[|${cdnUrl}/js/markdown.min.js?v=${version}|]], function() {
+            converter = Markdown.getSanitizingConverter();
+            editor    = new Markdown.Editor(converter);
+            editor.run();
+
+            $('.markdown').each(function() {
+                var plainContent    = $(this).text(),
+                    markdownContent = converter.makeHtml(plainContent.replace(/\\\n/g, '\\n'));
+
+                $(this).html(markdownContent);
+            });
+        });
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function onChangePasswordSubmit() {
+            $('.alert-success', '#password-form').addClass('hide');
+            $('.alert-error', '#password-form').addClass('hide');
+            $('button[type=submit]', '#password-form').attr('disabled', 'disabled');
+            $('button[type=submit]', '#password-form').html([[#{voj.accounts.dashboard.please-wait}]]);
+
+            var oldPassword     = $('#old-password').val(),
+                newPassword     = $('#new-password').val(),
+                confirmPassword = $('#confirm-new-password').val();
+
+            return doChangePasswordAction(oldPassword, newPassword, confirmPassword);
+        }
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function doChangePasswordAction(oldPassword, newPassword, confirmPassword) {
+            var postData = {
+                'oldPassword': oldPassword,
+                'newPassword': newPassword,
+                'confirmPassword': confirmPassword
+            };
+
+            $.ajax({
+                type: 'POST',
+                url: [[@{/accounts/changePassword.action}]],
+                data: postData,
+                dataType: 'JSON',
+                success: function(result){
+                    return processChangePasswordResult(result);
+                }
+            });
+        }
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function processChangePasswordResult(result) {
+            if ( result['isSuccessful'] ) {
+                $('.alert-success', '#password-form').removeClass('hide');
+            } else {
+                var errorMessage  = '';
+
+                if ( !result['isOldPasswordCorrect'] ) {
+                    errorMessage += [[#{voj.accounts.dashboard.old-password-incorrect}]] + '<br>';
+                }
+                if ( result['isNewPasswordEmpty'] ) {
+                    errorMessage += [[#{voj.accounts.dashboard.new-password-empty}]] + '<br>';
+                }
+                if ( !result['isNewPasswordLegal'] ) {
+                    errorMessage += [[#{voj.accounts.dashboard.new-password-illegal}]] + '<br>';
+                }
+                if ( !result['isConfirmPasswordMatched'] ) {
+                    errorMessage += [[#{voj.accounts.dashboard.new-password-not-matched}]] + '<br>';
+                }
+                $('.alert-error', '#password-form').html(errorMessage);
+                $('.alert-error', '#password-form').removeClass('hide');
+            }
+            $('button[type=submit]', '#password-form').html([[#{voj.accounts.dashboard.change-password}]]);
+            $('button[type=submit]', '#password-form').removeAttr('disabled');
+        }
+    </script>
+    <script type="text/javascript">
+        socialServices      = {
+            'Facebook'      : 'https://facebook.com/',
+            'Twitter'       : 'https://twitter.com/',
+            'Weibo'         : 'http://weibo.com/',
+            'Instagram'     : 'https://instagram.com/',
+            'GitHub'        : 'https://github.com/',
+            'StackOverflow' : 'http://stackoverflow.com/users/',
+            'LinkedIn'      : 'https://www.linkedin.com/profile/view?id='
+        };
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        $(function() {
+            var mySocialLinks   = {
+                'Facebook'      : [[${socialLinks['Facebook']} ?: '']],
+                'Twitter'       : [[${socialLinks['Twitter']} ?: '']],
+                'Weibo'         : [[${socialLinks['Weibo']} ?: '']],
+                'Instagram'     : [[${socialLinks['Instagram']} ?: '']],
+                'GitHub'        : [[${socialLinks['GitHub']} ?: '']],
+                'StackOverflow' : [[${socialLinks['StackOverflow']} ?: '']],
+                'LinkedIn'      : [[${socialLinks['LinkedIn']} ?: '']]
+            };
+
+            for ( var serviceName in mySocialLinks ) {
+                var serviceBaseUrl  = socialServices[serviceName],
+                    serviceUsername = mySocialLinks[serviceName],
+                    serviceUrl      = serviceBaseUrl + serviceUsername;
+
+                if ( typeof(serviceUsername) != 'undefined' && serviceUsername != '' ) {
+                    $('#no-social-links').addClass('hide');
+                    $('#social-links > ul').append(getSocialLinkContainer(serviceName, serviceUrl));
+                }
+            }
+        });
+    </script>
+    <script type="text/javascript">
+        $('#new-social-link').click(function() {
+            var serviceName = 'Facebook',
+                serviceUrl  = socialServices['Facebook'];
+
+            $('#no-social-links').addClass('hide');
+            $('#social-links > ul').append(getSocialLinkContainer(serviceName, serviceUrl));
+        });
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function getSocialLinkContainer(serviceName, serviceUrl) {
+            var containerTemplate = '<li class="social-link">' +
+                                    '    <div class="header">' +
+                                    '        <h5>%s</h5>' +
+                                    '        <ul class="inline">' +
+                                    '            <li><a href="javascript:void(0);"><i class="fa fa-edit"></i></a></li>' +
+                                    '            <li><a href="javascript:void(0);"><i class="fa fa-trash"></i></a></li>' +
+                                    '        </ul>' +
+                                    '    </div> <!-- .header -->' +
+                                    '    <div class="body hide">' +
+                                    '        <div class="row-fluid">' +
+                                    '            <div class="span4">' +
+                                    '                <label>' + [[#{voj.accounts.dashboard.service-name}]] + '</label>' +
+                                    '            </div> <!-- .span4 -->' +
+                                    '            <div class="span8">' +
+                                    '                <div class="control-group">' +
+                                    '                    <select class="service">' + getSocialLinkOptions(serviceName) + '</select>' +
+                                    '                </div> <!-- .control-group -->' +
+                                    '            </div> <!-- .span8 -->' +
+                                    '        </div> <!-- .row-fluid -->' +
+                                    '        <div class="row-fluid">' +
+                                    '            <div class="span4">' +
+                                    '                <label>URL</label>' +
+                                    '            </div> <!-- .span4 -->' +
+                                    '            <div class="span8">' +
+                                    '                <div class="control-group">' +
+                                    '                    <input class="url span8" type="text" maxlength="128" value="%s" />' +
+                                    '                </div> <!-- .control-group -->' +
+                                    '            </div> <!-- .span8 -->' +
+                                    '        </div> <!-- .row-fluid -->' +
+                                    '    </div> <!-- .body -->' +
+                                    '</li> <!-- .social-link -->';
+
+            return containerTemplate.format(serviceName, serviceUrl);
+        }
+    </script>
+    <script type="text/javascript">
+        function getSocialLinkOptions(selectedServiceName) {
+            var socialLinkOptions       = '',
+                optionTemplate          = '<option value="%s">%s</option>',
+                selectedOptionTemplate  = '<option value="%s" selected>%s</option>';
+
+            for ( var serviceName in socialServices ) {
+                if ( serviceName == selectedServiceName ) {
+                    socialLinkOptions  += selectedOptionTemplate.format(serviceName, serviceName);
+                } else {
+                    socialLinkOptions  += optionTemplate.format(serviceName, serviceName);
+                }
+            }
+            return socialLinkOptions;
+        }
+    </script>
+    <script type="text/javascript">
+        $('#social-links').on('click', 'i.fa-edit', function() {
+            var socialLinkContainer = $(this).parent().parent().parent().parent().parent(),
+                isBodyUnfolded      = $('.body', $(socialLinkContainer)).is(':visible');
+
+            if ( isBodyUnfolded ) {
+                $('.body', $(socialLinkContainer)).addClass('hide');
+            } else {
+                $('.body', $(socialLinkContainer)).removeClass('hide');
+            }
+        });
+    </script>
+    <script type="text/javascript">
+        $('#social-links').on('click', 'i.fa-trash', function() {
+            var socialLinkContainer = $(this).parent().parent().parent().parent().parent(),
+                socialLinks         = $('li.social-link', '#social-links').length;
+
+            $(socialLinkContainer).remove();
+
+            if ( socialLinks == 1 ) {
+                $('#no-social-links').removeClass('hide');
+            }
+        });
+    </script>
+    <script type="text/javascript">
+        $('#social-links').on('change', 'select.service', function() {
+            var socialLinkContainer = $(this).parent().parent().parent().parent().parent(),
+                serviceName         = $(this).val(),
+                serviceBaseUrl      = socialServices[serviceName];
+
+            $('h5', $(socialLinkContainer)).html(serviceName);
+            $('input.url', $(socialLinkContainer)).val(serviceBaseUrl);
+        });
+    </script>
+    <script type="text/javascript">
+        function getSocialLinks() {
+            var socialLinks = {};
+
+            $('.social-link').each(function() {
+                var serviceName     = $('select.service', $(this)).val(),
+                    serviceUrl      = $('input.url', $(this)).val(),
+                    serviceBaseUrl  = socialServices[serviceName],
+                    serviceUsername = serviceUrl.substr(serviceBaseUrl.length);
+
+                if ( serviceUrl.indexOf(serviceBaseUrl) != -1 && serviceUsername != '' ) {
+                    socialLinks[serviceName] = serviceUsername;
+                }
+            });
+            return JSON.stringify(socialLinks);
+        }
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function onChangeProfileSubmit() {
+            $('.alert-success', '#profile-form').addClass('hide');
+            $('.alert-error', '#profile-form').addClass('hide');
+            $('button[type=submit]', '#profile-form').attr('disabled', 'disabled');
+            $('button[type=submit]', '#profile-form').html([[#{voj.accounts.dashboard.please-wait}]]);
+
+            var email       = $('#email').val(),
+                location    = $('#location').val(),
+                website     = $('#website').val(),
+                socialLinks = getSocialLinks(),
+                aboutMe     = $('#wmd-input').val(),
+                csrfToken   = $('#csrf-token').val();
+
+            return doUpdateProfileAction(email, location, website, socialLinks, aboutMe, csrfToken);
+        }
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function doUpdateProfileAction(email, location, website, socialLinks, aboutMe, csrfToken) {
+            var postData = {
+                'email': email,
+                'location': location,
+                'website': website,
+                'socialLinks': socialLinks,
+                'aboutMe': aboutMe,
+                'csrfToken': csrfToken
+            };
+
+            $.ajax({
+                type: 'POST',
+                url: [[@{/accounts/updateProfile.action}]],
+                data: postData,
+                dataType: 'JSON',
+                success: function(result){
+                    return processUpdateProfileResult(result);
+                }
+            });
+        }
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function processUpdateProfileResult(result) {
+            if ( result['isSuccessful'] ) {
+                $('.alert-success', '#profile-form').removeClass('hide');
+            } else {
+                var errorMessage  = '';
+
+                if ( !result['isCsrfTokenValid'] ) {
+                    errorMessage += [[#{voj.accounts.dashboard.invalid-token}]];
+                }
+                if ( result['isEmailEmpty'] ) {
+                    errorMessage += [[#{voj.accounts.dashboard.email-empty}]] + '<br>';
+                } else if ( !result['isEmailLegal'] ) {
+                    errorMessage += [[#{voj.accounts.dashboard.email-illegal}]] + '<br>';
+                } else if ( result['isEmailExists'] ) {
+                    errorMessage += [[#{voj.accounts.dashboard.email-existing}]] + '<br>';
+                }
+                if ( !result['isLocationLegal'] ) {
+                    errorMessage += [[#{voj.accounts.dashboard.location-illegal}]] + '<br>';
+                }
+                if ( !result['isWebsiteLegal'] ) {
+                    errorMessage += [[#{voj.accounts.dashboard.website-legal}]] + '<br>';
+                }
+                if ( !result['isAboutMeLegal'] ) {
+                    errorMessage += [[#{voj.accounts.dashboard.about-me-legal}]] + '<br>';
+                }
+                $('.alert-error', '#profile-form').html(errorMessage);
+                $('.alert-error', '#profile-form').removeClass('hide');
+            }
+            $('button[type=submit]', '#profile-form').html([[#{voj.accounts.dashboard.update-profile}]]);
+            $('button[type=submit]', '#profile-form').removeAttr('disabled');
+        }
+    </script>
+    </th:block>
+</body>
+</html>

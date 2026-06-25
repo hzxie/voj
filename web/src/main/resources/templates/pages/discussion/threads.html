@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/main}" lang="en">
+<head>
+    <title th:text="#{voj.discussion.threads.title} + ' | ' + ${websiteName}">Discussion</title>
+    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/discussion/threads.css?v=${version}|" />
+</head>
+<body>
+    <div id="content" class="container" layout:fragment="content">
+        <div id="main-content" class="row-fluid">
+            <div id="discussion" class="span8">
+                <table id="discussion-threads" class="table">
+                    <tr class="discussion-thread" th:each="discussionThread : ${discussionThreads}">
+                        <td class="avatar" th:attr="data-value=${#strings.toLowerCase(discussionThread.discussionThreadCreator.email)}">
+                            <img th:src="|${cdnUrl}/img/avatar.jpg?v=${version}|" alt="avatar" />
+                        </td>
+                        <td class="overview">
+                            <h5><a th:href="@{/discussion/{id}(id=${discussionThread.discussionThreadId})}" th:text="${discussionThread.discussionThreadTitle}">Title</a></h5>
+                            <ul class="inline">
+                                <li>
+                                    <span th:text="#{voj.discussion.threads.author}">Author</span>:
+                                    <a th:href="@{/accounts/user/{id}(id=${discussionThread.discussionThreadCreator.uid})}" th:text="${discussionThread.discussionThreadCreator.username}">user</a>
+                                </li>
+                                <li>
+                                    <span th:text="#{voj.discussion.threads.posted-in}">Posted in</span>:
+                                    <a th:if="${discussionThread.problem == null}" th:href="@{/discussion(topicSlug=${discussionThread.discussionTopic.discussionTopicSlug})}" th:text="${discussionThread.discussionTopic.discussionTopicName}">Topic</a>
+                                    <a th:unless="${discussionThread.problem == null}" th:href="@{/p/{id}(id=${discussionThread.problem.problemId})}" th:text="|P${discussionThread.problem.problemId}: ${discussionThread.problem.problemName}|">Problem</a>
+                                </li>
+                                <li>
+                                    <span th:text="#{voj.discussion.threads.latest-reply}">Latest reply</span>:
+                                    <th:block th:if="${discussionThread.latestDiscussionReply == null}">
+                                        <a th:href="@{/accounts/user/{id}(id=${discussionThread.discussionThreadCreator.uid})}" th:text="${discussionThread.discussionThreadCreator.username}">user</a>
+                                        @<span class="reply-datetime" th:text="${#dates.format(discussionThread.discussionThreadCreateTime, 'yyyy-MM-dd HH:mm:ss')}">time</span>
+                                    </th:block>
+                                    <th:block th:unless="${discussionThread.latestDiscussionReply == null}">
+                                        <a th:href="@{/accounts/user/{id}(id=${discussionThread.latestDiscussionReply.discussionReplyCreator.uid})}" th:text="${discussionThread.latestDiscussionReply.discussionReplyCreator.username}">user</a>
+                                        @<span class="reply-datetime" th:text="${#dates.format(discussionThread.latestDiscussionReply.discussionReplyCreateTime, 'yyyy-MM-dd HH:mm:ss')}">time</span>
+                                    </th:block>
+                                </li>
+                            </ul>
+                        </td>
+                        <td class="reply-count">
+                            <span th:if="${discussionThread.discussionTopic.discussionTopicSlug == 'solutions'}" th:text="${discussionThread.numberOfReplies}">0</span>
+                            <span th:unless="${discussionThread.discussionTopic.discussionTopicSlug == 'solutions'}" th:text="${discussionThread.numberOfReplies <= 1 ? 0 : discussionThread.numberOfReplies - 1}">0</span>
+                        </td>
+                    </tr>
+                </table> <!-- .table -->
+                <div id="more-discussion-threads">
+                    <p class="availble" th:text="#{voj.discussion.threads.more-discussion}">More discussion threads...</p>
+                    <img th:src="|${cdnUrl}/img/loading.gif?v=${version}|" alt="Loading" class="hide" />
+                </div>
+            </div> <!-- #discussion -->
+            <div id="sidebar" class="span4">
+                <div id="create-thread-widget" class="widget" th:if="${isLogin}">
+                    <div class="header"></div> <!-- .header -->
+                    <div class="body">
+                        <button class="btn btn-primary btn-block" th:onclick="|window.location.href='@{/discussion/new}'|" th:text="#{voj.discussion.threads.new-discussion}">New Discussion</button>
+                    </div> <!-- .body -->
+                </div> <!-- .widget -->
+                <div id="topics-widget" class="widget">
+                    <div class="header">
+                        <h4 th:text="#{voj.discussion.threads.topics}">Discussion Topics</h4>
+                    </div> <!-- .header -->
+                    <div class="body">
+                        <th:block th:each="entry : ${discussionTopics}">
+                            <h6>
+                                <a th:classappend="${selectedTopicSlug == entry.key.discussionTopicSlug} ? 'active' : ''"
+                                   th:href="@{/discussion(topicSlug=${entry.key.discussionTopicSlug})}" th:text="${entry.key.discussionTopicName}">
+                                    Topic
+                                </a>
+                            </h6>
+                            <ul class="inline">
+                                <li th:each="discussionTopic : ${entry.value}">
+                                    <a th:classappend="${selectedTopicSlug == discussionTopic.discussionTopicSlug} ? 'active' : ''"
+                                       th:href="@{/discussion(topicSlug=${discussionTopic.discussionTopicSlug})}" th:text="${discussionTopic.discussionTopicName}">
+                                        Subtopic
+                                    </a>
+                                </li>
+                            </ul>
+                        </th:block>
+                    </div> <!-- .body -->
+                </div> <!-- .widget -->
+            </div> <!-- #sidebar -->
+        </div> <!-- #main-content -->
+    </div> <!-- #content -->
+
+    <th:block layout:fragment="scripts">
+    <script type="text/javascript" th:inline="javascript">
+        $.getScript([[|${cdnUrl}/js/moment.min.js?v=${version}|]], function() {
+            moment.locale([[${language}]]);
+            $('span.reply-datetime').each(function() {
+                var dateTime = $(this).html();
+                $(this).html(getTimeElapsed(dateTime));
+            });
+        });
+    </script>
+    <script type="text/javascript">
+        function getTimeElapsed(dateTimeString) {
+            var dateTime = moment(dateTimeString);
+            return dateTime.fromNow();
+        }
+    </script>
+    <script type="text/javascript">
+        $(function() {
+            $('.avatar', '.discussion-thread').each(function() {
+                var email         = $(this).attr('data-value'),
+                    imgContainer  = $('img', $(this));
+
+                getGravatarUrl(email, imgContainer);
+            });
+        });
+    </script>
+    <script type="text/javascript">
+        function getGravatarUrl(email, imgContainer) {
+            var hash = md5(email.toLowerCase());
+            $.ajax({
+                type: 'GET',
+                url: 'https://secure.gravatar.com/' + hash + '.json',
+                dataType: 'jsonp',
+                success: function(result){
+                    if ( result != null ) {
+                        var imageUrl    = result['entry'][0]['thumbnailUrl'],
+                            requrestUrl = imageUrl + '?s=120';
+                        $(imgContainer).attr('src', requrestUrl);
+                    }
+                }
+            });
+        }
+    </script>
+    <script type="text/javascript">
+        function setLoadingStatus(isLoading) {
+            if ( isLoading ) {
+                $('p', '#more-discussion-threads').addClass('hide');
+                $('img', '#more-discussion-threads').removeClass('hide');
+            } else {
+                $('img', '#more-discussion-threads').addClass('hide');
+                $('p', '#more-discussion-threads').removeClass('hide');
+            }
+        }
+    </script>
+    <script type="text/javascript">
+        $('#more-discussion-threads').click(function() {
+            var isLoading         = $('img', this).is(':visible'),
+                hasNextRecord     = $('p', this).hasClass('availble'),
+                numberOfThreads   = $('.discussion-thread').length;
+
+            if ( !isLoading && hasNextRecord ) {
+                setLoadingStatus(true);
+                return getMoreDiscussionThreads(numberOfThreads);
+            }
+        });
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function getMoreDiscussionThreads(startIndex) {
+            var pageRequests = {
+                'startIndex': startIndex,
+                'category': [[${selectedTopicSlug}]],
+                'problemId': [[${problemId}]],
+            };
+
+            $.ajax({
+                type: 'GET',
+                url: [[@{/discussion/getDiscussionThreads.action}]],
+                data: pageRequests,
+                dataType: 'JSON',
+                success: function(result){
+                    return processDiscussionThreadsResult(result);
+                }
+            });
+        }
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function processDiscussionThreadsResult(result) {
+            if ( result['isSuccessful'] ) {
+                displayDiscussionThreadRecords(result['discussionThreads']);
+            } else {
+                $('p', '#more-discussion-threads').removeClass('availble');
+                $('p', '#more-discussion-threads').html([[#{voj.discussion.threads.no-more-discussion}]]);
+                $('#more-discussion-threads').css('cursor', 'default');
+            }
+            setLoadingStatus(false);
+        }
+    </script>
+    <script type="text/javascript">
+        function displayDiscussionThreadRecords(discussionThreads) {
+            for ( var i = 0; i < discussionThreads.length; ++ i ) {
+                $('table#discussion-threads > tbody').append(
+                    getDiscussionThreadContent(discussionThreads[i]['discussionThreadCreator'], discussionThreads[i]['discussionThreadId'],
+                        discussionThreads[i]['discussionThreadTitle'], discussionThreads[i]['discussionThreadCreateTime'],
+                        discussionThreads[i]['problem'], discussionThreads[i]['discussionTopic'],
+                        discussionThreads[i]['latestDiscussionReply'], discussionThreads[i]['numberOfReplies'])
+                );
+                getGravatarUrl(discussionThreads[i]['discussionThreadCreator']['email'], $('img', 'table#discussion-threads tr:last-child'));
+            }
+        }
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function getDiscussionThreadContent(discussionThreadCreator, discussionThreadId, discussionThreadTitle, discussionThreadCreateTime, discussionThreadRelatedProblem, discussionTopic, latestDiscussionReply, numberOfReplies) {
+            var latestDiscussionReplyCreatorUid      = latestDiscussionReply ? latestDiscussionReply['discussionReplyCreator']['uid'] : discussionThreadCreator['uid'],
+                latestDiscussionReplyCreatorUsername = latestDiscussionReply ? latestDiscussionReply['discussionReplyCreator']['username'] : discussionThreadCreator['username'],
+                latestDiscussionReplyCreateTime      = latestDiscussionReply ? latestDiscussionReply['discussionReplyCreateTime'] : discussionThreadCreateTime,
+                discussionThreadPostedIn             = '';
+
+            if ( discussionThreadRelatedProblem ) {
+                discussionThreadPostedIn = '<a href="' + [[@{/p/}]] + '%s">P%s: %s</a>'.format(discussionThreadRelatedProblem['problemId'], discussionThreadRelatedProblem['problemId'], discussionThreadRelatedProblem['problemName']);
+            } else {
+                discussionThreadPostedIn = '<a href="' + [[@{/discussion(topicSlug='')}]] + '%s">%s</a>'.format(discussionTopic['discussionTopicSlug'], discussionTopic['discussionTopicName']);
+            }
+            var threadHtml =
+                '<tr class="discussion-thread">' +
+                '    <td class="avatar" data-value="%s">'.format(discussionThreadCreator['email']) +
+                '        <img src="' + [[|${cdnUrl}/img/avatar.jpg?v=${version}|]] + '" alt="avatar" />' +
+                '    </td>' +
+                '    <td class="overview">' +
+                '        <h5><a href="' + [[@{/discussion/}]] + '%s">%s</a></h5>'.format(discussionThreadId, discussionThreadTitle) +
+                '        <ul class="inline">' +
+                '            <li>' +
+                '                ' + [[#{voj.discussion.threads.author}]] + ': ' +
+                '                <a href="' + [[@{/accounts/user/}]] + '%s">%s</a>'.format(discussionThreadCreator['uid'], discussionThreadCreator['username']) +
+                '            </li>' +
+                '            <li>' +
+                '                ' + [[#{voj.discussion.threads.posted-in}]] + ': ' + discussionThreadPostedIn +
+                '            </li>' +
+                '            <li>' +
+                '                ' + [[#{voj.discussion.threads.latest-reply}]] + ':' +
+                '                <a href="' + [[@{/accounts/user/}]] + '%s">%s</a> '.format(latestDiscussionReplyCreatorUid, latestDiscussionReplyCreatorUsername) +
+                '                @<span class="reply-datetime">%s</span>'.format(getTimeElapsed(latestDiscussionReplyCreateTime)) +
+                '            </li>' +
+                '        </ul>' +
+                '    </td>' +
+                '    <td class="reply-count">%s</td>'.format(numberOfReplies < 1 ? 0 : numberOfReplies - 1) +
+                '</tr>';
+            return threadHtml;
+        }
+    </script>
+    </th:block>
+</body>
+</html>

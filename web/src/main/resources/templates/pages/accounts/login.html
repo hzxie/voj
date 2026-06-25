@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/main}" lang="en">
+<head>
+    <title th:text="#{voj.accounts.login.title} + ' | ' + ${websiteName}">Welcome Back</title>
+    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/accounts/login.css?v=${version}|" />
+    <script type="text/javascript" th:src="|${cdnUrl}/js/flat-ui.min.js?v=${version}|"></script>
+</head>
+<body>
+    <div id="content" layout:fragment="content">
+        <div id="login">
+            <h2 th:text="#{voj.accounts.login.sign-in}">Sign in</h2>
+            <div class="alert alert-error hide"></div>
+            <div class="alert alert-success" th:if="${isLogout}" th:text="#{voj.accounts.login.sign-out}">You are now logged out.</div>
+            <form id="login-form" method="POST" onsubmit="onSubmit(); return false;">
+                <p class="row-fluid">
+                    <label for="username" th:text="#{voj.accounts.login.username}">Username or Email</label>
+                    <input id="username" name="username" class="span12" type="text" maxlength="32" />
+                </p>
+                <p class="row-fluid">
+                    <label for="password">
+                        <span th:text="#{voj.accounts.login.password}">Password</span>
+                        <span class="pull-right">
+                            <a th:href="@{/accounts/reset-password}" th:text="#{voj.accounts.login.forgot-password}">Forgot password?</a>
+                        </span>
+                    </label>
+                    <input id="password" name="password" class="span12" type="password" maxlength="16" />
+                </p>
+                <p>
+                    <label class="checkbox" for="remember-me">
+                        <input id="remember-me" type="checkbox" data-toggle="checkbox" /> <span th:text="#{voj.accounts.login.remember-me}">Remember Me</span>
+                    </label>
+                </p>
+                <p>
+                    <button class="btn btn-primary btn-block" type="submit" th:text="#{voj.accounts.login.sign-in}">Sign in</button>
+                </p>
+            </form> <!-- #login-form -->
+        </div> <!-- #login -->
+        <p class="text-center">
+            <span th:text="#{voj.accounts.login.dont-have-account}">Don't have an account?</span><br />
+            <a th:href="@{/accounts/register}" th:text="#{voj.accounts.login.create-account}">Create an account</a>
+        </p>
+    </div> <!-- #content -->
+
+    <th:block layout:fragment="scripts">
+    <script type="text/javascript" th:inline="javascript">
+        function onSubmit() {
+            $('.alert-success').addClass('hide');
+            $('.alert-error').addClass('hide');
+            $('button[type=submit]').attr('disabled', 'disabled');
+            $('button[type=submit]').html([[#{voj.accounts.login.please-wait}]]);
+
+            var username   = $('#username').val(),
+                password   = $('#password').val(),
+                rememberMe = $('input#remember-me').is(':checked');
+
+            return doLoginAction(username, password, rememberMe);
+        };
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function doLoginAction(username, password, rememberMe) {
+            var postData = {
+                'username': username,
+                'password': password,
+                'rememberMe': rememberMe
+            };
+
+            $.ajax({
+                type: 'POST',
+                url: [[@{/accounts/login.action}]],
+                data: postData,
+                dataType: 'JSON',
+                success: function(result){
+                    return processLoginResult(result);
+                }
+            });
+        }
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function processLoginResult(result) {
+            if ( result['isSuccessful'] ) {
+                var forwardUrl = [[${forwardUrl} ?: '']] || [[@{/}]];
+                window.location.href = forwardUrl;
+            } else {
+                var errorMessage = '';
+                if ( !result['isAccountValid'] ) {
+                    errorMessage = [[#{voj.accounts.login.incorrect-password}]];
+                } else if ( !result['isAllowedToAccess'] ) {
+                    errorMessage = [[#{voj.accounts.login.forbidden-user}]];
+                }
+                $('#password').val('');
+                $('.alert-error').html(errorMessage);
+                $('.alert-error').removeClass('hide');
+            }
+
+            $('button[type=submit]').html([[#{voj.accounts.login.sign-in}]]);
+            $('button[type=submit]').removeAttr('disabled');
+        }
+    </script>
+    </th:block>
+</body>
+</html>

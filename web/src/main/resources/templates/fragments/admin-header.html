@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<!--/* Administration top bar. Used via ~{fragments/admin-header :: header}. */-->
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<body>
+    <div th:fragment="header" id="header">
+        <a id="sidebar-toggle" href="javascript:void(0);"><i class="fa fa-bars"></i></a>
+        <ul class="nav inline">
+            <li class="dropdown">
+                <a class="dropdown-toggle" data-toggle="dropdown" role="button" href="javascript:void(0);">
+                    <span th:text="${myProfile.username}">username</span> <img th:src="|${cdnUrl}/img/avatar.jpg|" alt="avatar" />
+                </a>
+                <ul class="dropdown-menu" role="menu">
+                    <li><a th:href="@{/worldwide(forward=${forwardUri})}"><i class="fa fa-language"></i> <span th:text="#{voj.administration.include.header.change-language}">Change Language</span></a></li>
+                    <li class="divider"></li>
+                    <li><a th:href="@{/accounts/login(logout=true)}"><i class="fa fa-sign-out"></i> <span th:text="#{voj.administration.include.header.sign-out}">Sign out</span></a></li>
+                </ul>
+            </li>
+        </ul>
+    </div> <!-- #header -->
+</body>
+</html>

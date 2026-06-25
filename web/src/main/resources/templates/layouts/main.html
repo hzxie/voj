@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<!--/*
+  The master layout for the public-facing site. Pages decorate it with
+  layout:decorate="~{layouts/main}" and supply their unique markup through the
+  layout:fragment="content" hole and, optionally, page-specific <head> elements
+  (stylesheets/<title>) and bottom-of-body scripts via layout:fragment="scripts".
+
+  The CDN base URL (cdnUrl), the cache-busting key (version), the display
+  language, the logged-in profile and the system options (websiteName, ...) are
+  all injected into the model by ViewAspect, so every page can rely on them.
+*/-->
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      th:lang="${language}" lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title th:text="${websiteName}">Verwandlung Online Judge</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" th:content="${description}" />
+    <meta name="author" content="Haozhe Xie" />
+    <!-- CSRF token for AJAX requests (consumed by the ajaxSend hook in site.js). -->
+    <meta name="_csrf" th:content="${_csrf.token}" />
+    <meta name="_csrf_header" th:content="${_csrf.headerName}" />
+    <!-- Icon -->
+    <link th:href="|${cdnUrl}/img/favicon.ico?v=${version}|" rel="shortcut icon" type="image/x-icon" />
+    <!-- Common StyleSheets -->
+    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/bootstrap.min.css?v=${version}|" />
+    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/bootstrap-responsive.min.css?v=${version}|" />
+    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/flat-ui.min.css?v=${version}|" />
+    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/font-awesome.min.css?v=${version}|" />
+    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/style.css?v=${version}|" />
+    <!-- Common JavaScript -->
+    <script type="text/javascript" th:src="|${cdnUrl}/js/jquery-1.11.1.min.js?v=${version}|"></script>
+    <script type="text/javascript" th:src="|${cdnUrl}/js/bootstrap.min.js?v=${version}|"></script>
+    <script type="text/javascript" th:src="|${cdnUrl}/js/md5.min.js?v=${version}|"></script>
+</head>
+<body>
+    <!-- Header -->
+    <div th:replace="~{fragments/header :: header}"></div>
+    <!-- Content -->
+    <th:block layout:fragment="content"></th:block>
+    <!-- Footer -->
+    <div th:replace="~{fragments/footer :: footer}"></div>
+    <!-- Site-wide JavaScript (placed at the end so the pages load faster). -->
+    <script type="text/javascript" th:src="|${cdnUrl}/js/site.js?v=${version}|"></script>
+    <!-- Page-specific bottom-of-body scripts. -->
+    <th:block layout:fragment="scripts"></th:block>
+    <!-- Google Analytics (rendered only when configured). -->
+    <th:block th:if="${googleAnalyticsCode != null and googleAnalyticsCode != ''}" th:utext="${googleAnalyticsCode}"></th:block>
+</body>
+</html>

@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/admin}" lang="en">
+<head>
+    <title th:text="#{voj.administration.general-settings.title} + ' | ' + ${websiteName}">General Settings</title>
+    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/administration/general-settings.css?v=${version}|" />
+</head>
+<body>
+    <div id="content" layout:fragment="content">
+        <h2 class="page-header"><i class="fa fa-cog"></i> <span th:text="#{voj.administration.general-settings.general-settings}">General Settings</span></h2>
+        <form id="option-form" onSubmit="onSubmit(); return false;">
+            <div class="alert alert-error hide"></div> <!-- .alert-error -->
+            <div class="alert alert-success hide" th:text="#{voj.administration.general-settings.settings-saved}">Settings saved.</div> <!-- .alert-success -->
+            <div class="control-group row-fluid">
+                <label for="website-name" th:text="#{voj.administration.general-settings.website-name}">Website Name</label>
+                <input id="website-name" class="span12" type="text" th:value="${options['websiteName']}" />
+            </div> <!-- .control-group -->
+            <div class="control-group row-fluid">
+                <label for="website-description" th:text="#{voj.administration.general-settings.website-description}">Website Description</label>
+                <input id="website-description" class="span12" type="text" th:value="${options['description']}" />
+            </div> <!-- .control-group -->
+            <div class="control-group row-fluid">
+                <label for="copyright" th:text="#{voj.administration.general-settings.copyright}">Copyright</label>
+                <input id="copyright" class="span12" type="text" th:value="${options['copyright']}" />
+            </div> <!-- .control-group -->
+            <div class="control-group switch-container row-fluid">
+                <div class="span8">
+                    <label for="allow-register" th:text="#{voj.administration.general-settings.allow-register}">Allowing User Registration</label>
+                </div> <!-- .span8 -->
+                <div class="span4">
+                    <input id="allow-register" type="checkbox" data-toggle="switch" th:checked="${options['allowUserRegister'] != '0'}" />
+                </div> <!-- .span4 -->
+            </div> <!-- .control-group -->
+            <div class="control-group row-fluid">
+                <label for="icp-number" th:text="#{voj.administration.general-settings.icp-number}">ICP Number (for Chinese users)</label>
+                <input id="icp-number" class="span12" type="text" th:value="${options['icpNumber']}" />
+            </div> <!-- .control-group -->
+            <div class="control-group row-fluid">
+                <label for="police-icp-number" th:text="#{voj.administration.general-settings.police-icp-number}">Police ICP Number (for Chinese users)</label>
+                <input id="police-icp-number" class="span12" type="text" th:value="${options['policeIcpNumber']}" />
+            </div> <!-- .control-group -->
+            <div class="control-group row-fluid">
+                <label for="google-analytics-code">
+                    <span th:text="#{voj.administration.general-settings.google-analytics-code}">Google Analytics Code</span>
+                    (<a href="https://www.google.com/analytics" target="_blank" th:text="#{voj.administration.general-settings.learn-more}">Learn More</a>)
+                </label>
+                <textarea id="google-analytics-code" class="span12" rows="5" th:text="${options['googleAnalyticsCode']}"></textarea>
+            </div> <!-- .control-group -->
+            <div class="control-group row-fluid">
+                <label for="offensive-words" th:text="#{voj.administration.general-settings.offensive-words}">Offensive Words and Expressions</label>
+                <input id="offensive-words" class="tagsinput" type="hidden" value="" />
+            </div> <!-- .control-group -->
+            <div class="row-fluid">
+                <button class="btn btn-primary" type="submit" th:text="#{voj.administration.general-settings.save-changes}">Save Changes</button>
+            </div> <!-- .row-fluid -->
+        </form> <!-- #option-form -->
+    </div> <!-- #content -->
+
+    <th:block layout:fragment="scripts">
+    <script type="text/javascript" th:inline="javascript">
+        $(function() {
+            var offensiveWordsList  = JSON.parse([[${options['offensiveWords']}]]),
+                offensiveWordsValue = '';
+            for ( var i = 0; i < offensiveWordsList.length; ++ i ) {
+                offensiveWordsValue += offensiveWordsList[i] + ',';
+            }
+
+            $('#offensive-words').val(offensiveWordsValue);
+            $('.tagsinput').tagsInput();
+            $("[data-toggle='switch']").wrap('<div class="switch" />').parent().bootstrapSwitch();
+        });
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function onSubmit() {
+            $('.alert-success').addClass('hide');
+            $('.alert-error').addClass('hide');
+            $('button[type=submit]').attr('disabled', 'disabled');
+            $('button[type=submit]').html([[#{voj.administration.general-settings.please-wait}]]);
+
+            var websiteName         = $('#website-name').val(),
+                websiteDescription  = $('#website-description').val(),
+                copyright           = $('#copyright').val(),
+                allowUserRegister   = $('#allow-register').is(':checked'),
+                icpNumber           = $('#icp-number').val(),
+                policeIcpNumber     = $('#police-icp-number').val(),
+                googleAnalyticsCode = $('#google-analytics-code').val(),
+                offensiveWords      = $('#offensive-words').val();
+
+            return doUpdateGeneralSettingsAction(websiteName, websiteDescription, copyright, allowUserRegister, icpNumber, policeIcpNumber, googleAnalyticsCode, offensiveWords);
+        }
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function doUpdateGeneralSettingsAction(websiteName, websiteDescription, copyright, allowUserRegister, icpNumber, policeIcpNumber, googleAnalyticsCode, offensiveWords) {
+            var postData = {
+                'websiteName': websiteName,
+                'websiteDescription': websiteDescription,
+                'copyright': copyright,
+                'allowUserRegister': allowUserRegister,
+                'policeIcpNumber': policeIcpNumber,
+                'icpNumber': icpNumber,
+                'googleAnalyticsCode': googleAnalyticsCode,
+                'offensiveWords': offensiveWords
+            };
+
+            $.ajax({
+                type: 'POST',
+                url: [[@{/administration/updateGeneralSettings.action}]],
+                data: postData,
+                dataType: 'JSON',
+                success: function(result){
+                    return processResult(result);
+                }
+            });
+        }
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function processResult(result) {
+            if ( result['isSuccessful'] ) {
+                $('.alert-success').removeClass('hide');
+            } else {
+                var errorMessage  = '';
+
+                if ( result['isWebsiteNameEmpty'] ) {
+                    errorMessage += [[#{voj.administration.general-settings.website-name-empty}]] + '<br>';
+                } else if ( !result['isWebisteNameLegal'] ) {
+                    errorMessage += [[#{voj.administration.general-settings.website-name-illegal}]] + '<br>';
+                }
+                if ( result['isDescriptionEmpty'] ) {
+                    errorMessage += [[#{voj.administration.general-settings.website-description-empty}]] + '<br>';
+                } else if ( !result['isDescriptionLegal'] ) {
+                    errorMessage += [[#{voj.administration.general-settings.website-description-illegal}]] + '<br>';
+                }
+                if ( result['isCopyrightEmpty'] ) {
+                    errorMessage += [[#{voj.administration.general-settings.copyright-empty}]] + '<br>';
+                } else if ( !result['isCopyrightLegal'] ) {
+                    errorMessage += [[#{voj.administration.general-settings.copyright-illegal}]] + '<br>';
+                }
+                if ( !result['isIcpNumberLegal'] ) {
+                    errorMessage += [[#{voj.administration.general-settings.icp-number-illegal}]] + '<br>';
+                }
+                if ( !result['isPoliceIcpNumberLegal'] ) {
+                    errorMessage += [[#{voj.administration.general-settings.police-icp-number-illegal}]] + '<br>';
+                }
+                if ( !result['isAnalyticsCodeLegal'] ) {
+                    errorMessage += [[#{voj.administration.general-settings.analytics-code-illegal}]] + '<br>';
+                }
+                $('.alert-error').html(errorMessage);
+                $('.alert-error').removeClass('hide');
+            }
+
+            $('button[type=submit]').html([[#{voj.administration.general-settings.save-changes}]]);
+            $('button[type=submit]').removeAttr('disabled');
+            $('html, body').animate({ scrollTop: 0 }, 100);
+        }
+    </script>
+    </th:block>
+</body>
+</html>

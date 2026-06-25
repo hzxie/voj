@@ -82,7 +82,7 @@ public class ProblemsController {
             startIndex, keyword, problemCategorySlug, null, true, NUMBER_OF_PROBLEMS_PER_PAGE);
     long totalProblems =
         problemService.getNumberOfProblemsUsingFilters(keyword, problemCategorySlug, true);
-    ModelAndView view = new ModelAndView("problems/problems");
+    ModelAndView view = new ModelAndView("pages/problems/problems");
     view.addObject("problems", problems)
         .addObject("startIndexOfProblems", startIndexOfProblems)
         .addObject("numberOfProblemsPerPage", NUMBER_OF_PROBLEMS_PER_PAGE)
@@ -185,7 +185,7 @@ public class ProblemsController {
       }
     }
 
-    ModelAndView view = new ModelAndView("problems/problem");
+    ModelAndView view = new ModelAndView("pages/problems/problem");
     view.addObject("problem", problem);
     view.addObject(
         "discussionThreads",
@@ -225,7 +225,7 @@ public class ProblemsController {
       throw new ResourceNotFoundException();
     }
 
-    ModelAndView view = new ModelAndView("discussion/thread");
+    ModelAndView view = new ModelAndView("pages/discussion/thread");
     view.addObject("discussionThread", discussionThread);
     return view;
   }

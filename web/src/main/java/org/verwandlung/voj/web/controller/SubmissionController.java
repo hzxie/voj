@@ -68,7 +68,7 @@ public class SubmissionController {
       HttpServletResponse response) {
     List<Submission> submissions =
         submissionService.getSubmissions(problemId, username, NUMBER_OF_SUBMISSION_PER_PAGE);
-    return new ModelAndView("submissions/submissions").addObject("submissions", submissions);
+    return new ModelAndView("pages/submissions/submissions").addObject("submissions", submissions);
   }
 
   /**
@@ -140,7 +140,7 @@ public class SubmissionController {
     if (submission == null) {
       throw new ResourceNotFoundException();
     }
-    ModelAndView view = new ModelAndView("submissions/submission");
+    ModelAndView view = new ModelAndView("pages/submissions/submission");
     view.addObject("submission", submission);
     return view;
   }

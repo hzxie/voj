@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/main}" lang="en">
+<head>
+    <title th:text="#{voj.misc.help.title} + ' | ' + ${websiteName}">Help Center</title>
+    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/misc/about.css?v=${version}|" />
+</head>
+<body>
+    <div id="content" layout:fragment="content">
+        <div id="ribbon"></div> <!-- #ribbon -->
+        <div class="container">
+            <div class="row-fluid">
+                <div class="span9">
+                    <div id="main-content">
+                        <div class="section">
+                            <h3 id="browsers" th:text="#{voj.misc.help.browsers-support}">Supported Browsers</h3>
+                            <div class="markdown" th:utext="#{voj.misc.help.browsers-support-content}"></div> <!-- .markdown -->
+                        </div> <!-- .section -->
+                        <div class="section">
+                            <h3 id="io" th:text="#{voj.misc.help.input-and-output}">Input and Output</h3>
+                            <div class="markdown" th:utext="#{voj.misc.help.input-and-output-content}"></div> <!-- .markdown -->
+                        </div> <!-- .section -->
+                        <div class="section">
+                            <h3 id="judge-results" th:text="#{voj.misc.help.judge-results-meaning}">Meaning of Judge Results</h3>
+                            <div class="markdown" th:utext="#{voj.misc.help.judge-results-meaning-content}"></div> <!-- .markdown -->
+                        </div> <!-- .section -->
+                        <div class="section">
+                            <h3 id="compile-error" th:text="#{voj.misc.help.compile-error-reason}">Reason for Compile Error</h3>
+                            <div class="markdown" th:utext="#{voj.misc.help.compile-error-content}"></div> <!-- .markdown -->
+                        </div> <!-- .section -->
+                        <div class="section">
+                            <h3 id="more" th:text="#{voj.misc.help.more}">More</h3>
+                            <div class="markdown" th:utext="#{voj.misc.help.more-content}"></div> <!-- .markdown -->
+                        </div> <!-- .section -->
+                    </div> <!-- #main-content -->
+                </div> <!-- .span9 -->
+                <div class="span3">
+                    <div id="sidebar-nav">
+                        <h5 th:text="#{voj.misc.help.help-and-support}">Help and Support</h5>
+                        <ul class="contents">
+                            <li><a href="#browsers" th:text="#{voj.misc.help.browsers-support}">Supported Browsers</a></li>
+                            <li><a href="#io" th:text="#{voj.misc.help.input-and-output}">Input and Output</a></li>
+                            <li><a href="#judge-results" th:text="#{voj.misc.help.judge-results-meaning}">Meaning of Judge Results</a></li>
+                            <li><a href="#compile-error" th:text="#{voj.misc.help.compile-error-reason}">Reason for Compile Error</a></li>
+                            <li><a href="#more" th:text="#{voj.misc.help.more}">More</a></li>
+                        </ul>
+                    </div> <!-- #sidebar-nav -->
+                </div> <!-- .span3 -->
+            </div> <!-- .row-fluid -->
+        </div> <!-- .container -->
+    </div> <!-- #content -->
+
+    <th:block layout:fragment="scripts">
+    <script type="text/javascript" th:inline="javascript">
+        $.getScript([[|${cdnUrl}/js/markdown.min.js?v=${version}|]], function() {
+            converter = Markdown.getSanitizingConverter();
+
+            $('.markdown').each(function() {
+                var plainContent    = $(this).text(),
+                    markdownContent = converter.makeHtml(plainContent.replace(/\\\n/g, '\\n'));
+
+                $(this).html(markdownContent);
+            });
+        });
+    </script>
+    </th:block>
+</body>
+</html>

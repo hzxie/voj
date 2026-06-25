@@ -69,12 +69,12 @@ See [`docker/README.md`](docker/README.md) for image and configuration details.
 
 ### Build from source
 
-**Web application** produces a self-contained executable WAR (embedded Tomcat):
+**Web application** produces a self-contained executable JAR (embedded Tomcat):
 
 ```bash
 cd web
-mvn package -DskipTests        # -> web/target/voj.web.war
-java -jar target/voj.web.war
+mvn package -DskipTests        # -> web/target/voj.web.jar
+java -jar target/voj.web.jar
 ```
 
 **Judger** builds a Spring Boot jar plus the JNI native library, so a C++

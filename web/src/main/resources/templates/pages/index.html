@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/main}" lang="en">
+<head>
+    <title th:text="#{voj.index.title} + ' | ' + ${websiteName}">Home</title>
+    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/misc/homepage.css?v=${version}|" />
+</head>
+<body>
+    <div id="content" layout:fragment="content">
+        <div id="introduction" class="carousel slide">
+            <ol class="carousel-indicators">
+                <li data-target="#introduction" data-slide-to="0" class="active"></li>
+                <li data-target="#introduction" data-slide-to="1"></li>
+                <li data-target="#introduction" data-slide-to="2"></li>
+            </ol>
+            <div class="carousel-inner">
+                <div class="active item first"></div>
+                <div class="item second"></div>
+                <div class="item third"></div>
+            </div>
+        </div> <!-- #introduction -->
+        <div id="slogan" class="row-fluid">
+            <div class="container">
+                <div class="span5 offset7">
+                    <h2 th:text="#{voj.index.slogan}">Start Your OJ Journey Today!</h2>
+                    <th:block th:unless="${isLogin}">
+                        <p><button class="btn btn-success" th:onclick="|window.location.href='@{/accounts/register}'|" th:text="#{voj.index.create-account}">Create Account</button></p>
+                        <p><a th:href="@{/accounts/login}" th:text="#{voj.index.login}">Sign In</a></p>
+                    </th:block>
+                    <th:block th:if="${isLogin}">
+                        <p><button class="btn btn-success" th:onclick="|window.location.href='@{/p}'|" th:text="#{voj.index.get-started}">Get Started Now</button></p>
+                    </th:block>
+                </div> <!-- .span6 -->
+            </div> <!-- .container -->
+        </div> <!-- #slogan -->
+        <div class="row-fluid container">
+            <div id="main-content" class="span8">
+                <div id="contests">
+                    <table class="table">
+                        <tbody>
+                            <tr class="contest" th:each="contest : ${contests}"
+                                th:with="contestStatus=${currentTime.before(contest.startTime) ? 'Ready' : (currentTime.after(contest.endTime) ? 'Done' : 'Live')}"
+                                th:classappend="${contestStatus}">
+                                <td class="overview">
+                                    <h5><a th:href="@{/contest/{id}(id=${contest.contestId})}" th:text="${contest.contestName}">Contest</a></h5>
+                                    <ul class="inline">
+                                        <li th:text="${contest.contestMode}">Mode</li>
+                                        <li><span th:text="#{voj.index.start-time}">Start Time</span>: <span th:text="${@dateFormatter.dateTimeLongMedium(contest.startTime, language)}">time</span></li>
+                                        <li><span th:text="#{voj.index.end-time}">End Time</span>: <span th:text="${@dateFormatter.dateTimeLongMedium(contest.endTime, language)}">time</span></li>
+                                    </ul>
+                                </td>
+                                <td class="status" th:text="${contestStatus}">Status</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div> <!-- #contests -->
+                <div id="discussion" th:if="${discussionThreads != null and discussionThreads.size() > 0}">
+                    <table class="table">
+                        <tbody>
+                            <tr class="discussion-thread" th:each="discussionThread : ${discussionThreads}">
+                                <td class="avatar" th:attr="data-value=${#strings.toLowerCase(discussionThread.discussionThreadCreator.email)}">
+                                    <img th:src="|${cdnUrl}/img/avatar.jpg?v=${version}|" alt="avatar" />
+                                </td>
+                                <td class="overview">
+                                    <h5><a th:href="@{/discussion/{id}(id=${discussionThread.discussionThreadId})}" th:text="${discussionThread.discussionThreadTitle}">Title</a></h5>
+                                    <ul class="inline">
+                                        <li>
+                                            <span th:text="#{voj.index.author}">Author</span>:
+                                            <a th:href="@{/accounts/user/{id}(id=${discussionThread.discussionThreadCreator.uid})}" th:text="${discussionThread.discussionThreadCreator.username}">user</a>
+                                        </li>
+                                        <li>
+                                            <span th:text="#{voj.index.posted-in}">Posted in</span>:
+                                            <a th:if="${discussionThread.problem == null}" th:href="@{/discussion(topicSlug=${discussionThread.discussionTopic.discussionTopicSlug})}" th:text="${discussionThread.discussionTopic.discussionTopicName}">Topic</a>
+                                            <a th:unless="${discussionThread.problem == null}" th:href="@{/p/{id}(id=${discussionThread.problem.problemId})}" th:text="|P${discussionThread.problem.problemId}: ${discussionThread.problem.problemName}|">Problem</a>
+                                        </li>
+                                        <li>
+                                            <span th:text="#{voj.index.latest-reply}">Latest reply</span>:
+                                            <th:block th:if="${discussionThread.latestDiscussionReply == null}">
+                                                <a th:href="@{/accounts/user/{id}(id=${discussionThread.discussionThreadCreator.uid})}" th:text="${discussionThread.discussionThreadCreator.username}">user</a>
+                                                @<span class="reply-datetime" th:text="${#dates.format(discussionThread.discussionThreadCreateTime, 'yyyy-MM-dd HH:mm:ss')}">time</span>
+                                            </th:block>
+                                            <th:block th:unless="${discussionThread.latestDiscussionReply == null}">
+                                                <a th:href="@{/accounts/user/{id}(id=${discussionThread.latestDiscussionReply.discussionReplyCreator.uid})}" th:text="${discussionThread.latestDiscussionReply.discussionReplyCreator.username}">user</a>
+                                                @<span class="reply-datetime" th:text="${#dates.format(discussionThread.latestDiscussionReply.discussionReplyCreateTime, 'yyyy-MM-dd HH:mm:ss')}">time</span>
+                                            </th:block>
+                                        </li>
+                                    </ul>
+                                </td>
+                                <td class="reply-count">
+                                    <span th:if="${discussionThread.discussionTopic.discussionTopicSlug == 'solutions'}" th:text="${discussionThread.numberOfReplies}">0</span>
+                                    <span th:unless="${discussionThread.discussionTopic.discussionTopicSlug == 'solutions'}" th:text="${discussionThread.numberOfReplies <= 1 ? 0 : discussionThread.numberOfReplies - 1}">0</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div> <!-- #discussion -->
+            </div> <!-- #main-content -->
+            <div id="sidebar" class="span4">
+                <div id="bulletin-board" class="widget">
+                    <h4 th:text="#{voj.index.bulletin-board}">Bulletin Board</h4>
+                    <ul id="bulletin-board-messages" th:if="${bulletinBoardMessages != null and bulletinBoardMessages.size() > 0}">
+                        <li th:each="bulletinBoardMessage : ${bulletinBoardMessages}">
+                            <a href="javascript:void(0);">
+                                <span class="message-create-time">[<span th:text="${@dateFormatter.dateShort(bulletinBoardMessage.messageCreateTime, language)}">date</span>]</span>
+                                <span class="message-title" th:text="${bulletinBoardMessage.messageTitle}">Title</span>
+                                <p class="message-body hide" th:text="${bulletinBoardMessage.messageBody}">Body</p>
+                            </a>
+                        </li>
+                    </ul>
+                    <p th:unless="${bulletinBoardMessages != null and bulletinBoardMessages.size() > 0}" th:text="#{voj.index.no-notification}">No notification now.</p>
+                </div> <!-- #kanban -->
+            </div> <!-- #sidebar -->
+        </div> <!-- .row-fluid -->
+    </div> <!-- #content -->
+
+    <th:block layout:fragment="scripts">
+    <div id="bulletin-board-message-modal" class="modal hide fade">
+        <div class="modal-header">
+            <i class="fa fa-info-circle"></i>
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        </div> <!-- .modal-header -->
+        <div class="modal-body">
+            <h5 class="message-title"></h5>
+            <div class="message-body"></div> <!-- .message-body -->
+        </div> <!-- .modal-body -->
+    </div> <!-- #bulletin-board-message-modal -->
+    <script type="text/javascript" th:inline="javascript">
+        $.getScript([[|${cdnUrl}/js/moment.min.js?v=${version}|]], function() {
+            moment.locale([[${language}]]);
+            $('span.reply-datetime').each(function() {
+                var dateTime = $(this).html();
+                $(this).html(getTimeElapsed(dateTime));
+            });
+        });
+    </script>
+    <script type="text/javascript">
+        function getTimeElapsed(dateTimeString) {
+            var dateTime = moment(dateTimeString);
+            return dateTime.fromNow();
+        }
+    </script>
+    <script type="text/javascript">
+        $(function() {
+            $('.carousel').carousel({
+                interval: 5000
+            });
+
+            $('.avatar', '.discussion-thread').each(function() {
+                var hash    = md5($(this).attr('data-value')),
+                    avatar  = $('img', $(this));
+
+                $.ajax({
+                    type: 'GET',
+                    url: 'https://secure.gravatar.com/' + hash + '.json',
+                    dataType: 'jsonp',
+                    success: function(result){
+                        if ( result != null ) {
+                            var imageUrl    = result['entry'][0]['thumbnailUrl'],
+                                requrestUrl = imageUrl + '?s=120';
+                            $(avatar).attr('src', requrestUrl);
+                        }
+                    }
+                });
+            });
+        });
+    </script>
+    <script type="text/javascript">
+        $('li', '#bulletin-board-messages').click(function() {
+            var messageTitle = $('.message-title', this).html(),
+                messageBody  = $('.message-body', this).html();
+
+            $('.message-title', '#bulletin-board-message-modal').html(messageTitle);
+            $('.message-body', '#bulletin-board-message-modal').html(messageBody.replace('\n', '<br><br>'));
+            $('#bulletin-board-message-modal').modal();
+        });
+    </script>
+    </th:block>
+</body>
+</html>

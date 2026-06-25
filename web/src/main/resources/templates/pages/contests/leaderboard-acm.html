@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/main}" lang="en">
+<head>
+    <title th:text="${contest.contestName} + ' ' + #{voj.contests.leaderboard.leaderboard} + ' | ' + ${websiteName}">Leaderboard</title>
+    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/contests/leaderboard.css?v=${version}|" />
+</head>
+<body>
+    <div id="content" class="container" layout:fragment="content">
+        <div class="row-fluid">
+            <div class="span12">
+                <div class="leaderboard">
+                    <div class="header">
+                        <span th:text="${contest.contestName}">Contest</span> <span th:text="#{voj.contests.leaderboard.leaderboard}">Leaderboard</span>
+                    </div> <!-- .header -->
+                    <div class="body">
+                        <table class="table table-striped">
+                            <thead>
+                                <th class="rank" th:text="#{voj.contests.leaderboard.rank}">Rank</th>
+                                <th class="contestant" th:text="#{voj.contests.leaderboard.contestant}">Contestant</th>
+                                <th class="score" th:text="#{voj.contests.leaderboard.solved}">Solved</th>
+                                <th class="time" th:text="#{voj.contests.leaderboard.penalty}">Penalty</th>
+                                <th class="submission" th:each="problem : ${problems}" th:classappend="|problem-${problem.problemId}|"><a th:href="@{/contest/{cid}/p/{pid}(cid=${contest.contestId},pid=${problem.problemId})}" target="_blank" th:text="|P${problem.problemId}|">P1</a></th>
+                            </thead>
+                            <tbody>
+                                <tr th:each="contestant : ${contestants}">
+                                    <td class="rank" th:text="${contestant.rank}">1</td>
+                                    <td class="contestant"><a th:href="@{/accounts/user/{id}(id=${contestant.contestant.uid})}" target="_blank" th:text="${contestant.contestant.username}">user</a></td>
+                                    <td class="score" th:text="${contestant.score}">0</td>
+                                    <td class="time"><span th:text="${#numbers.formatInteger(contestant.time % 3600 / 3600.0, 2)}">00</span>:<span th:text="${#numbers.formatInteger(contestant.time / 60.0 % 60, 2)}">00</span>:<span th:text="${#numbers.formatInteger(contestant.time % 60, 2)}">00</span></td>
+                                    <td class="submission" th:each="problem : ${problems}" th:classappend="|problem-${problem.problemId}|"
+                                        th:with="submission=${submissions[contestant.contestant.uid][problem.problemId]}">
+                                        <span th:if="${submission == null}">-</span>
+                                        <a th:unless="${submission == null}" th:href="@{/submission/{id}(id=${submission.submissionId})}" target="_blank"><span th:text="${#numbers.formatInteger(submission.usedTime / 3600.0, 2)}">00</span>:<span th:text="${#numbers.formatInteger(submission.usedTime / 60.0 % 60, 2)}">00</span>:<span th:text="${#numbers.formatInteger(submission.usedTime % 60, 2)}">00</span></a>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div> <!-- .body -->
+                </div> <!-- .leaderboard -->
+            </div> <!-- .span12 -->
+        </div> <!-- .row-fluid -->
+    </div> <!-- #content -->
+
+    <th:block layout:fragment="scripts">
+    <script type="text/javascript" th:inline="javascript">
+        $(window).scroll(function() {
+            var offset = $('table').offset().top - $('thead').outerHeight() - $(window).scrollTop();
+
+            if ( offset <= 0 ) {
+                $('thead').css('position', 'fixed');
+                /*[# th:each="problem : ${problems}"]*/
+                $('th.problem-[(${problem.problemId})]').width($('td.problem-[(${problem.problemId})]').width());
+                /*[/]*/
+            } else {
+                $('thead').css('position', 'relative');
+            }
+        });
+    </script>
+    </th:block>
+</body>
+</html>

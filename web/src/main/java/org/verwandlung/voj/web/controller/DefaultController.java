@@ -58,7 +58,7 @@ public class DefaultController {
     List<BulletinBoardMessage> bulletinBoardMessages =
         bulletinBoardService.getBulletinBoardMessages(0, NUMBER_OF_BULLETIN_MESSAGES_PER_REQUEST);
 
-    ModelAndView view = new ModelAndView("index");
+    ModelAndView view = new ModelAndView("pages/index");
     view.addObject("currentTime", new Date());
     view.addObject("contests", contests);
     view.addObject("discussionThreads", discussionThreads);
@@ -75,7 +75,7 @@ public class DefaultController {
    */
   @RequestMapping(value = "/terms", method = RequestMethod.GET)
   public ModelAndView termsView(HttpServletRequest request, HttpServletResponse response) {
-    ModelAndView view = new ModelAndView("misc/terms");
+    ModelAndView view = new ModelAndView("pages/terms");
     return view;
   }
 
@@ -88,7 +88,7 @@ public class DefaultController {
    */
   @RequestMapping(value = "/privacy", method = RequestMethod.GET)
   public ModelAndView privacyView(HttpServletRequest request, HttpServletResponse response) {
-    ModelAndView view = new ModelAndView("misc/privacy");
+    ModelAndView view = new ModelAndView("pages/privacy");
     return view;
   }
 
@@ -101,7 +101,7 @@ public class DefaultController {
    */
   @RequestMapping(value = "/judgers", method = RequestMethod.GET)
   public ModelAndView judgersView(HttpServletRequest request, HttpServletResponse response) {
-    ModelAndView view = new ModelAndView("misc/judgers");
+    ModelAndView view = new ModelAndView("pages/judgers");
     view.addObject("languages", languageService.getAllLanguages());
     return view;
   }
@@ -158,7 +158,7 @@ public class DefaultController {
    */
   @RequestMapping(value = "/help", method = RequestMethod.GET)
   public ModelAndView helpView(HttpServletRequest request, HttpServletResponse response) {
-    ModelAndView view = new ModelAndView("misc/help");
+    ModelAndView view = new ModelAndView("pages/help");
     return view;
   }
 
@@ -171,7 +171,7 @@ public class DefaultController {
    */
   @RequestMapping(value = "/about", method = RequestMethod.GET)
   public ModelAndView aboutView(HttpServletRequest request, HttpServletResponse response) {
-    ModelAndView view = new ModelAndView("misc/about");
+    ModelAndView view = new ModelAndView("pages/about");
     return view;
   }
 
@@ -187,7 +187,7 @@ public class DefaultController {
       @RequestParam(value = "forward", required = false, defaultValue = "") String forwardUrl,
       HttpServletRequest request,
       HttpServletResponse response) {
-    ModelAndView view = new ModelAndView("misc/worldwide");
+    ModelAndView view = new ModelAndView("pages/worldwide");
     view.addObject("forwardUrl", forwardUrl);
     return view;
   }
@@ -221,7 +221,7 @@ public class DefaultController {
    */
   @RequestMapping(value = "/*", method = RequestMethod.GET)
   public ModelAndView notFoundView(HttpServletRequest request, HttpServletResponse response) {
-    ModelAndView view = new ModelAndView("errors/404");
+    ModelAndView view = new ModelAndView("pages/errors/404");
     return view;
   }
 
@@ -234,7 +234,7 @@ public class DefaultController {
    */
   @RequestMapping(value = "/not-supported", method = RequestMethod.GET)
   public ModelAndView notSupportedView(HttpServletRequest request, HttpServletResponse response) {
-    ModelAndView view = new ModelAndView("errors/not-supported");
+    ModelAndView view = new ModelAndView("pages/errors/not-supported");
     return view;
   }
 

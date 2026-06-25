@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/main}" lang="en">
+<head>
+    <title th:text="#{voj.misc.judgers.title} + ' | ' + ${websiteName}">Judgers</title>
+    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/misc/about.css?v=${version}|" />
+    <style type="text/css">
+        table th.key,
+        table td.key {
+            width: 20%;
+        }
+
+        table th.value,
+        table td.value {
+            width: 80%;
+        }
+
+        span.online {
+            color: #f00;
+        }
+    </style>
+</head>
+<body>
+    <div id="content" layout:fragment="content">
+        <div id="ribbon"></div> <!-- #ribbon -->
+        <div class="container">
+            <div class="row-fluid">
+                <div class="span9">
+                    <div id="main-content">
+                        <div class="section">
+                            <h3 id="browsers" th:text="#{voj.misc.judgers.compile-command}">Compile Command</h3>
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th class="key" th:text="#{voj.misc.judgers.language}">Language</th>
+                                        <th class="value" th:text="#{voj.misc.judgers.compile-command}">Compile Command</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:each="language : ${languages}">
+                                        <td th:text="${language.languageName}">Language</td>
+                                        <td th:text="${language.compileCommand}">Command</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div> <!-- .section -->
+                        <div class="section">
+                            <h3 id="judgers" th:text="#{voj.misc.judgers.judgers}">Judgers</h3>
+                            <p id="no-judgers" th:text="#{voj.misc.judgers.no-judgers}">No Judgers.</p>
+                            <table id="judgers-list" class="table table-striped hide">
+                                <thead>
+                                    <tr>
+                                        <th class="key" th:text="#{voj.misc.judgers.judger-name}">Name</th>
+                                        <th class="value" th:text="#{voj.misc.judgers.judger-description}">Description</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div> <!-- .section -->
+                    </div> <!-- #main-content -->
+                </div> <!-- .span9 -->
+                <div class="span3">
+                    <div id="sidebar-nav">
+                        <h5 th:text="#{voj.misc.judgers.judgers}">Judgers</h5>
+                        <ul class="contents">
+                            <li><a href="#compile-command" th:text="#{voj.misc.judgers.compile-command}">Compile Command</a></li>
+                            <li><a href="#judgers" th:text="#{voj.misc.judgers.judgers}">Judgers</a></li>
+                        </ul>
+                    </div> <!-- #sidebar-nav -->
+                </div> <!-- .span3 -->
+            </div> <!-- .row-fluid -->
+        </div> <!-- .container -->
+    </div> <!-- #content -->
+
+    <th:block layout:fragment="scripts">
+    <script type="text/javascript" th:inline="javascript">
+        $(function() {
+            $.ajax({
+                type: 'GET',
+                url: [[@{/getJudgers.action}]],
+                dataType: 'JSON',
+                success: function(result){
+                    if ( result['isSuccessful'] ) {
+                        processResult(result['judgers']);
+
+                        $('#no-judgers').addClass('hide');
+                        $('#judgers-list').removeClass('hide');
+                    }
+                }
+            });
+        });
+    </script>
+    <script type="text/javascript">
+        function processResult(judgers) {
+            for ( var i = 0; i < judgers.length; ++ i ) {
+                $('#judgers-list').append(
+                    getJudgerContent(judgers[i]['username'], judgers[i]['description'])
+                );
+            }
+        }
+    </script>
+    <script type="text/javascript">
+        function getJudgerContent(username, description) {
+            var judgerInfoTemplate = '<tr>' +
+                                     '    <td>%s</td>' +
+                                     '    <td>%s</td>' +
+                                     '</tr>';
+
+            description = description.replace('[Online]', '<span class="online">[Online]</span>');
+            description = description.replace('[Offline]', '<span class="offline">[Offline]</span>');
+            return judgerInfoTemplate.format(username, description);
+        }
+    </script>
+    </th:block>
+</body>
+</html>

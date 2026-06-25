@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/admin}" lang="en">
+<head>
+    <title th:text="#{voj.administration.index.title} + ' | ' + ${websiteName}">System Administration</title>
+    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/administration/dashboard.css?v=${version}|" />
+</head>
+<body>
+    <div id="content" layout:fragment="content">
+        <h2 class="page-header">
+            <i class="fa fa-dashboard"></i> <span th:text="#{voj.administration.index.page-header}">Dashboard</span>
+        </h2>
+        <div id="overview" class="row-fluid">
+            <div class="span3">
+                <div id="overview-users" class="widget">
+                    <div class="row-fluid glance">
+                        <div class="span4 text-center">
+                            <i class="fa fa-users"></i>
+                        </div> <!-- .span4 -->
+                        <div class="span8">
+                            <span class="text-uppercase" th:text="#{voj.administration.index.total-users}">Total Users</span>
+                            <h2 th:text="${totalUsers}">0</h2>
+                        </div> <!-- .span8 -->
+                    </div> <!-- .row-fluid -->
+                    <div class="row-fluid">
+                        <div class="span6 border-right">
+                            <span class="text-uppercase" th:text="#{voj.administration.index.new-users-today}">New Users Today</span>
+                            <h4 th:text="${newUsersToday}">0</h4>
+                        </div> <!-- .span6 -->
+                        <div class="span6">
+                            <span class="text-uppercase" th:text="#{voj.administration.index.online-users}">Online Users</span>
+                            <h4 th:text="${onlineUsers}">0</h4>
+                        </div> <!-- .span6 -->
+                    </div> <!-- .row-fluid -->
+                </div> <!-- #overview-users -->
+            </div> <!-- .span3 -->
+            <div class="span3">
+                <div id="overview-problems" class="widget">
+                    <div class="row-fluid glance">
+                        <div class="span4 text-center">
+                            <i class="fa fa-question-circle"></i>
+                        </div> <!-- .span4 -->
+                        <div class="span8">
+                            <span class="text-uppercase" th:text="#{voj.administration.index.total-problems}">Total Problems</span>
+                            <h2 th:text="${totalProblems}">0</h2>
+                        </div> <!-- .span8 -->
+                    </div> <!-- .row-fluid -->
+                    <div class="row-fluid">
+                        <div class="span6 border-right">
+                            <span class="text-uppercase" th:text="#{voj.administration.index.total-checkpoints}">Total Checkpoints</span>
+                            <h4 th:text="${numberOfCheckpoints}">0</h4>
+                        </div> <!-- .span6 -->
+                        <div class="span6">
+                            <span class="text-uppercase" th:text="#{voj.administration.index.private-problems}">Private Problems</span>
+                            <h4 th:text="${privateProblems}">0</h4>
+                        </div> <!-- .span6 -->
+                    </div> <!-- .row-fluid -->
+                </div> <!-- #overview-problems -->
+            </div> <!-- .span3 -->
+            <div class="span3">
+                <div id="overview-contests" class="widget">
+                    <div class="row-fluid glance">
+                        <div class="span4 text-center">
+                            <i class="fa fa-paperclip"></i>
+                        </div> <!-- .span4 -->
+                        <div class="span8 text-right">
+                            <span class="text-uppercase" th:text="#{voj.administration.index.upcoming-contests}">Upcoming Contests</span>
+                            <h2>0</h2>
+                        </div> <!-- .span8 -->
+                    </div> <!-- .row-fluid -->
+                    <a th:href="@{/administration/all-contests}" class="more">
+                        <span th:text="#{voj.administration.index.more-contests}">More Contests</span> <i class="fa fa-arrow-circle-right"></i>
+                    </a>
+                </div> <!-- #overview-contests -->
+            </div> <!-- .span3 -->
+            <div class="span3">
+                <div id="overview-submissions" class="widget">
+                    <div class="row-fluid glance">
+                        <div class="span4 text-center">
+                            <i class="fa fa-code"></i>
+                        </div> <!-- .span4 -->
+                        <div class="span8 text-right">
+                            <span class="text-uppercase" th:text="#{voj.administration.index.submissions-today}">Submissions Today</span>
+                            <h2 th:text="${submissionsToday}">0</h2>
+                        </div> <!-- .span8 -->
+                    </div> <!-- .row-fluid -->
+                    <a th:href="@{/administration/all-submissions}" class="more">
+                        <span th:text="#{voj.administration.index.more-submissions}">More Submissions</span> <i class="fa fa-arrow-circle-right"></i>
+                    </a>
+                </div> <!-- #overview-submissions -->
+            </div> <!-- .span3 -->
+        </div> <!-- #overview -->
+        <div class="row-fluid">
+            <div class="span8">
+                <div id="submissions-panel" class="panel">
+                    <div class="header">
+                        <div class="row-fluid">
+                            <div class="span8">
+                                <h5>
+                                    <i class="fa fa-bar-chart"></i>
+                                    <span th:text="#{voj.administration.index.submissions-stats}">Submissions Stats</span>
+                                </h5>
+                            </div> <!-- .span8 -->
+                            <div class="span4">
+                                <select id="submission-period">
+                                    <option value="7" th:text="#{voj.administration.index.1-week}">1 Week</option>
+                                    <option value="30" th:text="#{voj.administration.index.1-month}">1 Month</option>
+                                    <option value="365" th:text="#{voj.administration.index.1-year}">1 Year</option>
+                                </select>
+                            </div> <!-- .span4 -->
+                        </div> <!-- .row-fluid -->
+                    </div> <!-- .header -->
+                    <div class="body">
+                        <div id="submissions-calendar"></div> <!-- #submissions-calendar -->
+                    </div> <!-- .body -->
+                </div> <!-- #submissions-panel -->
+            </div> <!-- .span8 -->
+            <div class="span4">
+                <div id="system-panel" class="panel">
+                    <div class="header">
+                        <h5>
+                            <i class="fa fa-info-circle"></i>
+                            <span th:text="#{voj.administration.index.system-info}">System Info</span>
+                        </h5>
+                    </div> <!-- .header -->
+                    <div class="body">
+                        <div class="row-fluid">
+                            <div class="span4" th:text="#{voj.administration.index.product-version}">Product Version</div> <!-- .span4 -->
+                            <div id="product-version" class="span8"><span th:text="${productVersion}">0.0.0</span> (Build: <a th:href="|https://github.com/hzxie/voj/commit/${version}|" target="_blank" th:text="${version}">build</a>)</div> <!-- .span8 -->
+                        </div> <!-- .row-fluid -->
+                        <div class="row-fluid">
+                            <div class="span4" th:text="#{voj.administration.index.memory-usage}">Memory Usage</div> <!-- .span4 -->
+                            <div class="span8" th:text="|${memoryUsage} MB|">0 MB</div> <!-- .span8 -->
+                        </div> <!-- .row-fluid -->
+                        <div class="row-fluid">
+                            <div class="span4" th:text="#{voj.administration.index.online-judgers}">Online Judgers</div> <!-- .span4 -->
+                            <div class="span8" th:text="${onlineJudgers}">0</div> <!-- .span8 -->
+                        </div> <!-- .row-fluid -->
+                    </div> <!-- .body -->
+                </div> <!-- #system-panel -->
+            </div> <!-- .span4 -->
+        </div> <!-- .row-fluid -->
+    </div> <!-- #content -->
+
+    <th:block layout:fragment="scripts">
+    <script type="text/javascript" th:inline="javascript">
+        $.getScript([[|${cdnUrl}/js/highcharts.min.js?v=${version}|]], function() {
+            return getSubmissionsOfUsers(7);
+        });
+    </script>
+    <script type="text/javascript">
+        $('#submission-period').change(function() {
+            var period = $(this).val();
+            return getSubmissionsOfUsers(period);
+        });
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function getSubmissionsOfUsers(period) {
+            var pageRequests = {
+                'period': period
+            };
+
+            $.ajax({
+                type: 'GET',
+                url: [[@{/administration/getNumberOfSubmissions.action}]],
+                data: pageRequests,
+                dataType: 'JSON',
+                success: function(result){
+                    return processSubmissionOfUsers(result['acceptedSubmissions'], result['totalSubmissions']);
+                }
+            });
+        }
+    </script>
+    <script type="text/javascript">
+        function processSubmissionOfUsers(acceptedSubmissionsMap, totalSubmissionsMap) {
+            var categories          = [],
+                totalSubmissions    = [],
+                acceptedSubmissions = [];
+
+            $.each(totalSubmissionsMap, function(key, value){
+                categories.push(key);
+                totalSubmissions.push(value);
+            });
+            $.each(acceptedSubmissionsMap, function(key, value){
+                acceptedSubmissions.push(value);
+            });
+            displaySubmissionsOfUsers(categories, acceptedSubmissions, totalSubmissions);
+        }
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function displaySubmissionsOfUsers(categories, acceptedSubmissions, totalSubmissions) {
+            Highcharts.setOptions({
+                colors: ['#34495e', '#e74c3c']
+            });
+
+            $('#submissions-calendar').highcharts({
+                chart: {
+                    backgroundColor: null,
+                },
+                title: {
+                    text: null
+                },
+                xAxis: {
+                    categories: categories
+                },
+                yAxis: {
+                    allowDecimals: false,
+                    title: {
+                        text: [[#{voj.administration.index.number-of-submissions}]]
+                    }
+                },
+                tooltip: {
+                    shared: true,
+                    crosshairs: true
+                },
+                series: [
+                    {
+                        name: [[#{voj.administration.index.total-submissions}]],
+                        lineWidth: 4,
+                        marker: {
+                            radius: 4
+                        },
+                        data: totalSubmissions
+                    },
+                    {
+                        name: [[#{voj.administration.index.accepted-submissions}]],
+                        data: acceptedSubmissions
+                    }
+                ]
+            });
+        }
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        $(function() {
+            var currentVersion = $('#product-version').html(),
+                newVersion     = '0.0.0';
+
+            $.ajax({
+                type: 'GET',
+                url: 'https://api.github.com/repos/zjhzxhz/voj/releases/latest',
+                dataType: 'jsonp',
+                success: function(result){
+                    newVersion = result['data']['name'];
+                    if ( newVersion > currentVersion ) {
+                        $('#product-version').html([[#{voj.administration.index.new-version-available}]] + ': ' + newVersion);
+                    }
+                }
+            });
+        });
+    </script>
+    </th:block>
+</body>
+</html>

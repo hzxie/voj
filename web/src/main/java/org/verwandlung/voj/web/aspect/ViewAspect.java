@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Properties;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -29,6 +30,7 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.ModelAndView;
 
@@ -73,6 +75,20 @@ public class ViewAspect {
     view = (ModelAndView) proceedingJoinPoint.proceed();
     view.addAllObjects(getSystemOptions());
     view.addObject("language", getUserLanguage(request, response));
+
+    // The CDN base URL and the cache-busting version key used by every page's
+    // asset references. Previously read per-page via <spring:eval> in the JSPs;
+    // now injected once here so the templates can rely on them being present.
+    view.addObject("cdnUrl", applicationProperties.getProperty("url.cdn"))
+        .addObject("version", applicationProperties.getProperty("build.version"))
+        .addObject("productVersion", applicationProperties.getProperty("product.version"));
+
+    // The current request URI, used by the header/footer to build the "forward"
+    // parameter on the sign-in / sign-up / language links so the user returns to
+    // the current page afterwards. Under JSP this was read from the
+    // jakarta.servlet.forward.request_uri attribute set by the dispatcher's
+    // forward; Thymeleaf renders without that forward, so it is supplied here.
+    view.addObject("forwardUri", request.getRequestURI());
 
     User user = HttpSessionParser.getCurrentUser();
     if (user != null) {
@@ -160,4 +176,13 @@ public class ViewAspect {
 
   /** The autowired OptionService object. */
   @Autowired private OptionService optionService;
+
+  /**
+   * voj.properties + version.properties, exposing url.cdn / build.version /
+   * product.version. Defined as the {@code propertyConfigurer} Bean in
+   * PersistenceConfig.
+   */
+  @Autowired
+  @Qualifier("propertyConfigurer")
+  private Properties applicationProperties;
 }

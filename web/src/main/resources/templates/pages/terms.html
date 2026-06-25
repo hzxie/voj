@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/main}" lang="en">
+<head>
+    <title th:text="#{voj.misc.terms.title} + ' | ' + ${websiteName}">Terms of Use</title>
+    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/misc/about.css?v=${version}|" />
+</head>
+<body>
+    <div id="content" layout:fragment="content">
+        <div id="ribbon" style="height: 500px;"></div> <!-- #ribbon -->
+        <div class="container">
+            <div class="row-fluid">
+                <div class="span9">
+                    <div id="main-content">
+                        <div class="section">
+                            <div class="markdown" th:utext="#{voj.misc.terms.introduction-content(${websiteName})}"></div> <!-- .markdown -->
+                        </div> <!-- .section -->
+                        <div class="section">
+                            <h3 id="using-services" th:text="#{voj.misc.terms.using-services}">Using our Services</h3>
+                            <div class="markdown" th:utext="#{voj.misc.terms.using-services-content(${websiteName})}"></div> <!-- .markdown -->
+                        </div> <!-- .section -->
+                        <div class="section">
+                            <h3 id="your-account" th:text="#{voj.misc.terms.your-account}">Your Account</h3>
+                            <div class="markdown" th:utext="#{voj.misc.terms.your-account-content(${websiteName})}"></div> <!-- .markdown -->
+                        </div> <!-- .section -->
+                        <div class="section" th:with="privacyUrl=@{/privacy}">
+                            <h3 id="privacy-and-copyright" th:text="#{voj.misc.terms.privacy-and-copyright}">Privacy and Copyright Protection</h3>
+                            <div class="markdown" th:utext="#{voj.misc.terms.privacy-and-copyright-content(${websiteName}, ${privacyUrl})}"></div> <!-- .markdown -->
+                        </div> <!-- .section -->
+                        <div class="section">
+                            <h3 id="your-content" th:text="#{voj.misc.terms.your-content}">Your Content in our Services</h3>
+                            <div class="markdown" th:utext="#{voj.misc.terms.your-content-content(${websiteName})}"></div> <!-- .markdown -->
+                        </div> <!-- .section -->
+                        <div class="section">
+                            <h3 id="software-in-service" th:text="#{voj.misc.terms.software-in-service}">About Software in our Services</h3>
+                            <div class="markdown" th:utext="#{voj.misc.terms.software-in-service-content(${websiteName})}"></div> <!-- .markdown -->
+                        </div> <!-- .section -->
+                        <div class="section">
+                            <h3 id="service-modify-terminate" th:text="#{voj.misc.terms.service-modify-terminate}">Modifying and Terminating our Services</h3>
+                            <div class="markdown" th:utext="#{voj.misc.terms.service-modify-terminate-content(${websiteName})}"></div> <!-- .markdown -->
+                        </div> <!-- .section -->
+                        <div class="section">
+                            <h3 id="warranties-and-disclaimers" th:text="#{voj.misc.terms.warranties-and-disclaimers}">Our Warranties and Disclaimers</h3>
+                            <div class="markdown" th:utext="#{voj.misc.terms.warranties-and-disclaimers-content(${websiteName})}"></div> <!-- .markdown -->
+                        </div> <!-- .section -->
+                        <div class="section">
+                            <h3 id="liability" th:text="#{voj.misc.terms.liability}">Liability for our Services</h3>
+                            <div class="markdown" th:utext="#{voj.misc.terms.liability-content(${websiteName})}"></div> <!-- .markdown -->
+                        </div> <!-- .section -->
+                        <div class="section">
+                            <h3 id="business-use" th:text="#{voj.misc.terms.business-use}">Business uses of our Services</h3>
+                            <div class="markdown" th:utext="#{voj.misc.terms.business-use-content(${websiteName})}"></div> <!-- .markdown -->
+                        </div> <!-- .section -->
+                        <div class="section">
+                            <h3 id="about-terms" th:text="#{voj.misc.terms.about-terms}">About these Terms</h3>
+                            <div class="markdown" th:utext="#{voj.misc.terms.about-terms-content(${websiteName})}"></div> <!-- .markdown -->
+                        </div> <!-- .section -->
+                    </div> <!-- #main-content -->
+                </div> <!-- .span9 -->
+                <div class="span3">
+                    <div id="sidebar-nav">
+                        <h5 th:text="#{voj.misc.terms.terms-of-use}">Terms of Use</h5>
+                        <ul class="contents">
+                            <li><a href="#using-services" th:text="#{voj.misc.terms.using-services}">Using our Services</a></li>
+                            <li><a href="#your-account" th:text="#{voj.misc.terms.your-account}">Your Account</a></li>
+                            <li><a href="#privacy-and-copyright" th:text="#{voj.misc.terms.privacy-and-copyright}">Privacy and Copyright Protection</a></li>
+                            <li><a href="#your-content" th:text="#{voj.misc.terms.your-content}">Your Content in our Services</a></li>
+                            <li><a href="#software-in-service" th:text="#{voj.misc.terms.software-in-service}">About Software in our Services</a></li>
+                            <li><a href="#service-modify-terminate" th:text="#{voj.misc.terms.service-modify-terminate}">Modifying and Terminating our Services</a></li>
+                            <li><a href="#warranties-and-disclaimers" th:text="#{voj.misc.terms.warranties-and-disclaimers}">Our Warranties and Disclaimers</a></li>
+                            <li><a href="#liability" th:text="#{voj.misc.terms.liability}">Liability for our Services</a></li>
+                            <li><a href="#business-use" th:text="#{voj.misc.terms.business-use}">Business uses of our Services</a></li>
+                            <li><a href="#about-terms" th:text="#{voj.misc.terms.about-terms}">About these Terms</a></li>
+                        </ul>
+                    </div> <!-- #sidebar-nav -->
+                </div> <!-- .span3 -->
+            </div> <!-- .row-fluid -->
+        </div> <!-- .container -->
+    </div> <!-- #content -->
+
+    <th:block layout:fragment="scripts">
+    <script type="text/javascript" th:inline="javascript">
+        $.getScript([[|${cdnUrl}/js/markdown.min.js?v=${version}|]], function() {
+            converter = Markdown.getSanitizingConverter();
+
+            $('.markdown').each(function() {
+                var plainContent    = $(this).text(),
+                    markdownContent = converter.makeHtml(plainContent.replace(/\\\n/g, '\\n'));
+
+                $(this).html(markdownContent);
+            });
+        });
+    </script>
+    </th:block>
+</body>
+</html>

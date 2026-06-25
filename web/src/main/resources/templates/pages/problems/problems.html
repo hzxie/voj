@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/main}" lang="en">
+<head>
+    <title th:text="#{voj.problems.problems.title} + ' | ' + ${websiteName}">Problems</title>
+    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/problems/problems.css?v=${version}|" />
+</head>
+<body>
+    <div id="content" class="container" layout:fragment="content"
+         th:with="keyword=${param.keyword != null ? param.keyword[0] : ''},category=${param.category != null ? param.category[0] : ''}">
+        <div id="locator">
+            <ul class="inline">
+                <li><span th:text="#{voj.problems.problems.locator}">Locator</span>:</li>
+                <li th:each="locatorID : ${#numbers.sequence(startIndexOfProblems, startIndexOfProblems + totalProblems, numberOfProblemsPerPage)}">
+                    <a th:href="@{/p(start=${locatorID})}" th:text="|P${locatorID}|">P1</a>
+                </li>
+            </ul>
+        </div> <!-- #locator -->
+        <div id="main-content" class="row-fluid">
+            <div id="problems" class="span8">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th class="flag" th:if="${isLogin}" th:text="#{voj.problems.problems.result}">Result</th>
+                            <th class="name" th:text="#{voj.problems.problems.name}">Name</th>
+                            <th class="submission" th:text="#{voj.problems.problems.submission}">Submission</th>
+                            <th class="ac-rate">AC%</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="problem : ${problems}" th:attr="data-value=${problem.problemId}">
+                            <th:block th:if="${isLogin}">
+                                <td th:if="${submissionOfProblems[problem.problemId] == null}"></td>
+                                <td th:unless="${submissionOfProblems[problem.problemId] == null}" th:class="|flag-${submissionOfProblems[problem.problemId].judgeResult.judgeResultSlug}|">
+                                    <a th:href="@{/submission/{id}(id=${submissionOfProblems[problem.problemId].submissionId})}" th:text="${submissionOfProblems[problem.problemId].judgeResult.judgeResultSlug}">AC</a>
+                                </td>
+                            </th:block>
+                            <td class="name"><a th:href="@{/p/{id}(id=${problem.problemId})}" th:text="|P${problem.problemId} ${problem.problemName}|">Problem</a></td>
+                            <td th:text="${problem.totalSubmission}">0</td>
+                            <td>
+                                <span th:if="${problem.totalSubmission == 0}">0%</span>
+                                <span th:unless="${problem.totalSubmission == 0}" th:text="${#numbers.formatDecimal(problem.acceptedSubmission * 100.0 / problem.totalSubmission, 1, 0)} + '%'">0%</span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div id="more-problems">
+                    <p class="availble" th:text="#{voj.problems.problems.more-problems}">More Problems...</p>
+                    <img th:src="|${cdnUrl}/img/loading.gif?v=${version}|" alt="Loading" class="hide" />
+                </div>
+            </div> <!-- #problems -->
+            <div id="sidebar" class="span4">
+                <div id="search-widget" class="widget">
+                    <h4 th:text="#{voj.problems.problems.search}">Search</h4>
+                    <form id="search-form" th:action="@{/p}">
+                        <div class="control-group">
+                            <input id="keyword" name="keyword" class="span12" type="text" th:placeholder="#{voj.problems.problems.keyword}" th:value="${keyword}" />
+                        </div>
+                        <button class="btn btn-primary btn-block" type="submit" th:text="#{voj.problems.problems.search}">Search</button>
+                    </form> <!-- #search-form -->
+                </div> <!-- #search-widget -->
+                <div id="categories-widget" class="widget">
+                    <h4 th:text="#{voj.problems.problems.categories}">Categories</h4>
+                    <th:block th:each="entry : ${problemCategories}">
+                        <h6>
+                            <a th:classappend="${category == entry.key.problemCategorySlug} ? 'active' : ''"
+                               th:href="@{/p(category=${entry.key.problemCategorySlug})}" th:text="${entry.key.problemCategoryName}">
+                                Category
+                            </a>
+                        </h6>
+                        <ul class="inline">
+                            <li th:each="problemCategory : ${entry.value}">
+                                <a th:classappend="${category == problemCategory.problemCategorySlug} ? 'active' : ''"
+                                   th:href="@{/p(category=${problemCategory.problemCategorySlug})}" th:text="${problemCategory.problemCategoryName}">
+                                    Subcategory
+                                </a>
+                            </li>
+                        </ul>
+                    </th:block>
+                </div> <!-- #categories-widget -->
+            </div> <!-- #sidebar -->
+        </div> <!-- #main-content -->
+    </div> <!-- #content -->
+
+    <th:block layout:fragment="scripts">
+    <script type="text/javascript">
+        $(function() {
+            var numberOfProblems = $('tr', '#problems tbody').length;
+
+            if ( numberOfProblems == 0 ) {
+                return processProblemsResult(false);
+            }
+        });
+    </script>
+    <script type="text/javascript">
+        function setLoadingStatus(isLoading) {
+            if ( isLoading ) {
+                $('p', '#more-problems').addClass('hide');
+                $('img', '#more-problems').removeClass('hide');
+            } else {
+                $('img', '#more-problems').addClass('hide');
+                $('p', '#more-problems').removeClass('hide');
+            }
+        }
+    </script>
+    <script type="text/javascript">
+        $('#more-problems').click(function(event) {
+            var isLoading         = $('img', this).is(':visible'),
+                hasNextRecord     = $('p', this).hasClass('availble'),
+                lastProblemRecord = $('tr:last-child', '#problems tbody'),
+                lastProblemId     = parseInt($(lastProblemRecord).attr('data-value'));
+
+            if ( !isLoading && hasNextRecord ) {
+                setLoadingStatus(true);
+                return getMoreProblems(lastProblemId + 1);
+            }
+        });
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function getMoreProblems(startIndex) {
+            var pageRequests = {
+                'startIndex': startIndex,
+                'keyword': [[${param.keyword != null ? param.keyword[0] : ''}]],
+                'category': [[${param.category != null ? param.category[0] : ''}]]
+            };
+
+            $.ajax({
+                type: 'GET',
+                url: [[@{/p/getProblems.action}]],
+                data: pageRequests,
+                dataType: 'JSON',
+                success: function(result){
+                    return processProblemsResult(result);
+                }
+            });
+        }
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function processProblemsResult(result) {
+            if ( result['isSuccessful'] ) {
+                displayProblemsRecords(result['problems'], result['submissionOfProblems']);
+            } else {
+                $('p', '#more-problems').removeClass('availble');
+                $('p', '#more-problems').html([[#{voj.problems.problems.no-more-problem}]]);
+                $('#more-problems').css('cursor', 'default');
+            }
+            setLoadingStatus(false);
+        }
+    </script>
+    <script type="text/javascript">
+        function displayProblemsRecords(problems, submissionOfProblems) {
+            for ( var i = 0; i < problems.length; ++ i ) {
+                $('table > tbody', '#problems').append(
+                    getProblemContent(problems[i]['problemId'], problems[i]['problemName'],
+                                      problems[i]['totalSubmission'], problems[i]['acceptedSubmission'], submissionOfProblems)
+                );
+            }
+        }
+    </script>
+    <script type="text/javascript" th:inline="javascript" th:if="${isLogin}">
+        function getProblemContent(problemId, problemName, totalSubmission, acceptedSubmission, submissionOfProblems) {
+            var problemTemplate = '<tr data-value="%s">' +
+                                  '    %s' +
+                                  '    <td class="name"><a href="' + [[@{/p/}]] + '%s">P%s %s</a></td>' +
+                                  '    <td>%s</td>' +
+                                  '    <td>%s%</td>' +
+                                  '</tr>';
+
+            return problemTemplate.format(problemId, getSubmissionOfProblemHtml(problemId, submissionOfProblems[problemId]),
+                        problemId, problemId, problemName, totalSubmission, getAcRate(acceptedSubmission, totalSubmission));
+        }
+    </script>
+    <script type="text/javascript" th:inline="javascript" th:unless="${isLogin}">
+        function getProblemContent(problemId, problemName, totalSubmission, acceptedSubmission) {
+            var problemTemplate = '<tr data-value="%s">' +
+                                  '    <td class="name"><a href="' + [[@{/p/}]] + '%s">P%s %s</a></td>' +
+                                  '    <td>%s</td>' +
+                                  '    <td>%s%</td>' +
+                                  '</tr>';
+
+            return problemTemplate.format(problemId, problemId, problemId, problemName,
+                        totalSubmission, getAcRate(acceptedSubmission, totalSubmission));
+        }
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function getSubmissionOfProblemHtml(problemId, submissionOfProblem) {
+            if ( typeof(submissionOfProblem) == 'undefined' ) {
+                return '<td></td>';
+            }
+
+            var submissionId        = submissionOfProblem['submissionId'],
+                judgeResultSlug     = submissionOfProblem['judgeResult']['judgeResultSlug'],
+                submissionTemplate  = '<td class="flag-%s">' +
+                                      '    <a href="' + [[@{/submission/}]] + '%s">%s</a>' +
+                                      '</td>';
+
+            return submissionTemplate.format(judgeResultSlug, submissionId, judgeResultSlug);
+        }
+    </script>
+    <script type="text/javascript">
+        function getAcRate(acceptedSubmission, totalSubmission) {
+            if ( totalSubmission == 0 ) {
+                return 0;
+            }
+            return Math.round(acceptedSubmission / totalSubmission) * 100;
+        }
+    </script>
+    </th:block>
+</body>
+</html>

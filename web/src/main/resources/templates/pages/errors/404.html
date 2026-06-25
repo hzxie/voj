@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/main}" lang="en">
+<head>
+    <title th:text="#{voj.error.404.title} + ' | ' + ${websiteName}">Page Not Found</title>
+    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/misc/error.css?v=${version}|" />
+</head>
+<body>
+    <div id="content" class="container" layout:fragment="content">
+        <div class="row-fluid">
+            <div class="span6">
+                <img th:src="|${cdnUrl}/img/error.png?v=${version}|" alt="Error" />
+            </div> <!-- .span6 -->
+            <div id="error-message" class="span6">
+                <h4 th:text="#{voj.error.404.page-not-found}">Page not found!</h4>
+                <p th:text="#{voj.error.404.message}">The requested URL was not found on this server.</p>
+                <button class="btn btn-primary" onclick="history.go(-1);" th:text="#{voj.error.404.go-back}">Go back</button>
+            </div> <!-- .span6 -->
+        </div> <!-- .row-fluid -->
+    </div> <!-- #content -->
+</body>
+</html>

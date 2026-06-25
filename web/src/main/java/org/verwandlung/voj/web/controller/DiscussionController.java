@@ -73,7 +73,7 @@ public class DiscussionController {
               discussionTopicSlug, 0, NUMBER_OF_THREADS_PER_REQUEST);
     }
 
-    ModelAndView view = new ModelAndView("discussion/threads");
+    ModelAndView view = new ModelAndView("pages/discussion/threads");
     view.addObject("selectedTopicSlug", discussionTopicSlug);
     view.addObject("problemId", problemId);
     view.addObject("discussionThreads", discussionThreads);
@@ -136,7 +136,7 @@ public class DiscussionController {
     }
 
     HttpSession session = request.getSession();
-    ModelAndView view = new ModelAndView("discussion/thread");
+    ModelAndView view = new ModelAndView("pages/discussion/thread");
     view.addObject("discussionThread", discussionThread);
     if (isLoggedIn(session)) {
       List<DiscussionTopic> discussionTopics = discussionService.getDiscussionTopics();
@@ -170,7 +170,7 @@ public class DiscussionController {
         problem = problemService.getProblem(problemId);
       }
 
-      view = new ModelAndView("discussion/new-thread");
+      view = new ModelAndView("pages/discussion/new-thread");
       view.addObject("discussionTopics", discussionTopics);
       view.addObject("relatedProblem", problem);
     }
