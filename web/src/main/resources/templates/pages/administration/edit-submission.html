@@ -94,7 +94,7 @@
             $('button.btn-warning').attr('disabled', 'disabled');
             $('button.btn-warning').html([[#{voj.administration.edit-submission.please-wait}]]);
 
-            var submissions = [[[${submission.submissionId}]]];
+            var submissions = [ [[${submission.submissionId}]] ];
             return doRestartSubmissionsAction(submissions);
         });
     </script>
@@ -107,7 +107,7 @@
             $('button.btn-danger').attr('disabled', 'disabled');
             $('button.btn-danger').html([[#{voj.administration.edit-submission.please-wait}]]);
 
-            var submissions = [[[${submission.submissionId}]]];
+            var submissions = [ [[${submission.submissionId}]] ];
             return doDeleteSubmissionsAction(submissions);
         });
     </script>

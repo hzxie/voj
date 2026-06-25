@@ -339,7 +339,7 @@
             $('button.btn-danger').attr('disabled', 'disabled');
             $('button.btn-danger').html([[#{voj.administration.edit-user.please-wait}]]);
 
-            var users = [[[${user.uid}]]];
+            var users = [ [[${user.uid}]] ];
             return doDeleteUsersAction(users);
         });
     </script>
