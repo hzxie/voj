@@ -23,7 +23,8 @@ Highlights:
   and **Windows** through JNI, rather than relying on a Linux-only runtime.
 - **Sandboxed execution.** On Linux each submission runs under kernel-enforced
   resource limits, a private network namespace and a seccomp syscall filter, as an
-  unprivileged user; on Windows it runs under a separate low-privilege account.
+  unprivileged user; on Windows it runs under a separate low-privilege account
+  inside a Job Object that caps the process count and enforces resource limits.
 - **Real-time feedback** streamed to the browser with Server-Sent Events (SSE), so
   results appear progressively as each test case finishes.
 - **Horizontally scalable judging.** The web app and the judgers are decoupled
@@ -31,9 +32,8 @@ Highlights:
   as many judgers in parallel as you need.
 - **Contests** and **internationalization** (English and Chinese) out of the box.
 
-It is built on the [Spring Framework](https://spring.io) with
-[Spring MVC](https://docs.spring.io/spring-framework/reference/web/webmvc.html) and
-the [MyBatis](https://mybatis.org/mybatis-3/) persistence framework.
+It is built on [Spring Boot](https://spring.io/projects/spring-boot) with the
+[MyBatis](https://mybatis.org/mybatis-3/) persistence framework.
 
 ### Architecture
 
@@ -119,7 +119,11 @@ Untrusted submissions run inside a sandbox so they cannot harm the judging host:
 - **Linux (isolate).** Optionally set `judger.sandbox = isolate` to delegate to the
   external [isolate](https://github.com/ioi/isolate) tool instead.
 - **Windows (native).** Each submission runs under a separate low-privilege Windows
-  account via `CreateProcessWithLogonW`.
+  account (`CreateProcessWithLogonW`) inside a
+  [Job Object](https://learn.microsoft.com/windows/win32/procthread/job-objects)
+  that caps the process count (anti fork-bomb), enforces memory and wall-clock
+  limits, applies UI restrictions (no access to the interactive desktop or
+  clipboard), and kills the whole process tree when the run ends.
 
 The native sandbox does not provide full filesystem isolation. Reference answers
 and configuration are protected by file permissions (the work directory is handed
