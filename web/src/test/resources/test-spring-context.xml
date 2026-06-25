@@ -87,9 +87,18 @@
 	<tx:annotation-driven transaction-manager="transactionManager"/>
 
 	<!-- Mail Service -->
-	<bean id="freeMarkerConfigurer"
-		class="org.springframework.web.servlet.view.freemarker.FreeMarkerConfigurer">
-		<property name="templateLoaderPath" value="classpath:/mails"/>
+	<!-- HTML mail bodies are rendered by the shared Thymeleaf engine (templates
+	     under classpath:/templates/mail), mirroring the application's MailConfig;
+	     FreeMarker has been removed. -->
+	<bean id="mailTemplateResolver"
+		class="org.thymeleaf.spring6.templateresolver.SpringResourceTemplateResolver">
+		<property name="prefix" value="classpath:/templates/" />
+		<property name="suffix" value=".html" />
+		<property name="templateMode" value="HTML" />
+		<property name="characterEncoding" value="UTF-8" />
+	</bean>
+	<bean id="templateEngine" class="org.thymeleaf.spring6.SpringTemplateEngine">
+		<property name="templateResolver" ref="mailTemplateResolver" />
 	</bean>
 	<bean id="mailSender" class="org.springframework.mail.javamail.JavaMailSenderImpl">
 		<property name="host" value="${mail.host}" />
@@ -102,10 +111,9 @@
 			</props>
 		</property>
 	</bean>
-	<bean id="vojMailSender" 
-		class="org.verwandlung.voj.web.util.MailSender">
-	</bean>
-	
+	<!-- vojMailSender (MailSender) is picked up by component scanning and
+	     constructor-injected with the Thymeleaf engine and JavaMailSender. -->
+
 	<!-- Message Service -->
 	<bean id="amqConnectionFactory" class="org.apache.activemq.ActiveMQConnectionFactory">
 		<constructor-arg index="0" value="${jms.broker.url}" />
