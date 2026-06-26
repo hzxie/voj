@@ -27,6 +27,7 @@ import org.mybatis.spring.SqlSessionTemplate;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -189,6 +190,41 @@ class ViewRenderSmokeTest {
   @ValueSource(strings = {"/this-route-does-not-exist"})
   void errorViewsRender(String url) throws Exception {
     mockMvc.perform(getWithCsrf(url)).andExpect(status().isNotFound());
+  }
+
+  // ---------------------------------------------------------------------------
+  // Not-yet-implemented admin features.
+  //
+  // These routes are linked from the admin sidebar but have no controller
+  // mapping or template yet (today they fall through to the static-resource
+  // handler and 500). Each is a placeholder asserting the eventual rendered
+  // state (HTTP 200); once the @RequestMapping in AdministrationController and
+  // the corresponding template exist, drop the @Disabled to turn it into an
+  // acceptance test. They double as a backlog: each shows up as a skipped test.
+  // ---------------------------------------------------------------------------
+
+  @Disabled("not implemented: admin 'all discussions' list — enable with the controller route + template")
+  @Test
+  void allDiscussionViewRenders() throws Exception {
+    mockMvc.perform(getWithCsrf("/administration/all-discussion")).andExpect(status().isOk());
+  }
+
+  @Disabled("not implemented: admin 'discussion topics' page — enable with the controller route + template")
+  @Test
+  void discussionTopicsViewRenders() throws Exception {
+    mockMvc.perform(getWithCsrf("/administration/discussion-topics")).andExpect(status().isOk());
+  }
+
+  @Disabled("not implemented: admin 'all contests' list — enable with the controller route + template")
+  @Test
+  void allContestsViewRenders() throws Exception {
+    mockMvc.perform(getWithCsrf("/administration/all-contests")).andExpect(status().isOk());
+  }
+
+  @Disabled("not implemented: admin 'new contest' page — enable with the controller route + template")
+  @Test
+  void newContestViewRenders() throws Exception {
+    mockMvc.perform(getWithCsrf("/administration/new-contest")).andExpect(status().isOk());
   }
 
   /** Builds a GET that carries a CSRF token request attribute for templates that reference it. */
