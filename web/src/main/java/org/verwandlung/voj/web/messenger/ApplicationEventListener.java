@@ -98,7 +98,21 @@ public class ApplicationEventListener {
     Map<String, String> mapMessage = new HashMap<>(3, 1);
     mapMessage.put("judgeResult", judgeResult);
     mapMessage.put("message", message);
-    sseEmitter.send(mapMessage);
+
+    try {
+      sseEmitter.send(mapMessage);
+    } catch (IOException | IllegalStateException ex) {
+      // The client closed the EventSource (or the stream is already complete): drop the dead
+      // emitter instead of letting the IOException propagate. Re-throwing here would surface
+      // through Spring's async error handling and, because the SSE response is already
+      // committed, fail again while rendering the HTML error view.
+      LOGGER.warn(
+          String.format("Dropping SseEmitter for submission #%d after a failed send.", submissionId),
+          ex);
+      sseEmitter.completeWithError(ex);
+      removeSseEmitters(submissionId);
+      return;
+    }
 
     if (isCompleted) {
       sseEmitter.complete();
@@ -113,6 +127,12 @@ public class ApplicationEventListener {
    * @param sseEmitter - the Server-Sent Event emitter object
    */
   public void addSseEmitters(long submissionId, SseEmitter sseEmitter) {
+    // Evict the emitter from the registry once the stream ends for any reason (normal
+    // completion, container timeout or a client disconnect). Without this a closed
+    // connection would linger in the map and keep failing on every future send().
+    sseEmitter.onCompletion(() -> sseEmitters.remove(submissionId, sseEmitter));
+    sseEmitter.onTimeout(() -> sseEmitters.remove(submissionId, sseEmitter));
+    sseEmitter.onError(throwable -> sseEmitters.remove(submissionId, sseEmitter));
     sseEmitters.put(submissionId, sseEmitter);
   }
 
