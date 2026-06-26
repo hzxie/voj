@@ -250,8 +250,12 @@ public class ApplicationDispatcher {
     formatedLogBuilder.append(
         String.format("Compile %s.\n\n", new Object[] {isSuccessful ? "Successful" : "Error"}));
     if (!isSuccessful) {
-      formatedLogBuilder.append(compileLog.replace("\n", "\n\n"));
-      formatedLogBuilder.append("\nCompile Error, Time = 0 ms, Memory = 0 KB, Score = 0.\n");
+      // Embed the raw compiler output as a Markdown indented code block (4-space prefix on every
+      // line). This keeps the rest of the log as Markdown while rendering the compiler stderr
+      // verbatim: line breaks are preserved and angle-bracketed tokens such as
+      // "#include <windows.h>" are not stripped as HTML by the front-end Markdown converter.
+      formatedLogBuilder.append(compileLog.replaceAll("(?m)^", "    "));
+      formatedLogBuilder.append("\n\nCompile Error, Time = 0 ms, Memory = 0 KB, Score = 0.\n");
     }
     return formatedLogBuilder.toString();
   }

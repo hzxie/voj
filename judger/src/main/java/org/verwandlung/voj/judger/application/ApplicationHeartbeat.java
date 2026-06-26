@@ -16,6 +16,7 @@
  */
 package org.verwandlung.voj.judger.application;
 
+import java.lang.management.ManagementFactory;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
@@ -54,8 +55,49 @@ public class ApplicationHeartbeat implements Runnable {
     mapMessage.put("username", judgerUsername);
     mapMessage.put("description", getDescription());
     mapMessage.put("heartbeatTime", currentTime);
+    // Live telemetry sampled from the JVM/host so the web dashboard can show node load.
+    mapMessage.put("cpuLoad", getCpuLoad());
+    mapMessage.put("memoryUsage", getMemoryUsage());
+    mapMessage.put("uptime", ManagementFactory.getRuntimeMXBean().getUptime());
     messageSender.sendMessage(mapMessage);
     LOGGER.info("Heartbeat sent to the web server.");
+  }
+
+  /**
+   * Gets the current system CPU load as a percentage (0-100).
+   *
+   * @return the system CPU load percentage, or 0 when the platform cannot report it
+   */
+  private int getCpuLoad() {
+    com.sun.management.OperatingSystemMXBean osBean =
+        (com.sun.management.OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
+    // The first reading after JVM start reflects class-loading/JIT warm-up rather than the
+    // steady-state load, which makes a freshly started judger report ~100%. Prime the bean and
+    // sample again over a short window so the reported value is an accurate recent load.
+    osBean.getCpuLoad();
+    try {
+      Thread.sleep(CPU_SAMPLE_INTERVAL);
+    } catch (InterruptedException ex) {
+      Thread.currentThread().interrupt();
+    }
+    double cpuLoad = osBean.getCpuLoad();
+    return cpuLoad < 0 ? 0 : (int) Math.round(cpuLoad * 100);
+  }
+
+  /**
+   * Gets the current physical memory usage as a percentage (0-100).
+   *
+   * @return the memory usage percentage, or 0 when the platform cannot report it
+   */
+  private int getMemoryUsage() {
+    com.sun.management.OperatingSystemMXBean osBean =
+        (com.sun.management.OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
+    long totalMemory = osBean.getTotalMemorySize();
+    long freeMemory = osBean.getFreeMemorySize();
+    if (totalMemory <= 0) {
+      return 0;
+    }
+    return (int) Math.round((totalMemory - freeMemory) * 100.0 / totalMemory);
   }
 
   /**
@@ -103,6 +145,9 @@ public class ApplicationHeartbeat implements Runnable {
 
   /** The autowired password encoder, used to verify the judger's password against the stored hash. */
   @Autowired private PasswordEncoder passwordEncoder;
+
+  /** The window (in milliseconds) over which the CPU load is sampled for each heartbeat. */
+  private static final long CPU_SAMPLE_INTERVAL = 500;
 
   /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(ApplicationHeartbeat.class);

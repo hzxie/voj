@@ -78,10 +78,12 @@ public class VojJudgerApplication {
   /** Configures the heartbeat connection with the web module, periodically sending Keep-Alive signals to it. */
   private void setupHeartBeat(ApplicationHeartbeat heartbeat) {
     final int INITIAL_DELAY = 0;
-    final int PERIOD = 25;
+    // A short interval keeps the web dashboard's telemetry (CPU/memory/uptime) and online status
+    // live; the web side treats a judger as offline after a few missed heartbeats.
+    final int PERIOD = 30;
 
     ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
-    scheduler.scheduleAtFixedRate(heartbeat, INITIAL_DELAY, PERIOD, TimeUnit.MINUTES);
+    scheduler.scheduleAtFixedRate(heartbeat, INITIAL_DELAY, PERIOD, TimeUnit.SECONDS);
   }
 
   /** Logs the system environment variables to make bug reproduction easier. */
