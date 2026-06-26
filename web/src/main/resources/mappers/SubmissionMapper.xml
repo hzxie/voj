@@ -194,12 +194,25 @@
 		FROM voj_submissions 
 		WHERE uid = #{uid} AND submission_judge_result = 'AC'
 	</select>
-	<select id="getTotalSubmissionUsingUserId" 
+	<select id="getTotalSubmissionUsingUserId"
 		parameterType="long"
 		resultType="long">
-		SELECT COUNT(*) 
-		FROM voj_submissions 
+		SELECT COUNT(*)
+		FROM voj_submissions
 		WHERE uid = #{uid} AND submission_judge_result != 'PD' AND submission_judge_result != 'SE'
+	</select>
+	<select id="getNumberOfSolvedProblemsByDifficulty"
+		parameterType="long"
+		resultType="hashmap">
+		SELECT d.problem_difficulty_slug AS slug,
+			d.problem_difficulty_name AS name,
+			COUNT(DISTINCT CASE WHEN p.problem_is_public = 1 THEN p.problem_id END) AS total,
+			COUNT(DISTINCT CASE WHEN p.problem_is_public = 1 AND s.submission_judge_result = 'AC' THEN s.problem_id END) AS solved
+		FROM voj_problem_difficulty d
+		LEFT JOIN voj_problems p ON p.problem_difficulty_id = d.problem_difficulty_id
+		LEFT JOIN voj_submissions s ON s.problem_id = p.problem_id AND s.uid = #{uid}
+		GROUP BY d.problem_difficulty_id, d.problem_difficulty_slug, d.problem_difficulty_name
+		ORDER BY d.problem_difficulty_id
 	</select>
 	<insert id="createSubmission" 
 		parameterType="org.verwandlung.voj.web.model.Submission"

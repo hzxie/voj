@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import org.verwandlung.voj.web.mapper.CheckpointMapper;
 import org.verwandlung.voj.web.mapper.ProblemCategoryMapper;
+import org.verwandlung.voj.web.mapper.ProblemDifficultyMapper;
 import org.verwandlung.voj.web.mapper.ProblemMapper;
 import org.verwandlung.voj.web.mapper.ProblemTagMapper;
 import org.verwandlung.voj.web.model.*;
@@ -105,6 +106,56 @@ public class ProblemService {
     }
     return problemMapper.getProblemsUsingFilters(
         keyword, problemCategoryId, problemTagId, isPublicOnly, offset, limit);
+  }
+
+  /**
+   * Gets a page of problems for the public problem set, filtered by a single field. Backs the
+   * numbered-pager problem list (the ID/Title/Tag segmented filter in the redesigned page).
+   *
+   * @param pageNumber - the 1-based page number
+   * @param pageSize - the number of problems per page
+   * @param field - the filter field ("id", "title" or "tag")
+   * @param query - the filter value (may be null/empty for no filtering)
+   * @param isPublicOnly - whether to filter only public problems
+   * @return the list of problems on the requested page
+   */
+  public List<Problem> getProblemsByPage(
+      int pageNumber, int pageSize, String field, String query, boolean isPublicOnly) {
+    long offset = (long) (pageNumber - 1) * pageSize;
+    if (offset < 0) {
+      offset = 0;
+    }
+    return problemMapper.getProblemsByPage(
+        field, query, resolveProblemTagId(field, query), isPublicOnly, offset, pageSize);
+  }
+
+  /**
+   * Gets the total number of problems matching the public problem-set filters.
+   *
+   * @param field - the filter field ("id", "title" or "tag")
+   * @param query - the filter value (may be null/empty for no filtering)
+   * @param isPublicOnly - whether to filter only public problems
+   * @return the total number of matching problems
+   */
+  public long getNumberOfProblemsByPage(String field, String query, boolean isPublicOnly) {
+    return problemMapper.getNumberOfProblemsByPage(
+        field, query, resolveProblemTagId(field, query), isPublicOnly);
+  }
+
+  /**
+   * Resolves the tag filter to a tag identifier. Returns 0 when no tag filter applies and -1 (a
+   * sentinel that matches no rows) when filtering by a tag that does not exist.
+   *
+   * @param field - the filter field
+   * @param query - the filter value
+   * @return the tag identifier to filter by
+   */
+  private long resolveProblemTagId(String field, String query) {
+    if (!"tag".equals(field) || query == null || query.isEmpty()) {
+      return 0;
+    }
+    ProblemTag problemTag = problemTagMapper.getProblemTagUsingTagSlug(SlugifyUtils.getSlug(query));
+    return problemTag != null ? problemTag.getProblemTagId() : -1;
   }
 
   /**
@@ -246,6 +297,37 @@ public class ProblemService {
   }
 
   /**
+   * Gets all the problem difficulty levels (for the administration problem editor).
+   *
+   * @return a list of all problem difficulty levels
+   */
+  public List<ProblemDifficulty> getProblemDifficulties() {
+    return problemDifficultyMapper.getProblemDifficulties();
+  }
+
+  /**
+   * Resolves a difficulty alias to a {@link ProblemDifficulty}, falling back to the first
+   * (lowest) difficulty when the alias is empty or unknown.
+   *
+   * @param problemDifficultySlug - the alias of the problem difficulty
+   * @return the matching problem difficulty, or the default one
+   */
+  private ProblemDifficulty getProblemDifficultyOrDefault(String problemDifficultySlug) {
+    ProblemDifficulty problemDifficulty = null;
+    if (problemDifficultySlug != null && !problemDifficultySlug.isEmpty()) {
+      problemDifficulty =
+          problemDifficultyMapper.getProblemDifficultyUsingSlug(problemDifficultySlug);
+    }
+    if (problemDifficulty == null) {
+      List<ProblemDifficulty> problemDifficulties = problemDifficultyMapper.getProblemDifficulties();
+      if (!problemDifficulties.isEmpty()) {
+        problemDifficulty = problemDifficulties.get(0);
+      }
+    }
+    return problemDifficulty;
+  }
+
+  /**
    * [For administrators only] Gets the total number of all problems.
    *
    * @return the total number of all problems
@@ -308,7 +390,8 @@ public class ProblemService {
       String problemCategories,
       String problemTags,
       boolean isPublic,
-      boolean isExactlyMatch) {
+      boolean isExactlyMatch,
+      String problemDifficulty) {
     Problem problem =
         new Problem(
             isPublic,
@@ -321,6 +404,7 @@ public class ProblemService {
             inputSample,
             outputSample,
             hint);
+    problem.setProblemDifficulty(getProblemDifficultyOrDefault(problemDifficulty));
     @SuppressWarnings("unchecked")
     Map<String, Object> result = (Map<String, Object>) getProblemCreationResult(problem);
 
@@ -404,7 +488,8 @@ public class ProblemService {
       String problemCategories,
       String problemTags,
       boolean isPublic,
-      boolean isExactlyMatch) {
+      boolean isExactlyMatch,
+      String problemDifficulty) {
     Problem problem =
         new Problem(
             problemId,
@@ -418,6 +503,7 @@ public class ProblemService {
             inputSample,
             outputSample,
             hint);
+    problem.setProblemDifficulty(getProblemDifficultyOrDefault(problemDifficulty));
     Map<String, Boolean> result = getProblemEditResult(problem);
 
     if (result.get("isSuccessful")) {
@@ -811,6 +897,9 @@ public class ProblemService {
 
   /** The autowired ProblemCategoryMapper object. */
   @Autowired private ProblemCategoryMapper problemCategoryMapper;
+
+  /** The autowired ProblemDifficultyMapper object. */
+  @Autowired private ProblemDifficultyMapper problemDifficultyMapper;
 
   /** The autowired ProblemTagMapper object. */
   @Autowired private ProblemTagMapper problemTagMapper;

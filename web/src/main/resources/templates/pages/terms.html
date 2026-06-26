@@ -1,97 +1,118 @@
 <!DOCTYPE html>
+<!--/* Reproduced verbatim from voj-design/Terms.dc.html (terminal aesthetic). */-->
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layouts/main}" lang="en">
 <head>
-    <title th:text="#{voj.misc.terms.title} + ' | ' + ${websiteName}">Terms of Use</title>
-    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/misc/about.css?v=${version}|" />
+    <title th:text="#{voj.misc.terms.title} + ' | ' + ${websiteName}">Terms of Service</title>
 </head>
 <body>
-    <div id="content" layout:fragment="content">
-        <div id="ribbon" style="height: 500px;"></div> <!-- #ribbon -->
-        <div class="container">
-            <div class="row-fluid">
-                <div class="span9">
-                    <div id="main-content">
-                        <div class="section">
-                            <div class="markdown" th:utext="#{voj.misc.terms.introduction-content(${websiteName})}"></div> <!-- .markdown -->
-                        </div> <!-- .section -->
-                        <div class="section">
-                            <h3 id="using-services" th:text="#{voj.misc.terms.using-services}">Using our Services</h3>
-                            <div class="markdown" th:utext="#{voj.misc.terms.using-services-content(${websiteName})}"></div> <!-- .markdown -->
-                        </div> <!-- .section -->
-                        <div class="section">
-                            <h3 id="your-account" th:text="#{voj.misc.terms.your-account}">Your Account</h3>
-                            <div class="markdown" th:utext="#{voj.misc.terms.your-account-content(${websiteName})}"></div> <!-- .markdown -->
-                        </div> <!-- .section -->
-                        <div class="section" th:with="privacyUrl=@{/privacy}">
-                            <h3 id="privacy-and-copyright" th:text="#{voj.misc.terms.privacy-and-copyright}">Privacy and Copyright Protection</h3>
-                            <div class="markdown" th:utext="#{voj.misc.terms.privacy-and-copyright-content(${websiteName}, ${privacyUrl})}"></div> <!-- .markdown -->
-                        </div> <!-- .section -->
-                        <div class="section">
-                            <h3 id="your-content" th:text="#{voj.misc.terms.your-content}">Your Content in our Services</h3>
-                            <div class="markdown" th:utext="#{voj.misc.terms.your-content-content(${websiteName})}"></div> <!-- .markdown -->
-                        </div> <!-- .section -->
-                        <div class="section">
-                            <h3 id="software-in-service" th:text="#{voj.misc.terms.software-in-service}">About Software in our Services</h3>
-                            <div class="markdown" th:utext="#{voj.misc.terms.software-in-service-content(${websiteName})}"></div> <!-- .markdown -->
-                        </div> <!-- .section -->
-                        <div class="section">
-                            <h3 id="service-modify-terminate" th:text="#{voj.misc.terms.service-modify-terminate}">Modifying and Terminating our Services</h3>
-                            <div class="markdown" th:utext="#{voj.misc.terms.service-modify-terminate-content(${websiteName})}"></div> <!-- .markdown -->
-                        </div> <!-- .section -->
-                        <div class="section">
-                            <h3 id="warranties-and-disclaimers" th:text="#{voj.misc.terms.warranties-and-disclaimers}">Our Warranties and Disclaimers</h3>
-                            <div class="markdown" th:utext="#{voj.misc.terms.warranties-and-disclaimers-content(${websiteName})}"></div> <!-- .markdown -->
-                        </div> <!-- .section -->
-                        <div class="section">
-                            <h3 id="liability" th:text="#{voj.misc.terms.liability}">Liability for our Services</h3>
-                            <div class="markdown" th:utext="#{voj.misc.terms.liability-content(${websiteName})}"></div> <!-- .markdown -->
-                        </div> <!-- .section -->
-                        <div class="section">
-                            <h3 id="business-use" th:text="#{voj.misc.terms.business-use}">Business uses of our Services</h3>
-                            <div class="markdown" th:utext="#{voj.misc.terms.business-use-content(${websiteName})}"></div> <!-- .markdown -->
-                        </div> <!-- .section -->
-                        <div class="section">
-                            <h3 id="about-terms" th:text="#{voj.misc.terms.about-terms}">About these Terms</h3>
-                            <div class="markdown" th:utext="#{voj.misc.terms.about-terms-content(${websiteName})}"></div> <!-- .markdown -->
-                        </div> <!-- .section -->
-                    </div> <!-- #main-content -->
-                </div> <!-- .span9 -->
-                <div class="span3">
-                    <div id="sidebar-nav">
-                        <h5 th:text="#{voj.misc.terms.terms-of-use}">Terms of Use</h5>
-                        <ul class="contents">
-                            <li><a href="#using-services" th:text="#{voj.misc.terms.using-services}">Using our Services</a></li>
-                            <li><a href="#your-account" th:text="#{voj.misc.terms.your-account}">Your Account</a></li>
-                            <li><a href="#privacy-and-copyright" th:text="#{voj.misc.terms.privacy-and-copyright}">Privacy and Copyright Protection</a></li>
-                            <li><a href="#your-content" th:text="#{voj.misc.terms.your-content}">Your Content in our Services</a></li>
-                            <li><a href="#software-in-service" th:text="#{voj.misc.terms.software-in-service}">About Software in our Services</a></li>
-                            <li><a href="#service-modify-terminate" th:text="#{voj.misc.terms.service-modify-terminate}">Modifying and Terminating our Services</a></li>
-                            <li><a href="#warranties-and-disclaimers" th:text="#{voj.misc.terms.warranties-and-disclaimers}">Our Warranties and Disclaimers</a></li>
-                            <li><a href="#liability" th:text="#{voj.misc.terms.liability}">Liability for our Services</a></li>
-                            <li><a href="#business-use" th:text="#{voj.misc.terms.business-use}">Business uses of our Services</a></li>
-                            <li><a href="#about-terms" th:text="#{voj.misc.terms.about-terms}">About these Terms</a></li>
-                        </ul>
-                    </div> <!-- #sidebar-nav -->
-                </div> <!-- .span3 -->
-            </div> <!-- .row-fluid -->
-        </div> <!-- .container -->
-    </div> <!-- #content -->
+    <div layout:fragment="content">
+        <!-- HERO -->
+        <section class="vw-dochero">
+            <div class="vw-dochero-inner vw-dochero-inner-w1100">
+                <div class="vw-eyebrow">// TERMS OF SERVICE</div>
+                <h1>The fine print,<br>minus the <span class="accent">jargon.</span></h1>
+                <p class="vw-dochero-lead mb">These terms govern your use of Verwandlung &mdash; the problems, contests, judging engine and discussion board. Plain language, no surprises. By creating an account or submitting code, you agree to what follows.</p>
+                <div class="vw-chiprow">
+                    <span class="chip">Effective <b>Jun 1, 2026</b></span>
+                    <span class="chip">Version <b>3.2</b></span>
+                    <span class="chip">~4 min read</span>
+                </div>
+            </div>
+        </section>
 
-    <th:block layout:fragment="scripts">
-    <script type="text/javascript" th:inline="javascript">
-        $.getScript([[|${cdnUrl}/js/markdown.min.js?v=${version}|]], function() {
-            converter = Markdown.getSanitizingConverter();
+        <!-- DOC -->
+        <section class="vw-legal">
+            <aside class="vw-legal-toc">
+                <div class="label">// CONTENTS</div>
+                <nav>
+                    <a href="#sec-1"><span class="n">01</span><span>Acceptance of Terms</span></a>
+                    <a href="#sec-2"><span class="n">02</span><span>Accounts &amp; Eligibility</span></a>
+                    <a href="#sec-3"><span class="n">03</span><span>Acceptable Use</span></a>
+                    <a href="#sec-4"><span class="n">04</span><span>Submissions &amp; Code Ownership</span></a>
+                    <a href="#sec-5"><span class="n">05</span><span>Contests &amp; Fair Play</span></a>
+                    <a href="#sec-6"><span class="n">06</span><span>Intellectual Property</span></a>
+                    <a href="#sec-7"><span class="n">07</span><span>Service Availability</span></a>
+                    <a href="#sec-8"><span class="n">08</span><span>Disclaimer of Warranties</span></a>
+                    <a href="#sec-9"><span class="n">09</span><span>Limitation of Liability</span></a>
+                    <a href="#sec-10"><span class="n">10</span><span>Changes to These Terms</span></a>
+                    <a href="#sec-11"><span class="n">11</span><span>Contact</span></a>
+                </nav>
+            </aside>
 
-            $('.markdown').each(function() {
-                var plainContent    = $(this).text(),
-                    markdownContent = converter.makeHtml(plainContent.replace(/\\\n/g, '\\n'));
+            <article class="vw-legal-body">
+                <div id="sec-1" class="vw-legal-sec">
+                    <div class="h"><span class="n">&sect; 01</span><h2>Acceptance of Terms</h2></div>
+                    <p>By accessing Verwandlung or creating an account, you agree to these Terms of Service and our Privacy Policy. If you do not agree, please do not use the platform.</p>
+                    <p>These terms apply to everyone who browses problems, submits code, joins contests, or posts on the discussion board &mdash; registered or not.</p>
+                </div>
+                <div id="sec-2" class="vw-legal-sec">
+                    <div class="h"><span class="n">&sect; 02</span><h2>Accounts &amp; Eligibility</h2></div>
+                    <p>You are responsible for the activity under your account and for keeping your password secure. One human, one account; automated or shared accounts may be suspended.</p>
+                    <ul>
+                        <li><span class="arrow">&rarr;</span><span>Provide a valid email so we can deliver verdicts and security notices.</span></li>
+                        <li><span class="arrow">&rarr;</span><span>You must be 13 or older to register, or have guardian consent.</span></li>
+                        <li><span class="arrow">&rarr;</span><span>Notify us promptly if you suspect unauthorized access.</span></li>
+                    </ul>
+                </div>
+                <div id="sec-3" class="vw-legal-sec">
+                    <div class="h"><span class="n">&sect; 03</span><h2>Acceptable Use</h2></div>
+                    <p>Verwandlung is a learning and competition platform. Use it to practice, compete, and discuss algorithms in good faith.</p>
+                    <ul>
+                        <li><span class="arrow">&rarr;</span><span>Do not attack, overload, or attempt to escape the judger sandbox.</span></li>
+                        <li><span class="arrow">&rarr;</span><span>Do not exfiltrate hidden test data or probe other users&rsquo; submissions.</span></li>
+                        <li><span class="arrow">&rarr;</span><span>Do not post spam, malware, or content you have no right to share.</span></li>
+                    </ul>
+                </div>
+                <div id="sec-4" class="vw-legal-sec">
+                    <div class="h"><span class="n">&sect; 04</span><h2>Submissions &amp; Code Ownership</h2></div>
+                    <p>You keep ownership of the source code you submit. By submitting, you grant Verwandlung a limited license to compile, execute, store, and grade it for the purpose of returning a verdict.</p>
+                    <p>We may retain submissions to power your profile statistics, contest standings, and plagiarism checks.</p>
+                </div>
+                <div id="sec-5" class="vw-legal-sec">
+                    <div class="h"><span class="n">&sect; 05</span><h2>Contests &amp; Fair Play</h2></div>
+                    <p>Ranked contests are governed by their individual rules in addition to these terms. Cheating undermines everyone&rsquo;s effort and is taken seriously.</p>
+                    <ul>
+                        <li><span class="arrow">&rarr;</span><span>No sharing solutions or accounts during a live contest.</span></li>
+                        <li><span class="arrow">&rarr;</span><span>No multiple accounts to manipulate standings.</span></li>
+                        <li><span class="arrow">&rarr;</span><span>Verdicts and penalties from the judging engine are final unless a rejudge is issued.</span></li>
+                    </ul>
+                </div>
+                <div id="sec-6" class="vw-legal-sec">
+                    <div class="h"><span class="n">&sect; 06</span><h2>Intellectual Property</h2></div>
+                    <p>The Verwandlung engine is open source under GPL-3.0. Problem statements, test data, and editorial content remain the property of their respective authors and may not be redistributed without permission.</p>
+                </div>
+                <div id="sec-7" class="vw-legal-sec">
+                    <div class="h"><span class="n">&sect; 07</span><h2>Service Availability</h2></div>
+                    <p>We run a distributed judger cluster and aim for high availability, but the service is provided on a best-effort basis. Maintenance, migrations, and outages may interrupt judging from time to time.</p>
+                </div>
+                <div id="sec-8" class="vw-legal-sec">
+                    <div class="h"><span class="n">&sect; 08</span><h2>Disclaimer of Warranties</h2></div>
+                    <p>Verwandlung is provided &ldquo;as is&rdquo; without warranties of any kind. We do not guarantee that verdicts, latencies, or standings will be free of error at all times.</p>
+                </div>
+                <div id="sec-9" class="vw-legal-sec">
+                    <div class="h"><span class="n">&sect; 09</span><h2>Limitation of Liability</h2></div>
+                    <p>To the fullest extent permitted by law, Verwandlung and its maintainers are not liable for any indirect or consequential damages arising from your use of the platform, including lost contest standing or data.</p>
+                </div>
+                <div id="sec-10" class="vw-legal-sec">
+                    <div class="h"><span class="n">&sect; 10</span><h2>Changes to These Terms</h2></div>
+                    <p>We may update these terms as the platform evolves. Material changes will be announced on the changelog and the effective date above will be revised. Continued use after changes means you accept them.</p>
+                </div>
+                <div id="sec-11" class="vw-legal-sec">
+                    <div class="h"><span class="n">&sect; 11</span><h2>Contact</h2></div>
+                    <p>Questions, disputes, or takedown requests can be sent to legal@verwandlung.io, or raised as an issue on the project&rsquo;s GitHub repository.</p>
+                </div>
 
-                $(this).html(markdownContent);
-            });
-        });
-    </script>
-    </th:block>
+                <div class="vw-contact">
+                    <div class="vw-contact-text">
+                        <div class="t">Questions about these terms?</div>
+                        <div class="d">Reach the maintainers at <a href="mailto:legal@verwandlung.io">legal@verwandlung.io</a> or open an issue on GitHub.</div>
+                    </div>
+                    <a class="vw-btn vw-btn-accent" th:href="@{/help}">Visit Help center &rarr;</a>
+                </div>
+            </article>
+        </section>
+    </div>
 </body>
 </html>

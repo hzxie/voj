@@ -199,6 +199,16 @@ public interface SubmissionMapper {
   long getTotalSubmissionUsingUserId(@Param("uid") long uid);
 
   /**
+   * Gets a user's public-problem counts broken down by difficulty level. Each row carries the
+   * difficulty's slug and name, the number of public problems at that difficulty (total) and the
+   * number the user has an accepted submission for (solved).
+   *
+   * @param uid - the unique identifier of the user
+   * @return an ordered list of per-difficulty rows (slug, name, total, solved)
+   */
+  List<Map<String, Object>> getNumberOfSolvedProblemsByDifficulty(@Param("uid") long uid);
+
+  /**
    * Creates a submission.
    *
    * @param submission - the submission object to create

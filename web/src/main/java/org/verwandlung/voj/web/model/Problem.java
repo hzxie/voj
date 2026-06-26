@@ -163,6 +163,24 @@ public class Problem implements Serializable {
   }
 
   /**
+   * Gets the difficulty of the problem.
+   *
+   * @return the difficulty of the problem
+   */
+  public ProblemDifficulty getProblemDifficulty() {
+    return problemDifficulty;
+  }
+
+  /**
+   * Sets the difficulty of the problem.
+   *
+   * @param problemDifficulty - the difficulty of the problem
+   */
+  public void setProblemDifficulty(ProblemDifficulty problemDifficulty) {
+    this.problemDifficulty = problemDifficulty;
+  }
+
+  /**
    * Gets the tags of the problem.
    *
    * @return the tags of the problem
@@ -394,6 +412,9 @@ public class Problem implements Serializable {
 
   /** The name of the problem. */
   private String problemName;
+
+  /** The difficulty of the problem (normalized lookup: id + slug + name). */
+  private ProblemDifficulty problemDifficulty;
 
   /** The tags of the problem. */
   private List<ProblemTag> problemTags;

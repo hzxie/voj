@@ -378,9 +378,22 @@ public class DiscussionService {
             threadCreator, discussionTopic, null, HtmlTextFilter.filter(discussionThreadTitle));
     Map<String, Object> result =
         (Map<String, Object>) getDiscussionThreadCreationResult(dt, discussionThreadContent);
-    if ((Boolean) result.get("isSuccessful")) {
-      if (relatedProblemId != 0) {
-        Problem relatedProblem = problemMapper.getProblem(relatedProblemId);
+
+    // The related problem is optional: a non-positive id means "no problem linked". When an id
+    // is supplied it must resolve to an existing problem, otherwise the thread is rejected rather
+    // than silently created with no problem attached.
+    Problem relatedProblem = null;
+    boolean isRelatedProblemExists = true;
+    if (relatedProblemId > 0) {
+      relatedProblem = problemMapper.getProblem(relatedProblemId);
+      isRelatedProblemExists = relatedProblem != null;
+    }
+    result.put("isRelatedProblemExists", isRelatedProblemExists);
+
+    boolean isSuccessful = (Boolean) result.get("isSuccessful") && isRelatedProblemExists;
+    result.put("isSuccessful", isSuccessful);
+    if (isSuccessful) {
+      if (relatedProblem != null) {
         dt.setProblem(relatedProblem);
       }
       discussionThreadMapper.createDiscussionThread(dt);

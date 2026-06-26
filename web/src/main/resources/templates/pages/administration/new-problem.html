@@ -4,7 +4,6 @@
       layout:decorate="~{layouts/admin}" lang="en">
 <head>
     <title th:text="#{voj.administration.new-problem.title} + ' | ' + ${websiteName}">New Problem</title>
-    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/administration/new-problem.css?v=${version}|" />
 </head>
 <body>
     <div id="content" layout:fragment="content">
@@ -29,11 +28,7 @@
                         <div class="span12">
                             <label for="wmd-input" th:text="#{voj.administration.new-problem.problem-description}">Description</label>
                             <div id="markdown-editor">
-                                <div class="wmd-panel">
-                                    <div id="wmd-button-bar" class="wmd-button-bar"></div> <!-- #wmd-button-bar -->
-                                    <textarea id="wmd-input" class="wmd-input"></textarea>
-                                </div> <!-- .wmd-panel -->
-                                <div id="wmd-preview" class="wmd-panel wmd-preview"></div> <!-- .wmd-preview -->
+                                <textarea id="wmd-input" class="wmd-input"></textarea>
                             </div> <!-- #markdown-editor -->
                         </div> <!-- .span12 -->
                     </div> <!-- .row-fluid -->
@@ -95,6 +90,14 @@
                                     <input id="problem-is-exactly-match" type="checkbox" data-toggle="switch" />
                                 </div> <!-- .span4 -->
                             </div> <!-- .row-fluid -->
+                            <div class="row-fluid">
+                                <div class="span4">Difficulty</div> <!--- .span4 -->
+                                <div class="span8 text-right">
+                                    <select id="problem-difficulty">
+                                        <option th:each="difficulty : ${problemDifficulties}" th:value="${difficulty.problemDifficultySlug}" th:text="${difficulty.problemDifficultyName}">Easy</option>
+                                    </select>
+                                </div> <!-- .span8 -->
+                            </div> <!-- .row-fluid -->
                         </div> <!-- .body -->
                         <div class="footer text-right">
                             <button class="btn btn-primary" type="submit" th:text="#{voj.administration.new-problem.publish-problem}">Publish</button>
@@ -142,18 +145,11 @@
         });
     </script>
     <script type='text/javascript' th:inline="javascript">
-        $.getScript([[|${cdnUrl}/js/markdown.min.js?v=${version}|]], function() {
-            converter = Markdown.getSanitizingConverter();
-            editor    = new Markdown.Editor(converter);
-            editor.run();
-
-            $('.markdown').each(function() {
-                var plainContent    = $(this).text(),
-                    markdownContent = converter.makeHtml(plainContent.replace(/\\\n/g, '\\n'));
-
-                $(this).html(markdownContent);
-            });
+        var descriptionEditor;
+        $(function() {
+            $('.markdown').each(function() { $(this).html(renderMarkdown($(this).text())); });
         });
+        descriptionEditor = createMarkdownEditor('#wmd-input');
     </script>
     <script type="text/javascript">
         $('#new-test-case').click(function() {
@@ -255,7 +251,7 @@
             var problemName         = $('#problem-name').val(),
                 timeLimit           = $('#time-limit').val(),
                 memoryLimit         = $('#memory-limit').val(),
-                description         = $('#wmd-input').val(),
+                description         = descriptionEditor ? descriptionEditor.value() : '',
                 hint                = $('#hint').val(),
                 inputFormat         = $('#input-format').val(),
                 outputFormat        = $('#output-format').val(),
@@ -265,7 +261,8 @@
                 problemCategories   = getProblemCategories(),
                 problemTags         = getProblemTags(),
                 isPublic            = $('#problem-is-public').parent().hasClass('switch-on'),
-                isExactlyMatch      = $('#problem-is-exactly-match').parent().hasClass('switch-on');
+                isExactlyMatch      = $('#problem-is-exactly-match').parent().hasClass('switch-on'),
+                problemDifficulty   = $('#problem-difficulty').val();
 
             $('.alert-success', '#problem-form').addClass('hide');
             $('.alert-error', '#problem-form').addClass('hide');
@@ -274,7 +271,7 @@
 
             return createProblem(problemName, timeLimit, memoryLimit, description, hint,
                     inputFormat, outputFormat, inputSample, outputSample, testCases,
-                    problemCategories, problemTags, isPublic, isExactlyMatch);
+                    problemCategories, problemTags, isPublic, isExactlyMatch, problemDifficulty);
         }
     </script>
     <script type="text/javascript">
@@ -317,7 +314,7 @@
     </script>
     <script type="text/javascript" th:inline="javascript">
         function createProblem(problemName, timeLimit, memoryLimit, description, hint, inputFormat, outputFormat,
-                    inputSample, outputSample, testCases, problemCategories, problemTags, isPublic, isExactlyMatch) {
+                    inputSample, outputSample, testCases, problemCategories, problemTags, isPublic, isExactlyMatch, problemDifficulty) {
             var postData = {
                 'problemName': problemName,
                 'timeLimit': timeLimit,
@@ -332,7 +329,8 @@
                 'problemCategories': problemCategories,
                 'problemTags': problemTags,
                 'isPublic': isPublic,
-                'isExactlyMatch': isExactlyMatch
+                'isExactlyMatch': isExactlyMatch,
+                'problemDifficulty': problemDifficulty
             };
 
             $.ajax({

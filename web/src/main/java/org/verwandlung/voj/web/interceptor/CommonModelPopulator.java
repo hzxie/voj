@@ -30,6 +30,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.support.RequestContextUtils;
 
 import org.verwandlung.voj.web.model.Option;
 import org.verwandlung.voj.web.model.User;
@@ -121,14 +122,23 @@ public class CommonModelPopulator {
    */
   private String getUserLanguage(HttpServletRequest request, HttpServletResponse response) {
     HttpSession session = request.getSession();
-    Object languageAttribute = session.getAttribute("language");
-
-    if (languageAttribute == null) {
-      String preferNaturalLanguage = getPreferNaturalLanguage(request, response);
-      LocaleUtils.setLocale(request, response, preferNaturalLanguage);
-      return preferNaturalLanguage;
+    boolean hasExplicitLanguage =
+        request.getParameter("language") != null || session.getAttribute("language") != null;
+    if (!hasExplicitLanguage) {
+      // First visit without an explicit ?language=xx_XX: seed the locale from the browser's
+      // preferred supported language (SessionLocaleResolver otherwise defaults to en_US,
+      // ignoring the Accept-Language header).
+      LocaleUtils.setLocale(request, response, getPreferNaturalLanguage(request, response));
     }
-    return (String) languageAttribute;
+    // The display language must follow Spring's *resolved* locale, which the ?language=xx_XX
+    // switch updates through the LocaleChangeInterceptor. The previous code returned the
+    // "language" session attribute, but that is only seeded on the first visit and is never
+    // updated by the switch: after switching to e.g. zh_CN the #{} labels rendered in Chinese
+    // while the dates (formatted via this attribute) stayed in the original en_US locale.
+    Locale locale = RequestContextUtils.getLocale(request);
+    String language = locale.getLanguage() + "_" + locale.getCountry();
+    session.setAttribute("language", language);
+    return language;
   }
 
   /**

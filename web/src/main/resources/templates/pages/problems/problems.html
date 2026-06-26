@@ -1,211 +1,89 @@
 <!DOCTYPE html>
+<!--/* Reproduced from voj-design/Problems.dc.html: // PROBLEM SET header, ID/Title/Tag
+       segmented filter + $ search, ST/#/TITLE/TAGS/ACCEPT/LEVEL grid, numbered pager. */-->
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layouts/main}" lang="en">
 <head>
     <title th:text="#{voj.problems.problems.title} + ' | ' + ${websiteName}">Problems</title>
-    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/problems/problems.css?v=${version}|" />
 </head>
 <body>
-    <div id="content" class="container" layout:fragment="content"
-         th:with="keyword=${param.keyword != null ? param.keyword[0] : ''},category=${param.category != null ? param.category[0] : ''}">
-        <div id="locator">
-            <ul class="inline">
-                <li><span th:text="#{voj.problems.problems.locator}">Locator</span>:</li>
-                <li th:each="locatorID : ${#numbers.sequence(startIndexOfProblems, startIndexOfProblems + totalProblems, numberOfProblemsPerPage)}">
-                    <a th:href="@{/p(start=${locatorID})}" th:text="|P${locatorID}|">P1</a>
-                </li>
-            </ul>
-        </div> <!-- #locator -->
-        <div id="main-content" class="row-fluid">
-            <div id="problems" class="span8">
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th class="flag" th:if="${isLogin}" th:text="#{voj.problems.problems.result}">Result</th>
-                            <th class="name" th:text="#{voj.problems.problems.name}">Name</th>
-                            <th class="submission" th:text="#{voj.problems.problems.submission}">Submission</th>
-                            <th class="ac-rate">AC%</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr th:each="problem : ${problems}" th:attr="data-value=${problem.problemId}">
-                            <th:block th:if="${isLogin}">
-                                <td th:if="${submissionOfProblems[problem.problemId] == null}"></td>
-                                <td th:unless="${submissionOfProblems[problem.problemId] == null}" th:class="|flag-${submissionOfProblems[problem.problemId].judgeResult.judgeResultSlug}|">
-                                    <a th:href="@{/submission/{id}(id=${submissionOfProblems[problem.problemId].submissionId})}" th:text="${submissionOfProblems[problem.problemId].judgeResult.judgeResultSlug}">AC</a>
-                                </td>
-                            </th:block>
-                            <td class="name"><a th:href="@{/p/{id}(id=${problem.problemId})}" th:text="|P${problem.problemId} ${problem.problemName}|">Problem</a></td>
-                            <td th:text="${problem.totalSubmission}">0</td>
-                            <td>
-                                <span th:if="${problem.totalSubmission == 0}">0%</span>
-                                <span th:unless="${problem.totalSubmission == 0}" th:text="${#numbers.formatDecimal(problem.acceptedSubmission * 100.0 / problem.totalSubmission, 1, 0)} + '%'">0%</span>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-                <div id="more-problems">
-                    <p class="availble" th:text="#{voj.problems.problems.more-problems}">More Problems...</p>
-                    <img th:src="|${cdnUrl}/img/loading.gif?v=${version}|" alt="Loading" class="hide" />
+    <div layout:fragment="content">
+        <!-- PAGE HEADER + FILTERS -->
+        <section class="vw-pagehead">
+            <div class="vw-eyebrow">// PROBLEM SET</div>
+            <h1>Problem Set</h1>
+            <div class="sub vw-filters-sub"><span th:text="${totalProblems}">0</span> problems &middot; solve to level up</div>
+            <div class="vw-filters" th:with="fieldLabel=${field == 'id' ? 'id' : (field == 'tag' ? 'tag' : 'title')}">
+                <div class="vw-seg">
+                    <a th:href="@{/p(field='id',query=${query})}" th:classappend="${field == 'id'} ? 'active'">ID</a>
+                    <a th:href="@{/p(field='title',query=${query})}" th:classappend="${field == 'title'} ? 'active'">Title</a>
+                    <a th:href="@{/p(field='tag',query=${query})}" th:classappend="${field == 'tag'} ? 'active'">Tag</a>
                 </div>
-            </div> <!-- #problems -->
-            <div id="sidebar" class="span4">
-                <div id="search-widget" class="widget">
-                    <h4 th:text="#{voj.problems.problems.search}">Search</h4>
-                    <form id="search-form" th:action="@{/p}">
-                        <div class="control-group">
-                            <input id="keyword" name="keyword" class="span12" type="text" th:placeholder="#{voj.problems.problems.keyword}" th:value="${keyword}" />
-                        </div>
-                        <button class="btn btn-primary btn-block" type="submit" th:text="#{voj.problems.problems.search}">Search</button>
-                    </form> <!-- #search-form -->
-                </div> <!-- #search-widget -->
-                <div id="categories-widget" class="widget">
-                    <h4 th:text="#{voj.problems.problems.categories}">Categories</h4>
-                    <th:block th:each="entry : ${problemCategories}">
-                        <h6>
-                            <a th:classappend="${category == entry.key.problemCategorySlug} ? 'active' : ''"
-                               th:href="@{/p(category=${entry.key.problemCategorySlug})}" th:text="${entry.key.problemCategoryName}">
-                                Category
-                            </a>
-                        </h6>
-                        <ul class="inline">
-                            <li th:each="problemCategory : ${entry.value}">
-                                <a th:classappend="${category == problemCategory.problemCategorySlug} ? 'active' : ''"
-                                   th:href="@{/p(category=${problemCategory.problemCategorySlug})}" th:text="${problemCategory.problemCategoryName}">
-                                    Subcategory
-                                </a>
-                            </li>
-                        </ul>
-                    </th:block>
-                </div> <!-- #categories-widget -->
-            </div> <!-- #sidebar -->
-        </div> <!-- #main-content -->
-    </div> <!-- #content -->
+                <form class="vw-field vw-filters-search" method="GET" th:action="@{/p}">
+                    <span class="sigil">$</span>
+                    <input type="hidden" name="field" th:value="${field}" />
+                    <input type="text" name="query" th:value="${query}" th:placeholder="|filter by ${fieldLabel}&#8230;|" />
+                    <span class="vw-filters-count"><span th:text="${totalProblems}">0</span> <span th:text="${totalProblems == 1 ? 'match' : 'matches'}">matches</span></span>
+                </form>
+            </div>
+        </section>
 
-    <th:block layout:fragment="scripts">
-    <script type="text/javascript">
-        $(function() {
-            var numberOfProblems = $('tr', '#problems tbody').length;
+        <!-- TABLE -->
+        <section class="vw-section-table">
+            <div class="vw-table vw-ptable" th:classappend="${!isLogin} ? 'vw-ptable-guest'">
+                <div class="vw-table-head">
+                    <div th:if="${isLogin}">ST</div>
+                    <div>#</div>
+                    <div>TITLE</div>
+                    <div>LEVEL</div>
+                    <div class="ptable-hide">TAGS</div>
+                    <div class="ptable-hide">ACCEPT</div>
+                </div>
+                <a class="vw-table-row" th:each="problem : ${problems}" th:href="@{/p/{id}(id=${problem.problemId})}">
+                    <div th:if="${isLogin}" th:with="sub=${submissionOfProblems != null ? submissionOfProblems[problem.problemId] : null}">
+                        <span th:if="${sub != null}" class="vw-vbadge"
+                              th:classappend="|flag-${#strings.toLowerCase(sub.judgeResult.judgeResultSlug)}|"
+                              th:text="${sub.judgeResult.judgeResultSlug}">AC</span>
+                    </div>
+                    <div class="vw-muted" th:text="${problem.problemId}">1000</div>
+                    <div class="vw-head vw-strong" th:text="${problem.problemName}">Problem</div>
+                    <div class="lvl"
+                         th:with="slug=${problem.problemDifficulty != null ? problem.problemDifficulty.problemDifficultySlug : 'easy'}"
+                         th:classappend="${'lvl-' + slug}"
+                         th:text="${problem.problemDifficulty != null ? problem.problemDifficulty.problemDifficultyName : 'Easy'}">Easy</div>
+                    <div class="ptable-hide tags">
+                        <span class="vw-tag" th:each="tag : ${problemTagsOfProblems != null ? problemTagsOfProblems[problem.problemId] : null}" th:text="${tag.problemTagName}">tag</span>
+                    </div>
+                    <div class="ptable-hide vw-muted2">
+                        <span th:if="${problem.totalSubmission == 0}">0%</span>
+                        <span th:unless="${problem.totalSubmission == 0}"
+                              th:text="${#numbers.formatDecimal(problem.acceptedSubmission * 100.0 / problem.totalSubmission, 1, 0)} + '%'">0%</span>
+                    </div>
+                </a>
+                <div class="vw-table-empty" th:if="${problems == null or problems.isEmpty()}">// no problems match the filter</div>
+            </div>
 
-            if ( numberOfProblems == 0 ) {
-                return processProblemsResult(false);
-            }
-        });
-    </script>
-    <script type="text/javascript">
-        function setLoadingStatus(isLoading) {
-            if ( isLoading ) {
-                $('p', '#more-problems').addClass('hide');
-                $('img', '#more-problems').removeClass('hide');
-            } else {
-                $('img', '#more-problems').addClass('hide');
-                $('p', '#more-problems').removeClass('hide');
-            }
-        }
-    </script>
-    <script type="text/javascript">
-        $('#more-problems').click(function(event) {
-            var isLoading         = $('img', this).is(':visible'),
-                hasNextRecord     = $('p', this).hasClass('availble'),
-                lastProblemRecord = $('tr:last-child', '#problems tbody'),
-                lastProblemId     = parseInt($(lastProblemRecord).attr('data-value'));
+            <!-- PAGER -->
+            <div class="vw-pager" th:if="${totalPages > 1}">
+                <a class="nav" th:if="${currentPage > 1}" th:href="@{/p(page=${currentPage - 1},field=${field},query=${query})}">&larr;</a>
+                <span class="nav" th:unless="${currentPage > 1}">&larr;</span>
 
-            if ( !isLoading && hasNextRecord ) {
-                setLoadingStatus(true);
-                return getMoreProblems(lastProblemId + 1);
-            }
-        });
-    </script>
-    <script type="text/javascript" th:inline="javascript">
-        function getMoreProblems(startIndex) {
-            var pageRequests = {
-                'startIndex': startIndex,
-                'keyword': [[${param.keyword != null ? param.keyword[0] : ''}]],
-                'category': [[${param.category != null ? param.category[0] : ''}]]
-            };
+                <a th:if="${windowStart > 1}" th:href="@{/p(page=1,field=${field},query=${query})}">1</a>
+                <span class="gap" th:if="${windowStart > 2}">&hellip;</span>
 
-            $.ajax({
-                type: 'GET',
-                url: [[@{/p/getProblems.action}]],
-                data: pageRequests,
-                dataType: 'JSON',
-                success: function(result){
-                    return processProblemsResult(result);
-                }
-            });
-        }
-    </script>
-    <script type="text/javascript" th:inline="javascript">
-        function processProblemsResult(result) {
-            if ( result['isSuccessful'] ) {
-                displayProblemsRecords(result['problems'], result['submissionOfProblems']);
-            } else {
-                $('p', '#more-problems').removeClass('availble');
-                $('p', '#more-problems').html([[#{voj.problems.problems.no-more-problem}]]);
-                $('#more-problems').css('cursor', 'default');
-            }
-            setLoadingStatus(false);
-        }
-    </script>
-    <script type="text/javascript">
-        function displayProblemsRecords(problems, submissionOfProblems) {
-            for ( var i = 0; i < problems.length; ++ i ) {
-                $('table > tbody', '#problems').append(
-                    getProblemContent(problems[i]['problemId'], problems[i]['problemName'],
-                                      problems[i]['totalSubmission'], problems[i]['acceptedSubmission'], submissionOfProblems)
-                );
-            }
-        }
-    </script>
-    <script type="text/javascript" th:inline="javascript" th:if="${isLogin}">
-        function getProblemContent(problemId, problemName, totalSubmission, acceptedSubmission, submissionOfProblems) {
-            var problemTemplate = '<tr data-value="%s">' +
-                                  '    %s' +
-                                  '    <td class="name"><a href="' + [[@{/p/}]] + '%s">P%s %s</a></td>' +
-                                  '    <td>%s</td>' +
-                                  '    <td>%s%</td>' +
-                                  '</tr>';
+                <th:block th:each="p : ${#numbers.sequence(windowStart, windowEnd)}">
+                    <span th:if="${p == currentPage}" class="active" th:text="${p}">1</span>
+                    <a th:unless="${p == currentPage}" th:href="@{/p(page=${p},field=${field},query=${query})}" th:text="${p}">2</a>
+                </th:block>
 
-            return problemTemplate.format(problemId, getSubmissionOfProblemHtml(problemId, submissionOfProblems[problemId]),
-                        problemId, problemId, problemName, totalSubmission, getAcRate(acceptedSubmission, totalSubmission));
-        }
-    </script>
-    <script type="text/javascript" th:inline="javascript" th:unless="${isLogin}">
-        function getProblemContent(problemId, problemName, totalSubmission, acceptedSubmission) {
-            var problemTemplate = '<tr data-value="%s">' +
-                                  '    <td class="name"><a href="' + [[@{/p/}]] + '%s">P%s %s</a></td>' +
-                                  '    <td>%s</td>' +
-                                  '    <td>%s%</td>' +
-                                  '</tr>';
+                <span class="gap" th:if="${windowEnd < totalPages - 1}">&hellip;</span>
+                <a th:if="${windowEnd < totalPages}" th:href="@{/p(page=${totalPages},field=${field},query=${query})}" th:text="${totalPages}">N</a>
 
-            return problemTemplate.format(problemId, problemId, problemId, problemName,
-                        totalSubmission, getAcRate(acceptedSubmission, totalSubmission));
-        }
-    </script>
-    <script type="text/javascript" th:inline="javascript">
-        function getSubmissionOfProblemHtml(problemId, submissionOfProblem) {
-            if ( typeof(submissionOfProblem) == 'undefined' ) {
-                return '<td></td>';
-            }
-
-            var submissionId        = submissionOfProblem['submissionId'],
-                judgeResultSlug     = submissionOfProblem['judgeResult']['judgeResultSlug'],
-                submissionTemplate  = '<td class="flag-%s">' +
-                                      '    <a href="' + [[@{/submission/}]] + '%s">%s</a>' +
-                                      '</td>';
-
-            return submissionTemplate.format(judgeResultSlug, submissionId, judgeResultSlug);
-        }
-    </script>
-    <script type="text/javascript">
-        function getAcRate(acceptedSubmission, totalSubmission) {
-            if ( totalSubmission == 0 ) {
-                return 0;
-            }
-            return Math.round(acceptedSubmission / totalSubmission) * 100;
-        }
-    </script>
-    </th:block>
+                <a class="nav" th:if="${currentPage < totalPages}" th:href="@{/p(page=${currentPage + 1},field=${field},query=${query})}">&rarr;</a>
+                <span class="nav" th:unless="${currentPage < totalPages}">&rarr;</span>
+            </div>
+        </section>
+    </div>
 </body>
 </html>

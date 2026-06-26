@@ -55,6 +55,23 @@ public class DateFormatter {
   }
 
   /**
+   * Formats a date and time using a medium date style and a short time style, producing a compact
+   * single-line label (e.g. {@code Feb 25, 2018, 8:04 AM}) suitable for dense table cells such as
+   * the submissions list, where the long/medium style wraps onto multiple lines.
+   *
+   * @param date - the date to format (may be {@code null})
+   * @param language - the user's language slug (e.g. en_US)
+   * @return the formatted date-time, or an empty string when {@code date} is {@code null}
+   */
+  public String dateTimeMediumShort(Date date, String language) {
+    if (date == null) {
+      return "";
+    }
+    Locale locale = LocaleUtils.getLocaleOfLanguage(language);
+    return DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT, locale).format(date);
+  }
+
+  /**
    * Formats a date using a short date style, equivalent to {@code <fmt:formatDate type="date"
    * dateStyle="short" />}.
    *

@@ -1,135 +1,123 @@
 <!DOCTYPE html>
+<!--/* Reproduced from voj-design/Submission Detail.dc.html. The backend stores the judge
+       LOG as text (not a structured per-test grid), so the design's TEST CASES table is
+       represented by the judge log card. Live SSE updates for Pending submissions, code
+       highlighting and the verdict/time/memory hooks are preserved. */-->
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layouts/main}" lang="en">
 <head>
     <title th:text="#{voj.submissions.submission.title} + ${submission.submissionId} + ' | ' + ${websiteName}">Submission</title>
-    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/submissions/submission.css?v=${version}|" />
     <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/highlight.min.css?v=${version}|" />
 </head>
 <body>
-    <div id="content" class="container" layout:fragment="content">
-        <div class="row-fluid">
-            <div id="main-content" class="span9">
-                <div class="submission">
-                    <div class="header">
-                        <span class="pull-right"></span>
-                        <span class="name" th:text="|P${submission.problem.problemId} ${submission.problem.problemName}|">Problem</span>
-                    </div> <!-- .header -->
-                    <div class="body">
-                        <div class="section">
-                            <h4 th:text="#{voj.submissions.submission.overview}">Overview</h4>
-                            <div class="description">
-                                <table class="table">
-                                    <tr>
-                                        <td th:text="#{voj.submissions.submission.judge-result}">Judge Result</td>
-                                        <td id="judge-result" th:class="|flag-${submission.judgeResult.judgeResultSlug}|" th:text="${submission.judgeResult.judgeResultName}">Result</td>
-                                    </tr>
-                                    <tr>
-                                        <td th:text="#{voj.submissions.submission.problem}">Problem</td>
-                                        <td id="problem-summery"><a th:href="@{/p/{id}(id=${submission.problem.problemId})}" th:text="|P${submission.problem.problemId} ${submission.problem.problemName}|">Problem</a></td>
-                                    </tr>
-                                    <tr>
-                                        <td th:text="#{voj.submissions.submission.submit-time}">Submit Time</td>
-                                        <td id="submit-time" th:text="${@dateFormatter.dateTimeLongMedium(submission.submitTime, language)}">time</td>
-                                    </tr>
-                                    <tr>
-                                        <td th:text="#{voj.submissions.submission.language}">Language</td>
-                                        <td id="language-name" th:text="${submission.language.languageName}">Language</td>
-                                    </tr>
-                                    <tr>
-                                        <td th:text="#{voj.submissions.submission.judger}">Judger</td>
-                                        <td id="judger-name">Default Judger</td>
-                                    </tr>
-                                    <tr>
-                                        <td th:text="#{voj.submissions.submission.used-time}">Used Time</td>
-                                        <td id="used-time" th:text="|${submission.usedTime} ms|">0 ms</td>
-                                    </tr>
-                                    <tr>
-                                        <td th:text="#{voj.submissions.submission.used-memory}">Used Memory</td>
-                                        <td id="used-memory" th:text="|${submission.usedMemory} K|">0 K</td>
-                                    </tr>
-                                    <tr>
-                                        <td th:text="#{voj.submissions.submission.execute-time}">Execute Time</td>
-                                        <td id="execute-time" th:text="${@dateFormatter.dateTimeLongMedium(submission.executeTime, language)}">time</td>
-                                    </tr>
-                                </table>
-                            </div> <!-- .description -->
-                        </div> <!-- .section -->
-                        <div class="section">
-                            <h4 th:text="#{voj.submissions.submission.judge-result}">Judge Result</h4>
-                            <div id="judge-log" class="description markdown" th:utext="${submission.judgeLog}">judge log</div> <!-- .description -->
-                        </div> <!-- .section -->
-                        <div class="section" th:if="${submission.user == myProfile or myProfile?.userGroup?.userGroupSlug == 'administrators'}">
-                            <h4 th:text="#{voj.submissions.submission.code}">Code</h4>
-                            <div class="description">
-                                <pre><code th:text="${submission.code}">code</code></pre>
-                            </div> <!-- .description -->
-                        </div> <!-- .section -->
-                    </div> <!-- .body -->
-                </div> <!-- .submission -->
-            </div> <!-- #main-content -->
-            <div id="sidebar" class="span3">
-                <div id="submit-user" class="section">
-                    <h5 th:text="#{voj.submissions.submission.user}">User</h5>
-                    <img th:src="|${cdnUrl}/img/avatar.jpg?v=${version}|" alt="User Avatar" class="img-circle" />
-                    <p>
-                        <span th:text="#{voj.submissions.submission.submitted-by}">Submitted by</span> <a th:href="@{/accounts/user/{id}(id=${submission.user.uid})}" th:text="${submission.user.username}">user</a>
-                    </p>
-                </div> <!-- #profile -->
-                <div id="problem" class="section">
-                    <h5 th:text="#{voj.submissions.submission.action}">Action</h5>
-                    <ul>
-                        <li><a th:href="@{/p/{id}(id=${submission.problem.problemId})}" th:text="#{voj.submissions.submission.view-problem}">View Problem</a></li>
-                        <li><a th:href="@{/p/{id}/solution(id=${submission.problem.problemId})}" th:text="#{voj.submissions.submission.view-solution}">View Solution</a></li>
-                        <li><a th:href="@{/submission(pid=${submission.problem.problemId})}" th:text="#{voj.submissions.submission.view-submission}">View Submission</a></li>
-                    </ul>
-                </div> <!-- problem -->
-            </div> <!-- #sidebar -->
-        </div> <!-- .row-fluid -->
-    </div> <!-- #content -->
+    <div layout:fragment="content" th:with="slug=${#strings.toLowerCase(submission.judgeResult.judgeResultSlug)}">
+        <!-- TITLE BAR -->
+        <section class="vw-titlebar">
+            <div class="vw-titlebar-inner">
+                <a class="vw-backlink" th:href="@{/submission}">&larr; ~/submission</a>
+                <div class="vw-row vw-gap vw-wrap">
+                    <span class="vw-muted vw-run-label">run #<span th:text="${submission.submissionId}">0</span></span>
+                    <span class="vw-verdict-lg" th:classappend="|flag-${slug}|">
+                        <span class="vw-verdict-dot"></span>
+                        <span id="judge-result" th:text="${submission.judgeResult.judgeResultName}">Result</span>
+                    </span>
+                    <a class="vw-head vw-titlebar-prob"
+                       th:href="@{/p/{id}(id=${submission.problem.problemId})}"
+                       th:text="|P${submission.problem.problemId} &middot; ${submission.problem.problemName}|">Problem</a>
+                    <div class="vw-header-spacer"></div>
+                    <div class="vw-titlebar-meta">
+                        <span>Time <b class="vw-head" th:text="|${submission.usedTime} ms|">0 ms</b></span>
+                        <span>Memory <b class="vw-head" th:text="|${submission.usedMemory} K|">0 K</b></span>
+                        <span>Lang <b class="vw-head" th:text="${submission.language.languageName}">Lang</b></span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="vw-detail">
+            <!-- LEFT MAIN -->
+            <div class="vw-detail-main">
+                <article class="vw-card vw-stmt">
+                    <div class="vw-card-bar">
+                        <span class="vw-dot vw-dot-r"></span><span class="vw-dot vw-dot-y"></span><span class="vw-dot vw-dot-g"></span>
+                        <span class="vw-card-title" th:text="'// ' + #{voj.submissions.submission.judge-result}">// JUDGE LOG</span>
+                    </div>
+                    <div class="vw-card-body">
+                        <div id="judge-log" class="description markdown" th:utext="${submission.judgeLog}">judge log</div>
+                    </div>
+                </article>
+
+                <article class="vw-card vw-stmt vw-card-accent" th:if="${submission.user == myProfile or myProfile?.userGroup?.userGroupSlug == 'administrators'}">
+                    <div class="vw-card-bar">
+                        <span class="vw-accent vw-card-srclabel" th:text="'// SOURCE &mdash; ' + #{voj.submissions.submission.code}">// SOURCE</span>
+                    </div>
+                    <div class="vw-card-body vw-card-flush">
+                        <pre class="vw-src-pre"><code th:text="${submission.code}">code</code></pre>
+                    </div>
+                    <div class="vw-card-foot">
+                        <span>length <b class="vw-muted2" th:text="|${#strings.length(submission.code)} B|">0 B</b></span>
+                    </div>
+                </article>
+            </div>
+
+            <!-- RIGHT SIDEBAR -->
+            <div class="vw-detail-side">
+                <div class="vw-card">
+                    <div class="vw-card-body vw-side-verdict">
+                        <div class="vw-side-verdict-name" th:classappend="|flag-${slug}|" th:text="${submission.judgeResult.judgeResultName}">Accepted</div>
+                        <div class="vw-muted2 vw-side-verdict-sub" th:text="#{voj.submissions.submission.judge-result}">Judge result</div>
+                    </div>
+                    <div class="vw-card-body">
+                        <div class="vw-kv">
+                            <div><span class="k">Run ID</span><span class="v">#<span th:text="${submission.submissionId}">0</span></span></div>
+                            <div><span class="k" th:text="#{voj.submissions.submission.problem}">Problem</span><a class="vw-accent" th:href="@{/p/{id}(id=${submission.problem.problemId})}" th:text="|P${submission.problem.problemId}|">P1000</a></div>
+                            <div><span class="k" th:text="#{voj.submissions.submission.submitted-by}">Submitted by</span><a class="vw-accent" th:href="@{/accounts/user/{id}(id=${submission.user.uid})}" th:text="${submission.user.username}">user</a></div>
+                            <div><span class="k" th:text="#{voj.submissions.submission.language}">Language</span><span class="v" th:text="${submission.language.languageName}">Lang</span></div>
+                            <div><span class="k" th:text="#{voj.submissions.submission.used-time}">Time</span><span class="v" id="used-time" th:text="|${submission.usedTime} ms|">0 ms</span></div>
+                            <div><span class="k" th:text="#{voj.submissions.submission.used-memory}">Memory</span><span class="v" id="used-memory" th:text="|${submission.usedMemory} K|">0 K</span></div>
+                            <div><span class="k">Code length</span><span class="v" th:text="|${#strings.length(submission.code)} B|">0 B</span></div>
+                            <div><span class="k" th:text="#{voj.submissions.submission.submit-time}">Submit Time</span><span class="v" th:text="${@dateFormatter.dateTimeLongMedium(submission.submitTime, language)}">time</span></div>
+                            <div><span class="k" th:text="#{voj.submissions.submission.execute-time}">Execute Time</span><span class="v" id="execute-time" th:text="${@dateFormatter.dateTimeLongMedium(submission.executeTime, language)}">time</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="vw-card">
+                    <div class="vw-card-body">
+                        <div class="vw-eyebrow vw-side-label" th:text="'// ' + #{voj.submissions.submission.judger}">// JUDGE ENVIRONMENT</div>
+                        <div class="vw-env">
+                            <div class="vw-env-row"><span class="vw-env-dot"></span><span id="judger-name">Default Judger</span></div>
+                            <div th:text="${submission.language.languageName}">C++ 23</div>
+                        </div>
+                    </div>
+                </div>
+
+                <a class="vw-btn vw-btn-accent vw-btn-block" th:href="@{/p/{id}(id=${submission.problem.problemId})}" th:text="#{voj.submissions.submission.view-problem}">Try again</a>
+            </div>
+        </div>
+    </div>
 
     <th:block layout:fragment="scripts">
     <script type="text/javascript" th:inline="javascript">
-        $.getScript([[|${cdnUrl}/js/markdown.min.js?v=${version}|]], function() {
-            converter = Markdown.getSanitizingConverter();
-
-            $('.markdown').each(function() {
-                var plainContent    = $(this).text(),
-                    markdownContent = converter.makeHtml(plainContent.replace(/\\\n/g, '\\n'));
-
-                $(this).html(markdownContent);
-            });
+        $(function() {
+            $('.markdown').each(function() { $(this).html(renderMarkdown($(this).text())); });
         });
     </script>
     <th:block th:if="${submission.judgeResult.judgeResultName == 'Pending'}">
     <script type="text/javascript" th:inline="javascript">
-        $.getScript([[|${cdnUrl}/js/date-${language}.min.js?v=${version}|]], function() {
-            var currentJudgeResult = 'Pending',
-                getterInterval     = setInterval(function() {
-                    getRealTimeJudgeResult();
-                    currentJudgeResult = $('#judge-result').html();
-
-                    if ( currentJudgeResult != 'Pending' ) {
-                        clearInterval(getterInterval);
-                    }
-                }, 10000);
-        });
-    </script>
-    <script type="text/javascript" th:inline="javascript">
+        var getterInterval = setInterval(function() {
+            getRealTimeJudgeResult();
+            if ( $('#judge-result').html() != 'Pending' ) { clearInterval(getterInterval); }
+        }, 10000);
         $(function() {
             var subscriptionUrl = [[@{/submission/getRealTimeJudgeResult.action(submissionId=${submission.submissionId},csrfToken=${_csrf.token})}]],
                 source          = new EventSource(subscriptionUrl),
                 lastMessage     = '';
-
-            source.onmessage    = function(e) {
-                var message     = e['data'];
-
-                if ( message == lastMessage ) {
-                    return;
-                }
-                lastMessage     = message;
-
+            source.onmessage = function(e) {
+                var message = e['data'];
+                if ( message == lastMessage ) { return; }
+                lastMessage = message;
                 if ( message == 'Established' ) {
                     $('#judge-log').append('<p>Connected to Server.</p>');
                     return;
@@ -137,79 +125,32 @@
                 var mapMessage  = JSON.parse(message),
                     judgeResult = mapMessage['judgeResult'],
                     judgeLog    = mapMessage['message'];
-
                 $('#judge-result').html(judgeResult);
-                $('#judge-log').append(converter.makeHtml(judgeLog));
+                $('#judge-log').append(renderMarkdown(judgeLog));
             }
         });
-    </script>
-    <script type="text/javascript" th:inline="javascript">
         function getRealTimeJudgeResult() {
-            var pageRequests = {
-                'submissionId': [[${submission.submissionId}]]
-            };
-
             $.ajax({
                 type: 'GET',
                 url: [[@{/submission/getSubmission.action}]],
-                data: pageRequests,
+                data: { 'submissionId': [[${submission.submissionId}]] },
                 dataType: 'JSON',
                 success: function(result){
-                    if ( result['isSuccessful'] ) {
-                        if ( result['submission']['judgeResult']['judgeResultSlug'] != 'PD' ) {
-                            $('#judge-result').removeClass();
-                            $('#judge-result').addClass("flag-" + result['submission']['judgeResult']['judgeResultSlug'])
-                            $('#judge-result').html(result['submission']['judgeResult']['judgeResultName']);
-                            $('#used-time').html(result['submission']['usedTime'] + " ms");
-                            $('#used-memory').html(result['submission']['usedMemory'] + " KB");
-                            $('#execute-time').html(getFormatedDateString(result['submission']['executeTime'], [[${language}]]));
-                            $('#judge-log').html(converter.makeHtml(result['submission']['judgeLog'].replace(/\\\n/g, '\\n')));
-                        }
+                    if ( result['isSuccessful'] && result['submission']['judgeResult']['judgeResultSlug'] != 'PD' ) {
+                        $('#judge-result').html(result['submission']['judgeResult']['judgeResultName']);
+                        $('#used-time').html(result['submission']['usedTime'] + " ms");
+                        $('#used-memory').html(result['submission']['usedMemory'] + " KB");
+                        $('#execute-time').html(getFormatedDateString(result['submission']['executeTime'], [[${language}]]));
+                        $('#judge-log').html(renderMarkdown(result['submission']['judgeLog']));
                     }
                 }
             });
-        }
-    </script>
-    <script type="text/javascript">
-        function getFormatedDateString(dateTime, locale) {
-            var dateObject = new Date(dateTime),
-                dateString = dateObject.toString();
-
-            if ( locale == 'en_US' ) {
-                dateString = dateObject.toString('MMM d, yyyy h:mm:ss tt');
-            } else if ( locale == 'zh_CN' ) {
-                dateString = dateObject.toString('yyyy-M-dd HH:mm:ss');
-            }
-
-            return dateString;
         }
     </script>
     </th:block>
     <script type="text/javascript" th:inline="javascript">
         $.getScript([[|${cdnUrl}/js/highlight.min.js?v=${version}|]], function() {
-            $('pre code').each(function(i, block) {
-                hljs.highlightBlock(block);
-            });
-        });
-    </script>
-    <script type="text/javascript" th:inline="javascript">
-        $(function() {
-            var imageObject       = $('img', '#submit-user'),
-                hashCode          = md5([[${submission.user.email}]]),
-                gravatarSeriveUrl = 'https://secure.gravatar.com/';
-
-            $.ajax({
-                type: 'GET',
-                url: gravatarSeriveUrl + hashCode + '.json',
-                dataType: 'jsonp',
-                success: function(result){
-                    if ( result != null ) {
-                        var imageUrl    = result['entry'][0]['thumbnailUrl'],
-                            requrestUrl = imageUrl + '?s=200';
-                        $(imageObject).attr('src', requrestUrl);
-                    }
-                }
-            });
+            $('pre code').each(function(i, block) { hljs.highlightElement(block); });
         });
     </script>
     </th:block>

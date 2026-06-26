@@ -1,136 +1,195 @@
 <!DOCTYPE html>
+<!--/* Reproduced from voj-design/New Thread.dc.html: a ~/discussion backlink, a // NEW THREAD
+       eyebrow + "Start a new thread" heading, then a two-column composer (the same minmax(0,1fr)
+       312px grid as the thread page). MAIN holds the title field (with a live char counter),
+       category chips (driven by ${discussionTopics}), an optional related-problem field, the
+       shared Markdown editor (js/markdown.js write/preview), and the cancel/post actions. SIDE
+       holds // POSTING AS (the signed-in profile), // GUIDELINES and // FORMATTING helper cards.
+       The createDiscussionThread AJAX flow is preserved: the topic <select> became chips backed
+       by a hidden #discussion-topic input, so the submit payload is unchanged. The design's
+       "Save draft" action is dropped (no backend). */-->
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layouts/main}" lang="en">
 <head>
-    <title th:text="#{voj.discussion.new-thread.create-discussion} + ' | ' + ${websiteName}">Create Discussion</title>
-    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/discussion/new-thread.css?v=${version}|" />
+    <title th:text="#{voj.discussion.new-thread.title} + ' | ' + ${websiteName}">Start a new thread</title>
 </head>
 <body>
-    <div id="content" class="container" layout:fragment="content">
-        <div id="discussion-thread">
-            <div class="alert alert-error hide"></div> <!-- .alert-error -->
-            <div class="header row-fluid">
-                <div class="span9">
-                    <p>
-                        <input id="discussion-thread-title" th:placeholder="#{voj.discussion.new-thread.thread-title}" type="text" maxlength="128" />
-                    </p>
-                </div> <!-- .span9 -->
-                <div class="span3 text-right">
-                    <input type="hidden" id="csrf-token" th:value="${_csrf.token}" />
-                    <button class="btn btn-primary" onclick="javascript:void(0);" th:text="#{voj.discussion.new-thread.create-discussion}">Create Discussion</button>
-                </div> <!-- .span3 -->
-            </div> <!-- .row-fluid -->
-            <div class="body row-fluid">
-                <div class="span9">
-                    <div id="editor">
-                        <div class="markdown-editor">
-                            <div class="wmd-panel">
-                                <div id="wmd-button-bar" class="wmd-button-bar"></div> <!-- #wmd-button-bar -->
+    <div layout:fragment="content">
+        <section class="vw-section vw-section-narrow">
+            <a class="vw-backlink" th:href="@{/discussion}">&larr; ~/discussion</a>
+
+            <div class="vw-thread-layout">
+                <!-- MAIN -->
+                <div class="vw-minw0">
+                    <div class="vw-eyebrow">// NEW THREAD</div>
+                    <h1 class="vw-thread-h1" th:text="#{voj.discussion.new-thread.title}">Start a new thread</h1>
+
+                    <div class="vw-alert vw-alert-error alert-error hide"></div>
+
+                    <div class="vw-composer">
+                        <!-- TITLE -->
+                        <div>
+                            <label class="vw-composer-label" for="discussion-thread-title">
+                                <span><span class="sigil">$</span> <span th:text="#{voj.discussion.new-thread.thread-title}">title</span></span>
+                                <span class="vw-composer-count"><span id="title-count">0</span> / 128</span>
+                            </label>
+                            <input id="discussion-thread-title" class="vw-composer-title-input" type="text" maxlength="128"
+                                   th:placeholder="#{voj.discussion.new-thread.thread-title}" />
+                        </div>
+
+                        <!-- CATEGORY -->
+                        <div>
+                            <label class="vw-composer-label">
+                                <span><span class="sigil">$</span> <span th:text="#{voj.discussion.new-thread.discussion-topic}">category</span></span>
+                            </label>
+                            <div class="vw-composer-cats" id="discussion-topics">
+                                <span th:each="discussionTopic : ${discussionTopics}"
+                                      th:if="${relatedProblem != null or discussionTopic.discussionTopicSlug != 'solutions'}"
+                                      class="vw-cat-chip"
+                                      th:attr="data-slug=${discussionTopic.discussionTopicSlug}"
+                                      th:classappend="${#strings.containsIgnoreCase(discussionTopic.discussionTopicSlug,'solution')} ? 'is-solutions' : (${#strings.containsIgnoreCase(discussionTopic.discussionTopicSlug,'announce')} ? 'is-announce' : (${#strings.containsIgnoreCase(discussionTopic.discussionTopicSlug,'help')} ? 'is-help' : 'is-default'))"
+                                      th:text="${discussionTopic.discussionTopicName}">Help</span>
+                            </div>
+                            <input type="hidden" id="discussion-topic" />
+                        </div>
+
+                        <!-- RELATED PROBLEM -->
+                        <div>
+                            <label class="vw-composer-label" for="related-problem-input">
+                                <span><span class="sigil">$</span> <span th:text="#{voj.discussion.new-thread.related-problem}">link-problem</span>
+                                    <span class="opt" th:text="'&mdash; ' + #{voj.discussion.new-thread.optional}">&mdash; optional</span></span>
+                            </label>
+                            <input id="related-problem-input" class="vw-composer-problem-input" type="text" inputmode="numeric" placeholder="e.g. 1005"
+                                   th:value="${relatedProblem != null ? relatedProblem.problemId : ''}" />
+                        </div>
+
+                        <!-- BODY -->
+                        <div id="editor">
+                            <div class="markdown-editor">
                                 <textarea id="wmd-input" class="wmd-input"></textarea>
-                            </div> <!-- .wmd-panel -->
-                            <div id="wmd-preview" class="wmd-panel wmd-preview"></div> <!-- .wmd-preview -->
-                        </div> <!-- #markdown-editor -->
-                    </div> <!-- .#editor -->
-                </div> <!-- .span9 -->
-                <div class="span3">
-                    <div class="section">
-                        <h5 th:text="#{voj.discussion.new-thread.discussion-topic}">Discussion Topic</h5>
-                        <select id="discussion-topic">
-                            <option th:each="discussionTopic : ${discussionTopics}"
-                                    th:if="${relatedProblem != null or discussionTopic.discussionTopicSlug != 'solutions'}"
-                                    th:value="${discussionTopic.discussionTopicSlug}" th:text="${discussionTopic.discussionTopicName}">Topic</option>
-                        </select>
-                    </div> <!-- .section -->
-                    <div class="section" th:if="${relatedProblem != null}">
-                        <h5 th:text="#{voj.discussion.new-thread.related-problem}">Related Problem</h5>
-                        <p>
-                            <a th:href="@{/p/{id}(id=${relatedProblem.problemId})}">P<span id="related-problem" th:text="|${relatedProblem.problemId} |">1 </span><span th:text="${relatedProblem.problemName}">Problem</span></a>
-                        </p>
-                    </div> <!-- .section -->
-                </div> <!-- .span3 -->
-            </div> <!-- .row-fluid -->
-        </div> <!-- #discussion-thread -->
-    </div> <!-- #content -->
+                            </div>
+                            <div class="vw-composer-count vw-mt-10"><span id="body-count">0</span> <span th:text="#{voj.discussion.new-thread.characters}">characters</span></div>
+                        </div>
+
+                        <!-- ACTIONS -->
+                        <div class="vw-composer-actions">
+                            <a class="vw-composer-cancel" th:href="@{/discussion}" th:text="#{voj.discussion.new-thread.cancel}">Cancel</a>
+                            <input type="hidden" id="csrf-token" th:value="${_csrf.token}" />
+                            <button id="create-discussion-thread" type="button" class="vw-btn vw-btn-accent"
+                                    th:text="#{voj.discussion.new-thread.create-discussion}">Create Discussion</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SIDEBAR -->
+                <aside class="vw-thread-side">
+                    <!-- POSTING AS -->
+                    <div class="vw-card" th:if="${myProfile != null}">
+                        <div class="vw-card-body">
+                            <div class="vw-eyebrow vw-side-label" th:text="'// ' + #{voj.discussion.new-thread.posting-as}">// POSTING AS</div>
+                            <div class="vw-postingas">
+                                <div class="vw-postingas-avatar" th:text="${#strings.toUpperCase(#strings.substring(myProfile.username,0,1))}">M</div>
+                                <div class="vw-minw0">
+                                    <a class="vw-postingas-name" th:href="@{/accounts/user/{id}(id=${myProfile.uid})}" th:text="${myProfile.username}">user</a>
+                                    <div class="vw-postingas-meta">
+                                        <span th:text="${mySubmissionStats != null ? mySubmissionStats.get('acceptedSubmission') : 0}">0</span>
+                                        <span th:text="#{voj.discussion.new-thread.solved}">solved</span> &middot;
+                                        <span th:text="${myProfile.userGroup.userGroupName}">member</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- GUIDELINES -->
+                    <div class="vw-card">
+                        <div class="vw-card-body">
+                            <div class="vw-eyebrow vw-side-label" th:text="'// ' + #{voj.discussion.new-thread.guidelines}">// GUIDELINES</div>
+                            <div class="vw-guide"><span class="vw-guide-mark">&rsaquo;</span><span th:text="#{voj.discussion.new-thread.guideline-search}">Search first.</span></div>
+                            <div class="vw-guide"><span class="vw-guide-mark">&rsaquo;</span><span th:text="#{voj.discussion.new-thread.guideline-context}">Include the failing test.</span></div>
+                            <div class="vw-guide"><span class="vw-guide-mark">&rsaquo;</span><span th:text="#{voj.discussion.new-thread.guideline-code}">Paste code in blocks.</span></div>
+                            <div class="vw-guide"><span class="vw-guide-mark">&rsaquo;</span><span th:text="#{voj.discussion.new-thread.guideline-kind}">Be kind.</span></div>
+                        </div>
+                    </div>
+
+                    <!-- FORMATTING -->
+                    <div class="vw-card">
+                        <div class="vw-card-body">
+                            <div class="vw-eyebrow vw-side-label" th:text="'// ' + #{voj.discussion.new-thread.formatting}">// FORMATTING</div>
+                            <div class="vw-cheat"><code>**bold**</code><span th:text="#{voj.discussion.new-thread.fmt-bold}">bold</span></div>
+                            <div class="vw-cheat"><code>`code`</code><span th:text="#{voj.discussion.new-thread.fmt-inline}">inline</span></div>
+                            <div class="vw-cheat"><code>```</code><span th:text="#{voj.discussion.new-thread.fmt-codeblock}">code block</span></div>
+                            <div class="vw-cheat"><code>&gt; text</code><span th:text="#{voj.discussion.new-thread.fmt-quote}">quote</span></div>
+                        </div>
+                    </div>
+                </aside>
+            </div>
+        </section>
+    </div>
 
     <th:block layout:fragment="scripts">
     <script type="text/javascript" th:inline="javascript">
-        $.when(
-            $.getScript([[|${cdnUrl}/js/markdown.min.js?v=${version}|]]),
-            $.Deferred(function(deferred) {
-                $(deferred.resolve);
-            })
-        ).done(function() {
-            converter = Markdown.getSanitizingConverter();
-            editor    = new Markdown.Editor(converter);
-            editor.run();
+        var threadEditor = createMarkdownEditor('#wmd-input');
+
+        $(function() {
+            // Select the first (server-filtered) category chip and seed the hidden topic field.
+            var firstChip = $('.vw-cat-chip').first();
+            firstChip.addClass('active');
+            $('#discussion-topic').val(firstChip.attr('data-slug'));
+            $('#title-count').text(($('#discussion-thread-title').val() || '').length);
         });
-    </script>
-    <script type="text/javascript" th:inline="javascript">
-        $('.btn-primary').click(function() {
-            var relatedProblemId = $('#related-problem').html() || '',
+        $('#discussion-topics').on('click', '.vw-cat-chip', function() {
+            $('.vw-cat-chip').removeClass('active');
+            $(this).addClass('active');
+            $('#discussion-topic').val($(this).attr('data-slug'));
+        });
+        $('#discussion-thread-title').on('input', function() {
+            $('#title-count').text(($(this).val() || '').length);
+        });
+        $('#wmd-input').on('input', function() {
+            $('#body-count').text(($(this).val() || '').length);
+        });
+
+        $('#create-discussion-thread').click(function() {
+            var rawProblem       = $('#related-problem-input').val() || '',
+                relatedProblemId = (rawProblem.match(/\d+/) || [''])[0],
                 discussionTopic  = $('#discussion-topic').val(),
                 threadTitle      = $('#discussion-thread-title').val(),
-                threadContent    = $('#wmd-input').val(),
+                threadContent    = threadEditor ? threadEditor.value() : '',
                 csrfToken        = $('#csrf-token').val();
-
             $('.alert-error').addClass('hide');
-            $('.btn-primary').attr('disabled', 'disabled');
-            $('.btn-primary').html([[#{voj.discussion.new-thread.please-wait}]]);
+            $('#create-discussion-thread').attr('disabled', 'disabled').html([[#{voj.discussion.new-thread.please-wait}]]);
             return createDiscussionThread(relatedProblemId, discussionTopic, threadTitle, threadContent, csrfToken);
         });
-    </script>
-    <script type="text/javascript" th:inline="javascript">
         function createDiscussionThread(relatedProblemId, discussionTopic, threadTitle, threadContent, csrfToken) {
-            var postData         = {
-                'relatedProblemId': relatedProblemId,
-                'discussionTopicSlug': discussionTopic,
-                'threadTitle': threadTitle,
-                'threadContent': threadContent,
-                'csrfToken': csrfToken
-            };
-
             $.ajax({
                 type: 'POST',
                 url: [[@{/discussion/createDiscussionThread.action}]],
-                data: postData,
+                data: {
+                    'relatedProblemId': relatedProblemId, 'discussionTopicSlug': discussionTopic,
+                    'threadTitle': threadTitle, 'threadContent': threadContent, 'csrfToken': csrfToken
+                },
                 dataType: 'JSON',
-                success: function(result){
-                    return processResult(result);
-                }
+                success: function(result){ return processResult(result); }
             });
         }
-    </script>
-    <script type="text/javascript" th:inline="javascript">
         function processResult(result) {
             if ( result['isSuccessful'] ) {
-                var threadId = result['discussionThreadId'];
-                window.location.href = [[@{/discussion/}]] + threadId;
+                window.location.href = [[@{/discussion/}]] + result['discussionThreadId'];
             } else {
                 var errorMessage = '';
-
-                if ( !result['isCsrfTokenValid'] ) {
-                    errorMessage += [[#{voj.discussion.new-thread.csrf-token-invalid}]] + '<br>';
-                }
-                if ( !result['isThreadCreatorExists'] || !result['isThreadCreatorLegal'] ) {
-                    errorMessage += [[#{voj.discussion.new-thread.not-allow-to-create-discussion}]] + '<br>';
-                }
-                if ( !result['isDiscussionTopicExists'] ) {
-                    errorMessage += [[#{voj.discussion.new-thread.discussion-topic-invalid}]] + '<br>';
-                }
-                if ( result['isThreadTitleEmpty'] ) {
-                    errorMessage += [[#{voj.discussion.new-thread.discussion-thread-title-empty}]] + '<br>';
-                } else if ( !result['isThreadTitleLegal'] ) {
-                    errorMessage += [[#{voj.discussion.new-thread.discussion-thread-title-too-long}]] + '<br>';
-                }
-                if ( result['isThreadContentEmpty'] ) {
-                    errorMessage += [[#{voj.discussion.new-thread.discussion-thread-content-empty}]] + '<br>';
-                }
+                if ( !result['isThreadCreatorExists'] || !result['isThreadCreatorLegal'] ) { errorMessage += [[#{voj.discussion.new-thread.not-allow-to-create-discussion}]] + '<br>'; }
+                if ( !result['isDiscussionTopicExists'] ) { errorMessage += [[#{voj.discussion.new-thread.discussion-topic-invalid}]] + '<br>'; }
+                if ( !result['isRelatedProblemExists'] ) { errorMessage += [[#{voj.discussion.new-thread.related-problem-not-exists}]] + '<br>'; }
+                if ( result['isThreadTitleEmpty'] ) { errorMessage += [[#{voj.discussion.new-thread.discussion-thread-title-empty}]] + '<br>'; }
+                else if ( !result['isThreadTitleLegal'] ) { errorMessage += [[#{voj.discussion.new-thread.discussion-thread-title-too-long}]] + '<br>'; }
+                if ( result['isThreadContentEmpty'] ) { errorMessage += [[#{voj.discussion.new-thread.discussion-thread-content-empty}]] + '<br>'; }
                 $('.alert-error').html(errorMessage);
                 $('.alert-error').removeClass('hide');
             }
-            $('.btn-primary').html([[#{voj.discussion.new-thread.create-discussion}]]);
-            $('.btn-primary').removeAttr('disabled');
+            $('#create-discussion-thread').html([[#{voj.discussion.new-thread.create-discussion}]]);
+            $('#create-discussion-thread').removeAttr('disabled');
         }
     </script>
     </th:block>

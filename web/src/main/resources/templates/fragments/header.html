@@ -1,63 +1,61 @@
 <!DOCTYPE html>
-<!--/* Public site header + drawer navigation. Used via ~{fragments/header :: header}. */-->
+<!--/*
+  Public site header (terminal aesthetic). Used via ~{fragments/header :: header}.
+  The active navigation item is derived from the current request URI (forwardUri,
+  injected by CommonModelPopulator) so no per-page parameter is needed. Styling
+  lives in css/app.css (.vw-header / .vw-nav / .vw-menu / ...); behaviour (theme
+  toggle, burger) lives in js/theme.js.
+*/-->
 <html xmlns:th="http://www.thymeleaf.org" lang="en">
 <body>
-    <th:block th:fragment="header">
-    <div id="header" class="row-fluid">
-        <div class="container">
-            <div id="logo" class="span6">
-                <a th:href="@{/}">
-                    <img th:src="|${cdnUrl}/img/logo.png?v=${version}|" alt="Logo" />
-                </a>
-            </div> <!-- #logo -->
-            <div id="nav" class="span6">
-                <ul class="inline">
-                    <li><a th:href="@{/p}" th:text="#{voj.include.header.problems}">Problems</a></li>
-                    <li><a th:href="@{/discussion}" th:text="#{voj.include.header.discussion}">Discussion</a></li>
-                    <li><a th:href="@{/contest}" th:text="#{voj.include.header.contests}">Contests</a></li>
-                    <li><a th:href="@{/submission}" th:text="#{voj.include.header.submission}">Submission</a></li>
-                    <li><a href="javascript:openDrawerMenu()" th:text="#{voj.include.header.more}">More</a></li>
-                </ul>
-            </div> <!-- #nav -->
-        </div> <!-- .container -->
-    </div> <!-- #header -->
-    <div id="drawer-nav">
-        <span class="close-trigger"><a href="javascript:closeDrawerMenu();"><span th:text="#{voj.include.header.close}">Close</span> &times;</a></span>
-        <div id="accounts" class="section">
-            <h4 th:text="#{voj.include.header.my-accounts}">My Accounts</h4>
-            <div id="profile">
-            <th:block th:if="${isLogin}">
-                <img th:src="|${cdnUrl}/img/avatar.jpg?v=${version}|" alt="avatar" class="img-circle" />
-                <h5 th:text="${myProfile.username}">username</h5>
-                <p class="email" th:text="${myProfile.email}">email</p>
-                <p>
-                    <span th:text="#{voj.include.header.accepted}">Accepted</span>/<span th:text="#{voj.include.header.submit}">Submit</span>:
-                    <span th:text="${mySubmissionStats['acceptedSubmission']}">0</span>/<span th:text="${mySubmissionStats['totalSubmission']}">0</span>(<span th:text="${mySubmissionStats['acRate']}">0</span>%)
-                </p>
-                <p><span th:text="#{voj.include.header.language-preference}">Language Preference</span>: <span th:text="${myProfile.preferLanguage.languageName}">Language</span></p>
-                <ul class="inline">
-                    <li><a th:href="@{/accounts/dashboard}" th:text="#{voj.include.header.dashboard}">Dashboard</a></li>
-                    <li><a th:href="@{/accounts/login(logout=true)}" th:text="#{voj.include.header.sign-out}">Sign out</a></li>
-                </ul>
-            </th:block>
-            <th:block th:unless="${isLogin}">
-                <p th:text="#{voj.include.header.not-logged-in}">You are not logged in.</p>
-                <ul class="inline">
-                    <li><a th:href="@{/accounts/login(forward=${forwardUri})}" th:text="#{voj.include.header.sign-in}">Sign in</a></li>
-                    <li><a th:href="@{/accounts/register(forward=${forwardUri})}" th:text="#{voj.include.header.sign-up}">Sign up</a></li>
-                </ul>
-            </th:block>
-            </div> <!-- #profile -->
-        </div> <!-- .section -->
-        <div id="about" class="section">
-            <h4 th:text="#{voj.include.header.about}">About</h4>
-            <ul>
-                <li><a th:href="@{/judgers}" th:text="#{voj.include.header.judgers}">Judgers</a></li>
-                <li><a href="https://github.com/zjhzxhz/voj/issues" target="_blank" th:text="#{voj.include.header.feedback}">Feedback</a></li>
-                <li><a th:href="@{/about}" th:text="#{voj.include.header.about-us}">About us</a></li>
-            </ul>
-        </div> <!-- .section -->
-    </div> <!-- #drawer-nav -->
+    <th:block th:fragment="header"
+        th:with="uri=${forwardUri != null ? forwardUri : ''},
+                 navP=${#strings.endsWith(uri,'/p') or #strings.contains(uri,'/p/')},
+                 navD=${#strings.contains(uri,'/discussion')},
+                 navC=${#strings.contains(uri,'/contest')},
+                 navS=${#strings.contains(uri,'/submission')}">
+    <header class="vw-header">
+        <a class="vw-logo" th:href="@{/}">
+            <span class="b">&lt;</span><span class="n">verwandlung</span><span class="b">&gt;</span><span class="vw-cursor">_</span>
+        </a>
+        <nav class="vw-nav">
+            <a th:href="@{/p}" th:classappend="${navP}? 'active'">~/problems</a>
+            <a th:href="@{/discussion}" th:classappend="${navD}? 'active'">~/discussion</a>
+            <a th:href="@{/contest}" th:classappend="${navC}? 'active'">~/contests</a>
+            <a th:href="@{/submission}" th:classappend="${navS}? 'active'">~/submission</a>
+        </nav>
+        <div class="vw-header-spacer"></div>
+        <div class="vw-toggle" data-vw="theme-toggle" title="Toggle theme" role="button" tabindex="0">
+            <span class="moon">&#9790;</span><span class="sun">&#9728;</span><span class="knob"></span>
+        </div>
+        <th:block th:if="${isLogin}">
+            <a class="vw-header-link vw-desktop-only" th:href="@{/accounts/user/{uid}(uid=${myProfile.uid})}" th:text="|~/${myProfile.username}|">~/user</a>
+            <a class="vw-btn vw-btn-ghost vw-btn-sm vw-desktop-only" th:href="@{/accounts/login(logout=true)}" th:text="#{voj.include.header.sign-out}">sign out</a>
+        </th:block>
+        <th:block th:unless="${isLogin}">
+            <a class="vw-header-link vw-desktop-only" th:href="@{/accounts/login(forward=${forwardUri})}" th:text="#{voj.include.header.sign-in}">login</a>
+            <a class="vw-btn vw-btn-accent vw-btn-sm vw-desktop-only" th:href="@{/accounts/register(forward=${forwardUri})}">$ create-account</a>
+        </th:block>
+        <button class="vw-burger" data-vw="burger" type="button" title="Menu" aria-label="Menu">
+            <span></span><span></span><span></span>
+        </button>
+    </header>
+
+    <!-- Mobile navigation drawer (toggled by the burger). -->
+    <div class="vw-menu" data-vw="menu">
+        <a th:href="@{/p}" th:classappend="${navP}? 'active'">~/problems</a>
+        <a th:href="@{/discussion}" th:classappend="${navD}? 'active'">~/discussion</a>
+        <a th:href="@{/contest}" th:classappend="${navC}? 'active'">~/contests</a>
+        <a th:href="@{/submission}" th:classappend="${navS}? 'active'">~/submission</a>
+        <div class="vw-menu-actions" th:if="${isLogin}">
+            <a class="vw-btn vw-btn-ghost" th:href="@{/accounts/user/{uid}(uid=${myProfile.uid})}" th:text="|~/${myProfile.username}|">~/user</a>
+            <a class="vw-btn vw-btn-accent" th:href="@{/accounts/login(logout=true)}" th:text="#{voj.include.header.sign-out}">sign out</a>
+        </div>
+        <div class="vw-menu-actions" th:unless="${isLogin}">
+            <a class="vw-btn vw-btn-ghost" th:href="@{/accounts/login(forward=${forwardUri})}" th:text="#{voj.include.header.sign-in}">login</a>
+            <a class="vw-btn vw-btn-accent" th:href="@{/accounts/register(forward=${forwardUri})}">$ create-account</a>
+        </div>
+    </div>
     </th:block>
 </body>
 </html>

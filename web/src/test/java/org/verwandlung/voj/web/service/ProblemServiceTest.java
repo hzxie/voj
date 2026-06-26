@@ -166,7 +166,7 @@ public class ProblemServiceTest {
     Map<String, Object> result =
         problemService.createProblem(
             "A New Problem", 1000, 65536, "Description", "Hint", "Input Format",
-            "Output Format", "1 2", "3", TEST_CASES, CATEGORIES, TAGS, true, true);
+            "Output Format", "1 2", "3", TEST_CASES, CATEGORIES, TAGS, true, true, "easy");
     Assertions.assertTrue((Boolean) result.get("isSuccessful"));
     Assertions.assertTrue(result.containsKey("problemId"));
     Assertions.assertEquals(5, problemService.getNumberOfProblems());
@@ -178,7 +178,7 @@ public class ProblemServiceTest {
     Map<String, Object> result =
         problemService.createProblem(
             "", 1000, 65536, "Description", "Hint", "Input Format", "Output Format",
-            "1 2", "3", TEST_CASES, CATEGORIES, TAGS, true, true);
+            "1 2", "3", TEST_CASES, CATEGORIES, TAGS, true, true, "easy");
     Assertions.assertTrue((Boolean) result.get("isProblemNameEmpty"));
     Assertions.assertFalse((Boolean) result.get("isSuccessful"));
   }
@@ -189,7 +189,7 @@ public class ProblemServiceTest {
     Map<String, Object> result =
         problemService.createProblem(
             "A New Problem", 0, 65536, "Description", "Hint", "Input Format", "Output Format",
-            "1 2", "3", TEST_CASES, CATEGORIES, TAGS, true, true);
+            "1 2", "3", TEST_CASES, CATEGORIES, TAGS, true, true, "easy");
     Assertions.assertFalse((Boolean) result.get("isTimeLimitLegal"));
     Assertions.assertFalse((Boolean) result.get("isSuccessful"));
   }
@@ -200,7 +200,7 @@ public class ProblemServiceTest {
     Map<String, Boolean> result =
         problemService.editProblem(
             1000, "A+B Problem (Edited)", 2000, 131072, "New Description", "Hint",
-            "Input Format", "Output Format", "1 2", "3", TEST_CASES, CATEGORIES, TAGS, true, true);
+            "Input Format", "Output Format", "1 2", "3", TEST_CASES, CATEGORIES, TAGS, true, true, "easy");
     Assertions.assertTrue(result.get("isSuccessful"));
     Assertions.assertEquals("A+B Problem (Edited)", problemService.getProblem(1000).getProblemName());
   }
@@ -211,7 +211,7 @@ public class ProblemServiceTest {
     Map<String, Boolean> result =
         problemService.editProblem(
             99999, "Nonexistent", 1000, 65536, "Description", "Hint", "Input Format",
-            "Output Format", "1 2", "3", TEST_CASES, CATEGORIES, TAGS, true, true);
+            "Output Format", "1 2", "3", TEST_CASES, CATEGORIES, TAGS, true, true, "easy");
     Assertions.assertFalse(result.get("isProblemExists"));
     Assertions.assertFalse(result.get("isSuccessful"));
   }

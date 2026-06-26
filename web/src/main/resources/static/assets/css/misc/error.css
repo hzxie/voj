@@ -1,9 +1,0 @@
-div#content div#error-message {
-	padding-top: 180px;
-}
-
-@media only screen and (max-width: 767px) {
-	div#content div#error-message {
-		padding-top: 0;
-	}
-}

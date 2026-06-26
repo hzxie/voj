@@ -66,37 +66,59 @@ public class ProblemsController {
    */
   @RequestMapping(value = "", method = RequestMethod.GET)
   public ModelAndView problemsView(
-      @RequestParam(value = "start", required = false, defaultValue = "1") long startIndex,
-      @RequestParam(value = "keyword", required = false) String keyword,
-      @RequestParam(value = "category", required = false) String problemCategorySlug,
+      @RequestParam(value = "page", required = false, defaultValue = "1") int pageNumber,
+      @RequestParam(value = "field", required = false, defaultValue = "title") String field,
+      @RequestParam(value = "query", required = false) String query,
       HttpServletRequest request,
       HttpServletResponse response)
       throws UnsupportedEncodingException {
-    long startIndexOfProblems = getFirstIndexOfProblems();
-    if (startIndex < startIndexOfProblems) {
-      startIndex = startIndexOfProblems;
+    if (!"id".equals(field) && !"title".equals(field) && !"tag".equals(field)) {
+      field = "title";
+    }
+    if (pageNumber < 1) {
+      pageNumber = 1;
     }
 
+    long totalProblems = problemService.getNumberOfProblemsByPage(field, query, true);
+    long totalPages = (totalProblems + NUMBER_OF_PROBLEMS_PER_PAGE - 1) / NUMBER_OF_PROBLEMS_PER_PAGE;
+    if (totalPages > 0 && pageNumber > totalPages) {
+      pageNumber = (int) totalPages;
+    }
     List<Problem> problems =
-        problemService.getProblemsUsingFilters(
-            startIndex, keyword, problemCategorySlug, null, true, NUMBER_OF_PROBLEMS_PER_PAGE);
-    long totalProblems =
-        problemService.getNumberOfProblemsUsingFilters(keyword, problemCategorySlug, true);
+        problemService.getProblemsByPage(
+            pageNumber, NUMBER_OF_PROBLEMS_PER_PAGE, field, query, true);
+
     ModelAndView view = new ModelAndView("pages/problems/problems");
     view.addObject("problems", problems)
-        .addObject("startIndexOfProblems", startIndexOfProblems)
-        .addObject("numberOfProblemsPerPage", NUMBER_OF_PROBLEMS_PER_PAGE)
         .addObject("totalProblems", totalProblems)
-        .addObject("problemCategories", problemService.getProblemCategoriesWithHierarchy());
+        .addObject("currentPage", pageNumber)
+        .addObject("totalPages", totalPages)
+        .addObject("windowStart", Math.max(1, pageNumber - 2))
+        .addObject("windowEnd", (int) Math.max(1, Math.min(totalPages, pageNumber + 2)))
+        .addObject("field", field)
+        .addObject("query", query);
 
-    HttpSession session = request.getSession();
-    if (isLoggedIn(session)) {
-      long userId = HttpSessionParser.getCurrentUser().getUid();
-      long endIndex =
-          problemService.getLastIndexOfProblems(true, startIndex, NUMBER_OF_PROBLEMS_PER_PAGE);
-      Map<Long, Submission> submissionOfProblems =
-          submissionService.getSubmissionOfProblems(userId, startIndex, endIndex);
-      view.addObject("submissionOfProblems", submissionOfProblems);
+    // Tags + (when logged in) solved status are keyed by problem id; the page's
+    // problems may not be a contiguous id range once filtered, so bound the
+    // lookups by the min/max id actually shown.
+    if (problems != null && !problems.isEmpty()) {
+      long minProblemId = problems.get(0).getProblemId();
+      long maxProblemId = problems.get(0).getProblemId();
+      for (Problem problem : problems) {
+        minProblemId = Math.min(minProblemId, problem.getProblemId());
+        maxProblemId = Math.max(maxProblemId, problem.getProblemId());
+      }
+      view.addObject(
+          "problemTagsOfProblems",
+          problemService.getProblemTagsOfProblems(minProblemId, maxProblemId));
+
+      HttpSession session = request.getSession();
+      if (isLoggedIn(session)) {
+        long userId = HttpSessionParser.getCurrentUser().getUid();
+        Map<Long, Submission> submissionOfProblems =
+            submissionService.getSubmissionOfProblems(userId, minProblemId, maxProblemId + 1);
+        view.addObject("submissionOfProblems", submissionOfProblems);
+      }
     }
     return view;
   }
@@ -191,6 +213,7 @@ public class ProblemsController {
     // the contest problem view, which sets isContest=true; here it must be set
     // to false so ${isContest and ...} resolves rather than failing on a null.
     view.addObject("isContest", false);
+    view.addObject("problemTags", problemService.getProblemTagsUsingProblemId(problemId));
     view.addObject(
         "discussionThreads",
         discussionService.getDiscussionThreadsOfProblem(

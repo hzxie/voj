@@ -1,23 +1,43 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
-      layout:decorate="~{layouts/main}" lang="en">
+      layout:decorate="~{layouts/error}" lang="en">
 <head>
     <title th:text="#{voj.error.500.title} + ' | ' + ${websiteName}">Internal Server Error</title>
-    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/misc/error.css?v=${version}|" />
 </head>
 <body>
-    <div id="content" class="container" layout:fragment="content">
-        <div class="row-fluid">
-            <div class="span6">
-                <img th:src="|${cdnUrl}/img/error.png?v=${version}|" alt="Error" />
-            </div> <!-- .span6 -->
-            <div id="error-message" class="span6">
-                <h4 th:text="#{voj.error.500.internal-server-error}">Internal Server Error Occurred!</h4>
-                <p th:text="#{voj.error.500.message}">The requested URL caused an internal server error.</p>
-                <button class="btn btn-primary" onclick="history.go(-1);" th:text="#{voj.error.500.go-back}">Go back</button>
-            </div> <!-- .span6 -->
-        </div> <!-- .row-fluid -->
-    </div> <!-- #content -->
+    <div layout:fragment="content">
+        <section class="vw-error">
+            <div class="vw-eyebrow vw-eyebrow-err">// ERROR &middot; INTERNAL SERVER ERROR</div>
+            <div class="vw-error-code">
+                <span class="base">500</span>
+                <span class="glitch" aria-hidden="true">500</span>
+            </div>
+            <h1 th:text="#{voj.error.500.internal-server-error}">Internal Server Error Occurred!</h1>
+            <p th:text="#{voj.error.500.message}">The requested URL caused an internal server error.</p>
+
+            <div class="vw-card vw-card-glow vw-trace">
+                <div class="vw-card-bar">
+                    <span class="vw-dot vw-dot-r"></span><span class="vw-dot vw-dot-y"></span><span class="vw-dot vw-dot-g"></span>
+                    <span class="vw-card-title">judge &mdash; judger &mdash; bash</span>
+                    <span class="vw-header-spacer"></span>
+                    <span class="vw-err vw-card-status">&#9679; core dumped</span>
+                </div>
+                <div class="vw-card-body vw-term-sm">
+                    <div class="vw-pre vw-muted2">$ voj judge your-request</div>
+                    <div class="vw-pre vw-err">judger: received SIGSEGV (signal 11)</div>
+                    <div class="vw-pre vw-err">&rarr; segmentation fault &middot; core dumped</div>
+                    <div class="vw-pre vw-muted">&rarr; incident logged &middot; exit code 500</div>
+                    <div class="vw-pre vw-pre-result"><span class="vw-accent">verwandlung@oj:~$ </span><span class="vw-cursor">&#9611;</span></div>
+                </div>
+            </div>
+
+            <div class="vw-error-btns">
+                <a class="vw-btn vw-btn-accent" th:href="@{/}">$ cd ~</a>
+                <a class="vw-btn" th:href="@{/judgers}" th:text="#{voj.include.footer.judgers}">System status</a>
+                <a class="vw-btn" href="javascript:history.go(-1);" th:text="#{voj.error.500.go-back}">Go back</a>
+            </div>
+        </section>
+    </div>
 </body>
 </html>

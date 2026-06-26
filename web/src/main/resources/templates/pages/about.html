@@ -1,59 +1,72 @@
 <!DOCTYPE html>
+<!--/* Reproduced from voj-design/About.dc.html. Styling lives in app.css. */-->
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layouts/main}" lang="en">
 <head>
     <title th:text="#{voj.misc.about.title} + ' | ' + ${websiteName}">About Us</title>
-    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/misc/about.css?v=${version}|" />
 </head>
 <body>
-    <div id="content" layout:fragment="content">
-        <div id="ribbon"></div> <!-- #ribbon -->
-        <div class="container">
-            <div class="row-fluid">
-                <div class="span9">
-                    <div id="main-content">
-                        <div class="section">
-                            <h3 id="about-project" th:text="#{voj.misc.about.about-project}">About the Project</h3>
-                            <div class="markdown" th:utext="#{voj.misc.about.about-project-content}"></div> <!-- .markdown -->
-                        </div> <!-- .section -->
-                        <div class="section">
-                            <h3 id="how-to-contribute" th:text="#{voj.misc.about.how-to-contribute}">How to Contribute</h3>
-                            <div class="markdown" th:utext="#{voj.misc.about.how-to-contribute-content}"></div> <!-- .markdown -->
-                        </div> <!-- .section -->
-                        <div class="section" th:with="termsUrl=@{/terms}">
-                            <h3 id="license" th:text="#{voj.misc.about.license}">License</h3>
-                            <div class="markdown" th:utext="#{voj.misc.about.license-content(${termsUrl})}"></div> <!-- .markdown -->
-                        </div> <!-- .section -->
-                    </div> <!-- #main-content -->
-                </div> <!-- .span9 -->
-                <div class="span3">
-                    <div id="sidebar-nav">
-                        <h5 th:text="#{voj.misc.about.about-us}">About Us</h5>
-                        <ul class="contents">
-                            <li><a href="#about-project" th:text="#{voj.misc.about.about-project}">About the Project</a></li>
-                            <li><a href="#how-to-contribute" th:text="#{voj.misc.about.how-to-contribute}">How to Contribute</a></li>
-                            <li><a href="#license" th:text="#{voj.misc.about.license}">License</a></li>
-                        </ul>
-                    </div> <!-- #sidebar-nav -->
-                </div> <!-- .span3 -->
-            </div> <!-- .row-fluid -->
-        </div> <!-- .container -->
-    </div> <!-- #content -->
+    <div layout:fragment="content">
+        <!-- HERO -->
+        <section class="vw-dochero">
+            <div class="vw-dochero-inner vw-dochero-inner-w920">
+                <div class="vw-eyebrow">// ABOUT</div>
+                <h1>A judge that turns<br>source into a <span class="accent">verdict.</span></h1>
+                <p class="vw-dochero-lead">Verwandlung is an open-source, cross-platform online judge built on Spring MVC and a distributed pool of judgers coordinated through ActiveMQ. It compiles, runs, and grades submissions against hidden test cases in milliseconds &mdash; the same engine behind every contest and practice problem on this site.</p>
+            </div>
+        </section>
 
-    <th:block layout:fragment="scripts">
-    <script type="text/javascript" th:inline="javascript">
-        $.getScript([[|${cdnUrl}/js/markdown.min.js?v=${version}|]], function() {
-            converter = Markdown.getSanitizingConverter();
+        <!-- ARCHITECTURE -->
+        <section class="vw-about">
+            <div class="vw-section-label">// ARCHITECTURE</div>
+            <div class="vw-arch">
+                <div class="card"><div class="n">Spring MVC</div><div class="d">Java backend serving problems, submissions, contests and the REST API.</div></div>
+                <div class="card"><div class="n">ActiveMQ</div><div class="d">Message broker that distributes judge jobs across the judger pool.</div></div>
+                <div class="card"><div class="n">Judgers</div><div class="d">Sandboxed runners compiling &amp; executing code under strict time/memory limits.</div></div>
+                <div class="card"><div class="n">MySQL</div><div class="d">Persistent store for users, problems, test data and verdicts.</div></div>
+                <div class="card"><div class="n">Redis</div><div class="d">Caches sessions, rate limits and live contest standings.</div></div>
+                <div class="card"><div class="n">Vanilla JS</div><div class="d">Lightweight front-end &mdash; no heavyweight SPA framework.</div></div>
+            </div>
+        </section>
 
-            $('.markdown').each(function() {
-                var plainContent    = $(this).text(),
-                    markdownContent = converter.makeHtml(plainContent.replace(/\\\n/g, '\\n'));
+        <!-- MILESTONES -->
+        <section class="vw-about">
+            <div class="vw-section-label">// MILESTONES</div>
+            <div class="vw-timeline">
+                <div class="row"><span class="y">2015</span><span class="t">First commit &mdash; Verwandlung is born as a course project.</span></div>
+                <div class="row"><span class="y">2018</span><span class="t">Distributed judging via ActiveMQ; first ACM-style contest hosted.</span></div>
+                <div class="row"><span class="y">2021</span><span class="t">Servers migrated to Tencent Cloud; Spring 6 upgrade.</span></div>
+                <div class="row"><span class="y">2024</span><span class="t">Ubuntu 24.04 LTS judgers; crossed 1M submissions.</span></div>
+                <div class="row"><span class="y">2026</span><span class="t">Ubuntu 26.04 LTS rollout; 38,902 registered users.</span></div>
+            </div>
+        </section>
 
-                $(this).html(markdownContent);
-            });
-        });
-    </script>
-    </th:block>
+        <!-- TEAM / LINKS -->
+        <section class="vw-about">
+            <div class="vw-tstack">
+                <div class="vw-pcard">
+                    <div class="vw-eyebrow">// MAINTAINER</div>
+                    <div class="vw-maint">
+                        <div class="vw-maint-avatar">H</div>
+                        <div>
+                            <div class="vw-maint-name">Haozhe Xie</div>
+                            <div class="vw-maint-role">creator &amp; lead maintainer &middot; since 2014</div>
+                            <div class="vw-maint-links"><a href="https://github.com/hzxie" target="_blank" rel="noopener">github.com/hzxie</a> &middot; root [at] haozhexie [dot] com</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="vw-pcard">
+                    <div class="vw-eyebrow">// OPEN SOURCE</div>
+                    <div class="vw-oss">
+                        <div class="vw-kvrow"><span class="k">License</span><span class="v">GPL-3.0</span></div>
+                        <div class="vw-kvrow"><span class="k">Stars</span><span class="v">&#9733; <span class="js-github-stars" data-fallback="611" aria-label="GitHub stars"><span class="vw-spinner" aria-hidden="true"></span></span></span></div>
+                        <div class="vw-kvrow"><span class="k">Language</span><span class="v">Java</span></div>
+                        <a class="vw-btn vw-btn-accent vw-btn-block" href="https://github.com/hzxie/voj" target="_blank" rel="noopener">&#9733; Star on GitHub</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
 </body>
 </html>

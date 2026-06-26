@@ -1,53 +1,87 @@
 <!DOCTYPE html>
+<!--/* Reproduced from voj-design/Contests.dc.html: // CONTESTS header, // LIVE & UPCOMING
+       cards (type badge, title, status, window/duration/problems/entrants) and a
+       // PAST CONTESTS table (type/title/window/entrants/problems). The design's per-user
+       RANK column is omitted (computing a contestant's rank for every past contest is too
+       costly for a list view); the problems count is shown in its place. The load-more
+       behaviour for older past contests is preserved. */-->
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layouts/main}" lang="en">
 <head>
     <title th:text="#{voj.contests.contests.title} + ' | ' + ${websiteName}">Contests</title>
-    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/contests/contests.css?v=${version}|" />
 </head>
 <body>
-    <div id="content" class="container" layout:fragment="content"
-         th:with="keyword=${param.keyword != null ? param.keyword[0] : ''}">
-        <div id="main-content" class="row-fluid">
-            <div id="contests" class="span8">
-                <table class="table">
-                    <tr class="contest" th:each="contest : ${contests}"
-                        th:with="contestStatus=${currentTime.before(contest.startTime) ? 'Ready' : (currentTime.after(contest.endTime) ? 'Done' : 'Live')}"
-                        th:classappend="${contestStatus}">
-                        <td class="overview">
-                            <h5><a th:href="@{/contest/{id}(id=${contest.contestId})}" th:text="${contest.contestName}">Contest</a></h5>
-                            <ul class="inline">
-                                <li th:text="${contest.contestMode}">Mode</li>
-                                <li><span th:text="#{voj.contests.contests.start-time}">Start Time</span>: <span th:text="${@dateFormatter.dateTimeLongMedium(contest.startTime, language)}">time</span></li>
-                                <li><span th:text="#{voj.contests.contests.end-time}">End Time</span>: <span th:text="${@dateFormatter.dateTimeLongMedium(contest.endTime, language)}">time</span></li>
-                            </ul>
-                        </td>
-                        <td class="status" th:text="${contestStatus}">Status</td>
-                    </tr>
-                </table> <!-- .table -->
-                <div id="more-contests">
-                    <p class="availble" th:text="#{voj.contests.contests.more-contests}">More Contests...</p>
-                    <img th:src="|${cdnUrl}/img/loading.gif?v=${version}|" alt="Loading" class="hide" />
+    <div layout:fragment="content">
+        <section class="vw-pagehead">
+            <div class="vw-eyebrow">// CONTESTS</div>
+            <h1 th:text="#{voj.contests.contests.title}">Contests</h1>
+            <div class="sub">ACM &amp; OI rounds &middot; solve against the clock</div>
+        </section>
+
+        <!-- LIVE & UPCOMING -->
+        <section class="vw-section vw-section-narrow">
+            <div class="vw-section-label">// LIVE &amp; UPCOMING</div>
+            <div class="vw-contest-list">
+                <a class="vw-contest-card" th:each="contest : ${liveContests}"
+                   th:with="durMin=${(contest.endTime.time - contest.startTime.time) / 60000},
+                            isReady=${currentTime.before(contest.startTime)}"
+                   th:href="@{/contest/{id}(id=${contest.contestId})}">
+                    <div class="vw-contest-cardhead">
+                        <span class="vw-ctype" th:classappend="${contest.contestMode == 'ACM'} ? 'vw-ctype-acm' : 'vw-ctype-oi'" th:text="${contest.contestMode}">ACM</span>
+                        <span class="vw-ctitle" th:text="${contest.contestName}">Contest</span>
+                        <div class="vw-header-spacer"></div>
+                        <span class="vw-cstatus" th:classappend="${isReady} ? 'vw-cstatus-ready' : 'vw-cstatus-live'">
+                            <span class="dot"></span><span th:text="${isReady} ? 'Upcoming' : 'Live'">Live</span>
+                        </span>
+                    </div>
+                    <div class="vw-cmeta">
+                        <span>&#128197; <span th:text="${@dateFormatter.dateTimeLongMedium(contest.startTime, language)}">start</span> &rarr; <span th:text="${@dateFormatter.dateTimeLongMedium(contest.endTime, language)}">end</span></span>
+                        <span>&#9201; <span th:text="|${durMin / 60}h ${#numbers.formatInteger(durMin % 60, 2)}m|">2h 00m</span></span>
+                        <span>&#128221; <span th:text="${problemCountOfContests.get(contest.contestId)}">0</span> problems</span>
+                        <span>&#128101; <span th:text="${entrantsOfContests.get(contest.contestId)}">0</span> entrants</span>
+                    </div>
+                </a>
+                <p class="vw-muted vw-card-empty" th:if="${liveContests == null or liveContests.isEmpty()}" th:text="#{voj.contests.contests.no-contests}">No live or upcoming contests.</p>
+            </div>
+        </section>
+
+        <!-- PAST CONTESTS -->
+        <section class="vw-section vw-section-narrow vw-section-table">
+            <div class="vw-section-label">// PAST CONTESTS</div>
+            <div class="vw-tablewrap">
+                <div class="vw-table vw-table-contests">
+                    <div class="vw-table-head">
+                        <div>TYPE</div>
+                        <div th:text="#{voj.contests.contests.title}">Title</div>
+                        <div>WINDOW</div>
+                        <div>ENTRANTS</div>
+                        <div>PROBLEMS</div>
+                    </div>
+                    <div id="past-contests-body">
+                        <a class="vw-table-row" th:each="contest : ${pastContests}"
+                           th:with="durMin=${(contest.endTime.time - contest.startTime.time) / 60000}"
+                           th:href="@{/contest/{id}(id=${contest.contestId})}">
+                            <div><span class="vw-ctype-sm" th:classappend="${contest.contestMode == 'ACM'} ? 'vw-ctype-acm' : 'vw-ctype-oi'" th:text="${contest.contestMode}">OI</span></div>
+                            <div class="vw-cell-title vw-ellipsis" th:text="${contest.contestName}">Contest</div>
+                            <div class="vw-muted2" th:text="|${@dateFormatter.dateShort(contest.startTime, language)} &middot; ${durMin / 60}h|">window</div>
+                            <div class="vw-muted2" th:text="${entrantsOfContests.get(contest.contestId)}">0</div>
+                            <div class="vw-muted2" th:text="${problemCountOfContests.get(contest.contestId)}">0</div>
+                        </a>
+                    </div>
                 </div>
-            </div> <!-- #contests -->
-            <div id="sidebar" class="span4">
-                <div id="search-widget" class="widget">
-                    <h4 th:text="#{voj.contests.contests.search}">Search</h4>
-                    <form id="search-form" th:action="@{/contest}">
-                        <div class="control-group">
-                            <input name="keyword" class="span12" type="text" th:placeholder="#{voj.contests.contests.keyword}" th:value="${keyword}" />
-                        </div>
-                        <button class="btn btn-primary btn-block" type="submit" th:text="#{voj.contests.contests.search}">Search</button>
-                    </form> <!-- #search-form -->
-                </div> <!-- #search-widget -->
-            </div> <!-- #sidebar -->
-        </div> <!-- #main-content -->
-    </div> <!-- #content -->
+            </div>
+            <div id="more-contests" class="vw-loadmore">
+                <p class="availble" th:text="#{voj.contests.contests.more-contests}">More Contests...</p>
+                <img th:src="|${cdnUrl}/img/loading.gif?v=${version}|" alt="Loading" class="hide" />
+            </div>
+        </section>
+    </div>
 
     <th:block layout:fragment="scripts">
-    <script type="text/javascript" th:src="|${cdnUrl}/js/date-${language}.min.js?v=${version}|"></script>
-    <script type="text/javascript">
+    <script type="text/javascript" th:inline="javascript">
+        var loadedContests = [[${loadedContests}]];
+
         function setLoadingStatus(isLoading) {
             if ( isLoading ) {
                 $('p', '#more-contests').addClass('hide');
@@ -57,73 +91,51 @@
                 $('p', '#more-contests').removeClass('hide');
             }
         }
-    </script>
-    <script type="text/javascript">
         $('#more-contests').click(function() {
-            var isLoading         = $('img', this).is(':visible'),
-                hasNextRecord     = $('p', this).hasClass('availble'),
-                numberOfContests  = $('tr.contest').length;
-
+            var isLoading     = $('img', this).is(':visible'),
+                hasNextRecord = $('p', this).hasClass('availble');
             if ( !isLoading && hasNextRecord ) {
                 setLoadingStatus(true);
-                return getMoreContests(numberOfContests);
+                return getMoreContests(loadedContests);
             }
         });
-    </script>
-    <script type="text/javascript" th:inline="javascript">
         function getMoreContests(startIndex) {
-            var pageRequests = {
-                'keyword': [[${param.keyword != null ? param.keyword[0] : ''}]],
-                'startIndex': startIndex
-            };
-
             $.ajax({
                 type: 'GET',
                 url: [[@{/contest/getContests.action}]],
-                data: pageRequests,
+                data: { 'startIndex': startIndex },
                 dataType: 'JSON',
-                success: function(result){
-                    return processContestsResult(result);
-                }
+                success: function(result){ return processContestsResult(result); }
             });
         }
-    </script>
-    <script type="text/javascript" th:inline="javascript">
         function processContestsResult(result) {
             if ( result['isSuccessful'] ) {
-                displayContests(result['contests']);
+                displayPastContests(result['contests'], result['entrants'], result['problemCount']);
             } else {
                 $('p', '#more-contests').removeClass('availble');
+                $('#more-contests').addClass('is-done');
                 $('p', '#more-contests').html([[#{voj.contests.contests.no-more-contests}]]);
-                $('#more-contests').css('cursor', 'default');
             }
             setLoadingStatus(false);
         }
-    </script>
-    <script type="text/javascript" th:inline="javascript">
-        function displayContests(contests) {
+        function displayPastContests(contests, entrants, problemCount) {
+            var typeClass = function(mode){ return mode === 'ACM' ? 'vw-ctype-acm' : 'vw-ctype-oi'; };
             for ( var i = 0; i < contests.length; ++ i ) {
-                var contestStatus    = 'Done',
-                    currentTime      = new Date(),
-                    contestStartTime = new Date(contests[i]['startTime']),
-                    contestEndTime   = new Date(contests[i]['endTime']);
-
-                if ( currentTime < contestStartTime ) {
-                    contestStatus = 'Ready';
-                } else if ( currentTime >= contestStartTime && currentTime <= contestEndTime ) {
-                    contestStatus = 'Live';
-                }
-                $('#contests tbody').append('<tr class="contest %s">'.format(contestStatus) +
-                    '    <td class="overview">' +
-                    '        <h5><a href="' + [[@{/contest/}]] + '%s">%s</a></h5>'.format(contests[i]['contestId'], contests[i]['contestName']) +
-                    '        <ul class="inline">' +
-                    '            <li>%s</li>'.format(contests[i]['contestMode']) +
-                    '            <li>' + [[#{voj.contests.contests.start-time}]] + ': %s</li>'.format(getFormatedDateString(contests[i]['startTime'], [[${language}]])) +
-                    '            <li>' + [[#{voj.contests.contests.end-time}]] + ': %s</li>'.format(getFormatedDateString(contests[i]['endTime'], [[${language}]])) +
-                    '        </ul>' +
-                    '    </td>' +
-                    '    <td class="status">%s</td>'.format(contestStatus) +
-                    '</tr>');
+                var c = contests[i];
+                loadedContests += 1;
+                var now = new Date(), et = new Date(c['endTime']);
+                if ( now <= et ) { continue; }
+                var durMin = Math.round((et - new Date(c['startTime'])) / 60000),
+                    hours  = Math.floor(durMin / 60),
+                    cid    = c['contestId'];
+                var html = '<a class="vw-table-row" href="' + [[@{/contest/}]] + cid + '">' +
+                    '<div><span class="vw-ctype-sm ' + typeClass(c['contestMode']) + '">' + c['contestMode'] + '</span></div>' +
+                    '<div class="vw-cell-title vw-ellipsis">' + c['contestName'] + '</div>' +
+                    '<div class="vw-muted2">' + getFormatedDateString(c['startTime'], [[${language}]]) + ' · ' + hours + 'h</div>' +
+                    '<div class="vw-muted2">' + (entrants[cid] || 0) + '</div>' +
+                    '<div class="vw-muted2">' + (problemCount[cid] || 0) + '</div>' +
+                    '</a>';
+                $('#past-contests-body').append(html);
             }
         }
     </script>

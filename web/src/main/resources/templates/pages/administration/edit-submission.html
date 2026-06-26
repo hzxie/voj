@@ -4,7 +4,6 @@
       layout:decorate="~{layouts/admin}" lang="en">
 <head>
     <title th:text="#{voj.administration.edit-submission.title} + ' #' + ${submission.submissionId} + ' | ' + ${websiteName}">Edit Submission</title>
-    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/administration/edit-submission.css?v=${version}|" />
     <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/highlight.min.css?v=${version}|" />
 </head>
 <body>
@@ -67,21 +66,14 @@
 
     <th:block layout:fragment="scripts">
     <script type="text/javascript" th:inline="javascript">
-        $.getScript([[|${cdnUrl}/js/markdown.min.js?v=${version}|]], function() {
-            converter = Markdown.getSanitizingConverter();
-
-            $('.markdown').each(function() {
-                var plainContent    = $(this).text(),
-                    markdownContent = converter.makeHtml(plainContent.replace(/\\\n/g, '\\n'));
-
-                $(this).html(markdownContent);
-            });
+        $(function() {
+            $('.markdown').each(function() { $(this).html(renderMarkdown($(this).text())); });
         });
     </script>
     <script type="text/javascript" th:inline="javascript">
         $.getScript([[|${cdnUrl}/js/highlight.min.js?v=${version}|]], function() {
             $('code').each(function(i, block) {
-                hljs.highlightBlock(block);
+                hljs.highlightElement(block);
             });
         });
     </script>
@@ -161,17 +153,15 @@
     </script>
     <th:block th:if="${submission.judgeResult.judgeResultName == 'Pending'}">
     <script type="text/javascript" th:inline="javascript">
-        $.getScript([[|${cdnUrl}/js/date-${language}.min.js?v=${version}|]], function() {
-            var currentJudgeResult = 'Pending',
-                getterInterval     = setInterval(function() {
-                    getRealTimeJudgeResult();
-                    currentJudgeResult = $('#judge-result').html();
+        var currentJudgeResult = 'Pending',
+            getterInterval     = setInterval(function() {
+                getRealTimeJudgeResult();
+                currentJudgeResult = $('#judge-result').html();
 
-                    if ( currentJudgeResult != 'Pending' ) {
-                        clearInterval(getterInterval);
-                    }
-                }, 10000);
-        });
+                if ( currentJudgeResult != 'Pending' ) {
+                    clearInterval(getterInterval);
+                }
+            }, 10000);
     </script>
     <script type="text/javascript" th:inline="javascript">
         $(function() {
@@ -196,7 +186,7 @@
                     judgeLog    = mapMessage['message'];
 
                 $('#judge-result').html(judgeResult);
-                $('#judge-log').append(converter.makeHtml(judgeLog));
+                $('#judge-log').append(renderMarkdown(judgeLog));
             }
         });
     </script>
@@ -220,7 +210,7 @@
                             $('#used-time').html(result['submission']['usedTime'] + " ms");
                             $('#used-memory').html(result['submission']['usedMemory'] + " KB");
                             $('#execute-time').html(getFormatedDateString(result['submission']['executeTime'], [[${language}]]));
-                            $('#judge-log').html(converter.makeHtml(result['submission']['judgeLog'].replace(/\\\n/g, '\\n')));
+                            $('#judge-log').html(renderMarkdown(result['submission']['judgeLog']));
                         }
                     }
                 }
@@ -229,16 +219,9 @@
     </script>
     <script type="text/javascript">
         function getFormatedDateString(dateTime, locale) {
-            var dateObject = new Date(dateTime),
-                dateString = dateObject.toString();
-
-            if ( locale == 'en_US' ) {
-                dateString = dateObject.toString('MMM d, yyyy h:mm:ss tt');
-            } else if ( locale == 'zh_CN' ) {
-                dateString = dateObject.toString('yyyy-M-dd HH:mm:ss');
-            }
-
-            return dateString;
+            return new Intl.DateTimeFormat((locale || 'en_US').replace('_', '-'), {
+                dateStyle: 'medium', timeStyle: 'medium'
+            }).format(new Date(dateTime));
         }
     </script>
     </th:block>

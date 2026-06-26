@@ -81,66 +81,8 @@ public class SubmissionService {
   }
 
   /**
-   * Gets the number of submissions within a specified time period.
-   *
-   * @param startTime - the start time of the statistics
-   * @param endTime - the end time of the statistics
-   * @param uid - the unique identifier of the user
-   * @param isAcceptedOnly - whether to count only accepted submissions
-   * @return a Map of key-value pairs containing the time and the number of submissions
-   */
-  public Map<String, Long> getNumberOfSubmissionsUsingDate(
-      Date startTime, Date endTime, long uid, boolean isAcceptedOnly) {
-    long differenceInSeconds = (endTime.getTime() - startTime.getTime()) / 1000;
-    if (differenceInSeconds > 32 * 86400) {
-      return getNumberOfSubmissionsGroupByMonth(startTime, endTime, uid, isAcceptedOnly);
-    }
-    return getNumberOfSubmissionsGroupByDay(startTime, endTime, uid, isAcceptedOnly);
-  }
-
-  /**
-   * Gets the number of submissions within a specified time period, grouped by month.
-   *
-   * @param startTime - the start time of the statistics
-   * @param endTime - the end time of the statistics
-   * @param uid - the unique identifier of the user
-   * @param isAcceptedOnly - whether to count only accepted submissions
-   * @return a Map of key-value pairs containing the month and the number of submissions
-   */
-  private Map<String, Long> getNumberOfSubmissionsGroupByMonth(
-      Date startTime, Date endTime, long uid, boolean isAcceptedOnly) {
-    // Build an empty list covering the date range
-    Map<String, Long> numberOfSubmissions = new LinkedHashMap<String, Long>();
-    Calendar calendar = new GregorianCalendar();
-    calendar.setTime(startTime);
-    while (calendar.getTime().before(endTime)) {
-      SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM");
-      calendar.add(Calendar.MONTH, 1);
-      Date targetDate = calendar.getTime();
-      numberOfSubmissions.put(sdf.format(targetDate), (long) 0);
-    }
-
-    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:MM:ss");
-    String startTimeString = sdf.format(startTime);
-    String endTimeString = sdf.format(endTime);
-    List<Map<String, Object>> submissions =
-        submissionMapper.getNumberOfSubmissionsGroupByMonth(
-            startTimeString, endTimeString, uid, isAcceptedOnly);
-
-    for (Map<String, Object> e : submissions) {
-      // A numeric value such as 201512
-      Integer month = (Integer) e.get("month");
-      String monthString = month.toString();
-      long submissionTimes = (Long) e.get("submissions");
-
-      monthString = monthString.substring(0, 4) + "/" + monthString.substring(4);
-      numberOfSubmissions.put(monthString, submissionTimes);
-    }
-    return numberOfSubmissions;
-  }
-
-  /**
-   * Gets the number of submissions within a specified time period, grouped by day.
+   * Gets the number of submissions for each day within a time period (always day-granularity).
+   * Feeds the activity heat-map.
    *
    * @param startTime - the start time of the statistics
    * @param endTime - the end time of the statistics
@@ -148,7 +90,7 @@ public class SubmissionService {
    * @param isAcceptedOnly - whether to count only accepted submissions
    * @return a Map of key-value pairs containing the date and the number of submissions
    */
-  private Map<String, Long> getNumberOfSubmissionsGroupByDay(
+  public Map<String, Long> getNumberOfSubmissionsGroupByDay(
       Date startTime, Date endTime, long uid, boolean isAcceptedOnly) {
     // Build an empty list covering the date range
     Map<String, Long> numberOfSubmissions = new LinkedHashMap<String, Long>();
@@ -300,6 +242,26 @@ public class SubmissionService {
     submissionStats.put("totalSubmission", totalSubmission);
     submissionStats.put("acRate", acRate);
     return submissionStats;
+  }
+
+  /**
+   * Gets a user's solved-problem counts grouped by difficulty level, feeding the profile's
+   * "solved by difficulty" breakdown. Each entry carries the difficulty slug/name, the number of
+   * public problems at that difficulty (total), the number the user has solved (solved) and the
+   * completion percentage.
+   *
+   * @param userId - the unique identifier of the user
+   * @return an ordered list of per-difficulty stat maps
+   */
+  public List<Map<String, Object>> getSolvedProblemsByDifficulty(long userId) {
+    List<Map<String, Object>> difficulties =
+        submissionMapper.getNumberOfSolvedProblemsByDifficulty(userId);
+    for (Map<String, Object> difficulty : difficulties) {
+      long total = ((Number) difficulty.get("total")).longValue();
+      long solved = ((Number) difficulty.get("solved")).longValue();
+      difficulty.put("percentage", total == 0 ? 0 : solved * 100 / total);
+    }
+    return difficulties;
   }
 
   /**

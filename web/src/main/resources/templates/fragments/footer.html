@@ -1,39 +1,42 @@
 <!DOCTYPE html>
-<!--/* Public site footer. Used via ~{fragments/footer :: footer}. */-->
+<!--/*
+  Public site footer (terminal aesthetic). Used via ~{fragments/footer :: footer}.
+  Reproduced from the design (Footer in every *.dc.html): a single copyright line,
+  Judgers/About/Terms/Privacy/Help links, and a language dropdown. Styling lives in
+  css/app.css (.vw-footer / .vw-footlinks / .vw-lang); the dropdown open/close and the
+  ?language= locale switch are handled by js/theme.js.
+*/-->
 <html xmlns:th="http://www.thymeleaf.org" lang="en">
 <body>
-    <div th:fragment="footer" id="footer">
-        <div class="container">
-            <ul id="footer-nav" class="inline">
-                <li><a th:href="@{/terms}" th:text="#{voj.include.footer.terms}">Terms of Use</a></li>
-                <li><a th:href="@{/privacy}" th:text="#{voj.include.footer.privacy}">Privacy &amp; Cookies</a></li>
-                <li><a th:href="@{/judgers}" th:text="#{voj.include.footer.judgers}">Judgers</a></li>
-                <li><a th:href="@{/help}" th:text="#{voj.include.footer.help}">Help</a></li>
-                <li><a th:href="@{/about}" th:text="#{voj.include.footer.about-us}">About Us</a></li>
-                <li>
-                    <a th:href="@{/worldwide(forward=${forwardUri})}">
-                        <i class="fa fa-globe"></i>
-                        <span id="current-language" th:text="${language}">en_US</span>
-                    </a>
-                </li>
-            </ul>
-            <p id="copyright">
-                <span th:text="#{voj.include.footer.copyright}">Copyright</span>&copy; <span th:text="${#dates.year(#dates.createNow())}">2026</span> <span th:utext="${copyright}">copyright</span>.
-                <span th:text="#{voj.include.footer.all-rights-reserved}">All rights reserved.</span>
-            </p>
-            <p>
-                <span id="icp-number" th:text="${icpNumber}">icp</span>
-                <span id="police-icp-number" th:if="${policeIcpNumber != null and policeIcpNumber != ''}">
-                    <img th:src="|${cdnUrl}/img/police-badge-of-china.png?v=${version}|" alt="Police Logo" /> <span th:text="${policeIcpNumber}">police-icp</span>
-                </span>
-            </p>
-            <p>
-                <a href="https://github.com/hzxie/voj/">
-                   <img src="https://img.shields.io/github/stars/hzxie/voj.svg?style=social&amp;label=Stars" alt="GitHub-Stars" />
-                </a>
-                <img src="https://api.infinitescript.com/badgen/count.svg?name=hzxie/voj" alt="Visitors" />
-            </p>
-        </div> <!-- .container -->
-    </div> <!-- #footer -->
+    <footer class="vw-footer" th:fragment="footer">
+        <div class="vw-footer-inner">
+            <span>
+                <span class="vw-footer-prompt">verwandlung@oj:~$ </span>
+                <span th:text="#{voj.include.footer.copyright}">Copyright</span> &copy;
+                <span th:text="${#dates.year(#dates.createNow())}">2026</span>
+                <span th:utext="${copyright}">Infinite Script</span>.
+            </span>
+            <div class="vw-footlinks">
+                <a th:href="@{/judgers}" th:text="#{voj.include.footer.judgers}">Judgers</a>
+                <a th:href="@{/about}" th:text="#{voj.include.footer.about-us}">About</a>
+                <a th:href="@{/terms}" th:text="#{voj.include.footer.terms}">Terms</a>
+                <a th:href="@{/privacy}" th:text="#{voj.include.footer.privacy}">Privacy</a>
+                <a th:href="@{/help}" th:text="#{voj.include.footer.help}">Help</a>
+                <div class="vw-lang" data-vw="dropdown">
+                    <button class="vw-lang-btn" data-vw="dropdown-btn" type="button" title="Language">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg>
+                    </button>
+                    <div class="vw-lang-menu">
+                        <a href="javascript:void(0);" data-language="en_US" th:classappend="${language == 'en_US'}? 'active'">
+                            <span>English</span><span th:if="${language == 'en_US'}">&#10003;</span>
+                        </a>
+                        <a href="javascript:void(0);" data-language="zh_CN" th:classappend="${language == 'zh_CN'}? 'active'">
+                            <span>&#31616;&#20307;&#20013;&#25991;</span><span th:if="${language == 'zh_CN'}">&#10003;</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
 </body>
 </html>

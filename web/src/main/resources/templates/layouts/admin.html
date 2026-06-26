@@ -4,31 +4,25 @@
   layout:decorate="~{layouts/admin}" and fill the #content area through
   layout:fragment="content", plus optional page <head> stylesheets and
   layout:fragment="scripts" for page-specific bottom-of-body scripts.
+
+  Shares the terminal UI system (css/app.css + js/theme.js) with the public site.
 */-->
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
-      th:lang="${language}" lang="en">
+      th:lang="${language}" lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8" />
+    <script>(function(){try{var t=localStorage.getItem('voj-theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
     <title th:text="${websiteName}">System Administration</title>
     <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" th:content="${description}" />
     <meta name="author" content="Haozhe Xie" />
-    <!-- Icon -->
     <link th:href="|${cdnUrl}/img/favicon.ico?v=${version}|" rel="shortcut icon" type="image/x-icon" />
-    <!-- Common StyleSheets -->
-    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/bootstrap.min.css?v=${version}|" />
-    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/bootstrap-responsive.min.css?v=${version}|" />
-    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/flat-ui.min.css?v=${version}|" />
-    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/font-awesome.min.css?v=${version}|" />
-    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/administration/style.css?v=${version}|" />
-    <!-- Common JavaScript -->
-    <script type="text/javascript" th:src="|${cdnUrl}/js/jquery-1.11.1.min.js?v=${version}|"></script>
-    <script type="text/javascript" th:src="|${cdnUrl}/js/bootstrap.min.js?v=${version}|"></script>
-    <script type="text/javascript" th:src="|${cdnUrl}/js/flat-ui.min.js?v=${version}|"></script>
-    <script type="text/javascript" th:src="|${cdnUrl}/js/md5.min.js?v=${version}|"></script>
-    <script type="text/javascript" th:src="|${cdnUrl}/js/pace.min.js?v=${version}|"></script>
+    <!-- UI system (self-hosted fonts + theme variables + components). -->
+    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/app.css?v=${version}|" />
+    <!-- Functional JavaScript kept from the legacy stack. -->
+    <script type="text/javascript" th:src="|${cdnUrl}/js/jquery-3.7.1.min.js?v=${version}|"></script>
 </head>
 <body>
     <div id="wrapper">
@@ -41,9 +35,10 @@
             <div id="content" layout:fragment="content"></div>
         </div> <!-- #container -->
     </div> <!-- #wrapper -->
-    <!-- Common administration scripts (formerly footer-script.jsp). -->
+    <!-- UI chrome behaviour (theme toggle, dropdowns). -->
+    <script type="text/javascript" th:src="|${cdnUrl}/js/theme.js?v=${version}|"></script>
+    <!-- Common administration scripts (CSRF token wiring + helpers). -->
     <script type="text/javascript" th:inline="javascript">
-        /* Attach the Spring Security CSRF token to every state-changing AJAX request. */
         $(document).ajaxSend(function(event, jqXHR, settings) {
             var method = (settings.type || 'GET').toUpperCase();
             if ( !settings.crossDomain &&
@@ -51,80 +46,58 @@
                 jqXHR.setRequestHeader([[${_csrf.headerName}]], [[${_csrf.token}]]);
             }
         });
-    </script>
-    <script type="text/javascript">
         String.prototype.format = function() {
             var newStr = this, i = 0;
-            while (/%s/.test(newStr)) {
-                newStr = newStr.replace("%s", arguments[i++])
-            }
+            while (/%s/.test(newStr)) { newStr = newStr.replace("%s", arguments[i++]) }
             return newStr;
         }
-    </script>
-    <script type="text/javascript">
         $('#sidebar-toggle').click(function() {
             var isSidebarShown = $('#sidebar').is(':visible');
-
             if ( isSidebarShown ) {
                 $('#sidebar').css('display', 'none');
-                $('#header').css('padding-left', 0);
-                $('#header').css('padding-right', 0);
+                $('#header').css('padding-left', 22);
                 $('#content').css('margin-left', 0);
-                $('#content').css('margin-right', 0);
             } else {
                 $('#sidebar').css('display', 'block');
                 $('#header').css('padding-left', 250);
-                $('#header').css('padding-right', -250);
                 $('#content').css('margin-left', 250);
-                $('#content').css('margin-right', -250);
             }
         });
-    </script>
-    <script type="text/javascript">
         $('li.nav-item-has-children > a').click(function() {
             var navItem       = $(this).parent(),
                 isSubNavShown = $('ul.sub-nav', navItem).is(':visible');
-
             if ( isSubNavShown ) {
-                $('i.fa-caret-down', navItem).addClass('fa-caret-right');
-                $('i.fa-caret-down', navItem).removeClass('fa-caret-down');
+                $('i.fa-caret-down', navItem).addClass('fa-caret-right').removeClass('fa-caret-down');
                 $('ul.sub-nav', navItem).slideUp(120);
             } else {
-                $('i.fa-caret-right', navItem).addClass('fa-caret-down');
-                $('i.fa-caret-right', navItem).removeClass('fa-caret-right');
+                $('i.fa-caret-right', navItem).addClass('fa-caret-down').removeClass('fa-caret-right');
                 $('ul.sub-nav', navItem).slideDown(120);
             }
         });
-    </script>
-    <script type="text/javascript">
         $(function() {
-            var currentLocation     = window.location.pathname,
-                mostSimilarItem     = null,
-                mostSimilarLength   = 0;
-
+            var currentLocation   = window.location.pathname,
+                mostSimilarItem   = null,
+                mostSimilarLength = 0;
             $('.nav-item > a', '#sidebar-nav').each(function() {
                 var navHref = $(this).attr('href');
-
-                if ( currentLocation.indexOf(navHref) != -1 ) {
-                    if ( navHref.length > mostSimilarLength ) {
-                        mostSimilarItem   = $(this);
-                        mostSimilarLength = navHref.length;
-                    }
+                if ( navHref && currentLocation.indexOf(navHref) != -1 && navHref.length > mostSimilarLength ) {
+                    mostSimilarItem   = $(this);
+                    mostSimilarLength = navHref.length;
                 }
             });
             $(mostSimilarItem).parent().addClass('active');
-
             $('li.primary-nav-item', '#sidebar-nav').each(function() {
                 if ( $('li.secondary-nav-item.active', $(this)).length != 0 ) {
                     $(this).addClass('active');
-
-                    $('i.fa-caret-right', $(this)).addClass('fa-caret-down');
-                    $('i.fa-caret-right', $(this)).removeClass('fa-caret-right');
+                    $('i.fa-caret-right', $(this)).addClass('fa-caret-down').removeClass('fa-caret-right');
                     $('ul.sub-nav', $(this)).slideDown(120);
                 }
             });
         });
     </script>
+    <!-- Markdown rendering (markdown-it) + shared helpers (renderMarkdown / createMarkdownEditor). -->
+    <script type="text/javascript" th:src="|${cdnUrl}/js/markdown-it.min.js?v=${version}|"></script>
+    <script type="text/javascript" th:src="|${cdnUrl}/js/markdown.js?v=${version}|"></script>
     <!-- Page-specific bottom-of-body scripts. -->
     <th:block layout:fragment="scripts"></th:block>
 </body>

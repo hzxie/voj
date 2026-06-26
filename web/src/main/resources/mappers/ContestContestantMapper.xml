@@ -23,9 +23,16 @@
 	<select id="getNumberOfContestantsOfContest"
 			parameterType="long"
 			resultType="long">
-		SELECT COUNT(*) 
+		SELECT COUNT(*)
 		FROM voj_contest_contestants
 		WHERE contest_id = #{contestId}
+	</select>
+	<select id="getNumberOfContestsUsingContestantUid"
+			parameterType="long"
+			resultType="long">
+		SELECT COUNT(*)
+		FROM voj_contest_contestants
+		WHERE contestant_uid = #{contestantUid}
 	</select>
 	<select id="getContestantsOfContestForOi"
 		parameterType="map"

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<!--/*
+  Minimal layout for the auth pages (login / register / reset password), matching
+  the design: a stripped header (logo + theme toggle + a single action link, no
+  nav/burger), a centered main, and the shared footer. Pages decorate it with
+  layout:decorate="~{layouts/auth}", fill layout:fragment="content", optionally
+  layout:fragment="auth-action" (the header's right-hand link) and
+  layout:fragment="scripts".
+*/-->
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      th:lang="${language}" lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8" />
+    <script>(function(){try{var t=localStorage.getItem('voj-theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+    <title th:text="${websiteName}">Verwandlung Online Judge</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" th:content="${description}" />
+    <meta name="author" content="Haozhe Xie" />
+    <meta name="_csrf" th:content="${_csrf.token}" />
+    <meta name="_csrf_header" th:content="${_csrf.headerName}" />
+    <link th:href="|${cdnUrl}/img/favicon.ico?v=${version}|" rel="shortcut icon" type="image/x-icon" />
+    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/app.css?v=${version}|" />
+    <script type="text/javascript" th:src="|${cdnUrl}/js/jquery-3.7.1.min.js?v=${version}|"></script>
+</head>
+<body>
+    <div class="vw-app">
+        <div class="vw-scanlines" aria-hidden="true"></div>
+        <!-- Minimal header (no navigation). -->
+        <header class="vw-header vw-header-min">
+            <a class="vw-logo" th:href="@{/}">
+                <span class="b">&lt;</span><span class="n">verwandlung</span><span class="b">&gt;</span><span class="vw-cursor">_</span>
+            </a>
+            <div class="vw-header-spacer"></div>
+            <div class="vw-toggle" data-vw="theme-toggle" title="Toggle theme" role="button" tabindex="0">
+                <span class="moon">&#9790;</span><span class="sun">&#9728;</span><span class="knob"></span>
+            </div>
+            <th:block layout:fragment="auth-action"></th:block>
+        </header>
+        <!-- Content -->
+        <main class="vw-main">
+            <th:block layout:fragment="content"></th:block>
+        </main>
+        <!-- Footer -->
+        <div th:replace="~{fragments/footer :: footer}"></div>
+    </div>
+    <script type="text/javascript" th:src="|${cdnUrl}/js/theme.js?v=${version}|"></script>
+    <script type="text/javascript" th:src="|${cdnUrl}/js/site.js?v=${version}|"></script>
+    <th:block layout:fragment="scripts"></th:block>
+    <th:block th:if="${googleAnalyticsCode != null and googleAnalyticsCode != ''}" th:utext="${googleAnalyticsCode}"></th:block>
+</body>
+</html>

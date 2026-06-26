@@ -176,6 +176,16 @@ public class ContestService {
   }
 
   /**
+   * Gets the number of contests a user has attended.
+   *
+   * @param userId - the unique identifier of the user
+   * @return the number of contests the user has attended
+   */
+  public long getNumberOfContestsOfUser(long userId) {
+    return contestContestantMapper.getNumberOfContestsUsingContestantUid(userId);
+  }
+
+  /**
    * Gets whether a user has joined a contest.
    *
    * @param contestId - the unique identifier of the contest

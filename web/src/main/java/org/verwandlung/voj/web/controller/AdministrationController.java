@@ -188,25 +188,19 @@ public class AdministrationController {
   }
 
   /**
-   * Gets the number of submissions of the system over a period of time.
+   * Gets the system's daily submission counts over the last year, feeding the activity heat-map.
    *
-   * @param period - the number of days of the time interval
    * @param request - the HttpServletRequest object
-   * @return a Map object containing the submission counts by date
+   * @return a Map object containing the system's daily submission counts keyed by date
    */
   @RequestMapping(value = "/getNumberOfSubmissions.action", method = RequestMethod.GET)
-  public @ResponseBody Map<String, Object> getNumberOfSubmissionsAction(
-      @RequestParam(value = "period") int period, HttpServletRequest request) {
-    Map<String, Object> submissions = new HashMap<>(2, 1);
+  public @ResponseBody Map<String, Object> getNumberOfSubmissionsAction(HttpServletRequest request) {
     Date today = new Date();
-    Date previousDate = DateUtils.getPreviousDate(period);
-    Map<String, Long> totalSubmissions =
-        submissionService.getNumberOfSubmissionsUsingDate(previousDate, today, 0, false);
-    Map<String, Long> acceptedSubmissions =
-        submissionService.getNumberOfSubmissionsUsingDate(previousDate, today, 0, true);
-
-    submissions.put("totalSubmissions", totalSubmissions);
-    submissions.put("acceptedSubmissions", acceptedSubmissions);
+    Date startDate = DateUtils.getDateBefore(ACTIVITY_HEAT_MAP_DAYS);
+    Map<String, Object> submissions = new HashMap<>(1, 1);
+    submissions.put(
+        "totalSubmissions",
+        submissionService.getNumberOfSubmissionsGroupByDay(startDate, today, 0, false));
     return submissions;
   }
 
@@ -481,6 +475,7 @@ public class AdministrationController {
 
     ModelAndView view = new ModelAndView("pages/administration/new-problem");
     view.addObject("problemCategories", problemCategories);
+    view.addObject("problemDifficulties", problemService.getProblemDifficulties());
     return view;
   }
 
@@ -520,6 +515,7 @@ public class AdministrationController {
       @RequestParam(value = "problemTags") String problemTags,
       @RequestParam(value = "isPublic") boolean isPublic,
       @RequestParam(value = "isExactlyMatch") boolean isExactlyMatch,
+      @RequestParam(value = "problemDifficulty", required = false, defaultValue = "") String problemDifficulty,
       HttpServletRequest request) {
     if (timeLimit.isEmpty() || !StringUtils.isNumeric(timeLimit)) {
       timeLimit = "-1";
@@ -542,7 +538,8 @@ public class AdministrationController {
             problemCategories,
             problemTags,
             isPublic,
-            isExactlyMatch);
+            isExactlyMatch,
+            problemDifficulty);
 
     if ((boolean) result.get("isSuccessful")) {
       long problemId = (Long) result.get("problemId");
@@ -587,6 +584,7 @@ public class AdministrationController {
     view.addObject("problemCategories", problemCategories);
     view.addObject("selectedProblemCategories", selectedProblemCategories);
     view.addObject("problemTags", problemTags);
+    view.addObject("problemDifficulties", problemService.getProblemDifficulties());
     return view;
   }
 
@@ -627,6 +625,7 @@ public class AdministrationController {
       @RequestParam(value = "problemTags") String problemTags,
       @RequestParam(value = "isPublic") boolean isPublic,
       @RequestParam(value = "isExactlyMatch") boolean isExactlyMatch,
+      @RequestParam(value = "problemDifficulty", required = false, defaultValue = "") String problemDifficulty,
       HttpServletRequest request) {
     if (timeLimit.isEmpty() || !StringUtils.isNumeric(timeLimit)) {
       timeLimit = "-1";
@@ -650,7 +649,8 @@ public class AdministrationController {
             problemCategories,
             problemTags,
             isPublic,
-            isExactlyMatch);
+            isExactlyMatch,
+            problemDifficulty);
 
     if (result.get("isSuccessful")) {
       String ipAddress = HttpRequestParser.getRemoteAddr(request);
@@ -1009,6 +1009,9 @@ public class AdministrationController {
    * The autowired ApplicationEventListener object. Used for getting the number of online judgers.
    */
   @Autowired private ApplicationEventListener eventListener;
+
+  /** The number of days of daily activity returned for the heat-map (53 weeks). */
+  private static final int ACTIVITY_HEAT_MAP_DAYS = 53 * 7;
 
   /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(AdministrationController.class);

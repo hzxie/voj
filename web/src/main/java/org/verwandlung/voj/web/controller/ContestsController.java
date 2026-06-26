@@ -36,6 +36,7 @@ import org.verwandlung.voj.web.util.HttpRequestParser;
 import org.verwandlung.voj.web.util.HttpSessionParser;
 import org.verwandlung.voj.web.util.JsonUtils;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -63,11 +64,62 @@ public class ContestsController {
       HttpServletRequest request,
       HttpServletResponse response) {
     List<Contest> contests = contestService.getContests(keyword, 0, NUMBER_OF_CONTESTS_PER_PAGE);
+    Date currentTime = new Date();
+    List<Contest> liveContests = new ArrayList<>();
+    List<Contest> pastContests = new ArrayList<>();
+    for (Contest contest : contests) {
+      if (currentTime.after(contest.getEndTime())) {
+        pastContests.add(contest);
+      } else {
+        liveContests.add(contest);
+      }
+    }
 
     ModelAndView view = new ModelAndView("pages/contests/contests");
-    view.addObject("contests", contests);
-    view.addObject("currentTime", new Date());
+    view.addObject("liveContests", liveContests);
+    view.addObject("pastContests", pastContests);
+    view.addObject("loadedContests", contests.size());
+    view.addObject("currentTime", currentTime);
+    view.addObject("entrantsOfContests", getEntrantsOfContests(contests));
+    view.addObject("problemCountOfContests", getProblemCountOfContests(contests));
     return view;
+  }
+
+  /**
+   * Builds a map of contest id to its number of entrants, used by the contest list to render the
+   * "entrants" field of the design without an N+1 lookup in the view layer.
+   *
+   * @param contests - the list of contests to summarise
+   * @return a Map indexed by contest id whose value is the number of entrants
+   */
+  private Map<Long, Long> getEntrantsOfContests(List<Contest> contests) {
+    Map<Long, Long> entrants = new HashMap<>();
+    if (contests != null) {
+      for (Contest contest : contests) {
+        entrants.put(
+            contest.getContestId(),
+            contestService.getNumberOfContestantsOfContest(contest.getContestId()));
+      }
+    }
+    return entrants;
+  }
+
+  /**
+   * Builds a map of contest id to its number of problems (derived from the JSON-encoded problem list
+   * stored on the contest), used to render the "problems" field of the design.
+   *
+   * @param contests - the list of contests to summarise
+   * @return a Map indexed by contest id whose value is the number of problems
+   */
+  private Map<Long, Integer> getProblemCountOfContests(List<Contest> contests) {
+    Map<Long, Integer> problemCount = new HashMap<>();
+    if (contests != null) {
+      for (Contest contest : contests) {
+        List<Long> problemIds = JsonUtils.toList(contest.getProblems(), Long.class);
+        problemCount.put(contest.getContestId(), problemIds == null ? 0 : problemIds.size());
+      }
+    }
+    return problemCount;
   }
 
   /**
@@ -89,6 +141,8 @@ public class ContestsController {
         contestService.getContests(keyword, startIndex, NUMBER_OF_CONTESTS_PER_PAGE);
     result.put("isSuccessful", contests != null && !contests.isEmpty());
     result.put("contests", contests);
+    result.put("entrants", getEntrantsOfContests(contests));
+    result.put("problemCount", getProblemCountOfContests(contests));
 
     return result;
   }
@@ -113,6 +167,7 @@ public class ContestsController {
       throw new ResourceNotFoundException();
     }
 
+    Date currentTime = new Date();
     boolean isAttended = contestService.isAttendContest(contestId, currentUser);
     long numberOfContestants = contestService.getNumberOfContestantsOfContest(contestId);
     List<Long> problemIdList = JsonUtils.toList(contest.getProblems(), Long.class);
@@ -120,13 +175,29 @@ public class ContestsController {
     Map<Long, ContestSubmission> submissions =
         contestService.getSubmissionsOfContestantOfContest(contestId, currentUser);
 
+    // Top of the standings for the design's // STANDINGS panel. Only computed once the
+    // contest has started (the leaderboard is meaningless before then).
+    List<ContestContestant> standings = null;
+    if (!currentTime.before(contest.getStartTime())) {
+      Map<String, Object> leaderBoard =
+          "OI".equals(contest.getContestMode())
+              ? contestService.getLeaderBoardForOi(contestId)
+              : contestService.getLeaderBoardForAcm(contestId);
+      List<ContestContestant> contestants =
+          (List<ContestContestant>) leaderBoard.get("contestants");
+      if (contestants != null) {
+        standings = contestants.size() > 10 ? contestants.subList(0, 10) : contestants;
+      }
+    }
+
     ModelAndView view = new ModelAndView("pages/contests/contest");
-    view.addObject("currentTime", new Date())
+    view.addObject("currentTime", currentTime)
         .addObject("contest", contest)
         .addObject("problems", problems)
         .addObject("submissions", submissions)
         .addObject("isAttended", isAttended)
-        .addObject("numberOfContestants", numberOfContestants);
+        .addObject("numberOfContestants", numberOfContestants)
+        .addObject("standings", standings);
     return view;
   }
 

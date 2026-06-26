@@ -103,6 +103,40 @@ public interface ProblemMapper {
       @Param("limit") int limit);
 
   /**
+   * Gets the total number of problems matching the public problem-set filters (field + tag).
+   *
+   * @param field - the filter field ("id", "title" or "tag")
+   * @param query - the filter value
+   * @param problemTagId - the unique identifier of the problem tag (0 = no tag filter)
+   * @param isPublicOnly - whether to filter only public problems
+   * @return the total number of matching problems
+   */
+  long getNumberOfProblemsByPage(
+      @Param("field") String field,
+      @Param("query") String query,
+      @Param("problemTagId") long problemTagId,
+      @Param("isPublicOnly") boolean isPublicOnly);
+
+  /**
+   * Gets a page of problems for the public problem set (numbered pager + ID/Title/Tag filter).
+   *
+   * @param field - the filter field ("id", "title" or "tag")
+   * @param query - the filter value
+   * @param problemTagId - the unique identifier of the problem tag (0 = no tag filter)
+   * @param isPublicOnly - whether to filter only public problems
+   * @param offset - the number of rows to skip
+   * @param limit - the number of problems to fetch
+   * @return the matching problems on the requested page
+   */
+  List<Problem> getProblemsByPage(
+      @Param("field") String field,
+      @Param("query") String query,
+      @Param("problemTagId") long problemTagId,
+      @Param("isPublicOnly") boolean isPublicOnly,
+      @Param("offset") long offset,
+      @Param("limit") int limit);
+
+  /**
    * Creates a new problem object.
    *
    * @param problem - the problem object

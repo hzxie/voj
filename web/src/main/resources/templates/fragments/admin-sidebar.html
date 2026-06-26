@@ -5,19 +5,16 @@
     <div th:fragment="sidebar" id="sidebar">
         <div id="logo">
             <a th:href="@{/}">
-                <img th:src="|${cdnUrl}/img/logo-light.png|" alt="Logo" />
+                <span class="b">&lt;</span><span class="n">verwandlung</span><span class="b">&gt;</span><span class="vw-cursor">_</span>
             </a>
         </div> <!-- #logo -->
         <div id="sidebar-user">
-            <div class="row-fluid">
-                <div class="span3">
-                    <img th:src="|${cdnUrl}/img/avatar.jpg|" alt="avatar" />
-                </div> <!-- .span3 -->
-                <div class="offset1 span8">
-                    <span th:text="#{voj.administration.include.sidebar.welcome-back}">Welcome back,</span> <br /><span th:text="${myProfile.username}">username</span> <br />
-                    <span class="label label-success" th:text="#{voj.administration.include.sidebar.online}">Online</span>
-                </div> <!-- .span8 -->
-            </div> <!-- .row-fluid -->
+            <img th:src="|${cdnUrl}/img/avatar.jpg|" alt="avatar" />
+            <div>
+                <span th:text="#{voj.administration.include.sidebar.welcome-back}">Welcome back,</span><br />
+                <span class="vw-head" th:text="${myProfile.username}">username</span>
+                <span class="label label-success" th:text="#{voj.administration.include.sidebar.online}">Online</span>
+            </div>
         </div> <!-- #sidebar-user -->
         <div id="sidebar-nav">
             <ul class="nav">

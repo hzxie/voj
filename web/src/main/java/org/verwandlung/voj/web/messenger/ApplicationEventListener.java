@@ -17,7 +17,6 @@
 package org.verwandlung.voj.web.messenger;
 
 import java.io.IOException;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Hashtable;
@@ -46,17 +45,14 @@ public class ApplicationEventListener {
   public ApplicationEventListener() {
     synchronized (this) {
       if (scheduler == null) {
-        final int INITIAL_DELAY = 0;
-        final int PERIOD = 30;
-
+        // Online/offline status is derived from heartbeat freshness at read time (see isOnline), so
+        // this sweep only evicts stale entries to bound the map's memory footprint.
         scheduler = Executors.newScheduledThreadPool(1);
         scheduler.scheduleAtFixedRate(
             new Runnable() {
               @Override
               public void run() {
-                Calendar calendar = Calendar.getInstance();
-                calendar.add(Calendar.MINUTE, -PERIOD);
-                Date heartbeatTimeDeadline = calendar.getTime();
+                long deadline = System.currentTimeMillis() - ONLINE_TIMEOUT_MILLIS;
 
                 for (Iterator<Entry<String, Map<String, Object>>> itr =
                         onlineJudgers.entrySet().iterator();
@@ -64,15 +60,15 @@ public class ApplicationEventListener {
                   Entry<String, Map<String, Object>> entry = itr.next();
                   Date lastHeartbeatTime = (Date) entry.getValue().get("heartbeatTime");
 
-                  if (!lastHeartbeatTime.after(heartbeatTimeDeadline)) {
+                  if (lastHeartbeatTime == null || lastHeartbeatTime.getTime() < deadline) {
                     itr.remove();
                   }
                 }
               }
             },
-            INITIAL_DELAY,
-            PERIOD,
-            TimeUnit.MINUTES);
+            SWEEP_INTERVAL_SECONDS,
+            SWEEP_INTERVAL_SECONDS,
+            TimeUnit.SECONDS);
       }
     }
   }
@@ -166,8 +162,22 @@ public class ApplicationEventListener {
     Map<String, Object> judgerInformation = new HashMap<>();
     judgerInformation.put("description", judgerDescription);
     judgerInformation.put("heartbeatTime", heartbeatTime);
+    judgerInformation.put("cpuLoad", event.getCpuLoad());
+    judgerInformation.put("memoryUsage", event.getMemoryUsage());
+    judgerInformation.put("uptime", event.getUptime());
 
     onlineJudgers.put(judgerUsername, judgerInformation);
+  }
+
+  /**
+   * Gets the live information (description + telemetry) of an online judger.
+   *
+   * @param judgerUsername - the username of the judger
+   * @return the judger's information map, or null when the judger is offline
+   */
+  public Map<String, Object> getJudgerInformation(String judgerUsername) {
+    Map<String, Object> judgerInformation = onlineJudgers.get(judgerUsername);
+    return isOnline(judgerInformation) ? judgerInformation : null;
   }
 
   /**
@@ -177,13 +187,12 @@ public class ApplicationEventListener {
    * @return the description information of the judger
    */
   public String getJudgerDescription(String judgerUsername) {
-    String judgerDescription = "[Offline]";
+    Map<String, Object> judgerInformation = onlineJudgers.get(judgerUsername);
 
-    if (onlineJudgers.containsKey(judgerUsername)) {
-      String description = (String) onlineJudgers.get(judgerUsername).get("description");
-      judgerDescription = "[Online] " + description;
+    if (isOnline(judgerInformation)) {
+      return "[Online] " + judgerInformation.get("description");
     }
-    return judgerDescription;
+    return "[Offline]";
   }
 
   /**
@@ -192,7 +201,30 @@ public class ApplicationEventListener {
    * @return the number of online judgers
    */
   public long getOnlineJudgers() {
-    return onlineJudgers.size();
+    long onlineJudgersCount = 0;
+
+    for (Map<String, Object> judgerInformation : onlineJudgers.values()) {
+      if (isOnline(judgerInformation)) {
+        ++onlineJudgersCount;
+      }
+    }
+    return onlineJudgersCount;
+  }
+
+  /**
+   * Checks whether a judger is currently online, i.e. whether its most recent heartbeat is recent
+   * enough that the judger is still considered alive.
+   *
+   * @param judgerInformation - the judger's information map, or null when never seen
+   * @return whether the judger is currently online
+   */
+  private boolean isOnline(Map<String, Object> judgerInformation) {
+    if (judgerInformation == null) {
+      return false;
+    }
+    Date lastHeartbeatTime = (Date) judgerInformation.get("heartbeatTime");
+    return lastHeartbeatTime != null
+        && System.currentTimeMillis() - lastHeartbeatTime.getTime() <= ONLINE_TIMEOUT_MILLIS;
   }
 
   /**
@@ -211,6 +243,15 @@ public class ApplicationEventListener {
 
   /** The ScheduledExecutorService object. Used to periodically remove offline judgers. */
   private static ScheduledExecutorService scheduler = null;
+
+  /**
+   * The maximum age (in milliseconds) of a judger's last heartbeat for it to still be considered
+   * online. A judger that misses roughly three 30-second heartbeats is treated as offline.
+   */
+  private static final long ONLINE_TIMEOUT_MILLIS = 90_000L;
+
+  /** The interval (in seconds) at which stale judger entries are swept from the map. */
+  private static final long SWEEP_INTERVAL_SECONDS = 60L;
 
   /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(ApplicationEventListener.class);

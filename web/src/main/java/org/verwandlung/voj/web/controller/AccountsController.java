@@ -49,6 +49,7 @@ import org.verwandlung.voj.web.exception.ResourceNotFoundException;
 import org.verwandlung.voj.web.model.Language;
 import org.verwandlung.voj.web.model.User;
 import org.verwandlung.voj.web.model.VojUserDetails;
+import org.verwandlung.voj.web.service.ContestService;
 import org.verwandlung.voj.web.service.LanguageService;
 import org.verwandlung.voj.web.service.OptionService;
 import org.verwandlung.voj.web.service.SubmissionService;
@@ -353,58 +354,36 @@ public class AccountsController {
     view.addObject("user", user);
     view.addAllObjects(userService.getUserMetaUsingUid(user));
 
-    view.addObject("submissions", submissionService.getSubmissionOfUser(userId));
+    view.addObject(
+        "recentSubmissions",
+        submissionService.getSubmissions(0, user.getUsername(), NUMBER_OF_RECENT_SUBMISSIONS));
     view.addObject("submissionStats", submissionService.getSubmissionStatsOfUser(userId));
+    view.addObject("contestsAttended", contestService.getNumberOfContestsOfUser(userId));
+    view.addObject("solvedByDifficulty", submissionService.getSolvedProblemsByDifficulty(userId));
     return view;
   }
 
   /**
-   * Gets the number of submissions of a user over a period of time.
+   * Gets a user's daily submission counts over the last year, feeding the activity heat-map.
    *
    * @param userId - the unique identifier of the user
-   * @param period - the number of days of the time interval
    * @param request - the HttpServletRequest object
-   * @return a Map object containing a user's submission counts by date
+   * @return a Map object containing a user's daily submission counts keyed by date
    */
   @RequestMapping(value = "/getNumberOfSubmissionsOfUsers.action", method = RequestMethod.GET)
   public @ResponseBody Map<String, Object> getNumberOfSubmissionsOfUsersAction(
       @RequestParam(value = "uid", required = false, defaultValue = "0") long userId,
-      @RequestParam(value = "period") int period,
       HttpServletRequest request) {
     if (userId == 0) {
       userId = HttpSessionParser.getCurrentUser().getUid();
     }
-    Map<String, Object> submissions = new HashMap<>(2, 1);
     Date today = new Date();
-    Date previousDate = DateUtils.getPreviousDate(period);
-    Map<String, Long> totalSubmissions =
-        submissionService.getNumberOfSubmissionsUsingDate(previousDate, today, userId, false);
-    Map<String, Long> acceptedSubmissions =
-        submissionService.getNumberOfSubmissionsUsingDate(previousDate, today, userId, true);
-
-    submissions.put("totalSubmissions", totalSubmissions);
-    submissions.put("acceptedSubmissions", acceptedSubmissions);
+    Date startDate = DateUtils.getDateBefore(ACTIVITY_HEAT_MAP_DAYS);
+    Map<String, Object> submissions = new HashMap<>(1, 1);
+    submissions.put(
+        "totalSubmissions",
+        submissionService.getNumberOfSubmissionsGroupByDay(startDate, today, userId, false));
     return submissions;
-  }
-
-  /**
-   * Loads the user dashboard page.
-   *
-   * @param request - the HttpServletRequest object
-   * @param response - the HttpResponse object
-   * @return a ModelAndView object containing the information of the dashboard page
-   */
-  @RequestMapping(value = "/dashboard", method = RequestMethod.GET)
-  public ModelAndView dashboardView(HttpServletRequest request, HttpServletResponse response) {
-    User user = HttpSessionParser.getCurrentUser();
-    long userId = user.getUid();
-
-    ModelAndView view = new ModelAndView("pages/accounts/dashboard");
-    view.addObject("user", user);
-    view.addAllObjects(userService.getUserMetaUsingUid(user));
-    view.addObject("submissions", submissionService.getSubmissionOfUser(userId));
-
-    return view;
   }
 
   /**
@@ -479,6 +458,9 @@ public class AccountsController {
    */
   @Autowired private SubmissionService submissionService;
 
+  /** The autowired ContestService object. Used for the profile page's contests-attended count. */
+  @Autowired private ContestService contestService;
+
   /**
    * The autowired OptionService object. Used for querying whether the registration feature is open.
    */
@@ -490,6 +472,12 @@ public class AccountsController {
   /** Persists the security context to the HTTP session after a programmatic login. */
   private final SecurityContextRepository securityContextRepository =
       new HttpSessionSecurityContextRepository();
+
+  /** The number of days of daily activity returned for the heat-map (53 weeks). */
+  private static final int ACTIVITY_HEAT_MAP_DAYS = 53 * 7;
+
+  /** The number of latest submissions shown in the profile's recent-submissions list. */
+  private static final int NUMBER_OF_RECENT_SUBMISSIONS = 8;
 
   /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(AccountsController.class);

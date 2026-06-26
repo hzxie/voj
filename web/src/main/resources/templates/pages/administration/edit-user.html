@@ -4,7 +4,6 @@
       layout:decorate="~{layouts/admin}" lang="en">
 <head>
     <title th:text="#{voj.administration.edit-user.title} + ': ' + ${user.username} + ' | ' + ${websiteName}">Edit User</title>
-    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/administration/edit-user.css?v=${version}|" />
 </head>
 <body>
     <div id="content" layout:fragment="content">
@@ -62,11 +61,7 @@
                 <div class="span12">
                     <label for="wmd-input" th:text="#{voj.administration.edit-user.about-me}">About Me</label>
                     <div id="markdown-editor">
-                        <div class="wmd-panel">
-                            <div id="wmd-button-bar" class="wmd-button-bar"></div> <!-- #wmd-button-bar -->
-                            <textarea id="wmd-input" class="wmd-input" th:text="${aboutMe}"></textarea>
-                        </div> <!-- .wmd-panel -->
-                        <div id="wmd-preview" class="wmd-panel wmd-preview"></div> <!-- .wmd-preview -->
+                        <textarea id="wmd-input" class="wmd-input" th:text="${aboutMe}"></textarea>
                     </div> <!-- #markdown-editor -->
                 </div> <!-- .span12 -->
             </div> <!-- .row-fluid -->
@@ -81,18 +76,11 @@
 
     <th:block layout:fragment="scripts">
     <script type="text/javascript" th:inline="javascript">
-        $.getScript([[|${cdnUrl}/js/markdown.min.js?v=${version}|]], function() {
-            converter = Markdown.getSanitizingConverter();
-            editor    = new Markdown.Editor(converter);
-            editor.run();
-
-            $('.markdown').each(function() {
-                var plainContent    = $(this).text(),
-                    markdownContent = converter.makeHtml(plainContent.replace(/\\\n/g, '\\n'));
-
-                $(this).html(markdownContent);
-            });
+        var aboutMeEditor;
+        $(function() {
+            $('.markdown').each(function() { $(this).html(renderMarkdown($(this).text())); });
         });
+        aboutMeEditor = createMarkdownEditor('#wmd-input');
     </script>
     <script type="text/javascript">
         socialServices      = {
@@ -257,7 +245,7 @@
                 location        = $('#location').val(),
                 website         = $('#website').val(),
                 socialLinks     = getSocialLinks(),
-                aboutMe         = $('#wmd-input').val();
+                aboutMe         = aboutMeEditor ? aboutMeEditor.value() : '';
 
             return doEditUserAction(uid, password, email, userGroup, preferLanguage, location, website, socialLinks, aboutMe);
         }

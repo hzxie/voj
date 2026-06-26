@@ -1,485 +1,297 @@
 <!DOCTYPE html>
+<!--/* Reproduced from voj-design/Thread.dc.html: backlink, category badge + related
+       problem + title, post cards (avatar column + body), a // YOUR REPLY box, and a
+       sidebar (status/meta + // PARTICIPANTS). "Related threads" is omitted (the backend
+       does not expose same-topic threads here). Replies are loaded over AJAX; vote / edit /
+       delete behaviour is preserved but rewired with .closest() for the new markup. */-->
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layouts/main}" lang="en">
 <head>
     <title th:text="${discussionThread.discussionThreadTitle} + ' | ' + ${websiteName}">Discussion</title>
-    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/discussion/thread.css?v=${version}|" />
 </head>
 <body>
-    <div id="content" class="container" layout:fragment="content">
-        <div id="discussion-thread">
-            <div class="header row-fluid">
-                <div class="span9">
-                    <h3 th:text="${discussionThread.discussionThreadTitle}">Title</h3>
-                    <p class="hide"><input id="discussion-thread-title" type="text" /></p>
-                    <ul class="inline">
-                        <li>
-                            <i class="fa fa-clock-o"></i>
-                            <span class="datetime" th:text="${#dates.format(discussionThread.discussionThreadCreateTime, 'yyyy-MM-dd HH:mm:ss')}">time</span>
-                        </li>
-                        <li>
-                            <i class="fa fa-user"></i>
-                            <a th:href="@{/accounts/user/{id}(id=${discussionThread.discussionThreadCreator.uid})}" th:text="${discussionThread.discussionThreadCreator.username}">user</a>
-                        </li>
-                        <li>
-                            <i class="fa fa-comments"></i>
-                            <span id="number-of-comments"
-                                  th:text="${discussionThread.discussionTopic.discussionTopicSlug == 'solutions' ? discussionThread.numberOfReplies : (discussionThread.numberOfReplies <= 1 ? 0 : discussionThread.numberOfReplies - 1)}">0</span>
-                            <span th:text="#{voj.discussion.thread.comments}">Comment(s)</span>
-                        </li>
-                    </ul>
-                </div> <!-- .span9 -->
-                <div class="span3 text-right">
-                    <button class="btn btn-default hide" onclick="javascript:editDiscussion();"
-                            th:if="${myProfile != null and myProfile.uid == discussionThread.discussionThreadCreator.uid}" th:text="#{voj.discussion.thread.edit-discussion}">Edit</button>
-                    <button class="btn btn-primary" th:if="${isLogin}" th:onclick="|window.location.href='@{/discussion/new}'|" th:text="#{voj.discussion.thread.new-discussion}">New Discussion</button>
-                </div> <!-- .span3 -->
-            </div> <!-- .row-fluid -->
-            <div class="body row-fluid">
-                <div class="span9">
-                    <ul id="discussion-replies"></ul>
-                    <div id="more-discussion-replies" class="text-center">
+    <div layout:fragment="content"
+         th:with="topicSlug=${discussionThread.discussionTopic.discussionTopicSlug},
+                  creator=${discussionThread.discussionThreadCreator}">
+        <section class="vw-section vw-section-narrow">
+            <a class="vw-backlink" th:href="@{/discussion}">&larr; ~/discussion</a>
+
+            <div class="vw-thread-layout">
+                <!-- MAIN -->
+                <div class="vw-minw0" id="discussion-thread-head">
+                    <div class="vw-thread-crumb">
+                        <span class="vw-cat-badge"
+                              th:classappend="${#strings.containsIgnoreCase(topicSlug,'solution')} ? 'vw-cat-solutions' : (${#strings.containsIgnoreCase(topicSlug,'announce')} ? 'vw-cat-announce' : (${#strings.containsIgnoreCase(topicSlug,'help')} ? 'vw-cat-help' : 'vw-cat-default'))"
+                              th:text="${discussionThread.discussionTopic.discussionTopicName}">Help</span>
+                        <a class="vw-thread-crumb-link" th:if="${discussionThread.problem != null}"
+                           th:href="@{/p/{id}(id=${discussionThread.problem.problemId})}"
+                           th:text="|P${discussionThread.problem.problemId} &middot; ${discussionThread.problem.problemName}|">P1005 &middot; Problem</a>
+                    </div>
+                    <div class="header">
+                        <h1 class="vw-thread-h1" th:text="${discussionThread.discussionThreadTitle}">Title</h1>
+                    </div>
+                    <p class="hide"><input id="discussion-thread-title" class="vw-input" type="text" /></p>
+
+                    <!-- POSTS (replies) -->
+                    <div id="discussion-replies" class="vw-posts"></div>
+                    <div id="more-discussion-replies" class="vw-loadmore">
                         <p class="availble"><a href="javascript:void(0);" th:text="#{voj.discussion.thread.more-replies}">More Replies...</a></p>
                         <img th:src="|${cdnUrl}/img/loading.gif?v=${version}|" alt="Loading" class="hide" />
-                    </div> <!-- #more-discussion-replies -->
-                    <div id="editor" class="row-fluid" th:if="${isLogin}">
-                        <div class="span2">
-                            <div class="avatar">
-                                <img th:src="|${cdnUrl}/img/avatar.jpg?v=${version}|" alt="gravatar" />
-                            </div> <!-- .avatar -->
-                        </div> <!-- .span2 -->
-                        <div class="span10">
-                            <div class="discussion-reply current-user">
-                                <div class="reply-header">
-                                    <label for="wmd-input">
-                                        <span th:text="#{voj.discussion.thread.leave-a-comment}">Leave a comment</span>
-                                        <input type="hidden" id="csrf-token" th:value="${_csrf.token}" />
-                                        <button id="create-discussion-reply" class="btn btn-primary" th:text="#{voj.discussion.thread.comment}">Comment</button>
-                                    </label>
-                                </div> <!-- .reply-header -->
-                                <div class="reply-body">
-                                    <div class="alert alert-error hide"></div> <!-- .alert-error -->
-                                    <div class="markdown-editor">
-                                        <div class="wmd-panel">
-                                            <div id="wmd-button-bar" class="wmd-button-bar"></div> <!-- #wmd-button-bar -->
-                                            <textarea id="wmd-input" class="wmd-input"></textarea>
-                                        </div> <!-- .wmd-panel -->
-                                        <div id="wmd-preview" class="wmd-panel wmd-preview"></div> <!-- .wmd-preview -->
-                                    </div> <!-- #markdown-editor -->
-                                </div> <!-- .reply-body -->
-                            </div> <!-- .discussion-reply -->
-                        </div> <!-- .span10 -->
-                    </div> <!-- .#editor -->
-                </div> <!-- .span9 -->
-                <div class="span3">
-                    <div class="section">
-                        <h5 th:text="#{voj.discussion.thread.discussion-topic}">Discussion Topic</h5>
-                        <p>
-                            <a th:href="@{/discussion(topicSlug=${discussionThread.discussionTopic.discussionTopicSlug})}" th:text="${discussionThread.discussionTopic.discussionTopicName}">Topic</a>
-                        </p>
-                    </div> <!-- .section -->
-                    <div class="section" th:if="${discussionThread.problem != null}">
-                        <h5 th:text="#{voj.discussion.thread.related-problem}">Related Problem</h5>
-                        <p>
-                            <a th:href="@{/p/{id}(id=${discussionThread.problem.problemId})}" th:text="|P${discussionThread.problem.problemId} ${discussionThread.problem.problemName}|">Problem</a>
-                        </p>
-                    </div> <!-- .section -->
-                </div> <!-- .span3 -->
-            </div> <!-- .row-fluid -->
-        </div> <!-- .discussion-thread -->
-    </div> <!-- #content -->
+                    </div>
+
+                    <!-- REPLY BOX -->
+                    <div id="editor" class="vw-replybox" th:if="${isLogin}">
+                        <div class="vw-eyebrow vw-side-label vw-side-label-accent" th:text="'// ' + #{voj.discussion.thread.leave-a-comment}">// YOUR REPLY</div>
+                        <div class="vw-alert vw-alert-error alert-error hide"></div>
+                        <div class="markdown-editor">
+                            <textarea id="wmd-input" class="wmd-input"></textarea>
+                        </div>
+                        <input type="hidden" id="csrf-token" th:value="${_csrf.token}" />
+                        <div class="vw-replybox-foot">
+                            <button id="create-discussion-reply" class="vw-btn vw-btn-accent" th:text="#{voj.discussion.thread.comment}">Post reply</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SIDEBAR -->
+                <aside class="vw-thread-side">
+                    <div class="vw-card">
+                        <div class="vw-thread-status">
+                            <span class="vw-thread-status-dot"></span>
+                            <span th:text="${discussionThread.discussionTopic.discussionTopicName}">Discussion</span>
+                        </div>
+                        <div class="vw-thread-meta-list">
+                            <div><span class="k" th:text="#{voj.discussion.thread.comments}">Replies</span><span class="v" id="number-of-comments" th:text="${topicSlug == 'solutions' ? discussionThread.numberOfReplies : (discussionThread.numberOfReplies <= 1 ? 0 : discussionThread.numberOfReplies - 1)}">0</span></div>
+                            <div><span class="k" th:text="#{voj.discussion.threads.author}">Author</span><a class="v vw-accent" th:href="@{/accounts/user/{id}(id=${creator.uid})}" th:text="${creator.username}">author</a></div>
+                            <div><span class="k">Created</span><span class="v datetime" th:text="${#dates.format(discussionThread.discussionThreadCreateTime, 'yyyy-MM-dd HH:mm:ss')}">time</span></div>
+                            <div th:if="${discussionThread.problem != null}"><span class="k" th:text="#{voj.discussion.thread.related-problem}">Problem</span><a class="v vw-accent" th:href="@{/p/{id}(id=${discussionThread.problem.problemId})}" th:text="|P${discussionThread.problem.problemId}|">P1000</a></div>
+                        </div>
+                    </div>
+
+                    <div class="vw-card">
+                        <div class="vw-card-body">
+                            <div class="vw-eyebrow vw-side-label">// PARTICIPANTS</div>
+                            <div id="participants" class="vw-participants">
+                                <a class="vw-participant" th:href="@{/accounts/user/{id}(id=${creator.uid})}" th:title="${creator.username}" th:text="${#strings.toUpperCase(#strings.substring(creator.username,0,1))}">A</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="vw-btn vw-btn-ghost vw-btn-block hide" onclick="javascript:editDiscussion();"
+                            th:if="${myProfile != null and myProfile.uid == creator.uid}" th:text="#{voj.discussion.thread.edit-discussion}">Edit</button>
+                </aside>
+            </div>
+        </section>
+    </div>
 
     <th:block layout:fragment="scripts">
     <script type="text/x-mathjax-config" th:inline="none">
-        MathJax.Hub.Config({
-            tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
-        });
+        MathJax.Hub.Config({ tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]} });
     </script>
     <script type="text/javascript" async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <script type="text/javascript" th:inline="javascript">
-        $.when(
-            $.getScript([[|${cdnUrl}/js/markdown.min.js?v=${version}|]]),
-            $.getScript([[|${cdnUrl}/js/moment.min.js?v=${version}|]]),
-            $.Deferred(function(deferred) {
-                $(deferred.resolve);
-            })
-        ).done(function() {
-            converter = Markdown.getSanitizingConverter();
+        var mainEditor, threadCreatorUid = [[${discussionThread.discussionThreadCreator.uid}]], seenParticipants = {};
+        $(function() {
+            $('span.datetime').html(getTimeElapsed($('span.datetime').html(), [[${language}]]));
             /*[# th:if="${isLogin}"]*/
-            editor    = new Markdown.Editor(converter);
-            editor.run();
-            getGravatarUrl([[${myProfile?.email}]], $('img', 'div#editor div.avatar'));
+            mainEditor = createMarkdownEditor('#wmd-input');
+            loadDiscussionReplies();
             /*[/]*/
-            moment.locale([[${language}]]);
-            $('span.datetime').html(getTimeElapsed($('span.datetime').html()));
-
-            setLoadingStatus(true);
-            getDiscussionReplies(0);
+            /*[# th:unless="${isLogin}"]*/
+            loadDiscussionReplies();
+            /*[/]*/
         });
-    </script>
-    <script type="text/javascript">
+        function loadDiscussionReplies() { setLoadingStatus(true); getDiscussionReplies(0); }
         $('#more-discussion-replies').click(function() {
             var isLoading       = $('img', this).is(':visible'),
                 hasNextRecord   = $('p', this).hasClass('availble'),
-                numberOfReplies = $('.discussion-reply').length;
-
-            if ( !isLoading && hasNextRecord ) {
-                setLoadingStatus(true);
-                return getDiscussionReplies(numberOfReplies);
-            }
+                numberOfReplies = $('.vw-post').length;
+            if ( !isLoading && hasNextRecord ) { setLoadingStatus(true); return getDiscussionReplies(numberOfReplies); }
         });
-    </script>
-    <script type="text/javascript">
-        function getTimeElapsed(dateTimeString) {
-            var dateTime = moment(dateTimeString);
-            return dateTime.fromNow();
-        }
-    </script>
-    <script type="text/javascript">
-        function getGravatarUrl(email, imgContainer) {
-            var hash = md5(email.toLowerCase());
-            $.ajax({
-                type: 'GET',
-                url: 'https://secure.gravatar.com/' + hash + '.json',
-                dataType: 'jsonp',
-                success: function(result){
-                    if ( result != null ) {
-                        var imageUrl    = result['entry'][0]['thumbnailUrl'],
-                            requrestUrl = imageUrl + '?s=120';
-                        $(imgContainer).attr('src', requrestUrl);
-                    }
-                }
-            });
-        }
-    </script>
-    <script type="text/javascript">
         function setLoadingStatus(isLoading) {
-            if ( isLoading ) {
-                $('p', '#more-discussion-replies').addClass('hide');
-                $('img', '#more-discussion-replies').removeClass('hide');
-            } else {
-                $('img', '#more-discussion-replies').addClass('hide');
-                $('p', '#more-discussion-replies').removeClass('hide');
-            }
+            if ( isLoading ) { $('p', '#more-discussion-replies').addClass('hide'); $('img', '#more-discussion-replies').removeClass('hide'); }
+            else { $('img', '#more-discussion-replies').addClass('hide'); $('p', '#more-discussion-replies').removeClass('hide'); }
         }
-    </script>
-    <script type="text/javascript" th:inline="javascript">
         function getDiscussionReplies(startIndex) {
-            var pageRequests = {
-                'startIndex': startIndex
-            };
-
             $.ajax({
                 type: 'GET',
                 url: [[@{/discussion/{tid}/getDiscussionReplies.action(tid=${discussionThread.discussionThreadId})}]],
-                data: pageRequests,
+                data: { 'startIndex': startIndex },
                 dataType: 'JSON',
-                success: function(result){
-                    return processDiscussionRepliesResult(result);
-                }
+                success: function(result){ return processDiscussionRepliesResult(result); }
             });
         }
-    </script>
-    <script type="text/javascript" th:inline="javascript">
         function processDiscussionRepliesResult(result) {
             if ( result['isSuccessful'] ) {
                 displayDiscussionReplyRecords(result['discussionReplies']);
             } else {
                 $('p', '#more-discussion-replies').removeClass('availble');
+                $('#more-discussion-replies').addClass('is-done');
                 $('p', '#more-discussion-replies').html([[#{voj.discussion.replies.no-more-discussion}]]);
             }
             setLoadingStatus(false);
         }
-    </script>
-    <script type="text/javascript">
+        function addParticipant(creator) {
+            if ( seenParticipants[creator['uid']] ) { return; }
+            seenParticipants[creator['uid']] = true;
+            var initial = (creator['username'] || '?').charAt(0).toUpperCase();
+            $('#participants').append('<a class="vw-participant" href="' + [[@{/accounts/user/}]] + creator['uid'] + '" title="' + creator['username'] + '">' + initial + '</a>');
+        }
         function displayDiscussionReplyRecords(discussionReplies) {
             for ( var i = 0; i < discussionReplies.length; ++ i ) {
-                $('ul#discussion-replies').append(
-                    getDiscussionReplyContent(discussionReplies[i]['discussionReplyId'], discussionReplies[i]['discussionReplyCreator'],
-                        discussionReplies[i]['discussionReplyCreateTime'], discussionReplies[i]['discussionReplyContent'],
-                        discussionReplies[i]['discussionReplyVotes'])
-                );
-                getGravatarUrl(discussionReplies[i]['discussionReplyCreator']['email'], $('img', 'ul#discussion-replies li:last-child div.avatar'));
-                /*[# th:if="${isLogin}"]*/
-                initializeMarkdownEditor(discussionReplies[i]['discussionReplyId']);
-                /*[/]*/
+                var r = discussionReplies[i];
+                $('#discussion-replies').append(getDiscussionReplyContent(r['discussionReplyId'], r['discussionReplyCreator'],
+                    r['discussionReplyCreateTime'], r['discussionReplyContent'], r['discussionReplyVotes']));
+                addParticipant(r['discussionReplyCreator']);
             }
         }
-    </script>
-    <script type="text/javascript" th:inline="javascript">
-        function getDiscussionReplyContent(discussionReplyId, discussionReplyCreator, discussionReplyCreateTime, discussionReplyContent, discussionReplyVotes) {
-            discussionReplyVotes = JSON.parse(discussionReplyVotes);
-            var replyHtml =
-                '<li class="row-fluid">' +
-                '    <div class="span2">' +
-                '        <div class="avatar" data-value="%s">'.format(discussionReplyCreator['email']) +
-                '            <img src="' + [[|${cdnUrl}/img/avatar.jpg?v=${version}|]] + '" alt="gravatar" />' +
-                '        </div> <!-- .avatar -->' +
-                '    </div> <!-- .span2 -->' +
-                '    <div class="span10">' +
-                '        <div class="discussion-reply %s" data-value="%s">'.format(discussionReplyCreator['uid'] == [[${myProfile?.uid}]] ? 'current-user' : '', discussionReplyId) +
-                '            <div class="reply-header">' +
-                '                <a href="' + [[@{/accounts/user/}]] + '%s">%s</a> @ %s'.format(discussionReplyCreator['uid'], discussionReplyCreator['username'], getTimeElapsed(discussionReplyCreateTime)) +
-                '                <ul class="inline pull-right %s">'.format(discussionReplyCreator['uid'] == [[${myProfile?.uid}]] || [[${myProfile?.userGroup?.userGroupSlug}]] == 'administrators' ? '' : 'hide') +
-                '                    <li><a href="javascript:void(0);"><i class="fa fa-pencil"></i></a></li>' +
-                '                    <li><a href="javascript:void(0);"><i class="fa fa-times"></i></a></li>' +
-                '                </ul> ' +
-                '            </div> <!-- .reply-header -->' +
-                '            <div class="reply-body">' +
-                '                <div class="markdown">%s</div> <!-- .markdown -->'.format(converter.makeHtml(discussionReplyContent.replace(/\\\n/g, '\\n'))) +
-                /*[# th:if="${isLogin}"]*/
-                '                <div class="markdown-editor hide">' +
-                '                    <div class="wmd-panel">' +
-                '                        <div id="wmd-button-bar-%s" class="wmd-button-bar"></div>'.format(discussionReplyId) +
-                '                        <textarea id="wmd-input-%s" class="wmd-input">%s</textarea>'.format(discussionReplyId, discussionReplyContent) +
-                '                    </div> <!-- .wmd-panel -->' +
-                '                    <div id="wmd-preview-%s" class="wmd-panel wmd-preview"></div>'.format(discussionReplyId) +
-                '                    <ul class="inline text-right">' +
-                '                        <li><button class="btn btn-primary">' + [[#{voj.discussion.thread.update-reply}]] + '</button></li>' +
-                '                        <li><button class="btn btn-default">' + [[#{voj.discussion.thread.cancel}]] + '</button></li>' +
-                '                    </ul>' +
-                '                </div> <!-- .markdown-editor -->' +
-                /*[/]*/
-                '            </div> <!-- .reply-body -->' +
-                '            <div class="reply-footer">' +
-                '                <ul class="inline">' +
-                '                    <li>' +
-                '                        <a href="javascript:void(0);" class="%s" title="' + [[#{voj.discussion.thread.useful-reply}]] + '">'.format(discussionReplyVotes['isVotedUp'] ? 'active': '') +
-                '                            <i class="fa fa-thumbs-up"></i>' +
-                '                        </a>' +
-                '                        <span class="vote-ups">%s</span>'.format(discussionReplyVotes['numberOfVoteUp'] || 0) +
-                '                    </li>' +
-                '                    <li>' +
-                '                        <a href="javascript:void(0);" class="%s" title="' + [[#{voj.discussion.thread.useless-reply}]] + '">'.format(discussionReplyVotes['isVotedDown'] ? 'active': '') +
-                '                            <i class="fa fa-thumbs-down"></i>' +
-                '                        </a>' +
-                '                        <span class="vote-downs">%s</span>'.format(discussionReplyVotes['numberOfVoteDown'] || 0) +
-                '                    </li>' +
-                '                </ul>' +
-                '            </div> <!-- .reply-footer -->' +
-                '        </div> <!-- .discussion-reply -->' +
-                '    </div> <!-- .span10 -->' +
-                '</li>';
-            return replyHtml;
+        function getDiscussionReplyContent(replyId, creator, createTime, content, votes) {
+            votes = JSON.parse(votes);
+            var initial = (creator['username'] || '?').charAt(0).toUpperCase(),
+                role    = (creator['userGroup'] && creator['userGroup']['userGroupName']) || '',
+                isOp    = creator['uid'] == threadCreatorUid,
+                isMine  = creator['uid'] == [[${myProfile?.uid}]] || [[${myProfile?.userGroup?.userGroupSlug}]] == 'administrators';
+            var actions = isMine
+                ? '<a href="javascript:void(0);" class="vw-post-edit" title="edit">edit</a>' +
+                  '<a href="javascript:void(0);" class="vw-post-delete" title="delete">delete</a>'
+                : '';
+            /*[# th:if="${isLogin}"]*/
+            var editor = '<div class="markdown-editor hide">' +
+                         '<textarea id="wmd-input-' + replyId + '" class="wmd-input">' + content + '</textarea>' +
+                         '<div class="vw-replybox-foot"><button class="vw-btn vw-btn-accent vw-btn-sm vw-reply-save">' + [[#{voj.discussion.thread.update-reply}]] + '</button>' +
+                         '<button class="vw-btn vw-btn-sm vw-reply-cancel">' + [[#{voj.discussion.thread.cancel}]] + '</button></div></div>';
+            /*[/]*/
+            /*[# th:unless="${isLogin}"]*/
+            var editor = '';
+            /*[/]*/
+            return '<div class="vw-post' + (isOp ? ' is-op' : '') + '" data-value="' + replyId + '">' +
+                '<div class="vw-post-avatarcol">' +
+                '<div class="vw-post-avatar">' + initial + '</div>' +
+                '<div><a class="vw-post-author" href="' + [[@{/accounts/user/}]] + creator['uid'] + '">' + creator['username'] + '</a>' +
+                '<div class="vw-post-role">' + role + '</div></div>' +
+                '</div>' +
+                '<div class="vw-minw0">' +
+                '<div class="vw-post-head">' +
+                (isOp ? '<span class="vw-post-op">OP</span>' : '') +
+                '<span class="vw-post-when">' + getTimeElapsed(createTime, [[${language}]]) + '</span>' +
+                '<div class="vw-header-spacer"></div>' +
+                '<a href="javascript:void(0);" class="vw-post-vote vw-vote-up' + (votes['isVotedUp'] ? ' active' : '') + '">&#9650; <span class="vote-ups">' + (votes['numberOfVoteUp'] || 0) + '</span></a>' +
+                '<a href="javascript:void(0);" class="vw-post-vote vw-vote-down' + (votes['isVotedDown'] ? ' active' : '') + '">&#9660; <span class="vote-downs">' + (votes['numberOfVoteDown'] || 0) + '</span></a>' +
+                actions +
+                '</div>' +
+                '<div class="markdown vw-post-body">' + renderMarkdown(content) + '</div>' +
+                editor +
+                '</div>' +
+                '</div>';
         }
     </script>
     <th:block th:if="${isLogin}">
-    <script type="text/javascript">
-        function initializeMarkdownEditor(discussionReplyId) {
-            editor    = new Markdown.Editor(converter, '-%s'.format(discussionReplyId));
-            editor.run();
-        }
-    </script>
-    <script type="text/javascript">
-        $('#discussion-replies').on('click', 'i.fa-thumbs-up', function() {
-            var discussionReplyId = $(this).parent().parent().parent().parent().parent().attr('data-value'),
-                csrfToken         = $('#csrf-token').val(),
-                isVotedUp         = $(this).parent().hasClass('active'),
-                isVotedDown       = $('i.fa-thumbs-down', $(this).parent().parent().parent()).parent().hasClass('active'),
-                voteUp            = isVotedUp ? -1 : 1,
-                voteDown          = isVotedDown ? -1 : 0;
-
-            return voteDiscussionReply(discussionReplyId, voteUp, voteDown, csrfToken);
-        });
-
-        $('#discussion-replies').on('click', 'i.fa-thumbs-down', function() {
-            var discussionReplyId = $(this).parent().parent().parent().parent().parent().attr('data-value'),
-                csrfToken         = $('#csrf-token').val(),
-                isVotedUp         = $('i.fa-thumbs-up', $(this).parent().parent().parent()).parent().hasClass('active'),
-                isVotedDown       = $(this).parent().hasClass('active'),
-                voteUp            = isVotedUp ? -1 : 0,
-                voteDown          = isVotedDown ? -1 : 1;
-
-            return voteDiscussionReply(discussionReplyId, voteUp, voteDown, csrfToken);
-        });
-    </script>
     <script type="text/javascript" th:inline="javascript">
-        function voteDiscussionReply(discussionReplyId, voteUp, voteDown, csrfToken) {
-            var postData = {
-                'discussionReplyId': discussionReplyId,
-                'voteUp': voteUp,
-                'voteDown': voteDown,
-                'csrfToken': csrfToken
-            };
-
+        function ensureReplyEditor(post) {
+            var textarea = $('.wmd-input', post)[0];
+            if ( textarea && !textarea.vojEditor ) { textarea.vojEditor = createMarkdownEditor(textarea); }
+            return textarea ? textarea.vojEditor : null;
+        }
+        $('#discussion-replies').on('click', '.vw-vote-up', function() {
+            var post = $(this).closest('.vw-post'), id = post.attr('data-value'),
+                isUp = $(this).hasClass('active'), isDown = $('.vw-vote-down', post).hasClass('active');
+            return voteDiscussionReply(id, isUp ? -1 : 1, isDown ? -1 : 0, $('#csrf-token').val());
+        });
+        $('#discussion-replies').on('click', '.vw-vote-down', function() {
+            var post = $(this).closest('.vw-post'), id = post.attr('data-value'),
+                isUp = $('.vw-vote-up', post).hasClass('active'), isDown = $(this).hasClass('active');
+            return voteDiscussionReply(id, isUp ? -1 : 0, isDown ? -1 : 1, $('#csrf-token').val());
+        });
+        function voteDiscussionReply(replyId, voteUp, voteDown, csrfToken) {
             $.ajax({
                 type: 'POST',
                 url: [[@{/discussion/{tid}/voteDiscussionReply.action(tid=${discussionThread.discussionThreadId})}]],
-                data: postData,
+                data: { 'discussionReplyId': replyId, 'voteUp': voteUp, 'voteDown': voteDown, 'csrfToken': csrfToken },
                 dataType: 'JSON',
                 success: function(result) {
-                    if ( result['isSuccessful'] ) {
-                        var thumbUpButton   = $('.fa-thumbs-up', 'div[data-value=%s]'.format(discussionReplyId)).parent(),
-                            thumbDownButton = $('.fa-thumbs-down', 'div[data-value=%s]'.format(discussionReplyId)).parent(),
-                            voteUpDisplay   = $('.vote-ups', 'div[data-value=%s]'.format(discussionReplyId)),
-                            voteDownDisplay = $('.vote-downs', 'div[data-value=%s]'.format(discussionReplyId)),
-                            voteUps         = parseInt($('.vote-ups', 'div[data-value=%s]'.format(discussionReplyId)).html()),
-                            voteDowns       = parseInt($('.vote-downs', 'div[data-value=%s]'.format(discussionReplyId)).html());
-
-                        // Setup vote up thumbs
-                        if ( voteUp == 1 ) {
-                            $(thumbUpButton).addClass('active');
-                        } else if ( voteUp == -1 ) {
-                            $(thumbUpButton).removeClass('active');
-                        }
-                        // Setup vote down thumbs
-                        if ( voteDown == 1 ) {
-                            $(thumbDownButton).addClass('active');
-                        } else if ( voteDown == -1 ) {
-                            $(thumbDownButton).removeClass('active');
-                        }
-                        $(voteUpDisplay).html(voteUps + voteUp);
-                        $(voteDownDisplay).html(voteDowns + voteDown);
-                    } else {
-                        alert([[#{voj.discussion.thread.failed-to-vote}]]);
-                    }
+                    if ( !result['isSuccessful'] ) { alert([[#{voj.discussion.thread.failed-to-vote}]]); return; }
+                    var post = $('.vw-post[data-value=' + replyId + ']'),
+                        up = $('.vw-vote-up', post), down = $('.vw-vote-down', post),
+                        ups = parseInt($('.vote-ups', post).html()), downs = parseInt($('.vote-downs', post).html());
+                    if ( voteUp == 1 ) { up.addClass('active'); } else if ( voteUp == -1 ) { up.removeClass('active'); }
+                    if ( voteDown == 1 ) { down.addClass('active'); } else if ( voteDown == -1 ) { down.removeClass('active'); }
+                    $('.vote-ups', post).html(ups + voteUp);
+                    $('.vote-downs', post).html(downs + voteDown);
                 }
             });
         }
-    </script>
-    <script type="text/javascript">
-        $('#discussion-replies').on('click', 'i.fa-pencil', function() {
-            var discussionReplyId = $(this).parent().parent().parent().parent().parent().attr('data-value'),
-                replyObject       = $(this).parent().parent().parent().parent().parent().parent().parent(),
-                markdownEditor    = $('.markdown-editor', replyObject);
-
-            if ( $(markdownEditor).is(':visible') ) {
-                $(markdownEditor).addClass('hide');
-                $('.markdown', replyObject).removeClass('hide');
-            } else {
-                $('.markdown', replyObject).addClass('hide');
-                $(markdownEditor).removeClass('hide');
+        $('#discussion-replies').on('click', '.vw-post-edit', function() {
+            var post = $(this).closest('.vw-post'), editor = $('.markdown-editor', post);
+            if ( editor.is(':visible') ) { editor.addClass('hide'); $('.vw-post-body', post).removeClass('hide'); }
+            else {
+                $('.vw-post-body', post).addClass('hide'); editor.removeClass('hide');
+                ensureReplyEditor(post);
             }
         });
-    </script>
-    <script type="text/javascript" th:inline="javascript">
-        $('#discussion-replies').on('click', '.markdown-editor .btn-primary', function() {
-            var discussionReplyId = $(this).parent().parent().parent().parent().parent().attr('data-value'),
-                replyObject       = $(this).parent().parent().parent().parent().parent().parent().parent(),
-                markdownEditor    = $('.markdown-editor', replyObject),
-                replyContent      = $('.wmd-input', replyObject).val(),
-                postData          = {
-                    'discussionReplyId': discussionReplyId,
-                    'replyContent': replyContent,
-                    'csrfToken': $('#csrf-token').val()
-                };
-
-            $('.btn-primary', replyObject).attr('disabled', 'disabled');
-            $('.btn-primary', replyObject).html([[#{voj.discussion.thread.please-wait}]]);
+        $('#discussion-replies').on('click', '.vw-reply-save', function() {
+            var post = $(this).closest('.vw-post'), id = post.attr('data-value'),
+                editor = $('.markdown-editor', post), content = ensureReplyEditor(post).value();
+            $('.vw-reply-save', post).attr('disabled', 'disabled').html([[#{voj.discussion.thread.please-wait}]]);
             $.ajax({
                 type: 'POST',
                 url: [[@{/discussion/{tid}/editDiscussionReply.action(tid=${discussionThread.discussionThreadId})}]],
-                data: postData,
+                data: { 'discussionReplyId': id, 'replyContent': content, 'csrfToken': $('#csrf-token').val() },
                 dataType: 'JSON',
                 success: function(result) {
                     if ( result['isSuccessful'] ) {
-                        $(markdownEditor).addClass('hide');
-                        $('.markdown', replyObject).html(converter.makeHtml(replyContent.replace(/\\\n/g, '\\n')));
-                        $('.markdown', replyObject).removeClass('hide');
-                    } else {
-                        alert([[#{voj.discussion.thread.failed-to-update}]]);
-                    }
-                    $('.btn-primary', replyObject).removeAttr('disabled');
-                    $('.btn-primary', replyObject).html([[#{voj.discussion.thread.update-reply}]]);
+                        editor.addClass('hide');
+                        $('.vw-post-body', post).html(renderMarkdown(content)).removeClass('hide');
+                    } else { alert([[#{voj.discussion.thread.failed-to-update}]]); }
+                    $('.vw-reply-save', post).removeAttr('disabled').html([[#{voj.discussion.thread.update-reply}]]);
                 }
             });
         });
-    </script>
-    <script type="text/javascript">
-        $('#discussion-replies').on('click', '.markdown-editor .btn-default', function() {
-            var discussionReplyId = $(this).parent().parent().parent().parent().parent().attr('data-value'),
-                replyObject       = $(this).parent().parent().parent().parent().parent().parent().parent(),
-                markdownEditor    = $('.markdown-editor', replyObject);
-
-            if ( $(markdownEditor).is(':visible') ) {
-                $(markdownEditor).addClass('hide');
-                $('.markdown', replyObject).removeClass('hide');
-            }
+        $('#discussion-replies').on('click', '.vw-reply-cancel', function() {
+            var post = $(this).closest('.vw-post');
+            $('.markdown-editor', post).addClass('hide'); $('.vw-post-body', post).removeClass('hide');
         });
-    </script>
-    <script type="text/javascript" th:inline="javascript">
-        $('#discussion-replies').on('click', 'i.fa-times', function() {
-            if ( !confirm([[#{voj.discussion.thread.continue-or-not}]]) ) {
-                return;
-            }
-
-            var discussionReplyId = $(this).parent().parent().parent().parent().parent().attr('data-value'),
-                replyObject       = $(this).parent().parent().parent().parent().parent().parent().parent(),
-                numberOfComments  = parseInt($('#number-of-comments').html());
-                postData          = {
-                    'discussionReplyId': discussionReplyId,
-                    'csrfToken': $('#csrf-token').val()
-                };
+        $('#discussion-replies').on('click', '.vw-post-delete', function() {
+            if ( !confirm([[#{voj.discussion.thread.continue-or-not}]]) ) { return; }
+            var post = $(this).closest('.vw-post'), id = post.attr('data-value'),
+                n = parseInt($('#number-of-comments').html());
             $.ajax({
                 type: 'POST',
                 url: [[@{/discussion/{tid}/deleteDiscussionReply.action(tid=${discussionThread.discussionThreadId})}]],
-                data: postData,
+                data: { 'discussionReplyId': id, 'csrfToken': $('#csrf-token').val() },
                 dataType: 'JSON',
                 success: function(result) {
-                    if ( result['isSuccessful'] ) {
-                        $(replyObject).remove();
-                        $('#number-of-comments').html(numberOfComments - 1);
-                    } else {
-                        alert([[#{voj.discussion.thread.failed-to-delete}]]);
-                    }
+                    if ( result['isSuccessful'] ) { post.remove(); $('#number-of-comments').html(n - 1); }
+                    else { alert([[#{voj.discussion.thread.failed-to-delete}]]); }
                 }
             });
         });
-    </script>
-    <script type="text/javascript" th:inline="javascript">
-        $('.btn-primary', '#editor').click(function() {
-            var postData = {
-                'replyContent': $('#wmd-input').val(),
-                'csrfToken': $('#csrf-token').val()
-            };
-
-            $('.btn-primary', '#editor').attr('disabled', 'disabled');
-            $('.btn-primary', '#editor').html([[#{voj.discussion.thread.please-wait}]]);
+        $('#create-discussion-reply').click(function() {
+            $('.alert-error', '#editor').addClass('hide');
+            $(this).attr('disabled', 'disabled').html([[#{voj.discussion.thread.please-wait}]]);
             $.ajax({
                 type: 'POST',
                 url: [[@{/discussion/{tid}/createDiscussionReply.action(tid=${discussionThread.discussionThreadId})}]],
-                data: postData,
+                data: { 'replyContent': mainEditor ? mainEditor.value() : '', 'csrfToken': $('#csrf-token').val() },
                 dataType: 'JSON',
-                success: function(result) {
-                    processDiscussionReplyCreationResult(result);
-                }
+                success: function(result) { processDiscussionReplyCreationResult(result); }
             });
         });
-    </script>
-    <script type="text/javascript" th:inline="javascript">
         function processDiscussionReplyCreationResult(result) {
             if ( result['isSuccessful'] ) {
-                var discussionReply   = result['discussionReply'],
-                    discussionReplies = [discussionReply],
-                    numberOfComments  = parseInt($('#number-of-comments').html());
-
-                $('#wmd-input').val('');
-                $('#wmd-preview').html('');
-                $('#number-of-comments').html(numberOfComments + 1);
-                displayDiscussionReplyRecords(discussionReplies);
+                var n = parseInt($('#number-of-comments').html());
+                if ( mainEditor ) { mainEditor.value(''); }
+                $('#number-of-comments').html(n + 1);
+                displayDiscussionReplyRecords([result['discussionReply']]);
             } else {
-                var errorMessage  = '';
-
-                if ( result['isCsrfTokenValid'] ) {
-                    errorMessage += [[#{voj.discussion.thread.csrf-token-invalid}]] + '<br>';
-                }
-                if ( !result['isDiscussionThreadExists'] ) {
-                    errorMessage += [[#{voj.discussion.thread.thread-not-exists}]] + '<br>';
-                }
-                if ( !result['isReplyCreatorExists'] ) {
-                    errorMessage += [[#{voj.discussion.thread.user-not-login}]] + '<br>';
-                } else if ( !result['isReplyCreatorLegal'] ) {
-                    errorMessage += [[#{voj.discussion.thread.user-not-permitted}]] + '<br>';
-                }
-                if ( result['isReplyContentEmpty'] ) {
-                    errorMessage += [[#{voj.discussion.thread.empty-reply}]] + '<br>';
-                }
-                $('.alert-error', '#editor').html(errorMessage);
-                $('.alert-error', '#editor').removeClass('hide');
+                var msg = '';
+                if ( !result['isDiscussionThreadExists'] ) { msg += [[#{voj.discussion.thread.thread-not-exists}]] + '<br>'; }
+                if ( !result['isReplyCreatorExists'] ) { msg += [[#{voj.discussion.thread.user-not-login}]] + '<br>'; }
+                else if ( !result['isReplyCreatorLegal'] ) { msg += [[#{voj.discussion.thread.user-not-permitted}]] + '<br>'; }
+                if ( result['isReplyContentEmpty'] ) { msg += [[#{voj.discussion.thread.empty-reply}]] + '<br>'; }
+                $('.alert-error', '#editor').html(msg).removeClass('hide');
             }
-            $('.btn-primary', '#editor').removeAttr('disabled');
-            $('.btn-primary', '#editor').html([[#{voj.discussion.thread.comment}]]);
+            $('#create-discussion-reply').removeAttr('disabled').html([[#{voj.discussion.thread.comment}]]);
         }
     </script>
     </th:block>
@@ -487,31 +299,11 @@
     <script type="text/javascript">
         function editDiscussion() {
             if ( !$('#discussion-thread-title').is(':visible') ) {
-                setEditControlsVisibility(true);
-            } else {
-            }
-        }
-    </script>
-    <script type="text/javascript">
-        function setEditControlsVisibility(isVisible) {
-            if ( isVisible ) {
-
-            } else {
-                var discussionThreadTitle = $('#discussion-thread > .header h3').html();
-                $('#discussion-thread-title').val(discussionThreadTitle);
-                $('#discussion-thread > .header h3').addClass('hide');
+                var title = $('#discussion-thread-head .header h1').html();
+                $('#discussion-thread-title').val(title);
+                $('#discussion-thread-head .header h1').addClass('hide');
                 $('#discussion-thread-title').removeClass('hide');
             }
-        }
-    </script>
-    <script type="text/javascript">
-        function doEditDiscussionThreadAction() {
-            var discussionThreadTitle     = '',
-                discussionThreadTopicSlug = '';
-
-            $.ajax({
-
-            });
         }
     </script>
     </th:block>

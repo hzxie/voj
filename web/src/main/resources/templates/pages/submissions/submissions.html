@@ -1,113 +1,103 @@
 <!DOCTYPE html>
+<!--/* Reproduced from voj-design/Submissions.dc.html: // SUBMISSIONS header, segmented
+       Problem/User filter + $ search, RUN#/PROBLEM/USER/WHEN/LANG/VERDICT table. The
+       backend filters by problemId + username, so the segmented field swaps the search
+       input's name between the two (no ID/Lang filter on the backend yet). The live poll +
+       load-more history behaviour is preserved. */-->
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layouts/main}" lang="en">
 <head>
-    <title th:text="#{voj.submissions.submissions.title} + ' | ' + ${websiteName}">Submission</title>
-    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/submissions/submissions.css?v=${version}|" />
+    <title th:text="#{voj.submissions.submissions.title} + ' | ' + ${websiteName}">Submissions</title>
 </head>
 <body>
-    <div id="content" class="container" layout:fragment="content"
-         th:with="fUsername=${param.username != null ? param.username[0] : ''},fProblemId=${param.problemId != null ? param.problemId[0] : ''}">
-        <form id="filter" th:action="@{/submission}">
-            <div class="row-fluid">
-                <div class="span5">
-                    <div class="form-group">
-                        <input name="username" type="text" th:value="${fUsername}" th:placeholder="#{voj.submissions.submissions.submitter-username}" class="form-control span12" />
-                    </div> <!-- .form-group -->
-                </div> <!-- .span5 -->
-                <div class="span5">
-                    <div class="form-group">
-                        <input name="problemId" type="text" th:value="${fProblemId}" th:placeholder="#{voj.submissions.submissions.problem-id}" class="form-control span12" />
-                    </div> <!-- .form-group -->
-                </div> <!-- .span5 -->
-                <div class="span2">
-                    <button class="btn btn-primary btn-block" type="submit" th:text="#{voj.submissions.submissions.filter}">Filter</button>
-                </div> <!-- .span2 -->
-            </div> <!-- .row-fluid -->
-        </form> <!-- #filter -->
-        <div id="main-content">
-            <div class="row-fluid">
-                <div id="submission" class="span12">
-                    <table class="table table-striped">
-                        <thead>
-                            <tr>
-                                <th class="flag" th:text="#{voj.submissions.submissions.result}">Result</th>
-                                <th class="score" th:text="#{voj.submissions.submissions.score}">Score</th>
-                                <th class="time" th:text="#{voj.submissions.submissions.time}">Time</th>
-                                <th class="memory" th:text="#{voj.submissions.submissions.memory}">Memory</th>
-                                <th class="name" th:text="#{voj.submissions.submissions.problem}">Problem</th>
-                                <th class="user" th:text="#{voj.submissions.submissions.user}">User</th>
-                                <th class="language" th:text="#{voj.submissions.submissions.language}">Language</th>
-                                <th class="submit-time" th:text="#{voj.submissions.submissions.submit-time}">Submit Time</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr th:each="submission : ${submissions}" th:attr="data-value=${submission.submissionId}">
-                                <td th:class="|flag-${submission.judgeResult.judgeResultSlug}|"><a th:href="@{/submission/{id}(id=${submission.submissionId})}" th:text="${submission.judgeResult.judgeResultName}">Result</a></td>
-                                <td class="score" th:text="${submission.judgeScore}">0</td>
-                                <td class="time" th:text="|${submission.usedTime} ms|">0 ms</td>
-                                <td class="memory" th:text="|${submission.usedMemory} K|">0 K</td>
-                                <td class="name"><a th:href="@{/p/{id}(id=${submission.problem.problemId})}" th:text="|P${submission.problem.problemId} ${submission.problem.problemName}|">Problem</a></td>
-                                <td class="user"><a th:href="@{/accounts/user/{id}(id=${submission.user.uid})}" th:text="${submission.user.username}">User</a></td>
-                                <td class="language" th:text="${submission.language.languageName}">Language</td>
-                                <td class="submit-time" th:text="${@dateFormatter.dateTimeLongMedium(submission.submitTime, language)}">time</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                    <div id="more-submissions">
-                        <p class="availble" th:text="#{voj.submissions.submissions.more-submission}">More Submission...</p>
-                        <img th:src="|${cdnUrl}/img/loading.gif?v=${version}|" alt="Loading" class="hide" />
+    <div layout:fragment="content"
+         th:with="fUsername=${param.username != null ? param.username[0] : ''},
+                  fProblemId=${param.problemId != null ? param.problemId[0] : ''},
+                  field=${param.field != null ? param.field[0] : 'problem'}">
+        <!-- PAGE HEADER + FILTER -->
+        <section class="vw-pagehead">
+            <div class="vw-eyebrow">// SUBMISSIONS</div>
+            <h1 th:text="#{voj.submissions.submissions.title}">Submissions</h1>
+            <div class="sub vw-livesub vw-livesub-mb">live judge queue
+                <span class="vw-livedot"></span>
+            </div>
+            <div class="vw-filters">
+                <div class="vw-seg">
+                    <a th:href="@{/submission(field='problem')}" th:classappend="${field == 'problem'} ? 'active'">Problem</a>
+                    <a th:href="@{/submission(field='user')}" th:classappend="${field == 'user'} ? 'active'">User</a>
+                </div>
+                <form class="vw-field vw-filters-search" method="GET" th:action="@{/submission}">
+                    <span class="sigil">$</span>
+                    <input type="hidden" name="field" th:value="${field}" />
+                    <input type="text" th:name="${field == 'user'} ? 'username' : 'problemId'"
+                           th:value="${field == 'user'} ? ${fUsername} : ${fProblemId}"
+                           th:placeholder="|filter by ${field}&#8230;|" />
+                </form>
+            </div>
+        </section>
+
+        <!-- TABLE -->
+        <section class="vw-section vw-section-table">
+            <div id="submission" class="vw-tablewrap">
+                <div class="vw-table vw-table-submissions">
+                    <div class="vw-table-head">
+                        <div>RUN #</div>
+                        <div th:text="#{voj.submissions.submissions.problem}">Problem</div>
+                        <div th:text="#{voj.submissions.submissions.user}">User</div>
+                        <div th:text="#{voj.submissions.submissions.submit-time}">When</div>
+                        <div th:text="#{voj.submissions.submissions.language}">Lang</div>
+                        <div th:text="#{voj.submissions.submissions.result}">Verdict</div>
                     </div>
-                </div> <!-- #submission -->
-            </div> <!-- .row-fluid -->
-        </div> <!-- #main-content -->
-    </div> <!-- #content -->
+                    <div id="submission-body">
+                        <a class="vw-table-row" th:each="submission : ${submissions}"
+                           th:attr="data-value=${submission.submissionId}"
+                           th:href="@{/submission/{id}(id=${submission.submissionId})}"
+                           th:with="slug=${#strings.toLowerCase(submission.judgeResult.judgeResultSlug)}">
+                            <div class="vw-muted" th:text="${submission.submissionId}">0</div>
+                            <div class="vw-head vw-strong vw-ellipsis" th:text="|P${submission.problem.problemId} ${submission.problem.problemName}|">Problem</div>
+                            <div class="vw-accent" th:text="${submission.user.username}">User</div>
+                            <div class="vw-muted vw-cell-when" th:text="${@dateFormatter.dateTimeMediumShort(submission.submitTime, language)}">when</div>
+                            <div class="vw-muted2 vw-cell-lang" th:text="${submission.language.languageName}">Lang</div>
+                            <div class="vw-cell-verdict">
+                                <span class="vw-vbadge" th:classappend="|flag-${slug}|" th:text="${#strings.toUpperCase(slug)}">AC</span>
+                                <span class="vw-verdict-name" th:classappend="|flag-${slug}|" th:text="${submission.judgeResult.judgeResultName}">Accepted</span>
+                                <span class="vw-muted vw-verdict-time" th:text="|${submission.usedTime}ms &middot; ${submission.usedMemory}K|">11ms</span>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div id="more-submissions" class="vw-loadmore">
+                <p class="availble" th:text="#{voj.submissions.submissions.more-submission}">More Submission...</p>
+                <img th:src="|${cdnUrl}/img/loading.gif?v=${version}|" alt="Loading" class="hide" />
+            </div>
+        </section>
+    </div>
 
     <th:block layout:fragment="scripts">
-    <script type="text/javascript" th:src="|${cdnUrl}/js/date-${language}.min.js?v=${version}|"></script>
-    <script type="text/javascript">
-        setInterval(function() {
-            var firstSubmissionRecord = $('tr:first-child', '#submission tbody'),
-                firstSubmissionId     = parseInt($(firstSubmissionRecord).attr('data-value'));
-
-            getLatestSubmissions(firstSubmissionId + 1);
-        }, 10000);
-    </script>
     <script type="text/javascript" th:inline="javascript">
-        function getLatestSubmissions(startIndex) {
-            var pageRequests = {
-                'problemId': [[${param.problemId != null ? param.problemId[0] : ''}]],
-                'username': [[${param.username != null ? param.username[0] : ''}]],
-                'startIndex': startIndex
-            };
+        setInterval(function() {
+            var firstRecord = $('#submission-body > .vw-table-row:first-child'),
+                firstId     = parseInt($(firstRecord).attr('data-value'));
+            if ( !isNaN(firstId) ) { getLatestSubmissions(firstId + 1); }
+        }, 10000);
 
+        function getLatestSubmissions(startIndex) {
             $.ajax({
                 type: 'GET',
                 url: [[@{/submission/getLatestSubmissions.action}]],
-                data: pageRequests,
+                data: {
+                    'problemId': [[${param.problemId != null ? param.problemId[0] : ''}]],
+                    'username': [[${param.username != null ? param.username[0] : ''}]],
+                    'startIndex': startIndex
+                },
                 dataType: 'JSON',
                 success: function(result){
-                    if ( result['isSuccessful'] ) {
-                        displayLatestSubmissionRecords(result['submissions']);
-                    }
+                    if ( result['isSuccessful'] ) { displayRecords(result['submissions'], true); }
                 }
             });
         }
-    </script>
-    <script type="text/javascript">
-        function displayLatestSubmissionRecords(submissions) {
-            for ( var i = 0; i < submissions.length; ++ i ) {
-                $('table > tbody', '#submission').prepend(
-                    getSubmissionContent(submissions[i]['submissionId'], submissions[i]['judgeResult'],
-                                         submissions[i]['judgeScore'], submissions[i]['usedTime'],
-                                         submissions[i]['usedMemory'], submissions[i]['problem'],
-                                         submissions[i]['user'], submissions[i]['language'], submissions[i]['submitTime'])
-                );
-            }
-        }
-    </script>
-    <script type="text/javascript">
         function setLoadingStatus(isLoading) {
             if ( isLoading ) {
                 $('p', '#more-submissions').addClass('hide');
@@ -117,83 +107,69 @@
                 $('p', '#more-submissions').removeClass('hide');
             }
         }
-    </script>
-    <script type="text/javascript">
-        $('#more-submissions').click(function(event) {
-            var isLoading            = $('img', this).is(':visible'),
-                hasNextRecord        = $('p', this).hasClass('availble'),
-                lastSubmissionRecord = $('tr:last-child', '#submission tbody'),
-                lastSubmissionId     = parseInt($(lastSubmissionRecord).attr('data-value'));
-
-            if ( isNaN(lastSubmissionId) ) {
-                lastSubmissionId = 0;
-            }
+        $('#more-submissions').click(function() {
+            var isLoading     = $('img', this).is(':visible'),
+                hasNextRecord = $('p', this).hasClass('availble'),
+                lastRecord    = $('#submission-body > .vw-table-row:last-child'),
+                lastId        = parseInt($(lastRecord).attr('data-value'));
+            if ( isNaN(lastId) ) { lastId = 0; }
             if ( !isLoading && hasNextRecord ) {
                 setLoadingStatus(true);
-                return getMoreHistorySubmissions(lastSubmissionId - 1);
+                return getMoreHistorySubmissions(lastId - 1);
             }
         });
-    </script>
-    <script type="text/javascript" th:inline="javascript">
         function getMoreHistorySubmissions(startIndex) {
-            var pageRequests = {
-                'problemId': [[${param.problemId != null ? param.problemId[0] : ''}]],
-                'username': [[${param.username != null ? param.username[0] : ''}]],
-                'startIndex': startIndex
-            };
-
             $.ajax({
                 type: 'GET',
                 url: [[@{/submission/getSubmissions.action}]],
-                data: pageRequests,
+                data: {
+                    'problemId': [[${param.problemId != null ? param.problemId[0] : ''}]],
+                    'username': [[${param.username != null ? param.username[0] : ''}]],
+                    'startIndex': startIndex
+                },
                 dataType: 'JSON',
-                success: function(result){
-                    return processHistorySubmissionsResult(result);
-                }
+                success: function(result){ return processHistorySubmissionsResult(result); }
             });
         }
-    </script>
-    <script type="text/javascript" th:inline="javascript">
         function processHistorySubmissionsResult(result) {
             if ( result['isSuccessful'] ) {
-                displayHistorySubmissionRecords(result['submissions']);
+                displayRecords(result['submissions'], false);
             } else {
                 $('p', '#more-submissions').removeClass('availble');
+                $('#more-submissions').addClass('is-done');
                 $('p', '#more-submissions').html([[#{voj.submissions.submissions.no-more-submission}]]);
-                $('#more-submissions').css('cursor', 'default');
             }
             setLoadingStatus(false);
         }
-    </script>
-    <script type="text/javascript">
-        function displayHistorySubmissionRecords(submissions) {
+        function displayRecords(submissions, prepend) {
             for ( var i = 0; i < submissions.length; ++ i ) {
-                $('table > tbody', '#submission').append(
-                    getSubmissionContent(submissions[i]['submissionId'], submissions[i]['judgeResult'],
-                                         submissions[i]['judgeScore'], submissions[i]['usedTime'],
-                                         submissions[i]['usedMemory'], submissions[i]['problem'],
-                                         submissions[i]['user'], submissions[i]['language'], submissions[i]['submitTime'])
-                );
+                var s = submissions[i];
+                var html = getSubmissionContent(s['submissionId'], s['judgeResult'], s['usedTime'],
+                                                s['usedMemory'], s['problem'], s['user'],
+                                                s['language'], s['submitTime']);
+                if ( prepend ) { $('#submission-body').prepend(html); }
+                else { $('#submission-body').append(html); }
             }
         }
-    </script>
-    <script type="text/javascript" th:inline="javascript">
-        function getSubmissionContent(submissionId, judgeResult, judgeScore, usedTime, usedMemory, problem, user, language, submitTime) {
-            var submissionTemplate = '<tr data-value="%s">' +
-                                     '    <td class="flag-%s"><a href="' + [[@{/submission/}]] + '%s">%s</a></td>' +
-                                     '    <td class="score">%s</td>' +
-                                     '    <td class="time">%s ms</td>' +
-                                     '    <td class="memory">%s K</td>' +
-                                     '    <td class="name"><a href="' + [[@{/p/}]] + '%s">P%s %s</a></td>' +
-                                     '    <td class="user"><a href="' + [[@{/accounts/user/}]] + '%s">%s</a></td>' +
-                                     '    <td class="language">%s</td>' +
-                                     '    <td class="submit-time">%s</td>' +
-                                     '</tr>';
-
-            return submissionTemplate.format(submissionId, judgeResult['judgeResultSlug'], submissionId,
-                                             judgeResult['judgeResultName'], judgeScore, usedTime, usedMemory,
-                                             problem['problemId'], problem['problemId'], problem['problemName'],
-                                             user['uid'], user['username'], language['languageName'], getFormatedDateString(submitTime, [[${language}]]));
+        function getSubmissionContent(submissionId, judgeResult, usedTime, usedMemory, problem, user, language, submitTime) {
+            var slug = judgeResult['judgeResultSlug'].toLowerCase();
+            var tpl = '<a class="vw-table-row" data-value="%s" href="' + [[@{/submission/}]] + '%s">' +
+                      '<div class="vw-muted">%s</div>' +
+                      '<div class="vw-head vw-strong vw-ellipsis">P%s %s</div>' +
+                      '<div class="vw-accent">%s</div>' +
+                      '<div class="vw-muted vw-cell-when">%s</div>' +
+                      '<div class="vw-muted2 vw-cell-lang">%s</div>' +
+                      '<div class="vw-cell-verdict">' +
+                      '<span class="vw-vbadge flag-%s">%s</span>' +
+                      '<span class="vw-verdict-name flag-%s">%s</span>' +
+                      '<span class="vw-muted vw-verdict-time">%sms · %sK</span>' +
+                      '</div>' +
+                      '</a>';
+            return tpl.format(submissionId, submissionId, submissionId,
+                              problem['problemId'], problem['problemName'], user['username'],
+                              getFormatedDateString(submitTime, [[${language}]]),
+                              language['languageName'], slug, slug.toUpperCase(),
+                              slug, judgeResult['judgeResultName'], usedTime, usedMemory);
         }
     </script>
     </th:block>

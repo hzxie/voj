@@ -32,7 +32,6 @@ import org.springframework.web.servlet.ModelAndView;
 import org.verwandlung.voj.web.messenger.ApplicationEventListener;
 import org.verwandlung.voj.web.model.*;
 import org.verwandlung.voj.web.service.*;
-import org.verwandlung.voj.web.util.LocaleUtils;
 
 /**
  * Handles the common requests of the application.
@@ -63,6 +62,15 @@ public class DefaultController {
     view.addObject("contests", contests);
     view.addObject("discussionThreads", discussionThreads);
     view.addObject("bulletinBoardMessages", bulletinBoardMessages);
+    // Stats band + supported-languages section (Home.dc.html).
+    view.addObject("totalProblems", problemService.getNumberOfProblems());
+    view.addObject(
+        "totalUsers", userService.getNumberOfUsers(userService.getUserGroupUsingSlug("users")));
+    view.addObject(
+        "totalSubmissions",
+        submissionService.getNumberOfSubmissionsUsingDate(new Date(0), new Date()));
+    view.addObject("onlineJudgers", keepAliveEventListener.getOnlineJudgers());
+    view.addObject("languages", languageService.getAllLanguages());
     return view;
   }
 
@@ -101,9 +109,65 @@ public class DefaultController {
    */
   @RequestMapping(value = "/judgers", method = RequestMethod.GET)
   public ModelAndView judgersView(HttpServletRequest request, HttpServletResponse response) {
+    UserGroup userGroup = userService.getUserGroupUsingSlug("judgers");
+    List<User> judgersList =
+        userService.getUserUsingUserGroup(userGroup, 0, NUMBER_OF_JUDGERS_PER_REQUEST);
+
+    List<Map<String, Object>> judgers = new ArrayList<>();
+    long onlineJudgers = 0, cpuSum = 0, memorySum = 0, nodesWithMetrics = 0;
+    for (User judger : judgersList) {
+      String username = judger.getUsername();
+      Map<String, Object> judgerInformation = keepAliveEventListener.getJudgerInformation(username);
+
+      Map<String, Object> node = new HashMap<>();
+      node.put("username", username);
+      if (judgerInformation != null) {
+        ++onlineJudgers;
+        int cpuLoad = (Integer) judgerInformation.getOrDefault("cpuLoad", -1);
+        int memoryUsage = (Integer) judgerInformation.getOrDefault("memoryUsage", -1);
+        long uptime = (Long) judgerInformation.getOrDefault("uptime", 0L);
+
+        node.put("online", true);
+        node.put("description", judgerInformation.get("description"));
+        node.put("cpuLoad", cpuLoad);
+        node.put("memoryUsage", memoryUsage);
+        node.put("uptime", formatUptime(uptime));
+        if (cpuLoad >= 0) {
+          cpuSum += cpuLoad;
+          memorySum += Math.max(memoryUsage, 0);
+          ++nodesWithMetrics;
+        }
+      } else {
+        node.put("online", false);
+      }
+      judgers.add(node);
+    }
+
     ModelAndView view = new ModelAndView("pages/judgers");
-    view.addObject("languages", languageService.getAllLanguages());
+    view.addObject("judgers", judgers);
+    view.addObject("onlineJudgers", onlineJudgers);
+    view.addObject("totalJudgers", (long) judgers.size());
+    view.addObject("averageCpuLoad", nodesWithMetrics > 0 ? cpuSum / nodesWithMetrics : 0);
+    view.addObject("averageMemoryUsage", nodesWithMetrics > 0 ? memorySum / nodesWithMetrics : 0);
     return view;
+  }
+
+  /**
+   * Formats a JVM uptime (in milliseconds) into a compact human-readable string.
+   *
+   * @param uptimeInMillis - the uptime in milliseconds
+   * @return a compact uptime string such as "31d", "7h", "12m" or "45s"
+   */
+  private String formatUptime(long uptimeInMillis) {
+    long minutes = uptimeInMillis / 60000;
+    if (minutes >= 1440) {
+      return (minutes / 1440) + "d";
+    } else if (minutes >= 60) {
+      return (minutes / 60) + "h";
+    } else if (minutes >= 1) {
+      return minutes + "m";
+    }
+    return (uptimeInMillis / 1000) + "s";
   }
 
   /**
@@ -176,43 +240,6 @@ public class DefaultController {
   }
 
   /**
-   * Displays the language switching page.
-   *
-   * @param request - the HttpRequest object
-   * @param response - the HttpResponse object
-   * @return a ModelAndView object containing the content of the language switching page
-   */
-  @RequestMapping(value = "/worldwide", method = RequestMethod.GET)
-  public ModelAndView worldwideView(
-      @RequestParam(value = "forward", required = false, defaultValue = "") String forwardUrl,
-      HttpServletRequest request,
-      HttpServletResponse response) {
-    ModelAndView view = new ModelAndView("pages/worldwide");
-    view.addObject("forwardUrl", forwardUrl);
-    return view;
-  }
-
-  /**
-   * Handles the request of a user switching the language.
-   *
-   * @param language - the language code to switch to
-   * @param request - the HttpRequest object
-   * @param response - the HttpResponse object
-   * @return a HashMap<String, Boolean> object containing the result of the language switch operation
-   */
-  @RequestMapping(value = "/worldwide.action", method = RequestMethod.GET)
-  public @ResponseBody Map<String, Boolean> localizationAction(
-      @RequestParam(value = "language") String language,
-      HttpServletRequest request,
-      HttpServletResponse response) {
-    LocaleUtils.setLocale(request, response, language);
-
-    Map<String, Boolean> result = new HashMap<>(2, 1);
-    result.put("isSuccessful", true);
-    return result;
-  }
-
-  /**
    * For all pages whose URLs are not properly mapped, displays the page not found.
    *
    * @param request - the HttpRequest object
@@ -252,6 +279,12 @@ public class DefaultController {
 
   /** The autowired UserService object. Used for getting the judger list of the judger page. */
   @Autowired private UserService userService;
+
+  /** The autowired ProblemService object. Used for the home-page problem count. */
+  @Autowired private ProblemService problemService;
+
+  /** The autowired SubmissionService object. Used for the home-page submission count. */
+  @Autowired private SubmissionService submissionService;
 
   /**
    * The autowired LanguageService object. Used for getting the compile commands of the judger page.

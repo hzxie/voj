@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<!--/*
+  Minimal layout for the error pages (404 / 500), matching Error.dc.html: a stripped
+  header (logo + theme toggle, no nav), a vertically-centered main, and a footer
+  showing copyright + an optional request-id. Pages decorate it with
+  layout:decorate="~{layouts/error}" and fill layout:fragment="content".
+
+  The request-id (model attribute "requestId") is rendered only when present, so the
+  page is safe whether or not the error handler supplies one.
+*/-->
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      th:lang="${language}" lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8" />
+    <script>(function(){try{var t=localStorage.getItem('voj-theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+    <title th:text="${websiteName}">Verwandlung Online Judge</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="author" content="Haozhe Xie" />
+    <link th:href="|${cdnUrl}/img/favicon.ico?v=${version}|" rel="shortcut icon" type="image/x-icon" />
+    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/app.css?v=${version}|" />
+    <script type="text/javascript" th:src="|${cdnUrl}/js/jquery-3.7.1.min.js?v=${version}|"></script>
+</head>
+<body>
+    <div class="vw-app">
+        <div class="vw-scanlines" aria-hidden="true"></div>
+        <!-- Minimal header (no navigation). -->
+        <header class="vw-header vw-header-min">
+            <a class="vw-logo" th:href="@{/}">
+                <span class="b">&lt;</span><span class="n">verwandlung</span><span class="b">&gt;</span><span class="vw-cursor">_</span>
+            </a>
+            <div class="vw-header-spacer"></div>
+            <div class="vw-toggle" data-vw="theme-toggle" title="Toggle theme" role="button" tabindex="0">
+                <span class="moon">&#9790;</span><span class="sun">&#9728;</span><span class="knob"></span>
+            </div>
+        </header>
+        <!-- Content (vertically centered, with the radial glow across the full area). -->
+        <main class="vw-main vw-error-main">
+            <th:block layout:fragment="content"></th:block>
+        </main>
+        <!--/* 500 shows a request-id footer (for support); other errors use the normal site footer. */-->
+        <footer class="vw-footer" th:if="${requestId != null and requestId != ''}">
+            <div class="vw-footer-inner">
+                <span>
+                    <span class="vw-footer-prompt">verwandlung@oj:~$ </span>
+                    <span th:text="#{voj.include.footer.copyright}">Copyright</span> &copy;
+                    <span th:text="${#dates.year(#dates.createNow())}">2026</span>
+                    <span th:utext="${copyright}">Infinite Script</span>.
+                </span>
+                <span class="vw-muted">request-id: <span th:text="${requestId}">0000:0000:0000</span></span>
+            </div>
+        </footer>
+        <div th:unless="${requestId != null and requestId != ''}" th:replace="~{fragments/footer :: footer}"></div>
+    </div>
+    <script type="text/javascript" th:src="|${cdnUrl}/js/theme.js?v=${version}|"></script>
+</body>
+</html>

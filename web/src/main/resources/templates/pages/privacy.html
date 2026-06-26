@@ -1,92 +1,117 @@
 <!DOCTYPE html>
+<!--/* Reproduced verbatim from voj-design/Privacy.dc.html (terminal aesthetic). */-->
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layouts/main}" lang="en">
 <head>
-    <title th:text="#{voj.misc.privacy.title} + ' | ' + ${websiteName}">Privacy &amp; Cookie</title>
-    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/misc/about.css?v=${version}|" />
+    <title th:text="#{voj.misc.privacy.title} + ' | ' + ${websiteName}">Privacy Policy</title>
 </head>
 <body>
-    <div id="content" layout:fragment="content">
-        <div id="ribbon" style="height: 500px;"></div> <!-- #ribbon -->
-        <div class="container">
-            <div class="row-fluid">
-                <div class="span9">
-                    <div id="main-content">
-                        <div class="section">
-                            <div class="markdown" th:utext="#{voj.misc.privacy.introduction-content(${websiteName})}"></div> <!-- .markdown -->
-                        </div> <!-- .section -->
-                        <div class="section">
-                            <h3 id="information-gathering-and-usage" th:text="#{voj.misc.privacy.information-gathering-and-usage}">Information Gathering and Usage</h3>
-                            <div class="markdown" th:utext="#{voj.misc.privacy.information-gathering-and-usage-content(${websiteName})}"></div> <!-- .markdown -->
-                        </div> <!-- .section -->
-                        <div class="section">
-                            <h3 id="cookies" th:text="#{voj.misc.privacy.cookies}">Cookies</h3>
-                            <div class="markdown" th:utext="#{voj.misc.privacy.cookies-content(${websiteName})}"></div> <!-- .markdown -->
-                        </div> <!-- .section -->
-                        <div class="section">
-                            <h3 id="information-protection" th:text="#{voj.misc.privacy.information-protection}">Protection of Personal Information</h3>
-                            <div class="markdown" th:utext="#{voj.misc.privacy.information-protection-content(${websiteName})}"></div> <!-- .markdown -->
-                        </div> <!-- .section -->
-                        <div class="section">
-                            <h3 id="information-integrity-and-retention" th:text="#{voj.misc.privacy.information-integrity-and-retention}">Integrity and Retention of Personal Information</h3>
-                            <div class="markdown" th:utext="#{voj.misc.privacy.information-integrity-and-retention-content(${websiteName})}"></div> <!-- .markdown -->
-                        </div> <!-- .section -->
-                        <div class="section">
-                            <h3 id="information-access" th:text="#{voj.misc.privacy.information-access}">Access to Personal Information</h3>
-                            <div class="markdown" th:utext="#{voj.misc.privacy.information-access-content(${websiteName})}"></div> <!-- .markdown -->
-                        </div> <!-- .section -->
-                        <div class="section">
-                            <h3 id="children" th:text="#{voj.misc.privacy.children}">Children</h3>
-                            <div class="markdown" th:utext="#{voj.misc.privacy.children-content(${websiteName})}"></div> <!-- .markdown -->
-                        </div> <!-- .section -->
-                        <div class="section">
-                            <h3 id="disclosure" th:text="#{voj.misc.privacy.disclosure}">Disclosure to Third Parties</h3>
-                            <div class="markdown" th:utext="#{voj.misc.privacy.disclosure-content(${websiteName})}"></div> <!-- .markdown -->
-                        </div> <!-- .section -->
-                        <div class="section">
-                            <h3 id="commitment" th:text="#{voj.misc.privacy.commitment}">Commitment to Your Privacy</h3>
-                            <div class="markdown" th:utext="#{voj.misc.privacy.commitment-content(${websiteName})}"></div> <!-- .markdown -->
-                        </div> <!-- .section -->
-                        <div class="section">
-                            <h3 id="changes" th:text="#{voj.misc.privacy.changes}">Changes</h3>
-                            <div class="markdown" th:utext="#{voj.misc.privacy.changes-content(${websiteName})}"></div> <!-- .markdown -->
-                        </div> <!-- .section -->
-                    </div> <!-- #main-content -->
-                </div> <!-- .span9 -->
-                <div class="span3">
-                    <div id="sidebar-nav">
-                        <h5 th:text="#{voj.misc.privacy.privacy-and-cookie}">Privacy &amp; Cookie</h5>
-                        <ul class="contents">
-                            <li><a href="#information-gathering-and-usage" th:text="#{voj.misc.privacy.information-gathering-and-usage}">Information Gathering and Usage</a></li>
-                            <li><a href="#cookies" th:text="#{voj.misc.privacy.cookies}">Cookies</a></li>
-                            <li><a href="#information-protection" th:text="#{voj.misc.privacy.information-protection}">Protection of Personal Information</a></li>
-                            <li><a href="#information-integrity-and-retention" th:text="#{voj.misc.privacy.information-integrity-and-retention}">Integrity and Retention of Personal Information</a></li>
-                            <li><a href="#information-access" th:text="#{voj.misc.privacy.information-access}">Access to Personal Information</a></li>
-                            <li><a href="#children" th:text="#{voj.misc.privacy.children}">Children</a></li>
-                            <li><a href="#disclosure" th:text="#{voj.misc.privacy.disclosure}">Disclosure to Third Parties</a></li>
-                            <li><a href="#commitment" th:text="#{voj.misc.privacy.commitment}">Commitment to Your Privacy</a></li>
-                            <li><a href="#changes" th:text="#{voj.misc.privacy.changes}">Changes</a></li>
-                        </ul>
-                    </div> <!-- #sidebar-nav -->
-                </div> <!-- .span3 -->
-            </div> <!-- .row-fluid -->
-        </div> <!-- .container -->
-    </div> <!-- #content -->
+    <div layout:fragment="content">
+        <!-- HERO -->
+        <section class="vw-dochero">
+            <div class="vw-dochero-inner vw-dochero-inner-w1100">
+                <div class="vw-eyebrow">// PRIVACY POLICY</div>
+                <h1>Your data,<br>handled with <span class="accent">care.</span></h1>
+                <p class="vw-dochero-lead mb">This policy explains what Verwandlung collects, why we collect it, and the control you have over it. We keep data to a minimum &mdash; only what judging, contests, and your profile actually need.</p>
+                <div class="vw-chiprow">
+                    <span class="chip">Effective <b>Jun 1, 2026</b></span>
+                    <span class="chip">GDPR <b>aligned</b></span>
+                    <span class="chip">~4 min read</span>
+                </div>
+            </div>
+        </section>
 
-    <th:block layout:fragment="scripts">
-    <script type="text/javascript" th:inline="javascript">
-        $.getScript([[|${cdnUrl}/js/markdown.min.js?v=${version}|]], function() {
-            converter = Markdown.getSanitizingConverter();
+        <!-- DOC -->
+        <section class="vw-legal">
+            <aside class="vw-legal-toc">
+                <div class="label">// CONTENTS</div>
+                <nav>
+                    <a href="#sec-1"><span class="n">01</span><span>Information We Collect</span></a>
+                    <a href="#sec-2"><span class="n">02</span><span>How We Use Information</span></a>
+                    <a href="#sec-3"><span class="n">03</span><span>Cookies &amp; Local Storage</span></a>
+                    <a href="#sec-4"><span class="n">04</span><span>Code &amp; Submission Data</span></a>
+                    <a href="#sec-5"><span class="n">05</span><span>Data Sharing</span></a>
+                    <a href="#sec-6"><span class="n">06</span><span>Data Retention</span></a>
+                    <a href="#sec-7"><span class="n">07</span><span>Security</span></a>
+                    <a href="#sec-8"><span class="n">08</span><span>Your Rights</span></a>
+                    <a href="#sec-9"><span class="n">09</span><span>Children&rsquo;s Privacy</span></a>
+                    <a href="#sec-10"><span class="n">10</span><span>Changes to This Policy</span></a>
+                    <a href="#sec-11"><span class="n">11</span><span>Contact</span></a>
+                </nav>
+            </aside>
 
-            $('.markdown').each(function() {
-                var plainContent    = $(this).text(),
-                    markdownContent = converter.makeHtml(plainContent.replace(/\\\n/g, '\\n'));
+            <article class="vw-legal-body">
+                <div id="sec-1" class="vw-legal-sec">
+                    <div class="h"><span class="n">&sect; 01</span><h2>Information We Collect</h2></div>
+                    <p>We collect only what the platform needs to function. There are no third-party advertising or tracking pixels on Verwandlung.</p>
+                    <ul>
+                        <li><span class="arrow">&rarr;</span><span>Account data &mdash; username, email, and a hashed password.</span></li>
+                        <li><span class="arrow">&rarr;</span><span>Submission data &mdash; your source code, language, verdict, runtime and memory.</span></li>
+                        <li><span class="arrow">&rarr;</span><span>Activity data &mdash; contest participation, discussion posts, and profile settings.</span></li>
+                        <li><span class="arrow">&rarr;</span><span>Technical data &mdash; IP address and browser agent, kept transiently for security.</span></li>
+                    </ul>
+                </div>
+                <div id="sec-2" class="vw-legal-sec">
+                    <div class="h"><span class="n">&sect; 02</span><h2>How We Use Information</h2></div>
+                    <p>Your data powers the core experience: compiling and grading code, building your profile statistics, ranking contest standings, and keeping the platform secure.</p>
+                    <ul>
+                        <li><span class="arrow">&rarr;</span><span>Return verdicts and deliver result notifications.</span></li>
+                        <li><span class="arrow">&rarr;</span><span>Compute leaderboards, ratings, and solved-problem history.</span></li>
+                        <li><span class="arrow">&rarr;</span><span>Detect abuse, plagiarism, and sandbox-escape attempts.</span></li>
+                    </ul>
+                </div>
+                <div id="sec-3" class="vw-legal-sec">
+                    <div class="h"><span class="n">&sect; 03</span><h2>Cookies &amp; Local Storage</h2></div>
+                    <p>We use a session cookie to keep you logged in and browser local storage to remember preferences like your theme. We do not use cookies to track you across other sites.</p>
+                </div>
+                <div id="sec-4" class="vw-legal-sec">
+                    <div class="h"><span class="n">&sect; 04</span><h2>Code &amp; Submission Data</h2></div>
+                    <p>Submitted source is stored so you can review it later and so we can run plagiarism comparisons. Code from hidden tests and contests is never sold or shared with advertisers.</p>
+                </div>
+                <div id="sec-5" class="vw-legal-sec">
+                    <div class="h"><span class="n">&sect; 05</span><h2>Data Sharing</h2></div>
+                    <p>We do not sell your personal data. Limited information is public by design &mdash; your username, rating, and accepted submissions appear on leaderboards and profiles.</p>
+                    <ul>
+                        <li><span class="arrow">&rarr;</span><span>Public: username, avatar, rating, and solved problems.</span></li>
+                        <li><span class="arrow">&rarr;</span><span>Private: email, IP address, and password hash.</span></li>
+                        <li><span class="arrow">&rarr;</span><span>We may disclose data only when legally required.</span></li>
+                    </ul>
+                </div>
+                <div id="sec-6" class="vw-legal-sec">
+                    <div class="h"><span class="n">&sect; 06</span><h2>Data Retention</h2></div>
+                    <p>We keep account and submission data while your account is active. If you delete your account, personal identifiers are removed, though anonymized contest results may remain for standings integrity.</p>
+                </div>
+                <div id="sec-7" class="vw-legal-sec">
+                    <div class="h"><span class="n">&sect; 07</span><h2>Security</h2></div>
+                    <p>Passwords are salted and hashed, traffic is served over TLS, and judgers run in isolated sandboxes. No system is perfectly secure, but we work to protect your data and respond quickly to incidents.</p>
+                </div>
+                <div id="sec-8" class="vw-legal-sec">
+                    <div class="h"><span class="n">&sect; 08</span><h2>Your Rights</h2></div>
+                    <p>You can access, export, correct, or delete your personal data at any time. Email privacy@verwandlung.io and we will respond within a reasonable period.</p>
+                </div>
+                <div id="sec-9" class="vw-legal-sec">
+                    <div class="h"><span class="n">&sect; 09</span><h2>Children&rsquo;s Privacy</h2></div>
+                    <p>Verwandlung is not directed at children under 13. If you believe a child has registered without consent, contact us and we will remove the account.</p>
+                </div>
+                <div id="sec-10" class="vw-legal-sec">
+                    <div class="h"><span class="n">&sect; 10</span><h2>Changes to This Policy</h2></div>
+                    <p>We may update this policy as the platform changes. Material updates will be announced on the changelog and the effective date above will be revised.</p>
+                </div>
+                <div id="sec-11" class="vw-legal-sec">
+                    <div class="h"><span class="n">&sect; 11</span><h2>Contact</h2></div>
+                    <p>Privacy questions and data requests can be sent to privacy@verwandlung.io, or raised as an issue on the project&rsquo;s GitHub repository.</p>
+                </div>
 
-                $(this).html(markdownContent);
-            });
-        });
-    </script>
-    </th:block>
+                <div class="vw-contact">
+                    <div class="vw-contact-text">
+                        <div class="t">Want a copy of your data, or to delete it?</div>
+                        <div class="d">Email <a href="mailto:privacy@verwandlung.io">privacy@verwandlung.io</a> and we&rsquo;ll handle your request.</div>
+                    </div>
+                    <a class="vw-btn vw-btn-accent" th:href="@{/help}">Visit Help center &rarr;</a>
+                </div>
+            </article>
+        </section>
+    </div>
 </body>
 </html>

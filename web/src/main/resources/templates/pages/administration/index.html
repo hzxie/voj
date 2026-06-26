@@ -4,7 +4,6 @@
       layout:decorate="~{layouts/admin}" lang="en">
 <head>
     <title th:text="#{voj.administration.index.title} + ' | ' + ${websiteName}">System Administration</title>
-    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/administration/dashboard.css?v=${version}|" />
 </head>
 <body>
     <div id="content" layout:fragment="content">
@@ -102,12 +101,8 @@
                                     <span th:text="#{voj.administration.index.submissions-stats}">Submissions Stats</span>
                                 </h5>
                             </div> <!-- .span8 -->
-                            <div class="span4">
-                                <select id="submission-period">
-                                    <option value="7" th:text="#{voj.administration.index.1-week}">1 Week</option>
-                                    <option value="30" th:text="#{voj.administration.index.1-month}">1 Month</option>
-                                    <option value="365" th:text="#{voj.administration.index.1-year}">1 Year</option>
-                                </select>
+                            <div class="span4" style="text-align:right;">
+                                <span id="heatmap-total" class="vw-muted"></span>
                             </div> <!-- .span4 -->
                         </div> <!-- .row-fluid -->
                     </div> <!-- .header -->
@@ -145,91 +140,21 @@
 
     <th:block layout:fragment="scripts">
     <script type="text/javascript" th:inline="javascript">
-        $.getScript([[|${cdnUrl}/js/highcharts.min.js?v=${version}|]], function() {
-            return getSubmissionsOfUsers(7);
-        });
-    </script>
-    <script type="text/javascript">
-        $('#submission-period').change(function() {
-            var period = $(this).val();
-            return getSubmissionsOfUsers(period);
-        });
-    </script>
-    <script type="text/javascript" th:inline="javascript">
-        function getSubmissionsOfUsers(period) {
-            var pageRequests = {
-                'period': period
-            };
-
+        $.getScript([[|${cdnUrl}/js/heatmap.js?v=${version}|]], function() {
             $.ajax({
                 type: 'GET',
                 url: [[@{/administration/getNumberOfSubmissions.action}]],
-                data: pageRequests,
                 dataType: 'JSON',
-                success: function(result){
-                    return processSubmissionOfUsers(result['acceptedSubmissions'], result['totalSubmissions']);
+                success: function(result) {
+                    VojHeatmap.render('#submissions-calendar', result['totalSubmissions'], {
+                        totalElement: '#heatmap-total',
+                        totalLabel: [[#{voj.common.heatmap.submissions-last-year}]],
+                        lessLabel:  [[#{voj.common.heatmap.less}]],
+                        moreLabel:  [[#{voj.common.heatmap.more}]]
+                    });
                 }
             });
-        }
-    </script>
-    <script type="text/javascript">
-        function processSubmissionOfUsers(acceptedSubmissionsMap, totalSubmissionsMap) {
-            var categories          = [],
-                totalSubmissions    = [],
-                acceptedSubmissions = [];
-
-            $.each(totalSubmissionsMap, function(key, value){
-                categories.push(key);
-                totalSubmissions.push(value);
-            });
-            $.each(acceptedSubmissionsMap, function(key, value){
-                acceptedSubmissions.push(value);
-            });
-            displaySubmissionsOfUsers(categories, acceptedSubmissions, totalSubmissions);
-        }
-    </script>
-    <script type="text/javascript" th:inline="javascript">
-        function displaySubmissionsOfUsers(categories, acceptedSubmissions, totalSubmissions) {
-            Highcharts.setOptions({
-                colors: ['#34495e', '#e74c3c']
-            });
-
-            $('#submissions-calendar').highcharts({
-                chart: {
-                    backgroundColor: null,
-                },
-                title: {
-                    text: null
-                },
-                xAxis: {
-                    categories: categories
-                },
-                yAxis: {
-                    allowDecimals: false,
-                    title: {
-                        text: [[#{voj.administration.index.number-of-submissions}]]
-                    }
-                },
-                tooltip: {
-                    shared: true,
-                    crosshairs: true
-                },
-                series: [
-                    {
-                        name: [[#{voj.administration.index.total-submissions}]],
-                        lineWidth: 4,
-                        marker: {
-                            radius: 4
-                        },
-                        data: totalSubmissions
-                    },
-                    {
-                        name: [[#{voj.administration.index.accepted-submissions}]],
-                        data: acceptedSubmissions
-                    }
-                ]
-            });
-        }
+        });
     </script>
     <script type="text/javascript" th:inline="javascript">
         $(function() {
