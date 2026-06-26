@@ -101,11 +101,13 @@ public class ApplicationHeartbeat implements Runnable {
   }
 
   /**
-   * Checks whether the judger's identity information is valid.
+   * Checks whether the judger's identity information is valid. Besides the periodic heartbeat, this
+   * is also invoked once at startup so the judger fails fast on bad credentials before accepting any
+   * judging task.
    *
    * @return whether the judger's identity information is valid
    */
-  private boolean isIdentityValid() {
+  public boolean isIdentityValid() {
     User user = userMapper.getUserUsingUsername(judgerUsername);
 
     if (user != null

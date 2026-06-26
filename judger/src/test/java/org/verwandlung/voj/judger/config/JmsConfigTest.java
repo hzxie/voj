@@ -73,6 +73,8 @@ public class JmsConfigTest {
     Assertions.assertEquals("vojSubmissionTaskQueue", listenerContainer.getDestinationName());
     Assertions.assertSame(messageListener, listenerContainer.getMessageListener());
     Assertions.assertSame(connectionFactory, listenerContainer.getConnectionFactory());
+    // The container must not auto-start; the startup runner starts it only after the identity check.
+    Assertions.assertFalse(listenerContainer.isAutoStartup());
   }
 
   /** The JmsConfig object under test. */

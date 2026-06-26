@@ -68,6 +68,9 @@ public class JmsConfig {
     listenerContainer.setConnectionFactory(connectionFactory);
     listenerContainer.setDestinationName(SUBMISSION_TASK_QUEUE);
     listenerContainer.setMessageListener(messageReceiver);
+    // Do not consume submissions until the application has verified the judger's identity at
+    // startup; the startup runner starts this container only after that check passes.
+    listenerContainer.setAutoStartup(false);
     return listenerContainer;
   }
 }

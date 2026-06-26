@@ -31,6 +31,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.PropertySource;
+import org.springframework.jms.listener.SimpleMessageListenerContainer;
 
 import org.verwandlung.voj.judger.application.ApplicationHeartbeat;
 import org.verwandlung.voj.judger.mapper.LanguageMapper;
@@ -64,13 +65,27 @@ public class VojJudgerApplication {
    *
    * @param languageMapper - the data access object for programming languages
    * @param heartbeat - the heartbeat task
+   * @param submissionTaskListenerContainer - the listener for the judging-task queue, started here
+   *     only after the identity check passes
    * @return an ApplicationRunner instance
    */
   @Bean
   public ApplicationRunner startupRunner(
-      LanguageMapper languageMapper, ApplicationHeartbeat heartbeat) {
+      LanguageMapper languageMapper,
+      ApplicationHeartbeat heartbeat,
+      SimpleMessageListenerContainer submissionTaskListenerContainer) {
     return args -> {
+      // Fail fast: verify the judger's credentials against the shared user table before consuming
+      // any task. Otherwise a misconfigured judger would accept submissions and abort them
+      // mid-judging (leaving them stuck) once the heartbeat later detected the bad credentials.
+      if (!heartbeat.isIdentityValid()) {
+        LOGGER.error("Unauthorized: please check judger.username / judger.password. Shutting down.");
+        System.exit(-1);
+      }
       logSystemEnvironment(languageMapper);
+      // The listener is configured with autoStartup=false; only now, with a valid identity, do we
+      // begin receiving submissions.
+      submissionTaskListenerContainer.start();
       setupHeartBeat(heartbeat);
     };
   }

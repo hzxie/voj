@@ -50,6 +50,10 @@ public class ApplicationDispatcher {
       judgerDispatcher.createNewTask(submissionId);
     } catch (Exception ex) {
       LOGGER.catching(ex);
+      // Any unexpected failure during judging (e.g. in the compile or run stage) must still leave a
+      // terminal result; otherwise the submission stays stuck "pending" forever. Mark it as a
+      // System Error so both the user and the web side see a final state.
+      onErrorOccurred(submissionId);
     }
   }
 
@@ -318,6 +322,10 @@ public class ApplicationDispatcher {
   private void updateSubmission(
       long submissionId, int usedTime, int usedMemory, int score, String judgeResult, String log) {
     Submission submission = submissionMapper.getSubmission(submissionId);
+    if (submission == null) {
+      LOGGER.warn(String.format("Cannot update a non-existent submission #%d", submissionId));
+      return;
+    }
     submission.setExecuteTime(new Date());
     submission.setUsedTime(usedTime);
     submission.setUsedMemory(usedMemory);
