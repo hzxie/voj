@@ -27,10 +27,12 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.verwandlung.voj.web.mapper.OptionMapper;
 import org.verwandlung.voj.web.mapper.UserMapper;
 import org.verwandlung.voj.web.model.DiscussionReply;
 import org.verwandlung.voj.web.model.DiscussionThread;
 import org.verwandlung.voj.web.model.DiscussionTopic;
+import org.verwandlung.voj.web.model.Option;
 import org.verwandlung.voj.web.model.User;
 
 /**
@@ -99,13 +101,17 @@ public class DiscussionServiceTest {
     Assertions.assertEquals(3, threads.size());
   }
 
-  /** Test case: tests the getDiscussionRepliesOfThread(...) method. Test data: discussion thread 2. Expected: all the replies of the thread. */
+  /** Test case: tests the getDiscussionRepliesOfThread(...) method. Test data: discussion thread 2. Expected: all the replies of the thread with their vote statistics populated. */
   @Test
   public void testGetDiscussionRepliesOfThread() {
     List<DiscussionReply> replies = discussionService.getDiscussionRepliesOfThread(2, 1000, 0, 10);
     Assertions.assertEquals(2, replies.size());
-    // The vote information has been replaced with a JSON string of the statistics.
-    Assertions.assertTrue(replies.get(0).getDiscussionReplyVotes().contains("numberOfVoteUp"));
+    // Reply 2 has one upvote (from user 1000) and one downvote (from user 1001).
+    DiscussionReply firstReply = replies.get(0);
+    Assertions.assertEquals(1, firstReply.getNumberOfVoteUp());
+    Assertions.assertEquals(1, firstReply.getNumberOfVoteDown());
+    Assertions.assertTrue(firstReply.getIsVotedUp());
+    Assertions.assertFalse(firstReply.getIsVotedDown());
   }
 
   /** Test case: tests the getDiscussionThreadUsingThreadId(long) method. Test data: an existing / non-existing thread identifier. Expected: the thread or a null reference. */
@@ -125,13 +131,165 @@ public class DiscussionServiceTest {
   /** Test case: tests the voteDiscussionReply(...) method. Test data: a valid upvote operation. Expected: the vote succeeds and is persisted. */
   @Test
   public void testVoteDiscussionReplySuccessfully() {
+    // Disable the reputation gate so a regular user without solved problems can vote.
+    setOption("discussionMinSolvedToVote", "0");
     // Reply 3 belongs to thread 2 and initially has no votes. User 1002 upvotes it.
     Map<String, Boolean> result =
         discussionService.voteDiscussionReply(2, 3, userWithUid(1002), 1, 0);
     Assertions.assertTrue(result.get("isSuccessful"));
 
-    DiscussionReply reply = discussionService.getDiscussionReplyUsingReplyId(3);
-    Assertions.assertTrue(reply.getDiscussionReplyVotes().contains("1002"));
+    DiscussionReply votedReply = findReplyById(2, 1002, 3);
+    Assertions.assertNotNull(votedReply);
+    Assertions.assertEquals(1, votedReply.getNumberOfVoteUp());
+    Assertions.assertTrue(votedReply.getIsVotedUp());
+  }
+
+  /** Test case: tests the voteDiscussionReply(...) method. Test data: a user without enough solved problems. Expected: the vote is rejected by the reputation gate. */
+  @Test
+  public void testVoteDiscussionReplyBlockedByReputation() {
+    // Require at least one solved problem; user 1002 has solved none.
+    setOption("discussionMinSolvedToVote", "1");
+    Map<String, Boolean> result =
+        discussionService.voteDiscussionReply(2, 3, userWithUid(1002), 1, 0);
+    Assertions.assertFalse(result.get("isReputationEnough"));
+    Assertions.assertFalse(result.get("isSuccessful"));
+  }
+
+  /** Test case: tests the voteDiscussionReply(...) method. Test data: a user voting on their own reply. Expected: the vote is rejected. */
+  @Test
+  public void testVoteDiscussionReplyOnOwnReplyBlocked() {
+    setOption("discussionMinSolvedToVote", "0");
+    // Reply 3 of thread 2 was created by user 1001, who cannot vote on it.
+    Map<String, Boolean> result =
+        discussionService.voteDiscussionReply(2, 3, userWithUid(1001), 1, 0);
+    Assertions.assertFalse(result.get("isNotSelfVote"));
+    Assertions.assertFalse(result.get("isSuccessful"));
+  }
+
+  /** Test case: tests the reportDiscussionReply(...) method. Test data: a valid report that crosses the hide threshold. Expected: the report succeeds and the thread becomes hidden. */
+  @Test
+  public void testReportDiscussionReplySuccessfullyHidesThread() {
+    setOption("discussionMinSolvedToReport", "0");
+    setOption("discussionReportHideThreshold", "1");
+    // Reply 1 of thread 1 was created by user 1001; user 1002 reports it.
+    Map<String, Boolean> result =
+        discussionService.reportDiscussionReply(1, 1, userWithUid(1002));
+    Assertions.assertTrue(result.get("isSuccessful"));
+    Assertions.assertTrue(discussionService.isDiscussionThreadHidden(1));
+  }
+
+  /** Test case: tests the reportDiscussionReply(...) method. Test data: a user reporting their own reply. Expected: the report is rejected. */
+  @Test
+  public void testReportDiscussionReplyOnOwnReplyBlocked() {
+    setOption("discussionMinSolvedToReport", "0");
+    // Reply 1 of thread 1 was created by user 1001, who cannot report it.
+    Map<String, Boolean> result =
+        discussionService.reportDiscussionReply(1, 1, userWithUid(1001));
+    Assertions.assertFalse(result.get("isNotSelfReport"));
+    Assertions.assertFalse(result.get("isSuccessful"));
+  }
+
+  /** Test case: tests the reportDiscussionReply(...) method. Test data: a user without enough solved problems. Expected: the report is rejected by the reputation gate. */
+  @Test
+  public void testReportDiscussionReplyBlockedByReputation() {
+    setOption("discussionMinSolvedToReport", "1");
+    Map<String, Boolean> result =
+        discussionService.reportDiscussionReply(1, 1, userWithUid(1002));
+    Assertions.assertFalse(result.get("isReputationEnough"));
+    Assertions.assertFalse(result.get("isSuccessful"));
+  }
+
+  /** Test case: tests the voteDiscussionReply(...) method. Test data: an upvote that is switched to a downvote. Expected: the upvote is replaced by a single downvote. */
+  @Test
+  public void testVoteDiscussionReplySwitchUpToDown() {
+    setOption("discussionMinSolvedToVote", "0");
+    discussionService.voteDiscussionReply(2, 3, userWithUid(1002), 1, 0);
+    discussionService.voteDiscussionReply(2, 3, userWithUid(1002), -1, 1);
+    DiscussionReply reply = findReplyById(2, 1002, 3);
+    Assertions.assertEquals(0, reply.getNumberOfVoteUp());
+    Assertions.assertEquals(1, reply.getNumberOfVoteDown());
+    Assertions.assertFalse(reply.getIsVotedUp());
+    Assertions.assertTrue(reply.getIsVotedDown());
+  }
+
+  /** Test case: tests the voteDiscussionReply(...) method. Test data: an upvote that is then cancelled. Expected: the reply has no votes left. */
+  @Test
+  public void testVoteDiscussionReplyCancel() {
+    setOption("discussionMinSolvedToVote", "0");
+    discussionService.voteDiscussionReply(2, 3, userWithUid(1002), 1, 0);
+    discussionService.voteDiscussionReply(2, 3, userWithUid(1002), -1, 0);
+    DiscussionReply reply = findReplyById(2, 1002, 3);
+    Assertions.assertEquals(0, reply.getNumberOfVoteUp());
+    Assertions.assertFalse(reply.getIsVotedUp());
+  }
+
+  /** Test case: tests that a vote and a report by the same user on the same reply are independent. Expected: reporting does not erase the existing vote. */
+  @Test
+  public void testVoteAndReportCoexist() {
+    setOption("discussionMinSolvedToVote", "0");
+    setOption("discussionMinSolvedToReport", "0");
+    // Reply 3 of thread 2 was created by user 1001; user 1002 upvotes and then reports it.
+    Assertions.assertTrue(
+        discussionService.voteDiscussionReply(2, 3, userWithUid(1002), 1, 0).get("isSuccessful"));
+    Assertions.assertTrue(
+        discussionService.reportDiscussionReply(2, 3, userWithUid(1002)).get("isSuccessful"));
+    DiscussionReply reply = findReplyById(2, 1002, 3);
+    Assertions.assertEquals(1, reply.getNumberOfVoteUp());
+    Assertions.assertTrue(reply.getIsVotedUp());
+  }
+
+  /** Test case: tests the reportDiscussionReply(...) method. Test data: the same reply reported twice. Expected: the report counts only once. */
+  @Test
+  public void testReportDiscussionReplyIsIdempotent() {
+    setOption("discussionMinSolvedToReport", "0");
+    discussionService.reportDiscussionReply(2, 3, userWithUid(1002));
+    discussionService.reportDiscussionReply(2, 3, userWithUid(1002));
+    // With only one effective report, a threshold of two does not hide the thread.
+    setOption("discussionReportHideThreshold", "2");
+    Assertions.assertFalse(discussionService.isDiscussionThreadHidden(2));
+  }
+
+  /** Test case: tests that administrators bypass the reputation gate. Test data: an admin with the gate set very high. Expected: the vote still succeeds. */
+  @Test
+  public void testAdministratorBypassesReputationGate() {
+    setOption("discussionMinSolvedToVote", "99");
+    // Admin user 1000 votes on reply 3 (created by user 1001).
+    Map<String, Boolean> result = discussionService.voteDiscussionReply(2, 3, adminUser(), 1, 0);
+    Assertions.assertTrue(result.get("isReputationEnough"));
+    Assertions.assertTrue(result.get("isSuccessful"));
+  }
+
+  /** Test case: tests that a thread whose reports reach the threshold is excluded from the listing. Expected: the hidden thread is not returned. */
+  @Test
+  public void testHiddenThreadExcludedFromList() {
+    setOption("discussionMinSolvedToReport", "0");
+    setOption("discussionReportHideThreshold", "1");
+    // Problem 1000 has threads 1 and 2; reporting a reply of thread 1 hides that thread.
+    discussionService.reportDiscussionReply(1, 1, userWithUid(1002));
+    List<DiscussionThread> threads = discussionService.getDiscussionThreadsOfProblem(1000, 0, 10);
+    Assertions.assertEquals(1, threads.size());
+    Assertions.assertEquals(2, threads.get(0).getDiscussionThreadId());
+  }
+
+  /** Test case: tests that replies are ordered with the original post pinned first, then by net votes descending. Expected: OP first, the higher-voted reply next. */
+  @Test
+  public void testGetDiscussionRepliesOrderedByVotes() {
+    setOption("discussionMinSolvedToVote", "0");
+    // Thread 2's original post is reply 2; reply 3 already exists with no votes. Add a third reply
+    // and upvote it so it outranks reply 3 among the non-original replies.
+    DiscussionReply newReply =
+        (DiscussionReply)
+            discussionService
+                .createDiscussionReply(2, adminUser(), "Highly voted reply")
+                .get("discussionReply");
+    long newReplyId = newReply.getDiscussionReplyId();
+    discussionService.voteDiscussionReply(2, newReplyId, userWithUid(1002), 1, 0);
+
+    List<DiscussionReply> replies = discussionService.getDiscussionRepliesOfThread(2, -1, 0, 10);
+    Assertions.assertEquals(3, replies.size());
+    Assertions.assertEquals(2, replies.get(0).getDiscussionReplyId());
+    Assertions.assertEquals(newReplyId, replies.get(1).getDiscussionReplyId());
+    Assertions.assertEquals(3, replies.get(2).getDiscussionReplyId());
   }
 
   /** Test case: tests the voteDiscussionReply(...) method. Test data: the reply and the thread do not match. Expected: the vote fails. */
@@ -307,6 +465,13 @@ public class DiscussionServiceTest {
     Assertions.assertFalse(result.get("isSuccessful"));
   }
 
+  /** Sets a system option value (rolled back after each test by the transactional context). */
+  private void setOption(String optionName, String optionValue) {
+    Option option = optionMapper.getOption(optionName);
+    option.setOptionValue(optionValue);
+    optionMapper.updateOption(option);
+  }
+
   /** Returns the administrator user (user 1000). */
   private User adminUser() {
     return userMapper.getUserUsingUid(1000);
@@ -319,9 +484,27 @@ public class DiscussionServiceTest {
     return user;
   }
 
+  /**
+   * Fetches the replies of a thread (as seen by the given user) and returns the one with the given
+   * reply identifier, or a null reference if it is not found.
+   */
+  private DiscussionReply findReplyById(long threadId, long currentUserUid, long replyId) {
+    List<DiscussionReply> replies =
+        discussionService.getDiscussionRepliesOfThread(threadId, currentUserUid, 0, 50);
+    for (DiscussionReply reply : replies) {
+      if (reply.getDiscussionReplyId() == replyId) {
+        return reply;
+      }
+    }
+    return null;
+  }
+
   /** The DiscussionService object under test. */
   @Autowired private DiscussionService discussionService;
 
   /** Used to get real user objects with user group information. */
   @Autowired private UserMapper userMapper;
+
+  /** Used to adjust the configurable discussion thresholds within a test. */
+  @Autowired private OptionMapper optionMapper;
 }

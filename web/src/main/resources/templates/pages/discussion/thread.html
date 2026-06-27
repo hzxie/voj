@@ -141,26 +141,35 @@
         function displayDiscussionReplyRecords(discussionReplies) {
             for ( var i = 0; i < discussionReplies.length; ++ i ) {
                 var r = discussionReplies[i];
-                $('#discussion-replies').append(getDiscussionReplyContent(r['discussionReplyId'], r['discussionReplyCreator'],
-                    r['discussionReplyCreateTime'], r['discussionReplyContent'], r['discussionReplyVotes']));
+                $('#discussion-replies').append(getDiscussionReplyContent(r));
                 addParticipant(r['discussionReplyCreator']);
             }
         }
-        function getDiscussionReplyContent(replyId, creator, createTime, content, votes) {
-            votes = JSON.parse(votes);
-            var initial = (creator['username'] || '?').charAt(0).toUpperCase(),
-                role    = (creator['userGroup'] && creator['userGroup']['userGroupName']) || '',
-                isOp    = creator['uid'] == threadCreatorUid,
-                isMine  = creator['uid'] == [[${myProfile?.uid}]] || [[${myProfile?.userGroup?.userGroupSlug}]] == 'administrators';
+        function getDiscussionReplyContent(reply) {
+            var replyId    = reply['discussionReplyId'],
+                creator    = reply['discussionReplyCreator'],
+                createTime = reply['discussionReplyCreateTime'],
+                content    = reply['discussionReplyContent'];
+            var initial  = (creator['username'] || '?').charAt(0).toUpperCase(),
+                role     = (creator['userGroup'] && creator['userGroup']['userGroupName']) || '',
+                isOp     = creator['uid'] == threadCreatorUid,
+                isAuthor = creator['uid'] == [[${myProfile?.uid}]],
+                isMine   = isAuthor || [[${myProfile?.userGroup?.userGroupSlug}]] == 'administrators';
             var actions = isMine
                 ? '<a href="javascript:void(0);" class="vw-post-edit" title="edit">edit</a>' +
                   '<a href="javascript:void(0);" class="vw-post-delete" title="delete">delete</a>'
                 : '';
+            // Users cannot vote on or report their own reply, so those controls are hidden there.
+            var voteButtons = isAuthor ? '' :
+                '<a href="javascript:void(0);" class="vw-post-vote vw-vote-up' + (reply['isVotedUp'] ? ' active' : '') + '">&#9650; <span class="vote-ups">' + (reply['numberOfVoteUp'] || 0) + '</span></a>' +
+                '<a href="javascript:void(0);" class="vw-post-vote vw-vote-down' + (reply['isVotedDown'] ? ' active' : '') + '">&#9660; <span class="vote-downs">' + (reply['numberOfVoteDown'] || 0) + '</span></a>';
+            var reportLink = '';
             /*[# th:if="${isLogin}"]*/
             var editor = '<div class="markdown-editor hide">' +
                          '<textarea id="wmd-input-' + replyId + '" class="wmd-input">' + content + '</textarea>' +
                          '<div class="vw-replybox-foot"><button class="vw-btn vw-btn-accent vw-btn-sm vw-reply-save">' + [[#{voj.discussion.thread.update-reply}]] + '</button>' +
                          '<button class="vw-btn vw-btn-sm vw-reply-cancel">' + [[#{voj.discussion.thread.cancel}]] + '</button></div></div>';
+            if ( !isAuthor ) { reportLink = '<a href="javascript:void(0);" class="vw-post-report" title="report">' + [[#{voj.discussion.thread.report}]] + '</a>'; }
             /*[/]*/
             /*[# th:unless="${isLogin}"]*/
             var editor = '';
@@ -176,8 +185,8 @@
                 (isOp ? '<span class="vw-post-op">OP</span>' : '') +
                 '<span class="vw-post-when">' + getTimeElapsed(createTime, [[${language}]]) + '</span>' +
                 '<div class="vw-header-spacer"></div>' +
-                '<a href="javascript:void(0);" class="vw-post-vote vw-vote-up' + (votes['isVotedUp'] ? ' active' : '') + '">&#9650; <span class="vote-ups">' + (votes['numberOfVoteUp'] || 0) + '</span></a>' +
-                '<a href="javascript:void(0);" class="vw-post-vote vw-vote-down' + (votes['isVotedDown'] ? ' active' : '') + '">&#9660; <span class="vote-downs">' + (votes['numberOfVoteDown'] || 0) + '</span></a>' +
+                voteButtons +
+                reportLink +
                 actions +
                 '</div>' +
                 '<div class="markdown vw-post-body">' + renderMarkdown(content) + '</div>' +
@@ -210,7 +219,12 @@
                 data: { 'discussionReplyId': replyId, 'voteUp': voteUp, 'voteDown': voteDown, 'csrfToken': csrfToken },
                 dataType: 'JSON',
                 success: function(result) {
-                    if ( !result['isSuccessful'] ) { alert([[#{voj.discussion.thread.failed-to-vote}]]); return; }
+                    if ( !result['isSuccessful'] ) {
+                        if ( result['isReputationEnough'] === false ) { alert([[#{voj.discussion.thread.vote-need-reputation}]]); }
+                        else if ( result['isNotSelfVote'] === false ) { alert([[#{voj.discussion.thread.cannot-vote-self}]]); }
+                        else { alert([[#{voj.discussion.thread.failed-to-vote}]]); }
+                        return;
+                    }
                     var post = $('.vw-post[data-value=' + replyId + ']'),
                         up = $('.vw-vote-up', post), down = $('.vw-vote-down', post),
                         ups = parseInt($('.vote-ups', post).html()), downs = parseInt($('.vote-downs', post).html());
@@ -221,6 +235,22 @@
                 }
             });
         }
+        $('#discussion-replies').on('click', '.vw-post-report', function() {
+            if ( !confirm([[#{voj.discussion.thread.report-confirm}]]) ) { return; }
+            var post = $(this).closest('.vw-post'), id = post.attr('data-value');
+            $.ajax({
+                type: 'POST',
+                url: [[@{/discussion/{tid}/reportDiscussionReply.action(tid=${discussionThread.discussionThreadId})}]],
+                data: { 'discussionReplyId': id, 'csrfToken': $('#csrf-token').val() },
+                dataType: 'JSON',
+                success: function(result) {
+                    if ( result['isSuccessful'] ) { alert([[#{voj.discussion.thread.reported}]]); return; }
+                    if ( result['isReputationEnough'] === false ) { alert([[#{voj.discussion.thread.report-need-reputation}]]); return; }
+                    if ( result['isNotSelfReport'] === false ) { alert([[#{voj.discussion.thread.cannot-report-self}]]); return; }
+                    alert([[#{voj.discussion.thread.failed-to-report}]]);
+                }
+            });
+        });
         $('#discussion-replies').on('click', '.vw-post-edit', function() {
             var post = $(this).closest('.vw-post'), editor = $('.markdown-editor', post);
             if ( editor.is(':visible') ) { editor.addClass('hide'); $('.vw-post-body', post).removeClass('hide'); }

@@ -109,18 +109,40 @@ CREATE TABLE `voj_discussion_replies` (
   `discussion_thread_id` bigint(20) NOT NULL,
   `discussion_reply_uid` bigint(20) NOT NULL,
   `discussion_reply_time` timestamp DEFAULT CURRENT_TIMESTAMP,
-  `discussion_reply_content` text COLLATE utf8mb4_unicode_ci NOT NULL,
-  `discussion_reply_votes` text COLLATE utf8mb4_unicode_ci NOT NULL
+  `discussion_reply_content` text COLLATE utf8mb4_unicode_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `voj_discussion_replies`
 --
 
-INSERT INTO `voj_discussion_replies` (`discussion_reply_id`, `discussion_thread_id`, `discussion_reply_uid`, `discussion_reply_time`, `discussion_reply_content`, `discussion_reply_votes`) VALUES
-(1, 1, 1001, '2017-01-09 21:42:20', 'Reply content for thread #1', '{"up": [1000], "down": [1002]}'),
-(2, 2, 1002, '2017-01-10 21:42:20', 'Reply content for thread #2', '{"up": [1000], "down": [1001]}'),
-(3, 2, 1001, '2017-01-11 21:42:20', 'Reply content for thread #2', '{"up": [], "down": []}');
+INSERT INTO `voj_discussion_replies` (`discussion_reply_id`, `discussion_thread_id`, `discussion_reply_uid`, `discussion_reply_time`, `discussion_reply_content`) VALUES
+(1, 1, 1001, '2017-01-09 21:42:20', 'Reply content for thread #1'),
+(2, 2, 1002, '2017-01-10 21:42:20', 'Reply content for thread #2'),
+(3, 2, 1001, '2017-01-11 21:42:20', 'Reply content for thread #2');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `voj_discussion_reply_votes`
+--
+
+CREATE TABLE `voj_discussion_reply_votes` (
+  `discussion_reply_id` bigint(20) NOT NULL,
+  `voter_uid` bigint(20) NOT NULL,
+  `vote_type` tinyint(4) NOT NULL COMMENT '1 = upvote, -1 = downvote, 2 = report',
+  `vote_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `voj_discussion_reply_votes`
+--
+
+INSERT INTO `voj_discussion_reply_votes` (`discussion_reply_id`, `voter_uid`, `vote_type`, `vote_time`) VALUES
+(1, 1000, 1, '2017-01-09 21:42:20'),
+(1, 1002, -1, '2017-01-09 21:42:20'),
+(2, 1000, 1, '2017-01-10 21:42:20'),
+(2, 1001, -1, '2017-01-10 21:42:20');
 
 -- --------------------------------------------------------
 
@@ -267,7 +289,10 @@ INSERT INTO `voj_options` (`option_id`, `option_name`, `option_value`, `is_autol
 (5, 'icpNumber', '', 1),
 (6, 'policeIcpNumber', '', 1),
 (7, 'allowUserRegister', '1', 0),
-(8, 'offensiveWords', '["法轮","中央","六四","军区","共产党","国民党"]', 0);
+(8, 'offensiveWords', '["法轮","中央","六四","军区","共产党","国民党"]', 0),
+(9, 'discussionReportHideThreshold', '5', 0),
+(10, 'discussionMinSolvedToVote', '1', 0),
+(11, 'discussionMinSolvedToReport', '3', 0);
 
 -- --------------------------------------------------------
 
@@ -598,6 +623,13 @@ ALTER TABLE `voj_discussion_replies`
   ADD KEY `discussion_reply_uid` (`discussion_reply_uid`);
 
 --
+-- Indexes for table `voj_discussion_reply_votes`
+--
+ALTER TABLE `voj_discussion_reply_votes`
+  ADD PRIMARY KEY (`discussion_reply_id`,`voter_uid`,`vote_type`),
+  ADD KEY `voter_uid` (`voter_uid`);
+
+--
 -- Indexes for table `voj_discussion_threads`
 --
 ALTER TABLE `voj_discussion_threads`
@@ -758,7 +790,7 @@ ALTER TABLE `voj_languages`
 -- AUTO_INCREMENT for table `voj_options`
 --
 ALTER TABLE `voj_options`
-  MODIFY `option_id` int(8) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `option_id` int(8) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 --
 -- AUTO_INCREMENT for table `voj_problems`
 --
@@ -818,6 +850,13 @@ ALTER TABLE `voj_contest_submissions`
 ALTER TABLE `voj_discussion_replies`
   ADD CONSTRAINT `voj_discussion_replies_ibfk_1` FOREIGN KEY (`discussion_thread_id`) REFERENCES `voj_discussion_threads` (`discussion_thread_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   ADD CONSTRAINT `voj_discussion_replies_ibfk_2` FOREIGN KEY (`discussion_reply_uid`) REFERENCES `voj_users` (`uid`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Constraints for table `voj_discussion_reply_votes`
+--
+ALTER TABLE `voj_discussion_reply_votes`
+  ADD CONSTRAINT `voj_discussion_reply_votes_ibfk_1` FOREIGN KEY (`discussion_reply_id`) REFERENCES `voj_discussion_replies` (`discussion_reply_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `voj_discussion_reply_votes_ibfk_2` FOREIGN KEY (`voter_uid`) REFERENCES `voj_users` (`uid`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
 -- Constraints for table `voj_discussion_threads`

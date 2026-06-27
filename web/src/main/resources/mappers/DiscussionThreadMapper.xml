@@ -50,6 +50,14 @@
 			<if test="discussionTopicId != 0">
 				AND discussion_topic_id = #{discussionTopicId}
 			</if>
+			<if test="reportHideThreshold > 0">
+				AND (
+					SELECT COUNT(*)
+					FROM voj_discussion_reply_votes v
+					JOIN voj_discussion_replies r ON v.discussion_reply_id = r.discussion_reply_id
+					WHERE r.discussion_thread_id = dt.discussion_thread_id AND v.vote_type = 2
+				) &lt; #{reportHideThreshold}
+			</if>
 		</where>
 		ORDER BY latest_discussion_reply_id DESC
 		LIMIT #{offset}, #{limit}

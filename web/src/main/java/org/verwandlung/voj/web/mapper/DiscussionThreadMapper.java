@@ -34,13 +34,16 @@ public interface DiscussionThreadMapper {
    * @param discussionTopicId - the unique identifier of the discussion topic
    * @param offset - the starting ID of the discussion threads
    * @param limit - the number of threads to fetch
+   * @param reportHideThreshold - threads whose total report count reaches this value are hidden; a
+   *     value of {@code 0} or below disables hiding
    * @return a list containing discussion thread objects
    */
   List<DiscussionThread> getDiscussionThreads(
       @Param("problemId") long problemId,
       @Param("discussionTopicId") int discussionTopicId,
       @Param("offset") long offset,
-      @Param("limit") int limit);
+      @Param("limit") int limit,
+      @Param("reportHideThreshold") int reportHideThreshold);
 
   /**
    * Gets the solution discussion of a problem. The solution discussion is created automatically

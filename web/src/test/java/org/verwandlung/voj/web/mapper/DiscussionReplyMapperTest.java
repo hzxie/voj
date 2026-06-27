@@ -81,7 +81,7 @@ public class DiscussionReplyMapperTest {
     User creator = userMapper.getUserUsingUid(1000);
     Assertions.assertNotNull(creator);
 
-    DiscussionReply discussionReply = new DiscussionReply(threadId, creator, "Content", "{}");
+    DiscussionReply discussionReply = new DiscussionReply(threadId, creator, "Content");
     int numberOfRowsAffected = discussionReplyMapper.createDiscussionReply(discussionReply);
     Assertions.assertEquals(1, numberOfRowsAffected);
   }
@@ -96,7 +96,7 @@ public class DiscussionReplyMapperTest {
     User creator = new User();
     creator.setUid(0);
 
-    DiscussionReply discussionReply = new DiscussionReply(threadId, creator, "Content", "{}");
+    DiscussionReply discussionReply = new DiscussionReply(threadId, creator, "Content");
     Executable e =
         () -> {
           discussionReplyMapper.createDiscussionReply(discussionReply);

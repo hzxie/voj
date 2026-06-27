@@ -9,8 +9,7 @@
 		<result property="discussionThreadId" column="discussion_thread_id" />
 		<result property="discussionReplyCreateTime" column="discussion_reply_time" />
 		<result property="discussionReplyContent" column="discussion_reply_content" />
-		<result property="discussionReplyVotes" column="discussion_reply_votes" />
-		<association property="discussionReplyCreator" 
+		<association property="discussionReplyCreator"
 			javaType="org.verwandlung.voj.web.model.User" 
 			column="discussion_reply_uid"
 			select="org.verwandlung.voj.web.mapper.UserMapper.getUserUsingUid" />
@@ -24,13 +23,25 @@
 		FROM voj_discussion_replies
 		WHERE discussion_reply_id = #{discussionReplyId}
 	</select>
-	<select id="getDiscussionRepliesUsingThreadId" 
+	<select id="getDiscussionRepliesUsingThreadId"
 		parameterType="map"
 		resultMap="DiscussionReplyResultMap">
-		SELECT * 
-		FROM voj_discussion_replies
-		WHERE discussion_thread_id = #{discussionThreadId}
-		ORDER BY discussion_reply_id
+		SELECT r.*
+		FROM voj_discussion_replies r
+		LEFT JOIN (
+			SELECT discussion_reply_id, SUM(CASE WHEN vote_type IN (1, -1) THEN vote_type ELSE 0 END) AS score
+			FROM voj_discussion_reply_votes
+			GROUP BY discussion_reply_id
+		) v ON v.discussion_reply_id = r.discussion_reply_id
+		WHERE r.discussion_thread_id = #{discussionThreadId}
+		ORDER BY
+			(r.discussion_reply_id = (
+				SELECT MIN(discussion_reply_id)
+				FROM voj_discussion_replies
+				WHERE discussion_thread_id = #{discussionThreadId}
+			)) DESC,
+			COALESCE(v.score, 0) DESC,
+			r.discussion_reply_id ASC
 		LIMIT #{offset}, #{limit}
 	</select>
 	<insert id="createDiscussionReply" 
@@ -38,13 +49,13 @@
 		keyProperty="discussionReplyId" 
 		keyColumn="discussion_reply_id"
 		useGeneratedKeys="true">
-		INSERT INTO voj_discussion_replies(discussion_thread_id, discussion_reply_uid, discussion_reply_time, discussion_reply_content, discussion_reply_votes) 
-		VALUES (#{discussionThreadId}, #{discussionReplyCreator.uid}, #{discussionReplyCreateTime}, #{discussionReplyContent}, #{discussionReplyVotes})
+		INSERT INTO voj_discussion_replies(discussion_thread_id, discussion_reply_uid, discussion_reply_time, discussion_reply_content)
+		VALUES (#{discussionThreadId}, #{discussionReplyCreator.uid}, #{discussionReplyCreateTime}, #{discussionReplyContent})
 	</insert>
 	<update id="updateDiscussionReply"
 		parameterType="org.verwandlung.voj.web.model.DiscussionThread">
-		UPDATE voj_discussion_replies 
-		SET discussion_thread_id = #{discussionThreadId}, discussion_reply_uid = #{discussionReplyCreator.uid}, discussion_reply_time = #{discussionReplyCreateTime}, discussion_reply_content = #{discussionReplyContent}, discussion_reply_votes = #{discussionReplyVotes}
+		UPDATE voj_discussion_replies
+		SET discussion_thread_id = #{discussionThreadId}, discussion_reply_uid = #{discussionReplyCreator.uid}, discussion_reply_time = #{discussionReplyCreateTime}, discussion_reply_content = #{discussionReplyContent}
 		WHERE discussion_reply_id = #{discussionReplyId}
 	</update>
 	<delete id="deleteDiscussionReplyUsingReplyId"

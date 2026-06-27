@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+		PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+		"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.verwandlung.voj.web.mapper.DiscussionReplyVoteMapper">
+	<!-- Methods -->
+	<select id="getNumberOfVotes"
+		parameterType="map"
+		resultType="int">
+		SELECT COUNT(*)
+		FROM voj_discussion_reply_votes
+		WHERE discussion_reply_id = #{discussionReplyId} AND vote_type = #{voteType}
+	</select>
+	<select id="getVoteType"
+		parameterType="map"
+		resultType="java.lang.Integer">
+		SELECT vote_type
+		FROM voj_discussion_reply_votes
+		WHERE discussion_reply_id = #{discussionReplyId} AND voter_uid = #{voterUid} AND vote_type IN (1, -1)
+	</select>
+	<select id="getNumberOfReportsOfThread"
+		parameterType="long"
+		resultType="int">
+		SELECT COUNT(*)
+		FROM voj_discussion_reply_votes v
+		JOIN voj_discussion_replies r ON v.discussion_reply_id = r.discussion_reply_id
+		WHERE r.discussion_thread_id = #{discussionThreadId} AND v.vote_type = 2
+	</select>
+	<insert id="castVote"
+		parameterType="org.verwandlung.voj.web.model.DiscussionReplyVote">
+		INSERT INTO voj_discussion_reply_votes(discussion_reply_id, voter_uid, vote_type)
+		VALUES (#{discussionReplyId}, #{voterUid}, #{voteType})
+		ON DUPLICATE KEY UPDATE vote_time = CURRENT_TIMESTAMP
+	</insert>
+	<delete id="withdrawVote"
+		parameterType="map">
+		DELETE FROM voj_discussion_reply_votes
+		WHERE discussion_reply_id = #{discussionReplyId} AND voter_uid = #{voterUid} AND vote_type = #{voteType}
+	</delete>
+</mapper>

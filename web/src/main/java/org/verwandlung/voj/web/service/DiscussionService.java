@@ -16,17 +16,18 @@
  */
 package org.verwandlung.voj.web.service;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.verwandlung.voj.web.mapper.DiscussionReplyMapper;
+import org.verwandlung.voj.web.mapper.DiscussionReplyVoteMapper;
 import org.verwandlung.voj.web.mapper.DiscussionThreadMapper;
 import org.verwandlung.voj.web.mapper.DiscussionTopicMapper;
+import org.verwandlung.voj.web.mapper.OptionMapper;
 import org.verwandlung.voj.web.mapper.ProblemMapper;
+import org.verwandlung.voj.web.mapper.SubmissionMapper;
 import org.verwandlung.voj.web.model.*;
 import org.verwandlung.voj.web.util.HtmlTextFilter;
-import org.verwandlung.voj.web.util.JsonUtils;
 import org.verwandlung.voj.web.util.OffensiveWordFilter;
 
 import java.util.*;
@@ -39,6 +40,15 @@ import java.util.*;
 @Service
 @Transactional
 public class DiscussionService {
+  /** The option name of the number of reports at which a discussion thread is hidden. */
+  private static final String OPTION_REPORT_HIDE_THRESHOLD = "discussionReportHideThreshold";
+
+  /** The option name of the minimum number of solved problems required to vote. */
+  private static final String OPTION_MIN_SOLVED_TO_VOTE = "discussionMinSolvedToVote";
+
+  /** The option name of the minimum number of solved problems required to report. */
+  private static final String OPTION_MIN_SOLVED_TO_REPORT = "discussionMinSolvedToReport";
+
   /**
    * Gets all discussion topics.
    *
@@ -100,7 +110,8 @@ public class DiscussionService {
    */
   public List<DiscussionThread> getDiscussionThreadsOfProblem(
       long problemId, long offset, int limit) {
-    return discussionThreadMapper.getDiscussionThreads(problemId, 0, offset, limit);
+    return discussionThreadMapper.getDiscussionThreads(
+        problemId, 0, offset, limit, getReportHideThreshold());
   }
 
   /**
@@ -118,7 +129,8 @@ public class DiscussionService {
       DiscussionTopic dt = discussionTopicMapper.getDiscussionTopicUsingSlug(discussionTopicSlug);
       discussionTopicId = dt.getDiscussionTopicId();
     }
-    return discussionThreadMapper.getDiscussionThreads(0, discussionTopicId, offset, limit);
+    return discussionThreadMapper.getDiscussionThreads(
+        0, discussionTopicId, offset, limit, getReportHideThreshold());
   }
 
   /**
@@ -140,49 +152,36 @@ public class DiscussionService {
       String replyContent = dr.getDiscussionReplyContent();
       replyContent = offensiveWordFilter.filter(HtmlTextFilter.filter(replyContent));
       dr.setDiscussionReplyContent(replyContent);
-      // Get the voting information in the reply
-      Map<String, Object> votesStatistics =
-          getVoteStatisticsOfDiscussionReply(dr.getDiscussionReplyVotes(), currentUserUid);
-      dr.setDiscussionReplyVotes(JsonUtils.toJsonString(votesStatistics));
+      // Aggregate the voting information of the reply for the current user
+      populateVoteStatistics(dr, currentUserUid);
     }
     return replies;
   }
 
   /**
-   * Aggregates the voting information in a discussion reply.
+   * Populates the aggregated voting information (vote counts and the current user's own vote) of a
+   * discussion reply, reading directly from the discussion reply vote table.
    *
-   * @param votes - the JSON-formatted string of the original voting information in the discussion
-   *     reply
+   * @param discussionReply - the discussion reply whose voting statistics are populated
    * @param currentUserUid - the unique identifier of the currently logged-in user (-1 means not
    *     logged in)
-   * @return a Map object containing the discussion reply voting information
    */
-  private Map<String, Object> getVoteStatisticsOfDiscussionReply(
-      String votes, long currentUserUid) {
-    Map<String, Object> votesStatistics = new HashMap<>(5, 1);
-    Map<String, List<Long>> voteUsers = parseVoteUsers(votes);
-
-    List<Long> voteUpUsers = voteUsers.get("up");
-    List<Long> voteDownUsers = voteUsers.get("down");
-    boolean isVotedUp = currentUserUid != -1 && voteUpUsers.contains(currentUserUid);
-    boolean isVotedDown = currentUserUid != -1 && voteDownUsers.contains(currentUserUid);
-
-    votesStatistics.put("isVotedUp", isVotedUp);
-    votesStatistics.put("isVotedDown", isVotedDown);
-    votesStatistics.put("numberOfVoteUp", voteUpUsers.size());
-    votesStatistics.put("numberOfVoteDown", voteDownUsers.size());
-    return votesStatistics;
-  }
-
-  /**
-   * Parses the JSON string of the discussion reply voting information into voting user lists. The
-   * voting information has the format {"up": [uid, ...], "down": [uid, ...]}.
-   *
-   * @param votes - the JSON-formatted string of the discussion reply voting information
-   * @return a Map object containing the lists of voting user UIDs under the "up" and "down" keys
-   */
-  private Map<String, List<Long>> parseVoteUsers(String votes) {
-    return JsonUtils.toObject(votes, new TypeReference<Map<String, List<Long>>>() {});
+  private void populateVoteStatistics(DiscussionReply discussionReply, long currentUserUid) {
+    long discussionReplyId = discussionReply.getDiscussionReplyId();
+    discussionReply.setNumberOfVoteUp(
+        discussionReplyVoteMapper.getNumberOfVotes(
+            discussionReplyId, DiscussionReplyVote.VOTE_UP));
+    discussionReply.setNumberOfVoteDown(
+        discussionReplyVoteMapper.getNumberOfVotes(
+            discussionReplyId, DiscussionReplyVote.VOTE_DOWN));
+    if (currentUserUid != -1) {
+      Integer currentUserVote =
+          discussionReplyVoteMapper.getVoteType(discussionReplyId, currentUserUid);
+      discussionReply.setIsVotedUp(
+          currentUserVote != null && currentUserVote == DiscussionReplyVote.VOTE_UP);
+      discussionReply.setIsVotedDown(
+          currentUserVote != null && currentUserVote == DiscussionReplyVote.VOTE_DOWN);
+    }
   }
 
   /**
@@ -193,6 +192,22 @@ public class DiscussionService {
    */
   public DiscussionThread getDiscussionThreadUsingThreadId(long discussionThreadId) {
     return discussionThreadMapper.getDiscussionThreadUsingThreadId(discussionThreadId);
+  }
+
+  /**
+   * Checks whether a discussion thread should be hidden because its replies have accumulated enough
+   * reports. The threshold is read from the {@code discussionReportHideThreshold} option; a value of
+   * zero or below disables hiding.
+   *
+   * @param discussionThreadId - the unique identifier of the discussion thread
+   * @return whether the discussion thread should be hidden
+   */
+  public boolean isDiscussionThreadHidden(long discussionThreadId) {
+    int threshold = getReportHideThreshold();
+    if (threshold <= 0) {
+      return false;
+    }
+    return discussionReplyVoteMapper.getNumberOfReportsOfThread(discussionThreadId) >= threshold;
   }
 
   /**
@@ -231,40 +246,155 @@ public class DiscussionService {
         discussionReply != null && discussionReply.getDiscussionThreadId() == discussionThreadId);
     result.put("isVoteValid", voteUp >= -1 && voteUp <= 1 && voteDown >= -1 && voteDown <= 1);
     result.put("isLoggedIn", currentUser != null);
+    result.put("isNotSelfVote", !isOwnReply(discussionReply, currentUser));
+    result.put(
+        "isReputationEnough",
+        hasEnoughReputation(currentUser, getIntOption(OPTION_MIN_SOLVED_TO_VOTE, 1)));
 
     boolean isSuccessful =
         result.get("isDiscussionReplyExists")
             && result.get("isVoteValid")
-            && result.get("isLoggedIn");
+            && result.get("isLoggedIn")
+            && result.get("isNotSelfVote")
+            && result.get("isReputationEnough");
     result.put("isSuccessful", isSuccessful);
 
     if (result.get("isSuccessful")) {
-      synchronized (this) {
-        // Set the new voting result
-        Map<String, List<Long>> voteUsers =
-            parseVoteUsers(discussionReply.getDiscussionReplyVotes());
-        List<Long> voteUpUsers = voteUsers.get("up");
-        List<Long> voteDownUsers = voteUsers.get("down");
-        boolean isVotedUp = voteUpUsers.contains(currentUser.getUid());
-        boolean isVotedDown = voteDownUsers.contains(currentUser.getUid());
-
-        if (voteUp == 1 && !isVotedUp) {
-          if (isVotedDown) voteDownUsers.remove(currentUser.getUid());
-          voteUpUsers.add(currentUser.getUid());
-        } else if (voteUp == -1) {
-          voteUpUsers.remove(currentUser.getUid());
-        }
-        if (voteDown == 1 && !isVotedDown) {
-          if (isVotedUp) voteUpUsers.remove(currentUser.getUid());
-          voteDownUsers.add(currentUser.getUid());
-        } else if (voteDown == -1) {
-          voteDownUsers.remove(currentUser.getUid());
-        }
-        discussionReply.setDiscussionReplyVotes(JsonUtils.toJsonString(voteUsers));
-        discussionReplyMapper.updateDiscussionReply(discussionReply);
+      // Each vote is a row keyed by (reply, voter, vote_type). Casting an up/down vote first clears
+      // the opposite vote so that a user holds at most one up/down vote per reply, then inserts the
+      // new one (idempotent via the primary key). Report rows (vote_type = 2) live in the same table
+      // and are untouched here, so a user's vote and report on the same reply are independent.
+      long uid = currentUser.getUid();
+      if (voteUp == 1) {
+        discussionReplyVoteMapper.withdrawVote(discussionReplyId, uid, DiscussionReplyVote.VOTE_DOWN);
+        discussionReplyVoteMapper.castVote(
+            new DiscussionReplyVote(discussionReplyId, uid, DiscussionReplyVote.VOTE_UP));
+      } else if (voteUp == -1) {
+        discussionReplyVoteMapper.withdrawVote(discussionReplyId, uid, DiscussionReplyVote.VOTE_UP);
+      }
+      if (voteDown == 1) {
+        discussionReplyVoteMapper.withdrawVote(discussionReplyId, uid, DiscussionReplyVote.VOTE_UP);
+        discussionReplyVoteMapper.castVote(
+            new DiscussionReplyVote(discussionReplyId, uid, DiscussionReplyVote.VOTE_DOWN));
+      } else if (voteDown == -1) {
+        discussionReplyVoteMapper.withdrawVote(
+            discussionReplyId, uid, DiscussionReplyVote.VOTE_DOWN);
       }
     }
     return result;
+  }
+
+  /**
+   * Reports a discussion reply for abuse. A report is stored as a row in the discussion reply vote
+   * table with the report vote type, and is idempotent (a user reporting the same reply twice still
+   * counts once). Once the replies of a thread accumulate enough reports the thread is hidden from
+   * the listings (see {@link #isDiscussionThreadHidden(long)}).
+   *
+   * @param discussionThreadId - the unique identifier of the discussion thread
+   * @param discussionReplyId - the unique identifier of the discussion reply being reported
+   * @param currentUser - the currently logged-in user
+   * @return the result of the report request
+   */
+  public Map<String, Boolean> reportDiscussionReply(
+      long discussionThreadId, long discussionReplyId, User currentUser) {
+    DiscussionReply discussionReply =
+        discussionReplyMapper.getDiscussionReplyUsingReplyId(discussionReplyId);
+    Map<String, Boolean> result = new HashMap<>();
+    result.put(
+        "isDiscussionReplyExists",
+        discussionReply != null && discussionReply.getDiscussionThreadId() == discussionThreadId);
+    result.put("isLoggedIn", currentUser != null);
+    result.put("isNotSelfReport", !isOwnReply(discussionReply, currentUser));
+    result.put(
+        "isReputationEnough",
+        hasEnoughReputation(currentUser, getIntOption(OPTION_MIN_SOLVED_TO_REPORT, 3)));
+
+    boolean isSuccessful =
+        result.get("isDiscussionReplyExists")
+            && result.get("isLoggedIn")
+            && result.get("isNotSelfReport")
+            && result.get("isReputationEnough");
+    result.put("isSuccessful", isSuccessful);
+
+    if (result.get("isSuccessful")) {
+      discussionReplyVoteMapper.castVote(
+          new DiscussionReplyVote(
+              discussionReplyId, currentUser.getUid(), DiscussionReplyVote.VOTE_REPORT));
+    }
+    return result;
+  }
+
+  /**
+   * Checks whether a discussion reply was created by a given user (used to forbid voting on or
+   * reporting one's own reply).
+   *
+   * @param discussionReply - the discussion reply (may be null)
+   * @param user - the acting user (may be null)
+   * @return whether the reply belongs to the user
+   */
+  private boolean isOwnReply(DiscussionReply discussionReply, User user) {
+    return user != null
+        && discussionReply != null
+        && discussionReply.getDiscussionReplyCreator() != null
+        && discussionReply.getDiscussionReplyCreator().getUid() == user.getUid();
+  }
+
+  /**
+   * Checks whether a user has enough reputation to participate. Reputation is measured by the number
+   * of distinct problems the user has solved; administrators always pass.
+   *
+   * @param user - the acting user (may be null)
+   * @param minSolvedProblems - the minimum number of solved problems required
+   * @return whether the user meets the reputation requirement
+   */
+  private boolean hasEnoughReputation(User user, int minSolvedProblems) {
+    if (user == null) {
+      return false;
+    }
+    if (minSolvedProblems <= 0 || isAdministrator(user)) {
+      return true;
+    }
+    return submissionMapper.getAcceptedSubmissionUsingUserId(user.getUid()) >= minSolvedProblems;
+  }
+
+  /**
+   * Checks whether a user belongs to the administrators user group.
+   *
+   * @param user - the user to check
+   * @return whether the user is an administrator
+   */
+  private boolean isAdministrator(User user) {
+    return user.getUserGroup() != null
+        && "administrators".equals(user.getUserGroup().getUserGroupSlug());
+  }
+
+  /**
+   * Reads the report-hide threshold option.
+   *
+   * @return the number of reports at which a thread is hidden (0 or below disables hiding)
+   */
+  private int getReportHideThreshold() {
+    return getIntOption(OPTION_REPORT_HIDE_THRESHOLD, 0);
+  }
+
+  /**
+   * Reads an integer-valued system option, falling back to a default value if the option is missing
+   * or not a valid integer.
+   *
+   * @param optionName - the name of the option
+   * @param defaultValue - the value to return when the option is absent or malformed
+   * @return the option value as an integer
+   */
+  private int getIntOption(String optionName, int defaultValue) {
+    Option option = optionMapper.getOption(optionName);
+    if (option == null || option.getOptionValue() == null) {
+      return defaultValue;
+    }
+    try {
+      return Integer.parseInt(option.getOptionValue().trim());
+    } catch (NumberFormatException e) {
+      return defaultValue;
+    }
   }
 
   /**
@@ -506,13 +636,9 @@ public class DiscussionService {
    */
   public Map<String, Object> createDiscussionReply(
       long discussionThreadId, User replyCreator, String replyContent) {
-    String discussionReplyVotes = "{ \"up\": [], \"down\": [] }";
     DiscussionReply dr =
         new DiscussionReply(
-            discussionThreadId,
-            replyCreator,
-            HtmlTextFilter.filter(replyContent),
-            discussionReplyVotes);
+            discussionThreadId, replyCreator, HtmlTextFilter.filter(replyContent));
 
     Map<String, Object> result =
         (Map<String, Object>) getDiscussionReplyCreationResult(dr);
@@ -614,6 +740,15 @@ public class DiscussionService {
 
   /** The autowired DiscussionReplyMapper object, used to obtain discussion replies. */
   @Autowired private DiscussionReplyMapper discussionReplyMapper;
+
+  /** The autowired DiscussionReplyVoteMapper object, used to obtain and persist reply votes. */
+  @Autowired private DiscussionReplyVoteMapper discussionReplyVoteMapper;
+
+  /** The autowired OptionMapper object, used to read the configurable discussion thresholds. */
+  @Autowired private OptionMapper optionMapper;
+
+  /** The autowired SubmissionMapper object, used to measure a user's reputation (solved problems). */
+  @Autowired private SubmissionMapper submissionMapper;
 
   /** The autowired ProblemMapper object, used to obtain problems. */
   @Autowired private ProblemMapper problemMapper;

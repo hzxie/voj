@@ -134,6 +134,11 @@ public class DiscussionController {
     if (discussionThread == null) {
       throw new ResourceNotFoundException();
     }
+    // A thread hidden by reports is treated as not found for everyone except administrators.
+    if (discussionService.isDiscussionThreadHidden(discussionThreadId)
+        && !isAdministrator(HttpSessionParser.getCurrentUser())) {
+      throw new ResourceNotFoundException();
+    }
 
     HttpSession session = request.getSession();
     ModelAndView view = new ModelAndView("pages/discussion/thread");
@@ -261,6 +266,46 @@ public class DiscussionController {
               new Object[] {currentUser, discussionReplyId, voteUp, voteDown, ipAddress}));
     }
     return result;
+  }
+
+  /**
+   * Handles the request of a user reporting a discussion reply for abuse.
+   *
+   * @param discussionThreadId - the unique identifier of the discussion thread
+   * @param discussionReplyId - the unique identifier of the discussion reply
+   * @param request - the HttpServletRequest object
+   * @return a JSON object containing the result of handling the report request
+   */
+  @RequestMapping(value = "/{threadId}/reportDiscussionReply.action", method = RequestMethod.POST)
+  public @ResponseBody Map<String, Boolean> reportDiscussionReplyAction(
+      @PathVariable("threadId") long discussionThreadId,
+      @RequestParam(value = "discussionReplyId") long discussionReplyId,
+      HttpServletRequest request) {
+    String ipAddress = HttpRequestParser.getRemoteAddr(request);
+    User currentUser = HttpSessionParser.getCurrentUser();
+
+    Map<String, Boolean> result =
+        discussionService.reportDiscussionReply(
+            discussionThreadId, discussionReplyId, currentUser);
+    if (result.get("isSuccessful")) {
+      LOGGER.info(
+          String.format(
+              "User: {%s} reported discussion reply #%d at %s",
+              new Object[] {currentUser, discussionReplyId, ipAddress}));
+    }
+    return result;
+  }
+
+  /**
+   * Checks whether a user belongs to the administrators user group.
+   *
+   * @param user - the user to check (may be null)
+   * @return whether the user is an administrator
+   */
+  private boolean isAdministrator(User user) {
+    return user != null
+        && user.getUserGroup() != null
+        && "administrators".equals(user.getUserGroup().getUserGroupSlug());
   }
 
   /**
