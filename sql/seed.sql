@@ -4,6 +4,17 @@ SET NAMES utf8mb4;
 SET SQL_MODE = "STRICT_TRANS_TABLES";
 SET FOREIGN_KEY_CHECKS = 0;
 
+-- Clear the reference tables first so this script is idempotent: re-running it
+-- (or running it after the suite/install already seeded) won't hit duplicate keys.
+DELETE FROM `voj_judge_results`;
+DELETE FROM `voj_languages`;
+DELETE FROM `voj_problem_difficulty`;
+DELETE FROM `voj_discussion_topics`;
+DELETE FROM `voj_options`;
+DELETE FROM `voj_user_groups`;
+DELETE FROM `voj_problem_categories`;
+DELETE FROM `voj_problem_tags`;
+
 INSERT INTO `voj_discussion_topics` (`discussion_topic_id`, `discussion_topic_slug`, `discussion_topic_name`, `discussion_parent_topic_id`) VALUES
 (1, 'solutions', 'Solutions', 0),
 (2, 'qa', 'Q & A', 0),

@@ -5,6 +5,24 @@ SET NAMES utf8mb4;
 SET SQL_MODE = "STRICT_TRANS_TABLES";
 SET FOREIGN_KEY_CHECKS = 0;
 
+-- Clear the content tables first so this script is idempotent: re-running it
+-- (or running it after the suite/install already loaded data) won't hit
+-- duplicate keys. FK checks are off above, so order does not matter.
+DELETE FROM `voj_contests`;
+DELETE FROM `voj_contest_contestants`;
+DELETE FROM `voj_contest_submissions`;
+DELETE FROM `voj_discussion_replies`;
+DELETE FROM `voj_discussion_reply_votes`;
+DELETE FROM `voj_discussion_threads`;
+DELETE FROM `voj_email_validation`;
+DELETE FROM `voj_problems`;
+DELETE FROM `voj_problem_category_relationships`;
+DELETE FROM `voj_problem_checkpoints`;
+DELETE FROM `voj_problem_tag_relationships`;
+DELETE FROM `voj_submissions`;
+DELETE FROM `voj_usermeta`;
+DELETE FROM `voj_users`;
+
 INSERT INTO `voj_contests` (`contest_id`, `contest_name`, `contest_notes`, `contest_start_time`, `contest_end_time`, `contest_mode`, `contest_problems`) VALUES
 (1, 'Contest #1', '', '2018-02-23 00:00:00', '2018-02-23 23:59:59', 'OI', '[1000, 1001, 1002]'),
 (2, 'Contest #2', '', '1970-01-02 00:00:01', '2038-01-18 03:14:07', 'ACM', '[1001, 1003]'),
