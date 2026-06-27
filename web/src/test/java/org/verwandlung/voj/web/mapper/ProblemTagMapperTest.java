@@ -43,7 +43,7 @@ public class ProblemTagMapperTest {
   @Test
   public void testGetProblemTags() {
     List<ProblemTag> problemTags = problemTagMapper.getProblemTags();
-    Assertions.assertEquals(2, problemTags.size());
+    Assertions.assertEquals(19, problemTags.size());
 
     ProblemTag firstTag = problemTags.get(0);
     String tagSlug = firstTag.getProblemTagSlug();

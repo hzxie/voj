@@ -50,7 +50,24 @@ INSERT INTO `voj_problem_categories` (`problem_category_id`, `problem_category_s
 
 INSERT INTO `voj_problem_tags` (`problem_tag_id`, `problem_tag_slug`, `problem_tag_name`) VALUES
 (1, 'greedy', 'Greedy'),
-(2, 'dynamic-programming', 'Dynamic Programming');
+(2, 'dynamic-programming', 'Dynamic Programming'),
+(3, 'combinatorics', 'Combinatorics'),
+(4, 'math', 'Math'),
+(5, 'number-theory', 'Number Theory'),
+(6, 'constructive-algorithms', 'Constructive Algorithms'),
+(7, 'dsu', 'Dsu'),
+(8, 'implementation', 'Implementation'),
+(9, 'strings', 'Strings'),
+(10, 'brute-force', 'Brute Force'),
+(11, 'data-structures', 'Data Structures'),
+(12, 'two-pointers', 'Two Pointers'),
+(13, 'binary-search', 'Binary Search'),
+(14, 'bitmasks', 'Bitmasks'),
+(15, 'sortings', 'Sortings'),
+(16, 'graphs', 'Graphs'),
+(17, 'shortest-paths', 'Shortest Paths'),
+(18, 'dfs-and-similar', 'Dfs And Similar'),
+(19, 'trees', 'Trees');
 
 INSERT INTO `voj_discussion_topics` (`discussion_topic_id`, `discussion_topic_slug`, `discussion_topic_name`, `discussion_parent_topic_id`) VALUES
 (1, 'solutions', 'Solutions', 0),
