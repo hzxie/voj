@@ -30,6 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.verwandlung.voj.web.mapper.ProblemMapper;
 import org.verwandlung.voj.web.model.Checkpoint;
 import org.verwandlung.voj.web.model.Problem;
+import org.verwandlung.voj.web.model.ProblemDifficulty;
 import org.verwandlung.voj.web.model.ProblemCategory;
 import org.verwandlung.voj.web.model.ProblemTag;
 
@@ -225,6 +226,7 @@ public class ProblemServiceTest {
         new Problem(
             true, "Throwaway Problem", 1000, 65536, "Description", "Input Format",
             "Output Format", "1 2", "3", "Hint");
+    problem.setProblemDifficulty(new ProblemDifficulty(1, "easy", "Easy"));
     problemMapper.createProblem(problem);
     long problemId = problem.getProblemId();
 

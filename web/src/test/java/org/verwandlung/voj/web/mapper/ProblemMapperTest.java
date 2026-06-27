@@ -27,6 +27,7 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.Transactional;
 
 import org.verwandlung.voj.web.model.Problem;
+import org.verwandlung.voj.web.model.ProblemDifficulty;
 
 /**
  * The test class for ProblemMapper.
@@ -169,6 +170,7 @@ public class ProblemMapperTest {
             "Sample Input",
             "Sample Input",
             null);
+    problem.setProblemDifficulty(new ProblemDifficulty(1, "easy", "Easy"));
     int numberOfRowsAffected = problemMapper.createProblem(problem);
     Assertions.assertEquals(1, numberOfRowsAffected);
   }
