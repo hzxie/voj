@@ -173,4 +173,6 @@ fi
 
 echo "==> Java: $("$JAVA_BIN" -version 2>&1 | head -1)"
 echo "==> Starting voj.judger ..."
-exec "$JAVA_BIN" ${JAVA_OPTS} -jar "$JAR" "$@"
+# --enable-native-access grants the JNI runner native access; without it the JDK
+# 24+ prints a restricted-method warning and a future JDK will block JNI outright.
+exec "$JAVA_BIN" --enable-native-access=ALL-UNNAMED ${JAVA_OPTS} -jar "$JAR" "$@"

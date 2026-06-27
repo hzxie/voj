@@ -67,7 +67,9 @@ echo ==^> Java:
 "%JAVA_BIN%" -version
 
 echo ==^> Starting voj.judger ...
-"%JAVA_BIN%" %JAVA_OPTS% -jar "%JAR%" %*
+REM --enable-native-access grants the JNI runner native access; without it the JDK
+REM 24+ prints a restricted-method warning and a future JDK will block JNI outright.
+"%JAVA_BIN%" --enable-native-access=ALL-UNNAMED %JAVA_OPTS% -jar "%JAR%" %*
 set "RC=%ERRORLEVEL%"
 popd
 exit /b %RC%
