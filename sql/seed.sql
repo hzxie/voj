@@ -5,6 +5,7 @@ SET NAMES utf8mb4;
 SET SQL_MODE = "STRICT_TRANS_TABLES";
 SET FOREIGN_KEY_CHECKS = 0;
 DELETE FROM `voj_options`;
+DELETE FROM `voj_offensive_words`;
 DELETE FROM `voj_discussion_topics`;
 DELETE FROM `voj_problem_tags`;
 DELETE FROM `voj_problem_categories`;
@@ -83,9 +84,21 @@ INSERT INTO `voj_options` (`option_id`, `option_name`, `option_value`, `is_autol
 (5, 'icpNumber', '', 1),
 (6, 'policeIcpNumber', '', 1),
 (7, 'allowUserRegister', '1', 0),
-(8, 'offensiveWords', '["法轮","中央","六四","军区","共产党","国民党"]', 0),
+(8, 'offensiveWordSources', '', 0),
 (9, 'discussionReportHideThreshold', '5', 0),
 (10, 'discussionMinSolvedToVote', '1', 0),
-(11, 'discussionMinSolvedToReport', '3', 0);
+(11, 'discussionMinSolvedToReport', '3', 0),
+(12, 'offensiveWordsImportedAt', '', 0);
+
+-- Baseline offensive-word library. Administrators normally replace this by
+-- importing external word lists (see voj_options.offensiveWordSources); the
+-- handful of words below give a fresh install a working default.
+INSERT INTO `voj_offensive_words` (`offensive_word_id`, `word`) VALUES
+(1, '法轮'),
+(2, '中央'),
+(3, '六四'),
+(4, '军区'),
+(5, '共产党'),
+(6, '国民党');
 
 SET FOREIGN_KEY_CHECKS = 1;

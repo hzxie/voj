@@ -27,11 +27,14 @@ import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import org.verwandlung.voj.web.mapper.OptionMapper;
-import org.verwandlung.voj.web.model.Option;
+import org.verwandlung.voj.web.mapper.OffensiveWordMapper;
 
 /**
  * The offensive word filtering class.
+ *
+ * <p>The offensive words are loaded once from the database into an in-memory DFA; the actual
+ * filtering never touches the database. The dictionary can be refreshed at runtime - for example
+ * after an administrator re-imports the external word lists - through {@link #reload()}.
  *
  * @author Zhou Yihao
  */
@@ -40,22 +43,51 @@ public class OffensiveWordFilter {
   /**
    * The constructor of the OffensiveWordFilter class.
    *
-   * @param optionMapper - the autowired optionMapper object, used to get the offensive word list
-   *     from the database
+   * @param offensiveWordMapper - the autowired OffensiveWordMapper object, used to get the offensive
+   *     words from the database
    */
   @Autowired
-  private OffensiveWordFilter(OptionMapper optionMapper) {
-    this.optionMapper = optionMapper;
+  private OffensiveWordFilter(OffensiveWordMapper offensiveWordMapper) {
+    this.offensiveWordMapper = offensiveWordMapper;
+  }
 
-    Option offensiveWordOption = optionMapper.getOption(OFFENSIVE_WORD_OPTION_KEY);
-    List<String> offensiveWordList = new ArrayList<>();
+  /**
+   * Reloads the offensive word dictionary from the database and rebuilds the DFA. The freshly built
+   * model is swapped in atomically, so concurrent {@link #filter(String)} calls keep using the
+   * previous model until the new one is ready and never observe a half-built state.
+   */
+  public void reload() {
+    this.offensiveWordMap = loadOffensiveWordMap();
+  }
 
-    if (offensiveWordOption != null) {
-      String optionValue = offensiveWordOption.getOptionValue();
-      offensiveWordList = JsonUtils.toList(optionValue, String.class);
+  /**
+   * Returns the DFA model, building it from the database on first use. The dictionary is loaded
+   * lazily rather than in the constructor so that the filter never touches the database while the
+   * Spring context is still wiring up (the schema may not be provisioned yet at that point).
+   *
+   * @return the DFA model
+   */
+  private Map<?, ?> getOffensiveWordMap() {
+    HashMap<?, ?> map = offensiveWordMap;
+    if (map == null) {
+      synchronized (this) {
+        map = offensiveWordMap;
+        if (map == null) {
+          map = loadOffensiveWordMap();
+          offensiveWordMap = map;
+        }
+      }
     }
-    Set<String> offensiveWordSet = new HashSet<>(offensiveWordList);
-    this.addOffensiveWordsToHashMap(offensiveWordSet);
+    return map;
+  }
+
+  /**
+   * Loads the offensive words from the database and builds a fresh DFA model.
+   *
+   * @return the freshly built DFA model
+   */
+  private HashMap<?, ?> loadOffensiveWordMap() {
+    return buildOffensiveWordMap(new HashSet<>(offensiveWordMapper.getOffensiveWords()));
   }
 
   /**
@@ -137,7 +169,7 @@ public class OffensiveWordFilter {
     int matchingLength = 0;
 
     char nowWord = 0;
-    Map nowMap = offensiveWordMap;
+    Map nowMap = getOffensiveWordMap();
     for (int i = beginIndex; i < text.length(); ++i) {
       nowWord = text.charAt(i);
       // The follow set of the current character
@@ -167,11 +199,11 @@ public class OffensiveWordFilter {
    * @return the string used to replace the offensive word
    */
   private static String getReplaceChars(String replaceChar, int length) {
-    String resultChars = "";
+    StringBuilder resultChars = new StringBuilder(length * replaceChar.length());
     for (int i = 0; i < length; ++i) {
-      resultChars += replaceChar;
+      resultChars.append(replaceChar);
     }
-    return resultChars;
+    return resultChars.toString();
   }
 
   /**
@@ -180,11 +212,12 @@ public class OffensiveWordFilter {
    * b = { isEnd = 1 c = { isEnd = 1 } } d = { isEnd = 0 e = { isEnd = 1 } } }.
    *
    * @param offensiveWordSet - the Set of offensive words
+   * @return the root HashMap of the freshly built DFA model
    */
   @SuppressWarnings({"unchecked", "rawtypes"})
-  private void addOffensiveWordsToHashMap(Set<String> offensiveWordSet) {
+  private static HashMap buildOffensiveWordMap(Set<String> offensiveWordSet) {
     // Initialize the offensive word HashMap, with a size equal to the Set.
-    offensiveWordMap = new HashMap((int) (offensiveWordSet.size() * 1.5));
+    HashMap offensiveWordMap = new HashMap((int) (offensiveWordSet.size() * 1.5));
 
     // After reading a key from the nowMap state and reaching a new state, create newWordMap
     String key = null;
@@ -220,10 +253,14 @@ public class OffensiveWordFilter {
         }
       }
     }
+    return offensiveWordMap;
   }
 
-  /** The HashMap that stores the offensive words. */
-  private HashMap<?, ?> offensiveWordMap;
+  /**
+   * The HashMap (DFA model) that stores the offensive words. Marked {@code volatile} because {@link
+   * #reload()} replaces it wholesale while request threads read it through {@link #filter(String)}.
+   */
+  private volatile HashMap<?, ?> offensiveWordMap;
 
   /** The flag in the HashMap indicating whether an offensive word terminates. */
   private static final String IS_END = "isEnd";
@@ -238,12 +275,8 @@ public class OffensiveWordFilter {
 
   public static final int MAX_MATCH_TYPE = 2;
 
-  /** The system setting key for offensive words. */
-  public static final String OFFENSIVE_WORD_OPTION_KEY = "offensiveWords";
-
-  /** The autowired OptionDao object. */
-  @SuppressWarnings("unused")
-  private OptionMapper optionMapper;
+  /** The autowired OffensiveWordMapper object, used to load the offensive words from the database. */
+  private final OffensiveWordMapper offensiveWordMapper;
 }
 
 /**

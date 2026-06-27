@@ -16,6 +16,7 @@ DROP TABLE IF EXISTS `voj_discussion_topics`;
 DROP TABLE IF EXISTS `voj_email_validation`;
 DROP TABLE IF EXISTS `voj_judge_results`;
 DROP TABLE IF EXISTS `voj_languages`;
+DROP TABLE IF EXISTS `voj_offensive_words`;
 DROP TABLE IF EXISTS `voj_options`;
 DROP TABLE IF EXISTS `voj_problems`;
 DROP TABLE IF EXISTS `voj_problem_difficulty`;
@@ -106,6 +107,11 @@ CREATE TABLE `voj_languages` (
   `language_name` varchar(16) COLLATE utf8mb4_unicode_ci NOT NULL,
   `language_compile_command` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL,
   `language_run_command` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `voj_offensive_words` (
+  `offensive_word_id` int(11) NOT NULL,
+  `word` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `voj_options` (
@@ -254,6 +260,10 @@ ALTER TABLE `voj_languages`
   ADD PRIMARY KEY (`language_id`),
   ADD UNIQUE KEY `language_slug` (`language_slug`);
 
+ALTER TABLE `voj_offensive_words`
+  ADD PRIMARY KEY (`offensive_word_id`),
+  ADD UNIQUE KEY `word` (`word`);
+
 ALTER TABLE `voj_options`
   ADD PRIMARY KEY (`option_id`),
   ADD UNIQUE KEY `option_name` (`option_name`);
@@ -323,8 +333,11 @@ ALTER TABLE `voj_judge_results`
 ALTER TABLE `voj_languages`
   MODIFY `language_id` int(4) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
+ALTER TABLE `voj_offensive_words`
+  MODIFY `offensive_word_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+
 ALTER TABLE `voj_options`
-  MODIFY `option_id` int(8) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `option_id` int(8) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 ALTER TABLE `voj_problems`
   MODIFY `problem_id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1004;
