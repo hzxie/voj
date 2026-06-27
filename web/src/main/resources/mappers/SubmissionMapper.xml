@@ -228,6 +228,12 @@
 		SET problem_id = #{problem.problemId}, uid = #{user.uid}, language_id = #{language.languageId}, submission_submit_time = #{submitTime}, submission_execute_time = #{executeTime}, submission_used_time = #{usedTime}, submission_used_memory = #{usedMemory}, submission_judge_result = #{judgeResult.judgeResultSlug}, submission_judge_score = #{judgeScore}, submission_judge_log = #{judgeLog}, submission_code = #{code} 
 		WHERE submission_id = #{submissionId}
 	</update>
+	<update id="markSubmissionUnjudgeable"
+		parameterType="map">
+		UPDATE voj_submissions
+		SET submission_judge_result = #{judgeResultSlug}, submission_judge_log = #{judgeLog}, submission_execute_time = NOW()
+		WHERE submission_id = #{submissionId} AND submission_judge_result = 'PD'
+	</update>
 	<delete id="deleteSubmission"
 		parameterType="long">
 		DELETE FROM voj_submissions 

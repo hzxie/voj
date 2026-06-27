@@ -223,6 +223,21 @@ public interface SubmissionMapper {
   int updateSubmission(Submission submission);
 
   /**
+   * Marks a still-pending submission as a terminal failure (used when a judging task expires with no
+   * available judger). Only rows whose result is still pending are updated, so a real verdict is
+   * never overwritten.
+   *
+   * @param submissionId - the unique identifier of the submission
+   * @param judgeResultSlug - the terminal judge-result slug to set
+   * @param judgeLog - the judge log explaining the failure
+   * @return the number of rows updated (1 when the submission was still pending, 0 otherwise)
+   */
+  int markSubmissionUnjudgeable(
+      @Param("submissionId") long submissionId,
+      @Param("judgeResultSlug") String judgeResultSlug,
+      @Param("judgeLog") String judgeLog);
+
+  /**
    * Deletes a submission by its unique identifier.
    *
    * @param submissionId - the unique identifier of the submission

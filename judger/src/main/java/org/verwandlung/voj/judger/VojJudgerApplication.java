@@ -16,6 +16,7 @@
  */
 package org.verwandlung.voj.judger;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -82,9 +83,28 @@ public class VojJudgerApplication {
         LOGGER.error("Unauthorized: please check judger.username / judger.password. Shutting down.");
         System.exit(-1);
       }
-      logSystemEnvironment(languageMapper);
-      // The listener is configured with autoStartup=false; only now, with a valid identity, do we
-      // begin receiving submissions.
+      logSystemEnvironment();
+
+      List<String> supportedLanguageSlugs = detectSupportedLanguages(languageMapper);
+      if (supportedLanguageSlugs.isEmpty()) {
+        // No usable toolchain on this host. Rather than accepting tasks we cannot build (and then
+        // either failing them with a bogus Compile Error or bouncing them around the queue), stay
+        // online for telemetry but never consume a submission. The web side's task TTL eventually
+        // fails any submission that no judger can handle.
+        LOGGER.error(
+            "No supported language compilers were detected; this judger will not consume any "
+                + "submission. Check the toolchain installation.");
+        setupHeartBeat(heartbeat);
+        return;
+      }
+      // Only claim tasks this judger can actually build. The broker evaluates this selector, so
+      // unsupported tasks are never delivered here (no take-and-requeue loop, hence no busy loop
+      // when nobody supports a language); they simply wait in the queue for a capable judger.
+      String messageSelector = buildLanguageSelector(supportedLanguageSlugs);
+      LOGGER.info("Listening for submission tasks with selector: " + messageSelector);
+      submissionTaskListenerContainer.setMessageSelector(messageSelector);
+      // The listener is configured with autoStartup=false; only now, with a valid identity and a
+      // known set of supported languages, do we begin receiving submissions.
       submissionTaskListenerContainer.start();
       setupHeartBeat(heartbeat);
     };
@@ -102,20 +122,58 @@ public class VojJudgerApplication {
   }
 
   /** Logs the system environment variables to make bug reproduction easier. */
-  private void logSystemEnvironment(LanguageMapper languageMapper) {
+  private void logSystemEnvironment() {
     LOGGER.info("System Information: ");
     LOGGER.info("\tOperating System Name: " + System.getProperty("os.name"));
     LOGGER.info("\tOperating System Version: " + System.getProperty("os.version"));
     LOGGER.info("\tJava VM Name: " + System.getProperty("java.vm.name"));
     LOGGER.info("\tJava Runtime Version: " + System.getProperty("java.runtime.version"));
+  }
 
+  /**
+   * Probes the toolchain for every language known to the system and returns the slugs of those this
+   * host can actually compile. A language counts as supported when its compiler can be launched; the
+   * compiler version is logged along the way to make bug reproduction easier.
+   *
+   * @param languageMapper - the data access object for programming languages
+   * @return the slugs of the languages this judger supports
+   */
+  private List<String> detectSupportedLanguages(LanguageMapper languageMapper) {
     LOGGER.info("Compiler Information: ");
+    List<String> supportedLanguageSlugs = new ArrayList<>();
     List<Language> languages = languageMapper.getAllLanguages();
     for (Language language : languages) {
       String languageName = language.getLanguageName();
       String compileProgram = getCompileProgram(language.getCompileCommand());
-      LOGGER.info("\t" + languageName + ": " + getCompilerVersion(languageName, compileProgram));
+      String compilerVersion = getCompilerVersion(languageName, compileProgram);
+      LOGGER.info(
+          "\t" + languageName + ": " + (compilerVersion == null ? "Not Found" : compilerVersion));
+      if (compilerVersion != null) {
+        supportedLanguageSlugs.add(language.getLanguageSlug());
+      }
     }
+    return supportedLanguageSlugs;
+  }
+
+  /**
+   * Builds the JMS message selector that limits this judger to submission tasks it can build. Tasks
+   * that carry no {@code languageSlug} property (e.g. produced by an older web build) are also
+   * accepted so they are never stranded in the queue.
+   *
+   * @param supportedLanguageSlugs - the slugs of the languages this judger supports
+   * @return the JMS message selector expression
+   */
+  private String buildLanguageSelector(List<String> supportedLanguageSlugs) {
+    StringBuilder quotedSlugs = new StringBuilder();
+    for (int i = 0; i < supportedLanguageSlugs.size(); ++i) {
+      if (i > 0) {
+        quotedSlugs.append(", ");
+      }
+      // Language slugs are CodeMirror MIME types (e.g. text/x-csrc); none contains a single quote,
+      // so they are safe to embed directly in the selector literal.
+      quotedSlugs.append('\'').append(supportedLanguageSlugs.get(i)).append('\'');
+    }
+    return String.format("languageSlug IS NULL OR languageSlug IN (%s)", quotedSlugs);
   }
 
   /**
@@ -139,7 +197,8 @@ public class VojJudgerApplication {
    *
    * @param languageName - the name of the programming language
    * @param compileProgram - the command used for compilation
-   * @return the compiler's version information
+   * @return the compiler's version information, or null when the compiler cannot be launched
+   *     (i.e. this host does not support the language)
    */
   private String getCompilerVersion(String languageName, String compileProgram) {
     String versionCommand = getVersionCommand(languageName);
@@ -153,7 +212,7 @@ public class VojJudgerApplication {
       compilerVersion.append(IOUtils.toString(process.getInputStream()));
       compilerVersion.append(IOUtils.toString(process.getErrorStream()));
     } catch (Exception ex) {
-      return "Not Found";
+      return null;
     }
     return compilerVersion.toString();
   }

@@ -289,7 +289,7 @@ public class SubmissionService {
       submissionMapper.createSubmission(submission);
 
       long submissionId = submission.getSubmissionId();
-      createSubmissionTask(submissionId);
+      createSubmissionTask(submissionId, language.getLanguageSlug());
       result.put("submissionId", submissionId);
     }
     return result;
@@ -319,16 +319,50 @@ public class SubmissionService {
   }
 
   /**
-   * Creates a judging task and submits the submission information to the message queue.
+   * Creates a judging task and submits the submission information to the message queue. Looks up the
+   * submission's language so the task can be tagged for language-aware routing; used by the rejudge
+   * flow, which only knows the submission's unique identifier.
    *
    * @param submissionId - the unique identifier of the submission
    */
   public void createSubmissionTask(long submissionId) {
+    Submission submission = submissionMapper.getSubmission(submissionId);
+    String languageSlug =
+        (submission != null && submission.getLanguage() != null)
+            ? submission.getLanguage().getLanguageSlug()
+            : null;
+    createSubmissionTask(submissionId, languageSlug);
+  }
+
+  /**
+   * Creates a judging task and submits the submission information to the message queue.
+   *
+   * @param submissionId - the unique identifier of the submission
+   * @param languageSlug - the slug of the submission's language, used by judgers to claim only the
+   *     tasks they can build
+   */
+  public void createSubmissionTask(long submissionId, String languageSlug) {
     Map<String, Object> mapMessage = new HashMap<>();
     mapMessage.put("event", "SubmissionCreated");
     mapMessage.put("submissionId", submissionId);
 
-    messageSender.sendMessage(mapMessage);
+    messageSender.sendMessage(mapMessage, languageSlug);
+  }
+
+  /**
+   * Marks a still-pending submission as a terminal failure because no judger was available to handle
+   * it before its judging task expired in the queue. Invoked from the dead-letter listener. The
+   * update only touches submissions that are still pending, so it never overwrites a real verdict
+   * (and is safe to apply more than once).
+   *
+   * @param submissionId - the unique identifier of the submission whose task expired
+   * @return whether the submission was marked (false when it was already judged or does not exist)
+   */
+  public boolean markSubmissionUnjudgeable(long submissionId) {
+    String judgeLog =
+        "System Error.\n\nNo available judger supports this submission's language, so the judging "
+            + "task expired before it could be processed.\n";
+    return submissionMapper.markSubmissionUnjudgeable(submissionId, "SE", judgeLog) > 0;
   }
 
   /**
