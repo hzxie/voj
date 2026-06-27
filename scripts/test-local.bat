@@ -48,29 +48,29 @@ if not defined DB_PASS set "DB_PASS="
 if not defined TEST_DB set "TEST_DB=test"
 if not defined KEEP_DB set "KEEP_DB=0"
 
-REM The first positional token may be the module target; everything after it
-REM (or every token, when no target is given) is forwarded verbatim to mvn.
-REM shift /1 is used so %0 (the script path, needed by pushd below) survives.
+REM The first token may be the module target; the rest of the raw command tail
+REM (%*) is forwarded to mvn. We slice the target off %* with a string replace
+REM rather than shift/%1, because cmd splits %1/%2 on '=' - which would mangle
+REM pass-through args like -Dkey=value - whereas %* preserves them verbatim.
 set "TARGET=all"
-set "MVN_ARGS="
-if /I "%~1"=="web"    ( set "TARGET=web"    & shift /1 & goto :collect_mvn_args )
-if /I "%~1"=="judger" ( set "TARGET=judger" & shift /1 & goto :collect_mvn_args )
-if /I "%~1"=="all"    ( set "TARGET=all"    & shift /1 & goto :collect_mvn_args )
+set "MVN_ARGS=%*"
+if /I "%~1"=="web"    ( set "TARGET=web"    & goto :strip_target )
+if /I "%~1"=="judger" ( set "TARGET=judger" & goto :strip_target )
+if /I "%~1"=="all"    ( set "TARGET=all"    & goto :strip_target )
 
-REM No explicit target. A leading mvn option (-D..., -P..., --...) is forwarded;
-REM a leading non-option token is almost certainly a mistyped target, so reject it.
+REM No explicit target: a leading mvn option (-D..., -P..., --...) is forwarded
+REM as-is; a leading non-option token is almost certainly a mistyped target.
 set "FIRST=%~1"
 if defined FIRST if not "%FIRST:~0,1%"=="-" (
   echo Usage: %~nx0 [web^|judger^|all] [extra mvn args...] 1>&2
   exit /b 1
 )
+goto :args_done
 
-:collect_mvn_args
-if "%~1"=="" goto :collect_mvn_args_done
-set "MVN_ARGS=%MVN_ARGS% %1"
-shift /1
-goto :collect_mvn_args
-:collect_mvn_args_done
+:strip_target
+REM Drop the leading target word (everything up to and including it) from %*.
+call set "MVN_ARGS=%%MVN_ARGS:*%~1=%%"
+:args_done
 
 pushd "%~dp0.." || exit /b 1
 set "PROJECT_ROOT=%CD%"
@@ -129,7 +129,7 @@ set "RC=0"
 REM --- 4. Run the web module tests -------------------------------------------
 if /I not "%TARGET%"=="judger" (
   echo ==^> Running web module tests ...
-  call mvn test -f web\pom.xml%MVN_ARGS%
+  call mvn test -f web\pom.xml %MVN_ARGS%
   if errorlevel 1 set "RC=1"
 )
 
@@ -137,7 +137,7 @@ REM --- 5. Run the judger module tests ----------------------------------------
 if /I not "%TARGET%"=="web" (
   if "%RC%"=="0" (
     echo ==^> Running judger module tests ...
-    call mvn test -f judger\pom.xml
+    call mvn test -f judger\pom.xml %MVN_ARGS%
     if errorlevel 1 set "RC=1"
   ) else (
     echo ==^> Skipping judger tests because the web tests failed. 1>&2

@@ -10,6 +10,7 @@
 #
 # Usage:
 #   scripts/test-local.sh
+#   scripts/test-local.sh -Djacoco.skip=true   # any args are forwarded to mvn
 #
 # Overridable via environment variables (defaults shown):
 #   JDK_HOME=/opt/homebrew/opt/openjdk@25   # Spring 7 supports JDK 17-25
@@ -70,9 +71,9 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# 3. Run the web module's tests.
+# 3. Run the web module's tests. Any script args ("$@") are forwarded to mvn.
 echo "==> Running web module tests ..."
-mvn test -f web/pom.xml
+mvn test -f web/pom.xml "$@"
 
 # 4. Run the judger module's tests on Linux only.
 if [ "$(uname -s)" = "Linux" ]; then
@@ -84,7 +85,7 @@ if [ "$(uname -s)" = "Linux" ]; then
     cp "$JAVA_HOME/include/linux/jni_md.h" "$JAVA_HOME/include/jni_md.h" 2>/dev/null || true
     cp "$JAVA_HOME/include/linux/jawt_md.h" "$JAVA_HOME/include/jawt_md.h" 2>/dev/null || true
   fi
-  mvn test -f judger/pom.xml
+  mvn test -f judger/pom.xml "$@"
 else
   echo "==> Skipping judger tests on $(uname -s): the judger uses a Linux-only"
   echo "    JNI native build. Use scripts/build-docker.sh or a Linux host."
