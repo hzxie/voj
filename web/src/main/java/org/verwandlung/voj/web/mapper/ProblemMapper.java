@@ -159,4 +159,22 @@ public interface ProblemMapper {
    * @return whether the operation completed successfully
    */
   int deleteProblem(@Param("problemId") long problemId);
+
+  /**
+   * Gets the current checkpoints version of a problem. The judger compares this value against the
+   * version it has cached locally to decide whether its copy of the test data is stale.
+   *
+   * @param problemId - the unique identifier of the problem
+   * @return the checkpoints version, or {@code null} if the problem does not exist
+   */
+  Integer getCheckpointsVersion(@Param("problemId") long problemId);
+
+  /**
+   * Bumps a problem's checkpoints version by one. Called within the same transaction that creates or
+   * updates a problem's test data, so a stale judger cache is invalidated on the next submission.
+   *
+   * @param problemId - the unique identifier of the problem
+   * @return the number of affected rows
+   */
+  int bumpCheckpointsVersion(@Param("problemId") long problemId);
 }

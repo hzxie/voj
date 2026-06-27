@@ -197,7 +197,20 @@
 	</update>
 	<delete id="deleteProblem"
 		parameterType="long">
-		DELETE FROM voj_problems 
+		DELETE FROM voj_problems
 		WHERE problem_id = #{problemId}
 	</delete>
+	<select id="getCheckpointsVersion"
+		parameterType="long"
+		resultType="java.lang.Integer">
+		SELECT checkpoints_version
+		FROM voj_problems
+		WHERE problem_id = #{problemId}
+	</select>
+	<update id="bumpCheckpointsVersion"
+		parameterType="long">
+		UPDATE voj_problems
+		SET checkpoints_version = checkpoints_version + 1
+		WHERE problem_id = #{problemId}
+	</update>
 </mapper>

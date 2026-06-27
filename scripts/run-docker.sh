@@ -24,6 +24,7 @@
 #   WEBSITE_URL=localhost:${WEB_PORT}/voj
 #   MYSQL_ROOT_PASS                 # generated if unset
 #   MYSQL_USER_PASS                 # generated if unset (shared by web + judger)
+#   JUDGER_API_TOKEN                # generated if unset (shared by web + judger)
 #   MAIL_HOST= / MAIL_USERNAME= / MAIL_PASSWORD=   # empty -> email disabled
 #   VOJ_PULL=                       # set to 1 to pull + run published images instead of building
 #
@@ -64,6 +65,10 @@ if [ -z "${MYSQL_USER_PASS:-}" ]; then
   MYSQL_USER_PASS="$(gen_secret)"
   GENERATED+=("MYSQL_USER_PASS=${MYSQL_USER_PASS}")
 fi
+if [ -z "${JUDGER_API_TOKEN:-}" ]; then
+  JUDGER_API_TOKEN="$(gen_secret)"
+  GENERATED+=("JUDGER_API_TOKEN=${JUDGER_API_TOKEN}")
+fi
 
 # --------------------------------------------------------------------------- #
 # Build (default) or pull the images.
@@ -81,11 +86,13 @@ else
     --build-arg "MAIL_HOST=${MAIL_HOST}" \
     --build-arg "MAIL_USERNAME=${MAIL_USERNAME}" \
     --build-arg "MAIL_PASSWORD=${MAIL_PASSWORD}" \
+    --build-arg "JUDGER_API_TOKEN=${JUDGER_API_TOKEN}" \
     -t "${WEB_IMAGE}" -f docker/web/Dockerfile .
 
   echo "==> Building ${JUDGER_IMAGE} ..."
   docker build \
     --build-arg "MYSQL_USER_PASS=${MYSQL_USER_PASS}" \
+    --build-arg "JUDGER_API_TOKEN=${JUDGER_API_TOKEN}" \
     -t "${JUDGER_IMAGE}" -f docker/judger/Dockerfile .
 fi
 

@@ -41,24 +41,32 @@ docker build -t zjhzxhz/voj.judger -f docker/judger/Dockerfile .
 
 ### Credentials
 
-Database passwords and mail settings are baked into the images at build time
-through `--build-arg`. The committed defaults are placeholders, not secrets, so
-supply real values when building for anything other than a local trial:
+Database passwords, the judger API token and mail settings are baked into the
+images at build time through `--build-arg`. The committed defaults are
+placeholders, not secrets, so supply real values when building for anything other
+than a local trial:
 
 ```
 docker build \
   --build-arg MYSQL_ROOT_PASS=... \
   --build-arg MYSQL_USER_PASS=... \
+  --build-arg JUDGER_API_TOKEN=... \
   -t zjhzxhz/voj.web -f docker/web/Dockerfile .
 
-# The judger must be built with the SAME MYSQL_USER_PASS as the web image.
+# The judger must be built with the SAME MYSQL_USER_PASS and JUDGER_API_TOKEN as
+# the web image.
 docker build \
   --build-arg MYSQL_USER_PASS=... \
+  --build-arg JUDGER_API_TOKEN=... \
   -t zjhzxhz/voj.judger -f docker/judger/Dockerfile .
 ```
 
-`scripts/run-docker.sh` does this for you and generates the passwords if you do
-not provide them.
+`JUDGER_API_TOKEN` is the shared secret the judger presents (in the
+`X-Judger-Token` header) to download a problem's test data from the web app; both
+images must be built with the same value.
+
+`scripts/run-docker.sh` does this for you and generates the passwords and token if
+you do not provide them.
 
 You can also pull the prebuilt images from Docker Hub:
 

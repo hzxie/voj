@@ -43,7 +43,6 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import org.verwandlung.voj.judger.application.ApplicationDispatcher;
 import org.verwandlung.voj.judger.exception.IllgealSubmissionException;
-import org.verwandlung.voj.judger.mapper.CheckpointMapper;
 import org.verwandlung.voj.judger.mapper.SubmissionMapper;
 import org.verwandlung.voj.judger.model.Checkpoint;
 import org.verwandlung.voj.judger.model.Problem;
@@ -91,7 +90,7 @@ public class DispatcherTest {
 
     List<Checkpoint> checkpoints = new ArrayList<>();
     checkpoints.add(new Checkpoint(1000L, 1, true, 100, "input", "output"));
-    when(checkpointMapper.getCheckpointsUsingProblemId(1000L)).thenReturn(checkpoints);
+    when(checkpointStore.getCheckpoints(1000L)).thenReturn(checkpoints);
 
     when(programRunner.getRuntimeResult(any(), anyString(), anyString(), anyString(), anyString()))
         .thenReturn(runtimeResult("AC"));
@@ -124,7 +123,7 @@ public class DispatcherTest {
 
     List<Checkpoint> checkpoints = new ArrayList<>();
     checkpoints.add(new Checkpoint(1000L, 1, true, 100, "input", "output"));
-    when(checkpointMapper.getCheckpointsUsingProblemId(1000L)).thenReturn(checkpoints);
+    when(checkpointStore.getCheckpoints(1000L)).thenReturn(checkpoints);
 
     when(programRunner.getRuntimeResult(any(), anyString(), anyString(), anyString(), anyString()))
         .thenReturn(runtimeResult("AC"));
@@ -216,8 +215,8 @@ public class DispatcherTest {
   /** The mocked SubmissionMapper object. */
   @Mock private SubmissionMapper submissionMapper;
 
-  /** The mocked CheckpointMapper object. */
-  @Mock private CheckpointMapper checkpointMapper;
+  /** The mocked CheckpointStore object. */
+  @Mock private CheckpointStore checkpointStore;
 
   /** The Dispatcher object under test. */
   @InjectMocks private Dispatcher dispatcher;

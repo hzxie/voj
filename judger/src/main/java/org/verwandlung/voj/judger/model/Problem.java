@@ -303,6 +303,25 @@ public class Problem implements Serializable {
     this.hint = hint;
   }
 
+  /**
+   * Gets the checkpoints version of the problem. The judger compares this against the version of its
+   * locally cached test data to decide whether the cache is stale.
+   *
+   * @return the checkpoints version
+   */
+  public int getCheckpointsVersion() {
+    return checkpointsVersion;
+  }
+
+  /**
+   * Sets the checkpoints version of the problem.
+   *
+   * @param checkpointsVersion - the checkpoints version
+   */
+  public void setCheckpointsVersion(int checkpointsVersion) {
+    this.checkpointsVersion = checkpointsVersion;
+  }
+
   /* (non-Javadoc)
    * @see java.lang.Object#toString()
    */
@@ -359,6 +378,9 @@ public class Problem implements Serializable {
 
   /** The hint of the problem. */
   private String hint;
+
+  /** The checkpoints version, bumped by the web side whenever a problem's test data changes. */
+  private int checkpointsVersion;
 
   /** The unique serialization identifier. */
   private static final long serialVersionUID = 4703482016721365341L;
