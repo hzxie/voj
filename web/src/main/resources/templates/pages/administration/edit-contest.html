@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/admin}" lang="en">
+<head>
+    <title th:text="#{voj.administration.edit-contest.title} + ' | ' + ${websiteName}">Contest</title>
+</head>
+<body>
+    <div layout:fragment="content">
+    <div class="adm-detail" th:with="isEdit=${contest != null},mode=${contest != null ? contest.contestMode : 'ACM'}">
+
+        <div class="adm-detail-top">
+            <a class="adm-back" th:href="@{/administration/all-contests}">&#8592; <span th:text="#{voj.administration.edit-contest.back}">back to contests</span></a>
+            <span class="adm-idchip" th:if="${isEdit}" th:text="'#' + ${contest.contestId}">#1</span>
+            <div style="flex:1;"></div>
+            <button type="button" class="adm-btn-tn danger" th:if="${isEdit}" id="delete-contest" th:text="#{voj.administration.edit-contest.delete}">delete</button>
+            <button type="button" class="adm-btn-tn go" id="save-contest" th:text="'$ ' + #{voj.administration.edit-contest.save}">$ save</button>
+        </div>
+
+        <div class="alert alert-error hide"></div>
+        <div class="alert alert-success hide" th:text="#{voj.administration.edit-contest.saved}">Saved.</div>
+        <input type="hidden" id="contest-id" th:value="${isEdit ? contest.contestId : ''}" />
+        <input type="hidden" id="contest-mode" th:value="${mode}" />
+
+        <div class="adm-ed2">
+            <div class="adm-col">
+                <div class="adm-card">
+                    <div class="adm-card-head plain" th:text="#{voj.administration.edit-contest.details}">// DETAILS</div>
+                    <div class="adm-card-body">
+                        <label class="adm-flabel">
+                            <span th:text="#{voj.administration.edit-contest.name}">CONTEST NAME</span>
+                            <input id="contest-name" class="adm-input" type="text" th:value="${isEdit ? contest.contestName : ''}" maxlength="128" />
+                        </label>
+                        <label class="adm-flabel">
+                            <span th:text="#{voj.administration.edit-contest.notes}">DESCRIPTION</span>
+                            <textarea id="contest-notes" class="adm-input" rows="5" th:text="${isEdit ? contest.contestNotes : ''}"></textarea>
+                        </label>
+                    </div>
+                </div>
+                <div class="adm-card">
+                    <div class="adm-card-head plain" th:text="#{voj.administration.edit-contest.problems}">// PROBLEMS</div>
+                    <div class="adm-card-body">
+                        <label class="adm-flabel">
+                            <span th:text="#{voj.administration.edit-contest.problems-hint}">PROBLEM IDS · JSON array</span>
+                            <textarea id="contest-problems" class="adm-input code" rows="3" th:text="${isEdit ? contest.problems : '[]'}">[]</textarea>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="adm-col">
+                <div class="adm-card">
+                    <div class="adm-card-head plain" th:text="#{voj.administration.edit-contest.schedule}">// SCHEDULE</div>
+                    <div class="adm-card-body">
+                        <label class="adm-flabel">
+                            <span th:text="#{voj.administration.edit-contest.start-time}">START TIME</span>
+                            <input id="start-time" class="adm-input" type="datetime-local" th:value="${isEdit ? #dates.format(contest.startTime, 'yyyy-MM-dd''T''HH:mm') : ''}" />
+                        </label>
+                        <label class="adm-flabel">
+                            <span th:text="#{voj.administration.edit-contest.end-time}">END TIME</span>
+                            <input id="end-time" class="adm-input" type="datetime-local" th:value="${isEdit ? #dates.format(contest.endTime, 'yyyy-MM-dd''T''HH:mm') : ''}" />
+                        </label>
+                    </div>
+                </div>
+                <div class="adm-card">
+                    <div class="adm-card-head plain" th:text="#{voj.administration.edit-contest.format}">// FORMAT</div>
+                    <div class="adm-card-body">
+                        <div>
+                            <div class="adm-block-label" th:text="#{voj.administration.edit-contest.mode}">SCORING</div>
+                            <div class="adm-seg" data-adm="seg" data-input="contest-mode">
+                                <a href="javascript:void(0);" data-value="ACM" th:classappend="${mode == 'ACM'} ? 'active'">ACM</a>
+                                <a href="javascript:void(0);" data-value="OI" th:classappend="${mode == 'OI'} ? 'active'">OI</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="adm-danger" th:if="${isEdit}">
+                    <div>
+                        <div class="t" th:text="#{voj.administration.edit-contest.delete-contest}">Delete contest</div>
+                        <div class="d" th:text="#{voj.administration.edit-contest.delete-hint}">Removes the contest permanently.</div>
+                    </div>
+                    <button type="button" class="adm-btn-tn danger" id="delete-contest-2" th:text="#{voj.administration.edit-contest.delete}">delete</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    </div>
+
+    <th:block layout:fragment="scripts">
+    <script type="text/javascript" th:inline="javascript">
+        document.addEventListener('DOMContentLoaded', function () {
+            var $err = $('.alert-error');
+            var contestId = document.getElementById('contest-id').value;
+
+            function save() {
+                $err.addClass('hide');
+                var data = {
+                    contestName: $('#contest-name').val(),
+                    contestNotes: $('#contest-notes').val(),
+                    startTime: $('#start-time').val(),
+                    endTime: $('#end-time').val(),
+                    contestMode: document.getElementById('contest-mode').value,
+                    problems: $('#contest-problems').val()
+                };
+                if (!data.contestName || !data.startTime || !data.endTime) {
+                    $err.html([[#{voj.administration.edit-contest.invalid-error}]]).removeClass('hide'); return;
+                }
+                var url = contestId ? [[@{/administration/editContest.action}]] : [[@{/administration/createContest.action}]];
+                if (contestId) { data.contestId = contestId; }
+                $.ajax({
+                    type: 'POST', url: url, data: data, dataType: 'JSON',
+                    success: function (result) {
+                        if (result['isSuccessful']) { window.location.href = [[@{/administration/all-contests}]]; }
+                        else { $err.html([[#{voj.administration.edit-contest.invalid-error}]]).removeClass('hide'); }
+                    }
+                });
+            }
+            document.getElementById('save-contest').addEventListener('click', save);
+
+            function del() {
+                if (!confirm([[#{voj.administration.edit-contest.continue-or-not}]])) return;
+                $.ajax({
+                    type: 'POST', url: [[@{/administration/deleteContests.action}]],
+                    data: { 'contests': JSON.stringify([contestId]) }, dataType: 'JSON',
+                    success: function (result) {
+                        if (result['isSuccessful']) { window.location.href = [[@{/administration/all-contests}]]; }
+                    }
+                });
+            }
+            ['delete-contest', 'delete-contest-2'].forEach(function (id) {
+                var el = document.getElementById(id);
+                if (el) el.addEventListener('click', del);
+            });
+        });
+    </script>
+    </th:block>
+</body>
+</html>

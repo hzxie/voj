@@ -18,10 +18,13 @@ package org.verwandlung.voj.web.mapper;
 
 import java.util.List;
 
+import javax.sql.DataSource;
+
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.Transactional;
@@ -69,6 +72,28 @@ public class ProblemMapperTest {
   }
 
   /**
+   * Test case: tests the getLowerBoundOfProblems() method when no problem exists. Test data: an
+   * emptied problems table. Expected: 0 (MIN over an empty table is NULL, which COALESCE maps to 0
+   * so the primitive long return type never receives null).
+   */
+  @Test
+  public void testGetLowerBoundOfProblemsWhenEmpty() {
+    deleteAllProblems();
+    Assertions.assertEquals(0, problemMapper.getLowerBoundOfProblems());
+  }
+
+  /**
+   * Test case: tests the getUpperBoundOfProblems() method when no problem exists. Test data: an
+   * emptied problems table. Expected: 0 (MAX over an empty table is NULL, which COALESCE maps to 0
+   * so the primitive long return type never receives null).
+   */
+  @Test
+  public void testGetUpperBoundOfProblemsWhenEmpty() {
+    deleteAllProblems();
+    Assertions.assertEquals(0, problemMapper.getUpperBoundOfProblems());
+  }
+
+  /**
    * Test case: tests the getUpperBoundOfProblemsWithLimit(boolean, long, int) method. Test data: get 3
    * problems with IDs starting from 1000. Expected: the ID of the last problem is 1002.
    */
@@ -86,6 +111,18 @@ public class ProblemMapperTest {
   public void testGetUpperBoundOfPublicProblemsWithOffsetFrom1000WithLimit3() {
     long upperBoundOfProblems = problemMapper.getUpperBoundOfProblemsWithLimit(true, 1000, 3);
     Assertions.assertEquals(1003, upperBoundOfProblems);
+  }
+
+  /**
+   * Test case: tests the getUpperBoundOfProblemsWithLimit(boolean, long, int) method when the
+   * requested range matches no problem. Test data: an offset beyond the last problem ID. Expected: 0
+   * (the inner query yields no rows, so MAX is NULL, which COALESCE maps to 0 — no deletion required
+   * to exercise the empty-result path).
+   */
+  @Test
+  public void testGetUpperBoundOfProblemsWithLimitWhenRangeEmpty() {
+    long upperBoundOfProblems = problemMapper.getUpperBoundOfProblemsWithLimit(false, 99999, 3);
+    Assertions.assertEquals(0, upperBoundOfProblems);
   }
 
   /** Test case: tests the getProblem() method. Test data: the problem unique identifier of A+B Problem. Expected: the expected problem object. */
@@ -230,6 +267,21 @@ public class ProblemMapperTest {
     Assertions.assertEquals(0, numberOfRowsAffected);
   }
 
+  /**
+   * Empties the problems table within the current (rolled-back) test transaction. Contest
+   * submissions reference submissions without ON DELETE CASCADE, so they must be removed first;
+   * deleting the problems then cascades to submissions, checkpoints, category/tag relationships and
+   * discussion threads.
+   */
+  private void deleteAllProblems() {
+    JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
+    jdbcTemplate.update("DELETE FROM voj_contest_submissions");
+    jdbcTemplate.update("DELETE FROM voj_problems");
+  }
+
   /** The ProblemMapper object under test. */
   @Autowired private ProblemMapper problemMapper;
+
+  /** The data source used to empty the problems table within the test transaction. */
+  @Autowired private DataSource dataSource;
 }

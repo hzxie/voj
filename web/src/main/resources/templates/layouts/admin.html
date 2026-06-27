@@ -1,11 +1,15 @@
 <!DOCTYPE html>
 <!--/*
   The master layout for the administration back-office. Pages decorate it with
-  layout:decorate="~{layouts/admin}" and fill the #content area through
+  layout:decorate="~{layouts/admin}" and fill the content hole through
   layout:fragment="content", plus optional page <head> stylesheets and
   layout:fragment="scripts" for page-specific bottom-of-body scripts.
 
-  Shares the terminal UI system (css/app.css + js/theme.js) with the public site.
+  Terminal aesthetic: shared tokens/components live in css/app.css; the admin
+  shell (fixed sidebar + command-prompt header + dashboard/table/editor pieces)
+  lives in css/admin.css. Chrome behaviour: js/theme.js (theme toggle) +
+  js/admin.js (sidebar drawer + checkbox tables). The active section + sidebar
+  badge counts are injected by AdministrationController#populateAdminChrome.
 */-->
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
@@ -18,26 +22,35 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" th:content="${description}" />
     <meta name="author" content="Haozhe Xie" />
+    <meta name="_csrf" th:content="${_csrf.token}" />
+    <meta name="_csrf_header" th:content="${_csrf.headerName}" />
     <link th:href="|${cdnUrl}/img/favicon.ico?v=${version}|" rel="shortcut icon" type="image/x-icon" />
     <!-- UI system (self-hosted fonts + theme variables + components). -->
     <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/app.css?v=${version}|" />
-    <!-- Functional JavaScript kept from the legacy stack. -->
+    <!-- Admin-only chrome + components. -->
+    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/admin.css?v=${version}|" />
+    <!-- Functional JavaScript kept from the legacy stack (page AJAX uses jQuery). -->
     <script type="text/javascript" th:src="|${cdnUrl}/js/jquery-3.7.1.min.js?v=${version}|"></script>
 </head>
-<body>
-    <div id="wrapper">
-        <!-- Sidebar -->
-        <div th:replace="~{fragments/admin-sidebar :: sidebar}"></div>
-        <div id="container">
-            <!-- Header -->
-            <div th:replace="~{fragments/admin-header :: header}"></div>
-            <!-- Content -->
-            <div id="content" layout:fragment="content"></div>
-        </div> <!-- #container -->
-    </div> <!-- #wrapper -->
-    <!-- UI chrome behaviour (theme toggle, dropdowns). -->
+<body class="adm-body">
+    <!-- Decorative scanline overlay. -->
+    <div class="adm-scanlines" aria-hidden="true"></div>
+    <!-- Mobile drawer scrim. -->
+    <div class="adm-scrim" data-adm="scrim"></div>
+    <!-- Sidebar -->
+    <div th:replace="~{fragments/admin-sidebar :: sidebar}"></div>
+    <!-- Main column -->
+    <main class="adm-main">
+        <!-- Header -->
+        <div th:replace="~{fragments/admin-header :: header}"></div>
+        <!-- Content -->
+        <div class="adm-content" layout:fragment="content"></div>
+    </main>
+
+    <!-- UI chrome behaviour (theme toggle) + admin chrome (drawer, tables). -->
     <script type="text/javascript" th:src="|${cdnUrl}/js/theme.js?v=${version}|"></script>
-    <!-- Common administration scripts (CSRF token wiring + helpers). -->
+    <script type="text/javascript" th:src="|${cdnUrl}/js/admin.js?v=${version}|"></script>
+    <!-- Common administration scripts (CSRF token wiring + %s formatter helper). -->
     <script type="text/javascript" th:inline="javascript">
         $(document).ajaxSend(function(event, jqXHR, settings) {
             var method = (settings.type || 'GET').toUpperCase();
@@ -51,49 +64,6 @@
             while (/%s/.test(newStr)) { newStr = newStr.replace("%s", arguments[i++]) }
             return newStr;
         }
-        $('#sidebar-toggle').click(function() {
-            var isSidebarShown = $('#sidebar').is(':visible');
-            if ( isSidebarShown ) {
-                $('#sidebar').css('display', 'none');
-                $('#header').css('padding-left', 22);
-                $('#content').css('margin-left', 0);
-            } else {
-                $('#sidebar').css('display', 'block');
-                $('#header').css('padding-left', 250);
-                $('#content').css('margin-left', 250);
-            }
-        });
-        $('li.nav-item-has-children > a').click(function() {
-            var navItem       = $(this).parent(),
-                isSubNavShown = $('ul.sub-nav', navItem).is(':visible');
-            if ( isSubNavShown ) {
-                $('i.fa-caret-down', navItem).addClass('fa-caret-right').removeClass('fa-caret-down');
-                $('ul.sub-nav', navItem).slideUp(120);
-            } else {
-                $('i.fa-caret-right', navItem).addClass('fa-caret-down').removeClass('fa-caret-right');
-                $('ul.sub-nav', navItem).slideDown(120);
-            }
-        });
-        $(function() {
-            var currentLocation   = window.location.pathname,
-                mostSimilarItem   = null,
-                mostSimilarLength = 0;
-            $('.nav-item > a', '#sidebar-nav').each(function() {
-                var navHref = $(this).attr('href');
-                if ( navHref && currentLocation.indexOf(navHref) != -1 && navHref.length > mostSimilarLength ) {
-                    mostSimilarItem   = $(this);
-                    mostSimilarLength = navHref.length;
-                }
-            });
-            $(mostSimilarItem).parent().addClass('active');
-            $('li.primary-nav-item', '#sidebar-nav').each(function() {
-                if ( $('li.secondary-nav-item.active', $(this)).length != 0 ) {
-                    $(this).addClass('active');
-                    $('i.fa-caret-right', $(this)).addClass('fa-caret-down').removeClass('fa-caret-right');
-                    $('ul.sub-nav', $(this)).slideDown(120);
-                }
-            });
-        });
     </script>
     <!-- Markdown rendering (markdown-it) + shared helpers (renderMarkdown / createMarkdownEditor). -->
     <script type="text/javascript" th:src="|${cdnUrl}/js/markdown-it.min.js?v=${version}|"></script>

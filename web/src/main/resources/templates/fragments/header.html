@@ -29,6 +29,7 @@
             <span class="moon">&#9790;</span><span class="sun">&#9728;</span><span class="knob"></span>
         </div>
         <th:block th:if="${isLogin}">
+            <a th:if="${myProfile.userGroup != null and myProfile.userGroup.userGroupSlug == 'administrators'}" class="vw-header-link vw-desktop-only" th:href="@{/administration}">~/admin</a>
             <a class="vw-header-link vw-desktop-only" th:href="@{/accounts/user/{uid}(uid=${myProfile.uid})}" th:text="|~/${myProfile.username}|">~/user</a>
             <a class="vw-btn vw-btn-ghost vw-btn-sm vw-desktop-only" th:href="@{/accounts/login(logout=true)}" th:text="#{voj.include.header.sign-out}">sign out</a>
         </th:block>
@@ -47,6 +48,7 @@
         <a th:href="@{/discussion}" th:classappend="${navD}? 'active'">~/discussion</a>
         <a th:href="@{/contest}" th:classappend="${navC}? 'active'">~/contests</a>
         <a th:href="@{/submission}" th:classappend="${navS}? 'active'">~/submission</a>
+        <a th:if="${isLogin and myProfile.userGroup != null and myProfile.userGroup.userGroupSlug == 'administrators'}" th:href="@{/administration}">~/admin</a>
         <div class="vw-menu-actions" th:if="${isLogin}">
             <a class="vw-btn vw-btn-ghost" th:href="@{/accounts/user/{uid}(uid=${myProfile.uid})}" th:text="|~/${myProfile.username}|">~/user</a>
             <a class="vw-btn vw-btn-accent" th:href="@{/accounts/login(logout=true)}" th:text="#{voj.include.header.sign-out}">sign out</a>

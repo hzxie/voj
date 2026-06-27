@@ -14,6 +14,11 @@ REM   scripts\test-local.bat
 REM   scripts\test-local.bat web        run only the web module tests
 REM   scripts\test-local.bat judger     run only the judger module tests
 REM
+REM Any tokens after the optional target are forwarded verbatim to `mvn test`,
+REM e.g. scripts\test-local.bat web -Djacoco.skip=true. When the first token is
+REM itself a mvn option (starts with '-'), the target defaults to 'all', so
+REM scripts\test-local.bat -Djacoco.skip=true also works.
+REM
 REM NOTE: the judger tests log in as a low-privilege local account
 REM (system.username / system.password in voj-test-windows.properties, default
 REM 'appveyor'). On your machine that account must exist, or override it via
@@ -43,12 +48,29 @@ if not defined DB_PASS set "DB_PASS="
 if not defined TEST_DB set "TEST_DB=test"
 if not defined KEEP_DB set "KEEP_DB=0"
 
-set "TARGET=%~1"
-if "%TARGET%"=="" set "TARGET=all"
-if /I not "%TARGET%"=="all" if /I not "%TARGET%"=="web" if /I not "%TARGET%"=="judger" (
-  echo Usage: %~nx0 [web^|judger^|all] 1>&2
+REM The first positional token may be the module target; everything after it
+REM (or every token, when no target is given) is forwarded verbatim to mvn.
+REM shift /1 is used so %0 (the script path, needed by pushd below) survives.
+set "TARGET=all"
+set "MVN_ARGS="
+if /I "%~1"=="web"    ( set "TARGET=web"    & shift /1 & goto :collect_mvn_args )
+if /I "%~1"=="judger" ( set "TARGET=judger" & shift /1 & goto :collect_mvn_args )
+if /I "%~1"=="all"    ( set "TARGET=all"    & shift /1 & goto :collect_mvn_args )
+
+REM No explicit target. A leading mvn option (-D..., -P..., --...) is forwarded;
+REM a leading non-option token is almost certainly a mistyped target, so reject it.
+set "FIRST=%~1"
+if defined FIRST if not "%FIRST:~0,1%"=="-" (
+  echo Usage: %~nx0 [web^|judger^|all] [extra mvn args...] 1>&2
   exit /b 1
 )
+
+:collect_mvn_args
+if "%~1"=="" goto :collect_mvn_args_done
+set "MVN_ARGS=%MVN_ARGS% %1"
+shift /1
+goto :collect_mvn_args
+:collect_mvn_args_done
 
 pushd "%~dp0.." || exit /b 1
 set "PROJECT_ROOT=%CD%"
@@ -107,7 +129,7 @@ set "RC=0"
 REM --- 4. Run the web module tests -------------------------------------------
 if /I not "%TARGET%"=="judger" (
   echo ==^> Running web module tests ...
-  call mvn test -f web\pom.xml
+  call mvn test -f web\pom.xml%MVN_ARGS%
   if errorlevel 1 set "RC=1"
 )
 

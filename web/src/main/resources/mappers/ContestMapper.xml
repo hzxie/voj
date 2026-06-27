@@ -25,7 +25,13 @@
 			</if>
 		</where>
 	</select>
-	<select id="getContests" 
+	<select id="getNumberOfLiveContests"
+		resultType="long">
+		SELECT COUNT(*)
+		FROM voj_contests
+		WHERE contest_start_time &lt;= NOW() AND contest_end_time &gt; NOW()
+	</select>
+	<select id="getContests"
 		parameterType="map"
 		resultMap="ContestResultMap">
 		SELECT * 

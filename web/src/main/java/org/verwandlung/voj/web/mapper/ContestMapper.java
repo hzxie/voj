@@ -36,6 +36,14 @@ public interface ContestMapper {
   long getNumberOfContests(@Param("keyword") String keyword);
 
   /**
+   * [For administrators only] Gets the number of contests that are currently live (started but not
+   * yet ended). Feeds the dashboard's "live contests" KPI and the sidebar badge.
+   *
+   * @return the number of live contests
+   */
+  long getNumberOfLiveContests();
+
+  /**
    * Gets the list of contests.
    *
    * @param keyword - the keyword of the contest

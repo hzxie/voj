@@ -532,7 +532,9 @@ a.vw-card:hover { border-color:var(--accent); }
 .vw-card-accent { box-shadow:0 0 0 1px var(--accent-soft); }
 .vw-card-srclabel { font-size:12px; letter-spacing:1.5px; }
 .vw-card-flush { padding:0; }
-.vw-src-pre { margin:0; border:0; border-radius:0; }
+/* Full-bleed source listing: cancel the bordered/rounded .vw-stmt pre treatment
+ * (defined later, higher specificity) so the code sits flush inside the card. */
+.vw-stmt .vw-src-pre { margin:0; border:0; border-radius:0; }
 .vw-card-foot { border-top:1px solid var(--line2); padding:11px 16px; display:flex; gap:18px; font-size:11px; color:var(--text3); flex-wrap:wrap; }
 .vw-side-verdict { background:var(--accent-soft); border-bottom:1px solid var(--line2); }
 .vw-side-verdict-name { font-size:18px; font-weight:700; }
@@ -1168,7 +1170,7 @@ ul.inline > li, .inline > li { display:inline-block; margin-right:14px; }
  * Give every section label except the first uniform space above it instead. */
 .vw-stmt .vw-block-label { margin-top:22px; }
 .vw-stmt .vw-block-label:first-child { margin-top:0; }
-.vw-stmt pre { background:var(--bg3); border:1px solid var(--line); border-radius:9px; padding:14px 16px; overflow:auto; white-space:pre; color:var(--text); font-family:var(--mono); font-size:13.5px; margin:0; }
+.vw-stmt pre { background:var(--bg1); border:1px solid var(--line); border-radius:9px; padding:14px 16px; overflow:auto; white-space:pre; color:var(--text); font-family:var(--mono); font-size:13.5px; margin:0; }
 
 /* Problem-detail sidebar lists (My Submissions / Discussion). Rows are full-bleed
  * inside the card and share the 20px horizontal inset of .vw-card-strip, so the

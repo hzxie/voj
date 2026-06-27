@@ -88,6 +88,25 @@ public interface SubmissionMapper {
       @Param("isAcceptedOnly") boolean isAcceptedOnly);
 
   /**
+   * [For administrators only] Gets the number of submissions within a specified time period, grouped
+   * by judge result. Feeds the dashboard's verdict-mix breakdown.
+   *
+   * @param startTime - the start time of the statistics
+   * @param endTime - the end time of the statistics
+   * @return a list of {slug, submissions} rows, one per judge-result slug
+   */
+  List<Map<String, Object>> getNumberOfSubmissionsGroupByJudgeResult(
+      @Param("startTime") String startTime, @Param("endTime") String endTime);
+
+  /**
+   * [For administrators only] Gets the number of submissions still waiting to be judged (the judge
+   * queue depth).
+   *
+   * @return the number of pending submissions
+   */
+  long getNumberOfPendingSubmissions();
+
+  /**
    * Gets the unique identifier of the latest submission.
    *
    * @return the unique identifier of the latest submission

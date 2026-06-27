@@ -17,10 +17,12 @@
 package org.verwandlung.voj.web.messenger;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.Executors;
@@ -209,6 +211,47 @@ public class ApplicationEventListener {
       }
     }
     return onlineJudgersCount;
+  }
+
+  /**
+   * Gets a snapshot of the currently online judgers and their live telemetry (description, CPU load,
+   * memory usage, uptime), used by the administration dashboard and the judgers page. Each entry is a
+   * copy that also carries the judger's {@code username}.
+   *
+   * @return a list of telemetry maps, one per online judger
+   */
+  public List<Map<String, Object>> getOnlineJudgerList() {
+    List<Map<String, Object>> judgers = new ArrayList<>();
+    for (Entry<String, Map<String, Object>> entry : onlineJudgers.entrySet()) {
+      if (isOnline(entry.getValue())) {
+        Map<String, Object> telemetry = new HashMap<>(entry.getValue());
+        telemetry.put("username", entry.getKey());
+        judgers.add(telemetry);
+      }
+    }
+    return judgers;
+  }
+
+  /**
+   * Gets the average CPU load across the currently online judgers, used by the dashboard's system
+   * status. CPU load is reported as a percentage in {@code [0, 100]} by each judger's heartbeat.
+   *
+   * @return the average CPU load (0..100), or {@code -1} when no judger is online or none reports it
+   */
+  public double getAverageCpuLoad() {
+    double total = 0;
+    int counted = 0;
+    for (Map<String, Object> judgerInformation : onlineJudgers.values()) {
+      if (!isOnline(judgerInformation)) {
+        continue;
+      }
+      Object cpuLoad = judgerInformation.get("cpuLoad");
+      if (cpuLoad instanceof Number) {
+        total += ((Number) cpuLoad).doubleValue();
+        ++counted;
+      }
+    }
+    return counted == 0 ? -1 : total / counted;
   }
 
   /**

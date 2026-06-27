@@ -6,147 +6,90 @@
     <title th:text="#{voj.administration.all-users.title} + ' | ' + ${websiteName}">All Users</title>
 </head>
 <body>
-    <div id="content" layout:fragment="content">
-        <h2 class="page-header"><i class="fa fa-users"></i> <span th:text="#{voj.administration.all-users.all-users}">All Users</span></h2>
-        <div class="alert alert-error hide"></div> <!-- .alert-error -->
-        <div id="filters" class="row-fluid">
-            <div class="span4">
-                <div class="row-fluid">
-                    <div class="span8">
-                        <select id="actions">
-                            <option value="delete" th:text="#{voj.administration.all-users.delete}">Delete</option>
-                        </select>
-                    </div> <!-- .span8 -->
-                    <div class="span4">
-                        <button class="btn btn-danger btn-block" th:text="#{voj.administration.all-users.apply}">Apply</button>
-                    </div> <!-- .span4 -->
-                </div> <!-- .row-fluid -->
-            </div> <!-- .span4 -->
-            <div class="span8 text-right">
-                <form th:action="@{/administration/all-users}" method="GET" class="row-fluid">
-                    <div class="span4">
-                        <select id="user-group" name="userGroup">
-                            <option value="" th:text="#{voj.administration.all-users.all-user-groups}">All User Groups</option>
-                            <option th:each="userGroup : ${userGroups}" th:value="${userGroup.userGroupSlug}" th:selected="${userGroup.userGroupSlug == selectedUserGroup}" th:text="${userGroup.userGroupName}">Group</option>
-                        </select>
-                    </div> <!-- .span4 -->
-                    <div class="span5">
-                        <div class="control-group">
-                            <input id="username" name="username" class="span12" type="text" th:value="${username}" th:placeholder="#{voj.administration.all-users.username}" />
-                        </div> <!-- .control-group -->
-                    </div> <!-- .span5 -->
-                    <div class="span3">
-                        <button class="btn btn-primary btn-block" th:text="#{voj.administration.all-users.filter}">Filter</button>
-                    </div> <!-- .span3 -->
-                </form> <!-- .row-fluid -->
-            </div> <!-- .span8 -->
-        </div> <!-- .row-fluid -->
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th class="check-box">
-                        <label class="checkbox" for="all-users">
-                            <input id="all-users" type="checkbox" data-toggle="checkbox" />
-                        </label>
-                    </th>
-                    <th class="username" th:text="#{voj.administration.all-users.username}">Username</th>
-                    <th class="email" th:text="#{voj.administration.all-users.email}">Email</th>
-                    <th class="user-group" th:text="#{voj.administration.all-users.user-group}">User Group</th>
-                    <th class="prefer-language" th:text="#{voj.administration.all-users.prefer-language}">Prefer Language</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr th:each="user : ${users}" th:attr="data-value=${user.uid}">
-                    <td class="check-box">
-                        <label class="checkbox" th:for="|user-${user.uid}|">
-                            <input th:id="|user-${user.uid}|" type="checkbox" th:value="${user.uid}" data-toggle="checkbox" />
-                        </label>
-                    </td>
-                    <td class="username">
-                        <a th:href="@{/administration/edit-user/{id}(id=${user.uid})}" th:text="${user.username}">user</a>
-                    </td>
-                    <td class="email" th:text="${user.email}">email</td>
-                    <td class="user-group" th:text="${user.userGroup.userGroupName}">group</td>
-                    <td class="prefer-language" th:text="${user.preferLanguage.languageName}">language</td>
-                </tr>
-            </tbody>
-        </table>
-        <div id="pagination" class="pagination pagination-centered"
-             th:with="lowerBound=${currentPage - 5 > 0 ? currentPage - 5 : 1},upperBound=${currentPage + 5 < totalPages ? currentPage + 5 : totalPages}">
-            <ul>
-                <li th:classappend="${currentPage <= 1} ? 'disabled' : ''" class="previous">
-                    <a th:if="${currentPage <= 1}" href="javascript:void(0);">&lt;</a>
-                    <a th:unless="${currentPage <= 1}" th:href="@{/administration/all-users(userGroup=${selectedUserGroup},username=${username},page=${currentPage - 1})}">&lt;</a>
-                </li>
-                <li th:each="pageNumber : ${#numbers.sequence(lowerBound, upperBound)}" th:classappend="${pageNumber == currentPage} ? 'active' : ''"><a th:href="@{/administration/all-users(userGroup=${selectedUserGroup},username=${username},page=${pageNumber})}" th:text="${pageNumber}">1</a></li>
-                <li th:classappend="${currentPage >= totalPages} ? 'disabled' : ''" class="next">
-                    <a th:if="${currentPage >= totalPages}" href="javascript:void(0);">&gt;</a>
-                    <a th:unless="${currentPage >= totalPages}" th:href="@{/administration/all-users(userGroup=${selectedUserGroup},username=${username},page=${currentPage + 1})}">&gt;</a>
-                </li>
-            </ul>
-        </div> <!-- #pagination-->
-    </div> <!-- #content -->
+    <div layout:fragment="content">
+    <div class="adm-wrap">
+
+        <!-- Toolbar -->
+        <form class="adm-toolbar" method="GET" th:action="@{/administration/all-users}">
+            <div class="adm-toolbar-search">
+                <span class="sigil">$</span>
+                <input name="username" type="text" th:value="${username}" th:placeholder="#{voj.administration.all-users.search-placeholder}" />
+                <span class="count"><span th:text="${#lists.size(users)}">0</span> <span th:text="#{voj.administration.all-users.records}">records</span></span>
+            </div>
+            <select name="userGroup" class="adm-toolbar-select" onchange="this.form.submit();">
+                <option value="" th:text="#{voj.administration.all-users.all-user-groups}">All User Groups</option>
+                <option th:each="userGroup : ${userGroups}" th:value="${userGroup.userGroupSlug}" th:selected="${userGroup.userGroupSlug == selectedUserGroup}" th:text="${userGroup.userGroupName}">Group</option>
+            </select>
+            <button type="submit" class="adm-btn-ghost"><span>&#9698;</span> <span th:text="#{voj.administration.all-users.filter}">filter</span></button>
+            <a class="adm-btn-accent" th:href="@{/administration/new-user}" th:text="#{voj.administration.all-users.new-user}">+ new user</a>
+        </form>
+
+        <!-- Bulk bar -->
+        <div class="adm-bulk" data-adm="bulk" style="display:none;">
+            <span class="sel"><span data-adm="bulk-count">0</span> <span th:text="#{voj.administration.all-users.selected}">selected</span></span>
+            <div style="flex:1;"></div>
+            <span class="adm-bulk-act c-err" data-adm="bulk-delete">&#10005; <span th:text="#{voj.administration.all-users.delete}">delete</span></span>
+            <span class="adm-bulk-clear" data-adm="bulk-clear" th:text="#{voj.administration.all-users.clear}">clear</span>
+        </div>
+
+        <!-- Table -->
+        <div class="adm-table" data-adm="table">
+            <div class="adm-table-scroll"><div class="adm-table-inner" style="--cols:34px 160px minmax(0,1fr) 130px 150px 40px;">
+                <div class="adm-table-head">
+                    <span class="adm-check" data-adm="check-all"></span>
+                    <span th:text="#{voj.administration.all-users.username}">USER</span>
+                    <span th:text="#{voj.administration.all-users.email}">EMAIL</span>
+                    <span th:text="#{voj.administration.all-users.user-group}">GROUP</span>
+                    <span th:text="#{voj.administration.all-users.prefer-language}">LANGUAGE</span>
+                    <span></span>
+                </div>
+                <a class="adm-table-row" data-adm="row" th:each="user : ${users}" th:href="@{/administration/edit-user/{id}(id=${user.uid})}">
+                    <span class="adm-check" data-adm="row-check" th:attr="data-id=${user.uid}"></span>
+                    <span class="adm-cell head" th:text="${user.username}">user</span>
+                    <span class="adm-cell" th:text="${user.email}">email</span>
+                    <span><span class="adm-pill c-info" th:text="${user.userGroup.userGroupName}">group</span></span>
+                    <span class="adm-cell muted" th:text="${user.preferLanguage.languageName}">language</span>
+                    <span class="adm-menu">&#183;&#183;&#183;</span>
+                </a>
+                <div class="adm-table-empty" th:if="${#lists.isEmpty(users)}" th:text="#{voj.administration.all-users.no-records}">// no records</div>
+            </div></div>
+        </div>
+
+        <!-- Pager -->
+        <div class="adm-pager" th:if="${totalPages > 1}"
+             th:with="lowerBound=${currentPage - 3 > 0 ? currentPage - 3 : 1},upperBound=${currentPage + 3 < totalPages ? currentPage + 3 : totalPages}">
+            <span><span th:text="#{voj.administration.all-users.page}">page</span> <span th:text="${currentPage}">1</span> / <span th:text="${totalPages}">1</span></span>
+            <div class="adm-pager-btns">
+                <a class="nav" th:classappend="${currentPage <= 1} ? 'off'" th:href="@{/administration/all-users(userGroup=${selectedUserGroup},username=${username},page=${currentPage - 1})}">&#8592;</a>
+                <a class="num" th:each="pageNumber : ${#numbers.sequence(lowerBound, upperBound)}" th:classappend="${pageNumber == currentPage} ? 'active'" th:href="@{/administration/all-users(userGroup=${selectedUserGroup},username=${username},page=${pageNumber})}" th:text="${pageNumber}">1</a>
+                <a class="nav" th:classappend="${currentPage >= totalPages} ? 'off'" th:href="@{/administration/all-users(userGroup=${selectedUserGroup},username=${username},page=${currentPage + 1})}">&#8594;</a>
+            </div>
+        </div>
+
+    </div>
+    </div>
 
     <th:block layout:fragment="scripts">
-    <script type="text/javascript">
-        $('label[for=all-users]').click(function() {
-            // Fix the bug for Checkbox in FlatUI
-            var isChecked = false;
-            setTimeout(function() {
-                isChecked = $('label[for=all-users]').hasClass('checked');
-
-                if ( isChecked ) {
-                    $('label.checkbox').addClass('checked');
-                } else {
-                    $('label.checkbox').removeClass('checked');
-                }
-            }, 100);
-        });
-    </script>
     <script type="text/javascript" th:inline="javascript">
-        $('button.btn-danger', '#filters').click(function() {
-            if ( !confirm([[#{voj.administration.all-users.continue-or-not}]]) ) {
-                return;
-            }
-            $('.alert-error').addClass('hide');
-            $('button.btn-danger', '#filters').attr('disabled', 'disabled');
-            $('button.btn-danger', '#filters').html([[#{voj.administration.all-users.please-wait}]]);
-
-            var users = [];
-            $('label.checkbox', 'table tbody').each(function() {
-                if ( $(this).hasClass('checked') ) {
-                    var uid = $('input[type=checkbox]', $(this)).val();
-                    users.push(uid);
-                }
-            });
-            return doDeleteUsersAction(users);
-        });
-    </script>
-    <script type="text/javascript" th:inline="javascript">
-        function doDeleteUsersAction(users) {
-            var postData = {
-                'users': JSON.stringify(users)
-            };
-
-            $.ajax({
-                type: 'POST',
-                url: [[@{/administration/deleteUsers.action}]],
-                data: postData,
-                dataType: 'JSON',
-                success: function(result){
-                    if ( result['isSuccessful'] ) {
-                        for ( var i = 0; i < users.length; ++ i ) {
-                            $('tr[data-value=%s]'.format(users[i])).remove();
-                        }
-                    } else {
-                        $('.alert').html([[#{voj.administration.all-users.delete-error}]]);
-                        $('.alert').removeClass('hide');
+        document.addEventListener('DOMContentLoaded', function () {
+            var del = document.querySelector('[data-adm="bulk-delete"]');
+            if (!del) return;
+            del.addEventListener('click', function () {
+                var ids = window.admSelectedIds ? window.admSelectedIds() : [];
+                if (ids.length === 0) return;
+                if (!confirm([[#{voj.administration.all-users.continue-or-not}]])) return;
+                $.ajax({
+                    type: 'POST',
+                    url: [[@{/administration/deleteUsers.action}]],
+                    data: { 'users': JSON.stringify(ids) },
+                    dataType: 'JSON',
+                    success: function (result) {
+                        if (result['isSuccessful']) { window.location.reload(); }
+                        else { alert([[#{voj.administration.all-users.delete-error}]]); }
                     }
-                    $('button.btn-danger', '#filters').removeAttr('disabled');
-                    $('button.btn-danger', '#filters').html([[#{voj.administration.all-users.apply}]]);
-                }
+                });
             });
-        }
+        });
     </script>
     </th:block>
 </body>

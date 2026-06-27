@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/admin}" lang="en">
+<head>
+    <title th:text="#{voj.administration.all-contests.title} + ' | ' + ${websiteName}">Contests</title>
+</head>
+<body>
+    <div layout:fragment="content">
+    <div class="adm-wrap">
+
+        <!-- Toolbar -->
+        <form class="adm-toolbar" method="GET" th:action="@{/administration/all-contests}">
+            <div class="adm-toolbar-search">
+                <span class="sigil">$</span>
+                <input name="keyword" type="text" th:value="${keyword}" th:placeholder="#{voj.administration.all-contests.search-placeholder}" />
+                <span class="count"><span th:text="${#lists.size(contests)}">0</span> <span th:text="#{voj.administration.all-contests.records}">records</span></span>
+            </div>
+            <button type="submit" class="adm-btn-ghost"><span>&#9698;</span> <span th:text="#{voj.administration.all-contests.filter}">filter</span></button>
+            <a class="adm-btn-accent" th:href="@{/administration/new-contest}" th:text="#{voj.administration.all-contests.new-contest}">+ new contest</a>
+        </form>
+
+        <!-- Bulk bar -->
+        <div class="adm-bulk" data-adm="bulk" style="display:none;">
+            <span class="sel"><span data-adm="bulk-count">0</span> <span th:text="#{voj.administration.all-contests.selected}">selected</span></span>
+            <div style="flex:1;"></div>
+            <span class="adm-bulk-act c-err" data-adm="bulk-delete">&#10005; <span th:text="#{voj.administration.all-contests.delete}">delete</span></span>
+            <span class="adm-bulk-clear" data-adm="bulk-clear" th:text="#{voj.administration.all-contests.clear}">clear</span>
+        </div>
+
+        <!-- Table -->
+        <div class="adm-table" data-adm="table">
+            <div class="adm-table-scroll"><div class="adm-table-inner" style="--cols:34px 64px minmax(0,1fr) 90px 180px 180px 40px;">
+                <div class="adm-table-head">
+                    <span class="adm-check" data-adm="check-all"></span>
+                    <span>#</span>
+                    <span th:text="#{voj.administration.all-contests.name}">NAME</span>
+                    <span th:text="#{voj.administration.all-contests.mode}">MODE</span>
+                    <span th:text="#{voj.administration.all-contests.starts}">STARTS</span>
+                    <span th:text="#{voj.administration.all-contests.ends}">ENDS</span>
+                    <span></span>
+                </div>
+                <a class="adm-table-row" data-adm="row" th:each="contest : ${contests}" th:href="@{/administration/edit-contest/{id}(id=${contest.contestId})}">
+                    <span class="adm-check" data-adm="row-check" th:attr="data-id=${contest.contestId}"></span>
+                    <span class="adm-cell mono muted" th:text="'#' + ${contest.contestId}">#1</span>
+                    <span class="adm-cell head" th:text="${contest.contestName}">Contest</span>
+                    <span><span class="adm-pill" th:classappend="${contest.contestMode == 'ACM'} ? 'c-accent' : 'c-info'" th:text="${contest.contestMode}">ACM</span></span>
+                    <span class="adm-cell muted" th:text="${@dateFormatter.dateTimeLongMedium(contest.startTime, language)}">starts</span>
+                    <span class="adm-cell muted" th:text="${@dateFormatter.dateTimeLongMedium(contest.endTime, language)}">ends</span>
+                    <span class="adm-menu">&#183;&#183;&#183;</span>
+                </a>
+                <div class="adm-table-empty" th:if="${#lists.isEmpty(contests)}" th:text="#{voj.administration.all-contests.no-records}">// no contests</div>
+            </div></div>
+        </div>
+
+        <!-- Pager -->
+        <div class="adm-pager" th:if="${totalPages > 1}"
+             th:with="lowerBound=${currentPage - 3 > 0 ? currentPage - 3 : 1},upperBound=${currentPage + 3 < totalPages ? currentPage + 3 : totalPages}">
+            <span><span th:text="#{voj.administration.all-contests.page}">page</span> <span th:text="${currentPage}">1</span> / <span th:text="${totalPages}">1</span></span>
+            <div class="adm-pager-btns">
+                <a class="nav" th:classappend="${currentPage <= 1} ? 'off'" th:href="@{/administration/all-contests(keyword=${keyword},page=${currentPage - 1})}">&#8592;</a>
+                <a class="num" th:each="pageNumber : ${#numbers.sequence(lowerBound, upperBound)}" th:classappend="${pageNumber == currentPage} ? 'active'" th:href="@{/administration/all-contests(keyword=${keyword},page=${pageNumber})}" th:text="${pageNumber}">1</a>
+                <a class="nav" th:classappend="${currentPage >= totalPages} ? 'off'" th:href="@{/administration/all-contests(keyword=${keyword},page=${currentPage + 1})}">&#8594;</a>
+            </div>
+        </div>
+
+    </div>
+    </div>
+
+    <th:block layout:fragment="scripts">
+    <script type="text/javascript" th:inline="javascript">
+        document.addEventListener('DOMContentLoaded', function () {
+            var del = document.querySelector('[data-adm="bulk-delete"]');
+            if (!del) return;
+            del.addEventListener('click', function () {
+                var ids = window.admSelectedIds ? window.admSelectedIds() : [];
+                if (ids.length === 0) return;
+                if (!confirm([[#{voj.administration.all-contests.continue-or-not}]])) return;
+                $.ajax({
+                    type: 'POST', url: [[@{/administration/deleteContests.action}]],
+                    data: { 'contests': JSON.stringify(ids) }, dataType: 'JSON',
+                    success: function (result) {
+                        if (result['isSuccessful']) { window.location.reload(); }
+                        else { alert([[#{voj.administration.all-contests.delete-error}]]); }
+                    }
+                });
+            });
+        });
+    </script>
+    </th:block>
+</body>
+</html>

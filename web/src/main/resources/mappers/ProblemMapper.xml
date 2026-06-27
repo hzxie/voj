@@ -50,20 +50,20 @@
 			</if>
 		</where>
 	</select>
-	<select id="getLowerBoundOfProblems" 
+	<select id="getLowerBoundOfProblems"
 		resultType="long">
-		SELECT MIN(problem_id) 
+		SELECT COALESCE(MIN(problem_id), 0)
 		FROM voj_problems
 	</select>
-	<select id="getUpperBoundOfProblems" 
+	<select id="getUpperBoundOfProblems"
 		resultType="long">
-		SELECT MAX(problem_id) 
+		SELECT COALESCE(MAX(problem_id), 0)
 		FROM voj_problems
 	</select>
-	<select id="getUpperBoundOfProblemsWithLimit" 
+	<select id="getUpperBoundOfProblemsWithLimit"
 		parameterType="map"
 		resultType="long">
-		SELECT MAX(problem_id)
+		SELECT COALESCE(MAX(problem_id), 0)
 		FROM (
 			SELECT problem_id
 			FROM voj_problems

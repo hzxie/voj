@@ -16,6 +16,9 @@
  */
 package org.verwandlung.voj.web.mapper;
 
+import java.util.List;
+import java.util.Map;
+
 import org.apache.ibatis.annotations.Param;
 import org.verwandlung.voj.web.model.DiscussionReplyVote;
 
@@ -57,6 +60,24 @@ public interface DiscussionReplyVoteMapper {
    * @return the total number of reports on the thread's replies
    */
   int getNumberOfReportsOfThread(@Param("discussionThreadId") long discussionThreadId);
+
+  /**
+   * [For administrators only] Gets the most-reported discussion replies, feeding the dashboard's
+   * moderation queue and the discussion admin. Each row carries the reply id, its thread id, a
+   * content snippet, the report count and the time of the latest report.
+   *
+   * @param limit - the maximum number of rows to return
+   * @return an ordered list of reported-reply rows (most reports first)
+   */
+  List<Map<String, Object>> getReportedReplies(@Param("limit") int limit);
+
+  /**
+   * [For administrators only] Gets the number of distinct replies that have at least one report.
+   * Feeds the moderation badge.
+   *
+   * @return the number of reported replies
+   */
+  int getNumberOfReportedReplies();
 
   /**
    * Casts a vote on a discussion reply. If the user has already voted on the reply, the existing vote

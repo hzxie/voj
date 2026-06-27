@@ -28,7 +28,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import org.verwandlung.voj.web.mapper.OptionMapper;
 import org.verwandlung.voj.web.model.Option;
-import org.verwandlung.voj.web.util.JsonUtils;
 
 /**
  * The system administration service, used to perform the administration functions of the whole
@@ -77,7 +76,7 @@ public class OptionService {
    * @param icpNumber - the website ICP registration number
    * @param policeIcpNumber - the police ICP registration number
    * @param googleAnalyticsCode - the Google Analytics code
-   * @param offensiveWords - the list of offensive words
+   * @param offensiveWordSources - the offensive word import sources, one URL per line
    * @return a Map object containing the option update result
    */
   public Map<String, Boolean> updateOptions(
@@ -88,7 +87,7 @@ public class OptionService {
       String icpNumber,
       String policeIcpNumber,
       String googleAnalyticsCode,
-      String offensiveWords) {
+      String offensiveWordSources) {
     Map<String, Boolean> result = new HashMap<>();
     result.put("isWebsiteNameEmpty", websiteName.isEmpty());
     result.put("isWebisteNameLegal", isWebsiteNameLegal(websiteName));
@@ -119,7 +118,7 @@ public class OptionService {
       optionMap.put("icpNumber", icpNumber);
       optionMap.put("policeIcpNumber", policeIcpNumber);
       optionMap.put("allowUserRegister", allowUserRegister ? "1" : "0");
-      optionMap.put("offensiveWords", JsonUtils.toJsonString(offensiveWords.split(",")));
+      optionMap.put("offensiveWordSources", offensiveWordSources);
       updateOptions(optionMap);
     }
     result.put("isSuccessful", isSuccessful);

@@ -185,7 +185,29 @@ public class DiscussionService {
   }
 
   /**
-   * Gets a discussion thread object by its unique identifier.
+   * [For administrators only] Gets a page of all discussion threads (no topic/problem filter and no
+   * report-based hiding), feeding the discussion admin list.
+   *
+   * @param offset - the cursor of the first thread
+   * @param limit - the number of threads to fetch
+   * @return a list of discussion threads
+   */
+  public List<DiscussionThread> getAllDiscussionThreads(long offset, int limit) {
+    return discussionThreadMapper.getDiscussionThreads(0, 0, offset, limit, 0);
+  }
+
+  /**
+   * [For administrators only] Gets the total number of discussion threads.
+   *
+   * @return the total number of discussion threads
+   */
+  public long getNumberOfDiscussionThreads() {
+    return discussionThreadMapper.getNumberOfDiscussionThreads();
+  }
+
+  /**
+   * Gets a discussion thread object by its unique identifier (no offensive-word filtering applied,
+   * used by the administration moderation view).
    *
    * @param discussionThreadId - the unique identifier of the discussion thread
    * @return the corresponding discussion thread object, or a null reference
@@ -218,6 +240,26 @@ public class DiscussionService {
    */
   public DiscussionReply getDiscussionReplyUsingReplyId(long discussionReplyId) {
     return discussionReplyMapper.getDiscussionReplyUsingReplyId(discussionReplyId);
+  }
+
+  /**
+   * [For administrators only] Gets the most-reported discussion replies, feeding the dashboard's
+   * moderation queue and the discussion admin.
+   *
+   * @param limit - the maximum number of rows to return
+   * @return an ordered list of reported-reply rows (most reports first)
+   */
+  public List<Map<String, Object>> getReportedReplies(int limit) {
+    return discussionReplyVoteMapper.getReportedReplies(limit);
+  }
+
+  /**
+   * [For administrators only] Gets the number of distinct replies that have at least one report.
+   *
+   * @return the number of reported replies
+   */
+  public int getNumberOfReportedReplies() {
+    return discussionReplyVoteMapper.getNumberOfReportedReplies();
   }
 
   /**

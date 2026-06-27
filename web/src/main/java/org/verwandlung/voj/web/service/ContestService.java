@@ -50,6 +50,117 @@ public class ContestService {
   }
 
   /**
+   * [For administrators only] Gets the total number of contests matching a keyword.
+   *
+   * @param keyword - the keyword of the contest (may be empty)
+   * @return the total number of matching contests
+   */
+  public long getNumberOfContests(String keyword) {
+    return contestMapper.getNumberOfContests(keyword);
+  }
+
+  /**
+   * Gets the number of contests that are currently live (started but not yet ended).
+   *
+   * @return the number of live contests
+   */
+  public long getNumberOfLiveContests() {
+    return contestMapper.getNumberOfLiveContests();
+  }
+
+  /**
+   * [For administrators only] Creates a contest.
+   *
+   * @param contestName - the name of the contest
+   * @param contestNotes - the notes/description of the contest
+   * @param startTime - the start time of the contest
+   * @param endTime - the end time of the contest
+   * @param contestMode - the mode of the contest (ACM / OI)
+   * @param problems - the contest problems (a JSON-formatted array of problem IDs)
+   * @return a Map containing the creation result and validation flags
+   */
+  public Map<String, Object> createContest(
+      String contestName,
+      String contestNotes,
+      Date startTime,
+      Date endTime,
+      String contestMode,
+      String problems) {
+    Map<String, Object> result = validateContest(contestName, startTime, endTime);
+    if ((Boolean) result.get("isSuccessful")) {
+      contestMapper.createContest(
+          new Contest(contestName, contestNotes, startTime, endTime, contestMode, problems));
+    }
+    return result;
+  }
+
+  /**
+   * [For administrators only] Edits an existing contest.
+   *
+   * @param contestId - the unique identifier of the contest
+   * @param contestName - the name of the contest
+   * @param contestNotes - the notes/description of the contest
+   * @param startTime - the start time of the contest
+   * @param endTime - the end time of the contest
+   * @param contestMode - the mode of the contest (ACM / OI)
+   * @param problems - the contest problems (a JSON-formatted array of problem IDs)
+   * @return a Map containing the edit result and validation flags
+   */
+  public Map<String, Object> editContest(
+      long contestId,
+      String contestName,
+      String contestNotes,
+      Date startTime,
+      Date endTime,
+      String contestMode,
+      String problems) {
+    Contest contest = contestMapper.getContest(contestId);
+    Map<String, Object> result = validateContest(contestName, startTime, endTime);
+    result.put("isContestExists", contest != null);
+    if (contest == null) {
+      result.put("isSuccessful", false);
+      return result;
+    }
+    if ((Boolean) result.get("isSuccessful")) {
+      contest.setContestName(contestName);
+      contest.setContestNotes(contestNotes);
+      contest.setStartTime(startTime);
+      contest.setEndTime(endTime);
+      contest.setContestMode(contestMode);
+      contest.setProblems(problems);
+      contestMapper.updateContest(contest);
+    }
+    return result;
+  }
+
+  /**
+   * [For administrators only] Deletes a contest.
+   *
+   * @param contestId - the unique identifier of the contest to delete
+   * @return whether the contest was deleted
+   */
+  public boolean deleteContest(long contestId) {
+    return contestMapper.deleteContest(contestId) > 0;
+  }
+
+  /**
+   * Validates a contest's name and schedule.
+   *
+   * @param contestName - the name of the contest
+   * @param startTime - the start time of the contest
+   * @param endTime - the end time of the contest
+   * @return a Map of validation flags including {@code isSuccessful}
+   */
+  private Map<String, Object> validateContest(String contestName, Date startTime, Date endTime) {
+    Map<String, Object> result = new HashMap<>(4, 1);
+    result.put("isNameEmpty", contestName == null || contestName.trim().isEmpty());
+    result.put("isTimeValid", startTime != null && endTime != null && endTime.after(startTime));
+    result.put(
+        "isSuccessful", !(Boolean) result.get("isNameEmpty") && (Boolean) result.get("isTimeValid"));
+    return result;
+  }
+
+  /**
    * Gets the detailed information of a contest by its unique identifier.
    *
    * @param contestId - the unique identifier of the contest

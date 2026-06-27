@@ -62,6 +62,11 @@
 		ORDER BY latest_discussion_reply_id DESC
 		LIMIT #{offset}, #{limit}
 	</select>
+	<select id="getNumberOfDiscussionThreads"
+		resultType="long">
+		SELECT COUNT(*)
+		FROM voj_discussion_threads
+	</select>
 	<select id="getSolutionThreadOfProblem"
 		parameterType="long"
 		resultMap="DiscussionThreadResultMap">

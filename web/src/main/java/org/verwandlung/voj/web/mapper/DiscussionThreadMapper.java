@@ -46,6 +46,13 @@ public interface DiscussionThreadMapper {
       @Param("reportHideThreshold") int reportHideThreshold);
 
   /**
+   * [For administrators only] Gets the total number of discussion threads.
+   *
+   * @return the total number of discussion threads
+   */
+  long getNumberOfDiscussionThreads();
+
+  /**
    * Gets the solution discussion of a problem. The solution discussion is created automatically
    * when the problem is created, i.e. it is the first discussion related to that problem.
    *

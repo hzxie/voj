@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/admin}" lang="en">
+<head>
+    <title th:text="#{voj.administration.edit-thread.title} + ' | ' + ${websiteName}">Thread</title>
+</head>
+<body>
+    <div layout:fragment="content">
+    <div class="adm-detail">
+
+        <div class="adm-detail-top">
+            <a class="adm-back" th:href="@{/administration/all-discussion}">&#8592; <span th:text="#{voj.administration.edit-thread.back}">back to discussion</span></a>
+            <span class="adm-idchip" th:text="'#' + ${thread.discussionThreadId}">#1</span>
+            <div style="flex:1;"></div>
+            <a class="adm-btn-tn" th:href="@{/discussion/{id}(id=${thread.discussionThreadId})}" target="_blank" th:text="#{voj.administration.edit-thread.view}">view</a>
+            <button type="button" class="adm-btn-tn danger" id="delete-thread" th:text="#{voj.administration.edit-thread.delete-thread}">delete thread</button>
+        </div>
+
+        <div class="adm-ed2">
+            <div class="adm-col">
+                <div class="adm-card">
+                    <div class="adm-card-head plain">
+                        <div style="font-family:var(--display);font-size:18px;font-weight:700;color:var(--head);letter-spacing:-.3px;" th:text="${thread.discussionThreadTitle}">Thread title</div>
+                        <div class="adm-cell muted" style="margin-top:6px;">
+                            <span th:text="${thread.discussionThreadCreator != null ? '@' + thread.discussionThreadCreator.username : '—'}">@author</span>
+                            &#183; <span th:text="${@dateFormatter.dateTimeLongMedium(thread.discussionThreadCreateTime, language)}">date</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="adm-card">
+                    <div class="adm-card-head plain"><span th:text="#{voj.administration.edit-thread.replies}">// REPLIES</span> <span class="adm-sub" style="float:right;" th:text="${#lists.size(replies)}">0</span></div>
+                    <div th:each="reply,iter : ${replies}" class="adm-reply" th:attr="data-reply=${reply.discussionReplyId}" style="display:flex;gap:14px;padding:16px 20px;border-bottom:1px solid var(--line2);">
+                        <div class="adm-mono" style="width:34px;height:34px;font-size:14px;" th:text="${reply.discussionReplyCreator != null ? #strings.substring(reply.discussionReplyCreator.username,0,1) : '?'}">A</div>
+                        <div style="min-width:0;flex:1;">
+                            <div style="display:flex;align-items:center;gap:10px;">
+                                <span class="adm-cell head" th:text="${reply.discussionReplyCreator != null ? '@' + reply.discussionReplyCreator.username : '—'}">@author</span>
+                                <span class="adm-feed-when" th:text="${@dateFormatter.dateTimeLongMedium(reply.discussionReplyCreateTime, language)}">when</span>
+                                <span class="adm-pill c-info" th:if="${iter.index == 0}" style="font-size:9.5px;" th:text="#{voj.administration.edit-thread.op}">OP</span>
+                            </div>
+                            <p style="font-size:12.5px;line-height:1.6;color:var(--text2);margin:7px 0 0;white-space:pre-wrap;" th:text="${reply.discussionReplyContent}">body</p>
+                        </div>
+                        <button type="button" class="adm-bulk-clear c-err" style="align-self:flex-start;" th:data-reply="${reply.discussionReplyId}" onclick="admDeleteReply(this);" th:text="#{voj.administration.edit-thread.delete}">delete</button>
+                    </div>
+                    <div class="adm-table-empty" th:if="${#lists.isEmpty(replies)}" th:text="#{voj.administration.edit-thread.no-replies}">// no replies</div>
+                </div>
+            </div>
+            <div class="adm-col">
+                <div class="adm-card">
+                    <div class="adm-card-head plain" th:text="#{voj.administration.edit-thread.info}">// INFO</div>
+                    <div class="adm-kv"><span class="k" th:text="#{voj.administration.edit-thread.author}">Author</span><span class="v" th:text="${thread.discussionThreadCreator != null ? thread.discussionThreadCreator.username : '—'}">author</span></div>
+                    <div class="adm-kv"><span class="k" th:text="#{voj.administration.edit-thread.topic}">Topic</span><span class="v" th:text="${thread.discussionTopic != null ? thread.discussionTopic.discussionTopicName : '—'}">topic</span></div>
+                    <div class="adm-kv"><span class="k" th:text="#{voj.administration.edit-thread.replies-count}">Replies</span><span class="v" th:text="${thread.numberOfReplies}">0</span></div>
+                </div>
+                <div class="adm-danger">
+                    <div>
+                        <div class="t" th:text="#{voj.administration.edit-thread.delete-thread}">Delete thread</div>
+                        <div class="d" th:text="#{voj.administration.edit-thread.delete-hint}">Removes the thread and all replies.</div>
+                    </div>
+                    <button type="button" class="adm-btn-tn danger" id="delete-thread-2" th:text="#{voj.administration.edit-thread.delete}">delete</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    </div>
+
+    <th:block layout:fragment="scripts">
+    <script type="text/javascript" th:inline="javascript">
+        window.admDeleteReply = function (btn) {
+            if (!confirm([[#{voj.administration.edit-thread.continue-reply}]])) return;
+            var replyId = btn.getAttribute('data-reply');
+            $.ajax({
+                type: 'POST', url: [[@{/administration/deleteReply.action}]],
+                data: { replyId: replyId }, dataType: 'JSON',
+                success: function (result) {
+                    if (result['isSuccessful']) {
+                        var row = document.querySelector('.adm-reply[data-reply="' + replyId + '"]');
+                        if (row) row.parentNode.removeChild(row);
+                    }
+                }
+            });
+        };
+        document.addEventListener('DOMContentLoaded', function () {
+            var threadId = [[${thread.discussionThreadId}]];
+            function del() {
+                if (!confirm([[#{voj.administration.edit-thread.continue-thread}]])) return;
+                $.ajax({
+                    type: 'POST', url: [[@{/administration/deleteThreads.action}]],
+                    data: { 'threads': JSON.stringify([threadId]) }, dataType: 'JSON',
+                    success: function (result) {
+                        if (result['isSuccessful']) { window.location.href = [[@{/administration/all-discussion}]]; }
+                    }
+                });
+            }
+            ['delete-thread', 'delete-thread-2'].forEach(function (id) {
+                var el = document.getElementById(id);
+                if (el) el.addEventListener('click', del);
+            });
+        });
+    </script>
+    </th:block>
+</body>
+</html>

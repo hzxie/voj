@@ -17,6 +17,8 @@
 package org.verwandlung.voj.web.service;
 
 import java.text.SimpleDateFormat;
+import java.util.AbstractMap;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
@@ -116,6 +118,48 @@ public class SubmissionService {
       numberOfSubmissions.put(date, submissionTimes);
     }
     return numberOfSubmissions;
+  }
+
+  /**
+   * [For administrators only] Gets the number of submissions within a time period grouped by judge
+   * result, feeding the dashboard's verdict-mix breakdown. The pending ("PD") bucket is dropped so
+   * the mix reflects completed judgements only.
+   *
+   * @param startTime - the start time of the statistics
+   * @param endTime - the end time of the statistics
+   * @return an ordered map of judge-result slug to submission count, highest count first
+   */
+  public Map<String, Long> getNumberOfSubmissionsGroupByJudgeResult(Date startTime, Date endTime) {
+    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd 00:00:00");
+    List<Map<String, Object>> rows =
+        submissionMapper.getNumberOfSubmissionsGroupByJudgeResult(
+            sdf.format(startTime), sdf.format(endTime));
+
+    List<Map.Entry<String, Long>> entries = new ArrayList<>();
+    for (Map<String, Object> row : rows) {
+      String slug = (String) row.get("slug");
+      if (slug == null || "PD".equals(slug)) {
+        continue;
+      }
+      entries.add(new AbstractMap.SimpleEntry<>(slug, ((Number) row.get("submissions")).longValue()));
+    }
+    entries.sort((a, b) -> Long.compare(b.getValue(), a.getValue()));
+
+    Map<String, Long> result = new LinkedHashMap<>();
+    for (Map.Entry<String, Long> entry : entries) {
+      result.put(entry.getKey(), entry.getValue());
+    }
+    return result;
+  }
+
+  /**
+   * [For administrators only] Gets the judge-queue depth, i.e. the number of submissions still
+   * waiting to be judged.
+   *
+   * @return the number of pending submissions
+   */
+  public long getNumberOfPendingSubmissions() {
+    return submissionMapper.getNumberOfPendingSubmissions();
   }
 
   /**

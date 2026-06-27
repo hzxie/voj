@@ -346,7 +346,9 @@ public class AccountsController {
       HttpServletRequest request,
       HttpServletResponse response) {
     User user = userService.getUserUsingUid(userId);
-    if (user == null || "judgers".equals(user.getUserGroup().getUserGroupSlug())) {
+    if (user == null
+        || user.getUserGroup() == null
+        || "judgers".equals(user.getUserGroup().getUserGroupSlug())) {
       throw new ResourceNotFoundException();
     }
 

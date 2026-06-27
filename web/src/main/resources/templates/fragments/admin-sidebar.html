@@ -1,74 +1,71 @@
 <!DOCTYPE html>
-<!--/* Administration sidebar navigation. Used via ~{fragments/admin-sidebar :: sidebar}. */-->
+<!--/*
+  Administration sidebar navigation (terminal aesthetic). Used via
+  ~{fragments/admin-sidebar :: sidebar}. The active item is driven by the
+  ${adminSection} attribute set by AdministrationController#populateAdminChrome;
+  badge counts (navProblemsBadge / navContestsBadge / navDiscussionBadge /
+  navJudgersBadge) are optional and only render when present.
+*/-->
 <html xmlns:th="http://www.thymeleaf.org" lang="en">
 <body>
-    <div th:fragment="sidebar" id="sidebar">
-        <div id="logo">
-            <a th:href="@{/}">
-                <span class="b">&lt;</span><span class="n">verwandlung</span><span class="b">&gt;</span><span class="vw-cursor">_</span>
+    <aside th:fragment="sidebar" class="adm-sidebar" data-adm="sidebar">
+        <a class="adm-logo" th:href="@{/}">
+            <span class="b">&lt;</span><span class="n">vwl</span><span class="b">&gt;</span>
+            <span class="tag" th:text="#{voj.administration.include.sidebar.admin}">ADMIN</span>
+        </a>
+
+        <nav class="adm-nav">
+            <div class="adm-nav-label" th:text="'// ' + #{voj.administration.include.sidebar.manage}">// MANAGE</div>
+            <a class="adm-navitem" th:classappend="${adminSection == 'dashboard'} ? 'active'" th:href="@{/administration}">
+                <span class="ico">&#9638;</span><span class="lbl" th:text="#{voj.administration.include.sidebar.dashboard}">Dashboard</span>
             </a>
-        </div> <!-- #logo -->
-        <div id="sidebar-user">
-            <img th:src="|${cdnUrl}/img/avatar.jpg|" alt="avatar" />
-            <div>
-                <span th:text="#{voj.administration.include.sidebar.welcome-back}">Welcome back,</span><br />
-                <span class="vw-head" th:text="${myProfile.username}">username</span>
-                <span class="label label-success" th:text="#{voj.administration.include.sidebar.online}">Online</span>
+            <a class="adm-navitem" th:classappend="${adminSection == 'problems'} ? 'active'" th:href="@{/administration/all-problems}">
+                <span class="ico">&#9776;</span><span class="lbl" th:text="#{voj.administration.include.sidebar.problems}">Problems</span>
+                <span class="adm-badge" th:if="${navProblemsBadge}" th:text="${navProblemsBadge}">0</span>
+            </a>
+            <a class="adm-navitem" th:classappend="${adminSection == 'contests'} ? 'active'" th:href="@{/administration/all-contests}">
+                <span class="ico">&#9719;</span><span class="lbl" th:text="#{voj.administration.include.sidebar.contests}">Contests</span>
+                <span class="adm-badge accent" th:if="${navContestsBadge}" th:text="${navContestsBadge}">0</span>
+            </a>
+            <a class="adm-navitem" th:classappend="${adminSection == 'submissions'} ? 'active'" th:href="@{/administration/all-submissions}">
+                <span class="ico">&#8645;</span><span class="lbl" th:text="#{voj.administration.include.sidebar.submissions}">Submissions</span>
+            </a>
+            <a class="adm-navitem" th:classappend="${adminSection == 'discussion'} ? 'active'" th:href="@{/administration/all-discussion}">
+                <span class="ico">&#10077;</span><span class="lbl" th:text="#{voj.administration.include.sidebar.discussion}">Discussion</span>
+                <span class="adm-badge err" th:if="${navDiscussionBadge}" th:text="${navDiscussionBadge}">0</span>
+            </a>
+            <a class="adm-navitem" th:classappend="${adminSection == 'bulletins'} ? 'active'" th:href="@{/administration/all-bulletins}">
+                <span class="ico">&#9993;</span><span class="lbl" th:text="#{voj.administration.include.sidebar.bulletins}">Bulletin</span>
+            </a>
+            <a class="adm-navitem" th:classappend="${adminSection == 'users'} ? 'active'" th:href="@{/administration/all-users}">
+                <span class="ico">&#9783;</span><span class="lbl" th:text="#{voj.administration.include.sidebar.users}">Users</span>
+            </a>
+
+            <div class="adm-nav-label sys" th:text="'// ' + #{voj.administration.include.sidebar.system}">// SYSTEM</div>
+            <a class="adm-navitem" th:classappend="${adminSection == 'judgers'} ? 'active'" th:href="@{/administration/judgers}">
+                <span class="ico">&#9707;</span><span class="lbl" th:text="#{voj.administration.include.sidebar.judgers}">Judgers</span>
+                <span class="adm-badge accent" th:if="${navJudgersBadge}" th:text="${navJudgersBadge}">0</span>
+            </a>
+            <a class="adm-navitem" th:classappend="${adminSection == 'settings'} ? 'active'" th:href="@{/administration/general-settings}">
+                <span class="ico">&#9881;</span><span class="lbl" th:text="#{voj.administration.include.sidebar.settings}">Settings</span>
+            </a>
+        </nav>
+
+        <div class="adm-side-foot">
+            <a class="adm-live-link" th:href="@{/}">
+                <span>&#8599;</span> <span th:text="#{voj.administration.include.sidebar.view-live-site}">view live site</span>
+            </a>
+            <div class="adm-user">
+                <div class="adm-mono" th:text="${#strings.substring(myProfile.username, 0, 1)}">H</div>
+                <div class="adm-user-meta">
+                    <div class="nm" th:text="${myProfile.username}">username</div>
+                    <div class="rl" th:text="${myProfile.userGroup.userGroupName}">superadmin</div>
+                </div>
+                <div class="adm-themetoggle" data-vw="theme-toggle" title="Toggle theme" role="button" tabindex="0">
+                    <span class="moon">&#9790;</span><span class="sun">&#9728;</span><span class="knob"></span>
+                </div>
             </div>
-        </div> <!-- #sidebar-user -->
-        <div id="sidebar-nav">
-            <ul class="nav">
-                <li class="nav-item primary-nav-item">
-                    <a th:href="@{/administration}"><i class="fa fa-dashboard"></i> <span th:text="#{voj.administration.include.sidebar.dashboard}">Dashboard</span></a>
-                </li>
-                <li class="nav-item primary-nav-item nav-item-has-children">
-                    <a href="javascript:void(0);"><i class="fa fa-users"></i> <span th:text="#{voj.administration.include.sidebar.users}">Users</span> <i class="fa fa-caret-right"></i></a>
-                    <ul class="sub-nav nav">
-                        <li class="nav-item secondary-nav-item"><a th:href="@{/administration/all-users}" th:text="#{voj.administration.include.sidebar.all-users}">All Users</a></li>
-                        <li class="nav-item secondary-nav-item"><a th:href="@{/administration/new-user}" th:text="#{voj.administration.include.sidebar.new-user}">New User</a></li>
-                        <li class="nav-item secondary-nav-item hide"><a th:href="@{/administration/edit-user}" th:text="#{voj.administration.include.sidebar.edit-user}">Edit User</a></li>
-                    </ul>
-                </li>
-                <li class="nav-item primary-nav-item nav-item-has-children">
-                    <a href="javascript:void(0);"><i class="fa fa-question-circle"></i> <span th:text="#{voj.administration.include.sidebar.problems}">Problems</span> <i class="fa fa-caret-right"></i></a>
-                    <ul class="sub-nav nav">
-                        <li class="nav-item secondary-nav-item"><a th:href="@{/administration/all-problems}" th:text="#{voj.administration.include.sidebar.all-problems}">All Problems</a></li>
-                        <li class="nav-item secondary-nav-item"><a th:href="@{/administration/new-problem}" th:text="#{voj.administration.include.sidebar.new-problem}">New Problem</a></li>
-                        <li class="nav-item secondary-nav-item"><a th:href="@{/administration/problem-categories}" th:text="#{voj.administration.include.sidebar.problem-categories}">Categories</a></li>
-                        <li class="nav-item secondary-nav-item hide"><a th:href="@{/administration/edit-problem}" th:text="#{voj.administration.include.sidebar.edit-problem}">Edit Problem</a></li>
-                    </ul>
-                </li>
-                <li class="nav-item primary-nav-item nav-item-has-children">
-                    <a href="javascript:void(0);"><i class="fa fa-comment"></i> <span th:text="#{voj.administration.include.sidebar.discussion}">Discussion</span> <i class="fa fa-caret-right"></i></a>
-                    <ul class="sub-nav nav">
-                        <li class="nav-item secondary-nav-item"><a th:href="@{/administration/all-discussion}" th:text="#{voj.administration.include.sidebar.all-discussion}">All Discussion</a></li>
-                        <li class="nav-item secondary-nav-item"><a th:href="@{/administration/discussion-topics}" th:text="#{voj.administration.include.sidebar.discussion-topics}">Topics</a></li>
-                    </ul>
-                </li>
-                <li class="nav-item primary-nav-item nav-item-has-children">
-                    <a href="javascript:void(0);"><i class="fa fa-paperclip"></i> <span th:text="#{voj.administration.include.sidebar.contests}">Contests</span> <i class="fa fa-caret-right"></i></a>
-                    <ul class="sub-nav nav">
-                        <li class="nav-item secondary-nav-item"><a th:href="@{/administration/all-contests}" th:text="#{voj.administration.include.sidebar.all-contests}">All Contests</a></li>
-                        <li class="nav-item secondary-nav-item"><a th:href="@{/administration/new-contest}" th:text="#{voj.administration.include.sidebar.new-contest}">New Contest</a></li>
-                        <li class="nav-item secondary-nav-item hide"><a th:href="@{/administration/edit-contest}" th:text="#{voj.administration.include.sidebar.edit-contest}">Edit Contest</a></li>
-                    </ul>
-                </li>
-                <li class="nav-item primary-nav-item nav-item-has-children">
-                    <a href="javascript:void(0);"><i class="fa fa-code"></i> <span th:text="#{voj.administration.include.sidebar.submissions}">Submissions</span> <i class="fa fa-caret-right"></i></a>
-                    <ul class="sub-nav nav">
-                        <li class="nav-item secondary-nav-item"><a th:href="@{/administration/all-submissions}" th:text="#{voj.administration.include.sidebar.all-submissions}">All Submissions</a></li>
-                        <li class="nav-item secondary-nav-item hide"><a th:href="@{/administration/edit-submission}" th:text="#{voj.administration.include.sidebar.edit-submission}">Edit Submission</a></li>
-                    </ul>
-                </li>
-                <li class="nav-item primary-nav-item nav-item-has-children">
-                    <a href="javascript:void(0);"><i class="fa fa-cogs"></i> <span th:text="#{voj.administration.include.sidebar.settings}">Settings</span> <i class="fa fa-caret-right"></i></a>
-                    <ul class="sub-nav nav">
-                        <li class="nav-item secondary-nav-item"><a th:href="@{/administration/general-settings}" th:text="#{voj.administration.include.sidebar.general-settings}">General</a></li>
-                        <li class="nav-item secondary-nav-item"><a th:href="@{/administration/language-settings}" th:text="#{voj.administration.include.sidebar.language-settings}">Languages</a></li>
-                    </ul>
-                </li>
-            </ul>
-        </div> <!-- #sidebar-nav -->
-    </div> <!-- #sidebar -->
+        </div>
+    </aside>
 </body>
 </html>

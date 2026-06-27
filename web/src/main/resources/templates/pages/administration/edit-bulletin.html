@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/admin}" lang="en">
+<head>
+    <title th:text="#{voj.administration.edit-bulletin.title} + ' | ' + ${websiteName}">Bulletin</title>
+</head>
+<body>
+    <div layout:fragment="content">
+    <div class="adm-detail" th:with="isEdit=${message != null}">
+
+        <div class="adm-detail-top">
+            <a class="adm-back" th:href="@{/administration/all-bulletins}">&#8592; <span th:text="#{voj.administration.edit-bulletin.back}">back to bulletins</span></a>
+            <span class="adm-idchip" th:if="${isEdit}" th:text="'#' + ${message.messageId}">#1</span>
+            <div style="flex:1;"></div>
+            <button type="button" class="adm-btn-tn danger" th:if="${isEdit}" id="delete-bulletin" th:text="#{voj.administration.edit-bulletin.delete}">delete</button>
+            <button type="button" class="adm-btn-tn go" id="save-bulletin" th:text="'$ ' + #{voj.administration.edit-bulletin.save}">$ save</button>
+        </div>
+
+        <div class="alert alert-error hide"></div>
+        <div class="alert alert-success hide" th:text="#{voj.administration.edit-bulletin.saved}">Saved.</div>
+
+        <input type="hidden" id="message-id" th:value="${isEdit ? message.messageId : ''}" />
+        <div class="adm-card" style="max-width:880px;">
+            <div class="adm-card-head plain" th:text="#{voj.administration.edit-bulletin.bulletin}">// BULLETIN</div>
+            <div class="adm-card-body">
+                <label class="adm-flabel">
+                    <span th:text="#{voj.administration.edit-bulletin.message-title}">TITLE</span>
+                    <input id="message-title" class="adm-input" type="text" th:value="${isEdit ? message.messageTitle : ''}" maxlength="128" />
+                </label>
+                <label class="adm-flabel">
+                    <span th:text="#{voj.administration.edit-bulletin.message-body}">BODY · markdown</span>
+                    <textarea id="message-body" class="adm-input" rows="10" th:text="${isEdit ? message.messageBody : ''}"></textarea>
+                </label>
+            </div>
+        </div>
+
+    </div>
+    </div>
+
+    <th:block layout:fragment="scripts">
+    <script type="text/javascript" th:inline="javascript">
+        document.addEventListener('DOMContentLoaded', function () {
+            var $ok = $('.alert-success'), $err = $('.alert-error');
+            var messageId = document.getElementById('message-id').value;
+
+            document.getElementById('save-bulletin').addEventListener('click', function () {
+                $ok.addClass('hide'); $err.addClass('hide');
+                var title = $('#message-title').val(), body = $('#message-body').val();
+                if (!title || !body) { $err.html([[#{voj.administration.edit-bulletin.empty-error}]]).removeClass('hide'); return; }
+                var url = messageId ? [[@{/administration/editBulletin.action}]] : [[@{/administration/createBulletin.action}]];
+                var data = { messageTitle: title, messageBody: body };
+                if (messageId) { data.messageId = messageId; }
+                $.ajax({
+                    type: 'POST', url: url, data: data, dataType: 'JSON',
+                    success: function (result) {
+                        if (result['isSuccessful']) { window.location.href = [[@{/administration/all-bulletins}]]; }
+                        else { $err.html([[#{voj.administration.edit-bulletin.empty-error}]]).removeClass('hide'); }
+                    }
+                });
+            });
+
+            var del = document.getElementById('delete-bulletin');
+            if (del) del.addEventListener('click', function () {
+                if (!confirm([[#{voj.administration.edit-bulletin.continue-or-not}]])) return;
+                $.ajax({
+                    type: 'POST', url: [[@{/administration/deleteBulletins.action}]],
+                    data: { 'bulletins': JSON.stringify([messageId]) }, dataType: 'JSON',
+                    success: function (result) {
+                        if (result['isSuccessful']) { window.location.href = [[@{/administration/all-bulletins}]]; }
+                    }
+                });
+            });
+        });
+    </script>
+    </th:block>
+</body>
+</html>

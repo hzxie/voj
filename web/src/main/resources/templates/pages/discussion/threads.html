@@ -43,7 +43,9 @@
                     <div id="discussion-threads">
                         <a class="vw-table-row discussion-thread" th:each="discussionThread : ${discussionThreads}"
                            th:href="@{/discussion/{id}(id=${discussionThread.discussionThreadId})}"
-                           th:with="topicSlug=${discussionThread.discussionTopic.discussionTopicSlug},
+                           th:with="topic=${discussionThread.discussionTopic},
+                                    topicSlug=${topic != null ? topic.discussionTopicSlug : ''},
+                                    topicName=${topic != null ? topic.discussionTopicName : ''},
                                     creator=${discussionThread.discussionThreadCreator},
                                     latest=${discussionThread.latestDiscussionReply}">
                             <div class="vw-thread-cell">
@@ -53,7 +55,7 @@
                                     <div class="vw-thread-meta">
                                         <span class="vw-accent" th:text="${creator.username}">author</span>
                                         &middot;
-                                        <span th:if="${discussionThread.problem == null}" th:text="${discussionThread.discussionTopic.discussionTopicName}">Topic</span>
+                                        <span th:if="${discussionThread.problem == null}" th:text="${topicName}">Topic</span>
                                         <span th:unless="${discussionThread.problem == null}" th:text="|P${discussionThread.problem.problemId}|">P1000</span>
                                     </div>
                                 </div>
@@ -61,7 +63,7 @@
                             <div class="vw-thide">
                                 <span class="vw-cat-badge"
                                       th:classappend="${#strings.containsIgnoreCase(topicSlug,'solution')} ? 'vw-cat-solutions' : (${#strings.containsIgnoreCase(topicSlug,'announce')} ? 'vw-cat-announce' : (${#strings.containsIgnoreCase(topicSlug,'help')} ? 'vw-cat-help' : 'vw-cat-default'))"
-                                      th:text="${discussionThread.discussionTopic.discussionTopicName}">Help</span>
+                                      th:text="${topicName}">Help</span>
                             </div>
                             <div class="vw-thread-replies"
                                  th:text="${topicSlug == 'solutions' ? discussionThread.numberOfReplies : (discussionThread.numberOfReplies <= 1 ? 0 : discussionThread.numberOfReplies - 1)}">0</div>
@@ -137,11 +139,12 @@
             }
         }
         function getDiscussionThreadContent(creator, threadId, title, createTime, problem, topic, latestReply, numberOfReplies) {
-            var rtime    = latestReply ? latestReply['discussionReplyCreateTime'] : createTime,
-                slug     = topic['discussionTopicSlug'],
-                replies  = slug === 'solutions' ? numberOfReplies : (numberOfReplies <= 1 ? 0 : numberOfReplies - 1),
-                postedIn = problem ? ('P' + problem['problemId']) : topic['discussionTopicName'],
-                initial  = (creator['username'] || '?').charAt(0).toUpperCase();
+            var rtime     = latestReply ? latestReply['discussionReplyCreateTime'] : createTime,
+                slug      = topic ? topic['discussionTopicSlug'] : '',
+                topicName = topic ? topic['discussionTopicName'] : '',
+                replies   = slug === 'solutions' ? numberOfReplies : (numberOfReplies <= 1 ? 0 : numberOfReplies - 1),
+                postedIn  = problem ? ('P' + problem['problemId']) : topicName,
+                initial   = (creator['username'] || '?').charAt(0).toUpperCase();
             return '<a class="vw-table-row discussion-thread" href="' + [[@{/discussion/}]] + threadId + '">' +
                 '<div class="vw-thread-cell">' +
                 '<span class="vw-thread-avatar">' + initial + '</span>' +
@@ -149,7 +152,7 @@
                 '<div class="vw-thread-title">' + title + '</div>' +
                 '<div class="vw-thread-meta"><span class="vw-accent">' + creator['username'] + '</span> · ' + postedIn + '</div>' +
                 '</div></div>' +
-                '<div class="vw-thide"><span class="vw-cat-badge ' + categoryClass(slug) + '">' + topic['discussionTopicName'] + '</span></div>' +
+                '<div class="vw-thide"><span class="vw-cat-badge ' + categoryClass(slug) + '">' + topicName + '</span></div>' +
                 '<div class="vw-thread-replies">' + replies + '</div>' +
                 '<div class="vw-thide vw-muted">' + getTimeElapsed(rtime, [[${language}]]) + '</div>' +
                 '</a>';

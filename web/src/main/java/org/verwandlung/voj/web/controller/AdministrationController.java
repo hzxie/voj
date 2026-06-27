@@ -16,6 +16,9 @@
  */
 package org.verwandlung.voj.web.controller;
 
+import java.io.File;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -32,6 +35,8 @@ import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.session.SessionRegistry;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -41,7 +46,10 @@ import org.springframework.web.servlet.ModelAndView;
 
 import org.verwandlung.voj.web.exception.ResourceNotFoundException;
 import org.verwandlung.voj.web.messenger.ApplicationEventListener;
+import org.verwandlung.voj.web.model.BulletinBoardMessage;
 import org.verwandlung.voj.web.model.Checkpoint;
+import org.verwandlung.voj.web.model.Contest;
+import org.verwandlung.voj.web.model.DiscussionThread;
 import org.verwandlung.voj.web.model.Language;
 import org.verwandlung.voj.web.model.Option;
 import org.verwandlung.voj.web.model.Problem;
@@ -50,13 +58,19 @@ import org.verwandlung.voj.web.model.ProblemTag;
 import org.verwandlung.voj.web.model.Submission;
 import org.verwandlung.voj.web.model.User;
 import org.verwandlung.voj.web.model.UserGroup;
+import org.verwandlung.voj.web.service.BulletinBoardService;
+import org.verwandlung.voj.web.service.ContestService;
+import org.verwandlung.voj.web.service.DiscussionService;
 import org.verwandlung.voj.web.service.LanguageService;
+import org.verwandlung.voj.web.service.OffensiveWordImportService;
+import org.verwandlung.voj.web.service.OffensiveWordService;
 import org.verwandlung.voj.web.service.OptionService;
 import org.verwandlung.voj.web.service.ProblemService;
 import org.verwandlung.voj.web.service.SubmissionService;
 import org.verwandlung.voj.web.service.UserService;
 import org.verwandlung.voj.web.util.DateUtils;
 import org.verwandlung.voj.web.util.HttpRequestParser;
+import org.verwandlung.voj.web.util.HttpSessionParser;
 import org.verwandlung.voj.web.util.JsonUtils;
 
 /**
@@ -68,6 +82,67 @@ import org.verwandlung.voj.web.util.JsonUtils;
 @RequestMapping(value = "/administration")
 public class AdministrationController {
   /**
+   * Populates the chrome shared by every administration page: the active sidebar section (derived
+   * from the request URI, so the sidebar/header need no per-page parameter) and the cheap sidebar
+   * badge counts. A page may override the heading by adding {@code sectionLabel} / {@code sectionCmd}
+   * to its own model.
+   *
+   * @param request - the HttpServletRequest object
+   * @param model - the Spring MVC model to populate
+   */
+  @ModelAttribute
+  public void populateAdminChrome(HttpServletRequest request, Model model) {
+    String uri = request.getRequestURI();
+    String section = "dashboard";
+    if (uri.contains("problem")) {
+      section = "problems";
+    } else if (uri.contains("contest")) {
+      section = "contests";
+    } else if (uri.contains("submission")) {
+      section = "submissions";
+    } else if (uri.contains("discussion")) {
+      section = "discussion";
+    } else if (uri.contains("bulletin")) {
+      section = "bulletins";
+    } else if (uri.contains("user")) {
+      section = "users";
+    } else if (uri.contains("judger")) {
+      section = "judgers";
+    } else if (uri.contains("settings")) {
+      section = "settings";
+    }
+    model.addAttribute("adminSection", section);
+    model.addAttribute("navProblemsBadge", toCompactNumber(getTotalProblems()));
+
+    long liveContests = contestService.getNumberOfLiveContests();
+    if (liveContests > 0) {
+      model.addAttribute("navContestsBadge", liveContests);
+    }
+    int reportedReplies = discussionService.getNumberOfReportedReplies();
+    if (reportedReplies > 0) {
+      model.addAttribute("navDiscussionBadge", reportedReplies);
+      model.addAttribute("navAlertCount", reportedReplies);
+    }
+    long onlineJudgers = getOnlineJudgers();
+    if (onlineJudgers > 0) {
+      model.addAttribute("navJudgersBadge", onlineJudgers);
+    }
+  }
+
+  /**
+   * Formats a count compactly for the sidebar badges (e.g. 2348 -&gt; "2.3k").
+   *
+   * @param number - the number to format
+   * @return the compact string representation of the number
+   */
+  private static String toCompactNumber(long number) {
+    if (number >= 1000) {
+      return String.format("%.1fk", number / 1000.0);
+    }
+    return String.valueOf(number);
+  }
+
+  /**
    * Loads the system administration home page.
    *
    * @param request - the HttpRequest object
@@ -77,16 +152,106 @@ public class AdministrationController {
   @RequestMapping(value = "", method = RequestMethod.GET)
   public ModelAndView indexView(HttpServletRequest request, HttpServletResponse response) {
     ModelAndView view = new ModelAndView("pages/administration/index");
+    Date today = new Date();
+
+    // KPI cards.
     view.addObject("totalUsers", getTotalUsers());
     view.addObject("newUsersToday", getNumberOfUserRegisteredToday());
     view.addObject("onlineUsers", getOnlineUsers());
     view.addObject("totalProblems", getTotalProblems());
-    view.addObject("numberOfCheckpoints", getNumberOfCheckpoints());
     view.addObject("privateProblems", getPrivateProblems());
     view.addObject("submissionsToday", getSubmissionsToday());
-    view.addObject("memoryUsage", getCurrentMemoryUsage());
+    long pendingSubmissions = submissionService.getNumberOfPendingSubmissions();
+    view.addObject("pendingSubmissions", pendingSubmissions);
+    view.addObject("liveContests", contestService.getNumberOfLiveContests());
+
+    // Submissions over the last 14 days (bar chart).
+    Map<String, Long> dailySubmissions =
+        submissionService.getNumberOfSubmissionsGroupByDay(
+            DateUtils.getDateBefore(DASHBOARD_CHART_DAYS), today, 0, false);
+    List<Map<String, Object>> submissionBars = new ArrayList<>();
+    long maxDaily = 1;
+    long totalDaily = 0;
+    for (long value : dailySubmissions.values()) {
+      maxDaily = Math.max(maxDaily, value);
+    }
+    for (Map.Entry<String, Long> entry : dailySubmissions.entrySet()) {
+      long value = entry.getValue();
+      totalDaily += value;
+      Map<String, Object> bar = new HashMap<>(4, 1);
+      bar.put("value", value);
+      bar.put("height", Math.round(value * 100.0 / maxDaily));
+      bar.put("label", getDayOfWeekLetter(entry.getKey()));
+      submissionBars.add(bar);
+    }
+    view.addObject("submissionBars", submissionBars);
+    view.addObject("submissionsTotal", totalDaily);
+
+    // Verdict mix over the last 30 days.
+    Map<String, Long> verdictMix =
+        submissionService.getNumberOfSubmissionsGroupByJudgeResult(
+            DateUtils.getDateBefore(DASHBOARD_VERDICT_DAYS), today);
+    long verdictTotal = 0;
+    for (long value : verdictMix.values()) {
+      verdictTotal += value;
+    }
+    List<Map<String, Object>> verdicts = new ArrayList<>();
+    for (Map.Entry<String, Long> entry : verdictMix.entrySet()) {
+      String slug = entry.getKey();
+      Map<String, Object> verdict = new HashMap<>(5, 1);
+      verdict.put("slug", slug);
+      verdict.put("name", VERDICT_NAMES.getOrDefault(slug, slug));
+      verdict.put("cls", VERDICT_CLASSES.getOrDefault(slug, "c-muted"));
+      verdict.put("count", entry.getValue());
+      verdict.put("percentage", verdictTotal == 0 ? 0 : Math.round(entry.getValue() * 100.0 / verdictTotal));
+      verdicts.add(verdict);
+    }
+    view.addObject("verdicts", verdicts);
+
+    // Moderation queue (most-reported discussion replies).
+    view.addObject("moderationQueue", discussionService.getReportedReplies(DASHBOARD_QUEUE_SIZE));
+    view.addObject("moderationCount", discussionService.getNumberOfReportedReplies());
+
+    // System status.
     view.addObject("onlineJudgers", getOnlineJudgers());
+    double averageCpuLoad = eventListener.getAverageCpuLoad();
+    view.addObject("averageCpuLoad", averageCpuLoad < 0 ? -1 : (int) Math.round(averageCpuLoad));
+    view.addObject("storageUsage", getStorageUsagePercentage());
+    view.addObject("memoryUsage", getCurrentMemoryUsage());
     return view;
+  }
+
+  /**
+   * Maps a {@code yyyy/MM/dd} date string to a single-letter day-of-week label for the dashboard's
+   * submissions chart.
+   *
+   * @param date - the date string in {@code yyyy/MM/dd} format
+   * @return the single-letter day-of-week label, or an empty string when the date cannot be parsed
+   */
+  private static String getDayOfWeekLetter(String date) {
+    try {
+      Calendar calendar = Calendar.getInstance();
+      calendar.setTime(new SimpleDateFormat("yyyy/MM/dd").parse(date));
+      return DAY_OF_WEEK_LETTERS[calendar.get(Calendar.DAY_OF_WEEK) - 1];
+    } catch (ParseException e) {
+      return "";
+    }
+  }
+
+  /**
+   * Gets the disk-usage percentage of the file store hosting the application's working directory,
+   * feeding the dashboard's "storage used" status row.
+   *
+   * @return the disk usage as a whole-number percentage (0..100)
+   */
+  private static int getStorageUsagePercentage() {
+    File root = new File(System.getProperty("user.dir"));
+    long totalSpace = root.getTotalSpace();
+    long usableSpace = root.getUsableSpace();
+    if (totalSpace <= 0) {
+      return 0;
+    }
+    return (int) Math.round((totalSpace - usableSpace) * 100.0 / totalSpace);
   }
 
   /**
@@ -202,6 +367,71 @@ public class AdministrationController {
         "totalSubmissions",
         submissionService.getNumberOfSubmissionsGroupByDay(startDate, today, 0, false));
     return submissions;
+  }
+
+  /**
+   * Loads the judge-cluster page, showing the live telemetry of every online judger node.
+   *
+   * @param request - the HttpServletRequest object
+   * @param response - the HttpServletResponse object
+   * @return a ModelAndView object containing the online judgers' telemetry
+   */
+  @RequestMapping(value = "/judgers", method = RequestMethod.GET)
+  public ModelAndView judgersView(HttpServletRequest request, HttpServletResponse response) {
+    List<Map<String, Object>> nodes = new ArrayList<>();
+    for (Map<String, Object> judger : eventListener.getOnlineJudgerList()) {
+      int cpuLoad = toInt(judger.get("cpuLoad"));
+      int memoryUsage = toInt(judger.get("memoryUsage"));
+      long uptime = judger.get("uptime") instanceof Number ? ((Number) judger.get("uptime")).longValue() : 0;
+
+      Map<String, Object> node = new HashMap<>(7, 1);
+      node.put("name", judger.get("username"));
+      node.put("description", judger.get("description"));
+      node.put("cpuLoad", cpuLoad);
+      node.put("memoryUsage", memoryUsage);
+      node.put("uptime", formatUptime(uptime));
+      node.put("loadClass", cpuLoad > 85 ? "c-err" : (cpuLoad > 60 ? "c-warn" : "c-accent"));
+      nodes.add(node);
+    }
+
+    ModelAndView view = new ModelAndView("pages/administration/judgers");
+    view.addObject("nodes", nodes);
+    view.addObject("onlineJudgers", nodes.size());
+    view.addObject("queueDepth", submissionService.getNumberOfPendingSubmissions());
+    double averageCpuLoad = eventListener.getAverageCpuLoad();
+    view.addObject("averageCpuLoad", averageCpuLoad < 0 ? -1 : (int) Math.round(averageCpuLoad));
+    return view;
+  }
+
+  /**
+   * Coerces a possibly-null Number telemetry value to an int.
+   *
+   * @param value - the value to coerce
+   * @return the int value, or 0 when not a Number
+   */
+  private static int toInt(Object value) {
+    return value instanceof Number ? ((Number) value).intValue() : 0;
+  }
+
+  /**
+   * Formats an uptime duration (in milliseconds) into a compact {@code Nd Nh}, {@code Nh Nm} or
+   * {@code Nm} string for the judgers page.
+   *
+   * @param uptimeMillis - the uptime in milliseconds
+   * @return the formatted uptime string
+   */
+  private static String formatUptime(long uptimeMillis) {
+    long totalMinutes = uptimeMillis / 60000L;
+    long days = totalMinutes / 1440L;
+    long hours = (totalMinutes % 1440L) / 60L;
+    long minutes = totalMinutes % 60L;
+    if (days > 0) {
+      return days + "d " + hours + "h";
+    }
+    if (hours > 0) {
+      return hours + "h " + minutes + "m";
+    }
+    return minutes + "m";
   }
 
   /**
@@ -898,6 +1128,7 @@ public class AdministrationController {
       HttpServletRequest request, HttpServletResponse response) {
     ModelAndView view = new ModelAndView("pages/administration/general-settings");
     view.addObject("options", getOptions());
+    view.addObject("offensiveWordCount", offensiveWordService.getNumberOfOffensiveWords());
     return view;
   }
 
@@ -926,7 +1157,7 @@ public class AdministrationController {
    * @param icpNumber - the ICP filing number of the website
    * @param policeIcpNumber - the public security filing number
    * @param googleAnalyticsCode - the Google Analytics code
-   * @param offensiveWords - the list of offensive words
+   * @param offensiveWordSources - the offensive word import sources, one URL per line
    * @param request - the HttpServletRequest object
    * @return the update result of the general settings of the website
    */
@@ -939,7 +1170,7 @@ public class AdministrationController {
       @RequestParam(value = "icpNumber") String icpNumber,
       @RequestParam(value = "policeIcpNumber") String policeIcpNumber,
       @RequestParam(value = "googleAnalyticsCode") String googleAnalyticsCode,
-      @RequestParam(value = "offensiveWords") String offensiveWords,
+      @RequestParam(value = "offensiveWordSources") String offensiveWordSources,
       HttpServletRequest request) {
     Map<String, Boolean> result =
         optionService.updateOptions(
@@ -950,8 +1181,25 @@ public class AdministrationController {
             icpNumber,
             policeIcpNumber,
             googleAnalyticsCode,
-            offensiveWords);
+            offensiveWordSources);
     return result;
+  }
+
+  /**
+   * Saves the offensive word import sources and re-imports the offensive word dictionary from them.
+   * The whole dictionary is replaced with the freshly fetched words; if every source fails the
+   * existing dictionary is left untouched.
+   *
+   * @param offensiveWordSources - the offensive word import sources, one URL per line
+   * @param request - the HttpServletRequest object
+   * @return a result map describing the import outcome and a per-source breakdown
+   */
+  @RequestMapping(value = "/importOffensiveWords.action", method = RequestMethod.POST)
+  public @ResponseBody Map<String, Object> importOffensiveWordsAction(
+      @RequestParam(value = "offensiveWordSources") String offensiveWordSources,
+      HttpServletRequest request) {
+    offensiveWordService.updateOffensiveWordSources(offensiveWordSources);
+    return offensiveWordImportService.importFromSources();
   }
 
   /**
@@ -984,6 +1232,416 @@ public class AdministrationController {
     return result;
   }
 
+  /**
+   * Loads the bulletin board message list page.
+   *
+   * @param pageNumber - the page number of the current page
+   * @param request - the HttpServletRequest object
+   * @param response - the HttpServletResponse object
+   * @return a ModelAndView object containing the bulletin board messages
+   */
+  @RequestMapping(value = "/all-bulletins", method = RequestMethod.GET)
+  public ModelAndView allBulletinsView(
+      @RequestParam(value = "page", required = false, defaultValue = "1") long pageNumber,
+      HttpServletRequest request,
+      HttpServletResponse response) {
+    final int NUMBER_OF_BULLETINS_PER_PAGE = 50;
+    long totalBulletins = bulletinBoardService.getNumberOfBulletinBoardMessages();
+    long offset = (pageNumber >= 1 ? pageNumber - 1 : 0) * NUMBER_OF_BULLETINS_PER_PAGE;
+    List<BulletinBoardMessage> messages =
+        bulletinBoardService.getBulletinBoardMessages(offset, NUMBER_OF_BULLETINS_PER_PAGE);
+
+    ModelAndView view = new ModelAndView("pages/administration/all-bulletins");
+    view.addObject("messages", messages);
+    view.addObject("currentPage", pageNumber);
+    view.addObject(
+        "totalPages", (long) Math.ceil(totalBulletins * 1.0 / NUMBER_OF_BULLETINS_PER_PAGE));
+    return view;
+  }
+
+  /**
+   * Loads the create bulletin board message page.
+   *
+   * @param request - the HttpServletRequest object
+   * @param response - the HttpServletResponse object
+   * @return a ModelAndView object for creating a bulletin board message
+   */
+  @RequestMapping(value = "/new-bulletin", method = RequestMethod.GET)
+  public ModelAndView newBulletinView(HttpServletRequest request, HttpServletResponse response) {
+    return new ModelAndView("pages/administration/edit-bulletin");
+  }
+
+  /**
+   * Loads the edit bulletin board message page.
+   *
+   * @param messageId - the unique identifier of the bulletin board message
+   * @param request - the HttpServletRequest object
+   * @param response - the HttpServletResponse object
+   * @return a ModelAndView object containing the bulletin board message to edit
+   */
+  @RequestMapping(value = "/edit-bulletin/{messageId}", method = RequestMethod.GET)
+  public ModelAndView editBulletinView(
+      @PathVariable(value = "messageId") long messageId,
+      HttpServletRequest request,
+      HttpServletResponse response) {
+    BulletinBoardMessage message = bulletinBoardService.getBulletinBoardMessage(messageId);
+    if (message == null) {
+      throw new ResourceNotFoundException();
+    }
+    ModelAndView view = new ModelAndView("pages/administration/edit-bulletin");
+    view.addObject("message", message);
+    view.addObject("sectionLabel", message.getMessageTitle());
+    return view;
+  }
+
+  /**
+   * Creates a bulletin board message.
+   *
+   * @param messageTitle - the title of the message
+   * @param messageBody - the content of the message
+   * @param request - the HttpServletRequest object
+   * @return a Map containing the creation result
+   */
+  @RequestMapping(value = "/createBulletin.action", method = RequestMethod.POST)
+  public @ResponseBody Map<String, Boolean> createBulletinAction(
+      @RequestParam(value = "messageTitle") String messageTitle,
+      @RequestParam(value = "messageBody") String messageBody,
+      HttpServletRequest request) {
+    return bulletinBoardService.createBulletinBoardMessage(messageTitle, messageBody);
+  }
+
+  /**
+   * Edits a bulletin board message.
+   *
+   * @param messageId - the unique identifier of the message
+   * @param messageTitle - the new title of the message
+   * @param messageBody - the new content of the message
+   * @param request - the HttpServletRequest object
+   * @return a Map containing the edit result
+   */
+  @RequestMapping(value = "/editBulletin.action", method = RequestMethod.POST)
+  public @ResponseBody Map<String, Boolean> editBulletinAction(
+      @RequestParam(value = "messageId") long messageId,
+      @RequestParam(value = "messageTitle") String messageTitle,
+      @RequestParam(value = "messageBody") String messageBody,
+      HttpServletRequest request) {
+    return bulletinBoardService.editBulletinBoardMessage(messageId, messageTitle, messageBody);
+  }
+
+  /**
+   * Deletes the selected bulletin board messages.
+   *
+   * @param bulletins - the set of message IDs, separated by commas
+   * @param request - the HttpServletRequest object
+   * @return the deletion result
+   */
+  @RequestMapping(value = "/deleteBulletins.action", method = RequestMethod.POST)
+  public @ResponseBody Map<String, Boolean> deleteBulletinsAction(
+      @RequestParam(value = "bulletins") String bulletins, HttpServletRequest request) {
+    Map<String, Boolean> result = new HashMap<>(2, 1);
+    List<Long> bulletinList = JsonUtils.toList(bulletins, Long.class);
+    for (Long messageId : bulletinList) {
+      bulletinBoardService.deleteBulletinBoardMessage(messageId);
+    }
+    result.put("isSuccessful", true);
+    return result;
+  }
+
+  /**
+   * Loads the contest list page.
+   *
+   * @param keyword - the search keyword
+   * @param pageNumber - the page number of the current page
+   * @param request - the HttpServletRequest object
+   * @param response - the HttpServletResponse object
+   * @return a ModelAndView object containing the contest list
+   */
+  @RequestMapping(value = "/all-contests", method = RequestMethod.GET)
+  public ModelAndView allContestsView(
+      @RequestParam(value = "keyword", required = false, defaultValue = "") String keyword,
+      @RequestParam(value = "page", required = false, defaultValue = "1") long pageNumber,
+      HttpServletRequest request,
+      HttpServletResponse response) {
+    final int NUMBER_OF_CONTESTS_PER_PAGE = 50;
+    long totalContests = contestService.getNumberOfContests(keyword);
+    long offset = (pageNumber >= 1 ? pageNumber - 1 : 0) * NUMBER_OF_CONTESTS_PER_PAGE;
+    List<Contest> contests =
+        contestService.getContests(keyword, offset, NUMBER_OF_CONTESTS_PER_PAGE);
+
+    ModelAndView view = new ModelAndView("pages/administration/all-contests");
+    view.addObject("contests", contests);
+    view.addObject("keyword", keyword);
+    view.addObject("currentPage", pageNumber);
+    view.addObject(
+        "totalPages", (long) Math.ceil(totalContests * 1.0 / NUMBER_OF_CONTESTS_PER_PAGE));
+    return view;
+  }
+
+  /**
+   * Loads the create contest page.
+   *
+   * @param request - the HttpServletRequest object
+   * @param response - the HttpServletResponse object
+   * @return a ModelAndView object for creating a contest
+   */
+  @RequestMapping(value = "/new-contest", method = RequestMethod.GET)
+  public ModelAndView newContestView(HttpServletRequest request, HttpServletResponse response) {
+    return new ModelAndView("pages/administration/edit-contest");
+  }
+
+  /**
+   * Loads the edit contest page.
+   *
+   * @param contestId - the unique identifier of the contest
+   * @param request - the HttpServletRequest object
+   * @param response - the HttpServletResponse object
+   * @return a ModelAndView object containing the contest to edit
+   */
+  @RequestMapping(value = "/edit-contest/{contestId}", method = RequestMethod.GET)
+  public ModelAndView editContestView(
+      @PathVariable(value = "contestId") long contestId,
+      HttpServletRequest request,
+      HttpServletResponse response) {
+    Contest contest = contestService.getContest(contestId);
+    if (contest == null) {
+      throw new ResourceNotFoundException();
+    }
+    ModelAndView view = new ModelAndView("pages/administration/edit-contest");
+    view.addObject("contest", contest);
+    view.addObject("sectionLabel", contest.getContestName());
+    return view;
+  }
+
+  /**
+   * Creates a contest.
+   *
+   * @param contestName - the name of the contest
+   * @param contestNotes - the notes/description of the contest
+   * @param startTime - the start time (local datetime string)
+   * @param endTime - the end time (local datetime string)
+   * @param contestMode - the mode of the contest (ACM / OI)
+   * @param problems - the contest problems (a JSON-formatted array of problem IDs)
+   * @param request - the HttpServletRequest object
+   * @return a Map containing the creation result
+   */
+  @RequestMapping(value = "/createContest.action", method = RequestMethod.POST)
+  public @ResponseBody Map<String, Object> createContestAction(
+      @RequestParam(value = "contestName") String contestName,
+      @RequestParam(value = "contestNotes", required = false, defaultValue = "") String contestNotes,
+      @RequestParam(value = "startTime") String startTime,
+      @RequestParam(value = "endTime") String endTime,
+      @RequestParam(value = "contestMode", required = false, defaultValue = "ACM") String contestMode,
+      @RequestParam(value = "problems", required = false, defaultValue = "[]") String problems,
+      HttpServletRequest request) {
+    return contestService.createContest(
+        contestName,
+        contestNotes,
+        parseLocalDateTime(startTime),
+        parseLocalDateTime(endTime),
+        contestMode,
+        problems);
+  }
+
+  /**
+   * Edits a contest.
+   *
+   * @param contestId - the unique identifier of the contest
+   * @param contestName - the name of the contest
+   * @param contestNotes - the notes/description of the contest
+   * @param startTime - the start time (local datetime string)
+   * @param endTime - the end time (local datetime string)
+   * @param contestMode - the mode of the contest (ACM / OI)
+   * @param problems - the contest problems (a JSON-formatted array of problem IDs)
+   * @param request - the HttpServletRequest object
+   * @return a Map containing the edit result
+   */
+  @RequestMapping(value = "/editContest.action", method = RequestMethod.POST)
+  public @ResponseBody Map<String, Object> editContestAction(
+      @RequestParam(value = "contestId") long contestId,
+      @RequestParam(value = "contestName") String contestName,
+      @RequestParam(value = "contestNotes", required = false, defaultValue = "") String contestNotes,
+      @RequestParam(value = "startTime") String startTime,
+      @RequestParam(value = "endTime") String endTime,
+      @RequestParam(value = "contestMode", required = false, defaultValue = "ACM") String contestMode,
+      @RequestParam(value = "problems", required = false, defaultValue = "[]") String problems,
+      HttpServletRequest request) {
+    return contestService.editContest(
+        contestId,
+        contestName,
+        contestNotes,
+        parseLocalDateTime(startTime),
+        parseLocalDateTime(endTime),
+        contestMode,
+        problems);
+  }
+
+  /**
+   * Deletes the selected contests.
+   *
+   * @param contests - the set of contest IDs, separated by commas
+   * @param request - the HttpServletRequest object
+   * @return the deletion result
+   */
+  @RequestMapping(value = "/deleteContests.action", method = RequestMethod.POST)
+  public @ResponseBody Map<String, Boolean> deleteContestsAction(
+      @RequestParam(value = "contests") String contests, HttpServletRequest request) {
+    Map<String, Boolean> result = new HashMap<>(2, 1);
+    List<Long> contestList = JsonUtils.toList(contests, Long.class);
+    for (Long contestId : contestList) {
+      contestService.deleteContest(contestId);
+    }
+    result.put("isSuccessful", true);
+    return result;
+  }
+
+  /**
+   * Parses an HTML {@code datetime-local} value ({@code yyyy-MM-dd'T'HH:mm}) into a Date, falling
+   * back to the {@code yyyy-MM-dd HH:mm:ss} format.
+   *
+   * @param value - the datetime string
+   * @return the parsed Date, or null when empty or unparseable
+   */
+  private static Date parseLocalDateTime(String value) {
+    if (value == null || value.trim().isEmpty()) {
+      return null;
+    }
+    try {
+      return new SimpleDateFormat("yyyy-MM-dd'T'HH:mm").parse(value.trim());
+    } catch (ParseException e) {
+      try {
+        return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(value.trim());
+      } catch (ParseException ex) {
+        return null;
+      }
+    }
+  }
+
+  /**
+   * Loads the discussion thread list page.
+   *
+   * @param pageNumber - the page number of the current page
+   * @param request - the HttpServletRequest object
+   * @param response - the HttpServletResponse object
+   * @return a ModelAndView object containing the discussion threads
+   */
+  @RequestMapping(value = "/all-discussion", method = RequestMethod.GET)
+  public ModelAndView allDiscussionView(
+      @RequestParam(value = "page", required = false, defaultValue = "1") long pageNumber,
+      HttpServletRequest request,
+      HttpServletResponse response) {
+    final int NUMBER_OF_THREADS_PER_PAGE = 50;
+    long totalThreads = discussionService.getNumberOfDiscussionThreads();
+    long offset = (pageNumber >= 1 ? pageNumber - 1 : 0) * NUMBER_OF_THREADS_PER_PAGE;
+
+    ModelAndView view = new ModelAndView("pages/administration/all-discussion");
+    view.addObject("threads", discussionService.getAllDiscussionThreads(offset, NUMBER_OF_THREADS_PER_PAGE));
+    view.addObject("currentPage", pageNumber);
+    view.addObject("totalPages", (long) Math.ceil(totalThreads * 1.0 / NUMBER_OF_THREADS_PER_PAGE));
+    return view;
+  }
+
+  /**
+   * Loads the discussion thread moderation page.
+   *
+   * @param threadId - the unique identifier of the discussion thread
+   * @param request - the HttpServletRequest object
+   * @param response - the HttpServletResponse object
+   * @return a ModelAndView object containing the thread, its replies and reports
+   */
+  @RequestMapping(value = "/edit-thread/{threadId}", method = RequestMethod.GET)
+  public ModelAndView editThreadView(
+      @PathVariable(value = "threadId") long threadId,
+      HttpServletRequest request,
+      HttpServletResponse response) {
+    DiscussionThread thread = discussionService.getDiscussionThreadUsingThreadId(threadId);
+    if (thread == null) {
+      throw new ResourceNotFoundException();
+    }
+    ModelAndView view = new ModelAndView("pages/administration/edit-thread");
+    view.addObject("thread", thread);
+    view.addObject("replies", discussionService.getDiscussionRepliesOfThread(threadId, -1, 0, 200));
+    view.addObject("sectionLabel", thread.getDiscussionThreadTitle());
+    return view;
+  }
+
+  /**
+   * Deletes the selected discussion threads.
+   *
+   * @param threads - the set of thread IDs, separated by commas
+   * @param request - the HttpServletRequest object
+   * @return the deletion result
+   */
+  @RequestMapping(value = "/deleteThreads.action", method = RequestMethod.POST)
+  public @ResponseBody Map<String, Boolean> deleteThreadsAction(
+      @RequestParam(value = "threads") String threads, HttpServletRequest request) {
+    Map<String, Boolean> result = new HashMap<>(2, 1);
+    List<Long> threadList = JsonUtils.toList(threads, Long.class);
+    for (Long threadId : threadList) {
+      discussionService.deleteDiscussionThread(threadId);
+    }
+    result.put("isSuccessful", true);
+    return result;
+  }
+
+  /**
+   * Deletes a single discussion reply.
+   *
+   * @param replyId - the unique identifier of the discussion reply
+   * @param request - the HttpServletRequest object
+   * @return the deletion result
+   */
+  @RequestMapping(value = "/deleteReply.action", method = RequestMethod.POST)
+  public @ResponseBody Map<String, Boolean> deleteReplyAction(
+      @RequestParam(value = "replyId") long replyId, HttpServletRequest request) {
+    User currentUser = HttpSessionParser.getCurrentUser(request.getSession());
+    return discussionService.deleteDiscussionReply(replyId, currentUser);
+  }
+
+  /**
+   * Loads the discussion topics page.
+   *
+   * @param request - the HttpServletRequest object
+   * @param response - the HttpServletResponse object
+   * @return a ModelAndView object containing the discussion topics
+   */
+  @RequestMapping(value = "/discussion-topics", method = RequestMethod.GET)
+  public ModelAndView discussionTopicsView(
+      HttpServletRequest request, HttpServletResponse response) {
+    ModelAndView view = new ModelAndView("pages/administration/discussion-topics");
+    view.addObject("discussionTopics", discussionService.getDiscussionTopics());
+    return view;
+  }
+
+  /**
+   * Creates a top-level discussion topic.
+   *
+   * @param discussionTopicSlug - the slug of the topic
+   * @param discussionTopicName - the name of the topic
+   * @param request - the HttpServletRequest object
+   * @return the creation result
+   */
+  @RequestMapping(value = "/createTopic.action", method = RequestMethod.POST)
+  public @ResponseBody Map<String, Boolean> createTopicAction(
+      @RequestParam(value = "discussionTopicSlug") String discussionTopicSlug,
+      @RequestParam(value = "discussionTopicName") String discussionTopicName,
+      HttpServletRequest request) {
+    return discussionService.createDiscussionTopic(
+        discussionTopicSlug, discussionTopicName, null);
+  }
+
+  /**
+   * Deletes a discussion topic.
+   *
+   * @param discussionTopicId - the unique identifier of the topic
+   * @param request - the HttpServletRequest object
+   * @return the deletion result
+   */
+  @RequestMapping(value = "/deleteTopic.action", method = RequestMethod.POST)
+  public @ResponseBody Map<String, Boolean> deleteTopicAction(
+      @RequestParam(value = "discussionTopicId") int discussionTopicId, HttpServletRequest request) {
+    return discussionService.deleteDiscussionTopic(discussionTopicId);
+  }
+
   /** The autowired UserService object. */
   @Autowired private UserService userService;
 
@@ -996,8 +1654,23 @@ public class AdministrationController {
   /** The autowired SubmissionService object. Used for getting submission record information. */
   @Autowired private SubmissionService submissionService;
 
+  /** The autowired ContestService object. Used for contest counts and the contest admin. */
+  @Autowired private ContestService contestService;
+
+  /** The autowired DiscussionService object. Used for the moderation queue and discussion admin. */
+  @Autowired private DiscussionService discussionService;
+
+  /** The autowired BulletinBoardService object. Used for the bulletin board admin. */
+  @Autowired private BulletinBoardService bulletinBoardService;
+
   /** The autowired OptionService object. Used for getting the settings options of the system. */
   @Autowired private OptionService optionService;
+
+  /** The autowired OffensiveWordService object. Used for managing the offensive word dictionary. */
+  @Autowired private OffensiveWordService offensiveWordService;
+
+  /** The autowired OffensiveWordImportService object. Used for importing offensive words by URL. */
+  @Autowired private OffensiveWordImportService offensiveWordImportService;
 
   /**
    * The autowired LanguageService object. Used for getting the programming language options of the
@@ -1012,6 +1685,46 @@ public class AdministrationController {
 
   /** The number of days of daily activity returned for the heat-map (53 weeks). */
   private static final int ACTIVITY_HEAT_MAP_DAYS = 53 * 7;
+
+  /** The number of days shown in the dashboard's submissions bar chart. */
+  private static final int DASHBOARD_CHART_DAYS = 14;
+
+  /** The window (in days) over which the dashboard's verdict mix is computed. */
+  private static final int DASHBOARD_VERDICT_DAYS = 30;
+
+  /** The number of moderation-queue rows shown on the dashboard. */
+  private static final int DASHBOARD_QUEUE_SIZE = 6;
+
+  /** Single-letter day-of-week labels (index 0 == Sunday, matching Calendar.DAY_OF_WEEK - 1). */
+  private static final String[] DAY_OF_WEEK_LETTERS = {"S", "M", "T", "W", "T", "F", "S"};
+
+  /** Human-readable names for the judge-result slugs shown in the dashboard's verdict mix. */
+  private static final Map<String, String> VERDICT_NAMES = new HashMap<>();
+
+  /** Colour classes (admin.css) for the judge-result slugs shown in the dashboard's verdict mix. */
+  private static final Map<String, String> VERDICT_CLASSES = new HashMap<>();
+
+  static {
+    VERDICT_NAMES.put("AC", "Accepted");
+    VERDICT_NAMES.put("WA", "Wrong Answer");
+    VERDICT_NAMES.put("TLE", "Time Limit Exceeded");
+    VERDICT_NAMES.put("MLE", "Memory Limit Exceeded");
+    VERDICT_NAMES.put("OLE", "Output Limit Exceeded");
+    VERDICT_NAMES.put("RE", "Runtime Error");
+    VERDICT_NAMES.put("CE", "Compile Error");
+    VERDICT_NAMES.put("PE", "Presentation Error");
+    VERDICT_NAMES.put("SE", "System Error");
+
+    VERDICT_CLASSES.put("AC", "c-accent");
+    VERDICT_CLASSES.put("WA", "c-err");
+    VERDICT_CLASSES.put("TLE", "c-warn");
+    VERDICT_CLASSES.put("MLE", "c-warn");
+    VERDICT_CLASSES.put("OLE", "c-warn");
+    VERDICT_CLASSES.put("RE", "c-info");
+    VERDICT_CLASSES.put("CE", "c-muted");
+    VERDICT_CLASSES.put("PE", "c-info");
+    VERDICT_CLASSES.put("SE", "c-muted");
+  }
 
   /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(AdministrationController.class);

@@ -43,7 +43,7 @@ public class OptionServiceTest {
   @Test
   public void testGetOptions() {
     List<Option> options = optionService.getOptions();
-    Assertions.assertEquals(11, options.size());
+    Assertions.assertEquals(12, options.size());
   }
 
   /** Test case: tests the getAutoloadOptions() method. Test data: N/a. Expected: only the auto-loaded system options. */

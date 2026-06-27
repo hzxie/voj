@@ -3,177 +3,108 @@
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layouts/admin}" lang="en">
 <head>
-    <title th:text="#{voj.administration.index.title} + ' | ' + ${websiteName}">System Administration</title>
+    <title th:text="#{voj.administration.index.title} + ' | ' + ${websiteName}">Dashboard</title>
 </head>
 <body>
-    <div id="content" layout:fragment="content">
-        <h2 class="page-header">
-            <i class="fa fa-dashboard"></i> <span th:text="#{voj.administration.index.page-header}">Dashboard</span>
-        </h2>
-        <div id="overview" class="row-fluid">
-            <div class="span3">
-                <div id="overview-users" class="widget">
-                    <div class="row-fluid glance">
-                        <div class="span4 text-center">
-                            <i class="fa fa-users"></i>
-                        </div> <!-- .span4 -->
-                        <div class="span8">
-                            <span class="text-uppercase" th:text="#{voj.administration.index.total-users}">Total Users</span>
-                            <h2 th:text="${totalUsers}">0</h2>
-                        </div> <!-- .span8 -->
-                    </div> <!-- .row-fluid -->
-                    <div class="row-fluid">
-                        <div class="span6 border-right">
-                            <span class="text-uppercase" th:text="#{voj.administration.index.new-users-today}">New Users Today</span>
-                            <h4 th:text="${newUsersToday}">0</h4>
-                        </div> <!-- .span6 -->
-                        <div class="span6">
-                            <span class="text-uppercase" th:text="#{voj.administration.index.online-users}">Online Users</span>
-                            <h4 th:text="${onlineUsers}">0</h4>
-                        </div> <!-- .span6 -->
-                    </div> <!-- .row-fluid -->
-                </div> <!-- #overview-users -->
-            </div> <!-- .span3 -->
-            <div class="span3">
-                <div id="overview-problems" class="widget">
-                    <div class="row-fluid glance">
-                        <div class="span4 text-center">
-                            <i class="fa fa-question-circle"></i>
-                        </div> <!-- .span4 -->
-                        <div class="span8">
-                            <span class="text-uppercase" th:text="#{voj.administration.index.total-problems}">Total Problems</span>
-                            <h2 th:text="${totalProblems}">0</h2>
-                        </div> <!-- .span8 -->
-                    </div> <!-- .row-fluid -->
-                    <div class="row-fluid">
-                        <div class="span6 border-right">
-                            <span class="text-uppercase" th:text="#{voj.administration.index.total-checkpoints}">Total Checkpoints</span>
-                            <h4 th:text="${numberOfCheckpoints}">0</h4>
-                        </div> <!-- .span6 -->
-                        <div class="span6">
-                            <span class="text-uppercase" th:text="#{voj.administration.index.private-problems}">Private Problems</span>
-                            <h4 th:text="${privateProblems}">0</h4>
-                        </div> <!-- .span6 -->
-                    </div> <!-- .row-fluid -->
-                </div> <!-- #overview-problems -->
-            </div> <!-- .span3 -->
-            <div class="span3">
-                <div id="overview-contests" class="widget">
-                    <div class="row-fluid glance">
-                        <div class="span4 text-center">
-                            <i class="fa fa-paperclip"></i>
-                        </div> <!-- .span4 -->
-                        <div class="span8 text-right">
-                            <span class="text-uppercase" th:text="#{voj.administration.index.upcoming-contests}">Upcoming Contests</span>
-                            <h2>0</h2>
-                        </div> <!-- .span8 -->
-                    </div> <!-- .row-fluid -->
-                    <a th:href="@{/administration/all-contests}" class="more">
-                        <span th:text="#{voj.administration.index.more-contests}">More Contests</span> <i class="fa fa-arrow-circle-right"></i>
-                    </a>
-                </div> <!-- #overview-contests -->
-            </div> <!-- .span3 -->
-            <div class="span3">
-                <div id="overview-submissions" class="widget">
-                    <div class="row-fluid glance">
-                        <div class="span4 text-center">
-                            <i class="fa fa-code"></i>
-                        </div> <!-- .span4 -->
-                        <div class="span8 text-right">
-                            <span class="text-uppercase" th:text="#{voj.administration.index.submissions-today}">Submissions Today</span>
-                            <h2 th:text="${submissionsToday}">0</h2>
-                        </div> <!-- .span8 -->
-                    </div> <!-- .row-fluid -->
-                    <a th:href="@{/administration/all-submissions}" class="more">
-                        <span th:text="#{voj.administration.index.more-submissions}">More Submissions</span> <i class="fa fa-arrow-circle-right"></i>
-                    </a>
-                </div> <!-- #overview-submissions -->
-            </div> <!-- .span3 -->
-        </div> <!-- #overview -->
-        <div class="row-fluid">
-            <div class="span8">
-                <div id="submissions-panel" class="panel">
-                    <div class="header">
-                        <div class="row-fluid">
-                            <div class="span8">
-                                <h5>
-                                    <i class="fa fa-bar-chart"></i>
-                                    <span th:text="#{voj.administration.index.submissions-stats}">Submissions Stats</span>
-                                </h5>
-                            </div> <!-- .span8 -->
-                            <div class="span4" style="text-align:right;">
-                                <span id="heatmap-total" class="vw-muted"></span>
-                            </div> <!-- .span4 -->
-                        </div> <!-- .row-fluid -->
-                    </div> <!-- .header -->
-                    <div class="body">
-                        <div id="submissions-calendar"></div> <!-- #submissions-calendar -->
-                    </div> <!-- .body -->
-                </div> <!-- #submissions-panel -->
-            </div> <!-- .span8 -->
-            <div class="span4">
-                <div id="system-panel" class="panel">
-                    <div class="header">
-                        <h5>
-                            <i class="fa fa-info-circle"></i>
-                            <span th:text="#{voj.administration.index.system-info}">System Info</span>
-                        </h5>
-                    </div> <!-- .header -->
-                    <div class="body">
-                        <div class="row-fluid">
-                            <div class="span4" th:text="#{voj.administration.index.product-version}">Product Version</div> <!-- .span4 -->
-                            <div id="product-version" class="span8"><span th:text="${productVersion}">0.0.0</span> (Build: <a th:href="|https://github.com/hzxie/voj/commit/${version}|" target="_blank" th:text="${version}">build</a>)</div> <!-- .span8 -->
-                        </div> <!-- .row-fluid -->
-                        <div class="row-fluid">
-                            <div class="span4" th:text="#{voj.administration.index.memory-usage}">Memory Usage</div> <!-- .span4 -->
-                            <div class="span8" th:text="|${memoryUsage} MB|">0 MB</div> <!-- .span8 -->
-                        </div> <!-- .row-fluid -->
-                        <div class="row-fluid">
-                            <div class="span4" th:text="#{voj.administration.index.online-judgers}">Online Judgers</div> <!-- .span4 -->
-                            <div class="span8" th:text="${onlineJudgers}">0</div> <!-- .span8 -->
-                        </div> <!-- .row-fluid -->
-                    </div> <!-- .body -->
-                </div> <!-- #system-panel -->
-            </div> <!-- .span4 -->
-        </div> <!-- .row-fluid -->
-    </div> <!-- #content -->
+    <div layout:fragment="content">
+    <div class="adm-wrap adm-stack">
 
-    <th:block layout:fragment="scripts">
-    <script type="text/javascript" th:inline="javascript">
-        $.getScript([[|${cdnUrl}/js/heatmap.js?v=${version}|]], function() {
-            $.ajax({
-                type: 'GET',
-                url: [[@{/administration/getNumberOfSubmissions.action}]],
-                dataType: 'JSON',
-                success: function(result) {
-                    VojHeatmap.render('#submissions-calendar', result['totalSubmissions'], {
-                        totalElement: '#heatmap-total',
-                        totalLabel: [[#{voj.common.heatmap.submissions-last-year}]],
-                        lessLabel:  [[#{voj.common.heatmap.less}]],
-                        moreLabel:  [[#{voj.common.heatmap.more}]]
-                    });
-                }
-            });
-        });
-    </script>
-    <script type="text/javascript" th:inline="javascript">
-        $(function() {
-            var currentVersion = $('#product-version').html(),
-                newVersion     = '0.0.0';
+        <!-- KPI cards -->
+        <div class="adm-kpis">
+            <div class="adm-kpi">
+                <div class="adm-kpi-top"><span class="k" th:text="#{voj.administration.index.kpi.problems}">PROBLEMS</span><span class="i">&#9776;</span></div>
+                <div class="adm-kpi-v" th:text="${#numbers.formatInteger(totalProblems, 1, 'COMMA')}">0</div>
+                <div class="adm-kpi-d"><span th:text="${privateProblems}">0</span> <span class="note" th:text="#{voj.administration.index.kpi.private}">private</span></div>
+            </div>
+            <div class="adm-kpi">
+                <div class="adm-kpi-top"><span class="k" th:text="#{voj.administration.index.kpi.users}">USERS</span><span class="i">&#9783;</span></div>
+                <div class="adm-kpi-v" th:text="${#numbers.formatInteger(totalUsers, 1, 'COMMA')}">0</div>
+                <div class="adm-kpi-d">+<span th:text="${newUsersToday}">0</span> <span class="note" th:text="#{voj.administration.index.kpi.today}">today</span></div>
+            </div>
+            <div class="adm-kpi">
+                <div class="adm-kpi-top"><span class="k" th:text="#{voj.administration.index.kpi.submissions-today}">SUBMISSIONS / DAY</span><span class="i">&#8645;</span></div>
+                <div class="adm-kpi-v" th:text="${#numbers.formatInteger(submissionsToday, 1, 'COMMA')}">0</div>
+                <div class="adm-kpi-d" th:classappend="${pendingSubmissions > 0} ? 'warn'"><span th:text="${pendingSubmissions}">0</span> <span class="note" th:text="#{voj.administration.index.kpi.pending}">pending</span></div>
+            </div>
+            <div class="adm-kpi">
+                <div class="adm-kpi-top"><span class="k" th:text="#{voj.administration.index.kpi.live-contests}">LIVE CONTESTS</span><span class="i">&#9719;</span></div>
+                <div class="adm-kpi-v" th:text="${liveContests}">0</div>
+                <div class="adm-kpi-d" th:classappend="${liveContests > 0} ? 'warn'"><span th:text="${onlineUsers}">0</span> <span class="note" th:text="#{voj.administration.index.kpi.online}">online</span></div>
+            </div>
+        </div>
 
-            $.ajax({
-                type: 'GET',
-                url: 'https://api.github.com/repos/zjhzxhz/voj/releases/latest',
-                dataType: 'jsonp',
-                success: function(result){
-                    newVersion = result['data']['name'];
-                    if ( newVersion > currentVersion ) {
-                        $('#product-version').html([[#{voj.administration.index.new-version-available}]] + ': ' + newVersion);
-                    }
-                }
-            });
-        });
-    </script>
-    </th:block>
+        <!-- Submissions chart + verdict mix -->
+        <div class="adm-charts adm-charts-2a">
+            <div class="adm-panel adm-panel-pad">
+                <div class="adm-panel-head mb">
+                    <span class="adm-label" th:text="#{voj.administration.index.submissions-14-days}">// SUBMISSIONS · LAST 14 DAYS</span>
+                    <span class="adm-sub"><span th:text="${#numbers.formatInteger(submissionsTotal, 1, 'COMMA')}">0</span> <span th:text="#{voj.administration.index.total}">total</span></span>
+                </div>
+                <div class="adm-bars">
+                    <div class="adm-bar" th:each="bar : ${submissionBars}">
+                        <div class="fill" th:style="|height:${bar.height}%|" th:title="${bar.value}"></div>
+                        <span class="lbl" th:text="${bar.label}">M</span>
+                    </div>
+                </div>
+            </div>
+            <div class="adm-panel adm-panel-pad">
+                <div class="adm-label" style="margin-bottom:18px;" th:text="#{voj.administration.index.verdict-mix}">// VERDICT MIX</div>
+                <div class="adm-verdict" th:each="v : ${verdicts}">
+                    <div class="adm-verdict-top">
+                        <span class="nm" th:classappend="${v.cls}" th:text="${v.name}">Accepted</span>
+                        <span class="pct"><span th:text="${v.percentage}">0</span>%</span>
+                    </div>
+                    <div class="adm-verdict-track"><div class="adm-verdict-fill" th:classappend="${v.cls}" th:style="|width:${v.percentage}%;background:currentColor|"></div></div>
+                </div>
+                <div class="adm-table-empty" th:if="${#lists.isEmpty(verdicts)}" th:text="#{voj.administration.index.no-submissions}">// no submissions yet</div>
+            </div>
+        </div>
+
+        <!-- Moderation queue + system status -->
+        <div class="adm-charts adm-charts-2b">
+            <div class="adm-panel adm-panel-flush">
+                <div class="adm-panel-bar">
+                    <span class="adm-label" th:text="#{voj.administration.index.moderation-queue}">// MODERATION QUEUE</span>
+                    <span class="adm-pending" th:if="${moderationCount > 0}"><span th:text="${moderationCount}">0</span> <span th:text="#{voj.administration.index.pending-count}">pending</span></span>
+                </div>
+                <a class="adm-feed-row" th:each="m : ${moderationQueue}" th:href="@{/administration/edit-thread/{id}(id=${m.threadId})}" style="text-decoration:none;">
+                    <span class="adm-feed-tag c-err" th:text="#{voj.administration.index.report}">REPORT</span>
+                    <span class="adm-feed-text" th:text="${m.threadTitle != null ? m.threadTitle : m.content}">Reported reply</span>
+                    <span class="adm-feed-when"><span th:text="${m.reportCount}">0</span>&#215;</span>
+                </a>
+                <div class="adm-table-empty" th:if="${#lists.isEmpty(moderationQueue)}" th:text="#{voj.administration.index.queue-clear}">// queue clear — nothing reported</div>
+            </div>
+            <div class="adm-panel adm-panel-flush">
+                <div class="adm-panel-bar"><span class="adm-label" th:text="#{voj.administration.index.system-status}">// SYSTEM STATUS</span></div>
+                <div class="adm-feed-row">
+                    <span class="adm-stat-dot" th:classappend="${onlineJudgers > 0} ? 'c-accent' : 'c-err'" th:style="|background:currentColor;box-shadow:0 0 8px currentColor|"></span>
+                    <span class="adm-feed-text"><span th:text="#{voj.administration.index.judge-cluster}">Judge cluster</span> (<span th:text="${onlineJudgers}">0</span>)</span>
+                    <span class="adm-stat-val" th:classappend="${onlineJudgers > 0} ? 'c-accent' : 'c-err'" th:text="${onlineJudgers > 0} ? #{voj.administration.index.healthy} : #{voj.administration.index.offline}">healthy</span>
+                </div>
+                <div class="adm-feed-row">
+                    <span class="adm-stat-dot" th:classappend="${pendingSubmissions > 50} ? 'c-warn' : 'c-accent'" th:style="|background:currentColor;box-shadow:0 0 8px currentColor|"></span>
+                    <span class="adm-feed-text" th:text="#{voj.administration.index.queue-depth}">Queue depth</span>
+                    <span class="adm-stat-val"><span th:text="${pendingSubmissions}">0</span> <span th:text="#{voj.administration.index.jobs}">jobs</span></span>
+                </div>
+                <div class="adm-feed-row" th:with="loadCls=${averageCpuLoad < 0 ? 'c-muted' : (averageCpuLoad > 85 ? 'c-err' : (averageCpuLoad > 60 ? 'c-warn' : 'c-accent'))}">
+                    <span class="adm-stat-dot" th:classappend="${loadCls}" th:style="|background:currentColor;box-shadow:0 0 8px currentColor|"></span>
+                    <span class="adm-feed-text" th:text="#{voj.administration.index.avg-node-load}">Avg node load</span>
+                    <span class="adm-stat-val" th:text="${averageCpuLoad < 0 ? '—' : averageCpuLoad + '%'}">—</span>
+                </div>
+                <div class="adm-feed-row" th:with="stoCls=${storageUsage > 85 ? 'c-err' : (storageUsage > 70 ? 'c-warn' : 'c-accent')}">
+                    <span class="adm-stat-dot" th:classappend="${stoCls}" th:style="|background:currentColor;box-shadow:0 0 8px currentColor|"></span>
+                    <span class="adm-feed-text" th:text="#{voj.administration.index.storage-used}">Storage used</span>
+                    <span class="adm-stat-val" th:classappend="${stoCls}"><span th:text="${storageUsage}">0</span>%</span>
+                </div>
+                <div class="adm-feed-row">
+                    <span class="adm-stat-dot c-accent" style="background:currentColor;box-shadow:0 0 8px currentColor;"></span>
+                    <span class="adm-feed-text" th:text="#{voj.administration.index.memory-usage}">Memory usage</span>
+                    <span class="adm-stat-val"><span th:text="${memoryUsage}">0</span> MB</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    </div>
 </body>
 </html>

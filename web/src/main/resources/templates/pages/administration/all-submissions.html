@@ -6,189 +6,104 @@
     <title th:text="#{voj.administration.all-submissions.title} + ' | ' + ${websiteName}">Submissions</title>
 </head>
 <body>
-    <div id="content" layout:fragment="content">
-        <h2 class="page-header"><i class="fa fa-code"></i> <span th:text="#{voj.administration.all-submissions.all-submissions}">Submissions</span></h2>
-        <div class="alert alert-error hide"></div> <!-- .alert-error -->
-        <div id="filters" class="row-fluid">
-            <div class="span6">
-                <select id="actions">
-                    <option value="delete" th:text="#{voj.administration.all-submissions.delete}">Delete</option>
-                    <option value="restart" th:text="#{voj.administration.all-submissions.restart}">Restart</option>
-                </select>
-                <button class="btn btn-danger" th:text="#{voj.administration.all-submissions.apply}">Apply</button>
-            </div> <!-- .span6 -->
-            <div class="span6">
-                <form class="row-fluid text-right" th:action="@{/administration/all-submissions}">
-                    <div class="span5">
-                        <div class="control-group">
-                            <input id="problem-id" name="problemId" class="span12" th:value="${problemId != 0 ? problemId : ''}" th:placeholder="#{voj.administration.all-submissions.problem-id}" type="text" />
-                        </div> <!-- .control-group -->
-                    </div> <!-- .span5 -->
-                    <div class="span5">
-                        <div class="control-group">
-                            <input id="username" name="username" class="span12" th:value="${username}" th:placeholder="#{voj.administration.all-submissions.username}" type="text" />
-                        </div> <!-- .control-group -->
-                    </div> <!-- .span5 -->
-                    <div class="span2">
-                        <button class="btn btn-primary" th:text="#{voj.administration.all-submissions.filter}">Filter</button>
-                    </div> <!-- .span2 -->
-                </form> <!-- .row-fluid -->
-            </div> <!-- .span6 -->
-        </div> <!-- .row-fluid -->
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th class="check-box">
-                        <label class="checkbox" for="all-submissions">
-                            <input id="all-submissions" type="checkbox" data-toggle="checkbox" />
-                        </label>
-                    </th>
-                    <th class="flag" th:text="#{voj.administration.all-submissions.result}">Result</th>
-                    <th class="score" th:text="#{voj.administration.all-submissions.score}">Score</th>
-                    <th class="time" th:text="#{voj.administration.all-submissions.time}">Time</th>
-                    <th class="memory" th:text="#{voj.administration.all-submissions.memory}">Memory</th>
-                    <th class="name" th:text="#{voj.administration.all-submissions.problem}">Problem</th>
-                    <th class="user" th:text="#{voj.administration.all-submissions.user}">User</th>
-                    <th class="language" th:text="#{voj.administration.all-submissions.language}">Language</th>
-                    <th class="submit-time" th:text="#{voj.administration.all-submissions.submit-time}">Submit Time</th>
-                    <th class="execute-time" th:text="#{voj.administration.all-submissions.execute-time}">Execute Time</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr th:each="submission : ${submissions}" th:attr="data-value=${submission.submissionId}">
-                    <td class="check-box">
-                        <label class="checkbox" th:for="|submission-${submission.submissionId}|">
-                            <input th:id="|submission-${submission.submissionId}|" type="checkbox" th:value="${submission.submissionId}" data-toggle="checkbox" />
-                        </label>
-                    </td>
-                    <td th:class="|flag flag-${submission.judgeResult.judgeResultSlug}|"><a th:href="@{/administration/edit-submission/{id}(id=${submission.submissionId})}" th:text="${submission.judgeResult.judgeResultName}">Result</a></td>
-                    <td class="score" th:text="${submission.judgeScore}">0</td>
-                    <td class="time" th:text="|${submission.usedTime} ms|">0 ms</td>
-                    <td class="memory" th:text="|${submission.usedMemory} K|">0 K</td>
-                    <td class="name"><a th:href="@{/administration/edit-problem/{id}(id=${submission.problem.problemId})}" th:text="|P${submission.problem.problemId} ${submission.problem.problemName}|">Problem</a></td>
-                    <td class="user"><a th:href="@{/administration/edit-user/{id}(id=${submission.user.uid})}" th:text="${submission.user.username}">user</a></td>
-                    <td class="language" th:text="${submission.language.languageName}">Language</td>
-                    <td class="submit-time" th:text="${@dateFormatter.dateTimeLongMedium(submission.submitTime, language)}">time</td>
-                    <td class="execute-time" th:text="${@dateFormatter.dateTimeLongMedium(submission.executeTime, language)}">time</td>
-                </tr>
-            </tbody>
-        </table>
-        <div id="pagination" class="pagination pagination-centered"
-             th:with="lowerBound=${currentPage - 5 > 0 ? currentPage - 5 : 1},upperBound=${currentPage + 5 < totalPages ? currentPage + 5 : totalPages}">
-            <ul>
-                <li th:classappend="${currentPage <= 1} ? 'disabled' : ''" class="previous">
-                    <a th:if="${currentPage <= 1}" href="javascript:void(0);">&lt;</a>
-                    <a th:unless="${currentPage <= 1}" th:href="@{/administration/all-submissions(problemId=${problemId},username=${username},page=${currentPage - 1})}">&lt;</a>
-                </li>
-                <li th:each="pageNumber : ${#numbers.sequence(lowerBound, upperBound)}" th:classappend="${pageNumber == currentPage} ? 'active' : ''"><a th:href="@{/administration/all-submissions(problemId=${problemId},username=${username},page=${pageNumber})}" th:text="${pageNumber}">1</a></li>
-                <li th:classappend="${currentPage >= totalPages} ? 'disabled' : ''" class="next">
-                    <a th:if="${currentPage >= totalPages}" href="javascript:void(0);">&gt;</a>
-                    <a th:unless="${currentPage >= totalPages}" th:href="@{/administration/all-submissions(problemId=${problemId},username=${username},page=${currentPage + 1})}">&gt;</a>
-                </li>
-            </ul>
-        </div> <!-- #pagination-->
-    </div> <!-- #content -->
+    <div layout:fragment="content">
+    <div class="adm-wrap">
+
+        <!-- Toolbar -->
+        <form class="adm-toolbar" method="GET" th:action="@{/administration/all-submissions}">
+            <div class="adm-toolbar-search">
+                <span class="sigil">$</span>
+                <input name="username" type="text" th:value="${username}" th:placeholder="#{voj.administration.all-submissions.search-placeholder}" />
+                <span class="count"><span th:text="${#lists.size(submissions)}">0</span> <span th:text="#{voj.administration.all-submissions.records}">records</span></span>
+            </div>
+            <input name="problemId" class="adm-toolbar-select" style="width:120px;" type="text" th:value="${problemId != 0 ? problemId : ''}" th:placeholder="#{voj.administration.all-submissions.problem-id}" />
+            <button type="submit" class="adm-btn-ghost"><span>&#9698;</span> <span th:text="#{voj.administration.all-submissions.filter}">filter</span></button>
+        </form>
+
+        <!-- Bulk bar -->
+        <div class="adm-bulk" data-adm="bulk" style="display:none;">
+            <span class="sel"><span data-adm="bulk-count">0</span> <span th:text="#{voj.administration.all-submissions.selected}">selected</span></span>
+            <div style="flex:1;"></div>
+            <span class="adm-bulk-act c-accent" data-adm="bulk-rejudge">&#8635; <span th:text="#{voj.administration.all-submissions.restart}">rejudge</span></span>
+            <span class="adm-bulk-act c-err" data-adm="bulk-delete">&#10005; <span th:text="#{voj.administration.all-submissions.delete}">delete</span></span>
+            <span class="adm-bulk-clear" data-adm="bulk-clear" th:text="#{voj.administration.all-submissions.clear}">clear</span>
+        </div>
+
+        <!-- Table -->
+        <div class="adm-table" data-adm="table">
+            <div class="adm-table-scroll"><div class="adm-table-inner" style="--cols:34px 70px 120px minmax(0,1fr) 120px 80px 96px 40px;">
+                <div class="adm-table-head">
+                    <span class="adm-check" data-adm="check-all"></span>
+                    <span>#</span>
+                    <span th:text="#{voj.administration.all-submissions.user}">USER</span>
+                    <span th:text="#{voj.administration.all-submissions.problem}">PROBLEM</span>
+                    <span th:text="#{voj.administration.all-submissions.language}">LANG</span>
+                    <span th:text="#{voj.administration.all-submissions.time}">TIME</span>
+                    <span th:text="#{voj.administration.all-submissions.result}">VERDICT</span>
+                    <span></span>
+                </div>
+                <a class="adm-table-row" data-adm="row" th:each="submission : ${submissions}"
+                   th:href="@{/administration/edit-submission/{id}(id=${submission.submissionId})}"
+                   th:with="vs=${submission.judgeResult != null ? submission.judgeResult.judgeResultSlug : ''},vcls=${vs == 'AC' ? 'c-accent' : (vs == 'WA' ? 'c-err' : ((vs == 'CE' or vs == 'SE' or vs == 'PD') ? 'c-muted' : ((vs == 'RE' or vs == 'PE') ? 'c-info' : 'c-warn')))}">
+                    <span class="adm-check" data-adm="row-check" th:attr="data-id=${submission.submissionId}"></span>
+                    <span class="adm-cell mono muted" th:text="'#' + ${submission.submissionId}">#1</span>
+                    <span class="adm-cell head" th:text="${submission.user != null ? submission.user.username : ''}">user</span>
+                    <span class="adm-cell txt" th:text="${submission.problem != null ? submission.problem.problemName : ''}">problem</span>
+                    <span class="adm-cell muted" th:text="${submission.language != null ? submission.language.languageName : ''}">lang</span>
+                    <span class="adm-cell mono muted" th:text="|${submission.usedTime} ms|">0 ms</span>
+                    <span><span class="adm-pill" th:classappend="${vcls}" th:text="${vs}">AC</span></span>
+                    <span class="adm-menu">&#183;&#183;&#183;</span>
+                </a>
+                <div class="adm-table-empty" th:if="${#lists.isEmpty(submissions)}" th:text="#{voj.administration.all-submissions.no-records}">// no records</div>
+            </div></div>
+        </div>
+
+        <!-- Pager -->
+        <div class="adm-pager" th:if="${totalPages > 1}"
+             th:with="lowerBound=${currentPage - 3 > 0 ? currentPage - 3 : 1},upperBound=${currentPage + 3 < totalPages ? currentPage + 3 : totalPages}">
+            <span><span th:text="#{voj.administration.all-submissions.page}">page</span> <span th:text="${currentPage}">1</span> / <span th:text="${totalPages}">1</span></span>
+            <div class="adm-pager-btns">
+                <a class="nav" th:classappend="${currentPage <= 1} ? 'off'" th:href="@{/administration/all-submissions(problemId=${problemId},username=${username},page=${currentPage - 1})}">&#8592;</a>
+                <a class="num" th:each="pageNumber : ${#numbers.sequence(lowerBound, upperBound)}" th:classappend="${pageNumber == currentPage} ? 'active'" th:href="@{/administration/all-submissions(problemId=${problemId},username=${username},page=${pageNumber})}" th:text="${pageNumber}">1</a>
+                <a class="nav" th:classappend="${currentPage >= totalPages} ? 'off'" th:href="@{/administration/all-submissions(problemId=${problemId},username=${username},page=${currentPage + 1})}">&#8594;</a>
+            </div>
+        </div>
+
+    </div>
+    </div>
 
     <th:block layout:fragment="scripts">
-    <script type="text/javascript">
-        $('label[for=all-submissions]').click(function() {
-            // Fix the bug for Checkbox in FlatUI
-            var isChecked = false;
-            setTimeout(function() {
-                isChecked = $('label[for=all-submissions]').hasClass('checked');
-
-                if ( isChecked ) {
-                    $('label.checkbox').addClass('checked');
-                } else {
-                    $('label.checkbox').removeClass('checked');
-                }
-            }, 100);
-        });
-    </script>
     <script type="text/javascript" th:inline="javascript">
-        $('button.btn-danger', '#filters').click(function() {
-            if ( !confirm([[#{voj.administration.all-submissions.continue-or-not}]]) ) {
-                return;
-            }
-            $('.alert-error').addClass('hide');
-            $('button.btn-danger', '#filters').attr('disabled', 'disabled');
-            $('button.btn-danger', '#filters').html([[#{voj.administration.all-submissions.please-wait}]]);
-
-            var submissions = [],
-                action      = $('#actions').val();
-
-            $('label.checkbox', 'table tbody').each(function() {
-                if ( $(this).hasClass('checked') ) {
-                    var submissionId = $('input[type=checkbox]', $(this)).val();
-                    submissions.push(submissionId);
-                }
-            });
-
-            if ( action == 'delete' ) {
-                return doDeleteSubmissionsAction(submissions);
-            } else if ( action == 'restart' ) {
-                return doRestartSubmissionsAction(submissions);
-            }
-        });
-    </script>
-    <script type="text/javascript" th:inline="javascript">
-        function doDeleteSubmissionsAction(submissions) {
-            var postData = {
-                'submissions': JSON.stringify(submissions)
-            };
-
-            $.ajax({
-                type: 'POST',
-                url: [[@{/administration/deleteSubmissions.action}]],
-                data: postData,
-                dataType: 'JSON',
-                success: function(result){
-                    if ( result['isSuccessful'] ) {
-                        var deletedSubmissions = result['deletedSubmissions'];
-
-                        for ( var i = 0; i < deletedSubmissions.length; ++ i ) {
-                            $('tr[data-value=%s]'.format(deletedSubmissions[i])).remove();
-                        }
-                    } else {
-                        $('.alert').html([[#{voj.administration.all-submissions.delete-error}]]);
-                        $('.alert').removeClass('hide');
+        document.addEventListener('DOMContentLoaded', function () {
+            function selected() { return window.admSelectedIds ? window.admSelectedIds() : []; }
+            var del = document.querySelector('[data-adm="bulk-delete"]');
+            var rej = document.querySelector('[data-adm="bulk-rejudge"]');
+            if (del) del.addEventListener('click', function () {
+                var ids = selected();
+                if (ids.length === 0) return;
+                if (!confirm([[#{voj.administration.all-submissions.continue-or-not}]])) return;
+                $.ajax({
+                    type: 'POST', url: [[@{/administration/deleteSubmissions.action}]],
+                    data: { 'submissions': JSON.stringify(ids) }, dataType: 'JSON',
+                    success: function (result) {
+                        if (result['isSuccessful']) { window.location.reload(); }
+                        else { alert([[#{voj.administration.all-submissions.delete-error}]]); }
                     }
-                    $('button.btn-danger', '#filters').removeAttr('disabled');
-                    $('button.btn-danger', '#filters').html([[#{voj.administration.all-submissions.apply}]]);
-                }
+                });
             });
-        }
-    </script>
-    <script type="text/javascript" th:inline="javascript">
-        function doRestartSubmissionsAction(submissions) {
-            var postData = {
-                'submissions': JSON.stringify(submissions)
-            };
-
-            $.ajax({
-                type: 'POST',
-                url: [[@{/administration/restartSubmissions.action}]],
-                data: postData,
-                dataType: 'JSON',
-                success: function(result){
-                    if ( result['isSuccessful'] ) {
-                        for ( var i = 0; i < submissions.length; ++ i ) {
-                            var submission  = $('tr[data-value=%s]'.format(submissions[i])),
-                                judgeResult = $('td.flag', $(submission));
-
-                            $(judgeResult).removeClass();
-                            $(judgeResult).addClass('flag flag-PD');
-                            $('a', $(judgeResult)).html('Pending');
-                        }
-                    } else {
-                        $('.alert').html([[#{voj.administration.all-submissions.restart-error}]]);
-                        $('.alert').removeClass('hide');
+            if (rej) rej.addEventListener('click', function () {
+                var ids = selected();
+                if (ids.length === 0) return;
+                $.ajax({
+                    type: 'POST', url: [[@{/administration/restartSubmissions.action}]],
+                    data: { 'submissions': JSON.stringify(ids) }, dataType: 'JSON',
+                    success: function (result) {
+                        if (result['isSuccessful']) { window.location.reload(); }
+                        else { alert([[#{voj.administration.all-submissions.restart-error}]]); }
                     }
-                    $('button.btn-danger', '#filters').removeAttr('disabled');
-                    $('button.btn-danger', '#filters').html([[#{voj.administration.all-submissions.apply}]]);
-                }
+                });
             });
-        }
+        });
     </script>
     </th:block>
 </body>

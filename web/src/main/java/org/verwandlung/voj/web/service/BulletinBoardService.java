@@ -22,7 +22,10 @@ import org.springframework.transaction.annotation.Transactional;
 import org.verwandlung.voj.web.mapper.BulletinBoardMessageMapper;
 import org.verwandlung.voj.web.model.BulletinBoardMessage;
 
+import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * The business logic layer of the bulletin board.
@@ -60,6 +63,73 @@ public class BulletinBoardService {
    */
   public BulletinBoardMessage getBulletinBoardMessage(long bulletinBoardMessageId) {
     return bulletinBoardMessageMapper.getBulletinBoardMessageUsingId(bulletinBoardMessageId);
+  }
+
+  /**
+   * [For administrators only] Creates a bulletin board message.
+   *
+   * @param messageTitle - the title of the message
+   * @param messageBody - the content of the message
+   * @return a Map containing the creation result and validation flags
+   */
+  public Map<String, Boolean> createBulletinBoardMessage(String messageTitle, String messageBody) {
+    Map<String, Boolean> result = validateMessage(messageTitle, messageBody);
+    if (result.get("isSuccessful")) {
+      bulletinBoardMessageMapper.createBulletinBoardMessage(
+          new BulletinBoardMessage(messageTitle, messageBody, new Date()));
+    }
+    return result;
+  }
+
+  /**
+   * [For administrators only] Edits an existing bulletin board message.
+   *
+   * @param messageId - the unique identifier of the message
+   * @param messageTitle - the new title of the message
+   * @param messageBody - the new content of the message
+   * @return a Map containing the edit result and validation flags
+   */
+  public Map<String, Boolean> editBulletinBoardMessage(
+      long messageId, String messageTitle, String messageBody) {
+    BulletinBoardMessage message =
+        bulletinBoardMessageMapper.getBulletinBoardMessageUsingId(messageId);
+    Map<String, Boolean> result = validateMessage(messageTitle, messageBody);
+    result.put("isMessageExists", message != null);
+    if (message == null) {
+      result.put("isSuccessful", false);
+      return result;
+    }
+    if (result.get("isSuccessful")) {
+      message.setMessageTitle(messageTitle);
+      message.setMessageBody(messageBody);
+      bulletinBoardMessageMapper.updateBulletinBoardMessage(message);
+    }
+    return result;
+  }
+
+  /**
+   * [For administrators only] Deletes a bulletin board message.
+   *
+   * @param messageId - the unique identifier of the message to delete
+   * @return whether the message was deleted
+   */
+  public boolean deleteBulletinBoardMessage(long messageId) {
+    return bulletinBoardMessageMapper.deleteBulletinBoardMessage(messageId) > 0;
+  }
+
+  /**
+   * Validates a bulletin board message's title and body.
+   *
+   * @param messageTitle - the title of the message
+   * @param messageBody - the content of the message
+   * @return a Map of validation flags including {@code isSuccessful}
+   */
+  private Map<String, Boolean> validateMessage(String messageTitle, String messageBody) {
+    Map<String, Boolean> result = new HashMap<>(4, 1);
+    result.put("isTitleEmpty", messageTitle == null || messageTitle.trim().isEmpty());
+    result.put("isBodyEmpty", messageBody == null || messageBody.trim().isEmpty());
+    result.put("isSuccessful", !result.get("isTitleEmpty") && !result.get("isBodyEmpty"));
+    return result;
   }
 
   /** The autowired BulletinBoardMessageMapper, used to obtain bulletin board messages. */

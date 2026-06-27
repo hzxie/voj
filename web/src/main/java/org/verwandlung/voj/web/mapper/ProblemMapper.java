@@ -51,14 +51,14 @@ public interface ProblemMapper {
   /**
    * Gets the ID of the first problem.
    *
-   * @return the ID of the first problem
+   * @return the ID of the first problem, or 0 if there are no problems
    */
   long getLowerBoundOfProblems();
 
   /**
    * Gets the ID of the last problem.
    *
-   * @return the ID of the last problem
+   * @return the ID of the last problem, or 0 if there are no problems
    */
   long getUpperBoundOfProblems();
 
@@ -68,7 +68,7 @@ public interface ProblemMapper {
    * @param isPublicOnly - whether to filter only public problems
    * @param offset - the starting number of the problem identifier
    * @param limit - the number of problems to fetch
-   * @return the ID of the last problem within the problem range
+   * @return the ID of the last problem within the problem range, or 0 if there are no problems
    */
   long getUpperBoundOfProblemsWithLimit(
       @Param("isPublicOnly") boolean isPublicOnly,

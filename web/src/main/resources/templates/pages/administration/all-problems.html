@@ -6,169 +6,101 @@
     <title th:text="#{voj.administration.all-problems.title} + ' | ' + ${websiteName}">All Problems</title>
 </head>
 <body>
-    <div id="content" layout:fragment="content">
-        <h2 class="page-header"><i class="fa fa-question-circle"></i> <span th:text="#{voj.administration.all-problems.all-problems}">All Problems</span></h2>
-        <div class="alert alert-error hide"></div> <!-- .alert-error -->
-        <div id="filters" class="row-fluid">
-            <div class="span4">
-                <div class="row-fluid">
-                    <div class="span8">
-                        <select id="actions">
-                            <option value="delete" th:text="#{voj.administration.all-problems.delete}">Delete</option>
-                        </select>
-                    </div> <!-- .span8 -->
-                    <div class="span4">
-                        <button class="btn btn-danger" th:text="#{voj.administration.all-problems.apply}">Apply</button>
-                    </div> <!-- .span4 -->
-                </div> <!-- .row-fluid -->
-            </div> <!-- .span4 -->
-            <div class="span8 text-right">
-                <form th:action="@{/administration/all-problems}" method="GET" class="row-fluid">
-                    <div class="span5">
-                        <div class="control-group">
-                            <input id="keyword" name="keyword" class="span12" type="text" th:placeholder="#{voj.administration.all-problems.keyword}" th:value="${keyword}" />
-                        </div> <!-- .control-group -->
-                    </div> <!-- .span5 -->
-                    <div class="span5">
-                        <select name="problemCategory" id="problem-category">
-                            <option value="" th:text="#{voj.administration.all-problems.all-problem-categories}">All Problem Categories</option>
-                            <option th:each="problemCategory : ${problemCategories}" th:value="${problemCategory.problemCategorySlug}" th:selected="${problemCategory.problemCategorySlug == selectedProblemCategory}" th:text="${problemCategory.problemCategoryName}">Category</option>
-                        </select>
-                    </div> <!-- .span5 -->
-                    <div class="span2">
-                        <button class="btn btn-primary" th:text="#{voj.administration.all-problems.filter}">Filter</button>
-                    </div> <!-- .span2 -->
-                </form> <!-- .row-fluid -->
-            </div> <!-- .span8 -->
-        </div> <!-- .row-fluid -->
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th class="check-box">
-                        <label class="checkbox" for="all-problems">
-                            <input id="all-problems" type="checkbox" data-toggle="checkbox" />
-                        </label>
-                    </th>
-                    <th class="problem-id">#</th>
-                    <th class="problem-is-public" th:text="#{voj.administration.all-problems.is-public}">Public/Private</th>
-                    <th class="problem-name" th:text="#{voj.administration.all-problems.problem-name}">Problem Name</th>
-                    <th class="problem-categories" th:text="#{voj.administration.all-problems.problem-categories}">Categories</th>
-                    <th class="problem-tags" th:text="#{voj.administration.all-problems.problem-tags}">Tags</th>
-                    <th class="total-submission" th:text="#{voj.administration.all-problems.total-submissions}">Total Submissions</th>
-                    <th class="accepted-submission" th:text="#{voj.administration.all-problems.accepted-submissions}">Accepted Submissions</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr th:each="problem : ${problems}" th:attr="data-value=${problem.problemId}">
-                    <td class="check-box">
-                        <label class="checkbox" th:for="|problem-${problem.problemId}|">
-                            <input th:id="|problem-${problem.problemId}|" type="checkbox" th:value="${problem.problemId}" data-toggle="checkbox" />
-                        </label>
-                    </td>
-                    <td class="problem-id">
-                        <a th:href="@{/administration/edit-problem/{id}(id=${problem.problemId})}" th:text="${problem.problemId}">1</a>
-                    </td>
-                    <td class="problem-is-public">
-                        <span th:if="${problem.isPublic()}" th:text="#{voj.administration.all-problems.public}">Public</span>
-                        <span th:unless="${problem.isPublic()}" th:text="#{voj.administration.all-problems.private}">Private</span>
-                    </td>
-                    <td class="problem-name" th:text="${problem.problemName}">Name</td>
-                    <td class="problem-categories">
+    <div layout:fragment="content">
+    <div class="adm-wrap">
+
+        <!-- Toolbar -->
+        <form class="adm-toolbar" method="GET" th:action="@{/administration/all-problems}">
+            <div class="adm-toolbar-search">
+                <span class="sigil">$</span>
+                <input name="keyword" type="text" th:value="${keyword}" th:placeholder="#{voj.administration.all-problems.search-placeholder}" />
+                <span class="count"><span th:text="${#lists.size(problems)}">0</span> <span th:text="#{voj.administration.all-problems.records}">records</span></span>
+            </div>
+            <select name="problemCategory" class="adm-toolbar-select" onchange="this.form.submit();">
+                <option value="" th:text="#{voj.administration.all-problems.all-problem-categories}">All Categories</option>
+                <option th:each="problemCategory : ${problemCategories}" th:value="${problemCategory.problemCategorySlug}" th:selected="${problemCategory.problemCategorySlug == selectedProblemCategory}" th:text="${problemCategory.problemCategoryName}">Category</option>
+            </select>
+            <button type="submit" class="adm-btn-ghost"><span>&#9698;</span> <span th:text="#{voj.administration.all-problems.filter}">filter</span></button>
+            <a class="adm-btn-accent" th:href="@{/administration/new-problem}" th:text="#{voj.administration.all-problems.new-problem}">+ new problem</a>
+        </form>
+
+        <!-- Bulk bar -->
+        <div class="adm-bulk" data-adm="bulk" style="display:none;">
+            <span class="sel"><span data-adm="bulk-count">0</span> <span th:text="#{voj.administration.all-problems.selected}">selected</span></span>
+            <div style="flex:1;"></div>
+            <span class="adm-bulk-act c-err" data-adm="bulk-delete">&#10005; <span th:text="#{voj.administration.all-problems.delete}">delete</span></span>
+            <span class="adm-bulk-clear" data-adm="bulk-clear" th:text="#{voj.administration.all-problems.clear}">clear</span>
+        </div>
+
+        <!-- Table -->
+        <div class="adm-table" data-adm="table">
+            <div class="adm-table-scroll"><div class="adm-table-inner" style="--cols:34px 64px minmax(0,1fr) 200px 64px 80px 96px 40px;">
+                <div class="adm-table-head">
+                    <span class="adm-check" data-adm="check-all"></span>
+                    <span>#</span>
+                    <span th:text="#{voj.administration.all-problems.problem-name}">TITLE</span>
+                    <span th:text="#{voj.administration.all-problems.problem-categories}">CATEGORIES</span>
+                    <span th:text="#{voj.administration.all-problems.ac-rate}">AC%</span>
+                    <span th:text="#{voj.administration.all-problems.total-submissions}">SUBS</span>
+                    <span th:text="#{voj.administration.all-problems.status}">STATUS</span>
+                    <span></span>
+                </div>
+                <a class="adm-table-row" data-adm="row" th:each="problem : ${problems}" th:href="@{/administration/edit-problem/{id}(id=${problem.problemId})}">
+                    <span class="adm-check" data-adm="row-check" th:attr="data-id=${problem.problemId}"></span>
+                    <span class="adm-cell mono muted" th:text="'#' + ${problem.problemId}">#1</span>
+                    <span class="adm-cell head" th:text="${problem.problemName}">Problem Name</span>
+                    <span class="adm-tags">
                         <th:block th:if="${problemCategoryRelationships[problem.problemId] != null}">
-                            <th:block th:each="problemCategory,loop : ${problemCategoryRelationships[problem.problemId]}"><a th:href="@{/administration/all-problems(problemCategory=${problemCategory.problemCategorySlug})}" th:text="${problemCategory.problemCategoryName}">Category</a><span th:unless="${loop.last}">, </span></th:block>
+                            <span th:each="problemCategory,loop : ${problemCategoryRelationships[problem.problemId]}" th:if="${loop.index < 2}" th:text="${problemCategory.problemCategoryName}">Category</span>
                         </th:block>
-                    </td>
-                    <td class="problem-tags">
-                        <th:block th:if="${problemTagRelationships[problem.problemId] != null}">
-                            <th:block th:each="problemTag,loop : ${problemTagRelationships[problem.problemId]}"><a th:href="@{/administration/all-problems(problemTag=${problemTag.problemTagSlug})}" th:text="${problemTag.problemTagName}">Tag</a><span th:unless="${loop.last}">, </span></th:block>
-                        </th:block>
-                    </td>
-                    <td class="total-submission" th:text="${problem.totalSubmission}">0</td>
-                    <td class="accepted-submission" th:text="${problem.acceptedSubmission}">0</td>
-                </tr>
-            </tbody>
-        </table>
-        <div id="pagination" class="pagination pagination-centered"
-             th:with="lowerBound=${currentPage - 5 > 0 ? currentPage - 5 : 1},upperBound=${currentPage + 5 < totalPages ? currentPage + 5 : totalPages}">
-            <ul>
-                <li th:classappend="${currentPage <= 1} ? 'disabled' : ''" class="previous">
-                    <a th:if="${currentPage <= 1}" href="javascript:void(0);">&lt;</a>
-                    <a th:unless="${currentPage <= 1}" th:href="@{/administration/all-problems(keyword=${keyword},problemCategory=${selectedProblemCategory},page=${currentPage - 1})}">&lt;</a>
-                </li>
-                <li th:each="pageNumber : ${#numbers.sequence(lowerBound, upperBound)}" th:classappend="${pageNumber == currentPage} ? 'active' : ''"><a th:href="@{/administration/all-problems(keyword=${keyword},problemCategory=${selectedProblemCategory},page=${pageNumber})}" th:text="${pageNumber}">1</a></li>
-                <li th:classappend="${currentPage >= totalPages} ? 'disabled' : ''" class="next">
-                    <a th:if="${currentPage >= totalPages}" href="javascript:void(0);">&gt;</a>
-                    <a th:unless="${currentPage >= totalPages}" th:href="@{/administration/all-problems(keyword=${keyword},problemCategory=${selectedProblemCategory},page=${currentPage + 1})}">&gt;</a>
-                </li>
-            </ul>
-        </div> <!-- #pagination-->
-    </div> <!-- #content -->
+                    </span>
+                    <span class="adm-cell txt" th:text="${problem.totalSubmission > 0 ? (problem.acceptedSubmission * 100 / problem.totalSubmission) + '%' : '—'}">0%</span>
+                    <span class="adm-cell muted" th:text="${problem.totalSubmission}">0</span>
+                    <span>
+                        <span class="adm-pill c-accent" th:if="${problem.isPublic()}" th:text="#{voj.administration.all-problems.public}">Public</span>
+                        <span class="adm-pill c-warn" th:unless="${problem.isPublic()}" th:text="#{voj.administration.all-problems.private}">Private</span>
+                    </span>
+                    <span class="adm-menu">&#183;&#183;&#183;</span>
+                </a>
+                <div class="adm-table-empty" th:if="${#lists.isEmpty(problems)}" th:text="#{voj.administration.all-problems.no-records}">// no records</div>
+            </div></div>
+        </div>
+
+        <!-- Pager -->
+        <div class="adm-pager" th:if="${totalPages > 1}"
+             th:with="lowerBound=${currentPage - 3 > 0 ? currentPage - 3 : 1},upperBound=${currentPage + 3 < totalPages ? currentPage + 3 : totalPages}">
+            <span><span th:text="#{voj.administration.all-problems.page}">page</span> <span th:text="${currentPage}">1</span> / <span th:text="${totalPages}">1</span></span>
+            <div class="adm-pager-btns">
+                <a class="nav" th:classappend="${currentPage <= 1} ? 'off'" th:href="@{/administration/all-problems(keyword=${keyword},problemCategory=${selectedProblemCategory},page=${currentPage - 1})}">&#8592;</a>
+                <a class="num" th:each="pageNumber : ${#numbers.sequence(lowerBound, upperBound)}" th:classappend="${pageNumber == currentPage} ? 'active'" th:href="@{/administration/all-problems(keyword=${keyword},problemCategory=${selectedProblemCategory},page=${pageNumber})}" th:text="${pageNumber}">1</a>
+                <a class="nav" th:classappend="${currentPage >= totalPages} ? 'off'" th:href="@{/administration/all-problems(keyword=${keyword},problemCategory=${selectedProblemCategory},page=${currentPage + 1})}">&#8594;</a>
+            </div>
+        </div>
+
+    </div>
+    </div>
 
     <th:block layout:fragment="scripts">
-    <script type="text/javascript">
-        $('label[for=all-problems]').click(function() {
-            // Fix the bug for Checkbox in FlatUI
-            var isChecked = false;
-            setTimeout(function() {
-                isChecked = $('label[for=all-problems]').hasClass('checked');
-
-                if ( isChecked ) {
-                    $('label.checkbox').addClass('checked');
-                } else {
-                    $('label.checkbox').removeClass('checked');
-                }
-            }, 100);
-        });
-    </script>
     <script type="text/javascript" th:inline="javascript">
-        $('button.btn-danger', '#filters').click(function() {
-            if ( !confirm([[#{voj.administration.all-problems.continue-or-not}]]) ) {
-                return;
-            }
-            $('.alert-error').addClass('hide');
-            $('button.btn-danger', '#filters').attr('disabled', 'disabled');
-            $('button.btn-danger', '#filters').html([[#{voj.administration.all-problems.please-wait}]]);
-
-            var problems    = [],
-                action      = $('#actions').val();
-
-            $('label.checkbox', 'table tbody').each(function() {
-                if ( $(this).hasClass('checked') ) {
-                    var problemId = $('input[type=checkbox]', $(this)).val();
-                    problems.push(problemId);
-                }
-            });
-
-            if ( action == 'delete' ) {
-                return doDeleteProblemsAction(problems);
-            }
-        });
-    </script>
-    <script type="text/javascript" th:inline="javascript">
-        function doDeleteProblemsAction(problems) {
-            var postData = {
-                'problems': JSON.stringify(problems)
-            };
-
-            $.ajax({
-                type: 'POST',
-                url: [[@{/administration/deleteProblems.action}]],
-                data: postData,
-                dataType: 'JSON',
-                success: function(result){
-                    if ( result['isSuccessful'] ) {
-                        for ( var i = 0; i < problems.length; ++ i ) {
-                            $('tr[data-value=%s]'.format(problems[i])).remove();
-                        }
-                    } else {
-                        $('.alert').html([[#{voj.administration.all-problems.delete-error}]]);
-                        $('.alert').removeClass('hide');
+        document.addEventListener('DOMContentLoaded', function () {
+            var del = document.querySelector('[data-adm="bulk-delete"]');
+            if (!del) return;
+            del.addEventListener('click', function () {
+                var ids = window.admSelectedIds ? window.admSelectedIds() : [];
+                if (ids.length === 0) return;
+                if (!confirm([[#{voj.administration.all-problems.continue-or-not}]])) return;
+                $.ajax({
+                    type: 'POST',
+                    url: [[@{/administration/deleteProblems.action}]],
+                    data: { 'problems': JSON.stringify(ids) },
+                    dataType: 'JSON',
+                    success: function (result) {
+                        if (result['isSuccessful']) { window.location.reload(); }
+                        else { alert([[#{voj.administration.all-problems.delete-error}]]); }
                     }
-                    $('button.btn-danger', '#filters').removeAttr('disabled');
-                    $('button.btn-danger', '#filters').html([[#{voj.administration.all-problems.apply}]]);
-                }
+                });
             });
-        }
+        });
     </script>
     </th:block>
 </body>

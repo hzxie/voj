@@ -26,6 +26,29 @@
 		JOIN voj_discussion_replies r ON v.discussion_reply_id = r.discussion_reply_id
 		WHERE r.discussion_thread_id = #{discussionThreadId} AND v.vote_type = 2
 	</select>
+	<select id="getReportedReplies"
+		parameterType="map"
+		resultType="hashmap">
+		SELECT r.discussion_reply_id AS replyId,
+			r.discussion_thread_id AS threadId,
+			t.discussion_thread_name AS threadTitle,
+			r.discussion_reply_content AS content,
+			COUNT(*) AS reportCount,
+			MAX(v.vote_time) AS lastReportTime
+		FROM voj_discussion_reply_votes v
+		JOIN voj_discussion_replies r ON v.discussion_reply_id = r.discussion_reply_id
+		LEFT JOIN voj_discussion_threads t ON r.discussion_thread_id = t.discussion_thread_id
+		WHERE v.vote_type = 2
+		GROUP BY r.discussion_reply_id, r.discussion_thread_id, t.discussion_thread_name, r.discussion_reply_content
+		ORDER BY reportCount DESC, lastReportTime DESC
+		LIMIT #{limit}
+	</select>
+	<select id="getNumberOfReportedReplies"
+		resultType="int">
+		SELECT COUNT(DISTINCT discussion_reply_id)
+		FROM voj_discussion_reply_votes
+		WHERE vote_type = 2
+	</select>
 	<insert id="castVote"
 		parameterType="org.verwandlung.voj.web.model.DiscussionReplyVote">
 		INSERT INTO voj_discussion_reply_votes(discussion_reply_id, voter_uid, vote_type)

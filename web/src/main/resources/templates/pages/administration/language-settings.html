@@ -3,332 +3,131 @@
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layouts/admin}" lang="en">
 <head>
-    <title th:text="#{voj.administration.language-settings.title} + ' | ' + ${websiteName}">Languages Settings</title>
+    <title th:text="#{voj.administration.language-settings.title} + ' | ' + ${websiteName}">Language Settings</title>
 </head>
 <body>
-    <div id="content" layout:fragment="content">
-        <h2 class="page-header"><i class="fa fa-code"></i> <span th:text="#{voj.administration.language-settings.language-settings}">Language Settings</span></h2>
-        <form id="language-form" onSubmit="onSubmit(); return false;">
-            <div class="alert alert-warning">
-                <button type="button" class="close" data-dismiss="alert">×</button>
-                <h6 th:text="#{voj.administration.language-settings.be-careful}">Please be Careful!</h6>
-                <p th:text="#{voj.administration.language-settings.be-careful-message}">Please don't change following settings unless you really know what you're doing.</p>
-            </div> <!-- .alert-warning -->
-            <div class="alert alert-error hide"></div> <!-- .alert-error -->
-            <div class="alert alert-success hide"></div> <!-- .alert-success -->
-            <p>
-                <a id="new-language" href="javascript:void(0);">
-                    <i class="fa fa-plus-circle"></i>
-                    <span th:text="#{voj.administration.language-settings.new-language}">New Language</span>
-                </a>
-            </p>
-            <p id="no-languages" th:classappend="${languages.size() != 0} ? 'hide' : ''" th:text="#{voj.administration.language-settings.no-languages}">No languages available.</p>
-            <ul id="languages">
-                <li class="language" th:each="language : ${languages}">
-                    <div class="header">
-                        <h5 th:text="${language.languageName}">Language</h5>
-                        <ul class="inline">
-                            <li><a href="javascript:void(0);"><i class="fa fa-edit"></i></a></li>
-                            <li><a href="javascript:void(0);"><i class="fa fa-trash"></i></a></li>
-                        </ul>
-                    </div> <!-- .header -->
-                    <div class="body hide">
-                        <div class="row-fluid">
-                            <div class="span4">
-                                <label>
-                                    <span th:text="#{voj.administration.language-settings.language-mode}">Language Mode</span>
-                                    <a href="https://codemirror.net/mode/" target="_blank">(<span th:text="#{voj.administration.language-settings.what-is-this}">What's this?</span>)</a>
-                                </label>
-                            </div> <!-- .span4 -->
-                            <div class="span8">
-                                <div class="control-group">
-                                    <input class="language-slug span8" type="text" th:value="${language.languageSlug}" maxlength="16" />
-                                </div> <!-- .control-group -->
-                            </div> <!-- .span8 -->
-                        </div> <!-- .row-fluid -->
-                        <div class="row-fluid">
-                            <div class="span4">
-                                <label th:text="#{voj.administration.language-settings.language-name}">Language Name</label>
-                            </div> <!-- .span4 -->
-                            <div class="span8">
-                                <div class="control-group">
-                                    <input class="language-id span8" type="hidden" th:value="${language.languageId}" />
-                                    <input class="language-name span8" type="text" th:value="${language.languageName}" maxlength="16" />
-                                </div> <!-- .control-group -->
-                            </div> <!-- .span8 -->
-                        </div> <!-- .row-fluid -->
-                        <div class="row-fluid">
-                            <div class="span4">
-                                <label th:text="#{voj.administration.language-settings.compile-command}">Compile Command</label>
-                            </div> <!-- .span4 -->
-                            <div class="span8">
-                                <div class="control-group">
-                                    <input class="compile-command span8" type="text" th:value="${language.compileCommand}" maxlength="128" />
-                                </div> <!-- .control-group -->
-                            </div> <!-- .span8 -->
-                        </div> <!-- .row-fluid -->
-                        <div class="row-fluid">
-                            <div class="span4">
-                                <label th:text="#{voj.administration.language-settings.run-command}">Run Command</label>
-                            </div> <!-- .span4 -->
-                            <div class="span8">
-                                <div class="control-group">
-                                    <input class="run-command span8" type="text" th:value="${language.runCommand}" maxlength="128" />
-                                </div> <!-- .control-group -->
-                            </div> <!-- .span8 -->
-                        </div> <!-- .row-fluid -->
-                    </div> <!-- .body -->
-                </li>
-            </ul>
-            <div class="row-fluid">
-                <button class="btn btn-primary" type="submit" th:text="#{voj.administration.language-settings.save-changes}">Save Changes</button>
-            </div> <!-- .row-fluid -->
-        </form> <!-- #language-form -->
-    </div> <!-- #content -->
+    <div layout:fragment="content">
+    <div class="adm-form" id="language-form">
+
+        <div class="alert alert-warning">
+            <h6 th:text="#{voj.administration.language-settings.be-careful}">Please be Careful!</h6>
+            <p th:text="#{voj.administration.language-settings.be-careful-message}">Don't change these unless you know what you're doing.</p>
+        </div>
+        <div class="alert alert-error hide"></div>
+        <div class="alert alert-success hide"></div>
+
+        <div class="vw-between" style="align-items:flex-end;">
+            <div class="adm-label" th:text="#{voj.administration.language-settings.languages-header}">// LANGUAGES</div>
+            <a class="adm-btn-accent" href="javascript:void(0);" id="new-language" th:text="#{voj.administration.language-settings.new-language}">+ add language</a>
+        </div>
+
+        <p id="no-languages" th:classappend="${languages.size() != 0} ? 'hide' : ''" class="adm-table-empty" th:text="#{voj.administration.language-settings.no-languages}">// no languages</p>
+
+        <div id="languages" style="display:flex;flex-direction:column;gap:18px;">
+            <div class="adm-langcard language" th:each="language : ${languages}">
+                <div class="adm-langcard-head">
+                    <span class="nm" th:text="${language.languageName}">Language</span>
+                    <span class="ext" th:text="${language.languageSlug}">slug</span>
+                    <div style="flex:1;"></div>
+                    <span class="del-lang" style="color:var(--text3);cursor:pointer;font-size:15px;">&#10005;</span>
+                </div>
+                <div class="adm-langcard-body">
+                    <input class="language-id" type="hidden" th:value="${language.languageId}" />
+                    <div class="adm-grid-2">
+                        <label class="adm-flabel"><span th:text="#{voj.administration.language-settings.language-name}">NAME</span><input class="language-name adm-input" type="text" th:value="${language.languageName}" maxlength="16" /></label>
+                        <label class="adm-flabel"><span th:text="#{voj.administration.language-settings.language-mode}">SLUG / MODE</span><input class="language-slug adm-input" type="text" th:value="${language.languageSlug}" maxlength="16" /></label>
+                    </div>
+                    <label class="adm-flabel"><span th:text="#{voj.administration.language-settings.compile-command}">COMPILE COMMAND</span><input class="compile-command adm-input code" type="text" th:value="${language.compileCommand}" maxlength="128" /></label>
+                    <label class="adm-flabel"><span th:text="#{voj.administration.language-settings.run-command}">RUN COMMAND</span><input class="run-command adm-input code" type="text" th:value="${language.runCommand}" maxlength="128" /></label>
+                </div>
+            </div>
+        </div>
+
+        <div class="adm-form-actions">
+            <button type="button" class="adm-btn-save" id="save-languages" th:text="'$ ' + #{voj.administration.language-settings.save-changes}">$ save-languages</button>
+        </div>
+
+    </div>
+    </div>
 
     <th:block layout:fragment="scripts">
-    <script type="text/javascript">
-        $('#languages').on('click', 'i.fa-edit', function() {
-            var languageContainer = $(this).parent().parent().parent().parent().parent(),
-                isBodyUnfolded    = $('.body', $(languageContainer)).is(':visible');
-
-            if ( isBodyUnfolded ) {
-                $('.body', $(languageContainer)).addClass('hide');
-            } else {
-                $('.body', $(languageContainer)).removeClass('hide');
-            }
+    <script type="text/javascript" th:inline="javascript">
+        $('#languages').on('click', '.del-lang', function() {
+            var card = $(this).closest('.language');
+            card.remove();
+            if ($('.language', '#languages').length === 0) { $('#no-languages').removeClass('hide'); }
         });
-    </script>
-    <script type="text/javascript">
-        $('#languages').on('click', 'i.fa-trash', function() {
-            var languageContainer = $(this).parent().parent().parent().parent().parent(),
-                languages         = $('li.language', '#languages').length;
-
-            $(languageContainer).remove();
-
-            if ( languages == 1 ) {
-                $('#no-languages').removeClass('hide');
-            }
+        $('#languages').on('input', 'input.language-name', function() {
+            $('.nm', $(this).closest('.language')).text($(this).val());
         });
-    </script>
-    <script type="text/javascript">
-        $('#languages').on('change', 'input.language-name', function() {
-            var languageContainer = $(this).parent().parent().parent().parent().parent(),
-                languageName      = $(this).val();
-
-            $('h5', $(languageContainer)).html(languageName);
+        $('#languages').on('input', 'input.language-slug', function() {
+            $('.ext', $(this).closest('.language')).text($(this).val());
         });
     </script>
     <script type="text/javascript" th:inline="javascript">
-        function onSubmit() {
-            $('.alert-success').addClass('hide');
-            $('.alert-error').addClass('hide');
-            $('button[type=submit]').attr('disabled', 'disabled');
-            $('button[type=submit]').html([[#{voj.administration.language-settings.please-wait}]]);
-
-            return updateLanguageSettings();
-        }
-    </script>
-    <script type="text/javascript" th:inline="javascript">
-        function updateLanguageSettings(languages) {
-            var postData = {
-                'languages': getLanguages()
-            }
-
-            $.ajax({
-                type: 'POST',
-                url: [[@{/administration/updateLanguageSettings.action}]],
-                data: postData,
-                dataType: 'JSON',
-                success: function(result){
-                    return processResult(result);
-                }
-            });
-        }
-    </script>
-    <script type="text/javascript">
         function getLanguages() {
             var languages = [];
-
             $('.language').each(function() {
-                var languageId     = $('.language-id', $(this)).val() || 0,
-                    languageSlug   = $('.language-slug', $(this)).val(),
-                    languageName   = $('.language-name', $(this)).val(),
-                    compileCommand = $('.compile-command', $(this)).val(),
-                    runCommand     = $('.run-command', $(this)).val(),
-                    language       = {
-                        'languageId': languageId,
-                        'languageSlug': languageSlug,
-                        'languageName': languageName,
-                        'compileCommand': compileCommand,
-                        'runCommand': runCommand
-                    };
-                languages.push(language);
+                languages.push({
+                    'languageId': $('.language-id', $(this)).val() || 0,
+                    'languageSlug': $('.language-slug', $(this)).val(),
+                    'languageName': $('.language-name', $(this)).val(),
+                    'compileCommand': $('.compile-command', $(this)).val(),
+                    'runCommand': $('.run-command', $(this)).val()
+                });
             });
             return JSON.stringify(languages);
         }
-    </script>
-    <script type="text/javascript" th:inline="javascript">
-        function processResult(result) {
-            if ( result['isSuccessful'] ) {
-                var message  = '<p>' + [[#{voj.administration.language-settings.settings-saved}]] + '</p>';
-
-                if ( result['languageCreated'].length != 0 ) {
-                    var totalLanguages = result['languageCreated'].length;
-
-                    message += '<p style="padding-left: 15px;">' + [[#{voj.administration.language-settings.language-created}]] + ' ';
-                    for ( var i = 0; i < totalLanguages; ++ i ) {
-                        var languageId   = result['languageCreated'][i]['languageId'],
-                            languageSlug = result['languageCreated'][i]['languageSlug'],
-                            languageName = result['languageCreated'][i]['languageName'];
-
-                        message += languageName + ( i != totalLanguages - 1 ? ', ' : '' );
-                        setLanguageId(languageSlug, languageId);
-                    }
-                    message += '</p>';
-                }
-                if ( result['languageUpdated'].length != 0 ) {
-                    var totalLanguages = result['languageUpdated'].length;
-
-                    message += '<p style="padding-left: 15px;">' + [[#{voj.administration.language-settings.language-updated}]] + ' ';
-                    for ( var i = 0; i < totalLanguages; ++ i ) {
-                        message += result['languageUpdated'][i]['languageName'] + ( i != totalLanguages - 1 ? ', ' : '' );
-                    }
-                    message += '</p>';
-                }
-                if ( result['languageDeleted'].length != 0 ) {
-                    var totalLanguages = result['languageDeleted'].length;
-
-                    message += '<p style="padding-left: 15px;">' + [[#{voj.administration.language-settings.language-deleted}]] + ' ';
-                    for ( var i = 0; i < totalLanguages; ++ i ) {
-                        message += result['languageDeleted'][i]['languageName'] + ( i != totalLanguages - 1 ? ', ' : '' );
-                    }
-                    message += '</p>';
-                }
-                $('.alert-success').html(message);
-                $('.alert-success').removeClass('hide');
-            } else {
-                var message  = '';
-
-                for ( var languageName in result ) {
-                    var languageResult = result[languageName];
-
-                    if ( typeof(languageResult) != 'object' ) {
-                        continue;
-                    }
-                    if ( !languageResult['isSuccessful'] ) {
-                        message += '<p>';
-                        message += '<strong>' + languageName + ' ' + [[#{voj.administration.language-settings.language}]] + '</strong><br>';
-                        if ( 'isLanguageSlugEmpty' in languageResult && languageResult['isLanguageSlugEmpty'] ) {
-                            message += [[#{voj.administration.language-settings.language-slug-empty}]] + '<br>';
-                        } else if ( 'isLanguageSlugLegal' in languageResult && !languageResult['isLanguageSlugLegal'] ) {
-                            message += [[#{voj.administration.language-settings.language-slug-illegal}]] + '<br>';
-                        } else if ( 'isLanguageSlugExists' in languageResult && languageResult['isLanguageSlugExists'] ) {
-                            message += [[#{voj.administration.language-settings.language-slug-exists}]] + '<br>';
-                        }
-                        if ( 'isLanguageNameEmpty' in languageResult && languageResult['isLanguageNameEmpty'] ) {
-                            message += [[#{voj.administration.language-settings.language-name-empty}]] + '<br>';
-                        } else if ( 'isLanguageNameLegal' in languageResult && !languageResult['isLanguageNameLegal'] ) {
-                            message += [[#{voj.administration.language-settings.language-name-illegal}]] + '<br>';
-                        }
-                        if ( 'isCompileCommandEmpty' in languageResult && languageResult['isCompileCommandEmpty'] ) {
-                            message += [[#{voj.administration.language-settings.compile-command-empty}]] + '<br>';
-                        } else if ( 'isCompileCommandLegal' in languageResult && !languageResult['isCompileCommandLegal'] ) {
-                            message += [[#{voj.administration.language-settings.compile-command-illegal}]] + '<br>';
-                        }
-                        if ( 'isRunCommandEmpty' in languageResult && languageResult['isRunCommandEmpty'] ) {
-                            message += [[#{voj.administration.language-settings.run-command-empty}]] + '<br>';
-                        } else if ( 'isRunCommandLegal' in languageResult && !languageResult['isRunCommandLegal'] ) {
-                            message += [[#{voj.administration.language-settings.run-command-illegal}]] + '<br>';
-                        }
-                        if ( 'isLangaugeInUse' in languageResult && languageResult['isLangaugeInUse'] ) {
-                            message += [[#{voj.administration.language-settings.language-in-use}]] + '<br>';
-                        }
-                        message += '</p>';
-                    }
-                }
-                $('.alert-error').html(message);
-                $('.alert-error').removeClass('hide');
-            }
-
-            $('button[type=submit]').html([[#{voj.administration.language-settings.save-changes}]]);
-            $('button[type=submit]').removeAttr('disabled');
-            $('html, body').animate({ scrollTop: 0 }, 100);
-        }
-    </script>
-    <script type="text/javascript">
         function setLanguageId(languageSlug, languageId) {
-            var languageSlugInput = null;
             $('.language-slug', '#languages').each(function() {
-                if ( $(this).val() == languageSlug ) {
-                    languageSlugInput = $(this);
-                }
+                if ($(this).val() == languageSlug) { $('.language-id', $(this).closest('.language')).val(languageId); }
             });
-
-            var languageContainer = $(languageSlugInput).parent().parent().parent().parent(),
-                languageIdInput   = $('.language-id', $(languageContainer));
-
-            $(languageIdInput).val(languageId);
         }
-    </script>
-    <script type="text/javascript" th:inline="javascript">
+        $('#save-languages').click(function() {
+            $('.alert-success, .alert-error').addClass('hide');
+            $(this).attr('disabled', 'disabled').html([[#{voj.administration.language-settings.please-wait}]]);
+            $.ajax({
+                type: 'POST', url: [[@{/administration/updateLanguageSettings.action}]],
+                data: { 'languages': getLanguages() }, dataType: 'JSON',
+                success: function(result) { processResult(result); }
+            });
+        });
+        function processResult(result) {
+            if (result['isSuccessful']) {
+                var message = '<p>' + [[#{voj.administration.language-settings.settings-saved}]] + '</p>';
+                (result['languageCreated'] || []).forEach(function(l) { setLanguageId(l['languageSlug'], l['languageId']); });
+                $('.alert-success').html(message).removeClass('hide');
+            } else {
+                var message = '';
+                for (var languageName in result) {
+                    var r = result[languageName];
+                    if (typeof(r) != 'object' || r['isSuccessful']) { continue; }
+                    message += '<p><strong>' + languageName + '</strong></p>';
+                }
+                $('.alert-error').html(message || [[#{voj.administration.language-settings.settings-saved}]]).removeClass('hide');
+            }
+            $('#save-languages').removeAttr('disabled').html('$ ' + [[#{voj.administration.language-settings.save-changes}]]);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
         $('#new-language').click(function() {
+            $('#no-languages').addClass('hide');
             $('#languages').append(
-                '<li class="language">' +
-                '    <div class="header">' +
-                '        <h5></h5>' +
-                '        <ul class="inline">' +
-                '            <li><a href="javascript:void(0);"><i class="fa fa-edit"></i></a></li>' +
-                '            <li><a href="javascript:void(0);"><i class="fa fa-trash"></i></a></li>' +
-                '        </ul>' +
-                '    </div> <!-- .header -->' +
-                '    <div class="body">' +
-                '        <div class="row-fluid">' +
-                '            <div class="span4">' +
-                '                <label>' +
-                '                    ' + [[#{voj.administration.language-settings.language-mode}]] +
-                '                    <a href="https://codemirror.net/mode/" target="_blank">(' + [[#{voj.administration.language-settings.what-is-this}]] + ')</a>' +
-                '                </label>' +
-                '            </div> <!-- .span4 -->' +
-                '            <div class="span8">' +
-                '                <div class="control-group">' +
-                '                    <input class="language-slug span8" type="text" maxlength="16" />' +
-                '                </div> <!-- .control-group -->' +
-                '            </div> <!-- .span8 -->' +
-                '        </div> <!-- .row-fluid -->' +
-                '        <div class="row-fluid">' +
-                '            <div class="span4">' +
-                '                <label>' + [[#{voj.administration.language-settings.language-name}]] + '</label>' +
-                '            </div> <!-- .span4 -->' +
-                '            <div class="span8">' +
-                '                <div class="control-group">' +
-                '                    <input class="language-id span8" type="hidden" value="0" />' +
-                '                    <input class="language-name span8" type="text" maxlength="16" />' +
-                '                </div> <!-- .control-group -->' +
-                '            </div> <!-- .span8 -->' +
-                '        </div> <!-- .row-fluid -->' +
-                '        <div class="row-fluid">' +
-                '            <div class="span4">' +
-                '                <label>' + [[#{voj.administration.language-settings.compile-command}]] + '</label>' +
-                '            </div> <!-- .span4 -->' +
-                '            <div class="span8">' +
-                '                <div class="control-group">' +
-                '                    <input class="compile-command span8" type="text" maxlength="128" />' +
-                '                </div> <!-- .control-group -->' +
-                '            </div> <!-- .span8 -->' +
-                '        </div> <!-- .row-fluid -->' +
-                '        <div class="row-fluid">' +
-                '            <div class="span4">' +
-                '                <label>' + [[#{voj.administration.language-settings.run-command}]] + '</label>' +
-                '            </div> <!-- .span4 -->' +
-                '            <div class="span8">' +
-                '                <div class="control-group">' +
-                '                    <input class="run-command span8" type="text" maxlength="128" />' +
-                '                </div> <!-- .control-group -->' +
-                '            </div> <!-- .span8 -->' +
-                '        </div> <!-- .row-fluid -->' +
-                '    </div> <!-- .body -->' +
-                '</li>'
+                '<div class="adm-langcard language">' +
+                '  <div class="adm-langcard-head">' +
+                '    <span class="nm"></span><span class="ext"></span>' +
+                '    <div style="flex:1;"></div>' +
+                '    <span class="del-lang" style="color:var(--text3);cursor:pointer;font-size:15px;">&#10005;</span>' +
+                '  </div>' +
+                '  <div class="adm-langcard-body">' +
+                '    <input class="language-id" type="hidden" value="0" />' +
+                '    <div class="adm-grid-2">' +
+                '      <label class="adm-flabel"><span>' + [[#{voj.administration.language-settings.language-name}]] + '</span><input class="language-name adm-input" type="text" maxlength="16" /></label>' +
+                '      <label class="adm-flabel"><span>' + [[#{voj.administration.language-settings.language-mode}]] + '</span><input class="language-slug adm-input" type="text" maxlength="16" /></label>' +
+                '    </div>' +
+                '    <label class="adm-flabel"><span>' + [[#{voj.administration.language-settings.compile-command}]] + '</span><input class="compile-command adm-input code" type="text" maxlength="128" /></label>' +
+                '    <label class="adm-flabel"><span>' + [[#{voj.administration.language-settings.run-command}]] + '</span><input class="run-command adm-input code" type="text" maxlength="128" /></label>' +
+                '  </div>' +
+                '</div>'
             );
         });
     </script>

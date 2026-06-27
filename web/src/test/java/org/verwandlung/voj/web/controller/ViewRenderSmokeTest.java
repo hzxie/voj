@@ -51,6 +51,8 @@ import org.verwandlung.voj.web.service.BulletinBoardService;
 import org.verwandlung.voj.web.service.ContestService;
 import org.verwandlung.voj.web.service.DiscussionService;
 import org.verwandlung.voj.web.service.LanguageService;
+import org.verwandlung.voj.web.service.OffensiveWordImportService;
+import org.verwandlung.voj.web.service.OffensiveWordService;
 import org.verwandlung.voj.web.service.OptionService;
 import org.verwandlung.voj.web.service.ProblemService;
 import org.verwandlung.voj.web.service.SubmissionService;
@@ -93,6 +95,8 @@ class ViewRenderSmokeTest {
   @MockitoBean private LanguageService languageService;
   @MockitoBean private SubmissionService submissionService;
   @MockitoBean private OptionService optionService;
+  @MockitoBean private OffensiveWordService offensiveWordService;
+  @MockitoBean private OffensiveWordImportService offensiveWordImportService;
   @MockitoBean private ProblemService problemService;
   @MockitoBean private DiscussionService discussionService;
   @MockitoBean private ContestService contestService;

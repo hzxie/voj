@@ -42,7 +42,7 @@
                 </div>
                 <a class="vw-table-row" th:each="problem : ${problems}" th:href="@{/p/{id}(id=${problem.problemId})}">
                     <div th:if="${isLogin}" th:with="sub=${submissionOfProblems != null ? submissionOfProblems[problem.problemId] : null}">
-                        <span th:if="${sub != null}" class="vw-vbadge"
+                        <span th:if="${sub != null and sub.judgeResult != null}" class="vw-vbadge"
                               th:classappend="|flag-${#strings.toLowerCase(sub.judgeResult.judgeResultSlug)}|"
                               th:text="${sub.judgeResult.judgeResultSlug}">AC</span>
                     </div>

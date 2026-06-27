@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/admin}" lang="en">
+<head>
+    <title th:text="#{voj.administration.judgers.title} + ' | ' + ${websiteName}">Judgers</title>
+</head>
+<body>
+    <div layout:fragment="content">
+    <div class="adm-jwrap">
+
+        <!-- KPI strip -->
+        <div class="adm-kpis" style="grid-template-columns:repeat(3,1fr);">
+            <div class="adm-kpi">
+                <div class="adm-kpi-top"><span class="k" th:text="#{voj.administration.judgers.online-nodes}">ONLINE NODES</span><span class="i">&#9707;</span></div>
+                <div class="adm-kpi-v" th:text="${onlineJudgers}">0</div>
+            </div>
+            <div class="adm-kpi">
+                <div class="adm-kpi-top"><span class="k" th:text="#{voj.administration.judgers.queue-depth}">QUEUE DEPTH</span><span class="i">&#8645;</span></div>
+                <div class="adm-kpi-v" th:text="${queueDepth}">0</div>
+            </div>
+            <div class="adm-kpi">
+                <div class="adm-kpi-top"><span class="k" th:text="#{voj.administration.judgers.avg-load}">AVG LOAD</span><span class="i">&#9684;</span></div>
+                <div class="adm-kpi-v" th:text="${averageCpuLoad < 0 ? '—' : averageCpuLoad + '%'}">—</div>
+            </div>
+        </div>
+
+        <!-- Cluster -->
+        <div class="adm-panel adm-panel-flush">
+            <div class="adm-panel-bar">
+                <span class="adm-label" th:text="#{voj.administration.judgers.judge-cluster}">// JUDGE CLUSTER</span>
+                <span class="adm-sub"><span th:text="${onlineJudgers}">0</span> <span th:text="#{voj.administration.judgers.online}">online</span></span>
+            </div>
+            <div class="adm-nodes" th:if="${!#lists.isEmpty(nodes)}">
+                <div class="adm-node" th:each="node : ${nodes}">
+                    <div class="adm-node-top">
+                        <span class="nm" th:text="${node.name}">judge-01</span>
+                        <span class="adm-node-dot c-accent" style="background:currentColor;box-shadow:0 0 7px currentColor;"></span>
+                    </div>
+                    <div class="adm-node-track"><div class="fill" th:classappend="${node.loadClass}" th:style="|width:${node.cpuLoad}%;background:currentColor|"></div></div>
+                    <div class="adm-node-foot">
+                        <span><span th:text="#{voj.administration.judgers.cpu}">CPU</span> <span th:text="${node.cpuLoad}">0</span>%</span>
+                        <span><span th:text="#{voj.administration.judgers.memory}">MEM</span> <span th:text="${node.memoryUsage}">0</span>%</span>
+                    </div>
+                    <div class="adm-node-foot" style="margin-top:5px;">
+                        <span class="adm-cell muted" th:text="${node.description}">node</span>
+                        <span th:text="${node.uptime}">0m</span>
+                    </div>
+                </div>
+            </div>
+            <div class="adm-table-empty" th:if="${#lists.isEmpty(nodes)}" th:text="#{voj.administration.judgers.no-judgers}">// no judgers online</div>
+        </div>
+
+    </div>
+    </div>
+</body>
+</html>
