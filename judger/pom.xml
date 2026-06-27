@@ -78,6 +78,25 @@
 
 	<build>
 		<finalName>voj.judger</finalName>
+		<testResources>
+			<!-- Default test resources (re-declared because adding <testResources>
+			     replaces Maven's implicit one). -->
+			<testResource>
+				<directory>src/test/resources</directory>
+			</testResource>
+			<!-- Shared DDL + reference + fixture scripts from the repo-root sql/ folder,
+			     copied onto the test classpath as db/*.sql for the Spring context to
+			     self-provision the database (demo.sql is excluded; tests use test-data.sql). -->
+			<testResource>
+				<directory>${project.basedir}/../sql</directory>
+				<targetPath>db</targetPath>
+				<includes>
+					<include>schema.sql</include>
+					<include>seed.sql</include>
+					<include>test-data.sql</include>
+				</includes>
+			</testResource>
+		</testResources>
 		<plugins>
 			<!-- Package as an executable, self-contained Spring Boot jar. -->
 			<plugin>

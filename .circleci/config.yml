@@ -37,12 +37,10 @@ jobs:
             sudo cp $JAVA_HOME/include/linux/jni_md.h $JAVA_HOME/include/jni_md.h
             sudo cp $JAVA_HOME/include/linux/jawt_md.h $JAVA_HOME/include/jawt_md.h
 
-      - run:
-          name: Initialize test database
-          command: |
-            sudo mysql -e "CREATE DATABASE test;"
-            sudo mysql -e "SET GLOBAL sql_mode=(SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY',''));"
-            sudo mysql test < voj.sql
+      # The test suite provisions its own database: the Spring test context runs
+      # sql/{schema,seed,test-data}.sql, and the JDBC URL carries
+      # createDatabaseIfNotExist=true plus the required sql_mode. No manual
+      # CREATE DATABASE / schema import / SET GLOBAL sql_mode is needed here.
 
       - run:
           name: Setup test environment for Linux
@@ -55,10 +53,6 @@ jobs:
       - run:
           name: Run Maven tests (judger)
           command: mvn test -f judger/pom.xml
-
-      - run:
-          name: Drop test database
-          command: sudo mysql -e "DROP DATABASE test;"
 
 workflows:
   test-matrix:

@@ -93,7 +93,8 @@ mvn package -DskipTests        # -> judger/target/voj.judger.jar
 
 Convenience wrappers live in [`scripts/`](scripts/): `build-jars.sh`,
 `build-docker.sh`, `run-web.sh` and `run-judger.sh` (the run scripts preflight
-MySQL/ActiveMQ and import `voj.sql` on first launch).
+MySQL/ActiveMQ and import `sql/schema.sql`, `sql/seed.sql` and `sql/demo.sql` on
+first launch).
 
 ### Requirements
 

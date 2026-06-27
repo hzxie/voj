@@ -142,6 +142,26 @@
 				</includes>
 			</resource>
 		</resources>
+		<testResources>
+			<!-- Default test resources (re-declared because adding <testResources>
+			     replaces Maven's implicit one). -->
+			<testResource>
+				<directory>src/test/resources</directory>
+			</testResource>
+			<!-- The canonical DDL + reference + fixture scripts live once at the repo
+			     root in sql/; copy the ones the tests need onto the test classpath as
+			     db/*.sql so the Spring context can self-provision the database. demo.sql
+			     is intentionally excluded - the suite uses test-data.sql instead. -->
+			<testResource>
+				<directory>${project.basedir}/../sql</directory>
+				<targetPath>db</targetPath>
+				<includes>
+					<include>schema.sql</include>
+					<include>seed.sql</include>
+					<include>test-data.sql</include>
+				</includes>
+			</testResource>
+		</testResources>
 		<plugins>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>

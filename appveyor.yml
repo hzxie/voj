@@ -35,17 +35,15 @@ install:
 build: off
 
 before_test:
+# Make root password-less to match the test JDBC URL. The test suite provisions
+# its own database (Spring runs sql/{schema,seed,test-data}.sql and the JDBC URL
+# carries createDatabaseIfNotExist=true plus the required sql_mode), so no manual
+# CREATE DATABASE / schema import / SET GLOBAL sql_mode is needed.
   - mysql -e "SET PASSWORD FOR 'root'@'localhost' = '';" --user=root --password=Password12!
-  - mysql -e "CREATE DATABASE test;" --user=root
-  - mysql -e "SET GLOBAL sql_mode=(SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY',''));" --user=root
-  - mysql test < voj.sql --user=root
 
 test_script:
   - mvn test -f web\pom.xml
   - mvn test -f judger\pom.xml
-
-after_test:
-  - mysql -e "DROP DATABASE test;" --user=root
 
 on_finish:
   - ps: $blockRdp = $false; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))

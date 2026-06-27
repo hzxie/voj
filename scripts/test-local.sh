@@ -57,11 +57,10 @@ if ! mysql_cmd -e "SELECT VERSION();" >/dev/null 2>&1; then
   exit 1
 fi
 
-# 2. (Re)create the test database and load the schema.
-echo "==> Creating test database '${TEST_DB}' and loading voj.sql ..."
-mysql_cmd -e "DROP DATABASE IF EXISTS \`${TEST_DB}\`; CREATE DATABASE \`${TEST_DB}\`;"
-mysql_cmd -e "SET GLOBAL sql_mode=(SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY',''));"
-mysql_cmd "${TEST_DB}" < voj.sql
+# 2. The test suite provisions its own schema: the Spring test context runs
+#    sql/{schema,seed,test-data}.sql, and the test JDBC URL carries
+#    createDatabaseIfNotExist=true plus the required sql_mode. Nothing to load
+#    here - the cleanup below just drops the database afterwards (unless KEEP_DB=1).
 
 cleanup() {
   if [ "$KEEP_DB" != "1" ]; then

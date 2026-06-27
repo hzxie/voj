@@ -87,11 +87,11 @@ if errorlevel 1 (
   popd & exit /b 1
 )
 
-REM --- 2. (Re)create the test database and load the schema -------------------
-echo ==^> Creating test database '%TEST_DB%' and loading voj.sql ...
-%MYSQL_BIN% %MYSQL_AUTH% -e "DROP DATABASE IF EXISTS `%TEST_DB%`; CREATE DATABASE `%TEST_DB%`;" || (popd & exit /b 1)
-%MYSQL_BIN% %MYSQL_AUTH% -e "SET GLOBAL sql_mode=(SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY',''));" 2>nul
-%MYSQL_BIN% %MYSQL_AUTH% %TEST_DB% < "%PROJECT_ROOT%\voj.sql" || (popd & exit /b 1)
+REM --- 2. Test DB provisioning is automatic ---------------------------------
+REM The Spring test context runs sql\schema.sql + seed.sql + test-data.sql and the
+REM test JDBC URL carries createDatabaseIfNotExist=true plus the required sql_mode,
+REM so there is nothing to create or load here. The cleanup at the end drops the
+REM test database afterwards (unless KEEP_DB=1).
 
 REM --- 3. Stage the judger's Windows test properties -------------------------
 if /I not "%TARGET%"=="web" (
