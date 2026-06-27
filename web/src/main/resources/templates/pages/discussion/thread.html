@@ -9,6 +9,7 @@
       layout:decorate="~{layouts/main}" lang="en">
 <head>
     <title th:text="${discussionThread.discussionThreadTitle} + ' | ' + ${websiteName}">Discussion</title>
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css" />
 </head>
 <body>
     <div layout:fragment="content"
@@ -86,10 +87,8 @@
     </div>
 
     <th:block layout:fragment="scripts">
-    <script type="text/x-mathjax-config" th:inline="none">
-        MathJax.Hub.Config({ tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]} });
-    </script>
-    <script type="text/javascript" async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
     <script type="text/javascript" th:inline="javascript">
         var mainEditor, threadCreatorUid = [[${discussionThread.discussionThreadCreator.uid}]], seenParticipants = {};
         $(function() {
@@ -141,7 +140,8 @@
         function displayDiscussionReplyRecords(discussionReplies) {
             for ( var i = 0; i < discussionReplies.length; ++ i ) {
                 var r = discussionReplies[i];
-                $('#discussion-replies').append(getDiscussionReplyContent(r));
+                var post = $(getDiscussionReplyContent(r)).appendTo('#discussion-replies');
+                typesetMath(post.find('.vw-post-body')[0]);
                 addParticipant(r['discussionReplyCreator']);
             }
         }
@@ -272,6 +272,7 @@
                     if ( result['isSuccessful'] ) {
                         editor.addClass('hide');
                         $('.vw-post-body', post).html(renderMarkdown(content)).removeClass('hide');
+                        typesetMath($('.vw-post-body', post)[0]);
                     } else { alert([[#{voj.discussion.thread.failed-to-update}]]); }
                     $('.vw-reply-save', post).removeAttr('disabled').html([[#{voj.discussion.thread.update-reply}]]);
                 }

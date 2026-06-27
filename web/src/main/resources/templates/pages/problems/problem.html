@@ -11,6 +11,7 @@
     <title th:text="'P' + ${problem.problemId} + ' ' + ${problem.problemName} + ' | ' + ${websiteName}">Problem</title>
     <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/codemirror.min.css?v=${version}|" />
     <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/highlight.min.css?v=${version}|" />
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css" />
 </head>
 <body>
     <div layout:fragment="content"
@@ -42,10 +43,14 @@
                         <div class="vw-eyebrow vw-block-label" th:text="'// ' + #{voj.problems.problem.description}">// DESCRIPTION</div>
                         <div class="description markdown" th:utext="${problem.description}">description</div>
 
-                        <div class="vw-eyebrow vw-block-label" th:text="'// ' + #{voj.problems.problem.input}">// INPUT</div>
-                        <div class="description" th:utext="${problem.inputFormat}">input format</div>
-                        <div class="vw-eyebrow vw-block-label" th:text="'// ' + #{voj.problems.problem.output}">// OUTPUT</div>
-                        <div class="description" th:utext="${problem.outputFormat}">output format</div>
+                        <th:block th:if="${problem.inputFormat != null and problem.inputFormat != ''}">
+                            <div class="vw-eyebrow vw-block-label" th:text="'// ' + #{voj.problems.problem.input}">// INPUT</div>
+                            <div class="description" th:utext="${problem.inputFormat}">input format</div>
+                        </th:block>
+                        <th:block th:if="${problem.outputFormat != null and problem.outputFormat != ''}">
+                            <div class="vw-eyebrow vw-block-label" th:text="'// ' + #{voj.problems.problem.output}">// OUTPUT</div>
+                            <div class="description" th:utext="${problem.outputFormat}">output format</div>
+                        </th:block>
 
                         <th:block th:if="${problem.hint != null and problem.hint != ''}">
                             <div class="vw-eyebrow vw-block-label" th:text="'// ' + #{voj.problems.problem.hint}">// HINT</div>
@@ -115,10 +120,10 @@
                     <p class="vw-muted vw-card-body" th:if="${submissions == null || submissions.size() == 0}" th:text="#{voj.problems.problem.no-submission}">No submission</p>
                     <ul class="vw-sidelist" th:unless="${submissions == null || submissions.size() == 0}">
                         <li th:each="submission : ${submissions}"
-                            th:with="slug=${#strings.toLowerCase(submission.judgeResult.judgeResultSlug)}">
+                            th:with="slug=${submission.judgeResult != null ? #strings.toLowerCase(submission.judgeResult.judgeResultSlug) : ''}">
                             <a class="vw-subrow" th:classappend="|flag-${slug}|" th:href="@{/submission/{id}(id=${submission.submissionId})}">
                                 <span class="vw-sub-badge" th:text="${#strings.toUpperCase(slug)}">AC</span>
-                                <span class="vw-sub-name" th:text="${submission.judgeResult.judgeResultName}">Accepted</span>
+                                <span class="vw-sub-name" th:text="${submission.judgeResult != null ? submission.judgeResult.judgeResultName : ''}">Accepted</span>
                                 <span class="vw-sub-when" th:text="${@dateFormatter.dateShort(submission.submitTime, language)}">date</span>
                             </a>
                         </li>
@@ -148,13 +153,11 @@
     </div>
 
     <th:block layout:fragment="scripts">
-    <script type="text/x-mathjax-config" th:inline="none">
-        MathJax.Hub.Config({ tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]} });
-    </script>
-    <script type="text/javascript" async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
     <script type="text/javascript" th:inline="javascript">
         $(function() {
-            $('.markdown').each(function() { $(this).html(renderMarkdown($(this).text())); });
+            $('.markdown').each(function() { $(this).html(renderMarkdown($(this).text())); typesetMath(this); });
         });
     </script>
     <script type="text/javascript" th:inline="javascript" th:if="${isLogin}">

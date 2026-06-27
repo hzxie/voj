@@ -9,6 +9,7 @@
       layout:decorate="~{layouts/main}" lang="en">
 <head>
     <title th:text="${contest.contestName} + ' | ' + ${websiteName}">Contest</title>
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css" />
 </head>
 <body>
     <div layout:fragment="content"
@@ -50,7 +51,7 @@
                         </div>
                         <a class="vw-cproblem-row" th:each="problem,iter : ${problems}"
                            th:with="sub=${submissions != null ? submissions[problem.problemId] : null},
-                                    slug=${sub != null ? sub.submission.judgeResult.judgeResultSlug : null}"
+                                    slug=${(sub != null and sub.submission != null and sub.submission.judgeResult != null) ? sub.submission.judgeResult.judgeResultSlug : null}"
                            th:href="@{/contest/{cid}/p/{pid}(cid=${contest.contestId},pid=${problem.problemId})}">
                             <div class="vw-cproblem-letter" th:text="${#strings.substring('ABCDEFGHIJKLMNOPQRSTUVWXYZ', iter.index, iter.index + 1)}">A</div>
                             <div class="vw-cproblem-title" th:text="${problem.problemName}">Title</div>
@@ -123,13 +124,11 @@
     </div>
 
     <th:block layout:fragment="scripts">
-    <script type="text/x-mathjax-config" th:inline="none">
-        MathJax.Hub.Config({ tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]} });
-    </script>
-    <script type="text/javascript" async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
     <script type="text/javascript" th:inline="javascript">
         $(function() {
-            $('.markdown').each(function() { $(this).html(renderMarkdown($(this).text())); });
+            $('.markdown').each(function() { $(this).html(renderMarkdown($(this).text())); typesetMath(this); });
         });
         // TIME REMAINING countdown.
         (function() {

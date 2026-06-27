@@ -9,6 +9,7 @@
       layout:decorate="~{layouts/main}" lang="en">
 <head>
     <title th:text="#{voj.accounts.user.title} + ': ' + ${user.username} + ' | ' + ${websiteName}">User</title>
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css" />
 </head>
 <body>
     <div layout:fragment="content"
@@ -89,9 +90,9 @@
                     <div th:unless="${recentSubmissions == null or recentSubmissions.isEmpty()}">
                         <a class="vw-recent-row" th:each="submission : ${recentSubmissions}"
                            th:href="@{/submission/{id}(id=${submission.submissionId})}"
-                           th:with="slug=${#strings.toLowerCase(submission.judgeResult.judgeResultSlug)}">
+                           th:with="slug=${submission.judgeResult != null ? #strings.toLowerCase(submission.judgeResult.judgeResultSlug) : ''}">
                             <span class="vw-vbadge" th:classappend="|flag-${slug}|" th:text="${#strings.toUpperCase(slug)}">AC</span>
-                            <span class="vw-recent-prob" th:text="|P${submission.problem.problemId} ${submission.problem.problemName}|">Problem</span>
+                            <span class="vw-recent-prob" th:text="${submission.problem != null ? 'P' + submission.problem.problemId + ' ' + submission.problem.problemName : ''}">Problem</span>
                             <span class="vw-muted2" th:text="${submission.language != null ? submission.language.languageName : ''}">Lang</span>
                             <span class="vw-muted vw-recent-when" th:text="${submission.submitTime != null ? @dateFormatter.dateShort(submission.submitTime, language) : ''}">when</span>
                         </a>
@@ -158,10 +159,11 @@
     </div>
 
     <th:block layout:fragment="scripts">
-    <script type="text/javascript" async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
     <script type="text/javascript" th:inline="javascript">
         $(function() {
-            $('.markdown').each(function() { $(this).html(renderMarkdown($(this).text())); });
+            $('.markdown').each(function() { $(this).html(renderMarkdown($(this).text())); typesetMath(this); });
         });
         $.getScript([[|${cdnUrl}/js/heatmap.js?v=${version}|]], function() {
             $.ajax({

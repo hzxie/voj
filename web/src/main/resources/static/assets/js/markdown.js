@@ -27,6 +27,23 @@
         return markdown().render(text || '');
     };
 
+    /* Typeset TeX math inside a DOM element with KaTeX's auto-render extension.
+     * No-op on pages that don't load KaTeX (renderMathInElement undefined), so it
+     * is safe to call from shared code. Call it AFTER renderMarkdown has injected
+     * the HTML, since auto-render scans the live DOM, not a string. */
+    global.typesetMath = function(element) {
+        if ( !element || typeof global.renderMathInElement !== 'function' ) { return; }
+        global.renderMathInElement(element, {
+            delimiters: [
+                { left: '$$', right: '$$', display: true  },
+                { left: '\\[', right: '\\]', display: true  },
+                { left: '$',  right: '$',  display: false },
+                { left: '\\(', right: '\\)', display: false }
+            ],
+            throwOnError: false
+        });
+    };
+
     /* Toolbar: `wrap` surrounds the selection, `line` prefixes each selected line,
      * `link` inserts a link template. */
     var TOOLBAR = [
@@ -116,6 +133,7 @@
         previewTab.addEventListener('click', function(ev) {
             ev.preventDefault();
             preview.innerHTML = global.renderMarkdown(ta.value);
+            global.typesetMath(preview);
             preview.hidden = false; ta.hidden = true;
             previewTab.classList.add('active'); writeTab.classList.remove('active');
         });
@@ -134,7 +152,7 @@
             value: function(v) {
                 if ( v === undefined ) { return ta.value; }
                 ta.value = v;
-                if ( !preview.hidden ) { preview.innerHTML = global.renderMarkdown(v); }
+                if ( !preview.hidden ) { preview.innerHTML = global.renderMarkdown(v); global.typesetMath(preview); }
                 return api;
             },
             refresh: function() { return api; },
