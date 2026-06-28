@@ -17,6 +17,12 @@ ARG MAIL_PASSWORD=
 # Shared secret the judger presents to download test data. Must match the judger
 # image's JUDGER_API_TOKEN. The placeholder default is NOT a secret — override it.
 ARG JUDGER_API_TOKEN=changeme
+# Host the ActiveMQ broker inside the web process instead of as a separate one.
+# Defaults to true: this single-container demo is single-web-instance, so the
+# embedded broker saves a whole broker JVM (~150 MB+). The web app reaches it over
+# vm://, while voj.judger (a separate container) connects to the TCP connector on
+# 61616. Set to false to run the bundled standalone broker instead.
+ARG JMS_BROKER_EMBEDDED=true
 
 # Set environment variables.
 # TARGETARCH is provided by BuildKit (amd64 / arm64) and matches the Ubuntu
@@ -25,6 +31,9 @@ ARG TARGETARCH
 ENV HOME=/root
 ENV JAVA_HOME=/usr/lib/jvm/java-25-openjdk-${TARGETARCH}
 ENV M2_HOME=/opt/maven
+# Persist the broker mode into the runtime environment so supervisord can decide
+# whether to start the standalone ActiveMQ process (see docker/web/supervisord.conf).
+ENV JMS_BROKER_EMBEDDED=${JMS_BROKER_EMBEDDED}
 
 # Define working directory.
 WORKDIR /root
@@ -37,6 +46,11 @@ RUN apt-get update && \
         openjdk-25-jdk \
         supervisor && \
     rm -rf /var/lib/apt/lists/*
+
+# Trim MariaDB's memory footprint for the single-container demo. Copied before
+# the server first starts so the leaner settings apply to the build-time import
+# and every subsequent boot.
+COPY docker/web/mariadb-demo.cnf /etc/mysql/mariadb.conf.d/99-voj-demo.cnf
 
 # Set up MariaDB
 RUN sed -i "s/127\.0\.0\.1/0.0.0.0/g" /etc/mysql/mariadb.conf.d/50-server.cnf && \
@@ -76,6 +90,10 @@ RUN sed -i "s@localhost:8080/voj@${WEBSITE_URL}@g" voj/web/src/main/resources/vo
     sed -i "s/mail.username = /mail.username = ${MAIL_USERNAME}/g" voj/web/src/main/resources/voj.properties && \
     sed -i "s/mail.password = /mail.password = ${MAIL_PASSWORD}/g" voj/web/src/main/resources/voj.properties && \
     sed -i "s/judger.apiToken = change-me-shared-secret/judger.apiToken = ${JUDGER_API_TOKEN}/g" voj/web/src/main/resources/voj.properties && \
+    if [ "${JMS_BROKER_EMBEDDED}" = "true" ]; then \
+        sed -i "s/jms.broker.embedded = false/jms.broker.embedded = true/" voj/web/src/main/resources/voj.properties && \
+        sed -i "s#jms.broker.url = tcp://localhost:61616#jms.broker.url = tcp://0.0.0.0:61616#" voj/web/src/main/resources/voj.properties ; \
+    fi && \
     $M2_HOME/bin/mvn package -DskipTests -f voj/web/pom.xml && \
     mkdir -p /opt/voj && \
     cp voj/web/target/voj.web.jar /opt/voj/voj.web.jar && \

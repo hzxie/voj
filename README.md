@@ -6,8 +6,8 @@
 [![Docker Pulls](https://img.shields.io/docker/pulls/zjhzxhz/voj.web.svg)](https://hub.docker.com/r/zjhzxhz/voj.web)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
-[**Official Website**](https://verwandlung.org) ·
-[**Tech Support**](https://infinitescript.com/project/verwandlung-online-judge/) ·
+[**Official Demo**](https://verwandlung.org) ·
+[**Project Page**](https://infinitescript.com/project/verwandlung-online-judge/) ·
 [**Change Log**](https://github.com/hzxie/voj/commits/master)
 
 ## Introduction

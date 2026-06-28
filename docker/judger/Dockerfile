@@ -60,4 +60,8 @@ RUN sed -i "s@jdbc.url = jdbc:mysql://localhost:3306@jdbc.url = jdbc:mysql://${M
 
 # Run Judger. --enable-native-access grants the JNI runner native access; without
 # it the JDK 24+ warns and a future JDK will block JNI outright.
-CMD ["java", "--enable-native-access=ALL-UNNAMED", "-jar", "voj/judger/target/voj.judger.jar"]
+# Lean JVM defaults for the small-demo footprint: capped heap/metaspace, the
+# single-threaded GC and no C2 JIT. The judged program runs as a separate OS
+# process, so this heap only sizes the judger's own orchestration. Keep in sync
+# with scripts/run-judger.sh.
+CMD ["java", "--enable-native-access=ALL-UNNAMED", "-Xmx256m", "-XX:+UseSerialGC", "-XX:MaxMetaspaceSize=128m", "-XX:TieredStopAtLevel=1", "-Xss512k", "-jar", "voj/judger/target/voj.judger.jar"]

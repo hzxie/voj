@@ -31,7 +31,11 @@
 set -euo pipefail
 
 JDK_HOME="${JDK_HOME:-/opt/homebrew/opt/openjdk@25}"
-JAVA_OPTS="${JAVA_OPTS:-}"
+# Lean JVM defaults for a small demo: cap the heap and metaspace, use the
+# single-threaded GC (smallest native/thread overhead at this heap size) and skip
+# the C2 JIT. The judged program runs as a separate OS process, so this heap only
+# sizes the judger's own orchestration. Export JAVA_OPTS to override the whole set.
+JAVA_OPTS="${JAVA_OPTS:--Xmx256m -XX:+UseSerialGC -XX:MaxMetaspaceSize=128m -XX:TieredStopAtLevel=1 -Xss512k}"
 MYSQL_BIN="${MYSQL_BIN:-mysql}"
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

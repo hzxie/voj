@@ -26,6 +26,8 @@
 #   MYSQL_USER_PASS                 # generated if unset (shared by web + judger)
 #   JUDGER_API_TOKEN                # generated if unset (shared by web + judger)
 #   MAIL_HOST= / MAIL_USERNAME= / MAIL_PASSWORD=   # empty -> email disabled
+#   JMS_BROKER_EMBEDDED=true        # host the broker inside voj.web (saves a JVM,
+#                                   # ~150 MB+). Set to false to run a standalone broker.
 #   VOJ_PULL=                       # set to 1 to pull + run published images instead of building
 #
 set -euo pipefail
@@ -41,6 +43,7 @@ WEBSITE_URL="${WEBSITE_URL:-localhost:${WEB_PORT}/voj}"
 MAIL_HOST="${MAIL_HOST:-}"
 MAIL_USERNAME="${MAIL_USERNAME:-}"
 MAIL_PASSWORD="${MAIL_PASSWORD:-}"
+JMS_BROKER_EMBEDDED="${JMS_BROKER_EMBEDDED:-true}"
 
 if ! command -v docker >/dev/null 2>&1; then
   echo "ERROR: docker is not installed or not on PATH." >&2
@@ -87,6 +90,7 @@ else
     --build-arg "MAIL_USERNAME=${MAIL_USERNAME}" \
     --build-arg "MAIL_PASSWORD=${MAIL_PASSWORD}" \
     --build-arg "JUDGER_API_TOKEN=${JUDGER_API_TOKEN}" \
+    --build-arg "JMS_BROKER_EMBEDDED=${JMS_BROKER_EMBEDDED}" \
     -t "${WEB_IMAGE}" -f docker/web/Dockerfile .
 
   echo "==> Building ${JUDGER_IMAGE} ..."

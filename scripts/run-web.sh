@@ -22,12 +22,26 @@
 #   JAVA_OPTS=                              # extra JVM options
 #   MYSQL_BIN=mysql                         # mysql client used for checks/import
 #   SKIP_PREFLIGHT=                         # set to 1 to skip the service checks
+#   JMS_BROKER_EMBEDDED=                    # true/false: host the broker in the web
+#                                          # process at runtime, overriding the value
+#                                          # baked into the jar (no rebuild needed)
 #
 set -euo pipefail
 
 JDK_HOME="${JDK_HOME:-/opt/homebrew/opt/openjdk@25}"
-JAVA_OPTS="${JAVA_OPTS:-}"
+# Lean JVM defaults for a small demo: cap the heap and metaspace, use the
+# single-threaded GC (smallest native/thread overhead at this heap size) and skip
+# the C2 JIT. Export JAVA_OPTS to override the whole set.
+JAVA_OPTS="${JAVA_OPTS:--Xmx256m -XX:+UseSerialGC -XX:MaxMetaspaceSize=128m -XX:TieredStopAtLevel=1 -Xss512k}"
 MYSQL_BIN="${MYSQL_BIN:-mysql}"
+
+# Optional runtime override for the broker mode. Passed as a -D system property,
+# which Spring ranks above the jar's baked voj.properties, so JMS_BROKER_EMBEDDED
+# flips the broker without a rebuild. Empty => use whatever the jar was built with.
+JMS_OVERRIDE=""
+if [ -n "${JMS_BROKER_EMBEDDED:-}" ]; then
+  JMS_OVERRIDE="-Djms.broker.embedded=${JMS_BROKER_EMBEDDED}"
+fi
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$PROJECT_ROOT"
@@ -45,6 +59,16 @@ JAR="$PROJECT_ROOT/web/target/voj.web.jar"
 if [ ! -f "$JAR" ]; then
   echo "ERROR: $JAR not found. Build it first: scripts/build-jars.sh web" >&2
   exit 1
+fi
+
+# Warn if the source voj.properties is newer than the packaged jar: config changes
+# (e.g. jms.broker.embedded) are baked in at build time, so an edit made after the
+# last package run will not take effect until you rebuild — a confusing silent no-op.
+SRC_PROPS="$PROJECT_ROOT/web/src/main/resources/voj.properties"
+if [ -f "$SRC_PROPS" ] && [ "$SRC_PROPS" -nt "$JAR" ]; then
+  echo "WARN: $SRC_PROPS is newer than the packaged jar." >&2
+  echo "      Config changes are baked in at build time and will NOT take effect" >&2
+  echo "      until you rebuild: scripts/build-jars.sh web (or mvn package -f web/pom.xml)." >&2
 fi
 
 # --------------------------------------------------------------------------- #
@@ -98,11 +122,22 @@ preflight() {
   jms_port="${jms_port:-61616}"
 
   # --- ActiveMQ: is the broker port listening? --------------------------- #
-  echo "==> Checking ActiveMQ at $jms_host:$jms_port ..."
-  if ! tcp_open "$jms_host" "$jms_port"; then
+  # When the broker is embedded the web process hosts it itself, so there is no
+  # external broker to reach yet (it only comes up once the app starts). Skip the
+  # check in that mode — requiring the port here would be a chicken-and-egg abort.
+  # The runtime override (JMS_BROKER_EMBEDDED) wins over the baked file value, so the
+  # check reflects what the app will actually do once launched.
+  local jms_embedded
+  jms_embedded="${JMS_BROKER_EMBEDDED:-$(prop jms.broker.embedded)}"
+  if [ "$jms_embedded" = "true" ]; then
+    echo "==> ActiveMQ broker is embedded in the web app; skipping external broker check."
+  elif ! tcp_open "$jms_host" "$jms_port"; then
     echo "ERROR: cannot reach ActiveMQ at $jms_host:$jms_port." >&2
-    echo "       Start the broker (e.g. 'activemq start') and retry." >&2
+    echo "       Start the broker (e.g. 'activemq start') and retry," >&2
+    echo "       or set jms.broker.embedded = true to host it in the web app." >&2
     exit 1
+  else
+    echo "==> Checking ActiveMQ at $jms_host:$jms_port ... ok"
   fi
 
   # --- MySQL: server up + credentials correct ---------------------------- #
@@ -168,4 +203,4 @@ fi
 
 echo "==> Java: $("$JAVA_BIN" -version 2>&1 | head -1)"
 echo "==> Starting voj.web (http://localhost:8080/voj) ..."
-exec "$JAVA_BIN" ${JAVA_OPTS} -jar "$JAR" "$@"
+exec "$JAVA_BIN" ${JAVA_OPTS} ${JMS_OVERRIDE} -jar "$JAR" "$@"
