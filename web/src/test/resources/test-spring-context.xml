@@ -25,7 +25,12 @@
 	http://www.springframework.org/schema/util/spring-util.xsd">
 	<!-- Base Components -->
 	<context:annotation-config />
-	<context:component-scan base-package="org.verwandlung.voj.web" />
+	<!-- Exclude MailConfig: it would contribute a real JavaMailSenderImpl that wins the
+	     by-type injection into MailSender. The tests inject the mock 'mailSender' bean below. -->
+	<context:component-scan base-package="org.verwandlung.voj.web">
+		<context:exclude-filter type="assignable"
+			expression="org.verwandlung.voj.web.config.MailConfig" />
+	</context:component-scan>
 
 	<!-- Property File Location -->
 	<!-- voj.properties supplies production-only keys (judger.apiToken, url.cdn, ...) that the
@@ -114,17 +119,13 @@
 	<bean id="templateEngine" class="org.thymeleaf.spring6.SpringTemplateEngine">
 		<property name="templateResolver" ref="mailTemplateResolver" />
 	</bean>
-	<bean id="mailSender" class="org.springframework.mail.javamail.JavaMailSenderImpl">
-		<property name="host" value="${mail.host}" />
-		<property name="username" value="${mail.username}" />
-		<property name="password" value="${mail.password}" />
-		<property name="javaMailProperties">
-			<props>
-				<prop key="mail.smtp.auth">true</prop>
-				<prop key="mail.smtp.starttls.enable">true</prop>
-			</props>
-		</property>
-	</bean>
+	<!-- The tests never reach a real SMTP server, so the JavaMailSender is a Mockito
+	     mock whose send() is a no-op. This keeps service tests (e.g. UserServiceTest)
+	     that trigger mail delivery from spawning background threads that fail with
+	     AuthenticationFailedException and clutter the test log. -->
+	<bean id="mailSender"
+		class="org.verwandlung.voj.web.util.TestMailSenderFactory"
+		factory-method="createMailSender" />
 	<!-- vojMailSender (MailSender) is picked up by component scanning and
 	     constructor-injected with the Thymeleaf engine and JavaMailSender. -->
 
