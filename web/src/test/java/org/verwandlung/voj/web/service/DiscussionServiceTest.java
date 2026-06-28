@@ -85,6 +85,10 @@ public class DiscussionServiceTest {
   public void testGetDiscussionThreadsOfProblem() {
     List<DiscussionThread> threads = discussionService.getDiscussionThreadsOfProblem(1000, 0, 10);
     Assertions.assertEquals(2, threads.size());
+
+    // Problem 1000 owns threads #1 and #2 (thread #3 has no related problem); a
+    // broken problem predicate could return a same-sized but wrong set of threads.
+    Assertions.assertEquals(java.util.Set.of("Thread #1", "Thread #2"), threadTitlesOf(threads));
   }
 
   /** Test case: tests the getDiscussionThreadsOfTopic(String, long, int) method. Test data: the solutions topic. Expected: the discussion threads under that topic. */
@@ -92,6 +96,19 @@ public class DiscussionServiceTest {
   public void testGetDiscussionThreadsOfTopic() {
     List<DiscussionThread> threads = discussionService.getDiscussionThreadsOfTopic("solutions", 0, 10);
     Assertions.assertEquals(2, threads.size());
+
+    // The "solutions" slug must resolve to its topic and return that topic's
+    // threads (#1 and #3), not another same-sized topic's threads.
+    Assertions.assertEquals(java.util.Set.of("Thread #1", "Thread #3"), threadTitlesOf(threads));
+  }
+
+  /** Collects the titles of a list of threads, for order-independent membership assertions. */
+  private java.util.Set<String> threadTitlesOf(List<DiscussionThread> threads) {
+    java.util.Set<String> titles = new java.util.HashSet<>();
+    for (DiscussionThread thread : threads) {
+      titles.add(thread.getDiscussionThreadTitle());
+    }
+    return titles;
   }
 
   /** Test case: tests the getDiscussionThreadsOfTopic(String, long, int) method. Test data: an empty topic slug. Expected: all discussion threads. */

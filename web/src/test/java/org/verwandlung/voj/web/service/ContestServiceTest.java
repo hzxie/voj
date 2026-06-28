@@ -75,6 +75,14 @@ public class ContestServiceTest {
     List<Problem> problems =
         contestService.getProblemsOfContests(Arrays.asList(1000L, 1001L, 99999L));
     Assertions.assertEquals(2, problems.size());
+
+    // The two existing ids must resolve to their problems and the missing 99999
+    // must be dropped - a size-only check would miss returning the wrong problems.
+    java.util.Set<Long> problemIds = new java.util.HashSet<>();
+    for (Problem problem : problems) {
+      problemIds.add(problem.getProblemId());
+    }
+    Assertions.assertEquals(java.util.Set.of(1000L, 1001L), problemIds);
   }
 
   /** Test case: tests the getSubmissionsOfContestantOfContest(long, User) method. Test data: the contestant is null. Expected: returns null. */
@@ -111,6 +119,13 @@ public class ContestServiceTest {
         contestService.getSubmissionsOfContestantOfContestProblem(
             contestService.getContest(1), 1000, userWithUid(1000));
     Assertions.assertEquals(1, submissions.size());
+
+    // Pin down which submission came back: the (contest, problem, contestant)
+    // lookup is a three-way join, so a wrong predicate could return one wrong
+    // row and still pass a size-only check.
+    Submission submission = submissions.get(0);
+    Assertions.assertEquals(1000, submission.getSubmissionId());
+    Assertions.assertEquals(1000, submission.getProblem().getProblemId());
   }
 
   /** Test case: tests the getSubmissionsOfContestantOfContestProblem(...) method. Test data: the not-started Contest #3. Expected: an empty list. */

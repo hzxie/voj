@@ -85,18 +85,41 @@ public class ProblemServiceTest {
     Assertions.assertNull(problemService.getProblem(0));
   }
 
-  /** Test case: tests the getProblemsUsingFilters(...) method. Test data: without filter conditions. Expected: all problems. */
+  /** Test case: tests the getProblemsUsingFilters(...) method. Test data: without filter conditions. Expected: all four problems, including the hidden problem 1002. */
   @Test
   public void testGetProblemsUsingFiltersWithoutFilters() {
     List<Problem> problems = problemService.getProblemsUsingFilters(0, "", "", "", "", false, 100);
     Assertions.assertEquals(4, problems.size());
+
+    // Unlike the public-only query, the unfiltered query must surface the hidden
+    // problem 1002 as well - that is the whole difference between the two paths.
+    Assertions.assertTrue(
+        problemIdsOf(problems).contains(1002L), "the unfiltered list must include the hidden problem");
   }
 
-  /** Test case: tests the getProblemsUsingFilters(...) method. Test data: public problems only. Expected: the public problems. */
+  /** Test case: tests the getProblemsUsingFilters(...) method. Test data: public problems only. Expected: the three published problems, with the hidden problem 1002 excluded. */
   @Test
   public void testGetProblemsUsingFiltersPublicOnly() {
     List<Problem> problems = problemService.getProblemsUsingFilters(0, "", "", "", "", true, 100);
     Assertions.assertEquals(3, problems.size());
+
+    // The point of the public-only filter is that no hidden problem can leak; a
+    // size-only assertion would miss a regression that returned the wrong rows.
+    for (Problem problem : problems) {
+      Assertions.assertTrue(
+          problem.isPublic(), "public-only filter returned non-public problem #" + problem.getProblemId());
+    }
+    Assertions.assertFalse(
+        problemIdsOf(problems).contains(1002L), "the hidden problem 1002 must not leak into the public list");
+  }
+
+  /** Collects the problem ids of a list of problems, for order-independent membership assertions. */
+  private java.util.Set<Long> problemIdsOf(List<Problem> problems) {
+    java.util.Set<Long> ids = new java.util.HashSet<>();
+    for (Problem problem : problems) {
+      ids.add(problem.getProblemId());
+    }
+    return ids;
   }
 
   /** Test case: tests the getProblemsUsingFilters(...) method. Test data: filtering by category. Expected: only the problems under that category. */

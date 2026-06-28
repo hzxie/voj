@@ -118,4 +118,10 @@ INSERT INTO `voj_discussion_reply_votes` (`discussion_reply_id`, `voter_uid`, `v
 (2, 1000, 1, '2017-01-10 21:42:20'),
 (2, 1001, -1, '2017-01-10 21:42:20');
 
+-- Pin the offensive-word bookkeeping options to non-empty values so the
+-- OffensiveWordService getters have something concrete to assert on (seed.sql
+-- ships them empty, and these tables are not re-inserted above).
+UPDATE `voj_options` SET `option_value` = 'https://example.org/badwords.txt\nhttps://example.org/more.txt' WHERE `option_name` = 'offensiveWordSources';
+UPDATE `voj_options` SET `option_value` = '2018-02-23 12:00:00' WHERE `option_name` = 'offensiveWordsImportedAt';
+
 SET FOREIGN_KEY_CHECKS = 1;

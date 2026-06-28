@@ -76,19 +76,37 @@ public class SubmissionServiceTest {
     Assertions.assertNull(submissionService.getSubmission(0));
   }
 
-  /** Test case: tests the getSubmissions(long, String, int) method. Test data: the submissions of user zjhzxhz for problem 1000. Expected: all the submissions of this user for this problem. */
+  /** Test case: tests the getSubmissions(long, String, int) method. Test data: the submissions of user zjhzxhz for problem 1000. Expected: exactly submissions 1000 and 1001, each belonging to problem 1000. */
   @Test
   public void testGetSubmissions() {
     List<Submission> submissions = submissionService.getSubmissions(1000, "zjhzxhz", 10);
     Assertions.assertEquals(2, submissions.size());
+
+    // Assert which submissions came back, not just how many: a wrong join or a
+    // missing problem/username predicate can return two rows that are the wrong
+    // ones, which a size-only check would happily pass.
+    java.util.Set<Long> submissionIds = new java.util.HashSet<>();
+    for (Submission submission : submissions) {
+      submissionIds.add(submission.getSubmissionId());
+      Assertions.assertEquals(1000, submission.getProblem().getProblemId());
+    }
+    Assertions.assertEquals(java.util.Set.of(1000L, 1001L), submissionIds);
   }
 
-  /** Test case: tests the getSubmissionUsingProblemIdAndUserId(long, long, int) method. Test data: the submissions of user 1000 for problem 1000. Expected: a non-empty list. */
+  /** Test case: tests the getSubmissionUsingProblemIdAndUserId(long, long, int) method. Test data: the submissions of user 1000 for problem 1000. Expected: exactly submissions 1000 and 1001. */
   @Test
   public void testGetSubmissionUsingProblemIdAndUserId() {
     List<Submission> submissions =
         submissionService.getSubmissionUsingProblemIdAndUserId(1000, 1000, 10);
     Assertions.assertEquals(2, submissions.size());
+
+    // Assert the identity of the rows, not just the count: the (problemId, userId)
+    // filter could return two wrong submissions and still pass a size check.
+    java.util.Set<Long> submissionIds = new java.util.HashSet<>();
+    for (Submission submission : submissions) {
+      submissionIds.add(submission.getSubmissionId());
+    }
+    Assertions.assertEquals(java.util.Set.of(1000L, 1001L), submissionIds);
   }
 
   /** Test case: tests the getSubmissionStatsOfUser(long) method. Test data: user 1000. Expected: the correct accepted count, total count and acceptance rate. */
