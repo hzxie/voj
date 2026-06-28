@@ -67,9 +67,12 @@ public class PersistenceConfig {
     dataSource.setRemoveAbandonedTimeout(removeAbandonedTimeout);
     dataSource.setValidationQuery("SELECT 1");
     dataSource.setConnectionInitSqls(Collections.singletonList("SET NAMES utf8mb4;"));
+    // Validate idle connections in the background only. testOnBorrow/testOnReturn would run the
+    // validationQuery on every borrow/return, adding a round-trip to the hot path; testWhileIdle is
+    // the recommended Druid setup.
     dataSource.setTestWhileIdle(true);
-    dataSource.setTestOnBorrow(true);
-    dataSource.setTestOnReturn(true);
+    dataSource.setTestOnBorrow(false);
+    dataSource.setTestOnReturn(false);
     return dataSource;
   }
 

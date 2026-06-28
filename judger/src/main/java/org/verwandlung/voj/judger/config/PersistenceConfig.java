@@ -60,9 +60,12 @@ public class PersistenceConfig {
     dataSource.setRemoveAbandoned(removeAbandoned);
     dataSource.setRemoveAbandonedTimeout(removeAbandonedTimeout);
     dataSource.setValidationQuery("SELECT 1");
+    // Validate idle connections in the background only. testOnBorrow/testOnReturn would run the
+    // validationQuery on every borrow/return, adding a round-trip to the hot path; testWhileIdle is
+    // the recommended Druid setup.
     dataSource.setTestWhileIdle(true);
-    dataSource.setTestOnBorrow(true);
-    dataSource.setTestOnReturn(true);
+    dataSource.setTestOnBorrow(false);
+    dataSource.setTestOnReturn(false);
     return dataSource;
   }
 }
