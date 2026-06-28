@@ -152,16 +152,26 @@ public class CommonModelPopulator {
   private String getPreferNaturalLanguage(
       HttpServletRequest request, HttpServletResponse response) {
     final String DEFAULT_LANGUAGE = "en_US";
-    final String[] supportedLanguages = {"en_US", "zh_CN"};
+    final String[] supportedLanguages = {"en_US", "zh_CN", "zh_TW"};
     Locale browserLocale = getBrowserLocale(request);
 
+    // Prefer an exact language + country match (e.g. zh-TW -> zh_TW, distinguishing
+    // Traditional from Simplified Chinese) before falling back to a language-only
+    // match (e.g. any other zh-* -> the first supported zh variant).
+    String languageOnlyMatch = null;
     for (String supportedLanguage : supportedLanguages) {
       Locale supportLanguageLocale = LocaleUtils.getLocaleOfLanguage(supportedLanguage);
-      if (supportLanguageLocale.getLanguage().equals(browserLocale.getLanguage())) {
+      if (!supportLanguageLocale.getLanguage().equals(browserLocale.getLanguage())) {
+        continue;
+      }
+      if (supportLanguageLocale.getCountry().equals(browserLocale.getCountry())) {
         return supportedLanguage;
       }
+      if (languageOnlyMatch == null) {
+        languageOnlyMatch = supportedLanguage;
+      }
     }
-    return DEFAULT_LANGUAGE;
+    return languageOnlyMatch != null ? languageOnlyMatch : DEFAULT_LANGUAGE;
   }
 
   /**
