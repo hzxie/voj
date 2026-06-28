@@ -11,9 +11,9 @@
         <!-- HERO -->
         <section class="vw-dochero">
             <div class="vw-dochero-inner vw-dochero-inner-center">
-                <div class="vw-eyebrow">// HELP CENTER</div>
-                <h1>Stuck? <span class="accent">man verwandlung</span></h1>
-                <p class="vw-dochero-lead">Quick answers for submitting code, reading verdicts, and joining contests. Can't find it? The discussion board and maintainers are one click away.</p>
+                <div class="vw-eyebrow" th:text="'// ' + #{voj.misc.help.eyebrow}">// HELP CENTER</div>
+                <h1 th:utext="#{voj.misc.help.hero-title}">Stuck? <span class="accent">man verwandlung</span></h1>
+                <p class="vw-dochero-lead" th:text="#{voj.misc.help.hero-lead}">Quick answers for submitting code, reading verdicts, and joining contests. Can't find it? The discussion board and maintainers are one click away.</p>
                 <div class="vw-help-search">
                     <span class="sig">$</span>
                     <span class="q">grep "how do I&hellip;" --help<span class="vw-cursor">&#9611;</span></span>
@@ -24,21 +24,21 @@
 
         <!-- QUICK START -->
         <section class="vw-help-section">
-            <div class="vw-section-label">// QUICK START</div>
+            <div class="vw-section-label" th:text="'// ' + #{voj.misc.help.quick-start}">// QUICK START</div>
             <div class="vw-arch">
                 <div class="vw-pcard vw-qcard">
-                    <div class="vw-qcard-head"><span class="vw-qcard-n">1</span><span class="vw-qcard-title">Submit a solution</span></div>
-                    <p class="vw-qcard-desc">Open any problem, pick your language, paste your code, and hit submit. The verdict streams back in milliseconds.</p>
+                    <div class="vw-qcard-head"><span class="vw-qcard-n">1</span><span class="vw-qcard-title" th:text="#{voj.misc.help.q1-title}">Submit a solution</span></div>
+                    <p class="vw-qcard-desc" th:text="#{voj.misc.help.q1-desc}">Open any problem, pick your language, paste your code, and hit submit. The verdict streams back in milliseconds.</p>
                     <div class="vw-qcard-cmd">$ voj submit solution.cpp</div>
                 </div>
                 <div class="vw-pcard vw-qcard">
-                    <div class="vw-qcard-head"><span class="vw-qcard-n">2</span><span class="vw-qcard-title">Read your verdict</span></div>
-                    <p class="vw-qcard-desc">Each test case shows a status, runtime, and memory. Click a submission to see per-test detail.</p>
+                    <div class="vw-qcard-head"><span class="vw-qcard-n">2</span><span class="vw-qcard-title" th:text="#{voj.misc.help.q2-title}">Read your verdict</span></div>
+                    <p class="vw-qcard-desc" th:text="#{voj.misc.help.q2-desc}">Each test case shows a status, runtime, and memory. Click a submission to see per-test detail.</p>
                     <div class="vw-qcard-cmd">&#9679; ACCEPTED  11ms &middot; 1.2 MB</div>
                 </div>
                 <div class="vw-pcard vw-qcard">
-                    <div class="vw-qcard-head"><span class="vw-qcard-n">3</span><span class="vw-qcard-title">Join a contest</span></div>
-                    <p class="vw-qcard-desc">Browse live and upcoming contests, register, and solve under ACM or OI scoring rules.</p>
+                    <div class="vw-qcard-head"><span class="vw-qcard-n">3</span><span class="vw-qcard-title" th:text="#{voj.misc.help.q3-title}">Join a contest</span></div>
+                    <p class="vw-qcard-desc" th:text="#{voj.misc.help.q3-desc}">Browse live and upcoming contests, register, and solve under ACM or OI scoring rules.</p>
                     <div class="vw-qcard-cmd">$ voj contest join #3</div>
                 </div>
             </div>
@@ -46,62 +46,62 @@
 
         <!-- VERDICT LEGEND -->
         <section class="vw-help-section">
-            <div class="vw-section-label">// VERDICT LEGEND</div>
+            <div class="vw-section-label" th:text="'// ' + #{voj.misc.help.verdict-legend}">// VERDICT LEGEND</div>
             <div class="vw-verdicts">
-                <div class="vw-verdict-card"><span class="vw-vfill vw-vfill-ac">AC</span><div><div class="n">Accepted</div><div class="d">All tests passed</div></div></div>
-                <div class="vw-verdict-card"><span class="vw-vfill vw-vfill-err">WA</span><div><div class="n">Wrong Answer</div><div class="d">Output mismatch</div></div></div>
-                <div class="vw-verdict-card"><span class="vw-vfill vw-vfill-warn">TLE</span><div><div class="n">Time Limit</div><div class="d">Too slow on a test</div></div></div>
-                <div class="vw-verdict-card"><span class="vw-vfill vw-vfill-warn">MLE</span><div><div class="n">Memory Limit</div><div class="d">Exceeded memory cap</div></div></div>
-                <div class="vw-verdict-card"><span class="vw-vfill vw-vfill-err">RE</span><div><div class="n">Runtime Error</div><div class="d">Crashed during run</div></div></div>
-                <div class="vw-verdict-card"><span class="vw-vfill vw-vfill-info">CE</span><div><div class="n">Compile Error</div><div class="d">Source failed to build</div></div></div>
+                <div class="vw-verdict-card"><span class="vw-vfill vw-vfill-ac">AC</span><div><div class="n" th:text="#{voj.misc.help.verdict-ac}">Accepted</div><div class="d" th:text="#{voj.misc.help.verdict-ac-desc}">All tests passed</div></div></div>
+                <div class="vw-verdict-card"><span class="vw-vfill vw-vfill-err">WA</span><div><div class="n" th:text="#{voj.misc.help.verdict-wa}">Wrong Answer</div><div class="d" th:text="#{voj.misc.help.verdict-wa-desc}">Output mismatch</div></div></div>
+                <div class="vw-verdict-card"><span class="vw-vfill vw-vfill-warn">TLE</span><div><div class="n" th:text="#{voj.misc.help.verdict-tle}">Time Limit</div><div class="d" th:text="#{voj.misc.help.verdict-tle-desc}">Too slow on a test</div></div></div>
+                <div class="vw-verdict-card"><span class="vw-vfill vw-vfill-warn">MLE</span><div><div class="n" th:text="#{voj.misc.help.verdict-mle}">Memory Limit</div><div class="d" th:text="#{voj.misc.help.verdict-mle-desc}">Exceeded memory cap</div></div></div>
+                <div class="vw-verdict-card"><span class="vw-vfill vw-vfill-err">RE</span><div><div class="n" th:text="#{voj.misc.help.verdict-re}">Runtime Error</div><div class="d" th:text="#{voj.misc.help.verdict-re-desc}">Crashed during run</div></div></div>
+                <div class="vw-verdict-card"><span class="vw-vfill vw-vfill-info">CE</span><div><div class="n" th:text="#{voj.misc.help.verdict-ce}">Compile Error</div><div class="d" th:text="#{voj.misc.help.verdict-ce-desc}">Source failed to build</div></div></div>
             </div>
         </section>
 
         <!-- FAQ -->
         <section class="vw-help-faq">
-            <div class="vw-section-label">// FREQUENTLY ASKED</div>
+            <div class="vw-section-label" th:text="'// ' + #{voj.misc.help.faq}">// FREQUENTLY ASKED</div>
 
             <div class="vw-faqgroup">
-                <div class="label">GETTING STARTED</div>
+                <div class="label" th:text="#{voj.misc.help.faq-group-getting-started}">GETTING STARTED</div>
                 <div class="vw-faq">
-                    <div class="vw-faq-item"><button class="vw-faq-q" type="button"><span class="chev">&rsaquo;</span><span>How do I submit my first solution?</span></button><div class="vw-faq-a"><p>Open a problem from ~/problems, choose a language in the editor, paste or type your code, and click submit. Your code is queued on the nearest judger and the verdict appears live as each test runs.</p></div></div>
-                    <div class="vw-faq-item"><button class="vw-faq-q" type="button"><span class="chev">&rsaquo;</span><span>Which languages are supported?</span></button><div class="vw-faq-a"><p>C 11, C++ 23, Java 25, Python 3.14, Kotlin, and Go. Each language has its own compiler flags and time-limit multiplier, shown on the submit panel.</p></div></div>
-                    <div class="vw-faq-item"><button class="vw-faq-q" type="button"><span class="chev">&rsaquo;</span><span>Do I need an account to view problems?</span></button><div class="vw-faq-a"><p>You can browse problem statements without an account, but you need to register to submit code, join contests, and appear on leaderboards.</p></div></div>
+                    <div class="vw-faq-item"><button class="vw-faq-q" type="button"><span class="chev">&rsaquo;</span><span th:text="#{voj.misc.help.faq-q1}">How do I submit my first solution?</span></button><div class="vw-faq-a"><p th:text="#{voj.misc.help.faq-a1}">Open a problem from ~/problems, choose a language in the editor, paste or type your code, and click submit. Your code is queued on the nearest judger and the verdict appears live as each test runs.</p></div></div>
+                    <div class="vw-faq-item"><button class="vw-faq-q" type="button"><span class="chev">&rsaquo;</span><span th:text="#{voj.misc.help.faq-q2}">Which languages are supported?</span></button><div class="vw-faq-a"><p th:text="#{voj.misc.help.faq-a2}">C 11, C++ 23, Java 25, Python 3.14, Kotlin, and Go. Each language has its own compiler flags and time-limit multiplier, shown on the submit panel.</p></div></div>
+                    <div class="vw-faq-item"><button class="vw-faq-q" type="button"><span class="chev">&rsaquo;</span><span th:text="#{voj.misc.help.faq-q3}">Do I need an account to view problems?</span></button><div class="vw-faq-a"><p th:text="#{voj.misc.help.faq-a3}">You can browse problem statements without an account, but you need to register to submit code, join contests, and appear on leaderboards.</p></div></div>
                 </div>
             </div>
 
             <div class="vw-faqgroup">
-                <div class="label">JUDGING &amp; VERDICTS</div>
+                <div class="label" th:text="#{voj.misc.help.faq-group-judging}">JUDGING &amp; VERDICTS</div>
                 <div class="vw-faq">
-                    <div class="vw-faq-item"><button class="vw-faq-q" type="button"><span class="chev">&rsaquo;</span><span>What do the verdict codes mean?</span></button><div class="vw-faq-a"><p>See the verdict legend above. AC means every test passed; WA, TLE, MLE, RE and CE each point to a specific failure mode so you know where to look.</p></div></div>
-                    <div class="vw-faq-item"><button class="vw-faq-q" type="button"><span class="chev">&rsaquo;</span><span>Why is my solution getting TLE?</span></button><div class="vw-faq-a"><p>Your program exceeded the time limit on at least one test. Profile your algorithm&rsquo;s complexity, avoid slow I/O, and check the per-test timing on the submission detail page to find the slow case.</p></div></div>
-                    <div class="vw-faq-item"><button class="vw-faq-q" type="button"><span class="chev">&rsaquo;</span><span>Can I see which test case failed?</span></button><div class="vw-faq-a"><p>For practice problems, the submission detail page shows the first failing test number, runtime, and memory. Hidden test inputs themselves are not revealed.</p></div></div>
-                    <div class="vw-faq-item"><button class="vw-faq-q" type="button"><span class="chev">&rsaquo;</span><span>How fast is judging?</span></button><div class="vw-faq-a"><p>Submissions are distributed across a judger cluster via ActiveMQ, with a median round-trip latency around 11ms. Heavy contest traffic may add a short queue.</p></div></div>
+                    <div class="vw-faq-item"><button class="vw-faq-q" type="button"><span class="chev">&rsaquo;</span><span th:text="#{voj.misc.help.faq-q4}">What do the verdict codes mean?</span></button><div class="vw-faq-a"><p th:text="#{voj.misc.help.faq-a4}">See the verdict legend above. AC means every test passed; WA, TLE, MLE, RE and CE each point to a specific failure mode so you know where to look.</p></div></div>
+                    <div class="vw-faq-item"><button class="vw-faq-q" type="button"><span class="chev">&rsaquo;</span><span th:text="#{voj.misc.help.faq-q5}">Why is my solution getting TLE?</span></button><div class="vw-faq-a"><p th:text="#{voj.misc.help.faq-a5}">Your program exceeded the time limit on at least one test. Profile your algorithm&rsquo;s complexity, avoid slow I/O, and check the per-test timing on the submission detail page to find the slow case.</p></div></div>
+                    <div class="vw-faq-item"><button class="vw-faq-q" type="button"><span class="chev">&rsaquo;</span><span th:text="#{voj.misc.help.faq-q6}">Can I see which test case failed?</span></button><div class="vw-faq-a"><p th:text="#{voj.misc.help.faq-a6}">For practice problems, the submission detail page shows the first failing test number, runtime, and memory. Hidden test inputs themselves are not revealed.</p></div></div>
+                    <div class="vw-faq-item"><button class="vw-faq-q" type="button"><span class="chev">&rsaquo;</span><span th:text="#{voj.misc.help.faq-q7}">How fast is judging?</span></button><div class="vw-faq-a"><p th:text="#{voj.misc.help.faq-a7}">Submissions are distributed across a judger cluster via ActiveMQ, with a median round-trip latency around 11ms. Heavy contest traffic may add a short queue.</p></div></div>
                 </div>
             </div>
 
             <div class="vw-faqgroup">
-                <div class="label">CONTESTS</div>
+                <div class="label" th:text="#{voj.misc.help.faq-group-contests}">CONTESTS</div>
                 <div class="vw-faq">
-                    <div class="vw-faq-item"><button class="vw-faq-q" type="button"><span class="chev">&rsaquo;</span><span>How do ACM and OI scoring differ?</span></button><div class="vw-faq-a"><p>ACM ranks by problems solved with penalty time per wrong attempt. OI awards partial points per passed test group, so a partially correct solution still scores. Each contest states its mode on the detail page.</p></div></div>
-                    <div class="vw-faq-item"><button class="vw-faq-q" type="button"><span class="chev">&rsaquo;</span><span>Can I submit after a contest ends?</span></button><div class="vw-faq-a"><p>Yes &mdash; problems move to the practice archive once a contest closes, so you can keep solving them. Those submissions do not affect the final standings.</p></div></div>
+                    <div class="vw-faq-item"><button class="vw-faq-q" type="button"><span class="chev">&rsaquo;</span><span th:text="#{voj.misc.help.faq-q8}">How do ACM and OI scoring differ?</span></button><div class="vw-faq-a"><p th:text="#{voj.misc.help.faq-a8}">ACM ranks by problems solved with penalty time per wrong attempt. OI awards partial points per passed test group, so a partially correct solution still scores. Each contest states its mode on the detail page.</p></div></div>
+                    <div class="vw-faq-item"><button class="vw-faq-q" type="button"><span class="chev">&rsaquo;</span><span th:text="#{voj.misc.help.faq-q9}">Can I submit after a contest ends?</span></button><div class="vw-faq-a"><p th:text="#{voj.misc.help.faq-a9}">Yes &mdash; problems move to the practice archive once a contest closes, so you can keep solving them. Those submissions do not affect the final standings.</p></div></div>
                 </div>
             </div>
 
             <div class="vw-faqgroup">
-                <div class="label">ACCOUNT</div>
+                <div class="label" th:text="#{voj.misc.help.faq-group-account}">ACCOUNT</div>
                 <div class="vw-faq">
-                    <div class="vw-faq-item"><button class="vw-faq-q" type="button"><span class="chev">&rsaquo;</span><span>How do I reset my password?</span></button><div class="vw-faq-a"><p>Use the &ldquo;forgot password&rdquo; link on the login page. A reset link is sent to your registered email; if it doesn&rsquo;t arrive, check spam or contact help@verwandlung.org.</p></div></div>
-                    <div class="vw-faq-item"><button class="vw-faq-q" type="button"><span class="chev">&rsaquo;</span><span>Can I change my username?</span></button><div class="vw-faq-a"><p>Usernames are tied to your submission history and leaderboard entries, so changes are limited. Email support if you have a genuine need to rename.</p></div></div>
+                    <div class="vw-faq-item"><button class="vw-faq-q" type="button"><span class="chev">&rsaquo;</span><span th:text="#{voj.misc.help.faq-q10}">How do I reset my password?</span></button><div class="vw-faq-a"><p th:text="#{voj.misc.help.faq-a10}">Use the &ldquo;forgot password&rdquo; link on the login page. A reset link is sent to your registered email; if it doesn&rsquo;t arrive, check spam or contact help@verwandlung.org.</p></div></div>
+                    <div class="vw-faq-item"><button class="vw-faq-q" type="button"><span class="chev">&rsaquo;</span><span th:text="#{voj.misc.help.faq-q11}">Can I change my username?</span></button><div class="vw-faq-a"><p th:text="#{voj.misc.help.faq-a11}">Usernames are tied to your submission history and leaderboard entries, so changes are limited. Email support if you have a genuine need to rename.</p></div></div>
                 </div>
             </div>
 
             <div class="vw-contact vw-help-faq-contact">
                 <div class="vw-contact-text">
-                    <div class="t">Still stuck?</div>
-                    <div class="d">Ask the community on the discussion board<th:block th:if="${contactEmail != null and contactEmail != ''}">, or email <a th:href="|mailto:${contactEmail}|" th:text="${contactEmail}">help@verwandlung.org</a></th:block>.</div>
+                    <div class="t" th:text="#{voj.misc.help.still-stuck}">Still stuck?</div>
+                    <div class="d"><span th:text="#{voj.misc.help.still-stuck-desc}">Ask the community on the discussion board</span><th:block th:if="${contactEmail != null and contactEmail != ''}"><span th:text="#{voj.misc.help.or-email} + ' '">, or email </span><a th:href="|mailto:${contactEmail}|" th:text="${contactEmail}">help@verwandlung.org</a></th:block>.</div>
                 </div>
-                <a class="vw-btn vw-btn-accent" th:href="@{/discussion}">Open discussion &rarr;</a>
+                <a class="vw-btn vw-btn-accent" th:href="@{/discussion}" th:text="#{voj.misc.help.open-discussion} + ' →'">Open discussion &rarr;</a>
             </div>
         </section>
     </div>

@@ -51,7 +51,7 @@
                 <div class="vw-pstats">
                     <div class="vw-pstat"><div class="v vw-accent" th:text="${accepted}">0</div><div class="k" th:text="#{voj.accounts.user.accepted}">SOLVED</div></div>
                     <div class="vw-pstat"><div class="v" th:text="${#numbers.formatInteger(total, 1, 'COMMA')}">0</div><div class="k" th:text="#{voj.accounts.user.submit}">SUBMISSIONS</div></div>
-                    <div class="vw-pstat"><div class="v" th:text="${total == 0 ? '0%' : #numbers.formatDecimal(accepted * 100.0 / total, 1, 0) + '%'}">0%</div><div class="k">ACCEPTANCE</div></div>
+                    <div class="vw-pstat"><div class="v" th:text="${total == 0 ? '0%' : #numbers.formatDecimal(accepted * 100.0 / total, 1, 0) + '%'}">0%</div><div class="k" th:text="#{voj.accounts.user.acceptance}">ACCEPTANCE</div></div>
                     <div class="vw-pstat"><div class="v" th:text="${contestsAttended}">0</div><div class="k" th:text="#{voj.accounts.user.contests}">CONTESTS</div></div>
                 </div>
 

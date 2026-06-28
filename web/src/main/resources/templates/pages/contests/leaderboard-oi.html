@@ -9,7 +9,7 @@
     <div layout:fragment="content">
         <section class="vw-pagehead">
             <a class="vw-backlink" th:href="@{/contest/{id}(id=${contest.contestId})}">&larr; <span th:text="${contest.contestName}">Contest</span></a>
-            <div class="vw-eyebrow">// LEADERBOARD &middot; OI</div>
+            <div class="vw-eyebrow vw-eyebrow-path" th:text="'~/' + #{voj.include.header.nav-contests} + ' · OI'">~/contests &middot; OI</div>
             <h1 th:text="#{voj.contests.leaderboard.leaderboard}">Leaderboard</h1>
         </section>
 

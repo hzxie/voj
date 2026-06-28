@@ -78,7 +78,7 @@ INSERT INTO `voj_discussion_topics` (`discussion_topic_id`, `discussion_topic_sl
 
 INSERT INTO `voj_options` (`option_id`, `option_name`, `option_value`, `is_autoload`) VALUES
 (1, 'websiteName', 'Verwandlung Online Judge', 1),
-(2, 'description', 'Verwandlung Online Judge is a cross-platform online judge system based on Spring MVC Framework.', 1),
+(2, 'description', 'Verwandlung Online Judge is an open-source, cross-platform online judge system built on Spring Boot.', 1),
 (3, 'copyright', '<a href="https://haozhexie.com/" target="_blank">Infinite Script</a>', 1),
 (4, 'googleAnalyticsCode', '', 1),
 (5, 'icpNumber', '', 1),

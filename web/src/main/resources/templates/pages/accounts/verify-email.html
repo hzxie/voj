@@ -7,12 +7,12 @@
 </head>
 <body>
     <a layout:fragment="auth-action" class="vw-header-link vw-header-link-accent"
-       th:href="@{/accounts/login}">sign in &rarr;</a>
+       th:href="@{/accounts/login}" th:text="#{voj.accounts.register.sign-in} + ' →'">sign in &rarr;</a>
     <div layout:fragment="content">
         <section class="vw-auth">
             <div class="vw-auth-inner">
                 <div class="vw-auth-head">
-                    <div class="vw-eyebrow">// VERIFY</div>
+                    <div class="vw-eyebrow" th:text="'// ' + #{voj.accounts.verify-email.eyebrow}">// VERIFY</div>
                     <h1 th:text="#{voj.accounts.verify-email.verify-email}">Verify Email</h1>
                 </div>
 

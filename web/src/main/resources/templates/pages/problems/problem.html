@@ -20,7 +20,7 @@
         <!-- TITLE BAR -->
         <section class="vw-titlebar">
             <div class="vw-titlebar-inner">
-                <a class="vw-backlink" th:href="@{/p}">&larr; ~/problems</a>
+                <a class="vw-backlink" th:href="@{/p}" th:text="'← ~/' + #{voj.include.header.nav-problems}">&larr; ~/problems</a>
                 <div class="vw-row vw-gap vw-wrap">
                     <span class="vw-muted vw-run-label" th:text="|P${problem.problemId}|">P1000</span>
                     <h1 th:text="${problem.problemName}">A + B Problem</h1>
@@ -76,7 +76,7 @@
                 <div id="editor" class="vw-card vw-card-glow vw-editor-card" th:if="${isLogin}">
                     <form id="code-editor" onsubmit="onSubmit(); return false;" method="POST">
                         <div class="vw-editor-bar">
-                            <span class="vw-eyebrow vw-mb0">// YOUR SOLUTION</span>
+                            <span class="vw-eyebrow vw-mb0" th:text="'// ' + #{voj.problems.problem.your-solution}">// YOUR SOLUTION</span>
                             <div class="vw-header-spacer"></div>
                             <select id="languages" class="vw-input vw-input-auto">
                                 <option th:each="language : ${languages}" th:value="${language.languageSlug}" th:text="${language.languageName}">Language</option>
@@ -98,10 +98,10 @@
             <div class="vw-detail-side">
                 <div class="vw-card">
                     <div class="vw-card-body">
-                        <div class="vw-eyebrow vw-side-label">// PROBLEM INFO</div>
+                        <div class="vw-eyebrow vw-side-label" th:text="'// ' + #{voj.problems.problem.info}">// PROBLEM INFO</div>
                         <div class="vw-kv">
-                            <div><span class="k">Difficulty</span><span class="v vw-strong" th:classappend="|vw-pdiff-${diffSlug}|" th:text="${diffName}">Easy</span></div>
-                            <div><span class="k">Acceptance</span><span class="v" th:text="${problem.totalSubmission == 0 ? '0%' : #numbers.formatDecimal(problem.acceptedSubmission * 100.0 / problem.totalSubmission, 1, 0) + '%'}">0%</span></div>
+                            <div><span class="k" th:text="#{voj.problems.problem.difficulty}">Difficulty</span><span class="v vw-strong" th:classappend="|vw-pdiff-${diffSlug}|" th:text="${diffName}">Easy</span></div>
+                            <div><span class="k" th:text="#{voj.problems.problem.acceptance}">Acceptance</span><span class="v" th:text="${problem.totalSubmission == 0 ? '0%' : #numbers.formatDecimal(problem.acceptedSubmission * 100.0 / problem.totalSubmission, 1, 0) + '%'}">0%</span></div>
                             <div><span class="k" th:text="#{voj.problems.problem.time-limit}">Time limit</span><span class="v"><span th:text="${problem.timeLimit}">0</span> ms</span></div>
                             <div><span class="k" th:text="#{voj.problems.problem.memory-limit}">Memory limit</span><span class="v"><span th:text="${problem.memoryLimit}">0</span> KB</span></div>
                             <div><span class="k" th:text="#{voj.accounts.user.accepted}">Accepted</span><span class="v" th:text="${#numbers.formatInteger(problem.acceptedSubmission, 1, 'COMMA')}">0</span></div>
@@ -115,7 +115,7 @@
                 <div id="mysubs" class="vw-card vw-anchored" th:if="${isLogin}">
                     <div class="vw-card-strip vw-between">
                         <span th:text="'// ' + #{voj.problems.problem.submission}">// MY SUBMISSIONS</span>
-                        <a class="vw-link-sm" th:href="@{/submission(problemId=${problem.problemId})}">all &rarr;</a>
+                        <a class="vw-link-sm" th:href="@{/submission(problemId=${problem.problemId})}" th:text="#{voj.common.all} + ' →'">all &rarr;</a>
                     </div>
                     <p class="vw-muted vw-card-body" th:if="${submissions == null || submissions.size() == 0}" th:text="#{voj.problems.problem.no-submission}">No submission</p>
                     <ul class="vw-sidelist" th:unless="${submissions == null || submissions.size() == 0}">
@@ -133,7 +133,7 @@
                 <div id="disc" class="vw-card vw-anchored" th:unless="${isContest}">
                     <div class="vw-card-strip vw-between">
                         <span th:text="'// ' + #{voj.problems.problem.discussion}">// DISCUSSION</span>
-                        <a class="vw-link-sm" th:if="${isLogin}" th:href="@{/discussion/new(problemId=${problem.problemId})}">+ ask</a>
+                        <a class="vw-link-sm" th:if="${isLogin}" th:href="@{/discussion/new(problemId=${problem.problemId})}" th:text="'+ ' + #{voj.problems.problem.ask}">+ ask</a>
                     </div>
                     <p class="vw-muted vw-card-body" th:if="${discussionThreads == null || discussionThreads.size() == 0}" th:text="#{voj.problems.problem.no-discussion}">No discussion</p>
                     <ul class="vw-sidelist" th:unless="${discussionThreads == null || discussionThreads.size() == 0}">

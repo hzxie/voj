@@ -8,7 +8,7 @@
 <body>
     <div layout:fragment="content">
         <section class="vw-error">
-            <div class="vw-eyebrow vw-eyebrow-warn">// ERROR &middot; ROUTE NOT FOUND</div>
+            <div class="vw-eyebrow vw-eyebrow-warn" th:text="'// ' + #{voj.error.404.eyebrow}">// ERROR &middot; ROUTE NOT FOUND</div>
             <div class="vw-error-code">
                 <span class="base">404</span>
                 <span class="glitch" aria-hidden="true">404</span>

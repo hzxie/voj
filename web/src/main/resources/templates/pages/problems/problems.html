@@ -11,21 +11,21 @@
     <div layout:fragment="content">
         <!-- PAGE HEADER + FILTERS -->
         <section class="vw-pagehead">
-            <div class="vw-eyebrow">// PROBLEM SET</div>
-            <h1>Problem Set</h1>
-            <div class="sub vw-filters-sub"><span th:text="${totalProblems}">0</span> problems &middot; solve to level up</div>
-            <div class="vw-filters" th:with="fieldLabel=${field == 'id' ? 'id' : (field == 'tag' ? 'tag' : 'title')}">
+            <div class="vw-eyebrow vw-eyebrow-path" th:text="'~/' + #{voj.include.header.nav-problems}">~/problems</div>
+            <h1 th:text="#{voj.problems.problems.heading}">Problem Set</h1>
+            <div class="sub vw-filters-sub"><span th:text="${totalProblems}">0</span> <span th:text="#{voj.problems.problems.subtitle}">problems &middot; solve to level up</span></div>
+            <div class="vw-filters" th:with="fieldLabel=${field == 'id' ? #messages.msg('voj.problems.problems.filter-id') : (field == 'tag' ? #messages.msg('voj.problems.problems.filter-tag') : #messages.msg('voj.problems.problems.filter-title'))}">
                 <div class="vw-seg">
-                    <a th:href="@{/p(field='id',query=${query},difficulty=${selectedProblemDifficulty})}" th:classappend="${field == 'id'} ? 'active'">ID</a>
-                    <a th:href="@{/p(field='title',query=${query},difficulty=${selectedProblemDifficulty})}" th:classappend="${field == 'title'} ? 'active'">Title</a>
-                    <a th:href="@{/p(field='tag',query=${query},difficulty=${selectedProblemDifficulty})}" th:classappend="${field == 'tag'} ? 'active'">Tag</a>
+                    <a th:href="@{/p(field='id',query=${query},difficulty=${selectedProblemDifficulty})}" th:classappend="${field == 'id'} ? 'active'" th:text="#{voj.problems.problems.filter-id}">ID</a>
+                    <a th:href="@{/p(field='title',query=${query},difficulty=${selectedProblemDifficulty})}" th:classappend="${field == 'title'} ? 'active'" th:text="#{voj.problems.problems.filter-title}">Title</a>
+                    <a th:href="@{/p(field='tag',query=${query},difficulty=${selectedProblemDifficulty})}" th:classappend="${field == 'tag'} ? 'active'" th:text="#{voj.problems.problems.filter-tag}">Tag</a>
                 </div>
                 <form class="vw-field vw-filters-search" method="GET" th:action="@{/p}">
                     <span class="sigil">$</span>
                     <input type="hidden" name="field" th:value="${field}" />
                     <input type="hidden" name="difficulty" th:value="${selectedProblemDifficulty}" />
-                    <input type="text" name="query" th:value="${query}" th:placeholder="|filter by ${fieldLabel}&#8230;|" />
-                    <span class="vw-filters-count"><span th:text="${totalProblems}">0</span> <span th:text="${totalProblems == 1 ? 'match' : 'matches'}">matches</span></span>
+                    <input type="text" name="query" th:value="${query}" th:placeholder="|${#messages.msg('voj.problems.problems.filter-by')} ${fieldLabel}…|" />
+                    <span class="vw-filters-count"><span th:text="${totalProblems}">0</span> <span th:text="${totalProblems == 1 ? #messages.msg('voj.problems.problems.match') : #messages.msg('voj.problems.problems.matches')}">matches</span></span>
                 </form>
                 <form class="vw-filters-difficulty" method="GET" th:action="@{/p}">
                     <input type="hidden" name="field" th:value="${field}" />
@@ -42,12 +42,12 @@
         <section class="vw-section-table">
             <div class="vw-table vw-ptable" th:classappend="${!isLogin} ? 'vw-ptable-guest'">
                 <div class="vw-table-head">
-                    <div th:if="${isLogin}">ST</div>
+                    <div th:if="${isLogin}" th:text="#{voj.problems.problems.col-status}">ST</div>
                     <div>#</div>
-                    <div>TITLE</div>
-                    <div>LEVEL</div>
-                    <div class="ptable-hide">TAGS</div>
-                    <div class="ptable-hide">ACCEPT</div>
+                    <div th:text="#{voj.problems.problems.col-title}">TITLE</div>
+                    <div th:text="#{voj.problems.problems.col-level}">LEVEL</div>
+                    <div class="ptable-hide" th:text="#{voj.problems.problems.col-tags}">TAGS</div>
+                    <div class="ptable-hide" th:text="#{voj.problems.problems.col-accept}">ACCEPT</div>
                 </div>
                 <a class="vw-table-row" th:each="problem : ${problems}" th:href="@{/p/{id}(id=${problem.problemId})}">
                     <div th:if="${isLogin}" th:with="sub=${submissionOfProblems != null ? submissionOfProblems[problem.problemId] : null}">
@@ -70,7 +70,7 @@
                               th:text="${#numbers.formatDecimal(problem.acceptedSubmission * 100.0 / problem.totalSubmission, 1, 0)} + '%'">0%</span>
                     </div>
                 </a>
-                <div class="vw-table-empty" th:if="${problems == null or problems.isEmpty()}">// no problems match the filter</div>
+                <div class="vw-table-empty" th:if="${problems == null or problems.isEmpty()}" th:text="'// ' + #{voj.problems.problems.no-problems}">// no problems match the filter</div>
             </div>
 
             <!-- PAGER -->

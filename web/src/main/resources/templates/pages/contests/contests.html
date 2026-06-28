@@ -14,14 +14,14 @@
 <body>
     <div layout:fragment="content">
         <section class="vw-pagehead">
-            <div class="vw-eyebrow">// CONTESTS</div>
+            <div class="vw-eyebrow vw-eyebrow-path" th:text="'~/' + #{voj.include.header.nav-contests}">~/contests</div>
             <h1 th:text="#{voj.contests.contests.title}">Contests</h1>
-            <div class="sub">ACM &amp; OI rounds &middot; solve against the clock</div>
+            <div class="sub" th:text="#{voj.contests.contests.subtitle}">ACM &amp; OI rounds · solve against the clock</div>
         </section>
 
         <!-- LIVE & UPCOMING -->
         <section class="vw-section vw-section-narrow">
-            <div class="vw-section-label">// LIVE &amp; UPCOMING</div>
+            <div class="vw-section-label" th:text="'// ' + #{voj.contests.contests.live-upcoming}">// LIVE &amp; UPCOMING</div>
             <div class="vw-contest-list">
                 <a class="vw-contest-card" th:each="contest : ${liveContests}"
                    th:with="durMin=${(contest.endTime.time - contest.startTime.time) / 60000},
@@ -32,14 +32,14 @@
                         <span class="vw-ctitle" th:text="${contest.contestName}">Contest</span>
                         <div class="vw-header-spacer"></div>
                         <span class="vw-cstatus" th:classappend="${isReady} ? 'vw-cstatus-ready' : 'vw-cstatus-live'">
-                            <span class="dot"></span><span th:text="${isReady} ? 'Upcoming' : 'Live'">Live</span>
+                            <span class="dot"></span><span th:text="${isReady ? #messages.msg('voj.contests.contests.status-upcoming') : #messages.msg('voj.contests.contests.status-live')}">Live</span>
                         </span>
                     </div>
                     <div class="vw-cmeta">
                         <span>&#128197; <span th:text="${@dateFormatter.dateTimeLongMedium(contest.startTime, language)}">start</span> &rarr; <span th:text="${@dateFormatter.dateTimeLongMedium(contest.endTime, language)}">end</span></span>
                         <span>&#9201; <span th:text="|${durMin / 60}h ${#numbers.formatInteger(durMin % 60, 2)}m|">2h 00m</span></span>
-                        <span>&#128221; <span th:text="${problemCountOfContests.get(contest.contestId)}">0</span> problems</span>
-                        <span>&#128101; <span th:text="${entrantsOfContests.get(contest.contestId)}">0</span> entrants</span>
+                        <span>&#128221; <span th:text="${problemCountOfContests.get(contest.contestId)}">0</span> <span th:text="#{voj.contests.contests.problems}">problems</span></span>
+                        <span>&#128101; <span th:text="${entrantsOfContests.get(contest.contestId)}">0</span> <span th:text="#{voj.contests.contests.entrants}">entrants</span></span>
                     </div>
                 </a>
                 <p class="vw-muted vw-card-empty" th:if="${liveContests == null or liveContests.isEmpty()}" th:text="#{voj.contests.contests.no-contests}">No live or upcoming contests.</p>
@@ -48,15 +48,15 @@
 
         <!-- PAST CONTESTS -->
         <section class="vw-section vw-section-narrow vw-section-table">
-            <div class="vw-section-label">// PAST CONTESTS</div>
+            <div class="vw-section-label" th:text="'// ' + #{voj.contests.contests.past-contests}">// PAST CONTESTS</div>
             <div class="vw-tablewrap">
                 <div class="vw-table vw-table-contests">
                     <div class="vw-table-head">
-                        <div>TYPE</div>
-                        <div th:text="#{voj.contests.contests.title}">Title</div>
-                        <div>WINDOW</div>
-                        <div>ENTRANTS</div>
-                        <div>PROBLEMS</div>
+                        <div th:text="#{voj.contests.contests.col-type}">TYPE</div>
+                        <div th:text="#{voj.contests.contests.col-title}">Title</div>
+                        <div th:text="#{voj.contests.contests.col-window}">WINDOW</div>
+                        <div th:text="#{voj.contests.contests.col-entrants}">ENTRANTS</div>
+                        <div th:text="#{voj.contests.contests.col-problems}">PROBLEMS</div>
                     </div>
                     <div id="past-contests-body">
                         <a class="vw-table-row" th:each="contest : ${pastContests}"
@@ -64,7 +64,7 @@
                            th:href="@{/contest/{id}(id=${contest.contestId})}">
                             <div><span class="vw-ctype-sm" th:classappend="${contest.contestMode == 'ACM'} ? 'vw-ctype-acm' : 'vw-ctype-oi'" th:text="${contest.contestMode}">OI</span></div>
                             <div class="vw-cell-title vw-ellipsis" th:text="${contest.contestName}">Contest</div>
-                            <div class="vw-muted2" th:text="|${@dateFormatter.dateShort(contest.startTime, language)} &middot; ${durMin / 60}h|">window</div>
+                            <div class="vw-muted2" th:text="|${@dateFormatter.dateShort(contest.startTime, language)} · ${durMin / 60}h|">window</div>
                             <div class="vw-muted2" th:text="${entrantsOfContests.get(contest.contestId)}">0</div>
                             <div class="vw-muted2" th:text="${problemCountOfContests.get(contest.contestId)}">0</div>
                         </a>
@@ -73,7 +73,7 @@
             </div>
             <div id="more-contests" class="vw-loadmore">
                 <p class="availble" th:text="#{voj.contests.contests.more-contests}">More Contests...</p>
-                <img th:src="|${cdnUrl}/img/loading.gif?v=${version}|" alt="Loading" class="hide" />
+                <span class="vw-spinner hide" role="status" aria-label="Loading"></span>
             </div>
         </section>
     </div>
@@ -85,14 +85,14 @@
         function setLoadingStatus(isLoading) {
             if ( isLoading ) {
                 $('p', '#more-contests').addClass('hide');
-                $('img', '#more-contests').removeClass('hide');
+                $('.vw-spinner', '#more-contests').removeClass('hide');
             } else {
-                $('img', '#more-contests').addClass('hide');
+                $('.vw-spinner', '#more-contests').addClass('hide');
                 $('p', '#more-contests').removeClass('hide');
             }
         }
         $('#more-contests').click(function() {
-            var isLoading     = $('img', this).is(':visible'),
+            var isLoading     = $('.vw-spinner', this).is(':visible'),
                 hasNextRecord = $('p', this).hasClass('availble');
             if ( !isLoading && hasNextRecord ) {
                 setLoadingStatus(true);

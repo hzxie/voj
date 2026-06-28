@@ -19,23 +19,23 @@
             <span class="b">&lt;</span><span class="n">verwandlung</span><span class="b">&gt;</span><span class="vw-cursor">_</span>
         </a>
         <nav class="vw-nav">
-            <a th:href="@{/p}" th:classappend="${navP}? 'active'">~/problems</a>
-            <a th:href="@{/discussion}" th:classappend="${navD}? 'active'">~/discussion</a>
-            <a th:href="@{/contest}" th:classappend="${navC}? 'active'">~/contests</a>
-            <a th:href="@{/submission}" th:classappend="${navS}? 'active'">~/submission</a>
+            <a th:href="@{/p}" th:classappend="${navP}? 'active'" th:text="'~/' + #{voj.include.header.nav-problems}">~/problems</a>
+            <a th:href="@{/discussion}" th:classappend="${navD}? 'active'" th:text="'~/' + #{voj.include.header.nav-discussion}">~/discussion</a>
+            <a th:href="@{/contest}" th:classappend="${navC}? 'active'" th:text="'~/' + #{voj.include.header.nav-contests}">~/contests</a>
+            <a th:href="@{/submission}" th:classappend="${navS}? 'active'" th:text="'~/' + #{voj.include.header.nav-submission}">~/submission</a>
         </nav>
         <div class="vw-header-spacer"></div>
         <div class="vw-toggle" data-vw="theme-toggle" title="Toggle theme" role="button" tabindex="0">
             <span class="moon">&#9790;</span><span class="sun">&#9728;</span><span class="knob"></span>
         </div>
         <th:block th:if="${isLogin}">
-            <a th:if="${myProfile.userGroup != null and myProfile.userGroup.userGroupSlug == 'administrators'}" class="vw-header-link vw-desktop-only" th:href="@{/administration}">~/admin</a>
+            <a th:if="${myProfile.userGroup != null and myProfile.userGroup.userGroupSlug == 'administrators'}" class="vw-header-link vw-desktop-only" th:href="@{/administration}" th:text="'~/' + #{voj.include.header.nav-admin}">~/admin</a>
             <a class="vw-header-link vw-desktop-only" th:href="@{/accounts/user/{uid}(uid=${myProfile.uid})}" th:text="|~/${myProfile.username}|">~/user</a>
             <a class="vw-btn vw-btn-ghost vw-btn-sm vw-desktop-only" th:href="@{/accounts/login(logout=true)}" th:text="#{voj.include.header.sign-out}">sign out</a>
         </th:block>
         <th:block th:unless="${isLogin}">
             <a class="vw-header-link vw-desktop-only" th:href="@{/accounts/login(forward=${forwardUri})}" th:text="#{voj.include.header.sign-in}">login</a>
-            <a class="vw-btn vw-btn-accent vw-btn-sm vw-desktop-only" th:href="@{/accounts/register(forward=${forwardUri})}">$ create-account</a>
+            <a class="vw-btn vw-btn-accent vw-btn-sm vw-desktop-only" th:href="@{/accounts/register(forward=${forwardUri})}" th:text="'$ ' + #{voj.include.header.create-account}">$ create-account</a>
         </th:block>
         <button class="vw-burger" data-vw="burger" type="button" title="Menu" aria-label="Menu">
             <span></span><span></span><span></span>
@@ -44,18 +44,18 @@
 
     <!-- Mobile navigation drawer (toggled by the burger). -->
     <div class="vw-menu" data-vw="menu">
-        <a th:href="@{/p}" th:classappend="${navP}? 'active'">~/problems</a>
-        <a th:href="@{/discussion}" th:classappend="${navD}? 'active'">~/discussion</a>
-        <a th:href="@{/contest}" th:classappend="${navC}? 'active'">~/contests</a>
-        <a th:href="@{/submission}" th:classappend="${navS}? 'active'">~/submission</a>
-        <a th:if="${isLogin and myProfile.userGroup != null and myProfile.userGroup.userGroupSlug == 'administrators'}" th:href="@{/administration}">~/admin</a>
+        <a th:href="@{/p}" th:classappend="${navP}? 'active'" th:text="'~/' + #{voj.include.header.nav-problems}">~/problems</a>
+        <a th:href="@{/discussion}" th:classappend="${navD}? 'active'" th:text="'~/' + #{voj.include.header.nav-discussion}">~/discussion</a>
+        <a th:href="@{/contest}" th:classappend="${navC}? 'active'" th:text="'~/' + #{voj.include.header.nav-contests}">~/contests</a>
+        <a th:href="@{/submission}" th:classappend="${navS}? 'active'" th:text="'~/' + #{voj.include.header.nav-submission}">~/submission</a>
+        <a th:if="${isLogin and myProfile.userGroup != null and myProfile.userGroup.userGroupSlug == 'administrators'}" th:href="@{/administration}" th:text="'~/' + #{voj.include.header.nav-admin}">~/admin</a>
         <div class="vw-menu-actions" th:if="${isLogin}">
             <a class="vw-btn vw-btn-ghost" th:href="@{/accounts/user/{uid}(uid=${myProfile.uid})}" th:text="|~/${myProfile.username}|">~/user</a>
             <a class="vw-btn vw-btn-accent" th:href="@{/accounts/login(logout=true)}" th:text="#{voj.include.header.sign-out}">sign out</a>
         </div>
         <div class="vw-menu-actions" th:unless="${isLogin}">
             <a class="vw-btn vw-btn-ghost" th:href="@{/accounts/login(forward=${forwardUri})}" th:text="#{voj.include.header.sign-in}">login</a>
-            <a class="vw-btn vw-btn-accent" th:href="@{/accounts/register(forward=${forwardUri})}">$ create-account</a>
+            <a class="vw-btn vw-btn-accent" th:href="@{/accounts/register(forward=${forwardUri})}" th:text="'$ ' + #{voj.include.header.create-account}">$ create-account</a>
         </div>
     </div>
     </th:block>

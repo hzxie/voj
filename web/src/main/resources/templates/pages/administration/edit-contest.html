@@ -224,7 +224,7 @@
                     diff.textContent = p.diff;
                     var add = document.createElement('span');
                     add.className = 'adm-cand-add';
-                    add.textContent = '+ add';
+                    add.textContent = '+ ' + [[#{voj.administration.edit-contest.add}]];
                     add.addEventListener('click', function () {
                         chosen.push(String(p.id));
                         syncInput(); renderChosen(); renderCandidates();

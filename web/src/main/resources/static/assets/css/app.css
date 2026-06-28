@@ -157,10 +157,10 @@ input, textarea, select, button { font-family:inherit; }
   border-bottom:1px solid var(--line); padding:8px var(--pad) 18px; flex-direction:column;
 }
 .vw-menu.open { display:flex; }
-.vw-menu a { font-size:15px; color:var(--text2); padding:13px 0; border-bottom:1px solid var(--line2); }
-.vw-menu a.active { color:var(--accent); }
+.vw-menu > a { font-size:15px; color:var(--text2); padding:13px 0; border-bottom:1px solid var(--line2); }
+.vw-menu > a.active { color:var(--accent); }
 .vw-menu-actions { display:flex; gap:10px; margin-top:14px; }
-.vw-menu-actions a { flex:1; text-align:center; font-size:13.5px; padding:12px; border-radius:9px; border-bottom:0; }
+.vw-menu-actions a { flex:1; text-align:center; font-size:13.5px; padding:12px; border-radius:9px; }
 
 @media (max-width:1080px) {
   .vw-nav, .vw-desktop-only { display:none !important; }
@@ -204,8 +204,13 @@ input, textarea, select, button { font-family:inherit; }
 .vw-lang-menu a:hover { background:var(--bg3); color:var(--accent); }
 .vw-lang-menu a.active { color:var(--accent); }
 
-@media (max-width:560px) {
+/* Once the copyright line and the links can no longer sit side by side they would
+   wrap onto separate rows that stay left-aligned (space-between aligns a lone
+   wrapped item to the start). Below that width, stack and center them instead. */
+@media (max-width:1100px) {
   .vw-footer-inner { flex-direction:column; align-items:center; text-align:center; }
+}
+@media (max-width:560px) {
   .vw-footer-prompt { display:none; }
 }
 
@@ -216,10 +221,11 @@ input, textarea, select, button { font-family:inherit; }
   padding-block:46px 28px; border-bottom:1px solid var(--line);
   background:radial-gradient(120% 130% at 88% 0%,var(--glow),transparent 55%);
 }
-.vw-eyebrow { font-size:12px; letter-spacing:2px; color:var(--accent); margin-bottom:14px; }
+.vw-eyebrow { font-size:12px; letter-spacing:2px; color:var(--accent); margin-bottom:14px; text-transform:uppercase; }
+.vw-eyebrow.vw-eyebrow-path { text-transform:none; letter-spacing:1px; }
 .vw-pagehead h1 { font-size:clamp(32px,4vw,46px); line-height:1.04; letter-spacing:-1.5px; font-weight:700; margin:0 0 8px; }
 .vw-pagehead .sub { font-size:13px; color:var(--text3); }
-.vw-section-label { font-size:12px; letter-spacing:1.5px; color:var(--text3); margin-bottom:16px; }
+.vw-section-label { font-size:12px; letter-spacing:1.5px; color:var(--text3); margin-bottom:16px; text-transform:uppercase; }
 
 /* The Latin "tracking-out" letter-spacing on small uppercase labels spaces CJK
  * glyphs apart unpleasantly (e.g. "// 输 入 格 式"). When the page language is
@@ -320,7 +326,7 @@ html[lang^="zh"] .vw-pstat .k { letter-spacing:normal; }
 .vw-table-head, .vw-table-row {
   display:grid; grid-template-columns:var(--cols); gap:14px; align-items:center; padding:14px 22px;
 }
-.vw-table-head { border-bottom:1px solid var(--line); font-size:11px; letter-spacing:1px; color:var(--text3); padding-top:13px; padding-bottom:13px; }
+.vw-table-head { border-bottom:1px solid var(--line); font-size:11px; letter-spacing:1px; color:var(--text3); padding-top:13px; padding-bottom:13px; text-transform:uppercase; }
 .vw-table-row { border-bottom:1px solid var(--line2); color:inherit; }
 .vw-table-row:last-child { border-bottom:0; }
 a.vw-table-row { text-decoration:none; color:inherit; }
@@ -419,7 +425,7 @@ a.vw-table-row:hover { background:var(--bg3); }
 .vw-kpi { background:var(--bg2); border:1px solid var(--line); border-radius:13px; padding:18px 20px; }
 .vw-kpi .v { font-size:30px; font-weight:700; color:var(--head); }
 .vw-kpi .v.accent { color:var(--accent); }
-.vw-kpi .k { font-size:10.5px; letter-spacing:1px; color:var(--text3); margin-top:5px; }
+.vw-kpi .k { font-size:10.5px; letter-spacing:1px; color:var(--text3); margin-top:5px; text-transform:uppercase; }
 @media (max-width:560px) { .vw-kpis { grid-template-columns:1fr 1fr; } }
 
 .vw-jgrid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; }
@@ -441,7 +447,7 @@ a.vw-table-row:hover { background:var(--bg3); }
 .vw-jcard-spec { font-size:11.5px; color:var(--text3); margin-bottom:16px; }
 .vw-bar { margin-bottom:11px; }
 .vw-bar-top { display:flex; justify-content:space-between; font-size:11px; margin-bottom:5px; }
-.vw-bar-top .lbl { color:var(--text3); }
+.vw-bar-top .lbl { color:var(--text3); text-transform:uppercase; }
 .vw-bar-track { height:6px; background:var(--line2); border-radius:4px; overflow:hidden; }
 .vw-bar-fill { height:100%; transform-origin:left; animation:vwBar 1.3s ease both; }
 /* Load colours (CPU buckets) + the memory fill. */
@@ -464,7 +470,7 @@ a.vw-table-row:hover { background:var(--bg3); }
 .vw-stat { flex:1; min-width:150px; padding:0 28px; border-left:1px solid var(--line); }
 .vw-stat:first-child { border-left:0; }
 .vw-stat .v { font-size:26px; font-weight:700; color:var(--head); font-family:var(--display); }
-.vw-stat .k { font-size:11px; letter-spacing:1.5px; color:var(--text3); margin-top:4px; }
+.vw-stat .k { font-size:11px; letter-spacing:1.5px; color:var(--text3); margin-top:4px; text-transform:uppercase; }
 @media (max-width:560px) { .vw-stat { flex:1 1 42%; border-left:0; padding:8px 0; } }
 
 /* ----------------------------------------------------------------------------
@@ -558,6 +564,12 @@ a.vw-card:hover { border-color:var(--accent); }
 
 /* Minimal header (error / auth chrome). */
 .vw-header-min { gap:18px; }
+/* On narrow screens the logo + toggle + action link no longer fit on one row and
+   the link overflows off the right edge; the same CTA lives in the auth footer, so
+   hide the redundant header link here. */
+@media (max-width:560px) {
+  .vw-header-min .vw-header-link { display:none; }
+}
 
 /* ----------------------------------------------------------------------------
  * Shared section / card labels + layout helpers reused across the data pages
@@ -820,7 +832,7 @@ ul.inline > li, .inline > li { display:inline-block; margin-right:14px; }
 /* Legal document layout (terms / privacy): left sticky numbered TOC + sections. */
 .vw-legal { max-width:var(--maxw); margin:0 auto; padding:46px var(--pad) 56px; display:grid; grid-template-columns:220px 1fr; gap:48px; align-items:start; }
 .vw-legal-toc { position:sticky; top:90px; }
-.vw-legal-toc .label { font-size:11px; letter-spacing:1.5px; color:var(--text3); margin-bottom:14px; }
+.vw-legal-toc .label { font-size:11px; letter-spacing:1.5px; color:var(--text3); margin-bottom:14px; text-transform:uppercase; }
 .vw-legal-toc nav { display:flex; flex-direction:column; gap:2px; }
 .vw-legal-toc a { display:flex; gap:9px; font-size:12px; color:var(--text2); padding:6px 8px; border-radius:6px; line-height:1.4; }
 .vw-legal-toc a:hover { background:var(--bg2); color:var(--accent); }
@@ -851,7 +863,9 @@ ul.inline > li, .inline > li { display:inline-block; margin-right:14px; }
 .vw-maint-avatar { width:58px; height:58px; border-radius:16px; background:var(--bg3); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-family:var(--display); font-size:26px; font-weight:700; color:var(--accent); flex-shrink:0; }
 .vw-maint-name { font-size:16px; font-weight:700; color:var(--head); }
 .vw-maint-role { font-size:12.5px; color:var(--text3); margin-top:3px; }
-.vw-maint-links { font-size:12px; color:var(--accent); margin-top:6px; }
+.vw-maint-links { font-size:12px; color:var(--accent); margin-top:6px; line-height:1.7; }
+.vw-maint-links .addr { white-space:nowrap; }
+.vw-maint-links .sep { color:var(--text3); }
 .vw-oss { display:flex; flex-direction:column; gap:11px; font-size:13px; }
 .vw-arch { display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; }
 .vw-arch .card { background:var(--bg2); border:1px solid var(--line); border-radius:13px; padding:20px 22px; }
@@ -877,7 +891,7 @@ ul.inline > li, .inline > li { display:inline-block; margin-right:14px; }
 @media (max-width:560px) { .vw-verdicts { grid-template-columns:1fr 1fr; } }
 
 .vw-faqgroup { margin-bottom:26px; }
-.vw-faqgroup .label { font-size:11px; letter-spacing:1.5px; color:var(--accent); margin-bottom:10px; }
+.vw-faqgroup .label { font-size:11px; letter-spacing:1.5px; color:var(--accent); margin-bottom:10px; text-transform:uppercase; }
 .vw-faq { background:var(--bg2); border:1px solid var(--line); border-radius:13px; overflow:hidden; }
 .vw-faq-item { border-bottom:1px solid var(--line2); }
 .vw-faq-item:last-child { border-bottom:0; }
@@ -1148,7 +1162,6 @@ ul.inline > li, .inline > li { display:inline-block; margin-right:14px; }
 /* "Load more" affordance for infinite-scroll lists. */
 .vw-loadmore { text-align:center; padding:20px; font-size:13px; color:var(--accent); cursor:pointer; }
 .vw-loadmore.is-done { color:var(--text3); cursor:default; }
-.vw-loadmore img { height:22px; }
 
 /* Locator (quick jump to problem ranges). */
 .vw-locator { display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; font-size:12px; color:var(--text3); }
@@ -1315,8 +1328,9 @@ ul.inline > li, .inline > li { display:inline-block; margin-right:14px; }
 /* Contest Detail (Contest Detail.dc.html): problems table + rules + time card + standings. */
 .vw-mt-12 { margin-top:12px; }
 .vw-card-strip { padding:15px 20px; border-bottom:1px solid var(--line2); font-size:12px; letter-spacing:1.5px; text-transform:uppercase; color:var(--accent); }
-.vw-cproblem-head, .vw-cproblem-row { display:grid; grid-template-columns:50px 1fr 90px 110px; gap:14px; align-items:center; }
-.vw-cproblem-head { padding:11px 20px; border-bottom:1px solid var(--line2); font-size:10.5px; letter-spacing:1px; color:var(--text3); }
+.vw-cproblem-table { display:grid; grid-template-columns:auto minmax(0,1fr) auto auto; }
+.vw-cproblem-head, .vw-cproblem-row { display:grid; grid-column:1 / -1; grid-template-columns:subgrid; gap:14px; align-items:center; }
+.vw-cproblem-head { padding:11px 20px; border-bottom:1px solid var(--line2); font-size:10.5px; letter-spacing:1px; color:var(--text3); text-transform:uppercase; }
 .vw-cproblem-row { padding:15px 20px; border-bottom:1px solid var(--line2); color:inherit; }
 .vw-cproblem-row:last-child { border-bottom:0; }
 a.vw-cproblem-row { text-decoration:none; }
@@ -1328,12 +1342,12 @@ a.vw-cproblem-row:hover { background:var(--bg3); }
 .vw-cproblem-status .dot { width:7px; height:7px; border-radius:50%; background:currentColor; flex-shrink:0; }
 .vw-cstat-ac { color:var(--accent); } .vw-cstat-try { color:var(--warn); } .vw-cstat-none { color:var(--text3); }
 .vw-rules { margin:0; padding-left:18px; font-size:13.5px; line-height:1.85; color:var(--text2); }
-.vw-timecard { background:#16150f; border-radius:13px; padding:20px; }
-.vw-timecard-label { font-size:11px; letter-spacing:1.5px; color:#8a877c; margin-bottom:6px; }
-.vw-timecard-clock { font-family:var(--mono); font-size:36px; font-weight:700; color:#34d399; letter-spacing:1px; }
-.vw-timecard-sub { font-size:12px; color:#a5a39a; margin-top:4px; }
+.vw-timecard { background:var(--bg2); border:1px solid var(--line); border-radius:13px; padding:20px; }
+.vw-timecard-label { font-size:11px; letter-spacing:1.5px; color:var(--text2); margin-bottom:6px; text-transform:uppercase; }
+.vw-timecard-clock { font-family:var(--mono); font-size:36px; font-weight:700; color:var(--accent); letter-spacing:1px; }
+.vw-timecard-sub { font-size:12px; color:var(--text3); margin-top:4px; }
 .vw-standings-head, .vw-standings-row { display:grid; grid-template-columns:42px 1fr 60px 70px; gap:10px; align-items:center; }
-.vw-standings-head { padding:10px 18px; border-bottom:1px solid var(--line2); font-size:10px; letter-spacing:1px; color:var(--text3); }
+.vw-standings-head { padding:10px 18px; border-bottom:1px solid var(--line2); font-size:10px; letter-spacing:1px; color:var(--text3); text-transform:uppercase; }
 .vw-standings-row { padding:11px 18px; border-bottom:1px solid var(--line2); font-size:12.5px; }
 .vw-standings-rank { font-weight:700; color:var(--text3); }
 .vw-rank-1 { color:var(--warn); } .vw-rank-3 { color:var(--accent); }
@@ -1459,7 +1473,7 @@ a.vw-recent-row:hover { background:var(--bg3); }
 .vw-maint-gear { position:relative; width:84px; height:84px; margin-bottom:26px; display:flex; align-items:center; justify-content:center; }
 .vw-maint-gear .ring { position:absolute; inset:0; border:1px dashed var(--line); border-radius:50%; animation:vwMaintSpin 9s linear infinite; }
 .vw-maint-gear svg { animation:vwMaintSpin 6s linear infinite; stroke:var(--accent); }
-.vw-maint-eyebrow { font-size:12px; letter-spacing:2px; color:var(--warn); margin-bottom:16px; }
+.vw-maint-eyebrow { font-size:12px; letter-spacing:2px; color:var(--warn); margin-bottom:16px; text-transform:uppercase; }
 .vw-maint-title { font-family:var(--display); font-weight:700; font-size:clamp(34px,5vw,58px); line-height:1.02; letter-spacing:-1.5px; color:var(--head); margin:0 0 16px; max-width:760px; }
 .vw-maint-desc { font-size:14px; line-height:1.7; color:var(--text2); max-width:480px; margin:0 0 36px; }
 .vw-maint-term { width:100%; max-width:580px; background:var(--bg2); border:1px solid var(--line); border-radius:13px; overflow:hidden; box-shadow:0 0 0 1px var(--accent-soft),0 26px 60px rgba(0,0,0,.28); text-align:left; }
@@ -1482,4 +1496,4 @@ a.vw-recent-row:hover { background:var(--bg3); }
 .vw-maint-cmd .cmd { color:var(--text3); }
 .vw-maint-cmd .cur { color:var(--accent); animation:vwMaintBlink 1.1s steps(1) infinite; }
 .vw-maint-btns { display:flex; gap:12px; margin-top:30px; flex-wrap:wrap; justify-content:center; }
-@media (max-width:620px){ .vw-maint-title { font-size:30px; } .vw-maint-btns { flex-direction:column; } }
+@media (max-width:1140px){ .vw-maint-title { font-size:30px; } .vw-maint-btns { flex-direction:column; } }

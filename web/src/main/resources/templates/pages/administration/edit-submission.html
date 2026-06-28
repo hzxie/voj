@@ -108,7 +108,7 @@
                 var message     = e['data'];
                 if ( message == lastMessage ) { return; }
                 lastMessage     = message;
-                if ( message == 'Established' ) { $('#judge-log').append('<p>Connected to Server.</p>'); return; }
+                if ( message == 'Established' ) { $('#judge-log').append('<p>' + [[#{voj.administration.edit-submission.connected-to-server}]] + '</p>'); return; }
                 var mapMessage  = JSON.parse(message),
                     judgeResult = mapMessage['judgeResult'],
                     judgeLog    = mapMessage['message'];

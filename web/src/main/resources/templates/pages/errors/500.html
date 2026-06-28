@@ -8,7 +8,7 @@
 <body>
     <div layout:fragment="content">
         <section class="vw-error">
-            <div class="vw-eyebrow vw-eyebrow-err">// ERROR &middot; INTERNAL SERVER ERROR</div>
+            <div class="vw-eyebrow vw-eyebrow-err" th:text="'// ' + #{voj.error.500.eyebrow}">// ERROR &middot; INTERNAL SERVER ERROR</div>
             <div class="vw-error-code">
                 <span class="base">500</span>
                 <span class="glitch" aria-hidden="true">500</span>

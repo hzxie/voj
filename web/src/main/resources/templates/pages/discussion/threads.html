@@ -13,16 +13,16 @@
     <div layout:fragment="content">
         <!-- PAGE HEADER -->
         <section class="vw-pagehead">
-            <div class="vw-eyebrow">// DISCUSSION</div>
+            <div class="vw-eyebrow vw-eyebrow-path" th:text="'~/' + #{voj.include.header.nav-discussion}">~/discussion</div>
             <div class="vw-pagehead-row">
                 <div>
                     <h1 th:text="#{voj.discussion.threads.title}">Discussion</h1>
-                    <div class="sub">ask questions, share solutions</div>
+                    <div class="sub" th:text="#{voj.discussion.threads.subtitle}">ask questions, share solutions</div>
                 </div>
                 <a class="vw-btn vw-btn-accent" th:if="${isLogin}" th:href="@{/discussion/new}">+ <span th:text="#{voj.discussion.threads.new-discussion}">New thread</span></a>
             </div>
             <div class="vw-chipfilter">
-                <a th:href="@{/discussion}" th:classappend="${selectedTopicSlug == null or selectedTopicSlug == ''} ? 'active'">All</a>
+                <a th:href="@{/discussion}" th:classappend="${selectedTopicSlug == null or selectedTopicSlug == ''} ? 'active'" th:text="#{voj.discussion.threads.all}">All</a>
                 <a th:each="entry : ${discussionTopics}"
                    th:href="@{/discussion(topicSlug=${entry.key.discussionTopicSlug})}"
                    th:classappend="${selectedTopicSlug == entry.key.discussionTopicSlug} ? 'active'"
@@ -35,10 +35,10 @@
             <div class="vw-tablewrap">
                 <div class="vw-table vw-table-threads">
                     <div class="vw-table-head">
-                        <div>THREAD</div>
-                        <div class="vw-thide">CATEGORY</div>
-                        <div>REPLIES</div>
-                        <div class="vw-thide">LAST ACTIVITY</div>
+                        <div th:text="#{voj.discussion.threads.col-thread}">THREAD</div>
+                        <div class="vw-thide" th:text="#{voj.discussion.threads.col-category}">CATEGORY</div>
+                        <div th:text="#{voj.discussion.threads.col-replies}">REPLIES</div>
+                        <div class="vw-thide" th:text="#{voj.discussion.threads.col-activity}">LAST ACTIVITY</div>
                     </div>
                     <div id="discussion-threads">
                         <a class="vw-table-row discussion-thread" th:each="discussionThread : ${discussionThreads}"
@@ -76,7 +76,7 @@
             </div>
             <div id="more-discussion-threads" class="vw-loadmore">
                 <p class="availble" th:text="#{voj.discussion.threads.more-discussion}">More discussion threads...</p>
-                <img th:src="|${cdnUrl}/img/loading.gif?v=${version}|" alt="Loading" class="hide" />
+                <span class="vw-spinner hide" role="status" aria-label="Loading"></span>
             </div>
         </section>
     </div>
@@ -89,14 +89,14 @@
         function setLoadingStatus(isLoading) {
             if ( isLoading ) {
                 $('p', '#more-discussion-threads').addClass('hide');
-                $('img', '#more-discussion-threads').removeClass('hide');
+                $('.vw-spinner', '#more-discussion-threads').removeClass('hide');
             } else {
-                $('img', '#more-discussion-threads').addClass('hide');
+                $('.vw-spinner', '#more-discussion-threads').addClass('hide');
                 $('p', '#more-discussion-threads').removeClass('hide');
             }
         }
         $('#more-discussion-threads').click(function() {
-            var isLoading       = $('img', this).is(':visible'),
+            var isLoading       = $('.vw-spinner', this).is(':visible'),
                 hasNextRecord   = $('p', this).hasClass('availble'),
                 numberOfThreads = $('.discussion-thread').length;
             if ( !isLoading && hasNextRecord ) {

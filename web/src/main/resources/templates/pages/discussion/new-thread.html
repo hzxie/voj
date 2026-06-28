@@ -17,12 +17,12 @@
 <body>
     <div layout:fragment="content">
         <section class="vw-section vw-section-narrow">
-            <a class="vw-backlink" th:href="@{/discussion}">&larr; ~/discussion</a>
+            <a class="vw-backlink" th:href="@{/discussion}" th:text="'← ~/' + #{voj.include.header.nav-discussion}">&larr; ~/discussion</a>
 
             <div class="vw-thread-layout">
                 <!-- MAIN -->
                 <div class="vw-minw0">
-                    <div class="vw-eyebrow">// NEW THREAD</div>
+                    <div class="vw-eyebrow" th:text="'// ' + #{voj.discussion.new-thread.eyebrow}">// NEW THREAD</div>
                     <h1 class="vw-thread-h1" th:text="#{voj.discussion.new-thread.title}">Start a new thread</h1>
 
                     <div class="vw-alert vw-alert-error alert-error hide"></div>
@@ -58,7 +58,7 @@
                         <div>
                             <label class="vw-composer-label" for="related-problem-input">
                                 <span><span class="sigil">$</span> <span th:text="#{voj.discussion.new-thread.related-problem}">link-problem</span>
-                                    <span class="opt" th:text="'&mdash; ' + #{voj.discussion.new-thread.optional}">&mdash; optional</span></span>
+                                    <span class="opt" th:text="'— ' + #{voj.discussion.new-thread.optional}">— optional</span></span>
                             </label>
                             <input id="related-problem-input" class="vw-composer-problem-input" type="text" inputmode="numeric" placeholder="e.g. 1005"
                                    th:value="${relatedProblem != null ? relatedProblem.problemId : ''}" />

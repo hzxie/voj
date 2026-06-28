@@ -19,12 +19,12 @@
         <!-- TITLE BAR -->
         <section class="vw-titlebar">
             <div class="vw-titlebar-inner">
-                <a class="vw-backlink" th:href="@{/contest}">&larr; ~/contests</a>
+                <a class="vw-backlink" th:href="@{/contest}" th:text="'← ~/' + #{voj.include.header.nav-contests}">&larr; ~/contests</a>
                 <div class="vw-row vw-gap vw-wrap">
                     <span class="vw-ctype" th:classappend="${contest.contestMode == 'ACM'} ? 'vw-ctype-acm' : 'vw-ctype-oi'" th:text="${contest.contestMode}">ACM</span>
                     <h1 th:text="${contest.contestName}">Contest</h1>
                     <span class="vw-cstatus" th:classappend="${contestStatus == 'Live'} ? 'vw-cstatus-live' : (${contestStatus == 'Ready'} ? 'vw-cstatus-ready' : '')">
-                        <span class="dot"></span><span th:text="${contestStatus}">Live</span>
+                        <span class="dot"></span><span th:text="${contestStatus == 'Ready' ? #messages.msg('voj.contests.contest.status-ready') : (contestStatus == 'Live' ? #messages.msg('voj.contests.contest.status-live') : #messages.msg('voj.contests.contest.status-done'))}">Live</span>
                     </span>
                     <span class="vw-muted2" id="attendance-status" th:if="${isLogin}"
                           th:text="${isAttended ? #messages.msg('voj.contests.contest.attended') : #messages.msg('voj.contests.contest.not-attended')}">Attendance</span>
@@ -32,8 +32,8 @@
                 <div class="vw-cmeta vw-mt-12">
                     <span>&#128197; <span th:text="${@dateFormatter.dateTimeLongMedium(contest.startTime, language)}">start</span> &rarr; <span th:text="${@dateFormatter.dateTimeLongMedium(contest.endTime, language)}">end</span></span>
                     <span>&#9201; <span th:text="|${durMin / 60}h ${#numbers.formatInteger(durMin % 60, 2)}m|">2h 00m</span></span>
-                    <span>&#128221; <span th:text="${problems.size()}">0</span> problems</span>
-                    <span>&#128101; <span id="number-of-contestants" th:text="${numberOfContestants}">0</span> entrants</span>
+                    <span>&#128221; <span th:text="${problems.size()}">0</span> <span th:text="#{voj.contests.contest.problems-count}">problems</span></span>
+                    <span>&#128101; <span id="number-of-contestants" th:text="${numberOfContestants}">0</span> <span th:text="#{voj.contests.contest.entrants}">entrants</span></span>
                 </div>
             </div>
         </section>
@@ -45,9 +45,9 @@
                 <!-- PROBLEMS -->
                 <article class="vw-card">
                     <div class="vw-card-strip" th:text="'// ' + #{voj.contests.contest.problems}">// PROBLEMS</div>
-                    <th:block th:if="${problemsVisible}">
+                    <div class="vw-cproblem-table" th:if="${problemsVisible}">
                         <div class="vw-cproblem-head">
-                            <div>ID</div><div>TITLE</div><div>SCORE</div><div>STATUS</div>
+                            <div th:text="#{voj.contests.contest.col-id}">ID</div><div th:text="#{voj.contests.contest.col-title}">TITLE</div><div th:text="#{voj.contests.contest.col-score}">SCORE</div><div th:text="#{voj.contests.contest.col-status}">STATUS</div>
                         </div>
                         <a class="vw-cproblem-row" th:each="problem,iter : ${problems}"
                            th:with="sub=${submissions != null ? submissions[problem.problemId] : null},
@@ -58,12 +58,12 @@
                             <div class="vw-cproblem-score" th:text="${slug == 'AC' ? '100' : (slug != null ? '0' : '—')}">—</div>
                             <div class="vw-cproblem-status"
                                  th:classappend="${slug == 'AC'} ? 'vw-cstat-ac' : (${slug != null} ? 'vw-cstat-try' : 'vw-cstat-none')">
-                                <span class="dot"></span><span th:text="${slug == 'AC' ? 'Solved' : (slug != null ? 'Attempted' : 'Not tried')}">Not tried</span>
+                                <span class="dot"></span><span th:text="${slug == 'AC' ? #messages.msg('voj.contests.contest.status-solved') : (slug != null ? #messages.msg('voj.contests.contest.status-attempted') : #messages.msg('voj.contests.contest.status-not-tried'))}">Not tried</span>
                             </div>
                         </a>
-                    </th:block>
+                    </div>
                     <div class="vw-card-body" th:unless="${problemsVisible}">
-                        <p class="vw-muted" th:text="#{voj.contests.contest.no-submissions}">Attend the contest to view the problems.</p>
+                        <p class="vw-muted" th:text="#{voj.contests.contest.problems-hidden}">Attend the contest to view the problems.</p>
                     </div>
                 </article>
 
@@ -72,10 +72,10 @@
                     <div class="vw-card-body">
                         <div class="vw-eyebrow vw-block-label" th:text="'// ' + #{voj.contests.contest.instruction}">// RULES</div>
                         <ul class="vw-rules" th:if="${contest.contestNotes == ''}">
-                            <li th:if="${contest.contestMode == 'ACM'}">ACM/ICPC scoring &mdash; problems are judged pass/fail and ranked by number solved, then penalty time.</li>
-                            <li th:if="${contest.contestMode == 'ACM'}">Penalty: 20 minutes are added per rejected submission on a problem that is eventually solved.</li>
-                            <li th:unless="${contest.contestMode == 'ACM'}">OI scoring &mdash; each problem awards partial points; contestants are ranked by total score.</li>
-                            <li th:unless="${contest.contestMode == 'ACM'}">Only the last submission for each problem counts toward the score.</li>
+                            <li th:if="${contest.contestMode == 'ACM'}" th:text="#{voj.contests.contest.rule-acm-1}">ACM/ICPC scoring &mdash; problems are judged pass/fail and ranked by number solved, then penalty time.</li>
+                            <li th:if="${contest.contestMode == 'ACM'}" th:text="#{voj.contests.contest.rule-acm-2}">Penalty: 20 minutes are added per rejected submission on a problem that is eventually solved.</li>
+                            <li th:unless="${contest.contestMode == 'ACM'}" th:text="#{voj.contests.contest.rule-oi-1}">OI scoring &mdash; each problem awards partial points; contestants are ranked by total score.</li>
+                            <li th:unless="${contest.contestMode == 'ACM'}" th:text="#{voj.contests.contest.rule-oi-2}">Only the last submission for each problem counts toward the score.</li>
                         </ul>
                         <div class="markdown description" th:unless="${contest.contestNotes == ''}" th:utext="${contest.contestNotes}">notes</div>
                     </div>
@@ -86,7 +86,7 @@
             <aside class="vw-detail-side">
                 <!-- TIME REMAINING -->
                 <div class="vw-timecard">
-                    <div class="vw-timecard-label" th:text="${contestStatus == 'Ready' ? 'STARTS IN' : (contestStatus == 'Live' ? 'TIME REMAINING' : 'CONTEST ENDED')}">TIME REMAINING</div>
+                    <div class="vw-timecard-label" th:text="${contestStatus == 'Ready' ? #messages.msg('voj.contests.contest.starts-in') : (contestStatus == 'Live' ? #messages.msg('voj.contests.contest.time-remaining') : #messages.msg('voj.contests.contest.contest-ended'))}">TIME REMAINING</div>
                     <div class="vw-timecard-clock" id="countdown"
                          th:attr="data-target=${contestStatus == 'Ready' ? contest.startTime.time : contest.endTime.time},data-status=${contestStatus}">--:--:--</div>
                     <div class="vw-timecard-sub">
@@ -98,9 +98,9 @@
 
                 <!-- STANDINGS -->
                 <div class="vw-card" th:if="${standings != null and !standings.isEmpty()}">
-                    <div class="vw-card-strip">// STANDINGS</div>
+                    <div class="vw-card-strip" th:text="'// ' + #{voj.contests.contest.standings}">// STANDINGS</div>
                     <div class="vw-standings-head">
-                        <div>#</div><div>USER</div><div th:text="${contest.contestMode == 'OI' ? 'SCORE' : 'SOLVED'}">SOLVED</div><div>PEN</div>
+                        <div>#</div><div th:text="#{voj.contests.contest.col-user}">USER</div><div th:text="${contest.contestMode == 'OI' ? #messages.msg('voj.contests.contest.col-score') : #messages.msg('voj.contests.contest.col-solved')}">SOLVED</div><div th:text="#{voj.contests.contest.col-penalty}">PEN</div>
                     </div>
                     <div class="vw-standings-row" th:each="cc : ${standings}">
                         <div class="vw-standings-rank"

@@ -15,7 +15,7 @@
         <!-- TITLE BAR -->
         <section class="vw-titlebar">
             <div class="vw-titlebar-inner">
-                <a class="vw-backlink" th:href="@{/submission}">&larr; ~/submission</a>
+                <a class="vw-backlink" th:href="@{/submission}" th:text="'← ~/' + #{voj.include.header.nav-submission}">&larr; ~/submission</a>
                 <div class="vw-row vw-gap vw-wrap">
                     <span class="vw-muted vw-run-label">run #<span th:text="${submission.submissionId}">0</span></span>
                     <span class="vw-verdict-lg" th:classappend="|flag-${slug}|">
@@ -24,12 +24,12 @@
                     </span>
                     <a class="vw-head vw-titlebar-prob"
                        th:href="@{/p/{id}(id=${prob != null ? prob.problemId : 0})}"
-                       th:text="${prob != null ? 'P' + prob.problemId + ' &middot; ' + prob.problemName : ''}">Problem</a>
+                       th:text="${prob != null ? 'P' + prob.problemId + ' · ' + prob.problemName : ''}">Problem</a>
                     <div class="vw-header-spacer"></div>
                     <div class="vw-titlebar-meta">
-                        <span>Time <b class="vw-head" th:text="|${submission.usedTime} ms|">0 ms</b></span>
-                        <span>Memory <b class="vw-head" th:text="|${submission.usedMemory} K|">0 K</b></span>
-                        <span>Lang <b class="vw-head" th:text="${lang != null ? lang.languageName : ''}">Lang</b></span>
+                        <span><span th:text="#{voj.submissions.submission.meta-time}">Time</span> <b class="vw-head" th:text="|${submission.usedTime} ms|">0 ms</b></span>
+                        <span><span th:text="#{voj.submissions.submission.meta-memory}">Memory</span> <b class="vw-head" th:text="|${submission.usedMemory} K|">0 K</b></span>
+                        <span><span th:text="#{voj.submissions.submission.meta-lang}">Lang</span> <b class="vw-head" th:text="${lang != null ? lang.languageName : ''}">Lang</b></span>
                     </div>
                 </div>
             </div>
@@ -50,13 +50,13 @@
 
                 <article class="vw-card vw-stmt vw-card-accent" th:if="${canViewCode}">
                     <div class="vw-card-bar">
-                        <span class="vw-accent vw-card-srclabel" th:text="'// SOURCE &mdash; ' + #{voj.submissions.submission.code}">// SOURCE</span>
+                        <span class="vw-accent vw-card-srclabel" th:text="'// ' + #{voj.submissions.submission.source}">// SOURCE</span>
                     </div>
                     <div class="vw-card-body vw-card-flush">
                         <pre class="vw-src-pre"><code th:text="${submission.code}">code</code></pre>
                     </div>
                     <div class="vw-card-foot">
-                        <span>length <b class="vw-muted2" th:text="|${#strings.length(submission.code)} B|">0 B</b></span>
+                        <span><span th:text="#{voj.submissions.submission.length}">length</span> <b class="vw-muted2" th:text="|${#strings.length(submission.code)} B|">0 B</b></span>
                     </div>
                 </article>
             </div>
@@ -70,13 +70,13 @@
                     </div>
                     <div class="vw-card-body">
                         <div class="vw-kv">
-                            <div><span class="k">Run ID</span><span class="v">#<span th:text="${submission.submissionId}">0</span></span></div>
+                            <div><span class="k" th:text="#{voj.submissions.submission.run-id}">Run ID</span><span class="v">#<span th:text="${submission.submissionId}">0</span></span></div>
                             <div><span class="k" th:text="#{voj.submissions.submission.problem}">Problem</span><a class="vw-accent" th:href="@{/p/{id}(id=${prob != null ? prob.problemId : 0})}" th:text="${prob != null ? 'P' + prob.problemId : ''}">P1000</a></div>
                             <div><span class="k" th:text="#{voj.submissions.submission.submitted-by}">Submitted by</span><a class="vw-accent" th:href="@{/accounts/user/{id}(id=${usr != null ? usr.uid : 0})}" th:text="${usr != null ? usr.username : ''}">user</a></div>
                             <div><span class="k" th:text="#{voj.submissions.submission.language}">Language</span><span class="v" th:text="${lang != null ? lang.languageName : ''}">Lang</span></div>
                             <div><span class="k" th:text="#{voj.submissions.submission.used-time}">Time</span><span class="v" id="used-time" th:text="|${submission.usedTime} ms|">0 ms</span></div>
                             <div><span class="k" th:text="#{voj.submissions.submission.used-memory}">Memory</span><span class="v" id="used-memory" th:text="|${submission.usedMemory} K|">0 K</span></div>
-                            <div><span class="k">Code length</span><span class="v" th:text="|${#strings.length(submission.code)} B|">0 B</span></div>
+                            <div><span class="k" th:text="#{voj.submissions.submission.code-length}">Code length</span><span class="v" th:text="|${#strings.length(submission.code)} B|">0 B</span></div>
                             <div><span class="k" th:text="#{voj.submissions.submission.submit-time}">Submit Time</span><span class="v" th:text="${@dateFormatter.dateTimeLongMedium(submission.submitTime, language)}">time</span></div>
                             <div><span class="k" th:text="#{voj.submissions.submission.execute-time}">Execute Time</span><span class="v" id="execute-time" th:text="${@dateFormatter.dateTimeLongMedium(submission.executeTime, language)}">time</span></div>
                         </div>
@@ -119,7 +119,7 @@
                 if ( message == lastMessage ) { return; }
                 lastMessage = message;
                 if ( message == 'Established' ) {
-                    $('#judge-log').append('<p>Connected to Server.</p>');
+                    $('#judge-log').append('<p>' + [[#{voj.submissions.submission.connected-to-server}]] + '</p>');
                     return;
                 }
                 var mapMessage  = JSON.parse(message),

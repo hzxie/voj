@@ -16,7 +16,7 @@
          th:with="topicSlug=${discussionThread.discussionTopic.discussionTopicSlug},
                   creator=${discussionThread.discussionThreadCreator}">
         <section class="vw-section vw-section-narrow">
-            <a class="vw-backlink" th:href="@{/discussion}">&larr; ~/discussion</a>
+            <a class="vw-backlink" th:href="@{/discussion}" th:text="'← ~/' + #{voj.include.header.nav-discussion}">&larr; ~/discussion</a>
 
             <div class="vw-thread-layout">
                 <!-- MAIN -->
@@ -36,7 +36,7 @@
                         <input type="hidden" id="discussion-thread-topic" th:value="${topicSlug}" />
                         <a class="vw-thread-crumb-link" th:if="${discussionThread.problem != null}"
                            th:href="@{/p/{id}(id=${discussionThread.problem.problemId})}"
-                           th:text="|P${discussionThread.problem.problemId} &middot; ${discussionThread.problem.problemName}|">P1005 &middot; Problem</a>
+                           th:text="|P${discussionThread.problem.problemId} · ${discussionThread.problem.problemName}|">P1005 · Problem</a>
                     </div>
                     <div class="header">
                         <h1 class="vw-thread-h1" th:text="${discussionThread.discussionThreadTitle}">Title</h1>
@@ -47,7 +47,7 @@
                     <div id="discussion-replies" class="vw-posts"></div>
                     <div id="more-discussion-replies" class="vw-loadmore">
                         <p class="availble"><a href="javascript:void(0);" th:text="#{voj.discussion.thread.more-replies}">More Replies...</a></p>
-                        <img th:src="|${cdnUrl}/img/loading.gif?v=${version}|" alt="Loading" class="hide" />
+                        <span class="vw-spinner hide" role="status" aria-label="Loading"></span>
                     </div>
 
                     <!-- REPLY BOX -->
@@ -70,13 +70,13 @@
                         <div class="vw-thread-meta-list">
                             <div><span class="k" th:text="#{voj.discussion.thread.comments}">Replies</span><span class="v" id="number-of-comments" th:text="${topicSlug == 'solutions' ? discussionThread.numberOfReplies : (discussionThread.numberOfReplies <= 1 ? 0 : discussionThread.numberOfReplies - 1)}">0</span></div>
                             <div><span class="k" th:text="#{voj.discussion.threads.author}">Author</span><a class="v vw-accent" th:href="@{/accounts/user/{id}(id=${creator.uid})}" th:text="${creator.username}">author</a></div>
-                            <div><span class="k">Created</span><span class="v datetime" th:text="${#dates.format(discussionThread.discussionThreadCreateTime, 'yyyy-MM-dd HH:mm:ss')}">time</span></div>
+                            <div><span class="k" th:text="#{voj.discussion.thread.created}">Created</span><span class="v datetime" th:text="${#dates.format(discussionThread.discussionThreadCreateTime, 'yyyy-MM-dd HH:mm:ss')}">time</span></div>
                         </div>
                     </div>
 
                     <div class="vw-card">
                         <div class="vw-card-body">
-                            <div class="vw-eyebrow vw-side-label">// PARTICIPANTS</div>
+                            <div class="vw-eyebrow vw-side-label" th:text="'// ' + #{voj.discussion.thread.participants}">// PARTICIPANTS</div>
                             <div id="participants" class="vw-participants">
                                 <a class="vw-participant" th:href="@{/accounts/user/{id}(id=${creator.uid})}" th:title="${creator.username}" th:text="${#strings.toUpperCase(#strings.substring(creator.username,0,1))}">A</a>
                             </div>
@@ -111,14 +111,14 @@
         });
         function loadDiscussionReplies() { setLoadingStatus(true); getDiscussionReplies(0); }
         $('#more-discussion-replies').click(function() {
-            var isLoading       = $('img', this).is(':visible'),
+            var isLoading       = $('.vw-spinner', this).is(':visible'),
                 hasNextRecord   = $('p', this).hasClass('availble'),
                 numberOfReplies = $('.vw-post').length;
             if ( !isLoading && hasNextRecord ) { setLoadingStatus(true); return getDiscussionReplies(numberOfReplies); }
         });
         function setLoadingStatus(isLoading) {
-            if ( isLoading ) { $('p', '#more-discussion-replies').addClass('hide'); $('img', '#more-discussion-replies').removeClass('hide'); }
-            else { $('img', '#more-discussion-replies').addClass('hide'); $('p', '#more-discussion-replies').removeClass('hide'); }
+            if ( isLoading ) { $('p', '#more-discussion-replies').addClass('hide'); $('.vw-spinner', '#more-discussion-replies').removeClass('hide'); }
+            else { $('.vw-spinner', '#more-discussion-replies').addClass('hide'); $('p', '#more-discussion-replies').removeClass('hide'); }
         }
         function getDiscussionReplies(startIndex) {
             $.ajax({
@@ -164,8 +164,8 @@
                 isAuthor = creator['uid'] == [[${myProfile?.uid}]],
                 isMine   = isAuthor || [[${myProfile?.userGroup?.userGroupSlug}]] == 'administrators';
             var actions = isMine
-                ? '<a href="javascript:void(0);" class="vw-post-edit" title="edit">edit</a>' +
-                  '<a href="javascript:void(0);" class="vw-post-delete" title="delete">delete</a>'
+                ? '<a href="javascript:void(0);" class="vw-post-edit" title="' + [[#{voj.discussion.thread.edit}]] + '">' + [[#{voj.discussion.thread.edit}]] + '</a>' +
+                  '<a href="javascript:void(0);" class="vw-post-delete" title="' + [[#{voj.discussion.thread.delete}]] + '">' + [[#{voj.discussion.thread.delete}]] + '</a>'
                 : '';
             // Users cannot vote on or report their own reply, so those controls are hidden there.
             var voteButtons = isAuthor ? '' :
@@ -190,7 +190,7 @@
                 '</div>' +
                 '<div class="vw-minw0">' +
                 '<div class="vw-post-head">' +
-                (isOp ? '<span class="vw-post-op">OP</span>' : '') +
+                (isOp ? '<span class="vw-post-op">' + [[#{voj.discussion.thread.op}]] + '</span>' : '') +
                 '<span class="vw-post-when">' + getTimeElapsed(createTime, [[${language}]]) + '</span>' +
                 '<div class="vw-header-spacer"></div>' +
                 voteButtons +

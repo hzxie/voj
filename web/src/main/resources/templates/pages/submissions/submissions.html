@@ -17,22 +17,22 @@
                   field=${param.field != null ? param.field[0] : 'problem'}">
         <!-- PAGE HEADER + FILTER -->
         <section class="vw-pagehead">
-            <div class="vw-eyebrow">// SUBMISSIONS</div>
+            <div class="vw-eyebrow vw-eyebrow-path" th:text="'~/' + #{voj.include.header.nav-submission}">~/submission</div>
             <h1 th:text="#{voj.submissions.submissions.title}">Submissions</h1>
-            <div class="sub vw-livesub vw-livesub-mb">live judge queue
+            <div class="sub vw-livesub vw-livesub-mb"><span th:text="#{voj.submissions.submissions.subtitle}">live judge queue</span>
                 <span class="vw-livedot"></span>
             </div>
             <div class="vw-filters">
                 <div class="vw-seg">
-                    <a th:href="@{/submission(field='problem')}" th:classappend="${field == 'problem'} ? 'active'">Problem</a>
-                    <a th:href="@{/submission(field='user')}" th:classappend="${field == 'user'} ? 'active'">User</a>
+                    <a th:href="@{/submission(field='problem')}" th:classappend="${field == 'problem'} ? 'active'" th:text="#{voj.submissions.submissions.problem}">Problem</a>
+                    <a th:href="@{/submission(field='user')}" th:classappend="${field == 'user'} ? 'active'" th:text="#{voj.submissions.submissions.user}">User</a>
                 </div>
                 <form class="vw-field vw-filters-search" method="GET" th:action="@{/submission}">
                     <span class="sigil">$</span>
                     <input type="hidden" name="field" th:value="${field}" />
                     <input type="text" th:name="${field == 'user'} ? 'username' : 'problemId'"
                            th:value="${field == 'user'} ? ${fUsername} : ${fProblemId}"
-                           th:placeholder="|filter by ${field}&#8230;|" />
+                           th:placeholder="|${#messages.msg('voj.submissions.submissions.filter-by')} ${field == 'user' ? #messages.msg('voj.submissions.submissions.user') : #messages.msg('voj.submissions.submissions.problem')}…|" />
                 </form>
             </div>
         </section>
@@ -42,7 +42,7 @@
             <div id="submission" class="vw-tablewrap">
                 <div class="vw-table vw-table-submissions">
                     <div class="vw-table-head">
-                        <div>RUN #</div>
+                        <div th:text="#{voj.submissions.submissions.col-run}">RUN #</div>
                         <div th:text="#{voj.submissions.submissions.problem}">Problem</div>
                         <div th:text="#{voj.submissions.submissions.user}">User</div>
                         <div th:text="#{voj.submissions.submissions.submit-time}">When</div>
@@ -62,7 +62,7 @@
                             <div class="vw-cell-verdict">
                                 <span class="vw-vbadge" th:classappend="|flag-${slug}|" th:text="${#strings.toUpperCase(slug)}">AC</span>
                                 <span class="vw-verdict-name" th:classappend="|flag-${slug}|" th:text="${submission.judgeResult != null ? submission.judgeResult.judgeResultName : ''}">Accepted</span>
-                                <span class="vw-muted vw-verdict-time" th:text="|${submission.usedTime}ms &middot; ${submission.usedMemory}K|">11ms</span>
+                                <span class="vw-muted vw-verdict-time" th:text="|${submission.usedTime}ms · ${submission.usedMemory}K|">11ms</span>
                             </div>
                         </a>
                     </div>
@@ -70,7 +70,7 @@
             </div>
             <div id="more-submissions" class="vw-loadmore">
                 <p class="availble" th:text="#{voj.submissions.submissions.more-submission}">More Submission...</p>
-                <img th:src="|${cdnUrl}/img/loading.gif?v=${version}|" alt="Loading" class="hide" />
+                <span class="vw-spinner hide" role="status" aria-label="Loading"></span>
             </div>
         </section>
     </div>
@@ -101,14 +101,14 @@
         function setLoadingStatus(isLoading) {
             if ( isLoading ) {
                 $('p', '#more-submissions').addClass('hide');
-                $('img', '#more-submissions').removeClass('hide');
+                $('.vw-spinner', '#more-submissions').removeClass('hide');
             } else {
-                $('img', '#more-submissions').addClass('hide');
+                $('.vw-spinner', '#more-submissions').addClass('hide');
                 $('p', '#more-submissions').removeClass('hide');
             }
         }
         $('#more-submissions').click(function() {
-            var isLoading     = $('img', this).is(':visible'),
+            var isLoading     = $('.vw-spinner', this).is(':visible'),
                 hasNextRecord = $('p', this).hasClass('availble'),
                 lastRecord    = $('#submission-body > .vw-table-row:last-child'),
                 lastId        = parseInt($(lastRecord).attr('data-value'));

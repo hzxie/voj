@@ -184,6 +184,8 @@
 .adm-cell.strong { font-weight:700; }
 .adm-pill { display:inline-flex; align-items:center; gap:5px; font-size:12.5px; font-weight:600; color:currentColor; border:1px solid currentColor; border-radius:9px; padding:8px 12px; white-space:nowrap; }
 .adm-pill.click { cursor:pointer; }
+/* Compact pills inside list tables. */
+.adm-table .adm-pill { gap:4px; font-size:11px; border-radius:7px; padding:3px 9px; }
 .adm-tags { display:flex; gap:6px; flex-wrap:nowrap; overflow:hidden; }
 .adm-tags span { font-size:10px; color:var(--text2); background:var(--chip); border:1px solid var(--line); padding:2px 7px; border-radius:5px; white-space:nowrap; }
 .adm-menu { text-align:center; color:var(--text3); cursor:pointer; font-size:16px; user-select:none; }
@@ -696,3 +698,22 @@ input.adm-w120 { width:120px; }
 
 .adm-table-inner.cols-topics { min-width:auto; --cols:64px 160px minmax(0,1fr) 80px; }
 .adm-table-inner.cols-bulletins { min-width:680px; --cols:34px minmax(0,1fr) 104px 96px 96px 104px 40px; }
+
+/* Label casing lives here, not in the i18n values: message strings are stored in
+   natural case and uppercased for display through these label-only selectors.
+   (.adm-table-head already applies text-transform above for column headers.) */
+.adm-block-label,
+.adm-label,
+.adm-flabel > span,
+.adm-card-head.plain,
+.adm-card-head > span,
+.adm-kpi-top .k,
+.adm-feed-tag,
+.adm-nav-label,
+.adm-logo .tag,
+.adm-setgroup-head .t,
+.adm-placeholders > .t,
+.adm-replies-band,
+.adm-catlist-head .used,
+.adm-pwpanel .lbl,
+.adm-mod-cols span { text-transform:uppercase; }

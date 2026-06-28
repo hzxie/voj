@@ -12,9 +12,9 @@
         <!-- HERO -->
         <section class="vw-hero">
             <div>
-                <div class="vw-eyebrow">// DISTRIBUTED ONLINE JUDGE</div>
-                <h1 class="vw-hero-title">Submit code.<br>Watch it <span class="vw-accent">transform.</span></h1>
-                <p class="vw-hero-lead" th:text="${description}">Distributed judgers powered by ActiveMQ return a verdict in milliseconds. Practice classic problems, join live ACM &amp; OI contests, climb the ranks.</p>
+                <div class="vw-eyebrow" th:text="'// ' + #{voj.index.eyebrow}">// DISTRIBUTED ONLINE JUDGE</div>
+                <h1 class="vw-hero-title" th:utext="#{voj.index.hero-title}">Submit code.<br>Watch it <span class="vw-accent">transform.</span></h1>
+                <p class="vw-hero-lead" th:text="#{voj.index.hero-lead}">Distributed judgers powered by ActiveMQ return a verdict in milliseconds. Practice classic problems, join live ACM &amp; OI contests, climb the ranks.</p>
                 <div class="vw-hero-btns">
                     <a class="vw-btn vw-btn-accent" th:href="@{/p}" th:text="#{voj.index.get-started}">Start solving &rarr;</a>
                     <a class="vw-gitbtn" href="https://github.com/hzxie/voj" target="_blank" rel="noopener" title="Star on GitHub">
@@ -51,10 +51,10 @@
         <!-- STATS BAND -->
         <section class="vw-stats">
             <div class="vw-stats-inner">
-                <div class="vw-stat"><div class="v" th:text="${#numbers.formatInteger(totalProblems, 1, 'COMMA')}">0</div><div class="k">PROBLEMS</div></div>
-                <div class="vw-stat"><div class="v" th:text="${#numbers.formatInteger(totalSubmissions, 1, 'COMMA')}">0</div><div class="k">SUBMISSIONS</div></div>
-                <div class="vw-stat"><div class="v" th:text="${#numbers.formatInteger(totalUsers, 1, 'COMMA')}">0</div><div class="k">USERS</div></div>
-                <div class="vw-stat"><div class="v" th:text="${onlineJudgers}">0</div><div class="k">JUDGERS ONLINE</div></div>
+                <div class="vw-stat"><div class="v" th:text="${#numbers.formatInteger(totalProblems, 1, 'COMMA')}">0</div><div class="k" th:text="#{voj.index.stats.problems}">PROBLEMS</div></div>
+                <div class="vw-stat"><div class="v" th:text="${#numbers.formatInteger(totalSubmissions, 1, 'COMMA')}">0</div><div class="k" th:text="#{voj.index.stats.submissions}">SUBMISSIONS</div></div>
+                <div class="vw-stat"><div class="v" th:text="${#numbers.formatInteger(totalUsers, 1, 'COMMA')}">0</div><div class="k" th:text="#{voj.index.stats.users}">USERS</div></div>
+                <div class="vw-stat"><div class="v" th:text="${onlineJudgers}">0</div><div class="k" th:text="#{voj.index.stats.judgers-online}">JUDGERS ONLINE</div></div>
             </div>
         </section>
 
@@ -63,8 +63,7 @@
             <div class="vw-grid-2">
                 <div>
                     <div class="vw-between vw-home-colhead">
-                        <span class="vw-section-label">// LIVE CONTESTS</span>
-                        <a class="vw-accent vw-link-sm" th:href="@{/contest}">view all &rarr;</a>
+                        <span class="vw-section-label" th:text="'// ' + #{voj.index.live-contests}">// LIVE CONTESTS</span>
                     </div>
                     <div class="vw-list">
                         <a class="vw-card" th:each="contest : ${contests}"
@@ -86,7 +85,7 @@
                 </div>
                 <div>
                     <div class="vw-between vw-home-colhead">
-                        <span class="vw-section-label">// BULLETIN BOARD</span>
+                        <span class="vw-section-label" th:text="'// ' + #{voj.index.bulletin-board}">// BULLETIN BOARD</span>
                     </div>
                     <div class="vw-card">
                         <ul id="bulletin-board-messages" class="vw-bulletin"
@@ -107,7 +106,7 @@
 
         <!-- SUPPORTED LANGUAGES -->
         <section class="vw-section vw-home-langs">
-            <div class="vw-section-label">// SUPPORTED LANGUAGES</div>
+            <div class="vw-section-label" th:text="'// ' + #{voj.index.supported-languages}">// SUPPORTED LANGUAGES</div>
             <div class="vw-chips">
                 <span class="vw-chip" th:each="language : ${languages}" th:text="${language.languageName}">C++</span>
             </div>
