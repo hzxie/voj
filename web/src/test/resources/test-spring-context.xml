@@ -39,7 +39,8 @@
 	     "voj" database, and when both files were merged that production value won, so the tests tried
 	     to connect to a non-existent "voj" database (passing locally only where one happened to
 	     exist, failing on CI). -->
-	<context:property-placeholder location="classpath:/voj-test.properties" />
+	<context:property-placeholder location="classpath:/voj-test.properties"
+		local-override="true" />
 	
 	<!-- Map simple view name such as "test" into /WEB-INF/test.jsp -->
 	<bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
