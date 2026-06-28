@@ -58,11 +58,11 @@
                         <div th:unless="${isCreate}">
                             <div class="adm-block-label" th:text="#{voj.administration.edit-user.default-language}">DEFAULT LANGUAGE</div>
                             <div class="adm-seg" data-adm="seg" data-input="prefer-language">
-                                <a href="javascript:void(0);" th:each="language : ${languages}" th:data-value="${language.languageSlug}" th:classappend="${language.languageId == user.preferLanguage.languageId} ? 'active'" th:text="${language.languageName}">C++ 23</a>
+                                <a href="javascript:void(0);" th:each="language : ${languages}" th:data-value="${language.languageSlug}" th:classappend="${user.preferLanguage != null and language.languageId == user.preferLanguage.languageId} ? 'active'" th:text="${language.languageName}">C++ 23</a>
                             </div>
-                            <input type="hidden" id="prefer-language" th:value="${user.preferLanguage.languageSlug}" />
+                            <input type="hidden" id="prefer-language" th:value="${user.preferLanguage != null ? user.preferLanguage.languageSlug : ''}" />
                         </div>
-                        <input th:if="${isCreate}" type="hidden" id="prefer-language" th:value="${languages[0].languageSlug}" />
+                        <input th:if="${isCreate}" type="hidden" id="prefer-language" th:value="${not #lists.isEmpty(languages) ? languages[0].languageSlug : ''}" />
                     </div>
                 </div>
                 <div class="adm-card" th:unless="${isCreate}">

@@ -13,8 +13,8 @@
 </head>
 <body>
     <div layout:fragment="content"
-         th:with="accepted=${submissionStats.get('acceptedSubmission')},
-                  total=${submissionStats.get('totalSubmission')}">
+         th:with="accepted=${submissionStats.get('acceptedSubmission') ?: 0},
+                  total=${submissionStats.get('totalSubmission') ?: 0}">
         <!-- PROFILE HEADER -->
         <section class="vw-titlebar">
             <div class="vw-titlebar-inner vw-profile-head">
@@ -85,7 +85,7 @@
                 <div class="vw-card">
                     <div class="vw-card-strip vw-between">
                         <span>// <span th:text="#{voj.accounts.user.recent-submissions}">RECENT SUBMISSIONS</span></span>
-                        <a class="vw-link-sm" th:href="@{/submission(username=${user.username})}">all &rarr;</a>
+                        <a class="vw-link-sm" th:href="@{/submission(username=${user.username})}" th:text="#{voj.common.all} + ' →'">all &rarr;</a>
                     </div>
                     <p class="vw-muted vw-card-body" th:if="${recentSubmissions == null or recentSubmissions.isEmpty()}" th:text="#{voj.accounts.user.no-submissions}">No Submissions.</p>
                     <div th:unless="${recentSubmissions == null or recentSubmissions.isEmpty()}">
