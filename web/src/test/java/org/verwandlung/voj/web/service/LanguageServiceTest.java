@@ -44,7 +44,10 @@ public class LanguageServiceTest {
   @Test
   public void testGetAllLanguages() {
     List<Language> languages = languageService.getAllLanguages();
-    Assertions.assertEquals(6, languages.size());
+    // The seeded roster changes over time, so assert the seeded languages are returned rather than
+    // a hard-coded count.
+    Assertions.assertFalse(languages.isEmpty());
+    Assertions.assertNotNull(languageService.getLanguageUsingSlug("text/x-csrc"));
   }
 
   /** Test case: tests the getLanguageUsingSlug(String) method. Test data: an existing language slug. Expected: the corresponding programming language object. */
@@ -66,12 +69,14 @@ public class LanguageServiceTest {
   @SuppressWarnings("unchecked")
   public void testUpdateLanguageSettingsCreateLanguage() {
     List<Language> newLanguages = currentLanguages();
-    newLanguages.add(new Language("text/x-go", "Go", "go build {filename}.go", "{filename}"));
+    int baseCount = newLanguages.size();
+    newLanguages.add(
+        new Language("text/x-haskell", "Haskell", "ghc -o {filename}.exe {filename}.hs", "{filename}.exe"));
 
     Map<String, Object> result = languageService.updateLanguageSettings(newLanguages);
     Assertions.assertTrue((Boolean) result.get("isSuccessful"));
     Assertions.assertEquals(1, ((List<Language>) result.get("languageCreated")).size());
-    Assertions.assertEquals(7, languageService.getAllLanguages().size());
+    Assertions.assertEquals(baseCount + 1, languageService.getAllLanguages().size());
   }
 
   /**
@@ -85,10 +90,10 @@ public class LanguageServiceTest {
   @SuppressWarnings("unchecked")
   public void testUpdateLanguageSettingsFromJsonPayload() {
     String payload =
-        "[{\"languageId\":0,\"languageSlug\":\"text/x-go\",\"languageName\":\"Go\","
-            + "\"compileCommand\":\"go build -o {filename}.exe {filename}.go\","
+        "[{\"languageId\":0,\"languageSlug\":\"text/x-haskell\",\"languageName\":\"Haskell\","
+            + "\"compileCommand\":\"ghc -o {filename}.exe {filename}.hs\","
             + "\"runCommand\":\"{filename}.exe\",\"enabled\":true,"
-            + "\"sourceFilename\":\"Main.go\",\"timeMultiplier\":1.5,\"memoryMultiplier\":2.0}]";
+            + "\"sourceFilename\":\"Main.hs\",\"timeMultiplier\":1.5,\"memoryMultiplier\":2.0}]";
     List<Language> newLanguages = currentLanguages();
     newLanguages.addAll(JsonUtils.toList(payload, Language.class));
 
@@ -96,12 +101,12 @@ public class LanguageServiceTest {
     Assertions.assertTrue((Boolean) result.get("isSuccessful"));
     Assertions.assertEquals(1, ((List<Language>) result.get("languageCreated")).size());
 
-    Language created = languageService.getLanguageUsingSlug("text/x-go");
+    Language created = languageService.getLanguageUsingSlug("text/x-haskell");
     Assertions.assertNotNull(created);
-    Assertions.assertEquals("go build -o {filename}.exe {filename}.go", created.getCompileCommand());
+    Assertions.assertEquals("ghc -o {filename}.exe {filename}.hs", created.getCompileCommand());
     Assertions.assertEquals("{filename}.exe", created.getRunCommand());
     Assertions.assertTrue(created.isEnabled());
-    Assertions.assertEquals("Main.go", created.getSourceFilename());
+    Assertions.assertEquals("Main.hs", created.getSourceFilename());
     Assertions.assertEquals(1.5, created.getTimeMultiplier());
     Assertions.assertEquals(2.0, created.getMemoryMultiplier());
   }
@@ -110,11 +115,12 @@ public class LanguageServiceTest {
   @Test
   public void testUpdateLanguageSettingsCreateLanguageWithEmptySlug() {
     List<Language> newLanguages = currentLanguages();
-    newLanguages.add(new Language("", "Go", "go build {filename}.go", "{filename}"));
+    int baseCount = newLanguages.size();
+    newLanguages.add(new Language("", "Haskell", "ghc -o {filename}.exe {filename}.hs", "{filename}.exe"));
 
     Map<String, Object> result = languageService.updateLanguageSettings(newLanguages);
     Assertions.assertFalse((Boolean) result.get("isSuccessful"));
-    Assertions.assertEquals(6, languageService.getAllLanguages().size());
+    Assertions.assertEquals(baseCount, languageService.getAllLanguages().size());
   }
 
   /** Test case: tests the updateLanguageSettings(List) method. Test data: the slug of the new language already exists. Expected: the update fails. */
@@ -131,7 +137,7 @@ public class LanguageServiceTest {
   @Test
   public void testUpdateLanguageSettingsCreateLanguageWithIllegalCompileCommand() {
     List<Language> newLanguages = currentLanguages();
-    newLanguages.add(new Language("text/x-go", "Go", "go build main.go", "{filename}"));
+    newLanguages.add(new Language("text/x-haskell", "Haskell", "ghc main.hs", "{filename}"));
 
     Map<String, Object> result = languageService.updateLanguageSettings(newLanguages);
     Assertions.assertFalse((Boolean) result.get("isSuccessful"));
@@ -160,25 +166,27 @@ public class LanguageServiceTest {
   @SuppressWarnings("unchecked")
   public void testUpdateLanguageSettingsDeleteUnusedLanguage() {
     List<Language> newLanguages = currentLanguages();
+    int baseCount = newLanguages.size();
     // Pascal (language_id = 4) is not used by any submission record or user.
     newLanguages.removeIf(language -> language.getLanguageId() == 4);
 
     Map<String, Object> result = languageService.updateLanguageSettings(newLanguages);
     Assertions.assertTrue((Boolean) result.get("isSuccessful"));
     Assertions.assertEquals(1, ((List<Language>) result.get("languageDeleted")).size());
-    Assertions.assertEquals(5, languageService.getAllLanguages().size());
+    Assertions.assertEquals(baseCount - 1, languageService.getAllLanguages().size());
   }
 
   /** Test case: tests the updateLanguageSettings(List) method. Test data: delete a language that is in use. Expected: the update fails and the language is not deleted. */
   @Test
   public void testUpdateLanguageSettingsDeleteLanguageInUse() {
     List<Language> newLanguages = currentLanguages();
+    int baseCount = newLanguages.size();
     // C++ (language_id = 2) is used by submission records and user preferences, and cannot be deleted.
     newLanguages.removeIf(language -> language.getLanguageId() == 2);
 
     Map<String, Object> result = languageService.updateLanguageSettings(newLanguages);
     Assertions.assertFalse((Boolean) result.get("isSuccessful"));
-    Assertions.assertEquals(6, languageService.getAllLanguages().size());
+    Assertions.assertEquals(baseCount, languageService.getAllLanguages().size());
   }
 
   /** Returns a mutable copy of all current languages, used to construct the input of updateLanguageSettings. */

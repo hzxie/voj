@@ -25,7 +25,11 @@ INSERT INTO `voj_languages` (`language_id`, `language_slug`, `language_name`, `l
 (2, 'text/x-c++src', 'C++', 'g++ -O2 -s -Wall -std=c++20 -o {filename}.exe {filename}.cpp -lm', '{filename}.exe', 1, 'Main.cpp', 1.0, 1.0),
 (3, 'text/x-java', 'Java', 'javac {filename}.java', 'java -cp {filename}', 1, 'Main.java', 2.0, 2.0),
 (4, 'text/x-pascal', 'Pascal', 'fpc -O2 -Xs -Sgic -vw -o{filename}.exe {filename}.pas', '{filename}.exe', 1, 'Main.pas', 1.0, 1.0),
-(5, 'text/x-python', 'Python 3', 'python3 -m py_compile {filename}.py', 'python3 {filename}.py', 1, 'Main.py', 3.0, 2.0);
+(5, 'text/x-python', 'Python 3', 'python3 -m py_compile {filename}.py', 'python3 {filename}.py', 1, 'Main.py', 3.0, 2.0),
+(6, 'text/x-go', 'Go', 'go build -o {filename}.exe {filename}.go', '{filename}.exe', 1, 'Main.go', 1.0, 1.0),
+(7, 'text/x-kotlin', 'Kotlin', 'kotlinc {filename}.kt -include-runtime -d {filename}.jar', 'java -jar {filename}.jar', 1, 'Main.kt', 2.0, 2.0),
+(8, 'text/javascript', 'JavaScript', 'node --check {filename}.js', 'node {filename}.js', 1, 'Main.js', 3.0, 3.0),
+(9, 'text/x-rustsrc', 'Rust', 'rustc -O -o {filename}.exe {filename}.rs', '{filename}.exe', 1, 'Main.rs', 1.0, 1.0);
 
 INSERT INTO `voj_judge_results` (`judge_result_id`, `judge_result_slug`, `judge_result_name`) VALUES
 (1, 'PD', 'Pending'),
