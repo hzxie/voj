@@ -309,7 +309,7 @@ public class LanguageService {
    * @return whether the programming language's compile command is legal
    */
   private boolean isCompileCommandLegal(String compileCommand) {
-    return compileCommand.length() <= 128 && compileCommand.matches(".*\\{filename\\}.*");
+    return compileCommand.length() <= 128 && compileCommand.contains("{filename}");
   }
 
   /**
@@ -320,7 +320,7 @@ public class LanguageService {
    * @return whether the programming language's run command is legal
    */
   private boolean isRunCommandLegal(String runCommand) {
-    return runCommand.length() <= 128 && runCommand.matches(".*\\{filename\\}.*");
+    return runCommand.length() <= 128 && runCommand.contains("{filename}");
   }
 
   /**
