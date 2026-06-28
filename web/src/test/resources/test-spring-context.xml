@@ -33,14 +33,13 @@
 	</context:component-scan>
 
 	<!-- Property File Location -->
-	<!-- voj.properties supplies production-only keys (judger.apiToken, url.cdn, ...) that the
-	     component-scanned @Configuration beans still resolve; voj-test.properties is listed last so
-	     its values win, both for ${} placeholders and for the Environment that @ConditionalOnProperty
-	     reads. In particular jms.broker.embedded must stay false here so the tests use their own
-	     vm:// broker (defined below) instead of JmsConfig's embedded broker, whose vm:// connector
-	     would otherwise collide with it. -->
-	<context:property-placeholder
-		location="classpath:/voj.properties,classpath:/voj-test.properties" />
+	<!-- Load ONLY voj-test.properties: it is self-contained and carries test-specific values
+	     (the "test" database with createDatabaseIfNotExist, the in-VM vm:// broker, empty mail
+	     settings). Do NOT also load the production voj.properties here - its jdbc.url points at the
+	     "voj" database, and when both files were merged that production value won, so the tests tried
+	     to connect to a non-existent "voj" database (passing locally only where one happened to
+	     exist, failing on CI). -->
+	<context:property-placeholder location="classpath:/voj-test.properties" />
 	
 	<!-- Map simple view name such as "test" into /WEB-INF/test.jsp -->
 	<bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
