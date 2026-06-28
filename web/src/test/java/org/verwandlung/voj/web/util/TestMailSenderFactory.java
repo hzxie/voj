@@ -16,15 +16,17 @@
  */
 package org.verwandlung.voj.web.util;
 
-import static org.mockito.Mockito.mock;
-
 import org.springframework.mail.javamail.JavaMailSender;
 
 /**
  * Supplies the JavaMailSender used by the test Spring context. The tests never reach a real SMTP
- * server, so this hands back a Mockito mock whose send() is a no-op. This keeps service tests (e.g.
- * UserServiceTest) that trigger mail delivery from spawning background threads that fail with
- * AuthenticationFailedException and clutter the test log.
+ * server, so this hands back a {@link NoOpJavaMailSender} whose send() is a no-op. This keeps
+ * service tests (e.g. UserServiceTest) that trigger mail delivery from spawning background threads
+ * that fail with AuthenticationFailedException and clutter the test log.
+ *
+ * <p>A hand-written stub is used rather than a Mockito mock because this bean is created while the
+ * Spring context is bootstrapping; building a mock there forces Mockito's inline mock-maker to
+ * self-attach a Java agent during start-up, which is fragile across JVMs/CI environments.
  *
  * @author Haozhe Xie
  */
@@ -33,6 +35,6 @@ public final class TestMailSenderFactory {
 
   /** Builds a no-op JavaMailSender for the test context. */
   public static JavaMailSender createMailSender() {
-    return mock(JavaMailSender.class);
+    return new NoOpJavaMailSender();
   }
 }
