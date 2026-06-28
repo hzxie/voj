@@ -17,6 +17,12 @@
                 <span class="count"><span th:text="${#lists.size(submissions)}">0</span> <span th:text="#{voj.administration.all-submissions.records}">records</span></span>
             </div>
             <input name="problemId" class="adm-toolbar-select adm-w120" type="text" th:value="${problemId != 0 ? problemId : ''}" th:placeholder="#{voj.administration.all-submissions.problem-id}" />
+            <select name="judgeResult" class="adm-toolbar-select">
+                <option value="" th:text="#{voj.administration.all-submissions.all-verdicts}">All Verdicts</option>
+                <option th:each="jr : ${judgeResults}" th:value="${jr.judgeResultSlug}"
+                        th:selected="${jr.judgeResultSlug == judgeResult}"
+                        th:text="${jr.judgeResultName}">Accepted</option>
+            </select>
             <button type="submit" class="adm-btn-ghost"><span>&#9698;</span> <span th:text="#{voj.administration.all-submissions.filter}">filter</span></button>
         </form>
 
@@ -37,6 +43,7 @@
                     <span>#</span>
                     <span th:text="#{voj.administration.all-submissions.user}">USER</span>
                     <span th:text="#{voj.administration.all-submissions.problem}">PROBLEM</span>
+                    <span th:text="#{voj.administration.all-submissions.submit-time}">WHEN</span>
                     <span th:text="#{voj.administration.all-submissions.language}">LANG</span>
                     <span th:text="#{voj.administration.all-submissions.time}">TIME</span>
                     <span th:text="#{voj.administration.all-submissions.mem}">MEM</span>
@@ -50,6 +57,7 @@
                     <span class="adm-cell mono muted" th:text="'#' + ${submission.submissionId}">#1</span>
                     <span class="adm-cell head" th:text="${submission.user != null ? submission.user.username : ''}">user</span>
                     <span class="adm-cell txt" th:text="${submission.problem != null ? submission.problem.problemName : ''}">problem</span>
+                    <span class="adm-cell mono muted" th:text="${@dateFormatter.dateTimeMediumShort(submission.submitTime, language)}">when</span>
                     <span class="adm-cell muted" th:text="${submission.language != null ? submission.language.languageName : ''}">lang</span>
                     <span class="adm-cell mono muted" th:text="|${submission.usedTime} ms|">0 ms</span>
                     <span class="adm-cell mono muted" th:text="|${submission.usedMemory} KB|">0 KB</span>
@@ -65,9 +73,9 @@
              th:with="lowerBound=${currentPage - 3 > 0 ? currentPage - 3 : 1},upperBound=${currentPage + 3 < totalPages ? currentPage + 3 : totalPages}">
             <span><span th:text="#{voj.administration.all-submissions.page}">page</span> <span th:text="${currentPage}">1</span> / <span th:text="${totalPages}">1</span></span>
             <div class="adm-pager-btns">
-                <a class="nav" th:classappend="${currentPage <= 1} ? 'off'" th:href="@{/administration/all-submissions(problemId=${problemId},username=${username},page=${currentPage - 1})}">&#8592;</a>
-                <a class="num" th:each="pageNumber : ${#numbers.sequence(lowerBound, upperBound)}" th:classappend="${pageNumber == currentPage} ? 'active'" th:href="@{/administration/all-submissions(problemId=${problemId},username=${username},page=${pageNumber})}" th:text="${pageNumber}">1</a>
-                <a class="nav" th:classappend="${currentPage >= totalPages} ? 'off'" th:href="@{/administration/all-submissions(problemId=${problemId},username=${username},page=${currentPage + 1})}">&#8594;</a>
+                <a class="nav" th:classappend="${currentPage <= 1} ? 'off'" th:href="@{/administration/all-submissions(problemId=${problemId},username=${username},judgeResult=${judgeResult},page=${currentPage - 1})}">&#8592;</a>
+                <a class="num" th:each="pageNumber : ${#numbers.sequence(lowerBound, upperBound)}" th:classappend="${pageNumber == currentPage} ? 'active'" th:href="@{/administration/all-submissions(problemId=${problemId},username=${username},judgeResult=${judgeResult},page=${pageNumber})}" th:text="${pageNumber}">1</a>
+                <a class="nav" th:classappend="${currentPage >= totalPages} ? 'off'" th:href="@{/administration/all-submissions(problemId=${problemId},username=${username},judgeResult=${judgeResult},page=${currentPage + 1})}">&#8594;</a>
             </div>
         </div>
 

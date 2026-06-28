@@ -73,8 +73,8 @@ public class Dispatcher {
         throw new IllgealSubmissionException(
             String.format("Illegal submission #%s", new Object[] {submissionId}));
       }
-      preprocess(submission, baseDirectory, baseFileName);
-      if (compile(submission, baseDirectory, baseFileName)) {
+      if (preprocess(submission, baseDirectory, baseFileName)
+          && compile(submission, baseDirectory, baseFileName)) {
         runProgram(submission, baseDirectory, baseFileName);
       }
       cleanUp(baseDirectory);
@@ -88,16 +88,19 @@ public class Dispatcher {
    * @param submission - the submission object
    * @param workDirectory - the directory used for producing compilation output
    * @param baseFileName - the random file name (without suffix)
+   * @return whether preprocessing succeeded; when it fails the task must not proceed to compilation
    */
-  private void preprocess(Submission submission, String workDirectory, String baseFileName) {
+  private boolean preprocess(Submission submission, String workDirectory, String baseFileName) {
     try {
       preprocessor.createTestCode(submission, workDirectory, baseFileName);
       checkpointStore.sync(submission.getProblem());
+      return true;
     } catch (Exception ex) {
       LOGGER.catching(ex);
 
       long submissionId = submission.getSubmissionId();
       applicationDispatcher.onErrorOccurred(submissionId);
+      return false;
     }
   }
 

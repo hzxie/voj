@@ -94,12 +94,21 @@
     </script>
     <th:block th:if="${submission.judgeResult != null and submission.judgeResult.judgeResultName == 'Pending'}">
     <script type="text/javascript" th:inline="javascript">
-        var currentJudgeResult = 'Pending',
-            getterInterval     = setInterval(function() {
-                getRealTimeJudgeResult();
-                currentJudgeResult = $('#judge-result').html();
-                if ( currentJudgeResult != 'Pending' ) { clearInterval(getterInterval); }
-            }, 10000);
+        // Mirrors the server-side `vcls` mapping (see the th:with on .adm-detail): the verdict pill's
+        // colour follows the result slug. Re-applied here so the live update recolours the pill too,
+        // not just its text.
+        function verdictClass(slug) {
+            if ( slug == 'AC' ) { return 'c-accent'; }
+            if ( slug == 'WA' ) { return 'c-err'; }
+            if ( slug == 'CE' || slug == 'SE' || slug == 'PD' ) { return 'c-muted'; }
+            if ( slug == 'RE' || slug == 'PE' ) { return 'c-info'; }
+            return 'c-warn';
+        }
+        function applyVerdict(slug, name) {
+            $('#judge-result').text(name)
+                .removeClass('c-accent c-err c-muted c-info c-warn').addClass(verdictClass(slug));
+        }
+        var getterInterval = setInterval(getRealTimeJudgeResult, 10000);
         $(function() {
             var subscriptionUrl = [[@{/submission/getRealTimeJudgeResult.action(submissionId=${submission.submissionId},csrfToken=${_csrf.token})}]],
                 source          = new EventSource(subscriptionUrl),
@@ -112,8 +121,11 @@
                 var mapMessage  = JSON.parse(message),
                     judgeResult = mapMessage['judgeResult'],
                     judgeLog    = mapMessage['message'];
-                $('#judge-result').html(judgeResult);
+                $('#judge-result').text(judgeResult);
                 $('#judge-log').append(renderMarkdown(judgeLog));
+                // 'Running' is intermediate; any other verdict is terminal, so refresh the
+                // authoritative slug/time/memory immediately instead of waiting for the next poll.
+                if ( judgeResult != 'Running' ) { getRealTimeJudgeResult(); }
             }
         });
         function getRealTimeJudgeResult() {
@@ -122,11 +134,13 @@
                 data: { 'submissionId': [[${submission.submissionId}]] }, dataType: 'JSON',
                 success: function(result){
                     if ( result['isSuccessful'] && result['submission']['judgeResult']['judgeResultSlug'] != 'PD' ) {
-                        $('#judge-result').html(result['submission']['judgeResult']['judgeResultName']);
-                        $('#used-time').html(result['submission']['usedTime'] + " ms");
-                        $('#used-memory').html(result['submission']['usedMemory'] + " KB");
-                        $('#execute-time').html(getFormatedDateString(result['submission']['executeTime']));
-                        $('#judge-log').html(renderMarkdown(result['submission']['judgeLog']));
+                        var submission = result['submission'];
+                        applyVerdict(submission['judgeResult']['judgeResultSlug'], submission['judgeResult']['judgeResultName']);
+                        $('#used-time').html(submission['usedTime'] + " ms");
+                        $('#used-memory').html(submission['usedMemory'] + " KB");
+                        $('#execute-time').html(getFormatedDateString(submission['executeTime']));
+                        $('#judge-log').html(renderMarkdown(submission['judgeLog']));
+                        clearInterval(getterInterval);
                     }
                 }
             });

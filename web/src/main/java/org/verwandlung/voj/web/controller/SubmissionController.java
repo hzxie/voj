@@ -220,8 +220,12 @@ public class SubmissionController {
     User currentUser = HttpSessionParser.getCurrentUser(request.getSession());
     Submission submission = submissionService.getSubmission(submissionId);
 
+    // Anyone allowed to see the source code may also follow the live judge log (which can echo the
+    // source for compiler errors): this covers the owner, administrators and, when public
+    // submissions are enabled, everyone else. Without this, the administration console's
+    // edit-submission page could never subscribe to another user's pending submission.
     if (submission == null
-        || !submission.getUser().equals(currentUser)
+        || !canViewSourceCode(submission, currentUser)
         || !submission.getJudgeResult().getJudgeResultSlug().equals("PD")) {
       throw new ResourceNotFoundException();
     }

@@ -61,10 +61,12 @@
 				problem_id = #{problemId}
 			</if>
 			<if test="username != null and username != ''">
-				AND username = #{username} 
+				AND username = #{username}
+			</if>
+			<if test="judgeResult != null and judgeResult != ''">
+				AND submission_judge_result = #{judgeResult}
 			</if>
 		</where>
-		
 	</select>
 	<select id="getNumberOfSubmissionsGroupByMonth"
 		parameterType="map"
@@ -155,9 +157,12 @@
 			AND problem_id = #{problemId} 
 		</if>
 		<if test="username != null and username != ''">
-			AND username = #{username} 
+			AND username = #{username}
 		</if>
-		ORDER BY submission_id DESC 
+		<if test="judgeResult != null and judgeResult != ''">
+			AND submission_judge_result = #{judgeResult}
+		</if>
+		ORDER BY submission_id DESC
 		LIMIT #{limit}
 	</select>
 	<select id="getLatestSubmissionsUsingOffset" 

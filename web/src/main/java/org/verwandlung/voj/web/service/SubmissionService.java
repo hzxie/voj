@@ -31,12 +31,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.verwandlung.voj.web.mapper.JudgeResultMapper;
 import org.verwandlung.voj.web.mapper.LanguageMapper;
 import org.verwandlung.voj.web.mapper.OptionMapper;
 import org.verwandlung.voj.web.mapper.ProblemMapper;
 import org.verwandlung.voj.web.mapper.SubmissionMapper;
 import org.verwandlung.voj.web.mapper.UserMapper;
 import org.verwandlung.voj.web.messenger.MessageSender;
+import org.verwandlung.voj.web.model.JudgeResult;
 import org.verwandlung.voj.web.model.Language;
 import org.verwandlung.voj.web.model.Option;
 import org.verwandlung.voj.web.model.Problem;
@@ -70,10 +72,13 @@ public class SubmissionService {
    *
    * @param problemId - the unique identifier of the problem
    * @param username - the username of the user
+   * @param judgeResult - the slug of the judge result to filter by, or empty for all
    * @return the number of submissions by the user for the problem
    */
-  public long getNumberOfSubmissionsUsingProblemIdAndUsername(long problemId, String username) {
-    return submissionMapper.getNumberOfSubmissionsUsingProblemIdAndUsername(problemId, username);
+  public long getNumberOfSubmissionsUsingProblemIdAndUsername(
+      long problemId, String username, String judgeResult) {
+    return submissionMapper.getNumberOfSubmissionsUsingProblemIdAndUsername(
+        problemId, username, judgeResult);
   }
 
   /**
@@ -198,7 +203,32 @@ public class SubmissionService {
    * @return the list of submissions (a List<Submission> object)
    */
   public List<Submission> getSubmissions(long problemId, String username, long offset, int limit) {
-    return submissionMapper.getSubmissionsUsingOffset(problemId, username, offset, limit);
+    return submissionMapper.getSubmissionsUsingOffset(problemId, username, "", offset, limit);
+  }
+
+  /**
+   * Gets the list of submissions filtered by judge result. Used to load submissions asynchronously.
+   *
+   * @param problemId - the unique identifier of the problem
+   * @param username - the username of the user
+   * @param judgeResult - the slug of the judge result to filter by, or empty for all
+   * @param offset - the starting number of the submission identifier
+   * @param limit - the number of submissions to load each time
+   * @return the list of submissions (a List<Submission> object)
+   */
+  public List<Submission> getSubmissions(
+      long problemId, String username, String judgeResult, long offset, int limit) {
+    return submissionMapper.getSubmissionsUsingOffset(
+        problemId, username, judgeResult, offset, limit);
+  }
+
+  /**
+   * Gets all judge results. Used to populate the verdict filter on the submission list.
+   *
+   * @return the list of all judge results
+   */
+  public List<JudgeResult> getJudgeResults() {
+    return judgeResultMapper.getJudgeResults();
   }
 
   /**
@@ -467,6 +497,9 @@ public class SubmissionService {
 
   /** The autowired SubmissionMapper object. */
   @Autowired private SubmissionMapper submissionMapper;
+
+  /** The autowired JudgeResultMapper object. Used to populate the verdict filter. */
+  @Autowired private JudgeResultMapper judgeResultMapper;
 
   /** The autowired OptionMapper object. Used to resolve the email-verification requirement. */
   @Autowired private OptionMapper optionMapper;

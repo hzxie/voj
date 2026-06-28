@@ -1311,6 +1311,7 @@ public class AdministrationController {
    *
    * @param problemId - the unique identifier of the problem the submission corresponds to
    * @param username - the username of the submitter
+   * @param judgeResult - the slug of the judge result to filter by, or empty for all
    * @param pageNumber - the page number of the current page
    * @param request - the HttpServletRequest object
    * @param response - the HttpServletResponse object
@@ -1320,24 +1321,28 @@ public class AdministrationController {
   public ModelAndView allSubmissionsView(
       @RequestParam(value = "problemId", required = false, defaultValue = "0") long problemId,
       @RequestParam(value = "username", required = false, defaultValue = "") String username,
+      @RequestParam(value = "judgeResult", required = false, defaultValue = "") String judgeResult,
       @RequestParam(value = "page", required = false, defaultValue = "1") long pageNumber,
       HttpServletRequest request,
       HttpServletResponse response) {
     final int NUMBER_OF_SUBMISSIONS_PER_PAGE = getIntOption("submissionsPerPage", 100);
 
     long totalSubmissions =
-        submissionService.getNumberOfSubmissionsUsingProblemIdAndUsername(problemId, username);
+        submissionService.getNumberOfSubmissionsUsingProblemIdAndUsername(
+            problemId, username, judgeResult);
     long latestSubmissionId = submissionService.getLatestSubmissionId();
     long offset =
         latestSubmissionId
             - (pageNumber >= 1 ? pageNumber - 1 : 0) * NUMBER_OF_SUBMISSIONS_PER_PAGE;
     List<Submission> submissions =
         submissionService.getSubmissions(
-            problemId, username, offset, NUMBER_OF_SUBMISSIONS_PER_PAGE);
+            problemId, username, judgeResult, offset, NUMBER_OF_SUBMISSIONS_PER_PAGE);
 
     ModelAndView view = new ModelAndView("pages/administration/all-submissions");
     view.addObject("problemId", problemId);
     view.addObject("username", username);
+    view.addObject("judgeResult", judgeResult);
+    view.addObject("judgeResults", submissionService.getJudgeResults());
     view.addObject("currentPage", pageNumber);
     view.addObject(
         "totalPages", (long) Math.ceil(totalSubmissions * 1.0 / NUMBER_OF_SUBMISSIONS_PER_PAGE));

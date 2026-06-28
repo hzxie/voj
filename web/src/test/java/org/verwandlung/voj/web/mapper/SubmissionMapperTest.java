@@ -282,7 +282,7 @@ public class SubmissionMapperTest {
    */
   @Test
   public void testGetSubmissionsFrom1010WithLimit10() {
-    List<Submission> submissions = submissionMapper.getSubmissionsUsingOffset(0, "", 1010, 10);
+    List<Submission> submissions = submissionMapper.getSubmissionsUsingOffset(0, "", "", 1010, 10);
     Assertions.assertEquals(5, submissions.size());
 
     Submission firstSubmission = submissions.get(0);
@@ -296,7 +296,7 @@ public class SubmissionMapperTest {
    */
   @Test
   public void testGetSubmissionsFrom1003WithLimit2() {
-    List<Submission> submissions = submissionMapper.getSubmissionsUsingOffset(0, "", 1003, 2);
+    List<Submission> submissions = submissionMapper.getSubmissionsUsingOffset(0, "", "", 1003, 2);
     Assertions.assertEquals(2, submissions.size());
 
     Submission firstSubmission = submissions.get(0);
@@ -310,7 +310,7 @@ public class SubmissionMapperTest {
    */
   @Test
   public void testGetSubmissionsFrom100WithLimit10() {
-    List<Submission> submissions = submissionMapper.getSubmissionsUsingOffset(0, "", 100, 10);
+    List<Submission> submissions = submissionMapper.getSubmissionsUsingOffset(0, "", "", 100, 10);
     Assertions.assertEquals(0, submissions.size());
   }
 

@@ -164,7 +164,9 @@
         var cmModeBase = [[${cdnUrl}]], cmModeVer = [[${version}]];
         /* A language slug is a CodeMirror MIME (e.g. text/x-c++src). meta.js maps the MIME to a
          * mode name and loadmode.js fetches /mode/<name>.min.js on demand, so any language with a
-         * known MIME highlights without bundling every mode up front. Unknown MIMEs stay plain. */
+         * known MIME highlights without bundling every mode up front. Unknown MIMEs stay plain.
+         * addon/mode/simple.js is loaded up front because simple-mode grammars (e.g. rust) call
+         * CodeMirror.defineSimpleMode, which the addon installs onto the global CodeMirror. */
         function setEditorMode(slug) {
             if ( !window.codeMirrorEditor ) { return; }
             window.codeMirrorEditor.setOption('mode', slug);
@@ -179,6 +181,7 @@
             $.when(
                 $.getScript([[|${cdnUrl}/mode/meta.min.js?v=${version}|]]),
                 $.getScript([[|${cdnUrl}/mode/loadmode.min.js?v=${version}|]]),
+                $.getScript([[|${cdnUrl}/mode/simple.min.js?v=${version}|]]),
                 $.Deferred(function(deferred) { $(deferred.resolve); })
             ).done(function() {
                 CodeMirror.modeURL = cmModeBase + '/mode/%N.min.js?v=' + cmModeVer;

@@ -25,4 +25,10 @@
 		FROM voj_judge_results 
 		WHERE judge_result_slug = #{judgeResultSlug}
 	</select>
+	<select id="getJudgeResults"
+		resultMap="JudgeResultResultMap">
+		SELECT *
+		FROM voj_judge_results
+		ORDER BY judge_result_id
+	</select>
 </mapper>

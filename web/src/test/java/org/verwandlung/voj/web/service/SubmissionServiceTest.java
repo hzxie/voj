@@ -48,12 +48,20 @@ public class SubmissionServiceTest {
     Assertions.assertEquals(5, submissionService.getNumberOfSubmissionsUsingDate(null, null));
   }
 
-  /** Test case: tests the getNumberOfSubmissionsUsingProblemIdAndUsername(long, String) method. Test data: the submissions of user zjhzxhz for problem 1000. Expected: returns 2. */
+  /** Test case: tests the getNumberOfSubmissionsUsingProblemIdAndUsername(long, String, String) method. Test data: the submissions of user zjhzxhz for problem 1000. Expected: returns 2. */
   @Test
   public void testGetNumberOfSubmissionsUsingProblemIdAndUsername() {
     Assertions.assertEquals(
         2,
-        submissionService.getNumberOfSubmissionsUsingProblemIdAndUsername(1000, "zjhzxhz"));
+        submissionService.getNumberOfSubmissionsUsingProblemIdAndUsername(1000, "zjhzxhz", ""));
+  }
+
+  /** Test case: tests the getNumberOfSubmissionsUsingProblemIdAndUsername(long, String, String) method with a verdict filter. Test data: the accepted submissions of user zjhzxhz for problem 1000. Expected: returns 1. */
+  @Test
+  public void testGetNumberOfSubmissionsUsingProblemIdAndUsernameWithJudgeResult() {
+    Assertions.assertEquals(
+        1,
+        submissionService.getNumberOfSubmissionsUsingProblemIdAndUsername(1000, "zjhzxhz", "AC"));
   }
 
   /** Test case: tests the getLatestSubmissionId() method. Test data: N/a. Expected: the unique identifier of the latest submission record. */

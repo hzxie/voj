@@ -16,6 +16,8 @@
  */
 package org.verwandlung.voj.web.mapper;
 
+import java.util.List;
+
 import org.apache.ibatis.annotations.Param;
 
 import org.verwandlung.voj.web.model.JudgeResult;
@@ -41,4 +43,11 @@ public interface JudgeResultMapper {
    * @return the expected judge result object, or a null reference
    */
   JudgeResult getJudgeResultUsingSlug(@Param("judgeResultSlug") String judgeResultSlug);
+
+  /**
+   * Gets all judge results ordered by their unique identifier. Used to populate the verdict filter.
+   *
+   * @return the list of all judge results
+   */
+  List<JudgeResult> getJudgeResults();
 }

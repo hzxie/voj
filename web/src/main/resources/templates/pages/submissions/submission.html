@@ -106,10 +106,16 @@
     </script>
     <th:block th:if="${submission.judgeResult != null and submission.judgeResult.judgeResultName == 'Pending'}">
     <script type="text/javascript" th:inline="javascript">
-        var getterInterval = setInterval(function() {
-            getRealTimeJudgeResult();
-            if ( $('#judge-result').html() != 'Pending' ) { clearInterval(getterInterval); }
-        }, 10000);
+        // Swaps the verdict name and its colour (the `flag-<slug>` class drives the colour in CSS)
+        // on both the title-bar headline and the sidebar badge. The slug is taken from the
+        // authoritative poll below, not from the SSE stream, so the colour always matches the result.
+        function applyVerdict(slug, name) {
+            var flag = 'flag-' + slug.toLowerCase(),
+                strip = function(i, c) { return (c.match(/flag-\S+/g) || []).join(' '); };
+            $('#judge-result').text(name).closest('.vw-verdict-lg').removeClass(strip).addClass(flag);
+            $('.vw-side-verdict-name').text(name).removeClass(strip).addClass(flag);
+        }
+        var getterInterval = setInterval(getRealTimeJudgeResult, 10000);
         $(function() {
             var subscriptionUrl = [[@{/submission/getRealTimeJudgeResult.action(submissionId=${submission.submissionId},csrfToken=${_csrf.token})}]],
                 source          = new EventSource(subscriptionUrl),
@@ -125,8 +131,11 @@
                 var mapMessage  = JSON.parse(message),
                     judgeResult = mapMessage['judgeResult'],
                     judgeLog    = mapMessage['message'];
-                $('#judge-result').html(judgeResult);
+                $('#judge-result').text(judgeResult);
                 $('#judge-log').append(renderMarkdown(judgeLog));
+                // 'Running' is an intermediate marker; any other verdict is terminal, so pull the
+                // final slug/time/memory immediately instead of waiting for the next poll tick.
+                if ( judgeResult != 'Running' ) { getRealTimeJudgeResult(); }
             }
         });
         function getRealTimeJudgeResult() {
@@ -137,14 +146,16 @@
                 dataType: 'JSON',
                 success: function(result){
                     if ( result['isSuccessful'] && result['submission']['judgeResult']['judgeResultSlug'] != 'PD' ) {
-                        $('#judge-result').html(result['submission']['judgeResult']['judgeResultName']);
-                        $('#used-time').html(result['submission']['usedTime'] + " ms");
-                        $('#used-memory').html(result['submission']['usedMemory'] + " KB");
-                        $('#execute-time').html(getFormatedDateString(result['submission']['executeTime'], [[${language}]]));
-                        $('#judge-log').html(renderMarkdown(result['submission']['judgeLog']));
-                        if ( result['submission']['judger'] ) {
-                            $('#judger-name').html(result['submission']['judger']['username']);
+                        var submission = result['submission'];
+                        applyVerdict(submission['judgeResult']['judgeResultSlug'], submission['judgeResult']['judgeResultName']);
+                        $('#used-time').html(submission['usedTime'] + " ms");
+                        $('#used-memory').html(submission['usedMemory'] + " KB");
+                        $('#execute-time').html(getFormatedDateString(submission['executeTime'], [[${language}]]));
+                        $('#judge-log').html(renderMarkdown(submission['judgeLog']));
+                        if ( submission['judger'] ) {
+                            $('#judger-name').html(submission['judger']['username']);
                         }
+                        clearInterval(getterInterval);
                     }
                 }
             });

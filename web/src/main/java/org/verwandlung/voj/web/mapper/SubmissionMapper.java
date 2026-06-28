@@ -44,10 +44,13 @@ public interface SubmissionMapper {
    *
    * @param problemId - the unique identifier of the problem
    * @param username - the username of the user
+   * @param judgeResult - the slug of the judge result to filter by, or empty for all
    * @return the number of submissions by the user for the problem
    */
   long getNumberOfSubmissionsUsingProblemIdAndUsername(
-      @Param("problemId") long problemId, @Param("username") String username);
+      @Param("problemId") long problemId,
+      @Param("username") String username,
+      @Param("judgeResult") String judgeResult);
 
   /**
    * [For administrators only] Gets the number of submissions for a programming language.
@@ -139,6 +142,7 @@ public interface SubmissionMapper {
    *
    * @param problemId - the unique identifier of the problem
    * @param username - the username of the user
+   * @param judgeResult - the slug of the judge result to filter by, or empty for all
    * @param offset - the starting number of the submission identifier
    * @param limit - the number of submissions to load each time
    * @return all submissions within a range
@@ -146,6 +150,7 @@ public interface SubmissionMapper {
   List<Submission> getSubmissionsUsingOffset(
       @Param("problemId") long problemId,
       @Param("username") String username,
+      @Param("judgeResult") String judgeResult,
       @Param("submissionId") long offset,
       @Param("limit") int limit);
 
