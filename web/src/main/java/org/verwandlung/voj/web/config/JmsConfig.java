@@ -20,8 +20,10 @@ import jakarta.jms.ConnectionFactory;
 import jakarta.jms.MessageListener;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
+import org.apache.activemq.broker.BrokerService;
 import org.apache.activemq.command.ActiveMQQueue;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jms.connection.CachingConnectionFactory;
@@ -50,9 +52,62 @@ public class JmsConfig {
   /** The ActiveMQ dead-letter queue that expired, undeliverable messages land on by default. */
   private static final String DEAD_LETTER_QUEUE = "ActiveMQ.DLQ";
 
-  /** The JMS connection factory with connection caching. */
+  /** The well-known name of the in-JVM broker, matched by the {@code vm://localhost} transport. */
+  private static final String EMBEDDED_BROKER_NAME = "localhost";
+
+  /**
+   * An ActiveMQ broker embedded in this JVM, created only when {@code jms.broker.embedded=true}.
+   *
+   * <p>This lets a single-instance deployment drop the standalone broker process (and its whole
+   * JVM, ~150&nbsp;MB+) entirely. The web module talks to it over the in-process {@code vm://}
+   * transport, while out-of-process judgers still reach it through the TCP connector opened here
+   * (the same {@code jms.broker.url} address the judger already dials).
+   *
+   * <p>The broker is non-persistent: a web restart drops any in-flight submission tasks. That keeps
+   * the embedded footprint small and is acceptable for the single-node use case this mode targets;
+   * deployments that need durable queues should run an external broker (the default,
+   * {@code jms.broker.embedded=false}) instead.
+   *
+   * <p><strong>Do not run the bundled standalone broker at the same time</strong> — both bind
+   * {@code jms.broker.url}, so the Docker image / supervisord must skip the separate ActiveMQ
+   * process whenever this mode is enabled.
+   */
+  @Bean(initMethod = "start", destroyMethod = "stop")
+  @ConditionalOnProperty(name = "jms.broker.embedded", havingValue = "true")
+  public BrokerService embeddedBroker(@Value("${jms.broker.url}") String brokerUrl)
+      throws Exception {
+    BrokerService broker = new BrokerService();
+    broker.setBrokerName(EMBEDDED_BROKER_NAME);
+    broker.setPersistent(false);
+    broker.setUseJmx(false);
+    // Spring manages the lifecycle via initMethod/destroyMethod; no JVM shutdown hook needed.
+    broker.setUseShutdownHook(false);
+    // Expose the TCP connector so out-of-process judgers can connect.
+    broker.addConnector(brokerUrl);
+    return broker;
+  }
+
+  /**
+   * The JMS connection factory used when the broker is embedded. Declaring {@code embeddedBroker} as
+   * a parameter makes Spring start the broker before this factory is created, so the in-process
+   * {@code vm://localhost} transport always finds a running broker ({@code create=false} stops it
+   * from silently spinning up a second, unconfigured one).
+   */
   @Bean
-  public ConnectionFactory connectionFactory(@Value("${jms.broker.url}") String brokerUrl) {
+  @ConditionalOnProperty(name = "jms.broker.embedded", havingValue = "true")
+  public ConnectionFactory connectionFactory(BrokerService embeddedBroker) {
+    ActiveMQConnectionFactory amqConnectionFactory =
+        new ActiveMQConnectionFactory("vm://" + EMBEDDED_BROKER_NAME + "?create=false");
+    return new CachingConnectionFactory(amqConnectionFactory);
+  }
+
+  /**
+   * The JMS connection factory used when talking to an external broker (the default). Dials the
+   * configured {@code jms.broker.url} over TCP.
+   */
+  @Bean
+  @ConditionalOnProperty(name = "jms.broker.embedded", havingValue = "false", matchIfMissing = true)
+  public ConnectionFactory externalConnectionFactory(@Value("${jms.broker.url}") String brokerUrl) {
     ActiveMQConnectionFactory amqConnectionFactory = new ActiveMQConnectionFactory(brokerUrl);
     return new CachingConnectionFactory(amqConnectionFactory);
   }
