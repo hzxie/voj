@@ -104,7 +104,8 @@ INSERT INTO `voj_options` (`option_id`, `option_name`, `option_value`, `is_autol
 (25, 'autoCensorOffensiveWords', '1', 0),
 (26, 'turnstileEnabled', '0', 1),
 (27, 'turnstileSiteKey', '', 1),
-(28, 'turnstileSecretKey', '', 0);
+(28, 'turnstileSecretKey', '', 0),
+(29, 'emailDailyLimit', '3', 0);
 
 -- Baseline offensive-word library. Administrators normally replace this by
 -- importing external word lists (see voj_options.offensiveWordSources); the

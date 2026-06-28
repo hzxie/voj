@@ -59,12 +59,15 @@ public class UserService {
   /** The number of days an email validation credential remains valid after it is issued. */
   private static final long EMAIL_VALIDATION_VALID_DAYS = 1;
 
+  /** The length of the rolling rate-limit window for verification / password-reset emails. */
+  private static final long EMAIL_RATE_LIMIT_WINDOW_MILLIS = TimeUnit.DAYS.toMillis(1);
+
   /**
-   * The minimum interval between two verification / password-reset emails to the same address. A
-   * second request within this window is silently ignored so the email endpoints cannot be abused
-   * to flood an inbox.
+   * The fallback maximum number of verification / password-reset emails sent to one address per
+   * {@link #EMAIL_RATE_LIMIT_WINDOW_MILLIS} window, used when the {@code emailDailyLimit} option is
+   * missing or malformed.
    */
-  private static final long EMAIL_COOLDOWN_MILLIS = TimeUnit.MINUTES.toMillis(1);
+  private static final int DEFAULT_EMAIL_DAILY_LIMIT = 3;
 
   /**
    * Gets a user object by its unique identifier.
@@ -440,19 +443,18 @@ public class UserService {
    * @param email - the user's email address
    */
   private void dispatchVerificationEmail(String username, String email) {
-    // Rate-limit: skip the send when a credential was issued to this address within the cooldown
-    // window, so the endpoint cannot be abused to flood an inbox with reset emails.
-    if (isEmailRecentlySent(email)) {
+    String token = DigestUtils.getGuid();
+    // Rate-limit: skip the send once the address has reached its daily email limit, so the endpoint
+    // cannot be abused to flood an inbox with reset emails.
+    EmailValidation emailValidation = nextEmailValidation(email, token);
+    if (emailValidation == null) {
       return;
     }
-    String token = DigestUtils.getGuid();
-    Date expireTime = getExpireTime();
     Map<String, Object> model = new HashMap<>(4, 1);
     model.put("username", username);
     model.put("email", email);
     model.put("token", token);
 
-    EmailValidation emailValidation = new EmailValidation(email, token, expireTime);
     emailValidationMapper.deleteEmailValidation(email);
     emailValidationMapper.createEmailValidation(emailValidation);
 
@@ -519,19 +521,18 @@ public class UserService {
    * @param email - the user's email address
    */
   private void dispatchEmailVerificationEmail(String username, String email) {
-    // Rate-limit: skip the send when a credential was issued to this address within the cooldown
-    // window, so repeated registrations / email changes cannot flood an inbox with verifications.
-    if (isEmailRecentlySent(email)) {
+    String token = DigestUtils.getGuid();
+    // Rate-limit: skip the send once the address has reached its daily email limit, so repeated
+    // registrations / email changes cannot flood an inbox with verifications.
+    EmailValidation emailValidation = nextEmailValidation(email, token);
+    if (emailValidation == null) {
       return;
     }
-    String token = DigestUtils.getGuid();
-    Date expireTime = getExpireTime();
     Map<String, Object> model = new HashMap<>(4, 1);
     model.put("username", username);
     model.put("email", email);
     model.put("token", token);
 
-    EmailValidation emailValidation = new EmailValidation(email, token, expireTime);
     emailValidationMapper.deleteEmailValidation(email);
     emailValidationMapper.createEmailValidation(emailValidation);
 
@@ -555,23 +556,59 @@ public class UserService {
   }
 
   /**
-   * Checks whether an email validation credential was issued to an address within the cooldown
-   * window. Because every credential expires exactly {@link #EMAIL_VALIDATION_VALID_DAYS} day(s)
-   * after it is issued, the issue time can be recovered from the stored expiration time without an
-   * extra column, and a credential whose issue time is younger than {@link #EMAIL_COOLDOWN_MILLIS}
-   * means another email was sent very recently.
+   * Builds the email validation credential to persist for a new verification / password-reset email,
+   * carrying forward the per-address send counter, or returns {@code null} when the address has
+   * already reached its daily email limit within the current rate-limit window. A {@code null}
+   * return tells the caller to silently skip the send so the email endpoints cannot be abused to
+   * flood an inbox.
    *
    * @param email - the email address
-   * @return whether an email was sent to the address within the cooldown window
+   * @param token - the freshly generated validation token
+   * @return the credential to persist, or null if the daily limit has been reached
    */
-  private boolean isEmailRecentlySent(String email) {
+  private EmailValidation nextEmailValidation(String email, String token) {
     EmailValidation existing = emailValidationMapper.getEmailValidation(email);
-    if (existing == null || existing.getExpireTime() == null) {
-      return false;
+    long now = System.currentTimeMillis();
+
+    int dailyCount;
+    Date windowStart;
+    boolean withinWindow =
+        existing != null
+            && existing.getWindowStart() != null
+            && now - existing.getWindowStart().getTime() < EMAIL_RATE_LIMIT_WINDOW_MILLIS;
+    if (withinWindow) {
+      if (existing.getDailyCount() >= getEmailDailyLimit()) {
+        return null;
+      }
+      dailyCount = existing.getDailyCount() + 1;
+      windowStart = existing.getWindowStart();
+    } else {
+      dailyCount = 1;
+      windowStart = new Date(now);
     }
-    long issuedAt =
-        existing.getExpireTime().getTime() - TimeUnit.DAYS.toMillis(EMAIL_VALIDATION_VALID_DAYS);
-    return System.currentTimeMillis() - issuedAt < EMAIL_COOLDOWN_MILLIS;
+    return new EmailValidation(email, token, getExpireTime(), dailyCount, windowStart);
+  }
+
+  /**
+   * Resolves the configured maximum number of verification / password-reset emails per address per
+   * rate-limit window, falling back to {@link #DEFAULT_EMAIL_DAILY_LIMIT} when the {@code
+   * emailDailyLimit} option is missing or not a positive integer.
+   *
+   * @return the maximum number of emails allowed per address per window
+   */
+  private int getEmailDailyLimit() {
+    Option option = optionMapper.getOption("emailDailyLimit");
+    if (option != null) {
+      try {
+        int limit = Integer.parseInt(option.getOptionValue().trim());
+        if (limit > 0) {
+          return limit;
+        }
+      } catch (NumberFormatException e) {
+        // Fall through to the default when the stored value is malformed.
+      }
+    }
+    return DEFAULT_EMAIL_DAILY_LIMIT;
   }
 
   /**

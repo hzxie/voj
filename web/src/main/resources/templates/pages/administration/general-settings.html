@@ -77,6 +77,13 @@
                 </div>
                 <div class="adm-setrow">
                     <div class="adm-setrow-l">
+                        <div class="lbl" th:text="#{voj.administration.general-settings.email-daily-limit}">Daily email limit</div>
+                        <div class="hint" th:text="#{voj.administration.general-settings.email-daily-limit-hint}">Maximum verification / password-reset emails sent to one address per day.</div>
+                    </div>
+                    <div class="adm-setrow-r"><input id="email-daily-limit" class="adm-input" type="number" min="1" max="100" th:value="${options['emailDailyLimit']}" /></div>
+                </div>
+                <div class="adm-setrow">
+                    <div class="adm-setrow-l">
                         <div class="lbl" th:text="#{voj.administration.general-settings.turnstile-enabled}">Cloudflare Turnstile</div>
                         <div class="hint" th:text="#{voj.administration.general-settings.turnstile-enabled-hint}">Require a Turnstile challenge on the login, registration and password-reset forms.</div>
                     </div>
@@ -289,6 +296,7 @@
                     copyright: $('#copyright').val(),
                     allowUserRegister: isOn('allow-register'),
                     requireEmailVerification: isOn('require-email-verification'),
+                    emailDailyLimit: $('#email-daily-limit').val(),
                     turnstileEnabled: isOn('turnstile-enabled'),
                     turnstileSiteKey: $('#turnstile-site-key').val(),
                     turnstileSecretKey: $('#turnstile-secret-key').val(),

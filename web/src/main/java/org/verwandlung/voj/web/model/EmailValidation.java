@@ -42,6 +42,24 @@ public class EmailValidation implements Serializable {
   }
 
   /**
+   * Constructor of the EmailValidation class that also carries the per-address rate-limit counters.
+   *
+   * @param email - the email address to be validated
+   * @param token - the token used for validation
+   * @param expireTime - the expiration time of the token
+   * @param dailyCount - the number of emails sent to the address in the current rate-limit window
+   * @param windowStart - the time at which the current rate-limit window began
+   */
+  public EmailValidation(
+      String email, String token, Date expireTime, int dailyCount, Date windowStart) {
+    this.email = email;
+    this.token = token;
+    this.expireTime = expireTime;
+    this.dailyCount = dailyCount;
+    this.windowStart = windowStart;
+  }
+
+  /**
    * Gets the email address to be validated.
    *
    * @return the email address to be validated
@@ -95,13 +113,49 @@ public class EmailValidation implements Serializable {
     this.expireTime = expireTime;
   }
 
+  /**
+   * Gets the number of emails sent to the address in the current rate-limit window.
+   *
+   * @return the number of emails sent in the current rate-limit window
+   */
+  public int getDailyCount() {
+    return dailyCount;
+  }
+
+  /**
+   * Sets the number of emails sent to the address in the current rate-limit window.
+   *
+   * @param dailyCount - the number of emails sent in the current rate-limit window
+   */
+  public void setDailyCount(int dailyCount) {
+    this.dailyCount = dailyCount;
+  }
+
+  /**
+   * Gets the time at which the current rate-limit window began.
+   *
+   * @return the time at which the current rate-limit window began
+   */
+  public Date getWindowStart() {
+    return windowStart;
+  }
+
+  /**
+   * Sets the time at which the current rate-limit window began.
+   *
+   * @param windowStart - the time at which the current rate-limit window began
+   */
+  public void setWindowStart(Date windowStart) {
+    this.windowStart = windowStart;
+  }
+
   /* (non-Javadoc)
    * @see java.lang.Object#toString()
    */
   public String toString() {
     return String.format(
-        "EmailValidation [Email=%s, Token=%s, ExpireTime=%s]",
-        new Object[] {email, token, expireTime});
+        "EmailValidation [Email=%s, Token=%s, ExpireTime=%s, DailyCount=%d, WindowStart=%s]",
+        new Object[] {email, token, expireTime, dailyCount, windowStart});
   }
 
   /** The email address to be validated. */
@@ -112,6 +166,12 @@ public class EmailValidation implements Serializable {
 
   /** The expiration time of the token. */
   private Date expireTime;
+
+  /** The number of emails sent to the address in the current rate-limit window. */
+  private int dailyCount = 1;
+
+  /** The time at which the current rate-limit window began. */
+  private Date windowStart;
 
   /** The unique serialization identifier. */
   private static final long serialVersionUID = -2452767046421078474L;

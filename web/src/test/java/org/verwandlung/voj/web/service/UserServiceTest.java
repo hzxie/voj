@@ -448,6 +448,54 @@ public class UserServiceTest {
     Assertions.assertFalse(result.get("isSuccessful"));
   }
 
+  /** Test case: the per-address daily email limit caps repeated sends. Test data: four sends to one address with the default limit of three. Expected: the credential's counter stops at three and the fourth send leaves it untouched. */
+  @Test
+  public void testSendVerificationEmailRespectsDailyLimit() {
+    // User #1000 (zjhzxhz) owns cshzxie@gmail.com, which has no credential seeded.
+    for (int i = 0; i < 3; ++i) {
+      userService.sendVerificationEmail("zjhzxhz", "cshzxie@gmail.com");
+    }
+    EmailValidation atCap = emailValidationMapper.getEmailValidation("cshzxie@gmail.com");
+    Assertions.assertEquals(3, atCap.getDailyCount());
+
+    // The fourth send is over the limit: it neither increments the counter nor re-issues the token.
+    userService.sendVerificationEmail("zjhzxhz", "cshzxie@gmail.com");
+    EmailValidation overCap = emailValidationMapper.getEmailValidation("cshzxie@gmail.com");
+    Assertions.assertEquals(3, overCap.getDailyCount());
+    Assertions.assertEquals(atCap.getToken(), overCap.getToken());
+  }
+
+  /** Test case: the daily email limit is configurable. Test data: the emailDailyLimit option set to one. Expected: the second send to an address is suppressed. */
+  @Test
+  public void testSendVerificationEmailDailyLimitIsConfigurable() {
+    Option option = optionMapper.getOption("emailDailyLimit");
+    option.setOptionValue("1");
+    optionMapper.updateOption(option);
+
+    userService.sendVerificationEmail("zjhzxhz", "cshzxie@gmail.com");
+    EmailValidation first = emailValidationMapper.getEmailValidation("cshzxie@gmail.com");
+    Assertions.assertEquals(1, first.getDailyCount());
+
+    userService.sendVerificationEmail("zjhzxhz", "cshzxie@gmail.com");
+    EmailValidation second = emailValidationMapper.getEmailValidation("cshzxie@gmail.com");
+    Assertions.assertEquals(1, second.getDailyCount());
+    Assertions.assertEquals(first.getToken(), second.getToken());
+  }
+
+  /** Test case: an elapsed rate-limit window resets the counter. Test data: a credential whose window began more than a day ago and is already at the cap. Expected: the next send starts a fresh window at one. */
+  @Test
+  public void testSendVerificationEmailResetsAfterWindow() {
+    Calendar calendar = Calendar.getInstance();
+    calendar.add(Calendar.DATE, -2);
+    emailValidationMapper.createEmailValidation(
+        new EmailValidation("cshzxie@gmail.com", "stale-token", tomorrow(), 3, calendar.getTime()));
+
+    userService.sendVerificationEmail("zjhzxhz", "cshzxie@gmail.com");
+    EmailValidation reset = emailValidationMapper.getEmailValidation("cshzxie@gmail.com");
+    Assertions.assertEquals(1, reset.getDailyCount());
+    Assertions.assertNotEquals("stale-token", reset.getToken());
+  }
+
   /** Test case: tests the deleteUser(long) method. Test data: a user with no associated data. Expected: the user is deleted. */
   @Test
   public void testDeleteUser() {

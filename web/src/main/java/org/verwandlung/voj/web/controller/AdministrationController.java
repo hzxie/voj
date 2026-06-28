@@ -1500,6 +1500,7 @@ public class AdministrationController {
       @RequestParam(value = "turnstileEnabled", defaultValue = "false") boolean turnstileEnabled,
       @RequestParam(value = "turnstileSiteKey", defaultValue = "") String turnstileSiteKey,
       @RequestParam(value = "turnstileSecretKey", defaultValue = "") String turnstileSecretKey,
+      @RequestParam(value = "emailDailyLimit", defaultValue = "3") int emailDailyLimit,
       HttpServletRequest request) {
     Map<String, Boolean> result =
         optionService.updateOptions(
@@ -1538,6 +1539,7 @@ public class AdministrationController {
       moderationOptions.put("turnstileEnabled", turnstileEnabled ? "1" : "0");
       moderationOptions.put("turnstileSiteKey", turnstileSiteKey.trim());
       moderationOptions.put("turnstileSecretKey", turnstileSecretKey.trim());
+      moderationOptions.put("emailDailyLimit", String.valueOf(Math.max(1, emailDailyLimit)));
       optionService.updateOptions(moderationOptions);
 
       Map<String, String> pageSizeOptions = new HashMap<>();

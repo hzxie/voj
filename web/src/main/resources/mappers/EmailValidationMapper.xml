@@ -8,6 +8,8 @@
 		<id property="email" column="email" />
 		<result property="token" column="token" />
 		<result property="expireTime" column="expire_time" />
+		<result property="dailyCount" column="daily_count" />
+		<result property="windowStart" column="window_start" />
 	</resultMap>
 
 	<!-- Methods -->
@@ -20,8 +22,8 @@
 	</select>
 	<insert id="createEmailValidation" 
 		parameterType="org.verwandlung.voj.web.model.EmailValidation">
-		INSERT INTO voj_email_validation (email, token, expire_time) 
-		VALUES (#{email}, #{token}, #{expireTime})
+		INSERT INTO voj_email_validation (email, token, expire_time, daily_count, window_start)
+		VALUES (#{email}, #{token}, #{expireTime}, #{dailyCount}, #{windowStart})
 	</insert>
 	<delete id="deleteEmailValidation"
 		parameterType="String">

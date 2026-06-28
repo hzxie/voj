@@ -105,7 +105,9 @@ CREATE TABLE `voj_discussion_topics` (
 CREATE TABLE `voj_email_validation` (
   `email` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL,
   `token` varchar(36) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `expire_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  `expire_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `daily_count` int(11) NOT NULL DEFAULT 1,
+  `window_start` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `voj_judge_results` (
