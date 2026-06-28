@@ -456,6 +456,29 @@ public class DiscussionServiceTest {
     Assertions.assertFalse((Boolean) result.get("isSuccessful"));
   }
 
+  /** Test case: tests the createDiscussionReply(...) method. Test data: the discussion thread is locked. Expected: creation fails. */
+  @Test
+  public void testCreateDiscussionReplyOnLockedThread() {
+    // Lock thread #1 (topic 1) through the moderation entry point, then attempt to reply.
+    Assertions.assertTrue(discussionService.saveThread(1, "Thread #1", 1, true, false, true));
+    Map<String, Object> result =
+        discussionService.createDiscussionReply(1, adminUser(), "A reply on a locked thread.");
+    Assertions.assertTrue((Boolean) result.get("isDiscussionThreadLocked"));
+    Assertions.assertFalse((Boolean) result.get("isSuccessful"));
+    Assertions.assertFalse(result.containsKey("discussionReply"));
+  }
+
+  /** Test case: tests the createDiscussionReply(...) method. Test data: a thread that was locked and then unlocked. Expected: creation succeeds again. */
+  @Test
+  public void testCreateDiscussionReplyAfterUnlockingThread() {
+    Assertions.assertTrue(discussionService.saveThread(1, "Thread #1", 1, true, false, true));
+    Assertions.assertTrue(discussionService.saveThread(1, "Thread #1", 1, true, false, false));
+    Map<String, Object> result =
+        discussionService.createDiscussionReply(1, adminUser(), "A reply after unlocking.");
+    Assertions.assertFalse((Boolean) result.get("isDiscussionThreadLocked"));
+    Assertions.assertTrue((Boolean) result.get("isSuccessful"));
+  }
+
   /** Test case: tests the editDiscussionReply(...) method. Test data: edited by an administrator. Expected: editing succeeds. */
   @Test
   public void testEditDiscussionReplyByAdministrator() {

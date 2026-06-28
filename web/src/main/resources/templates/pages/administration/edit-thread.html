@@ -205,7 +205,7 @@
                     },
                     dataType: 'JSON',
                     success: function (result) {
-                        if (result['isSuccessful']) { window.location.reload(); }
+                        if (result['isSuccessful']) { alert([[#{voj.administration.edit-thread.save-success}]]); window.location.reload(); }
                         else { alert([[#{voj.administration.edit-thread.save-error}]]); }
                     }
                 });

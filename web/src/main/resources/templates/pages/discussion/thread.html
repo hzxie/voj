@@ -51,7 +51,8 @@
                     </div>
 
                     <!-- REPLY BOX -->
-                    <div id="editor" class="vw-replybox" th:if="${isLogin}">
+                    <div class="vw-alert vw-alert-warning" th:if="${discussionThread.locked}" th:text="#{voj.discussion.thread.thread-locked}">This thread is locked and no longer accepts new replies.</div>
+                    <div id="editor" class="vw-replybox" th:if="${isLogin and !discussionThread.locked}">
                         <div class="vw-eyebrow vw-side-label vw-side-label-accent" th:text="'// ' + #{voj.discussion.thread.leave-a-comment}">// YOUR REPLY</div>
                         <div class="vw-alert vw-alert-error alert-error hide"></div>
                         <div class="markdown-editor">
@@ -329,6 +330,7 @@
             } else {
                 var msg = '';
                 if ( !result['isDiscussionThreadExists'] ) { msg += [[#{voj.discussion.thread.thread-not-exists}]] + '<br>'; }
+                else if ( result['isDiscussionThreadLocked'] ) { msg += [[#{voj.discussion.thread.thread-locked}]] + '<br>'; }
                 if ( !result['isReplyCreatorExists'] ) { msg += [[#{voj.discussion.thread.user-not-login}]] + '<br>'; }
                 else if ( !result['isReplyCreatorLegal'] ) { msg += [[#{voj.discussion.thread.user-not-permitted}]] + '<br>'; }
                 if ( result['isReplyContentEmpty'] ) { msg += [[#{voj.discussion.thread.empty-reply}]] + '<br>'; }
