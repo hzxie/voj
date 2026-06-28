@@ -55,9 +55,6 @@ public class DiscussionService {
   /** The option name of the switch that enables report-based auto-hiding of threads. */
   private static final String OPTION_AUTO_HIDE_ON_REPORTS = "autoHideOnReports";
 
-  /** The option name of the switch that enables offensive-word censoring of discussion content. */
-  private static final String OPTION_AUTO_CENSOR = "autoCensorOffensiveWords";
-
   /** The option name of the cooldown (in minutes) before a freshly-registered user can post. */
   private static final String OPTION_NEW_USER_POST_DELAY = "newUserPostDelay";
 
@@ -109,7 +106,38 @@ public class DiscussionService {
    * @return the DiscussionThread object of the problem's solution discussion
    */
   public DiscussionThread getSolutionThreadOfProblem(long problemId) {
-    return discussionThreadMapper.getSolutionThreadOfProblem(problemId);
+    DiscussionThread thread = discussionThreadMapper.getSolutionThreadOfProblem(problemId);
+    censorThreadTitle(thread);
+    return thread;
+  }
+
+  /**
+   * Gets a discussion thread object by its unique identifier for public display, censoring its
+   * title when auto-censoring is enabled. Use this instead of {@link
+   * #getDiscussionThreadUsingThreadId(long)} on user-facing pages; the latter returns the raw title
+   * for the administration moderation view, where the unmasked text is needed for editing.
+   *
+   * @param discussionThreadId - the unique identifier of the discussion thread
+   * @return the corresponding discussion thread object, or a null reference
+   */
+  public DiscussionThread getDiscussionThreadForDisplay(long discussionThreadId) {
+    DiscussionThread thread =
+        discussionThreadMapper.getDiscussionThreadUsingThreadId(discussionThreadId);
+    censorThreadTitle(thread);
+    return thread;
+  }
+
+  /**
+   * Censors a discussion thread's title in place, honouring the auto-censor system option. A {@code
+   * null} thread is ignored so callers need not null-check before invoking.
+   *
+   * @param thread - the discussion thread whose title is censored, may be {@code null}
+   */
+  private void censorThreadTitle(DiscussionThread thread) {
+    if (thread != null) {
+      thread.setDiscussionThreadTitle(
+          offensiveWordFilter.censor(thread.getDiscussionThreadTitle()));
+    }
   }
 
   /**
@@ -122,8 +150,11 @@ public class DiscussionService {
    */
   public List<DiscussionThread> getDiscussionThreadsOfProblem(
       long problemId, long offset, int limit) {
-    return discussionThreadMapper.getDiscussionThreads(
-        problemId, 0, offset, limit, getReportHideThreshold(), true);
+    List<DiscussionThread> threads =
+        discussionThreadMapper.getDiscussionThreads(
+            problemId, 0, offset, limit, getReportHideThreshold(), true);
+    threads.forEach(this::censorThreadTitle);
+    return threads;
   }
 
   /**
@@ -141,8 +172,11 @@ public class DiscussionService {
       DiscussionTopic dt = discussionTopicMapper.getDiscussionTopicUsingSlug(discussionTopicSlug);
       discussionTopicId = dt.getDiscussionTopicId();
     }
-    return discussionThreadMapper.getDiscussionThreads(
-        0, discussionTopicId, offset, limit, getReportHideThreshold(), true);
+    List<DiscussionThread> threads =
+        discussionThreadMapper.getDiscussionThreads(
+            0, discussionTopicId, offset, limit, getReportHideThreshold(), true);
+    threads.forEach(this::censorThreadTitle);
+    return threads;
   }
 
   /**
@@ -161,14 +195,10 @@ public class DiscussionService {
     List<DiscussionReply> replies =
         discussionReplyMapper.getDiscussionRepliesUsingThreadId(
             discussionThreadId, offset, limit, visibleOnly);
-    boolean censor = isOptionEnabled(OPTION_AUTO_CENSOR, true);
     for (DiscussionReply dr : replies) {
       // Sanitize the HTML, and censor offensive content when auto-censoring is enabled.
-      String replyContent = HtmlTextFilter.filter(dr.getDiscussionReplyContent());
-      if (censor) {
-        replyContent = offensiveWordFilter.filter(replyContent);
-      }
-      dr.setDiscussionReplyContent(replyContent);
+      dr.setDiscussionReplyContent(
+          offensiveWordFilter.censor(HtmlTextFilter.filter(dr.getDiscussionReplyContent())));
       // Aggregate the voting information of the reply for the current user
       populateVoteStatistics(dr, currentUserUid);
     }

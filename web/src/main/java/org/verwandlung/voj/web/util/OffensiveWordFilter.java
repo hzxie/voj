@@ -28,6 +28,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import org.verwandlung.voj.web.mapper.OffensiveWordMapper;
+import org.verwandlung.voj.web.mapper.OptionMapper;
+import org.verwandlung.voj.web.model.Option;
 
 /**
  * The offensive word filtering class.
@@ -47,8 +49,9 @@ public class OffensiveWordFilter {
    *     words from the database
    */
   @Autowired
-  private OffensiveWordFilter(OffensiveWordMapper offensiveWordMapper) {
+  private OffensiveWordFilter(OffensiveWordMapper offensiveWordMapper, OptionMapper optionMapper) {
     this.offensiveWordMapper = offensiveWordMapper;
+    this.optionMapper = optionMapper;
   }
 
   /**
@@ -88,6 +91,42 @@ public class OffensiveWordFilter {
    */
   private HashMap<?, ?> loadOffensiveWordMap() {
     return buildOffensiveWordMap(new HashSet<>(offensiveWordMapper.getOffensiveWords()));
+  }
+
+  /**
+   * Censors offensive words in user-generated text that is about to be displayed, honouring the
+   * {@code autoCensorOffensiveWords} system option. This is the entry point that callers should use
+   * for every displayable, user-supplied field (display names, bios, discussion titles and replies,
+   * and so on) - source code is the deliberate exception, as masking it would corrupt the program.
+   *
+   * <p>When the option is disabled the original text is returned untouched, so censoring can be
+   * toggled at runtime without rewriting stored content; the censoring happens at display time
+   * rather than at write time so refreshed dictionaries ({@link #reload()}) and option changes take
+   * effect retroactively.
+   *
+   * @param text - the string to censor, may be {@code null}
+   * @return the censored string, or the original text when censoring is disabled or the text is
+   *     {@code null}/empty
+   */
+  public String censor(String text) {
+    if (text == null || text.isEmpty() || !isAutoCensorEnabled()) {
+      return text;
+    }
+    return filter(text);
+  }
+
+  /**
+   * Reads the {@code autoCensorOffensiveWords} system option, treating a missing option as enabled
+   * so that censoring is on by default.
+   *
+   * @return whether automatic censoring of offensive words is enabled
+   */
+  private boolean isAutoCensorEnabled() {
+    Option option = optionMapper.getOption(OPTION_AUTO_CENSOR);
+    if (option == null || option.getOptionValue() == null) {
+      return true;
+    }
+    return "1".equals(option.getOptionValue().trim());
   }
 
   /**
@@ -275,8 +314,14 @@ public class OffensiveWordFilter {
 
   public static final int MAX_MATCH_TYPE = 2;
 
+  /** The name of the system option that toggles automatic censoring of offensive words. */
+  private static final String OPTION_AUTO_CENSOR = "autoCensorOffensiveWords";
+
   /** The autowired OffensiveWordMapper object, used to load the offensive words from the database. */
   private final OffensiveWordMapper offensiveWordMapper;
+
+  /** The autowired OptionMapper object, used to read the auto-censor system option. */
+  private final OptionMapper optionMapper;
 }
 
 /**

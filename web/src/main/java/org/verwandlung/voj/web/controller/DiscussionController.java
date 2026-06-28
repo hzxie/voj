@@ -135,7 +135,7 @@ public class DiscussionController {
       HttpServletRequest request,
       HttpServletResponse response) {
     DiscussionThread discussionThread =
-        discussionService.getDiscussionThreadUsingThreadId(discussionThreadId);
+        discussionService.getDiscussionThreadForDisplay(discussionThreadId);
     if (discussionThread == null) {
       throw new ResourceNotFoundException();
     }

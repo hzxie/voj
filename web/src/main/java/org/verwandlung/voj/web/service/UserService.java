@@ -17,11 +17,14 @@
 package org.verwandlung.voj.web.service;
 
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -161,6 +164,11 @@ public class UserService {
 
       if ("socialLinks".equals(key)) {
         value = JsonUtils.toMap((String) value);
+      } else if (CENSORED_PROFILE_FIELDS.contains(key)) {
+        // Censor the displayable prose fields at read time so refreshed dictionaries and the
+        // auto-censor option take effect retroactively. URL fields (website, socialLinks) are left
+        // untouched, as masking substrings would break the links.
+        value = offensiveWordFilter.censor((String) value);
       }
       userMetaMap.put(key, value);
     }
@@ -332,7 +340,7 @@ public class UserService {
     if (result.get("isSuccessful")) {
       User user = userMapper.getUserUsingUsername(username);
       updateUserMeta(user, "displayName", HtmlTextFilter.filter(displayName));
-      updateUserMeta(user, "aboutMe", offensiveWordFilter.filter(HtmlTextFilter.filter(aboutMe)));
+      updateUserMeta(user, "aboutMe", HtmlTextFilter.filter(aboutMe));
     }
     return result;
   }
@@ -752,7 +760,7 @@ public class UserService {
     location = HtmlTextFilter.filter(location);
     website = HtmlTextFilter.filter(website);
     socialLinks = HtmlTextFilter.filter(socialLinks);
-    aboutMe = offensiveWordFilter.filter(HtmlTextFilter.filter(aboutMe));
+    aboutMe = HtmlTextFilter.filter(aboutMe);
     Map<String, Boolean> result =
         getUpdateProfileResult(user, email, displayName, location, website, socialLinks, aboutMe);
 
@@ -793,7 +801,7 @@ public class UserService {
   public Map<String, Boolean> updateProfileByAdmin(
       User user, String email, String displayName, String aboutMe) {
     displayName = HtmlTextFilter.filter(displayName);
-    aboutMe = offensiveWordFilter.filter(HtmlTextFilter.filter(aboutMe));
+    aboutMe = HtmlTextFilter.filter(aboutMe);
 
     Map<String, Boolean> result = new HashMap<>(6, 1);
     result.put("isEmailEmpty", email.isEmpty());
@@ -1147,6 +1155,13 @@ public class UserService {
 
   /** The autowired OffensiveWordFilter object, used to filter offensive words in user content. */
   @Autowired private OffensiveWordFilter offensiveWordFilter;
+
+  /**
+   * The displayable, prose profile meta fields that are censored at read time. URL fields (website,
+   * socialLinks) are deliberately excluded, as masking substrings would break the links.
+   */
+  private static final Set<String> CENSORED_PROFILE_FIELDS =
+      new HashSet<>(Arrays.asList("displayName", "location", "aboutMe"));
 
   /** The autowired MailSender object, used to send emails to users' mailboxes. */
   @Autowired

@@ -382,7 +382,7 @@ class ViewRenderSmokeTest {
   /** A visible discussion thread renders. */
   @Test
   void discussionThreadViewRenders() throws Exception {
-    when(discussionService.getDiscussionThreadUsingThreadId(5000L)).thenReturn(aThread(5000L));
+    when(discussionService.getDiscussionThreadForDisplay(5000L)).thenReturn(aThread(5000L));
     mockMvc.perform(getWithCsrf("/discussion/5000")).andExpect(status().isOk());
   }
 

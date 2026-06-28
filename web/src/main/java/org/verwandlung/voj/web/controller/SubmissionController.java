@@ -149,10 +149,34 @@ public class SubmissionController {
       throw new ResourceNotFoundException();
     }
     User currentUser = HttpSessionParser.getCurrentUser(request.getSession());
+    boolean canViewCode = canViewSourceCode(submission, currentUser);
+    // The page template already gates the source code behind canViewCode (only its length stays
+    // public), so the code itself is left in place here; only the compiler-error log, which echoes
+    // the source verbatim, needs redacting for viewers who may not see the code.
+    redactCompilerErrorLog(submission, canViewCode);
     ModelAndView view = new ModelAndView("pages/submissions/submission");
     view.addObject("submission", submission);
-    view.addObject("canViewCode", canViewSourceCode(submission, currentUser));
+    view.addObject("canViewCode", canViewCode);
     return view;
+  }
+
+  /**
+   * Clears a submission's judge log when it echoes source the viewer may not see. The compiler-error
+   * log reproduces the submitted source verbatim, so it must follow the same visibility rule as the
+   * code itself; judge logs for other verdicts (compile success, runtime results) carry no source
+   * and are left intact.
+   *
+   * @param submission - the submission record to redact in place, may be {@code null}
+   * @param canViewCode - whether the current viewer may see the submission's source code
+   */
+  private void redactCompilerErrorLog(Submission submission, boolean canViewCode) {
+    if (submission == null || canViewCode) {
+      return;
+    }
+    if (submission.getJudgeResult() != null
+        && "CE".equals(submission.getJudgeResult().getJudgeResultSlug())) {
+      submission.setJudgeLog(null);
+    }
   }
 
   /**
@@ -224,9 +248,11 @@ public class SubmissionController {
     Submission submission = submissionService.getSubmission(submissionId);
     if (submission != null) {
       User currentUser = HttpSessionParser.getCurrentUser(request.getSession());
-      if (!canViewSourceCode(submission, currentUser)) {
+      boolean canViewCode = canViewSourceCode(submission, currentUser);
+      if (!canViewCode) {
         submission.setCode(null);
       }
+      redactCompilerErrorLog(submission, canViewCode);
     }
     result.put("isSuccessful", submission != null);
     result.put("submission", submission);
