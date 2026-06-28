@@ -40,6 +40,25 @@ public class OffensiveWordFilterTest {
     Assertions.assertEquals("**大法好 你好", filter.filter("法轮大法好 你好"));
   }
 
+  /** Test case: tests the censor() method. Test data: text containing an offensive word. Expected: the word is masked with plain asterisks. */
+  @Test
+  public void testCensorMasksWithPlainAsterisks() {
+    Assertions.assertEquals("**大法好 你好", filter.censor("法轮大法好 你好"));
+  }
+
+  /** Test case: tests the censorMarkdown() method. Test data: text containing an offensive word. Expected: the word is masked with escaped asterisks so Markdown renders them literally. */
+  @Test
+  public void testCensorMarkdownEscapesAsterisks() {
+    Assertions.assertEquals("\\*\\*大法好 你好", filter.censorMarkdown("法轮大法好 你好"));
+  }
+
+  /** Test case: tests that censor() tolerates a null argument. Test data: null. Expected: null is returned unchanged. */
+  @Test
+  public void testCensorToleratesNull() {
+    Assertions.assertNull(filter.censor(null));
+    Assertions.assertNull(filter.censorMarkdown(null));
+  }
+
   /** The autowired SensitiveWordFilter object. */
   @Autowired private OffensiveWordFilter filter;
 }

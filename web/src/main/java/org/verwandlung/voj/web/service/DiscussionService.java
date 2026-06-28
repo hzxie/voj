@@ -196,9 +196,11 @@ public class DiscussionService {
         discussionReplyMapper.getDiscussionRepliesUsingThreadId(
             discussionThreadId, offset, limit, visibleOnly);
     for (DiscussionReply dr : replies) {
-      // Sanitize the HTML, and censor offensive content when auto-censoring is enabled.
+      // Sanitize the HTML, and censor offensive content when auto-censoring is enabled. Reply
+      // bodies are rendered as Markdown, so use the Markdown-safe variant (escaped asterisks).
       dr.setDiscussionReplyContent(
-          offensiveWordFilter.censor(HtmlTextFilter.filter(dr.getDiscussionReplyContent())));
+          offensiveWordFilter.censorMarkdown(
+              HtmlTextFilter.filter(dr.getDiscussionReplyContent())));
       // Aggregate the voting information of the reply for the current user
       populateVoteStatistics(dr, currentUserUid);
     }

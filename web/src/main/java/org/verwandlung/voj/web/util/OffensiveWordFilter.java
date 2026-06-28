@@ -109,10 +109,39 @@ public class OffensiveWordFilter {
    *     {@code null}/empty
    */
   public String censor(String text) {
+    return censor(text, "*");
+  }
+
+  /**
+   * Censors offensive words in user-generated text that is rendered as Markdown (discussion content,
+   * bios, ...). Identical to {@link #censor(String)} except each masked character becomes an escaped
+   * asterisk ({@code \*}) so the mask still reads as {@code ***} but the Markdown renderer treats it
+   * as literal text - an unescaped {@code ***} alone on a line would otherwise become a horizontal
+   * rule, and {@code **}/{@code *} would turn into bold/italic.
+   *
+   * @param text - the Markdown string to censor, may be {@code null}
+   * @return the censored string, or the original text when censoring is disabled or the text is
+   *     {@code null}/empty
+   */
+  public String censorMarkdown(String text) {
+    return censor(text, "\\*");
+  }
+
+  /**
+   * Shared implementation of {@link #censor(String)} and {@link #censorMarkdown(String)}: masks
+   * offensive words with the given replacement when the {@code autoCensorOffensiveWords} option is
+   * enabled, otherwise returns the text untouched.
+   *
+   * @param text - the string to censor, may be {@code null}
+   * @param replaceChar - the string each offensive character is replaced with
+   * @return the censored string, or the original text when censoring is disabled or the text is
+   *     {@code null}/empty
+   */
+  private String censor(String text, String replaceChar) {
     if (text == null || text.isEmpty() || !isAutoCensorEnabled()) {
       return text;
     }
-    return filter(text);
+    return filter(text, OffensiveWordFilter.MAX_MATCH_TYPE, replaceChar);
   }
 
   /**

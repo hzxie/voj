@@ -164,10 +164,13 @@ public class UserService {
 
       if ("socialLinks".equals(key)) {
         value = JsonUtils.toMap((String) value);
+      } else if ("aboutMe".equals(key)) {
+        // The bio is rendered as Markdown, so use the Markdown-safe variant (escaped asterisks).
+        value = offensiveWordFilter.censorMarkdown((String) value);
       } else if (CENSORED_PROFILE_FIELDS.contains(key)) {
-        // Censor the displayable prose fields at read time so refreshed dictionaries and the
-        // auto-censor option take effect retroactively. URL fields (website, socialLinks) are left
-        // untouched, as masking substrings would break the links.
+        // Censor the remaining displayable prose fields at read time so refreshed dictionaries and
+        // the auto-censor option take effect retroactively. URL fields (website, socialLinks) are
+        // left untouched, as masking substrings would break the links.
         value = offensiveWordFilter.censor((String) value);
       }
       userMetaMap.put(key, value);
@@ -1157,11 +1160,12 @@ public class UserService {
   @Autowired private OffensiveWordFilter offensiveWordFilter;
 
   /**
-   * The displayable, prose profile meta fields that are censored at read time. URL fields (website,
+   * The displayable, plain-text profile meta fields that are censored at read time. The bio
+   * (aboutMe) is censored separately with the Markdown-safe variant; URL fields (website,
    * socialLinks) are deliberately excluded, as masking substrings would break the links.
    */
   private static final Set<String> CENSORED_PROFILE_FIELDS =
-      new HashSet<>(Arrays.asList("displayName", "location", "aboutMe"));
+      new HashSet<>(Arrays.asList("displayName", "location"));
 
   /** The autowired MailSender object, used to send emails to users' mailboxes. */
   @Autowired
