@@ -54,7 +54,9 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import org.verwandlung.voj.web.interceptor.CommonModelInterceptor;
 import org.verwandlung.voj.web.interceptor.CommonModelPopulator;
 import org.verwandlung.voj.web.interceptor.MaintenanceModeInterceptor;
+import org.verwandlung.voj.web.mapper.CheckpointMapper;
 import org.verwandlung.voj.web.mapper.OptionMapper;
+import org.verwandlung.voj.web.mapper.ProblemMapper;
 import org.verwandlung.voj.web.messenger.ApplicationEventListener;
 import org.verwandlung.voj.web.model.Option;
 import org.verwandlung.voj.web.model.User;
@@ -118,6 +120,10 @@ class ViewRenderSmokeTest {
   @MockitoBean private BulletinBoardService bulletinBoardService;
   @MockitoBean private SessionRegistry sessionRegistry;
   @MockitoBean private ApplicationEventListener applicationEventListener;
+  // CheckpointApiController is a @RestController, so the @WebMvcTest slice picks it up; unlike the
+  // other controllers it injects these mappers directly rather than going through a (mocked) service.
+  @MockitoBean private ProblemMapper problemMapper;
+  @MockitoBean private CheckpointMapper checkpointMapper;
 
   /** A fixed CSRF token so templates referencing {@code ${_csrf.token}} render. */
   private static final CsrfToken CSRF =

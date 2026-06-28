@@ -51,7 +51,8 @@ public interface ProblemMapper {
     @Result(property = "outputFormat", column = "problem_output_format"),
     @Result(property = "sampleInput", column = "problem_sample_input"),
     @Result(property = "sampleOutput", column = "problem_sample_output"),
-    @Result(property = "hint", column = "problem_hint")
+    @Result(property = "hint", column = "problem_hint"),
+    @Result(property = "checkpointsVersion", column = "checkpoints_version")
   })
   Problem getProblem(@Param("problemId") long problemId);
 }

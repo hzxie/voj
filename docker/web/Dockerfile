@@ -14,6 +14,9 @@ ARG WEBSITE_URL=localhost:8080/voj
 ARG MAIL_HOST=
 ARG MAIL_USERNAME=
 ARG MAIL_PASSWORD=
+# Shared secret the judger presents to download test data. Must match the judger
+# image's JUDGER_API_TOKEN. The placeholder default is NOT a secret — override it.
+ARG JUDGER_API_TOKEN=changeme
 
 # Set environment variables.
 # TARGETARCH is provided by BuildKit (amd64 / arm64) and matches the Ubuntu
@@ -72,6 +75,7 @@ RUN sed -i "s@localhost:8080/voj@${WEBSITE_URL}@g" voj/web/src/main/resources/vo
     sed -i "s/mail.host = /mail.host = ${MAIL_HOST}/g" voj/web/src/main/resources/voj.properties && \
     sed -i "s/mail.username = /mail.username = ${MAIL_USERNAME}/g" voj/web/src/main/resources/voj.properties && \
     sed -i "s/mail.password = /mail.password = ${MAIL_PASSWORD}/g" voj/web/src/main/resources/voj.properties && \
+    sed -i "s/judger.apiToken = change-me-shared-secret/judger.apiToken = ${JUDGER_API_TOKEN}/g" voj/web/src/main/resources/voj.properties && \
     $M2_HOME/bin/mvn package -DskipTests -f voj/web/pom.xml && \
     mkdir -p /opt/voj && \
     cp voj/web/target/voj.web.war /opt/voj/voj.web.war && \

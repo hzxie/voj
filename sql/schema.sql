@@ -150,7 +150,8 @@ CREATE TABLE `voj_problems` (
   `problem_output_format` text COLLATE utf8mb4_unicode_ci NOT NULL,
   `problem_sample_input` text COLLATE utf8mb4_unicode_ci NOT NULL,
   `problem_sample_output` text COLLATE utf8mb4_unicode_ci NOT NULL,
-  `problem_hint` text COLLATE utf8mb4_unicode_ci
+  `problem_hint` text COLLATE utf8mb4_unicode_ci,
+  `checkpoints_version` int(11) NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `voj_problem_difficulty` (

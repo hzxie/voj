@@ -24,7 +24,6 @@ import java.nio.file.Files;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.UserPrincipal;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -32,18 +31,18 @@ import java.util.regex.Pattern;
 import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import org.verwandlung.voj.judger.exception.CreateDirectoryException;
-import org.verwandlung.voj.judger.mapper.CheckpointMapper;
-import org.verwandlung.voj.judger.model.Checkpoint;
 import org.verwandlung.voj.judger.model.Language;
 import org.verwandlung.voj.judger.model.Submission;
 
 /**
  * The preprocessor, used to perform preparation work before judging.
+ *
+ * <p>This now covers only the submission's source code; a problem's checkpoints (test data) are
+ * managed by {@link CheckpointStore}, which caches them locally and downloads them on demand.
  *
  * @author Haozhe Xie
  */
@@ -142,25 +141,6 @@ public class Preprocessor {
   }
 
   /**
-   * Restricts a problem's checkpoint directory to its owner (the judger), so that submitted
-   * programs, which run as the unprivileged sandbox user, cannot read the reference answers. The
-   * judge reads the expected output itself and the submission receives its input on stdin, so the
-   * sandbox user never needs access to this directory.
-   *
-   * @param checkpointDirectory the directory holding a problem's checkpoint data
-   */
-  private void setCheckpointDirectoryPermission(File checkpointDirectory) throws IOException {
-    if (System.getProperty("os.name").contains("Windows")) {
-      return;
-    }
-    Set<PosixFilePermission> permissions = new HashSet<>();
-    permissions.add(PosixFilePermission.OWNER_READ);
-    permissions.add(PosixFilePermission.OWNER_WRITE);
-    permissions.add(PosixFilePermission.OWNER_EXECUTE);
-    Files.setPosixFilePermissions(checkpointDirectory.toPath(), permissions);
-  }
-
-  /**
    * Checks whether the judger is running as the root user.
    *
    * @return whether the current process is running as root
@@ -168,51 +148,6 @@ public class Preprocessor {
   private boolean isRunningAsRoot() {
     return "root".equals(System.getProperty("user.name"));
   }
-
-  /**
-   * Fetches the judging data from the database.
-   *
-   * @param problemId - the unique identifier of the problem
-   * @throws Exception
-   */
-  public void fetchTestPoints(long problemId) throws Exception {
-    String checkpointsFilePath =
-        String.format("%s/%s", new Object[] {checkpointDirectory, problemId});
-    File checkpointsDirFile = new File(checkpointsFilePath);
-    if (!checkpointsDirFile.exists() && !checkpointsDirFile.mkdirs()) {
-      throw new CreateDirectoryException(
-          "Failed to create the checkpoints directory: " + checkpointsFilePath);
-    }
-    setCheckpointDirectoryPermission(checkpointsDirFile);
-
-    List<Checkpoint> checkpoints = checkpointMapper.getCheckpointsUsingProblemId(problemId);
-    for (Checkpoint checkpoint : checkpoints) {
-      long checkpointId = checkpoint.getCheckpointId();
-      { // Standard Input File
-        String filePath =
-            String.format("%s/input#%s.txt", new Object[] {checkpointsFilePath, checkpointId});
-        FileOutputStream outputStream = new FileOutputStream(new File(filePath));
-        String input = checkpoint.getInput();
-        IOUtils.write(input, outputStream);
-        IOUtils.closeQuietly(outputStream);
-      }
-      { // Standard Output File
-        String filePath =
-            String.format("%s/output#%s.txt", new Object[] {checkpointsFilePath, checkpointId});
-        FileOutputStream outputStream = new FileOutputStream(new File(filePath));
-        String output = checkpoint.getOutput();
-        IOUtils.write(output, outputStream);
-        IOUtils.closeQuietly(outputStream);
-      }
-    }
-  }
-
-  /** The autowired CheckpointMapper object, used to obtain a problem's checkpoints. */
-  @Autowired private CheckpointMapper checkpointMapper;
-
-  /** The storage directory of checkpoints, used to store the input/output data of checkpoints. */
-  @Value("${judger.checkpointDir}")
-  private String checkpointDirectory;
 
   /** The unprivileged user the native sandbox drops to; the work directory is handed to it. */
   @Value("${system.username}")

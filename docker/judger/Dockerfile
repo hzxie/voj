@@ -13,6 +13,11 @@ ARG MYSQL_HOST=voj.web
 ARG MYSQL_PORT=3306
 ARG ACTIVEMQ_HOST=voj.web
 ARG ACTIVEMQ_PORT=61616
+# Where the judger downloads test data from, and the shared secret to do so. The
+# host defaults to the web container; JUDGER_API_TOKEN must match the web image.
+ARG WEB_HOST=voj.web
+ARG WEB_PORT=8080
+ARG JUDGER_API_TOKEN=changeme
 
 # Set environment variables.
 # TARGETARCH is provided by BuildKit (amd64 / arm64) and matches the Ubuntu
@@ -48,6 +53,8 @@ RUN sed -i "s@jdbc.url = jdbc:mysql://localhost:3306@jdbc.url = jdbc:mysql://${M
     sed -i "s/jdbc.username = root/jdbc.username = voj/g" voj/judger/src/main/resources/voj.properties && \
     sed -i "s/jdbc.password = /jdbc.password = ${MYSQL_USER_PASS}/g" voj/judger/src/main/resources/voj.properties && \
     sed -i "s/localhost:61616/${ACTIVEMQ_HOST}:${ACTIVEMQ_PORT}/g" voj/judger/src/main/resources/voj.properties && \
+    sed -i "s@judger.web.baseUrl = http://localhost:8080/voj@judger.web.baseUrl = http://${WEB_HOST}:${WEB_PORT}/voj@g" voj/judger/src/main/resources/voj.properties && \
+    sed -i "s/judger.apiToken = change-me-shared-secret/judger.apiToken = ${JUDGER_API_TOKEN}/g" voj/judger/src/main/resources/voj.properties && \
     mkdir -p voj/target/classes && \
     $M2_HOME/bin/mvn package -DskipTests -f voj/judger/pom.xml
 

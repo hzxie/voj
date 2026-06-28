@@ -34,7 +34,6 @@ import org.springframework.stereotype.Component;
 
 import org.verwandlung.voj.judger.application.ApplicationDispatcher;
 import org.verwandlung.voj.judger.exception.IllgealSubmissionException;
-import org.verwandlung.voj.judger.mapper.CheckpointMapper;
 import org.verwandlung.voj.judger.mapper.SubmissionMapper;
 import org.verwandlung.voj.judger.model.Submission;
 import org.verwandlung.voj.judger.util.DigestUtils;
@@ -92,9 +91,8 @@ public class Dispatcher {
    */
   private void preprocess(Submission submission, String workDirectory, String baseFileName) {
     try {
-      long problemId = submission.getProblem().getProblemId();
       preprocessor.createTestCode(submission, workDirectory, baseFileName);
-      preprocessor.fetchTestPoints(problemId);
+      checkpointStore.sync(submission.getProblem());
     } catch (Exception ex) {
       LOGGER.catching(ex);
 
@@ -131,7 +129,14 @@ public class Dispatcher {
     long submissionId = submission.getSubmissionId();
     long problemId = submission.getProblem().getProblemId();
 
-    List<Checkpoint> checkpoints = checkpointMapper.getCheckpointsUsingProblemId(problemId);
+    List<Checkpoint> checkpoints;
+    try {
+      checkpoints = checkpointStore.getCheckpoints(problemId);
+    } catch (IOException ex) {
+      LOGGER.catching(ex);
+      applicationDispatcher.onErrorOccurred(submissionId);
+      return;
+    }
     for (Checkpoint checkpoint : checkpoints) {
       int checkpointId = checkpoint.getCheckpointId();
       int checkpointScore = checkpoint.getScore();
@@ -247,8 +252,8 @@ public class Dispatcher {
   /** The autowired SubmissionMapper object. */
   @Autowired private SubmissionMapper submissionMapper;
 
-  /** The autowired CheckpointMapper object, used to obtain a problem's checkpoints. */
-  @Autowired private CheckpointMapper checkpointMapper;
+  /** The autowired CheckpointStore, which caches a problem's checkpoints locally. */
+  @Autowired private CheckpointStore checkpointStore;
 
   /** The working directory of the judger, used to store compilation results and program output. */
   @Value("${judger.workDir}")

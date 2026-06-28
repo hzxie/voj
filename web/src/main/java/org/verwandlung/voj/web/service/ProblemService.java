@@ -734,6 +734,10 @@ public class ProblemService {
       Checkpoint checkpoint = new Checkpoint(problemId, i, isExactlyMatch, score, input, output);
       checkpointMapper.createCheckpoint(checkpoint);
     }
+    // Invalidate any judger's cached copy of this problem's test data. Runs in the same transaction
+    // as the checkpoint writes (both create and edit funnel through here), so the bump is rolled back
+    // together with the data if the surrounding operation fails.
+    problemMapper.bumpCheckpointsVersion(problemId);
   }
 
   /**
