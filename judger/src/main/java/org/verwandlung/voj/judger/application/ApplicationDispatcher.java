@@ -24,14 +24,17 @@ import java.util.Map;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import org.verwandlung.voj.judger.core.Dispatcher;
 import org.verwandlung.voj.judger.mapper.JudgeResultMapper;
 import org.verwandlung.voj.judger.mapper.SubmissionMapper;
+import org.verwandlung.voj.judger.mapper.UserMapper;
 import org.verwandlung.voj.judger.messenger.MessageSender;
 import org.verwandlung.voj.judger.model.JudgeResult;
 import org.verwandlung.voj.judger.model.Submission;
+import org.verwandlung.voj.judger.model.User;
 
 /**
  * The application dispatcher.
@@ -332,8 +335,26 @@ public class ApplicationDispatcher {
     submission.setJudgeScore(score);
     submission.setJudgeResultSlug(judgeResult);
     submission.setJudgeLog(log);
+    submission.setJudgerUid(getJudgerUid());
 
     submissionMapper.updateSubmission(submission);
+  }
+
+  /**
+   * Resolves and caches the uid of this judger, so each judged submission records which judger
+   * processed it. The judger is a regular user account (in the {@code judgers} group) identified by
+   * the configured username.
+   *
+   * @return the uid of this judger, or null if the account cannot be resolved
+   */
+  private Long getJudgerUid() {
+    if (judgerUid == null && judgerUsername != null && !judgerUsername.isEmpty()) {
+      User judger = userMapper.getUserUsingUsername(judgerUsername);
+      if (judger != null) {
+        judgerUid = judger.getUid();
+      }
+    }
+    return judgerUid;
   }
 
   /** The autowired Dispatcher object, used to schedule judging jobs. */
@@ -347,6 +368,16 @@ public class ApplicationDispatcher {
 
   /** The autowired JudgeResultMapper object, used to access information about all judge results. */
   @Autowired private JudgeResultMapper judgeResultMapper;
+
+  /** The autowired UserMapper object, used to resolve this judger's own user account. */
+  @Autowired private UserMapper userMapper;
+
+  /** The judger's username, used to resolve which judger processed each submission. */
+  @Value("${judger.username}")
+  private String judgerUsername;
+
+  /** The lazily-resolved, cached uid of this judger (null until resolved). */
+  private Long judgerUid;
 
   /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(ApplicationDispatcher.class);
