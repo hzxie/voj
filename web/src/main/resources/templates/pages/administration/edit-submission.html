@@ -14,7 +14,7 @@
         <div class="adm-detail-top">
             <a class="adm-back" th:href="@{/administration/all-submissions}">&#8592; <span th:text="#{voj.administration.edit-submission.back}">back to submissions</span></a>
             <span class="adm-idchip" th:text="'#' + ${submission.submissionId}">#1</span>
-            <span class="adm-hpill" id="judge-result" th:classappend="${vcls}" th:text="${submission.judgeResult != null ? submission.judgeResult.judgeResultName : ''}">Result</span>
+            <span class="adm-pill" id="judge-result" th:classappend="${vcls}" th:text="${submission.judgeResult != null ? submission.judgeResult.judgeResultName : ''}">Result</span>
             <div class="adm-flex1"></div>
             <a class="adm-btn-tn" th:href="@{/administration/edit-problem/{id}(id=${submission.problem != null ? submission.problem.problemId : 0})}" th:text="#{voj.administration.edit-submission.view-problem}">view problem</a>
             <button type="button" class="adm-btn-tn danger" id="delete-submission" th:text="#{voj.administration.edit-submission.delete-submission}">delete</button>
@@ -26,7 +26,7 @@
                 <div class="adm-card">
                     <div class="adm-card-head"><span th:text="#{voj.administration.edit-submission.code}">// SOURCE</span></div>
                     <div class="adm-src adm-pad0">
-                        <pre class="adm-codeblock"><code th:text="${submission.code}">code</code></pre>
+                        <pre class="adm-codeblock"><code th:attr="data-mime=${submission.language != null ? submission.language.languageSlug : ''}" th:text="${submission.code}">code</code></pre>
                     </div>
                 </div>
                 <div class="adm-card">
@@ -52,12 +52,13 @@
     </div>
 
     <th:block layout:fragment="scripts">
-    <script type="text/javascript" th:inline="javascript">
+    <script type="text/javascript" th:src="|${cdnUrl}/js/highlight.min.js?v=${version}|"></script>
+    <script type="text/javascript" th:src="|${cdnUrl}/hljs/delphi.min.js?v=${version}|"></script>
+    <script type="text/javascript" th:src="|${cdnUrl}/js/highlight-source.js?v=${version}|"></script>
+    <script type="text/javascript">
         $(function() {
             $('.markdown').each(function() { $(this).html(renderMarkdown($(this).text())); });
-        });
-        $.getScript([[|${cdnUrl}/js/highlight.min.js?v=${version}|]], function() {
-            $('code').each(function(i, block) { hljs.highlightElement(block); });
+            highlightSourceBlocks('code');
         });
     </script>
     <script type="text/javascript" th:inline="javascript">

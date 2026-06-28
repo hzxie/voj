@@ -53,7 +53,7 @@
                         <span class="vw-accent vw-card-srclabel" th:text="'// ' + #{voj.submissions.submission.source}">// SOURCE</span>
                     </div>
                     <div class="vw-card-body vw-card-flush">
-                        <pre class="vw-src-pre"><code th:text="${submission.code}">code</code></pre>
+                        <pre class="vw-src-pre"><code th:attr="data-mime=${lang != null ? lang.languageSlug : ''}" th:text="${submission.code}">code</code></pre>
                     </div>
                     <div class="vw-card-foot">
                         <span><span th:text="#{voj.submissions.submission.length}">length</span> <b class="vw-muted2" th:text="|${#strings.length(submission.code)} B|">0 B</b></span>
@@ -162,10 +162,11 @@
         }
     </script>
     </th:block>
-    <script type="text/javascript" th:inline="javascript">
-        $.getScript([[|${cdnUrl}/js/highlight.min.js?v=${version}|]], function() {
-            $('pre code').each(function(i, block) { hljs.highlightElement(block); });
-        });
+    <script type="text/javascript" th:src="|${cdnUrl}/js/highlight.min.js?v=${version}|"></script>
+    <script type="text/javascript" th:src="|${cdnUrl}/hljs/delphi.min.js?v=${version}|"></script>
+    <script type="text/javascript" th:src="|${cdnUrl}/js/highlight-source.js?v=${version}|"></script>
+    <script type="text/javascript">
+        $(function() { highlightSourceBlocks('pre code'); });
     </script>
     </th:block>
 </body>
