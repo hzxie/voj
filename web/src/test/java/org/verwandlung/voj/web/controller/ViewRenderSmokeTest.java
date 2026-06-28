@@ -71,6 +71,7 @@ import org.verwandlung.voj.web.service.OffensiveWordService;
 import org.verwandlung.voj.web.service.OptionService;
 import org.verwandlung.voj.web.service.ProblemService;
 import org.verwandlung.voj.web.service.SubmissionService;
+import org.verwandlung.voj.web.service.TurnstileService;
 import org.verwandlung.voj.web.service.UserService;
 
 /**
@@ -108,6 +109,7 @@ class ViewRenderSmokeTest {
   @Autowired private MockMvc mockMvc;
 
   @MockitoBean private UserService userService;
+  @MockitoBean private TurnstileService turnstileService;
   @MockitoBean private LanguageService languageService;
   @MockitoBean private SubmissionService submissionService;
   @MockitoBean private OptionService optionService;
@@ -184,7 +186,6 @@ class ViewRenderSmokeTest {
         "/judgers",
         "/help",
         "/about",
-        "/not-supported",
         "/maintenance",
         "/p",
         "/submission",

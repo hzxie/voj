@@ -22,6 +22,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -31,11 +32,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 import org.verwandlung.voj.web.mapper.EmailValidationMapper;
 import org.verwandlung.voj.web.mapper.LanguageMapper;
+import org.verwandlung.voj.web.mapper.OptionMapper;
 import org.verwandlung.voj.web.mapper.UserGroupMapper;
 import org.verwandlung.voj.web.mapper.UserMapper;
 import org.verwandlung.voj.web.mapper.UserMetaMapper;
 import org.verwandlung.voj.web.model.EmailValidation;
 import org.verwandlung.voj.web.model.Language;
+import org.verwandlung.voj.web.model.Option;
 import org.verwandlung.voj.web.model.User;
 import org.verwandlung.voj.web.model.UserGroup;
 import org.verwandlung.voj.web.model.UserMeta;
@@ -53,6 +56,16 @@ import org.verwandlung.voj.web.util.OffensiveWordFilter;
 @Service
 @Transactional
 public class UserService {
+  /** The number of days an email validation credential remains valid after it is issued. */
+  private static final long EMAIL_VALIDATION_VALID_DAYS = 1;
+
+  /**
+   * The minimum interval between two verification / password-reset emails to the same address. A
+   * second request within this window is silently ignored so the email endpoints cannot be abused
+   * to flood an inbox.
+   */
+  private static final long EMAIL_COOLDOWN_MILLIS = TimeUnit.MINUTES.toMillis(1);
+
   /**
    * Gets a user object by its unique identifier.
    *
@@ -427,6 +440,11 @@ public class UserService {
    * @param email - the user's email address
    */
   private void dispatchVerificationEmail(String username, String email) {
+    // Rate-limit: skip the send when a credential was issued to this address within the cooldown
+    // window, so the endpoint cannot be abused to flood an inbox with reset emails.
+    if (isEmailRecentlySent(email)) {
+      return;
+    }
     String token = DigestUtils.getGuid();
     Date expireTime = getExpireTime();
     Map<String, Object> model = new HashMap<>(4, 1);
@@ -442,6 +460,17 @@ public class UserService {
     String subject = "Password Reset Request";
     String body = mailSender.getMailContent(templateName, model);
     mailSender.sendMail(email, subject, body);
+  }
+
+  /**
+   * Checks whether email verification is currently required, i.e. whether the {@code
+   * requireEmailVerification} option is enabled.
+   *
+   * @return whether email verification is required
+   */
+  public boolean isEmailVerificationRequired() {
+    Option option = optionMapper.getOption("requireEmailVerification");
+    return option != null && "1".equals(option.getOptionValue());
   }
 
   /**
@@ -490,6 +519,11 @@ public class UserService {
    * @param email - the user's email address
    */
   private void dispatchEmailVerificationEmail(String username, String email) {
+    // Rate-limit: skip the send when a credential was issued to this address within the cooldown
+    // window, so repeated registrations / email changes cannot flood an inbox with verifications.
+    if (isEmailRecentlySent(email)) {
+      return;
+    }
     String token = DigestUtils.getGuid();
     Date expireTime = getExpireTime();
     Map<String, Object> model = new HashMap<>(4, 1);
@@ -514,10 +548,30 @@ public class UserService {
     Date date = new Date();
     Calendar calendar = Calendar.getInstance();
     calendar.setTime(date);
-    calendar.add(Calendar.DATE, 1);
+    calendar.add(Calendar.DATE, (int) EMAIL_VALIDATION_VALID_DAYS);
     date = calendar.getTime();
 
     return date;
+  }
+
+  /**
+   * Checks whether an email validation credential was issued to an address within the cooldown
+   * window. Because every credential expires exactly {@link #EMAIL_VALIDATION_VALID_DAYS} day(s)
+   * after it is issued, the issue time can be recovered from the stored expiration time without an
+   * extra column, and a credential whose issue time is younger than {@link #EMAIL_COOLDOWN_MILLIS}
+   * means another email was sent very recently.
+   *
+   * @param email - the email address
+   * @return whether an email was sent to the address within the cooldown window
+   */
+  private boolean isEmailRecentlySent(String email) {
+    EmailValidation existing = emailValidationMapper.getEmailValidation(email);
+    if (existing == null || existing.getExpireTime() == null) {
+      return false;
+    }
+    long issuedAt =
+        existing.getExpireTime().getTime() - TimeUnit.DAYS.toMillis(EMAIL_VALIDATION_VALID_DAYS);
+    return System.currentTimeMillis() - issuedAt < EMAIL_COOLDOWN_MILLIS;
   }
 
   /**
@@ -666,6 +720,7 @@ public class UserService {
         getUpdateProfileResult(user, email, displayName, location, website, socialLinks, aboutMe);
 
     if (result.get("isSuccessful")) {
+      boolean isEmailChanged = !email.equals(user.getEmail());
       user.setEmail(email);
       userMapper.updateUser(user);
 
@@ -674,6 +729,14 @@ public class UserService {
       updateUserMeta(user, "website", website);
       updateUserMeta(user, "socialLinks", socialLinks);
       updateUserMeta(user, "aboutMe", aboutMe);
+
+      // A changed email address has not been verified yet. Mirror the registration flow and force
+      // re-verification so a previously verified account cannot silently switch to an unverified
+      // address and keep its verified privileges.
+      if (isEmailChanged && isEmailVerificationRequired()) {
+        requireEmailVerification(user);
+        result.put("isEmailVerificationSent", true);
+      }
     }
     return result;
   }
@@ -711,11 +774,18 @@ public class UserService {
     result.put("isSuccessful", isSuccessful);
 
     if (isSuccessful) {
+      boolean isEmailChanged = !email.equals(user.getEmail());
       user.setEmail(email);
       userMapper.updateUser(user);
 
       updateUserMeta(user, "displayName", displayName);
       updateUserMeta(user, "aboutMe", aboutMe);
+
+      // A changed email address has not been verified yet. Force re-verification so the account
+      // cannot keep its verified privileges on an unverified address.
+      if (isEmailChanged && isEmailVerificationRequired()) {
+        requireEmailVerification(user);
+      }
     }
     return result;
   }
@@ -1031,6 +1101,9 @@ public class UserService {
 
   /** The autowired EmailValidationMapper object, used to generate password reset tokens. */
   @Autowired private EmailValidationMapper emailValidationMapper;
+
+  /** The autowired OptionMapper object, used to resolve the email-verification requirement. */
+  @Autowired private OptionMapper optionMapper;
 
   /** The autowired password encoder, used to encode and verify user passwords. */
   @Autowired private PasswordEncoder passwordEncoder;

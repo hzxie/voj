@@ -50,6 +50,9 @@
                             <p class="vw-muted vw-auth-fineprint" th:with="termsUrl=@{/terms},privacyUrl=@{/privacy}"
                                th:utext="#{voj.accounts.register.agree-terms(${termsUrl}, ${privacyUrl})}">By creating an account you agree to the Terms and Privacy Policy.</p>
                             <input id="csrf-token" type="hidden" th:value="${_csrf.token}" />
+                            <div class="vw-formrow" th:if="${turnstileEnabled == '1'}">
+                                <div class="cf-turnstile" th:attr="data-sitekey=${turnstileSiteKey}"></div>
+                            </div>
                             <button class="vw-btn vw-btn-accent vw-btn-block" type="submit">$ <span th:text="#{voj.accounts.register.create-account}">create account</span></button>
                         </form>
                     </div>
@@ -65,6 +68,7 @@
 
     <th:block layout:fragment="scripts">
     <th:block th:if="${isAllowRegister}">
+    <script th:if="${turnstileEnabled == '1'}" src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     <script type="text/javascript" th:inline="javascript">
         function onSubmit() {
             $('.alert-error').addClass('hide');
@@ -85,7 +89,8 @@
                 url: [[@{/accounts/register.action}]],
                 data: {
                     'username': username, 'password': password, 'email': email,
-                    'languagePreference': languagePreference, 'csrfToken': csrfToken
+                    'languagePreference': languagePreference, 'csrfToken': csrfToken,
+                    'cf-turnstile-response': $('[name="cf-turnstile-response"]').val()
                 },
                 dataType: 'JSON',
                 success: function(result){ return processRegisterResult(result); }
@@ -95,6 +100,14 @@
             if ( result['isSuccessful'] ) {
                 var forwardUrl = [[${forwardUrl} ?: '']] || [[@{/}]];
                 window.location.href = forwardUrl;
+            } else if ( result['isCaptchaValid'] === false ) {
+                $('.alert-error').html([[#{voj.accounts.captcha-invalid}]]);
+                $('.alert-error').removeClass('hide');
+                if ( window.turnstile ) { turnstile.reset(); }
+                $('button[type=submit]').html('$ ' + [[#{voj.accounts.register.create-account}]]);
+                $('button[type=submit]').removeAttr('disabled');
+                $('html, body').animate({ scrollTop: 0 }, 100);
+                return;
             } else {
                 var errorMessage  = '';
                 if ( result['isUsernameEmpty'] ) {

@@ -43,6 +43,9 @@
                                     <input id="remember-me" type="checkbox" /> <span th:text="#{voj.accounts.login.remember-me}">Remember Me</span>
                                 </label>
                             </div>
+                            <div class="vw-formrow" th:if="${turnstileEnabled == '1'}">
+                                <div class="cf-turnstile" th:attr="data-sitekey=${turnstileSiteKey}"></div>
+                            </div>
                             <button class="vw-btn vw-btn-accent vw-btn-block" type="submit">$ <span th:text="#{voj.accounts.login.sign-in}">sign in</span></button>
                         </form>
                     </div>
@@ -57,6 +60,7 @@
     </div>
 
     <th:block layout:fragment="scripts">
+    <script th:if="${turnstileEnabled == '1'}" src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     <script type="text/javascript" th:inline="javascript">
         function onSubmit() {
             $('.alert-success').addClass('hide');
@@ -74,7 +78,10 @@
             $.ajax({
                 type: 'POST',
                 url: [[@{/accounts/login.action}]],
-                data: { 'username': username, 'password': password, 'rememberMe': rememberMe },
+                data: {
+                    'username': username, 'password': password, 'rememberMe': rememberMe,
+                    'cf-turnstile-response': $('[name="cf-turnstile-response"]').val()
+                },
                 dataType: 'JSON',
                 success: function(result){ return processLoginResult(result); }
             });
@@ -85,7 +92,9 @@
                 window.location.href = forwardUrl;
             } else {
                 var errorMessage = '';
-                if ( !result['isAccountValid'] ) {
+                if ( result['isCaptchaValid'] === false ) {
+                    errorMessage = [[#{voj.accounts.captcha-invalid}]];
+                } else if ( !result['isAccountValid'] ) {
                     errorMessage = [[#{voj.accounts.login.incorrect-password}]];
                 } else if ( !result['isAllowedToAccess'] ) {
                     errorMessage = [[#{voj.accounts.login.forbidden-user}]];
@@ -93,6 +102,7 @@
                 $('#password').val('');
                 $('.alert-error').html(errorMessage);
                 $('.alert-error').removeClass('hide');
+                if ( window.turnstile ) { turnstile.reset(); }
             }
             $('button[type=submit]').html('$ ' + [[#{voj.accounts.login.sign-in}]]);
             $('button[type=submit]').removeAttr('disabled');

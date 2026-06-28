@@ -54,6 +54,7 @@ import org.verwandlung.voj.web.service.ContestService;
 import org.verwandlung.voj.web.service.LanguageService;
 import org.verwandlung.voj.web.service.OptionService;
 import org.verwandlung.voj.web.service.SubmissionService;
+import org.verwandlung.voj.web.service.TurnstileService;
 import org.verwandlung.voj.web.service.UserService;
 import org.verwandlung.voj.web.util.DateUtils;
 import org.verwandlung.voj.web.util.HttpRequestParser;
@@ -138,9 +139,14 @@ public class AccountsController {
       @RequestParam(value = "username") String username,
       @RequestParam(value = "password") String password,
       @RequestParam(value = "rememberMe") boolean isAutoLoginAllowed,
+      @RequestParam(value = "cf-turnstile-response", required = false, defaultValue = "")
+          String captchaResponse,
       HttpServletRequest request,
       HttpServletResponse response) {
     String ipAddress = HttpRequestParser.getRemoteAddr(request);
+    if (!turnstileService.verify(captchaResponse, ipAddress)) {
+      return captchaFailureResult();
+    }
     Map<String, Boolean> result = userService.isAllowedToLogin(username, password);
     LOGGER.info(
         String.format(
@@ -223,8 +229,13 @@ public class AccountsController {
       @RequestParam(value = "password") String password,
       @RequestParam(value = "email") String email,
       @RequestParam(value = "languagePreference") String languageSlug,
+      @RequestParam(value = "cf-turnstile-response", required = false, defaultValue = "")
+          String captchaResponse,
       HttpServletRequest request,
       HttpServletResponse response) {
+    if (!turnstileService.verify(captchaResponse, HttpRequestParser.getRemoteAddr(request))) {
+      return captchaFailureResult();
+    }
     boolean isAllowRegister =
         optionService.getOption("allowUserRegister").getOptionValue().equals("1");
     String userGroupSlug = "users";
@@ -316,8 +327,13 @@ public class AccountsController {
   public @ResponseBody Map<String, Boolean> forgotPasswordAction(
       @RequestParam(value = "username") String username,
       @RequestParam(value = "email") String email,
+      @RequestParam(value = "cf-turnstile-response", required = false, defaultValue = "")
+          String captchaResponse,
       HttpServletRequest request) {
     String ipAddress = HttpRequestParser.getRemoteAddr(request);
+    if (!turnstileService.verify(captchaResponse, ipAddress)) {
+      return captchaFailureResult();
+    }
     Map<String, Boolean> result = userService.sendVerificationEmail(username, email);
 
     if (result.get("isSuccessful")) {
@@ -474,8 +490,24 @@ public class AccountsController {
     return result;
   }
 
+  /**
+   * Builds the result returned when a Turnstile challenge fails, so the front end can surface a
+   * captcha-specific error and reset the widget without attempting the underlying action.
+   *
+   * @return a result map flagging the captcha as invalid and the request as unsuccessful
+   */
+  private static Map<String, Boolean> captchaFailureResult() {
+    Map<String, Boolean> result = new HashMap<>(2, 1);
+    result.put("isCaptchaValid", false);
+    result.put("isSuccessful", false);
+    return result;
+  }
+
   /** The autowired UserService object. Used for completing the business logic operations of users. */
   @Autowired private UserService userService;
+
+  /** The autowired TurnstileService object. Used to verify the captcha on public auth forms. */
+  @Autowired private TurnstileService turnstileService;
 
   /**
    * The autowired LanguageService object. Used for loading the language options of the registration

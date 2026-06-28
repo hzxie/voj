@@ -25,8 +25,8 @@
                         <span class="vw-rank-badge" th:text="${user.userGroup.userGroupName}">User</span>
                     </div>
                     <div class="vw-profile-meta">
-                        <span th:if="${!#strings.isEmpty(displayName)}" th:text="${displayName} + ' &middot; '">Display Name &middot; </span>
-                        <span th:if="${!#strings.isEmpty(location)}" th:text="${location} + ' &middot; '">Location &middot; </span>
+                        <span th:if="${!#strings.isEmpty(displayName)}" th:text="${displayName} + ' · '">Display Name · </span>
+                        <span th:if="${!#strings.isEmpty(location)}" th:text="${location} + ' · '">Location · </span>
                         <span th:text="#{voj.accounts.user.joined-on} + ' ' + ${@dateFormatter.parseDateLong(registerTime, language)}">joined</span>
                     </div>
                     <p class="vw-profile-bio markdown" th:if="${!#strings.isEmpty(aboutMe)}" th:utext="${aboutMe}">bio</p>
@@ -123,7 +123,7 @@
                                 <input class="vw-input" id="edit-display-name" name="displayName" type="text" maxlength="64" th:value="${displayName}" />
                             </div>
                             <div class="vw-pmodal-field">
-                                <label class="vw-label" for="edit-username" th:text="#{voj.accounts.user.username} + ' &middot; ' + #{voj.accounts.user.locked}">Username · Locked</label>
+                                <label class="vw-label" for="edit-username" th:text="#{voj.accounts.user.username} + ' · ' + #{voj.accounts.user.locked}">Username · Locked</label>
                                 <input class="vw-input" id="edit-username" type="text" readonly th:value="${user.username}" />
                             </div>
                         </div>
@@ -233,6 +233,9 @@
         }
         function processUpdateProfileResult(result) {
             if (result['isSuccessful']) {
+                if (result['isEmailVerificationSent']) {
+                    alert([[#{voj.accounts.dashboard.email-verification-sent}]]);
+                }
                 window.location.reload();
                 return;
             }

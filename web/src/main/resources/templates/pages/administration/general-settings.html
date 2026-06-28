@@ -77,6 +77,29 @@
                 </div>
                 <div class="adm-setrow">
                     <div class="adm-setrow-l">
+                        <div class="lbl" th:text="#{voj.administration.general-settings.turnstile-enabled}">Cloudflare Turnstile</div>
+                        <div class="hint" th:text="#{voj.administration.general-settings.turnstile-enabled-hint}">Require a Turnstile challenge on the login, registration and password-reset forms.</div>
+                    </div>
+                    <div class="adm-setrow-r">
+                        <div class="adm-switch" id="turnstile-enabled" data-adm="switch" th:classappend="${options['turnstileEnabled'] == '1'} ? 'on'"><div class="knob"></div></div>
+                    </div>
+                </div>
+                <div class="adm-setrow">
+                    <div class="adm-setrow-l">
+                        <div class="lbl" th:text="#{voj.administration.general-settings.turnstile-site-key}">Turnstile site key</div>
+                        <div class="hint" th:text="#{voj.administration.general-settings.turnstile-site-key-hint}">The public site key from your Cloudflare Turnstile widget.</div>
+                    </div>
+                    <div class="adm-setrow-r"><input id="turnstile-site-key" class="adm-input" type="text" th:value="${options['turnstileSiteKey']}" /></div>
+                </div>
+                <div class="adm-setrow">
+                    <div class="adm-setrow-l">
+                        <div class="lbl" th:text="#{voj.administration.general-settings.turnstile-secret-key}">Turnstile secret key</div>
+                        <div class="hint" th:text="#{voj.administration.general-settings.turnstile-secret-key-hint}">The secret key used for server-side verification. Kept private.</div>
+                    </div>
+                    <div class="adm-setrow-r"><input id="turnstile-secret-key" class="adm-input" type="password" autocomplete="new-password" th:value="${options['turnstileSecretKey']}" /></div>
+                </div>
+                <div class="adm-setrow">
+                    <div class="adm-setrow-l">
                         <div class="lbl" th:text="#{voj.administration.general-settings.public-submissions}">Public submissions</div>
                         <div class="hint" th:text="#{voj.administration.general-settings.public-submissions-hint}">Let non-authors view submitted source code.</div>
                     </div>
@@ -187,7 +210,7 @@
                     <div class="adm-wordlist-head">
                         <span class="adm-srclabel" th:text="#{voj.administration.general-settings.source-urls}">SOURCE URLS &middot; one per line</span>
                         <button type="button" class="adm-import-btn" id="import-offensive-words"
-                                th:text="'&#8675; ' + #{voj.administration.general-settings.import-now}">&#8675; import now</button>
+                                th:text="'⇣ ' + #{voj.administration.general-settings.import-now}">⇣ import now</button>
                     </div>
                     <textarea id="offensive-word-sources" class="adm-wordlist-input" rows="3"
                               placeholder="https://&hellip;/blocklist.txt" th:text="${options['offensiveWordSources']}"></textarea>
@@ -266,6 +289,9 @@
                     copyright: $('#copyright').val(),
                     allowUserRegister: isOn('allow-register'),
                     requireEmailVerification: isOn('require-email-verification'),
+                    turnstileEnabled: isOn('turnstile-enabled'),
+                    turnstileSiteKey: $('#turnstile-site-key').val(),
+                    turnstileSecretKey: $('#turnstile-secret-key').val(),
                     publicSubmissions: isOn('public-submissions'),
                     maintenanceMode: isOn('maintenance-mode'),
                     icpNumber: $('#icp-number').val(),

@@ -1497,6 +1497,9 @@ public class AdministrationController {
       @RequestParam(value = "contestsPerPage", defaultValue = "50") int contestsPerPage,
       @RequestParam(value = "bulletinsPerPage", defaultValue = "50") int bulletinsPerPage,
       @RequestParam(value = "discussionsPerPage", defaultValue = "50") int discussionsPerPage,
+      @RequestParam(value = "turnstileEnabled", defaultValue = "false") boolean turnstileEnabled,
+      @RequestParam(value = "turnstileSiteKey", defaultValue = "") String turnstileSiteKey,
+      @RequestParam(value = "turnstileSecretKey", defaultValue = "") String turnstileSecretKey,
       HttpServletRequest request) {
     Map<String, Boolean> result =
         optionService.updateOptions(
@@ -1532,6 +1535,9 @@ public class AdministrationController {
       moderationOptions.put(
           "discussionMinSolvedToReport",
           String.valueOf(clampNonNegative(discussionMinSolvedToReport)));
+      moderationOptions.put("turnstileEnabled", turnstileEnabled ? "1" : "0");
+      moderationOptions.put("turnstileSiteKey", turnstileSiteKey.trim());
+      moderationOptions.put("turnstileSecretKey", turnstileSecretKey.trim());
       optionService.updateOptions(moderationOptions);
 
       Map<String, String> pageSizeOptions = new HashMap<>();

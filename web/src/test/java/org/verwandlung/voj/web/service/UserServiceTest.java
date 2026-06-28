@@ -32,9 +32,11 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.Transactional;
 
 import org.verwandlung.voj.web.mapper.EmailValidationMapper;
+import org.verwandlung.voj.web.mapper.OptionMapper;
 import org.verwandlung.voj.web.mapper.UserMapper;
 import org.verwandlung.voj.web.model.EmailValidation;
 import org.verwandlung.voj.web.model.Language;
+import org.verwandlung.voj.web.model.Option;
 import org.verwandlung.voj.web.model.User;
 import org.verwandlung.voj.web.model.UserGroup;
 
@@ -121,13 +123,22 @@ public class UserServiceTest {
     UserGroup userGroup = userService.getUserGroupUsingSlug("users");
     List<User> users = userService.getUserUsingUserGroupAndUsername(userGroup, "another", 0, 10);
     Assertions.assertEquals(1, users.size());
+
+    // The "another" keyword must resolve to the another-user account, not just
+    // any single row - this guards the username LIKE predicate, not only its count.
+    Assertions.assertEquals("another-user", users.get(0).getUsername());
   }
 
   /** Test case: tests the getUserUsingUserGroup(...) method. Test data: the users user group. Expected: the list of users in this group. */
   @Test
   public void testGetUserUsingUserGroup() {
     UserGroup userGroup = userService.getUserGroupUsingSlug("users");
-    Assertions.assertEquals(1, userService.getUserUsingUserGroup(userGroup, 0, 10).size());
+    List<User> users = userService.getUserUsingUserGroup(userGroup, 0, 10);
+    Assertions.assertEquals(1, users.size());
+
+    // The "users" group holds exactly one seeded account; assert it is that one,
+    // so a broken group predicate that returns a same-sized but wrong page fails.
+    Assertions.assertEquals("another-user", users.get(0).getUsername());
   }
 
   /** Test case: tests the isAllowedToLogin(...) method. Test data: an administrator account with the correct password. Expected: login is allowed. */
@@ -353,6 +364,41 @@ public class UserServiceTest {
     Assertions.assertEquals(location, userService.getUserMetaUsingUid(user).get("location"));
   }
 
+  /** Test case: tests the updateProfile (profile) method. Test data: the email changes while email verification is required. Expected: the account is forced back to unverified and a verification email is dispatched. */
+  @Test
+  public void testUpdateProfileResetsVerificationWhenEmailChanges() {
+    enableEmailVerificationRequirement();
+    userMapper.updateEmailVerified(1000, true);
+    User user = userService.getUserUsingUid(1000);
+    Map<String, Boolean> result =
+        userService.updateProfile(
+            user, "changed@example.com", "Haozhe Xie", "", "", "{}", "About me");
+    Assertions.assertTrue(result.get("isSuccessful"));
+    Assertions.assertTrue(result.get("isEmailVerificationSent"));
+    Assertions.assertFalse(userService.getUserUsingUid(1000).isEmailVerified());
+  }
+
+  /** Test case: tests the updateProfile (profile) method. Test data: the email is unchanged while email verification is required. Expected: the verified status is preserved and no verification email is dispatched. */
+  @Test
+  public void testUpdateProfileKeepsVerificationWhenEmailUnchanged() {
+    enableEmailVerificationRequirement();
+    userMapper.updateEmailVerified(1000, true);
+    User user = userService.getUserUsingUid(1000);
+    Map<String, Boolean> result =
+        userService.updateProfile(
+            user, user.getEmail(), "Haozhe Xie", "Beijing", "", "{}", "About me");
+    Assertions.assertTrue(result.get("isSuccessful"));
+    Assertions.assertNull(result.get("isEmailVerificationSent"));
+    Assertions.assertTrue(userService.getUserUsingUid(1000).isEmailVerified());
+  }
+
+  /** Enables the requireEmailVerification option within the current test transaction. */
+  private void enableEmailVerificationRequirement() {
+    Option option = optionMapper.getOption("requireEmailVerification");
+    option.setOptionValue("1");
+    optionMapper.updateOption(option);
+  }
+
   /** Test case: tests the isEmailValidationValid(...) method. Test data: valid validation credentials. Expected: returns true. */
   @Test
   public void testIsEmailValidationValid() {
@@ -457,4 +503,7 @@ public class UserServiceTest {
 
   /** The Mapper used to construct email validation credentials within the test transaction. */
   @Autowired private EmailValidationMapper emailValidationMapper;
+
+  /** The Mapper used to toggle the email-verification requirement within the test transaction. */
+  @Autowired private OptionMapper optionMapper;
 }

@@ -41,7 +41,7 @@ public class OptionMapperTest {
   @Test
   public void testGetAutoloadOptions() {
     List<Option> options = optionMapper.getAutoloadOptions();
-    Assertions.assertEquals(7, options.size());
+    Assertions.assertEquals(9, options.size());
 
     Option firstOption = options.get(0);
     int optionId = firstOption.getOptionId();
