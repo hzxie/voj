@@ -36,6 +36,7 @@ import org.verwandlung.voj.web.service.SubmissionService;
 import org.verwandlung.voj.web.util.HttpRequestParser;
 import org.verwandlung.voj.web.util.HttpSessionParser;
 import org.verwandlung.voj.web.util.JsonUtils;
+import org.verwandlung.voj.web.util.LogSanitizer;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -228,7 +229,9 @@ public class ContestsController {
       LOGGER.info(
           String.format(
               "User: {%s} attended contest #%d at %s",
-              new Object[] {currentUser, contestId, ipAddress}));
+              new Object[] {
+                LogSanitizer.forLog(currentUser), contestId, LogSanitizer.forLog(ipAddress)
+              }));
     }
     return result;
   }

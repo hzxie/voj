@@ -82,6 +82,7 @@ import org.verwandlung.voj.web.util.DateUtils;
 import org.verwandlung.voj.web.util.HttpRequestParser;
 import org.verwandlung.voj.web.util.HttpSessionParser;
 import org.verwandlung.voj.web.util.JsonUtils;
+import org.verwandlung.voj.web.util.LogSanitizer;
 
 /**
  * Handles the requests for system administration.
@@ -686,7 +687,7 @@ public class AdministrationController {
       LOGGER.info(
           String.format(
               "User: [Username=%s] was created by administrator at %s.",
-              new Object[] {username, ipAddress}));
+              new Object[] {LogSanitizer.forLog(username), LogSanitizer.forLog(ipAddress)}));
     }
     return result;
   }
@@ -781,7 +782,7 @@ public class AdministrationController {
       LOGGER.info(
           String.format(
               "Problem: [ProblemId=%s] was deleted by administrator at %s.",
-              new Object[] {problemId, ipAddress}));
+              new Object[] {problemId, LogSanitizer.forLog(ipAddress)}));
     }
     result.put("isSuccessful", true);
     return result;
@@ -874,7 +875,7 @@ public class AdministrationController {
       LOGGER.info(
           String.format(
               "Problem: [ProblemId=%s] was created by administrator at %s.",
-              new Object[] {problemId, ipAddress}));
+              new Object[] {problemId, LogSanitizer.forLog(ipAddress)}));
     }
     return result;
   }
@@ -983,7 +984,7 @@ public class AdministrationController {
       LOGGER.info(
           String.format(
               "Problem: [ProblemId=%s] was edited by administrator at %s.",
-              new Object[] {problemId, ipAddress}));
+              new Object[] {problemId, LogSanitizer.forLog(ipAddress)}));
     }
     return result;
   }
@@ -1034,7 +1035,11 @@ public class AdministrationController {
     LOGGER.info(
         String.format(
             "Problem: [ProblemId=%s] test data (%s checkpoints) was uploaded by administrator at %s.",
-            new Object[] {problemId, testCases.size(), HttpRequestParser.getRemoteAddr(request)}));
+            new Object[] {
+              problemId,
+              testCases.size(),
+              LogSanitizer.forLog(HttpRequestParser.getRemoteAddr(request))
+            }));
     return result;
   }
 
@@ -1181,7 +1186,7 @@ public class AdministrationController {
       LOGGER.info(
           String.format(
               "ProblemCategory: [ProblemCategoryId=%s] was created by administrator at %s.",
-              new Object[] {problemCategoryId, ipAddress}));
+              new Object[] {problemCategoryId, LogSanitizer.forLog(ipAddress)}));
     }
     return result;
   }
@@ -1216,7 +1221,9 @@ public class AdministrationController {
       LOGGER.info(
           String.format(
               "ProblemCategory: [ProblemCategoryId=%s] was edited by administrator at %s.",
-              new Object[] {problemCategoryId, ipAddress}));
+              new Object[] {
+                LogSanitizer.forLog(problemCategoryId), LogSanitizer.forLog(ipAddress)
+              }));
     }
     return result;
   }
@@ -1244,7 +1251,7 @@ public class AdministrationController {
       LOGGER.info(
           String.format(
               "ProblemCategory: [ProblemCategoryId=%s] was deleted by administrator at %s.",
-              new Object[] {problemCategoryId, ipAddress}));
+              new Object[] {problemCategoryId, LogSanitizer.forLog(ipAddress)}));
     }
     result.put("isSuccessful", true);
     result.put("deletedProblemCategories", deletedProblemCategories);
@@ -1270,7 +1277,7 @@ public class AdministrationController {
       LOGGER.info(
           String.format(
               "ProblemTag: [ProblemTagId=%s] was created by administrator at %s.",
-              new Object[] {problemTagId, ipAddress}));
+              new Object[] {problemTagId, LogSanitizer.forLog(ipAddress)}));
     }
     return result;
   }
@@ -1293,7 +1300,7 @@ public class AdministrationController {
       LOGGER.info(
           String.format(
               "ProblemTag: [ProblemTagId=%s] was deleted by administrator at %s.",
-              new Object[] {problemTagId, ipAddress}));
+              new Object[] {problemTagId, LogSanitizer.forLog(ipAddress)}));
     }
     result.put("isSuccessful", isSuccessful);
     return result;
@@ -1360,7 +1367,7 @@ public class AdministrationController {
       LOGGER.info(
           String.format(
               "Submission: [SubmissionId=%s] deleted by administrator at %s.",
-              new Object[] {submissionId, ipAddress}));
+              new Object[] {submissionId, LogSanitizer.forLog(ipAddress)}));
     }
     result.put("isSuccessful", true);
     result.put("deletedSubmissions", deletedSubmissions);

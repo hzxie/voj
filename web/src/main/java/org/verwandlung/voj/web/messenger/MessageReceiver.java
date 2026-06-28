@@ -29,6 +29,7 @@ import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
+import org.verwandlung.voj.web.util.LogSanitizer;
 
 /**
  * The message receiving service. Used to receive real-time judge results from the judgers.
@@ -101,7 +102,7 @@ public class MessageReceiver implements MessageListener {
       LOGGER.info(
           String.format(
               "Submission #%d returned [Compile Error].\n\tError Message:%s",
-              new Object[] {submissionId, log}));
+              new Object[] {submissionId, LogSanitizer.forLog(log)}));
     }
   }
 
@@ -129,7 +130,14 @@ public class MessageReceiver implements MessageListener {
         String.format(
             "Submission #%d/ CheckPoint#%d returned [%s] (Time = %dms, Memory = %d KB, Score ="
                 + " %d).",
-            new Object[] {submissionId, checkpointId, runtimeResult, usedTime, usedMemory, score}));
+            new Object[] {
+              submissionId,
+              checkpointId,
+              LogSanitizer.forLog(runtimeResult),
+              usedTime,
+              usedMemory,
+              score
+            }));
   }
 
   /**
@@ -156,7 +164,9 @@ public class MessageReceiver implements MessageListener {
         String.format(
             "Submission #%d judge completed and returned [%s] (Time = %d ms, Memory = %d KB, Score"
                 + " = %d).",
-            new Object[] {submissionId, runtimeResult, usedTime, usedMemory, score}));
+            new Object[] {
+              submissionId, LogSanitizer.forLog(runtimeResult), usedTime, usedMemory, score
+            }));
   }
 
   /**
@@ -182,7 +192,9 @@ public class MessageReceiver implements MessageListener {
     eventPublisher.publishEvent(
         new KeepAliveEvent(
             this, judgerUsername, judgerDescription, heartbeatTime, cpuLoad, memoryUsage, uptime));
-    LOGGER.info(String.format("Received heartbeat from Judger[%s]", judgerUsername));
+    LOGGER.info(
+        String.format(
+            "Received heartbeat from Judger[%s]", LogSanitizer.forLog(judgerUsername)));
   }
 
   /**

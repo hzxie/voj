@@ -34,6 +34,7 @@ import org.verwandlung.voj.web.service.OptionService;
 import org.verwandlung.voj.web.service.ProblemService;
 import org.verwandlung.voj.web.util.HttpRequestParser;
 import org.verwandlung.voj.web.util.HttpSessionParser;
+import org.verwandlung.voj.web.util.LogSanitizer;
 
 import java.util.HashMap;
 import java.util.List;
@@ -274,7 +275,13 @@ public class DiscussionController {
       LOGGER.info(
           String.format(
               "User: {%s} voted discussion reply #%d {Up: %d, Down: %d} at %s",
-              new Object[] {currentUser, discussionReplyId, voteUp, voteDown, ipAddress}));
+              new Object[] {
+                LogSanitizer.forLog(currentUser),
+                discussionReplyId,
+                voteUp,
+                voteDown,
+                LogSanitizer.forLog(ipAddress)
+              }));
     }
     return result;
   }
@@ -302,7 +309,9 @@ public class DiscussionController {
       LOGGER.info(
           String.format(
               "User: {%s} reported discussion reply #%d at %s",
-              new Object[] {currentUser, discussionReplyId, ipAddress}));
+              new Object[] {
+                LogSanitizer.forLog(currentUser), discussionReplyId, LogSanitizer.forLog(ipAddress)
+              }));
     }
     return result;
   }
@@ -351,7 +360,11 @@ public class DiscussionController {
       LOGGER.info(
           String.format(
               "User: {%s} created discussion thread[Title=%s] at %s",
-              new Object[] {currentUser, discussionThreadTitle, ipAddress}));
+              new Object[] {
+                LogSanitizer.forLog(currentUser),
+                LogSanitizer.forLog(discussionThreadTitle),
+                LogSanitizer.forLog(ipAddress)
+              }));
     }
     return result;
   }
@@ -404,7 +417,9 @@ public class DiscussionController {
       LOGGER.info(
           String.format(
               "User: {%s} voted discussion thread #%d at %s",
-              new Object[] {currentUser, discussionThreadId, ipAddress}));
+              new Object[] {
+                LogSanitizer.forLog(currentUser), discussionThreadId, LogSanitizer.forLog(ipAddress)
+              }));
     }
     return result;
   }
@@ -431,7 +446,9 @@ public class DiscussionController {
       LOGGER.info(
           String.format(
               "User: {%s} created discussion reply for thread #%d at %s",
-              new Object[] {currentUser, discussionThreadId, ipAddress}));
+              new Object[] {
+                LogSanitizer.forLog(currentUser), discussionThreadId, LogSanitizer.forLog(ipAddress)
+              }));
     }
     return result;
   }
@@ -459,7 +476,9 @@ public class DiscussionController {
       LOGGER.info(
           String.format(
               "User: {%s} edited discussion reply #%d at %s",
-              new Object[] {currentUser, discussionReplyId, ipAddress}));
+              new Object[] {
+                LogSanitizer.forLog(currentUser), discussionReplyId, LogSanitizer.forLog(ipAddress)
+              }));
     }
     return result;
   }
@@ -485,7 +504,9 @@ public class DiscussionController {
       LOGGER.info(
           String.format(
               "User: {%s} deleted discussion reply #%d at %s",
-              new Object[] {currentUser, discussionReplyId, ipAddress}));
+              new Object[] {
+                LogSanitizer.forLog(currentUser), discussionReplyId, LogSanitizer.forLog(ipAddress)
+              }));
     }
     return result;
   }

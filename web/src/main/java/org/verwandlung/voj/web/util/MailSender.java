@@ -101,7 +101,9 @@ public class MailSender {
                 LOGGER.info(
                     String.format(
                         "An Email{Recipient: %s, Subject: %s} has been sent.",
-                        new Object[] {recipient, subject}));
+                        new Object[] {
+                          LogSanitizer.forLog(recipient), LogSanitizer.forLog(subject)
+                        }));
               }
             })
         .start();

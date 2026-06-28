@@ -45,6 +45,7 @@ import org.verwandlung.voj.web.service.ProblemService;
 import org.verwandlung.voj.web.service.SubmissionService;
 import org.verwandlung.voj.web.util.HttpRequestParser;
 import org.verwandlung.voj.web.util.HttpSessionParser;
+import org.verwandlung.voj.web.util.LogSanitizer;
 
 /**
  * Handles users' requests of viewing problems / making submissions, etc.
@@ -296,7 +297,9 @@ public class ProblemsController {
       LOGGER.info(
           String.format(
               "User: {%s} submitted code with SubmissionId #%s at %s",
-              new Object[] {currentUser, submissionId, ipAddress}));
+              new Object[] {
+                LogSanitizer.forLog(currentUser), submissionId, LogSanitizer.forLog(ipAddress)
+              }));
     }
     return result;
   }

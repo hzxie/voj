@@ -59,6 +59,7 @@ import org.verwandlung.voj.web.service.UserService;
 import org.verwandlung.voj.web.util.DateUtils;
 import org.verwandlung.voj.web.util.HttpRequestParser;
 import org.verwandlung.voj.web.util.HttpSessionParser;
+import org.verwandlung.voj.web.util.LogSanitizer;
 
 /**
  * Handles users' login/registration requests.
@@ -110,7 +111,10 @@ public class AccountsController {
   private void destroySession(HttpServletRequest request, HttpServletResponse response) {
     User currentUser = HttpSessionParser.getCurrentUser();
     String ipAddress = HttpRequestParser.getRemoteAddr(request);
-    LOGGER.info(String.format("%s logged out at %s", new Object[] {currentUser, ipAddress}));
+    LOGGER.info(
+        String.format(
+            "%s logged out at %s",
+            new Object[] {LogSanitizer.forLog(currentUser), LogSanitizer.forLog(ipAddress)}));
 
     Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
     new SecurityContextLogoutHandler().logout(request, response, authentication);
@@ -150,7 +154,8 @@ public class AccountsController {
     Map<String, Boolean> result = userService.isAllowedToLogin(username, password);
     LOGGER.info(
         String.format(
-            "User: [Username=%s] tried to log in at %s", new Object[] {username, ipAddress}));
+            "User: [Username=%s] tried to log in at %s",
+            new Object[] {LogSanitizer.forLog(username), LogSanitizer.forLog(ipAddress)}));
     if (result.get("isSuccessful")) {
       User user = userService.getUserUsingUsernameOrEmail(username);
       establishSecurityContext(request, response, user);
@@ -180,7 +185,10 @@ public class AccountsController {
     sessionRegistry.registerNewSession(request.getSession().getId(), userDetails);
 
     String ipAddress = HttpRequestParser.getRemoteAddr(request);
-    LOGGER.info(String.format("%s logged in at %s", new Object[] {user, ipAddress}));
+    LOGGER.info(
+        String.format(
+            "%s logged in at %s",
+            new Object[] {LogSanitizer.forLog(user), LogSanitizer.forLog(ipAddress)}));
   }
 
   /**
@@ -253,7 +261,9 @@ public class AccountsController {
 
       String ipAddress = HttpRequestParser.getRemoteAddr(request);
       LOGGER.info(
-          String.format("User: [Username=%s] created at %s.", new Object[] {username, ipAddress}));
+          String.format(
+              "User: [Username=%s] created at %s.",
+              new Object[] {LogSanitizer.forLog(username), LogSanitizer.forLog(ipAddress)}));
     }
     return result;
   }
@@ -340,7 +350,7 @@ public class AccountsController {
       LOGGER.info(
           String.format(
               "User: [Username=%s] send an email for resetting password at %s.",
-              new Object[] {username, ipAddress}));
+              new Object[] {LogSanitizer.forLog(username), LogSanitizer.forLog(ipAddress)}));
     }
     return result;
   }
@@ -369,7 +379,8 @@ public class AccountsController {
     if (result.get("isSuccessful")) {
       LOGGER.info(
           String.format(
-              "User: [Email=%s] resetted password at %s", new Object[] {email, ipAddress}));
+              "User: [Email=%s] resetted password at %s",
+              new Object[] {LogSanitizer.forLog(email), LogSanitizer.forLog(ipAddress)}));
     }
     return result;
   }
@@ -452,7 +463,9 @@ public class AccountsController {
         userService.changePassword(currentUser, oldPassword, newPassword, confirmPassword);
     if (result.get("isSuccessful")) {
       LOGGER.info(
-          String.format("%s changed password at %s", new Object[] {currentUser, ipAddress}));
+          String.format(
+              "%s changed password at %s",
+              new Object[] {LogSanitizer.forLog(currentUser), LogSanitizer.forLog(ipAddress)}));
     }
     return result;
   }
@@ -485,7 +498,10 @@ public class AccountsController {
         userService.updateProfile(
             currentUser, email, displayName, location, website, socialLinks, aboutMe);
     if (result.get("isSuccessful")) {
-      LOGGER.info(String.format("%s updated profile at %s", new Object[] {currentUser, ipAddress}));
+      LOGGER.info(
+          String.format(
+              "%s updated profile at %s",
+              new Object[] {LogSanitizer.forLog(currentUser), LogSanitizer.forLog(ipAddress)}));
     }
     return result;
   }

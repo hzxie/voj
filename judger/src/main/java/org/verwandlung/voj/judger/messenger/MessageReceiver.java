@@ -27,6 +27,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import org.verwandlung.voj.judger.application.ApplicationDispatcher;
+import org.verwandlung.voj.judger.util.LogSanitizer;
 
 /**
  * The message receiving service.
@@ -48,7 +49,10 @@ public class MessageReceiver implements MessageListener {
         if ("SubmissionCreated".equals(event)) {
           newSubmissionHandler(mapMessage);
         } else {
-          LOGGER.warn(String.format("Unknown Event Received. [Event = %s]", new Object[] {event}));
+          LOGGER.warn(
+              String.format(
+                  "Unknown Event Received. [Event = %s]",
+                  new Object[] {LogSanitizer.forLog(event)}));
         }
       } catch (Exception ex) {
         LOGGER.catching(ex);
