@@ -134,7 +134,9 @@
         // Runtime presets used by the quick-add scaffolder. Commands follow VOJ's
         // {filename} placeholder convention (validated server-side).
         var ADM_PRESETS = [
+            { name:'Go',         slug:'text/x-go',         src:'Main.go',    compile:'go build -o {filename}.exe {filename}.go',                 run:'{filename}.exe' },
             { name:'Kotlin',     slug:'text/x-kotlin',     src:'Main.kt',    compile:'kotlinc {filename}.kt -include-runtime -d {filename}.jar', run:'java -jar {filename}.jar' },
+            { name:'Rust',       slug:'text/x-rustsrc',    src:'Main.rs',    compile:'rustc -O -o {filename}.exe {filename}.rs',                 run:'{filename}.exe' },
             { name:'C#',         slug:'text/x-csharp',     src:'Main.cs',    compile:'mcs -optimize+ -out:{filename}.exe {filename}.cs',         run:'mono {filename}.exe' },
             { name:'Node.js',    slug:'text/javascript',   src:'Main.js',    compile:'node --check {filename}.js',                               run:'node {filename}.js' },
             { name:'TypeScript', slug:'text/typescript',   src:'Main.ts',    compile:'tsc --outFile {filename}.js {filename}.ts',                run:'node {filename}.js' },
