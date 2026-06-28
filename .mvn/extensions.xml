@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<extensions xmlns="http://maven.apache.org/EXTENSIONS/1.0.0"
+            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+            xsi:schemaLocation="http://maven.apache.org/EXTENSIONS/1.0.0 http://maven.apache.org/xsd/core-extensions-1.0.0.xsd">
+    <!-- Derives the Maven project version from the current git tag/branch at build
+         time (the on-disk poms keep a placeholder version and are never modified), so
+         releasing only means creating a git tag - no manual pom version bump. -->
+    <extension>
+        <groupId>me.qoomon</groupId>
+        <artifactId>maven-git-versioning-extension</artifactId>
+        <version>9.12.0</version>
+    </extension>
+</extensions>

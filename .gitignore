@@ -11,6 +11,8 @@ pom.xml.versionsBackup
 pom.xml.next
 release.properties
 dependency-reduced-pom.xml
+# Build-time poms written by maven-git-versioning-extension (.mvn/); never committed.
+.git-versioned-pom.xml
 
 # Eclipse
 .classpath

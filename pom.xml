@@ -4,7 +4,10 @@
 
 	<groupId>org.verwandlung</groupId>
 	<artifactId>voj-parent</artifactId>
-	<version>0.9.0</version>
+	<!-- Placeholder only: the real version is derived from the current git tag/branch
+	     at build time by the maven-git-versioning-extension (see .mvn/). Release by
+	     tagging (e.g. `git tag 1.0.1`), not by editing this value. -->
+	<version>0.0.0-SNAPSHOT</version>
 	<packaging>pom</packaging>
 	<name>Verwandlung Online Judge</name>
 	<url>https://verwandlung.org</url>

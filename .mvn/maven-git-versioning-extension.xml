@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration xmlns="https://github.com/qoomon/maven-git-versioning-extension"
+               xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+               xsi:schemaLocation="https://github.com/qoomon/maven-git-versioning-extension https://qoomon.github.io/maven-git-versioning-extension/configuration-9.4.0.xsd">
+    <!-- Restrict git-describe to release tags, which are plain semver (e.g. 1.0.0)
+         without a 'v' prefix. The extension parses the matched tag itself to populate
+         ${describe.tag.version}, so this pattern must not declare a 'version' group. -->
+    <describeTagPattern><![CDATA[\d+\.\d+\.\d+]]></describeTagPattern>
+    <refs>
+        <!-- Building from a release tag yields the clean release version (e.g. 1.0.0). -->
+        <ref type="tag">
+            <pattern><![CDATA[(?<version>\d+\.\d+\.\d+)]]></pattern>
+            <version>${ref.version}</version>
+        </ref>
+        <!-- Building from a branch yields the next-patch snapshot off the latest tag
+             (e.g. after 1.0.0, master builds report 1.0.1-SNAPSHOT). -->
+        <ref type="branch">
+            <pattern>.+</pattern>
+            <version>${describe.tag.version.next}-SNAPSHOT</version>
+        </ref>
+    </refs>
+    <!-- Detached HEAD that matches no ref above (e.g. a bare commit checkout). -->
+    <rev>
+        <version>${describe.tag.version.next}-SNAPSHOT</version>
+    </rev>
+</configuration>
