@@ -32,8 +32,11 @@ DROP TABLE IF EXISTS `voj_user_groups`;
 
 CREATE TABLE `voj_bulletin_board_messages` (
   `message_id` bigint(20) NOT NULL,
+  `message_author_id` bigint(20) DEFAULT NULL,
   `message_title` varchar(128) NOT NULL,
   `message_body` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `message_is_pinned` tinyint(1) NOT NULL DEFAULT 0,
+  `message_status` varchar(16) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'PUBLISHED',
   `message_create_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -44,7 +47,13 @@ CREATE TABLE `voj_contests` (
   `contest_start_time` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
   `contest_end_time` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
   `contest_mode` varchar(4) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `contest_problems` text COLLATE utf8mb4_unicode_ci NOT NULL
+  `contest_problems` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `contest_status` varchar(16) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'PUBLISHED',
+  `contest_scoring` varchar(16) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'ICPC',
+  `contest_penalty` int(11) NOT NULL DEFAULT '20',
+  `contest_freeze` int(11) NOT NULL DEFAULT '0',
+  `contest_is_rated` tinyint(1) NOT NULL DEFAULT '1',
+  `contest_open_registration` tinyint(1) NOT NULL DEFAULT '1'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `voj_contest_contestants` (
@@ -63,7 +72,8 @@ CREATE TABLE `voj_discussion_replies` (
   `discussion_thread_id` bigint(20) NOT NULL,
   `discussion_reply_uid` bigint(20) NOT NULL,
   `discussion_reply_time` timestamp DEFAULT CURRENT_TIMESTAMP,
-  `discussion_reply_content` text COLLATE utf8mb4_unicode_ci NOT NULL
+  `discussion_reply_content` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `discussion_reply_visible` tinyint(1) NOT NULL DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `voj_discussion_reply_votes` (
@@ -79,7 +89,10 @@ CREATE TABLE `voj_discussion_threads` (
   `discussion_thread_create_time` timestamp DEFAULT CURRENT_TIMESTAMP,
   `problem_id` bigint(20) DEFAULT NULL,
   `discussion_topic_id` int(8) NOT NULL,
-  `discussion_thread_name` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL
+  `discussion_thread_name` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `discussion_thread_visible` tinyint(1) NOT NULL DEFAULT 1,
+  `discussion_thread_pinned` tinyint(1) NOT NULL DEFAULT 0,
+  `discussion_thread_locked` tinyint(1) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `voj_discussion_topics` (
@@ -106,7 +119,11 @@ CREATE TABLE `voj_languages` (
   `language_slug` varchar(16) COLLATE utf8mb4_unicode_ci NOT NULL,
   `language_name` varchar(16) COLLATE utf8mb4_unicode_ci NOT NULL,
   `language_compile_command` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `language_run_command` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL
+  `language_run_command` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `language_enabled` tinyint(1) NOT NULL DEFAULT 1,
+  `language_source_filename` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `language_time_multiplier` decimal(3,1) NOT NULL DEFAULT 1.0,
+  `language_memory_multiplier` decimal(3,1) NOT NULL DEFAULT 1.0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `voj_offensive_words` (
@@ -123,7 +140,7 @@ CREATE TABLE `voj_options` (
 
 CREATE TABLE `voj_problems` (
   `problem_id` bigint(20) NOT NULL,
-  `problem_is_public` tinyint(1) NOT NULL DEFAULT '1',
+  `problem_status` varchar(16) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'PUBLISHED',
   `problem_name` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL,
   `problem_difficulty_id` int(4) NOT NULL DEFAULT '1',
   `problem_time_limit` int(8) NOT NULL,
@@ -186,6 +203,7 @@ CREATE TABLE `voj_submissions` (
   `submission_judge_result` varchar(8) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'PD',
   `submission_judge_score` int(4) DEFAULT NULL,
   `submission_judge_log` text COLLATE utf8mb4_unicode_ci,
+  `judger_uid` bigint(20) DEFAULT NULL,
   `submission_code` text COLLATE utf8mb4_unicode_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -202,7 +220,8 @@ CREATE TABLE `voj_users` (
   `password` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `email` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL,
   `user_group_id` int(4) NOT NULL,
-  `prefer_language_id` int(4) NOT NULL
+  `prefer_language_id` int(4) NOT NULL,
+  `is_email_verified` tinyint(1) NOT NULL DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `voj_user_groups` (
@@ -295,7 +314,8 @@ ALTER TABLE `voj_submissions`
   ADD KEY `problem_id` (`problem_id`,`uid`),
   ADD KEY `uid` (`uid`),
   ADD KEY `submission_language_id` (`language_id`),
-  ADD KEY `submission_runtime_result` (`submission_judge_result`);
+  ADD KEY `submission_runtime_result` (`submission_judge_result`),
+  ADD KEY `judger_uid` (`judger_uid`);
 
 ALTER TABLE `voj_usermeta`
   ADD PRIMARY KEY (`meta_id`),
@@ -337,7 +357,7 @@ ALTER TABLE `voj_offensive_words`
   MODIFY `offensive_word_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 ALTER TABLE `voj_options`
-  MODIFY `option_id` int(8) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+  MODIFY `option_id` int(8) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
 
 ALTER TABLE `voj_problems`
   MODIFY `problem_id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1004;
@@ -399,7 +419,8 @@ ALTER TABLE `voj_submissions`
   ADD CONSTRAINT `voj_submissions_ibfk_1` FOREIGN KEY (`problem_id`) REFERENCES `voj_problems` (`problem_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   ADD CONSTRAINT `voj_submissions_ibfk_2` FOREIGN KEY (`uid`) REFERENCES `voj_users` (`uid`) ON DELETE CASCADE ON UPDATE CASCADE,
   ADD CONSTRAINT `voj_submissions_ibfk_3` FOREIGN KEY (`language_id`) REFERENCES `voj_languages` (`language_id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT `voj_submissions_ibfk_4` FOREIGN KEY (`submission_judge_result`) REFERENCES `voj_judge_results` (`judge_result_slug`);
+  ADD CONSTRAINT `voj_submissions_ibfk_4` FOREIGN KEY (`submission_judge_result`) REFERENCES `voj_judge_results` (`judge_result_slug`),
+  ADD CONSTRAINT `voj_submissions_ibfk_5` FOREIGN KEY (`judger_uid`) REFERENCES `voj_users` (`uid`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 ALTER TABLE `voj_usermeta`
   ADD CONSTRAINT `voj_usermeta_ibfk_1` FOREIGN KEY (`uid`) REFERENCES `voj_users` (`uid`) ON DELETE CASCADE ON UPDATE CASCADE;
