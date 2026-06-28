@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Verwandlung">
+  <rect width="64" height="64" rx="15" fill="#0a0c0b"/>
+  <path transform="translate(20.600 44.870) scale(0.03800 -0.03800)" d="M219 0 35 730H165L275 254Q284 219 292.0 179.0Q300 139 304 114Q308 139 315.0 179.0Q322 219 330 255L439 730H565L381 0Z" fill="#34d399"/>
+  <rect x="44" y="49" width="8" height="3.5" rx="1" fill="#34d399"/>
+</svg>

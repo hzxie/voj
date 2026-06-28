@@ -32,7 +32,9 @@
     <meta name="_csrf" th:content="${_csrf.token}" />
     <meta name="_csrf_header" th:content="${_csrf.headerName}" />
     <!-- Icon -->
-    <link th:href="|${cdnUrl}/img/favicon.ico?v=${version}|" rel="shortcut icon" type="image/x-icon" />
+    <link th:href="|${cdnUrl}/img/favicon.svg?v=${version}|" rel="icon" type="image/svg+xml" />
+    <link th:href="|${cdnUrl}/img/favicon.ico?v=${version}|" rel="alternate icon" type="image/x-icon" />
+    <link th:href="|${cdnUrl}/img/apple-touch-icon.png?v=${version}|" rel="apple-touch-icon" />
     <!-- UI system (self-hosted fonts + theme variables + components live in app.css). -->
     <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/app.css?v=${version}|" />
     <!-- Functional JavaScript kept from the legacy stack (page AJAX still uses jQuery). -->

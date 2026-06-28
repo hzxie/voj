@@ -1,4 +1,4 @@
-![Verwandlung Online Judge](https://raw.githubusercontent.com/hzxie/voj/master/web/src/main/webapp/assets/img/logo.png)
+![Verwandlung Online Judge](https://raw.githubusercontent.com/hzxie/voj/refs/heads/master/web/src/main/resources/static/assets/img/logo.svg)
 
 [![CircleCI](https://dl.circleci.com/status-badge/img/circleci/SxfxeEFFqyS3JM5ftpk7cK/DNyawsGdEXznk4GzmBs8dx/tree/master.svg?style=shield)](https://dl.circleci.com/status-badge/redirect/circleci/SxfxeEFFqyS3JM5ftpk7cK/DNyawsGdEXznk4GzmBs8dx/tree/master)
 [![Build status](https://ci.appveyor.com/api/projects/status/j62ns9p8whttittm?svg=true)](https://ci.appveyor.com/project/hzxie/voj)
