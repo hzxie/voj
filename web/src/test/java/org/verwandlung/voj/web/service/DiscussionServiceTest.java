@@ -104,7 +104,7 @@ public class DiscussionServiceTest {
   /** Test case: tests the getDiscussionRepliesOfThread(...) method. Test data: discussion thread 2. Expected: all the replies of the thread with their vote statistics populated. */
   @Test
   public void testGetDiscussionRepliesOfThread() {
-    List<DiscussionReply> replies = discussionService.getDiscussionRepliesOfThread(2, 1000, 0, 10);
+    List<DiscussionReply> replies = discussionService.getDiscussionRepliesOfThread(2, 1000, 0, 10, false);
     Assertions.assertEquals(2, replies.size());
     // Reply 2 has one upvote (from user 1000) and one downvote (from user 1001).
     DiscussionReply firstReply = replies.get(0);
@@ -285,7 +285,7 @@ public class DiscussionServiceTest {
     long newReplyId = newReply.getDiscussionReplyId();
     discussionService.voteDiscussionReply(2, newReplyId, userWithUid(1002), 1, 0);
 
-    List<DiscussionReply> replies = discussionService.getDiscussionRepliesOfThread(2, -1, 0, 10);
+    List<DiscussionReply> replies = discussionService.getDiscussionRepliesOfThread(2, -1, 0, 10, false);
     Assertions.assertEquals(3, replies.size());
     Assertions.assertEquals(2, replies.get(0).getDiscussionReplyId());
     Assertions.assertEquals(newReplyId, replies.get(1).getDiscussionReplyId());
@@ -490,7 +490,7 @@ public class DiscussionServiceTest {
    */
   private DiscussionReply findReplyById(long threadId, long currentUserUid, long replyId) {
     List<DiscussionReply> replies =
-        discussionService.getDiscussionRepliesOfThread(threadId, currentUserUid, 0, 50);
+        discussionService.getDiscussionRepliesOfThread(threadId, currentUserUid, 0, 50, false);
     for (DiscussionReply reply : replies) {
       if (reply.getDiscussionReplyId() == replyId) {
         return reply;

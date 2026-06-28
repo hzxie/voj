@@ -12,6 +12,12 @@
 		<result property="endTime" column="contest_end_time" />
 		<result property="contestMode" column="contest_mode" />
 		<result property="problems" column="contest_problems" />
+		<result property="status" column="contest_status" />
+		<result property="scoring" column="contest_scoring" />
+		<result property="penalty" column="contest_penalty" />
+		<result property="freeze" column="contest_freeze" />
+		<result property="isRated" column="contest_is_rated" />
+		<result property="openRegistration" column="contest_open_registration" />
 	</resultMap>
 
 	<!-- Methods -->
@@ -53,13 +59,13 @@
 	</select>
 	<insert id="createContest" 
 		parameterType="org.verwandlung.voj.web.model.Contest">
-		INSERT INTO voj_contests (contest_name, contest_notes, contest_start_time, contest_end_time, contest_mode, contest_problems) 
-		VALUES (#{contestName}, #{contestNotes}, #{startTime}, #{endTime}, #{contestMode}, #{problems})
+		INSERT INTO voj_contests (contest_name, contest_notes, contest_start_time, contest_end_time, contest_mode, contest_problems, contest_status, contest_scoring, contest_penalty, contest_freeze, contest_is_rated, contest_open_registration)
+		VALUES (#{contestName}, #{contestNotes}, #{startTime}, #{endTime}, #{contestMode}, #{problems}, #{status}, #{scoring}, #{penalty}, #{freeze}, #{isRated}, #{openRegistration})
 	</insert>
 	<update id="updateContest" 
 		parameterType="org.verwandlung.voj.web.model.Contest">
 		UPDATE voj_contests 
-		SET contest_name = #{contestName}, contest_notes = #{contestNotes}, contest_start_time = #{startTime}, contest_end_time = #{endTime}, contest_mode = #{contestMode}, contest_problems = #{problems}
+		SET contest_name = #{contestName}, contest_notes = #{contestNotes}, contest_start_time = #{startTime}, contest_end_time = #{endTime}, contest_mode = #{contestMode}, contest_problems = #{problems}, contest_status = #{status}, contest_scoring = #{scoring}, contest_penalty = #{penalty}, contest_freeze = #{freeze}, contest_is_rated = #{isRated}, contest_open_registration = #{openRegistration}
 		WHERE contest_id = #{contestId}
 	</update>
 	<delete id="deleteContest"

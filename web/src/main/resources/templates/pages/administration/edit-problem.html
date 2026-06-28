@@ -14,9 +14,10 @@
             <a class="adm-back" th:href="@{/administration/all-problems}">&#8592; <span th:text="#{voj.administration.edit-problem.back}">back to problems</span></a>
             <span class="adm-idchip" th:text="'#' + ${problem.problemId}">#1</span>
             <input id="problem-id" type="hidden" th:value="${problem.problemId}" />
-            <div style="flex:1;"></div>
-            <a class="adm-btn-tn" th:href="@{/p/{id}(id=${problem.problemId})}" target="_blank" th:text="#{voj.administration.edit-problem.view-problem}">view</a>
-            <button type="button" class="adm-btn-tn danger" id="delete-problem" th:text="#{voj.administration.edit-problem.delete-problem}">delete</button>
+            <input type="hidden" id="problem-status" th:value="${problem.status}" />
+            <div class="adm-flex1"></div>
+            <a class="adm-btn-tn" th:href="@{/p/{id}(id=${problem.problemId})}" target="_blank" th:text="#{voj.administration.edit-problem.preview}">preview</a>
+            <button type="button" class="adm-btn-tn danger" id="delete-problem" th:text="#{voj.administration.edit-problem.delete}">delete</button>
             <button type="submit" class="adm-btn-tn go" th:text="'$ ' + #{voj.administration.edit-problem.update-problem}">$ save</button>
         </div>
 
@@ -34,26 +35,16 @@
                             <label class="adm-flabel"><span th:text="#{voj.administration.edit-problem.input-format}">INPUT FORMAT</span><textarea id="input-format" class="adm-input" rows="3" th:text="${problem.inputFormat}"></textarea></label>
                             <label class="adm-flabel"><span th:text="#{voj.administration.edit-problem.output-format}">OUTPUT FORMAT</span><textarea id="output-format" class="adm-input" rows="3" th:text="${problem.outputFormat}"></textarea></label>
                         </div>
-                        <div class="adm-grid-2">
-                            <label class="adm-flabel"><span th:text="#{voj.administration.edit-problem.input-sample}">INPUT SAMPLE</span><textarea id="input-sample" class="adm-input code" rows="3" th:text="${problem.sampleInput}"></textarea></label>
-                            <label class="adm-flabel"><span th:text="#{voj.administration.edit-problem.output-sample}">OUTPUT SAMPLE</span><textarea id="output-sample" class="adm-input code" rows="3" th:text="${problem.sampleOutput}"></textarea></label>
-                        </div>
                         <label class="adm-flabel"><span th:text="#{voj.administration.edit-problem.hint}">HINT</span><textarea id="hint" class="adm-input" rows="2" th:text="${problem.hint}"></textarea></label>
                     </div>
                 </div>
                 <div class="adm-card">
-                    <div class="adm-card-head"><span th:text="#{voj.administration.edit-problem.test-cases}">// TEST CASES</span><span class="act" id="new-test-case" th:text="#{voj.administration.edit-problem.new-test-case}">+ add sample</span></div>
-                    <div id="test-cases" class="adm-card-body" style="gap:0;">
-                        <p id="no-test-cases" class="adm-cell muted" th:classappend="${!checkpoints.isEmpty()} ? 'hide'" th:text="#{voj.administration.edit-problem.no-test-cases}">No test cases.</p>
-                        <ul style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:14px;">
-                            <li class="test-case adm-card" style="border-radius:11px;" th:each="checkpoint,iter : ${checkpoints}">
-                                <div class="adm-card-head"><span th:text="#{voj.administration.edit-problem.test-case} + ' #' + ${iter.index}">Test Case #0</span><span class="del-test" style="cursor:pointer;color:var(--text3);">&#10005;</span></div>
-                                <div class="adm-card-body" style="gap:10px;">
-                                    <label class="adm-flabel"><span th:text="#{voj.administration.edit-problem.standard-input}">INPUT</span><textarea class="standard-input adm-input code" rows="2" th:text="${checkpoint.input}"></textarea></label>
-                                    <label class="adm-flabel"><span th:text="#{voj.administration.edit-problem.standard-output}">OUTPUT</span><textarea class="standard-output adm-input code" rows="2" th:text="${checkpoint.output}"></textarea></label>
-                                </div>
-                            </li>
-                        </ul>
+                    <div class="adm-card-head plain" th:text="#{voj.administration.edit-problem.sample-cases}">// SAMPLE CASES</div>
+                    <div class="adm-card-body">
+                        <div class="adm-grid-2">
+                            <label class="adm-flabel"><span th:text="#{voj.administration.edit-problem.sample-input}">INPUT</span><textarea id="input-sample" class="adm-input code" rows="3" th:text="${problem.sampleInput}"></textarea></label>
+                            <label class="adm-flabel"><span th:text="#{voj.administration.edit-problem.sample-output}">EXPECTED OUTPUT</span><textarea id="output-sample" class="adm-input code" rows="3" th:text="${problem.sampleOutput}"></textarea></label>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -62,41 +53,70 @@
                     <div class="adm-card-head plain" th:text="#{voj.administration.edit-problem.properties}">// PROPERTIES</div>
                     <div class="adm-card-body">
                         <div>
+                            <div class="adm-block-label" th:text="#{voj.administration.edit-problem.status}">STATUS</div>
+                            <div class="adm-seg" data-adm="seg" data-input="problem-status">
+                                <a href="javascript:void(0);" data-value="PUBLISHED" th:classappend="${problem.status == 'PUBLISHED'} ? 'active'" th:text="#{voj.administration.status.published}">Published</a>
+                                <a href="javascript:void(0);" data-value="DRAFT" th:classappend="${problem.status == 'DRAFT'} ? 'active'" th:text="#{voj.administration.status.draft}">Draft</a>
+                                <a href="javascript:void(0);" data-value="HIDDEN" th:classappend="${problem.status == 'HIDDEN'} ? 'active'" th:text="#{voj.administration.status.hidden}">Hidden</a>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="adm-block-label" th:text="#{voj.administration.edit-problem.problem-categories}">CATEGORY</div>
+                            <div class="adm-seg">
+                                <th:block th:each="entry : ${problemCategories}">
+                                    <label class="adm-segchk"><input type="checkbox" class="category-check" th:value="${entry.key.problemCategorySlug}" /><span th:text="${entry.key.problemCategoryName}">Category</span></label>
+                                    <label th:each="problemCategory : ${entry.value}" class="adm-segchk"><input type="checkbox" class="category-check" th:value="${problemCategory.problemCategorySlug}" /><span th:text="${problemCategory.problemCategoryName}">Subcategory</span></label>
+                                </th:block>
+                            </div>
+                        </div>
+                        <div>
                             <div class="adm-block-label" th:text="#{voj.administration.edit-problem.difficulty}">DIFFICULTY</div>
                             <div class="adm-seg" data-adm="seg" data-input="problem-difficulty">
                                 <a href="javascript:void(0);" th:each="difficulty : ${problemDifficulties}" th:data-value="${difficulty.problemDifficultySlug}" th:classappend="${difficulty.problemDifficultySlug == currentDifficulty} ? 'active'" th:text="${difficulty.problemDifficultyName}">Easy</a>
                             </div>
                             <input type="hidden" id="problem-difficulty" th:value="${currentDifficulty}" />
                         </div>
+                        <div>
+                            <div class="adm-block-label" th:text="#{voj.administration.edit-problem.problem-tags}">TAGS</div>
+                            <div id="tag-box" class="adm-tagbox">
+                                <input id="tag-input" class="adm-taginput" type="text" autocomplete="off" th:placeholder="#{voj.administration.edit-problem.tag-placeholder}" />
+                            </div>
+                            <input type="hidden" id="problem-tags" th:value="${#strings.listJoin(problemTags.![problemTagName], ',')}" />
+                        </div>
                         <div class="adm-grid-2">
                             <label class="adm-flabel"><span th:text="#{voj.administration.edit-problem.time-limit}">TIME · ms</span><input id="time-limit" class="adm-input" type="text" maxlength="8" th:value="${problem.timeLimit}" /></label>
                             <label class="adm-flabel"><span th:text="#{voj.administration.edit-problem.memory-limit}">MEMORY · KB</span><input id="memory-limit" class="adm-input" type="text" maxlength="8" th:value="${problem.memoryLimit}" /></label>
                         </div>
-                        <div class="vw-between"><span class="adm-cell txt" th:text="#{voj.administration.edit-problem.is-public}">Public to users</span><div class="adm-switch" id="problem-is-public" data-adm="switch" th:classappend="${problem.isPublic()} ? 'on'"><div class="knob"></div></div></div>
-                        <div class="vw-between"><span class="adm-cell txt" th:text="#{voj.administration.edit-problem.test-case-exactly-match}">Exact match</span><div class="adm-switch" id="problem-is-exactly-match" data-adm="switch"><div class="knob"></div></div></div>
+                        <div>
+                            <div class="adm-block-label" th:text="#{voj.administration.edit-problem.checker}">CHECKER</div>
+                            <div class="adm-seg" data-adm="seg" data-input="problem-is-exactly-match">
+                                <a href="javascript:void(0);" data-value="1" th:classappend="${currentExactlyMatch} ? 'active'" th:text="#{voj.administration.edit-problem.checker-exact}">Exact</a>
+                                <a href="javascript:void(0);" data-value="0" th:classappend="${!currentExactlyMatch} ? 'active'" th:text="#{voj.administration.edit-problem.checker-token}">Token</a>
+                            </div>
+                            <input type="hidden" id="problem-is-exactly-match" th:value="${currentExactlyMatch} ? '1' : '0'" />
+                        </div>
                     </div>
                 </div>
                 <div class="adm-card">
-                    <div class="adm-card-head plain" th:text="#{voj.administration.edit-problem.problem-categories}">// CATEGORIES</div>
-                    <div class="adm-card-body" style="gap:8px;">
-                        <th:block th:each="entry : ${problemCategories}">
-                            <label class="checkbox" style="display:flex;align-items:center;gap:8px;color:var(--head);font-size:13px;"><input type="checkbox" class="category-check" th:value="${entry.key.problemCategorySlug}" /> <span th:text="${entry.key.problemCategoryName}">Category</span></label>
-                            <label th:each="problemCategory : ${entry.value}" class="checkbox" style="display:flex;align-items:center;gap:8px;color:var(--text2);font-size:12.5px;padding-left:20px;"><input type="checkbox" class="category-check" th:value="${problemCategory.problemCategorySlug}" /> <span th:text="${problemCategory.problemCategoryName}">Subcategory</span></label>
-                        </th:block>
+                    <div class="adm-card-head"><span th:text="#{voj.administration.edit-problem.test-data}">// TEST DATA</span><span class="adm-sub" id="test-data-count" th:text="${checkpointMeta.size()} + ' ' + #{voj.administration.edit-problem.test-data-files}">0 files</span></div>
+                    <div id="test-data-list" class="adm-testdata-list">
+                        <p id="test-data-empty" class="adm-testdata-empty" th:classappend="${!checkpointMeta.isEmpty()} ? 'hide'" th:text="#{voj.administration.edit-problem.test-data-empty}">No test data.</p>
+                        <div class="adm-testfile" th:each="cp : ${checkpointMeta}" th:data-checkpoint-id="${cp.checkpointId}">
+                            <span class="ic">&#9923;</span>
+                            <span class="nm" th:text="${#numbers.formatInteger(cp.checkpointId + 1, 2)} + '.in / ' + ${#numbers.formatInteger(cp.checkpointId + 1, 2)} + '.out'">01.in / 01.out</span>
+                            <span class="sz" th:text="${cp.size &lt; 1024} ? (${cp.size} + ' B') : (${cp.size / 1024} + ' KB')">0 B</span>
+                            <span class="x del-checkpoint">&#10005;</span>
+                        </div>
                     </div>
-                </div>
-                <div class="adm-card">
-                    <div class="adm-card-head plain" th:text="#{voj.administration.edit-problem.problem-tags}">// TAGS</div>
-                    <div class="adm-card-body">
-                        <label class="adm-flabel"><span th:text="#{voj.administration.edit-problem.problem-tags-hint}">COMMA-SEPARATED</span><input id="problem-tags" class="adm-input" type="text" th:value="${#strings.listJoin(problemTags.![problemTagName], ',')}" /></label>
-                    </div>
+                    <div id="test-data-drop" class="adm-dropzone" th:utext="#{voj.administration.edit-problem.test-data-upload}">drop test archive</div>
+                    <input type="file" id="test-data-input" accept=".zip" class="adm-none" />
                 </div>
                 <div class="adm-danger">
                     <div>
                         <div class="t" th:text="#{voj.administration.edit-problem.delete-problem}">Delete problem</div>
                         <div class="d" th:text="#{voj.administration.edit-problem.delete-hint}">Removes the problem and its submissions.</div>
                     </div>
-                    <button type="button" class="adm-btn-tn danger" id="delete-problem-2" th:text="#{voj.administration.edit-problem.delete-problem}">delete</button>
+                    <button type="button" class="adm-btn-tn danger" id="delete-problem-2" th:text="#{voj.administration.edit-problem.delete}">delete</button>
                 </div>
             </div>
         </div>
@@ -113,34 +133,97 @@
             /*[# th:each="problemCategory : ${selectedProblemCategories}"]*/
             $('.category-check[value="[(${problemCategory.problemCategorySlug})]"]').prop('checked', true);
             /*[/]*/
+            initTagBox();
+            initTestData();
         });
 
-        function getTestCaseContainer(n, input, output) {
-            return '<li class="test-case adm-card" style="border-radius:11px;">' +
-                   '  <div class="adm-card-head"><span>' + [[#{voj.administration.edit-problem.test-case}]] + ' #' + n + '</span><span class="del-test" style="cursor:pointer;color:var(--text3);">&#10005;</span></div>' +
-                   '  <div class="adm-card-body" style="gap:10px;">' +
-                   '    <label class="adm-flabel"><span>' + [[#{voj.administration.edit-problem.standard-input}]] + '</span><textarea class="standard-input adm-input code" rows="2">' + (input || '') + '</textarea></label>' +
-                   '    <label class="adm-flabel"><span>' + [[#{voj.administration.edit-problem.standard-output}]] + '</span><textarea class="standard-output adm-input code" rows="2">' + (output || '') + '</textarea></label>' +
-                   '  </div>' +
-                   '</li>';
-        }
-        function renumberTestCases() {
-            $('li.test-case', '#test-cases').each(function(i) { $('.adm-card-head span:first-child', this).text([[#{voj.administration.edit-problem.test-case}]] + ' #' + i); });
-        }
-        $('#new-test-case').click(function() {
-            $('#no-test-cases').addClass('hide');
-            $('#test-cases > ul').append(getTestCaseContainer($('li.test-case', '#test-cases').length));
-        });
-        $('#test-cases').on('click', '.del-test', function() {
-            $(this).closest('.test-case').remove();
-            renumberTestCases();
-            if ($('li.test-case', '#test-cases').length === 0) { $('#no-test-cases').removeClass('hide'); }
-        });
+        // The STATUS segment (data-adm="seg") is wired by admin.js: clicking an
+        // option writes its data-value into the hidden #problem-status input.
 
-        function getTestCases() {
-            var testCases = [];
-            $('li.test-case').each(function() { testCases.push({ 'input': $('.standard-input', this).val(), 'output': $('.standard-output', this).val() }); });
-            return JSON.stringify(testCases);
+        // Tag chips: chips live in #tag-box, the canonical comma-joined value in #problem-tags.
+        function initTagBox() {
+            var hidden = $('#problem-tags'), box = $('#tag-box'), field = $('#tag-input');
+            function syncHidden() {
+                var tags = $.map(box.find('.adm-tagchip'), function(c) { return $(c).attr('data-tag'); });
+                hidden.val(tags.join(','));
+            }
+            function addTag(name) {
+                name = $.trim(name);
+                if (!name) { return; }
+                var exists = false;
+                box.find('.adm-tagchip').each(function() { if ($(this).attr('data-tag') === name) { exists = true; } });
+                if (exists) { return; }
+                var chip = $('<span class="adm-tagchip" data-tag=""></span>').attr('data-tag', name);
+                chip.text(name + ' ').append($('<span class="x">&#10005;</span>'));
+                field.before(chip);
+                syncHidden();
+            }
+            (hidden.val() ? hidden.val().split(',') : []).forEach(function(t) { addTag(t); });
+            field.on('keydown', function(e) {
+                if (e.key === 'Enter' || e.keyCode === 13 || e.key === ',' || e.keyCode === 188) {
+                    e.preventDefault(); addTag(field.val()); field.val('');
+                } else if ((e.key === 'Backspace' || e.keyCode === 8) && !field.val()) {
+                    box.find('.adm-tagchip').last().remove(); syncHidden();
+                }
+            });
+            field.on('blur', function() { addTag(field.val()); field.val(''); });
+            box.on('click', '.adm-tagchip .x', function() { $(this).closest('.adm-tagchip').remove(); syncHidden(); });
+        }
+
+        // Test data: a metadata-only file list (NN.in / NN.out + byte size) plus archive upload.
+        // The full input/output text is never shipped to the browser.
+        function initTestData() {
+            var dropZone = $('#test-data-drop'), fileInput = $('#test-data-input'), list = $('#test-data-list');
+            function pad2(n) { return (n < 9 ? '0' : '') + (n + 1); }
+            function fmtSize(bytes) { return bytes < 1024 ? (bytes + ' B') : (Math.round(bytes / 1024) + ' KB'); }
+            function renderList(checkpoints) {
+                list.find('.adm-testfile').remove();
+                checkpoints.forEach(function(cp) {
+                    var name = pad2(cp.checkpointId) + '.in / ' + pad2(cp.checkpointId) + '.out';
+                    var row = $('<div class="adm-testfile"></div>').attr('data-checkpoint-id', cp.checkpointId);
+                    row.append('<span class="ic">&#9923;</span>');
+                    row.append($('<span class="nm"></span>').text(name));
+                    row.append($('<span class="sz"></span>').text(fmtSize(cp.size)));
+                    row.append('<span class="x del-checkpoint">&#10005;</span>');
+                    list.append(row);
+                });
+                $('#test-data-count').text(checkpoints.length + ' ' + [[#{voj.administration.edit-problem.test-data-files}]]);
+                $('#test-data-empty').toggleClass('hide', checkpoints.length > 0);
+            }
+            function upload(file) {
+                if (!file) { return; }
+                var data = new FormData();
+                data.append('problemId', $('#problem-id').val());
+                data.append('isExactlyMatch', document.getElementById('problem-is-exactly-match').value);
+                data.append('testDataArchive', file);
+                dropZone.text([[#{voj.administration.edit-problem.please-wait}]]);
+                $.ajax({
+                    type: 'POST', url: [[@{/administration/uploadProblemTestData.action}]],
+                    data: data, processData: false, contentType: false, dataType: 'JSON',
+                    success: function(result) {
+                        if (result['isSuccessful']) { renderList(result['checkpoints']); }
+                        else { alert([[#{voj.administration.edit-problem.test-data-error}]]); }
+                        dropZone.html([[#{voj.administration.edit-problem.test-data-upload}]]);
+                    },
+                    error: function() {
+                        alert([[#{voj.administration.edit-problem.test-data-error}]]);
+                        dropZone.html([[#{voj.administration.edit-problem.test-data-upload}]]);
+                    }
+                });
+            }
+            dropZone.on('click', function() { fileInput.trigger('click'); });
+            fileInput.on('change', function() { upload(this.files[0]); this.value = ''; });
+            dropZone.on('dragover', function(e) { e.preventDefault(); dropZone.addClass('drag'); });
+            dropZone.on('dragleave dragend', function() { dropZone.removeClass('drag'); });
+            dropZone.on('drop', function(e) { e.preventDefault(); dropZone.removeClass('drag'); upload(e.originalEvent.dataTransfer.files[0]); });
+            list.on('click', '.del-checkpoint', function() {
+                var checkpointId = $(this).closest('.adm-testfile').attr('data-checkpoint-id');
+                $.ajax({
+                    type: 'POST', url: [[@{/administration/deleteProblemCheckpoint.action}]],
+                    data: { problemId: $('#problem-id').val(), checkpointId: checkpointId }, dataType: 'JSON',
+                    success: function(result) { if (result['isSuccessful']) { renderList(result['checkpoints']); } }
+                });
+            });
         }
         function getProblemCategories() {
             var categories = [];
@@ -156,19 +239,19 @@
             $('button[type=submit]', '#problem-form').attr('disabled', 'disabled').html([[#{voj.administration.edit-problem.please-wait}]]);
             editProblem($('#problem-id').val(), $('#problem-name').val(), $('#time-limit').val(), $('#memory-limit').val(),
                 descriptionEditor ? descriptionEditor.value() : '', $('#hint').val(), $('#input-format').val(),
-                $('#output-format').val(), $('#input-sample').val(), $('#output-sample').val(), getTestCases(),
+                $('#output-format').val(), $('#input-sample').val(), $('#output-sample').val(),
                 getProblemCategories(), getProblemTags(),
-                document.getElementById('problem-is-public').classList.contains('on'),
-                document.getElementById('problem-is-exactly-match').classList.contains('on'),
+                document.getElementById('problem-status').value,
+                document.getElementById('problem-is-exactly-match').value === '1',
                 document.getElementById('problem-difficulty').value);
         }
-        function editProblem(problemId, problemName, timeLimit, memoryLimit, description, hint, inputFormat, outputFormat, inputSample, outputSample, testCases, problemCategories, problemTags, isPublic, isExactlyMatch, problemDifficulty) {
+        function editProblem(problemId, problemName, timeLimit, memoryLimit, description, hint, inputFormat, outputFormat, inputSample, outputSample, problemCategories, problemTags, status, isExactlyMatch, problemDifficulty) {
             $.ajax({
                 type: 'POST', url: [[@{/administration/editProblem.action}]],
                 data: { problemId:problemId, problemName:problemName, timeLimit:timeLimit, memoryLimit:memoryLimit, description:description, hint:hint,
                         inputFormat:inputFormat, outputFormat:outputFormat, inputSample:inputSample, outputSample:outputSample,
-                        testCases:testCases, problemCategories:problemCategories, problemTags:problemTags,
-                        isPublic:isPublic, isExactlyMatch:isExactlyMatch, problemDifficulty:problemDifficulty },
+                        problemCategories:problemCategories, problemTags:problemTags,
+                        status:status, isExactlyMatch:isExactlyMatch, problemDifficulty:problemDifficulty },
                 dataType: 'JSON', success: function(result){ processEditProblemResult(result); }
             });
         }

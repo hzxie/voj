@@ -25,10 +25,14 @@
 			javaType="org.verwandlung.voj.web.model.Language" 
 			column="language_id"
 			select="org.verwandlung.voj.web.mapper.LanguageMapper.getLanguageUsingId" />
-		<association property="judgeResult" 
-			javaType="org.verwandlung.voj.web.model.JudgeResult" 
+		<association property="judgeResult"
+			javaType="org.verwandlung.voj.web.model.JudgeResult"
 			column="submission_judge_result"
 			select="org.verwandlung.voj.web.mapper.JudgeResultMapper.getJudgeResultUsingSlug" />
+		<association property="judger"
+			javaType="org.verwandlung.voj.web.model.User"
+			column="judger_uid"
+			select="org.verwandlung.voj.web.mapper.UserMapper.getUserUsingUid" />
 	</resultMap>
 	
 	<!-- Methods -->
@@ -220,15 +224,24 @@
 		resultType="hashmap">
 		SELECT d.problem_difficulty_slug AS slug,
 			d.problem_difficulty_name AS name,
-			COUNT(DISTINCT CASE WHEN p.problem_is_public = 1 THEN p.problem_id END) AS total,
-			COUNT(DISTINCT CASE WHEN p.problem_is_public = 1 AND s.submission_judge_result = 'AC' THEN s.problem_id END) AS solved
+			COUNT(DISTINCT CASE WHEN p.problem_status = 'PUBLISHED' THEN p.problem_id END) AS total,
+			COUNT(DISTINCT CASE WHEN p.problem_status = 'PUBLISHED' AND s.submission_judge_result = 'AC' THEN s.problem_id END) AS solved
 		FROM voj_problem_difficulty d
 		LEFT JOIN voj_problems p ON p.problem_difficulty_id = d.problem_difficulty_id
 		LEFT JOIN voj_submissions s ON s.problem_id = p.problem_id AND s.uid = #{uid}
 		GROUP BY d.problem_difficulty_id, d.problem_difficulty_slug, d.problem_difficulty_name
 		ORDER BY d.problem_difficulty_id
 	</select>
-	<insert id="createSubmission" 
+	<select id="getSolvedProblemCountForAllUsers"
+		resultType="hashmap">
+		SELECT uid AS uid,
+			COUNT(DISTINCT problem_id) AS solved
+		FROM voj_submissions
+		WHERE submission_judge_result = 'AC'
+		GROUP BY uid
+		ORDER BY solved DESC, uid ASC
+	</select>
+	<insert id="createSubmission"
 		parameterType="org.verwandlung.voj.web.model.Submission"
 		keyProperty="submissionId" 
 		keyColumn="submission_id"

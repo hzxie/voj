@@ -16,8 +16,13 @@
  */
 package org.verwandlung.voj.web.controller;
 
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.forwardedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.List;
@@ -25,6 +30,7 @@ import java.util.Properties;
 
 import org.mybatis.spring.SqlSessionTemplate;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -36,6 +42,8 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.session.SessionRegistry;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.security.web.csrf.DefaultCsrfToken;
@@ -45,8 +53,13 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 
 import org.verwandlung.voj.web.interceptor.CommonModelInterceptor;
 import org.verwandlung.voj.web.interceptor.CommonModelPopulator;
+import org.verwandlung.voj.web.interceptor.MaintenanceModeInterceptor;
+import org.verwandlung.voj.web.mapper.OptionMapper;
 import org.verwandlung.voj.web.messenger.ApplicationEventListener;
 import org.verwandlung.voj.web.model.Option;
+import org.verwandlung.voj.web.model.User;
+import org.verwandlung.voj.web.model.UserGroup;
+import org.verwandlung.voj.web.model.VojUserDetails;
 import org.verwandlung.voj.web.service.BulletinBoardService;
 import org.verwandlung.voj.web.service.ContestService;
 import org.verwandlung.voj.web.service.DiscussionService;
@@ -86,6 +99,7 @@ import org.verwandlung.voj.web.service.UserService;
 @Import({
   CommonModelInterceptor.class,
   CommonModelPopulator.class,
+  MaintenanceModeInterceptor.class,
   ViewRenderSmokeTest.TestBeans.class
 })
 class ViewRenderSmokeTest {
@@ -95,6 +109,7 @@ class ViewRenderSmokeTest {
   @MockitoBean private LanguageService languageService;
   @MockitoBean private SubmissionService submissionService;
   @MockitoBean private OptionService optionService;
+  @MockitoBean private OptionMapper optionMapper;
   @MockitoBean private OffensiveWordService offensiveWordService;
   @MockitoBean private OffensiveWordImportService offensiveWordImportService;
   @MockitoBean private ProblemService problemService;
@@ -123,6 +138,31 @@ class ViewRenderSmokeTest {
     // The registration page reads this option's value in the controller.
     when(optionService.getOption("allowUserRegister"))
         .thenReturn(new Option("allowUserRegister", "1", false));
+    // Paginated list controllers resolve their page size via getIntOption; return the default.
+    when(optionService.getIntOption(anyString(), anyInt()))
+        .thenAnswer(invocation -> invocation.getArgument(1));
+  }
+
+  @AfterEach
+  void clearSecurityContext() {
+    SecurityContextHolder.clearContext();
+  }
+
+  /**
+   * Authenticates an administrator in the Spring Security context so the admin chrome (which reads
+   * {@code myProfile} via {@code HttpSessionParser.getCurrentUser()}) renders. Admin views require a
+   * logged-in user; public views do not, so this is opt-in per test.
+   */
+  private void authenticateAdmin() {
+    User admin = new User();
+    admin.setUid(1000);
+    admin.setUsername("root");
+    admin.setUserGroup(new UserGroup(8, "administrators", "Administrators"));
+    VojUserDetails principal = new VojUserDetails(admin);
+    SecurityContextHolder.getContext()
+        .setAuthentication(
+            new UsernamePasswordAuthenticationToken(
+                principal, "", principal.getAuthorities()));
   }
 
   /**
@@ -139,6 +179,7 @@ class ViewRenderSmokeTest {
         "/help",
         "/about",
         "/not-supported",
+        "/maintenance",
         "/p",
         "/submission",
         "/contest",
@@ -195,37 +236,64 @@ class ViewRenderSmokeTest {
   }
 
   // ---------------------------------------------------------------------------
-  // Not-yet-implemented admin features.
-  //
-  // These routes are linked from the admin sidebar but have no controller
-  // mapping or template yet (today they fall through to the static-resource
-  // handler and 500). Each is a placeholder asserting the eventual rendered
-  // state (HTTP 200); once the @RequestMapping in AdministrationController and
-  // the corresponding template exist, drop the @Disabled to turn it into an
-  // acceptance test. They double as a backlog: each shows up as a skipped test.
+  // Admin list / form pages. Each route + template now exists, so these render
+  // against the admin layout with the page's service calls stubbed to empty
+  // collections (the controllers iterate those lists, so a null mock would NPE
+  // before reaching the template).
   // ---------------------------------------------------------------------------
 
-  @Disabled("not implemented: admin 'all discussions' list — enable with the controller route + template")
+  /**
+   * Maintenance mode: when the option is on, an anonymous visitor is forwarded to the maintenance
+   * page with a 503 status, while an administrator is let through.
+   */
+  @Test
+  void maintenanceModeBlocksAnonymousButAllowsAdmin() throws Exception {
+    when(optionMapper.getOption("maintenanceMode"))
+        .thenReturn(new Option("maintenanceMode", "1", false));
+
+    // Anonymous visitor (no authentication) is forwarded to the maintenance page with 503.
+    mockMvc
+        .perform(getWithCsrf("/"))
+        .andExpect(status().isServiceUnavailable())
+        .andExpect(forwardedUrl("/maintenance"));
+
+    // The maintenance page itself and the informational pages linked from the footer stay reachable.
+    mockMvc.perform(getWithCsrf("/maintenance")).andExpect(status().isOk());
+    mockMvc.perform(getWithCsrf("/about")).andExpect(status().isOk());
+    mockMvc.perform(getWithCsrf("/help")).andExpect(status().isOk());
+
+    // Administrators are let through to the rest of the site.
+    authenticateAdmin();
+    mockMvc.perform(getWithCsrf("/")).andExpect(status().isOk());
+  }
+
   @Test
   void allDiscussionViewRenders() throws Exception {
+    authenticateAdmin();
+    when(discussionService.getAllDiscussionThreads(anyLong(), anyInt())).thenReturn(List.of());
     mockMvc.perform(getWithCsrf("/administration/all-discussion")).andExpect(status().isOk());
   }
 
-  @Disabled("not implemented: admin 'discussion topics' page — enable with the controller route + template")
   @Test
   void discussionTopicsViewRenders() throws Exception {
+    authenticateAdmin();
+    when(discussionService.getDiscussionTopics()).thenReturn(List.of());
     mockMvc.perform(getWithCsrf("/administration/discussion-topics")).andExpect(status().isOk());
   }
 
-  @Disabled("not implemented: admin 'all contests' list — enable with the controller route + template")
   @Test
   void allContestsViewRenders() throws Exception {
+    authenticateAdmin();
+    when(contestService.getContests(anyString(), anyLong(), anyInt())).thenReturn(List.of());
     mockMvc.perform(getWithCsrf("/administration/all-contests")).andExpect(status().isOk());
   }
 
-  @Disabled("not implemented: admin 'new contest' page — enable with the controller route + template")
   @Test
   void newContestViewRenders() throws Exception {
+    authenticateAdmin();
+    when(problemService.getProblemsUsingFilters(
+            anyLong(), anyString(), anyString(), anyString(), anyString(), anyBoolean(), anyInt()))
+        .thenReturn(List.of());
     mockMvc.perform(getWithCsrf("/administration/new-contest")).andExpect(status().isOk());
   }
 

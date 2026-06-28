@@ -20,35 +20,43 @@
                 <option value="" th:text="#{voj.administration.all-users.all-user-groups}">All User Groups</option>
                 <option th:each="userGroup : ${userGroups}" th:value="${userGroup.userGroupSlug}" th:selected="${userGroup.userGroupSlug == selectedUserGroup}" th:text="${userGroup.userGroupName}">Group</option>
             </select>
-            <button type="submit" class="adm-btn-ghost"><span>&#9698;</span> <span th:text="#{voj.administration.all-users.filter}">filter</span></button>
             <a class="adm-btn-accent" th:href="@{/administration/new-user}" th:text="#{voj.administration.all-users.new-user}">+ new user</a>
         </form>
 
         <!-- Bulk bar -->
-        <div class="adm-bulk" data-adm="bulk" style="display:none;">
+        <div class="adm-bulk" data-adm="bulk">
             <span class="sel"><span data-adm="bulk-count">0</span> <span th:text="#{voj.administration.all-users.selected}">selected</span></span>
-            <div style="flex:1;"></div>
+            <div class="adm-flex1"></div>
             <span class="adm-bulk-act c-err" data-adm="bulk-delete">&#10005; <span th:text="#{voj.administration.all-users.delete}">delete</span></span>
             <span class="adm-bulk-clear" data-adm="bulk-clear" th:text="#{voj.administration.all-users.clear}">clear</span>
         </div>
 
         <!-- Table -->
         <div class="adm-table" data-adm="table">
-            <div class="adm-table-scroll"><div class="adm-table-inner" style="--cols:34px 160px minmax(0,1fr) 130px 150px 40px;">
+            <div class="adm-table-scroll"><div class="adm-table-inner cols-users">
                 <div class="adm-table-head">
                     <span class="adm-check" data-adm="check-all"></span>
                     <span th:text="#{voj.administration.all-users.username}">USER</span>
                     <span th:text="#{voj.administration.all-users.email}">EMAIL</span>
-                    <span th:text="#{voj.administration.all-users.user-group}">GROUP</span>
-                    <span th:text="#{voj.administration.all-users.prefer-language}">LANGUAGE</span>
+                    <span th:text="#{voj.administration.all-users.role}">ROLE</span>
+                    <span th:text="#{voj.administration.all-users.rank}">RANK</span>
+                    <span th:text="#{voj.administration.all-users.solved}">SOLVED</span>
+                    <span th:text="#{voj.administration.all-users.joined}">JOINED</span>
+                    <span th:text="#{voj.administration.all-users.status}">STATUS</span>
+                    <span></span>
                     <span></span>
                 </div>
-                <a class="adm-table-row" data-adm="row" th:each="user : ${users}" th:href="@{/administration/edit-user/{id}(id=${user.uid})}">
+                <a class="adm-table-row" data-adm="row" th:each="user : ${users}" th:href="@{/administration/edit-user/{id}(id=${user.uid})}"
+                   th:with="slug=${user.userGroup.userGroupSlug}">
                     <span class="adm-check" data-adm="row-check" th:attr="data-id=${user.uid}"></span>
                     <span class="adm-cell head" th:text="${user.username}">user</span>
                     <span class="adm-cell" th:text="${user.email}">email</span>
-                    <span><span class="adm-pill c-info" th:text="${user.userGroup.userGroupName}">group</span></span>
-                    <span class="adm-cell muted" th:text="${user.preferLanguage.languageName}">language</span>
+                    <span><span class="adm-pill" th:classappend="${slug == 'administrators' ? 'c-err' : (slug == 'judgers' ? 'c-info' : (slug == 'forbidden' ? 'c-err' : 'c-muted'))}" th:text="${user.userGroup.userGroupName}">role</span></span>
+                    <span class="adm-cell mono txt" th:text="${userRanks.containsKey(user.uid) ? '#' + userRanks.get(user.uid) : '—'}">#7</span>
+                    <span class="adm-cell" th:text="${solvedCounts.containsKey(user.uid) ? #numbers.formatInteger(solvedCounts.get(user.uid), 1, 'COMMA') : '0'}">0</span>
+                    <span class="adm-cell muted" th:text="${@dateFormatter.monthYear(joinedDates.get(user.uid), language)}">Mar 2015</span>
+                    <span><span class="adm-pill" th:classappend="${slug == 'forbidden' ? 'c-err' : 'c-accent'}" th:text="${slug == 'forbidden'} ? #{voj.administration.all-users.banned} : #{voj.administration.all-users.active}">Active</span></span>
+                    <span></span>
                     <span class="adm-menu">&#183;&#183;&#183;</span>
                 </a>
                 <div class="adm-table-empty" th:if="${#lists.isEmpty(users)}" th:text="#{voj.administration.all-users.no-records}">// no records</div>

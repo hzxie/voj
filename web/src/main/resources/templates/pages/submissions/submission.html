@@ -48,7 +48,7 @@
                     </div>
                 </article>
 
-                <article class="vw-card vw-stmt vw-card-accent" th:if="${submission.user == myProfile or myProfile?.userGroup?.userGroupSlug == 'administrators'}">
+                <article class="vw-card vw-stmt vw-card-accent" th:if="${canViewCode}">
                     <div class="vw-card-bar">
                         <span class="vw-accent vw-card-srclabel" th:text="'// SOURCE &mdash; ' + #{voj.submissions.submission.code}">// SOURCE</span>
                     </div>
@@ -87,7 +87,7 @@
                     <div class="vw-card-body">
                         <div class="vw-eyebrow vw-side-label" th:text="'// ' + #{voj.submissions.submission.judger}">// JUDGE ENVIRONMENT</div>
                         <div class="vw-env">
-                            <div class="vw-env-row"><span class="vw-env-dot"></span><span id="judger-name">Default Judger</span></div>
+                            <div class="vw-env-row"><span class="vw-env-dot"></span><span id="judger-name" th:text="${submission.judger != null ? submission.judger.username : '—'}">Default Judger</span></div>
                             <div th:text="${lang != null ? lang.languageName : ''}">C++ 23</div>
                         </div>
                     </div>
@@ -142,6 +142,9 @@
                         $('#used-memory').html(result['submission']['usedMemory'] + " KB");
                         $('#execute-time').html(getFormatedDateString(result['submission']['executeTime'], [[${language}]]));
                         $('#judge-log').html(renderMarkdown(result['submission']['judgeLog']));
+                        if ( result['submission']['judger'] ) {
+                            $('#judger-name').html(result['submission']['judger']['username']);
+                        }
                     }
                 }
             });

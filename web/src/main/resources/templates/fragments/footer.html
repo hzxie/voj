@@ -15,6 +15,12 @@
                 <span th:text="#{voj.include.footer.copyright}">Copyright</span> &copy;
                 <span th:text="${#dates.year(#dates.createNow())}">2026</span>
                 <span th:utext="${copyright}">Infinite Script</span>.
+                <span class="vw-footer-icp" th:if="${icpNumber != null and icpNumber != ''}">
+                    &middot; <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener" th:text="${icpNumber}">ICP</a>
+                </span>
+                <span class="vw-footer-icp" th:if="${policeIcpNumber != null and policeIcpNumber != ''}">
+                    &middot; <a href="https://beian.mps.gov.cn/" target="_blank" rel="noopener" th:text="${policeIcpNumber}">Police ICP</a>
+                </span>
             </span>
             <div class="vw-footlinks">
                 <a th:href="@{/judgers}" th:text="#{voj.include.footer.judgers}">Judgers</a>

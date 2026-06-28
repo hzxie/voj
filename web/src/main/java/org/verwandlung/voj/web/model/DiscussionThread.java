@@ -210,6 +210,78 @@ public class DiscussionThread implements Serializable {
     this.numberOfReplies = numberOfReplies;
   }
 
+  /**
+   * Gets the number of reports filed against replies in the discussion thread.
+   *
+   * @return the number of reports of the discussion thread
+   */
+  public long getNumberOfReports() {
+    return numberOfReports;
+  }
+
+  /**
+   * Sets the number of reports filed against replies in the discussion thread.
+   *
+   * @param numberOfReports - the number of reports of the discussion thread
+   */
+  public void setNumberOfReports(long numberOfReports) {
+    this.numberOfReports = numberOfReports;
+  }
+
+  /**
+   * Gets whether the discussion thread is visible to ordinary users.
+   *
+   * @return whether the discussion thread is visible
+   */
+  public boolean isVisible() {
+    return visible;
+  }
+
+  /**
+   * Sets whether the discussion thread is visible to ordinary users.
+   *
+   * @param visible - whether the discussion thread is visible
+   */
+  public void setVisible(boolean visible) {
+    this.visible = visible;
+  }
+
+  /**
+   * Gets whether the discussion thread is pinned to the top of its list.
+   *
+   * @return whether the discussion thread is pinned
+   */
+  public boolean isPinned() {
+    return pinned;
+  }
+
+  /**
+   * Sets whether the discussion thread is pinned to the top of its list.
+   *
+   * @param pinned - whether the discussion thread is pinned
+   */
+  public void setPinned(boolean pinned) {
+    this.pinned = pinned;
+  }
+
+  /**
+   * Gets whether the discussion thread is locked (no new replies allowed).
+   *
+   * @return whether the discussion thread is locked
+   */
+  public boolean isLocked() {
+    return locked;
+  }
+
+  /**
+   * Sets whether the discussion thread is locked (no new replies allowed).
+   *
+   * @param locked - whether the discussion thread is locked
+   */
+  public void setLocked(boolean locked) {
+    this.locked = locked;
+  }
+
   public String toString() {
     return String.format(
         "DiscussionThread [ThreadID=%d, Creator={%s}, Problem={%s}, Title=%s]",
@@ -239,6 +311,18 @@ public class DiscussionThread implements Serializable {
 
   /** The number of replies of the discussion thread. */
   private long numberOfReplies;
+
+  /** The number of reports filed against replies in the discussion thread. */
+  private long numberOfReports;
+
+  /** Whether the discussion thread is visible to ordinary users. */
+  private boolean visible = true;
+
+  /** Whether the discussion thread is pinned to the top of its list. */
+  private boolean pinned = false;
+
+  /** Whether the discussion thread is locked (no new replies allowed). */
+  private boolean locked = false;
 
   /** The unique serialization identifier. */
   private static final long serialVersionUID = -616554199104563280L;

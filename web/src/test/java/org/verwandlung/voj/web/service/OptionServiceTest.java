@@ -43,14 +43,14 @@ public class OptionServiceTest {
   @Test
   public void testGetOptions() {
     List<Option> options = optionService.getOptions();
-    Assertions.assertEquals(12, options.size());
+    Assertions.assertEquals(25, options.size());
   }
 
   /** Test case: tests the getAutoloadOptions() method. Test data: N/a. Expected: only the auto-loaded system options. */
   @Test
   public void testGetAutoloadOptions() {
     List<Option> options = optionService.getAutoloadOptions();
-    Assertions.assertEquals(6, options.size());
+    Assertions.assertEquals(7, options.size());
   }
 
   /** Test case: tests the getOption(String) method. Test data: an existing option name. Expected: the corresponding Option object. */
@@ -144,6 +144,14 @@ public class OptionServiceTest {
             "OJ", "Description", "Copyright", true, "", "", "not-a-script-tag", "");
     Assertions.assertFalse(result.get("isAnalyticsCodeLegal"));
     Assertions.assertFalse(result.get("isSuccessful"));
+  }
+
+  /** Test case: tests isContactEmailLegal(String). Test data: empty, a valid and an invalid address. Expected: empty and valid pass, invalid fails. */
+  @Test
+  public void testIsContactEmailLegal() {
+    Assertions.assertTrue(optionService.isContactEmailLegal(""));
+    Assertions.assertTrue(optionService.isContactEmailLegal("admin@verwandlung.org"));
+    Assertions.assertFalse(optionService.isContactEmailLegal("not-an-email"));
   }
 
   /** The OptionService object under test. */

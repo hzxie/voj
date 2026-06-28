@@ -20,15 +20,31 @@
             </div>
             <div class="adm-setgroup-body">
                 <div class="adm-setrow">
-                    <div class="adm-setrow-l"><div class="lbl" th:text="#{voj.administration.general-settings.website-name}">Site name</div></div>
+                    <div class="adm-setrow-l">
+                        <div class="lbl" th:text="#{voj.administration.general-settings.website-name}">Site name</div>
+                        <div class="hint" th:text="#{voj.administration.general-settings.website-name-hint}">Shown in the header and browser title.</div>
+                    </div>
                     <div class="adm-setrow-r"><input id="website-name" class="adm-input" type="text" th:value="${options['websiteName']}" /></div>
                 </div>
                 <div class="adm-setrow">
-                    <div class="adm-setrow-l"><div class="lbl" th:text="#{voj.administration.general-settings.website-description}">Description</div></div>
+                    <div class="adm-setrow-l">
+                        <div class="lbl" th:text="#{voj.administration.general-settings.website-description}">Tagline</div>
+                        <div class="hint" th:text="#{voj.administration.general-settings.website-description-hint}">Short description shown under the logo.</div>
+                    </div>
                     <div class="adm-setrow-r"><input id="website-description" class="adm-input" type="text" th:value="${options['description']}" /></div>
                 </div>
                 <div class="adm-setrow">
-                    <div class="adm-setrow-l"><div class="lbl" th:text="#{voj.administration.general-settings.copyright}">Copyright</div></div>
+                    <div class="adm-setrow-l">
+                        <div class="lbl" th:text="#{voj.administration.general-settings.contact-email}">Contact email</div>
+                        <div class="hint" th:text="#{voj.administration.general-settings.contact-email-hint}">Reply-to for system mail and reports.</div>
+                    </div>
+                    <div class="adm-setrow-r"><input id="contact-email" class="adm-input" type="text" th:value="${options['contactEmail']}" /></div>
+                </div>
+                <div class="adm-setrow">
+                    <div class="adm-setrow-l">
+                        <div class="lbl" th:text="#{voj.administration.general-settings.copyright}">Copyright</div>
+                        <div class="hint" th:text="#{voj.administration.general-settings.copyright-hint}">Shown in the site footer.</div>
+                    </div>
                     <div class="adm-setrow-r"><input id="copyright" class="adm-input" type="text" th:value="${options['copyright']}" /></div>
                 </div>
             </div>
@@ -38,7 +54,7 @@
         <div class="adm-setgroup">
             <div class="adm-setgroup-head">
                 <div class="t" th:text="'// ' + #{voj.administration.general-settings.group-access}">// ACCESS &amp; REGISTRATION</div>
-                <div class="d" th:text="#{voj.administration.general-settings.group-access-desc}">Control who can join.</div>
+                <div class="d" th:text="#{voj.administration.general-settings.group-access-desc}">Control who can join and submit.</div>
             </div>
             <div class="adm-setgroup-body">
                 <div class="adm-setrow">
@@ -48,6 +64,33 @@
                     </div>
                     <div class="adm-setrow-r">
                         <div class="adm-switch" id="allow-register" data-adm="switch" th:classappend="${options['allowUserRegister'] != '0'} ? 'on'"><div class="knob"></div></div>
+                    </div>
+                </div>
+                <div class="adm-setrow">
+                    <div class="adm-setrow-l">
+                        <div class="lbl" th:text="#{voj.administration.general-settings.require-email-verification}">Require email verification</div>
+                        <div class="hint" th:text="#{voj.administration.general-settings.require-email-verification-hint}">New users must confirm their address before submitting.</div>
+                    </div>
+                    <div class="adm-setrow-r">
+                        <div class="adm-switch" id="require-email-verification" data-adm="switch" th:classappend="${options['requireEmailVerification'] == '1'} ? 'on'"><div class="knob"></div></div>
+                    </div>
+                </div>
+                <div class="adm-setrow">
+                    <div class="adm-setrow-l">
+                        <div class="lbl" th:text="#{voj.administration.general-settings.public-submissions}">Public submissions</div>
+                        <div class="hint" th:text="#{voj.administration.general-settings.public-submissions-hint}">Let non-authors view submitted source code.</div>
+                    </div>
+                    <div class="adm-setrow-r">
+                        <div class="adm-switch" id="public-submissions" data-adm="switch" th:classappend="${options['publicSubmissions'] == '1'} ? 'on'"><div class="knob"></div></div>
+                    </div>
+                </div>
+                <div class="adm-setrow">
+                    <div class="adm-setrow-l">
+                        <div class="lbl" th:text="#{voj.administration.general-settings.maintenance-mode}">Maintenance mode</div>
+                        <div class="hint" th:text="#{voj.administration.general-settings.maintenance-mode-hint}">Take the site offline except for administrators.</div>
+                    </div>
+                    <div class="adm-setrow-r">
+                        <div class="adm-switch" id="maintenance-mode" data-adm="switch" th:classappend="${options['maintenanceMode'] == '1'} ? 'on'"><div class="knob"></div></div>
                     </div>
                 </div>
             </div>
@@ -82,32 +125,122 @@
                 <div class="d" th:text="#{voj.administration.general-settings.group-moderation-desc}">Automated guardrails for the community.</div>
             </div>
             <div class="adm-setgroup-body">
-                <div class="adm-setrow adm-setrow-stack">
+                <div class="adm-setrow">
                     <div class="adm-setrow-l">
-                        <div class="lbl" th:text="#{voj.administration.general-settings.offensive-word-sources}">Offensive word sources</div>
-                        <div class="hint" th:text="#{voj.administration.general-settings.offensive-word-sources-hint}">One URL per line.</div>
+                        <div class="lbl" th:text="#{voj.administration.general-settings.auto-hide-on-reports}">Auto-hide on reports</div>
+                        <div class="hint" th:text="#{voj.administration.general-settings.auto-hide-on-reports-hint}">Hide content once it hits the report threshold.</div>
                     </div>
-                    <div>
-                        <textarea id="offensive-word-sources" class="adm-input" rows="6" th:text="${options['offensiveWordSources']}"></textarea>
-                        <div class="adm-source-meta">
-                            <span th:text="#{voj.administration.general-settings.offensive-words-count}">Words in dictionary</span>:
-                            <span id="offensive-words-count" th:text="${offensiveWordCount}">0</span>
-                            <span th:if="${!#strings.isEmpty(options['offensiveWordsImportedAt'])}">
-                                &middot; <span th:text="#{voj.administration.general-settings.offensive-words-last-imported}">Last imported</span>:
-                                <span th:text="${options['offensiveWordsImportedAt']}">-</span>
-                            </span>
-                        </div>
-                        <div id="offensive-words-import-result" class="adm-source-result"></div>
-                        <div class="adm-form-actions">
-                            <button type="button" class="adm-btn-save" id="import-offensive-words"
-                                    th:text="'$ ' + #{voj.administration.general-settings.offensive-words-import}">$ import</button>
-                        </div>
+                    <div class="adm-setrow-r">
+                        <div class="adm-switch" id="auto-hide-on-reports" data-adm="switch" th:classappend="${options['autoHideOnReports'] != '0'} ? 'on'"><div class="knob"></div></div>
                     </div>
+                </div>
+                <div class="adm-setrow">
+                    <div class="adm-setrow-l">
+                        <div class="lbl" th:text="#{voj.administration.general-settings.report-threshold}">Report threshold</div>
+                        <div class="hint" th:text="#{voj.administration.general-settings.report-threshold-hint}">Reports needed before auto-hide triggers.</div>
+                    </div>
+                    <div class="adm-setrow-r"><input id="report-threshold" class="adm-input" type="number" min="0" max="1000" th:value="${options['discussionReportHideThreshold']}" /></div>
+                </div>
+                <div class="adm-setrow">
+                    <div class="adm-setrow-l">
+                        <div class="lbl" th:text="#{voj.administration.general-settings.new-user-post-delay}">New-user post delay</div>
+                        <div class="hint" th:text="#{voj.administration.general-settings.new-user-post-delay-hint}">Cooldown before fresh accounts can post (minutes).</div>
+                    </div>
+                    <div class="adm-setrow-r"><input id="new-user-post-delay" class="adm-input" type="number" min="0" max="100000" th:value="${options['newUserPostDelay']}" /></div>
+                </div>
+                <div class="adm-setrow">
+                    <div class="adm-setrow-l">
+                        <div class="lbl" th:text="#{voj.administration.general-settings.min-solved-to-vote}">Min. solved to vote</div>
+                        <div class="hint" th:text="#{voj.administration.general-settings.min-solved-to-vote-hint}">Problems a user must solve before voting on replies.</div>
+                    </div>
+                    <div class="adm-setrow-r"><input id="min-solved-to-vote" class="adm-input" type="number" min="0" max="100000" th:value="${options['discussionMinSolvedToVote']}" /></div>
+                </div>
+                <div class="adm-setrow">
+                    <div class="adm-setrow-l">
+                        <div class="lbl" th:text="#{voj.administration.general-settings.min-solved-to-report}">Min. solved to report</div>
+                        <div class="hint" th:text="#{voj.administration.general-settings.min-solved-to-report-hint}">Problems a user must solve before reporting replies.</div>
+                    </div>
+                    <div class="adm-setrow-r"><input id="min-solved-to-report" class="adm-input" type="number" min="0" max="100000" th:value="${options['discussionMinSolvedToReport']}" /></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CONTENT FILTER -->
+        <div class="adm-setgroup">
+            <div class="adm-setgroup-head">
+                <div class="t" th:text="'// ' + #{voj.administration.general-settings.group-content-filter}">// CONTENT FILTER</div>
+                <div class="d" th:text="#{voj.administration.general-settings.group-content-filter-desc}">Block offensive language across submissions, threads and comments.</div>
+            </div>
+            <div class="adm-setgroup-body">
+                <div class="adm-setrow">
+                    <div class="adm-setrow-l">
+                        <div class="lbl" th:text="#{voj.administration.general-settings.auto-censor}">Auto-censor offensive words</div>
+                        <div class="hint" th:text="#{voj.administration.general-settings.auto-censor-hint}">Mask matched words in discussion content.</div>
+                    </div>
+                    <div class="adm-setrow-r">
+                        <div class="adm-switch" id="auto-censor" data-adm="switch" th:classappend="${options['autoCensorOffensiveWords'] != '0'} ? 'on'"><div class="knob"></div></div>
+                    </div>
+                </div>
+                <div class="adm-wordlist">
+                    <div class="lbl" th:text="#{voj.administration.general-settings.offensive-word-sources}">Offensive word blocklist</div>
+                    <div class="hint" th:text="#{voj.administration.general-settings.offensive-word-sources-hint}">Sources are fetched and merged on import. One URL per line.</div>
+                    <div class="adm-wordlist-head">
+                        <span class="adm-srclabel" th:text="#{voj.administration.general-settings.source-urls}">SOURCE URLS &middot; one per line</span>
+                        <button type="button" class="adm-import-btn" id="import-offensive-words"
+                                th:text="'&#8675; ' + #{voj.administration.general-settings.import-now}">&#8675; import now</button>
+                    </div>
+                    <textarea id="offensive-word-sources" class="adm-wordlist-input" rows="3"
+                              placeholder="https://&hellip;/blocklist.txt" th:text="${options['offensiveWordSources']}"></textarea>
+                    <div class="adm-wordlist-status">
+                        <span class="adm-dot-live"></span>
+                        <span th:if="${!#strings.isEmpty(options['offensiveWordsImportedAt'])}">
+                            <span th:text="#{voj.administration.general-settings.offensive-words-last-imported}">last imported</span>
+                            <span th:text="${options['offensiveWordsImportedAt']}">-</span> &middot;
+                        </span>
+                        <span class="num" id="offensive-words-count" th:text="${offensiveWordCount}">0</span>
+                        <span th:text="#{voj.administration.general-settings.words-active}">words active in blocklist</span>
+                    </div>
+                    <div id="offensive-words-import-result" class="adm-wordlist-result"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- LIST DISPLAY -->
+        <div class="adm-setgroup">
+            <div class="adm-setgroup-head">
+                <div class="t" th:text="'// ' + #{voj.administration.general-settings.group-pagination}">// LIST DISPLAY</div>
+                <div class="d" th:text="#{voj.administration.general-settings.group-pagination-desc}">Rows shown per page in each admin list.</div>
+            </div>
+            <div class="adm-setgroup-body">
+                <div class="adm-setrow">
+                    <div class="adm-setrow-l"><div class="lbl" th:text="#{voj.administration.general-settings.problems-per-page}">Problems per page</div></div>
+                    <div class="adm-setrow-r"><input id="problems-per-page" class="adm-input" type="number" min="1" max="1000" th:value="${options['problemsPerPage']}" /></div>
+                </div>
+                <div class="adm-setrow">
+                    <div class="adm-setrow-l"><div class="lbl" th:text="#{voj.administration.general-settings.users-per-page}">Users per page</div></div>
+                    <div class="adm-setrow-r"><input id="users-per-page" class="adm-input" type="number" min="1" max="1000" th:value="${options['usersPerPage']}" /></div>
+                </div>
+                <div class="adm-setrow">
+                    <div class="adm-setrow-l"><div class="lbl" th:text="#{voj.administration.general-settings.submissions-per-page}">Submissions per page</div></div>
+                    <div class="adm-setrow-r"><input id="submissions-per-page" class="adm-input" type="number" min="1" max="1000" th:value="${options['submissionsPerPage']}" /></div>
+                </div>
+                <div class="adm-setrow">
+                    <div class="adm-setrow-l"><div class="lbl" th:text="#{voj.administration.general-settings.contests-per-page}">Contests per page</div></div>
+                    <div class="adm-setrow-r"><input id="contests-per-page" class="adm-input" type="number" min="1" max="1000" th:value="${options['contestsPerPage']}" /></div>
+                </div>
+                <div class="adm-setrow">
+                    <div class="adm-setrow-l"><div class="lbl" th:text="#{voj.administration.general-settings.bulletins-per-page}">Bulletins per page</div></div>
+                    <div class="adm-setrow-r"><input id="bulletins-per-page" class="adm-input" type="number" min="1" max="1000" th:value="${options['bulletinsPerPage']}" /></div>
+                </div>
+                <div class="adm-setrow">
+                    <div class="adm-setrow-l"><div class="lbl" th:text="#{voj.administration.general-settings.discussions-per-page}">Discussion threads per page</div></div>
+                    <div class="adm-setrow-r"><input id="discussions-per-page" class="adm-input" type="number" min="1" max="1000" th:value="${options['discussionsPerPage']}" /></div>
                 </div>
             </div>
         </div>
 
         <div class="adm-form-actions">
+            <button type="button" class="adm-btn-reset" id="reset-settings" th:text="#{voj.administration.general-settings.reset}">reset</button>
             <button type="button" class="adm-btn-save" id="save-settings" th:text="'$ ' + #{voj.administration.general-settings.save-changes}">$ save-settings</button>
         </div>
 
@@ -117,25 +250,52 @@
     <th:block layout:fragment="scripts">
     <script type="text/javascript" th:inline="javascript">
         document.addEventListener('DOMContentLoaded', function () {
+            function isOn(id) { return document.getElementById(id).classList.contains('on'); }
+
+            document.getElementById('reset-settings').addEventListener('click', function () {
+                window.location.reload();
+            });
+
             document.getElementById('save-settings').addEventListener('click', function () {
                 var $ok = $('.alert-success'), $err = $('.alert-error');
                 $ok.addClass('hide'); $err.addClass('hide');
                 var data = {
                     websiteName: $('#website-name').val(),
                     websiteDescription: $('#website-description').val(),
+                    contactEmail: $('#contact-email').val(),
                     copyright: $('#copyright').val(),
-                    allowUserRegister: document.getElementById('allow-register').classList.contains('on'),
+                    allowUserRegister: isOn('allow-register'),
+                    requireEmailVerification: isOn('require-email-verification'),
+                    publicSubmissions: isOn('public-submissions'),
+                    maintenanceMode: isOn('maintenance-mode'),
                     icpNumber: $('#icp-number').val(),
                     policeIcpNumber: $('#police-icp-number').val(),
                     googleAnalyticsCode: $('#google-analytics-code').val(),
-                    offensiveWordSources: $('#offensive-word-sources').val()
+                    autoHideOnReports: isOn('auto-hide-on-reports'),
+                    discussionReportHideThreshold: $('#report-threshold').val(),
+                    newUserPostDelay: $('#new-user-post-delay').val(),
+                    discussionMinSolvedToVote: $('#min-solved-to-vote').val(),
+                    discussionMinSolvedToReport: $('#min-solved-to-report').val(),
+                    autoCensorOffensiveWords: isOn('auto-censor'),
+                    offensiveWordSources: $('#offensive-word-sources').val(),
+                    problemsPerPage: $('#problems-per-page').val(),
+                    usersPerPage: $('#users-per-page').val(),
+                    submissionsPerPage: $('#submissions-per-page').val(),
+                    contestsPerPage: $('#contests-per-page').val(),
+                    bulletinsPerPage: $('#bulletins-per-page').val(),
+                    discussionsPerPage: $('#discussions-per-page').val()
                 };
                 $.ajax({
                     type: 'POST', url: [[@{/administration/updateGeneralSettings.action}]],
                     data: data, dataType: 'JSON',
                     success: function (result) {
                         if (result['isSuccessful']) { $ok.removeClass('hide'); }
-                        else { $err.html([[#{voj.administration.general-settings.save-error}]]).removeClass('hide'); }
+                        else {
+                            var msg = result['isContactEmailLegal'] === false
+                                ? [[#{voj.administration.general-settings.contact-email-illegal}]]
+                                : [[#{voj.administration.general-settings.save-error}]];
+                            $err.html(msg).removeClass('hide');
+                        }
                         window.scrollTo({ top: 0, behavior: 'smooth' });
                     }
                 });
@@ -143,8 +303,8 @@
 
             document.getElementById('import-offensive-words').addEventListener('click', function () {
                 var $btn = $(this), $result = $('#offensive-words-import-result');
-                var label = $btn.text();
-                $btn.prop('disabled', true).text('$ ' + [[#{voj.administration.general-settings.offensive-words-importing}]]);
+                var label = $btn.html();
+                $btn.prop('disabled', true).text([[#{voj.administration.general-settings.offensive-words-importing}]]);
                 $result.removeClass('ok err').text('');
                 $.ajax({
                     type: 'POST', url: [[@{/administration/importOffensiveWords.action}]],
@@ -168,7 +328,7 @@
                         $result.addClass('err').text([[#{voj.administration.general-settings.offensive-words-import-failed}]]);
                     },
                     complete: function () {
-                        $btn.prop('disabled', false).text(label);
+                        $btn.prop('disabled', false).html(label);
                     }
                 });
             });

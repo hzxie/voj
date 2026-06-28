@@ -80,6 +80,36 @@ public interface DiscussionReplyVoteMapper {
   int getNumberOfReportedReplies();
 
   /**
+   * [For administrators only] Gets the reporters of a discussion reply, feeding the moderation
+   * review page. Each row carries the reporter's username and the time the report was filed, most
+   * recent first.
+   *
+   * @param discussionReplyId - the unique identifier of the reported reply
+   * @return an ordered list of reporter rows (most recent first)
+   */
+  List<Map<String, Object>> getReportersOfReply(@Param("discussionReplyId") long discussionReplyId);
+
+  /**
+   * [For administrators only] Gets the reporters across every reply of a discussion thread, feeding
+   * the thread moderation page's report list. Each row carries the reporter's username and the time
+   * the report was filed, most recent first.
+   *
+   * @param discussionThreadId - the unique identifier of the discussion thread
+   * @return an ordered list of reporter rows (most recent first)
+   */
+  List<Map<String, Object>> getReportersOfThread(
+      @Param("discussionThreadId") long discussionThreadId);
+
+  /**
+   * [For administrators only] Dismisses every report on a discussion reply, clearing it from the
+   * moderation queue while keeping the reply itself intact.
+   *
+   * @param discussionReplyId - the unique identifier of the reply whose reports are dismissed
+   * @return the number of report rows removed
+   */
+  int dismissReportsOfReply(@Param("discussionReplyId") long discussionReplyId);
+
+  /**
    * Casts a vote on a discussion reply. If the user has already voted on the reply, the existing vote
    * is overwritten so a user can switch between an upvote and a downvote with a single statement.
    *

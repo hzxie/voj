@@ -75,8 +75,13 @@ public class ContestService {
    * @param contestNotes - the notes/description of the contest
    * @param startTime - the start time of the contest
    * @param endTime - the end time of the contest
-   * @param contestMode - the mode of the contest (ACM / OI)
+   * @param scoring - the scoring rule of the contest (ICPC / IOI / Codeforces)
    * @param problems - the contest problems (a JSON-formatted array of problem IDs)
+   * @param status - the publication status of the contest (PUBLISHED / DRAFT / HIDDEN)
+   * @param penalty - the penalty (in minutes) per wrong submission
+   * @param freeze - the scoreboard freeze duration (in minutes) before the end
+   * @param isRated - whether the contest is rated
+   * @param openRegistration - whether the contest is open for registration
    * @return a Map containing the creation result and validation flags
    */
   public Map<String, Object> createContest(
@@ -84,12 +89,25 @@ public class ContestService {
       String contestNotes,
       Date startTime,
       Date endTime,
-      String contestMode,
-      String problems) {
+      String scoring,
+      String problems,
+      String status,
+      int penalty,
+      int freeze,
+      boolean isRated,
+      boolean openRegistration) {
     Map<String, Object> result = validateContest(contestName, startTime, endTime);
     if ((Boolean) result.get("isSuccessful")) {
-      contestMapper.createContest(
-          new Contest(contestName, contestNotes, startTime, endTime, contestMode, problems));
+      Contest contest =
+          new Contest(
+              contestName, contestNotes, startTime, endTime, getContestMode(scoring), problems);
+      contest.setStatus(PublicationStatus.normalize(status));
+      contest.setScoring(scoring);
+      contest.setPenalty(penalty);
+      contest.setFreeze(freeze);
+      contest.setRated(isRated);
+      contest.setOpenRegistration(openRegistration);
+      contestMapper.createContest(contest);
     }
     return result;
   }
@@ -102,8 +120,13 @@ public class ContestService {
    * @param contestNotes - the notes/description of the contest
    * @param startTime - the start time of the contest
    * @param endTime - the end time of the contest
-   * @param contestMode - the mode of the contest (ACM / OI)
+   * @param scoring - the scoring rule of the contest (ICPC / IOI / Codeforces)
    * @param problems - the contest problems (a JSON-formatted array of problem IDs)
+   * @param status - the publication status of the contest (PUBLISHED / DRAFT / HIDDEN)
+   * @param penalty - the penalty (in minutes) per wrong submission
+   * @param freeze - the scoreboard freeze duration (in minutes) before the end
+   * @param isRated - whether the contest is rated
+   * @param openRegistration - whether the contest is open for registration
    * @return a Map containing the edit result and validation flags
    */
   public Map<String, Object> editContest(
@@ -112,8 +135,13 @@ public class ContestService {
       String contestNotes,
       Date startTime,
       Date endTime,
-      String contestMode,
-      String problems) {
+      String scoring,
+      String problems,
+      String status,
+      int penalty,
+      int freeze,
+      boolean isRated,
+      boolean openRegistration) {
     Contest contest = contestMapper.getContest(contestId);
     Map<String, Object> result = validateContest(contestName, startTime, endTime);
     result.put("isContestExists", contest != null);
@@ -126,11 +154,28 @@ public class ContestService {
       contest.setContestNotes(contestNotes);
       contest.setStartTime(startTime);
       contest.setEndTime(endTime);
-      contest.setContestMode(contestMode);
+      contest.setContestMode(getContestMode(scoring));
       contest.setProblems(problems);
+      contest.setStatus(PublicationStatus.normalize(status));
+      contest.setScoring(scoring);
+      contest.setPenalty(penalty);
+      contest.setFreeze(freeze);
+      contest.setRated(isRated);
+      contest.setOpenRegistration(openRegistration);
       contestMapper.updateContest(contest);
     }
     return result;
+  }
+
+  /**
+   * Derives the underlying ranking mode (ACM / OI) from a scoring rule. IOI contests are ranked in
+   * the OI style; ICPC and Codeforces contests are ranked in the ACM style.
+   *
+   * @param scoring - the scoring rule of the contest (ICPC / IOI / Codeforces)
+   * @return the ranking mode (ACM / OI)
+   */
+  private String getContestMode(String scoring) {
+    return "IOI".equals(scoring) ? "OI" : "ACM";
   }
 
   /**
@@ -316,7 +361,7 @@ public class ContestService {
    * @param contest - the contest to query
    * @return the current status of the contest
    */
-  private Contest.CONTEST_STATUS getContestStatus(Contest contest) {
+  public Contest.CONTEST_STATUS getContestStatus(Contest contest) {
     if (contest == null) {
       return null;
     }

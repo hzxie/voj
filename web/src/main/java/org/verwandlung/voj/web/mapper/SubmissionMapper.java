@@ -228,6 +228,16 @@ public interface SubmissionMapper {
   List<Map<String, Object>> getNumberOfSolvedProblemsByDifficulty(@Param("uid") long uid);
 
   /**
+   * Gets the number of distinct solved (accepted) problems for every user who has at least one
+   * accepted submission. Used to populate the admin user list's SOLVED and RANK columns in a single
+   * query (rather than one query per user).
+   *
+   * @return a list of rows, each carrying the user identifier (uid) and the number of distinct
+   *     solved problems (solved), ordered by solved count descending
+   */
+  List<Map<String, Object>> getSolvedProblemCountForAllUsers();
+
+  /**
    * Creates a submission.
    *
    * @param submission - the submission object to create

@@ -49,6 +49,36 @@
 		FROM voj_discussion_reply_votes
 		WHERE vote_type = 2
 	</select>
+	<select id="getReportersOfReply"
+		parameterType="long"
+		resultType="hashmap">
+		SELECT u.username AS username,
+			v.vote_time AS reportTime
+		FROM voj_discussion_reply_votes v
+		LEFT JOIN voj_users u ON v.voter_uid = u.uid
+		WHERE v.discussion_reply_id = #{discussionReplyId} AND v.vote_type = 2
+		ORDER BY v.vote_time DESC
+	</select>
+	<select id="getReportersOfThread"
+		parameterType="long"
+		resultType="hashmap">
+		SELECT u.username AS username,
+			v.vote_time AS reportTime,
+			r.discussion_reply_id AS reportedReplyId,
+			ru.username AS reportedUsername,
+			r.discussion_reply_content AS reportedContent
+		FROM voj_discussion_reply_votes v
+		JOIN voj_discussion_replies r ON v.discussion_reply_id = r.discussion_reply_id
+		LEFT JOIN voj_users u ON v.voter_uid = u.uid
+		LEFT JOIN voj_users ru ON r.discussion_reply_uid = ru.uid
+		WHERE r.discussion_thread_id = #{discussionThreadId} AND v.vote_type = 2
+		ORDER BY v.vote_time DESC
+	</select>
+	<delete id="dismissReportsOfReply"
+		parameterType="long">
+		DELETE FROM voj_discussion_reply_votes
+		WHERE discussion_reply_id = #{discussionReplyId} AND vote_type = 2
+	</delete>
 	<insert id="castVote"
 		parameterType="org.verwandlung.voj.web.model.DiscussionReplyVote">
 		INSERT INTO voj_discussion_reply_votes(discussion_reply_id, voter_uid, vote_type)

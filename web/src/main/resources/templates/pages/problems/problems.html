@@ -16,15 +16,24 @@
             <div class="sub vw-filters-sub"><span th:text="${totalProblems}">0</span> problems &middot; solve to level up</div>
             <div class="vw-filters" th:with="fieldLabel=${field == 'id' ? 'id' : (field == 'tag' ? 'tag' : 'title')}">
                 <div class="vw-seg">
-                    <a th:href="@{/p(field='id',query=${query})}" th:classappend="${field == 'id'} ? 'active'">ID</a>
-                    <a th:href="@{/p(field='title',query=${query})}" th:classappend="${field == 'title'} ? 'active'">Title</a>
-                    <a th:href="@{/p(field='tag',query=${query})}" th:classappend="${field == 'tag'} ? 'active'">Tag</a>
+                    <a th:href="@{/p(field='id',query=${query},difficulty=${selectedProblemDifficulty})}" th:classappend="${field == 'id'} ? 'active'">ID</a>
+                    <a th:href="@{/p(field='title',query=${query},difficulty=${selectedProblemDifficulty})}" th:classappend="${field == 'title'} ? 'active'">Title</a>
+                    <a th:href="@{/p(field='tag',query=${query},difficulty=${selectedProblemDifficulty})}" th:classappend="${field == 'tag'} ? 'active'">Tag</a>
                 </div>
                 <form class="vw-field vw-filters-search" method="GET" th:action="@{/p}">
                     <span class="sigil">$</span>
                     <input type="hidden" name="field" th:value="${field}" />
+                    <input type="hidden" name="difficulty" th:value="${selectedProblemDifficulty}" />
                     <input type="text" name="query" th:value="${query}" th:placeholder="|filter by ${fieldLabel}&#8230;|" />
                     <span class="vw-filters-count"><span th:text="${totalProblems}">0</span> <span th:text="${totalProblems == 1 ? 'match' : 'matches'}">matches</span></span>
+                </form>
+                <form class="vw-filters-difficulty" method="GET" th:action="@{/p}">
+                    <input type="hidden" name="field" th:value="${field}" />
+                    <input type="hidden" name="query" th:value="${query}" />
+                    <select name="difficulty" class="vw-filter-select" onchange="this.form.submit();">
+                        <option value="" th:text="#{voj.problems.problems.all-difficulties}">All Levels</option>
+                        <option th:each="problemDifficulty : ${problemDifficulties}" th:value="${problemDifficulty.problemDifficultySlug}" th:selected="${problemDifficulty.problemDifficultySlug == selectedProblemDifficulty}" th:text="${problemDifficulty.problemDifficultyName}">Level</option>
+                    </select>
                 </form>
             </div>
         </section>
@@ -66,21 +75,21 @@
 
             <!-- PAGER -->
             <div class="vw-pager" th:if="${totalPages > 1}">
-                <a class="nav" th:if="${currentPage > 1}" th:href="@{/p(page=${currentPage - 1},field=${field},query=${query})}">&larr;</a>
+                <a class="nav" th:if="${currentPage > 1}" th:href="@{/p(page=${currentPage - 1},field=${field},query=${query},difficulty=${selectedProblemDifficulty})}">&larr;</a>
                 <span class="nav" th:unless="${currentPage > 1}">&larr;</span>
 
-                <a th:if="${windowStart > 1}" th:href="@{/p(page=1,field=${field},query=${query})}">1</a>
+                <a th:if="${windowStart > 1}" th:href="@{/p(page=1,field=${field},query=${query},difficulty=${selectedProblemDifficulty})}">1</a>
                 <span class="gap" th:if="${windowStart > 2}">&hellip;</span>
 
                 <th:block th:each="p : ${#numbers.sequence(windowStart, windowEnd)}">
                     <span th:if="${p == currentPage}" class="active" th:text="${p}">1</span>
-                    <a th:unless="${p == currentPage}" th:href="@{/p(page=${p},field=${field},query=${query})}" th:text="${p}">2</a>
+                    <a th:unless="${p == currentPage}" th:href="@{/p(page=${p},field=${field},query=${query},difficulty=${selectedProblemDifficulty})}" th:text="${p}">2</a>
                 </th:block>
 
                 <span class="gap" th:if="${windowEnd < totalPages - 1}">&hellip;</span>
-                <a th:if="${windowEnd < totalPages}" th:href="@{/p(page=${totalPages},field=${field},query=${query})}" th:text="${totalPages}">N</a>
+                <a th:if="${windowEnd < totalPages}" th:href="@{/p(page=${totalPages},field=${field},query=${query},difficulty=${selectedProblemDifficulty})}" th:text="${totalPages}">N</a>
 
-                <a class="nav" th:if="${currentPage < totalPages}" th:href="@{/p(page=${currentPage + 1},field=${field},query=${query})}">&rarr;</a>
+                <a class="nav" th:if="${currentPage < totalPages}" th:href="@{/p(page=${currentPage + 1},field=${field},query=${query},difficulty=${selectedProblemDifficulty})}">&rarr;</a>
                 <span class="nav" th:unless="${currentPage < totalPages}">&rarr;</span>
             </div>
         </section>

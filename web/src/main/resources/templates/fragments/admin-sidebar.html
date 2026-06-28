@@ -42,6 +42,10 @@
             </a>
 
             <div class="adm-nav-label sys" th:text="'// ' + #{voj.administration.include.sidebar.system}">// SYSTEM</div>
+            <a class="adm-navitem" th:classappend="${adminSection == 'moderation'} ? 'active'" th:href="@{/administration/moderation}">
+                <span class="ico">&#9878;</span><span class="lbl" th:text="#{voj.administration.include.sidebar.moderation}">Moderation</span>
+                <span class="adm-badge err" th:if="${navModerationBadge}" th:text="${navModerationBadge}">0</span>
+            </a>
             <a class="adm-navitem" th:classappend="${adminSection == 'judgers'} ? 'active'" th:href="@{/administration/judgers}">
                 <span class="ico">&#9707;</span><span class="lbl" th:text="#{voj.administration.include.sidebar.judgers}">Judgers</span>
                 <span class="adm-badge accent" th:if="${navJudgersBadge}" th:text="${navJudgersBadge}">0</span>

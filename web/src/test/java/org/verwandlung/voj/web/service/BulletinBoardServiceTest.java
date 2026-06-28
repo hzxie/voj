@@ -80,6 +80,34 @@ public class BulletinBoardServiceTest {
     Assertions.assertNull(bulletinBoardService.getBulletinBoardMessage(0));
   }
 
+  /** Test case: tests the createBulletinBoardMessage(...) method. Test data: a message with an author, a pin and an unknown status. Expected: it is created, the pin is kept and the unknown status falls back to PUBLISHED. */
+  @Test
+  public void testCreateBulletinBoardMessageNormalizesStatus() {
+    java.util.Map<String, Boolean> result =
+        bulletinBoardService.createBulletinBoardMessage("Title", "Body", 1000, true, "BOGUS");
+    Assertions.assertTrue(result.get("isSuccessful"));
+
+    BulletinBoardMessage stored = bulletinBoardService.getBulletinBoardMessages(0, 1).get(0);
+    Assertions.assertEquals(1000, stored.getMessageAuthorId());
+    Assertions.assertTrue(stored.isPinned());
+    Assertions.assertEquals(BulletinBoardMessage.STATUS_PUBLISHED, stored.getStatus());
+  }
+
+  /** Test case: tests the editBulletinBoardMessage(...) method. Test data: an existing message edited to be pinned and hidden. Expected: the pin and status are persisted. */
+  @Test
+  public void testEditBulletinBoardMessageUpdatesPinnedAndStatus() {
+    BulletinBoardMessage created = createMessage("Title");
+
+    java.util.Map<String, Boolean> result =
+        bulletinBoardService.editBulletinBoardMessage(
+            created.getMessageId(), "Title", "Body", true, BulletinBoardMessage.STATUS_HIDDEN);
+    Assertions.assertTrue(result.get("isSuccessful"));
+
+    BulletinBoardMessage stored = bulletinBoardService.getBulletinBoardMessage(created.getMessageId());
+    Assertions.assertTrue(stored.isPinned());
+    Assertions.assertEquals(BulletinBoardMessage.STATUS_HIDDEN, stored.getStatus());
+  }
+
   /** Creates a bulletin board message through the Mapper in order to test the read logic of the Service. */
   private BulletinBoardMessage createMessage(String title) {
     BulletinBoardMessage message = new BulletinBoardMessage(title, title + " Body", new Date());

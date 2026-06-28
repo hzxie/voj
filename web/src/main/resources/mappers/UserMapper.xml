@@ -10,6 +10,7 @@
 		<result property="username" column="username" />
 		<result property="password" column="password" />
 		<result property="email" column="email" />
+		<result property="isEmailVerified" column="is_email_verified" />
 		<association property="userGroup" 
 			javaType="org.verwandlung.voj.web.model.UserGroup" 
 			column="user_group_id"
@@ -99,13 +100,19 @@
 		keyProperty="uid" 
 		keyColumn="uid"
 		useGeneratedKeys="true">
-		INSERT INTO voj_users (username, password, email, user_group_id, prefer_language_id) 
-		VALUES (#{username}, #{password}, #{email}, #{userGroup.userGroupId}, #{preferLanguage.languageId})
+		INSERT INTO voj_users (username, password, email, user_group_id, prefer_language_id, is_email_verified)
+		VALUES (#{username}, #{password}, #{email}, #{userGroup.userGroupId}, #{preferLanguage.languageId}, #{isEmailVerified})
 	</insert>
 	<update id="updateUser"
 		parameterType="org.verwandlung.voj.web.model.User">
-		UPDATE voj_users 
-		SET username = #{username}, password = #{password}, email = #{email}, user_group_id = #{userGroup.userGroupId}, prefer_language_id = #{preferLanguage.languageId} 
+		UPDATE voj_users
+		SET username = #{username}, password = #{password}, email = #{email}, user_group_id = #{userGroup.userGroupId}, prefer_language_id = #{preferLanguage.languageId}
+		WHERE uid = #{uid}
+	</update>
+	<update id="updateEmailVerified"
+		parameterType="map">
+		UPDATE voj_users
+		SET is_email_verified = #{isEmailVerified}
 		WHERE uid = #{uid}
 	</update>
 	<delete id="deleteUser"

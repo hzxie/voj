@@ -25,6 +25,7 @@
                         <span class="vw-rank-badge" th:text="${user.userGroup.userGroupName}">User</span>
                     </div>
                     <div class="vw-profile-meta">
+                        <span th:if="${!#strings.isEmpty(displayName)}" th:text="${displayName} + ' &middot; '">Display Name &middot; </span>
                         <span th:if="${!#strings.isEmpty(location)}" th:text="${location} + ' &middot; '">Location &middot; </span>
                         <span th:text="#{voj.accounts.user.joined-on} + ' ' + ${@dateFormatter.parseDateLong(registerTime, language)}">joined</span>
                     </div>
@@ -102,9 +103,9 @@
         </section>
 
         <!--/* EDIT PROFILE MODAL (owner only). Mirrors voj-design/Profile.dc.html's
-               // edit-profile dialog. Fields map to the kept /accounts/updateProfile.action:
-               email, location, website, socialLinks (GitHub) and aboutMe. The design's
-               avatar upload, display-name and rank are not backed by the server, so they
+               // edit-profile dialog. Fields map to /accounts/updateProfile.action:
+               displayName, email, location, website, socialLinks (GitHub) and aboutMe.
+               The design's avatar upload and rank are not backed by the server, so they
                are omitted; username is shown read-only. */-->
         <div class="vw-pmodal-overlay hide" id="edit-profile-modal"
              th:if="${isLogin and myProfile != null and myProfile.uid == user.uid}">
@@ -118,12 +119,12 @@
                         <div class="vw-alert vw-alert-error hide" id="edit-profile-error"></div>
                         <div class="vw-pmodal-grid">
                             <div class="vw-pmodal-field">
-                                <label class="vw-label" for="edit-username" th:text="#{voj.accounts.user.username} + ' &middot; ' + #{voj.accounts.user.locked}">Username · Locked</label>
-                                <input class="vw-input" id="edit-username" type="text" readonly th:value="${user.username}" />
+                                <label class="vw-label" for="edit-display-name" th:text="#{voj.accounts.user.display-name}">Display Name</label>
+                                <input class="vw-input" id="edit-display-name" name="displayName" type="text" maxlength="64" th:value="${displayName}" />
                             </div>
                             <div class="vw-pmodal-field">
-                                <label class="vw-label" for="edit-email" th:text="#{voj.accounts.dashboard.email}">Email</label>
-                                <input class="vw-input" id="edit-email" name="email" type="text" maxlength="64" th:value="${user.email}" />
+                                <label class="vw-label" for="edit-username" th:text="#{voj.accounts.user.username} + ' &middot; ' + #{voj.accounts.user.locked}">Username · Locked</label>
+                                <input class="vw-input" id="edit-username" type="text" readonly th:value="${user.username}" />
                             </div>
                         </div>
                         <div class="vw-pmodal-grid">
@@ -133,15 +134,21 @@
                                        th:value="${location}" th:placeholder="#{voj.accounts.dashboard.location-example}" />
                             </div>
                             <div class="vw-pmodal-field">
+                                <label class="vw-label" for="edit-email" th:text="#{voj.accounts.dashboard.email}">Email</label>
+                                <input class="vw-input" id="edit-email" name="email" type="text" maxlength="64" th:value="${user.email}" />
+                            </div>
+                        </div>
+                        <div class="vw-pmodal-grid">
+                            <div class="vw-pmodal-field">
                                 <label class="vw-label" for="edit-website" th:text="#{voj.accounts.dashboard.website}">Website</label>
                                 <input class="vw-input" id="edit-website" name="website" type="text" maxlength="64"
                                        th:value="${website}" placeholder="https://" />
                             </div>
-                        </div>
-                        <div class="vw-pmodal-field">
-                            <label class="vw-label" for="edit-github" th:text="#{voj.accounts.user.github}">GitHub</label>
-                            <input class="vw-input" id="edit-github" type="text" placeholder="username"
-                                   th:value="${socialLinks != null ? socialLinks['GitHub'] : ''}" />
+                            <div class="vw-pmodal-field">
+                                <label class="vw-label" for="edit-github" th:text="#{voj.accounts.user.github}">GitHub</label>
+                                <input class="vw-input" id="edit-github" type="text" placeholder="username"
+                                       th:value="${socialLinks != null ? socialLinks['GitHub'] : ''}" />
+                            </div>
                         </div>
                         <div class="vw-pmodal-field">
                             <label class="vw-label" for="edit-about-me" th:text="#{voj.accounts.user.about-me}">About Me</label>
@@ -210,6 +217,7 @@
                 url: [[@{/accounts/updateProfile.action}]],
                 data: {
                     'email':       $('#edit-email').val(),
+                    'displayName': $('#edit-display-name').val(),
                     'location':    $('#edit-location').val(),
                     'website':     $('#edit-website').val(),
                     'socialLinks': JSON.stringify(social),
@@ -235,6 +243,9 @@
                 errorMessage += [[#{voj.accounts.dashboard.email-illegal}]] + '<br>';
             } else if (result['isEmailExists']) {
                 errorMessage += [[#{voj.accounts.dashboard.email-existing}]] + '<br>';
+            }
+            if (!result['isDisplayNameLegal']) {
+                errorMessage += [[#{voj.accounts.user.display-name-illegal}]] + '<br>';
             }
             if (!result['isLocationLegal']) {
                 errorMessage += [[#{voj.accounts.dashboard.location-illegal}]] + '<br>';

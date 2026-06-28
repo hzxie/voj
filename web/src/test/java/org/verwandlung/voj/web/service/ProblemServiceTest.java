@@ -88,14 +88,14 @@ public class ProblemServiceTest {
   /** Test case: tests the getProblemsUsingFilters(...) method. Test data: without filter conditions. Expected: all problems. */
   @Test
   public void testGetProblemsUsingFiltersWithoutFilters() {
-    List<Problem> problems = problemService.getProblemsUsingFilters(0, "", "", "", false, 100);
+    List<Problem> problems = problemService.getProblemsUsingFilters(0, "", "", "", "", false, 100);
     Assertions.assertEquals(4, problems.size());
   }
 
   /** Test case: tests the getProblemsUsingFilters(...) method. Test data: public problems only. Expected: the public problems. */
   @Test
   public void testGetProblemsUsingFiltersPublicOnly() {
-    List<Problem> problems = problemService.getProblemsUsingFilters(0, "", "", "", true, 100);
+    List<Problem> problems = problemService.getProblemsUsingFilters(0, "", "", "", "", true, 100);
     Assertions.assertEquals(3, problems.size());
   }
 
@@ -103,7 +103,7 @@ public class ProblemServiceTest {
   @Test
   public void testGetProblemsUsingFiltersByCategory() {
     List<Problem> problems =
-        problemService.getProblemsUsingFilters(0, "", "dynamic-programming", "", false, 100);
+        problemService.getProblemsUsingFilters(0, "", "dynamic-programming", "", "", false, 100);
     // Only problem 1000 belongs to the dynamic-programming category.
     Assertions.assertEquals(1, problems.size());
     Assertions.assertEquals(1000, problems.get(0).getProblemId());
@@ -112,8 +112,8 @@ public class ProblemServiceTest {
   /** Test case: tests the getNumberOfProblemsUsingFilters(...) method. Test data: all / public only. Expected: the corresponding count. */
   @Test
   public void testGetNumberOfProblemsUsingFilters() {
-    Assertions.assertEquals(4, problemService.getNumberOfProblemsUsingFilters("", "", false));
-    Assertions.assertEquals(3, problemService.getNumberOfProblemsUsingFilters("", "", true));
+    Assertions.assertEquals(4, problemService.getNumberOfProblemsUsingFilters("", "", "", false));
+    Assertions.assertEquals(3, problemService.getNumberOfProblemsUsingFilters("", "", "", true));
   }
 
   /** Test case: tests the getProblemCategories() method. Test data: N/a. Expected: all problem categories. */
@@ -182,7 +182,7 @@ public class ProblemServiceTest {
     Map<String, Object> result =
         problemService.createProblem(
             "A New Problem", 1000, 65536, "Description", "Hint", "Input Format",
-            "Output Format", "1 2", "3", TEST_CASES, CATEGORIES, TAGS, true, true, "easy");
+            "Output Format", "1 2", "3", TEST_CASES, CATEGORIES, TAGS, "PUBLISHED", true, "easy");
     Assertions.assertTrue((Boolean) result.get("isSuccessful"));
     Assertions.assertTrue(result.containsKey("problemId"));
     Assertions.assertEquals(5, problemService.getNumberOfProblems());
@@ -194,7 +194,7 @@ public class ProblemServiceTest {
     Map<String, Object> result =
         problemService.createProblem(
             "", 1000, 65536, "Description", "Hint", "Input Format", "Output Format",
-            "1 2", "3", TEST_CASES, CATEGORIES, TAGS, true, true, "easy");
+            "1 2", "3", TEST_CASES, CATEGORIES, TAGS, "PUBLISHED", true, "easy");
     Assertions.assertTrue((Boolean) result.get("isProblemNameEmpty"));
     Assertions.assertFalse((Boolean) result.get("isSuccessful"));
   }
@@ -205,7 +205,7 @@ public class ProblemServiceTest {
     Map<String, Object> result =
         problemService.createProblem(
             "A New Problem", 0, 65536, "Description", "Hint", "Input Format", "Output Format",
-            "1 2", "3", TEST_CASES, CATEGORIES, TAGS, true, true, "easy");
+            "1 2", "3", TEST_CASES, CATEGORIES, TAGS, "PUBLISHED", true, "easy");
     Assertions.assertFalse((Boolean) result.get("isTimeLimitLegal"));
     Assertions.assertFalse((Boolean) result.get("isSuccessful"));
   }
@@ -216,7 +216,7 @@ public class ProblemServiceTest {
     Map<String, Boolean> result =
         problemService.editProblem(
             1000, "A+B Problem (Edited)", 2000, 131072, "New Description", "Hint",
-            "Input Format", "Output Format", "1 2", "3", TEST_CASES, CATEGORIES, TAGS, true, true, "easy");
+            "Input Format", "Output Format", "1 2", "3", CATEGORIES, TAGS, "PUBLISHED", true, "easy");
     Assertions.assertTrue(result.get("isSuccessful"));
     Assertions.assertEquals("A+B Problem (Edited)", problemService.getProblem(1000).getProblemName());
   }
@@ -227,7 +227,7 @@ public class ProblemServiceTest {
     Map<String, Boolean> result =
         problemService.editProblem(
             99999, "Nonexistent", 1000, 65536, "Description", "Hint", "Input Format",
-            "Output Format", "1 2", "3", TEST_CASES, CATEGORIES, TAGS, true, true, "easy");
+            "Output Format", "1 2", "3", CATEGORIES, TAGS, "PUBLISHED", true, "easy");
     Assertions.assertFalse(result.get("isProblemExists"));
     Assertions.assertFalse(result.get("isSuccessful"));
   }
@@ -239,7 +239,7 @@ public class ProblemServiceTest {
     // constraints.
     Problem problem =
         new Problem(
-            true, "Throwaway Problem", 1000, 65536, "Description", "Input Format",
+            "PUBLISHED", "Throwaway Problem", 1000, 65536, "Description", "Input Format",
             "Output Format", "1 2", "3", "Hint");
     problem.setProblemDifficulty(new ProblemDifficulty(1, "easy", "Easy"));
     problemMapper.createProblem(problem);

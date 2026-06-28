@@ -53,7 +53,7 @@ public class ProblemMapperTest {
    */
   @Test
   public void testGetNumberOfPublicProblems() {
-    long totalProblems = problemMapper.getNumberOfProblemsUsingFilters(null, 0, true);
+    long totalProblems = problemMapper.getNumberOfProblemsUsingFilters(null, 0, 0, true);
     Assertions.assertEquals(3, totalProblems);
   }
 
@@ -146,12 +146,12 @@ public class ProblemMapperTest {
   }
 
   /**
-   * Test case: tests the getProblemsUsingFilters(String, int, boolean, long, int) method. Test data:
-   * get 10 problems with IDs starting from 1000. Expected: the expected problem list (3 problems).
+   * Test case: tests the getProblemsUsingFilters(...) method. Test data: get up to 10 public
+   * problems starting at row offset 0. Expected: the expected problem list (3 problems).
    */
   @Test
   public void testGetProblemsFrom1000WithLimit10() {
-    List<Problem> problems = problemMapper.getProblemsUsingFilters(null, 0, 0, true, 1000, 10);
+    List<Problem> problems = problemMapper.getProblemsUsingFilters(null, 0, 0, 0, true, 0, 10);
     Assertions.assertEquals(3, problems.size());
 
     Problem firstProblem = problems.get(0);
@@ -166,12 +166,12 @@ public class ProblemMapperTest {
   }
 
   /**
-   * Test case: tests the getProblemsUsingFilters(String, int, boolean, long, int) method. Test data:
-   * get 1 problem with ID starting from 1001. Expected: the expected problem list (1 problem).
+   * Test case: tests the getProblemsUsingFilters(...) method. Test data: get 1 public problem at
+   * row offset 1 (the second public problem). Expected: the expected problem list (1 problem).
    */
   @Test
   public void testGetProblemsFrom1001WithLimit1() {
-    List<Problem> problems = problemMapper.getProblemsUsingFilters("", 0, 0, true, 1001, 1);
+    List<Problem> problems = problemMapper.getProblemsUsingFilters("", 0, 0, 0, true, 1, 1);
     Assertions.assertEquals(1, problems.size());
 
     Problem firstProblem = problems.get(0);
@@ -183,12 +183,12 @@ public class ProblemMapperTest {
   }
 
   /**
-   * Test case: tests the getProblemsUsingFilters(String, int, boolean, long, int) method. Test data:
-   * get 10 problems with IDs starting from 1010. Expected: an empty problem list.
+   * Test case: tests the getProblemsUsingFilters(...) method. Test data: get up to 10 public
+   * problems starting at row offset 10 (beyond the last problem). Expected: an empty problem list.
    */
   @Test
   public void testGetProblemsFrom1010WithLimit10() {
-    List<Problem> problems = problemMapper.getProblemsUsingFilters(null, 0, 0, true, 1010, 10);
+    List<Problem> problems = problemMapper.getProblemsUsingFilters(null, 0, 0, 0, true, 10, 10);
     Assertions.assertEquals(0, problems.size());
   }
 
@@ -197,7 +197,7 @@ public class ProblemMapperTest {
   public void testCreateProblemNormally() {
     Problem problem =
         new Problem(
-            false,
+            "HIDDEN",
             "Problem Name",
             1000,
             32768,

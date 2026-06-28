@@ -6,9 +6,16 @@
     <!-- ResultMap -->
     <resultMap id="BulletinBoardMessageResultMap" type="org.verwandlung.voj.web.model.BulletinBoardMessage">
         <id property="messageId" column="message_id" />
+        <result property="messageAuthorId" column="message_author_id" />
         <result property="messageTitle" column="message_title" />
         <result property="messageBody" column="message_body" />
+        <result property="pinned" column="message_is_pinned" />
+        <result property="status" column="message_status" />
         <result property="messageCreateTime" column="message_create_time" />
+        <association property="messageAuthor"
+            javaType="org.verwandlung.voj.web.model.User"
+            column="message_author_id"
+            select="org.verwandlung.voj.web.mapper.UserMapper.getUserUsingUid" />
     </resultMap>
 
     <!-- Methods -->
@@ -25,6 +32,15 @@
         ORDER BY message_id DESC
         LIMIT #{offset}, #{limit}
     </select>
+    <select id="getPublishedBulletinBoardMessages"
+            parameterType="map"
+            resultMap="BulletinBoardMessageResultMap">
+        SELECT *
+        FROM voj_bulletin_board_messages
+        WHERE message_status = 'PUBLISHED'
+        ORDER BY message_is_pinned DESC, message_id DESC
+        LIMIT #{offset}, #{limit}
+    </select>
     <select id="getBulletinBoardMessageUsingId"
             parameterType="long"
             resultMap="BulletinBoardMessageResultMap">
@@ -35,13 +51,13 @@
     <insert id="createBulletinBoardMessage"
             parameterType="org.verwandlung.voj.web.model.BulletinBoardMessage"
             useGeneratedKeys="true" keyProperty="messageId">
-        INSERT INTO voj_bulletin_board_messages(message_title, message_body, message_create_time)
-        VALUES (#{messageTitle}, #{messageBody}, #{messageCreateTime})
+        INSERT INTO voj_bulletin_board_messages(message_author_id, message_title, message_body, message_is_pinned, message_status, message_create_time)
+        VALUES (#{messageAuthorId}, #{messageTitle}, #{messageBody}, #{pinned}, #{status}, #{messageCreateTime})
     </insert>
     <update id="updateBulletinBoardMessage"
             parameterType="org.verwandlung.voj.web.model.BulletinBoardMessage">
         UPDATE voj_bulletin_board_messages
-        SET message_title = #{messageTitle}, message_body = #{messageBody}, message_create_time = #{messageCreateTime}
+        SET message_title = #{messageTitle}, message_body = #{messageBody}, message_is_pinned = #{pinned}, message_status = #{status}, message_create_time = #{messageCreateTime}
         WHERE message_id = #{messageId}
     </update>
     <delete id="deleteBulletinBoardMessage"

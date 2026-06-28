@@ -18,6 +18,7 @@ package org.verwandlung.voj.web.mapper;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.ibatis.annotations.Param;
 
@@ -58,6 +59,17 @@ public interface UserMetaMapper {
    */
   UserMeta getUserMetaUsingUserAndMetaKey(
       @Param("user") User user, @Param("metaKey") String metaKey);
+
+  /**
+   * Gets a specific meta value for a batch of users in a single query, used to populate columns such
+   * as the admin user list's JOINED date without an N+1 lookup per user.
+   *
+   * @param uids - the user identifiers to fetch the meta value for
+   * @param metaKey - the key of the meta information
+   * @return a list of rows, each carrying the user identifier (uid) and the meta value (metaValue)
+   */
+  List<Map<String, Object>> getUserMetaValuesUsingMetaKey(
+      @Param("uids") List<Long> uids, @Param("metaKey") String metaKey);
 
   /**
    * Inserts new user meta data.

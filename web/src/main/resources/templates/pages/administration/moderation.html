@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/admin}" lang="en">
+<head>
+    <title th:text="#{voj.administration.moderation.title} + ' | ' + ${websiteName}">Moderation</title>
+</head>
+<body>
+    <div layout:fragment="content">
+    <div class="adm-detail">
+
+        <div class="adm-mod-head">
+            <span class="adm-label" th:text="#{voj.administration.moderation.reported-content}">// REPORTED CONTENT</span>
+            <span class="adm-pending" th:if="${moderationCount > 0}"><span th:text="${moderationCount}">0</span> <span th:text="#{voj.administration.moderation.pending}">pending</span></span>
+            <span class="adm-mod-hint" th:text="#{voj.administration.moderation.hint}">open an item, then resolve it to clear it from the queue</span>
+        </div>
+
+        <div class="adm-card">
+            <div class="adm-mod-cols">
+                <span class="c-type" th:text="#{voj.administration.moderation.col-type}">TYPE</span>
+                <span class="c-content" th:text="#{voj.administration.moderation.col-content}">FLAGGED CONTENT</span>
+                <span th:text="#{voj.administration.moderation.col-reports}">REPORTS</span>
+                <span class="adm-w18"></span>
+            </div>
+
+            <a class="adm-mod-row" th:each="m : ${reportedReplies}"
+               th:href="@{/administration/moderation/{id}(id=${m.replyId})}"
+               th:with="reports=${m.reportCount}">
+                <span class="adm-mod-tag c-info" th:text="#{voj.administration.moderation.type-comment}">COMMENT</span>
+                <div class="adm-mod-main">
+                    <div class="adm-mod-title" th:text="${m.threadTitle != null ? m.threadTitle : #messages.msg('voj.administration.moderation.untitled-thread')}">Thread title</div>
+                    <div class="adm-mod-snip" th:text="${m.content}">Reported reply content…</div>
+                    <div class="adm-mod-meta" th:text="'#' + ${m.replyId} + '  ·  ' + ${@dateFormatter.dateTimeLongMedium(m.lastReportTime, language)}">#1 · reported</div>
+                </div>
+                <span class="adm-mod-count"
+                      th:classappend="${reports >= 5} ? 's-err' : (${reports >= 3} ? 's-warn' : 's-info')">
+                    &#9650; <span th:text="${reports}">0</span>
+                    <span class="w" th:text="${reports == 1} ? #{voj.administration.moderation.report} : #{voj.administration.moderation.reports}">reports</span>
+                </span>
+                <span class="adm-mod-chev">&#8250;</span>
+            </a>
+
+            <div class="adm-mod-empty" th:if="${#lists.isEmpty(reportedReplies)}">
+                <div class="ic">&#10003;</div>
+                <div class="t" th:text="#{voj.administration.moderation.empty-title}">Queue is clear</div>
+                <div class="d" th:text="#{voj.administration.moderation.empty-desc}">// no reported content awaiting review</div>
+            </div>
+        </div>
+
+    </div>
+    </div>
+</body>
+</html>

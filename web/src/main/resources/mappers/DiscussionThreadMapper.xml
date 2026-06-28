@@ -8,7 +8,11 @@
 		<id property="discussionThreadId" column="discussion_thread_id" />
 		<result property="discussionThreadTitle" column="discussion_thread_name" />
 		<result property="discussionThreadCreateTime" column="discussion_thread_create_time" />
+		<result property="visible" column="discussion_thread_visible" />
+		<result property="pinned" column="discussion_thread_pinned" />
+		<result property="locked" column="discussion_thread_locked" />
 		<result property="numberOfReplies" column="discussion_replies" />
+		<result property="numberOfReports" column="discussion_reports" />
 		<association property="discussionThreadCreator" 
 			javaType="org.verwandlung.voj.web.model.User" 
 			column="discussion_thread_creator_uid"
@@ -36,6 +40,11 @@
 			FROM voj_discussion_replies dr
 			WHERE dt.discussion_thread_id = dr.discussion_thread_id
 		) AS discussion_replies, (
+			SELECT COUNT(*)
+			FROM voj_discussion_reply_votes v
+			JOIN voj_discussion_replies r ON v.discussion_reply_id = r.discussion_reply_id
+			WHERE r.discussion_thread_id = dt.discussion_thread_id AND v.vote_type = 2
+		) AS discussion_reports, (
 			SELECT discussion_reply_id
 			FROM voj_discussion_replies dr
 			WHERE dt.discussion_thread_id = dr.discussion_thread_id
@@ -50,6 +59,9 @@
 			<if test="discussionTopicId != 0">
 				AND discussion_topic_id = #{discussionTopicId}
 			</if>
+			<if test="visibleOnly">
+				AND discussion_thread_visible = 1
+			</if>
 			<if test="reportHideThreshold > 0">
 				AND (
 					SELECT COUNT(*)
@@ -59,7 +71,7 @@
 				) &lt; #{reportHideThreshold}
 			</if>
 		</where>
-		ORDER BY latest_discussion_reply_id DESC
+		ORDER BY discussion_thread_pinned DESC, latest_discussion_reply_id DESC
 		LIMIT #{offset}, #{limit}
 	</select>
 	<select id="getNumberOfDiscussionThreads"
@@ -83,7 +95,12 @@
 			SELECT COUNT(*)
 			FROM voj_discussion_replies dr
 			WHERE dt.discussion_thread_id = dr.discussion_thread_id
-		) AS discussion_replies 
+		) AS discussion_replies, (
+			SELECT COUNT(*)
+			FROM voj_discussion_reply_votes v
+			JOIN voj_discussion_replies r ON v.discussion_reply_id = r.discussion_reply_id
+			WHERE r.discussion_thread_id = dt.discussion_thread_id AND v.vote_type = 2
+		) AS discussion_reports
 		FROM voj_discussion_threads dt
 		WHERE discussion_thread_id = #{discussionThreadId}
 	</select>
@@ -92,13 +109,25 @@
 		keyProperty="discussionThreadId" 
 		keyColumn="discussion_thread_id"
 		useGeneratedKeys="true">
-		INSERT INTO voj_discussion_threads(discussion_thread_creator_uid, discussion_thread_create_time, problem_id, discussion_topic_id, discussion_thread_name) 
-		VALUES (#{discussionThreadCreator.uid}, #{discussionThreadCreateTime}, #{problem.problemId}, #{discussionTopic.discussionTopicId}, #{discussionThreadTitle})
+		INSERT INTO voj_discussion_threads(discussion_thread_creator_uid, discussion_thread_create_time, problem_id, discussion_topic_id, discussion_thread_name, discussion_thread_visible, discussion_thread_pinned, discussion_thread_locked)
+		VALUES (#{discussionThreadCreator.uid}, #{discussionThreadCreateTime}, #{problem.problemId}, #{discussionTopic.discussionTopicId}, #{discussionThreadTitle}, #{visible}, #{pinned}, #{locked})
 	</insert>
 	<update id="updateDiscussionThread"
 		parameterType="org.verwandlung.voj.web.model.DiscussionThread">
-		UPDATE voj_discussion_threads 
-		SET discussion_thread_creator_uid = #{discussionThreadCreator.uid}, discussion_thread_create_time = #{discussionThreadCreateTime}, problem_id = #{problem.problemId}, discussion_topic_id = #{discussionTopic.discussionTopicId}, discussion_thread_name = #{discussionThreadTitle}
+		UPDATE voj_discussion_threads
+		SET discussion_thread_creator_uid = #{discussionThreadCreator.uid}, discussion_thread_create_time = #{discussionThreadCreateTime}, problem_id = #{problem.problemId}, discussion_topic_id = #{discussionTopic.discussionTopicId}, discussion_thread_name = #{discussionThreadTitle}, discussion_thread_visible = #{visible}, discussion_thread_pinned = #{pinned}, discussion_thread_locked = #{locked}
+		WHERE discussion_thread_id = #{discussionThreadId}
+	</update>
+	<update id="updateThreadVisibility"
+		parameterType="map">
+		UPDATE voj_discussion_threads
+		SET discussion_thread_visible = #{visible}
+		WHERE discussion_thread_id = #{discussionThreadId}
+	</update>
+	<update id="updateThreadModeration"
+		parameterType="org.verwandlung.voj.web.model.DiscussionThread">
+		UPDATE voj_discussion_threads
+		SET discussion_thread_name = #{discussionThreadTitle}, discussion_topic_id = #{discussionTopic.discussionTopicId}, discussion_thread_visible = #{visible}, discussion_thread_pinned = #{pinned}, discussion_thread_locked = #{locked}
 		WHERE discussion_thread_id = #{discussionThreadId}
 	</update>
 	<delete id="deleteDiscussionThreadUsingThreadId"

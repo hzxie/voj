@@ -47,6 +47,7 @@ import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.view.RedirectView;
 import org.verwandlung.voj.web.exception.ResourceNotFoundException;
 import org.verwandlung.voj.web.model.Language;
+import org.verwandlung.voj.web.model.Option;
 import org.verwandlung.voj.web.model.User;
 import org.verwandlung.voj.web.model.VojUserDetails;
 import org.verwandlung.voj.web.service.ContestService;
@@ -233,6 +234,10 @@ public class AccountsController {
 
     if (result.get("isSuccessful")) {
       User user = userService.getUserUsingUsernameOrEmail(username);
+      Option requireVerification = optionService.getOption("requireEmailVerification");
+      if (requireVerification != null && "1".equals(requireVerification.getOptionValue())) {
+        userService.requireEmailVerification(user);
+      }
       establishSecurityContext(request, response, user);
 
       String ipAddress = HttpRequestParser.getRemoteAddr(request);
@@ -240,6 +245,27 @@ public class AccountsController {
           String.format("User: [Username=%s] created at %s.", new Object[] {username, ipAddress}));
     }
     return result;
+  }
+
+  /**
+   * Verifies a user's email address using the token from the verification email.
+   *
+   * @param email - the user's email address
+   * @param token - the verification token
+   * @param request - the HttpServletRequest object
+   * @param response - the HttpServletResponse object
+   * @return a ModelAndView object containing the email-verification result page
+   */
+  @RequestMapping(value = "/verify-email", method = RequestMethod.GET)
+  public ModelAndView verifyEmailView(
+      @RequestParam(value = "email", required = false) String email,
+      @RequestParam(value = "token", required = false) String token,
+      HttpServletRequest request,
+      HttpServletResponse response) {
+    Map<String, Boolean> result = userService.verifyEmail(email, token);
+    ModelAndView view = new ModelAndView("pages/accounts/verify-email");
+    view.addObject("isVerified", result.get("isSuccessful"));
+    return view;
   }
 
   /**
@@ -419,6 +445,7 @@ public class AccountsController {
    * Handles the user's request to change their profile.
    *
    * @param email - the user's email address
+   * @param displayName - the user's display name
    * @param location - the user's location
    * @param website - the user's personal homepage
    * @param socialLinks - the user's social network information
@@ -429,6 +456,7 @@ public class AccountsController {
   @RequestMapping(value = "/updateProfile.action", method = RequestMethod.POST)
   public @ResponseBody Map<String, Boolean> updateProfileInDashboardAction(
       @RequestParam(value = "email") String email,
+      @RequestParam(value = "displayName", required = false, defaultValue = "") String displayName,
       @RequestParam(value = "location") String location,
       @RequestParam(value = "website") String website,
       @RequestParam(value = "socialLinks") String socialLinks,
@@ -438,7 +466,8 @@ public class AccountsController {
     String ipAddress = HttpRequestParser.getRemoteAddr(request);
 
     Map<String, Boolean> result =
-        userService.updateProfile(currentUser, email, location, website, socialLinks, aboutMe);
+        userService.updateProfile(
+            currentUser, email, displayName, location, website, socialLinks, aboutMe);
     if (result.get("isSuccessful")) {
       LOGGER.info(String.format("%s updated profile at %s", new Object[] {currentUser, ipAddress}));
     }

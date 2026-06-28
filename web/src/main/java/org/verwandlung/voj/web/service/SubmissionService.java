@@ -32,10 +32,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import org.verwandlung.voj.web.mapper.LanguageMapper;
+import org.verwandlung.voj.web.mapper.OptionMapper;
 import org.verwandlung.voj.web.mapper.ProblemMapper;
 import org.verwandlung.voj.web.mapper.SubmissionMapper;
+import org.verwandlung.voj.web.mapper.UserMapper;
 import org.verwandlung.voj.web.messenger.MessageSender;
 import org.verwandlung.voj.web.model.Language;
+import org.verwandlung.voj.web.model.Option;
 import org.verwandlung.voj.web.model.Problem;
 import org.verwandlung.voj.web.model.Submission;
 import org.verwandlung.voj.web.model.User;
@@ -105,9 +108,9 @@ public class SubmissionService {
       numberOfSubmissions.put(sdf.format(targetDate), (long) 0);
     }
 
-    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd 00:00:00");
-    String startTimeString = sdf.format(startTime);
-    String endTimeString = sdf.format(endTime);
+    String startTimeString = new SimpleDateFormat("yyyy-MM-dd 00:00:00").format(startTime);
+    // Keep the upper bound at the actual instant so today's (partial-day) submissions are counted.
+    String endTimeString = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(endTime);
     List<Map<String, Object>> submissions =
         submissionMapper.getNumberOfSubmissionsGroupByDay(
             startTimeString, endTimeString, uid, isAcceptedOnly);
@@ -130,10 +133,11 @@ public class SubmissionService {
    * @return an ordered map of judge-result slug to submission count, highest count first
    */
   public Map<String, Long> getNumberOfSubmissionsGroupByJudgeResult(Date startTime, Date endTime) {
-    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd 00:00:00");
+    String startTimeString = new SimpleDateFormat("yyyy-MM-dd 00:00:00").format(startTime);
+    // Keep the upper bound at the actual instant so today's submissions are part of the mix.
+    String endTimeString = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(endTime);
     List<Map<String, Object>> rows =
-        submissionMapper.getNumberOfSubmissionsGroupByJudgeResult(
-            sdf.format(startTime), sdf.format(endTime));
+        submissionMapper.getNumberOfSubmissionsGroupByJudgeResult(startTimeString, endTimeString);
 
     List<Map.Entry<String, Long>> entries = new ArrayList<>();
     for (Map<String, Object> row : rows) {
@@ -309,6 +313,24 @@ public class SubmissionService {
   }
 
   /**
+   * Gets the number of distinct solved (accepted) problems for every user with at least one accepted
+   * submission, keyed by user identifier. Backs the admin user list's SOLVED and RANK columns; users
+   * absent from the map have solved no problems.
+   *
+   * @return a map from user identifier to the number of distinct solved problems
+   */
+  public Map<Long, Long> getSolvedProblemCountForAllUsers() {
+    List<Map<String, Object>> rows = submissionMapper.getSolvedProblemCountForAllUsers();
+    Map<Long, Long> solvedCounts = new HashMap<>(rows.size() * 4 / 3 + 1);
+    for (Map<String, Object> row : rows) {
+      long uid = ((Number) row.get("uid")).longValue();
+      long solved = ((Number) row.get("solved")).longValue();
+      solvedCounts.put(uid, solved);
+    }
+    return solvedCounts;
+  }
+
+  /**
    * Creates a submission and adds the judging task to the message queue.
    *
    * @param user - the logged-in user object
@@ -352,12 +374,14 @@ public class SubmissionService {
     result.put("isProblemExists", submission.getProblem() != null);
     result.put("isLanguageExists", submission.getLanguage() != null);
     result.put("isCodeEmpty", code == null || code.length() == 0);
+    result.put("isEmailVerified", isSubmitterEmailVerified(submission.getUser()));
 
     boolean isSuccessful =
         result.get("isUserLogined")
             && result.get("isProblemExists")
             && result.get("isLanguageExists")
-            && !result.get("isCodeEmpty");
+            && !result.get("isCodeEmpty")
+            && result.get("isEmailVerified");
     result.put("isSuccessful", isSuccessful);
     return result;
   }
@@ -420,8 +444,35 @@ public class SubmissionService {
     return true;
   }
 
+  /**
+   * Checks whether the submitter is allowed to submit with respect to email verification. When the
+   * {@code requireEmailVerification} option is enabled, only users whose email address has been
+   * verified may submit; otherwise everyone may submit.
+   *
+   * @param user - the submitting user, or null
+   * @return whether the submitter satisfies the email-verification requirement
+   */
+  private boolean isSubmitterEmailVerified(User user) {
+    Option option = optionMapper.getOption("requireEmailVerification");
+    boolean isRequired = option != null && "1".equals(option.getOptionValue());
+    if (!isRequired) {
+      return true;
+    }
+    if (user == null) {
+      return false;
+    }
+    User freshUser = userMapper.getUserUsingUid(user.getUid());
+    return freshUser != null && freshUser.isEmailVerified();
+  }
+
   /** The autowired SubmissionMapper object. */
   @Autowired private SubmissionMapper submissionMapper;
+
+  /** The autowired OptionMapper object. Used to resolve the email-verification requirement. */
+  @Autowired private OptionMapper optionMapper;
+
+  /** The autowired UserMapper object. Used to read a submitter's current verification status. */
+  @Autowired private UserMapper userMapper;
 
   /** The autowired ProblemMapper object. */
   @Autowired private ProblemMapper problemMapper;

@@ -55,7 +55,8 @@ public class DefaultController {
         discussionService.getDiscussionThreadsOfTopic(
             null, 0, NUMBER_OF_DISCUSSION_THREADS_PER_REQUEST);
     List<BulletinBoardMessage> bulletinBoardMessages =
-        bulletinBoardService.getBulletinBoardMessages(0, NUMBER_OF_BULLETIN_MESSAGES_PER_REQUEST);
+        bulletinBoardService.getPublishedBulletinBoardMessages(
+            0, NUMBER_OF_BULLETIN_MESSAGES_PER_REQUEST);
 
     ModelAndView view = new ModelAndView("pages/index");
     view.addObject("currentTime", new Date());
@@ -98,6 +99,19 @@ public class DefaultController {
   public ModelAndView privacyView(HttpServletRequest request, HttpServletResponse response) {
     ModelAndView view = new ModelAndView("pages/privacy");
     return view;
+  }
+
+  /**
+   * Displays the maintenance page. Rendered for non-administrators while the site is in maintenance
+   * mode (see {@code MaintenanceModeInterceptor}).
+   *
+   * @param request - the HttpRequest object
+   * @param response - the HttpResponse object
+   * @return a ModelAndView object containing the content of the maintenance page
+   */
+  @RequestMapping(value = "/maintenance", method = RequestMethod.GET)
+  public ModelAndView maintenanceView(HttpServletRequest request, HttpServletResponse response) {
+    return new ModelAndView("pages/errors/maintenance");
   }
 
   /**

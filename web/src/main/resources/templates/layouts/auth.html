@@ -13,6 +13,8 @@
 <head>
     <meta charset="UTF-8" />
     <script>(function(){try{var t=localStorage.getItem('voj-theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+    <!-- Analytics (rendered only when configured) — async, placed high in <head> per Google's guidance. -->
+    <th:block th:if="${googleAnalyticsCode != null and googleAnalyticsCode != ''}" th:utext="${googleAnalyticsCode}"></th:block>
     <title th:text="${websiteName}">Verwandlung Online Judge</title>
     <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -48,6 +50,5 @@
     <script type="text/javascript" th:src="|${cdnUrl}/js/theme.js?v=${version}|"></script>
     <script type="text/javascript" th:src="|${cdnUrl}/js/site.js?v=${version}|"></script>
     <th:block layout:fragment="scripts"></th:block>
-    <th:block th:if="${googleAnalyticsCode != null and googleAnalyticsCode != ''}" th:utext="${googleAnalyticsCode}"></th:block>
 </body>
 </html>

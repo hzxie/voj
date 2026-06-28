@@ -56,6 +56,12 @@
                         </div>
                     </div>
                 </div>
+                <div class="vw-pcard" th:if="${contactEmail != null and contactEmail != ''}">
+                    <div class="vw-eyebrow">// CONTACT</div>
+                    <div class="vw-oss">
+                        <div class="vw-kvrow"><span class="k">Email</span><span class="v"><a th:href="|mailto:${contactEmail}|" th:text="${contactEmail}">admin@example.com</a></span></div>
+                    </div>
+                </div>
                 <div class="vw-pcard">
                     <div class="vw-eyebrow">// OPEN SOURCE</div>
                     <div class="vw-oss">

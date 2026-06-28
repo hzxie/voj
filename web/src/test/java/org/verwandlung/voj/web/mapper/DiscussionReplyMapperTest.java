@@ -45,7 +45,7 @@ public class DiscussionReplyMapperTest {
   @Test
   public void testGetDiscussionRepliesOfThread2WithOffsetFrom0WithLimit2() {
     List<DiscussionReply> discussionReplies =
-        discussionReplyMapper.getDiscussionRepliesUsingThreadId(2, 0, 2);
+        discussionReplyMapper.getDiscussionRepliesUsingThreadId(2, 0, 2, false);
     Assertions.assertEquals(2, discussionReplies.size());
 
     DiscussionReply firstDiscussionReply = discussionReplies.get(0);
@@ -63,7 +63,7 @@ public class DiscussionReplyMapperTest {
   @Test
   public void testGetDiscussionRepliesOfThread2WithOffsetFrom1WithLimit1() {
     List<DiscussionReply> discussionReplies =
-        discussionReplyMapper.getDiscussionRepliesUsingThreadId(2, 1, 1);
+        discussionReplyMapper.getDiscussionRepliesUsingThreadId(2, 1, 1, false);
     Assertions.assertEquals(1, discussionReplies.size());
 
     DiscussionReply firstDiscussionReply = discussionReplies.get(0);
@@ -108,7 +108,7 @@ public class DiscussionReplyMapperTest {
   @Test
   public void testUpdateDiscussionReplyNormally() {
     List<DiscussionReply> discussionReplies =
-        discussionReplyMapper.getDiscussionRepliesUsingThreadId(1, 0, 1);
+        discussionReplyMapper.getDiscussionRepliesUsingThreadId(1, 0, 1, false);
     Assertions.assertEquals(1, discussionReplies.size());
 
     DiscussionReply discussionReply = discussionReplies.get(0);

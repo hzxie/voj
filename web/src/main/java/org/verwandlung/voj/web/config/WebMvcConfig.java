@@ -32,6 +32,7 @@ import org.springframework.web.servlet.i18n.LocaleChangeInterceptor;
 import org.springframework.web.servlet.i18n.SessionLocaleResolver;
 
 import org.verwandlung.voj.web.interceptor.CommonModelInterceptor;
+import org.verwandlung.voj.web.interceptor.MaintenanceModeInterceptor;
 
 /**
  * The Spring MVC configuration. Replaces the internationalization and localization configuration
@@ -49,13 +50,18 @@ public class WebMvcConfig implements WebMvcConfigurer {
   /** The interceptor that injects the shared page model attributes. */
   @Autowired private CommonModelInterceptor commonModelInterceptor;
 
+  /** The interceptor that takes the site offline for non-administrators during maintenance. */
+  @Autowired private MaintenanceModeInterceptor maintenanceModeInterceptor;
+
   /* (non-Javadoc)
-   * Registers the language switching interceptor (switches the display language via ?language=xx_XX)
-   * and the interceptor that injects the shared page model attributes (formerly ViewAspect).
+   * Registers the language switching interceptor (switches the display language via ?language=xx_XX),
+   * the maintenance-mode gate, and the interceptor that injects the shared page model attributes
+   * (formerly ViewAspect).
    */
   @Override
   public void addInterceptors(InterceptorRegistry registry) {
     registry.addInterceptor(localeChangeInterceptor());
+    registry.addInterceptor(maintenanceModeInterceptor);
     registry.addInterceptor(commonModelInterceptor);
   }
 

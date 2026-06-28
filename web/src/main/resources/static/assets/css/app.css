@@ -180,6 +180,9 @@ input, textarea, select, button { font-family:inherit; }
 .vw-footlinks a { color:var(--text2); }
 .vw-footlinks a:hover { color:var(--accent); }
 .vw-footlinks img { vertical-align:middle; }
+.vw-footer-icp { white-space:nowrap; }
+.vw-footer-icp a { color:var(--text2); }
+.vw-footer-icp a:hover { color:var(--accent); }
 
 /* Language dropdown. */
 .vw-lang { position:relative; }
@@ -386,6 +389,15 @@ a.vw-table-row:hover { background:var(--bg3); }
 /* Public problem-set page: filter bar, table grid, difficulty colours. */
 .vw-filters { display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
 .vw-filters-search { flex:1; min-width:220px; }
+.vw-filters-difficulty { flex-shrink:0; }
+.vw-filter-select {
+  flex-shrink:0; background:var(--bg3); border:1px solid var(--line); border-radius:9px;
+  color:var(--text2); font-family:var(--mono); font-size:13px; padding:12px 34px 12px 14px;
+  outline:none; cursor:pointer; -webkit-appearance:none; -moz-appearance:none; appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%238ba093' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 14px center;
+}
+.vw-filter-select:hover, .vw-filter-select:focus { border-color:var(--accent); }
 .vw-filters-count { color:var(--text3); font-size:11.5px; white-space:nowrap; flex-shrink:0; }
 @media (max-width:560px) { .vw-filters { flex-direction:column; align-items:stretch; } }
 .vw-ptable { --cols:48px 64px minmax(0,1fr) 96px minmax(0,1fr) 88px; }
@@ -1244,6 +1256,7 @@ ul.inline > li, .inline > li { display:inline-block; margin-right:14px; }
 .vw-post-vote.active { color:var(--accent); }
 .vw-post-edit, .vw-post-delete, .vw-post-report { font-size:11px; color:var(--text3); }
 .vw-post-edit:hover, .vw-post-delete:hover, .vw-post-report:hover { color:var(--accent); }
+.vw-post-reported { font-size:11px; color:var(--text3); opacity:.6; pointer-events:none; cursor:default; }
 .vw-post-body { font-size:14px; line-height:1.75; color:var(--text); }
 .vw-post-body p { margin:0 0 12px; }
 .vw-post-body pre { margin:8px 0 0; background:var(--bg3); border:1px solid var(--line); border-radius:9px; padding:14px 16px; font-size:12.5px; line-height:1.7; color:var(--text2); overflow:auto; white-space:pre; }
@@ -1251,9 +1264,7 @@ ul.inline > li, .inline > li { display:inline-block; margin-right:14px; }
 .vw-replybox-foot { display:flex; justify-content:flex-end; gap:10px; margin-top:12px; }
 .vw-thread-side { display:flex; flex-direction:column; gap:16px; min-width:0; }
 @media (min-width:881px) { .vw-thread-side { position:sticky; top:90px; } }
-.vw-thread-status { padding:14px 18px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:8px; font-size:12px; font-weight:600; color:var(--head); }
-.vw-thread-status-dot { width:7px; height:7px; border-radius:50%; background:var(--accent); box-shadow:0 0 8px var(--accent); flex-shrink:0; }
-.vw-thread-meta-list { padding:6px 18px 14px; }
+.vw-thread-meta-list { padding:12px 18px 14px; }
 .vw-thread-meta-list > div { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 0; border-bottom:1px solid var(--line2); font-size:12px; }
 .vw-thread-meta-list > div:last-child { border-bottom:0; }
 .vw-thread-meta-list .k { color:var(--text3); }
@@ -1429,3 +1440,46 @@ a.vw-recent-row:hover { background:var(--bg3); }
   margin-top:12px; font-size:10.5px; color:var(--text3);
 }
 .vw-heatmap-legend .vw-hm-cell { border-radius:3px; }
+
+/* ===== Maintenance page (standalone; mirrors voj-design/Maintenance.dc.html) ===== */
+@keyframes vwMaintBlink { 0%,100%{opacity:1;} 50%{opacity:0;} }
+@keyframes vwMaintPulse { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:.45;transform:scale(.82);} }
+@keyframes vwMaintSpin { to { transform:rotate(360deg); } }
+@keyframes vwMaintBar { 0%{left:-40%;} 100%{left:100%;} }
+.vw-maint-page { min-height:100vh; display:flex; flex-direction:column; background:var(--bg); color:var(--text); font-family:var(--mono); }
+.vw-maint-header { height:66px; display:flex; align-items:center; gap:18px; padding:0 clamp(20px,5vw,72px); border-bottom:1px solid var(--line); flex-shrink:0; }
+.vw-maint-logo { font-size:19px; font-weight:600; letter-spacing:-.3px; display:flex; align-items:center; gap:2px; text-decoration:none; }
+.vw-maint-logo .b { color:var(--accent); }
+.vw-maint-logo .n { color:var(--head); }
+.vw-maint-logo .c { color:var(--accent); animation:vwMaintBlink 1.1s steps(1) infinite; }
+.vw-maint-offline { font-size:11px; letter-spacing:1px; color:var(--warn); border:1px solid var(--line); border-radius:30px; padding:4px 11px; display:flex; align-items:center; gap:7px; }
+.vw-maint-offline .dot { width:7px; height:7px; border-radius:50%; background:var(--warn); animation:vwMaintPulse 1.4s ease-in-out infinite; }
+.vw-maint-spacer { flex:1; }
+.vw-maint-main { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:56px clamp(20px,5vw,72px); background:radial-gradient(120% 90% at 50% 0%,var(--glow),transparent 60%); }
+.vw-maint-gear { position:relative; width:84px; height:84px; margin-bottom:26px; display:flex; align-items:center; justify-content:center; }
+.vw-maint-gear .ring { position:absolute; inset:0; border:1px dashed var(--line); border-radius:50%; animation:vwMaintSpin 9s linear infinite; }
+.vw-maint-gear svg { animation:vwMaintSpin 6s linear infinite; stroke:var(--accent); }
+.vw-maint-eyebrow { font-size:12px; letter-spacing:2px; color:var(--warn); margin-bottom:16px; }
+.vw-maint-title { font-family:var(--display); font-weight:700; font-size:clamp(34px,5vw,58px); line-height:1.02; letter-spacing:-1.5px; color:var(--head); margin:0 0 16px; max-width:760px; }
+.vw-maint-desc { font-size:14px; line-height:1.7; color:var(--text2); max-width:480px; margin:0 0 36px; }
+.vw-maint-term { width:100%; max-width:580px; background:var(--bg2); border:1px solid var(--line); border-radius:13px; overflow:hidden; box-shadow:0 0 0 1px var(--accent-soft),0 26px 60px rgba(0,0,0,.28); text-align:left; }
+.vw-maint-term-bar { display:flex; align-items:center; gap:9px; padding:11px 16px; border-bottom:1px solid var(--line2); background:var(--bg3); }
+.vw-maint-term-bar .d { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+.vw-maint-term-bar .r { background:#e0605a; }
+.vw-maint-term-bar .y { background:#e0a73a; }
+.vw-maint-term-bar .g { background:var(--accent); }
+.vw-maint-term-bar .name { font-size:11.5px; color:var(--text3); margin-left:6px; }
+.vw-maint-term-bar .status { font-size:11px; color:var(--warn); margin-left:auto; }
+.vw-maint-term-body { padding:16px 18px; font-size:12.5px; line-height:1.85; }
+.vw-maint-term-body .line { white-space:pre-wrap; }
+.vw-maint-term-body .ok { color:var(--accent); }
+.vw-maint-term-body .mut { color:var(--text3); }
+.vw-maint-term-body .t2 { color:var(--text2); }
+.vw-maint-progress { margin:12px 0 4px; position:relative; height:8px; border-radius:6px; background:var(--bg3); border:1px solid var(--line2); overflow:hidden; }
+.vw-maint-progress .fill { position:absolute; top:0; bottom:0; width:40%; border-radius:6px; background:linear-gradient(90deg,transparent,var(--accent),transparent); animation:vwMaintBar 1.6s linear infinite; }
+.vw-maint-cmd { white-space:pre; margin-top:8px; }
+.vw-maint-cmd .p { color:var(--accent); }
+.vw-maint-cmd .cmd { color:var(--text3); }
+.vw-maint-cmd .cur { color:var(--accent); animation:vwMaintBlink 1.1s steps(1) infinite; }
+.vw-maint-btns { display:flex; gap:12px; margin-top:30px; flex-wrap:wrap; justify-content:center; }
+@media (max-width:620px){ .vw-maint-title { font-size:30px; } .vw-maint-btns { flex-direction:column; } }

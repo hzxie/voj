@@ -258,6 +258,8 @@
                             errorMessage = [[#{voj.problems.problem.language-not-exists}]];
                         } else if ( result['isCodeEmpty'] ) {
                             errorMessage = [[#{voj.problems.problem.empty-code}]];
+                        } else if ( result['isEmailVerified'] === false ) {
+                            errorMessage = [[#{voj.problems.problem.email-not-verified}]];
                         }
                         $('#submission-error').html(errorMessage);
                     }

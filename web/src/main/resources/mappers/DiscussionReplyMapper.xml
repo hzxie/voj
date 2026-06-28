@@ -9,6 +9,7 @@
 		<result property="discussionThreadId" column="discussion_thread_id" />
 		<result property="discussionReplyCreateTime" column="discussion_reply_time" />
 		<result property="discussionReplyContent" column="discussion_reply_content" />
+		<result property="visible" column="discussion_reply_visible" />
 		<association property="discussionReplyCreator"
 			javaType="org.verwandlung.voj.web.model.User" 
 			column="discussion_reply_uid"
@@ -34,6 +35,9 @@
 			GROUP BY discussion_reply_id
 		) v ON v.discussion_reply_id = r.discussion_reply_id
 		WHERE r.discussion_thread_id = #{discussionThreadId}
+		<if test="visibleOnly">
+			AND r.discussion_reply_visible = 1
+		</if>
 		ORDER BY
 			(r.discussion_reply_id = (
 				SELECT MIN(discussion_reply_id)
@@ -58,9 +62,15 @@
 		SET discussion_thread_id = #{discussionThreadId}, discussion_reply_uid = #{discussionReplyCreator.uid}, discussion_reply_time = #{discussionReplyCreateTime}, discussion_reply_content = #{discussionReplyContent}
 		WHERE discussion_reply_id = #{discussionReplyId}
 	</update>
+	<update id="updateReplyVisibility"
+		parameterType="map">
+		UPDATE voj_discussion_replies
+		SET discussion_reply_visible = #{visible}
+		WHERE discussion_reply_id = #{discussionReplyId}
+	</update>
 	<delete id="deleteDiscussionReplyUsingReplyId"
 		parameterType="long">
-		DELETE FROM voj_discussion_replies 
+		DELETE FROM voj_discussion_replies
 		WHERE discussion_reply_id = #{discussionReplyId}
 	</delete>
 </mapper>

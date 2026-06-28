@@ -20,6 +20,9 @@
     <meta charset="UTF-8" />
     <!--/* Apply the persisted theme before first paint to avoid a flash. */-->
     <script>(function(){try{var t=localStorage.getItem('voj-theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+    <!-- Analytics (rendered only when configured). The gtag.js snippet is async, so placing it
+         high in <head> — Google's recommendation — captures the pageview early without blocking. -->
+    <th:block th:if="${googleAnalyticsCode != null and googleAnalyticsCode != ''}" th:utext="${googleAnalyticsCode}"></th:block>
     <title th:text="${websiteName}">Verwandlung Online Judge</title>
     <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -57,7 +60,5 @@
     <script type="text/javascript" th:src="|${cdnUrl}/js/markdown.js?v=${version}|"></script>
     <!-- Page-specific bottom-of-body scripts. -->
     <th:block layout:fragment="scripts"></th:block>
-    <!-- Google Analytics (rendered only when configured). -->
-    <th:block th:if="${googleAnalyticsCode != null and googleAnalyticsCode != ''}" th:utext="${googleAnalyticsCode}"></th:block>
 </body>
 </html>

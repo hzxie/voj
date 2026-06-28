@@ -199,7 +199,11 @@ public class LanguageService {
     return !previousLanguage.getLanguageSlug().equals(language.getLanguageSlug())
         || !previousLanguage.getLanguageName().equals(language.getLanguageName())
         || !previousLanguage.getCompileCommand().equals(language.getCompileCommand())
-        || !previousLanguage.getRunCommand().equals(language.getRunCommand());
+        || !previousLanguage.getRunCommand().equals(language.getRunCommand())
+        || previousLanguage.isEnabled() != language.isEnabled()
+        || !previousLanguage.getSourceFilename().equals(language.getSourceFilename())
+        || previousLanguage.getTimeMultiplier() != language.getTimeMultiplier()
+        || previousLanguage.getMemoryMultiplier() != language.getMemoryMultiplier();
   }
 
   /**

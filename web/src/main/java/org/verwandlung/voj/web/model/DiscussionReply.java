@@ -221,6 +221,24 @@ public class DiscussionReply implements Serializable {
     this.isVotedDown = isVotedDown;
   }
 
+  /**
+   * Gets whether the discussion reply is visible to ordinary users.
+   *
+   * @return whether the discussion reply is visible
+   */
+  public boolean isVisible() {
+    return visible;
+  }
+
+  /**
+   * Sets whether the discussion reply is visible to ordinary users.
+   *
+   * @param visible - whether the discussion reply is visible
+   */
+  public void setVisible(boolean visible) {
+    this.visible = visible;
+  }
+
   /* (non-Javadoc)
    * @see java.lang.Object#toString()
    */
@@ -264,6 +282,9 @@ public class DiscussionReply implements Serializable {
    * value).
    */
   private boolean isVotedDown;
+
+  /** Whether the discussion reply is visible to ordinary users. */
+  private boolean visible = true;
 
   /** The unique serialization identifier. */
   private static final long serialVersionUID = 3380540873295113998L;

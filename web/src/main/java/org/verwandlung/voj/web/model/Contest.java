@@ -223,6 +223,124 @@ public class Contest {
     this.problems = problems;
   }
 
+  /**
+   * Gets the publication status of the contest (PUBLISHED / DRAFT / HIDDEN).
+   *
+   * @return the publication status of the contest
+   */
+  public String getStatus() {
+    return status;
+  }
+
+  /**
+   * Sets the publication status of the contest (PUBLISHED / DRAFT / HIDDEN).
+   *
+   * @param status - the publication status of the contest
+   */
+  public void setStatus(String status) {
+    this.status = status;
+  }
+
+  /**
+   * Gets whether the contest is publicly visible (i.e. its status is PUBLISHED). Derived from
+   * {@link #getStatus()}; kept for visibility checks across the codebase.
+   *
+   * @return whether the contest is publicly visible
+   */
+  public boolean isPublic() {
+    return PublicationStatus.isPublic(status);
+  }
+
+  /**
+   * Gets the scoring rule of the contest (ICPC / IOI / Codeforces).
+   *
+   * @return the scoring rule of the contest
+   */
+  public String getScoring() {
+    return scoring;
+  }
+
+  /**
+   * Sets the scoring rule of the contest (ICPC / IOI / Codeforces).
+   *
+   * @param scoring - the scoring rule of the contest
+   */
+  public void setScoring(String scoring) {
+    this.scoring = scoring;
+  }
+
+  /**
+   * Gets the penalty (in minutes) applied for each wrong submission.
+   *
+   * @return the penalty in minutes per wrong submission
+   */
+  public int getPenalty() {
+    return penalty;
+  }
+
+  /**
+   * Sets the penalty (in minutes) applied for each wrong submission.
+   *
+   * @param penalty - the penalty in minutes per wrong submission
+   */
+  public void setPenalty(int penalty) {
+    this.penalty = penalty;
+  }
+
+  /**
+   * Gets the scoreboard freeze duration (in minutes) before the contest ends.
+   *
+   * @return the freeze duration in minutes
+   */
+  public int getFreeze() {
+    return freeze;
+  }
+
+  /**
+   * Sets the scoreboard freeze duration (in minutes) before the contest ends.
+   *
+   * @param freeze - the freeze duration in minutes
+   */
+  public void setFreeze(int freeze) {
+    this.freeze = freeze;
+  }
+
+  /**
+   * Gets whether the contest is rated.
+   *
+   * @return whether the contest is rated
+   */
+  public boolean isRated() {
+    return isRated;
+  }
+
+  /**
+   * Sets whether the contest is rated.
+   *
+   * @param isRated - whether the contest is rated
+   */
+  public void setRated(boolean isRated) {
+    this.isRated = isRated;
+  }
+
+  /**
+   * Gets whether the contest is open for registration.
+   *
+   * @return whether the contest is open for registration
+   */
+  public boolean isOpenRegistration() {
+    return openRegistration;
+  }
+
+  /**
+   * Sets whether the contest is open for registration.
+   *
+   * @param openRegistration - whether the contest is open for registration
+   */
+  public void setOpenRegistration(boolean openRegistration) {
+    this.openRegistration = openRegistration;
+  }
+
   /** The unique identifier of the contest. */
   private long contestId;
 
@@ -243,6 +361,24 @@ public class Contest {
 
   /** The problems included in the contest (a JSON-formatted string). */
   private String problems;
+
+  /** The publication status of the contest (PUBLISHED / DRAFT / HIDDEN). */
+  private String status = PublicationStatus.PUBLISHED;
+
+  /** The scoring rule of the contest. The available rules are: ICPC, IOI and Codeforces. */
+  private String scoring = "ICPC";
+
+  /** The penalty (in minutes) applied for each wrong submission. */
+  private int penalty = 20;
+
+  /** The scoreboard freeze duration (in minutes) before the contest ends. */
+  private int freeze = 0;
+
+  /** Whether the contest is rated. */
+  private boolean isRated = true;
+
+  /** Whether the contest is open for registration. */
+  private boolean openRegistration = true;
 
   /** The contest status, representing not started, in progress, and finished respectively. */
   public enum CONTEST_STATUS {

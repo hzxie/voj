@@ -30,6 +30,7 @@ import org.verwandlung.voj.web.exception.ResourceNotFoundException;
 import org.verwandlung.voj.web.model.*;
 import org.verwandlung.voj.web.service.ContestService;
 import org.verwandlung.voj.web.service.LanguageService;
+import org.verwandlung.voj.web.service.OptionService;
 import org.verwandlung.voj.web.service.ProblemService;
 import org.verwandlung.voj.web.service.SubmissionService;
 import org.verwandlung.voj.web.util.HttpRequestParser;
@@ -63,6 +64,8 @@ public class ContestsController {
       @RequestParam(value = "keyword", required = false) String keyword,
       HttpServletRequest request,
       HttpServletResponse response) {
+    final int NUMBER_OF_CONTESTS_PER_PAGE =
+        optionService.getIntOption("contestsPerPage", DEFAULT_NUMBER_OF_CONTESTS_PER_PAGE);
     List<Contest> contests = contestService.getContests(keyword, 0, NUMBER_OF_CONTESTS_PER_PAGE);
     Date currentTime = new Date();
     List<Contest> liveContests = new ArrayList<>();
@@ -137,6 +140,8 @@ public class ContestsController {
       HttpServletRequest request) {
     Map<String, Object> result = new HashMap<>(3, 1);
 
+    final int NUMBER_OF_CONTESTS_PER_PAGE =
+        optionService.getIntOption("contestsPerPage", DEFAULT_NUMBER_OF_CONTESTS_PER_PAGE);
     List<Contest> contests =
         contestService.getContests(keyword, startIndex, NUMBER_OF_CONTESTS_PER_PAGE);
     result.put("isSuccessful", contests != null && !contests.isEmpty());
@@ -323,11 +328,14 @@ public class ContestsController {
     return view;
   }
 
-  /** The number of contests to load per query. */
-  private static final int NUMBER_OF_CONTESTS_PER_PAGE = 10;
+  /** The default number of contests to load per query when the admin option is unset. */
+  private static final int DEFAULT_NUMBER_OF_CONTESTS_PER_PAGE = 50;
 
   /** The autowired ContestService object. */
   @Autowired private ContestService contestService;
+
+  /** The autowired OptionService object. Used for reading the configurable list-display options. */
+  @Autowired private OptionService optionService;
 
   /** The autowired ProblemService object. Used for querying problem information. */
   @Autowired private ProblemService problemService;

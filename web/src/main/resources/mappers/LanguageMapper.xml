@@ -10,6 +10,10 @@
 		<result property="languageName" column="language_name" />
 		<result property="compileCommand" column="language_compile_command" />
 		<result property="runCommand" column="language_run_command" />
+		<result property="enabled" column="language_enabled" />
+		<result property="sourceFilename" column="language_source_filename" />
+		<result property="timeMultiplier" column="language_time_multiplier" />
+		<result property="memoryMultiplier" column="language_memory_multiplier" />
 	</resultMap>
 
 	<!-- Methods -->
@@ -37,13 +41,13 @@
 		keyProperty="languageId" 
 		keyColumn="language_id"
 		useGeneratedKeys="true">
-		INSERT INTO voj_languages (language_id, language_slug, language_name, language_compile_command, language_run_command) 
-		VALUES (#{languageId}, #{languageSlug}, #{languageName}, #{compileCommand}, #{runCommand})
+		INSERT INTO voj_languages (language_id, language_slug, language_name, language_compile_command, language_run_command, language_enabled, language_source_filename, language_time_multiplier, language_memory_multiplier)
+		VALUES (#{languageId}, #{languageSlug}, #{languageName}, #{compileCommand}, #{runCommand}, #{enabled}, #{sourceFilename}, #{timeMultiplier}, #{memoryMultiplier})
 	</insert>
 	<update id="updateLanguage"
 		parameterType="org.verwandlung.voj.web.model.Language">
 		UPDATE voj_languages 
-		SET language_slug = #{languageSlug}, language_name = #{languageName}, language_compile_command = #{compileCommand}, language_run_command = #{runCommand} 
+		SET language_slug = #{languageSlug}, language_name = #{languageName}, language_compile_command = #{compileCommand}, language_run_command = #{runCommand}, language_enabled = #{enabled}, language_source_filename = #{sourceFilename}, language_time_multiplier = #{timeMultiplier}, language_memory_multiplier = #{memoryMultiplier}
 		WHERE language_id = #{languageId}
 	</update>
 	<delete id="deleteLanguage"

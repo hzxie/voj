@@ -33,14 +33,14 @@
 
         <!-- List -->
         <div class="adm-table" data-adm="table">
-            <div class="adm-table-inner" style="min-width:auto;--cols:64px 160px minmax(0,1fr) 80px;">
+            <div class="adm-table-inner cols-topics">
                 <div class="adm-table-head">
                     <span>#</span>
                     <span th:text="#{voj.administration.discussion-topics.slug}">SLUG</span>
                     <span th:text="#{voj.administration.discussion-topics.name}">NAME</span>
                     <span></span>
                 </div>
-                <div class="adm-table-row" data-adm="row" th:each="topic : ${discussionTopics}" th:attr="data-topic=${topic.discussionTopicId}" style="cursor:default;">
+                <div class="adm-table-row adm-cursor-default" data-adm="row" th:each="topic : ${discussionTopics}" th:attr="data-topic=${topic.discussionTopicId}">
                     <span class="adm-cell mono muted" th:text="'#' + ${topic.discussionTopicId}">#1</span>
                     <span class="adm-cell mono" th:text="${topic.discussionTopicSlug}">slug</span>
                     <span class="adm-cell head" th:text="${topic.discussionTopicName}">name</span>

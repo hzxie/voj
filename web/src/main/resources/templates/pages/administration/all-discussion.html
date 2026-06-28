@@ -20,32 +20,34 @@
         </div>
 
         <!-- Bulk bar -->
-        <div class="adm-bulk" data-adm="bulk" style="display:none;">
+        <div class="adm-bulk" data-adm="bulk">
             <span class="sel"><span data-adm="bulk-count">0</span> <span th:text="#{voj.administration.all-discussion.selected}">selected</span></span>
-            <div style="flex:1;"></div>
+            <div class="adm-flex1"></div>
             <span class="adm-bulk-act c-err" data-adm="bulk-delete">&#10005; <span th:text="#{voj.administration.all-discussion.delete}">delete</span></span>
             <span class="adm-bulk-clear" data-adm="bulk-clear" th:text="#{voj.administration.all-discussion.clear}">clear</span>
         </div>
 
         <!-- Table -->
         <div class="adm-table" data-adm="table">
-            <div class="adm-table-scroll"><div class="adm-table-inner" style="--cols:34px 64px minmax(0,1fr) 130px 120px 70px 40px;">
+            <div class="adm-table-scroll"><div class="adm-table-inner cols-discussion">
                 <div class="adm-table-head">
                     <span class="adm-check" data-adm="check-all"></span>
-                    <span>#</span>
                     <span th:text="#{voj.administration.all-discussion.thread}">THREAD</span>
                     <span th:text="#{voj.administration.all-discussion.author}">AUTHOR</span>
-                    <span th:text="#{voj.administration.all-discussion.topic}">TOPIC</span>
+                    <span th:text="#{voj.administration.all-discussion.category}">CATEGORY</span>
                     <span th:text="#{voj.administration.all-discussion.replies}">REPLIES</span>
+                    <span th:text="#{voj.administration.all-discussion.reports}">REPORTS</span>
+                    <span th:text="#{voj.administration.all-discussion.status}">STATUS</span>
                     <span></span>
                 </div>
                 <a class="adm-table-row" data-adm="row" th:each="thread : ${threads}" th:href="@{/administration/edit-thread/{id}(id=${thread.discussionThreadId})}">
                     <span class="adm-check" data-adm="row-check" th:attr="data-id=${thread.discussionThreadId}"></span>
-                    <span class="adm-cell mono muted" th:text="'#' + ${thread.discussionThreadId}">#1</span>
                     <span class="adm-cell head" th:text="${thread.discussionThreadTitle}">Thread</span>
                     <span class="adm-cell muted" th:text="${thread.discussionThreadCreator != null ? '@' + thread.discussionThreadCreator.username : '—'}">@author</span>
-                    <span><span class="adm-pill c-info" th:if="${thread.discussionTopic != null}" th:text="${thread.discussionTopic.discussionTopicName}">topic</span></span>
+                    <span><span class="adm-pill c-info" th:if="${thread.discussionTopic != null}" th:text="${thread.discussionTopic.discussionTopicName}">category</span></span>
                     <span class="adm-cell txt" th:text="${thread.numberOfReplies}">0</span>
+                    <span class="adm-cell" th:classappend="${thread.numberOfReports > 2 ? 'c-err strong' : (thread.numberOfReports > 0 ? 'c-warn strong' : 'muted')}" th:text="${thread.numberOfReports}">0</span>
+                    <span><span class="adm-pill click" data-adm="status-toggle" th:classappend="${thread.visible ? 'c-accent' : 'c-err'}" th:attr="data-id=${thread.discussionThreadId},data-visible=${thread.visible}" th:text="${thread.visible} ? #{voj.administration.all-discussion.visible} : #{voj.administration.all-discussion.hidden}">Visible</span></span>
                     <span class="adm-menu">&#183;&#183;&#183;</span>
                 </a>
                 <div class="adm-table-empty" th:if="${#lists.isEmpty(threads)}" th:text="#{voj.administration.all-discussion.no-records}">// no threads</div>
@@ -69,6 +71,28 @@
     <th:block layout:fragment="scripts">
     <script type="text/javascript" th:inline="javascript">
         document.addEventListener('DOMContentLoaded', function () {
+            // Status pills toggle thread visibility without following the row link.
+            var visibleLabel = [[#{voj.administration.all-discussion.visible}]];
+            var hiddenLabel = [[#{voj.administration.all-discussion.hidden}]];
+            Array.prototype.forEach.call(document.querySelectorAll('[data-adm="status-toggle"]'), function (pill) {
+                pill.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    var next = pill.getAttribute('data-visible') !== 'true';
+                    $.ajax({
+                        type: 'POST', url: [[@{/administration/toggleThreadVisibility.action}]],
+                        data: { 'threadId': pill.getAttribute('data-id'), 'visible': next }, dataType: 'JSON',
+                        success: function (result) {
+                            if (!result['isSuccessful']) return;
+                            pill.setAttribute('data-visible', next);
+                            pill.classList.toggle('c-accent', next);
+                            pill.classList.toggle('c-err', !next);
+                            pill.textContent = next ? visibleLabel : hiddenLabel;
+                        }
+                    });
+                });
+            });
+
             var del = document.querySelector('[data-adm="bulk-delete"]');
             if (!del) return;
             del.addEventListener('click', function () {

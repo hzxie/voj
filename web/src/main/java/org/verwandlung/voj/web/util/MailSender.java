@@ -33,6 +33,9 @@ import org.springframework.stereotype.Component;
 import org.thymeleaf.ITemplateEngine;
 import org.thymeleaf.context.Context;
 
+import org.verwandlung.voj.web.mapper.OptionMapper;
+import org.verwandlung.voj.web.model.Option;
+
 /**
  * The email sending service.
  *
@@ -83,6 +86,10 @@ public class MailSender {
             MimeMessageHelper message = new MimeMessageHelper(mimeMessage);
             message.setTo(recipient);
             message.setFrom(senderMail, senderName);
+            String contactEmail = getContactEmail();
+            if (!contactEmail.isEmpty()) {
+              message.setReplyTo(contactEmail);
+            }
             message.setSubject(subject);
             message.setText(body, true);
           }
@@ -100,8 +107,21 @@ public class MailSender {
         .start();
   }
 
+  /**
+   * Gets the configured contact email address, used as the Reply-To of system mail.
+   *
+   * @return the contact email address, or an empty string when none is configured
+   */
+  private String getContactEmail() {
+    Option option = optionMapper.getOption("contactEmail");
+    return option == null || option.getOptionValue() == null ? "" : option.getOptionValue().trim();
+  }
+
   /** The shared Thymeleaf engine, used to render the HTML mail bodies. */
   private final ITemplateEngine templateEngine;
+
+  /** The autowired OptionMapper object. Used to resolve the contact email Reply-To address. */
+  @Autowired private OptionMapper optionMapper;
 
   /** The autowired JavaMailSender object. Used to send emails. */
   private final JavaMailSender mailSender;

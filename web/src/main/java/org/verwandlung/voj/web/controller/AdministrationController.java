@@ -16,15 +16,23 @@
  */
 package org.verwandlung.voj.web.controller;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -42,18 +50,20 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.ModelAndView;
 
 import org.verwandlung.voj.web.exception.ResourceNotFoundException;
 import org.verwandlung.voj.web.messenger.ApplicationEventListener;
 import org.verwandlung.voj.web.model.BulletinBoardMessage;
-import org.verwandlung.voj.web.model.Checkpoint;
 import org.verwandlung.voj.web.model.Contest;
+import org.verwandlung.voj.web.model.DiscussionReply;
 import org.verwandlung.voj.web.model.DiscussionThread;
 import org.verwandlung.voj.web.model.Language;
 import org.verwandlung.voj.web.model.Option;
 import org.verwandlung.voj.web.model.Problem;
 import org.verwandlung.voj.web.model.ProblemCategory;
+import org.verwandlung.voj.web.model.ProblemDifficulty;
 import org.verwandlung.voj.web.model.ProblemTag;
 import org.verwandlung.voj.web.model.Submission;
 import org.verwandlung.voj.web.model.User;
@@ -100,10 +110,12 @@ public class AdministrationController {
       section = "contests";
     } else if (uri.contains("submission")) {
       section = "submissions";
-    } else if (uri.contains("discussion")) {
+    } else if (uri.contains("discussion") || uri.contains("thread")) {
       section = "discussion";
     } else if (uri.contains("bulletin")) {
       section = "bulletins";
+    } else if (uri.contains("moderation")) {
+      section = "moderation";
     } else if (uri.contains("user")) {
       section = "users";
     } else if (uri.contains("judger")) {
@@ -121,6 +133,7 @@ public class AdministrationController {
     int reportedReplies = discussionService.getNumberOfReportedReplies();
     if (reportedReplies > 0) {
       model.addAttribute("navDiscussionBadge", reportedReplies);
+      model.addAttribute("navModerationBadge", reportedReplies);
       model.addAttribute("navAlertCount", reportedReplies);
     }
     long onlineJudgers = getOnlineJudgers();
@@ -298,7 +311,8 @@ public class AdministrationController {
    */
   private long getPrivateProblems() {
     long numberOfTotalProblems = getTotalProblems();
-    long numberOfPublicProblems = problemService.getNumberOfProblemsUsingFilters(null, "", true);
+    long numberOfPublicProblems =
+        problemService.getNumberOfProblemsUsingFilters(null, "", "", true);
     return numberOfTotalProblems - numberOfPublicProblems;
   }
 
@@ -398,8 +412,7 @@ public class AdministrationController {
     view.addObject("nodes", nodes);
     view.addObject("onlineJudgers", nodes.size());
     view.addObject("queueDepth", submissionService.getNumberOfPendingSubmissions());
-    double averageCpuLoad = eventListener.getAverageCpuLoad();
-    view.addObject("averageCpuLoad", averageCpuLoad < 0 ? -1 : (int) Math.round(averageCpuLoad));
+    view.addObject("languages", languageService.getAllLanguages());
     return view;
   }
 
@@ -448,7 +461,7 @@ public class AdministrationController {
       @RequestParam(value = "page", required = false, defaultValue = "1") long pageNumber,
       HttpServletRequest request,
       HttpServletResponse response) {
-    final int NUMBER_OF_USERS_PER_PAGE = 100;
+    final int NUMBER_OF_USERS_PER_PAGE = getIntOption("usersPerPage", 100);
     List<UserGroup> userGroups = userService.getUserGroups();
     UserGroup userGroup = userService.getUserGroupUsingSlug(userGroupSlug);
     long totalUsers = userService.getNumberOfUsersUsingUserGroupAndUsername(userGroup, username);
@@ -457,6 +470,18 @@ public class AdministrationController {
         userService.getUserUsingUserGroupAndUsername(
             userGroup, username, offset, NUMBER_OF_USERS_PER_PAGE);
 
+    // SOLVED + RANK: the solved-problem count for every user (single query), with each user's global
+    // rank derived from it using standard competition ranking (ties share the lowest rank).
+    Map<Long, Long> solvedCounts = submissionService.getSolvedProblemCountForAllUsers();
+    Map<Long, Long> userRanks = computeUserRanks(solvedCounts);
+
+    // JOINED: the registration time for the users on this page (single query).
+    List<Long> uids = new ArrayList<>(users.size());
+    for (User user : users) {
+      uids.add(user.getUid());
+    }
+    Map<Long, Date> joinedDates = userService.getRegisterTimes(uids);
+
     ModelAndView view = new ModelAndView("pages/administration/all-users");
     view.addObject("userGroups", userGroups);
     view.addObject("selectedUserGroup", userGroupSlug);
@@ -464,7 +489,37 @@ public class AdministrationController {
     view.addObject("currentPage", pageNumber);
     view.addObject("totalPages", (long) Math.ceil(totalUsers * 1.0 / NUMBER_OF_USERS_PER_PAGE));
     view.addObject("users", users);
+    view.addObject("solvedCounts", solvedCounts);
+    view.addObject("userRanks", userRanks);
+    view.addObject("joinedDates", joinedDates);
     return view;
+  }
+
+  /**
+   * Computes each user's global rank from their solved-problem counts using standard competition
+   * ranking: users are ordered by solved count descending, ties share the lowest rank, and the next
+   * distinct count skips the appropriate number of positions (e.g. 1, 1, 3). Users with no solved
+   * problems are absent from both the input and the result.
+   *
+   * @param solvedCounts - a map from user identifier to solved-problem count
+   * @return a map from user identifier to rank (starting at 1)
+   */
+  private Map<Long, Long> computeUserRanks(Map<Long, Long> solvedCounts) {
+    List<Map.Entry<Long, Long>> entries = new ArrayList<>(solvedCounts.entrySet());
+    entries.sort((a, b) -> Long.compare(b.getValue(), a.getValue()));
+    Map<Long, Long> userRanks = new HashMap<>(entries.size() * 4 / 3 + 1);
+    long rank = 0;
+    long previousSolved = -1;
+    long processed = 0;
+    for (Map.Entry<Long, Long> entry : entries) {
+      processed++;
+      if (entry.getValue() != previousSolved) {
+        rank = processed;
+        previousSolved = entry.getValue();
+      }
+      userRanks.put(entry.getKey(), rank);
+    }
+    return userRanks;
   }
 
   /**
@@ -508,11 +563,31 @@ public class AdministrationController {
 
     List<UserGroup> userGroups = userService.getUserGroups();
     List<Language> languages = languageService.getAllLanguages();
+
+    // STATS: solved-problem count and global rank (shared with the user list), the total
+    // number of submissions, and the most recent submissions for the activity feed.
+    Map<Long, Long> solvedCounts = submissionService.getSolvedProblemCountForAllUsers();
+    Map<Long, Long> userRanks = computeUserRanks(solvedCounts);
+    long solvedCount = solvedCounts.getOrDefault(userId, 0L);
+    Long userRank = userRanks.get(userId);
+    Map<String, Long> submissionStats = submissionService.getSubmissionStatsOfUser(userId);
+    List<Submission> recentSubmissions =
+        submissionService.getLatestSubmissions(0, user.getUsername(), 0, NUMBER_OF_RECENT_SUBMISSIONS);
+    boolean isBanned = "forbidden".equals(user.getUserGroup().getUserGroupSlug());
+    Date joinedDate = userService.getRegisterTimes(Collections.singletonList(userId)).get(userId);
+
     ModelAndView view = new ModelAndView("pages/administration/edit-user");
+    view.addObject("isCreate", false);
     view.addObject("user", user);
     view.addAllObjects(userMeta);
     view.addObject("userGroups", userGroups);
     view.addObject("languages", languages);
+    view.addObject("solvedCount", solvedCount);
+    view.addObject("userRank", userRank);
+    view.addObject("totalSubmissions", submissionStats.get("totalSubmission"));
+    view.addObject("recentSubmissions", recentSubmissions);
+    view.addObject("isBanned", isBanned);
+    view.addObject("joinedDate", joinedDate);
     return view;
   }
 
@@ -524,9 +599,7 @@ public class AdministrationController {
    * @param email - the user's email address
    * @param userGroupSlug - the slug of the user group
    * @param preferLanguageSlug - the slug of the user's preferred language
-   * @param location - the user's location
-   * @param website - the user's personal homepage
-   * @param socialLinks - the user's social network information
+   * @param displayName - the user's display name
    * @param aboutMe - the user's personal bio
    * @param request - the HttpServletRequest object
    * @return a Map<String, Boolean> object containing the profile update result
@@ -538,9 +611,7 @@ public class AdministrationController {
       @RequestParam(value = "email") String email,
       @RequestParam(value = "userGroup") String userGroupSlug,
       @RequestParam(value = "preferLanguage") String preferLanguageSlug,
-      @RequestParam(value = "location") String location,
-      @RequestParam(value = "website") String website,
-      @RequestParam(value = "socialLinks") String socialLinks,
+      @RequestParam(value = "displayName") String displayName,
       @RequestParam(value = "aboutMe") String aboutMe,
       HttpServletRequest request) {
     User user = userService.getUserUsingUid(uid);
@@ -552,7 +623,7 @@ public class AdministrationController {
       Map<String, Boolean> updateProfileResult =
           userService.updateProfile(user, password, userGroupSlug, preferLanguageSlug);
       Map<String, Boolean> updateUserMetaResult =
-          userService.updateProfile(user, email, location, website, socialLinks, aboutMe);
+          userService.updateProfileByAdmin(user, email, displayName, aboutMe);
       boolean isUpdateProfileSuccessful = updateProfileResult.get("isSuccessful");
       boolean isUpdateUserMetaSuccessful = updateUserMetaResult.get("isSuccessful");
 
@@ -575,7 +646,9 @@ public class AdministrationController {
   public ModelAndView newUserView(HttpServletRequest request, HttpServletResponse response) {
     List<UserGroup> userGroups = userService.getUserGroups();
     List<Language> languages = languageService.getAllLanguages();
-    ModelAndView view = new ModelAndView("pages/administration/new-user");
+    // The create flow reuses the user editor template in "create" mode.
+    ModelAndView view = new ModelAndView("pages/administration/edit-user");
+    view.addObject("isCreate", true);
     view.addObject("userGroups", userGroups);
     view.addObject("languages", languages);
     return view;
@@ -589,6 +662,8 @@ public class AdministrationController {
    * @param email - the email address
    * @param userGroupSlug - the slug of the user group
    * @param preferLanguageSlug - the slug of the preferred language
+   * @param displayName - the optional display name
+   * @param aboutMe - the optional personal bio
    * @param request - the HttpServletRequest object
    * @return a Map<String, Boolean> object containing the account creation result
    */
@@ -599,9 +674,12 @@ public class AdministrationController {
       @RequestParam(value = "email") String email,
       @RequestParam(value = "userGroup") String userGroupSlug,
       @RequestParam(value = "preferLanguage") String preferLanguageSlug,
+      @RequestParam(value = "displayName", required = false, defaultValue = "") String displayName,
+      @RequestParam(value = "aboutMe", required = false, defaultValue = "") String aboutMe,
       HttpServletRequest request) {
     Map<String, Boolean> result =
-        userService.createUser(username, password, email, userGroupSlug, preferLanguageSlug);
+        userService.createUser(
+            username, password, email, userGroupSlug, preferLanguageSlug, displayName, aboutMe);
 
     if (result.get("isSuccessful")) {
       String ipAddress = HttpRequestParser.getRemoteAddr(request);
@@ -627,34 +705,52 @@ public class AdministrationController {
           String problemCategorySlug,
       @RequestParam(value = "problemTag", required = false, defaultValue = "")
           String problemTagSlug,
+      @RequestParam(value = "problemDifficulty", required = false, defaultValue = "")
+          String problemDifficultySlug,
       @RequestParam(value = "page", required = false, defaultValue = "1") long pageNumber,
       HttpServletRequest request,
       HttpServletResponse response) {
-    final int NUMBER_OF_PROBLEMS_PER_PAGE = 100;
+    final int NUMBER_OF_PROBLEMS_PER_PAGE = getIntOption("problemsPerPage", 100);
     List<ProblemCategory> problemCategories = problemService.getProblemCategories();
+    List<ProblemDifficulty> problemDifficulties = problemService.getProblemDifficulties();
     long totalProblems =
-        problemService.getNumberOfProblemsUsingFilters(keyword, problemCategorySlug, false);
+        problemService.getNumberOfProblemsUsingFilters(
+            keyword, problemCategorySlug, problemDifficultySlug, false);
 
     long offset = (pageNumber >= 1 ? pageNumber - 1 : 0) * NUMBER_OF_PROBLEMS_PER_PAGE;
-    long problemIdLowerBound = problemService.getFirstIndexOfProblems() + offset;
-    long problemIdUpperBound = problemIdLowerBound + NUMBER_OF_PROBLEMS_PER_PAGE - 1;
 
     List<Problem> problems =
         problemService.getProblemsUsingFilters(
-            problemIdLowerBound,
+            offset,
             keyword,
             problemCategorySlug,
             problemTagSlug,
+            problemDifficultySlug,
             false,
             NUMBER_OF_PROBLEMS_PER_PAGE);
-    Map<Long, List<ProblemCategory>> problemCategoryRelationships =
-        problemService.getProblemCategoriesOfProblems(problemIdLowerBound, problemIdUpperBound);
-    Map<Long, List<ProblemTag>> problemTagRelationships =
-        problemService.getProblemTagsOfProblems(problemIdLowerBound, problemIdUpperBound);
+
+    // The page's problems are no longer a contiguous id range, so bound the
+    // relationship lookups by the min/max id actually shown.
+    Map<Long, List<ProblemCategory>> problemCategoryRelationships = new HashMap<>();
+    Map<Long, List<ProblemTag>> problemTagRelationships = new HashMap<>();
+    if (!problems.isEmpty()) {
+      long minProblemId = problems.get(0).getProblemId();
+      long maxProblemId = problems.get(0).getProblemId();
+      for (Problem problem : problems) {
+        minProblemId = Math.min(minProblemId, problem.getProblemId());
+        maxProblemId = Math.max(maxProblemId, problem.getProblemId());
+      }
+      problemCategoryRelationships =
+          problemService.getProblemCategoriesOfProblems(minProblemId, maxProblemId);
+      problemTagRelationships =
+          problemService.getProblemTagsOfProblems(minProblemId, maxProblemId);
+    }
 
     ModelAndView view = new ModelAndView("pages/administration/all-problems");
     view.addObject("problemCategories", problemCategories);
     view.addObject("selectedProblemCategory", problemCategorySlug);
+    view.addObject("problemDifficulties", problemDifficulties);
+    view.addObject("selectedProblemDifficulty", problemDifficultySlug);
     view.addObject("keyword", keyword);
     view.addObject("currentPage", pageNumber);
     view.addObject(
@@ -724,7 +820,7 @@ public class AdministrationController {
    * @param testCases - the test cases (in JSON format)
    * @param problemCategories - the problem categories (in JSON format)
    * @param problemTags - the problem tags (in JSON format)
-   * @param isPublic - whether the problem is public
+   * @param status - the publication status of the problem (PUBLISHED / DRAFT / HIDDEN)
    * @param isExactlyMatch - whether the checkpoints are matched exactly
    * @param request - the HttpServletRequest object
    * @return a Map<String, Boolean> object containing the problem creation result
@@ -743,7 +839,7 @@ public class AdministrationController {
       @RequestParam(value = "testCases") String testCases,
       @RequestParam(value = "problemCategories") String problemCategories,
       @RequestParam(value = "problemTags") String problemTags,
-      @RequestParam(value = "isPublic") boolean isPublic,
+      @RequestParam(value = "status", required = false, defaultValue = "PUBLISHED") String status,
       @RequestParam(value = "isExactlyMatch") boolean isExactlyMatch,
       @RequestParam(value = "problemDifficulty", required = false, defaultValue = "") String problemDifficulty,
       HttpServletRequest request) {
@@ -767,7 +863,7 @@ public class AdministrationController {
             testCases,
             problemCategories,
             problemTags,
-            isPublic,
+            status,
             isExactlyMatch,
             problemDifficulty);
 
@@ -801,7 +897,8 @@ public class AdministrationController {
     if (problem == null) {
       throw new ResourceNotFoundException();
     }
-    List<Checkpoint> checkpoints = problemService.getCheckpointsUsingProblemId(problemId);
+    List<Map<String, Object>> checkpointMeta =
+        problemService.getCheckpointMetaUsingProblemId(problemId);
     List<ProblemCategory> selectedProblemCategories =
         problemService.getProblemCategoriesUsingProblemId(problemId);
     Map<ProblemCategory, List<ProblemCategory>> problemCategories =
@@ -810,7 +907,8 @@ public class AdministrationController {
 
     ModelAndView view = new ModelAndView("pages/administration/edit-problem");
     view.addObject("problem", problem);
-    view.addObject("checkpoints", checkpoints);
+    view.addObject("checkpointMeta", checkpointMeta);
+    view.addObject("currentExactlyMatch", problemService.isExactlyMatch(problemId));
     view.addObject("problemCategories", problemCategories);
     view.addObject("selectedProblemCategories", selectedProblemCategories);
     view.addObject("problemTags", problemTags);
@@ -830,10 +928,9 @@ public class AdministrationController {
    * @param outputFormat - the output format
    * @param inputSample - the input sample
    * @param outputSample - the output sample
-   * @param testCases - the test cases (in JSON format)
    * @param problemCategories - the problem categories (in JSON format)
    * @param problemTags - the problem tags (in JSON format)
-   * @param isPublic - whether the problem is public
+   * @param status - the publication status of the problem (PUBLISHED / DRAFT / HIDDEN)
    * @param isExactlyMatch - whether the checkpoints are matched exactly
    * @param request - the HttpServletRequest object
    * @return a Map<String, Boolean> object containing the problem edit result
@@ -850,10 +947,9 @@ public class AdministrationController {
       @RequestParam(value = "outputFormat") String outputFormat,
       @RequestParam(value = "inputSample") String inputSample,
       @RequestParam(value = "outputSample") String outputSample,
-      @RequestParam(value = "testCases") String testCases,
       @RequestParam(value = "problemCategories") String problemCategories,
       @RequestParam(value = "problemTags") String problemTags,
-      @RequestParam(value = "isPublic") boolean isPublic,
+      @RequestParam(value = "status", required = false, defaultValue = "PUBLISHED") String status,
       @RequestParam(value = "isExactlyMatch") boolean isExactlyMatch,
       @RequestParam(value = "problemDifficulty", required = false, defaultValue = "") String problemDifficulty,
       HttpServletRequest request) {
@@ -875,10 +971,9 @@ public class AdministrationController {
             outputFormat,
             inputSample,
             outputSample,
-            testCases,
             problemCategories,
             problemTags,
-            isPublic,
+            status,
             isExactlyMatch,
             problemDifficulty);
 
@@ -894,6 +989,144 @@ public class AdministrationController {
   }
 
   /**
+   * Handles uploading a test-data archive (.zip of NN.in / NN.out pairs) for a problem. The parsed
+   * pairs replace all existing checkpoints.
+   *
+   * @param problemId - the unique identifier of the problem
+   * @param isExactlyMatch - whether the new checkpoints require an exact match
+   * @param testDataArchive - the uploaded .zip archive
+   * @param request - the HttpServletRequest object
+   * @return a Map containing the upload result and the refreshed checkpoint metadata
+   */
+  @RequestMapping(value = "/uploadProblemTestData.action", method = RequestMethod.POST)
+  public @ResponseBody Map<String, Object> uploadProblemTestDataAction(
+      @RequestParam(value = "problemId") long problemId,
+      @RequestParam(value = "isExactlyMatch", required = false, defaultValue = "false") boolean isExactlyMatch,
+      @RequestParam(value = "testDataArchive", required = false) MultipartFile testDataArchive,
+      HttpServletRequest request) {
+    Map<String, Object> result = new HashMap<>();
+    boolean problemExists = problemService.getProblem(problemId) != null;
+    boolean archiveEmpty = testDataArchive == null || testDataArchive.isEmpty();
+    result.put("isProblemExists", problemExists);
+    result.put("isArchiveEmpty", archiveEmpty);
+    result.put("isArchiveLegal", true);
+    result.put("isSuccessful", false);
+
+    if (!problemExists || archiveEmpty) {
+      return result;
+    }
+    List<Map<String, String>> testCases;
+    try {
+      testCases = parseTestDataArchive(testDataArchive);
+    } catch (IOException e) {
+      LOGGER.warn(String.format("Failed to parse test-data archive for [ProblemId=%s].", problemId), e);
+      result.put("isArchiveLegal", false);
+      return result;
+    }
+    if (testCases.isEmpty()) {
+      result.put("isArchiveLegal", false);
+      return result;
+    }
+    problemService.replaceTestCases(problemId, testCases, isExactlyMatch);
+    result.put("isSuccessful", true);
+    result.put("checkpoints", problemService.getCheckpointMetaUsingProblemId(problemId));
+
+    LOGGER.info(
+        String.format(
+            "Problem: [ProblemId=%s] test data (%s checkpoints) was uploaded by administrator at %s.",
+            new Object[] {problemId, testCases.size(), HttpRequestParser.getRemoteAddr(request)}));
+    return result;
+  }
+
+  /**
+   * Handles deleting a single checkpoint of a problem. The remaining checkpoints are renumbered and
+   * re-scored by the service layer.
+   *
+   * @param problemId - the unique identifier of the problem
+   * @param checkpointId - the id of the checkpoint to delete
+   * @return a Map containing the result and the refreshed checkpoint metadata
+   */
+  @RequestMapping(value = "/deleteProblemCheckpoint.action", method = RequestMethod.POST)
+  public @ResponseBody Map<String, Object> deleteProblemCheckpointAction(
+      @RequestParam(value = "problemId") long problemId,
+      @RequestParam(value = "checkpointId") int checkpointId) {
+    Map<String, Object> result = new HashMap<>();
+    boolean problemExists = problemService.getProblem(problemId) != null;
+    if (problemExists) {
+      problemService.deleteCheckpoint(problemId, checkpointId);
+    }
+    result.put("isProblemExists", problemExists);
+    result.put("isSuccessful", problemExists);
+    result.put("checkpoints", problemService.getCheckpointMetaUsingProblemId(problemId));
+    return result;
+  }
+
+  /**
+   * Parses an uploaded test-data archive into ordered input/output pairs. Entries are paired by
+   * file stem: {@code NN.in} with {@code NN.out} (or {@code NN.ans}); unmatched or unrelated entries
+   * are ignored. The total uncompressed size is capped to guard against archive bombs.
+   *
+   * @param archive - the uploaded .zip archive
+   * @return the input/output pairs in file-name order (each map holds {@code input}/{@code output})
+   */
+  private List<Map<String, String>> parseTestDataArchive(MultipartFile archive) throws IOException {
+    Map<String, String> inputs = new TreeMap<>();
+    Map<String, String> outputs = new TreeMap<>();
+    long totalBytes = 0;
+
+    try (ZipInputStream zipStream =
+        new ZipInputStream(archive.getInputStream(), StandardCharsets.UTF_8)) {
+      ZipEntry entry;
+      while ((entry = zipStream.getNextEntry()) != null) {
+        if (entry.isDirectory()) {
+          continue;
+        }
+        String name = entry.getName();
+        String base = name.substring(Math.max(name.lastIndexOf('/'), name.lastIndexOf('\\')) + 1);
+        int dot = base.lastIndexOf('.');
+        if (dot < 0) {
+          continue;
+        }
+        String stem = base.substring(0, dot);
+        String extension = base.substring(dot + 1).toLowerCase();
+        boolean isInput = extension.equals("in");
+        boolean isOutput = extension.equals("out") || extension.equals("ans");
+        if (!isInput && !isOutput) {
+          continue;
+        }
+
+        ByteArrayOutputStream content = new ByteArrayOutputStream();
+        byte[] buffer = new byte[8192];
+        int bytesRead;
+        while ((bytesRead = zipStream.read(buffer)) != -1) {
+          totalBytes += bytesRead;
+          if (totalBytes > MAX_TEST_DATA_BYTES) {
+            throw new IOException("Test-data archive exceeds the maximum allowed size.");
+          }
+          content.write(buffer, 0, bytesRead);
+        }
+        (isInput ? inputs : outputs).put(stem, content.toString(StandardCharsets.UTF_8));
+      }
+    }
+
+    List<Map<String, String>> testCases = new ArrayList<>();
+    for (Map.Entry<String, String> input : inputs.entrySet()) {
+      String output = outputs.get(input.getKey());
+      if (output == null) {
+        continue;
+      }
+      Map<String, String> testCase = new HashMap<>();
+      testCase.put("input", input.getValue());
+      testCase.put("output", output);
+      testCases.add(testCase);
+    }
+    return testCases;
+  }
+
+  /** The maximum total uncompressed size accepted from a test-data archive (128 MiB). */
+  private static final long MAX_TEST_DATA_BYTES = 128L * 1024 * 1024;
+
+  /**
    * Loads the problem categories page.
    *
    * @param request - the HttpServletRequest object
@@ -905,8 +1138,20 @@ public class AdministrationController {
       HttpServletRequest request, HttpServletResponse response) {
     List<ProblemCategory> problemCategories = problemService.getProblemCategories();
 
+    Map<Integer, Long> problemCategoryProblems = new HashMap<>();
+    for (ProblemCategory problemCategory : problemCategories) {
+      long numberOfProblems =
+          problemService.getNumberOfProblemsUsingFilters(
+              "", problemCategory.getProblemCategorySlug(), "", false);
+      problemCategoryProblems.put(problemCategory.getProblemCategoryId(), numberOfProblems);
+    }
+
+    List<ProblemTag> problemTags = problemService.getProblemTags();
+
     ModelAndView view = new ModelAndView("pages/administration/problem-categories");
     view.addObject("problemCategories", problemCategories);
+    view.addObject("problemCategoryProblems", problemCategoryProblems);
+    view.addObject("problemTags", problemTags);
     return view;
   }
 
@@ -1007,6 +1252,54 @@ public class AdministrationController {
   }
 
   /**
+   * Creates a problem tag.
+   *
+   * @param problemTagName - the name of the problem tag
+   * @param request - the HttpServletRequest object
+   * @return a Map<String, Object> object containing the problem tag creation result
+   */
+  @RequestMapping(value = "/createProblemTag.action", method = RequestMethod.POST)
+  public @ResponseBody Map<String, Object> createProblemTagAction(
+      @RequestParam(value = "problemTagName") String problemTagName, HttpServletRequest request) {
+    Map<String, Object> result = problemService.createProblemTag(problemTagName);
+
+    if ((boolean) result.get("isSuccessful")) {
+      long problemTagId = (Long) result.get("problemTagId");
+      String ipAddress = HttpRequestParser.getRemoteAddr(request);
+
+      LOGGER.info(
+          String.format(
+              "ProblemTag: [ProblemTagId=%s] was created by administrator at %s.",
+              new Object[] {problemTagId, ipAddress}));
+    }
+    return result;
+  }
+
+  /**
+   * Deletes a problem tag.
+   *
+   * @param problemTagId - the unique identifier of the problem tag
+   * @param request - the HttpServletRequest object
+   * @return a Map<String, Boolean> object containing the problem tag deletion result
+   */
+  @RequestMapping(value = "/deleteProblemTag.action", method = RequestMethod.POST)
+  public @ResponseBody Map<String, Boolean> deleteProblemTagAction(
+      @RequestParam(value = "problemTagId") long problemTagId, HttpServletRequest request) {
+    Map<String, Boolean> result = new HashMap<>(2, 1);
+    boolean isSuccessful = problemService.deleteProblemTag(problemTagId);
+
+    if (isSuccessful) {
+      String ipAddress = HttpRequestParser.getRemoteAddr(request);
+      LOGGER.info(
+          String.format(
+              "ProblemTag: [ProblemTagId=%s] was deleted by administrator at %s.",
+              new Object[] {problemTagId, ipAddress}));
+    }
+    result.put("isSuccessful", isSuccessful);
+    return result;
+  }
+
+  /**
    * Loads the submission list page.
    *
    * @param problemId - the unique identifier of the problem the submission corresponds to
@@ -1023,7 +1316,7 @@ public class AdministrationController {
       @RequestParam(value = "page", required = false, defaultValue = "1") long pageNumber,
       HttpServletRequest request,
       HttpServletResponse response) {
-    final int NUMBER_OF_SUBMISSIONS_PER_PAGE = 100;
+    final int NUMBER_OF_SUBMISSIONS_PER_PAGE = getIntOption("submissionsPerPage", 100);
 
     long totalSubmissions =
         submissionService.getNumberOfSubmissionsUsingProblemIdAndUsername(problemId, username);
@@ -1148,6 +1441,18 @@ public class AdministrationController {
   }
 
   /**
+   * Gets the value of an integer option, falling back to the default value when the option is
+   * missing, blank, non-numeric or non-positive.
+   *
+   * @param optionName - the name of the option
+   * @param defaultValue - the value used when the option cannot be resolved to a positive integer
+   * @return the option value as a positive integer, or the default value
+   */
+  private int getIntOption(String optionName, int defaultValue) {
+    return optionService.getIntOption(optionName, defaultValue);
+  }
+
+  /**
    * Updates the general settings of the website.
    *
    * @param websiteName - the name of the website
@@ -1171,6 +1476,27 @@ public class AdministrationController {
       @RequestParam(value = "policeIcpNumber") String policeIcpNumber,
       @RequestParam(value = "googleAnalyticsCode") String googleAnalyticsCode,
       @RequestParam(value = "offensiveWordSources") String offensiveWordSources,
+      @RequestParam(value = "contactEmail", defaultValue = "") String contactEmail,
+      @RequestParam(value = "requireEmailVerification", defaultValue = "false")
+          boolean requireEmailVerification,
+      @RequestParam(value = "publicSubmissions", defaultValue = "true") boolean publicSubmissions,
+      @RequestParam(value = "maintenanceMode", defaultValue = "false") boolean maintenanceMode,
+      @RequestParam(value = "autoHideOnReports", defaultValue = "true") boolean autoHideOnReports,
+      @RequestParam(value = "autoCensorOffensiveWords", defaultValue = "true")
+          boolean autoCensorOffensiveWords,
+      @RequestParam(value = "newUserPostDelay", defaultValue = "0") int newUserPostDelay,
+      @RequestParam(value = "discussionReportHideThreshold", defaultValue = "5")
+          int discussionReportHideThreshold,
+      @RequestParam(value = "discussionMinSolvedToVote", defaultValue = "1")
+          int discussionMinSolvedToVote,
+      @RequestParam(value = "discussionMinSolvedToReport", defaultValue = "3")
+          int discussionMinSolvedToReport,
+      @RequestParam(value = "problemsPerPage", defaultValue = "100") int problemsPerPage,
+      @RequestParam(value = "usersPerPage", defaultValue = "100") int usersPerPage,
+      @RequestParam(value = "submissionsPerPage", defaultValue = "100") int submissionsPerPage,
+      @RequestParam(value = "contestsPerPage", defaultValue = "50") int contestsPerPage,
+      @RequestParam(value = "bulletinsPerPage", defaultValue = "50") int bulletinsPerPage,
+      @RequestParam(value = "discussionsPerPage", defaultValue = "50") int discussionsPerPage,
       HttpServletRequest request) {
     Map<String, Boolean> result =
         optionService.updateOptions(
@@ -1182,7 +1508,56 @@ public class AdministrationController {
             policeIcpNumber,
             googleAnalyticsCode,
             offensiveWordSources);
+
+    boolean isContactEmailLegal = optionService.isContactEmailLegal(contactEmail);
+    result.put("isContactEmailLegal", isContactEmailLegal);
+    if (!isContactEmailLegal) {
+      result.put("isSuccessful", false);
+    }
+
+    if (result.get("isSuccessful")) {
+      Map<String, String> moderationOptions = new HashMap<>();
+      moderationOptions.put("contactEmail", contactEmail);
+      moderationOptions.put("requireEmailVerification", requireEmailVerification ? "1" : "0");
+      moderationOptions.put("publicSubmissions", publicSubmissions ? "1" : "0");
+      moderationOptions.put("maintenanceMode", maintenanceMode ? "1" : "0");
+      moderationOptions.put("autoHideOnReports", autoHideOnReports ? "1" : "0");
+      moderationOptions.put("autoCensorOffensiveWords", autoCensorOffensiveWords ? "1" : "0");
+      moderationOptions.put("newUserPostDelay", String.valueOf(clampNonNegative(newUserPostDelay)));
+      moderationOptions.put(
+          "discussionReportHideThreshold",
+          String.valueOf(clampNonNegative(discussionReportHideThreshold)));
+      moderationOptions.put(
+          "discussionMinSolvedToVote", String.valueOf(clampNonNegative(discussionMinSolvedToVote)));
+      moderationOptions.put(
+          "discussionMinSolvedToReport",
+          String.valueOf(clampNonNegative(discussionMinSolvedToReport)));
+      optionService.updateOptions(moderationOptions);
+
+      Map<String, String> pageSizeOptions = new HashMap<>();
+      pageSizeOptions.put("problemsPerPage", String.valueOf(clampPageSize(problemsPerPage)));
+      pageSizeOptions.put("usersPerPage", String.valueOf(clampPageSize(usersPerPage)));
+      pageSizeOptions.put("submissionsPerPage", String.valueOf(clampPageSize(submissionsPerPage)));
+      pageSizeOptions.put("contestsPerPage", String.valueOf(clampPageSize(contestsPerPage)));
+      pageSizeOptions.put("bulletinsPerPage", String.valueOf(clampPageSize(bulletinsPerPage)));
+      pageSizeOptions.put("discussionsPerPage", String.valueOf(clampPageSize(discussionsPerPage)));
+      optionService.updateOptions(pageSizeOptions);
+    }
+
     return result;
+  }
+
+  /** Clamps a page-size value to a sane range of [1, 1000]. */
+  private int clampPageSize(int pageSize) {
+    if (pageSize < 1) {
+      return 1;
+    }
+    return Math.min(pageSize, 1000);
+  }
+
+  /** Clamps a value to be non-negative. */
+  private int clampNonNegative(int value) {
+    return Math.max(value, 0);
   }
 
   /**
@@ -1245,7 +1620,7 @@ public class AdministrationController {
       @RequestParam(value = "page", required = false, defaultValue = "1") long pageNumber,
       HttpServletRequest request,
       HttpServletResponse response) {
-    final int NUMBER_OF_BULLETINS_PER_PAGE = 50;
+    final int NUMBER_OF_BULLETINS_PER_PAGE = getIntOption("bulletinsPerPage", 50);
     long totalBulletins = bulletinBoardService.getNumberOfBulletinBoardMessages();
     long offset = (pageNumber >= 1 ? pageNumber - 1 : 0) * NUMBER_OF_BULLETINS_PER_PAGE;
     List<BulletinBoardMessage> messages =
@@ -1306,8 +1681,13 @@ public class AdministrationController {
   public @ResponseBody Map<String, Boolean> createBulletinAction(
       @RequestParam(value = "messageTitle") String messageTitle,
       @RequestParam(value = "messageBody") String messageBody,
+      @RequestParam(value = "isPinned", defaultValue = "false") boolean isPinned,
+      @RequestParam(value = "status", defaultValue = "PUBLISHED") String status,
       HttpServletRequest request) {
-    return bulletinBoardService.createBulletinBoardMessage(messageTitle, messageBody);
+    User currentUser = HttpSessionParser.getCurrentUser(request.getSession());
+    long authorId = currentUser != null ? currentUser.getUid() : 0;
+    return bulletinBoardService.createBulletinBoardMessage(
+        messageTitle, messageBody, authorId, isPinned, status);
   }
 
   /**
@@ -1324,8 +1704,11 @@ public class AdministrationController {
       @RequestParam(value = "messageId") long messageId,
       @RequestParam(value = "messageTitle") String messageTitle,
       @RequestParam(value = "messageBody") String messageBody,
+      @RequestParam(value = "isPinned", defaultValue = "false") boolean isPinned,
+      @RequestParam(value = "status", defaultValue = "PUBLISHED") String status,
       HttpServletRequest request) {
-    return bulletinBoardService.editBulletinBoardMessage(messageId, messageTitle, messageBody);
+    return bulletinBoardService.editBulletinBoardMessage(
+        messageId, messageTitle, messageBody, isPinned, status);
   }
 
   /**
@@ -1362,14 +1745,28 @@ public class AdministrationController {
       @RequestParam(value = "page", required = false, defaultValue = "1") long pageNumber,
       HttpServletRequest request,
       HttpServletResponse response) {
-    final int NUMBER_OF_CONTESTS_PER_PAGE = 50;
+    final int NUMBER_OF_CONTESTS_PER_PAGE = getIntOption("contestsPerPage", 50);
     long totalContests = contestService.getNumberOfContests(keyword);
     long offset = (pageNumber >= 1 ? pageNumber - 1 : 0) * NUMBER_OF_CONTESTS_PER_PAGE;
     List<Contest> contests =
         contestService.getContests(keyword, offset, NUMBER_OF_CONTESTS_PER_PAGE);
 
+    Map<Long, String> contestPhases = new HashMap<>();
+    Map<Long, Long> contestEntrants = new HashMap<>();
+    Map<Long, String> contestDurations = new HashMap<>();
+    for (Contest contest : contests) {
+      long contestId = contest.getContestId();
+      contestPhases.put(contestId, contestService.getContestStatus(contest).name());
+      contestEntrants.put(contestId, contestService.getNumberOfContestantsOfContest(contestId));
+      contestDurations.put(
+          contestId, formatDuration(contest.getStartTime(), contest.getEndTime()));
+    }
+
     ModelAndView view = new ModelAndView("pages/administration/all-contests");
     view.addObject("contests", contests);
+    view.addObject("contestPhases", contestPhases);
+    view.addObject("contestEntrants", contestEntrants);
+    view.addObject("contestDurations", contestDurations);
     view.addObject("keyword", keyword);
     view.addObject("currentPage", pageNumber);
     view.addObject(
@@ -1386,7 +1783,30 @@ public class AdministrationController {
    */
   @RequestMapping(value = "/new-contest", method = RequestMethod.GET)
   public ModelAndView newContestView(HttpServletRequest request, HttpServletResponse response) {
-    return new ModelAndView("pages/administration/edit-contest");
+    ModelAndView view = new ModelAndView("pages/administration/edit-contest");
+    view.addObject("allProblems", getProblemsForPicker());
+    return view;
+  }
+
+  /**
+   * Builds the lightweight problem list consumed by the contest editor's problem picker.
+   *
+   * @return a List of {@code {id, title, diff, diffSlug}} maps, ordered by problem ID
+   */
+  private List<Map<String, Object>> getProblemsForPicker() {
+    List<Problem> problems =
+        problemService.getProblemsUsingFilters(0, "", "", "", "", false, Integer.MAX_VALUE);
+    List<Map<String, Object>> picker = new ArrayList<>(problems.size());
+    for (Problem problem : problems) {
+      Map<String, Object> entry = new HashMap<>(4, 1);
+      entry.put("id", problem.getProblemId());
+      entry.put("title", problem.getProblemName());
+      ProblemDifficulty difficulty = problem.getProblemDifficulty();
+      entry.put("diff", difficulty != null ? difficulty.getProblemDifficultyName() : "Easy");
+      entry.put("diffSlug", difficulty != null ? difficulty.getProblemDifficultySlug() : "easy");
+      picker.add(entry);
+    }
+    return picker;
   }
 
   /**
@@ -1409,6 +1829,13 @@ public class AdministrationController {
     ModelAndView view = new ModelAndView("pages/administration/edit-contest");
     view.addObject("contest", contest);
     view.addObject("sectionLabel", contest.getContestName());
+    view.addObject("contestPhase", contestService.getContestStatus(contest).name());
+    view.addObject(
+        "contestEntrants",
+        contestService.getNumberOfContestantsOfContest(contest.getContestId()));
+    view.addObject(
+        "contestDuration", formatDuration(contest.getStartTime(), contest.getEndTime()));
+    view.addObject("allProblems", getProblemsForPicker());
     return view;
   }
 
@@ -1419,7 +1846,7 @@ public class AdministrationController {
    * @param contestNotes - the notes/description of the contest
    * @param startTime - the start time (local datetime string)
    * @param endTime - the end time (local datetime string)
-   * @param contestMode - the mode of the contest (ACM / OI)
+   * @param scoring - the scoring rule of the contest (ICPC / IOI / Codeforces)
    * @param problems - the contest problems (a JSON-formatted array of problem IDs)
    * @param request - the HttpServletRequest object
    * @return a Map containing the creation result
@@ -1430,16 +1857,27 @@ public class AdministrationController {
       @RequestParam(value = "contestNotes", required = false, defaultValue = "") String contestNotes,
       @RequestParam(value = "startTime") String startTime,
       @RequestParam(value = "endTime") String endTime,
-      @RequestParam(value = "contestMode", required = false, defaultValue = "ACM") String contestMode,
+      @RequestParam(value = "scoring", required = false, defaultValue = "ICPC") String scoring,
       @RequestParam(value = "problems", required = false, defaultValue = "[]") String problems,
+      @RequestParam(value = "status", required = false, defaultValue = "PUBLISHED") String status,
+      @RequestParam(value = "penalty", required = false, defaultValue = "20") int penalty,
+      @RequestParam(value = "freeze", required = false, defaultValue = "0") int freeze,
+      @RequestParam(value = "isRated", required = false, defaultValue = "true") boolean isRated,
+      @RequestParam(value = "openRegistration", required = false, defaultValue = "true")
+          boolean openRegistration,
       HttpServletRequest request) {
     return contestService.createContest(
         contestName,
         contestNotes,
         parseLocalDateTime(startTime),
         parseLocalDateTime(endTime),
-        contestMode,
-        problems);
+        scoring,
+        problems,
+        status,
+        penalty,
+        freeze,
+        isRated,
+        openRegistration);
   }
 
   /**
@@ -1450,7 +1888,7 @@ public class AdministrationController {
    * @param contestNotes - the notes/description of the contest
    * @param startTime - the start time (local datetime string)
    * @param endTime - the end time (local datetime string)
-   * @param contestMode - the mode of the contest (ACM / OI)
+   * @param scoring - the scoring rule of the contest (ICPC / IOI / Codeforces)
    * @param problems - the contest problems (a JSON-formatted array of problem IDs)
    * @param request - the HttpServletRequest object
    * @return a Map containing the edit result
@@ -1462,8 +1900,14 @@ public class AdministrationController {
       @RequestParam(value = "contestNotes", required = false, defaultValue = "") String contestNotes,
       @RequestParam(value = "startTime") String startTime,
       @RequestParam(value = "endTime") String endTime,
-      @RequestParam(value = "contestMode", required = false, defaultValue = "ACM") String contestMode,
+      @RequestParam(value = "scoring", required = false, defaultValue = "ICPC") String scoring,
       @RequestParam(value = "problems", required = false, defaultValue = "[]") String problems,
+      @RequestParam(value = "status", required = false, defaultValue = "PUBLISHED") String status,
+      @RequestParam(value = "penalty", required = false, defaultValue = "20") int penalty,
+      @RequestParam(value = "freeze", required = false, defaultValue = "0") int freeze,
+      @RequestParam(value = "isRated", required = false, defaultValue = "true") boolean isRated,
+      @RequestParam(value = "openRegistration", required = false, defaultValue = "true")
+          boolean openRegistration,
       HttpServletRequest request) {
     return contestService.editContest(
         contestId,
@@ -1471,8 +1915,13 @@ public class AdministrationController {
         contestNotes,
         parseLocalDateTime(startTime),
         parseLocalDateTime(endTime),
-        contestMode,
-        problems);
+        scoring,
+        problems,
+        status,
+        penalty,
+        freeze,
+        isRated,
+        openRegistration);
   }
 
   /**
@@ -1517,6 +1966,25 @@ public class AdministrationController {
   }
 
   /**
+   * Formats a contest's duration (end - start) as an {@code HH:MM} string, where hours may exceed
+   * 24 for multi-day contests.
+   *
+   * @param startTime - the start time of the contest
+   * @param endTime - the end time of the contest
+   * @return the duration formatted as {@code HH:MM}, or an empty string when either time is missing
+   */
+  private static String formatDuration(Date startTime, Date endTime) {
+    if (startTime == null || endTime == null) {
+      return "";
+    }
+    long minutes = (endTime.getTime() - startTime.getTime()) / 60000L;
+    if (minutes < 0) {
+      minutes = 0;
+    }
+    return String.format("%02d:%02d", minutes / 60, minutes % 60);
+  }
+
+  /**
    * Loads the discussion thread list page.
    *
    * @param pageNumber - the page number of the current page
@@ -1529,7 +1997,7 @@ public class AdministrationController {
       @RequestParam(value = "page", required = false, defaultValue = "1") long pageNumber,
       HttpServletRequest request,
       HttpServletResponse response) {
-    final int NUMBER_OF_THREADS_PER_PAGE = 50;
+    final int NUMBER_OF_THREADS_PER_PAGE = getIntOption("discussionsPerPage", 50);
     long totalThreads = discussionService.getNumberOfDiscussionThreads();
     long offset = (pageNumber >= 1 ? pageNumber - 1 : 0) * NUMBER_OF_THREADS_PER_PAGE;
 
@@ -1559,9 +2027,59 @@ public class AdministrationController {
     }
     ModelAndView view = new ModelAndView("pages/administration/edit-thread");
     view.addObject("thread", thread);
-    view.addObject("replies", discussionService.getDiscussionRepliesOfThread(threadId, -1, 0, 200));
+    view.addObject(
+        "replies", discussionService.getDiscussionRepliesOfThread(threadId, -1, 0, 200, false));
+    view.addObject("topics", discussionService.getDiscussionTopics());
+    view.addObject("reporters", discussionService.getReportersOfThread(threadId));
     view.addObject("sectionLabel", thread.getDiscussionThreadTitle());
     return view;
+  }
+
+  /**
+   * Saves the moderation-editable fields of a discussion thread: its title, category, visibility,
+   * pinned and locked flags.
+   *
+   * @param threadId - the unique identifier of the discussion thread
+   * @param title - the new title of the thread
+   * @param topicId - the unique identifier of the new category (topic)
+   * @param visible - whether the thread is visible to ordinary users
+   * @param pinned - whether the thread is pinned to the top of its list
+   * @param locked - whether the thread is locked against new replies
+   * @param request - the HttpServletRequest object
+   * @return the update result
+   */
+  @RequestMapping(value = "/saveThread.action", method = RequestMethod.POST)
+  public @ResponseBody Map<String, Boolean> saveThreadAction(
+      @RequestParam(value = "threadId") long threadId,
+      @RequestParam(value = "title") String title,
+      @RequestParam(value = "topicId") int topicId,
+      @RequestParam(value = "visible") boolean visible,
+      @RequestParam(value = "pinned") boolean pinned,
+      @RequestParam(value = "locked") boolean locked,
+      HttpServletRequest request) {
+    Map<String, Boolean> result = new HashMap<>(2, 1);
+    result.put(
+        "isSuccessful",
+        discussionService.saveThread(threadId, title, topicId, visible, pinned, locked));
+    return result;
+  }
+
+  /**
+   * Toggles the visibility of a discussion reply.
+   *
+   * @param replyId - the unique identifier of the discussion reply
+   * @param visible - whether the reply should be visible to ordinary users
+   * @param request - the HttpServletRequest object
+   * @return the update result
+   */
+  @RequestMapping(value = "/toggleReplyVisibility.action", method = RequestMethod.POST)
+  public @ResponseBody Map<String, Boolean> toggleReplyVisibilityAction(
+      @RequestParam(value = "replyId") long replyId,
+      @RequestParam(value = "visible") boolean visible,
+      HttpServletRequest request) {
+    Map<String, Boolean> result = new HashMap<>(2, 1);
+    result.put("isSuccessful", discussionService.setReplyVisibility(replyId, visible));
+    return result;
   }
 
   /**
@@ -1584,6 +2102,24 @@ public class AdministrationController {
   }
 
   /**
+   * Toggles the visibility of a discussion thread.
+   *
+   * @param threadId - the unique identifier of the discussion thread
+   * @param visible - whether the thread should be visible to ordinary users
+   * @param request - the HttpServletRequest object
+   * @return the update result
+   */
+  @RequestMapping(value = "/toggleThreadVisibility.action", method = RequestMethod.POST)
+  public @ResponseBody Map<String, Boolean> toggleThreadVisibilityAction(
+      @RequestParam(value = "threadId") long threadId,
+      @RequestParam(value = "visible") boolean visible,
+      HttpServletRequest request) {
+    Map<String, Boolean> result = new HashMap<>(2, 1);
+    result.put("isSuccessful", discussionService.setThreadVisibility(threadId, visible));
+    return result;
+  }
+
+  /**
    * Deletes a single discussion reply.
    *
    * @param replyId - the unique identifier of the discussion reply
@@ -1595,6 +2131,79 @@ public class AdministrationController {
       @RequestParam(value = "replyId") long replyId, HttpServletRequest request) {
     User currentUser = HttpSessionParser.getCurrentUser(request.getSession());
     return discussionService.deleteDiscussionReply(replyId, currentUser);
+  }
+
+  /**
+   * Loads the moderation queue: every discussion reply with at least one outstanding report.
+   *
+   * @param request - the HttpServletRequest object
+   * @param response - the HttpServletResponse object
+   * @return a ModelAndView object containing the reported replies awaiting review
+   */
+  @RequestMapping(value = "/moderation", method = RequestMethod.GET)
+  public ModelAndView moderationView(
+      HttpServletRequest request, HttpServletResponse response) {
+    ModelAndView view = new ModelAndView("pages/administration/moderation");
+    view.addObject("reportedReplies", discussionService.getReportedReplies(MODERATION_QUEUE_LIMIT));
+    view.addObject("moderationCount", discussionService.getNumberOfReportedReplies());
+    return view;
+  }
+
+  /**
+   * Loads the moderation review page for a single reported reply: the flagged content, the list of
+   * reporters and the resolution actions (dismiss reports, remove content, ban author).
+   *
+   * @param replyId - the unique identifier of the reported reply
+   * @param request - the HttpServletRequest object
+   * @param response - the HttpServletResponse object
+   * @return a ModelAndView object containing the reported reply and its reports
+   */
+  @RequestMapping(value = "/moderation/{replyId}", method = RequestMethod.GET)
+  public ModelAndView moderationReviewView(
+      @PathVariable(value = "replyId") long replyId,
+      HttpServletRequest request,
+      HttpServletResponse response) {
+    DiscussionReply reply = discussionService.getDiscussionReplyUsingReplyId(replyId);
+    if (reply == null) {
+      throw new ResourceNotFoundException();
+    }
+    DiscussionThread thread =
+        discussionService.getDiscussionThreadUsingThreadId(reply.getDiscussionThreadId());
+    List<Map<String, Object>> reporters = discussionService.getReportersOfReply(replyId);
+    ModelAndView view = new ModelAndView("pages/administration/moderation-review");
+    view.addObject("reply", reply);
+    view.addObject("thread", thread);
+    view.addObject("reporters", reporters);
+    view.addObject("reportCount", reporters.size());
+    return view;
+  }
+
+  /**
+   * Dismisses every report on a discussion reply, clearing it from the moderation queue while
+   * keeping the reply itself intact.
+   *
+   * @param replyId - the unique identifier of the reply whose reports are dismissed
+   * @param request - the HttpServletRequest object
+   * @return the dismissal result
+   */
+  @RequestMapping(value = "/dismissReports.action", method = RequestMethod.POST)
+  public @ResponseBody Map<String, Boolean> dismissReportsAction(
+      @RequestParam(value = "replyId") long replyId, HttpServletRequest request) {
+    return discussionService.dismissReportsOfReply(replyId);
+  }
+
+  /**
+   * Bans a user by moving them to the {@code forbidden} user group. Used by the moderation review
+   * page to ban the author of flagged content.
+   *
+   * @param userId - the unique identifier of the user to ban
+   * @param request - the HttpServletRequest object
+   * @return the ban result
+   */
+  @RequestMapping(value = "/banUser.action", method = RequestMethod.POST)
+  public @ResponseBody Map<String, Boolean> banUserAction(
+      @RequestParam(value = "userId") long userId, HttpServletRequest request) {
+    return userService.banUser(userId);
   }
 
   /**
@@ -1694,6 +2303,12 @@ public class AdministrationController {
 
   /** The number of moderation-queue rows shown on the dashboard. */
   private static final int DASHBOARD_QUEUE_SIZE = 6;
+
+  /** The maximum number of reported replies listed on the dedicated moderation page. */
+  private static final int MODERATION_QUEUE_LIMIT = 200;
+
+  /** The number of recent submissions shown on the user editor's activity feed. */
+  private static final int NUMBER_OF_RECENT_SUBMISSIONS = 5;
 
   /** Single-letter day-of-week labels (index 0 == Sunday, matching Calendar.DAY_OF_WEEK - 1). */
   private static final String[] DAY_OF_WEEK_LETTERS = {"S", "M", "T", "W", "T", "F", "S"};

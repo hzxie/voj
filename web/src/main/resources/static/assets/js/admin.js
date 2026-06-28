@@ -53,6 +53,13 @@
       });
     });
 
+    // --- Data-driven fill bars -----------------------------------------------
+    // Elements carrying data-pct expose their value to CSS via the --adm-pct
+    // custom property, keeping percentage widths/heights out of the markup.
+    Array.prototype.forEach.call(document.querySelectorAll('[data-pct]'), function (el) {
+      el.style.setProperty('--adm-pct', el.getAttribute('data-pct') + '%');
+    });
+
     // --- Checkbox data table -------------------------------------------------
     var table = document.querySelector('[data-adm="table"]');
     if (!table) return;
@@ -78,7 +85,7 @@
         paint(checkAll, all);
       }
       if (bulk) {
-        bulk.style.display = n > 0 ? '' : 'none';
+        bulk.classList.toggle('is-open', n > 0);
         if (bulkCount) bulkCount.textContent = n;
       }
     }

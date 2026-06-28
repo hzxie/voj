@@ -78,6 +78,7 @@ public class ProblemService {
    * @param keyword - the keyword
    * @param problemCategorySlug - the alias of the problem category
    * @param problemTagSlug - the alias of the problem tag
+   * @param problemDifficultySlug - the alias of the problem difficulty (null/empty = no filter)
    * @param isPublicOnly - whether to filter only public problems
    * @param limit - the number of problems to load each time
    * @return the list of problems (a List<Problem> object)
@@ -87,6 +88,7 @@ public class ProblemService {
       String keyword,
       String problemCategorySlug,
       String problemTagSlug,
+      String problemDifficultySlug,
       boolean isPublicOnly,
       int limit) {
     ProblemCategory problemCategory =
@@ -95,6 +97,7 @@ public class ProblemService {
         problemTagMapper.getProblemTagUsingTagSlug(SlugifyUtils.getSlug(problemTagSlug));
     int problemCategoryId = 0;
     long problemTagId = 0;
+    int problemDifficultyId = resolveProblemDifficultyId(problemDifficultySlug);
     if (offset < 0) {
       offset = 0;
     }
@@ -105,7 +108,7 @@ public class ProblemService {
       problemTagId = problemTag.getProblemTagId();
     }
     return problemMapper.getProblemsUsingFilters(
-        keyword, problemCategoryId, problemTagId, isPublicOnly, offset, limit);
+        keyword, problemCategoryId, problemTagId, problemDifficultyId, isPublicOnly, offset, limit);
   }
 
   /**
@@ -116,17 +119,29 @@ public class ProblemService {
    * @param pageSize - the number of problems per page
    * @param field - the filter field ("id", "title" or "tag")
    * @param query - the filter value (may be null/empty for no filtering)
+   * @param problemDifficultySlug - the alias of the problem difficulty (null/empty = no filter)
    * @param isPublicOnly - whether to filter only public problems
    * @return the list of problems on the requested page
    */
   public List<Problem> getProblemsByPage(
-      int pageNumber, int pageSize, String field, String query, boolean isPublicOnly) {
+      int pageNumber,
+      int pageSize,
+      String field,
+      String query,
+      String problemDifficultySlug,
+      boolean isPublicOnly) {
     long offset = (long) (pageNumber - 1) * pageSize;
     if (offset < 0) {
       offset = 0;
     }
     return problemMapper.getProblemsByPage(
-        field, query, resolveProblemTagId(field, query), isPublicOnly, offset, pageSize);
+        field,
+        query,
+        resolveProblemTagId(field, query),
+        resolveProblemDifficultyId(problemDifficultySlug),
+        isPublicOnly,
+        offset,
+        pageSize);
   }
 
   /**
@@ -134,12 +149,18 @@ public class ProblemService {
    *
    * @param field - the filter field ("id", "title" or "tag")
    * @param query - the filter value (may be null/empty for no filtering)
+   * @param problemDifficultySlug - the alias of the problem difficulty (null/empty = no filter)
    * @param isPublicOnly - whether to filter only public problems
    * @return the total number of matching problems
    */
-  public long getNumberOfProblemsByPage(String field, String query, boolean isPublicOnly) {
+  public long getNumberOfProblemsByPage(
+      String field, String query, String problemDifficultySlug, boolean isPublicOnly) {
     return problemMapper.getNumberOfProblemsByPage(
-        field, query, resolveProblemTagId(field, query), isPublicOnly);
+        field,
+        query,
+        resolveProblemTagId(field, query),
+        resolveProblemDifficultyId(problemDifficultySlug),
+        isPublicOnly);
   }
 
   /**
@@ -159,22 +180,45 @@ public class ProblemService {
   }
 
   /**
+   * Resolves a difficulty filter slug to a difficulty identifier. Returns 0 when no difficulty
+   * filter applies and -1 (a sentinel that matches no rows) when filtering by a difficulty that does
+   * not exist.
+   *
+   * @param problemDifficultySlug - the slug of the problem difficulty
+   * @return the difficulty identifier to filter by
+   */
+  private int resolveProblemDifficultyId(String problemDifficultySlug) {
+    if (problemDifficultySlug == null || problemDifficultySlug.isEmpty()) {
+      return 0;
+    }
+    ProblemDifficulty problemDifficulty =
+        problemDifficultyMapper.getProblemDifficultyUsingSlug(problemDifficultySlug);
+    return problemDifficulty != null ? problemDifficulty.getProblemDifficultyId() : -1;
+  }
+
+  /**
    * Gets the total number of problems.
    *
    * @param keyword - the keyword
    * @param problemCategorySlug - the alias of the problem category
+   * @param problemDifficultySlug - the alias of the problem difficulty (null/empty = no filter)
    * @param isPublicOnly - whether to filter only public problems
    * @return the total number of problems
    */
   public long getNumberOfProblemsUsingFilters(
-      String keyword, String problemCategorySlug, boolean isPublicOnly) {
+      String keyword,
+      String problemCategorySlug,
+      String problemDifficultySlug,
+      boolean isPublicOnly) {
     ProblemCategory problemCategory =
         problemCategoryMapper.getProblemCategoryUsingCategorySlug(problemCategorySlug);
     int problemCategoryId = 0;
     if (problemCategory != null) {
       problemCategoryId = problemCategory.getProblemCategoryId();
     }
-    return problemMapper.getNumberOfProblemsUsingFilters(keyword, problemCategoryId, isPublicOnly);
+    int problemDifficultyId = resolveProblemDifficultyId(problemDifficultySlug);
+    return problemMapper.getNumberOfProblemsUsingFilters(
+        keyword, problemCategoryId, problemDifficultyId, isPublicOnly);
   }
 
   /**
@@ -297,6 +341,64 @@ public class ProblemService {
   }
 
   /**
+   * [For administrators only] Gets all problem tags.
+   *
+   * @return a list containing all problem tags
+   */
+  public List<ProblemTag> getProblemTags() {
+    return problemTagMapper.getProblemTags();
+  }
+
+  /**
+   * [For administrators only] Creates a problem tag.
+   *
+   * @param problemTagName - the name of the problem tag
+   * @return a Map<String, Object> object containing the problem tag creation result
+   */
+  public Map<String, Object> createProblemTag(String problemTagName) {
+    String name = problemTagName == null ? "" : problemTagName.trim();
+    String slug = SlugifyUtils.getSlug(name);
+
+    Map<String, Object> result = new HashMap<>();
+    result.put("isProblemTagNameEmpty", name.isEmpty());
+    result.put("isProblemTagNameLegal", name.length() <= 32 && slug.length() <= 32);
+    result.put(
+        "isProblemTagSlugExists",
+        !slug.isEmpty() && problemTagMapper.getProblemTagUsingTagSlug(slug) != null);
+
+    boolean isSuccessful =
+        !(boolean) result.get("isProblemTagNameEmpty")
+            && (boolean) result.get("isProblemTagNameLegal")
+            && !slug.isEmpty()
+            && !(boolean) result.get("isProblemTagSlugExists");
+    result.put("isSuccessful", isSuccessful);
+
+    if (isSuccessful) {
+      ProblemTag problemTag = new ProblemTag(slug, name);
+      problemTagMapper.createProblemTag(problemTag);
+      result.put("problemTagId", problemTag.getProblemTagId());
+      result.put("problemTagSlug", slug);
+      result.put("problemTagName", name);
+    }
+    return result;
+  }
+
+  /**
+   * [For administrators only] Deletes a problem tag by its unique identifier. Relationships with
+   * problems are removed by the database via {@code ON DELETE CASCADE}.
+   *
+   * @param problemTagId - the unique identifier of the problem tag
+   * @return whether the problem tag was deleted
+   */
+  public boolean deleteProblemTag(long problemTagId) {
+    if (problemTagMapper.getProblemTagUsingTagId(problemTagId) == null) {
+      return false;
+    }
+    problemTagMapper.deleteProblemTagUsingTagId(problemTagId);
+    return true;
+  }
+
+  /**
    * Gets all the problem difficulty levels (for the administration problem editor).
    *
    * @return a list of all problem difficulty levels
@@ -358,6 +460,66 @@ public class ProblemService {
   }
 
   /**
+   * [For administrators only] Gets lightweight metadata (id + byte size) of a problem's checkpoints,
+   * without loading the input/output text. Used by the editor's test-data file list.
+   *
+   * @param problemId - the unique identifier of the problem
+   * @return a list of maps, each holding {@code checkpointId} and {@code size} (bytes)
+   */
+  public List<Map<String, Object>> getCheckpointMetaUsingProblemId(long problemId) {
+    return checkpointMapper.getCheckpointMetaUsingProblemId(problemId);
+  }
+
+  /**
+   * [For administrators only] Gets the exact-match flag of a problem's checkpoints.
+   *
+   * @param problemId - the unique identifier of the problem
+   * @return the exact-match flag; defaults to {@code true} when the problem has no checkpoints
+   */
+  public boolean isExactlyMatch(long problemId) {
+    Boolean isExactlyMatch = checkpointMapper.getCheckpointExactlyMatch(problemId);
+    return isExactlyMatch == null || isExactlyMatch;
+  }
+
+  /**
+   * [For administrators only] Replaces all test cases of a problem with the given input/output
+   * pairs (e.g. parsed from an uploaded archive). Checkpoints are renumbered from 0 and scores are
+   * redistributed evenly.
+   *
+   * @param problemId - the unique identifier of the problem
+   * @param testCases - the input/output pairs (each map holds {@code input} and {@code output})
+   * @param isExactlyMatch - whether the checkpoints require an exact match
+   */
+  public void replaceTestCases(
+      long problemId, List<Map<String, String>> testCases, boolean isExactlyMatch) {
+    checkpointMapper.deleteCheckpoint(problemId);
+    createTestCases(problemId, testCases, isExactlyMatch);
+  }
+
+  /**
+   * [For administrators only] Deletes a single checkpoint of a problem, then renumbers and re-scores
+   * the remaining checkpoints so ids stay contiguous and scores keep summing to 100.
+   *
+   * @param problemId - the unique identifier of the problem
+   * @param checkpointId - the id of the checkpoint to delete
+   */
+  public void deleteCheckpoint(long problemId, int checkpointId) {
+    List<Checkpoint> checkpoints = checkpointMapper.getCheckpointsUsingProblemId(problemId);
+    boolean isExactlyMatch = checkpoints.isEmpty() || checkpoints.get(0).isExactlyMatch();
+    List<Map<String, String>> remaining = new ArrayList<>();
+    for (Checkpoint checkpoint : checkpoints) {
+      if (checkpoint.getCheckpointId() != checkpointId) {
+        Map<String, String> testCase = new HashMap<>();
+        testCase.put("input", checkpoint.getInput());
+        testCase.put("output", checkpoint.getOutput());
+        remaining.add(testCase);
+      }
+    }
+    checkpointMapper.deleteCheckpoint(problemId);
+    createTestCases(problemId, remaining, isExactlyMatch);
+  }
+
+  /**
    * [For administrators only] Creates a problem.
    *
    * @param problemName - the name of the problem
@@ -372,7 +534,7 @@ public class ProblemService {
    * @param testCases - the test cases (JSON format)
    * @param problemCategories - the problem categories (JSON format)
    * @param problemTags - the problem tags (JSON format)
-   * @param isPublic - whether the problem is public
+   * @param status - the publication status of the problem (PUBLISHED / DRAFT / HIDDEN)
    * @param isExactlyMatch - whether the checkpoints require an exact match
    * @return a Map<String, Object> object containing the problem creation result
    */
@@ -389,12 +551,12 @@ public class ProblemService {
       String testCases,
       String problemCategories,
       String problemTags,
-      boolean isPublic,
+      String status,
       boolean isExactlyMatch,
       String problemDifficulty) {
     Problem problem =
         new Problem(
-            isPublic,
+            PublicationStatus.normalize(status),
             problemName,
             timeLimit,
             memoryLimit,
@@ -466,10 +628,9 @@ public class ProblemService {
    * @param outputFormat - the output format
    * @param inputSample - the input sample
    * @param outputSample - the output sample
-   * @param testCases - the test cases (JSON format)
    * @param problemCategories - the problem categories (JSON format)
    * @param problemTags - the problem tags (JSON format)
-   * @param isPublic - whether the problem is public
+   * @param status - the publication status of the problem (PUBLISHED / DRAFT / HIDDEN)
    * @param isExactlyMatch - whether the checkpoints require an exact match
    * @return a Map<String, Object> object containing the problem editing result
    */
@@ -484,16 +645,15 @@ public class ProblemService {
       String outputFormat,
       String inputSample,
       String outputSample,
-      String testCases,
       String problemCategories,
       String problemTags,
-      boolean isPublic,
+      String status,
       boolean isExactlyMatch,
       String problemDifficulty) {
     Problem problem =
         new Problem(
             problemId,
-            isPublic,
+            PublicationStatus.normalize(status),
             problemName,
             timeLimit,
             memoryLimit,
@@ -509,7 +669,9 @@ public class ProblemService {
     if (result.get("isSuccessful")) {
       problemMapper.updateProblem(problem);
 
-      updateTestCases(problemId, testCases, isExactlyMatch);
+      // Test data is managed separately (archive upload / per-checkpoint delete); editing only
+      // re-applies the exact-match flag to the existing checkpoints.
+      checkpointMapper.updateCheckpointsExactlyMatch(problemId, isExactlyMatch);
       updateProblemCategoryRelationships(problemId, problemCategories);
       updateProblemTags(problemId, problemTags);
     }
@@ -546,7 +708,19 @@ public class ProblemService {
   private void createTestCases(long problemId, String testCases, boolean isExactlyMatch) {
     List<Map<String, String>> testCaseList =
         JsonUtils.toObject(testCases, new TypeReference<List<Map<String, String>>>() {});
+    createTestCases(problemId, testCaseList, isExactlyMatch);
+  }
 
+  /**
+   * Creates the test cases from parsed input/output pairs, numbering checkpoints from 0 and
+   * distributing 100 points evenly across them.
+   *
+   * @param problemId - the unique identifier of the problem
+   * @param testCaseList - the input/output pairs (each map holds {@code input} and {@code output})
+   * @param isExactlyMatch - whether the test cases require an exact match
+   */
+  private void createTestCases(
+      long problemId, List<Map<String, String>> testCaseList, boolean isExactlyMatch) {
     for (int i = 0; i < testCaseList.size(); ++i) {
       Map<String, String> testCase = testCaseList.get(i);
 
@@ -560,19 +734,6 @@ public class ProblemService {
       Checkpoint checkpoint = new Checkpoint(problemId, i, isExactlyMatch, score, input, output);
       checkpointMapper.createCheckpoint(checkpoint);
     }
-  }
-
-  /**
-   * Updates the test cases. First deletes all test cases of the problem, then creates the test
-   * cases.
-   *
-   * @param problemId - the unique identifier of the problem
-   * @param testCases - the test cases (JSON format)
-   * @param isExactlyMatch - whether the test cases require an exact match
-   */
-  private void updateTestCases(long problemId, String testCases, boolean isExactlyMatch) {
-    checkpointMapper.deleteCheckpoint(problemId);
-    createTestCases(problemId, testCases, isExactlyMatch);
   }
 
   /**

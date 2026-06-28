@@ -2,7 +2,7 @@
 #
 # Run the Verwandlung Online Judge web application.
 #
-# Launches the self-contained Spring Boot executable WAR (embedded Tomcat).
+# Launches the self-contained Spring Boot executable JAR (embedded Tomcat).
 # By default it serves http://localhost:8080/voj and expects MySQL and ActiveMQ
 # to be reachable (see web/src/main/resources/voj.properties).
 #
@@ -41,9 +41,9 @@ else
   exit 1
 fi
 
-WAR="$PROJECT_ROOT/web/target/voj.web.war"
-if [ ! -f "$WAR" ]; then
-  echo "ERROR: $WAR not found. Build it first: scripts/build-jars.sh web" >&2
+JAR="$PROJECT_ROOT/web/target/voj.web.jar"
+if [ ! -f "$JAR" ]; then
+  echo "ERROR: $JAR not found. Build it first: scripts/build-jars.sh web" >&2
   exit 1
 fi
 
@@ -168,4 +168,4 @@ fi
 
 echo "==> Java: $("$JAVA_BIN" -version 2>&1 | head -1)"
 echo "==> Starting voj.web (http://localhost:8080/voj) ..."
-exec "$JAVA_BIN" ${JAVA_OPTS} -jar "$WAR" "$@"
+exec "$JAVA_BIN" ${JAVA_OPTS} -jar "$JAR" "$@"

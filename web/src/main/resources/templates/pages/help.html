@@ -91,7 +91,7 @@
             <div class="vw-faqgroup">
                 <div class="label">ACCOUNT</div>
                 <div class="vw-faq">
-                    <div class="vw-faq-item"><button class="vw-faq-q" type="button"><span class="chev">&rsaquo;</span><span>How do I reset my password?</span></button><div class="vw-faq-a"><p>Use the &ldquo;forgot password&rdquo; link on the login page. A reset link is sent to your registered email; if it doesn&rsquo;t arrive, check spam or contact help@verwandlung.io.</p></div></div>
+                    <div class="vw-faq-item"><button class="vw-faq-q" type="button"><span class="chev">&rsaquo;</span><span>How do I reset my password?</span></button><div class="vw-faq-a"><p>Use the &ldquo;forgot password&rdquo; link on the login page. A reset link is sent to your registered email; if it doesn&rsquo;t arrive, check spam or contact help@verwandlung.org.</p></div></div>
                     <div class="vw-faq-item"><button class="vw-faq-q" type="button"><span class="chev">&rsaquo;</span><span>Can I change my username?</span></button><div class="vw-faq-a"><p>Usernames are tied to your submission history and leaderboard entries, so changes are limited. Email support if you have a genuine need to rename.</p></div></div>
                 </div>
             </div>
@@ -99,7 +99,7 @@
             <div class="vw-contact vw-help-faq-contact">
                 <div class="vw-contact-text">
                     <div class="t">Still stuck?</div>
-                    <div class="d">Ask the community on the discussion board, or email <a href="mailto:help@verwandlung.io">help@verwandlung.io</a>.</div>
+                    <div class="d">Ask the community on the discussion board<th:block th:if="${contactEmail != null and contactEmail != ''}">, or email <a th:href="|mailto:${contactEmail}|" th:text="${contactEmail}">help@verwandlung.org</a></th:block>.</div>
                 </div>
                 <a class="vw-btn vw-btn-accent" th:href="@{/discussion}">Open discussion &rarr;</a>
             </div>

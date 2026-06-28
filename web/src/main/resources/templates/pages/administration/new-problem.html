@@ -11,7 +11,7 @@
 
         <div class="adm-detail-top">
             <a class="adm-back" th:href="@{/administration/all-problems}">&#8592; <span th:text="#{voj.administration.new-problem.back}">back to problems</span></a>
-            <div style="flex:1;"></div>
+            <div class="adm-flex1"></div>
             <button type="submit" class="adm-btn-tn go" th:text="'$ ' + #{voj.administration.new-problem.publish-problem}">$ publish</button>
         </div>
 
@@ -37,9 +37,9 @@
                 </div>
                 <div class="adm-card">
                     <div class="adm-card-head"><span th:text="#{voj.administration.new-problem.test-cases}">// TEST CASES</span><span class="act" id="new-test-case" th:text="#{voj.administration.new-problem.new-test-case}">+ add sample</span></div>
-                    <div id="test-cases" class="adm-card-body" style="gap:0;">
+                    <div id="test-cases" class="adm-card-body adm-gap0">
                         <p id="no-test-cases" class="adm-cell muted" th:text="#{voj.administration.new-problem.no-test-cases}">No test cases.</p>
-                        <ul style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:14px;"></ul>
+                        <ul class="adm-list-reset adm-stack14"></ul>
                     </div>
                 </div>
             </div>
@@ -47,6 +47,15 @@
                 <div class="adm-card">
                     <div class="adm-card-head plain" th:text="#{voj.administration.new-problem.properties}">// PROPERTIES</div>
                     <div class="adm-card-body">
+                        <div>
+                            <div class="adm-block-label" th:text="#{voj.administration.new-problem.status}">STATUS</div>
+                            <div class="adm-seg" data-adm="seg" data-input="problem-status">
+                                <a href="javascript:void(0);" data-value="PUBLISHED" class="active" th:text="#{voj.administration.status.published}">Published</a>
+                                <a href="javascript:void(0);" data-value="DRAFT" th:text="#{voj.administration.status.draft}">Draft</a>
+                                <a href="javascript:void(0);" data-value="HIDDEN" th:text="#{voj.administration.status.hidden}">Hidden</a>
+                            </div>
+                            <input type="hidden" id="problem-status" value="PUBLISHED" />
+                        </div>
                         <div>
                             <div class="adm-block-label" th:text="#{voj.administration.new-problem.difficulty}">DIFFICULTY</div>
                             <div class="adm-seg" data-adm="seg" data-input="problem-difficulty">
@@ -58,16 +67,15 @@
                             <label class="adm-flabel"><span th:text="#{voj.administration.new-problem.time-limit}">TIME · ms</span><input id="time-limit" class="adm-input" type="text" maxlength="8" /></label>
                             <label class="adm-flabel"><span th:text="#{voj.administration.new-problem.memory-limit}">MEMORY · KB</span><input id="memory-limit" class="adm-input" type="text" maxlength="8" /></label>
                         </div>
-                        <div class="vw-between"><span class="adm-cell txt" th:text="#{voj.administration.new-problem.is-public}">Public to users</span><div class="adm-switch on" id="problem-is-public" data-adm="switch"><div class="knob"></div></div></div>
                         <div class="vw-between"><span class="adm-cell txt" th:text="#{voj.administration.new-problem.test-case-exactly-match}">Exact match</span><div class="adm-switch" id="problem-is-exactly-match" data-adm="switch"><div class="knob"></div></div></div>
                     </div>
                 </div>
                 <div class="adm-card">
                     <div class="adm-card-head plain" th:text="#{voj.administration.new-problem.problem-categories}">// CATEGORIES</div>
-                    <div class="adm-card-body" style="gap:8px;">
+                    <div class="adm-card-body adm-gap8">
                         <th:block th:each="entry : ${problemCategories}">
-                            <label class="checkbox" style="display:flex;align-items:center;gap:8px;color:var(--head);font-size:13px;"><input type="checkbox" class="category-check" th:value="${entry.key.problemCategorySlug}" /> <span th:text="${entry.key.problemCategoryName}">Category</span></label>
-                            <label th:each="problemCategory : ${entry.value}" class="checkbox" style="display:flex;align-items:center;gap:8px;color:var(--text2);font-size:12.5px;padding-left:20px;"><input type="checkbox" class="category-check" th:value="${problemCategory.problemCategorySlug}" /> <span th:text="${problemCategory.problemCategoryName}">Subcategory</span></label>
+                            <label class="checkbox adm-checkrow"><input type="checkbox" class="category-check" th:value="${entry.key.problemCategorySlug}" /> <span th:text="${entry.key.problemCategoryName}">Category</span></label>
+                            <label th:each="problemCategory : ${entry.value}" class="checkbox adm-checkrow sub"><input type="checkbox" class="category-check" th:value="${problemCategory.problemCategorySlug}" /> <span th:text="${problemCategory.problemCategoryName}">Subcategory</span></label>
                         </th:block>
                     </div>
                 </div>
@@ -89,9 +97,9 @@
         $(function() { descriptionEditor = createMarkdownEditor('#wmd-input'); });
 
         function getTestCaseContainer(n, input, output) {
-            return '<li class="test-case adm-card" style="border-radius:11px;">' +
-                   '  <div class="adm-card-head"><span>' + [[#{voj.administration.new-problem.test-case}]] + ' #' + n + '</span><span class="del-test" style="cursor:pointer;color:var(--text3);">&#10005;</span></div>' +
-                   '  <div class="adm-card-body" style="gap:10px;">' +
+            return '<li class="test-case adm-card">' +
+                   '  <div class="adm-card-head"><span>' + [[#{voj.administration.new-problem.test-case}]] + ' #' + n + '</span><span class="del-test">&#10005;</span></div>' +
+                   '  <div class="adm-card-body adm-gap10">' +
                    '    <label class="adm-flabel"><span>' + [[#{voj.administration.new-problem.standard-input}]] + '</span><textarea class="standard-input adm-input code" rows="2">' + (input || '') + '</textarea></label>' +
                    '    <label class="adm-flabel"><span>' + [[#{voj.administration.new-problem.standard-output}]] + '</span><textarea class="standard-output adm-input code" rows="2">' + (output || '') + '</textarea></label>' +
                    '  </div>' +
@@ -131,17 +139,17 @@
                 descriptionEditor ? descriptionEditor.value() : '', $('#hint').val(), $('#input-format').val(),
                 $('#output-format').val(), $('#input-sample').val(), $('#output-sample').val(), getTestCases(),
                 getProblemCategories(), getProblemTags(),
-                document.getElementById('problem-is-public').classList.contains('on'),
+                document.getElementById('problem-status').value,
                 document.getElementById('problem-is-exactly-match').classList.contains('on'),
                 document.getElementById('problem-difficulty').value);
         }
-        function createProblem(problemName, timeLimit, memoryLimit, description, hint, inputFormat, outputFormat, inputSample, outputSample, testCases, problemCategories, problemTags, isPublic, isExactlyMatch, problemDifficulty) {
+        function createProblem(problemName, timeLimit, memoryLimit, description, hint, inputFormat, outputFormat, inputSample, outputSample, testCases, problemCategories, problemTags, status, isExactlyMatch, problemDifficulty) {
             $.ajax({
                 type: 'POST', url: [[@{/administration/createProblem.action}]],
                 data: { problemName:problemName, timeLimit:timeLimit, memoryLimit:memoryLimit, description:description, hint:hint,
                         inputFormat:inputFormat, outputFormat:outputFormat, inputSample:inputSample, outputSample:outputSample,
                         testCases:testCases, problemCategories:problemCategories, problemTags:problemTags,
-                        isPublic:isPublic, isExactlyMatch:isExactlyMatch, problemDifficulty:problemDifficulty },
+                        status:status, isExactlyMatch:isExactlyMatch, problemDifficulty:problemDifficulty },
                 dataType: 'JSON', success: function(result){ processCreateProblemResult(result); }
             });
         }

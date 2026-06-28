@@ -185,6 +185,7 @@
                 if ( result['isThreadTitleEmpty'] ) { errorMessage += [[#{voj.discussion.new-thread.discussion-thread-title-empty}]] + '<br>'; }
                 else if ( !result['isThreadTitleLegal'] ) { errorMessage += [[#{voj.discussion.new-thread.discussion-thread-title-too-long}]] + '<br>'; }
                 if ( result['isThreadContentEmpty'] ) { errorMessage += [[#{voj.discussion.new-thread.discussion-thread-content-empty}]] + '<br>'; }
+                if ( result['isPostDelayElapsed'] === false ) { errorMessage += [[#{voj.discussion.new-thread.post-delay-active}]].replace('{0}', [[${postDelayMinutes}]]) + '<br>'; }
                 $('.alert-error').html(errorMessage);
                 $('.alert-error').removeClass('hide');
             }

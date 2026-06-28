@@ -72,6 +72,38 @@ public class DateFormatter {
   }
 
   /**
+   * Formats a date using a medium date style (e.g. {@code Jun 24, 2026}), suitable for compact
+   * table cells such as the bulletin list where only the calendar date is shown.
+   *
+   * @param date - the date to format (may be {@code null})
+   * @param language - the user's language slug (e.g. en_US)
+   * @return the formatted date, or an empty string when {@code date} is {@code null}
+   */
+  public String dateMedium(Date date, String language) {
+    if (date == null) {
+      return "";
+    }
+    Locale locale = LocaleUtils.getLocaleOfLanguage(language);
+    return DateFormat.getDateInstance(DateFormat.MEDIUM, locale).format(date);
+  }
+
+  /**
+   * Formats a date as an abbreviated month and year (e.g. {@code Mar 2015}), suitable for the admin
+   * user list's JOINED column where only the join month matters.
+   *
+   * @param date - the date to format (may be {@code null})
+   * @param language - the user's language slug (e.g. en_US)
+   * @return the formatted month and year, or an empty string when {@code date} is {@code null}
+   */
+  public String monthYear(Date date, String language) {
+    if (date == null) {
+      return "";
+    }
+    Locale locale = LocaleUtils.getLocaleOfLanguage(language);
+    return new SimpleDateFormat("MMM yyyy", locale).format(date);
+  }
+
+  /**
    * Formats a date using a short date style, equivalent to {@code <fmt:formatDate type="date"
    * dateStyle="short" />}.
    *

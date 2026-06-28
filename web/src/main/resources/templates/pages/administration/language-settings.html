@@ -16,20 +16,20 @@
         <div class="alert alert-error hide"></div>
         <div class="alert alert-success hide"></div>
 
-        <div class="vw-between" style="align-items:flex-end;">
+        <div class="vw-between adm-items-end">
             <div class="adm-label" th:text="#{voj.administration.language-settings.languages-header}">// LANGUAGES</div>
             <a class="adm-btn-accent" href="javascript:void(0);" id="new-language" th:text="#{voj.administration.language-settings.new-language}">+ add language</a>
         </div>
 
         <p id="no-languages" th:classappend="${languages.size() != 0} ? 'hide' : ''" class="adm-table-empty" th:text="#{voj.administration.language-settings.no-languages}">// no languages</p>
 
-        <div id="languages" style="display:flex;flex-direction:column;gap:18px;">
+        <div id="languages" class="adm-stack18">
             <div class="adm-langcard language" th:each="language : ${languages}">
                 <div class="adm-langcard-head">
                     <span class="nm" th:text="${language.languageName}">Language</span>
                     <span class="ext" th:text="${language.languageSlug}">slug</span>
-                    <div style="flex:1;"></div>
-                    <span class="del-lang" style="color:var(--text3);cursor:pointer;font-size:15px;">&#10005;</span>
+                    <div class="adm-flex1"></div>
+                    <span class="del-lang">&#10005;</span>
                 </div>
                 <div class="adm-langcard-body">
                     <input class="language-id" type="hidden" th:value="${language.languageId}" />
@@ -115,8 +115,8 @@
                 '<div class="adm-langcard language">' +
                 '  <div class="adm-langcard-head">' +
                 '    <span class="nm"></span><span class="ext"></span>' +
-                '    <div style="flex:1;"></div>' +
-                '    <span class="del-lang" style="color:var(--text3);cursor:pointer;font-size:15px;">&#10005;</span>' +
+                '    <div class="adm-flex1"></div>' +
+                '    <span class="del-lang">&#10005;</span>' +
                 '  </div>' +
                 '  <div class="adm-langcard-body">' +
                 '    <input class="language-id" type="hidden" value="0" />' +

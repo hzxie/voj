@@ -18,7 +18,7 @@
             <h1 th:text="${sectionLabel != null ? sectionLabel : #messages.msg('voj.administration.include.sidebar.' + section)}">Dashboard</h1>
         </div>
         <div class="adm-head-spacer"></div>
-        <a class="adm-bell" th:href="@{/administration/all-discussion}" title="Moderation">
+        <a class="adm-bell" th:href="@{/administration/moderation}" title="Moderation">
             <span class="ico">&#9673;</span>
             <span class="count" th:if="${navAlertCount}" th:text="${navAlertCount}">0</span>
         </a>

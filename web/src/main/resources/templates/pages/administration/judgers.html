@@ -7,42 +7,32 @@
 </head>
 <body>
     <div layout:fragment="content">
-    <div class="adm-jwrap">
+    <div class="adm-jwrap" id="judgers-page">
 
-        <!-- KPI strip -->
-        <div class="adm-kpis" style="grid-template-columns:repeat(3,1fr);">
-            <div class="adm-kpi">
-                <div class="adm-kpi-top"><span class="k" th:text="#{voj.administration.judgers.online-nodes}">ONLINE NODES</span><span class="i">&#9707;</span></div>
-                <div class="adm-kpi-v" th:text="${onlineJudgers}">0</div>
-            </div>
-            <div class="adm-kpi">
-                <div class="adm-kpi-top"><span class="k" th:text="#{voj.administration.judgers.queue-depth}">QUEUE DEPTH</span><span class="i">&#8645;</span></div>
-                <div class="adm-kpi-v" th:text="${queueDepth}">0</div>
-            </div>
-            <div class="adm-kpi">
-                <div class="adm-kpi-top"><span class="k" th:text="#{voj.administration.judgers.avg-load}">AVG LOAD</span><span class="i">&#9684;</span></div>
-                <div class="adm-kpi-v" th:text="${averageCpuLoad < 0 ? '—' : averageCpuLoad + '%'}">—</div>
-            </div>
-        </div>
+        <div class="alert alert-error hide"></div>
+        <div class="alert alert-success hide"></div>
 
-        <!-- Cluster -->
+        <!-- Judge cluster -->
         <div class="adm-panel adm-panel-flush">
             <div class="adm-panel-bar">
                 <span class="adm-label" th:text="#{voj.administration.judgers.judge-cluster}">// JUDGE CLUSTER</span>
-                <span class="adm-sub"><span th:text="${onlineJudgers}">0</span> <span th:text="#{voj.administration.judgers.online}">online</span></span>
+                <span class="adm-sub">
+                    <span th:text="${onlineJudgers}">0</span> <span th:text="#{voj.administration.judgers.online}">online</span>
+                    &middot; <span th:text="${queueDepth}">0</span> <span th:text="#{voj.administration.judgers.queued}">queued</span>
+                </span>
             </div>
             <div class="adm-nodes" th:if="${!#lists.isEmpty(nodes)}">
                 <div class="adm-node" th:each="node : ${nodes}">
                     <div class="adm-node-top">
                         <span class="nm" th:text="${node.name}">judge-01</span>
-                        <span class="adm-node-dot c-accent" style="background:currentColor;box-shadow:0 0 7px currentColor;"></span>
+                        <span class="adm-node-dot c-accent"></span>
                     </div>
-                    <div class="adm-node-track"><div class="fill" th:classappend="${node.loadClass}" th:style="|width:${node.cpuLoad}%;background:currentColor|"></div></div>
+                    <div class="adm-node-track"><div class="fill" th:classappend="${node.loadClass}" th:attr="data-pct=${node.cpuLoad}"></div></div>
                     <div class="adm-node-foot">
                         <span><span th:text="#{voj.administration.judgers.cpu}">CPU</span> <span th:text="${node.cpuLoad}">0</span>%</span>
                         <span><span th:text="#{voj.administration.judgers.memory}">MEM</span> <span th:text="${node.memoryUsage}">0</span>%</span>
                     </div>
-                    <div class="adm-node-foot" style="margin-top:5px;">
+                    <div class="adm-node-foot adm-mt5">
                         <span class="adm-cell muted" th:text="${node.description}">node</span>
                         <span th:text="${node.uptime}">0m</span>
                     </div>
@@ -51,7 +41,268 @@
             <div class="adm-table-empty" th:if="${#lists.isEmpty(nodes)}" th:text="#{voj.administration.judgers.no-judgers}">// no judgers online</div>
         </div>
 
+        <!-- Languages header -->
+        <div class="adm-lang-header">
+            <div>
+                <div class="adm-label" th:text="#{voj.administration.judgers.languages}">// LANGUAGES</div>
+                <div class="desc" th:text="#{voj.administration.judgers.languages-desc}">Compile &amp; run commands per language. Disable to hide from submitters.</div>
+            </div>
+            <a class="adm-btn-accent" href="javascript:void(0);" id="toggle-quickadd"
+               th:text="#{voj.administration.judgers.add-language}"
+               th:attr="data-add=#{voj.administration.judgers.add-language},data-close=#{voj.administration.judgers.close}">+ add language</a>
+        </div>
+
+        <!-- Quick add -->
+        <div class="adm-quickadd hide" id="quickadd">
+            <div class="adm-quickadd-bar" th:text="#{voj.administration.judgers.quick-add}">// QUICK ADD</div>
+            <div class="adm-quickadd-grid" id="quickadd-grid"></div>
+            <div class="adm-quickadd-foot">
+                <div class="txt">
+                    <div class="t" th:text="#{voj.administration.judgers.not-listed}">Not listed?</div>
+                    <div class="d" th:text="#{voj.administration.judgers.not-listed-desc}">Add a blank language and fill in the commands yourself.</div>
+                </div>
+                <button type="button" class="adm-customlang" id="custom-lang" th:text="#{voj.administration.judgers.custom-language}">+ custom language</button>
+            </div>
+        </div>
+
+        <!-- Placeholders -->
+        <div class="adm-placeholders">
+            <span class="t" th:text="#{voj.administration.judgers.placeholders}">PLACEHOLDERS</span>
+            <span class="ph"><code>{filename}</code><span class="d" th:text="#{voj.administration.judgers.placeholder-filename}">source basename</span></span>
+        </div>
+
+        <!-- No languages -->
+        <p id="no-languages" class="adm-table-empty" th:classappend="${#lists.isEmpty(languages)} ? '' : 'hide'" th:text="#{voj.administration.judgers.no-languages}">// no languages</p>
+
+        <!-- Language cards -->
+        <div id="languages" class="adm-stack18">
+            <div class="adm-langcard language" th:each="language : ${languages}" th:classappend="${language.enabled} ? '' : 'off'">
+                <div class="adm-langcard-head">
+                    <div class="adm-switch sm lang-enabled" th:classappend="${language.enabled} ? 'on'"><div class="knob"></div></div>
+                    <input class="adm-langname language-name" type="text" th:value="${language.languageName}" maxlength="16" />
+                    <span class="ext" th:text="${language.languageSlug}">slug</span>
+                    <div class="adm-flex1"></div>
+                    <span class="del-lang">&#10005;</span>
+                    <input class="language-id" type="hidden" th:value="${language.languageId}" />
+                </div>
+                <div class="adm-langcard-body">
+                    <div class="adm-lang-top">
+                        <label class="adm-flabel"><span th:text="#{voj.administration.judgers.source-filename}">SOURCE FILENAME</span><input class="language-src adm-input" type="text" th:value="${language.sourceFilename}" maxlength="32" /></label>
+                        <label class="adm-flabel"><span th:text="#{voj.administration.judgers.slug-mode}">SLUG / MODE</span><input class="language-slug adm-input" type="text" th:value="${language.languageSlug}" maxlength="16" /></label>
+                    </div>
+                    <label class="adm-flabel"><span th:text="#{voj.administration.judgers.compile-command}">COMPILE COMMAND</span><input class="compile-command adm-input code" type="text" th:value="${language.compileCommand}" maxlength="128" /></label>
+                    <label class="adm-flabel"><span th:text="#{voj.administration.judgers.run-command}">RUN COMMAND</span><input class="run-command adm-input code" type="text" th:value="${language.runCommand}" maxlength="128" /></label>
+                    <div class="adm-mult-wrap">
+                        <div class="adm-multrow">
+                            <div class="meta">
+                                <div class="t" th:text="#{voj.administration.judgers.time-multiplier}">Time limit multiplier</div>
+                                <div class="d" th:text="#{voj.administration.judgers.time-multiplier-desc}">Wall-clock limit is scaled by this factor.</div>
+                            </div>
+                            <div class="adm-step time-mult" th:attr="data-val=${#numbers.formatDecimal(language.timeMultiplier, 1, 1)}">
+                                <span class="btn dec">&minus;</span>
+                                <span class="val">&times;<span class="num" th:text="${#numbers.formatDecimal(language.timeMultiplier, 1, 1)}">1.0</span></span>
+                                <span class="btn inc">+</span>
+                            </div>
+                        </div>
+                        <div class="adm-multrow">
+                            <div class="meta">
+                                <div class="t" th:text="#{voj.administration.judgers.memory-multiplier}">Memory limit multiplier</div>
+                                <div class="d" th:text="#{voj.administration.judgers.memory-multiplier-desc}">Memory cap is scaled by this factor.</div>
+                            </div>
+                            <div class="adm-step memory-mult" th:attr="data-val=${#numbers.formatDecimal(language.memoryMultiplier, 1, 1)}">
+                                <span class="btn dec">&minus;</span>
+                                <span class="val">&times;<span class="num" th:text="${#numbers.formatDecimal(language.memoryMultiplier, 1, 1)}">1.0</span></span>
+                                <span class="btn inc">+</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="adm-form-actions">
+            <button type="button" class="adm-btn-reset" id="reset-languages" th:text="#{voj.administration.judgers.reset}">reset</button>
+            <button type="button" class="adm-btn-save" id="save-languages" th:text="#{voj.administration.judgers.save}">$ save-judgers</button>
+        </div>
+
     </div>
     </div>
+
+    <th:block layout:fragment="scripts">
+    <script type="text/javascript" th:inline="javascript">
+        // Runtime presets used by the quick-add scaffolder. Commands follow VOJ's
+        // {filename} placeholder convention (validated server-side).
+        var ADM_PRESETS = [
+            { name:'Kotlin',     slug:'text/x-kotlin',     src:'Main.kt',    compile:'kotlinc {filename}.kt -include-runtime -d {filename}.jar', run:'java -jar {filename}.jar' },
+            { name:'C#',         slug:'text/x-csharp',     src:'Main.cs',    compile:'mcs -optimize+ -out:{filename}.exe {filename}.cs',         run:'mono {filename}.exe' },
+            { name:'Node.js',    slug:'text/javascript',   src:'Main.js',    compile:'node --check {filename}.js',                               run:'node {filename}.js' },
+            { name:'TypeScript', slug:'text/typescript',   src:'Main.ts',    compile:'tsc --outFile {filename}.js {filename}.ts',                run:'node {filename}.js' },
+            { name:'Ruby',       slug:'text/x-ruby',       src:'Main.rb',    compile:'ruby -c {filename}.rb',                                    run:'ruby {filename}.rb' },
+            { name:'PHP',        slug:'application/x-httpd-php', src:'Main.php', compile:'php -l {filename}.php',                                 run:'php {filename}.php' },
+            { name:'Swift',      slug:'text/x-swift',      src:'Main.swift', compile:'swiftc -O -o {filename}.exe {filename}.swift',             run:'{filename}.exe' },
+            { name:'Haskell',    slug:'text/x-haskell',    src:'Main.hs',    compile:'ghc -O2 -o {filename}.exe {filename}.hs',                  run:'{filename}.exe' },
+            { name:'Pascal',     slug:'text/x-pascal',     src:'Main.pas',   compile:'fpc -O2 -o{filename}.exe {filename}.pas',                  run:'{filename}.exe' }
+        ];
+        var ADM_I18N = {
+            sourceFilename: [[#{voj.administration.judgers.source-filename}]],
+            slugMode:       [[#{voj.administration.judgers.slug-mode}]],
+            compile:        [[#{voj.administration.judgers.compile-command}]],
+            run:            [[#{voj.administration.judgers.run-command}]],
+            timeMul:        [[#{voj.administration.judgers.time-multiplier}]],
+            timeMulDesc:    [[#{voj.administration.judgers.time-multiplier-desc}]],
+            memMul:         [[#{voj.administration.judgers.memory-multiplier}]],
+            memMulDesc:     [[#{voj.administration.judgers.memory-multiplier-desc}]],
+            pleaseWait:     [[#{voj.administration.judgers.please-wait}]],
+            settingsSaved:  [[#{voj.administration.judgers.settings-saved}]],
+            saveLabel:      [[#{voj.administration.judgers.save}]]
+        };
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        (function() {
+            var MIN_MUL = 1.0, MAX_MUL = 5.0, STEP = 0.5;
+
+            function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+            function languageCardHtml(l) {
+                l = l || {};
+                var enabled = l.enabled !== false;
+                var t = (l.tmul == null ? 1.0 : l.tmul).toFixed(1);
+                var m = (l.mmul == null ? 1.0 : l.mmul).toFixed(1);
+                return '' +
+                '<div class="adm-langcard language' + (enabled ? '' : ' off') + '">' +
+                '  <div class="adm-langcard-head">' +
+                '    <div class="adm-switch sm lang-enabled' + (enabled ? ' on' : '') + '"><div class="knob"></div></div>' +
+                '    <input class="adm-langname language-name" type="text" value="' + esc(l.name) + '" maxlength="16" />' +
+                '    <span class="ext">' + esc(l.slug) + '</span>' +
+                '    <div class="adm-flex1"></div>' +
+                '    <span class="del-lang">&#10005;</span>' +
+                '    <input class="language-id" type="hidden" value="0" />' +
+                '  </div>' +
+                '  <div class="adm-langcard-body">' +
+                '    <div class="adm-lang-top">' +
+                '      <label class="adm-flabel"><span>' + esc(ADM_I18N.sourceFilename) + '</span><input class="language-src adm-input" type="text" value="' + esc(l.src) + '" maxlength="32" /></label>' +
+                '      <label class="adm-flabel"><span>' + esc(ADM_I18N.slugMode) + '</span><input class="language-slug adm-input" type="text" value="' + esc(l.slug) + '" maxlength="16" /></label>' +
+                '    </div>' +
+                '    <label class="adm-flabel"><span>' + esc(ADM_I18N.compile) + '</span><input class="compile-command adm-input code" type="text" value="' + esc(l.compile) + '" maxlength="128" /></label>' +
+                '    <label class="adm-flabel"><span>' + esc(ADM_I18N.run) + '</span><input class="run-command adm-input code" type="text" value="' + esc(l.run) + '" maxlength="128" /></label>' +
+                '    <div class="adm-mult-wrap">' +
+                '      <div class="adm-multrow">' +
+                '        <div class="meta"><div class="t">' + esc(ADM_I18N.timeMul) + '</div><div class="d">' + esc(ADM_I18N.timeMulDesc) + '</div></div>' +
+                '        <div class="adm-step time-mult" data-val="' + t + '"><span class="btn dec">&minus;</span><span class="val">&times;<span class="num">' + t + '</span></span><span class="btn inc">+</span></div>' +
+                '      </div>' +
+                '      <div class="adm-multrow">' +
+                '        <div class="meta"><div class="t">' + esc(ADM_I18N.memMul) + '</div><div class="d">' + esc(ADM_I18N.memMulDesc) + '</div></div>' +
+                '        <div class="adm-step memory-mult" data-val="' + m + '"><span class="btn dec">&minus;</span><span class="val">&times;<span class="num">' + m + '</span></span><span class="btn inc">+</span></div>' +
+                '      </div>' +
+                '    </div>' +
+                '  </div>' +
+                '</div>';
+            }
+
+            function addLanguage(data) {
+                $('#no-languages').addClass('hide');
+                $('#languages').append(languageCardHtml(data));
+            }
+
+            // Render quick-add preset cards.
+            ADM_PRESETS.forEach(function(p, i) {
+                $('#quickadd-grid').append(
+                    '<div class="adm-preset" data-preset="' + i + '">' +
+                    '  <span class="ic">+</span>' +
+                    '  <div class="meta"><div class="nm">' + esc(p.name) + '</div><div class="ext">' + esc(p.slug) + '</div></div>' +
+                    '</div>'
+                );
+            });
+
+            // Toggle quick-add panel.
+            $('#toggle-quickadd').click(function() {
+                var $b = $(this), open = $('#quickadd').toggleClass('hide').hasClass('hide') === false;
+                $b.text(open ? $b.data('close') : $b.data('add'));
+            });
+            $('#quickadd-grid').on('click', '.adm-preset', function() {
+                var p = ADM_PRESETS[$(this).data('preset')];
+                addLanguage({ name:p.name, slug:p.slug, src:p.src, compile:p.compile, run:p.run, enabled:true, tmul:1.0, mmul:1.0 });
+            });
+            $('#custom-lang').click(function() { addLanguage({ enabled:true, tmul:1.0, mmul:1.0 }); });
+
+            // Per-card interactions (delegated, since cards can be added dynamically).
+            $('#languages').on('click', '.del-lang', function() {
+                $(this).closest('.language').remove();
+                if ($('.language', '#languages').length === 0) { $('#no-languages').removeClass('hide'); }
+            });
+            $('#languages').on('click', '.lang-enabled', function() {
+                $(this).toggleClass('on');
+                $(this).closest('.language').toggleClass('off', !$(this).hasClass('on'));
+            });
+            $('#languages').on('input', '.language-name', function() {
+                $('.nm', $(this).closest('.language')).text($(this).val());
+            });
+            $('#languages').on('input', '.language-slug', function() {
+                $('.ext', $(this).closest('.language')).text($(this).val());
+            });
+            $('#languages').on('click', '.adm-step .btn', function() {
+                var $step = $(this).closest('.adm-step');
+                var v = parseFloat($step.attr('data-val')) || MIN_MUL;
+                v = $(this).hasClass('inc') ? Math.min(MAX_MUL, v + STEP) : Math.max(MIN_MUL, v - STEP);
+                v = Math.round(v * 10) / 10;
+                $step.attr('data-val', v.toFixed(1));
+                $('.num', $step).text(v.toFixed(1));
+            });
+
+            function collectLanguages() {
+                var languages = [];
+                $('.language', '#languages').each(function() {
+                    var $c = $(this);
+                    languages.push({
+                        languageId: $('.language-id', $c).val() || 0,
+                        languageSlug: $('.language-slug', $c).val(),
+                        languageName: $('.language-name', $c).val(),
+                        compileCommand: $('.compile-command', $c).val(),
+                        runCommand: $('.run-command', $c).val(),
+                        enabled: $('.lang-enabled', $c).hasClass('on'),
+                        sourceFilename: $('.language-src', $c).val(),
+                        timeMultiplier: parseFloat($('.time-mult', $c).attr('data-val')) || 1.0,
+                        memoryMultiplier: parseFloat($('.memory-mult', $c).attr('data-val')) || 1.0
+                    });
+                });
+                return JSON.stringify(languages);
+            }
+
+            function setLanguageId(slug, id) {
+                $('.language-slug', '#languages').each(function() {
+                    if ($(this).val() == slug) { $('.language-id', $(this).closest('.language')).val(id); }
+                });
+            }
+
+            $('#reset-languages').click(function() { window.location.reload(); });
+
+            $('#save-languages').click(function() {
+                $('.alert-success, .alert-error').addClass('hide');
+                var $btn = $(this).attr('disabled', 'disabled').text(ADM_I18N.pleaseWait);
+                $.ajax({
+                    type: 'POST', url: [[@{/administration/updateLanguageSettings.action}]],
+                    data: { languages: collectLanguages() }, dataType: 'JSON',
+                    success: function(result) {
+                        if (result['isSuccessful']) {
+                            (result['languageCreated'] || []).forEach(function(l) { setLanguageId(l['languageSlug'], l['languageId']); });
+                            $('.alert-success').html('<p>' + ADM_I18N.settingsSaved + '</p>').removeClass('hide');
+                        } else {
+                            var message = '';
+                            for (var name in result) {
+                                var r = result[name];
+                                if (typeof r != 'object' || r['isSuccessful']) { continue; }
+                                message += '<p><strong>' + name + '</strong></p>';
+                            }
+                            $('.alert-error').html(message || ('<p>' + ADM_I18N.settingsSaved + '</p>')).removeClass('hide');
+                        }
+                        $btn.removeAttr('disabled').text(ADM_I18N.saveLabel);
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }
+                });
+            });
+        })();
+    </script>
+    </th:block>
 </body>
 </html>
