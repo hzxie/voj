@@ -126,9 +126,52 @@ public class OffensiveWordImportServiceTest {
     Assertions.assertThrows(IOException.class, () -> readBoundedUtf8(oversized));
   }
 
+  /** Test case: tests isPlainTextContentType(String). Test data: text/plain with a charset parameter. Expected: accepted (the charset parameter is ignored). */
+  @Test
+  public void testIsPlainTextContentTypeAcceptsTextPlain() {
+    Assertions.assertTrue(isPlainTextContentType("text/plain; charset=utf-8"));
+  }
+
+  /** Test case: tests isPlainTextContentType(String). Test data: application/octet-stream, as raw.githubusercontent.com serves raw files. Expected: accepted. */
+  @Test
+  public void testIsPlainTextContentTypeAcceptsOctetStream() {
+    Assertions.assertTrue(isPlainTextContentType("application/octet-stream"));
+  }
+
+  /** Test case: tests isPlainTextContentType(String). Test data: an absent (empty) Content-Type. Expected: accepted, since some static hosts omit it for .txt files. */
+  @Test
+  public void testIsPlainTextContentTypeAcceptsEmpty() {
+    Assertions.assertTrue(isPlainTextContentType(""));
+  }
+
+  /** Test case: tests isPlainTextContentType(String). Test data: text/html, as returned by a file-view page or a soft-404. Expected: rejected so the HTML is not stored as words. */
+  @Test
+  public void testIsPlainTextContentTypeRejectsHtml() {
+    Assertions.assertFalse(isPlainTextContentType("text/html; charset=utf-8"));
+  }
+
+  /** Test case: tests isPlainTextContentType(String). Test data: application/json. Expected: rejected. */
+  @Test
+  public void testIsPlainTextContentTypeRejectsJson() {
+    Assertions.assertFalse(isPlainTextContentType("application/json"));
+  }
+
   /** Wraps a string as a UTF-8 input stream. */
   private static InputStream streamOf(String body) {
     return new ByteArrayInputStream(body.getBytes(StandardCharsets.UTF_8));
+  }
+
+  /** Invokes the private static isPlainTextContentType helper. */
+  private static boolean isPlainTextContentType(String contentType) {
+    try {
+      Method method =
+          OffensiveWordImportService.class.getDeclaredMethod(
+              "isPlainTextContentType", String.class);
+      method.setAccessible(true);
+      return (boolean) method.invoke(null, contentType);
+    } catch (ReflectiveOperationException ex) {
+      throw new RuntimeException(ex);
+    }
   }
 
   /** Invokes the private static parseSourceUrls helper. */

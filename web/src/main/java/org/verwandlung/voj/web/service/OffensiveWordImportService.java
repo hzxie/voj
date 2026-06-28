@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -154,7 +155,8 @@ public class OffensiveWordImportService {
    *
    * @param url - the URL to fetch
    * @return the response body decoded as UTF-8
-   * @throws IOException if the URL is not http(s), the response is not 200, or it is too large
+   * @throws IOException if the URL is not http(s), the response is not 200, the response is not a
+   *     plain-text word list, or it is too large
    * @throws InterruptedException if the fetch is interrupted
    */
   private String fetch(String url) throws IOException, InterruptedException {
@@ -171,9 +173,39 @@ public class OffensiveWordImportService {
     if (response.statusCode() != 200) {
       throw new IOException("Unexpected HTTP status: " + response.statusCode());
     }
+    // Reject anything that is not a plain-text word list: a URL that points at a web page (e.g. a
+    // repository's file-view page rather than the raw file, or a soft-404 / login / error page that
+    // still answers 200) would otherwise have every line of its HTML stored as an offensive word.
+    String contentType = response.headers().firstValue("Content-Type").orElse("");
+    if (!isPlainTextContentType(contentType)) {
+      throw new IOException(
+          "Source is not a plain-text word list (Content-Type: " + contentType + ").");
+    }
     try (InputStream in = response.body()) {
       return readBoundedUtf8(in);
     }
+  }
+
+  /**
+   * Decides whether a response Content-Type denotes a plain-text word list. Textual types are
+   * accepted (apart from HTML), as is {@code application/octet-stream} - the type {@code
+   * raw.githubusercontent.com} and many static hosts serve raw files as - and an absent Content-Type,
+   * which some static hosts omit for {@code .txt} files.
+   *
+   * @param contentType - the raw Content-Type response header, possibly empty
+   * @return whether the response should be parsed as a word list
+   */
+  private static boolean isPlainTextContentType(String contentType) {
+    String type = contentType.toLowerCase(Locale.ROOT).trim();
+    // Drop any ";charset=..." parameter.
+    int semicolon = type.indexOf(';');
+    if (semicolon >= 0) {
+      type = type.substring(0, semicolon).trim();
+    }
+    if (type.isEmpty() || type.equals("application/octet-stream")) {
+      return true;
+    }
+    return type.startsWith("text/") && !type.equals("text/html");
   }
 
   /**
