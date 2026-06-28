@@ -105,11 +105,7 @@ public class ProgramRunner {
   private int getTimeLimit(Submission submission) {
     Language language = submission.getLanguage();
     int timeLimit = submission.getProblem().getTimeLimit();
-
-    if (language.getLanguageName().equalsIgnoreCase("Java")) {
-      timeLimit *= 2;
-    }
-    return timeLimit;
+    return (int) Math.ceil(timeLimit * language.getTimeMultiplier());
   }
 
   /**
@@ -119,8 +115,9 @@ public class ProgramRunner {
    * @return the maximum memory limit
    */
   private int getMemoryLimit(Submission submission) {
+    Language language = submission.getLanguage();
     int memoryLimit = submission.getProblem().getMemoryLimit();
-    return memoryLimit;
+    return (int) Math.ceil(memoryLimit * language.getMemoryMultiplier());
   }
 
   /**

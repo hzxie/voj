@@ -22,11 +22,10 @@ INSERT INTO `voj_user_groups` (`user_group_id`, `user_group_slug`, `user_group_n
 
 INSERT INTO `voj_languages` (`language_id`, `language_slug`, `language_name`, `language_compile_command`, `language_run_command`, `language_enabled`, `language_source_filename`, `language_time_multiplier`, `language_memory_multiplier`) VALUES
 (1, 'text/x-csrc', 'C', 'gcc -O2 -s -Wall -o {filename}.exe {filename}.c -lm', '{filename}.exe', 1, 'Main.c', 1.0, 1.0),
-(2, 'text/x-c++src', 'C++', 'g++ -O2 -s -Wall -std=c++11 -o {filename}.exe {filename}.cpp -lm', '{filename}.exe', 1, 'Main.cpp', 1.0, 1.0),
+(2, 'text/x-c++src', 'C++', 'g++ -O2 -s -Wall -std=c++20 -o {filename}.exe {filename}.cpp -lm', '{filename}.exe', 1, 'Main.cpp', 1.0, 1.0),
 (3, 'text/x-java', 'Java', 'javac {filename}.java', 'java -cp {filename}', 1, 'Main.java', 2.0, 2.0),
 (4, 'text/x-pascal', 'Pascal', 'fpc -O2 -Xs -Sgic -vw -o{filename}.exe {filename}.pas', '{filename}.exe', 1, 'Main.pas', 1.0, 1.0),
-(5, 'text/x-python', 'Python 2', 'python -m py_compile {filename}.py', 'python {filename}.py', 1, 'Main.py', 3.0, 2.0),
-(6, 'text/x-ruby', 'Ruby', 'rbx compile {filename}.rb', 'ruby {filename}.rb ', 1, 'Main.rb', 2.0, 1.0);
+(5, 'text/x-python', 'Python 3', 'python3 -m py_compile {filename}.py', 'python3 {filename}.py', 1, 'Main.py', 3.0, 2.0);
 
 INSERT INTO `voj_judge_results` (`judge_result_id`, `judge_result_slug`, `judge_result_name`) VALUES
 (1, 'PD', 'Pending'),

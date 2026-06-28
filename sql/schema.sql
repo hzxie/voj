@@ -354,7 +354,7 @@ ALTER TABLE `voj_judge_results`
   MODIFY `judge_result_id` int(4) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 ALTER TABLE `voj_languages`
-  MODIFY `language_id` int(4) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `language_id` int(4) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 ALTER TABLE `voj_offensive_words`
   MODIFY `offensive_word_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;

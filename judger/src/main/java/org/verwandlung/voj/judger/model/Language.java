@@ -152,6 +152,42 @@ public class Language implements Serializable {
     this.runCommand = runCommand;
   }
 
+  /**
+   * Gets the factor applied to a problem's time limit for this language.
+   *
+   * @return the time-limit multiplier of the programming language
+   */
+  public double getTimeMultiplier() {
+    return timeMultiplier;
+  }
+
+  /**
+   * Sets the factor applied to a problem's time limit for this language.
+   *
+   * @param timeMultiplier - the time-limit multiplier of the programming language
+   */
+  public void setTimeMultiplier(double timeMultiplier) {
+    this.timeMultiplier = timeMultiplier;
+  }
+
+  /**
+   * Gets the factor applied to a problem's memory limit for this language.
+   *
+   * @return the memory-limit multiplier of the programming language
+   */
+  public double getMemoryMultiplier() {
+    return memoryMultiplier;
+  }
+
+  /**
+   * Sets the factor applied to a problem's memory limit for this language.
+   *
+   * @param memoryMultiplier - the memory-limit multiplier of the programming language
+   */
+  public void setMemoryMultiplier(double memoryMultiplier) {
+    this.memoryMultiplier = memoryMultiplier;
+  }
+
   /* (non-Javadoc)
    * @see java.lang.Object#toString()
    */
@@ -176,6 +212,12 @@ public class Language implements Serializable {
 
   /** The run command of the programming language. */
   private String runCommand;
+
+  /** The factor applied to a problem's time limit for this language. */
+  private double timeMultiplier;
+
+  /** The factor applied to a problem's memory limit for this language. */
+  private double memoryMultiplier;
 
   /** The unique serialization identifier. */
   private static final long serialVersionUID = 9065824880175832696L;

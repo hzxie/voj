@@ -46,6 +46,8 @@ public interface LanguageMapper {
     @Result(property = "languageName", column = "language_name"),
     @Result(property = "compileCommand", column = "language_compile_command"),
     @Result(property = "runCommand", column = "language_run_command"),
+    @Result(property = "timeMultiplier", column = "language_time_multiplier"),
+    @Result(property = "memoryMultiplier", column = "language_memory_multiplier"),
   })
   Language getLanguageUsingId(@Param("languageId") int languageId);
 
@@ -63,6 +65,8 @@ public interface LanguageMapper {
     @Result(property = "languageName", column = "language_name"),
     @Result(property = "compileCommand", column = "language_compile_command"),
     @Result(property = "runCommand", column = "language_run_command"),
+    @Result(property = "timeMultiplier", column = "language_time_multiplier"),
+    @Result(property = "memoryMultiplier", column = "language_memory_multiplier"),
   })
   Language getLanguageUsingSlug(@Param("languageSlug") String languageSlug);
 
@@ -79,6 +83,8 @@ public interface LanguageMapper {
     @Result(property = "languageName", column = "language_name"),
     @Result(property = "compileCommand", column = "language_compile_command"),
     @Result(property = "runCommand", column = "language_run_command"),
+    @Result(property = "timeMultiplier", column = "language_time_multiplier"),
+    @Result(property = "memoryMultiplier", column = "language_memory_multiplier"),
   })
   List<Language> getAllLanguages();
 }

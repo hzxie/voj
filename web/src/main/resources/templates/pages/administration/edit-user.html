@@ -58,7 +58,7 @@
                         <div th:unless="${isCreate}">
                             <div class="adm-block-label" th:text="#{voj.administration.edit-user.default-language}">DEFAULT LANGUAGE</div>
                             <div class="adm-seg" data-adm="seg" data-input="prefer-language">
-                                <a href="javascript:void(0);" th:each="language : ${languages}" th:data-value="${language.languageSlug}" th:classappend="${user.preferLanguage != null and language.languageId == user.preferLanguage.languageId} ? 'active'" th:text="${language.languageName}">C++ 23</a>
+                                <a href="javascript:void(0);" th:each="language : ${languages}" th:data-value="${language.languageSlug}" th:classappend="${user.preferLanguage != null and language.languageId == user.preferLanguage.languageId} ? 'active'" th:text="${language.languageName}">C++</a>
                             </div>
                             <input type="hidden" id="prefer-language" th:value="${user.preferLanguage != null ? user.preferLanguage.languageSlug : ''}" />
                         </div>

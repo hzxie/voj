@@ -221,7 +221,7 @@ public class Main {
         System.out.println(in.nextInt() + in.nextInt());
     }
 }'),
-(1006, 1000, 1010, 6, '2025-05-12 13:13:00', '2025-05-12 13:13:05', 130, 8200, 'AC', 100, 'Compile Successfully.
+(1006, 1000, 1010, 5, '2025-05-12 13:13:00', '2025-05-12 13:13:05', 130, 8200, 'AC', 100, 'Compile Successfully.
 
 - Test Point #0: Accepted, Time = 13 ms, Memory = 8200 KB, Score = 10
 - Test Point #1: Accepted, Time = 13 ms, Memory = 8200 KB, Score = 10
@@ -235,8 +235,8 @@ public class Main {
 - Test Point #9: Accepted, Time = 13 ms, Memory = 8200 KB, Score = 10
 
 Accepted, Time = 130 ms, Memory = 8200 KB, Score = 100
-', 'a, b = gets.split.map(&:to_i)
-puts a + b'),
+', 'a, b = map(int, input().split())
+print(a + b)'),
 (1007, 1000, 1011, 1, '2025-07-23 19:00:00', '2025-07-23 19:00:05', 10, 256, 'WA', 30, 'Compile Successfully.
 
 - Test Point #0: Accepted, Time = 1 ms, Memory = 256 KB, Score = 10
@@ -595,7 +595,7 @@ int main() {
     while (true) x++;
     return 0;
 }'),
-(1022, 1003, 1010, 6, '2026-03-01 13:00:00', '2026-03-01 13:00:05', 65, 65540, 'MLE', 20, 'Compile Successfully.
+(1022, 1003, 1010, 2, '2026-03-01 13:00:00', '2026-03-01 13:00:05', 65, 65540, 'MLE', 20, 'Compile Successfully.
 
 - Test Point #0: Accepted, Time = 13 ms, Memory = 8200 KB, Score = 20
 - Test Point #1: Memory Limit Exceed, Time = 13 ms, Memory = 65540 KB, Score = 0
@@ -886,7 +886,7 @@ public class Main {
         System.out.println(total);
     }
 }'),
-(1040, 1000, 1010, 6, '2025-07-12 10:20:00', '2025-07-12 10:20:05', 130, 8200, 'AC', 100, 'Compile Successfully.
+(1040, 1000, 1010, 5, '2025-07-12 10:20:00', '2025-07-12 10:20:05', 130, 8200, 'AC', 100, 'Compile Successfully.
 
 - Test Point #0: Accepted, Time = 13 ms, Memory = 8200 KB, Score = 10
 - Test Point #1: Accepted, Time = 13 ms, Memory = 8200 KB, Score = 10
@@ -900,8 +900,8 @@ public class Main {
 - Test Point #9: Accepted, Time = 13 ms, Memory = 8200 KB, Score = 10
 
 Accepted, Time = 130 ms, Memory = 8200 KB, Score = 100
-', 'a, b = gets.split.map(&:to_i)
-puts a + b'),
+', 'a, b = map(int, input().split())
+print(a + b)'),
 (1041, 1002, 1003, 2, '2025-10-18 09:40:00', '2025-10-18 09:40:05', 5, 308, 'AC', 100, 'Compile Successfully.
 
 - Test Point #0: Accepted, Time = 1 ms, Memory = 308 KB, Score = 20
@@ -1206,7 +1206,7 @@ INSERT INTO `voj_discussion_replies` (`discussion_reply_id`, `discussion_thread_
 (4, 2, 1009, '2025-04-11 10:05:00', 'Thanks, that matches the sample where ChenRuiyi is printed.'),
 (5, 3, 1003, '2025-10-21 09:30:00', 'Great trick. lcm(1..10) = 2520, so any gap larger than that can be capped safely.'),
 (6, 4, 1013, '2025-05-01 12:00:00', 'Evaluating at a few random points modulo a big prime is enough to avoid collisions in practice.'),
-(7, 5, 1000, '2025-02-20 13:00:00', 'The judge compiles C++ with -std=c++11 by default. See the Languages page for the exact command.'),
+(7, 5, 1000, '2025-02-20 13:00:00', 'The judge compiles C++ with -std=c++20 by default. See the Languages page for the exact command.'),
 (8, 6, 1005, '2025-06-12 15:20:00', 'Hi everyone, Carol here. Happy to be solving problems with you all!'),
 (9, 6, 1014, '2025-06-13 09:00:00', 'Welcome! Trent from the data-structures study group.'),
 (10, 7, 1003, '2025-04-22 21:00:00', 'Read all input at once and avoid recomputing inside the loop - that is usually the culprit.'),

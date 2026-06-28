@@ -65,12 +65,16 @@ public class LanguageTest {
     language.setLanguageName("Python");
     language.setCompileCommand("");
     language.setRunCommand("python main.py");
+    language.setTimeMultiplier(3.0);
+    language.setMemoryMultiplier(2.0);
 
     Assertions.assertEquals(5, language.getLanguageId());
     Assertions.assertEquals("py", language.getLanguageSlug());
     Assertions.assertEquals("Python", language.getLanguageName());
     Assertions.assertEquals("", language.getCompileCommand());
     Assertions.assertEquals("python main.py", language.getRunCommand());
+    Assertions.assertEquals(3.0, language.getTimeMultiplier());
+    Assertions.assertEquals(2.0, language.getMemoryMultiplier());
   }
 
   /** Test case: tests toString. Expected result: a string containing the slug. */
