@@ -124,4 +124,13 @@ INSERT INTO `voj_discussion_reply_votes` (`discussion_reply_id`, `voter_uid`, `v
 UPDATE `voj_options` SET `option_value` = 'https://example.org/badwords.txt\nhttps://example.org/more.txt' WHERE `option_name` = 'offensiveWordSources';
 UPDATE `voj_options` SET `option_value` = '2018-02-23 12:00:00' WHERE `option_name` = 'offensiveWordsImportedAt';
 
+-- Downgrade the C++ standard for the test toolchains only. The judger tests compile a real C++
+-- program with the seeded compile command, and AppVeyor's MinGW g++ 8.1 only recognises the
+-- pre-release spelling -std=c++2a (-std=c++20 was added in GCC 10). Production (seed.sql) keeps
+-- -std=c++20, which the modern g++ in the judger image accepts; this rewrite affects the test
+-- database only.
+UPDATE `voj_languages`
+  SET `language_compile_command` = REPLACE(`language_compile_command`, '-std=c++20', '-std=c++2a')
+  WHERE `language_slug` = 'text/x-c++src';
+
 SET FOREIGN_KEY_CHECKS = 1;
