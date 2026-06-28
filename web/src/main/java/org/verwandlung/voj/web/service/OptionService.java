@@ -246,9 +246,10 @@ public class OptionService {
    * @return whether the Google Analytics code is legal
    */
   private boolean isGoogleAnalyticsCodeLegal(String googleAnalyticsCode) {
-    boolean isAnalyticsCodeEmpty = googleAnalyticsCode.isEmpty();
+    String code = googleAnalyticsCode.trim();
+    boolean isAnalyticsCodeEmpty = code.isEmpty();
     Pattern p = Pattern.compile("<script.*>.*</script>", Pattern.DOTALL);
-    boolean isAnalyticsCodeLegal = p.matcher(googleAnalyticsCode).matches();
+    boolean isAnalyticsCodeLegal = p.matcher(code).matches();
     return isAnalyticsCodeEmpty || isAnalyticsCodeLegal;
   }
 
