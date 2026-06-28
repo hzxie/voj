@@ -266,19 +266,6 @@ public class DefaultController {
     return view;
   }
 
-  /**
-   * Displays the browser upgrade page.
-   *
-   * @param request - the HttpRequest object
-   * @param response - the HttpResponse object
-   * @return a ModelAndView object containing the content of the browser upgrade page
-   */
-  @RequestMapping(value = "/not-supported", method = RequestMethod.GET)
-  public ModelAndView notSupportedView(HttpServletRequest request, HttpServletResponse response) {
-    ModelAndView view = new ModelAndView("pages/errors/not-supported");
-    return view;
-  }
-
   /** The number of judgers to load per request. */
   private static final int NUMBER_OF_JUDGERS_PER_REQUEST = 10;
 
