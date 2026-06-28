@@ -3,7 +3,7 @@
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layouts/admin}" lang="en">
 <head>
-    <title th:text="#{voj.administration.edit-problem.title} + ' - ' + ${problem.problemName} + ' | ' + ${websiteName}">Edit Problem</title>
+    <title th:text="'P' + ${problem.problemId} + ' ' + ${problem.problemName} + ' | ' + ${websiteName}">Edit Problem</title>
 </head>
 <body>
     <div layout:fragment="content">

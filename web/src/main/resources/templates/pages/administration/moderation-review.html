@@ -3,7 +3,7 @@
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layouts/admin}" lang="en">
 <head>
-    <title th:text="#{voj.administration.moderation-review.title} + ' | ' + ${websiteName}">Review</title>
+    <title th:text="${thread != null ? thread.discussionThreadTitle : #messages.msg('voj.administration.moderation-review.title')} + ' | ' + ${websiteName}">Review</title>
 </head>
 <body>
     <div layout:fragment="content">

@@ -3,7 +3,7 @@
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layouts/admin}" lang="en">
 <head>
-    <title th:text="#{voj.administration.edit-thread.title} + ' | ' + ${websiteName}">Thread</title>
+    <title th:text="${thread.discussionThreadTitle} + ' | ' + ${websiteName}">Thread</title>
 </head>
 <body>
     <div layout:fragment="content">

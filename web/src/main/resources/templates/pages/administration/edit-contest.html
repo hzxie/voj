@@ -3,7 +3,7 @@
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layouts/admin}" lang="en">
 <head>
-    <title th:text="#{voj.administration.edit-contest.title} + ' | ' + ${websiteName}">Contest</title>
+    <title th:text="${contest != null ? contest.contestName : #messages.msg('voj.administration.edit-contest.new-title')} + ' | ' + ${websiteName}">Contest</title>
 </head>
 <body>
     <div layout:fragment="content">

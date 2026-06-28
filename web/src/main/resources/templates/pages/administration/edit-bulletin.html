@@ -3,7 +3,7 @@
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layouts/admin}" lang="en">
 <head>
-    <title th:text="#{voj.administration.edit-bulletin.title} + ' | ' + ${websiteName}">Bulletin</title>
+    <title th:text="${message != null ? message.messageTitle : #messages.msg('voj.administration.edit-bulletin.new-title')} + ' | ' + ${websiteName}">Bulletin</title>
 </head>
 <body>
     <div layout:fragment="content">

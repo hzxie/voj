@@ -3,8 +3,7 @@
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layouts/admin}" lang="en">
 <head>
-    <title th:if="${isCreate}" th:text="#{voj.administration.new-user.title} + ' | ' + ${websiteName}">New User</title>
-    <title th:unless="${isCreate}" th:text="#{voj.administration.edit-user.title} + ': ' + ${user.username} + ' | ' + ${websiteName}">Edit User</title>
+    <title th:text="${isCreate ? #messages.msg('voj.administration.new-user.title') : user.username} + ' | ' + ${websiteName}">Edit User</title>
 </head>
 <body>
     <div layout:fragment="content" th:with="roleSlug=${isCreate ? 'users' : (isBanned ? 'users' : user.userGroup.userGroupSlug)}">
