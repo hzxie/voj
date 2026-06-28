@@ -38,8 +38,10 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import org.verwandlung.voj.web.exception.ResourceNotFoundException;
 import org.verwandlung.voj.web.messenger.ApplicationEventListener;
+import org.verwandlung.voj.web.model.Option;
 import org.verwandlung.voj.web.model.Submission;
 import org.verwandlung.voj.web.model.User;
+import org.verwandlung.voj.web.service.OptionService;
 import org.verwandlung.voj.web.service.SubmissionService;
 import org.verwandlung.voj.web.util.HttpSessionParser;
 
@@ -66,9 +68,11 @@ public class SubmissionController {
       @RequestParam(value = "username", required = false, defaultValue = "") String username,
       HttpServletRequest request,
       HttpServletResponse response) {
+    final int NUMBER_OF_SUBMISSION_PER_PAGE =
+        optionService.getIntOption("submissionsPerPage", DEFAULT_NUMBER_OF_SUBMISSION_PER_PAGE);
     List<Submission> submissions =
         submissionService.getSubmissions(problemId, username, NUMBER_OF_SUBMISSION_PER_PAGE);
-    return new ModelAndView("submissions/submissions").addObject("submissions", submissions);
+    return new ModelAndView("pages/submissions/submissions").addObject("submissions", submissions);
   }
 
   /**
@@ -88,6 +92,8 @@ public class SubmissionController {
       HttpServletRequest request) {
     Map<String, Object> result = new HashMap<>(3, 1);
 
+    final int NUMBER_OF_SUBMISSION_PER_PAGE =
+        optionService.getIntOption("submissionsPerPage", DEFAULT_NUMBER_OF_SUBMISSION_PER_PAGE);
     List<Submission> submissions =
         submissionService.getSubmissions(
             problemId, username, startIndex, NUMBER_OF_SUBMISSION_PER_PAGE);
@@ -114,6 +120,8 @@ public class SubmissionController {
       HttpServletRequest request) {
     Map<String, Object> result = new HashMap<>(3, 1);
 
+    final int NUMBER_OF_SUBMISSION_PER_PAGE =
+        optionService.getIntOption("submissionsPerPage", DEFAULT_NUMBER_OF_SUBMISSION_PER_PAGE);
     List<Submission> submissions =
         submissionService.getLatestSubmissions(
             problemId, username, startIndex, NUMBER_OF_SUBMISSION_PER_PAGE);
@@ -140,9 +148,36 @@ public class SubmissionController {
     if (submission == null) {
       throw new ResourceNotFoundException();
     }
-    ModelAndView view = new ModelAndView("submissions/submission");
+    User currentUser = HttpSessionParser.getCurrentUser(request.getSession());
+    ModelAndView view = new ModelAndView("pages/submissions/submission");
     view.addObject("submission", submission);
+    view.addObject("canViewCode", canViewSourceCode(submission, currentUser));
     return view;
+  }
+
+  /**
+   * Determines whether the given viewer is allowed to see a submission's source code. Owners and
+   * administrators may always see it; everyone else may see it only when the {@code
+   * publicSubmissions} option is enabled.
+   *
+   * @param submission - the submission record
+   * @param currentUser - the currently logged-in user, or null
+   * @return whether the viewer may see the submission's source code
+   */
+  private boolean canViewSourceCode(Submission submission, User currentUser) {
+    Option option = optionService.getOption("publicSubmissions");
+    boolean isPublic = option != null && "1".equals(option.getOptionValue());
+    if (isPublic) {
+      return true;
+    }
+    if (currentUser == null) {
+      return false;
+    }
+    if (currentUser.equals(submission.getUser())) {
+      return true;
+    }
+    return currentUser.getUserGroup() != null
+        && "administrators".equals(currentUser.getUserGroup().getUserGroupSlug());
   }
 
   /**
@@ -187,17 +222,26 @@ public class SubmissionController {
     Map<String, Object> result = new HashMap<>(3, 1);
 
     Submission submission = submissionService.getSubmission(submissionId);
+    if (submission != null) {
+      User currentUser = HttpSessionParser.getCurrentUser(request.getSession());
+      if (!canViewSourceCode(submission, currentUser)) {
+        submission.setCode(null);
+      }
+    }
     result.put("isSuccessful", submission != null);
     result.put("submission", submission);
 
     return result;
   }
 
-  /** The number of submission records to load per request. */
-  private static final int NUMBER_OF_SUBMISSION_PER_PAGE = 100;
+  /** The default number of submission records to load per request when the admin option is unset. */
+  private static final int DEFAULT_NUMBER_OF_SUBMISSION_PER_PAGE = 100;
 
   /** The autowired SubmissionService object. */
   @Autowired private SubmissionService submissionService;
+
+  /** The autowired OptionService object. Used to resolve the public-submissions visibility option. */
+  @Autowired private OptionService optionService;
 
   /** The autowired ApplicationEventListener object. Used for registering the sseEmitter. */
   @Autowired private ApplicationEventListener submissionEventListener;

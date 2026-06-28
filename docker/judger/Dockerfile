@@ -51,5 +51,6 @@ RUN sed -i "s@jdbc.url = jdbc:mysql://localhost:3306@jdbc.url = jdbc:mysql://${M
     mkdir -p voj/target/classes && \
     $M2_HOME/bin/mvn package -DskipTests -f voj/judger/pom.xml
 
-# Run Judger
-CMD ["java", "-jar", "voj/judger/target/voj.judger.jar"]
+# Run Judger. --enable-native-access grants the JNI runner native access; without
+# it the JDK 24+ warns and a future JDK will block JNI outright.
+CMD ["java", "--enable-native-access=ALL-UNNAMED", "-jar", "voj/judger/target/voj.judger.jar"]

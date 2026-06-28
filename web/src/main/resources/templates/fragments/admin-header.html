@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<!--/*
+  Administration top bar (terminal aesthetic). Used via ~{fragments/admin-header :: header}.
+  The command prompt + heading default to the active section (${adminSection}),
+  but a page may override them by adding ${sectionLabel} / ${sectionCmd} to its
+  model (e.g. the editor pages show the entity name). The notification bell count
+  renders only when ${navAlertCount} is present.
+*/-->
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<body>
+    <header th:fragment="header" class="adm-header"
+            th:with="section=${adminSection != null ? adminSection : 'dashboard'}">
+        <div class="adm-burger" data-adm="burger" title="Menu" role="button" tabindex="0">
+            <span></span><span></span><span></span>
+        </div>
+        <div class="adm-head-title">
+            <div class="cmd" th:text="|admin@verwandlung:~$ ${sectionCmd != null ? sectionCmd : 'manage --' + section}|">admin@verwandlung:~$ manage --dashboard</div>
+            <h1 th:text="${sectionLabel != null ? sectionLabel : #messages.msg('voj.administration.include.sidebar.' + section)}">Dashboard</h1>
+        </div>
+        <div class="adm-head-spacer"></div>
+        <a class="adm-bell" th:href="@{/administration/moderation}" title="Moderation">
+            <span class="ico">&#9673;</span>
+            <span class="count" th:if="${navAlertCount}" th:text="${navAlertCount}">0</span>
+        </a>
+    </header>
+</body>
+</html>

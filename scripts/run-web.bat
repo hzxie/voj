@@ -4,7 +4,7 @@ setlocal EnableExtensions
 REM ===========================================================================
 REM Run the Verwandlung Online Judge web application (Windows).
 REM
-REM Launches the self-contained Spring Boot executable WAR (embedded Tomcat).
+REM Launches the self-contained Spring Boot executable JAR (embedded Tomcat).
 REM By default it serves http://localhost:8080/voj and expects MySQL and ActiveMQ
 REM to be reachable (see web\src\main\resources\voj.properties).
 REM
@@ -16,7 +16,7 @@ REM   scripts\run-web.bat --server.port=9090           override Boot properties
 REM   set "JAVA_OPTS=-Xmx512m" ^& scripts\run-web.bat
 REM
 REM Before launching it verifies ActiveMQ and MySQL are reachable and, when the
-REM voj schema is empty, imports voj.sql automatically.
+REM voj schema is empty, imports sql\schema.sql + seed.sql + demo.sql automatically.
 REM
 REM Overridable environment variables (defaults shown):
 REM   JDK_HOME=%%JAVA_HOME%% or D:\Applications\OpenJDK
@@ -52,9 +52,9 @@ if not defined JAVA_BIN (
   popd & exit /b 1
 )
 
-set "WAR=%PROJECT_ROOT%\web\target\voj.web.war"
-if not exist "%WAR%" (
-  echo ERROR: %WAR% not found. Build it first: scripts\build-jars.bat web 1>&2
+set "JAR=%PROJECT_ROOT%\web\target\voj.web.jar"
+if not exist "%JAR%" (
+  echo ERROR: %JAR% not found. Build it first: scripts\build-jars.bat web 1>&2
   popd & exit /b 1
 )
 
@@ -66,7 +66,7 @@ echo ==^> Java:
 "%JAVA_BIN%" -version
 
 echo ==^> Starting voj.web ^(http://localhost:8080/voj^) ...
-"%JAVA_BIN%" %JAVA_OPTS% -jar "%WAR%" %*
+"%JAVA_BIN%" %JAVA_OPTS% -jar "%JAR%" %*
 set "RC=%ERRORLEVEL%"
 popd
 exit /b %RC%
@@ -113,17 +113,20 @@ for /f %%c in ('%MYSQL_BIN% %MYSQL_AUTH% -N -B -e "SELECT COUNT(*) FROM informat
 if not defined TABLE_COUNT set "TABLE_COUNT=0"
 
 if "%TABLE_COUNT%"=="0" (
-  if not exist "%PROJECT_ROOT%\voj.sql" (
-    echo ERROR: database '%DB_NAME%' is empty but %PROJECT_ROOT%\voj.sql is missing. 1>&2
-    exit /b 1
+  echo ==^> Database '%DB_NAME%' is empty; importing sql\schema.sql + seed.sql + demo.sql ...
+  for %%f in (schema.sql seed.sql demo.sql) do (
+    if not exist "%PROJECT_ROOT%\sql\%%f" (
+      echo ERROR: database '%DB_NAME%' is empty but %PROJECT_ROOT%\sql\%%f is missing. 1>&2
+      exit /b 1
+    )
+    echo     - %%f
+    %MYSQL_BIN% %MYSQL_AUTH% %DB_NAME% < "%PROJECT_ROOT%\sql\%%f"
+    if errorlevel 1 (
+      echo ERROR: failed to import sql\%%f. 1>&2
+      exit /b 1
+    )
   )
-  echo ==^> Database '%DB_NAME%' is empty; importing voj.sql ...
-  %MYSQL_BIN% %MYSQL_AUTH% %DB_NAME% < "%PROJECT_ROOT%\voj.sql"
-  if errorlevel 1 (
-    echo ERROR: failed to import voj.sql. 1>&2
-    exit /b 1
-  )
-  echo ==^> Imported voj.sql into '%DB_NAME%'.
+  echo ==^> Imported sql\schema.sql + seed.sql + demo.sql into '%DB_NAME%'.
 ) else (
   echo ==^> Database '%DB_NAME%' already has %TABLE_COUNT% table^(s^); skipping import.
 )

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<!--/* Reproduced from voj-design/Discussion.dc.html: // DISCUSSION header with a
+       "+ New thread" action and category filter chips, then a single THREAD / CATEGORY /
+       REPLIES / LAST ACTIVITY table (avatar-initial circle + title + author·problem).
+       The load-more pagination behaviour is preserved. */-->
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/main}" lang="en">
+<head>
+    <title th:text="#{voj.discussion.threads.title} + ' | ' + ${websiteName}">Discussion</title>
+</head>
+<body>
+    <div layout:fragment="content">
+        <!-- PAGE HEADER -->
+        <section class="vw-pagehead">
+            <div class="vw-eyebrow">// DISCUSSION</div>
+            <div class="vw-pagehead-row">
+                <div>
+                    <h1 th:text="#{voj.discussion.threads.title}">Discussion</h1>
+                    <div class="sub">ask questions, share solutions</div>
+                </div>
+                <a class="vw-btn vw-btn-accent" th:if="${isLogin}" th:href="@{/discussion/new}">+ <span th:text="#{voj.discussion.threads.new-discussion}">New thread</span></a>
+            </div>
+            <div class="vw-chipfilter">
+                <a th:href="@{/discussion}" th:classappend="${selectedTopicSlug == null or selectedTopicSlug == ''} ? 'active'">All</a>
+                <a th:each="entry : ${discussionTopics}"
+                   th:href="@{/discussion(topicSlug=${entry.key.discussionTopicSlug})}"
+                   th:classappend="${selectedTopicSlug == entry.key.discussionTopicSlug} ? 'active'"
+                   th:text="${entry.key.discussionTopicName}">Help</a>
+            </div>
+        </section>
+
+        <!-- THREADS -->
+        <section class="vw-section vw-section-table">
+            <div class="vw-tablewrap">
+                <div class="vw-table vw-table-threads">
+                    <div class="vw-table-head">
+                        <div>THREAD</div>
+                        <div class="vw-thide">CATEGORY</div>
+                        <div>REPLIES</div>
+                        <div class="vw-thide">LAST ACTIVITY</div>
+                    </div>
+                    <div id="discussion-threads">
+                        <a class="vw-table-row discussion-thread" th:each="discussionThread : ${discussionThreads}"
+                           th:href="@{/discussion/{id}(id=${discussionThread.discussionThreadId})}"
+                           th:with="topic=${discussionThread.discussionTopic},
+                                    topicSlug=${topic != null ? topic.discussionTopicSlug : ''},
+                                    topicName=${topic != null ? topic.discussionTopicName : ''},
+                                    creator=${discussionThread.discussionThreadCreator},
+                                    latest=${discussionThread.latestDiscussionReply}">
+                            <div class="vw-thread-cell">
+                                <span class="vw-thread-avatar" th:text="${#strings.toUpperCase(#strings.substring(creator.username,0,1))}">R</span>
+                                <div class="vw-minw0">
+                                    <div class="vw-thread-title" th:text="${discussionThread.discussionThreadTitle}">Title</div>
+                                    <div class="vw-thread-meta">
+                                        <span class="vw-accent" th:text="${creator.username}">author</span>
+                                        &middot;
+                                        <span th:if="${discussionThread.problem == null}" th:text="${topicName}">Topic</span>
+                                        <span th:unless="${discussionThread.problem == null}" th:text="|P${discussionThread.problem.problemId}|">P1000</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="vw-thide">
+                                <span class="vw-cat-badge"
+                                      th:classappend="${#strings.containsIgnoreCase(topicSlug,'solution')} ? 'vw-cat-solutions' : (${#strings.containsIgnoreCase(topicSlug,'announce')} ? 'vw-cat-announce' : (${#strings.containsIgnoreCase(topicSlug,'help')} ? 'vw-cat-help' : 'vw-cat-default'))"
+                                      th:text="${topicName}">Help</span>
+                            </div>
+                            <div class="vw-thread-replies"
+                                 th:text="${topicSlug == 'solutions' ? discussionThread.numberOfReplies : (discussionThread.numberOfReplies <= 1 ? 0 : discussionThread.numberOfReplies - 1)}">0</div>
+                            <div class="vw-thide vw-muted">
+                                <span class="reply-datetime" th:text="${latest == null ? #dates.format(discussionThread.discussionThreadCreateTime, 'yyyy-MM-dd HH:mm:ss') : #dates.format(latest.discussionReplyCreateTime, 'yyyy-MM-dd HH:mm:ss')}">time</span>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div id="more-discussion-threads" class="vw-loadmore">
+                <p class="availble" th:text="#{voj.discussion.threads.more-discussion}">More discussion threads...</p>
+                <img th:src="|${cdnUrl}/img/loading.gif?v=${version}|" alt="Loading" class="hide" />
+            </div>
+        </section>
+    </div>
+
+    <th:block layout:fragment="scripts">
+    <script type="text/javascript" th:inline="javascript">
+        $('span.reply-datetime').each(function() {
+            $(this).html(getTimeElapsed($(this).html(), [[${language}]]));
+        });
+        function setLoadingStatus(isLoading) {
+            if ( isLoading ) {
+                $('p', '#more-discussion-threads').addClass('hide');
+                $('img', '#more-discussion-threads').removeClass('hide');
+            } else {
+                $('img', '#more-discussion-threads').addClass('hide');
+                $('p', '#more-discussion-threads').removeClass('hide');
+            }
+        }
+        $('#more-discussion-threads').click(function() {
+            var isLoading       = $('img', this).is(':visible'),
+                hasNextRecord   = $('p', this).hasClass('availble'),
+                numberOfThreads = $('.discussion-thread').length;
+            if ( !isLoading && hasNextRecord ) {
+                setLoadingStatus(true);
+                return getMoreDiscussionThreads(numberOfThreads);
+            }
+        });
+        function getMoreDiscussionThreads(startIndex) {
+            $.ajax({
+                type: 'GET',
+                url: [[@{/discussion/getDiscussionThreads.action}]],
+                data: { 'startIndex': startIndex, 'category': [[${selectedTopicSlug}]], 'problemId': [[${problemId}]] },
+                dataType: 'JSON',
+                success: function(result){ return processDiscussionThreadsResult(result); }
+            });
+        }
+        function processDiscussionThreadsResult(result) {
+            if ( result['isSuccessful'] ) {
+                displayDiscussionThreadRecords(result['discussionThreads']);
+            } else {
+                $('p', '#more-discussion-threads').removeClass('availble');
+                $('#more-discussion-threads').addClass('is-done');
+                $('p', '#more-discussion-threads').html([[#{voj.discussion.threads.no-more-discussion}]]);
+            }
+            setLoadingStatus(false);
+        }
+        function categoryClass(slug) {
+            slug = (slug || '').toLowerCase();
+            if ( slug.indexOf('solution') !== -1 ) { return 'vw-cat-solutions'; }
+            if ( slug.indexOf('announce') !== -1 ) { return 'vw-cat-announce'; }
+            if ( slug.indexOf('help') !== -1 ) { return 'vw-cat-help'; }
+            return 'vw-cat-default';
+        }
+        function displayDiscussionThreadRecords(discussionThreads) {
+            for ( var i = 0; i < discussionThreads.length; ++ i ) {
+                var t = discussionThreads[i];
+                $('#discussion-threads').append(
+                    getDiscussionThreadContent(t['discussionThreadCreator'], t['discussionThreadId'], t['discussionThreadTitle'],
+                        t['discussionThreadCreateTime'], t['problem'], t['discussionTopic'], t['latestDiscussionReply'], t['numberOfReplies']));
+            }
+        }
+        function getDiscussionThreadContent(creator, threadId, title, createTime, problem, topic, latestReply, numberOfReplies) {
+            var rtime     = latestReply ? latestReply['discussionReplyCreateTime'] : createTime,
+                slug      = topic ? topic['discussionTopicSlug'] : '',
+                topicName = topic ? topic['discussionTopicName'] : '',
+                replies   = slug === 'solutions' ? numberOfReplies : (numberOfReplies <= 1 ? 0 : numberOfReplies - 1),
+                postedIn  = problem ? ('P' + problem['problemId']) : topicName,
+                initial   = (creator['username'] || '?').charAt(0).toUpperCase();
+            return '<a class="vw-table-row discussion-thread" href="' + [[@{/discussion/}]] + threadId + '">' +
+                '<div class="vw-thread-cell">' +
+                '<span class="vw-thread-avatar">' + initial + '</span>' +
+                '<div class="vw-minw0">' +
+                '<div class="vw-thread-title">' + title + '</div>' +
+                '<div class="vw-thread-meta"><span class="vw-accent">' + creator['username'] + '</span> · ' + postedIn + '</div>' +
+                '</div></div>' +
+                '<div class="vw-thide"><span class="vw-cat-badge ' + categoryClass(slug) + '">' + topicName + '</span></div>' +
+                '<div class="vw-thread-replies">' + replies + '</div>' +
+                '<div class="vw-thide vw-muted">' + getTimeElapsed(rtime, [[${language}]]) + '</div>' +
+                '</a>';
+        }
+    </script>
+    </th:block>
+</body>
+</html>

@@ -39,9 +39,6 @@
 	<util:properties id="propertyConfigurer" location="classpath:/voj.properties" />
 	<context:property-placeholder properties-ref="propertyConfigurer" />
 	
-	<!-- Enable AspectJ style of Spring AOP -->
-	<aop:aspectj-autoproxy />
-
 	<!-- Map simple view name such as "test" into /WEB-INF/test.jsp -->
 	<bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
 		<property name="prefix">
@@ -86,10 +83,39 @@
 	</bean>
 	<tx:annotation-driven transaction-manager="transactionManager"/>
 
+	<!-- Provision the test database on context startup: build the schema, then
+	     load the reference data and the test fixtures. This replaces the manual
+	     "mysql test < voj.sql" step the CI configs used to run; schema.sql drops
+	     and recreates every table, so it is safe to re-run. -->
+	<bean class="org.springframework.jdbc.datasource.init.DataSourceInitializer">
+		<property name="dataSource" ref="dataSource" />
+		<property name="databasePopulator">
+			<bean class="org.springframework.jdbc.datasource.init.ResourceDatabasePopulator">
+				<property name="sqlScriptEncoding" value="UTF-8" />
+				<property name="scripts">
+					<list>
+						<value>classpath:db/schema.sql</value>
+						<value>classpath:db/seed.sql</value>
+						<value>classpath:db/test-data.sql</value>
+					</list>
+				</property>
+			</bean>
+		</property>
+	</bean>
+
 	<!-- Mail Service -->
-	<bean id="freeMarkerConfigurer"
-		class="org.springframework.web.servlet.view.freemarker.FreeMarkerConfigurer">
-		<property name="templateLoaderPath" value="classpath:/mails"/>
+	<!-- HTML mail bodies are rendered by the shared Thymeleaf engine (templates
+	     under classpath:/templates/mail), mirroring the application's MailConfig;
+	     FreeMarker has been removed. -->
+	<bean id="mailTemplateResolver"
+		class="org.thymeleaf.spring6.templateresolver.SpringResourceTemplateResolver">
+		<property name="prefix" value="classpath:/templates/" />
+		<property name="suffix" value=".html" />
+		<property name="templateMode" value="HTML" />
+		<property name="characterEncoding" value="UTF-8" />
+	</bean>
+	<bean id="templateEngine" class="org.thymeleaf.spring6.SpringTemplateEngine">
+		<property name="templateResolver" ref="mailTemplateResolver" />
 	</bean>
 	<bean id="mailSender" class="org.springframework.mail.javamail.JavaMailSenderImpl">
 		<property name="host" value="${mail.host}" />
@@ -102,10 +128,9 @@
 			</props>
 		</property>
 	</bean>
-	<bean id="vojMailSender" 
-		class="org.verwandlung.voj.web.util.MailSender">
-	</bean>
-	
+	<!-- vojMailSender (MailSender) is picked up by component scanning and
+	     constructor-injected with the Thymeleaf engine and JavaMailSender. -->
+
 	<!-- Message Service -->
 	<bean id="amqConnectionFactory" class="org.apache.activemq.ActiveMQConnectionFactory">
 		<constructor-arg index="0" value="${jms.broker.url}" />

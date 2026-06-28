@@ -37,8 +37,9 @@ jobs:
           java-version: "25"
           cache: maven
 
-      - name: Import test database schema
-        run: mysql -h 127.0.0.1 -P 3306 -u root test < voj.sql
+      # No manual schema import: the Spring test context provisions the database
+      # by running sql/{schema,seed,test-data}.sql, and the JDBC URL carries
+      # createDatabaseIfNotExist=true plus the required sql_mode.
 
       - name: Install judger native build dependencies
         run: sudo apt-get update && sudo apt-get install -y libseccomp-dev

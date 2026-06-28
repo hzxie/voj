@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<!--/* Reproduced from voj-design/Home.dc.html: hero + live terminal card, stats band,
+       live contests + changelog (bulletin), supported languages. */-->
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/main}" lang="en">
+<head>
+    <title th:text="#{voj.index.title} + ' | ' + ${websiteName}">Home</title>
+</head>
+<body>
+    <div layout:fragment="content">
+        <!-- HERO -->
+        <section class="vw-hero">
+            <div>
+                <div class="vw-eyebrow">// DISTRIBUTED ONLINE JUDGE</div>
+                <h1 class="vw-hero-title">Submit code.<br>Watch it <span class="vw-accent">transform.</span></h1>
+                <p class="vw-hero-lead" th:text="${description}">Distributed judgers powered by ActiveMQ return a verdict in milliseconds. Practice classic problems, join live ACM &amp; OI contests, climb the ranks.</p>
+                <div class="vw-hero-btns">
+                    <a class="vw-btn vw-btn-accent" th:href="@{/p}" th:text="#{voj.index.get-started}">Start solving &rarr;</a>
+                    <a class="vw-gitbtn" href="https://github.com/hzxie/voj" target="_blank" rel="noopener" title="Star on GitHub">
+                        <span class="vw-gitbtn-label">git clone repo</span>
+                        <span class="vw-gitbtn-star">
+                            <svg viewBox="0 0 24 24" width="13" height="13" fill="var(--warn)" aria-hidden="true"><path d="M12 2l2.95 6.18 6.8.78-5.02 4.64 1.35 6.7L12 17.77 5.92 20.3l1.35-6.7L2.25 8.96l6.8-.78L12 2z"/></svg>
+                            <span class="vw-gitbtn-count js-github-stars" data-fallback="611" aria-label="GitHub stars"><span class="vw-spinner" aria-hidden="true"></span></span>
+                        </span>
+                    </a>
+                </div>
+            </div>
+            <div class="vw-card vw-card-glow">
+                <div class="vw-card-bar">
+                    <span class="vw-dot vw-dot-r"></span><span class="vw-dot vw-dot-y"></span><span class="vw-dot vw-dot-g"></span>
+                    <span class="vw-card-title">judge &mdash; P1000 &mdash; bash</span>
+                    <span class="vw-header-spacer"></span>
+                    <span class="vw-accent vw-card-status">&#9679; online</span>
+                </div>
+                <div class="vw-card-body vw-term">
+                    <div class="vw-pre vw-muted2">$ voj submit solution.cpp</div>
+                    <div class="vw-pre vw-muted">&rarr; uploading source (412 B)</div>
+                    <div class="vw-pre vw-muted">&rarr; queued on judger-la-01</div>
+                    <div class="vw-pre vw-head">Compiling ............ ok (0.31s)</div>
+                    <div class="vw-pre">Running test 01/10 &middot;&middot;&middot;&middot; <span class="vw-accent">AC</span>  3ms</div>
+                    <div class="vw-pre">Running test 02/10 &middot;&middot;&middot;&middot; <span class="vw-accent">AC</span>  2ms</div>
+                    <div class="vw-pre">Running test 03/10 &middot;&middot;&middot;&middot; <span class="vw-accent">AC</span>  4ms</div>
+                    <div class="vw-pre vw-muted">&middot;&middot;&middot;</div>
+                    <div class="vw-pre">Running test 10/10 &middot;&middot;&middot;&middot; <span class="vw-accent">AC</span>  2ms</div>
+                    <div class="vw-pre vw-pre-result"><span class="vw-accent vw-strong">&#9679; ACCEPTED</span>  11ms &middot; 1.2 MB &middot; 10/10<span class="vw-cursor">&#9611;</span></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- STATS BAND -->
+        <section class="vw-stats">
+            <div class="vw-stats-inner">
+                <div class="vw-stat"><div class="v" th:text="${#numbers.formatInteger(totalProblems, 1, 'COMMA')}">0</div><div class="k">PROBLEMS</div></div>
+                <div class="vw-stat"><div class="v" th:text="${#numbers.formatInteger(totalSubmissions, 1, 'COMMA')}">0</div><div class="k">SUBMISSIONS</div></div>
+                <div class="vw-stat"><div class="v" th:text="${#numbers.formatInteger(totalUsers, 1, 'COMMA')}">0</div><div class="k">USERS</div></div>
+                <div class="vw-stat"><div class="v" th:text="${onlineJudgers}">0</div><div class="k">JUDGERS ONLINE</div></div>
+            </div>
+        </section>
+
+        <!-- CONTESTS + CHANGELOG -->
+        <section class="vw-section vw-home-contests">
+            <div class="vw-grid-2">
+                <div>
+                    <div class="vw-between vw-home-colhead">
+                        <span class="vw-section-label">// LIVE CONTESTS</span>
+                        <a class="vw-accent vw-link-sm" th:href="@{/contest}">view all &rarr;</a>
+                    </div>
+                    <div class="vw-list">
+                        <a class="vw-card" th:each="contest : ${contests}"
+                           th:with="contestStatus=${currentTime.before(contest.startTime) ? 'Ready' : (currentTime.after(contest.endTime) ? 'Done' : 'Live')},
+                                    pill=${contestStatus == 'Live' ? 'vw-pill-live' : (contestStatus == 'Ready' ? 'vw-pill-ready' : 'vw-pill-done')}"
+                           th:href="@{/contest/{id}(id=${contest.contestId})}">
+                            <div class="vw-card-body vw-between">
+                                <div class="vw-minw0">
+                                    <div class="vw-head vw-contest-name" th:text="${contest.contestName}">Contest</div>
+                                    <div class="vw-muted vw-contest-meta">
+                                        <span th:text="${contest.contestMode}">Mode</span> &middot;
+                                        <span th:text="${@dateFormatter.dateTimeLongMedium(contest.startTime, language)}">time</span>
+                                    </div>
+                                </div>
+                                <span class="vw-pill" th:classappend="${pill}"><span class="led"></span><span th:text="${contestStatus}">Status</span></span>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+                <div>
+                    <div class="vw-between vw-home-colhead">
+                        <span class="vw-section-label">// BULLETIN BOARD</span>
+                    </div>
+                    <div class="vw-card">
+                        <ul id="bulletin-board-messages" class="vw-bulletin"
+                            th:if="${bulletinBoardMessages != null and bulletinBoardMessages.size() > 0}">
+                            <li th:each="bulletinBoardMessage : ${bulletinBoardMessages}" class="vw-bulletin-item">
+                                <a href="javascript:void(0);" class="vw-bulletin-link">
+                                    <span class="vw-accent vw-bulletin-date"><span class="message-create-time" th:text="${@dateFormatter.dateShort(bulletinBoardMessage.messageCreateTime, language)}">date</span></span>
+                                    <span class="message-title vw-bulletin-title" th:text="${bulletinBoardMessage.messageTitle}">Title</span>
+                                    <span class="message-body hide" th:text="${bulletinBoardMessage.messageBody}">Body</span>
+                                </a>
+                            </li>
+                        </ul>
+                        <p class="vw-muted vw-card-empty" th:unless="${bulletinBoardMessages != null and bulletinBoardMessages.size() > 0}" th:text="#{voj.index.no-notification}">No notification now.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SUPPORTED LANGUAGES -->
+        <section class="vw-section vw-home-langs">
+            <div class="vw-section-label">// SUPPORTED LANGUAGES</div>
+            <div class="vw-chips">
+                <span class="vw-chip" th:each="language : ${languages}" th:text="${language.languageName}">C++</span>
+            </div>
+        </section>
+    </div>
+
+    <th:block layout:fragment="scripts">
+    <div id="bulletin-board-message-modal" class="modal hide">
+        <div class="modal-header">
+            <h5 class="message-title vw-modal-title"></h5>
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="message-body vw-prose"></div>
+        </div>
+    </div>
+    <script type="text/javascript">
+        $('#bulletin-board-messages > li').click(function() {
+            var title = $('.message-title', this).html(),
+                body  = $('.message-body', this).html();
+            $('.message-title', '#bulletin-board-message-modal').html(title);
+            $('.message-body', '#bulletin-board-message-modal').html((body || '').replace(/\n/g, '<br>'));
+            $('#bulletin-board-message-modal').removeClass('hide');
+            if ( $('#bulletin-board-modal-backdrop').length === 0 ) {
+                $('body').append('<div id="bulletin-board-modal-backdrop" class="modal-backdrop"></div>');
+            }
+        });
+        $('#bulletin-board-message-modal .close, #bulletin-board-message-modal').on('click', '[data-dismiss=modal]', function() {
+            $('#bulletin-board-message-modal').addClass('hide');
+            $('#bulletin-board-modal-backdrop').remove();
+        });
+    </script>
+    </th:block>
+</body>
+</html>

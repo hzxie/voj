@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/main}" lang="en">
+<head>
+    <title th:text="${contest.contestName} + ' ' + #{voj.contests.leaderboard.leaderboard} + ' | ' + ${websiteName}">Leaderboard</title>
+</head>
+<body>
+    <div layout:fragment="content">
+        <section class="vw-pagehead">
+            <a class="vw-backlink" th:href="@{/contest/{id}(id=${contest.contestId})}">&larr; <span th:text="${contest.contestName}">Contest</span></a>
+            <div class="vw-eyebrow">// LEADERBOARD &middot; ACM</div>
+            <h1 th:text="#{voj.contests.leaderboard.leaderboard}">Leaderboard</h1>
+        </section>
+
+        <section class="vw-section vw-section-narrow">
+            <div class="vw-tablewrap">
+                <table class="vw-ltable">
+                    <thead>
+                        <tr>
+                            <th class="rank" th:text="#{voj.contests.leaderboard.rank}">Rank</th>
+                            <th class="contestant" th:text="#{voj.contests.leaderboard.contestant}">Contestant</th>
+                            <th th:text="#{voj.contests.leaderboard.solved}">Solved</th>
+                            <th th:text="#{voj.contests.leaderboard.penalty}">Penalty</th>
+                            <th th:each="problem : ${problems}"><a th:href="@{/contest/{cid}/p/{pid}(cid=${contest.contestId},pid=${problem.problemId})}" target="_blank" th:text="|P${problem.problemId}|">P1</a></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="contestant : ${contestants}">
+                            <td class="rank" th:text="${contestant.rank}">1</td>
+                            <td class="contestant"><a th:href="@{/accounts/user/{id}(id=${contestant.contestant.uid})}" target="_blank" th:text="${contestant.contestant.username}">user</a></td>
+                            <td class="vw-accent" th:text="${contestant.score}">0</td>
+                            <td class="vw-muted2"><span th:text="${#numbers.formatInteger(contestant.time % 3600 / 3600.0, 2)}">00</span>:<span th:text="${#numbers.formatInteger(contestant.time / 60.0 % 60, 2)}">00</span>:<span th:text="${#numbers.formatInteger(contestant.time % 60, 2)}">00</span></td>
+                            <td th:each="problem : ${problems}" th:with="userSubs=${submissions[contestant.contestant.uid]},submission=${userSubs != null ? userSubs[problem.problemId] : null}">
+                                <span class="vw-muted" th:if="${submission == null}">-</span>
+                                <a th:unless="${submission == null}" th:href="@{/submission/{id}(id=${submission.submissionId})}" target="_blank"><span th:text="${#numbers.formatInteger(submission.usedTime / 3600.0, 2)}">00</span>:<span th:text="${#numbers.formatInteger(submission.usedTime / 60.0 % 60, 2)}">00</span>:<span th:text="${#numbers.formatInteger(submission.usedTime % 60, 2)}">00</span></a>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+</body>
+</html>

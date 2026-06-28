@@ -123,6 +123,15 @@ public interface UserMapper {
   int updateUser(User user);
 
   /**
+   * Updates the email-verified flag of a user.
+   *
+   * @param uid - the unique identifier of the user
+   * @param isEmailVerified - whether the user's email address has been verified
+   */
+  int updateEmailVerified(
+      @Param("uid") long uid, @Param("isEmailVerified") boolean isEmailVerified);
+
+  /**
    * Deletes a user object.
    *
    * @param uid - the unique identifier of the user to delete

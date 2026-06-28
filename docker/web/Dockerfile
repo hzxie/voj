@@ -76,7 +76,9 @@ RUN sed -i "s@localhost:8080/voj@${WEBSITE_URL}@g" voj/web/src/main/resources/vo
     mkdir -p /opt/voj && \
     cp voj/web/target/voj.web.war /opt/voj/voj.web.war && \
     /etc/init.d/mariadb start && \
-    mysql voj < voj/voj.sql
+    mysql voj < voj/sql/schema.sql && \
+    mysql voj < voj/sql/seed.sql && \
+    mysql voj < voj/sql/demo.sql
 
 # Expose Ports
 EXPOSE 3306

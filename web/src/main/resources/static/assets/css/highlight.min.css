@@ -1,0 +1,57 @@
+/**
+ * Verwandlung Online Judge - dark syntax theme for highlight.js.
+ * Replaces the stock GitHub-light theme so highlighted code (submission source,
+ * problem statements, judge logs) matches the terminal aesthetic. Colours are
+ * driven by the app.css palette variables, so the code follows the light/dark
+ * theme toggle automatically. Covers both the legacy hljs v8/v9 token names and
+ * the v11 scope names (.hljs-meta, .hljs-title.function_, ...) emitted by the
+ * bundled highlight.min.js.
+ */
+.hljs {
+  display:block; overflow-x:auto; padding:0;
+  background:transparent; color:var(--text);
+  -webkit-text-size-adjust:none;
+}
+.hljs, .hljs-subst { color:var(--text); }
+
+/* Comments */
+.hljs-comment, .hljs-quote, .hljs-annotation, .hljs-chunk { color:var(--text3); font-style:italic; }
+
+/* Keywords / control flow / built-ins / types */
+.hljs-keyword, .hljs-flow, .hljs-winutils, .hljs-request, .hljs-status,
+.hljs-built_in, .hljs-type, .hljs-typename, .hljs-id,
+.css .hljs-tag, .apache .hljs-tag, .hljs-tag .hljs-title { color:var(--info); font-weight:600; }
+
+/* Strings / chars */
+.hljs-string, .hljs-char, .ruby .hljs-symbol, .ruby .hljs-symbol .hljs-string,
+.hljs-template_tag { color:var(--warn); }
+
+/* Numbers / literals / constants / regexp */
+.hljs-number, .hljs-literal, .hljs-constant, .hljs-hexcolor,
+.hljs-regexp, .hljs-change, .hljs-date { color:var(--accent); }
+
+/* Preprocessor / meta / pragma (e.g. #include). hljs v11 emits .hljs-meta. */
+.hljs-meta, .hljs-meta .hljs-keyword, .hljs-meta .hljs-string,
+.hljs-preprocessor, .hljs-pragma, .hljs-shebang, .hljs-pi, .hljs-doctype,
+.hljs-doctag, .hljs-name { color:var(--accent); }
+
+/* Titles: function / class / section names */
+.hljs-title, .hljs-section { color:var(--head); font-weight:600; }
+
+/* Attributes / variables / parameters / symbols */
+.hljs-attr, .hljs-attribute, .hljs-variable, .hljs-symbol,
+.hljs-envvar, .hljs-localvars, .hljs-decorator { color:var(--text); }
+
+/* Tags */
+.hljs-tag, .hljs-subst .hljs-tag { color:var(--info); }
+
+/* Diffs */
+.hljs-addition { color:var(--accent); }
+.hljs-deletion { color:var(--err); }
+
+.hljs-emphasis { font-style:italic; }
+.hljs-strong { font-weight:700; }
+
+.coffeescript .javascript, .javascript .xml, .lasso .markup,
+.tex .hljs-formula, .xml .css, .xml .hljs-cdata,
+.xml .javascript, .xml .vbscript { opacity:.6; }

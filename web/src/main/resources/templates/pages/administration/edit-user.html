@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/admin}" lang="en">
+<head>
+    <title th:if="${isCreate}" th:text="#{voj.administration.new-user.title} + ' | ' + ${websiteName}">New User</title>
+    <title th:unless="${isCreate}" th:text="#{voj.administration.edit-user.title} + ': ' + ${user.username} + ' | ' + ${websiteName}">Edit User</title>
+</head>
+<body>
+    <div layout:fragment="content" th:with="roleSlug=${isCreate ? 'users' : (isBanned ? 'users' : user.userGroup.userGroupSlug)}">
+    <form id="profile-form" class="adm-detail" onSubmit="onSubmit(); return false;">
+
+        <div class="adm-detail-top">
+            <a class="adm-back" th:href="@{/administration/all-users}">&#8592; <span th:text="#{voj.administration.edit-user.back}">back to users</span></a>
+            <span class="adm-idchip" th:text="${isCreate ? 'new' : '#' + user.uid}">#1</span>
+            <span th:if="${isCreate}" class="adm-pill c-muted">&#9679; <span th:text="#{voj.administration.edit-user.new-user-name}">New user</span></span>
+            <th:block th:unless="${isCreate}">
+                <span class="adm-pill click" id="status-pill"
+                      th:classappend="${isBanned} ? 'c-err' : 'c-accent'"
+                      th:text="${isBanned} ? #{voj.administration.edit-user.status-banned} : #{voj.administration.edit-user.status-active}">Active</span>
+                <input type="hidden" id="is-banned" th:value="${isBanned} ? '1' : '0'" />
+            </th:block>
+            <div class="adm-flex1"></div>
+            <a th:unless="${isCreate}" class="adm-btn-tn" th:href="@{/accounts/user/{uid}(uid=${user.uid})}" target="_blank" th:text="#{voj.administration.edit-user.view-profile}">view profile</a>
+            <a th:if="${isCreate}" class="adm-btn-tn" th:href="@{/administration/all-users}" th:text="#{voj.administration.edit-user.discard}">discard</a>
+            <button th:unless="${isCreate}" type="button" class="adm-btn-tn danger btn-danger" th:text="#{voj.administration.edit-user.delete-user}">delete</button>
+            <button type="submit" class="adm-btn-tn go" th:text="${isCreate} ? '$ ' + #{voj.administration.edit-user.create-user} : '$ ' + #{voj.administration.edit-user.save}">$ save</button>
+        </div>
+
+        <div class="alert alert-error hide"></div>
+        <div class="alert alert-success hide" th:text="${isCreate} ? #{voj.administration.new-user.user-created} : #{voj.administration.edit-user.profile-updated}">Saved.</div>
+
+        <div class="adm-ed2">
+            <div class="adm-col">
+                <div class="adm-card">
+                    <div class="adm-card-head plain" th:text="${isCreate} ? #{voj.administration.edit-user.new-user} : #{voj.administration.edit-user.profile}">// PROFILE</div>
+                    <div class="adm-user-head" th:unless="${isCreate}">
+                        <div class="adm-mono adm-avatar-lg" th:text="${#strings.substring(user.username,0,1)}">H</div>
+                        <div class="adm-min0">
+                            <div class="adm-username" th:text="${user.username}">username</div>
+                            <div class="adm-cell muted" th:text="${user.email}">email</div>
+                        </div>
+                    </div>
+                    <div class="adm-user-head" th:if="${isCreate}">
+                        <div class="adm-mono adm-avatar-lg dashed">&#10022;</div>
+                        <div class="adm-min0">
+                            <div class="adm-username" th:text="#{voj.administration.edit-user.new-user-name}">New user</div>
+                            <div class="sub" th:text="#{voj.administration.edit-user.new-user-subtitle}">Set a username & password.</div>
+                        </div>
+                    </div>
+                    <div class="adm-card-body">
+                        <label th:if="${isCreate}" class="adm-flabel"><span th:text="#{voj.administration.edit-user.username}">USERNAME</span><input id="username" class="adm-input" type="text" maxlength="16" /></label>
+                        <div class="adm-grid-2">
+                            <label class="adm-flabel"><span th:text="#{voj.administration.edit-user.display-name}">DISPLAY NAME</span><input id="display-name" class="adm-input" type="text" maxlength="64" th:value="${displayName}" /></label>
+                            <label class="adm-flabel"><span th:text="#{voj.administration.edit-user.email}">EMAIL</span><input id="email" class="adm-input" type="text" maxlength="64" th:value="${user != null ? user.email : ''}" /></label>
+                        </div>
+                        <label class="adm-flabel"><span th:text="${isCreate} ? #{voj.administration.edit-user.bio-optional} : #{voj.administration.edit-user.bio}">BIO</span><textarea id="about-me" class="adm-input" rows="2" maxlength="256" th:text="${aboutMe}"></textarea></label>
+                        <div th:unless="${isCreate}">
+                            <div class="adm-block-label" th:text="#{voj.administration.edit-user.default-language}">DEFAULT LANGUAGE</div>
+                            <div class="adm-seg" data-adm="seg" data-input="prefer-language">
+                                <a href="javascript:void(0);" th:each="language : ${languages}" th:data-value="${language.languageSlug}" th:classappend="${language.languageId == user.preferLanguage.languageId} ? 'active'" th:text="${language.languageName}">C++ 23</a>
+                            </div>
+                            <input type="hidden" id="prefer-language" th:value="${user.preferLanguage.languageSlug}" />
+                        </div>
+                        <input th:if="${isCreate}" type="hidden" id="prefer-language" th:value="${languages[0].languageSlug}" />
+                    </div>
+                </div>
+                <div class="adm-card" th:unless="${isCreate}">
+                    <div class="adm-card-head plain" th:text="#{voj.administration.edit-user.recent-submissions}">// RECENT SUBMISSIONS</div>
+                    <p class="adm-empty" th:if="${recentSubmissions == null or recentSubmissions.isEmpty()}" th:text="#{voj.administration.edit-user.no-submissions}">No submissions yet.</p>
+                    <div class="adm-subrow" th:each="submission : ${recentSubmissions}"
+                         th:with="vs=${submission.judgeResult != null ? submission.judgeResult.judgeResultSlug : ''},vcls=${vs == 'AC' ? 'c-accent' : (vs == 'WA' ? 'c-err' : ((vs == 'CE' or vs == 'SE' or vs == 'PD') ? 'c-muted' : ((vs == 'RE' or vs == 'PE') ? 'c-info' : 'c-warn')))}">
+                        <span class="v" th:classappend="${vcls}" th:text="${vs}">AC</span>
+                        <span class="nm" th:text="${submission.problem.problemName}">A + B Problem</span>
+                        <span class="when" th:text="${@dateFormatter.dateTimeMediumShort(submission.submitTime, language)}">2m ago</span>
+                    </div>
+                </div>
+            </div>
+            <div class="adm-col">
+                <div class="adm-card">
+                    <div class="adm-card-head plain" th:text="#{voj.administration.edit-user.access}">// ACCESS</div>
+                    <div class="adm-card-body">
+                        <div>
+                            <div class="adm-block-label" th:text="#{voj.administration.edit-user.role}">ROLE</div>
+                            <div class="adm-seg" data-adm="seg" data-input="user-group">
+                                <a href="javascript:void(0);" th:each="userGroup : ${userGroups}" th:if="${userGroup.userGroupSlug != 'forbidden'}" th:data-value="${userGroup.userGroupSlug}" th:classappend="${userGroup.userGroupSlug == roleSlug} ? 'active'" th:text="${userGroup.userGroupName}">User</a>
+                            </div>
+                            <input type="hidden" id="user-group" th:value="${roleSlug}" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="adm-card" th:if="${isCreate}">
+                    <div class="adm-card-head plain" th:text="#{voj.administration.edit-user.password-card}">// PASSWORD</div>
+                    <div class="adm-card-body">
+                        <label class="adm-flabel"><span th:text="#{voj.administration.edit-user.password}">PASSWORD</span><input id="password" class="adm-input" type="password" maxlength="16" /></label>
+                        <label class="adm-flabel"><span th:text="#{voj.administration.edit-user.confirm-password}">CONFIRM PASSWORD</span><input id="password-confirm" class="adm-input" type="password" maxlength="16" /></label>
+                        <div class="adm-formnote" th:text="#{voj.administration.edit-user.password-hint}">Min 6 characters.</div>
+                    </div>
+                </div>
+
+                <th:block th:unless="${isCreate}">
+                <div class="adm-card">
+                    <div class="adm-card-head plain" th:text="#{voj.administration.edit-user.stats}">// STATS</div>
+                    <div class="adm-meta"><span class="k" th:text="#{voj.administration.edit-user.solved}">Solved</span><span class="v" th:text="${#numbers.formatInteger(solvedCount, 1, 'COMMA')}">412</span></div>
+                    <div class="adm-meta"><span class="k" th:text="#{voj.administration.edit-user.rank}">Rank</span><span class="v" th:text="${userRank != null ? '#' + userRank : '—'}">#7</span></div>
+                    <div class="adm-meta"><span class="k" th:text="#{voj.administration.edit-user.joined}">Joined</span><span class="v" th:text="${joinedDate != null ? @dateFormatter.monthYear(joinedDate, language) : '—'}">Mar 2015</span></div>
+                    <div class="adm-meta"><span class="k" th:text="#{voj.administration.edit-user.submissions}">Submissions</span><span class="v" th:text="${#numbers.formatInteger(totalSubmissions, 1, 'COMMA')}">1,089</span></div>
+                </div>
+                <div class="adm-danger col">
+                    <div class="t" th:text="#{voj.administration.edit-user.danger-zone}">Danger zone</div>
+                    <div class="adm-danger-btns">
+                        <button type="button" class="adm-btn-outline warn" id="toggle-set-password" th:text="#{voj.administration.edit-user.set-password}">set password</button>
+                        <button type="button" class="adm-btn-outline err btn-danger" th:text="#{voj.administration.edit-user.delete-account}">delete account</button>
+                    </div>
+                    <div class="adm-pwpanel hide" id="set-password-panel">
+                        <div class="lbl" th:text="#{voj.administration.edit-user.set-password-card}">// SET PASSWORD</div>
+                        <div id="set-password-form">
+                            <label class="adm-flabel"><span th:text="#{voj.administration.edit-user.new-password}">NEW PASSWORD</span><input id="new-password" class="adm-input" type="password" maxlength="16" /></label>
+                            <label class="adm-flabel"><span th:text="#{voj.administration.edit-user.confirm-password}">CONFIRM PASSWORD</span><input id="new-password-confirm" class="adm-input" type="password" maxlength="16" /></label>
+                            <div class="adm-formnote" th:text="#{voj.administration.edit-user.set-password-hint}">Min 6 characters.</div>
+                            <div class="adm-pwpanel-btns">
+                                <button type="button" class="adm-btn-reset" id="cancel-set-password" th:text="#{voj.administration.edit-user.cancel}">cancel</button>
+                                <button type="button" class="adm-btn-warn" id="confirm-set-password" th:text="'$ ' + #{voj.administration.edit-user.set-password}">$ set password</button>
+                            </div>
+                        </div>
+                        <div class="hide" id="set-password-done">
+                            <div class="adm-pwok"><span class="ic">&#10003;</span><span th:text="#{voj.administration.edit-user.password-updated}">Password updated.</span></div>
+                            <div class="adm-pwpanel-btns end">
+                                <button type="button" class="adm-btn-reset" id="done-set-password" th:text="#{voj.administration.edit-user.done}">done</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                </th:block>
+            </div>
+        </div>
+
+    </form>
+    </div>
+
+    <th:block layout:fragment="scripts">
+
+    <!-- CREATE MODE -->
+    <script th:if="${isCreate}" type="text/javascript" th:inline="javascript">
+        function onSubmit() {
+            $('.alert-success, .alert-error', '#profile-form').addClass('hide');
+            if ($('#password').val() !== $('#password-confirm').val()) {
+                $('.alert-error', '#profile-form').html([[#{voj.administration.edit-user.password-mismatch}]]).removeClass('hide');
+                return;
+            }
+            $('button[type=submit]', '#profile-form').attr('disabled', 'disabled').html([[#{voj.administration.edit-user.please-wait}]]);
+            $.ajax({
+                type: 'POST', url: [[@{/administration/newUser.action}]],
+                data: { username:$('#username').val(), password:$('#password').val(), email:$('#email').val(),
+                        userGroup:$('#user-group').val(), preferLanguage:$('#prefer-language').val(),
+                        displayName:$('#display-name').val(), aboutMe:$('#about-me').val() },
+                dataType: 'JSON', success: function(result){ processCreateUserResult(result); }
+            });
+        }
+        function processCreateUserResult(result) {
+            if (result['isSuccessful']) {
+                $('#profile-form input, #profile-form textarea').val('');
+                $('.alert-success', '#profile-form').removeClass('hide');
+            } else {
+                var m = '';
+                if (result['isUsernameEmpty']) { m += [[#{voj.administration.new-user.username-empty}]] + '<br>'; }
+                else if (!result['isUsernameLegal']) {
+                    var u = $('#username').val();
+                    if (u.length < 6 || u.length > 16) { m += [[#{voj.administration.new-user.username-length-illegal}]] + '<br>'; }
+                    else if (!u[0].match(/[a-z]/i)) { m += [[#{voj.administration.new-user.username-beginning-illegal}]] + '<br>'; }
+                    else { m += [[#{voj.administration.new-user.username-character-illegal}]] + '<br>'; }
+                } else if (result['isUsernameExists']) { m += [[#{voj.administration.new-user.username-existing}]] + '<br>'; }
+                if (result['isPasswordEmpty']) { m += [[#{voj.administration.new-user.password-empty}]] + '<br>'; }
+                else if (!result['isPasswordLegal']) { m += [[#{voj.administration.new-user.password-illegal}]] + '<br>'; }
+                if (result['isEmailEmpty']) { m += [[#{voj.administration.new-user.email-empty}]] + '<br>'; }
+                else if (!result['isEmailLegal']) { m += [[#{voj.administration.new-user.email-illegal}]] + '<br>'; }
+                else if (result['isEmailExists']) { m += [[#{voj.administration.new-user.email-existing}]] + '<br>'; }
+                if (!result['isUserGroupLegal']) { m += [[#{voj.administration.new-user.user-group-empty}]] + '<br>'; }
+                if (!result['isLanguageLegal']) { m += [[#{voj.administration.new-user.language-empty}]] + '<br>'; }
+                $('.alert-error', '#profile-form').html(m).removeClass('hide');
+            }
+            $('button[type=submit]', '#profile-form').removeAttr('disabled').html('$ ' + [[#{voj.administration.edit-user.create-user}]]);
+        }
+    </script>
+
+    <!-- EDIT MODE -->
+    <script th:unless="${isCreate}" type="text/javascript" th:inline="javascript">
+        function onSubmit() {
+            $('.alert-success, .alert-error', '#profile-form').addClass('hide');
+            $('button[type=submit]', '#profile-form').attr('disabled', 'disabled').html([[#{voj.administration.edit-user.please-wait}]]);
+            saveUser('');
+        }
+        function saveUser(password) {
+            var userGroup = $('#is-banned').val() === '1' ? 'forbidden' : $('#user-group').val();
+            $.ajax({
+                type: 'POST', url: [[@{/administration/editUser.action}]],
+                data: { uid:[[${user.uid}]], password:password, email:$('#email').val(),
+                        displayName:$('#display-name').val(), userGroup:userGroup,
+                        preferLanguage:$('#prefer-language').val(), aboutMe:$('#about-me').val() },
+                dataType: 'JSON', success: function(result){ processEditUserResult(result, password); }
+            });
+        }
+        function processEditUserResult(result, password) {
+            if (result['isSuccessful']) {
+                $('.alert-success').removeClass('hide');
+                if (password) { showSetPasswordDone(); }
+            } else {
+                var m = '';
+                if (!result['isUserExists']) { m = [[#{voj.administration.edit-user.user-not-exists}]] + '<br>'; }
+                if (!result['isPasswordEmpty'] && !result['isPasswordLegal']) { m += [[#{voj.administration.edit-user.password-illegal}]] + '<br>'; }
+                if (result['isEmailEmpty']) { m += [[#{voj.administration.edit-user.email-empty}]] + '<br>'; }
+                else if (!result['isEmailLegal']) { m += [[#{voj.administration.edit-user.email-illegal}]] + '<br>'; }
+                else if (result['isEmailExists']) { m += [[#{voj.administration.edit-user.email-existing}]] + '<br>'; }
+                if (!result['isUserGroupLegal']) { m += [[#{voj.administration.edit-user.user-group-not-exists}]] + '<br>'; }
+                if (!result['isPreferLanguageLegal']) { m += [[#{voj.administration.edit-user.prefer-language-not-exists}]] + '<br>'; }
+                if (!result['isDisplayNameLegal']) { m += [[#{voj.administration.edit-user.display-name-illegal}]] + '<br>'; }
+                if (!result['isAboutMeLegal']) { m += [[#{voj.administration.edit-user.about-me-legal}]] + '<br>'; }
+                $('.alert-error').html(m).removeClass('hide');
+            }
+            $('button[type=submit]').removeAttr('disabled').html('$ ' + [[#{voj.administration.edit-user.save}]]);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        $('#status-pill').click(function() {
+            var banned = $('#is-banned').val() !== '1';
+            $('#is-banned').val(banned ? '1' : '0');
+            $(this).removeClass('c-accent c-err').addClass(banned ? 'c-err' : 'c-accent')
+                   .text(banned ? [[#{voj.administration.edit-user.status-banned}]] : [[#{voj.administration.edit-user.status-active}]]);
+        });
+
+        /* ---- inline set-password panel ---- */
+        function showSetPasswordDone() {
+            $('#set-password-form').addClass('hide');
+            $('#set-password-done').removeClass('hide');
+            $('#set-password-panel').removeClass('hide');
+        }
+        $('#toggle-set-password').click(function() {
+            $('#set-password-panel').toggleClass('hide');
+            $('#set-password-form').removeClass('hide');
+            $('#set-password-done').addClass('hide');
+            $('#new-password, #new-password-confirm').val('');
+        });
+        $('#cancel-set-password').click(function() {
+            $('#set-password-panel').addClass('hide');
+            $('#new-password, #new-password-confirm').val('');
+        });
+        $('#confirm-set-password').click(function() {
+            var p1 = $('#new-password').val(), p2 = $('#new-password-confirm').val();
+            $('.alert-success, .alert-error', '#profile-form').addClass('hide');
+            if (p1.length < 6 || p1.length > 16) {
+                $('.alert-error', '#profile-form').html([[#{voj.administration.edit-user.password-illegal}]]).removeClass('hide');
+                window.scrollTo({ top: 0, behavior: 'smooth' }); return;
+            }
+            if (p1 !== p2) {
+                $('.alert-error', '#profile-form').html([[#{voj.administration.edit-user.password-mismatch}]]).removeClass('hide');
+                window.scrollTo({ top: 0, behavior: 'smooth' }); return;
+            }
+            $('button[type=submit]', '#profile-form').attr('disabled', 'disabled');
+            saveUser(p1);
+        });
+        $('#done-set-password').click(function() {
+            $('#set-password-panel').addClass('hide');
+            $('#new-password, #new-password-confirm').val('');
+        });
+
+        $('button.btn-danger').click(function() {
+            if (!confirm([[#{voj.administration.edit-user.continue-or-not}]])) { return; }
+            $(this).attr('disabled', 'disabled');
+            $.ajax({
+                type: 'POST', url: [[@{/administration/deleteUsers.action}]],
+                data: { 'users': JSON.stringify([ [[${user.uid}]] ]) }, dataType: 'JSON',
+                success: function(result){
+                    if (result['isSuccessful']) { window.location.href = [[@{/administration/all-users}]]; }
+                    else { $('.alert-error').html([[#{voj.administration.edit-user.delete-error}]]).removeClass('hide'); $('button.btn-danger').removeAttr('disabled'); }
+                }
+            });
+        });
+    </script>
+    </th:block>
+</body>
+</html>

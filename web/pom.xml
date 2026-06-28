@@ -9,7 +9,7 @@
 	</parent>
 
 	<artifactId>voj.web</artifactId>
-	<packaging>war</packaging>
+	<packaging>jar</packaging>
 	<name>Verwandlung Online Judge WebApp</name>
 
 	<dependencies>
@@ -45,32 +45,16 @@
 			<groupId>org.aspectj</groupId>
 			<artifactId>aspectjweaver</artifactId>
 		</dependency>
-		<!-- Embedded servlet container. Marked provided so the artifact stays a
-		     deployable WAR while still being runnable via `java -jar`. -->
+		<!-- Thymeleaf server-side templating (replaces JSP/JSTL), with the
+		     Layout Dialect for decorator-style page layouts. -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-tomcat</artifactId>
-			<scope>provided</scope>
-			<exclusions>
-				<exclusion>
-					<groupId>org.springframework.boot</groupId>
-					<artifactId>spring-boot-starter-logging</artifactId>
-				</exclusion>
-			</exclusions>
-		</dependency>
-		<!-- JSP rendering support. -->
-		<dependency>
-			<groupId>org.apache.tomcat.embed</groupId>
-			<artifactId>tomcat-embed-jasper</artifactId>
-			<scope>provided</scope>
+			<artifactId>spring-boot-starter-thymeleaf</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>jakarta.servlet.jsp.jstl</groupId>
-			<artifactId>jakarta.servlet.jsp.jstl-api</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.glassfish.web</groupId>
-			<artifactId>jakarta.servlet.jsp.jstl</artifactId>
+			<groupId>nz.net.ultraq.thymeleaf</groupId>
+			<artifactId>thymeleaf-layout-dialect</artifactId>
+			<version>3.4.0</version>
 		</dependency>
 
 		<!-- Persistence -->
@@ -98,18 +82,11 @@
 			<artifactId>activemq-broker</artifactId>
 		</dependency>
 
-		<!-- Mail Service (FreeMarker-templated mails) -->
+		<!-- Mail Service (Thymeleaf-templated mails; the HTML mail body is
+		     rendered by the same Thymeleaf engine used for the web views). -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-mail</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework</groupId>
-			<artifactId>spring-context-support</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.freemarker</groupId>
-			<artifactId>freemarker</artifactId>
 		</dependency>
 
 		<!-- Others -->
@@ -126,6 +103,14 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<!-- Spring Boot 4 modularised the test slices: @WebMvcTest /
+		     @AutoConfigureMockMvc / MockMvc live in the web MVC test starter,
+		     no longer in spring-boot-starter-test. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-webmvc-test</artifactId>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
@@ -157,6 +142,26 @@
 				</includes>
 			</resource>
 		</resources>
+		<testResources>
+			<!-- Default test resources (re-declared because adding <testResources>
+			     replaces Maven's implicit one). -->
+			<testResource>
+				<directory>src/test/resources</directory>
+			</testResource>
+			<!-- The canonical DDL + reference + fixture scripts live once at the repo
+			     root in sql/; copy the ones the tests need onto the test classpath as
+			     db/*.sql so the Spring context can self-provision the database. demo.sql
+			     is intentionally excluded - the suite uses test-data.sql instead. -->
+			<testResource>
+				<directory>${project.basedir}/../sql</directory>
+				<targetPath>db</targetPath>
+				<includes>
+					<include>schema.sql</include>
+					<include>seed.sql</include>
+					<include>test-data.sql</include>
+				</includes>
+			</testResource>
+		</testResources>
 		<plugins>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>

@@ -34,13 +34,25 @@ public interface DiscussionThreadMapper {
    * @param discussionTopicId - the unique identifier of the discussion topic
    * @param offset - the starting ID of the discussion threads
    * @param limit - the number of threads to fetch
+   * @param reportHideThreshold - threads whose total report count reaches this value are hidden; a
+   *     value of {@code 0} or below disables hiding
+   * @param visibleOnly - when {@code true}, threads hidden by an administrator are excluded
    * @return a list containing discussion thread objects
    */
   List<DiscussionThread> getDiscussionThreads(
       @Param("problemId") long problemId,
       @Param("discussionTopicId") int discussionTopicId,
       @Param("offset") long offset,
-      @Param("limit") int limit);
+      @Param("limit") int limit,
+      @Param("reportHideThreshold") int reportHideThreshold,
+      @Param("visibleOnly") boolean visibleOnly);
+
+  /**
+   * [For administrators only] Gets the total number of discussion threads.
+   *
+   * @return the total number of discussion threads
+   */
+  long getNumberOfDiscussionThreads();
 
   /**
    * Gets the solution discussion of a problem. The solution discussion is created automatically
@@ -73,6 +85,23 @@ public interface DiscussionThreadMapper {
    * @param discussionThread - the discussion thread to update
    */
   int updateDiscussionThread(DiscussionThread discussionThread);
+
+  /**
+   * Updates the visibility of a discussion thread.
+   *
+   * @param discussionThreadId - the unique identifier of the discussion thread
+   * @param visible - whether the discussion thread is visible to ordinary users
+   */
+  int updateThreadVisibility(
+      @Param("discussionThreadId") long discussionThreadId, @Param("visible") boolean visible);
+
+  /**
+   * [For administrators only] Updates the moderation-editable fields of a discussion thread: its
+   * title, category (topic), visibility, pinned and locked flags.
+   *
+   * @param discussionThread - the discussion thread carrying the new moderation values
+   */
+  int updateThreadModeration(DiscussionThread discussionThread);
 
   /**
    * Deletes a discussion thread.

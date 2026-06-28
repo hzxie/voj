@@ -442,6 +442,28 @@ public class SubmissionMapperTest {
     Assertions.assertEquals(3, acceptedSubmission);
   }
 
+  /**
+   * Test case: tests the getSolvedProblemCountForAllUsers() method. Test data: the seeded
+   * submissions. Expected: user ID #1000 appears with a solved-problem count of 2 (problems #1000 and
+   * #1001), matching getAcceptedSubmissionUsingUserId.
+   */
+  @Test
+  public void testGetSolvedProblemCountForAllUsers() {
+    List<Map<String, Object>> rows = submissionMapper.getSolvedProblemCountForAllUsers();
+    Assertions.assertNotNull(rows);
+
+    boolean foundUser1000 = false;
+    for (Map<String, Object> row : rows) {
+      long uid = ((Number) row.get("uid")).longValue();
+      long solved = ((Number) row.get("solved")).longValue();
+      if (uid == 1000) {
+        foundUser1000 = true;
+        Assertions.assertEquals(2, solved);
+      }
+    }
+    Assertions.assertTrue(foundUser1000);
+  }
+
   /** Test case: tests the createSubmission(Submission) method. Test data: a valid data set. Expected: the data insertion operation completes successfully. */
   @Test
   public void testCreateSubmissionNormally() {

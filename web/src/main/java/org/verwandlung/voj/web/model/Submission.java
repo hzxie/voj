@@ -323,6 +323,24 @@ public class Submission implements Serializable {
   }
 
   /**
+   * Gets the judger that processed this submission.
+   *
+   * @return the judger user object, or null if the submission has not been judged yet
+   */
+  public User getJudger() {
+    return judger;
+  }
+
+  /**
+   * Sets the judger that processed this submission.
+   *
+   * @param judger - the judger user object
+   */
+  public void setJudger(User judger) {
+    this.judger = judger;
+  }
+
+  /**
    * Gets the code executed during judging.
    *
    * @return the code executed during judging
@@ -397,6 +415,9 @@ public class Submission implements Serializable {
 
   /** The log of the judging. */
   private String judgeLog;
+
+  /** The judger that processed this submission. */
+  private User judger;
 
   /** The code executed during judging. */
   private String code;

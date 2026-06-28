@@ -88,6 +88,25 @@ public interface SubmissionMapper {
       @Param("isAcceptedOnly") boolean isAcceptedOnly);
 
   /**
+   * [For administrators only] Gets the number of submissions within a specified time period, grouped
+   * by judge result. Feeds the dashboard's verdict-mix breakdown.
+   *
+   * @param startTime - the start time of the statistics
+   * @param endTime - the end time of the statistics
+   * @return a list of {slug, submissions} rows, one per judge-result slug
+   */
+  List<Map<String, Object>> getNumberOfSubmissionsGroupByJudgeResult(
+      @Param("startTime") String startTime, @Param("endTime") String endTime);
+
+  /**
+   * [For administrators only] Gets the number of submissions still waiting to be judged (the judge
+   * queue depth).
+   *
+   * @return the number of pending submissions
+   */
+  long getNumberOfPendingSubmissions();
+
+  /**
    * Gets the unique identifier of the latest submission.
    *
    * @return the unique identifier of the latest submission
@@ -199,6 +218,26 @@ public interface SubmissionMapper {
   long getTotalSubmissionUsingUserId(@Param("uid") long uid);
 
   /**
+   * Gets a user's public-problem counts broken down by difficulty level. Each row carries the
+   * difficulty's slug and name, the number of public problems at that difficulty (total) and the
+   * number the user has an accepted submission for (solved).
+   *
+   * @param uid - the unique identifier of the user
+   * @return an ordered list of per-difficulty rows (slug, name, total, solved)
+   */
+  List<Map<String, Object>> getNumberOfSolvedProblemsByDifficulty(@Param("uid") long uid);
+
+  /**
+   * Gets the number of distinct solved (accepted) problems for every user who has at least one
+   * accepted submission. Used to populate the admin user list's SOLVED and RANK columns in a single
+   * query (rather than one query per user).
+   *
+   * @return a list of rows, each carrying the user identifier (uid) and the number of distinct
+   *     solved problems (solved), ordered by solved count descending
+   */
+  List<Map<String, Object>> getSolvedProblemCountForAllUsers();
+
+  /**
    * Creates a submission.
    *
    * @param submission - the submission object to create
@@ -211,6 +250,21 @@ public interface SubmissionMapper {
    * @param submission - the submission object to update
    */
   int updateSubmission(Submission submission);
+
+  /**
+   * Marks a still-pending submission as a terminal failure (used when a judging task expires with no
+   * available judger). Only rows whose result is still pending are updated, so a real verdict is
+   * never overwritten.
+   *
+   * @param submissionId - the unique identifier of the submission
+   * @param judgeResultSlug - the terminal judge-result slug to set
+   * @param judgeLog - the judge log explaining the failure
+   * @return the number of rows updated (1 when the submission was still pending, 0 otherwise)
+   */
+  int markSubmissionUnjudgeable(
+      @Param("submissionId") long submissionId,
+      @Param("judgeResultSlug") String judgeResultSlug,
+      @Param("judgeLog") String judgeLog);
 
   /**
    * Deletes a submission by its unique identifier.

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<!--/*
+  Public site header (terminal aesthetic). Used via ~{fragments/header :: header}.
+  The active navigation item is derived from the current request URI (forwardUri,
+  injected by CommonModelPopulator) so no per-page parameter is needed. Styling
+  lives in css/app.css (.vw-header / .vw-nav / .vw-menu / ...); behaviour (theme
+  toggle, burger) lives in js/theme.js.
+*/-->
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<body>
+    <th:block th:fragment="header"
+        th:with="uri=${forwardUri != null ? forwardUri : ''},
+                 navP=${#strings.endsWith(uri,'/p') or #strings.contains(uri,'/p/')},
+                 navD=${#strings.contains(uri,'/discussion')},
+                 navC=${#strings.contains(uri,'/contest')},
+                 navS=${#strings.contains(uri,'/submission')}">
+    <header class="vw-header">
+        <a class="vw-logo" th:href="@{/}">
+            <span class="b">&lt;</span><span class="n">verwandlung</span><span class="b">&gt;</span><span class="vw-cursor">_</span>
+        </a>
+        <nav class="vw-nav">
+            <a th:href="@{/p}" th:classappend="${navP}? 'active'">~/problems</a>
+            <a th:href="@{/discussion}" th:classappend="${navD}? 'active'">~/discussion</a>
+            <a th:href="@{/contest}" th:classappend="${navC}? 'active'">~/contests</a>
+            <a th:href="@{/submission}" th:classappend="${navS}? 'active'">~/submission</a>
+        </nav>
+        <div class="vw-header-spacer"></div>
+        <div class="vw-toggle" data-vw="theme-toggle" title="Toggle theme" role="button" tabindex="0">
+            <span class="moon">&#9790;</span><span class="sun">&#9728;</span><span class="knob"></span>
+        </div>
+        <th:block th:if="${isLogin}">
+            <a th:if="${myProfile.userGroup != null and myProfile.userGroup.userGroupSlug == 'administrators'}" class="vw-header-link vw-desktop-only" th:href="@{/administration}">~/admin</a>
+            <a class="vw-header-link vw-desktop-only" th:href="@{/accounts/user/{uid}(uid=${myProfile.uid})}" th:text="|~/${myProfile.username}|">~/user</a>
+            <a class="vw-btn vw-btn-ghost vw-btn-sm vw-desktop-only" th:href="@{/accounts/login(logout=true)}" th:text="#{voj.include.header.sign-out}">sign out</a>
+        </th:block>
+        <th:block th:unless="${isLogin}">
+            <a class="vw-header-link vw-desktop-only" th:href="@{/accounts/login(forward=${forwardUri})}" th:text="#{voj.include.header.sign-in}">login</a>
+            <a class="vw-btn vw-btn-accent vw-btn-sm vw-desktop-only" th:href="@{/accounts/register(forward=${forwardUri})}">$ create-account</a>
+        </th:block>
+        <button class="vw-burger" data-vw="burger" type="button" title="Menu" aria-label="Menu">
+            <span></span><span></span><span></span>
+        </button>
+    </header>
+
+    <!-- Mobile navigation drawer (toggled by the burger). -->
+    <div class="vw-menu" data-vw="menu">
+        <a th:href="@{/p}" th:classappend="${navP}? 'active'">~/problems</a>
+        <a th:href="@{/discussion}" th:classappend="${navD}? 'active'">~/discussion</a>
+        <a th:href="@{/contest}" th:classappend="${navC}? 'active'">~/contests</a>
+        <a th:href="@{/submission}" th:classappend="${navS}? 'active'">~/submission</a>
+        <a th:if="${isLogin and myProfile.userGroup != null and myProfile.userGroup.userGroupSlug == 'administrators'}" th:href="@{/administration}">~/admin</a>
+        <div class="vw-menu-actions" th:if="${isLogin}">
+            <a class="vw-btn vw-btn-ghost" th:href="@{/accounts/user/{uid}(uid=${myProfile.uid})}" th:text="|~/${myProfile.username}|">~/user</a>
+            <a class="vw-btn vw-btn-accent" th:href="@{/accounts/login(logout=true)}" th:text="#{voj.include.header.sign-out}">sign out</a>
+        </div>
+        <div class="vw-menu-actions" th:unless="${isLogin}">
+            <a class="vw-btn vw-btn-ghost" th:href="@{/accounts/login(forward=${forwardUri})}" th:text="#{voj.include.header.sign-in}">login</a>
+            <a class="vw-btn vw-btn-accent" th:href="@{/accounts/register(forward=${forwardUri})}">$ create-account</a>
+        </div>
+    </div>
+    </th:block>
+</body>
+</html>

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/auth}" lang="en">
+<head>
+    <title th:text="#{voj.accounts.verify-email.title} + ' | ' + ${websiteName}">Verify Email</title>
+</head>
+<body>
+    <a layout:fragment="auth-action" class="vw-header-link vw-header-link-accent"
+       th:href="@{/accounts/login}">sign in &rarr;</a>
+    <div layout:fragment="content">
+        <section class="vw-auth">
+            <div class="vw-auth-inner">
+                <div class="vw-auth-head">
+                    <div class="vw-eyebrow">// VERIFY</div>
+                    <h1 th:text="#{voj.accounts.verify-email.verify-email}">Verify Email</h1>
+                </div>
+
+                <div class="vw-card vw-card-glow">
+                    <div class="vw-card-bar">
+                        <span class="vw-dot vw-dot-r"></span><span class="vw-dot vw-dot-y"></span><span class="vw-dot vw-dot-g"></span>
+                        <span class="vw-card-title">auth &mdash; verify.sh</span>
+                    </div>
+                    <div class="vw-card-body">
+                        <div class="vw-alert vw-alert-success" th:if="${isVerified}"
+                             th:text="#{voj.accounts.verify-email.verified}">Your email address has been verified. You can now submit solutions.</div>
+                        <div class="vw-alert vw-alert-error" th:unless="${isVerified}"
+                             th:text="#{voj.accounts.verify-email.invalid-token}">This verification link is invalid or has expired.</div>
+                    </div>
+                </div>
+
+                <p class="vw-auth-foot">
+                    <a class="vw-accent" th:href="@{/accounts/login}" th:text="#{voj.accounts.register.sign-in}">&larr; Back to sign in</a>
+                </p>
+            </div>
+        </section>
+    </div>
+</body>
+</html>

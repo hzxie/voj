@@ -16,7 +16,6 @@
  */
 package org.verwandlung.voj.web.service;
 
-import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
@@ -29,8 +28,6 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import freemarker.template.TemplateException;
 
 import org.verwandlung.voj.web.mapper.EmailValidationMapper;
 import org.verwandlung.voj.web.mapper.LanguageMapper;
@@ -67,6 +64,58 @@ public class UserService {
   }
 
   /**
+   * [For administrators only] Bans a user by moving them to the {@code forbidden} user group, which
+   * blocks login and posting. Used by the moderation review page.
+   *
+   * @param userId - the unique identifier of the user to ban
+   * @return a Map containing whether the ban was successful
+   */
+  public Map<String, Boolean> banUser(long userId) {
+    Map<String, Boolean> result = new HashMap<>(2, 1);
+    User user = userMapper.getUserUsingUid(userId);
+    UserGroup forbidden = userGroupMapper.getUserGroupUsingSlug("forbidden");
+    boolean isSuccessful = user != null && forbidden != null;
+    if (isSuccessful) {
+      user.setUserGroup(forbidden);
+      userMapper.updateUser(user);
+    }
+    result.put("isSuccessful", isSuccessful);
+    return result;
+  }
+
+  /**
+   * Gets the registration time of a batch of users, keyed by user identifier. Reads the {@code
+   * registerTime} user-meta entry (stored as {@code yyyy-MM-dd HH:mm:ss}) for every requested user in
+   * a single query; users without a parseable registration time are omitted from the result. Backs
+   * the admin user list's JOINED column.
+   *
+   * @param uids - the user identifiers to look up
+   * @return a map from user identifier to registration date
+   */
+  public Map<Long, Date> getRegisterTimes(List<Long> uids) {
+    Map<Long, Date> registerTimes = new HashMap<>(uids.size() * 4 / 3 + 1);
+    if (uids.isEmpty()) {
+      return registerTimes;
+    }
+    SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    List<Map<String, Object>> rows =
+        userMetaMapper.getUserMetaValuesUsingMetaKey(uids, "registerTime");
+    for (Map<String, Object> row : rows) {
+      long uid = ((Number) row.get("uid")).longValue();
+      Object metaValue = row.get("metaValue");
+      if (metaValue == null) {
+        continue;
+      }
+      try {
+        registerTimes.put(uid, formatter.parse(metaValue.toString()));
+      } catch (java.text.ParseException e) {
+        // Ignore unparseable registration times; the JOINED cell will simply be blank.
+      }
+    }
+    return registerTimes;
+  }
+
+  /**
    * Gets the list of users in a user group.
    *
    * @param userGroup - the user group object the users belong to
@@ -99,6 +148,12 @@ public class UserService {
       }
       userMetaMap.put(key, value);
     }
+    // Ensure socialLinks is always present as a (possibly empty) map. New users
+    // have no socialLinks meta row, leaving the attribute null; the JSP views
+    // tolerated indexing a null map, but Thymeleaf's SpEL throws EL1012E
+    // ("Cannot index into a null value"). Defaulting to an empty map keeps
+    // socialLinks['Facebook'] et al. resolving to null as the templates expect.
+    userMetaMap.putIfAbsent("socialLinks", new HashMap<String, Object>());
     return userMetaMap;
   }
 
@@ -236,6 +291,37 @@ public class UserService {
   }
 
   /**
+   * Creates a new user (from the admin console) and, when supplied, seeds the optional display name
+   * and bio. Both extras are HTML-filtered and only persisted when non-empty.
+   *
+   * @param username - the username
+   * @param password - the password (not encrypted with MD5)
+   * @param email - the email address
+   * @param userGroupSlug - the alias of the user group
+   * @param languageSlug - the alias of the preferred language
+   * @param displayName - the optional display name
+   * @param aboutMe - the optional personal bio
+   * @return a Map<String, Boolean> object containing the account creation result
+   */
+  public Map<String, Boolean> createUser(
+      String username,
+      String password,
+      String email,
+      String userGroupSlug,
+      String languageSlug,
+      String displayName,
+      String aboutMe) {
+    Map<String, Boolean> result =
+        createUser(username, password, email, userGroupSlug, languageSlug);
+    if (result.get("isSuccessful")) {
+      User user = userMapper.getUserUsingUsername(username);
+      updateUserMeta(user, "displayName", HtmlTextFilter.filter(displayName));
+      updateUserMeta(user, "aboutMe", offensiveWordFilter.filter(HtmlTextFilter.filter(aboutMe)));
+    }
+    return result;
+  }
+
+  /**
    * Creates the user meta information.
    *
    * @param user - the corresponding user object
@@ -323,7 +409,7 @@ public class UserService {
       isUserExists = true;
       try {
         dispatchVerificationEmail(username, email);
-      } catch (IOException | TemplateException e) {
+      } catch (Exception e) {
         e.printStackTrace();
         isSuccessful = false;
       }
@@ -339,11 +425,8 @@ public class UserService {
    *
    * @param username - the user's username
    * @param email - the user's email address
-   * @throws TemplateException
-   * @throws IOException
    */
-  private void dispatchVerificationEmail(String username, String email)
-      throws IOException, TemplateException {
+  private void dispatchVerificationEmail(String username, String email) {
     String token = DigestUtils.getGuid();
     Date expireTime = getExpireTime();
     Map<String, Object> model = new HashMap<>(4, 1);
@@ -355,10 +438,71 @@ public class UserService {
     emailValidationMapper.deleteEmailValidation(email);
     emailValidationMapper.createEmailValidation(emailValidation);
 
-    String templatePath = "/reset-password.ftl";
+    String templateName = "mail/reset-password";
     String subject = "Password Reset Request";
-    String body = mailSender.getMailContent(templatePath, model);
+    String body = mailSender.getMailContent(templateName, model);
     mailSender.sendMail(email, subject, body);
+  }
+
+  /**
+   * Marks a freshly-registered user as unverified and emails them a verification link. Used by the
+   * registration flow when the {@code requireEmailVerification} option is enabled.
+   *
+   * @param user - the newly-created user
+   */
+  public void requireEmailVerification(User user) {
+    userMapper.updateEmailVerified(user.getUid(), false);
+    user.setEmailVerified(false);
+    try {
+      dispatchEmailVerificationEmail(user.getUsername(), user.getEmail());
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+  }
+
+  /**
+   * Validates an email-verification token and, when valid, marks the user's email as verified.
+   *
+   * @param email - the user's email address
+   * @param token - the token from the verification link
+   * @return a Map object containing the verification result
+   */
+  public Map<String, Boolean> verifyEmail(String email, String token) {
+    boolean isTokenValid = email != null && token != null && isEmailValidationValid(email, token);
+    Map<String, Boolean> result = new HashMap<>(2, 1);
+    result.put("isTokenValid", isTokenValid);
+
+    if (isTokenValid) {
+      User user = userMapper.getUserUsingEmail(email);
+      if (user != null) {
+        userMapper.updateEmailVerified(user.getUid(), true);
+      }
+      emailValidationMapper.deleteEmailValidation(email);
+    }
+    result.put("isSuccessful", isTokenValid);
+    return result;
+  }
+
+  /**
+   * Sends the email-verification email containing the confirmation link.
+   *
+   * @param username - the user's username
+   * @param email - the user's email address
+   */
+  private void dispatchEmailVerificationEmail(String username, String email) {
+    String token = DigestUtils.getGuid();
+    Date expireTime = getExpireTime();
+    Map<String, Object> model = new HashMap<>(4, 1);
+    model.put("username", username);
+    model.put("email", email);
+    model.put("token", token);
+
+    EmailValidation emailValidation = new EmailValidation(email, token, expireTime);
+    emailValidationMapper.deleteEmailValidation(email);
+    emailValidationMapper.createEmailValidation(emailValidation);
+
+    String body = mailSender.getMailContent("mail/verify-email", model);
+    mailSender.sendMail(email, "Verify Your Email Address", body);
   }
 
   /**
@@ -498,6 +642,7 @@ public class UserService {
    *
    * @param user - the user whose profile is to be changed
    * @param email - the user's email address
+   * @param displayName - the user's display name
    * @param location - the user's location
    * @param website - the user's personal homepage
    * @param socialLinks - the user's social network information
@@ -507,24 +652,69 @@ public class UserService {
   public Map<String, Boolean> updateProfile(
       User user,
       String email,
+      String displayName,
       String location,
       String website,
       String socialLinks,
       String aboutMe) {
+    displayName = HtmlTextFilter.filter(displayName);
     location = HtmlTextFilter.filter(location);
     website = HtmlTextFilter.filter(website);
     socialLinks = HtmlTextFilter.filter(socialLinks);
     aboutMe = offensiveWordFilter.filter(HtmlTextFilter.filter(aboutMe));
     Map<String, Boolean> result =
-        getUpdateProfileResult(user, email, location, website, socialLinks, aboutMe);
+        getUpdateProfileResult(user, email, displayName, location, website, socialLinks, aboutMe);
 
     if (result.get("isSuccessful")) {
       user.setEmail(email);
       userMapper.updateUser(user);
 
+      updateUserMeta(user, "displayName", displayName);
       updateUserMeta(user, "location", location);
       updateUserMeta(user, "website", website);
       updateUserMeta(user, "socialLinks", socialLinks);
+      updateUserMeta(user, "aboutMe", aboutMe);
+    }
+    return result;
+  }
+
+  /**
+   * Validates and updates the subset of a user's profile that an administrator manages from the
+   * admin console: the email address, the display name and the bio. Personal-profile fields the
+   * admin editor does not surface (location, website, social links) are intentionally left
+   * untouched so that re-saving here does not wipe data the user maintains on their own dashboard.
+   *
+   * @param user - the user whose profile is to be changed
+   * @param email - the user's email address
+   * @param displayName - the user's display name
+   * @param aboutMe - the user's personal bio
+   * @return a Map<String, Boolean> object containing the personal profile update result
+   */
+  public Map<String, Boolean> updateProfileByAdmin(
+      User user, String email, String displayName, String aboutMe) {
+    displayName = HtmlTextFilter.filter(displayName);
+    aboutMe = offensiveWordFilter.filter(HtmlTextFilter.filter(aboutMe));
+
+    Map<String, Boolean> result = new HashMap<>(6, 1);
+    result.put("isEmailEmpty", email.isEmpty());
+    result.put("isEmailLegal", isEmailLegal(email));
+    result.put("isEmailExists", isEmailExists(user.getEmail(), email));
+    result.put("isDisplayNameLegal", displayName.length() <= 64);
+    result.put("isAboutMeLegal", aboutMe.length() <= 256);
+
+    boolean isSuccessful =
+        !result.get("isEmailEmpty")
+            && result.get("isEmailLegal")
+            && !result.get("isEmailExists")
+            && result.get("isDisplayNameLegal")
+            && result.get("isAboutMeLegal");
+    result.put("isSuccessful", isSuccessful);
+
+    if (isSuccessful) {
+      user.setEmail(email);
+      userMapper.updateUser(user);
+
+      updateUserMeta(user, "displayName", displayName);
       updateUserMeta(user, "aboutMe", aboutMe);
     }
     return result;
@@ -535,6 +725,7 @@ public class UserService {
    *
    * @param user - the user whose profile is to be changed
    * @param email - the user's email address
+   * @param displayName - the user's display name
    * @param location - the user's location
    * @param website - the user's personal homepage
    * @param socialLinks - the user's social network information
@@ -544,14 +735,16 @@ public class UserService {
   private Map<String, Boolean> getUpdateProfileResult(
       User user,
       String email,
+      String displayName,
       String location,
       String website,
       String socialLinks,
       String aboutMe) {
-    Map<String, Boolean> result = new HashMap<>(7, 1);
+    Map<String, Boolean> result = new HashMap<>(8, 1);
     result.put("isEmailEmpty", email.isEmpty());
     result.put("isEmailLegal", isEmailLegal(email));
     result.put("isEmailExists", isEmailExists(user.getEmail(), email));
+    result.put("isDisplayNameLegal", displayName.length() <= 64);
     result.put("isLocationLegal", location.length() <= 128);
     result.put("isWebsiteLegal", isWebsiteLegal(website));
     result.put("isAboutMeLegal", aboutMe.length() <= 256);
@@ -560,6 +753,7 @@ public class UserService {
         !result.get("isEmailEmpty")
             && result.get("isEmailLegal")
             && !result.get("isEmailExists")
+            && result.get("isDisplayNameLegal")
             && result.get("isLocationLegal")
             && result.get("isWebsiteLegal")
             && result.get("isAboutMeLegal");

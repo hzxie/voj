@@ -170,13 +170,18 @@ public class MessageReceiver implements MessageListener {
     String judgerUsername = mapMessage.getString("username");
     String judgerDescription = mapMessage.getString("description");
     long heartbeatTimeInMillis = mapMessage.getLong("heartbeatTime");
+    // Telemetry fields are tolerated as optional so older judgers still report in.
+    int cpuLoad = mapMessage.itemExists("cpuLoad") ? mapMessage.getInt("cpuLoad") : -1;
+    int memoryUsage = mapMessage.itemExists("memoryUsage") ? mapMessage.getInt("memoryUsage") : -1;
+    long uptime = mapMessage.itemExists("uptime") ? mapMessage.getLong("uptime") : 0;
 
     Calendar calendar = Calendar.getInstance();
     calendar.setTimeInMillis(heartbeatTimeInMillis);
     Date heartbeatTime = calendar.getTime();
 
     eventPublisher.publishEvent(
-        new KeepAliveEvent(this, judgerUsername, judgerDescription, heartbeatTime));
+        new KeepAliveEvent(
+            this, judgerUsername, judgerDescription, heartbeatTime, cpuLoad, memoryUsage, uptime));
     LOGGER.info(String.format("Received heartbeat from Judger[%s]", judgerUsername));
   }
 

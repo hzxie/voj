@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<!--/*
+  New-user welcome / e-mail verification body. Decorates layouts/mail (terminal
+  title bar, logo, footer, sign-off); only the per-email rows live here.
+  Model: baseUrl, username, email, token.
+*/-->
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/mail}" lang="en">
+<body>
+
+<th:block layout:fragment="script">verify-email.sh</th:block>
+
+<th:block layout:fragment="content">
+
+    <!-- heading -->
+    <tr>
+        <td style="padding:24px 44px 0;">
+            <div style="font-size:11px; letter-spacing:2px; color:#34d399; margin-bottom:14px;">// WELCOME ABOARD</div>
+            <div style="font-family:'Space Grotesk','Segoe UI',Arial,sans-serif; font-size:32px; line-height:1.1; letter-spacing:-1px; font-weight:700; color:#eafff5;">Verify your email.</div>
+        </td>
+    </tr>
+
+    <!-- intro -->
+    <tr>
+        <td style="padding:22px 44px 0; font-size:13.5px; line-height:1.75; color:#cdd9d1;">
+            Welcome to Verwandlung Online Judge, <span style="color:#34d399;" th:text="${username}">username</span>! Your account is
+            almost ready &mdash; confirm this email address to activate it and unlock submissions,
+            contests, and discussions.
+        </td>
+    </tr>
+
+    <!-- account meta block -->
+    <tr>
+        <td style="padding:22px 44px 0;">
+            <table width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#0b110e; border:1px solid #16201b; border-radius:11px;">
+                <tbody>
+                    <tr><td style="padding:14px 18px; font-size:12.5px; color:#6f8479; border-bottom:1px solid #16201b;"><span style="color:#34d399;">$</span> account&nbsp;&nbsp;<span style="color:#cdd9d1;" th:text="${email}">user@example.com</span></td></tr>
+                    <tr><td style="padding:14px 18px; font-size:12.5px; color:#6f8479;"><span style="color:#34d399;">$</span> expires&nbsp;&nbsp;<span style="color:#cdd9d1;">24h</span> from delivery<span style="display:inline-block; width:7px; height:14px; background:#34d399; margin-left:4px; vertical-align:middle;"></span></td></tr>
+                </tbody>
+            </table>
+        </td>
+    </tr>
+
+    <!-- CTA -->
+    <tr>
+        <td style="padding:28px 44px 0;">
+            <a th:href="|${baseUrl}/accounts/verify-email?email=${email}&amp;token=${token}|" target="_blank" style="display:block; text-align:center; font-family:'JetBrains Mono','Courier New',monospace; font-size:14px; font-weight:600; color:#062018; background:#34d399; padding:15px 12px; border-radius:10px; text-decoration:none; box-shadow:0 12px 28px rgba(52,211,153,.16);">$ verify email</a>
+        </td>
+    </tr>
+
+    <!-- fallback URL -->
+    <tr>
+        <td style="padding:18px 44px 4px; font-size:12px; line-height:1.7; color:#6f8479;">
+            If you didn't create this account, ignore this email &mdash; nothing more will happen. If the button doesn't work, paste this URL into your browser:
+        </td>
+    </tr>
+    <tr>
+        <td style="padding:4px 44px 36px;">
+            <a th:href="|${baseUrl}/accounts/verify-email?email=${email}&amp;token=${token}|" th:text="|${baseUrl}/accounts/verify-email?email=${email}&amp;token=${token}|" target="_blank" style="font-size:11.5px; color:#34d399; text-decoration:none; word-break:break-all;">https://verwandlung.org/accounts/verify-email</a>
+        </td>
+    </tr>
+
+</th:block>
+
+</body>
+</html>

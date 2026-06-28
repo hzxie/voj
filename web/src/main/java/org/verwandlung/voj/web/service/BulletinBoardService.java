@@ -22,7 +22,10 @@ import org.springframework.transaction.annotation.Transactional;
 import org.verwandlung.voj.web.mapper.BulletinBoardMessageMapper;
 import org.verwandlung.voj.web.model.BulletinBoardMessage;
 
+import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * The business logic layer of the bulletin board.
@@ -53,6 +56,18 @@ public class BulletinBoardService {
   }
 
   /**
+   * Gets the bulletin board messages visible to the public (those with a {@code PUBLISHED} status),
+   * with pinned messages floated to the top.
+   *
+   * @param offset - the starting number of the bulletin board message identifier
+   * @param limit - the number of bulletin board messages to fetch
+   * @return a list containing published bulletin board messages, pinned ones first
+   */
+  public List<BulletinBoardMessage> getPublishedBulletinBoardMessages(long offset, int limit) {
+    return bulletinBoardMessageMapper.getPublishedBulletinBoardMessages(offset, limit);
+  }
+
+  /**
    * Gets a bulletin board message by its unique identifier.
    *
    * @param bulletinBoardMessageId - the unique identifier of the bulletin board message
@@ -60,6 +75,99 @@ public class BulletinBoardService {
    */
   public BulletinBoardMessage getBulletinBoardMessage(long bulletinBoardMessageId) {
     return bulletinBoardMessageMapper.getBulletinBoardMessageUsingId(bulletinBoardMessageId);
+  }
+
+  /**
+   * [For administrators only] Creates a bulletin board message.
+   *
+   * @param messageTitle - the title of the message
+   * @param messageBody - the content of the message
+   * @param authorId - the unique identifier of the author (creator) of the message
+   * @param isPinned - whether the message is pinned to the top of the list
+   * @param status - the publication status of the message (PUBLISHED / DRAFT / HIDDEN)
+   * @return a Map containing the creation result and validation flags
+   */
+  public Map<String, Boolean> createBulletinBoardMessage(
+      String messageTitle, String messageBody, long authorId, boolean isPinned, String status) {
+    Map<String, Boolean> result = validateMessage(messageTitle, messageBody);
+    if (result.get("isSuccessful")) {
+      BulletinBoardMessage message =
+          new BulletinBoardMessage(messageTitle, messageBody, new Date());
+      message.setMessageAuthorId(authorId);
+      message.setPinned(isPinned);
+      message.setStatus(normalizeStatus(status));
+      bulletinBoardMessageMapper.createBulletinBoardMessage(message);
+    }
+    return result;
+  }
+
+  /**
+   * [For administrators only] Edits an existing bulletin board message.
+   *
+   * @param messageId - the unique identifier of the message
+   * @param messageTitle - the new title of the message
+   * @param messageBody - the new content of the message
+   * @param isPinned - whether the message is pinned to the top of the list
+   * @param status - the publication status of the message (PUBLISHED / DRAFT / HIDDEN)
+   * @return a Map containing the edit result and validation flags
+   */
+  public Map<String, Boolean> editBulletinBoardMessage(
+      long messageId, String messageTitle, String messageBody, boolean isPinned, String status) {
+    BulletinBoardMessage message =
+        bulletinBoardMessageMapper.getBulletinBoardMessageUsingId(messageId);
+    Map<String, Boolean> result = validateMessage(messageTitle, messageBody);
+    result.put("isMessageExists", message != null);
+    if (message == null) {
+      result.put("isSuccessful", false);
+      return result;
+    }
+    if (result.get("isSuccessful")) {
+      message.setMessageTitle(messageTitle);
+      message.setMessageBody(messageBody);
+      message.setPinned(isPinned);
+      message.setStatus(normalizeStatus(status));
+      bulletinBoardMessageMapper.updateBulletinBoardMessage(message);
+    }
+    return result;
+  }
+
+  /**
+   * Normalizes a publication status string, falling back to {@code PUBLISHED} for unknown values.
+   *
+   * @param status - the raw status string supplied by the caller
+   * @return one of {@code PUBLISHED}, {@code DRAFT}, or {@code HIDDEN}
+   */
+  private String normalizeStatus(String status) {
+    if (BulletinBoardMessage.STATUS_DRAFT.equals(status)
+        || BulletinBoardMessage.STATUS_HIDDEN.equals(status)) {
+      return status;
+    }
+    return BulletinBoardMessage.STATUS_PUBLISHED;
+  }
+
+  /**
+   * [For administrators only] Deletes a bulletin board message.
+   *
+   * @param messageId - the unique identifier of the message to delete
+   * @return whether the message was deleted
+   */
+  public boolean deleteBulletinBoardMessage(long messageId) {
+    return bulletinBoardMessageMapper.deleteBulletinBoardMessage(messageId) > 0;
+  }
+
+  /**
+   * Validates a bulletin board message's title and body.
+   *
+   * @param messageTitle - the title of the message
+   * @param messageBody - the content of the message
+   * @return a Map of validation flags including {@code isSuccessful}
+   */
+  private Map<String, Boolean> validateMessage(String messageTitle, String messageBody) {
+    Map<String, Boolean> result = new HashMap<>(4, 1);
+    result.put("isTitleEmpty", messageTitle == null || messageTitle.trim().isEmpty());
+    result.put("isBodyEmpty", messageBody == null || messageBody.trim().isEmpty());
+    result.put("isSuccessful", !result.get("isTitleEmpty") && !result.get("isBodyEmpty"));
+    return result;
   }
 
   /** The autowired BulletinBoardMessageMapper, used to obtain bulletin board messages. */

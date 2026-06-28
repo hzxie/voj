@@ -28,7 +28,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import org.verwandlung.voj.web.mapper.OptionMapper;
 import org.verwandlung.voj.web.model.Option;
-import org.verwandlung.voj.web.util.JsonUtils;
 
 /**
  * The system administration service, used to perform the administration functions of the whole
@@ -68,6 +67,27 @@ public class OptionService {
   }
 
   /**
+   * Gets the value of a system option as a positive integer.
+   *
+   * @param optionName - the name of the system option
+   * @param defaultValue - the value to fall back to when the option is missing, non-numeric, or
+   *     not positive
+   * @return the integer value of the option, or the default value
+   */
+  public int getIntOption(String optionName, int defaultValue) {
+    Option option = optionMapper.getOption(optionName);
+    if (option == null) {
+      return defaultValue;
+    }
+    try {
+      int value = Integer.parseInt(option.getOptionValue().trim());
+      return value > 0 ? value : defaultValue;
+    } catch (NumberFormatException e) {
+      return defaultValue;
+    }
+  }
+
+  /**
    * Updates the system options.
    *
    * @param websiteName - the website name
@@ -77,7 +97,7 @@ public class OptionService {
    * @param icpNumber - the website ICP registration number
    * @param policeIcpNumber - the police ICP registration number
    * @param googleAnalyticsCode - the Google Analytics code
-   * @param offensiveWords - the list of offensive words
+   * @param offensiveWordSources - the offensive word import sources, one URL per line
    * @return a Map object containing the option update result
    */
   public Map<String, Boolean> updateOptions(
@@ -88,7 +108,7 @@ public class OptionService {
       String icpNumber,
       String policeIcpNumber,
       String googleAnalyticsCode,
-      String offensiveWords) {
+      String offensiveWordSources) {
     Map<String, Boolean> result = new HashMap<>();
     result.put("isWebsiteNameEmpty", websiteName.isEmpty());
     result.put("isWebisteNameLegal", isWebsiteNameLegal(websiteName));
@@ -119,7 +139,7 @@ public class OptionService {
       optionMap.put("icpNumber", icpNumber);
       optionMap.put("policeIcpNumber", policeIcpNumber);
       optionMap.put("allowUserRegister", allowUserRegister ? "1" : "0");
-      optionMap.put("offensiveWords", JsonUtils.toJsonString(offensiveWords.split(",")));
+      optionMap.put("offensiveWordSources", offensiveWordSources);
       updateOptions(optionMap);
     }
     result.put("isSuccessful", isSuccessful);
@@ -137,6 +157,9 @@ public class OptionService {
       String optionValue = e.getValue();
 
       Option option = optionMapper.getOption(optionName);
+      if (option == null) {
+        continue;
+      }
       option.setOptionValue(optionValue);
       optionMapper.updateOption(option);
     }
@@ -201,6 +224,18 @@ public class OptionService {
     boolean isIcpNumberEmpty = policeIcpNumber.isEmpty();
     boolean isIcpNumberLegal = policeIcpNumber.matches("^.公网安备[\\s]*[0-9]{14}号$");
     return isIcpNumberEmpty || isIcpNumberLegal;
+  }
+
+  /**
+   * Checks whether the contact email address is legal. Rule: a legal contact email is either empty
+   * or a syntactically valid email address.
+   *
+   * @param contactEmail - the contact email address
+   * @return whether the contact email address is legal
+   */
+  public boolean isContactEmailLegal(String contactEmail) {
+    return contactEmail.isEmpty()
+        || contactEmail.matches("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
   }
 
   /**

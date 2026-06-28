@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/admin}" lang="en">
+<head>
+    <title th:text="#{voj.administration.all-submissions.title} + ' | ' + ${websiteName}">Submissions</title>
+</head>
+<body>
+    <div layout:fragment="content">
+    <div class="adm-wrap">
+
+        <!-- Toolbar -->
+        <form class="adm-toolbar" method="GET" th:action="@{/administration/all-submissions}">
+            <div class="adm-toolbar-search">
+                <span class="sigil">$</span>
+                <input name="username" type="text" th:value="${username}" th:placeholder="#{voj.administration.all-submissions.search-placeholder}" />
+                <span class="count"><span th:text="${#lists.size(submissions)}">0</span> <span th:text="#{voj.administration.all-submissions.records}">records</span></span>
+            </div>
+            <input name="problemId" class="adm-toolbar-select adm-w120" type="text" th:value="${problemId != 0 ? problemId : ''}" th:placeholder="#{voj.administration.all-submissions.problem-id}" />
+            <button type="submit" class="adm-btn-ghost"><span>&#9698;</span> <span th:text="#{voj.administration.all-submissions.filter}">filter</span></button>
+        </form>
+
+        <!-- Bulk bar -->
+        <div class="adm-bulk" data-adm="bulk">
+            <span class="sel"><span data-adm="bulk-count">0</span> <span th:text="#{voj.administration.all-submissions.selected}">selected</span></span>
+            <div class="adm-flex1"></div>
+            <span class="adm-bulk-act c-accent" data-adm="bulk-rejudge">&#8635; <span th:text="#{voj.administration.all-submissions.restart}">rejudge</span></span>
+            <span class="adm-bulk-act c-err" data-adm="bulk-delete">&#10005; <span th:text="#{voj.administration.all-submissions.delete}">delete</span></span>
+            <span class="adm-bulk-clear" data-adm="bulk-clear" th:text="#{voj.administration.all-submissions.clear}">clear</span>
+        </div>
+
+        <!-- Table -->
+        <div class="adm-table" data-adm="table">
+            <div class="adm-table-scroll"><div class="adm-table-inner cols-submissions">
+                <div class="adm-table-head">
+                    <span class="adm-check" data-adm="check-all"></span>
+                    <span>#</span>
+                    <span th:text="#{voj.administration.all-submissions.user}">USER</span>
+                    <span th:text="#{voj.administration.all-submissions.problem}">PROBLEM</span>
+                    <span th:text="#{voj.administration.all-submissions.language}">LANG</span>
+                    <span th:text="#{voj.administration.all-submissions.time}">TIME</span>
+                    <span th:text="#{voj.administration.all-submissions.mem}">MEM</span>
+                    <span th:text="#{voj.administration.all-submissions.result}">VERDICT</span>
+                    <span></span>
+                </div>
+                <a class="adm-table-row" data-adm="row" th:each="submission : ${submissions}"
+                   th:href="@{/administration/edit-submission/{id}(id=${submission.submissionId})}"
+                   th:with="vs=${submission.judgeResult != null ? submission.judgeResult.judgeResultSlug : ''},vcls=${vs == 'AC' ? 'c-accent' : (vs == 'WA' ? 'c-err' : ((vs == 'CE' or vs == 'SE' or vs == 'PD') ? 'c-muted' : ((vs == 'RE' or vs == 'PE') ? 'c-info' : 'c-warn')))}">
+                    <span class="adm-check" data-adm="row-check" th:attr="data-id=${submission.submissionId}"></span>
+                    <span class="adm-cell mono muted" th:text="'#' + ${submission.submissionId}">#1</span>
+                    <span class="adm-cell head" th:text="${submission.user != null ? submission.user.username : ''}">user</span>
+                    <span class="adm-cell txt" th:text="${submission.problem != null ? submission.problem.problemName : ''}">problem</span>
+                    <span class="adm-cell muted" th:text="${submission.language != null ? submission.language.languageName : ''}">lang</span>
+                    <span class="adm-cell mono muted" th:text="|${submission.usedTime} ms|">0 ms</span>
+                    <span class="adm-cell mono muted" th:text="|${submission.usedMemory} KB|">0 KB</span>
+                    <span><span class="adm-pill" th:classappend="${vcls}" th:text="${vs}">AC</span></span>
+                    <span class="adm-menu">&#183;&#183;&#183;</span>
+                </a>
+                <div class="adm-table-empty" th:if="${#lists.isEmpty(submissions)}" th:text="#{voj.administration.all-submissions.no-records}">// no records</div>
+            </div></div>
+        </div>
+
+        <!-- Pager -->
+        <div class="adm-pager" th:if="${totalPages > 1}"
+             th:with="lowerBound=${currentPage - 3 > 0 ? currentPage - 3 : 1},upperBound=${currentPage + 3 < totalPages ? currentPage + 3 : totalPages}">
+            <span><span th:text="#{voj.administration.all-submissions.page}">page</span> <span th:text="${currentPage}">1</span> / <span th:text="${totalPages}">1</span></span>
+            <div class="adm-pager-btns">
+                <a class="nav" th:classappend="${currentPage <= 1} ? 'off'" th:href="@{/administration/all-submissions(problemId=${problemId},username=${username},page=${currentPage - 1})}">&#8592;</a>
+                <a class="num" th:each="pageNumber : ${#numbers.sequence(lowerBound, upperBound)}" th:classappend="${pageNumber == currentPage} ? 'active'" th:href="@{/administration/all-submissions(problemId=${problemId},username=${username},page=${pageNumber})}" th:text="${pageNumber}">1</a>
+                <a class="nav" th:classappend="${currentPage >= totalPages} ? 'off'" th:href="@{/administration/all-submissions(problemId=${problemId},username=${username},page=${currentPage + 1})}">&#8594;</a>
+            </div>
+        </div>
+
+    </div>
+    </div>
+
+    <th:block layout:fragment="scripts">
+    <script type="text/javascript" th:inline="javascript">
+        document.addEventListener('DOMContentLoaded', function () {
+            function selected() { return window.admSelectedIds ? window.admSelectedIds() : []; }
+            var del = document.querySelector('[data-adm="bulk-delete"]');
+            var rej = document.querySelector('[data-adm="bulk-rejudge"]');
+            if (del) del.addEventListener('click', function () {
+                var ids = selected();
+                if (ids.length === 0) return;
+                if (!confirm([[#{voj.administration.all-submissions.continue-or-not}]])) return;
+                $.ajax({
+                    type: 'POST', url: [[@{/administration/deleteSubmissions.action}]],
+                    data: { 'submissions': JSON.stringify(ids) }, dataType: 'JSON',
+                    success: function (result) {
+                        if (result['isSuccessful']) { window.location.reload(); }
+                        else { alert([[#{voj.administration.all-submissions.delete-error}]]); }
+                    }
+                });
+            });
+            if (rej) rej.addEventListener('click', function () {
+                var ids = selected();
+                if (ids.length === 0) return;
+                $.ajax({
+                    type: 'POST', url: [[@{/administration/restartSubmissions.action}]],
+                    data: { 'submissions': JSON.stringify(ids) }, dataType: 'JSON',
+                    success: function (result) {
+                        if (result['isSuccessful']) { window.location.reload(); }
+                        else { alert([[#{voj.administration.all-submissions.restart-error}]]); }
+                    }
+                });
+            });
+        });
+    </script>
+    </th:block>
+</body>
+</html>

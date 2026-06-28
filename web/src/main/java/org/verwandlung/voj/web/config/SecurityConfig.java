@@ -44,7 +44,7 @@ import org.springframework.security.web.session.HttpSessionEventPublisher;
  *   <li><b>Authentication</b> is performed programmatically by {@code AccountsController} so that the
  *       existing AJAX login (which returns a JSON result) is preserved.
  *   <li><b>Authorisation</b> guards {@code /administration/**} (administrators only) and the
- *       dashboard endpoints (any authenticated user).
+ *       account self-service actions (change password / update profile — any authenticated user).
  *   <li><b>CSRF</b> protection is enabled globally; the token is submitted via the {@code csrfToken}
  *       request parameter (matching the existing forms) or the {@code X-CSRF-TOKEN} header.
  *   <li><b>Online users</b> are tracked through a {@link SessionRegistry}.
@@ -58,7 +58,7 @@ public class SecurityConfig {
   private static final String LOGIN_URL = "/accounts/login";
 
   /** The page a forbidden (authenticated but unauthorised) user is redirected to. */
-  private static final String ACCESS_DENIED_URL = "/accounts/dashboard";
+  private static final String ACCESS_DENIED_URL = "/";
 
   /**
    * The security filter chain. Guarded by {@link ConditionalOnWebApplication} so the bean is only
@@ -78,9 +78,7 @@ public class SecurityConfig {
                     .requestMatchers("/administration", "/administration/**")
                     .hasRole("ADMINISTRATORS")
                     .requestMatchers(
-                        "/accounts/dashboard",
-                        "/accounts/changePassword.action",
-                        "/accounts/updateProfile.action")
+                        "/accounts/changePassword.action", "/accounts/updateProfile.action")
                     .authenticated()
                     .anyRequest()
                     .permitAll())
@@ -132,7 +130,7 @@ public class SecurityConfig {
     return new HttpSessionEventPublisher();
   }
 
-  /** Redirects an authenticated but unauthorised user to the dashboard. */
+  /** Redirects an authenticated but unauthorised user to the home page. */
   private AccessDeniedHandlerImpl accessDeniedHandler() {
     AccessDeniedHandlerImpl accessDeniedHandler = new AccessDeniedHandlerImpl();
     accessDeniedHandler.setErrorPage(ACCESS_DENIED_URL);

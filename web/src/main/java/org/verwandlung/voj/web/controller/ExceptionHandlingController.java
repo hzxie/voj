@@ -21,6 +21,7 @@ import jakarta.servlet.http.HttpServletResponse;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -28,8 +29,10 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import org.verwandlung.voj.web.exception.ResourceNotFoundException;
+import org.verwandlung.voj.web.interceptor.CommonModelPopulator;
 
 /**
  * The controller for handling exceptions.
@@ -48,7 +51,8 @@ public class ExceptionHandlingController {
   @ResponseStatus(value = HttpStatus.BAD_REQUEST)
   @ExceptionHandler(MissingServletRequestParameterException.class)
   public ModelAndView badRequestView(HttpServletRequest request, HttpServletResponse response) {
-    ModelAndView view = new ModelAndView("errors/404");
+    ModelAndView view = new ModelAndView("pages/errors/404");
+    commonModelPopulator.populate(view, request, response);
     return view;
   }
 
@@ -62,7 +66,26 @@ public class ExceptionHandlingController {
   @ResponseStatus(value = HttpStatus.NOT_FOUND)
   @ExceptionHandler(ResourceNotFoundException.class)
   public ModelAndView notFoundView(HttpServletRequest request, HttpServletResponse response) {
-    ModelAndView view = new ModelAndView("errors/404");
+    ModelAndView view = new ModelAndView("pages/errors/404");
+    commonModelPopulator.populate(view, request, response);
+    return view;
+  }
+
+  /**
+   * Handles the NoResourceFoundException, thrown when an unmapped URL falls through to the static
+   * resource handler and matches no resource. Rendering the 404 view keeps a stale link (e.g. to a
+   * removed page) a clean Not Found rather than the catch-all 500.
+   *
+   * @param request - the HttpRequest object
+   * @param response - the HttpResponse object
+   * @return a ModelAndView object containing the exception information
+   */
+  @ResponseStatus(value = HttpStatus.NOT_FOUND)
+  @ExceptionHandler(NoResourceFoundException.class)
+  public ModelAndView noResourceFoundView(
+      HttpServletRequest request, HttpServletResponse response) {
+    ModelAndView view = new ModelAndView("pages/errors/404");
+    commonModelPopulator.populate(view, request, response);
     return view;
   }
 
@@ -77,7 +100,8 @@ public class ExceptionHandlingController {
   @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
   public ModelAndView methodNotAllowedView(
       HttpServletRequest request, HttpServletResponse response) {
-    ModelAndView view = new ModelAndView("errors/404");
+    ModelAndView view = new ModelAndView("pages/errors/404");
+    commonModelPopulator.populate(view, request, response);
     return view;
   }
 
@@ -93,11 +117,41 @@ public class ExceptionHandlingController {
   @ExceptionHandler(Exception.class)
   public ModelAndView internalServerErrorView(
       Exception ex, HttpServletRequest request, HttpServletResponse response) {
-    LOGGER.catching(ex);
+    // A committed response (e.g. an in-flight SSE/async stream whose send() failed because
+    // the client disconnected) can no longer be turned into an HTML error page: Thymeleaf
+    // would call response.getWriter() on a response whose OutputStream is already open and
+    // throw "getOutputStream() has already been called", masking the real cause. Nothing can
+    // be rendered, so log the original exception and let the container close the connection.
+    if (response.isCommitted()) {
+      LOGGER.warn("Suppressing error view for an already-committed response", ex);
+      return null;
+    }
 
-    ModelAndView view = new ModelAndView("errors/500");
+    String requestId = newRequestId();
+    // Log the stack trace tagged with the same id shown to the user, so a reported
+    // request-id can be located in the logs.
+    LOGGER.error("[request-id: {}] Unhandled exception", requestId, ex);
+
+    ModelAndView view = new ModelAndView("pages/errors/500");
+    commonModelPopulator.populate(view, request, response);
+    view.addObject("requestId", requestId);
     return view;
   }
+
+  /**
+   * Generates a short, human-quotable correlation id (three groups of four hex digits) used to tie
+   * the error page shown to the user to the corresponding entry in the server log.
+   *
+   * @return a request id of the form XXXX:XXXX:XXXX
+   */
+  private String newRequestId() {
+    String hex =
+        java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 12).toUpperCase();
+    return hex.substring(0, 4) + ":" + hex.substring(4, 8) + ":" + hex.substring(8, 12);
+  }
+
+  /** The autowired CommonModelPopulator object. */
+  @Autowired private CommonModelPopulator commonModelPopulator;
 
   /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(ExceptionHandlingController.class);

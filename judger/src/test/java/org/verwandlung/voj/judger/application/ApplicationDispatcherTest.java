@@ -64,14 +64,33 @@ public class ApplicationDispatcherTest {
 
   /**
    * Test case: tests the onSubmissionCreated method. Test data: the judger dispatcher throws an
-   * exception. Expected result: the exception is swallowed.
+   * exception. Expected result: the exception is swallowed and the submission is marked as a system
+   * error so it does not stay stuck pending.
    */
   @Test
-  public void testOnSubmissionCreatedSwallowsException() throws Exception {
+  public void testOnSubmissionCreatedMarksSystemErrorOnFailure() throws Exception {
     org.mockito.Mockito.doThrow(new InterruptedException("interrupted"))
         .when(judgerDispatcher)
         .createNewTask(anyLong());
+    when(submissionMapper.getSubmission(100L)).thenReturn(new Submission());
+
     Assertions.assertDoesNotThrow(() -> applicationDispatcher.onSubmissionCreated(100L));
+
+    ArgumentCaptor<Submission> submissionCaptor = ArgumentCaptor.forClass(Submission.class);
+    verify(submissionMapper).updateSubmission(submissionCaptor.capture());
+    Assertions.assertEquals("SE", submissionCaptor.getValue().getJudgeResultSlug());
+  }
+
+  /**
+   * Test case: tests the onErrorOccurred method. Test data: a submission that no longer exists.
+   * Expected result: no update is attempted and the call does not throw.
+   */
+  @Test
+  public void testOnErrorOccurredWithMissingSubmission() {
+    when(submissionMapper.getSubmission(100L)).thenReturn(null);
+
+    Assertions.assertDoesNotThrow(() -> applicationDispatcher.onErrorOccurred(100L));
+    verify(submissionMapper, never()).updateSubmission(any(Submission.class));
   }
 
   /**

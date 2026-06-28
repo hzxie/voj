@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/admin}" lang="en">
+<head>
+    <title th:text="#{voj.administration.language-settings.title} + ' | ' + ${websiteName}">Language Settings</title>
+</head>
+<body>
+    <div layout:fragment="content">
+    <div class="adm-form" id="language-form">
+
+        <div class="alert alert-warning">
+            <h6 th:text="#{voj.administration.language-settings.be-careful}">Please be Careful!</h6>
+            <p th:text="#{voj.administration.language-settings.be-careful-message}">Don't change these unless you know what you're doing.</p>
+        </div>
+        <div class="alert alert-error hide"></div>
+        <div class="alert alert-success hide"></div>
+
+        <div class="vw-between adm-items-end">
+            <div class="adm-label" th:text="#{voj.administration.language-settings.languages-header}">// LANGUAGES</div>
+            <a class="adm-btn-accent" href="javascript:void(0);" id="new-language" th:text="#{voj.administration.language-settings.new-language}">+ add language</a>
+        </div>
+
+        <p id="no-languages" th:classappend="${languages.size() != 0} ? 'hide' : ''" class="adm-table-empty" th:text="#{voj.administration.language-settings.no-languages}">// no languages</p>
+
+        <div id="languages" class="adm-stack18">
+            <div class="adm-langcard language" th:each="language : ${languages}">
+                <div class="adm-langcard-head">
+                    <span class="nm" th:text="${language.languageName}">Language</span>
+                    <span class="ext" th:text="${language.languageSlug}">slug</span>
+                    <div class="adm-flex1"></div>
+                    <span class="del-lang">&#10005;</span>
+                </div>
+                <div class="adm-langcard-body">
+                    <input class="language-id" type="hidden" th:value="${language.languageId}" />
+                    <div class="adm-grid-2">
+                        <label class="adm-flabel"><span th:text="#{voj.administration.language-settings.language-name}">NAME</span><input class="language-name adm-input" type="text" th:value="${language.languageName}" maxlength="16" /></label>
+                        <label class="adm-flabel"><span th:text="#{voj.administration.language-settings.language-mode}">SLUG / MODE</span><input class="language-slug adm-input" type="text" th:value="${language.languageSlug}" maxlength="16" /></label>
+                    </div>
+                    <label class="adm-flabel"><span th:text="#{voj.administration.language-settings.compile-command}">COMPILE COMMAND</span><input class="compile-command adm-input code" type="text" th:value="${language.compileCommand}" maxlength="128" /></label>
+                    <label class="adm-flabel"><span th:text="#{voj.administration.language-settings.run-command}">RUN COMMAND</span><input class="run-command adm-input code" type="text" th:value="${language.runCommand}" maxlength="128" /></label>
+                </div>
+            </div>
+        </div>
+
+        <div class="adm-form-actions">
+            <button type="button" class="adm-btn-save" id="save-languages" th:text="'$ ' + #{voj.administration.language-settings.save-changes}">$ save-languages</button>
+        </div>
+
+    </div>
+    </div>
+
+    <th:block layout:fragment="scripts">
+    <script type="text/javascript" th:inline="javascript">
+        $('#languages').on('click', '.del-lang', function() {
+            var card = $(this).closest('.language');
+            card.remove();
+            if ($('.language', '#languages').length === 0) { $('#no-languages').removeClass('hide'); }
+        });
+        $('#languages').on('input', 'input.language-name', function() {
+            $('.nm', $(this).closest('.language')).text($(this).val());
+        });
+        $('#languages').on('input', 'input.language-slug', function() {
+            $('.ext', $(this).closest('.language')).text($(this).val());
+        });
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        function getLanguages() {
+            var languages = [];
+            $('.language').each(function() {
+                languages.push({
+                    'languageId': $('.language-id', $(this)).val() || 0,
+                    'languageSlug': $('.language-slug', $(this)).val(),
+                    'languageName': $('.language-name', $(this)).val(),
+                    'compileCommand': $('.compile-command', $(this)).val(),
+                    'runCommand': $('.run-command', $(this)).val()
+                });
+            });
+            return JSON.stringify(languages);
+        }
+        function setLanguageId(languageSlug, languageId) {
+            $('.language-slug', '#languages').each(function() {
+                if ($(this).val() == languageSlug) { $('.language-id', $(this).closest('.language')).val(languageId); }
+            });
+        }
+        $('#save-languages').click(function() {
+            $('.alert-success, .alert-error').addClass('hide');
+            $(this).attr('disabled', 'disabled').html([[#{voj.administration.language-settings.please-wait}]]);
+            $.ajax({
+                type: 'POST', url: [[@{/administration/updateLanguageSettings.action}]],
+                data: { 'languages': getLanguages() }, dataType: 'JSON',
+                success: function(result) { processResult(result); }
+            });
+        });
+        function processResult(result) {
+            if (result['isSuccessful']) {
+                var message = '<p>' + [[#{voj.administration.language-settings.settings-saved}]] + '</p>';
+                (result['languageCreated'] || []).forEach(function(l) { setLanguageId(l['languageSlug'], l['languageId']); });
+                $('.alert-success').html(message).removeClass('hide');
+            } else {
+                var message = '';
+                for (var languageName in result) {
+                    var r = result[languageName];
+                    if (typeof(r) != 'object' || r['isSuccessful']) { continue; }
+                    message += '<p><strong>' + languageName + '</strong></p>';
+                }
+                $('.alert-error').html(message || [[#{voj.administration.language-settings.settings-saved}]]).removeClass('hide');
+            }
+            $('#save-languages').removeAttr('disabled').html('$ ' + [[#{voj.administration.language-settings.save-changes}]]);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        $('#new-language').click(function() {
+            $('#no-languages').addClass('hide');
+            $('#languages').append(
+                '<div class="adm-langcard language">' +
+                '  <div class="adm-langcard-head">' +
+                '    <span class="nm"></span><span class="ext"></span>' +
+                '    <div class="adm-flex1"></div>' +
+                '    <span class="del-lang">&#10005;</span>' +
+                '  </div>' +
+                '  <div class="adm-langcard-body">' +
+                '    <input class="language-id" type="hidden" value="0" />' +
+                '    <div class="adm-grid-2">' +
+                '      <label class="adm-flabel"><span>' + [[#{voj.administration.language-settings.language-name}]] + '</span><input class="language-name adm-input" type="text" maxlength="16" /></label>' +
+                '      <label class="adm-flabel"><span>' + [[#{voj.administration.language-settings.language-mode}]] + '</span><input class="language-slug adm-input" type="text" maxlength="16" /></label>' +
+                '    </div>' +
+                '    <label class="adm-flabel"><span>' + [[#{voj.administration.language-settings.compile-command}]] + '</span><input class="compile-command adm-input code" type="text" maxlength="128" /></label>' +
+                '    <label class="adm-flabel"><span>' + [[#{voj.administration.language-settings.run-command}]] + '</span><input class="run-command adm-input code" type="text" maxlength="128" /></label>' +
+                '  </div>' +
+                '</div>'
+            );
+        });
+    </script>
+    </th:block>
+</body>
+</html>

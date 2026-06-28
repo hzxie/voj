@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/admin}" lang="en">
+<head>
+    <title th:text="#{voj.administration.edit-bulletin.title} + ' | ' + ${websiteName}">Bulletin</title>
+</head>
+<body>
+    <div layout:fragment="content">
+    <div class="adm-detail" th:with="isEdit=${message != null},
+                                      status=${message != null ? message.status : 'PUBLISHED'},
+                                      pinned=${message != null and message.pinned}">
+
+        <div class="adm-detail-top">
+            <a class="adm-back" th:href="@{/administration/all-bulletins}">&#8592; <span th:text="#{voj.administration.edit-bulletin.back}">back to bulletins</span></a>
+            <span class="adm-idchip" th:if="${isEdit}" th:text="'#' + ${message.messageId}">#1</span>
+            <div class="adm-flex1"></div>
+            <button type="button" class="adm-btn-tn danger" th:if="${isEdit}" id="delete-bulletin" th:text="#{voj.administration.edit-bulletin.delete}">delete</button>
+            <button type="button" class="adm-btn-tn go" id="save-bulletin" th:text="'$ ' + #{voj.administration.edit-bulletin.save}">$ save</button>
+        </div>
+
+        <div class="alert alert-error hide"></div>
+        <div class="alert alert-success hide" th:text="#{voj.administration.edit-bulletin.saved}">Saved.</div>
+
+        <input type="hidden" id="message-id" th:value="${isEdit ? message.messageId : ''}" />
+        <input type="hidden" id="bulletin-status" th:value="${status}" />
+        <input type="hidden" id="bulletin-is-pinned" th:value="${pinned} ? '1' : '0'" />
+
+        <div class="adm-ed2">
+            <div class="adm-col">
+                <div class="adm-card">
+                    <div class="adm-card-head plain" th:text="#{voj.administration.edit-bulletin.content}">// CONTENT</div>
+                    <div class="adm-card-body">
+                        <label class="adm-flabel">
+                            <span th:text="#{voj.administration.edit-bulletin.message-title}">TITLE</span>
+                            <input id="message-title" class="adm-input" type="text" th:value="${isEdit ? message.messageTitle : ''}" maxlength="128" />
+                        </label>
+                        <label class="adm-flabel">
+                            <span th:text="#{voj.administration.edit-bulletin.message-body}">BODY · markdown</span>
+                            <div id="markdown-editor"><textarea id="message-body" class="wmd-input" th:text="${isEdit ? message.messageBody : ''}"></textarea></div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="adm-col">
+                <div class="adm-card">
+                    <div class="adm-card-head plain" th:text="#{voj.administration.edit-bulletin.publishing}">// PUBLISHING</div>
+                    <div class="adm-card-body">
+                        <div>
+                            <div class="adm-block-label" th:text="#{voj.administration.edit-bulletin.status}">STATUS</div>
+                            <div class="adm-seg" data-adm="seg" data-input="bulletin-status">
+                                <a href="javascript:void(0);" data-value="PUBLISHED" th:classappend="${status == 'PUBLISHED'} ? 'active'" th:text="#{voj.administration.status.published}">Published</a>
+                                <a href="javascript:void(0);" data-value="DRAFT" th:classappend="${status == 'DRAFT'} ? 'active'" th:text="#{voj.administration.status.draft}">Draft</a>
+                                <a href="javascript:void(0);" data-value="HIDDEN" th:classappend="${status == 'HIDDEN'} ? 'active'" th:text="#{voj.administration.status.hidden}">Hidden</a>
+                            </div>
+                        </div>
+                        <div class="adm-togrow">
+                            <span th:text="#{voj.administration.edit-bulletin.pin}">Pin to top</span>
+                            <div class="adm-switch" data-adm="switch" data-input="bulletin-is-pinned"
+                                 th:classappend="${pinned} ? 'on'"><div class="knob"></div></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="adm-card" th:if="${isEdit}">
+                    <div class="adm-card-head plain" th:text="#{voj.administration.edit-bulletin.details}">// DETAILS</div>
+                    <div class="adm-meta">
+                        <span class="k" th:text="#{voj.administration.edit-bulletin.author}">Author</span>
+                        <span class="v" th:text="${message.messageAuthor != null} ? '@' + ${message.messageAuthor.username} : '—'">@admin</span>
+                    </div>
+                    <div class="adm-meta">
+                        <span class="k" th:text="#{voj.administration.edit-bulletin.created}">Created</span>
+                        <span class="v" th:text="${@dateFormatter.dateMedium(message.messageCreateTime, language)}">Jun 24, 2026</span>
+                    </div>
+                </div>
+                <div class="adm-danger" th:if="${isEdit}">
+                    <div>
+                        <div class="t" th:text="#{voj.administration.edit-bulletin.delete-bulletin}">Delete bulletin</div>
+                        <div class="d" th:text="#{voj.administration.edit-bulletin.delete-note}">Removes this notice for all readers.</div>
+                    </div>
+                    <button type="button" class="adm-btn-tn danger" id="delete-bulletin-2" th:text="#{voj.administration.edit-bulletin.delete}">delete</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    </div>
+
+    <th:block layout:fragment="scripts">
+    <script type="text/javascript" th:inline="javascript">
+        document.addEventListener('DOMContentLoaded', function () {
+            var $ok = $('.alert-success'), $err = $('.alert-error');
+            var messageId = document.getElementById('message-id').value;
+            var bodyEditor = createMarkdownEditor('#message-body');
+            // The STATUS segment (data-adm="seg") is wired by admin.js: clicking an
+            // option writes its data-value into the hidden #bulletin-status input.
+
+            // --- Save ----------------------------------------------------------------
+            document.getElementById('save-bulletin').addEventListener('click', function () {
+                $ok.addClass('hide'); $err.addClass('hide');
+                var title = $('#message-title').val();
+                var body = bodyEditor ? bodyEditor.value() : $('#message-body').val();
+                if (!title || !body) { $err.html([[#{voj.administration.edit-bulletin.empty-error}]]).removeClass('hide'); return; }
+                var url = messageId ? [[@{/administration/editBulletin.action}]] : [[@{/administration/createBulletin.action}]];
+                var data = {
+                    messageTitle: title,
+                    messageBody: body,
+                    isPinned: document.getElementById('bulletin-is-pinned').value === '1',
+                    status: document.getElementById('bulletin-status').value
+                };
+                if (messageId) { data.messageId = messageId; }
+                $.ajax({
+                    type: 'POST', url: url, data: data, dataType: 'JSON',
+                    success: function (result) {
+                        if (result['isSuccessful']) { window.location.href = [[@{/administration/all-bulletins}]]; }
+                        else { $err.html([[#{voj.administration.edit-bulletin.empty-error}]]).removeClass('hide'); }
+                    }
+                });
+            });
+
+            // --- Delete --------------------------------------------------------------
+            function del() {
+                if (!confirm([[#{voj.administration.edit-bulletin.continue-or-not}]])) return;
+                $.ajax({
+                    type: 'POST', url: [[@{/administration/deleteBulletins.action}]],
+                    data: { 'bulletins': JSON.stringify([messageId]) }, dataType: 'JSON',
+                    success: function (result) {
+                        if (result['isSuccessful']) { window.location.href = [[@{/administration/all-bulletins}]]; }
+                    }
+                });
+            }
+            ['delete-bulletin', 'delete-bulletin-2'].forEach(function (id) {
+                var el = document.getElementById(id);
+                if (el) el.addEventListener('click', del);
+            });
+        });
+    </script>
+    </th:block>
+</body>
+</html>

@@ -18,15 +18,19 @@ package org.verwandlung.voj.web.mapper;
 
 import java.util.List;
 
+import javax.sql.DataSource;
+
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.Transactional;
 
 import org.verwandlung.voj.web.model.Problem;
+import org.verwandlung.voj.web.model.ProblemDifficulty;
 
 /**
  * The test class for ProblemMapper.
@@ -49,7 +53,7 @@ public class ProblemMapperTest {
    */
   @Test
   public void testGetNumberOfPublicProblems() {
-    long totalProblems = problemMapper.getNumberOfProblemsUsingFilters(null, 0, true);
+    long totalProblems = problemMapper.getNumberOfProblemsUsingFilters(null, 0, 0, true);
     Assertions.assertEquals(3, totalProblems);
   }
 
@@ -65,6 +69,28 @@ public class ProblemMapperTest {
   public void testGetUpperBoundOfProblems() {
     long upperBoundOfProblems = problemMapper.getUpperBoundOfProblems();
     Assertions.assertEquals(1003, upperBoundOfProblems);
+  }
+
+  /**
+   * Test case: tests the getLowerBoundOfProblems() method when no problem exists. Test data: an
+   * emptied problems table. Expected: 0 (MIN over an empty table is NULL, which COALESCE maps to 0
+   * so the primitive long return type never receives null).
+   */
+  @Test
+  public void testGetLowerBoundOfProblemsWhenEmpty() {
+    deleteAllProblems();
+    Assertions.assertEquals(0, problemMapper.getLowerBoundOfProblems());
+  }
+
+  /**
+   * Test case: tests the getUpperBoundOfProblems() method when no problem exists. Test data: an
+   * emptied problems table. Expected: 0 (MAX over an empty table is NULL, which COALESCE maps to 0
+   * so the primitive long return type never receives null).
+   */
+  @Test
+  public void testGetUpperBoundOfProblemsWhenEmpty() {
+    deleteAllProblems();
+    Assertions.assertEquals(0, problemMapper.getUpperBoundOfProblems());
   }
 
   /**
@@ -85,6 +111,18 @@ public class ProblemMapperTest {
   public void testGetUpperBoundOfPublicProblemsWithOffsetFrom1000WithLimit3() {
     long upperBoundOfProblems = problemMapper.getUpperBoundOfProblemsWithLimit(true, 1000, 3);
     Assertions.assertEquals(1003, upperBoundOfProblems);
+  }
+
+  /**
+   * Test case: tests the getUpperBoundOfProblemsWithLimit(boolean, long, int) method when the
+   * requested range matches no problem. Test data: an offset beyond the last problem ID. Expected: 0
+   * (the inner query yields no rows, so MAX is NULL, which COALESCE maps to 0 — no deletion required
+   * to exercise the empty-result path).
+   */
+  @Test
+  public void testGetUpperBoundOfProblemsWithLimitWhenRangeEmpty() {
+    long upperBoundOfProblems = problemMapper.getUpperBoundOfProblemsWithLimit(false, 99999, 3);
+    Assertions.assertEquals(0, upperBoundOfProblems);
   }
 
   /** Test case: tests the getProblem() method. Test data: the problem unique identifier of A+B Problem. Expected: the expected problem object. */
@@ -108,12 +146,12 @@ public class ProblemMapperTest {
   }
 
   /**
-   * Test case: tests the getProblemsUsingFilters(String, int, boolean, long, int) method. Test data:
-   * get 10 problems with IDs starting from 1000. Expected: the expected problem list (3 problems).
+   * Test case: tests the getProblemsUsingFilters(...) method. Test data: get up to 10 public
+   * problems starting at row offset 0. Expected: the expected problem list (3 problems).
    */
   @Test
   public void testGetProblemsFrom1000WithLimit10() {
-    List<Problem> problems = problemMapper.getProblemsUsingFilters(null, 0, 0, true, 1000, 10);
+    List<Problem> problems = problemMapper.getProblemsUsingFilters(null, 0, 0, 0, true, 0, 10);
     Assertions.assertEquals(3, problems.size());
 
     Problem firstProblem = problems.get(0);
@@ -128,12 +166,12 @@ public class ProblemMapperTest {
   }
 
   /**
-   * Test case: tests the getProblemsUsingFilters(String, int, boolean, long, int) method. Test data:
-   * get 1 problem with ID starting from 1001. Expected: the expected problem list (1 problem).
+   * Test case: tests the getProblemsUsingFilters(...) method. Test data: get 1 public problem at
+   * row offset 1 (the second public problem). Expected: the expected problem list (1 problem).
    */
   @Test
   public void testGetProblemsFrom1001WithLimit1() {
-    List<Problem> problems = problemMapper.getProblemsUsingFilters("", 0, 0, true, 1001, 1);
+    List<Problem> problems = problemMapper.getProblemsUsingFilters("", 0, 0, 0, true, 1, 1);
     Assertions.assertEquals(1, problems.size());
 
     Problem firstProblem = problems.get(0);
@@ -145,12 +183,12 @@ public class ProblemMapperTest {
   }
 
   /**
-   * Test case: tests the getProblemsUsingFilters(String, int, boolean, long, int) method. Test data:
-   * get 10 problems with IDs starting from 1010. Expected: an empty problem list.
+   * Test case: tests the getProblemsUsingFilters(...) method. Test data: get up to 10 public
+   * problems starting at row offset 10 (beyond the last problem). Expected: an empty problem list.
    */
   @Test
   public void testGetProblemsFrom1010WithLimit10() {
-    List<Problem> problems = problemMapper.getProblemsUsingFilters(null, 0, 0, true, 1010, 10);
+    List<Problem> problems = problemMapper.getProblemsUsingFilters(null, 0, 0, 0, true, 10, 10);
     Assertions.assertEquals(0, problems.size());
   }
 
@@ -159,7 +197,7 @@ public class ProblemMapperTest {
   public void testCreateProblemNormally() {
     Problem problem =
         new Problem(
-            false,
+            "HIDDEN",
             "Problem Name",
             1000,
             32768,
@@ -169,6 +207,7 @@ public class ProblemMapperTest {
             "Sample Input",
             "Sample Input",
             null);
+    problem.setProblemDifficulty(new ProblemDifficulty(1, "easy", "Easy"));
     int numberOfRowsAffected = problemMapper.createProblem(problem);
     Assertions.assertEquals(1, numberOfRowsAffected);
   }
@@ -228,6 +267,21 @@ public class ProblemMapperTest {
     Assertions.assertEquals(0, numberOfRowsAffected);
   }
 
+  /**
+   * Empties the problems table within the current (rolled-back) test transaction. Contest
+   * submissions reference submissions without ON DELETE CASCADE, so they must be removed first;
+   * deleting the problems then cascades to submissions, checkpoints, category/tag relationships and
+   * discussion threads.
+   */
+  private void deleteAllProblems() {
+    JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
+    jdbcTemplate.update("DELETE FROM voj_contest_submissions");
+    jdbcTemplate.update("DELETE FROM voj_problems");
+  }
+
   /** The ProblemMapper object under test. */
   @Autowired private ProblemMapper problemMapper;
+
+  /** The data source used to empty the problems table within the test transaction. */
+  @Autowired private DataSource dataSource;
 }

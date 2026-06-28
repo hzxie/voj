@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/admin}" lang="en">
+<head>
+    <title th:text="#{voj.administration.edit-submission.title} + ' #' + ${submission.submissionId} + ' | ' + ${websiteName}">Edit Submission</title>
+    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/highlight.min.css?v=${version}|" />
+</head>
+<body>
+    <div layout:fragment="content">
+    <div class="adm-detail"
+         th:with="vs=${submission.judgeResult != null ? submission.judgeResult.judgeResultSlug : ''},vcls=${vs == 'AC' ? 'c-accent' : (vs == 'WA' ? 'c-err' : ((vs == 'CE' or vs == 'SE' or vs == 'PD') ? 'c-muted' : ((vs == 'RE' or vs == 'PE') ? 'c-info' : 'c-warn')))}">
+
+        <div class="adm-detail-top">
+            <a class="adm-back" th:href="@{/administration/all-submissions}">&#8592; <span th:text="#{voj.administration.edit-submission.back}">back to submissions</span></a>
+            <span class="adm-idchip" th:text="'#' + ${submission.submissionId}">#1</span>
+            <span class="adm-hpill" id="judge-result" th:classappend="${vcls}" th:text="${submission.judgeResult != null ? submission.judgeResult.judgeResultName : ''}">Result</span>
+            <div class="adm-flex1"></div>
+            <a class="adm-btn-tn" th:href="@{/administration/edit-problem/{id}(id=${submission.problem != null ? submission.problem.problemId : 0})}" th:text="#{voj.administration.edit-submission.view-problem}">view problem</a>
+            <button type="button" class="adm-btn-tn danger" id="delete-submission" th:text="#{voj.administration.edit-submission.delete-submission}">delete</button>
+            <button type="button" class="adm-btn-tn go" id="rejudge-submission" th:text="'⟳ ' + #{voj.administration.edit-submission.restart-submission}">rejudge</button>
+        </div>
+
+        <div class="adm-ed2">
+            <div class="adm-col">
+                <div class="adm-card">
+                    <div class="adm-card-head"><span th:text="#{voj.administration.edit-submission.code}">// SOURCE</span></div>
+                    <div class="adm-src adm-pad0">
+                        <pre class="adm-codeblock"><code th:text="${submission.code}">code</code></pre>
+                    </div>
+                </div>
+                <div class="adm-card">
+                    <div class="adm-card-head"><span th:text="#{voj.administration.edit-submission.judge-result}">// JUDGE OUTPUT</span></div>
+                    <div id="judge-log" class="markdown adm-judge-log" th:utext="${submission.judgeLog}">judge log</div>
+                </div>
+            </div>
+            <div class="adm-col">
+                <div class="adm-card">
+                    <div class="adm-card-head"><span th:text="#{voj.administration.edit-submission.overview}">// DETAILS</span></div>
+                    <div class="adm-kv"><span class="k" th:text="#{voj.administration.edit-submission.submit-user}">User</span><span class="v"><a th:href="@{/administration/edit-user/{id}(id=${submission.user != null ? submission.user.uid : 0})}" th:text="${submission.user != null ? '@' + submission.user.username : ''}">@user</a></span></div>
+                    <div class="adm-kv"><span class="k" th:text="#{voj.administration.edit-submission.problem}">Problem</span><span class="v"><a th:href="@{/administration/edit-problem/{id}(id=${submission.problem != null ? submission.problem.problemId : 0})}" th:text="${submission.problem != null ? submission.problem.problemName : ''}">problem</a></span></div>
+                    <div class="adm-kv"><span class="k" th:text="#{voj.administration.edit-submission.language}">Language</span><span class="v" th:text="${submission.language != null ? submission.language.languageName : ''}">lang</span></div>
+                    <div class="adm-kv"><span class="k" th:text="#{voj.administration.edit-submission.used-time}">Time</span><span class="v" id="used-time" th:text="|${submission.usedTime} ms|">0 ms</span></div>
+                    <div class="adm-kv"><span class="k" th:text="#{voj.administration.edit-submission.used-memory}">Memory</span><span class="v" id="used-memory" th:text="|${submission.usedMemory} KB|">0 KB</span></div>
+                    <div class="adm-kv"><span class="k" th:text="#{voj.administration.edit-submission.submit-time}">Submitted</span><span class="v" th:text="${submission.submitTime != null ? #dates.format(submission.submitTime, 'yyyy-MM-dd HH:mm:ss') : ''}">time</span></div>
+                    <div class="adm-kv"><span class="k" th:text="#{voj.administration.edit-submission.execute-time}">Executed</span><span class="v" id="execute-time" th:text="${submission.executeTime != null ? #dates.format(submission.executeTime, 'yyyy-MM-dd HH:mm:ss') : ''}">time</span></div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    </div>
+
+    <th:block layout:fragment="scripts">
+    <script type="text/javascript" th:inline="javascript">
+        $(function() {
+            $('.markdown').each(function() { $(this).html(renderMarkdown($(this).text())); });
+        });
+        $.getScript([[|${cdnUrl}/js/highlight.min.js?v=${version}|]], function() {
+            $('code').each(function(i, block) { hljs.highlightElement(block); });
+        });
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        $('#rejudge-submission').click(function() {
+            if ( !confirm([[#{voj.administration.edit-submission.continue-or-not}]]) ) { return; }
+            $(this).attr('disabled', 'disabled');
+            doRestartSubmissionsAction([ [[${submission.submissionId}]] ]);
+        });
+        $('#delete-submission').click(function() {
+            if ( !confirm([[#{voj.administration.edit-submission.continue-or-not}]]) ) { return; }
+            $(this).attr('disabled', 'disabled');
+            doDeleteSubmissionsAction([ [[${submission.submissionId}]] ]);
+        });
+        function doDeleteSubmissionsAction(submissions) {
+            $.ajax({
+                type: 'POST', url: [[@{/administration/deleteSubmissions.action}]],
+                data: { 'submissions': JSON.stringify(submissions) }, dataType: 'JSON',
+                success: function(result){
+                    if ( result['isSuccessful'] ) { window.location.href = [[@{/administration/all-submissions}]]; }
+                    else { alert([[#{voj.administration.edit-submission.delete-error}]]); $('#delete-submission').removeAttr('disabled'); }
+                }
+            });
+        }
+        function doRestartSubmissionsAction(submissions) {
+            $.ajax({
+                type: 'POST', url: [[@{/administration/restartSubmissions.action}]],
+                data: { 'submissions': JSON.stringify(submissions) }, dataType: 'JSON',
+                success: function(result){
+                    if ( result['isSuccessful'] ) { window.location.reload(); }
+                    else { alert([[#{voj.administration.edit-submission.restart-error}]]); $('#rejudge-submission').removeAttr('disabled'); }
+                }
+            });
+        }
+    </script>
+    <th:block th:if="${submission.judgeResult != null and submission.judgeResult.judgeResultName == 'Pending'}">
+    <script type="text/javascript" th:inline="javascript">
+        var currentJudgeResult = 'Pending',
+            getterInterval     = setInterval(function() {
+                getRealTimeJudgeResult();
+                currentJudgeResult = $('#judge-result').html();
+                if ( currentJudgeResult != 'Pending' ) { clearInterval(getterInterval); }
+            }, 10000);
+        $(function() {
+            var subscriptionUrl = [[@{/submission/getRealTimeJudgeResult.action(submissionId=${submission.submissionId},csrfToken=${_csrf.token})}]],
+                source          = new EventSource(subscriptionUrl),
+                lastMessage     = '';
+            source.onmessage    = function(e) {
+                var message     = e['data'];
+                if ( message == lastMessage ) { return; }
+                lastMessage     = message;
+                if ( message == 'Established' ) { $('#judge-log').append('<p>Connected to Server.</p>'); return; }
+                var mapMessage  = JSON.parse(message),
+                    judgeResult = mapMessage['judgeResult'],
+                    judgeLog    = mapMessage['message'];
+                $('#judge-result').html(judgeResult);
+                $('#judge-log').append(renderMarkdown(judgeLog));
+            }
+        });
+        function getRealTimeJudgeResult() {
+            $.ajax({
+                type: 'GET', url: [[@{/submission/getSubmission.action}]],
+                data: { 'submissionId': [[${submission.submissionId}]] }, dataType: 'JSON',
+                success: function(result){
+                    if ( result['isSuccessful'] && result['submission']['judgeResult']['judgeResultSlug'] != 'PD' ) {
+                        $('#judge-result').html(result['submission']['judgeResult']['judgeResultName']);
+                        $('#used-time').html(result['submission']['usedTime'] + " ms");
+                        $('#used-memory').html(result['submission']['usedMemory'] + " KB");
+                        $('#execute-time').html(getFormatedDateString(result['submission']['executeTime']));
+                        $('#judge-log').html(renderMarkdown(result['submission']['judgeLog']));
+                    }
+                }
+            });
+        }
+        function getFormatedDateString(dateTime) {
+            var d = new Date(dateTime), p = function(n) { return (n < 10 ? '0' : '') + n; };
+            return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' '
+                 + p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+        }
+    </script>
+    </th:block>
+    </th:block>
+</body>
+</html>

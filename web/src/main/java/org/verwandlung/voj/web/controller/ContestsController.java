@@ -30,12 +30,14 @@ import org.verwandlung.voj.web.exception.ResourceNotFoundException;
 import org.verwandlung.voj.web.model.*;
 import org.verwandlung.voj.web.service.ContestService;
 import org.verwandlung.voj.web.service.LanguageService;
+import org.verwandlung.voj.web.service.OptionService;
 import org.verwandlung.voj.web.service.ProblemService;
 import org.verwandlung.voj.web.service.SubmissionService;
 import org.verwandlung.voj.web.util.HttpRequestParser;
 import org.verwandlung.voj.web.util.HttpSessionParser;
 import org.verwandlung.voj.web.util.JsonUtils;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -62,12 +64,65 @@ public class ContestsController {
       @RequestParam(value = "keyword", required = false) String keyword,
       HttpServletRequest request,
       HttpServletResponse response) {
+    final int NUMBER_OF_CONTESTS_PER_PAGE =
+        optionService.getIntOption("contestsPerPage", DEFAULT_NUMBER_OF_CONTESTS_PER_PAGE);
     List<Contest> contests = contestService.getContests(keyword, 0, NUMBER_OF_CONTESTS_PER_PAGE);
+    Date currentTime = new Date();
+    List<Contest> liveContests = new ArrayList<>();
+    List<Contest> pastContests = new ArrayList<>();
+    for (Contest contest : contests) {
+      if (currentTime.after(contest.getEndTime())) {
+        pastContests.add(contest);
+      } else {
+        liveContests.add(contest);
+      }
+    }
 
-    ModelAndView view = new ModelAndView("contests/contests");
-    view.addObject("contests", contests);
-    view.addObject("currentTime", new Date());
+    ModelAndView view = new ModelAndView("pages/contests/contests");
+    view.addObject("liveContests", liveContests);
+    view.addObject("pastContests", pastContests);
+    view.addObject("loadedContests", contests.size());
+    view.addObject("currentTime", currentTime);
+    view.addObject("entrantsOfContests", getEntrantsOfContests(contests));
+    view.addObject("problemCountOfContests", getProblemCountOfContests(contests));
     return view;
+  }
+
+  /**
+   * Builds a map of contest id to its number of entrants, used by the contest list to render the
+   * "entrants" field of the design without an N+1 lookup in the view layer.
+   *
+   * @param contests - the list of contests to summarise
+   * @return a Map indexed by contest id whose value is the number of entrants
+   */
+  private Map<Long, Long> getEntrantsOfContests(List<Contest> contests) {
+    Map<Long, Long> entrants = new HashMap<>();
+    if (contests != null) {
+      for (Contest contest : contests) {
+        entrants.put(
+            contest.getContestId(),
+            contestService.getNumberOfContestantsOfContest(contest.getContestId()));
+      }
+    }
+    return entrants;
+  }
+
+  /**
+   * Builds a map of contest id to its number of problems (derived from the JSON-encoded problem list
+   * stored on the contest), used to render the "problems" field of the design.
+   *
+   * @param contests - the list of contests to summarise
+   * @return a Map indexed by contest id whose value is the number of problems
+   */
+  private Map<Long, Integer> getProblemCountOfContests(List<Contest> contests) {
+    Map<Long, Integer> problemCount = new HashMap<>();
+    if (contests != null) {
+      for (Contest contest : contests) {
+        List<Long> problemIds = JsonUtils.toList(contest.getProblems(), Long.class);
+        problemCount.put(contest.getContestId(), problemIds == null ? 0 : problemIds.size());
+      }
+    }
+    return problemCount;
   }
 
   /**
@@ -85,10 +140,14 @@ public class ContestsController {
       HttpServletRequest request) {
     Map<String, Object> result = new HashMap<>(3, 1);
 
+    final int NUMBER_OF_CONTESTS_PER_PAGE =
+        optionService.getIntOption("contestsPerPage", DEFAULT_NUMBER_OF_CONTESTS_PER_PAGE);
     List<Contest> contests =
         contestService.getContests(keyword, startIndex, NUMBER_OF_CONTESTS_PER_PAGE);
     result.put("isSuccessful", contests != null && !contests.isEmpty());
     result.put("contests", contests);
+    result.put("entrants", getEntrantsOfContests(contests));
+    result.put("problemCount", getProblemCountOfContests(contests));
 
     return result;
   }
@@ -113,6 +172,7 @@ public class ContestsController {
       throw new ResourceNotFoundException();
     }
 
+    Date currentTime = new Date();
     boolean isAttended = contestService.isAttendContest(contestId, currentUser);
     long numberOfContestants = contestService.getNumberOfContestantsOfContest(contestId);
     List<Long> problemIdList = JsonUtils.toList(contest.getProblems(), Long.class);
@@ -120,13 +180,29 @@ public class ContestsController {
     Map<Long, ContestSubmission> submissions =
         contestService.getSubmissionsOfContestantOfContest(contestId, currentUser);
 
-    ModelAndView view = new ModelAndView("contests/contest");
-    view.addObject("currentTime", new Date())
+    // Top of the standings for the design's // STANDINGS panel. Only computed once the
+    // contest has started (the leaderboard is meaningless before then).
+    List<ContestContestant> standings = null;
+    if (!currentTime.before(contest.getStartTime())) {
+      Map<String, Object> leaderBoard =
+          "OI".equals(contest.getContestMode())
+              ? contestService.getLeaderBoardForOi(contestId)
+              : contestService.getLeaderBoardForAcm(contestId);
+      List<ContestContestant> contestants =
+          (List<ContestContestant>) leaderBoard.get("contestants");
+      if (contestants != null) {
+        standings = contestants.size() > 10 ? contestants.subList(0, 10) : contestants;
+      }
+    }
+
+    ModelAndView view = new ModelAndView("pages/contests/contest");
+    view.addObject("currentTime", currentTime)
         .addObject("contest", contest)
         .addObject("problems", problems)
         .addObject("submissions", submissions)
         .addObject("isAttended", isAttended)
-        .addObject("numberOfContestants", numberOfContestants);
+        .addObject("numberOfContestants", numberOfContestants)
+        .addObject("standings", standings);
     return view;
   }
 
@@ -184,10 +260,10 @@ public class ContestsController {
     Map<String, Object> result = null;
 
     if (contest.getContestMode().equals("OI")) {
-      view = new ModelAndView("contests/leaderboard-oi");
+      view = new ModelAndView("pages/contests/leaderboard-oi");
       result = contestService.getLeaderBoardForOi(contestId);
     } else if (contest.getContestMode().equals("ACM")) {
-      view = new ModelAndView("contests/leaderboard-acm");
+      view = new ModelAndView("pages/contests/leaderboard-acm");
       result = contestService.getLeaderBoardForAcm(contestId);
     } else {
       throw new ResourceNotFoundException();
@@ -241,7 +317,7 @@ public class ContestsController {
         contestService.getCodeSnippetOfContestProblem(contest, problemId, currentUser);
     List<Submission> submissions =
         contestService.getSubmissionsOfContestantOfContestProblem(contest, problemId, currentUser);
-    ModelAndView view = new ModelAndView("problems/problem");
+    ModelAndView view = new ModelAndView("pages/problems/problem");
     view.addObject("contest", contest);
     view.addObject("problem", problem);
     view.addObject("languages", languages);
@@ -252,11 +328,14 @@ public class ContestsController {
     return view;
   }
 
-  /** The number of contests to load per query. */
-  private static final int NUMBER_OF_CONTESTS_PER_PAGE = 10;
+  /** The default number of contests to load per query when the admin option is unset. */
+  private static final int DEFAULT_NUMBER_OF_CONTESTS_PER_PAGE = 50;
 
   /** The autowired ContestService object. */
   @Autowired private ContestService contestService;
+
+  /** The autowired OptionService object. Used for reading the configurable list-display options. */
+  @Autowired private OptionService optionService;
 
   /** The autowired ProblemService object. Used for querying problem information. */
   @Autowired private ProblemService problemService;

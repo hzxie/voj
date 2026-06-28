@@ -17,6 +17,7 @@
 package org.verwandlung.voj.web.mapper;
 
 import java.util.List;
+import java.util.Map;
 
 import org.apache.ibatis.annotations.Param;
 
@@ -42,6 +43,32 @@ public interface CheckpointMapper {
    * @return all checkpoints of the problem
    */
   List<Checkpoint> getCheckpointsUsingProblemId(@Param("problemId") long problemId);
+
+  /**
+   * Gets lightweight metadata (checkpoint id + total byte size) of a problem's checkpoints without
+   * loading the (potentially huge) input/output text. Used by the editor's test-data file list.
+   *
+   * @param problemId - the unique identifier of the problem
+   * @return a list of maps, each holding {@code checkpointId} and {@code size} (bytes)
+   */
+  List<Map<String, Object>> getCheckpointMetaUsingProblemId(@Param("problemId") long problemId);
+
+  /**
+   * Gets the exact-match flag of a problem's checkpoints (they all share the same value).
+   *
+   * @param problemId - the unique identifier of the problem
+   * @return the exact-match flag, or {@code null} if the problem has no checkpoints
+   */
+  Boolean getCheckpointExactlyMatch(@Param("problemId") long problemId);
+
+  /**
+   * [For administrators only] Updates the exact-match flag on all checkpoints of a problem.
+   *
+   * @param problemId - the unique identifier of the problem
+   * @param isExactlyMatch - whether the checkpoints require an exact match
+   */
+  int updateCheckpointsExactlyMatch(
+      @Param("problemId") long problemId, @Param("isExactlyMatch") boolean isExactlyMatch);
 
   /**
    * [For administrators only] Creates a checkpoint.

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/auth}" lang="en">
+<head>
+    <title th:text="#{voj.accounts.login.title} + ' | ' + ${websiteName}">Welcome Back</title>
+</head>
+<body>
+    <a layout:fragment="auth-action" class="vw-header-link vw-header-link-accent"
+       th:href="@{/accounts/register}">create account &rarr;</a>
+    <div layout:fragment="content">
+        <section class="vw-auth">
+            <div class="vw-auth-inner">
+                <div class="vw-auth-head">
+                    <div class="vw-eyebrow">// LOGIN</div>
+                    <h1 th:text="#{voj.accounts.login.sign-in}">Welcome back.</h1>
+                    <div class="sub" th:text="#{voj.accounts.login.dont-have-account}">Sign in to keep solving.</div>
+                </div>
+
+                <div class="vw-card vw-card-glow">
+                    <div class="vw-card-bar">
+                        <span class="vw-dot vw-dot-r"></span><span class="vw-dot vw-dot-y"></span><span class="vw-dot vw-dot-g"></span>
+                        <span class="vw-card-title">auth &mdash; login.sh</span>
+                    </div>
+                    <div class="vw-card-body">
+                        <div class="vw-alert vw-alert-error alert-error hide"></div>
+                        <div class="vw-alert vw-alert-success alert-success" th:if="${isLogout}" th:text="#{voj.accounts.login.sign-out}">You are now logged out.</div>
+
+                        <form id="login-form" method="POST" onsubmit="onSubmit(); return false;">
+                            <div class="vw-formrow">
+                                <label class="vw-label" for="username" th:text="#{voj.accounts.login.username}">Username / Email</label>
+                                <div class="vw-field"><span class="sigil">$</span><input id="username" name="username" type="text" maxlength="32" autocomplete="username" /></div>
+                            </div>
+                            <div class="vw-formrow">
+                                <label class="vw-label" for="password">
+                                    <span th:text="#{voj.accounts.login.password}">Password</span>
+                                    <a th:href="@{/accounts/reset-password}" th:text="#{voj.accounts.login.forgot-password}">Forgot password?</a>
+                                </label>
+                                <input id="password" class="vw-input" name="password" type="password" maxlength="16" autocomplete="current-password" />
+                            </div>
+                            <div class="vw-formrow">
+                                <label class="vw-check" for="remember-me">
+                                    <input id="remember-me" type="checkbox" /> <span th:text="#{voj.accounts.login.remember-me}">Remember Me</span>
+                                </label>
+                            </div>
+                            <button class="vw-btn vw-btn-accent vw-btn-block" type="submit">$ <span th:text="#{voj.accounts.login.sign-in}">sign in</span></button>
+                        </form>
+                    </div>
+                </div>
+
+                <p class="vw-auth-foot">
+                    <span th:text="#{voj.accounts.login.dont-have-account}">Don't have an account?</span>
+                    <a class="vw-accent" th:href="@{/accounts/register}" th:text="#{voj.accounts.login.create-account}">Create one &rarr;</a>
+                </p>
+            </div>
+        </section>
+    </div>
+
+    <th:block layout:fragment="scripts">
+    <script type="text/javascript" th:inline="javascript">
+        function onSubmit() {
+            $('.alert-success').addClass('hide');
+            $('.alert-error').addClass('hide');
+            $('button[type=submit]').attr('disabled', 'disabled');
+            $('button[type=submit]').html([[#{voj.accounts.login.please-wait}]]);
+
+            var username   = $('#username').val(),
+                password   = $('#password').val(),
+                rememberMe = $('input#remember-me').is(':checked');
+
+            return doLoginAction(username, password, rememberMe);
+        };
+        function doLoginAction(username, password, rememberMe) {
+            $.ajax({
+                type: 'POST',
+                url: [[@{/accounts/login.action}]],
+                data: { 'username': username, 'password': password, 'rememberMe': rememberMe },
+                dataType: 'JSON',
+                success: function(result){ return processLoginResult(result); }
+            });
+        }
+        function processLoginResult(result) {
+            if ( result['isSuccessful'] ) {
+                var forwardUrl = [[${forwardUrl} ?: '']] || [[@{/}]];
+                window.location.href = forwardUrl;
+            } else {
+                var errorMessage = '';
+                if ( !result['isAccountValid'] ) {
+                    errorMessage = [[#{voj.accounts.login.incorrect-password}]];
+                } else if ( !result['isAllowedToAccess'] ) {
+                    errorMessage = [[#{voj.accounts.login.forbidden-user}]];
+                }
+                $('#password').val('');
+                $('.alert-error').html(errorMessage);
+                $('.alert-error').removeClass('hide');
+            }
+            $('button[type=submit]').html('$ ' + [[#{voj.accounts.login.sign-in}]]);
+            $('button[type=submit]').removeAttr('disabled');
+        }
+    </script>
+    </th:block>
+</body>
+</html>

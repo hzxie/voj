@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/admin}" lang="en">
+<head>
+    <title th:text="#{voj.administration.all-bulletins.title} + ' | ' + ${websiteName}">Bulletin</title>
+</head>
+<body>
+    <div layout:fragment="content">
+    <div class="adm-wrap">
+
+        <!-- Toolbar -->
+        <div class="adm-toolbar">
+            <div class="adm-toolbar-search">
+                <span class="sigil">$</span>
+                <input type="text" disabled th:placeholder="#{voj.administration.all-bulletins.title}" />
+                <span class="count"><span th:text="${#lists.size(messages)}">0</span> <span th:text="#{voj.administration.all-bulletins.records}">records</span></span>
+            </div>
+            <a class="adm-btn-accent" th:href="@{/administration/new-bulletin}" th:text="#{voj.administration.all-bulletins.new-bulletin}">+ new bulletin</a>
+        </div>
+
+        <!-- Bulk bar -->
+        <div class="adm-bulk" data-adm="bulk">
+            <span class="sel"><span data-adm="bulk-count">0</span> <span th:text="#{voj.administration.all-bulletins.selected}">selected</span></span>
+            <div class="adm-flex1"></div>
+            <span class="adm-bulk-act c-err" data-adm="bulk-delete">&#10005; <span th:text="#{voj.administration.all-bulletins.delete}">delete</span></span>
+            <span class="adm-bulk-clear" data-adm="bulk-clear" th:text="#{voj.administration.all-bulletins.clear}">clear</span>
+        </div>
+
+        <!-- Table -->
+        <div class="adm-table" data-adm="table">
+            <div class="adm-table-scroll"><div class="adm-table-inner cols-bulletins">
+                <div class="adm-table-head">
+                    <span class="adm-check" data-adm="check-all"></span>
+                    <span th:text="#{voj.administration.all-bulletins.message-title}">TITLE</span>
+                    <span th:text="#{voj.administration.all-bulletins.author}">AUTHOR</span>
+                    <span th:text="#{voj.administration.all-bulletins.pinned}">PINNED</span>
+                    <span th:text="#{voj.administration.all-bulletins.date}">DATE</span>
+                    <span th:text="#{voj.administration.all-bulletins.status}">STATUS</span>
+                    <span></span>
+                </div>
+                <a class="adm-table-row" data-adm="row" th:each="message : ${messages}" th:href="@{/administration/edit-bulletin/{id}(id=${message.messageId})}">
+                    <span class="adm-check" data-adm="row-check" th:attr="data-id=${message.messageId}"></span>
+                    <span class="adm-cell head" th:text="${message.messageTitle}">Title</span>
+                    <span class="adm-cell muted" th:text="${message.messageAuthor != null} ? '@' + ${message.messageAuthor.username} : '—'">@admin</span>
+                    <span class="adm-cell" th:classappend="${message.pinned} ? 'c-warn' : 'muted'" th:text="${message.pinned} ? '★ ' + #{voj.administration.all-bulletins.pinned-flag} : '—'">—</span>
+                    <span class="adm-cell mono muted" th:text="${@dateFormatter.dateMedium(message.messageCreateTime, language)}">Jun 24, 2026</span>
+                    <span>
+                        <span class="adm-pill"
+                              th:classappend="${message.status == 'PUBLISHED'} ? 'c-accent' : (${message.status == 'DRAFT'} ? 'c-warn' : 'c-err')"
+                              th:text="${message.status == 'DRAFT'} ? #{voj.administration.status.draft} : (${message.status == 'HIDDEN'} ? #{voj.administration.status.hidden} : #{voj.administration.status.published})">Published</span>
+                    </span>
+                    <span class="adm-menu">&#183;&#183;&#183;</span>
+                </a>
+                <div class="adm-table-empty" th:if="${#lists.isEmpty(messages)}" th:text="#{voj.administration.all-bulletins.no-records}">// no bulletins</div>
+            </div></div>
+        </div>
+
+        <!-- Pager -->
+        <div class="adm-pager" th:if="${totalPages > 1}"
+             th:with="lowerBound=${currentPage - 3 > 0 ? currentPage - 3 : 1},upperBound=${currentPage + 3 < totalPages ? currentPage + 3 : totalPages}">
+            <span><span th:text="#{voj.administration.all-bulletins.page}">page</span> <span th:text="${currentPage}">1</span> / <span th:text="${totalPages}">1</span></span>
+            <div class="adm-pager-btns">
+                <a class="nav" th:classappend="${currentPage <= 1} ? 'off'" th:href="@{/administration/all-bulletins(page=${currentPage - 1})}">&#8592;</a>
+                <a class="num" th:each="pageNumber : ${#numbers.sequence(lowerBound, upperBound)}" th:classappend="${pageNumber == currentPage} ? 'active'" th:href="@{/administration/all-bulletins(page=${pageNumber})}" th:text="${pageNumber}">1</a>
+                <a class="nav" th:classappend="${currentPage >= totalPages} ? 'off'" th:href="@{/administration/all-bulletins(page=${currentPage + 1})}">&#8594;</a>
+            </div>
+        </div>
+
+    </div>
+    </div>
+
+    <th:block layout:fragment="scripts">
+    <script type="text/javascript" th:inline="javascript">
+        document.addEventListener('DOMContentLoaded', function () {
+            var del = document.querySelector('[data-adm="bulk-delete"]');
+            if (!del) return;
+            del.addEventListener('click', function () {
+                var ids = window.admSelectedIds ? window.admSelectedIds() : [];
+                if (ids.length === 0) return;
+                if (!confirm([[#{voj.administration.all-bulletins.continue-or-not}]])) return;
+                $.ajax({
+                    type: 'POST', url: [[@{/administration/deleteBulletins.action}]],
+                    data: { 'bulletins': JSON.stringify(ids) }, dataType: 'JSON',
+                    success: function (result) {
+                        if (result['isSuccessful']) { window.location.reload(); }
+                        else { alert([[#{voj.administration.all-bulletins.delete-error}]]); }
+                    }
+                });
+            });
+        });
+    </script>
+    </th:block>
+</body>
+</html>

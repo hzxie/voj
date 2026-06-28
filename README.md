@@ -69,12 +69,12 @@ See [`docker/README.md`](docker/README.md) for image and configuration details.
 
 ### Build from source
 
-**Web application** produces a self-contained executable WAR (embedded Tomcat):
+**Web application** produces a self-contained executable JAR (embedded Tomcat):
 
 ```bash
 cd web
-mvn package -DskipTests        # -> web/target/voj.web.war
-java -jar target/voj.web.war
+mvn package -DskipTests        # -> web/target/voj.web.jar
+java -jar target/voj.web.jar
 ```
 
 **Judger** builds a Spring Boot jar plus the JNI native library, so a C++
@@ -93,7 +93,8 @@ mvn package -DskipTests        # -> judger/target/voj.judger.jar
 
 Convenience wrappers live in [`scripts/`](scripts/): `build-jars.sh`,
 `build-docker.sh`, `run-web.sh` and `run-judger.sh` (the run scripts preflight
-MySQL/ActiveMQ and import `voj.sql` on first launch).
+MySQL/ActiveMQ and import `sql/schema.sql`, `sql/seed.sql` and `sql/demo.sql` on
+first launch).
 
 ### Requirements
 

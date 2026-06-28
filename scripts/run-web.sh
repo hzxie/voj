@@ -2,7 +2,7 @@
 #
 # Run the Verwandlung Online Judge web application.
 #
-# Launches the self-contained Spring Boot executable WAR (embedded Tomcat).
+# Launches the self-contained Spring Boot executable JAR (embedded Tomcat).
 # By default it serves http://localhost:8080/voj and expects MySQL and ActiveMQ
 # to be reachable (see web/src/main/resources/voj.properties).
 #
@@ -15,7 +15,7 @@
 #
 # Before launching it verifies that MySQL and ActiveMQ are running and that the
 # database credentials are correct; if the `voj` schema is empty it imports
-# voj.sql automatically.
+# sql/{schema,seed,demo}.sql automatically.
 #
 # Overridable via environment variables (defaults shown):
 #   JDK_HOME=/opt/homebrew/opt/openjdk@25   # falls back to `java` on PATH
@@ -41,15 +41,15 @@ else
   exit 1
 fi
 
-WAR="$PROJECT_ROOT/web/target/voj.web.war"
-if [ ! -f "$WAR" ]; then
-  echo "ERROR: $WAR not found. Build it first: scripts/build-jars.sh web" >&2
+JAR="$PROJECT_ROOT/web/target/voj.web.jar"
+if [ ! -f "$JAR" ]; then
+  echo "ERROR: $JAR not found. Build it first: scripts/build-jars.sh web" >&2
   exit 1
 fi
 
 # --------------------------------------------------------------------------- #
 # Preflight: verify MySQL and ActiveMQ are up, credentials are valid, and the
-# voj schema is populated (importing voj.sql on first run).
+# voj schema is populated (importing sql/{schema,seed,demo}.sql on first run).
 # --------------------------------------------------------------------------- #
 
 # Read a "key = value" property from voj.properties (last match wins).
@@ -136,7 +136,7 @@ preflight() {
     exit 1
   fi
 
-  # --- Database: create + import voj.sql when the schema is empty -------- #
+  # --- Database: create + import the SQL scripts when the schema is empty - #
   "$MYSQL_BIN" "${mysql_args[@]}" -e \
     "CREATE DATABASE IF NOT EXISTS \`$db_name\` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
 
@@ -145,14 +145,18 @@ preflight() {
     "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='$db_name'")"
 
   if [ "${table_count:-0}" -eq 0 ]; then
-    local sql_file="$PROJECT_ROOT/voj.sql"
-    if [ ! -f "$sql_file" ]; then
-      echo "ERROR: database '$db_name' is empty but $sql_file is missing." >&2
-      exit 1
-    fi
-    echo "==> Database '$db_name' is empty; importing voj.sql ..."
-    "$MYSQL_BIN" "${mysql_args[@]}" "$db_name" < "$sql_file"
-    echo "==> Imported voj.sql into '$db_name'."
+    echo "==> Database '$db_name' is empty; importing sql/{schema,seed,demo}.sql ..."
+    local sql_name sql_file
+    for sql_name in schema.sql seed.sql demo.sql; do
+      sql_file="$PROJECT_ROOT/sql/$sql_name"
+      if [ ! -f "$sql_file" ]; then
+        echo "ERROR: database '$db_name' is empty but $sql_file is missing." >&2
+        exit 1
+      fi
+      echo "    - $sql_name"
+      "$MYSQL_BIN" "${mysql_args[@]}" "$db_name" < "$sql_file"
+    done
+    echo "==> Imported sql/{schema,seed,demo}.sql into '$db_name'."
   else
     echo "==> Database '$db_name' already has $table_count table(s); skipping import."
   fi
@@ -164,4 +168,4 @@ fi
 
 echo "==> Java: $("$JAVA_BIN" -version 2>&1 | head -1)"
 echo "==> Starting voj.web (http://localhost:8080/voj) ..."
-exec "$JAVA_BIN" ${JAVA_OPTS} -jar "$WAR" "$@"
+exec "$JAVA_BIN" ${JAVA_OPTS} -jar "$JAR" "$@"

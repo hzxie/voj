@@ -14,6 +14,11 @@ REM   scripts\test-local.bat
 REM   scripts\test-local.bat web        run only the web module tests
 REM   scripts\test-local.bat judger     run only the judger module tests
 REM
+REM Any tokens after the optional target are forwarded verbatim to `mvn test`,
+REM e.g. scripts\test-local.bat web -Djacoco.skip=true. When the first token is
+REM itself a mvn option (starts with '-'), the target defaults to 'all', so
+REM scripts\test-local.bat -Djacoco.skip=true also works.
+REM
 REM NOTE: the judger tests log in as a low-privilege local account
 REM (system.username / system.password in voj-test-windows.properties, default
 REM 'appveyor'). On your machine that account must exist, or override it via
@@ -43,12 +48,29 @@ if not defined DB_PASS set "DB_PASS="
 if not defined TEST_DB set "TEST_DB=test"
 if not defined KEEP_DB set "KEEP_DB=0"
 
-set "TARGET=%~1"
-if "%TARGET%"=="" set "TARGET=all"
-if /I not "%TARGET%"=="all" if /I not "%TARGET%"=="web" if /I not "%TARGET%"=="judger" (
-  echo Usage: %~nx0 [web^|judger^|all] 1>&2
+REM The first token may be the module target; the rest of the raw command tail
+REM (%*) is forwarded to mvn. We slice the target off %* with a string replace
+REM rather than shift/%1, because cmd splits %1/%2 on '=' - which would mangle
+REM pass-through args like -Dkey=value - whereas %* preserves them verbatim.
+set "TARGET=all"
+set "MVN_ARGS=%*"
+if /I "%~1"=="web"    ( set "TARGET=web"    & goto :strip_target )
+if /I "%~1"=="judger" ( set "TARGET=judger" & goto :strip_target )
+if /I "%~1"=="all"    ( set "TARGET=all"    & goto :strip_target )
+
+REM No explicit target: a leading mvn option (-D..., -P..., --...) is forwarded
+REM as-is; a leading non-option token is almost certainly a mistyped target.
+set "FIRST=%~1"
+if defined FIRST if not "%FIRST:~0,1%"=="-" (
+  echo Usage: %~nx0 [web^|judger^|all] [extra mvn args...] 1>&2
   exit /b 1
 )
+goto :args_done
+
+:strip_target
+REM Drop the leading target word (everything up to and including it) from %*.
+call set "MVN_ARGS=%%MVN_ARGS:*%~1=%%"
+:args_done
 
 pushd "%~dp0.." || exit /b 1
 set "PROJECT_ROOT=%CD%"
@@ -87,11 +109,11 @@ if errorlevel 1 (
   popd & exit /b 1
 )
 
-REM --- 2. (Re)create the test database and load the schema -------------------
-echo ==^> Creating test database '%TEST_DB%' and loading voj.sql ...
-%MYSQL_BIN% %MYSQL_AUTH% -e "DROP DATABASE IF EXISTS `%TEST_DB%`; CREATE DATABASE `%TEST_DB%`;" || (popd & exit /b 1)
-%MYSQL_BIN% %MYSQL_AUTH% -e "SET GLOBAL sql_mode=(SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY',''));" 2>nul
-%MYSQL_BIN% %MYSQL_AUTH% %TEST_DB% < "%PROJECT_ROOT%\voj.sql" || (popd & exit /b 1)
+REM --- 2. Test DB provisioning is automatic ---------------------------------
+REM The Spring test context runs sql\schema.sql + seed.sql + test-data.sql and the
+REM test JDBC URL carries createDatabaseIfNotExist=true plus the required sql_mode,
+REM so there is nothing to create or load here. The cleanup at the end drops the
+REM test database afterwards (unless KEEP_DB=1).
 
 REM --- 3. Stage the judger's Windows test properties -------------------------
 if /I not "%TARGET%"=="web" (
@@ -107,7 +129,7 @@ set "RC=0"
 REM --- 4. Run the web module tests -------------------------------------------
 if /I not "%TARGET%"=="judger" (
   echo ==^> Running web module tests ...
-  call mvn test -f web\pom.xml
+  call mvn test -f web\pom.xml %MVN_ARGS%
   if errorlevel 1 set "RC=1"
 )
 
@@ -115,7 +137,7 @@ REM --- 5. Run the judger module tests ----------------------------------------
 if /I not "%TARGET%"=="web" (
   if "%RC%"=="0" (
     echo ==^> Running judger module tests ...
-    call mvn test -f judger\pom.xml
+    call mvn test -f judger\pom.xml %MVN_ARGS%
     if errorlevel 1 set "RC=1"
   ) else (
     echo ==^> Skipping judger tests because the web tests failed. 1>&2

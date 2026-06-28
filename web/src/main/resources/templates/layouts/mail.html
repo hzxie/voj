@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<!--/*
+  Shared layout for transactional e-mails. Rendered by MailSender through the same
+  ITemplateEngine as the web pages, so the layout-dialect decorator works here too;
+  the rendered output is plain table markup with fully inlined colours (email-safe).
+
+  All URLs are absolute literals built from ${baseUrl} (a plain, non-web Context is
+  used, so @{...} link expressions are not available).
+
+  Emails decorate it with layout:decorate="~{layouts/mail}" and fill:
+    - layout:fragment="script"  -> the terminal title-bar command (e.g. reset-password.sh)
+    - layout:fragment="content" -> the body rows (kicker, heading, intro, CTA, ...)
+  Common model: baseUrl, username, email, token.
+*/-->
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="supported-color-schemes" content="dark" />
+    <!--/* Loads in clients that support web fonts (e.g. Apple Mail); falls back gracefully elsewhere. */-->
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600;700&amp;display=swap" rel="stylesheet" />
+</head>
+<body style="margin:0; padding:0; background:#0a0c0b;">
+<table width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#0a0c0b; margin:0; padding:0;">
+    <tbody>
+        <tr>
+            <td align="center" style="padding:46px 24px;">
+
+                <!-- ============ EMAIL BODY (table-based, email-safe) ============ -->
+                <table align="center" width="680" cellspacing="0" cellpadding="0" border="0" style="width:680px; max-width:680px; background:#0e1411; border:1px solid #1f2a24; border-radius:16px; overflow:hidden; font-family:'JetBrains Mono','Courier New',monospace; box-shadow:0 30px 70px rgba(0,0,0,.5);">
+                    <tbody>
+
+                        <!-- terminal title bar -->
+                        <tr>
+                            <td style="padding:14px 26px; border-bottom:1px solid #16201b; background:#0b110e;">
+                                <table width="100%" cellspacing="0" cellpadding="0" border="0"><tbody><tr>
+                                    <td style="white-space:nowrap;">
+                                        <span style="display:inline-block; width:11px; height:11px; border-radius:50%; background:#e0605a;"></span>
+                                        <span style="display:inline-block; width:11px; height:11px; border-radius:50%; background:#e0a73a; margin-left:7px;"></span>
+                                        <span style="display:inline-block; width:11px; height:11px; border-radius:50%; background:#34d399; margin-left:7px;"></span>
+                                        <span style="font-size:11.5px; color:#6f8479; margin-left:14px;">mailer &mdash; <th:block layout:fragment="script">mailer.sh</th:block></span>
+                                    </td>
+                                    <td align="right" style="font-size:11px; color:#34d399; white-space:nowrap;">&bull; secure</td>
+                                </tr></tbody></table>
+                            </td>
+                        </tr>
+
+                        <!-- logo -->
+                        <tr>
+                            <td style="padding:38px 44px 8px;">
+                                <div style="font-size:20px; font-weight:600; letter-spacing:-.3px; font-family:'JetBrains Mono','Courier New',monospace;">
+                                    <span style="color:#34d399;">&lt;</span><span style="color:#eafff5;">verwandlung</span><span style="color:#34d399;">&gt;</span><span style="color:#34d399;">_</span>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <!-- ===== per-email body rows ===== -->
+                        <th:block layout:fragment="content"></th:block>
+
+                        <!-- footer links -->
+                        <tr>
+                            <td style="padding:22px 44px; border-top:1px solid #16201b; background:#0b110e;">
+                                <table width="100%" cellspacing="0" cellpadding="0" border="0"><tbody><tr><td align="center" style="font-size:12px; color:#34d399;">
+                                    <a th:href="|${baseUrl}/accounts/login|" target="_blank" style="color:#34d399; text-decoration:none;">Accounts</a>
+                                    <span style="color:#6f8479; padding:0 12px;">&middot;</span>
+                                    <a th:href="|${baseUrl}/privacy|" target="_blank" style="color:#34d399; text-decoration:none;">Privacy &amp; Cookies</a>
+                                    <span style="color:#6f8479; padding:0 12px;">&middot;</span>
+                                    <a th:href="|${baseUrl}/help|" target="_blank" style="color:#34d399; text-decoration:none;">Help</a>
+                                    <span style="color:#6f8479; padding:0 12px;">&middot;</span>
+                                    <a th:href="|${baseUrl}/about|" target="_blank" style="color:#34d399; text-decoration:none;">About</a>
+                                </td></tr></tbody></table>
+                            </td>
+                        </tr>
+
+                        <!-- sign-off -->
+                        <tr>
+                            <td align="center" style="padding:20px 44px 30px; font-size:11px; line-height:1.7; color:#6f8479; background:#0b110e;">
+                                <span style="color:#8ba093;">verwandlung@oj:~$</span> sent by Verwandlung Online Judge<br />
+                                Follow us on <a href="https://github.com/hzxie/voj" target="_blank" style="color:#34d399; text-decoration:none;">GitHub@voj</a> 
+                                &middot; 
+                                &copy; 2026 <a href="https://infinitescript.com" target="_blank" style="color:#34d399; text-decoration:none;">Infinite Script</a>
+                            </td>
+                        </tr>
+
+                    </tbody>
+                </table>
+
+            </td>
+        </tr>
+    </tbody>
+</table>
+</body>
+</html>

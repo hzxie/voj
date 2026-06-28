@@ -12,6 +12,13 @@
 	<packaging>jar</packaging>
 	<name>voj.judger</name>
 
+	<properties>
+		<!-- Default so surefire's @{argLine} below still resolves when JaCoCo's
+		     prepare-agent is skipped (e.g. -Djacoco.skip=true); when active it
+		     overwrites this with the agent's -javaagent argument. -->
+		<argLine></argLine>
+	</properties>
+
 	<dependencies>
 		<!-- Core Spring Boot (non-web). Boot's Logback is swapped for Log4j2. -->
 		<dependency>
@@ -78,6 +85,25 @@
 
 	<build>
 		<finalName>voj.judger</finalName>
+		<testResources>
+			<!-- Default test resources (re-declared because adding <testResources>
+			     replaces Maven's implicit one). -->
+			<testResource>
+				<directory>src/test/resources</directory>
+			</testResource>
+			<!-- Shared DDL + reference + fixture scripts from the repo-root sql/ folder,
+			     copied onto the test classpath as db/*.sql for the Spring context to
+			     self-provision the database (demo.sql is excluded; tests use test-data.sql). -->
+			<testResource>
+				<directory>${project.basedir}/../sql</directory>
+				<targetPath>db</targetPath>
+				<includes>
+					<include>schema.sql</include>
+					<include>seed.sql</include>
+					<include>test-data.sql</include>
+				</includes>
+			</testResource>
+		</testResources>
 		<plugins>
 			<!-- Package as an executable, self-contained Spring Boot jar. -->
 			<plugin>
@@ -94,6 +120,11 @@
 				<artifactId>maven-surefire-plugin</artifactId>
 				<configuration>
 					<excludedGroups>sandbox-stress</excludedGroups>
+					<!-- @{argLine} carries JaCoCo's agent (when active) or the empty default
+					     above. The native-access flag grants the JNI runner native access,
+					     silencing the JDK 24+ restricted-method warning from NativeLibraryLoader
+					     (a future JDK will block JNI without it). -->
+					<argLine>@{argLine} --enable-native-access=ALL-UNNAMED</argLine>
 				</configuration>
 			</plugin>
 			<!-- Build the JNI native library (compiled into target/classes so it

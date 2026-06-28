@@ -33,7 +33,7 @@ public class Problem implements Serializable {
   /**
    * Constructor of the problem.
    *
-   * @param isPublic - whether the problem is public
+   * @param status - the publication status of the problem (PUBLISHED / DRAFT / HIDDEN)
    * @param problemName - the name of the problem
    * @param timeLimit - the maximum running time
    * @param memoryLimit - the maximum running memory
@@ -45,7 +45,7 @@ public class Problem implements Serializable {
    * @param hint - the hint of the problem
    */
   public Problem(
-      boolean isPublic,
+      String status,
       String problemName,
       int timeLimit,
       int memoryLimit,
@@ -55,7 +55,7 @@ public class Problem implements Serializable {
       String sampleInput,
       String sampleOutput,
       String hint) {
-    this.isPublic = isPublic;
+    this.status = status;
     this.problemName = problemName;
     this.timeLimit = timeLimit;
     this.memoryLimit = memoryLimit;
@@ -71,7 +71,7 @@ public class Problem implements Serializable {
    * Constructor of the Problem class.
    *
    * @param problemId - the unique identifier of the problem
-   * @param isPublic - whether the problem is public
+   * @param status - the publication status of the problem (PUBLISHED / DRAFT / HIDDEN)
    * @param problemName - the name of the problem
    * @param timeLimit - the maximum running time
    * @param memoryLimit - the maximum running memory
@@ -84,7 +84,7 @@ public class Problem implements Serializable {
    */
   public Problem(
       long problemId,
-      boolean isPublic,
+      String status,
       String problemName,
       int timeLimit,
       int memoryLimit,
@@ -95,7 +95,7 @@ public class Problem implements Serializable {
       String sampleOutput,
       String hint) {
     this(
-        isPublic,
+        status,
         problemName,
         timeLimit,
         memoryLimit,
@@ -127,21 +127,31 @@ public class Problem implements Serializable {
   }
 
   /**
-   * Gets whether the problem is public.
+   * Gets the publication status of the problem (PUBLISHED / DRAFT / HIDDEN).
+   *
+   * @return the publication status of the problem
+   */
+  public String getStatus() {
+    return status;
+  }
+
+  /**
+   * Sets the publication status of the problem (PUBLISHED / DRAFT / HIDDEN).
+   *
+   * @param status - the publication status of the problem
+   */
+  public void setStatus(String status) {
+    this.status = status;
+  }
+
+  /**
+   * Gets whether the problem is publicly visible (i.e. its status is PUBLISHED). Derived from
+   * {@link #getStatus()}; kept for visibility checks across the codebase.
    *
    * @return whether the problem is public
    */
   public boolean isPublic() {
-    return isPublic;
-  }
-
-  /**
-   * Sets whether the problem is public.
-   *
-   * @param isPublic - whether the problem is public
-   */
-  public void setPublic(boolean isPublic) {
-    this.isPublic = isPublic;
+    return PublicationStatus.isPublic(status);
   }
 
   /**
@@ -160,6 +170,24 @@ public class Problem implements Serializable {
    */
   public void setProblemName(String problemName) {
     this.problemName = problemName;
+  }
+
+  /**
+   * Gets the difficulty of the problem.
+   *
+   * @return the difficulty of the problem
+   */
+  public ProblemDifficulty getProblemDifficulty() {
+    return problemDifficulty;
+  }
+
+  /**
+   * Sets the difficulty of the problem.
+   *
+   * @param problemDifficulty - the difficulty of the problem
+   */
+  public void setProblemDifficulty(ProblemDifficulty problemDifficulty) {
+    this.problemDifficulty = problemDifficulty;
   }
 
   /**
@@ -366,12 +394,12 @@ public class Problem implements Serializable {
   @Override
   public String toString() {
     return String.format(
-        "Problem: [ProblemID=%s, isPublic=%s, ProblemName=%s, TotalSubmission=%s, "
+        "Problem: [ProblemID=%s, Status=%s, ProblemName=%s, TotalSubmission=%s, "
             + "AcceptedSubmission=%s, TimeLimit=%s, MemoryLimit=%s, Description=%s, "
             + "InputFormat=%s, OutputFormat=%s, SampleInput=%s, SampleOutput=%s, Hint=%s]",
         new Object[] {
           problemId,
-          isPublic,
+          status,
           problemName,
           totalSubmission,
           acceptedSubmission,
@@ -389,11 +417,14 @@ public class Problem implements Serializable {
   /** The unique identifier of the problem. */
   private long problemId;
 
-  /** Whether the problem is public. */
-  private boolean isPublic;
+  /** The publication status of the problem (PUBLISHED / DRAFT / HIDDEN). */
+  private String status = PublicationStatus.PUBLISHED;
 
   /** The name of the problem. */
   private String problemName;
+
+  /** The difficulty of the problem (normalized lookup: id + slug + name). */
+  private ProblemDifficulty problemDifficulty;
 
   /** The tags of the problem. */
   private List<ProblemTag> problemTags;

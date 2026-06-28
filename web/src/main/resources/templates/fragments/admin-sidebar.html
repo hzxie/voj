@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<!--/*
+  Administration sidebar navigation (terminal aesthetic). Used via
+  ~{fragments/admin-sidebar :: sidebar}. The active item is driven by the
+  ${adminSection} attribute set by AdministrationController#populateAdminChrome;
+  badge counts (navProblemsBadge / navContestsBadge / navDiscussionBadge /
+  navJudgersBadge) are optional and only render when present.
+*/-->
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<body>
+    <aside th:fragment="sidebar" class="adm-sidebar" data-adm="sidebar">
+        <a class="adm-logo" th:href="@{/}">
+            <span class="b">&lt;</span><span class="n">vwl</span><span class="b">&gt;</span>
+            <span class="tag" th:text="#{voj.administration.include.sidebar.admin}">ADMIN</span>
+        </a>
+
+        <nav class="adm-nav">
+            <div class="adm-nav-label" th:text="'// ' + #{voj.administration.include.sidebar.manage}">// MANAGE</div>
+            <a class="adm-navitem" th:classappend="${adminSection == 'dashboard'} ? 'active'" th:href="@{/administration}">
+                <span class="ico">&#9638;</span><span class="lbl" th:text="#{voj.administration.include.sidebar.dashboard}">Dashboard</span>
+            </a>
+            <a class="adm-navitem" th:classappend="${adminSection == 'problems'} ? 'active'" th:href="@{/administration/all-problems}">
+                <span class="ico">&#9776;</span><span class="lbl" th:text="#{voj.administration.include.sidebar.problems}">Problems</span>
+                <span class="adm-badge" th:if="${navProblemsBadge}" th:text="${navProblemsBadge}">0</span>
+            </a>
+            <a class="adm-navitem" th:classappend="${adminSection == 'contests'} ? 'active'" th:href="@{/administration/all-contests}">
+                <span class="ico">&#9719;</span><span class="lbl" th:text="#{voj.administration.include.sidebar.contests}">Contests</span>
+                <span class="adm-badge accent" th:if="${navContestsBadge}" th:text="${navContestsBadge}">0</span>
+            </a>
+            <a class="adm-navitem" th:classappend="${adminSection == 'submissions'} ? 'active'" th:href="@{/administration/all-submissions}">
+                <span class="ico">&#8645;</span><span class="lbl" th:text="#{voj.administration.include.sidebar.submissions}">Submissions</span>
+            </a>
+            <a class="adm-navitem" th:classappend="${adminSection == 'discussion'} ? 'active'" th:href="@{/administration/all-discussion}">
+                <span class="ico">&#10077;</span><span class="lbl" th:text="#{voj.administration.include.sidebar.discussion}">Discussion</span>
+                <span class="adm-badge err" th:if="${navDiscussionBadge}" th:text="${navDiscussionBadge}">0</span>
+            </a>
+            <a class="adm-navitem" th:classappend="${adminSection == 'bulletins'} ? 'active'" th:href="@{/administration/all-bulletins}">
+                <span class="ico">&#9993;</span><span class="lbl" th:text="#{voj.administration.include.sidebar.bulletins}">Bulletin</span>
+            </a>
+            <a class="adm-navitem" th:classappend="${adminSection == 'users'} ? 'active'" th:href="@{/administration/all-users}">
+                <span class="ico">&#9783;</span><span class="lbl" th:text="#{voj.administration.include.sidebar.users}">Users</span>
+            </a>
+
+            <div class="adm-nav-label sys" th:text="'// ' + #{voj.administration.include.sidebar.system}">// SYSTEM</div>
+            <a class="adm-navitem" th:classappend="${adminSection == 'moderation'} ? 'active'" th:href="@{/administration/moderation}">
+                <span class="ico">&#9878;</span><span class="lbl" th:text="#{voj.administration.include.sidebar.moderation}">Moderation</span>
+                <span class="adm-badge err" th:if="${navModerationBadge}" th:text="${navModerationBadge}">0</span>
+            </a>
+            <a class="adm-navitem" th:classappend="${adminSection == 'judgers'} ? 'active'" th:href="@{/administration/judgers}">
+                <span class="ico">&#9707;</span><span class="lbl" th:text="#{voj.administration.include.sidebar.judgers}">Judgers</span>
+                <span class="adm-badge accent" th:if="${navJudgersBadge}" th:text="${navJudgersBadge}">0</span>
+            </a>
+            <a class="adm-navitem" th:classappend="${adminSection == 'settings'} ? 'active'" th:href="@{/administration/general-settings}">
+                <span class="ico">&#9881;</span><span class="lbl" th:text="#{voj.administration.include.sidebar.settings}">Settings</span>
+            </a>
+        </nav>
+
+        <div class="adm-side-foot">
+            <a class="adm-live-link" th:href="@{/}">
+                <span>&#8599;</span> <span th:text="#{voj.administration.include.sidebar.view-live-site}">view live site</span>
+            </a>
+            <div class="adm-user">
+                <div class="adm-mono" th:text="${#strings.substring(myProfile.username, 0, 1)}">H</div>
+                <div class="adm-user-meta">
+                    <div class="nm" th:text="${myProfile.username}">username</div>
+                    <div class="rl" th:text="${myProfile.userGroup.userGroupName}">superadmin</div>
+                </div>
+                <div class="adm-themetoggle" data-vw="theme-toggle" title="Toggle theme" role="button" tabindex="0">
+                    <span class="moon">&#9790;</span><span class="sun">&#9728;</span><span class="knob"></span>
+                </div>
+            </div>
+        </div>
+    </aside>
+</body>
+</html>

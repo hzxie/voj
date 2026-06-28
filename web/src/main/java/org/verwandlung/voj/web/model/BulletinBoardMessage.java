@@ -133,18 +133,113 @@ public class BulletinBoardMessage implements Serializable {
    */
   public String toString() {
     return String.format(
-        "BulletinBoardMessage [ID=%d, Title=%s, Body=%s, CreateTime=%s]",
-        new Object[] {messageId, messageTitle, messageBody, messageCreateTime});
+        "BulletinBoardMessage [ID=%d, Title=%s, Body=%s, Pinned=%b, Status=%s, CreateTime=%s]",
+        new Object[] {
+          messageId, messageTitle, messageBody, pinned, status, messageCreateTime
+        });
   }
+
+  /**
+   * Gets the unique identifier of the author (creator) of the bulletin board message.
+   *
+   * @return the unique identifier of the author
+   */
+  public long getMessageAuthorId() {
+    return messageAuthorId;
+  }
+
+  /**
+   * Sets the unique identifier of the author (creator) of the bulletin board message.
+   *
+   * @param messageAuthorId - the unique identifier of the author
+   */
+  public void setMessageAuthorId(long messageAuthorId) {
+    this.messageAuthorId = messageAuthorId;
+  }
+
+  /**
+   * Gets the author (creator) of the bulletin board message.
+   *
+   * @return the author of the bulletin board message
+   */
+  public User getMessageAuthor() {
+    return messageAuthor;
+  }
+
+  /**
+   * Sets the author (creator) of the bulletin board message.
+   *
+   * @param messageAuthor - the author of the bulletin board message
+   */
+  public void setMessageAuthor(User messageAuthor) {
+    this.messageAuthor = messageAuthor;
+  }
+
+  /**
+   * Gets whether the bulletin board message is pinned to the top of the list.
+   *
+   * @return whether the bulletin board message is pinned
+   */
+  public boolean isPinned() {
+    return pinned;
+  }
+
+  /**
+   * Sets whether the bulletin board message is pinned to the top of the list.
+   *
+   * @param pinned - whether the bulletin board message is pinned
+   */
+  public void setPinned(boolean pinned) {
+    this.pinned = pinned;
+  }
+
+  /**
+   * Gets the publication status of the bulletin board message (PUBLISHED / DRAFT / HIDDEN).
+   *
+   * @return the publication status of the bulletin board message
+   */
+  public String getStatus() {
+    return status;
+  }
+
+  /**
+   * Sets the publication status of the bulletin board message (PUBLISHED / DRAFT / HIDDEN).
+   *
+   * @param status - the publication status of the bulletin board message
+   */
+  public void setStatus(String status) {
+    this.status = status;
+  }
+
+  /** The publication status: visible to everyone. */
+  public static final String STATUS_PUBLISHED = "PUBLISHED";
+
+  /** The publication status: not yet published, visible only to administrators. */
+  public static final String STATUS_DRAFT = "DRAFT";
+
+  /** The publication status: withdrawn, hidden from everyone. */
+  public static final String STATUS_HIDDEN = "HIDDEN";
 
   /** The unique identifier of the bulletin board message. */
   private long messageId;
+
+  /** The unique identifier of the author (creator) of the bulletin board message. */
+  private long messageAuthorId;
+
+  /** The author (creator) of the bulletin board message. */
+  private User messageAuthor;
 
   /** The title of the bulletin board message. */
   private String messageTitle;
 
   /** The content of the bulletin board message. */
   private String messageBody;
+
+  /** Whether the bulletin board message is pinned to the top of the list. */
+  private boolean pinned;
+
+  /** The publication status of the bulletin board message (PUBLISHED / DRAFT / HIDDEN). */
+  private String status = STATUS_PUBLISHED;
 
   /** The creation time of the bulletin board message. */
   private Date messageCreateTime;

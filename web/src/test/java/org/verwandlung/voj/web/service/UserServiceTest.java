@@ -16,7 +16,9 @@
  */
 package org.verwandlung.voj.web.service;
 
+import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -172,6 +174,21 @@ public class UserServiceTest {
     Assertions.assertNotNull(userService.getUserUsingUsernameOrEmail("newuser01"));
   }
 
+  /** Test case: tests the createUser (7-argument) method. Test data: valid info plus a display name and bio. Expected: creation succeeds and both extras persist as user meta. */
+  @Test
+  public void testCreateUserWithDisplayNameAndBio() {
+    Map<String, Boolean> result =
+        userService.createUser(
+            "newuser02", "password", "newuser02@example.com", "users", "text/x-java",
+            "Display Name", "Hello world");
+    Assertions.assertTrue(result.get("isSuccessful"));
+    User user = userService.getUserUsingUsernameOrEmail("newuser02");
+    Assertions.assertNotNull(user);
+    Map<String, Object> meta = userService.getUserMetaUsingUid(user);
+    Assertions.assertEquals("Display Name", meta.get("displayName"));
+    Assertions.assertEquals("Hello world", meta.get("aboutMe"));
+  }
+
   /** Test case: tests the createUser (6-argument) method. Test data: the username already exists. Expected: creation fails. */
   @Test
   public void testCreateUserWithExistingUsername() {
@@ -263,8 +280,10 @@ public class UserServiceTest {
     User user = userService.getUserUsingUid(1000);
     Map<String, Boolean> result =
         userService.updateProfile(
-            user, "cshzxie@gmail.com", "Beijing", "https://haozhexie.com", "{}", "About me");
+            user, "cshzxie@gmail.com", "Haozhe Xie", "Beijing", "https://haozhexie.com", "{}",
+            "About me");
     Assertions.assertTrue(result.get("isSuccessful"));
+    Assertions.assertEquals("Haozhe Xie", userService.getUserMetaUsingUid(user).get("displayName"));
   }
 
   /** Test case: tests the updateProfile (profile) method. Test data: the email is already taken by another user. Expected: the update fails. */
@@ -273,7 +292,7 @@ public class UserServiceTest {
     User user = userService.getUserUsingUid(1000);
     Map<String, Boolean> result =
         userService.updateProfile(
-            user, "support@verwandlung.org", "", "", "{}", "About me");
+            user, "support@verwandlung.org", "", "", "", "{}", "About me");
     Assertions.assertTrue(result.get("isEmailExists"));
     Assertions.assertFalse(result.get("isSuccessful"));
   }
@@ -283,7 +302,7 @@ public class UserServiceTest {
   public void testUpdateProfileWithIllegalWebsite() {
     User user = userService.getUserUsingUid(1000);
     Map<String, Boolean> result =
-        userService.updateProfile(user, "cshzxie@gmail.com", "", "ftp://invalid", "{}", "Me");
+        userService.updateProfile(user, "cshzxie@gmail.com", "", "", "ftp://invalid", "{}", "Me");
     Assertions.assertFalse(result.get("isWebsiteLegal"));
     Assertions.assertFalse(result.get("isSuccessful"));
   }
@@ -305,6 +324,33 @@ public class UserServiceTest {
         userService.updateProfile(user, "new-password", "no-group", "text/x-java");
     Assertions.assertFalse(result.get("isUserGroupLegal"));
     Assertions.assertFalse(result.get("isSuccessful"));
+  }
+
+  /** Test case: tests the updateProfileByAdmin(...) method. Test data: a valid email / display name / bio. Expected: the update succeeds and the display name persists. */
+  @Test
+  public void testUpdateProfileByAdminSuccessfully() {
+    User user = userService.getUserUsingUid(1000);
+    Map<String, Boolean> result =
+        userService.updateProfileByAdmin(user, "cshzxie@gmail.com", "Haozhe Xie", "About me");
+    Assertions.assertTrue(result.get("isSuccessful"));
+    Assertions.assertEquals("Haozhe Xie", userService.getUserMetaUsingUid(user).get("displayName"));
+  }
+
+  /** Test case: tests the updateProfileByAdmin(...) method. Test data: an over-long display name. Expected: the update fails and personal profile fields are left untouched. */
+  @Test
+  public void testUpdateProfileByAdminWithIllegalDisplayName() {
+    User user = userService.getUserUsingUid(1000);
+    String location = (String) userService.getUserMetaUsingUid(user).get("location");
+    StringBuilder displayName = new StringBuilder();
+    for (int i = 0; i < 65; ++i) {
+      displayName.append('x');
+    }
+    Map<String, Boolean> result =
+        userService.updateProfileByAdmin(user, "cshzxie@gmail.com", displayName.toString(), "Bio");
+    Assertions.assertFalse(result.get("isDisplayNameLegal"));
+    Assertions.assertFalse(result.get("isSuccessful"));
+    // The admin editor must not wipe location / website / social links it never edits.
+    Assertions.assertEquals(location, userService.getUserMetaUsingUid(user).get("location"));
   }
 
   /** Test case: tests the isEmailValidationValid(...) method. Test data: valid validation credentials. Expected: returns true. */
@@ -370,6 +416,30 @@ public class UserServiceTest {
 
     userService.deleteUser(user.getUid());
     Assertions.assertNull(userService.getUserUsingUid(user.getUid()));
+  }
+
+  /**
+   * Test case: tests the getRegisterTimes(List) method. Test data: users #1000 and #1001. Expected:
+   * both users' register-time meta values are parsed into dates, keyed by user identifier (user #1000
+   * registered on 2014-10-07).
+   */
+  @Test
+  public void testGetRegisterTimes() {
+    Map<Long, Date> registerTimes = userService.getRegisterTimes(Arrays.asList(1000L, 1001L));
+    Assertions.assertEquals(2, registerTimes.size());
+    Assertions.assertTrue(registerTimes.containsKey(1000L));
+
+    Calendar calendar = Calendar.getInstance();
+    calendar.setTime(registerTimes.get(1000L));
+    Assertions.assertEquals(2014, calendar.get(Calendar.YEAR));
+    Assertions.assertEquals(Calendar.OCTOBER, calendar.get(Calendar.MONTH));
+    Assertions.assertEquals(7, calendar.get(Calendar.DAY_OF_MONTH));
+  }
+
+  /** Test case: tests the getRegisterTimes(List) method with an empty list. Expected: an empty map (no query is issued). */
+  @Test
+  public void testGetRegisterTimesEmpty() {
+    Assertions.assertTrue(userService.getRegisterTimes(Collections.emptyList()).isEmpty());
   }
 
   /** Returns the time at this moment tomorrow, used to construct non-expired email validation credentials. */

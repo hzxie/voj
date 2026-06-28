@@ -1,0 +1,1485 @@
+/*!
+ * Verwandlung Online Judge - terminal-aesthetic UI system
+ * Single source of truth for theme variables + reusable components.
+ * Replaces the old Bootstrap 2.x / Flat-UI / Font Awesome stack.
+ */
+
+/* ----------------------------------------------------------------------------
+ * Self-hosted fonts (no Google Fonts CDN - works behind the GFW).
+ * ------------------------------------------------------------------------- */
+@font-face { font-family:'Space Grotesk'; font-style:normal; font-weight:400; font-display:swap; src:url('../fonts/space-grotesk-400.woff2') format('woff2'); }
+@font-face { font-family:'Space Grotesk'; font-style:normal; font-weight:500; font-display:swap; src:url('../fonts/space-grotesk-500.woff2') format('woff2'); }
+@font-face { font-family:'Space Grotesk'; font-style:normal; font-weight:600; font-display:swap; src:url('../fonts/space-grotesk-600.woff2') format('woff2'); }
+@font-face { font-family:'Space Grotesk'; font-style:normal; font-weight:700; font-display:swap; src:url('../fonts/space-grotesk-700.woff2') format('woff2'); }
+@font-face { font-family:'JetBrains Mono'; font-style:normal; font-weight:400; font-display:swap; src:url('../fonts/jetbrains-mono-400.woff2') format('woff2'); }
+@font-face { font-family:'JetBrains Mono'; font-style:normal; font-weight:500; font-display:swap; src:url('../fonts/jetbrains-mono-500.woff2') format('woff2'); }
+@font-face { font-family:'JetBrains Mono'; font-style:normal; font-weight:600; font-display:swap; src:url('../fonts/jetbrains-mono-600.woff2') format('woff2'); }
+@font-face { font-family:'JetBrains Mono'; font-style:normal; font-weight:700; font-display:swap; src:url('../fonts/jetbrains-mono-700.woff2') format('woff2'); }
+
+/* ----------------------------------------------------------------------------
+ * Theme variables. Dark is the default; [data-theme="light"] overrides them.
+ * Values copied verbatim from the design files (superset across all pages).
+ * ------------------------------------------------------------------------- */
+:root {
+  --bg:#0a0c0b; --bg2:#0e1411; --bg3:#0b110e; --band:#0c110f;
+  --line:#1f2a24; --line2:#16201b;
+  --text:#cdd9d1; --text2:#8ba093; --text3:#6f8479; --head:#eafff5;
+  --accent:#34d399; --accent-ink:#062018; --accent-soft:rgba(52,211,153,.12);
+  --warn:#e6a445; --err:#ef6b66; --info:#a78bfa; --dot:#34d399;
+  --glow:rgba(52,211,153,.10); --scan:rgba(52,211,153,.022); --chip:#0e1411;
+
+  /* JetBrains Mono / Space Grotesk have no CJK glyphs, so Chinese characters fall
+   * through (per-glyph) to the CJK system fonts below - PingFang SC (macOS),
+   * Microsoft YaHei (Windows), Noto/Source Han Sans (Linux) - instead of the UA's
+   * default SimSun. Latin text still renders in the primary webfont. */
+  --cjk:'PingFang SC','Microsoft YaHei','Hiragino Sans GB','Noto Sans CJK SC','Source Han Sans SC';
+  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,var(--cjk),monospace;
+  --display:'Space Grotesk','Segoe UI',system-ui,var(--cjk),sans-serif;
+  --pad:clamp(20px,5vw,72px);
+  --maxw:1340px;
+  --shadow-card:0 8px 28px rgba(0,0,0,.35);
+}
+[data-theme="light"] {
+  --bg:#e7eeea; --bg2:#ffffff; --bg3:#eef4f0; --band:#dde7e1;
+  --line:#ccdad2; --line2:#e3ede7;
+  --text:#28332e; --text2:#52645b; --text3:#82948a; --head:#0b1812;
+  --accent:#079a4e; --accent-ink:#ffffff; --accent-soft:rgba(7,154,78,.14);
+  --warn:#c2600a; --err:#cf3a1f; --info:#7c52d6; --dot:#079a4e;
+  --glow:rgba(7,154,78,.16); --scan:rgba(7,154,78,.03); --chip:#eef6f1;
+  --shadow-card:0 8px 28px rgba(0,0,0,.12);
+}
+
+/* ----------------------------------------------------------------------------
+ * Base / reset
+ * ------------------------------------------------------------------------- */
+* { box-sizing:border-box; }
+html, body { margin:0; padding:0; }
+body {
+  min-height:100vh;
+  background-color:var(--bg);
+  color:var(--text);
+  font-family:var(--mono);
+  font-size:14px;
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+a { color:var(--accent); text-decoration:none; }
+a:hover { text-decoration:none; }
+h1, h2, h3, h4, h5, h6 { font-family:var(--display); color:var(--head); margin:0; }
+img { max-width:100%; }
+::selection { background:var(--accent-soft); }
+input, textarea, select, button { font-family:inherit; }
+
+@keyframes vwBlink { 0%,100%{opacity:1;} 50%{opacity:0;} }
+@keyframes vwPulse { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:.3;transform:scale(.82);} }
+@keyframes vwBar { 0%{transform:scaleX(.15);} 100%{transform:scaleX(1);} }
+
+/* App shell: header / content / footer in a sticky-footer column. */
+.vw-app { min-height:100vh; display:flex; flex-direction:column; position:relative; overflow-x:hidden; }
+.vw-main { flex:1 0 auto; }
+
+/* Scanline overlay (decorative). */
+.vw-scanlines {
+  position:fixed; inset:0; z-index:60; pointer-events:none;
+  background-image:linear-gradient(var(--scan) 1px,transparent 1px);
+  background-size:100% 4px;
+}
+
+/* The page content column — one source of truth, like Bootstrap's .container.
+   Caps width at --maxw, centres it and adds the --pad gutters. Reused by the body
+   content sections AND every full-bleed band's inner wrapper, so the header, page
+   heads, body and footer all line up on the same column.
+   Bands whose content has no inner wrapper inset their own padding to the same
+   column via the .vw-header / .vw-pagehead / .vw-hero rule below. */
+.vw-container,
+.vw-section,
+.vw-section-table,
+.vw-detail,
+.vw-footer-inner,
+.vw-titlebar-inner,
+.vw-dochero-inner,
+.vw-stats-inner,
+.vw-profile-body {
+  max-width:var(--maxw); margin-inline:auto; padding-inline:var(--pad);
+}
+.vw-header,
+.vw-pagehead,
+.vw-hero {
+  padding-inline:max(var(--pad), (100% - var(--maxw)) / 2 + var(--pad));
+}
+.vw-cursor { display:inline-block; color:var(--accent); animation:vwBlink 1.1s steps(1) infinite; }
+
+/* ----------------------------------------------------------------------------
+ * Header + navigation
+ * ------------------------------------------------------------------------- */
+.vw-header {
+  height:66px; display:flex; align-items:center; gap:32px;
+  border-bottom:1px solid var(--line); position:sticky; top:0; z-index:50;
+  background:color-mix(in srgb,var(--bg) 88%,transparent); backdrop-filter:blur(10px);
+}
+.vw-logo { font-size:19px; font-weight:600; letter-spacing:-.3px; display:flex; align-items:center; gap:2px; white-space:nowrap; }
+.vw-logo .b { color:var(--accent); }
+.vw-logo .n { color:var(--head); }
+.vw-nav { display:flex; gap:24px; font-size:13px; }
+.vw-nav a { color:var(--text2); white-space:nowrap; }
+.vw-nav a:hover { color:var(--accent); }
+.vw-nav a.active { color:var(--accent); }
+.vw-header-spacer { flex:1; }
+
+/* Theme toggle switch. */
+.vw-toggle {
+  position:relative; width:54px; height:28px; border-radius:30px; border:1px solid var(--line);
+  background:var(--bg3); cursor:pointer; flex-shrink:0; user-select:none;
+}
+.vw-toggle .moon, .vw-toggle .sun { position:absolute; top:0; bottom:0; display:flex; align-items:center; font-size:13px; }
+.vw-toggle .moon { left:7px; color:var(--text2); }
+.vw-toggle .sun { right:7px; color:var(--warn); }
+.vw-toggle .knob {
+  position:absolute; top:3px; left:3px; width:21px; height:21px; border-radius:50%;
+  background:var(--accent); box-shadow:0 2px 5px rgba(0,0,0,.3); transition:transform .18s ease;
+}
+[data-theme="light"] .vw-toggle .knob { transform:translateX(26px); }
+
+.vw-header-link { font-size:12.5px; color:var(--text2); white-space:nowrap; }
+.vw-header-link:hover { color:var(--accent); }
+
+/* Hamburger (shown < 1080px). */
+.vw-burger {
+  display:none; flex-direction:column; align-items:center; justify-content:center; gap:4px;
+  width:40px; height:40px; border:1px solid var(--line); border-radius:9px; cursor:pointer; flex-shrink:0;
+  background:transparent;
+}
+.vw-burger span { width:16px; height:2px; background:var(--text); border-radius:2px; }
+
+/* Mobile drawer menu. */
+.vw-menu {
+  display:none; position:sticky; top:66px; z-index:49; background:var(--bg2);
+  border-bottom:1px solid var(--line); padding:8px var(--pad) 18px; flex-direction:column;
+}
+.vw-menu.open { display:flex; }
+.vw-menu a { font-size:15px; color:var(--text2); padding:13px 0; border-bottom:1px solid var(--line2); }
+.vw-menu a.active { color:var(--accent); }
+.vw-menu-actions { display:flex; gap:10px; margin-top:14px; }
+.vw-menu-actions a { flex:1; text-align:center; font-size:13.5px; padding:12px; border-radius:9px; border-bottom:0; }
+
+@media (max-width:1080px) {
+  .vw-nav, .vw-desktop-only { display:none !important; }
+  .vw-burger { display:flex !important; }
+}
+
+/* ----------------------------------------------------------------------------
+ * Footer
+ * ------------------------------------------------------------------------- */
+.vw-footer { border-top:1px solid var(--line); font-size:11.5px; color:var(--text3); flex-shrink:0; }
+.vw-footer-inner {
+  padding-block:24px;
+  display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:14px;
+}
+.vw-footer-prompt { color:var(--text3); }
+.vw-footlinks { display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:8px 18px; }
+.vw-footlinks a { color:var(--text2); }
+.vw-footlinks a:hover { color:var(--accent); }
+.vw-footlinks img { vertical-align:middle; }
+.vw-footer-icp { white-space:nowrap; }
+.vw-footer-icp a { color:var(--text2); }
+.vw-footer-icp a:hover { color:var(--accent); }
+
+/* Language dropdown. */
+.vw-lang { position:relative; }
+.vw-lang-btn {
+  display:flex; align-items:center; justify-content:center; gap:6px; color:var(--text2); cursor:pointer;
+  padding:5px 8px; border:1px solid var(--line); border-radius:7px; user-select:none; background:transparent;
+}
+.vw-lang-btn:hover { border-color:var(--accent); color:var(--accent); }
+.vw-lang-menu {
+  display:none; position:absolute; bottom:calc(100% + 8px); right:0; min-width:152px;
+  background:var(--bg2); border:1px solid var(--line); border-radius:10px;
+  box-shadow:var(--shadow-card); overflow:hidden; z-index:30;
+}
+.vw-lang.open .vw-lang-menu { display:block; }
+.vw-lang-menu a {
+  display:flex; align-items:center; justify-content:space-between; gap:14px; padding:9px 14px;
+  font-size:12px; color:var(--text2); white-space:nowrap;
+}
+.vw-lang-menu a:hover { background:var(--bg3); color:var(--accent); }
+.vw-lang-menu a.active { color:var(--accent); }
+
+@media (max-width:560px) {
+  .vw-footer-inner { flex-direction:column; align-items:center; text-align:center; }
+  .vw-footer-prompt { display:none; }
+}
+
+/* ----------------------------------------------------------------------------
+ * Page header band ( // LABEL  +  h1  +  subtitle )
+ * ------------------------------------------------------------------------- */
+.vw-pagehead {
+  padding-block:46px 28px; border-bottom:1px solid var(--line);
+  background:radial-gradient(120% 130% at 88% 0%,var(--glow),transparent 55%);
+}
+.vw-eyebrow { font-size:12px; letter-spacing:2px; color:var(--accent); margin-bottom:14px; }
+.vw-pagehead h1 { font-size:clamp(32px,4vw,46px); line-height:1.04; letter-spacing:-1.5px; font-weight:700; margin:0 0 8px; }
+.vw-pagehead .sub { font-size:13px; color:var(--text3); }
+.vw-section-label { font-size:12px; letter-spacing:1.5px; color:var(--text3); margin-bottom:16px; }
+
+/* The Latin "tracking-out" letter-spacing on small uppercase labels spaces CJK
+ * glyphs apart unpleasantly (e.g. "// 输 入 格 式"). When the page language is
+ * Chinese, reset tracking on these label/eyebrow classes - Latin locales keep it.
+ * (Matched via [lang^="zh"] because the rendered lang is "zh_CN", which the
+ * :lang(zh) hyphen-based pseudo-class would not catch.) */
+html[lang^="zh"] .vw-eyebrow,
+html[lang^="zh"] .vw-section-label,
+html[lang^="zh"] .vw-side-label,
+html[lang^="zh"] .vw-block-label,
+html[lang^="zh"] .vw-card-strip,
+html[lang^="zh"] .vw-card-srclabel,
+html[lang^="zh"] .vw-label,
+html[lang^="zh"] .vw-sample-label,
+html[lang^="zh"] .vw-table-head,
+html[lang^="zh"] .vw-stmt h5,
+html[lang^="zh"] .vw-stat .k,
+html[lang^="zh"] .vw-kpi .k,
+html[lang^="zh"] .vw-pstat .k { letter-spacing:normal; }
+
+/* Generic content section spacing. */
+.vw-section { padding:32px var(--pad); }
+
+/* Home hero (full-bleed band, aligned with the header/footer insets). */
+.vw-hero { padding-block:66px 50px; display:grid;
+  grid-template-columns:.92fr 1.08fr; gap:46px; align-items:center;
+  background:radial-gradient(120% 110% at 78% 0%,var(--glow),transparent 55%); }
+.vw-hero .vw-eyebrow { margin-bottom:22px; }
+.vw-hero-title { font-size:clamp(40px,4.6vw,58px); line-height:1.04; letter-spacing:-2px; font-weight:700; margin:0 0 20px; }
+.vw-hero-lead { font-size:14.5px; line-height:1.75; color:var(--text2); max-width:460px; margin:0 0 32px; }
+.vw-hero-btns { display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+@media (max-width:980px) { .vw-hero { grid-template-columns:1fr; gap:38px; } }
+
+/* ----------------------------------------------------------------------------
+ * Terminal "window" card (3 dots + title bar)
+ * ------------------------------------------------------------------------- */
+.vw-card { background:var(--bg2); border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+.vw-card-glow { box-shadow:0 0 0 1px var(--accent-soft),0 24px 60px var(--accent-soft); }
+.vw-card-bar {
+  display:flex; align-items:center; gap:9px; padding:12px 16px;
+  border-bottom:1px solid var(--line2); background:var(--bg3);
+}
+.vw-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+.vw-dot-r { background:#e0605a; } .vw-dot-y { background:#e0a73a; } .vw-dot-g { background:var(--accent); }
+.vw-card-title { font-size:11.5px; color:var(--text3); margin-left:6px; }
+.vw-card-body { padding:18px; }
+
+/* ----------------------------------------------------------------------------
+ * Buttons
+ * ------------------------------------------------------------------------- */
+.vw-btn {
+  display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  font-size:13.5px; font-weight:600; padding:12px 20px; border-radius:9px;
+  border:1px solid var(--line); color:var(--text); background:transparent;
+  cursor:pointer; white-space:nowrap; text-decoration:none; line-height:1;
+}
+.vw-btn:hover { border-color:var(--accent); color:var(--accent); }
+.vw-btn-accent { background:var(--accent); color:var(--accent-ink); border-color:var(--accent); box-shadow:0 10px 26px var(--accent-soft); }
+.vw-btn-accent:hover { color:var(--accent-ink); filter:brightness(1.05); }
+.vw-btn-ghost { background:var(--bg3); }
+.vw-btn-block { display:flex; width:100%; }
+.vw-btn-sm { padding:8px 14px; font-size:12.5px; }
+.vw-btn:disabled, .vw-btn.disabled { opacity:.5; cursor:not-allowed; }
+
+/* ----------------------------------------------------------------------------
+ * Chips / tags / pills
+ * ------------------------------------------------------------------------- */
+.vw-chip {
+  display:inline-block; font-size:13px; padding:9px 16px; background:var(--chip);
+  border:1px solid var(--line); border-radius:8px; color:var(--text);
+}
+.vw-tag {
+  display:inline-block; font-size:10.5px; color:var(--text2); background:var(--chip);
+  border:1px solid var(--line); padding:2px 8px; border-radius:5px;
+}
+.vw-pill {
+  display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:600;
+  padding:4px 9px; border-radius:6px; border:1px solid var(--accent-soft);
+  background:var(--accent-soft); color:var(--accent);
+}
+.vw-pill .led { width:7px; height:7px; border-radius:50%; background:currentColor; }
+.vw-pill-live { color:var(--accent); } .vw-pill-live .led { animation:vwPulse 1.6s ease infinite; }
+.vw-pill-ready { color:var(--info); border-color:var(--info); background:transparent; }
+.vw-pill-done { color:var(--text3); border-color:var(--line); background:transparent; }
+
+/* Compact verdict badge (submissions table): outlined chip taking the verdict colour. */
+.vw-vbadge { font-size:10.5px; font-weight:700; width:34px; text-align:center; padding:3px 0; border-radius:5px; flex-shrink:0; border:1px solid currentColor; }
+
+/* Verdict / difficulty colours (apply to text). */
+.vw-accent { color:var(--accent); } .vw-warn { color:var(--warn); } .vw-err { color:var(--err); } .vw-info { color:var(--info); }
+.vw-muted { color:var(--text3); } .vw-muted2 { color:var(--text2); } .vw-head { color:var(--head); }
+
+/* ----------------------------------------------------------------------------
+ * Grid tables (problems / submissions / contests / ...).
+ * A row sets its own `--cols`; cells flow inside the CSS grid.
+ * ------------------------------------------------------------------------- */
+.vw-table { background:var(--bg2); border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+.vw-table-head, .vw-table-row {
+  display:grid; grid-template-columns:var(--cols); gap:14px; align-items:center; padding:14px 22px;
+}
+.vw-table-head { border-bottom:1px solid var(--line); font-size:11px; letter-spacing:1px; color:var(--text3); padding-top:13px; padding-bottom:13px; }
+.vw-table-row { border-bottom:1px solid var(--line2); color:inherit; }
+.vw-table-row:last-child { border-bottom:0; }
+a.vw-table-row { text-decoration:none; color:inherit; }
+a.vw-table-row:hover { background:var(--bg3); }
+.vw-table-empty { padding:44px 22px; text-align:center; font-size:13px; color:var(--text3); }
+/* Horizontal-scroll wrapper for wide data tables (submissions, leaderboards). */
+.vw-tablewrap { overflow-x:auto; border:1px solid var(--line); border-radius:12px; }
+.vw-tablewrap .vw-table { border:0; border-radius:0; }
+
+/* Dynamic-column data table (contest leaderboards). */
+.vw-ltable { width:100%; border-collapse:collapse; font-size:13px; white-space:nowrap; }
+.vw-ltable th, .vw-ltable td { border-bottom:1px solid var(--line2); padding:11px 14px; text-align:left; }
+.vw-ltable thead th { background:var(--bg3); color:var(--text3); font-weight:600; font-size:11px; letter-spacing:1px; border-bottom:1px solid var(--line); }
+.vw-ltable thead th a { color:var(--text2); }
+.vw-ltable tbody tr:hover { background:var(--bg3); }
+.vw-ltable .rank { color:var(--head); font-weight:700; }
+.vw-ltable .contestant a { color:var(--head); font-weight:600; }
+.vw-ltable a { color:var(--text2); }
+.vw-ltable a:hover { color:var(--accent); }
+
+/* ----------------------------------------------------------------------------
+ * Pager
+ * ------------------------------------------------------------------------- */
+.vw-pager { display:flex; justify-content:center; align-items:center; gap:6px; margin-top:26px; font-size:13px; }
+.vw-pager a, .vw-pager span {
+  min-width:34px; height:34px; padding:0 8px; display:flex; align-items:center; justify-content:center;
+  border-radius:8px; border:1px solid var(--line); color:var(--text2);
+}
+.vw-pager a:hover { border-color:var(--accent); color:var(--accent); }
+.vw-pager .active { background:var(--accent); color:var(--accent-ink); border-color:var(--accent); }
+.vw-pager .gap, .vw-pager .nav { border:0; color:var(--text3); }
+
+/* ----------------------------------------------------------------------------
+ * Form controls (terminal style)
+ * ------------------------------------------------------------------------- */
+.vw-label { display:block; font-size:11px; letter-spacing:1px; color:var(--text3); margin-bottom:8px; }
+.vw-field {
+  display:flex; align-items:center; gap:8px; background:var(--bg3); border:1px solid var(--line);
+  border-radius:9px; padding:0 14px;
+}
+.vw-field:focus-within { border-color:var(--accent); }
+.vw-field .sigil { color:var(--accent); font-size:13px; flex-shrink:0; }
+.vw-field input, .vw-field textarea, .vw-field select {
+  flex:1; min-width:0; background:transparent; border:none; outline:none; color:var(--text);
+  font-family:var(--mono); font-size:14px; padding:12px 0;
+}
+.vw-field textarea { resize:vertical; }
+.vw-input {
+  width:100%; background:var(--bg3); border:1px solid var(--line); border-radius:9px;
+  color:var(--text); font-family:var(--mono); font-size:14px; padding:12px 14px; outline:none;
+}
+.vw-input:focus { border-color:var(--accent); }
+.vw-divider { display:flex; align-items:center; gap:12px; margin:20px 0; }
+.vw-divider::before, .vw-divider::after { content:""; flex:1; height:1px; background:var(--line2); }
+.vw-divider span { font-size:11px; color:var(--text3); }
+
+/* Segmented control (filter field switch). */
+.vw-seg { display:inline-flex; border:1px solid var(--line); border-radius:9px; overflow:hidden; flex-shrink:0; }
+.vw-seg a, .vw-seg button {
+  padding:9px 15px; font-size:12.5px; cursor:pointer; white-space:nowrap; color:var(--text2);
+  background:transparent; border:0; border-right:1px solid var(--line);
+}
+.vw-seg a:last-child, .vw-seg button:last-child { border-right:0; }
+.vw-seg .active { color:var(--accent-ink); background:var(--accent); font-weight:600; }
+
+/* Public problem-set page: filter bar, table grid, difficulty colours. */
+.vw-filters { display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+.vw-filters-search { flex:1; min-width:220px; }
+.vw-filters-difficulty { flex-shrink:0; }
+.vw-filter-select {
+  flex-shrink:0; background:var(--bg3); border:1px solid var(--line); border-radius:9px;
+  color:var(--text2); font-family:var(--mono); font-size:13px; padding:12px 34px 12px 14px;
+  outline:none; cursor:pointer; -webkit-appearance:none; -moz-appearance:none; appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%238ba093' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 14px center;
+}
+.vw-filter-select:hover, .vw-filter-select:focus { border-color:var(--accent); }
+.vw-filters-count { color:var(--text3); font-size:11.5px; white-space:nowrap; flex-shrink:0; }
+@media (max-width:560px) { .vw-filters { flex-direction:column; align-items:stretch; } }
+.vw-ptable { --cols:48px 64px minmax(0,1fr) 96px minmax(0,1fr) 88px; }
+/* Guest view: no ST column (per-user verdicts need a login), so drop its track. */
+.vw-ptable-guest { --cols:64px minmax(0,1fr) 96px minmax(0,1fr) 88px; }
+.vw-ptable .tags { display:flex; gap:6px; flex-wrap:wrap; }
+.vw-ptable .lvl { font-size:12px; font-weight:700; }
+/* ST column: show the verdict as bare coloured text, no outlined box. */
+.vw-ptable .vw-vbadge { border:none; border-radius:0; padding:0; width:auto; text-align:left; }
+@media (max-width:760px) {
+  .vw-ptable { --cols:40px 60px minmax(0,1fr) 80px; }
+  .vw-ptable-guest { --cols:60px minmax(0,1fr) 80px; }
+  .vw-ptable .ptable-hide { display:none !important; }
+}
+.lvl-easy { color:var(--accent); } .lvl-medium { color:var(--warn); } .lvl-hard { color:var(--err); }
+
+/* Judgers page: KPI cards + node cards with live load bars. */
+.vw-kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+.vw-kpi { background:var(--bg2); border:1px solid var(--line); border-radius:13px; padding:18px 20px; }
+.vw-kpi .v { font-size:30px; font-weight:700; color:var(--head); }
+.vw-kpi .v.accent { color:var(--accent); }
+.vw-kpi .k { font-size:10.5px; letter-spacing:1px; color:var(--text3); margin-top:5px; }
+@media (max-width:560px) { .vw-kpis { grid-template-columns:1fr 1fr; } }
+
+.vw-jgrid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; }
+.vw-jgrid .vw-table-empty { grid-column:1 / -1; }
+@media (max-width:1100px) { .vw-jgrid { grid-template-columns:repeat(3,1fr); } }
+@media (max-width:860px) { .vw-jgrid { grid-template-columns:1fr 1fr; } }
+@media (max-width:560px) { .vw-jgrid { grid-template-columns:1fr; } }
+.vw-jcard { background:var(--bg2); border:1px solid var(--line); border-radius:13px; padding:20px 22px; }
+.vw-jcard.is-online { box-shadow:0 0 0 1px var(--accent-soft); }
+.vw-jcard.is-offline { opacity:.62; }
+.vw-jcard-head { display:flex; align-items:center; gap:11px; margin-bottom:16px; }
+.vw-jcard-dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+.vw-jcard-dot.on { background:var(--accent); animation:vwPulse 1.6s ease infinite; }
+.vw-jcard-dot.off { background:var(--text3); }
+.vw-jcard-name { font-size:15px; font-weight:700; color:var(--head); }
+.vw-jcard-status { font-size:11px; font-weight:600; margin-left:auto; }
+.vw-jcard-status.on { color:var(--accent); }
+.vw-jcard-status.off { color:var(--text3); }
+.vw-jcard-spec { font-size:11.5px; color:var(--text3); margin-bottom:16px; }
+.vw-bar { margin-bottom:11px; }
+.vw-bar-top { display:flex; justify-content:space-between; font-size:11px; margin-bottom:5px; }
+.vw-bar-top .lbl { color:var(--text3); }
+.vw-bar-track { height:6px; background:var(--line2); border-radius:4px; overflow:hidden; }
+.vw-bar-fill { height:100%; transform-origin:left; animation:vwBar 1.3s ease both; }
+/* Load colours (CPU buckets) + the memory fill. */
+.vw-bar-low, .vw-load-low { color:var(--accent); } .vw-bar-low { background:var(--accent); }
+.vw-bar-mid, .vw-load-mid { color:var(--warn); } .vw-bar-mid { background:var(--warn); }
+.vw-bar-high, .vw-load-high { color:var(--err); } .vw-bar-high { background:var(--err); }
+.vw-bar-mem { background:var(--accent); opacity:.7; }
+
+/* Inline "live" indicator (pulsing dot) reused by page sub-headers. */
+.vw-livesub { display:flex; align-items:center; gap:8px; }
+.vw-livedot { width:6px; height:6px; border-radius:50%; background:var(--accent); animation:vwPulse 1.5s ease infinite; }
+.vw-jcard-foot { display:flex; gap:18px; margin-top:16px; padding-top:14px; border-top:1px solid var(--line2); font-size:11px; color:var(--text3); flex-wrap:wrap; }
+.vw-jcard-foot b { color:var(--text2); }
+
+/* ----------------------------------------------------------------------------
+ * Stats band
+ * ------------------------------------------------------------------------- */
+.vw-stats { border-top:1px solid var(--line); border-bottom:1px solid var(--line); background:var(--band); }
+.vw-stats-inner { padding-block:22px; display:flex; flex-wrap:wrap; }
+.vw-stat { flex:1; min-width:150px; padding:0 28px; border-left:1px solid var(--line); }
+.vw-stat:first-child { border-left:0; }
+.vw-stat .v { font-size:26px; font-weight:700; color:var(--head); font-family:var(--display); }
+.vw-stat .k { font-size:11px; letter-spacing:1.5px; color:var(--text3); margin-top:4px; }
+@media (max-width:560px) { .vw-stat { flex:1 1 42%; border-left:0; padding:8px 0; } }
+
+/* ----------------------------------------------------------------------------
+ * Small utilities (sparingly; prefer components above)
+ * ------------------------------------------------------------------------- */
+.vw-row { display:flex; align-items:center; }
+.vw-between { display:flex; align-items:center; justify-content:space-between; gap:14px; }
+.vw-list { display:flex; flex-direction:column; gap:10px; }
+a.vw-card { text-decoration:none; color:inherit; display:block; }
+a.vw-card:hover { border-color:var(--accent); }
+.vw-gap-sm { gap:8px; } .vw-gap { gap:14px; }
+.vw-grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:26px; }
+@media (max-width:760px) { .vw-grid-2 { grid-template-columns:1fr; } }
+.vw-mono { font-family:var(--mono); }
+.vw-display { font-family:var(--display); }
+.vw-pre { white-space:pre; }
+.vw-hidden { display:none !important; }
+.vw-strong { font-weight:600; }
+.vw-nowrap { white-space:nowrap; }
+.vw-ellipsis { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.vw-minw0 { min-width:0; }
+.vw-wrap { flex-wrap:wrap; }
+.vw-chips { display:flex; flex-wrap:wrap; gap:9px; }
+.vw-link-sm { font-size:12px; text-transform:none; }
+.vw-livesub-mb { margin-bottom:24px; }
+
+/* ----------------------------------------------------------------------------
+ * Terminal card decorations (home hero card + error pages).
+ * ------------------------------------------------------------------------- */
+.vw-card-status { font-size:11px; }
+.vw-term { font-size:13px; line-height:1.75; }
+.vw-term-sm { font-size:12.5px; line-height:1.8; }
+.vw-pre-result { margin-top:6px; }
+
+/* ----------------------------------------------------------------------------
+ * Home (index) specifics.
+ * ------------------------------------------------------------------------- */
+.vw-gitbtn { display:flex; align-items:stretch; border:1px solid var(--line); border-radius:9px; overflow:hidden; font-size:13.5px; font-weight:600; line-height:1; color:var(--text); }
+.vw-gitbtn:hover { border-color:var(--accent); }
+.vw-gitbtn-label { display:flex; align-items:center; padding:12px 16px; }
+.vw-gitbtn-star { display:flex; align-items:center; gap:6px; padding:12px 15px; border-left:1px solid var(--line); background:var(--bg3); }
+.vw-gitbtn-count { display:inline-flex; align-items:center; justify-content:center; min-width:24px; }
+/* Spinner shown while the live GitHub star count loads. */
+.vw-spinner { display:inline-block; vertical-align:middle; width:13px; height:13px; border:2px solid var(--line); border-top-color:var(--warn); border-radius:50%; animation:vwSpin .6s linear infinite; }
+@keyframes vwSpin { to { transform:rotate(360deg); } }
+.vw-home-contests { padding-bottom:30px; }
+.vw-home-langs { padding-top:14px; }
+.vw-home-langs .vw-section-label { margin-bottom:14px; }
+.vw-home-colhead { margin-bottom:15px; }
+.vw-contest-name { font-size:14.5px; font-weight:600; }
+.vw-contest-meta { font-size:11px; margin-top:3px; }
+.vw-bulletin { list-style:none; margin:0; padding:0; }
+.vw-bulletin-item { padding:11px 17px; border-bottom:1px solid var(--line2); display:flex; align-items:center; gap:13px; font-size:12.5px; cursor:pointer; }
+.vw-bulletin-item:last-child { border-bottom:0; }
+.vw-bulletin-link { display:flex; align-items:center; gap:13px; width:100%; color:inherit; }
+.vw-bulletin-date { width:60px; flex-shrink:0; }
+.vw-bulletin-title { color:var(--text); flex:1; }
+.vw-card-empty { padding:18px; }
+.vw-modal-title { margin:0; color:var(--head); }
+
+/* ----------------------------------------------------------------------------
+ * Submissions list / detail specifics.
+ * ------------------------------------------------------------------------- */
+.vw-section-table { padding:24px var(--pad) 54px; }
+.vw-table-submissions { --cols:88px minmax(220px,1fr) 128px 172px 96px 272px; min-width:1100px; }
+.vw-cell-when { white-space:nowrap; font-size:12px; }
+.vw-cell-lang { font-size:12.5px; }
+.vw-cell-verdict { display:flex; align-items:center; gap:10px; min-width:0; }
+.vw-verdict-name { font-size:13px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.vw-verdict-time { font-size:11px; white-space:nowrap; flex-shrink:0; }
+.vw-loadmore p { margin:0; }
+.vw-run-label { font-size:15px; }
+.vw-verdict-lg { font-size:18px; font-weight:700; display:flex; align-items:center; gap:9px; }
+.vw-verdict-dot { width:11px; height:11px; border-radius:50%; background:currentColor; }
+.vw-titlebar-prob { font-size:14px; border-left:1px solid var(--line); padding-left:14px; }
+.vw-titlebar-meta { display:flex; gap:18px; font-size:12px; color:var(--text3); flex-wrap:wrap; }
+.vw-card-accent { box-shadow:0 0 0 1px var(--accent-soft); }
+.vw-card-srclabel { font-size:12px; letter-spacing:1.5px; }
+.vw-card-flush { padding:0; }
+/* Full-bleed source listing: cancel the bordered/rounded .vw-stmt pre treatment
+ * (defined later, higher specificity) so the code sits flush inside the card. */
+.vw-stmt .vw-src-pre { margin:0; border:0; border-radius:0; }
+.vw-card-foot { border-top:1px solid var(--line2); padding:11px 16px; display:flex; gap:18px; font-size:11px; color:var(--text3); flex-wrap:wrap; }
+.vw-side-verdict { background:var(--accent-soft); border-bottom:1px solid var(--line2); }
+.vw-side-verdict-name { font-size:18px; font-weight:700; }
+.vw-side-verdict-sub { font-size:12px; margin-top:4px; }
+.vw-side-label { font-size:11px; letter-spacing:1.5px; color:var(--text3); margin-bottom:12px; }
+.vw-env { display:flex; flex-direction:column; gap:9px; font-size:12.5px; color:var(--text2); }
+.vw-env-row { display:flex; align-items:center; gap:9px; }
+.vw-env-dot { width:7px; height:7px; border-radius:50%; background:var(--accent); }
+
+/* Minimal header (error / auth chrome). */
+.vw-header-min { gap:18px; }
+
+/* ----------------------------------------------------------------------------
+ * Shared section / card labels + layout helpers reused across the data pages
+ * (contests, discussion, problem detail, profile).
+ * ------------------------------------------------------------------------- */
+.vw-side-label-accent { color:var(--accent); }
+.vw-block-label { font-size:12px; letter-spacing:1.5px; margin-bottom:14px; }
+.vw-mb0 { margin-bottom:0; }
+.vw-section-narrow { max-width:1340px; margin:0 auto; }
+.vw-flex1-min0 { flex:1; min-width:0; }
+.vw-input-auto { width:auto; padding:7px 12px; }
+
+/* ----------------------------------------------------------------------------
+ * Contests list (// LIVE & UPCOMING cards + // PAST CONTESTS table).
+ * ------------------------------------------------------------------------- */
+.vw-contest-list { display:flex; flex-direction:column; gap:12px; }
+.vw-contest-card { display:block; background:var(--bg2); border:1px solid var(--line); border-radius:13px; padding:22px 24px; text-decoration:none; color:inherit; box-shadow:0 0 0 1px var(--accent-soft); }
+.vw-contest-card:hover { border-color:var(--accent); }
+.vw-contest-cardhead { display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-bottom:12px; }
+.vw-ctype { font-size:11px; font-weight:700; border:1px solid currentColor; padding:3px 10px; border-radius:6px; }
+.vw-ctype-sm { font-size:10.5px; font-weight:700; border:1px solid currentColor; padding:2px 8px; border-radius:5px; }
+.vw-ctype-acm { color:var(--accent); }
+.vw-ctype-oi { color:var(--info); }
+.vw-ctitle { font-size:18px; font-weight:700; color:var(--head); }
+.vw-cstatus { font-size:12px; font-weight:600; display:flex; align-items:center; gap:7px; }
+.vw-cstatus .dot { width:8px; height:8px; border-radius:50%; background:currentColor; }
+.vw-cstatus-live { color:var(--accent); } .vw-cstatus-live .dot { animation:vwPulse 1.6s ease infinite; }
+.vw-cstatus-ready { color:var(--info); }
+.vw-cmeta { display:flex; gap:26px; font-size:12.5px; color:var(--text3); flex-wrap:wrap; }
+.vw-table-contests { --cols:70px minmax(0,1fr) 220px 150px 90px; min-width:760px; }
+.vw-cell-title { font-size:14.5px; font-weight:600; color:var(--head); }
+.vw-table-cproblems { --cols:110px minmax(0,1fr); }
+.vw-table-cproblems-guest { --cols:minmax(0,1fr); }
+.vw-card-cta { margin-bottom:16px; }
+.vw-between-top { flex-wrap:wrap; align-items:flex-start; }
+.vw-thread-title { font-size:clamp(22px,3vw,30px); letter-spacing:-1px; margin:0; }
+.vw-mt-10 { margin-top:10px; }
+.vw-mt-16 { margin-top:16px; }
+.vw-noshrink { flex-shrink:0; }
+.vw-editor-card { scroll-margin-top:84px; }
+.vw-filters-sub { margin-bottom:26px; }
+.vw-mb-14 { margin-bottom:14px; }
+.vw-mb-6 { margin-bottom:6px; }
+.vw-dash-title { font-size:clamp(26px,3vw,34px); letter-spacing:-1px; margin:0 0 22px; }
+
+/* ----------------------------------------------------------------------------
+ * Profile (user) specifics.
+ * ------------------------------------------------------------------------- */
+.vw-avatar-lg { width:64px; height:64px; border-radius:16px; }
+.vw-user-name { font-size:clamp(24px,3vw,34px); letter-spacing:-1px; }
+.vw-user-group { font-size:12.5px; margin-top:4px; }
+.vw-social { list-style:none; margin:0 0 16px; padding:0; flex-wrap:wrap; }
+.vw-stats-plain { border:0; background:none; margin-top:8px; }
+.vw-stats-plain .vw-stats-inner { padding:14px 0 0; }
+.vw-stats-plain .vw-stat { padding:0 14px; }
+.vw-stats-plain .vw-stat:first-child { border-left:0; padding:0 14px 0 0; }
+.vw-table-usersubs { --cols:54px minmax(0,1fr) 110px 80px; }
+
+/* ----------------------------------------------------------------------------
+ * Bootstrap-2.x compatibility shim - themed.
+ * The legacy markup that still ships (admin area) and the HTML built at runtime
+ * by page scripts (reply editors, modals) use these class names. Rather than
+ * rewrite every line, map them onto the terminal aesthetic so everything stays
+ * visually consistent.
+ * ------------------------------------------------------------------------- */
+.container { width:100%; max-width:var(--maxw); margin:0 auto; padding-left:var(--pad); padding-right:var(--pad); }
+.row-fluid { display:flex; flex-wrap:wrap; gap:20px; }
+.row-fluid::after { content:""; display:table; clear:both; }
+[class*="span"] { flex:1; min-width:0; }
+.row-fluid > .span1 { flex:0 0 6.5%; } .row-fluid > .span2 { flex:0 0 15%; } .row-fluid > .span3 { flex:0 0 23%; }
+.row-fluid > .span4 { flex:0 0 31%; } .row-fluid > .span5 { flex:0 0 40%; } .row-fluid > .span6 { flex:0 0 48%; }
+.row-fluid > .span7 { flex:0 0 57%; } .row-fluid > .span8 { flex:0 0 65%; } .row-fluid > .span9 { flex:0 0 74%; }
+.row-fluid > .span10 { flex:0 0 82%; } .row-fluid > .span12 { flex:0 0 100%; }
+@media (max-width:860px) { .row-fluid > [class*="span"] { flex:0 0 100%; } }
+
+.btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; font-size:13px; font-weight:600;
+  padding:10px 16px; border-radius:9px; border:1px solid var(--line); color:var(--text); background:transparent; cursor:pointer; text-decoration:none; line-height:1; }
+.btn:hover { border-color:var(--accent); color:var(--accent); }
+.btn-primary, .btn-success { background:var(--accent); color:var(--accent-ink); border-color:var(--accent); }
+.btn-primary:hover, .btn-success:hover { color:var(--accent-ink); filter:brightness(1.05); }
+.btn-default { background:var(--bg3); }
+.btn-danger { border-color:var(--err); color:var(--err); }
+.btn-danger:hover { background:var(--err); color:#fff; border-color:var(--err); }
+.btn-block { display:flex; width:100%; }
+.btn-small, .btn-sm { padding:7px 12px; font-size:12px; }
+.btn[disabled], .btn:disabled { opacity:.5; cursor:not-allowed; }
+
+.form-control, input[type=text], input[type=password], input[type=email], input[type=number], textarea, select {
+  width:100%; background:var(--bg3); border-radius:9px; color:var(--text);
+  font-family:var(--mono); font-size:14px; padding:10px 12px; outline:none; box-sizing:border-box; }
+.form-control:focus, input:focus, textarea:focus, select:focus { border-color:var(--accent); }
+.control-group, .form-group { margin-bottom:14px; }
+label { color:var(--text2); font-size:13px; }
+.checkbox, .radio { display:flex; align-items:center; gap:8px; }
+input[type=checkbox], input[type=radio] { width:auto; accent-color:var(--accent); }
+
+.table { width:100%; border-collapse:collapse; font-size:13px; }
+.table th, .table td { padding:11px 14px; text-align:left; border-bottom:1px solid var(--line2); }
+.table th { color:var(--text3); font-weight:600; font-size:11px; letter-spacing:1px; border-bottom:1px solid var(--line); }
+.table-striped tbody tr:nth-child(odd) { background:var(--bg2); }
+.table a { color:var(--text2); }
+.table a:hover { color:var(--accent); }
+
+ul.inline, .inline { list-style:none; margin:0; padding:0; }
+ul.inline > li, .inline > li { display:inline-block; margin-right:14px; }
+.pull-right { float:right; }
+.pull-left { float:left; }
+.text-right { text-align:right; }
+.text-center { text-align:center; }
+.img-circle { border-radius:50%; }
+
+.alert { border-radius:9px; padding:11px 14px; font-size:12.5px; line-height:1.5; margin-bottom:16px; border:1px solid var(--line); background:var(--bg3); color:var(--text2); }
+.alert-error, .alert-danger { background:rgba(239,107,102,.10); border-color:var(--err); color:var(--err); }
+.alert-success { background:var(--accent-soft); border-color:var(--accent); color:var(--accent); }
+.alert-warning { background:rgba(230,164,69,.10); border-color:var(--warn); color:var(--warn); }
+.alert h5 { color:inherit; margin:0 0 4px; font-family:var(--mono); font-size:13px; }
+
+.modal { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:1050; width:90%; max-width:560px;
+  background:var(--bg2); border:1px solid var(--line); border-radius:13px; box-shadow:var(--shadow-card); overflow:hidden; }
+.modal.hide { display:none !important; }
+.modal-header { padding:14px 18px; border-bottom:1px solid var(--line2); display:flex; align-items:center; justify-content:space-between; }
+.modal-body { padding:18px; }
+.modal-footer { padding:14px 18px; border-top:1px solid var(--line2); display:flex; justify-content:flex-end; gap:10px; }
+.modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:1040; }
+.close { background:none; border:0; color:var(--text3); font-size:20px; cursor:pointer; line-height:1; }
+.close:hover { color:var(--accent); }
+.widget { margin-bottom:18px; }
+.widget h4 { font-family:var(--mono); font-size:11px; font-weight:600; letter-spacing:1.5px; color:var(--text3); text-transform:uppercase; margin:0 0 12px; }
+
+/* Tabs (legacy .nav-tabs + .tab-pane, driven by the data-toggle handler in theme.js). */
+.nav-tabs { list-style:none; margin:0 0 24px; padding:0; display:flex; gap:4px; flex-wrap:wrap; border-bottom:1px solid var(--line); }
+.nav-tabs > li > a { display:block; padding:11px 16px; font-size:12.5px; font-weight:600; color:var(--text3); border-bottom:2px solid transparent; white-space:nowrap; }
+.nav-tabs > li > a:hover { color:var(--text); }
+.nav-tabs > li.active > a { color:var(--accent); border-bottom-color:var(--accent); }
+.tab-content > .tab-pane { display:none; }
+.tab-content > .tab-pane.active { display:block; }
+
+/* Section (legacy) - card-ish block used by dashboard/user/admin. */
+.tab-content .section, #main-content .section { background:var(--bg2); border:1px solid var(--line); border-radius:12px; padding:24px; margin-bottom:20px; }
+.tab-content .section > .header h4, .section > .header h4 { font-family:var(--display); font-size:18px; color:var(--head); margin:0 0 16px; }
+.section h4 { font-family:var(--display); color:var(--head); }
+.section h5 { font-family:var(--mono); font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--text3); }
+
+.label { display:inline-block; font-size:10.5px; font-weight:600; padding:2px 8px; border-radius:5px; border:1px solid var(--line); color:var(--text2); }
+.label-success { background:var(--accent-soft); border-color:var(--accent); color:var(--accent); }
+
+/* Bootstrap-style dropdown (admin header user menu). */
+.dropdown { position:relative; }
+.dropdown-menu { display:none; position:absolute; right:0; top:calc(100% + 6px); min-width:190px;
+  background:var(--bg2); border:1px solid var(--line); border-radius:10px; box-shadow:var(--shadow-card); z-index:60; list-style:none; margin:0; padding:6px; }
+.dropdown.open .dropdown-menu { display:block; }
+.dropdown-menu > li > a { display:flex; align-items:center; gap:8px; padding:9px 12px; color:var(--text2); font-size:13px; border-radius:7px; }
+.dropdown-menu > li > a:hover { background:var(--bg3); color:var(--accent); }
+.dropdown-menu .divider { height:1px; background:var(--line2); margin:6px 0; list-style:none; }
+
+/* ----------------------------------------------------------------------------
+ * Administration back-office shell (layouts/admin + admin-sidebar + admin-header)
+ * ------------------------------------------------------------------------- */
+#wrapper { min-height:100vh; }
+#sidebar { position:fixed; top:0; left:0; bottom:0; width:250px; background:var(--bg2); border-right:1px solid var(--line); overflow-y:auto; z-index:40; }
+#sidebar #logo { padding:18px 20px; border-bottom:1px solid var(--line); }
+#sidebar #logo a { font-size:18px; font-weight:600; letter-spacing:-.3px; display:inline-flex; align-items:center; gap:2px; }
+#sidebar #logo .b { color:var(--accent); } #sidebar #logo .n { color:var(--head); }
+#sidebar-user { padding:16px 20px; border-bottom:1px solid var(--line); font-size:12px; color:var(--text2); display:flex; gap:12px; align-items:center; }
+#sidebar-user img { width:40px; height:40px; border-radius:10px; border:1px solid var(--line); }
+#sidebar-nav ul.nav { list-style:none; margin:0; padding:8px 0; }
+#sidebar-nav .nav-item > a { display:flex; align-items:center; gap:10px; padding:11px 20px; color:var(--text2); font-size:13px; }
+#sidebar-nav .nav-item > a:hover { color:var(--accent); background:var(--bg3); }
+#sidebar-nav .nav-item.active > a { color:var(--accent); }
+#sidebar-nav .primary-nav-item > a > .fa-caret-right, #sidebar-nav .primary-nav-item > a > .fa-caret-down { margin-left:auto; font-size:11px; color:var(--text3); }
+#sidebar-nav .sub-nav { display:none; list-style:none; margin:0; padding:0; background:var(--bg3); }
+#sidebar-nav .sub-nav .nav-item > a { padding:9px 20px 9px 46px; font-size:12.5px; }
+
+#container { min-height:100vh; display:flex; flex-direction:column; }
+#header { height:60px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between;
+  padding:0 22px 0 250px; position:sticky; top:0; background:color-mix(in srgb,var(--bg) 88%,transparent); backdrop-filter:blur(10px); z-index:30; }
+#header #sidebar-toggle { color:var(--text2); font-size:18px; }
+#header #sidebar-toggle:hover { color:var(--accent); }
+#header .nav.inline { margin:0; }
+#header .dropdown-toggle { display:flex; align-items:center; gap:10px; color:var(--text2); font-size:13px; }
+#header .dropdown-toggle img { width:30px; height:30px; border-radius:8px; border:1px solid var(--line); }
+#content { padding:26px 22px; margin-left:250px; flex:1; }
+#content .vw-eyebrow { color:var(--accent); }
+@media (max-width:760px) {
+  #header { padding-left:22px; }
+  #content { margin-left:0; }
+  #sidebar { display:none; }
+}
+
+/* Admin page-body building blocks (themed; bodies otherwise rely on the shim). */
+.page-header { font-family:var(--display); font-size:24px; color:var(--head); margin:0 0 22px; display:flex; align-items:center; gap:10px; padding-bottom:16px; border-bottom:1px solid var(--line); }
+.page-header .fa { color:var(--accent); }
+.panel { background:var(--bg2); border:1px solid var(--line); border-radius:12px; overflow:hidden; margin-bottom:20px; }
+.panel > .header { padding:16px 18px; border-bottom:1px solid var(--line2); }
+.panel > .header h5 { font-family:var(--mono); font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--text3); margin:0; display:flex; align-items:center; gap:8px; }
+.panel > .body { padding:18px; }
+#overview .widget { background:var(--bg2); border:1px solid var(--line); border-radius:12px; padding:18px; }
+#overview .glance { align-items:center; }
+#overview .glance .fa { font-size:28px; color:var(--accent); }
+#overview h2 { font-family:var(--display); font-size:28px; color:var(--head); margin:4px 0 0; }
+#overview h4 { font-family:var(--display); color:var(--head); margin:4px 0 0; }
+.text-uppercase { text-transform:uppercase; font-size:10.5px; letter-spacing:1px; color:var(--text3); }
+.border-right { border-right:1px solid var(--line2); }
+.more { display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--accent); margin-top:10px; }
+.glance { display:flex; gap:14px; }
+
+/* ----------------------------------------------------------------------------
+ * Long-form document pages (about / help / terms / privacy) + prose/markdown
+ * ------------------------------------------------------------------------- */
+.vw-doc {
+  max-width:var(--maxw); margin:0 auto; padding:36px var(--pad) 56px;
+  display:grid; grid-template-columns:1fr 240px; gap:28px; align-items:start;
+}
+.vw-doc-toc { position:sticky; top:90px; font-size:12.5px; }
+.vw-doc-toc h5 { font-family:var(--mono); font-weight:600; font-size:11px; letter-spacing:1.5px; color:var(--text3); margin:0 0 12px; }
+.vw-doc-toc a { display:block; color:var(--text2); padding:6px 0; }
+.vw-doc-toc a:hover { color:var(--accent); }
+@media (max-width:860px) {
+  .vw-doc { grid-template-columns:1fr; }
+  .vw-doc-toc { position:static; order:-1; }
+}
+
+.vw-prose, .markdown { font-size:14px; line-height:1.8; color:var(--text2); }
+.vw-prose > :first-child, .markdown > :first-child { margin-top:0; }
+.vw-prose h1, .vw-prose h2, .vw-prose h3, .vw-prose h4,
+.markdown h1, .markdown h2, .markdown h3, .markdown h4 { color:var(--head); font-family:var(--display); line-height:1.25; margin:1.7em 0 .6em; }
+.vw-prose h1, .markdown h1 { font-size:24px; }
+.vw-prose h2, .markdown h2 { font-size:20px; }
+.vw-prose h3, .markdown h3 { font-size:16px; }
+.vw-prose h4, .markdown h4 { font-size:14px; }
+.vw-prose p, .markdown p { margin:0 0 1em; }
+.vw-prose a, .markdown a { color:var(--accent); }
+.vw-prose a:hover, .markdown a:hover { text-decoration:underline; }
+.vw-prose ul, .vw-prose ol, .markdown ul, .markdown ol { padding-left:20px; margin:0 0 1em; }
+.vw-prose li, .markdown li { margin:.3em 0; }
+.vw-prose code, .markdown code { font-family:var(--mono); background:var(--bg3); border:1px solid var(--line2); border-radius:5px; padding:1px 5px; font-size:.92em; color:var(--text); white-space:pre-wrap; word-wrap:break-word; }
+.vw-prose pre, .markdown pre { background:var(--bg3); border:1px solid var(--line); border-radius:9px; padding:14px 16px; overflow:auto; margin:0 0 1em; }
+.vw-prose pre code, .markdown pre code { border:0; background:transparent; padding:0; white-space:pre; }
+.vw-prose blockquote, .markdown blockquote { border-left:2px solid var(--accent); margin:1em 0; padding:2px 0 2px 16px; color:var(--text3); }
+.vw-prose table, .markdown table { width:100%; border-collapse:collapse; margin:0 0 1em; font-size:13px; }
+.vw-prose th, .vw-prose td, .markdown th, .markdown td { border:1px solid var(--line); padding:8px 12px; text-align:left; }
+.vw-prose th, .markdown th { background:var(--bg3); color:var(--text); }
+.vw-prose img, .markdown img { border-radius:8px; }
+
+/* ----------------------------------------------------------------------------
+ * Constrained hero for the doc / legal / about pages (centered, not full-bleed).
+ * Mirrors the design: radial glow band, eyebrow, big display headline, lead.
+ * The max-width differs per page, so callers set it via an inline style.
+ * ------------------------------------------------------------------------- */
+.vw-dochero { border-bottom:1px solid var(--line); background:radial-gradient(110% 130% at 80% 0%,var(--glow),transparent 55%); }
+.vw-dochero-inner { padding-block:60px 44px; }
+.vw-dochero h1 { font-size:clamp(32px,4.4vw,52px); line-height:1.05; letter-spacing:-2px; font-weight:700; margin:0 0 22px; }
+.vw-dochero h1 .accent { color:var(--accent); }
+.vw-dochero-lead { font-size:15.5px; line-height:1.75; color:var(--text2); max-width:640px; margin:0; }
+.vw-dochero-lead.mb { margin-bottom:26px; }
+.vw-chiprow { display:flex; flex-wrap:wrap; gap:10px; font-size:11.5px; }
+.vw-chiprow .chip { padding:7px 13px; background:var(--chip); border:1px solid var(--line); border-radius:7px; color:var(--text3); }
+.vw-chiprow .chip b { color:var(--head); font-weight:400; }
+
+/* Legal document layout (terms / privacy): left sticky numbered TOC + sections. */
+.vw-legal { max-width:var(--maxw); margin:0 auto; padding:46px var(--pad) 56px; display:grid; grid-template-columns:220px 1fr; gap:48px; align-items:start; }
+.vw-legal-toc { position:sticky; top:90px; }
+.vw-legal-toc .label { font-size:11px; letter-spacing:1.5px; color:var(--text3); margin-bottom:14px; }
+.vw-legal-toc nav { display:flex; flex-direction:column; gap:2px; }
+.vw-legal-toc a { display:flex; gap:9px; font-size:12px; color:var(--text2); padding:6px 8px; border-radius:6px; line-height:1.4; }
+.vw-legal-toc a:hover { background:var(--bg2); color:var(--accent); }
+.vw-legal-toc a .n { color:var(--accent); flex-shrink:0; }
+.vw-legal-body { min-width:0; }
+.vw-legal-sec { scroll-margin-top:90px; padding-bottom:34px; margin-bottom:34px; border-bottom:1px solid var(--line2); }
+.vw-legal-sec > .h { display:flex; align-items:baseline; gap:14px; margin-bottom:16px; }
+.vw-legal-sec > .h .n { font-size:12px; font-weight:700; color:var(--accent); }
+.vw-legal-sec h2 { font-size:22px; line-height:1.2; letter-spacing:-.5px; font-weight:700; margin:0; }
+.vw-legal-sec p { font-size:14px; line-height:1.78; color:var(--text2); margin:0 0 14px; }
+.vw-legal-sec ul { margin:4px 0 6px; padding-left:0; list-style:none; display:flex; flex-direction:column; gap:9px; }
+.vw-legal-sec li { display:flex; gap:11px; font-size:13.5px; line-height:1.65; color:var(--text2); }
+.vw-legal-sec li .arrow { color:var(--accent); flex-shrink:0; }
+@media (max-width:880px) { .vw-legal { grid-template-columns:1fr; } .vw-legal-toc { display:none; } }
+
+/* Contact card footer (terms / privacy). */
+.vw-contact { background:var(--bg2); border:1px solid var(--line); border-radius:13px; padding:22px 24px; display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+.vw-contact-text { flex:1; min-width:200px; }
+.vw-contact-text .t { font-size:13px; font-weight:700; color:var(--head); margin-bottom:5px; }
+.vw-contact-text .d { font-size:12.5px; color:var(--text3); }
+.vw-contact-text .d a { color:var(--accent); }
+
+/* About page: architecture stack, milestones timeline, maintainer/links cards. */
+.vw-about { max-width:var(--maxw); margin:0 auto; padding:34px var(--pad); }
+.vw-pcard { background:var(--bg2); border:1px solid var(--line); border-radius:13px; padding:24px 26px; }
+/* About maintainer + open-source cards. */
+.vw-maint { display:flex; align-items:center; gap:16px; }
+.vw-maint-avatar { width:58px; height:58px; border-radius:16px; background:var(--bg3); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-family:var(--display); font-size:26px; font-weight:700; color:var(--accent); flex-shrink:0; }
+.vw-maint-name { font-size:16px; font-weight:700; color:var(--head); }
+.vw-maint-role { font-size:12.5px; color:var(--text3); margin-top:3px; }
+.vw-maint-links { font-size:12px; color:var(--accent); margin-top:6px; }
+.vw-oss { display:flex; flex-direction:column; gap:11px; font-size:13px; }
+.vw-arch { display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; }
+.vw-arch .card { background:var(--bg2); border:1px solid var(--line); border-radius:13px; padding:20px 22px; }
+.vw-arch .card .n { font-size:13px; font-weight:700; color:var(--accent); margin-bottom:8px; }
+.vw-arch .card .d { font-size:12.5px; line-height:1.65; color:var(--text2); }
+@media (max-width:860px) { .vw-arch { grid-template-columns:1fr; } }
+.vw-timeline { background:var(--bg2); border:1px solid var(--line); border-radius:13px; overflow:hidden; }
+.vw-timeline .row { display:grid; grid-template-columns:90px 1fr; gap:18px; padding:16px 22px; border-bottom:1px solid var(--line2); align-items:baseline; }
+.vw-timeline .row:last-child { border-bottom:0; }
+.vw-timeline .y { font-size:13px; font-weight:700; color:var(--accent); }
+.vw-timeline .t { font-size:14px; color:var(--text); }
+.vw-tstack { display:grid; grid-template-columns:1.4fr 1fr; gap:16px; }
+@media (max-width:560px) { .vw-tstack { grid-template-columns:1fr; } }
+.vw-kvrow { display:flex; justify-content:space-between; font-size:13px; }
+.vw-kvrow .k { color:var(--text3); } .vw-kvrow .v { color:var(--head); }
+
+/* Help page: verdict legend grid + FAQ accordion. */
+.vw-verdicts { max-width:var(--maxw); margin:0 auto; display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+.vw-verdict-card { background:var(--bg2); border:1px solid var(--line); border-radius:11px; padding:14px 16px; display:flex; align-items:center; gap:13px; }
+.vw-verdict-card .badge { font-size:12px; font-weight:700; width:38px; text-align:center; padding:5px 0; border-radius:6px; border:1px solid transparent; flex-shrink:0; }
+.vw-verdict-card .n { font-size:13px; font-weight:600; color:var(--head); }
+.vw-verdict-card .d { font-size:11px; color:var(--text3); margin-top:2px; }
+@media (max-width:560px) { .vw-verdicts { grid-template-columns:1fr 1fr; } }
+
+.vw-faqgroup { margin-bottom:26px; }
+.vw-faqgroup .label { font-size:11px; letter-spacing:1.5px; color:var(--accent); margin-bottom:10px; }
+.vw-faq { background:var(--bg2); border:1px solid var(--line); border-radius:13px; overflow:hidden; }
+.vw-faq-item { border-bottom:1px solid var(--line2); }
+.vw-faq-item:last-child { border-bottom:0; }
+.vw-faq-q { display:flex; align-items:center; gap:14px; width:100%; padding:16px 20px; cursor:pointer; background:transparent; border:0; text-align:left; font-family:var(--mono); }
+.vw-faq-q:hover { background:var(--bg3); }
+.vw-faq-q > span:last-child { flex:1; font-size:14px; color:var(--head); font-weight:500; }
+.vw-faq-q .chev { font-size:14px; color:var(--accent); width:16px; flex-shrink:0; transition:transform .15s; }
+.vw-faq-item.open .vw-faq-q .chev { transform:rotate(90deg); }
+.vw-faq-a { display:none; padding:2px 20px 18px 50px; }
+.vw-faq-item.open .vw-faq-a { display:block; }
+.vw-faq-a p { font-size:13px; line-height:1.75; color:var(--text2); margin:0; }
+
+/* Help: centered hero variant + decorative search bar + quick-start cards. */
+.vw-dochero-inner-center { max-width:760px; text-align:center; }
+.vw-dochero-inner-center .vw-dochero-lead { margin-left:auto; margin-right:auto; max-width:520px; }
+.vw-dochero-inner-w920 { max-width:var(--maxw); }
+.vw-dochero-inner-w1100 { max-width:var(--maxw); }
+.vw-header-link-accent { color:var(--accent); font-weight:600; }
+.vw-auth-fineprint { font-size:11.5px; line-height:1.5; margin:0 0 16px; }
+.vw-help-search { max-width:480px; margin:0 auto; display:flex; align-items:center; gap:10px; background:var(--bg2); border:1px solid var(--line); border-radius:10px; padding:12px 16px; }
+.vw-help-search .sig { color:var(--accent); font-size:14px; }
+.vw-help-search .q { flex:1; text-align:left; font-size:13.5px; color:var(--text3); }
+.vw-help-search .key { font-size:11px; color:var(--text3); border:1px solid var(--line); border-radius:5px; padding:3px 7px; }
+.vw-qcard { padding:20px 22px; display:flex; flex-direction:column; }
+.vw-qcard-head { display:flex; align-items:center; gap:11px; margin-bottom:12px; }
+.vw-qcard-n { width:30px; height:30px; border-radius:9px; background:var(--accent-soft); border:1px solid var(--accent-soft); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:var(--accent); flex-shrink:0; }
+.vw-qcard-title { font-size:14px; font-weight:700; color:var(--head); }
+.vw-qcard-desc { font-size:12.5px; line-height:1.65; color:var(--text2); margin:0 0 12px; }
+.vw-qcard-cmd { font-size:11.5px; color:var(--accent); background:var(--bg3); border:1px solid var(--line2); border-radius:7px; padding:8px 11px; margin-top:auto; }
+/* Verdict-legend filled badge colours. */
+.vw-vfill { font-size:12px; font-weight:700; width:38px; text-align:center; padding:5px 0; border-radius:6px; flex-shrink:0; }
+.vw-vfill-ac { color:var(--accent-ink); background:var(--accent); }
+.vw-vfill-err { color:#fff; background:var(--err); }
+.vw-vfill-warn { color:var(--accent-ink); background:var(--warn); }
+.vw-vfill-info { color:#fff; background:var(--info); }
+.vw-help-section { max-width:var(--maxw); margin:0 auto; padding:36px var(--pad) 12px; }
+.vw-help-faq { max-width:880px; margin:0 auto; padding:36px var(--pad) 20px; }
+.vw-help-faq-contact { margin-top:8px; }
+
+/* ----------------------------------------------------------------------------
+ * Error pages (404 / 500)
+ * ------------------------------------------------------------------------- */
+@keyframes vwGlitch {
+  0%,100%{transform:translate(0,0);clip-path:inset(0 0 0 0);}
+  20%{transform:translate(-2px,1px);clip-path:inset(8% 0 62% 0);}
+  40%{transform:translate(2px,-1px);clip-path:inset(54% 0 18% 0);}
+  60%{transform:translate(-1px,0);clip-path:inset(30% 0 44% 0);}
+  80%{transform:translate(1px,1px);clip-path:inset(74% 0 6% 0);}
+}
+/* Error layout main: full-height, centered, with the radial glow. */
+.vw-error-main { flex:1; display:flex; flex-direction:column; justify-content:center;
+  background:radial-gradient(120% 90% at 50% 0%,var(--glow),transparent 60%); }
+.vw-error {
+  display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;
+  padding:56px var(--pad);
+}
+/* Eyebrow colour variants used by the 404/500 kicker. */
+.vw-eyebrow-warn { color:var(--warn); }
+.vw-eyebrow-err { color:var(--err); }
+.vw-error-code { font-family:var(--display); font-weight:700; font-size:clamp(120px,20vw,200px); line-height:.86; letter-spacing:-6px; color:var(--head); position:relative; }
+.vw-error-code .base { position:relative; z-index:2; }
+.vw-error-code .glitch { position:absolute; inset:0; color:var(--accent); opacity:.55; animation:vwGlitch 2.6s steps(2) infinite; z-index:1; }
+.vw-error h1 { font-size:clamp(22px,3vw,30px); letter-spacing:-1px; margin:26px 0 12px; }
+.vw-error p { font-size:14px; line-height:1.7; color:var(--text2); max-width:460px; margin:0 0 30px; }
+.vw-error-btns { display:flex; gap:12px; margin-top:8px; flex-wrap:wrap; justify-content:center; }
+.vw-trace { width:100%; max-width:560px; text-align:left; }
+@media (max-width:620px) { .vw-error-btns { flex-direction:column; align-self:stretch; } }
+
+/* ----------------------------------------------------------------------------
+ * Auth pages (login / register / reset password) + form rows + alerts
+ * ------------------------------------------------------------------------- */
+.vw-auth {
+  display:flex; align-items:center; justify-content:center; padding:48px var(--pad);
+  background:radial-gradient(90% 80% at 50% 0%,var(--glow),transparent 60%);
+}
+.vw-auth-inner { width:100%; max-width:440px; }
+.vw-auth-head { text-align:center; margin-bottom:24px; }
+.vw-auth-head h1 { font-size:34px; letter-spacing:-1px; }
+.vw-auth-head .sub { font-size:13.5px; color:var(--text3); margin-top:8px; }
+.vw-auth-foot { text-align:center; font-size:12.5px; color:var(--text3); margin:20px 0 0; }
+
+/* label + control stack used across forms. */
+.vw-formrow { margin-bottom:16px; }
+.vw-formrow:last-child { margin-bottom:0; }
+.vw-formrow .vw-label { display:flex; align-items:center; justify-content:space-between; }
+.vw-formrow .vw-label a { font-size:11px; letter-spacing:0; text-transform:none; }
+
+.vw-alert { border-radius:9px; padding:11px 14px; font-size:12.5px; line-height:1.5; margin-bottom:16px; }
+.vw-alert-error { background:rgba(239,107,102,.10); border:1px solid var(--err); color:var(--err); }
+.vw-alert-success { background:var(--accent-soft); border:1px solid var(--accent); color:var(--accent); }
+.vw-alert-warning { background:rgba(230,164,69,.10); border:1px solid var(--warn); color:var(--warn); }
+.vw-alert h5 { color:inherit; font-family:var(--mono); font-size:13px; margin:0 0 4px; }
+.vw-alert p { margin:0; }
+
+.vw-check { display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--text2); cursor:pointer; }
+.vw-check input { accent-color:var(--accent); width:16px; height:16px; }
+
+/* Legacy hook: page scripts toggle a `.hide` class (formerly Bootstrap). */
+.hide { display:none !important; }
+
+/* ----------------------------------------------------------------------------
+ * Icon map - monochrome glyph replacements for the old Font Awesome classes.
+ * Keeps every `<i class="fa fa-xxx">` working (and JS selectors like
+ * `i.fa-thumbs-up`) without shipping the Font Awesome webfont.
+ * ------------------------------------------------------------------------- */
+.fa { font-style:normal; font-weight:400; display:inline-block; line-height:1; font-family:var(--mono); }
+.fa-caret-down::before { content:'\25BE'; }
+.fa-caret-right::before { content:'\25B8'; }
+.fa-clock-o::before { content:'\25F7'; }
+.fa-user::before { content:'\25C9'; }
+.fa-users::before { content:'\25CE'; }
+.fa-comment::before, .fa-comments::before { content:'\275D'; }
+.fa-pencil::before, .fa-edit::before { content:'\270E'; }
+.fa-trash::before { content:'\2421'; }
+.fa-times::before { content:'\2715'; }
+.fa-thumbs-up::before { content:'\25B2'; }
+.fa-thumbs-down::before { content:'\25BC'; }
+.fa-info-circle::before { content:'\24D8'; }
+.fa-question-circle::before { content:'?'; }
+.fa-plus-circle::before { content:'\FF0B'; }
+.fa-arrow-circle-right::before { content:'\279C'; }
+.fa-map-marker::before { content:'\25C8'; }
+.fa-envelope-o::before { content:'\2709'; }
+.fa-link::before { content:'\29C9'; }
+.fa-dashboard::before { content:'\25A6'; }
+.fa-bar-chart::before { content:'\25A5'; }
+.fa-code::before { content:'\2039\203A'; }
+.fa-cog::before, .fa-cogs::before { content:'\2699'; }
+.fa-file::before { content:'\25A4'; }
+.fa-paperclip::before { content:'\2702'; }
+.fa-bars::before { content:'\2630'; }
+.fa-language::before { content:'\6587'; }
+.fa-sign-out::before { content:'\21AA'; }
+.fa-facebook::before { content:'f'; }
+.fa-twitter::before { content:'\1D54F'; }
+.fa-weibo::before { content:'W'; }
+.fa-instagram::before { content:'\25C9'; }
+.fa-github::before { content:'\2325'; }
+.fa-stack-overflow::before { content:'S'; }
+.fa-linkedin-square::before { content:'in'; }
+
+/* ----------------------------------------------------------------------------
+ * Discussion thread (replies, vote buttons) + WMD markdown editor
+ * ------------------------------------------------------------------------- */
+#discussion-replies { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:14px; }
+#discussion-replies > li { display:flex; gap:14px; align-items:flex-start; background:var(--bg2); border:1px solid var(--line); border-radius:12px; padding:16px 18px; }
+#discussion-replies > li .span2 { flex-shrink:0; width:48px; }
+#discussion-replies > li .span10 { flex:1; min-width:0; }
+.discussion-reply .avatar img, #editor .avatar img { width:40px; height:40px; border-radius:10px; border:1px solid var(--line); }
+.discussion-reply .reply-header { font-size:12px; color:var(--text3); display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+.discussion-reply .reply-header a { color:var(--head); font-weight:600; }
+.discussion-reply .reply-header .pull-right { margin-left:auto; }
+.discussion-reply .reply-header ul { list-style:none; margin:0; padding:0; display:flex; gap:10px; }
+.discussion-reply .reply-header ul a { color:var(--text3); }
+.discussion-reply .reply-header ul a:hover { color:var(--accent); }
+.discussion-reply .reply-body { font-size:14px; line-height:1.7; color:var(--text2); }
+.discussion-reply .reply-footer { margin-top:12px; }
+.discussion-reply .reply-footer ul { list-style:none; margin:0; padding:0; display:flex; gap:18px; }
+.discussion-reply .reply-footer ul li { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text3); }
+.discussion-reply .reply-footer a { color:var(--text3); }
+.discussion-reply .reply-footer a.active { color:var(--accent); }
+.discussion-reply.current-user { border-color:var(--accent-soft); }
+
+.reply-header label { display:flex; align-items:center; gap:12px; width:100%; }
+#editor { margin-top:20px; }
+/* Two-column avatar+editor layout, only for the discussion reply editor. */
+#editor:has(> .span2) { display:flex; gap:14px; align-items:flex-start; }
+#editor .span2 { flex-shrink:0; width:48px; }
+#editor .span10 { flex:1; min-width:0; }
+
+/* Bare <textarea> base (also the pre-init / standalone state). */
+.wmd-input { width:100%; min-height:140px; line-height:1.5; padding:12px 14px; resize:vertical; box-sizing:border-box;
+  background:var(--bg3); border:1px solid var(--line); border-radius:9px; color:var(--text); font-family:var(--mono); font-size:13px; outline:none; }
+.wmd-input:focus { border-color:var(--accent); }
+
+/* Lightweight Markdown editor (js/markdown.js): toolbar + write/preview tabs around the textarea. */
+.vw-md { border:1px solid var(--line); border-radius:10px; overflow:hidden; background:var(--bg2); }
+.vw-md-bar { display:flex; align-items:center; flex-wrap:wrap; gap:2px; padding:6px 8px; border-bottom:1px solid var(--line2); background:var(--bg3); }
+.vw-md-btn { font-family:var(--mono); font-size:13px; line-height:1; color:var(--text2); background:transparent; border:1px solid transparent; border-radius:6px; padding:6px 9px; cursor:pointer; }
+.vw-md-btn:hover { color:var(--accent); border-color:var(--line); }
+.vw-md-spacer { flex:1; }
+.vw-md-tab { font-family:var(--mono); font-size:12px; color:var(--text3); background:transparent; border:1px solid transparent; border-radius:6px; padding:6px 12px; cursor:pointer; }
+.vw-md-tab:hover { color:var(--text); }
+.vw-md-tab.active { color:var(--accent); border-color:var(--accent); }
+.vw-md-body .vw-md-input { width:100%; min-height:200px; border:0; border-radius:0; background:var(--bg2); padding:14px 16px; }
+.vw-md-body .vw-md-input:focus { border:0; }
+.vw-md-preview { padding:14px 16px; min-height:200px; }
+
+/* ----------------------------------------------------------------------------
+ * Judge verdict colours (keyed by judgeResultSlug; used server-side and by the
+ * row-append JS, so the legacy `.flag-<slug>` class names are preserved).
+ * ------------------------------------------------------------------------- */
+.vw-verdict { font-weight:600; }
+.flag-ac, .flag-ac a { color:var(--accent); font-weight:600; }
+.flag-wa, .flag-wa a, .flag-re, .flag-re a, .flag-se, .flag-se a { color:var(--err); font-weight:600; }
+.flag-tle, .flag-tle a, .flag-mle, .flag-mle a, .flag-ole, .flag-ole a,
+.flag-pe, .flag-pe a,
+.flag-pd, .flag-pd a, .flag-pending, .flag-pending a { color:var(--warn); font-weight:600; }
+/* Compile Error is blue (info) to match the Help verdict legend (.vw-vfill-info). */
+.flag-ce, .flag-ce a { color:var(--info); font-weight:600; }
+
+/* ----------------------------------------------------------------------------
+ * Two-column page layout (main + right aside) used by list pages
+ * ------------------------------------------------------------------------- */
+.vw-with-aside { display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:26px; align-items:start; }
+@media (max-width:980px) { .vw-with-aside { grid-template-columns:1fr; } }
+.vw-widget { margin-bottom:18px; }
+.vw-widget h4 { font-family:var(--mono); font-size:11px; font-weight:600; letter-spacing:1.5px; color:var(--text3); text-transform:uppercase; margin:0 0 12px; }
+
+/* Category list in the problems sidebar. */
+.vw-cats h6 { font-family:var(--mono); margin:14px 0 6px; }
+.vw-cats h6:first-child { margin-top:0; }
+.vw-cats h6 a { color:var(--text); font-weight:600; font-size:13px; }
+.vw-cats h6 a.active { color:var(--accent); }
+.vw-cats ul { list-style:none; margin:0 0 4px; padding:0; display:flex; flex-wrap:wrap; gap:6px; }
+.vw-cats ul a { font-size:11px; color:var(--text2); background:var(--chip); border:1px solid var(--line); padding:3px 9px; border-radius:6px; display:inline-block; }
+.vw-cats ul a:hover, .vw-cats ul a.active { border-color:var(--accent); color:var(--accent); }
+
+/* Discussion thread list. */
+.vw-avatar { width:40px; height:40px; border-radius:10px; border:1px solid var(--line); object-fit:cover; flex-shrink:0; }
+
+/* ===========================================================================
+ * Page rebuilds to match the *.dc.html designs (appended; page-specific only —
+ * does not touch the global header/footer/width model).
+ * ======================================================================== */
+
+/* Discussion (Discussion.dc.html): header row + category chips + threads table. */
+.vw-pagehead-row { display:flex; align-items:flex-end; justify-content:space-between; gap:20px; flex-wrap:wrap; }
+.vw-chipfilter { display:flex; gap:8px; flex-wrap:wrap; margin-top:24px; }
+.vw-chipfilter a { font-size:12.5px; font-weight:600; padding:9px 15px; border-radius:8px; border:1px solid var(--line); color:var(--text2); }
+.vw-chipfilter a:hover { border-color:var(--accent); color:var(--accent); }
+.vw-chipfilter a.active { background:var(--accent); color:var(--accent-ink); border-color:var(--accent); }
+.vw-table-threads { --cols:1fr 110px 90px 150px; min-width:720px; }
+.vw-thread-cell { min-width:0; display:flex; align-items:center; gap:13px; }
+.vw-thread-avatar { width:34px; height:34px; border-radius:50%; background:var(--bg3); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:600; color:var(--text2); flex-shrink:0; }
+.vw-thread-title { font-size:14.5px; font-weight:600; color:var(--head); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.vw-thread-meta { font-size:11.5px; color:var(--text3); margin-top:3px; }
+.vw-thread-replies { font-size:14px; font-weight:600; color:var(--text2); }
+.vw-cat-badge { font-size:10.5px; border:1px solid currentColor; padding:2px 9px; border-radius:5px; white-space:nowrap; }
+.vw-cat-help { color:var(--info); }
+.vw-cat-solutions { color:var(--accent); }
+.vw-cat-announce { color:var(--warn); }
+.vw-cat-default { color:var(--text2); }
+@media (max-width:760px) {
+  .vw-table-threads { --cols:1fr 90px; }
+  .vw-table-threads .vw-thide { display:none; }
+}
+.vw-thread { display:flex; gap:14px; align-items:flex-start; }
+.vw-thread h5 { font-family:var(--mono); font-size:14.5px; font-weight:600; margin:0; }
+.vw-thread h5 a { color:var(--head); }
+.vw-thread h5 a:hover { color:var(--accent); }
+.vw-threadmeta { font-size:11.5px; color:var(--text3); margin-top:6px; display:flex; flex-wrap:wrap; gap:4px 16px; }
+.vw-threadmeta a { color:var(--text2); }
+.vw-threadmeta a:hover { color:var(--accent); }
+.vw-replies { flex-shrink:0; text-align:center; min-width:54px; }
+.vw-replies .n { font-size:20px; font-weight:700; color:var(--head); font-family:var(--display); }
+.vw-replies .l { font-size:10px; letter-spacing:1px; color:var(--text3); }
+
+/* Profile vcard + social links. */
+.vw-vcard { list-style:none; margin:0 0 8px; padding:0; }
+.vw-vcard li { display:flex; align-items:center; gap:10px; font-size:12.5px; color:var(--text2); padding:6px 0; }
+.vw-vcard li .fa { color:var(--text3); width:16px; text-align:center; flex-shrink:0; }
+.vw-vcard a { color:var(--text2); word-break:break-all; }
+.vw-vcard a:hover { color:var(--accent); }
+.vw-social a { display:flex; align-items:center; justify-content:center; width:34px; height:34px; border:1px solid var(--line); border-radius:9px; color:var(--text2); }
+.vw-social a:hover { border-color:var(--accent); color:var(--accent); }
+
+/* "Load more" affordance for infinite-scroll lists. */
+.vw-loadmore { text-align:center; padding:20px; font-size:13px; color:var(--accent); cursor:pointer; }
+.vw-loadmore.is-done { color:var(--text3); cursor:default; }
+.vw-loadmore img { height:22px; }
+
+/* Locator (quick jump to problem ranges). */
+.vw-locator { display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; font-size:12px; color:var(--text3); }
+.vw-locator a { color:var(--text2); }
+.vw-locator a:hover { color:var(--accent); }
+
+/* ----------------------------------------------------------------------------
+ * Problem / submission detail
+ * ------------------------------------------------------------------------- */
+.vw-detail { padding:28px var(--pad) 56px; display:grid; grid-template-columns:minmax(0,1.7fr) minmax(0,1fr); gap:24px; align-items:start; }
+@media (max-width:980px) { .vw-detail { grid-template-columns:1fr; } }
+.vw-detail-main { display:flex; flex-direction:column; gap:22px; min-width:0; }
+.vw-detail-side { display:flex; flex-direction:column; gap:16px; min-width:0; }
+@media (min-width:981px) { .vw-detail-side { position:sticky; top:84px; } }
+
+.vw-backlink { font-size:12px; color:var(--text3); display:inline-block; margin-bottom:12px; }
+.vw-backlink:hover { color:var(--accent); }
+.vw-titlebar { border-bottom:1px solid var(--line); background:radial-gradient(120% 130% at 90% 0%,var(--glow),transparent 52%); }
+.vw-titlebar-inner { padding-block:24px 22px; }
+.vw-titlebar h1 { font-size:clamp(26px,3vw,36px); letter-spacing:-1px; font-weight:700; margin:0; }
+
+.vw-stmt h4 { font-family:var(--display); font-size:18px; margin:24px 0 10px; color:var(--head); }
+.vw-stmt h4:first-child { margin-top:0; }
+.vw-stmt h5 { font-family:var(--mono); font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--accent); margin:16px 0 8px; }
+.vw-stmt .description { font-size:14.5px; line-height:1.8; color:var(--text2); }
+.vw-stmt .description p { margin:0 0 1em; }
+.vw-stmt .description > :last-child { margin-bottom:0; }
+/* Even vertical rhythm between statement sections. The block bodies are a mix of
+ * rendered markdown (wrapped in <p>, carrying a trailing margin) and raw HTML (no
+ * trailing margin), which left the gaps before INPUT/OUTPUT/HINT inconsistent.
+ * Give every section label except the first uniform space above it instead. */
+.vw-stmt .vw-block-label { margin-top:22px; }
+.vw-stmt .vw-block-label:first-child { margin-top:0; }
+.vw-stmt pre { background:var(--bg1); border:1px solid var(--line); border-radius:9px; padding:14px 16px; overflow:auto; white-space:pre; color:var(--text); font-family:var(--mono); font-size:13.5px; margin:0; }
+
+/* Problem-detail sidebar lists (My Submissions / Discussion). Rows are full-bleed
+ * inside the card and share the 20px horizontal inset of .vw-card-strip, so the
+ * section header and the rows line up - matching voj-design/Problem Detail.dc.html. */
+.vw-sidelist { list-style:none; margin:0; padding:0; }
+.vw-sidelist li { border-bottom:1px solid var(--line2); font-size:12.5px; }
+.vw-sidelist li:last-child { border-bottom:0; }
+/* My Submissions row: result badge + result name + submit time. */
+.vw-subrow { display:flex; align-items:center; gap:10px; padding:12px 20px; }
+.vw-sub-badge { font-size:10px; font-weight:700; min-width:34px; text-align:center; padding:3px 5px; border-radius:5px; border:1px solid currentColor; flex-shrink:0; }
+.vw-sub-name { flex:1; font-weight:600; }
+.vw-sub-when { color:var(--text3); font-weight:400; font-size:11px; }
+/* Discussion row: two lines (title + author / reply count). */
+.vw-disc-link { display:block; padding:13px 20px; }
+.vw-disc-title { display:block; font-size:13px; font-weight:600; color:var(--head); line-height:1.4; }
+.vw-disc-link:hover .vw-disc-title { color:var(--accent); }
+.vw-disc-meta { display:block; font-size:11px; color:var(--text3); margin-top:4px; }
+.vw-disc-author { color:var(--accent); }
+/* Problem Info tag chips, separated from the key/value list by a divider. */
+.vw-ptags { display:flex; gap:6px; flex-wrap:wrap; margin-top:14px; padding-top:14px; border-top:1px solid var(--line2); }
+.vw-actions { list-style:none; margin:0; padding:0; }
+.vw-actions li { padding:6px 0; }
+.vw-actions a { color:var(--text2); font-size:13px; }
+.vw-actions a:hover { color:var(--accent); }
+.vw-kv { display:flex; flex-direction:column; gap:11px; font-size:13px; }
+.vw-kv > div { display:flex; justify-content:space-between; gap:12px; }
+.vw-kv .k { color:var(--text3); }
+.vw-kv .v { color:var(--head); }
+/* Difficulty value keeps its level colour - the .vw-kv .v head colour outranks the
+ * bare .vw-pdiff-* classes on specificity, so restate them more specifically here. */
+.vw-kv .v.vw-pdiff-easy { color:var(--accent); }
+.vw-kv .v.vw-pdiff-medium { color:var(--warn); }
+.vw-kv .v.vw-pdiff-hard { color:var(--err); }
+
+/* Code editor toolbar/footer. */
+.vw-editor-bar { display:flex; align-items:center; gap:12px; padding:13px 16px; border-bottom:1px solid var(--line2); background:var(--bg3); flex-wrap:wrap; }
+.vw-editor-foot { border-top:1px solid var(--line2); padding:14px 16px; display:flex; align-items:center; gap:11px; flex-wrap:wrap; }
+.vw-editor-error { color:var(--err); font-size:12px; }
+
+/* CodeMirror dark integration. */
+.CodeMirror { background:var(--bg3) !important; color:var(--text) !important; border:0; height:auto; min-height:260px;
+  font-family:var(--mono) !important; font-size:13px; line-height:1.7; }
+.CodeMirror-gutters { background:var(--bg3) !important; border-right:1px solid var(--line2) !important; }
+.CodeMirror-linenumber { color:var(--text3) !important; }
+/* Thick block-style caret to match the ▋ cursor in voj-design/Problem Detail.dc.html. */
+.CodeMirror-cursor { border-left:0.6em solid var(--accent) !important; }
+.CodeMirror-selected { background:var(--accent-soft) !important; }
+.CodeMirror-activeline-background { background:rgba(127,127,127,.06) !important; }
+
+/* Thread (Thread.dc.html): post cards (avatar column + body) + sidebar. */
+.vw-thread-layout { display:grid; grid-template-columns:minmax(0,1fr) 312px; gap:36px; align-items:start; }
+@media (max-width:880px) { .vw-thread-layout { grid-template-columns:1fr; } }
+.vw-thread-crumb { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:8px; }
+.vw-thread-crumb-link { font-size:12px; color:var(--accent); }
+.vw-thread-h1 { font-family:var(--display); font-size:clamp(24px,3vw,34px); line-height:1.12; letter-spacing:-1px; font-weight:700; color:var(--head); margin:0 0 26px; }
+.vw-posts { display:flex; flex-direction:column; gap:16px; }
+.vw-post { background:var(--bg2); border:1px solid var(--line); border-radius:13px; padding:20px 22px; display:grid; grid-template-columns:140px 1fr; gap:18px; }
+.vw-post.is-op { box-shadow:0 0 0 1px var(--accent-soft); }
+@media (max-width:560px) {
+  .vw-post { grid-template-columns:1fr; }
+  .vw-post-avatarcol { flex-direction:row !important; justify-content:flex-start; text-align:left !important; }
+}
+.vw-post-avatarcol { display:flex; flex-direction:column; align-items:center; gap:8px; text-align:center; }
+.vw-post-avatar { width:46px; height:46px; border-radius:50%; background:var(--bg3); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:600; color:var(--text2); flex-shrink:0; }
+.vw-post-author { font-size:13px; font-weight:600; color:var(--accent); }
+.vw-post-role { font-size:10.5px; color:var(--text3); margin-top:2px; }
+.vw-post-head { display:flex; align-items:center; gap:10px; margin-bottom:12px; flex-wrap:wrap; }
+.vw-post-op { font-size:10px; font-weight:700; color:var(--accent); background:var(--accent-soft); padding:2px 8px; border-radius:5px; }
+.vw-post-when { font-size:11.5px; color:var(--text3); }
+.vw-post-vote { font-size:11px; color:var(--text3); }
+.vw-post-vote.active { color:var(--accent); }
+.vw-post-edit, .vw-post-delete, .vw-post-report { font-size:11px; color:var(--text3); }
+.vw-post-edit:hover, .vw-post-delete:hover, .vw-post-report:hover { color:var(--accent); }
+.vw-post-reported { font-size:11px; color:var(--text3); opacity:.6; pointer-events:none; cursor:default; }
+.vw-post-body { font-size:14px; line-height:1.75; color:var(--text); }
+.vw-post-body p { margin:0 0 12px; }
+.vw-post-body pre { margin:8px 0 0; background:var(--bg3); border:1px solid var(--line); border-radius:9px; padding:14px 16px; font-size:12.5px; line-height:1.7; color:var(--text2); overflow:auto; white-space:pre; }
+.vw-replybox { background:var(--bg2); border:1px solid var(--line); border-radius:13px; padding:18px 20px; margin-top:18px; }
+.vw-replybox-foot { display:flex; justify-content:flex-end; gap:10px; margin-top:12px; }
+.vw-thread-side { display:flex; flex-direction:column; gap:16px; min-width:0; }
+@media (min-width:881px) { .vw-thread-side { position:sticky; top:90px; } }
+.vw-thread-meta-list { padding:12px 18px 14px; }
+.vw-thread-meta-list > div { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 0; border-bottom:1px solid var(--line2); font-size:12px; }
+.vw-thread-meta-list > div:last-child { border-bottom:0; }
+.vw-thread-meta-list .k { color:var(--text3); }
+.vw-thread-meta-list .v { color:var(--head); font-weight:600; text-align:right; }
+.vw-participants { display:flex; flex-wrap:wrap; gap:8px; }
+.vw-participant { width:34px; height:34px; border-radius:50%; background:var(--bg3); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:600; color:var(--text2); }
+.vw-participant:hover { border-color:var(--accent); color:var(--accent); }
+
+/* ----------------------------------------------------------------------------
+ * Discussion: new-thread composer (voj-design/New Thread.dc.html).
+ * Reuses .vw-thread-layout (main + 312px side) and the shared Markdown editor.
+ * ------------------------------------------------------------------------- */
+.vw-composer { background:var(--bg2); border:1px solid var(--line); border-radius:14px; padding:24px clamp(18px,3vw,28px); display:flex; flex-direction:column; gap:26px; }
+.vw-composer-label { display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:12px; color:var(--text2); margin-bottom:10px; }
+.vw-composer-label .sigil { color:var(--accent); }
+.vw-composer-label .opt { font-size:10.5px; color:var(--text3); }
+.vw-composer-count { font-size:10.5px; color:var(--text3); }
+.vw-composer-title-input { width:100%; background:var(--bg3); border:1px solid var(--line); border-radius:9px; padding:13px 15px; font-family:var(--mono); font-size:15px; color:var(--head); outline:none; }
+.vw-composer-title-input:focus { border-color:var(--accent); }
+.vw-composer-problem-input { width:200px; max-width:100%; background:var(--bg3); border:1px solid var(--line); border-radius:9px; padding:11px 14px; font-family:var(--mono); font-size:13.5px; color:var(--accent); outline:none; }
+.vw-composer-problem-input:focus { border-color:var(--accent); }
+.vw-composer-cats { display:flex; gap:8px; flex-wrap:wrap; }
+.vw-cat-chip { font-size:12.5px; font-weight:600; padding:9px 15px; border:1px solid var(--line); border-radius:8px; color:var(--text2); background:transparent; cursor:pointer; }
+.vw-cat-chip:hover { border-color:var(--text2); }
+.vw-cat-chip.active { background:var(--accent-soft); }
+.vw-cat-chip.active.is-help { color:var(--info); border-color:var(--info); }
+.vw-cat-chip.active.is-solutions { color:var(--accent); border-color:var(--accent); }
+.vw-cat-chip.active.is-announce { color:var(--warn); border-color:var(--warn); }
+.vw-cat-chip.active.is-default { color:var(--text2); border-color:var(--text2); }
+.vw-composer-actions { display:flex; align-items:center; justify-content:space-between; gap:14px; border-top:1px solid var(--line2); padding-top:20px; }
+.vw-composer-cancel { font-size:13px; color:var(--text2); }
+.vw-composer-cancel:hover { color:var(--text); }
+@media (max-width:560px) { .vw-composer-actions { flex-direction:column-reverse; align-items:stretch; gap:12px; } }
+
+/* New-thread sidebar helper cards (// POSTING AS / // GUIDELINES / // FORMATTING). */
+.vw-postingas { display:flex; align-items:center; gap:12px; }
+.vw-postingas-avatar { width:42px; height:42px; border-radius:50%; background:var(--bg3); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-size:17px; font-weight:600; color:var(--accent); flex-shrink:0; }
+.vw-postingas-name { display:block; font-size:14px; font-weight:600; color:var(--head); }
+.vw-postingas-name:hover { color:var(--accent); }
+.vw-postingas-meta { font-size:11px; color:var(--text3); margin-top:2px; }
+.vw-guide { display:flex; gap:10px; padding:7px 0; font-size:12px; line-height:1.55; color:var(--text2); }
+.vw-guide-mark { color:var(--accent); flex-shrink:0; }
+.vw-cheat { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:7px 0; border-bottom:1px solid var(--line2); font-size:11.5px; }
+.vw-cheat:last-child { border-bottom:0; }
+.vw-cheat code { color:var(--accent); background:var(--bg3); border:1px solid var(--line); border-radius:5px; padding:2px 7px; }
+.vw-cheat span { color:var(--text3); }
+
+/* Contest Detail (Contest Detail.dc.html): problems table + rules + time card + standings. */
+.vw-mt-12 { margin-top:12px; }
+.vw-card-strip { padding:15px 20px; border-bottom:1px solid var(--line2); font-size:12px; letter-spacing:1.5px; text-transform:uppercase; color:var(--accent); }
+.vw-cproblem-head, .vw-cproblem-row { display:grid; grid-template-columns:50px 1fr 90px 110px; gap:14px; align-items:center; }
+.vw-cproblem-head { padding:11px 20px; border-bottom:1px solid var(--line2); font-size:10.5px; letter-spacing:1px; color:var(--text3); }
+.vw-cproblem-row { padding:15px 20px; border-bottom:1px solid var(--line2); color:inherit; }
+.vw-cproblem-row:last-child { border-bottom:0; }
+a.vw-cproblem-row { text-decoration:none; }
+a.vw-cproblem-row:hover { background:var(--bg3); }
+.vw-cproblem-letter { font-size:15px; font-weight:700; color:var(--accent); }
+.vw-cproblem-title { font-size:14px; font-weight:600; color:var(--head); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.vw-cproblem-score { font-size:13px; color:var(--text2); }
+.vw-cproblem-status { font-size:12px; font-weight:600; display:flex; align-items:center; gap:7px; }
+.vw-cproblem-status .dot { width:7px; height:7px; border-radius:50%; background:currentColor; flex-shrink:0; }
+.vw-cstat-ac { color:var(--accent); } .vw-cstat-try { color:var(--warn); } .vw-cstat-none { color:var(--text3); }
+.vw-rules { margin:0; padding-left:18px; font-size:13.5px; line-height:1.85; color:var(--text2); }
+.vw-timecard { background:#16150f; border-radius:13px; padding:20px; }
+.vw-timecard-label { font-size:11px; letter-spacing:1.5px; color:#8a877c; margin-bottom:6px; }
+.vw-timecard-clock { font-family:var(--mono); font-size:36px; font-weight:700; color:#34d399; letter-spacing:1px; }
+.vw-timecard-sub { font-size:12px; color:#a5a39a; margin-top:4px; }
+.vw-standings-head, .vw-standings-row { display:grid; grid-template-columns:42px 1fr 60px 70px; gap:10px; align-items:center; }
+.vw-standings-head { padding:10px 18px; border-bottom:1px solid var(--line2); font-size:10px; letter-spacing:1px; color:var(--text3); }
+.vw-standings-row { padding:11px 18px; border-bottom:1px solid var(--line2); font-size:12.5px; }
+.vw-standings-rank { font-weight:700; color:var(--text3); }
+.vw-rank-1 { color:var(--warn); } .vw-rank-3 { color:var(--accent); }
+.vw-standings-row a { font-weight:600; color:var(--accent); }
+.vw-contest-actions { display:flex; flex-direction:column; gap:10px; }
+
+/* Profile (Profile.dc.html): header band + stat column + activity / recent submissions. */
+.vw-profile-head { display:flex; align-items:flex-start; gap:26px; }
+.vw-profile-avatar { width:96px; height:96px; border-radius:22px; background:var(--bg2); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-family:var(--display); font-size:42px; font-weight:700; color:var(--accent); flex-shrink:0; }
+.vw-profile-name-row { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.vw-profile-name-row h1 { font-family:var(--display); font-size:clamp(28px,3.4vw,40px); letter-spacing:-1px; font-weight:700; color:var(--head); margin:0; }
+.vw-rank-badge { font-size:11px; font-weight:700; color:var(--warn); border:1px solid var(--warn); padding:3px 10px; border-radius:6px; }
+.vw-profile-meta { font-size:13.5px; color:var(--text2); margin-top:6px; }
+.vw-profile-bio { font-size:13.5px; line-height:1.55; color:var(--text); margin:10px 0 0; max-width:560px; }
+.vw-profile-contact { font-size:12.5px; color:var(--text3); margin-top:8px; display:flex; gap:18px; flex-wrap:wrap; }
+.vw-profile-contact a { color:var(--text3); word-break:break-all; }
+.vw-profile-contact a:hover { color:var(--accent); }
+.vw-edit-btn { align-self:center; font-family:var(--mono); font-size:12.5px; font-weight:600; color:var(--accent); background:var(--accent-soft); border:1px solid var(--accent); padding:10px 16px; border-radius:9px; white-space:nowrap; }
+.vw-edit-btn:hover { background:var(--accent); color:var(--accent-ink); }
+.vw-profile-body { padding-block:28px 56px; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.7fr); gap:24px; align-items:start; }
+@media (max-width:980px) { .vw-profile-body { grid-template-columns:1fr; } }
+.vw-profile-side { display:flex; flex-direction:column; gap:16px; min-width:0; }
+@media (min-width:981px) { .vw-profile-side { position:sticky; top:84px; } }
+.vw-profile-main { display:flex; flex-direction:column; gap:22px; min-width:0; }
+.vw-pstats { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.vw-pstat { background:var(--bg2); border:1px solid var(--line); border-radius:13px; padding:18px 20px; }
+.vw-pstat .v { font-size:30px; font-weight:700; font-family:var(--display); color:var(--head); }
+.vw-pstat .v.vw-accent { color:var(--accent); }
+.vw-pstat .k { font-size:10.5px; letter-spacing:1px; color:var(--text3); margin-top:4px; text-transform:uppercase; }
+.vw-recent-row { display:grid; grid-template-columns:46px 1fr 120px 90px; gap:12px; align-items:center; padding:13px 20px; border-bottom:1px solid var(--line2); color:inherit; }
+.vw-recent-row:last-child { border-bottom:0; }
+a.vw-recent-row:hover { background:var(--bg3); }
+.vw-recent-prob { font-size:13.5px; font-weight:600; color:var(--head); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.vw-recent-when { font-size:11px; text-align:right; }
+
+/* Solved-by-difficulty bars (profile left column). The name/fill take the difficulty colour
+   via the shared .vw-pdiff-<slug> classes; the fill paints itself with currentColor. */
+.vw-pdiff-row { margin-bottom:14px; }
+.vw-pdiff-row:last-child { margin-bottom:0; }
+.vw-pdiff-head { display:flex; align-items:baseline; justify-content:space-between; font-size:12px; margin-bottom:6px; }
+.vw-pdiff-name { font-weight:600; }
+.vw-pdiff-count { color:var(--text3); }
+.vw-pdiff-track { height:7px; background:var(--line2); border-radius:4px; overflow:hidden; }
+.vw-pdiff-fill { height:100%; background:currentColor; border-radius:4px; }
+
+/* Edit-profile modal (owner only): centred dialog over a blurred backdrop. */
+.vw-pmodal-overlay { position:fixed; inset:0; z-index:80; background:rgba(0,0,0,.62); backdrop-filter:blur(3px); display:flex; align-items:flex-start; justify-content:center; padding:48px 20px; overflow-y:auto; }
+.vw-pmodal-overlay.hide { display:none; }
+.vw-pmodal { width:100%; max-width:580px; background:var(--bg2); border:1px solid var(--line); border-radius:16px; overflow:hidden; box-shadow:0 28px 80px rgba(0,0,0,.55); }
+.vw-pmodal-head { display:flex; align-items:center; justify-content:space-between; padding:18px 22px; border-bottom:1px solid var(--line2); }
+.vw-pmodal-eyebrow { font-size:13px; letter-spacing:1.5px; color:var(--accent); }
+.vw-pmodal-close { cursor:pointer; color:var(--text3); font-size:15px; line-height:1; width:28px; height:28px; display:flex; align-items:center; justify-content:center; border:1px solid var(--line); border-radius:7px; background:transparent; }
+.vw-pmodal-close:hover { color:var(--accent); border-color:var(--accent); }
+.vw-pmodal-body { padding:22px; display:flex; flex-direction:column; gap:18px; }
+.vw-pmodal-body .vw-alert { margin-bottom:0; }
+.vw-pmodal-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+@media (max-width:560px) { .vw-pmodal-grid { grid-template-columns:1fr; } }
+.vw-pmodal-field .vw-label { text-transform:uppercase; }
+.vw-pmodal-foot { display:flex; gap:12px; justify-content:flex-end; padding:18px 22px; border-top:1px solid var(--line2); }
+.vw-input[readonly] { color:var(--text3); background:var(--band); border-color:var(--line2); cursor:not-allowed; }
+
+/* Problem Detail (Problem Detail.dc.html): subnav + difficulty badge + samples. */
+.vw-anchored { scroll-margin-top:84px; }
+.vw-psubnav { display:flex; gap:4px; margin-top:18px; flex-wrap:wrap; }
+.vw-psubnav a { font-size:12.5px; font-weight:600; color:var(--text3); padding:11px 14px; border-bottom:2px solid transparent; white-space:nowrap; }
+.vw-psubnav a.active, .vw-psubnav a:hover { color:var(--accent); border-bottom-color:var(--accent); }
+.vw-pdiff { font-size:12px; font-weight:700; padding:3px 11px; border:1px solid currentColor; border-radius:20px; }
+.vw-pdiff-easy { color:var(--accent); }
+.vw-pdiff-medium { color:var(--warn); }
+.vw-pdiff-hard { color:var(--err); }
+.vw-sample { margin-top:14px; }
+.vw-sample:first-of-type { margin-top:0; }
+.vw-sample-label { font-size:10.5px; letter-spacing:1px; color:var(--text3); margin-bottom:6px; }
+.vw-sample-pre { margin:0; background:var(--bg3); border:1px solid var(--line); border-radius:9px; padding:14px 16px; font-size:13.5px; line-height:1.6; color:var(--text); overflow:auto; max-height:220px; white-space:pre; }
+.vw-sample-pre.vw-sample-out { color:var(--accent); }
+
+/* -------------------------------------------------------------------------
+ * Activity heat-map (GitHub-style contribution calendar). Rendered by
+ * js/heatmap.js; replaces the legacy Highcharts submission chart.
+ * ------------------------------------------------------------------------- */
+.vw-heatmap-scroll { overflow:visible; }
+.vw-heatmap-inner { display:block; width:100%; }
+.vw-heatmap-months {
+  display:grid; grid-template-columns:repeat(53,minmax(0,1fr)); gap:3px;
+  margin-bottom:5px; font-size:9.5px; line-height:1; color:var(--text3);
+}
+.vw-heatmap-months > div { white-space:nowrap; overflow:visible; }
+.vw-heatmap-grid {
+  display:grid; grid-auto-flow:column;
+  grid-template-rows:repeat(7,auto); grid-template-columns:repeat(53,minmax(0,1fr)); gap:3px;
+}
+.vw-hm-cell { width:11px; height:11px; border-radius:2px; }
+/* Grid cells flex to fill their column so all 53 weeks fit the card with no horizontal scroll. */
+.vw-heatmap-grid .vw-hm-cell { width:100%; height:auto; aspect-ratio:1; align-self:start; }
+.vw-hm-empty { background:transparent; }
+.vw-hm-l0 { background:var(--line2); }
+.vw-hm-l1 { background:rgba(52,211,153,.25); }
+.vw-hm-l2 { background:rgba(52,211,153,.55); }
+.vw-hm-l3 { background:var(--accent); }
+[data-theme="light"] .vw-hm-l1 { background:rgba(7,154,78,.22); }
+[data-theme="light"] .vw-hm-l2 { background:rgba(7,154,78,.5); }
+.vw-heatmap-legend {
+  display:flex; align-items:center; justify-content:flex-end; gap:6px;
+  margin-top:12px; font-size:10.5px; color:var(--text3);
+}
+.vw-heatmap-legend .vw-hm-cell { border-radius:3px; }
+
+/* ===== Maintenance page (standalone; mirrors voj-design/Maintenance.dc.html) ===== */
+@keyframes vwMaintBlink { 0%,100%{opacity:1;} 50%{opacity:0;} }
+@keyframes vwMaintPulse { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:.45;transform:scale(.82);} }
+@keyframes vwMaintSpin { to { transform:rotate(360deg); } }
+@keyframes vwMaintBar { 0%{left:-40%;} 100%{left:100%;} }
+.vw-maint-page { min-height:100vh; display:flex; flex-direction:column; background:var(--bg); color:var(--text); font-family:var(--mono); }
+.vw-maint-header { height:66px; display:flex; align-items:center; gap:18px; padding:0 clamp(20px,5vw,72px); border-bottom:1px solid var(--line); flex-shrink:0; }
+.vw-maint-logo { font-size:19px; font-weight:600; letter-spacing:-.3px; display:flex; align-items:center; gap:2px; text-decoration:none; }
+.vw-maint-logo .b { color:var(--accent); }
+.vw-maint-logo .n { color:var(--head); }
+.vw-maint-logo .c { color:var(--accent); animation:vwMaintBlink 1.1s steps(1) infinite; }
+.vw-maint-offline { font-size:11px; letter-spacing:1px; color:var(--warn); border:1px solid var(--line); border-radius:30px; padding:4px 11px; display:flex; align-items:center; gap:7px; }
+.vw-maint-offline .dot { width:7px; height:7px; border-radius:50%; background:var(--warn); animation:vwMaintPulse 1.4s ease-in-out infinite; }
+.vw-maint-spacer { flex:1; }
+.vw-maint-main { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:56px clamp(20px,5vw,72px); background:radial-gradient(120% 90% at 50% 0%,var(--glow),transparent 60%); }
+.vw-maint-gear { position:relative; width:84px; height:84px; margin-bottom:26px; display:flex; align-items:center; justify-content:center; }
+.vw-maint-gear .ring { position:absolute; inset:0; border:1px dashed var(--line); border-radius:50%; animation:vwMaintSpin 9s linear infinite; }
+.vw-maint-gear svg { animation:vwMaintSpin 6s linear infinite; stroke:var(--accent); }
+.vw-maint-eyebrow { font-size:12px; letter-spacing:2px; color:var(--warn); margin-bottom:16px; }
+.vw-maint-title { font-family:var(--display); font-weight:700; font-size:clamp(34px,5vw,58px); line-height:1.02; letter-spacing:-1.5px; color:var(--head); margin:0 0 16px; max-width:760px; }
+.vw-maint-desc { font-size:14px; line-height:1.7; color:var(--text2); max-width:480px; margin:0 0 36px; }
+.vw-maint-term { width:100%; max-width:580px; background:var(--bg2); border:1px solid var(--line); border-radius:13px; overflow:hidden; box-shadow:0 0 0 1px var(--accent-soft),0 26px 60px rgba(0,0,0,.28); text-align:left; }
+.vw-maint-term-bar { display:flex; align-items:center; gap:9px; padding:11px 16px; border-bottom:1px solid var(--line2); background:var(--bg3); }
+.vw-maint-term-bar .d { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+.vw-maint-term-bar .r { background:#e0605a; }
+.vw-maint-term-bar .y { background:#e0a73a; }
+.vw-maint-term-bar .g { background:var(--accent); }
+.vw-maint-term-bar .name { font-size:11.5px; color:var(--text3); margin-left:6px; }
+.vw-maint-term-bar .status { font-size:11px; color:var(--warn); margin-left:auto; }
+.vw-maint-term-body { padding:16px 18px; font-size:12.5px; line-height:1.85; }
+.vw-maint-term-body .line { white-space:pre-wrap; }
+.vw-maint-term-body .ok { color:var(--accent); }
+.vw-maint-term-body .mut { color:var(--text3); }
+.vw-maint-term-body .t2 { color:var(--text2); }
+.vw-maint-progress { margin:12px 0 4px; position:relative; height:8px; border-radius:6px; background:var(--bg3); border:1px solid var(--line2); overflow:hidden; }
+.vw-maint-progress .fill { position:absolute; top:0; bottom:0; width:40%; border-radius:6px; background:linear-gradient(90deg,transparent,var(--accent),transparent); animation:vwMaintBar 1.6s linear infinite; }
+.vw-maint-cmd { white-space:pre; margin-top:8px; }
+.vw-maint-cmd .p { color:var(--accent); }
+.vw-maint-cmd .cmd { color:var(--text3); }
+.vw-maint-cmd .cur { color:var(--accent); animation:vwMaintBlink 1.1s steps(1) infinite; }
+.vw-maint-btns { display:flex; gap:12px; margin-top:30px; flex-wrap:wrap; justify-content:center; }
+@media (max-width:620px){ .vw-maint-title { font-size:30px; } .vw-maint-btns { flex-direction:column; } }

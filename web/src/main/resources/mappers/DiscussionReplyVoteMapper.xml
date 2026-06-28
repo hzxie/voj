@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+		PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+		"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.verwandlung.voj.web.mapper.DiscussionReplyVoteMapper">
+	<!-- Methods -->
+	<select id="getNumberOfVotes"
+		parameterType="map"
+		resultType="int">
+		SELECT COUNT(*)
+		FROM voj_discussion_reply_votes
+		WHERE discussion_reply_id = #{discussionReplyId} AND vote_type = #{voteType}
+	</select>
+	<select id="getVoteType"
+		parameterType="map"
+		resultType="java.lang.Integer">
+		SELECT vote_type
+		FROM voj_discussion_reply_votes
+		WHERE discussion_reply_id = #{discussionReplyId} AND voter_uid = #{voterUid} AND vote_type IN (1, -1)
+	</select>
+	<select id="getNumberOfReportsOfThread"
+		parameterType="long"
+		resultType="int">
+		SELECT COUNT(*)
+		FROM voj_discussion_reply_votes v
+		JOIN voj_discussion_replies r ON v.discussion_reply_id = r.discussion_reply_id
+		WHERE r.discussion_thread_id = #{discussionThreadId} AND v.vote_type = 2
+	</select>
+	<select id="getReportedReplies"
+		parameterType="map"
+		resultType="hashmap">
+		SELECT r.discussion_reply_id AS replyId,
+			r.discussion_thread_id AS threadId,
+			t.discussion_thread_name AS threadTitle,
+			r.discussion_reply_content AS content,
+			COUNT(*) AS reportCount,
+			MAX(v.vote_time) AS lastReportTime
+		FROM voj_discussion_reply_votes v
+		JOIN voj_discussion_replies r ON v.discussion_reply_id = r.discussion_reply_id
+		LEFT JOIN voj_discussion_threads t ON r.discussion_thread_id = t.discussion_thread_id
+		WHERE v.vote_type = 2
+		GROUP BY r.discussion_reply_id, r.discussion_thread_id, t.discussion_thread_name, r.discussion_reply_content
+		ORDER BY reportCount DESC, lastReportTime DESC
+		LIMIT #{limit}
+	</select>
+	<select id="getNumberOfReportedReplies"
+		resultType="int">
+		SELECT COUNT(DISTINCT discussion_reply_id)
+		FROM voj_discussion_reply_votes
+		WHERE vote_type = 2
+	</select>
+	<select id="getReportersOfReply"
+		parameterType="long"
+		resultType="hashmap">
+		SELECT u.username AS username,
+			v.vote_time AS reportTime
+		FROM voj_discussion_reply_votes v
+		LEFT JOIN voj_users u ON v.voter_uid = u.uid
+		WHERE v.discussion_reply_id = #{discussionReplyId} AND v.vote_type = 2
+		ORDER BY v.vote_time DESC
+	</select>
+	<select id="getReportersOfThread"
+		parameterType="long"
+		resultType="hashmap">
+		SELECT u.username AS username,
+			v.vote_time AS reportTime,
+			r.discussion_reply_id AS reportedReplyId,
+			ru.username AS reportedUsername,
+			r.discussion_reply_content AS reportedContent
+		FROM voj_discussion_reply_votes v
+		JOIN voj_discussion_replies r ON v.discussion_reply_id = r.discussion_reply_id
+		LEFT JOIN voj_users u ON v.voter_uid = u.uid
+		LEFT JOIN voj_users ru ON r.discussion_reply_uid = ru.uid
+		WHERE r.discussion_thread_id = #{discussionThreadId} AND v.vote_type = 2
+		ORDER BY v.vote_time DESC
+	</select>
+	<delete id="dismissReportsOfReply"
+		parameterType="long">
+		DELETE FROM voj_discussion_reply_votes
+		WHERE discussion_reply_id = #{discussionReplyId} AND vote_type = 2
+	</delete>
+	<insert id="castVote"
+		parameterType="org.verwandlung.voj.web.model.DiscussionReplyVote">
+		INSERT INTO voj_discussion_reply_votes(discussion_reply_id, voter_uid, vote_type)
+		VALUES (#{discussionReplyId}, #{voterUid}, #{voteType})
+		ON DUPLICATE KEY UPDATE vote_time = CURRENT_TIMESTAMP
+	</insert>
+	<delete id="withdrawVote"
+		parameterType="map">
+		DELETE FROM voj_discussion_reply_votes
+		WHERE discussion_reply_id = #{discussionReplyId} AND voter_uid = #{voterUid} AND vote_type = #{voteType}
+	</delete>
+</mapper>

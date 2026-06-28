@@ -19,10 +19,13 @@ package org.verwandlung.voj.web.service;
 import java.util.List;
 import java.util.Map;
 
+import javax.sql.DataSource;
+
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.verwandlung.voj.web.mapper.ProblemMapper;
 import org.verwandlung.voj.web.model.Checkpoint;
 import org.verwandlung.voj.web.model.Problem;
+import org.verwandlung.voj.web.model.ProblemDifficulty;
 import org.verwandlung.voj.web.model.ProblemCategory;
 import org.verwandlung.voj.web.model.ProblemTag;
 
@@ -56,6 +60,18 @@ public class ProblemServiceTest {
     Assertions.assertEquals(1000, problemService.getFirstIndexOfProblems());
   }
 
+  /**
+   * Test case: tests the getFirstIndexOfProblems() method when no problem exists. Test data: an
+   * emptied problems table. Expected: 0, rather than a BindingException. Regression test for the
+   * all-problems administration view, which crashed with "attempted to return null from a method
+   * with a primitive return type (long)" when the problems table was empty.
+   */
+  @Test
+  public void testGetFirstIndexOfProblemsWhenEmpty() {
+    deleteAllProblems();
+    Assertions.assertEquals(0, problemService.getFirstIndexOfProblems());
+  }
+
   /** Test case: tests the getNumberOfProblems() method. Test data: N/a. Expected: the number of all problems. */
   @Test
   public void testGetNumberOfProblems() {
@@ -72,14 +88,14 @@ public class ProblemServiceTest {
   /** Test case: tests the getProblemsUsingFilters(...) method. Test data: without filter conditions. Expected: all problems. */
   @Test
   public void testGetProblemsUsingFiltersWithoutFilters() {
-    List<Problem> problems = problemService.getProblemsUsingFilters(0, "", "", "", false, 100);
+    List<Problem> problems = problemService.getProblemsUsingFilters(0, "", "", "", "", false, 100);
     Assertions.assertEquals(4, problems.size());
   }
 
   /** Test case: tests the getProblemsUsingFilters(...) method. Test data: public problems only. Expected: the public problems. */
   @Test
   public void testGetProblemsUsingFiltersPublicOnly() {
-    List<Problem> problems = problemService.getProblemsUsingFilters(0, "", "", "", true, 100);
+    List<Problem> problems = problemService.getProblemsUsingFilters(0, "", "", "", "", true, 100);
     Assertions.assertEquals(3, problems.size());
   }
 
@@ -87,7 +103,7 @@ public class ProblemServiceTest {
   @Test
   public void testGetProblemsUsingFiltersByCategory() {
     List<Problem> problems =
-        problemService.getProblemsUsingFilters(0, "", "dynamic-programming", "", false, 100);
+        problemService.getProblemsUsingFilters(0, "", "dynamic-programming", "", "", false, 100);
     // Only problem 1000 belongs to the dynamic-programming category.
     Assertions.assertEquals(1, problems.size());
     Assertions.assertEquals(1000, problems.get(0).getProblemId());
@@ -96,8 +112,8 @@ public class ProblemServiceTest {
   /** Test case: tests the getNumberOfProblemsUsingFilters(...) method. Test data: all / public only. Expected: the corresponding count. */
   @Test
   public void testGetNumberOfProblemsUsingFilters() {
-    Assertions.assertEquals(4, problemService.getNumberOfProblemsUsingFilters("", "", false));
-    Assertions.assertEquals(3, problemService.getNumberOfProblemsUsingFilters("", "", true));
+    Assertions.assertEquals(4, problemService.getNumberOfProblemsUsingFilters("", "", "", false));
+    Assertions.assertEquals(3, problemService.getNumberOfProblemsUsingFilters("", "", "", true));
   }
 
   /** Test case: tests the getProblemCategories() method. Test data: N/a. Expected: all problem categories. */
@@ -166,7 +182,7 @@ public class ProblemServiceTest {
     Map<String, Object> result =
         problemService.createProblem(
             "A New Problem", 1000, 65536, "Description", "Hint", "Input Format",
-            "Output Format", "1 2", "3", TEST_CASES, CATEGORIES, TAGS, true, true);
+            "Output Format", "1 2", "3", TEST_CASES, CATEGORIES, TAGS, "PUBLISHED", true, "easy");
     Assertions.assertTrue((Boolean) result.get("isSuccessful"));
     Assertions.assertTrue(result.containsKey("problemId"));
     Assertions.assertEquals(5, problemService.getNumberOfProblems());
@@ -178,7 +194,7 @@ public class ProblemServiceTest {
     Map<String, Object> result =
         problemService.createProblem(
             "", 1000, 65536, "Description", "Hint", "Input Format", "Output Format",
-            "1 2", "3", TEST_CASES, CATEGORIES, TAGS, true, true);
+            "1 2", "3", TEST_CASES, CATEGORIES, TAGS, "PUBLISHED", true, "easy");
     Assertions.assertTrue((Boolean) result.get("isProblemNameEmpty"));
     Assertions.assertFalse((Boolean) result.get("isSuccessful"));
   }
@@ -189,7 +205,7 @@ public class ProblemServiceTest {
     Map<String, Object> result =
         problemService.createProblem(
             "A New Problem", 0, 65536, "Description", "Hint", "Input Format", "Output Format",
-            "1 2", "3", TEST_CASES, CATEGORIES, TAGS, true, true);
+            "1 2", "3", TEST_CASES, CATEGORIES, TAGS, "PUBLISHED", true, "easy");
     Assertions.assertFalse((Boolean) result.get("isTimeLimitLegal"));
     Assertions.assertFalse((Boolean) result.get("isSuccessful"));
   }
@@ -200,7 +216,7 @@ public class ProblemServiceTest {
     Map<String, Boolean> result =
         problemService.editProblem(
             1000, "A+B Problem (Edited)", 2000, 131072, "New Description", "Hint",
-            "Input Format", "Output Format", "1 2", "3", TEST_CASES, CATEGORIES, TAGS, true, true);
+            "Input Format", "Output Format", "1 2", "3", CATEGORIES, TAGS, "PUBLISHED", true, "easy");
     Assertions.assertTrue(result.get("isSuccessful"));
     Assertions.assertEquals("A+B Problem (Edited)", problemService.getProblem(1000).getProblemName());
   }
@@ -211,7 +227,7 @@ public class ProblemServiceTest {
     Map<String, Boolean> result =
         problemService.editProblem(
             99999, "Nonexistent", 1000, 65536, "Description", "Hint", "Input Format",
-            "Output Format", "1 2", "3", TEST_CASES, CATEGORIES, TAGS, true, true);
+            "Output Format", "1 2", "3", CATEGORIES, TAGS, "PUBLISHED", true, "easy");
     Assertions.assertFalse(result.get("isProblemExists"));
     Assertions.assertFalse(result.get("isSuccessful"));
   }
@@ -223,8 +239,9 @@ public class ProblemServiceTest {
     // constraints.
     Problem problem =
         new Problem(
-            true, "Throwaway Problem", 1000, 65536, "Description", "Input Format",
+            "PUBLISHED", "Throwaway Problem", 1000, 65536, "Description", "Input Format",
             "Output Format", "1 2", "3", "Hint");
+    problem.setProblemDifficulty(new ProblemDifficulty(1, "easy", "Easy"));
     problemMapper.createProblem(problem);
     long problemId = problem.getProblemId();
 
@@ -300,9 +317,24 @@ public class ProblemServiceTest {
     Assertions.assertTrue(problemService.deleteProblemCategory(problemCategoryId));
   }
 
+  /**
+   * Empties the problems table within the current (rolled-back) test transaction. Contest
+   * submissions reference submissions without ON DELETE CASCADE, so they must be removed first;
+   * deleting the problems then cascades to submissions, checkpoints, category/tag relationships and
+   * discussion threads.
+   */
+  private void deleteAllProblems() {
+    JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
+    jdbcTemplate.update("DELETE FROM voj_contest_submissions");
+    jdbcTemplate.update("DELETE FROM voj_problems");
+  }
+
   /** The ProblemService object under test. */
   @Autowired private ProblemService problemService;
 
   /** The Mapper used to construct unassociated problem data within the test transaction. */
   @Autowired private ProblemMapper problemMapper;
+
+  /** The data source used to empty the problems table within the test transaction. */
+  @Autowired private DataSource dataSource;
 }

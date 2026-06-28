@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<!--/* Reproduced from voj-design/Thread.dc.html: backlink, category badge + related
+       problem + title, post cards (avatar column + body), a // YOUR REPLY box, and a
+       sidebar (status/meta + // PARTICIPANTS). "Related threads" is omitted (the backend
+       does not expose same-topic threads here). Replies are loaded over AJAX; vote / edit /
+       delete behaviour is preserved but rewired with .closest() for the new markup. */-->
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/main}" lang="en">
+<head>
+    <title th:text="${discussionThread.discussionThreadTitle} + ' | ' + ${websiteName}">Discussion</title>
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css" />
+</head>
+<body>
+    <div layout:fragment="content"
+         th:with="topicSlug=${discussionThread.discussionTopic.discussionTopicSlug},
+                  creator=${discussionThread.discussionThreadCreator}">
+        <section class="vw-section vw-section-narrow">
+            <a class="vw-backlink" th:href="@{/discussion}">&larr; ~/discussion</a>
+
+            <div class="vw-thread-layout">
+                <!-- MAIN -->
+                <div class="vw-minw0" id="discussion-thread-head">
+                    <div class="vw-thread-crumb">
+                        <span class="vw-cat-badge" id="thread-cat-badge"
+                              th:classappend="${#strings.containsIgnoreCase(topicSlug,'solution')} ? 'vw-cat-solutions' : (${#strings.containsIgnoreCase(topicSlug,'announce')} ? 'vw-cat-announce' : (${#strings.containsIgnoreCase(topicSlug,'help')} ? 'vw-cat-help' : 'vw-cat-default'))"
+                              th:text="${discussionThread.discussionTopic.discussionTopicName}">Help</span>
+                        <span id="edit-topic-chips" class="vw-composer-cats hide" th:if="${discussionTopics != null}">
+                            <span th:each="discussionTopic : ${discussionTopics}"
+                                  th:if="${discussionThread.problem != null or discussionTopic.discussionTopicSlug != 'solutions'}"
+                                  class="vw-cat-chip"
+                                  th:attr="data-slug=${discussionTopic.discussionTopicSlug}"
+                                  th:classappend="${#strings.containsIgnoreCase(discussionTopic.discussionTopicSlug,'solution')} ? 'is-solutions' : (${#strings.containsIgnoreCase(discussionTopic.discussionTopicSlug,'announce')} ? 'is-announce' : (${#strings.containsIgnoreCase(discussionTopic.discussionTopicSlug,'help')} ? 'is-help' : 'is-default'))"
+                                  th:text="${discussionTopic.discussionTopicName}">Help</span>
+                        </span>
+                        <input type="hidden" id="discussion-thread-topic" th:value="${topicSlug}" />
+                        <a class="vw-thread-crumb-link" th:if="${discussionThread.problem != null}"
+                           th:href="@{/p/{id}(id=${discussionThread.problem.problemId})}"
+                           th:text="|P${discussionThread.problem.problemId} &middot; ${discussionThread.problem.problemName}|">P1005 &middot; Problem</a>
+                    </div>
+                    <div class="header">
+                        <h1 class="vw-thread-h1" th:text="${discussionThread.discussionThreadTitle}">Title</h1>
+                    </div>
+                    <p class="hide" id="discussion-thread-title-wrap"><input id="discussion-thread-title" class="vw-input" type="text" maxlength="128" /></p>
+
+                    <!-- POSTS (replies) -->
+                    <div id="discussion-replies" class="vw-posts"></div>
+                    <div id="more-discussion-replies" class="vw-loadmore">
+                        <p class="availble"><a href="javascript:void(0);" th:text="#{voj.discussion.thread.more-replies}">More Replies...</a></p>
+                        <img th:src="|${cdnUrl}/img/loading.gif?v=${version}|" alt="Loading" class="hide" />
+                    </div>
+
+                    <!-- REPLY BOX -->
+                    <div id="editor" class="vw-replybox" th:if="${isLogin}">
+                        <div class="vw-eyebrow vw-side-label vw-side-label-accent" th:text="'// ' + #{voj.discussion.thread.leave-a-comment}">// YOUR REPLY</div>
+                        <div class="vw-alert vw-alert-error alert-error hide"></div>
+                        <div class="markdown-editor">
+                            <textarea id="wmd-input" class="wmd-input"></textarea>
+                        </div>
+                        <input type="hidden" id="csrf-token" th:value="${_csrf.token}" />
+                        <div class="vw-replybox-foot">
+                            <button id="create-discussion-reply" class="vw-btn vw-btn-accent" th:text="#{voj.discussion.thread.comment}">Post reply</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SIDEBAR -->
+                <aside class="vw-thread-side">
+                    <div class="vw-card">
+                        <div class="vw-thread-meta-list">
+                            <div><span class="k" th:text="#{voj.discussion.thread.comments}">Replies</span><span class="v" id="number-of-comments" th:text="${topicSlug == 'solutions' ? discussionThread.numberOfReplies : (discussionThread.numberOfReplies <= 1 ? 0 : discussionThread.numberOfReplies - 1)}">0</span></div>
+                            <div><span class="k" th:text="#{voj.discussion.threads.author}">Author</span><a class="v vw-accent" th:href="@{/accounts/user/{id}(id=${creator.uid})}" th:text="${creator.username}">author</a></div>
+                            <div><span class="k">Created</span><span class="v datetime" th:text="${#dates.format(discussionThread.discussionThreadCreateTime, 'yyyy-MM-dd HH:mm:ss')}">time</span></div>
+                        </div>
+                    </div>
+
+                    <div class="vw-card">
+                        <div class="vw-card-body">
+                            <div class="vw-eyebrow vw-side-label">// PARTICIPANTS</div>
+                            <div id="participants" class="vw-participants">
+                                <a class="vw-participant" th:href="@{/accounts/user/{id}(id=${creator.uid})}" th:title="${creator.username}" th:text="${#strings.toUpperCase(#strings.substring(creator.username,0,1))}">A</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <th:block th:if="${myProfile != null and myProfile.uid == creator.uid}">
+                        <button class="vw-btn vw-btn-ghost vw-btn-block" id="edit-discussion-btn"
+                                th:text="#{voj.discussion.thread.edit-discussion}">Edit</button>
+                        <button class="vw-btn vw-btn-block hide" id="cancel-edit-discussion-btn"
+                                th:text="#{voj.discussion.thread.cancel}">Cancel</button>
+                    </th:block>
+                </aside>
+            </div>
+        </section>
+    </div>
+
+    <th:block layout:fragment="scripts">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+    <script type="text/javascript" th:inline="javascript">
+        var mainEditor, threadCreatorUid = [[${discussionThread.discussionThreadCreator.uid}]], seenParticipants = {};
+        $(function() {
+            $('span.datetime').html(getTimeElapsed($('span.datetime').html(), [[${language}]]));
+            /*[# th:if="${isLogin}"]*/
+            mainEditor = createMarkdownEditor('#wmd-input');
+            loadDiscussionReplies();
+            /*[/]*/
+            /*[# th:unless="${isLogin}"]*/
+            loadDiscussionReplies();
+            /*[/]*/
+        });
+        function loadDiscussionReplies() { setLoadingStatus(true); getDiscussionReplies(0); }
+        $('#more-discussion-replies').click(function() {
+            var isLoading       = $('img', this).is(':visible'),
+                hasNextRecord   = $('p', this).hasClass('availble'),
+                numberOfReplies = $('.vw-post').length;
+            if ( !isLoading && hasNextRecord ) { setLoadingStatus(true); return getDiscussionReplies(numberOfReplies); }
+        });
+        function setLoadingStatus(isLoading) {
+            if ( isLoading ) { $('p', '#more-discussion-replies').addClass('hide'); $('img', '#more-discussion-replies').removeClass('hide'); }
+            else { $('img', '#more-discussion-replies').addClass('hide'); $('p', '#more-discussion-replies').removeClass('hide'); }
+        }
+        function getDiscussionReplies(startIndex) {
+            $.ajax({
+                type: 'GET',
+                url: [[@{/discussion/{tid}/getDiscussionReplies.action(tid=${discussionThread.discussionThreadId})}]],
+                data: { 'startIndex': startIndex },
+                dataType: 'JSON',
+                success: function(result){ return processDiscussionRepliesResult(result); }
+            });
+        }
+        function processDiscussionRepliesResult(result) {
+            if ( result['isSuccessful'] ) {
+                displayDiscussionReplyRecords(result['discussionReplies']);
+            } else {
+                $('p', '#more-discussion-replies').removeClass('availble');
+                $('#more-discussion-replies').addClass('is-done');
+                $('p', '#more-discussion-replies').html([[#{voj.discussion.threads.no-more-discussion}]]);
+            }
+            setLoadingStatus(false);
+        }
+        function addParticipant(creator) {
+            if ( seenParticipants[creator['uid']] ) { return; }
+            seenParticipants[creator['uid']] = true;
+            var initial = (creator['username'] || '?').charAt(0).toUpperCase();
+            $('#participants').append('<a class="vw-participant" href="' + [[@{/accounts/user/}]] + creator['uid'] + '" title="' + creator['username'] + '">' + initial + '</a>');
+        }
+        function displayDiscussionReplyRecords(discussionReplies) {
+            for ( var i = 0; i < discussionReplies.length; ++ i ) {
+                var r = discussionReplies[i];
+                var post = $(getDiscussionReplyContent(r)).appendTo('#discussion-replies');
+                typesetMath(post.find('.vw-post-body')[0]);
+                addParticipant(r['discussionReplyCreator']);
+            }
+        }
+        function getDiscussionReplyContent(reply) {
+            var replyId    = reply['discussionReplyId'],
+                creator    = reply['discussionReplyCreator'],
+                createTime = reply['discussionReplyCreateTime'],
+                content    = reply['discussionReplyContent'];
+            var initial  = (creator['username'] || '?').charAt(0).toUpperCase(),
+                role     = (creator['userGroup'] && creator['userGroup']['userGroupName']) || '',
+                isOp     = creator['uid'] == threadCreatorUid,
+                isAuthor = creator['uid'] == [[${myProfile?.uid}]],
+                isMine   = isAuthor || [[${myProfile?.userGroup?.userGroupSlug}]] == 'administrators';
+            var actions = isMine
+                ? '<a href="javascript:void(0);" class="vw-post-edit" title="edit">edit</a>' +
+                  '<a href="javascript:void(0);" class="vw-post-delete" title="delete">delete</a>'
+                : '';
+            // Users cannot vote on or report their own reply, so those controls are hidden there.
+            var voteButtons = isAuthor ? '' :
+                '<a href="javascript:void(0);" class="vw-post-vote vw-vote-up' + (reply['isVotedUp'] ? ' active' : '') + '">&#9650; <span class="vote-ups">' + (reply['numberOfVoteUp'] || 0) + '</span></a>' +
+                '<a href="javascript:void(0);" class="vw-post-vote vw-vote-down' + (reply['isVotedDown'] ? ' active' : '') + '">&#9660; <span class="vote-downs">' + (reply['numberOfVoteDown'] || 0) + '</span></a>';
+            var reportLink = '';
+            /*[# th:if="${isLogin}"]*/
+            var editor = '<div class="markdown-editor hide">' +
+                         '<textarea id="wmd-input-' + replyId + '" class="wmd-input">' + content + '</textarea>' +
+                         '<div class="vw-replybox-foot"><button class="vw-btn vw-btn-accent vw-btn-sm vw-reply-save">' + [[#{voj.discussion.thread.update-reply}]] + '</button>' +
+                         '<button class="vw-btn vw-btn-sm vw-reply-cancel">' + [[#{voj.discussion.thread.cancel}]] + '</button></div></div>';
+            if ( !isAuthor ) { reportLink = '<a href="javascript:void(0);" class="vw-post-report" title="report">' + [[#{voj.discussion.thread.report}]] + '</a>'; }
+            /*[/]*/
+            /*[# th:unless="${isLogin}"]*/
+            var editor = '';
+            /*[/]*/
+            return '<div class="vw-post' + (isOp ? ' is-op' : '') + '" data-value="' + replyId + '">' +
+                '<div class="vw-post-avatarcol">' +
+                '<div class="vw-post-avatar">' + initial + '</div>' +
+                '<div><a class="vw-post-author" href="' + [[@{/accounts/user/}]] + creator['uid'] + '">' + creator['username'] + '</a>' +
+                '<div class="vw-post-role">' + role + '</div></div>' +
+                '</div>' +
+                '<div class="vw-minw0">' +
+                '<div class="vw-post-head">' +
+                (isOp ? '<span class="vw-post-op">OP</span>' : '') +
+                '<span class="vw-post-when">' + getTimeElapsed(createTime, [[${language}]]) + '</span>' +
+                '<div class="vw-header-spacer"></div>' +
+                voteButtons +
+                reportLink +
+                actions +
+                '</div>' +
+                '<div class="markdown vw-post-body">' + renderMarkdown(content) + '</div>' +
+                editor +
+                '</div>' +
+                '</div>';
+        }
+    </script>
+    <th:block th:if="${isLogin}">
+    <script type="text/javascript" th:inline="javascript">
+        function ensureReplyEditor(post) {
+            var textarea = $('.wmd-input', post)[0];
+            if ( textarea && !textarea.vojEditor ) { textarea.vojEditor = createMarkdownEditor(textarea); }
+            return textarea ? textarea.vojEditor : null;
+        }
+        $('#discussion-replies').on('click', '.vw-vote-up', function() {
+            var post = $(this).closest('.vw-post'), id = post.attr('data-value'),
+                isUp = $(this).hasClass('active'), isDown = $('.vw-vote-down', post).hasClass('active');
+            return voteDiscussionReply(id, isUp ? -1 : 1, isDown ? -1 : 0, $('#csrf-token').val());
+        });
+        $('#discussion-replies').on('click', '.vw-vote-down', function() {
+            var post = $(this).closest('.vw-post'), id = post.attr('data-value'),
+                isUp = $('.vw-vote-up', post).hasClass('active'), isDown = $(this).hasClass('active');
+            return voteDiscussionReply(id, isUp ? -1 : 0, isDown ? -1 : 1, $('#csrf-token').val());
+        });
+        function voteDiscussionReply(replyId, voteUp, voteDown, csrfToken) {
+            $.ajax({
+                type: 'POST',
+                url: [[@{/discussion/{tid}/voteDiscussionReply.action(tid=${discussionThread.discussionThreadId})}]],
+                data: { 'discussionReplyId': replyId, 'voteUp': voteUp, 'voteDown': voteDown, 'csrfToken': csrfToken },
+                dataType: 'JSON',
+                success: function(result) {
+                    if ( !result['isSuccessful'] ) {
+                        if ( result['isReputationEnough'] === false ) { alert([[#{voj.discussion.thread.vote-need-reputation}]].replace('{0}', [[${minSolvedToVote}]])); }
+                        else if ( result['isNotSelfVote'] === false ) { alert([[#{voj.discussion.thread.cannot-vote-self}]]); }
+                        else { alert([[#{voj.discussion.thread.failed-to-vote}]]); }
+                        return;
+                    }
+                    var post = $('.vw-post[data-value=' + replyId + ']'),
+                        up = $('.vw-vote-up', post), down = $('.vw-vote-down', post),
+                        ups = parseInt($('.vote-ups', post).html()), downs = parseInt($('.vote-downs', post).html());
+                    if ( voteUp == 1 ) { up.addClass('active'); } else if ( voteUp == -1 ) { up.removeClass('active'); }
+                    if ( voteDown == 1 ) { down.addClass('active'); } else if ( voteDown == -1 ) { down.removeClass('active'); }
+                    $('.vote-ups', post).html(ups + voteUp);
+                    $('.vote-downs', post).html(downs + voteDown);
+                }
+            });
+        }
+        $('#discussion-replies').on('click', '.vw-post-report', function() {
+            if ( !confirm([[#{voj.discussion.thread.report-confirm}]]) ) { return; }
+            var link = $(this), post = link.closest('.vw-post'), id = post.attr('data-value');
+            $.ajax({
+                type: 'POST',
+                url: [[@{/discussion/{tid}/reportDiscussionReply.action(tid=${discussionThread.discussionThreadId})}]],
+                data: { 'discussionReplyId': id, 'csrfToken': $('#csrf-token').val() },
+                dataType: 'JSON',
+                success: function(result) {
+                    if ( result['isSuccessful'] ) {
+                        link.removeClass('vw-post-report').addClass('vw-post-reported is-reported')
+                            .removeAttr('title').text([[#{voj.discussion.thread.report-done}]]);
+                        return;
+                    }
+                    if ( result['isReputationEnough'] === false ) { alert([[#{voj.discussion.thread.report-need-reputation}]].replace('{0}', [[${minSolvedToReport}]])); return; }
+                    if ( result['isNotSelfReport'] === false ) { alert([[#{voj.discussion.thread.cannot-report-self}]]); return; }
+                    alert([[#{voj.discussion.thread.failed-to-report}]]);
+                }
+            });
+        });
+        $('#discussion-replies').on('click', '.vw-post-edit', function() {
+            var post = $(this).closest('.vw-post'), editor = $('.markdown-editor', post);
+            if ( editor.is(':visible') ) { editor.addClass('hide'); $('.vw-post-body', post).removeClass('hide'); }
+            else {
+                $('.vw-post-body', post).addClass('hide'); editor.removeClass('hide');
+                ensureReplyEditor(post);
+            }
+        });
+        $('#discussion-replies').on('click', '.vw-reply-save', function() {
+            var post = $(this).closest('.vw-post'), id = post.attr('data-value'),
+                editor = $('.markdown-editor', post), content = ensureReplyEditor(post).value();
+            $('.vw-reply-save', post).attr('disabled', 'disabled').html([[#{voj.discussion.thread.please-wait}]]);
+            $.ajax({
+                type: 'POST',
+                url: [[@{/discussion/{tid}/editDiscussionReply.action(tid=${discussionThread.discussionThreadId})}]],
+                data: { 'discussionReplyId': id, 'replyContent': content, 'csrfToken': $('#csrf-token').val() },
+                dataType: 'JSON',
+                success: function(result) {
+                    if ( result['isSuccessful'] ) {
+                        editor.addClass('hide');
+                        $('.vw-post-body', post).html(renderMarkdown(content)).removeClass('hide');
+                        typesetMath($('.vw-post-body', post)[0]);
+                    } else { alert([[#{voj.discussion.thread.failed-to-update}]]); }
+                    $('.vw-reply-save', post).removeAttr('disabled').html([[#{voj.discussion.thread.update-reply}]]);
+                }
+            });
+        });
+        $('#discussion-replies').on('click', '.vw-reply-cancel', function() {
+            var post = $(this).closest('.vw-post');
+            $('.markdown-editor', post).addClass('hide'); $('.vw-post-body', post).removeClass('hide');
+        });
+        $('#discussion-replies').on('click', '.vw-post-delete', function() {
+            if ( !confirm([[#{voj.discussion.thread.continue-or-not}]]) ) { return; }
+            var post = $(this).closest('.vw-post'), id = post.attr('data-value'),
+                n = parseInt($('#number-of-comments').html());
+            $.ajax({
+                type: 'POST',
+                url: [[@{/discussion/{tid}/deleteDiscussionReply.action(tid=${discussionThread.discussionThreadId})}]],
+                data: { 'discussionReplyId': id, 'csrfToken': $('#csrf-token').val() },
+                dataType: 'JSON',
+                success: function(result) {
+                    if ( result['isSuccessful'] ) { post.remove(); $('#number-of-comments').html(n - 1); }
+                    else { alert([[#{voj.discussion.thread.failed-to-delete}]]); }
+                }
+            });
+        });
+        $('#create-discussion-reply').click(function() {
+            $('.alert-error', '#editor').addClass('hide');
+            $(this).attr('disabled', 'disabled').html([[#{voj.discussion.thread.please-wait}]]);
+            $.ajax({
+                type: 'POST',
+                url: [[@{/discussion/{tid}/createDiscussionReply.action(tid=${discussionThread.discussionThreadId})}]],
+                data: { 'replyContent': mainEditor ? mainEditor.value() : '', 'csrfToken': $('#csrf-token').val() },
+                dataType: 'JSON',
+                success: function(result) { processDiscussionReplyCreationResult(result); }
+            });
+        });
+        function processDiscussionReplyCreationResult(result) {
+            if ( result['isSuccessful'] ) {
+                var n = parseInt($('#number-of-comments').html());
+                if ( mainEditor ) { mainEditor.value(''); }
+                $('#number-of-comments').html(n + 1);
+                displayDiscussionReplyRecords([result['discussionReply']]);
+            } else {
+                var msg = '';
+                if ( !result['isDiscussionThreadExists'] ) { msg += [[#{voj.discussion.thread.thread-not-exists}]] + '<br>'; }
+                if ( !result['isReplyCreatorExists'] ) { msg += [[#{voj.discussion.thread.user-not-login}]] + '<br>'; }
+                else if ( !result['isReplyCreatorLegal'] ) { msg += [[#{voj.discussion.thread.user-not-permitted}]] + '<br>'; }
+                if ( result['isReplyContentEmpty'] ) { msg += [[#{voj.discussion.thread.empty-reply}]] + '<br>'; }
+                if ( result['isPostDelayElapsed'] === false ) { msg += [[#{voj.discussion.thread.post-delay-active}]].replace('{0}', [[${postDelayMinutes}]]) + '<br>'; }
+                $('.alert-error', '#editor').html(msg).removeClass('hide');
+            }
+            $('#create-discussion-reply').removeAttr('disabled').html([[#{voj.discussion.thread.comment}]]);
+        }
+    </script>
+    </th:block>
+    <th:block th:if="${myProfile != null and myProfile.uid == discussionThread.discussionThreadCreator.uid}">
+    <script type="text/javascript" th:inline="javascript">
+        var editLabel = [[#{voj.discussion.thread.edit-discussion}]],
+            saveLabel = [[#{voj.discussion.thread.save-changes}]];
+
+        // Topic chip picker (only active while editing).
+        $('#edit-topic-chips').on('click', '.vw-cat-chip', function() {
+            $('#edit-topic-chips .vw-cat-chip').removeClass('active');
+            $(this).addClass('active');
+            $('#discussion-thread-topic').val($(this).attr('data-slug'));
+        });
+
+        $('#edit-discussion-btn').click(function() {
+            if ( $('#discussion-thread-title').is(':visible') ) { saveDiscussion(); }
+            else { enterEditMode(); }
+        });
+        $('#cancel-edit-discussion-btn').click(exitEditMode);
+
+        function enterEditMode() {
+            $('#discussion-thread-title').val($('#discussion-thread-head .header h1').text());
+            $('#edit-topic-chips .vw-cat-chip').removeClass('active')
+                .filter('[data-slug="' + $('#discussion-thread-topic').val() + '"]').addClass('active');
+            $('#discussion-thread-head .header h1').addClass('hide');
+            $('#discussion-thread-title-wrap').removeClass('hide');
+            $('#thread-cat-badge').addClass('hide');
+            $('#edit-topic-chips').removeClass('hide');
+            $('#edit-discussion-btn').text(saveLabel);
+            $('#cancel-edit-discussion-btn').removeClass('hide');
+        }
+        function exitEditMode() {
+            $('#discussion-thread-title-wrap').addClass('hide');
+            $('#discussion-thread-head .header h1').removeClass('hide');
+            $('#edit-topic-chips').addClass('hide');
+            $('#thread-cat-badge').removeClass('hide');
+            $('#edit-discussion-btn').removeAttr('disabled').text(editLabel);
+            $('#cancel-edit-discussion-btn').addClass('hide');
+        }
+        function saveDiscussion() {
+            var title = ($('#discussion-thread-title').val() || '').trim(),
+                slug  = $('#discussion-thread-topic').val();
+            if ( title === '' ) { alert([[#{voj.discussion.new-thread.discussion-thread-title-empty}]]); return; }
+            $('#edit-discussion-btn').attr('disabled', 'disabled').text([[#{voj.discussion.thread.please-wait}]]);
+            $.ajax({
+                type: 'POST',
+                url: [[@{/discussion/editDiscussionThread.action}]],
+                data: {
+                    'discussionThreadId': [[${discussionThread.discussionThreadId}]],
+                    'discussionTopicSlug': slug, 'discussionThreadTitle': title,
+                    'csrfToken': $('#csrf-token').val()
+                },
+                dataType: 'JSON',
+                success: function(result) {
+                    if ( result['isSuccessful'] ) {
+                        $('#discussion-thread-head .header h1').text(title);
+                        updateCategoryBadge(slug);
+                        exitEditMode();
+                        return;
+                    }
+                    if ( result['isThreadTitleEmpty'] ) { alert([[#{voj.discussion.new-thread.discussion-thread-title-empty}]]); }
+                    else if ( result['isThreadTitleLegal'] === false ) { alert([[#{voj.discussion.new-thread.discussion-thread-title-too-long}]]); }
+                    else { alert([[#{voj.discussion.thread.failed-to-update-thread}]]); }
+                    $('#edit-discussion-btn').removeAttr('disabled').text(saveLabel);
+                }
+            });
+        }
+        function updateCategoryBadge(slug) {
+            var name = $('#edit-topic-chips .vw-cat-chip[data-slug="' + slug + '"]').text(),
+                cls  = 'vw-cat-default';
+            if ( /solution/i.test(slug) ) { cls = 'vw-cat-solutions'; }
+            else if ( /announce/i.test(slug) ) { cls = 'vw-cat-announce'; }
+            else if ( /help/i.test(slug) ) { cls = 'vw-cat-help'; }
+            $('#thread-cat-badge')
+                .removeClass('vw-cat-default vw-cat-solutions vw-cat-announce vw-cat-help')
+                .addClass(cls).text(name);
+        }
+    </script>
+    </th:block>
+    </th:block>
+</body>
+</html>

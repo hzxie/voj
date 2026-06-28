@@ -17,6 +17,8 @@
 package org.verwandlung.voj.web.service;
 
 import java.text.SimpleDateFormat;
+import java.util.AbstractMap;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
@@ -30,10 +32,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import org.verwandlung.voj.web.mapper.LanguageMapper;
+import org.verwandlung.voj.web.mapper.OptionMapper;
 import org.verwandlung.voj.web.mapper.ProblemMapper;
 import org.verwandlung.voj.web.mapper.SubmissionMapper;
+import org.verwandlung.voj.web.mapper.UserMapper;
 import org.verwandlung.voj.web.messenger.MessageSender;
 import org.verwandlung.voj.web.model.Language;
+import org.verwandlung.voj.web.model.Option;
 import org.verwandlung.voj.web.model.Problem;
 import org.verwandlung.voj.web.model.Submission;
 import org.verwandlung.voj.web.model.User;
@@ -81,66 +86,8 @@ public class SubmissionService {
   }
 
   /**
-   * Gets the number of submissions within a specified time period.
-   *
-   * @param startTime - the start time of the statistics
-   * @param endTime - the end time of the statistics
-   * @param uid - the unique identifier of the user
-   * @param isAcceptedOnly - whether to count only accepted submissions
-   * @return a Map of key-value pairs containing the time and the number of submissions
-   */
-  public Map<String, Long> getNumberOfSubmissionsUsingDate(
-      Date startTime, Date endTime, long uid, boolean isAcceptedOnly) {
-    long differenceInSeconds = (endTime.getTime() - startTime.getTime()) / 1000;
-    if (differenceInSeconds > 32 * 86400) {
-      return getNumberOfSubmissionsGroupByMonth(startTime, endTime, uid, isAcceptedOnly);
-    }
-    return getNumberOfSubmissionsGroupByDay(startTime, endTime, uid, isAcceptedOnly);
-  }
-
-  /**
-   * Gets the number of submissions within a specified time period, grouped by month.
-   *
-   * @param startTime - the start time of the statistics
-   * @param endTime - the end time of the statistics
-   * @param uid - the unique identifier of the user
-   * @param isAcceptedOnly - whether to count only accepted submissions
-   * @return a Map of key-value pairs containing the month and the number of submissions
-   */
-  private Map<String, Long> getNumberOfSubmissionsGroupByMonth(
-      Date startTime, Date endTime, long uid, boolean isAcceptedOnly) {
-    // Build an empty list covering the date range
-    Map<String, Long> numberOfSubmissions = new LinkedHashMap<String, Long>();
-    Calendar calendar = new GregorianCalendar();
-    calendar.setTime(startTime);
-    while (calendar.getTime().before(endTime)) {
-      SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM");
-      calendar.add(Calendar.MONTH, 1);
-      Date targetDate = calendar.getTime();
-      numberOfSubmissions.put(sdf.format(targetDate), (long) 0);
-    }
-
-    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:MM:ss");
-    String startTimeString = sdf.format(startTime);
-    String endTimeString = sdf.format(endTime);
-    List<Map<String, Object>> submissions =
-        submissionMapper.getNumberOfSubmissionsGroupByMonth(
-            startTimeString, endTimeString, uid, isAcceptedOnly);
-
-    for (Map<String, Object> e : submissions) {
-      // A numeric value such as 201512
-      Integer month = (Integer) e.get("month");
-      String monthString = month.toString();
-      long submissionTimes = (Long) e.get("submissions");
-
-      monthString = monthString.substring(0, 4) + "/" + monthString.substring(4);
-      numberOfSubmissions.put(monthString, submissionTimes);
-    }
-    return numberOfSubmissions;
-  }
-
-  /**
-   * Gets the number of submissions within a specified time period, grouped by day.
+   * Gets the number of submissions for each day within a time period (always day-granularity).
+   * Feeds the activity heat-map.
    *
    * @param startTime - the start time of the statistics
    * @param endTime - the end time of the statistics
@@ -148,7 +95,7 @@ public class SubmissionService {
    * @param isAcceptedOnly - whether to count only accepted submissions
    * @return a Map of key-value pairs containing the date and the number of submissions
    */
-  private Map<String, Long> getNumberOfSubmissionsGroupByDay(
+  public Map<String, Long> getNumberOfSubmissionsGroupByDay(
       Date startTime, Date endTime, long uid, boolean isAcceptedOnly) {
     // Build an empty list covering the date range
     Map<String, Long> numberOfSubmissions = new LinkedHashMap<String, Long>();
@@ -161,9 +108,9 @@ public class SubmissionService {
       numberOfSubmissions.put(sdf.format(targetDate), (long) 0);
     }
 
-    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd 00:00:00");
-    String startTimeString = sdf.format(startTime);
-    String endTimeString = sdf.format(endTime);
+    String startTimeString = new SimpleDateFormat("yyyy-MM-dd 00:00:00").format(startTime);
+    // Keep the upper bound at the actual instant so today's (partial-day) submissions are counted.
+    String endTimeString = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(endTime);
     List<Map<String, Object>> submissions =
         submissionMapper.getNumberOfSubmissionsGroupByDay(
             startTimeString, endTimeString, uid, isAcceptedOnly);
@@ -174,6 +121,49 @@ public class SubmissionService {
       numberOfSubmissions.put(date, submissionTimes);
     }
     return numberOfSubmissions;
+  }
+
+  /**
+   * [For administrators only] Gets the number of submissions within a time period grouped by judge
+   * result, feeding the dashboard's verdict-mix breakdown. The pending ("PD") bucket is dropped so
+   * the mix reflects completed judgements only.
+   *
+   * @param startTime - the start time of the statistics
+   * @param endTime - the end time of the statistics
+   * @return an ordered map of judge-result slug to submission count, highest count first
+   */
+  public Map<String, Long> getNumberOfSubmissionsGroupByJudgeResult(Date startTime, Date endTime) {
+    String startTimeString = new SimpleDateFormat("yyyy-MM-dd 00:00:00").format(startTime);
+    // Keep the upper bound at the actual instant so today's submissions are part of the mix.
+    String endTimeString = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(endTime);
+    List<Map<String, Object>> rows =
+        submissionMapper.getNumberOfSubmissionsGroupByJudgeResult(startTimeString, endTimeString);
+
+    List<Map.Entry<String, Long>> entries = new ArrayList<>();
+    for (Map<String, Object> row : rows) {
+      String slug = (String) row.get("slug");
+      if (slug == null || "PD".equals(slug)) {
+        continue;
+      }
+      entries.add(new AbstractMap.SimpleEntry<>(slug, ((Number) row.get("submissions")).longValue()));
+    }
+    entries.sort((a, b) -> Long.compare(b.getValue(), a.getValue()));
+
+    Map<String, Long> result = new LinkedHashMap<>();
+    for (Map.Entry<String, Long> entry : entries) {
+      result.put(entry.getKey(), entry.getValue());
+    }
+    return result;
+  }
+
+  /**
+   * [For administrators only] Gets the judge-queue depth, i.e. the number of submissions still
+   * waiting to be judged.
+   *
+   * @return the number of pending submissions
+   */
+  public long getNumberOfPendingSubmissions() {
+    return submissionMapper.getNumberOfPendingSubmissions();
   }
 
   /**
@@ -303,6 +293,44 @@ public class SubmissionService {
   }
 
   /**
+   * Gets a user's solved-problem counts grouped by difficulty level, feeding the profile's
+   * "solved by difficulty" breakdown. Each entry carries the difficulty slug/name, the number of
+   * public problems at that difficulty (total), the number the user has solved (solved) and the
+   * completion percentage.
+   *
+   * @param userId - the unique identifier of the user
+   * @return an ordered list of per-difficulty stat maps
+   */
+  public List<Map<String, Object>> getSolvedProblemsByDifficulty(long userId) {
+    List<Map<String, Object>> difficulties =
+        submissionMapper.getNumberOfSolvedProblemsByDifficulty(userId);
+    for (Map<String, Object> difficulty : difficulties) {
+      long total = ((Number) difficulty.get("total")).longValue();
+      long solved = ((Number) difficulty.get("solved")).longValue();
+      difficulty.put("percentage", total == 0 ? 0 : solved * 100 / total);
+    }
+    return difficulties;
+  }
+
+  /**
+   * Gets the number of distinct solved (accepted) problems for every user with at least one accepted
+   * submission, keyed by user identifier. Backs the admin user list's SOLVED and RANK columns; users
+   * absent from the map have solved no problems.
+   *
+   * @return a map from user identifier to the number of distinct solved problems
+   */
+  public Map<Long, Long> getSolvedProblemCountForAllUsers() {
+    List<Map<String, Object>> rows = submissionMapper.getSolvedProblemCountForAllUsers();
+    Map<Long, Long> solvedCounts = new HashMap<>(rows.size() * 4 / 3 + 1);
+    for (Map<String, Object> row : rows) {
+      long uid = ((Number) row.get("uid")).longValue();
+      long solved = ((Number) row.get("solved")).longValue();
+      solvedCounts.put(uid, solved);
+    }
+    return solvedCounts;
+  }
+
+  /**
    * Creates a submission and adds the judging task to the message queue.
    *
    * @param user - the logged-in user object
@@ -327,7 +355,7 @@ public class SubmissionService {
       submissionMapper.createSubmission(submission);
 
       long submissionId = submission.getSubmissionId();
-      createSubmissionTask(submissionId);
+      createSubmissionTask(submissionId, language.getLanguageSlug());
       result.put("submissionId", submissionId);
     }
     return result;
@@ -346,27 +374,63 @@ public class SubmissionService {
     result.put("isProblemExists", submission.getProblem() != null);
     result.put("isLanguageExists", submission.getLanguage() != null);
     result.put("isCodeEmpty", code == null || code.length() == 0);
+    result.put("isEmailVerified", isSubmitterEmailVerified(submission.getUser()));
 
     boolean isSuccessful =
         result.get("isUserLogined")
             && result.get("isProblemExists")
             && result.get("isLanguageExists")
-            && !result.get("isCodeEmpty");
+            && !result.get("isCodeEmpty")
+            && result.get("isEmailVerified");
     result.put("isSuccessful", isSuccessful);
     return result;
+  }
+
+  /**
+   * Creates a judging task and submits the submission information to the message queue. Looks up the
+   * submission's language so the task can be tagged for language-aware routing; used by the rejudge
+   * flow, which only knows the submission's unique identifier.
+   *
+   * @param submissionId - the unique identifier of the submission
+   */
+  public void createSubmissionTask(long submissionId) {
+    Submission submission = submissionMapper.getSubmission(submissionId);
+    String languageSlug =
+        (submission != null && submission.getLanguage() != null)
+            ? submission.getLanguage().getLanguageSlug()
+            : null;
+    createSubmissionTask(submissionId, languageSlug);
   }
 
   /**
    * Creates a judging task and submits the submission information to the message queue.
    *
    * @param submissionId - the unique identifier of the submission
+   * @param languageSlug - the slug of the submission's language, used by judgers to claim only the
+   *     tasks they can build
    */
-  public void createSubmissionTask(long submissionId) {
+  public void createSubmissionTask(long submissionId, String languageSlug) {
     Map<String, Object> mapMessage = new HashMap<>();
     mapMessage.put("event", "SubmissionCreated");
     mapMessage.put("submissionId", submissionId);
 
-    messageSender.sendMessage(mapMessage);
+    messageSender.sendMessage(mapMessage, languageSlug);
+  }
+
+  /**
+   * Marks a still-pending submission as a terminal failure because no judger was available to handle
+   * it before its judging task expired in the queue. Invoked from the dead-letter listener. The
+   * update only touches submissions that are still pending, so it never overwrites a real verdict
+   * (and is safe to apply more than once).
+   *
+   * @param submissionId - the unique identifier of the submission whose task expired
+   * @return whether the submission was marked (false when it was already judged or does not exist)
+   */
+  public boolean markSubmissionUnjudgeable(long submissionId) {
+    String judgeLog =
+        "System Error.\n\nNo available judger supports this submission's language, so the judging "
+            + "task expired before it could be processed.\n";
+    return submissionMapper.markSubmissionUnjudgeable(submissionId, "SE", judgeLog) > 0;
   }
 
   /**
@@ -380,8 +444,35 @@ public class SubmissionService {
     return true;
   }
 
+  /**
+   * Checks whether the submitter is allowed to submit with respect to email verification. When the
+   * {@code requireEmailVerification} option is enabled, only users whose email address has been
+   * verified may submit; otherwise everyone may submit.
+   *
+   * @param user - the submitting user, or null
+   * @return whether the submitter satisfies the email-verification requirement
+   */
+  private boolean isSubmitterEmailVerified(User user) {
+    Option option = optionMapper.getOption("requireEmailVerification");
+    boolean isRequired = option != null && "1".equals(option.getOptionValue());
+    if (!isRequired) {
+      return true;
+    }
+    if (user == null) {
+      return false;
+    }
+    User freshUser = userMapper.getUserUsingUid(user.getUid());
+    return freshUser != null && freshUser.isEmailVerified();
+  }
+
   /** The autowired SubmissionMapper object. */
   @Autowired private SubmissionMapper submissionMapper;
+
+  /** The autowired OptionMapper object. Used to resolve the email-verification requirement. */
+  @Autowired private OptionMapper optionMapper;
+
+  /** The autowired UserMapper object. Used to read a submitter's current verification status. */
+  @Autowired private UserMapper userMapper;
 
   /** The autowired ProblemMapper object. */
   @Autowired private ProblemMapper problemMapper;

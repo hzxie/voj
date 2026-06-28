@@ -30,6 +30,7 @@ import org.springframework.web.servlet.view.RedirectView;
 import org.verwandlung.voj.web.exception.ResourceNotFoundException;
 import org.verwandlung.voj.web.model.*;
 import org.verwandlung.voj.web.service.DiscussionService;
+import org.verwandlung.voj.web.service.OptionService;
 import org.verwandlung.voj.web.service.ProblemService;
 import org.verwandlung.voj.web.util.HttpRequestParser;
 import org.verwandlung.voj.web.util.HttpSessionParser;
@@ -62,6 +63,8 @@ public class DiscussionController {
       @RequestParam(value = "problemId", required = false, defaultValue = "-1") long problemId,
       HttpServletRequest request,
       HttpServletResponse response) {
+    final int NUMBER_OF_THREADS_PER_REQUEST =
+        optionService.getIntOption("discussionsPerPage", DEFAULT_NUMBER_OF_THREADS_PER_REQUEST);
     List<DiscussionThread> discussionThreads = null;
     if (problemId != -1) {
       discussionThreads =
@@ -73,7 +76,7 @@ public class DiscussionController {
               discussionTopicSlug, 0, NUMBER_OF_THREADS_PER_REQUEST);
     }
 
-    ModelAndView view = new ModelAndView("discussion/threads");
+    ModelAndView view = new ModelAndView("pages/discussion/threads");
     view.addObject("selectedTopicSlug", discussionTopicSlug);
     view.addObject("problemId", problemId);
     view.addObject("discussionThreads", discussionThreads);
@@ -99,6 +102,8 @@ public class DiscussionController {
     if (startIndex < 0) {
       startIndex = 0;
     }
+    final int NUMBER_OF_THREADS_PER_REQUEST =
+        optionService.getIntOption("discussionsPerPage", DEFAULT_NUMBER_OF_THREADS_PER_REQUEST);
     List<DiscussionThread> discussionThreads = null;
     if (problemId != -1) {
       discussionThreads =
@@ -134,10 +139,20 @@ public class DiscussionController {
     if (discussionThread == null) {
       throw new ResourceNotFoundException();
     }
+    // A thread hidden by reports or by an administrator is treated as not found for everyone
+    // except administrators.
+    if ((discussionService.isDiscussionThreadHidden(discussionThreadId)
+            || !discussionThread.isVisible())
+        && !isAdministrator(HttpSessionParser.getCurrentUser())) {
+      throw new ResourceNotFoundException();
+    }
 
     HttpSession session = request.getSession();
-    ModelAndView view = new ModelAndView("discussion/thread");
+    ModelAndView view = new ModelAndView("pages/discussion/thread");
     view.addObject("discussionThread", discussionThread);
+    view.addObject("minSolvedToVote", discussionService.getMinSolvedToVote());
+    view.addObject("minSolvedToReport", discussionService.getMinSolvedToReport());
+    view.addObject("postDelayMinutes", discussionService.getNewUserPostDelay());
     if (isLoggedIn(session)) {
       List<DiscussionTopic> discussionTopics = discussionService.getDiscussionTopics();
       view.addObject("discussionTopics", discussionTopics);
@@ -170,9 +185,10 @@ public class DiscussionController {
         problem = problemService.getProblem(problemId);
       }
 
-      view = new ModelAndView("discussion/new-thread");
+      view = new ModelAndView("pages/discussion/new-thread");
       view.addObject("discussionTopics", discussionTopics);
       view.addObject("relatedProblem", problem);
+      view.addObject("postDelayMinutes", discussionService.getNewUserPostDelay());
     }
     return view;
   }
@@ -208,7 +224,7 @@ public class DiscussionController {
 
     List<DiscussionReply> discussionReplies =
         discussionService.getDiscussionRepliesOfThread(
-            discussionThreadId, currentUserUid, startIndex, NUMBER_OF_REPLIES_PER_REQUEST);
+            discussionThreadId, currentUserUid, startIndex, NUMBER_OF_REPLIES_PER_REQUEST, true);
     Map<String, Object> result = new HashMap<>(3, 1);
     result.put("isSuccessful", discussionReplies != null && !discussionReplies.isEmpty());
     result.put("discussionReplies", discussionReplies);
@@ -261,6 +277,46 @@ public class DiscussionController {
               new Object[] {currentUser, discussionReplyId, voteUp, voteDown, ipAddress}));
     }
     return result;
+  }
+
+  /**
+   * Handles the request of a user reporting a discussion reply for abuse.
+   *
+   * @param discussionThreadId - the unique identifier of the discussion thread
+   * @param discussionReplyId - the unique identifier of the discussion reply
+   * @param request - the HttpServletRequest object
+   * @return a JSON object containing the result of handling the report request
+   */
+  @RequestMapping(value = "/{threadId}/reportDiscussionReply.action", method = RequestMethod.POST)
+  public @ResponseBody Map<String, Boolean> reportDiscussionReplyAction(
+      @PathVariable("threadId") long discussionThreadId,
+      @RequestParam(value = "discussionReplyId") long discussionReplyId,
+      HttpServletRequest request) {
+    String ipAddress = HttpRequestParser.getRemoteAddr(request);
+    User currentUser = HttpSessionParser.getCurrentUser();
+
+    Map<String, Boolean> result =
+        discussionService.reportDiscussionReply(
+            discussionThreadId, discussionReplyId, currentUser);
+    if (result.get("isSuccessful")) {
+      LOGGER.info(
+          String.format(
+              "User: {%s} reported discussion reply #%d at %s",
+              new Object[] {currentUser, discussionReplyId, ipAddress}));
+    }
+    return result;
+  }
+
+  /**
+   * Checks whether a user belongs to the administrators user group.
+   *
+   * @param user - the user to check (may be null)
+   * @return whether the user is an administrator
+   */
+  private boolean isAdministrator(User user) {
+    return user != null
+        && user.getUserGroup() != null
+        && "administrators".equals(user.getUserGroup().getUserGroupSlug());
   }
 
   /**
@@ -434,14 +490,17 @@ public class DiscussionController {
     return result;
   }
 
-  /** The number of discussion threads per request. */
-  private static final int NUMBER_OF_THREADS_PER_REQUEST = 25;
+  /** The default number of discussion threads per request when the admin option is unset. */
+  private static final int DEFAULT_NUMBER_OF_THREADS_PER_REQUEST = 50;
 
   /** The number of discussion replies per request. */
   private static final int NUMBER_OF_REPLIES_PER_REQUEST = 50;
 
   /** The autowired DiscussionService object. */
   @Autowired private DiscussionService discussionService;
+
+  /** The autowired OptionService object. Used for reading the configurable list-display options. */
+  @Autowired private OptionService optionService;
 
   /** The autowired ProblemService object. */
   @Autowired private ProblemService problemService;

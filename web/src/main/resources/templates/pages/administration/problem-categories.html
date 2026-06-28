@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/admin}" lang="en">
+<head>
+    <title th:text="#{voj.administration.problem-categories.title} + ' | ' + ${websiteName}">Problem Categories</title>
+</head>
+<body>
+    <div layout:fragment="content">
+    <div class="adm-form">
+
+        <!-- PROBLEM TAXONOMY -->
+        <div class="adm-setgroup">
+            <div class="adm-setgroup-head">
+                <div class="t" th:text="'// ' + #{voj.administration.problem-categories.taxonomy}">// PROBLEM TAXONOMY</div>
+                <div class="d" th:text="#{voj.administration.problem-categories.taxonomy-desc}">Categories used across the problem set.</div>
+            </div>
+            <div class="adm-setgroup-body">
+                <div class="adm-taxchips">
+                    <div class="lbl" th:text="#{voj.administration.problem-categories.tags-label}">Problem tags</div>
+                    <div class="hint" th:text="#{voj.administration.problem-categories.tags-hint}">Free-form labels selectable when editing a problem.</div>
+                    <div class="adm-taxbox" id="problem-tags">
+                        <span class="adm-taxchip" th:each="problemTag : ${problemTags}" th:attr="data-id=${problemTag.problemTagId}">
+                            <span th:text="${problemTag.problemTagName}">Tag</span>
+                            <span class="x" th:title="#{voj.administration.problem-categories.delete}">&#10005;</span>
+                        </span>
+                        <input id="new-tag-input" class="adm-taxinput" type="text" maxlength="32" th:placeholder="#{voj.administration.problem-categories.tag-add-placeholder}" />
+                    </div>
+                </div>
+                <div class="adm-catlist">
+                    <div class="adm-catlist-title">
+                        <div class="lbl" th:text="#{voj.administration.problem-categories.problem-categories}">Problem categories</div>
+                        <span class="total"><span id="category-total" th:text="${#lists.size(problemCategories)}">0</span> <span th:text="#{voj.administration.problem-categories.total}">total</span></span>
+                    </div>
+                    <div class="hint" th:text="#{voj.administration.problem-categories.categories-hint}">Top-level groupings shown in the problem set filter.</div>
+
+                    <div class="adm-catlist-table" id="problem-categories">
+                        <div class="adm-catlist-row adm-catlist-head">
+                            <span></span>
+                            <span th:text="#{voj.administration.problem-categories.name}">NAME</span>
+                            <span class="used" th:text="#{voj.administration.problem-categories.used-by}">USED BY</span>
+                            <span></span>
+                        </div>
+                        <div class="adm-catlist-row adm-catlist-item" th:each="problemCategory,loop : ${problemCategories}"
+                             th:attr="data-value=${problemCategory.problemCategoryId},data-slug=${problemCategory.problemCategorySlug},data-parent=${problemCategory.parentProblemCategoryId}"
+                             th:with="dotClass=${ {'c-accent','c-info','c-warn','c-err','c-info','c-accent','c-warn'}[loop.index % 7] }">
+                            <span class="adm-catlist-grip" th:title="#{voj.administration.problem-categories.categories-hint}">
+                                <span class="adm-catlist-dot" th:classappend="${dotClass}"></span>
+                            </span>
+                            <input class="adm-catlist-name" type="text" maxlength="32" th:value="${problemCategory.problemCategoryName}"
+                                   th:readonly="${problemCategory.problemCategorySlug == 'uncategorized'}" />
+                            <span class="adm-catlist-uses"><span th:text="${problemCategoryProblems[problemCategory.problemCategoryId]}">0</span> <span th:text="#{voj.administration.problem-categories.unit}">problems</span></span>
+                            <span class="adm-catlist-x" th:if="${problemCategory.problemCategorySlug != 'uncategorized'}" th:title="#{voj.administration.problem-categories.delete}">&#10005;</span>
+                            <span th:unless="${problemCategory.problemCategorySlug != 'uncategorized'}"></span>
+                        </div>
+                        <div class="adm-catlist-row adm-catlist-add">
+                            <span class="plus">+</span>
+                            <input id="new-category-input" type="text" maxlength="32" th:placeholder="#{voj.administration.problem-categories.add-placeholder}" />
+                            <span></span>
+                            <span></span>
+                        </div>
+                    </div>
+
+                    <div class="adm-catlist-note" th:text="#{voj.administration.problem-categories.note}">Renaming a category updates it on every problem already using it.</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    </div>
+
+    <th:block layout:fragment="scripts">
+    <script type="text/javascript" th:inline="javascript">
+        $(function () {
+            var $cat = $('#problem-categories');
+
+            // Map of category id -> slug, used to resolve a category's parent slug when
+            // renaming (the edit endpoint takes a parent slug, the model holds a parent id).
+            var idToSlug = { '0': 'none' };
+            $cat.find('.adm-catlist-item').each(function () {
+                idToSlug[String($(this).data('value'))] = $(this).data('slug');
+            });
+
+            function slugify(name) {
+                return (name || '').toLowerCase().trim()
+                    .replace(/[^a-z0-9]+/g, '-')
+                    .replace(/^-+|-+$/g, '');
+            }
+
+            function editError(result) {
+                if (!result['isProblemCategoryEditable']) { return [[#{voj.administration.problem-categories.problem-category-not-editable}]]; }
+                if (!result['isProblemCategoryExists']) { return [[#{voj.administration.problem-categories.problem-category-not-exists}]]; }
+                if (result['isProblemCategoryNameEmpty']) { return [[#{voj.administration.problem-categories.problem-category-name-empty}]]; }
+                if (!result['isProblemCategoryNameLegal']) { return [[#{voj.administration.problem-categories.problem-category-name-illegal}]]; }
+                return [[#{voj.administration.problem-categories.problem-category-name-illegal}]];
+            }
+
+            function createError(result) {
+                if (result['isProblemCategoryNameEmpty']) { return [[#{voj.administration.problem-categories.problem-category-name-empty}]]; }
+                if (!result['isProblemCategoryNameLegal']) { return [[#{voj.administration.problem-categories.problem-category-name-illegal}]]; }
+                if (result['isProblemCategorySlugEmpty']) { return [[#{voj.administration.problem-categories.problem-category-slug-empty}]]; }
+                if (!result['isProblemCategorySlugLegal']) { return [[#{voj.administration.problem-categories.problem-category-slug-illegal}]]; }
+                if (result['isProblemCategorySlugExists']) { return [[#{voj.administration.problem-categories.problem-category-slug-exists}]]; }
+                return [[#{voj.administration.problem-categories.problem-category-name-illegal}]];
+            }
+
+            function refreshTotal() {
+                $('#category-total').text($cat.find('.adm-catlist-item').length);
+            }
+
+            // ----- inline rename -----
+            $cat.on('focus', '.adm-catlist-name', function () { $(this).data('orig', this.value); });
+            $cat.on('keydown', '.adm-catlist-name', function (e) {
+                if (e.key === 'Enter' || e.keyCode === 13) { e.preventDefault(); this.blur(); }
+            });
+            $cat.on('blur', '.adm-catlist-name', function () {
+                var $input = $(this), row = $input.closest('.adm-catlist-item');
+                var orig = $input.data('orig'), name = this.value.trim();
+                if (name === '') { this.value = orig; return; }
+                if (name === orig) { return; }
+                $.ajax({
+                    type: 'POST', url: [[@{/administration/editProblemCategory.action}]],
+                    data: {
+                        problemCategoryId: row.data('value'),
+                        problemCategorySlug: row.data('slug'),
+                        problemCategoryName: name,
+                        parentProblemCategory: idToSlug[String(row.data('parent'))] || 'none'
+                    },
+                    dataType: 'JSON',
+                    success: function (result) {
+                        if (result['isSuccessful']) { $input.val(name).data('orig', name); }
+                        else { $input.val(orig); alert(editError(result)); }
+                    },
+                    error: function () { $input.val(orig); }
+                });
+            });
+
+            // ----- add (press Enter) -----
+            $('#new-category-input').on('keydown', function (e) {
+                if (e.key !== 'Enter' && e.keyCode !== 13) { return; }
+                e.preventDefault();
+                var $input = $(this), name = this.value.trim();
+                if (name === '') { return; }
+                $input.prop('disabled', true);
+                $.ajax({
+                    type: 'POST', url: [[@{/administration/createProblemCategory.action}]],
+                    data: { problemCategorySlug: slugify(name), problemCategoryName: name, parentProblemCategory: 'none' },
+                    dataType: 'JSON',
+                    success: function (result) {
+                        if (result['isSuccessful']) { window.location.reload(); }
+                        else { alert(createError(result)); $input.prop('disabled', false).focus(); }
+                    },
+                    error: function () { $input.prop('disabled', false); }
+                });
+            });
+
+            // ----- tags: add (press Enter) -----
+            function tagError(result) {
+                if (result['isProblemTagNameEmpty']) { return [[#{voj.administration.problem-categories.problem-tag-name-empty}]]; }
+                if (!result['isProblemTagNameLegal']) { return [[#{voj.administration.problem-categories.problem-tag-name-illegal}]]; }
+                if (result['isProblemTagSlugExists']) { return [[#{voj.administration.problem-categories.problem-tag-slug-exists}]]; }
+                return [[#{voj.administration.problem-categories.problem-tag-name-illegal}]];
+            }
+            $('#new-tag-input').on('keydown', function (e) {
+                if (e.key !== 'Enter' && e.keyCode !== 13) { return; }
+                e.preventDefault();
+                var $input = $(this), name = this.value.trim();
+                if (name === '') { return; }
+                $input.prop('disabled', true);
+                $.ajax({
+                    type: 'POST', url: [[@{/administration/createProblemTag.action}]],
+                    data: { problemTagName: name }, dataType: 'JSON',
+                    success: function (result) {
+                        if (result['isSuccessful']) { window.location.reload(); }
+                        else { alert(tagError(result)); $input.prop('disabled', false).focus(); }
+                    },
+                    error: function () { $input.prop('disabled', false); }
+                });
+            });
+
+            // ----- tags: delete -----
+            $('#problem-tags').on('click', '.adm-taxchip .x', function () {
+                var chip = $(this).closest('.adm-taxchip');
+                if (!confirm([[#{voj.administration.problem-categories.continue-or-not}]])) { return; }
+                $.ajax({
+                    type: 'POST', url: [[@{/administration/deleteProblemTag.action}]],
+                    data: { problemTagId: chip.data('id') }, dataType: 'JSON',
+                    success: function (result) { if (result['isSuccessful']) { chip.remove(); } }
+                });
+            });
+
+            // ----- delete -----
+            $cat.on('click', '.adm-catlist-x', function () {
+                var row = $(this).closest('.adm-catlist-item');
+                if (!confirm([[#{voj.administration.problem-categories.continue-or-not}]])) { return; }
+                $.ajax({
+                    type: 'POST', url: [[@{/administration/deleteProblemCategories.action}]],
+                    data: { 'problemCategories': JSON.stringify([row.data('value')]) }, dataType: 'JSON',
+                    success: function (result) {
+                        if (result['isSuccessful']) {
+                            (result['deletedProblemCategories'] || []).forEach(function (id) {
+                                $cat.find('.adm-catlist-item[data-value="' + id + '"]').remove();
+                            });
+                            refreshTotal();
+                        }
+                    }
+                });
+            });
+        });
+    </script>
+    </th:block>
+</body>
+</html>

@@ -28,6 +28,8 @@ import org.springframework.jms.connection.CachingConnectionFactory;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.jms.listener.SimpleMessageListenerContainer;
 
+import org.verwandlung.voj.web.messenger.ExpiredSubmissionTaskReceiver;
+
 /**
  * The message queue configuration. Replaces the ActiveMQ / JMS definitions in the original
  * dispatcher-servlet.xml.
@@ -45,6 +47,9 @@ public class JmsConfig {
   /** The name of the judge result queue (Judger -> Web). */
   private static final String JUDGE_RESULT_QUEUE = "vojJudgeResultQueue";
 
+  /** The ActiveMQ dead-letter queue that expired, undeliverable messages land on by default. */
+  private static final String DEAD_LETTER_QUEUE = "ActiveMQ.DLQ";
+
   /** The JMS connection factory with connection caching. */
   @Bean
   public ConnectionFactory connectionFactory(@Value("${jms.broker.url}") String brokerUrl) {
@@ -54,9 +59,18 @@ public class JmsConfig {
 
   /** The JmsTemplate used to dispatch messages to the judge task queue. */
   @Bean
-  public JmsTemplate jmsTemplate(ConnectionFactory connectionFactory) {
+  public JmsTemplate jmsTemplate(
+      ConnectionFactory connectionFactory,
+      @Value("${jms.submissionTask.ttl:1800000}") long submissionTaskTtl) {
     JmsTemplate jmsTemplate = new JmsTemplate(connectionFactory);
     jmsTemplate.setDefaultDestination(new ActiveMQQueue(SUBMISSION_TASK_QUEUE));
+    // Give each submission task a time-to-live. If no judger claims it before then (e.g. no online
+    // judger supports its language), the broker expires it to the dead-letter queue, where
+    // deadLetterListenerContainer picks it up and marks the submission as failed instead of leaving
+    // it Pending forever. Keep the default generous so a temporarily busy or offline (but capable)
+    // cluster does not fail otherwise valid submissions.
+    jmsTemplate.setExplicitQosEnabled(true);
+    jmsTemplate.setTimeToLive(submissionTaskTtl);
     return jmsTemplate;
   }
 
@@ -68,6 +82,23 @@ public class JmsConfig {
     listenerContainer.setConnectionFactory(connectionFactory);
     listenerContainer.setDestinationName(JUDGE_RESULT_QUEUE);
     listenerContainer.setMessageListener(messageReceiver);
+    return listenerContainer;
+  }
+
+  /**
+   * The message listener container that watches the dead-letter queue for submission tasks that
+   * expired before any judger could handle them. The selector keeps this consumer from touching
+   * unrelated dead-lettered messages (only our submission tasks carry the {@code event} property).
+   */
+  @Bean
+  public SimpleMessageListenerContainer deadLetterListenerContainer(
+      ConnectionFactory connectionFactory,
+      ExpiredSubmissionTaskReceiver expiredSubmissionTaskReceiver) {
+    SimpleMessageListenerContainer listenerContainer = new SimpleMessageListenerContainer();
+    listenerContainer.setConnectionFactory(connectionFactory);
+    listenerContainer.setDestinationName(DEAD_LETTER_QUEUE);
+    listenerContainer.setMessageSelector("event = 'SubmissionCreated'");
+    listenerContainer.setMessageListener(expiredSubmissionTaskReceiver);
     return listenerContainer;
   }
 }

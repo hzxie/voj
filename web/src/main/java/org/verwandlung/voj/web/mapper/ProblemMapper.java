@@ -40,25 +40,27 @@ public interface ProblemMapper {
    *
    * @param keyword - the keyword
    * @param problemCategoryId - the unique identifier of the problem category
+   * @param problemDifficultyId - the unique identifier of the problem difficulty (0 = no filter)
    * @param isPublicOnly - whether to filter only public problems
    * @return the total number of problems matching the filter conditions
    */
   long getNumberOfProblemsUsingFilters(
       @Param("keyword") String keyword,
       @Param("problemCategoryId") int problemCategoryId,
+      @Param("problemDifficultyId") int problemDifficultyId,
       @Param("isPublicOnly") boolean isPublicOnly);
 
   /**
    * Gets the ID of the first problem.
    *
-   * @return the ID of the first problem
+   * @return the ID of the first problem, or 0 if there are no problems
    */
   long getLowerBoundOfProblems();
 
   /**
    * Gets the ID of the last problem.
    *
-   * @return the ID of the last problem
+   * @return the ID of the last problem, or 0 if there are no problems
    */
   long getUpperBoundOfProblems();
 
@@ -68,7 +70,7 @@ public interface ProblemMapper {
    * @param isPublicOnly - whether to filter only public problems
    * @param offset - the starting number of the problem identifier
    * @param limit - the number of problems to fetch
-   * @return the ID of the last problem within the problem range
+   * @return the ID of the last problem within the problem range, or 0 if there are no problems
    */
   long getUpperBoundOfProblemsWithLimit(
       @Param("isPublicOnly") boolean isPublicOnly,
@@ -89,8 +91,9 @@ public interface ProblemMapper {
    * @param keyword - the keyword
    * @param problemCategoryId - the unique identifier of the problem category
    * @param problemTagId - the unique identifier of the problem tag
+   * @param problemDifficultyId - the unique identifier of the problem difficulty (0 = no filter)
    * @param isPublicOnly - whether to filter only public problems
-   * @param offset - the starting number of the problem identifier
+   * @param offset - the number of rows to skip (zero-based)
    * @param limit - the number of problems to fetch
    * @return the matching problems within the range
    */
@@ -98,8 +101,47 @@ public interface ProblemMapper {
       @Param("keyword") String keyword,
       @Param("problemCategoryId") int problemCategoryId,
       @Param("problemTagId") long problemTagId,
+      @Param("problemDifficultyId") int problemDifficultyId,
       @Param("isPublicOnly") boolean isPublicOnly,
-      @Param("problemId") long offset,
+      @Param("offset") long offset,
+      @Param("limit") int limit);
+
+  /**
+   * Gets the total number of problems matching the public problem-set filters (field + tag).
+   *
+   * @param field - the filter field ("id", "title" or "tag")
+   * @param query - the filter value
+   * @param problemTagId - the unique identifier of the problem tag (0 = no tag filter)
+   * @param problemDifficultyId - the unique identifier of the problem difficulty (0 = no filter)
+   * @param isPublicOnly - whether to filter only public problems
+   * @return the total number of matching problems
+   */
+  long getNumberOfProblemsByPage(
+      @Param("field") String field,
+      @Param("query") String query,
+      @Param("problemTagId") long problemTagId,
+      @Param("problemDifficultyId") int problemDifficultyId,
+      @Param("isPublicOnly") boolean isPublicOnly);
+
+  /**
+   * Gets a page of problems for the public problem set (numbered pager + ID/Title/Tag filter).
+   *
+   * @param field - the filter field ("id", "title" or "tag")
+   * @param query - the filter value
+   * @param problemTagId - the unique identifier of the problem tag (0 = no tag filter)
+   * @param problemDifficultyId - the unique identifier of the problem difficulty (0 = no filter)
+   * @param isPublicOnly - whether to filter only public problems
+   * @param offset - the number of rows to skip
+   * @param limit - the number of problems to fetch
+   * @return the matching problems on the requested page
+   */
+  List<Problem> getProblemsByPage(
+      @Param("field") String field,
+      @Param("query") String query,
+      @Param("problemTagId") long problemTagId,
+      @Param("problemDifficultyId") int problemDifficultyId,
+      @Param("isPublicOnly") boolean isPublicOnly,
+      @Param("offset") long offset,
       @Param("limit") int limit);
 
   /**

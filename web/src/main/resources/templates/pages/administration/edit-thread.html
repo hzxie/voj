@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/admin}" lang="en">
+<head>
+    <title th:text="#{voj.administration.edit-thread.title} + ' | ' + ${websiteName}">Thread</title>
+</head>
+<body>
+    <div layout:fragment="content">
+    <div class="adm-detail">
+
+        <div class="adm-detail-top">
+            <a class="adm-back" th:href="@{/administration/all-discussion}">&#8592; <span th:text="#{voj.administration.edit-thread.back}">back to discussion</span></a>
+            <span class="adm-idchip" th:text="'#' + ${thread.discussionThreadId}">#1</span>
+            <span class="adm-pill click" id="status-pill"
+                  th:classappend="${thread.visible} ? 'c-accent' : 'c-err'"
+                  th:text="${thread.visible} ? #{voj.administration.edit-thread.visible} : #{voj.administration.edit-thread.hidden}">Visible</span>
+            <div class="adm-flex1"></div>
+            <a class="adm-btn-tn" th:href="@{/discussion/{id}(id=${thread.discussionThreadId})}" target="_blank" th:text="#{voj.administration.edit-thread.view-thread}">view thread</a>
+            <button type="button" class="adm-btn-tn danger" id="delete-thread" th:text="#{voj.administration.edit-thread.delete}">delete</button>
+            <button type="button" class="adm-btn-accent" id="save-thread" th:text="#{voj.administration.edit-thread.save}">$ save</button>
+        </div>
+
+        <div class="adm-ed2">
+            <div class="adm-card adm-min0">
+                <div class="adm-card-head plain">
+                    <input class="adm-title-input" id="thread-title" type="text" th:value="${thread.discussionThreadTitle}" />
+                </div>
+                <div class="adm-reply op" th:if="${!#lists.isEmpty(replies)}" th:with="op=${replies[0]}">
+                    <div class="adm-mono adm-avatar-md" th:text="${op.discussionReplyCreator != null ? #strings.substring(op.discussionReplyCreator.username,0,1) : '?'}">A</div>
+                    <div class="adm-min0 adm-flex1">
+                        <div class="adm-reply-head">
+                            <span class="adm-cell head" th:text="${op.discussionReplyCreator != null ? '@' + op.discussionReplyCreator.username : '—'}">@author</span>
+                            <span class="adm-feed-when" th:text="${@dateFormatter.dateTimeLongMedium(op.discussionReplyCreateTime, language)}">when</span>
+                            <span class="adm-pill c-info xs" th:text="#{voj.administration.edit-thread.op}">OP</span>
+                        </div>
+                        <p class="adm-reply-body" th:text="${op.discussionReplyContent}">body</p>
+                    </div>
+                </div>
+                <div class="adm-replies-band" th:text="#{voj.administration.edit-thread.replies}">REPLIES</div>
+                <th:block th:each="reply,iter : ${replies}">
+                    <div th:if="${iter.index > 0}" class="adm-reply" th:classappend="${!reply.visible} ? 'hidden-reply'" th:attr="data-reply=${reply.discussionReplyId}">
+                        <div class="adm-mono muted adm-avatar-sm" th:text="${reply.discussionReplyCreator != null ? #strings.substring(reply.discussionReplyCreator.username,0,1) : '?'}">A</div>
+                        <div class="adm-min0 adm-flex1">
+                            <div class="adm-reply-head">
+                                <span class="adm-cell head" th:text="${reply.discussionReplyCreator != null ? '@' + reply.discussionReplyCreator.username : '—'}">@author</span>
+                                <span class="adm-feed-when" th:text="${@dateFormatter.dateTimeLongMedium(reply.discussionReplyCreateTime, language)}">when</span>
+                            </div>
+                            <p class="adm-reply-body" th:text="${reply.discussionReplyContent}">body</p>
+                        </div>
+                        <div class="adm-reply-acts">
+                            <button type="button" class="adm-reply-act hide" th:data-reply="${reply.discussionReplyId}" th:attr="data-visible=${reply.visible}" onclick="admToggleReply(this);"
+                                    th:text="${reply.visible} ? #{voj.administration.edit-thread.hide} : #{voj.administration.edit-thread.show}">hide</button>
+                            <button type="button" class="adm-reply-act del" th:data-reply="${reply.discussionReplyId}" onclick="admDeleteReply(this);" th:text="#{voj.administration.edit-thread.delete}">delete</button>
+                        </div>
+                    </div>
+                </th:block>
+                <div class="adm-table-empty" th:if="${#lists.size(replies) <= 1}" th:text="#{voj.administration.edit-thread.no-replies}">// no replies</div>
+            </div>
+
+            <div class="adm-col">
+                <div class="adm-card">
+                    <div class="adm-card-head plain" th:text="#{voj.administration.edit-thread.moderation}">// MODERATION</div>
+                    <div class="adm-card-body">
+                        <div>
+                            <div class="adm-block-label" th:text="#{voj.administration.edit-thread.category}">CATEGORY</div>
+                            <div class="adm-seg" id="category-seg">
+                                <button type="button" th:each="topic : ${topics}" th:attr="data-topic=${topic.discussionTopicId}"
+                                        th:classappend="${thread.discussionTopic != null and topic.discussionTopicId == thread.discussionTopic.discussionTopicId} ? 'active'"
+                                        th:text="${topic.discussionTopicName}">Category</button>
+                            </div>
+                        </div>
+                        <div class="adm-togrow">
+                            <span th:text="#{voj.administration.edit-thread.pinned}">Pinned to top</span>
+                            <div class="adm-switch md" id="pin-switch" th:classappend="${thread.pinned} ? 'on'"><div class="knob"></div></div>
+                        </div>
+                        <div class="adm-togrow">
+                            <span th:text="#{voj.administration.edit-thread.locked}">Locked (no replies)</span>
+                            <div class="adm-switch md" id="lock-switch" th:classappend="${thread.locked} ? 'on'"><div class="knob"></div></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="adm-card">
+                    <div class="adm-card-head">
+                        <span th:text="#{voj.administration.edit-thread.reports}">// REPORTS</span>
+                        <span class="adm-report-count" th:if="${!#lists.isEmpty(reporters)}" th:text="${#lists.size(reporters)}">0</span>
+                    </div>
+                    <a class="adm-report" th:each="reporter : ${reporters}" th:href="@{/administration/moderation/{id}(id=${reporter.reportedReplyId})}">
+                        <div class="adm-report-top">
+                            <span class="who" th:text="'@' + ${reporter.username}">@user</span>
+                            <span class="when" th:text="${@dateFormatter.dateTimeLongMedium(reporter.reportTime, language)}">when</span>
+                        </div>
+                        <div class="adm-report-target">
+                            <span th:text="#{voj.administration.edit-thread.reported}">reported</span>
+                            <span class="at" th:text="${reporter.reportedUsername != null ? '@' + reporter.reportedUsername : '—'}">@grace</span>
+                            <span class="snippet" th:text="'· ' + ${reporter.reportedContent}">· reply content</span>
+                        </div>
+                    </a>
+                    <div class="adm-report-empty" th:if="${#lists.isEmpty(reporters)}" th:text="#{voj.administration.edit-thread.no-reports}">// no reports — thread is clean</div>
+                </div>
+
+                <div class="adm-danger col">
+                    <div class="t" th:text="#{voj.administration.edit-thread.danger-zone}">Danger zone</div>
+                    <div class="adm-danger-btns">
+                        <button type="button" class="adm-btn-tn danger" id="delete-thread-2" th:text="#{voj.administration.edit-thread.delete-thread}">delete thread</button>
+                        <a class="adm-btn-tn danger" th:if="${thread.discussionThreadCreator != null}" th:href="@{/administration/edit-user/{id}(id=${thread.discussionThreadCreator.uid})}" th:text="#{voj.administration.edit-thread.ban-author}">ban author</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    </div>
+
+    <th:block layout:fragment="scripts">
+    <script type="text/javascript" th:inline="javascript">
+        var admState = {
+            visible: [[${thread.visible}]],
+            pinned: [[${thread.pinned}]],
+            locked: [[${thread.locked}]],
+            topicId: [[${thread.discussionTopic != null ? thread.discussionTopic.discussionTopicId : 0}]]
+        };
+        var visibleLabel = [[#{voj.administration.edit-thread.visible}]];
+        var hiddenLabel = [[#{voj.administration.edit-thread.hidden}]];
+        var hideLabel = [[#{voj.administration.edit-thread.hide}]];
+        var showLabel = [[#{voj.administration.edit-thread.show}]];
+
+        window.admDeleteReply = function (btn) {
+            if (!confirm([[#{voj.administration.edit-thread.continue-reply}]])) return;
+            var replyId = btn.getAttribute('data-reply');
+            $.ajax({
+                type: 'POST', url: [[@{/administration/deleteReply.action}]],
+                data: { replyId: replyId }, dataType: 'JSON',
+                success: function (result) {
+                    if (result['isSuccessful']) {
+                        var row = document.querySelector('.adm-reply[data-reply="' + replyId + '"]');
+                        if (row) row.parentNode.removeChild(row);
+                    }
+                }
+            });
+        };
+
+        window.admToggleReply = function (btn) {
+            var replyId = btn.getAttribute('data-reply');
+            var next = btn.getAttribute('data-visible') !== 'true';
+            $.ajax({
+                type: 'POST', url: [[@{/administration/toggleReplyVisibility.action}]],
+                data: { replyId: replyId, visible: next }, dataType: 'JSON',
+                success: function (result) {
+                    if (!result['isSuccessful']) return;
+                    btn.setAttribute('data-visible', next);
+                    btn.textContent = next ? hideLabel : showLabel;
+                    var row = document.querySelector('.adm-reply[data-reply="' + replyId + '"]');
+                    if (row) row.classList.toggle('hidden-reply', !next);
+                }
+            });
+        };
+
+        document.addEventListener('DOMContentLoaded', function () {
+            var threadId = [[${thread.discussionThreadId}]];
+
+            // Header status pill toggles the in-page visibility state (persisted on save).
+            var statusPill = document.getElementById('status-pill');
+            statusPill.addEventListener('click', function () {
+                admState.visible = !admState.visible;
+                statusPill.classList.toggle('c-accent', admState.visible);
+                statusPill.classList.toggle('c-err', !admState.visible);
+                statusPill.textContent = admState.visible ? visibleLabel : hiddenLabel;
+            });
+
+            // Category chips: single-select.
+            Array.prototype.forEach.call(document.querySelectorAll('#category-seg > button'), function (chip) {
+                chip.addEventListener('click', function () {
+                    Array.prototype.forEach.call(document.querySelectorAll('#category-seg > button'), function (c) {
+                        c.classList.remove('active');
+                    });
+                    chip.classList.add('active');
+                    admState.topicId = parseInt(chip.getAttribute('data-topic'), 10);
+                });
+            });
+
+            // Pinned / Locked switches.
+            function wireSwitch(id, key) {
+                var sw = document.getElementById(id);
+                sw.addEventListener('click', function () {
+                    admState[key] = !admState[key];
+                    sw.classList.toggle('on', admState[key]);
+                });
+            }
+            wireSwitch('pin-switch', 'pinned');
+            wireSwitch('lock-switch', 'locked');
+
+            // Save the moderation form.
+            document.getElementById('save-thread').addEventListener('click', function () {
+                $.ajax({
+                    type: 'POST', url: [[@{/administration/saveThread.action}]],
+                    data: {
+                        threadId: threadId,
+                        title: document.getElementById('thread-title').value,
+                        topicId: admState.topicId,
+                        visible: admState.visible,
+                        pinned: admState.pinned,
+                        locked: admState.locked
+                    },
+                    dataType: 'JSON',
+                    success: function (result) {
+                        if (result['isSuccessful']) { window.location.reload(); }
+                        else { alert([[#{voj.administration.edit-thread.save-error}]]); }
+                    }
+                });
+            });
+
+            // Delete the thread.
+            function del() {
+                if (!confirm([[#{voj.administration.edit-thread.continue-thread}]])) return;
+                $.ajax({
+                    type: 'POST', url: [[@{/administration/deleteThreads.action}]],
+                    data: { 'threads': JSON.stringify([threadId]) }, dataType: 'JSON',
+                    success: function (result) {
+                        if (result['isSuccessful']) { window.location.href = [[@{/administration/all-discussion}]]; }
+                    }
+                });
+            }
+            ['delete-thread', 'delete-thread-2'].forEach(function (id) {
+                var el = document.getElementById(id);
+                if (el) el.addEventListener('click', del);
+            });
+        });
+    </script>
+    </th:block>
+</body>
+</html>

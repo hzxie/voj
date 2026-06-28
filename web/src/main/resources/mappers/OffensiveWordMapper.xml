@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+	PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.verwandlung.voj.web.mapper.OffensiveWordMapper">
+	<!-- Methods -->
+	<select id="getOffensiveWords"
+		resultType="java.lang.String">
+		SELECT word
+		FROM voj_offensive_words
+	</select>
+	<select id="getNumberOfOffensiveWords"
+		resultType="long">
+		SELECT COUNT(*)
+		FROM voj_offensive_words
+	</select>
+	<delete id="deleteAllOffensiveWords">
+		DELETE FROM voj_offensive_words
+	</delete>
+	<insert id="batchCreateOffensiveWords"
+		parameterType="map">
+		INSERT INTO voj_offensive_words (word)
+		VALUES
+		<foreach collection="offensiveWords" item="word" separator=",">
+			(#{word})
+		</foreach>
+	</insert>
+</mapper>

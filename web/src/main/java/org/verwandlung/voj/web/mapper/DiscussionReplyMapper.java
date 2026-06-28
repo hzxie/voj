@@ -42,12 +42,14 @@ public interface DiscussionReplyMapper {
    * @param discussionThreadId - the unique identifier of the discussion thread
    * @param offset the cursor of the first reply
    * @param limit the number of replies to fetch
+   * @param visibleOnly - when {@code true}, replies hidden by an administrator are excluded
    * @return a List object containing the discussion replies
    */
   List<DiscussionReply> getDiscussionRepliesUsingThreadId(
       @Param("discussionThreadId") long discussionThreadId,
       @Param("offset") long offset,
-      @Param("limit") int limit);
+      @Param("limit") int limit,
+      @Param("visibleOnly") boolean visibleOnly);
 
   /**
    * Creates a discussion reply.
@@ -62,6 +64,15 @@ public interface DiscussionReplyMapper {
    * @param discussionReply - the DiscussionReply object to update
    */
   int updateDiscussionReply(DiscussionReply discussionReply);
+
+  /**
+   * [For administrators only] Updates the visibility of a discussion reply.
+   *
+   * @param discussionReplyId - the unique identifier of the discussion reply
+   * @param visible - whether the discussion reply is visible to ordinary users
+   */
+  int updateReplyVisibility(
+      @Param("discussionReplyId") long discussionReplyId, @Param("visible") boolean visible);
 
   /**
    * Deletes a discussion reply.

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/error}" lang="en">
+<head>
+    <title th:text="#{voj.error.404.title} + ' | ' + ${websiteName}">Page Not Found</title>
+</head>
+<body>
+    <div layout:fragment="content">
+        <section class="vw-error">
+            <div class="vw-eyebrow vw-eyebrow-warn">// ERROR &middot; ROUTE NOT FOUND</div>
+            <div class="vw-error-code">
+                <span class="base">404</span>
+                <span class="glitch" aria-hidden="true">404</span>
+            </div>
+            <h1 th:text="#{voj.error.404.page-not-found}">Page not found!</h1>
+            <p th:text="#{voj.error.404.message}">The requested URL was not found on this server.</p>
+
+            <div class="vw-card vw-card-glow vw-trace">
+                <div class="vw-card-bar">
+                    <span class="vw-dot vw-dot-r"></span><span class="vw-dot vw-dot-y"></span><span class="vw-dot vw-dot-g"></span>
+                    <span class="vw-card-title">shell &mdash; ~ &mdash; bash</span>
+                    <span class="vw-header-spacer"></span>
+                    <span class="vw-warn vw-card-status">&#9679; no such file</span>
+                </div>
+                <div class="vw-card-body vw-term-sm">
+                    <div class="vw-pre vw-muted2">$ cd ~/requested-page</div>
+                    <div class="vw-pre vw-err">bash: cd: No such file or directory</div>
+                    <div class="vw-pre vw-muted">&rarr; resolver checked the cluster &middot; 0 matches</div>
+                    <div class="vw-pre vw-muted2">&rarr; exit code 404</div>
+                    <div class="vw-pre vw-pre-result"><span class="vw-accent">verwandlung@oj:~$ </span><span class="vw-cursor">&#9611;</span></div>
+                </div>
+            </div>
+
+            <div class="vw-error-btns">
+                <a class="vw-btn vw-btn-accent" th:href="@{/}">$ cd ~</a>
+                <a class="vw-btn" th:href="@{/p}" th:text="#{voj.include.header.problems}">Browse problems</a>
+                <a class="vw-btn" href="javascript:history.go(-1);" th:text="#{voj.error.404.go-back}">Go back</a>
+            </div>
+        </section>
+    </div>
+</body>
+</html>

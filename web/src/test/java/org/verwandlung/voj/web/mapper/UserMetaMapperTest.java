@@ -16,9 +16,12 @@
  */
 package org.verwandlung.voj.web.mapper;
 
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -109,6 +112,26 @@ public class UserMetaMapperTest {
 
     UserMeta userMeta = userMetaMapper.getUserMetaUsingUserAndMetaKey(user, "notExistsKey");
     Assertions.assertNull(userMeta);
+  }
+
+  /**
+   * Test case: tests the getUserMetaValuesUsingMetaKey(List, String) method. Test data: users #1000
+   * and #1001 with the register-time meta key. Expected: both users' register-time values are
+   * returned, keyed by user identifier.
+   */
+  @Test
+  public void testGetUserMetaValuesUsingMetaKey() {
+    List<Map<String, Object>> rows =
+        userMetaMapper.getUserMetaValuesUsingMetaKey(Arrays.asList(1000L, 1001L), "registerTime");
+    Assertions.assertEquals(2, rows.size());
+
+    Map<Long, String> valuesByUid = new HashMap<>();
+    for (Map<String, Object> row : rows) {
+      long uid = ((Number) row.get("uid")).longValue();
+      valuesByUid.put(uid, (String) row.get("metaValue"));
+    }
+    Assertions.assertEquals("2014-10-07 12:35:45", valuesByUid.get(1000L));
+    Assertions.assertEquals("2014-10-08 12:35:45", valuesByUid.get(1001L));
   }
 
   /** Test case: tests the createUserMeta(UserMeta) method. Test data: a valid data set, creating new user metadata. Expected: the data insertion operation completes successfully. */

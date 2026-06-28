@@ -180,6 +180,24 @@ public class User implements Serializable {
     this.preferLanguage = preferLanguage;
   }
 
+  /**
+   * Gets whether the user's email address has been verified.
+   *
+   * @return whether the user's email address has been verified
+   */
+  public boolean isEmailVerified() {
+    return isEmailVerified;
+  }
+
+  /**
+   * Sets whether the user's email address has been verified.
+   *
+   * @param isEmailVerified - whether the user's email address has been verified
+   */
+  public void setEmailVerified(boolean isEmailVerified) {
+    this.isEmailVerified = isEmailVerified;
+  }
+
   /* (non-Javadoc)
    * @see java.lang.Object#hashCode()
    */
@@ -224,6 +242,9 @@ public class User implements Serializable {
 
   /** The user's preferred language object. */
   @JsonIgnore private Language preferLanguage;
+
+  /** Whether the user's email address has been verified. */
+  @JsonIgnore private boolean isEmailVerified = true;
 
   /** The unique serialization identifier. */
   private static final long serialVersionUID = 2264535351943252507L;

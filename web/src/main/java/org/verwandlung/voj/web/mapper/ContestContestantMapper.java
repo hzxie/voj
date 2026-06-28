@@ -36,6 +36,14 @@ public interface ContestContestantMapper {
   long getNumberOfContestantsOfContest(long contestId);
 
   /**
+   * Gets the number of contests a user has attended.
+   *
+   * @param contestantUid - the unique identifier of the contestant
+   * @return the number of contests the user has attended
+   */
+  long getNumberOfContestsUsingContestantUid(@Param("contestantUid") long contestantUid);
+
+  /**
    * Gets the list of contestants of a contest (OI mode).
    *
    * @param contestId - the unique identifier of the contest

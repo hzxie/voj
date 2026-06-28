@@ -6,7 +6,7 @@
 	<!-- ResultMap -->
 	<resultMap id="ProblemResultMap" type="org.verwandlung.voj.web.model.Problem">
 		<id property="problemId" column="problem_id" />
-		<result property="isPublic" column="problem_is_public" />
+		<result property="status" column="problem_status" />
 		<result property="problemName" column="problem_name" />
 		<result property="totalSubmission" column="total_submission" />
 		<result property="acceptedSubmission" column="accepted_submission" />
@@ -18,6 +18,11 @@
 		<result property="sampleInput" column="problem_sample_input" />
 		<result property="sampleOutput" column="problem_sample_output" />
 		<result property="hint" column="problem_hint" />
+		<association property="problemDifficulty" javaType="org.verwandlung.voj.web.model.ProblemDifficulty">
+			<id property="problemDifficultyId" column="problem_difficulty_id" />
+			<result property="problemDifficultySlug" column="problem_difficulty_slug" />
+			<result property="problemDifficultyName" column="problem_difficulty_name" />
+		</association>
 	</resultMap>
 
 	<!-- Methods -->
@@ -29,81 +34,152 @@
 	<select id="getNumberOfProblemsUsingFilters" 
 		parameterType="map"
 		resultType="long">
-		SELECT COUNT(DISTINCT(problem_id)) 
-		FROM voj_problems 
+		SELECT COUNT(DISTINCT(problem_id))
+		FROM voj_problems
 		NATURAL JOIN voj_problem_category_relationships pcr
 		NATURAL JOIN voj_problem_categories pc
 		<where>
 			<if test="isPublicOnly == true">
-				problem_is_public = 1
+				problem_status = 'PUBLISHED'
 			</if>
 			<if test="keyword != null and keyword != ''">
 				AND problem_name LIKE "%"#{keyword}"%"
 			</if>
 			<if test="problemCategoryId != 0">
-				AND problem_category_id = #{problemCategoryId} 
+				AND problem_category_id = #{problemCategoryId}
+			</if>
+			<if test="problemDifficultyId != 0">
+				AND problem_difficulty_id = #{problemDifficultyId}
 			</if>
 		</where>
 	</select>
-	<select id="getLowerBoundOfProblems" 
+	<select id="getLowerBoundOfProblems"
 		resultType="long">
-		SELECT MIN(problem_id) 
+		SELECT COALESCE(MIN(problem_id), 0)
 		FROM voj_problems
 	</select>
-	<select id="getUpperBoundOfProblems" 
+	<select id="getUpperBoundOfProblems"
 		resultType="long">
-		SELECT MAX(problem_id) 
+		SELECT COALESCE(MAX(problem_id), 0)
 		FROM voj_problems
 	</select>
-	<select id="getUpperBoundOfProblemsWithLimit" 
+	<select id="getUpperBoundOfProblemsWithLimit"
 		parameterType="map"
 		resultType="long">
-		SELECT MAX(problem_id)
+		SELECT COALESCE(MAX(problem_id), 0)
 		FROM (
 			SELECT problem_id
 			FROM voj_problems
 			WHERE problem_id >= #{problemId}
 			<if test="isPublicOnly == true">
-				AND problem_is_public = 1
+				AND problem_status = 'PUBLISHED'
 			</if>
 			LIMIT #{limit}
 		) p
 	</select>
-	<select id="getProblem" 
+	<select id="getProblem"
 		parameterType="long"
 		resultMap="ProblemResultMap">
-		SELECT *, (
-			SELECT COUNT(*) 
-			FROM voj_submissions s 
+		SELECT p.*, d.problem_difficulty_slug, d.problem_difficulty_name, (
+			SELECT COUNT(*)
+			FROM voj_submissions s
 			WHERE s.problem_id = p.problem_id
 		) AS total_submission, (
-			SELECT COUNT(*) 
-			FROM voj_submissions s 
+			SELECT COUNT(*)
+			FROM voj_submissions s
 			WHERE s.problem_id = p.problem_id AND s.submission_judge_result = 'AC'
 		) AS accepted_submission
-		FROM voj_problems p 
-		WHERE problem_id = #{problemId}
+		FROM voj_problems p
+		LEFT JOIN voj_problem_difficulty d ON d.problem_difficulty_id = p.problem_difficulty_id
+		WHERE p.problem_id = #{problemId}
+	</select>
+	<!-- Page-based listing for the public problem set (numbered pager + ID/Title/Tag filter). -->
+	<select id="getNumberOfProblemsByPage"
+		parameterType="map"
+		resultType="long">
+		SELECT COUNT(DISTINCT p.problem_id)
+		FROM voj_problems p
+		<if test="problemTagId != 0">
+			JOIN voj_problem_tag_relationships ptr ON ptr.problem_id = p.problem_id
+		</if>
+		<where>
+			<if test="isPublicOnly == true">
+				p.problem_status = 'PUBLISHED'
+			</if>
+			<if test="field == 'id' and query != null and query != ''">
+				AND p.problem_id LIKE CONCAT('%', #{query}, '%')
+			</if>
+			<if test="field == 'title' and query != null and query != ''">
+				AND p.problem_name LIKE CONCAT('%', #{query}, '%')
+			</if>
+			<if test="problemTagId != 0">
+				AND ptr.problem_tag_id = #{problemTagId}
+			</if>
+			<if test="problemDifficultyId != 0">
+				AND p.problem_difficulty_id = #{problemDifficultyId}
+			</if>
+		</where>
+	</select>
+	<select id="getProblemsByPage"
+		parameterType="map"
+		resultMap="ProblemResultMap">
+		SELECT DISTINCT p.problem_id, p.problem_name, p.problem_status, p.problem_difficulty_id,
+			d.problem_difficulty_slug, d.problem_difficulty_name, (
+			SELECT COUNT(*)
+			FROM voj_submissions s
+			WHERE s.problem_id = p.problem_id
+		) AS total_submission, (
+			SELECT COUNT(*)
+			FROM voj_submissions s
+			WHERE s.problem_id = p.problem_id AND s.submission_judge_result = 'AC'
+		) AS accepted_submission
+		FROM voj_problems p
+		LEFT JOIN voj_problem_difficulty d ON d.problem_difficulty_id = p.problem_difficulty_id
+		<if test="problemTagId != 0">
+			JOIN voj_problem_tag_relationships ptr ON ptr.problem_id = p.problem_id
+		</if>
+		<where>
+			<if test="isPublicOnly == true">
+				p.problem_status = 'PUBLISHED'
+			</if>
+			<if test="field == 'id' and query != null and query != ''">
+				AND p.problem_id LIKE CONCAT('%', #{query}, '%')
+			</if>
+			<if test="field == 'title' and query != null and query != ''">
+				AND p.problem_name LIKE CONCAT('%', #{query}, '%')
+			</if>
+			<if test="problemTagId != 0">
+				AND ptr.problem_tag_id = #{problemTagId}
+			</if>
+			<if test="problemDifficultyId != 0">
+				AND p.problem_difficulty_id = #{problemDifficultyId}
+			</if>
+		</where>
+		ORDER BY p.problem_id
+		LIMIT #{offset}, #{limit}
 	</select>
 	<select id="getProblemsUsingFilters" 
 		parameterType="map"
 		resultMap="ProblemResultMap">
-		SELECT DISTINCT(p.problem_id), problem_name, problem_is_public, (
-			SELECT COUNT(*) 
-			FROM voj_submissions s 
+		SELECT DISTINCT p.problem_id, problem_name, problem_status, p.problem_difficulty_id,
+			d.problem_difficulty_slug, d.problem_difficulty_name, (
+			SELECT COUNT(*)
+			FROM voj_submissions s
 			WHERE s.problem_id = p.problem_id
 		) AS total_submission, (
-			SELECT COUNT(*) 
-			FROM voj_submissions s 
+			SELECT COUNT(*)
+			FROM voj_submissions s
 			WHERE s.problem_id = p.problem_id AND s.submission_judge_result = 'AC'
 		) AS accepted_submission
-		FROM voj_problems p 
+		FROM voj_problems p
 		NATURAL JOIN voj_problem_category_relationships pcr
 		<if test="problemTagId != 0">
 			NATURAL JOIN voj_problem_tag_relationships ptr
 		</if>
-		WHERE p.problem_id &gt;= #{problemId}
+		LEFT JOIN voj_problem_difficulty d ON d.problem_difficulty_id = p.problem_difficulty_id
+		WHERE 1 = 1
 		<if test="isPublicOnly == true">
-			AND problem_is_public = 1
+			AND problem_status = 'PUBLISHED'
 		</if>
 		<if test="keyword != null and keyword != ''">
 			AND problem_name LIKE "%"#{keyword}"%"
@@ -114,20 +190,24 @@
 		<if test="problemTagId != 0">
 			AND problem_tag_id = #{problemTagId}
 		</if>
-		LIMIT #{limit}
+		<if test="problemDifficultyId != 0">
+			AND p.problem_difficulty_id = #{problemDifficultyId}
+		</if>
+		ORDER BY p.problem_id
+		LIMIT #{offset}, #{limit}
 	</select>
 	<insert id="createProblem" 
 		parameterType="org.verwandlung.voj.web.model.Problem"
 		keyProperty="problemId" 
 		keyColumn="problem_id"
 		useGeneratedKeys="true">
-		INSERT INTO voj_problems (problem_is_public, problem_name, problem_time_limit, problem_memory_limit, problem_description, problem_input_format, problem_output_format, problem_sample_input, problem_sample_output, problem_hint) 
-		VALUES (#{isPublic}, #{problemName}, #{timeLimit}, #{memoryLimit}, #{description}, #{inputFormat}, #{outputFormat}, #{sampleInput}, #{sampleOutput}, #{hint})
+		INSERT INTO voj_problems (problem_status, problem_name, problem_difficulty_id, problem_time_limit, problem_memory_limit, problem_description, problem_input_format, problem_output_format, problem_sample_input, problem_sample_output, problem_hint)
+		VALUES (#{status}, #{problemName}, #{problemDifficulty.problemDifficultyId}, #{timeLimit}, #{memoryLimit}, #{description}, #{inputFormat}, #{outputFormat}, #{sampleInput}, #{sampleOutput}, #{hint})
 	</insert>
 	<update id="updateProblem"
 		parameterType="org.verwandlung.voj.web.model.Problem">
 		UPDATE voj_problems 
-		SET problem_is_public = #{isPublic}, problem_name = #{problemName}, problem_time_limit = #{timeLimit}, problem_memory_limit = #{memoryLimit}, problem_description = #{description}, problem_input_format = #{inputFormat}, problem_output_format = #{outputFormat}, problem_sample_input = #{sampleInput}, problem_sample_output = #{sampleOutput}, problem_hint = #{hint} 
+		SET problem_status = #{status}, problem_name = #{problemName}, problem_difficulty_id = #{problemDifficulty.problemDifficultyId}, problem_time_limit = #{timeLimit}, problem_memory_limit = #{memoryLimit}, problem_description = #{description}, problem_input_format = #{inputFormat}, problem_output_format = #{outputFormat}, problem_sample_input = #{sampleInput}, problem_sample_output = #{sampleOutput}, problem_hint = #{hint} 
 		WHERE problem_id = #{problemId}
 	</update>
 	<delete id="deleteProblem"

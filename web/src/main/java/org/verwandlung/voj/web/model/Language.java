@@ -18,7 +18,7 @@ package org.verwandlung.voj.web.model;
 
 import java.io.Serializable;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * The model of a programming language. Maps to the voj_languages table in the database.
@@ -154,6 +154,78 @@ public class Language implements Serializable {
     this.runCommand = runCommand;
   }
 
+  /**
+   * Gets whether the programming language is enabled (offered to submitters).
+   *
+   * @return whether the programming language is enabled
+   */
+  public boolean isEnabled() {
+    return enabled;
+  }
+
+  /**
+   * Sets whether the programming language is enabled (offered to submitters).
+   *
+   * @param enabled - whether the programming language is enabled
+   */
+  public void setEnabled(boolean enabled) {
+    this.enabled = enabled;
+  }
+
+  /**
+   * Gets the canonical source filename used when the judger writes the submission to disk.
+   *
+   * @return the canonical source filename of the programming language
+   */
+  public String getSourceFilename() {
+    return sourceFilename;
+  }
+
+  /**
+   * Sets the canonical source filename used when the judger writes the submission to disk.
+   *
+   * @param sourceFilename - the canonical source filename of the programming language
+   */
+  public void setSourceFilename(String sourceFilename) {
+    this.sourceFilename = sourceFilename;
+  }
+
+  /**
+   * Gets the factor by which the wall-clock time limit is scaled for this programming language.
+   *
+   * @return the time limit multiplier of the programming language
+   */
+  public double getTimeMultiplier() {
+    return timeMultiplier;
+  }
+
+  /**
+   * Sets the factor by which the wall-clock time limit is scaled for this programming language.
+   *
+   * @param timeMultiplier - the time limit multiplier of the programming language
+   */
+  public void setTimeMultiplier(double timeMultiplier) {
+    this.timeMultiplier = timeMultiplier;
+  }
+
+  /**
+   * Gets the factor by which the memory limit is scaled for this programming language.
+   *
+   * @return the memory limit multiplier of the programming language
+   */
+  public double getMemoryMultiplier() {
+    return memoryMultiplier;
+  }
+
+  /**
+   * Sets the factor by which the memory limit is scaled for this programming language.
+   *
+   * @param memoryMultiplier - the memory limit multiplier of the programming language
+   */
+  public void setMemoryMultiplier(double memoryMultiplier) {
+    this.memoryMultiplier = memoryMultiplier;
+  }
+
   /* (non-Javadoc)
    * @see java.lang.Object#toString()
    */
@@ -173,11 +245,32 @@ public class Language implements Serializable {
   /** The name of the programming language. */
   private String languageName;
 
-  /** The compile command of the programming language. */
-  @JsonIgnore private String compileCommand;
+  /**
+   * The compile command of the programming language. WRITE_ONLY keeps it out of serialized output
+   * (the original {@code @JsonIgnore} intent) while still allowing it to be read from the admin save
+   * payload.
+   */
+  @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+  private String compileCommand;
 
-  /** The run command of the programming language. */
-  @JsonIgnore private String runCommand;
+  /**
+   * The run command of the programming language. WRITE_ONLY keeps it out of serialized output while
+   * still allowing it to be read from the admin save payload.
+   */
+  @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+  private String runCommand;
+
+  /** Whether the programming language is enabled (offered to submitters). */
+  private boolean enabled = true;
+
+  /** The canonical source filename used when the judger writes the submission to disk. */
+  private String sourceFilename = "";
+
+  /** The factor by which the wall-clock time limit is scaled for this programming language. */
+  private double timeMultiplier = 1.0;
+
+  /** The factor by which the memory limit is scaled for this programming language. */
+  private double memoryMultiplier = 1.0;
 
   /** The unique serialization identifier. */
   private static final long serialVersionUID = 9065824880175832696L;

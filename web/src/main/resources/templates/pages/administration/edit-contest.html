@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/admin}" lang="en">
+<head>
+    <title th:text="#{voj.administration.edit-contest.title} + ' | ' + ${websiteName}">Contest</title>
+</head>
+<body>
+    <div layout:fragment="content">
+    <div class="adm-detail" th:with="isEdit=${contest != null},
+                                      scoring=${contest != null ? contest.scoring : 'ICPC'},
+                                      status=${contest != null ? contest.status : 'PUBLISHED'},
+                                      phase=${contestPhase != null ? contestPhase : ''}">
+
+        <div class="adm-detail-top">
+            <a class="adm-back" th:href="@{/administration/all-contests}">&#8592; <span th:text="#{voj.administration.edit-contest.back}">back to contests</span></a>
+            <span class="adm-idchip" th:if="${isEdit}" th:text="'#' + ${contest.contestId}">#1</span>
+            <input type="hidden" id="contest-status" th:value="${status}" />
+            <div class="adm-flex1"></div>
+            <a class="adm-btn-tn" th:if="${isEdit and phase != 'READY'}" th:href="@{'/contest/' + ${contest.contestId} + '/leaderboard'}" th:text="#{voj.administration.edit-contest.standings}">standings</a>
+            <button type="button" class="adm-btn-tn danger" th:if="${isEdit}" id="delete-contest" th:text="#{voj.administration.edit-contest.delete}">delete</button>
+            <button type="button" class="adm-btn-tn go" id="save-contest" th:text="'$ ' + #{voj.administration.edit-contest.save}">$ save</button>
+        </div>
+
+        <div class="alert alert-error hide"></div>
+        <div class="alert alert-success hide" th:text="#{voj.administration.edit-contest.saved}">Saved.</div>
+        <input type="hidden" id="contest-id" th:value="${isEdit ? contest.contestId : ''}" />
+        <input type="hidden" id="contest-scoring" th:value="${scoring}" />
+        <input type="hidden" id="contest-is-rated" th:value="${!isEdit or contest.isRated()} ? '1' : '0'" />
+        <input type="hidden" id="contest-open-registration" th:value="${!isEdit or contest.isOpenRegistration()} ? '1' : '0'" />
+        <input type="hidden" id="contest-problems" th:value="${isEdit ? contest.problems : '[]'}" />
+        <input type="hidden" id="start-time" th:value="${isEdit ? #dates.format(contest.startTime, 'yyyy-MM-dd''T''HH:mm') : ''}" />
+
+        <div class="adm-ed2">
+            <div class="adm-col">
+                <div class="adm-card">
+                    <div class="adm-card-head plain" th:text="#{voj.administration.edit-contest.details}">// DETAILS</div>
+                    <div class="adm-card-body">
+                        <label class="adm-flabel">
+                            <span th:text="#{voj.administration.edit-contest.name}">CONTEST NAME</span>
+                            <input id="contest-name" class="adm-input" type="text" th:value="${isEdit ? contest.contestName : ''}" maxlength="128" />
+                        </label>
+                        <label class="adm-flabel">
+                            <span th:text="#{voj.administration.edit-contest.notes}">DESCRIPTION · markdown</span>
+                            <div id="markdown-editor"><textarea id="contest-notes" class="wmd-input" th:text="${isEdit ? contest.contestNotes : ''}"></textarea></div>
+                        </label>
+                    </div>
+                </div>
+                <div class="adm-card">
+                    <div class="adm-card-head">
+                        <span th:text="#{voj.administration.edit-contest.problems}">// PROBLEMS</span>
+                        <span id="picker-toggle" class="toggle" th:text="'+ ' + #{voj.administration.edit-contest.add-problem}">+ add problem</span>
+                    </div>
+                    <div class="adm-picker hide" id="picker-panel">
+                        <div class="adm-picker-search">
+                            <span class="p">$</span>
+                            <input id="picker-query" type="text" th:placeholder="#{voj.administration.edit-contest.search-placeholder}" />
+                            <span class="count" id="picker-count">0 <span th:text="#{voj.administration.edit-contest.available}">available</span></span>
+                        </div>
+                        <div class="adm-picker-list" id="picker-candidates"></div>
+                        <div class="adm-picker-empty hide" id="picker-empty" th:text="#{voj.administration.edit-contest.every-problem-added}">// every problem is already in this contest</div>
+                    </div>
+                    <div id="chosen-problems"></div>
+                </div>
+            </div>
+            <div class="adm-col">
+                <div class="adm-card vis">
+                    <div class="adm-card-head">
+                        <span th:text="#{voj.administration.edit-contest.schedule}">// SCHEDULE</span>
+                        <span th:if="${isEdit}" class="adm-pill"
+                              th:classappend="${phase == 'LIVE'} ? 'c-accent' : (${phase == 'READY'} ? 'c-info' : 'c-muted')"
+                              th:text="${phase == 'LIVE'} ? #{voj.administration.all-contests.phase-running} : (${phase == 'READY'} ? #{voj.administration.all-contests.phase-upcoming} : #{voj.administration.all-contests.phase-ended})">Running</span>
+                    </div>
+                    <div class="adm-card-body">
+                        <label class="adm-flabel adm-dt-wrap">
+                            <span th:text="#{voj.administration.edit-contest.start-time}">START TIME</span>
+                            <div id="dt-trigger" class="adm-dt">
+                                <span class="adm-dt-main"><span class="adm-dt-ico">&#9719;</span><span id="dt-display">--</span><span class="adm-dt-sub" id="dt-sub"></span></span>
+                                <span class="adm-dt-caret">&#9662;</span>
+                            </div>
+                        </label>
+                        <div class="adm-grid2">
+                            <label class="adm-flabel">
+                                <span th:text="#{voj.administration.edit-contest.duration}">DURATION</span>
+                                <input id="contest-duration" class="adm-input" type="text" placeholder="HH:MM"
+                                       th:value="${isEdit ? contestDuration : ''}" />
+                            </label>
+                            <label class="adm-flabel">
+                                <span th:text="#{voj.administration.edit-contest.freeze}">FREEZE</span>
+                                <input id="contest-freeze" class="adm-input" type="text" placeholder="HH:MM"
+                                       th:value="${isEdit ? (#numbers.formatInteger(contest.freeze / 60, 2) + ':' + #numbers.formatInteger(contest.freeze % 60, 2)) : '00:00'}" />
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="adm-card">
+                    <div class="adm-card-head plain" th:text="#{voj.administration.edit-contest.format}">// FORMAT</div>
+                    <div class="adm-card-body">
+                        <div>
+                            <div class="adm-block-label" th:text="#{voj.administration.edit-contest.status}">STATUS</div>
+                            <div class="adm-seg" data-adm="seg" data-input="contest-status">
+                                <a href="javascript:void(0);" data-value="PUBLISHED" th:classappend="${status == 'PUBLISHED'} ? 'active'" th:text="#{voj.administration.status.published}">Published</a>
+                                <a href="javascript:void(0);" data-value="DRAFT" th:classappend="${status == 'DRAFT'} ? 'active'" th:text="#{voj.administration.status.draft}">Draft</a>
+                                <a href="javascript:void(0);" data-value="HIDDEN" th:classappend="${status == 'HIDDEN'} ? 'active'" th:text="#{voj.administration.status.hidden}">Hidden</a>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="adm-block-label" th:text="#{voj.administration.edit-contest.scoring}">SCORING</div>
+                            <div class="adm-seg" data-adm="seg" data-input="contest-scoring">
+                                <a href="javascript:void(0);" data-value="ICPC" th:classappend="${scoring == 'ICPC'} ? 'active'">ICPC</a>
+                                <a href="javascript:void(0);" data-value="IOI" th:classappend="${scoring == 'IOI'} ? 'active'">IOI</a>
+                                <a href="javascript:void(0);" data-value="Codeforces" th:classappend="${scoring == 'Codeforces'} ? 'active'">Codeforces</a>
+                            </div>
+                        </div>
+                        <label class="adm-flabel">
+                            <span th:text="#{voj.administration.edit-contest.penalty}">PENALTY · min / wrong</span>
+                            <input id="contest-penalty" class="adm-input" type="number" min="0" th:value="${isEdit ? contest.penalty : 20}" />
+                        </label>
+                        <div class="adm-togrow">
+                            <span th:text="#{voj.administration.edit-contest.rated}">Rated contest</span>
+                            <div class="adm-switch" data-adm="switch" data-input="contest-is-rated"
+                                 th:classappend="${!isEdit or contest.isRated()} ? 'on'"><div class="knob"></div></div>
+                        </div>
+                        <div class="adm-togrow">
+                            <span th:text="#{voj.administration.edit-contest.open-registration}">Open registration</span>
+                            <div class="adm-switch" data-adm="switch" data-input="contest-open-registration"
+                                 th:classappend="${!isEdit or contest.isOpenRegistration()} ? 'on'"><div class="knob"></div></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="adm-danger" th:if="${isEdit}">
+                    <div>
+                        <div class="t" th:text="#{voj.administration.edit-contest.delete-contest}">Delete contest</div>
+                        <div class="d" th:text="${contestEntrants} + ' ' + #{voj.administration.edit-contest.registered-entrants}">0 registered entrants.</div>
+                    </div>
+                    <button type="button" class="adm-btn-tn danger" id="delete-contest-2" th:text="#{voj.administration.edit-contest.delete}">delete</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    </div>
+
+    <th:block layout:fragment="scripts">
+    <script type="text/javascript" th:inline="javascript">
+        /*<![CDATA[*/
+        var ADM_PROBLEMS = /*[[${allProblems}]]*/ [];
+        /*]]>*/
+        document.addEventListener('DOMContentLoaded', function () {
+            var $err = $('.alert-error');
+            var contestId = document.getElementById('contest-id').value;
+            var diffClass = { 'hard': 'c-err', 'medium': 'c-warn', 'easy': 'c-accent' };
+            var notesEditor = createMarkdownEditor('#contest-notes');
+            // The STATUS segment (data-adm="seg") is wired by admin.js: clicking an
+            // option writes its data-value into the hidden #contest-status input.
+
+            // --- Problem picker --------------------------------------------------
+            // The hidden #contest-problems input is the source of truth (a JSON id
+            // array). The candidate list and the ordered chosen list are rendered
+            // from ADM_PROBLEMS; adding / removing re-letters and re-syncs the JSON.
+            var problemsInput = document.getElementById('contest-problems');
+            var byId = {};
+            ADM_PROBLEMS.forEach(function (p) { byId[String(p.id)] = p; });
+            var chosen = (function () {
+                try { return (JSON.parse(problemsInput.value) || []).map(String); }
+                catch (e) { return []; }
+            })();
+
+            function syncInput() { problemsInput.value = JSON.stringify(chosen.map(Number)); }
+
+            function renderChosen() {
+                var host = document.getElementById('chosen-problems');
+                host.innerHTML = '';
+                chosen.forEach(function (pid, i) {
+                    var p = byId[pid] || { id: pid, title: '#' + pid };
+                    var row = document.createElement('div');
+                    row.className = 'adm-cprob adm-balloon-' + (i % 8);
+                    var lbl = document.createElement('span');
+                    lbl.className = 'adm-cprob-lbl';
+                    lbl.textContent = String.fromCharCode(65 + i);
+                    var title = document.createElement('span');
+                    title.className = 'adm-cprob-title';
+                    title.textContent = p.title;
+                    var idEl = document.createElement('span');
+                    idEl.className = 'adm-cprob-pid';
+                    idEl.textContent = '#' + pid;
+                    var dot = document.createElement('span');
+                    dot.className = 'adm-cprob-dot';
+                    var x = document.createElement('span');
+                    x.className = 'adm-cprob-x';
+                    x.innerHTML = '&#10005;';
+                    x.addEventListener('click', function () {
+                        chosen = chosen.filter(function (c) { return c !== pid; });
+                        syncInput(); renderChosen(); renderCandidates();
+                    });
+                    row.appendChild(lbl); row.appendChild(title); row.appendChild(idEl);
+                    row.appendChild(dot); row.appendChild(x);
+                    host.appendChild(row);
+                });
+            }
+
+            function renderCandidates() {
+                var host = document.getElementById('picker-candidates');
+                var q = (document.getElementById('picker-query').value || '').trim().toLowerCase();
+                host.innerHTML = '';
+                var available = ADM_PROBLEMS.filter(function (p) {
+                    if (chosen.indexOf(String(p.id)) !== -1) { return false; }
+                    if (!q) { return true; }
+                    return String(p.id).indexOf(q) !== -1 || (p.title || '').toLowerCase().indexOf(q) !== -1;
+                });
+                document.getElementById('picker-count').firstChild.nodeValue = available.length + ' ';
+                document.getElementById('picker-empty').classList.toggle('hide', available.length !== 0);
+                available.forEach(function (p) {
+                    var row = document.createElement('div');
+                    row.className = 'adm-cand';
+                    var idEl = document.createElement('span');
+                    idEl.className = 'adm-cand-pid';
+                    idEl.textContent = '#' + p.id;
+                    var title = document.createElement('span');
+                    title.className = 'adm-cand-title';
+                    title.textContent = p.title;
+                    var diff = document.createElement('span');
+                    diff.className = 'adm-diff ' + (diffClass[p.diffSlug] || 'c-accent');
+                    diff.textContent = p.diff;
+                    var add = document.createElement('span');
+                    add.className = 'adm-cand-add';
+                    add.textContent = '+ add';
+                    add.addEventListener('click', function () {
+                        chosen.push(String(p.id));
+                        syncInput(); renderChosen(); renderCandidates();
+                    });
+                    row.appendChild(idEl); row.appendChild(title); row.appendChild(diff); row.appendChild(add);
+                    host.appendChild(row);
+                });
+            }
+
+            (function initPicker() {
+                var toggle = document.getElementById('picker-toggle');
+                var panel = document.getElementById('picker-panel');
+                var addLabel = '+ ' + [[#{voj.administration.edit-contest.add-problem}]];
+                var closeLabel = '✕ ' + [[#{voj.administration.edit-contest.close-picker}]];
+                toggle.addEventListener('click', function () {
+                    var open = panel.classList.toggle('hide') === false;
+                    toggle.textContent = open ? closeLabel : addLabel;
+                    if (open) { document.getElementById('picker-query').focus(); }
+                });
+                document.getElementById('picker-query').addEventListener('input', renderCandidates);
+                renderChosen(); renderCandidates();
+            })();
+
+            // --- START TIME calendar popup (ported from the design) --------------
+            var dtState = (function () {
+                var raw = document.getElementById('start-time').value;
+                var d = raw ? new Date(raw) : new Date();
+                if (isNaN(d.getTime())) { d = new Date(); }
+                return { y: d.getFullYear(), m: d.getMonth(), d: d.getDate(), h: d.getHours(), min: d.getMinutes() };
+            })();
+            var DT_MONTHS3 = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            var DT_MONTHSF = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+            function pad2(n) { return String(n).padStart(2, '0'); }
+
+            function dtWriteStart() {
+                document.getElementById('start-time').value =
+                    dtState.y + '-' + pad2(dtState.m + 1) + '-' + pad2(dtState.d) + 'T' + pad2(dtState.h) + ':' + pad2(dtState.min);
+                document.getElementById('dt-display').textContent =
+                    DT_MONTHS3[dtState.m] + ' ' + pad2(dtState.d) + ' · ' + pad2(dtState.h) + ':' + pad2(dtState.min);
+                document.getElementById('dt-sub').textContent = String(dtState.y);
+            }
+
+            var calOpen = false;
+            function renderCal() {
+                var pop = document.getElementById('dt-popup');
+                if (!pop) { return; }
+                pop.innerHTML = '';
+                // header
+                var head = el('div', 'adm-cal-nav');
+                var prev = el('span', 'adm-cal-nav-btn', '‹');
+                prev.addEventListener('click', function () { dtNav(-1); });
+                var monthLbl = el('span', 'adm-cal-month', DT_MONTHSF[dtState.m] + ' ' + dtState.y);
+                var next = el('span', 'adm-cal-nav-btn', '›');
+                next.addEventListener('click', function () { dtNav(1); });
+                head.appendChild(prev); head.appendChild(monthLbl); head.appendChild(next);
+                pop.appendChild(head);
+                // grid
+                var gridWrap = el('div', 'adm-cal-gridwrap');
+                var grid = el('div', 'adm-cal-grid');
+                ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].forEach(function (w) { grid.appendChild(el('div', 'adm-cal-wk', w)); });
+                var firstDow = (new Date(dtState.y, dtState.m, 1).getDay() + 6) % 7;
+                var dim = new Date(dtState.y, dtState.m + 1, 0).getDate();
+                for (var i = 0; i < firstDow; i++) { grid.appendChild(el('div', 'adm-cal-day empty', '')); }
+                for (var day = 1; day <= dim; day++) {
+                    var sel = day === dtState.d;
+                    var cell = el('div', 'adm-cal-day' + (sel ? ' sel' : ''), String(day));
+                    (function (dd) { cell.addEventListener('click', function () { dtState.d = dd; dtWriteStart(); renderCal(); }); })(day);
+                    grid.appendChild(cell);
+                }
+                gridWrap.appendChild(grid); pop.appendChild(gridWrap);
+                // time section (controls row + quick chips)
+                var timeWrap = el('div', 'adm-cal-timewrap');
+                var timeRow = el('div', 'adm-cal-timerow');
+                timeRow.appendChild(el('span', 'adm-cal-time-label', 'TIME'));
+                timeRow.appendChild(stepper(pad2(dtState.h), function () { dtStepHour(-1); }, function () { dtStepHour(1); }));
+                timeRow.appendChild(el('span', 'adm-cal-colon', ':'));
+                timeRow.appendChild(stepper(pad2(dtState.min), function () { dtStepMin(-5); }, function () { dtStepMin(5); }));
+                timeWrap.appendChild(timeRow);
+                var chips = el('div', 'adm-cal-chips');
+                var quickTimes = [ [9, 0], [12, 0], [18, 0], [20, 0] ];
+                quickTimes.forEach(function (c) {
+                    var on = dtState.h === c[0] && dtState.min === c[1];
+                    var chip = el('span', 'adm-cal-chip' + (on ? ' on' : ''), pad2(c[0]) + ':' + pad2(c[1]));
+                    chip.addEventListener('click', function () { dtState.h = c[0]; dtState.min = c[1]; dtWriteStart(); renderCal(); });
+                    chips.appendChild(chip);
+                });
+                timeWrap.appendChild(chips);
+                pop.appendChild(timeWrap);
+                // footer
+                var foot = el('div', 'adm-cal-foot');
+                var today = el('span', 'adm-cal-today', [[#{voj.administration.edit-contest.jump-today}]]);
+                today.addEventListener('click', function () {
+                    var n = new Date();
+                    dtState.y = n.getFullYear(); dtState.m = n.getMonth(); dtState.d = n.getDate();
+                    dtWriteStart(); renderCal();
+                });
+                var set = el('span', 'adm-cal-set', [[#{voj.administration.edit-contest.set}]]);
+                set.addEventListener('click', closeCal);
+                foot.appendChild(today); foot.appendChild(set);
+                pop.appendChild(foot);
+            }
+            function el(tag, cls, text) { var e = document.createElement(tag); if (cls) { e.className = cls; } if (text !== undefined) { e.textContent = text; } return e; }
+            function stepper(value, onDown, onUp) {
+                var wrap = el('div', 'adm-cal-stepper');
+                var dn = el('span', 'adm-cal-step', '−'); dn.addEventListener('click', onDown);
+                var num = el('span', 'adm-cal-num', value);
+                var up = el('span', 'adm-cal-step', '+'); up.addEventListener('click', onUp);
+                wrap.appendChild(dn); wrap.appendChild(num); wrap.appendChild(up);
+                return wrap;
+            }
+            function dtNav(delta) {
+                dtState.m += delta;
+                if (dtState.m < 0) { dtState.m = 11; dtState.y--; }
+                else if (dtState.m > 11) { dtState.m = 0; dtState.y++; }
+                var dim = new Date(dtState.y, dtState.m + 1, 0).getDate();
+                if (dtState.d > dim) { dtState.d = dim; }
+                dtWriteStart(); renderCal();
+            }
+            function dtStepHour(d) { dtState.h = (dtState.h + d + 24) % 24; dtWriteStart(); renderCal(); }
+            function dtStepMin(d) { dtState.min = (dtState.min + d + 60) % 60; dtWriteStart(); renderCal(); }
+            function openCal() {
+                if (calOpen) { return; }
+                calOpen = true;
+                var pop = document.createElement('div');
+                pop.id = 'dt-popup'; pop.className = 'adm-cal';
+                document.getElementById('dt-trigger').parentNode.appendChild(pop);
+                renderCal();
+            }
+            function closeCal() {
+                calOpen = false;
+                var pop = document.getElementById('dt-popup');
+                if (pop) { pop.parentNode.removeChild(pop); }
+            }
+            document.getElementById('dt-trigger').addEventListener('click', function (e) {
+                e.preventDefault();
+                if (calOpen) { closeCal(); } else { openCal(); }
+            });
+            document.addEventListener('click', function (e) {
+                if (!calOpen) { return; }
+                var wrap = document.getElementById('dt-trigger').parentNode;
+                if (!wrap.contains(e.target)) { closeCal(); }
+            });
+            dtWriteStart();
+
+            // --- Save ------------------------------------------------------------
+            function parseHhMm(text) {
+                var m = /^\s*(\d+)\s*:\s*(\d{1,2})\s*$/.exec(text || '');
+                if (!m) { return null; }
+                return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+            }
+            function save() {
+                $err.addClass('hide');
+                var startRaw = document.getElementById('start-time').value;
+                var durationMinutes = parseHhMm(document.getElementById('contest-duration').value);
+                var freezeMinutes = parseHhMm(document.getElementById('contest-freeze').value);
+                var name = $('#contest-name').val();
+                if (!name || !startRaw || durationMinutes === null || durationMinutes <= 0) {
+                    $err.html([[#{voj.administration.edit-contest.invalid-error}]]).removeClass('hide'); return;
+                }
+                var endDate = new Date(new Date(startRaw).getTime() + durationMinutes * 60000);
+                function fmt(d) {
+                    return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()) +
+                        'T' + pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+                }
+                var data = {
+                    contestName: name,
+                    contestNotes: notesEditor ? notesEditor.value() : $('#contest-notes').val(),
+                    startTime: startRaw,
+                    endTime: fmt(endDate),
+                    scoring: document.getElementById('contest-scoring').value,
+                    problems: document.getElementById('contest-problems').value,
+                    status: document.getElementById('contest-status').value,
+                    penalty: parseInt($('#contest-penalty').val(), 10) || 0,
+                    freeze: freezeMinutes === null ? 0 : freezeMinutes,
+                    isRated: document.getElementById('contest-is-rated').value === '1',
+                    openRegistration: document.getElementById('contest-open-registration').value === '1'
+                };
+                var url = contestId ? [[@{/administration/editContest.action}]] : [[@{/administration/createContest.action}]];
+                if (contestId) { data.contestId = contestId; }
+                $.ajax({
+                    type: 'POST', url: url, data: data, dataType: 'JSON',
+                    success: function (result) {
+                        if (result['isSuccessful']) { window.location.href = [[@{/administration/all-contests}]]; }
+                        else { $err.html([[#{voj.administration.edit-contest.invalid-error}]]).removeClass('hide'); }
+                    }
+                });
+            }
+            document.getElementById('save-contest').addEventListener('click', save);
+
+            function del() {
+                if (!confirm([[#{voj.administration.edit-contest.continue-or-not}]])) return;
+                $.ajax({
+                    type: 'POST', url: [[@{/administration/deleteContests.action}]],
+                    data: { 'contests': JSON.stringify([contestId]) }, dataType: 'JSON',
+                    success: function (result) {
+                        if (result['isSuccessful']) { window.location.href = [[@{/administration/all-contests}]]; }
+                    }
+                });
+            }
+            ['delete-contest', 'delete-contest-2'].forEach(function (id) {
+                var el = document.getElementById(id);
+                if (el) el.addEventListener('click', del);
+            });
+        });
+    </script>
+    </th:block>
+</body>
+</html>

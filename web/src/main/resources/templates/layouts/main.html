@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<!--/*
+  The master layout for the public-facing site. Pages decorate it with
+  layout:decorate="~{layouts/main}" and supply their unique markup through the
+  layout:fragment="content" hole and, optionally, page-specific <head> elements
+  (stylesheets/<title>) and bottom-of-body scripts via layout:fragment="scripts".
+
+  The CDN base URL (cdnUrl), the cache-busting key (version), the display
+  language, the logged-in profile and the system options (websiteName, ...) are
+  all injected into the model by CommonModelInterceptor (and, for the error
+  pages, by ExceptionHandlingController), so every page can rely on them.
+
+  UI system: terminal aesthetic driven by css/app.css (CSS variables + reusable
+  .vw-* components) and js/theme.js (theme toggle, mobile menu, language menu).
+*/-->
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      th:lang="${language}" lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8" />
+    <!--/* Apply the persisted theme before first paint to avoid a flash. */-->
+    <script>(function(){try{var t=localStorage.getItem('voj-theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+    <!-- Analytics (rendered only when configured). The gtag.js snippet is async, so placing it
+         high in <head> — Google's recommendation — captures the pageview early without blocking. -->
+    <th:block th:if="${googleAnalyticsCode != null and googleAnalyticsCode != ''}" th:utext="${googleAnalyticsCode}"></th:block>
+    <title th:text="${websiteName}">Verwandlung Online Judge</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" th:content="${description}" />
+    <meta name="author" content="Haozhe Xie" />
+    <!-- CSRF token for AJAX requests (consumed by the ajaxSend hook in site.js). -->
+    <meta name="_csrf" th:content="${_csrf.token}" />
+    <meta name="_csrf_header" th:content="${_csrf.headerName}" />
+    <!-- Icon -->
+    <link th:href="|${cdnUrl}/img/favicon.ico?v=${version}|" rel="shortcut icon" type="image/x-icon" />
+    <!-- UI system (self-hosted fonts + theme variables + components live in app.css). -->
+    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/app.css?v=${version}|" />
+    <!-- Functional JavaScript kept from the legacy stack (page AJAX still uses jQuery). -->
+    <script type="text/javascript" th:src="|${cdnUrl}/js/jquery-3.7.1.min.js?v=${version}|"></script>
+</head>
+<body>
+    <div class="vw-app">
+        <!-- Decorative scanline overlay. -->
+        <div class="vw-scanlines" aria-hidden="true"></div>
+        <!-- Header -->
+        <div th:replace="~{fragments/header :: header}"></div>
+        <!-- Content -->
+        <main class="vw-main">
+            <th:block layout:fragment="content"></th:block>
+        </main>
+        <!-- Footer -->
+        <div th:replace="~{fragments/footer :: footer}"></div>
+    </div>
+    <!-- UI chrome behaviour (theme toggle, mobile menu, language menu). -->
+    <script type="text/javascript" th:src="|${cdnUrl}/js/theme.js?v=${version}|"></script>
+    <!-- Site-wide JavaScript (CSRF token wiring for AJAX). -->
+    <script type="text/javascript" th:src="|${cdnUrl}/js/site.js?v=${version}|"></script>
+    <!-- Markdown rendering (markdown-it) + shared helpers (renderMarkdown / createMarkdownEditor). -->
+    <script type="text/javascript" th:src="|${cdnUrl}/js/markdown-it.min.js?v=${version}|"></script>
+    <script type="text/javascript" th:src="|${cdnUrl}/js/markdown.js?v=${version}|"></script>
+    <!-- Page-specific bottom-of-body scripts. -->
+    <th:block layout:fragment="scripts"></th:block>
+</body>
+</html>

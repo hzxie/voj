@@ -48,7 +48,7 @@ public class DiscussionThreadMapperTest {
   @Test
   public void testGetDiscussionThreadsOfProblem1000WithOffsetFrom0WithLimit2() {
     List<DiscussionThread> discussionThreads =
-        discussionThreadMapper.getDiscussionThreads(1000, 0, 0, 2);
+        discussionThreadMapper.getDiscussionThreads(1000, 0, 0, 2, 0, true);
     Assertions.assertEquals(2, discussionThreads.size());
 
     DiscussionThread firstThread = discussionThreads.get(0);
@@ -72,7 +72,7 @@ public class DiscussionThreadMapperTest {
   @Test
   public void testGetDiscussionThreadsOfNoRelatedProblemWithOffsetFrom0WithLimit1() {
     List<DiscussionThread> discussionThreads =
-        discussionThreadMapper.getDiscussionThreads(0, 1, 0, 1);
+        discussionThreadMapper.getDiscussionThreads(0, 1, 0, 1, 0, true);
     DiscussionThread thread = discussionThreads.get(0);
     Assertions.assertNotNull(thread);
 

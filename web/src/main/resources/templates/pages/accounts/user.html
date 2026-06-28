@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<!--/* Reproduced from voj-design/Profile.dc.html: profile header band (avatar + name + meta
+       + bio + contact + $ edit-profile), a left stat column (solved / submissions / acceptance /
+       contests + a solved-by-difficulty breakdown) and a right column with an // ACTIVITY heatmap
+       (last-year daily submissions) and a // RECENT SUBMISSIONS list. The design's global RANK has
+       no backend source, so the user-group badge stands in for it. */-->
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/main}" lang="en">
+<head>
+    <title th:text="#{voj.accounts.user.title} + ': ' + ${user.username} + ' | ' + ${websiteName}">User</title>
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css" />
+</head>
+<body>
+    <div layout:fragment="content"
+         th:with="accepted=${submissionStats.get('acceptedSubmission')},
+                  total=${submissionStats.get('totalSubmission')}">
+        <!-- PROFILE HEADER -->
+        <section class="vw-titlebar">
+            <div class="vw-titlebar-inner vw-profile-head">
+                <div class="vw-profile-avatar" th:text="${#strings.toUpperCase(#strings.substring(user.username,0,1))}">H</div>
+                <div class="vw-minw0">
+                    <div class="vw-profile-name-row">
+                        <h1 th:text="${user.username}">username</h1>
+                        <span class="vw-rank-badge" th:text="${user.userGroup.userGroupName}">User</span>
+                    </div>
+                    <div class="vw-profile-meta">
+                        <span th:if="${!#strings.isEmpty(displayName)}" th:text="${displayName} + ' &middot; '">Display Name &middot; </span>
+                        <span th:if="${!#strings.isEmpty(location)}" th:text="${location} + ' &middot; '">Location &middot; </span>
+                        <span th:text="#{voj.accounts.user.joined-on} + ' ' + ${@dateFormatter.parseDateLong(registerTime, language)}">joined</span>
+                    </div>
+                    <p class="vw-profile-bio markdown" th:if="${!#strings.isEmpty(aboutMe)}" th:utext="${aboutMe}">bio</p>
+                    <div class="vw-profile-contact">
+                        <span>&#9993; <span th:text="${user.email}">email</span></span>
+                        <span th:if="${!#strings.isEmpty(website)}">&#9740; <a th:href="${website}" target="_blank" th:text="${website}">website</a></span>
+                        <span th:if="${socialLinks != null and !#strings.isEmpty(socialLinks['GitHub'])}">&#9881; <a th:href="|https://github.com/${socialLinks['GitHub']}|" target="_blank" th:text="|github.com/${socialLinks['GitHub']}|">github</a></span>
+                    </div>
+                </div>
+                <div class="vw-header-spacer"></div>
+                <!--/* Owner-only edit trigger. Opens the // edit-profile modal (below), which
+                       posts to /accounts/updateProfile.action. */-->
+                <button type="button" class="vw-edit-btn" id="edit-profile-btn"
+                        th:if="${isLogin and myProfile != null and myProfile.uid == user.uid}">$ <span th:text="#{voj.accounts.user.edit-profile}">edit-profile</span></button>
+            </div>
+        </section>
+
+        <!-- BODY -->
+        <section class="vw-profile-body">
+            <!-- LEFT: STATS -->
+            <div class="vw-profile-side">
+                <div class="vw-pstats">
+                    <div class="vw-pstat"><div class="v vw-accent" th:text="${accepted}">0</div><div class="k" th:text="#{voj.accounts.user.accepted}">SOLVED</div></div>
+                    <div class="vw-pstat"><div class="v" th:text="${#numbers.formatInteger(total, 1, 'COMMA')}">0</div><div class="k" th:text="#{voj.accounts.user.submit}">SUBMISSIONS</div></div>
+                    <div class="vw-pstat"><div class="v" th:text="${total == 0 ? '0%' : #numbers.formatDecimal(accepted * 100.0 / total, 1, 0) + '%'}">0%</div><div class="k">ACCEPTANCE</div></div>
+                    <div class="vw-pstat"><div class="v" th:text="${contestsAttended}">0</div><div class="k" th:text="#{voj.accounts.user.contests}">CONTESTS</div></div>
+                </div>
+
+                <!-- SOLVED BY DIFFICULTY -->
+                <div class="vw-card" th:if="${solvedByDifficulty != null and !solvedByDifficulty.isEmpty()}">
+                    <div class="vw-card-body">
+                        <div class="vw-side-label" th:text="'// ' + #{voj.accounts.user.solved-by-difficulty}">// SOLVED BY DIFFICULTY</div>
+                        <div class="vw-pdiff-row" th:each="d : ${solvedByDifficulty}">
+                            <div class="vw-pdiff-head">
+                                <span class="vw-pdiff-name" th:classappend="|vw-pdiff-${d['slug']}|" th:text="${d['name']}">Easy</span>
+                                <span class="vw-pdiff-count" th:text="|${d['solved']} / ${d['total']}|">0 / 0</span>
+                            </div>
+                            <div class="vw-pdiff-track"><div class="vw-pdiff-fill" th:classappend="|vw-pdiff-${d['slug']}|" th:style="|width:${d['percentage']}%|"></div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT: ACTIVITY + RECENT -->
+            <div class="vw-profile-main">
+                <div class="vw-card">
+                    <div class="vw-card-body">
+                        <div class="vw-between vw-mb-14">
+                            <div class="vw-eyebrow vw-block-label vw-mb0" th:text="'// ' + #{voj.accounts.user.activity}">// ACTIVITY</div>
+                            <span id="heatmap-total" class="vw-muted"></span>
+                        </div>
+                        <div id="submissions-calendar"></div>
+                    </div>
+                </div>
+
+                <div class="vw-card">
+                    <div class="vw-card-strip vw-between">
+                        <span>// <span th:text="#{voj.accounts.user.recent-submissions}">RECENT SUBMISSIONS</span></span>
+                        <a class="vw-link-sm" th:href="@{/submission(username=${user.username})}">all &rarr;</a>
+                    </div>
+                    <p class="vw-muted vw-card-body" th:if="${recentSubmissions == null or recentSubmissions.isEmpty()}" th:text="#{voj.accounts.user.no-submissions}">No Submissions.</p>
+                    <div th:unless="${recentSubmissions == null or recentSubmissions.isEmpty()}">
+                        <a class="vw-recent-row" th:each="submission : ${recentSubmissions}"
+                           th:href="@{/submission/{id}(id=${submission.submissionId})}"
+                           th:with="slug=${submission.judgeResult != null ? #strings.toLowerCase(submission.judgeResult.judgeResultSlug) : ''}">
+                            <span class="vw-vbadge" th:classappend="|flag-${slug}|" th:text="${#strings.toUpperCase(slug)}">AC</span>
+                            <span class="vw-recent-prob" th:text="${submission.problem != null ? 'P' + submission.problem.problemId + ' ' + submission.problem.problemName : ''}">Problem</span>
+                            <span class="vw-muted2" th:text="${submission.language != null ? submission.language.languageName : ''}">Lang</span>
+                            <span class="vw-muted vw-recent-when" th:text="${submission.submitTime != null ? @dateFormatter.dateShort(submission.submitTime, language) : ''}">when</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!--/* EDIT PROFILE MODAL (owner only). Mirrors voj-design/Profile.dc.html's
+               // edit-profile dialog. Fields map to /accounts/updateProfile.action:
+               displayName, email, location, website, socialLinks (GitHub) and aboutMe.
+               The design's avatar upload and rank are not backed by the server, so they
+               are omitted; username is shown read-only. */-->
+        <div class="vw-pmodal-overlay hide" id="edit-profile-modal"
+             th:if="${isLogin and myProfile != null and myProfile.uid == user.uid}">
+            <div class="vw-pmodal">
+                <div class="vw-pmodal-head">
+                    <span class="vw-pmodal-eyebrow" th:text="'// ' + #{voj.accounts.user.edit-profile}">// edit-profile</span>
+                    <button type="button" class="vw-pmodal-close" data-edit-dismiss th:title="#{voj.include.header.close}">&#10005;</button>
+                </div>
+                <form id="edit-profile-form" method="POST" onsubmit="onUpdateProfile(); return false;">
+                    <div class="vw-pmodal-body">
+                        <div class="vw-alert vw-alert-error hide" id="edit-profile-error"></div>
+                        <div class="vw-pmodal-grid">
+                            <div class="vw-pmodal-field">
+                                <label class="vw-label" for="edit-display-name" th:text="#{voj.accounts.user.display-name}">Display Name</label>
+                                <input class="vw-input" id="edit-display-name" name="displayName" type="text" maxlength="64" th:value="${displayName}" />
+                            </div>
+                            <div class="vw-pmodal-field">
+                                <label class="vw-label" for="edit-username" th:text="#{voj.accounts.user.username} + ' &middot; ' + #{voj.accounts.user.locked}">Username · Locked</label>
+                                <input class="vw-input" id="edit-username" type="text" readonly th:value="${user.username}" />
+                            </div>
+                        </div>
+                        <div class="vw-pmodal-grid">
+                            <div class="vw-pmodal-field">
+                                <label class="vw-label" for="edit-location" th:text="#{voj.accounts.dashboard.location}">Location</label>
+                                <input class="vw-input" id="edit-location" name="location" type="text" maxlength="128"
+                                       th:value="${location}" th:placeholder="#{voj.accounts.dashboard.location-example}" />
+                            </div>
+                            <div class="vw-pmodal-field">
+                                <label class="vw-label" for="edit-email" th:text="#{voj.accounts.dashboard.email}">Email</label>
+                                <input class="vw-input" id="edit-email" name="email" type="text" maxlength="64" th:value="${user.email}" />
+                            </div>
+                        </div>
+                        <div class="vw-pmodal-grid">
+                            <div class="vw-pmodal-field">
+                                <label class="vw-label" for="edit-website" th:text="#{voj.accounts.dashboard.website}">Website</label>
+                                <input class="vw-input" id="edit-website" name="website" type="text" maxlength="64"
+                                       th:value="${website}" placeholder="https://" />
+                            </div>
+                            <div class="vw-pmodal-field">
+                                <label class="vw-label" for="edit-github" th:text="#{voj.accounts.user.github}">GitHub</label>
+                                <input class="vw-input" id="edit-github" type="text" placeholder="username"
+                                       th:value="${socialLinks != null ? socialLinks['GitHub'] : ''}" />
+                            </div>
+                        </div>
+                        <div class="vw-pmodal-field">
+                            <label class="vw-label" for="edit-about-me" th:text="#{voj.accounts.user.about-me}">About Me</label>
+                            <textarea class="vw-input" id="edit-about-me" name="aboutMe" rows="3" maxlength="256"
+                                      th:placeholder="#{voj.accounts.dashboard.introduce-yourself}" th:text="${aboutMe}"></textarea>
+                        </div>
+                    </div>
+                    <div class="vw-pmodal-foot">
+                        <button type="button" class="vw-btn vw-btn-sm" data-edit-dismiss th:text="#{voj.accounts.user.cancel}">Cancel</button>
+                        <button type="submit" class="vw-btn vw-btn-sm vw-btn-accent" id="edit-profile-submit">$ <span th:text="#{voj.accounts.user.save-changes}">Save Changes</span></button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <th:block layout:fragment="scripts">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+    <script type="text/javascript" th:inline="javascript">
+        $(function() {
+            $('.markdown').each(function() { $(this).html(renderMarkdown($(this).text())); typesetMath(this); });
+        });
+        $.getScript([[|${cdnUrl}/js/heatmap.js?v=${version}|]], function() {
+            $.ajax({
+                type: 'GET',
+                url: [[@{/accounts/getNumberOfSubmissionsOfUsers.action}]],
+                data: { 'uid': [[${user.uid}]] },
+                dataType: 'JSON',
+                success: function(result) {
+                    VojHeatmap.render('#submissions-calendar', result['totalSubmissions'], {
+                        totalElement: '#heatmap-total',
+                        totalLabel: [[#{voj.common.heatmap.submissions-last-year}]],
+                        lessLabel:  [[#{voj.common.heatmap.less}]],
+                        moreLabel:  [[#{voj.common.heatmap.more}]]
+                    });
+                }
+            });
+        });
+
+        // ---- Edit profile modal (owner only) -------------------------------
+        // Existing social links are inlined so non-GitHub entries survive a save;
+        // only the GitHub key is edited from the modal.
+        var existingSocialLinks = /*[[${socialLinks}]]*/ {};
+        $('#edit-profile-btn').on('click', function() {
+            $('#edit-profile-error').addClass('hide').empty();
+            $('#edit-profile-modal').removeClass('hide');
+        });
+        $('#edit-profile-modal').on('click', '[data-edit-dismiss]', function() {
+            $('#edit-profile-modal').addClass('hide');
+        });
+        $('#edit-profile-modal').on('click', function(e) {
+            if (e.target === this) { $(this).addClass('hide'); }
+        });
+        function onUpdateProfile() {
+            var $submit = $('#edit-profile-submit');
+            $('#edit-profile-error').addClass('hide').empty();
+            $submit.attr('disabled', 'disabled').html([[#{voj.accounts.dashboard.please-wait}]]);
+
+            var social = existingSocialLinks || {};
+            var github = $('#edit-github').val().trim();
+            if (github) { social['GitHub'] = github; } else { delete social['GitHub']; }
+
+            $.ajax({
+                type: 'POST',
+                url: [[@{/accounts/updateProfile.action}]],
+                data: {
+                    'email':       $('#edit-email').val(),
+                    'displayName': $('#edit-display-name').val(),
+                    'location':    $('#edit-location').val(),
+                    'website':     $('#edit-website').val(),
+                    'socialLinks': JSON.stringify(social),
+                    'aboutMe':     $('#edit-about-me').val()
+                },
+                dataType: 'JSON',
+                success: function(result) { processUpdateProfileResult(result); },
+                error: function() {
+                    $('#edit-profile-error').html([[#{voj.accounts.dashboard.invalid-token}]]).removeClass('hide');
+                    $('#edit-profile-submit').removeAttr('disabled').html('$ ' + [[#{voj.accounts.user.save-changes}]]);
+                }
+            });
+        }
+        function processUpdateProfileResult(result) {
+            if (result['isSuccessful']) {
+                window.location.reload();
+                return;
+            }
+            var errorMessage = '';
+            if (result['isEmailEmpty']) {
+                errorMessage += [[#{voj.accounts.dashboard.email-empty}]] + '<br>';
+            } else if (!result['isEmailLegal']) {
+                errorMessage += [[#{voj.accounts.dashboard.email-illegal}]] + '<br>';
+            } else if (result['isEmailExists']) {
+                errorMessage += [[#{voj.accounts.dashboard.email-existing}]] + '<br>';
+            }
+            if (!result['isDisplayNameLegal']) {
+                errorMessage += [[#{voj.accounts.user.display-name-illegal}]] + '<br>';
+            }
+            if (!result['isLocationLegal']) {
+                errorMessage += [[#{voj.accounts.dashboard.location-illegal}]] + '<br>';
+            }
+            if (!result['isWebsiteLegal']) {
+                errorMessage += [[#{voj.accounts.dashboard.website-legal}]] + '<br>';
+            }
+            if (!result['isAboutMeLegal']) {
+                errorMessage += [[#{voj.accounts.dashboard.about-me-legal}]] + '<br>';
+            }
+            $('#edit-profile-error').html(errorMessage).removeClass('hide');
+            $('#edit-profile-submit').removeAttr('disabled').html('$ ' + [[#{voj.accounts.user.save-changes}]]);
+        }
+    </script>
+    </th:block>
+</body>
+</html>

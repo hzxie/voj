@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/admin}" lang="en">
+<head>
+    <title th:text="#{voj.administration.new-problem.title} + ' | ' + ${websiteName}">New Problem</title>
+</head>
+<body>
+    <div layout:fragment="content">
+    <form id="problem-form" class="adm-detail" onSubmit="onSubmit(); return false;">
+
+        <div class="adm-detail-top">
+            <a class="adm-back" th:href="@{/administration/all-problems}">&#8592; <span th:text="#{voj.administration.new-problem.back}">back to problems</span></a>
+            <div class="adm-flex1"></div>
+            <button type="submit" class="adm-btn-tn go" th:text="'$ ' + #{voj.administration.new-problem.publish-problem}">$ publish</button>
+        </div>
+
+        <div class="alert alert-error hide"></div>
+
+        <div class="adm-ed2">
+            <div class="adm-col">
+                <div class="adm-card">
+                    <div class="adm-card-head plain" th:text="#{voj.administration.new-problem.statement}">// STATEMENT</div>
+                    <div class="adm-card-body">
+                        <label class="adm-flabel"><span th:text="#{voj.administration.new-problem.problem-name}">TITLE</span><input id="problem-name" class="adm-input" type="text" maxlength="128" /></label>
+                        <label class="adm-flabel"><span th:text="#{voj.administration.new-problem.problem-description}">DESCRIPTION · markdown</span><div id="markdown-editor"><textarea id="wmd-input" class="wmd-input"></textarea></div></label>
+                        <div class="adm-grid-2">
+                            <label class="adm-flabel"><span th:text="#{voj.administration.new-problem.input-format}">INPUT FORMAT</span><textarea id="input-format" class="adm-input" rows="3"></textarea></label>
+                            <label class="adm-flabel"><span th:text="#{voj.administration.new-problem.output-format}">OUTPUT FORMAT</span><textarea id="output-format" class="adm-input" rows="3"></textarea></label>
+                        </div>
+                        <div class="adm-grid-2">
+                            <label class="adm-flabel"><span th:text="#{voj.administration.new-problem.input-sample}">INPUT SAMPLE</span><textarea id="input-sample" class="adm-input code" rows="3"></textarea></label>
+                            <label class="adm-flabel"><span th:text="#{voj.administration.new-problem.output-sample}">OUTPUT SAMPLE</span><textarea id="output-sample" class="adm-input code" rows="3"></textarea></label>
+                        </div>
+                        <label class="adm-flabel"><span th:text="#{voj.administration.new-problem.hint}">HINT</span><textarea id="hint" class="adm-input" rows="2"></textarea></label>
+                    </div>
+                </div>
+                <div class="adm-card">
+                    <div class="adm-card-head"><span th:text="#{voj.administration.new-problem.test-cases}">// TEST CASES</span><span class="act" id="new-test-case" th:text="#{voj.administration.new-problem.new-test-case}">+ add sample</span></div>
+                    <div id="test-cases" class="adm-card-body adm-gap0">
+                        <p id="no-test-cases" class="adm-cell muted" th:text="#{voj.administration.new-problem.no-test-cases}">No test cases.</p>
+                        <ul class="adm-list-reset adm-stack14"></ul>
+                    </div>
+                </div>
+            </div>
+            <div class="adm-col">
+                <div class="adm-card">
+                    <div class="adm-card-head plain" th:text="#{voj.administration.new-problem.properties}">// PROPERTIES</div>
+                    <div class="adm-card-body">
+                        <div>
+                            <div class="adm-block-label" th:text="#{voj.administration.new-problem.status}">STATUS</div>
+                            <div class="adm-seg" data-adm="seg" data-input="problem-status">
+                                <a href="javascript:void(0);" data-value="PUBLISHED" class="active" th:text="#{voj.administration.status.published}">Published</a>
+                                <a href="javascript:void(0);" data-value="DRAFT" th:text="#{voj.administration.status.draft}">Draft</a>
+                                <a href="javascript:void(0);" data-value="HIDDEN" th:text="#{voj.administration.status.hidden}">Hidden</a>
+                            </div>
+                            <input type="hidden" id="problem-status" value="PUBLISHED" />
+                        </div>
+                        <div>
+                            <div class="adm-block-label" th:text="#{voj.administration.new-problem.difficulty}">DIFFICULTY</div>
+                            <div class="adm-seg" data-adm="seg" data-input="problem-difficulty">
+                                <a href="javascript:void(0);" th:each="difficulty,iter : ${problemDifficulties}" th:data-value="${difficulty.problemDifficultySlug}" th:classappend="${iter.index == 0} ? 'active'" th:text="${difficulty.problemDifficultyName}">Easy</a>
+                            </div>
+                            <input type="hidden" id="problem-difficulty" th:value="${!#lists.isEmpty(problemDifficulties) ? problemDifficulties[0].problemDifficultySlug : ''}" />
+                        </div>
+                        <div class="adm-grid-2">
+                            <label class="adm-flabel"><span th:text="#{voj.administration.new-problem.time-limit}">TIME · ms</span><input id="time-limit" class="adm-input" type="text" maxlength="8" /></label>
+                            <label class="adm-flabel"><span th:text="#{voj.administration.new-problem.memory-limit}">MEMORY · KB</span><input id="memory-limit" class="adm-input" type="text" maxlength="8" /></label>
+                        </div>
+                        <div class="vw-between"><span class="adm-cell txt" th:text="#{voj.administration.new-problem.test-case-exactly-match}">Exact match</span><div class="adm-switch" id="problem-is-exactly-match" data-adm="switch"><div class="knob"></div></div></div>
+                    </div>
+                </div>
+                <div class="adm-card">
+                    <div class="adm-card-head plain" th:text="#{voj.administration.new-problem.problem-categories}">// CATEGORIES</div>
+                    <div class="adm-card-body adm-gap8">
+                        <th:block th:each="entry : ${problemCategories}">
+                            <label class="checkbox adm-checkrow"><input type="checkbox" class="category-check" th:value="${entry.key.problemCategorySlug}" /> <span th:text="${entry.key.problemCategoryName}">Category</span></label>
+                            <label th:each="problemCategory : ${entry.value}" class="checkbox adm-checkrow sub"><input type="checkbox" class="category-check" th:value="${problemCategory.problemCategorySlug}" /> <span th:text="${problemCategory.problemCategoryName}">Subcategory</span></label>
+                        </th:block>
+                    </div>
+                </div>
+                <div class="adm-card">
+                    <div class="adm-card-head plain" th:text="#{voj.administration.new-problem.problem-tags}">// TAGS</div>
+                    <div class="adm-card-body">
+                        <label class="adm-flabel"><span th:text="#{voj.administration.new-problem.problem-tags-hint}">COMMA-SEPARATED</span><input id="problem-tags" class="adm-input" type="text" /></label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </form>
+    </div>
+
+    <th:block layout:fragment="scripts">
+    <script type="text/javascript" th:inline="javascript">
+        var descriptionEditor;
+        $(function() { descriptionEditor = createMarkdownEditor('#wmd-input'); });
+
+        function getTestCaseContainer(n, input, output) {
+            return '<li class="test-case adm-card">' +
+                   '  <div class="adm-card-head"><span>' + [[#{voj.administration.new-problem.test-case}]] + ' #' + n + '</span><span class="del-test">&#10005;</span></div>' +
+                   '  <div class="adm-card-body adm-gap10">' +
+                   '    <label class="adm-flabel"><span>' + [[#{voj.administration.new-problem.standard-input}]] + '</span><textarea class="standard-input adm-input code" rows="2">' + (input || '') + '</textarea></label>' +
+                   '    <label class="adm-flabel"><span>' + [[#{voj.administration.new-problem.standard-output}]] + '</span><textarea class="standard-output adm-input code" rows="2">' + (output || '') + '</textarea></label>' +
+                   '  </div>' +
+                   '</li>';
+        }
+        function renumberTestCases() {
+            $('li.test-case', '#test-cases').each(function(i) { $('.adm-card-head span:first-child', this).text([[#{voj.administration.new-problem.test-case}]] + ' #' + i); });
+        }
+        $('#new-test-case').click(function() {
+            $('#no-test-cases').addClass('hide');
+            $('#test-cases > ul').append(getTestCaseContainer($('li.test-case', '#test-cases').length));
+        });
+        $('#test-cases').on('click', '.del-test', function() {
+            $(this).closest('.test-case').remove();
+            renumberTestCases();
+            if ($('li.test-case', '#test-cases').length === 0) { $('#no-test-cases').removeClass('hide'); }
+        });
+
+        function getTestCases() {
+            var testCases = [];
+            $('li.test-case').each(function() { testCases.push({ 'input': $('.standard-input', this).val(), 'output': $('.standard-output', this).val() }); });
+            return JSON.stringify(testCases);
+        }
+        function getProblemCategories() {
+            var categories = [];
+            $('.category-check:checked').each(function() { categories.push($(this).val()); });
+            return JSON.stringify(categories);
+        }
+        function getProblemTags() {
+            var t = $('#problem-tags').val();
+            return JSON.stringify(t ? t.split(',').map(function(s){ return s.trim(); }).filter(Boolean) : []);
+        }
+        function onSubmit() {
+            $('.alert-error', '#problem-form').addClass('hide');
+            $('button[type=submit]', '#problem-form').attr('disabled', 'disabled').html([[#{voj.administration.new-problem.please-wait}]]);
+            createProblem($('#problem-name').val(), $('#time-limit').val(), $('#memory-limit').val(),
+                descriptionEditor ? descriptionEditor.value() : '', $('#hint').val(), $('#input-format').val(),
+                $('#output-format').val(), $('#input-sample').val(), $('#output-sample').val(), getTestCases(),
+                getProblemCategories(), getProblemTags(),
+                document.getElementById('problem-status').value,
+                document.getElementById('problem-is-exactly-match').classList.contains('on'),
+                document.getElementById('problem-difficulty').value);
+        }
+        function createProblem(problemName, timeLimit, memoryLimit, description, hint, inputFormat, outputFormat, inputSample, outputSample, testCases, problemCategories, problemTags, status, isExactlyMatch, problemDifficulty) {
+            $.ajax({
+                type: 'POST', url: [[@{/administration/createProblem.action}]],
+                data: { problemName:problemName, timeLimit:timeLimit, memoryLimit:memoryLimit, description:description, hint:hint,
+                        inputFormat:inputFormat, outputFormat:outputFormat, inputSample:inputSample, outputSample:outputSample,
+                        testCases:testCases, problemCategories:problemCategories, problemTags:problemTags,
+                        status:status, isExactlyMatch:isExactlyMatch, problemDifficulty:problemDifficulty },
+                dataType: 'JSON', success: function(result){ processCreateProblemResult(result); }
+            });
+        }
+        function processCreateProblemResult(result) {
+            if (result['isSuccessful']) { window.location.href = [[@{/administration/edit-problem/}]] + result['problemId']; }
+            else {
+                var m = '';
+                if (result['isProblemNameEmpty']) { m += [[#{voj.administration.new-problem.problem-name-empty}]] + '<br>'; }
+                else if (!result['isProblemNameLegal']) { m += [[#{voj.administration.new-problem.problem-name-illegal}]] + '<br>'; }
+                if (!result['isTimeLimitLegal']) { m += [[#{voj.administration.new-problem.time-limit-illegal}]] + '<br>'; }
+                if (!result['isMemoryLimitLegal']) { m += [[#{voj.administration.new-problem.memory-limit-illegal}]] + '<br>'; }
+                if (result['isDescriptionEmpty']) { m += [[#{voj.administration.new-problem.description-empty}]] + '<br>'; }
+                if (result['isInputFormatEmpty']) { m += [[#{voj.administration.new-problem.input-format-empty}]] + '<br>'; }
+                if (result['isOutputFormatEmpty']) { m += [[#{voj.administration.new-problem.output-format-empty}]] + '<br>'; }
+                if (result['isInputSampleEmpty']) { m += [[#{voj.administration.new-problem.input-sample-empty}]] + '<br>'; }
+                if (result['isOutputSampleEmpty']) { m += [[#{voj.administration.new-problem.output-sample-empty}]] + '<br>'; }
+                $('.alert-error', '#problem-form').html(m).removeClass('hide');
+                $('button[type=submit]', '#problem-form').removeAttr('disabled').html('$ ' + [[#{voj.administration.new-problem.publish-problem}]]);
+            }
+        }
+    </script>
+    </th:block>
+</body>
+</html>

@@ -62,6 +62,7 @@ public interface SubmissionMapper {
     @Result(property = "judgeResultSlug", column = "submission_judge_result"),
     @Result(property = "judgeScore", column = "submission_judge_score"),
     @Result(property = "judgeLog", column = "submission_judge_log"),
+    @Result(property = "judgerUid", column = "judger_uid"),
     @Result(property = "code", column = "submission_code"),
   })
   Submission getSubmission(@Param("submissionId") long submissionId);
@@ -77,7 +78,8 @@ public interface SubmissionMapper {
           + " submission_execute_time = #{executeTime}, submission_used_time = #{usedTime},"
           + " submission_used_memory = #{usedMemory}, submission_judge_result = #{judgeResultSlug},"
           + " submission_judge_score = #{judgeScore}, submission_judge_log = #{judgeLog},"
-          + " submission_code = #{code} WHERE submission_id = #{submissionId}")
+          + " judger_uid = #{judgerUid}, submission_code = #{code} WHERE submission_id ="
+          + " #{submissionId}")
   @Options(flushCache = Options.FlushCachePolicy.TRUE)
   void updateSubmission(Submission submission);
 }

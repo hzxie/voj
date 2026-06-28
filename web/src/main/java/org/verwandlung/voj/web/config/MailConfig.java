@@ -23,28 +23,19 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
-import org.springframework.web.servlet.view.freemarker.FreeMarkerConfigurer;
 
 /**
- * The mail service configuration. Replaces the JavaMailSender and FreeMarker definitions in the
- * original dispatcher-servlet.xml.
+ * The mail service configuration. Replaces the JavaMailSender definition in the original
+ * dispatcher-servlet.xml.
  *
- * <p>The mail body is rendered using FreeMarker templates located under classpath:/mails. Spring
- * Boot's built-in FreeMarker MVC view resolver is disabled via {@code spring.freemarker.enabled=
- * false} to avoid conflicts with the JSP view resolver.
+ * <p>The HTML mail body is rendered by the shared Thymeleaf engine (auto-configured by Spring Boot)
+ * from templates under classpath:/templates/mails, so no dedicated templating configuration is
+ * required here.
  *
  * @author Haozhe Xie
  */
 @Configuration
 public class MailConfig {
-  /** The FreeMarker configuration used to render mail templates. */
-  @Bean
-  public FreeMarkerConfigurer freeMarkerConfigurer() {
-    FreeMarkerConfigurer freeMarkerConfigurer = new FreeMarkerConfigurer();
-    freeMarkerConfigurer.setTemplateLoaderPath("classpath:/mails");
-    return freeMarkerConfigurer;
-  }
-
   /** The SMTP-based mail sender. */
   @Bean
   public JavaMailSender javaMailSender(

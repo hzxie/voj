@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/admin}" lang="en">
+<head>
+    <title th:text="#{voj.administration.all-problems.title} + ' | ' + ${websiteName}">All Problems</title>
+</head>
+<body>
+    <div layout:fragment="content">
+    <div class="adm-wrap">
+
+        <!-- Toolbar -->
+        <form class="adm-toolbar" method="GET" th:action="@{/administration/all-problems}">
+            <div class="adm-toolbar-search">
+                <span class="sigil">$</span>
+                <input name="keyword" type="text" th:value="${keyword}" th:placeholder="#{voj.administration.all-problems.search-placeholder}" />
+                <span class="count"><span th:text="${#lists.size(problems)}">0</span> <span th:text="#{voj.administration.all-problems.records}">records</span></span>
+            </div>
+            <select name="problemCategory" class="adm-toolbar-select" onchange="this.form.submit();">
+                <option value="" th:text="#{voj.administration.all-problems.all-problem-categories}">All Categories</option>
+                <option th:each="problemCategory : ${problemCategories}" th:value="${problemCategory.problemCategorySlug}" th:selected="${problemCategory.problemCategorySlug == selectedProblemCategory}" th:text="${problemCategory.problemCategoryName}">Category</option>
+            </select>
+            <select name="problemDifficulty" class="adm-toolbar-select" onchange="this.form.submit();">
+                <option value="" th:text="#{voj.administration.all-problems.all-difficulties}">All Difficulties</option>
+                <option th:each="problemDifficulty : ${problemDifficulties}" th:value="${problemDifficulty.problemDifficultySlug}" th:selected="${problemDifficulty.problemDifficultySlug == selectedProblemDifficulty}" th:text="${problemDifficulty.problemDifficultyName}">Difficulty</option>
+            </select>
+            <button type="submit" class="adm-btn-ghost"><span>&#9698;</span> <span th:text="#{voj.administration.all-problems.filter}">filter</span></button>
+            <a class="adm-btn-ghost" th:href="@{/administration/problem-categories}"><span>&#9776;</span> <span th:text="#{voj.administration.all-problems.categories}">categories</span></a>
+            <a class="adm-btn-accent" th:href="@{/administration/new-problem}" th:text="#{voj.administration.all-problems.new-problem}">+ new problem</a>
+        </form>
+
+        <!-- Bulk bar -->
+        <div class="adm-bulk" data-adm="bulk">
+            <span class="sel"><span data-adm="bulk-count">0</span> <span th:text="#{voj.administration.all-problems.selected}">selected</span></span>
+            <div class="adm-flex1"></div>
+            <span class="adm-bulk-act c-err" data-adm="bulk-delete">&#10005; <span th:text="#{voj.administration.all-problems.delete}">delete</span></span>
+            <span class="adm-bulk-clear" data-adm="bulk-clear" th:text="#{voj.administration.all-problems.clear}">clear</span>
+        </div>
+
+        <!-- Table -->
+        <div class="adm-table" data-adm="table">
+            <div class="adm-table-scroll"><div class="adm-table-inner cols-problems">
+                <div class="adm-table-head">
+                    <span class="adm-check" data-adm="check-all"></span>
+                    <span>#</span>
+                    <span th:text="#{voj.administration.all-problems.problem-name}">TITLE</span>
+                    <span th:text="#{voj.administration.all-problems.problem-categories}">CATEGORY</span>
+                    <span th:text="#{voj.administration.all-problems.problem-tags}">TAGS</span>
+                    <span th:text="#{voj.administration.all-problems.difficulty}">DIFFICULTY</span>
+                    <span th:text="#{voj.administration.all-problems.ac-rate}">AC%</span>
+                    <span th:text="#{voj.administration.all-problems.total-submissions}">SUBS</span>
+                    <span th:text="#{voj.administration.all-problems.status}">STATUS</span>
+                    <span></span>
+                </div>
+                <a class="adm-table-row" data-adm="row" th:each="problem : ${problems}" th:href="@{/administration/edit-problem/{id}(id=${problem.problemId})}">
+                    <span class="adm-check" data-adm="row-check" th:attr="data-id=${problem.problemId}"></span>
+                    <span class="adm-cell mono muted" th:text="'#' + ${problem.problemId}">#1</span>
+                    <span class="adm-cell head" th:text="${problem.problemName}">Problem Name</span>
+                    <span class="adm-cell" th:with="firstCategory=${problemCategoryRelationships[problem.problemId] != null && !problemCategoryRelationships[problem.problemId].isEmpty() ? problemCategoryRelationships[problem.problemId][0] : null}">
+                        <span class="adm-pill c-info" th:if="${firstCategory != null}" th:text="${firstCategory.problemCategoryName}">Category</span>
+                        <span class="c-muted" th:if="${firstCategory == null}">&#8212;</span>
+                    </span>
+                    <span class="adm-tags">
+                        <th:block th:if="${problemTagRelationships[problem.problemId] != null}">
+                            <span th:each="problemTag,loop : ${problemTagRelationships[problem.problemId]}" th:if="${loop.index < 2}" th:text="${problemTag.problemTagName}">Tag</span>
+                        </th:block>
+                    </span>
+                    <span th:with="slug=${problem.problemDifficulty != null ? problem.problemDifficulty.problemDifficultySlug : 'easy'}">
+                        <span class="adm-pill" th:classappend="${slug == 'hard' ? 'c-err' : (slug == 'medium' ? 'c-warn' : 'c-accent')}" th:text="${problem.problemDifficulty != null ? problem.problemDifficulty.problemDifficultyName : 'Easy'}">Easy</span>
+                    </span>
+                    <span class="adm-cell txt" th:text="${problem.totalSubmission > 0 ? (problem.acceptedSubmission * 100 / problem.totalSubmission) + '%' : '—'}">0%</span>
+                    <span class="adm-cell" th:text="${problem.totalSubmission}">0</span>
+                    <span>
+                        <span class="adm-pill"
+                              th:classappend="${problem.status == 'PUBLISHED'} ? 'c-accent' : (${problem.status == 'DRAFT'} ? 'c-warn' : 'c-err')"
+                              th:text="${problem.status == 'DRAFT'} ? #{voj.administration.status.draft} : (${problem.status == 'HIDDEN'} ? #{voj.administration.status.hidden} : #{voj.administration.status.published})">Published</span>
+                    </span>
+                    <span class="adm-menu">&#183;&#183;&#183;</span>
+                </a>
+                <div class="adm-table-empty" th:if="${#lists.isEmpty(problems)}" th:text="#{voj.administration.all-problems.no-records}">// no records</div>
+            </div></div>
+        </div>
+
+        <!-- Pager -->
+        <div class="adm-pager" th:if="${totalPages > 1}"
+             th:with="lowerBound=${currentPage - 3 > 0 ? currentPage - 3 : 1},upperBound=${currentPage + 3 < totalPages ? currentPage + 3 : totalPages}">
+            <span>
+                <span th:text="#{voj.administration.all-problems.showing}">showing</span>
+                <span th:text="${#lists.size(problems)}">0</span> &#183;
+                <span th:text="#{voj.administration.all-problems.page}">page</span>
+                <span th:text="${currentPage}">1</span>
+                <span th:text="#{voj.administration.all-problems.page-of}">of</span>
+                <span th:text="${totalPages}">1</span>
+            </span>
+            <div class="adm-pager-btns">
+                <a class="nav" th:classappend="${currentPage <= 1} ? 'off'" th:href="@{/administration/all-problems(keyword=${keyword},problemCategory=${selectedProblemCategory},problemDifficulty=${selectedProblemDifficulty},page=${currentPage - 1})}">&#8592;</a>
+                <a class="num" th:each="pageNumber : ${#numbers.sequence(lowerBound, upperBound)}" th:classappend="${pageNumber == currentPage} ? 'active'" th:href="@{/administration/all-problems(keyword=${keyword},problemCategory=${selectedProblemCategory},problemDifficulty=${selectedProblemDifficulty},page=${pageNumber})}" th:text="${pageNumber}">1</a>
+                <a class="nav" th:classappend="${currentPage >= totalPages} ? 'off'" th:href="@{/administration/all-problems(keyword=${keyword},problemCategory=${selectedProblemCategory},problemDifficulty=${selectedProblemDifficulty},page=${currentPage + 1})}">&#8594;</a>
+            </div>
+        </div>
+
+    </div>
+    </div>
+
+    <th:block layout:fragment="scripts">
+    <script type="text/javascript" th:inline="javascript">
+        document.addEventListener('DOMContentLoaded', function () {
+            var del = document.querySelector('[data-adm="bulk-delete"]');
+            if (!del) return;
+            del.addEventListener('click', function () {
+                var ids = window.admSelectedIds ? window.admSelectedIds() : [];
+                if (ids.length === 0) return;
+                if (!confirm([[#{voj.administration.all-problems.continue-or-not}]])) return;
+                $.ajax({
+                    type: 'POST',
+                    url: [[@{/administration/deleteProblems.action}]],
+                    data: { 'problems': JSON.stringify(ids) },
+                    dataType: 'JSON',
+                    success: function (result) {
+                        if (result['isSuccessful']) { window.location.reload(); }
+                        else { alert([[#{voj.administration.all-problems.delete-error}]]); }
+                    }
+                });
+            });
+        });
+    </script>
+    </th:block>
+</body>
+</html>

@@ -34,11 +34,20 @@ public class KeepAliveEvent extends ApplicationEvent {
    * @param judgerDescription - the description information of the judger
    */
   public KeepAliveEvent(
-      Object source, String judgerUsername, String judgerDescription, Date heartbeatTime) {
+      Object source,
+      String judgerUsername,
+      String judgerDescription,
+      Date heartbeatTime,
+      int cpuLoad,
+      int memoryUsage,
+      long uptime) {
     super(source);
     this.judgerUsername = judgerUsername;
     this.judgerDescription = judgerDescription;
     this.heartbeatTime = heartbeatTime;
+    this.cpuLoad = cpuLoad;
+    this.memoryUsage = memoryUsage;
+    this.uptime = uptime;
   }
 
   /**
@@ -68,6 +77,33 @@ public class KeepAliveEvent extends ApplicationEvent {
     return heartbeatTime;
   }
 
+  /**
+   * Gets the judger's CPU load percentage (0-100).
+   *
+   * @return the judger's CPU load percentage
+   */
+  public int getCpuLoad() {
+    return cpuLoad;
+  }
+
+  /**
+   * Gets the judger's memory usage percentage (0-100).
+   *
+   * @return the judger's memory usage percentage
+   */
+  public int getMemoryUsage() {
+    return memoryUsage;
+  }
+
+  /**
+   * Gets the judger's uptime in milliseconds.
+   *
+   * @return the judger's uptime in milliseconds
+   */
+  public long getUptime() {
+    return uptime;
+  }
+
   /** The username of the judger. */
   private final String judgerUsername;
 
@@ -76,6 +112,15 @@ public class KeepAliveEvent extends ApplicationEvent {
 
   /** The time of the judger's heartbeat. */
   private final Date heartbeatTime;
+
+  /** The judger's CPU load percentage (0-100). */
+  private final int cpuLoad;
+
+  /** The judger's memory usage percentage (0-100). */
+  private final int memoryUsage;
+
+  /** The judger's uptime in milliseconds. */
+  private final long uptime;
 
   /** The unique serialization identifier. */
   private static final long serialVersionUID = -9218788192064705664L;

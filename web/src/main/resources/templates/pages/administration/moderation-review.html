@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/admin}" lang="en">
+<head>
+    <title th:text="#{voj.administration.moderation-review.title} + ' | ' + ${websiteName}">Review</title>
+</head>
+<body>
+    <div layout:fragment="content">
+    <div class="adm-detail" th:with="author=${reply.discussionReplyCreator}">
+
+        <div class="adm-detail-top">
+            <a class="adm-back" th:href="@{/administration/moderation}">&#8592; <span th:text="#{voj.administration.moderation-review.back}">back to queue</span></a>
+            <span class="adm-idchip" th:text="'#' + ${reply.discussionReplyId}">#1</span>
+            <div class="adm-flex1"></div>
+            <a class="adm-btn-tn" th:if="${thread != null}" th:href="@{/discussion/{id}(id=${thread.discussionThreadId})}" target="_blank" th:text="#{voj.administration.moderation-review.view}">view in context</a>
+        </div>
+
+        <div class="adm-ed2">
+            <div class="adm-col">
+                <div class="adm-card">
+                    <div class="adm-card-head">
+                        <span th:text="#{voj.administration.moderation-review.flagged-content}">// FLAGGED CONTENT</span>
+                        <span class="adm-pill c-info" th:text="#{voj.administration.moderation.type-comment}">COMMENT</span>
+                    </div>
+                    <div class="adm-card-body">
+                        <div class="adm-mod-flagtitle" th:text="${thread != null ? thread.discussionThreadTitle : #messages.msg('voj.administration.moderation.untitled-thread')}">Thread title</div>
+                        <div class="adm-mod-quote" th:text="${reply.discussionReplyContent}">flagged reply content</div>
+                        <div class="adm-cell muted adm-mono-sm">
+                            <span th:text="${author != null ? '@' + author.username : '—'}">@author</span>
+                            &#183; <span th:text="#{voj.administration.moderation-review.posted}">posted</span>
+                            <span th:text="${@dateFormatter.dateTimeLongMedium(reply.discussionReplyCreateTime, language)}">date</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="adm-card">
+                    <div class="adm-card-head adm-text-err">
+                        <span th:text="'// ' + #{voj.administration.moderation-review.reports} + ' · ' + ${reportCount}">// REPORTS · 0</span>
+                    </div>
+                    <div class="adm-reporter" th:each="r : ${reporters}">
+                        <div class="av" th:text="${r.username != null ? #strings.substring(r.username,0,1) : '?'}">A</div>
+                        <div class="adm-min0 adm-flex1">
+                            <div class="who" th:text="${r.username != null ? '@' + r.username : '—'}">@reporter</div>
+                            <div class="when" th:text="${@dateFormatter.dateTimeLongMedium(r.reportTime, language)}">when</div>
+                        </div>
+                    </div>
+                    <div class="adm-table-empty" th:if="${#lists.isEmpty(reporters)}" th:text="#{voj.administration.moderation-review.no-reports}">// no outstanding reports</div>
+                </div>
+            </div>
+
+            <div class="adm-col">
+                <div class="adm-card">
+                    <div class="adm-card-head plain" th:text="#{voj.administration.moderation-review.resolution}">// RESOLUTION</div>
+                    <div class="adm-resolve">
+                        <button type="button" class="adm-btn-resolve" id="mod-dismiss">&#10003; <span th:text="#{voj.administration.moderation-review.approve}">Approve &amp; clear</span></button>
+                        <div class="hint" th:text="#{voj.administration.moderation-review.approve-hint}">Keeps the content as-is, dismisses all reports and removes it from the queue.</div>
+                        <div class="sep"></div>
+                        <button type="button" class="adm-btn-outline warn" id="mod-remove">&#8856; <span th:text="#{voj.administration.moderation-review.remove}">Remove content</span></button>
+                        <button type="button" class="adm-btn-outline err" id="mod-ban" th:if="${author != null}">&#9940; <span th:text="#{voj.administration.moderation-review.ban}">Ban author</span></button>
+                    </div>
+                </div>
+
+                <div class="adm-card">
+                    <div class="adm-card-head plain" th:text="#{voj.administration.moderation-review.details}">// DETAILS</div>
+                    <div class="adm-kv"><span class="k" th:text="#{voj.administration.moderation-review.content-type}">Content type</span><span class="v" th:text="#{voj.administration.moderation.type-comment}">Comment</span></div>
+                    <div class="adm-kv"><span class="k" th:text="#{voj.administration.moderation-review.author}">Author</span><span class="v" th:text="${author != null ? '@' + author.username : '—'}">@author</span></div>
+                    <div class="adm-kv"><span class="k" th:text="#{voj.administration.moderation-review.total-reports}">Total reports</span><span class="v" th:text="${reportCount}">0</span></div>
+                    <div class="adm-kv"><span class="k" th:text="#{voj.administration.moderation-review.thread}">Thread</span><span class="v" th:text="${thread != null ? thread.discussionThreadTitle : '—'}">thread</span></div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    </div>
+
+    <th:block layout:fragment="scripts">
+    <script type="text/javascript" th:inline="javascript">
+        document.addEventListener('DOMContentLoaded', function () {
+            var replyId = [[${reply.discussionReplyId}]];
+            var authorId = [[${reply.discussionReplyCreator != null ? reply.discussionReplyCreator.uid : 0}]];
+            var queueUrl = [[@{/administration/moderation}]];
+
+            function post(url, data, confirmMsg) {
+                if (confirmMsg && !confirm(confirmMsg)) return;
+                $.ajax({
+                    type: 'POST', url: url, data: data, dataType: 'JSON',
+                    success: function (result) {
+                        if (result['isSuccessful']) { window.location.href = queueUrl; }
+                    }
+                });
+            }
+
+            $('#mod-dismiss').on('click', function () {
+                post([[@{/administration/dismissReports.action}]], { replyId: replyId });
+            });
+            $('#mod-remove').on('click', function () {
+                post([[@{/administration/deleteReply.action}]], { replyId: replyId }, [[#{voj.administration.moderation-review.confirm-remove}]]);
+            });
+            $('#mod-ban').on('click', function () {
+                post([[@{/administration/banUser.action}]], { userId: authorId }, [[#{voj.administration.moderation-review.confirm-ban}]]);
+            });
+        });
+    </script>
+    </th:block>
+</body>
+</html>

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/admin}" lang="en">
+<head>
+    <title th:text="#{voj.administration.index.title} + ' | ' + ${websiteName}">Dashboard</title>
+</head>
+<body>
+    <div layout:fragment="content">
+    <div class="adm-wrap adm-stack">
+
+        <!-- KPI cards -->
+        <div class="adm-kpis">
+            <div class="adm-kpi">
+                <div class="adm-kpi-top"><span class="k" th:text="#{voj.administration.index.kpi.problems}">PROBLEMS</span><span class="i">&#9776;</span></div>
+                <div class="adm-kpi-v" th:text="${#numbers.formatInteger(totalProblems, 1, 'COMMA')}">0</div>
+                <div class="adm-kpi-d"><span th:text="${privateProblems}">0</span> <span class="note" th:text="#{voj.administration.index.kpi.private}">private</span></div>
+            </div>
+            <div class="adm-kpi">
+                <div class="adm-kpi-top"><span class="k" th:text="#{voj.administration.index.kpi.users}">USERS</span><span class="i">&#9783;</span></div>
+                <div class="adm-kpi-v" th:text="${#numbers.formatInteger(totalUsers, 1, 'COMMA')}">0</div>
+                <div class="adm-kpi-d">+<span th:text="${newUsersToday}">0</span> <span class="note" th:text="#{voj.administration.index.kpi.today}">today</span></div>
+            </div>
+            <div class="adm-kpi">
+                <div class="adm-kpi-top"><span class="k" th:text="#{voj.administration.index.kpi.submissions-today}">SUBMISSIONS / DAY</span><span class="i">&#8645;</span></div>
+                <div class="adm-kpi-v" th:text="${#numbers.formatInteger(submissionsToday, 1, 'COMMA')}">0</div>
+                <div class="adm-kpi-d" th:classappend="${pendingSubmissions > 0} ? 'warn'"><span th:text="${pendingSubmissions}">0</span> <span class="note" th:text="#{voj.administration.index.kpi.pending}">pending</span></div>
+            </div>
+            <div class="adm-kpi">
+                <div class="adm-kpi-top"><span class="k" th:text="#{voj.administration.index.kpi.live-contests}">LIVE CONTESTS</span><span class="i">&#9719;</span></div>
+                <div class="adm-kpi-v" th:text="${liveContests}">0</div>
+                <div class="adm-kpi-d" th:classappend="${liveContests > 0} ? 'warn'"><span th:text="${onlineUsers}">0</span> <span class="note" th:text="#{voj.administration.index.kpi.online}">online</span></div>
+            </div>
+        </div>
+
+        <!-- Submissions chart + verdict mix -->
+        <div class="adm-charts adm-charts-2a">
+            <div class="adm-panel adm-panel-pad">
+                <div class="adm-panel-head mb">
+                    <span class="adm-label" th:text="#{voj.administration.index.submissions-14-days}">// SUBMISSIONS · LAST 14 DAYS</span>
+                    <span class="adm-sub"><span th:text="${#numbers.formatInteger(submissionsTotal, 1, 'COMMA')}">0</span> <span th:text="#{voj.administration.index.total}">total</span></span>
+                </div>
+                <div class="adm-bars">
+                    <div class="adm-bar" th:each="bar : ${submissionBars}">
+                        <div class="fill" th:attr="data-pct=${bar.height}" th:title="${bar.value}"></div>
+                        <span class="lbl" th:text="${bar.label}">M</span>
+                    </div>
+                </div>
+            </div>
+            <div class="adm-panel adm-panel-pad">
+                <div class="adm-label adm-mb18" th:text="#{voj.administration.index.verdict-mix}">// VERDICT MIX</div>
+                <div class="adm-verdict" th:each="v : ${verdicts}">
+                    <div class="adm-verdict-top">
+                        <span class="nm" th:classappend="${v.cls}" th:text="${v.name}">Accepted</span>
+                        <span class="pct"><span th:text="${v.percentage}">0</span>%</span>
+                    </div>
+                    <div class="adm-verdict-track"><div class="adm-verdict-fill" th:classappend="${v.cls}" th:attr="data-pct=${v.percentage}"></div></div>
+                </div>
+                <div class="adm-table-empty" th:if="${#lists.isEmpty(verdicts)}" th:text="#{voj.administration.index.no-submissions}">// no submissions yet</div>
+            </div>
+        </div>
+
+        <!-- Moderation queue + system status -->
+        <div class="adm-charts adm-charts-2b">
+            <div class="adm-panel adm-panel-flush">
+                <a class="adm-panel-bar adm-panel-bar-link" th:href="@{/administration/moderation}">
+                    <span class="adm-label" th:text="#{voj.administration.index.moderation-queue}">// MODERATION QUEUE</span>
+                    <span class="adm-panel-bar-right">
+                        <span class="adm-pending" th:if="${moderationCount > 0}"><span th:text="${moderationCount}">0</span> <span th:text="#{voj.administration.index.pending-count}">pending</span></span>
+                        <span class="adm-open"><span th:text="#{voj.administration.index.open}">open</span> &#8594;</span>
+                    </span>
+                </a>
+                <a class="adm-feed-row" th:each="m : ${moderationQueue}" th:href="@{/administration/edit-thread/{id}(id=${m.threadId})}">
+                    <span class="adm-feed-tag c-err" th:text="#{voj.administration.index.report}">REPORT</span>
+                    <span class="adm-feed-text" th:text="${m.threadTitle != null ? m.threadTitle : m.content}">Reported reply</span>
+                    <span class="adm-feed-when"><span th:text="${m.reportCount}">0</span>&#215;</span>
+                </a>
+                <div class="adm-table-empty" th:if="${#lists.isEmpty(moderationQueue)}" th:text="#{voj.administration.index.queue-clear}">// queue clear — nothing reported</div>
+            </div>
+            <div class="adm-panel adm-panel-flush">
+                <div class="adm-panel-bar"><span class="adm-label" th:text="#{voj.administration.index.system-status}">// SYSTEM STATUS</span></div>
+                <div class="adm-feed-row">
+                    <span class="adm-stat-dot" th:classappend="${onlineJudgers > 0} ? 'c-accent' : 'c-err'"></span>
+                    <span class="adm-feed-text"><span th:text="#{voj.administration.index.judge-cluster}">Judge cluster</span> (<span th:text="${onlineJudgers}">0</span>)</span>
+                    <span class="adm-stat-val" th:classappend="${onlineJudgers > 0} ? 'c-accent' : 'c-err'" th:text="${onlineJudgers > 0} ? #{voj.administration.index.healthy} : #{voj.administration.index.offline}">healthy</span>
+                </div>
+                <div class="adm-feed-row">
+                    <span class="adm-stat-dot" th:classappend="${pendingSubmissions > 50} ? 'c-warn' : 'c-accent'"></span>
+                    <span class="adm-feed-text" th:text="#{voj.administration.index.queue-depth}">Queue depth</span>
+                    <span class="adm-stat-val"><span th:text="${pendingSubmissions}">0</span> <span th:text="#{voj.administration.index.jobs}">jobs</span></span>
+                </div>
+                <div class="adm-feed-row" th:with="loadCls=${averageCpuLoad < 0 ? 'c-muted' : (averageCpuLoad > 85 ? 'c-err' : (averageCpuLoad > 60 ? 'c-warn' : 'c-accent'))}">
+                    <span class="adm-stat-dot" th:classappend="${loadCls}"></span>
+                    <span class="adm-feed-text" th:text="#{voj.administration.index.avg-node-load}">Avg node load</span>
+                    <span class="adm-stat-val" th:text="${averageCpuLoad < 0 ? '—' : averageCpuLoad + '%'}">—</span>
+                </div>
+                <div class="adm-feed-row" th:with="stoCls=${storageUsage > 85 ? 'c-err' : (storageUsage > 70 ? 'c-warn' : 'c-accent')}">
+                    <span class="adm-stat-dot" th:classappend="${stoCls}"></span>
+                    <span class="adm-feed-text" th:text="#{voj.administration.index.storage-used}">Storage used</span>
+                    <span class="adm-stat-val" th:classappend="${stoCls}"><span th:text="${storageUsage}">0</span>%</span>
+                </div>
+                <div class="adm-feed-row">
+                    <span class="adm-stat-dot c-accent"></span>
+                    <span class="adm-feed-text" th:text="#{voj.administration.index.memory-usage}">Memory usage</span>
+                    <span class="adm-stat-val"><span th:text="${memoryUsage}">0</span> MB</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    </div>
+</body>
+</html>

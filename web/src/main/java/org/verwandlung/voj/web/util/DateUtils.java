@@ -46,4 +46,17 @@ public class DateUtils {
     }
     return calendar.getTime();
   }
+
+  /**
+   * Gets the Date object of an exact number of days before now (day-precise, unlike {@link
+   * #getPreviousDate(int)} which buckets to week/month/year). Used by the activity heat-map.
+   *
+   * @param days - the number of days before now
+   * @return the Date object of {@code days} days ago
+   */
+  public static Date getDateBefore(int days) {
+    Calendar calendar = new GregorianCalendar();
+    calendar.add(Calendar.DATE, -days);
+    return calendar.getTime();
+  }
 }

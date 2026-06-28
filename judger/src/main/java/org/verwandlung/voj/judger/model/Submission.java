@@ -270,6 +270,24 @@ public class Submission implements Serializable {
   }
 
   /**
+   * Gets the unique identifier of the judger that processed this submission.
+   *
+   * @return the unique identifier of the judger, or null if it has not been judged yet
+   */
+  public Long getJudgerUid() {
+    return judgerUid;
+  }
+
+  /**
+   * Sets the unique identifier of the judger that processed this submission.
+   *
+   * @param judgerUid - the unique identifier of the judger, or null if unknown
+   */
+  public void setJudgerUid(Long judgerUid) {
+    this.judgerUid = judgerUid;
+  }
+
+  /**
    * Gets the code executed during judging.
    *
    * @return the code executed during judging
@@ -344,6 +362,9 @@ public class Submission implements Serializable {
 
   /** The log of the judging. */
   private String judgeLog;
+
+  /** The unique identifier of the judger that processed this submission (null if not yet judged). */
+  private Long judgerUid;
 
   /** The code executed during judging. */
   private String code;

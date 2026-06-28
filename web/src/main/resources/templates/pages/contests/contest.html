@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<!--/* Reproduced from voj-design/Contest Detail.dc.html: title bar (type · title · status ·
+       window/duration/problems/entrants), a two-column body with a PROBLEMS table
+       (ID/TITLE/SCORE/STATUS) and a RULES card, plus a sticky sidebar with a TIME REMAINING
+       countdown and a // STANDINGS mini-board (top of the leaderboard). Per-problem SCORE is
+       derived from the viewer's best submission (AC=100, attempted=0, none=—). */-->
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/main}" lang="en">
+<head>
+    <title th:text="${contest.contestName} + ' | ' + ${websiteName}">Contest</title>
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css" />
+</head>
+<body>
+    <div layout:fragment="content"
+         th:with="contestStatus=${currentTime.before(contest.startTime) ? 'Ready' : (currentTime.after(contest.endTime) ? 'Done' : 'Live')},
+                  durMin=${(contest.endTime.time - contest.startTime.time) / 60000},
+                  problemsVisible=${(currentTime.after(contest.startTime) and isAttended) or currentTime.after(contest.endTime)}">
+        <!-- TITLE BAR -->
+        <section class="vw-titlebar">
+            <div class="vw-titlebar-inner">
+                <a class="vw-backlink" th:href="@{/contest}">&larr; ~/contests</a>
+                <div class="vw-row vw-gap vw-wrap">
+                    <span class="vw-ctype" th:classappend="${contest.contestMode == 'ACM'} ? 'vw-ctype-acm' : 'vw-ctype-oi'" th:text="${contest.contestMode}">ACM</span>
+                    <h1 th:text="${contest.contestName}">Contest</h1>
+                    <span class="vw-cstatus" th:classappend="${contestStatus == 'Live'} ? 'vw-cstatus-live' : (${contestStatus == 'Ready'} ? 'vw-cstatus-ready' : '')">
+                        <span class="dot"></span><span th:text="${contestStatus}">Live</span>
+                    </span>
+                    <span class="vw-muted2" id="attendance-status" th:if="${isLogin}"
+                          th:text="${isAttended ? #messages.msg('voj.contests.contest.attended') : #messages.msg('voj.contests.contest.not-attended')}">Attendance</span>
+                </div>
+                <div class="vw-cmeta vw-mt-12">
+                    <span>&#128197; <span th:text="${@dateFormatter.dateTimeLongMedium(contest.startTime, language)}">start</span> &rarr; <span th:text="${@dateFormatter.dateTimeLongMedium(contest.endTime, language)}">end</span></span>
+                    <span>&#9201; <span th:text="|${durMin / 60}h ${#numbers.formatInteger(durMin % 60, 2)}m|">2h 00m</span></span>
+                    <span>&#128221; <span th:text="${problems.size()}">0</span> problems</span>
+                    <span>&#128101; <span id="number-of-contestants" th:text="${numberOfContestants}">0</span> entrants</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- BODY -->
+        <div class="vw-detail">
+            <!-- LEFT -->
+            <div class="vw-detail-main">
+                <!-- PROBLEMS -->
+                <article class="vw-card">
+                    <div class="vw-card-strip" th:text="'// ' + #{voj.contests.contest.problems}">// PROBLEMS</div>
+                    <th:block th:if="${problemsVisible}">
+                        <div class="vw-cproblem-head">
+                            <div>ID</div><div>TITLE</div><div>SCORE</div><div>STATUS</div>
+                        </div>
+                        <a class="vw-cproblem-row" th:each="problem,iter : ${problems}"
+                           th:with="sub=${submissions != null ? submissions[problem.problemId] : null},
+                                    slug=${(sub != null and sub.submission != null and sub.submission.judgeResult != null) ? sub.submission.judgeResult.judgeResultSlug : null}"
+                           th:href="@{/contest/{cid}/p/{pid}(cid=${contest.contestId},pid=${problem.problemId})}">
+                            <div class="vw-cproblem-letter" th:text="${#strings.substring('ABCDEFGHIJKLMNOPQRSTUVWXYZ', iter.index, iter.index + 1)}">A</div>
+                            <div class="vw-cproblem-title" th:text="${problem.problemName}">Title</div>
+                            <div class="vw-cproblem-score" th:text="${slug == 'AC' ? '100' : (slug != null ? '0' : '—')}">—</div>
+                            <div class="vw-cproblem-status"
+                                 th:classappend="${slug == 'AC'} ? 'vw-cstat-ac' : (${slug != null} ? 'vw-cstat-try' : 'vw-cstat-none')">
+                                <span class="dot"></span><span th:text="${slug == 'AC' ? 'Solved' : (slug != null ? 'Attempted' : 'Not tried')}">Not tried</span>
+                            </div>
+                        </a>
+                    </th:block>
+                    <div class="vw-card-body" th:unless="${problemsVisible}">
+                        <p class="vw-muted" th:text="#{voj.contests.contest.no-submissions}">Attend the contest to view the problems.</p>
+                    </div>
+                </article>
+
+                <!-- RULES / INSTRUCTION -->
+                <article class="vw-card">
+                    <div class="vw-card-body">
+                        <div class="vw-eyebrow vw-block-label" th:text="'// ' + #{voj.contests.contest.instruction}">// RULES</div>
+                        <ul class="vw-rules" th:if="${contest.contestNotes == ''}">
+                            <li th:if="${contest.contestMode == 'ACM'}">ACM/ICPC scoring &mdash; problems are judged pass/fail and ranked by number solved, then penalty time.</li>
+                            <li th:if="${contest.contestMode == 'ACM'}">Penalty: 20 minutes are added per rejected submission on a problem that is eventually solved.</li>
+                            <li th:unless="${contest.contestMode == 'ACM'}">OI scoring &mdash; each problem awards partial points; contestants are ranked by total score.</li>
+                            <li th:unless="${contest.contestMode == 'ACM'}">Only the last submission for each problem counts toward the score.</li>
+                        </ul>
+                        <div class="markdown description" th:unless="${contest.contestNotes == ''}" th:utext="${contest.contestNotes}">notes</div>
+                    </div>
+                </article>
+            </div>
+
+            <!-- RIGHT -->
+            <aside class="vw-detail-side">
+                <!-- TIME REMAINING -->
+                <div class="vw-timecard">
+                    <div class="vw-timecard-label" th:text="${contestStatus == 'Ready' ? 'STARTS IN' : (contestStatus == 'Live' ? 'TIME REMAINING' : 'CONTEST ENDED')}">TIME REMAINING</div>
+                    <div class="vw-timecard-clock" id="countdown"
+                         th:attr="data-target=${contestStatus == 'Ready' ? contest.startTime.time : contest.endTime.time},data-status=${contestStatus}">--:--:--</div>
+                    <div class="vw-timecard-sub">
+                        <span th:text="${@dateFormatter.dateTimeLongMedium(contest.startTime, language)}">start</span>
+                        &rarr;
+                        <span th:text="${@dateFormatter.dateTimeLongMedium(contest.endTime, language)}">end</span>
+                    </div>
+                </div>
+
+                <!-- STANDINGS -->
+                <div class="vw-card" th:if="${standings != null and !standings.isEmpty()}">
+                    <div class="vw-card-strip">// STANDINGS</div>
+                    <div class="vw-standings-head">
+                        <div>#</div><div>USER</div><div th:text="${contest.contestMode == 'OI' ? 'SCORE' : 'SOLVED'}">SOLVED</div><div>PEN</div>
+                    </div>
+                    <div class="vw-standings-row" th:each="cc : ${standings}">
+                        <div class="vw-standings-rank"
+                             th:classappend="${cc.rank == 1} ? 'vw-rank-1' : (${cc.rank <= 3} ? 'vw-rank-3' : '')"
+                             th:text="${cc.rank}">1</div>
+                        <a class="vw-accent vw-ellipsis" th:href="@{/accounts/user/{id}(id=${cc.contestant.uid})}" th:text="${cc.contestant.username}">user</a>
+                        <div class="vw-head" th:text="${cc.score}">0</div>
+                        <div class="vw-muted" th:text="${cc.time}">0</div>
+                    </div>
+                </div>
+
+                <!-- ACTIONS -->
+                <div class="vw-contest-actions">
+                    <a class="vw-btn vw-btn-accent vw-btn-block" th:if="${not isAttended and contestStatus != 'Done'}"
+                       id="attend-contest-button" href="javascript:attendContest();" th:text="#{voj.contests.contest.attend-contest}">Attend the contest</a>
+                    <a class="vw-btn vw-btn-block" th:if="${contestStatus != 'Ready'}"
+                       th:href="@{/contest/{id}/leaderboard(id=${contest.contestId})}" th:text="#{voj.contests.contest.view-leaderboard}">View leaderboard</a>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <th:block layout:fragment="scripts">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+    <script type="text/javascript" th:inline="javascript">
+        $(function() {
+            $('.markdown').each(function() { $(this).html(renderMarkdown($(this).text())); typesetMath(this); });
+        });
+        // TIME REMAINING countdown.
+        (function() {
+            var el = document.getElementById('countdown');
+            if ( !el ) { return; }
+            var status = el.getAttribute('data-status'),
+                target = parseInt(el.getAttribute('data-target'), 10);
+            if ( status === 'Done' ) { el.textContent = '00:00:00'; return; }
+            function pad(n) { return (n < 10 ? '0' : '') + n; }
+            function tick() {
+                var diff = Math.floor((target - Date.now()) / 1000);
+                if ( diff <= 0 ) { el.textContent = '00:00:00'; clearInterval(timer); window.location.reload(); return; }
+                var h = Math.floor(diff / 3600), m = Math.floor((diff % 3600) / 60), s = diff % 60;
+                el.textContent = pad(h) + ':' + pad(m) + ':' + pad(s);
+            }
+            tick();
+            var timer = setInterval(tick, 1000);
+        })();
+    </script>
+    <th:block th:if="${not isAttended and !currentTime.after(contest.endTime)}">
+    <th:block th:if="${isLogin}">
+    <script type="text/javascript" th:inline="javascript">
+        function attendContest() {
+            $.ajax({
+                type: 'POST',
+                url: [[@{/contest/{id}/attend.action(id=${contest.contestId})}]],
+                data: { 'csrfToken': [[${_csrf.token}]] },
+                dataType: 'JSON',
+                success: function(result) {
+                    if ( result['isSuccessful'] ) {
+                        $('#attend-contest-button').removeAttr('href');
+                        setContestAttended();
+                    } else {
+                        if ( !result['isContestExists'] ) { alert([[#{voj.contests.contest.contest-not-exists}]]); }
+                        else if ( !result['isContestReady'] ) { alert([[#{voj.contests.contest.contest-not-ready}]]); }
+                        else if ( !result['isUserLogin'] ) { alert([[#{voj.contests.contest.user-not-login}]]); }
+                        else if ( result['isAttendedContest'] ) { alert([[#{voj.contests.contest.already-attended}]]); setContestAttended(); }
+                    }
+                }
+            });
+        }
+        function setContestAttended() {
+            var numberOfContestants = parseInt($('#number-of-contestants').html());
+            $('#attendance-status').html([[#{voj.contests.contest.attended}]]);
+            $('#number-of-contestants').html(numberOfContestants + 1);
+            $('#attend-contest-button').html([[#{voj.contests.contest.attended-contest}]]);
+            setTimeout(function(){ $('#attend-contest-button').remove(); }, 1500);
+        }
+    </script>
+    </th:block>
+    <th:block th:unless="${isLogin}">
+    <script type="text/javascript" th:inline="javascript">
+        function attendContest() {
+            window.location.href = [[@{/accounts/login(forward=${forwardUri})}]];
+        }
+    </script>
+    </th:block>
+    </th:block>
+    </th:block>
+</body>
+</html>

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<!--/* Standalone maintenance page (no site nav). Rendered by MaintenanceModeInterceptor's
+       forward to /maintenance for non-administrators while the maintenanceMode option is on.
+       Mirrors voj-design/Maintenance.dc.html; styling lives in app.css (.vw-maint-*). */-->
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <script>(function(){try{var t=localStorage.getItem('voj-theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+    <title th:text="#{voj.error.maintenance.title} + ' | ' + ${websiteName}">Under Maintenance</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link th:href="|${cdnUrl}/img/favicon.ico?v=${version}|" rel="shortcut icon" type="image/x-icon" />
+    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/app.css?v=${version}|" />
+</head>
+<body>
+    <div class="vw-scanlines" aria-hidden="true"></div>
+    <div class="vw-maint-page">
+
+        <!-- HEADER -->
+        <header class="vw-maint-header">
+            <a class="vw-maint-logo" th:href="@{/}">
+                <span class="b">&lt;</span><span class="n">verwandlung</span><span class="b">&gt;</span><span class="c">_</span>
+            </a>
+            <span class="vw-maint-offline">
+                <span class="dot"></span><span th:text="#{voj.error.maintenance.offline}">OFFLINE</span>
+            </span>
+            <div class="vw-maint-spacer"></div>
+            <div class="vw-toggle" data-vw="theme-toggle" title="Toggle theme" role="button" tabindex="0">
+                <span class="moon">&#9790;</span><span class="sun">&#9728;</span><span class="knob"></span>
+            </div>
+        </header>
+
+        <!-- BODY -->
+        <main class="vw-maint-main">
+            <div class="vw-maint-gear">
+                <div class="ring"></div>
+                <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke-width="1.6"><path d="M19.4 13a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+            </div>
+
+            <div class="vw-maint-eyebrow" th:text="'// ' + #{voj.error.maintenance.scheduled}">// SCHEDULED MAINTENANCE</div>
+            <h1 class="vw-maint-title" th:utext="#{voj.error.maintenance.under-maintenance}">Down for<br>maintenance.</h1>
+            <p class="vw-maint-desc" th:text="#{voj.error.maintenance.message}">Verwandlung is temporarily offline for scheduled maintenance. Submissions, contests and discussions are paused. Everything will be back exactly as you left it.</p>
+
+            <!-- TERMINAL STATUS -->
+            <div class="vw-maint-term">
+                <div class="vw-maint-term-bar">
+                    <span class="d r"></span><span class="d y"></span><span class="d g"></span>
+                    <span class="name">ops &mdash; deploy.sh</span>
+                    <span class="status">&#9679; in progress</span>
+                </div>
+                <div class="vw-maint-term-body">
+                    <div class="line t2">$ voj maintenance --enable</div>
+                    <div class="line ok">&#10003; gateway: rejecting public traffic (503)</div>
+                    <div class="line ok">&#10003; admin role: allowed through</div>
+                    <div class="line mut">&rarr; applying updates &middot; please stand by</div>
+                    <div class="vw-maint-progress"><div class="fill"></div></div>
+                    <div class="vw-maint-cmd"><span class="p">verwandlung@oj:~$ </span><span class="cmd">deploy --stage rolling </span><span class="cur">&#9611;</span></div>
+                </div>
+            </div>
+
+            <!-- BUTTONS -->
+            <div class="vw-maint-btns">
+                <a class="vw-btn vw-btn-accent" href="https://status.infinitescript.com/" target="_blank" rel="noopener"
+                   th:text="#{voj.error.maintenance.view-status}">View status page</a>
+                <a class="vw-btn" th:href="@{/accounts/login}" th:text="#{voj.error.maintenance.admin-sign-in}">Admin sign in</a>
+            </div>
+        </main>
+
+        <!-- FOOTER (shared with the rest of the site) -->
+        <div th:replace="~{fragments/footer :: footer}"></div>
+
+    </div>
+    <script type="text/javascript" th:src="|${cdnUrl}/js/theme.js?v=${version}|"></script>
+</body>
+</html>

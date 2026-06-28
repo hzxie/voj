@@ -47,8 +47,10 @@ import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.view.RedirectView;
 import org.verwandlung.voj.web.exception.ResourceNotFoundException;
 import org.verwandlung.voj.web.model.Language;
+import org.verwandlung.voj.web.model.Option;
 import org.verwandlung.voj.web.model.User;
 import org.verwandlung.voj.web.model.VojUserDetails;
+import org.verwandlung.voj.web.service.ContestService;
 import org.verwandlung.voj.web.service.LanguageService;
 import org.verwandlung.voj.web.service.OptionService;
 import org.verwandlung.voj.web.service.SubmissionService;
@@ -91,7 +93,7 @@ public class AccountsController {
       redirectView.setExposeModelAttributes(false);
       view = new ModelAndView(redirectView);
     } else {
-      view = new ModelAndView("accounts/login");
+      view = new ModelAndView("pages/accounts/login");
       view.addObject("isLogout", isLogout);
       view.addObject("forwardUrl", forwardUrl);
     }
@@ -198,7 +200,7 @@ public class AccountsController {
       boolean isAllowRegister =
           optionService.getOption("allowUserRegister").getOptionValue().equals("1");
 
-      view = new ModelAndView("accounts/register");
+      view = new ModelAndView("pages/accounts/register");
       view.addObject("languages", languages);
       view.addObject("isAllowRegister", isAllowRegister);
     }
@@ -232,6 +234,10 @@ public class AccountsController {
 
     if (result.get("isSuccessful")) {
       User user = userService.getUserUsingUsernameOrEmail(username);
+      Option requireVerification = optionService.getOption("requireEmailVerification");
+      if (requireVerification != null && "1".equals(requireVerification.getOptionValue())) {
+        userService.requireEmailVerification(user);
+      }
       establishSecurityContext(request, response, user);
 
       String ipAddress = HttpRequestParser.getRemoteAddr(request);
@@ -239,6 +245,27 @@ public class AccountsController {
           String.format("User: [Username=%s] created at %s.", new Object[] {username, ipAddress}));
     }
     return result;
+  }
+
+  /**
+   * Verifies a user's email address using the token from the verification email.
+   *
+   * @param email - the user's email address
+   * @param token - the verification token
+   * @param request - the HttpServletRequest object
+   * @param response - the HttpServletResponse object
+   * @return a ModelAndView object containing the email-verification result page
+   */
+  @RequestMapping(value = "/verify-email", method = RequestMethod.GET)
+  public ModelAndView verifyEmailView(
+      @RequestParam(value = "email", required = false) String email,
+      @RequestParam(value = "token", required = false) String token,
+      HttpServletRequest request,
+      HttpServletResponse response) {
+    Map<String, Boolean> result = userService.verifyEmail(email, token);
+    ModelAndView view = new ModelAndView("pages/accounts/verify-email");
+    view.addObject("isVerified", result.get("isSuccessful"));
+    return view;
   }
 
   /**
@@ -269,7 +296,7 @@ public class AccountsController {
         isTokenValid = userService.isEmailValidationValid(email, token);
       }
 
-      view = new ModelAndView("accounts/reset-password");
+      view = new ModelAndView("pages/accounts/reset-password");
       view.addObject("email", email);
       view.addObject("token", token);
       view.addObject("isTokenValid", isTokenValid);
@@ -345,66 +372,46 @@ public class AccountsController {
       HttpServletRequest request,
       HttpServletResponse response) {
     User user = userService.getUserUsingUid(userId);
-    if (user == null || "judgers".equals(user.getUserGroup().getUserGroupSlug())) {
+    if (user == null
+        || user.getUserGroup() == null
+        || "judgers".equals(user.getUserGroup().getUserGroupSlug())) {
       throw new ResourceNotFoundException();
     }
 
-    ModelAndView view = new ModelAndView("accounts/user");
+    ModelAndView view = new ModelAndView("pages/accounts/user");
     view.addObject("user", user);
     view.addAllObjects(userService.getUserMetaUsingUid(user));
 
-    view.addObject("submissions", submissionService.getSubmissionOfUser(userId));
+    view.addObject(
+        "recentSubmissions",
+        submissionService.getSubmissions(0, user.getUsername(), NUMBER_OF_RECENT_SUBMISSIONS));
     view.addObject("submissionStats", submissionService.getSubmissionStatsOfUser(userId));
+    view.addObject("contestsAttended", contestService.getNumberOfContestsOfUser(userId));
+    view.addObject("solvedByDifficulty", submissionService.getSolvedProblemsByDifficulty(userId));
     return view;
   }
 
   /**
-   * Gets the number of submissions of a user over a period of time.
+   * Gets a user's daily submission counts over the last year, feeding the activity heat-map.
    *
    * @param userId - the unique identifier of the user
-   * @param period - the number of days of the time interval
    * @param request - the HttpServletRequest object
-   * @return a Map object containing a user's submission counts by date
+   * @return a Map object containing a user's daily submission counts keyed by date
    */
   @RequestMapping(value = "/getNumberOfSubmissionsOfUsers.action", method = RequestMethod.GET)
   public @ResponseBody Map<String, Object> getNumberOfSubmissionsOfUsersAction(
       @RequestParam(value = "uid", required = false, defaultValue = "0") long userId,
-      @RequestParam(value = "period") int period,
       HttpServletRequest request) {
     if (userId == 0) {
       userId = HttpSessionParser.getCurrentUser().getUid();
     }
-    Map<String, Object> submissions = new HashMap<>(2, 1);
     Date today = new Date();
-    Date previousDate = DateUtils.getPreviousDate(period);
-    Map<String, Long> totalSubmissions =
-        submissionService.getNumberOfSubmissionsUsingDate(previousDate, today, userId, false);
-    Map<String, Long> acceptedSubmissions =
-        submissionService.getNumberOfSubmissionsUsingDate(previousDate, today, userId, true);
-
-    submissions.put("totalSubmissions", totalSubmissions);
-    submissions.put("acceptedSubmissions", acceptedSubmissions);
+    Date startDate = DateUtils.getDateBefore(ACTIVITY_HEAT_MAP_DAYS);
+    Map<String, Object> submissions = new HashMap<>(1, 1);
+    submissions.put(
+        "totalSubmissions",
+        submissionService.getNumberOfSubmissionsGroupByDay(startDate, today, userId, false));
     return submissions;
-  }
-
-  /**
-   * Loads the user dashboard page.
-   *
-   * @param request - the HttpServletRequest object
-   * @param response - the HttpResponse object
-   * @return a ModelAndView object containing the information of the dashboard page
-   */
-  @RequestMapping(value = "/dashboard", method = RequestMethod.GET)
-  public ModelAndView dashboardView(HttpServletRequest request, HttpServletResponse response) {
-    User user = HttpSessionParser.getCurrentUser();
-    long userId = user.getUid();
-
-    ModelAndView view = new ModelAndView("accounts/dashboard");
-    view.addObject("user", user);
-    view.addAllObjects(userService.getUserMetaUsingUid(user));
-    view.addObject("submissions", submissionService.getSubmissionOfUser(userId));
-
-    return view;
   }
 
   /**
@@ -438,6 +445,7 @@ public class AccountsController {
    * Handles the user's request to change their profile.
    *
    * @param email - the user's email address
+   * @param displayName - the user's display name
    * @param location - the user's location
    * @param website - the user's personal homepage
    * @param socialLinks - the user's social network information
@@ -448,6 +456,7 @@ public class AccountsController {
   @RequestMapping(value = "/updateProfile.action", method = RequestMethod.POST)
   public @ResponseBody Map<String, Boolean> updateProfileInDashboardAction(
       @RequestParam(value = "email") String email,
+      @RequestParam(value = "displayName", required = false, defaultValue = "") String displayName,
       @RequestParam(value = "location") String location,
       @RequestParam(value = "website") String website,
       @RequestParam(value = "socialLinks") String socialLinks,
@@ -457,7 +466,8 @@ public class AccountsController {
     String ipAddress = HttpRequestParser.getRemoteAddr(request);
 
     Map<String, Boolean> result =
-        userService.updateProfile(currentUser, email, location, website, socialLinks, aboutMe);
+        userService.updateProfile(
+            currentUser, email, displayName, location, website, socialLinks, aboutMe);
     if (result.get("isSuccessful")) {
       LOGGER.info(String.format("%s updated profile at %s", new Object[] {currentUser, ipAddress}));
     }
@@ -479,6 +489,9 @@ public class AccountsController {
    */
   @Autowired private SubmissionService submissionService;
 
+  /** The autowired ContestService object. Used for the profile page's contests-attended count. */
+  @Autowired private ContestService contestService;
+
   /**
    * The autowired OptionService object. Used for querying whether the registration feature is open.
    */
@@ -490,6 +503,12 @@ public class AccountsController {
   /** Persists the security context to the HTTP session after a programmatic login. */
   private final SecurityContextRepository securityContextRepository =
       new HttpSessionSecurityContextRepository();
+
+  /** The number of days of daily activity returned for the heat-map (53 weeks). */
+  private static final int ACTIVITY_HEAT_MAP_DAYS = 53 * 7;
+
+  /** The number of latest submissions shown in the profile's recent-submissions list. */
+  private static final int NUMBER_OF_RECENT_SUBMISSIONS = 8;
 
   /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(AccountsController.class);

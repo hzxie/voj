@@ -24,14 +24,17 @@ import java.util.Map;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import org.verwandlung.voj.judger.core.Dispatcher;
 import org.verwandlung.voj.judger.mapper.JudgeResultMapper;
 import org.verwandlung.voj.judger.mapper.SubmissionMapper;
+import org.verwandlung.voj.judger.mapper.UserMapper;
 import org.verwandlung.voj.judger.messenger.MessageSender;
 import org.verwandlung.voj.judger.model.JudgeResult;
 import org.verwandlung.voj.judger.model.Submission;
+import org.verwandlung.voj.judger.model.User;
 
 /**
  * The application dispatcher.
@@ -50,6 +53,10 @@ public class ApplicationDispatcher {
       judgerDispatcher.createNewTask(submissionId);
     } catch (Exception ex) {
       LOGGER.catching(ex);
+      // Any unexpected failure during judging (e.g. in the compile or run stage) must still leave a
+      // terminal result; otherwise the submission stays stuck "pending" forever. Mark it as a
+      // System Error so both the user and the web side see a final state.
+      onErrorOccurred(submissionId);
     }
   }
 
@@ -250,8 +257,12 @@ public class ApplicationDispatcher {
     formatedLogBuilder.append(
         String.format("Compile %s.\n\n", new Object[] {isSuccessful ? "Successful" : "Error"}));
     if (!isSuccessful) {
-      formatedLogBuilder.append(compileLog.replace("\n", "\n\n"));
-      formatedLogBuilder.append("\nCompile Error, Time = 0 ms, Memory = 0 KB, Score = 0.\n");
+      // Embed the raw compiler output as a Markdown indented code block (4-space prefix on every
+      // line). This keeps the rest of the log as Markdown while rendering the compiler stderr
+      // verbatim: line breaks are preserved and angle-bracketed tokens such as
+      // "#include <windows.h>" are not stripped as HTML by the front-end Markdown converter.
+      formatedLogBuilder.append(compileLog.replaceAll("(?m)^", "    "));
+      formatedLogBuilder.append("\n\nCompile Error, Time = 0 ms, Memory = 0 KB, Score = 0.\n");
     }
     return formatedLogBuilder.toString();
   }
@@ -314,14 +325,36 @@ public class ApplicationDispatcher {
   private void updateSubmission(
       long submissionId, int usedTime, int usedMemory, int score, String judgeResult, String log) {
     Submission submission = submissionMapper.getSubmission(submissionId);
+    if (submission == null) {
+      LOGGER.warn(String.format("Cannot update a non-existent submission #%d", submissionId));
+      return;
+    }
     submission.setExecuteTime(new Date());
     submission.setUsedTime(usedTime);
     submission.setUsedMemory(usedMemory);
     submission.setJudgeScore(score);
     submission.setJudgeResultSlug(judgeResult);
     submission.setJudgeLog(log);
+    submission.setJudgerUid(getJudgerUid());
 
     submissionMapper.updateSubmission(submission);
+  }
+
+  /**
+   * Resolves and caches the uid of this judger, so each judged submission records which judger
+   * processed it. The judger is a regular user account (in the {@code judgers} group) identified by
+   * the configured username.
+   *
+   * @return the uid of this judger, or null if the account cannot be resolved
+   */
+  private Long getJudgerUid() {
+    if (judgerUid == null && judgerUsername != null && !judgerUsername.isEmpty()) {
+      User judger = userMapper.getUserUsingUsername(judgerUsername);
+      if (judger != null) {
+        judgerUid = judger.getUid();
+      }
+    }
+    return judgerUid;
   }
 
   /** The autowired Dispatcher object, used to schedule judging jobs. */
@@ -335,6 +368,16 @@ public class ApplicationDispatcher {
 
   /** The autowired JudgeResultMapper object, used to access information about all judge results. */
   @Autowired private JudgeResultMapper judgeResultMapper;
+
+  /** The autowired UserMapper object, used to resolve this judger's own user account. */
+  @Autowired private UserMapper userMapper;
+
+  /** The judger's username, used to resolve which judger processed each submission. */
+  @Value("${judger.username}")
+  private String judgerUsername;
+
+  /** The lazily-resolved, cached uid of this judger (null until resolved). */
+  private Long judgerUid;
 
   /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(ApplicationDispatcher.class);

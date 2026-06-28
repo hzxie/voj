@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<!--/*
+  The master layout for the administration back-office. Pages decorate it with
+  layout:decorate="~{layouts/admin}" and fill the content hole through
+  layout:fragment="content", plus optional page <head> stylesheets and
+  layout:fragment="scripts" for page-specific bottom-of-body scripts.
+
+  Terminal aesthetic: shared tokens/components live in css/app.css; the admin
+  shell (fixed sidebar + command-prompt header + dashboard/table/editor pieces)
+  lives in css/admin.css. Chrome behaviour: js/theme.js (theme toggle) +
+  js/admin.js (sidebar drawer + checkbox tables). The active section + sidebar
+  badge counts are injected by AdministrationController#populateAdminChrome.
+*/-->
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      th:lang="${language}" lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8" />
+    <script>(function(){try{var t=localStorage.getItem('voj-theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+    <title th:text="${websiteName}">System Administration</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" th:content="${description}" />
+    <meta name="author" content="Haozhe Xie" />
+    <meta name="_csrf" th:content="${_csrf.token}" />
+    <meta name="_csrf_header" th:content="${_csrf.headerName}" />
+    <link th:href="|${cdnUrl}/img/favicon.ico?v=${version}|" rel="shortcut icon" type="image/x-icon" />
+    <!-- UI system (self-hosted fonts + theme variables + components). -->
+    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/app.css?v=${version}|" />
+    <!-- Admin-only chrome + components. -->
+    <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/admin.css?v=${version}|" />
+    <!-- Functional JavaScript kept from the legacy stack (page AJAX uses jQuery). -->
+    <script type="text/javascript" th:src="|${cdnUrl}/js/jquery-3.7.1.min.js?v=${version}|"></script>
+</head>
+<body class="adm-body">
+    <!-- Decorative scanline overlay. -->
+    <div class="adm-scanlines" aria-hidden="true"></div>
+    <!-- Mobile drawer scrim. -->
+    <div class="adm-scrim" data-adm="scrim"></div>
+    <!-- Sidebar -->
+    <div th:replace="~{fragments/admin-sidebar :: sidebar}"></div>
+    <!-- Main column -->
+    <main class="adm-main">
+        <!-- Header -->
+        <div th:replace="~{fragments/admin-header :: header}"></div>
+        <!-- Content -->
+        <div class="adm-content" layout:fragment="content"></div>
+    </main>
+
+    <!-- UI chrome behaviour (theme toggle) + admin chrome (drawer, tables). -->
+    <script type="text/javascript" th:src="|${cdnUrl}/js/theme.js?v=${version}|"></script>
+    <script type="text/javascript" th:src="|${cdnUrl}/js/admin.js?v=${version}|"></script>
+    <!-- Common administration scripts (CSRF token wiring + %s formatter helper). -->
+    <script type="text/javascript" th:inline="javascript">
+        $(document).ajaxSend(function(event, jqXHR, settings) {
+            var method = (settings.type || 'GET').toUpperCase();
+            if ( !settings.crossDomain &&
+                 method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS' && method !== 'TRACE' ) {
+                jqXHR.setRequestHeader([[${_csrf.headerName}]], [[${_csrf.token}]]);
+            }
+        });
+        String.prototype.format = function() {
+            var newStr = this, i = 0;
+            while (/%s/.test(newStr)) { newStr = newStr.replace("%s", arguments[i++]) }
+            return newStr;
+        }
+    </script>
+    <!-- Markdown rendering (markdown-it) + shared helpers (renderMarkdown / createMarkdownEditor). -->
+    <script type="text/javascript" th:src="|${cdnUrl}/js/markdown-it.min.js?v=${version}|"></script>
+    <script type="text/javascript" th:src="|${cdnUrl}/js/markdown.js?v=${version}|"></script>
+    <!-- Page-specific bottom-of-body scripts. -->
+    <th:block layout:fragment="scripts"></th:block>
+</body>
+</html>

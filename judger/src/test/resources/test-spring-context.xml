@@ -68,7 +68,27 @@
 		<property name="dataSource" ref="dataSource" />
 	</bean>
 	<tx:annotation-driven transaction-manager="transactionManager" />
-	
+
+	<!-- Provision the test database on context startup: build the schema, then
+	     load the reference data and the test fixtures. This replaces the manual
+	     "mysql test < voj.sql" step the CI configs used to run; schema.sql drops
+	     and recreates every table, so it is safe to re-run. -->
+	<bean class="org.springframework.jdbc.datasource.init.DataSourceInitializer">
+		<property name="dataSource" ref="dataSource" />
+		<property name="databasePopulator">
+			<bean class="org.springframework.jdbc.datasource.init.ResourceDatabasePopulator">
+				<property name="sqlScriptEncoding" value="UTF-8" />
+				<property name="scripts">
+					<list>
+						<value>classpath:db/schema.sql</value>
+						<value>classpath:db/seed.sql</value>
+						<value>classpath:db/test-data.sql</value>
+					</list>
+				</property>
+			</bean>
+		</property>
+	</bean>
+
 	<!-- Message Service -->
 	<bean id="amqConnectionFactory" class="org.apache.activemq.ActiveMQConnectionFactory">
 		<constructor-arg index="0" value="${jms.broker.url}" />

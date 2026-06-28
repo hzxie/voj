@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+	PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.verwandlung.voj.web.mapper.ProblemDifficultyMapper">
+	<!-- ResultMap -->
+	<resultMap id="ProblemDifficultyResultMap"
+		type="org.verwandlung.voj.web.model.ProblemDifficulty">
+		<id property="problemDifficultyId" column="problem_difficulty_id" />
+		<result property="problemDifficultySlug" column="problem_difficulty_slug" />
+		<result property="problemDifficultyName" column="problem_difficulty_name" />
+	</resultMap>
+
+	<!-- Methods -->
+	<select id="getProblemDifficulties"
+		resultMap="ProblemDifficultyResultMap">
+		SELECT *
+		FROM voj_problem_difficulty
+		ORDER BY problem_difficulty_id
+	</select>
+	<select id="getProblemDifficultyUsingSlug"
+		parameterType="String"
+		resultMap="ProblemDifficultyResultMap">
+		SELECT *
+		FROM voj_problem_difficulty
+		WHERE problem_difficulty_slug = #{problemDifficultySlug}
+	</select>
+</mapper>

@@ -93,6 +93,29 @@ public class BulletinBoardMessageMapperTest {
     Assertions.assertEquals("Second", messages.get(0).getMessageTitle());
   }
 
+  /** Test case: tests the getPublishedBulletinBoardMessages(long, int) method. Test data: messages with mixed statuses and pins. Expected: only PUBLISHED messages are returned, pinned ones first. */
+  @Test
+  public void testGetPublishedBulletinBoardMessagesFiltersAndPins() {
+    createMessage("Hidden", false, BulletinBoardMessage.STATUS_HIDDEN);
+    createMessage("Draft", false, BulletinBoardMessage.STATUS_DRAFT);
+    createMessage("Plain", false, BulletinBoardMessage.STATUS_PUBLISHED);
+    createMessage("Pinned", true, BulletinBoardMessage.STATUS_PUBLISHED);
+
+    List<BulletinBoardMessage> messages =
+        bulletinBoardMessageMapper.getPublishedBulletinBoardMessages(0, 10);
+    Assertions.assertEquals(2, messages.size());
+    Assertions.assertEquals("Pinned", messages.get(0).getMessageTitle());
+    Assertions.assertEquals("Plain", messages.get(1).getMessageTitle());
+  }
+
+  /** Creates a bulletin board message with the given pin flag and status, used by the published-list test. */
+  private void createMessage(String title, boolean pinned, String status) {
+    BulletinBoardMessage message = new BulletinBoardMessage(title, title + " Body", new Date());
+    message.setPinned(pinned);
+    message.setStatus(status);
+    bulletinBoardMessageMapper.createBulletinBoardMessage(message);
+  }
+
   /** Test case: tests the getBulletinBoardMessageUsingId(long) method. Test data: a non-existing message identifier. Expected: a null reference. */
   @Test
   public void testGetBulletinBoardMessageUsingIdNotExists() {
@@ -120,6 +143,38 @@ public class BulletinBoardMessageMapperTest {
     int numberOfRowsAffected = bulletinBoardMessageMapper.createBulletinBoardMessage(message);
     Assertions.assertEquals(1, numberOfRowsAffected);
     Assertions.assertTrue(message.getMessageId() > 0);
+  }
+
+  /** Test case: tests the createBulletinBoardMessage(BulletinBoardMessage) method. Test data: a message with author, pinned and status set. Expected: the author identifier, pinned flag and status are persisted and read back. */
+  @Test
+  public void testCreatePersistsAuthorPinnedAndStatus() {
+    BulletinBoardMessage message = new BulletinBoardMessage("Pinned", "Body", new Date());
+    message.setMessageAuthorId(1000);
+    message.setPinned(true);
+    message.setStatus(BulletinBoardMessage.STATUS_DRAFT);
+    bulletinBoardMessageMapper.createBulletinBoardMessage(message);
+
+    BulletinBoardMessage stored =
+        bulletinBoardMessageMapper.getBulletinBoardMessageUsingId(message.getMessageId());
+    Assertions.assertEquals(1000, stored.getMessageAuthorId());
+    Assertions.assertTrue(stored.isPinned());
+    Assertions.assertEquals(BulletinBoardMessage.STATUS_DRAFT, stored.getStatus());
+  }
+
+  /** Test case: tests the updateBulletinBoardMessage(BulletinBoardMessage) method. Test data: an existing message whose pinned flag and status are changed. Expected: the new pinned flag and status are persisted. */
+  @Test
+  public void testUpdatePersistsPinnedAndStatus() {
+    BulletinBoardMessage message = new BulletinBoardMessage("Title", "Body", new Date());
+    bulletinBoardMessageMapper.createBulletinBoardMessage(message);
+
+    message.setPinned(true);
+    message.setStatus(BulletinBoardMessage.STATUS_HIDDEN);
+    bulletinBoardMessageMapper.updateBulletinBoardMessage(message);
+
+    BulletinBoardMessage stored =
+        bulletinBoardMessageMapper.getBulletinBoardMessageUsingId(message.getMessageId());
+    Assertions.assertTrue(stored.isPinned());
+    Assertions.assertEquals(BulletinBoardMessage.STATUS_HIDDEN, stored.getStatus());
   }
 
   /** Test case: tests the updateBulletinBoardMessage(BulletinBoardMessage) method. Test data: an existing message identifier. Expected: the data update operation completes successfully. */

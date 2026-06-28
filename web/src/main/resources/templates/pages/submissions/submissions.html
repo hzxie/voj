@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<!--/* Reproduced from voj-design/Submissions.dc.html: // SUBMISSIONS header, segmented
+       Problem/User filter + $ search, RUN#/PROBLEM/USER/WHEN/LANG/VERDICT table. The
+       backend filters by problemId + username, so the segmented field swaps the search
+       input's name between the two (no ID/Lang filter on the backend yet). The live poll +
+       load-more history behaviour is preserved. */-->
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/main}" lang="en">
+<head>
+    <title th:text="#{voj.submissions.submissions.title} + ' | ' + ${websiteName}">Submissions</title>
+</head>
+<body>
+    <div layout:fragment="content"
+         th:with="fUsername=${param.username != null ? param.username[0] : ''},
+                  fProblemId=${param.problemId != null ? param.problemId[0] : ''},
+                  field=${param.field != null ? param.field[0] : 'problem'}">
+        <!-- PAGE HEADER + FILTER -->
+        <section class="vw-pagehead">
+            <div class="vw-eyebrow">// SUBMISSIONS</div>
+            <h1 th:text="#{voj.submissions.submissions.title}">Submissions</h1>
+            <div class="sub vw-livesub vw-livesub-mb">live judge queue
+                <span class="vw-livedot"></span>
+            </div>
+            <div class="vw-filters">
+                <div class="vw-seg">
+                    <a th:href="@{/submission(field='problem')}" th:classappend="${field == 'problem'} ? 'active'">Problem</a>
+                    <a th:href="@{/submission(field='user')}" th:classappend="${field == 'user'} ? 'active'">User</a>
+                </div>
+                <form class="vw-field vw-filters-search" method="GET" th:action="@{/submission}">
+                    <span class="sigil">$</span>
+                    <input type="hidden" name="field" th:value="${field}" />
+                    <input type="text" th:name="${field == 'user'} ? 'username' : 'problemId'"
+                           th:value="${field == 'user'} ? ${fUsername} : ${fProblemId}"
+                           th:placeholder="|filter by ${field}&#8230;|" />
+                </form>
+            </div>
+        </section>
+
+        <!-- TABLE -->
+        <section class="vw-section vw-section-table">
+            <div id="submission" class="vw-tablewrap">
+                <div class="vw-table vw-table-submissions">
+                    <div class="vw-table-head">
+                        <div>RUN #</div>
+                        <div th:text="#{voj.submissions.submissions.problem}">Problem</div>
+                        <div th:text="#{voj.submissions.submissions.user}">User</div>
+                        <div th:text="#{voj.submissions.submissions.submit-time}">When</div>
+                        <div th:text="#{voj.submissions.submissions.language}">Lang</div>
+                        <div th:text="#{voj.submissions.submissions.result}">Verdict</div>
+                    </div>
+                    <div id="submission-body">
+                        <a class="vw-table-row" th:each="submission : ${submissions}"
+                           th:attr="data-value=${submission.submissionId}"
+                           th:href="@{/submission/{id}(id=${submission.submissionId})}"
+                           th:with="slug=${submission.judgeResult != null ? #strings.toLowerCase(submission.judgeResult.judgeResultSlug) : ''}">
+                            <div class="vw-muted" th:text="${submission.submissionId}">0</div>
+                            <div class="vw-head vw-strong vw-ellipsis" th:text="${submission.problem != null ? 'P' + submission.problem.problemId + ' ' + submission.problem.problemName : ''}">Problem</div>
+                            <div class="vw-accent" th:text="${submission.user != null ? submission.user.username : ''}">User</div>
+                            <div class="vw-muted vw-cell-when" th:text="${@dateFormatter.dateTimeMediumShort(submission.submitTime, language)}">when</div>
+                            <div class="vw-muted2 vw-cell-lang" th:text="${submission.language != null ? submission.language.languageName : ''}">Lang</div>
+                            <div class="vw-cell-verdict">
+                                <span class="vw-vbadge" th:classappend="|flag-${slug}|" th:text="${#strings.toUpperCase(slug)}">AC</span>
+                                <span class="vw-verdict-name" th:classappend="|flag-${slug}|" th:text="${submission.judgeResult != null ? submission.judgeResult.judgeResultName : ''}">Accepted</span>
+                                <span class="vw-muted vw-verdict-time" th:text="|${submission.usedTime}ms &middot; ${submission.usedMemory}K|">11ms</span>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div id="more-submissions" class="vw-loadmore">
+                <p class="availble" th:text="#{voj.submissions.submissions.more-submission}">More Submission...</p>
+                <img th:src="|${cdnUrl}/img/loading.gif?v=${version}|" alt="Loading" class="hide" />
+            </div>
+        </section>
+    </div>
+
+    <th:block layout:fragment="scripts">
+    <script type="text/javascript" th:inline="javascript">
+        setInterval(function() {
+            var firstRecord = $('#submission-body > .vw-table-row:first-child'),
+                firstId     = parseInt($(firstRecord).attr('data-value'));
+            if ( !isNaN(firstId) ) { getLatestSubmissions(firstId + 1); }
+        }, 10000);
+
+        function getLatestSubmissions(startIndex) {
+            $.ajax({
+                type: 'GET',
+                url: [[@{/submission/getLatestSubmissions.action}]],
+                data: {
+                    'problemId': [[${param.problemId != null ? param.problemId[0] : ''}]],
+                    'username': [[${param.username != null ? param.username[0] : ''}]],
+                    'startIndex': startIndex
+                },
+                dataType: 'JSON',
+                success: function(result){
+                    if ( result['isSuccessful'] ) { displayRecords(result['submissions'], true); }
+                }
+            });
+        }
+        function setLoadingStatus(isLoading) {
+            if ( isLoading ) {
+                $('p', '#more-submissions').addClass('hide');
+                $('img', '#more-submissions').removeClass('hide');
+            } else {
+                $('img', '#more-submissions').addClass('hide');
+                $('p', '#more-submissions').removeClass('hide');
+            }
+        }
+        $('#more-submissions').click(function() {
+            var isLoading     = $('img', this).is(':visible'),
+                hasNextRecord = $('p', this).hasClass('availble'),
+                lastRecord    = $('#submission-body > .vw-table-row:last-child'),
+                lastId        = parseInt($(lastRecord).attr('data-value'));
+            if ( isNaN(lastId) ) { lastId = 0; }
+            if ( !isLoading && hasNextRecord ) {
+                setLoadingStatus(true);
+                return getMoreHistorySubmissions(lastId - 1);
+            }
+        });
+        function getMoreHistorySubmissions(startIndex) {
+            $.ajax({
+                type: 'GET',
+                url: [[@{/submission/getSubmissions.action}]],
+                data: {
+                    'problemId': [[${param.problemId != null ? param.problemId[0] : ''}]],
+                    'username': [[${param.username != null ? param.username[0] : ''}]],
+                    'startIndex': startIndex
+                },
+                dataType: 'JSON',
+                success: function(result){ return processHistorySubmissionsResult(result); }
+            });
+        }
+        function processHistorySubmissionsResult(result) {
+            if ( result['isSuccessful'] ) {
+                displayRecords(result['submissions'], false);
+            } else {
+                $('p', '#more-submissions').removeClass('availble');
+                $('#more-submissions').addClass('is-done');
+                $('p', '#more-submissions').html([[#{voj.submissions.submissions.no-more-submission}]]);
+            }
+            setLoadingStatus(false);
+        }
+        function displayRecords(submissions, prepend) {
+            for ( var i = 0; i < submissions.length; ++ i ) {
+                var s = submissions[i];
+                var html = getSubmissionContent(s['submissionId'], s['judgeResult'], s['usedTime'],
+                                                s['usedMemory'], s['problem'], s['user'],
+                                                s['language'], s['submitTime']);
+                if ( prepend ) { $('#submission-body').prepend(html); }
+                else { $('#submission-body').append(html); }
+            }
+        }
+        function getSubmissionContent(submissionId, judgeResult, usedTime, usedMemory, problem, user, language, submitTime) {
+            var slug = judgeResult['judgeResultSlug'].toLowerCase();
+            var tpl = '<a class="vw-table-row" data-value="%s" href="' + [[@{/submission/}]] + '%s">' +
+                      '<div class="vw-muted">%s</div>' +
+                      '<div class="vw-head vw-strong vw-ellipsis">P%s %s</div>' +
+                      '<div class="vw-accent">%s</div>' +
+                      '<div class="vw-muted vw-cell-when">%s</div>' +
+                      '<div class="vw-muted2 vw-cell-lang">%s</div>' +
+                      '<div class="vw-cell-verdict">' +
+                      '<span class="vw-vbadge flag-%s">%s</span>' +
+                      '<span class="vw-verdict-name flag-%s">%s</span>' +
+                      '<span class="vw-muted vw-verdict-time">%sms · %sK</span>' +
+                      '</div>' +
+                      '</a>';
+            return tpl.format(submissionId, submissionId, submissionId,
+                              problem['problemId'], problem['problemName'], user['username'],
+                              getFormatedDateString(submitTime, [[${language}]]),
+                              language['languageName'], slug, slug.toUpperCase(),
+                              slug, judgeResult['judgeResultName'], usedTime, usedMemory);
+        }
+    </script>
+    </th:block>
+</body>
+</html>

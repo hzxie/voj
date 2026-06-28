@@ -16,19 +16,23 @@
  */
 package org.verwandlung.voj.web.service;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.verwandlung.voj.web.mapper.DiscussionReplyMapper;
+import org.verwandlung.voj.web.mapper.DiscussionReplyVoteMapper;
 import org.verwandlung.voj.web.mapper.DiscussionThreadMapper;
 import org.verwandlung.voj.web.mapper.DiscussionTopicMapper;
+import org.verwandlung.voj.web.mapper.OptionMapper;
 import org.verwandlung.voj.web.mapper.ProblemMapper;
+import org.verwandlung.voj.web.mapper.SubmissionMapper;
+import org.verwandlung.voj.web.mapper.UserMetaMapper;
 import org.verwandlung.voj.web.model.*;
 import org.verwandlung.voj.web.util.HtmlTextFilter;
-import org.verwandlung.voj.web.util.JsonUtils;
 import org.verwandlung.voj.web.util.OffensiveWordFilter;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 /**
@@ -39,6 +43,24 @@ import java.util.*;
 @Service
 @Transactional
 public class DiscussionService {
+  /** The option name of the number of reports at which a discussion thread is hidden. */
+  private static final String OPTION_REPORT_HIDE_THRESHOLD = "discussionReportHideThreshold";
+
+  /** The option name of the minimum number of solved problems required to vote. */
+  private static final String OPTION_MIN_SOLVED_TO_VOTE = "discussionMinSolvedToVote";
+
+  /** The option name of the minimum number of solved problems required to report. */
+  private static final String OPTION_MIN_SOLVED_TO_REPORT = "discussionMinSolvedToReport";
+
+  /** The option name of the switch that enables report-based auto-hiding of threads. */
+  private static final String OPTION_AUTO_HIDE_ON_REPORTS = "autoHideOnReports";
+
+  /** The option name of the switch that enables offensive-word censoring of discussion content. */
+  private static final String OPTION_AUTO_CENSOR = "autoCensorOffensiveWords";
+
+  /** The option name of the cooldown (in minutes) before a freshly-registered user can post. */
+  private static final String OPTION_NEW_USER_POST_DELAY = "newUserPostDelay";
+
   /**
    * Gets all discussion topics.
    *
@@ -100,7 +122,8 @@ public class DiscussionService {
    */
   public List<DiscussionThread> getDiscussionThreadsOfProblem(
       long problemId, long offset, int limit) {
-    return discussionThreadMapper.getDiscussionThreads(problemId, 0, offset, limit);
+    return discussionThreadMapper.getDiscussionThreads(
+        problemId, 0, offset, limit, getReportHideThreshold(), true);
   }
 
   /**
@@ -118,7 +141,8 @@ public class DiscussionService {
       DiscussionTopic dt = discussionTopicMapper.getDiscussionTopicUsingSlug(discussionTopicSlug);
       discussionTopicId = dt.getDiscussionTopicId();
     }
-    return discussionThreadMapper.getDiscussionThreads(0, discussionTopicId, offset, limit);
+    return discussionThreadMapper.getDiscussionThreads(
+        0, discussionTopicId, offset, limit, getReportHideThreshold(), true);
   }
 
   /**
@@ -129,70 +153,169 @@ public class DiscussionService {
    *     logged in)
    * @param offset - the cursor of the first reply
    * @param limit - the number of replies to fetch
+   * @param visibleOnly - when {@code true}, replies hidden by an administrator are excluded
    * @return a List object containing the discussion thread replies
    */
   public List<DiscussionReply> getDiscussionRepliesOfThread(
-      long discussionThreadId, long currentUserUid, long offset, int limit) {
+      long discussionThreadId, long currentUserUid, long offset, int limit, boolean visibleOnly) {
     List<DiscussionReply> replies =
-        discussionReplyMapper.getDiscussionRepliesUsingThreadId(discussionThreadId, offset, limit);
+        discussionReplyMapper.getDiscussionRepliesUsingThreadId(
+            discussionThreadId, offset, limit, visibleOnly);
+    boolean censor = isOptionEnabled(OPTION_AUTO_CENSOR, true);
     for (DiscussionReply dr : replies) {
-      // Filter offensive content in the reply
-      String replyContent = dr.getDiscussionReplyContent();
-      replyContent = offensiveWordFilter.filter(HtmlTextFilter.filter(replyContent));
+      // Sanitize the HTML, and censor offensive content when auto-censoring is enabled.
+      String replyContent = HtmlTextFilter.filter(dr.getDiscussionReplyContent());
+      if (censor) {
+        replyContent = offensiveWordFilter.filter(replyContent);
+      }
       dr.setDiscussionReplyContent(replyContent);
-      // Get the voting information in the reply
-      Map<String, Object> votesStatistics =
-          getVoteStatisticsOfDiscussionReply(dr.getDiscussionReplyVotes(), currentUserUid);
-      dr.setDiscussionReplyVotes(JsonUtils.toJsonString(votesStatistics));
+      // Aggregate the voting information of the reply for the current user
+      populateVoteStatistics(dr, currentUserUid);
     }
     return replies;
   }
 
   /**
-   * Aggregates the voting information in a discussion reply.
+   * Populates the aggregated voting information (vote counts and the current user's own vote) of a
+   * discussion reply, reading directly from the discussion reply vote table.
    *
-   * @param votes - the JSON-formatted string of the original voting information in the discussion
-   *     reply
+   * @param discussionReply - the discussion reply whose voting statistics are populated
    * @param currentUserUid - the unique identifier of the currently logged-in user (-1 means not
    *     logged in)
-   * @return a Map object containing the discussion reply voting information
    */
-  private Map<String, Object> getVoteStatisticsOfDiscussionReply(
-      String votes, long currentUserUid) {
-    Map<String, Object> votesStatistics = new HashMap<>(5, 1);
-    Map<String, List<Long>> voteUsers = parseVoteUsers(votes);
-
-    List<Long> voteUpUsers = voteUsers.get("up");
-    List<Long> voteDownUsers = voteUsers.get("down");
-    boolean isVotedUp = currentUserUid != -1 && voteUpUsers.contains(currentUserUid);
-    boolean isVotedDown = currentUserUid != -1 && voteDownUsers.contains(currentUserUid);
-
-    votesStatistics.put("isVotedUp", isVotedUp);
-    votesStatistics.put("isVotedDown", isVotedDown);
-    votesStatistics.put("numberOfVoteUp", voteUpUsers.size());
-    votesStatistics.put("numberOfVoteDown", voteDownUsers.size());
-    return votesStatistics;
+  private void populateVoteStatistics(DiscussionReply discussionReply, long currentUserUid) {
+    long discussionReplyId = discussionReply.getDiscussionReplyId();
+    discussionReply.setNumberOfVoteUp(
+        discussionReplyVoteMapper.getNumberOfVotes(
+            discussionReplyId, DiscussionReplyVote.VOTE_UP));
+    discussionReply.setNumberOfVoteDown(
+        discussionReplyVoteMapper.getNumberOfVotes(
+            discussionReplyId, DiscussionReplyVote.VOTE_DOWN));
+    if (currentUserUid != -1) {
+      Integer currentUserVote =
+          discussionReplyVoteMapper.getVoteType(discussionReplyId, currentUserUid);
+      discussionReply.setIsVotedUp(
+          currentUserVote != null && currentUserVote == DiscussionReplyVote.VOTE_UP);
+      discussionReply.setIsVotedDown(
+          currentUserVote != null && currentUserVote == DiscussionReplyVote.VOTE_DOWN);
+    }
   }
 
   /**
-   * Parses the JSON string of the discussion reply voting information into voting user lists. The
-   * voting information has the format {"up": [uid, ...], "down": [uid, ...]}.
+   * [For administrators only] Gets a page of all discussion threads (no topic/problem filter and no
+   * report-based hiding), feeding the discussion admin list.
    *
-   * @param votes - the JSON-formatted string of the discussion reply voting information
-   * @return a Map object containing the lists of voting user UIDs under the "up" and "down" keys
+   * @param offset - the cursor of the first thread
+   * @param limit - the number of threads to fetch
+   * @return a list of discussion threads
    */
-  private Map<String, List<Long>> parseVoteUsers(String votes) {
-    return JsonUtils.toObject(votes, new TypeReference<Map<String, List<Long>>>() {});
+  public List<DiscussionThread> getAllDiscussionThreads(long offset, int limit) {
+    return discussionThreadMapper.getDiscussionThreads(0, 0, offset, limit, 0, false);
   }
 
   /**
-   * Gets a discussion thread object by its unique identifier.
+   * [For administrators only] Gets the total number of discussion threads.
+   *
+   * @return the total number of discussion threads
+   */
+  public long getNumberOfDiscussionThreads() {
+    return discussionThreadMapper.getNumberOfDiscussionThreads();
+  }
+
+  /**
+   * [For administrators only] Sets whether a discussion thread is visible to ordinary users.
+   *
+   * @param discussionThreadId - the unique identifier of the discussion thread
+   * @param visible - whether the discussion thread should be visible
+   * @return whether the visibility was updated
+   */
+  public boolean setThreadVisibility(long discussionThreadId, boolean visible) {
+    return discussionThreadMapper.updateThreadVisibility(discussionThreadId, visible) > 0;
+  }
+
+  /**
+   * [For administrators only] Saves the moderation-editable fields of a discussion thread (title,
+   * category, visibility, pinned and locked flags) from the thread moderation page.
+   *
+   * @param discussionThreadId - the unique identifier of the discussion thread
+   * @param title - the new title of the thread
+   * @param discussionTopicId - the unique identifier of the new category (topic)
+   * @param visible - whether the thread is visible to ordinary users
+   * @param pinned - whether the thread is pinned to the top of its list
+   * @param locked - whether the thread is locked against new replies
+   * @return whether the thread was found and updated
+   */
+  public boolean saveThread(
+      long discussionThreadId,
+      String title,
+      int discussionTopicId,
+      boolean visible,
+      boolean pinned,
+      boolean locked) {
+    DiscussionThread thread =
+        discussionThreadMapper.getDiscussionThreadUsingThreadId(discussionThreadId);
+    if (thread == null) {
+      return false;
+    }
+    DiscussionTopic topic = discussionTopicMapper.getDiscussionTopicUsingId(discussionTopicId);
+    if (topic == null) {
+      return false;
+    }
+    thread.setDiscussionThreadTitle(HtmlTextFilter.filter(title));
+    thread.setDiscussionTopic(topic);
+    thread.setVisible(visible);
+    thread.setPinned(pinned);
+    thread.setLocked(locked);
+    return discussionThreadMapper.updateThreadModeration(thread) > 0;
+  }
+
+  /**
+   * [For administrators only] Sets whether a discussion reply is visible to ordinary users.
+   *
+   * @param discussionReplyId - the unique identifier of the discussion reply
+   * @param visible - whether the discussion reply should be visible
+   * @return whether the visibility was updated
+   */
+  public boolean setReplyVisibility(long discussionReplyId, boolean visible) {
+    return discussionReplyMapper.updateReplyVisibility(discussionReplyId, visible) > 0;
+  }
+
+  /**
+   * [For administrators only] Gets the reporters across every reply of a discussion thread, feeding
+   * the thread moderation page's report list.
+   *
+   * @param discussionThreadId - the unique identifier of the discussion thread
+   * @return an ordered list of reporter rows (username + report time, most recent first)
+   */
+  public List<Map<String, Object>> getReportersOfThread(long discussionThreadId) {
+    return discussionReplyVoteMapper.getReportersOfThread(discussionThreadId);
+  }
+
+  /**
+   * Gets a discussion thread object by its unique identifier (no offensive-word filtering applied,
+   * used by the administration moderation view).
    *
    * @param discussionThreadId - the unique identifier of the discussion thread
    * @return the corresponding discussion thread object, or a null reference
    */
   public DiscussionThread getDiscussionThreadUsingThreadId(long discussionThreadId) {
     return discussionThreadMapper.getDiscussionThreadUsingThreadId(discussionThreadId);
+  }
+
+  /**
+   * Checks whether a discussion thread should be hidden because its replies have accumulated enough
+   * reports. The threshold is read from the {@code discussionReportHideThreshold} option; a value of
+   * zero or below disables hiding.
+   *
+   * @param discussionThreadId - the unique identifier of the discussion thread
+   * @return whether the discussion thread should be hidden
+   */
+  public boolean isDiscussionThreadHidden(long discussionThreadId) {
+    int threshold = getReportHideThreshold();
+    if (threshold <= 0) {
+      return false;
+    }
+    return discussionReplyVoteMapper.getNumberOfReportsOfThread(discussionThreadId) >= threshold;
   }
 
   /**
@@ -203,6 +326,51 @@ public class DiscussionService {
    */
   public DiscussionReply getDiscussionReplyUsingReplyId(long discussionReplyId) {
     return discussionReplyMapper.getDiscussionReplyUsingReplyId(discussionReplyId);
+  }
+
+  /**
+   * [For administrators only] Gets the most-reported discussion replies, feeding the dashboard's
+   * moderation queue and the discussion admin.
+   *
+   * @param limit - the maximum number of rows to return
+   * @return an ordered list of reported-reply rows (most reports first)
+   */
+  public List<Map<String, Object>> getReportedReplies(int limit) {
+    return discussionReplyVoteMapper.getReportedReplies(limit);
+  }
+
+  /**
+   * [For administrators only] Gets the number of distinct replies that have at least one report.
+   *
+   * @return the number of reported replies
+   */
+  public int getNumberOfReportedReplies() {
+    return discussionReplyVoteMapper.getNumberOfReportedReplies();
+  }
+
+  /**
+   * [For administrators only] Gets the reporters of a discussion reply for the moderation review
+   * page.
+   *
+   * @param discussionReplyId - the unique identifier of the reported reply
+   * @return an ordered list of reporter rows (most recent first)
+   */
+  public List<Map<String, Object>> getReportersOfReply(long discussionReplyId) {
+    return discussionReplyVoteMapper.getReportersOfReply(discussionReplyId);
+  }
+
+  /**
+   * [For administrators only] Dismisses every report on a discussion reply, clearing it from the
+   * moderation queue while keeping the reply itself intact.
+   *
+   * @param discussionReplyId - the unique identifier of the reply whose reports are dismissed
+   * @return a Map containing whether the dismissal was successful
+   */
+  public Map<String, Boolean> dismissReportsOfReply(long discussionReplyId) {
+    discussionReplyVoteMapper.dismissReportsOfReply(discussionReplyId);
+    Map<String, Boolean> result = new HashMap<>(2, 1);
+    result.put("isSuccessful", true);
+    return result;
   }
 
   /**
@@ -231,40 +399,228 @@ public class DiscussionService {
         discussionReply != null && discussionReply.getDiscussionThreadId() == discussionThreadId);
     result.put("isVoteValid", voteUp >= -1 && voteUp <= 1 && voteDown >= -1 && voteDown <= 1);
     result.put("isLoggedIn", currentUser != null);
+    result.put("isNotSelfVote", !isOwnReply(discussionReply, currentUser));
+    result.put(
+        "isReputationEnough",
+        hasEnoughReputation(currentUser, getIntOption(OPTION_MIN_SOLVED_TO_VOTE, 1)));
 
     boolean isSuccessful =
         result.get("isDiscussionReplyExists")
             && result.get("isVoteValid")
-            && result.get("isLoggedIn");
+            && result.get("isLoggedIn")
+            && result.get("isNotSelfVote")
+            && result.get("isReputationEnough");
     result.put("isSuccessful", isSuccessful);
 
     if (result.get("isSuccessful")) {
-      synchronized (this) {
-        // Set the new voting result
-        Map<String, List<Long>> voteUsers =
-            parseVoteUsers(discussionReply.getDiscussionReplyVotes());
-        List<Long> voteUpUsers = voteUsers.get("up");
-        List<Long> voteDownUsers = voteUsers.get("down");
-        boolean isVotedUp = voteUpUsers.contains(currentUser.getUid());
-        boolean isVotedDown = voteDownUsers.contains(currentUser.getUid());
-
-        if (voteUp == 1 && !isVotedUp) {
-          if (isVotedDown) voteDownUsers.remove(currentUser.getUid());
-          voteUpUsers.add(currentUser.getUid());
-        } else if (voteUp == -1) {
-          voteUpUsers.remove(currentUser.getUid());
-        }
-        if (voteDown == 1 && !isVotedDown) {
-          if (isVotedUp) voteUpUsers.remove(currentUser.getUid());
-          voteDownUsers.add(currentUser.getUid());
-        } else if (voteDown == -1) {
-          voteDownUsers.remove(currentUser.getUid());
-        }
-        discussionReply.setDiscussionReplyVotes(JsonUtils.toJsonString(voteUsers));
-        discussionReplyMapper.updateDiscussionReply(discussionReply);
+      // Each vote is a row keyed by (reply, voter, vote_type). Casting an up/down vote first clears
+      // the opposite vote so that a user holds at most one up/down vote per reply, then inserts the
+      // new one (idempotent via the primary key). Report rows (vote_type = 2) live in the same table
+      // and are untouched here, so a user's vote and report on the same reply are independent.
+      long uid = currentUser.getUid();
+      if (voteUp == 1) {
+        discussionReplyVoteMapper.withdrawVote(discussionReplyId, uid, DiscussionReplyVote.VOTE_DOWN);
+        discussionReplyVoteMapper.castVote(
+            new DiscussionReplyVote(discussionReplyId, uid, DiscussionReplyVote.VOTE_UP));
+      } else if (voteUp == -1) {
+        discussionReplyVoteMapper.withdrawVote(discussionReplyId, uid, DiscussionReplyVote.VOTE_UP);
+      }
+      if (voteDown == 1) {
+        discussionReplyVoteMapper.withdrawVote(discussionReplyId, uid, DiscussionReplyVote.VOTE_UP);
+        discussionReplyVoteMapper.castVote(
+            new DiscussionReplyVote(discussionReplyId, uid, DiscussionReplyVote.VOTE_DOWN));
+      } else if (voteDown == -1) {
+        discussionReplyVoteMapper.withdrawVote(
+            discussionReplyId, uid, DiscussionReplyVote.VOTE_DOWN);
       }
     }
     return result;
+  }
+
+  /**
+   * Reports a discussion reply for abuse. A report is stored as a row in the discussion reply vote
+   * table with the report vote type, and is idempotent (a user reporting the same reply twice still
+   * counts once). Once the replies of a thread accumulate enough reports the thread is hidden from
+   * the listings (see {@link #isDiscussionThreadHidden(long)}).
+   *
+   * @param discussionThreadId - the unique identifier of the discussion thread
+   * @param discussionReplyId - the unique identifier of the discussion reply being reported
+   * @param currentUser - the currently logged-in user
+   * @return the result of the report request
+   */
+  public Map<String, Boolean> reportDiscussionReply(
+      long discussionThreadId, long discussionReplyId, User currentUser) {
+    DiscussionReply discussionReply =
+        discussionReplyMapper.getDiscussionReplyUsingReplyId(discussionReplyId);
+    Map<String, Boolean> result = new HashMap<>();
+    result.put(
+        "isDiscussionReplyExists",
+        discussionReply != null && discussionReply.getDiscussionThreadId() == discussionThreadId);
+    result.put("isLoggedIn", currentUser != null);
+    result.put("isNotSelfReport", !isOwnReply(discussionReply, currentUser));
+    result.put(
+        "isReputationEnough",
+        hasEnoughReputation(currentUser, getIntOption(OPTION_MIN_SOLVED_TO_REPORT, 3)));
+
+    boolean isSuccessful =
+        result.get("isDiscussionReplyExists")
+            && result.get("isLoggedIn")
+            && result.get("isNotSelfReport")
+            && result.get("isReputationEnough");
+    result.put("isSuccessful", isSuccessful);
+
+    if (result.get("isSuccessful")) {
+      discussionReplyVoteMapper.castVote(
+          new DiscussionReplyVote(
+              discussionReplyId, currentUser.getUid(), DiscussionReplyVote.VOTE_REPORT));
+    }
+    return result;
+  }
+
+  /**
+   * Checks whether a discussion reply was created by a given user (used to forbid voting on or
+   * reporting one's own reply).
+   *
+   * @param discussionReply - the discussion reply (may be null)
+   * @param user - the acting user (may be null)
+   * @return whether the reply belongs to the user
+   */
+  private boolean isOwnReply(DiscussionReply discussionReply, User user) {
+    return user != null
+        && discussionReply != null
+        && discussionReply.getDiscussionReplyCreator() != null
+        && discussionReply.getDiscussionReplyCreator().getUid() == user.getUid();
+  }
+
+  /**
+   * Checks whether a user has enough reputation to participate. Reputation is measured by the number
+   * of distinct problems the user has solved; administrators always pass.
+   *
+   * @param user - the acting user (may be null)
+   * @param minSolvedProblems - the minimum number of solved problems required
+   * @return whether the user meets the reputation requirement
+   */
+  private boolean hasEnoughReputation(User user, int minSolvedProblems) {
+    if (user == null) {
+      return false;
+    }
+    if (minSolvedProblems <= 0 || isAdministrator(user)) {
+      return true;
+    }
+    return submissionMapper.getAcceptedSubmissionUsingUserId(user.getUid()) >= minSolvedProblems;
+  }
+
+  /**
+   * Checks whether a user belongs to the administrators user group.
+   *
+   * @param user - the user to check
+   * @return whether the user is an administrator
+   */
+  private boolean isAdministrator(User user) {
+    return user.getUserGroup() != null
+        && "administrators".equals(user.getUserGroup().getUserGroupSlug());
+  }
+
+  /**
+   * Reads the report-hide threshold option.
+   *
+   * @return the number of reports at which a thread is hidden (0 or below disables hiding)
+   */
+  private int getReportHideThreshold() {
+    if (!isOptionEnabled(OPTION_AUTO_HIDE_ON_REPORTS, true)) {
+      return 0;
+    }
+    return getIntOption(OPTION_REPORT_HIDE_THRESHOLD, 0);
+  }
+
+  /**
+   * Gets the minimum number of solved problems required to vote on a reply.
+   *
+   * @return the minimum number of solved problems required to vote
+   */
+  public int getMinSolvedToVote() {
+    return getIntOption(OPTION_MIN_SOLVED_TO_VOTE, 1);
+  }
+
+  /**
+   * Gets the minimum number of solved problems required to report a reply.
+   *
+   * @return the minimum number of solved problems required to report
+   */
+  public int getMinSolvedToReport() {
+    return getIntOption(OPTION_MIN_SOLVED_TO_REPORT, 3);
+  }
+
+  /**
+   * Gets the new-user posting cooldown, in minutes.
+   *
+   * @return the cooldown (in minutes) before a freshly-registered user can post
+   */
+  public int getNewUserPostDelay() {
+    return getIntOption(OPTION_NEW_USER_POST_DELAY, 0);
+  }
+
+  /**
+   * Reads a boolean-valued system option, treating {@code "1"} as enabled.
+   *
+   * @param optionName - the name of the option
+   * @param defaultValue - the value to return when the option is absent
+   * @return whether the option is enabled
+   */
+  private boolean isOptionEnabled(String optionName, boolean defaultValue) {
+    Option option = optionMapper.getOption(optionName);
+    if (option == null || option.getOptionValue() == null) {
+      return defaultValue;
+    }
+    return "1".equals(option.getOptionValue().trim());
+  }
+
+  /**
+   * Checks whether the given user has waited out the new-user posting cooldown. Administrators and
+   * accounts whose registration time is unknown are never delayed; a cooldown of zero disables the
+   * check.
+   *
+   * @param user - the posting user
+   * @return whether the user is allowed to post now
+   */
+  private boolean isPostDelayElapsed(User user) {
+    int delayMinutes = getIntOption(OPTION_NEW_USER_POST_DELAY, 0);
+    if (delayMinutes <= 0 || user == null || isAdministrator(user)) {
+      return true;
+    }
+    UserMeta registerTimeMeta =
+        userMetaMapper.getUserMetaUsingUserAndMetaKey(user, "registerTime");
+    if (registerTimeMeta == null || registerTimeMeta.getMetaValue() == null) {
+      return true;
+    }
+    try {
+      Date registerTime =
+          new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(registerTimeMeta.getMetaValue());
+      long elapsedMillis = System.currentTimeMillis() - registerTime.getTime();
+      return elapsedMillis >= delayMinutes * 60_000L;
+    } catch (ParseException e) {
+      return true;
+    }
+  }
+
+  /**
+   * Reads an integer-valued system option, falling back to a default value if the option is missing
+   * or not a valid integer.
+   *
+   * @param optionName - the name of the option
+   * @param defaultValue - the value to return when the option is absent or malformed
+   * @return the option value as an integer
+   */
+  private int getIntOption(String optionName, int defaultValue) {
+    Option option = optionMapper.getOption(optionName);
+    if (option == null || option.getOptionValue() == null) {
+      return defaultValue;
+    }
+    try {
+      return Integer.parseInt(option.getOptionValue().trim());
+    } catch (NumberFormatException e) {
+      return defaultValue;
+    }
   }
 
   /**
@@ -378,9 +734,22 @@ public class DiscussionService {
             threadCreator, discussionTopic, null, HtmlTextFilter.filter(discussionThreadTitle));
     Map<String, Object> result =
         (Map<String, Object>) getDiscussionThreadCreationResult(dt, discussionThreadContent);
-    if ((Boolean) result.get("isSuccessful")) {
-      if (relatedProblemId != 0) {
-        Problem relatedProblem = problemMapper.getProblem(relatedProblemId);
+
+    // The related problem is optional: a non-positive id means "no problem linked". When an id
+    // is supplied it must resolve to an existing problem, otherwise the thread is rejected rather
+    // than silently created with no problem attached.
+    Problem relatedProblem = null;
+    boolean isRelatedProblemExists = true;
+    if (relatedProblemId > 0) {
+      relatedProblem = problemMapper.getProblem(relatedProblemId);
+      isRelatedProblemExists = relatedProblem != null;
+    }
+    result.put("isRelatedProblemExists", isRelatedProblemExists);
+
+    boolean isSuccessful = (Boolean) result.get("isSuccessful") && isRelatedProblemExists;
+    result.put("isSuccessful", isSuccessful);
+    if (isSuccessful) {
+      if (relatedProblem != null) {
         dt.setProblem(relatedProblem);
       }
       discussionThreadMapper.createDiscussionThread(dt);
@@ -413,6 +782,7 @@ public class DiscussionService {
     result.put("isThreadTitleEmpty", dt.getDiscussionThreadTitle().isEmpty());
     result.put("isThreadTitleLegal", dt.getDiscussionThreadTitle().length() <= 128);
     result.put("isThreadContentEmpty", discussionThreadContent.isEmpty());
+    result.put("isPostDelayElapsed", isPostDelayElapsed(dt.getDiscussionThreadCreator()));
 
     boolean isSuccessful =
         result.get("isThreadCreatorExists")
@@ -420,7 +790,8 @@ public class DiscussionService {
             && result.get("isDiscussionTopicExists")
             && !result.get("isThreadTitleEmpty")
             && result.get("isThreadTitleLegal")
-            && !result.get("isThreadContentEmpty");
+            && !result.get("isThreadContentEmpty")
+            && result.get("isPostDelayElapsed");
     result.put("isSuccessful", isSuccessful);
     return result;
   }
@@ -493,13 +864,9 @@ public class DiscussionService {
    */
   public Map<String, Object> createDiscussionReply(
       long discussionThreadId, User replyCreator, String replyContent) {
-    String discussionReplyVotes = "{ \"up\": [], \"down\": [] }";
     DiscussionReply dr =
         new DiscussionReply(
-            discussionThreadId,
-            replyCreator,
-            HtmlTextFilter.filter(replyContent),
-            discussionReplyVotes);
+            discussionThreadId, replyCreator, HtmlTextFilter.filter(replyContent));
 
     Map<String, Object> result =
         (Map<String, Object>) getDiscussionReplyCreationResult(dr);
@@ -524,20 +891,24 @@ public class DiscussionService {
 
     DiscussionThread discussionThread =
         discussionThreadMapper.getDiscussionThreadUsingThreadId(discussionThreadId);
-    Map<String, Boolean> result = new HashMap<>(6, 1);
+    Map<String, Boolean> result = new HashMap<>(8, 1);
     result.put("isDiscussionThreadExists", discussionThread != null);
+    result.put("isDiscussionThreadLocked", discussionThread != null && discussionThread.isLocked());
     result.put("isReplyCreatorExists", replyCreator != null);
     result.put(
         "isReplyCreatorLegal",
         replyCreator != null
             && !replyCreator.getUserGroup().getUserGroupSlug().equals("forbidden"));
     result.put("isReplyContentEmpty", replyContent.isEmpty());
+    result.put("isPostDelayElapsed", isPostDelayElapsed(replyCreator));
 
     boolean isSuccessful =
         result.get("isDiscussionThreadExists")
+            && !result.get("isDiscussionThreadLocked")
             && result.get("isReplyCreatorExists")
             && result.get("isReplyCreatorLegal")
-            && !result.get("isReplyContentEmpty");
+            && !result.get("isReplyContentEmpty")
+            && result.get("isPostDelayElapsed");
     result.put("isSuccessful", isSuccessful);
     return result;
   }
@@ -602,9 +973,21 @@ public class DiscussionService {
   /** The autowired DiscussionReplyMapper object, used to obtain discussion replies. */
   @Autowired private DiscussionReplyMapper discussionReplyMapper;
 
+  /** The autowired DiscussionReplyVoteMapper object, used to obtain and persist reply votes. */
+  @Autowired private DiscussionReplyVoteMapper discussionReplyVoteMapper;
+
+  /** The autowired OptionMapper object, used to read the configurable discussion thresholds. */
+  @Autowired private OptionMapper optionMapper;
+
+  /** The autowired SubmissionMapper object, used to measure a user's reputation (solved problems). */
+  @Autowired private SubmissionMapper submissionMapper;
+
   /** The autowired ProblemMapper object, used to obtain problems. */
   @Autowired private ProblemMapper problemMapper;
 
   /** The autowired OffensiveWordFilter object, used to filter offensive words in user content. */
   @Autowired private OffensiveWordFilter offensiveWordFilter;
+
+  /** The autowired UserMetaMapper object. Used to resolve a user's registration time. */
+  @Autowired private UserMetaMapper userMetaMapper;
 }

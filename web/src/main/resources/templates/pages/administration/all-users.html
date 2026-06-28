@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/admin}" lang="en">
+<head>
+    <title th:text="#{voj.administration.all-users.title} + ' | ' + ${websiteName}">All Users</title>
+</head>
+<body>
+    <div layout:fragment="content">
+    <div class="adm-wrap">
+
+        <!-- Toolbar -->
+        <form class="adm-toolbar" method="GET" th:action="@{/administration/all-users}">
+            <div class="adm-toolbar-search">
+                <span class="sigil">$</span>
+                <input name="username" type="text" th:value="${username}" th:placeholder="#{voj.administration.all-users.search-placeholder}" />
+                <span class="count"><span th:text="${#lists.size(users)}">0</span> <span th:text="#{voj.administration.all-users.records}">records</span></span>
+            </div>
+            <select name="userGroup" class="adm-toolbar-select" onchange="this.form.submit();">
+                <option value="" th:text="#{voj.administration.all-users.all-user-groups}">All User Groups</option>
+                <option th:each="userGroup : ${userGroups}" th:value="${userGroup.userGroupSlug}" th:selected="${userGroup.userGroupSlug == selectedUserGroup}" th:text="${userGroup.userGroupName}">Group</option>
+            </select>
+            <a class="adm-btn-accent" th:href="@{/administration/new-user}" th:text="#{voj.administration.all-users.new-user}">+ new user</a>
+        </form>
+
+        <!-- Bulk bar -->
+        <div class="adm-bulk" data-adm="bulk">
+            <span class="sel"><span data-adm="bulk-count">0</span> <span th:text="#{voj.administration.all-users.selected}">selected</span></span>
+            <div class="adm-flex1"></div>
+            <span class="adm-bulk-act c-err" data-adm="bulk-delete">&#10005; <span th:text="#{voj.administration.all-users.delete}">delete</span></span>
+            <span class="adm-bulk-clear" data-adm="bulk-clear" th:text="#{voj.administration.all-users.clear}">clear</span>
+        </div>
+
+        <!-- Table -->
+        <div class="adm-table" data-adm="table">
+            <div class="adm-table-scroll"><div class="adm-table-inner cols-users">
+                <div class="adm-table-head">
+                    <span class="adm-check" data-adm="check-all"></span>
+                    <span th:text="#{voj.administration.all-users.username}">USER</span>
+                    <span th:text="#{voj.administration.all-users.email}">EMAIL</span>
+                    <span th:text="#{voj.administration.all-users.role}">ROLE</span>
+                    <span th:text="#{voj.administration.all-users.rank}">RANK</span>
+                    <span th:text="#{voj.administration.all-users.solved}">SOLVED</span>
+                    <span th:text="#{voj.administration.all-users.joined}">JOINED</span>
+                    <span th:text="#{voj.administration.all-users.status}">STATUS</span>
+                    <span></span>
+                    <span></span>
+                </div>
+                <a class="adm-table-row" data-adm="row" th:each="user : ${users}" th:href="@{/administration/edit-user/{id}(id=${user.uid})}"
+                   th:with="slug=${user.userGroup.userGroupSlug}">
+                    <span class="adm-check" data-adm="row-check" th:attr="data-id=${user.uid}"></span>
+                    <span class="adm-cell head" th:text="${user.username}">user</span>
+                    <span class="adm-cell" th:text="${user.email}">email</span>
+                    <span><span class="adm-pill" th:classappend="${slug == 'administrators' ? 'c-err' : (slug == 'judgers' ? 'c-info' : (slug == 'forbidden' ? 'c-err' : 'c-muted'))}" th:text="${user.userGroup.userGroupName}">role</span></span>
+                    <span class="adm-cell mono txt" th:text="${userRanks.containsKey(user.uid) ? '#' + userRanks.get(user.uid) : '—'}">#7</span>
+                    <span class="adm-cell" th:text="${solvedCounts.containsKey(user.uid) ? #numbers.formatInteger(solvedCounts.get(user.uid), 1, 'COMMA') : '0'}">0</span>
+                    <span class="adm-cell muted" th:text="${@dateFormatter.monthYear(joinedDates.get(user.uid), language)}">Mar 2015</span>
+                    <span><span class="adm-pill" th:classappend="${slug == 'forbidden' ? 'c-err' : 'c-accent'}" th:text="${slug == 'forbidden'} ? #{voj.administration.all-users.banned} : #{voj.administration.all-users.active}">Active</span></span>
+                    <span></span>
+                    <span class="adm-menu">&#183;&#183;&#183;</span>
+                </a>
+                <div class="adm-table-empty" th:if="${#lists.isEmpty(users)}" th:text="#{voj.administration.all-users.no-records}">// no records</div>
+            </div></div>
+        </div>
+
+        <!-- Pager -->
+        <div class="adm-pager" th:if="${totalPages > 1}"
+             th:with="lowerBound=${currentPage - 3 > 0 ? currentPage - 3 : 1},upperBound=${currentPage + 3 < totalPages ? currentPage + 3 : totalPages}">
+            <span><span th:text="#{voj.administration.all-users.page}">page</span> <span th:text="${currentPage}">1</span> / <span th:text="${totalPages}">1</span></span>
+            <div class="adm-pager-btns">
+                <a class="nav" th:classappend="${currentPage <= 1} ? 'off'" th:href="@{/administration/all-users(userGroup=${selectedUserGroup},username=${username},page=${currentPage - 1})}">&#8592;</a>
+                <a class="num" th:each="pageNumber : ${#numbers.sequence(lowerBound, upperBound)}" th:classappend="${pageNumber == currentPage} ? 'active'" th:href="@{/administration/all-users(userGroup=${selectedUserGroup},username=${username},page=${pageNumber})}" th:text="${pageNumber}">1</a>
+                <a class="nav" th:classappend="${currentPage >= totalPages} ? 'off'" th:href="@{/administration/all-users(userGroup=${selectedUserGroup},username=${username},page=${currentPage + 1})}">&#8594;</a>
+            </div>
+        </div>
+
+    </div>
+    </div>
+
+    <th:block layout:fragment="scripts">
+    <script type="text/javascript" th:inline="javascript">
+        document.addEventListener('DOMContentLoaded', function () {
+            var del = document.querySelector('[data-adm="bulk-delete"]');
+            if (!del) return;
+            del.addEventListener('click', function () {
+                var ids = window.admSelectedIds ? window.admSelectedIds() : [];
+                if (ids.length === 0) return;
+                if (!confirm([[#{voj.administration.all-users.continue-or-not}]])) return;
+                $.ajax({
+                    type: 'POST',
+                    url: [[@{/administration/deleteUsers.action}]],
+                    data: { 'users': JSON.stringify(ids) },
+                    dataType: 'JSON',
+                    success: function (result) {
+                        if (result['isSuccessful']) { window.location.reload(); }
+                        else { alert([[#{voj.administration.all-users.delete-error}]]); }
+                    }
+                });
+            });
+        });
+    </script>
+    </th:block>
+</body>
+</html>

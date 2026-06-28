@@ -29,6 +29,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
 import org.verwandlung.voj.judger.application.ApplicationDispatcher;
@@ -229,7 +230,7 @@ public class Dispatcher {
    * The autowired ApplicationDispatcher object, which pushes a message to the message queue after
    * each stage's task completes.
    */
-  @Autowired private ApplicationDispatcher applicationDispatcher;
+  @Lazy @Autowired private ApplicationDispatcher applicationDispatcher;
 
   /** The autowired Preprocessor object, which performs the preparation work before compilation. */
   @Autowired private Preprocessor preprocessor;

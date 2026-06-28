@@ -37,9 +37,33 @@ public class MessageSender {
    * @param mapMessage - the message in Key-Value format
    */
   public void sendMessage(final Map<String, Object> mapMessage) {
+    sendMessage(mapMessage, null);
+  }
+
+  /**
+   * Sends a message to the message queue, tagging it with JMS string properties so the broker can
+   * route it. The {@code event} and {@code languageSlug} properties mirror the map body but, unlike
+   * map entries, are visible to JMS selectors: judgers claim tasks by {@code languageSlug} (pulling
+   * only the languages they support) and the web's dead-letter listener selects by {@code event}.
+   *
+   * @param mapMessage - the message in Key-Value format
+   * @param languageSlug - the slug of the submission's language, or null when unknown
+   */
+  public void sendMessage(final Map<String, Object> mapMessage, final String languageSlug) {
     long submissionId = (Long) mapMessage.get("submissionId");
 
-    jmsTemplate.convertAndSend(mapMessage);
+    jmsTemplate.convertAndSend(
+        mapMessage,
+        message -> {
+          Object event = mapMessage.get("event");
+          if (event != null) {
+            message.setStringProperty("event", event.toString());
+          }
+          if (languageSlug != null) {
+            message.setStringProperty("languageSlug", languageSlug);
+          }
+          return message;
+        });
     LOGGER.info(
         String.format("Submission task #%d has been created.", new Object[] {submissionId}));
   }

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/admin}" lang="en">
+<head>
+    <title th:text="#{voj.administration.discussion-topics.title} + ' | ' + ${websiteName}">Topics</title>
+</head>
+<body>
+    <div layout:fragment="content">
+    <div class="adm-form">
+
+        <div class="alert alert-error hide"></div>
+
+        <!-- Create -->
+        <div class="adm-card">
+            <div class="adm-card-head plain" th:text="#{voj.administration.discussion-topics.new-topic}">// NEW TOPIC</div>
+            <div class="adm-card-body">
+                <div class="adm-grid-2">
+                    <label class="adm-flabel">
+                        <span th:text="#{voj.administration.discussion-topics.slug}">SLUG</span>
+                        <input id="topic-slug" class="adm-input" type="text" maxlength="16" />
+                    </label>
+                    <label class="adm-flabel">
+                        <span th:text="#{voj.administration.discussion-topics.name}">NAME</span>
+                        <input id="topic-name" class="adm-input" type="text" maxlength="32" />
+                    </label>
+                </div>
+                <div class="adm-form-actions">
+                    <button type="button" class="adm-btn-save" id="create-topic" th:text="'$ ' + #{voj.administration.discussion-topics.create}">$ create</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- List -->
+        <div class="adm-table" data-adm="table">
+            <div class="adm-table-inner cols-topics">
+                <div class="adm-table-head">
+                    <span>#</span>
+                    <span th:text="#{voj.administration.discussion-topics.slug}">SLUG</span>
+                    <span th:text="#{voj.administration.discussion-topics.name}">NAME</span>
+                    <span></span>
+                </div>
+                <div class="adm-table-row adm-cursor-default" data-adm="row" th:each="topic : ${discussionTopics}" th:attr="data-topic=${topic.discussionTopicId}">
+                    <span class="adm-cell mono muted" th:text="'#' + ${topic.discussionTopicId}">#1</span>
+                    <span class="adm-cell mono" th:text="${topic.discussionTopicSlug}">slug</span>
+                    <span class="adm-cell head" th:text="${topic.discussionTopicName}">name</span>
+                    <button type="button" class="adm-bulk-clear c-err" th:data-topic="${topic.discussionTopicId}" onclick="admDeleteTopic(this);" th:text="#{voj.administration.discussion-topics.delete}">delete</button>
+                </div>
+                <div class="adm-table-empty" th:if="${#lists.isEmpty(discussionTopics)}" th:text="#{voj.administration.discussion-topics.no-records}">// no topics</div>
+            </div>
+        </div>
+
+    </div>
+    </div>
+
+    <th:block layout:fragment="scripts">
+    <script type="text/javascript" th:inline="javascript">
+        window.admDeleteTopic = function (btn) {
+            if (!confirm([[#{voj.administration.discussion-topics.continue-or-not}]])) return;
+            var id = btn.getAttribute('data-topic');
+            $.ajax({
+                type: 'POST', url: [[@{/administration/deleteTopic.action}]],
+                data: { discussionTopicId: id }, dataType: 'JSON',
+                success: function (result) {
+                    if (result['isSuccessful']) {
+                        var row = document.querySelector('.adm-table-row[data-topic="' + id + '"]');
+                        if (row) row.parentNode.removeChild(row);
+                    }
+                }
+            });
+        };
+        document.addEventListener('DOMContentLoaded', function () {
+            document.getElementById('create-topic').addEventListener('click', function () {
+                var slug = $('#topic-slug').val(), name = $('#topic-name').val();
+                if (!slug || !name) { $('.alert-error').html([[#{voj.administration.discussion-topics.empty-error}]]).removeClass('hide'); return; }
+                $.ajax({
+                    type: 'POST', url: [[@{/administration/createTopic.action}]],
+                    data: { discussionTopicSlug: slug, discussionTopicName: name }, dataType: 'JSON',
+                    success: function (result) {
+                        if (result['isSuccessful']) { window.location.reload(); }
+                        else { $('.alert-error').html([[#{voj.administration.discussion-topics.create-error}]]).removeClass('hide'); }
+                    }
+                });
+            });
+        });
+    </script>
+    </th:block>
+</body>
+</html>

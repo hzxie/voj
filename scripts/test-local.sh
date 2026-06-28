@@ -10,6 +10,7 @@
 #
 # Usage:
 #   scripts/test-local.sh
+#   scripts/test-local.sh -Djacoco.skip=true   # any args are forwarded to mvn
 #
 # Overridable via environment variables (defaults shown):
 #   JDK_HOME=/opt/homebrew/opt/openjdk@25   # Spring 7 supports JDK 17-25
@@ -57,11 +58,10 @@ if ! mysql_cmd -e "SELECT VERSION();" >/dev/null 2>&1; then
   exit 1
 fi
 
-# 2. (Re)create the test database and load the schema.
-echo "==> Creating test database '${TEST_DB}' and loading voj.sql ..."
-mysql_cmd -e "DROP DATABASE IF EXISTS \`${TEST_DB}\`; CREATE DATABASE \`${TEST_DB}\`;"
-mysql_cmd -e "SET GLOBAL sql_mode=(SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY',''));"
-mysql_cmd "${TEST_DB}" < voj.sql
+# 2. The test suite provisions its own schema: the Spring test context runs
+#    sql/{schema,seed,test-data}.sql, and the test JDBC URL carries
+#    createDatabaseIfNotExist=true plus the required sql_mode. Nothing to load
+#    here - the cleanup below just drops the database afterwards (unless KEEP_DB=1).
 
 cleanup() {
   if [ "$KEEP_DB" != "1" ]; then
@@ -71,9 +71,9 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# 3. Run the web module's tests.
+# 3. Run the web module's tests. Any script args ("$@") are forwarded to mvn.
 echo "==> Running web module tests ..."
-mvn test -f web/pom.xml
+mvn test -f web/pom.xml "$@"
 
 # 4. Run the judger module's tests on Linux only.
 if [ "$(uname -s)" = "Linux" ]; then
@@ -85,7 +85,7 @@ if [ "$(uname -s)" = "Linux" ]; then
     cp "$JAVA_HOME/include/linux/jni_md.h" "$JAVA_HOME/include/jni_md.h" 2>/dev/null || true
     cp "$JAVA_HOME/include/linux/jawt_md.h" "$JAVA_HOME/include/jawt_md.h" 2>/dev/null || true
   fi
-  mvn test -f judger/pom.xml
+  mvn test -f judger/pom.xml "$@"
 else
   echo "==> Skipping judger tests on $(uname -s): the judger uses a Linux-only"
   echo "    JNI native build. Use scripts/build-docker.sh or a Linux host."

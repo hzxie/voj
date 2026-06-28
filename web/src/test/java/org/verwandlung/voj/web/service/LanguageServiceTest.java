@@ -29,6 +29,7 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.Transactional;
 
 import org.verwandlung.voj.web.model.Language;
+import org.verwandlung.voj.web.util.JsonUtils;
 
 /**
  * The test class for LanguageService.
@@ -71,6 +72,38 @@ public class LanguageServiceTest {
     Assertions.assertTrue((Boolean) result.get("isSuccessful"));
     Assertions.assertEquals(1, ((List<Language>) result.get("languageCreated")).size());
     Assertions.assertEquals(7, languageService.getAllLanguages().size());
+  }
+
+  /**
+   * Test case: tests the updateLanguageSettings(List) method against a list deserialized from a JSON
+   * payload, mirroring the controller flow (the admin editor posts JSON, the action runs it through
+   * JsonUtils.toList). Regression guard: compileCommand / runCommand must survive deserialization
+   * (they were @JsonIgnore, which stripped them on the way in and NPE'd the validation). Expected:
+   * the new language is created and its commands are persisted.
+   */
+  @Test
+  @SuppressWarnings("unchecked")
+  public void testUpdateLanguageSettingsFromJsonPayload() {
+    String payload =
+        "[{\"languageId\":0,\"languageSlug\":\"text/x-go\",\"languageName\":\"Go\","
+            + "\"compileCommand\":\"go build -o {filename}.exe {filename}.go\","
+            + "\"runCommand\":\"{filename}.exe\",\"enabled\":true,"
+            + "\"sourceFilename\":\"Main.go\",\"timeMultiplier\":1.5,\"memoryMultiplier\":2.0}]";
+    List<Language> newLanguages = currentLanguages();
+    newLanguages.addAll(JsonUtils.toList(payload, Language.class));
+
+    Map<String, Object> result = languageService.updateLanguageSettings(newLanguages);
+    Assertions.assertTrue((Boolean) result.get("isSuccessful"));
+    Assertions.assertEquals(1, ((List<Language>) result.get("languageCreated")).size());
+
+    Language created = languageService.getLanguageUsingSlug("text/x-go");
+    Assertions.assertNotNull(created);
+    Assertions.assertEquals("go build -o {filename}.exe {filename}.go", created.getCompileCommand());
+    Assertions.assertEquals("{filename}.exe", created.getRunCommand());
+    Assertions.assertTrue(created.isEnabled());
+    Assertions.assertEquals("Main.go", created.getSourceFilename());
+    Assertions.assertEquals(1.5, created.getTimeMultiplier());
+    Assertions.assertEquals(2.0, created.getMemoryMultiplier());
   }
 
   /** Test case: tests the updateLanguageSettings(List) method. Test data: the slug of the new language is empty. Expected: the update fails. */
@@ -152,13 +185,18 @@ public class LanguageServiceTest {
   private List<Language> currentLanguages() {
     List<Language> languages = new ArrayList<>();
     for (Language language : languageService.getAllLanguages()) {
-      languages.add(
+      Language copy =
           new Language(
               language.getLanguageId(),
               language.getLanguageSlug(),
               language.getLanguageName(),
               language.getCompileCommand(),
-              language.getRunCommand()));
+              language.getRunCommand());
+      copy.setEnabled(language.isEnabled());
+      copy.setSourceFilename(language.getSourceFilename());
+      copy.setTimeMultiplier(language.getTimeMultiplier());
+      copy.setMemoryMultiplier(language.getMemoryMultiplier());
+      languages.add(copy);
     }
     return languages;
   }

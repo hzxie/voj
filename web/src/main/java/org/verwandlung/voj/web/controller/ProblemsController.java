@@ -40,6 +40,7 @@ import org.verwandlung.voj.web.exception.ResourceNotFoundException;
 import org.verwandlung.voj.web.model.*;
 import org.verwandlung.voj.web.service.DiscussionService;
 import org.verwandlung.voj.web.service.LanguageService;
+import org.verwandlung.voj.web.service.OptionService;
 import org.verwandlung.voj.web.service.ProblemService;
 import org.verwandlung.voj.web.service.SubmissionService;
 import org.verwandlung.voj.web.util.HttpRequestParser;
@@ -66,37 +67,66 @@ public class ProblemsController {
    */
   @RequestMapping(value = "", method = RequestMethod.GET)
   public ModelAndView problemsView(
-      @RequestParam(value = "start", required = false, defaultValue = "1") long startIndex,
-      @RequestParam(value = "keyword", required = false) String keyword,
-      @RequestParam(value = "category", required = false) String problemCategorySlug,
+      @RequestParam(value = "page", required = false, defaultValue = "1") int pageNumber,
+      @RequestParam(value = "field", required = false, defaultValue = "title") String field,
+      @RequestParam(value = "query", required = false) String query,
+      @RequestParam(value = "difficulty", required = false, defaultValue = "")
+          String problemDifficultySlug,
       HttpServletRequest request,
       HttpServletResponse response)
       throws UnsupportedEncodingException {
-    long startIndexOfProblems = getFirstIndexOfProblems();
-    if (startIndex < startIndexOfProblems) {
-      startIndex = startIndexOfProblems;
+    if (!"id".equals(field) && !"title".equals(field) && !"tag".equals(field)) {
+      field = "title";
+    }
+    if (pageNumber < 1) {
+      pageNumber = 1;
     }
 
-    List<Problem> problems =
-        problemService.getProblemsUsingFilters(
-            startIndex, keyword, problemCategorySlug, null, true, NUMBER_OF_PROBLEMS_PER_PAGE);
+    final int NUMBER_OF_PROBLEMS_PER_PAGE =
+        optionService.getIntOption("problemsPerPage", DEFAULT_NUMBER_OF_PROBLEMS_PER_PAGE);
     long totalProblems =
-        problemService.getNumberOfProblemsUsingFilters(keyword, problemCategorySlug, true);
-    ModelAndView view = new ModelAndView("problems/problems");
-    view.addObject("problems", problems)
-        .addObject("startIndexOfProblems", startIndexOfProblems)
-        .addObject("numberOfProblemsPerPage", NUMBER_OF_PROBLEMS_PER_PAGE)
-        .addObject("totalProblems", totalProblems)
-        .addObject("problemCategories", problemService.getProblemCategoriesWithHierarchy());
+        problemService.getNumberOfProblemsByPage(field, query, problemDifficultySlug, true);
+    long totalPages = (totalProblems + NUMBER_OF_PROBLEMS_PER_PAGE - 1) / NUMBER_OF_PROBLEMS_PER_PAGE;
+    if (totalPages > 0 && pageNumber > totalPages) {
+      pageNumber = (int) totalPages;
+    }
+    List<Problem> problems =
+        problemService.getProblemsByPage(
+            pageNumber, NUMBER_OF_PROBLEMS_PER_PAGE, field, query, problemDifficultySlug, true);
 
-    HttpSession session = request.getSession();
-    if (isLoggedIn(session)) {
-      long userId = HttpSessionParser.getCurrentUser().getUid();
-      long endIndex =
-          problemService.getLastIndexOfProblems(true, startIndex, NUMBER_OF_PROBLEMS_PER_PAGE);
-      Map<Long, Submission> submissionOfProblems =
-          submissionService.getSubmissionOfProblems(userId, startIndex, endIndex);
-      view.addObject("submissionOfProblems", submissionOfProblems);
+    ModelAndView view = new ModelAndView("pages/problems/problems");
+    view.addObject("problems", problems)
+        .addObject("totalProblems", totalProblems)
+        .addObject("currentPage", pageNumber)
+        .addObject("totalPages", totalPages)
+        .addObject("windowStart", Math.max(1, pageNumber - 2))
+        .addObject("windowEnd", (int) Math.max(1, Math.min(totalPages, pageNumber + 2)))
+        .addObject("field", field)
+        .addObject("query", query)
+        .addObject("problemDifficulties", problemService.getProblemDifficulties())
+        .addObject("selectedProblemDifficulty", problemDifficultySlug);
+
+    // Tags + (when logged in) solved status are keyed by problem id; the page's
+    // problems may not be a contiguous id range once filtered, so bound the
+    // lookups by the min/max id actually shown.
+    if (problems != null && !problems.isEmpty()) {
+      long minProblemId = problems.get(0).getProblemId();
+      long maxProblemId = problems.get(0).getProblemId();
+      for (Problem problem : problems) {
+        minProblemId = Math.min(minProblemId, problem.getProblemId());
+        maxProblemId = Math.max(maxProblemId, problem.getProblemId());
+      }
+      view.addObject(
+          "problemTagsOfProblems",
+          problemService.getProblemTagsOfProblems(minProblemId, maxProblemId));
+
+      HttpSession session = request.getSession();
+      if (isLoggedIn(session)) {
+        long userId = HttpSessionParser.getCurrentUser().getUid();
+        Map<Long, Submission> submissionOfProblems =
+            submissionService.getSubmissionOfProblems(userId, minProblemId, maxProblemId + 1);
+        view.addObject("submissionOfProblems", submissionOfProblems);
+      }
     }
     return view;
   }
@@ -124,9 +154,11 @@ public class ProblemsController {
       @RequestParam(value = "category", required = false) String problemCategorySlug,
       HttpServletRequest request) {
     HttpSession session = request.getSession();
+    final int NUMBER_OF_PROBLEMS_PER_PAGE =
+        optionService.getIntOption("problemsPerPage", DEFAULT_NUMBER_OF_PROBLEMS_PER_PAGE);
     List<Problem> problems =
         problemService.getProblemsUsingFilters(
-            startIndex, keyword, problemCategorySlug, null, true, NUMBER_OF_PROBLEMS_PER_PAGE);
+            startIndex, keyword, problemCategorySlug, null, null, true, NUMBER_OF_PROBLEMS_PER_PAGE);
     Map<Long, Submission> submissionOfProblems = null;
     if (isLoggedIn(session)) {
       long userId = HttpSessionParser.getCurrentUser().getUid();
@@ -185,8 +217,13 @@ public class ProblemsController {
       }
     }
 
-    ModelAndView view = new ModelAndView("problems/problem");
+    ModelAndView view = new ModelAndView("pages/problems/problem");
     view.addObject("problem", problem);
+    // Standard (non-contest) problem view. The problem template is shared with
+    // the contest problem view, which sets isContest=true; here it must be set
+    // to false so ${isContest and ...} resolves rather than failing on a null.
+    view.addObject("isContest", false);
+    view.addObject("problemTags", problemService.getProblemTagsUsingProblemId(problemId));
     view.addObject(
         "discussionThreads",
         discussionService.getDiscussionThreadsOfProblem(
@@ -225,8 +262,11 @@ public class ProblemsController {
       throw new ResourceNotFoundException();
     }
 
-    ModelAndView view = new ModelAndView("discussion/thread");
+    ModelAndView view = new ModelAndView("pages/discussion/thread");
     view.addObject("discussionThread", discussionThread);
+    view.addObject("minSolvedToVote", discussionService.getMinSolvedToVote());
+    view.addObject("minSolvedToReport", discussionService.getMinSolvedToReport());
+    view.addObject("postDelayMinutes", discussionService.getNewUserPostDelay());
     return view;
   }
 
@@ -261,8 +301,8 @@ public class ProblemsController {
     return result;
   }
 
-  /** The number of problems to load per request. */
-  private static final int NUMBER_OF_PROBLEMS_PER_PAGE = 100;
+  /** The default number of problems to load per request when the admin option is unset. */
+  private static final int DEFAULT_NUMBER_OF_PROBLEMS_PER_PAGE = 100;
 
   /** The number of recent submissions to load per problem. */
   private static final int NUMBER_OF_SUBMISSIONS_PER_PROBLEM = 10;
@@ -287,6 +327,9 @@ public class ProblemsController {
 
   /** The autowired DiscussionService object. Used for getting the discussions related to problems. */
   @Autowired private DiscussionService discussionService;
+
+  /** The autowired OptionService object. Used for reading the configurable list-display options. */
+  @Autowired private OptionService optionService;
 
   /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(ProblemsController.class);

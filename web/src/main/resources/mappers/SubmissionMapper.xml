@@ -25,10 +25,14 @@
 			javaType="org.verwandlung.voj.web.model.Language" 
 			column="language_id"
 			select="org.verwandlung.voj.web.mapper.LanguageMapper.getLanguageUsingId" />
-		<association property="judgeResult" 
-			javaType="org.verwandlung.voj.web.model.JudgeResult" 
+		<association property="judgeResult"
+			javaType="org.verwandlung.voj.web.model.JudgeResult"
 			column="submission_judge_result"
 			select="org.verwandlung.voj.web.mapper.JudgeResultMapper.getJudgeResultUsingSlug" />
+		<association property="judger"
+			javaType="org.verwandlung.voj.web.model.User"
+			column="judger_uid"
+			select="org.verwandlung.voj.web.mapper.UserMapper.getUserUsingUid" />
 	</resultMap>
 	
 	<!-- Methods -->
@@ -90,11 +94,25 @@
 		</if>
 		GROUP BY DATE(submission_submit_time)
 	</select>
+	<select id="getNumberOfSubmissionsGroupByJudgeResult"
+		parameterType="map"
+		resultType="hashmap">
+		SELECT submission_judge_result AS slug, COUNT(*) AS submissions
+		FROM `voj_submissions`
+		WHERE submission_submit_time &gt;= #{startTime} AND submission_submit_time &lt; #{endTime}
+		GROUP BY submission_judge_result
+	</select>
+	<select id="getNumberOfPendingSubmissions"
+		resultType="long">
+		SELECT COUNT(*)
+		FROM voj_submissions
+		WHERE submission_judge_result = 'PD'
+	</select>
 	<select id="getNumberOfSubmissionsUsingLanguage"
 		parameterType="org.verwandlung.voj.web.model.Language"
 		resultType="long">
 		SELECT COUNT(*)
-		FROM voj_submissions 
+		FROM voj_submissions
 		WHERE language_id = #{languageId}
 	</select>
 	<select id="getLatestSubmissionId"
@@ -194,14 +212,36 @@
 		FROM voj_submissions 
 		WHERE uid = #{uid} AND submission_judge_result = 'AC'
 	</select>
-	<select id="getTotalSubmissionUsingUserId" 
+	<select id="getTotalSubmissionUsingUserId"
 		parameterType="long"
 		resultType="long">
-		SELECT COUNT(*) 
-		FROM voj_submissions 
+		SELECT COUNT(*)
+		FROM voj_submissions
 		WHERE uid = #{uid} AND submission_judge_result != 'PD' AND submission_judge_result != 'SE'
 	</select>
-	<insert id="createSubmission" 
+	<select id="getNumberOfSolvedProblemsByDifficulty"
+		parameterType="long"
+		resultType="hashmap">
+		SELECT d.problem_difficulty_slug AS slug,
+			d.problem_difficulty_name AS name,
+			COUNT(DISTINCT CASE WHEN p.problem_status = 'PUBLISHED' THEN p.problem_id END) AS total,
+			COUNT(DISTINCT CASE WHEN p.problem_status = 'PUBLISHED' AND s.submission_judge_result = 'AC' THEN s.problem_id END) AS solved
+		FROM voj_problem_difficulty d
+		LEFT JOIN voj_problems p ON p.problem_difficulty_id = d.problem_difficulty_id
+		LEFT JOIN voj_submissions s ON s.problem_id = p.problem_id AND s.uid = #{uid}
+		GROUP BY d.problem_difficulty_id, d.problem_difficulty_slug, d.problem_difficulty_name
+		ORDER BY d.problem_difficulty_id
+	</select>
+	<select id="getSolvedProblemCountForAllUsers"
+		resultType="hashmap">
+		SELECT uid AS uid,
+			COUNT(DISTINCT problem_id) AS solved
+		FROM voj_submissions
+		WHERE submission_judge_result = 'AC'
+		GROUP BY uid
+		ORDER BY solved DESC, uid ASC
+	</select>
+	<insert id="createSubmission"
 		parameterType="org.verwandlung.voj.web.model.Submission"
 		keyProperty="submissionId" 
 		keyColumn="submission_id"
@@ -214,6 +254,12 @@
 		UPDATE voj_submissions 
 		SET problem_id = #{problem.problemId}, uid = #{user.uid}, language_id = #{language.languageId}, submission_submit_time = #{submitTime}, submission_execute_time = #{executeTime}, submission_used_time = #{usedTime}, submission_used_memory = #{usedMemory}, submission_judge_result = #{judgeResult.judgeResultSlug}, submission_judge_score = #{judgeScore}, submission_judge_log = #{judgeLog}, submission_code = #{code} 
 		WHERE submission_id = #{submissionId}
+	</update>
+	<update id="markSubmissionUnjudgeable"
+		parameterType="map">
+		UPDATE voj_submissions
+		SET submission_judge_result = #{judgeResultSlug}, submission_judge_log = #{judgeLog}, submission_execute_time = NOW()
+		WHERE submission_id = #{submissionId} AND submission_judge_result = 'PD'
 	</update>
 	<delete id="deleteSubmission"
 		parameterType="long">

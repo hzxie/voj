@@ -34,17 +34,12 @@ public class DiscussionReply implements Serializable {
    * @param discussionThreadId - the unique identifier of the discussion thread
    * @param discussionReplyCreator - the creator of the discussion reply
    * @param discussionReplyContent - the content of the discussion reply
-   * @param discussionReplyVotes - the voting result of the discussion reply
    */
   public DiscussionReply(
-      long discussionThreadId,
-      User discussionReplyCreator,
-      String discussionReplyContent,
-      String discussionReplyVotes) {
+      long discussionThreadId, User discussionReplyCreator, String discussionReplyContent) {
     this.discussionThreadId = discussionThreadId;
     this.discussionReplyCreator = discussionReplyCreator;
     this.discussionReplyContent = discussionReplyContent;
-    this.discussionReplyVotes = discussionReplyVotes;
   }
 
   /**
@@ -54,15 +49,13 @@ public class DiscussionReply implements Serializable {
    * @param discussionThreadId - the unique identifier of the discussion thread
    * @param discussionReplyCreator - the creator of the discussion reply
    * @param discussionReplyContent - the content of the discussion reply
-   * @param discussionReplyVote - the voting result of the discussion reply
    */
   public DiscussionReply(
       long discussionReplyId,
       long discussionThreadId,
       User discussionReplyCreator,
-      String discussionReplyContent,
-      String discussionReplyVote) {
-    this(discussionThreadId, discussionReplyCreator, discussionReplyContent, discussionReplyVote);
+      String discussionReplyContent) {
+    this(discussionThreadId, discussionReplyCreator, discussionReplyContent);
     this.discussionReplyId = discussionReplyId;
   }
 
@@ -157,21 +150,93 @@ public class DiscussionReply implements Serializable {
   }
 
   /**
-   * Gets the voting result of the discussion reply.
+   * Gets the number of upvotes of the discussion reply.
    *
-   * @return the voting result of the discussion reply
+   * @return the number of upvotes of the discussion reply
    */
-  public String getDiscussionReplyVotes() {
-    return discussionReplyVotes;
+  public int getNumberOfVoteUp() {
+    return numberOfVoteUp;
   }
 
   /**
-   * Sets the voting result of the discussion reply.
+   * Sets the number of upvotes of the discussion reply.
    *
-   * @param discussionReplyVote - the voting result of the discussion reply
+   * @param numberOfVoteUp - the number of upvotes of the discussion reply
    */
-  public void setDiscussionReplyVotes(String discussionReplyVote) {
-    this.discussionReplyVotes = discussionReplyVote;
+  public void setNumberOfVoteUp(int numberOfVoteUp) {
+    this.numberOfVoteUp = numberOfVoteUp;
+  }
+
+  /**
+   * Gets the number of downvotes of the discussion reply.
+   *
+   * @return the number of downvotes of the discussion reply
+   */
+  public int getNumberOfVoteDown() {
+    return numberOfVoteDown;
+  }
+
+  /**
+   * Sets the number of downvotes of the discussion reply.
+   *
+   * @param numberOfVoteDown - the number of downvotes of the discussion reply
+   */
+  public void setNumberOfVoteDown(int numberOfVoteDown) {
+    this.numberOfVoteDown = numberOfVoteDown;
+  }
+
+  /**
+   * Gets whether the current user has upvoted the discussion reply.
+   *
+   * @return whether the current user has upvoted the discussion reply
+   */
+  public boolean getIsVotedUp() {
+    return isVotedUp;
+  }
+
+  /**
+   * Sets whether the current user has upvoted the discussion reply.
+   *
+   * @param isVotedUp - whether the current user has upvoted the discussion reply
+   */
+  public void setIsVotedUp(boolean isVotedUp) {
+    this.isVotedUp = isVotedUp;
+  }
+
+  /**
+   * Gets whether the current user has downvoted the discussion reply.
+   *
+   * @return whether the current user has downvoted the discussion reply
+   */
+  public boolean getIsVotedDown() {
+    return isVotedDown;
+  }
+
+  /**
+   * Sets whether the current user has downvoted the discussion reply.
+   *
+   * @param isVotedDown - whether the current user has downvoted the discussion reply
+   */
+  public void setIsVotedDown(boolean isVotedDown) {
+    this.isVotedDown = isVotedDown;
+  }
+
+  /**
+   * Gets whether the discussion reply is visible to ordinary users.
+   *
+   * @return whether the discussion reply is visible
+   */
+  public boolean isVisible() {
+    return visible;
+  }
+
+  /**
+   * Sets whether the discussion reply is visible to ordinary users.
+   *
+   * @param visible - whether the discussion reply is visible
+   */
+  public void setVisible(boolean visible) {
+    this.visible = visible;
   }
 
   /* (non-Javadoc)
@@ -200,8 +265,26 @@ public class DiscussionReply implements Serializable {
   /** The content of the discussion reply. */
   private String discussionReplyContent;
 
-  /** The voting result of the discussion reply. */
-  private String discussionReplyVotes;
+  /** The number of upvotes of the discussion reply (a computed, non-persistent view value). */
+  private int numberOfVoteUp;
+
+  /** The number of downvotes of the discussion reply (a computed, non-persistent view value). */
+  private int numberOfVoteDown;
+
+  /**
+   * Whether the current user has upvoted the discussion reply (a computed, non-persistent view
+   * value).
+   */
+  private boolean isVotedUp;
+
+  /**
+   * Whether the current user has downvoted the discussion reply (a computed, non-persistent view
+   * value).
+   */
+  private boolean isVotedDown;
+
+  /** Whether the discussion reply is visible to ordinary users. */
+  private boolean visible = true;
 
   /** The unique serialization identifier. */
   private static final long serialVersionUID = 3380540873295113998L;

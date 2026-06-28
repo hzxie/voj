@@ -45,6 +45,17 @@ public interface BulletinBoardMessageMapper {
       @Param("offset") long offset, @Param("limit") int limit);
 
   /**
+   * Gets a subset of the bulletin board messages visible to the public (i.e. with a {@code
+   * PUBLISHED} status), with pinned messages floated to the top.
+   *
+   * @param offset - the starting number of the bulletin board message identifier
+   * @param limit - the number of bulletin board messages to fetch
+   * @return a list containing published bulletin board messages, pinned ones first
+   */
+  List<BulletinBoardMessage> getPublishedBulletinBoardMessages(
+      @Param("offset") long offset, @Param("limit") int limit);
+
+  /**
    * Gets a bulletin board message by its unique identifier.
    *
    * @param bulletinBoardMessageId - the unique identifier of the bulletin board message
