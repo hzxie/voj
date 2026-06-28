@@ -3,7 +3,7 @@
 # Build the Spring Boot artifacts for Verwandlung Online Judge.
 #
 # Produces two self-contained, executable artifacts:
-#   web/target/voj.web.war       - the web application (embedded Tomcat)
+#   web/target/voj.web.jar       - the web application (embedded Tomcat)
 #   judger/target/voj.judger.jar - the judger
 #
 # Run them with scripts/run-web.sh and scripts/run-judger.sh.
@@ -51,4 +51,4 @@ case "$TARGET" in
 esac
 
 echo "==> Done. Artifacts:"
-ls -lh web/target/voj.web.war judger/target/voj.judger.jar 2>/dev/null || true
+ls -lh web/target/voj.web.jar judger/target/voj.judger.jar 2>/dev/null || true

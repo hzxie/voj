@@ -116,4 +116,9 @@
 		WHERE contest_id = #{contestId} 
 		AND contestant_uid = #{contestantUid}
 	</delete>
+	<delete id="deleteContestantsOfContest"
+		parameterType="long">
+		DELETE FROM voj_contest_contestants
+		WHERE contest_id = #{contestId}
+	</delete>
 </mapper>

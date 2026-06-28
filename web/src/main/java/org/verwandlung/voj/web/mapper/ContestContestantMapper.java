@@ -101,4 +101,12 @@ public interface ContestContestantMapper {
    */
   int deleteContestContestant(
       @Param("contestId") long contestId, @Param("contestantUid") long contestantUid);
+
+  /**
+   * Deletes all participation records of a contest.
+   *
+   * @param contestId - the unique identifier of the contest
+   * @return the number of participation records deleted
+   */
+  int deleteContestantsOfContest(@Param("contestId") long contestId);
 }

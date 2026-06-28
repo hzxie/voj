@@ -46,7 +46,7 @@ RUN sed -i "s/127\.0\.0\.1/0.0.0.0/g" /etc/mysql/mariadb.conf.d/50-server.cnf &&
     mysql -e "GRANT SELECT, INSERT, UPDATE, DELETE ON voj.* TO 'voj'@'%' IDENTIFIED BY '${MYSQL_USER_PASS}'"
 
 # Install Maven and ActiveMQ. The web app now ships as a self-contained Spring
-# Boot executable WAR with an embedded Tomcat, so no external Tomcat is needed.
+# Boot executable JAR with an embedded Tomcat, so no external Tomcat is needed.
 RUN MAVEN_VERSION=$(curl -s https://maven.apache.org/download.cgi | grep -oP 'apache-maven-\K[0-9]+\.[0-9]+\.[0-9]+' | head -1) && \
     ACTIVEMQ_VERSION=$(curl -s https://activemq.apache.org/components/classic/download/ | grep -oP 'apache-activemq-\K[0-9]+\.[0-9]+\.[0-9]+' | head -1) && \
 # Install Maven
@@ -67,7 +67,7 @@ RUN MAVEN_VERSION=$(curl -s https://maven.apache.org/download.cgi | grep -oP 'ap
 
 # Build the web project from the build context (no network checkout).
 # Deployment values are baked into voj.properties before packaging, then a
-# self-contained executable WAR (embedded Tomcat) is produced.
+# self-contained executable JAR (embedded Tomcat) is produced.
 COPY . /root/voj
 RUN sed -i "s@localhost:8080/voj@${WEBSITE_URL}@g" voj/web/src/main/resources/voj.properties && \
     sed -i "s/jdbc.username = root/jdbc.username = voj/g" voj/web/src/main/resources/voj.properties && \
@@ -78,7 +78,7 @@ RUN sed -i "s@localhost:8080/voj@${WEBSITE_URL}@g" voj/web/src/main/resources/vo
     sed -i "s/judger.apiToken = change-me-shared-secret/judger.apiToken = ${JUDGER_API_TOKEN}/g" voj/web/src/main/resources/voj.properties && \
     $M2_HOME/bin/mvn package -DskipTests -f voj/web/pom.xml && \
     mkdir -p /opt/voj && \
-    cp voj/web/target/voj.web.war /opt/voj/voj.web.war && \
+    cp voj/web/target/voj.web.jar /opt/voj/voj.web.jar && \
     /etc/init.d/mariadb start && \
     mysql voj < voj/sql/schema.sql && \
     mysql voj < voj/sql/seed.sql && \

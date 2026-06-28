@@ -185,6 +185,8 @@ public class ContestService {
    * @return whether the contest was deleted
    */
   public boolean deleteContest(long contestId) {
+    contestSubmissionMapper.deleteSubmissionsOfContest(contestId);
+    contestContestantMapper.deleteContestantsOfContest(contestId);
     return contestMapper.deleteContest(contestId) > 0;
   }
 

@@ -99,3 +99,48 @@ configuration. See [`../docker/README.md`](../docker/README.md).
 When the judger is not running as root it cannot drop privileges, so submissions
 run as the same user as the judger. This is fine for development and continuous
 integration but provides no isolation, so do not use it in production.
+
+## Windows native sandbox
+
+On Windows the native backend is the only option (`isolate` is Linux-only). Each
+submission runs under a **separate low-privilege Windows account** inside a
+[Job Object](https://learn.microsoft.com/windows/win32/procthread/job-objects)
+that caps the process count (anti fork-bomb), enforces memory and wall-clock
+limits, applies UI restrictions, and kills the whole process tree when the run
+ends.
+
+### The sandbox account
+
+Unlike Linux, Windows needs a real account *with a password* to log the
+submission in. Set both `system.username` and `system.password` to a dedicated
+low-privilege local account (do not reuse the judger's own account):
+
+```
+net user voj-sandbox <StrongPassword> /add
+```
+
+Then set `system.username = voj-sandbox` and `system.password = <StrongPassword>`
+in `voj.properties`.
+
+Requirements for that account:
+
+- It must have the **"Log on as a batch job"** right
+  (`SeBatchLogonRight`) — the judger logs it in with `LOGON32_LOGON_BATCH`. Grant
+  it via *Local Security Policy → Local Policies → User Rights Assignment → Log
+  on as a batch job*, or `secedit`.
+- It must have a **loadable user profile**; the judger creates each submission
+  process with `LOGON_WITH_PROFILE`. Logging in once interactively, or letting
+  the first batch logon create it, is enough.
+- Keep it a plain member of *Users* (no admin rights). It only needs to read the
+  submission's work directory under `judger.workDir` and execute the compiled
+  program.
+
+Because the credentials live in `voj.properties`, keep that file readable only by
+the judger account.
+
+### Native build prerequisites (Windows)
+
+The JNI library is built with the MSVC toolchain (the Windows runner uses Win32
+APIs — `CreateProcessWithLogonW`, Job Objects). Build with a Visual Studio C++
+toolchain installed and a JDK whose `include/win32` headers are available to the
+compiler.

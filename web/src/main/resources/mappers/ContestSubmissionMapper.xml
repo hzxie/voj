@@ -64,4 +64,9 @@
 		WHERE contest_id = #{contestId} 
 		AND submission_id = #{submissionId}
 	</delete>
+	<delete id="deleteSubmissionsOfContest"
+		parameterType="long">
+		DELETE FROM voj_contest_submissions
+		WHERE contest_id = #{contestId}
+	</delete>
 </mapper>
