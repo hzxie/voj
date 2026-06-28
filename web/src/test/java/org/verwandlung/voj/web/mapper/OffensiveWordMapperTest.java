@@ -59,6 +59,15 @@ public class OffensiveWordMapperTest {
     Assertions.assertEquals(8, offensiveWordMapper.getNumberOfOffensiveWords());
   }
 
+  /** Test case: tests that batchCreateOffensiveWords(List) ignores words that are duplicates only under the column's case- and accent-insensitive collation. Test data: two words differing only in case. Expected: just one row is inserted; the second is silently skipped instead of raising a duplicate-key error. */
+  @Test
+  public void testBatchCreateOffensiveWordsIgnoresCollationDuplicates() {
+    int numberOfRowsAffected =
+        offensiveWordMapper.batchCreateOffensiveWords(Arrays.asList("Cafe", "cafe"));
+    Assertions.assertEquals(1, numberOfRowsAffected);
+    Assertions.assertEquals(7, offensiveWordMapper.getNumberOfOffensiveWords());
+  }
+
   /** Test case: tests the deleteAllOffensiveWords() method. Test data: N/a. Expected: the dictionary is emptied. */
   @Test
   public void testDeleteAllOffensiveWords() {

@@ -80,6 +80,16 @@ public class OffensiveWordServiceTest {
     Assertions.assertFalse(offensiveWordService.getOffensiveWordsImportedAt().isEmpty());
   }
 
+  /** Test case: tests that replaceAllOffensiveWords(Collection) tolerates words that are duplicates only under the database collation (e.g. the same term contributed by different source lists in a different case or accent) and reports the count actually stored. Test data: a set whose entries are distinct as Java strings but collation-equal in pairs. Expected: the import succeeds and the stored count counts each collation-equal group once. */
+  @Test
+  public void testReplaceAllOffensiveWordsDeduplicatesCollationDuplicates() {
+    int numberOfWords =
+        offensiveWordService.replaceAllOffensiveWords(
+            Arrays.asList("Cafe", "cafe", "café", "resume", "RESUME", "naive"));
+    Assertions.assertEquals(3, numberOfWords);
+    Assertions.assertEquals(3, offensiveWordService.getNumberOfOffensiveWords());
+  }
+
   /** The OffensiveWordService object under test. */
   @Autowired private OffensiveWordService offensiveWordService;
 }

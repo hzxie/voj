@@ -86,8 +86,9 @@ public class OffensiveWordService {
    * Rebuilding the in-memory DFA is left to the caller, which must do it after this method returns
    * (i.e. after the transaction commits).
    *
-   * @param offensiveWords - the de-duplicated offensive words to store
-   * @return the number of offensive words stored
+   * @param offensiveWords - the offensive words to store, de-duplicated case-sensitively (the
+   *     database collapses any further duplicates that are only collation-equal)
+   * @return the number of offensive words actually stored
    */
   public int replaceAllOffensiveWords(Collection<String> offensiveWords) {
     offensiveWordMapper.deleteAllOffensiveWords();
@@ -99,7 +100,7 @@ public class OffensiveWordService {
     }
     updateOption(
         OFFENSIVE_WORDS_IMPORTED_AT_OPTION_KEY, LocalDateTime.now().format(IMPORTED_AT_FORMATTER));
-    return words.size();
+    return (int) offensiveWordMapper.getNumberOfOffensiveWords();
   }
 
   /**

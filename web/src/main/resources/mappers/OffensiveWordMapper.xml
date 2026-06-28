@@ -19,7 +19,10 @@
 	</delete>
 	<insert id="batchCreateOffensiveWords"
 		parameterType="map">
-		INSERT INTO voj_offensive_words (word)
+		<!-- IGNORE skips words that collide with an existing row under the column's
+		     case- and accent-insensitive collation (utf8mb4_unicode_ci), e.g. "K粉" and
+		     "k粉", which the Java-side set de-duplicates only case-sensitively. -->
+		INSERT IGNORE INTO voj_offensive_words (word)
 		VALUES
 		<foreach collection="offensiveWords" item="word" separator=",">
 			(#{word})
