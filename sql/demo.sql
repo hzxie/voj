@@ -4500,4 +4500,21 @@ INSERT INTO `voj_problem_tag_relationships` (`problem_id`, `problem_tag_id`) VAL
 (2023, 12);
 -- <<< CODECONTESTS END
 
+-- Keep the demo fresh over time. The data above is authored around the anchor date
+-- 2026-06-27 (contest 5 is "running", 6 is "today", 7/8 are "upcoming"). On every
+-- import we shift the whole contest timeline by the number of days between that
+-- anchor and today, so the live/upcoming contests never rot into the past. The
+-- shift is a whole number of days, so contests and their linked submissions move
+-- together and standings/penalties stay intact. Discussion and registration times
+-- are intentionally left as historical literals.
+SET @voj_demo_shift = DATEDIFF(CURDATE(), '2026-06-27');
+
+UPDATE `voj_contests`
+   SET `contest_start_time` = `contest_start_time` + INTERVAL @voj_demo_shift DAY,
+       `contest_end_time`   = `contest_end_time`   + INTERVAL @voj_demo_shift DAY;
+
+UPDATE `voj_submissions`
+   SET `submission_submit_time`  = `submission_submit_time`  + INTERVAL @voj_demo_shift DAY,
+       `submission_execute_time` = `submission_execute_time` + INTERVAL @voj_demo_shift DAY;
+
 SET FOREIGN_KEY_CHECKS = 1;

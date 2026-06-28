@@ -96,6 +96,10 @@ Convenience wrappers live in [`scripts/`](scripts/): `build-jars.sh`,
 MySQL/ActiveMQ and import `sql/schema.sql`, `sql/seed.sql` and `sql/demo.sql` on
 first launch).
 
+Both components read a `voj.properties` file (database, mail, message queue,
+sandbox, etc.). See [`docs/configuration.md`](docs/configuration.md) for the full
+property reference.
+
 ### Requirements
 
 | Component | Requirement |
