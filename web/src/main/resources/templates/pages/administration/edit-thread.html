@@ -17,7 +17,6 @@
                   th:text="${thread.visible} ? #{voj.administration.edit-thread.visible} : #{voj.administration.edit-thread.hidden}">Visible</span>
             <div class="adm-flex1"></div>
             <a class="adm-btn-tn" th:href="@{/discussion/{id}(id=${thread.discussionThreadId})}" target="_blank" th:text="#{voj.administration.edit-thread.view-thread}">view thread</a>
-            <button type="button" class="adm-btn-tn danger" id="delete-thread" th:text="#{voj.administration.edit-thread.delete}">delete</button>
             <button type="button" class="adm-btn-accent" id="save-thread" th:text="#{voj.administration.edit-thread.save}">$ save</button>
         </div>
 
@@ -222,7 +221,7 @@
                     }
                 });
             }
-            ['delete-thread', 'delete-thread-2'].forEach(function (id) {
+            ['delete-thread-2'].forEach(function (id) {
                 var el = document.getElementById(id);
                 if (el) el.addEventListener('click', del);
             });

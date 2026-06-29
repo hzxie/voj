@@ -165,7 +165,7 @@
 /* Per-list column templates (consumed by .adm-table-head / .adm-table-row via --cols). */
 .adm-table-inner.cols-problems { --cols:34px 52px minmax(0,1.3fr) 130px minmax(0,1fr) 86px 56px 62px 98px 40px; }
 .adm-table-inner.cols-contests { --cols:34px minmax(220px,1fr) 104px 80px minmax(180px,0.6fr) 96px 100px 104px 40px; }
-.adm-table-inner.cols-submissions { --cols:34px 70px 120px minmax(0,1fr) 120px 80px 80px 96px 40px; }
+.adm-table-inner.cols-submissions { --cols:34px 70px 120px minmax(0,1fr) 150px 120px 80px 80px 96px 40px; }
 .adm-table-inner.cols-discussion { --cols:34px minmax(0,1fr) 116px 152px 70px 78px 104px 40px; }
 .adm-table-inner.cols-users { --cols:34px 130px minmax(0,320px) 132px 64px 74px 104px 78px minmax(0,1fr) 40px; }
 .adm-table-head { display:grid; grid-template-columns:var(--cols); gap:14px; padding:12px 20px; border-bottom:1px solid var(--line); font-size:10.5px; letter-spacing:1px; color:var(--text3); align-items:center; text-transform:uppercase; }
@@ -717,3 +717,21 @@ input.adm-w120 { width:120px; }
 .adm-catlist-head .used,
 .adm-pwpanel .lbl,
 .adm-mod-cols span { text-transform:uppercase; }
+
+/* Action buttons display their label lowercase regardless of the i18n value's
+   case, so the verb buttons stay visually consistent. The i18n strings keep
+   their natural case — same single-source-of-truth principle as the label
+   block above. (Segmented toggles in .adm-seg are intentionally excluded: they
+   carry proper nouns / acronyms like ICPC, IOI and role names.) */
+.adm-btn-tn,
+.adm-btn-ghost,
+.adm-btn-accent,
+.adm-btn-save,
+.adm-btn-outline,
+.adm-btn-warn,
+.adm-btn-reset,
+.adm-btn-resolve,
+.adm-bulk-act,
+.adm-bulk-clear,
+.adm-reply-act,
+input.adm-toolbar-select { text-transform:lowercase; }

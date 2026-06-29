@@ -22,7 +22,6 @@
             <div class="adm-flex1"></div>
             <a th:unless="${isCreate}" class="adm-btn-tn" th:href="@{/accounts/user/{uid}(uid=${user.uid})}" target="_blank" th:text="#{voj.administration.edit-user.view-profile}">view profile</a>
             <a th:if="${isCreate}" class="adm-btn-tn" th:href="@{/administration/all-users}" th:text="#{voj.administration.edit-user.discard}">discard</a>
-            <button th:unless="${isCreate}" type="button" class="adm-btn-tn danger btn-danger" th:text="#{voj.administration.edit-user.delete-user}">delete</button>
             <button type="submit" class="adm-btn-tn go" th:text="${isCreate} ? '$ ' + #{voj.administration.edit-user.create-user} : '$ ' + #{voj.administration.edit-user.save}">$ save</button>
         </div>
 

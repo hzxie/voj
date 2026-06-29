@@ -18,7 +18,6 @@
             <input type="hidden" id="contest-status" th:value="${status}" />
             <div class="adm-flex1"></div>
             <a class="adm-btn-tn" th:if="${isEdit and phase != 'READY'}" th:href="@{'/contest/' + ${contest.contestId} + '/leaderboard'}" th:text="#{voj.administration.edit-contest.standings}">standings</a>
-            <button type="button" class="adm-btn-tn danger" th:if="${isEdit}" id="delete-contest" th:text="#{voj.administration.edit-contest.delete}">delete</button>
             <button type="button" class="adm-btn-tn go" id="save-contest" th:text="'$ ' + #{voj.administration.edit-contest.save}">$ save</button>
         </div>
 
@@ -424,7 +423,7 @@
                     }
                 });
             }
-            ['delete-contest', 'delete-contest-2'].forEach(function (id) {
+            ['delete-contest-2'].forEach(function (id) {
                 var el = document.getElementById(id);
                 if (el) el.addEventListener('click', del);
             });

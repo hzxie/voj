@@ -15,7 +15,6 @@
             <a class="adm-back" th:href="@{/administration/all-bulletins}">&#8592; <span th:text="#{voj.administration.edit-bulletin.back}">back to bulletins</span></a>
             <span class="adm-idchip" th:if="${isEdit}" th:text="'#' + ${message.messageId}">#1</span>
             <div class="adm-flex1"></div>
-            <button type="button" class="adm-btn-tn danger" th:if="${isEdit}" id="delete-bulletin" th:text="#{voj.administration.edit-bulletin.delete}">delete</button>
             <button type="button" class="adm-btn-tn go" id="save-bulletin" th:text="'$ ' + #{voj.administration.edit-bulletin.save}">$ save</button>
         </div>
 
@@ -128,7 +127,7 @@
                     }
                 });
             }
-            ['delete-bulletin', 'delete-bulletin-2'].forEach(function (id) {
+            ['delete-bulletin-2'].forEach(function (id) {
                 var el = document.getElementById(id);
                 if (el) el.addEventListener('click', del);
             });

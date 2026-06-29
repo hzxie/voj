@@ -17,7 +17,6 @@
             <input type="hidden" id="problem-status" th:value="${problem.status}" />
             <div class="adm-flex1"></div>
             <a class="adm-btn-tn" th:href="@{/p/{id}(id=${problem.problemId})}" target="_blank" th:text="#{voj.administration.edit-problem.preview}">preview</a>
-            <button type="button" class="adm-btn-tn danger" id="delete-problem" th:text="#{voj.administration.edit-problem.delete}">delete</button>
             <button type="submit" class="adm-btn-tn go" th:text="'$ ' + #{voj.administration.edit-problem.update-problem}">$ save</button>
         </div>
 
@@ -287,7 +286,7 @@
                 }
             });
         }
-        ['delete-problem', 'delete-problem-2'].forEach(function(id) {
+        ['delete-problem-2'].forEach(function(id) {
             var el = document.getElementById(id);
             if (el) el.addEventListener('click', deleteProblem);
         });
