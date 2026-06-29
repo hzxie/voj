@@ -24,6 +24,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import org.verwandlung.voj.judger.model.Submission;
@@ -91,12 +92,11 @@ public class Compiler {
    */
   private Map<String, Object> getCompileResult(String commandLine, String compileLogPath) {
     String inputFilePath = null;
-    int timeLimit = 5000;
-    int memoryLimit = 0;
 
     LOGGER.info("Start compiling with command: " + commandLine);
     RunResult runResult =
-        sandboxRunner.run(commandLine, inputFilePath, compileLogPath, timeLimit, memoryLimit);
+        sandboxRunner.run(
+            commandLine, inputFilePath, compileLogPath, compileTimeLimit, compileMemoryLimit);
     Map<String, Object> result = new HashMap<>(3, 1);
 
     boolean isSuccessful = runResult.getVerdict() == Verdict.NORMAL;
@@ -126,6 +126,23 @@ public class Compiler {
 
   /** The configured sandbox runner, used to execute the compile command. */
   @Autowired private SandboxRunner sandboxRunner;
+
+  /**
+   * The CPU time limit (milliseconds) for a compilation. Heavyweight toolchains such as the Go build
+   * driver and the JVM-based Kotlin compiler need far more than a few seconds, so this is generous
+   * and configurable rather than hardcoded.
+   */
+  @Value("${judger.compileTimeLimit:20000}")
+  private int compileTimeLimit;
+
+  /**
+   * The memory limit (kilobytes) for a compilation. Without it, a small "compiler bomb" (e.g. C++
+   * template recursion or a giant array initializer) can exhaust host memory and OOM the judger. It
+   * must stay generous enough for legitimate heavyweight compilers (the JVM-based Kotlin compiler,
+   * the Go linker), otherwise a real compile is killed and wrongly reported as a compile error.
+   */
+  @Value("${judger.compileMemoryLimit:524288}")
+  private int compileMemoryLimit;
 
   /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(Compiler.class);

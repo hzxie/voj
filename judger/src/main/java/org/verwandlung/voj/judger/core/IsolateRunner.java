@@ -141,6 +141,12 @@ public class IsolateRunner implements SandboxRunner {
     command.add("-M");
     command.add(metaFile.getAbsolutePath());
     command.add("--processes=" + maxProcesses);
+    // Cap the size of files the sandboxed program may create, so a "disk bomb" (a compiler or a
+    // submission emitting a huge file) cannot fill the work directory. Mirrors the native runner's
+    // RLIMIT_FSIZE. isolate expects the limit in kilobytes.
+    if (fileSizeLimitKb > 0) {
+      command.add("--fsize=" + fileSizeLimitKb);
+    }
 
     if (timeLimitMs > 0) {
       double timeLimitSec = timeLimitMs / 1000.0;
@@ -307,6 +313,10 @@ public class IsolateRunner implements SandboxRunner {
   /** The maximum number of processes/threads the sandboxed program may create. */
   @Value("${judger.isolate.maxProcesses:64}")
   private int maxProcesses;
+
+  /** The maximum size (kilobytes) of files the sandboxed program may create (0 means no limit). */
+  @Value("${judger.isolate.fileSizeLimitKb:262144}")
+  private int fileSizeLimitKb;
 
   /** Extra wall-clock time (seconds) allowed on top of the CPU time limit. */
   @Value("${judger.isolate.wallTimeBufferSec:1.0}")
