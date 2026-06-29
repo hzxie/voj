@@ -266,9 +266,17 @@
 		SET submission_judge_result = #{judgeResultSlug}, submission_judge_log = #{judgeLog}, submission_execute_time = NOW()
 		WHERE submission_id = #{submissionId} AND submission_judge_result = 'PD'
 	</update>
+	<update id="resetSubmissionToPending"
+		parameterType="long">
+		UPDATE voj_submissions
+		SET submission_judge_result = 'PD', submission_judge_log = NULL, submission_judge_score = NULL,
+			submission_used_time = NULL, submission_used_memory = NULL, submission_execute_time = NULL,
+			judger_uid = NULL
+		WHERE submission_id = #{submissionId}
+	</update>
 	<delete id="deleteSubmission"
 		parameterType="long">
-		DELETE FROM voj_submissions 
+		DELETE FROM voj_submissions
 		WHERE submission_id = #{submissionId}
 	</delete>
 </mapper>

@@ -272,6 +272,18 @@ public interface SubmissionMapper {
       @Param("judgeLog") String judgeLog);
 
   /**
+   * Resets a submission back to the pending state so it can be re-judged, clearing the previous
+   * verdict, judge log, resource usage, score, executing judger and execute time. Used by the
+   * rejudge flow: without this, the record would keep its old verdict, the detail pages would not
+   * show the live judging stream, and the expired-task guard (which only touches pending rows) could
+   * never mark it as unjudgeable.
+   *
+   * @param submissionId - the unique identifier of the submission
+   * @return the number of rows updated
+   */
+  int resetSubmissionToPending(@Param("submissionId") long submissionId);
+
+  /**
    * Deletes a submission by its unique identifier.
    *
    * @param submissionId - the unique identifier of the submission

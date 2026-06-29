@@ -429,6 +429,10 @@ public class SubmissionService {
         (submission != null && submission.getLanguage() != null)
             ? submission.getLanguage().getLanguageSlug()
             : null;
+    // Rejudge path: clear the previous verdict/log so the record returns to pending before the new
+    // task is enqueued. This makes the detail pages stream the live judging result again and lets
+    // the expired-task guard fall back to marking it unjudgeable if no judger ever claims it.
+    submissionMapper.resetSubmissionToPending(submissionId);
     createSubmissionTask(submissionId, languageSlug);
   }
 
