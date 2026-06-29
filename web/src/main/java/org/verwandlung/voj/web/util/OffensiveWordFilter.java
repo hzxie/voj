@@ -205,7 +205,7 @@ public class OffensiveWordFilter {
     // starting at i is an offensive word
     for (int i = 0; i < text.length(); ++i) {
       int length = checkOffensiveWord(text, i, matchType);
-      if (length > 0) {
+      if (length > 0 && hasWordBoundary(text, i, length)) {
         Position position = new Position(i, length);
         offensiveWordsPosition.add(position);
         // Skip the already-matched offensive word; subtract one because the for loop increments
@@ -213,6 +213,42 @@ public class OffensiveWordFilter {
       }
     }
     return offensiveWordsPosition;
+  }
+
+  /**
+   * Checks that an ASCII-alphanumeric match is a whole word rather than a fragment of a longer one.
+   * The DFA matches character by character, which is what Chinese (which has no word delimiters)
+   * needs, but for ASCII text it would otherwise mask {@code b} inside {@code dashboard} or
+   * {@code ass} inside {@code class}. So when the match begins or ends with an ASCII letter/digit, we
+   * require the adjacent character on that side not to be one too; CJK matches carry no such
+   * requirement and keep matching anywhere, exactly as before.
+   *
+   * @param text - the text being filtered
+   * @param start - the start position of the match
+   * @param length - the length of the match
+   * @return whether the match sits on word boundaries and should therefore be masked
+   */
+  private static boolean hasWordBoundary(String text, int start, int length) {
+    int end = start + length;
+    if (isAsciiWordChar(text.charAt(start)) && start > 0 && isAsciiWordChar(text.charAt(start - 1))) {
+      return false;
+    }
+    if (isAsciiWordChar(text.charAt(end - 1)) && end < text.length() && isAsciiWordChar(text.charAt(end))) {
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * Reports whether a character is an ASCII letter or digit, i.e. the kind of character that forms
+   * English words and therefore demands word-boundary matching. CJK characters are deliberately
+   * excluded so that Chinese offensive words keep matching without delimiters.
+   *
+   * @param c - the character to test
+   * @return whether the character is an ASCII letter or digit
+   */
+  private static boolean isAsciiWordChar(char c) {
+    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9');
   }
 
   /**

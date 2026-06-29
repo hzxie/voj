@@ -144,10 +144,31 @@ public class OffensiveWordImportService {
     }
     for (String line : body.split("\\r?\\n")) {
       String word = line.trim();
-      if (!word.isEmpty() && !word.startsWith("#") && word.length() <= MAX_WORD_LENGTH) {
+      if (!word.startsWith("#") && word.length() <= MAX_WORD_LENGTH && isMeaningfulWord(word)) {
         offensiveWords.add(word);
       }
     }
+  }
+
+  /**
+   * Decides whether a word is meaningful enough to censor. Community word lists are littered with
+   * single-character noise - bare ASCII letters such as {@code b}, punctuation like {@code &}, and
+   * lone bopomofo symbols - that the character-level filter would then mask everywhere (a lone
+   * {@code b} would gut {@code dashboard}). A single character is therefore only accepted when it is
+   * a CJK ideograph (e.g. {@code 操}), which can legitimately be an offensive word on its own;
+   * everything else must be at least two characters long.
+   *
+   * @param word - the trimmed candidate word
+   * @return whether the word should be added to the dictionary
+   */
+  private static boolean isMeaningfulWord(String word) {
+    if (word.isEmpty()) {
+      return false;
+    }
+    if (word.length() == 1) {
+      return Character.UnicodeScript.of(word.charAt(0)) == Character.UnicodeScript.HAN;
+    }
+    return true;
   }
 
   /**

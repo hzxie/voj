@@ -156,6 +156,45 @@ public class OffensiveWordImportServiceTest {
     Assertions.assertFalse(isPlainTextContentType("application/json"));
   }
 
+  /** Test case: tests isMeaningfulWord(String). Test data: a lone ASCII letter such as 'b'. Expected: rejected, so it cannot mask every 'b' (e.g. inside "dashboard"). */
+  @Test
+  public void testIsMeaningfulWordRejectsLoneAsciiLetter() {
+    Assertions.assertFalse(isMeaningfulWord("b"));
+    Assertions.assertFalse(isMeaningfulWord("B"));
+  }
+
+  /** Test case: tests isMeaningfulWord(String). Test data: a lone punctuation/bopomofo character. Expected: rejected. */
+  @Test
+  public void testIsMeaningfulWordRejectsLoneSymbol() {
+    Assertions.assertFalse(isMeaningfulWord("&"));
+    Assertions.assertFalse(isMeaningfulWord("ㄅ"));
+  }
+
+  /** Test case: tests isMeaningfulWord(String). Test data: a single CJK ideograph. Expected: accepted, since one Chinese character can be an offensive word on its own. */
+  @Test
+  public void testIsMeaningfulWordAcceptsSingleCjk() {
+    Assertions.assertTrue(isMeaningfulWord("操"));
+  }
+
+  /** Test case: tests isMeaningfulWord(String). Test data: multi-character words. Expected: accepted regardless of script. */
+  @Test
+  public void testIsMeaningfulWordAcceptsMultiCharacter() {
+    Assertions.assertTrue(isMeaningfulWord("ab"));
+    Assertions.assertTrue(isMeaningfulWord("法轮"));
+  }
+
+  /** Invokes the private static isMeaningfulWord helper. */
+  private static boolean isMeaningfulWord(String word) {
+    try {
+      Method method =
+          OffensiveWordImportService.class.getDeclaredMethod("isMeaningfulWord", String.class);
+      method.setAccessible(true);
+      return (boolean) method.invoke(null, word);
+    } catch (ReflectiveOperationException ex) {
+      throw new RuntimeException(ex);
+    }
+  }
+
   /** Wraps a string as a UTF-8 input stream. */
   private static InputStream streamOf(String body) {
     return new ByteArrayInputStream(body.getBytes(StandardCharsets.UTF_8));
