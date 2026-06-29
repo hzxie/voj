@@ -21,6 +21,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+        with:
+          # Full history and tags are required for the maven-git-versioning
+          # extension to resolve the project version via git describe.
+          fetch-depth: 0
 
       - name: Set up JDK
         uses: actions/setup-java@v5
