@@ -5,6 +5,13 @@
 # The Dockerfiles build from this repository as the build context (your local
 # working tree), so local changes are included without pushing first.
 #
+# The images are generic: deployment config (passwords, URLs, mail, the judger
+# token) is read from VOJ_* environment variables at RUN time, not baked in here.
+# Configure the stack with `docker run -e ...` (or use scripts/run-docker.sh).
+# The only build-time setting is the bundled demo MariaDB password, which defaults
+# to "voj"; override it with `MYSQL_USER_PASS=... scripts/build-docker.sh web` and
+# remember to start the container with a matching `-e VOJ_DB_PASSWORD=...`.
+#
 # Usage:
 #   scripts/build-docker.sh            # build both images
 #   scripts/build-docker.sh web        # build only the web image
@@ -13,6 +20,7 @@
 # Overridable via environment variables (defaults shown):
 #   WEB_IMAGE=zjhzxhz/voj.web
 #   JUDGER_IMAGE=zjhzxhz/voj.judger
+#   MYSQL_USER_PASS=voj                # bundled demo DB password (web image only)
 #
 set -euo pipefail
 
@@ -21,6 +29,7 @@ cd "$PROJECT_ROOT"
 
 WEB_IMAGE="${WEB_IMAGE:-zjhzxhz/voj.web}"
 JUDGER_IMAGE="${JUDGER_IMAGE:-zjhzxhz/voj.judger}"
+MYSQL_USER_PASS="${MYSQL_USER_PASS:-voj}"
 TARGET="${1:-all}"
 
 if ! command -v docker >/dev/null 2>&1; then
@@ -30,7 +39,10 @@ fi
 
 build_web() {
   echo "==> Building web image: ${WEB_IMAGE}"
-  docker build -t "${WEB_IMAGE}" -f docker/web/Dockerfile .
+  docker build \
+    --build-arg "MYSQL_ROOT_PASS=${MYSQL_USER_PASS}" \
+    --build-arg "MYSQL_USER_PASS=${MYSQL_USER_PASS}" \
+    -t "${WEB_IMAGE}" -f docker/web/Dockerfile .
 }
 
 build_judger() {

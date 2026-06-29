@@ -17,6 +17,7 @@
 package org.verwandlung.voj.web.config;
 
 import java.util.Collections;
+import java.util.Properties;
 
 import javax.sql.DataSource;
 
@@ -25,6 +26,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.config.PropertiesFactoryBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 import org.springframework.core.io.ClassPathResource;
 
 /**
@@ -81,12 +83,26 @@ public class PersistenceConfig {
    * java.util.Properties} Bean named {@code propertyConfigurer}, so that the SpEL expression {@code
    * @propertyConfigurer.getProperty('...')} in JSPs remains usable. version.properties carries
    * build.version / product.version, filled in by Maven resource filtering at build time.
+   *
+   * <p>Unlike the {@code @Value("${...}")} injection points, a raw {@link PropertiesFactoryBean}
+   * does not resolve {@code ${...}} placeholders, so each value is run through the {@link
+   * Environment} here. That keeps env-driven values such as {@code url.cdn = ${VOJ_BASE_URL:...}}
+   * from leaking the literal placeholder string into the rendered pages.
    */
   @Bean(name = "propertyConfigurer")
-  public PropertiesFactoryBean propertyConfigurer() {
+  public Properties propertyConfigurer(Environment environment) throws Exception {
     PropertiesFactoryBean propertiesFactoryBean = new PropertiesFactoryBean();
     propertiesFactoryBean.setLocations(
         new ClassPathResource("voj.properties"), new ClassPathResource("version.properties"));
-    return propertiesFactoryBean;
+    propertiesFactoryBean.afterPropertiesSet();
+    Properties raw = propertiesFactoryBean.getObject();
+
+    Properties resolved = new Properties();
+    if (raw != null) {
+      for (String name : raw.stringPropertyNames()) {
+        resolved.setProperty(name, environment.resolvePlaceholders(raw.getProperty(name)));
+      }
+    }
+    return resolved;
   }
 }

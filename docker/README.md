@@ -17,12 +17,38 @@ From the repository root:
 scripts/run-docker.sh
 ```
 
-This generates strong random database passwords, builds both images with those
-secrets and starts the `voj.web` and `voj.judger` containers on a shared network.
+This builds both images, generates a strong random judger API token (and, when
+building locally, a database password), and starts the `voj.web` and `voj.judger`
+containers on a shared network, passing the secrets in as environment variables.
 The generated secrets are printed once at the end. To run the published images
 instead of building locally, use `VOJ_PULL=1 scripts/run-docker.sh`.
 
 The rest of this document describes the underlying build and run steps.
+
+## Configuration model
+
+The images are **generic**: every deployment knob (database, message queue, mail,
+URLs, the judger token) is read from a `VOJ_*` environment variable **at run
+time**, resolved by the app from `voj.properties`. Nothing is baked into the jar,
+so you reconfigure with `docker run -e ...` — no rebuild to change a password, a
+URL, or to move behind a reverse proxy. The most common variables:
+
+| Variable | Applies to | Default | Purpose |
+| --- | --- | --- | --- |
+| `VOJ_DB_HOST` / `VOJ_DB_PORT` / `VOJ_DB_NAME` | web, judger | `voj.web` (image) / `3306` / `voj` | Database location |
+| `VOJ_DB_USERNAME` / `VOJ_DB_PASSWORD` | web, judger | `voj` / `voj` | Database credentials |
+| `VOJ_JMS_BROKER_URL` | web, judger | `tcp://0.0.0.0:61616` (web) | ActiveMQ connector |
+| `VOJ_JMS_BROKER_EMBEDDED` | web | `true` | Host the broker in the web process |
+| `VOJ_JUDGER_API_TOKEN` | web, judger | `verwandlung` | Shared test-data download secret (**must match** on both) |
+| `VOJ_BASE_URL` | web | `http://localhost:8080/voj` | Public root used in e-mails/links |
+| `VOJ_CONTEXT_PATH` | web | `/voj` | Servlet context path (set `/` to serve at root) |
+| `VOJ_MAIL_HOST` / `VOJ_MAIL_USERNAME` / `VOJ_MAIL_PASSWORD` | web | empty | SMTP (empty disables e-mail) |
+
+Behind a reverse proxy, set `VOJ_BASE_URL` (and optionally `VOJ_CONTEXT_PATH=/`)
+to the externally visible URL so generated links, e-mails and assets are correct.
+
+The only build-time setting that remains is the **bundled demo MariaDB** password,
+which initialises the in-image database and defaults to `voj`.
 
 ## Build Locally
 
@@ -39,34 +65,15 @@ docker build -t zjhzxhz/voj.web -f docker/web/Dockerfile .
 docker build -t zjhzxhz/voj.judger -f docker/judger/Dockerfile .
 ```
 
-### Credentials
-
-Database passwords, the judger API token and mail settings are baked into the
-images at build time through `--build-arg`. The committed defaults are
-placeholders, not secrets, so supply real values when building for anything other
-than a local trial:
+The build no longer bakes any credentials. The only build-time argument is the
+bundled demo MariaDB password (`MYSQL_USER_PASS`, default `voj`); if you change it
+remember to start the web container with a matching `-e VOJ_DB_PASSWORD=...`:
 
 ```
 docker build \
-  --build-arg MYSQL_ROOT_PASS=... \
-  --build-arg MYSQL_USER_PASS=... \
-  --build-arg JUDGER_API_TOKEN=... \
+  --build-arg MYSQL_USER_PASS=s3cr3t \
   -t zjhzxhz/voj.web -f docker/web/Dockerfile .
-
-# The judger must be built with the SAME MYSQL_USER_PASS and JUDGER_API_TOKEN as
-# the web image.
-docker build \
-  --build-arg MYSQL_USER_PASS=... \
-  --build-arg JUDGER_API_TOKEN=... \
-  -t zjhzxhz/voj.judger -f docker/judger/Dockerfile .
 ```
-
-`JUDGER_API_TOKEN` is the shared secret the judger presents (in the
-`X-Judger-Token` header) to download a problem's test data from the web app; both
-images must be built with the same value.
-
-`scripts/run-docker.sh` does this for you and generates the passwords and token if
-you do not provide them.
 
 You can also pull the prebuilt images from Docker Hub:
 
@@ -87,12 +94,19 @@ docker network create voj
 
 # Web (MySQL + ActiveMQ + the Spring Boot web app with embedded Tomcat live here)
 # By default the broker is embedded in the web process (saves a JVM, ~150 MB+);
-# build with --build-arg JMS_BROKER_EMBEDDED=false to run a standalone broker.
-docker run -d --name voj.web --network voj -p 8080:8080 zjhzxhz/voj.web
+# run with -e VOJ_JMS_BROKER_EMBEDDED=false to use a standalone broker.
+docker run -d --name voj.web --network voj -p 8080:8080 \
+  -e VOJ_JUDGER_API_TOKEN=your-shared-secret \
+  zjhzxhz/voj.web
 
-# Judger (resolves "voj.web" over the shared network)
-docker run -d --name voj.judger --network voj zjhzxhz/voj.judger
+# Judger (resolves "voj.web" over the shared network; token must match the web's)
+docker run -d --name voj.judger --network voj \
+  -e VOJ_JUDGER_API_TOKEN=your-shared-secret \
+  zjhzxhz/voj.judger
 ```
+
+For a real deployment behind a reverse proxy, also pass the web container
+`-e VOJ_BASE_URL=https://oj.example.edu` (see the configuration table above).
 
 The judger container runs as root and drops each submission to the `nobody`
 account, so native sandboxing (resource limits, network namespace, seccomp and

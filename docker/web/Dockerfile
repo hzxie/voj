@@ -5,35 +5,35 @@
 FROM ubuntu:26.04
 LABEL org.opencontainers.image.authors="Haozhe Xie <root@haozhexie.com>"
 
-# Deployment settings. Pass real values at build time with --build-arg (or use
-# scripts/run-docker.sh, which generates strong random database passwords). The
-# placeholder password defaults below are NOT secrets — override them.
-ARG MYSQL_ROOT_PASS=changeme
-ARG MYSQL_USER_PASS=changeme
-ARG WEBSITE_URL=localhost:8080/voj
-ARG MAIL_HOST=
-ARG MAIL_USERNAME=
-ARG MAIL_PASSWORD=
-# Shared secret the judger presents to download test data. Must match the judger
-# image's JUDGER_API_TOKEN. The placeholder default is NOT a secret — override it.
-ARG JUDGER_API_TOKEN=changeme
-# Host the ActiveMQ broker inside the web process instead of as a separate one.
-# Defaults to true: this single-container demo is single-web-instance, so the
-# embedded broker saves a whole broker JVM (~150 MB+). The web app reaches it over
-# vm://, while voj.judger (a separate container) connects to the TCP connector on
-# 61616. Set to false to run the bundled standalone broker instead.
-ARG JMS_BROKER_EMBEDDED=true
+# Credentials for the bundled (demo) MariaDB only. The app no longer bakes its
+# config at build time — every deployment knob is read from a VOJ_* environment
+# variable at runtime (see the ENV block below and voj.properties). These two
+# ARGs just initialise the in-image database; if you override them, also pass a
+# matching `-e VOJ_DB_PASSWORD=...` at `docker run` so the app can log in.
+ARG MYSQL_ROOT_PASS=voj
+ARG MYSQL_USER_PASS=voj
 
-# Set environment variables.
 # TARGETARCH is provided by BuildKit (amd64 / arm64) and matches the Ubuntu
 # OpenJDK directory suffix, so the image builds natively on both.
 ARG TARGETARCH
 ENV HOME=/root
 ENV JAVA_HOME=/usr/lib/jvm/java-25-openjdk-${TARGETARCH}
 ENV M2_HOME=/opt/maven
-# Persist the broker mode into the runtime environment so supervisord can decide
-# whether to start the standalone ActiveMQ process (see docker/web/supervisord.conf).
-ENV JMS_BROKER_EMBEDDED=${JMS_BROKER_EMBEDDED}
+
+# Runtime configuration (override any of these with `docker run -e ...`).
+# Defaults wire the app to the bundled MariaDB + embedded broker so a bare
+# `docker run` works out of the box; point VOJ_DB_HOST / VOJ_JMS_BROKER_URL at
+# external services, or set VOJ_BASE_URL when running behind a reverse proxy.
+ENV VOJ_DB_USERNAME=voj
+ENV VOJ_DB_PASSWORD=voj
+# Embed the ActiveMQ broker in the web process (saves a standalone broker JVM,
+# ~150 MB+); both the app and supervisord read VOJ_JMS_BROKER_EMBEDDED. The TCP
+# connector binds 0.0.0.0 so a separate voj.judger container can connect.
+ENV VOJ_JMS_BROKER_EMBEDDED=true
+ENV VOJ_JMS_BROKER_URL=tcp://0.0.0.0:61616
+# Non-secret default so the published web + judger images interoperate out of the
+# box. Override on BOTH images with a long random value for a real deployment.
+ENV VOJ_JUDGER_API_TOKEN=verwandlung
 
 # Define working directory.
 WORKDIR /root
@@ -79,22 +79,12 @@ RUN MAVEN_VERSION=$(curl -s https://maven.apache.org/download.cgi | grep -oP 'ap
     sed -i 's/storeUsage limit="100 gb"/storeUsage limit="1 gb"/g' /opt/activemq/conf/activemq.xml && \
     sed -i 's/tempUsage limit="50 gb"/tempUsage limit="1 gb"/g' /opt/activemq/conf/activemq.xml
 
-# Build the web project from the build context (no network checkout).
-# Deployment values are baked into voj.properties before packaging, then a
-# self-contained executable JAR (embedded Tomcat) is produced.
+# Build the web project from the build context (no network checkout). voj.properties
+# ships with ${VOJ_*} placeholders that are resolved from the environment at runtime,
+# so nothing is baked in here — the image stays generic and is configured with
+# `docker run -e ...`. A self-contained executable JAR (embedded Tomcat) is produced.
 COPY . /root/voj
-RUN sed -i "s@localhost:8080/voj@${WEBSITE_URL}@g" voj/web/src/main/resources/voj.properties && \
-    sed -i "s/jdbc.username = root/jdbc.username = voj/g" voj/web/src/main/resources/voj.properties && \
-    sed -i "s/jdbc.password = /jdbc.password = ${MYSQL_USER_PASS}/g" voj/web/src/main/resources/voj.properties && \
-    sed -i "s/mail.host = /mail.host = ${MAIL_HOST}/g" voj/web/src/main/resources/voj.properties && \
-    sed -i "s/mail.username = /mail.username = ${MAIL_USERNAME}/g" voj/web/src/main/resources/voj.properties && \
-    sed -i "s/mail.password = /mail.password = ${MAIL_PASSWORD}/g" voj/web/src/main/resources/voj.properties && \
-    sed -i "s/judger.apiToken = change-me-shared-secret/judger.apiToken = ${JUDGER_API_TOKEN}/g" voj/web/src/main/resources/voj.properties && \
-    if [ "${JMS_BROKER_EMBEDDED}" = "true" ]; then \
-        sed -i "s/jms.broker.embedded = false/jms.broker.embedded = true/" voj/web/src/main/resources/voj.properties && \
-        sed -i "s#jms.broker.url = tcp://localhost:61616#jms.broker.url = tcp://0.0.0.0:61616#" voj/web/src/main/resources/voj.properties ; \
-    fi && \
-    $M2_HOME/bin/mvn package -DskipTests -f voj/web/pom.xml && \
+RUN $M2_HOME/bin/mvn package -DskipTests -f voj/web/pom.xml && \
     mkdir -p /opt/voj && \
     cp voj/web/target/voj.web.jar /opt/voj/voj.web.jar && \
     /etc/init.d/mariadb start && \

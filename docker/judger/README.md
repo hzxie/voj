@@ -19,10 +19,12 @@ put both on a shared user-defined network (`--link` is deprecated):
 docker network create voj
 
 # Web (MySQL + ActiveMQ + the Spring Boot web app all live here)
-docker run -d --name voj.web --network voj -p 8080:8080 zjhzxhz/voj.web
+docker run -d --name voj.web --network voj -p 8080:8080 \
+  -e VOJ_JUDGER_API_TOKEN=your-shared-secret zjhzxhz/voj.web
 
-# Judger (resolves "voj.web" over the shared network)
-docker run -d --name voj.judger --network voj zjhzxhz/voj.judger
+# Judger (resolves "voj.web" over the shared network; token must match the web's)
+docker run -d --name voj.judger --network voj \
+  -e VOJ_JUDGER_API_TOKEN=your-shared-secret zjhzxhz/voj.judger
 ```
 
 You can run as many judgers in parallel as you need — they are decoupled from the
@@ -36,11 +38,24 @@ account, so native Linux sandboxing works out of the box: per-submission
 syscall filter and privilege drop. If the judger cannot drop privileges, a
 submission is **refused** rather than run as root.
 
-> **Heads-up on secrets.** The published images are built with a placeholder
-> database password and a placeholder `JUDGER_API_TOKEN` (the shared secret the
-> judger presents to download test data). For a real deployment, build your own
-> images so the judger's `MYSQL_USER_PASS` and `JUDGER_API_TOKEN` **match the web
-> image's** values.
+## Configuration
+
+The image is generic: every deployment knob is read from a `VOJ_*` environment
+variable **at run time**. The defaults assume a shared Docker network with a
+container named `voj.web`; point them at external services for a split deployment:
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `VOJ_DB_HOST` / `VOJ_DB_PORT` / `VOJ_DB_NAME` | `voj.web` / `3306` / `voj` | Database location |
+| `VOJ_DB_USERNAME` / `VOJ_DB_PASSWORD` | `voj` / `voj` | Database credentials |
+| `VOJ_JMS_BROKER_URL` | `tcp://voj.web:61616` | ActiveMQ connector |
+| `VOJ_WEB_BASE_URL` | `http://voj.web:8080/voj` | Where the judger downloads test data |
+| `VOJ_JUDGER_API_TOKEN` | `verwandlung` | Shared test-data secret (**must match** the web) |
+
+> **Heads-up on secrets.** Out of the box the image uses a non-secret default
+> `VOJ_JUDGER_API_TOKEN` and the bundled web image's demo database password (`voj`).
+> For a real deployment pass a long random `-e VOJ_JUDGER_API_TOKEN=...` (the **same
+> value** as the web container) and matching `-e VOJ_DB_*` for your database.
 
 ## Requirements
 
@@ -57,14 +72,13 @@ The image is built from the [repository](https://github.com/hzxie/voj) with the
 ```bash
 git clone https://github.com/hzxie/voj.git
 cd voj
-docker build \
-  --build-arg MYSQL_USER_PASS=... \
-  --build-arg JUDGER_API_TOKEN=... \
-  -t zjhzxhz/voj.judger -f docker/judger/Dockerfile .
+docker build -t zjhzxhz/voj.judger -f docker/judger/Dockerfile .
 ```
 
-The `MYSQL_USER_PASS` and `JUDGER_API_TOKEN` must match the web image. Or let
-`scripts/run-docker.sh` generate them and build/run both images for you.
+No credentials are baked in — configure the running container with `-e VOJ_*`
+(see **Configuration** above), making sure `VOJ_JUDGER_API_TOKEN` and the database
+settings match the web image. Or let `scripts/run-docker.sh` generate a token and
+build/run both images for you.
 
 ## Links
 

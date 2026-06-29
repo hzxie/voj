@@ -19,20 +19,41 @@ both on a shared user-defined network (`--link` is deprecated):
 docker network create voj
 
 # Web (MySQL + ActiveMQ + the Spring Boot web app all live here)
-docker run -d --name voj.web --network voj -p 8080:8080 zjhzxhz/voj.web
+docker run -d --name voj.web --network voj -p 8080:8080 \
+  -e VOJ_JUDGER_API_TOKEN=your-shared-secret zjhzxhz/voj.web
 
-# Judger (resolves "voj.web" over the shared network)
-docker run -d --name voj.judger --network voj zjhzxhz/voj.judger
+# Judger (resolves "voj.web" over the shared network; token must match the web's)
+docker run -d --name voj.judger --network voj \
+  -e VOJ_JUDGER_API_TOKEN=your-shared-secret zjhzxhz/voj.judger
 ```
 
 The web UI is then available at <http://localhost:8080/voj>.
 
-> **Heads-up on secrets.** The published images are built with placeholder
-> database passwords and a placeholder `JUDGER_API_TOKEN` (the shared secret the
-> judger presents to download test data). They are fine for a local trial but are
-> **not** secrets. For a real deployment, build your own images with
-> `--build-arg` (see the build docs below); the web and judger images must share
-> the same `MYSQL_USER_PASS` and `JUDGER_API_TOKEN`.
+## Configuration
+
+The image is generic: every deployment knob is read from a `VOJ_*` environment
+variable **at run time**, so you configure it with `docker run -e ...` — no
+rebuild needed. Common variables:
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `VOJ_DB_HOST` / `VOJ_DB_PORT` / `VOJ_DB_NAME` | bundled / `3306` / `voj` | Database location |
+| `VOJ_DB_USERNAME` / `VOJ_DB_PASSWORD` | `voj` / `voj` | Database credentials |
+| `VOJ_JUDGER_API_TOKEN` | `verwandlung` | Shared test-data secret (**must match** the judger) |
+| `VOJ_BASE_URL` | `http://localhost:8080/voj` | Public root used in e-mails/links |
+| `VOJ_CONTEXT_PATH` | `/voj` | Servlet context path (`/` serves at root) |
+| `VOJ_JMS_BROKER_EMBEDDED` | `true` | Host the ActiveMQ broker in the web process |
+| `VOJ_MAIL_HOST` / `VOJ_MAIL_USERNAME` / `VOJ_MAIL_PASSWORD` | empty | SMTP (empty disables e-mail) |
+
+Behind a reverse proxy, set `VOJ_BASE_URL` to the externally visible URL so links,
+e-mails and assets are correct.
+
+> **Heads-up on secrets.** Out of the box the image uses a non-secret default
+> `VOJ_JUDGER_API_TOKEN` and a bundled demo database with password `voj` — fine
+> for a local trial, **not** for production. For a real deployment pass a long
+> random `-e VOJ_JUDGER_API_TOKEN=...` (the same value on the web and judger
+> containers) and point `-e VOJ_DB_HOST=... -e VOJ_DB_PASSWORD=...` at a database
+> you manage.
 
 ## Ports
 
@@ -55,14 +76,15 @@ The image is built from the [repository](https://github.com/hzxie/voj) with the
 ```bash
 git clone https://github.com/hzxie/voj.git
 cd voj
-docker build \
-  --build-arg MYSQL_ROOT_PASS=... \
-  --build-arg MYSQL_USER_PASS=... \
-  --build-arg JUDGER_API_TOKEN=... \
-  -t zjhzxhz/voj.web -f docker/web/Dockerfile .
+docker build -t zjhzxhz/voj.web -f docker/web/Dockerfile .
 ```
 
-Or let `scripts/run-docker.sh` generate strong random passwords and a token, build
+No credentials are baked in — configure the running container with `-e VOJ_*`
+(see **Configuration** above). The only build-time knob is the bundled demo
+database password, `--build-arg MYSQL_USER_PASS=...` (default `voj`); if you change
+it, start the container with a matching `-e VOJ_DB_PASSWORD=...`.
+
+Or let `scripts/run-docker.sh` generate a strong random token and password, build
 both images and start the containers for you.
 
 ## Links

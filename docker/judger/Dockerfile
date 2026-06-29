@@ -5,27 +5,29 @@
 FROM ubuntu:26.04
 LABEL org.opencontainers.image.authors="Haozhe Xie <root@haozhexie.com>"
 
-# Deployment settings. Must match the web image's MYSQL_USER_PASS. Pass it at
-# build time with --build-arg (or use scripts/run-docker.sh). The placeholder
-# default below is NOT a secret — override it.
-ARG MYSQL_USER_PASS=changeme
-ARG MYSQL_HOST=voj.web
-ARG MYSQL_PORT=3306
-ARG ACTIVEMQ_HOST=voj.web
-ARG ACTIVEMQ_PORT=61616
-# Where the judger downloads test data from, and the shared secret to do so. The
-# host defaults to the web container; JUDGER_API_TOKEN must match the web image.
-ARG WEB_HOST=voj.web
-ARG WEB_PORT=8080
-ARG JUDGER_API_TOKEN=changeme
+# The judger no longer bakes its config at build time — every deployment knob is
+# read from a VOJ_* environment variable at runtime (see the ENV block below and
+# voj.properties), so the image stays generic and is configured with
+# `docker run -e ...`.
 
-# Set environment variables.
 # TARGETARCH is provided by BuildKit (amd64 / arm64) and matches the Ubuntu
 # OpenJDK directory suffix, so the image builds natively on both.
 ARG TARGETARCH
 ENV HOME=/root
 ENV JAVA_HOME=/usr/lib/jvm/java-25-openjdk-${TARGETARCH}
 ENV M2_HOME=/opt/maven
+
+# Runtime configuration (override any of these with `docker run -e ...`).
+# Defaults assume the judger shares a Docker network with a container named
+# "voj.web" (the bundled MariaDB + ActiveMQ + web app); point them at external
+# services for a split deployment. VOJ_DB_PASSWORD matches the web image's bundled
+# database, and VOJ_JUDGER_API_TOKEN must match the web image's value.
+ENV VOJ_DB_HOST=voj.web
+ENV VOJ_DB_USERNAME=voj
+ENV VOJ_DB_PASSWORD=voj
+ENV VOJ_JMS_BROKER_URL=tcp://voj.web:61616
+ENV VOJ_WEB_BASE_URL=http://voj.web:8080/voj
+ENV VOJ_JUDGER_API_TOKEN=verwandlung
 # Go toolchain settings. GOROOT/PATH point at the official tarball unpacked into
 # /opt/go below. The judger drops privileges before compiling, so the build cache
 # and GOPATH must live somewhere the unprivileged user can write (HOME stays
@@ -76,15 +78,12 @@ RUN apt-get update && \
     tar -C /opt -xzf ${GO_VERSION}.linux-${TARGETARCH}.tar.gz && \
     rm ${GO_VERSION}.linux-${TARGETARCH}.tar.gz
 
-# Build the judger project from the build context (no network checkout).
+# Build the judger project from the build context (no network checkout). voj.properties
+# ships with ${VOJ_*} placeholders that are resolved from the environment at runtime,
+# so nothing is baked in here — the image stays generic and is configured with
+# `docker run -e ...`.
 COPY . /root/voj
-RUN sed -i "s@jdbc.url = jdbc:mysql://localhost:3306@jdbc.url = jdbc:mysql://${MYSQL_HOST}:${MYSQL_PORT}@g" voj/judger/src/main/resources/voj.properties && \
-    sed -i "s/jdbc.username = root/jdbc.username = voj/g" voj/judger/src/main/resources/voj.properties && \
-    sed -i "s/jdbc.password = /jdbc.password = ${MYSQL_USER_PASS}/g" voj/judger/src/main/resources/voj.properties && \
-    sed -i "s/localhost:61616/${ACTIVEMQ_HOST}:${ACTIVEMQ_PORT}/g" voj/judger/src/main/resources/voj.properties && \
-    sed -i "s@judger.web.baseUrl = http://localhost:8080/voj@judger.web.baseUrl = http://${WEB_HOST}:${WEB_PORT}/voj@g" voj/judger/src/main/resources/voj.properties && \
-    sed -i "s/judger.apiToken = change-me-shared-secret/judger.apiToken = ${JUDGER_API_TOKEN}/g" voj/judger/src/main/resources/voj.properties && \
-    mkdir -p voj/target/classes && \
+RUN mkdir -p voj/target/classes && \
     $M2_HOME/bin/mvn package -DskipTests -f voj/judger/pom.xml
 
 # Run Judger. --enable-native-access grants the JNI runner native access; without

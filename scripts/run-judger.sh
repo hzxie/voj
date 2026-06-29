@@ -61,12 +61,6 @@ fi
 # voj schema is populated (importing sql/{schema,seed,demo}.sql on first run).
 # --------------------------------------------------------------------------- #
 
-# Read a "key = value" property from voj.properties (last match wins).
-prop() {
-  sed -nE "s/^[[:space:]]*$1[[:space:]]*=[[:space:]]*(.*[^[:space:]])[[:space:]]*$/\1/p" \
-    "$PROPS" | tail -1
-}
-
 # Test whether a TCP port is accepting connections. For "localhost" we also try
 # 127.0.0.1, since bash /dev/tcp may resolve localhost to IPv6 (::1) while the
 # service only listens on IPv4.
@@ -80,27 +74,15 @@ tcp_open() {
 }
 
 preflight() {
-  local PROPS
-  PROPS="$PROJECT_ROOT/judger/src/main/resources/voj.properties"
-  if [ ! -f "$PROPS" ]; then
-    echo "WARN: $PROPS not found; skipping preflight checks." >&2
-    return 0
-  fi
+  # --- Connection settings from the VOJ_* env (defaults match voj.properties) - #
+  local db_host db_port db_name db_user db_pass jms_url jms_host jms_port
+  db_host="${VOJ_DB_HOST:-localhost}"
+  db_port="${VOJ_DB_PORT:-3306}"
+  db_name="${VOJ_DB_NAME:-voj}"
+  db_user="${VOJ_DB_USERNAME:-root}"
+  db_pass="${VOJ_DB_PASSWORD:-}"
 
-  # --- Parse connection settings from voj.properties --------------------- #
-  local jdbc_url db_host db_port db_name db_user db_pass jms_url jms_host jms_port
-  jdbc_url="$(prop jdbc.url)"
-  db_host="$(printf '%s' "$jdbc_url" | sed -nE 's#^jdbc:mysql://([^:/]+).*#\1#p')"
-  db_port="$(printf '%s' "$jdbc_url" | sed -nE 's#^jdbc:mysql://[^:/]+:([0-9]+).*#\1#p')"
-  db_name="$(printf '%s' "$jdbc_url" | sed -nE 's#^jdbc:mysql://[^/]+/([^?]+).*#\1#p')"
-  db_user="$(prop jdbc.username)"
-  db_pass="$(prop jdbc.password)"
-  db_host="${db_host:-localhost}"
-  db_port="${db_port:-3306}"
-  db_name="${db_name:-voj}"
-  db_user="${db_user:-root}"
-
-  jms_url="$(prop jms.broker.url)"
+  jms_url="${VOJ_JMS_BROKER_URL:-tcp://localhost:61616}"
   jms_host="$(printf '%s' "$jms_url" | sed -nE 's#^tcp://([^:/]+).*#\1#p')"
   jms_port="$(printf '%s' "$jms_url" | sed -nE 's#^tcp://[^:/]+:([0-9]+).*#\1#p')"
   jms_host="${jms_host:-localhost}"
@@ -133,8 +115,7 @@ preflight() {
   if ! err="$("$MYSQL_BIN" "${mysql_args[@]}" -N -e 'SELECT 1' 2>&1 >/dev/null)"; then
     if printf '%s' "$err" | grep -qi 'access denied'; then
       echo "ERROR: MySQL access denied for user '$db_user'@'$db_host'." >&2
-      echo "       Fix jdbc.username / jdbc.password in:" >&2
-      echo "         $PROPS" >&2
+      echo "       Fix VOJ_DB_USERNAME / VOJ_DB_PASSWORD in your environment." >&2
     elif printf '%s' "$err" | grep -qiE "can't connect|connection refused|unknown.*host|2002|2003"; then
       echo "ERROR: cannot reach MySQL at $db_host:$db_port." >&2
       echo "       Start the MySQL server and retry." >&2
