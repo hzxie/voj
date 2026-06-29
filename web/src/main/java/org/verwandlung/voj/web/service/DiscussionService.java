@@ -554,6 +554,19 @@ public class DiscussionService {
   }
 
   /**
+   * Checks whether the given editor may modify (edit or delete) content created by {@code creator}:
+   * only the original author or an administrator may. An anonymous (null) editor is rejected, so the
+   * mutating discussion actions deny unauthenticated callers cleanly instead of dereferencing null.
+   *
+   * @param creator - the user who created the content
+   * @param editor - the user attempting the modification, or null when unauthenticated
+   * @return whether the editor is allowed to modify the content
+   */
+  private boolean canModify(User creator, User editor) {
+    return editor != null && (editor.equals(creator) || isAdministrator(editor));
+  }
+
+  /**
    * Reads the report-hide threshold option.
    *
    * @return the number of reports at which a thread is hidden (0 or below disables hiding)
@@ -854,19 +867,21 @@ public class DiscussionService {
         discussionTopicMapper.getDiscussionTopicUsingSlug(discussionTopicSlug);
     result.put("isDiscussionTopicExists", discussionTopic != null);
 
-    boolean isSuccessful =
+    boolean isValid =
         result.get("isDiscussionThreadExists")
             && result.get("isDiscussionTopicExists")
             && !result.get("isThreadTitleEmpty")
             && result.get("isThreadTitleLegal");
+    // The edit only succeeds when the request is both valid and made by someone allowed to modify
+    // the thread (its author or an administrator); reporting success to anyone else would be
+    // misleading, since no change is persisted.
+    boolean isSuccessful =
+        isValid && canModify(dt != null ? dt.getDiscussionThreadCreator() : null, currentEditor);
     result.put("isSuccessful", isSuccessful);
     if (isSuccessful) {
-      if (dt.getDiscussionThreadCreator().equals(currentEditor)
-          || currentEditor.getUserGroup().getUserGroupSlug().equals("administrators")) {
-        dt.setDiscussionTopic(discussionTopic);
-        dt.setDiscussionThreadTitle(HtmlTextFilter.filter(discussionThreadTitle));
-        discussionThreadMapper.updateDiscussionThread(dt);
-      }
+      dt.setDiscussionTopic(discussionTopic);
+      dt.setDiscussionThreadTitle(HtmlTextFilter.filter(discussionThreadTitle));
+      discussionThreadMapper.updateDiscussionThread(dt);
     }
     return result;
   }
@@ -961,8 +976,7 @@ public class DiscussionService {
     DiscussionReply dr = discussionReplyMapper.getDiscussionReplyUsingReplyId(discussionReplyId);
 
     if (dr != null) {
-      if (dr.getDiscussionReplyCreator().equals(currentEditor)
-          || currentEditor.getUserGroup().getUserGroupSlug().equals("administrators")) {
+      if (canModify(dr.getDiscussionReplyCreator(), currentEditor)) {
         dr.setDiscussionReplyContent(HtmlTextFilter.filter(discussionReplyContent));
         discussionReplyMapper.updateDiscussionReply(dr);
         isSuccessful = true;
@@ -986,8 +1000,7 @@ public class DiscussionService {
     DiscussionReply dr = discussionReplyMapper.getDiscussionReplyUsingReplyId(discussionReplyId);
 
     if (dr != null) {
-      if (dr.getDiscussionReplyCreator().equals(currentEditor)
-          || currentEditor.getUserGroup().getUserGroupSlug().equals("administrators")) {
+      if (canModify(dr.getDiscussionReplyCreator(), currentEditor)) {
         discussionReplyMapper.deleteDiscussionReplyUsingReplyId(discussionReplyId);
         isSuccessful = true;
       }

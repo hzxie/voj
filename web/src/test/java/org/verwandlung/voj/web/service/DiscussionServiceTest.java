@@ -505,6 +505,29 @@ public class DiscussionServiceTest {
     Assertions.assertFalse(result.get("isSuccessful"));
   }
 
+  /** Test case: tests the editDiscussionThread(...) method. Test data: an anonymous (null) editor. Expected: editing is denied cleanly, without a NullPointerException. */
+  @Test
+  public void testEditDiscussionThreadByAnonymousUser() {
+    Map<String, Boolean> result =
+        discussionService.editDiscussionThread(1, null, "qa", "Edited Title");
+    Assertions.assertFalse(result.get("isSuccessful"));
+  }
+
+  /** Test case: tests the editDiscussionReply(...) method. Test data: an anonymous (null) editor. Expected: editing is denied cleanly, without a NullPointerException. */
+  @Test
+  public void testEditDiscussionReplyByAnonymousUser() {
+    Map<String, Boolean> result = discussionService.editDiscussionReply(1, null, "Edited content.");
+    Assertions.assertFalse(result.get("isSuccessful"));
+  }
+
+  /** Test case: tests the deleteDiscussionReply(...) method. Test data: an anonymous (null) editor. Expected: deletion is denied cleanly, without a NullPointerException. */
+  @Test
+  public void testDeleteDiscussionReplyByAnonymousUser() {
+    Map<String, Boolean> result = discussionService.deleteDiscussionReply(1, null);
+    Assertions.assertFalse(result.get("isSuccessful"));
+    Assertions.assertNotNull(discussionService.getDiscussionReplyUsingReplyId(1));
+  }
+
   /** Sets a system option value (rolled back after each test by the transactional context). */
   private void setOption(String optionName, String optionValue) {
     Option option = optionMapper.getOption(optionName);

@@ -22,6 +22,7 @@ import java.util.Map;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.core.session.SessionRegistry;
@@ -43,8 +44,9 @@ import org.springframework.security.web.session.HttpSessionEventPublisher;
  * <ul>
  *   <li><b>Authentication</b> is performed programmatically by {@code AccountsController} so that the
  *       existing AJAX login (which returns a JSON result) is preserved.
- *   <li><b>Authorisation</b> guards {@code /administration/**} (administrators only) and the
- *       account self-service actions (change password / update profile — any authenticated user).
+ *   <li><b>Authorisation</b> guards {@code /administration/**} (administrators only), the account
+ *       self-service actions (change password / update profile — any authenticated user) and every
+ *       discussion mutation (POST {@code /discussion/**} — any authenticated user).
  *   <li><b>CSRF</b> protection is enabled globally; the token is submitted via the {@code csrfToken}
  *       request parameter (matching the existing forms) or the {@code X-CSRF-TOKEN} header.
  *   <li><b>Online users</b> are tracked through a {@link SessionRegistry}.
@@ -79,6 +81,11 @@ public class SecurityConfig {
                     .hasRole("ADMINISTRATORS")
                     .requestMatchers(
                         "/accounts/changePassword.action", "/accounts/updateProfile.action")
+                    .authenticated()
+                    // Every discussion mutation (create/edit/delete a thread or reply, vote, report)
+                    // is a POST under /discussion and acts on behalf of the current user, so it must
+                    // be authenticated; the GET views and listing actions stay public.
+                    .requestMatchers(HttpMethod.POST, "/discussion/**")
                     .authenticated()
                     .anyRequest()
                     .permitAll())
