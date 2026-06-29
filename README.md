@@ -47,25 +47,30 @@ Verwandlung has two components, the **web application** and one or more
 ### Run with Docker (recommended)
 
 The fastest way to stand up the whole stack (database, message queue, web app and a
-judger):
+judger) — two equivalent options:
 
 ```bash
 git clone https://github.com/hzxie/voj.git
 cd voj
+
+# A) Docker Compose
+docker compose up -d
+
+# B) Plain `docker run`, no compose
 scripts/run-docker.sh
 ```
 
-`run-docker.sh` generates strong random database passwords, builds both images and
-starts the `voj.web` and `voj.judger` containers on a shared network. The web UI is
-then available at <http://localhost:8080/voj>.
+Both bring up the `voj.web` and `voj.judger` containers and persist the database
+in a named volume, so the web UI is available at <http://localhost:8080/voj> and
+your data survives image updates. `run-docker.sh` also generates strong random
+secrets and prints them once; to run the prebuilt Docker Hub images instead of
+building locally, use `VOJ_PULL=1 scripts/run-docker.sh` (or `docker compose up`,
+which pulls by default).
 
-To run the prebuilt images from Docker Hub instead of building locally:
-
-```bash
-VOJ_PULL=1 scripts/run-docker.sh
-```
-
-See [`docker/README.md`](docker/README.md) for image and configuration details.
+Configuration (database, mail, URLs, the judger token) is read from `VOJ_*`
+environment variables at runtime, so you can reconfigure or sit behind a reverse
+proxy without rebuilding. See [`docker/README.md`](docker/README.md) for the full
+configuration, persistence and reverse-proxy details.
 
 ### Build from source
 

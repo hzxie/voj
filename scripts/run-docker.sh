@@ -24,6 +24,7 @@
 #   JUDGER_IMAGE=zjhzxhz/voj.judger
 #   WEB_PORT=8080
 #   NETWORK=voj
+#   DB_VOLUME=voj-db               # named volume that persists the MariaDB data
 #   VOJ_BASE_URL=http://localhost:${WEB_PORT}/voj  # public root (used in e-mails/links)
 #   VOJ_JUDGER_API_TOKEN            # shared web<->judger secret; generated if unset
 #   VOJ_JMS_BROKER_EMBEDDED=true    # host the broker inside voj.web (saves a JVM, ~150 MB+)
@@ -40,6 +41,7 @@ WEB_IMAGE="${WEB_IMAGE:-zjhzxhz/voj.web}"
 JUDGER_IMAGE="${JUDGER_IMAGE:-zjhzxhz/voj.judger}"
 WEB_PORT="${WEB_PORT:-8080}"
 NETWORK="${NETWORK:-voj}"
+DB_VOLUME="${DB_VOLUME:-voj-db}"
 VOJ_BASE_URL="${VOJ_BASE_URL:-http://localhost:${WEB_PORT}/voj}"
 VOJ_MAIL_HOST="${VOJ_MAIL_HOST:-}"
 VOJ_MAIL_USERNAME="${VOJ_MAIL_USERNAME:-}"
@@ -114,7 +116,12 @@ echo "==> Removing any previous voj.web / voj.judger containers ..."
 docker rm -f voj.web voj.judger >/dev/null 2>&1 || true
 
 echo "==> Starting voj.web ..."
+# The named volume persists the database (problems, users, submissions and the
+# problem test data all live in MariaDB), so recreating the container after an
+# image update does not lose data. Docker seeds the empty volume from the image's
+# bundled database on the first start.
 docker run -d --name voj.web --network "${NETWORK}" -p "${WEB_PORT}:8080" \
+  -v "${DB_VOLUME}:/var/lib/mariadb" \
   -e "VOJ_DB_PASSWORD=${MYSQL_USER_PASS}" \
   -e "VOJ_BASE_URL=${VOJ_BASE_URL}" \
   -e "VOJ_JUDGER_API_TOKEN=${VOJ_JUDGER_API_TOKEN}" \
@@ -145,5 +152,6 @@ if [ "${#GENERATED[@]}" -gt 0 ]; then
   done
 fi
 echo
+echo "    Data:  persisted in the '${DB_VOLUME}' volume (survives container removal)."
 echo "    Logs:  docker logs -f voj.web   |   docker logs -f voj.judger"
-echo "    Stop:  docker rm -f voj.web voj.judger"
+echo "    Stop:  docker rm -f voj.web voj.judger   (keeps data; add 'docker volume rm ${DB_VOLUME}' to wipe)"

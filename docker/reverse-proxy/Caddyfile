@@ -1,0 +1,33 @@
+# Example Caddy reverse proxy for Verwandlung Online Judge.
+#
+# Caddy fetches and renews TLS certificates automatically. Run the web container
+# with the matching public URL so generated links, e-mails and assets are correct:
+#
+#   # served under /voj (the default context path):
+#   docker run ... -e VOJ_BASE_URL=https://oj.example.edu/voj zjhzxhz/voj.web
+#
+#   # or served at the site root:
+#   docker run ... -e VOJ_CONTEXT_PATH=/ -e VOJ_BASE_URL=https://oj.example.edu zjhzxhz/voj.web
+#
+# Caddy does not buffer reverse_proxy responses by default, so Server-Sent Events
+# (the real-time judge result stream) work out of the box; we only need a longer
+# read timeout so a long-running judge stream is not cut off.
+
+oj.example.edu {
+	# Problem test-data archives can be large (the app caps multipart at 128 MB).
+	request_body {
+		max_size 128MB
+	}
+
+	# Real-time judge result stream (SSE): keep the upstream connection open long
+	# enough for judging to finish. Matches both /voj and a root deployment.
+	@sse path /submission/getRealTimeJudgeResult.action /voj/submission/getRealTimeJudgeResult.action
+	reverse_proxy @sse 127.0.0.1:8080 {
+		transport http {
+			read_timeout 1h
+		}
+		flush_interval -1
+	}
+
+	reverse_proxy 127.0.0.1:8080
+}

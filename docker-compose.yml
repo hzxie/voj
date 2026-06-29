@@ -1,0 +1,67 @@
+# Verwandlung Online Judge - self-host stack (Docker Compose)
+#
+# Brings up the bundled web container (MariaDB + ActiveMQ + the Spring Boot app)
+# and a judger, the same two-container topology as scripts/run-docker.sh -- pick
+# whichever you prefer, they are equivalent:
+#
+#   docker compose up -d           # this file
+#   scripts/run-docker.sh          # plain `docker run`, no compose
+#
+# Configuration is read from VOJ_* environment variables at runtime (see
+# voj.properties). Copy .env.example to .env to set your own URL, secrets and SMTP;
+# the defaults below let `docker compose up` work with zero config for a local try.
+#
+# Persistence: the database (problems, users, submissions AND problem test data --
+# all of it lives in MariaDB) is kept in the named volume `voj-db`, so pulling a
+# newer image and recreating the containers does NOT lose data. On the very first
+# start Docker seeds the empty volume from the image's bundled database.
+services:
+  web:
+    image: zjhzxhz/voj.web
+    # To build from this checkout instead of pulling, comment out `image:` above
+    # and uncomment:
+    # build:
+    #   context: .
+    #   dockerfile: docker/web/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${VOJ_HTTP_PORT:-8080}:8080"
+    environment:
+      # Public root used in e-mails and absolute links. Behind a reverse proxy set
+      # this (and VOJ_CONTEXT_PATH=/) to the externally visible URL in .env.
+      VOJ_BASE_URL: ${VOJ_BASE_URL:-http://localhost:8080/voj}
+      VOJ_CONTEXT_PATH: ${VOJ_CONTEXT_PATH:-/voj}
+      # Shared secret the judger presents to download test data; must match the
+      # judger service below. Override in .env for anything but a local trial.
+      VOJ_JUDGER_API_TOKEN: ${VOJ_JUDGER_API_TOKEN:-verwandlung}
+      # SMTP (empty disables e-mail).
+      VOJ_MAIL_HOST: ${VOJ_MAIL_HOST:-}
+      VOJ_MAIL_USERNAME: ${VOJ_MAIL_USERNAME:-}
+      VOJ_MAIL_PASSWORD: ${VOJ_MAIL_PASSWORD:-}
+      VOJ_MAIL_SENDER: ${VOJ_MAIL_SENDER:-noreply@example.com}
+    volumes:
+      # /var/lib/mariadb is the MariaDB data directory in the image's Ubuntu base
+      # (Ubuntu moved it there from the traditional /var/lib/mysql).
+      - voj-db:/var/lib/mariadb
+    networks:
+      default:
+        # The judger image defaults to reaching the web app at the host "voj.web";
+        # expose that name here so the judger needs no extra configuration.
+        aliases:
+          - voj.web
+
+  judger:
+    image: zjhzxhz/voj.judger
+    # build:
+    #   context: .
+    #   dockerfile: docker/judger/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - web
+    environment:
+      # Must match the web service. Everything else (DB host, broker, web base URL)
+      # defaults to "voj.web" in the image, resolved via the alias above.
+      VOJ_JUDGER_API_TOKEN: ${VOJ_JUDGER_API_TOKEN:-verwandlung}
+
+volumes:
+  voj-db:
