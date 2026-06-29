@@ -29,3 +29,19 @@ jobs:
           docker build -t ${{ secrets.DOCKER_USERNAME }}/voj.judger:latest -f docker/judger/Dockerfile .
           docker push ${{ secrets.DOCKER_USERNAME }}/voj.judger:latest
 
+      - name: Sync Web Docker Hub description
+        uses: peter-evans/dockerhub-description@v4
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+          repository: ${{ secrets.DOCKER_USERNAME }}/voj.web
+          readme-filepath: ./docker/web/DOCKERHUB.md
+
+      - name: Sync Judger Docker Hub description
+        uses: peter-evans/dockerhub-description@v4
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+          repository: ${{ secrets.DOCKER_USERNAME }}/voj.judger
+          readme-filepath: ./docker/judger/DOCKERHUB.md
+
