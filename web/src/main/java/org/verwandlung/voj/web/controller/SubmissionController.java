@@ -38,7 +38,6 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import org.verwandlung.voj.web.exception.ResourceNotFoundException;
 import org.verwandlung.voj.web.messenger.ApplicationEventListener;
-import org.verwandlung.voj.web.model.Option;
 import org.verwandlung.voj.web.model.Submission;
 import org.verwandlung.voj.web.model.User;
 import org.verwandlung.voj.web.service.OptionService;
@@ -72,6 +71,7 @@ public class SubmissionController {
         optionService.getIntOption("submissionsPerPage", DEFAULT_NUMBER_OF_SUBMISSION_PER_PAGE);
     List<Submission> submissions =
         submissionService.getSubmissions(problemId, username, NUMBER_OF_SUBMISSION_PER_PAGE);
+    redactSubmissions(submissions, HttpSessionParser.getCurrentUser(request.getSession()));
     return new ModelAndView("pages/submissions/submissions").addObject("submissions", submissions);
   }
 
@@ -97,6 +97,7 @@ public class SubmissionController {
     List<Submission> submissions =
         submissionService.getSubmissions(
             problemId, username, startIndex, NUMBER_OF_SUBMISSION_PER_PAGE);
+    redactSubmissions(submissions, HttpSessionParser.getCurrentUser(request.getSession()));
     result.put("isSuccessful", submissions != null && !submissions.isEmpty());
     result.put("submissions", submissions);
 
@@ -125,6 +126,7 @@ public class SubmissionController {
     List<Submission> submissions =
         submissionService.getLatestSubmissions(
             problemId, username, startIndex, NUMBER_OF_SUBMISSION_PER_PAGE);
+    redactSubmissions(submissions, HttpSessionParser.getCurrentUser(request.getSession()));
     result.put("isSuccessful", submissions != null && !submissions.isEmpty());
     result.put("submissions", submissions);
 
@@ -161,6 +163,29 @@ public class SubmissionController {
   }
 
   /**
+   * Strips the source code (and any source-echoing compiler-error log) from every submission in a
+   * list the current viewer is not allowed to see, applying the same per-submission visibility rule
+   * as the detail pages. The submission-list views never render the source, but the list records are
+   * serialised verbatim to JSON by the {@code getSubmissions}/{@code getLatestSubmissions} actions,
+   * so without this another user's code would leak through those endpoints.
+   *
+   * @param submissions - the submission records to redact in place, may be {@code null}
+   * @param currentUser - the currently logged-in user, or null
+   */
+  private void redactSubmissions(List<Submission> submissions, User currentUser) {
+    if (submissions == null) {
+      return;
+    }
+    for (Submission submission : submissions) {
+      boolean canViewCode = canViewSourceCode(submission, currentUser);
+      if (!canViewCode) {
+        submission.setCode(null);
+      }
+      redactCompilerErrorLog(submission, canViewCode);
+    }
+  }
+
+  /**
    * Clears a submission's judge log when it echoes source the viewer may not see. The compiler-error
    * log reproduces the submitted source verbatim, so it must follow the same visibility rule as the
    * code itself; judge logs for other verdicts (compile success, runtime results) carry no source
@@ -180,20 +205,15 @@ public class SubmissionController {
   }
 
   /**
-   * Determines whether the given viewer is allowed to see a submission's source code. Owners and
-   * administrators may always see it; everyone else may see it only when the {@code
-   * publicSubmissions} option is enabled.
+   * Determines whether the given viewer is allowed to see a submission's source code. A submission's
+   * source is private: only its owner and administrators may ever see it. Everyone else - including
+   * anonymous visitors - is denied, regardless of any site-wide option.
    *
    * @param submission - the submission record
    * @param currentUser - the currently logged-in user, or null
    * @return whether the viewer may see the submission's source code
    */
   private boolean canViewSourceCode(Submission submission, User currentUser) {
-    Option option = optionService.getOption("publicSubmissions");
-    boolean isPublic = option != null && "1".equals(option.getOptionValue());
-    if (isPublic) {
-      return true;
-    }
     if (currentUser == null) {
       return false;
     }

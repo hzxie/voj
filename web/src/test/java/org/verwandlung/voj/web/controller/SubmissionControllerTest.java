@@ -35,7 +35,6 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import org.verwandlung.voj.web.model.Option;
 import org.verwandlung.voj.web.model.Submission;
 import org.verwandlung.voj.web.model.User;
 import org.verwandlung.voj.web.model.UserGroup;
@@ -112,6 +111,46 @@ public class SubmissionControllerTest {
     Assertions.assertSame(submissions, result.get("submissions"));
   }
 
+  /** Test case: tests getSubmissionsAction(...). Test data: an anonymous viewer. Expected: the source code is stripped from every listed submission. */
+  @Test
+  public void testGetSubmissionsActionStripsCodeForOtherViewer() {
+    Submission submission = submissionWithCode(ownerUser(), "secret code");
+    when(submissionService.getSubmissions(eq(1000L), eq("zjhzxhz"), eq(0L), eq(100)))
+        .thenReturn(List.of(submission));
+
+    Map<String, Object> result =
+        controller.getSubmissionsAction(1000L, "zjhzxhz", 0L, new MockHttpServletRequest());
+
+    Assertions.assertEquals(Boolean.TRUE, result.get("isSuccessful"));
+    Assertions.assertNull(submission.getCode());
+  }
+
+  /** Test case: tests getSubmissionsAction(...). Test data: the owner browsing their own submissions. Expected: the source code is retained for the owner. */
+  @Test
+  public void testGetSubmissionsActionKeepsCodeForOwner() {
+    User owner = ownerUser();
+    Submission submission = submissionWithCode(owner, "my code");
+    when(submissionService.getSubmissions(eq(0L), eq(""), eq(0L), eq(100)))
+        .thenReturn(List.of(submission));
+    authenticate(owner);
+
+    controller.getSubmissionsAction(0L, "", 0L, new MockHttpServletRequest());
+
+    Assertions.assertEquals("my code", submission.getCode());
+  }
+
+  /** Test case: tests getLatestSubmissionsAction(...). Test data: an anonymous viewer. Expected: the source code is stripped from every listed submission. */
+  @Test
+  public void testGetLatestSubmissionsActionStripsCodeForOtherViewer() {
+    Submission submission = submissionWithCode(ownerUser(), "secret code");
+    when(submissionService.getLatestSubmissions(eq(1000L), eq(""), eq(5L), eq(100)))
+        .thenReturn(List.of(submission));
+
+    controller.getLatestSubmissionsAction(1000L, "", 5L, new MockHttpServletRequest());
+
+    Assertions.assertNull(submission.getCode());
+  }
+
   /** Test case: tests getSubmissionAction(...). Test data: a non-existent submission id. Expected: isSuccessful is false and the submission is null. */
   @Test
   public void testGetSubmissionActionNotFound() {
@@ -123,11 +162,9 @@ public class SubmissionControllerTest {
     Assertions.assertNull(result.get("submission"));
   }
 
-  /** Test case: tests getSubmissionAction(...). Test data: an anonymous viewer with public-submissions disabled. Expected: the source code is stripped before returning. */
+  /** Test case: tests getSubmissionAction(...). Test data: an anonymous viewer. Expected: the source code is stripped before returning. */
   @Test
   public void testGetSubmissionActionStripsCodeForAnonymousViewer() {
-    when(optionService.getOption("publicSubmissions"))
-        .thenReturn(new Option("publicSubmissions", "0", true));
     Submission submission = submissionWithCode(ownerUser(), "secret code");
     when(submissionService.getSubmission(1000L)).thenReturn(submission);
 
@@ -137,24 +174,33 @@ public class SubmissionControllerTest {
     Assertions.assertNull(((Submission) result.get("submission")).getCode());
   }
 
-  /** Test case: tests getSubmissionAction(...). Test data: public-submissions enabled. Expected: the source code is retained for any viewer. */
+  /** Test case: tests getSubmissionAction(...). Test data: a logged-in user viewing another user's submission. Expected: the source code is stripped for the non-owner. */
   @Test
-  public void testGetSubmissionActionKeepsCodeWhenPublic() {
-    when(optionService.getOption("publicSubmissions"))
-        .thenReturn(new Option("publicSubmissions", "1", true));
-    Submission submission = submissionWithCode(ownerUser(), "shared code");
+  public void testGetSubmissionActionStripsCodeForOtherLoggedInUser() {
+    Submission submission = submissionWithCode(ownerUser(), "secret code");
     when(submissionService.getSubmission(1000L)).thenReturn(submission);
+    authenticate(otherUser());
 
     Map<String, Object> result = controller.getSubmissionAction(1000L, new MockHttpServletRequest());
 
-    Assertions.assertEquals("shared code", ((Submission) result.get("submission")).getCode());
+    Assertions.assertNull(((Submission) result.get("submission")).getCode());
   }
 
-  /** Test case: tests getSubmissionAction(...). Test data: the owner viewing their own submission with public-submissions disabled. Expected: the source code is retained for the owner. */
+  /** Test case: tests getSubmissionAction(...). Test data: an administrator viewing another user's submission. Expected: the source code is retained for administrators. */
+  @Test
+  public void testGetSubmissionActionKeepsCodeForAdministrator() {
+    Submission submission = submissionWithCode(ownerUser(), "secret code");
+    when(submissionService.getSubmission(1000L)).thenReturn(submission);
+    authenticate(administratorUser());
+
+    Map<String, Object> result = controller.getSubmissionAction(1000L, new MockHttpServletRequest());
+
+    Assertions.assertEquals("secret code", ((Submission) result.get("submission")).getCode());
+  }
+
+  /** Test case: tests getSubmissionAction(...). Test data: the owner viewing their own submission. Expected: the source code is retained for the owner. */
   @Test
   public void testGetSubmissionActionKeepsCodeForOwner() {
-    when(optionService.getOption("publicSubmissions"))
-        .thenReturn(new Option("publicSubmissions", "0", true));
     User owner = ownerUser();
     Submission submission = submissionWithCode(owner, "my code");
     when(submissionService.getSubmission(1000L)).thenReturn(submission);
@@ -168,6 +214,17 @@ public class SubmissionControllerTest {
   /** Builds the submission owner (uid 1000, group "users"). */
   private static User ownerUser() {
     return new User(1000, "zjhzxhz", "p", "a@b.com", new UserGroup(2, "users", "Users"), null);
+  }
+
+  /** Builds a different regular user (uid 1001, group "users") who does not own the submission. */
+  private static User otherUser() {
+    return new User(1001, "someone", "p", "c@d.com", new UserGroup(2, "users", "Users"), null);
+  }
+
+  /** Builds an administrator (uid 1, group "administrators"). */
+  private static User administratorUser() {
+    return new User(
+        1, "admin", "p", "e@f.com", new UserGroup(1, "administrators", "Administrators"), null);
   }
 
   /** Builds a submission owned by the given user and carrying the given source code. */
