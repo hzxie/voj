@@ -152,7 +152,7 @@ public class CommonModelPopulator {
   private String getPreferNaturalLanguage(
       HttpServletRequest request, HttpServletResponse response) {
     final String DEFAULT_LANGUAGE = "en_US";
-    final String[] supportedLanguages = {"en_US", "zh_CN", "zh_TW"};
+    final String[] supportedLanguages = {"en_US", "zh_CN", "zh_TW", "ja_JP", "ko_KR", "vi_VN", "ru_RU"};
     Locale browserLocale = getBrowserLocale(request);
 
     // Prefer an exact language + country match (e.g. zh-TW -> zh_TW, distinguishing
