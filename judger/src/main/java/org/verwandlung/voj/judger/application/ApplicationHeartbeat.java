@@ -16,7 +16,11 @@
  */
 package org.verwandlung.voj.judger.application;
 
+import java.io.IOException;
 import java.lang.management.ManagementFactory;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
@@ -87,9 +91,22 @@ public class ApplicationHeartbeat implements Runnable {
   /**
    * Gets the current physical memory usage as a percentage (0-100).
    *
+   * <p>On Linux the usage is derived from {@code MemAvailable} in {@code /proc/meminfo}, which
+   * accounts for reclaimable page cache and slab. Using the JVM bean's free memory instead would
+   * count {@code buff/cache} as "used" and report a misleadingly high figure (close to 100%) on a
+   * perfectly healthy host. The host-wide {@code /proc/meminfo} is also visible from inside a
+   * container, so the reported value matches what {@code free} shows on the machine.
+   *
    * @return the memory usage percentage, or 0 when the platform cannot report it
    */
   private int getMemoryUsage() {
+    int usageFromMemInfo = getMemoryUsageFromProcMemInfo();
+    if (usageFromMemInfo >= 0) {
+      return usageFromMemInfo;
+    }
+    // Fall back to the JVM bean on platforms without /proc/meminfo (e.g. Windows, macOS). This
+    // overstates usage on systems with a large page cache, but those platforms have no equivalent
+    // of MemAvailable exposed here.
     com.sun.management.OperatingSystemMXBean osBean =
         (com.sun.management.OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
     long totalMemory = osBean.getTotalMemorySize();
@@ -98,6 +115,61 @@ public class ApplicationHeartbeat implements Runnable {
       return 0;
     }
     return (int) Math.round((totalMemory - freeMemory) * 100.0 / totalMemory);
+  }
+
+  /**
+   * Computes the memory usage percentage from {@code MemTotal} and {@code MemAvailable} in {@code
+   * /proc/meminfo}.
+   *
+   * @return the memory usage percentage (0-100), or -1 when {@code /proc/meminfo} is unavailable or
+   *     does not provide the required fields
+   */
+  private int getMemoryUsageFromProcMemInfo() {
+    Path memInfoPath = Paths.get("/proc/meminfo");
+    if (!Files.isReadable(memInfoPath)) {
+      return -1;
+    }
+    long memTotal = -1;
+    long memAvailable = -1;
+    try {
+      for (String line : Files.readAllLines(memInfoPath)) {
+        if (line.startsWith("MemTotal:")) {
+          memTotal = parseMemInfoKilobytes(line);
+        } else if (line.startsWith("MemAvailable:")) {
+          memAvailable = parseMemInfoKilobytes(line);
+        }
+        if (memTotal > 0 && memAvailable >= 0) {
+          break;
+        }
+      }
+    } catch (IOException ex) {
+      LOGGER.warn("Failed to read /proc/meminfo; falling back to JVM memory reporting.", ex);
+      return -1;
+    }
+    if (memTotal <= 0 || memAvailable < 0) {
+      return -1;
+    }
+    long used = memTotal - memAvailable;
+    return (int) Math.round(used * 100.0 / memTotal);
+  }
+
+  /**
+   * Parses the kilobyte value from a {@code /proc/meminfo} line such as {@code "MemTotal:  2031024
+   * kB"}.
+   *
+   * @param line the line to parse
+   * @return the value in kilobytes, or -1 when it cannot be parsed
+   */
+  private long parseMemInfoKilobytes(String line) {
+    String[] tokens = line.trim().split("\\s+");
+    if (tokens.length < 2) {
+      return -1;
+    }
+    try {
+      return Long.parseLong(tokens[1]);
+    } catch (NumberFormatException ex) {
+      return -1;
+    }
   }
 
   /**
