@@ -211,8 +211,12 @@
 .adm-setgroup-head .t { font-size:12px; letter-spacing:1.4px; color:var(--accent); }
 .adm-setgroup-head .d { font-size:11.5px; color:var(--text3); margin-top:4px; }
 .adm-setgroup-body { padding:8px 22px; }
-.adm-setrow { display:grid; grid-template-columns:1fr 280px; gap:18px; align-items:center; padding:15px 0; border-bottom:1px solid var(--line2); }
+.adm-setrow { display:grid; grid-template-columns:minmax(0,1fr) minmax(300px,520px); gap:18px; align-items:center; padding:15px 0; border-bottom:1px solid var(--line2); }
 .adm-setrow:last-child { border-bottom:0; }
+@media (max-width:1024px) {
+  .adm-setrow { grid-template-columns:1fr; align-items:stretch; }
+  .adm-setrow-r { justify-content:flex-start; }
+}
 .adm-setrow-l { min-width:0; }
 .adm-setrow-l .lbl { font-size:13px; color:var(--head); font-weight:600; }
 .adm-setrow-l .hint { font-size:11.5px; color:var(--text3); margin-top:3px; line-height:1.5; }
