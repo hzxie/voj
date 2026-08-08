@@ -33,7 +33,7 @@
 		<!-- Versions not managed by the Spring Boot BOM. -->
 		<mybatis-spring-boot.version>4.0.1</mybatis-spring-boot.version>
 		<druid.version>1.2.28</druid.version>
-		<jsoup.version>1.22.2</jsoup.version>
+		<jsoup.version>1.23.1</jsoup.version>
 		<commons-io.version>2.22.0</commons-io.version>
 		<jacoco.version>0.8.13</jacoco.version>
 	</properties>
