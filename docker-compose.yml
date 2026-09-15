@@ -34,8 +34,9 @@ services:
       # Shared secret the judger presents to download test data; must match the
       # judger service below. Override in .env for anything but a local trial.
       VOJ_JUDGER_API_TOKEN: ${VOJ_JUDGER_API_TOKEN:-verwandlung}
-      # SMTP (empty disables e-mail).
+      # SMTP (empty host disables e-mail).
       VOJ_MAIL_HOST: ${VOJ_MAIL_HOST:-}
+      VOJ_MAIL_PORT: ${VOJ_MAIL_PORT:-587}
       VOJ_MAIL_USERNAME: ${VOJ_MAIL_USERNAME:-}
       VOJ_MAIL_PASSWORD: ${VOJ_MAIL_PASSWORD:-}
       VOJ_MAIL_SENDER: ${VOJ_MAIL_SENDER:-noreply@example.com}
