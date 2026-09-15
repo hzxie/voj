@@ -13,6 +13,9 @@ LABEL org.opencontainers.image.authors="Haozhe Xie <root@haozhexie.com>"
 # TARGETARCH is provided by BuildKit (amd64 / arm64) and matches the Ubuntu
 # OpenJDK directory suffix, so the image builds natively on both.
 ARG TARGETARCH
+ARG MAVEN_VERSION=3.9.16
+ARG KOTLIN_VERSION=2.4.20
+ARG GO_VERSION=go1.27.1
 ENV HOME=/root
 ENV JAVA_HOME=/usr/lib/jvm/java-25-openjdk-${TARGETARCH}
 ENV M2_HOME=/opt/maven
@@ -48,33 +51,37 @@ WORKDIR /root
 
 # Install the toolchains for every language enabled in sql/seed.sql
 # (C/C++, Pascal, Java, Python 3, Go, JavaScript/Node.js, Rust and Kotlin)
-# in a single layer.
-RUN apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+# using pinned versions so builds do not depend on release-page scraping or the
+# unauthenticated GitHub API.
+RUN apt-get -o Acquire::Retries=5 update && \
+    DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=5 install -y --no-install-recommends \
         ca-certificates wget curl unzip \
         make g++ fp-compiler python3 nodejs rustc \
         libseccomp-dev \
         openjdk-25-jdk && \
     rm -rf /var/lib/apt/lists/* && \
 # Setup Python3 as the default Python
-    ln -s /usr/bin/python3 /usr/bin/python && \
+    ln -s /usr/bin/python3 /usr/bin/python
+
 # Install Maven
-    MAVEN_VERSION=$(curl -s https://maven.apache.org/download.cgi | grep -oP 'apache-maven-\K[0-9]+\.[0-9]+\.[0-9]+' | head -1) && \
-    wget https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz && \
+RUN wget --progress=dot:giga --tries=5 --timeout=30 --retry-connrefused \
+        https://dlcdn.apache.org/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz && \
     tar -xf apache-maven-${MAVEN_VERSION}-bin.tar.gz -C /opt && \
     mv /opt/apache-maven-${MAVEN_VERSION} /opt/maven && \
-    rm apache-maven-${MAVEN_VERSION}-bin.tar.gz && \
+    rm apache-maven-${MAVEN_VERSION}-bin.tar.gz
+
 # Install the Kotlin command-line compiler (no apt package; mirror the Maven
 # pattern by unpacking the official release into /opt/kotlinc).
-    KOTLIN_VERSION=$(curl -s https://api.github.com/repos/JetBrains/kotlin/releases/latest | grep -oP '"tag_name": "v\K[^"]+') && \
-    wget https://github.com/JetBrains/kotlin/releases/download/v${KOTLIN_VERSION}/kotlin-compiler-${KOTLIN_VERSION}.zip && \
+RUN wget --progress=dot:giga --tries=5 --timeout=30 --retry-connrefused \
+        https://github.com/JetBrains/kotlin/releases/download/v${KOTLIN_VERSION}/kotlin-compiler-${KOTLIN_VERSION}.zip && \
     unzip -q kotlin-compiler-${KOTLIN_VERSION}.zip -d /opt && \
-    rm kotlin-compiler-${KOTLIN_VERSION}.zip && \
-# Install the official Go toolchain (latest stable) into /opt/go. Apt's golang-go
-# lags upstream; this keeps Go on the same download-and-unpack footing as Maven
-# and Kotlin. TARGETARCH (amd64/arm64) matches Go's release archive naming.
-    GO_VERSION=$(curl -s https://go.dev/VERSION?m=text | head -1) && \
-    wget https://go.dev/dl/${GO_VERSION}.linux-${TARGETARCH}.tar.gz && \
+    rm kotlin-compiler-${KOTLIN_VERSION}.zip
+
+# Install the pinned official Go toolchain into /opt/go. Apt's golang-go lags
+# upstream; this keeps Go on the same download-and-unpack footing as Maven and
+# Kotlin. TARGETARCH (amd64/arm64) matches Go's release archive naming.
+RUN wget --progress=dot:giga --tries=5 --timeout=30 --retry-connrefused \
+        https://go.dev/dl/${GO_VERSION}.linux-${TARGETARCH}.tar.gz && \
     tar -C /opt -xzf ${GO_VERSION}.linux-${TARGETARCH}.tar.gz && \
     rm ${GO_VERSION}.linux-${TARGETARCH}.tar.gz
 
