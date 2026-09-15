@@ -64,7 +64,7 @@ RUN apt-get -o Acquire::Retries=5 update && \
     ln -s /usr/bin/python3 /usr/bin/python
 
 # Install Maven
-RUN wget --tries=5 --timeout=30 --retry-connrefused \
+RUN wget --progress=dot:giga --tries=5 --timeout=30 --retry-connrefused \
         https://dlcdn.apache.org/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz && \
     tar -xf apache-maven-${MAVEN_VERSION}-bin.tar.gz -C /opt && \
     mv /opt/apache-maven-${MAVEN_VERSION} /opt/maven && \
@@ -72,7 +72,7 @@ RUN wget --tries=5 --timeout=30 --retry-connrefused \
 
 # Install the Kotlin command-line compiler (no apt package; mirror the Maven
 # pattern by unpacking the official release into /opt/kotlinc).
-RUN wget --tries=5 --timeout=30 --retry-connrefused \
+RUN wget --progress=dot:giga --tries=5 --timeout=30 --retry-connrefused \
         https://github.com/JetBrains/kotlin/releases/download/v${KOTLIN_VERSION}/kotlin-compiler-${KOTLIN_VERSION}.zip && \
     unzip -q kotlin-compiler-${KOTLIN_VERSION}.zip -d /opt && \
     rm kotlin-compiler-${KOTLIN_VERSION}.zip
@@ -80,7 +80,7 @@ RUN wget --tries=5 --timeout=30 --retry-connrefused \
 # Install the pinned official Go toolchain into /opt/go. Apt's golang-go lags
 # upstream; this keeps Go on the same download-and-unpack footing as Maven and
 # Kotlin. TARGETARCH (amd64/arm64) matches Go's release archive naming.
-RUN wget --tries=5 --timeout=30 --retry-connrefused \
+RUN wget --progress=dot:giga --tries=5 --timeout=30 --retry-connrefused \
         https://go.dev/dl/${GO_VERSION}.linux-${TARGETARCH}.tar.gz && \
     tar -C /opt -xzf ${GO_VERSION}.linux-${TARGETARCH}.tar.gz && \
     rm ${GO_VERSION}.linux-${TARGETARCH}.tar.gz
