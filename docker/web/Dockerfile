@@ -16,6 +16,8 @@ ARG MYSQL_USER_PASS=voj
 # TARGETARCH is provided by BuildKit (amd64 / arm64) and matches the Ubuntu
 # OpenJDK directory suffix, so the image builds natively on both.
 ARG TARGETARCH
+ARG MAVEN_VERSION=3.9.16
+ARG ACTIVEMQ_VERSION=6.3.2
 ENV HOME=/root
 ENV JAVA_HOME=/usr/lib/jvm/java-25-openjdk-${TARGETARCH}
 ENV M2_HOME=/opt/maven
@@ -61,16 +63,17 @@ RUN sed -i "s/127\.0\.0\.1/0.0.0.0/g" /etc/mysql/mariadb.conf.d/50-server.cnf &&
 
 # Install Maven and ActiveMQ. The web app now ships as a self-contained Spring
 # Boot executable JAR with an embedded Tomcat, so no external Tomcat is needed.
-RUN MAVEN_VERSION=$(curl -s https://maven.apache.org/download.cgi | grep -oP 'apache-maven-\K[0-9]+\.[0-9]+\.[0-9]+' | head -1) && \
-    ACTIVEMQ_VERSION=$(curl -s https://activemq.apache.org/components/classic/download/ | grep -oP 'apache-activemq-\K[0-9]+\.[0-9]+\.[0-9]+' | head -1) && \
 # Install Maven
-    wget https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz && \
+RUN wget --tries=5 --timeout=30 --retry-connrefused \
+        https://dlcdn.apache.org/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz && \
     tar -xf apache-maven-${MAVEN_VERSION}-bin.tar.gz -C /opt && \
     mv /opt/apache-maven-${MAVEN_VERSION} /opt/maven && \
-    rm apache-maven-${MAVEN_VERSION}-bin.tar.gz && \
+    rm apache-maven-${MAVEN_VERSION}-bin.tar.gz
+
 # Install ActiveMQ
-    useradd activemq -s /usr/sbin/nologin && \
-    wget https://archive.apache.org/dist/activemq/${ACTIVEMQ_VERSION}/apache-activemq-${ACTIVEMQ_VERSION}-bin.tar.gz && \
+RUN useradd activemq -s /usr/sbin/nologin && \
+    wget --tries=5 --timeout=30 --retry-connrefused \
+        https://dlcdn.apache.org/activemq/${ACTIVEMQ_VERSION}/apache-activemq-${ACTIVEMQ_VERSION}-bin.tar.gz && \
     tar -xf apache-activemq-${ACTIVEMQ_VERSION}-bin.tar.gz -C /opt && \
     mv /opt/apache-activemq-${ACTIVEMQ_VERSION} /opt/activemq && \
     rm apache-activemq-${ACTIVEMQ_VERSION}-bin.tar.gz && \
