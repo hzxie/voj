@@ -43,7 +43,8 @@ rebuild needed. Common variables:
 | `VOJ_BASE_URL` | `http://localhost:8080/voj` | Public root used in e-mails/links |
 | `VOJ_CONTEXT_PATH` | `/voj` | Servlet context path (`/` serves at root) |
 | `VOJ_JMS_BROKER_EMBEDDED` | `true` | Host the ActiveMQ broker in the web process |
-| `VOJ_MAIL_HOST` / `VOJ_MAIL_USERNAME` / `VOJ_MAIL_PASSWORD` | empty | SMTP (empty disables e-mail) |
+| `VOJ_MAIL_HOST` / `VOJ_MAIL_USERNAME` / `VOJ_MAIL_PASSWORD` | empty | SMTP credentials (empty host disables e-mail) |
+| `VOJ_MAIL_PORT` | `587` | SMTP submission port (STARTTLS) |
 
 Behind a reverse proxy, set `VOJ_BASE_URL` to the externally visible URL so links,
 e-mails and assets are correct.
