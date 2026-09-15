@@ -19,13 +19,25 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Build and Push Web Image
-        run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/voj.web:latest -f docker/web/Dockerfile .
-          docker push ${{ secrets.DOCKER_USERNAME }}/voj.web:latest
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/web/Dockerfile
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/voj.web:latest
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web
 
       - name: Build and Push Judger Image
-        run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/voj.judger:latest -f docker/judger/Dockerfile .
-          docker push ${{ secrets.DOCKER_USERNAME }}/voj.judger:latest
-
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/judger/Dockerfile
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/voj.judger:latest
+          cache-from: type=gha,scope=judger
+          cache-to: type=gha,mode=max,scope=judger
