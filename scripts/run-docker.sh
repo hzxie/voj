@@ -28,7 +28,7 @@
 #   VOJ_BASE_URL=http://localhost:${WEB_PORT}/voj  # public root (used in e-mails/links)
 #   VOJ_JUDGER_API_TOKEN            # shared web<->judger secret; generated if unset
 #   VOJ_JMS_BROKER_EMBEDDED=true    # host the broker inside voj.web (saves a JVM, ~150 MB+)
-#   VOJ_MAIL_HOST= / VOJ_MAIL_USERNAME= / VOJ_MAIL_PASSWORD=   # empty -> email disabled
+#   VOJ_MAIL_HOST= / VOJ_MAIL_PORT=587 / VOJ_MAIL_USERNAME= / VOJ_MAIL_PASSWORD=   # empty host -> email disabled
 #   MYSQL_USER_PASS                 # bundled-DB password (build mode only); generated if unset
 #   VOJ_PULL=                       # set to 1 to pull + run published images instead of building
 #
@@ -44,6 +44,7 @@ NETWORK="${NETWORK:-voj}"
 DB_VOLUME="${DB_VOLUME:-voj-db}"
 VOJ_BASE_URL="${VOJ_BASE_URL:-http://localhost:${WEB_PORT}/voj}"
 VOJ_MAIL_HOST="${VOJ_MAIL_HOST:-}"
+VOJ_MAIL_PORT="${VOJ_MAIL_PORT:-587}"
 VOJ_MAIL_USERNAME="${VOJ_MAIL_USERNAME:-}"
 VOJ_MAIL_PASSWORD="${VOJ_MAIL_PASSWORD:-}"
 VOJ_JMS_BROKER_EMBEDDED="${VOJ_JMS_BROKER_EMBEDDED:-true}"
@@ -127,6 +128,7 @@ docker run -d --name voj.web --network "${NETWORK}" -p "${WEB_PORT}:8080" \
   -e "VOJ_JUDGER_API_TOKEN=${VOJ_JUDGER_API_TOKEN}" \
   -e "VOJ_JMS_BROKER_EMBEDDED=${VOJ_JMS_BROKER_EMBEDDED}" \
   -e "VOJ_MAIL_HOST=${VOJ_MAIL_HOST}" \
+  -e "VOJ_MAIL_PORT=${VOJ_MAIL_PORT}" \
   -e "VOJ_MAIL_USERNAME=${VOJ_MAIL_USERNAME}" \
   -e "VOJ_MAIL_PASSWORD=${VOJ_MAIL_PASSWORD}" \
   "${WEB_IMAGE}" >/dev/null
