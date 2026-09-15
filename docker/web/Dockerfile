@@ -64,7 +64,7 @@ RUN sed -i "s/127\.0\.0\.1/0.0.0.0/g" /etc/mysql/mariadb.conf.d/50-server.cnf &&
 # Install Maven and ActiveMQ. The web app now ships as a self-contained Spring
 # Boot executable JAR with an embedded Tomcat, so no external Tomcat is needed.
 # Install Maven
-RUN wget --tries=5 --timeout=30 --retry-connrefused \
+RUN wget --progress=dot:giga --tries=5 --timeout=30 --retry-connrefused \
         https://dlcdn.apache.org/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz && \
     tar -xf apache-maven-${MAVEN_VERSION}-bin.tar.gz -C /opt && \
     mv /opt/apache-maven-${MAVEN_VERSION} /opt/maven && \
@@ -72,7 +72,7 @@ RUN wget --tries=5 --timeout=30 --retry-connrefused \
 
 # Install ActiveMQ
 RUN useradd activemq -s /usr/sbin/nologin && \
-    wget --tries=5 --timeout=30 --retry-connrefused \
+    wget --progress=dot:giga --tries=5 --timeout=30 --retry-connrefused \
         https://dlcdn.apache.org/activemq/${ACTIVEMQ_VERSION}/apache-activemq-${ACTIVEMQ_VERSION}-bin.tar.gz && \
     tar -xf apache-activemq-${ACTIVEMQ_VERSION}-bin.tar.gz -C /opt && \
     mv /opt/apache-activemq-${ACTIVEMQ_VERSION} /opt/activemq && \
