@@ -363,7 +363,33 @@ class ViewRenderSmokeTest {
                 .string(containsString("<meta name=\"description\" content=\"Compute a + b.\"")))
         .andExpect(
             content()
-                .string(containsString("<meta property=\"og:title\" content=\"P1000 A + B Problem\"")));
+                .string(containsString("<meta property=\"og:title\" content=\"P1000 A + B Problem\"")))
+        .andExpect(
+            content()
+                .string(containsString(
+                    "<link rel=\"canonical\" href=\"https://oj.example.edu/voj/p/1000\"")))
+        .andExpect(content().string(not(containsString("hreflang"))));
+  }
+
+  /** A page whose content is the translated UI lists an alternate URL per display language. */
+  @Test
+  void homeViewListsLanguageAlternates() throws Exception {
+    mockMvc
+        .perform(getWithCsrf("/").param("language", "zh_CN"))
+        .andExpect(status().isOk())
+        .andExpect(content().string(containsString(" lang=\"zh-CN\"")))
+        .andExpect(
+            content()
+                .string(containsString(
+                    "<link rel=\"canonical\" href=\"https://oj.example.edu/voj/?language=zh_CN\"")))
+        .andExpect(
+            content()
+                .string(containsString(
+                    "hreflang=\"ja\" href=\"https://oj.example.edu/voj/?language=ja_JP\"")))
+        .andExpect(
+            content()
+                .string(containsString(
+                    "hreflang=\"x-default\" href=\"https://oj.example.edu/voj/\"")));
   }
 
   /** robots.txt keeps crawlers out of the administration pages and points to the sitemap. */

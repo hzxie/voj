@@ -9,7 +9,7 @@
 */-->
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
-      th:lang="${language}" lang="en" data-theme="dark">
+      th:lang="${#strings.replace(language, '_', '-')}" lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8" />
     <script>(function(){try{var t=localStorage.getItem('voj-theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>

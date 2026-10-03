@@ -64,6 +64,7 @@ public class CommonModelPopulatorTest {
         .thenReturn(List.of(new Option("siteName", "Verwandlung OJ", true)));
 
     Properties properties = new Properties();
+    properties.setProperty("url.base", "https://oj.example.edu/voj");
     properties.setProperty("url.cdn", "https://cdn.example.org");
     properties.setProperty("build.version", "20260628");
     properties.setProperty("product.version", "1.2.3");
@@ -134,6 +135,48 @@ public class CommonModelPopulatorTest {
     Assertions.assertEquals("20260628", model.get("version"));
     Assertions.assertEquals("1.2.3", model.get("productVersion"));
     Assertions.assertEquals("/about", model.get("forwardUri"));
+  }
+
+  /** Test case: tests populate(...). Test data: a list page requested with ?language=zh_CN and another query parameter. Expected: the canonical URL keeps both parameters, every supported language has an alternate URL and x-default drops the language parameter. */
+  @Test
+  public void testPopulateLanguageUrls() {
+    MockHttpServletRequest request = requestFor("/voj/p");
+    request.setContextPath("/voj");
+    request.setQueryString("page=2&language=zh_CN");
+    request.setParameter("page", "2");
+    request.setParameter("language", "zh_CN");
+    ModelAndView view = new ModelAndView();
+
+    populator.populate(view, request, new MockHttpServletResponse());
+
+    Map<String, Object> model = view.getModel();
+    Assertions.assertEquals(
+        "https://oj.example.edu/voj/p?page=2&language=zh_CN", model.get("canonicalUrl"));
+    @SuppressWarnings("unchecked")
+    Map<String, String> alternateUrls = (Map<String, String>) model.get("alternateUrls");
+    Assertions.assertEquals(8, alternateUrls.size());
+    Assertions.assertEquals(
+        "https://oj.example.edu/voj/p?page=2&language=en_US", alternateUrls.get("en"));
+    Assertions.assertEquals(
+        "https://oj.example.edu/voj/p?page=2&language=zh_TW", alternateUrls.get("zh-TW"));
+    Assertions.assertEquals("https://oj.example.edu/voj/p?page=2", alternateUrls.get("x-default"));
+  }
+
+  /** Test case: tests populate(...). Test data: a problem page (isAuthoredContent) requested with ?language=ja_JP. Expected: the canonical URL drops the language parameter and no alternate URLs are listed. */
+  @Test
+  public void testPopulateLanguageUrlsOfAuthoredContent() {
+    MockHttpServletRequest request = requestFor("/voj/p/1000");
+    request.setContextPath("/voj");
+    request.setQueryString("language=ja_JP");
+    request.setParameter("language", "ja_JP");
+    ModelAndView view = new ModelAndView();
+    view.addObject("isAuthoredContent", true);
+
+    populator.populate(view, request, new MockHttpServletResponse());
+
+    Map<String, Object> model = view.getModel();
+    Assertions.assertEquals("https://oj.example.edu/voj/p/1000", model.get("canonicalUrl"));
+    Assertions.assertFalse(model.containsKey("alternateUrls"));
   }
 
   /**

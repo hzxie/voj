@@ -17,6 +17,7 @@
 package org.verwandlung.voj.web.interceptor;
 
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -31,6 +32,8 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.support.RequestContextUtils;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import org.verwandlung.voj.web.model.Option;
 import org.verwandlung.voj.web.model.User;
@@ -78,6 +81,7 @@ public class CommonModelPopulator {
     // jakarta.servlet.forward.request_uri attribute set by the dispatcher's
     // forward; Thymeleaf renders without that forward, so it is supplied here.
     view.addObject("forwardUri", request.getRequestURI());
+    addLanguageUrls(view, request);
 
     User user = HttpSessionParser.getCurrentUser();
     if (user != null) {
@@ -152,14 +156,13 @@ public class CommonModelPopulator {
   private String getPreferNaturalLanguage(
       HttpServletRequest request, HttpServletResponse response) {
     final String DEFAULT_LANGUAGE = "en_US";
-    final String[] supportedLanguages = {"en_US", "zh_CN", "zh_TW", "ja_JP", "ko_KR", "vi_VN", "ru_RU"};
     Locale browserLocale = getBrowserLocale(request);
 
     // Prefer an exact language + country match (e.g. zh-TW -> zh_TW, distinguishing
     // Traditional from Simplified Chinese) before falling back to a language-only
     // match (e.g. any other zh-* -> the first supported zh variant).
     String languageOnlyMatch = null;
-    for (String supportedLanguage : supportedLanguages) {
+    for (String supportedLanguage : HREFLANGS_OF_SUPPORTED_LANGUAGES.keySet()) {
       Locale supportLanguageLocale = LocaleUtils.getLocaleOfLanguage(supportedLanguage);
       if (!supportLanguageLocale.getLanguage().equals(browserLocale.getLanguage())) {
         continue;
@@ -183,6 +186,67 @@ public class CommonModelPopulator {
   private Locale getBrowserLocale(HttpServletRequest request) {
     Locale locale = request.getLocale();
     return locale;
+  }
+
+  /**
+   * Adds the canonical URL and the per-language alternate URLs used by search engines. The display
+   * language is chosen with the ?language=xx_XX parameter (falling back to the browser language),
+   * so every language version of a page has its own URL.
+   *
+   * <p>Pages whose main content is authored in a single language (problems, discussion threads,
+   * contests) set {@code isAuthoredContent}: switching the display language only translates the
+   * page chrome, so all the language versions share one canonical URL and no alternates are listed
+   * — search engines index the page once and detect its language from the content.
+   *
+   * @param view - the ModelAndView object to populate
+   * @param request - the HttpRequest object
+   */
+  private void addLanguageUrls(ModelAndView view, HttpServletRequest request) {
+    String baseUrl = applicationProperties.getProperty("url.base");
+    UriComponentsBuilder pageUrl =
+        baseUrl == null || baseUrl.isBlank()
+            ? ServletUriComponentsBuilder.fromContextPath(request)
+            : UriComponentsBuilder.fromUriString(baseUrl);
+    pageUrl
+        .path(request.getRequestURI().substring(request.getContextPath().length()))
+        .query(request.getQueryString())
+        .replaceQueryParam("language");
+    String defaultUrl = pageUrl.build().toUriString();
+
+    String language = request.getParameter("language");
+    boolean isAuthoredContent = Boolean.TRUE.equals(view.getModel().get("isAuthoredContent"));
+    if (isAuthoredContent || !HREFLANGS_OF_SUPPORTED_LANGUAGES.containsKey(language)) {
+      view.addObject("canonicalUrl", defaultUrl);
+    } else {
+      view.addObject(
+          "canonicalUrl", pageUrl.replaceQueryParam("language", language).build().toUriString());
+    }
+    if (!isAuthoredContent) {
+      Map<String, String> alternateUrls = new LinkedHashMap<>();
+      HREFLANGS_OF_SUPPORTED_LANGUAGES.forEach(
+          (supportedLanguage, hreflang) ->
+              alternateUrls.put(
+                  hreflang,
+                  pageUrl
+                      .replaceQueryParam("language", supportedLanguage)
+                      .build()
+                      .toUriString()));
+      alternateUrls.put("x-default", defaultUrl);
+      view.addObject("alternateUrls", alternateUrls);
+    }
+  }
+
+  /** The supported display languages, mapped to the hreflang codes of their alternate URLs. */
+  private static final Map<String, String> HREFLANGS_OF_SUPPORTED_LANGUAGES = new LinkedHashMap<>();
+
+  static {
+    HREFLANGS_OF_SUPPORTED_LANGUAGES.put("en_US", "en");
+    HREFLANGS_OF_SUPPORTED_LANGUAGES.put("zh_CN", "zh-CN");
+    HREFLANGS_OF_SUPPORTED_LANGUAGES.put("zh_TW", "zh-TW");
+    HREFLANGS_OF_SUPPORTED_LANGUAGES.put("ja_JP", "ja");
+    HREFLANGS_OF_SUPPORTED_LANGUAGES.put("ko_KR", "ko");
+    HREFLANGS_OF_SUPPORTED_LANGUAGES.put("vi_VN", "vi");
+    HREFLANGS_OF_SUPPORTED_LANGUAGES.put("ru_RU", "ru");
   }
 
   /** The autowired SubmissionService object. */

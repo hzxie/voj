@@ -196,6 +196,8 @@ public class ContestsController {
     }
 
     ModelAndView view = new ModelAndView("pages/contests/contest");
+    // The main content is authored in a single language (see CommonModelPopulator).
+    view.addObject("isAuthoredContent", true);
     view.addObject("currentTime", currentTime)
         .addObject("contest", contest)
         .addObject("pageDescription", SeoUtils.getDescription(contest.getContestNotes()))
@@ -317,6 +319,8 @@ public class ContestsController {
     List<Submission> submissions =
         contestService.getSubmissionsOfContestantOfContestProblem(contest, problemId, currentUser);
     ModelAndView view = new ModelAndView("pages/problems/problem");
+    // The main content is authored in a single language (see CommonModelPopulator).
+    view.addObject("isAuthoredContent", true);
     view.addObject("contest", contest);
     view.addObject("problem", problem);
     view.addObject("languages", languages);

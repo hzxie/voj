@@ -15,7 +15,7 @@
 */-->
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
-      th:lang="${language}" lang="en" data-theme="dark">
+      th:lang="${#strings.replace(language, '_', '-')}" lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8" />
     <!--/* Apply the persisted theme before first paint to avoid a flash. */-->
@@ -34,6 +34,9 @@
     <meta property="og:description" th:content="${pageDescription ?: description}" />
     <meta property="og:image" th:content="|${cdnUrl}/img/apple-touch-icon.png|" />
     <meta name="twitter:card" content="summary" />
+    <!-- One URL per display language (?language=xx_XX); see CommonModelPopulator.addLanguageUrls. -->
+    <link rel="canonical" th:href="${canonicalUrl}" />
+    <link th:each="alternate : ${alternateUrls}" rel="alternate" th:hreflang="${alternate.key}" th:href="${alternate.value}" />
     <meta name="author" content="Haozhe Xie" />
     <!-- CSRF token for AJAX requests (consumed by the ajaxSend hook in site.js). -->
     <meta name="_csrf" th:content="${_csrf.token}" />

@@ -151,6 +151,8 @@ public class DiscussionController {
 
     HttpSession session = request.getSession();
     ModelAndView view = new ModelAndView("pages/discussion/thread");
+    // The main content is authored in a single language (see CommonModelPopulator).
+    view.addObject("isAuthoredContent", true);
     view.addObject("discussionThread", discussionThread);
     // The opening post is the first reply of the thread.
     List<DiscussionReply> openingPost =

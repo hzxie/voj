@@ -48,6 +48,13 @@ public class ProblemMapperTest {
     Assertions.assertEquals(4, totalProblems);
   }
 
+  /** Test case: tests the getIdsOfPublicProblems(int) method. Test data: N/a. Expected: the IDs of the published problems in ascending order, without the hidden problem 1002. */
+  @Test
+  public void testGetIdsOfPublicProblems() {
+    Assertions.assertEquals(List.of(1000L, 1001L, 1003L), problemMapper.getIdsOfPublicProblems(10));
+    Assertions.assertEquals(List.of(1000L), problemMapper.getIdsOfPublicProblems(1));
+  }
+
   /**
    * Test case: tests the getNumberOfProblemsUsingFilters(String, int, boolean) method. Test data: N/a. Expected: the number of public problems in the table.
    */

@@ -220,6 +220,8 @@ public class ProblemsController {
     }
 
     ModelAndView view = new ModelAndView("pages/problems/problem");
+    // The main content is authored in a single language (see CommonModelPopulator).
+    view.addObject("isAuthoredContent", true);
     view.addObject("problem", problem);
     view.addObject("pageDescription", SeoUtils.getDescription(problem.getDescription()));
     // Standard (non-contest) problem view. The problem template is shared with
@@ -266,6 +268,8 @@ public class ProblemsController {
     }
 
     ModelAndView view = new ModelAndView("pages/discussion/thread");
+    // The main content is authored in a single language (see CommonModelPopulator).
+    view.addObject("isAuthoredContent", true);
     view.addObject("discussionThread", discussionThread);
     view.addObject("minSolvedToVote", discussionService.getMinSolvedToVote());
     view.addObject("minSolvedToReport", discussionService.getMinSolvedToReport());
