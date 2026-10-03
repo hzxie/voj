@@ -68,7 +68,7 @@
 
     <th:block layout:fragment="scripts">
     <th:block th:if="${isAllowRegister}">
-    <script th:if="${turnstileEnabled == '1'}" src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    <script th:if="${turnstileEnabled == '1'}" src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&amp;onload=onTurnstileLoad" async defer></script>
     <script type="text/javascript" th:inline="javascript">
         function onSubmit() {
             $('.alert-error').addClass('hide');

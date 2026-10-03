@@ -13,6 +13,8 @@
   function applyTheme(theme) {
     document.documentElement.setAttribute('data-theme', theme);
     try { localStorage.setItem(STORAGE_KEY, theme); } catch (e) {}
+    // Let widgets that cannot follow the CSS variables (e.g. Turnstile) re-theme themselves.
+    document.dispatchEvent(new CustomEvent('voj:themechange', { detail: { theme: theme } }));
   }
 
   function currentTheme() {

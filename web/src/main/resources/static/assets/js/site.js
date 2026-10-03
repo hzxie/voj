@@ -20,6 +20,27 @@ $(function() {
     });
 });
 
+/* Cloudflare Turnstile widgets that follow the site theme. The pages load api.js with
+ * render=explicit&onload=onTurnstileLoad; a rendered widget cannot be restyled, so it is
+ * removed and rendered again (which discards a solved challenge) when the theme is toggled. */
+function renderTurnstileWidgets() {
+    var theme = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+    $('.cf-turnstile').each(function() {
+        var widgetId = $(this).data('widgetId');
+        if ( widgetId !== undefined ) {
+            turnstile.remove(widgetId);
+        }
+        $(this).data('widgetId', turnstile.render(this, {
+            sitekey: this.getAttribute('data-sitekey'),
+            theme: theme
+        }));
+    });
+}
+window.onTurnstileLoad = renderTurnstileWidgets;
+document.addEventListener('voj:themechange', function() {
+    if ( window.turnstile ) { renderTurnstileWidgets(); }
+});
+
 /* String Prototype Extension - used by the table-building page scripts. */
 String.prototype.format = function() {
     var newStr = this, i = 0;
