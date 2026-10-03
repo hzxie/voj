@@ -40,7 +40,7 @@ export PATH="$JAVA_HOME/bin:$PATH"
 
 echo "==> JDK: $(java -version 2>&1 | head -1)"
 
-MVN_ARGS=()
+MVN_ARGS=("-Drevision=$(scripts/version.sh)")
 [ "$SKIP_TESTS" = "1" ] && MVN_ARGS+=("-DskipTests")
 
 case "$TARGET" in

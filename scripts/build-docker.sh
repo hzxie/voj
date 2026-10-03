@@ -31,6 +31,7 @@ WEB_IMAGE="${WEB_IMAGE:-zjhzxhz/voj.web}"
 JUDGER_IMAGE="${JUDGER_IMAGE:-zjhzxhz/voj.judger}"
 MYSQL_USER_PASS="${MYSQL_USER_PASS:-voj}"
 TARGET="${1:-all}"
+VOJ_VERSION="$(scripts/version.sh)"
 
 if ! command -v docker >/dev/null 2>&1; then
   echo "ERROR: docker is not installed or not on PATH." >&2
@@ -42,12 +43,14 @@ build_web() {
   docker build \
     --build-arg "MYSQL_ROOT_PASS=${MYSQL_USER_PASS}" \
     --build-arg "MYSQL_USER_PASS=${MYSQL_USER_PASS}" \
+    --build-arg "VOJ_VERSION=${VOJ_VERSION}" \
     -t "${WEB_IMAGE}" -f docker/web/Dockerfile .
 }
 
 build_judger() {
   echo "==> Building judger image: ${JUDGER_IMAGE}"
-  docker build -t "${JUDGER_IMAGE}" -f docker/judger/Dockerfile .
+  docker build --build-arg "VOJ_VERSION=${VOJ_VERSION}" \
+    -t "${JUDGER_IMAGE}" -f docker/judger/Dockerfile .
 }
 
 case "$TARGET" in

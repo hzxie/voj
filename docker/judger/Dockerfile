@@ -13,7 +13,7 @@ LABEL org.opencontainers.image.authors="Haozhe Xie <root@haozhexie.com>"
 # TARGETARCH is provided by BuildKit (amd64 / arm64) and matches the Ubuntu
 # OpenJDK directory suffix, so the image builds natively on both.
 ARG TARGETARCH
-ARG MAVEN_VERSION=3.9.16
+ARG MAVEN_VERSION=3.10.0
 ARG KOTLIN_VERSION=2.4.20
 ARG GO_VERSION=go1.27.1
 ENV HOME=/root
@@ -64,11 +64,15 @@ RUN apt-get -o Acquire::Retries=5 update && \
     ln -s /usr/bin/python3 /usr/bin/python
 
 # Install Maven
-RUN wget --progress=dot:giga --tries=5 --timeout=30 --retry-connrefused \
-        https://dlcdn.apache.org/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz && \
-    tar -xf apache-maven-${MAVEN_VERSION}-bin.tar.gz -C /opt && \
+# Apache downloads come from the fast release CDN, which only keeps the latest release
+# of each line, and fall back to the permanent archive once a newer one is out.
+RUN WGET="wget --progress=dot:giga --tries=5 --timeout=30 --retry-connrefused" && \
+    TGZ=apache-maven-${MAVEN_VERSION}-bin.tar.gz && \
+    URL=maven/maven-3/${MAVEN_VERSION}/binaries/$TGZ && \
+    { $WGET -O $TGZ https://dlcdn.apache.org/$URL || $WGET -O $TGZ https://archive.apache.org/dist/$URL; } && \
+    tar -xf $TGZ -C /opt && \
     mv /opt/apache-maven-${MAVEN_VERSION} /opt/maven && \
-    rm apache-maven-${MAVEN_VERSION}-bin.tar.gz
+    rm $TGZ
 
 # Install the Kotlin command-line compiler (no apt package; mirror the Maven
 # pattern by unpacking the official release into /opt/kotlinc).
@@ -89,9 +93,12 @@ RUN wget --progress=dot:giga --tries=5 --timeout=30 --retry-connrefused \
 # ships with ${VOJ_*} placeholders that are resolved from the environment at runtime,
 # so nothing is baked in here — the image stays generic and is configured with
 # `docker run -e ...`.
+# The project version (scripts/version.sh); the build context has no .git to derive
+# it from. Declared here so a new version does not invalidate the toolchain layers.
+ARG VOJ_VERSION=0.0.0-SNAPSHOT
 COPY . /root/voj
 RUN mkdir -p voj/target/classes && \
-    $M2_HOME/bin/mvn package -DskipTests -f voj/judger/pom.xml
+    $M2_HOME/bin/mvn package -DskipTests -Drevision=${VOJ_VERSION} -f voj/judger/pom.xml
 
 # Run Judger. --enable-native-access grants the JNI runner native access; without
 # it the JDK 24+ warns and a future JDK will block JNI outright.

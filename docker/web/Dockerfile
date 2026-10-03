@@ -16,7 +16,7 @@ ARG MYSQL_USER_PASS=voj
 # TARGETARCH is provided by BuildKit (amd64 / arm64) and matches the Ubuntu
 # OpenJDK directory suffix, so the image builds natively on both.
 ARG TARGETARCH
-ARG MAVEN_VERSION=3.9.16
+ARG MAVEN_VERSION=3.10.0
 ARG ACTIVEMQ_VERSION=6.3.2
 ENV HOME=/root
 ENV JAVA_HOME=/usr/lib/jvm/java-25-openjdk-${TARGETARCH}
@@ -61,22 +61,28 @@ RUN sed -i "s/127\.0\.0\.1/0.0.0.0/g" /etc/mysql/mariadb.conf.d/50-server.cnf &&
     mysql -e "CREATE DATABASE voj" && \
     mysql -e "GRANT SELECT, INSERT, UPDATE, DELETE ON voj.* TO 'voj'@'%' IDENTIFIED BY '${MYSQL_USER_PASS}'"
 
+# Apache downloads come from the fast release CDN, which only keeps the latest release
+# of each line, and fall back to the permanent archive once a newer one is out.
 # Install Maven and ActiveMQ. The web app now ships as a self-contained Spring
 # Boot executable JAR with an embedded Tomcat, so no external Tomcat is needed.
 # Install Maven
-RUN wget --progress=dot:giga --tries=5 --timeout=30 --retry-connrefused \
-        https://dlcdn.apache.org/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz && \
-    tar -xf apache-maven-${MAVEN_VERSION}-bin.tar.gz -C /opt && \
+RUN WGET="wget --progress=dot:giga --tries=5 --timeout=30 --retry-connrefused" && \
+    TGZ=apache-maven-${MAVEN_VERSION}-bin.tar.gz && \
+    URL=maven/maven-3/${MAVEN_VERSION}/binaries/$TGZ && \
+    { $WGET -O $TGZ https://dlcdn.apache.org/$URL || $WGET -O $TGZ https://archive.apache.org/dist/$URL; } && \
+    tar -xf $TGZ -C /opt && \
     mv /opt/apache-maven-${MAVEN_VERSION} /opt/maven && \
-    rm apache-maven-${MAVEN_VERSION}-bin.tar.gz
+    rm $TGZ
 
 # Install ActiveMQ
 RUN useradd activemq -s /usr/sbin/nologin && \
-    wget --progress=dot:giga --tries=5 --timeout=30 --retry-connrefused \
-        https://dlcdn.apache.org/activemq/${ACTIVEMQ_VERSION}/apache-activemq-${ACTIVEMQ_VERSION}-bin.tar.gz && \
-    tar -xf apache-activemq-${ACTIVEMQ_VERSION}-bin.tar.gz -C /opt && \
+    WGET="wget --progress=dot:giga --tries=5 --timeout=30 --retry-connrefused" && \
+    TGZ=apache-activemq-${ACTIVEMQ_VERSION}-bin.tar.gz && \
+    URL=activemq/${ACTIVEMQ_VERSION}/$TGZ && \
+    { $WGET -O $TGZ https://dlcdn.apache.org/$URL || $WGET -O $TGZ https://archive.apache.org/dist/$URL; } && \
+    tar -xf $TGZ -C /opt && \
     mv /opt/apache-activemq-${ACTIVEMQ_VERSION} /opt/activemq && \
-    rm apache-activemq-${ACTIVEMQ_VERSION}-bin.tar.gz && \
+    rm $TGZ && \
     chown -R activemq:activemq /opt/activemq && \
     sed -i 's/memoryUsage percentOfJvmHeap="70"/memoryUsage limit="256 mb"/g' /opt/activemq/conf/activemq.xml && \
     sed -i 's/storeUsage limit="100 gb"/storeUsage limit="1 gb"/g' /opt/activemq/conf/activemq.xml && \
@@ -86,8 +92,11 @@ RUN useradd activemq -s /usr/sbin/nologin && \
 # ships with ${VOJ_*} placeholders that are resolved from the environment at runtime,
 # so nothing is baked in here — the image stays generic and is configured with
 # `docker run -e ...`. A self-contained executable JAR (embedded Tomcat) is produced.
+# The project version (scripts/version.sh); the build context has no .git to derive
+# it from. Declared here so a new version does not invalidate the toolchain layers.
+ARG VOJ_VERSION=0.0.0-SNAPSHOT
 COPY . /root/voj
-RUN $M2_HOME/bin/mvn package -DskipTests -f voj/web/pom.xml && \
+RUN $M2_HOME/bin/mvn package -DskipTests -Drevision=${VOJ_VERSION} -f voj/web/pom.xml && \
     mkdir -p /opt/voj && \
     cp voj/web/target/voj.web.jar /opt/voj/voj.web.jar && \
     /etc/init.d/mariadb start && \

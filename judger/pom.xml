@@ -5,8 +5,7 @@
 	<parent>
 		<groupId>org.verwandlung</groupId>
 		<artifactId>voj-parent</artifactId>
-		<!-- Placeholder; overridden at build time by maven-git-versioning-extension. -->
-		<version>0.0.0-SNAPSHOT</version>
+		<version>${revision}</version>
 	</parent>
 
 	<artifactId>voj.judger</artifactId>

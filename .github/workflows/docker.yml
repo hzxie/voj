@@ -12,6 +12,13 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+        with:
+          # Full history and tags are required to derive the version from git.
+          fetch-depth: 0
+
+      - name: Derive version
+        id: version
+        run: echo "version=$(scripts/version.sh)" >> "$GITHUB_OUTPUT"
 
       - name: Log in to DockerHub
         uses: docker/login-action@v3
@@ -30,6 +37,7 @@ jobs:
         with:
           context: .
           file: docker/web/Dockerfile
+          build-args: VOJ_VERSION=${{ steps.version.outputs.version }}
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ secrets.DOCKER_USERNAME }}/voj.web:latest
@@ -41,6 +49,7 @@ jobs:
         with:
           context: .
           file: docker/judger/Dockerfile
+          build-args: VOJ_VERSION=${{ steps.version.outputs.version }}
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ secrets.DOCKER_USERNAME }}/voj.judger:latest
