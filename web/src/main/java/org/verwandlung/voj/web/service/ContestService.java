@@ -41,12 +41,13 @@ public class ContestService {
    * Gets the list of contests.
    *
    * @param keyword - the keyword of the contest
+   * @param isPublicOnly - whether to fetch only the published contests
    * @param offset - the cursor of the first contest
    * @param limit - the number of contests to fetch
    * @return a List object containing Contest objects
    */
-  public List<Contest> getContests(String keyword, long offset, int limit) {
-    return contestMapper.getContests(keyword, offset, limit);
+  public List<Contest> getContests(String keyword, boolean isPublicOnly, long offset, int limit) {
+    return contestMapper.getContests(keyword, isPublicOnly, offset, limit);
   }
 
   /**
@@ -392,7 +393,9 @@ public class ContestService {
     Contest contest = contestMapper.getContest(contestId);
 
     Map<String, Boolean> result = new HashMap<>(6, 1);
-    result.put("isContestExists", contest != null);
+    // Unpublished (draft / hidden) contests cannot be attended.
+    result.put(
+        "isContestExists", contest != null && PublicationStatus.isPublic(contest.getStatus()));
     result.put("isContestReady", getContestStatus(contest) == Contest.CONTEST_STATUS.READY);
     result.put("isUserLogin", currentUser != null);
     result.put("isAttendedContest", isAttendContest(contestId, currentUser));

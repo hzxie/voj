@@ -1769,7 +1769,7 @@ public class AdministrationController {
     long totalContests = contestService.getNumberOfContests(keyword);
     long offset = (pageNumber >= 1 ? pageNumber - 1 : 0) * NUMBER_OF_CONTESTS_PER_PAGE;
     List<Contest> contests =
-        contestService.getContests(keyword, offset, NUMBER_OF_CONTESTS_PER_PAGE);
+        contestService.getContests(keyword, false, offset, NUMBER_OF_CONTESTS_PER_PAGE);
 
     Map<Long, String> contestPhases = new HashMap<>();
     Map<Long, Long> contestEntrants = new HashMap<>();

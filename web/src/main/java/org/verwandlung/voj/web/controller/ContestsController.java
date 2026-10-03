@@ -68,7 +68,8 @@ public class ContestsController {
       HttpServletResponse response) {
     final int NUMBER_OF_CONTESTS_PER_PAGE =
         optionService.getIntOption("contestsPerPage", DEFAULT_NUMBER_OF_CONTESTS_PER_PAGE);
-    List<Contest> contests = contestService.getContests(keyword, 0, NUMBER_OF_CONTESTS_PER_PAGE);
+    List<Contest> contests =
+        contestService.getContests(keyword, true, 0, NUMBER_OF_CONTESTS_PER_PAGE);
     Date currentTime = new Date();
     List<Contest> liveContests = new ArrayList<>();
     List<Contest> pastContests = new ArrayList<>();
@@ -145,7 +146,7 @@ public class ContestsController {
     final int NUMBER_OF_CONTESTS_PER_PAGE =
         optionService.getIntOption("contestsPerPage", DEFAULT_NUMBER_OF_CONTESTS_PER_PAGE);
     List<Contest> contests =
-        contestService.getContests(keyword, startIndex, NUMBER_OF_CONTESTS_PER_PAGE);
+        contestService.getContests(keyword, true, startIndex, NUMBER_OF_CONTESTS_PER_PAGE);
     result.put("isSuccessful", contests != null && !contests.isEmpty());
     result.put("contests", contests);
     result.put("entrants", getEntrantsOfContests(contests));
@@ -169,10 +170,7 @@ public class ContestsController {
       HttpServletResponse response) {
     HttpSession session = request.getSession();
     User currentUser = HttpSessionParser.getCurrentUser(session);
-    Contest contest = contestService.getContest(contestId);
-    if (contest == null) {
-      throw new ResourceNotFoundException();
-    }
+    Contest contest = getVisibleContest(contestId, currentUser);
 
     Date currentTime = new Date();
     boolean isAttended = contestService.isAttendContest(contestId, currentUser);
@@ -251,10 +249,9 @@ public class ContestsController {
       @PathVariable("contestId") long contestId,
       HttpServletRequest request,
       HttpServletResponse response) {
-    Contest contest = contestService.getContest(contestId);
+    Contest contest = getVisibleContest(contestId, HttpSessionParser.getCurrentUser());
     Date currentTime = new Date();
-    if (contest == null
-        || contest.getStartTime().after(currentTime)
+    if (contest.getStartTime().after(currentTime)
         || !(contest.getContestMode().equals("OI") || contest.getContestMode().equals("ACM"))) {
       throw new ResourceNotFoundException();
     }
@@ -300,10 +297,7 @@ public class ContestsController {
       HttpServletResponse response) {
     HttpSession session = request.getSession();
     User currentUser = HttpSessionParser.getCurrentUser(session);
-    Contest contest = contestService.getContest(contestId);
-    if (contest == null) {
-      throw new ResourceNotFoundException();
-    }
+    Contest contest = getVisibleContest(contestId, currentUser);
     // The problem does not exist in the contest's problem list
     List<Long> problems = JsonUtils.toList(contest.getProblems(), Long.class);
     if (!problems.contains(problemId)) {
@@ -331,6 +325,30 @@ public class ContestsController {
     view.addObject("currentTime", currentTime);
     view.addObject("isContest", true);
     return view;
+  }
+
+  /**
+   * Gets a contest the current user may view: unpublished (draft / hidden) contests are visible to
+   * administrators only and are treated as not found for everyone else.
+   *
+   * @param contestId - the unique identifier of the contest
+   * @param currentUser - the currently logged-in user (may be null)
+   * @return the contest
+   * @throws ResourceNotFoundException if the contest does not exist or is not visible to the user
+   */
+  private Contest getVisibleContest(long contestId, User currentUser) {
+    Contest contest = contestService.getContest(contestId);
+    if (contest == null) {
+      throw new ResourceNotFoundException();
+    }
+    boolean isAdministrator =
+        currentUser != null
+            && currentUser.getUserGroup() != null
+            && "administrators".equals(currentUser.getUserGroup().getUserGroupSlug());
+    if (!PublicationStatus.isPublic(contest.getStatus()) && !isAdministrator) {
+      throw new ResourceNotFoundException();
+    }
+    return contest;
   }
 
   /** The default number of contests to load per query when the admin option is unset. */

@@ -43,8 +43,11 @@
 		SELECT * 
 		FROM voj_contests
 		<where>
+			<if test="isPublicOnly == true">
+				contest_status = 'PUBLISHED'
+			</if>
 			<if test="keyword != null and keyword != ''">
-				contest_name LIKE "%"#{keyword}"%"
+				AND contest_name LIKE "%"#{keyword}"%"
 			</if>
 		</where>
 		ORDER BY contest_id DESC

@@ -51,7 +51,7 @@ public class DefaultController {
    */
   @RequestMapping(value = "/", method = RequestMethod.GET)
   public ModelAndView indexView(HttpServletRequest request, HttpServletResponse response) {
-    List<Contest> contests = contestService.getContests(null, 0, NUMBER_OF_CONTESTS_PER_REQUEST);
+    List<Contest> contests = contestService.getContests(null, true, 0, NUMBER_OF_CONTESTS_PER_REQUEST);
     List<DiscussionThread> discussionThreads =
         discussionService.getDiscussionThreadsOfTopic(
             null, 0, NUMBER_OF_DISCUSSION_THREADS_PER_REQUEST);

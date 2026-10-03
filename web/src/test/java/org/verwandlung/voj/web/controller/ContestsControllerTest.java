@@ -78,7 +78,7 @@ public class ContestsControllerTest {
     Contest contest = new Contest();
     contest.setContestId(7);
     contest.setProblems("[1000, 1001]");
-    when(contestService.getContests(nullable(String.class), eq(0L), eq(50)))
+    when(contestService.getContests(nullable(String.class), eq(true), eq(0L), eq(50)))
         .thenReturn(List.of(contest));
     when(contestService.getNumberOfContestantsOfContest(7L)).thenReturn(5L);
 
@@ -97,7 +97,7 @@ public class ContestsControllerTest {
   /** Test case: tests getContestsAction(...). Test data: no contests. Expected: isSuccessful is false. */
   @Test
   public void testGetContestsActionEmpty() {
-    when(contestService.getContests(nullable(String.class), anyLong(), anyInt()))
+    when(contestService.getContests(nullable(String.class), eq(true), anyLong(), anyInt()))
         .thenReturn(List.of());
 
     Map<String, Object> result =

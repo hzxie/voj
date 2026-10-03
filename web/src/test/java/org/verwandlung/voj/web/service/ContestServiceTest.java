@@ -29,10 +29,12 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.verwandlung.voj.web.mapper.ContestMapper;
 import org.verwandlung.voj.web.model.Contest;
 import org.verwandlung.voj.web.model.ContestContestant;
 import org.verwandlung.voj.web.model.ContestSubmission;
 import org.verwandlung.voj.web.model.Problem;
+import org.verwandlung.voj.web.model.PublicationStatus;
 import org.verwandlung.voj.web.model.Submission;
 import org.verwandlung.voj.web.model.User;
 
@@ -48,11 +50,18 @@ import org.verwandlung.voj.web.model.User;
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class ContestServiceTest {
-  /** Test case: tests the getContests(String, long, int) method. Test data: an empty keyword. Expected: all contests. */
+  /** Test case: tests the getContests(String, boolean, long, int) method. Test data: an empty keyword. Expected: all contests. */
   @Test
   public void testGetContests() {
-    List<Contest> contests = contestService.getContests("", 0, 10);
+    List<Contest> contests = contestService.getContests("", false, 0, 10);
     Assertions.assertEquals(3, contests.size());
+  }
+
+  /** Test case: tests the getContests(String, boolean, long, int) method. Test data: an empty keyword, published contests only. Expected: the two published contests. */
+  @Test
+  public void testGetContestsPublicOnly() {
+    List<Contest> contests = contestService.getContests("", true, 0, 10);
+    Assertions.assertEquals(2, contests.size());
   }
 
   /** Test case: tests the getContest(long) method. Test data: an existing contest identifier. Expected: the corresponding contest object. */
@@ -164,12 +173,21 @@ public class ContestServiceTest {
     Assertions.assertFalse(contestService.isAttendContest(1, null));
   }
 
-  /** Test case: tests the attendContest(...) method. Test data: all conditions are met to attend the not-started Contest #3. Expected: attendance succeeds and the number of participants increases by one. */
+  /** Test case: tests the attendContest(...) method. Test data: all conditions are met to attend the not-started Contest #3 once it is published. Expected: attendance succeeds and the number of participants increases by one. */
   @Test
   public void testAttendContestSuccessfully() {
+    publishContest(3);
     Map<String, Boolean> result = contestService.attendContest(3, userWithUid(1000));
     Assertions.assertTrue(result.get("isSuccessful"));
     Assertions.assertEquals(1, contestService.getNumberOfContestantsOfContest(3));
+  }
+
+  /** Test case: tests the attendContest(...) method. Test data: the not-started but hidden Contest #3. Expected: attendance fails as if the contest did not exist. */
+  @Test
+  public void testAttendContestThatIsNotPublished() {
+    Map<String, Boolean> result = contestService.attendContest(3, userWithUid(1000));
+    Assertions.assertFalse(result.get("isContestExists"));
+    Assertions.assertFalse(result.get("isSuccessful"));
   }
 
   /** Test case: tests the attendContest(...) method. Test data: the contest has ended (not in the not-started state). Expected: attendance fails. */
@@ -191,6 +209,7 @@ public class ContestServiceTest {
   /** Test case: tests the attendContest(...) method. Test data: attending the same contest again. Expected: the second attendance fails. */
   @Test
   public void testAttendContestThatIsAlreadyAttended() {
+    publishContest(3);
     contestService.attendContest(3, userWithUid(1000));
 
     Map<String, Boolean> result = contestService.attendContest(3, userWithUid(1000));
@@ -247,6 +266,13 @@ public class ContestServiceTest {
     Assertions.assertDoesNotThrow(() -> contestService.rankingContestants(contestants));
   }
 
+  /** Publishes a contest (the hidden Contest #3 is the only not-started one in the test data). */
+  private void publishContest(long contestId) {
+    Contest contest = contestService.getContest(contestId);
+    contest.setStatus(PublicationStatus.PUBLISHED);
+    contestMapper.updateContest(contest);
+  }
+
   /** Constructs a User object with only the UID set, used as a contestant argument. */
   private User userWithUid(long uid) {
     User user = new User();
@@ -263,4 +289,7 @@ public class ContestServiceTest {
 
   /** The ContestService object under test. */
   @Autowired private ContestService contestService;
+
+  /** The ContestMapper object, used to publish a contest in the test data. */
+  @Autowired private ContestMapper contestMapper;
 }

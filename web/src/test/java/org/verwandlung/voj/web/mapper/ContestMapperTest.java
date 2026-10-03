@@ -65,10 +65,10 @@ public class ContestMapperTest {
     Assertions.assertEquals(3, numberOfContests);
   }
 
-  /** Test case: tests the getContests(String, long, int) method. Test data: get 2 contests starting from item 1. Expected: a List in the form [contest 2, contest 1]. */
+  /** Test case: tests the getContests(String, boolean, long, int) method. Test data: get 2 contests starting from item 1. Expected: a List in the form [contest 2, contest 1]. */
   @Test
   public void testGetContestsFrom0WithLimit2() {
-    List<Contest> contests = contestMapper.getContests("test #", 0, 2);
+    List<Contest> contests = contestMapper.getContests("test #", false, 0, 2);
     Assertions.assertEquals(2, contests.size());
 
     Contest firstContest = contests.get(0);
@@ -76,10 +76,10 @@ public class ContestMapperTest {
     Assertions.assertEquals("Contest #3", contestName);
   }
 
-  /** Test case: tests the getContests(String, long, int) method. Test data: get 1 contest starting from item 2. Expected: a List in the form [contest 1]. */
+  /** Test case: tests the getContests(String, boolean, long, int) method. Test data: get 1 contest starting from item 2. Expected: a List in the form [contest 1]. */
   @Test
   public void testGetContestsFrom1WithLimit1() {
-    List<Contest> contests = contestMapper.getContests(null, 1, 1);
+    List<Contest> contests = contestMapper.getContests(null, false, 1, 1);
     Assertions.assertEquals(1, contests.size());
 
     Contest contest = contests.get(0);
@@ -87,22 +87,31 @@ public class ContestMapperTest {
     Assertions.assertEquals("Contest #2", contestName);
   }
 
-  /** Test case: tests the getContests(String, long, int) method. Test data: get 1 contest starting from item 4. Expected: a List in the form []. */
+  /** Test case: tests the getContests(String, boolean, long, int) method. Test data: get 1 contest starting from item 4. Expected: a List in the form []. */
   @Test
   public void testGetContestsFrom2WithLimit1() {
-    List<Contest> contests = contestMapper.getContests(null, 3, 1);
+    List<Contest> contests = contestMapper.getContests(null, false, 3, 1);
     Assertions.assertEquals(0, contests.size());
   }
 
-  /** Test case: tests the getContests(String, long, int) method. Test data: get 2 contests starting from item 1. Expected: a List in the form [contest 2, contest 1]. */
+  /** Test case: tests the getContests(String, boolean, long, int) method. Test data: get 2 contests starting from item 1. Expected: a List in the form [contest 2, contest 1]. */
   @Test
   public void testGetContestsFrom0WithLimit2WithKeywordSharp2() {
-    List<Contest> contests = contestMapper.getContests("#2", 0, 2);
+    List<Contest> contests = contestMapper.getContests("#2", false, 0, 2);
     Assertions.assertEquals(1, contests.size());
 
     Contest firstContest = contests.get(0);
     String contestName = firstContest.getContestName();
     Assertions.assertEquals("Contest #2", contestName);
+  }
+
+  /** Test case: tests the getContests(String, boolean, long, int) method. Test data: only the published contests. Expected: a List in the form [contest 2, contest 1] without the hidden contest 3. */
+  @Test
+  public void testGetContestsPublicOnly() {
+    List<Contest> contests = contestMapper.getContests(null, true, 0, 10);
+    Assertions.assertEquals(2, contests.size());
+    Assertions.assertEquals("Contest #2", contests.get(0).getContestName());
+    Assertions.assertEquals("Contest #1", contests.get(1).getContestName());
   }
 
   /** Test case: tests the getContest(long) method. Test data: get the 1st contest object. Expected: the 1st contest object. */

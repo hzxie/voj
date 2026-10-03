@@ -47,12 +47,16 @@ public interface ContestMapper {
    * Gets the list of contests.
    *
    * @param keyword - the keyword of the contest
+   * @param isPublicOnly - whether to fetch only the published contests
    * @param offset - the offset of the first contest
    * @param limit - the number of contests to fetch
    * @return the expected contest objects
    */
   List<Contest> getContests(
-      @Param("keyword") String keyword, @Param("offset") long offset, @Param("limit") int limit);
+      @Param("keyword") String keyword,
+      @Param("isPublicOnly") boolean isPublicOnly,
+      @Param("offset") long offset,
+      @Param("limit") int limit);
 
   /**
    * Gets a contest by its unique identifier.

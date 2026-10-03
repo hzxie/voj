@@ -30,7 +30,6 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.util.HtmlUtils;
 import org.verwandlung.voj.web.model.Contest;
 import org.verwandlung.voj.web.model.DiscussionThread;
-import org.verwandlung.voj.web.model.PublicationStatus;
 import org.verwandlung.voj.web.service.ContestService;
 import org.verwandlung.voj.web.service.DiscussionService;
 import org.verwandlung.voj.web.service.ProblemService;
@@ -85,10 +84,8 @@ public class SeoController {
     for (long problemId : problemService.getIdsOfPublicProblems(MAX_URLS_PER_TYPE)) {
       appendUrl(sitemap, baseUrl + "/p/" + problemId);
     }
-    for (Contest contest : contestService.getContests(null, 0, MAX_URLS_PER_TYPE)) {
-      if (PublicationStatus.isPublic(contest.getStatus())) {
-        appendUrl(sitemap, baseUrl + "/contest/" + contest.getContestId());
-      }
+    for (Contest contest : contestService.getContests(null, true, 0, MAX_URLS_PER_TYPE)) {
+      appendUrl(sitemap, baseUrl + "/contest/" + contest.getContestId());
     }
     List<DiscussionThread> threads =
         discussionService.getDiscussionThreadsOfTopic(null, 0, MAX_URLS_PER_TYPE);

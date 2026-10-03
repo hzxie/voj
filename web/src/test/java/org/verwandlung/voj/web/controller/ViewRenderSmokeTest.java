@@ -21,6 +21,7 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.hamcrest.Matchers.containsString;
@@ -330,7 +331,8 @@ class ViewRenderSmokeTest {
   @Test
   void allContestsViewRenders() throws Exception {
     authenticateAdmin();
-    when(contestService.getContests(anyString(), anyLong(), anyInt())).thenReturn(List.of());
+    when(contestService.getContests(anyString(), anyBoolean(), anyLong(), anyInt()))
+        .thenReturn(List.of());
     mockMvc.perform(getWithCsrf("/administration/all-contests")).andExpect(status().isOk());
   }
 
@@ -376,22 +378,19 @@ class ViewRenderSmokeTest {
                 .string(containsString("Sitemap: https://oj.example.edu/voj/sitemap.xml\n")));
   }
 
-  /** sitemap.xml lists the public problems and only the published contests. */
+  /** sitemap.xml lists the public problems and the published contests. */
   @Test
   void sitemapXmlRenders() throws Exception {
-    Contest draftContest = aContest(2L, "ACM", future(), farFuture());
-    draftContest.setStatus("DRAFT");
     when(problemService.getIdsOfPublicProblems(anyInt())).thenReturn(List.of(1000L));
-    when(contestService.getContests(any(), anyLong(), anyInt()))
-        .thenReturn(List.of(aContest(1L, "ACM", future(), farFuture()), draftContest));
+    when(contestService.getContests(any(), eq(true), anyLong(), anyInt()))
+        .thenReturn(List.of(aContest(1L, "ACM", future(), farFuture())));
     mockMvc
         .perform(get("/sitemap.xml"))
         .andExpect(status().isOk())
         .andExpect(content().string(containsString("<loc>https://oj.example.edu/voj/p/1000</loc>")))
         .andExpect(
             content()
-                .string(containsString("<loc>https://oj.example.edu/voj/contest/1</loc>")))
-        .andExpect(content().string(not(containsString("/contest/2<"))));
+                .string(containsString("<loc>https://oj.example.edu/voj/contest/1</loc>")));
   }
 
   /** The auth pages are kept out of search results. */
@@ -424,6 +423,18 @@ class ViewRenderSmokeTest {
   void contestViewRenders() throws Exception {
     when(contestService.getContest(1L))
         .thenReturn(aContest(1L, "ACM", future(), farFuture()));
+    mockMvc.perform(getWithCsrf("/contest/1")).andExpect(status().isOk());
+  }
+
+  /** An unpublished contest is not found for anonymous users but still renders for administrators. */
+  @Test
+  void draftContestIsHiddenFromNonAdministrators() throws Exception {
+    Contest draftContest = aContest(1L, "ACM", future(), farFuture());
+    draftContest.setStatus("DRAFT");
+    when(contestService.getContest(1L)).thenReturn(draftContest);
+    mockMvc.perform(getWithCsrf("/contest/1")).andExpect(status().isNotFound());
+
+    authenticateAdmin();
     mockMvc.perform(getWithCsrf("/contest/1")).andExpect(status().isOk());
   }
 
