@@ -23,6 +23,9 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.forwardedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -264,6 +267,12 @@ class ViewRenderSmokeTest {
     mockMvc.perform(getWithCsrf("/p/999999")).andExpect(status().isNotFound());
   }
 
+  /** An unmapped URL renders the 404 view with a 404 status, so it is not indexed as a page. */
+  @Test
+  void unmappedUrlReturnsNotFound() throws Exception {
+    mockMvc.perform(getWithCsrf("/no-such-page")).andExpect(status().isNotFound());
+  }
+
   /** The 500 view renders when a handler fails unexpectedly. */
   @Test
   void internalServerErrorViewRenders() throws Exception {
@@ -344,7 +353,53 @@ class ViewRenderSmokeTest {
   @Test
   void problemViewRenders() throws Exception {
     when(problemService.getProblem(1000L)).thenReturn(aPublishedProblem(1000L));
-    mockMvc.perform(getWithCsrf("/p/1000")).andExpect(status().isOk());
+    mockMvc
+        .perform(getWithCsrf("/p/1000"))
+        .andExpect(status().isOk())
+        .andExpect(
+            content()
+                .string(containsString("<meta name=\"description\" content=\"Compute a + b.\"")))
+        .andExpect(
+            content()
+                .string(containsString("<meta property=\"og:title\" content=\"P1000 A + B Problem\"")));
+  }
+
+  /** robots.txt keeps crawlers out of the administration pages and points to the sitemap. */
+  @Test
+  void robotsTxtRenders() throws Exception {
+    mockMvc
+        .perform(get("/robots.txt"))
+        .andExpect(status().isOk())
+        .andExpect(content().string(containsString("Disallow: /voj/administration\n")))
+        .andExpect(
+            content()
+                .string(containsString("Sitemap: https://oj.example.edu/voj/sitemap.xml\n")));
+  }
+
+  /** sitemap.xml lists the public problems and only the published contests. */
+  @Test
+  void sitemapXmlRenders() throws Exception {
+    Contest draftContest = aContest(2L, "ACM", future(), farFuture());
+    draftContest.setStatus("DRAFT");
+    when(problemService.getIdsOfPublicProblems(anyInt())).thenReturn(List.of(1000L));
+    when(contestService.getContests(any(), anyLong(), anyInt()))
+        .thenReturn(List.of(aContest(1L, "ACM", future(), farFuture()), draftContest));
+    mockMvc
+        .perform(get("/sitemap.xml"))
+        .andExpect(status().isOk())
+        .andExpect(content().string(containsString("<loc>https://oj.example.edu/voj/p/1000</loc>")))
+        .andExpect(
+            content()
+                .string(containsString("<loc>https://oj.example.edu/voj/contest/1</loc>")))
+        .andExpect(content().string(not(containsString("/contest/2<"))));
+  }
+
+  /** The auth pages are kept out of search results. */
+  @Test
+  void loginViewIsNoindex() throws Exception {
+    mockMvc
+        .perform(getWithCsrf("/accounts/login"))
+        .andExpect(content().string(containsString("<meta name=\"robots\" content=\"noindex\"")));
   }
 
   /** The problem editorial (solution) page reuses the discussion-thread template. */
@@ -635,6 +690,7 @@ class ViewRenderSmokeTest {
     @Bean(name = "propertyConfigurer")
     Properties propertyConfigurer() {
       Properties properties = new Properties();
+      properties.setProperty("url.base", "https://oj.example.edu/voj");
       properties.setProperty("url.cdn", "/assets");
       properties.setProperty("build.version", "test");
       properties.setProperty("product.version", "0.0.0-test");

@@ -9,6 +9,7 @@
       layout:decorate="~{layouts/main}" lang="en">
 <head>
     <title th:text="'P' + ${problem.problemId} + ' ' + ${problem.problemName} + ' | ' + ${websiteName}">Problem</title>
+    <meta property="og:title" th:content="'P' + ${problem.problemId} + ' ' + ${problem.problemName}" />
     <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/codemirror.min.css?v=${version}|" />
     <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/highlight.min.css?v=${version}|" />
     <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css" />

@@ -8,6 +8,7 @@
       layout:decorate="~{layouts/main}" lang="en">
 <head>
     <title th:text="#{voj.submissions.submission.title} + ${submission.submissionId} + ' | ' + ${websiteName}">Submission</title>
+    <meta name="robots" content="noindex" />
     <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/highlight.min.css?v=${version}|" />
 </head>
 <body>

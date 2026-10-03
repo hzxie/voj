@@ -46,6 +46,7 @@ import org.verwandlung.voj.web.service.SubmissionService;
 import org.verwandlung.voj.web.util.HttpRequestParser;
 import org.verwandlung.voj.web.util.HttpSessionParser;
 import org.verwandlung.voj.web.util.LogSanitizer;
+import org.verwandlung.voj.web.util.SeoUtils;
 
 /**
  * Handles users' requests of viewing problems / making submissions, etc.
@@ -220,6 +221,7 @@ public class ProblemsController {
 
     ModelAndView view = new ModelAndView("pages/problems/problem");
     view.addObject("problem", problem);
+    view.addObject("pageDescription", SeoUtils.getDescription(problem.getDescription()));
     // Standard (non-contest) problem view. The problem template is shared with
     // the contest problem view, which sets isContest=true; here it must be set
     // to false so ${isContest and ...} resolves rather than failing on a null.

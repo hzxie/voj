@@ -53,6 +53,15 @@
 			</if>
 		</where>
 	</select>
+	<select id="getIdsOfPublicProblems"
+		parameterType="int"
+		resultType="long">
+		SELECT problem_id
+		FROM voj_problems
+		WHERE problem_status = 'PUBLISHED'
+		ORDER BY problem_id
+		LIMIT #{limit}
+	</select>
 	<select id="getLowerBoundOfProblems"
 		resultType="long">
 		SELECT COALESCE(MIN(problem_id), 0)

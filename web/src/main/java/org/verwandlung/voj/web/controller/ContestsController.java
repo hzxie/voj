@@ -37,6 +37,7 @@ import org.verwandlung.voj.web.util.HttpRequestParser;
 import org.verwandlung.voj.web.util.HttpSessionParser;
 import org.verwandlung.voj.web.util.JsonUtils;
 import org.verwandlung.voj.web.util.LogSanitizer;
+import org.verwandlung.voj.web.util.SeoUtils;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -199,6 +200,7 @@ public class ContestsController {
     ModelAndView view = new ModelAndView("pages/contests/contest");
     view.addObject("currentTime", currentTime)
         .addObject("contest", contest)
+        .addObject("pageDescription", SeoUtils.getDescription(contest.getContestNotes()))
         .addObject("problems", problems)
         .addObject("submissions", submissions)
         .addObject("isAttended", isAttended)

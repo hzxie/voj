@@ -78,6 +78,14 @@ public interface ProblemMapper {
       @Param("limit") int limit);
 
   /**
+   * Gets the IDs of the public problems, in ascending order. Used by the sitemap.
+   *
+   * @param limit - the maximum number of IDs to return
+   * @return the list of problem IDs
+   */
+  List<Long> getIdsOfPublicProblems(@Param("limit") int limit);
+
+  /**
    * Gets a problem object by its unique identifier.
    *
    * @param problemId - the unique identifier of the problem

@@ -26,7 +26,14 @@
     <title th:text="${websiteName}">Verwandlung Online Judge</title>
     <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" th:content="${description}" />
+    <!-- Search engine and link-preview metadata. Detail pages supply pageDescription (and their
+         own og:title); the other pages fall back to the site-wide description and <title>. -->
+    <meta name="description" th:content="${pageDescription ?: description}" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" th:content="${websiteName}" />
+    <meta property="og:description" th:content="${pageDescription ?: description}" />
+    <meta property="og:image" th:content="|${cdnUrl}/img/apple-touch-icon.png|" />
+    <meta name="twitter:card" content="summary" />
     <meta name="author" content="Haozhe Xie" />
     <!-- CSRF token for AJAX requests (consumed by the ajaxSend hook in site.js). -->
     <meta name="_csrf" th:content="${_csrf.token}" />

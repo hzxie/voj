@@ -62,6 +62,16 @@ public class ProblemService {
   }
 
   /**
+   * Gets the IDs of the public problems, in ascending order.
+   *
+   * @param limit - the maximum number of IDs to return
+   * @return the list of problem IDs
+   */
+  public List<Long> getIdsOfPublicProblems(int limit) {
+    return problemMapper.getIdsOfPublicProblems(limit);
+  }
+
+  /**
    * Gets the detailed information of a problem by its unique identifier.
    *
    * @param problemId - the unique identifier of the problem

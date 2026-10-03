@@ -35,6 +35,7 @@ import org.verwandlung.voj.web.service.ProblemService;
 import org.verwandlung.voj.web.util.HttpRequestParser;
 import org.verwandlung.voj.web.util.HttpSessionParser;
 import org.verwandlung.voj.web.util.LogSanitizer;
+import org.verwandlung.voj.web.util.SeoUtils;
 
 import java.util.HashMap;
 import java.util.List;
@@ -151,6 +152,14 @@ public class DiscussionController {
     HttpSession session = request.getSession();
     ModelAndView view = new ModelAndView("pages/discussion/thread");
     view.addObject("discussionThread", discussionThread);
+    // The opening post is the first reply of the thread.
+    List<DiscussionReply> openingPost =
+        discussionService.getDiscussionRepliesOfThread(discussionThreadId, -1, 0, 1, true);
+    if (!openingPost.isEmpty()) {
+      view.addObject(
+          "pageDescription",
+          SeoUtils.getDescription(openingPost.get(0).getDiscussionReplyContent()));
+    }
     view.addObject("minSolvedToVote", discussionService.getMinSolvedToVote());
     view.addObject("minSolvedToReport", discussionService.getMinSolvedToReport());
     view.addObject("postDelayMinutes", discussionService.getNewUserPostDelay());

@@ -9,6 +9,7 @@
       layout:decorate="~{layouts/main}" lang="en">
 <head>
     <title th:text="${contest.contestName} + ' | ' + ${websiteName}">Contest</title>
+    <meta property="og:title" th:content="${contest.contestName}" />
     <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css" />
 </head>
 <body>
