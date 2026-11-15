@@ -39,7 +39,14 @@ submission is refused rather than executed with root privileges. So if you chang
 For a shared, multi-tenant host, prefer a dedicated account over `nobody`, because
 `nobody` is shared with other system services. A dedicated account makes the
 process-count limit (`RLIMIT_NPROC`) effective and keeps submissions from
-interfering with other `nobody` processes:
+interfering with other `nobody` processes.
+
+**The account must be used by the judger only.** After every compile and run,
+the native sandbox kills *every* process owned by `system.username`, so that a
+submission cannot leave a process behind (for example via `setsid`) to tamper
+with later submissions. Inside the Docker image nothing else runs as `nobody`, so
+the default is safe there; on a bare host where other services run as `nobody`,
+create a dedicated account instead, or those services will be killed:
 
 ```
 sudo useradd --system --no-create-home --shell /usr/sbin/nologin voj-sandbox

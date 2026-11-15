@@ -42,7 +42,9 @@ public interface SandboxRunner {
    *
    * @param commandLine - the command line to execute
    * @param inputFilePath - the file to redirect to standard input, or {@code null} for none
-   * @param outputFilePath - the file to capture standard output/error into, or {@code null} for none
+   * @param outputFilePath - the file to capture the output into, or {@code null} for none; whether
+   *     standard error is included depends on the implementation (see the overload taking {@code
+   *     isCompilation})
    * @param timeLimitMs - the time limit in milliseconds (0 means no limit)
    * @param memoryLimitKb - the memory limit in kilobytes (0 means no limit)
    * @return the structured run result; never {@code null} (use {@link RunResult#internalError()} on

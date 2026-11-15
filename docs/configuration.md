@@ -99,5 +99,5 @@ settings above. Judger-specific keys:
 
 | Property | Default | Purpose |
 | --- | --- | --- |
-| `system.username` | `nobody` | Unprivileged account the native sandbox drops to. On Linux any non-root account works; `nobody` is present out of the box. When the judger runs as root, dropping privileges is mandatory and fails closed. See [`deployment.md`](deployment.md). |
+| `system.username` | `nobody` | Unprivileged account the native sandbox drops to. On Linux any non-root account works; `nobody` is present out of the box. When the judger runs as root, dropping privileges is mandatory and fails closed. Every process owned by this account is killed after each run, so it must not be shared with other services. See [`deployment.md`](deployment.md). |
 | `system.password` | *(empty)* | Unused on Linux; required on Windows for the separate low-privilege logon account. |
