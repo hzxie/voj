@@ -577,6 +577,106 @@ public class DiscussionServiceTest {
     Assertions.assertNotNull(discussionService.getDiscussionReplyUsingReplyId(1));
   }
 
+  /** Test case: tests the getDiscussionThreadsOfProblem(...) method. Test data: thread 2 whose latest reply (3) is hidden by an administrator. Expected: the latest reply falls back to the visible reply 2, and the list never carries the reply content. */
+  @Test
+  public void testLatestReplyOfThreadListExcludesHiddenReplies() {
+    DiscussionThread thread = findThread(discussionService.getDiscussionThreadsOfProblem(1000, 0, 10), 2);
+    Assertions.assertEquals(3, thread.getLatestDiscussionReply().getDiscussionReplyId());
+    Assertions.assertNull(thread.getLatestDiscussionReply().getDiscussionReplyContent());
+
+    Assertions.assertTrue(discussionService.setReplyVisibility(3, false));
+    thread = findThread(discussionService.getDiscussionThreadsOfProblem(1000, 0, 10), 2);
+    Assertions.assertEquals(2, thread.getLatestDiscussionReply().getDiscussionReplyId());
+    Assertions.assertNull(thread.getLatestDiscussionReply().getDiscussionReplyContent());
+  }
+
+  /** Test case: tests the createDiscussionReply(...) method. Test data: a thread hidden by an administrator. Expected: regular users see it as not found; administrators may still reply. */
+  @Test
+  public void testCreateDiscussionReplyOnHiddenThread() {
+    Assertions.assertTrue(discussionService.setThreadVisibility(1, false));
+    Map<String, Object> result =
+        discussionService.createDiscussionReply(1, userMapper.getUserUsingUid(1002), "Reply");
+    Assertions.assertFalse((Boolean) result.get("isDiscussionThreadExists"));
+    Assertions.assertFalse((Boolean) result.get("isSuccessful"));
+
+    result = discussionService.createDiscussionReply(1, adminUser(), "Reply");
+    Assertions.assertTrue((Boolean) result.get("isSuccessful"));
+  }
+
+  /** Test case: tests the createDiscussionReply(...) method. Test data: a thread hidden by reports. Expected: regular users see it as not found. */
+  @Test
+  public void testCreateDiscussionReplyOnReportHiddenThread() {
+    setOption("discussionMinSolvedToReport", "0");
+    setOption("discussionReportHideThreshold", "1");
+    Assertions.assertTrue(
+        discussionService.reportDiscussionReply(1, 1, userWithUid(1002)).get("isSuccessful"));
+    Map<String, Object> result =
+        discussionService.createDiscussionReply(1, userMapper.getUserUsingUid(1002), "Reply");
+    Assertions.assertFalse((Boolean) result.get("isDiscussionThreadExists"));
+    Assertions.assertFalse((Boolean) result.get("isSuccessful"));
+  }
+
+  /** Test case: tests the createDiscussionReply(...), voteDiscussionReply(...) and reportDiscussionReply(...) methods. Test data: a thread of the unpublished problem 1002. Expected: regular users see the thread and its replies as not found. */
+  @Test
+  public void testActionsOnThreadOfUnpublishedProblem() {
+    setOption("discussionMinSolvedToVote", "0");
+    setOption("discussionMinSolvedToReport", "0");
+    long threadId =
+        (Long)
+            discussionService
+                .createDiscussionThread(adminUser(), "qa", 1002, "Title", "Content")
+                .get("discussionThreadId");
+    long replyId =
+        discussionService.getDiscussionRepliesOfThread(threadId, -1, 0, 1, false).get(0)
+            .getDiscussionReplyId();
+
+    Assertions.assertFalse(
+        (Boolean)
+            discussionService
+                .createDiscussionReply(threadId, userMapper.getUserUsingUid(1002), "Reply")
+                .get("isSuccessful"));
+    Map<String, Boolean> vote =
+        discussionService.voteDiscussionReply(threadId, replyId, userWithUid(1002), 1, 0);
+    Assertions.assertFalse(vote.get("isDiscussionReplyExists"));
+    Assertions.assertFalse(vote.get("isSuccessful"));
+    Map<String, Boolean> report =
+        discussionService.reportDiscussionReply(threadId, replyId, userWithUid(1002));
+    Assertions.assertFalse(report.get("isDiscussionReplyExists"));
+    Assertions.assertFalse(report.get("isSuccessful"));
+  }
+
+  /** Test case: tests the voteDiscussionReply(...) and reportDiscussionReply(...) methods. Test data: a reply hidden by an administrator. Expected: regular users see it as not found; administrators may still vote. */
+  @Test
+  public void testVoteAndReportOnHiddenReply() {
+    setOption("discussionMinSolvedToVote", "0");
+    setOption("discussionMinSolvedToReport", "0");
+    Assertions.assertTrue(discussionService.setReplyVisibility(3, false));
+
+    Map<String, Boolean> vote =
+        discussionService.voteDiscussionReply(2, 3, userWithUid(1002), 1, 0);
+    Assertions.assertFalse(vote.get("isDiscussionReplyExists"));
+    Assertions.assertFalse(vote.get("isSuccessful"));
+    Map<String, Boolean> report = discussionService.reportDiscussionReply(2, 3, userWithUid(1002));
+    Assertions.assertFalse(report.get("isDiscussionReplyExists"));
+    Assertions.assertFalse(report.get("isSuccessful"));
+
+    Assertions.assertTrue(
+        discussionService.voteDiscussionReply(2, 3, adminUser(), 1, 0).get("isSuccessful"));
+  }
+
+  /** Test case: tests the voteDiscussionReply(...) and reportDiscussionReply(...) methods. Test data: a visible reply of a thread hidden by an administrator. Expected: regular users see it as not found. */
+  @Test
+  public void testVoteAndReportOnReplyOfHiddenThread() {
+    setOption("discussionMinSolvedToVote", "0");
+    setOption("discussionMinSolvedToReport", "0");
+    Assertions.assertTrue(discussionService.setThreadVisibility(2, false));
+
+    Assertions.assertFalse(
+        discussionService.voteDiscussionReply(2, 3, userWithUid(1002), 1, 0).get("isSuccessful"));
+    Assertions.assertFalse(
+        discussionService.reportDiscussionReply(2, 3, userWithUid(1002)).get("isSuccessful"));
+  }
+
   /** Test case: tests the createDiscussionThread(...) method. Test data: a title and content with code, angle brackets and ampersands. Expected: both are stored verbatim (not stripped or entity-encoded) and the opening post is created with the thread. */
   @Test
   public void testCreateDiscussionThreadKeepsPlainText() {
@@ -593,6 +693,16 @@ public class DiscussionServiceTest {
         discussionService.getDiscussionRepliesOfThread(threadId, -1, 0, 10, true);
     Assertions.assertEquals(1, replies.size());
     Assertions.assertEquals(content, replies.get(0).getDiscussionReplyContent());
+  }
+
+  /** Returns the thread with the given identifier from a list, failing the test if it is absent. */
+  private static DiscussionThread findThread(List<DiscussionThread> threads, long threadId) {
+    for (DiscussionThread thread : threads) {
+      if (thread.getDiscussionThreadId() == threadId) {
+        return thread;
+      }
+    }
+    return Assertions.fail("Thread #" + threadId + " is not listed");
   }
 
   /** Sets a system option value (rolled back after each test by the transactional context). */

@@ -447,7 +447,7 @@ public class DiscussionService {
     Map<String, Boolean> result = new HashMap<>();
     result.put(
         "isDiscussionReplyExists",
-        discussionReply != null && discussionReply.getDiscussionThreadId() == discussionThreadId);
+        isDiscussionReplyAccessible(discussionReply, discussionThreadId, currentUser));
     result.put("isVoteValid", voteUp >= -1 && voteUp <= 1 && voteDown >= -1 && voteDown <= 1);
     result.put("isLoggedIn", currentUser != null);
     result.put("isNotSelfVote", !isOwnReply(discussionReply, currentUser));
@@ -506,7 +506,7 @@ public class DiscussionService {
     Map<String, Boolean> result = new HashMap<>();
     result.put(
         "isDiscussionReplyExists",
-        discussionReply != null && discussionReply.getDiscussionThreadId() == discussionThreadId);
+        isDiscussionReplyAccessible(discussionReply, discussionThreadId, currentUser));
     result.put("isLoggedIn", currentUser != null);
     result.put("isNotSelfReport", !isOwnReply(discussionReply, currentUser));
     result.put(
@@ -526,6 +526,33 @@ public class DiscussionService {
               discussionReplyId, currentUser.getUid(), DiscussionReplyVote.VOTE_REPORT));
     }
     return result;
+  }
+
+  /**
+   * Checks whether a user may act on (vote on or report) a discussion reply. The reply must belong
+   * to the given thread, and - except for administrators - it must not be hidden and its thread must
+   * be viewable (see {@link #isDiscussionThreadViewable(DiscussionThread, User)}); otherwise the
+   * reply is treated as not found, exactly as on the thread page.
+   *
+   * @param discussionReply - the discussion reply (may be null)
+   * @param discussionThreadId - the unique identifier of the thread the reply is expected in
+   * @param user - the acting user (may be null)
+   * @return whether the reply exists and the user may act on it
+   */
+  private boolean isDiscussionReplyAccessible(
+      DiscussionReply discussionReply, long discussionThreadId, User user) {
+    if (discussionReply == null || discussionReply.getDiscussionThreadId() != discussionThreadId) {
+      return false;
+    }
+    if (PublicationStatus.isAdministrator(user)) {
+      return true;
+    }
+    if (!discussionReply.isVisible()) {
+      return false;
+    }
+    DiscussionThread discussionThread =
+        discussionThreadMapper.getDiscussionThreadUsingThreadId(discussionThreadId);
+    return discussionThread != null && isDiscussionThreadViewable(discussionThread, user);
   }
 
   /**
@@ -961,7 +988,11 @@ public class DiscussionService {
     DiscussionThread discussionThread =
         discussionThreadMapper.getDiscussionThreadUsingThreadId(discussionThreadId);
     Map<String, Boolean> result = new HashMap<>(8, 1);
-    result.put("isDiscussionThreadExists", discussionThread != null);
+    // A thread the creator may not view (hidden by an administrator or by reports, or attached to
+    // an unpublished problem) is treated as not found, exactly as on the thread page.
+    result.put(
+        "isDiscussionThreadExists",
+        discussionThread != null && isDiscussionThreadViewable(discussionThread, replyCreator));
     result.put("isDiscussionThreadLocked", discussionThread != null && discussionThread.isLocked());
     result.put("isReplyCreatorExists", replyCreator != null);
     result.put(

@@ -37,6 +37,16 @@ public interface DiscussionReplyMapper {
       @Param("discussionReplyId") long discussionReplyId);
 
   /**
+   * Gets the summary of a discussion reply (its identifiers, time and visibility, but neither its
+   * content nor its creator), used as the latest reply of a thread in the thread lists.
+   *
+   * @param discussionReplyId - the unique identifier of the discussion reply
+   * @return the summary DiscussionReply object, or a null reference
+   */
+  DiscussionReply getDiscussionReplySummaryUsingReplyId(
+      @Param("discussionReplyId") long discussionReplyId);
+
+  /**
    * Gets all replies of a discussion thread, with pagination.
    *
    * @param discussionThreadId - the unique identifier of the discussion thread

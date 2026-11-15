@@ -28,7 +28,7 @@
 		<association property="latestDiscussionReply" 
 			javaType="org.verwandlung.voj.web.model.DiscussionReply"
 			column="latest_discussion_reply_id"
-			select="org.verwandlung.voj.web.mapper.DiscussionReplyMapper.getDiscussionReplyUsingReplyId" />
+			select="org.verwandlung.voj.web.mapper.DiscussionReplyMapper.getDiscussionReplySummaryUsingReplyId" />
 	</resultMap>
 
 	<!-- Methods -->
@@ -45,9 +45,14 @@
 			JOIN voj_discussion_replies r ON v.discussion_reply_id = r.discussion_reply_id
 			WHERE r.discussion_thread_id = dt.discussion_thread_id AND v.vote_type = 2
 		) AS discussion_reports, (
+			<!-- Replies hidden by an administrator neither count as the latest activity nor leak
+			     through the latest reply of the public lists. -->
 			SELECT discussion_reply_id
 			FROM voj_discussion_replies dr
 			WHERE dt.discussion_thread_id = dr.discussion_thread_id
+			<if test="visibleOnly">
+				AND dr.discussion_reply_visible = 1
+			</if>
 			ORDER BY discussion_reply_id DESC
 			LIMIT 1
 		) AS latest_discussion_reply_id

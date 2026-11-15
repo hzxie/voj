@@ -16,7 +16,23 @@
 			select="org.verwandlung.voj.web.mapper.UserMapper.getUserUsingUid" />
 	</resultMap>
 
+	<!-- The summary of a reply used as the latest reply of a thread in the thread lists: only its
+	     identity and time, never its content (which the lists do not display). -->
+	<resultMap id="DiscussionReplySummaryResultMap" type="org.verwandlung.voj.web.model.DiscussionReply">
+		<id property="discussionReplyId" column="discussion_reply_id" />
+		<result property="discussionThreadId" column="discussion_thread_id" />
+		<result property="discussionReplyCreateTime" column="discussion_reply_time" />
+		<result property="visible" column="discussion_reply_visible" />
+	</resultMap>
+
 	<!-- Methods -->
+	<select id="getDiscussionReplySummaryUsingReplyId"
+		parameterType="long"
+		resultMap="DiscussionReplySummaryResultMap">
+		SELECT discussion_reply_id, discussion_thread_id, discussion_reply_time, discussion_reply_visible
+		FROM voj_discussion_replies
+		WHERE discussion_reply_id = #{discussionReplyId}
+	</select>
 	<select id="getDiscussionReplyUsingReplyId"
 		parameterType="long"
 		resultMap="DiscussionReplyResultMap">
