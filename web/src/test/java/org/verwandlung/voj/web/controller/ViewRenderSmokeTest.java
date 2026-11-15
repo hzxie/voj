@@ -419,6 +419,23 @@ class ViewRenderSmokeTest {
                     "hreflang=\"x-default\" href=\"https://oj.example.edu/voj/\"")));
   }
 
+  /**
+   * The shared UI chrome renders: the color-scheme meta before first paint, the theme toggle as a
+   * real button, the popover navigation menu and the dialog behind vojConfirm / vojAlert.
+   */
+  @Test
+  void homeViewRendersSharedChrome() throws Exception {
+    mockMvc
+        .perform(getWithCsrf("/"))
+        .andExpect(status().isOk())
+        .andExpect(content().string(containsString("<meta name=\"color-scheme\" content=\"light dark\"")))
+        .andExpect(content().string(containsString("data-vw=\"theme-toggle\" aria-pressed=\"true\"")))
+        .andExpect(content().string(containsString("popovertarget=\"vw-menu\"")))
+        .andExpect(content().string(containsString("<nav id=\"vw-menu\" class=\"vw-menu\" data-vw=\"menu\" popover")))
+        .andExpect(content().string(containsString("<dialog id=\"vw-dialog\" class=\"vw-dialog\"")))
+        .andExpect(content().string(not(containsString("X-UA-Compatible"))));
+  }
+
   /** robots.txt keeps crawlers out of the administration pages and points to the sitemap. */
   @Test
   void robotsTxtRenders() throws Exception {

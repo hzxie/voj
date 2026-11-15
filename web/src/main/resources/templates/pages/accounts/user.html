@@ -107,20 +107,22 @@
                displayName, email, location, website, socialLinks (GitHub) and aboutMe.
                The design's avatar upload and rank are not backed by the server, so they
                are omitted; username is shown read-only. */-->
-        <div class="vw-pmodal-overlay hide" id="edit-profile-modal"
+        <!--/* A native modal <dialog>: the browser makes the page inert, traps focus, closes on
+               Esc and returns focus to the edit button. It does not close on a backdrop click,
+               so a stray click cannot throw away unsaved edits. */-->
+        <dialog class="vw-pmodal" id="edit-profile-modal" aria-labelledby="edit-profile-title"
              th:if="${isLogin and myProfile != null and myProfile.uid == user.uid}">
-            <div class="vw-pmodal">
                 <div class="vw-pmodal-head">
-                    <span class="vw-pmodal-eyebrow" th:text="'// ' + #{voj.accounts.user.edit-profile}">// edit-profile</span>
-                    <button type="button" class="vw-pmodal-close" data-edit-dismiss th:title="#{voj.include.header.close}">&#10005;</button>
+                    <span class="vw-pmodal-eyebrow" id="edit-profile-title" th:text="'// ' + #{voj.accounts.user.edit-profile}">// edit-profile</span>
+                    <button type="button" class="vw-pmodal-close" data-edit-dismiss th:title="#{voj.include.header.close}" th:aria-label="#{voj.include.header.close}"><span aria-hidden="true">&#10005;</span></button>
                 </div>
-                <form id="edit-profile-form" method="POST" onsubmit="onUpdateProfile(); return false;">
+                <form id="edit-profile-form" method="POST">
                     <div class="vw-pmodal-body">
-                        <div class="vw-alert vw-alert-error hide" id="edit-profile-error"></div>
+                        <div class="vw-alert vw-alert-error hide" id="edit-profile-error" role="alert"></div>
                         <div class="vw-pmodal-grid">
                             <div class="vw-pmodal-field">
                                 <label class="vw-label" for="edit-display-name" th:text="#{voj.accounts.user.display-name}">Display Name</label>
-                                <input class="vw-input" id="edit-display-name" name="displayName" type="text" maxlength="64" th:value="${displayName}" />
+                                <input class="vw-input" id="edit-display-name" name="displayName" type="text" maxlength="64" autocomplete="name" autofocus th:value="${displayName}" />
                             </div>
                             <div class="vw-pmodal-field">
                                 <label class="vw-label" for="edit-username" th:text="#{voj.accounts.user.username} + ' · ' + #{voj.accounts.user.locked}">Username · Locked</label>
@@ -135,18 +137,18 @@
                             </div>
                             <div class="vw-pmodal-field">
                                 <label class="vw-label" for="edit-email" th:text="#{voj.accounts.dashboard.email}">Email</label>
-                                <input class="vw-input" id="edit-email" name="email" type="text" maxlength="64" th:value="${user.email}" />
+                                <input class="vw-input" id="edit-email" name="email" type="email" maxlength="64" autocomplete="email" spellcheck="false" th:value="${user.email}" />
                             </div>
                         </div>
                         <div class="vw-pmodal-grid">
                             <div class="vw-pmodal-field">
                                 <label class="vw-label" for="edit-website" th:text="#{voj.accounts.dashboard.website}">Website</label>
-                                <input class="vw-input" id="edit-website" name="website" type="text" maxlength="64"
+                                <input class="vw-input" id="edit-website" name="website" type="text" inputmode="url" autocomplete="url" spellcheck="false" maxlength="64"
                                        th:value="${website}" placeholder="https://" />
                             </div>
                             <div class="vw-pmodal-field">
                                 <label class="vw-label" for="edit-github" th:text="#{voj.accounts.user.github}">GitHub</label>
-                                <input class="vw-input" id="edit-github" type="text" maxlength="64" placeholder="username"
+                                <input class="vw-input" id="edit-github" type="text" maxlength="64" spellcheck="false" autocapitalize="off" placeholder="username"
                                        th:value="${socialLinks != null ? socialLinks['GitHub'] : ''}" />
                             </div>
                         </div>
@@ -161,8 +163,7 @@
                         <button type="submit" class="vw-btn vw-btn-sm vw-btn-accent" id="edit-profile-submit">$ <span th:text="#{voj.accounts.user.save-changes}">Save Changes</span></button>
                     </div>
                 </form>
-            </div>
-        </div>
+        </dialog>
     </div>
 
     <th:block layout:fragment="scripts">
@@ -193,15 +194,17 @@
         // Existing social links are inlined so non-GitHub entries survive a save;
         // only the GitHub key is edited from the modal.
         var existingSocialLinks = /*[[${socialLinks}]]*/ {};
+        var editProfileDialog = document.getElementById('edit-profile-modal');
         $('#edit-profile-btn').on('click', function() {
             $('#edit-profile-error').addClass('hide').empty();
-            $('#edit-profile-modal').removeClass('hide');
+            editProfileDialog.showModal();
         });
         $('#edit-profile-modal').on('click', '[data-edit-dismiss]', function() {
-            $('#edit-profile-modal').addClass('hide');
+            editProfileDialog.close();
         });
-        $('#edit-profile-modal').on('click', function(e) {
-            if (e.target === this) { $(this).addClass('hide'); }
+        $('#edit-profile-form').on('submit', function(e) {
+            e.preventDefault();
+            onUpdateProfile();
         });
         function onUpdateProfile() {
             var $submit = $('#edit-profile-submit');
@@ -233,10 +236,12 @@
         }
         function processUpdateProfileResult(result) {
             if (result['isSuccessful']) {
+                var reload = function() { window.location.reload(); };
                 if (result['isEmailVerificationSent']) {
-                    alert([[#{voj.accounts.dashboard.email-verification-sent}]]);
+                    vojAlert([[#{voj.accounts.dashboard.email-verification-sent}]]).then(reload);
+                } else {
+                    reload();
                 }
-                window.location.reload();
                 return;
             }
             var errorMessage = '';

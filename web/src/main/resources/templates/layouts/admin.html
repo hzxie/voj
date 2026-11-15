@@ -16,9 +16,9 @@
       th:lang="${#strings.replace(language, '_', '-')}" lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8" />
-    <script>(function(){try{var t=localStorage.getItem('voj-theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+    <!--/* color-scheme meta + pre-paint theme resolution (stored override, else system). */-->
+    <th:block th:replace="~{fragments/chrome :: theme-head}"></th:block>
     <title th:text="${websiteName}">System Administration</title>
-    <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" th:content="${description}" />
     <meta name="robots" content="noindex" />
@@ -32,14 +32,12 @@
     <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/app.css?v=${version}|" />
     <!-- Admin-only chrome + components. -->
     <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/admin.css?v=${version}|" />
-    <!-- Functional JavaScript kept from the legacy stack (page AJAX uses jQuery). -->
-    <script type="text/javascript" th:src="|${cdnUrl}/js/jquery-3.7.1.min.js?v=${version}|"></script>
 </head>
-<body class="adm-body">
+<body class="adm-body" th:data-select-all-label="#{voj.administration.include.select-all}">
     <!-- Decorative scanline overlay. -->
     <div class="adm-scanlines" aria-hidden="true"></div>
     <!-- Mobile drawer scrim. -->
-    <div class="adm-scrim" data-adm="scrim"></div>
+    <div class="adm-scrim" data-adm="scrim" aria-hidden="true"></div>
     <!-- Sidebar -->
     <div th:replace="~{fragments/admin-sidebar :: sidebar}"></div>
     <!-- Main column -->
@@ -50,6 +48,10 @@
         <div class="adm-content" layout:fragment="content"></div>
     </main>
 
+    <!-- Shared modal behind vojConfirm() / vojAlert() (js/theme.js). -->
+    <dialog th:replace="~{fragments/chrome :: dialog}"></dialog>
+    <!-- jQuery (page AJAX still uses it). Loaded at the end of <body> so it does not block rendering. -->
+    <script type="text/javascript" th:src="|${cdnUrl}/js/jquery-3.7.1.min.js?v=${version}|"></script>
     <!-- UI chrome behaviour (theme toggle) + admin chrome (drawer, tables). -->
     <script type="text/javascript" th:src="|${cdnUrl}/js/theme.js?v=${version}|"></script>
     <script type="text/javascript" th:src="|${cdnUrl}/js/admin.js?v=${version}|"></script>
@@ -62,11 +64,11 @@
                 jqXHR.setRequestHeader([[${_csrf.headerName}]], [[${_csrf.token}]]);
             }
         });
+        // Single pass: an argument containing "%s" is inserted verbatim, not re-substituted.
         String.prototype.format = function() {
-            var newStr = this, i = 0;
-            while (/%s/.test(newStr)) { newStr = newStr.replace("%s", arguments[i++]) }
-            return newStr;
-        }
+            var args = arguments, i = 0;
+            return String(this).replace(/%s/g, function() { return String(args[i++]); });
+        };
     </script>
     <!-- Markdown rendering (markdown-it) + shared helpers (renderMarkdown / createMarkdownEditor). -->
     <script type="text/javascript" th:src="|${cdnUrl}/js/markdown-it.min.js?v=${version}|"></script>

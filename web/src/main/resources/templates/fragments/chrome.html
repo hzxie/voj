@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<!--/*
+  Shared UI chrome pieces used by every layout:
+
+  - theme-head:   the <meta name="color-scheme"> plus the tiny blocking script that
+                  resolves the theme before first paint (no flash of the wrong theme).
+                  A stored override ("light"/"dark" in localStorage) wins; otherwise the
+                  page follows the system preference. Must stay inline and synchronous.
+  - theme-toggle: the theme switch. A real <button>; aria-pressed (true = dark) is kept
+                  in sync by js/theme.js.
+  - dialog:       the shared modal behind window.vojConfirm / window.vojAlert (js/theme.js),
+                  which replace the browser's blocking confirm() / alert().
+*/-->
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <th:block th:fragment="theme-head">
+    <meta name="color-scheme" content="light dark" />
+    <script>(function(){var t=null;try{t=localStorage.getItem('voj-theme');}catch(e){}if(t!=='light'&&t!=='dark'){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';}document.documentElement.setAttribute('data-theme',t);document.querySelector('meta[name="color-scheme"]').content=t;})();</script>
+    </th:block>
+</head>
+<body>
+    <button th:fragment="theme-toggle(cls)" type="button" th:class="${cls}" data-vw="theme-toggle" aria-pressed="true"
+            th:aria-label="#{voj.include.header.dark-theme}" th:title="#{voj.include.header.dark-theme}">
+        <span class="moon" aria-hidden="true">&#9790;</span><span class="sun" aria-hidden="true">&#9728;</span><span class="knob"></span>
+    </button>
+
+    <dialog th:fragment="dialog" id="vw-dialog" class="vw-dialog" aria-labelledby="vw-dialog-message">
+        <form method="dialog">
+            <p id="vw-dialog-message" class="vw-dialog-message"></p>
+            <div class="vw-dialog-actions">
+                <button type="submit" value="cancel" class="vw-btn vw-btn-ghost vw-btn-sm" th:text="#{voj.include.dialog.cancel}">Cancel</button>
+                <button type="submit" value="ok" class="vw-btn vw-btn-accent vw-btn-sm" th:text="#{voj.include.dialog.ok}">OK</button>
+            </div>
+        </form>
+    </dialog>
+</body>
+</html>

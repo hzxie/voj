@@ -48,6 +48,12 @@
   --glow:rgba(7,154,78,.16); --scan:rgba(7,154,78,.03); --chip:#eef6f1;
   --shadow-card:0 8px 28px rgba(0,0,0,.12);
 }
+/* Tell the browser which scheme the active palette is, so native UI (scrollbars, form
+   controls, date pickers, the canvas) matches it. The base stays "light dark"; the
+   data-theme attribute set before first paint (fragments/chrome.html) pins it. */
+:root { color-scheme:light dark; }
+:root[data-theme="dark"] { color-scheme:dark; }
+:root[data-theme="light"] { color-scheme:light; }
 
 /* ----------------------------------------------------------------------------
  * Base / reset
@@ -107,7 +113,7 @@ input, textarea, select, button { font-family:inherit; }
 .vw-hero {
   padding-inline:max(var(--pad), (100% - var(--maxw)) / 2 + var(--pad));
 }
-.vw-cursor { display:inline-block; color:var(--accent); animation:vwBlink 1.1s steps(1) infinite; }
+.vw-cursor { display:inline-block; color:var(--accent); @media (prefers-reduced-motion: no-preference) { animation:vwBlink 1.1s steps(1) infinite; } }
 
 /* ----------------------------------------------------------------------------
  * Header + navigation
@@ -130,6 +136,7 @@ input, textarea, select, button { font-family:inherit; }
 .vw-toggle {
   position:relative; width:54px; height:28px; border-radius:30px; border:1px solid var(--line);
   background:var(--bg3); cursor:pointer; flex-shrink:0; user-select:none;
+  padding:0; font:inherit; color:inherit;
 }
 .vw-toggle .moon, .vw-toggle .sun { position:absolute; top:0; bottom:0; display:flex; align-items:center; font-size:13px; }
 .vw-toggle .moon { left:7px; color:var(--text2); }
@@ -156,11 +163,17 @@ input, textarea, select, button { font-family:inherit; }
   display:none; position:sticky; top:66px; z-index:49; background:var(--bg2);
   border-bottom:1px solid var(--line); padding:8px var(--pad) 18px; flex-direction:column;
 }
-.vw-menu.open { display:flex; }
+.vw-menu.open { display:flex; } /* no-popover fallback (js/theme.js) */
+/* Native popover: a full-width panel pinned under the sticky header. */
+.vw-menu:popover-open {
+  display:flex; position:fixed; inset:66px 0 auto 0; width:auto; margin:0; color:inherit;
+  border:0; border-bottom:1px solid var(--line); max-height:calc(100dvh - 66px); overflow-y:auto;
+}
+@media (min-width:1081px) { .vw-menu:popover-open { display:none; } }
 .vw-menu > a { font-size:15px; color:var(--text2); padding:13px 0; border-bottom:1px solid var(--line2); }
 .vw-menu > a.active { color:var(--accent); }
 .vw-menu-actions { display:flex; gap:10px; margin-top:14px; }
-.vw-menu-actions a { flex:1; text-align:center; font-size:13.5px; padding:12px; border-radius:9px; }
+.vw-menu-actions a, .vw-menu-actions button { flex:1; text-align:center; font-size:13.5px; padding:12px; border-radius:9px; }
 
 @media (max-width:1080px) {
   .vw-nav, .vw-desktop-only { display:none !important; }
@@ -196,7 +209,17 @@ input, textarea, select, button { font-family:inherit; }
   background:var(--bg2); border:1px solid var(--line); border-radius:10px;
   box-shadow:var(--shadow-card); overflow:hidden; z-index:30;
 }
-.vw-lang.open .vw-lang-menu { display:block; }
+.vw-lang.open .vw-lang-menu { display:block; } /* no-popover fallback (js/theme.js) */
+/* Native popover: top layer, so it is positioned against the viewport. Anchor positioning
+   puts it above the button, right-aligned; without it js/theme.js sets left/top. */
+.vw-lang-btn { anchor-name:--vw-lang; }
+.vw-lang-menu:popover-open { display:block; position:fixed; inset:auto; margin:0; padding:0; color:inherit; }
+@supports (position-area: block-start) {
+  .vw-lang-menu:popover-open {
+    position-anchor:--vw-lang; position-area:block-start span-inline-start;
+    position-try-fallbacks:flip-block; margin-block-end:8px;
+  }
+}
 .vw-lang-menu a {
   display:flex; align-items:center; justify-content:space-between; gap:14px; padding:9px 14px;
   font-size:12px; color:var(--text2); white-space:nowrap;
@@ -307,7 +330,7 @@ html[lang^="zh"] .vw-pstat .k { letter-spacing:normal; }
   background:var(--accent-soft); color:var(--accent);
 }
 .vw-pill .led { width:7px; height:7px; border-radius:50%; background:currentColor; }
-.vw-pill-live { color:var(--accent); } .vw-pill-live .led { animation:vwPulse 1.6s ease infinite; }
+.vw-pill-live { color:var(--accent); } .vw-pill-live .led { @media (prefers-reduced-motion: no-preference) { animation:vwPulse 1.6s ease infinite; } }
 .vw-pill-ready { color:var(--info); border-color:var(--info); background:transparent; }
 .vw-pill-done { color:var(--text3); border-color:var(--line); background:transparent; }
 
@@ -438,7 +461,7 @@ a.vw-table-row:hover { background:var(--bg3); }
 .vw-jcard.is-offline { opacity:.62; }
 .vw-jcard-head { display:flex; align-items:center; gap:11px; margin-bottom:16px; }
 .vw-jcard-dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
-.vw-jcard-dot.on { background:var(--accent); animation:vwPulse 1.6s ease infinite; }
+.vw-jcard-dot.on { background:var(--accent); @media (prefers-reduced-motion: no-preference) { animation:vwPulse 1.6s ease infinite; } }
 .vw-jcard-dot.off { background:var(--text3); }
 .vw-jcard-name { font-size:15px; font-weight:700; color:var(--head); }
 .vw-jcard-status { font-size:11px; font-weight:600; margin-left:auto; }
@@ -449,7 +472,7 @@ a.vw-table-row:hover { background:var(--bg3); }
 .vw-bar-top { display:flex; justify-content:space-between; font-size:11px; margin-bottom:5px; }
 .vw-bar-top .lbl { color:var(--text3); text-transform:uppercase; }
 .vw-bar-track { height:6px; background:var(--line2); border-radius:4px; overflow:hidden; }
-.vw-bar-fill { height:100%; transform-origin:left; animation:vwBar 1.3s ease both; }
+.vw-bar-fill { height:100%; transform-origin:left; @media (prefers-reduced-motion: no-preference) { animation:vwBar 1.3s ease both; } }
 /* Load colours (CPU buckets) + the memory fill. */
 .vw-bar-low, .vw-load-low { color:var(--accent); } .vw-bar-low { background:var(--accent); }
 .vw-bar-mid, .vw-load-mid { color:var(--warn); } .vw-bar-mid { background:var(--warn); }
@@ -458,7 +481,7 @@ a.vw-table-row:hover { background:var(--bg3); }
 
 /* Inline "live" indicator (pulsing dot) reused by page sub-headers. */
 .vw-livesub { display:flex; align-items:center; gap:8px; }
-.vw-livedot { width:6px; height:6px; border-radius:50%; background:var(--accent); animation:vwPulse 1.5s ease infinite; }
+.vw-livedot { width:6px; height:6px; border-radius:50%; background:var(--accent); @media (prefers-reduced-motion: no-preference) { animation:vwPulse 1.5s ease infinite; } }
 .vw-jcard-foot { display:flex; gap:18px; margin-top:16px; padding-top:14px; border-top:1px solid var(--line2); font-size:11px; color:var(--text3); flex-wrap:wrap; }
 .vw-jcard-foot b { color:var(--text2); }
 
@@ -514,7 +537,7 @@ a.vw-card:hover { border-color:var(--accent); }
 .vw-gitbtn-star { display:flex; align-items:center; gap:6px; padding:12px 15px; border-left:1px solid var(--line); background:var(--bg3); }
 .vw-gitbtn-count { display:inline-flex; align-items:center; justify-content:center; min-width:24px; }
 /* Spinner shown while the live GitHub star count loads. */
-.vw-spinner { display:inline-block; vertical-align:middle; width:13px; height:13px; border:2px solid var(--line); border-top-color:var(--warn); border-radius:50%; animation:vwSpin .6s linear infinite; }
+.vw-spinner { display:inline-block; vertical-align:middle; width:13px; height:13px; border:2px solid var(--line); border-top-color:var(--warn); border-radius:50%; animation:vwSpin .6s linear infinite; @media (prefers-reduced-motion: reduce) { animation-duration:1.8s; } }
 @keyframes vwSpin { to { transform:rotate(360deg); } }
 .vw-home-contests { padding-bottom:30px; }
 .vw-home-langs { padding-top:14px; }
@@ -525,7 +548,7 @@ a.vw-card:hover { border-color:var(--accent); }
 .vw-bulletin { list-style:none; margin:0; padding:0; }
 .vw-bulletin-item { padding:11px 17px; border-bottom:1px solid var(--line2); display:flex; align-items:center; gap:13px; font-size:12.5px; cursor:pointer; }
 .vw-bulletin-item:last-child { border-bottom:0; }
-.vw-bulletin-link { display:flex; align-items:center; gap:13px; width:100%; color:inherit; }
+.vw-bulletin-link { display:flex; align-items:center; gap:13px; width:100%; color:inherit; padding:0; border:0; background:none; font:inherit; text-align:start; cursor:pointer; }
 .vw-bulletin-date { width:60px; flex-shrink:0; }
 .vw-bulletin-title { color:var(--text); flex:1; }
 .vw-card-empty { padding:18px; }
@@ -596,7 +619,7 @@ a.vw-card:hover { border-color:var(--accent); }
 .vw-ctitle { font-size:18px; font-weight:700; color:var(--head); }
 .vw-cstatus { font-size:12px; font-weight:600; display:flex; align-items:center; gap:7px; }
 .vw-cstatus .dot { width:8px; height:8px; border-radius:50%; background:currentColor; }
-.vw-cstatus-live { color:var(--accent); } .vw-cstatus-live .dot { animation:vwPulse 1.6s ease infinite; }
+.vw-cstatus-live { color:var(--accent); } .vw-cstatus-live .dot { @media (prefers-reduced-motion: no-preference) { animation:vwPulse 1.6s ease infinite; } }
 .vw-cstatus-ready { color:var(--info); }
 .vw-cmeta { display:flex; gap:26px; font-size:12.5px; color:var(--text3); flex-wrap:wrap; }
 .vw-table-contests { --cols:70px minmax(0,1fr) 220px 150px 90px; min-width:760px; }
@@ -687,13 +710,21 @@ ul.inline > li, .inline > li { display:inline-block; margin-right:14px; }
 .alert-warning { background:rgba(230,164,69,.10); border-color:var(--warn); color:var(--warn); }
 .alert h5 { color:inherit; margin:0 0 4px; font-family:var(--mono); font-size:13px; }
 
-.modal { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:1050; width:90%; max-width:560px;
-  background:var(--bg2); border:1px solid var(--line); border-radius:13px; box-shadow:var(--shadow-card); overflow:hidden; }
-.modal.hide { display:none !important; }
-.modal-header { padding:14px 18px; border-bottom:1px solid var(--line2); display:flex; align-items:center; justify-content:space-between; }
-.modal-body { padding:18px; }
-.modal-footer { padding:14px 18px; border-top:1px solid var(--line2); display:flex; justify-content:flex-end; gap:10px; }
-.modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:1040; }
+/* Native <dialog> modals: the shared confirm/alert (fragments/chrome.html), the bulletin
+   notice (index) and the edit-profile form (.vw-pmodal). Never set `display` on a closed
+   dialog; scroll containment keeps wheel/touch scrolling from reaching the page. */
+dialog:modal { overscroll-behavior:contain; }
+dialog::backdrop { background:rgba(0,0,0,.6); overflow:hidden; overscroll-behavior:contain; }
+.vw-dialog {
+  width:min(560px, calc(100vw - 32px)); max-height:calc(100dvh - 32px); padding:20px; color:var(--text);
+  background:var(--bg2); border:1px solid var(--line); border-radius:13px; box-shadow:var(--shadow-card);
+}
+#vw-dialog { width:min(440px, calc(100vw - 32px)); }
+.vw-dialog-message { margin:0 0 20px; white-space:pre-line; line-height:1.6; overflow-wrap:anywhere; }
+.vw-dialog-actions { display:flex; justify-content:flex-end; gap:10px; }
+.vw-dialog-head { display:flex; align-items:center; justify-content:space-between; gap:14px; margin:-20px -20px 18px; padding:14px 18px; border-bottom:1px solid var(--line2); }
+.vw-dialog-head .vw-modal-title { font-size:17px; }
+.vw-bulletin-dialog .vw-dialog-body { white-space:pre-line; }
 .close { background:none; border:0; color:var(--text3); font-size:20px; cursor:pointer; line-height:1; }
 .close:hover { color:var(--accent); }
 .widget { margin-bottom:18px; }
@@ -953,7 +984,7 @@ ul.inline > li, .inline > li { display:inline-block; margin-right:14px; }
 .vw-eyebrow-err { color:var(--err); }
 .vw-error-code { font-family:var(--display); font-weight:700; font-size:clamp(120px,20vw,200px); line-height:.86; letter-spacing:-6px; color:var(--head); position:relative; }
 .vw-error-code .base { position:relative; z-index:2; }
-.vw-error-code .glitch { position:absolute; inset:0; color:var(--accent); opacity:.55; animation:vwGlitch 2.6s steps(2) infinite; z-index:1; }
+.vw-error-code .glitch { position:absolute; inset:0; color:var(--accent); opacity:.55; z-index:1; @media (prefers-reduced-motion: no-preference) { animation:vwGlitch 2.6s steps(2) infinite; } }
 .vw-error h1 { font-size:clamp(22px,3vw,30px); letter-spacing:-1px; margin:26px 0 12px; }
 .vw-error p { font-size:14px; line-height:1.7; color:var(--text2); max-width:460px; margin:0 0 30px; }
 .vw-error-btns { display:flex; gap:12px; margin-top:8px; flex-wrap:wrap; justify-content:center; }
@@ -1393,10 +1424,9 @@ a.vw-recent-row:hover { background:var(--bg3); }
 .vw-pdiff-track { height:7px; background:var(--line2); border-radius:4px; overflow:hidden; }
 .vw-pdiff-fill { height:100%; background:currentColor; border-radius:4px; }
 
-/* Edit-profile modal (owner only): centred dialog over a blurred backdrop. */
-.vw-pmodal-overlay { position:fixed; inset:0; z-index:80; background:rgba(0,0,0,.62); backdrop-filter:blur(3px); display:flex; align-items:flex-start; justify-content:center; padding:48px 20px; overflow-y:auto; }
-.vw-pmodal-overlay.hide { display:none; }
-.vw-pmodal { width:100%; max-width:580px; background:var(--bg2); border:1px solid var(--line); border-radius:16px; overflow:hidden; box-shadow:0 28px 80px rgba(0,0,0,.55); }
+/* Edit-profile modal (owner only): a native <dialog> over a blurred backdrop. */
+.vw-pmodal { width:min(580px, calc(100vw - 40px)); max-height:calc(100dvh - 96px); margin:48px auto auto; padding:0; color:var(--text); background:var(--bg2); border:1px solid var(--line); border-radius:16px; overflow-y:auto; box-shadow:0 28px 80px rgba(0,0,0,.55); }
+.vw-pmodal::backdrop { background:rgba(0,0,0,.62); backdrop-filter:blur(3px); }
 .vw-pmodal-head { display:flex; align-items:center; justify-content:space-between; padding:18px 22px; border-bottom:1px solid var(--line2); }
 .vw-pmodal-eyebrow { font-size:13px; letter-spacing:1.5px; color:var(--accent); }
 .vw-pmodal-close { cursor:pointer; color:var(--text3); font-size:15px; line-height:1; width:28px; height:28px; display:flex; align-items:center; justify-content:center; border:1px solid var(--line); border-radius:7px; background:transparent; }
@@ -1465,14 +1495,14 @@ a.vw-recent-row:hover { background:var(--bg3); }
 .vw-maint-logo { font-size:19px; font-weight:600; letter-spacing:-.3px; display:flex; align-items:center; gap:2px; text-decoration:none; }
 .vw-maint-logo .b { color:var(--accent); }
 .vw-maint-logo .n { color:var(--head); }
-.vw-maint-logo .c { color:var(--accent); animation:vwMaintBlink 1.1s steps(1) infinite; }
+.vw-maint-logo .c { color:var(--accent); @media (prefers-reduced-motion: no-preference) { animation:vwMaintBlink 1.1s steps(1) infinite; } }
 .vw-maint-offline { font-size:11px; letter-spacing:1px; color:var(--warn); border:1px solid var(--line); border-radius:30px; padding:4px 11px; display:flex; align-items:center; gap:7px; }
-.vw-maint-offline .dot { width:7px; height:7px; border-radius:50%; background:var(--warn); animation:vwMaintPulse 1.4s ease-in-out infinite; }
+.vw-maint-offline .dot { width:7px; height:7px; border-radius:50%; background:var(--warn); @media (prefers-reduced-motion: no-preference) { animation:vwMaintPulse 1.4s ease-in-out infinite; } }
 .vw-maint-spacer { flex:1; }
 .vw-maint-main { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:56px clamp(20px,5vw,72px); background:radial-gradient(120% 90% at 50% 0%,var(--glow),transparent 60%); }
 .vw-maint-gear { position:relative; width:84px; height:84px; margin-bottom:26px; display:flex; align-items:center; justify-content:center; }
-.vw-maint-gear .ring { position:absolute; inset:0; border:1px dashed var(--line); border-radius:50%; animation:vwMaintSpin 9s linear infinite; }
-.vw-maint-gear svg { animation:vwMaintSpin 6s linear infinite; stroke:var(--accent); }
+.vw-maint-gear .ring { position:absolute; inset:0; border:1px dashed var(--line); border-radius:50%; @media (prefers-reduced-motion: no-preference) { animation:vwMaintSpin 9s linear infinite; } }
+.vw-maint-gear svg { stroke:var(--accent); @media (prefers-reduced-motion: no-preference) { animation:vwMaintSpin 6s linear infinite; } }
 .vw-maint-eyebrow { font-size:12px; letter-spacing:2px; color:var(--warn); margin-bottom:16px; text-transform:uppercase; }
 .vw-maint-title { font-family:var(--display); font-weight:700; font-size:clamp(34px,5vw,58px); line-height:1.02; letter-spacing:-1.5px; color:var(--head); margin:0 0 16px; max-width:760px; }
 .vw-maint-desc { font-size:14px; line-height:1.7; color:var(--text2); max-width:480px; margin:0 0 36px; }
@@ -1490,10 +1520,16 @@ a.vw-recent-row:hover { background:var(--bg3); }
 .vw-maint-term-body .mut { color:var(--text3); }
 .vw-maint-term-body .t2 { color:var(--text2); }
 .vw-maint-progress { margin:12px 0 4px; position:relative; height:8px; border-radius:6px; background:var(--bg3); border:1px solid var(--line2); overflow:hidden; }
-.vw-maint-progress .fill { position:absolute; top:0; bottom:0; width:40%; border-radius:6px; background:linear-gradient(90deg,transparent,var(--accent),transparent); animation:vwMaintBar 1.6s linear infinite; }
+.vw-maint-progress .fill { position:absolute; top:0; bottom:0; width:40%; border-radius:6px; background:linear-gradient(90deg,transparent,var(--accent),transparent); @media (prefers-reduced-motion: no-preference) { animation:vwMaintBar 1.6s linear infinite; } }
 .vw-maint-cmd { white-space:pre; margin-top:8px; }
 .vw-maint-cmd .p { color:var(--accent); }
 .vw-maint-cmd .cmd { color:var(--text3); }
-.vw-maint-cmd .cur { color:var(--accent); animation:vwMaintBlink 1.1s steps(1) infinite; }
+.vw-maint-cmd .cur { color:var(--accent); @media (prefers-reduced-motion: no-preference) { animation:vwMaintBlink 1.1s steps(1) infinite; } }
 .vw-maint-btns { display:flex; gap:12px; margin-top:30px; flex-wrap:wrap; justify-content:center; }
 @media (max-width:1140px){ .vw-maint-title { font-size:30px; } .vw-maint-btns { flex-direction:column; } }
+
+/* Thread actions (vote / report / edit / delete) and "load more" are <button>s that look like the
+   plain text links they replaced. :where() keeps this at zero specificity so the class rules above win. */
+:where(.vw-post-vote, .vw-post-edit, .vw-post-delete, .vw-post-report, .vw-post-reported, .vw-loadmore-btn) {
+  padding:0; border:0; background:none; font:inherit; color:inherit; cursor:pointer;
+}

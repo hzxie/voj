@@ -41,14 +41,14 @@ document.addEventListener('voj:themechange', function() {
     if ( window.turnstile ) { renderTurnstileWidgets(); }
 });
 
-/* String Prototype Extension - used by the table-building page scripts. */
+/* String Prototype Extension - used by the table-building page scripts.
+ * Replaces each %s placeholder, in order, with the next argument in a single pass, so
+ * an argument that itself contains "%s" is inserted verbatim rather than re-substituted.
+ * The arguments are inserted as-is: escape user text with escapeHtml() first. */
 String.prototype.format = function() {
-    var newStr = this, i = 0;
-    while (/%s/.test(newStr)) {
-        newStr = newStr.replace("%s", arguments[i++])
-    }
-    return newStr;
-}
+    var args = arguments, i = 0;
+    return String(this).replace(/%s/g, function() { return String(args[i++]); });
+};
 
 /* Convert a Java-style locale (en_US, zh_CN) to a BCP 47 language tag (en-US, zh-CN). */
 function toBcp47Locale(locale) {

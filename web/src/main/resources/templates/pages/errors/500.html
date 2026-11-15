@@ -35,7 +35,7 @@
             <div class="vw-error-btns">
                 <a class="vw-btn vw-btn-accent" th:href="@{/}">$ cd ~</a>
                 <a class="vw-btn" th:href="@{/judgers}" th:text="#{voj.include.footer.judgers}">System status</a>
-                <a class="vw-btn" href="javascript:history.go(-1);" th:text="#{voj.error.500.go-back}">Go back</a>
+                <button type="button" class="vw-btn" data-vw="history-back" th:text="#{voj.error.500.go-back}">Go back</button>
             </div>
         </section>
     </div>

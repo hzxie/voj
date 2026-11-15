@@ -5,7 +5,8 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="en">
 <head>
     <meta charset="UTF-8" />
-    <script>(function(){try{var t=localStorage.getItem('voj-theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+    <!--/* color-scheme meta + pre-paint theme resolution (stored override, else system). */-->
+    <th:block th:replace="~{fragments/chrome :: theme-head}"></th:block>
     <title th:text="#{voj.error.maintenance.title} + ' | ' + ${websiteName}">Under Maintenance</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link th:href="|${cdnUrl}/img/favicon.ico?v=${version}|" rel="shortcut icon" type="image/x-icon" />
@@ -24,9 +25,7 @@
                 <span class="dot"></span><span th:text="#{voj.error.maintenance.offline}">OFFLINE</span>
             </span>
             <div class="vw-maint-spacer"></div>
-            <div class="vw-toggle" data-vw="theme-toggle" title="Toggle theme" role="button" tabindex="0">
-                <span class="moon">&#9790;</span><span class="sun">&#9728;</span><span class="knob"></span>
-            </div>
+            <button th:replace="~{fragments/chrome :: theme-toggle('vw-toggle')}"></button>
         </header>
 
         <!-- BODY -->

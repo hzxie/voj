@@ -13,9 +13,9 @@
       th:lang="${#strings.replace(language, '_', '-')}" lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8" />
-    <script>(function(){try{var t=localStorage.getItem('voj-theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+    <!--/* color-scheme meta + pre-paint theme resolution (stored override, else system). */-->
+    <th:block th:replace="~{fragments/chrome :: theme-head}"></th:block>
     <title th:text="${websiteName}">Verwandlung Online Judge</title>
-    <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="author" content="Haozhe Xie" />
     <meta name="robots" content="noindex" />
@@ -23,7 +23,6 @@
     <link th:href="|${cdnUrl}/img/favicon.ico?v=${version}|" rel="alternate icon" type="image/x-icon" />
     <link th:href="|${cdnUrl}/img/apple-touch-icon.png?v=${version}|" rel="apple-touch-icon" />
     <link rel="stylesheet" type="text/css" th:href="|${cdnUrl}/css/app.css?v=${version}|" />
-    <script type="text/javascript" th:src="|${cdnUrl}/js/jquery-3.7.1.min.js?v=${version}|"></script>
 </head>
 <body>
     <div class="vw-app">
@@ -34,9 +33,7 @@
                 <span class="b">&lt;</span><span class="n">verwandlung</span><span class="b">&gt;</span><span class="vw-cursor">_</span>
             </a>
             <div class="vw-header-spacer"></div>
-            <div class="vw-toggle" data-vw="theme-toggle" title="Toggle theme" role="button" tabindex="0">
-                <span class="moon">&#9790;</span><span class="sun">&#9728;</span><span class="knob"></span>
-            </div>
+            <button th:replace="~{fragments/chrome :: theme-toggle('vw-toggle')}"></button>
         </header>
         <!-- Content (vertically centered, with the radial glow across the full area). -->
         <main class="vw-main vw-error-main">

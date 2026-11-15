@@ -91,11 +91,11 @@
                         <ul id="bulletin-board-messages" class="vw-bulletin"
                             th:if="${bulletinBoardMessages != null and bulletinBoardMessages.size() > 0}">
                             <li th:each="bulletinBoardMessage : ${bulletinBoardMessages}" class="vw-bulletin-item">
-                                <a href="javascript:void(0);" class="vw-bulletin-link">
+                                <button type="button" class="vw-bulletin-link" aria-haspopup="dialog">
                                     <span class="vw-accent vw-bulletin-date"><span class="message-create-time" th:text="${@dateFormatter.dateShort(bulletinBoardMessage.messageCreateTime, language)}">date</span></span>
                                     <span class="message-title vw-bulletin-title" th:text="${bulletinBoardMessage.messageTitle}">Title</span>
                                     <span class="message-body hide" th:text="${bulletinBoardMessage.messageBody}">Body</span>
-                                </a>
+                                </button>
                             </li>
                         </ul>
                         <p class="vw-muted vw-card-empty" th:unless="${bulletinBoardMessages != null and bulletinBoardMessages.size() > 0}" th:text="#{voj.index.no-notification}">No notification now.</p>
@@ -114,29 +114,26 @@
     </div>
 
     <th:block layout:fragment="scripts">
-    <div id="bulletin-board-message-modal" class="modal hide">
-        <div class="modal-header">
-            <h5 class="message-title vw-modal-title"></h5>
-            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+    <!--/* Read-only notice in a native modal <dialog>: Esc, the close button or a click on the
+           backdrop (closedby="any"; js/theme.js covers browsers without it) dismiss it, and
+           the browser returns focus to the bulletin that opened it. */-->
+    <dialog id="bulletin-board-message-modal" class="vw-dialog vw-bulletin-dialog" aria-labelledby="bulletin-board-message-title" closedby="any">
+        <div class="vw-dialog-head">
+            <h2 id="bulletin-board-message-title" class="message-title vw-modal-title"></h2>
+            <form method="dialog">
+                <button type="submit" class="vw-pmodal-close" th:title="#{voj.include.header.close}" th:aria-label="#{voj.include.header.close}"><span aria-hidden="true">&times;</span></button>
+            </form>
         </div>
-        <div class="modal-body">
-            <div class="message-body vw-prose"></div>
-        </div>
-    </div>
+        <div class="message-body vw-prose vw-dialog-body"></div>
+    </dialog>
     <script type="text/javascript">
-        $('#bulletin-board-messages > li').click(function() {
-            var title = $('.message-title', this).html(),
-                body  = $('.message-body', this).html();
-            $('.message-title', '#bulletin-board-message-modal').html(title);
-            $('.message-body', '#bulletin-board-message-modal').html((body || '').replace(/\n/g, '<br>'));
-            $('#bulletin-board-message-modal').removeClass('hide');
-            if ( $('#bulletin-board-modal-backdrop').length === 0 ) {
-                $('body').append('<div id="bulletin-board-modal-backdrop" class="modal-backdrop"></div>');
-            }
-        });
-        $('#bulletin-board-message-modal .close, #bulletin-board-message-modal').on('click', '[data-dismiss=modal]', function() {
-            $('#bulletin-board-message-modal').addClass('hide');
-            $('#bulletin-board-modal-backdrop').remove();
+        // The title/body are copied as text (they are plain text, rendered with th:text); the
+        // body keeps its line breaks through white-space: pre-line rather than injected <br>s.
+        $('#bulletin-board-messages .vw-bulletin-link').on('click', function() {
+            var dialog = document.getElementById('bulletin-board-message-modal');
+            $('.message-title', dialog).text($('.message-title', this).text());
+            $('.message-body', dialog).text($('.message-body', this).text());
+            dialog.showModal();
         });
     </script>
     </th:block>
