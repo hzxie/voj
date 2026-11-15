@@ -25,6 +25,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -76,50 +78,55 @@ public class ApplicationEventListener {
   }
 
   /**
-   * The handler for submission events.
+   * The handler for submission events. The message is pushed to every viewer subscribed to the
+   * submission (e.g. its owner on the submission page and an administrator on the edit-submission
+   * page); a viewer whose stream fails is dropped without affecting the others. Once judging has
+   * completed every stream of the submission is completed and the submission is unregistered.
    *
    * @param event - the submission record event
-   * @throws IOException
    */
   @EventListener
-  public void submissionEventHandler(SubmissionEvent event) throws IOException {
+  public void submissionEventHandler(SubmissionEvent event) {
     long submissionId = event.getSubmissionId();
-    String judgeResult = event.getJudgeResult();
-    String message = event.getMessage();
     boolean isCompleted = event.isCompleted();
-    SseEmitter sseEmitter = sseEmitters.get(submissionId);
+    Set<SseEmitter> emitters =
+        isCompleted ? sseEmitters.remove(submissionId) : sseEmitters.get(submissionId);
 
-    if (sseEmitter == null) {
+    if (emitters == null || emitters.isEmpty()) {
       LOGGER.warn(String.format("CANNOT get the SseEmitter for submission #%d.", submissionId));
       return;
     }
     Map<String, String> mapMessage = new HashMap<>(3, 1);
-    mapMessage.put("judgeResult", judgeResult);
-    mapMessage.put("message", message);
+    mapMessage.put("judgeResult", event.getJudgeResult());
+    mapMessage.put("message", event.getMessage());
 
-    try {
-      sseEmitter.send(mapMessage);
-    } catch (IOException | IllegalStateException ex) {
-      // The client closed the EventSource (or the stream is already complete): drop the dead
-      // emitter instead of letting the IOException propagate. Re-throwing here would surface
-      // through Spring's async error handling and, because the SSE response is already
-      // committed, fail again while rendering the HTML error view.
-      LOGGER.warn(
-          String.format("Dropping SseEmitter for submission #%d after a failed send.", submissionId),
-          ex);
-      sseEmitter.completeWithError(ex);
-      removeSseEmitters(submissionId);
-      return;
-    }
-
-    if (isCompleted) {
-      sseEmitter.complete();
-      removeSseEmitters(submissionId);
+    // The set is concurrent, so iterating it while a callback (or another event) removes an
+    // emitter never throws a ConcurrentModificationException.
+    for (SseEmitter sseEmitter : emitters) {
+      try {
+        sseEmitter.send(mapMessage);
+      } catch (IOException | IllegalStateException ex) {
+        // The client closed the EventSource (or the stream is already complete): drop the dead
+        // emitter instead of letting the exception propagate. Re-throwing here would surface
+        // through Spring's async error handling and, because the SSE response is already
+        // committed, fail again while rendering the HTML error view.
+        LOGGER.warn(
+            String.format(
+                "Dropping SseEmitter for submission #%d after a failed send.", submissionId),
+            ex);
+        removeSseEmitter(submissionId, sseEmitter);
+        completeQuietly(sseEmitter, ex);
+        continue;
+      }
+      if (isCompleted) {
+        completeQuietly(sseEmitter, null);
+      }
     }
   }
 
   /**
-   * Registers a Server-Sent Event emitter object.
+   * Registers a Server-Sent Event emitter object. Several emitters may be registered for the same
+   * submission; each of them receives every judge message of that submission.
    *
    * @param submissionId - the unique identifier of the submission record
    * @param sseEmitter - the Server-Sent Event emitter object
@@ -128,26 +135,64 @@ public class ApplicationEventListener {
     // Evict the emitter from the registry once the stream ends for any reason (normal
     // completion, container timeout or a client disconnect). Without this a closed
     // connection would linger in the map and keep failing on every future send().
-    sseEmitter.onCompletion(() -> sseEmitters.remove(submissionId, sseEmitter));
-    sseEmitter.onTimeout(() -> sseEmitters.remove(submissionId, sseEmitter));
-    sseEmitter.onError(throwable -> sseEmitters.remove(submissionId, sseEmitter));
-    sseEmitters.put(submissionId, sseEmitter);
+    sseEmitter.onCompletion(() -> removeSseEmitter(submissionId, sseEmitter));
+    sseEmitter.onTimeout(() -> removeSseEmitter(submissionId, sseEmitter));
+    sseEmitter.onError(throwable -> removeSseEmitter(submissionId, sseEmitter));
+    sseEmitters.compute(
+        submissionId,
+        (id, emitters) -> {
+          Set<SseEmitter> registeredEmitters =
+              emitters != null ? emitters : ConcurrentHashMap.newKeySet();
+          registeredEmitters.add(sseEmitter);
+          return registeredEmitters;
+        });
   }
 
   /**
-   * Removes a Server-Sent Event emitter object.
+   * Unregisters one Server-Sent Event emitter of a submission, and the submission itself once it
+   * has no emitter left. Emitters of other submissions are never touched: several judgers run in
+   * parallel, so submissions do not complete in the order of their identifiers.
    *
    * @param submissionId - the unique identifier of the submission record
+   * @param sseEmitter - the Server-Sent Event emitter object to unregister
    */
-  private void removeSseEmitters(long submissionId) {
-    sseEmitters.remove(submissionId);
+  private void removeSseEmitter(long submissionId, SseEmitter sseEmitter) {
+    sseEmitters.computeIfPresent(
+        submissionId,
+        (id, emitters) -> {
+          emitters.remove(sseEmitter);
+          return emitters.isEmpty() ? null : emitters;
+        });
+  }
 
-    for (Entry<Long, SseEmitter> mapEntry : sseEmitters.entrySet()) {
-      long currentSubmissionId = mapEntry.getKey();
-      if (currentSubmissionId < submissionId) {
-        sseEmitters.remove(currentSubmissionId);
+  /**
+   * Completes a Server-Sent Event emitter, ignoring the failure of an emitter whose stream has
+   * already been closed.
+   *
+   * @param sseEmitter - the Server-Sent Event emitter object
+   * @param error - the error to complete the stream with, or null to complete it normally
+   */
+  private static void completeQuietly(SseEmitter sseEmitter, Throwable error) {
+    try {
+      if (error == null) {
+        sseEmitter.complete();
+      } else {
+        sseEmitter.completeWithError(error);
       }
+    } catch (RuntimeException ex) {
+      LOGGER.debug("Ignoring the failure to complete an SseEmitter.", ex);
     }
+  }
+
+  /**
+   * Gets the number of Server-Sent Event emitters registered for a submission (used by tests).
+   *
+   * @param submissionId - the unique identifier of the submission record
+   * @return the number of registered emitters
+   */
+  int getNumberOfSseEmitters(long submissionId) {
+    Set<SseEmitter> emitters = sseEmitters.get(submissionId);
+    return emitters == null ? 0 : emitters.size();
   }
 
   /**
@@ -271,11 +316,11 @@ public class ApplicationEventListener {
   }
 
   /**
-   * The list of SseEmitter objects. The Key in the Map represents the unique identifier of the
-   * submission record. The Value in the Map represents the corresponding SseEmitter object, used to
-   * push real-time judge information.
+   * The registered SseEmitter objects. The Key in the Map represents the unique identifier of the
+   * submission record. The Value in the Map is the set of SseEmitter objects of every viewer
+   * following that submission, used to push real-time judge information.
    */
-  private static Map<Long, SseEmitter> sseEmitters = new Hashtable<>();
+  private static final Map<Long, Set<SseEmitter>> sseEmitters = new ConcurrentHashMap<>();
 
   /**
    * The list of online judgers. The Key in the Map represents the username of the judger. The Value
