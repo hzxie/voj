@@ -234,8 +234,12 @@ public class User implements Serializable {
   /** The password (encrypted with MD5). */
   @JsonIgnore private String password;
 
-  /** The email address. */
-  private String email;
+  /**
+   * The email address. Private to the user and the administrators, so it is never serialized into
+   * the JSON responses that embed a User (submissions, discussions, rankings, ...); the pages that
+   * show it render it on the server.
+   */
+  @JsonIgnore private String email;
 
   /** The user group object. */
   @JsonIgnore private UserGroup userGroup;

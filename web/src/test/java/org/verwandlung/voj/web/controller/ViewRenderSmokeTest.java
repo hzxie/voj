@@ -490,6 +490,35 @@ class ViewRenderSmokeTest {
     mockMvc.perform(getWithCsrf("/accounts/user/2000")).andExpect(status().isOk());
   }
 
+  /** A profile's email address is shown only to its owner and to administrators. */
+  @Test
+  void userProfileEmailIsPrivate() throws Exception {
+    when(userService.getUserUsingUid(2000L)).thenReturn(aUser(2000L, usersGroup()));
+    when(userService.getUserMetaUsingUid(any())).thenReturn(userMeta());
+    mockMvc
+        .perform(getWithCsrf("/accounts/user/2000"))
+        .andExpect(status().isOk())
+        .andExpect(content().string(not(containsString("alice@example.com"))));
+
+    authenticate(aUser(3000L, usersGroup()));
+    mockMvc
+        .perform(getWithCsrf("/accounts/user/2000"))
+        .andExpect(status().isOk())
+        .andExpect(content().string(not(containsString("alice@example.com"))));
+
+    authenticateUser();
+    mockMvc
+        .perform(getWithCsrf("/accounts/user/2000"))
+        .andExpect(status().isOk())
+        .andExpect(content().string(containsString("alice@example.com")));
+
+    authenticateAdmin();
+    mockMvc
+        .perform(getWithCsrf("/accounts/user/2000"))
+        .andExpect(status().isOk())
+        .andExpect(content().string(containsString("alice@example.com")));
+  }
+
   /** The contest overview page renders for an upcoming contest (leaderboard block skipped). */
   @Test
   void contestViewRenders() throws Exception {
