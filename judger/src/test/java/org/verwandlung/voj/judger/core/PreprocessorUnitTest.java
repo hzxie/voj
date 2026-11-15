@@ -25,10 +25,12 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
 import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.io.TempDir;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import org.verwandlung.voj.judger.model.Language;
 import org.verwandlung.voj.judger.model.Submission;
@@ -136,6 +138,47 @@ public class PreprocessorUnitTest {
 
     Assertions.assertEquals(
         "class Random<T> {}", Files.readString(workDirectory.resolve("Random.java")));
+  }
+
+  /**
+   * Test case: tests the createTestCode(Submission, String, String) method. Test data: a Go
+   * submission, a root-owned read-only build cache seed holding an entry, a group-writable entry
+   * and a stale trim file. Expected result: the submission gets its own cache in its work
+   * directory whose directories belong to the sandbox user, the trusted entry is a link to the
+   * seed's file that stays root-owned and read-only, the untrusted entry is left out, and the
+   * cache is marked as just trimmed. Needs root (it hands files to another user).
+   */
+  @Test
+  @DisabledOnOs(OS.WINDOWS)
+  public void testCreateTestCodeSeedsAPrivateGoBuildCache() throws Exception {
+    Assumptions.assumeTrue("root".equals(System.getProperty("user.name")), "Needs root.");
+    Path seed = Files.createDirectories(tempDir.resolve("seed/ab"));
+    Path entry = Files.writeString(seed.resolve("0123-d"), "compiled");
+    Path untrusted = Files.writeString(seed.resolve("4567-d"), "untrusted");
+    Files.writeString(seed.getParent().resolve("trim.txt"), "0");
+    Files.setPosixFilePermissions(entry, PosixFilePermissions.fromString("r--r--r--"));
+    Files.setPosixFilePermissions(untrusted, PosixFilePermissions.fromString("rw-rw-rw-"));
+    Files.setPosixFilePermissions(tempDir, PosixFilePermissions.fromString("rwxr-xr-x"));
+    ReflectionTestUtils.setField(preprocessor, "goBuildCacheSeed", seed.getParent().toString());
+    ReflectionTestUtils.setField(preprocessor, "sandboxUsername", "nobody");
+    Path workDirectory = tempDir.resolve("voj-1004");
+
+    preprocessor.createTestCode(
+        submission("Go", "go build -o {filename}.exe {filename}.go", "package main"),
+        workDirectory.toString(),
+        "random");
+
+    Path cache = workDirectory.resolve(".cache/go-build");
+    Assertions.assertEquals("nobody", Files.getOwner(cache.resolve("ab")).getName());
+    Assertions.assertEquals("nobody", Files.getOwner(cache.getParent()).getName());
+    Path linked = cache.resolve("ab/0123-d");
+    Assertions.assertTrue(Files.isSameFile(entry, linked));
+    Assertions.assertEquals("root", Files.getOwner(linked).getName());
+    Assertions.assertEquals(
+        "r--r--r--", PosixFilePermissions.toString(Files.getPosixFilePermissions(linked)));
+    Assertions.assertFalse(Files.exists(cache.resolve("ab/4567-d")));
+    long trimmed = Long.parseLong(Files.readString(cache.resolve("trim.txt")));
+    Assertions.assertTrue(Math.abs(System.currentTimeMillis() / 1000 - trimmed) < 60);
   }
 
   /**

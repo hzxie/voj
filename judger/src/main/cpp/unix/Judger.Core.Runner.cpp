@@ -102,6 +102,15 @@ static const char* const INHERITED_ENVIRONMENT_VARIABLES[] = {
     "GOROOT", "GOPATH", "GOCACHE", "GOENV", "GOTOOLCHAIN", "GOFLAGS",
     "RUSTUP_HOME", "RUSTUP_TOOLCHAIN", "CARGO_HOME",
 };
+/**
+ * The Go toolchain's writable state, which must never be shared between submissions: a cache that
+ * one submission (compiled or run as the sandbox user) can write is one it can poison for every
+ * later Go build. When privileges are dropped these are not inherited but placed in the work
+ * directory, which is fresh and private for every submission (the judger may seed the build cache
+ * there from a read-only copy, see judger.goBuildCacheSeed).
+ */
+static const char* const GO_BUILD_CACHE_DIRECTORY = "/.cache/go-build"; // GOCACHE (work dir relative)
+static const char* const GO_PATH_DIRECTORY        = "/go";              // GOPATH (work dir relative)
 static const char* const DEFAULT_PATH = "/usr/local/bin:/usr/bin:/bin";
 static const char* const DEFAULT_LANG = "C.UTF-8";
 
@@ -932,18 +941,31 @@ static std::string resolveExecutable(const std::string& file) {
  * Builds the minimal environment of the sandboxed process: the whitelisted variables of the judger
  * (INHERITED_ENVIRONMENT_VARIABLES), defaults for PATH and LANG, and HOME. When privileges are
  * dropped, the judger's HOME (e.g. /root) is useless to the sandbox user, so HOME is set to the
- * work directory (the directory holding the output file), which the sandbox user owns.
+ * work directory (the directory holding the output file), which the sandbox user owns, and so are
+ * the Go build cache (GOCACHE) and GOPATH, which would otherwise be shared between submissions.
  * @param  dropPrivileges - whether the child drops to the sandbox user
  * @param  outputFilePath - the output file path (its directory is the work directory)
  * @return the list of "NAME=value" strings
  */
 static std::vector<std::string> buildEnvironment(bool dropPrivileges, const std::string& outputFilePath) {
+    size_t      lastSlash     = outputFilePath.rfind('/');
+    std::string workDirectory = (lastSlash != std::string::npos && lastSlash > 0)
+                                    ? outputFilePath.substr(0, lastSlash)
+                                    : std::string("/tmp");
+
     std::vector<std::string> environment;
     for ( const char* name : INHERITED_ENVIRONMENT_VARIABLES ) {
+        if ( dropPrivileges && (strcmp(name, "GOCACHE") == 0 || strcmp(name, "GOPATH") == 0) ) {
+            continue;
+        }
         const char* value = getenv(name);
         if ( value != nullptr ) {
             environment.push_back(std::string(name) + "=" + value);
         }
+    }
+    if ( dropPrivileges ) {
+        environment.push_back("GOCACHE=" + workDirectory + GO_BUILD_CACHE_DIRECTORY);
+        environment.push_back("GOPATH=" + workDirectory + GO_PATH_DIRECTORY);
     }
     if ( getenv("PATH") == nullptr ) {
         environment.push_back(std::string("PATH=") + DEFAULT_PATH);
@@ -954,10 +976,6 @@ static std::vector<std::string> buildEnvironment(bool dropPrivileges, const std:
 
     const char* home = getenv("HOME");
     if ( dropPrivileges || home == nullptr ) {
-        size_t      lastSlash     = outputFilePath.rfind('/');
-        std::string workDirectory = (lastSlash != std::string::npos && lastSlash > 0)
-                                        ? outputFilePath.substr(0, lastSlash)
-                                        : std::string("/tmp");
         environment.push_back("HOME=" + workDirectory);
     } else {
         environment.push_back(std::string("HOME=") + home);

@@ -21,13 +21,22 @@ import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.FileSystems;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.PosixFileAttributes;
+import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.nio.file.attribute.UserPrincipal;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -78,8 +87,118 @@ public class Preprocessor {
             LinkOption.NOFOLLOW_LINKS)) {
       outputStream.write(code.getBytes(StandardCharsets.UTF_8));
     }
-    // Only hand the directory to the sandbox user once the judger has finished writing into it.
-    setWorkDirectoryOwner(workDirPath);
+    List<Path> sandboxWritablePaths = new ArrayList<>();
+    sandboxWritablePaths.add(workDirPath);
+    if (usesGoToolchain(language)) {
+      sandboxWritablePaths.addAll(seedGoBuildCache(workDirPath));
+    }
+    // Only hand the directories to the sandbox user once the judger has finished writing into them.
+    for (Path path : sandboxWritablePaths) {
+      setWorkDirectoryOwner(path);
+    }
+  }
+
+  /**
+   * Checks whether a language is compiled by the Go toolchain ({@code go build ...}).
+   *
+   * @param language - the programming language object
+   * @return whether the compile command runs {@code go}
+   */
+  private boolean usesGoToolchain(Language language) {
+    String compileCommand = language.getCompileCommand();
+    if (compileCommand == null || compileCommand.isBlank()) {
+      return false;
+    }
+    String program = compileCommand.trim().split("\\s+")[0];
+    return program.equals("go") || program.endsWith("/go");
+  }
+
+  /**
+   * Seeds the submission's own Go build cache ({@value #GO_BUILD_CACHE_DIRECTORY} in the work
+   * directory, where the native sandbox points GOCACHE when it drops privileges) from the read-only
+   * cache at {@code judger.goBuildCacheSeed}, so that the standard library does not have to be
+   * rebuilt for every submission. A cache shared between submissions would let one poison the Go
+   * builds of all later ones, so every submission gets its own: the seed's files are hard-linked
+   * (or, across file systems, copied) into it, and stay owned by the judger and read-only, while
+   * the cache's directories are handed to the sandbox user so the build can add its own entries.
+   * Linking a file the sandbox user cannot write gives it no way to modify the seed: it can only
+   * remove its own link. Only files that are owned by the judger and not writable by anybody else
+   * are taken from the seed. Seeding is skipped (the build then starts from an empty cache) unless
+   * the judger runs as root, the only case in which GOCACHE is moved to the work directory.
+   *
+   * @param workDirectory - the submission's work directory
+   * @return the directories (and the trim file) created, which the sandbox user must be able to
+   *     write
+   */
+  private List<Path> seedGoBuildCache(Path workDirectory) {
+    List<Path> directories = new ArrayList<>();
+    if (goBuildCacheSeed == null || goBuildCacheSeed.isBlank() || !isPosix() || !isRunningAsRoot()) {
+      return directories;
+    }
+    Path seed = Paths.get(goBuildCacheSeed);
+    Path cache = workDirectory.resolve(GO_BUILD_CACHE_DIRECTORY);
+    try {
+      PosixFileAttributes seedAttributes =
+          Files.readAttributes(seed, PosixFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
+      if (!seedAttributes.isDirectory() || !isTrusted(seedAttributes)) {
+        LOGGER.warn("Ignoring the Go build cache seed " + seed + ": not a root-owned directory.");
+        return directories;
+      }
+      directories.add(Files.createDirectory(cache.getParent()));
+      Files.walkFileTree(
+          seed,
+          new SimpleFileVisitor<Path>() {
+            @Override
+            public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs)
+                throws IOException {
+              directories.add(Files.createDirectory(cache.resolve(seed.relativize(dir))));
+              return FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs)
+                throws IOException {
+              PosixFileAttributes fileAttributes =
+                  Files.readAttributes(file, PosixFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
+              if (fileAttributes.isRegularFile() && isTrusted(fileAttributes)) {
+                Path target = cache.resolve(seed.relativize(file));
+                try {
+                  Files.createLink(target, file);
+                } catch (IOException | UnsupportedOperationException ex) {
+                  Files.copy(file, target, StandardCopyOption.COPY_ATTRIBUTES);
+                }
+              }
+              return FileVisitResult.CONTINUE;
+            }
+          });
+      // Go trims entries unused for five days whenever the last trim (trim.txt) is a day old. The
+      // seed is as old as the image, so mark this cache as just trimmed.
+      Path trimFile = cache.resolve("trim.txt");
+      Files.deleteIfExists(trimFile);
+      Files.writeString(
+          trimFile,
+          String.valueOf(System.currentTimeMillis() / 1000),
+          StandardOpenOption.CREATE_NEW,
+          StandardOpenOption.WRITE);
+      directories.add(trimFile);
+    } catch (IOException ex) {
+      LOGGER.warn("Failed to seed the Go build cache from " + seed, ex);
+    }
+    return directories;
+  }
+
+  /**
+   * Checks that a file of the Go build cache seed is owned by the judger (root) and cannot be
+   * written by anybody else, so that linking it into a submission's cache cannot expose it.
+   *
+   * @param attributes - the file's attributes
+   * @return whether the file can be trusted
+   */
+  private boolean isTrusted(PosixFileAttributes attributes) {
+    Set<PosixFilePermission> permissions = attributes.permissions();
+    return "root".equals(attributes.owner().getName())
+        && !permissions.contains(PosixFilePermission.GROUP_WRITE)
+        && !permissions.contains(PosixFilePermission.OTHERS_WRITE);
   }
 
   /**
@@ -206,6 +325,19 @@ public class Preprocessor {
   /** The unprivileged user the native sandbox drops to; the work directory is handed to it. */
   @Value("${system.username}")
   private String sandboxUsername;
+
+  /**
+   * A read-only Go build cache (owned by root, e.g. built into the Docker image) that each Go
+   * submission's own build cache is seeded from; empty to start every Go build from an empty cache.
+   */
+  @Value("${judger.goBuildCacheSeed:}")
+  private String goBuildCacheSeed;
+
+  /**
+   * The submission's Go build cache, relative to its work directory. Must match GOCACHE as set by
+   * the native sandbox (GO_BUILD_CACHE_DIRECTORY in Judger.Core.Runner.cpp).
+   */
+  static final String GO_BUILD_CACHE_DIRECTORY = ".cache/go-build";
 
   /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(Preprocessor.class);
