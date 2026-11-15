@@ -103,6 +103,18 @@ public class SandboxBehaviorTest {
   }
 
   /**
+   * Test case: a program that tries to create a user namespace with clone, clone3 and unshare, and
+   * then checks that threads and fork still work. Expected result: Accepted (every attempt is
+   * refused, see USER_NAMESPACE_CODE).
+   */
+  @Test
+  public void testUserNamespacesAreDenied() throws Exception {
+    Assumptions.assumeTrue(
+        System.getProperty("os.name").contains("Linux"), "User namespaces are Linux-only.");
+    Assertions.assertEquals("AC", judge(900005L, USER_NAMESPACE_CODE, 5000, 262144));
+  }
+
+  /**
    * Compiles and runs a C++ program under the active sandbox and returns its verdict slug.
    *
    * @param id - a unique id used for the work directory and the in-memory submission
@@ -178,6 +190,62 @@ public class SandboxBehaviorTest {
       """
       int main() {
           return 1;
+      }
+      """;
+
+  /**
+   * A program that exits with 1, 2 or 3 if it managed to create a user namespace with clone, clone3
+   * or unshare, with 4 if fork or a thread fails, and with 0 otherwise.
+   */
+  private static final String USER_NAMESPACE_CODE =
+      """
+      #include <cstring>
+      #include <thread>
+      #include <linux/sched.h>
+      #include <sched.h>
+      #include <signal.h>
+      #include <sys/syscall.h>
+      #include <sys/wait.h>
+      #include <unistd.h>
+
+      static int tryChild(long pid, int code) {
+          if (pid == 0) {
+              _exit(0);
+          }
+          if (pid > 0) {
+              waitpid((pid_t) pid, nullptr, 0);
+              return code;
+          }
+          return 0;
+      }
+
+      int main() {
+          int code = tryChild(syscall(SYS_clone, CLONE_NEWUSER | SIGCHLD, 0, 0, 0, 0), 1);
+          if (code != 0) {
+              return code;
+          }
+          struct clone_args args;
+          std::memset(&args, 0, sizeof(args));
+          args.flags = CLONE_NEWUSER;
+          args.exit_signal = SIGCHLD;
+          code = tryChild(syscall(SYS_clone3, &args, sizeof(args)), 2);
+          if (code != 0) {
+              return code;
+          }
+          if (unshare(CLONE_NEWUSER) == 0) {
+              return 3;
+          }
+          pid_t child = fork();
+          if (child < 0) {
+              return 4;
+          }
+          if (child == 0) {
+              _exit(0);
+          }
+          waitpid(child, nullptr, 0);
+          std::thread thread([] {});
+          thread.join();
+          return 0;
       }
       """;
 

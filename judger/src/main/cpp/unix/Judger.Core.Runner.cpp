@@ -646,6 +646,13 @@ static std::vector<std::string> buildEnvironment(bool dropPrivileges, const std:
  * are added by syscall name through libseccomp, so the filter is portable across architectures
  * (amd64/arm64). The program is exported here, in the parent, so the child can install it without
  * calling into libseccomp.
+ *
+ * Creating namespaces is denied as well. An unprivileged user namespace hands the submission a full
+ * set of capabilities inside it, which turns every namespaced kernel interface (mount, netfilter,
+ * ...) into attack surface and lets it undo the filesystem and network confinement. unshare and
+ * setns are denied outright; clone is denied only when it asks for a new namespace, so threads and
+ * fork keep working; clone3 passes its flags in memory, which seccomp cannot inspect, so it fails
+ * with ENOSYS, and the C library (glibc 2.34+ creates threads with clone3) falls back to clone.
  * @return the exported BPF bytes, or an empty string if the filter could not be built
  */
 static std::string buildSeccompProgram() {
@@ -669,6 +676,22 @@ static std::string buildSeccompProgram() {
         if ( syscallNr >= 0 ) {
             seccomp_rule_add(ctx, SCMP_ACT_ERRNO(EPERM), syscallNr, 0);
         }
+    }
+
+    // clone(flags, ...): the flags are the first argument on every architecture this builds for
+    // (amd64/arm64; s390 swaps the first two). One rule per flag: any of them set means EPERM.
+    const unsigned long long namespaceFlags[] = {
+        CLONE_NEWUSER, CLONE_NEWNS, CLONE_NEWPID, CLONE_NEWNET, CLONE_NEWUTS, CLONE_NEWIPC,
+        CLONE_NEWCGROUP,
+    };
+    for ( unsigned long long flag : namespaceFlags ) {
+        seccomp_rule_add(ctx, SCMP_ACT_ERRNO(EPERM), SCMP_SYS(clone), 1,
+                         SCMP_A0(SCMP_CMP_MASKED_EQ, flag, flag));
+    }
+    // Resolved by name, so this still builds against a libseccomp that predates clone3.
+    int clone3Nr = seccomp_syscall_resolve_name("clone3");
+    if ( clone3Nr != __NR_SCMP_ERROR ) {
+        seccomp_rule_add(ctx, SCMP_ACT_ERRNO(ENOSYS), clone3Nr, 0);
     }
 
     std::string program;
