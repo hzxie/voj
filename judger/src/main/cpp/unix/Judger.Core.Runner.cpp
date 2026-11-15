@@ -56,6 +56,15 @@
 #define SECCOMP_SET_MODE_FILTER 1
 #endif
 
+// close_range(2) (Linux 5.9+, CLOSE_RANGE_CLOEXEC since 5.11) has the same number on every
+// architecture; older C libraries may not define it.
+#ifndef SYS_close_range
+#define SYS_close_range 436
+#endif
+#ifndef CLOSE_RANGE_CLOEXEC
+#define CLOSE_RANGE_CLOEXEC (1U << 2)
+#endif
+
 /**
  * Tunables for the sandbox.
  */
@@ -114,6 +123,7 @@ static int  readPeakMemoryKb(pid_t);
 static void runChild(const ChildPlan&, int syncWriteFd) __attribute__((noreturn));
 static void reportChildFailure(int syncWriteFd, int error) __attribute__((noreturn));
 static int  openOutputFile(const char*);
+static void markInheritedDescriptorsCloseOnExec();
 
 /**
  * JNI call entry point.
@@ -328,6 +338,10 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
  * @param  syncWriteFd - the write end of the close-on-exec sync pipe
  */
 static void runChild(const ChildPlan& plan, int syncWriteFd) {
+    // Nothing the JVM has open (database and message-broker sockets, jars, logs, ...) may leak into
+    // the sandbox, where it would bypass the network namespace and file permissions.
+    markInheritedDescriptorsCloseOnExec();
+
     // Standard input is opened before the privilege drop: the checkpoint directory is private to the
     // judger, and the path is chosen by the judger, not by the submission.
     if ( !plan.inputFilePath.empty() ) {
@@ -421,6 +435,29 @@ static void reportChildFailure(int syncWriteFd, int error) {
     ssize_t ignored = write(syncWriteFd, &error, sizeof(error));
     (void) ignored;
     _exit(127);
+}
+
+/**
+ * Marks every file descriptor above standard error close-on-exec, so the sandboxed program only
+ * inherits stdin, stdout and stderr. Closing them right away is not an option: the sync pipe must
+ * stay open until exec. Async-signal-safe.
+ */
+static void markInheritedDescriptorsCloseOnExec() {
+    if ( syscall(SYS_close_range, 3U, ~0U, CLOSE_RANGE_CLOEXEC) == 0 ) {
+        return;
+    }
+    // Fallback for kernels without close_range: walk the whole descriptor table.
+    struct rlimit noFile;
+    rlim_t        maxFd = 65536;
+    if ( getrlimit(RLIMIT_NOFILE, &noFile) == 0 && noFile.rlim_cur != RLIM_INFINITY ) {
+        maxFd = noFile.rlim_cur;
+    }
+    if ( maxFd > ((rlim_t) 1 << 20) ) {
+        maxFd = (rlim_t) 1 << 20;
+    }
+    for ( rlim_t fd = 3; fd < maxFd; ++fd ) {
+        fcntl((int) fd, F_SETFD, FD_CLOEXEC);
+    }
 }
 
 /**
