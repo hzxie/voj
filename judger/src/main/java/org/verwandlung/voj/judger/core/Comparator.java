@@ -22,18 +22,68 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.stereotype.Component;
 
+import java.io.Closeable;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 
 /**
  * Compares the user's output against the standard output.
+ *
+ * <p>Two comparisons are available:
+ *
+ * <ul>
+ *   <li><b>Lenient</b> ({@link #isOutputTheSame}): trailing whitespace (spaces and tabs) at the end
+ *       of each line and trailing blank lines at the end of the output are ignored; LF, CRLF and CR
+ *       line endings are all accepted.
+ *   <li><b>Exact</b> ({@link #isOutputExactlyTheSame}): the outputs must be byte-for-byte identical,
+ *       except that CRLF line endings are treated as LF and a single trailing newline is optional.
+ * </ul>
+ *
+ * <p>{@link #getComparisonResult} combines them according to a checkpoint's {@code exactlyMatch}
+ * flag, and reports a Presentation Error when an exact match is required and only the lenient
+ * comparison succeeds.
  *
  * @author Haozhe Xie
  */
 @Component
 public class Comparator {
+  /** The judge result slug of an accepted output. */
+  public static final String ACCEPTED = "AC";
+
+  /** The judge result slug of an output that only differs in whitespace / blank lines. */
+  public static final String PRESENTATION_ERROR = "PE";
+
+  /** The judge result slug of a wrong output. */
+  public static final String WRONG_ANSWER = "WA";
+
   /**
-   * Gets the comparison result between the user's output and the standard output.
+   * Compares the user's output against the standard output.
+   *
+   * @param standardOutputFilePath - the path of the standard output file
+   * @param outputFilePath - the path of the user's output file
+   * @param exactlyMatch - whether the checkpoint requires an exact match
+   * @return {@link #ACCEPTED}, {@link #PRESENTATION_ERROR} (only when {@code exactlyMatch} is set
+   *     and the outputs differ only in trailing whitespace / blank lines) or {@link #WRONG_ANSWER}
+   * @throws IOException if either file cannot be read
+   */
+  public String getComparisonResult(
+      String standardOutputFilePath, String outputFilePath, boolean exactlyMatch)
+      throws IOException {
+    if (exactlyMatch && isOutputExactlyTheSame(standardOutputFilePath, outputFilePath)) {
+      return ACCEPTED;
+    }
+    if (!isOutputTheSame(standardOutputFilePath, outputFilePath)) {
+      return WRONG_ANSWER;
+    }
+    return exactlyMatch ? PRESENTATION_ERROR : ACCEPTED;
+  }
+
+  /**
+   * Gets the lenient comparison result between the user's output and the standard output: trailing
+   * spaces/tabs on each line and trailing blank lines are ignored.
    *
    * @param standardOutputFilePath - the path of the standard output file
    * @param outputFilePath - the path of the user's output file
@@ -44,17 +94,57 @@ public class Comparator {
     File stdFile = new File(standardOutputFilePath);
     File file = new File(outputFilePath);
 
-    LineIterator stdFileItr = FileUtils.lineIterator(stdFile, "UTF-8");
-    LineIterator fileItr = FileUtils.lineIterator(file, "UTF-8");
-    boolean isFileOutputTheSame = isFileOutputTheSame(stdFileItr, fileItr);
-
-    LineIterator.closeQuietly(stdFileItr);
-    LineIterator.closeQuietly(fileItr);
-    return isFileOutputTheSame;
+    // ISO-8859-1 maps every byte to one char, so non-ASCII (or invalid UTF-8) bytes are compared
+    // as-is instead of being decoded, and possibly collapsed into U+FFFD.
+    LineIterator stdFileItr = FileUtils.lineIterator(stdFile, StandardCharsets.ISO_8859_1.name());
+    LineIterator fileItr = FileUtils.lineIterator(file, StandardCharsets.ISO_8859_1.name());
+    try {
+      return isFileOutputTheSame(stdFileItr, fileItr);
+    } finally {
+      LineIterator.closeQuietly(stdFileItr);
+      LineIterator.closeQuietly(fileItr);
+    }
   }
 
   /**
-   * Compares whether the standard output and the user's output are the same.
+   * Gets the exact comparison result between the user's output and the standard output: the bytes
+   * must be identical, except that CRLF is treated as LF and a single trailing newline is optional.
+   *
+   * @param standardOutputFilePath - the path of the standard output file
+   * @param outputFilePath - the path of the user's output file
+   * @return whether the user's output and the standard output are exactly the same
+   */
+  public boolean isOutputExactlyTheSame(String standardOutputFilePath, String outputFilePath)
+      throws IOException {
+    try (NewlineNormalizingReader stdReader =
+            new NewlineNormalizingReader(new FileInputStream(standardOutputFilePath));
+        NewlineNormalizingReader reader =
+            new NewlineNormalizingReader(new FileInputStream(outputFilePath))) {
+      int lastByte = -1;
+      while (true) {
+        int stdByte = stdReader.read();
+        int currentByte = reader.read();
+        if (stdByte != currentByte) {
+          // Equal after dropping one optional trailing newline from each side: one output ended and
+          // the other has exactly one "\n" left, which does not follow another "\n".
+          if (stdByte == -1) {
+            return currentByte == '\n' && reader.read() == -1 && lastByte != '\n';
+          }
+          if (currentByte == -1) {
+            return stdByte == '\n' && stdReader.read() == -1 && lastByte != '\n';
+          }
+          return false;
+        }
+        if (stdByte == -1) {
+          return true;
+        }
+        lastByte = stdByte;
+      }
+    }
+  }
+
+  /**
+   * Compares whether the standard output and the user's output are the same (leniently).
    *
    * @param stdFileItr - the iterator over the standard output file
    * @param fileItr - the iterator over the user's output file
@@ -66,19 +156,18 @@ public class Comparator {
         String stdLine = stdFileItr.nextLine();
         String line = fileItr.nextLine();
 
-        if (!isLineOutputTheSame(stdLine, line)) {
+        if (!stripTrailingWhitespace(stdLine).equals(stripTrailingWhitespace(line))) {
           return false;
         }
       }
+      // Whatever remains of the longer output may only consist of blank lines.
       while (stdFileItr.hasNext()) {
-        String line = stdFileItr.nextLine();
-        if (!isLineEmpty(line, 0)) {
+        if (!isLineBlank(stdFileItr.nextLine())) {
           return false;
         }
       }
       while (fileItr.hasNext()) {
-        String line = fileItr.nextLine();
-        if (!isLineEmpty(line, 0)) {
+        if (!isLineBlank(fileItr.nextLine())) {
           return false;
         }
       }
@@ -90,59 +179,110 @@ public class Comparator {
   }
 
   /**
-   * Compares a line of the standard output against the user's output (trailing spaces ignored).
+   * Removes the trailing spaces and tabs of a line.
    *
-   * @param stdLine - a line of the standard output
-   * @param line - a line of the user's output
-   * @return whether the line of the standard output and the user's output are the same
+   * @param line - the content of a line (without its line terminator)
+   * @return the line without trailing spaces and tabs
    */
-  private boolean isLineOutputTheSame(String stdLine, String line) {
-    int i = 0, j = 0;
-    for (; i < stdLine.length() && j < line.length(); ++i, ++j) {
-      if (stdLine.charAt(i) != line.charAt(j)) {
-        if (stdLine.charAt(i) == '\n') {
-          if (!isLineEmpty(line, j)) {
-            return false;
-          }
-          return true;
-        } else if (line.charAt(j) == '\n') {
-          if (!isLineEmpty(stdLine, i)) {
-            return false;
-          }
-          return true;
-        }
-        return false;
-      }
+  private String stripTrailingWhitespace(String line) {
+    int end = line.length();
+    while (end > 0 && isWhitespace(line.charAt(end - 1))) {
+      --end;
     }
-    while (i < stdLine.length()) {
-      if (!isLineEmpty(stdLine, i)) {
-        return false;
-      }
-      ++i;
-    }
-    while (j < line.length()) {
-      if (!isLineEmpty(line, j)) {
-        return false;
-      }
-      ++j;
-    }
-    return true;
+    return line.substring(0, end);
   }
 
   /**
-   * Ignores blank lines and spaces at the end of the file.
+   * Checks whether a line contains only spaces and tabs.
    *
-   * @param line - the content of a line
-   * @param startIndex - the index at which to start checking
-   * @return whether the line contains only spaces and newline characters
+   * @param line - the content of a line (without its line terminator)
+   * @return whether the line is blank
    */
-  private boolean isLineEmpty(String line, int startIndex) {
-    for (int i = startIndex; i < line.length(); ++i) {
-      if (!(line.charAt(i) == ' ' || line.charAt(i) == '\n')) {
-        return false;
-      }
+  private boolean isLineBlank(String line) {
+    return stripTrailingWhitespace(line).isEmpty();
+  }
+
+  /**
+   * Checks whether a character is ignorable trailing whitespace.
+   *
+   * @param c - the character
+   * @return whether it is a space or a tab
+   */
+  private boolean isWhitespace(char c) {
+    return c == ' ' || c == '\t';
+  }
+
+  /** A buffered byte reader that turns every CRLF into LF. */
+  private static final class NewlineNormalizingReader implements Closeable {
+    /**
+     * Constructor.
+     *
+     * @param inputStream - the underlying stream (closed by {@link #close})
+     */
+    private NewlineNormalizingReader(InputStream inputStream) {
+      this.inputStream = inputStream;
     }
-    return true;
+
+    /**
+     * Reads the next byte.
+     *
+     * @return the next byte (0-255), or -1 at the end of the stream
+     * @throws IOException if the stream cannot be read
+     */
+    private int read() throws IOException {
+      int current = readRaw();
+      if (current == '\r') {
+        int next = readRaw();
+        if (next == '\n') {
+          return '\n';
+        }
+        // Not a CRLF: hand the byte after the CR back on the next call.
+        if (next != -1) {
+          --position;
+        }
+      }
+      return current;
+    }
+
+    /**
+     * Reads the next raw byte.
+     *
+     * @return the next byte (0-255), or -1 at the end of the stream
+     * @throws IOException if the stream cannot be read
+     */
+    private int readRaw() throws IOException {
+      if (position == limit) {
+        // Keep the last byte, so that read() can step back over it after a refill.
+        if (limit > 0) {
+          buffer[0] = buffer[limit - 1];
+          position = 1;
+          limit = 1;
+        }
+        int count = inputStream.read(buffer, limit, buffer.length - limit);
+        if (count <= 0) {
+          return -1;
+        }
+        limit += count;
+      }
+      return buffer[position++] & 0xFF;
+    }
+
+    @Override
+    public void close() throws IOException {
+      inputStream.close();
+    }
+
+    /** The underlying stream. */
+    private final InputStream inputStream;
+
+    /** The read buffer. */
+    private final byte[] buffer = new byte[8192];
+
+    /** The index of the next byte to return from the buffer. */
+    private int position;
+
+    /** The number of valid bytes in the buffer. */
+    private int limit;
   }
 
   /** The logger. */

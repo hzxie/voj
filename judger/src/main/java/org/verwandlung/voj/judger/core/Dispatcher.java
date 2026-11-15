@@ -162,7 +162,8 @@ public class Dispatcher {
               programRunner.getRuntimeResult(
                   submission, workDirectory, baseFileName, inputFilePath, outputFilePath),
               stdOutputFilePath,
-              outputFilePath);
+              outputFilePath,
+              checkpoint.isExactlyMatch());
       runtimeResult.put("score", checkpointScore);
       runtimeResults.add(runtimeResult);
       applicationDispatcher.onOneTestPointFinished(submissionId, checkpointId, runtimeResult);
@@ -187,17 +188,20 @@ public class Dispatcher {
    * @param result - the Map object containing the program's runtime result
    * @param standardOutputFilePath - the path of the standard output file
    * @param outputFilePath - the path of the user's output file
+   * @param exactlyMatch - whether the checkpoint requires an exact match
    * @return the Map object containing the program's runtime result
    */
   private Map<String, Object> getRuntimeResult(
-      Map<String, Object> result, String standardOutputFilePath, String outputFilePath) {
+      Map<String, Object> result,
+      String standardOutputFilePath,
+      String outputFilePath,
+      boolean exactlyMatch) {
     String runtimeResultSlug = (String) result.get("runtimeResult");
     int usedTime = (Integer) result.get("usedTime");
     int usedMemory = (Integer) result.get("usedMemory");
 
-    if (runtimeResultSlug.equals("AC")
-        && !isOutputTheSame(standardOutputFilePath, outputFilePath)) {
-      runtimeResultSlug = "WA";
+    if (runtimeResultSlug.equals("AC")) {
+      runtimeResultSlug = getComparisonResult(standardOutputFilePath, outputFilePath, exactlyMatch);
       result.put("runtimeResult", runtimeResultSlug);
     }
     LOGGER.info(
@@ -213,15 +217,17 @@ public class Dispatcher {
    *
    * @param standardOutputFilePath - the path of the standard output file
    * @param outputFilePath - the path of the user's output file
-   * @return whether the user's output and the standard output are the same
+   * @param exactlyMatch - whether the checkpoint requires an exact match
+   * @return the judge result slug: AC, PE (exact match required but only whitespace differs) or WA
    */
-  private boolean isOutputTheSame(String standardOutputFilePath, String outputFilePath) {
+  private String getComparisonResult(
+      String standardOutputFilePath, String outputFilePath, boolean exactlyMatch) {
     try {
-      return comparator.isOutputTheSame(standardOutputFilePath, outputFilePath);
+      return comparator.getComparisonResult(standardOutputFilePath, outputFilePath, exactlyMatch);
     } catch (IOException ex) {
       LOGGER.catching(ex);
     }
-    return false;
+    return Comparator.WRONG_ANSWER;
   }
 
   /**

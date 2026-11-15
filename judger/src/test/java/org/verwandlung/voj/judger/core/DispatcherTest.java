@@ -17,6 +17,7 @@
 package org.verwandlung.voj.judger.core;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -97,7 +98,7 @@ public class DispatcherTest {
 
     when(programRunner.getRuntimeResult(any(), anyString(), anyString(), anyString(), anyString()))
         .thenReturn(runtimeResult("AC"));
-    when(comparator.isOutputTheSame(anyString(), anyString())).thenReturn(true);
+    when(comparator.getComparisonResult(anyString(), anyString(), anyBoolean())).thenReturn("AC");
 
     dispatcher.createNewTask(100L);
 
@@ -130,7 +131,7 @@ public class DispatcherTest {
 
     when(programRunner.getRuntimeResult(any(), anyString(), anyString(), anyString(), anyString()))
         .thenReturn(runtimeResult("AC"));
-    when(comparator.isOutputTheSame(anyString(), anyString())).thenReturn(false);
+    when(comparator.getComparisonResult(anyString(), anyString(), anyBoolean())).thenReturn("WA");
 
     dispatcher.createNewTask(100L);
 
@@ -139,6 +140,38 @@ public class DispatcherTest {
         org.mockito.ArgumentCaptor.forClass(Map.class);
     verify(applicationDispatcher).onOneTestPointFinished(eq(100L), eq(1), resultCaptor.capture());
     Assertions.assertEquals("WA", resultCaptor.getValue().get("runtimeResult"));
+  }
+
+  /**
+   * Test case: tests the createNewTask method. Test data: two checkpoints, only the first requiring
+   * an exact match, whose output differs only in presentation. Expected result: each checkpoint's
+   * exactlyMatch flag is passed to the comparator and its verdict (PE / AC) is reported.
+   */
+  @Test
+  public void testCreateNewTaskHonoursExactlyMatch() throws Exception {
+    Submission submission = buildSubmission();
+    when(submissionMapper.getSubmission(100L)).thenReturn(submission);
+    when(compiler.getCompileResult(any(), anyString(), anyString()))
+        .thenReturn(compileResult(true));
+
+    List<Checkpoint> checkpoints = new ArrayList<>();
+    checkpoints.add(new Checkpoint(1000L, 1, true, 50, "input", "output"));
+    checkpoints.add(new Checkpoint(1000L, 2, false, 50, "input", "output"));
+    when(checkpointStore.getCheckpoints(1000L)).thenReturn(checkpoints);
+
+    when(programRunner.getRuntimeResult(any(), anyString(), anyString(), anyString(), anyString()))
+        .thenAnswer(invocation -> runtimeResult("AC"));
+    when(comparator.getComparisonResult(anyString(), anyString(), eq(true))).thenReturn("PE");
+    when(comparator.getComparisonResult(anyString(), anyString(), eq(false))).thenReturn("AC");
+
+    dispatcher.createNewTask(100L);
+
+    @SuppressWarnings("unchecked")
+    org.mockito.ArgumentCaptor<List<Map<String, Object>>> resultsCaptor =
+        org.mockito.ArgumentCaptor.forClass(List.class);
+    verify(applicationDispatcher).onAllTestPointsFinished(eq(100L), resultsCaptor.capture());
+    Assertions.assertEquals("PE", resultsCaptor.getValue().get(0).get("runtimeResult"));
+    Assertions.assertEquals("AC", resultsCaptor.getValue().get(1).get("runtimeResult"));
   }
 
   /**
