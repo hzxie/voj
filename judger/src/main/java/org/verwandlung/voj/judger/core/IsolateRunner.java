@@ -52,10 +52,13 @@ import org.springframework.stereotype.Component;
  *   <li>isolate 2.x with cgroup v2 support is installed and the {@code --cg} option is available.
  *   <li>The judger process is allowed to run isolate (isolate is installed setuid-root, or the
  *       judger runs with the appropriate privileges / via {@code isolate}'s init).
- *   <li>The work directory is bound into the sandbox at its <em>same absolute path</em> via {@code
- *       --dir}, so the absolute command line built by {@link ProgramRunner} works unchanged inside
- *       the box. It is writable while compiling (the compiler writes the binary there) and
- *       read-only while running a submission. It must be accessible to isolate's box user.
+ *   <li>The work directory is bound into the sandbox at {@link #BOX_WORK_DIRECTORY} via {@code
+ *       --dir}, and its host path in the command line is rewritten to that. It is writable while
+ *       compiling (the compiler writes the binary there) and read-only while running a submission.
+ *       It must belong to isolate's box user (UID first_uid + box id, see
+ *       judger.isolate.firstUid), which the judger arranges when it runs as root.
+ *   <li>isolate neither searches PATH nor passes on the environment: the program is resolved on the
+ *       judger's PATH, and the box gets PATH, LANG and HOME.
  *   <li>Standard input/output never go through a bound directory. The checkpoint directory, which
  *       holds both the inputs and the expected outputs, is never bound: the single input file of
  *       the current run is copied into isolate's own box directory and redirected from there, and
@@ -69,6 +72,9 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class IsolateRunner implements SandboxRunner {
+  /** Where the submission's work directory is bound inside the box. */
+  static final String BOX_WORK_DIRECTORY = "/work";
+
   /** The name, inside the box, of the copy of the input file. */
   static final String BOX_STDIN_FILE = "stdin.txt";
 
@@ -244,15 +250,25 @@ public class IsolateRunner implements SandboxRunner {
       command.add("--cg-mem=" + memoryLimitKb);
     }
 
-    // Bind the work directory (source + compiled binary) at its same path: read-write while
+    // Bind the work directory (source + compiled binary) at BOX_WORK_DIRECTORY: read-write while
     // compiling, read-only while running a submission, so a submission cannot leave files behind
     // for later checkpoints. The work directory is derived from the output file, which always lives
     // in it (the program output for a run, or the compile log for a compilation); this is robust
     // regardless of whether the first command-line token is a path (e.g. "java", "python") or the
-    // binary itself. The checkpoint directory (inputs AND expected outputs) is never bound.
+    // binary itself. The checkpoint directory (inputs AND expected outputs) is never bound. It
+    // cannot be bound at its own path: isolate mounts the box's private /tmp over every mount point
+    // below /tmp (the default judger.workDir), so the command line's paths are rewritten instead.
     String workDirectory = directoryOf(outputFilePath);
     if (workDirectory != null) {
-      command.add("--dir=" + workDirectory + (isCompilation ? ":rw" : ""));
+      command.add(
+          "--dir=" + BOX_WORK_DIRECTORY + "=" + workDirectory + (isCompilation ? ":rw" : ""));
+    }
+    // Toolchains that live outside isolate's default mounts (/bin, /lib, /usr, ...): the
+    // alternatives symlinks behind /usr/bin/javac, cc, fpc, ... and /opt (Go, Kotlin).
+    for (String directory : extraDirectories.split(",")) {
+      if (!directory.isBlank()) {
+        command.add("--dir=" + directory.trim());
+      }
     }
 
     // Redirections are opened by isolate inside the sandbox, relative to the box (the working
@@ -271,11 +287,74 @@ public class IsolateRunner implements SandboxRunner {
       }
     }
 
+    // isolate starts the program with an empty environment and execve()s it without searching
+    // PATH, so a compile/run command such as "g++ ..." or "python3 ..." would fail with ENOENT:
+    // resolve the program on the judger's PATH, and give the box a minimal environment (the
+    // compilers and runtimes themselves look up their helpers on PATH), like the native sandbox.
+    String searchPath = System.getenv("PATH");
+    if (searchPath == null || searchPath.isBlank()) {
+      searchPath = DEFAULT_PATH;
+    }
+    command.add("--env=PATH=" + searchPath);
+    command.add("--env=LANG=C.UTF-8");
+    command.add("--env=HOME=/box");
+
     command.add("--run");
     command.add("--");
-    command.addAll(Arrays.asList(commandLine.trim().split("\\s+")));
+    List<String> arguments = new ArrayList<>();
+    for (String argument : commandLine.trim().split("\\s+")) {
+      arguments.add(toBoxPath(argument, workDirectory));
+    }
+    arguments.set(0, resolveExecutable(arguments.get(0), searchPath));
+    command.addAll(arguments);
     return command;
   }
+
+  /**
+   * Rewrites the work directory's host path, wherever it appears in a command-line argument (e.g.
+   * {@code /tmp/voj-1/a.cpp}, {@code -o/tmp/voj-1/a.exe} or {@code -cp /tmp/voj-1}), to its path in
+   * the box, {@link #BOX_WORK_DIRECTORY}.
+   *
+   * @param argument - the command-line argument
+   * @param workDirectory - the work directory's host path (may be {@code null})
+   * @return the argument as seen from inside the box
+   */
+  static String toBoxPath(String argument, String workDirectory) {
+    if (workDirectory == null) {
+      return argument;
+    }
+    if (argument.equals(workDirectory)) {
+      return BOX_WORK_DIRECTORY;
+    }
+    return argument.replace(workDirectory + "/", BOX_WORK_DIRECTORY + "/");
+  }
+
+  /**
+   * Resolves a program name on a search path, as a shell would. A name containing a slash is used
+   * as is.
+   *
+   * @param program - the program name (first token of the command line)
+   * @param searchPath - the colon-separated directories to search
+   * @return the absolute path of the first executable regular file found, or the name unchanged
+   */
+  static String resolveExecutable(String program, String searchPath) {
+    if (program.contains("/")) {
+      return program;
+    }
+    for (String directory : searchPath.split(":")) {
+      if (directory.isEmpty()) {
+        continue;
+      }
+      Path candidate = Paths.get(directory, program);
+      if (Files.isRegularFile(candidate) && Files.isExecutable(candidate)) {
+        return candidate.toAbsolutePath().toString();
+      }
+    }
+    return program;
+  }
+
+  /** The search path given to the box when the judger itself has none. */
+  private static final String DEFAULT_PATH = "/usr/local/bin:/usr/bin:/bin";
 
   /**
    * Copies the captured output out of the box once the sandbox has exited. The sandboxed program
@@ -450,6 +529,13 @@ public class IsolateRunner implements SandboxRunner {
   /** The maximum number of processes/threads the sandboxed program may create. */
   @Value("${judger.isolate.maxProcesses:64}")
   private int maxProcesses;
+
+  /**
+   * Extra directory rules (isolate {@code --dir} syntax, comma-separated) bound read-only into the
+   * box, for toolchains outside isolate's default mounts.
+   */
+  @Value("${judger.isolate.extraDirs:/etc/alternatives:maybe,/opt:maybe}")
+  private String extraDirectories = "/etc/alternatives:maybe,/opt:maybe";
 
   /** The maximum number of processes/threads a compilation may create. */
   @Value("${judger.compileProcessLimit:1024}")

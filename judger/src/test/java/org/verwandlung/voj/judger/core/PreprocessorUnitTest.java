@@ -182,6 +182,34 @@ public class PreprocessorUnitTest {
   }
 
   /**
+   * Test case: tests the createTestCode(Submission, String, String) method. Test data: the isolate
+   * backend with box 3. Expected result: the private work directory belongs to isolate's box user,
+   * UID first_uid + 3. Needs root.
+   */
+  @Test
+  @DisabledOnOs(OS.WINDOWS)
+  public void testCreateTestCodeHandsWorkDirectoryToIsolateBoxUser() throws Exception {
+    Assumptions.assumeTrue("root".equals(System.getProperty("user.name")), "Needs root.");
+    ReflectionTestUtils.setField(preprocessor, "sandbox", "isolate");
+    ReflectionTestUtils.setField(preprocessor, "isolateFirstUid", 60000);
+    ReflectionTestUtils.setField(preprocessor, "isolateBoxId", 3);
+    ReflectionTestUtils.setField(preprocessor, "sandboxUsername", "nobody");
+    Path workDirectory = tempDir.resolve("voj-1005");
+
+    preprocessor.createTestCode(
+        submission("C++", "g++ -o {filename}.exe {filename}.cpp", "int main() {}"),
+        workDirectory.toString(),
+        "random");
+
+    Assertions.assertEquals(
+        60003, Files.getAttribute(workDirectory, "unix:uid", LinkOption.NOFOLLOW_LINKS));
+    Assertions.assertEquals(
+        "rwx------",
+        PosixFilePermissions.toString(
+            Files.getPosixFilePermissions(workDirectory, LinkOption.NOFOLLOW_LINKS)));
+  }
+
+  /**
    * Builds a submission in the given language.
    *
    * @param languageName - the name of the programming language

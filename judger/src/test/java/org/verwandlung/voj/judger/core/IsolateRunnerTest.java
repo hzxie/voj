@@ -78,7 +78,9 @@ public class IsolateRunnerTest {
     Assertions.assertTrue(args.contains("--stdin=" + IsolateRunner.BOX_STDIN_FILE));
     Assertions.assertTrue(args.contains("--stdout=" + IsolateRunner.BOX_STDOUT_FILE));
     Assertions.assertTrue(args.contains("--stderr=" + IsolateRunner.BOX_STDERR_FILE));
-    Assertions.assertTrue(args.contains("--dir=" + workDirectory));
+    Assertions.assertTrue(
+        args.contains("--dir=" + IsolateRunner.BOX_WORK_DIRECTORY + "=" + workDirectory));
+    Assertions.assertTrue(args.contains(IsolateRunner.BOX_WORK_DIRECTORY + "/prog.sh"));
     Assertions.assertFalse(args.contains("--stderr-to-stdout"));
     for (String arg : args) {
       Assertions.assertFalse(arg.contains(checkpointDirectory.toString()), arg);
@@ -101,9 +103,44 @@ public class IsolateRunnerTest {
     Assertions.assertEquals("out\nerr\n", Files.readString(logFile));
     List<String> args = Files.readAllLines(isolateRoot.resolve("args.log"));
     Assertions.assertTrue(args.contains("--stderr-to-stdout"));
-    Assertions.assertTrue(args.contains("--dir=" + workDirectory + ":rw"));
+    Assertions.assertTrue(
+        args.contains("--dir=" + IsolateRunner.BOX_WORK_DIRECTORY + "=" + workDirectory + ":rw"));
     Assertions.assertTrue(args.stream().noneMatch(arg -> arg.startsWith("--stdin=")));
     Assertions.assertTrue(args.stream().noneMatch(arg -> arg.startsWith("--stderr=")));
+  }
+
+  /**
+   * Test case: a command naming its program without a path ("sh ..."), as every seeded language
+   * does. Expected result: isolate, which neither searches PATH nor passes on the environment, is
+   * given the program's absolute path and a PATH for the box.
+   */
+  @Test
+  public void testRunResolvesTheProgramOnPath() throws Exception {
+    Path script = writeProgram("hello.sh", "echo hello\n");
+    Path logFile = workDirectory.resolve("random-compile.log");
+
+    RunResult result = runner.run("sh " + script, null, logFile.toString(), 1000, 0, true);
+
+    Assertions.assertEquals(Verdict.NORMAL, result.getVerdict());
+    Assertions.assertEquals("hello\n", Files.readString(logFile));
+    List<String> args = Files.readAllLines(isolateRoot.resolve("args.log"));
+    String program = args.get(args.indexOf("--") + 1);
+    Assertions.assertTrue(program.startsWith("/") && program.endsWith("/sh"), program);
+    Assertions.assertTrue(args.stream().anyMatch(arg -> arg.startsWith("--env=PATH=/")));
+  }
+
+  /**
+   * Test case: tests the toBoxPath(String, String) method. Expected result: the work directory is
+   * rewritten to its path in the box wherever it appears in an argument, and only as a whole path
+   * component.
+   */
+  @Test
+  public void testToBoxPathRewritesTheWorkDirectory() {
+    Assertions.assertEquals("/work/a.cpp", IsolateRunner.toBoxPath("/tmp/voj-1/a.cpp", "/tmp/voj-1"));
+    Assertions.assertEquals("-o/work/a.exe", IsolateRunner.toBoxPath("-o/tmp/voj-1/a.exe", "/tmp/voj-1"));
+    Assertions.assertEquals("/work", IsolateRunner.toBoxPath("/tmp/voj-1", "/tmp/voj-1"));
+    Assertions.assertEquals("/tmp/voj-10/a", IsolateRunner.toBoxPath("/tmp/voj-10/a", "/tmp/voj-1"));
+    Assertions.assertEquals("g++", IsolateRunner.toBoxPath("g++", "/tmp/voj-1"));
   }
 
   /**
@@ -159,10 +196,12 @@ public class IsolateRunnerTest {
           "#!/bin/bash",
           "ROOT='@ROOT@'",
           "ARGS=(\"$@\")",
-          "id=0; meta=; stdin=; stdout=; stderr=; merge=0; action=",
+          "id=0; meta=; stdin=; stdout=; stderr=; merge=0; action=; inside=; outside=",
           "while [ $# -gt 0 ]; do",
           "  case \"$1\" in",
           "    -b) id=$2; shift;;",
+          "    --dir=*=*) rule=${1#--dir=}; inside=${rule%%=*}; outside=${rule#*=};"
+              + " outside=${outside%:rw};;",
           "    -M) meta=$2; shift;;",
           "    --stdin=*) stdin=${1#--stdin=};;",
           "    --stdout=*) stdout=${1#--stdout=};;",
@@ -185,6 +224,10 @@ public class IsolateRunnerTest {
           "    if [ -n \"$stdout\" ]; then exec 1>\"$stdout\"; fi",
           "    if [ $merge = 1 ]; then exec 2>&1;",
           "    elif [ -n \"$stderr\" ]; then exec 2>\"$stderr\"; fi",
+          "    if [ -n \"$inside\" ]; then", // map the box's paths back onto the host
+          "      cmd=(); for a in \"$@\"; do cmd+=(\"${a//$inside\\//$outside/}\"); done",
+          "      set -- \"${cmd[@]}\"",
+          "    fi",
           "    \"$@\"; code=$?",
           "    printf 'time:0.010\\nexitcode:%d\\n' $code > \"$meta\"",
           "    if [ $code -ne 0 ]; then echo 'status:RE' >> \"$meta\"; fi",

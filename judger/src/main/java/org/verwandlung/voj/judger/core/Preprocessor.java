@@ -282,13 +282,22 @@ public class Preprocessor {
    * Hands the work directory to the unprivileged sandbox user. The directory is private (owner
    * only, see {@link #createFreshWorkDirectory}), so that other accounts on the host cannot read a
    * submission's files. When the judger runs as root the directory is then handed to the sandbox
-   * user (system.username), so that the compiler and the submitted program, which run with dropped
-   * privileges, can still write their output here.
+   * user, so that the compiler and the submitted program, which run with dropped privileges, can
+   * still write their output here: the native sandbox runs them as system.username, isolate as the
+   * box's own user, whose UID is isolate's first_uid plus the box id (see {@link #isolateUid()}).
    *
    * @param workDirectory the directory used for producing compilation output
    */
   private void setWorkDirectoryOwner(Path workDirectory) {
     if (!isPosix()) {
+      return;
+    }
+    if (isRunningAsRoot() && "isolate".equalsIgnoreCase(sandbox)) {
+      try {
+        Files.setAttribute(workDirectory, "unix:uid", isolateUid(), LinkOption.NOFOLLOW_LINKS);
+      } catch (IOException ex) {
+        LOGGER.warn("Failed to hand work directory to isolate's box user " + isolateUid(), ex);
+      }
       return;
     }
     if (isRunningAsRoot() && sandboxUsername != null && !sandboxUsername.isEmpty()) {
@@ -302,6 +311,16 @@ public class Preprocessor {
             "Failed to hand work directory to sandbox user '" + sandboxUsername + "'", ex);
       }
     }
+  }
+
+  /**
+   * Gets the UID isolate runs the sandboxed program as: its first_uid (judger.isolate.firstUid,
+   * which must match isolate's configuration) plus the box id.
+   *
+   * @return the UID of the isolate box's user
+   */
+  private int isolateUid() {
+    return isolateFirstUid + isolateBoxId;
   }
 
   /**
@@ -325,6 +344,18 @@ public class Preprocessor {
   /** The unprivileged user the native sandbox drops to; the work directory is handed to it. */
   @Value("${system.username}")
   private String sandboxUsername;
+
+  /** The sandbox backend ({@code native} or {@code isolate}), see SandboxConfiguration. */
+  @Value("${judger.sandbox:native}")
+  private String sandbox;
+
+  /** isolate's first_uid: the box with id n runs as UID first_uid + n. */
+  @Value("${judger.isolate.firstUid:60000}")
+  private int isolateFirstUid;
+
+  /** The isolate box id used for judging. */
+  @Value("${judger.isolate.boxId:0}")
+  private int isolateBoxId;
 
   /**
    * A read-only Go build cache (owned by root, e.g. built into the Docker image) that each Go
