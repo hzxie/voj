@@ -138,6 +138,11 @@ public class Preprocessor {
   /**
    * Replaces the class name in certain languages (such as Java) to ensure compilation succeeds.
    *
+   * <p>Only the declaration {@code class Main} is renamed: the word boundaries keep e.g. {@code
+   * class MainHelper} or {@code subclass Main} intact, and {@code \s+} accepts any whitespace
+   * (tabs, CRLF line breaks) between the keyword and the name. This is a plain text substitution,
+   * so a {@code "class Main"} inside a string literal or comment is rewritten as well.
+   *
    * @param language - the programming language object
    * @param code - the code in which to perform the replacement
    * @param newClassName - the new class name
@@ -146,8 +151,13 @@ public class Preprocessor {
     if (!language.getLanguageName().equalsIgnoreCase("Java")) {
       return code;
     }
-    return code.replaceAll("class[ \n]+Main", "class " + newClassName);
+    return JAVA_MAIN_CLASS_DECLARATION
+        .matcher(code)
+        .replaceAll(Matcher.quoteReplacement("class " + newClassName));
   }
+
+  /** Matches the declaration of the Java class {@code Main}, which is renamed before compiling. */
+  private static final Pattern JAVA_MAIN_CLASS_DECLARATION = Pattern.compile("\\bclass\\s+Main\\b");
 
   /**
    * Hands the work directory to the unprivileged sandbox user. The directory is private (owner only,

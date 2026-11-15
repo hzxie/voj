@@ -95,6 +95,50 @@ public class PreprocessorUnitTest {
   }
 
   /**
+   * Test case: tests the createTestCode(Submission, String, String) method. Test data: Java code
+   * declaring Main (separated by a tab / CRLF) alongside a MainHelper class. Expected result: only
+   * the Main declarations are renamed.
+   */
+  @Test
+  public void testCreateTestCodeRenamesOnlyJavaMainClass() throws Exception {
+    String code =
+        "public class\tMain {\r\n"
+            + "  public static void main(String[] args) { MainHelper.run(); }\r\n"
+            + "}\r\n"
+            + "class MainHelper { static void run() {} }\n"
+            + "final class\r\nMain2 {}\n";
+    Path workDirectory = tempDir.resolve("voj-1002");
+
+    preprocessor.createTestCode(
+        submission("Java", "javac {filename}.java", code), workDirectory.toString(), "Random");
+
+    String expected =
+        "public class Random {\r\n"
+            + "  public static void main(String[] args) { MainHelper.run(); }\r\n"
+            + "}\r\n"
+            + "class MainHelper { static void run() {} }\n"
+            + "final class\r\nMain2 {}\n";
+    Assertions.assertEquals(expected, Files.readString(workDirectory.resolve("Random.java")));
+  }
+
+  /**
+   * Test case: tests the createTestCode(Submission, String, String) method. Test data: Java code
+   * whose Main class is declared on the line after the keyword. Expected result: it is renamed.
+   */
+  @Test
+  public void testCreateTestCodeRenamesJavaMainClassAcrossLines() throws Exception {
+    Path workDirectory = tempDir.resolve("voj-1003");
+
+    preprocessor.createTestCode(
+        submission("Java", "javac {filename}.java", "class\r\n  Main<T> {}"),
+        workDirectory.toString(),
+        "Random");
+
+    Assertions.assertEquals(
+        "class Random<T> {}", Files.readString(workDirectory.resolve("Random.java")));
+  }
+
+  /**
    * Builds a submission in the given language.
    *
    * @param languageName - the name of the programming language
