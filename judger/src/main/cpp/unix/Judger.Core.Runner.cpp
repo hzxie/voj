@@ -32,6 +32,7 @@
 #include <thread>
 #include <vector>
 
+#include <dirent.h>
 #include <fcntl.h>
 #include <grp.h>
 #include <pwd.h>
@@ -75,6 +76,11 @@ static const long long WALL_TIME_SLACK_MS     = 1000;        // wall-clock backs
 static const rlim_t    OUTPUT_FILE_SIZE_LIMIT = (rlim_t)256 * 1024 * 1024; // RLIMIT_FSIZE (256 MB)
 static const rlim_t    PROCESS_NUMBER_LIMIT   = 64;          // RLIMIT_NPROC (anti fork-bomb)
 static const int       CLEANUP_ATTEMPTS       = 1000;        // kill/reap rounds (x 1 ms) after a run
+static const int       GROUP_SCAN_INTERVAL    = 10;          // scan the whole group every 10th poll
+// RLIMIT_DATA backstop: 2 x the memory limit plus a headroom of max(256 MB, physical RAM / 32). The
+// headroom matters for the JVM, whose committed initial heap defaults to physical RAM / 64.
+static const unsigned long long DATA_LIMIT_MIN_HEADROOM_KB = 256ULL * 1024;
+static const unsigned long long DATA_LIMIT_RAM_DIVISOR     = 32;
 
 /**
  * The only environment variables the sandboxed process inherits from the judger. The judger's own
@@ -105,6 +111,7 @@ struct ChildPlan {
   std::string              outputFilePath; // stdout redirect (empty = none)
   bool                     compileStep;    // compile: stderr also goes to outputFilePath
   int                      timeLimit;      // ms (0 = no limit)
+  rlim_t                   dataLimit;      // RLIMIT_DATA in bytes (0 = none)
   bool                     dropPrivileges; // whether to setuid/setgid
   uid_t                    dropUid;
   gid_t                    dropGid;
@@ -121,6 +128,8 @@ static std::string buildSeccompProgram();
 static long long getMonotonicMillis();
 static int  readCpuTimeMillis(pid_t);
 static int  readPeakMemoryKb(pid_t);
+static bool readProcessGroupUsage(pid_t, long long* cpuMillis, long long* residentKb);
+static rlim_t getDataLimit(int memoryLimitKb);
 static void reapProcessGroup(pid_t);
 static void killProcessGroup(pid_t);
 static void killSandboxUserProcesses(uid_t, pid_t);
@@ -180,6 +189,7 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     // reach the judged output.
     plan.compileStep    = (isCompilation == JNI_TRUE);
     plan.timeLimit      = timeLimit;
+    plan.dataLimit      = getDataLimit(memoryLimit);
     plan.dropPrivileges = false;
     plan.dropUid        = 0;
     plan.dropGid        = 0;
@@ -247,14 +257,34 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     std::atomic<bool> timedOut(false);
     std::atomic<bool> memoryExceeded(false);
     std::atomic<int>  peakMemoryKb(0);
+    std::atomic<long long> groupCpuMillis(0);
     long long startMillis = getMonotonicMillis();
+
+    // Child processes are accounted for, not only the top-level process: every GROUP_SCAN_INTERVAL
+    // polls the watchdog sums the CPU time and resident memory of the whole process group (the
+    // seccomp filter keeps every descendant in it). Memory is always summed, so the compile memory
+    // limit also covers cc1plus, rustc's linker, go's compile/link children, kotlinc's JVM, ... For
+    // a compilation, CPU time keeps being measured on the top-level process only (plus the
+    // wall-clock backstop and each process's own RLIMIT_CPU): the toolchains legitimately burn CPU
+    // in parallel children (go build, the JVM-based kotlinc) and must not turn into compile errors.
+    bool countGroupCpu = !plan.compileStep;
 
     std::thread watchdog([&]() {
         long long wallBackstopMs =
             (timeLimit > 0) ? (long long) timeLimit * WALL_TIME_FACTOR + WALL_TIME_SLACK_MS : 0;
-        while ( !finished.load() ) {
+        for ( int poll = 0; !finished.load(); ++poll ) {
+            long long groupCpuMs = -1;
+            long long groupRssKb = -1;
+            if ( poll % GROUP_SCAN_INTERVAL == 0 &&
+                 readProcessGroupUsage(pid, &groupCpuMs, &groupRssKb) &&
+                 countGroupCpu && groupCpuMs > groupCpuMillis.load() ) {
+                groupCpuMillis.store(groupCpuMs);
+            }
             if ( timeLimit > 0 ) {
-                int cpuMs = readCpuTimeMillis(pid);
+                long long cpuMs = readCpuTimeMillis(pid);
+                if ( countGroupCpu && groupCpuMs > cpuMs ) {
+                    cpuMs = groupCpuMs;
+                }
                 if ( cpuMs >= 0 && cpuMs > timeLimit ) {
                     timedOut.store(true);
                     kill(-pid, SIGKILL);
@@ -269,6 +299,9 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
             // (the parent blocks on the sync pipe until then), so this never sees the JVM image the
             // freshly forked child briefly shared before exec.
             int peakKb = readPeakMemoryKb(pid);
+            if ( groupRssKb > peakKb ) {
+                peakKb = (int) groupRssKb;
+            }
             if ( peakKb > peakMemoryKb.load() ) {
                 peakMemoryKb.store(peakKb);
             }
@@ -302,6 +335,9 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     long long cpuMillis =
         (long long) usage.ru_utime.tv_sec * 1000 + usage.ru_utime.tv_usec / 1000 +
         (long long) usage.ru_stime.tv_sec * 1000 + usage.ru_stime.tv_usec / 1000;
+    if ( countGroupCpu && groupCpuMillis.load() > cpuMillis ) {
+        cpuMillis = groupCpuMillis.load(); // children that were never waited for
+    }
     usedTime   = (int) cpuMillis;
     // Peak RSS sampled from /proc (VmHWM) after exec. rusage's ru_maxrss is deliberately NOT used:
     // for a child forked from the multi-threaded JVM it can include the parent's resident pages,
@@ -416,6 +452,18 @@ static void runChild(const ChildPlan& plan, int syncWriteFd) {
         }
         dup2(nullFd, STDERR_FILENO);
         close(nullFd);
+    }
+
+    // Tier 1: a per-process kernel memory backstop, inherited by every child. RLIMIT_DATA (private
+    // writable mappings, i.e. roughly committed memory) is used rather than RLIMIT_AS, because the
+    // JVM, V8 (Node.js) and the Go runtime reserve far more address space than they ever commit and
+    // do not start under a tight RLIMIT_AS. It is generous on purpose (see getDataLimit), so the
+    // watchdog normally reports the overrun as MLE first; the backstop only bounds how far a single
+    // process can balloon between two polls. Set last: the forked JVM image itself is far larger.
+    if ( plan.dataLimit > 0 ) {
+        limit.rlim_cur = plan.dataLimit;
+        limit.rlim_max = plan.dataLimit;
+        setrlimit(RLIMIT_DATA, &limit);
     }
 
     // Tier 2 (best-effort): install the pre-built seccomp syscall filter via the raw syscall, so
@@ -704,6 +752,96 @@ static void killSandboxUserProcesses(uid_t uid, pid_t pgid) {
         }
         usleep(POLL_INTERVAL_US);
     }
+}
+
+/**
+ * Computes the RLIMIT_DATA backstop for a memory limit: 2 x the limit plus a headroom of
+ * max(DATA_LIMIT_MIN_HEADROOM_KB, physical RAM / DATA_LIMIT_RAM_DIVISOR).
+ * @param  memoryLimitKb - the memory limit in KB (0 means no limit)
+ * @return the limit in bytes, or 0 for none
+ */
+static rlim_t getDataLimit(int memoryLimitKb) {
+    if ( memoryLimitKb <= 0 ) {
+        return 0;
+    }
+    unsigned long long headroomKb = DATA_LIMIT_MIN_HEADROOM_KB;
+    long pages    = sysconf(_SC_PHYS_PAGES);
+    long pageSize = sysconf(_SC_PAGESIZE);
+    if ( pages > 0 && pageSize > 0 ) {
+        unsigned long long ramKb = (unsigned long long) pages * (unsigned long long) pageSize / 1024;
+        if ( ramKb / DATA_LIMIT_RAM_DIVISOR > headroomKb ) {
+            headroomKb = ramKb / DATA_LIMIT_RAM_DIVISOR;
+        }
+    }
+    return (rlim_t) ((2ULL * (unsigned long long) memoryLimitKb + headroomKb) * 1024);
+}
+
+/**
+ * Sums the CPU time and the current resident memory of every live process in a process group, by
+ * scanning /proc. A process's CPU time includes its children that it has already waited for, so a
+ * process tree is counted once. Resident memory is summed per process, so pages shared between
+ * processes (e.g. after fork) are counted more than once: a conservative over-estimate.
+ * @param  pgid       - the process group ID
+ * @param  cpuMillis  - receives the total CPU time (user + system) in milliseconds
+ * @param  residentKb - receives the total resident set size in KB
+ * @return whether /proc could be scanned
+ */
+static bool readProcessGroupUsage(pid_t pgid, long long* cpuMillis, long long* residentKb) {
+    DIR* procDir = opendir("/proc");
+    if ( procDir == nullptr ) {
+        return false;
+    }
+    long hertz    = sysconf(_SC_CLK_TCK);
+    long pageSize = sysconf(_SC_PAGESIZE);
+    if ( hertz <= 0 ) {
+        hertz = 100;
+    }
+    if ( pageSize <= 0 ) {
+        pageSize = 4096;
+    }
+    long long ticks         = 0;
+    long long residentPages = 0;
+    struct dirent* entry;
+    while ( (entry = readdir(procDir)) != nullptr ) {
+        if ( entry->d_name[0] < '0' || entry->d_name[0] > '9' ) {
+            continue;
+        }
+        char path[64];
+        snprintf(path, sizeof(path), "/proc/%s/stat", entry->d_name);
+        int fd = open(path, O_RDONLY | O_CLOEXEC);
+        if ( fd < 0 ) {
+            continue;
+        }
+        char    buffer[1024];
+        ssize_t length = read(fd, buffer, sizeof(buffer) - 1);
+        close(fd);
+        if ( length <= 0 ) {
+            continue;
+        }
+        buffer[length] = '\0';
+
+        // The comm field may contain spaces/parentheses, so parse after the last ')'. The fields
+        // read are 3 (state), 5 (pgrp), 14-17 (utime, stime, cutime, cstime) and 24 (rss).
+        char* rightParen = strrchr(buffer, ')');
+        if ( rightParen == nullptr ) {
+            continue;
+        }
+        char      state;
+        int       processGroup;
+        long long utime, stime, cutime, cstime, rss;
+        int fields = sscanf(rightParen + 1,
+            " %c %*s %d %*s %*s %*s %*s %*s %*s %*s %*s %lld %lld %lld %lld %*s %*s %*s %*s %*s %*s %lld",
+            &state, &processGroup, &utime, &stime, &cutime, &cstime, &rss);
+        if ( fields != 7 || processGroup != pgid || state == 'Z' || state == 'X' ) {
+            continue;
+        }
+        ticks         += utime + stime + cutime + cstime;
+        residentPages += rss;
+    }
+    closedir(procDir);
+    *cpuMillis  = ticks * 1000 / hertz;
+    *residentKb = residentPages * (pageSize / 1024);
+    return true;
 }
 
 /**
