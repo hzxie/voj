@@ -24,8 +24,11 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
+import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.UserPrincipal;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -76,6 +79,7 @@ public class CheckpointStore {
     int version = problem.getCheckpointsVersion();
     File problemDirectory = new File(checkpointDirectory, String.valueOf(problemId));
 
+    ensureCheckpointRootIsTrusted();
     if (isCacheFresh(problemDirectory, version)) {
       return;
     }
@@ -181,6 +185,42 @@ public class CheckpointStore {
           StandardCopyOption.ATOMIC_MOVE);
     } catch (AtomicMoveNotSupportedException ex) {
       Files.move(temporaryDirectory.toPath(), problemDirectory.toPath());
+    }
+  }
+
+  /**
+   * Makes sure the checkpoint root directory belongs to the judger before anything in it is trusted.
+   * The default root ({@code /tmp/voj-testpoints}) lives in the world-writable {@code /tmp}, so the
+   * sandbox user (or any local account) could create it first, or plant a symbolic link there. The
+   * owner of the root can rename and replace the per-problem directories inside it, which would let
+   * a submission swap in answers of its choosing. The root is therefore created by the judger,
+   * restricted to its owner, and refused when it is a link or owned by someone else.
+   *
+   * @throws IOException if the root cannot be created or is not owned by the judger
+   */
+  private void ensureCheckpointRootIsTrusted() throws IOException {
+    if (System.getProperty("os.name").contains("Windows")) {
+      return;
+    }
+    Path root = new File(checkpointDirectory).toPath();
+    if (!Files.exists(root, LinkOption.NOFOLLOW_LINKS)) {
+      Files.createDirectories(root);
+      restrictToOwner(root.toFile());
+    }
+    if (!Files.isDirectory(root, LinkOption.NOFOLLOW_LINKS)) {
+      throw new IOException("The checkpoint directory is not a real directory: " + root);
+    }
+    UserPrincipal owner = Files.getOwner(root, LinkOption.NOFOLLOW_LINKS);
+    UserPrincipal judger =
+        root.getFileSystem()
+            .getUserPrincipalLookupService()
+            .lookupPrincipalByName(System.getProperty("user.name"));
+    if (!owner.equals(judger)) {
+      throw new IOException(
+          String.format(
+              "Refusing to use the checkpoint directory %s: it is owned by %s, not by the judger"
+                  + " (%s). Remove it or set judger.checkpointDir to a directory the judger owns.",
+              root, owner.getName(), judger.getName()));
     }
   }
 
