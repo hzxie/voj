@@ -168,6 +168,23 @@ public class SandboxBehaviorTest {
   }
 
   /**
+   * Test case: a program that tries to connect to the judger's database port on the loopback
+   * interface and to an external address, and to create sockets of several non-local address
+   * families. Expected result: Accepted (no connection is established, while an AF_UNIX socket pair
+   * still works, see NETWORK_CODE). Under the native sandbox the program is told to be strict: the
+   * seccomp filter must refuse every socket but AF_UNIX with EACCES, even where no private network
+   * namespace can be created (e.g. a Docker container without CAP_SYS_ADMIN). isolate instead gives
+   * the box its own, empty network namespace.
+   */
+  @Test
+  public void testNetworkIsUnreachable() throws Exception {
+    Assumptions.assumeTrue(
+        System.getProperty("os.name").contains("Linux"), "The socket filter is Linux-only.");
+    String mode = "native".equalsIgnoreCase(sandbox) ? "strict" : "lenient";
+    Assertions.assertEquals("AC", judge(900009L, NETWORK_CODE, 10000, 262144, mode));
+  }
+
+  /**
    * Compiles and runs a C++ program under the active sandbox and returns its verdict slug.
    *
    * @param id - a unique id used for the work directory and the in-memory submission
@@ -178,6 +195,22 @@ public class SandboxBehaviorTest {
    * @throws Exception if the test fixtures cannot be set up
    */
   private String judge(long id, String code, int timeLimitMs, int memoryLimitKb) throws Exception {
+    return judge(id, code, timeLimitMs, memoryLimitKb, "");
+  }
+
+  /**
+   * Compiles and runs a C++ program under the active sandbox and returns its verdict slug.
+   *
+   * @param id - a unique id used for the work directory and the in-memory submission
+   * @param code - the C++ source code to compile and run
+   * @param timeLimitMs - the time limit (ms)
+   * @param memoryLimitKb - the memory limit (KB)
+   * @param input - the program's standard input
+   * @return the verdict slug (AC/TLE/MLE/RE/SE)
+   * @throws Exception if the test fixtures cannot be set up
+   */
+  private String judge(long id, String code, int timeLimitMs, int memoryLimitKb, String input)
+      throws Exception {
     Language cpp = languageMapper.getLanguageUsingSlug("text/x-c++src");
     Assertions.assertNotNull(cpp, "The C++ language must be seeded in the test database.");
 
@@ -200,7 +233,7 @@ public class SandboxBehaviorTest {
         "The test program must compile: " + compileResult.get("log"));
 
     Path inputFile = Path.of(workDirectory, "input.txt");
-    Files.write(inputFile, new byte[0]);
+    Files.writeString(inputFile, input);
     String outputFile = workDirectory + "/output.txt";
 
     Map<String, Object> result =
@@ -366,6 +399,98 @@ public class SandboxBehaviorTest {
       }
       """;
 
+  /**
+   * A program that exits with 1 or 2 if it connected to 127.0.0.1:3306 (the judger's database in
+   * the test setup) or to 1.1.1.1:80, and with 5 if an AF_UNIX socket pair fails. Given "strict" on
+   * its input, it also exits with 3 if a socket of another address family is created, with 4 if the
+   * refusal is not the seccomp filter's EACCES, or with 6 if an AF_INET socket can be created
+   * through the i386 system call entry point (x86-64 only). Otherwise it exits with 0.
+   */
+  private static final String NETWORK_CODE =
+      """
+      #include <arpa/inet.h>
+      #include <cerrno>
+      #include <cstdio>
+      #include <cstring>
+      #include <netinet/in.h>
+      #include <poll.h>
+      #include <sys/socket.h>
+      #include <sys/wait.h>
+      #include <unistd.h>
+
+      static bool connects(const char* address, int port) {
+          int fd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
+          if (fd < 0) {
+              return false;
+          }
+          sockaddr_in peer;
+          std::memset(&peer, 0, sizeof(peer));
+          peer.sin_family = AF_INET;
+          peer.sin_port = htons(port);
+          inet_pton(AF_INET, address, &peer.sin_addr);
+          bool connected = connect(fd, (sockaddr*) &peer, sizeof(peer)) == 0;
+          if (!connected && errno == EINPROGRESS) {
+              pollfd event = {fd, POLLOUT, 0};
+              int error = -1;
+              socklen_t length = sizeof(error);
+              connected = poll(&event, 1, 2000) == 1
+                  && getsockopt(fd, SOL_SOCKET, SO_ERROR, &error, &length) == 0 && error == 0;
+          }
+          close(fd);
+          return connected;
+      }
+
+      int main() {
+          char mode[16] = "";
+          bool strict = std::scanf("%15s", mode) == 1 && std::strcmp(mode, "strict") == 0;
+          if (connects("127.0.0.1", 3306)) {
+              return 1;
+          }
+          if (connects("1.1.1.1", 80)) {
+              return 2;
+          }
+          const int families[] = {AF_INET, AF_INET6, AF_NETLINK, AF_PACKET, AF_VSOCK};
+          for (int family : families) {
+              int fd = socket(family, SOCK_DGRAM, 0);
+              if (fd >= 0) {
+                  close(fd);
+                  if (strict) {
+                      return 3;
+                  }
+              } else if (strict && errno != EACCES) {
+                  return 4;
+              }
+              int pair[2];
+              if (socketpair(family, SOCK_STREAM, 0, pair) == 0) {
+                  return 3;
+              }
+              if (strict && errno != EACCES) {
+                  return 4;
+              }
+          }
+          int pair[2];
+          if (socketpair(AF_UNIX, SOCK_STREAM, 0, pair) != 0) {
+              return 5;
+          }
+      #if defined(__x86_64__)
+          // The i386 entry point (socketcall) must not get around the filter either.
+          pid_t child = fork();
+          if (child == 0) {
+              static unsigned int args[3] = {AF_INET, SOCK_STREAM, 0};
+              long fd;
+              asm volatile("int $0x80" : "=a"(fd) : "a"(102), "b"(1), "c"(args) : "memory");
+              _exit(fd >= 0 ? 7 : 0);
+          }
+          int status = 0;
+          waitpid(child, &status, 0);
+          if (strict && WIFEXITED(status) && WEXITSTATUS(status) == 7) {
+              return 6;
+          }
+      #endif
+          return 0;
+      }
+      """;
+
   /** A fork bomb. */
   private static final String FORK_BOMB_CODE =
       """
@@ -390,6 +515,10 @@ public class SandboxBehaviorTest {
 
   /** The autowired LanguageMapper object, used to fetch the C++ language definition. */
   @Autowired private LanguageMapper languageMapper;
+
+  /** The active sandbox backend ({@code native} or {@code isolate}). */
+  @Value("${judger.sandbox:native}")
+  private String sandbox;
 
   /** The working directory of the judger, used to store compilation results and program output. */
   @Value("${judger.workDir}")

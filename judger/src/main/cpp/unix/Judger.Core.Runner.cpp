@@ -43,6 +43,7 @@
 #include <sys/mman.h>
 #include <sys/prctl.h>
 #include <sys/resource.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/syscall.h>
 #include <sys/types.h>
@@ -753,7 +754,8 @@ static void runProgram(const ChildPlan& plan, int syncWriteFd) {
     limit.rlim_max = OUTPUT_FILE_SIZE_LIMIT;
     setrlimit(RLIMIT_FSIZE, &limit);
 
-    // Tier 2 (best-effort): cut off the network.
+    // Tier 2 (best-effort): cut off the network. This needs CAP_SYS_ADMIN, which a default Docker
+    // container lacks; the seccomp filter, which refuses every socket but AF_UNIX, does not.
     unshare(CLONE_NEWNET);
 
     // Drop privileges to the unprivileged sandbox user (only when running as root). The process
@@ -997,6 +999,15 @@ static std::vector<std::string> buildEnvironment(bool dropPrivileges, const std:
  * setns are denied outright; clone is denied only when it asks for a new namespace, so threads and
  * fork keep working; clone3 passes its flags in memory, which seccomp cannot inspect, so it fails
  * with ENOSYS, and the C library (glibc 2.34+ creates threads with clone3) falls back to clone.
+ *
+ * Network sockets are denied too: socket and socketpair fail with EACCES for every address family
+ * but AF_UNIX. The private network namespace cannot be created without CAP_SYS_ADMIN (e.g. in a
+ * default Docker container), and without it a submission could reach the judger's database and
+ * message queue or the internet. Local AF_UNIX sockets stay available (runtimes use socketpair) and
+ * are guarded by file permissions. io_uring, whose IORING_OP_SOCKET would create a socket without
+ * calling socket(), fails with ENOSYS, so runtimes such as libuv fall back to plain system calls.
+ * Only native-architecture system calls pass the filter (libseccomp kills any other ABI, such as
+ * i386's socketcall), so these rules cannot be bypassed through a compat entry point.
  * @return the exported BPF bytes, or an empty string if the filter could not be built
  */
 static std::string buildSeccompProgram() {
@@ -1036,6 +1047,21 @@ static std::string buildSeccompProgram() {
     int clone3Nr = seccomp_syscall_resolve_name("clone3");
     if ( clone3Nr != __NR_SCMP_ERROR ) {
         seccomp_rule_add(ctx, SCMP_ACT_ERRNO(ENOSYS), clone3Nr, 0);
+    }
+
+    // socket(domain, ...) and socketpair(domain, ...): an allow-list of AF_UNIX. The comparison is
+    // on the full 64-bit argument, so a value with stray upper bits is refused as well.
+    const int socketSyscalls[] = { SCMP_SYS(socket), SCMP_SYS(socketpair) };
+    for ( int syscallNr : socketSyscalls ) {
+        seccomp_rule_add(ctx, SCMP_ACT_ERRNO(EACCES), syscallNr, 1,
+                         SCMP_A0(SCMP_CMP_NE, (scmp_datum_t) AF_UNIX));
+    }
+    const char* const ioUringSyscalls[] = { "io_uring_setup", "io_uring_enter", "io_uring_register" };
+    for ( const char* name : ioUringSyscalls ) {
+        int syscallNr = seccomp_syscall_resolve_name(name);
+        if ( syscallNr != __NR_SCMP_ERROR ) {
+            seccomp_rule_add(ctx, SCMP_ACT_ERRNO(ENOSYS), syscallNr, 0);
+        }
     }
 
     std::string program;
