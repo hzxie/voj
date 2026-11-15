@@ -217,20 +217,22 @@ public class SubmissionService {
   }
 
   /**
-   * [For administrators only] Gets the list of submissions filtered by judge result, including the
-   * submissions to unpublished problems.
+   * [For administrators only] Gets a page of the submissions filtered by problem, user and judge
+   * result (newest first), including the submissions to unpublished problems. The filters match
+   * {@link #getNumberOfSubmissionsUsingProblemIdAndUsername}, so the two can back one pager.
    *
-   * @param problemId - the unique identifier of the problem
-   * @param username - the username of the user
+   * @param problemId - the unique identifier of the problem (0 = no filter)
+   * @param username - the username of the user (empty = no filter)
    * @param judgeResult - the slug of the judge result to filter by, or empty for all
-   * @param offset - the starting number of the submission identifier
-   * @param limit - the number of submissions to load each time
-   * @return the list of submissions (a List<Submission> object)
+   * @param pageNumber - the 1-based page number
+   * @param pageSize - the number of submissions per page
+   * @return the submissions on the requested page
    */
-  public List<Submission> getSubmissions(
-      long problemId, String username, String judgeResult, long offset, int limit) {
-    return submissionMapper.getSubmissionsUsingOffset(
-        problemId, username, judgeResult, offset, limit, false);
+  public List<Submission> getSubmissionsByPage(
+      long problemId, String username, String judgeResult, long pageNumber, int pageSize) {
+    long offset = (Math.max(pageNumber, 1) - 1) * pageSize;
+    return submissionMapper.getSubmissionsUsingFilters(
+        problemId, username, judgeResult, offset, pageSize);
   }
 
   /**

@@ -153,6 +153,26 @@
 		ORDER BY submission_id DESC 
 		LIMIT #{limit}
 	</select>
+	<select id="getSubmissionsUsingFilters"
+		parameterType="map"
+		resultMap="SubmissionResultMap">
+		SELECT *
+		FROM voj_submissions
+		NATURAL JOIN voj_users
+		<where>
+			<if test="problemId != 0">
+				problem_id = #{problemId}
+			</if>
+			<if test="username != null and username != ''">
+				AND username = #{username}
+			</if>
+			<if test="judgeResult != null and judgeResult != ''">
+				AND submission_judge_result = #{judgeResult}
+			</if>
+		</where>
+		ORDER BY submission_id DESC
+		LIMIT #{offset}, #{limit}
+	</select>
 	<select id="getSubmissionsUsingOffset" 
 		parameterType="map"
 		resultMap="SubmissionResultMap">

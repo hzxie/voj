@@ -294,6 +294,35 @@ public class SubmissionServiceTest {
     Assertions.assertEquals(0L, submissions.get("2014/10/02"));
   }
 
+  /**
+   * Test case: tests the getSubmissionsByPage(...) method. Test data: user zjhzxhz's three
+   * submissions (1003, 1001, 1000 newest first) paged two at a time, and the CE filter. Expected:
+   * the pages partition exactly the filtered rows counted by
+   * getNumberOfSubmissionsUsingProblemIdAndUsername, without repeating or skipping any.
+   */
+  @Test
+  public void testGetSubmissionsByPageFollowsFilteredCount() {
+    Assertions.assertEquals(
+        3, submissionService.getNumberOfSubmissionsUsingProblemIdAndUsername(0, "zjhzxhz", ""));
+    Assertions.assertEquals(
+        List.of(1003L, 1001L),
+        submissionIdsOf(submissionService.getSubmissionsByPage(0, "zjhzxhz", "", 1, 2)));
+    Assertions.assertEquals(
+        List.of(1000L), submissionIdsOf(submissionService.getSubmissionsByPage(0, "zjhzxhz", "", 2, 2)));
+
+    // Submissions 1002 and 1004 are the only CE ones; their ids are not adjacent to the latest id.
+    Assertions.assertEquals(
+        List.of(1004L), submissionIdsOf(submissionService.getSubmissionsByPage(0, "", "CE", 1, 1)));
+    Assertions.assertEquals(
+        List.of(1002L), submissionIdsOf(submissionService.getSubmissionsByPage(0, "", "CE", 2, 1)));
+    Assertions.assertTrue(submissionService.getSubmissionsByPage(0, "", "CE", 3, 1).isEmpty());
+  }
+
+  /** Collects the ids of a list of submissions, preserving their order. */
+  private static List<Long> submissionIdsOf(List<Submission> submissions) {
+    return submissions.stream().map(Submission::getSubmissionId).toList();
+  }
+
   /** Constructs a User object with only the UID set, used as the submitting user argument. */
   private User userWithUid(long uid) {
     User user = new User();

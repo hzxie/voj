@@ -140,6 +140,25 @@ public interface SubmissionMapper {
       @Param("isPublicOnly") boolean isPublicOnly);
 
   /**
+   * [For administrators only] Gets a page of the submissions matching the filters, newest first.
+   * Uses the same filters as {@link #getNumberOfSubmissionsUsingProblemIdAndUsername}, so a pager
+   * built on the two stays consistent.
+   *
+   * @param problemId - the unique identifier of the problem (0 = no filter)
+   * @param username - the username of the user (empty = no filter)
+   * @param judgeResult - the slug of the judge result to filter by, or empty for all
+   * @param offset - the number of matching submissions to skip (zero-based)
+   * @param limit - the number of submissions to fetch
+   * @return the submissions on the requested page
+   */
+  List<Submission> getSubmissionsUsingFilters(
+      @Param("problemId") long problemId,
+      @Param("username") String username,
+      @Param("judgeResult") String judgeResult,
+      @Param("offset") long offset,
+      @Param("limit") int limit);
+
+  /**
    * Gets the submissions of a user for a problem.
    *
    * @param problemId - the unique identifier of the problem

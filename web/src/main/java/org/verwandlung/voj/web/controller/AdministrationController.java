@@ -1332,13 +1332,9 @@ public class AdministrationController {
     long totalSubmissions =
         submissionService.getNumberOfSubmissionsUsingProblemIdAndUsername(
             problemId, username, judgeResult);
-    long latestSubmissionId = submissionService.getLatestSubmissionId();
-    long offset =
-        latestSubmissionId
-            - (pageNumber >= 1 ? pageNumber - 1 : 0) * NUMBER_OF_SUBMISSIONS_PER_PAGE;
     List<Submission> submissions =
-        submissionService.getSubmissions(
-            problemId, username, judgeResult, offset, NUMBER_OF_SUBMISSIONS_PER_PAGE);
+        submissionService.getSubmissionsByPage(
+            problemId, username, judgeResult, pageNumber, NUMBER_OF_SUBMISSIONS_PER_PAGE);
 
     ModelAndView view = new ModelAndView("pages/administration/all-submissions");
     view.addObject("problemId", problemId);
