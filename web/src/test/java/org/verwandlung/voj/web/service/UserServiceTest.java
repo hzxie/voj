@@ -404,6 +404,46 @@ public class UserServiceTest {
     Assertions.assertTrue(userService.getUserUsingUid(1000).isEmailVerified());
   }
 
+  /** Test case: tests the updateProfile (profile) method. Test data: a pending password-reset token for the old address, then an email change. Expected: the token is not usable for the new address, while the daily email counter carries over. */
+  @Test
+  public void testUpdateProfileInvalidatesTokenOfOldEmail() {
+    emailValidationMapper.createEmailValidation(
+        new EmailValidation("cshzxie@gmail.com", "old-token", tomorrow(), 2, new Date()));
+    User user = userService.getUserUsingUid(1000);
+    Map<String, Boolean> result =
+        userService.updateProfile(
+            user, "new-address@example.com", "Haozhe Xie", "Beijing", "", "{}", "About me");
+    Assertions.assertTrue(result.get("isSuccessful"));
+
+    Assertions.assertNull(emailValidationMapper.getEmailValidation("cshzxie@gmail.com"));
+    Assertions.assertFalse(
+        userService.isEmailValidationValid("new-address@example.com", "old-token"));
+    Assertions.assertFalse(
+        userService
+            .resetPassword("new-address@example.com", "old-token", "new-password", "new-password")
+            .get("isSuccessful"));
+    EmailValidation moved = emailValidationMapper.getEmailValidation("new-address@example.com");
+    Assertions.assertNotNull(moved);
+    Assertions.assertNotEquals("old-token", moved.getToken());
+    Assertions.assertEquals(2, moved.getDailyCount());
+  }
+
+  /** Test case: tests the updateProfileByAdmin(...) method. Test data: a pending verification token for the old address, then an email change by an administrator. Expected: the token is not usable for the new address. */
+  @Test
+  public void testUpdateProfileByAdminInvalidatesTokenOfOldEmail() {
+    emailValidationMapper.createEmailValidation(
+        new EmailValidation("cshzxie@gmail.com", "old-token", tomorrow()));
+    User user = userService.getUserUsingUid(1000);
+    Map<String, Boolean> result =
+        userService.updateProfileByAdmin(user, "new-address@example.com", "Haozhe Xie", "");
+    Assertions.assertTrue(result.get("isSuccessful"));
+
+    Assertions.assertFalse(
+        userService.verifyEmail("new-address@example.com", "old-token").get("isSuccessful"));
+    Assertions.assertFalse(
+        userService.isEmailValidationValid("new-address@example.com", "old-token"));
+  }
+
   /** Enables the requireEmailVerification option within the current test transaction. */
   private void enableEmailVerificationRequirement() {
     Option option = optionMapper.getOption("requireEmailVerification");

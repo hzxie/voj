@@ -769,8 +769,7 @@ public class UserService {
 
     if (result.get("isSuccessful")) {
       boolean isEmailChanged = !email.equals(user.getEmail());
-      user.setEmail(email);
-      userMapper.updateUser(user);
+      changeEmailAndUpdateUser(user, email);
 
       updateUserMeta(user, "displayName", displayName);
       updateUserMeta(user, "location", location);
@@ -823,8 +822,7 @@ public class UserService {
 
     if (isSuccessful) {
       boolean isEmailChanged = !email.equals(user.getEmail());
-      user.setEmail(email);
-      userMapper.updateUser(user);
+      changeEmailAndUpdateUser(user, email);
 
       updateUserMeta(user, "displayName", displayName);
       updateUserMeta(user, "aboutMe", aboutMe);
@@ -877,6 +875,43 @@ public class UserService {
             && result.get("isAboutMeLegal");
     result.put("isSuccessful", isSuccessful);
     return result;
+  }
+
+  /**
+   * Sets the user's email address and persists the user, invalidating any pending email-validation
+   * token of the previous address.
+   *
+   * <p>voj_email_validation.email references voj_users.email with ON UPDATE CASCADE, so changing the
+   * address used to carry a token mailed to the old address over to the new one: whoever controlled
+   * the old address could then verify the new address, or reset the account's password, with it.
+   * The row of the old address is therefore replaced by one for the new address whose token is
+   * random and already expired. Its rate-limit counters are kept, so switching addresses back and
+   * forth does not reset the daily email limit.
+   *
+   * @param user - the user to update
+   * @param email - the (possibly unchanged) new email address
+   */
+  private void changeEmailAndUpdateUser(User user, String email) {
+    String oldEmail = user.getEmail();
+    EmailValidation oldEmailValidation = null;
+    if (oldEmail != null && !oldEmail.equals(email)) {
+      oldEmailValidation = emailValidationMapper.getEmailValidation(oldEmail);
+      if (oldEmailValidation != null) {
+        emailValidationMapper.deleteEmailValidation(oldEmail);
+      }
+    }
+    user.setEmail(email);
+    userMapper.updateUser(user);
+
+    if (oldEmailValidation != null) {
+      emailValidationMapper.createEmailValidation(
+          new EmailValidation(
+              email,
+              DigestUtils.getGuid(),
+              new Date(),
+              oldEmailValidation.getDailyCount(),
+              oldEmailValidation.getWindowStart()));
+    }
   }
 
   /**
