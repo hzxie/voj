@@ -260,6 +260,31 @@ public class ApplicationDispatcherTest {
   }
 
   /**
+   * Test case: tests the onAllTestPointsFinished method. Test data: several failing checkpoints
+   * with different verdicts. Expected result: the overall verdict is the first failing one.
+   */
+  @Test
+  public void testOnAllTestPointsFinishedReportsFirstFailure() {
+    when(submissionMapper.getSubmission(100L)).thenReturn(new Submission());
+    when(judgeResultMapper.getJudgeResultUsingSlug("TLE"))
+        .thenReturn(new JudgeResult(3, "TLE", "Time Limit Exceeded"));
+
+    List<Map<String, Object>> runtimeResults = new ArrayList<>();
+    runtimeResults.add(buildRuntimeResult("AC", 10, 128, 25));
+    runtimeResults.add(buildRuntimeResult("TLE", 1000, 128, 25));
+    runtimeResults.add(buildRuntimeResult("WA", 20, 128, 25));
+    runtimeResults.add(buildRuntimeResult("RE", 20, 128, 25));
+
+    applicationDispatcher.onAllTestPointsFinished(100L, runtimeResults);
+
+    ArgumentCaptor<Submission> submissionCaptor = ArgumentCaptor.forClass(Submission.class);
+    verify(submissionMapper).updateSubmission(submissionCaptor.capture());
+    Assertions.assertEquals("TLE", submissionCaptor.getValue().getJudgeResultSlug());
+    Assertions.assertEquals(25, submissionCaptor.getValue().getJudgeScore());
+    Assertions.assertEquals("Time Limit Exceeded", captureSentMessage().get("runtimeResult"));
+  }
+
+  /**
    * Builds a runtime-result map for a single checkpoint.
    *
    * @param slug - the unique English abbreviation of the judging result

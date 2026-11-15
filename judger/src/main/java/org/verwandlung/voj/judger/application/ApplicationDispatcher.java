@@ -150,7 +150,8 @@ public class ApplicationDispatcher {
       if ("AC".equals(currentRuntimeResultSlug)) {
         totalScore += score;
       }
-      if (!"AC".equals(currentRuntimeResultSlug)) {
+      // The overall verdict is that of the FIRST failing checkpoint (standard OJ behaviour).
+      if ("AC".equals(runtimeResultSlug) && !"AC".equals(currentRuntimeResultSlug)) {
         runtimeResultSlug = currentRuntimeResultSlug;
       }
     }
