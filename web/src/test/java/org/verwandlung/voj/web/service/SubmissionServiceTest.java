@@ -272,6 +272,28 @@ public class SubmissionServiceTest {
     Assertions.assertDoesNotThrow(() -> submissionService.createSubmissionTask(1000));
   }
 
+  /**
+   * Test case: tests the getNumberOfSubmissionsGroupByDay(...) method. Test data: a range starting
+   * mid-day on 2014-10-01 (the day of user 1000's submission #1000) and ending on 2014-10-03.
+   * Expected: one slot per day from the start day through the end day, in chronological order, with
+   * the start day's submission counted in its own slot.
+   */
+  @Test
+  public void testGetNumberOfSubmissionsGroupByDayIncludesStartDay() {
+    java.util.Calendar calendar = new java.util.GregorianCalendar(2014, 9, 1, 12, 0, 0);
+    java.util.Date startTime = calendar.getTime();
+    calendar.set(2014, 9, 3, 8, 0, 0);
+    java.util.Date endTime = calendar.getTime();
+
+    Map<String, Long> submissions =
+        submissionService.getNumberOfSubmissionsGroupByDay(startTime, endTime, 1000, false);
+
+    Assertions.assertEquals(
+        List.of("2014/10/01", "2014/10/02", "2014/10/03"), List.copyOf(submissions.keySet()));
+    Assertions.assertEquals(1L, submissions.get("2014/10/01"));
+    Assertions.assertEquals(0L, submissions.get("2014/10/02"));
+  }
+
   /** Constructs a User object with only the UID set, used as the submitting user argument. */
   private User userWithUid(long uid) {
     User user = new User();

@@ -103,15 +103,19 @@ public class SubmissionService {
    */
   public Map<String, Long> getNumberOfSubmissionsGroupByDay(
       Date startTime, Date endTime, long uid, boolean isAcceptedOnly) {
-    // Build an empty list covering the date range
+    // Build an empty, chronologically ordered slot for every day from the start day (whose
+    // submissions the query below includes from midnight on) through the end day.
     Map<String, Long> numberOfSubmissions = new LinkedHashMap<String, Long>();
+    SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd");
     Calendar calendar = new GregorianCalendar();
     calendar.setTime(startTime);
-    while (calendar.getTime().before(endTime)) {
-      SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd");
+    calendar.set(Calendar.HOUR_OF_DAY, 0);
+    calendar.set(Calendar.MINUTE, 0);
+    calendar.set(Calendar.SECOND, 0);
+    calendar.set(Calendar.MILLISECOND, 0);
+    while (!calendar.getTime().after(endTime)) {
+      numberOfSubmissions.put(sdf.format(calendar.getTime()), (long) 0);
       calendar.add(Calendar.DATE, 1);
-      Date targetDate = calendar.getTime();
-      numberOfSubmissions.put(sdf.format(targetDate), (long) 0);
     }
 
     String startTimeString = new SimpleDateFormat("yyyy-MM-dd 00:00:00").format(startTime);
