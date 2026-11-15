@@ -34,11 +34,13 @@ import org.springframework.transaction.annotation.Transactional;
 import org.verwandlung.voj.web.mapper.EmailValidationMapper;
 import org.verwandlung.voj.web.mapper.OptionMapper;
 import org.verwandlung.voj.web.mapper.UserMapper;
+import org.verwandlung.voj.web.mapper.UserMetaMapper;
 import org.verwandlung.voj.web.model.EmailValidation;
 import org.verwandlung.voj.web.model.Language;
 import org.verwandlung.voj.web.model.Option;
 import org.verwandlung.voj.web.model.User;
 import org.verwandlung.voj.web.model.UserGroup;
+import org.verwandlung.voj.web.model.UserMeta;
 
 /**
  * The test class for UserService.
@@ -307,6 +309,61 @@ public class UserServiceTest {
             "About me");
     Assertions.assertTrue(result.get("isSuccessful"));
     Assertions.assertEquals("Haozhe Xie", userService.getUserMetaUsingUid(user).get("displayName"));
+  }
+
+  /** Test case: tests the updateProfile (profile) method. Test data: social links that are not a JSON object of short strings. Expected: the update fails and nothing is stored. */
+  @Test
+  public void testUpdateProfileWithIllegalSocialLinks() {
+    String[] illegalSocialLinks = {
+      "x",
+      "[\"GitHub\"]",
+      "\"GitHub\"",
+      "{\"GitHub\": 1}",
+      "{\"GitHub\": {\"a\": \"b\"}}",
+      "{\"\": \"zjhzxhz\"}",
+      "{\"GitHub\": \"" + "a".repeat(65) + "\"}"
+    };
+    Object storedSocialLinks =
+        userService.getUserMetaUsingUid(userService.getUserUsingUid(1000)).get("socialLinks");
+    for (String socialLinks : illegalSocialLinks) {
+      User user = userService.getUserUsingUid(1000);
+      Map<String, Boolean> result =
+          userService.updateProfile(
+              user, "cshzxie@gmail.com", "Haozhe Xie", "Beijing", "", socialLinks, "About me");
+      Assertions.assertFalse(result.get("isSocialLinksLegal"), socialLinks);
+      Assertions.assertFalse(result.get("isSuccessful"), socialLinks);
+    }
+    Assertions.assertEquals(
+        storedSocialLinks,
+        userService.getUserMetaUsingUid(userService.getUserUsingUid(1000)).get("socialLinks"));
+  }
+
+  /** Test case: tests the updateProfile (profile) method. Test data: legal social links. Expected: they are stored and read back as a map. */
+  @Test
+  public void testUpdateProfileWithSocialLinks() {
+    User user = userService.getUserUsingUid(1000);
+    Map<String, Boolean> result =
+        userService.updateProfile(
+            user, "cshzxie@gmail.com", "Haozhe Xie", "Beijing", "",
+            "{\"GitHub\": \"hzxie\"}", "About me");
+    Assertions.assertTrue(result.get("isSuccessful"));
+    Assertions.assertEquals(
+        Map.of("GitHub", "hzxie"), userService.getUserMetaUsingUid(user).get("socialLinks"));
+  }
+
+  /** Test case: tests the getUserMetaUsingUid(...) method. Test data: malformed social links stored before they were validated on write. Expected: they are read as an empty map instead of failing. */
+  @Test
+  public void testGetUserMetaUsingUidToleratesMalformedSocialLinks() {
+    User user = userService.getUserUsingUid(1000);
+    UserMeta socialLinks = userMetaMapper.getUserMetaUsingUserAndMetaKey(user, "socialLinks");
+    if (socialLinks == null) {
+      userMetaMapper.createUserMeta(new UserMeta(user, "socialLinks", "x"));
+    } else {
+      socialLinks.setMetaValue("x");
+      userMetaMapper.updateUserMeta(socialLinks);
+    }
+    Assertions.assertEquals(
+        Collections.emptyMap(), userService.getUserMetaUsingUid(user).get("socialLinks"));
   }
 
   /** Test case: tests the updateProfile (profile) method. Test data: the email is already taken by another user. Expected: the update fails. */
@@ -600,6 +657,9 @@ public class UserServiceTest {
 
   /** The Mapper used to construct unassociated user data within the test transaction. */
   @Autowired private UserMapper userMapper;
+
+  /** The autowired UserMetaMapper object, used to seed raw meta values. */
+  @Autowired private UserMetaMapper userMetaMapper;
 
   /** The Mapper used to construct email validation credentials within the test transaction. */
   @Autowired private EmailValidationMapper emailValidationMapper;

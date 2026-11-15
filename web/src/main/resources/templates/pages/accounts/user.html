@@ -146,7 +146,7 @@
                             </div>
                             <div class="vw-pmodal-field">
                                 <label class="vw-label" for="edit-github" th:text="#{voj.accounts.user.github}">GitHub</label>
-                                <input class="vw-input" id="edit-github" type="text" placeholder="username"
+                                <input class="vw-input" id="edit-github" type="text" maxlength="64" placeholder="username"
                                        th:value="${socialLinks != null ? socialLinks['GitHub'] : ''}" />
                             </div>
                         </div>

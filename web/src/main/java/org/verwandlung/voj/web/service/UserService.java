@@ -22,6 +22,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -71,6 +72,18 @@ public class UserService {
    * missing or malformed.
    */
   private static final int DEFAULT_EMAIL_DAILY_LIMIT = 3;
+
+  /** The maximum length of the submitted social links JSON. */
+  private static final int MAX_SOCIAL_LINKS_LENGTH = 2048;
+
+  /** The maximum number of social links of a user. */
+  private static final int MAX_NUMBER_OF_SOCIAL_LINKS = 16;
+
+  /** The maximum length of a social network name (the key of a social link). */
+  private static final int MAX_SOCIAL_NETWORK_LENGTH = 32;
+
+  /** The maximum length of a social network handle (the value of a social link). */
+  private static final int MAX_SOCIAL_HANDLE_LENGTH = 64;
 
   /**
    * Gets a user object by its unique identifier.
@@ -163,7 +176,7 @@ public class UserService {
       Object value = userMeta.getMetaValue();
 
       if ("socialLinks".equals(key)) {
-        value = JsonUtils.toMap((String) value);
+        value = parseSocialLinks((String) value);
       } else if ("aboutMe".equals(key)) {
         // The bio is rendered as Markdown, so use the Markdown-safe variant (escaped asterisks).
         value = offensiveWordFilter.censorMarkdown((String) value);
@@ -182,6 +195,35 @@ public class UserService {
     // socialLinks['Facebook'] et al. resolving to null as the templates expect.
     userMetaMap.putIfAbsent("socialLinks", new HashMap<String, Object>());
     return userMetaMap;
+  }
+
+  /**
+   * Parses the stored social links of a user. A malformed value (stored before the links were
+   * validated on write) must not break the profile pages, so anything that is not a JSON object is
+   * treated as no links, and only string-valued entries are kept.
+   *
+   * @param socialLinks - the stored JSON representation of the social links
+   * @return a (possibly empty) map from the social network name to the user's handle
+   */
+  private static Map<String, Object> parseSocialLinks(String socialLinks) {
+    Map<String, Object> links = new HashMap<>();
+    if (socialLinks == null || socialLinks.isBlank()) {
+      return links;
+    }
+    try {
+      Map<String, Object> parsedLinks = JsonUtils.toMap(socialLinks);
+      if (parsedLinks != null) {
+        parsedLinks.forEach(
+            (network, handle) -> {
+              if (network != null && handle instanceof String) {
+                links.put(network, handle);
+              }
+            });
+      }
+    } catch (IllegalArgumentException ex) {
+      // Malformed JSON: fall back to no links.
+    }
+    return links;
   }
 
   /**
@@ -762,7 +804,7 @@ public class UserService {
     displayName = HtmlTextFilter.filter(displayName);
     location = HtmlTextFilter.filter(location);
     website = HtmlTextFilter.filter(website);
-    socialLinks = HtmlTextFilter.filter(socialLinks);
+    socialLinks = normalizeSocialLinks(socialLinks);
     aboutMe = HtmlTextFilter.filter(aboutMe);
     Map<String, Boolean> result =
         getUpdateProfileResult(user, email, displayName, location, website, socialLinks, aboutMe);
@@ -856,13 +898,14 @@ public class UserService {
       String website,
       String socialLinks,
       String aboutMe) {
-    Map<String, Boolean> result = new HashMap<>(8, 1);
+    Map<String, Boolean> result = new HashMap<>(9, 1);
     result.put("isEmailEmpty", email.isEmpty());
     result.put("isEmailLegal", isEmailLegal(email));
     result.put("isEmailExists", isEmailExists(user.getEmail(), email));
     result.put("isDisplayNameLegal", displayName.length() <= 64);
     result.put("isLocationLegal", location.length() <= 128);
     result.put("isWebsiteLegal", isWebsiteLegal(website));
+    result.put("isSocialLinksLegal", socialLinks != null);
     result.put("isAboutMeLegal", aboutMe.length() <= 256);
 
     boolean isSuccessful =
@@ -872,9 +915,52 @@ public class UserService {
             && result.get("isDisplayNameLegal")
             && result.get("isLocationLegal")
             && result.get("isWebsiteLegal")
+            && result.get("isSocialLinksLegal")
             && result.get("isAboutMeLegal");
     result.put("isSuccessful", isSuccessful);
     return result;
+  }
+
+  /**
+   * Validates and normalizes the submitted social links: they must be a JSON object of at most
+   * {@value #MAX_NUMBER_OF_SOCIAL_LINKS} entries mapping a non-empty network name (at most {@value
+   * #MAX_SOCIAL_NETWORK_LENGTH} characters) to a handle (at most {@value
+   * #MAX_SOCIAL_HANDLE_LENGTH} characters). An empty value means no links.
+   *
+   * @param socialLinks - the submitted JSON representation of the social links
+   * @return the sanitized JSON object to store, or null if the submitted value is illegal
+   */
+  private static String normalizeSocialLinks(String socialLinks) {
+    if (socialLinks == null || socialLinks.isBlank()) {
+      return "{}";
+    }
+    if (socialLinks.length() > MAX_SOCIAL_LINKS_LENGTH) {
+      return null;
+    }
+    Map<String, Object> links;
+    try {
+      links = JsonUtils.toMap(socialLinks);
+    } catch (IllegalArgumentException ex) {
+      return null;
+    }
+    if (links == null || links.size() > MAX_NUMBER_OF_SOCIAL_LINKS) {
+      return null;
+    }
+    Map<String, String> normalizedLinks = new LinkedHashMap<>();
+    for (Map.Entry<String, Object> link : links.entrySet()) {
+      if (!(link.getValue() instanceof String)) {
+        return null;
+      }
+      String network = HtmlTextFilter.filter(link.getKey());
+      String handle = HtmlTextFilter.filter((String) link.getValue());
+      if (network.isEmpty()
+          || network.length() > MAX_SOCIAL_NETWORK_LENGTH
+          || handle.length() > MAX_SOCIAL_HANDLE_LENGTH) {
+        return null;
+      }
+      normalizedLinks.put(network, handle);
+    }
+    return JsonUtils.toJsonString(normalizedLinks);
   }
 
   /**
