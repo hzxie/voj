@@ -22,17 +22,25 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.ConversionNotSupportedException;
+import org.springframework.beans.TypeMismatchException;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.ErrorResponse;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import org.verwandlung.voj.web.exception.ResourceNotFoundException;
 import org.verwandlung.voj.web.interceptor.CommonModelPopulator;
+import org.verwandlung.voj.web.util.LogSanitizer;
 
 /**
  * The controller for handling exceptions.
@@ -106,17 +114,97 @@ public class ExceptionHandlingController {
   }
 
   /**
-   * Handles general exceptions.
+   * Handles a request parameter or path variable that cannot be converted to the handler's argument
+   * type (e.g. {@code GET /p/abc} for a numeric problem id). A malformed path variable names a
+   * resource that cannot exist, so it is a 404; a malformed request parameter is a 400. Either way
+   * it is the client's mistake, not a server error, so it is neither logged as an error nor
+   * rendered as a 500.
    *
    * @param ex - the thrown exception object
    * @param request - the HttpRequest object
    * @param response - the HttpResponse object
    * @return a ModelAndView object containing the exception information
    */
-  @ResponseStatus(value = HttpStatus.INTERNAL_SERVER_ERROR)
+  @ExceptionHandler(TypeMismatchException.class)
+  public ModelAndView typeMismatchView(
+      TypeMismatchException ex, HttpServletRequest request, HttpServletResponse response) {
+    // No converter at all is a programming error rather than bad input.
+    if (ex instanceof ConversionNotSupportedException) {
+      return internalServerErrorView(ex, request, response);
+    }
+    boolean isPathVariable =
+        ex instanceof MethodArgumentTypeMismatchException
+            && ((MethodArgumentTypeMismatchException) ex)
+                .getParameter()
+                .hasParameterAnnotation(PathVariable.class);
+    return clientErrorView(
+        isPathVariable ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST, ex, request, response);
+  }
+
+  /**
+   * Handles a request body that cannot be read (e.g. malformed JSON) as a 400.
+   *
+   * @param ex - the thrown exception object
+   * @param request - the HttpRequest object
+   * @param response - the HttpResponse object
+   * @return a ModelAndView object containing the exception information
+   */
+  @ExceptionHandler(HttpMessageNotReadableException.class)
+  public ModelAndView messageNotReadableView(
+      HttpMessageNotReadableException ex,
+      HttpServletRequest request,
+      HttpServletResponse response) {
+    return clientErrorView(HttpStatus.BAD_REQUEST, ex, request, response);
+  }
+
+  /**
+   * Renders the error page for a client error (4xx) with the given status. Client errors are caused
+   * by the request, so they are only logged at debug level rather than as server errors.
+   *
+   * @param status - the HTTP status of the response
+   * @param ex - the thrown exception object
+   * @param request - the HttpRequest object
+   * @param response - the HttpResponse object
+   * @return a ModelAndView object containing the exception information
+   */
+  private ModelAndView clientErrorView(
+      HttpStatusCode status,
+      Exception ex,
+      HttpServletRequest request,
+      HttpServletResponse response) {
+    LOGGER.debug(
+        "Client error {} for {}: {}",
+        status.value(),
+        LogSanitizer.forLog(request.getRequestURI()),
+        LogSanitizer.forLog(ex.getMessage()));
+    if (response.isCommitted()) {
+      return null;
+    }
+    response.setStatus(status.value());
+    ModelAndView view = new ModelAndView("pages/errors/404");
+    view.setStatus(status);
+    commonModelPopulator.populate(view, request, response);
+    return view;
+  }
+
+  /**
+   * Handles general exceptions. Spring MVC exceptions that describe a client error (e.g. a missing
+   * request header, an unsupported media type or a failed argument validation) carry their 4xx
+   * status and are rendered as client errors; everything else is an unexpected server error (500).
+   *
+   * @param ex - the thrown exception object
+   * @param request - the HttpRequest object
+   * @param response - the HttpResponse object
+   * @return a ModelAndView object containing the exception information
+   */
   @ExceptionHandler(Exception.class)
   public ModelAndView internalServerErrorView(
       Exception ex, HttpServletRequest request, HttpServletResponse response) {
+    if (ex instanceof ErrorResponse
+        && ((ErrorResponse) ex).getStatusCode().is4xxClientError()) {
+      return clientErrorView(((ErrorResponse) ex).getStatusCode(), ex, request, response);
+    }
+    response.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
     // A committed response (e.g. an in-flight SSE/async stream whose send() failed because
     // the client disconnected) can no longer be turned into an HTML error page: Thymeleaf
     // would call response.getWriter() on a response whose OutputStream is already open and
@@ -133,6 +221,7 @@ public class ExceptionHandlingController {
     LOGGER.error("[request-id: {}] Unhandled exception", requestId, ex);
 
     ModelAndView view = new ModelAndView("pages/errors/500");
+    view.setStatus(HttpStatus.INTERNAL_SERVER_ERROR);
     commonModelPopulator.populate(view, request, response);
     view.addObject("requestId", requestId);
     return view;
