@@ -23,6 +23,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -77,6 +78,7 @@ public class DispatcherTest {
 
     Assertions.assertThrows(
         IllgealSubmissionException.class, () -> dispatcher.createNewTask(404L));
+    verify(submissionMapper, times(1 + Dispatcher.SUBMISSION_FETCH_RETRIES)).getSubmission(404L);
     verify(compiler, never()).getCompileResult(any(), anyString(), anyString());
   }
 
@@ -100,8 +102,14 @@ public class DispatcherTest {
         .thenReturn(runtimeResult("AC"));
     when(comparator.getComparisonResult(anyString(), anyString(), anyBoolean())).thenReturn("AC");
 
+    long startNanos = System.nanoTime();
     dispatcher.createNewTask(100L);
 
+    // The submission is committed before the task is queued: it is fetched once, without waiting.
+    verify(submissionMapper, times(1)).getSubmission(100L);
+    Assertions.assertTrue(
+        System.nanoTime() - startNanos < java.util.concurrent.TimeUnit.MILLISECONDS.toNanos(900),
+        "An existing submission must be judged without an artificial delay.");
     verify(applicationDispatcher).onCompileFinished(eq(100L), any());
     verify(applicationDispatcher).onOneTestPointFinished(eq(100L), eq(1), any());
 
