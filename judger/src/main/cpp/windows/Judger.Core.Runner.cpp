@@ -26,6 +26,7 @@
 
 #include <windows.h>
 #include <userenv.h>
+#include <psapi.h>
 
 #include "../org_verwandlung_voj_jni_hashmap.h"
 #include "../org_verwandlung_voj_jni_library.h"
@@ -62,8 +63,8 @@ bool setupIoRedirection(const std::wstring&, const std::wstring&, HANDLE&, HANDL
 void setupStartupInfo(STARTUPINFOW&, HANDLE&, HANDLE&, HANDLE&);
 HANDLE createJobObject(DWORD);
 bool createProcess(const std::wstring&, const std::wstring&, const std::wstring&, HANDLE&, LPVOID&, STARTUPINFOW&, PROCESS_INFORMATION&);
-jint getPeakMemoryUsage(HANDLE& hJob);
-jint getCpuTimeUsage(HANDLE& hProcess);
+jint getPeakMemoryUsage(HANDLE& hJob, HANDLE& hProcess);
+jint getCpuTimeUsage(HANDLE& hJob, HANDLE& hProcess, bool includeChildren);
 DWORD getExitCode(HANDLE& hProcess);
 unsigned long long fileTimeToUll(const FILETIME&);
 std::string getErrorMessage(const std::string&);
@@ -112,8 +113,55 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     jint                memoryUsage         = 0;
     DWORD               exitCode            = 127;
 
+    // Releases everything acquired so far. Every early exit below goes through it: a pending Java
+    // exception does not stop this function, so each failure must clean up and return explicitly
+    // instead of carrying on with invalid handles.
+    auto cleanup = [&]() {
+        if ( lpEnvironment != NULL ) {
+            DestroyEnvironmentBlock(lpEnvironment);
+            lpEnvironment = NULL;
+        }
+        if ( hToken != NULL ) {
+            CloseHandle(hToken);
+            hToken = NULL;
+        }
+        if ( processInfo.hThread != NULL ) {
+            CloseHandle(processInfo.hThread);
+            processInfo.hThread = NULL;
+        }
+        if ( processInfo.hProcess != NULL ) {
+            CloseHandle(processInfo.hProcess);
+            processInfo.hProcess = NULL;
+        }
+        // Closing the job kills any surviving processes in it (JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE).
+        if ( hJob != NULL ) {
+            CloseHandle(hJob);
+            hJob = NULL;
+        }
+        if ( hInput != NULL ) {
+            CloseHandle(hInput);
+            hInput = NULL;
+        }
+        if ( hError != NULL && hError != hOutput ) {
+            CloseHandle(hError);
+        }
+        hError = NULL;
+        if ( hOutput != NULL ) {
+            CloseHandle(hOutput);
+            hOutput = NULL;
+        }
+    };
+    // Reports a failed Windows API call as a Java exception and releases everything. The error
+    // message is read before cleaning up, which would overwrite GetLastError().
+    auto fail = [&](const std::string& apiName) -> jobject {
+        std::string message = getErrorMessage(apiName);
+        cleanup();
+        throwStringException(jniEnv, message);
+        return NULL;
+    };
+
     if ( !setupIoRedirection(inputFilePath, outputFilePath, hInput, hOutput) ) {
-        throwStringException(jniEnv, getErrorMessage("SetupIoRedirection"));
+        return fail("SetupIoRedirection");
     }
     // A compilation's diagnostics (stderr) are the compile log, but a submission's stderr must never
     // reach the judged output: discard it.
@@ -132,17 +180,36 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     // The Job Object enforces the active-process limit (anti fork bomb) and the UI restrictions, and
     // kills the whole process tree atomically when it is closed. The memory limit is enforced below
     // by polling the Job's peak accounting (a soft limit), not the Job's hard ProcessMemoryLimit.
+    // Without a Job none of this holds, so the run is refused rather than started unconfined.
     hJob = createJobObject(processLimit > 0 ? (DWORD) processLimit : ACTIVE_PROCESS_LIMIT);
+    if ( hJob == NULL ) {
+        return fail("CreateJobObject");
+    }
 
     // The process is created suspended, assigned to the Job Object before it runs a single
     // instruction, and only then resumed - so the limits are in force from the very beginning.
     if ( !createProcess(commandLine, username, password, hToken, lpEnvironment, startupInfo, processInfo) ) {
-        throwStringException(jniEnv, getErrorMessage("CreateProcess"));
+        return fail("CreateProcess");
     }
-    if ( hJob != NULL ) {
-        AssignProcessToJobObject(hJob, processInfo.hProcess);
+    // If the assignment fails the process would run outside the Job: without the process limit,
+    // without the kill-on-close guarantee, and with the Job reporting no memory at all (a memory
+    // bomb would be judged Accepted). Kill it while it is still suspended and refuse the run.
+    if ( !AssignProcessToJobObject(hJob, processInfo.hProcess) ) {
+        std::string message = getErrorMessage("AssignProcessToJobObject");
+        TerminateProcess(processInfo.hProcess, 1);
+        WaitForSingleObject(processInfo.hProcess, INFINITE);
+        cleanup();
+        throwStringException(jniEnv, message);
+        return NULL;
     }
-    ResumeThread(processInfo.hThread);
+    if ( ResumeThread(processInfo.hThread) == (DWORD) -1 ) {
+        std::string message = getErrorMessage("ResumeThread");
+        TerminateJobObject(hJob, 1);
+        WaitForSingleObject(processInfo.hProcess, INFINITE);
+        cleanup();
+        throwStringException(jniEnv, message);
+        return NULL;
+    }
 
     // Poll while the child runs: enforce the memory limit as a soft limit (let the peak rise just
     // above the limit, then kill, so the run is classified as MLE) and apply a wall-clock guard for a
@@ -152,34 +219,38 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     bool      memoryExceeded      = false;
     ULONGLONG startTick           = GetTickCount64();
     for ( ;; ) {
-        if ( WaitForSingleObject(processInfo.hProcess, MEMORY_POLL_INTERVAL_MS) == WAIT_OBJECT_0 ) {
+        DWORD waitResult = WaitForSingleObject(processInfo.hProcess, MEMORY_POLL_INTERVAL_MS);
+        if ( waitResult == WAIT_OBJECT_0 ) {
             break; // the process exited on its own
         }
-        if ( memoryLimit > 0 && getPeakMemoryUsage(hJob) > memoryLimit ) {
+        if ( waitResult == WAIT_FAILED ) {
+            // Never spin on a handle that cannot be waited on: kill the run and report the error.
+            std::string message = getErrorMessage("WaitForSingleObject");
+            TerminateJobObject(hJob, 1);
+            cleanup();
+            throwStringException(jniEnv, message);
+            return NULL;
+        }
+        if ( memoryLimit > 0 && getPeakMemoryUsage(hJob, processInfo.hProcess) > memoryLimit ) {
             memoryExceeded = true;
-            if ( hJob != NULL ) {
-                TerminateJobObject(hJob, 1);
-            } else {
-                TerminateProcess(processInfo.hProcess, 1);
-            }
+            TerminateJobObject(hJob, 1);
             WaitForSingleObject(processInfo.hProcess, INFINITE);
             break;
         }
         if ( waitTimeout != INFINITE && GetTickCount64() - startTick > (ULONGLONG) waitTimeout ) {
             killedByWallTimeout = true;
-            if ( hJob != NULL ) {
-                TerminateJobObject(hJob, 1);
-            } else {
-                TerminateProcess(processInfo.hProcess, 1);
-            }
+            TerminateJobObject(hJob, 1);
             WaitForSingleObject(processInfo.hProcess, INFINITE);
             break;
         }
     }
 
     exitCode    = getExitCode(processInfo.hProcess);
-    timeUsage   = getCpuTimeUsage(processInfo.hProcess);
-    memoryUsage = getPeakMemoryUsage(hJob); // the Job's peak accounting persists after the process exits
+    // A run is charged for the CPU of every process it started; a compilation is not, because build
+    // tools legitimately run several processes in parallel (matching the Linux runner).
+    timeUsage   = getCpuTimeUsage(hJob, processInfo.hProcess, !isCompilation);
+    // Both the Job's and the process's peak accounting persist after the process exits.
+    memoryUsage = getPeakMemoryUsage(hJob, processInfo.hProcess);
 
     // A process killed for exceeding the wall-clock guard consumes little CPU, so force the reported
     // time to the limit, ensuring the Java side classifies it as a Time Limit Exceeded.
@@ -192,27 +263,7 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
         memoryUsage = memoryLimit;
     }
 
-    if ( lpEnvironment != NULL ) {
-        DestroyEnvironmentBlock(lpEnvironment);
-    }
-    if ( hToken != NULL ) {
-        CloseHandle(hToken);
-    }
-    CloseHandle(processInfo.hThread);
-    CloseHandle(processInfo.hProcess);
-    // Closing the job kills any surviving processes in it (JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE).
-    if ( hJob != NULL ) {
-        CloseHandle(hJob);
-    }
-    if ( hInput != NULL ) {
-        CloseHandle(hInput);
-    }
-    if ( hError != NULL && hError != hOutput ) {
-        CloseHandle(hError);
-    }
-    if ( hOutput != NULL ) {
-        CloseHandle(hOutput);
-    }
+    cleanup();
 
     result.put("usedTime", timeUsage);
     result.put("usedMemory", memoryUsage);
@@ -275,7 +326,7 @@ void setupStartupInfo(STARTUPINFOW& startupInfo, HANDLE& hInput, HANDLE& hOutput
  * whole tree when closed. No hard memory limit is set: memory is enforced by polling the Job's peak
  * accounting (see the run loop), which the Job tracks regardless of whether a memory limit is set.
  * @param  activeProcessLimit - the maximum number of processes that may be active in the Job
- * @return the Job Object handle, or NULL on failure
+ * @return the Job Object handle, or NULL on failure (GetLastError() tells why)
  */
 HANDLE createJobObject(DWORD activeProcessLimit) {
     HANDLE hJob = CreateJobObjectW(NULL, NULL);
@@ -288,7 +339,13 @@ HANDLE createJobObject(DWORD activeProcessLimit) {
         JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE | JOB_OBJECT_LIMIT_DIE_ON_UNHANDLED_EXCEPTION |
         JOB_OBJECT_LIMIT_ACTIVE_PROCESS;
     jeli.BasicLimitInformation.ActiveProcessLimit = activeProcessLimit;
-    SetInformationJobObject(hJob, JobObjectExtendedLimitInformation, &jeli, sizeof(jeli));
+    if ( !SetInformationJobObject(hJob, JobObjectExtendedLimitInformation, &jeli, sizeof(jeli)) ) {
+        // Without these limits the Job would neither cap the process count nor kill the tree.
+        DWORD errorCode = GetLastError();
+        CloseHandle(hJob);
+        SetLastError(errorCode);
+        return NULL;
+    }
 
     // Cut the sandboxed program off from the interactive desktop (clipboard, global atoms, etc.).
     JOBOBJECT_BASIC_UI_RESTRICTIONS uiRestrictions = {0};
@@ -348,20 +405,29 @@ bool createProcess(const std::wstring& commandLine, const std::wstring& username
 }
 
 /**
- * Gets the peak memory usage from the Job Object's accounting.
- * @param  hJob - the Job Object handle
- * @return the peak physical memory usage (KB)
+ * Gets the peak memory usage of the run: the larger of the Job Object's peak (the most any process
+ * in the Job ever committed) and the main process's own peak commit. The process's counter is an
+ * independent second source, so a failed Job query can never make a run look like it used nothing.
+ * @param  hJob     - the Job Object handle
+ * @param  hProcess - the main process handle
+ * @return the peak memory usage (KB)
  */
-jint getPeakMemoryUsage(HANDLE& hJob) {
-    if ( hJob == NULL ) {
-        return 0;
-    }
+jint getPeakMemoryUsage(HANDLE& hJob, HANDLE& hProcess) {
+    unsigned long long peakBytes = 0;
     JOBOBJECT_EXTENDED_LIMIT_INFORMATION jeli = {0};
-    if ( !QueryInformationJobObject(hJob, JobObjectExtendedLimitInformation,
+    if ( hJob != NULL && QueryInformationJobObject(hJob, JobObjectExtendedLimitInformation,
             &jeli, sizeof(jeli), NULL) ) {
-        return 0;
+        peakBytes = (unsigned long long) jeli.PeakProcessMemoryUsed;
     }
-    unsigned long long peakKb = (unsigned long long)jeli.PeakProcessMemoryUsed >> 10;
+    PROCESS_MEMORY_COUNTERS counters = {0};
+    counters.cb = sizeof(counters);
+    if ( hProcess != NULL && GetProcessMemoryInfo(hProcess, &counters, sizeof(counters)) ) {
+        unsigned long long processPeak = (unsigned long long) counters.PeakPagefileUsage;
+        if ( processPeak > peakBytes ) {
+            peakBytes = processPeak;
+        }
+    }
+    unsigned long long peakKb = peakBytes >> 10;
     if ( peakKb > (unsigned long long)INT32_MAX ) {
         return INT32_MAX;
     }
@@ -369,17 +435,31 @@ jint getPeakMemoryUsage(HANDLE& hJob) {
 }
 
 /**
- * Gets the CPU time (user + kernel) used by the process.
- * @param  hProcess - the process handle
+ * Gets the CPU time (user + kernel) used by the run: the main process's own time or, when children
+ * are included, the Job's total over every process that ever ran in it (so CPU burnt in child
+ * processes counts too), whichever is larger.
+ * @param  hJob             - the Job Object handle
+ * @param  hProcess         - the main process handle
+ * @param  includeChildren  - whether to charge the CPU time of the other processes in the Job
  * @return the CPU time used (ms)
  */
-jint getCpuTimeUsage(HANDLE& hProcess) {
+jint getCpuTimeUsage(HANDLE& hJob, HANDLE& hProcess, bool includeChildren) {
+    unsigned long long cpu100ns = 0;
     FILETIME creationTime, exitTime, kernelTime, userTime;
-    if ( !GetProcessTimes(hProcess, &creationTime, &exitTime, &kernelTime, &userTime) ) {
-        return 0;
+    if ( GetProcessTimes(hProcess, &creationTime, &exitTime, &kernelTime, &userTime) ) {
+        // FILETIME is measured in 100-nanosecond intervals.
+        cpu100ns = fileTimeToUll(kernelTime) + fileTimeToUll(userTime);
     }
-    // FILETIME is measured in 100-nanosecond intervals.
-    unsigned long long cpu100ns = fileTimeToUll(kernelTime) + fileTimeToUll(userTime);
+    JOBOBJECT_BASIC_ACCOUNTING_INFORMATION accounting = {0};
+    if ( includeChildren && hJob != NULL &&
+            QueryInformationJobObject(hJob, JobObjectBasicAccountingInformation,
+            &accounting, sizeof(accounting), NULL) ) {
+        unsigned long long jobCpu100ns = (unsigned long long) accounting.TotalUserTime.QuadPart +
+            (unsigned long long) accounting.TotalKernelTime.QuadPart;
+        if ( jobCpu100ns > cpu100ns ) {
+            cpu100ns = jobCpu100ns;
+        }
+    }
     unsigned long long cpuMs = cpu100ns / 10000ULL;
     if ( cpuMs > (unsigned long long)INT32_MAX ) {
         return INT32_MAX;
