@@ -30,7 +30,7 @@
                 <form class="vw-filters-difficulty" method="GET" th:action="@{/p}">
                     <input type="hidden" name="field" th:value="${field}" />
                     <input type="hidden" name="query" th:value="${query}" />
-                    <select name="difficulty" class="vw-filter-select" onchange="this.form.submit();">
+                    <select name="difficulty" class="vw-filter-select" data-autosubmit>
                         <option value="" th:text="#{voj.problems.problems.all-difficulties}">All Levels</option>
                         <option th:each="problemDifficulty : ${problemDifficulties}" th:value="${problemDifficulty.problemDifficultySlug}" th:selected="${problemDifficulty.problemDifficultySlug == selectedProblemDifficulty}" th:text="${problemDifficulty.problemDifficultyName}">Level</option>
                     </select>

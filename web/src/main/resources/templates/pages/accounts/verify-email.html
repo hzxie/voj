@@ -22,9 +22,9 @@
                         <span class="vw-card-title">auth &mdash; verify.sh</span>
                     </div>
                     <div class="vw-card-body">
-                        <div class="vw-alert vw-alert-success" th:if="${isVerified}"
+                        <div class="vw-alert vw-alert-success" role="status" th:if="${isVerified}"
                              th:text="#{voj.accounts.verify-email.verified}">Your email address has been verified. You can now submit solutions.</div>
-                        <div class="vw-alert vw-alert-error" th:unless="${isVerified}"
+                        <div class="vw-alert vw-alert-error" role="alert" th:unless="${isVerified}"
                              th:text="#{voj.accounts.verify-email.invalid-token}">This verification link is invalid or has expired.</div>
                     </div>
                 </div>

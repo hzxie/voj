@@ -154,7 +154,7 @@
                         $('#execute-time').html(getFormatedDateString(submission['executeTime'], [[${language}]]));
                         $('#judge-log').html(renderMarkdown(submission['judgeLog']));
                         if ( submission['judger'] ) {
-                            $('#judger-name').html(submission['judger']['username']);
+                            $('#judger-name').text(submission['judger']['username']);
                         }
                         clearInterval(getterInterval);
                     }

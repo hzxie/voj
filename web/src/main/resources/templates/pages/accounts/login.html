@@ -23,20 +23,20 @@
                         <span class="vw-card-title">auth &mdash; login.sh</span>
                     </div>
                     <div class="vw-card-body">
-                        <div class="vw-alert vw-alert-error alert-error hide"></div>
-                        <div class="vw-alert vw-alert-success alert-success" th:if="${isLogout}" th:text="#{voj.accounts.login.sign-out}">You are now logged out.</div>
+                        <div class="vw-alert vw-alert-error alert-error hide" role="alert"></div>
+                        <div class="vw-alert vw-alert-success alert-success" role="status" th:if="${isLogout}" th:text="#{voj.accounts.login.sign-out}">You are now logged out.</div>
 
-                        <form id="login-form" method="POST" onsubmit="onSubmit(); return false;">
+                        <form id="login-form" method="POST">
                             <div class="vw-formrow">
                                 <label class="vw-label" for="username" th:text="#{voj.accounts.login.username}">Username / Email</label>
-                                <div class="vw-field"><span class="sigil">$</span><input id="username" name="username" type="text" maxlength="32" autocomplete="username" /></div>
+                                <div class="vw-field"><span class="sigil">$</span><input id="username" name="username" type="text" maxlength="32" autocomplete="username" spellcheck="false" autocapitalize="off" required /></div>
                             </div>
                             <div class="vw-formrow">
                                 <label class="vw-label" for="password">
                                     <span th:text="#{voj.accounts.login.password}">Password</span>
                                     <a th:href="@{/accounts/reset-password}" th:text="#{voj.accounts.login.forgot-password}">Forgot password?</a>
                                 </label>
-                                <input id="password" class="vw-input" name="password" type="password" maxlength="16" autocomplete="current-password" />
+                                <input id="password" class="vw-input" name="password" type="password" maxlength="16" autocomplete="current-password" required />
                             </div>
                             <div class="vw-formrow">
                                 <label class="vw-check" for="remember-me">
@@ -62,6 +62,10 @@
     <th:block layout:fragment="scripts">
     <script th:if="${turnstileEnabled == '1'}" src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&amp;onload=onTurnstileLoad" async defer></script>
     <script type="text/javascript" th:inline="javascript">
+        $('#login-form').on('submit', function(e) {
+            e.preventDefault();
+            onSubmit();
+        });
         function onSubmit() {
             $('.alert-success').addClass('hide');
             $('.alert-error').addClass('hide');

@@ -22,24 +22,24 @@
                         <span class="vw-card-title">auth &mdash; register.sh</span>
                     </div>
                     <div class="vw-card-body">
-                        <div class="vw-alert vw-alert-error alert-error hide"></div>
+                        <div class="vw-alert vw-alert-error alert-error hide" role="alert"></div>
                         <div class="vw-alert vw-alert-warning" th:unless="${isAllowRegister}">
                             <h5 th:text="#{voj.accounts.register.registration-closed}">Online Registration Closed</h5>
                             <p th:text="#{voj.accounts.register.registration-closed-message}">Online registration is now closed.</p>
                         </div>
 
-                        <form id="register-form" method="POST" onsubmit="onSubmit(); return false;" th:if="${isAllowRegister}">
+                        <form id="register-form" method="POST" th:if="${isAllowRegister}">
                             <div class="vw-formrow">
                                 <label class="vw-label" for="username" th:text="#{voj.accounts.register.username}">Username</label>
-                                <div class="vw-field"><span class="sigil">$</span><input id="username" name="username" type="text" maxlength="16" autocomplete="username" /></div>
+                                <div class="vw-field"><span class="sigil">$</span><input id="username" name="username" type="text" maxlength="16" autocomplete="username" spellcheck="false" autocapitalize="off" required /></div>
                             </div>
                             <div class="vw-formrow">
                                 <label class="vw-label" for="email" th:text="#{voj.accounts.register.email}">Email</label>
-                                <input id="email" class="vw-input" name="email" type="text" maxlength="64" autocomplete="email" />
+                                <input id="email" class="vw-input" name="email" type="email" maxlength="64" autocomplete="email" required />
                             </div>
                             <div class="vw-formrow">
                                 <label class="vw-label" for="password" th:text="#{voj.accounts.register.password}">Password</label>
-                                <input id="password" class="vw-input" name="password" type="password" maxlength="16" autocomplete="new-password" />
+                                <input id="password" class="vw-input" name="password" type="password" maxlength="16" autocomplete="new-password" required />
                             </div>
                             <div class="vw-formrow">
                                 <label class="vw-label" for="language-preference" th:text="#{voj.accounts.register.language-preference}">Language Preference</label>
@@ -70,6 +70,10 @@
     <th:block th:if="${isAllowRegister}">
     <script th:if="${turnstileEnabled == '1'}" src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&amp;onload=onTurnstileLoad" async defer></script>
     <script type="text/javascript" th:inline="javascript">
+        $('#register-form').on('submit', function(e) {
+            e.preventDefault();
+            onSubmit();
+        });
         function onSubmit() {
             $('.alert-error').addClass('hide');
             $('button[type=submit]').attr('disabled', 'disabled');

@@ -47,7 +47,7 @@
                     <!-- POSTS (replies) -->
                     <div id="discussion-replies" class="vw-posts"></div>
                     <div id="more-discussion-replies" class="vw-loadmore">
-                        <p class="availble"><a href="javascript:void(0);" th:text="#{voj.discussion.thread.more-replies}">More Replies...</a></p>
+                        <p class="availble"><button type="button" class="vw-loadmore-btn" th:text="#{voj.discussion.thread.more-replies}">More Replies...</button></p>
                         <span class="vw-spinner hide" role="status" aria-label="Loading"></span>
                     </div>
 
@@ -55,7 +55,7 @@
                     <div class="vw-alert vw-alert-warning" th:if="${discussionThread.locked}" th:text="#{voj.discussion.thread.thread-locked}">This thread is locked and no longer accepts new replies.</div>
                     <div id="editor" class="vw-replybox" th:if="${isLogin and !discussionThread.locked}">
                         <div class="vw-eyebrow vw-side-label vw-side-label-accent" th:text="'// ' + #{voj.discussion.thread.leave-a-comment}">// YOUR REPLY</div>
-                        <div class="vw-alert vw-alert-error alert-error hide"></div>
+                        <div class="vw-alert vw-alert-error alert-error hide" role="alert"></div>
                         <div class="markdown-editor">
                             <textarea id="wmd-input" class="wmd-input"></textarea>
                         </div>
@@ -179,20 +179,20 @@
                 isAuthor = creator['uid'] == [[${myProfile?.uid}]],
                 isMine   = isAuthor || [[${myProfile?.userGroup?.userGroupSlug}]] == 'administrators';
             var actions = isMine
-                ? '<a href="javascript:void(0);" class="vw-post-edit" title="' + [[#{voj.discussion.thread.edit}]] + '">' + [[#{voj.discussion.thread.edit}]] + '</a>' +
-                  '<a href="javascript:void(0);" class="vw-post-delete" title="' + [[#{voj.discussion.thread.delete}]] + '">' + [[#{voj.discussion.thread.delete}]] + '</a>'
+                ? '<button type="button" class="vw-post-edit" title="' + [[#{voj.discussion.thread.edit}]] + '">' + [[#{voj.discussion.thread.edit}]] + '</button>' +
+                  '<button type="button" class="vw-post-delete" title="' + [[#{voj.discussion.thread.delete}]] + '">' + [[#{voj.discussion.thread.delete}]] + '</button>'
                 : '';
             // Users cannot vote on or report their own reply, so those controls are hidden there.
             var voteButtons = isAuthor ? '' :
-                '<a href="javascript:void(0);" class="vw-post-vote vw-vote-up' + (reply['isVotedUp'] ? ' active' : '') + '">&#9650; <span class="vote-ups">' + (reply['numberOfVoteUp'] || 0) + '</span></a>' +
-                '<a href="javascript:void(0);" class="vw-post-vote vw-vote-down' + (reply['isVotedDown'] ? ' active' : '') + '">&#9660; <span class="vote-downs">' + (reply['numberOfVoteDown'] || 0) + '</span></a>';
+                '<button type="button" class="vw-post-vote vw-vote-up' + (reply['isVotedUp'] ? ' active' : '') + '">&#9650; <span class="vote-ups">' + (reply['numberOfVoteUp'] || 0) + '</span></button>' +
+                '<button type="button" class="vw-post-vote vw-vote-down' + (reply['isVotedDown'] ? ' active' : '') + '">&#9660; <span class="vote-downs">' + (reply['numberOfVoteDown'] || 0) + '</span></button>';
             var reportLink = '';
             /*[# th:if="${isLogin}"]*/
             var editor = '<div class="markdown-editor hide">' +
                          '<textarea id="wmd-input-' + replyId + '" class="wmd-input">' + escapeHtml(content) + '</textarea>' +
                          '<div class="vw-replybox-foot"><button class="vw-btn vw-btn-accent vw-btn-sm vw-reply-save">' + [[#{voj.discussion.thread.update-reply}]] + '</button>' +
                          '<button class="vw-btn vw-btn-sm vw-reply-cancel">' + [[#{voj.discussion.thread.cancel}]] + '</button></div></div>';
-            if ( !isAuthor ) { reportLink = '<a href="javascript:void(0);" class="vw-post-report" title="report">' + [[#{voj.discussion.thread.report}]] + '</a>'; }
+            if ( !isAuthor ) { reportLink = '<button type="button" class="vw-post-report" title="report">' + [[#{voj.discussion.thread.report}]] + '</button>'; }
             /*[/]*/
             /*[# th:unless="${isLogin}"]*/
             var editor = '';
@@ -245,9 +245,9 @@
                 dataType: 'JSON',
                 success: function(result) {
                     if ( !result['isSuccessful'] ) {
-                        if ( result['isReputationEnough'] === false ) { alert([[#{voj.discussion.thread.vote-need-reputation}]].replace('{0}', [[${minSolvedToVote}]])); }
-                        else if ( result['isNotSelfVote'] === false ) { alert([[#{voj.discussion.thread.cannot-vote-self}]]); }
-                        else { alert([[#{voj.discussion.thread.failed-to-vote}]]); }
+                        if ( result['isReputationEnough'] === false ) { vojAlert([[#{voj.discussion.thread.vote-need-reputation}]].replace('{0}', [[${minSolvedToVote}]])); }
+                        else if ( result['isNotSelfVote'] === false ) { vojAlert([[#{voj.discussion.thread.cannot-vote-self}]]); }
+                        else { vojAlert([[#{voj.discussion.thread.failed-to-vote}]]); }
                         return;
                     }
                     var post = $('.vw-post[data-value=' + replyId + ']'),
@@ -261,23 +261,25 @@
             });
         }
         $('#discussion-replies').on('click', '.vw-post-report', function() {
-            if ( !confirm([[#{voj.discussion.thread.report-confirm}]]) ) { return; }
             var link = $(this), post = link.closest('.vw-post'), id = post.attr('data-value');
-            $.ajax({
-                type: 'POST',
-                url: [[@{/discussion/{tid}/reportDiscussionReply.action(tid=${discussionThread.discussionThreadId})}]],
-                data: { 'discussionReplyId': id, 'csrfToken': $('#csrf-token').val() },
-                dataType: 'JSON',
-                success: function(result) {
-                    if ( result['isSuccessful'] ) {
-                        link.removeClass('vw-post-report').addClass('vw-post-reported is-reported')
-                            .removeAttr('title').text([[#{voj.discussion.thread.report-done}]]);
-                        return;
+            vojConfirm([[#{voj.discussion.thread.report-confirm}]]).then(function(ok) {
+                if ( !ok ) { return; }
+                $.ajax({
+                    type: 'POST',
+                    url: [[@{/discussion/{tid}/reportDiscussionReply.action(tid=${discussionThread.discussionThreadId})}]],
+                    data: { 'discussionReplyId': id, 'csrfToken': $('#csrf-token').val() },
+                    dataType: 'JSON',
+                    success: function(result) {
+                        if ( result['isSuccessful'] ) {
+                            link.removeClass('vw-post-report').addClass('vw-post-reported is-reported')
+                                .removeAttr('title').text([[#{voj.discussion.thread.report-done}]]);
+                            return;
+                        }
+                        if ( result['isReputationEnough'] === false ) { vojAlert([[#{voj.discussion.thread.report-need-reputation}]].replace('{0}', [[${minSolvedToReport}]])); return; }
+                        if ( result['isNotSelfReport'] === false ) { vojAlert([[#{voj.discussion.thread.cannot-report-self}]]); return; }
+                        vojAlert([[#{voj.discussion.thread.failed-to-report}]]);
                     }
-                    if ( result['isReputationEnough'] === false ) { alert([[#{voj.discussion.thread.report-need-reputation}]].replace('{0}', [[${minSolvedToReport}]])); return; }
-                    if ( result['isNotSelfReport'] === false ) { alert([[#{voj.discussion.thread.cannot-report-self}]]); return; }
-                    alert([[#{voj.discussion.thread.failed-to-report}]]);
-                }
+                });
             });
         });
         $('#discussion-replies').on('click', '.vw-post-edit', function() {
@@ -302,7 +304,7 @@
                         editor.addClass('hide');
                         $('.vw-post-body', post).html(renderMarkdown(content)).removeClass('hide');
                         typesetMath($('.vw-post-body', post)[0]);
-                    } else { alert([[#{voj.discussion.thread.failed-to-update}]]); }
+                    } else { vojAlert([[#{voj.discussion.thread.failed-to-update}]]); }
                     $('.vw-reply-save', post).removeAttr('disabled').html([[#{voj.discussion.thread.update-reply}]]);
                 }
             });
@@ -312,23 +314,24 @@
             $('.markdown-editor', post).addClass('hide'); $('.vw-post-body', post).removeClass('hide');
         });
         $('#discussion-replies').on('click', '.vw-post-delete', function() {
-            if ( !confirm([[#{voj.discussion.thread.continue-or-not}]]) ) { return; }
-            var post = $(this).closest('.vw-post'), id = post.attr('data-value'),
-                n = parseInt($('#number-of-comments').html());
-            $.ajax({
-                type: 'POST',
-                url: [[@{/discussion/{tid}/deleteDiscussionReply.action(tid=${discussionThread.discussionThreadId})}]],
-                data: { 'discussionReplyId': id, 'csrfToken': $('#csrf-token').val() },
-                dataType: 'JSON',
-                success: function(result) {
-                    if ( result['isSuccessful'] ) {
-                        post.remove();
-                        $('#number-of-comments').html(n - 1);
-                        // A deleted reply that was part of a loaded page shifts the later ones back by one.
-                        if ( serverReplyIds[id] ) { delete serverReplyIds[id]; replyOffset = Math.max(0, replyOffset - 1); }
+            var post = $(this).closest('.vw-post'), id = post.attr('data-value');
+            vojConfirm([[#{voj.discussion.thread.continue-or-not}]]).then(function(ok) {
+                if ( !ok ) { return; }
+                $.ajax({
+                    type: 'POST',
+                    url: [[@{/discussion/{tid}/deleteDiscussionReply.action(tid=${discussionThread.discussionThreadId})}]],
+                    data: { 'discussionReplyId': id, 'csrfToken': $('#csrf-token').val() },
+                    dataType: 'JSON',
+                    success: function(result) {
+                        if ( result['isSuccessful'] ) {
+                            post.remove();
+                            $('#number-of-comments').html(parseInt($('#number-of-comments').html()) - 1);
+                            // A deleted reply that was part of a loaded page shifts the later ones back by one.
+                            if ( serverReplyIds[id] ) { delete serverReplyIds[id]; replyOffset = Math.max(0, replyOffset - 1); }
+                        }
+                        else { vojAlert([[#{voj.discussion.thread.failed-to-delete}]]); }
                     }
-                    else { alert([[#{voj.discussion.thread.failed-to-delete}]]); }
-                }
+                });
             });
         });
         $('#create-discussion-reply').click(function() {
@@ -402,7 +405,7 @@
         function saveDiscussion() {
             var title = ($('#discussion-thread-title').val() || '').trim(),
                 slug  = $('#discussion-thread-topic').val();
-            if ( title === '' ) { alert([[#{voj.discussion.new-thread.discussion-thread-title-empty}]]); return; }
+            if ( title === '' ) { vojAlert([[#{voj.discussion.new-thread.discussion-thread-title-empty}]]); return; }
             $('#edit-discussion-btn').attr('disabled', 'disabled').text([[#{voj.discussion.thread.please-wait}]]);
             $.ajax({
                 type: 'POST',
@@ -420,9 +423,9 @@
                         exitEditMode();
                         return;
                     }
-                    if ( result['isThreadTitleEmpty'] ) { alert([[#{voj.discussion.new-thread.discussion-thread-title-empty}]]); }
-                    else if ( result['isThreadTitleLegal'] === false ) { alert([[#{voj.discussion.new-thread.discussion-thread-title-too-long}]]); }
-                    else { alert([[#{voj.discussion.thread.failed-to-update-thread}]]); }
+                    if ( result['isThreadTitleEmpty'] ) { vojAlert([[#{voj.discussion.new-thread.discussion-thread-title-empty}]]); }
+                    else if ( result['isThreadTitleLegal'] === false ) { vojAlert([[#{voj.discussion.new-thread.discussion-thread-title-too-long}]]); }
+                    else { vojAlert([[#{voj.discussion.thread.failed-to-update-thread}]]); }
                     $('#edit-discussion-btn').removeAttr('disabled').text(saveLabel);
                 }
             });

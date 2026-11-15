@@ -115,8 +115,8 @@
 
                 <!-- ACTIONS -->
                 <div class="vw-contest-actions">
-                    <a class="vw-btn vw-btn-accent vw-btn-block" th:if="${not isAttended and contestStatus != 'Done'}"
-                       id="attend-contest-button" href="javascript:attendContest();" th:text="#{voj.contests.contest.attend-contest}">Attend the contest</a>
+                    <button class="vw-btn vw-btn-accent vw-btn-block" type="button" th:if="${not isAttended and contestStatus != 'Done'}"
+                            id="attend-contest-button" th:text="#{voj.contests.contest.attend-contest}">Attend the contest</button>
                     <a class="vw-btn vw-btn-block" th:if="${contestStatus != 'Ready'}"
                        th:href="@{/contest/{id}/leaderboard(id=${contest.contestId})}" th:text="#{voj.contests.contest.view-leaderboard}">View leaderboard</a>
                 </div>
@@ -152,6 +152,7 @@
     <th:block th:if="${not isAttended and !currentTime.after(contest.endTime)}">
     <th:block th:if="${isLogin}">
     <script type="text/javascript" th:inline="javascript">
+        $('#attend-contest-button').on('click', attendContest);
         function attendContest() {
             $.ajax({
                 type: 'POST',
@@ -160,13 +161,13 @@
                 dataType: 'JSON',
                 success: function(result) {
                     if ( result['isSuccessful'] ) {
-                        $('#attend-contest-button').removeAttr('href');
+                        $('#attend-contest-button').off('click', attendContest);
                         setContestAttended();
                     } else {
-                        if ( !result['isContestExists'] ) { alert([[#{voj.contests.contest.contest-not-exists}]]); }
-                        else if ( !result['isContestReady'] ) { alert([[#{voj.contests.contest.contest-not-ready}]]); }
-                        else if ( !result['isUserLogin'] ) { alert([[#{voj.contests.contest.user-not-login}]]); }
-                        else if ( result['isAttendedContest'] ) { alert([[#{voj.contests.contest.already-attended}]]); setContestAttended(); }
+                        if ( !result['isContestExists'] ) { vojAlert([[#{voj.contests.contest.contest-not-exists}]]); }
+                        else if ( !result['isContestReady'] ) { vojAlert([[#{voj.contests.contest.contest-not-ready}]]); }
+                        else if ( !result['isUserLogin'] ) { vojAlert([[#{voj.contests.contest.user-not-login}]]); }
+                        else if ( result['isAttendedContest'] ) { vojAlert([[#{voj.contests.contest.already-attended}]]).then(setContestAttended); }
                     }
                 }
             });
@@ -182,6 +183,7 @@
     </th:block>
     <th:block th:unless="${isLogin}">
     <script type="text/javascript" th:inline="javascript">
+        $('#attend-contest-button').on('click', attendContest);
         function attendContest() {
             window.location.href = [[@{/accounts/login(forward=${forwardUri})}]];
         }

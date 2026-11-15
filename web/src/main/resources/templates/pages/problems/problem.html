@@ -75,7 +75,7 @@
                 </article>
 
                 <div id="editor" class="vw-card vw-card-glow vw-editor-card" th:if="${isLogin}">
-                    <form id="code-editor" onsubmit="onSubmit(); return false;" method="POST">
+                    <form id="code-editor" method="POST">
                         <div class="vw-editor-bar">
                             <span class="vw-eyebrow vw-mb0" th:text="'// ' + #{voj.problems.problem.your-solution}">// YOUR SOLUTION</span>
                             <div class="vw-header-spacer"></div>
@@ -89,7 +89,7 @@
                             <button type="submit" class="vw-btn vw-btn-accent" th:text="#{voj.problems.problem.submit}">Submit</button>
                             <button id="close-submission" class="vw-btn" type="button" th:text="#{voj.problems.problem.cancel}">Cancel</button>
                             <div class="vw-header-spacer"></div>
-                            <span id="submission-error" class="vw-editor-error"></span>
+                            <span id="submission-error" class="vw-editor-error" role="alert"></span>
                         </div>
                     </form>
                 </div>
@@ -220,6 +220,10 @@
         });
     </script>
     <script type="text/javascript" th:inline="javascript">
+        $('#code-editor').on('submit', function(e) {
+            e.preventDefault();
+            onSubmit();
+        });
         function onSubmit() {
             var problemId   = [[${problem.problemId}]],
                 language    = $('select#languages').val(),

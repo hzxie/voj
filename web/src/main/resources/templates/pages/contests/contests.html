@@ -72,7 +72,7 @@
                 </div>
             </div>
             <div id="more-contests" class="vw-loadmore">
-                <p class="availble" th:text="#{voj.contests.contests.more-contests}">More Contests...</p>
+                <p class="availble"><button type="button" class="vw-loadmore-btn" th:text="#{voj.contests.contests.more-contests}">More Contests...</button></p>
                 <span class="vw-spinner hide" role="status" aria-label="Loading"></span>
             </div>
         </section>
@@ -129,8 +129,8 @@
                     hours  = Math.floor(durMin / 60),
                     cid    = c['contestId'];
                 var html = '<a class="vw-table-row" href="' + [[@{/contest/}]] + cid + '">' +
-                    '<div><span class="vw-ctype-sm ' + typeClass(c['contestMode']) + '">' + c['contestMode'] + '</span></div>' +
-                    '<div class="vw-cell-title vw-ellipsis">' + c['contestName'] + '</div>' +
+                    '<div><span class="vw-ctype-sm ' + typeClass(c['contestMode']) + '">' + escapeHtml(c['contestMode']) + '</span></div>' +
+                    '<div class="vw-cell-title vw-ellipsis">' + escapeHtml(c['contestName']) + '</div>' +
                     '<div class="vw-muted2">' + getFormatedDateString(c['startTime'], [[${language}]]) + ' · ' + hours + 'h</div>' +
                     '<div class="vw-muted2">' + (entrants[cid] || 0) + '</div>' +
                     '<div class="vw-muted2">' + (problemCount[cid] || 0) + '</div>' +

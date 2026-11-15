@@ -70,7 +70,7 @@
                 </div>
             </div>
             <div id="more-submissions" class="vw-loadmore">
-                <p class="availble" th:text="#{voj.submissions.submissions.more-submission}">More Submission...</p>
+                <p class="availble"><button type="button" class="vw-loadmore-btn" th:text="#{voj.submissions.submissions.more-submission}">More Submission...</button></p>
                 <span class="vw-spinner hide" role="status" aria-label="Loading"></span>
             </div>
         </section>
@@ -153,6 +153,7 @@
             }
         }
         function getSubmissionContent(submissionId, judgeResult, usedTime, usedMemory, problem, user, language, submitTime) {
+            // Names are stored as plain text, so escape them before building markup.
             var slug = judgeResult['judgeResultSlug'].toLowerCase();
             var tpl = '<a class="vw-table-row" data-value="%s" href="' + [[@{/submission/}]] + '%s">' +
                       '<div class="vw-muted">%s</div>' +
@@ -167,10 +168,10 @@
                       '</div>' +
                       '</a>';
             return tpl.format(submissionId, submissionId, submissionId,
-                              problem['problemId'], problem['problemName'], user['username'],
+                              problem['problemId'], escapeHtml(problem['problemName']), escapeHtml(user['username']),
                               getFormatedDateString(submitTime, [[${language}]]),
-                              language['languageName'], slug, slug.toUpperCase(),
-                              slug, judgeResult['judgeResultName'], usedTime, usedMemory);
+                              escapeHtml(language['languageName']), escapeHtml(slug), escapeHtml(slug.toUpperCase()),
+                              escapeHtml(slug), escapeHtml(judgeResult['judgeResultName']), usedTime, usedMemory);
         }
     </script>
     </th:block>
