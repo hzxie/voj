@@ -16,6 +16,7 @@
                 <input name="keyword" type="text" th:value="${keyword}" th:placeholder="#{voj.administration.all-problems.search-placeholder}" />
                 <span class="count"><span th:text="${#lists.size(problems)}">0</span> <span th:text="#{voj.administration.all-problems.records}">records</span></span>
             </div>
+            <input type="hidden" name="problemTag" th:if="${selectedProblemTag != null and selectedProblemTag != ''}" th:value="${selectedProblemTag}" />
             <select name="problemCategory" class="adm-toolbar-select" onchange="this.form.submit();">
                 <option value="" th:text="#{voj.administration.all-problems.all-problem-categories}">All Categories</option>
                 <option th:each="problemCategory : ${problemCategories}" th:value="${problemCategory.problemCategorySlug}" th:selected="${problemCategory.problemCategorySlug == selectedProblemCategory}" th:text="${problemCategory.problemCategoryName}">Category</option>
@@ -93,9 +94,9 @@
                 <span th:text="${totalPages}">1</span>
             </span>
             <div class="adm-pager-btns">
-                <a class="nav" th:classappend="${currentPage <= 1} ? 'off'" th:href="@{/administration/all-problems(keyword=${keyword},problemCategory=${selectedProblemCategory},problemDifficulty=${selectedProblemDifficulty},page=${currentPage - 1})}">&#8592;</a>
-                <a class="num" th:each="pageNumber : ${#numbers.sequence(lowerBound, upperBound)}" th:classappend="${pageNumber == currentPage} ? 'active'" th:href="@{/administration/all-problems(keyword=${keyword},problemCategory=${selectedProblemCategory},problemDifficulty=${selectedProblemDifficulty},page=${pageNumber})}" th:text="${pageNumber}">1</a>
-                <a class="nav" th:classappend="${currentPage >= totalPages} ? 'off'" th:href="@{/administration/all-problems(keyword=${keyword},problemCategory=${selectedProblemCategory},problemDifficulty=${selectedProblemDifficulty},page=${currentPage + 1})}">&#8594;</a>
+                <a class="nav" th:classappend="${currentPage <= 1} ? 'off'" th:href="@{/administration/all-problems(keyword=${keyword},problemCategory=${selectedProblemCategory},problemTag=${selectedProblemTag},problemDifficulty=${selectedProblemDifficulty},page=${currentPage - 1})}">&#8592;</a>
+                <a class="num" th:each="pageNumber : ${#numbers.sequence(lowerBound, upperBound)}" th:classappend="${pageNumber == currentPage} ? 'active'" th:href="@{/administration/all-problems(keyword=${keyword},problemCategory=${selectedProblemCategory},problemTag=${selectedProblemTag},problemDifficulty=${selectedProblemDifficulty},page=${pageNumber})}" th:text="${pageNumber}">1</a>
+                <a class="nav" th:classappend="${currentPage >= totalPages} ? 'off'" th:href="@{/administration/all-problems(keyword=${keyword},problemCategory=${selectedProblemCategory},problemTag=${selectedProblemTag},problemDifficulty=${selectedProblemDifficulty},page=${currentPage + 1})}">&#8594;</a>
             </div>
         </div>
 

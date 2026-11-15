@@ -39,7 +39,8 @@ public interface ProblemMapper {
    * Gets the total number of problems matching the filter conditions.
    *
    * @param keyword - the keyword
-   * @param problemCategoryId - the unique identifier of the problem category
+   * @param problemCategoryId - the unique identifier of the problem category (0 = no filter)
+   * @param problemTagId - the unique identifier of the problem tag (0 = no filter)
    * @param problemDifficultyId - the unique identifier of the problem difficulty (0 = no filter)
    * @param isPublicOnly - whether to filter only public problems
    * @return the total number of problems matching the filter conditions
@@ -47,6 +48,7 @@ public interface ProblemMapper {
   long getNumberOfProblemsUsingFilters(
       @Param("keyword") String keyword,
       @Param("problemCategoryId") int problemCategoryId,
+      @Param("problemTagId") long problemTagId,
       @Param("problemDifficultyId") int problemDifficultyId,
       @Param("isPublicOnly") boolean isPublicOnly);
 

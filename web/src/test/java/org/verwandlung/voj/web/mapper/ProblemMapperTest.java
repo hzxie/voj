@@ -56,11 +56,11 @@ public class ProblemMapperTest {
   }
 
   /**
-   * Test case: tests the getNumberOfProblemsUsingFilters(String, int, boolean) method. Test data: N/a. Expected: the number of public problems in the table.
+   * Test case: tests the getNumberOfProblemsUsingFilters(String, int, long, int, boolean) method. Test data: N/a. Expected: the number of public problems in the table.
    */
   @Test
   public void testGetNumberOfPublicProblems() {
-    long totalProblems = problemMapper.getNumberOfProblemsUsingFilters(null, 0, 0, true);
+    long totalProblems = problemMapper.getNumberOfProblemsUsingFilters(null, 0, 0, 0, true);
     Assertions.assertEquals(3, totalProblems);
   }
 

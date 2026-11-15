@@ -82,12 +82,12 @@ public class ProblemService {
   }
 
   /**
-   * Gets the list of problems.
+   * Gets the list of problems. An unknown category or tag slug matches no problems.
    *
-   * @param offset - the starting number of the problem identifier
+   * @param offset - the number of matching problems to skip (zero-based)
    * @param keyword - the keyword
-   * @param problemCategorySlug - the alias of the problem category
-   * @param problemTagSlug - the alias of the problem tag
+   * @param problemCategorySlug - the alias of the problem category (null/empty = no filter)
+   * @param problemTagSlug - the alias of the problem tag (null/empty = no filter)
    * @param problemDifficultySlug - the alias of the problem difficulty (null/empty = no filter)
    * @param isPublicOnly - whether to filter only public problems
    * @param limit - the number of problems to load each time
@@ -101,24 +101,17 @@ public class ProblemService {
       String problemDifficultySlug,
       boolean isPublicOnly,
       int limit) {
-    ProblemCategory problemCategory =
-        problemCategoryMapper.getProblemCategoryUsingCategorySlug(problemCategorySlug);
-    ProblemTag problemTag =
-        problemTagMapper.getProblemTagUsingTagSlug(SlugifyUtils.getSlug(problemTagSlug));
-    int problemCategoryId = 0;
-    long problemTagId = 0;
-    int problemDifficultyId = resolveProblemDifficultyId(problemDifficultySlug);
     if (offset < 0) {
       offset = 0;
     }
-    if (problemCategory != null) {
-      problemCategoryId = problemCategory.getProblemCategoryId();
-    }
-    if (problemTag != null) {
-      problemTagId = problemTag.getProblemTagId();
-    }
     return problemMapper.getProblemsUsingFilters(
-        keyword, problemCategoryId, problemTagId, problemDifficultyId, isPublicOnly, offset, limit);
+        keyword,
+        resolveProblemCategoryId(problemCategorySlug),
+        resolveProblemTagIdUsingSlug(problemTagSlug),
+        resolveProblemDifficultyId(problemDifficultySlug),
+        isPublicOnly,
+        offset,
+        limit);
   }
 
   /**
@@ -220,15 +213,67 @@ public class ProblemService {
       String problemCategorySlug,
       String problemDifficultySlug,
       boolean isPublicOnly) {
+    return getNumberOfProblemsUsingFilters(
+        keyword, problemCategorySlug, null, problemDifficultySlug, isPublicOnly);
+  }
+
+  /**
+   * Gets the total number of problems matching the same filters as {@link
+   * #getProblemsUsingFilters(long, String, String, String, String, boolean, int)}, so that a pager
+   * built on the two stays consistent.
+   *
+   * @param keyword - the keyword
+   * @param problemCategorySlug - the alias of the problem category (null/empty = no filter)
+   * @param problemTagSlug - the alias of the problem tag (null/empty = no filter)
+   * @param problemDifficultySlug - the alias of the problem difficulty (null/empty = no filter)
+   * @param isPublicOnly - whether to filter only public problems
+   * @return the total number of problems
+   */
+  public long getNumberOfProblemsUsingFilters(
+      String keyword,
+      String problemCategorySlug,
+      String problemTagSlug,
+      String problemDifficultySlug,
+      boolean isPublicOnly) {
+    return problemMapper.getNumberOfProblemsUsingFilters(
+        keyword,
+        resolveProblemCategoryId(problemCategorySlug),
+        resolveProblemTagIdUsingSlug(problemTagSlug),
+        resolveProblemDifficultyId(problemDifficultySlug),
+        isPublicOnly);
+  }
+
+  /**
+   * Resolves a category filter slug to a category identifier. Returns 0 when no category filter
+   * applies and -1 (a sentinel that matches no rows) when filtering by a category that does not
+   * exist, so an unknown category yields no problems instead of all of them.
+   *
+   * @param problemCategorySlug - the slug of the problem category
+   * @return the category identifier to filter by
+   */
+  private int resolveProblemCategoryId(String problemCategorySlug) {
+    if (problemCategorySlug == null || problemCategorySlug.isEmpty()) {
+      return 0;
+    }
     ProblemCategory problemCategory =
         problemCategoryMapper.getProblemCategoryUsingCategorySlug(problemCategorySlug);
-    int problemCategoryId = 0;
-    if (problemCategory != null) {
-      problemCategoryId = problemCategory.getProblemCategoryId();
+    return problemCategory != null ? problemCategory.getProblemCategoryId() : -1;
+  }
+
+  /**
+   * Resolves a tag filter slug to a tag identifier. Returns 0 when no tag filter applies and -1 (a
+   * sentinel that matches no rows) when filtering by a tag that does not exist.
+   *
+   * @param problemTagSlug - the slug (or name) of the problem tag
+   * @return the tag identifier to filter by
+   */
+  private long resolveProblemTagIdUsingSlug(String problemTagSlug) {
+    if (problemTagSlug == null || problemTagSlug.isEmpty()) {
+      return 0;
     }
-    int problemDifficultyId = resolveProblemDifficultyId(problemDifficultySlug);
-    return problemMapper.getNumberOfProblemsUsingFilters(
-        keyword, problemCategoryId, problemDifficultyId, isPublicOnly);
+    ProblemTag problemTag =
+        problemTagMapper.getProblemTagUsingTagSlug(SlugifyUtils.getSlug(problemTagSlug));
+    return problemTag != null ? problemTag.getProblemTagId() : -1;
   }
 
   /**

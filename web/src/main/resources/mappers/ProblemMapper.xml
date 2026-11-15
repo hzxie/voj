@@ -31,27 +31,43 @@
 		SELECT COUNT(*) 
 		FROM voj_problems
 	</select>
+	<!-- The category / tag filters use EXISTS so problems without any category or tag are still
+	     listed when that filter is not applied, and so the count and the page below always apply
+	     exactly the same conditions. -->
+	<sql id="problemFilters">
+		<if test="isPublicOnly == true">
+			AND p.problem_status = 'PUBLISHED'
+		</if>
+		<if test="keyword != null and keyword != ''">
+			AND p.problem_name LIKE CONCAT('%', #{keyword}, '%')
+		</if>
+		<if test="problemCategoryId != 0">
+			AND EXISTS (
+				SELECT 1
+				FROM voj_problem_category_relationships pcr
+				WHERE pcr.problem_id = p.problem_id
+				AND pcr.problem_category_id = #{problemCategoryId}
+			)
+		</if>
+		<if test="problemTagId != 0">
+			AND EXISTS (
+				SELECT 1
+				FROM voj_problem_tag_relationships ptr
+				WHERE ptr.problem_id = p.problem_id
+				AND ptr.problem_tag_id = #{problemTagId}
+			)
+		</if>
+		<if test="problemDifficultyId != 0">
+			AND p.problem_difficulty_id = #{problemDifficultyId}
+		</if>
+	</sql>
 	<select id="getNumberOfProblemsUsingFilters" 
 		parameterType="map"
 		resultType="long">
-		SELECT COUNT(DISTINCT(problem_id))
-		FROM voj_problems
-		NATURAL JOIN voj_problem_category_relationships pcr
-		NATURAL JOIN voj_problem_categories pc
-		<where>
-			<if test="isPublicOnly == true">
-				problem_status = 'PUBLISHED'
-			</if>
-			<if test="keyword != null and keyword != ''">
-				AND problem_name LIKE "%"#{keyword}"%"
-			</if>
-			<if test="problemCategoryId != 0">
-				AND problem_category_id = #{problemCategoryId}
-			</if>
-			<if test="problemDifficultyId != 0">
-				AND problem_difficulty_id = #{problemDifficultyId}
-			</if>
-		</where>
+		SELECT COUNT(*)
+		FROM voj_problems p
+		WHERE 1 = 1
+		<include refid="problemFilters" />
 	</select>
 	<select id="getIdsOfPublicProblems"
 		parameterType="int"
@@ -170,7 +186,7 @@
 	<select id="getProblemsUsingFilters" 
 		parameterType="map"
 		resultMap="ProblemResultMap">
-		SELECT DISTINCT p.problem_id, problem_name, problem_status, p.problem_difficulty_id,
+		SELECT p.problem_id, p.problem_name, p.problem_status, p.problem_difficulty_id,
 			d.problem_difficulty_slug, d.problem_difficulty_name, (
 			SELECT COUNT(*)
 			FROM voj_submissions s
@@ -181,27 +197,9 @@
 			WHERE s.problem_id = p.problem_id AND s.submission_judge_result = 'AC'
 		) AS accepted_submission
 		FROM voj_problems p
-		NATURAL JOIN voj_problem_category_relationships pcr
-		<if test="problemTagId != 0">
-			NATURAL JOIN voj_problem_tag_relationships ptr
-		</if>
 		LEFT JOIN voj_problem_difficulty d ON d.problem_difficulty_id = p.problem_difficulty_id
 		WHERE 1 = 1
-		<if test="isPublicOnly == true">
-			AND problem_status = 'PUBLISHED'
-		</if>
-		<if test="keyword != null and keyword != ''">
-			AND problem_name LIKE "%"#{keyword}"%"
-		</if>
-		<if test="problemCategoryId != 0">
-			AND problem_category_id = #{problemCategoryId}
-		</if>
-		<if test="problemTagId != 0">
-			AND problem_tag_id = #{problemTagId}
-		</if>
-		<if test="problemDifficultyId != 0">
-			AND p.problem_difficulty_id = #{problemDifficultyId}
-		</if>
+		<include refid="problemFilters" />
 		ORDER BY p.problem_id
 		LIMIT #{offset}, #{limit}
 	</select>

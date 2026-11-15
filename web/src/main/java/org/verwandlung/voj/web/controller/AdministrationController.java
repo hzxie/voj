@@ -717,7 +717,7 @@ public class AdministrationController {
     List<ProblemDifficulty> problemDifficulties = problemService.getProblemDifficulties();
     long totalProblems =
         problemService.getNumberOfProblemsUsingFilters(
-            keyword, problemCategorySlug, problemDifficultySlug, false);
+            keyword, problemCategorySlug, problemTagSlug, problemDifficultySlug, false);
 
     long offset = (pageNumber >= 1 ? pageNumber - 1 : 0) * NUMBER_OF_PROBLEMS_PER_PAGE;
 
@@ -751,6 +751,7 @@ public class AdministrationController {
     ModelAndView view = new ModelAndView("pages/administration/all-problems");
     view.addObject("problemCategories", problemCategories);
     view.addObject("selectedProblemCategory", problemCategorySlug);
+    view.addObject("selectedProblemTag", problemTagSlug);
     view.addObject("problemDifficulties", problemDifficulties);
     view.addObject("selectedProblemDifficulty", problemDifficultySlug);
     view.addObject("keyword", keyword);

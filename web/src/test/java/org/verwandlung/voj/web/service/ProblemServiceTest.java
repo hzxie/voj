@@ -132,6 +132,32 @@ public class ProblemServiceTest {
     Assertions.assertEquals(1000, problems.get(0).getProblemId());
   }
 
+  /** Test case: tests getProblemsUsingFilters(...) and getNumberOfProblemsUsingFilters(...) with a tag filter. Test data: the "greedy" tag (problems 1000, 1001 and the hidden 1002). Expected: the count agrees with the listed problems. */
+  @Test
+  public void testGetNumberOfProblemsUsingFiltersByTagMatchesList() {
+    List<Problem> problems =
+        problemService.getProblemsUsingFilters(0, "", "", "greedy", "", false, 100);
+    Assertions.assertEquals(java.util.Set.of(1000L, 1001L, 1002L), problemIdsOf(problems));
+    Assertions.assertEquals(
+        3, problemService.getNumberOfProblemsUsingFilters("", "", "greedy", "", false));
+    Assertions.assertEquals(
+        2, problemService.getNumberOfProblemsUsingFilters("", "", "greedy", "", true));
+  }
+
+  /** Test case: tests getProblemsUsingFilters(...) and getNumberOfProblemsUsingFilters(...) with unknown slugs. Test data: a category slug and a tag slug that do not exist. Expected: no problems instead of every problem. */
+  @Test
+  public void testGetProblemsUsingFiltersWithUnknownSlugsMatchesNothing() {
+    Assertions.assertTrue(
+        problemService.getProblemsUsingFilters(0, "", "no-such-category", "", "", false, 100)
+            .isEmpty());
+    Assertions.assertTrue(
+        problemService.getProblemsUsingFilters(0, "", "", "no-such-tag", "", false, 100).isEmpty());
+    Assertions.assertEquals(
+        0, problemService.getNumberOfProblemsUsingFilters("", "no-such-category", "", false));
+    Assertions.assertEquals(
+        0, problemService.getNumberOfProblemsUsingFilters("", "", "no-such-tag", "", false));
+  }
+
   /** Test case: tests the getNumberOfProblemsUsingFilters(...) method. Test data: all / public only. Expected: the corresponding count. */
   @Test
   public void testGetNumberOfProblemsUsingFilters() {
