@@ -498,6 +498,20 @@ class ViewRenderSmokeTest {
     mockMvc.perform(getWithCsrf("/discussion/5000")).andExpect(status().isOk());
   }
 
+  /** User text is stored as plain text: the thread page escapes markup in the title exactly once. */
+  @Test
+  void discussionThreadTitleIsEscapedOnce() throws Exception {
+    DiscussionThread thread = aThread(5000L);
+    thread.setDiscussionThreadTitle("A & B <img src=x onerror=alert(1)>");
+    when(discussionService.getDiscussionThreadForDisplay(5000L)).thenReturn(thread);
+    when(discussionService.isDiscussionThreadViewable(any(), any())).thenReturn(true);
+    mockMvc
+        .perform(getWithCsrf("/discussion/5000"))
+        .andExpect(status().isOk())
+        .andExpect(content().string(containsString("A &amp; B &lt;img src=x onerror=alert(1)&gt;")))
+        .andExpect(content().string(not(containsString("<img src=x"))));
+  }
+
   /** The judge log carries raw compiler output, so both submission pages must escape it. */
   @Test
   void judgeLogIsEscaped() throws Exception {
@@ -516,6 +530,26 @@ class ViewRenderSmokeTest {
         .andExpect(status().isOk())
         .andExpect(content().string(containsString("#error &lt;img src=x onerror=alert(1)&gt;")))
         .andExpect(content().string(not(containsString("<img src=x"))));
+  }
+
+  /** The profile escapes the display name and the bio (the bio is rendered as Markdown client-side). */
+  @Test
+  void userProfileTextIsEscaped() throws Exception {
+    Map<String, Object> meta = userMeta();
+    meta.put("displayName", "A & B <b>");
+    meta.put("aboutMe", "I like <script>alert(1)</script> & vector<int>");
+    when(userService.getUserUsingUid(2000L)).thenReturn(aUser(2000L, usersGroup()));
+    when(userService.getUserMetaUsingUid(any())).thenReturn(meta);
+    mockMvc
+        .perform(getWithCsrf("/accounts/user/2000"))
+        .andExpect(status().isOk())
+        .andExpect(content().string(containsString("A &amp; B &lt;b&gt;")))
+        .andExpect(
+            content()
+                .string(
+                    containsString(
+                        "I like &lt;script&gt;alert(1)&lt;/script&gt; &amp; vector&lt;int&gt;")))
+        .andExpect(content().string(not(containsString("<script>alert(1)"))));
   }
 
   /** The new-thread form renders for a logged-in user. */

@@ -145,15 +145,16 @@
                 replies   = slug === 'solutions' ? numberOfReplies : (numberOfReplies <= 1 ? 0 : numberOfReplies - 1),
                 postedIn  = problem ? ('P' + problem['problemId']) : topicName,
                 initial   = (creator['username'] || '?').charAt(0).toUpperCase();
-            return '<a class="vw-table-row discussion-thread" href="' + [[@{/discussion/}]] + threadId + '">' +
+            // Titles and names are stored as plain text, so escape them before building markup.
+            return '<a class="vw-table-row discussion-thread" href="' + [[@{/discussion/}]] + encodeURIComponent(threadId) + '">' +
                 '<div class="vw-thread-cell">' +
-                '<span class="vw-thread-avatar">' + initial + '</span>' +
+                '<span class="vw-thread-avatar">' + escapeHtml(initial) + '</span>' +
                 '<div class="vw-minw0">' +
-                '<div class="vw-thread-title">' + title + '</div>' +
-                '<div class="vw-thread-meta"><span class="vw-accent">' + creator['username'] + '</span> · ' + postedIn + '</div>' +
+                '<div class="vw-thread-title">' + escapeHtml(title) + '</div>' +
+                '<div class="vw-thread-meta"><span class="vw-accent">' + escapeHtml(creator['username']) + '</span> · ' + escapeHtml(postedIn) + '</div>' +
                 '</div></div>' +
-                '<div class="vw-thide"><span class="vw-cat-badge ' + categoryClass(slug) + '">' + topicName + '</span></div>' +
-                '<div class="vw-thread-replies">' + replies + '</div>' +
+                '<div class="vw-thide"><span class="vw-cat-badge ' + categoryClass(slug) + '">' + escapeHtml(topicName) + '</span></div>' +
+                '<div class="vw-thread-replies">' + escapeHtml(replies) + '</div>' +
                 '<div class="vw-thide vw-muted">' + getTimeElapsed(rtime, [[${language}]]) + '</div>' +
                 '</a>';
         }

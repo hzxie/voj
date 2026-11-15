@@ -145,7 +145,7 @@
             if ( seenParticipants[creator['uid']] ) { return; }
             seenParticipants[creator['uid']] = true;
             var initial = (creator['username'] || '?').charAt(0).toUpperCase();
-            $('#participants').append('<a class="vw-participant" href="' + [[@{/accounts/user/}]] + creator['uid'] + '" title="' + creator['username'] + '">' + initial + '</a>');
+            $('#participants').append('<a class="vw-participant" href="' + [[@{/accounts/user/}]] + encodeURIComponent(creator['uid']) + '" title="' + escapeHtml(creator['username']) + '">' + escapeHtml(initial) + '</a>');
         }
         function displayDiscussionReplyRecords(discussionReplies) {
             for ( var i = 0; i < discussionReplies.length; ++ i ) {
@@ -176,7 +176,7 @@
             var reportLink = '';
             /*[# th:if="${isLogin}"]*/
             var editor = '<div class="markdown-editor hide">' +
-                         '<textarea id="wmd-input-' + replyId + '" class="wmd-input">' + content + '</textarea>' +
+                         '<textarea id="wmd-input-' + replyId + '" class="wmd-input">' + escapeHtml(content) + '</textarea>' +
                          '<div class="vw-replybox-foot"><button class="vw-btn vw-btn-accent vw-btn-sm vw-reply-save">' + [[#{voj.discussion.thread.update-reply}]] + '</button>' +
                          '<button class="vw-btn vw-btn-sm vw-reply-cancel">' + [[#{voj.discussion.thread.cancel}]] + '</button></div></div>';
             if ( !isAuthor ) { reportLink = '<a href="javascript:void(0);" class="vw-post-report" title="report">' + [[#{voj.discussion.thread.report}]] + '</a>'; }
@@ -184,11 +184,13 @@
             /*[# th:unless="${isLogin}"]*/
             var editor = '';
             /*[/]*/
-            return '<div class="vw-post' + (isOp ? ' is-op' : '') + '" data-value="' + replyId + '">' +
+            // Names and reply content are stored as plain text, so escape them before building markup
+            // (the reply body itself goes through markdown-it, which escapes raw HTML).
+            return '<div class="vw-post' + (isOp ? ' is-op' : '') + '" data-value="' + escapeHtml(replyId) + '">' +
                 '<div class="vw-post-avatarcol">' +
-                '<div class="vw-post-avatar">' + initial + '</div>' +
-                '<div><a class="vw-post-author" href="' + [[@{/accounts/user/}]] + creator['uid'] + '">' + creator['username'] + '</a>' +
-                '<div class="vw-post-role">' + role + '</div></div>' +
+                '<div class="vw-post-avatar">' + escapeHtml(initial) + '</div>' +
+                '<div><a class="vw-post-author" href="' + [[@{/accounts/user/}]] + encodeURIComponent(creator['uid']) + '">' + escapeHtml(creator['username']) + '</a>' +
+                '<div class="vw-post-role">' + escapeHtml(role) + '</div></div>' +
                 '</div>' +
                 '<div class="vw-minw0">' +
                 '<div class="vw-post-head">' +

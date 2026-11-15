@@ -577,6 +577,24 @@ public class DiscussionServiceTest {
     Assertions.assertNotNull(discussionService.getDiscussionReplyUsingReplyId(1));
   }
 
+  /** Test case: tests the createDiscussionThread(...) method. Test data: a title and content with code, angle brackets and ampersands. Expected: both are stored verbatim (not stripped or entity-encoded) and the opening post is created with the thread. */
+  @Test
+  public void testCreateDiscussionThreadKeepsPlainText() {
+    String title = "vector<int> & map<K, V>";
+    String content = "#include <iostream>\nint main() { return a < b && b > c; }";
+    Map<String, Object> result =
+        discussionService.createDiscussionThread(adminUser(), "qa", 0, title, content);
+    Assertions.assertTrue((Boolean) result.get("isSuccessful"));
+
+    long threadId = (Long) result.get("discussionThreadId");
+    Assertions.assertEquals(
+        title, discussionService.getDiscussionThreadUsingThreadId(threadId).getDiscussionThreadTitle());
+    List<DiscussionReply> replies =
+        discussionService.getDiscussionRepliesOfThread(threadId, -1, 0, 10, true);
+    Assertions.assertEquals(1, replies.size());
+    Assertions.assertEquals(content, replies.get(0).getDiscussionReplyContent());
+  }
+
   /** Sets a system option value (rolled back after each test by the transactional context). */
   private void setOption(String optionName, String optionValue) {
     Option option = optionMapper.getOption(optionName);

@@ -22,6 +22,16 @@
         return instance;
     }
 
+    /* Escape a plain-text string for use inside HTML element content or a quoted attribute value.
+     * User text (titles, replies, names, ...) is stored as plain text, so any markup built by
+     * string concatenation must pass it through this first. */
+    var HTML_ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+    global.escapeHtml = function(text) {
+        return String(text === null || text === undefined ? '' : text).replace(/[&<>"']/g, function(c) {
+            return HTML_ESCAPES[c];
+        });
+    };
+
     /* Render a Markdown string to sanitized HTML. */
     global.renderMarkdown = function(text) {
         return markdown().render(text || '');

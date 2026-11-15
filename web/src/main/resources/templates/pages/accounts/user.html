@@ -29,7 +29,7 @@
                         <span th:if="${!#strings.isEmpty(location)}" th:text="${location} + ' · '">Location · </span>
                         <span th:text="#{voj.accounts.user.joined-on} + ' ' + ${@dateFormatter.parseDateLong(registerTime, language)}">joined</span>
                     </div>
-                    <p class="vw-profile-bio markdown" th:if="${!#strings.isEmpty(aboutMe)}" th:utext="${aboutMe}">bio</p>
+                    <p class="vw-profile-bio markdown" th:if="${!#strings.isEmpty(aboutMe)}" th:text="${aboutMe}">bio</p>
                     <div class="vw-profile-contact">
                         <span>&#9993; <span th:text="${user.email}">email</span></span>
                         <span th:if="${!#strings.isEmpty(website)}">&#9740; <a th:href="${website}" target="_blank" th:text="${website}">website</a></span>
