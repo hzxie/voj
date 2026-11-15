@@ -29,6 +29,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import org.verwandlung.voj.judger.model.Language;
 import org.verwandlung.voj.judger.model.Submission;
 import org.verwandlung.voj.judger.util.FileSystemUtils;
 
@@ -51,8 +52,27 @@ public class Compiler {
       Submission submission, String workDirectory, String baseFileName) {
     String commandLine = getCompileCommandLine(submission, workDirectory, baseFileName);
     String compileLogPath = getCompileLogPath(workDirectory, baseFileName);
+    int memoryLimit = getCompileMemoryLimit(submission.getLanguage());
 
-    return getCompileResult(commandLine, compileLogPath);
+    return getCompileResult(commandLine, compileLogPath, memoryLimit);
+  }
+
+  /**
+   * Gets the memory limit of a compilation: judger.compileMemoryLimit scaled by the language's
+   * memory multiplier, like the memory limit of a run. Languages that run on a memory-hungry
+   * runtime have a memory-hungry compiler too: kotlinc is a JVM with a 512 MB heap of its own
+   * (its launcher's -Xmx512M) and peaks well above 512 MB in total, while C, C++, Go, Rust and
+   * Pascal (multiplier 1) keep the base limit, which bounds a "compiler bomb".
+   *
+   * @param language - the programming language object
+   * @return the memory limit (KB, 0 means no limit)
+   */
+  int getCompileMemoryLimit(Language language) {
+    double multiplier = language == null ? 1.0 : language.getMemoryMultiplier();
+    if (compileMemoryLimit <= 0 || multiplier <= 1.0) {
+      return compileMemoryLimit;
+    }
+    return (int) Math.min(Integer.MAX_VALUE, Math.ceil(compileMemoryLimit * multiplier));
   }
 
   /**
@@ -91,15 +111,17 @@ public class Compiler {
    *
    * @param commandLine - the compile command
    * @param compileLogPath - the path of the compilation log output
+   * @param memoryLimit - the memory limit (KB, 0 means no limit)
    * @return a Map<String, Object> object containing the compilation result
    */
-  private Map<String, Object> getCompileResult(String commandLine, String compileLogPath) {
+  private Map<String, Object> getCompileResult(
+      String commandLine, String compileLogPath, int memoryLimit) {
     String inputFilePath = null;
 
     LOGGER.info("Start compiling with command: " + commandLine);
     RunResult runResult =
         sandboxRunner.run(
-            commandLine, inputFilePath, compileLogPath, compileTimeLimit, compileMemoryLimit, true);
+            commandLine, inputFilePath, compileLogPath, compileTimeLimit, memoryLimit, true);
     Map<String, Object> result = new HashMap<>(3, 1);
 
     boolean isSuccessful = runResult.getVerdict() == Verdict.NORMAL;
@@ -137,10 +159,11 @@ public class Compiler {
   private int compileTimeLimit;
 
   /**
-   * The memory limit (kilobytes) for a compilation. Without it, a small "compiler bomb" (e.g. C++
-   * template recursion or a giant array initializer) can exhaust host memory and OOM the judger. It
-   * must stay generous enough for legitimate heavyweight compilers (the JVM-based Kotlin compiler,
-   * the Go linker), otherwise a real compile is killed and wrongly reported as a compile error.
+   * The memory limit (kilobytes) for a compilation, before the language's memory multiplier. Without
+   * it, a small "compiler bomb" (e.g. C++ template recursion or a giant array initializer) can
+   * exhaust host memory and OOM the judger. It must stay generous enough for legitimate compilers
+   * (the Go linker, rustc), otherwise a real compile is killed and wrongly reported as a compile
+   * error; JVM-based compilers get more through their language's multiplier.
    */
   @Value("${judger.compileMemoryLimit:524288}")
   private int compileMemoryLimit;
