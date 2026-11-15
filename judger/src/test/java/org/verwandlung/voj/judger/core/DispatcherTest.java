@@ -25,6 +25,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -34,6 +36,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.io.TempDir;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -155,6 +158,25 @@ public class DispatcherTest {
     verify(programRunner, never())
         .getRuntimeResult(any(), anyString(), anyString(), anyString(), anyString());
     verify(applicationDispatcher, never()).onAllTestPointsFinished(anyLong(), any());
+  }
+
+  /**
+   * Test case: tests the createNewTask method. Test data: a stage throws after the work directory
+   * was created. Expected result: the exception propagates and the work directory is still removed.
+   */
+  @Test
+  public void testCreateNewTaskCleansUpOnFailure(@TempDir Path tempDir) throws Exception {
+    ReflectionTestUtils.setField(dispatcher, "workBaseDirectory", tempDir.toString());
+    Path workDirectory = Files.createDirectory(tempDir.resolve("voj-100"));
+    Files.writeString(workDirectory.resolve("Main.cpp"), "int main() {}");
+
+    Submission submission = buildSubmission();
+    when(submissionMapper.getSubmission(100L)).thenReturn(submission);
+    when(compiler.getCompileResult(any(), anyString(), anyString()))
+        .thenThrow(new IllegalStateException("compiler crashed"));
+
+    Assertions.assertThrows(IllegalStateException.class, () -> dispatcher.createNewTask(100L));
+    Assertions.assertFalse(Files.exists(workDirectory));
   }
 
   /**

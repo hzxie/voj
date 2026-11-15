@@ -16,19 +16,21 @@
  */
 package org.verwandlung.voj.judger.core;
 
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
-import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.LinkOption;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.nio.file.attribute.UserPrincipal;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
@@ -37,6 +39,7 @@ import org.springframework.stereotype.Component;
 import org.verwandlung.voj.judger.exception.CreateDirectoryException;
 import org.verwandlung.voj.judger.model.Language;
 import org.verwandlung.voj.judger.model.Submission;
+import org.verwandlung.voj.judger.util.FileSystemUtils;
 
 /**
  * The preprocessor, used to perform preparation work before judging.
@@ -58,21 +61,59 @@ public class Preprocessor {
    */
   public void createTestCode(Submission submission, String workDirectory, String baseFileName)
       throws Exception {
-    File workDirFile = new File(workDirectory);
-    if (!workDirFile.exists() && !workDirFile.mkdirs()) {
-      throw new CreateDirectoryException("Failed to create directory: " + workDirectory);
-    }
-    setWorkDirectoryPermission(workDirFile);
+    Path workDirPath = Paths.get(workDirectory);
+    createFreshWorkDirectory(workDirPath);
 
     Language language = submission.getLanguage();
     String code = replaceClassName(language, submission.getCode(), baseFileName);
-    String codeFilePath =
-        String.format(
-            "%s/%s.%s", new Object[] {workDirectory, baseFileName, getCodeFileSuffix(language)});
+    Path codeFilePath = workDirPath.resolve(baseFileName + "." + getCodeFileSuffix(language));
 
-    FileOutputStream outputStream = new FileOutputStream(new File(codeFilePath));
-    IOUtils.write(code, outputStream);
-    IOUtils.closeQuietly(outputStream);
+    // CREATE_NEW + NOFOLLOW_LINKS: the directory was just created empty, so anything already at
+    // this path (e.g. a planted symbolic link) is an attack and must not be written through.
+    try (OutputStream outputStream =
+        Files.newOutputStream(
+            codeFilePath,
+            StandardOpenOption.CREATE_NEW,
+            StandardOpenOption.WRITE,
+            LinkOption.NOFOLLOW_LINKS)) {
+      outputStream.write(code.getBytes(StandardCharsets.UTF_8));
+    }
+    // Only hand the directory to the sandbox user once the judger has finished writing into it.
+    setWorkDirectoryOwner(workDirPath);
+  }
+
+  /**
+   * Creates an empty, private work directory for a submission. Any existing directory at that path
+   * (left over from a crashed run, or pre-created by an earlier submission running as the same
+   * sandbox user to plant files or symbolic links such as {@code output#1.txt -> /etc/...}) is
+   * removed first, without following symbolic links. The directory is then created atomically with
+   * owner-only permissions; if something re-appears at the path in between, judging is aborted
+   * rather than reusing a directory the judger did not create.
+   *
+   * @param workDirectory - the directory used for producing compilation output
+   * @throws CreateDirectoryException if a fresh directory cannot be created
+   */
+  private void createFreshWorkDirectory(Path workDirectory) throws CreateDirectoryException {
+    try {
+      FileSystemUtils.deleteRecursively(workDirectory);
+      Path parent = workDirectory.toAbsolutePath().getParent();
+      if (parent != null) {
+        Files.createDirectories(parent);
+      }
+      if (isPosix()) {
+        Files.createDirectory(
+            workDirectory,
+            PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwx------")));
+      } else {
+        Files.createDirectory(workDirectory);
+      }
+    } catch (FileAlreadyExistsException ex) {
+      throw new CreateDirectoryException(
+          "Work directory re-appeared while being recreated: " + workDirectory);
+    } catch (IOException ex) {
+      throw new CreateDirectoryException(
+          "Failed to create directory: " + workDirectory + " (" + ex + ")");
+    }
   }
 
   /**
@@ -109,35 +150,38 @@ public class Preprocessor {
   }
 
   /**
-   * Restricts the work directory to the unprivileged sandbox user. The directory is made private
-   * (owner only), so that other accounts on the host cannot read a submission's files. When the
-   * judger runs as root the directory is then handed to the sandbox user (system.username), so that
-   * the compiler and the submitted program, which run with dropped privileges, can still write
-   * their output here.
+   * Hands the work directory to the unprivileged sandbox user. The directory is private (owner only,
+   * see {@link #createFreshWorkDirectory}), so that other accounts on the host cannot read a
+   * submission's files. When the judger runs as root the directory is then handed to the sandbox
+   * user (system.username), so that the compiler and the submitted program, which run with dropped
+   * privileges, can still write their output here.
    *
    * @param workDirectory the directory used for producing compilation output
    */
-  private void setWorkDirectoryPermission(File workDirectory) throws IOException {
-    if (System.getProperty("os.name").contains("Windows")) {
+  private void setWorkDirectoryOwner(Path workDirectory) {
+    if (!isPosix()) {
       return;
     }
-    Set<PosixFilePermission> permissions = new HashSet<>();
-    permissions.add(PosixFilePermission.OWNER_READ);
-    permissions.add(PosixFilePermission.OWNER_WRITE);
-    permissions.add(PosixFilePermission.OWNER_EXECUTE);
-    Files.setPosixFilePermissions(workDirectory.toPath(), permissions);
-
     if (isRunningAsRoot() && sandboxUsername != null && !sandboxUsername.isEmpty()) {
       try {
         UserPrincipal owner =
             FileSystems.getDefault().getUserPrincipalLookupService().lookupPrincipalByName(
                 sandboxUsername);
-        Files.setOwner(workDirectory.toPath(), owner);
+        Files.setOwner(workDirectory, owner);
       } catch (IOException ex) {
         LOGGER.warn(
             "Failed to hand work directory to sandbox user '" + sandboxUsername + "'", ex);
       }
     }
+  }
+
+  /**
+   * Checks whether the host file system supports POSIX permissions (i.e. is not Windows).
+   *
+   * @return whether POSIX permissions are available
+   */
+  private boolean isPosix() {
+    return !System.getProperty("os.name").contains("Windows");
   }
 
   /**

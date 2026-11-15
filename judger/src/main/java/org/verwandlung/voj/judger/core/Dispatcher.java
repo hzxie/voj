@@ -16,15 +16,14 @@
  */
 package org.verwandlung.voj.judger.core;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 import org.verwandlung.voj.judger.model.Checkpoint;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +36,7 @@ import org.verwandlung.voj.judger.exception.IllgealSubmissionException;
 import org.verwandlung.voj.judger.mapper.SubmissionMapper;
 import org.verwandlung.voj.judger.model.Submission;
 import org.verwandlung.voj.judger.util.DigestUtils;
+import org.verwandlung.voj.judger.util.FileSystemUtils;
 
 /**
  * The judger dispatcher. Drives the judging workflow of the judger. After each stage finishes, a
@@ -73,11 +73,17 @@ public class Dispatcher {
         throw new IllgealSubmissionException(
             String.format("Illegal submission #%s", new Object[] {submissionId}));
       }
-      if (preprocess(submission, baseDirectory, baseFileName)
-          && compile(submission, baseDirectory, baseFileName)) {
-        runProgram(submission, baseDirectory, baseFileName);
+      try {
+        if (preprocess(submission, baseDirectory, baseFileName)
+            && compile(submission, baseDirectory, baseFileName)) {
+          runProgram(submission, baseDirectory, baseFileName);
+        }
+      } finally {
+        // Always remove the work directory (source, binary and program output), even when a stage
+        // throws; otherwise it lingers in a shared location, readable by later submissions that
+        // run as the same sandbox user.
+        cleanUp(baseDirectory);
       }
-      cleanUp(baseDirectory);
     }
   }
 
@@ -224,13 +230,11 @@ public class Dispatcher {
    * @param baseDirectory - the directory used for producing output results
    */
   private void cleanUp(String baseDirectory) {
-    File baseDirFile = new File(baseDirectory);
-    if (baseDirFile.exists()) {
-      try {
-        FileUtils.deleteDirectory(baseDirFile);
-      } catch (IOException ex) {
-        LOGGER.catching(ex);
-      }
+    try {
+      // The directory was writable by the submission, so never follow links planted inside it.
+      FileSystemUtils.deleteRecursively(Paths.get(baseDirectory));
+    } catch (IOException ex) {
+      LOGGER.catching(ex);
     }
   }
 
