@@ -256,6 +256,9 @@
             if (!result['isWebsiteLegal']) {
                 errorMessage += [[#{voj.accounts.dashboard.website-legal}]] + '<br>';
             }
+            if (!result['isSocialLinksLegal']) {
+                errorMessage += [[#{voj.accounts.dashboard.social-links-illegal}]] + '<br>';
+            }
             if (!result['isAboutMeLegal']) {
                 errorMessage += [[#{voj.accounts.dashboard.about-me-legal}]] + '<br>';
             }

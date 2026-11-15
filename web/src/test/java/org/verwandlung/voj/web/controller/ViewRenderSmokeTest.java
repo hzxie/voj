@@ -652,6 +652,24 @@ class ViewRenderSmokeTest {
         .andExpect(content().string(not(containsString("<script>alert(1)"))));
   }
 
+  /** The profile editor explains a rejected social-links value, in the display language. */
+  @Test
+  void userProfileExplainsIllegalSocialLinks() throws Exception {
+    authenticateUser();
+    when(userService.getUserUsingUid(2000L)).thenReturn(aUser(2000L, usersGroup()));
+    when(userService.getUserMetaUsingUid(any())).thenReturn(userMeta());
+    mockMvc
+        .perform(getWithCsrf("/accounts/user/2000"))
+        .andExpect(status().isOk())
+        .andExpect(content().string(containsString("if (!result['isSocialLinksLegal'])")))
+        .andExpect(content().string(containsString("The social links seem invalid.")));
+    // Thymeleaf's JavaScript inlining escapes non-ASCII text; this is "社交账号" escaped.
+    mockMvc
+        .perform(getWithCsrf("/accounts/user/2000").param("language", "zh_CN"))
+        .andExpect(status().isOk())
+        .andExpect(content().string(containsString("\\u793E\\u4EA4\\u8D26\\u53F7")));
+  }
+
   /** The new-thread form renders for a logged-in user. */
   @Test
   void newDiscussionThreadViewRenders() throws Exception {
