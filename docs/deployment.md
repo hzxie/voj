@@ -2,7 +2,9 @@
 
 This document covers what the judger's sandbox expects from the host. The web
 application has no special requirements beyond a reachable database and message
-queue, so most of this is about running judgers securely.
+queue, so most of this is about running judgers securely; see
+[Upgrading the web application](#upgrading-the-web-application) for the one-time
+database scripts some releases need.
 
 ## Sandbox backends
 
@@ -151,3 +153,26 @@ The JNI library is built with the MSVC toolchain (the Windows runner uses Win32
 APIs — `CreateProcessWithLogonW`, Job Objects). Build with a Visual Studio C++
 toolchain installed and a JDK whose `include/win32` headers are available to the
 compiler.
+
+## Upgrading the web application
+
+The database is created by `sql/schema.sql` and `sql/seed.sql` on the first
+launch only; there is no automatic migration on startup. When a release needs a
+one-time data change on an existing installation, it ships a script under
+[`../sql/upgrades/`](../sql/upgrades/) that you run once against the database.
+New installations never need these scripts. Each script is safe to run again:
+it records that it has run in `voj_options` and does nothing on later runs.
+
+Back up the database first, then run the script while the old version is
+stopped (or just before you switch to the new one), using the same credentials
+as the web application:
+
+```bash
+mysql -u voj -p voj < sql/upgrades/<script>.sql
+# Bundled Docker database (the old container is still running):
+docker compose exec -T web mysql voj < sql/upgrades/<script>.sql
+```
+
+| Upgrading from | Script | What it does |
+| --- | --- | --- |
+| 1.0.2 or earlier | `decode-legacy-html-entities.sql` | Up to 1.0.2, discussion titles and replies, display names, locations, websites, social links and bios were stored HTML-escaped, so after the upgrade old rows show `&amp;`, `&lt;`, `&gt;` and `&nbsp;` literally. The script decodes them once. Run it before users post on the new version: its first run decodes every such row, so text typed as `&amp;` on the new version before that would be decoded too. |

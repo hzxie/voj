@@ -28,6 +28,8 @@ package org.verwandlung.voj.web.util;
  * side, which must always escape this text: {@code th:text} / {@code th:value} in templates, jQuery
  * {@code .text()} or an explicit escape when building markup in JavaScript, and markdown-it with
  * {@code html: false} for Markdown fields. Never render these fields with {@code th:utext}.
+ * Versions up to 1.0.2 stored this text entity-encoded; the one-time upgrade script
+ * sql/upgrades/decode-legacy-html-entities.sql decodes such rows.
  *
  * <p>The only normalisation performed is removing control characters other than tab, line feed
  * and carriage return, which have no legitimate use in such text.

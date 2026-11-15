@@ -108,7 +108,10 @@ INSERT INTO `voj_options` (`option_id`, `option_name`, `option_value`, `is_autol
 (26, 'turnstileEnabled', '0', 1),
 (27, 'turnstileSiteKey', '', 1),
 (28, 'turnstileSecretKey', '', 0),
-(29, 'emailDailyLimit', '3', 0);
+(29, 'emailDailyLimit', '3', 0),
+-- Marks the one-time sql/upgrades/decode-legacy-html-entities.sql as done: a
+-- new installation never stored entity-encoded user text.
+(30, 'legacyHtmlEntitiesDecoded', '1', 0);
 
 -- Baseline offensive-word library. Administrators normally replace this by
 -- importing external word lists (see voj_options.offensiveWordSources); the

@@ -105,6 +105,10 @@ Both components read a `voj.properties` file (database, mail, message queue,
 sandbox, etc.). See [`docs/configuration.md`](docs/configuration.md) for the full
 property reference.
 
+Upgrading an existing installation? Some releases need a one-time database
+script from [`sql/upgrades/`](sql/upgrades/); see
+[Upgrading the web application](docs/deployment.md#upgrading-the-web-application).
+
 ### Requirements
 
 | Component | Requirement |

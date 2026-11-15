@@ -159,6 +159,8 @@
 					<include>schema.sql</include>
 					<include>seed.sql</include>
 					<include>test-data.sql</include>
+					<!-- One-time upgrade scripts, exercised by the upgrade tests. -->
+					<include>upgrades/*.sql</include>
 				</includes>
 			</testResource>
 		</testResources>
