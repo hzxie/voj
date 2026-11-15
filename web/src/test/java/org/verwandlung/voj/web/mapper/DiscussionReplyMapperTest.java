@@ -84,6 +84,11 @@ public class DiscussionReplyMapperTest {
     DiscussionReply discussionReply = new DiscussionReply(threadId, creator, "Content");
     int numberOfRowsAffected = discussionReplyMapper.createDiscussionReply(discussionReply);
     Assertions.assertEquals(1, numberOfRowsAffected);
+
+    // A reply created without an explicit time is stamped with the current time.
+    DiscussionReply createdReply =
+        discussionReplyMapper.getDiscussionReplyUsingReplyId(discussionReply.getDiscussionReplyId());
+    Assertions.assertNotNull(createdReply.getDiscussionReplyCreateTime());
   }
 
   /**

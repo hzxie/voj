@@ -133,6 +133,11 @@ public class DiscussionThreadMapperTest {
     DiscussionThread thread = new DiscussionThread(creator, topic, problem, "title");
     int numberOfRowsAffected = discussionThreadMapper.createDiscussionThread(thread);
     Assertions.assertEquals(1, numberOfRowsAffected);
+
+    // A thread created without an explicit time is stamped with the current time.
+    DiscussionThread createdThread =
+        discussionThreadMapper.getDiscussionThreadUsingThreadId(thread.getDiscussionThreadId());
+    Assertions.assertNotNull(createdThread.getDiscussionThreadCreateTime());
   }
 
   /**

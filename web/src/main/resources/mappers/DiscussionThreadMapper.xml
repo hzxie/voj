@@ -123,7 +123,7 @@
 		keyColumn="discussion_thread_id"
 		useGeneratedKeys="true">
 		INSERT INTO voj_discussion_threads(discussion_thread_creator_uid, discussion_thread_create_time, problem_id, discussion_topic_id, discussion_thread_name, discussion_thread_visible, discussion_thread_pinned, discussion_thread_locked)
-		VALUES (#{discussionThreadCreator.uid}, #{discussionThreadCreateTime}, #{problem.problemId}, #{discussionTopic.discussionTopicId}, #{discussionThreadTitle}, #{visible}, #{pinned}, #{locked})
+		VALUES (#{discussionThreadCreator.uid}, COALESCE(#{discussionThreadCreateTime}, CURRENT_TIMESTAMP), #{problem.problemId}, #{discussionTopic.discussionTopicId}, #{discussionThreadTitle}, #{visible}, #{pinned}, #{locked})
 	</insert>
 	<update id="updateDiscussionThread"
 		parameterType="org.verwandlung.voj.web.model.DiscussionThread">

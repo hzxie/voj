@@ -70,7 +70,7 @@
 		keyColumn="discussion_reply_id"
 		useGeneratedKeys="true">
 		INSERT INTO voj_discussion_replies(discussion_thread_id, discussion_reply_uid, discussion_reply_time, discussion_reply_content)
-		VALUES (#{discussionThreadId}, #{discussionReplyCreator.uid}, #{discussionReplyCreateTime}, #{discussionReplyContent})
+		VALUES (#{discussionThreadId}, #{discussionReplyCreator.uid}, COALESCE(#{discussionReplyCreateTime}, CURRENT_TIMESTAMP), #{discussionReplyContent})
 	</insert>
 	<update id="updateDiscussionReply"
 		parameterType="org.verwandlung.voj.web.model.DiscussionThread">
