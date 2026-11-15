@@ -67,6 +67,21 @@ static const rlim_t    OUTPUT_FILE_SIZE_LIMIT = (rlim_t)256 * 1024 * 1024; // RL
 static const rlim_t    PROCESS_NUMBER_LIMIT   = 64;          // RLIMIT_NPROC (anti fork-bomb)
 
 /**
+ * The only environment variables the sandboxed process inherits from the judger. The judger's own
+ * environment holds secrets (VOJ_DB_PASSWORD, VOJ_JUDGER_API_TOKEN, ...) that a submission could
+ * otherwise read, e.g. with `#include "/proc/self/environ"` echoed into the compile log. Only
+ * locale and toolchain settings that compilers and runtimes genuinely need are passed through.
+ */
+static const char* const INHERITED_ENVIRONMENT_VARIABLES[] = {
+    "PATH", "LANG", "LC_ALL", "TZ",
+    "JAVA_HOME", "KOTLIN_HOME",
+    "GOROOT", "GOPATH", "GOCACHE", "GOENV", "GOTOOLCHAIN", "GOFLAGS",
+    "RUSTUP_HOME", "RUSTUP_TOOLCHAIN", "CARGO_HOME",
+};
+static const char* const DEFAULT_PATH = "/usr/local/bin:/usr/bin:/bin";
+static const char* const DEFAULT_LANG = "C.UTF-8";
+
+/**
  * Everything the (async-signal-safe) child needs is resolved in the parent before fork, so that
  * the child never has to call malloc, NSS or the C++ runtime while the rest of the JVM's threads
  * are frozen by fork.
@@ -74,6 +89,8 @@ static const rlim_t    PROCESS_NUMBER_LIMIT   = 64;          // RLIMIT_NPROC (an
 struct ChildPlan {
   std::string              executable;     // absolute path or PATH-resolved program to exec
   std::vector<char*>       argv;           // NULL-terminated argument vector
+  std::vector<std::string> environment;    // sanitized "NAME=value" environment
+  std::vector<char*>       envp;           // NULL-terminated pointers into environment
   std::string              inputFilePath;  // stdin redirect (empty = none)
   std::string              outputFilePath; // stdout redirect (empty = none)
   bool                     compileStep;    // compile: stderr also goes to outputFilePath
@@ -89,6 +106,7 @@ struct ChildPlan {
  */
 static std::vector<std::string> splitCommandLine(const std::string&);
 static std::string resolveExecutable(const std::string&);
+static std::vector<std::string> buildEnvironment(bool dropPrivileges, const std::string& outputFilePath);
 static std::string buildSeccompProgram();
 static long long getMonotonicMillis();
 static int  readCpuTimeMillis(pid_t);
@@ -170,9 +188,15 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
         plan.dropGid        = pw->pw_gid;
     }
 
+    plan.environment = buildEnvironment(plan.dropPrivileges, plan.outputFilePath);
+    for ( std::string& variable : plan.environment ) {
+        plan.envp.push_back(const_cast<char*>(variable.c_str()));
+    }
+    plan.envp.push_back(nullptr);
+
     plan.seccompProgram = buildSeccompProgram();
 
-    // A close-on-exec pipe: it stays open until execvp succeeds (then it auto-closes, the parent's
+    // A close-on-exec pipe: it stays open until execve succeeds (then it auto-closes, the parent's
     // read sees EOF) or the child reports an errno on failure. The parent blocks on it so the
     // watchdog only starts once the real program is running, avoiding measuring the JVM image that
     // the freshly forked child still shares before exec.
@@ -297,7 +321,7 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
  * The body of the forked child. Runs only async-signal-safe operations (no malloc, NSS or C++
  * runtime), because the surrounding JVM is multi-threaded and fork leaves its locks frozen.
  * Everything else was resolved into the ChildPlan before fork. On any failure it reports the
- * errno through the sync pipe and exits; on success execvp replaces the image and closes the
+ * errno through the sync pipe and exits; on success execve replaces the image and closes the
  * close-on-exec pipe, which the parent observes as EOF.
  *
  * @param  plan        - the pre-resolved execution plan
@@ -380,9 +404,9 @@ static void runChild(const ChildPlan& plan, int syncWriteFd) {
         syscall(SYS_seccomp, SECCOMP_SET_MODE_FILTER, 0, &prog);
     }
 
-    execv(plan.executable.c_str(), plan.argv.data());
+    execve(plan.executable.c_str(), plan.argv.data(), plan.envp.data());
 
-    // execv only returns on failure: report the errno and exit.
+    // execve only returns on failure: report the errno and exit.
     reportChildFailure(syncWriteFd, errno);
 }
 
@@ -444,7 +468,7 @@ static std::vector<std::string> splitCommandLine(const std::string& commandLine)
 
 /**
  * Resolves a program name to an executable path. Names containing a slash are used verbatim;
- * otherwise PATH is searched, so the child can call execv (which does not search PATH and so does
+ * otherwise PATH is searched, so the child can call execve (which does not search PATH and so does
  * not allocate) instead of execvp.
  * @param  file - the program name from the command line
  * @return the resolved path (or the original name if nothing matched)
@@ -455,7 +479,7 @@ static std::string resolveExecutable(const std::string& file) {
     }
     const char* path = getenv("PATH");
     if ( path == nullptr ) {
-        path = "/usr/local/bin:/usr/bin:/bin";
+        path = DEFAULT_PATH;
     }
     std::string pathValue(path);
     size_t start = 0;
@@ -475,6 +499,43 @@ static std::string resolveExecutable(const std::string& file) {
         start = colon + 1;
     }
     return file;
+}
+
+/**
+ * Builds the minimal environment of the sandboxed process: the whitelisted variables of the judger
+ * (INHERITED_ENVIRONMENT_VARIABLES), defaults for PATH and LANG, and HOME. When privileges are
+ * dropped, the judger's HOME (e.g. /root) is useless to the sandbox user, so HOME is set to the
+ * work directory (the directory holding the output file), which the sandbox user owns.
+ * @param  dropPrivileges - whether the child drops to the sandbox user
+ * @param  outputFilePath - the output file path (its directory is the work directory)
+ * @return the list of "NAME=value" strings
+ */
+static std::vector<std::string> buildEnvironment(bool dropPrivileges, const std::string& outputFilePath) {
+    std::vector<std::string> environment;
+    for ( const char* name : INHERITED_ENVIRONMENT_VARIABLES ) {
+        const char* value = getenv(name);
+        if ( value != nullptr ) {
+            environment.push_back(std::string(name) + "=" + value);
+        }
+    }
+    if ( getenv("PATH") == nullptr ) {
+        environment.push_back(std::string("PATH=") + DEFAULT_PATH);
+    }
+    if ( getenv("LANG") == nullptr ) {
+        environment.push_back(std::string("LANG=") + DEFAULT_LANG);
+    }
+
+    const char* home = getenv("HOME");
+    if ( dropPrivileges || home == nullptr ) {
+        size_t      lastSlash     = outputFilePath.rfind('/');
+        std::string workDirectory = (lastSlash != std::string::npos && lastSlash > 0)
+                                        ? outputFilePath.substr(0, lastSlash)
+                                        : std::string("/tmp");
+        environment.push_back("HOME=" + workDirectory);
+    } else {
+        environment.push_back(std::string("HOME=") + home);
+    }
+    return environment;
 }
 
 /**
