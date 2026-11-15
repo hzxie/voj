@@ -93,6 +93,8 @@ static long long getMonotonicMillis();
 static int  readCpuTimeMillis(pid_t);
 static int  readPeakMemoryKb(pid_t);
 static void runChild(const ChildPlan&, int syncWriteFd) __attribute__((noreturn));
+static void reportChildFailure(int syncWriteFd, int error) __attribute__((noreturn));
+static int  openOutputFile(const char*);
 
 /**
  * JNI call entry point.
@@ -296,23 +298,15 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
  * @param  syncWriteFd - the write end of the close-on-exec sync pipe
  */
 static void runChild(const ChildPlan& plan, int syncWriteFd) {
-    // I/O redirection.
+    // Standard input is opened before the privilege drop: the checkpoint directory is private to the
+    // judger, and the path is chosen by the judger, not by the submission.
     if ( !plan.inputFilePath.empty() ) {
-        int inputFd = open(plan.inputFilePath.c_str(), O_RDONLY);
+        int inputFd = open(plan.inputFilePath.c_str(), O_RDONLY | O_CLOEXEC);
         if ( inputFd < 0 ) {
-            _exit(127);
+            reportChildFailure(syncWriteFd, errno);
         }
         dup2(inputFd, STDIN_FILENO);
         close(inputFd);
-    }
-    if ( !plan.outputFilePath.empty() ) {
-        int outputFd = open(plan.outputFilePath.c_str(), O_CREAT | O_WRONLY | O_TRUNC, OUTPUT_FILE_MODE);
-        if ( outputFd < 0 ) {
-            _exit(127);
-        }
-        dup2(outputFd, STDOUT_FILENO);
-        dup2(outputFd, STDERR_FILENO);
-        close(outputFd);
     }
 
     // Run in a dedicated process group so the watchdog can signal the whole tree.
@@ -342,12 +336,22 @@ static void runChild(const ChildPlan& plan, int syncWriteFd) {
         setrlimit(RLIMIT_NPROC, &limit);
 
         setgroups(0, nullptr);
-        if ( setgid(plan.dropGid) != 0 ) {
-            _exit(127);
+        if ( setgid(plan.dropGid) != 0 || setuid(plan.dropUid) != 0 ) {
+            reportChildFailure(syncWriteFd, errno);
         }
-        if ( setuid(plan.dropUid) != 0 ) {
-            _exit(127);
+    }
+
+    // The output file is opened only now, with the sandbox user's credentials: the work directory is
+    // writable by the submission, which may have planted a symlink (or a hard link, FIFO, ...) at
+    // this path during an earlier checkpoint, and root must never follow it.
+    if ( !plan.outputFilePath.empty() ) {
+        int outputFd = openOutputFile(plan.outputFilePath.c_str());
+        if ( outputFd < 0 ) {
+            reportChildFailure(syncWriteFd, errno);
         }
+        dup2(outputFd, STDOUT_FILENO);
+        dup2(outputFd, STDERR_FILENO);
+        close(outputFd);
     }
 
     // Tier 2 (best-effort): install the pre-built seccomp syscall filter via the raw syscall, so
@@ -363,10 +367,50 @@ static void runChild(const ChildPlan& plan, int syncWriteFd) {
     execv(plan.executable.c_str(), plan.argv.data());
 
     // execv only returns on failure: report the errno and exit.
-    int execErrno = errno;
-    ssize_t ignored = write(syncWriteFd, &execErrno, sizeof(execErrno));
+    reportChildFailure(syncWriteFd, errno);
+}
+
+/**
+ * Reports a failure of the forked child to the parent through the sync pipe and exits. The parent
+ * then knows the program never ran (exit code 127). Async-signal-safe.
+ *
+ * @param  syncWriteFd - the write end of the close-on-exec sync pipe
+ * @param  error       - the errno to report
+ */
+static void reportChildFailure(int syncWriteFd, int error) {
+    ssize_t ignored = write(syncWriteFd, &error, sizeof(error));
     (void) ignored;
     _exit(127);
+}
+
+/**
+ * Opens (creating or truncating) the file that receives the program's output. Must be called after
+ * the privilege drop, so that whatever the path resolves to is only writable if the sandbox user
+ * could write it anyway. As defence in depth it also refuses to follow a symlink in the last path
+ * component, never blocks on a FIFO and only accepts a regular file with a single link.
+ * Async-signal-safe.
+ *
+ * @param  path - the output file path
+ * @return the open file descriptor, or -1 (with errno set) on failure
+ */
+static int openOutputFile(const char* path) {
+    int fd = open(path, O_CREAT | O_WRONLY | O_TRUNC | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC,
+                  OUTPUT_FILE_MODE);
+    if ( fd < 0 ) {
+        return -1;
+    }
+    struct stat st;
+    if ( fstat(fd, &st) != 0 || !S_ISREG(st.st_mode) || st.st_nlink != 1 ) {
+        close(fd);
+        errno = EPERM;
+        return -1;
+    }
+    int flags = fcntl(fd, F_GETFL);
+    if ( flags < 0 || fcntl(fd, F_SETFL, flags & ~O_NONBLOCK) != 0 ) {
+        close(fd);
+        return -1;
+    }
+    return fd;
 }
 
 /**
