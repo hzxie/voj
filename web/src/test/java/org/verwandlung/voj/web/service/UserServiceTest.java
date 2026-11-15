@@ -251,6 +251,17 @@ public class UserServiceTest {
     Assertions.assertTrue(result.get("isSuccessful"));
   }
 
+  /** Test case: tests the isAllowedToAccess(User) method. Test data: an administrator, a judger, a banned user and null. Expected: only users and administrators may access. */
+  @Test
+  public void testIsAllowedToAccess() {
+    User user = userService.getUserUsingUid(1000);
+    Assertions.assertTrue(userService.isAllowedToAccess(user));
+    Assertions.assertFalse(userService.isAllowedToAccess(userService.getUserUsingUid(1001)));
+    userService.banUser(1000);
+    Assertions.assertFalse(userService.isAllowedToAccess(userService.getUserUsingUid(1000)));
+    Assertions.assertFalse(userService.isAllowedToAccess(null));
+  }
+
   /** Test case: tests the changePreferLanguage(...) method. Test data: a legal / illegal language slug. Expected: success or failure accordingly. */
   @Test
   public void testChangePreferLanguage() {

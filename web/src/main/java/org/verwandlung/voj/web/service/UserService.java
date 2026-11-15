@@ -288,6 +288,18 @@ public class UserService {
   }
 
   /**
+   * Checks whether the user may (still) use an authenticated session: the user must belong to a
+   * user group that is allowed to log in. Used to re-validate logged-in users on every request, so
+   * that banning or demoting a user takes effect immediately.
+   *
+   * @param user - the user to check
+   * @return whether the user is allowed to access the system
+   */
+  public boolean isAllowedToAccess(User user) {
+    return user != null && user.getUserGroup() != null && isAllowedToAccess(user.getUserGroup());
+  }
+
+  /**
    * Verifies whether the user is allowed to log in.
    *
    * @param userGroup - the object of the user group the user belongs to

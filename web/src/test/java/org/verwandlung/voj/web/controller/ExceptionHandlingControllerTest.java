@@ -23,6 +23,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Controller;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
@@ -96,8 +97,13 @@ public class ExceptionHandlingControllerTest {
     mockMvc.perform(get("/test/item/42")).andExpect(status().isOk());
   }
 
-  /** A minimal controller exercising each failure mode. */
+  /**
+   * A minimal controller exercising each failure mode. The stand-alone MockMvc registers it
+   * explicitly; the profile keeps the component scan of test-spring-context.xml (which covers the
+   * test classes too) from picking it up.
+   */
   @Controller
+  @Profile("exception-handling-controller-test")
   static class TestController {
     @GetMapping("/test/item/{id}")
     @ResponseBody

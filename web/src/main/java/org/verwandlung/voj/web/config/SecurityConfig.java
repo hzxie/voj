@@ -33,10 +33,14 @@ import org.springframework.security.crypto.password.MessageDigestPasswordEncoder
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandlerImpl;
+import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.csrf.CsrfTokenRepository;
 import org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository;
 import org.springframework.security.web.session.HttpSessionEventPublisher;
+
+import org.verwandlung.voj.web.interceptor.CurrentUserRefreshFilter;
+import org.verwandlung.voj.web.service.UserService;
 
 /**
  * The Spring Security configuration. Replaces the home-grown {@code CsrfProtector}, the {@code
@@ -71,7 +75,8 @@ public class SecurityConfig {
   @Bean
   @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
   public SecurityFilterChain securityFilterChain(
-      HttpSecurity http, SessionRegistry sessionRegistry) throws Exception {
+      HttpSecurity http, SessionRegistry sessionRegistry, UserService userService)
+      throws Exception {
     CsrfTokenRepository csrfTokenRepository = newCsrfTokenRepository();
 
     http.authorizeHttpRequests(
@@ -101,7 +106,10 @@ public class SecurityConfig {
         // form-login, HTTP basic and logout endpoints are disabled.
         .formLogin(AbstractHttpConfigurer::disable)
         .httpBasic(AbstractHttpConfigurer::disable)
-        .logout(AbstractHttpConfigurer::disable);
+        .logout(AbstractHttpConfigurer::disable)
+        // The session caches the logged-in user and its role; reload it on every request (before
+        // the authorization checks) so a ban, demotion or deletion takes effect immediately.
+        .addFilterBefore(new CurrentUserRefreshFilter(userService), AuthorizationFilter.class);
     return http.build();
   }
 
