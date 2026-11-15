@@ -256,6 +256,8 @@
                         var errorMessage = '';
                         if ( !result['isUserLogined'] ) {
                             errorMessage = [[#{voj.problems.problem.user-not-login}]];
+                        } else if ( result['isUserLegal'] === false ) {
+                            errorMessage = [[#{voj.problems.problem.user-forbidden}]];
                         } else if ( !result['isProblemExists'] ) {
                             errorMessage = [[#{voj.problems.problem.problem-not-exists}]];
                         } else if ( !result['isLanguageExists'] ) {

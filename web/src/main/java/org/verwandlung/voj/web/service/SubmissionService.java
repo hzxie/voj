@@ -423,9 +423,10 @@ public class SubmissionService {
    * @return a Map<String, Boolean> object containing the validation result of the submission
    */
   private Map<String, ? extends Object> getSubmissionCreationResult(Submission submission) {
-    Map<String, Boolean> result = new HashMap<>(6, 1);
+    Map<String, Boolean> result = new HashMap<>(8, 1);
     String code = submission.getCode();
     result.put("isUserLogined", submission.getUser() != null);
+    result.put("isUserLegal", isSubmitterLegal(submission.getUser()));
     result.put("isProblemExists", submission.getProblem() != null);
     result.put("isLanguageExists", submission.getLanguage() != null);
     result.put("isCodeEmpty", code == null || code.length() == 0);
@@ -433,6 +434,7 @@ public class SubmissionService {
 
     boolean isSuccessful =
         result.get("isUserLogined")
+            && result.get("isUserLegal")
             && result.get("isProblemExists")
             && result.get("isLanguageExists")
             && !result.get("isCodeEmpty")
@@ -504,6 +506,24 @@ public class SubmissionService {
   }
 
   /**
+   * Checks whether the submitter is allowed to submit at all: banned users (the {@code forbidden}
+   * user group) may not, mirroring the rule for creating discussion threads. The user group is
+   * re-read from the database so a ban takes effect even for a session that was signed in before.
+   *
+   * @param user - the submitting user, or null
+   * @return whether the submitter exists and is not banned
+   */
+  private boolean isSubmitterLegal(User user) {
+    if (user == null) {
+      return false;
+    }
+    User freshUser = userMapper.getUserUsingUid(user.getUid());
+    return freshUser != null
+        && freshUser.getUserGroup() != null
+        && !"forbidden".equals(freshUser.getUserGroup().getUserGroupSlug());
+  }
+
+  /**
    * Checks whether the submitter is allowed to submit with respect to email verification. When the
    * {@code requireEmailVerification} option is enabled, only users whose email address has been
    * verified may submit; otherwise everyone may submit.
@@ -533,7 +553,10 @@ public class SubmissionService {
   /** The autowired OptionMapper object. Used to resolve the email-verification requirement. */
   @Autowired private OptionMapper optionMapper;
 
-  /** The autowired UserMapper object. Used to read a submitter's current verification status. */
+  /**
+   * The autowired UserMapper object. Used to read a submitter's current user group and verification
+   * status.
+   */
   @Autowired private UserMapper userMapper;
 
   /** The autowired ProblemMapper object. */

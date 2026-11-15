@@ -202,6 +202,20 @@ public class SubmissionServiceTest {
     Assertions.assertFalse((Boolean) result.get("isSuccessful"));
   }
 
+  /** Test case: tests the createSubmission(...) method. Test data: user 1002 is moved to the forbidden (banned) user group after signing in. Expected: the user is reported as not legal and creation fails. */
+  @Test
+  public void testCreateSubmissionByBannedUser() {
+    new org.springframework.jdbc.core.JdbcTemplate(dataSource)
+        .update(
+            "UPDATE voj_users SET user_group_id = (SELECT user_group_id FROM voj_user_groups"
+                + " WHERE user_group_slug = 'forbidden') WHERE uid = 1002");
+
+    Map<String, Object> result =
+        submissionService.createSubmission(userWithUid(1002), 1000, "text/x-java", "Code");
+    Assertions.assertFalse((Boolean) result.get("isUserLegal"));
+    Assertions.assertFalse((Boolean) result.get("isSuccessful"));
+  }
+
   /** Test case: tests the createSubmission(...) method. Test data: a submission in Java after Java has been disabled. Expected: the language is rejected and creation fails. */
   @Test
   public void testCreateSubmissionWithDisabledLanguage() {
