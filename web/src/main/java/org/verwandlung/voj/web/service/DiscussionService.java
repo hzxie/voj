@@ -170,6 +170,10 @@ public class DiscussionService {
     int discussionTopicId = 0;
     if (discussionTopicSlug != null && !discussionTopicSlug.isEmpty()) {
       DiscussionTopic dt = discussionTopicMapper.getDiscussionTopicUsingSlug(discussionTopicSlug);
+      if (dt == null) {
+        // An unknown topic has no threads (rather than failing, or falling back to every topic).
+        return new ArrayList<>();
+      }
       discussionTopicId = dt.getDiscussionTopicId();
     }
     List<DiscussionThread> threads =
@@ -600,6 +604,16 @@ public class DiscussionService {
   }
 
   /**
+   * Checks whether a piece of user text is missing or consists of whitespace only.
+   *
+   * @param text - the text to check (may be null)
+   * @return whether the text is blank
+   */
+  private static boolean isBlank(String text) {
+    return text == null || text.isBlank();
+  }
+
+  /**
    * Checks whether the given editor may modify (edit or delete) content created by {@code creator}:
    * only the original author or an administrator may. An anonymous (null) editor is rejected, so the
    * mutating discussion actions deny unauthenticated callers cleanly instead of dereferencing null.
@@ -740,7 +754,7 @@ public class DiscussionService {
     result.put("isSuccessful", isSuccessful);
     if (isSuccessful) {
       int parentDiscussionTopicId =
-          parentDiscussionTopic == null ? 0 : parentDiscussionTopic.getParentDiscussionTopicId();
+          parentDiscussionTopic == null ? 0 : parentDiscussionTopic.getDiscussionTopicId();
       DiscussionTopic dt =
           new DiscussionTopic(discussionTopicSlug, discussionTopicName, parentDiscussionTopicId);
       discussionTopicMapper.createDiscussionTopic(dt);
@@ -779,7 +793,7 @@ public class DiscussionService {
     result.put("isSuccessful", isSuccessful);
     if (isSuccessful) {
       int parentDiscussionTopicId =
-          parentDiscussionTopic == null ? 0 : parentDiscussionTopic.getParentDiscussionTopicId();
+          parentDiscussionTopic == null ? 0 : parentDiscussionTopic.getDiscussionTopicId();
       dt.setDiscussionTopicSlug(discussionTopicSlug);
       dt.setDiscussionTopicName(discussionTopicName);
       dt.setParentDiscussionTopicId(parentDiscussionTopicId);
@@ -812,6 +826,7 @@ public class DiscussionService {
    * @param discussionThreadContent - the content of the first reply in the discussion thread
    * @return a Map object containing the discussion thread creation result
    */
+  @Transactional
   public Map<String, Object> createDiscussionThread(
       User threadCreator,
       String discussionTopicSlug,
@@ -823,8 +838,13 @@ public class DiscussionService {
     DiscussionThread dt =
         new DiscussionThread(
             threadCreator, discussionTopic, null, HtmlTextFilter.filter(discussionThreadTitle));
+    // The first reply is validated in the exact form it is stored in, so a thread is never created
+    // without its opening post.
+    DiscussionReply firstReply =
+        new DiscussionReply(0, threadCreator, HtmlTextFilter.filter(discussionThreadContent));
     Map<String, Object> result =
-        (Map<String, Object>) getDiscussionThreadCreationResult(dt, discussionThreadContent);
+        (Map<String, Object>)
+            getDiscussionThreadCreationResult(dt, firstReply.getDiscussionReplyContent());
 
     // The related problem is optional: a non-positive id means "no problem linked". When an id
     // is supplied it must resolve to a problem the creator may view, otherwise the thread is
@@ -846,8 +866,11 @@ public class DiscussionService {
       if (relatedProblem != null) {
         dt.setProblem(relatedProblem);
       }
+      // Both rows are written in one transaction, so the thread and its opening post are created
+      // (or rolled back) together.
       discussionThreadMapper.createDiscussionThread(dt);
-      createDiscussionReply(dt.getDiscussionThreadId(), threadCreator, discussionThreadContent);
+      firstReply.setDiscussionThreadId(dt.getDiscussionThreadId());
+      discussionReplyMapper.createDiscussionReply(firstReply);
       result.put("discussionThreadId", dt.getDiscussionThreadId());
     }
     return result;
@@ -857,7 +880,7 @@ public class DiscussionService {
    * Gets the creation result of a discussion thread.
    *
    * @param dt - the discussion thread to create
-   * @param discussionThreadContent - the content of the thread to create (stored as a
+   * @param discussionThreadContent - the filtered content of the thread to create (stored as a
    *     DiscussionReply object)
    * @return a Map<String, Boolean> object containing the discussion thread creation result
    */
@@ -873,9 +896,9 @@ public class DiscussionService {
                 .getUserGroupSlug()
                 .equals("forbidden"));
     result.put("isDiscussionTopicExists", dt.getDiscussionTopic() != null);
-    result.put("isThreadTitleEmpty", dt.getDiscussionThreadTitle().isEmpty());
+    result.put("isThreadTitleEmpty", isBlank(dt.getDiscussionThreadTitle()));
     result.put("isThreadTitleLegal", dt.getDiscussionThreadTitle().length() <= 128);
-    result.put("isThreadContentEmpty", discussionThreadContent.isEmpty());
+    result.put("isThreadContentEmpty", isBlank(discussionThreadContent));
     result.put("isPostDelayElapsed", isPostDelayElapsed(dt.getDiscussionThreadCreator()));
 
     boolean isSuccessful =
@@ -907,9 +930,10 @@ public class DiscussionService {
       String discussionThreadTitle) {
     DiscussionThread dt =
         discussionThreadMapper.getDiscussionThreadUsingThreadId(discussionThreadId);
+    discussionThreadTitle = HtmlTextFilter.filter(discussionThreadTitle);
     Map<String, Boolean> result = new HashMap<>(7, 1);
     result.put("isDiscussionThreadExists", dt != null);
-    result.put("isThreadTitleEmpty", discussionThreadTitle.isEmpty());
+    result.put("isThreadTitleEmpty", isBlank(discussionThreadTitle));
     result.put("isThreadTitleLegal", discussionThreadTitle.length() <= 128);
 
     DiscussionTopic discussionTopic =
@@ -929,7 +953,7 @@ public class DiscussionService {
     result.put("isSuccessful", isSuccessful);
     if (isSuccessful) {
       dt.setDiscussionTopic(discussionTopic);
-      dt.setDiscussionThreadTitle(HtmlTextFilter.filter(discussionThreadTitle));
+      dt.setDiscussionThreadTitle(discussionThreadTitle);
       discussionThreadMapper.updateDiscussionThread(dt);
     }
     return result;
@@ -999,7 +1023,7 @@ public class DiscussionService {
         "isReplyCreatorLegal",
         replyCreator != null
             && !replyCreator.getUserGroup().getUserGroupSlug().equals("forbidden"));
-    result.put("isReplyContentEmpty", replyContent.isEmpty());
+    result.put("isReplyContentEmpty", isBlank(replyContent));
     result.put("isPostDelayElapsed", isPostDelayElapsed(replyCreator));
 
     boolean isSuccessful =
@@ -1028,9 +1052,11 @@ public class DiscussionService {
     boolean isSuccessful = false;
     DiscussionReply dr = discussionReplyMapper.getDiscussionReplyUsingReplyId(discussionReplyId);
 
-    if (dr != null) {
+    String filteredContent = HtmlTextFilter.filter(discussionReplyContent);
+
+    if (dr != null && !isBlank(filteredContent)) {
       if (canModify(dr.getDiscussionReplyCreator(), currentEditor)) {
-        dr.setDiscussionReplyContent(HtmlTextFilter.filter(discussionReplyContent));
+        dr.setDiscussionReplyContent(filteredContent);
         discussionReplyMapper.updateDiscussionReply(dr);
         isSuccessful = true;
       }

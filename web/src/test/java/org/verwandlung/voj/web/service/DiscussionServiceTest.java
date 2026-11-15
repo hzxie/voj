@@ -577,6 +577,15 @@ public class DiscussionServiceTest {
     Assertions.assertNotNull(discussionService.getDiscussionReplyUsingReplyId(1));
   }
 
+  /** Test case: tests the getDiscussionThreadsOfTopic(...) method. Test data: a topic slug that does not exist. Expected: an empty list instead of a NullPointerException (or every topic's threads). */
+  @Test
+  public void testGetDiscussionThreadsOfUnknownTopic() {
+    List<DiscussionThread> threads =
+        discussionService.getDiscussionThreadsOfTopic("not-a-topic", 0, 10);
+    Assertions.assertNotNull(threads);
+    Assertions.assertTrue(threads.isEmpty());
+  }
+
   /** Test case: tests the getDiscussionThreadsOfProblem(...) method. Test data: thread 2 whose latest reply (3) is hidden by an administrator. Expected: the latest reply falls back to the visible reply 2, and the list never carries the reply content. */
   @Test
   public void testLatestReplyOfThreadListExcludesHiddenReplies() {
@@ -693,6 +702,56 @@ public class DiscussionServiceTest {
         discussionService.getDiscussionRepliesOfThread(threadId, -1, 0, 10, true);
     Assertions.assertEquals(1, replies.size());
     Assertions.assertEquals(content, replies.get(0).getDiscussionReplyContent());
+  }
+
+  /** Test case: tests the createDiscussionThread(...) method. Test data: content that is blank (whitespace or removed control characters only). Expected: creation fails and no thread without an opening post is left behind. */
+  @Test
+  public void testCreateDiscussionThreadWithBlankContent() {
+    long numberOfThreads = discussionService.getNumberOfDiscussionThreads();
+    for (String content : new String[] {"", "  \n\t ", "\u0000"}) {
+      Map<String, Object> result =
+          discussionService.createDiscussionThread(adminUser(), "qa", 0, "Title", content);
+      Assertions.assertTrue((Boolean) result.get("isThreadContentEmpty"));
+      Assertions.assertFalse((Boolean) result.get("isSuccessful"));
+    }
+    Assertions.assertEquals(numberOfThreads, discussionService.getNumberOfDiscussionThreads());
+  }
+
+  /** Test case: tests the createDiscussionReply(...) and editDiscussionReply(...) methods. Test data: whitespace-only content. Expected: rejected. */
+  @Test
+  public void testDiscussionReplyWithBlankContent() {
+    Map<String, Object> result = discussionService.createDiscussionReply(1, adminUser(), " \n ");
+    Assertions.assertTrue((Boolean) result.get("isReplyContentEmpty"));
+    Assertions.assertFalse((Boolean) result.get("isSuccessful"));
+    Assertions.assertFalse(discussionService.editDiscussionReply(1, adminUser(), "  ").get("isSuccessful"));
+  }
+
+  /** Test case: tests the createDiscussionTopic(...) and updateDiscussionTopic(...) methods. Test data: a parent topic (topic 1, itself top-level). Expected: the new topic's parent is that topic, not the parent's own parent. */
+  @Test
+  public void testDiscussionTopicParent() {
+    DiscussionTopic parent = findTopic("solutions");
+    Assertions.assertTrue(
+        discussionService.createDiscussionTopic("child", "Child", parent).get("isSuccessful"));
+    DiscussionTopic child = findTopic("child");
+    Assertions.assertEquals(parent.getDiscussionTopicId(), child.getParentDiscussionTopicId());
+
+    DiscussionTopic otherParent = findTopic("qa");
+    Assertions.assertTrue(
+        discussionService
+            .updateDiscussionTopic(child.getDiscussionTopicId(), "child", "Child", otherParent)
+            .get("isSuccessful"));
+    Assertions.assertEquals(
+        otherParent.getDiscussionTopicId(), findTopic("child").getParentDiscussionTopicId());
+  }
+
+  /** Returns the discussion topic with the given slug, or a null reference. */
+  private DiscussionTopic findTopic(String slug) {
+    for (DiscussionTopic topic : discussionService.getDiscussionTopics()) {
+      if (slug.equals(topic.getDiscussionTopicSlug())) {
+        return topic;
+      }
+    }
+    return null;
   }
 
   /** Returns the thread with the given identifier from a list, failing the test if it is absent. */

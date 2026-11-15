@@ -108,7 +108,7 @@
             $.ajax({
                 type: 'GET',
                 url: [[@{/discussion/getDiscussionThreads.action}]],
-                data: { 'startIndex': startIndex, 'category': [[${selectedTopicSlug}]], 'problemId': [[${problemId}]] },
+                data: { 'startIndex': startIndex, 'topicSlug': [[${selectedTopicSlug}]], 'problemId': [[${problemId}]] },
                 dataType: 'JSON',
                 success: function(result){ return processDiscussionThreadsResult(result); }
             });

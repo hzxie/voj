@@ -101,6 +101,11 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
     <script type="text/javascript" th:inline="javascript">
         var mainEditor, threadCreatorUid = [[${discussionThread.discussionThreadCreator.uid}]], seenParticipants = {};
+        // The offset of the next page of replies on the server. It only advances by the number of
+        // replies the server returned, so replies posted on this page (appended locally) do not
+        // shift it; serverReplyIds remembers which rendered replies came from the server, so that
+        // deleting one of them moves the offset back by one.
+        var replyOffset = 0, serverReplyIds = {};
         $(function() {
             $('span.datetime').html(getTimeElapsed($('span.datetime').html(), [[${language}]]));
             /*[# th:if="${isLogin}"]*/
@@ -111,12 +116,11 @@
             loadDiscussionReplies();
             /*[/]*/
         });
-        function loadDiscussionReplies() { setLoadingStatus(true); getDiscussionReplies(0); }
+        function loadDiscussionReplies() { setLoadingStatus(true); getDiscussionReplies(replyOffset); }
         $('#more-discussion-replies').click(function() {
             var isLoading       = $('.vw-spinner', this).is(':visible'),
-                hasNextRecord   = $('p', this).hasClass('availble'),
-                numberOfReplies = $('.vw-post').length;
-            if ( !isLoading && hasNextRecord ) { setLoadingStatus(true); return getDiscussionReplies(numberOfReplies); }
+                hasNextRecord   = $('p', this).hasClass('availble');
+            if ( !isLoading && hasNextRecord ) { setLoadingStatus(true); return getDiscussionReplies(replyOffset); }
         });
         function setLoadingStatus(isLoading) {
             if ( isLoading ) { $('p', '#more-discussion-replies').addClass('hide'); $('.vw-spinner', '#more-discussion-replies').removeClass('hide'); }
@@ -133,7 +137,13 @@
         }
         function processDiscussionRepliesResult(result) {
             if ( result['isSuccessful'] ) {
-                displayDiscussionReplyRecords(result['discussionReplies']);
+                var replies = result['discussionReplies'];
+                replyOffset += replies.length;
+                for ( var i = 0; i < replies.length; ++ i ) {
+                    var replyId = replies[i]['discussionReplyId'];
+                    serverReplyIds[replyId] = true;
+                }
+                displayDiscussionReplyRecords(replies);
             } else {
                 $('p', '#more-discussion-replies').removeClass('availble');
                 $('#more-discussion-replies').addClass('is-done');
@@ -150,6 +160,9 @@
         function displayDiscussionReplyRecords(discussionReplies) {
             for ( var i = 0; i < discussionReplies.length; ++ i ) {
                 var r = discussionReplies[i];
+                // A reply posted on this page may come back from the server in a later page (and the
+                // vote-based order may shift between pages): never render the same reply twice.
+                if ( $('.vw-post[data-value="' + parseInt(r['discussionReplyId'], 10) + '"]').length ) { continue; }
                 var post = $(getDiscussionReplyContent(r)).appendTo('#discussion-replies');
                 typesetMath(post.find('.vw-post-body')[0]);
                 addParticipant(r['discussionReplyCreator']);
@@ -308,7 +321,12 @@
                 data: { 'discussionReplyId': id, 'csrfToken': $('#csrf-token').val() },
                 dataType: 'JSON',
                 success: function(result) {
-                    if ( result['isSuccessful'] ) { post.remove(); $('#number-of-comments').html(n - 1); }
+                    if ( result['isSuccessful'] ) {
+                        post.remove();
+                        $('#number-of-comments').html(n - 1);
+                        // A deleted reply that was part of a loaded page shifts the later ones back by one.
+                        if ( serverReplyIds[id] ) { delete serverReplyIds[id]; replyOffset = Math.max(0, replyOffset - 1); }
+                    }
                     else { alert([[#{voj.discussion.thread.failed-to-delete}]]); }
                 }
             });
