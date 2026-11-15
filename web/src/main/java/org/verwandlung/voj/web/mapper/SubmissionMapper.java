@@ -213,18 +213,21 @@ public interface SubmissionMapper {
       @Param("problemIdUpperBound") long problemIdUpperBound);
 
   /**
-   * Gets the number of accepted submissions of a user.
+   * Gets the number of distinct published problems a user has solved. Problems that are not
+   * published (draft / hidden, e.g. contest-only problems) are not counted, so the figure can be
+   * shown on public pages such as the user profile.
    *
    * @param uid - the unique identifier of the user
-   * @return the number of accepted submissions of the user
+   * @return the number of distinct published problems the user has solved
    */
   long getAcceptedSubmissionUsingUserId(@Param("uid") long uid);
 
   /**
-   * Gets the total number of submissions of a user.
+   * Gets the total number of judged submissions of a user to published problems (pending and
+   * system-error submissions, and submissions to draft / hidden problems, are not counted).
    *
    * @param uid - the unique identifier of the user
-   * @return the total number of submissions of the user
+   * @return the total number of judged submissions of the user to published problems
    */
   long getTotalSubmissionUsingUserId(@Param("uid") long uid);
 

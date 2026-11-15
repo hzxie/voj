@@ -25,6 +25,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.function.Executable;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.Transactional;
@@ -443,6 +444,22 @@ public class SubmissionMapperTest {
   }
 
   /**
+   * Test case: tests the getAcceptedSubmissionUsingUserId(long) and getTotalSubmissionUsingUserId
+   * (long) methods. Test data: user ID #1000 gets an accepted submission to the hidden problem #1002.
+   * Expected: neither count changes, because the profile statistics only cover published problems.
+   */
+  @Test
+  public void testSubmissionStatsIgnoreUnpublishedProblems() {
+    new JdbcTemplate(dataSource)
+        .update(
+            "INSERT INTO voj_submissions (problem_id, uid, language_id, submission_judge_result,"
+                + " submission_code) VALUES (1002, 1000, 2, 'AC', 'Code')");
+
+    Assertions.assertEquals(2, submissionMapper.getAcceptedSubmissionUsingUserId(1000));
+    Assertions.assertEquals(3, submissionMapper.getTotalSubmissionUsingUserId(1000));
+  }
+
+  /**
    * Test case: tests the getSolvedProblemCountForAllUsers() method. Test data: the seeded
    * submissions. Expected: user ID #1000 appears with a solved-problem count of 2 (problems #1000 and
    * #1001), matching getAcceptedSubmissionUsingUserId.
@@ -553,6 +570,9 @@ public class SubmissionMapperTest {
 
   /** The SubmissionMapper object under test. */
   @Autowired private SubmissionMapper submissionMapper;
+
+  /** The DataSource of the test database, used to insert fixtures the mappers cannot create. */
+  @Autowired private javax.sql.DataSource dataSource;
 
   /** The ProblemMapper object, used to build the unit test cases. */
   @Autowired private ProblemMapper problemMapper;

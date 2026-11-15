@@ -234,16 +234,20 @@
 	<select id="getAcceptedSubmissionUsingUserId" 
 		parameterType="long"
 		resultType="long">
-		SELECT COUNT(DISTINCT problem_id) 
-		FROM voj_submissions 
-		WHERE uid = #{uid} AND submission_judge_result = 'AC'
+		SELECT COUNT(DISTINCT s.problem_id)
+		FROM voj_submissions s
+		JOIN voj_problems p ON p.problem_id = s.problem_id
+		WHERE s.uid = #{uid} AND s.submission_judge_result = 'AC'
+		AND p.problem_status = 'PUBLISHED'
 	</select>
 	<select id="getTotalSubmissionUsingUserId"
 		parameterType="long"
 		resultType="long">
 		SELECT COUNT(*)
-		FROM voj_submissions
-		WHERE uid = #{uid} AND submission_judge_result != 'PD' AND submission_judge_result != 'SE'
+		FROM voj_submissions s
+		JOIN voj_problems p ON p.problem_id = s.problem_id
+		WHERE s.uid = #{uid} AND s.submission_judge_result != 'PD' AND s.submission_judge_result != 'SE'
+		AND p.problem_status = 'PUBLISHED'
 	</select>
 	<select id="getNumberOfSolvedProblemsByDifficulty"
 		parameterType="long"
