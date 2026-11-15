@@ -72,7 +72,7 @@ public class DefaultController {
         "totalSubmissions",
         submissionService.getNumberOfSubmissionsUsingDate(new Date(0), new Date()));
     view.addObject("onlineJudgers", keepAliveEventListener.getOnlineJudgers());
-    view.addObject("languages", languageService.getAllLanguages());
+    view.addObject("languages", languageService.getEnabledLanguages());
     return view;
   }
 

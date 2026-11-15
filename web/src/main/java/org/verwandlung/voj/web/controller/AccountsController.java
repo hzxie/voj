@@ -270,7 +270,7 @@ public class AccountsController {
       redirectView.setExposeModelAttributes(false);
       view = new ModelAndView(redirectView);
     } else {
-      List<Language> languages = languageService.getAllLanguages();
+      List<Language> languages = languageService.getEnabledLanguages();
       boolean isAllowRegister =
           optionService.getOption("allowUserRegister").getOptionValue().equals("1");
 
