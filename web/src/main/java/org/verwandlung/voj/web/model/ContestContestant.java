@@ -139,10 +139,17 @@ public class ContestContestant implements Comparable {
     }
 
     ContestContestant occ = (ContestContestant) o;
-    if (occ.getScore() == this.score) {
-      return this.time < occ.getTime() ? -1 : 1;
+    if (occ.getScore() != this.score) {
+      return Integer.compare(occ.getScore(), this.score);
     }
-    return occ.getScore() - this.score;
+    if (occ.getTime() != this.time) {
+      return Long.compare(this.time, occ.getTime());
+    }
+    // Full tie: order by UID so the comparison stays a consistent total order (the two
+    // contestants still share a rank, see ContestService#rankingContestants).
+    long uid = this.contestant != null ? this.contestant.getUid() : 0;
+    long otherUid = occ.getContestant() != null ? occ.getContestant().getUid() : 0;
+    return Long.compare(uid, otherUid);
   }
 
   /* (non-Javadoc)

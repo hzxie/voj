@@ -34,60 +34,71 @@
 		FROM voj_contest_contestants
 		WHERE contestant_uid = #{contestantUid}
 	</select>
+	<!-- OI ranking: only the last submission of a contestant to each problem counts (as the
+	     contest rules and the leaderboard cells say), for both the score and the time. -->
 	<select id="getContestantsOfContestForOi"
 		parameterType="map"
 		resultMap="ContestContestantResultMap">
-		SELECT *, (
-			SELECT SUM(submission_judge_score)
-			FROM voj_contest_submissions cs
-			NATURAL JOIN voj_submissions
-			WHERE uid = cc.contestant_uid
-			AND submission_id = cs.submission_id
-			AND cs.contest_id = cc.contest_id
-		) AS contestant_score, (
-			SELECT SUM(submission_used_time)
-			FROM voj_contest_submissions cs
-			NATURAL JOIN voj_submissions
-			WHERE uid = cc.contestant_uid
-			AND submission_id = cs.submission_id
-			AND cs.contest_id = cc.contest_id
-		) AS contestant_time
+		SELECT cc.*, IFNULL(r.score, 0) AS contestant_score, IFNULL(r.used_time, 0) AS contestant_time
 		FROM voj_contest_contestants cc
-		WHERE contest_id = #{contestId}
-		ORDER BY contestant_score DESC, contestant_time
+		LEFT JOIN (
+			SELECT s.uid,
+				SUM(IFNULL(s.submission_judge_score, 0)) AS score,
+				SUM(IFNULL(s.submission_used_time, 0)) AS used_time
+			FROM voj_submissions s
+			JOIN (
+				SELECT ls.uid, ls.problem_id, MAX(ls.submission_id) AS submission_id
+				FROM voj_contest_submissions lcs
+				JOIN voj_submissions ls ON ls.submission_id = lcs.submission_id
+				WHERE lcs.contest_id = #{contestId}
+				<if test="frozenAt != null">
+					AND ls.submission_submit_time &lt; #{frozenAt}
+				</if>
+				GROUP BY ls.uid, ls.problem_id
+			) last_submission ON last_submission.submission_id = s.submission_id
+			GROUP BY s.uid
+		) r ON r.uid = cc.contestant_uid
+		WHERE cc.contest_id = #{contestId}
+		ORDER BY contestant_score DESC, contestant_time, cc.contestant_uid
 		LIMIT #{offset}, #{limit}
 	</select>
+	<!-- ACM ranking: the score is the number of distinct problems solved; the "time" column carries
+	     the number of rejected attempts (WA / TLE / MLE / OLE / RE / PE, i.e. anything but AC and the
+	     not-the-contestant's-fault verdicts PD / CE / SE) made on solved problems before their first
+	     accepted submission. ContestService turns it into penalty time. -->
 	<select id="getContestantsOfContestForAcm"
 		parameterType="map"
 		resultMap="ContestContestantResultMap">
-		SELECT *, (
-			SELECT COUNT(DISTINCT(uid))
-			FROM voj_contest_submissions cs
-			NATURAL JOIN voj_submissions
-			WHERE uid = cc.contestant_uid
-			AND submission_judge_result = 'AC'
-			AND submission_id = cs.submission_id
-			AND cs.contest_id = cc.contest_id
-		) AS contestant_score, (
-			SELECT COUNT(*)
-			FROM voj_contest_submissions cs
-			NATURAL JOIN voj_submissions
-			WHERE uid = cc.contestant_uid
-			AND submission_judge_result != 'AC'
-			AND submission_id = cs.submission_id
-			AND cs.contest_id = cc.contest_id
-			AND problem_id IN (
-				SELECT problem_id
-				FROM voj_contest_submissions cs
-				NATURAL JOIN voj_submissions
-				WHERE uid = cc.contestant_uid
-				AND submission_judge_result = 'AC'
-				AND submission_id = cs.submission_id
-				AND cs.contest_id = cc.contest_id
-			)
-		) AS contestant_time
+		SELECT cc.*, IFNULL(r.solved, 0) AS contestant_score, IFNULL(r.rejected, 0) AS contestant_time
 		FROM voj_contest_contestants cc
-		WHERE contest_id = #{contestId}
+		LEFT JOIN (
+			SELECT first_ac.uid,
+				COUNT(DISTINCT first_ac.problem_id) AS solved,
+				COUNT(rs.submission_id) AS rejected
+			FROM (
+				SELECT acs.uid, acs.problem_id, MIN(acs.submission_id) AS submission_id
+				FROM voj_contest_submissions accs
+				JOIN voj_submissions acs ON acs.submission_id = accs.submission_id
+				WHERE accs.contest_id = #{contestId}
+				AND acs.submission_judge_result = 'AC'
+				<if test="frozenAt != null">
+					AND acs.submission_submit_time &lt; #{frozenAt}
+				</if>
+				GROUP BY acs.uid, acs.problem_id
+			) first_ac
+			LEFT JOIN (
+				SELECT rjs.submission_id, rjs.uid, rjs.problem_id
+				FROM voj_contest_submissions rjcs
+				JOIN voj_submissions rjs ON rjs.submission_id = rjcs.submission_id
+				WHERE rjcs.contest_id = #{contestId}
+				AND rjs.submission_judge_result NOT IN ('AC', 'PD', 'CE', 'SE')
+			) rs ON rs.uid = first_ac.uid
+				AND rs.problem_id = first_ac.problem_id
+				AND rs.submission_id &lt; first_ac.submission_id
+			GROUP BY first_ac.uid
+		) r ON r.uid = cc.contestant_uid
+		WHERE cc.contest_id = #{contestId}
+		ORDER BY contestant_score DESC, cc.contestant_uid
 		LIMIT #{offset}, #{limit}
 	</select>
 	<select id="getContestantOfContest"

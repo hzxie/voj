@@ -186,8 +186,8 @@ public class ContestsController {
     if (!currentTime.before(contest.getStartTime())) {
       Map<String, Object> leaderBoard =
           "OI".equals(contest.getContestMode())
-              ? contestService.getLeaderBoardForOi(contestId)
-              : contestService.getLeaderBoardForAcm(contestId);
+              ? contestService.getLeaderBoardForOi(contestId, currentUser)
+              : contestService.getLeaderBoardForAcm(contestId, currentUser);
       List<ContestContestant> contestants =
           (List<ContestContestant>) leaderBoard.get("contestants");
       if (contestants != null) {
@@ -251,7 +251,8 @@ public class ContestsController {
       @PathVariable("contestId") long contestId,
       HttpServletRequest request,
       HttpServletResponse response) {
-    Contest contest = getVisibleContest(contestId, HttpSessionParser.getCurrentUser());
+    User currentUser = HttpSessionParser.getCurrentUser();
+    Contest contest = getVisibleContest(contestId, currentUser);
     Date currentTime = new Date();
     if (contest.getStartTime().after(currentTime)
         || !(contest.getContestMode().equals("OI") || contest.getContestMode().equals("ACM"))) {
@@ -265,10 +266,10 @@ public class ContestsController {
 
     if (contest.getContestMode().equals("OI")) {
       view = new ModelAndView("pages/contests/leaderboard-oi");
-      result = contestService.getLeaderBoardForOi(contestId);
+      result = contestService.getLeaderBoardForOi(contestId, currentUser);
     } else if (contest.getContestMode().equals("ACM")) {
       view = new ModelAndView("pages/contests/leaderboard-acm");
-      result = contestService.getLeaderBoardForAcm(contestId);
+      result = contestService.getLeaderBoardForAcm(contestId, currentUser);
     } else {
       throw new ResourceNotFoundException();
     }
@@ -279,6 +280,7 @@ public class ContestsController {
     view.addObject("submissions", submissions);
     view.addObject("contest", contest);
     view.addObject("problems", problems);
+    view.addObject("frozenAt", result.get("frozenAt"));
     return view;
   }
 

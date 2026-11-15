@@ -14,6 +14,7 @@
         </section>
 
         <section class="vw-section vw-section-narrow">
+            <p class="vw-muted" th:if="${frozenAt != null}" th:text="#{voj.contests.leaderboard.frozen(${contest.freeze})}">The leaderboard is frozen.</p>
             <div class="vw-tablewrap">
                 <table class="vw-ltable">
                     <thead>

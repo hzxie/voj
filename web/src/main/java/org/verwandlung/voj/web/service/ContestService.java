@@ -414,64 +414,103 @@ public class ContestService {
   }
 
   /**
-   * Gets the leaderboard for the OI mode.
+   * Gets the instant from which submissions are hidden from a viewer's leaderboard because of the
+   * contest's scoreboard freeze ({@code contest_freeze}, in minutes before the end). The freeze is
+   * in effect for non-administrators from {@code endTime - freeze} until the contest ends; after the
+   * end (and for administrators at any time) the full leaderboard is shown.
+   *
+   * @param contest - the contest
+   * @param viewer - the user viewing the leaderboard (may be null)
+   * @return the freeze instant while the freeze applies to the viewer, otherwise null
+   */
+  public Date getScoreboardFrozenAt(Contest contest, User viewer) {
+    if (contest == null || contest.getFreeze() <= 0 || PublicationStatus.isAdministrator(viewer)) {
+      return null;
+    }
+    Date frozenAt = new Date(contest.getEndTime().getTime() - contest.getFreeze() * 60_000L);
+    Date currentTime = new Date();
+    if (currentTime.before(frozenAt) || !currentTime.before(contest.getEndTime())) {
+      return null;
+    }
+    return frozenAt;
+  }
+
+  /**
+   * Gets the leaderboard for the OI mode, ranked by the score (then the time) of each contestant's
+   * last submission to every problem.
    *
    * @param contestId - the unique identifier of the contest
-   * @return a Map object containing the contestant and submission information
+   * @param viewer - the user viewing the leaderboard (may be null); decides whether the scoreboard
+   *     freeze applies
+   * @return a Map object containing the contestants, their submissions indexed by contestant UID and
+   *     problem ID, and the freeze instant ({@code frozenAt}, null when the board is not frozen)
    */
-  public Map<String, Object> getLeaderBoardForOi(long contestId) {
-    Map<String, Object> result = new HashMap<>(3, 1);
+  public Map<String, Object> getLeaderBoardForOi(long contestId, User viewer) {
+    Contest contest = contestMapper.getContest(contestId);
+    Date frozenAt = getScoreboardFrozenAt(contest, viewer);
+
+    Map<String, Object> result = new HashMap<>(4, 1);
     List<ContestContestant> contestants =
-        contestContestantMapper.getContestantsOfContestForOi(contestId, 0, Integer.MAX_VALUE);
+        contestContestantMapper.getContestantsOfContestForOi(
+            contestId, frozenAt, 0, Integer.MAX_VALUE);
     Map<Long, Map<Long, Submission>> submissions =
         getSubmissionsGroupByContestant(
-            contestSubmissionMapper.getSubmissionsOfContest(contestId), true);
+            contestSubmissionMapper.getSubmissionsOfContest(contestId), true, frozenAt);
     rankingContestants(contestants);
 
     result.put("contestants", contestants);
     result.put("submissions", submissions);
+    result.put("frozenAt", frozenAt);
     return result;
   }
 
   /**
-   * Gets the leaderboard for the ACM mode.
+   * Gets the leaderboard for the ACM mode, ranked by the number of solved problems, then by the
+   * penalty time: the time from the contest start to the first accepted submission of every solved
+   * problem plus {@code contest_penalty} minutes per rejected attempt before it.
    *
    * @param contestId - the unique identifier of the contest
-   * @return a Map object containing the contestant and submission information
+   * @param viewer - the user viewing the leaderboard (may be null); decides whether the scoreboard
+   *     freeze applies
+   * @return a Map object containing the contestants, their first accepted submissions indexed by
+   *     contestant UID and problem ID, and the freeze instant ({@code frozenAt}, null when the board
+   *     is not frozen)
    */
-  public Map<String, Object> getLeaderBoardForAcm(long contestId) {
+  public Map<String, Object> getLeaderBoardForAcm(long contestId, User viewer) {
     Contest contest = contestMapper.getContest(contestId);
+    Date frozenAt = getScoreboardFrozenAt(contest, viewer);
 
-    Map<String, Object> result = new HashMap<>(3, 1);
+    Map<String, Object> result = new HashMap<>(4, 1);
     List<ContestContestant> contestants =
-        contestContestantMapper.getContestantsOfContestForAcm(contestId, 0, Integer.MAX_VALUE);
+        contestContestantMapper.getContestantsOfContestForAcm(
+            contestId, frozenAt, 0, Integer.MAX_VALUE);
     Map<Long, Map<Long, Submission>> submissions =
         getSubmissionsGroupByContestant(
-            contestSubmissionMapper.getAcceptedSubmissionsOfContest(contestId), false);
+            contestSubmissionMapper.getAcceptedSubmissionsOfContest(contestId), false, frozenAt);
 
-    // Calculate the penalty time
+    // Calculate the penalty time (in seconds): the mapper returns the number of rejected attempts
+    // in the Time field; the contest penalty is configured in minutes per rejected attempt.
+    long penaltyPerRejection = Math.max(contest.getPenalty(), 0) * 60L;
     for (ContestContestant cc : contestants) {
       long numberOfRejected = cc.getTime();
-      long penalty = numberOfRejected * 1200;
-      if (submissions.containsKey(cc.getContestant().getUid())) {
-        Map<Long, Submission> submissionsOfContestant =
-            submissions.get(cc.getContestant().getUid());
-
-        for (Map.Entry<Long, Submission> e : submissionsOfContestant.entrySet()) {
-          Submission s = e.getValue();
+      long penalty = numberOfRejected * penaltyPerRejection;
+      Map<Long, Submission> submissionsOfContestant = submissions.get(cc.getContestant().getUid());
+      if (submissionsOfContestant != null) {
+        for (Submission s : submissionsOfContestant.values()) {
           long usedTimeInMilliseconds =
               s.getSubmitTime().getTime() - contest.getStartTime().getTime();
           s.setUsedTime(usedTimeInMilliseconds / 1000);
           penalty += s.getUsedTime();
         }
-        cc.setTime(penalty);
       }
+      cc.setTime(penalty);
     }
     Collections.sort(contestants);
     rankingContestants(contestants);
 
     result.put("contestants", contestants);
     result.put("submissions", submissions);
+    result.put("frozenAt", frozenAt);
     return result;
   }
 
@@ -502,16 +541,20 @@ public class ContestService {
   /**
    * Builds an index of contest submissions (contestant UID - problem ID).
    *
-   * @param contestSubmissions the list containing all contest submissions
+   * @param contestSubmissions the list containing all contest submissions, oldest first
    * @param override - whether to override an existing submission when the same problem has multiple
-   *     submissions
+   *     submissions (true keeps the last submission, false the first one)
+   * @param frozenAt - when not null, submissions made at or after this instant are left out
    * @return the organized contest submissions
    */
   private Map<Long, Map<Long, Submission>> getSubmissionsGroupByContestant(
-      List<ContestSubmission> contestSubmissions, boolean override) {
+      List<ContestSubmission> contestSubmissions, boolean override, Date frozenAt) {
     Map<Long, Map<Long, Submission>> submissions = new HashMap<>();
 
     for (ContestSubmission cs : contestSubmissions) {
+      if (frozenAt != null && !cs.getSubmission().getSubmitTime().before(frozenAt)) {
+        continue;
+      }
       long problemId = cs.getSubmission().getProblem().getProblemId();
       long contestantUid = cs.getSubmission().getUser().getUid();
 

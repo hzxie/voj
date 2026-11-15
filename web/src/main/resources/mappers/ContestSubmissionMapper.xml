@@ -19,19 +19,21 @@
 	<select id="getSubmissionsOfContest"
 		parameterType="long"
 		resultMap="ContestSubmissionResultMap">
-		SELECT * 
+		SELECT *
 		FROM voj_contest_submissions
 		NATURAL JOIN voj_submissions
 		WHERE contest_id = #{contestId}
+		ORDER BY submission_id
 	</select>
 	<select id="getAcceptedSubmissionsOfContest"
 		parameterType="long"
 		resultMap="ContestSubmissionResultMap">
-		SELECT * 
+		SELECT *
 		FROM voj_contest_submissions
 		NATURAL JOIN voj_submissions
 		WHERE contest_id = #{contestId}
 		AND submission_judge_result = 'AC'
+		ORDER BY submission_id
 	</select>
 	<select id="getSubmissionOfContestOfContest"
 		parameterType="map"
@@ -41,6 +43,7 @@
 		NATURAL JOIN voj_submissions
 		WHERE contest_id = #{contestId}
 		AND uid = #{contestantUid}
+		ORDER BY submission_id
 	</select>
 	<select id="getSubmissionOfContestOfContestProblem"
 		parameterType="map"

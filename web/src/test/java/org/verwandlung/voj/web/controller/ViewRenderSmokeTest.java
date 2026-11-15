@@ -490,6 +490,37 @@ class ViewRenderSmokeTest {
     mockMvc.perform(getWithCsrf("/contest/1/leaderboard")).andExpect(status().isOk());
   }
 
+  /**
+   * The ACM leaderboard formats the penalty as HH:MM:SS (3725 s = 01:02:05) and shows the freeze
+   * notice while the scoreboard is frozen.
+   */
+  @Test
+  void contestLeaderboardFormatsPenaltyAndShowsFreeze() throws Exception {
+    Contest contest = aContest(1L, "ACM", past(), future());
+    contest.setProblems("[1000]");
+    contest.setFreeze(60);
+    when(contestService.getContest(1L)).thenReturn(contest);
+    when(contestService.getProblemsOfContests(any())).thenReturn(List.of(aPublishedProblem(1000L)));
+    org.verwandlung.voj.web.model.ContestContestant contestant =
+        new org.verwandlung.voj.web.model.ContestContestant(contest, aUser(2000L, usersGroup()));
+    contestant.setTime(3725);
+    contestant.setRank(1);
+    Submission submission = aSubmission(3000L);
+    submission.setUsedTime(125);
+    Map<String, Object> leaderBoard = new HashMap<>();
+    leaderBoard.put("contestants", List.of(contestant));
+    leaderBoard.put("submissions", Map.of(2000L, Map.of(1000L, submission)));
+    leaderBoard.put("frozenAt", new Date());
+    when(contestService.getLeaderBoardForAcm(eq(1L), any())).thenReturn(leaderBoard);
+
+    mockMvc
+        .perform(getWithCsrf("/contest/1/leaderboard"))
+        .andExpect(status().isOk())
+        .andExpect(content().string(containsString(">01</span>:<span>02</span>:<span>05<")))
+        .andExpect(content().string(containsString(">00</span>:<span>02</span>:<span>05<")))
+        .andExpect(content().string(containsString("last 60 minutes")));
+  }
+
   /** A visible discussion thread renders. */
   @Test
   void discussionThreadViewRenders() throws Exception {

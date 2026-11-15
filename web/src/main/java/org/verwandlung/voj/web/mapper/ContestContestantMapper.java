@@ -19,6 +19,7 @@ package org.verwandlung.voj.web.mapper;
 import org.apache.ibatis.annotations.Param;
 import org.verwandlung.voj.web.model.ContestContestant;
 
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -44,29 +45,41 @@ public interface ContestContestantMapper {
   long getNumberOfContestsUsingContestantUid(@Param("contestantUid") long contestantUid);
 
   /**
-   * Gets the list of contestants of a contest (OI mode).
+   * Gets the list of contestants of a contest (OI mode), ranked by score then time. Only the last
+   * submission of a contestant to each problem counts: the Score field holds the sum of their judge
+   * scores and the Time field the sum of their used time (ms).
    *
    * @param contestId - the unique identifier of the contest
+   * @param frozenAt - when not null, submissions made at or after this instant are ignored (the
+   *     scoreboard freeze); null counts every submission
    * @param offset - the offset of the first contestant
    * @param limit - the number of contestants to fetch
    * @return the list of contestants of the contest
    */
   List<ContestContestant> getContestantsOfContestForOi(
-      @Param("contestId") long contestId, @Param("offset") long offset, @Param("limit") int limit);
+      @Param("contestId") long contestId,
+      @Param("frozenAt") Date frozenAt,
+      @Param("offset") long offset,
+      @Param("limit") int limit);
 
   /**
    * Gets the list of contestants of a contest (ACM mode). Here, the Score field of
-   * ContestContestant is used to store the number of accepted problems, and the Time field is used
-   * to store the number of rejected problems (the number of rejected problems is related to the
-   * penalty time).
+   * ContestContestant is used to store the number of distinct solved problems, and the Time field
+   * the number of rejected attempts (WA / TLE / MLE / OLE / RE / PE; not CE / SE / PD) made on the
+   * solved problems before their first accepted submission, from which the penalty time is derived.
    *
    * @param contestId - the unique identifier of the contest
+   * @param frozenAt - when not null, submissions made at or after this instant are ignored (the
+   *     scoreboard freeze); null counts every submission
    * @param offset - the offset of the first contestant
    * @param limit - the number of contestants to fetch
    * @return the list of contestants of the contest
    */
   List<ContestContestant> getContestantsOfContestForAcm(
-      @Param("contestId") long contestId, @Param("offset") long offset, @Param("limit") int limit);
+      @Param("contestId") long contestId,
+      @Param("frozenAt") Date frozenAt,
+      @Param("offset") long offset,
+      @Param("limit") int limit);
 
   /**
    * Gets the participation record of a contestant in a contest.

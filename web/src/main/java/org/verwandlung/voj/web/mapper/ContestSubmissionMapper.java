@@ -28,7 +28,7 @@ import java.util.List;
  */
 public interface ContestSubmissionMapper {
   /**
-   * Gets the submissions of a contest.
+   * Gets the submissions of a contest, oldest first.
    *
    * @param contestId - the unique identifier of the contest
    * @return a List object containing the contest submissions (ContestSubmission)
@@ -36,7 +36,8 @@ public interface ContestSubmissionMapper {
   List<ContestSubmission> getSubmissionsOfContest(@Param("contestId") long contestId);
 
   /**
-   * Gets the accepted submissions of a contest.
+   * Gets the accepted submissions of a contest, oldest first (so the first one per contestant and
+   * problem is the first accepted submission).
    *
    * @param contestId - the unique identifier of the contest
    * @return a List object containing the accepted contest submissions (ContestSubmission)
@@ -44,7 +45,7 @@ public interface ContestSubmissionMapper {
   List<ContestSubmission> getAcceptedSubmissionsOfContest(@Param("contestId") long contestId);
 
   /**
-   * Gets the submissions of a contestant in a contest.
+   * Gets the submissions of a contestant in a contest, oldest first.
    *
    * @param contestId - the unique identifier of the contest
    * @param contestantUid - the unique identifier of the contestant

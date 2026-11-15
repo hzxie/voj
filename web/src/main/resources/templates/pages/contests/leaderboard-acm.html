@@ -14,6 +14,7 @@
         </section>
 
         <section class="vw-section vw-section-narrow">
+            <p class="vw-muted" th:if="${frozenAt != null}" th:text="#{voj.contests.leaderboard.frozen(${contest.freeze})}">The leaderboard is frozen.</p>
             <div class="vw-tablewrap">
                 <table class="vw-ltable">
                     <thead>
@@ -30,10 +31,10 @@
                             <td class="rank" th:text="${contestant.rank}">1</td>
                             <td class="contestant"><a th:href="@{/accounts/user/{id}(id=${contestant.contestant.uid})}" target="_blank" th:text="${contestant.contestant.username}">user</a></td>
                             <td class="vw-accent" th:text="${contestant.score}">0</td>
-                            <td class="vw-muted2"><span th:text="${#numbers.formatInteger(contestant.time % 3600 / 3600.0, 2)}">00</span>:<span th:text="${#numbers.formatInteger(contestant.time / 60.0 % 60, 2)}">00</span>:<span th:text="${#numbers.formatInteger(contestant.time % 60, 2)}">00</span></td>
+                            <td class="vw-muted2"><span th:text="${#numbers.formatInteger(contestant.time / 3600, 2)}">00</span>:<span th:text="${#numbers.formatInteger(contestant.time / 60 % 60, 2)}">00</span>:<span th:text="${#numbers.formatInteger(contestant.time % 60, 2)}">00</span></td>
                             <td th:each="problem : ${problems}" th:with="userSubs=${submissions[contestant.contestant.uid]},submission=${userSubs != null ? userSubs[problem.problemId] : null}">
                                 <span class="vw-muted" th:if="${submission == null}">-</span>
-                                <a th:unless="${submission == null}" th:href="@{/submission/{id}(id=${submission.submissionId})}" target="_blank"><span th:text="${#numbers.formatInteger(submission.usedTime / 3600.0, 2)}">00</span>:<span th:text="${#numbers.formatInteger(submission.usedTime / 60.0 % 60, 2)}">00</span>:<span th:text="${#numbers.formatInteger(submission.usedTime % 60, 2)}">00</span></a>
+                                <a th:unless="${submission == null}" th:href="@{/submission/{id}(id=${submission.submissionId})}" target="_blank"><span th:text="${#numbers.formatInteger(submission.usedTime / 3600, 2)}">00</span>:<span th:text="${#numbers.formatInteger(submission.usedTime / 60 % 60, 2)}">00</span>:<span th:text="${#numbers.formatInteger(submission.usedTime % 60, 2)}">00</span></a>
                             </td>
                         </tr>
                     </tbody>

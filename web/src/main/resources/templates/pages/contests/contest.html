@@ -74,7 +74,7 @@
                         <div class="vw-eyebrow vw-block-label" th:text="'// ' + #{voj.contests.contest.instruction}">// RULES</div>
                         <ul class="vw-rules" th:if="${contest.contestNotes == ''}">
                             <li th:if="${contest.contestMode == 'ACM'}" th:text="#{voj.contests.contest.rule-acm-1}">ACM/ICPC scoring &mdash; problems are judged pass/fail and ranked by number solved, then penalty time.</li>
-                            <li th:if="${contest.contestMode == 'ACM'}" th:text="#{voj.contests.contest.rule-acm-2}">Penalty: 20 minutes are added per rejected submission on a problem that is eventually solved.</li>
+                            <li th:if="${contest.contestMode == 'ACM'}" th:text="#{voj.contests.contest.rule-acm-2(${contest.penalty})}">Penalty: 20 minutes are added per rejected submission on a problem that is eventually solved.</li>
                             <li th:unless="${contest.contestMode == 'ACM'}" th:text="#{voj.contests.contest.rule-oi-1}">OI scoring &mdash; each problem awards partial points; contestants are ranked by total score.</li>
                             <li th:unless="${contest.contestMode == 'ACM'}" th:text="#{voj.contests.contest.rule-oi-2}">Only the last submission for each problem counts toward the score.</li>
                         </ul>

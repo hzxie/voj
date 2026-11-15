@@ -68,13 +68,13 @@ public class ContestContestantMapperTest {
   }
 
   /**
-   * Test case: tests the getContestantsOfContestForOi(long, long, int) method. Test data: ContestID =
+   * Test case: tests the getContestantsOfContestForOi(long, Date, long, int) method. Test data: ContestID =
    * 1, offset = 0, limit = 2. Expected: 2 contestants of the 1st contest starting from 0.
    */
   @Test
   public void testGetContestantsOfFirstContestForOiFrom0WithLimit2() {
     List<ContestContestant> contestants =
-        contestContestantMapper.getContestantsOfContestForOi(1, 0, 2);
+        contestContestantMapper.getContestantsOfContestForOi(1, null, 0, 2);
     Assertions.assertEquals(2, contestants.size());
 
     ContestContestant firstContestant = contestants.get(0);
@@ -88,13 +88,13 @@ public class ContestContestantMapperTest {
   }
 
   /**
-   * Test case: tests the getContestantsOfContestForOi(long, long, int) method. Test data: ContestID =
+   * Test case: tests the getContestantsOfContestForOi(long, Date, long, int) method. Test data: ContestID =
    * 2, offset = 0, limit = 1. Expected: 1 contestant of the 2nd contest starting from 0.
    */
   @Test
   public void testGetContestantsOfSecondContestForOiFrom1WithLimit1() {
     List<ContestContestant> contestants =
-        contestContestantMapper.getContestantsOfContestForOi(2, 0, 1);
+        contestContestantMapper.getContestantsOfContestForOi(2, null, 0, 1);
     Assertions.assertEquals(1, contestants.size());
 
     ContestContestant firstContestant = contestants.get(0);

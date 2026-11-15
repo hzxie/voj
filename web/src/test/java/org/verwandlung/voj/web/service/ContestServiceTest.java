@@ -217,11 +217,11 @@ public class ContestServiceTest {
     Assertions.assertFalse(result.get("isSuccessful"));
   }
 
-  /** Test case: tests the getLeaderBoardForOi(long) method. Test data: the OI-mode Contest #1. Expected: the contestants and submission records, with rankings completed. */
+  /** Test case: tests the getLeaderBoardForOi(long, User) method. Test data: the OI-mode Contest #1. Expected: the contestants and submission records, with rankings completed. */
   @Test
   @SuppressWarnings("unchecked")
   public void testGetLeaderBoardForOi() {
-    Map<String, Object> leaderBoard = contestService.getLeaderBoardForOi(1);
+    Map<String, Object> leaderBoard = contestService.getLeaderBoardForOi(1, null);
     Assertions.assertTrue(leaderBoard.containsKey("contestants"));
     Assertions.assertTrue(leaderBoard.containsKey("submissions"));
 
@@ -230,11 +230,11 @@ public class ContestServiceTest {
     Assertions.assertEquals(1, contestants.get(0).getRank());
   }
 
-  /** Test case: tests the getLeaderBoardForAcm(long) method. Test data: the ACM-mode Contest #2. Expected: the contestants and submission records, with rankings completed. */
+  /** Test case: tests the getLeaderBoardForAcm(long, User) method. Test data: the ACM-mode Contest #2. Expected: the contestants and submission records, with rankings completed. */
   @Test
   @SuppressWarnings("unchecked")
   public void testGetLeaderBoardForAcm() {
-    Map<String, Object> leaderBoard = contestService.getLeaderBoardForAcm(2);
+    Map<String, Object> leaderBoard = contestService.getLeaderBoardForAcm(2, null);
     Assertions.assertTrue(leaderBoard.containsKey("contestants"));
     Assertions.assertTrue(leaderBoard.containsKey("submissions"));
 
@@ -242,6 +242,216 @@ public class ContestServiceTest {
     Assertions.assertEquals(1, contestants.size());
     Assertions.assertEquals(1, contestants.get(0).getRank());
   }
+
+  /**
+   * Test case: tests the getLeaderBoardForAcm(long, User) method on a running contest (penalty 20
+   * minutes). Test data: user 1000 gets WA (+10 min), CE (+11), AC (+20) and WA (+30) on P1000, AC
+   * (+40) on P1001 and an unsolved WA (+5) on P1003; user 1001 gets AC (+15) and AC (+50) on P1000;
+   * user 1002 submits nothing. Expected: scores count distinct solved problems (2 / 1 / 0); only the
+   * WA before the first AC is penalised (CE, the WA after the AC and the unsolved problem are not);
+   * the time of a problem is that of its first AC.
+   */
+  @Test
+  @SuppressWarnings("unchecked")
+  public void testGetLeaderBoardForAcmScoresAndPenalty() {
+    long start = createAcmContestFixture(0);
+
+    List<ContestContestant> raw =
+        contestContestantMapper.getContestantsOfContestForAcm(FIXTURE_CONTEST_ID, null, 0, 10);
+    Map<Long, ContestContestant> rawByUid = new java.util.HashMap<>();
+    raw.forEach(cc -> rawByUid.put(cc.getContestant().getUid(), cc));
+    Assertions.assertEquals(2, rawByUid.get(1000L).getScore());
+    Assertions.assertEquals(1, rawByUid.get(1000L).getTime());
+    Assertions.assertEquals(1, rawByUid.get(1001L).getScore());
+    Assertions.assertEquals(0, rawByUid.get(1001L).getTime());
+    Assertions.assertEquals(0, rawByUid.get(1002L).getScore());
+
+    Map<String, Object> leaderBoard = contestService.getLeaderBoardForAcm(FIXTURE_CONTEST_ID, null);
+    List<ContestContestant> contestants = (List<ContestContestant>) leaderBoard.get("contestants");
+    Assertions.assertEquals(List.of(1000L, 1001L, 1002L), uidsOf(contestants));
+    // 1 rejected attempt * 20 min + 20 min (P1000) + 40 min (P1001)
+    Assertions.assertEquals(20 * 60 + 20 * 60 + 40 * 60, contestants.get(0).getTime());
+    Assertions.assertEquals(15 * 60, contestants.get(1).getTime());
+    Assertions.assertEquals(0, contestants.get(2).getTime());
+    Assertions.assertEquals(List.of(1L, 2L, 3L), ranksOf(contestants));
+
+    Map<Long, Map<Long, Submission>> submissions =
+        (Map<Long, Map<Long, Submission>>) leaderBoard.get("submissions");
+    Submission firstAc = submissions.get(1001L).get(1000L);
+    Assertions.assertEquals(start + 15 * 60_000L, firstAc.getSubmitTime().getTime());
+    Assertions.assertNull(leaderBoard.get("frozenAt"));
+  }
+
+  /**
+   * Test case: tests the getLeaderBoardForAcm(long, User) method with a scoreboard freeze. Test
+   * data: the fixture above with a 150-minute freeze, i.e. frozen from 30 minutes after the start.
+   * Expected: for a regular viewer, user 1000's AC on P1001 (+40 min) is hidden so user 1001 (one
+   * problem, less penalty) leads; an administrator still sees the full leaderboard.
+   */
+  @Test
+  @SuppressWarnings("unchecked")
+  public void testGetLeaderBoardForAcmHonoursFreeze() {
+    createAcmContestFixture(150);
+
+    Map<String, Object> leaderBoard =
+        contestService.getLeaderBoardForAcm(FIXTURE_CONTEST_ID, userWithUid(1002));
+    Assertions.assertNotNull(leaderBoard.get("frozenAt"));
+    List<ContestContestant> contestants = (List<ContestContestant>) leaderBoard.get("contestants");
+    Assertions.assertEquals(List.of(1001L, 1000L, 1002L), uidsOf(contestants));
+    Assertions.assertEquals(1, contestants.get(1).getScore());
+    Assertions.assertEquals(20 * 60 + 20 * 60, contestants.get(1).getTime());
+    Map<Long, Map<Long, Submission>> submissions =
+        (Map<Long, Map<Long, Submission>>) leaderBoard.get("submissions");
+    Assertions.assertFalse(submissions.get(1000L).containsKey(1001L));
+
+    User administrator = userWithUid(1000);
+    administrator.setUserGroup(
+        new org.verwandlung.voj.web.model.UserGroup(8, "administrators", "Administrators"));
+    leaderBoard = contestService.getLeaderBoardForAcm(FIXTURE_CONTEST_ID, administrator);
+    Assertions.assertNull(leaderBoard.get("frozenAt"));
+    contestants = (List<ContestContestant>) leaderBoard.get("contestants");
+    Assertions.assertEquals(List.of(1000L, 1001L, 1002L), uidsOf(contestants));
+  }
+
+  /**
+   * Test case: tests the getLeaderBoardForOi(long, User) method. Test data: user 1000 scores 100 then
+   * 40 on P1000 and 60 on P1001; user 1001 scores 70 on P1000. Expected: only the last submission per
+   * problem counts, for the score (40 + 60) and the time (50 + 10 ms), and the leaderboard cells show
+   * that last submission.
+   */
+  @Test
+  @SuppressWarnings("unchecked")
+  public void testGetLeaderBoardForOiCountsLastSubmissionPerProblem() {
+    long now = System.currentTimeMillis() / 1000 * 1000;
+    long start = now - 2 * 3600_000L;
+    insertContest(FIXTURE_CONTEST_ID, "OI", "IOI", start, now + 3600_000L, 0);
+    insertContestant(FIXTURE_CONTEST_ID, 1000);
+    insertContestant(FIXTURE_CONTEST_ID, 1001);
+    insertSubmission(1000, 1000, "AC", 100, 30, start + 10 * 60_000L);
+    insertSubmission(1001, 1000, "WA", 70, 5, start + 12 * 60_000L);
+    long last = insertSubmission(1000, 1000, "WA", 40, 50, start + 20 * 60_000L);
+    insertSubmission(1000, 1001, "WA", 60, 10, start + 30 * 60_000L);
+
+    Map<String, Object> leaderBoard = contestService.getLeaderBoardForOi(FIXTURE_CONTEST_ID, null);
+    List<ContestContestant> contestants = (List<ContestContestant>) leaderBoard.get("contestants");
+    Assertions.assertEquals(List.of(1000L, 1001L), uidsOf(contestants));
+    Assertions.assertEquals(100, contestants.get(0).getScore());
+    Assertions.assertEquals(60, contestants.get(0).getTime());
+    Assertions.assertEquals(70, contestants.get(1).getScore());
+    Map<Long, Map<Long, Submission>> submissions =
+        (Map<Long, Map<Long, Submission>>) leaderBoard.get("submissions");
+    Assertions.assertEquals(last, submissions.get(1000L).get(1000L).getSubmissionId());
+  }
+
+  /** Test case: tests ContestContestant.compareTo(Object). Test data: two contestants with equal score and time. Expected: a consistent order (sgn(a.compareTo(b)) == -sgn(b.compareTo(a))), and 0 against itself. */
+  @Test
+  public void testCompareToIsConsistentOnFullTies() {
+    ContestContestant a = contestantWithTime(10);
+    a.setContestant(userWithUid(1000));
+    ContestContestant b = contestantWithTime(10);
+    b.setContestant(userWithUid(1001));
+
+    Assertions.assertEquals(
+        Integer.signum(a.compareTo(b)), -Integer.signum(b.compareTo(a)));
+    Assertions.assertNotEquals(0, a.compareTo(b));
+    Assertions.assertEquals(0, a.compareTo(a));
+  }
+
+  /**
+   * Creates a running ACM contest (started two hours ago, ending in one hour, 20-minute penalty)
+   * with the submissions described in testGetLeaderBoardForAcmScoresAndPenalty.
+   *
+   * @param freeze - the scoreboard freeze in minutes
+   * @return the start time of the contest in milliseconds
+   */
+  private long createAcmContestFixture(int freeze) {
+    long now = System.currentTimeMillis() / 1000 * 1000;
+    long start = now - 2 * 3600_000L;
+    insertContest(FIXTURE_CONTEST_ID, "ACM", "ICPC", start, now + 3600_000L, freeze);
+    insertContestant(FIXTURE_CONTEST_ID, 1000);
+    insertContestant(FIXTURE_CONTEST_ID, 1001);
+    insertContestant(FIXTURE_CONTEST_ID, 1002);
+    // Inserted in chronological order so that submission ids follow the submit time.
+    insertSubmission(1000, 1003, "WA", 0, 10, start + 5 * 60_000L);
+    insertSubmission(1000, 1000, "WA", 0, 10, start + 10 * 60_000L);
+    insertSubmission(1000, 1000, "CE", 0, 0, start + 11 * 60_000L);
+    insertSubmission(1001, 1000, "AC", 100, 10, start + 15 * 60_000L);
+    insertSubmission(1000, 1000, "AC", 100, 10, start + 20 * 60_000L);
+    insertSubmission(1000, 1000, "WA", 0, 10, start + 30 * 60_000L);
+    insertSubmission(1000, 1001, "AC", 100, 10, start + 40 * 60_000L);
+    insertSubmission(1001, 1000, "AC", 100, 10, start + 50 * 60_000L);
+    return start;
+  }
+
+  /** Inserts a published contest over problems 1000, 1001 and 1003. */
+  private void insertContest(
+      long contestId, String mode, String scoring, long start, long end, int freeze) {
+    jdbcTemplate()
+        .update(
+            "INSERT INTO voj_contests (contest_id, contest_name, contest_notes, contest_start_time,"
+                + " contest_end_time, contest_mode, contest_problems, contest_status,"
+                + " contest_scoring, contest_penalty, contest_freeze) VALUES (?, 'Fixture', '', ?,"
+                + " ?, ?, '[1000, 1001, 1003]', 'PUBLISHED', ?, 20, ?)",
+            contestId,
+            new java.sql.Timestamp(start),
+            new java.sql.Timestamp(end),
+            mode,
+            scoring,
+            freeze);
+  }
+
+  /** Registers a user as a contestant. */
+  private void insertContestant(long contestId, long uid) {
+    jdbcTemplate()
+        .update(
+            "INSERT INTO voj_contest_contestants (contest_id, contestant_uid) VALUES (?, ?)",
+            contestId,
+            uid);
+  }
+
+  /**
+   * Inserts a judged submission and attaches it to the fixture contest.
+   *
+   * @return the identifier of the new submission
+   */
+  private long insertSubmission(
+      long uid, long problemId, String judgeResult, int score, int usedTime, long submitTime) {
+    org.springframework.jdbc.core.JdbcTemplate jdbcTemplate = jdbcTemplate();
+    jdbcTemplate.update(
+        "INSERT INTO voj_submissions (problem_id, uid, language_id, submission_submit_time,"
+            + " submission_used_time, submission_used_memory, submission_judge_result,"
+            + " submission_judge_score, submission_code) VALUES (?, ?, 2, ?, ?, 0, ?, ?, 'Code')",
+        problemId,
+        uid,
+        new java.sql.Timestamp(submitTime),
+        usedTime,
+        judgeResult,
+        score);
+    long submissionId = jdbcTemplate.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
+    jdbcTemplate.update(
+        "INSERT INTO voj_contest_submissions (contest_id, submission_id) VALUES (?, ?)",
+        FIXTURE_CONTEST_ID,
+        submissionId);
+    return submissionId;
+  }
+
+  /** Creates a JdbcTemplate on the test DataSource (it joins the test transaction). */
+  private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate() {
+    return new org.springframework.jdbc.core.JdbcTemplate(dataSource);
+  }
+
+  /** Collects the contestant UIDs of a leaderboard, in order. */
+  private static List<Long> uidsOf(List<ContestContestant> contestants) {
+    return contestants.stream().map(cc -> cc.getContestant().getUid()).toList();
+  }
+
+  /** Collects the ranks of a leaderboard, in order. */
+  private static List<Long> ranksOf(List<ContestContestant> contestants) {
+    return contestants.stream().map(ContestContestant::getRank).toList();
+  }
+
+  /** The identifier of the contest created by the leaderboard fixtures. */
+  private static final long FIXTURE_CONTEST_ID = 100;
 
   /** Test case: tests the rankingContestants(List) method. Test data: a list of contestants with tied ranks. Expected: equal scores are tied, and the subsequent ranks are skipped. */
   @Test
@@ -292,4 +502,10 @@ public class ContestServiceTest {
 
   /** The ContestMapper object, used to publish a contest in the test data. */
   @Autowired private ContestMapper contestMapper;
+
+  /** The ContestContestantMapper object, used to check the raw leaderboard query results. */
+  @Autowired private org.verwandlung.voj.web.mapper.ContestContestantMapper contestContestantMapper;
+
+  /** The DataSource of the test database, used to insert leaderboard fixtures. */
+  @Autowired private javax.sql.DataSource dataSource;
 }
