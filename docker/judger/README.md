@@ -34,8 +34,10 @@ web app through the queue.
 
 The container runs as root and drops each submission to the unprivileged `nobody`
 account, so native Linux sandboxing works out of the box: per-submission
-`setrlimit` caps, peak-memory accounting, a private network namespace, a seccomp
-syscall filter and privilege drop. If the judger cannot drop privileges, a
+`setrlimit` caps, peak-memory accounting, a seccomp syscall filter (which also
+refuses network sockets, so submissions cannot reach the network even though the
+container lacks the `CAP_SYS_ADMIN` a private network namespace needs) and
+privilege drop. If the judger cannot drop privileges, a
 submission is **refused** rather than run as root.
 
 ## Configuration

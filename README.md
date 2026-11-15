@@ -22,8 +22,8 @@ Highlights:
 - **Cross-platform native judging.** Submissions are judged natively on **Linux**
   and **Windows** through JNI, rather than relying on a Linux-only runtime.
 - **Sandboxed execution.** On Linux each submission runs under kernel-enforced
-  resource limits, a private network namespace and a seccomp syscall filter, as an
-  unprivileged user; on Windows it runs under a separate low-privilege account
+  resource limits and a seccomp syscall filter that also cuts off the network, as
+  an unprivileged user; on Windows it runs under a separate low-privilege account
   inside a Job Object that caps the process count and enforces resource limits.
 - **Real-time feedback** streamed to the browser with Server-Sent Events (SSE), so
   results appear progressively as each test case finishes.
@@ -124,9 +124,10 @@ script from [`sql/upgrades/`](sql/upgrades/); see
 Untrusted submissions run inside a sandbox so they cannot harm the judging host:
 
 - **Linux (native).** Each submission runs in a forked child with `setrlimit`
-  (CPU time, output size and process-count caps), a private network namespace, a
-  seccomp syscall filter (blocking `ptrace`, `mount`, module loading, leaving the
-  process group, creating namespaces, etc.) and privileges dropped to an
+  (CPU time, output size and process-count caps), a seccomp syscall filter
+  (blocking `ptrace`, `mount`, module loading, leaving the process group, creating
+  namespaces, network sockets other than `AF_UNIX`, etc.), a private network
+  namespace where one can be created, and privileges dropped to an
   unprivileged user (`system.username`, defaulting to `nobody`). CPU time is that of
   every process the submission creates, including orphans (a root-owned subreaper
   reaps them), and memory is their summed proportional set size, so shared pages
@@ -134,7 +135,9 @@ Untrusted submissions run inside a sandbox so they cannot harm the judging host:
   root and cannot drop privileges, the submission is refused rather than run as
   root.
 - **Linux (isolate).** Optionally set `judger.sandbox = isolate` to delegate to the
-  external [isolate](https://github.com/ioi/isolate) tool instead.
+  external [isolate](https://github.com/ioi/isolate) tool instead, which confines
+  each submission to its own mount and network namespaces and cgroup; every
+  seeded language compiles and runs under it.
 - **Windows (native).** Each submission runs under a separate low-privilege Windows
   account (`CreateProcessWithLogonW`) inside a
   [Job Object](https://learn.microsoft.com/windows/win32/procthread/job-objects)

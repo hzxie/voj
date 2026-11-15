@@ -11,8 +11,9 @@ database scripts some releases need.
 The judger picks a sandbox backend with `judger.sandbox` in `voj.properties`:
 
 - `native` (default): an in-process JNI runner. On Linux it confines each
-  submission with `setrlimit`, a private network namespace, a seccomp syscall
-  filter and a privilege drop. On Windows it runs the submission under a separate
+  submission with `setrlimit`, a seccomp syscall filter (which also refuses
+  network sockets), a private network namespace where one can be created, and a
+  privilege drop. On Windows it runs the submission under a separate
   low-privilege account. This is the only option on Windows.
 - `isolate` (Linux only): delegates to the external
   [isolate](https://github.com/ioi/isolate) tool. Choose this when you need full
@@ -21,9 +22,10 @@ The judger picks a sandbox backend with `judger.sandbox` in `voj.properties`:
   as UID `first_uid + n` (its default `first_uid` is 60000), so the judger hands
   each submission's private work directory to that UID: set
   `judger.isolate.firstUid` to isolate's `first_uid` and `judger.isolate.boxId`
-  to the box id.
+  to the box id. See [The isolate backend](#the-isolate-backend) for how the
+  judger sets up each box.
 
-The rest of this guide describes the `native` backend on Linux.
+Unless a section says otherwise, this guide describes the `native` backend on Linux.
 
 ## Running the native sandbox as root (recommended for production)
 
@@ -80,17 +82,21 @@ sudo useradd --system --no-create-home --shell /usr/sbin/nologin voj-sandbox
   Linux 4.14+) of all its processes, so pages shared after `fork` or by the
   runtime's shared libraries count once, not once per process. Without PSS
   (older kernels) the RSS is summed instead, which over-counts.
+- **Network.** The seccomp filter refuses `socket` and `socketpair` with
+  `EACCES` for every address family but `AF_UNIX`, and `io_uring` (which can
+  create sockets on its own) with `ENOSYS`, so a submission cannot reach the
+  judger's database or message queue, other hosts or the internet. This needs no
+  privilege, so it holds in a Docker container without `CAP_SYS_ADMIN` too, where
+  the private network namespace, still tried first, cannot be created. Compilers
+  run under the same filter. `AF_UNIX` sockets stay available (runtimes use
+  `socketpair`), so do not leave a Unix socket that the sandbox user may connect
+  to (e.g. a database's or Docker's) where it can reach it.
 - **Go.** `GOCACHE` and `GOPATH` point into the submission's own work directory,
   never at a cache other submissions can write: a shared build cache could be
   poisoned by one submission for every later Go build. Set
   `judger.goBuildCacheSeed` to a root-owned, read-only build cache (the Docker
   image builds one) to seed it, so the standard library is not rebuilt every time;
   the seeded files are hard links the sandbox user cannot modify.
-
-Note that in a container without `CAP_SYS_ADMIN` (Docker's default) the private
-network namespace cannot be created and the sandbox runs without it; give the
-judger its own Docker network without outside access if submissions must not
-reach the network.
 
 ### Filesystem layout and permissions
 
@@ -121,6 +127,34 @@ user can still read world-readable files on the host. Keep `voj.properties` and
 the judger jar readable only by the judger account (for example mode `0640`), and
 use `judger.sandbox = isolate` if you need to prevent reads of arbitrary host
 files entirely.
+
+## The isolate backend
+
+With `judger.sandbox = isolate` the judger (running as root) prepares an isolate
+box for every compilation and run. isolate 2.7 built from source has been
+verified with every language in `sql/seed.sql` (C, C++, Java, Pascal, Python 3,
+Go, Kotlin, JavaScript and Rust).
+
+- **Filesystem.** The box sees isolate's default mounts (`/bin`, `/lib`, `/usr`,
+  ...) plus `judger.isolate.extraDirs` (by default `/etc/alternatives` and
+  `/opt`, read-only), and the submission's work directory at `/work`, writable
+  while compiling and read-only while running. The checkpoint directory is never
+  bound: the input of the current run is copied into the box.
+- **Compiler configuration.** isolate binds directories only, so configuration
+  files a compiler expects outside the box are copied into it before a
+  compilation (`judger.isolate.compileFiles`): Free Pascal's `/etc/fpc.cfg`, which
+  holds its unit search paths, becomes `~/.fpc.cfg` in the box.
+- **Environment.** As with the native backend, the box gets only the locale and
+  toolchain variables of the judger (no secrets), `HOME=/box`, and a Go build
+  cache and `GOPATH` of its own in the work directory, seeded from
+  `judger.goBuildCacheSeed`.
+- **System calls.** isolate's own seccomp filter makes file locks fail (`flock`
+  with `ENOSYS`), which the Go build cache cannot do without. Compilations, which
+  run a trusted compiler rather than the submission, are given
+  `--syscalls=27` (`judger.isolate.compileSyscalls`: every restriction but the
+  one on file locks); runs of the submission keep all of them. For an isolate
+  without `--syscalls`, set `judger.isolate.compileSyscalls` empty.
+- **Network.** isolate gives each box its own, empty network namespace.
 
 ## Native build prerequisites (Linux)
 

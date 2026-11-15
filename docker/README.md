@@ -156,8 +156,8 @@ For a real deployment behind a reverse proxy, also pass the web container
 `-e VOJ_BASE_URL=https://oj.example.edu` (see the configuration table above).
 
 The judger container runs as root and drops each submission to the `nobody`
-account, so native sandboxing (resource limits, network namespace, seccomp and
-privilege drop) works out of the box. See [`../docs/deployment.md`](../docs/deployment.md)
+account, so native sandboxing (resource limits, a seccomp filter that also cuts
+off the network, and privilege drop) works out of the box. See [`../docs/deployment.md`](../docs/deployment.md)
 for the sandbox's filesystem expectations.
 
 The web application is available at
