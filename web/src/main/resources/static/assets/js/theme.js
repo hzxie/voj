@@ -6,10 +6,14 @@
  *    when it differs from the system scheme, so toggling back returns to "system".
  *    The initial theme is applied by the inline script in fragments/chrome.html
  *    (theme-head) before first paint.
- *  - Mobile navigation menu and footer language menu: native popovers (light
- *    dismiss, Esc, focus return and the expanded state come from the browser).
- *    This file positions the language menu where CSS anchor positioning is missing
- *    and falls back to class toggling where popover itself is unsupported.
+ *  - Site navigation: one list at every width. It stays a popover behind the menu
+ *    button until brand + links + account actions fit on one row, then becomes the
+ *    inline row (header.is-wide). There is no breakpoint: the row is measured, so a
+ *    longer translation or larger text moves the switch point by itself.
+ *  - Footer language menu: a native popover (light dismiss, Esc, focus return and
+ *    the expanded state come from the browser), positioned here where CSS anchor
+ *    positioning is missing. Both menus fall back to class toggling where popover
+ *    itself is unsupported.
  *  - vojConfirm(message) / vojAlert(message): promise-based replacements for the
  *    blocking confirm() / alert(), rendered in the shared <dialog> (fragments/chrome).
  */
@@ -116,6 +120,60 @@
     panel.style.top = top + 'px';
   }
 
+  // ---- Site navigation layout ----------------------------------------------
+  // Measure the inline row with .is-wide applied: if everything fits, keep it
+  // inline and drop the popover attribute; otherwise collapse back to the popover.
+  // While collapsed, only remeasure once the header has grown (switching to inline
+  // just to measure on every shrink would thrash). Removing `popover` closes an
+  // open menu, so reopen it if the layout stays collapsed.
+  function setupSiteNav(header, burger, menu) {
+    var lastWidth = -1;
+
+    function setPopover(on) {
+      // setAttribute/removeAttribute rather than the IDL property (polyfill-safe).
+      if (on) { menu.setAttribute('popover', 'auto'); } else { menu.removeAttribute('popover'); }
+    }
+
+    function isOpen() {
+      if (menu.classList.contains('open')) { return true; }
+      try { return menu.matches(':popover-open'); } catch (e) { return false; }
+    }
+
+    function layout() {
+      var width = header.clientWidth;
+      var wide = header.classList.contains('is-wide');
+      if (!wide && width <= lastWidth) { lastWidth = width; return; }
+      lastWidth = width;
+
+      var wasOpen = isOpen();
+      header.classList.add('is-measuring');
+      setPopover(false);
+      menu.classList.remove('open');
+      header.classList.add('is-wide');
+      var fits = header.scrollWidth <= header.clientWidth;
+      if (!fits) {
+        header.classList.remove('is-wide');
+        setPopover(supportsPopover);
+        if (wasOpen) {
+          if (supportsPopover) { menu.showPopover(); } else { menu.classList.add('open'); }
+        }
+      }
+      // Native popovertarget exposes the expanded state itself; the fallback does not.
+      if (!supportsPopover) { burger.setAttribute('aria-expanded', !fits && wasOpen ? 'true' : 'false'); }
+      window.requestAnimationFrame(function () { header.classList.remove('is-measuring'); });
+    }
+
+    if (!supportsPopover) { classToggle(burger, menu, menu); }
+    layout();
+    if (window.ResizeObserver) {
+      var ro = new ResizeObserver(function () { layout(); });
+      ro.observe(header);
+      ro.observe(menu);
+    } else {
+      window.addEventListener('resize', layout);
+    }
+  }
+
   // ---- Shared confirm / alert dialog ---------------------------------------
   var dialogQueue = Promise.resolve();
 
@@ -195,11 +253,12 @@
       el.addEventListener('click', toggleTheme);
     });
 
-    // Mobile navigation menu.
-    var burger = document.querySelector('[data-vw="burger"]');
-    var menu = document.querySelector('[data-vw="menu"]');
-    if (burger && menu && !supportsPopover) {
-      classToggle(burger, menu, menu);
+    // Site navigation (public header).
+    var siteHeader = document.querySelector('[data-vw="site-header"]');
+    if (siteHeader) {
+      var burger = siteHeader.querySelector('[data-vw="burger"]');
+      var menu = siteHeader.querySelector('[data-vw="menu"]');
+      if (burger && menu) { setupSiteNav(siteHeader, burger, menu); }
     }
 
     // Footer language menu.

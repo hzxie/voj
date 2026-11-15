@@ -10,16 +10,63 @@
  * ------------------------------------------------------------------------- */
 .adm-body { min-height:100vh; background-color:var(--bg); color:var(--text); font-family:var(--mono); -webkit-font-smoothing:antialiased; display:flex; position:relative; }
 .adm-scanlines { position:fixed; inset:0; z-index:90; pointer-events:none; background-image:linear-gradient(var(--scan) 1px,transparent 1px); background-size:100% 4px; }
-.adm-scrim { position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:75; display:none; }
-.adm-scrim.open { display:block; }
-
+/* The sidebar sheet (shared by both modes below). */
 .adm-sidebar {
-  position:fixed; top:0; left:0; width:238px; height:100vh; flex-shrink:0;
-  background:var(--bg2); border-right:1px solid var(--line); display:flex; flex-direction:column;
-  z-index:80; transform:translateX(-100%);
-  @media (prefers-reduced-motion: no-preference) { transition:transform .2s; }
+  position:relative; height:100%; background:var(--bg2); border-right:1px solid var(--line);
+  display:flex; flex-direction:column;
 }
-.adm-sidebar.open { transform:translateX(0); }
+.adm-drawer-close {
+  display:none; position:absolute; top:19px; right:14px; width:28px; height:28px; padding:0;
+  align-items:center; justify-content:center; font:inherit; font-size:14px; line-height:1;
+  color:var(--text3); background:transparent; border:1px solid var(--line); border-radius:7px; cursor:pointer;
+}
+.adm-drawer-close:hover { color:var(--accent); border-color:var(--accent); }
+
+/* Wide: an ordinary sticky sidebar. The popover attribute stays on the element, so
+   reset the UA popover styles and keep it rendered while it is "closed". */
+@media (min-width:861px) {
+  .adm-drawer {
+    display:block; position:sticky; top:0; inset:auto; width:238px; height:100vh; flex-shrink:0;
+    margin:0; padding:0; border:0; background:none; color:inherit; overflow:visible;
+  }
+  .adm-drawer-scroller { display:contents; }
+  .adm-burger { display:none !important; }
+}
+
+/* Narrow: a swipeable drawer in the top layer, covering the viewport so the swipe
+   surface spans edge to edge; a tap outside the sheet closes it (js/admin.js). */
+@media (max-width:860px) {
+  .adm-drawer {
+    --drawer-width:min(238px, 80dvw, 100dvw - 24px);
+    --drawer-backdrop:0;
+    inset:0; width:auto; height:auto; max-width:none; max-height:none;
+    margin:0; padding:0; border:0; background:transparent; color:inherit; overflow:visible;
+  }
+  .adm-drawer::backdrop { background:#000; opacity:calc(var(--drawer-backdrop) * .6); }
+  .adm-drawer-scroller {
+    position:relative; display:grid; grid-template-columns:var(--drawer-width) 100%; height:100%;
+    overflow-x:scroll; overscroll-behavior:none; scrollbar-width:none; scroll-snap-type:x mandatory;
+    @media (prefers-reduced-motion: no-preference) { scroll-behavior:smooth; }
+  }
+  /* The empty "closed" snap stop; the drawer opens already scrolled to it. */
+  .adm-drawer-scroller::after { content:''; scroll-snap-align:end; scroll-initial-target:nearest; }
+  .adm-drawer .adm-sidebar {
+    /* svh: the sheet must not jump when a mobile address bar resizes mid-swipe. */
+    height:100svh; overflow-y:auto; scroll-snap-align:start; scrollbar-width:none;
+  }
+  .adm-drawer-close { display:flex; }
+}
+
+/* Backdrop opacity follows the swipe. Gated: without animation-timeline the 0%
+   keyframe would apply permanently; js/admin.js writes --drawer-backdrop instead. */
+@supports (animation-timeline: scroll()) {
+  @property --drawer-backdrop { syntax:'<number>'; inherits:true; initial-value:0; }
+  @keyframes adm-drawer-backdrop { 0% { --drawer-backdrop:1; } 100% { --drawer-backdrop:0; } }
+  @media (max-width:860px) {
+    .adm-drawer { timeline-scope:--adm-drawer; animation:adm-drawer-backdrop linear both; animation-timeline:--adm-drawer; }
+    .adm-drawer-scroller { scroll-timeline:--adm-drawer x; }
+  }
+}
 
 .adm-logo { height:66px; display:flex; align-items:center; gap:2px; padding:0 22px; border-bottom:1px solid var(--line); flex-shrink:0; text-decoration:none; }
 .adm-logo .b { color:var(--accent); font-size:18px; font-weight:600; }
@@ -83,11 +130,6 @@
 .adm-wrap { max-width:1320px; }
 .adm-stack { display:flex; flex-direction:column; gap:22px; }
 
-/* Desktop: sidebar is in-flow (sticky); mobile chrome hidden. */
-@media (min-width:861px) {
-  .adm-sidebar { position:sticky; transform:none; }
-  .adm-burger, .adm-scrim { display:none !important; }
-}
 
 /* ----------------------------------------------------------------------------
  * Dashboard

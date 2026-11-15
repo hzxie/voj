@@ -126,10 +126,6 @@ input, textarea, select, button { font-family:inherit; }
 .vw-logo { font-size:19px; font-weight:600; letter-spacing:-.3px; display:flex; align-items:center; gap:2px; white-space:nowrap; }
 .vw-logo .b { color:var(--accent); }
 .vw-logo .n { color:var(--head); }
-.vw-nav { display:flex; gap:24px; font-size:13px; }
-.vw-nav a { color:var(--text2); white-space:nowrap; }
-.vw-nav a:hover { color:var(--accent); }
-.vw-nav a.active { color:var(--accent); }
 .vw-header-spacer { flex:1; }
 
 /* Theme toggle switch. */
@@ -150,35 +146,57 @@ input, textarea, select, button { font-family:inherit; }
 .vw-header-link { font-size:12.5px; color:var(--text2); white-space:nowrap; }
 .vw-header-link:hover { color:var(--accent); }
 
-/* Hamburger (shown < 1080px). */
+/* ----------------------------------------------------------------------------
+ * Site navigation: one <nav> list at every width (js/theme.js decides the layout).
+ * Collapsed (default, and without script): the list is a popover anchored under
+ * the menu button. .vw-header.is-wide (set when brand + links + account actions
+ * fit on one row): the same list sits inline in the header.
+ * ------------------------------------------------------------------------- */
+/* Keep the row's natural width measurable. */
+[data-vw="site-header"] > * { flex-shrink:0; white-space:nowrap; }
+.vw-header.is-measuring * { transition:none !important; }
+.vw-site-nav { flex:1 0 auto; display:flex; justify-content:flex-end; align-items:center; }
+
 .vw-burger {
-  display:none; flex-direction:column; align-items:center; justify-content:center; gap:4px;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;
   width:40px; height:40px; border:1px solid var(--line); border-radius:9px; cursor:pointer; flex-shrink:0;
-  background:transparent;
+  background:transparent; padding:0; anchor-name:--vw-burger;
 }
 .vw-burger span { width:16px; height:2px; background:var(--text); border-radius:2px; }
 
-/* Mobile drawer menu. */
 .vw-menu {
-  display:none; position:sticky; top:66px; z-index:49; background:var(--bg2);
-  border-bottom:1px solid var(--line); padding:8px var(--pad) 18px; flex-direction:column;
+  display:none; flex-direction:column; list-style:none; z-index:70;
+  position:fixed; inset:auto;
+  /* Browsers without anchor() keep the header-height offset. */
+  inset-block-start:66px; inset-block-start:anchor(--vw-burger bottom);
+  inset-inline-end:var(--pad);
+  inline-size:min(80dvw, 22rem); max-inline-size:calc(100dvw - 2rem);
+  block-size:fit-content; max-block-size:calc(100dvh - 6rem); overflow:auto;
+  margin:8px 0 0; padding:6px 18px 16px; color:var(--text); background:var(--bg2);
+  border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow-card);
 }
+.vw-menu:popover-open { display:flex; }
 .vw-menu.open { display:flex; } /* no-popover fallback (js/theme.js) */
-/* Native popover: a full-width panel pinned under the sticky header. */
-.vw-menu:popover-open {
-  display:flex; position:fixed; inset:66px 0 auto 0; width:auto; margin:0; color:inherit;
-  border:0; border-bottom:1px solid var(--line); max-height:calc(100dvh - 66px); overflow-y:auto;
+.vw-menu > li > a:not(.vw-btn) { display:block; font-size:15px; color:var(--text2); padding:12px 0; border-bottom:1px solid var(--line2); }
+.vw-menu > li > a:not(.vw-btn):hover { color:var(--accent); }
+/* Current page: colour plus an underline, never colour alone. */
+.vw-menu a[aria-current="page"] {
+  color:var(--accent); text-decoration:underline; text-decoration-thickness:2px; text-underline-offset:6px;
 }
-@media (min-width:1081px) { .vw-menu:popover-open { display:none; } }
-.vw-menu > a { font-size:15px; color:var(--text2); padding:13px 0; border-bottom:1px solid var(--line2); }
-.vw-menu > a.active { color:var(--accent); }
-.vw-menu-actions { display:flex; gap:10px; margin-top:14px; }
-.vw-menu-actions a, .vw-menu-actions button { flex:1; text-align:center; font-size:13.5px; padding:12px; border-radius:9px; }
+.vw-menu-account .vw-btn { display:flex; width:100%; margin-top:12px; padding:12px; font-size:13.5px; }
 
-@media (max-width:1080px) {
-  .vw-nav, .vw-desktop-only { display:none !important; }
-  .vw-burger { display:flex !important; }
+.vw-header.is-wide .vw-burger { display:none; }
+.vw-header.is-wide .vw-menu {
+  position:static; display:flex; flex:1; flex-direction:row; align-items:center; gap:24px;
+  inline-size:auto; max-inline-size:none; block-size:auto; max-block-size:none; overflow:visible;
+  margin:0; padding:0; border:0; border-radius:0; background:transparent; box-shadow:none; font-size:13px;
 }
+.vw-header.is-wide .vw-menu::backdrop { display:none; }
+.vw-header.is-wide .vw-menu > li > a:not(.vw-btn) { display:inline; font-size:13px; padding:0; border:0; }
+.vw-header.is-wide .vw-menu-account > a:not(.vw-btn) { font-size:12.5px; }
+/* The account actions sit at the far end of the row. */
+.vw-header.is-wide .vw-menu > li:not(.vw-menu-account) + .vw-menu-account { margin-inline-start:auto; }
+.vw-header.is-wide .vw-menu-account .vw-btn { display:inline-flex; width:auto; margin:0; padding:8px 14px; font-size:12.5px; }
 
 /* ----------------------------------------------------------------------------
  * Footer

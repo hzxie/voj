@@ -8,11 +8,22 @@
 */-->
 <html xmlns:th="http://www.thymeleaf.org" lang="en">
 <body>
-    <aside th:fragment="sidebar" id="adm-sidebar" class="adm-sidebar" data-adm="sidebar">
+    <!--/* Navigation drawer that is also the sidebar (js/admin.js). On wide screens it is
+           the sticky in-flow sidebar. On narrow screens it is a popover="manual" drawer
+           exposed as role="dialog": a horizontal scroll-snap container holds the sheet
+           plus an empty "closed" stop, so the sheet can be swiped shut, and the
+           backdrop fades with the scroll position. */-->
+    <div th:fragment="sidebar" id="adm-sidebar" class="adm-drawer" data-adm="sidebar" popover="manual"
+         th:data-drawer-label="#{voj.include.header.main-navigation}">
+    <div class="adm-drawer-scroller" data-adm="drawer-scroller">
+    <aside class="adm-sidebar" data-adm="drawer-sheet">
         <a class="adm-logo" th:href="@{/}">
             <span class="b">&lt;</span><span class="n">vwl</span><span class="b">&gt;</span>
             <span class="tag" th:text="#{voj.administration.include.sidebar.admin}">ADMIN</span>
         </a>
+        <!--/* Drawer only: receives focus when the drawer opens. */-->
+        <button type="button" class="adm-drawer-close" data-adm="drawer-close" autofocus
+                th:title="#{voj.include.header.close}" th:aria-label="#{voj.include.header.close}"><span aria-hidden="true">&#10005;</span></button>
 
         <nav class="adm-nav">
             <div class="adm-nav-label" th:text="'// ' + #{voj.administration.include.sidebar.manage}">// MANAGE</div>
@@ -69,5 +80,7 @@
             </div>
         </div>
     </aside>
+    </div>
+    </div>
 </body>
 </html>
