@@ -37,11 +37,13 @@ import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.session.SessionRegistry;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.web.servlet.ModelAndView;
 
 import org.verwandlung.voj.web.model.Option;
 import org.verwandlung.voj.web.model.User;
 import org.verwandlung.voj.web.model.UserGroup;
 import org.verwandlung.voj.web.model.VojUserDetails;
+import org.verwandlung.voj.web.service.LanguageService;
 import org.verwandlung.voj.web.service.OptionService;
 import org.verwandlung.voj.web.service.SubmissionService;
 import org.verwandlung.voj.web.service.TurnstileService;
@@ -294,6 +296,62 @@ public class AccountsControllerTest {
     Assertions.assertSame(perDay, result.get("totalSubmissions"));
     verify(submissionService)
         .getNumberOfSubmissionsGroupByDay(any(), any(), eq(1000L), eq(false));
+  }
+
+  /** Test case: tests getSafeForwardUrl(...). Test data: same-origin relative paths. Expected: they are kept unchanged. */
+  @Test
+  public void testGetSafeForwardUrlKeepsRelativePaths() {
+    Assertions.assertEquals("/", AccountsController.getSafeForwardUrl("/"));
+    Assertions.assertEquals("/p/1000", AccountsController.getSafeForwardUrl("/p/1000"));
+    Assertions.assertEquals(
+        "/voj/discussion?page=2", AccountsController.getSafeForwardUrl("/voj/discussion?page=2"));
+  }
+
+  /** Test case: tests getSafeForwardUrl(...). Test data: absolute, protocol-relative, scripted and obfuscated targets. Expected: all of them are replaced by an empty string. */
+  @Test
+  public void testGetSafeForwardUrlRejectsUnsafeTargets() {
+    String[] unsafeUrls = {
+      null,
+      "",
+      "javascript:alert(1)",
+      "https://evil.com",
+      "//evil.com",
+      "/\\evil.com",
+      "\\\\evil.com",
+      "/\t/evil.com",
+      " /p/1000",
+      "evil.com/p/1000",
+      "/p/1000\r\nSet-Cookie: x=y"
+    };
+    for (String unsafeUrl : unsafeUrls) {
+      Assertions.assertEquals("", AccountsController.getSafeForwardUrl(unsafeUrl), unsafeUrl);
+    }
+  }
+
+  /** Test case: tests loginView(...). Test data: a javascript: forward URL. Expected: the login page is rendered with an empty forward URL. */
+  @Test
+  public void testLoginViewDropsUnsafeForwardUrl() {
+    ModelAndView view =
+        controller.loginView(
+            false, "javascript:alert(document.cookie)", request(), new MockHttpServletResponse());
+
+    Assertions.assertEquals("pages/accounts/login", view.getViewName());
+    Assertions.assertEquals("", view.getModel().get("forwardUrl"));
+  }
+
+  /** Test case: tests registerView(...). Test data: a same-origin forward URL. Expected: it is passed to the registration page. */
+  @Test
+  public void testRegisterViewPassesSafeForwardUrl() {
+    LanguageService languageService = mock(LanguageService.class);
+    ReflectionTestUtils.setField(controller, "languageService", languageService);
+    when(optionService.getOption("allowUserRegister"))
+        .thenReturn(new Option("allowUserRegister", "1", true));
+
+    ModelAndView view =
+        controller.registerView("/p/1000", request(), new MockHttpServletResponse());
+
+    Assertions.assertEquals("pages/accounts/register", view.getViewName());
+    Assertions.assertEquals("/p/1000", view.getModel().get("forwardUrl"));
   }
 
   /** Builds a User (uid 1000, group "users") suitable for VojUserDetails (which needs a non-null user group). */

@@ -98,9 +98,40 @@ public class AccountsController {
     } else {
       view = new ModelAndView("pages/accounts/login");
       view.addObject("isLogout", isLogout);
-      view.addObject("forwardUrl", forwardUrl);
+      view.addObject("forwardUrl", getSafeForwardUrl(forwardUrl));
     }
     return view;
+  }
+
+  /**
+   * Returns the given post-login/registration redirect target if it is a same-origin relative path,
+   * or an empty string (which the pages treat as "go to the home page") otherwise.
+   *
+   * <p>The value is assigned to {@code window.location.href} after a successful login or
+   * registration, so anything other than a plain absolute path on this host would be an open
+   * redirect (e.g. {@code https://evil.com} or the protocol-relative {@code //evil.com}) or even a
+   * script injection ({@code javascript:...}). Only paths that start with a single {@code /} are
+   * accepted: a second {@code /} right after it, any backslash (which browsers normalise to {@code
+   * /}) and any whitespace or control character (which browsers strip before parsing) are rejected.
+   *
+   * @param forwardUrl - the requested redirect target
+   * @return the redirect target if it is safe, or an empty string otherwise
+   */
+  static String getSafeForwardUrl(String forwardUrl) {
+    if (forwardUrl == null
+        || forwardUrl.isEmpty()
+        || forwardUrl.length() > MAX_FORWARD_URL_LENGTH
+        || forwardUrl.charAt(0) != '/'
+        || forwardUrl.startsWith("//")) {
+      return "";
+    }
+    for (int i = 0; i < forwardUrl.length(); ++i) {
+      char c = forwardUrl.charAt(i);
+      if (c == '\\' || Character.isISOControl(c) || Character.isWhitespace(c)) {
+        return "";
+      }
+    }
+    return forwardUrl;
   }
 
   /**
@@ -195,6 +226,7 @@ public class AccountsController {
   /**
    * Displays the user registration page.
    *
+   * @param forwardUrl - the address to redirect to after registration (relative path)
    * @param request - the HttpServletRequest object
    * @param response - the HttpResponse object
    * @return a ModelAndView object containing the information of the registration page
@@ -218,6 +250,7 @@ public class AccountsController {
       view = new ModelAndView("pages/accounts/register");
       view.addObject("languages", languages);
       view.addObject("isAllowRegister", isAllowRegister);
+      view.addObject("forwardUrl", getSafeForwardUrl(forwardUrl));
     }
     return view;
   }
@@ -556,6 +589,9 @@ public class AccountsController {
   /** Persists the security context to the HTTP session after a programmatic login. */
   private final SecurityContextRepository securityContextRepository =
       new HttpSessionSecurityContextRepository();
+
+  /** The maximum length of an accepted post-login/registration redirect target. */
+  private static final int MAX_FORWARD_URL_LENGTH = 2048;
 
   /** The number of days of daily activity returned for the heat-map (53 weeks). */
   private static final int ACTIVITY_HEAT_MAP_DAYS = 53 * 7;
