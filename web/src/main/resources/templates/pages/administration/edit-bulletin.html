@@ -18,8 +18,8 @@
             <button type="button" class="adm-btn-tn go" id="save-bulletin" th:text="'$ ' + #{voj.administration.edit-bulletin.save}">$ save</button>
         </div>
 
-        <div class="alert alert-error hide"></div>
-        <div class="alert alert-success hide" th:text="#{voj.administration.edit-bulletin.saved}">Saved.</div>
+        <div class="alert alert-error hide" role="alert"></div>
+        <div class="alert alert-success hide" role="status" th:text="#{voj.administration.edit-bulletin.saved}">Saved.</div>
 
         <input type="hidden" id="message-id" th:value="${isEdit ? message.messageId : ''}" />
         <input type="hidden" id="bulletin-status" th:value="${status}" />
@@ -48,15 +48,15 @@
                         <div>
                             <div class="adm-block-label" th:text="#{voj.administration.edit-bulletin.status}">STATUS</div>
                             <div class="adm-seg" data-adm="seg" data-input="bulletin-status">
-                                <a href="javascript:void(0);" data-value="PUBLISHED" th:classappend="${status == 'PUBLISHED'} ? 'active'" th:text="#{voj.administration.status.published}">Published</a>
-                                <a href="javascript:void(0);" data-value="DRAFT" th:classappend="${status == 'DRAFT'} ? 'active'" th:text="#{voj.administration.status.draft}">Draft</a>
-                                <a href="javascript:void(0);" data-value="HIDDEN" th:classappend="${status == 'HIDDEN'} ? 'active'" th:text="#{voj.administration.status.hidden}">Hidden</a>
+                                <button type="button" data-value="PUBLISHED" th:classappend="${status == 'PUBLISHED'} ? 'active'" th:text="#{voj.administration.status.published}">Published</button>
+                                <button type="button" data-value="DRAFT" th:classappend="${status == 'DRAFT'} ? 'active'" th:text="#{voj.administration.status.draft}">Draft</button>
+                                <button type="button" data-value="HIDDEN" th:classappend="${status == 'HIDDEN'} ? 'active'" th:text="#{voj.administration.status.hidden}">Hidden</button>
                             </div>
                         </div>
                         <div class="adm-togrow">
                             <span th:text="#{voj.administration.edit-bulletin.pin}">Pin to top</span>
-                            <div class="adm-switch" data-adm="switch" data-input="bulletin-is-pinned"
-                                 th:classappend="${pinned} ? 'on'"><div class="knob"></div></div>
+                            <button type="button" role="switch" class="adm-switch" data-adm="switch" data-input="bulletin-is-pinned"
+                                 th:classappend="${pinned} ? 'on'"><span class="knob"></span></button>
                         </div>
                     </div>
                 </div>
@@ -98,7 +98,7 @@
                 $ok.addClass('hide'); $err.addClass('hide');
                 var title = $('#message-title').val();
                 var body = bodyEditor ? bodyEditor.value() : $('#message-body').val();
-                if (!title || !body) { $err.html([[#{voj.administration.edit-bulletin.empty-error}]]).removeClass('hide'); return; }
+                if (!title || !body) { $err.text([[#{voj.administration.edit-bulletin.empty-error}]]).removeClass('hide'); return; }
                 var url = messageId ? [[@{/administration/editBulletin.action}]] : [[@{/administration/createBulletin.action}]];
                 var data = {
                     messageTitle: title,
@@ -111,20 +111,22 @@
                     type: 'POST', url: url, data: data, dataType: 'JSON',
                     success: function (result) {
                         if (result['isSuccessful']) { window.location.href = [[@{/administration/all-bulletins}]]; }
-                        else { $err.html([[#{voj.administration.edit-bulletin.empty-error}]]).removeClass('hide'); }
+                        else { $err.text([[#{voj.administration.edit-bulletin.empty-error}]]).removeClass('hide'); }
                     }
                 });
             });
 
             // --- Delete --------------------------------------------------------------
             function del() {
-                if (!confirm([[#{voj.administration.edit-bulletin.continue-or-not}]])) return;
-                $.ajax({
-                    type: 'POST', url: [[@{/administration/deleteBulletins.action}]],
-                    data: { 'bulletins': JSON.stringify([messageId]) }, dataType: 'JSON',
-                    success: function (result) {
-                        if (result['isSuccessful']) { window.location.href = [[@{/administration/all-bulletins}]]; }
-                    }
+                vojConfirm([[#{voj.administration.edit-bulletin.continue-or-not}]]).then(function (ok) {
+                    if (!ok) return;
+                    $.ajax({
+                        type: 'POST', url: [[@{/administration/deleteBulletins.action}]],
+                        data: { 'bulletins': JSON.stringify([messageId]) }, dataType: 'JSON',
+                        success: function (result) {
+                            if (result['isSuccessful']) { window.location.href = [[@{/administration/all-bulletins}]]; }
+                        }
+                    });
                 });
             }
             ['delete-bulletin-2'].forEach(function (id) {

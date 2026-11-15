@@ -7,7 +7,7 @@
 </head>
 <body>
     <div layout:fragment="content" th:with="roleSlug=${isCreate ? 'users' : (isBanned ? 'users' : user.userGroup.userGroupSlug)}">
-    <form id="profile-form" class="adm-detail" onSubmit="onSubmit(); return false;">
+    <form id="profile-form" class="adm-detail">
 
         <div class="adm-detail-top">
             <a class="adm-back" th:href="@{/administration/all-users}">&#8592; <span th:text="#{voj.administration.edit-user.back}">back to users</span></a>
@@ -25,8 +25,8 @@
             <button type="submit" class="adm-btn-tn go" th:text="${isCreate} ? '$ ' + #{voj.administration.edit-user.create-user} : '$ ' + #{voj.administration.edit-user.save}">$ save</button>
         </div>
 
-        <div class="alert alert-error hide"></div>
-        <div class="alert alert-success hide" th:text="${isCreate} ? #{voj.administration.new-user.user-created} : #{voj.administration.edit-user.profile-updated}">Saved.</div>
+        <div class="alert alert-error hide" role="alert"></div>
+        <div class="alert alert-success hide" role="status" th:text="${isCreate} ? #{voj.administration.new-user.user-created} : #{voj.administration.edit-user.profile-updated}">Saved.</div>
 
         <div class="adm-ed2">
             <div class="adm-col">
@@ -56,7 +56,7 @@
                         <div th:unless="${isCreate}">
                             <div class="adm-block-label" th:text="#{voj.administration.edit-user.default-language}">DEFAULT LANGUAGE</div>
                             <div class="adm-seg" data-adm="seg" data-input="prefer-language">
-                                <a href="javascript:void(0);" th:each="language : ${languages}" th:data-value="${language.languageSlug}" th:classappend="${user.preferLanguage != null and language.languageId == user.preferLanguage.languageId} ? 'active'" th:text="${language.languageName}">C++</a>
+                                <button type="button" th:each="language : ${languages}" th:data-value="${language.languageSlug}" th:classappend="${user.preferLanguage != null and language.languageId == user.preferLanguage.languageId} ? 'active'" th:text="${language.languageName}">C++</button>
                             </div>
                             <input type="hidden" id="prefer-language" th:value="${user.preferLanguage != null ? user.preferLanguage.languageSlug : ''}" />
                         </div>
@@ -81,7 +81,7 @@
                         <div>
                             <div class="adm-block-label" th:text="#{voj.administration.edit-user.role}">ROLE</div>
                             <div class="adm-seg" data-adm="seg" data-input="user-group">
-                                <a href="javascript:void(0);" th:each="userGroup : ${userGroups}" th:if="${userGroup.userGroupSlug != 'forbidden'}" th:data-value="${userGroup.userGroupSlug}" th:classappend="${userGroup.userGroupSlug == roleSlug} ? 'active'" th:text="${userGroup.userGroupName}">User</a>
+                                <button type="button" th:each="userGroup : ${userGroups}" th:if="${userGroup.userGroupSlug != 'forbidden'}" th:data-value="${userGroup.userGroupSlug}" th:classappend="${userGroup.userGroupSlug == roleSlug} ? 'active'" th:text="${userGroup.userGroupName}">User</button>
                             </div>
                             <input type="hidden" id="user-group" th:value="${roleSlug}" />
                         </div>
@@ -141,13 +141,14 @@
 
     <!-- CREATE MODE -->
     <script th:if="${isCreate}" type="text/javascript" th:inline="javascript">
+        $('#profile-form').on('submit', function(e) { e.preventDefault(); onSubmit(); });
         function onSubmit() {
             $('.alert-success, .alert-error', '#profile-form').addClass('hide');
             if ($('#password').val() !== $('#password-confirm').val()) {
-                $('.alert-error', '#profile-form').html([[#{voj.administration.edit-user.password-mismatch}]]).removeClass('hide');
+                $('.alert-error', '#profile-form').text([[#{voj.administration.edit-user.password-mismatch}]]).removeClass('hide');
                 return;
             }
-            $('button[type=submit]', '#profile-form').attr('disabled', 'disabled').html([[#{voj.administration.edit-user.please-wait}]]);
+            $('button[type=submit]', '#profile-form').attr('disabled', 'disabled').text([[#{voj.administration.edit-user.please-wait}]]);
             $.ajax({
                 type: 'POST', url: [[@{/administration/newUser.action}]],
                 data: { username:$('#username').val(), password:$('#password').val(), email:$('#email').val(),
@@ -178,15 +179,16 @@
                 if (!result['isLanguageLegal']) { m += [[#{voj.administration.new-user.language-empty}]] + '<br>'; }
                 $('.alert-error', '#profile-form').html(m).removeClass('hide');
             }
-            $('button[type=submit]', '#profile-form').removeAttr('disabled').html('$ ' + [[#{voj.administration.edit-user.create-user}]]);
+            $('button[type=submit]', '#profile-form').removeAttr('disabled').text('$ ' + [[#{voj.administration.edit-user.create-user}]]);
         }
     </script>
 
     <!-- EDIT MODE -->
     <script th:unless="${isCreate}" type="text/javascript" th:inline="javascript">
+        $('#profile-form').on('submit', function(e) { e.preventDefault(); onSubmit(); });
         function onSubmit() {
             $('.alert-success, .alert-error', '#profile-form').addClass('hide');
-            $('button[type=submit]', '#profile-form').attr('disabled', 'disabled').html([[#{voj.administration.edit-user.please-wait}]]);
+            $('button[type=submit]', '#profile-form').attr('disabled', 'disabled').text([[#{voj.administration.edit-user.please-wait}]]);
             saveUser('');
         }
         function saveUser(password) {
@@ -216,7 +218,7 @@
                 if (!result['isAboutMeLegal']) { m += [[#{voj.administration.edit-user.about-me-legal}]] + '<br>'; }
                 $('.alert-error').html(m).removeClass('hide');
             }
-            $('button[type=submit]').removeAttr('disabled').html('$ ' + [[#{voj.administration.edit-user.save}]]);
+            $('button[type=submit]').removeAttr('disabled').text('$ ' + [[#{voj.administration.edit-user.save}]]);
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
@@ -247,11 +249,11 @@
             var p1 = $('#new-password').val(), p2 = $('#new-password-confirm').val();
             $('.alert-success, .alert-error', '#profile-form').addClass('hide');
             if (p1.length < 6 || p1.length > 16) {
-                $('.alert-error', '#profile-form').html([[#{voj.administration.edit-user.password-illegal}]]).removeClass('hide');
+                $('.alert-error', '#profile-form').text([[#{voj.administration.edit-user.password-illegal}]]).removeClass('hide');
                 window.scrollTo({ top: 0, behavior: 'smooth' }); return;
             }
             if (p1 !== p2) {
-                $('.alert-error', '#profile-form').html([[#{voj.administration.edit-user.password-mismatch}]]).removeClass('hide');
+                $('.alert-error', '#profile-form').text([[#{voj.administration.edit-user.password-mismatch}]]).removeClass('hide');
                 window.scrollTo({ top: 0, behavior: 'smooth' }); return;
             }
             $('button[type=submit]', '#profile-form').attr('disabled', 'disabled');
@@ -263,15 +265,18 @@
         });
 
         $('button.btn-danger').click(function() {
-            if (!confirm([[#{voj.administration.edit-user.continue-or-not}]])) { return; }
-            $(this).attr('disabled', 'disabled');
-            $.ajax({
-                type: 'POST', url: [[@{/administration/deleteUsers.action}]],
-                data: { 'users': JSON.stringify([ [[${user.uid}]] ]) }, dataType: 'JSON',
-                success: function(result){
-                    if (result['isSuccessful']) { window.location.href = [[@{/administration/all-users}]]; }
-                    else { $('.alert-error').html([[#{voj.administration.edit-user.delete-error}]]).removeClass('hide'); $('button.btn-danger').removeAttr('disabled'); }
-                }
+            var $btn = $(this);
+            vojConfirm([[#{voj.administration.edit-user.continue-or-not}]]).then(function(ok) {
+                if (!ok) { return; }
+                $btn.attr('disabled', 'disabled');
+                $.ajax({
+                    type: 'POST', url: [[@{/administration/deleteUsers.action}]],
+                    data: { 'users': JSON.stringify([ [[${user.uid}]] ]) }, dataType: 'JSON',
+                    success: function(result){
+                        if (result['isSuccessful']) { window.location.href = [[@{/administration/all-users}]]; }
+                        else { $('.alert-error').text([[#{voj.administration.edit-user.delete-error}]]).removeClass('hide'); $('button.btn-danger').removeAttr('disabled'); }
+                    }
+                });
             });
         });
     </script>

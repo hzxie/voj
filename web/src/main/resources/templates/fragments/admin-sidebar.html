@@ -8,7 +8,7 @@
 */-->
 <html xmlns:th="http://www.thymeleaf.org" lang="en">
 <body>
-    <aside th:fragment="sidebar" class="adm-sidebar" data-adm="sidebar">
+    <aside th:fragment="sidebar" id="adm-sidebar" class="adm-sidebar" data-adm="sidebar">
         <a class="adm-logo" th:href="@{/}">
             <span class="b">&lt;</span><span class="n">vwl</span><span class="b">&gt;</span>
             <span class="tag" th:text="#{voj.administration.include.sidebar.admin}">ADMIN</span>
@@ -65,9 +65,7 @@
                     <div class="nm" th:text="${myProfile.username}">username</div>
                     <div class="rl" th:text="${myProfile.userGroup.userGroupName}">superadmin</div>
                 </div>
-                <div class="adm-themetoggle" data-vw="theme-toggle" title="Toggle theme" role="button" tabindex="0">
-                    <span class="moon">&#9790;</span><span class="sun">&#9728;</span><span class="knob"></span>
-                </div>
+                <button th:replace="~{fragments/chrome :: theme-toggle('adm-themetoggle')}"></button>
             </div>
         </div>
     </aside>

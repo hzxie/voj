@@ -9,8 +9,8 @@
     <div layout:fragment="content">
     <div class="adm-form">
 
-        <div class="alert alert-error hide"></div>
-        <div class="alert alert-success hide" th:text="#{voj.administration.general-settings.settings-saved}">Settings saved.</div>
+        <div class="alert alert-error hide" role="alert"></div>
+        <div class="alert alert-success hide" role="status" th:text="#{voj.administration.general-settings.settings-saved}">Settings saved.</div>
 
         <!-- SITE IDENTITY -->
         <div class="adm-setgroup">
@@ -63,7 +63,7 @@
                         <div class="hint" th:text="#{voj.administration.general-settings.allow-register-hint}">Allow new accounts to be created.</div>
                     </div>
                     <div class="adm-setrow-r">
-                        <div class="adm-switch" id="allow-register" data-adm="switch" th:classappend="${options['allowUserRegister'] != '0'} ? 'on'"><div class="knob"></div></div>
+                        <button type="button" role="switch" class="adm-switch" id="allow-register" data-adm="switch" th:classappend="${options['allowUserRegister'] != '0'} ? 'on'"><span class="knob"></span></button>
                     </div>
                 </div>
                 <div class="adm-setrow">
@@ -72,7 +72,7 @@
                         <div class="hint" th:text="#{voj.administration.general-settings.require-email-verification-hint}">New users must confirm their address before submitting.</div>
                     </div>
                     <div class="adm-setrow-r">
-                        <div class="adm-switch" id="require-email-verification" data-adm="switch" th:classappend="${options['requireEmailVerification'] == '1'} ? 'on'"><div class="knob"></div></div>
+                        <button type="button" role="switch" class="adm-switch" id="require-email-verification" data-adm="switch" th:classappend="${options['requireEmailVerification'] == '1'} ? 'on'"><span class="knob"></span></button>
                     </div>
                 </div>
                 <div class="adm-setrow">
@@ -88,7 +88,7 @@
                         <div class="hint" th:text="#{voj.administration.general-settings.turnstile-enabled-hint}">Require a Turnstile challenge on the login, registration and password-reset forms.</div>
                     </div>
                     <div class="adm-setrow-r">
-                        <div class="adm-switch" id="turnstile-enabled" data-adm="switch" th:classappend="${options['turnstileEnabled'] == '1'} ? 'on'"><div class="knob"></div></div>
+                        <button type="button" role="switch" class="adm-switch" id="turnstile-enabled" data-adm="switch" th:classappend="${options['turnstileEnabled'] == '1'} ? 'on'"><span class="knob"></span></button>
                     </div>
                 </div>
                 <div class="adm-setrow">
@@ -111,7 +111,7 @@
                         <div class="hint" th:text="#{voj.administration.general-settings.public-submissions-hint}">Let non-authors view submitted source code.</div>
                     </div>
                     <div class="adm-setrow-r">
-                        <div class="adm-switch" id="public-submissions" data-adm="switch" th:classappend="${options['publicSubmissions'] == '1'} ? 'on'"><div class="knob"></div></div>
+                        <button type="button" role="switch" class="adm-switch" id="public-submissions" data-adm="switch" th:classappend="${options['publicSubmissions'] == '1'} ? 'on'"><span class="knob"></span></button>
                     </div>
                 </div>
                 <div class="adm-setrow">
@@ -120,7 +120,7 @@
                         <div class="hint" th:text="#{voj.administration.general-settings.maintenance-mode-hint}">Take the site offline except for administrators.</div>
                     </div>
                     <div class="adm-setrow-r">
-                        <div class="adm-switch" id="maintenance-mode" data-adm="switch" th:classappend="${options['maintenanceMode'] == '1'} ? 'on'"><div class="knob"></div></div>
+                        <button type="button" role="switch" class="adm-switch" id="maintenance-mode" data-adm="switch" th:classappend="${options['maintenanceMode'] == '1'} ? 'on'"><span class="knob"></span></button>
                     </div>
                 </div>
             </div>
@@ -161,7 +161,7 @@
                         <div class="hint" th:text="#{voj.administration.general-settings.auto-hide-on-reports-hint}">Hide content once it hits the report threshold.</div>
                     </div>
                     <div class="adm-setrow-r">
-                        <div class="adm-switch" id="auto-hide-on-reports" data-adm="switch" th:classappend="${options['autoHideOnReports'] != '0'} ? 'on'"><div class="knob"></div></div>
+                        <button type="button" role="switch" class="adm-switch" id="auto-hide-on-reports" data-adm="switch" th:classappend="${options['autoHideOnReports'] != '0'} ? 'on'"><span class="knob"></span></button>
                     </div>
                 </div>
                 <div class="adm-setrow">
@@ -208,7 +208,7 @@
                         <div class="hint" th:text="#{voj.administration.general-settings.auto-censor-hint}">Mask matched words in discussion content.</div>
                     </div>
                     <div class="adm-setrow-r">
-                        <div class="adm-switch" id="auto-censor" data-adm="switch" th:classappend="${options['autoCensorOffensiveWords'] != '0'} ? 'on'"><div class="knob"></div></div>
+                        <button type="button" role="switch" class="adm-switch" id="auto-censor" data-adm="switch" th:classappend="${options['autoCensorOffensiveWords'] != '0'} ? 'on'"><span class="knob"></span></button>
                     </div>
                 </div>
                 <div class="adm-wordlist">
@@ -230,7 +230,7 @@
                         <span class="num" id="offensive-words-count" th:text="${offensiveWordCount}">0</span>
                         <span th:text="#{voj.administration.general-settings.words-active}">words active in blocklist</span>
                     </div>
-                    <div id="offensive-words-import-result" class="adm-wordlist-result"></div>
+                    <div id="offensive-words-import-result" class="adm-wordlist-result" role="status"></div>
                 </div>
             </div>
         </div>
@@ -328,7 +328,7 @@
                             var msg = result['isContactEmailLegal'] === false
                                 ? [[#{voj.administration.general-settings.contact-email-illegal}]]
                                 : [[#{voj.administration.general-settings.save-error}]];
-                            $err.html(msg).removeClass('hide');
+                            $err.text(msg).removeClass('hide');
                         }
                         window.scrollTo({ top: 0, behavior: 'smooth' });
                     }
@@ -354,7 +354,7 @@
                         var failed = (result['sources'] || []).filter(function (s) { return !s['isSuccessful']; });
                         if (failed.length) {
                             $result.append(' ' + failed.map(function (s) {
-                                return s['url'] + ': ' + (s['error'] || '');
+                                return escapeHtml(s['url']) + ': ' + escapeHtml(s['error'] || '');
                             }).join('; '));
                         }
                     },

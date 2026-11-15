@@ -11,15 +11,98 @@
     else { document.addEventListener('DOMContentLoaded', fn); }
   }
 
+  // --- ARIA state for the custom admin controls ------------------------------
+  // .adm-switch (<button role="switch">) and .adm-check (row / select-all
+  // checkboxes) keep their state in an `.on` class that page scripts also flip;
+  // .adm-seg options mark the chosen one with `.active`. Mirror those classes
+  // into aria-checked / aria-pressed, including on controls added later.
+  function textOf(el) { return el ? el.textContent.replace(/\s+/g, ' ').trim() : ''; }
+
+  function labelSwitch(sw) {
+    if (sw.hasAttribute('aria-label') || sw.hasAttribute('aria-labelledby')) return;
+    var row = sw.closest('.adm-setrow, .adm-togrow, .vw-between, .language');
+    var lbl = row && row.querySelector('.lbl, .language-name, span:not(.knob)');
+    var text = lbl ? (lbl.value !== undefined && lbl.tagName === 'INPUT' ? lbl.value : textOf(lbl)) : '';
+    if (text) sw.setAttribute('aria-label', text);
+  }
+
+  function enhanceCheck(c) {
+    if (c.getAttribute('role') !== 'checkbox') {
+      c.setAttribute('role', 'checkbox');
+      c.setAttribute('tabindex', '0');
+    }
+    if (!c.hasAttribute('aria-label')) {
+      var row = c.closest('[data-adm="row"]');
+      var label = row ? textOf(row.querySelector('.adm-cell.head') || row.querySelector('.adm-cell'))
+                      : document.body.getAttribute('data-select-all-label');
+      if (label) c.setAttribute('aria-label', label);
+    }
+  }
+
+  function syncState(el) {
+    if (el.classList.contains('adm-switch') || el.classList.contains('adm-check')) {
+      el.setAttribute('aria-checked', el.classList.contains('on') ? 'true' : 'false');
+    } else if (el.parentNode && el.parentNode.classList && el.parentNode.classList.contains('adm-seg')) {
+      el.setAttribute('aria-pressed', el.classList.contains('active') ? 'true' : 'false');
+    }
+  }
+
+  function enhance(scope) {
+    Array.prototype.forEach.call(scope.querySelectorAll('.adm-switch'), function (sw) { labelSwitch(sw); syncState(sw); });
+    Array.prototype.forEach.call(scope.querySelectorAll('.adm-check'), function (c) { enhanceCheck(c); syncState(c); });
+    Array.prototype.forEach.call(scope.querySelectorAll('.adm-seg > [data-value]'), syncState);
+  }
+
   ready(function () {
+    enhance(document);
+    new MutationObserver(function (records) {
+      records.forEach(function (r) {
+        if (r.type === 'attributes') { syncState(r.target); return; }
+        Array.prototype.forEach.call(r.addedNodes, function (n) { if (n.nodeType === 1) enhance(n.parentNode || n); });
+      });
+    }).observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['class'] });
+
+    // Space / Enter on a focused checkbox span (buttons already do this natively).
+    // preventDefault keeps Space from scrolling and Enter from following the row link.
+    document.addEventListener('keydown', function (e) {
+      var t = e.target;
+      if ((e.key === ' ' || e.key === 'Enter') && t.classList && t.classList.contains('adm-check')) {
+        e.preventDefault();
+        t.click();
+      }
+    });
+
     // --- Sidebar drawer (mobile) ---------------------------------------------
+    // Below 861px the sidebar is an off-canvas drawer: keep it out of the tab
+    // order while closed (inert), reflect the state on the burger, move focus in
+    // on open and back to the burger on close (scrim click or Esc).
     var sidebar = document.querySelector('[data-adm="sidebar"]');
     var scrim = document.querySelector('[data-adm="scrim"]');
     var burger = document.querySelector('[data-adm="burger"]');
-    function openSb() { if (sidebar) sidebar.classList.add('open'); if (scrim) scrim.classList.add('open'); }
-    function closeSb() { if (sidebar) sidebar.classList.remove('open'); if (scrim) scrim.classList.remove('open'); }
-    if (burger) burger.addEventListener('click', openSb);
+    var narrow = window.matchMedia('(max-width: 860px)');
+    function isOpen() { return !!sidebar && sidebar.classList.contains('open'); }
+    function syncInert() { if (sidebar) sidebar.inert = narrow.matches && !isOpen(); }
+    function openSb() {
+      if (!sidebar) return;
+      sidebar.classList.add('open');
+      if (scrim) scrim.classList.add('open');
+      if (burger) burger.setAttribute('aria-expanded', 'true');
+      syncInert();
+      var first = sidebar.querySelector('a, button');
+      if (first) first.focus();
+    }
+    function closeSb() {
+      if (!isOpen()) return;
+      sidebar.classList.remove('open');
+      if (scrim) scrim.classList.remove('open');
+      if (burger) { burger.setAttribute('aria-expanded', 'false'); if (narrow.matches) burger.focus(); }
+      syncInert();
+    }
+    if (burger) burger.addEventListener('click', function () { if (isOpen()) closeSb(); else openSb(); });
     if (scrim) scrim.addEventListener('click', closeSb);
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeSb(); });
+    if (narrow.addEventListener) narrow.addEventListener('change', syncInert);
+    syncInert();
 
     // --- Toggle switches (settings / editors) --------------------------------
     // Any [data-adm="switch"] flips its `.on` class on click; pages read the

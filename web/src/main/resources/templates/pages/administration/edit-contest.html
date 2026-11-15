@@ -21,8 +21,8 @@
             <button type="button" class="adm-btn-tn go" id="save-contest" th:text="'$ ' + #{voj.administration.edit-contest.save}">$ save</button>
         </div>
 
-        <div class="alert alert-error hide"></div>
-        <div class="alert alert-success hide" th:text="#{voj.administration.edit-contest.saved}">Saved.</div>
+        <div class="alert alert-error hide" role="alert"></div>
+        <div class="alert alert-success hide" role="status" th:text="#{voj.administration.edit-contest.saved}">Saved.</div>
         <input type="hidden" id="contest-id" th:value="${isEdit ? contest.contestId : ''}" />
         <input type="hidden" id="contest-scoring" th:value="${scoring}" />
         <input type="hidden" id="contest-is-rated" th:value="${!isEdit or contest.isRated()} ? '1' : '0'" />
@@ -98,17 +98,17 @@
                         <div>
                             <div class="adm-block-label" th:text="#{voj.administration.edit-contest.status}">STATUS</div>
                             <div class="adm-seg" data-adm="seg" data-input="contest-status">
-                                <a href="javascript:void(0);" data-value="PUBLISHED" th:classappend="${status == 'PUBLISHED'} ? 'active'" th:text="#{voj.administration.status.published}">Published</a>
-                                <a href="javascript:void(0);" data-value="DRAFT" th:classappend="${status == 'DRAFT'} ? 'active'" th:text="#{voj.administration.status.draft}">Draft</a>
-                                <a href="javascript:void(0);" data-value="HIDDEN" th:classappend="${status == 'HIDDEN'} ? 'active'" th:text="#{voj.administration.status.hidden}">Hidden</a>
+                                <button type="button" data-value="PUBLISHED" th:classappend="${status == 'PUBLISHED'} ? 'active'" th:text="#{voj.administration.status.published}">Published</button>
+                                <button type="button" data-value="DRAFT" th:classappend="${status == 'DRAFT'} ? 'active'" th:text="#{voj.administration.status.draft}">Draft</button>
+                                <button type="button" data-value="HIDDEN" th:classappend="${status == 'HIDDEN'} ? 'active'" th:text="#{voj.administration.status.hidden}">Hidden</button>
                             </div>
                         </div>
                         <div>
                             <div class="adm-block-label" th:text="#{voj.administration.edit-contest.scoring}">SCORING</div>
                             <div class="adm-seg" data-adm="seg" data-input="contest-scoring">
-                                <a href="javascript:void(0);" data-value="ICPC" th:classappend="${scoring == 'ICPC'} ? 'active'">ICPC</a>
-                                <a href="javascript:void(0);" data-value="IOI" th:classappend="${scoring == 'IOI'} ? 'active'">IOI</a>
-                                <a href="javascript:void(0);" data-value="Codeforces" th:classappend="${scoring == 'Codeforces'} ? 'active'">Codeforces</a>
+                                <button type="button" data-value="ICPC" th:classappend="${scoring == 'ICPC'} ? 'active'">ICPC</button>
+                                <button type="button" data-value="IOI" th:classappend="${scoring == 'IOI'} ? 'active'">IOI</button>
+                                <button type="button" data-value="Codeforces" th:classappend="${scoring == 'Codeforces'} ? 'active'">Codeforces</button>
                             </div>
                         </div>
                         <label class="adm-flabel">
@@ -117,13 +117,13 @@
                         </label>
                         <div class="adm-togrow">
                             <span th:text="#{voj.administration.edit-contest.rated}">Rated contest</span>
-                            <div class="adm-switch" data-adm="switch" data-input="contest-is-rated"
-                                 th:classappend="${!isEdit or contest.isRated()} ? 'on'"><div class="knob"></div></div>
+                            <button type="button" role="switch" class="adm-switch" data-adm="switch" data-input="contest-is-rated"
+                                 th:classappend="${!isEdit or contest.isRated()} ? 'on'"><span class="knob"></span></button>
                         </div>
                         <div class="adm-togrow">
                             <span th:text="#{voj.administration.edit-contest.open-registration}">Open registration</span>
-                            <div class="adm-switch" data-adm="switch" data-input="contest-open-registration"
-                                 th:classappend="${!isEdit or contest.isOpenRegistration()} ? 'on'"><div class="knob"></div></div>
+                            <button type="button" role="switch" class="adm-switch" data-adm="switch" data-input="contest-open-registration"
+                                 th:classappend="${!isEdit or contest.isOpenRegistration()} ? 'on'"><span class="knob"></span></button>
                         </div>
                     </div>
                 </div>
@@ -381,7 +381,7 @@
                 var freezeMinutes = parseHhMm(document.getElementById('contest-freeze').value);
                 var name = $('#contest-name').val();
                 if (!name || !startRaw || durationMinutes === null || durationMinutes <= 0) {
-                    $err.html([[#{voj.administration.edit-contest.invalid-error}]]).removeClass('hide'); return;
+                    $err.text([[#{voj.administration.edit-contest.invalid-error}]]).removeClass('hide'); return;
                 }
                 var endDate = new Date(new Date(startRaw).getTime() + durationMinutes * 60000);
                 function fmt(d) {
@@ -407,20 +407,22 @@
                     type: 'POST', url: url, data: data, dataType: 'JSON',
                     success: function (result) {
                         if (result['isSuccessful']) { window.location.href = [[@{/administration/all-contests}]]; }
-                        else { $err.html([[#{voj.administration.edit-contest.invalid-error}]]).removeClass('hide'); }
+                        else { $err.text([[#{voj.administration.edit-contest.invalid-error}]]).removeClass('hide'); }
                     }
                 });
             }
             document.getElementById('save-contest').addEventListener('click', save);
 
             function del() {
-                if (!confirm([[#{voj.administration.edit-contest.continue-or-not}]])) return;
-                $.ajax({
-                    type: 'POST', url: [[@{/administration/deleteContests.action}]],
-                    data: { 'contests': JSON.stringify([contestId]) }, dataType: 'JSON',
-                    success: function (result) {
-                        if (result['isSuccessful']) { window.location.href = [[@{/administration/all-contests}]]; }
-                    }
+                vojConfirm([[#{voj.administration.edit-contest.continue-or-not}]]).then(function (ok) {
+                    if (!ok) return;
+                    $.ajax({
+                        type: 'POST', url: [[@{/administration/deleteContests.action}]],
+                        data: { 'contests': JSON.stringify([contestId]) }, dataType: 'JSON',
+                        success: function (result) {
+                            if (result['isSuccessful']) { window.location.href = [[@{/administration/all-contests}]]; }
+                        }
+                    });
                 });
             }
             ['delete-contest-2'].forEach(function (id) {

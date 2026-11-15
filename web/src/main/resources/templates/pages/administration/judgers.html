@@ -9,8 +9,8 @@
     <div layout:fragment="content">
     <div class="adm-jwrap" id="judgers-page">
 
-        <div class="alert alert-error hide"></div>
-        <div class="alert alert-success hide"></div>
+        <div class="alert alert-error hide" role="alert"></div>
+        <div class="alert alert-success hide" role="status"></div>
 
         <!-- Judge cluster -->
         <div class="adm-panel adm-panel-flush">
@@ -47,9 +47,9 @@
                 <div class="adm-label" th:text="#{voj.administration.judgers.languages}">// LANGUAGES</div>
                 <div class="desc" th:text="#{voj.administration.judgers.languages-desc}">Compile &amp; run commands per language. Disable to hide from submitters.</div>
             </div>
-            <a class="adm-btn-accent" href="javascript:void(0);" id="toggle-quickadd"
-               th:text="#{voj.administration.judgers.add-language}"
-               th:attr="data-add=#{voj.administration.judgers.add-language},data-close=#{voj.administration.judgers.close}">+ add language</a>
+            <button type="button" class="adm-btn-accent" id="toggle-quickadd"
+                    th:text="#{voj.administration.judgers.add-language}"
+                    th:attr="data-add=#{voj.administration.judgers.add-language},data-close=#{voj.administration.judgers.close}">+ add language</button>
         </div>
 
         <!-- Quick add -->
@@ -78,7 +78,7 @@
         <div id="languages" class="adm-stack18">
             <div class="adm-langcard language" th:each="language : ${languages}" th:classappend="${language.enabled} ? '' : 'off'">
                 <div class="adm-langcard-head">
-                    <div class="adm-switch sm lang-enabled" th:classappend="${language.enabled} ? 'on'"><div class="knob"></div></div>
+                    <button type="button" role="switch" class="adm-switch sm lang-enabled" th:classappend="${language.enabled} ? 'on'"><span class="knob"></span></button>
                     <input class="adm-langname language-name" type="text" th:value="${language.languageName}" maxlength="16" />
                     <span class="ext" th:text="${language.languageSlug}">slug</span>
                     <div class="adm-flex1"></div>
@@ -174,7 +174,7 @@
                 return '' +
                 '<div class="adm-langcard language' + (enabled ? '' : ' off') + '">' +
                 '  <div class="adm-langcard-head">' +
-                '    <div class="adm-switch sm lang-enabled' + (enabled ? ' on' : '') + '"><div class="knob"></div></div>' +
+                '    <button type="button" role="switch" class="adm-switch sm lang-enabled' + (enabled ? ' on' : '') + '"><span class="knob"></span></button>' +
                 '    <input class="adm-langname language-name" type="text" value="' + esc(l.name) + '" maxlength="16" />' +
                 '    <span class="ext">' + esc(l.slug) + '</span>' +
                 '    <div class="adm-flex1"></div>' +
@@ -288,15 +288,15 @@
                     success: function(result) {
                         if (result['isSuccessful']) {
                             (result['languageCreated'] || []).forEach(function(l) { setLanguageId(l['languageSlug'], l['languageId']); });
-                            $('.alert-success').html('<p>' + ADM_I18N.settingsSaved + '</p>').removeClass('hide');
+                            $('.alert-success').html('<p>' + esc(ADM_I18N.settingsSaved) + '</p>').removeClass('hide');
                         } else {
                             var message = '';
                             for (var name in result) {
                                 var r = result[name];
                                 if (typeof r != 'object' || r['isSuccessful']) { continue; }
-                                message += '<p><strong>' + name + '</strong></p>';
+                                message += '<p><strong>' + esc(name) + '</strong></p>';
                             }
-                            $('.alert-error').html(message || ('<p>' + ADM_I18N.settingsSaved + '</p>')).removeClass('hide');
+                            $('.alert-error').html(message || ('<p>' + esc(ADM_I18N.settingsSaved) + '</p>')).removeClass('hide');
                         }
                         $btn.removeAttr('disabled').text(ADM_I18N.saveLabel);
                         window.scrollTo({ top: 0, behavior: 'smooth' });

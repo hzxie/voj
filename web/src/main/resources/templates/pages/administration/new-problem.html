@@ -7,7 +7,7 @@
 </head>
 <body>
     <div layout:fragment="content">
-    <form id="problem-form" class="adm-detail" onSubmit="onSubmit(); return false;">
+    <form id="problem-form" class="adm-detail">
 
         <div class="adm-detail-top">
             <a class="adm-back" th:href="@{/administration/all-problems}">&#8592; <span th:text="#{voj.administration.new-problem.back}">back to problems</span></a>
@@ -15,7 +15,7 @@
             <button type="submit" class="adm-btn-tn go" th:text="'$ ' + #{voj.administration.new-problem.publish-problem}">$ publish</button>
         </div>
 
-        <div class="alert alert-error hide"></div>
+        <div class="alert alert-error hide" role="alert"></div>
 
         <div class="adm-ed2">
             <div class="adm-col">
@@ -50,16 +50,16 @@
                         <div>
                             <div class="adm-block-label" th:text="#{voj.administration.new-problem.status}">STATUS</div>
                             <div class="adm-seg" data-adm="seg" data-input="problem-status">
-                                <a href="javascript:void(0);" data-value="PUBLISHED" class="active" th:text="#{voj.administration.status.published}">Published</a>
-                                <a href="javascript:void(0);" data-value="DRAFT" th:text="#{voj.administration.status.draft}">Draft</a>
-                                <a href="javascript:void(0);" data-value="HIDDEN" th:text="#{voj.administration.status.hidden}">Hidden</a>
+                                <button type="button" data-value="PUBLISHED" class="active" th:text="#{voj.administration.status.published}">Published</button>
+                                <button type="button" data-value="DRAFT" th:text="#{voj.administration.status.draft}">Draft</button>
+                                <button type="button" data-value="HIDDEN" th:text="#{voj.administration.status.hidden}">Hidden</button>
                             </div>
                             <input type="hidden" id="problem-status" value="PUBLISHED" />
                         </div>
                         <div>
                             <div class="adm-block-label" th:text="#{voj.administration.new-problem.difficulty}">DIFFICULTY</div>
                             <div class="adm-seg" data-adm="seg" data-input="problem-difficulty">
-                                <a href="javascript:void(0);" th:each="difficulty,iter : ${problemDifficulties}" th:data-value="${difficulty.problemDifficultySlug}" th:classappend="${iter.index == 0} ? 'active'" th:text="${difficulty.problemDifficultyName}">Easy</a>
+                                <button type="button" th:each="difficulty,iter : ${problemDifficulties}" th:data-value="${difficulty.problemDifficultySlug}" th:classappend="${iter.index == 0} ? 'active'" th:text="${difficulty.problemDifficultyName}">Easy</button>
                             </div>
                             <input type="hidden" id="problem-difficulty" th:value="${!#lists.isEmpty(problemDifficulties) ? problemDifficulties[0].problemDifficultySlug : ''}" />
                         </div>
@@ -67,7 +67,7 @@
                             <label class="adm-flabel"><span th:text="#{voj.administration.new-problem.time-limit}">TIME · ms</span><input id="time-limit" class="adm-input" type="text" maxlength="8" /></label>
                             <label class="adm-flabel"><span th:text="#{voj.administration.new-problem.memory-limit}">MEMORY · KB</span><input id="memory-limit" class="adm-input" type="text" maxlength="8" /></label>
                         </div>
-                        <div class="vw-between"><span class="adm-cell txt" th:text="#{voj.administration.new-problem.test-case-exactly-match}">Exact match</span><div class="adm-switch" id="problem-is-exactly-match" data-adm="switch"><div class="knob"></div></div></div>
+                        <div class="vw-between"><span class="adm-cell txt" th:text="#{voj.administration.new-problem.test-case-exactly-match}">Exact match</span><button type="button" role="switch" class="adm-switch" id="problem-is-exactly-match" data-adm="switch"><span class="knob"></span></button></div>
                     </div>
                 </div>
                 <div class="adm-card">
@@ -98,10 +98,10 @@
 
         function getTestCaseContainer(n, input, output) {
             return '<li class="test-case adm-card">' +
-                   '  <div class="adm-card-head"><span>' + [[#{voj.administration.new-problem.test-case}]] + ' #' + n + '</span><span class="del-test">&#10005;</span></div>' +
+                   '  <div class="adm-card-head"><span>' + escapeHtml([[#{voj.administration.new-problem.test-case}]]) + ' #' + n + '</span><span class="del-test">&#10005;</span></div>' +
                    '  <div class="adm-card-body adm-gap10">' +
-                   '    <label class="adm-flabel"><span>' + [[#{voj.administration.new-problem.standard-input}]] + '</span><textarea class="standard-input adm-input code" rows="2">' + (input || '') + '</textarea></label>' +
-                   '    <label class="adm-flabel"><span>' + [[#{voj.administration.new-problem.standard-output}]] + '</span><textarea class="standard-output adm-input code" rows="2">' + (output || '') + '</textarea></label>' +
+                   '    <label class="adm-flabel"><span>' + escapeHtml([[#{voj.administration.new-problem.standard-input}]]) + '</span><textarea class="standard-input adm-input code" rows="2">' + escapeHtml(input || '') + '</textarea></label>' +
+                   '    <label class="adm-flabel"><span>' + escapeHtml([[#{voj.administration.new-problem.standard-output}]]) + '</span><textarea class="standard-output adm-input code" rows="2">' + escapeHtml(output || '') + '</textarea></label>' +
                    '  </div>' +
                    '</li>';
         }
@@ -132,9 +132,10 @@
             var t = $('#problem-tags').val();
             return JSON.stringify(t ? t.split(',').map(function(s){ return s.trim(); }).filter(Boolean) : []);
         }
+        $('#problem-form').on('submit', function(e) { e.preventDefault(); onSubmit(); });
         function onSubmit() {
             $('.alert-error', '#problem-form').addClass('hide');
-            $('button[type=submit]', '#problem-form').attr('disabled', 'disabled').html([[#{voj.administration.new-problem.please-wait}]]);
+            $('button[type=submit]', '#problem-form').attr('disabled', 'disabled').text([[#{voj.administration.new-problem.please-wait}]]);
             createProblem($('#problem-name').val(), $('#time-limit').val(), $('#memory-limit').val(),
                 descriptionEditor ? descriptionEditor.value() : '', $('#hint').val(), $('#input-format').val(),
                 $('#output-format').val(), $('#input-sample').val(), $('#output-sample').val(), getTestCases(),
@@ -167,7 +168,7 @@
                 if (result['isInputSampleEmpty']) { m += [[#{voj.administration.new-problem.input-sample-empty}]] + '<br>'; }
                 if (result['isOutputSampleEmpty']) { m += [[#{voj.administration.new-problem.output-sample-empty}]] + '<br>'; }
                 $('.alert-error', '#problem-form').html(m).removeClass('hide');
-                $('button[type=submit]', '#problem-form').removeAttr('disabled').html('$ ' + [[#{voj.administration.new-problem.publish-problem}]]);
+                $('button[type=submit]', '#problem-form').removeAttr('disabled').text('$ ' + [[#{voj.administration.new-problem.publish-problem}]]);
             }
         }
     </script>

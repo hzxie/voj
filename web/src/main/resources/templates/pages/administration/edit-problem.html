@@ -7,7 +7,7 @@
 </head>
 <body>
     <div layout:fragment="content">
-    <form id="problem-form" class="adm-detail" onSubmit="onSubmit(); return false;"
+    <form id="problem-form" class="adm-detail"
           th:with="currentDifficulty=${problem.problemDifficulty != null ? problem.problemDifficulty.problemDifficultySlug : ''}">
 
         <div class="adm-detail-top">
@@ -20,8 +20,8 @@
             <button type="submit" class="adm-btn-tn go" th:text="'$ ' + #{voj.administration.edit-problem.update-problem}">$ save</button>
         </div>
 
-        <div class="alert alert-error hide"></div>
-        <div class="alert alert-success hide"><span th:text="#{voj.administration.edit-problem.problem-edited}">Problem updated.</span> <a th:href="@{/p/{id}(id=${problem.problemId})}" th:text="#{voj.administration.edit-problem.view-problem}">view</a></div>
+        <div class="alert alert-error hide" role="alert"></div>
+        <div class="alert alert-success hide" role="status"><span th:text="#{voj.administration.edit-problem.problem-edited}">Problem updated.</span> <a th:href="@{/p/{id}(id=${problem.problemId})}" th:text="#{voj.administration.edit-problem.view-problem}">view</a></div>
 
         <div class="adm-ed2">
             <div class="adm-col">
@@ -54,9 +54,9 @@
                         <div>
                             <div class="adm-block-label" th:text="#{voj.administration.edit-problem.status}">STATUS</div>
                             <div class="adm-seg" data-adm="seg" data-input="problem-status">
-                                <a href="javascript:void(0);" data-value="PUBLISHED" th:classappend="${problem.status == 'PUBLISHED'} ? 'active'" th:text="#{voj.administration.status.published}">Published</a>
-                                <a href="javascript:void(0);" data-value="DRAFT" th:classappend="${problem.status == 'DRAFT'} ? 'active'" th:text="#{voj.administration.status.draft}">Draft</a>
-                                <a href="javascript:void(0);" data-value="HIDDEN" th:classappend="${problem.status == 'HIDDEN'} ? 'active'" th:text="#{voj.administration.status.hidden}">Hidden</a>
+                                <button type="button" data-value="PUBLISHED" th:classappend="${problem.status == 'PUBLISHED'} ? 'active'" th:text="#{voj.administration.status.published}">Published</button>
+                                <button type="button" data-value="DRAFT" th:classappend="${problem.status == 'DRAFT'} ? 'active'" th:text="#{voj.administration.status.draft}">Draft</button>
+                                <button type="button" data-value="HIDDEN" th:classappend="${problem.status == 'HIDDEN'} ? 'active'" th:text="#{voj.administration.status.hidden}">Hidden</button>
                             </div>
                         </div>
                         <div>
@@ -71,7 +71,7 @@
                         <div>
                             <div class="adm-block-label" th:text="#{voj.administration.edit-problem.difficulty}">DIFFICULTY</div>
                             <div class="adm-seg" data-adm="seg" data-input="problem-difficulty">
-                                <a href="javascript:void(0);" th:each="difficulty : ${problemDifficulties}" th:data-value="${difficulty.problemDifficultySlug}" th:classappend="${difficulty.problemDifficultySlug == currentDifficulty} ? 'active'" th:text="${difficulty.problemDifficultyName}">Easy</a>
+                                <button type="button" th:each="difficulty : ${problemDifficulties}" th:data-value="${difficulty.problemDifficultySlug}" th:classappend="${difficulty.problemDifficultySlug == currentDifficulty} ? 'active'" th:text="${difficulty.problemDifficultyName}">Easy</button>
                             </div>
                             <input type="hidden" id="problem-difficulty" th:value="${currentDifficulty}" />
                         </div>
@@ -89,8 +89,8 @@
                         <div>
                             <div class="adm-block-label" th:text="#{voj.administration.edit-problem.checker}">CHECKER</div>
                             <div class="adm-seg" data-adm="seg" data-input="problem-is-exactly-match">
-                                <a href="javascript:void(0);" data-value="1" th:classappend="${currentExactlyMatch} ? 'active'" th:text="#{voj.administration.edit-problem.checker-exact}">Exact</a>
-                                <a href="javascript:void(0);" data-value="0" th:classappend="${!currentExactlyMatch} ? 'active'" th:text="#{voj.administration.edit-problem.checker-token}">Token</a>
+                                <button type="button" data-value="1" th:classappend="${currentExactlyMatch} ? 'active'" th:text="#{voj.administration.edit-problem.checker-exact}">Exact</button>
+                                <button type="button" data-value="0" th:classappend="${!currentExactlyMatch} ? 'active'" th:text="#{voj.administration.edit-problem.checker-token}">Token</button>
                             </div>
                             <input type="hidden" id="problem-is-exactly-match" th:value="${currentExactlyMatch} ? '1' : '0'" />
                         </div>
@@ -130,7 +130,7 @@
             descriptionEditor = createMarkdownEditor('#wmd-input');
             // Pre-check the selected categories.
             /*[# th:each="problemCategory : ${selectedProblemCategories}"]*/
-            $('.category-check[value="[(${problemCategory.problemCategorySlug})]"]').prop('checked', true);
+            $('.category-check').filter(function() { return this.value === [[${problemCategory.problemCategorySlug}]]; }).prop('checked', true);
             /*[/]*/
             initTagBox();
             initTestData();
@@ -201,12 +201,12 @@
                     data: data, processData: false, contentType: false, dataType: 'JSON',
                     success: function(result) {
                         if (result['isSuccessful']) { renderList(result['checkpoints']); }
-                        else { alert([[#{voj.administration.edit-problem.test-data-error}]]); }
-                        dropZone.html([[#{voj.administration.edit-problem.test-data-upload}]]);
+                        else { vojAlert([[#{voj.administration.edit-problem.test-data-error}]]); }
+                        dropZone.text([[#{voj.administration.edit-problem.test-data-upload}]]);
                     },
                     error: function() {
-                        alert([[#{voj.administration.edit-problem.test-data-error}]]);
-                        dropZone.html([[#{voj.administration.edit-problem.test-data-upload}]]);
+                        vojAlert([[#{voj.administration.edit-problem.test-data-error}]]);
+                        dropZone.text([[#{voj.administration.edit-problem.test-data-upload}]]);
                     }
                 });
             }
@@ -233,9 +233,10 @@
             var t = $('#problem-tags').val();
             return JSON.stringify(t ? t.split(',').map(function(s){ return s.trim(); }).filter(Boolean) : []);
         }
+        $('#problem-form').on('submit', function(e) { e.preventDefault(); onSubmit(); });
         function onSubmit() {
             $('.alert-success, .alert-error', '#problem-form').addClass('hide');
-            $('button[type=submit]', '#problem-form').attr('disabled', 'disabled').html([[#{voj.administration.edit-problem.please-wait}]]);
+            $('button[type=submit]', '#problem-form').attr('disabled', 'disabled').text([[#{voj.administration.edit-problem.please-wait}]]);
             editProblem($('#problem-id').val(), $('#problem-name').val(), $('#time-limit').val(), $('#memory-limit').val(),
                 descriptionEditor ? descriptionEditor.value() : '', $('#hint').val(), $('#input-format').val(),
                 $('#output-format').val(), $('#input-sample').val(), $('#output-sample').val(),
@@ -272,18 +273,20 @@
                 if (result['isOutputSampleEmpty']) { m += [[#{voj.administration.edit-problem.output-sample-empty}]] + '<br>'; }
                 $('.alert-error', '#problem-form').html(m).removeClass('hide');
             }
-            $('button[type=submit]', '#problem-form').removeAttr('disabled').html('$ ' + [[#{voj.administration.edit-problem.update-problem}]]);
+            $('button[type=submit]', '#problem-form').removeAttr('disabled').text('$ ' + [[#{voj.administration.edit-problem.update-problem}]]);
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
         function deleteProblem() {
-            if (!confirm([[#{voj.administration.edit-problem.continue-or-not}]])) { return; }
-            $.ajax({
-                type: 'POST', url: [[@{/administration/deleteProblems.action}]],
-                data: { 'problems': JSON.stringify([ $('#problem-id').val() ]) }, dataType: 'JSON',
-                success: function(result){
-                    if (result['isSuccessful']) { window.location.href = [[@{/administration/all-problems}]]; }
-                    else { $('.alert-error').html([[#{voj.administration.edit-problem.delete-error}]]).removeClass('hide'); }
-                }
+            vojConfirm([[#{voj.administration.edit-problem.continue-or-not}]]).then(function (ok) {
+                if (!ok) return;
+                $.ajax({
+                    type: 'POST', url: [[@{/administration/deleteProblems.action}]],
+                    data: { 'problems': JSON.stringify([ $('#problem-id').val() ]) }, dataType: 'JSON',
+                    success: function(result){
+                        if (result['isSuccessful']) { window.location.href = [[@{/administration/all-problems}]]; }
+                        else { $('.alert-error').text([[#{voj.administration.edit-problem.delete-error}]]).removeClass('hide'); }
+                    }
+                });
             });
         }
         ['delete-problem-2'].forEach(function(id) {

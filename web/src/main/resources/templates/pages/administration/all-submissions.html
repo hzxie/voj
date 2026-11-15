@@ -91,14 +91,16 @@
             if (del) del.addEventListener('click', function () {
                 var ids = selected();
                 if (ids.length === 0) return;
-                if (!confirm([[#{voj.administration.all-submissions.continue-or-not}]])) return;
-                $.ajax({
-                    type: 'POST', url: [[@{/administration/deleteSubmissions.action}]],
-                    data: { 'submissions': JSON.stringify(ids) }, dataType: 'JSON',
-                    success: function (result) {
-                        if (result['isSuccessful']) { window.location.reload(); }
-                        else { alert([[#{voj.administration.all-submissions.delete-error}]]); }
-                    }
+                vojConfirm([[#{voj.administration.all-submissions.continue-or-not}]]).then(function (ok) {
+                    if (!ok) return;
+                    $.ajax({
+                        type: 'POST', url: [[@{/administration/deleteSubmissions.action}]],
+                        data: { 'submissions': JSON.stringify(ids) }, dataType: 'JSON',
+                        success: function (result) {
+                            if (result['isSuccessful']) { window.location.reload(); }
+                            else { vojAlert([[#{voj.administration.all-submissions.delete-error}]]); }
+                        }
+                    });
                 });
             });
             if (rej) rej.addEventListener('click', function () {
@@ -109,7 +111,7 @@
                     data: { 'submissions': JSON.stringify(ids) }, dataType: 'JSON',
                     success: function (result) {
                         if (result['isSuccessful']) { window.location.reload(); }
-                        else { alert([[#{voj.administration.all-submissions.restart-error}]]); }
+                        else { vojAlert([[#{voj.administration.all-submissions.restart-error}]]); }
                     }
                 });
             });

@@ -63,14 +63,20 @@
     </script>
     <script type="text/javascript" th:inline="javascript">
         $('#rejudge-submission').click(function() {
-            if ( !confirm([[#{voj.administration.edit-submission.continue-or-not}]]) ) { return; }
-            $(this).attr('disabled', 'disabled');
-            doRestartSubmissionsAction([ [[${submission.submissionId}]] ]);
+            var $btn = $(this);
+            vojConfirm([[#{voj.administration.edit-submission.continue-or-not}]]).then(function (ok) {
+                if ( !ok ) { return; }
+                $btn.attr('disabled', 'disabled');
+                doRestartSubmissionsAction([ [[${submission.submissionId}]] ]);
+            });
         });
         $('#delete-submission').click(function() {
-            if ( !confirm([[#{voj.administration.edit-submission.continue-or-not}]]) ) { return; }
-            $(this).attr('disabled', 'disabled');
-            doDeleteSubmissionsAction([ [[${submission.submissionId}]] ]);
+            var $btn = $(this);
+            vojConfirm([[#{voj.administration.edit-submission.continue-or-not}]]).then(function (ok) {
+                if ( !ok ) { return; }
+                $btn.attr('disabled', 'disabled');
+                doDeleteSubmissionsAction([ [[${submission.submissionId}]] ]);
+            });
         });
         function doDeleteSubmissionsAction(submissions) {
             $.ajax({
@@ -78,7 +84,7 @@
                 data: { 'submissions': JSON.stringify(submissions) }, dataType: 'JSON',
                 success: function(result){
                     if ( result['isSuccessful'] ) { window.location.href = [[@{/administration/all-submissions}]]; }
-                    else { alert([[#{voj.administration.edit-submission.delete-error}]]); $('#delete-submission').removeAttr('disabled'); }
+                    else { vojAlert([[#{voj.administration.edit-submission.delete-error}]]); $('#delete-submission').removeAttr('disabled'); }
                 }
             });
         }
@@ -88,7 +94,7 @@
                 data: { 'submissions': JSON.stringify(submissions) }, dataType: 'JSON',
                 success: function(result){
                     if ( result['isSuccessful'] ) { window.location.reload(); }
-                    else { alert([[#{voj.administration.edit-submission.restart-error}]]); $('#rejudge-submission').removeAttr('disabled'); }
+                    else { vojAlert([[#{voj.administration.edit-submission.restart-error}]]); $('#rejudge-submission').removeAttr('disabled'); }
                 }
             });
         }
@@ -118,7 +124,7 @@
                 var message     = e['data'];
                 if ( message == lastMessage ) { return; }
                 lastMessage     = message;
-                if ( message == 'Established' ) { $('#judge-log').append('<p>' + [[#{voj.administration.edit-submission.connected-to-server}]] + '</p>'); return; }
+                if ( message == 'Established' ) { $('#judge-log').append('<p>' + escapeHtml([[#{voj.administration.edit-submission.connected-to-server}]]) + '</p>'); return; }
                 var mapMessage  = JSON.parse(message),
                     judgeResult = mapMessage['judgeResult'],
                     judgeLog    = mapMessage['message'];

@@ -10,9 +10,12 @@
 <body>
     <header th:fragment="header" class="adm-header"
             th:with="section=${adminSection != null ? adminSection : 'dashboard'}">
-        <div class="adm-burger" data-adm="burger" title="Menu" role="button" tabindex="0">
-            <span></span><span></span><span></span>
-        </div>
+        <!--/* Opens the sidebar as a drawer on narrow screens; js/admin.js keeps
+               aria-expanded in sync and handles Esc / focus return. */-->
+        <button type="button" class="adm-burger" data-adm="burger" aria-controls="adm-sidebar" aria-expanded="false"
+                th:title="#{voj.include.header.menu}" th:aria-label="#{voj.include.header.menu}">
+            <span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span>
+        </button>
         <div class="adm-head-title">
             <div class="cmd" th:text="|admin@verwandlung:~$ ${sectionCmd != null ? sectionCmd : 'manage --' + section}|">admin@verwandlung:~$ manage --dashboard</div>
             <h1 th:text="${sectionLabel != null ? sectionLabel : #messages.msg('voj.administration.include.sidebar.' + section)}">Dashboard</h1>

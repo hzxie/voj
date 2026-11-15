@@ -17,11 +17,11 @@
                 <span class="count"><span th:text="${#lists.size(problems)}">0</span> <span th:text="#{voj.administration.all-problems.records}">records</span></span>
             </div>
             <input type="hidden" name="problemTag" th:if="${selectedProblemTag != null and selectedProblemTag != ''}" th:value="${selectedProblemTag}" />
-            <select name="problemCategory" class="adm-toolbar-select" onchange="this.form.submit();">
+            <select name="problemCategory" class="adm-toolbar-select" data-autosubmit>
                 <option value="" th:text="#{voj.administration.all-problems.all-problem-categories}">All Categories</option>
                 <option th:each="problemCategory : ${problemCategories}" th:value="${problemCategory.problemCategorySlug}" th:selected="${problemCategory.problemCategorySlug == selectedProblemCategory}" th:text="${problemCategory.problemCategoryName}">Category</option>
             </select>
-            <select name="problemDifficulty" class="adm-toolbar-select" onchange="this.form.submit();">
+            <select name="problemDifficulty" class="adm-toolbar-select" data-autosubmit>
                 <option value="" th:text="#{voj.administration.all-problems.all-difficulties}">All Difficulties</option>
                 <option th:each="problemDifficulty : ${problemDifficulties}" th:value="${problemDifficulty.problemDifficultySlug}" th:selected="${problemDifficulty.problemDifficultySlug == selectedProblemDifficulty}" th:text="${problemDifficulty.problemDifficultyName}">Difficulty</option>
             </select>
@@ -111,16 +111,18 @@
             del.addEventListener('click', function () {
                 var ids = window.admSelectedIds ? window.admSelectedIds() : [];
                 if (ids.length === 0) return;
-                if (!confirm([[#{voj.administration.all-problems.continue-or-not}]])) return;
-                $.ajax({
-                    type: 'POST',
-                    url: [[@{/administration/deleteProblems.action}]],
-                    data: { 'problems': JSON.stringify(ids) },
-                    dataType: 'JSON',
-                    success: function (result) {
-                        if (result['isSuccessful']) { window.location.reload(); }
-                        else { alert([[#{voj.administration.all-problems.delete-error}]]); }
-                    }
+                vojConfirm([[#{voj.administration.all-problems.continue-or-not}]]).then(function (ok) {
+                    if (!ok) return;
+                    $.ajax({
+                        type: 'POST',
+                        url: [[@{/administration/deleteProblems.action}]],
+                        data: { 'problems': JSON.stringify(ids) },
+                        dataType: 'JSON',
+                        success: function (result) {
+                            if (result['isSuccessful']) { window.location.reload(); }
+                            else { vojAlert([[#{voj.administration.all-problems.delete-error}]]); }
+                        }
+                    });
                 });
             });
         });

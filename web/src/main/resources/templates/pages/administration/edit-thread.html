@@ -48,9 +48,9 @@
                             <p class="adm-reply-body" th:text="${reply.discussionReplyContent}">body</p>
                         </div>
                         <div class="adm-reply-acts">
-                            <button type="button" class="adm-reply-act hide" th:data-reply="${reply.discussionReplyId}" th:attr="data-visible=${reply.visible}" onclick="admToggleReply(this);"
+                            <button type="button" class="adm-reply-act toggle-visibility" th:data-reply="${reply.discussionReplyId}" th:attr="data-visible=${reply.visible}"
                                     th:text="${reply.visible} ? #{voj.administration.edit-thread.hide} : #{voj.administration.edit-thread.show}">hide</button>
-                            <button type="button" class="adm-reply-act del" th:data-reply="${reply.discussionReplyId}" onclick="admDeleteReply(this);" th:text="#{voj.administration.edit-thread.delete}">delete</button>
+                            <button type="button" class="adm-reply-act del" th:data-reply="${reply.discussionReplyId}" th:text="#{voj.administration.edit-thread.delete}">delete</button>
                         </div>
                     </div>
                 </th:block>
@@ -71,11 +71,11 @@
                         </div>
                         <div class="adm-togrow">
                             <span th:text="#{voj.administration.edit-thread.pinned}">Pinned to top</span>
-                            <div class="adm-switch md" id="pin-switch" th:classappend="${thread.pinned} ? 'on'"><div class="knob"></div></div>
+                            <button type="button" role="switch" class="adm-switch md" id="pin-switch" th:classappend="${thread.pinned} ? 'on'"><span class="knob"></span></button>
                         </div>
                         <div class="adm-togrow">
                             <span th:text="#{voj.administration.edit-thread.locked}">Locked (no replies)</span>
-                            <div class="adm-switch md" id="lock-switch" th:classappend="${thread.locked} ? 'on'"><div class="knob"></div></div>
+                            <button type="button" role="switch" class="adm-switch md" id="lock-switch" th:classappend="${thread.locked} ? 'on'"><span class="knob"></span></button>
                         </div>
                     </div>
                 </div>
@@ -126,17 +126,19 @@
         var showLabel = [[#{voj.administration.edit-thread.show}]];
 
         window.admDeleteReply = function (btn) {
-            if (!confirm([[#{voj.administration.edit-thread.continue-reply}]])) return;
-            var replyId = btn.getAttribute('data-reply');
-            $.ajax({
-                type: 'POST', url: [[@{/administration/deleteReply.action}]],
-                data: { replyId: replyId }, dataType: 'JSON',
-                success: function (result) {
-                    if (result['isSuccessful']) {
-                        var row = document.querySelector('.adm-reply[data-reply="' + replyId + '"]');
-                        if (row) row.parentNode.removeChild(row);
+            vojConfirm([[#{voj.administration.edit-thread.continue-reply}]]).then(function (ok) {
+                if (!ok) return;
+                var replyId = btn.getAttribute('data-reply');
+                $.ajax({
+                    type: 'POST', url: [[@{/administration/deleteReply.action}]],
+                    data: { replyId: replyId }, dataType: 'JSON',
+                    success: function (result) {
+                        if (result['isSuccessful']) {
+                            var row = document.querySelector('.adm-reply[data-reply="' + replyId + '"]');
+                            if (row) row.parentNode.removeChild(row);
+                        }
                     }
-                }
+                });
             });
         };
 
@@ -155,6 +157,9 @@
                 }
             });
         };
+
+        $(document).on('click', '.adm-reply-act.toggle-visibility', function () { admToggleReply(this); });
+        $(document).on('click', '.adm-reply-act.del', function () { admDeleteReply(this); });
 
         document.addEventListener('DOMContentLoaded', function () {
             var threadId = [[${thread.discussionThreadId}]];
@@ -204,21 +209,23 @@
                     },
                     dataType: 'JSON',
                     success: function (result) {
-                        if (result['isSuccessful']) { alert([[#{voj.administration.edit-thread.save-success}]]); window.location.reload(); }
-                        else { alert([[#{voj.administration.edit-thread.save-error}]]); }
+                        if (result['isSuccessful']) { vojAlert([[#{voj.administration.edit-thread.save-success}]]).then(function () { window.location.reload(); }); }
+                        else { vojAlert([[#{voj.administration.edit-thread.save-error}]]); }
                     }
                 });
             });
 
             // Delete the thread.
             function del() {
-                if (!confirm([[#{voj.administration.edit-thread.continue-thread}]])) return;
-                $.ajax({
-                    type: 'POST', url: [[@{/administration/deleteThreads.action}]],
-                    data: { 'threads': JSON.stringify([threadId]) }, dataType: 'JSON',
-                    success: function (result) {
-                        if (result['isSuccessful']) { window.location.href = [[@{/administration/all-discussion}]]; }
-                    }
+                vojConfirm([[#{voj.administration.edit-thread.continue-thread}]]).then(function (ok) {
+                    if (!ok) return;
+                    $.ajax({
+                        type: 'POST', url: [[@{/administration/deleteThreads.action}]],
+                        data: { 'threads': JSON.stringify([threadId]) }, dataType: 'JSON',
+                        success: function (result) {
+                            if (result['isSuccessful']) { window.location.href = [[@{/administration/all-discussion}]]; }
+                        }
+                    });
                 });
             }
             ['delete-thread-2'].forEach(function (id) {

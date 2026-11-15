@@ -82,12 +82,15 @@
             var queueUrl = [[@{/administration/moderation}]];
 
             function post(url, data, confirmMsg) {
-                if (confirmMsg && !confirm(confirmMsg)) return;
-                $.ajax({
-                    type: 'POST', url: url, data: data, dataType: 'JSON',
-                    success: function (result) {
-                        if (result['isSuccessful']) { window.location.href = queueUrl; }
-                    }
+                var proceed = confirmMsg ? vojConfirm(confirmMsg) : Promise.resolve(true);
+                proceed.then(function (ok) {
+                    if (!ok) return;
+                    $.ajax({
+                        type: 'POST', url: url, data: data, dataType: 'JSON',
+                        success: function (result) {
+                            if (result['isSuccessful']) { window.location.href = queueUrl; }
+                        }
+                    });
                 });
             }
 

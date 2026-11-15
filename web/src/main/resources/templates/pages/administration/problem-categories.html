@@ -129,7 +129,7 @@
                     dataType: 'JSON',
                     success: function (result) {
                         if (result['isSuccessful']) { $input.val(name).data('orig', name); }
-                        else { $input.val(orig); alert(editError(result)); }
+                        else { $input.val(orig); vojAlert(editError(result)); }
                     },
                     error: function () { $input.val(orig); }
                 });
@@ -148,7 +148,7 @@
                     dataType: 'JSON',
                     success: function (result) {
                         if (result['isSuccessful']) { window.location.reload(); }
-                        else { alert(createError(result)); $input.prop('disabled', false).focus(); }
+                        else { $input.prop('disabled', false); vojAlert(createError(result)).then(function () { $input.focus(); }); }
                     },
                     error: function () { $input.prop('disabled', false); }
                 });
@@ -172,7 +172,7 @@
                     data: { problemTagName: name }, dataType: 'JSON',
                     success: function (result) {
                         if (result['isSuccessful']) { window.location.reload(); }
-                        else { alert(tagError(result)); $input.prop('disabled', false).focus(); }
+                        else { $input.prop('disabled', false); vojAlert(tagError(result)).then(function () { $input.focus(); }); }
                     },
                     error: function () { $input.prop('disabled', false); }
                 });
@@ -181,29 +181,33 @@
             // ----- tags: delete -----
             $('#problem-tags').on('click', '.adm-taxchip .x', function () {
                 var chip = $(this).closest('.adm-taxchip');
-                if (!confirm([[#{voj.administration.problem-categories.continue-or-not}]])) { return; }
-                $.ajax({
-                    type: 'POST', url: [[@{/administration/deleteProblemTag.action}]],
-                    data: { problemTagId: chip.data('id') }, dataType: 'JSON',
-                    success: function (result) { if (result['isSuccessful']) { chip.remove(); } }
+                vojConfirm([[#{voj.administration.problem-categories.continue-or-not}]]).then(function (ok) {
+                    if (!ok) return;
+                    $.ajax({
+                        type: 'POST', url: [[@{/administration/deleteProblemTag.action}]],
+                        data: { problemTagId: chip.data('id') }, dataType: 'JSON',
+                        success: function (result) { if (result['isSuccessful']) { chip.remove(); } }
+                    });
                 });
             });
 
             // ----- delete -----
             $cat.on('click', '.adm-catlist-x', function () {
                 var row = $(this).closest('.adm-catlist-item');
-                if (!confirm([[#{voj.administration.problem-categories.continue-or-not}]])) { return; }
-                $.ajax({
-                    type: 'POST', url: [[@{/administration/deleteProblemCategories.action}]],
-                    data: { 'problemCategories': JSON.stringify([row.data('value')]) }, dataType: 'JSON',
-                    success: function (result) {
-                        if (result['isSuccessful']) {
-                            (result['deletedProblemCategories'] || []).forEach(function (id) {
-                                $cat.find('.adm-catlist-item[data-value="' + id + '"]').remove();
-                            });
-                            refreshTotal();
+                vojConfirm([[#{voj.administration.problem-categories.continue-or-not}]]).then(function (ok) {
+                    if (!ok) return;
+                    $.ajax({
+                        type: 'POST', url: [[@{/administration/deleteProblemCategories.action}]],
+                        data: { 'problemCategories': JSON.stringify([row.data('value')]) }, dataType: 'JSON',
+                        success: function (result) {
+                            if (result['isSuccessful']) {
+                                (result['deletedProblemCategories'] || []).forEach(function (id) {
+                                    $cat.find('.adm-catlist-item[data-value="' + id + '"]').remove();
+                                });
+                                refreshTotal();
+                            }
                         }
-                    }
+                    });
                 });
             });
         });

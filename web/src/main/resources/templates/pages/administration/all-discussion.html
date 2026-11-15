@@ -98,14 +98,16 @@
             del.addEventListener('click', function () {
                 var ids = window.admSelectedIds ? window.admSelectedIds() : [];
                 if (ids.length === 0) return;
-                if (!confirm([[#{voj.administration.all-discussion.continue-or-not}]])) return;
-                $.ajax({
-                    type: 'POST', url: [[@{/administration/deleteThreads.action}]],
-                    data: { 'threads': JSON.stringify(ids) }, dataType: 'JSON',
-                    success: function (result) {
-                        if (result['isSuccessful']) { window.location.reload(); }
-                        else { alert([[#{voj.administration.all-discussion.delete-error}]]); }
-                    }
+                vojConfirm([[#{voj.administration.all-discussion.continue-or-not}]]).then(function (ok) {
+                    if (!ok) return;
+                    $.ajax({
+                        type: 'POST', url: [[@{/administration/deleteThreads.action}]],
+                        data: { 'threads': JSON.stringify(ids) }, dataType: 'JSON',
+                        success: function (result) {
+                            if (result['isSuccessful']) { window.location.reload(); }
+                            else { vojAlert([[#{voj.administration.all-discussion.delete-error}]]); }
+                        }
+                    });
                 });
             });
         });

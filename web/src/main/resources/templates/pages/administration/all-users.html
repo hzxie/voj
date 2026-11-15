@@ -16,7 +16,7 @@
                 <input name="username" type="text" th:value="${username}" th:placeholder="#{voj.administration.all-users.search-placeholder}" />
                 <span class="count"><span th:text="${#lists.size(users)}">0</span> <span th:text="#{voj.administration.all-users.records}">records</span></span>
             </div>
-            <select name="userGroup" class="adm-toolbar-select" onchange="this.form.submit();">
+            <select name="userGroup" class="adm-toolbar-select" data-autosubmit>
                 <option value="" th:text="#{voj.administration.all-users.all-user-groups}">All User Groups</option>
                 <option th:each="userGroup : ${userGroups}" th:value="${userGroup.userGroupSlug}" th:selected="${userGroup.userGroupSlug == selectedUserGroup}" th:text="${userGroup.userGroupName}">Group</option>
             </select>
@@ -85,16 +85,18 @@
             del.addEventListener('click', function () {
                 var ids = window.admSelectedIds ? window.admSelectedIds() : [];
                 if (ids.length === 0) return;
-                if (!confirm([[#{voj.administration.all-users.continue-or-not}]])) return;
-                $.ajax({
-                    type: 'POST',
-                    url: [[@{/administration/deleteUsers.action}]],
-                    data: { 'users': JSON.stringify(ids) },
-                    dataType: 'JSON',
-                    success: function (result) {
-                        if (result['isSuccessful']) { window.location.reload(); }
-                        else { alert([[#{voj.administration.all-users.delete-error}]]); }
-                    }
+                vojConfirm([[#{voj.administration.all-users.continue-or-not}]]).then(function (ok) {
+                    if (!ok) return;
+                    $.ajax({
+                        type: 'POST',
+                        url: [[@{/administration/deleteUsers.action}]],
+                        data: { 'users': JSON.stringify(ids) },
+                        dataType: 'JSON',
+                        success: function (result) {
+                            if (result['isSuccessful']) { window.location.reload(); }
+                            else { vojAlert([[#{voj.administration.all-users.delete-error}]]); }
+                        }
+                    });
                 });
             });
         });

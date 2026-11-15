@@ -9,7 +9,7 @@
     <div layout:fragment="content">
     <div class="adm-form">
 
-        <div class="alert alert-error hide"></div>
+        <div class="alert alert-error hide" role="alert"></div>
 
         <!-- Create -->
         <div class="adm-card">
@@ -44,7 +44,7 @@
                     <span class="adm-cell mono muted" th:text="'#' + ${topic.discussionTopicId}">#1</span>
                     <span class="adm-cell mono" th:text="${topic.discussionTopicSlug}">slug</span>
                     <span class="adm-cell head" th:text="${topic.discussionTopicName}">name</span>
-                    <button type="button" class="adm-bulk-clear c-err" th:data-topic="${topic.discussionTopicId}" onclick="admDeleteTopic(this);" th:text="#{voj.administration.discussion-topics.delete}">delete</button>
+                    <button type="button" class="adm-bulk-clear c-err" th:data-topic="${topic.discussionTopicId}" th:text="#{voj.administration.discussion-topics.delete}">delete</button>
                 </div>
                 <div class="adm-table-empty" th:if="${#lists.isEmpty(discussionTopics)}" th:text="#{voj.administration.discussion-topics.no-records}">// no topics</div>
             </div>
@@ -56,29 +56,32 @@
     <th:block layout:fragment="scripts">
     <script type="text/javascript" th:inline="javascript">
         window.admDeleteTopic = function (btn) {
-            if (!confirm([[#{voj.administration.discussion-topics.continue-or-not}]])) return;
-            var id = btn.getAttribute('data-topic');
-            $.ajax({
-                type: 'POST', url: [[@{/administration/deleteTopic.action}]],
-                data: { discussionTopicId: id }, dataType: 'JSON',
-                success: function (result) {
-                    if (result['isSuccessful']) {
-                        var row = document.querySelector('.adm-table-row[data-topic="' + id + '"]');
-                        if (row) row.parentNode.removeChild(row);
+            vojConfirm([[#{voj.administration.discussion-topics.continue-or-not}]]).then(function (ok) {
+                if (!ok) return;
+                var id = btn.getAttribute('data-topic');
+                $.ajax({
+                    type: 'POST', url: [[@{/administration/deleteTopic.action}]],
+                    data: { discussionTopicId: id }, dataType: 'JSON',
+                    success: function (result) {
+                        if (result['isSuccessful']) {
+                            var row = document.querySelector('.adm-table-row[data-topic="' + id + '"]');
+                            if (row) row.parentNode.removeChild(row);
+                        }
                     }
-                }
+                });
             });
         };
+        $(document).on('click', 'button[data-topic]', function () { admDeleteTopic(this); });
         document.addEventListener('DOMContentLoaded', function () {
             document.getElementById('create-topic').addEventListener('click', function () {
                 var slug = $('#topic-slug').val(), name = $('#topic-name').val();
-                if (!slug || !name) { $('.alert-error').html([[#{voj.administration.discussion-topics.empty-error}]]).removeClass('hide'); return; }
+                if (!slug || !name) { $('.alert-error').text([[#{voj.administration.discussion-topics.empty-error}]]).removeClass('hide'); return; }
                 $.ajax({
                     type: 'POST', url: [[@{/administration/createTopic.action}]],
                     data: { discussionTopicSlug: slug, discussionTopicName: name }, dataType: 'JSON',
                     success: function (result) {
                         if (result['isSuccessful']) { window.location.reload(); }
-                        else { $('.alert-error').html([[#{voj.administration.discussion-topics.create-error}]]).removeClass('hide'); }
+                        else { $('.alert-error').text([[#{voj.administration.discussion-topics.create-error}]]).removeClass('hide'); }
                     }
                 });
             });

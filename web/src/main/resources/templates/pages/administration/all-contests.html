@@ -87,14 +87,16 @@
             del.addEventListener('click', function () {
                 var ids = window.admSelectedIds ? window.admSelectedIds() : [];
                 if (ids.length === 0) return;
-                if (!confirm([[#{voj.administration.all-contests.continue-or-not}]])) return;
-                $.ajax({
-                    type: 'POST', url: [[@{/administration/deleteContests.action}]],
-                    data: { 'contests': JSON.stringify(ids) }, dataType: 'JSON',
-                    success: function (result) {
-                        if (result['isSuccessful']) { window.location.reload(); }
-                        else { alert([[#{voj.administration.all-contests.delete-error}]]); }
-                    }
+                vojConfirm([[#{voj.administration.all-contests.continue-or-not}]]).then(function (ok) {
+                    if (!ok) return;
+                    $.ajax({
+                        type: 'POST', url: [[@{/administration/deleteContests.action}]],
+                        data: { 'contests': JSON.stringify(ids) }, dataType: 'JSON',
+                        success: function (result) {
+                            if (result['isSuccessful']) { window.location.reload(); }
+                            else { vojAlert([[#{voj.administration.all-contests.delete-error}]]); }
+                        }
+                    });
                 });
             });
         });

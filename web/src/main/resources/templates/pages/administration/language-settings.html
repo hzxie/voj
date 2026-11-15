@@ -13,12 +13,12 @@
             <h6 th:text="#{voj.administration.language-settings.be-careful}">Please be Careful!</h6>
             <p th:text="#{voj.administration.language-settings.be-careful-message}">Don't change these unless you know what you're doing.</p>
         </div>
-        <div class="alert alert-error hide"></div>
-        <div class="alert alert-success hide"></div>
+        <div class="alert alert-error hide" role="alert"></div>
+        <div class="alert alert-success hide" role="status"></div>
 
         <div class="vw-between adm-items-end">
             <div class="adm-label" th:text="#{voj.administration.language-settings.languages-header}">// LANGUAGES</div>
-            <a class="adm-btn-accent" href="javascript:void(0);" id="new-language" th:text="#{voj.administration.language-settings.new-language}">+ add language</a>
+            <button type="button" class="adm-btn-accent" id="new-language" th:text="#{voj.administration.language-settings.new-language}">+ add language</button>
         </div>
 
         <p id="no-languages" th:classappend="${languages.size() != 0} ? 'hide' : ''" class="adm-table-empty" th:text="#{voj.administration.language-settings.no-languages}">// no languages</p>
@@ -85,7 +85,7 @@
         }
         $('#save-languages').click(function() {
             $('.alert-success, .alert-error').addClass('hide');
-            $(this).attr('disabled', 'disabled').html([[#{voj.administration.language-settings.please-wait}]]);
+            $(this).attr('disabled', 'disabled').text([[#{voj.administration.language-settings.please-wait}]]);
             $.ajax({
                 type: 'POST', url: [[@{/administration/updateLanguageSettings.action}]],
                 data: { 'languages': getLanguages() }, dataType: 'JSON',
@@ -94,7 +94,7 @@
         });
         function processResult(result) {
             if (result['isSuccessful']) {
-                var message = '<p>' + [[#{voj.administration.language-settings.settings-saved}]] + '</p>';
+                var message = '<p>' + escapeHtml([[#{voj.administration.language-settings.settings-saved}]]) + '</p>';
                 (result['languageCreated'] || []).forEach(function(l) { setLanguageId(l['languageSlug'], l['languageId']); });
                 $('.alert-success').html(message).removeClass('hide');
             } else {
@@ -102,11 +102,11 @@
                 for (var languageName in result) {
                     var r = result[languageName];
                     if (typeof(r) != 'object' || r['isSuccessful']) { continue; }
-                    message += '<p><strong>' + languageName + '</strong></p>';
+                    message += '<p><strong>' + escapeHtml(languageName) + '</strong></p>';
                 }
-                $('.alert-error').html(message || [[#{voj.administration.language-settings.settings-saved}]]).removeClass('hide');
+                $('.alert-error').html(message || escapeHtml([[#{voj.administration.language-settings.settings-saved}]])).removeClass('hide');
             }
-            $('#save-languages').removeAttr('disabled').html('$ ' + [[#{voj.administration.language-settings.save-changes}]]);
+            $('#save-languages').removeAttr('disabled').text('$ ' + [[#{voj.administration.language-settings.save-changes}]]);
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
         $('#new-language').click(function() {
@@ -121,11 +121,11 @@
                 '  <div class="adm-langcard-body">' +
                 '    <input class="language-id" type="hidden" value="0" />' +
                 '    <div class="adm-grid-2">' +
-                '      <label class="adm-flabel"><span>' + [[#{voj.administration.language-settings.language-name}]] + '</span><input class="language-name adm-input" type="text" maxlength="16" /></label>' +
-                '      <label class="adm-flabel"><span>' + [[#{voj.administration.language-settings.language-mode}]] + '</span><input class="language-slug adm-input" type="text" maxlength="16" /></label>' +
+                '      <label class="adm-flabel"><span>' + escapeHtml([[#{voj.administration.language-settings.language-name}]]) + '</span><input class="language-name adm-input" type="text" maxlength="16" /></label>' +
+                '      <label class="adm-flabel"><span>' + escapeHtml([[#{voj.administration.language-settings.language-mode}]]) + '</span><input class="language-slug adm-input" type="text" maxlength="16" /></label>' +
                 '    </div>' +
-                '    <label class="adm-flabel"><span>' + [[#{voj.administration.language-settings.compile-command}]] + '</span><input class="compile-command adm-input code" type="text" maxlength="128" /></label>' +
-                '    <label class="adm-flabel"><span>' + [[#{voj.administration.language-settings.run-command}]] + '</span><input class="run-command adm-input code" type="text" maxlength="128" /></label>' +
+                '    <label class="adm-flabel"><span>' + escapeHtml([[#{voj.administration.language-settings.compile-command}]]) + '</span><input class="compile-command adm-input code" type="text" maxlength="128" /></label>' +
+                '    <label class="adm-flabel"><span>' + escapeHtml([[#{voj.administration.language-settings.run-command}]]) + '</span><input class="run-command adm-input code" type="text" maxlength="128" /></label>' +
                 '  </div>' +
                 '</div>'
             );

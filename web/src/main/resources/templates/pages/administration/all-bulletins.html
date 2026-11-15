@@ -78,14 +78,16 @@
             del.addEventListener('click', function () {
                 var ids = window.admSelectedIds ? window.admSelectedIds() : [];
                 if (ids.length === 0) return;
-                if (!confirm([[#{voj.administration.all-bulletins.continue-or-not}]])) return;
-                $.ajax({
-                    type: 'POST', url: [[@{/administration/deleteBulletins.action}]],
-                    data: { 'bulletins': JSON.stringify(ids) }, dataType: 'JSON',
-                    success: function (result) {
-                        if (result['isSuccessful']) { window.location.reload(); }
-                        else { alert([[#{voj.administration.all-bulletins.delete-error}]]); }
-                    }
+                vojConfirm([[#{voj.administration.all-bulletins.continue-or-not}]]).then(function (ok) {
+                    if (!ok) return;
+                    $.ajax({
+                        type: 'POST', url: [[@{/administration/deleteBulletins.action}]],
+                        data: { 'bulletins': JSON.stringify(ids) }, dataType: 'JSON',
+                        success: function (result) {
+                            if (result['isSuccessful']) { window.location.reload(); }
+                            else { vojAlert([[#{voj.administration.all-bulletins.delete-error}]]); }
+                        }
+                    });
                 });
             });
         });
