@@ -28,12 +28,17 @@ public class NativeLibraryLoaderTest {
   /**
    * Test case: tests the loadLibrary method. Test data: the name of a library that is neither on the
    * java.library.path nor on the class path. Expected result: System.loadLibrary fails, the loader
-   * falls back to the class-path lookup, fails to locate the resource, and an exception is thrown.
+   * falls back to the class-path lookup, fails to locate the resource, and an IOException naming the
+   * library is thrown.
    */
   @Test
   public void testLoadLibraryNotFound() {
-    Assertions.assertThrows(
-        Exception.class,
-        () -> NativeLibraryLoader.loadLibrary("voj-runner-does-not-exist-" + System.nanoTime()));
+    String libraryName = "voj-runner-does-not-exist-" + System.nanoTime();
+    java.io.IOException ex =
+        Assertions.assertThrows(
+            java.io.IOException.class, () -> NativeLibraryLoader.loadLibrary(libraryName));
+    // The failure names the library instead of surfacing as a NullPointerException.
+    Assertions.assertTrue(ex.getMessage().contains(libraryName), ex.getMessage());
+    Assertions.assertInstanceOf(UnsatisfiedLinkError.class, ex.getCause());
   }
 }

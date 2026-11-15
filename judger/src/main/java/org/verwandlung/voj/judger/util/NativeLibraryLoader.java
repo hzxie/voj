@@ -17,10 +17,10 @@
 package org.verwandlung.voj.judger.util;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 
 /**
  * Contains helper methods for loading native libraries, particularly JNI.
@@ -44,30 +44,26 @@ public class NativeLibraryLoader {
       System.loadLibrary(libraryName);
     } catch (UnsatisfiedLinkError e) {
       String fileName = System.mapLibraryName(libraryName);
-
-      int dotPosition = fileName.lastIndexOf('.');
-      File file =
-          File.createTempFile(fileName.substring(0, dotPosition), fileName.substring(dotPosition));
-      file.deleteOnExit();
-
-      byte[] buffer = new byte[4096];
-      InputStream inputStream =
-          NativeLibraryLoader.class.getClassLoader().getResourceAsStream(fileName);
-      OutputStream outputStream = new FileOutputStream(file);
-
-      try {
-        while (inputStream.available() > 0) {
-          int StreamLength = inputStream.read(buffer);
-          if (StreamLength >= 0) {
-            outputStream.write(buffer, 0, StreamLength);
-          }
+      try (InputStream inputStream =
+          NativeLibraryLoader.class.getClassLoader().getResourceAsStream(fileName)) {
+        if (inputStream == null) {
+          throw new IOException(
+              String.format(
+                  "Native library %s is neither on java.library.path nor bundled as %s on the"
+                      + " class path",
+                  libraryName, fileName),
+              e);
         }
-      } finally {
-        outputStream.close();
-        inputStream.close();
+        int dotPosition = fileName.lastIndexOf('.');
+        File file =
+            File.createTempFile(
+                fileName.substring(0, dotPosition), fileName.substring(dotPosition));
+        file.deleteOnExit();
+        // Copy until end of stream: available() only estimates what can be read without blocking,
+        // so looping on it could stop early and load a truncated library.
+        Files.copy(inputStream, file.toPath(), StandardCopyOption.REPLACE_EXISTING);
+        System.load(file.getAbsolutePath());
       }
-
-      System.load(file.getAbsolutePath());
     }
   }
 }
