@@ -27,9 +27,16 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import org.verwandlung.voj.web.mapper.JudgeResultMapper;
 import org.verwandlung.voj.web.mapper.LanguageMapper;
@@ -487,16 +494,83 @@ public class SubmissionService {
   /**
    * Creates a judging task and submits the submission information to the message queue.
    *
+   * <p>Inside a transaction (the normal case, as this service is transactional) the task is only
+   * sent once that transaction has committed: a judger must not be able to fetch a submission that
+   * is not visible yet, and a transaction that rolls back must not leave a task behind. Outside a
+   * transaction the task is sent immediately. See {@link #sendSubmissionTask(long, String)} for what
+   * happens when sending fails.
+   *
    * @param submissionId - the unique identifier of the submission
    * @param languageSlug - the slug of the submission's language, used by judgers to claim only the
    *     tasks they can build
    */
   public void createSubmissionTask(long submissionId, String languageSlug) {
+    if (TransactionSynchronizationManager.isSynchronizationActive()) {
+      TransactionSynchronizationManager.registerSynchronization(
+          new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+              sendSubmissionTask(submissionId, languageSlug);
+            }
+          });
+    } else {
+      sendSubmissionTask(submissionId, languageSlug);
+    }
+  }
+
+  /**
+   * Sends the judging task of a stored submission to the message queue.
+   *
+   * <p>The submission is already committed at this point, so a failure cannot be rolled back and
+   * must not reach the user either: the submission was accepted. Instead of leaving it pending
+   * forever (no judger will ever see it, and the expired-task guard only covers tasks that reached
+   * the queue), it is marked as a system error in a new transaction, which tells the user what
+   * happened and lets an administrator rejudge it once the message queue is back. Retrying here is
+   * deliberately avoided: it would hold the request thread while the broker is down, and a retry
+   * that only lives in memory is lost on restart anyway.
+   *
+   * @param submissionId - the unique identifier of the submission
+   * @param languageSlug - the slug of the submission's language
+   */
+  private void sendSubmissionTask(long submissionId, String languageSlug) {
     Map<String, Object> mapMessage = new HashMap<>();
     mapMessage.put("event", "SubmissionCreated");
     mapMessage.put("submissionId", submissionId);
 
-    messageSender.sendMessage(mapMessage, languageSlug);
+    try {
+      messageSender.sendMessage(mapMessage, languageSlug);
+    } catch (RuntimeException ex) {
+      LOGGER.error(
+          String.format(
+              "Failed to queue the judging task of submission #%d; marking it as a system error.",
+              submissionId),
+          ex);
+      markSubmissionTaskNotQueued(submissionId);
+    }
+  }
+
+  /**
+   * Marks a still-pending submission as a system error because its judging task could not be sent
+   * to the message queue. Runs in a new transaction, as Spring requires for writes made after a
+   * commit: the committed transaction still holds its connection at that point, so this briefly
+   * takes a second one from the pool. Only this failure path does, and if no connection can be had
+   * the error is logged and the submission stays pending, as before.
+   *
+   * @param submissionId - the unique identifier of the submission
+   */
+  private void markSubmissionTaskNotQueued(long submissionId) {
+    String judgeLog =
+        "System Error.\n\nThe judging task could not be sent to the message queue. "
+            + "An administrator can rejudge this submission.\n";
+    try {
+      TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
+      transactionTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+      transactionTemplate.executeWithoutResult(
+          status -> submissionMapper.markSubmissionUnjudgeable(submissionId, "SE", judgeLog));
+    } catch (RuntimeException ex) {
+      LOGGER.error(
+          String.format("Failed to mark submission #%d as a system error.", submissionId), ex);
+    }
   }
 
   /**
@@ -588,4 +662,13 @@ public class SubmissionService {
 
   /** The autowired MessageSender object. */
   @Autowired private MessageSender messageSender;
+
+  /**
+   * The autowired transaction manager. Used to record a failed task submission in a transaction of
+   * its own.
+   */
+  @Autowired private PlatformTransactionManager transactionManager;
+
+  /** The logger. */
+  private static final Logger LOGGER = LogManager.getLogger(SubmissionService.class);
 }

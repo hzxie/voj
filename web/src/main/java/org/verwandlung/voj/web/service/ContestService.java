@@ -389,7 +389,7 @@ public class ContestService {
    * The contest must be visible to the user and running (start &lt;= now &lt; end), the user must
    * have attended it and the problem must be one of its problems; the problem itself may be
    * unpublished (contest problems usually are). The submission and its contest record are stored in
-   * one transaction, and the judging task is only enqueued once both exist.
+   * one transaction, and the judging task is only enqueued once that transaction has committed.
    *
    * @param contestId - the unique identifier of the contest
    * @param problemId - the unique identifier of the problem
