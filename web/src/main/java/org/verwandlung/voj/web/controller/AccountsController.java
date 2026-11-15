@@ -467,12 +467,18 @@ public class AccountsController {
   public @ResponseBody Map<String, Object> getNumberOfSubmissionsOfUsersAction(
       @RequestParam(value = "uid", required = false, defaultValue = "0") long userId,
       HttpServletRequest request) {
+    Map<String, Object> submissions = new HashMap<>(1, 1);
     if (userId == 0) {
-      userId = HttpSessionParser.getCurrentUser().getUid();
+      // Without an explicit uid the heat-map is the current user's; an anonymous visitor has none.
+      User currentUser = HttpSessionParser.getCurrentUser();
+      if (currentUser == null) {
+        submissions.put("totalSubmissions", new HashMap<String, Long>());
+        return submissions;
+      }
+      userId = currentUser.getUid();
     }
     Date today = new Date();
     Date startDate = DateUtils.getDateBefore(ACTIVITY_HEAT_MAP_DAYS);
-    Map<String, Object> submissions = new HashMap<>(1, 1);
     submissions.put(
         "totalSubmissions",
         submissionService.getNumberOfSubmissionsGroupByDay(startDate, today, userId, false));

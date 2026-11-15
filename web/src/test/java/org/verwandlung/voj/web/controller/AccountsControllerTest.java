@@ -298,6 +298,16 @@ public class AccountsControllerTest {
         .getNumberOfSubmissionsGroupByDay(any(), any(), eq(1000L), eq(false));
   }
 
+  /** Test case: tests getNumberOfSubmissionsOfUsersAction(...). Test data: uid 0 with no authenticated user. Expected: an empty heat-map instead of a NullPointerException, and no query. */
+  @Test
+  public void testGetNumberOfSubmissionsOfUsersWithoutUidAndLogin() {
+    Map<String, Object> result = controller.getNumberOfSubmissionsOfUsersAction(0L, request());
+
+    Assertions.assertEquals(Map.of(), result.get("totalSubmissions"));
+    verify(submissionService, never())
+        .getNumberOfSubmissionsGroupByDay(any(), any(), anyLong(), anyBoolean());
+  }
+
   /** Test case: tests getSafeForwardUrl(...). Test data: same-origin relative paths. Expected: they are kept unchanged. */
   @Test
   public void testGetSafeForwardUrlKeepsRelativePaths() {
