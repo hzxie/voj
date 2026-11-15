@@ -54,6 +54,8 @@ import org.verwandlung.voj.web.service.UserService;
  *       discussion mutation (POST {@code /discussion/**} — any authenticated user).
  *   <li><b>CSRF</b> protection is enabled globally; the token is submitted via the {@code csrfToken}
  *       request parameter (matching the existing forms) or the {@code X-CSRF-TOKEN} header.
+ *   <li><b>Content-Security-Policy</b> blocks plugins, {@code <base>} hijacking and framing (see
+ *       {@link #CONTENT_SECURITY_POLICY}); Spring Security's other default headers stay on.
  *   <li><b>Online users</b> are tracked through a {@link SessionRegistry}.
  * </ul>
  *
@@ -66,6 +68,16 @@ public class SecurityConfig {
 
   /** The page a forbidden (authenticated but unauthorised) user is redirected to. */
   private static final String ACCESS_DENIED_URL = "/";
+
+  /**
+   * The Content-Security-Policy sent with every response. It carries the directives that hold for
+   * every page today: no plugins, no {@code <base>} retargeting of relative URLs, and no framing by
+   * any site (matching the default {@code X-Frame-Options: DENY}). It deliberately has no {@code
+   * script-src}: the templates still rely on inline Thymeleaf scripts and the administrator-supplied
+   * analytics snippet, which a script allowlist would need per-request nonces for.
+   */
+  static final String CONTENT_SECURITY_POLICY =
+      "object-src 'none'; base-uri 'self'; frame-ancestors 'none'";
 
   /**
    * The security filter chain. Guarded by {@link ConditionalOnWebApplication} so the bean is only
@@ -95,6 +107,10 @@ public class SecurityConfig {
                     .anyRequest()
                     .permitAll())
         .csrf(csrf -> csrf.csrfTokenRepository(csrfTokenRepository))
+        .headers(
+            headers ->
+                headers.contentSecurityPolicy(
+                    csp -> csp.policyDirectives(CONTENT_SECURITY_POLICY)))
         .exceptionHandling(
             exception ->
                 exception

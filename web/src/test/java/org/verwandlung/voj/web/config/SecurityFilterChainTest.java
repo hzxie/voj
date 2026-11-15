@@ -21,6 +21,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -129,6 +130,15 @@ public class SecurityFilterChainTest {
     mockMvc
         .perform(get("/accounts/changePassword.action"))
         .andExpect(redirectedUrl("/accounts/login"));
+  }
+
+  /** Test case: any response. Expected: it carries the Content-Security-Policy and still denies framing. */
+  @Test
+  public void testResponsesCarrySecurityHeaders() throws Exception {
+    mockMvc
+        .perform(get("/accounts/changePassword.action"))
+        .andExpect(header().string("Content-Security-Policy", SecurityConfig.CONTENT_SECURITY_POLICY))
+        .andExpect(header().string("X-Frame-Options", "DENY"));
   }
 
   /** Builds a session holding a security context for the given user, as the login stores it. */
