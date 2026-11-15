@@ -64,12 +64,15 @@ public class MaintenanceModeInterceptor implements HandlerInterceptor {
    * Checks whether the request path stays reachable during maintenance: the maintenance page itself,
    * authentication, static assets, and the informational pages still linked from the footer
    * (about / terms / privacy / help / judgers) so visitors can read them while the site is offline.
+   * The judger API is machine-to-machine (judgers download checkpoints from it) and must keep
+   * working, otherwise queued submissions cannot be judged during or after the maintenance window.
    *
    * @param path - the request path relative to the context root
    * @return whether the request is allowed during maintenance
    */
   private boolean isAllowedDuringMaintenance(String path) {
     return path.startsWith("/maintenance")
+        || path.startsWith("/api/judger/")
         || path.startsWith("/accounts")
         || path.startsWith("/assets")
         || path.equals("/favicon.ico")

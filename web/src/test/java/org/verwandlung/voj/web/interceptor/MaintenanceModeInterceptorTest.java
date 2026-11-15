@@ -90,6 +90,17 @@ public class MaintenanceModeInterceptorTest {
   }
 
   /** Test case: tests preHandle(...). Test data: maintenance mode enabled, an administrator requesting a normal path. Expected: the request proceeds (returns true). */
+  /** Test case: tests preHandle(...). Test data: maintenance on and an anonymous judger API request. Expected: the request passes so judgers can still download checkpoints. */
+  @Test
+  public void testPreHandleAllowsJudgerApi() throws Exception {
+    setMaintenanceMode("1");
+    MockHttpServletRequest request = requestFor("/api/judger/checkpoints/1000");
+    MockHttpServletResponse response = new MockHttpServletResponse();
+
+    Assertions.assertTrue(interceptor.preHandle(request, response, new Object()));
+    Assertions.assertNull(response.getForwardedUrl());
+  }
+
   @Test
   public void testPreHandleAllowsAdministrator() throws Exception {
     setMaintenanceMode("1");
