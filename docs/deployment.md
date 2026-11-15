@@ -17,7 +17,11 @@ The judger picks a sandbox backend with `judger.sandbox` in `voj.properties`:
 - `isolate` (Linux only): delegates to the external
   [isolate](https://github.com/ioi/isolate) tool. Choose this when you need full
   filesystem isolation (each submission gets its own mount namespace). It requires
-  `isolate` to be installed and the judger to run as root.
+  `isolate` to be installed and the judger to run as root. isolate runs box *n*
+  as UID `first_uid + n` (its default `first_uid` is 60000), so the judger hands
+  each submission's private work directory to that UID: set
+  `judger.isolate.firstUid` to isolate's `first_uid` and `judger.isolate.boxId`
+  to the box id.
 
 The rest of this guide describes the `native` backend on Linux.
 
@@ -54,6 +58,39 @@ create a dedicated account instead, or those services will be killed:
 sudo useradd --system --no-create-home --shell /usr/sbin/nologin voj-sandbox
 # then set system.username = voj-sandbox in voj.properties
 ```
+
+### What a submission is held to
+
+- **Processes.** The sandbox user's `RLIMIT_NPROC` (which counts threads) is
+  `judger.processLimit` (64) for a run and `judger.compileProcessLimit` (1024)
+  for a compilation, whose toolchains are trusted but parallel (`go build`).
+  The seccomp filter denies leaving the process group (`setsid`, `setpgid`) and
+  creating namespaces (`unshare`, `setns`, `clone` with a `CLONE_NEW*` flag;
+  `clone3` fails with `ENOSYS` so the C library falls back to `clone`), so a
+  submission cannot obtain the capabilities of an unprivileged user namespace.
+- **CPU time.** Every run gets a small supervisor process (a root-owned fork of
+  the judger, so the submission can neither signal nor trace it) that is the
+  *child subreaper* of the submission: every orphaned descendant is reparented to
+  it and reaped by it, so the CPU time of a process that exits after being
+  orphaned still counts. A run's time is the CPU time of all its processes; a
+  compilation's is the compiler's top-level process (including what it waited
+  for).
+- **Memory.** A run's memory is the larger of the top-level process's peak RSS
+  and the sum of the proportional set size (PSS, `/proc/<pid>/smaps_rollup`,
+  Linux 4.14+) of all its processes, so pages shared after `fork` or by the
+  runtime's shared libraries count once, not once per process. Without PSS
+  (older kernels) the RSS is summed instead, which over-counts.
+- **Go.** `GOCACHE` and `GOPATH` point into the submission's own work directory,
+  never at a cache other submissions can write: a shared build cache could be
+  poisoned by one submission for every later Go build. Set
+  `judger.goBuildCacheSeed` to a root-owned, read-only build cache (the Docker
+  image builds one) to seed it, so the standard library is not rebuilt every time;
+  the seeded files are hard links the sandbox user cannot modify.
+
+Note that in a container without `CAP_SYS_ADMIN` (Docker's default) the private
+network namespace cannot be created and the sandbox runs without it; give the
+judger its own Docker network without outside access if submissions must not
+reach the network.
 
 ### Filesystem layout and permissions
 
