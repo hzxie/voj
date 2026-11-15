@@ -90,7 +90,9 @@ sudo useradd --system --no-create-home --shell /usr/sbin/nologin voj-sandbox
   the private network namespace, still tried first, cannot be created. Compilers
   run under the same filter. `AF_UNIX` sockets stay available (runtimes use
   `socketpair`), so do not leave a Unix socket that the sandbox user may connect
-  to (e.g. a database's or Docker's) where it can reach it.
+  to (e.g. a database's or Docker's) where it can reach it. The filter is
+  mandatory: if it cannot be built or installed (or any one of its rules cannot
+  be added), the submission is not run and is judged a system error.
 - **Go.** `GOCACHE` and `GOPATH` point into the submission's own work directory,
   never at a cache other submissions can write: a shared build cache could be
   poisoned by one submission for every later Go build. Set

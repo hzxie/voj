@@ -184,8 +184,9 @@ static void markInheritedDescriptorsCloseOnExec();
  * JNI call entry point.
  * Runs the given command in a sandboxed child process and measures its CPU time and peak memory
  * usage. Limits are enforced both by the kernel (setrlimit) and by a fine-grained watchdog;
- * isolation is layered and best-effort (network namespace, privilege drop and a seccomp syscall
- * filter are applied when the environment permits).
+ * isolation is layered: the seccomp syscall filter and (when running as root) the privilege drop
+ * are mandatory - the run is refused if either cannot be applied - while the network namespace is
+ * best-effort, as the filter already refuses every socket but AF_UNIX.
  *
  * @param  jniEnv          - a reference to the JNI runtime environment
  * @param  selfReference   - a reference to the calling Java object
@@ -263,7 +264,14 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     }
     plan.envp.push_back(nullptr);
 
+    // The filter is what keeps a submission off the network when the judger has no CAP_SYS_ADMIN
+    // (a default Docker container), and away from ptrace, namespaces and setsid everywhere: a run
+    // without it is refused rather than started unconfined.
     plan.seccompProgram = buildSeccompProgram();
+    if ( plan.seccompProgram.empty() ) {
+        throwStringException(jniEnv, "Judger: failed to build the seccomp filter; refusing to run");
+        return NULL;
+    }
 
     // A close-on-exec pipe: it stays open until execve succeeds (then it auto-closes, the parent's
     // read sees EOF) or the child reports an errno on failure. The parent blocks on it so the
@@ -809,14 +817,17 @@ static void runProgram(const ChildPlan& plan, int syncWriteFd) {
         setrlimit(RLIMIT_DATA, &limit);
     }
 
-    // Tier 2 (best-effort): install the pre-built seccomp syscall filter via the raw syscall, so
-    // the child does not have to call into libseccomp (which would allocate).
-    if ( !plan.seccompProgram.empty() ) {
+    // Install the pre-built seccomp syscall filter via the raw syscall, so the child does not have
+    // to call into libseccomp (which would allocate). Mandatory: if it cannot be installed the
+    // program is not run (the parent sees exit code 127 and the errno).
+    {
         struct sock_fprog prog;
         prog.len    = (unsigned short) (plan.seccompProgram.size() / sizeof(struct sock_filter));
         prog.filter = (struct sock_filter*) plan.seccompProgram.data();
-        prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0);
-        syscall(SYS_seccomp, SECCOMP_SET_MODE_FILTER, 0, &prog);
+        if ( prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) != 0 ||
+             syscall(SYS_seccomp, SECCOMP_SET_MODE_FILTER, 0, &prog) != 0 ) {
+            reportChildFailure(syncWriteFd, errno);
+        }
     }
 
     execve(plan.executable.c_str(), plan.argv.data(), plan.envp.data());
@@ -1008,13 +1019,22 @@ static std::vector<std::string> buildEnvironment(bool dropPrivileges, const std:
  * calling socket(), fails with ENOSYS, so runtimes such as libuv fall back to plain system calls.
  * Only native-architecture system calls pass the filter (libseccomp kills any other ABI, such as
  * i386's socketcall), so these rules cannot be bypassed through a compat entry point.
- * @return the exported BPF bytes, or an empty string if the filter could not be built
+ * @return the exported BPF bytes, or an empty string if the filter (or any one of its rules) could
+ *         not be built - a partial filter is never returned
  */
 static std::string buildSeccompProgram() {
     scmp_filter_ctx ctx = seccomp_init(SCMP_ACT_ALLOW);
     if ( ctx == nullptr ) {
         return std::string();
     }
+    // Every rule must make it into the filter: one that silently failed to be added would leave a
+    // hole (e.g. sockets allowed) in a filter that otherwise looks fine.
+    bool allRulesAdded = true;
+    auto addRule = [&allRulesAdded](int rc) {
+        if ( rc != 0 ) {
+            allRulesAdded = false;
+        }
+    };
     const int deniedSyscalls[] = {
         SCMP_SYS(ptrace),            SCMP_SYS(process_vm_readv), SCMP_SYS(process_vm_writev),
         SCMP_SYS(mount),             SCMP_SYS(umount2),          SCMP_SYS(pivot_root),
@@ -1029,7 +1049,7 @@ static std::string buildSeccompProgram() {
     };
     for ( int syscallNr : deniedSyscalls ) {
         if ( syscallNr >= 0 ) {
-            seccomp_rule_add(ctx, SCMP_ACT_ERRNO(EPERM), syscallNr, 0);
+            addRule(seccomp_rule_add(ctx, SCMP_ACT_ERRNO(EPERM), syscallNr, 0));
         }
     }
 
@@ -1040,28 +1060,32 @@ static std::string buildSeccompProgram() {
         CLONE_NEWCGROUP,
     };
     for ( unsigned long long flag : namespaceFlags ) {
-        seccomp_rule_add(ctx, SCMP_ACT_ERRNO(EPERM), SCMP_SYS(clone), 1,
-                         SCMP_A0(SCMP_CMP_MASKED_EQ, flag, flag));
+        addRule(seccomp_rule_add(ctx, SCMP_ACT_ERRNO(EPERM), SCMP_SYS(clone), 1,
+                                 SCMP_A0(SCMP_CMP_MASKED_EQ, flag, flag)));
     }
     // Resolved by name, so this still builds against a libseccomp that predates clone3.
     int clone3Nr = seccomp_syscall_resolve_name("clone3");
     if ( clone3Nr != __NR_SCMP_ERROR ) {
-        seccomp_rule_add(ctx, SCMP_ACT_ERRNO(ENOSYS), clone3Nr, 0);
+        addRule(seccomp_rule_add(ctx, SCMP_ACT_ERRNO(ENOSYS), clone3Nr, 0));
     }
 
     // socket(domain, ...) and socketpair(domain, ...): an allow-list of AF_UNIX. The comparison is
     // on the full 64-bit argument, so a value with stray upper bits is refused as well.
     const int socketSyscalls[] = { SCMP_SYS(socket), SCMP_SYS(socketpair) };
     for ( int syscallNr : socketSyscalls ) {
-        seccomp_rule_add(ctx, SCMP_ACT_ERRNO(EACCES), syscallNr, 1,
-                         SCMP_A0(SCMP_CMP_NE, (scmp_datum_t) AF_UNIX));
+        addRule(seccomp_rule_add(ctx, SCMP_ACT_ERRNO(EACCES), syscallNr, 1,
+                                 SCMP_A0(SCMP_CMP_NE, (scmp_datum_t) AF_UNIX)));
     }
     const char* const ioUringSyscalls[] = { "io_uring_setup", "io_uring_enter", "io_uring_register" };
     for ( const char* name : ioUringSyscalls ) {
         int syscallNr = seccomp_syscall_resolve_name(name);
         if ( syscallNr != __NR_SCMP_ERROR ) {
-            seccomp_rule_add(ctx, SCMP_ACT_ERRNO(ENOSYS), syscallNr, 0);
+            addRule(seccomp_rule_add(ctx, SCMP_ACT_ERRNO(ENOSYS), syscallNr, 0));
         }
+    }
+    if ( !allRulesAdded ) {
+        seccomp_release(ctx);
+        return std::string();
     }
 
     std::string program;
