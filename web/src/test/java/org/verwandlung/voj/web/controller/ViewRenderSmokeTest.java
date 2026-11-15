@@ -498,6 +498,26 @@ class ViewRenderSmokeTest {
     mockMvc.perform(getWithCsrf("/discussion/5000")).andExpect(status().isOk());
   }
 
+  /** The judge log carries raw compiler output, so both submission pages must escape it. */
+  @Test
+  void judgeLogIsEscaped() throws Exception {
+    Submission submission = aSubmission(7000L);
+    submission.setJudgeLog("#error <img src=x onerror=alert(1)>");
+    when(submissionService.getSubmission(7000L)).thenReturn(submission);
+    mockMvc
+        .perform(getWithCsrf("/submission/7000"))
+        .andExpect(status().isOk())
+        .andExpect(content().string(containsString("#error &lt;img src=x onerror=alert(1)&gt;")))
+        .andExpect(content().string(not(containsString("<img src=x"))));
+
+    authenticateAdmin();
+    mockMvc
+        .perform(getWithCsrf("/administration/edit-submission/7000"))
+        .andExpect(status().isOk())
+        .andExpect(content().string(containsString("#error &lt;img src=x onerror=alert(1)&gt;")))
+        .andExpect(content().string(not(containsString("<img src=x"))));
+  }
+
   /** The new-thread form renders for a logged-in user. */
   @Test
   void newDiscussionThreadViewRenders() throws Exception {

@@ -31,7 +31,7 @@
                 </div>
                 <div class="adm-card">
                     <div class="adm-card-head"><span th:text="#{voj.administration.edit-submission.judge-result}">// JUDGE OUTPUT</span></div>
-                    <div id="judge-log" class="markdown adm-judge-log" th:utext="${submission.judgeLog}">judge log</div>
+                    <div id="judge-log" class="markdown adm-judge-log" th:text="${submission.judgeLog}">judge log</div>
                 </div>
             </div>
             <div class="adm-col">

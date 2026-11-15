@@ -45,7 +45,7 @@
                         <span class="vw-card-title" th:text="'// ' + #{voj.submissions.submission.judge-result}">// JUDGE LOG</span>
                     </div>
                     <div class="vw-card-body">
-                        <div id="judge-log" class="description markdown" th:utext="${submission.judgeLog}">judge log</div>
+                        <div id="judge-log" class="description markdown" th:text="${submission.judgeLog}">judge log</div>
                     </div>
                 </article>
 
