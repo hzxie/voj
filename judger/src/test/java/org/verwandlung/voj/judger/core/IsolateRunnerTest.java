@@ -20,6 +20,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -141,6 +142,53 @@ public class IsolateRunnerTest {
     Assertions.assertEquals("/work", IsolateRunner.toBoxPath("/tmp/voj-1", "/tmp/voj-1"));
     Assertions.assertEquals("/tmp/voj-10/a", IsolateRunner.toBoxPath("/tmp/voj-10/a", "/tmp/voj-1"));
     Assertions.assertEquals("g++", IsolateRunner.toBoxPath("g++", "/tmp/voj-1"));
+  }
+
+  /**
+   * Test case: a compilation and a run. Expected result: the compilation is given its own syscall
+   * filter flags (file locks allowed, for the Go build cache); the run keeps isolate's.
+   */
+  @Test
+  public void testOnlyCompilationsMayLockFiles() throws Exception {
+    Path logFile = workDirectory.resolve("random-compile.log");
+    RunResult compilation = runner.run("true", null, logFile.toString(), 1000, 0, true);
+
+    Assertions.assertEquals(Verdict.NORMAL, compilation.getVerdict());
+    Assertions.assertTrue(
+        Files.readAllLines(isolateRoot.resolve("args.log")).contains("--syscalls=27"));
+
+    Path outputFile = workDirectory.resolve("output#1.txt");
+    RunResult run = runner.run("true", null, outputFile.toString(), 1000, 0, false);
+
+    Assertions.assertEquals(Verdict.NORMAL, run.getVerdict());
+    Assertions.assertTrue(
+        Files.readAllLines(isolateRoot.resolve("args.log")).stream()
+            .noneMatch(arg -> arg.startsWith("--syscalls")));
+  }
+
+  /**
+   * Test case: tests the boxEnvironment(Map) method. Expected result: only the locale and toolchain
+   * variables are passed on (no secrets), and the Go build cache and GOPATH are the submission's
+   * own, in the work directory, even when the judger sets them.
+   */
+  @Test
+  public void testBoxEnvironmentKeepsSecretsOutAndGivesGoItsOwnCache() {
+    Map<String, String> environment =
+        IsolateRunner.boxEnvironment(
+            Map.of(
+                "PATH", "/opt/go/bin:/usr/bin",
+                "GOROOT", "/opt/go",
+                "GOCACHE", "/root/.cache/go-build",
+                "GOPATH", "/root/go",
+                "VOJ_DB_PASSWORD", "secret"));
+
+    Assertions.assertEquals("/opt/go/bin:/usr/bin", environment.get("PATH"));
+    Assertions.assertEquals("/opt/go", environment.get("GOROOT"));
+    Assertions.assertEquals("/work/.cache/go-build", environment.get("GOCACHE"));
+    Assertions.assertEquals("/work/go", environment.get("GOPATH"));
+    Assertions.assertEquals("/box", environment.get("HOME"));
+    Assertions.assertEquals("C.UTF-8", environment.get("LANG"));
+    Assertions.assertFalse(environment.containsKey("VOJ_DB_PASSWORD"));
   }
 
   /**

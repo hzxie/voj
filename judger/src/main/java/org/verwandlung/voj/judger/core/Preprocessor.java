@@ -115,16 +115,17 @@ public class Preprocessor {
 
   /**
    * Seeds the submission's own Go build cache ({@value #GO_BUILD_CACHE_DIRECTORY} in the work
-   * directory, where the native sandbox points GOCACHE when it drops privileges) from the read-only
-   * cache at {@code judger.goBuildCacheSeed}, so that the standard library does not have to be
-   * rebuilt for every submission. A cache shared between submissions would let one poison the Go
-   * builds of all later ones, so every submission gets its own: the seed's files are hard-linked
-   * (or, across file systems, copied) into it, and stay owned by the judger and read-only, while
-   * the cache's directories are handed to the sandbox user so the build can add its own entries.
-   * Linking a file the sandbox user cannot write gives it no way to modify the seed: it can only
-   * remove its own link. Only files that are owned by the judger and not writable by anybody else
-   * are taken from the seed. Seeding is skipped (the build then starts from an empty cache) unless
-   * the judger runs as root, the only case in which GOCACHE is moved to the work directory.
+   * directory, where the native sandbox points GOCACHE when it drops privileges, and IsolateRunner
+   * always does) from the read-only cache at {@code judger.goBuildCacheSeed}, so that the standard
+   * library does not have to be rebuilt for every submission. A cache shared between submissions
+   * would let one poison the Go builds of all later ones, so every submission gets its own: the
+   * seed's files are hard-linked (or, across file systems, copied) into it, and stay owned by the
+   * judger and read-only, while the cache's directories are handed to the sandbox user so the build
+   * can add its own entries. Linking a file the sandbox user cannot write gives it no way to modify
+   * the seed: it can only remove its own link. Only files that are owned by the judger and not
+   * writable by anybody else are taken from the seed. Seeding is skipped (the build then starts
+   * from an empty cache) unless the judger runs as root: only then does the native sandbox move
+   * GOCACHE to the work directory, and isolate needs root anyway.
    *
    * @param workDirectory - the submission's work directory
    * @return the directories (and the trim file) created, which the sandbox user must be able to
@@ -366,7 +367,7 @@ public class Preprocessor {
 
   /**
    * The submission's Go build cache, relative to its work directory. Must match GOCACHE as set by
-   * the native sandbox (GO_BUILD_CACHE_DIRECTORY in Judger.Core.Runner.cpp).
+   * the native sandbox (GO_BUILD_CACHE_DIRECTORY in Judger.Core.Runner.cpp) and by IsolateRunner.
    */
   static final String GO_BUILD_CACHE_DIRECTORY = ".cache/go-build";
 

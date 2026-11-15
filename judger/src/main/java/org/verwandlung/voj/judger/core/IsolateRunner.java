@@ -28,6 +28,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -58,7 +59,8 @@ import org.springframework.stereotype.Component;
  *       It must belong to isolate's box user (UID first_uid + box id, see
  *       judger.isolate.firstUid), which the judger arranges when it runs as root.
  *   <li>isolate neither searches PATH nor passes on the environment: the program is resolved on the
- *       judger's PATH, and the box gets PATH, LANG and HOME.
+ *       judger's PATH, and the box gets the locale and toolchain variables the native sandbox
+ *       passes on, HOME, and a Go build cache and GOPATH of its own in the work directory.
  *   <li>Standard input/output never go through a bound directory. The checkpoint directory, which
  *       holds both the inputs and the expected outputs, is never bound: the single input file of
  *       the current run is copied into isolate's own box directory and redirected from there, and
@@ -231,6 +233,14 @@ public class IsolateRunner implements SandboxRunner {
     command.add(metaFile.getAbsolutePath());
     // isolate counts threads too; compilers get a higher cap (see judger.compileProcessLimit).
     command.add("--processes=" + (isCompilation ? compileProcessLimit : maxProcesses));
+    // isolate's syscall filter makes file locks fail (flock with ENOSYS, fcntl locks with EPERM),
+    // because a lock on an inode visible in several boxes (e.g. under the read-only /usr) is a side
+    // channel between them. The Go build cache cannot do without locks ("go: failed to trim cache:
+    // Lock .../trim.txt: function not implemented"), and a compilation runs a trusted compiler, not
+    // the submission, so compilations get their own filter flags (judger.isolate.compileSyscalls).
+    if (isCompilation && !compileSyscalls.isBlank()) {
+      command.add("--syscalls=" + compileSyscalls.trim());
+    }
     // Cap the size of files the sandboxed program may create, so a "disk bomb" (a compiler or a
     // submission emitting a huge file) cannot fill the disk. Mirrors the native runner's
     // RLIMIT_FSIZE. isolate expects the limit in kilobytes.
@@ -291,13 +301,11 @@ public class IsolateRunner implements SandboxRunner {
     // PATH, so a compile/run command such as "g++ ..." or "python3 ..." would fail with ENOENT:
     // resolve the program on the judger's PATH, and give the box a minimal environment (the
     // compilers and runtimes themselves look up their helpers on PATH), like the native sandbox.
-    String searchPath = System.getenv("PATH");
-    if (searchPath == null || searchPath.isBlank()) {
-      searchPath = DEFAULT_PATH;
+    Map<String, String> environment = boxEnvironment(System.getenv());
+    String searchPath = environment.get("PATH");
+    for (Map.Entry<String, String> variable : environment.entrySet()) {
+      command.add("--env=" + variable.getKey() + "=" + variable.getValue());
     }
-    command.add("--env=PATH=" + searchPath);
-    command.add("--env=LANG=C.UTF-8");
-    command.add("--env=HOME=/box");
 
     command.add("--run");
     command.add("--");
@@ -309,6 +317,54 @@ public class IsolateRunner implements SandboxRunner {
     command.addAll(arguments);
     return command;
   }
+
+  /**
+   * Builds the environment of the sandboxed program, as the native sandbox does: only the locale
+   * and toolchain settings of {@link #INHERITED_ENVIRONMENT_VARIABLES} are taken from the judger,
+   * whose own environment holds secrets (database password, API token). The Go toolchain's writable
+   * state (GOCACHE, GOPATH) is never inherited: it is placed in the submission's own work directory
+   * ({@link Preprocessor#GO_BUILD_CACHE_DIRECTORY}, seeded from judger.goBuildCacheSeed), because a
+   * build cache shared between submissions could be poisoned by one of them for every later build.
+   *
+   * @param judgerEnvironment - the judger's environment
+   * @return the variables to pass to the box, in a stable order
+   */
+  static Map<String, String> boxEnvironment(Map<String, String> judgerEnvironment) {
+    Map<String, String> environment = new LinkedHashMap<>();
+    for (String name : INHERITED_ENVIRONMENT_VARIABLES) {
+      String value = judgerEnvironment.get(name);
+      if (value != null && !value.isEmpty()) {
+        environment.put(name, value);
+      }
+    }
+    environment.putIfAbsent("PATH", DEFAULT_PATH);
+    environment.putIfAbsent("LANG", DEFAULT_LANG);
+    environment.put("HOME", BOX_HOME_DIRECTORY);
+    environment.put(
+        "GOCACHE", BOX_WORK_DIRECTORY + "/" + Preprocessor.GO_BUILD_CACHE_DIRECTORY);
+    environment.put("GOPATH", BOX_WORK_DIRECTORY + "/" + GO_PATH_DIRECTORY);
+    return environment;
+  }
+
+  /**
+   * The judger's environment variables the box inherits (see Judger.Core.Runner.cpp). GOCACHE and
+   * GOPATH are deliberately absent, see {@link #boxEnvironment}.
+   */
+  private static final String[] INHERITED_ENVIRONMENT_VARIABLES = {
+    "PATH", "LANG", "LC_ALL", "TZ",
+    "JAVA_HOME", "KOTLIN_HOME",
+    "GOROOT", "GOENV", "GOTOOLCHAIN", "GOFLAGS",
+    "RUSTUP_HOME", "RUSTUP_TOOLCHAIN", "CARGO_HOME",
+  };
+
+  /** GOPATH, relative to the work directory (GO_PATH_DIRECTORY in Judger.Core.Runner.cpp). */
+  private static final String GO_PATH_DIRECTORY = "go";
+
+  /** The box's own directory (isolate's working directory), given to the program as HOME. */
+  private static final String BOX_HOME_DIRECTORY = "/box";
+
+  /** The locale given to the box when the judger has none. */
+  private static final String DEFAULT_LANG = "C.UTF-8";
 
   /**
    * Rewrites the work directory's host path, wherever it appears in a command-line argument (e.g.
@@ -540,6 +596,14 @@ public class IsolateRunner implements SandboxRunner {
   /** The maximum number of processes/threads a compilation may create. */
   @Value("${judger.compileProcessLimit:1024}")
   private int compileProcessLimit;
+
+  /**
+   * isolate's syscall filter flags ({@code --syscalls}) for a compilation; blank to use isolate's
+   * configured syscall_flags. The default, 27, keeps every restriction but the one on file locks
+   * (flag 4), which the Go build cache needs.
+   */
+  @Value("${judger.isolate.compileSyscalls:27}")
+  private String compileSyscalls = "27";
 
   /** The maximum size (kilobytes) of files the sandboxed program may create (0 means no limit). */
   @Value("${judger.isolate.fileSizeLimitKb:262144}")
