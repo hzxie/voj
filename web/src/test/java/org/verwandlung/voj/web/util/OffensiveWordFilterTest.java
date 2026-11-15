@@ -16,15 +16,21 @@
  */
 package org.verwandlung.voj.web.util;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
+import java.util.List;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.Transactional;
+
+import org.verwandlung.voj.web.mapper.OffensiveWordMapper;
+import org.verwandlung.voj.web.mapper.OptionMapper;
 
 /**
  * The test class for SensitiveWordFilter.
@@ -82,6 +88,38 @@ public class OffensiveWordFilterTest {
   public void testHasWordBoundaryAlwaysAcceptsCjkMatch() {
     Assertions.assertTrue(hasWordBoundary("我操你", 1, 1)); // a single CJK character between CJK
     Assertions.assertTrue(hasWordBoundary("法轮功", 0, 2)); // "法轮" immediately followed by a CJK char
+  }
+
+  /** Test case: tests the filter() method. Test data: a lower-case and a mixed-case dictionary entry, matched against text in other cases. Expected: matching ignores case and the original text around the masked words is preserved. */
+  @Test
+  public void testFilterIsCaseInsensitive() {
+    OffensiveWordFilter caseFilter = newFilter(List.of("fuck", "BadWord"));
+    Assertions.assertEquals("**** you", caseFilter.filter("FUCK you"));
+    Assertions.assertEquals("Oh ****!", caseFilter.filter("Oh FuCk!"));
+    Assertions.assertEquals("a ******* b", caseFilter.filter("a badword b"));
+    Assertions.assertEquals("a ******* B", caseFilter.filter("a BADWORD B"));
+    // Word boundaries still apply after case folding.
+    Assertions.assertEquals("BADWORDS", caseFilter.filter("BADWORDS"));
+  }
+
+  /**
+   * Creates a stand-alone filter over the given dictionary, with the auto-censor option unset.
+   *
+   * @param words - the offensive words of the dictionary
+   * @return the filter
+   */
+  private static OffensiveWordFilter newFilter(List<String> words) {
+    OffensiveWordMapper offensiveWordMapper = Mockito.mock(OffensiveWordMapper.class);
+    Mockito.when(offensiveWordMapper.getOffensiveWords()).thenReturn(words);
+    try {
+      Constructor<OffensiveWordFilter> constructor =
+          OffensiveWordFilter.class.getDeclaredConstructor(
+              OffensiveWordMapper.class, OptionMapper.class);
+      constructor.setAccessible(true);
+      return constructor.newInstance(offensiveWordMapper, Mockito.mock(OptionMapper.class));
+    } catch (ReflectiveOperationException ex) {
+      throw new RuntimeException(ex);
+    }
   }
 
   /** Invokes the private static hasWordBoundary helper. */

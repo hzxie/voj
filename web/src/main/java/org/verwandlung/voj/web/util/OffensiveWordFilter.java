@@ -38,6 +38,9 @@ import org.verwandlung.voj.web.model.Option;
  * filtering never touches the database. The dictionary can be refreshed at runtime - for example
  * after an administrator re-imports the external word lists - through {@link #reload()}.
  *
+ * <p>Matching is case-insensitive: both the dictionary and the scanned text are case-folded
+ * character by character, while the masking is applied to the original text in place.
+ *
  * @author Zhou Yihao
  */
 @Component
@@ -275,7 +278,10 @@ public class OffensiveWordFilter {
     char nowWord = 0;
     Map nowMap = getOffensiveWordMap();
     for (int i = beginIndex; i < text.length(); ++i) {
-      nowWord = text.charAt(i);
+      // The dictionary is stored case-folded (see buildOffensiveWordMap), so fold each input
+      // character the same way. Folding one char at a time keeps the match positions aligned with
+      // the original text, which is masked in place and otherwise left untouched.
+      nowWord = foldCase(text.charAt(i));
       // The follow set of the current character
       nowMap = (Map) nowMap.get(nowWord);
       if (nowMap != null) {
@@ -292,6 +298,20 @@ public class OffensiveWordFilter {
       }
     }
     return matchedLength;
+  }
+
+  /**
+   * Folds a character for case-insensitive matching, so that {@code FUCK} or {@code Fuck} matches a
+   * lower-case dictionary entry. The folding is applied per character (rather than with {@link
+   * String#toLowerCase()}, which may change the length of the string for some locales and code
+   * points) so that a match in the folded text always has the same position and length in the
+   * original text.
+   *
+   * @param c - the character to fold
+   * @return the case-folded character
+   */
+  static char foldCase(char c) {
+    return Character.toLowerCase(Character.toUpperCase(c));
   }
 
   /**
@@ -336,7 +356,7 @@ public class OffensiveWordFilter {
 
       // Iterate over each character in the current offensive word
       for (int i = 0; i < key.length(); ++i) {
-        char keyChar = key.charAt(i);
+        char keyChar = foldCase(key.charAt(i));
         Object wordMap = nowMap.get(keyChar);
 
         if (wordMap != null) {
