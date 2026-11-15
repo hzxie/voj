@@ -167,6 +167,33 @@ public class IsolateRunnerTest {
   }
 
   /**
+   * Test case: a compilation and a run of a program that prints a configured compile file from its
+   * working directory (the box), as fpc reads its configuration from HOME. Expected result: the
+   * compilation finds the host file copied into the box (rules naming a path rather than a plain
+   * file name are ignored); the run does not get it.
+   */
+  @Test
+  public void testOnlyCompilationsGetTheirConfigFiles() throws Exception {
+    Path configFile = Files.writeString(tempDir.resolve("fpc.cfg"), "-Fu/usr/lib/fpc\n");
+    // Copying to ".." or "sub/x" would fail and turn the compilation into an internal error.
+    ReflectionTestUtils.setField(
+        runner,
+        "compileFiles",
+        ".fpc.cfg=" + configFile + ",..=" + configFile + ",sub/x=" + configFile);
+    Path logFile = workDirectory.resolve("random-compile.log");
+
+    RunResult compilation = runner.run("cat .fpc.cfg", null, logFile.toString(), 1000, 0, true);
+
+    Assertions.assertEquals(Verdict.NORMAL, compilation.getVerdict());
+    Assertions.assertEquals("-Fu/usr/lib/fpc\n", Files.readString(logFile));
+
+    Path outputFile = workDirectory.resolve("output#1.txt");
+    RunResult run = runner.run("cat .fpc.cfg", null, outputFile.toString(), 1000, 0, false);
+
+    Assertions.assertEquals(Verdict.RUNTIME_ERROR, run.getVerdict());
+  }
+
+  /**
    * Test case: tests the boxEnvironment(Map) method. Expected result: only the locale and toolchain
    * variables are passed on (no secrets), and the Go build cache and GOPATH are the submission's
    * own, in the work directory, even when the judger sets them.

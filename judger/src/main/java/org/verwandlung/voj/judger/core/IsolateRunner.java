@@ -138,6 +138,9 @@ public class IsolateRunner implements SandboxRunner {
         // Only this one file is made visible to the sandbox; the box is wiped by --cleanup.
         Files.copy(Paths.get(inputFilePath), boxDirectory.resolve(BOX_STDIN_FILE));
       }
+      if (isCompilation) {
+        copyCompileFilesIntoBox(boxDirectory);
+      }
 
       List<String> command =
           buildRunCommand(
@@ -316,6 +319,39 @@ public class IsolateRunner implements SandboxRunner {
     arguments.set(0, resolveExecutable(arguments.get(0), searchPath));
     command.addAll(arguments);
     return command;
+  }
+
+  /**
+   * Copies the configured host files (judger.isolate.compileFiles, {@code boxName=hostPath} pairs)
+   * into the box before a compilation, for compilers that need a configuration file isolate cannot
+   * bind: it binds directories only, and the file's directory, such as /etc for Free Pascal's
+   * /etc/fpc.cfg, would expose far more than the file. The box is the compiler's working directory
+   * and HOME, where e.g. fpc looks for its configuration ({@code ~/.fpc.cfg}) before /etc. Links are
+   * followed on the host (the file is usually reached through /etc/alternatives); a missing file is
+   * skipped. The copies are wiped with the box.
+   *
+   * @param boxDirectory - the box directory on the host
+   * @throws IOException if a file cannot be copied
+   */
+  private void copyCompileFilesIntoBox(Path boxDirectory) throws IOException {
+    for (String rule : compileFiles.split(",")) {
+      int separator = rule.indexOf('=');
+      if (separator <= 0) {
+        continue;
+      }
+      String boxName = rule.substring(0, separator).trim();
+      Path hostFile = Paths.get(rule.substring(separator + 1).trim());
+      if (boxName.contains("/") || boxName.equals(".") || boxName.equals("..")) {
+        LOGGER.warn("Ignoring the compile file rule " + rule + ": not a plain file name.");
+        continue;
+      }
+      if (!Files.isRegularFile(hostFile)) {
+        continue;
+      }
+      try (InputStream inputStream = Files.newInputStream(hostFile)) {
+        Files.copy(inputStream, boxDirectory.resolve(boxName));
+      }
+    }
   }
 
   /**
@@ -604,6 +640,13 @@ public class IsolateRunner implements SandboxRunner {
    */
   @Value("${judger.isolate.compileSyscalls:27}")
   private String compileSyscalls = "27";
+
+  /**
+   * Host files copied into the box before a compilation ({@code boxName=hostPath}, comma-separated),
+   * for compiler configuration files isolate cannot bind.
+   */
+  @Value("${judger.isolate.compileFiles:.fpc.cfg=/etc/fpc.cfg}")
+  private String compileFiles = ".fpc.cfg=/etc/fpc.cfg";
 
   /** The maximum size (kilobytes) of files the sandboxed program may create (0 means no limit). */
   @Value("${judger.isolate.fileSizeLimitKb:262144}")
