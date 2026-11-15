@@ -43,11 +43,13 @@ import org.verwandlung.voj.judger.util.NativeLibraryLoader;
 @Component
 public class Runner implements SandboxRunner {
   /**
-   * Runs a command under the legacy native sandbox.
+   * Runs a command under the legacy native sandbox. Callers that do not say whether this is a
+   * compilation are treated as one exactly when there is no standard input (a compilation never has
+   * one, a run of the submission always does).
    *
    * @param commandLine - the command line to execute
    * @param inputFilePath - the file to redirect to standard input, or {@code null} for none
-   * @param outputFilePath - the file to capture standard output/error into, or {@code null} for none
+   * @param outputFilePath - the file to capture the output into, or {@code null} for none
    * @param timeLimitMs - the time limit in milliseconds (0 means no limit)
    * @param memoryLimitKb - the memory limit in kilobytes (0 means no limit)
    * @return the structured run result; never {@code null}
@@ -59,6 +61,35 @@ public class Runner implements SandboxRunner {
       String outputFilePath,
       int timeLimitMs,
       int memoryLimitKb) {
+    return run(
+        commandLine,
+        inputFilePath,
+        outputFilePath,
+        timeLimitMs,
+        memoryLimitKb,
+        inputFilePath == null);
+  }
+
+  /**
+   * Runs a command under the legacy native sandbox. A compilation captures standard output and
+   * standard error into {@code outputFilePath} (the compile log); a run of the submission captures
+   * only standard output, and its standard error is discarded so it never reaches the judged output.
+   *
+   * @param commandLine - the command line to execute
+   * @param inputFilePath - the file to redirect to standard input, or {@code null} for none
+   * @param outputFilePath - the file to capture the output into, or {@code null} for none
+   * @param timeLimitMs - the time limit in milliseconds (0 means no limit)
+   * @param memoryLimitKb - the memory limit in kilobytes (0 means no limit)
+   * @param isCompilation - whether this is a compilation (as opposed to a run of the submission)
+   * @return the structured run result; never {@code null}
+   */
+  public RunResult run(
+      String commandLine,
+      String inputFilePath,
+      String outputFilePath,
+      int timeLimitMs,
+      int memoryLimitKb,
+      boolean isCompilation) {
     try {
       Map<String, Object> nativeResult =
           getRuntimeResult(
@@ -68,7 +99,8 @@ public class Runner implements SandboxRunner {
               inputFilePath,
               outputFilePath,
               timeLimitMs,
-              memoryLimitKb);
+              memoryLimitKb,
+              isCompilation);
       if (nativeResult == null) {
         return RunResult.internalError();
       }
@@ -121,6 +153,7 @@ public class Runner implements SandboxRunner {
    * @param outputFilePath - the output file path (may be NULL)
    * @param timeLimit - the time limit (in ms, 0 means no limit)
    * @param memoryLimit - the memory limit (in KB, 0 means no limit)
+   * @param isCompilation - whether this is a compilation (stderr is then captured with stdout)
    * @return a Map<String, Object> object containing the program's runtime result
    */
   public native Map<String, Object> getRuntimeResult(
@@ -130,7 +163,8 @@ public class Runner implements SandboxRunner {
       String inputFilePath,
       String outputFilePath,
       int timeLimit,
-      int memoryLimit);
+      int memoryLimit,
+      boolean isCompilation);
 
   /**
    * The username for logging into the operating system. For security, we recommend running the

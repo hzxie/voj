@@ -58,7 +58,7 @@
  * Function Prototypes.
  */
 bool setupIoRedirection(const std::wstring&, const std::wstring&, HANDLE&, HANDLE&);
-void setupStartupInfo(STARTUPINFOW&, HANDLE&, HANDLE&);
+void setupStartupInfo(STARTUPINFOW&, HANDLE&, HANDLE&, HANDLE&);
 HANDLE createJobObject();
 bool createProcess(const std::wstring&, const std::wstring&, const std::wstring&, HANDLE&, LPVOID&, STARTUPINFOW&, PROCESS_INFORMATION&);
 jint getPeakMemoryUsage(HANDLE& hJob);
@@ -79,15 +79,17 @@ LPCWSTR getConstWideStringPointer(const std::wstring&);
  * @param  jUsername       - the Windows username
  * @param  jPassword       - the Windows password
  * @param  jInputFilePath  - the input file path when running the program (may be NULL)
- * @param  jOutputFilePath - the output file path after running the program (may be NULL)
+ * @param  jOutputFilePath - the file receiving stdout (may be NULL); for a compilation it also
+ *                           receives stderr, otherwise stderr is discarded
  * @param  timeLimit       - the program execution time limit (ms, 0 means no limit)
  * @param  memoryLimit     - the program execution memory limit (KB, 0 means no limit)
+ * @param  isCompilation   - whether this is a compilation (as opposed to a run of the submission)
  * @return a Map<String, Object> object containing the runtime result
  */
 JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntimeResult(
     JNIEnv* jniEnv, jobject selfReference, jstring jCommandLine, jstring jUsername,
     jstring jPassword, jstring jInputFilePath, jstring jOutputFilePath, jint timeLimit,
-    jint memoryLimit) {
+    jint memoryLimit, jboolean isCompilation) {
     std::wstring        commandLine         = getWideString(getStringValue(jniEnv, jCommandLine));
     std::wstring        username            = getWideString(getStringValue(jniEnv, jUsername));
     std::wstring        password            = getWideString(getStringValue(jniEnv, jPassword));
@@ -96,6 +98,7 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
 
     HANDLE              hInput              = NULL;
     HANDLE              hOutput             = NULL;
+    HANDLE              hError              = NULL;
     HANDLE              hToken              = NULL;
     HANDLE              hJob                = NULL;
     LPVOID              lpEnvironment       = NULL;
@@ -110,7 +113,19 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     if ( !setupIoRedirection(inputFilePath, outputFilePath, hInput, hOutput) ) {
         throwStringException(jniEnv, getErrorMessage("SetupIoRedirection"));
     }
-    setupStartupInfo(startupInfo, hInput, hOutput);
+    // A compilation's diagnostics (stderr) are the compile log, but a submission's stderr must never
+    // reach the judged output: discard it.
+    if ( isCompilation ) {
+        hError = hOutput;
+    } else {
+        SECURITY_ATTRIBUTES nulSa = { sizeof(SECURITY_ATTRIBUTES), NULL, TRUE };
+        hError = CreateFileW(L"NUL", GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, &nulSa,
+                    OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+        if ( hError == INVALID_HANDLE_VALUE ) {
+            hError = NULL;
+        }
+    }
+    setupStartupInfo(startupInfo, hInput, hOutput, hError);
 
     // The Job Object enforces the active-process limit (anti fork bomb) and the UI restrictions, and
     // kills the whole process tree atomically when it is closed. The memory limit is enforced below
@@ -190,6 +205,9 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     if ( hInput != NULL ) {
         CloseHandle(hInput);
     }
+    if ( hError != NULL && hError != hOutput ) {
+        CloseHandle(hError);
+    }
     if ( hOutput != NULL ) {
         CloseHandle(hOutput);
     }
@@ -240,12 +258,13 @@ bool setupIoRedirection(const std::wstring& inputFilePath, const std::wstring& o
  * @param startupInfo - the STARTUPINFOW structure
  * @param hInput      - the file input handle
  * @param hOutput     - the file output handle
+ * @param hError      - the standard error handle
  */
-void setupStartupInfo(STARTUPINFOW& startupInfo, HANDLE& hInput, HANDLE& hOutput) {
+void setupStartupInfo(STARTUPINFOW& startupInfo, HANDLE& hInput, HANDLE& hOutput, HANDLE& hError) {
     startupInfo.cb              = sizeof(STARTUPINFOW);
     startupInfo.dwFlags        |= STARTF_USESTDHANDLES;
     startupInfo.hStdInput       = hInput;
-    startupInfo.hStdError       = hOutput;
+    startupInfo.hStdError       = hError;
     startupInfo.hStdOutput      = hOutput;
 }
 

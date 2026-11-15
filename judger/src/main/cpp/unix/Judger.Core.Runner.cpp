@@ -75,7 +75,8 @@ struct ChildPlan {
   std::string              executable;     // absolute path or PATH-resolved program to exec
   std::vector<char*>       argv;           // NULL-terminated argument vector
   std::string              inputFilePath;  // stdin redirect (empty = none)
-  std::string              outputFilePath; // stdout/stderr redirect (empty = none)
+  std::string              outputFilePath; // stdout redirect (empty = none)
+  bool                     compileStep;    // compile: stderr also goes to outputFilePath
   int                      timeLimit;      // ms (0 = no limit)
   bool                     dropPrivileges; // whether to setuid/setgid
   uid_t                    dropUid;
@@ -109,15 +110,17 @@ static int  openOutputFile(const char*);
  * @param  jUsername       - the unprivileged user to drop to (when running as root)
  * @param  jPassword       - unused on Unix (privilege drop is resolved from the username)
  * @param  jInputFilePath  - the input file path when running the program (may be NULL)
- * @param  jOutputFilePath - the output file path after running the program (may be NULL)
+ * @param  jOutputFilePath - the file receiving stdout (may be NULL); for a compilation it also
+ *                           receives stderr, otherwise stderr is discarded
  * @param  timeLimit       - the program execution time limit (ms, 0 means no limit)
  * @param  memoryLimit     - the program execution memory limit (KB, 0 means no limit)
+ * @param  isCompilation   - whether this is a compilation (as opposed to a run of the submission)
  * @return a Map<String, Object> object containing the runtime result
  */
 JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntimeResult(
     JNIEnv* jniEnv, jobject selfReference, jstring jCommandLine, jstring jUsername,
     jstring jPassword, jstring jInputFilePath, jstring jOutputFilePath, jint timeLimit,
-    jint memoryLimit) {
+    jint memoryLimit, jboolean isCompilation) {
     (void) selfReference;
     (void) jPassword;
     std::string commandLine = getStringValue(jniEnv, jCommandLine);
@@ -141,6 +144,9 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     plan.executable     = resolveExecutable(args[0]);
     plan.inputFilePath  = getStringValue(jniEnv, jInputFilePath);
     plan.outputFilePath = getStringValue(jniEnv, jOutputFilePath);
+    // A compiler's diagnostics (stderr) are the compile log, but a submission's stderr must never
+    // reach the judged output.
+    plan.compileStep    = (isCompilation == JNI_TRUE);
     plan.timeLimit      = timeLimit;
     plan.dropPrivileges = false;
     plan.dropUid        = 0;
@@ -350,8 +356,18 @@ static void runChild(const ChildPlan& plan, int syncWriteFd) {
             reportChildFailure(syncWriteFd, errno);
         }
         dup2(outputFd, STDOUT_FILENO);
-        dup2(outputFd, STDERR_FILENO);
+        if ( plan.compileStep ) {
+            dup2(outputFd, STDERR_FILENO);
+        }
         close(outputFd);
+    }
+    if ( !plan.compileStep ) {
+        int nullFd = open("/dev/null", O_WRONLY | O_CLOEXEC);
+        if ( nullFd < 0 ) {
+            reportChildFailure(syncWriteFd, errno);
+        }
+        dup2(nullFd, STDERR_FILENO);
+        close(nullFd);
     }
 
     // Tier 2 (best-effort): install the pre-built seccomp syscall filter via the raw syscall, so
