@@ -32,16 +32,19 @@ ENV VOJ_JMS_BROKER_URL=tcp://voj.web:61616
 ENV VOJ_WEB_BASE_URL=http://voj.web:8080/voj
 ENV VOJ_JUDGER_API_TOKEN=verwandlung
 # Go toolchain settings. GOROOT/PATH point at the official tarball unpacked into
-# /opt/go below. The judger drops privileges before compiling, so the build cache
-# and GOPATH must live somewhere the unprivileged user can write (HOME stays
-# /root, 0700) -- hence /tmp. GOENV=off skips the per-user env file under $HOME,
-# and GOTOOLCHAIN=local keeps `go build` from fetching a newer toolchain over the
-# (namespaced, offline) sandbox network.
+# /opt/go below. GOCACHE and GOPATH are deliberately not set: the judger gives
+# every submission its own, in its private work directory, because a build cache
+# shared by all submissions (which compile and run as the same sandbox user)
+# could be poisoned by one of them for every later Go build. Each submission's
+# cache is seeded from the read-only, root-owned cache built below
+# (VOJ_GO_BUILD_CACHE_SEED), so the standard library is not rebuilt every time.
+# GOENV=off skips the per-user env file under $HOME, and GOTOOLCHAIN=local keeps
+# `go build` from fetching a newer toolchain over the (namespaced, offline)
+# sandbox network.
 ENV GOROOT=/opt/go
-ENV GOCACHE=/tmp/.cache/go-build
-ENV GOPATH=/tmp/go
 ENV GOENV=off
 ENV GOTOOLCHAIN=local
+ENV VOJ_GO_BUILD_CACHE_SEED=/opt/go-build-cache
 # Put the Go and Kotlin compilers (unpacked into /opt below) on PATH so the
 # judger can invoke `go`/`kotlinc` when compiling submissions.
 ENV PATH=/opt/go/bin:/opt/kotlinc/bin:${PATH}
@@ -88,6 +91,24 @@ RUN wget --progress=dot:giga --tries=5 --timeout=30 --retry-connrefused \
         https://go.dev/dl/${GO_VERSION}.linux-${TARGETARCH}.tar.gz && \
     tar -C /opt -xzf ${GO_VERSION}.linux-${TARGETARCH}.tar.gz && \
     rm ${GO_VERSION}.linux-${TARGETARCH}.tar.gz
+
+# Build the read-only Go build cache that seeds each submission's own cache: the
+# standard-library packages submissions commonly import, compiled with the same
+# toolchain and environment the judger compiles with. The judger hard-links these
+# files into a submission's cache; they must stay owned by root and read-only, so
+# a submission can neither modify them nor anything another submission builds on.
+RUN mkdir /tmp/go-warm && cd /tmp/go-warm && \
+    printf '%s\n' 'package main' 'import (' \
+        '_ "bufio"' '_ "bytes"' '_ "cmp"' '_ "container/heap"' '_ "container/list"' \
+        '_ "errors"' '_ "fmt"' '_ "io"' '_ "maps"' '_ "math"' '_ "math/big"' '_ "math/bits"' \
+        '_ "math/rand"' '_ "math/rand/v2"' '_ "os"' '_ "regexp"' '_ "slices"' '_ "sort"' \
+        '_ "strconv"' '_ "strings"' '_ "sync"' '_ "time"' '_ "unicode"' ')' 'func main() {}' > main.go && \
+    GOCACHE=$VOJ_GO_BUILD_CACHE_SEED GOPATH=/tmp/go-warm/go go build -o /dev/null main.go && \
+    rm -f $VOJ_GO_BUILD_CACHE_SEED/trim.txt && \
+    chown -R root:root $VOJ_GO_BUILD_CACHE_SEED && \
+    find $VOJ_GO_BUILD_CACHE_SEED -type d -exec chmod 0755 {} + && \
+    find $VOJ_GO_BUILD_CACHE_SEED -type f -exec chmod 0444 {} + && \
+    cd / && rm -rf /tmp/go-warm /root/.cache
 
 # Build the judger project from the build context (no network checkout). voj.properties
 # ships with ${VOJ_*} placeholders that are resolved from the environment at runtime,
