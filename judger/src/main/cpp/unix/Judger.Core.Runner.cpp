@@ -74,6 +74,7 @@ static const int       WALL_TIME_FACTOR       = 3;           // wall-clock backs
 static const long long WALL_TIME_SLACK_MS     = 1000;        // wall-clock backstop slack
 static const rlim_t    OUTPUT_FILE_SIZE_LIMIT = (rlim_t)256 * 1024 * 1024; // RLIMIT_FSIZE (256 MB)
 static const rlim_t    PROCESS_NUMBER_LIMIT   = 64;          // RLIMIT_NPROC (anti fork-bomb)
+static const int       CLEANUP_ATTEMPTS       = 1000;        // kill/reap rounds (x 1 ms) after a run
 
 /**
  * The only environment variables the sandboxed process inherits from the judger. The judger's own
@@ -120,6 +121,9 @@ static std::string buildSeccompProgram();
 static long long getMonotonicMillis();
 static int  readCpuTimeMillis(pid_t);
 static int  readPeakMemoryKb(pid_t);
+static void reapProcessGroup(pid_t);
+static void killProcessGroup(pid_t);
+static void killSandboxUserProcesses(uid_t, pid_t);
 static void runChild(const ChildPlan&, int syncWriteFd) __attribute__((noreturn));
 static void reportChildFailure(int syncWriteFd, int error) __attribute__((noreturn));
 static int  openOutputFile(const char*);
@@ -285,8 +289,14 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     finished.store(true);
     watchdog.join();
 
-    // Reap any leftover children (e.g. from a fork bomb) still in the group.
-    kill(-pid, SIGKILL);
+    // Kill everything the program left behind (background children, a fork bomb) before the caller
+    // looks at its output. setsid/setpgid are denied by the seccomp filter, so every descendant is
+    // still in the process group; when running as a dedicated sandbox user, also sweep every
+    // process of that user, in case one got out of the group anyway (e.g. no seccomp filter).
+    killProcessGroup(pid);
+    if ( plan.dropPrivileges ) {
+        killSandboxUserProcesses(plan.dropUid, pid);
+    }
 
     // Kernel-accounted CPU time (user + system).
     long long cpuMillis =
@@ -597,6 +607,9 @@ static std::string buildSeccompProgram() {
         SCMP_SYS(swapon),            SCMP_SYS(swapoff),          SCMP_SYS(settimeofday),
         SCMP_SYS(clock_settime),     SCMP_SYS(adjtimex),         SCMP_SYS(setns),
         SCMP_SYS(unshare),
+        // Leaving the process group would escape the watchdog's kill(-pgid) and the group's
+        // resource accounting, letting a process outlive the run and tamper with later ones.
+        SCMP_SYS(setsid),            SCMP_SYS(setpgid),
     };
     for ( int syscallNr : deniedSyscalls ) {
         if ( syscallNr >= 0 ) {
@@ -622,6 +635,75 @@ static std::string buildSeccompProgram() {
     }
     seccomp_release(ctx);
     return program;
+}
+
+/**
+ * Reaps the members of a process group that are children of this process. Normally the program's
+ * descendants are reparented to init, but when the judger is PID 1 (e.g. in its Docker image) or a
+ * subreaper they become ours, and would otherwise linger as zombies counted against RLIMIT_NPROC.
+ * Only the given group is waited for, so the JVM's other children are never touched.
+ * @param  pgid - the process group ID
+ */
+static void reapProcessGroup(pid_t pgid) {
+    while ( waitpid(-pgid, nullptr, WNOHANG | __WALL) > 0 ) {
+        // Keep reaping.
+    }
+}
+
+/**
+ * Kills every process in the group and waits (bounded) until the group is empty.
+ * @param  pgid - the process group ID
+ */
+static void killProcessGroup(pid_t pgid) {
+    for ( int attempt = 0; attempt < CLEANUP_ATTEMPTS; ++attempt ) {
+        reapProcessGroup(pgid);
+        if ( kill(-pgid, SIGKILL) != 0 ) {
+            return; // ESRCH: nothing is left in the group
+        }
+        usleep(POLL_INTERVAL_US);
+    }
+}
+
+/**
+ * Kills every process owned by the sandbox user. A helper process drops to that user and calls
+ * kill(-1, SIGKILL), which signals every process it is allowed to signal (all of the sandbox user's
+ * processes in this PID namespace) except itself, until none is left. This is only safe when the
+ * sandbox user is dedicated to the judger, i.e. when privileges are dropped; it is never called
+ * otherwise, since it would kill the judger's own user's processes.
+ * @param  uid  - the sandbox user ID (never root)
+ * @param  pgid - the run's process group, reaped meanwhile in case its members are our children
+ */
+static void killSandboxUserProcesses(uid_t uid, pid_t pgid) {
+    if ( uid == 0 ) {
+        return;
+    }
+    pid_t helper = fork();
+    if ( helper < 0 ) {
+        return;
+    }
+    if ( helper == 0 ) {
+        // Async-signal-safe only: this is a fork of the multi-threaded JVM. A failed or partial
+        // setuid must never reach kill(-1), which as root would signal every process on the host.
+        if ( setuid(uid) != 0 || getuid() != uid || geteuid() != uid ) {
+            _exit(2);
+        }
+        struct timespec pause = {0, POLL_INTERVAL_US * 1000L};
+        for ( int attempt = 0; attempt < CLEANUP_ATTEMPTS; ++attempt ) {
+            if ( kill(-1, SIGKILL) != 0 ) {
+                _exit(errno == ESRCH ? 0 : 3); // ESRCH: no process of the user is left
+            }
+            nanosleep(&pause, nullptr);
+        }
+        _exit(1);
+    }
+    for ( ;; ) {
+        reapProcessGroup(pgid);
+        pid_t waited = waitpid(helper, nullptr, WNOHANG);
+        if ( waited == helper || (waited < 0 && errno != EINTR) ) {
+            break;
+        }
+        usleep(POLL_INTERVAL_US);
+    }
 }
 
 /**
