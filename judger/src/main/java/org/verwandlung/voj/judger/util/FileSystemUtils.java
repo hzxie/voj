@@ -17,6 +17,7 @@
 package org.verwandlung.voj.judger.util;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
@@ -32,6 +33,36 @@ import java.nio.file.attribute.BasicFileAttributes;
 public class FileSystemUtils {
   /** Utility classes should not have a public constructor. */
   private FileSystemUtils() {}
+
+  /**
+   * Opens a file that sandboxed code may have written (a submission's output or the compile log)
+   * for reading, refusing anything but a plain regular file. The judger reads these files with its
+   * own (typically root) privileges, while the directory holding them belongs to the sandbox user:
+   * a submission could otherwise replace its output with a symbolic link to e.g. {@code
+   * /etc/shadow} (and have it compared against the answer or echoed back in the compile log), a
+   * hard link, or a FIFO that blocks the judger forever. All sandboxed processes have been killed
+   * by the time the judger reads the file, so the file cannot change between the check and the
+   * open; the open itself also refuses symbolic links.
+   *
+   * @param path - the file to open
+   * @return an input stream over the file
+   * @throws IOException if the file does not exist, is not a regular file, has more than one link,
+   *     or cannot be opened
+   */
+  public static InputStream newSandboxFileInputStream(Path path) throws IOException {
+    BasicFileAttributes attributes =
+        Files.readAttributes(path, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
+    if (!attributes.isRegularFile()) {
+      throw new IOException("Refusing to read a non-regular sandbox file: " + path);
+    }
+    if (!System.getProperty("os.name").contains("Windows")) {
+      Object numberOfLinks = Files.getAttribute(path, "unix:nlink", LinkOption.NOFOLLOW_LINKS);
+      if (numberOfLinks instanceof Integer && (Integer) numberOfLinks != 1) {
+        throw new IOException("Refusing to read a hard-linked sandbox file: " + path);
+      }
+    }
+    return Files.newInputStream(path, LinkOption.NOFOLLOW_LINKS);
+  }
 
   /**
    * Recursively deletes a file or directory <em>without following symbolic links</em>. A symbolic

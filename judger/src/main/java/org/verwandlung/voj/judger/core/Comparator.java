@@ -16,18 +16,19 @@
  */
 package org.verwandlung.voj.judger.core;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.LineIterator;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.stereotype.Component;
+import org.verwandlung.voj.judger.util.FileSystemUtils;
 
 import java.io.Closeable;
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Paths;
 
 /**
  * Compares the user's output against the standard output.
@@ -91,13 +92,24 @@ public class Comparator {
    */
   public boolean isOutputTheSame(String standardOutputFilePath, String outputFilePath)
       throws IOException {
-    File stdFile = new File(standardOutputFilePath);
-    File file = new File(outputFilePath);
-
     // ISO-8859-1 maps every byte to one char, so non-ASCII (or invalid UTF-8) bytes are compared
-    // as-is instead of being decoded, and possibly collapsed into U+FFFD.
-    LineIterator stdFileItr = FileUtils.lineIterator(stdFile, StandardCharsets.ISO_8859_1.name());
-    LineIterator fileItr = FileUtils.lineIterator(file, StandardCharsets.ISO_8859_1.name());
+    // as-is instead of being decoded, and possibly collapsed into U+FFFD. The user's output lives in
+    // the sandbox-owned work directory, so it is opened without following links.
+    LineIterator stdFileItr =
+        new LineIterator(
+            new InputStreamReader(
+                new FileInputStream(standardOutputFilePath), StandardCharsets.ISO_8859_1));
+    LineIterator fileItr;
+    try {
+      fileItr =
+          new LineIterator(
+              new InputStreamReader(
+                  FileSystemUtils.newSandboxFileInputStream(Paths.get(outputFilePath)),
+                  StandardCharsets.ISO_8859_1));
+    } catch (IOException ex) {
+      LineIterator.closeQuietly(stdFileItr);
+      throw ex;
+    }
     try {
       return isFileOutputTheSame(stdFileItr, fileItr);
     } finally {
@@ -119,7 +131,8 @@ public class Comparator {
     try (NewlineNormalizingReader stdReader =
             new NewlineNormalizingReader(new FileInputStream(standardOutputFilePath));
         NewlineNormalizingReader reader =
-            new NewlineNormalizingReader(new FileInputStream(outputFilePath))) {
+            new NewlineNormalizingReader(
+                FileSystemUtils.newSandboxFileInputStream(Paths.get(outputFilePath)))) {
       int lastByte = -1;
       while (true) {
         int stdByte = stdReader.read();

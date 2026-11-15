@@ -21,6 +21,8 @@ import java.nio.file.Path;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.io.TempDir;
 
 /**
@@ -97,6 +99,23 @@ public class ComparatorUnitTest {
     String body = "1234567\r\n".repeat(5000);
     assertResult(body + "8\n", body.replace("\r\n", "\n") + "8", "AC", "AC");
     assertResult(body + "8\n", body + "9\n", "WA", "WA");
+  }
+
+  /**
+   * Test case: the user's output is replaced by a symbolic link to the answer itself. Expected
+   * result: the link is not followed, so the submission does not get AC for "printing" the answer.
+   */
+  @Test
+  @DisabledOnOs(OS.WINDOWS)
+  public void testSymlinkedOutputIsNotFollowed() throws Exception {
+    Path std = Files.writeString(tempDir.resolve("std-link.txt"), "42\n");
+    Path out = Files.createSymbolicLink(tempDir.resolve("out-link.txt"), std);
+    Assertions.assertThrows(
+        java.io.IOException.class,
+        () -> comparator.getComparisonResult(std.toString(), out.toString(), false));
+    Assertions.assertThrows(
+        java.io.IOException.class,
+        () -> comparator.getComparisonResult(std.toString(), out.toString(), true));
   }
 
   /**

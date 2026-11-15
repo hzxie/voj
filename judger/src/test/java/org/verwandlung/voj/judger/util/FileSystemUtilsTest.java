@@ -16,6 +16,8 @@
  */
 package org.verwandlung.voj.judger.util;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
@@ -79,6 +81,47 @@ public class FileSystemUtilsTest {
     FileSystemUtils.deleteRecursively(rootLink);
     Assertions.assertFalse(Files.exists(rootLink, LinkOption.NOFOLLOW_LINKS));
     Assertions.assertEquals("secret", Files.readString(outsideFile));
+  }
+
+  /**
+   * Test case: tests the newSandboxFileInputStream(Path) method. Test data: a plain regular file.
+   * Expected result: its content is read.
+   */
+  @Test
+  public void testNewSandboxFileInputStreamReadsRegularFile() throws Exception {
+    Path file = Files.writeString(tempDir.resolve("output#0.txt"), "42\n");
+    try (InputStream inputStream = FileSystemUtils.newSandboxFileInputStream(file)) {
+      Assertions.assertEquals("42\n", new String(inputStream.readAllBytes()));
+    }
+  }
+
+  /**
+   * Test case: tests the newSandboxFileInputStream(Path) method. Test data: a symbolic link, a hard
+   * link, a FIFO and a missing file planted in place of the output. Expected result: each is
+   * refused instead of being followed (or blocking).
+   */
+  @Test
+  @DisabledOnOs(OS.WINDOWS)
+  public void testNewSandboxFileInputStreamRefusesPlantedFiles() throws Exception {
+    Path secret = Files.writeString(tempDir.resolve("secret.txt"), "secret");
+
+    Path symlink = Files.createSymbolicLink(tempDir.resolve("output#1.txt"), secret);
+    Assertions.assertThrows(
+        IOException.class, () -> FileSystemUtils.newSandboxFileInputStream(symlink));
+
+    Path hardLink = Files.createLink(tempDir.resolve("output#2.txt"), secret);
+    Assertions.assertThrows(
+        IOException.class, () -> FileSystemUtils.newSandboxFileInputStream(hardLink));
+
+    Path fifo = tempDir.resolve("output#3.txt");
+    Process mkfifo = new ProcessBuilder("mkfifo", fifo.toString()).start();
+    Assertions.assertEquals(0, mkfifo.waitFor());
+    Assertions.assertThrows(
+        IOException.class, () -> FileSystemUtils.newSandboxFileInputStream(fifo));
+
+    Assertions.assertThrows(
+        IOException.class,
+        () -> FileSystemUtils.newSandboxFileInputStream(tempDir.resolve("missing.txt")));
   }
 
   /** A temporary directory managed by JUnit. */

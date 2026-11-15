@@ -16,7 +16,9 @@
  */
 package org.verwandlung.voj.judger.core;
 
-import java.io.FileInputStream;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -28,6 +30,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import org.verwandlung.voj.judger.model.Submission;
+import org.verwandlung.voj.judger.util.FileSystemUtils;
 
 /**
  * The program compiler, used to compile the code submitted by users.
@@ -112,16 +115,14 @@ public class Compiler {
    * @return the content of the compilation log
    */
   private String getCompileOutput(String compileLogPath) {
-    FileInputStream inputStream = null;
-    String compileLog = "";
-    try {
-      inputStream = new FileInputStream(compileLogPath);
-      compileLog = IOUtils.toString(inputStream);
-      inputStream.close();
+    // The log is written by the compiler as the sandbox user into its own directory: never follow
+    // a link planted there, or the log shown to the user could be any file the judger can read.
+    try (InputStream inputStream =
+        FileSystemUtils.newSandboxFileInputStream(Paths.get(compileLogPath))) {
+      return IOUtils.toString(inputStream, StandardCharsets.UTF_8);
     } catch (Exception ex) {
-      // Do nothing
+      return "";
     }
-    return compileLog;
   }
 
   /** The configured sandbox runner, used to execute the compile command. */
