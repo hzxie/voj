@@ -54,4 +54,36 @@ public interface SandboxRunner {
       String outputFilePath,
       int timeLimitMs,
       int memoryLimitKb);
+
+  /**
+   * Runs a command under the sandbox, telling a compilation apart from a run of the submission.
+   *
+   * <ul>
+   *   <li>A compilation ({@code isCompilation == true}) captures standard output <em>and</em>
+   *       standard error into {@code outputFilePath}, so the compile log keeps the diagnostics.
+   *   <li>A run of the submission ({@code isCompilation == false}) captures only standard output
+   *       into {@code outputFilePath}, which is compared against the expected answer; standard
+   *       error must be kept out of it (sent elsewhere or discarded).
+   * </ul>
+   *
+   * <p>The default implementation ignores the distinction and delegates to {@link #run(String,
+   * String, String, int, int)}, for runners that do not support it yet.
+   *
+   * @param commandLine - the command line to execute
+   * @param inputFilePath - the file to redirect to standard input, or {@code null} for none
+   * @param outputFilePath - the file to capture the output into, or {@code null} for none
+   * @param timeLimitMs - the time limit in milliseconds (0 means no limit)
+   * @param memoryLimitKb - the memory limit in kilobytes (0 means no limit)
+   * @param isCompilation - whether this is a compilation (as opposed to a run of the submission)
+   * @return the structured run result; never {@code null}
+   */
+  default RunResult run(
+      String commandLine,
+      String inputFilePath,
+      String outputFilePath,
+      int timeLimitMs,
+      int memoryLimitKb,
+      boolean isCompilation) {
+    return run(commandLine, inputFilePath, outputFilePath, timeLimitMs, memoryLimitKb);
+  }
 }

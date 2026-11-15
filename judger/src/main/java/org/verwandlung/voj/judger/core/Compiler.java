@@ -96,7 +96,7 @@ public class Compiler {
     LOGGER.info("Start compiling with command: " + commandLine);
     RunResult runResult =
         sandboxRunner.run(
-            commandLine, inputFilePath, compileLogPath, compileTimeLimit, compileMemoryLimit);
+            commandLine, inputFilePath, compileLogPath, compileTimeLimit, compileMemoryLimit, true);
     Map<String, Object> result = new HashMap<>(3, 1);
 
     boolean isSuccessful = runResult.getVerdict() == Verdict.NORMAL;

@@ -17,8 +17,14 @@
 package org.verwandlung.voj.judger.core;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -46,19 +52,35 @@ import org.springframework.stereotype.Component;
  *   <li>isolate 2.x with cgroup v2 support is installed and the {@code --cg} option is available.
  *   <li>The judger process is allowed to run isolate (isolate is installed setuid-root, or the
  *       judger runs with the appropriate privileges / via {@code isolate}'s init).
- *   <li>Directories are bound into the sandbox at their <em>same absolute path</em> via {@code
+ *   <li>The work directory is bound into the sandbox at its <em>same absolute path</em> via {@code
  *       --dir}, so the absolute command line built by {@link ProgramRunner} works unchanged inside
- *       the box. The work directory is bound read-write; the input file's directory read-only. The
- *       expected-output (checkpoint) directory is deliberately <em>not</em> bound, so submitted code
- *       cannot read the answers.
+ *       the box. It is writable while compiling (the compiler writes the binary there) and
+ *       read-only while running a submission. It must be accessible to isolate's box user.
+ *   <li>Standard input/output never go through a bound directory. The checkpoint directory, which
+ *       holds both the inputs and the expected outputs, is never bound: the single input file of
+ *       the current run is copied into isolate's own box directory and redirected from there, and
+ *       the captured output is copied out of the box after the run. isolate opens these
+ *       redirections inside the sandbox, relative to the box (its working directory), as the box
+ *       user, and owns the box directory's permissions, so this works whatever the permissions of
+ *       the checkpoint and work directories are.
  * </ul>
  *
  * @author Haozhe Xie
  */
 @Component
 public class IsolateRunner implements SandboxRunner {
+  /** The name, inside the box, of the copy of the input file. */
+  static final String BOX_STDIN_FILE = "stdin.txt";
+
+  /** The name, inside the box, of the captured standard output. */
+  static final String BOX_STDOUT_FILE = "stdout.txt";
+
+  /** The name, inside the box, of the (discarded) standard error of a submission run. */
+  static final String BOX_STDERR_FILE = "stderr.txt";
+
   /**
-   * Runs a command inside an isolate sandbox.
+   * Runs a command inside an isolate sandbox, capturing standard output and standard error together
+   * (the semantics of a compilation).
    *
    * @param commandLine - the command line to execute (absolute paths)
    * @param inputFilePath - the file to redirect to standard input, or {@code null} for none
@@ -68,24 +90,64 @@ public class IsolateRunner implements SandboxRunner {
    * @return the structured run result; never {@code null}
    */
   @Override
-  public synchronized RunResult run(
+  public RunResult run(
       String commandLine,
       String inputFilePath,
       String outputFilePath,
       int timeLimitMs,
       int memoryLimitKb) {
+    return run(commandLine, inputFilePath, outputFilePath, timeLimitMs, memoryLimitKb, true);
+  }
+
+  /**
+   * Runs a command inside an isolate sandbox.
+   *
+   * @param commandLine - the command line to execute (absolute paths)
+   * @param inputFilePath - the file to redirect to standard input, or {@code null} for none
+   * @param outputFilePath - the file to capture the output into, or {@code null} for none
+   * @param timeLimitMs - the time limit in milliseconds (0 means no limit)
+   * @param memoryLimitKb - the memory limit in kilobytes (0 means no limit)
+   * @param isCompilation - whether this is a compilation (stderr merged into the output, work
+   *     directory writable) or a run of the submission (stderr discarded, work directory read-only)
+   * @return the structured run result; never {@code null}
+   */
+  @Override
+  public synchronized RunResult run(
+      String commandLine,
+      String inputFilePath,
+      String outputFilePath,
+      int timeLimitMs,
+      int memoryLimitKb,
+      boolean isCompilation) {
     File metaFile = null;
     try {
-      initBox();
+      Path boxDirectory = initBox();
       metaFile = File.createTempFile("voj-isolate-", ".meta");
+
+      boolean hasInput = inputFilePath != null && !inputFilePath.isEmpty();
+      boolean hasOutput = outputFilePath != null && !outputFilePath.isEmpty();
+      if (hasInput) {
+        // Only this one file is made visible to the sandbox; the box is wiped by --cleanup.
+        Files.copy(Paths.get(inputFilePath), boxDirectory.resolve(BOX_STDIN_FILE));
+      }
 
       List<String> command =
           buildRunCommand(
-              commandLine, inputFilePath, outputFilePath, timeLimitMs, memoryLimitKb, metaFile);
+              commandLine,
+              hasInput,
+              outputFilePath,
+              timeLimitMs,
+              memoryLimitKb,
+              isCompilation,
+              metaFile);
       LOGGER.info("Running under isolate: " + String.join(" ", command));
       execute(command);
 
-      return parseMeta(metaFile, memoryLimitKb);
+      RunResult result = parseMeta(metaFile, memoryLimitKb);
+      if (hasOutput) {
+        copyOutOfBox(boxDirectory.resolve(BOX_STDOUT_FILE), Paths.get(outputFilePath));
+      }
+      return result;
     } catch (Exception ex) {
       LOGGER.catching(ex);
       return RunResult.internalError();
@@ -100,10 +162,29 @@ public class IsolateRunner implements SandboxRunner {
   /**
    * Initializes (or re-initializes) the isolate sandbox box.
    *
+   * @return the box directory on the host (isolate prints the box root; the box is its {@code box}
+   *     sub-directory, which is the sandbox's working directory)
    * @throws Exception if the box cannot be initialized
    */
-  private void initBox() throws Exception {
-    execute(Arrays.asList(isolateExecutable, "--cg", "-b", String.valueOf(boxId), "--init"));
+  private Path initBox() throws Exception {
+    // Start from an empty box even if a previous judger process died before cleaning up.
+    cleanupBox();
+    ProcessOutput init =
+        execute(Arrays.asList(isolateExecutable, "--cg", "-b", String.valueOf(boxId), "--init"));
+    if (init.exitCode != 0) {
+      throw new IOException("isolate --init failed: " + init.output.trim());
+    }
+    String boxRoot = "";
+    for (String line : init.output.split("\\R")) {
+      if (!line.isBlank()) {
+        boxRoot = line.trim();
+      }
+    }
+    Path boxDirectory = Paths.get(boxRoot, "box");
+    if (!boxRoot.startsWith("/") || !Files.isDirectory(boxDirectory, LinkOption.NOFOLLOW_LINKS)) {
+      throw new IOException("Unexpected isolate --init output: " + init.output.trim());
+    }
+    return boxDirectory;
   }
 
   /** Cleans up the isolate sandbox box, ignoring any failure. */
@@ -119,19 +200,21 @@ public class IsolateRunner implements SandboxRunner {
    * Builds the {@code isolate --run} command.
    *
    * @param commandLine - the command line to execute
-   * @param inputFilePath - the stdin file, or {@code null}
-   * @param outputFilePath - the stdout/stderr file, or {@code null}
+   * @param hasInput - whether the input was copied into the box as {@link #BOX_STDIN_FILE}
+   * @param outputFilePath - the file the output is eventually copied to, or {@code null}
    * @param timeLimitMs - the time limit (ms, 0 means no limit)
    * @param memoryLimitKb - the memory limit (KB, 0 means no limit)
+   * @param isCompilation - whether this is a compilation or a run of the submission
    * @param metaFile - the file isolate writes its accounting metadata to
    * @return the full command (program + arguments) to execute
    */
-  private List<String> buildRunCommand(
+  List<String> buildRunCommand(
       String commandLine,
-      String inputFilePath,
+      boolean hasInput,
       String outputFilePath,
       int timeLimitMs,
       int memoryLimitKb,
+      boolean isCompilation,
       File metaFile) {
     List<String> command = new ArrayList<>();
     command.add(isolateExecutable);
@@ -142,7 +225,7 @@ public class IsolateRunner implements SandboxRunner {
     command.add(metaFile.getAbsolutePath());
     command.add("--processes=" + maxProcesses);
     // Cap the size of files the sandboxed program may create, so a "disk bomb" (a compiler or a
-    // submission emitting a huge file) cannot fill the work directory. Mirrors the native runner's
+    // submission emitting a huge file) cannot fill the disk. Mirrors the native runner's
     // RLIMIT_FSIZE. isolate expects the limit in kilobytes.
     if (fileSizeLimitKb > 0) {
       command.add("--fsize=" + fileSizeLimitKb);
@@ -160,31 +243,59 @@ public class IsolateRunner implements SandboxRunner {
       command.add("--cg-mem=" + memoryLimitKb);
     }
 
-    // Bind the work directory (compiled binary + program output) read-write at its same path, and
-    // the input file's directory read-only. The expected-output directory is intentionally NOT bound.
-    // The work directory is derived from the output file, which always lives in it (the program
-    // output for a run, or the compile log for a compilation); this is robust regardless of whether
-    // the first command-line token is a path (e.g. "java", "python") or the binary itself.
+    // Bind the work directory (source + compiled binary) at its same path: read-write while
+    // compiling, read-only while running a submission, so a submission cannot leave files behind
+    // for later checkpoints. The work directory is derived from the output file, which always lives
+    // in it (the program output for a run, or the compile log for a compilation); this is robust
+    // regardless of whether the first command-line token is a path (e.g. "java", "python") or the
+    // binary itself. The checkpoint directory (inputs AND expected outputs) is never bound.
     String workDirectory = directoryOf(outputFilePath);
     if (workDirectory != null) {
-      command.add("--dir=" + workDirectory + ":rw");
+      command.add("--dir=" + workDirectory + (isCompilation ? ":rw" : ""));
     }
-    if (inputFilePath != null && !inputFilePath.isEmpty()) {
-      String inputDirectory = directoryOf(inputFilePath);
-      if (inputDirectory != null) {
-        command.add("--dir=" + inputDirectory);
-      }
-      command.add("--stdin=" + inputFilePath);
+
+    // Redirections are opened by isolate inside the sandbox, relative to the box (the working
+    // directory), so they name files in the box rather than host paths.
+    if (hasInput) {
+      command.add("--stdin=" + BOX_STDIN_FILE);
     }
     if (outputFilePath != null && !outputFilePath.isEmpty()) {
-      command.add("--stdout=" + outputFilePath);
-      command.add("--stderr=" + outputFilePath);
+      command.add("--stdout=" + BOX_STDOUT_FILE);
+      if (isCompilation) {
+        // The compile log keeps the compiler's diagnostics (usually written to stderr).
+        command.add("--stderr-to-stdout");
+      } else {
+        // Keep stderr out of the output compared against the answer; it is wiped with the box.
+        command.add("--stderr=" + BOX_STDERR_FILE);
+      }
     }
 
     command.add("--run");
     command.add("--");
     command.addAll(Arrays.asList(commandLine.trim().split("\\s+")));
     return command;
+  }
+
+  /**
+   * Copies the captured output out of the box once the sandbox has exited. The sandboxed program
+   * could have replaced the file with a symbolic link or a FIFO, so only a regular file is copied
+   * (opened without following links); anything else counts as empty output. The destination is
+   * replaced rather than written through, so a link planted at the destination is never followed.
+   *
+   * @param boxFile - the output file inside the box
+   * @param destination - the file to copy the output to
+   * @throws IOException if the output cannot be copied
+   */
+  private void copyOutOfBox(Path boxFile, Path destination) throws IOException {
+    if (Files.isRegularFile(boxFile, LinkOption.NOFOLLOW_LINKS)) {
+      try (InputStream inputStream = Files.newInputStream(boxFile, LinkOption.NOFOLLOW_LINKS)) {
+        Files.copy(inputStream, destination, StandardCopyOption.REPLACE_EXISTING);
+      }
+    } else {
+      LOGGER.warn("No regular output file in the isolate box; treating the output as empty.");
+      Files.deleteIfExists(destination);
+      Files.createFile(destination);
+    }
   }
 
   /**
@@ -245,19 +356,24 @@ public class IsolateRunner implements SandboxRunner {
   }
 
   /**
-   * Executes a command and waits for it to finish. isolate's exit code is intentionally ignored: a
-   * non-zero exit merely means the sandboxed program failed, which is recorded in the meta file.
+   * Executes a command and waits for it to finish. isolate's exit code is not interpreted here: for
+   * {@code --run} a non-zero exit merely means the sandboxed program failed, which is recorded in
+   * the meta file. Standard input is {@code /dev/null}, so a sandboxed process without a redirected
+   * input (e.g. a compiler) gets EOF rather than blocking on the judger's stdin.
    *
    * @param command - the command (program + arguments) to execute
+   * @return isolate's exit code and its (merged stdout/stderr) output
    * @throws Exception if the process cannot be started or is interrupted
    */
-  private void execute(List<String> command) throws Exception {
+  private ProcessOutput execute(List<String> command) throws Exception {
     ProcessBuilder processBuilder = new ProcessBuilder(command);
     processBuilder.redirectErrorStream(true);
+    processBuilder.redirectInput(ProcessBuilder.Redirect.from(new File("/dev/null")));
     Process process = processBuilder.start();
-    // Drain the output so the process cannot block on a full pipe buffer.
-    process.getInputStream().readAllBytes();
-    process.waitFor();
+    // Drain the output so the process cannot block on a full pipe buffer. Every stream of the
+    // sandboxed program is redirected, so this is only isolate's own (short) diagnostics.
+    String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+    return new ProcessOutput(process.waitFor(), output);
   }
 
   /**
@@ -299,6 +415,26 @@ public class IsolateRunner implements SandboxRunner {
       return value == null ? 0 : Double.parseDouble(value.trim());
     } catch (NumberFormatException ex) {
       return 0;
+    }
+  }
+
+  /** The exit code and output of an executed process. */
+  private static final class ProcessOutput {
+    /** The process's exit code. */
+    private final int exitCode;
+
+    /** The process's merged standard output and standard error. */
+    private final String output;
+
+    /**
+     * Constructor.
+     *
+     * @param exitCode - the process's exit code
+     * @param output - the process's merged standard output and standard error
+     */
+    private ProcessOutput(int exitCode, String output) {
+      this.exitCode = exitCode;
+      this.output = output;
     }
   }
 

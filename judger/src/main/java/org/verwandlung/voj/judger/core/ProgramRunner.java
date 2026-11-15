@@ -64,7 +64,8 @@ public class ProgramRunner {
             "[Submission #%d] Start running with command %s (TimeLimit=%d, MemoryLimit=%s)",
             new Object[] {submission.getSubmissionId(), commandLine, timeLimit, memoryLimit}));
     RunResult runResult =
-        sandboxRunner.run(commandLine, inputFilePath, outputFilePath, timeLimit, memoryLimit);
+        sandboxRunner.run(
+            commandLine, inputFilePath, outputFilePath, timeLimit, memoryLimit, false);
 
     Map<String, Object> result = new HashMap<>(4, 1);
     result.put("runtimeResult", getRuntimeResultSlug(runResult.getVerdict()));

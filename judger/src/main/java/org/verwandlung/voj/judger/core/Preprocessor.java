@@ -160,8 +160,8 @@ public class Preprocessor {
   private static final Pattern JAVA_MAIN_CLASS_DECLARATION = Pattern.compile("\\bclass\\s+Main\\b");
 
   /**
-   * Hands the work directory to the unprivileged sandbox user. The directory is private (owner only,
-   * see {@link #createFreshWorkDirectory}), so that other accounts on the host cannot read a
+   * Hands the work directory to the unprivileged sandbox user. The directory is private (owner
+   * only, see {@link #createFreshWorkDirectory}), so that other accounts on the host cannot read a
    * submission's files. When the judger runs as root the directory is then handed to the sandbox
    * user (system.username), so that the compiler and the submitted program, which run with dropped
    * privileges, can still write their output here.
