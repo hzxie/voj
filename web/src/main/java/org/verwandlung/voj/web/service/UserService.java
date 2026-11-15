@@ -942,8 +942,11 @@ public class UserService {
    * @return whether the user's old password is correct
    */
   private boolean isOldPasswordCorrect(String oldPassword, String submitedPassword) {
-    if (submitedPassword.isEmpty()) {
-      return true;
+    // An empty old password used to count as correct, so a hijacked session (or a CSRF-able client)
+    // could change the password without knowing it. Forgotten passwords go through the token-checked
+    // resetPassword(...) flow instead, so nothing legitimately submits an empty old password here.
+    if (submitedPassword == null || submitedPassword.isEmpty()) {
+      return false;
     }
     return passwordEncoder.matches(submitedPassword, oldPassword);
   }

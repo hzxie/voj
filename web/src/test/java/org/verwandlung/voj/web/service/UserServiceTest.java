@@ -257,12 +257,24 @@ public class UserServiceTest {
     Assertions.assertFalse(userService.changePreferLanguage(user, "no-lang").get("isSuccessful"));
   }
 
-  /** Test case: tests the changePassword(...) method. Test data: the old password is left empty (treated as correct) and the new password is valid. Expected: the change succeeds. */
+  /** Test case: tests the changePassword(...) method. Test data: the correct old password and a valid new password. Expected: the change succeeds. */
   @Test
   public void testChangePasswordSuccessfully() {
     User user = userService.getUserUsingUid(1000);
-    Map<String, Boolean> result = userService.changePassword(user, "", "new-password", "new-password");
+    Map<String, Boolean> result =
+        userService.changePassword(user, PLAINTEXT_PASSWORD, "new-password", "new-password");
     Assertions.assertTrue(result.get("isSuccessful"));
+  }
+
+  /** Test case: tests the changePassword(...) method. Test data: the old password is left empty. Expected: the change fails as the old password is not correct. */
+  @Test
+  public void testChangePasswordWithEmptyOldPassword() {
+    User user = userService.getUserUsingUid(1000);
+    String encodedPassword = user.getPassword();
+    Map<String, Boolean> result = userService.changePassword(user, "", "new-password", "new-password");
+    Assertions.assertFalse(result.get("isOldPasswordCorrect"));
+    Assertions.assertFalse(result.get("isSuccessful"));
+    Assertions.assertEquals(encodedPassword, userService.getUserUsingUid(1000).getPassword());
   }
 
   /** Test case: tests the changePassword(...) method. Test data: the old password is wrong. Expected: the change fails. */
@@ -280,7 +292,7 @@ public class UserServiceTest {
   public void testChangePasswordWithMismatchedConfirmPassword() {
     User user = userService.getUserUsingUid(1000);
     Map<String, Boolean> result =
-        userService.changePassword(user, "", "new-password", "another-password");
+        userService.changePassword(user, PLAINTEXT_PASSWORD, "new-password", "another-password");
     Assertions.assertFalse(result.get("isConfirmPasswordMatched"));
     Assertions.assertFalse(result.get("isSuccessful"));
   }
