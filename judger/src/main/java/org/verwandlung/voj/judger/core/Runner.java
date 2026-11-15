@@ -101,7 +101,8 @@ public class Runner implements SandboxRunner {
               outputFilePath,
               timeLimitMs,
               memoryLimitKb,
-              isCompilation);
+              isCompilation,
+              isCompilation ? compileProcessLimit : processLimit);
       if (nativeResult == null) {
         return RunResult.internalError();
       }
@@ -155,6 +156,8 @@ public class Runner implements SandboxRunner {
    * @param timeLimit - the time limit (in ms, 0 means no limit)
    * @param memoryLimit - the memory limit (in KB, 0 means no limit)
    * @param isCompilation - whether this is a compilation (stderr is then captured with stdout)
+   * @param processLimit - the maximum number of processes (Linux: processes and threads) the
+   *     sandbox may have at once (0 means the native default)
    * @return a Map<String, Object> object containing the program's runtime result
    */
   public native Map<String, Object> getRuntimeResult(
@@ -165,7 +168,8 @@ public class Runner implements SandboxRunner {
       String outputFilePath,
       int timeLimit,
       int memoryLimit,
-      boolean isCompilation);
+      boolean isCompilation,
+      int processLimit);
 
   /**
    * The username for logging into the operating system. For security, we recommend running the
@@ -180,6 +184,21 @@ public class Runner implements SandboxRunner {
    */
   @Value("${system.password}")
   private String systemPassword;
+
+  /**
+   * The maximum number of processes a submission may have at once (anti fork bomb). On Linux this
+   * is the sandbox user's RLIMIT_NPROC, which counts threads too.
+   */
+  @Value("${judger.processLimit:64}")
+  private int processLimit;
+
+  /**
+   * The maximum number of processes a compilation may have at once. Higher than {@link
+   * #processLimit}: the compilers are trusted programs, and the Go toolchain runs one compiler per
+   * CPU, each with up to a thread per CPU, which exhausts a small limit on a many-core host.
+   */
+  @Value("${judger.compileProcessLimit:1024}")
+  private int compileProcessLimit;
 
   /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(Runner.class);

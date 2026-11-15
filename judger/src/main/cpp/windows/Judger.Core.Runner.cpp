@@ -32,9 +32,10 @@
 #include "../org_verwandlung_voj_judger_core_Runner.h"
 
 /**
- * The maximum number of processes a sandboxed program (or compiler) may have running at once. This
- * is enforced by the Job Object and primarily blocks fork bombs; it must stay high enough for the
- * compiler's helper-process chain (cc1, as, ld, ...).
+ * The default maximum number of processes a sandboxed program (or compiler) may have running at
+ * once, used when the caller does not pass one. This is enforced by the Job Object and primarily
+ * blocks fork bombs; it must stay high enough for the compiler's helper-process chain (cc1, as, ld,
+ * ...).
  */
 #define ACTIVE_PROCESS_LIMIT 64
 
@@ -59,7 +60,7 @@
  */
 bool setupIoRedirection(const std::wstring&, const std::wstring&, HANDLE&, HANDLE&);
 void setupStartupInfo(STARTUPINFOW&, HANDLE&, HANDLE&, HANDLE&);
-HANDLE createJobObject();
+HANDLE createJobObject(DWORD);
 bool createProcess(const std::wstring&, const std::wstring&, const std::wstring&, HANDLE&, LPVOID&, STARTUPINFOW&, PROCESS_INFORMATION&);
 jint getPeakMemoryUsage(HANDLE& hJob);
 jint getCpuTimeUsage(HANDLE& hProcess);
@@ -84,12 +85,13 @@ LPCWSTR getConstWideStringPointer(const std::wstring&);
  * @param  timeLimit       - the program execution time limit (ms, 0 means no limit)
  * @param  memoryLimit     - the program execution memory limit (KB, 0 means no limit)
  * @param  isCompilation   - whether this is a compilation (as opposed to a run of the submission)
+ * @param  processLimit    - the maximum number of active processes (0 means the default)
  * @return a Map<String, Object> object containing the runtime result
  */
 JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntimeResult(
     JNIEnv* jniEnv, jobject selfReference, jstring jCommandLine, jstring jUsername,
     jstring jPassword, jstring jInputFilePath, jstring jOutputFilePath, jint timeLimit,
-    jint memoryLimit, jboolean isCompilation) {
+    jint memoryLimit, jboolean isCompilation, jint processLimit) {
     std::wstring        commandLine         = getWideString(getStringValue(jniEnv, jCommandLine));
     std::wstring        username            = getWideString(getStringValue(jniEnv, jUsername));
     std::wstring        password            = getWideString(getStringValue(jniEnv, jPassword));
@@ -130,7 +132,7 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     // The Job Object enforces the active-process limit (anti fork bomb) and the UI restrictions, and
     // kills the whole process tree atomically when it is closed. The memory limit is enforced below
     // by polling the Job's peak accounting (a soft limit), not the Job's hard ProcessMemoryLimit.
-    hJob = createJobObject();
+    hJob = createJobObject(processLimit > 0 ? (DWORD) processLimit : ACTIVE_PROCESS_LIMIT);
 
     // The process is created suspended, assigned to the Job Object before it runs a single
     // instruction, and only then resumed - so the limits are in force from the very beginning.
@@ -272,9 +274,10 @@ void setupStartupInfo(STARTUPINFOW& startupInfo, HANDLE& hInput, HANDLE& hOutput
  * Creates a Job Object that enforces the active-process limit and UI restrictions and kills the
  * whole tree when closed. No hard memory limit is set: memory is enforced by polling the Job's peak
  * accounting (see the run loop), which the Job tracks regardless of whether a memory limit is set.
+ * @param  activeProcessLimit - the maximum number of processes that may be active in the Job
  * @return the Job Object handle, or NULL on failure
  */
-HANDLE createJobObject() {
+HANDLE createJobObject(DWORD activeProcessLimit) {
     HANDLE hJob = CreateJobObjectW(NULL, NULL);
     if ( hJob == NULL ) {
         return NULL;
@@ -284,7 +287,7 @@ HANDLE createJobObject() {
     jeli.BasicLimitInformation.LimitFlags =
         JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE | JOB_OBJECT_LIMIT_DIE_ON_UNHANDLED_EXCEPTION |
         JOB_OBJECT_LIMIT_ACTIVE_PROCESS;
-    jeli.BasicLimitInformation.ActiveProcessLimit = ACTIVE_PROCESS_LIMIT;
+    jeli.BasicLimitInformation.ActiveProcessLimit = activeProcessLimit;
     SetInformationJobObject(hJob, JobObjectExtendedLimitInformation, &jeli, sizeof(jeli));
 
     // Cut the sandboxed program off from the interactive desktop (clipboard, global atoms, etc.).

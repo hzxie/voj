@@ -54,6 +54,7 @@ public class IsolateRunnerTest {
     ReflectionTestUtils.setField(runner, "isolateExecutable", fakeIsolate.toString());
     ReflectionTestUtils.setField(runner, "boxId", 0);
     ReflectionTestUtils.setField(runner, "maxProcesses", 64);
+    ReflectionTestUtils.setField(runner, "compileProcessLimit", 1024);
     ReflectionTestUtils.setField(runner, "fileSizeLimitKb", 0);
     ReflectionTestUtils.setField(runner, "wallTimeBufferSec", 1.0);
   }

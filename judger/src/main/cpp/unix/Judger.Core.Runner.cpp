@@ -74,7 +74,7 @@ static const int       POLL_INTERVAL_US       = 1000;        // watchdog poll (1
 static const int       WALL_TIME_FACTOR       = 3;           // wall-clock backstop multiplier
 static const long long WALL_TIME_SLACK_MS     = 1000;        // wall-clock backstop slack
 static const rlim_t    OUTPUT_FILE_SIZE_LIMIT = (rlim_t)256 * 1024 * 1024; // RLIMIT_FSIZE (256 MB)
-static const rlim_t    PROCESS_NUMBER_LIMIT   = 64;          // RLIMIT_NPROC (anti fork-bomb)
+static const rlim_t    PROCESS_NUMBER_LIMIT   = 64;          // default RLIMIT_NPROC (anti fork-bomb)
 static const int       CLEANUP_ATTEMPTS       = 1000;        // kill/reap rounds (x 1 ms) after a run
 static const int       GROUP_SCAN_INTERVAL    = 10;          // scan the whole group every 10th poll
 // RLIMIT_DATA backstop: 2 x the memory limit plus a headroom of max(256 MB, physical RAM / 32). The
@@ -112,6 +112,7 @@ struct ChildPlan {
   bool                     compileStep;    // compile: stderr also goes to outputFilePath
   int                      timeLimit;      // ms (0 = no limit)
   rlim_t                   dataLimit;      // RLIMIT_DATA in bytes (0 = none)
+  rlim_t                   processLimit;   // RLIMIT_NPROC of the sandbox user (processes + threads)
   bool                     dropPrivileges; // whether to setuid/setgid
   uid_t                    dropUid;
   gid_t                    dropGid;
@@ -156,12 +157,14 @@ static void markInheritedDescriptorsCloseOnExec();
  * @param  timeLimit       - the program execution time limit (ms, 0 means no limit)
  * @param  memoryLimit     - the program execution memory limit (KB, 0 means no limit)
  * @param  isCompilation   - whether this is a compilation (as opposed to a run of the submission)
+ * @param  processLimit    - the maximum number of processes and threads of the sandbox user
+ *                           (RLIMIT_NPROC, applied when privileges are dropped; 0 means the default)
  * @return a Map<String, Object> object containing the runtime result
  */
 JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntimeResult(
     JNIEnv* jniEnv, jobject selfReference, jstring jCommandLine, jstring jUsername,
     jstring jPassword, jstring jInputFilePath, jstring jOutputFilePath, jint timeLimit,
-    jint memoryLimit, jboolean isCompilation) {
+    jint memoryLimit, jboolean isCompilation, jint processLimit) {
     (void) selfReference;
     (void) jPassword;
     std::string commandLine = getStringValue(jniEnv, jCommandLine);
@@ -190,6 +193,7 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     plan.compileStep    = (isCompilation == JNI_TRUE);
     plan.timeLimit      = timeLimit;
     plan.dataLimit      = getDataLimit(memoryLimit);
+    plan.processLimit   = (processLimit > 0) ? (rlim_t) processLimit : PROCESS_NUMBER_LIMIT;
     plan.dropPrivileges = false;
     plan.dropUid        = 0;
     plan.dropGid        = 0;
@@ -419,10 +423,12 @@ static void runChild(const ChildPlan& plan, int syncWriteFd) {
 
     // Drop privileges to the unprivileged sandbox user (only when running as root). The process
     // count cap is applied only here, because RLIMIT_NPROC is per real-UID: enforcing it without a
-    // dedicated user would count, and throttle, every process owned by the shared account.
+    // dedicated user would count, and throttle, every process owned by the shared account. It
+    // counts threads too, so a compilation gets a higher cap than a run of the submission: the Go
+    // toolchain runs one compiler per CPU, each with a thread per CPU.
     if ( plan.dropPrivileges ) {
-        limit.rlim_cur = PROCESS_NUMBER_LIMIT;
-        limit.rlim_max = PROCESS_NUMBER_LIMIT;
+        limit.rlim_cur = plan.processLimit;
+        limit.rlim_max = plan.processLimit;
         setrlimit(RLIMIT_NPROC, &limit);
 
         setgroups(0, nullptr);
