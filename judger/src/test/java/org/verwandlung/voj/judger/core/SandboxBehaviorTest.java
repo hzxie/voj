@@ -128,6 +128,19 @@ public class SandboxBehaviorTest {
   }
 
   /**
+   * Test case: a program that has three orphaned grandchildren, one after the other, each burn 600
+   * ms of CPU time and exit, while it itself stays idle. Expected result: Time Limit Exceeded under
+   * a 1000 ms limit: the CPU time of a process that exits after being orphaned still counts, even
+   * though none of the program's processes ever waits for it.
+   */
+  @Test
+  public void testCpuTimeOfOrphansIsCounted() throws Exception {
+    Assumptions.assumeFalse(
+        System.getProperty("os.name").contains("Windows"), "This test uses fork().");
+    Assertions.assertEquals("TLE", judge(900007L, ORPHAN_CPU_CODE, 1000, 262144));
+  }
+
+  /**
    * Compiles and runs a C++ program under the active sandbox and returns its verdict slug.
    *
    * @param id - a unique id used for the work directory and the in-memory submission
@@ -281,6 +294,46 @@ public class SandboxBehaviorTest {
               }
           }
           while (wait(nullptr) > 0) {
+          }
+          return 0;
+      }
+      """;
+
+  /** A program whose orphaned grandchildren burn 3 x 600 ms of CPU time, one after the other. */
+  private static final String ORPHAN_CPU_CODE =
+      """
+      #include <ctime>
+      #include <sys/wait.h>
+      #include <unistd.h>
+
+      static void burn(double seconds) {
+          timespec now;
+          do {
+              clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &now);
+          } while (now.tv_sec + now.tv_nsec / 1e9 < seconds);
+      }
+
+      int main() {
+          for (int i = 0; i < 3; ++i) {
+              int fds[2];
+              if (pipe(fds) != 0) {
+                  return 1;
+              }
+              pid_t child = fork();
+              if (child == 0) {
+                  if (fork() == 0) {
+                      close(fds[0]);
+                      burn(0.6);
+                      _exit(0);
+                  }
+                  _exit(0); // orphans the grandchild
+              }
+              close(fds[1]);
+              waitpid(child, nullptr, 0);
+              char c;
+              while (read(fds[0], &c, 1) > 0) {
+              }
+              close(fds[0]); // end-of-file: the grandchild has exited
           }
           return 0;
       }
