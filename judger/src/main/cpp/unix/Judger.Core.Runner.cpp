@@ -159,6 +159,7 @@ static rlim_t getDataLimit(int memoryLimitKb);
 static void reapProcessGroup(pid_t);
 static void killProcessGroup(pid_t);
 static void killSandboxUserProcesses(uid_t, pid_t);
+static bool hasLiveProcessOf(uid_t, pid_t exclude);
 static void runSupervisor(const ChildPlan&, int syncWriteFd, int reportWriteFd,
                           long long* reapedCpuMicros) __attribute__((noreturn));
 static void runProgram(const ChildPlan&, int syncWriteFd) __attribute__((noreturn));
@@ -1073,43 +1074,112 @@ static void killProcessGroup(pid_t pgid) {
 /**
  * Kills every process owned by the sandbox user. A helper process drops to that user and calls
  * kill(-1, SIGKILL), which signals every process it is allowed to signal (all of the sandbox user's
- * processes in this PID namespace) except itself, until none is left. This is only safe when the
- * sandbox user is dedicated to the judger, i.e. when privileges are dropped; it is never called
- * otherwise, since it would kill the judger's own user's processes.
+ * processes in this PID namespace) except itself, until the judger sees none of them left. This is
+ * only safe when the sandbox user is dedicated to the judger, i.e. when privileges are dropped; it
+ * is never called otherwise, since it would kill the judger's own user's processes.
+ *
+ * kill(-1) cannot tell when the user has no process left: it fails with ESRCH only when there is
+ * no other process at all, and succeeds (signalling nobody) as long as there is any, so the judger
+ * checks /proc instead. When nothing of the user survived the run, which is the norm, no helper
+ * is started at all.
  * @param  uid  - the sandbox user ID (never root)
  * @param  pgid - the run's process group, reaped meanwhile in case its members are our children
  */
 static void killSandboxUserProcesses(uid_t uid, pid_t pgid) {
-    if ( uid == 0 ) {
+    if ( uid == 0 || !hasLiveProcessOf(uid, 0) ) {
+        return;
+    }
+    int stopPipe[2];
+    if ( pipe2(stopPipe, O_CLOEXEC) != 0 ) {
         return;
     }
     pid_t helper = fork();
     if ( helper < 0 ) {
+        close(stopPipe[0]);
+        close(stopPipe[1]);
         return;
     }
     if ( helper == 0 ) {
         // Async-signal-safe only: this is a fork of the multi-threaded JVM. A failed or partial
         // setuid must never reach kill(-1), which as root would signal every process on the host.
+        close(stopPipe[1]);
         if ( setuid(uid) != 0 || getuid() != uid || geteuid() != uid ) {
             _exit(2);
         }
-        struct timespec pause = {0, POLL_INTERVAL_US * 1000L};
+        struct pollfd stop;
+        stop.fd     = stopPipe[0];
+        stop.events = POLLIN;
         for ( int attempt = 0; attempt < CLEANUP_ATTEMPTS; ++attempt ) {
-            if ( kill(-1, SIGKILL) != 0 ) {
-                _exit(errno == ESRCH ? 0 : 3); // ESRCH: no process of the user is left
+            kill(-1, SIGKILL);
+            // The judger closes the pipe once none of the user's processes is left.
+            stop.revents = 0;
+            if ( poll(&stop, 1, POLL_INTERVAL_US / 1000) > 0 ) {
+                _exit(0);
             }
-            nanosleep(&pause, nullptr);
         }
         _exit(1);
     }
-    for ( ;; ) {
+    close(stopPipe[0]);
+    for ( int attempt = 0; attempt < CLEANUP_ATTEMPTS; ++attempt ) {
         reapProcessGroup(pgid);
-        pid_t waited = waitpid(helper, nullptr, WNOHANG);
-        if ( waited == helper || (waited < 0 && errno != EINTR) ) {
+        if ( !hasLiveProcessOf(uid, helper) ) {
             break;
         }
         usleep(POLL_INTERVAL_US);
     }
+    close(stopPipe[1]);
+    while ( waitpid(helper, nullptr, 0) < 0 && errno == EINTR ) {
+        // Retry on interrupted system call.
+    }
+}
+
+/**
+ * Checks whether a user has a live (not zombie) process, by scanning /proc. A process counts when
+ * the user is its real, effective or saved user, i.e. when the user may signal it.
+ * @param  uid     - the user ID
+ * @param  exclude - a process to ignore (0 for none)
+ * @return whether such a process exists (true if /proc cannot be read, to stay on the safe side)
+ */
+static bool hasLiveProcessOf(uid_t uid, pid_t exclude) {
+    DIR* procDir = opendir("/proc");
+    if ( procDir == nullptr ) {
+        return true;
+    }
+    bool found = false;
+    struct dirent* entry;
+    while ( !found && (entry = readdir(procDir)) != nullptr ) {
+        if ( entry->d_name[0] < '0' || entry->d_name[0] > '9' || atoi(entry->d_name) == exclude ) {
+            continue;
+        }
+        char path[64];
+        snprintf(path, sizeof(path), "/proc/%s/status", entry->d_name);
+        int fd = open(path, O_RDONLY | O_CLOEXEC);
+        if ( fd < 0 ) {
+            continue;
+        }
+        // "Name:", "Umask:", "State:", ..., "Uid:" are the first lines: 2 KB is plenty.
+        char    buffer[2048];
+        ssize_t length = read(fd, buffer, sizeof(buffer) - 1);
+        close(fd);
+        if ( length <= 0 ) {
+            continue;
+        }
+        buffer[length] = '\0';
+        const char*  stateLine = strstr(buffer, "\nState:");
+        const char*  uidLine   = strstr(buffer, "\nUid:");
+        char         state     = '?';
+        unsigned int realUid, effectiveUid, savedUid;
+        if ( stateLine == nullptr || uidLine == nullptr || sscanf(stateLine + 7, " %c", &state) != 1 ||
+             sscanf(uidLine + 5, " %u %u %u", &realUid, &effectiveUid, &savedUid) != 3 ) {
+            continue;
+        }
+        if ( state != 'Z' && state != 'X' &&
+             (realUid == uid || effectiveUid == uid || savedUid == uid) ) {
+            found = true;
+        }
+    }
+    closedir(procDir);
+    return found;
 }
 
 /**

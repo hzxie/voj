@@ -88,6 +88,33 @@ public class SandboxBehaviorTest {
   }
 
   /**
+   * Test case: a trivial program, timed from start to verdict. Expected result: the cleanup after
+   * the run (killing whatever the program left behind) does not add a fixed delay: the whole run
+   * takes well under a second.
+   */
+  @Test
+  public void testCleanupDoesNotDelayTheRun() throws Exception {
+    Language cpp = languageMapper.getLanguageUsingSlug("text/x-c++src");
+    Problem problem =
+        new Problem(900008L, true, "sandbox-behavior", 1000, 65536, "", "", "", "", "", "");
+    Submission submission = new Submission();
+    submission.setSubmissionId(900008L);
+    submission.setProblem(problem);
+    submission.setLanguage(cpp);
+    submission.setCode(RUNTIME_ERROR_CODE);
+    String workDirectory = workBaseDirectory + "/voj-sandbox-900008";
+    preprocessor.createTestCode(submission, workDirectory, "sandboxtest");
+    compiler.getCompileResult(submission, workDirectory, "sandboxtest");
+    Path inputFile = Files.write(Path.of(workDirectory, "input.txt"), new byte[0]);
+
+    long startNanos = System.nanoTime();
+    programRunner.getRuntimeResult(
+        submission, workDirectory, "sandboxtest", inputFile.toString(), workDirectory + "/out.txt");
+    long elapsedMs = (System.nanoTime() - startNanos) / 1_000_000;
+    Assertions.assertTrue(elapsedMs < 800, "A trivial run took " + elapsedMs + " ms.");
+  }
+
+  /**
    * Test case: a fork bomb. Expected result: the run is contained and returns some non-accepted
    * verdict (rather than taking down the host). POSIX-only and tagged {@code sandbox-stress}, so it
    * is excluded from the default build.
