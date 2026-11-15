@@ -224,7 +224,7 @@ public class ProblemsController {
       List<Submission> submissions =
           submissionService.getSubmissionUsingProblemIdAndUserId(
               problemId, userId, NUMBER_OF_SUBMISSIONS_PER_PROBLEM);
-      List<Language> languages = languageService.getAllLanguages();
+      List<Language> languages = languageService.getEnabledLanguages();
 
       view.addObject("latestSubmission", submissionOfProblems);
       view.addObject("submissions", submissions);

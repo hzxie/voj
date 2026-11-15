@@ -48,6 +48,16 @@ public class LanguageService {
   }
 
   /**
+   * Gets the enabled programming languages, i.e. the ones offered to users when submitting. The
+   * administration pages keep using {@link #getAllLanguages()} so disabled languages stay editable.
+   *
+   * @return the list of enabled programming languages
+   */
+  public List<Language> getEnabledLanguages() {
+    return languageMapper.getEnabledLanguages();
+  }
+
+  /**
    * Gets a programming language object by its alias.
    *
    * @param languageSlug - the alias of the programming language

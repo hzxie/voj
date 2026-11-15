@@ -36,6 +36,13 @@
 		SELECT *
 		FROM voj_languages
 	</select>
+	<select id="getEnabledLanguages"
+		resultMap="LanguageResultMap">
+		SELECT *
+		FROM voj_languages
+		WHERE language_enabled = 1
+		ORDER BY language_id
+	</select>
 	<insert id="createLanguage" 
 		parameterType="org.verwandlung.voj.web.model.Language"
 		keyProperty="languageId" 

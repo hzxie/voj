@@ -313,7 +313,7 @@ public class ContestsController {
     }
 
     Problem problem = problemService.getProblem(problemId);
-    List<Language> languages = languageService.getAllLanguages();
+    List<Language> languages = languageService.getEnabledLanguages();
     Map<String, String> codeSnippet =
         contestService.getCodeSnippetOfContestProblem(contest, problemId, currentUser);
     List<Submission> submissions =

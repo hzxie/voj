@@ -50,6 +50,22 @@ public class LanguageServiceTest {
     Assertions.assertNotNull(languageService.getLanguageUsingSlug("text/x-csrc"));
   }
 
+  /** Test case: tests the getEnabledLanguages() method. Test data: Java is disabled. Expected: Java is left out of the enabled languages but still listed by getAllLanguages(). */
+  @Test
+  public void testGetEnabledLanguagesExcludesDisabledLanguages() {
+    new org.springframework.jdbc.core.JdbcTemplate(dataSource)
+        .update("UPDATE voj_languages SET language_enabled = 0 WHERE language_slug = 'text/x-java'");
+
+    List<Language> enabledLanguages = languageService.getEnabledLanguages();
+    Assertions.assertFalse(enabledLanguages.isEmpty());
+    Assertions.assertTrue(enabledLanguages.stream().allMatch(Language::isEnabled));
+    Assertions.assertTrue(
+        enabledLanguages.stream().noneMatch(l -> "text/x-java".equals(l.getLanguageSlug())));
+    Assertions.assertTrue(
+        languageService.getAllLanguages().stream()
+            .anyMatch(l -> "text/x-java".equals(l.getLanguageSlug())));
+  }
+
   /** Test case: tests the getLanguageUsingSlug(String) method. Test data: an existing language slug. Expected: the corresponding programming language object. */
   @Test
   public void testGetLanguageUsingSlugExists() {
@@ -211,4 +227,7 @@ public class LanguageServiceTest {
 
   /** The LanguageService object under test. */
   @Autowired private LanguageService languageService;
+
+  /** The DataSource of the test database, used to toggle a language's enabled flag. */
+  @org.springframework.beans.factory.annotation.Autowired private javax.sql.DataSource dataSource;
 }

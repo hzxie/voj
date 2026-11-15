@@ -395,6 +395,10 @@ public class SubmissionService {
       problem = null;
     }
     Language language = languageMapper.getLanguageUsingSlug(languageSlug);
+    // A disabled language is not offered on the problem page and must not be accepted either.
+    if (language != null && !language.isEnabled()) {
+      language = null;
+    }
 
     Submission submission = new Submission(problem, user, language, code);
 

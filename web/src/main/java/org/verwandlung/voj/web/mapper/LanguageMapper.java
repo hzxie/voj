@@ -52,6 +52,13 @@ public interface LanguageMapper {
   List<Language> getAllLanguages();
 
   /**
+   * Gets the enabled programming languages, i.e. the ones users may submit in.
+   *
+   * @return a list of the enabled programming languages
+   */
+  List<Language> getEnabledLanguages();
+
+  /**
    * Adds a programming language object.
    *
    * @param language - the programming language object to add

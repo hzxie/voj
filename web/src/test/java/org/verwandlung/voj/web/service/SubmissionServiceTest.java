@@ -202,6 +202,18 @@ public class SubmissionServiceTest {
     Assertions.assertFalse((Boolean) result.get("isSuccessful"));
   }
 
+  /** Test case: tests the createSubmission(...) method. Test data: a submission in Java after Java has been disabled. Expected: the language is rejected and creation fails. */
+  @Test
+  public void testCreateSubmissionWithDisabledLanguage() {
+    new org.springframework.jdbc.core.JdbcTemplate(dataSource)
+        .update("UPDATE voj_languages SET language_enabled = 0 WHERE language_slug = 'text/x-java'");
+
+    Map<String, Object> result =
+        submissionService.createSubmission(userWithUid(1000), 1000, "text/x-java", "Code");
+    Assertions.assertFalse((Boolean) result.get("isLanguageExists"));
+    Assertions.assertFalse((Boolean) result.get("isSuccessful"));
+  }
+
   /** Test case: tests the createSubmission(...) method. Test data: a regular user submitting to the hidden problem 1002. Expected: the problem is reported as missing and creation fails. */
   @Test
   public void testCreateSubmissionToUnpublishedProblemByUser() {
@@ -332,4 +344,7 @@ public class SubmissionServiceTest {
 
   /** The SubmissionService object under test. */
   @Autowired private SubmissionService submissionService;
+
+  /** The DataSource of the test database, used to set up fixtures the services cannot create. */
+  @Autowired private javax.sql.DataSource dataSource;
 }
