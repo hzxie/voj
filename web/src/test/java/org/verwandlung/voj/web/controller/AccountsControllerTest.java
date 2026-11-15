@@ -34,11 +34,15 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.session.SessionRegistry;
+import org.springframework.security.web.csrf.CsrfTokenRepository;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.view.RedirectView;
 
+import org.verwandlung.voj.web.config.SecurityConfig;
 import org.verwandlung.voj.web.model.Option;
 import org.verwandlung.voj.web.model.User;
 import org.verwandlung.voj.web.model.UserGroup;
@@ -138,6 +142,59 @@ public class AccountsControllerTest {
         SecurityContextHolder.getContext().getAuthentication().getPrincipal();
     Assertions.assertTrue(principal instanceof VojUserDetails);
     Assertions.assertEquals("zjhzxhz", ((VojUserDetails) principal).getUser().getUsername());
+  }
+
+  /** Test case: tests loginAction(...). Test data: a successful login on a pre-existing anonymous session holding a CSRF token. Expected: the session id is rotated (session fixation) and the anonymous CSRF token is discarded. */
+  @Test
+  public void testLoginActionRotatesSessionIdAndCsrfToken() {
+    when(turnstileService.verify(anyString(), anyString())).thenReturn(true);
+    when(userService.isAllowedToLogin("zjhzxhz", "secret"))
+        .thenReturn(Map.of("isSuccessful", true));
+    when(userService.getUserUsingUsernameOrEmail("zjhzxhz")).thenReturn(userWithGroup());
+
+    MockHttpServletRequest request = request();
+    MockHttpServletResponse response = new MockHttpServletResponse();
+    CsrfTokenRepository csrfTokenRepository = SecurityConfig.newCsrfTokenRepository();
+    csrfTokenRepository.saveToken(
+        csrfTokenRepository.generateToken(request), request, response);
+    String anonymousSessionId = request.getSession().getId();
+
+    controller.loginAction("zjhzxhz", "secret", false, "captcha", request, response);
+
+    Assertions.assertNotEquals(anonymousSessionId, request.getSession().getId());
+    Assertions.assertNull(csrfTokenRepository.loadToken(request));
+    verify(sessionRegistry).registerNewSession(eq(request.getSession().getId()), any());
+  }
+
+  /** Test case: tests loginView(...). Test data: ?logout=true for a logged-in user (e.g. a cross-site GET). Expected: the session is not destroyed any more. */
+  @Test
+  public void testLoginViewWithLogoutFlagDoesNotLogOut() {
+    authenticate(userWithGroup());
+    MockHttpServletRequest request = new MockHttpServletRequest("GET", "/accounts/login");
+    MockHttpSession session = new MockHttpSession();
+    request.setSession(session);
+
+    controller.loginView(true, "", request, new MockHttpServletResponse());
+
+    Assertions.assertFalse(session.isInvalid());
+    Assertions.assertNotNull(SecurityContextHolder.getContext().getAuthentication());
+  }
+
+  /** Test case: tests logoutAction(...). Test data: a logged-in user. Expected: the session is invalidated, the security context cleared and the user redirected to the logged-out login page. */
+  @Test
+  public void testLogoutActionInvalidatesSession() {
+    authenticate(userWithGroup());
+    MockHttpServletRequest request = request();
+    MockHttpSession session = new MockHttpSession();
+    request.setSession(session);
+
+    ModelAndView view = controller.logoutAction(request, new MockHttpServletResponse());
+
+    Assertions.assertTrue(session.isInvalid());
+    Assertions.assertNull(SecurityContextHolder.getContext().getAuthentication());
+    Assertions.assertTrue(view.getView() instanceof RedirectView);
+    Assertions.assertEquals(
+        "/accounts/login?logout=true", ((RedirectView) view.getView()).getUrl());
   }
 
   /** Test case: tests registerAction(...). Test data: a request whose captcha fails verification. Expected: the captcha-failure result is returned and no user is created. */

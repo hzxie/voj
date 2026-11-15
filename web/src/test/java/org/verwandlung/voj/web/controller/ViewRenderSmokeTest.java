@@ -519,6 +519,19 @@ class ViewRenderSmokeTest {
         .andExpect(content().string(containsString("alice@example.com")));
   }
 
+  /** Signing out is a CSRF-protected POST form, not a GET link that a cross-site request could hit. */
+  @Test
+  void headerSignOutIsCsrfProtectedPost() throws Exception {
+    authenticateUser();
+    mockMvc
+        .perform(getWithCsrf("/"))
+        .andExpect(status().isOk())
+        .andExpect(content().string(not(containsString("logout=true"))))
+        .andExpect(content().string(containsString("action=\"/accounts/logout\"")))
+        .andExpect(
+            content().string(containsString("name=\"_csrf\" value=\"test-csrf-token\"")));
+  }
+
   /** The contest overview page renders for an upcoming contest (leaderboard block skipped). */
   @Test
   void contestViewRenders() throws Exception {

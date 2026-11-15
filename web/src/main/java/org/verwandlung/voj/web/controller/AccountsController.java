@@ -36,6 +36,7 @@ import org.springframework.security.core.session.SessionRegistry;
 import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
+import org.springframework.security.web.csrf.CsrfTokenRepository;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -45,6 +46,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.ModelAndView;
 
 import org.springframework.web.servlet.view.RedirectView;
+import org.verwandlung.voj.web.config.SecurityConfig;
 import org.verwandlung.voj.web.exception.ResourceNotFoundException;
 import org.verwandlung.voj.web.model.Language;
 import org.verwandlung.voj.web.model.Option;
@@ -73,7 +75,7 @@ public class AccountsController {
   /**
    * Displays the user's login page.
    *
-   * @param isLogout - whether the user is in the logout state
+   * @param isLogout - whether to show the notice that the user has just logged out
    * @param forwardUrl - the address to redirect to after login (relative path)
    * @param request - the HttpServletRequest object
    * @param response - the HttpResponse object
@@ -85,11 +87,9 @@ public class AccountsController {
       @RequestParam(value = "forward", required = false, defaultValue = "") String forwardUrl,
       HttpServletRequest request,
       HttpServletResponse response) {
+    // ?logout=true only shows the "you are now logged out" notice: the logout itself is the
+    // CSRF-protected POST /accounts/logout, so a cross-site GET can no longer end the session.
     HttpSession session = request.getSession();
-    if (isLogout) {
-      destroySession(request, response);
-    }
-
     ModelAndView view = null;
     if (isLoggedIn(session)) {
       RedirectView redirectView = new RedirectView(request.getContextPath());
@@ -132,6 +132,25 @@ public class AccountsController {
       }
     }
     return forwardUrl;
+  }
+
+  /**
+   * Logs the current user out and redirects to the login page with the logged-out notice. It is a
+   * POST so that it is covered by the CSRF protection: a cross-site link or image can no longer log
+   * the user out.
+   *
+   * @param request - the HttpServletRequest object
+   * @param response - the HttpServletResponse object
+   * @return a ModelAndView redirecting to the login page
+   */
+  @RequestMapping(value = "/logout", method = RequestMethod.POST)
+  public ModelAndView logoutAction(HttpServletRequest request, HttpServletResponse response) {
+    if (isLoggedIn(request.getSession(false))) {
+      destroySession(request, response);
+    }
+    RedirectView redirectView = new RedirectView("/accounts/login?logout=true", true);
+    redirectView.setExposeModelAttributes(false);
+    return new ModelAndView(redirectView);
   }
 
   /**
@@ -205,6 +224,14 @@ public class AccountsController {
    */
   private void establishSecurityContext(
       HttpServletRequest request, HttpServletResponse response, User user) {
+    // Session fixation: a session id planted before login (or observed while anonymous) must not
+    // become an authenticated session, so the id is rotated (the attributes are kept). The CSRF token
+    // bound to the anonymous session is discarded as well; a fresh one is issued on the next page,
+    // which the login / registration pages navigate to right after a successful response.
+    request.getSession();
+    request.changeSessionId();
+    csrfTokenRepository.saveToken(null, request, response);
+
     VojUserDetails userDetails = new VojUserDetails(user);
     Authentication authentication =
         UsernamePasswordAuthenticationToken.authenticated(
@@ -591,6 +618,9 @@ public class AccountsController {
 
   /** The registry of authenticated sessions, used to track logged-in users. */
   @Autowired private SessionRegistry sessionRegistry;
+
+  /** Discards the anonymous session's CSRF token after a programmatic login. */
+  private final CsrfTokenRepository csrfTokenRepository = SecurityConfig.newCsrfTokenRepository();
 
   /** Persists the security context to the HTTP session after a programmatic login. */
   private final SecurityContextRepository securityContextRepository =

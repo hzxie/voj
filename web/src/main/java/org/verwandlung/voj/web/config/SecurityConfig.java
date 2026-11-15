@@ -34,6 +34,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandlerImpl;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
+import org.springframework.security.web.csrf.CsrfTokenRepository;
 import org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository;
 import org.springframework.security.web.session.HttpSessionEventPublisher;
 
@@ -71,8 +72,7 @@ public class SecurityConfig {
   @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
   public SecurityFilterChain securityFilterChain(
       HttpSecurity http, SessionRegistry sessionRegistry) throws Exception {
-    HttpSessionCsrfTokenRepository csrfTokenRepository = new HttpSessionCsrfTokenRepository();
-    csrfTokenRepository.setParameterName("csrfToken");
+    CsrfTokenRepository csrfTokenRepository = newCsrfTokenRepository();
 
     http.authorizeHttpRequests(
             authorize ->
@@ -103,6 +103,20 @@ public class SecurityConfig {
         .httpBasic(AbstractHttpConfigurer::disable)
         .logout(AbstractHttpConfigurer::disable);
     return http.build();
+  }
+
+  /**
+   * Creates the CSRF token repository: tokens live in the HTTP session and are submitted via the
+   * {@code csrfToken} request parameter or the {@code X-CSRF-TOKEN} header. The programmatic login in
+   * AccountsController uses its own instance (backed by the same session attribute) to rotate the
+   * token once a user signs in.
+   *
+   * @return a new session-backed CSRF token repository
+   */
+  public static CsrfTokenRepository newCsrfTokenRepository() {
+    HttpSessionCsrfTokenRepository csrfTokenRepository = new HttpSessionCsrfTokenRepository();
+    csrfTokenRepository.setParameterName("csrfToken");
+    return csrfTokenRepository;
   }
 
   /**
