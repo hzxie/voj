@@ -32,7 +32,6 @@ import org.verwandlung.voj.web.service.ContestService;
 import org.verwandlung.voj.web.service.LanguageService;
 import org.verwandlung.voj.web.service.OptionService;
 import org.verwandlung.voj.web.service.ProblemService;
-import org.verwandlung.voj.web.service.SubmissionService;
 import org.verwandlung.voj.web.util.HttpRequestParser;
 import org.verwandlung.voj.web.util.HttpSessionParser;
 import org.verwandlung.voj.web.util.JsonUtils;
@@ -307,10 +306,10 @@ public class ContestsController {
     if (!problems.contains(problemId)) {
       throw new ResourceNotFoundException();
     }
-    // Users who have not attended the contest cannot view the problem before the contest ends
+    // Nobody but administrators may view the problems before the contest starts, and only the
+    // contestants who attended it while it is running.
     Date currentTime = new Date();
-    boolean isAttended = contestService.isAttendContest(contestId, currentUser);
-    if (contest.getEndTime().after(currentTime) && !isAttended) {
+    if (!contestService.isContestProblemsViewable(contest, currentUser)) {
       throw new ResourceNotFoundException();
     }
 
@@ -331,6 +330,42 @@ public class ContestsController {
     view.addObject("currentTime", currentTime);
     view.addObject("isContest", true);
     return view;
+  }
+
+  /**
+   * Creates a submission to a problem of a running contest the current user attends.
+   *
+   * @param contestId - the unique identifier of the contest
+   * @param problemId - the unique identifier of the problem
+   * @param languageSlug - the slug of the programming language
+   * @param code - the code
+   * @param request - the HttpRequest object
+   * @return a Map<String, Object> object containing the result of the submission creation
+   */
+  @RequestMapping(value = "/{contestId}/createSubmission.action", method = RequestMethod.POST)
+  public @ResponseBody Map<String, Object> createSubmissionAction(
+      @PathVariable("contestId") long contestId,
+      @RequestParam(value = "problemId") long problemId,
+      @RequestParam(value = "languageSlug") String languageSlug,
+      @RequestParam(value = "code") String code,
+      HttpServletRequest request) {
+    String ipAddress = HttpRequestParser.getRemoteAddr(request);
+    User currentUser = HttpSessionParser.getCurrentUser();
+
+    Map<String, Object> result =
+        contestService.createSubmission(contestId, problemId, currentUser, languageSlug, code);
+    if ((Boolean) result.get("isSuccessful")) {
+      LOGGER.info(
+          String.format(
+              "User: {%s} submitted code with SubmissionId #%s in contest #%d at %s",
+              new Object[] {
+                LogSanitizer.forLog(currentUser),
+                result.get("submissionId"),
+                contestId,
+                LogSanitizer.forLog(ipAddress)
+              }));
+    }
+    return result;
   }
 
   /**
@@ -370,9 +405,6 @@ public class ContestsController {
    * detail page.
    */
   @Autowired private LanguageService languageService;
-
-  /** The autowired SubmissionService object. Used for creating submission records. */
-  @Autowired private SubmissionService subsmissionService;
 
   /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(ContestsController.class);

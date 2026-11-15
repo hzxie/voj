@@ -121,6 +121,41 @@ public class ContestsControllerTest {
     verify(contestService).attendContest(42L, user);
   }
 
+  /** Test case: tests createSubmissionAction(...). Test data: an authenticated user submitting to contest 42. Expected: the contest, problem, current user, language and code are passed to ContestService.createSubmission and its result returned. */
+  @Test
+  public void testCreateSubmissionActionDelegates() {
+    User user = currentUser();
+    authenticate(user);
+    Map<String, Object> serviceResult = Map.of("isSuccessful", true, "submissionId", 7L);
+    when(contestService.createSubmission(42L, 1002L, user, "text/x-java", "code"))
+        .thenReturn(serviceResult);
+
+    Map<String, Object> result =
+        controller.createSubmissionAction(42L, 1002L, "text/x-java", "code", request());
+
+    Assertions.assertSame(serviceResult, result);
+    verify(contestService).createSubmission(42L, 1002L, user, "text/x-java", "code");
+  }
+
+  /** Test case: tests problemView(...). Test data: a published contest whose problems the user may not view yet (e.g. it has not started). Expected: the problem is treated as not found. */
+  @Test
+  public void testProblemViewBeforeContestStartIsNotFound() {
+    User user = currentUser();
+    authenticate(user);
+    Contest contest = new Contest();
+    contest.setContestId(42);
+    contest.setStatus("PUBLISHED");
+    contest.setProblems("[1000]");
+    when(contestService.getContest(42L)).thenReturn(contest);
+    when(contestService.isContestProblemsViewable(contest, user)).thenReturn(false);
+
+    Assertions.assertThrows(
+        org.verwandlung.voj.web.exception.ResourceNotFoundException.class,
+        () ->
+            controller.problemView(
+                42L, 1000L, request(), new org.springframework.mock.web.MockHttpServletResponse()));
+  }
+
   /** Builds the current user (uid 1000, group "users"). */
   private static User currentUser() {
     return new User(1000, "zjhzxhz", "p", "a@b.com", new UserGroup(2, "users", "Users"), null);

@@ -371,6 +371,33 @@ class ViewRenderSmokeTest {
         .andExpect(content().string(not(containsString("hreflang"))));
   }
 
+  /**
+   * The contest problem page renders for a logged-in contestant and its editor posts to the
+   * contest submission endpoint, while the normal problem page posts to the problem one.
+   */
+  @Test
+  void contestProblemViewPostsToContestEndpoint() throws Exception {
+    authenticateUser();
+    Contest contest = aContest(1L, "ACM", past(), future());
+    contest.setProblems("[1000]");
+    when(contestService.getContest(1L)).thenReturn(contest);
+    when(contestService.isContestProblemsViewable(any(), any())).thenReturn(true);
+    when(problemService.getProblem(1000L)).thenReturn(aPublishedProblem(1000L));
+    when(languageService.getEnabledLanguages())
+        .thenReturn(List.of(new Language(1, "java", "Java", "javac Main.java", "java Main")));
+
+    mockMvc
+        .perform(getWithCsrf("/contest/1/p/1000"))
+        .andExpect(status().isOk())
+        .andExpect(content().string(containsString("\\/contest\\/1\\/createSubmission.action")))
+        .andExpect(content().string(not(containsString("\\/p\\/createSubmission.action"))));
+    mockMvc
+        .perform(getWithCsrf("/p/1000"))
+        .andExpect(status().isOk())
+        .andExpect(content().string(containsString("\\/p\\/createSubmission.action")))
+        .andExpect(content().string(not(containsString("\\/contest\\/1\\/createSubmission.action"))));
+  }
+
   /** A page whose content is the translated UI lists an alternate URL per display language. */
   @Test
   void homeViewListsLanguageAlternates() throws Exception {

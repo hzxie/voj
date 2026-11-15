@@ -390,10 +390,34 @@ public class SubmissionService {
     Problem problem = problemMapper.getProblem(problemId);
     // An unpublished (draft / hidden) problem only accepts submissions from administrators. For
     // everyone else it is reported as missing, matching the problem page, so this endpoint does not
-    // reveal which unpublished problem ids exist.
+    // reveal which unpublished problem ids exist. (Contest problems, which are often hidden, are
+    // submitted through ContestService.createSubmission instead.)
     if (problem != null && !PublicationStatus.isVisibleTo(problem.getStatus(), user)) {
       problem = null;
     }
+    Map<String, Object> result = saveSubmission(user, problem, languageSlug, code);
+    if ((Boolean) result.get("isSuccessful")) {
+      createSubmissionTask((Long) result.get("submissionId"), languageSlug);
+    }
+    return result;
+  }
+
+  /**
+   * Validates and stores a submission without enqueuing its judging task. The caller is
+   * responsible for having checked that the user may submit to the problem (the normal path only
+   * allows published problems, the contest path only problems of a running contest the user
+   * attends) and for calling {@link #createSubmissionTask(long, String)} once everything that
+   * belongs to the submission has been stored.
+   *
+   * @param user - the logged-in user object
+   * @param problem - the problem to submit to, or null when it does not exist / may not be used
+   * @param languageSlug - the alias of the programming language
+   * @param code - the code
+   * @return a Map<String, Object> object containing the validation result and, on success, the
+   *     unique identifier of the created submission ({@code submissionId})
+   */
+  public Map<String, Object> saveSubmission(
+      User user, Problem problem, String languageSlug, String code) {
     Language language = languageMapper.getLanguageUsingSlug(languageSlug);
     // A disabled language is not offered on the problem page and must not be accepted either.
     if (language != null && !language.isEnabled()) {
@@ -408,10 +432,7 @@ public class SubmissionService {
     boolean isSuccessful = (Boolean) result.get("isSuccessful");
     if (isSuccessful) {
       submissionMapper.createSubmission(submission);
-
-      long submissionId = submission.getSubmissionId();
-      createSubmissionTask(submissionId, language.getLanguageSlug());
-      result.put("submissionId", submissionId);
+      result.put("submissionId", submission.getSubmissionId());
     }
     return result;
   }

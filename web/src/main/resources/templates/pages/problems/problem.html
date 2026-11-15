@@ -116,7 +116,7 @@
                 <div id="mysubs" class="vw-card vw-anchored" th:if="${isLogin}">
                     <div class="vw-card-strip vw-between">
                         <span th:text="'// ' + #{voj.problems.problem.submission}">// MY SUBMISSIONS</span>
-                        <a class="vw-link-sm" th:href="@{/submission(problemId=${problem.problemId})}" th:text="#{voj.common.all} + ' →'">all &rarr;</a>
+                        <a class="vw-link-sm" th:unless="${isContest}" th:href="@{/submission(problemId=${problem.problemId})}" th:text="#{voj.common.all} + ' →'">all &rarr;</a>
                     </div>
                     <p class="vw-muted vw-card-body" th:if="${submissions == null || submissions.size() == 0}" th:text="#{voj.problems.problem.no-submission}">No submission</p>
                     <ul class="vw-sidelist" th:unless="${submissions == null || submissions.size() == 0}">
@@ -231,22 +231,16 @@
             return createSubmissionAction(problemId, language, code, csrfToken);
         }
     </script>
-    <script type="text/javascript" th:inline="javascript" th:if="${isContest}">
+    <script type="text/javascript" th:inline="javascript">
         function createSubmissionAction(problemId, languageSlug, code, csrfToken) {
             $.ajax({
                 type: 'POST',
+                /*[# th:if="${isContest}"]*/
                 url: [[@{/contest/{id}/createSubmission.action(id=${contest.contestId})}]],
-                data: { 'problemId': problemId, 'languageSlug': languageSlug, 'code': code, 'csrfToken': csrfToken },
-                dataType: 'JSON',
-                success: function(result) {}
-            });
-        }
-    </script>
-    <script type="text/javascript" th:inline="javascript" th:unless="${isContest}">
-        function createSubmissionAction(problemId, languageSlug, code, csrfToken) {
-            $.ajax({
-                type: 'POST',
+                /*[/]*/
+                /*[# th:unless="${isContest}"]*/
                 url: [[@{/p/createSubmission.action}]],
+                /*[/]*/
                 data: { 'problemId': problemId, 'languageSlug': languageSlug, 'code': code, 'csrfToken': csrfToken },
                 dataType: 'JSON',
                 success: function(result) {
@@ -256,6 +250,10 @@
                         var errorMessage = '';
                         if ( !result['isUserLogined'] ) {
                             errorMessage = [[#{voj.problems.problem.user-not-login}]];
+                        } else if ( result['isContestExists'] === false || result['isContestLive'] === false ) {
+                            errorMessage = [[#{voj.problems.problem.contest-not-live}]];
+                        } else if ( result['isAttended'] === false ) {
+                            errorMessage = [[#{voj.problems.problem.contest-not-attended}]];
                         } else if ( result['isUserLegal'] === false ) {
                             errorMessage = [[#{voj.problems.problem.user-forbidden}]];
                         } else if ( !result['isProblemExists'] ) {

@@ -42,6 +42,7 @@ import org.verwandlung.voj.web.model.Problem;
 import org.verwandlung.voj.web.model.PublicationStatus;
 import org.verwandlung.voj.web.model.Submission;
 import org.verwandlung.voj.web.model.User;
+import org.verwandlung.voj.web.service.ContestService;
 import org.verwandlung.voj.web.service.OptionService;
 import org.verwandlung.voj.web.service.SubmissionService;
 import org.verwandlung.voj.web.util.HttpSessionParser;
@@ -243,7 +244,9 @@ public class SubmissionController {
   /**
    * Determines whether the given viewer is allowed to see a submission at all. A submission to an
    * unpublished (draft / hidden) problem is visible to administrators only, so that neither the
-   * submission nor the problem it names is exposed through the submission pages.
+   * submission nor the problem it names is exposed through the submission pages - unless it was
+   * made in a contest whose problem pages the viewer may open (e.g. a contestant following their own
+   * contest submission while the contest runs).
    *
    * @param submission - the submission record
    * @param currentUser - the currently logged-in user, or null
@@ -251,7 +254,9 @@ public class SubmissionController {
    */
   private boolean isSubmissionVisible(Submission submission, User currentUser) {
     Problem problem = submission.getProblem();
-    return problem == null || PublicationStatus.isVisibleTo(problem.getStatus(), currentUser);
+    return problem == null
+        || PublicationStatus.isVisibleTo(problem.getStatus(), currentUser)
+        || contestService.isSubmissionViewableThroughContest(submission, currentUser);
   }
 
   /**
@@ -323,6 +328,12 @@ public class SubmissionController {
 
   /** The autowired SubmissionService object. */
   @Autowired private SubmissionService submissionService;
+
+  /**
+   * The autowired ContestService object. Used to show contest submissions to unpublished problems
+   * to the users who may view that contest's problems.
+   */
+  @Autowired private ContestService contestService;
 
   /** The autowired OptionService object. Used to resolve the public-submissions visibility option. */
   @Autowired private OptionService optionService;

@@ -68,6 +68,14 @@ public interface ContestSubmissionMapper {
       @Param("contestantUid") long contestantUid);
 
   /**
+   * Gets the identifiers of the contests a submission was made in.
+   *
+   * @param submissionId - the unique identifier of the submission
+   * @return the identifiers of the contests (empty for a submission made outside any contest)
+   */
+  List<Long> getContestIdsOfSubmission(@Param("submissionId") long submissionId);
+
+  /**
    * Creates a submission.
    *
    * @param contestSubmission - the submission to create

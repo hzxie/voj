@@ -313,6 +313,10 @@ public class ContestService {
       ContestContestant cc =
           contestContestantMapper.getContestantOfContest(
               contest.getContestId(), contestant.getUid());
+      // An administrator may view the problem without having attended the contest.
+      if (cc == null) {
+        return null;
+      }
       Map<Long, Map<String, String>> codeSnippet =
           JsonUtils.toObject(
               cc.getCodeSnippet(), new TypeReference<Map<Long, Map<String, String>>>() {});
@@ -322,6 +326,116 @@ public class ContestService {
       }
     }
     return null;
+  }
+
+  /**
+   * Tests whether a user may view the problems of a (visible) contest: administrators always; other
+   * users only once the contest has started, and, while it is running, only if they attended it.
+   * After the contest ends the problems are open to everyone who can see the contest.
+   *
+   * @param contest - the contest
+   * @param user - the user (may be null)
+   * @return whether the user may view the contest's problems
+   */
+  public boolean isContestProblemsViewable(Contest contest, User user) {
+    if (contest == null) {
+      return false;
+    }
+    if (PublicationStatus.isAdministrator(user)) {
+      return true;
+    }
+    Date currentTime = new Date();
+    if (currentTime.before(contest.getStartTime())) {
+      return false;
+    }
+    if (currentTime.before(contest.getEndTime())) {
+      return isAttendContest(contest.getContestId(), user);
+    }
+    return true;
+  }
+
+  /**
+   * Tests whether a user may see a submission because it was made in a contest whose problem pages
+   * the user may view. Contest problems are often unpublished, and the submission pages otherwise
+   * hide submissions to unpublished problems from non-administrators; this keeps a contestant's own
+   * contest submissions (and, after the contest, everyone's) reachable from the contest pages.
+   *
+   * @param submission - the submission
+   * @param user - the user (may be null)
+   * @return whether the submission belongs to a contest whose problems the user may view
+   */
+  public boolean isSubmissionViewableThroughContest(Submission submission, User user) {
+    if (submission == null || submission.getProblem() == null) {
+      return false;
+    }
+    for (long contestId :
+        contestSubmissionMapper.getContestIdsOfSubmission(submission.getSubmissionId())) {
+      Contest contest = contestMapper.getContest(contestId);
+      if (contest == null || !PublicationStatus.isVisibleTo(contest.getStatus(), user)) {
+        continue;
+      }
+      List<Long> problemIds = JsonUtils.toList(contest.getProblems(), Long.class);
+      if (problemIds != null
+          && problemIds.contains(submission.getProblem().getProblemId())
+          && isContestProblemsViewable(contest, user)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Creates a submission to a problem of a contest and adds the judging task to the message queue.
+   * The contest must be visible to the user and running (start &lt;= now &lt; end), the user must
+   * have attended it and the problem must be one of its problems; the problem itself may be
+   * unpublished (contest problems usually are). The submission and its contest record are stored in
+   * one transaction, and the judging task is only enqueued once both exist.
+   *
+   * @param contestId - the unique identifier of the contest
+   * @param problemId - the unique identifier of the problem
+   * @param user - the logged-in user (may be null)
+   * @param languageSlug - the alias of the programming language
+   * @param code - the code
+   * @return a Map containing the same validation flags as SubmissionService.createSubmission plus
+   *     {@code isContestExists}, {@code isContestLive} and {@code isAttended}, and on success the
+   *     {@code submissionId}
+   */
+  public Map<String, Object> createSubmission(
+      long contestId, long problemId, User user, String languageSlug, String code) {
+    Contest contest = contestMapper.getContest(contestId);
+    boolean isContestExists =
+        contest != null && PublicationStatus.isVisibleTo(contest.getStatus(), user);
+    Date currentTime = new Date();
+    boolean isContestLive =
+        isContestExists
+            && !currentTime.before(contest.getStartTime())
+            && currentTime.before(contest.getEndTime());
+    boolean isAttended = isContestExists && isAttendContest(contestId, user);
+
+    Map<String, Object> result = new HashMap<>(12, 1);
+    result.put("isUserLogined", user != null);
+    result.put("isContestExists", isContestExists);
+    result.put("isContestLive", isContestLive);
+    result.put("isAttended", isAttended);
+    if (!isContestExists || !isContestLive || !isAttended) {
+      result.put("isSuccessful", false);
+      return result;
+    }
+
+    List<Long> problemIds = JsonUtils.toList(contest.getProblems(), Long.class);
+    Problem problem =
+        problemIds != null && problemIds.contains(problemId)
+            ? problemMapper.getProblem(problemId)
+            : null;
+    result.putAll(submissionService.saveSubmission(user, problem, languageSlug, code));
+    if ((Boolean) result.get("isSuccessful")) {
+      long submissionId = (Long) result.get("submissionId");
+      Submission submission = new Submission();
+      submission.setSubmissionId(submissionId);
+      contestSubmissionMapper.createContestSubmission(new ContestSubmission(contest, submission));
+      submissionService.createSubmissionTask(submissionId, languageSlug);
+    }
+    return result;
   }
 
   /**
@@ -582,4 +696,10 @@ public class ContestService {
 
   /** The autowired ProblemMapper object, used to obtain the problem information in a contest. */
   @Autowired private ProblemMapper problemMapper;
+
+  /**
+   * The autowired SubmissionService object, used to validate, store and enqueue contest
+   * submissions the same way as normal submissions.
+   */
+  @Autowired private SubmissionService submissionService;
 }

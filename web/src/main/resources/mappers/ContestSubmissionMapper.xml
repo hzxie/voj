@@ -56,6 +56,13 @@
 		AND uid = #{contestantUid}
 		ORDER BY submission_id DESC
 	</select>
+	<select id="getContestIdsOfSubmission"
+		parameterType="long"
+		resultType="long">
+		SELECT contest_id
+		FROM voj_contest_submissions
+		WHERE submission_id = #{submissionId}
+	</select>
 	<insert id="createContestSubmission" 
 		parameterType="org.verwandlung.voj.web.model.ContestSubmission">
 		INSERT INTO voj_contest_submissions (contest_id, submission_id)

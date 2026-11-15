@@ -41,6 +41,7 @@ import org.verwandlung.voj.web.model.Submission;
 import org.verwandlung.voj.web.model.User;
 import org.verwandlung.voj.web.model.UserGroup;
 import org.verwandlung.voj.web.model.VojUserDetails;
+import org.verwandlung.voj.web.service.ContestService;
 import org.verwandlung.voj.web.service.OptionService;
 import org.verwandlung.voj.web.service.SubmissionService;
 
@@ -62,8 +63,11 @@ public class SubmissionControllerTest {
     optionService = mock(OptionService.class);
     when(optionService.getIntOption(anyString(), anyInt())).thenReturn(100);
 
+    contestService = mock(ContestService.class);
+
     controller = new SubmissionController();
     ReflectionTestUtils.setField(controller, "submissionService", submissionService);
+    ReflectionTestUtils.setField(controller, "contestService", contestService);
     ReflectionTestUtils.setField(controller, "optionService", optionService);
   }
 
@@ -228,6 +232,22 @@ public class SubmissionControllerTest {
     Assertions.assertNull(result.get("submission"));
   }
 
+  /** Test case: tests getSubmissionAction(...). Test data: the owner viewing their own contest submission to a hidden contest problem, which the contest makes viewable to them. Expected: the submission is returned with its code. */
+  @Test
+  public void testGetSubmissionActionShowsContestSubmissionToUnpublishedProblem() {
+    User owner = ownerUser();
+    Submission submission = submissionWithCode(owner, "my code");
+    submission.setProblem(problemWithStatus("HIDDEN"));
+    when(submissionService.getSubmission(1000L)).thenReturn(submission);
+    when(contestService.isSubmissionViewableThroughContest(submission, owner)).thenReturn(true);
+    authenticate(owner);
+
+    Map<String, Object> result = controller.getSubmissionAction(1000L, new MockHttpServletRequest());
+
+    Assertions.assertSame(submission, result.get("submission"));
+    Assertions.assertEquals("my code", submission.getCode());
+  }
+
   /** Test case: tests getSubmissionAction(...). Test data: an administrator viewing a submission to a draft problem. Expected: the submission is returned. */
   @Test
   public void testGetSubmissionActionShowsSubmissionToUnpublishedProblemForAdministrator() {
@@ -298,6 +318,9 @@ public class SubmissionControllerTest {
 
   /** The mocked SubmissionService. */
   private SubmissionService submissionService;
+
+  /** The mocked ContestService. */
+  private ContestService contestService;
 
   /** The mocked OptionService. */
   private OptionService optionService;

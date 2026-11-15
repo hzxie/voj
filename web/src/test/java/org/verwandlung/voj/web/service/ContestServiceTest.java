@@ -358,6 +358,127 @@ public class ContestServiceTest {
   }
 
   /**
+   * Test case: tests createSubmission(long, long, User, String, String). Test data: a running
+   * contest attended by user 1000 whose problem list holds the hidden problem 1002. Expected: the
+   * submission and its contest record are created, and the submission is viewable by the
+   * contestant through the contest but not by a user who did not attend.
+   */
+  @Test
+  public void testCreateContestSubmissionToHiddenContestProblem() {
+    createRunningContestWithHiddenProblem();
+
+    Map<String, Object> result =
+        contestService.createSubmission(
+            FIXTURE_CONTEST_ID, 1002, userWithUid(1000), "text/x-java", "Code");
+    Assertions.assertEquals(Boolean.TRUE, result.get("isSuccessful"), result.toString());
+    long submissionId = (Long) result.get("submissionId");
+    Assertions.assertEquals(
+        List.of(FIXTURE_CONTEST_ID),
+        contestSubmissionMapper.getContestIdsOfSubmission(submissionId));
+
+    Submission submission = submissionService.getSubmission(submissionId);
+    Assertions.assertTrue(
+        contestService.isSubmissionViewableThroughContest(submission, userWithUid(1000)));
+    Assertions.assertFalse(
+        contestService.isSubmissionViewableThroughContest(submission, userWithUid(1002)));
+    Assertions.assertFalse(contestService.isSubmissionViewableThroughContest(submission, null));
+
+    // The normal submission path still refuses the hidden problem.
+    Assertions.assertEquals(
+        Boolean.FALSE,
+        submissionService
+            .createSubmission(userWithUid(1000), 1002, "text/x-java", "Code")
+            .get("isProblemExists"));
+  }
+
+  /** Test case: tests createSubmission(long, long, User, String, String). Test data: user 1002, who did not attend the running contest. Expected: rejected with isAttended = false. */
+  @Test
+  public void testCreateContestSubmissionWithoutAttending() {
+    createRunningContestWithHiddenProblem();
+
+    Map<String, Object> result =
+        contestService.createSubmission(
+            FIXTURE_CONTEST_ID, 1002, userWithUid(1002), "text/x-java", "Code");
+    Assertions.assertEquals(Boolean.FALSE, result.get("isAttended"));
+    Assertions.assertEquals(Boolean.FALSE, result.get("isSuccessful"));
+  }
+
+  /** Test case: tests createSubmission(long, long, User, String, String). Test data: an anonymous user. Expected: rejected with isUserLogined = false. */
+  @Test
+  public void testCreateContestSubmissionWithoutLogin() {
+    createRunningContestWithHiddenProblem();
+
+    Map<String, Object> result =
+        contestService.createSubmission(FIXTURE_CONTEST_ID, 1002, null, "text/x-java", "Code");
+    Assertions.assertEquals(Boolean.FALSE, result.get("isUserLogined"));
+    Assertions.assertEquals(Boolean.FALSE, result.get("isSuccessful"));
+  }
+
+  /** Test case: tests createSubmission(long, long, User, String, String). Test data: a problem that is not in the running Contest #2. Expected: rejected with isProblemExists = false. */
+  @Test
+  public void testCreateContestSubmissionToProblemOutsideContest() {
+    Map<String, Object> result =
+        contestService.createSubmission(2, 1000, userWithUid(1000), "text/x-java", "Code");
+    Assertions.assertEquals(Boolean.TRUE, result.get("isContestLive"));
+    Assertions.assertEquals(Boolean.FALSE, result.get("isProblemExists"));
+    Assertions.assertEquals(Boolean.FALSE, result.get("isSuccessful"));
+  }
+
+  /** Test case: tests createSubmission(long, long, User, String, String). Test data: the ended Contest #1, attended by user 1000. Expected: rejected with isContestLive = false. */
+  @Test
+  public void testCreateContestSubmissionToEndedContest() {
+    Map<String, Object> result =
+        contestService.createSubmission(1, 1000, userWithUid(1000), "text/x-java", "Code");
+    Assertions.assertEquals(Boolean.TRUE, result.get("isContestExists"));
+    Assertions.assertEquals(Boolean.FALSE, result.get("isContestLive"));
+    Assertions.assertEquals(Boolean.FALSE, result.get("isSuccessful"));
+  }
+
+  /** Test case: tests createSubmission(long, long, User, String, String). Test data: the hidden Contest #3. Expected: reported as missing to a regular user. */
+  @Test
+  public void testCreateContestSubmissionToHiddenContest() {
+    Map<String, Object> result =
+        contestService.createSubmission(3, 1000, userWithUid(1000), "text/x-java", "Code");
+    Assertions.assertEquals(Boolean.FALSE, result.get("isContestExists"));
+    Assertions.assertEquals(Boolean.FALSE, result.get("isSuccessful"));
+  }
+
+  /** Test case: tests isContestProblemsViewable(Contest, User). Test data: not-started, running and ended contests. Expected: nobody but administrators before the start (even attendees), attendees only while running, everyone after the end. */
+  @Test
+  public void testIsContestProblemsViewable() {
+    User administrator = userWithUid(1001);
+    administrator.setUserGroup(
+        new org.verwandlung.voj.web.model.UserGroup(8, "administrators", "Administrators"));
+
+    // Contest #3 has not started; user 1000 attends it.
+    publishContest(3);
+    contestService.attendContest(3, userWithUid(1000));
+    Contest notStarted = contestService.getContest(3);
+    Assertions.assertFalse(contestService.isContestProblemsViewable(notStarted, userWithUid(1000)));
+    Assertions.assertTrue(contestService.isContestProblemsViewable(notStarted, administrator));
+
+    // Contest #2 is running; only user 1000 attends it.
+    Contest running = contestService.getContest(2);
+    Assertions.assertTrue(contestService.isContestProblemsViewable(running, userWithUid(1000)));
+    Assertions.assertFalse(contestService.isContestProblemsViewable(running, userWithUid(1002)));
+    Assertions.assertFalse(contestService.isContestProblemsViewable(running, null));
+
+    // Contest #1 has ended.
+    Assertions.assertTrue(contestService.isContestProblemsViewable(contestService.getContest(1), null));
+  }
+
+  /** Creates a running contest (problems 1001 and the hidden 1002) attended by user 1000. */
+  private void createRunningContestWithHiddenProblem() {
+    long now = System.currentTimeMillis() / 1000 * 1000;
+    insertContest(FIXTURE_CONTEST_ID, "ACM", "ICPC", now - 3600_000L, now + 3600_000L, 0);
+    jdbcTemplate()
+        .update(
+            "UPDATE voj_contests SET contest_problems = '[1001, 1002]' WHERE contest_id = ?",
+            FIXTURE_CONTEST_ID);
+    insertContestant(FIXTURE_CONTEST_ID, 1000);
+  }
+
+  /**
    * Creates a running ACM contest (started two hours ago, ending in one hour, 20-minute penalty)
    * with the submissions described in testGetLeaderBoardForAcmScoresAndPenalty.
    *
@@ -505,6 +626,13 @@ public class ContestServiceTest {
 
   /** The ContestContestantMapper object, used to check the raw leaderboard query results. */
   @Autowired private org.verwandlung.voj.web.mapper.ContestContestantMapper contestContestantMapper;
+
+  /** The SubmissionService object, used to read back contest submissions. */
+  @Autowired private SubmissionService submissionService;
+
+  /** The ContestSubmissionMapper object, used to check the stored contest records. */
+  @Autowired
+  private org.verwandlung.voj.web.mapper.ContestSubmissionMapper contestSubmissionMapper;
 
   /** The DataSource of the test database, used to insert leaderboard fixtures. */
   @Autowired private javax.sql.DataSource dataSource;
