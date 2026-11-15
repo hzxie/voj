@@ -115,6 +115,19 @@ public class SandboxBehaviorTest {
   }
 
   /**
+   * Test case: a program that touches 48 MB and then forks seven children that share those pages
+   * until they exit. Expected result: Accepted under a 128 MB limit: the group's memory is the
+   * proportional set size, which counts each shared page once rather than once per process (as
+   * the sum of the resident set sizes, 8 x 48 MB, would).
+   */
+  @Test
+  public void testMemorySharedAfterForkIsCountedOnce() throws Exception {
+    Assumptions.assumeFalse(
+        System.getProperty("os.name").contains("Windows"), "This test uses fork().");
+    Assertions.assertEquals("AC", judge(900006L, SHARED_MEMORY_CODE, 5000, 131072));
+  }
+
+  /**
    * Compiles and runs a C++ program under the active sandbox and returns its verdict slug.
    *
    * @param id - a unique id used for the work directory and the in-memory submission
@@ -245,6 +258,30 @@ public class SandboxBehaviorTest {
           waitpid(child, nullptr, 0);
           std::thread thread([] {});
           thread.join();
+          return 0;
+      }
+      """;
+
+  /** A program whose eight processes share 48 MB of memory (see testMemorySharedAfterFork...). */
+  private static final String SHARED_MEMORY_CODE =
+      """
+      #include <cstdlib>
+      #include <cstring>
+      #include <sys/wait.h>
+      #include <unistd.h>
+
+      int main() {
+          const size_t size = 48 * 1024 * 1024;
+          char* block = static_cast<char*>(std::malloc(size));
+          std::memset(block, 1, size);
+          for (int i = 0; i < 7; ++i) {
+              if (fork() == 0) {
+                  usleep(300 * 1000);
+                  _exit(block[i] == 1 ? 0 : 1);
+              }
+          }
+          while (wait(nullptr) > 0) {
+          }
           return 0;
       }
       """;

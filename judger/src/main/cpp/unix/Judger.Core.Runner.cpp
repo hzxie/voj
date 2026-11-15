@@ -21,6 +21,7 @@
 #include "../org_verwandlung_voj_jni_library.h"
 #include "../org_verwandlung_voj_judger_core_Runner.h"
 
+#include <algorithm>
 #include <atomic>
 #include <cerrno>
 #include <cstdio>
@@ -77,6 +78,11 @@ static const rlim_t    OUTPUT_FILE_SIZE_LIMIT = (rlim_t)256 * 1024 * 1024; // RL
 static const rlim_t    PROCESS_NUMBER_LIMIT   = 64;          // default RLIMIT_NPROC (anti fork-bomb)
 static const int       CLEANUP_ATTEMPTS       = 1000;        // kill/reap rounds (x 1 ms) after a run
 static const int       GROUP_SCAN_INTERVAL    = 10;          // scan the whole group every 10th poll
+// Reading a process's PSS walks its page tables (~3 ms for a 550 MB JVM, ~1000 x reading its stat),
+// so the group's PSS is read at most every 10 ms and at most every 10 x the last read's duration
+// (<= 10% of the watchdog's time), and only when it can raise the peak (see the watchdog).
+static const long long PSS_SCAN_MIN_INTERVAL_MS = 10;
+static const long long PSS_SCAN_COST_FACTOR     = 10;
 // RLIMIT_DATA backstop: 2 x the memory limit plus a headroom of max(256 MB, physical RAM / 32). The
 // headroom matters for the JVM, whose committed initial heap defaults to physical RAM / 64.
 static const unsigned long long DATA_LIMIT_MIN_HEADROOM_KB = 256ULL * 1024;
@@ -129,7 +135,9 @@ static std::string buildSeccompProgram();
 static long long getMonotonicMillis();
 static int  readCpuTimeMillis(pid_t);
 static int  readPeakMemoryKb(pid_t);
-static bool readProcessGroupUsage(pid_t, long long* cpuMillis, long long* residentKb);
+static bool readProcessGroupUsage(pid_t, long long* cpuMillis,
+                                  std::vector<std::pair<pid_t, long long>>* members);
+static long long readProportionalSetSizeKb(pid_t);
 static rlim_t getDataLimit(int memoryLimitKb);
 static void reapProcessGroup(pid_t);
 static void killProcessGroup(pid_t);
@@ -265,7 +273,7 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     long long startMillis = getMonotonicMillis();
 
     // Child processes are accounted for, not only the top-level process: every GROUP_SCAN_INTERVAL
-    // polls the watchdog sums the CPU time and resident memory of the whole process group (the
+    // polls the watchdog sums the CPU time and the memory (PSS) of the whole process group (the
     // seccomp filter keeps every descendant in it). Memory is always summed, so the compile memory
     // limit also covers cc1plus, rustc's linker, go's compile/link children, kotlinc's JVM, ... For
     // a compilation, CPU time keeps being measured on the top-level process only (plus the
@@ -274,13 +282,54 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     bool countGroupCpu = !plan.compileStep;
 
     std::thread watchdog([&]() {
+        // PSS (/proc/<pid>/smaps_rollup) is only readable with ptrace-read access to the process,
+        // which root lacks for another user's process without CAP_SYS_PTRACE (Docker drops it).
+        // The kernel checks the file-system UID/GID for it, so this thread - and only this thread,
+        // which the raw syscalls affect, unlike the glibc wrappers - takes on the sandbox user's
+        // for file access. It does nothing but read /proc and send signals (which use the real UID).
+        if ( plan.dropPrivileges ) {
+            syscall(SYS_setfsgid, plan.dropGid);
+            syscall(SYS_setfsuid, plan.dropUid);
+        }
         long long wallBackstopMs =
             (timeLimit > 0) ? (long long) timeLimit * WALL_TIME_FACTOR + WALL_TIME_SLACK_MS : 0;
+        // The group's memory is the sum of its processes' PSS. Reading it is costly (see
+        // PSS_SCAN_COST_FACTOR), so it is only read when it can matter: when the group has more
+        // than one process (a single one's VmHWM, sampled on every poll, is at least its PSS) and
+        // the cheap sum of their RSS, an upper bound of the PSS sum, exceeds the peak so far. When
+        // that happens too soon after the last read, the read waits for a later scan; the memory
+        // is never estimated.
+        long long nextPssScanMs = 0;
+        std::vector<std::pair<pid_t, long long>> members;
+        auto scanProcessGroup = [&](long long* cpuMs, long long* memoryKb) {
+            if ( !readProcessGroupUsage(pid, cpuMs, &members) ) {
+                return false;
+            }
+            long long rssKb = 0;
+            for ( const auto& member : members ) {
+                rssKb += member.second;
+            }
+            long long startMs = getMonotonicMillis();
+            if ( members.size() < 2 || rssKb <= peakMemoryKb.load() || startMs < nextPssScanMs ) {
+                *memoryKb = (members.size() < 2) ? rssKb : -1;
+                return true;
+            }
+            long long pssKb = 0;
+            for ( const auto& member : members ) {
+                long long processPssKb = readProportionalSetSizeKb(member.first);
+                pssKb += (processPssKb >= 0) ? processPssKb : member.second;
+            }
+            long long elapsedMs = getMonotonicMillis() - startMs;
+            nextPssScanMs = startMs + std::max(PSS_SCAN_MIN_INTERVAL_MS,
+                                               elapsedMs * PSS_SCAN_COST_FACTOR);
+            *memoryKb = pssKb;
+            return true;
+        };
         for ( int poll = 0; !finished.load(); ++poll ) {
             long long groupCpuMs = -1;
-            long long groupRssKb = -1;
+            long long groupMemKb = -1;
             if ( poll % GROUP_SCAN_INTERVAL == 0 &&
-                 readProcessGroupUsage(pid, &groupCpuMs, &groupRssKb) &&
+                 scanProcessGroup(&groupCpuMs, &groupMemKb) &&
                  countGroupCpu && groupCpuMs > groupCpuMillis.load() ) {
                 groupCpuMillis.store(groupCpuMs);
             }
@@ -299,12 +348,13 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
                     kill(-pid, SIGKILL);
                 }
             }
-            // Sample peak RSS from /proc (VmHWM). The watchdog only runs after the child has exec'd
-            // (the parent blocks on the sync pipe until then), so this never sees the JVM image the
-            // freshly forked child briefly shared before exec.
+            // Sample the top-level process's peak RSS from /proc (VmHWM), which also catches a spike
+            // between two polls, and the whole group's memory (PSS). The watchdog only runs after
+            // the child has exec'd (the parent blocks on the sync pipe until then), so this never
+            // sees the JVM image the freshly forked child briefly shared before exec.
             int peakKb = readPeakMemoryKb(pid);
-            if ( groupRssKb > peakKb ) {
-                peakKb = (int) groupRssKb;
+            if ( groupMemKb > peakKb ) {
+                peakKb = (int) groupMemKb;
             }
             if ( peakKb > peakMemoryKb.load() ) {
                 peakMemoryKb.store(peakKb);
@@ -314,6 +364,10 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
                 kill(-pid, SIGKILL);
             }
             usleep(POLL_INTERVAL_US);
+        }
+        if ( plan.dropPrivileges ) {
+            syscall(SYS_setfsuid, 0);
+            syscall(SYS_setfsgid, 0);
         }
     });
 
@@ -806,16 +860,20 @@ static rlim_t getDataLimit(int memoryLimitKb) {
 }
 
 /**
- * Sums the CPU time and the current resident memory of every live process in a process group, by
- * scanning /proc. A process's CPU time includes its children that it has already waited for, so a
- * process tree is counted once. Resident memory is summed per process, so pages shared between
- * processes (e.g. after fork) are counted more than once: a conservative over-estimate.
- * @param  pgid       - the process group ID
- * @param  cpuMillis  - receives the total CPU time (user + system) in milliseconds
- * @param  residentKb - receives the total resident set size in KB
+ * Sums the CPU time of every live process in a process group and lists them with their resident
+ * set size (RSS), by scanning /proc. A process's CPU time includes its children that it has already
+ * waited for, so a process tree is counted once. The RSS counts a page shared between processes
+ * (e.g. after fork) once per process, so their sum is an upper bound of the group's memory; the
+ * watchdog reads their proportional set size (readProportionalSetSizeKb) when it needs the exact
+ * figure.
+ * @param  pgid      - the process group ID
+ * @param  cpuMillis - receives the total CPU time (user + system) in milliseconds
+ * @param  members   - receives the group's processes and their RSS in KB
  * @return whether /proc could be scanned
  */
-static bool readProcessGroupUsage(pid_t pgid, long long* cpuMillis, long long* residentKb) {
+static bool readProcessGroupUsage(pid_t pgid, long long* cpuMillis,
+                                  std::vector<std::pair<pid_t, long long>>* members) {
+    members->clear();
     DIR* procDir = opendir("/proc");
     if ( procDir == nullptr ) {
         return false;
@@ -828,8 +886,7 @@ static bool readProcessGroupUsage(pid_t pgid, long long* cpuMillis, long long* r
     if ( pageSize <= 0 ) {
         pageSize = 4096;
     }
-    long long ticks         = 0;
-    long long residentPages = 0;
+    long long ticks = 0;
     struct dirent* entry;
     while ( (entry = readdir(procDir)) != nullptr ) {
         if ( entry->d_name[0] < '0' || entry->d_name[0] > '9' ) {
@@ -864,13 +921,44 @@ static bool readProcessGroupUsage(pid_t pgid, long long* cpuMillis, long long* r
         if ( fields != 7 || processGroup != pgid || state == 'Z' || state == 'X' ) {
             continue;
         }
-        ticks         += utime + stime + cutime + cstime;
-        residentPages += rss;
+        ticks += utime + stime + cutime + cstime;
+        members->push_back(std::make_pair((pid_t) atoi(entry->d_name), rss * (pageSize / 1024)));
     }
     closedir(procDir);
-    *cpuMillis  = ticks * 1000 / hertz;
-    *residentKb = residentPages * (pageSize / 1024);
+    *cpuMillis = ticks * 1000 / hertz;
     return true;
+}
+
+/**
+ * Reads the proportional set size (PSS) of a process from /proc/<pid>/smaps_rollup (Linux 4.14+):
+ * a page shared by n processes counts 1/n towards each, so the PSS of a group's processes adds up
+ * pages shared after fork, or the shared libraries of the JVM and other runtimes, only once.
+ * Reading it requires ptrace-read access to the process (see the watchdog) and walks its page
+ * tables, so it costs far more than its stat.
+ * @param  pid - the process ID
+ * @return the PSS in KB, or -1 if it cannot be read (the caller then counts the RSS instead)
+ */
+static long long readProportionalSetSizeKb(pid_t pid) {
+    char path[64];
+    snprintf(path, sizeof(path), "/proc/%d/smaps_rollup", (int) pid);
+    int fd = open(path, O_RDONLY | O_CLOEXEC);
+    if ( fd < 0 ) {
+        return -1;
+    }
+    // The file is a header line and a few dozen "Name:   value kB" lines; Pss is the third field.
+    char    buffer[4096];
+    ssize_t length = read(fd, buffer, sizeof(buffer) - 1);
+    close(fd);
+    if ( length <= 0 ) {
+        return -1;
+    }
+    buffer[length] = '\0';
+    const char* pss = strstr(buffer, "\nPss:");
+    if ( pss == nullptr ) {
+        return -1;
+    }
+    long long kb = -1;
+    return sscanf(pss + 5, " %lld", &kb) == 1 ? kb : -1;
 }
 
 /**
