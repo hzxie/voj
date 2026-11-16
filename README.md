@@ -124,16 +124,16 @@ script from [`sql/upgrades/`](sql/upgrades/); see
 Untrusted submissions run inside a sandbox so they cannot harm the judging host:
 
 - **Linux (native).** Each submission runs in a forked child with `setrlimit`
-  (CPU time, output size and process-count caps), a seccomp syscall filter
-  (blocking `ptrace`, `mount`, module loading, leaving the process group, creating
-  namespaces, network sockets other than `AF_UNIX`, etc.), a private network
-  namespace where one can be created, and privileges dropped to an
-  unprivileged user (`system.username`, defaulting to `nobody`). CPU time is that of
-  every process the submission creates, including orphans (a root-owned subreaper
-  reaps them), and memory is their summed proportional set size, so shared pages
-  count once. Each Go submission gets its own build cache. If the judger runs as
-  root and cannot drop privileges, the submission is refused rather than run as
-  root.
+  (CPU time, memory backstop, output size and thread caps), a seccomp syscall
+  filter (blocking creating processes, `ptrace`, `mount`, module loading,
+  leaving the process group, creating namespaces, network sockets other than
+  `AF_UNIX`, etc.), a private network namespace where one can be created, and
+  privileges dropped to an unprivileged user (`system.username`, defaulting to
+  `nobody`). A run is a single process, so its CPU time and peak memory are
+  exactly those of the program, and nothing it starts outlives it. Each Go
+  submission gets its own build cache. If the judger runs as root and cannot
+  drop privileges, or any part of the sandbox cannot be set up, the submission
+  is refused (a system error) rather than run unconfined.
 - **Linux (isolate).** Optionally set `judger.sandbox = isolate` to delegate to the
   external [isolate](https://github.com/ioi/isolate) tool instead, which confines
   each submission to its own mount and network namespaces and cgroup; every

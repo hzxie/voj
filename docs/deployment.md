@@ -44,17 +44,14 @@ if the configured user does not exist, is root, or the switch fails, the
 submission is refused rather than executed with root privileges. So if you change
 `system.username`, make sure that account exists.
 
-For a shared, multi-tenant host, prefer a dedicated account over `nobody`, because
-`nobody` is shared with other system services. A dedicated account makes the
-process-count limit (`RLIMIT_NPROC`) effective and keeps submissions from
-interfering with other `nobody` processes.
-
-**The account must be used by the judger only.** After every compile and run,
-the native sandbox kills *every* process owned by `system.username`, so that a
-submission cannot leave a process behind (for example via `setsid`) to tamper
-with later submissions. Inside the Docker image nothing else runs as `nobody`, so
-the default is safe there; on a bare host where other services run as `nobody`,
-create a dedicated account instead, or those services will be killed:
+The judger never touches other processes of the account: nothing a submission
+starts can outlive its run (see below), so there is nothing to sweep up
+afterwards, and `nobody` works on a bare host as well as in the Docker image.
+On a host where other services run as `nobody`, a dedicated account is still the
+better choice, for two reasons: `RLIMIT_NPROC`, which caps a submission's
+threads, counts every process and thread of the account, so busy `nobody`
+services eat into it (a run that cannot even start is then a system error); and
+processes of the same account can signal one another.
 
 ```
 sudo useradd --system --no-create-home --shell /usr/sbin/nologin voj-sandbox
@@ -63,25 +60,57 @@ sudo useradd --system --no-create-home --shell /usr/sbin/nologin voj-sandbox
 
 ### What a submission is held to
 
-- **Processes.** The sandbox user's `RLIMIT_NPROC` (which counts threads) is
-  `judger.processLimit` (64) for a run and `judger.compileProcessLimit` (1024)
-  for a compilation, whose toolchains are trusted but parallel (`go build`).
-  The seccomp filter denies leaving the process group (`setsid`, `setpgid`) and
-  creating namespaces (`unshare`, `setns`, `clone` with a `CLONE_NEW*` flag;
-  `clone3` fails with `ENOSYS` so the C library falls back to `clone`), so a
-  submission cannot obtain the capabilities of an unprivileged user namespace.
-- **CPU time.** Every run gets a small supervisor process (a root-owned fork of
-  the judger, so the submission can neither signal nor trace it) that is the
-  *child subreaper* of the submission: every orphaned descendant is reparented to
-  it and reaped by it, so the CPU time of a process that exits after being
-  orphaned still counts. A run's time is the CPU time of all its processes; a
-  compilation's is the compiler's top-level process (including what it waited
-  for).
-- **Memory.** A run's memory is the larger of the top-level process's peak RSS
-  and the sum of the proportional set size (PSS, `/proc/<pid>/smaps_rollup`,
-  Linux 4.14+) of all its processes, so pages shared after `fork` or by the
-  runtime's shared libraries count once, not once per process. Without PSS
-  (older kernels) the RSS is summed instead, which over-counts.
+- **Processes.** A run of the submission is a single process: it may create
+  threads, but the seccomp filter makes `fork`, `vfork` and `clone` without
+  `CLONE_THREAD` (the C library's `fork`, `posix_spawn`, `system`) fail with
+  `EPERM`. Its threads are capped by the sandbox user's `RLIMIT_NPROC`,
+  `judger.processLimit` (64), which counts every process and thread of that user.
+  A compilation runs a trusted toolchain, which may start other programs (the
+  `gcc` driver, `go build`), under `judger.compileProcessLimit` (1024). Every
+  process of a compilation stays in the compiler's process group, since the
+  filter denies leaving it (`setsid`, `setpgid`); the whole group is killed when
+  a limit is hit and as soon as the compiler exits, so nothing outlives a
+  compile or a run. The filter also denies `ptrace`, `mount`, module loading
+  and the like, and creating namespaces (`unshare`, `setns`, `clone` with a
+  `CLONE_NEW*` flag; `clone3` fails with `ENOSYS` so the C library falls back
+  to `clone`), so a submission cannot obtain the capabilities of an
+  unprivileged user namespace.
+- **CPU time.** A run's time is the CPU time (user + system, every thread) of
+  its process, as the kernel accounts it when the process is reaped. A watchdog
+  polls it every millisecond and kills the program once it exceeds the limit,
+  backed by `RLIMIT_CPU` (the limit rounded up to whole seconds, plus one) and a
+  wall-clock limit of three times the time limit plus one second (for a program
+  that sleeps or blocks). A program that finishes over the limit before the
+  watchdog stops it is Time Limit Exceeded all the same. A compilation's time is
+  that of the compiler's top-level process, including the children it waited
+  for, under `judger.compileTimeLimit`.
+- **Memory.** A run's memory is the peak resident set size of its process
+  (`VmHWM`, polled from `/proc` every millisecond; the program is killed once it
+  exceeds the limit). The kernel backs this with `RLIMIT_DATA` at twice the
+  limit plus max(256 MB, RAM / 32), which bounds how far a process can grow
+  between two polls; a single allocation larger than that (say,
+  `std::vector<int>(1e9)` under 256 MB) is stopped by the seccomp filter and is
+  Memory Limit Exceeded too, rather than the runtime error its failure would
+  look like. A program that would have handled such a failed allocation is
+  stopped there instead. Allocations that exceed the backstop only together
+  with earlier untouched ones, or by growing with `brk`/`mremap`, still just
+  fail and are judged by how the program then ends; with the backstop at more
+  than twice the limit, that is rare. Memory that is reserved but never touched
+  does not count. A compilation's memory is that of the compiler's top-level
+  process, under `judger.compileMemoryLimit`; every process it runs is held to
+  the same `RLIMIT_DATA` backstop, derived from that limit.
+- **Output.** A file the program writes, standard output included, may reach
+  256 MB (`RLIMIT_FSIZE`; fixed). A run that hits the limit is Output Limit
+  Exceeded, whether the kernel's `SIGXFSZ` kills it or it ignores the signal,
+  so that its writes fail, and its output has reached the limit.
+- **Standard streams and descriptors.** A run reads its standard input from the
+  test's input file and a compilation from `/dev/null`; standard output goes to
+  the output file (for a compilation, standard error too: the compile log), and
+  a run's standard error is discarded. No other descriptor of the judger is
+  inherited.
+- **Environment.** Only the locale and toolchain variables of the judger are
+  passed on (`PATH`, `LANG`, `JAVA_HOME`, the Go and Rust settings, ...), never
+  its secrets, with `HOME` set to the submission's work directory.
 - **Network.** The seccomp filter refuses `socket` and `socketpair` with
   `EACCES` for every address family but `AF_UNIX`, and `io_uring` (which can
   create sockets on its own) with `ENOSYS`, so a submission cannot reach the
@@ -90,9 +119,12 @@ sudo useradd --system --no-create-home --shell /usr/sbin/nologin voj-sandbox
   the private network namespace, still tried first, cannot be created. Compilers
   run under the same filter. `AF_UNIX` sockets stay available (runtimes use
   `socketpair`), so do not leave a Unix socket that the sandbox user may connect
-  to (e.g. a database's or Docker's) where it can reach it. The filter is
-  mandatory: if it cannot be built or installed (or any one of its rules cannot
-  be added), the submission is not run and is judged a system error.
+  to (e.g. a database's or Docker's) where it can reach it.
+- **Failing closed.** The seccomp filter and, when the judger runs as root, the
+  privilege drop (including dropping supplementary groups) are mandatory, as are
+  the resource limits and the standard streams. If any of them cannot be set
+  up, or the program cannot be executed at all, it is not run and is judged a
+  system error, never a runtime or compile error.
 - **Go.** `GOCACHE` and `GOPATH` point into the submission's own work directory,
   never at a cache other submissions can write: a shared build cache could be
   poisoned by one submission for every later Go build. Set

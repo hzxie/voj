@@ -91,8 +91,8 @@ settings above. Judger-specific keys:
 | --- | --- | --- |
 | `judger.sandbox` | `native` | Sandbox backend. `native` is the in-process JNI runner (Linux: `setrlimit` + seccomp filter, which also refuses network sockets + network namespace where possible + privilege drop; Windows: separate low-privilege account). `isolate` (Linux only) delegates to the external [isolate](https://github.com/ioi/isolate) tool. See [`deployment.md`](deployment.md). |
 | `judger.compileTimeLimit` | `20000` | CPU time (ms) a compilation may use (measured on the compiler's top-level process). |
-| `judger.compileMemoryLimit` | `524288` | Memory (KB) a compilation may use, summed over the compiler's processes (PSS), and scaled by the language's memory multiplier like a run's limit. The base 512 MB caps C/C++/Go/Rust/Pascal "compiler bombs"; Kotlin (multiplier 2) gets 1 GB, since `kotlinc` is a JVM with a 512 MB heap of its own. |
-| `judger.processLimit` | `64` | Processes a submission may have at once (native sandbox: the sandbox user's `RLIMIT_NPROC`, which counts threads too). |
+| `judger.compileMemoryLimit` | `524288` | Memory (KB) a compilation may use, scaled by the language's memory multiplier like a run's limit. The native sandbox measures the compiler's top-level process against it and holds every process it runs to a kernel backstop of twice the limit plus headroom (`RLIMIT_DATA`). The base 512 MB caps C/C++/Go/Rust/Pascal "compiler bombs"; Kotlin (multiplier 2) gets 1 GB, since `kotlinc` is a JVM with a 512 MB heap of its own. |
+| `judger.processLimit` | `64` | Processes a submission may have at once. The native sandbox on Linux does not let a run create processes at all; this is the sandbox user's `RLIMIT_NPROC`, which caps the run's threads. |
 | `judger.compileProcessLimit` | `1024` | Processes and threads a compilation may have at once (both backends). Higher than `judger.processLimit` because the Go toolchain runs a compiler per CPU, each with up to a thread per CPU: a cold `go build` used ~100 threads on a 24-core host. |
 | `judger.goBuildCacheSeed` | `${VOJ_GO_BUILD_CACHE_SEED}` *(empty)* | A read-only, root-owned Go build cache that each Go submission's private build cache is seeded from (hard links, or copies across file systems). Empty: every Go build starts from an empty cache. The Docker image builds one at `/opt/go-build-cache`. |
 | `judger.isolate.executable` | `isolate` | Path to the `isolate` binary. Used only when `judger.sandbox = isolate`. |
@@ -109,5 +109,5 @@ settings above. Judger-specific keys:
 
 | Property | Default | Purpose |
 | --- | --- | --- |
-| `system.username` | `nobody` | Unprivileged account the native sandbox drops to. On Linux any non-root account works; `nobody` is present out of the box. When the judger runs as root, dropping privileges is mandatory and fails closed. Every process owned by this account is killed after each run, so it must not be shared with other services. See [`deployment.md`](deployment.md). |
+| `system.username` | `nobody` | Unprivileged account the native sandbox drops to. On Linux any non-root account works; `nobody` is present out of the box. When the judger runs as root, dropping privileges is mandatory and fails closed. A dedicated account is preferable on a host where other services use `nobody`. See [`deployment.md`](deployment.md). |
 | `system.password` | *(empty)* | Unused on Linux; required on Windows for the separate low-privilege logon account. |
