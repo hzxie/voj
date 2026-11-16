@@ -97,9 +97,7 @@ public class ApplicationDispatcher {
   public void onErrorOccurred(Submission submission, String reason) {
     updateSubmission(submission, 0, 0, 0, "SE", String.format("System Error.\n\n%s\n", reason));
 
-    Map<String, Object> mapMessage = new HashMap<>();
-    mapMessage.put("event", "ErrorOccurred");
-    mapMessage.put("submissionId", submission.getSubmissionId());
+    Map<String, Object> mapMessage = newMessage("ErrorOccurred", submission);
 
     notifyWebApplication(mapMessage);
   }
@@ -117,9 +115,7 @@ public class ApplicationDispatcher {
     if (!isSuccessful) {
       updateSubmission(submission, 0, 0, 0, "CE", log);
     }
-    Map<String, Object> mapMessage = new HashMap<>();
-    mapMessage.put("event", "CompileFinished");
-    mapMessage.put("submissionId", submission.getSubmissionId());
+    Map<String, Object> mapMessage = newMessage("CompileFinished", submission);
     mapMessage.put("isSuccessful", isSuccessful);
     mapMessage.put("log", log);
 
@@ -129,21 +125,19 @@ public class ApplicationDispatcher {
   /**
    * Returns the judging result in real time.
    *
-   * @param submissionId - the number of the submission
+   * @param submission - the submission, claimed by {@link #onJudgingStarted}
    * @param checkpointId - the number of the checkpoint
    * @param runtimeResult - the program's runtime result for a checkpoint
    */
   public void onOneTestPointFinished(
-      long submissionId, int checkpointId, Map<String, Object> runtimeResult) {
+      Submission submission, int checkpointId, Map<String, Object> runtimeResult) {
     String runtimeResultSlug = getRuntimeResultSlug(runtimeResult);
     String runtimeResultName = getRuntimeResultName(runtimeResultSlug);
     int usedTime = getUsedTime(runtimeResult);
     int usedMemory = getUsedMemory(runtimeResult);
     int score = getScore(runtimeResult);
 
-    Map<String, Object> mapMessage = new HashMap<>();
-    mapMessage.put("event", "TestPointFinished");
-    mapMessage.put("submissionId", submissionId);
+    Map<String, Object> mapMessage = newMessage("TestPointFinished", submission);
     mapMessage.put("checkpointId", checkpointId);
     mapMessage.put("runtimeResult", runtimeResultName);
     mapMessage.put("usedTime", usedTime);
@@ -189,15 +183,33 @@ public class ApplicationDispatcher {
     log = getJudgeLog(runtimeResults, runtimeResultSlug, totalTime, maxMemory, totalScore);
     updateSubmission(submission, totalTime, maxMemory, totalScore, runtimeResultSlug, log);
 
-    Map<String, Object> mapMessage = new HashMap<>();
-    mapMessage.put("event", "AllTestPointsFinished");
-    mapMessage.put("submissionId", submission.getSubmissionId());
+    Map<String, Object> mapMessage = newMessage("AllTestPointsFinished", submission);
     mapMessage.put("runtimeResult", getRuntimeResultName(runtimeResultSlug));
     mapMessage.put("totalTime", totalTime);
     mapMessage.put("maxMemory", maxMemory);
     mapMessage.put("totalScore", totalScore);
 
     notifyWebApplication(mapMessage);
+  }
+
+  /**
+   * Creates a progress message of a judging. Besides the submission it carries the judging's claim
+   * ({@code executeTime}: the start time set by {@link #onJudgingStarted}, in milliseconds), so that
+   * the web application can drop the messages of a judging that a rejudge (or a later delivery of
+   * the task) superseded instead of showing them on the submission's page.
+   *
+   * @param event - the event of the message
+   * @param submission - the submission, claimed by {@link #onJudgingStarted}
+   * @return the message
+   */
+  private static Map<String, Object> newMessage(String event, Submission submission) {
+    Map<String, Object> mapMessage = new HashMap<>();
+    mapMessage.put("event", event);
+    mapMessage.put("submissionId", submission.getSubmissionId());
+    if (submission.getExecuteTime() != null) {
+      mapMessage.put("executeTime", submission.getExecuteTime().getTime());
+    }
+    return mapMessage;
   }
 
   /**

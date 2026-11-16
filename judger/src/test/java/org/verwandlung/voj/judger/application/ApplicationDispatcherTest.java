@@ -127,6 +127,26 @@ public class ApplicationDispatcherTest {
   }
 
   /**
+   * Test case: tests the messages of a judging. Test data: a claimed submission. Expected result:
+   * every message (error, compilation, verdict) carries the judging's claim, its start time.
+   */
+  @Test
+  public void testMessagesCarryTheClaimOfTheJudging() {
+    Map<String, Object> result = new HashMap<>();
+    result.put("isSuccessful", true);
+    result.put("log", "");
+    applicationDispatcher.onErrorOccurred(submission(), "reason");
+    applicationDispatcher.onCompileFinished(submission(), result);
+    applicationDispatcher.onAllTestPointsFinished(submission(), new ArrayList<>());
+
+    ArgumentCaptor<Map<String, Object>> messageCaptor = ArgumentCaptor.forClass(Map.class);
+    verify(messageSender, org.mockito.Mockito.times(3)).sendMessage(messageCaptor.capture());
+    for (Map<String, Object> message : messageCaptor.getAllValues()) {
+      Assertions.assertEquals(1700000000000L, message.get("executeTime"), message.toString());
+    }
+  }
+
+  /**
    * Test case: tests the onJudgingStarted method. Test data: a pending submission. Expected result:
    * it is claimed, with the start time at second precision (that of the column) as the token that
    * identifies this judging.
@@ -233,10 +253,13 @@ public class ApplicationDispatcherTest {
     runtimeResult.put("usedMemory", 256);
     runtimeResult.put("score", 10);
 
-    applicationDispatcher.onOneTestPointFinished(100L, 1, runtimeResult);
+    applicationDispatcher.onOneTestPointFinished(submission(), 1, runtimeResult);
 
     Map<String, Object> message = captureSentMessage();
     Assertions.assertEquals("TestPointFinished", message.get("event"));
+    Assertions.assertEquals(100L, message.get("submissionId"));
+    // The claim of the judging, so that the web application can drop a superseded judging's messages.
+    Assertions.assertEquals(1700000000000L, message.get("executeTime"));
     Assertions.assertEquals(1, message.get("checkpointId"));
     Assertions.assertEquals("Accepted", message.get("runtimeResult"));
     Assertions.assertEquals(12, message.get("usedTime"));
@@ -255,7 +278,7 @@ public class ApplicationDispatcherTest {
 
     Map<String, Object> runtimeResult = new HashMap<>();
 
-    applicationDispatcher.onOneTestPointFinished(100L, 2, runtimeResult);
+    applicationDispatcher.onOneTestPointFinished(submission(), 2, runtimeResult);
 
     Map<String, Object> message = captureSentMessage();
     Assertions.assertEquals("System Error", message.get("runtimeResult"));

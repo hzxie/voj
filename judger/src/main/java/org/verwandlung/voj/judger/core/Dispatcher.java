@@ -210,7 +210,6 @@ public class Dispatcher {
       String baseFileName)
       throws SystemError {
     List<Map<String, Object>> runtimeResults = new ArrayList<Map<String, Object>>();
-    long submissionId = submission.getSubmissionId();
 
     for (Checkpoint checkpoint : checkpoints) {
       int checkpointId = checkpoint.getCheckpointId();
@@ -230,7 +229,7 @@ public class Dispatcher {
               checkpoint.isExactlyMatch());
       runtimeResult.put("score", checkpointScore);
       runtimeResults.add(runtimeResult);
-      applicationDispatcher.onOneTestPointFinished(submissionId, checkpointId, runtimeResult);
+      applicationDispatcher.onOneTestPointFinished(submission, checkpointId, runtimeResult);
     }
     applicationDispatcher.onAllTestPointsFinished(submission, runtimeResults);
   }

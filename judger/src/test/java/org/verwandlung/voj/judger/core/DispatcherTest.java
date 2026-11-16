@@ -17,6 +17,7 @@
 package org.verwandlung.voj.judger.core;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -107,7 +108,7 @@ public class DispatcherTest {
 
     verify(submissionMapper, times(1)).getSubmission(100L);
     verify(applicationDispatcher).onCompileFinished(any(), any());
-    verify(applicationDispatcher).onOneTestPointFinished(eq(100L), eq(1), any());
+    verify(applicationDispatcher).onOneTestPointFinished(argThat(s -> s.getSubmissionId() == 100L), eq(1), any());
     // The test data is read from the directory the checkpoint store synced it to.
     String checkpointDirectory = "/tmp/voj-dispatcher-tests/1000/";
     verify(programRunner)
@@ -151,7 +152,7 @@ public class DispatcherTest {
     @SuppressWarnings("unchecked")
     org.mockito.ArgumentCaptor<Map<String, Object>> resultCaptor =
         org.mockito.ArgumentCaptor.forClass(Map.class);
-    verify(applicationDispatcher).onOneTestPointFinished(eq(100L), eq(1), resultCaptor.capture());
+    verify(applicationDispatcher).onOneTestPointFinished(argThat(s -> s.getSubmissionId() == 100L), eq(1), resultCaptor.capture());
     Assertions.assertEquals("WA", resultCaptor.getValue().get("runtimeResult"));
   }
 
