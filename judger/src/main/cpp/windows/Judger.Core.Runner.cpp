@@ -75,9 +75,11 @@
  * not what the memory limit is measured against (that is the peak working set, see
  * getPeakMemoryUsage), and the cap is generous for the same reason: the JVM commits its initial
  * heap, physical RAM / 64 by default, as it starts, so a Java "hello world" on a 64 GB host commits
- * over 1 GB while it touches a few dozen MB. The cap only bounds how far a program can grow between
- * two polls. It does not kill the program: an allocation that would exceed it fails, and the Job
- * posts JOB_OBJECT_MSG_(JOB|PROCESS)_MEMORY_LIMIT to its completion port, which the runner treats as
+ * over 1 GB while it touches a few dozen MB. The cap bounds how far a program can grow between two
+ * polls, and it is the only bound on the memory of a program that keeps its own working set below
+ * the limit (see getPeakMemoryUsage): commit is the one measure the program cannot lower. It does
+ * not kill the program: an allocation that would exceed it fails, and the Job posts
+ * JOB_OBJECT_MSG_(JOB|PROCESS)_MEMORY_LIMIT to its completion port, which the runner treats as
  * Memory Limit Exceeded (otherwise the failed allocation would surface as a crash, indistinguishable
  * from a runtime error, or be survived by a program that checks for it), like the Linux runner's
  * seccomp rule for a single mapping beyond RLIMIT_DATA.
@@ -787,7 +789,26 @@ std::wstring getWorkDirectory(const std::wstring& outputFilePath) {
  * the JVM's initial heap (see MEMORY_HARD_LIMIT_MIN_HEADROOM_KB) is not mistaken for the program's
  * own use. A run cannot have other processes but its console host (see RUN_ACTIVE_PROCESS_LIMIT),
  * which is not the program's; a compiler's other processes are held to the Job's hard cap.
- * See https://learn.microsoft.com/windows/win32/api/psapi/ns-psapi-process_memory_counters
+ *
+ * The working set is not a measure the program cannot lower. Its pages leave it, while staying
+ * committed and readable (they are faulted back from the standby or modified list, or the paging
+ * file), when the program calls SetProcessWorkingSetSize(Ex) with (SIZE_T)-1 for both sizes,
+ * EmptyWorkingSet, or VirtualUnlock on pages it has not locked; it needs no privilege for that, and
+ * a Job cannot take it away (JOB_OBJECT_LIMIT_WORKINGSET still lets a process empty its working
+ * set). A program that trims itself as it goes can thus touch more memory than its limit without
+ * its peak working set ever reaching it. No documented per-process measure tells such pages apart
+ * from the JVM's committed but untouched heap: the commit charge (PagefileUsage, PrivateUsage)
+ * counts both, QueryWorkingSetEx says nothing of a page that is not resident, and PageFaultCount
+ * also counts every page freed and touched again. Measuring commit would judge every Java program
+ * by the size of the heap the JVM reserves for it, not by what it uses, and differently from Linux;
+ * so the limit is measured on the working set, and the residual is bounded by the Job's commit cap
+ * (see MEMORY_HARD_LIMIT_MIN_HEADROOM_KB): a self-trimming run can hold up to 2 x the limit +
+ * max(256 MB, physical RAM / 32) in all before an allocation fails and it is judged Memory Limit
+ * Exceeded. It pays for that with a page fault for every trimmed page it touches again.
+ * See https://learn.microsoft.com/windows/win32/api/psapi/ns-psapi-process_memory_counters,
+ * https://learn.microsoft.com/windows/win32/api/memoryapi/nf-memoryapi-setprocessworkingsetsizeex,
+ * https://learn.microsoft.com/windows/win32/api/memoryapi/nf-memoryapi-virtualunlock and
+ * https://learn.microsoft.com/windows/win32/api/winnt/ns-winnt-jobobject_basic_limit_information
  * @param  hProcess - the main process handle
  * @param  memory   - receives the peak memory usage (KB)
  * @return whether the memory could be measured (GetLastError() tells why not)
