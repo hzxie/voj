@@ -175,8 +175,12 @@ two ways:
   `judger.web.baseUrl`, an archive that is malformed) or read, the source code
   cannot be written, or the database is unreachable when the verdict is recorded
   (it is tried 3 times within a few seconds first). The judger releases the
-  submission at its place in the queue and counts nothing on it: an outage of
-  the web app or the database never fails a submission.
+  submission at its place in the queue and counts nothing on it, so an outage
+  of the web app or the database does not use up its budget (a submission that
+  cannot even be released, as the database is down, is left to its lease, which
+  counts one failed judging). The judgers then soon are not ready, and an
+  outage longer than `judging.noJudgerTimeout` of the web app has the waiting
+  submissions judged a System Error (see [Judging queue](#judging-queue)).
 
 Two budgets, independent of each other, keep failed judgings from going on for
 ever:

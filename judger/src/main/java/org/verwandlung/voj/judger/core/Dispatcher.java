@@ -53,7 +53,7 @@ import org.verwandlung.voj.judger.model.Submission;
  *   <li>One of the judger or its environment: the test data cannot be downloaded or read, the
  *       source code cannot be written, the database is unreachable. The submission is released at
  *       its place in the queue without counting anything on it, so that an outage of the web
- *       application or the database never fails a submission.
+ *       application or the database does not use up the budget of a submission.
  * </ul>
  *
  * <p>Either kind counts on the judger: after a failed judging it pauses (see {@link #getPause}),
