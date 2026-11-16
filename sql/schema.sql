@@ -199,6 +199,7 @@ CREATE TABLE `voj_submissions` (
   `language_id` int(4) NOT NULL,
   `submission_submit_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `submission_execute_time` timestamp NULL DEFAULT NULL,
+  `submission_judge_generation` int(8) NOT NULL DEFAULT 0,
   `submission_used_time` int(8) DEFAULT NULL,
   `submission_used_memory` int(8) DEFAULT NULL,
   `submission_judge_result` varchar(8) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'PD',
