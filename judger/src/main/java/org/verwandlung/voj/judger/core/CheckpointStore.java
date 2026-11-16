@@ -68,13 +68,17 @@ import org.verwandlung.voj.judger.util.FileSystemUtils;
  * path: so before each use the judger checks that the file at the path is still the one it
  * locked (and marks it as just used), and claims a slot again if not.
  *
- * <p>The slot also gives the judger a directory of its own under {@code judger.workDir}, {@code
- * voj-judger-<n>/}, which holds the work directory of each judging (see {@link
- * #getWorkDirectory}). A judger that died while judging (killed, out of memory) leaves the work
- * directory of that judging behind, with a submission's source and binary in it: it is removed
- * when the slot is claimed again, while the judgings of other judgers on the host, in directories
- * of their own slots, are left alone. Judgers that share {@code judger.workDir} must therefore
- * share {@code judger.checkpointDir} too, as they do by default.
+ * <p>Likewise, every judger has a directory of its own under {@code judger.workDir}, {@code
+ * voj-judger-<m>/}, which holds the work directory of each judging (see {@link
+ * #getWorkDirectory}): it claims the first slot <i>m</i> there whose lock file ({@code
+ * voj-judger-<m>.lock}) no other process holds, independently of its cache slot, so judgers that
+ * share {@code judger.workDir} need not share {@code judger.checkpointDir}. A judger that died
+ * while judging (killed, out of memory) leaves the work directory of that judging behind, with a
+ * submission's source and binary in it: it is removed when the slot is claimed again, while the
+ * judgings of other judgers on the host, in directories of their own slots, are left alone. The
+ * work root may be shared by judgers running as different accounts (e.g. {@code /tmp}): a slot
+ * whose lock file this judger cannot open, or whose directory belongs to another account, is
+ * theirs.
  *
  * @author Haozhe Xie
  */
@@ -83,36 +87,50 @@ public class CheckpointStore {
   /** The manifest entry, written by the web side, that records the version and per-checkpoint meta. */
   private static final String MANIFEST_FILE = "manifest.properties";
 
-  /** The most judgers on one host that can share a checkpoint root. */
+  /** The most judgers on one host that can share a checkpoint root, or a work root. */
   static final int MAX_SLOTS = 64;
 
   /**
-   * Opens this judger's cache directory, claiming a slot under the checkpoint root, and removes the
-   * temporary directories of downloads that never completed and the work directories of judgings
-   * that never completed. Called at startup; {@link #sync} does it on first use otherwise.
+   * Opens this judger's cache directory and work directory, claiming a slot under the checkpoint
+   * root and one under the work root, and removes the temporary directories of downloads that
+   * never completed and the work directories of judgings that never completed. Called at startup;
+   * {@link #sync} does it on first use otherwise.
    *
    * @return this judger's cache directory
    * @throws IOException if the checkpoint root cannot be trusted or every slot is taken
    */
   public synchronized Path open() throws IOException {
     ensureCheckpointRootIsTrusted();
-    if (slotLock != null && !slotLock.isValid()) {
-      LOGGER.warn(
-          "The lock file {} of this judger's slot was removed or replaced (e.g. by a clean-up of"
-              + " temporary files): claiming a slot again.",
-          slotLock.getFile());
-      slotLock.close();
-      slotLock = null;
+    if (cacheSlotLock != null && !cacheSlotLock.isValid()) {
+      warnOfLostSlot(cacheSlotLock);
+      cacheSlotLock.close();
+      cacheSlotLock = null;
       cacheDirectory = null;
-      judgerWorkDirectory = null;
     }
     if (cacheDirectory == null) {
-      cacheDirectory = claimSlot(Paths.get(checkpointDirectory));
+      cacheDirectory = claimCacheSlot(Paths.get(checkpointDirectory));
       removeTemporaryDirectories(cacheDirectory);
       LOGGER.info("Caching checkpoints in {}", cacheDirectory);
     } else if (!Files.isDirectory(cacheDirectory, LinkOption.NOFOLLOW_LINKS)) {
       // Removed behind the judger's back, e.g. by a clean-up of /tmp.
       createPrivateDirectory(cacheDirectory);
+    }
+
+    if (workSlotLock != null && !workSlotLock.isValid()) {
+      warnOfLostSlot(workSlotLock);
+      workSlotLock.close();
+      workSlotLock = null;
+      judgerWorkDirectory = null;
+    }
+    if (judgerWorkDirectory == null) {
+      // Relative to the directory the judger was started in, as any relative path is; but the
+      // sandbox resolves the paths of a judging after entering its work directory.
+      judgerWorkDirectory =
+          claimWorkSlot(Paths.get(workRootDirectory).toAbsolutePath().normalize());
+      LOGGER.info("Judging in {}", judgerWorkDirectory);
+    } else if (!Files.isDirectory(judgerWorkDirectory, LinkOption.NOFOLLOW_LINKS)) {
+      // Removed behind the judger's back, e.g. by a clean-up of /tmp.
+      resetWorkDirectory(judgerWorkDirectory);
     }
     return cacheDirectory;
   }
@@ -128,10 +146,6 @@ public class CheckpointStore {
    */
   public synchronized Path getWorkDirectory() throws IOException {
     open();
-    if (!Files.isDirectory(judgerWorkDirectory, LinkOption.NOFOLLOW_LINKS)) {
-      // Removed behind the judger's back, e.g. by a clean-up of /tmp.
-      resetWorkDirectory(judgerWorkDirectory);
-    }
     return judgerWorkDirectory;
   }
 
@@ -193,41 +207,59 @@ public class CheckpointStore {
   }
 
   /**
-   * Claims the first free slot under the checkpoint root: locks its lock file, for as long as this
-   * judger runs (the lock is released when the process exits, however it exits), creates its
-   * cache directory if needed, and empties its work directory.
+   * Claims the first free slot under the checkpoint root for this judger's cache: locks its lock
+   * file, for as long as this judger runs, and creates its cache directory if needed.
    *
    * @param root - the checkpoint root
    * @return the slot's cache directory
    * @throws IOException if every slot is taken
    */
-  private Path claimSlot(Path root) throws IOException {
+  private Path claimCacheSlot(Path root) throws IOException {
     Files.createDirectories(root);
-    // Relative to the directory the judger was started in, as any relative path is; but the
-    // sandbox resolves the paths of a judging after entering its work directory.
-    Path workRoot = Paths.get(workRootDirectory).toAbsolutePath().normalize();
-    Path[] workDirectory = new Path[1];
+    // Only the judger writes to the checkpoint root: a lock file it cannot open is an error.
     Slot slot =
         claimSlot(
             root,
             "judger-",
+            false,
             directory -> {
               if (!Files.exists(directory, LinkOption.NOFOLLOW_LINKS)) {
                 createPrivateDirectory(directory);
               }
               ensureOwnedByJudger(directory);
-              workDirectory[0] = workRoot.resolve("voj-" + directory.getFileName());
-              resetWorkDirectory(workDirectory[0]);
+              return true;
             });
-    if (slot == null) {
-      throw new IOException(
-          String.format(
-              "All %d checkpoint cache slots under %s are taken by other judgers.",
-              MAX_SLOTS, root));
-    }
-    LOGGER.info("Judging in {}", workDirectory[0]);
-    slotLock = slot.lock();
-    judgerWorkDirectory = workDirectory[0];
+    cacheSlotLock = slot.lock();
+    return slot.directory();
+  }
+
+  /**
+   * Claims the first free slot under the work root for this judger's work directory: locks its
+   * lock file, for as long as this judger runs, and empties its work directory. The work root may
+   * be shared by judgers of other accounts ({@code /tmp} is): a slot whose lock file this judger
+   * cannot open, or whose directory belongs to another account, is theirs.
+   *
+   * @param root - the work root, absolute and normalized
+   * @return the slot's work directory
+   * @throws IOException if every slot is taken
+   */
+  private Path claimWorkSlot(Path root) throws IOException {
+    Files.createDirectories(root);
+    Slot slot =
+        claimSlot(
+            root,
+            "voj-judger-",
+            true,
+            directory -> {
+              if (Files.exists(directory, LinkOption.NOFOLLOW_LINKS)
+                  && !isOwnedByJudger(directory)) {
+                LOGGER.info("Leaving {} alone: it belongs to another account.", directory);
+                return false;
+              }
+              resetWorkDirectory(directory);
+              return true;
+            });
+    workSlotLock = slot.lock();
     return slot.directory();
   }
 
@@ -239,19 +271,35 @@ public class CheckpointStore {
    *
    * @param root - the directory of the slots
    * @param name - the name of the slots, without their number
+   * @param sharedWithOtherAccounts - whether other accounts may have slots in the directory too,
+   *     whose lock files this judger may be unable to open: such a slot is theirs, then
    * @param preparation - prepares the directory of the slot once it is locked
-   * @return the slot, or {@code null} if every slot is taken
-   * @throws IOException if a lock file cannot be opened or the directory cannot be prepared
+   * @return the slot
+   * @throws IOException if every slot is taken, or a lock file cannot be opened (in a directory not
+   *     shared with other accounts), or the directory cannot be prepared
    */
-  static Slot claimSlot(Path root, String name, SlotPreparation preparation) throws IOException {
+  static Slot claimSlot(
+      Path root, String name, boolean sharedWithOtherAccounts, SlotPreparation preparation)
+      throws IOException {
+    IOException unopenedLockFile = null;
     for (int number = 0; number < MAX_SLOTS; ++number) {
-      ExclusiveFileLock lock = ExclusiveFileLock.tryAcquire(root.resolve(name + number + ".lock"));
+      ExclusiveFileLock lock;
+      try {
+        lock = ExclusiveFileLock.tryAcquire(root.resolve(name + number + ".lock"));
+      } catch (IOException ex) {
+        if (!sharedWithOtherAccounts) {
+          throw ex;
+        }
+        unopenedLockFile = ex;
+        continue;
+      }
       if (lock == null) {
         continue;
       }
       Path directory = root.resolve(name + number);
+      boolean usable;
       try {
-        preparation.prepare(directory);
+        usable = preparation.prepare(directory);
       } catch (Throwable ex) {
         try {
           lock.close();
@@ -260,9 +308,32 @@ public class CheckpointStore {
         }
         throw ex;
       }
-      return new Slot(lock, directory);
+      if (usable) {
+        return new Slot(lock, directory);
+      }
+      lock.close();
     }
-    return null;
+    throw new IOException(
+        String.format(
+            "All %d slots %s<n> under %s are taken by other judgers%s.",
+            MAX_SLOTS,
+            name,
+            root,
+            sharedWithOtherAccounts ? " or belong to other accounts" : ""),
+        unopenedLockFile);
+  }
+
+  /**
+   * Warns that the lock file of a slot of this judger was removed or replaced, so that the judger
+   * claims a slot again.
+   *
+   * @param lock - the lock of the slot
+   */
+  private static void warnOfLostSlot(ExclusiveFileLock lock) {
+    LOGGER.warn(
+        "The lock file {} of this judger's slot was removed or replaced (e.g. by a clean-up of"
+            + " temporary files): claiming a slot again.",
+        lock.getFile());
   }
 
   /**
@@ -280,10 +351,12 @@ public class CheckpointStore {
      * Prepares the directory of a slot.
      *
      * @param directory - the directory of the slot
+     * @return whether the slot can be used, {@code false} to leave it for another one
      * @throws IOException if the directory cannot be prepared
      */
-    void prepare(Path directory) throws IOException;
+    boolean prepare(Path directory) throws IOException;
   }
+
 
   /**
    * Removes the temporary directories (named {@code .<problemId>-<uuid>}) of downloads that never
@@ -435,8 +508,26 @@ public class CheckpointStore {
    * @throws IOException if it is not a real directory or not owned by the judger
    */
   private static void ensureOwnedByJudger(Path directory) throws IOException {
+    if (!isOwnedByJudger(directory)) {
+      throw new IOException(
+          String.format(
+              "Refusing to use %s: it is not a directory of the judger (%s) but of %s. Remove it.",
+              directory,
+              System.getProperty("user.name"),
+              Files.getOwner(directory, LinkOption.NOFOLLOW_LINKS).getName()));
+    }
+  }
+
+  /**
+   * Checks whether a file is a directory of the judger's account (any directory on Windows).
+   *
+   * @param directory - the file
+   * @return whether it is a directory owned by the judger
+   * @throws IOException if its owner cannot be read
+   */
+  private static boolean isOwnedByJudger(Path directory) throws IOException {
     if (!isPosix()) {
-      return;
+      return true;
     }
     UserPrincipal owner = Files.getOwner(directory, LinkOption.NOFOLLOW_LINKS);
     UserPrincipal judger =
@@ -444,12 +535,7 @@ public class CheckpointStore {
             .getFileSystem()
             .getUserPrincipalLookupService()
             .lookupPrincipalByName(System.getProperty("user.name"));
-    if (!Files.isDirectory(directory, LinkOption.NOFOLLOW_LINKS) || !owner.equals(judger)) {
-      throw new IOException(
-          String.format(
-              "Refusing to use %s: it is not a directory of the judger (%s) but of %s. Remove it.",
-              directory, judger.getName(), owner.getName()));
-    }
+    return Files.isDirectory(directory, LinkOption.NOFOLLOW_LINKS) && owner.equals(judger);
   }
 
   /** The permission bit of a file mode that lets the group write. */
@@ -485,13 +571,16 @@ public class CheckpointStore {
     return !System.getProperty("os.name").contains("Windows");
   }
 
-  /** The lock of this judger's slot, held until it exits, once claimed. */
-  private ExclusiveFileLock slotLock;
+  /** The lock of this judger's slot under the checkpoint root, held until it exits, if claimed. */
+  private ExclusiveFileLock cacheSlotLock;
 
   /** This judger's cache directory (its slot under the checkpoint root), once opened. */
   private Path cacheDirectory;
 
-  /** This judger's work directory (its slot's under the work root), once opened. */
+  /** The lock of this judger's slot under the work root, held until it exits, once claimed. */
+  private ExclusiveFileLock workSlotLock;
+
+  /** This judger's work directory (its slot under the work root), once opened. */
   private Path judgerWorkDirectory;
 
   /** The autowired HttpCheckpointProvider, which performs the actual download. */

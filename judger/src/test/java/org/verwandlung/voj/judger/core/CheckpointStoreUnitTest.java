@@ -228,6 +228,47 @@ public class CheckpointStoreUnitTest {
   }
 
   /**
+   * Test case: two judgers share the work root but not the checkpoint root (e.g. they run as
+   * different accounts), and one of them is judging. Expected result: the other one claims a work
+   * directory of its own and leaves the judging of the first one alone.
+   */
+  @Test
+  public void testJudgersSharingOnlyTheWorkRootGetSeparateWorkDirectories() throws Exception {
+    Path workRoot = tempDir.resolve("work");
+    ReflectionTestUtils.setField(
+        checkpointStore, "checkpointDirectory", tempDir.resolve("voj-testpoints-a").toString());
+    CheckpointStore otherStore = new CheckpointStore();
+    ReflectionTestUtils.setField(
+        otherStore, "checkpointDirectory", tempDir.resolve("voj-testpoints-b").toString());
+    ReflectionTestUtils.setField(otherStore, "workRootDirectory", workRoot.toString());
+
+    Path judging =
+        Files.createDirectory(checkpointStore.getWorkDirectory().resolve("voj-1000-abc"));
+    Path otherWorkDirectory = otherStore.getWorkDirectory();
+
+    Assertions.assertEquals(workRoot.resolve("voj-judger-0"), judging.getParent());
+    Assertions.assertEquals(workRoot.resolve("voj-judger-1"), otherWorkDirectory);
+    Assertions.assertTrue(Files.isDirectory(judging));
+  }
+
+  /**
+   * Test case: the lock file of the first work directory slot cannot be opened (here a link
+   * planted in its place; a lock file of another account is the same). Expected result: the judger
+   * leaves that slot alone and judges in the next one.
+   */
+  @Test
+  public void testOpenLeavesAWorkSlotWhoseLockFileCannotBeOpened() throws Exception {
+    Path workRoot = Files.createDirectory(tempDir.resolve("work"));
+    Path target = Files.createFile(tempDir.resolve("target"));
+    Files.createSymbolicLink(workRoot.resolve("voj-judger-0.lock"), target);
+    ReflectionTestUtils.setField(
+        checkpointStore, "checkpointDirectory", tempDir.resolve("voj-testpoints").toString());
+
+    Assertions.assertEquals(workRoot.resolve("voj-judger-1"), checkpointStore.getWorkDirectory());
+    Assertions.assertFalse(Files.exists(workRoot.resolve("voj-judger-0")));
+  }
+
+  /**
    * Test case: a clean-up of old files in /tmp removed the lock file of the judger's slot while it
    * ran, so another judger could lock a new file at that path and share the slot. Expected result:
    * the judger notices before it uses its slot again, and locks the file at the path again.
@@ -259,11 +300,13 @@ public class CheckpointStoreUnitTest {
             CheckpointStore.claimSlot(
                 root,
                 "judger-",
+                false,
                 directory -> {
                   throw new IllegalStateException("unexpected");
                 }));
 
-    CheckpointStore.Slot slot = CheckpointStore.claimSlot(root, "judger-", directory -> {});
+    CheckpointStore.Slot slot =
+        CheckpointStore.claimSlot(root, "judger-", false, directory -> true);
     try {
       Assertions.assertEquals(root.resolve("judger-0"), slot.directory());
     } finally {
