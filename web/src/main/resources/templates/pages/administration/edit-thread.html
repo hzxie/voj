@@ -12,9 +12,9 @@
         <div class="adm-detail-top">
             <a class="adm-back" th:href="@{/administration/all-discussion}">&#8592; <span th:text="#{voj.administration.edit-thread.back}">back to discussion</span></a>
             <span class="adm-idchip" th:text="'#' + ${thread.discussionThreadId}">#1</span>
-            <span class="adm-pill click" id="status-pill"
+            <button type="button" class="adm-pill click" id="status-pill"
                   th:classappend="${thread.visible} ? 'c-accent' : 'c-err'"
-                  th:text="${thread.visible} ? #{voj.administration.edit-thread.visible} : #{voj.administration.edit-thread.hidden}">Visible</span>
+                  th:text="${thread.visible} ? #{voj.administration.edit-thread.visible} : #{voj.administration.edit-thread.hidden}">Visible</button>
             <div class="adm-flex1"></div>
             <a class="adm-btn-tn" th:href="@{/discussion/{id}(id=${thread.discussionThreadId})}" target="_blank" th:text="#{voj.administration.edit-thread.view-thread}">view thread</a>
             <button type="button" class="adm-btn-accent" id="save-thread" th:text="#{voj.administration.edit-thread.save}">$ save</button>

@@ -14,9 +14,9 @@
             <span class="adm-idchip" th:text="${isCreate ? 'new' : '#' + user.uid}">#1</span>
             <span th:if="${isCreate}" class="adm-pill c-muted">&#9679; <span th:text="#{voj.administration.edit-user.new-user-name}">New user</span></span>
             <th:block th:unless="${isCreate}">
-                <span class="adm-pill click" id="status-pill"
+                <button type="button" class="adm-pill click" id="status-pill"
                       th:classappend="${isBanned} ? 'c-err' : 'c-accent'"
-                      th:text="${isBanned} ? #{voj.administration.edit-user.status-banned} : #{voj.administration.edit-user.status-active}">Active</span>
+                      th:text="${isBanned} ? #{voj.administration.edit-user.status-banned} : #{voj.administration.edit-user.status-active}">Active</button>
                 <input type="hidden" id="is-banned" th:value="${isBanned} ? '1' : '0'" />
             </th:block>
             <div class="adm-flex1"></div>
