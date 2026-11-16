@@ -686,6 +686,28 @@ class ViewRenderSmokeTest {
         .andExpect(content().string(not(containsString("<script>alert(1)"))));
   }
 
+  /**
+   * The contest editor's start time is a native datetime-local input holding the value the save
+   * action posts, and its problem picker is opened by a real button.
+   */
+  @Test
+  void adminContestEditorUsesNativeControls() throws Exception {
+    authenticateAdmin();
+    Contest contest = aContest(1L, "ACM", future(), farFuture());
+    contest.setStartTime(new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm").parse("2030-01-02 03:04"));
+    when(contestService.getContest(1L)).thenReturn(contest);
+    when(contestService.getContestStatus(any())).thenReturn(Contest.CONTEST_STATUS.READY);
+    mockMvc
+        .perform(getWithCsrf("/administration/edit-contest/1"))
+        .andExpect(status().isOk())
+        .andExpect(content().string(containsString(
+            "<input id=\"start-time\" class=\"adm-input\" type=\"datetime-local\" required")))
+        .andExpect(content().string(containsString("value=\"2030-01-02T03:04\"")))
+        .andExpect(content().string(containsString(
+            "<button type=\"button\" id=\"picker-toggle\" class=\"toggle\" aria-expanded=\"false\" aria-controls=\"picker-panel\">")))
+        .andExpect(content().string(not(containsString("dt-trigger"))));
+  }
+
   /** The judge log carries raw compiler output, so both submission pages must escape it. */
   @Test
   void judgeLogIsEscaped() throws Exception {

@@ -522,7 +522,7 @@ input.adm-langname:focus { border-color:var(--accent); }
 .adm-togrow > span { font-size:12.5px; color:var(--text); }
 
 /* Card-head mini toggle (e.g. "+ add problem" / "✕ close"). */
-.adm-card-head .toggle { font-size:11px; color:var(--accent); cursor:pointer; letter-spacing:0; border:1px solid var(--accent); border-radius:7px; padding:4px 10px; }
+.adm-card-head .toggle { font:inherit; font-size:11px; color:var(--accent); background:transparent; cursor:pointer; letter-spacing:0; border:1px solid var(--accent); border-radius:7px; padding:4px 10px; }
 
 /* Problem picker panel. */
 .adm-picker { padding:14px 20px; border-bottom:1px solid var(--line2); background:var(--bg3); }
@@ -535,7 +535,7 @@ input.adm-langname:focus { border-color:var(--accent); }
 .adm-cand { display:flex; align-items:center; gap:12px; padding:9px 12px; border:1px solid var(--line); border-radius:9px; background:var(--bg2); }
 .adm-cand-pid { font-size:11px; color:var(--text3); font-family:var(--mono); flex-shrink:0; }
 .adm-cand-title { flex:1; font-size:12.5px; color:var(--head); font-weight:600; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.adm-cand-add { font-size:11px; font-weight:600; color:var(--accent-ink); background:var(--accent); border-radius:7px; padding:5px 11px; cursor:pointer; white-space:nowrap; flex-shrink:0; }
+.adm-cand-add { font:inherit; font-size:11px; font-weight:600; color:var(--accent-ink); background:var(--accent); border:0; border-radius:7px; padding:5px 11px; cursor:pointer; white-space:nowrap; flex-shrink:0; }
 .adm-diff { font-size:9.5px; font-weight:700; color:currentColor; border:1px solid currentColor; border-radius:5px; padding:2px 7px; white-space:nowrap; flex-shrink:0; }
 
 /* Chosen contest problems (ordered, balloon-colored). */
@@ -544,47 +544,13 @@ input.adm-langname:focus { border-color:var(--accent); }
 .adm-cprob-title { flex:1; font-size:13px; color:var(--head); font-weight:600; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .adm-cprob-pid { font-size:11px; color:var(--text3); font-family:var(--mono); }
 .adm-cprob-dot { width:13px; height:13px; border-radius:50%; background:var(--balloon); flex-shrink:0; }
-.adm-cprob-x { color:var(--text3); cursor:pointer; font-size:14px; }
+.adm-cprob-x { font:inherit; font-size:14px; line-height:1; color:var(--text3); background:transparent; border:0; border-radius:5px; padding:4px; cursor:pointer; }
 .adm-cprob-x:hover { color:var(--err); }
 .adm-balloon-0 { --balloon:#34d399; } .adm-balloon-1 { --balloon:#e6a445; }
 .adm-balloon-2 { --balloon:#a78bfa; } .adm-balloon-3 { --balloon:#ef6b66; }
 .adm-balloon-4 { --balloon:#22d3ee; } .adm-balloon-5 { --balloon:#f472b6; }
 .adm-balloon-6 { --balloon:#fbbf24; } .adm-balloon-7 { --balloon:#60a5fa; }
 
-/* Schedule start-time trigger + calendar popup. */
-.adm-dt-wrap { position:relative; }
-.adm-dt { display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%; font-family:var(--mono); font-size:13px; color:var(--text); background:var(--bg3); border:1px solid var(--line); border-radius:9px; padding:10px 13px; cursor:pointer; }
-.adm-dt:hover { border-color:var(--accent); }
-.adm-dt-main { display:flex; align-items:center; gap:9px; }
-.adm-dt-ico { color:var(--accent); }
-.adm-dt-sub { color:var(--text3); font-size:11px; }
-.adm-dt-caret { color:var(--text3); font-size:11px; }
-.adm-cal { position:absolute; top:100%; left:0; right:0; margin-top:8px; z-index:30; background:var(--bg2); border:1px solid var(--accent); border-radius:12px; box-shadow:0 18px 44px rgba(0,0,0,.4); overflow:hidden; }
-.adm-cal-nav { display:flex; align-items:center; justify-content:space-between; padding:12px 14px; border-bottom:1px solid var(--line2); }
-.adm-cal-nav-btn { width:28px; height:28px; display:flex; align-items:center; justify-content:center; border:1px solid var(--line); border-radius:7px; cursor:pointer; color:var(--text2); font-size:15px; }
-.adm-cal-nav-btn:hover { border-color:var(--accent); color:var(--accent); }
-.adm-cal-month { font-size:12.5px; font-weight:600; color:var(--head); font-family:var(--mono); }
-.adm-cal-gridwrap { padding:12px 14px; }
-.adm-cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:3px; }
-.adm-cal-wk { text-align:center; font-size:9px; letter-spacing:1px; color:var(--text3); padding-bottom:5px; }
-.adm-cal-day { display:flex; align-items:center; justify-content:center; height:30px; border-radius:7px; font-size:12px; cursor:pointer; font-family:var(--mono); font-weight:500; color:var(--text); border:1px solid transparent; }
-.adm-cal-day.empty { cursor:default; }
-.adm-cal-day.sel { font-weight:700; color:var(--accent-ink); background:var(--accent); border-color:var(--accent); }
-.adm-cal-timewrap { padding:12px 14px; border-top:1px solid var(--line2); display:flex; flex-direction:column; gap:11px; }
-.adm-cal-timerow { display:flex; align-items:center; gap:11px; }
-.adm-cal-time-label { font-size:9px; letter-spacing:1.5px; color:var(--text3); width:34px; flex-shrink:0; }
-.adm-cal-stepper { display:flex; align-items:center; border:1px solid var(--line); border-radius:9px; overflow:hidden; height:34px; }
-.adm-cal-step { width:30px; height:100%; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text2); font-size:16px; background:var(--bg3); user-select:none; }
-.adm-cal-step:hover { color:var(--accent); }
-.adm-cal-num { width:38px; text-align:center; font-family:var(--mono); font-size:14px; font-weight:600; color:var(--head); }
-.adm-cal-colon { color:var(--text3); font-family:var(--mono); font-size:15px; }
-.adm-cal-chips { display:flex; gap:6px; flex-wrap:wrap; }
-.adm-cal-chip { font-size:11px; font-family:var(--mono); padding:6px 11px; border-radius:7px; cursor:pointer; color:var(--text2); background:var(--bg3); border:1px solid var(--line); }
-.adm-cal-chip.on { color:var(--accent-ink); background:var(--accent); border-color:var(--accent); }
-.adm-cal-foot { padding:11px 14px; border-top:1px solid var(--line2); display:flex; align-items:center; justify-content:space-between; background:var(--bg3); }
-.adm-cal-today { font-size:11px; color:var(--text2); cursor:pointer; }
-.adm-cal-today:hover { color:var(--accent); }
-.adm-cal-set { font-size:11.5px; font-weight:600; color:var(--accent-ink); background:var(--accent); border-radius:7px; padding:7px 18px; cursor:pointer; font-family:var(--mono); }
 
 /* Source code viewer (submission detail). */
 .adm-src { background:var(--bg1); overflow-x:auto; padding:14px 0; }
