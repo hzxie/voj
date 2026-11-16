@@ -51,6 +51,10 @@
 --
 -- Usage: mysql -u <user> -p <database> < sql/upgrades/upgrade-from-1.0.2.sql
 SET NAMES utf8mb4;
+-- The SQL mode schema.sql creates the tables in. The server's default may
+-- include NO_ZERO_DATE (MySQL 5.7 and later do), which makes every ALTER TABLE
+-- of voj_contests fail on the '0000-00-00 00:00:00' defaults of its times.
+SET SQL_MODE = "STRICT_TRANS_TABLES";
 
 -- 1. Cascading foreign keys. Each one is dropped and added again unless its
 --    delete rule is already CASCADE. The second statement also restores a key

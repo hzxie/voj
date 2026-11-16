@@ -19,6 +19,7 @@ package org.verwandlung.voj.web.upgrade;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.sql.Statement;
 
 import javax.sql.DataSource;
 
@@ -54,6 +55,11 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 public class UpgradeFrom102Test {
   /** The upgrade script, copied onto the test classpath from sql/upgrades. */
   private static final String SCRIPT = "db/upgrades/upgrade-from-1.0.2.sql";
+
+  /** The default SQL mode of MySQL 8, in which an operator's mysql client runs the script. */
+  private static final String MYSQL_8_DEFAULT_SQL_MODE =
+      "ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,"
+          + "ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION";
 
   /** The option that marks the upgrade as done. */
   private static final String MARKER = "upgradeFrom102Applied";
@@ -357,11 +363,22 @@ public class UpgradeFrom102Test {
     Assertions.assertEquals("CASCADE", getDeleteRule("voj_contest_submissions_ibfk_2"));
   }
 
-  /** Runs the upgrade script as an operator would: on one connection, statement by statement. */
+  /**
+   * Runs the upgrade script as an operator would: on one connection, statement by statement, in
+   * the default SQL mode of MySQL 8 (which, unlike the test connections' mode, rejects zero dates)
+   * rather than one the script does not set itself.
+   */
   private void runUpgrade() throws SQLException {
-    try (Connection connection = dataSource.getConnection()) {
-      ScriptUtils.executeSqlScript(
-          connection, new EncodedResource(new ClassPathResource(SCRIPT), StandardCharsets.UTF_8));
+    try (Connection connection = dataSource.getConnection();
+        Statement statement = connection.createStatement()) {
+      statement.execute("SET SESSION sql_mode = '" + MYSQL_8_DEFAULT_SQL_MODE + "'");
+      try {
+        ScriptUtils.executeSqlScript(
+            connection, new EncodedResource(new ClassPathResource(SCRIPT), StandardCharsets.UTF_8));
+      } finally {
+        // The connection goes back to the pool: give it the test connections' mode again.
+        statement.execute("SET SESSION sql_mode = 'STRICT_TRANS_TABLES'");
+      }
     }
   }
 
