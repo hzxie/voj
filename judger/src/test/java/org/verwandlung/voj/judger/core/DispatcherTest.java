@@ -269,12 +269,12 @@ public class DispatcherTest {
   /**
    * Test case: tests the createNewTask method. Test data: the test data cannot be downloaded now
    * (e.g. the web application is restarting). Expected result: no System Error; the exception is
-   * passed on so that the task is delivered again, and the work directory is removed.
+   * passed on so that the task is delivered again. (The test data is synced before the work
+   * directory is created, so there is none to remove yet; the removal of one after a failure is
+   * tested by testCreateNewTaskCleansUpOnFailure.)
    */
   @Test
-  public void testCreateNewTaskWithUnavailableCheckpointsIsRetried(@TempDir Path tempDir)
-      throws Exception {
-    when(checkpointStore.getWorkDirectory()).thenReturn(tempDir);
+  public void testCreateNewTaskWithUnavailableCheckpointsIsRetried() throws Exception {
     org.mockito.Mockito.doThrow(new java.io.IOException("HTTP 503"))
         .when(checkpointStore)
         .sync(any());
@@ -283,10 +283,8 @@ public class DispatcherTest {
         RetryableJudgingException.class, () -> dispatcher.createNewTask(100L, GENERATION, NEVER));
 
     verify(applicationDispatcher, never()).onErrorOccurred(any(), anyString());
+    verify(preprocessor, never()).createTestCode(any(), anyString(), anyString());
     verify(compiler, never()).getCompileResult(any(), anyString(), anyString());
-    try (java.util.stream.Stream<Path> leftovers = Files.list(tempDir)) {
-      Assertions.assertEquals(0, leftovers.count());
-    }
   }
 
   /**
