@@ -990,7 +990,9 @@ static int openOutputFile(const char* path) {
  *    sends with them on its own; send and write work on a socket pair). Otherwise a run could send
  *    datagrams to the host's Unix sockets, such as /dev/log or the journal's, without connecting;
  *  - files beyond reading and writing them: their owner, mode, times and extended attributes (which
- *    Landlock does not confine), links, device nodes and FIFOs, watching files (inotify, fanotify),
+ *    Landlock does not confine), fallocate (whose FALLOC_FL_KEEP_SIZE escapes RLIMIT_FSIZE; the C
+ *    library's posix_fallocate falls back to writing), links, device nodes and FIFOs, watching
+ *    files (inotify, fanotify),
  *    the writeback of the whole system (sync, syncfs), splice, tee and vmsplice, Linux AIO
  *    (io_setup & co.) and io_uring;
  *  - other processes' resource limits: prlimit64 is allowed on the caller only (see
@@ -1010,8 +1012,8 @@ static const char* const RUN_ALLOWED_SYSCALLS[] = {
     "dup2", "dup3", "fcntl", "ioctl", "flock", "pipe", "pipe2", "stat", "fstat", "lstat",
     "newfstatat", "statx", "statfs", "fstatfs", "access", "faccessat", "faccessat2", "getdents",
     "getdents64", "getcwd", "chdir", "fchdir", "readlink", "readlinkat", "mkdir", "mkdirat", "rmdir",
-    "unlink", "unlinkat", "rename", "renameat", "renameat2", "truncate", "ftruncate", "fallocate",
-    "fadvise64", "readahead", "fsync", "fdatasync", "sendfile", "copy_file_range", "umask",
+    "unlink", "unlinkat", "rename", "renameat", "renameat2", "truncate", "ftruncate", "fadvise64",
+    "readahead", "fsync", "fdatasync", "sendfile", "copy_file_range", "umask",
     // Memory (the deny-list filter checks mmap and madvise).
     "brk", "mmap", "munmap", "mremap", "mprotect", "madvise", "mincore", "msync", "membarrier",
     "pkey_alloc", "pkey_free", "pkey_mprotect", "map_shadow_stack", "mseal",
