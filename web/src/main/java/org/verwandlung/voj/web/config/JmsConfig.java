@@ -28,8 +28,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.jms.listener.DefaultMessageListenerContainer;
 
 /**
- * The message queue configuration. Replaces the ActiveMQ / JMS definitions in the original
- * dispatcher-servlet.xml.
+ * The message queue configuration: the connection to the ActiveMQ broker (embedded or external)
+ * and the subscription to the progress of the judgings.
  *
  * <p>Every instance of the web module subscribes to the topic {@value #JUDGE_PROGRESS_TOPIC}, on
  * which the judgers publish the progress of their judgings, so that the viewers of a judging see its

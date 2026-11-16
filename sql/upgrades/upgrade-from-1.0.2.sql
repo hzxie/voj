@@ -59,10 +59,10 @@
 --    from it (rather than from the judgers' heartbeats over the message
 --    queue), and marks as a System Error the pending submissions in a
 --    language that no judger taking submissions has supported for a while.
--- 11. submission_judge_failure is added to voj_submissions: why the last
---    failed judging of a submission failed, which its System Error tells once
---    too many of its judgings failed. It is a step of its own, so that a
---    database that already has the columns of step 8 gets it too.
+-- 11. submission_judge_failure is added to voj_submissions unless it exists
+--    (checked apart from the columns of step 8): why the last failed judging
+--    of a submission failed, which its System Error tells once too many of its
+--    judgings failed.
 --
 -- Safe to run more than once. Steps 1 to 4, 6 and 8 to 11 first check the
 -- information schema (or create a table only if it is missing) and only change
