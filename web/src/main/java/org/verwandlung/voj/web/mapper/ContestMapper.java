@@ -20,6 +20,7 @@ import org.apache.ibatis.annotations.Param;
 import org.verwandlung.voj.web.model.Contest;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Contest Data Access Object.
@@ -86,4 +87,49 @@ public interface ContestMapper {
    * @param contestId - the unique identifier of the contest
    */
   int deleteContest(long contestId);
+
+  /**
+   * Gets the problems of a contest, in the order the contest lists them.
+   *
+   * @param contestId - the unique identifier of the contest
+   * @return the unique identifiers of the problems
+   */
+  List<Long> getProblemIdsOfContest(@Param("contestId") long contestId);
+
+  /**
+   * Checks whether a problem is one of the problems of a contest.
+   *
+   * @param contestId - the unique identifier of the contest
+   * @param problemId - the unique identifier of the problem
+   * @return whether the problem is one of the contest's
+   */
+  boolean isProblemOfContest(
+      @Param("contestId") long contestId, @Param("problemId") long problemId);
+
+  /**
+   * Gets the number of problems of some contests.
+   *
+   * @param contestIds - the unique identifiers of the contests (not empty)
+   * @return for each contest with problems: {@code contestId} and {@code numberOfProblems}
+   */
+  List<Map<String, Object>> getNumberOfProblemsOfContests(
+      @Param("contestIds") List<Long> contestIds);
+
+  /**
+   * [For administrators only] Removes every problem from a contest.
+   *
+   * @param contestId - the unique identifier of the contest
+   * @return the number of problems removed
+   */
+  int deleteProblemsOfContest(@Param("contestId") long contestId);
+
+  /**
+   * [For administrators only] Adds problems to a contest, at the positions of the list.
+   *
+   * @param contestId - the unique identifier of the contest
+   * @param problemIds - the unique identifiers of the problems (not empty, without duplicates)
+   * @return the number of problems added
+   */
+  int createProblemsOfContest(
+      @Param("contestId") long contestId, @Param("problemIds") List<Long> problemIds);
 }

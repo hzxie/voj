@@ -10,6 +10,7 @@ DELETE FROM `voj_discussion_replies`;
 DELETE FROM `voj_discussion_threads`;
 DELETE FROM `voj_contest_submissions`;
 DELETE FROM `voj_contest_contestants`;
+DELETE FROM `voj_contest_problems`;
 DELETE FROM `voj_problem_checkpoints`;
 DELETE FROM `voj_problem_tag_relationships`;
 DELETE FROM `voj_problem_category_relationships`;
@@ -37,10 +38,19 @@ UPDATE `voj_problems` SET `problem_difficulty_id` = 2 WHERE `problem_id` IN (100
 
 UPDATE `voj_problems` SET `problem_difficulty_id` = 3 WHERE `problem_id` IN (1002);
 
-INSERT INTO `voj_contests` (`contest_id`, `contest_name`, `contest_notes`, `contest_start_time`, `contest_end_time`, `contest_problems`, `contest_status`, `contest_scoring`, `contest_penalty`, `contest_freeze`, `contest_open_registration`) VALUES
-(1, 'Contest #1', '', '2018-02-23 00:00:00', '2018-02-23 23:59:59', '[1000, 1001, 1002]', 'PUBLISHED', 'IOI', 0, 0, 1),
-(2, 'Contest #2', '', '1970-01-02 00:00:01', '2038-01-18 03:14:07', '[1001, 1003]', 'PUBLISHED', 'ICPC', 20, 0, 1),
-(3, 'Contest #3', '', '2038-01-18 00:00:00', '2038-01-18 02:00:00', '[1000, 1003]', 'HIDDEN', 'ICPC', 20, 0, 0);
+INSERT INTO `voj_contests` (`contest_id`, `contest_name`, `contest_notes`, `contest_start_time`, `contest_end_time`, `contest_status`, `contest_scoring`, `contest_penalty`, `contest_freeze`, `contest_open_registration`) VALUES
+(1, 'Contest #1', '', '2018-02-23 00:00:00', '2018-02-23 23:59:59', 'PUBLISHED', 'IOI', 0, 0, 1),
+(2, 'Contest #2', '', '1970-01-02 00:00:01', '2038-01-18 03:14:07', 'PUBLISHED', 'ICPC', 20, 0, 1),
+(3, 'Contest #3', '', '2038-01-18 00:00:00', '2038-01-18 02:00:00', 'HIDDEN', 'ICPC', 20, 0, 0);
+
+INSERT INTO `voj_contest_problems` (`contest_id`, `problem_id`, `position`) VALUES
+(1, 1000, 0),
+(1, 1001, 1),
+(1, 1002, 2),
+(2, 1001, 0),
+(2, 1003, 1),
+(3, 1000, 0),
+(3, 1003, 1);
 
 INSERT INTO `voj_usermeta` (`meta_id`, `uid`, `meta_key`, `meta_value`) VALUES
 (1, 1000, 'registerTime', '2014-10-07 12:35:45'),

@@ -404,9 +404,11 @@ public class ProblemServiceTest {
     // The times come from the database clock, the one the counts are compared with.
     jdbcTemplate.update(
         "INSERT INTO voj_contests (contest_id, contest_name, contest_notes, contest_start_time,"
-            + " contest_end_time, contest_problems, contest_status, contest_scoring)"
+            + " contest_end_time, contest_status, contest_scoring)"
             + " VALUES (9301, 'Running', '', NOW() - INTERVAL 1 HOUR, NOW() + INTERVAL 1 HOUR,"
-            + " '[1001]', 'PUBLISHED', 'ICPC')");
+            + " 'PUBLISHED', 'ICPC')");
+    jdbcTemplate.update(
+        "INSERT INTO voj_contest_problems (contest_id, problem_id, position) VALUES (9301, 1001, 0)");
     jdbcTemplate.update(
         "INSERT INTO voj_submissions (problem_id, uid, language_id, submission_judge_result,"
             + " submission_code) VALUES (1001, 1002, 2, 'AC', 'Code')");

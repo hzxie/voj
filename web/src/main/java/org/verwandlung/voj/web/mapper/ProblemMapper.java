@@ -70,6 +70,14 @@ public interface ProblemMapper {
   Problem getProblem(@Param("problemId") long problemId);
 
   /**
+   * Gets the problems of a contest, in the order the contest lists them.
+   *
+   * @param contestId - the unique identifier of the contest
+   * @return the problems of the contest
+   */
+  List<Problem> getProblemsOfContest(@Param("contestId") long contestId);
+
+  /**
    * Gets all problems within a range by problem identifier and keyword.
    *
    * @param keyword - the keyword

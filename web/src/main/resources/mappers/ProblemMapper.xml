@@ -114,6 +114,26 @@
 		LEFT JOIN voj_problem_difficulty d ON d.problem_difficulty_id = p.problem_difficulty_id
 		WHERE p.problem_id = #{problemId}
 	</select>
+	<select id="getProblemsOfContest"
+		parameterType="long"
+		resultMap="ProblemResultMap">
+		SELECT p.*, d.problem_difficulty_slug, d.problem_difficulty_name, (
+			SELECT COUNT(*)
+			FROM voj_submissions s
+			WHERE s.problem_id = p.problem_id
+			<include refid="notInRunningContest" />
+		) AS total_submission, (
+			SELECT COUNT(*)
+			FROM voj_submissions s
+			WHERE s.problem_id = p.problem_id AND s.submission_judge_result = 'AC'
+			<include refid="notInRunningContest" />
+		) AS accepted_submission
+		FROM voj_contest_problems cp
+		JOIN voj_problems p ON p.problem_id = cp.problem_id
+		LEFT JOIN voj_problem_difficulty d ON d.problem_difficulty_id = p.problem_difficulty_id
+		WHERE cp.contest_id = #{contestId}
+		ORDER BY cp.position
+	</select>
 	<select id="getProblemsUsingFilters" 
 		parameterType="map"
 		resultMap="ProblemResultMap">

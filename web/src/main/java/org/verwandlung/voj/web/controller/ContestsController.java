@@ -32,7 +32,6 @@ import org.verwandlung.voj.web.service.LanguageService;
 import org.verwandlung.voj.web.service.OptionService;
 import org.verwandlung.voj.web.service.ProblemService;
 import org.verwandlung.voj.web.util.HttpSessionParser;
-import org.verwandlung.voj.web.util.JsonUtils;
 import org.verwandlung.voj.web.util.LogSanitizer;
 import org.verwandlung.voj.web.util.SeoUtils;
 import org.verwandlung.voj.web.util.Pagination;
@@ -86,26 +85,9 @@ public class ContestsController {
     view.addObject("currentTime", currentTime);
     view.addObject(
         "entrantsOfContests", contestService.getNumberOfContestantsOfContests(contests));
-    view.addObject("problemCountOfContests", getProblemCountOfContests(contests));
+    view.addObject(
+        "problemCountOfContests", contestService.getNumberOfProblemsOfContests(contests));
     return view;
-  }
-
-  /**
-   * Builds a map of contest id to its number of problems (derived from the JSON-encoded problem list
-   * stored on the contest), used to render the "problems" field of the design.
-   *
-   * @param contests - the list of contests to summarise
-   * @return a Map indexed by contest id whose value is the number of problems
-   */
-  private Map<Long, Integer> getProblemCountOfContests(List<Contest> contests) {
-    Map<Long, Integer> problemCount = new HashMap<>();
-    if (contests != null) {
-      for (Contest contest : contests) {
-        List<Long> problemIds = JsonUtils.toList(contest.getProblems(), Long.class);
-        problemCount.put(contest.getContestId(), problemIds == null ? 0 : problemIds.size());
-      }
-    }
-    return problemCount;
   }
 
   /**
@@ -131,7 +113,7 @@ public class ContestsController {
     result.put("isSuccessful", contests != null && !contests.isEmpty());
     result.put("contests", contests);
     result.put("entrants", contestService.getNumberOfContestantsOfContests(contests));
-    result.put("problemCount", getProblemCountOfContests(contests));
+    result.put("problemCount", contestService.getNumberOfProblemsOfContests(contests));
 
     return result;
   }
@@ -155,8 +137,7 @@ public class ContestsController {
     Date currentTime = new Date();
     boolean isAttended = contestService.isAttendContest(contestId, currentUser);
     long numberOfContestants = contestService.getNumberOfContestantsOfContest(contestId);
-    List<Long> problemIdList = JsonUtils.toList(contest.getProblems(), Long.class);
-    List<Problem> problems = contestService.getProblemsOfContests(problemIdList);
+    List<Problem> problems = contestService.getProblemsOfContest(contestId);
     Map<Long, ContestSubmission> submissions =
         contestService.getSubmissionsOfContestantOfContest(contestId, currentUser);
 
@@ -230,8 +211,7 @@ public class ContestsController {
       throw new ResourceNotFoundException();
     }
 
-    List<Long> problemIdList = JsonUtils.toList(contest.getProblems(), Long.class);
-    List<Problem> problems = contestService.getProblemsOfContests(problemIdList);
+    List<Problem> problems = contestService.getProblemsOfContest(contestId);
     ModelAndView view =
         new ModelAndView(
             contest.isIoi() ? "pages/contests/leaderboard-oi" : "pages/contests/leaderboard-acm");
@@ -267,9 +247,7 @@ public class ContestsController {
       HttpServletResponse response) {
     User currentUser = HttpSessionParser.getCurrentUser();
     Contest contest = getVisibleContest(contestId, currentUser);
-    // The problem does not exist in the contest's problem list
-    List<Long> problems = JsonUtils.toList(contest.getProblems(), Long.class);
-    if (!problems.contains(problemId)) {
+    if (!contestService.isProblemOfContest(contestId, problemId)) {
       throw new ResourceNotFoundException();
     }
     // Nobody but administrators may view the problems before the contest starts, and only the

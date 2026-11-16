@@ -72,14 +72,15 @@ public class ContestsControllerTest {
     SecurityContextHolder.clearContext();
   }
 
-  /** Test case: tests getContestsAction(...). Test data: a contest whose JSON problem list holds two ids and five entrants. Expected: the result exposes the contest, its entrant count and a problem count of two. */
+  /** Test case: tests getContestsAction(...). Test data: a contest with two problems and five entrants. Expected: the result exposes the contest, its entrant count and its problem count. */
   @Test
   public void testGetContestsActionBuildsCountsFromContest() {
     Contest contest = new Contest();
     contest.setContestId(7);
-    contest.setProblems("[1000, 1001]");
     when(contestService.getContests(nullable(String.class), eq(true), eq(0L), eq(50)))
         .thenReturn(List.of(contest));
+    when(contestService.getNumberOfProblemsOfContests(List.of(contest)))
+        .thenReturn(Map.of(7L, 2L));
     when(contestService.getNumberOfContestantsOfContests(List.of(contest)))
         .thenReturn(Map.of(7L, 5L));
 
@@ -90,9 +91,9 @@ public class ContestsControllerTest {
     @SuppressWarnings("unchecked")
     Map<Long, Long> entrants = (Map<Long, Long>) result.get("entrants");
     @SuppressWarnings("unchecked")
-    Map<Long, Integer> problemCount = (Map<Long, Integer>) result.get("problemCount");
+    Map<Long, Long> problemCount = (Map<Long, Long>) result.get("problemCount");
     Assertions.assertEquals(5L, entrants.get(7L));
-    Assertions.assertEquals(2, problemCount.get(7L));
+    Assertions.assertEquals(2L, problemCount.get(7L));
   }
 
   /** Test case: tests getContestsAction(...). Test data: a negative startIndex, which MySQL rejects in LIMIT. Expected: the contests are read from offset 0 instead of failing. */
@@ -158,8 +159,8 @@ public class ContestsControllerTest {
     Contest contest = new Contest();
     contest.setContestId(42);
     contest.setStatus("PUBLISHED");
-    contest.setProblems("[1000]");
     when(contestService.getContest(42L)).thenReturn(contest);
+    when(contestService.isProblemOfContest(42L, 1000L)).thenReturn(true);
     when(contestService.isContestProblemsViewable(contest, user)).thenReturn(false);
 
     Assertions.assertThrows(

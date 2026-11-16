@@ -158,6 +158,9 @@ public class ContestAdministrationController {
     }
     ModelAndView view = new ModelAndView("pages/administration/edit-contest");
     view.addObject("contest", contest);
+    view.addObject(
+        "contestProblemIds",
+        JsonUtils.toJsonString(contestService.getProblemIdsOfContest(contestId)));
     view.addObject("sectionLabel", contest.getContestName());
     view.addObject("contestPhase", contestService.getContestStatus(contest).name());
     view.addObject(
@@ -220,7 +223,7 @@ public class ContestAdministrationController {
    * @param startTime - the start time (epoch milliseconds, see parseInstant)
    * @param endTime - the end time (epoch milliseconds, see parseInstant)
    * @param scoring - the scoring rule of the contest (ICPC / IOI)
-   * @param problems - the contest problems (a JSON-formatted array of problem IDs)
+   * @param problems - the contest problems (a JSON array of problem IDs, in order)
    * @param request - the HttpServletRequest object
    * @return a Map containing the creation result
    */
@@ -260,7 +263,7 @@ public class ContestAdministrationController {
    * @param startTime - the start time (epoch milliseconds, see parseInstant)
    * @param endTime - the end time (epoch milliseconds, see parseInstant)
    * @param scoring - the scoring rule of the contest (ICPC / IOI)
-   * @param problems - the contest problems (a JSON-formatted array of problem IDs)
+   * @param problems - the contest problems (a JSON array of problem IDs, in order)
    * @param request - the HttpServletRequest object
    * @return a Map containing the edit result
    */

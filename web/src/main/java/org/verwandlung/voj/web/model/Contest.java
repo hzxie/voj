@@ -30,44 +30,14 @@ public class Contest {
    * @param startTime - the start time of the contest
    * @param endTime - the end time of the contest
    * @param scoring - the scoring rule of the contest (ICPC / IOI)
-   * @param problems - the problems included in the contest
    */
   public Contest(
-      String contestName,
-      String contestNotes,
-      Date startTime,
-      Date endTime,
-      String scoring,
-      String problems) {
+      String contestName, String contestNotes, Date startTime, Date endTime, String scoring) {
     this.contestName = contestName;
     this.contestNotes = contestNotes;
     this.startTime = startTime;
     this.endTime = endTime;
     setScoring(scoring);
-    this.problems = problems;
-  }
-
-  /**
-   * Constructor of the contest.
-   *
-   * @param contestId - the unique identifier of the contest
-   * @param contestName - the name of the contest
-   * @param contestNotes - the notes of the contest
-   * @param startTime - the start time of the contest
-   * @param endTime - the end time of the contest
-   * @param scoring - the scoring rule of the contest (ICPC / IOI)
-   * @param problems - the problems included in the contest
-   */
-  public Contest(
-      long contestId,
-      String contestNotes,
-      String contestName,
-      Date startTime,
-      Date endTime,
-      String scoring,
-      String problems) {
-    this(contestName, contestNotes, startTime, endTime, scoring, problems);
-    this.contestId = contestId;
   }
 
   /**
@@ -197,24 +167,6 @@ public class Contest {
   }
 
   /**
-   * Gets the problems included in the contest.
-   *
-   * @return the problems included in the contest
-   */
-  public String getProblems() {
-    return problems;
-  }
-
-  /**
-   * Sets the problems included in the contest.
-   *
-   * @param problems - the problems included in the contest
-   */
-  public void setProblems(String problems) {
-    this.problems = problems;
-  }
-
-  /**
    * Gets the publication status of the contest (PUBLISHED / DRAFT / HIDDEN).
    *
    * @return the publication status of the contest
@@ -329,9 +281,6 @@ public class Contest {
 
   /** The end time of the contest. */
   private Date endTime;
-
-  /** The problems included in the contest (a JSON-formatted string). */
-  private String problems;
 
   /** The publication status of the contest (PUBLISHED / DRAFT / HIDDEN). */
   private String status = PublicationStatus.PUBLISHED;

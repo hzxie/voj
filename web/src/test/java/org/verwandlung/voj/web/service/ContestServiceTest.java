@@ -85,21 +85,70 @@ public class ContestServiceTest {
     Assertions.assertNull(contestService.getContest(0));
   }
 
-  /** Test case: tests the getProblemsOfContests(List) method. Test data: a mix of existing and non-existing problem IDs. Expected: only the existing problems. */
+  /** Test case: tests getProblemsOfContest(long) and getProblemIdsOfContest(long). Test data: contest #1 (problems 1000, 1001 and 1002, in that order). Expected: the problems in order. */
   @Test
-  public void testGetProblemsOfContests() {
-    List<Problem> problems =
-        contestService.getProblemsOfContests(Arrays.asList(1000L, 1001L, 99999L));
-    Assertions.assertEquals(2, problems.size());
-
-    // The two existing ids must resolve to their problems and the missing 99999
-    // must be dropped - a size-only check would miss returning the wrong problems.
-    java.util.Set<Long> problemIds = new java.util.HashSet<>();
-    for (Problem problem : problems) {
-      problemIds.add(problem.getProblemId());
-    }
-    Assertions.assertEquals(java.util.Set.of(1000L, 1001L), problemIds);
+  public void testGetProblemsOfContest() {
+    List<Problem> problems = contestService.getProblemsOfContest(1);
+    Assertions.assertEquals(
+        Arrays.asList(1000L, 1001L, 1002L),
+        problems.stream().map(Problem::getProblemId).collect(java.util.stream.Collectors.toList()));
+    Assertions.assertEquals(
+        Arrays.asList(1000L, 1001L, 1002L), contestService.getProblemIdsOfContest(1));
+    Assertions.assertTrue(contestService.isProblemOfContest(1, 1002));
+    Assertions.assertFalse(contestService.isProblemOfContest(1, 1003));
   }
+
+  /** Test case: tests createContest(...) and editContest(...). Test data: problems in a given order with a duplicate, then malformed or unknown problems ("[1,", "abc", "null", a missing id). Expected: the order is kept without the duplicate; the malformed lists are refused with isProblemsLegal. */
+  @Test
+  public void testContestProblemsAreValidated() {
+    Date start = new Date(System.currentTimeMillis() + 3600_000L);
+    Date end = new Date(start.getTime() + 3600_000L);
+    Map<String, Object> result =
+        contestService.createContest(
+            "New", "", start, end, "ICPC", "[1003, 1000, 1003]", "PUBLISHED", 20, 0, true);
+    Assertions.assertTrue((Boolean) result.get("isSuccessful"));
+    long contestId = (Long) result.get("contestId");
+    Assertions.assertEquals(
+        Arrays.asList(1003L, 1000L), contestService.getProblemIdsOfContest(contestId));
+
+    for (String problems : new String[] {"[1,", "abc", "null", "[99999]", "[null]"}) {
+      result =
+          contestService.editContest(
+              contestId, "New", "", start, end, "ICPC", problems, "PUBLISHED", 20, 0, true);
+      Assertions.assertFalse((Boolean) result.get("isProblemsLegal"), problems);
+      Assertions.assertFalse((Boolean) result.get("isSuccessful"), problems);
+    }
+    Assertions.assertEquals(
+        Arrays.asList(1003L, 1000L), contestService.getProblemIdsOfContest(contestId));
+
+    result =
+        contestService.editContest(
+            contestId, "New", "", start, end, "ICPC", "[1001]", "PUBLISHED", 20, 0, true);
+    Assertions.assertTrue((Boolean) result.get("isSuccessful"));
+    Assertions.assertEquals(Arrays.asList(1001L), contestService.getProblemIdsOfContest(contestId));
+  }
+
+  /** Test case: tests deleting a problem of a contest. Test data: problem 1003 of contest #2, deleted. Expected: the contest no longer lists it (no dangling id). */
+  @Test
+  public void testDeletedProblemLeavesTheContest() {
+    problemService.deleteProblems(Arrays.asList(1003L));
+    Assertions.assertEquals(Arrays.asList(1001L), contestService.getProblemIdsOfContest(2));
+    Assertions.assertEquals(1, contestService.getProblemsOfContest(2).size());
+  }
+
+  /** Test case: tests getNumberOfProblemsOfContests(List). Test data: contests #1, #2 and a contest without problems. Expected: 3, 2 and 0. */
+  @Test
+  public void testGetNumberOfProblemsOfContests() {
+    Contest empty = new Contest();
+    empty.setContestId(99999);
+    Map<Long, Long> numbers =
+        contestService.getNumberOfProblemsOfContests(
+            Arrays.asList(contestService.getContest(1), contestService.getContest(2), empty));
+    Assertions.assertEquals(3L, numbers.get(1L));
+    Assertions.assertEquals(2L, numbers.get(2L));
+    Assertions.assertEquals(0L, numbers.get(99999L));
+  }
+
 
   /** Test case: tests the getSubmissionsOfContestantOfContest(long, User) method. Test data: the contestant is null. Expected: returns null. */
   @Test
@@ -903,8 +952,12 @@ public class ContestServiceTest {
     long now = System.currentTimeMillis() / 1000 * 1000;
     insertContest(FIXTURE_CONTEST_ID, "ICPC", now - 3600_000L, now + 3600_000L, 0);
     jdbcTemplate()
+        .update("DELETE FROM voj_contest_problems WHERE contest_id = ?", FIXTURE_CONTEST_ID);
+    jdbcTemplate()
         .update(
-            "UPDATE voj_contests SET contest_problems = '[1001, 1002]' WHERE contest_id = ?",
+            "INSERT INTO voj_contest_problems (contest_id, problem_id, position)"
+                + " VALUES (?, 1001, 0), (?, 1002, 1)",
+            FIXTURE_CONTEST_ID,
             FIXTURE_CONTEST_ID);
     insertContestant(FIXTURE_CONTEST_ID, 1000);
   }
@@ -940,14 +993,21 @@ public class ContestServiceTest {
     jdbcTemplate()
         .update(
             "INSERT INTO voj_contests (contest_id, contest_name, contest_notes, contest_start_time,"
-                + " contest_end_time, contest_problems, contest_status, contest_scoring,"
+                + " contest_end_time, contest_status, contest_scoring,"
                 + " contest_penalty, contest_freeze) VALUES (?, 'Fixture', '', ?, ?,"
-                + " '[1000, 1001, 1003]', 'PUBLISHED', ?, 20, ?)",
+                + " 'PUBLISHED', ?, 20, ?)",
             contestId,
             new java.sql.Timestamp(start),
             new java.sql.Timestamp(end),
             scoring,
             freeze);
+    jdbcTemplate()
+        .update(
+            "INSERT INTO voj_contest_problems (contest_id, problem_id, position)"
+                + " VALUES (?, 1000, 0), (?, 1001, 1), (?, 1003, 2)",
+            contestId,
+            contestId,
+            contestId);
   }
 
   /** Registers a user as a contestant. */
@@ -1071,4 +1131,7 @@ public class ContestServiceTest {
 
   /** The DataSource of the test database, used to insert leaderboard fixtures. */
   @Autowired private javax.sql.DataSource dataSource;
+
+  /** The ProblemService object, used to delete a problem of a contest. */
+  @Autowired private ProblemService problemService;
 }

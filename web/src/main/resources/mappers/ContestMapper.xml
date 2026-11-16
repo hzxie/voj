@@ -10,7 +10,6 @@
 		<result property="contestNotes" column="contest_notes" />
 		<result property="startTime" column="contest_start_time" />
 		<result property="endTime" column="contest_end_time" />
-		<result property="problems" column="contest_problems" />
 		<result property="status" column="contest_status" />
 		<result property="scoring" column="contest_scoring" />
 		<result property="penalty" column="contest_penalty" />
@@ -59,16 +58,58 @@
 		WHERE contest_id = #{contestId}
 	</select>
 	<insert id="createContest" 
-		parameterType="org.verwandlung.voj.web.model.Contest">
-		INSERT INTO voj_contests (contest_name, contest_notes, contest_start_time, contest_end_time, contest_problems, contest_status, contest_scoring, contest_penalty, contest_freeze, contest_open_registration)
-		VALUES (#{contestName}, #{contestNotes}, #{startTime}, #{endTime}, #{problems}, #{status}, #{scoring}, #{penalty}, #{freeze}, #{openRegistration})
+		parameterType="org.verwandlung.voj.web.model.Contest"
+		keyProperty="contestId"
+		keyColumn="contest_id"
+		useGeneratedKeys="true">
+		INSERT INTO voj_contests (contest_name, contest_notes, contest_start_time, contest_end_time, contest_status, contest_scoring, contest_penalty, contest_freeze, contest_open_registration)
+		VALUES (#{contestName}, #{contestNotes}, #{startTime}, #{endTime}, #{status}, #{scoring}, #{penalty}, #{freeze}, #{openRegistration})
 	</insert>
 	<update id="updateContest" 
 		parameterType="org.verwandlung.voj.web.model.Contest">
 		UPDATE voj_contests 
-		SET contest_name = #{contestName}, contest_notes = #{contestNotes}, contest_start_time = #{startTime}, contest_end_time = #{endTime}, contest_problems = #{problems}, contest_status = #{status}, contest_scoring = #{scoring}, contest_penalty = #{penalty}, contest_freeze = #{freeze}, contest_open_registration = #{openRegistration}
+		SET contest_name = #{contestName}, contest_notes = #{contestNotes}, contest_start_time = #{startTime}, contest_end_time = #{endTime}, contest_status = #{status}, contest_scoring = #{scoring}, contest_penalty = #{penalty}, contest_freeze = #{freeze}, contest_open_registration = #{openRegistration}
 		WHERE contest_id = #{contestId}
 	</update>
+	<select id="getProblemIdsOfContest"
+		parameterType="long"
+		resultType="long">
+		SELECT problem_id
+		FROM voj_contest_problems
+		WHERE contest_id = #{contestId}
+		ORDER BY position
+	</select>
+	<select id="isProblemOfContest"
+		parameterType="map"
+		resultType="boolean">
+		SELECT COUNT(*) &gt; 0
+		FROM voj_contest_problems
+		WHERE contest_id = #{contestId} AND problem_id = #{problemId}
+	</select>
+	<select id="getNumberOfProblemsOfContests"
+		parameterType="map"
+		resultType="java.util.HashMap">
+		SELECT contest_id AS contestId, COUNT(*) AS numberOfProblems
+		FROM voj_contest_problems
+		WHERE contest_id IN
+		<foreach collection="contestIds" item="contestId" open="(" separator="," close=")">
+			#{contestId}
+		</foreach>
+		GROUP BY contest_id
+	</select>
+	<delete id="deleteProblemsOfContest"
+		parameterType="long">
+		DELETE FROM voj_contest_problems
+		WHERE contest_id = #{contestId}
+	</delete>
+	<insert id="createProblemsOfContest"
+		parameterType="map">
+		INSERT INTO voj_contest_problems (contest_id, problem_id, position)
+		VALUES
+		<foreach collection="problemIds" item="problemId" index="position" separator=",">
+			(#{contestId}, #{problemId}, #{position})
+		</foreach>
+	</insert>
 	<delete id="deleteContest"
 		parameterType="long">
 		DELETE FROM voj_contests 

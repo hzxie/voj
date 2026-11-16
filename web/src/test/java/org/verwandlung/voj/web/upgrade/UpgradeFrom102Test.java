@@ -45,7 +45,8 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
  * of voj_submissions but the index of the judge result alone, no registry of the judgers, the
  * foreign key from voj_email_validation to voj_users, problem statements
  * and contest notes written for HTML output (with HTML entities), the contestants' code_snippet
- * column and Kotlin's old compile command.
+ * column, Kotlin's old compile command and the problems of the contests as a JSON array in
+ * voj_contests.contest_problems.
  *
  * <p>The script changes the schema (DDL commits implicitly), so this test is not {@code
  * Transactional}: it puts the shared test database back into the 1.0.2 state before each test and
@@ -123,6 +124,18 @@ public class UpgradeFrom102Test {
     {"9104", "ACM", "ICPC", "ICPC"},
   };
 
+  /**
+   * The problems of the contests inserted by this test: { id, contest_problems as stored by 1.0.2,
+   * the problem ids after the upgrade }. Duplicates keep their first position; a deleted problem
+   * (99999) and malformed values are dropped.
+   */
+  private static final String[][] CONTEST_PROBLEMS = {
+    {"9101", "[1000, 1001]", "1000,1001"},
+    {"9102", "[1003,1000 ,\n 99999, 1003]", "1003,1000"},
+    {"9103", "null", ""},
+    {"9104", "[1000,", "1000"},
+  };
+
   /** Kotlin's compile command as 1.0.2 seeded it, and as the upgrade sets it. */
   private static final String OLD_KOTLIN_COMPILE_COMMAND =
       "kotlinc {filename}.kt -include-runtime -d {filename}.jar";
@@ -143,6 +156,18 @@ public class UpgradeFrom102Test {
             + " AFTER contest_freeze");
     jdbcTemplate.update(
         "UPDATE voj_contests SET contest_mode = IF(contest_scoring = 'IOI', 'OI', 'ACM')");
+    // The problems of the contests as 1.0.2 stored them: a JSON array in voj_contests.
+    jdbcTemplate.execute(
+        "ALTER TABLE voj_contests ADD COLUMN contest_problems text NOT NULL"
+            + " AFTER contest_end_time");
+    jdbcTemplate.update(
+        "UPDATE voj_contests c SET contest_problems = CONCAT('[', COALESCE(("
+            + "SELECT GROUP_CONCAT(cp.problem_id ORDER BY cp.position SEPARATOR ', ')"
+            + " FROM voj_contest_problems cp WHERE cp.contest_id = c.contest_id), ''), ']')");
+    if (fixtureContestProblems == null) {
+      fixtureContestProblems = getContestProblems();
+    }
+    jdbcTemplate.execute("DROP TABLE voj_contest_problems");
     // The contestants as 1.0.2 created them, with a code snippet.
     jdbcTemplate.execute("ALTER TABLE voj_contest_contestants ADD COLUMN code_snippet text");
     // Kotlin's compile command as 1.0.2 seeded it.
@@ -185,13 +210,15 @@ public class UpgradeFrom102Test {
             + ", ?".repeat(PROBLEM_FIELDS.length)
             + ")",
         values);
-    for (String[] contest : CONTESTS) {
+    for (int i = 0; i < CONTESTS.length; ++i) {
+      String[] contest = CONTESTS[i];
       jdbcTemplate.update(
           "INSERT INTO voj_contests (contest_id, contest_name, contest_notes, contest_start_time,"
               + " contest_end_time, contest_mode, contest_problems, contest_scoring)"
-              + " VALUES (?, 'Legacy', 'Rule: a &lt;= b', NOW(), NOW(), ?, '[]', ?)",
+              + " VALUES (?, 'Legacy', 'Rule: a &lt;= b', NOW(), NOW(), ?, ?, ?)",
           Long.parseLong(contest[0]),
           contest[1],
+          CONTEST_PROBLEMS[i][1],
           contest[2]);
     }
     // The foreign keys as 1.0.2 created them: without an ON DELETE rule.
@@ -218,6 +245,51 @@ public class UpgradeFrom102Test {
         "INSERT INTO voj_options (option_id, option_name, option_value, is_autoload)"
             + " VALUES (31, ?, '1', 0)",
         MARKER);
+  }
+
+  /**
+   * Test case: runs the upgrade on a 1.0.2 database, then once more. Test data: the fixture contests
+   * and contests whose JSON problem lists hold a duplicate, a deleted problem, "null" and a
+   * truncated array. Expected: voj_contest_problems holds every existing problem once, in order;
+   * contest_problems is dropped; deleting a contest's problem removes it from the contest; the
+   * second run changes nothing.
+   */
+  @Test
+  public void testMovesTheProblemsOfContestsToTheirTable() throws SQLException {
+    runUpgrade();
+    Map<Long, String> contestProblems = getContestProblems();
+    for (String[] contest : CONTEST_PROBLEMS) {
+      Assertions.assertEquals(
+          contest[2], contestProblems.getOrDefault(Long.parseLong(contest[0]), ""), contest[0]);
+    }
+    for (Map.Entry<Long, String> fixture : fixtureContestProblems.entrySet()) {
+      Assertions.assertEquals(fixture.getValue(), contestProblems.get(fixture.getKey()));
+    }
+    Assertions.assertFalse(hasColumn("voj_contests", "contest_problems"));
+
+    runUpgrade();
+    Assertions.assertEquals(contestProblems, getContestProblems());
+
+    jdbcTemplate.update(
+        "INSERT INTO voj_contest_problems (contest_id, problem_id, position) VALUES (9103, ?, 0)",
+        PROBLEM_ID);
+    jdbcTemplate.update("DELETE FROM voj_problems WHERE problem_id = ?", PROBLEM_ID);
+    Assertions.assertFalse(getContestProblems().containsKey(9103L));
+    jdbcTemplate.update("DELETE FROM voj_contests WHERE contest_id = 9104");
+    Assertions.assertFalse(getContestProblems().containsKey(9104L));
+  }
+
+  /** Gets the problems of every contest from voj_contest_problems, as comma-separated ids. */
+  private Map<Long, String> getContestProblems() {
+    Map<Long, String> contestProblems = new java.util.HashMap<>();
+    for (Map<String, Object> row :
+        jdbcTemplate.queryForList(
+            "SELECT contest_id, GROUP_CONCAT(problem_id ORDER BY position) AS problems"
+                + " FROM voj_contest_problems GROUP BY contest_id")) {
+      contestProblems.put(
+          ((Number) row.get("contest_id")).longValue(), String.valueOf(row.get("problems")));
+    }
+    return contestProblems;
   }
 
   /**
@@ -633,4 +705,7 @@ public class UpgradeFrom102Test {
 
   /** The keys of voj_judgers as schema.sql creates them (see getKeys). */
   private static List<Map<String, Object>> judgerKeys;
+
+  /** The problems of the fixture contests, as test-data.sql stores them. */
+  private static Map<Long, String> fixtureContestProblems;
 }

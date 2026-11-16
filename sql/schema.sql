@@ -8,6 +8,7 @@ SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS `voj_bulletin_board_messages`;
 DROP TABLE IF EXISTS `voj_contests`;
 DROP TABLE IF EXISTS `voj_contest_contestants`;
+DROP TABLE IF EXISTS `voj_contest_problems`;
 DROP TABLE IF EXISTS `voj_contest_submissions`;
 DROP TABLE IF EXISTS `voj_discussion_replies`;
 DROP TABLE IF EXISTS `voj_discussion_reply_votes`;
@@ -47,12 +48,18 @@ CREATE TABLE `voj_contests` (
   `contest_notes` text COLLATE utf8mb4_unicode_ci NOT NULL,
   `contest_start_time` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
   `contest_end_time` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
-  `contest_problems` text COLLATE utf8mb4_unicode_ci NOT NULL,
   `contest_status` varchar(16) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'PUBLISHED',
   `contest_scoring` varchar(16) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'ICPC',
   `contest_penalty` int(11) NOT NULL DEFAULT '20',
   `contest_freeze` int(11) NOT NULL DEFAULT '0',
   `contest_open_registration` tinyint(1) NOT NULL DEFAULT '1'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- The problems of each contest, in the order the contest lists them.
+CREATE TABLE `voj_contest_problems` (
+  `contest_id` bigint(20) NOT NULL,
+  `problem_id` bigint(20) NOT NULL,
+  `position` int(4) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `voj_contest_contestants` (
@@ -261,6 +268,10 @@ ALTER TABLE `voj_bulletin_board_messages`
 ALTER TABLE `voj_contests`
   ADD PRIMARY KEY (`contest_id`);
 
+ALTER TABLE `voj_contest_problems`
+  ADD PRIMARY KEY (`contest_id`,`problem_id`),
+  ADD KEY `problem_id` (`problem_id`);
+
 ALTER TABLE `voj_contest_contestants`
   ADD PRIMARY KEY (`contest_id`,`contestant_uid`),
   ADD KEY `contestant_uid` (`contestant_uid`);
@@ -408,6 +419,10 @@ ALTER TABLE `voj_user_groups`
 ALTER TABLE `voj_contest_contestants`
   ADD CONSTRAINT `voj_contest_contestants_ibfk_1` FOREIGN KEY (`contest_id`) REFERENCES `voj_contests` (`contest_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   ADD CONSTRAINT `voj_contest_contestants_ibfk_2` FOREIGN KEY (`contestant_uid`) REFERENCES `voj_users` (`uid`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE `voj_contest_problems`
+  ADD CONSTRAINT `voj_contest_problems_ibfk_1` FOREIGN KEY (`contest_id`) REFERENCES `voj_contests` (`contest_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `voj_contest_problems_ibfk_2` FOREIGN KEY (`problem_id`) REFERENCES `voj_problems` (`problem_id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 ALTER TABLE `voj_contest_submissions`
   ADD CONSTRAINT `voj_contest_submissions_ibfk_1` FOREIGN KEY (`contest_id`) REFERENCES `voj_contests` (`contest_id`) ON DELETE CASCADE ON UPDATE CASCADE,

@@ -377,8 +377,8 @@ class ViewRenderSmokeTest {
   void contestProblemViewPostsToContestEndpoint() throws Exception {
     authenticateUser();
     Contest contest = aContest(1L, "ACM", past(), future());
-    contest.setProblems("[1000]");
     when(contestService.getContest(1L)).thenReturn(contest);
+    when(contestService.isProblemOfContest(1L, 1000L)).thenReturn(true);
     when(contestService.isContestProblemsViewable(any(), any())).thenReturn(true);
     when(problemService.getProblem(1000L)).thenReturn(aPublishedProblem(1000L));
     when(languageService.getEnabledLanguages())
@@ -658,10 +658,9 @@ class ViewRenderSmokeTest {
   @Test
   void contestLeaderboardFormatsPenaltyAndShowsFreeze() throws Exception {
     Contest contest = aContest(1L, "ACM", past(), future());
-    contest.setProblems("[1000]");
     contest.setFreeze(60);
     when(contestService.getContest(1L)).thenReturn(contest);
-    when(contestService.getProblemsOfContests(any())).thenReturn(List.of(aPublishedProblem(1000L)));
+    when(contestService.getProblemsOfContest(1L)).thenReturn(List.of(aPublishedProblem(1000L)));
     org.verwandlung.voj.web.model.ContestContestant contestant =
         new org.verwandlung.voj.web.model.ContestContestant(contest, aUser(2000L, usersGroup()));
     contestant.setTime(3725);
@@ -1090,7 +1089,6 @@ class ViewRenderSmokeTest {
     contest.setEndTime(end);
     contest.setStatus("PUBLISHED");
     contest.setScoring("OI".equals(mode) ? "IOI" : "ICPC");
-    contest.setProblems("[]");
     return contest;
   }
 

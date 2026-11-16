@@ -63,8 +63,16 @@
 --    (checked apart from the columns of step 8): why the last failed judging
 --    of a submission failed, which its System Error tells once too many of its
 --    judgings failed.
+-- 12. voj_contests.contest_problems held the problems of a contest as a JSON
+--    array in a text column, which nothing kept valid: a malformed value broke
+--    every page of the contest, and deleting a problem left its id behind.
+--    The problems move to voj_contest_problems (contest, problem, position),
+--    whose foreign keys cascade. The ids are copied in their order; a
+--    duplicate keeps its first position, and anything that is not the id of
+--    an existing problem (a deleted problem, a malformed value) is dropped.
+--    Then contest_problems is dropped.
 --
--- Safe to run more than once. Steps 1 to 4, 6 and 8 to 11 first check the
+-- Safe to run more than once. Steps 1 to 4, 6 and 8 to 12 first check the
 -- information schema (or create a table only if it is missing) and only change
 -- what is still in the old state (MySQL commits DDL implicitly, so a
 -- transaction could not make them atomic; an interrupted run is completed by
@@ -267,6 +275,56 @@ SET @voj_has_column = (SELECT COUNT(*) FROM information_schema.COLUMNS
   AND COLUMN_NAME = 'submission_judge_failure');
 SET @voj_sql = IF(@voj_has_column = 0,
   'ALTER TABLE `voj_submissions` ADD COLUMN `submission_judge_failure` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL AFTER `submission_judge_attempts`', 'DO 0');
+PREPARE voj_stmt FROM @voj_sql;
+EXECUTE voj_stmt;
+DEALLOCATE PREPARE voj_stmt;
+
+-- 12. The problems of the contests, in a table of their own. The copy runs only
+--     while contest_problems exists, and skips the rows an interrupted run
+--     copied already. An id is matched as text: a malformed value is never
+--     converted to a number (which fails in strict mode).
+CREATE TABLE IF NOT EXISTS `voj_contest_problems` (
+  `contest_id` bigint(20) NOT NULL,
+  `problem_id` bigint(20) NOT NULL,
+  `position` int(4) NOT NULL,
+  PRIMARY KEY (`contest_id`,`problem_id`),
+  KEY `problem_id` (`problem_id`),
+  CONSTRAINT `voj_contest_problems_ibfk_1` FOREIGN KEY (`contest_id`) REFERENCES `voj_contests` (`contest_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `voj_contest_problems_ibfk_2` FOREIGN KEY (`problem_id`) REFERENCES `voj_problems` (`problem_id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+SET @voj_has_column = (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'voj_contests'
+  AND COLUMN_NAME = 'contest_problems');
+SET @voj_sql = IF(@voj_has_column > 0,
+  'INSERT IGNORE INTO `voj_contest_problems` (`contest_id`, `problem_id`, `position`)
+   SELECT c.`contest_id`, p.`problem_id`, MIN(n.`position`)
+   FROM (
+     SELECT `contest_id`, REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(`contest_problems`,
+       ''['', ''''), '']'', ''''), '' '', ''''), CHAR(9), ''''), CHAR(10), ''''), CHAR(13), '''')
+       AS `ids`
+     FROM `voj_contests`
+   ) c
+   JOIN (
+     SELECT units.d + 10 * tens.d + 100 * hundreds.d AS `position`
+     FROM (SELECT 0 AS d UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3
+       UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7
+       UNION ALL SELECT 8 UNION ALL SELECT 9) units
+     CROSS JOIN (SELECT 0 AS d UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3
+       UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7
+       UNION ALL SELECT 8 UNION ALL SELECT 9) tens
+     CROSS JOIN (SELECT 0 AS d UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3
+       UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7
+       UNION ALL SELECT 8 UNION ALL SELECT 9) hundreds
+   ) n ON n.`position` <= LENGTH(c.`ids`) - LENGTH(REPLACE(c.`ids`, '','', ''''))
+   JOIN `voj_problems` p ON CAST(p.`problem_id` AS CHAR)
+     = SUBSTRING_INDEX(SUBSTRING_INDEX(c.`ids`, '','', n.`position` + 1), '','', -1)
+   GROUP BY c.`contest_id`, p.`problem_id`', 'DO 0');
+PREPARE voj_stmt FROM @voj_sql;
+EXECUTE voj_stmt;
+DEALLOCATE PREPARE voj_stmt;
+SET @voj_sql = IF(@voj_has_column > 0,
+  'ALTER TABLE `voj_contests` DROP COLUMN `contest_problems`', 'DO 0');
 PREPARE voj_stmt FROM @voj_sql;
 EXECUTE voj_stmt;
 DEALLOCATE PREPARE voj_stmt;

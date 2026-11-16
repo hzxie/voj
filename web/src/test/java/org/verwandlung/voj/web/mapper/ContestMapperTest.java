@@ -141,7 +141,7 @@ public class ContestMapperTest {
     calendar.set(2016, Calendar.MAY, 7, 20, 0, 0);
     Date endTime = calendar.getTime();
 
-    Contest contest = new Contest("Contest", "Contest Notes", startTime, endTime, "IOI", "[]");
+    Contest contest = new Contest("Contest", "Contest Notes", startTime, endTime, "IOI");
     int numberOfRowsAffected = contestMapper.createContest(contest);
     Assertions.assertEquals(1, numberOfRowsAffected);
   }
@@ -154,7 +154,7 @@ public class ContestMapperTest {
   public void testCreateContestWithRetiredScoring() {
     Date startTime = new Date();
     Contest contest =
-        new Contest("Contest", "Contest Notes", startTime, startTime, "Codeforces", "[]");
+        new Contest("Contest", "Contest Notes", startTime, startTime, "Codeforces");
     contestMapper.createContest(contest);
 
     List<Contest> contests = contestMapper.getContests("Contest", false, 0, 1);
@@ -175,7 +175,7 @@ public class ContestMapperTest {
     Date endTime = calendar.getTime();
 
     Contest contest =
-        new Contest("C".repeat(129), "Contest Notes", startTime, endTime, "IOI", "[1000]");
+        new Contest("C".repeat(129), "Contest Notes", startTime, endTime, "IOI");
     Executable e =
         () -> {
           contestMapper.createContest(contest);

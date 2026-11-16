@@ -26,7 +26,7 @@
         <input type="hidden" id="contest-id" th:value="${isEdit ? contest.contestId : ''}" />
         <input type="hidden" id="contest-scoring" th:value="${scoring}" />
         <input type="hidden" id="contest-open-registration" th:value="${!isEdit or contest.isOpenRegistration()} ? '1' : '0'" />
-        <input type="hidden" id="contest-problems" th:value="${isEdit ? contest.problems : '[]'}" />
+        <input type="hidden" id="contest-problems" th:value="${isEdit ? contestProblemIds : '[]'}" />
 
         <div class="adm-ed2">
             <div class="adm-col">

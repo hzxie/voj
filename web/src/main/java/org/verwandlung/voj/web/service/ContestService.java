@@ -78,7 +78,7 @@ public class ContestService {
    * @param startTime - the start time of the contest
    * @param endTime - the end time of the contest
    * @param scoring - the scoring rule of the contest (ICPC / IOI)
-   * @param problems - the contest problems (a JSON-formatted array of problem IDs)
+   * @param problems - the contest problems (a JSON array of the IDs of existing problems)
    * @param status - the publication status of the contest (PUBLISHED / DRAFT / HIDDEN)
    * @param penalty - the penalty (in minutes) per wrong submission
    * @param freeze - the scoreboard freeze duration (in minutes) before the end
@@ -96,15 +96,17 @@ public class ContestService {
       int penalty,
       int freeze,
       boolean openRegistration) {
-    Map<String, Object> result = validateContest(contestName, startTime, endTime);
+    List<Long> problemIds = parseProblemIds(problems);
+    Map<String, Object> result = validateContest(contestName, startTime, endTime, problemIds);
     if ((Boolean) result.get("isSuccessful")) {
-      Contest contest =
-          new Contest(contestName, contestNotes, startTime, endTime, scoring, problems);
+      Contest contest = new Contest(contestName, contestNotes, startTime, endTime, scoring);
       contest.setStatus(PublicationStatus.normalize(status));
       contest.setPenalty(penalty);
       contest.setFreeze(freeze);
       contest.setOpenRegistration(openRegistration);
       contestMapper.createContest(contest);
+      setProblemsOfContest(contest.getContestId(), problemIds);
+      result.put("contestId", contest.getContestId());
     }
     return result;
   }
@@ -118,7 +120,7 @@ public class ContestService {
    * @param startTime - the start time of the contest
    * @param endTime - the end time of the contest
    * @param scoring - the scoring rule of the contest (ICPC / IOI)
-   * @param problems - the contest problems (a JSON-formatted array of problem IDs)
+   * @param problems - the contest problems (a JSON array of the IDs of existing problems)
    * @param status - the publication status of the contest (PUBLISHED / DRAFT / HIDDEN)
    * @param penalty - the penalty (in minutes) per wrong submission
    * @param freeze - the scoreboard freeze duration (in minutes) before the end
@@ -138,7 +140,8 @@ public class ContestService {
       int freeze,
       boolean openRegistration) {
     Contest contest = contestMapper.getContest(contestId);
-    Map<String, Object> result = validateContest(contestName, startTime, endTime);
+    List<Long> problemIds = parseProblemIds(problems);
+    Map<String, Object> result = validateContest(contestName, startTime, endTime, problemIds);
     result.put("isContestExists", contest != null);
     if (contest == null) {
       result.put("isSuccessful", false);
@@ -149,15 +152,54 @@ public class ContestService {
       contest.setContestNotes(contestNotes);
       contest.setStartTime(startTime);
       contest.setEndTime(endTime);
-      contest.setProblems(problems);
       contest.setStatus(PublicationStatus.normalize(status));
       contest.setScoring(scoring);
       contest.setPenalty(penalty);
       contest.setFreeze(freeze);
       contest.setOpenRegistration(openRegistration);
       contestMapper.updateContest(contest);
+      setProblemsOfContest(contestId, problemIds);
     }
     return result;
+  }
+
+  /**
+   * Parses the problems posted by the contest editor: a JSON array of the unique identifiers of
+   * existing problems. A problem listed twice keeps its first position.
+   *
+   * @param problems - the JSON array
+   * @return the unique identifiers of the problems, or null if the value is not such an array
+   */
+  private List<Long> parseProblemIds(String problems) {
+    List<Long> problemIds;
+    try {
+      problemIds = JsonUtils.toList(problems, Long.class);
+    } catch (RuntimeException ex) {
+      return null;
+    }
+    if (problemIds == null || problemIds.contains(null)) {
+      return null;
+    }
+    List<Long> distinctProblemIds = new ArrayList<>(new LinkedHashSet<>(problemIds));
+    for (long problemId : distinctProblemIds) {
+      if (problemMapper.getProblem(problemId) == null) {
+        return null;
+      }
+    }
+    return distinctProblemIds;
+  }
+
+  /**
+   * Replaces the problems of a contest.
+   *
+   * @param contestId - the unique identifier of the contest
+   * @param problemIds - the unique identifiers of the problems, in order
+   */
+  private void setProblemsOfContest(long contestId, List<Long> problemIds) {
+    contestMapper.deleteProblemsOfContest(contestId);
+    if (!problemIds.isEmpty()) {
+      contestMapper.createProblemsOfContest(contestId, problemIds);
+    }
   }
 
   /**
@@ -174,19 +216,25 @@ public class ContestService {
   }
 
   /**
-   * Validates a contest's name and schedule.
+   * Validates a contest's name, schedule and problems.
    *
    * @param contestName - the name of the contest
    * @param startTime - the start time of the contest
    * @param endTime - the end time of the contest
+   * @param problemIds - the parsed problems (null when they are not legal)
    * @return a Map of validation flags including {@code isSuccessful}
    */
-  private Map<String, Object> validateContest(String contestName, Date startTime, Date endTime) {
-    Map<String, Object> result = new HashMap<>(4, 1);
+  private Map<String, Object> validateContest(
+      String contestName, Date startTime, Date endTime, List<Long> problemIds) {
+    Map<String, Object> result = new HashMap<>(6, 1);
     result.put("isNameEmpty", contestName == null || contestName.trim().isEmpty());
     result.put("isTimeValid", startTime != null && endTime != null && endTime.after(startTime));
+    result.put("isProblemsLegal", problemIds != null);
     result.put(
-        "isSuccessful", !(Boolean) result.get("isNameEmpty") && (Boolean) result.get("isTimeValid"));
+        "isSuccessful",
+        !(Boolean) result.get("isNameEmpty")
+            && (Boolean) result.get("isTimeValid")
+            && problemIds != null);
     return result;
   }
 
@@ -201,21 +249,58 @@ public class ContestService {
   }
 
   /**
-   * Gets the problem list of a contest.
+   * Gets the problems of a contest, in the order the contest lists them.
    *
-   * @param problemIdList - a List object containing the list of contest problem IDs
-   * @return a List object containing the problem information
+   * @param contestId - the unique identifier of the contest
+   * @return the problems of the contest
    */
-  public List<Problem> getProblemsOfContests(List<Long> problemIdList) {
-    List<Problem> problems = new ArrayList<>();
-    for (long problemId : problemIdList) {
-      Problem p = problemMapper.getProblem(problemId);
+  public List<Problem> getProblemsOfContest(long contestId) {
+    return problemMapper.getProblemsOfContest(contestId);
+  }
 
-      if (p != null) {
-        problems.add(p);
-      }
+  /**
+   * Gets the unique identifiers of the problems of a contest, in order.
+   *
+   * @param contestId - the unique identifier of the contest
+   * @return the unique identifiers of the problems
+   */
+  public List<Long> getProblemIdsOfContest(long contestId) {
+    return contestMapper.getProblemIdsOfContest(contestId);
+  }
+
+  /**
+   * Checks whether a problem is one of the problems of a contest.
+   *
+   * @param contestId - the unique identifier of the contest
+   * @param problemId - the unique identifier of the problem
+   * @return whether the problem is one of the contest's
+   */
+  public boolean isProblemOfContest(long contestId, long problemId) {
+    return contestMapper.isProblemOfContest(contestId, problemId);
+  }
+
+  /**
+   * Gets the number of problems of some contests.
+   *
+   * @param contests - the contests
+   * @return the number of problems of each contest, by contest identifier
+   */
+  public Map<Long, Long> getNumberOfProblemsOfContests(List<Contest> contests) {
+    Map<Long, Long> numberOfProblems = new HashMap<>();
+    if (contests == null || contests.isEmpty()) {
+      return numberOfProblems;
     }
-    return problems;
+    List<Long> contestIds = new ArrayList<>(contests.size());
+    for (Contest contest : contests) {
+      contestIds.add(contest.getContestId());
+      numberOfProblems.put(contest.getContestId(), 0L);
+    }
+    for (Map<String, Object> row : contestMapper.getNumberOfProblemsOfContests(contestIds)) {
+      numberOfProblems.put(
+          ((Number) row.get("contestId")).longValue(),
+          ((Number) row.get("numberOfProblems")).longValue());
+    }
+    return numberOfProblems;
   }
 
   /**
@@ -342,10 +427,8 @@ public class ContestService {
       if (!isOwner && currentTime.before(contest.getEndTime())) {
         return false;
       }
-      List<Long> problemIds = JsonUtils.toList(contest.getProblems(), Long.class);
       if (PublicationStatus.isVisibleTo(contest.getStatus(), user)
-          && problemIds != null
-          && problemIds.contains(submission.getProblem().getProblemId())
+          && contestMapper.isProblemOfContest(contestId, submission.getProblem().getProblemId())
           && isContestProblemsViewable(contest, user)) {
         isViewableThroughContest = true;
       }
@@ -392,9 +475,8 @@ public class ContestService {
       return result;
     }
 
-    List<Long> problemIds = JsonUtils.toList(contest.getProblems(), Long.class);
     Problem problem =
-        problemIds != null && problemIds.contains(problemId)
+        contestMapper.isProblemOfContest(contestId, problemId)
             ? problemMapper.getProblem(problemId)
             : null;
     result.putAll(submissionService.saveSubmission(user, problem, languageSlug, code));
