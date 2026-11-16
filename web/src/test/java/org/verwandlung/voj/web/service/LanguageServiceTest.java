@@ -209,6 +209,32 @@ public class LanguageServiceTest {
     Assertions.assertEquals(baseCount, languageService.getAllLanguages().size());
   }
 
+  /**
+   * Test case: tests the updateLanguageSettings(List) method. Test data: C++ (in use) is deleted
+   * and a new language takes its name, but has no slug and a run command without the {filename}
+   * placeholder. Expected: the update fails with one error for each failed check, and the deleted
+   * language's error is not lost to the new one of the same name.
+   */
+  @Test
+  @SuppressWarnings("unchecked")
+  public void testUpdateLanguageSettingsReportsEveryError() {
+    List<Language> newLanguages = currentLanguages();
+    newLanguages.removeIf(language -> language.getLanguageId() == 2);
+    Language replacement = new Language("", "C++", "g++ -o {filename}.exe {filename}.cpp", "a.out");
+    replacement.setSourceFilename("Main.cpp");
+    newLanguages.add(replacement);
+
+    Map<String, Object> result = languageService.updateLanguageSettings(newLanguages);
+    Assertions.assertFalse((Boolean) result.get("isSuccessful"));
+    Assertions.assertEquals(
+        List.of(
+            Map.of("languageName", "C++", "error", "languageInUse"),
+            Map.of("languageName", "C++", "error", "languageSlugIllegal"),
+            Map.of("languageName", "C++", "error", "runCommandIllegal")),
+        result.get("errors"));
+    Assertions.assertNotNull(languageMapper.getLanguageUsingId(2));
+  }
+
   /** Returns a mutable copy of all current languages, used to construct the input of updateLanguageSettings. */
   private List<Language> currentLanguages() {
     List<Language> languages = new ArrayList<>();

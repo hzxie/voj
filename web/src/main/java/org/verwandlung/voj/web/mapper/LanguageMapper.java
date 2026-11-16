@@ -73,6 +73,15 @@ public interface LanguageMapper {
   int updateLanguage(Language language);
 
   /**
+   * Tells whether a programming language is in use: a submission is in it, or a user prefers it.
+   * Deleting it would then delete those submissions (their foreign key cascades) or fail.
+   *
+   * @param languageId - the unique identifier of the programming language
+   * @return whether the programming language is in use
+   */
+  boolean isLanguageInUse(@Param("languageId") int languageId);
+
+  /**
    * Deletes a programming language object.
    *
    * @param languageId - the unique identifier of the programming language

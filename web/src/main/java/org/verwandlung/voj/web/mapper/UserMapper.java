@@ -48,15 +48,6 @@ public interface UserMapper {
       @Param("userGroup") UserGroup userGroup, @Param("username") String username);
 
   /**
-   * [For administrators only] Gets the total number of users who selected a certain preferred
-   * language.
-   *
-   * @param languageId - the unique identifier of the programming language
-   * @return the total number of users who selected the preferred language
-   */
-  long getNumberOfUsersUsingLanguage(@Param("languageId") int languageId);
-
-  /**
    * Gets a user object by its unique identifier.
    *
    * @param uid - the unique identifier of the user

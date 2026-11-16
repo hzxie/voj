@@ -43,6 +43,12 @@
 		WHERE language_enabled = 1
 		ORDER BY language_id
 	</select>
+	<select id="isLanguageInUse"
+		parameterType="int"
+		resultType="boolean">
+		SELECT EXISTS (SELECT 1 FROM voj_submissions WHERE language_id = #{languageId})
+			OR EXISTS (SELECT 1 FROM voj_users WHERE prefer_language_id = #{languageId})
+	</select>
 	<insert id="createLanguage" 
 		parameterType="org.verwandlung.voj.web.model.Language"
 		keyProperty="languageId" 

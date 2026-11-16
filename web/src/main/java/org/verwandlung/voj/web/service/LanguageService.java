@@ -26,8 +26,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import org.verwandlung.voj.web.mapper.LanguageMapper;
-import org.verwandlung.voj.web.mapper.SubmissionMapper;
-import org.verwandlung.voj.web.mapper.UserMapper;
 import org.verwandlung.voj.web.model.Language;
 
 /**
@@ -58,19 +56,20 @@ public class LanguageService {
   }
 
   /**
-   * Updates the programming language options.
+   * Updates the programming language options: the languages are replaced by the given ones (a
+   * language without an identifier is created, one left out is deleted), unless one of them fails a
+   * check.
    *
    * @param languages - the array containing the programming language settings
-   * @return the update result of the programming language options
+   * @return {@code isSuccessful}, and either the changes ({@code languageCreated}, {@code
+   *     languageUpdated} and {@code languageDeleted}) or the {@code errors} (see {@link
+   *     #getLanguageSettingErrors})
    */
   public Map<String, Object> updateLanguageSettings(List<Language> languages) {
     List<Language> previousLanguages = languageMapper.getAllLanguages();
+    List<Map<String, String>> errors = getLanguageSettingErrors(previousLanguages, languages);
     Map<String, Object> result = new HashMap<>();
-    Map<String, Object> validationResult =
-        getUpdateLanguageSettingsResult(previousLanguages, languages);
-    boolean isSuccessful = (Boolean) validationResult.get("isSuccessful");
-
-    if (isSuccessful) {
+    if (errors.isEmpty()) {
       Map<String, List<Language>> languageChanges =
           getLanguageChanges(previousLanguages, languages);
 
@@ -79,71 +78,66 @@ public class LanguageService {
       deleteLanguages(languageChanges.get("languageDeleted"));
       result.putAll(languageChanges);
     } else {
-      result.putAll(validationResult);
+      result.put("errors", errors);
     }
-    result.put("isSuccessful", isSuccessful);
+    result.put("isSuccessful", errors.isEmpty());
     return result;
   }
 
   /**
-   * Checks the correctness of the programming language settings.
+   * Checks the programming language settings. A language that would be deleted must not be in use
+   * (which only those are asked); every language that would remain needs a slug of 1 to 16
+   * characters that no other language has, a name of 1 to 16 characters, compile and run
+   * commands of at most 128 characters with the {@code {filename}} placeholder, and a source file
+   * name (see {@link #isSourceFilenameLegal}).
    *
    * @param previousLanguages - the list of language settings before the update
    * @param newLanguages - the list of language settings after the update
-   * @return the validation result of the programming language settings
+   * @return the failed checks, each with the name of its language ({@code languageName}) and the
+   *     check ({@code error}): {@code languageInUse}, {@code languageSlugIllegal}, {@code
+   *     languageSlugExists}, {@code languageNameIllegal}, {@code compileCommandIllegal}, {@code
+   *     runCommandIllegal} or {@code sourceFilenameIllegal}
    */
-  private Map<String, Object> getUpdateLanguageSettingsResult(
+  private List<Map<String, String>> getLanguageSettingErrors(
       List<Language> previousLanguages, List<Language> newLanguages) {
-    boolean isSuccessful = true;
-    Map<String, Object> result = new HashMap<>();
-
+    List<Map<String, String>> errors = new ArrayList<>();
     for (Language language : previousLanguages) {
-      Map<String, Boolean> languageResult = new HashMap<>(4, 1);
-      languageResult.put("isLanguageDeleted", isLanguageDeleted(newLanguages, language));
-      languageResult.put("isLangaugeInUse", isLanguageInUse(language));
-
-      boolean isLanguageSuccessful =
-          !languageResult.get("isLanguageDeleted") || !languageResult.get("isLangaugeInUse");
-      languageResult.put("isSuccessful", isLanguageSuccessful);
-      result.put(language.getLanguageName(), languageResult);
-
-      isSuccessful &= isLanguageSuccessful;
+      if (isLanguageDeleted(newLanguages, language)
+          && languageMapper.isLanguageInUse(language.getLanguageId())) {
+        errors.add(getLanguageSettingError(language, "languageInUse"));
+      }
     }
     for (Language language : newLanguages) {
-      Map<String, Boolean> languageResult = new HashMap<>(10, 1);
-      languageResult.put("isLanguageSlugEmpty", language.getLanguageSlug().isEmpty());
-      languageResult.put("isLanguageSlugLegal", isLanguageSlugLegal(language.getLanguageSlug()));
-      languageResult.put(
-          "isLanguageSlugExists",
-          isLanguageSlugExists(language.getLanguageSlug(), language.getLanguageId()));
-      languageResult.put("isLanguageNameEmpty", language.getLanguageName().isEmpty());
-      languageResult.put("isLanguageNameLegal", isLanguageNameLegal(language.getLanguageName()));
-      languageResult.put("isCompileCommandEmpty", language.getCompileCommand().isEmpty());
-      languageResult.put(
-          "isCompileCommandLegal", isCompileCommandLegal(language.getCompileCommand()));
-      languageResult.put("isRunCommandEmpty", language.getRunCommand().isEmpty());
-      languageResult.put("isRunCommandLegal", isRunCommandLegal(language.getRunCommand()));
-      languageResult.put(
-          "isSourceFilenameLegal", isSourceFilenameLegal(language.getSourceFilename()));
-
-      boolean isLanguageSuccessful =
-          !languageResult.get("isLanguageSlugEmpty")
-              && languageResult.get("isLanguageSlugLegal")
-              && !languageResult.get("isLanguageSlugExists")
-              && !languageResult.get("isLanguageNameEmpty")
-              && languageResult.get("isLanguageNameLegal")
-              && !languageResult.get("isCompileCommandEmpty")
-              && languageResult.get("isCompileCommandLegal")
-              && !languageResult.get("isRunCommandEmpty")
-              && languageResult.get("isRunCommandLegal")
-              && languageResult.get("isSourceFilenameLegal");
-      languageResult.put("isSuccessful", isLanguageSuccessful);
-      result.put(language.getLanguageName(), languageResult);
-
-      isSuccessful &= isLanguageSuccessful;
+      if (!isLanguageSlugLegal(language.getLanguageSlug())) {
+        errors.add(getLanguageSettingError(language, "languageSlugIllegal"));
+      } else if (isLanguageSlugExists(language.getLanguageSlug(), language.getLanguageId())) {
+        errors.add(getLanguageSettingError(language, "languageSlugExists"));
+      }
+      if (!isLanguageNameLegal(language.getLanguageName())) {
+        errors.add(getLanguageSettingError(language, "languageNameIllegal"));
+      }
+      if (!isCompileCommandLegal(language.getCompileCommand())) {
+        errors.add(getLanguageSettingError(language, "compileCommandIllegal"));
+      }
+      if (!isRunCommandLegal(language.getRunCommand())) {
+        errors.add(getLanguageSettingError(language, "runCommandIllegal"));
+      }
+      if (!isSourceFilenameLegal(language.getSourceFilename())) {
+        errors.add(getLanguageSettingError(language, "sourceFilenameIllegal"));
+      }
     }
-    result.put("isSuccessful", isSuccessful);
-    return result;
+    return errors;
+  }
+
+  /**
+   * Describes a failed check of the programming language settings.
+   *
+   * @param language - the programming language that fails it
+   * @param error - the check
+   * @return the name of the language ({@code languageName}) and the check ({@code error})
+   */
+  private static Map<String, String> getLanguageSettingError(Language language, String error) {
+    return Map.of("languageName", language.getLanguageName(), "error", error);
   }
 
   /**
@@ -270,14 +264,13 @@ public class LanguageService {
   }
 
   /**
-   * Checks whether a programming language alias is legal. Rule: a legal programming language alias
-   * should not exceed 16 characters.
+   * Checks whether a programming language alias is legal: 1 to 16 characters.
    *
    * @param languageSlug - the alias of the programming language
    * @return whether the programming language alias is legal
    */
   private boolean isLanguageSlugLegal(String languageSlug) {
-    return languageSlug.length() <= 16;
+    return !languageSlug.isEmpty() && languageSlug.length() <= 16;
   }
 
   /**
@@ -294,14 +287,13 @@ public class LanguageService {
   }
 
   /**
-   * Checks whether a programming language name is legal. Rule: a legal programming language name
-   * should not exceed 16 characters.
+   * Checks whether a programming language name is legal: 1 to 16 characters.
    *
    * @param languageName - the name of the programming language
    * @return whether the programming language name is legal
    */
   private boolean isLanguageNameLegal(String languageName) {
-    return languageName.length() <= 16;
+    return !languageName.isEmpty() && languageName.length() <= 16;
   }
 
   /**
@@ -344,32 +336,6 @@ public class LanguageService {
         && !sourceFilename.contains("\\");
   }
 
-  /**
-   * Checks whether other records reference this language; if so, it cannot be deleted due to the
-   * database foreign key integrity constraints.
-   *
-   * @param language - the programming language to check
-   * @return whether there are submissions referencing this language
-   */
-  private boolean isLanguageInUse(Language language) {
-    if (language == null) {
-      return false;
-    }
-
-    int languageId = language.getLanguageId();
-    return userMapper.getNumberOfUsersUsingLanguage(languageId) != 0
-        || submissionMapper.getNumberOfSubmissionsUsingLanguage(languageId) != 0;
-  }
-
   /** The autowired LanguageMapper object. */
   @Autowired private LanguageMapper languageMapper;
-
-  /** The autowired SubmissionMapper object, used to query submissions associated with a language. */
-  @Autowired private SubmissionMapper submissionMapper;
-
-  /**
-   * The autowired UserMapper object, used to query users whose preferred language is associated with
-   * a language.
-   */
-  @Autowired private UserMapper userMapper;
 }

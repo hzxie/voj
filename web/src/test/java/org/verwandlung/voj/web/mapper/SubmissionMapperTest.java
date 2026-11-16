@@ -147,25 +147,6 @@ public class SubmissionMapperTest {
     Assertions.assertEquals(1L, ((Number) firstEntry.get("submissions")).longValue());
   }
 
-  /**
-   * Test case: tests the getNumberOfSubmissionsUsingLanguage(int) method. Test data: the unique
-   * identifier of the C++ language. Expected: the number of submissions using the C++ language.
-   */
-  @Test
-  public void testGetNumberOfSubmissionsUsingLanguageUsingCpp() {
-    int languageId = 2;
-    long numberOfSubmissions = submissionMapper.getNumberOfSubmissionsUsingLanguage(languageId);
-    Assertions.assertEquals(4, numberOfSubmissions);
-  }
-
-  /** Test case: tests the getNumberOfSubmissionsUsingLanguage(int) method. Test data: a non-existing unique identifier. Expected: returns 0. */
-  @Test
-  public void testGetNumberOfSubmissionsUsingLanguageUsingNotExistingLanguage() {
-    int languageId = 0;
-    long numberOfSubmissions = submissionMapper.getNumberOfSubmissionsUsingLanguage(languageId);
-    Assertions.assertEquals(0, numberOfSubmissions);
-  }
-
   /** Test case: tests the getLatestSubmissionId() method. Test data: N/a. Expected: the unique identifier of the last submission. */
   @Test
   public void testGetLatestSubmissionId() {

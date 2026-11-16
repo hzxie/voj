@@ -170,7 +170,18 @@
             settingsSaved:  [[#{voj.administration.judgers.settings-saved}]],
             saveLabel:      [[#{voj.administration.judgers.save}]],
             languageName:   [[#{voj.administration.judgers.language-name}]],
-            remove:         [[#{voj.administration.include.remove}]]
+            remove:         [[#{voj.administration.include.remove}]],
+            saveFailed:     [[#{voj.administration.judgers.save-failed}]],
+            // The checks of the settings a language may fail, by the name the server gives them.
+            errors: {
+                languageInUse:         [[#{voj.administration.judgers.language-in-use}]],
+                languageSlugIllegal:   [[#{voj.administration.judgers.language-slug-illegal}]],
+                languageSlugExists:    [[#{voj.administration.judgers.language-slug-exists}]],
+                languageNameIllegal:   [[#{voj.administration.judgers.language-name-illegal}]],
+                compileCommandIllegal: [[#{voj.administration.judgers.compile-command-illegal}]],
+                runCommandIllegal:     [[#{voj.administration.judgers.run-command-illegal}]],
+                sourceFilenameIllegal: [[#{voj.administration.judgers.source-filename-illegal}]]
+            }
         };
     </script>
     <script type="text/javascript" th:inline="javascript">
@@ -313,13 +324,18 @@
                             $('.alert-success').html('<p>' + esc(ADM_I18N.settingsSaved) + '</p>').removeClass('hide');
                         } else {
                             var message = '';
-                            for (var name in result) {
-                                var r = result[name];
-                                if (typeof r != 'object' || r['isSuccessful']) { continue; }
-                                message += '<p><strong>' + esc(name) + '</strong></p>';
-                            }
-                            $('.alert-error').html(message || ('<p>' + esc(ADM_I18N.settingsSaved) + '</p>')).removeClass('hide');
+                            (result['errors'] || []).forEach(function(e) {
+                                message += '<p><strong>' + esc(e['languageName']) + '</strong>: ' +
+                                           esc(ADM_I18N.errors[e['error']]) + '</p>';
+                            });
+                            $('.alert-error').html(message).removeClass('hide');
                         }
+                    },
+                    // E.g. the session (and with it the CSRF token) expired, or the server failed.
+                    error: function() {
+                        $('.alert-error').html('<p>' + esc(ADM_I18N.saveFailed) + '</p>').removeClass('hide');
+                    },
+                    complete: function() {
                         $btn.removeAttr('disabled').text(ADM_I18N.saveLabel);
                         window.scrollTo({ top: 0, behavior: 'smooth' });
                     }

@@ -197,13 +197,6 @@
 		FROM voj_submissions
 		WHERE submission_judge_result = 'PD'
 	</select>
-	<select id="getNumberOfSubmissionsUsingLanguage"
-		parameterType="org.verwandlung.voj.web.model.Language"
-		resultType="long">
-		SELECT COUNT(*)
-		FROM voj_submissions
-		WHERE language_id = #{languageId}
-	</select>
 	<select id="getLatestSubmissionId"
 		resultType="long">
 		SELECT IFNULL(MAX(submission_id), 0)

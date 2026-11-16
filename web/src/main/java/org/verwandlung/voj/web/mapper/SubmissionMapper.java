@@ -55,14 +55,6 @@ public interface SubmissionMapper {
       @Param("judgeResult") String judgeResult);
 
   /**
-   * [For administrators only] Gets the number of submissions for a programming language.
-   *
-   * @param languageId - the unique identifier of the programming language
-   * @return the number of submissions for the programming language
-   */
-  long getNumberOfSubmissionsUsingLanguage(@Param("languageId") int languageId);
-
-  /**
    * Gets the number of submissions within a specified time period, grouped by quarter of an hour
    * (which SubmissionService adds up into the days of its time zone: the database session's time
    * zone is UTC, and the offset of every time zone is a multiple of 15 minutes).

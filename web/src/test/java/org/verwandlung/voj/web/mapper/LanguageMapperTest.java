@@ -156,6 +156,24 @@ public class LanguageMapperTest {
     Assertions.assertEquals(0, numberOfRowsAffected);
   }
 
+  /**
+   * Test case: tests the isLanguageInUse(int) method. Test data: C++, which submissions are in and
+   * users prefer; Java once only a user prefers it (its submission moves to C++); C and Pascal,
+   * which nothing uses. Expected: in use, in use, not in use.
+   */
+  @Test
+  public void testIsLanguageInUse() {
+    Assertions.assertTrue(languageMapper.isLanguageInUse(2));
+    new org.springframework.jdbc.core.JdbcTemplate(dataSource)
+        .update("UPDATE voj_submissions SET language_id = 2 WHERE language_id = 3");
+    Assertions.assertTrue(languageMapper.isLanguageInUse(3));
+    Assertions.assertFalse(languageMapper.isLanguageInUse(1));
+    Assertions.assertFalse(languageMapper.isLanguageInUse(4));
+  }
+
+  /** The data source of the test database. */
+  @Autowired private javax.sql.DataSource dataSource;
+
   /** The LanguageMapper object under test. */
   @Autowired private LanguageMapper languageMapper;
 }

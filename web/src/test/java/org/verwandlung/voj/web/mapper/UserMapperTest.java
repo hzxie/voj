@@ -49,14 +49,6 @@ public class UserMapperTest {
     Assertions.assertEquals(1, totalUsers);
   }
 
-  /** Test case: tests the getNumberOfUsersUsingLanguage(int) method. Test data: the unique identifier of the C++ language. Expected: the number of users using C++ as their preferred language. */
-  @Test
-  public void testGetNumberOfUsersUsingLanguage() {
-    int languageId = 2;
-    long totalUsers = userMapper.getNumberOfUsersUsingLanguage(languageId);
-    Assertions.assertEquals(2, totalUsers);
-  }
-
   /** Test case: tests the getUserUsingUid(long) method. Test data: the unique identifier of the user with username zjhzxhz. Expected: the expected user object. */
   @Test
   public void testGetUserUsingUidExists() {
