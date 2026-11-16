@@ -63,12 +63,14 @@ public class Dispatcher {
    * Creates a new judging task. Only one judging task runs at a time.
    *
    * @param submissionId - the unique identifier of the submission
+   * @param generation - the judging generation of the task, or {@code null} if it carries none
    * @throws IllgealSubmissionException if the submission does not exist
    * @throws DataAccessException if the submission or the outcome of its judging cannot be read or
    *     written
    * @throws RetryableJudgingException if the submission cannot be judged now, but likely later
    */
-  public void createNewTask(long submissionId) throws IllgealSubmissionException {
+  public void createNewTask(long submissionId, Long generation)
+      throws IllgealSubmissionException {
     synchronized (this) {
       // Unique per judging, not just per submission: another judger on this host may be judging
       // the same submission (a rejudge, or a task delivered again) in the same directory.
@@ -82,13 +84,13 @@ public class Dispatcher {
               });
       String baseFileName = DigestUtils.getRandomString(12, DigestUtils.Mode.ALPHA);
 
-      Date startTime = applicationDispatcher.onJudgingStarted(submissionId);
+      Date startTime = applicationDispatcher.onJudgingStarted(submissionId, generation);
       if (startTime == null) {
         LOGGER.info(
             String.format(
-                "Skipping submission #%d: it is not pending (e.g. its task was delivered twice)"
-                    + " or does not exist.",
-                submissionId));
+                "Skipping submission #%d: it is not pending (e.g. its task was delivered twice),"
+                    + " was rejudged since its task (generation %s) was queued, or does not exist.",
+                submissionId, generation));
         return;
       }
       // Read only once claimed, never before: an administrator may edit the submission's problem
@@ -100,6 +102,7 @@ public class Dispatcher {
             String.format("Illegal submission #%s", new Object[] {submissionId}));
       }
       submission.setExecuteTime(startTime);
+      submission.setJudgeGeneration(generation);
       try {
         judge(submission, baseDirectory, baseFileName);
       } catch (DataAccessException ex) {

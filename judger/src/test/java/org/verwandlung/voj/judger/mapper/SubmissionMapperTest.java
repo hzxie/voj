@@ -74,7 +74,7 @@ public class SubmissionMapperTest {
     Submission before = setPending(1000);
     Date startTime = startTime(0);
 
-    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, startTime, 1000L));
+    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, startTime, 1000L, null));
     Assertions.assertEquals(1, submissionMapper.updateSubmissionResult(verdict(1000, startTime)));
 
     Submission after = submissionMapper.getSubmission(1000);
@@ -87,7 +87,7 @@ public class SubmissionMapperTest {
     Assertions.assertEquals(1000L, after.getJudgerUid());
     Assertions.assertEquals(before.getCode(), after.getCode());
     Assertions.assertEquals(before.getUid(), after.getUid());
-    Assertions.assertEquals(0, submissionMapper.claimSubmission(1000, startTime(1), 1000L));
+    Assertions.assertEquals(0, submissionMapper.claimSubmission(1000, startTime(1), 1000L, null));
   }
 
   /**
@@ -99,7 +99,7 @@ public class SubmissionMapperTest {
   public void testStaleVerdictIsDropped() {
     setPending(1000);
     Date firstStartTime = startTime(0);
-    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, firstStartTime, null));
+    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, firstStartTime, null, null));
 
     setPending(1000); // a rejudge, as the web application does it
     Assertions.assertEquals(
@@ -107,8 +107,8 @@ public class SubmissionMapperTest {
 
     Date secondStartTime = startTime(1);
     Date thirdStartTime = startTime(2);
-    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, secondStartTime, null));
-    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, thirdStartTime, null));
+    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, secondStartTime, null, null));
+    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, thirdStartTime, null, null));
     Assertions.assertEquals(
         0, submissionMapper.updateSubmissionResult(verdict(1000, secondStartTime)));
     Assertions.assertEquals(
@@ -117,8 +117,69 @@ public class SubmissionMapperTest {
   }
 
   /**
+   * Test case: tests the claimSubmission method. Test data: a task queued before the submission was
+   * rejudged, i.e. of an older generation, and the rejudge's task. Expected result: only the task
+   * of the current generation claims it.
+   */
+  @Test
+  public void testStaleGenerationIsNotClaimed() {
+    setPending(1000);
+    long staleGeneration = generationOf(1000);
+    setPending(1000); // a rejudge, as the web application does it
+    long generation = generationOf(1000);
+    Assertions.assertEquals(staleGeneration + 1, generation);
+
+    Assertions.assertEquals(
+        0, submissionMapper.claimSubmission(1000, startTime(0), null, staleGeneration));
+    Assertions.assertEquals(
+        1, submissionMapper.claimSubmission(1000, startTime(0), null, generation));
+  }
+
+  /**
+   * Test case: tests the updateSubmissionResult method. Test data: a judging, then a rejudge and
+   * the judging of its task, which started in the same second (the precision of the start time).
+   * Expected result: the verdict of the stale judging is dropped all the same, the current
+   * judging's is recorded.
+   */
+  @Test
+  public void testStaleVerdictIsDroppedEvenWithTheSameStartTime() {
+    setPending(1000);
+    long staleGeneration = generationOf(1000);
+    Date startTime = startTime(0);
+    Assertions.assertEquals(
+        1, submissionMapper.claimSubmission(1000, startTime, null, staleGeneration));
+
+    setPending(1000); // a rejudge, as the web application does it
+    long generation = generationOf(1000);
+    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, startTime, null, generation));
+
+    Submission staleVerdict = verdict(1000, startTime);
+    staleVerdict.setJudgeGeneration(staleGeneration);
+    Assertions.assertEquals(0, submissionMapper.updateSubmissionResult(staleVerdict));
+    Submission verdict = verdict(1000, startTime);
+    verdict.setJudgeGeneration(generation);
+    verdict.setJudgeResultSlug("AC");
+    Assertions.assertEquals(1, submissionMapper.updateSubmissionResult(verdict));
+    Assertions.assertEquals("AC", submissionMapper.getSubmission(1000).getJudgeResultSlug());
+  }
+
+  /**
+   * Gets the judging generation of a submission.
+   *
+   * @param submissionId - the unique identifier of the submission
+   * @return its judging generation
+   */
+  private long generationOf(long submissionId) {
+    return new JdbcTemplate(dataSource)
+        .queryForObject(
+            "SELECT submission_judge_generation FROM voj_submissions WHERE submission_id = ?",
+            Long.class,
+            submissionId);
+  }
+
+  /**
    * Sets a submission back to pending, as a rejudge does (resetSubmissionToPending in the web
-   * application's SubmissionMapper.xml).
+   * application's SubmissionMapper.xml), which also counts the judging asked for.
    *
    * @param submissionId - the unique identifier of the submission
    * @return the submission as it was before
@@ -130,7 +191,9 @@ public class SubmissionMapperTest {
             "UPDATE voj_submissions SET submission_judge_result = 'PD', submission_judge_log ="
                 + " NULL, submission_judge_score = NULL, submission_used_time = NULL,"
                 + " submission_used_memory = NULL, submission_execute_time = NULL,"
-                + " judger_uid = NULL WHERE submission_id = ?",
+                + " judger_uid = NULL,"
+                + " submission_judge_generation = submission_judge_generation + 1"
+                + " WHERE submission_id = ?",
             submissionId);
     return submission;
   }

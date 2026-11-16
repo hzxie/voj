@@ -180,6 +180,24 @@ public class Submission implements Serializable {
   }
 
   /**
+   * Gets the judging generation this judging is for: that of its judging task.
+   *
+   * @return the judging generation, or {@code null} for a task that carries none
+   */
+  public Long getJudgeGeneration() {
+    return judgeGeneration;
+  }
+
+  /**
+   * Sets the judging generation this judging is for: that of its judging task.
+   *
+   * @param judgeGeneration - the judging generation, or {@code null} for a task that carries none
+   */
+  public void setJudgeGeneration(Long judgeGeneration) {
+    this.judgeGeneration = judgeGeneration;
+  }
+
+  /**
    * Gets the total running time of the judging.
    *
    * @return the total running time of the judging
@@ -347,6 +365,13 @@ public class Submission implements Serializable {
 
   /** The time the judging started. */
   private Date executeTime;
+
+  /**
+   * The judging generation this judging is for (see {@code SubmissionMapper#claimSubmission}).
+   * Not read from the database: it is that of the judging task, which the claim and the verdict
+   * must match, or {@code null} for a task from a web application that predates generations.
+   */
+  private Long judgeGeneration;
 
   /** The total running time of the judging. */
   private int usedTime;

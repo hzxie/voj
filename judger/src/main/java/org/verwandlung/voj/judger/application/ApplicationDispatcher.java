@@ -54,10 +54,11 @@ public class ApplicationDispatcher {
    * forever or being judged a System Error.
    *
    * @param submissionId - the unique identifier of the submission
+   * @param generation - the judging generation of the task, or {@code null} if it carries none
    */
-  public void onSubmissionCreated(long submissionId) {
+  public void onSubmissionCreated(long submissionId, Long generation) {
     try {
-      judgerDispatcher.createNewTask(submissionId);
+      judgerDispatcher.createNewTask(submissionId, generation);
     } catch (IllgealSubmissionException ex) {
       LOGGER.warn(
           String.format(
@@ -67,23 +68,27 @@ public class ApplicationDispatcher {
 
   /**
    * Claims a submission for judging: records when (and by which judger) its judging started, if it
-   * is still pending. A submission that is no longer pending has been judged already, e.g. its task
-   * was delivered twice, and must not be judged (and overwritten) again.
+   * is still pending, at the generation of the task. A submission that is no longer pending has
+   * been judged already, e.g. its task was delivered twice, and must not be judged (and
+   * overwritten) again; one at another generation was rejudged since the task was queued, and the
+   * rejudge's own task judges it.
    *
    * <p>The start time, at second precision, also identifies this judging: its verdict is only
    * recorded if the submission still carries it (see {@link #updateSubmission}), so the caller
    * sets it as the execute time of the submission it judges. A rejudge resets the submission (to
    * pending, without a start time), so a judging that was still running then cannot overwrite the
    * new verdict with a stale one; neither can a judging that a later delivery of the same task
-   * took over.
+   * took over. The generation tells apart judgings that started in the same second.
    *
    * @param submissionId - the unique identifier of the submission
+   * @param generation - the judging generation of the task, or {@code null} if it carries none
    * @return the start time if the submission was pending and is now claimed by this judging,
    *     {@code null} otherwise
    */
-  public Date onJudgingStarted(long submissionId) {
+  public Date onJudgingStarted(long submissionId, Long generation) {
     Date startTime = new Date(System.currentTimeMillis() / 1000 * 1000);
-    if (submissionMapper.claimSubmission(submissionId, startTime, getJudgerUid()) == 0) {
+    if (submissionMapper.claimSubmission(submissionId, startTime, getJudgerUid(), generation)
+        == 0) {
       return null;
     }
     return startTime;
@@ -196,7 +201,8 @@ public class ApplicationDispatcher {
 
   /**
    * Creates a progress message of a judging. Besides the submission it carries the judging's claim
-   * ({@code executeTime}: the start time set by {@link #onJudgingStarted}, in milliseconds), so that
+   * ({@code executeTime}: the start time set by {@link #onJudgingStarted}, in milliseconds, and
+   * {@code generation}: the judging generation of its task, unless the task carried none), so that
    * the web application can drop the messages of a judging that a rejudge (or a later delivery of
    * the task) superseded instead of showing them on the submission's page.
    *
@@ -210,6 +216,9 @@ public class ApplicationDispatcher {
     mapMessage.put("submissionId", submission.getSubmissionId());
     if (submission.getExecuteTime() != null) {
       mapMessage.put("executeTime", submission.getExecuteTime().getTime());
+    }
+    if (submission.getJudgeGeneration() != null) {
+      mapMessage.put("generation", submission.getJudgeGeneration().longValue());
     }
     return mapMessage;
   }
@@ -403,7 +412,7 @@ public class ApplicationDispatcher {
       LOGGER.warn(
           String.format(
               "Dropped the verdict %s of submission #%d: it was rejudged, or judged by another"
-                  + " delivery of its task, meanwhile.",
+                  + " delivery of its task, meanwhile (or its task was stale).",
               judgeResult, submission.getSubmissionId()));
     }
   }

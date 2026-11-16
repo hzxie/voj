@@ -63,8 +63,8 @@ public class ApplicationDispatcherTest {
    */
   @Test
   public void testOnSubmissionCreated() throws Exception {
-    applicationDispatcher.onSubmissionCreated(100L);
-    verify(judgerDispatcher).createNewTask(100L);
+    applicationDispatcher.onSubmissionCreated(100L, 3L);
+    verify(judgerDispatcher).createNewTask(100L, 3L);
   }
 
   /**
@@ -76,11 +76,11 @@ public class ApplicationDispatcherTest {
   public void testOnSubmissionCreatedPassesOnFailures() throws Exception {
     org.mockito.Mockito.doThrow(new DataAccessResourceFailureException("database down"))
         .when(judgerDispatcher)
-        .createNewTask(anyLong());
+        .createNewTask(anyLong(), any());
 
     Assertions.assertThrows(
         DataAccessResourceFailureException.class,
-        () -> applicationDispatcher.onSubmissionCreated(100L));
+        () -> applicationDispatcher.onSubmissionCreated(100L, 3L));
   }
 
   /**
@@ -91,9 +91,9 @@ public class ApplicationDispatcherTest {
   public void testOnSubmissionCreatedIgnoresMissingSubmissions() throws Exception {
     org.mockito.Mockito.doThrow(new IllgealSubmissionException("Illegal submission #100"))
         .when(judgerDispatcher)
-        .createNewTask(anyLong());
+        .createNewTask(anyLong(), any());
 
-    Assertions.assertDoesNotThrow(() -> applicationDispatcher.onSubmissionCreated(100L));
+    Assertions.assertDoesNotThrow(() -> applicationDispatcher.onSubmissionCreated(100L, 3L));
     verify(submissionMapper, never()).updateSubmissionResult(any(Submission.class));
   }
 
@@ -143,7 +143,22 @@ public class ApplicationDispatcherTest {
     verify(messageSender, org.mockito.Mockito.times(3)).sendMessage(messageCaptor.capture());
     for (Map<String, Object> message : messageCaptor.getAllValues()) {
       Assertions.assertEquals(1700000000000L, message.get("executeTime"), message.toString());
+      Assertions.assertEquals(3L, message.get("generation"), message.toString());
     }
+  }
+
+  /**
+   * Test case: tests the messages of a judging. Test data: a judging whose task carried no
+   * generation (queued by an older web application). Expected result: its messages carry none.
+   */
+  @Test
+  public void testMessagesOfALegacyTaskCarryNoGeneration() {
+    Submission submission = submission();
+    submission.setJudgeGeneration(null);
+
+    applicationDispatcher.onErrorOccurred(submission, "reason");
+
+    Assertions.assertFalse(captureSentMessage().containsKey("generation"));
   }
 
   /**
@@ -153,12 +168,14 @@ public class ApplicationDispatcherTest {
    */
   @Test
   public void testOnJudgingStartedClaimsPendingSubmission() {
-    when(submissionMapper.claimSubmission(eq(100L), any(Date.class), any())).thenReturn(1);
+    when(submissionMapper.claimSubmission(eq(100L), any(Date.class), any(), eq(3L)))
+        .thenReturn(1);
 
-    Date startTime = applicationDispatcher.onJudgingStarted(100L);
+    Date startTime = applicationDispatcher.onJudgingStarted(100L, 3L);
 
     ArgumentCaptor<Date> startTimeCaptor = ArgumentCaptor.forClass(Date.class);
-    verify(submissionMapper).claimSubmission(eq(100L), startTimeCaptor.capture(), any());
+    verify(submissionMapper)
+        .claimSubmission(eq(100L), startTimeCaptor.capture(), any(), eq(3L));
     Assertions.assertEquals(0, startTimeCaptor.getValue().getTime() % 1000);
     Assertions.assertEquals(startTimeCaptor.getValue(), startTime);
   }
@@ -169,9 +186,10 @@ public class ApplicationDispatcherTest {
    */
   @Test
   public void testOnJudgingStartedSkipsJudgedSubmission() {
-    when(submissionMapper.claimSubmission(eq(100L), any(Date.class), any())).thenReturn(0);
+    when(submissionMapper.claimSubmission(eq(100L), any(Date.class), any(), eq(3L)))
+        .thenReturn(0);
 
-    Assertions.assertNull(applicationDispatcher.onJudgingStarted(100L));
+    Assertions.assertNull(applicationDispatcher.onJudgingStarted(100L, 3L));
   }
 
   /**
@@ -387,6 +405,7 @@ public class ApplicationDispatcherTest {
     Submission submission = new Submission();
     submission.setSubmissionId(100L);
     submission.setExecuteTime(new Date(1700000000000L));
+    submission.setJudgeGeneration(3L);
     return submission;
   }
 

@@ -71,33 +71,50 @@ public interface SubmissionMapper {
    * Claims a pending submission for a judging: records when it started (which identifies the
    * judging) and the judger.
    *
+   * <p>The web application counts the judgings asked for in {@code submission_judge_generation}:
+   * a rejudge increments it, and every judging task carries the generation it was queued with. A
+   * task whose generation is no longer the submission's is stale (a rejudge queued a newer one),
+   * so it claims nothing.
+   *
    * @param submissionId - the unique identifier of the submission
    * @param executeTime - the start time of the judging, at second precision (the column's)
    * @param judgerUid - the uid of the judger, or null if unknown
-   * @return 1 if the submission was pending and is now claimed, 0 otherwise
+   * @param generation - the judging generation of the task, or null for a task that carries none
+   * @return 1 if the submission was pending (at that generation) and is now claimed, 0 otherwise
    */
   @Update(
-      "UPDATE voj_submissions SET submission_execute_time = #{executeTime},"
+      "<script>UPDATE voj_submissions SET submission_execute_time = #{executeTime},"
           + " judger_uid = #{judgerUid}"
-          + " WHERE submission_id = #{submissionId} AND submission_judge_result = 'PD'")
+          + " WHERE submission_id = #{submissionId} AND submission_judge_result = 'PD'"
+          + "<if test='generation != null'>"
+          + " AND submission_judge_generation = #{generation}"
+          + "</if></script>")
   int claimSubmission(
       @Param("submissionId") long submissionId,
       @Param("executeTime") Date executeTime,
-      @Param("judgerUid") Long judgerUid);
+      @Param("judgerUid") Long judgerUid,
+      @Param("generation") Long generation);
 
   /**
    * Records the verdict of a judging: only the result columns (never e.g. the code), and only if
-   * the submission is still pending and claimed by that judging.
+   * the submission is still pending and claimed by that judging: its start time and, when the
+   * judging has one, its generation. The start time has a precision of a second only, so two
+   * judgings claimed in the same second (the second one after a rejudge) are told apart by their
+   * generation.
    *
-   * @param submission - the submission, whose execute time is the start time of the judging
+   * @param submission - the submission, whose execute time is the start time of the judging and
+   *     whose judge generation is that of its task (or null)
    * @return 1 if the verdict was recorded, 0 if the submission was meanwhile rejudged or claimed by
    *     another judging
    */
   @Update(
-      "UPDATE voj_submissions SET submission_used_time = #{usedTime},"
+      "<script>UPDATE voj_submissions SET submission_used_time = #{usedTime},"
           + " submission_used_memory = #{usedMemory}, submission_judge_score = #{judgeScore},"
           + " submission_judge_result = #{judgeResultSlug}, submission_judge_log = #{judgeLog}"
           + " WHERE submission_id = #{submissionId} AND submission_judge_result = 'PD'"
-          + " AND submission_execute_time = #{executeTime}")
+          + " AND submission_execute_time = #{executeTime}"
+          + "<if test='judgeGeneration != null'>"
+          + " AND submission_judge_generation = #{judgeGeneration}"
+          + "</if></script>")
   int updateSubmissionResult(Submission submission);
 }

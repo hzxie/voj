@@ -50,6 +50,7 @@ public class MessageReceiver implements MessageListener {
       return;
     }
     long submissionId;
+    Long generation;
     try {
       MapMessage mapMessage = (MapMessage) message;
       String event = mapMessage.getString("event");
@@ -61,12 +62,17 @@ public class MessageReceiver implements MessageListener {
         return;
       }
       submissionId = mapMessage.getLong("submissionId");
+      // Absent from a task queued by a web application that predates judging generations.
+      generation =
+          mapMessage.itemExists("generation") ? mapMessage.getLong("generation") : null;
     } catch (JMSException | RuntimeException ex) {
       LOGGER.error("Ignoring a malformed message", ex);
       return;
     }
-    LOGGER.info(String.format("Received new submission task #%d", new Object[] {submissionId}));
-    dispatcher.onSubmissionCreated(submissionId);
+    LOGGER.info(
+        String.format(
+            "Received new submission task #%d (generation %s)", submissionId, generation));
+    dispatcher.onSubmissionCreated(submissionId, generation);
   }
 
   /** The autowired ApplicationDispatcher object, used to perform the callback after a message is received. */
