@@ -87,6 +87,7 @@ import org.verwandlung.voj.web.util.HttpRequestParser;
 import org.verwandlung.voj.web.util.HttpSessionParser;
 import org.verwandlung.voj.web.util.JsonUtils;
 import org.verwandlung.voj.web.util.LogSanitizer;
+import org.verwandlung.voj.web.util.Pagination;
 
 /**
  * Handles the requests for system administration.
@@ -470,7 +471,7 @@ public class AdministrationController {
     List<UserGroup> userGroups = userService.getUserGroups();
     UserGroup userGroup = userService.getUserGroupUsingSlug(userGroupSlug);
     long totalUsers = userService.getNumberOfUsersUsingUserGroupAndUsername(userGroup, username);
-    long offset = (pageNumber >= 1 ? pageNumber - 1 : 0) * NUMBER_OF_USERS_PER_PAGE;
+    long offset = Pagination.getOffset(pageNumber, NUMBER_OF_USERS_PER_PAGE);
     List<User> users =
         userService.getUserUsingUserGroupAndUsername(
             userGroup, username, offset, NUMBER_OF_USERS_PER_PAGE);
@@ -733,7 +734,7 @@ public class AdministrationController {
         problemService.getNumberOfProblemsUsingFilters(
             keyword, problemCategorySlug, problemTagSlug, problemDifficultySlug, false);
 
-    long offset = (pageNumber >= 1 ? pageNumber - 1 : 0) * NUMBER_OF_PROBLEMS_PER_PAGE;
+    long offset = Pagination.getOffset(pageNumber, NUMBER_OF_PROBLEMS_PER_PAGE);
 
     List<Problem> problems =
         problemService.getProblemsUsingFilters(
@@ -1652,7 +1653,7 @@ public class AdministrationController {
       HttpServletResponse response) {
     final int NUMBER_OF_BULLETINS_PER_PAGE = getIntOption("bulletinsPerPage", 50);
     long totalBulletins = bulletinBoardService.getNumberOfBulletinBoardMessages();
-    long offset = (pageNumber >= 1 ? pageNumber - 1 : 0) * NUMBER_OF_BULLETINS_PER_PAGE;
+    long offset = Pagination.getOffset(pageNumber, NUMBER_OF_BULLETINS_PER_PAGE);
     List<BulletinBoardMessage> messages =
         bulletinBoardService.getBulletinBoardMessages(offset, NUMBER_OF_BULLETINS_PER_PAGE);
 
@@ -1778,7 +1779,7 @@ public class AdministrationController {
       HttpServletResponse response) {
     final int NUMBER_OF_CONTESTS_PER_PAGE = getIntOption("contestsPerPage", 50);
     long totalContests = contestService.getNumberOfContests(keyword);
-    long offset = (pageNumber >= 1 ? pageNumber - 1 : 0) * NUMBER_OF_CONTESTS_PER_PAGE;
+    long offset = Pagination.getOffset(pageNumber, NUMBER_OF_CONTESTS_PER_PAGE);
     List<Contest> contests =
         contestService.getContests(keyword, false, offset, NUMBER_OF_CONTESTS_PER_PAGE);
 
@@ -2046,7 +2047,7 @@ public class AdministrationController {
       HttpServletResponse response) {
     final int NUMBER_OF_THREADS_PER_PAGE = getIntOption("discussionsPerPage", 50);
     long totalThreads = discussionService.getNumberOfDiscussionThreads();
-    long offset = (pageNumber >= 1 ? pageNumber - 1 : 0) * NUMBER_OF_THREADS_PER_PAGE;
+    long offset = Pagination.getOffset(pageNumber, NUMBER_OF_THREADS_PER_PAGE);
 
     ModelAndView view = new ModelAndView("pages/administration/all-discussion");
     view.addObject("threads", discussionService.getAllDiscussionThreads(offset, NUMBER_OF_THREADS_PER_PAGE));

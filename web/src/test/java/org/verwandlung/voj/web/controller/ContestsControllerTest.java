@@ -94,6 +94,18 @@ public class ContestsControllerTest {
     Assertions.assertEquals(2, problemCount.get(7L));
   }
 
+  /** Test case: tests getContestsAction(...). Test data: a negative startIndex, which MySQL rejects in LIMIT. Expected: the contests are read from offset 0 instead of failing. */
+  @Test
+  public void testGetContestsActionClampsNegativeStartIndex() {
+    when(contestService.getContests(nullable(String.class), eq(true), eq(0L), eq(50)))
+        .thenReturn(List.of());
+
+    controller.getContestsAction(null, -50L, new MockHttpServletRequest());
+
+    org.mockito.Mockito.verify(contestService)
+        .getContests(nullable(String.class), eq(true), eq(0L), eq(50));
+  }
+
   /** Test case: tests getContestsAction(...). Test data: no contests. Expected: isSuccessful is false. */
   @Test
   public void testGetContestsActionEmpty() {

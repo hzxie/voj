@@ -36,6 +36,7 @@ import org.verwandlung.voj.web.util.HttpRequestParser;
 import org.verwandlung.voj.web.util.HttpSessionParser;
 import org.verwandlung.voj.web.util.LogSanitizer;
 import org.verwandlung.voj.web.util.SeoUtils;
+import org.verwandlung.voj.web.util.Pagination;
 
 import java.util.HashMap;
 import java.util.List;
@@ -101,9 +102,7 @@ public class DiscussionController {
           String discussionTopicSlug,
       @RequestParam(value = "problemId", required = false, defaultValue = "-1") long problemId,
       HttpServletRequest request) {
-    if (startIndex < 0) {
-      startIndex = 0;
-    }
+    startIndex = Pagination.getOffset(startIndex);
     final int NUMBER_OF_THREADS_PER_REQUEST =
         optionService.getIntOption("discussionsPerPage", DEFAULT_NUMBER_OF_THREADS_PER_REQUEST);
     List<DiscussionThread> discussionThreads = null;
@@ -234,9 +233,7 @@ public class DiscussionController {
       @RequestParam(value = "startIndex") long startIndex,
       HttpServletRequest request) {
     long currentUserUid = getUidOfUserLoggedIn(request.getSession());
-    if (startIndex < 0) {
-      startIndex = 0;
-    }
+    startIndex = Pagination.getOffset(startIndex);
 
     // Replies follow the visibility of their thread, so a thread that would be treated as not
     // found on its page cannot be read through this action either.

@@ -52,6 +52,7 @@ import org.verwandlung.voj.web.model.Problem;
 import org.verwandlung.voj.web.model.PublicationStatus;
 import org.verwandlung.voj.web.model.Submission;
 import org.verwandlung.voj.web.model.User;
+import org.verwandlung.voj.web.util.Pagination;
 
 /**
  * The business logic layer of the Submission class.
@@ -263,7 +264,7 @@ public class SubmissionService {
    */
   public List<Submission> getSubmissionsByPage(
       long problemId, String username, String judgeResult, long pageNumber, int pageSize) {
-    long offset = (Math.max(pageNumber, 1) - 1) * pageSize;
+    long offset = Pagination.getOffset(pageNumber, pageSize);
     return submissionMapper.getSubmissionsUsingFilters(
         problemId, username, judgeResult, offset, pageSize);
   }

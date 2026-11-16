@@ -37,6 +37,7 @@ import org.verwandlung.voj.web.util.HttpSessionParser;
 import org.verwandlung.voj.web.util.JsonUtils;
 import org.verwandlung.voj.web.util.LogSanitizer;
 import org.verwandlung.voj.web.util.SeoUtils;
+import org.verwandlung.voj.web.util.Pagination;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -145,7 +146,8 @@ public class ContestsController {
     final int NUMBER_OF_CONTESTS_PER_PAGE =
         optionService.getIntOption("contestsPerPage", DEFAULT_NUMBER_OF_CONTESTS_PER_PAGE);
     List<Contest> contests =
-        contestService.getContests(keyword, true, startIndex, NUMBER_OF_CONTESTS_PER_PAGE);
+        contestService.getContests(
+            keyword, true, Pagination.getOffset(startIndex), NUMBER_OF_CONTESTS_PER_PAGE);
     result.put("isSuccessful", contests != null && !contests.isEmpty());
     result.put("contests", contests);
     result.put("entrants", getEntrantsOfContests(contests));

@@ -31,6 +31,7 @@ import org.verwandlung.voj.web.model.*;
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.verwandlung.voj.web.util.JsonUtils;
 import org.verwandlung.voj.web.util.SlugifyUtils;
+import org.verwandlung.voj.web.util.Pagination;
 
 /**
  * The business logic layer of the Problem class.
@@ -133,10 +134,7 @@ public class ProblemService {
       String query,
       String problemDifficultySlug,
       boolean isPublicOnly) {
-    long offset = (long) (pageNumber - 1) * pageSize;
-    if (offset < 0) {
-      offset = 0;
-    }
+    long offset = Pagination.getOffset(pageNumber, pageSize);
     return problemMapper.getProblemsByPage(
         field,
         query,
