@@ -696,8 +696,8 @@ bool createProcess(const std::wstring& commandLine, const std::wstring& username
 
 /**
  * Builds the environment of the sandboxed process: the sandbox user's own environment, plus the
- * judger's whitelisted toolchain variables (INHERITED_ENVIRONMENT_VARIABLES), a private Go build
- * cache and GOPATH in the work directory, and the options of the JVM a run starts, in place of any
+ * judger's whitelisted toolchain variables (INHERITED_ENVIRONMENT_VARIABLES), TEMP and TMP, a
+ * private Go build cache and GOPATH in the work directory, and the options of the JVM a run starts, in place of any
  * the user's environment sets (JVM_OPTIONS_VARIABLES). Nothing else of the judger's environment is
  * passed on.
  *
@@ -708,8 +708,8 @@ bool createProcess(const std::wstring& commandLine, const std::wstring& username
  * See https://learn.microsoft.com/windows/win32/api/userenv/nf-userenv-createenvironmentblock
  *
  * @param  hToken           - the sandbox user's token
- * @param  workDirectory    - the submission's work directory (empty if unknown: the Go variables
- *                            are then left to the user's defaults)
+ * @param  workDirectory    - the submission's work directory (empty if unknown: TEMP, TMP and the
+ *                            Go variables are then left to the user's defaults)
  * @param  javaOptions      - the value of JDK_JAVA_OPTIONS, which the java launcher (and nothing
  *                            else) reads: the heap and other settings that fit the JVM to the run's
  *                            limits, derived from them by JavaOptions.java (empty: not set; the
@@ -755,6 +755,10 @@ bool buildEnvironmentBlock(HANDLE hToken, const std::wstring& workDirectory,
         }
     }
     if ( !workDirectory.empty() ) {
+        // Temporary files in the work directory, as TMPDIR on Linux: the account's own TEMP is
+        // shared by every submission it runs (e.g. the JVM's hsperfdata_<user> there).
+        environment[L"TEMP"]    = workDirectory;
+        environment[L"TMP"]     = workDirectory;
         environment[L"GOCACHE"] = workDirectory + GO_BUILD_CACHE_DIRECTORY;
         environment[L"GOPATH"]  = workDirectory + GO_PATH_DIRECTORY;
     }

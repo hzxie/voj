@@ -531,13 +531,14 @@ left at its path (such as a hard link to another file) is removed first, never
 written through.
 
 The submission's environment is the sandbox account's own (system variables,
-the account's variables and profile paths such as `TEMP` and `APPDATA`) plus
+the account's variables and profile paths such as `APPDATA`) plus
 only these variables of the judger: `PATH`, `LANG`, `LC_ALL`, `TZ`,
 `JAVA_HOME`, `KOTLIN_HOME`, `GOROOT`, `GOENV`, `GOTOOLCHAIN`, `GOFLAGS`,
 `RUSTUP_HOME`, `RUSTUP_TOOLCHAIN` and `CARGO_HOME`. Nothing else of the
 judger's environment (such as `VOJ_DB_PASSWORD` or `VOJ_JUDGER_API_TOKEN`)
-reaches it. `GOCACHE` and `GOPATH` point into the submission's work directory,
-so every Go build starts from its own empty cache, and a run gets
+reaches it. `TEMP`, `TMP`, `GOCACHE` and `GOPATH` point into the submission's
+work directory, so temporary files stay with the submission and every Go build
+starts from its own empty cache, and a run gets
 `JDK_JAVA_OPTIONS` (see [Java and Kotlin runs](#java-and-kotlin-runs)). Toolchains must therefore be
 reachable through the judger's `PATH` and readable by the sandbox account. The
 JVM option variables of the account's own environment (`JDK_JAVA_OPTIONS`,
@@ -575,6 +576,14 @@ Requirements for that account:
 
 Because the credentials live in `voj.properties`, keep that file readable only by
 the judger account.
+
+Run the judger in an interactive session (for example a scheduled task that runs
+at logon, or a console of a logged-on user), not as a service or from an SSH
+session. Processes the judger starts as the sandbox account
+(`CreateProcessWithLogonW`) from session 0 cannot initialise on its window
+station: the JVM (javac, java, kotlinc) then exits at once with
+`STATUS_DLL_INIT_FAILED` (0xC0000142), so Java and Kotlin submissions could not
+be compiled or run, while C and C++ ones may still work.
 
 ### The checkpoint directory on Windows
 
