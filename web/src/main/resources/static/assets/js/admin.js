@@ -13,9 +13,8 @@
   }
 
   // --- ARIA state for the custom admin controls ------------------------------
-  // .adm-switch (<button role="switch">) and .adm-check (row / select-all
-  // checkboxes) keep their state in an `.on` class that page scripts also flip;
-  // .adm-seg options mark the chosen one with `.active`. Mirror those classes
+  // .adm-switch (<button role="switch">) keeps its state in an `.on` class that page
+  // scripts also flip; .adm-seg options mark the chosen one with `.active`. Mirror those classes
   // into aria-checked / aria-pressed, including on controls added later.
   function textOf(el) { return el ? el.textContent.replace(/\s+/g, ' ').trim() : ''; }
 
@@ -27,21 +26,8 @@
     if (text) sw.setAttribute('aria-label', text);
   }
 
-  function enhanceCheck(c) {
-    if (c.getAttribute('role') !== 'checkbox') {
-      c.setAttribute('role', 'checkbox');
-      c.setAttribute('tabindex', '0');
-    }
-    if (!c.hasAttribute('aria-label')) {
-      var row = c.closest('[data-adm="row"]');
-      var label = row ? textOf(row.querySelector('.adm-cell.head') || row.querySelector('.adm-cell'))
-                      : document.body.getAttribute('data-select-all-label');
-      if (label) c.setAttribute('aria-label', label);
-    }
-  }
-
   function syncState(el) {
-    if (el.classList.contains('adm-switch') || el.classList.contains('adm-check')) {
+    if (el.classList.contains('adm-switch')) {
       el.setAttribute('aria-checked', el.classList.contains('on') ? 'true' : 'false');
     } else if (el.parentNode && el.parentNode.classList && el.parentNode.classList.contains('adm-seg')) {
       el.setAttribute('aria-pressed', el.classList.contains('active') ? 'true' : 'false');
@@ -50,7 +36,6 @@
 
   function enhance(scope) {
     Array.prototype.forEach.call(scope.querySelectorAll('.adm-switch'), function (sw) { labelSwitch(sw); syncState(sw); });
-    Array.prototype.forEach.call(scope.querySelectorAll('.adm-check'), function (c) { enhanceCheck(c); syncState(c); });
     Array.prototype.forEach.call(scope.querySelectorAll('.adm-seg > [data-value]'), syncState);
   }
 
@@ -94,16 +79,6 @@
       });
     }).observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['class'] });
 
-    // Space / Enter on a focused checkbox span (buttons already do this natively).
-    // preventDefault keeps Space from scrolling and Enter from following the row link.
-    document.addEventListener('keydown', function (e) {
-      var t = e.target;
-      if ((e.key === ' ' || e.key === 'Enter') && t.classList && t.classList.contains('adm-check')) {
-        e.preventDefault();
-        t.click();
-      }
-    });
-
     setupDrawer();
 
     // --- Toggle switches (settings / editors) --------------------------------
@@ -146,6 +121,9 @@
     });
 
     // --- Checkbox data table -------------------------------------------------
+    // Rows hold native checkboxes (data-adm="row-check", data-id) next to the row's link;
+    // the select-all box in the head is checked / indeterminate to match, and the bulk
+    // bar shows while anything is selected. Selected rows are highlighted by CSS (:has).
     var table = document.querySelector('[data-adm="table"]');
     if (!table) return;
 
@@ -155,19 +133,13 @@
     var bulkClear = bulk ? bulk.querySelector('[data-adm="bulk-clear"]') : null;
 
     function rowChecks() { return Array.prototype.slice.call(table.querySelectorAll('[data-adm="row-check"]')); }
-    function selected() { return rowChecks().filter(function (c) { return c.classList.contains('on'); }); }
-
-    function paint(el, on) {
-      el.classList.toggle('on', on);
-      el.innerHTML = on ? '✓' : '';
-    }
+    function selected() { return rowChecks().filter(function (c) { return c.checked; }); }
 
     function refresh() {
-      var sel = selected();
-      var n = sel.length;
+      var n = selected().length, total = rowChecks().length;
       if (checkAll) {
-        var all = rowChecks().length > 0 && n === rowChecks().length;
-        paint(checkAll, all);
+        checkAll.checked = total > 0 && n === total;
+        checkAll.indeterminate = n > 0 && n < total;
       }
       if (bulk) {
         bulk.classList.toggle('is-open', n > 0);
@@ -175,39 +147,21 @@
       }
     }
 
-    // Toggling a row checkbox must not follow the row's link / open the editor.
-    rowChecks().forEach(function (c) {
-      c.addEventListener('click', function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        paint(c, !c.classList.contains('on'));
-        c.closest('[data-adm="row"]').classList.toggle('sel', c.classList.contains('on'));
-        refresh();
-      });
-    });
-
-    if (checkAll) {
-      checkAll.addEventListener('click', function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        var turnOn = selected().length !== rowChecks().length;
-        rowChecks().forEach(function (c) {
-          paint(c, turnOn);
-          var row = c.closest('[data-adm="row"]');
-          if (row) row.classList.toggle('sel', turnOn);
-        });
-        refresh();
-      });
+    function setAll(on) {
+      rowChecks().forEach(function (c) { c.checked = on; });
+      refresh();
     }
+
+    table.addEventListener('change', function (e) {
+      if (e.target === checkAll) setAll(checkAll.checked);
+      else if (e.target.getAttribute('data-adm') === 'row-check') refresh();
+    });
 
     if (bulkClear) {
       bulkClear.addEventListener('click', function () {
-        rowChecks().forEach(function (c) {
-          paint(c, false);
-          var row = c.closest('[data-adm="row"]');
-          if (row) row.classList.remove('sel');
-        });
-        refresh();
+        setAll(false);
+        // The bulk bar (and the focused button with it) is hidden now.
+        if (checkAll) checkAll.focus();
       });
     }
 
@@ -215,8 +169,8 @@
     window.admSelectedIds = function () {
       return selected().map(function (c) { return c.getAttribute('data-id'); });
     };
-    window.admRefreshBulk = refresh;
 
+    // Browsers restore checkbox state on back/forward navigation.
     refresh();
   });
 })();

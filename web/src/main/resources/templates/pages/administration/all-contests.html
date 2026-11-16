@@ -24,15 +24,15 @@
         <div class="adm-bulk" data-adm="bulk">
             <span class="sel"><span data-adm="bulk-count">0</span> <span th:text="#{voj.administration.all-contests.selected}">selected</span></span>
             <div class="adm-flex1"></div>
-            <span class="adm-bulk-act c-err" data-adm="bulk-delete">&#10005; <span th:text="#{voj.administration.all-contests.delete}">delete</span></span>
-            <span class="adm-bulk-clear" data-adm="bulk-clear" th:text="#{voj.administration.all-contests.clear}">clear</span>
+            <button type="button" class="adm-bulk-act c-err" data-adm="bulk-delete">&#10005; <span th:text="#{voj.administration.all-contests.delete}">delete</span></button>
+            <button type="button" class="adm-bulk-clear" data-adm="bulk-clear" th:text="#{voj.administration.all-contests.clear}">clear</button>
         </div>
 
         <!-- Table -->
         <div class="adm-table" data-adm="table">
             <div class="adm-table-scroll"><div class="adm-table-inner cols-contests">
                 <div class="adm-table-head">
-                    <span class="adm-check" data-adm="check-all"></span>
+                    <input type="checkbox" class="adm-check" data-adm="check-all" th:aria-label="#{voj.administration.include.select-all}" />
                     <span th:text="#{voj.administration.all-contests.name}">NAME</span>
                     <span th:text="#{voj.administration.all-contests.phase}">PHASE</span>
                     <span th:text="#{voj.administration.all-contests.mode}">MODE</span>
@@ -42,10 +42,10 @@
                     <span th:text="#{voj.administration.all-contests.visibility}">VISIBILITY</span>
                     <span></span>
                 </div>
-                <a class="adm-table-row" data-adm="row" th:each="contest : ${contests}" th:href="@{/administration/edit-contest/{id}(id=${contest.contestId})}"
+                <div class="adm-table-row" data-adm="row" th:each="contest : ${contests}"
                    th:with="phase=${contestPhases[contest.contestId]}">
-                    <span class="adm-check" data-adm="row-check" th:attr="data-id=${contest.contestId}"></span>
-                    <span class="adm-cell head" th:text="${contest.contestName}">Contest</span>
+                    <input type="checkbox" class="adm-check" data-adm="row-check" th:attr="data-id=${contest.contestId}" th:aria-label="${contest.contestName}" />
+                    <a class="adm-cell head adm-row-link" th:href="@{/administration/edit-contest/{id}(id=${contest.contestId})}" th:text="${contest.contestName}">Contest</a>
                     <span>
                         <span class="adm-pill" th:classappend="${phase == 'LIVE'} ? 'c-accent' : (${phase == 'READY'} ? 'c-info' : 'c-muted')"
                               th:text="${phase == 'LIVE'} ? #{voj.administration.all-contests.phase-running} : (${phase == 'READY'} ? #{voj.administration.all-contests.phase-upcoming} : #{voj.administration.all-contests.phase-ended})">Running</span>
@@ -59,8 +59,8 @@
                               th:classappend="${contest.status == 'PUBLISHED'} ? 'c-accent' : (${contest.status == 'DRAFT'} ? 'c-warn' : 'c-err')"
                               th:text="${contest.status == 'DRAFT'} ? #{voj.administration.status.draft} : (${contest.status == 'HIDDEN'} ? #{voj.administration.status.hidden} : #{voj.administration.status.published})">Published</span>
                     </span>
-                    <span class="adm-menu">&#183;&#183;&#183;</span>
-                </a>
+                    <span class="adm-menu" aria-hidden="true">&#183;&#183;&#183;</span>
+                </div>
                 <div class="adm-table-empty" th:if="${#lists.isEmpty(contests)}" th:text="#{voj.administration.all-contests.no-records}">// no contests</div>
             </div></div>
         </div>
