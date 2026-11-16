@@ -595,18 +595,24 @@ leave files there for a later one; to close that too, label the folder Medium
 before the account's first run:
 `icacls C:\Users\voj-sandbox\AppData\LocalLow /setintegritylevel (OI)(CI)M`.
 
-The submission's environment is the sandbox account's own (system variables,
-the account's variables and profile paths such as `APPDATA`) plus
-only these variables of the judger: `PATH`, `LANG`, `LC_ALL`, `TZ`,
+The submission's environment is the system environment (the system variables
+of `HKLM\System\CurrentControlSet\Control\Session Manager\Environment`, such as
+`Path`, `ComSpec` and `PATHEXT`, and `SystemRoot`, `ProgramFiles`, ...), never
+the variables of the sandbox account, plus only these variables of the judger:
+`PATH`, `LANG`, `LC_ALL`, `TZ`,
 `JAVA_HOME`, `KOTLIN_HOME`, `GOROOT`, `GOENV`, `GOTOOLCHAIN`, `GOFLAGS`,
 `RUSTUP_HOME`, `RUSTUP_TOOLCHAIN` and `CARGO_HOME`. Nothing else of the
 judger's environment (such as `VOJ_DB_PASSWORD` or `VOJ_JUDGER_API_TOKEN`)
-reaches it. `TEMP`, `TMP`, `GOCACHE` and `GOPATH` point into the submission's
-work directory, so temporary files stay with the submission and every Go build
-starts from its own empty cache, and a run gets
+reaches it. `TEMP`, `TMP`, `USERPROFILE`, `HOME`, `APPDATA`, `LOCALAPPDATA`,
+`GOCACHE` and `GOPATH` point into the submission's work directory, the one
+place it can write to, so temporary files stay with the submission and every Go
+build starts from its own empty cache; `USERNAME` is the sandbox account, and a
+run gets
 `JDK_JAVA_OPTIONS` (see [Java and Kotlin runs](#java-and-kotlin-runs)). Toolchains must therefore be
-reachable through the judger's `PATH` and readable by the sandbox account. The
-JVM option variables of the account's own environment (`JDK_JAVA_OPTIONS`,
+reachable through the judger's `PATH` and readable by the sandbox account; what
+they need of the environment must be a system variable or one of the judger's
+above, as variables set for the sandbox account are ignored. The JVM option
+variables of the system environment (`JDK_JAVA_OPTIONS`,
 `JAVA_TOOL_OPTIONS`, `_JAVA_OPTIONS`) are dropped, for compilations and runs
 alike, as on Linux, where the sandbox never gets them.
 

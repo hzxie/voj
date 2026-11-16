@@ -423,7 +423,7 @@ public class SandboxBehaviorTest {
    * find it: a variable of the account (HKCU\Environment, whose variables reach the processes the
    * account starts), a file in its profile and one in C:\Users\Public; and that creates a file in
    * its work directory and one in its USERPROFILE. Expected result: the run is Low integrity, so
-   * every write is refused but the one into the work directory.
+   * every write is refused but those into the work directory, which USERPROFILE points into.
    */
   @Test
   public void testRunWritesOnlyInItsWorkDirectoryOnWindows() throws Exception {
@@ -440,10 +440,11 @@ public class SandboxBehaviorTest {
             "profile: denied",
             "public: denied",
             "work: created",
-            "USERPROFILE: denied",
+            "USERPROFILE: created",
             ""),
         Files.readString(workDirectory.resolve("output.txt")).replace("\r\n", "\n"));
     Assertions.assertTrue(Files.exists(workDirectory.resolve("voj-sandbox-leak-900041")));
+    Assertions.assertTrue(Files.exists(workDirectory.resolve("home.txt")));
   }
 
   /**

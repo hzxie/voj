@@ -112,8 +112,9 @@ static const LONGLONG OUTPUT_FILE_SIZE_LIMIT = 256LL * 1024 * 1024;
  * The only environment variables the sandboxed process inherits from the judger, mirroring the
  * Linux runner. The judger's own environment holds secrets (VOJ_DB_PASSWORD, VOJ_JUDGER_API_TOKEN,
  * ...) that a submission could otherwise read (GetEnvironmentVariable, or a compile error that
- * echoes it into the compile log), so the sandbox gets the sandbox user's own environment plus
- * only the locale and toolchain settings that compilers and runtimes genuinely need. PATH is the
+ * echoes it into the compile log), so the sandbox gets the system environment (see
+ * buildEnvironmentBlock) plus only the locale and toolchain settings that compilers and runtimes
+ * genuinely need. PATH is the
  * judger's because that is where the toolchains are found (e.g. a MinGW bin directory added to
  * PATH only for the judger, as on AppVeyor).
  */
@@ -126,17 +127,17 @@ static const wchar_t* const INHERITED_ENVIRONMENT_VARIABLES[] = {
 /**
  * Variables without which Windows programs misbehave (Winsock and the CRT need SystemRoot, cmd
  * needs ComSpec and PATHEXT). They are system variables, which CreateEnvironmentBlock always puts
- * in the sandbox user's environment; the judger's values are only a fallback for a block that
- * somehow lacks one. None of them is a secret.
+ * in the system environment; the judger's values are only a fallback for a block that somehow
+ * lacks one. None of them is a secret.
  */
 static const wchar_t* const ESSENTIAL_ENVIRONMENT_VARIABLES[] = {
     L"SystemRoot", L"SystemDrive", L"windir", L"ComSpec", L"PATHEXT",
 };
 /**
  * The variables a JVM reads its options from (the java launcher's JDK_JAVA_OPTIONS, and the JVM's
- * own JAVA_TOOL_OPTIONS and _JAVA_OPTIONS), which are never taken from the sandbox user's
- * environment: as on Linux, where the sandbox gets none of them, a run gets JDK_JAVA_OPTIONS from
- * the judger only, and a compilation none.
+ * own JAVA_TOOL_OPTIONS and _JAVA_OPTIONS), which are never taken from the system environment: as
+ * on Linux, where the sandbox gets none of them, a run gets JDK_JAVA_OPTIONS from the judger only,
+ * and a compilation none.
  */
 static const wchar_t* const JVM_OPTIONS_VARIABLES[] = {
     L"JDK_JAVA_OPTIONS", L"JAVA_TOOL_OPTIONS", L"_JAVA_OPTIONS",
@@ -171,6 +172,15 @@ static const wchar_t* const LOW_INTEGRITY_SID = L"S-1-16-4096";
  * files the judger creates there and the program's own.
  */
 static const wchar_t* const WORK_DIRECTORY_LABEL = L"S:(ML;OICI;NW;;;LW)";
+/**
+ * The variables that tell a program where the account's profile is. The system environment has
+ * the Default profile's (and USERNAME is SYSTEM's), which are not the account's; when the work
+ * directory is known they point into it instead, as HOME on Linux: it is the only place a program
+ * can write to.
+ */
+static const wchar_t* const PROFILE_ENVIRONMENT_VARIABLES[] = {
+    L"USERPROFILE", L"HOME", L"APPDATA", L"LOCALAPPDATA",
+};
 /**
  * What the sandbox account needs of the judger's window station and desktop for its programs to
  * start: user32 connects to them as a console program starts (a JVM's does, whoami's does), and
@@ -211,7 +221,7 @@ bool labelLowIntegrity(const std::wstring&);
 bool hasLowIntegrityLabel(PACL, PSID);
 bool grantDesktopAccess(HANDLE);
 bool grantAccess(HANDLE, PSID, DWORD);
-bool buildEnvironmentBlock(HANDLE, const std::wstring&, const std::wstring&, std::vector<wchar_t>&);
+bool buildEnvironmentBlock(const std::wstring&, const std::wstring&, const std::wstring&, std::vector<wchar_t>&);
 bool getJudgerEnvironmentVariable(const wchar_t*, std::wstring&);
 std::wstring getWorkDirectory(const std::wstring&);
 bool getPeakMemoryUsage(HANDLE& hProcess, jint& memory);
@@ -738,7 +748,7 @@ bool createProcess(const std::wstring& commandLine, const std::wstring& username
         return false;
     }
     hProfile = profileInfo.hProfile;
-    if ( !buildEnvironmentBlock(hToken, workDirectory, javaOptions, environmentBlock) ) {
+    if ( !buildEnvironmentBlock(username, workDirectory, javaOptions, environmentBlock) ) {
         failedApi = "CreateEnvironmentBlock";
         return false;
     }
@@ -972,37 +982,39 @@ bool grantAccess(HANDLE hObject, PSID sid, DWORD access) {
 }
 
 /**
- * Builds the environment of the sandboxed process: the sandbox user's own environment, plus the
- * judger's whitelisted toolchain variables (INHERITED_ENVIRONMENT_VARIABLES), TEMP and TMP, a
- * private Go build cache and GOPATH in the work directory, and the options of the JVM a run starts, in place of any
- * the user's environment sets (JVM_OPTIONS_VARIABLES). Nothing else of the judger's environment is
- * passed on.
+ * Builds the environment of the sandboxed process: the system environment, plus the judger's
+ * whitelisted toolchain variables (INHERITED_ENVIRONMENT_VARIABLES), TEMP and TMP, the profile
+ * variables (PROFILE_ENVIRONMENT_VARIABLES), a private Go build cache and GOPATH in the work
+ * directory, and the options of the JVM a run starts (JVM_OPTIONS_VARIABLES). Nothing else of the
+ * judger's environment is passed on, and nothing of the sandbox account's own.
  *
- * CreateEnvironmentBlock is called with bInherit = FALSE, so the block holds only the system
- * variables and the user's own variables and profile paths (USERPROFILE, APPDATA, LOCALAPPDATA,
- * TEMP, ...), never the judger's environment. With TRUE it would also copy the judger's whole
- * environment, secrets included.
+ * The system environment is what CreateEnvironmentBlock gives without a token: the system
+ * variables (those of HKLM\System\CurrentControlSet\Control\Session Manager\Environment, such as
+ * Path, ComSpec and PATHEXT, and SystemRoot, ProgramFiles, ...), never the variables of an
+ * account (HKCU\Environment), which a program of the account could set for the ones after it, nor
+ * the judger's environment (bInherit = FALSE), whose secrets it would copy.
  * See https://learn.microsoft.com/windows/win32/api/userenv/nf-userenv-createenvironmentblock
  *
- * @param  hToken           - the sandbox user's token
- * @param  workDirectory    - the submission's work directory (empty if unknown: TEMP, TMP and the
- *                            Go variables are then left to the user's defaults)
+ * @param  username         - the sandbox account (USERNAME)
+ * @param  workDirectory    - the submission's work directory (empty if unknown: TEMP and TMP are
+ *                            then the system's, the profile variables unset and the Go variables
+ *                            left to their defaults)
  * @param  javaOptions      - the value of JDK_JAVA_OPTIONS, which the java launcher (and nothing
  *                            else) reads: the heap and other settings that fit the JVM to the run's
- *                            limits, derived from them by JavaOptions.java (empty: not set; the
- *                            user's own JVM option variables are dropped either way)
+ *                            limits, derived from them by JavaOptions.java (empty: not set; any of
+ *                            the system environment are dropped either way)
  * @param  environmentBlock - receives the Unicode environment block (sorted "NAME=value" strings,
  *                            each NUL-terminated, followed by an extra NUL)
  * @return whether the block was built (GetLastError() tells why not)
  */
-bool buildEnvironmentBlock(HANDLE hToken, const std::wstring& workDirectory,
+bool buildEnvironmentBlock(const std::wstring& username, const std::wstring& workDirectory,
         const std::wstring& javaOptions, std::vector<wchar_t>& environmentBlock) {
-    LPVOID lpUserEnvironment = NULL;
-    if ( !CreateEnvironmentBlock(&lpUserEnvironment, hToken, FALSE) ) {
+    LPVOID lpSystemEnvironment = NULL;
+    if ( !CreateEnvironmentBlock(&lpSystemEnvironment, NULL, FALSE) ) {
         return false;
     }
     EnvironmentMap environment;
-    for ( const wchar_t* entry = static_cast<const wchar_t*>(lpUserEnvironment);
+    for ( const wchar_t* entry = static_cast<const wchar_t*>(lpSystemEnvironment);
             *entry != L'\0'; entry += wcslen(entry) + 1 ) {
         // A name never contains '=' but may start with one (the per-drive current directories,
         // "=C:=C:\..."): look for the separator after the first character, and drop those entries.
@@ -1012,13 +1024,17 @@ bool buildEnvironmentBlock(HANDLE hToken, const std::wstring& workDirectory,
         }
         environment[std::wstring(entry, separator - entry)] = std::wstring(separator + 1);
     }
-    DestroyEnvironmentBlock(lpUserEnvironment);
-    // The JVM options the sandbox account's profile may set: a compilation never gets them, as on
-    // Linux, and a run only the judger's (see JavaOptions.java), which the profile could otherwise
-    // override (_JAVA_OPTIONS comes after every other option, -Xmx included).
+    DestroyEnvironmentBlock(lpSystemEnvironment);
+    // A compilation never gets JVM options, as on Linux, and a run only the judger's (see
+    // JavaOptions.java), which a system variable could otherwise override (_JAVA_OPTIONS comes
+    // after every other option, -Xmx included).
     for ( const wchar_t* name : JVM_OPTIONS_VARIABLES ) {
         environment.erase(name);
     }
+    for ( const wchar_t* name : PROFILE_ENVIRONMENT_VARIABLES ) {
+        environment.erase(name);
+    }
+    environment[L"USERNAME"] = username;
 
     std::wstring value;
     for ( const wchar_t* name : INHERITED_ENVIRONMENT_VARIABLES ) {
@@ -1032,10 +1048,13 @@ bool buildEnvironmentBlock(HANDLE hToken, const std::wstring& workDirectory,
         }
     }
     if ( !workDirectory.empty() ) {
-        // Temporary files in the work directory, as TMPDIR on Linux: the account's own TEMP is
-        // shared by every submission it runs (e.g. the JVM's hsperfdata_<user> there).
+        // Temporary files in the work directory, as TMPDIR on Linux: the system's TEMP is shared,
+        // and the program may not write to it anyway.
         environment[L"TEMP"]    = workDirectory;
         environment[L"TMP"]     = workDirectory;
+        for ( const wchar_t* name : PROFILE_ENVIRONMENT_VARIABLES ) {
+            environment[name] = workDirectory;
+        }
         environment[L"GOCACHE"] = workDirectory + GO_BUILD_CACHE_DIRECTORY;
         environment[L"GOPATH"]  = workDirectory + GO_PATH_DIRECTORY;
     }
