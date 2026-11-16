@@ -91,6 +91,13 @@ public class Runner implements SandboxRunner {
       int timeLimitMs,
       int memoryLimitKb,
       boolean isCompilation) {
+    if (LIBRARY_LOAD_FAILURE != null) {
+      LOGGER.error(
+          "The native sandbox library is not loaded, so {} cannot run: {}",
+          commandLine,
+          LIBRARY_LOAD_FAILURE.toString());
+      return RunResult.internalError();
+    }
     try {
       Map<String, Object> nativeResult =
           getRuntimeResult(
@@ -112,8 +119,12 @@ public class Runner implements SandboxRunner {
       int usedMemory = (Integer) nativeResult.get("usedMemory");
       Verdict verdict = inferVerdict(exitCode, usedTime, usedMemory, timeLimitMs, memoryLimitKb);
       return new RunResult(verdict, usedTime, usedMemory, exitCode);
-    } catch (Exception ex) {
-      LOGGER.catching(ex);
+    } catch (Throwable ex) {
+      // The native runner throws when the sandbox cannot be set up (no sandbox user, a failed
+      // privilege drop or seccomp filter, an executable that cannot be run, ...). That is a system
+      // error, never a verdict on the submission, and must not escape: the caller would leave the
+      // submission pending.
+      LOGGER.error("The native sandbox failed to run " + commandLine, ex);
       return RunResult.internalError();
     }
   }
@@ -203,13 +214,25 @@ public class Runner implements SandboxRunner {
   /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(Runner.class);
 
-  /** Load Native Library. */
-  static {
+  /**
+   * Why the native library could not be loaded, or {@code null} once it is. The judger still
+   * starts without it (e.g. with {@code judger.sandbox=isolate}), but every native run is then a
+   * system error.
+   */
+  private static final Throwable LIBRARY_LOAD_FAILURE = loadNativeLibrary();
+
+  /**
+   * Loads the native library.
+   *
+   * @return why it could not be loaded, or {@code null} if it was
+   */
+  private static Throwable loadNativeLibrary() {
     try {
       NativeLibraryLoader.loadLibrary("JudgerCore");
-    } catch (Exception ex) {
-      ex.printStackTrace();
-      LOGGER.catching(ex);
+      return null;
+    } catch (Throwable ex) {
+      LOGGER.error("Failed to load the native sandbox library JudgerCore", ex);
+      return ex;
     }
   }
 }

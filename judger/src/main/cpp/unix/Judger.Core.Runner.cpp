@@ -138,6 +138,25 @@ struct ChildPlan {
 };
 
 /**
+ * The steps that prepare the sandbox before exec. A step that fails is reported to the judger, with
+ * its errno, through the sync pipe, and the judger refuses the run with an exception (a system
+ * error), so that a broken sandbox is never mistaken for a fault of the submission.
+ */
+enum ChildStep {
+  STEP_SUBREAPER, STEP_FORK, STEP_INPUT, STEP_PROCESS_GROUP, STEP_RESOURCE_LIMIT, STEP_GROUPS,
+  STEP_GID, STEP_UID, STEP_OUTPUT, STEP_DEV_NULL, STEP_NO_NEW_PRIVS, STEP_SECCOMP, STEP_EXEC,
+};
+static const char* const CHILD_STEP_NAMES[] = {
+  "prctl(PR_SET_CHILD_SUBREAPER)", "fork()", "opening the input file", "setpgid()", "setrlimit()",
+  "setgroups()", "setgid()", "setuid()", "opening the output file", "opening /dev/null",
+  "prctl(PR_SET_NO_NEW_PRIVS)", "installing the seccomp filter", "execve()",
+};
+struct ChildFailure {
+  int step;
+  int error;
+};
+
+/**
  * A report of the supervisor (see runSupervisor) to the judger, written to a pipe in one atomic
  * write.
  */
@@ -176,7 +195,8 @@ static void runProgram(const ChildPlan&, int syncWriteFd) __attribute__((noretur
 static void writeSupervisorMessage(int fd, int type, int status, long long value);
 static bool readSupervisorMessage(int fd, SupervisorMessage*, int timeoutMs);
 static void closeDescriptorsExcept(int keepFd1, int keepFd2);
-static void reportChildFailure(int syncWriteFd, int error) __attribute__((noreturn));
+static void reportChildFailure(int syncWriteFd, int step) __attribute__((noreturn));
+static bool setResourceLimit(int resource, rlim_t soft, rlim_t hard);
 static int  openOutputFile(const char*);
 static void markInheritedDescriptorsCloseOnExec();
 
@@ -220,10 +240,8 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     // ----- Resolve everything the child needs while still single-threaded-safe -----
     std::vector<std::string> args = splitCommandLine(commandLine);
     if ( args.empty() ) {
-        result.put("usedTime", 0);
-        result.put("usedMemory", 0);
-        result.put("exitCode", 127);
-        return result.toJObject(jniEnv);
+        throwStringException(jniEnv, "Judger: the command line is empty");
+        return NULL;
     }
 
     ChildPlan plan;
@@ -248,10 +266,11 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     if ( geteuid() == 0 ) {
         struct passwd* pw = username.empty() ? nullptr : getpwnam(username.c_str());
         if ( pw == nullptr || pw->pw_uid == 0 ) {
-            result.put("usedTime", 0);
-            result.put("usedMemory", 0);
-            result.put("exitCode", 127); // never run untrusted code as root
-            return result.toJObject(jniEnv);
+            // Never run untrusted code as root.
+            throwStringException(jniEnv, "Judger: the sandbox user \"" + username +
+                                         (pw == nullptr ? "\" does not exist" : "\" is root") +
+                                         "; refusing to run");
+            return NULL;
         }
         plan.dropPrivileges = true;
         plan.dropUid        = pw->pw_uid;
@@ -333,9 +352,11 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
         pid = (pid_t) message.value;
     }
 
-    int     childErrno = 0;
+    ChildFailure childFailure;
+    childFailure.step  = -1;
+    childFailure.error = 0;
     ssize_t syncBytes  = 0;
-    while ( (syncBytes = read(syncPipe[0], &childErrno, sizeof(childErrno))) < 0 && errno == EINTR ) {
+    while ( (syncBytes = read(syncPipe[0], &childFailure, sizeof(childFailure))) < 0 && errno == EINTR ) {
         // Retry on interrupted read.
     }
     close(syncPipe[0]);
@@ -521,10 +542,19 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     // a trivial program measured as the whole JVM heap).
     usedMemory = peakMemoryKb.load();
 
-    if ( syncBytes > 0 || pid <= 0 ) {
-        // The child never reached the program: exec failed.
-        exitCode = 127;
-    } else if ( !programExited ) {
+    if ( syncBytes != 0 || pid <= 0 ) {
+        // The sandbox could not be set up, so the program never ran: a system error, never a
+        // verdict on the submission.
+        std::string message = "Judger: the sandbox failed to start the program";
+        if ( syncBytes == (ssize_t) sizeof(childFailure) && childFailure.step >= 0 &&
+             childFailure.step < (int) (sizeof(CHILD_STEP_NAMES) / sizeof(CHILD_STEP_NAMES[0])) ) {
+            message = std::string("Judger: ") + CHILD_STEP_NAMES[childFailure.step] +
+                      " failed in the sandbox: " + strerror(childFailure.error);
+        }
+        throwStringException(jniEnv, message + " (" + commandLine + ")");
+        return NULL;
+    }
+    if ( !programExited ) {
         exitCode = 1;
     } else if ( WIFEXITED(status) ) {
         exitCode = WEXITSTATUS(status);
@@ -596,12 +626,12 @@ static void runSupervisor(const ChildPlan& plan, int syncWriteFd, int reportWrit
     closeDescriptorsExcept(syncWriteFd, reportWriteFd);
 
     if ( prctl(PR_SET_CHILD_SUBREAPER, 1, 0, 0, 0) != 0 ) {
-        reportChildFailure(syncWriteFd, errno);
+        reportChildFailure(syncWriteFd, STEP_SUBREAPER);
     }
 
     pid_t program = fork();
     if ( program < 0 ) {
-        reportChildFailure(syncWriteFd, errno);
+        reportChildFailure(syncWriteFd, STEP_FORK);
     }
     if ( program == 0 ) {
         close(reportWriteFd);
@@ -741,26 +771,27 @@ static void runProgram(const ChildPlan& plan, int syncWriteFd) {
     if ( !plan.inputFilePath.empty() ) {
         int inputFd = open(plan.inputFilePath.c_str(), O_RDONLY | O_CLOEXEC);
         if ( inputFd < 0 ) {
-            reportChildFailure(syncWriteFd, errno);
+            reportChildFailure(syncWriteFd, STEP_INPUT);
         }
         dup2(inputFd, STDIN_FILENO);
         close(inputFd);
     }
 
     // Run in a dedicated process group so the watchdog can signal the whole tree.
-    setpgid(0, 0);
+    if ( setpgid(0, 0) != 0 ) {
+        reportChildFailure(syncWriteFd, STEP_PROCESS_GROUP);
+    }
 
     // Tier 1: kernel-enforced resource limits.
-    struct rlimit limit;
     if ( plan.timeLimit > 0 ) {
         rlim_t seconds = (rlim_t) ((plan.timeLimit + 999) / 1000) + 1;
-        limit.rlim_cur = seconds;
-        limit.rlim_max = seconds + 1;
-        setrlimit(RLIMIT_CPU, &limit);
+        if ( !setResourceLimit(RLIMIT_CPU, seconds, seconds + 1) ) {
+            reportChildFailure(syncWriteFd, STEP_RESOURCE_LIMIT);
+        }
     }
-    limit.rlim_cur = OUTPUT_FILE_SIZE_LIMIT;
-    limit.rlim_max = OUTPUT_FILE_SIZE_LIMIT;
-    setrlimit(RLIMIT_FSIZE, &limit);
+    if ( !setResourceLimit(RLIMIT_FSIZE, OUTPUT_FILE_SIZE_LIMIT, OUTPUT_FILE_SIZE_LIMIT) ) {
+        reportChildFailure(syncWriteFd, STEP_RESOURCE_LIMIT);
+    }
 
     // Tier 2 (best-effort): cut off the network. This needs CAP_SYS_ADMIN, which a default Docker
     // container lacks; the seccomp filter, which refuses every socket but AF_UNIX, does not.
@@ -772,13 +803,19 @@ static void runProgram(const ChildPlan& plan, int syncWriteFd) {
     // counts threads too, so a compilation gets a higher cap than a run of the submission: the Go
     // toolchain runs one compiler per CPU, each with a thread per CPU.
     if ( plan.dropPrivileges ) {
-        limit.rlim_cur = plan.processLimit;
-        limit.rlim_max = plan.processLimit;
-        setrlimit(RLIMIT_NPROC, &limit);
-
-        setgroups(0, nullptr);
-        if ( setgid(plan.dropGid) != 0 || setuid(plan.dropUid) != 0 ) {
-            reportChildFailure(syncWriteFd, errno);
+        if ( !setResourceLimit(RLIMIT_NPROC, plan.processLimit, plan.processLimit) ) {
+            reportChildFailure(syncWriteFd, STEP_RESOURCE_LIMIT);
+        }
+        // Every step fails closed: a process that kept root's supplementary groups (e.g. disk,
+        // docker) could reach whatever they grant.
+        if ( setgroups(0, nullptr) != 0 ) {
+            reportChildFailure(syncWriteFd, STEP_GROUPS);
+        }
+        if ( setgid(plan.dropGid) != 0 ) {
+            reportChildFailure(syncWriteFd, STEP_GID);
+        }
+        if ( setuid(plan.dropUid) != 0 ) {
+            reportChildFailure(syncWriteFd, STEP_UID);
         }
     }
 
@@ -788,7 +825,7 @@ static void runProgram(const ChildPlan& plan, int syncWriteFd) {
     if ( !plan.outputFilePath.empty() ) {
         int outputFd = openOutputFile(plan.outputFilePath.c_str());
         if ( outputFd < 0 ) {
-            reportChildFailure(syncWriteFd, errno);
+            reportChildFailure(syncWriteFd, STEP_OUTPUT);
         }
         dup2(outputFd, STDOUT_FILENO);
         if ( plan.compileStep ) {
@@ -799,7 +836,7 @@ static void runProgram(const ChildPlan& plan, int syncWriteFd) {
     if ( !plan.compileStep ) {
         int nullFd = open("/dev/null", O_WRONLY | O_CLOEXEC);
         if ( nullFd < 0 ) {
-            reportChildFailure(syncWriteFd, errno);
+            reportChildFailure(syncWriteFd, STEP_DEV_NULL);
         }
         dup2(nullFd, STDERR_FILENO);
         close(nullFd);
@@ -811,42 +848,62 @@ static void runProgram(const ChildPlan& plan, int syncWriteFd) {
     // do not start under a tight RLIMIT_AS. It is generous on purpose (see getDataLimit), so the
     // watchdog normally reports the overrun as MLE first; the backstop only bounds how far a single
     // process can balloon between two polls. Set last: the forked JVM image itself is far larger.
-    if ( plan.dataLimit > 0 ) {
-        limit.rlim_cur = plan.dataLimit;
-        limit.rlim_max = plan.dataLimit;
-        setrlimit(RLIMIT_DATA, &limit);
+    if ( plan.dataLimit > 0 && !setResourceLimit(RLIMIT_DATA, plan.dataLimit, plan.dataLimit) ) {
+        reportChildFailure(syncWriteFd, STEP_RESOURCE_LIMIT);
     }
 
     // Install the pre-built seccomp syscall filter via the raw syscall, so the child does not have
     // to call into libseccomp (which would allocate). Mandatory: if it cannot be installed the
-    // program is not run (the parent sees exit code 127 and the errno).
-    {
-        struct sock_fprog prog;
-        prog.len    = (unsigned short) (plan.seccompProgram.size() / sizeof(struct sock_filter));
-        prog.filter = (struct sock_filter*) plan.seccompProgram.data();
-        if ( prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) != 0 ||
-             syscall(SYS_seccomp, SECCOMP_SET_MODE_FILTER, 0, &prog) != 0 ) {
-            reportChildFailure(syncWriteFd, errno);
-        }
+    // program is not run.
+    struct sock_fprog prog;
+    prog.len    = (unsigned short) (plan.seccompProgram.size() / sizeof(struct sock_filter));
+    prog.filter = (struct sock_filter*) plan.seccompProgram.data();
+    if ( prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) != 0 ) {
+        reportChildFailure(syncWriteFd, STEP_NO_NEW_PRIVS);
+    }
+    if ( syscall(SYS_seccomp, SECCOMP_SET_MODE_FILTER, 0, &prog) != 0 ) {
+        reportChildFailure(syncWriteFd, STEP_SECCOMP);
     }
 
     execve(plan.executable.c_str(), plan.argv.data(), plan.envp.data());
 
-    // execve only returns on failure: report the errno and exit.
-    reportChildFailure(syncWriteFd, errno);
+    // execve only returns on failure.
+    reportChildFailure(syncWriteFd, STEP_EXEC);
 }
 
 /**
- * Reports a failure of the forked child to the parent through the sync pipe and exits. The parent
- * then knows the program never ran (exit code 127). Async-signal-safe.
+ * Reports a failed setup step of the forked child, with the current errno, to the parent through
+ * the sync pipe and exits. The parent then refuses the run (see ChildStep). Async-signal-safe.
  *
  * @param  syncWriteFd - the write end of the close-on-exec sync pipe
- * @param  error       - the errno to report
+ * @param  step        - the ChildStep that failed
  */
-static void reportChildFailure(int syncWriteFd, int error) {
-    ssize_t ignored = write(syncWriteFd, &error, sizeof(error));
+static void reportChildFailure(int syncWriteFd, int step) {
+    ChildFailure failure;
+    failure.step  = step;
+    failure.error = errno;
+    ssize_t ignored = write(syncWriteFd, &failure, sizeof(failure));
     (void) ignored;
     _exit(127);
+}
+
+/**
+ * Sets a resource limit. A hard limit the judger already has below the one asked for is kept (the
+ * limit is then stricter than asked for). Async-signal-safe.
+ *
+ * @param  resource - the RLIMIT_* resource
+ * @param  soft     - the soft limit
+ * @param  hard     - the hard limit
+ * @return whether the limit is in place
+ */
+static bool setResourceLimit(int resource, rlim_t soft, rlim_t hard) {
+    struct rlimit limit;
+    if ( getrlimit(resource, &limit) == 0 && limit.rlim_max != RLIM_INFINITY && limit.rlim_max < hard ) {
+        hard = limit.rlim_max;
+    }
+    limit.rlim_cur = soft < hard ? soft : hard;
+    limit.rlim_max = hard;
+    return setrlimit(resource, &limit) == 0;
 }
 
 /**

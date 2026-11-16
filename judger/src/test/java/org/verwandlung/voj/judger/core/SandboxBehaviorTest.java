@@ -29,6 +29,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
+import org.springframework.test.util.AopTestUtils;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.annotation.Transactional;
 
 import org.verwandlung.voj.judger.mapper.LanguageMapper;
@@ -182,6 +184,41 @@ public class SandboxBehaviorTest {
         System.getProperty("os.name").contains("Linux"), "The socket filter is Linux-only.");
     String mode = "native".equalsIgnoreCase(sandbox) ? "strict" : "lenient";
     Assertions.assertEquals("AC", judge(900009L, NETWORK_CODE, 10000, 262144, mode));
+  }
+
+  /**
+   * Test case: the judger runs as root and the sandbox user does not exist. Expected result: the
+   * native runner refuses the run, which is a system error (never a run as root, nor a verdict on
+   * the submission).
+   */
+  @Test
+  public void testMissingSandboxUserIsASystemError() {
+    Assumptions.assumeTrue("native".equalsIgnoreCase(sandbox), "This tests the native runner.");
+    Assumptions.assumeTrue(
+        "root".equals(System.getProperty("user.name")), "Privileges are only dropped by root.");
+    Object runner = AopTestUtils.getUltimateTargetObject(sandboxRunner);
+    Object username = ReflectionTestUtils.getField(runner, "systemUsername");
+    ReflectionTestUtils.setField(runner, "systemUsername", "voj-no-such-user");
+    try {
+      RunResult result = sandboxRunner.run("/bin/true", null, null, 1000, 65536, false);
+      Assertions.assertEquals(Verdict.INTERNAL_ERROR, result.getVerdict());
+    } finally {
+      ReflectionTestUtils.setField(runner, "systemUsername", username);
+    }
+  }
+
+  /**
+   * Test case: a command whose executable does not exist. Expected result: a system error, for a
+   * run as well as for a compilation (not a runtime error, nor a compile error with an empty log).
+   */
+  @Test
+  public void testUnrunnableCommandIsASystemError() {
+    Assumptions.assumeTrue("native".equalsIgnoreCase(sandbox), "This tests the native runner.");
+    String command = "/voj-no-such-directory/program";
+    Assertions.assertEquals(
+        Verdict.INTERNAL_ERROR, sandboxRunner.run(command, null, null, 1000, 65536, false).getVerdict());
+    Assertions.assertEquals(
+        Verdict.INTERNAL_ERROR, sandboxRunner.run(command, null, null, 1000, 65536, true).getVerdict());
   }
 
   /**
@@ -503,6 +540,9 @@ public class SandboxBehaviorTest {
           return 0;
       }
       """;
+
+  /** The active sandbox runner, exercised directly by the tests of the runner itself. */
+  @Autowired private SandboxRunner sandboxRunner;
 
   /** The ProgramRunner object under test. */
   @Autowired private ProgramRunner programRunner;
