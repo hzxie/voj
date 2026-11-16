@@ -115,9 +115,10 @@
 
                 <!-- ACTIONS -->
                 <div class="vw-contest-actions">
-                    <button class="vw-btn vw-btn-accent vw-btn-block" type="button" th:if="${not isAttended and contestStatus != 'Done' and contest.openRegistration}"
+                    <!-- A contest can be attended only before it starts, and only if its registration is open. -->
+                    <button class="vw-btn vw-btn-accent vw-btn-block" type="button" th:if="${not isAttended and contestStatus == 'Ready' and contest.openRegistration}"
                             id="attend-contest-button" th:text="#{voj.contests.contest.attend-contest}">Attend the contest</button>
-                    <p class="vw-muted" th:if="${not isAttended and contestStatus != 'Done' and !contest.openRegistration}"
+                    <p class="vw-muted" th:if="${not isAttended and (contestStatus == 'Live' or (contestStatus == 'Ready' and !contest.openRegistration))}"
                        th:text="#{voj.contests.contest.registration-closed}">Registration for this contest is closed.</p>
                     <a class="vw-btn vw-btn-block" th:if="${contestStatus != 'Ready'}"
                        th:href="@{/contest/{id}/leaderboard(id=${contest.contestId})}" th:text="#{voj.contests.contest.view-leaderboard}">View leaderboard</a>
@@ -151,7 +152,7 @@
             var timer = setInterval(tick, 1000);
         })();
     </script>
-    <th:block th:if="${not isAttended and !currentTime.after(contest.endTime)}">
+    <th:block th:if="${not isAttended and currentTime.before(contest.startTime)}">
     <th:block th:if="${isLogin}">
     <script type="text/javascript" th:inline="javascript">
         $('#attend-contest-button').on('click', attendContest);

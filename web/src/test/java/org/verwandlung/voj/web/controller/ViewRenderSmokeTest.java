@@ -615,6 +615,21 @@ class ViewRenderSmokeTest {
         .andExpect(content().string(containsString("Registration for this contest is closed.")));
   }
 
+  /**
+   * A running contest offers no "Attend" button even when its registration is open (a contest can
+   * only be attended before it starts) but says that registration is closed.
+   */
+  @Test
+  void liveContestOffersNoAttendButton() throws Exception {
+    when(contestService.getContest(1L)).thenReturn(aContest(1L, "ACM", past(), future()));
+    mockMvc
+        .perform(getWithCsrf("/contest/1"))
+        .andExpect(status().isOk())
+        .andExpect(content().string(not(containsString("id=\"attend-contest-button\""))))
+        .andExpect(content().string(not(containsString("/attend.action"))))
+        .andExpect(content().string(containsString("Registration for this contest is closed.")));
+  }
+
   /** An unpublished contest is not found for anonymous users but still renders for administrators. */
   @Test
   void draftContestIsHiddenFromNonAdministrators() throws Exception {
