@@ -9,6 +9,9 @@
 		</Console>
 	</Appenders>
 	<Loggers>
+		<!-- Why the sandbox could not run a compiler, which the result of the compilation does
+		     not say: a test that fails on it shows the cause. -->
+		<Logger name="org.verwandlung.voj.judger.core.Compiler" level="ERROR" />
 		<Root level="OFF">
 			<AppenderRef ref="Console" />
 		</Root>

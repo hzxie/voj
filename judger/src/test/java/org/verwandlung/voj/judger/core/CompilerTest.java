@@ -48,7 +48,8 @@ public class CompilerTest {
     Submission submission = submissionMapper.getSubmission(1000);
     preprocessor.createTestCode(submission, workDirectory);
 
-    Assertions.assertTrue(compiler.getCompileResult(submission, workDirectory).isSuccessful());
+    CompileResult result = compiler.getCompileResult(submission, workDirectory);
+    Assertions.assertTrue(result.isSuccessful(), result.toString());
   }
 
   /**
@@ -61,7 +62,8 @@ public class CompilerTest {
     Submission submission = submissionMapper.getSubmission(1001);
     preprocessor.createTestCode(submission, workDirectory);
 
-    Assertions.assertTrue(compiler.getCompileResult(submission, workDirectory).isSuccessful());
+    CompileResult result = compiler.getCompileResult(submission, workDirectory);
+    Assertions.assertTrue(result.isSuccessful(), result.toString());
   }
 
   /**

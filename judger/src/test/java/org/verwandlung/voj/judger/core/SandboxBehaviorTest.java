@@ -2128,6 +2128,8 @@ public class SandboxBehaviorTest {
    */
   private static final String WINDOWS_LATER_RUNS_CODE =
       """
+      // GetFinalPathNameByHandleW is Vista's: MinGW declares only what the version asked for has.
+      #define _WIN32_WINNT 0x0600
       #include <windows.h>
       #include <aclapi.h>
       #include <cstdio>
