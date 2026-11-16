@@ -93,7 +93,7 @@ restarts with it):
 | Property | Default | Purpose |
 | --- | --- | --- |
 | `judger.workDir` | `/tmp` | Parent of the work directories. The judger creates a private `0700` subdirectory, `voj-<submissionId>-<random>`, for every judging and removes it afterwards; the random part keeps two judgers on one host apart when they judge the same submission. |
-| `judger.checkpointDir` | `/tmp/voj-testpoints` | Local cache of downloaded reference inputs/outputs, kept readable only by the judger. |
+| `judger.checkpointDir` | `/tmp/voj-testpoints` | Local cache of downloaded reference inputs/outputs, kept readable only by the judger. Every judger on the host caches in a directory of its own, `judger-<n>/` (claimed with the lock file `judger-<n>.lock`, held while the judger runs), so judgers sharing this setting never replace test data another one is reading. Directories named after a problem id directly under it are the cache of an older version and can be deleted. |
 
 ### Checkpoint download
 

@@ -64,9 +64,9 @@ import org.verwandlung.voj.judger.model.Submission;
 public class DispatcherTest {
   /** Injects the working-directory configuration that would normally come from the property files. */
   @BeforeEach
-  public void setUp() {
+  public void setUp() throws Exception {
     ReflectionTestUtils.setField(dispatcher, "workBaseDirectory", "/tmp/voj-dispatcher-tests");
-    ReflectionTestUtils.setField(dispatcher, "checkpointDirectory", "/tmp/voj-dispatcher-tests");
+    when(checkpointStore.sync(any())).thenReturn(Path.of("/tmp/voj-dispatcher-tests/1000"));
     when(submissionMapper.getSubmission(100L)).thenReturn(buildSubmission());
     when(applicationDispatcher.onJudgingStarted(any())).thenReturn(true);
   }
@@ -108,6 +108,17 @@ public class DispatcherTest {
     verify(submissionMapper, times(1)).getSubmission(100L);
     verify(applicationDispatcher).onCompileFinished(any(), any());
     verify(applicationDispatcher).onOneTestPointFinished(eq(100L), eq(1), any());
+    // The test data is read from the directory the checkpoint store synced it to.
+    String checkpointDirectory = "/tmp/voj-dispatcher-tests/1000/";
+    verify(programRunner)
+        .getRuntimeResult(
+            any(),
+            anyString(),
+            anyString(),
+            eq(checkpointDirectory + "input#1.txt"),
+            anyString());
+    verify(comparator)
+        .getComparisonResult(eq(checkpointDirectory + "output#1.txt"), anyString(), eq(true));
 
     @SuppressWarnings("unchecked")
     org.mockito.ArgumentCaptor<List<Map<String, Object>>> resultsCaptor =

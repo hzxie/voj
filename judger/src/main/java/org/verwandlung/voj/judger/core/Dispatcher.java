@@ -17,6 +17,7 @@
 package org.verwandlung.voj.judger.core;
 
 import java.io.IOException;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
@@ -125,27 +126,42 @@ public class Dispatcher {
    */
   private void judge(Submission submission, String workDirectory, String baseFileName)
       throws Exception {
+    Path checkpointDirectory = syncCheckpoints(submission);
     List<Checkpoint> checkpoints = getCheckpoints(submission);
     preprocessor.createTestCode(submission, workDirectory, baseFileName);
     if (compile(submission, workDirectory, baseFileName)) {
-      runProgram(submission, checkpoints, workDirectory, baseFileName);
+      runProgram(submission, checkpoints, checkpointDirectory, workDirectory, baseFileName);
     }
   }
 
   /**
-   * Makes the problem's test data available locally and reads its checkpoints. There is nothing to
-   * judge a submission against without them, so a problem without checkpoints is a System Error:
-   * every submission that compiles would be Accepted otherwise.
+   * Makes the problem's test data available locally.
+   *
+   * @param submission - the submission object
+   * @return the directory holding the problem's test data
+   * @throws SystemError if the test data cannot be downloaded
+   */
+  private Path syncCheckpoints(Submission submission) throws SystemError {
+    try {
+      return checkpointStore.sync(submission.getProblem());
+    } catch (IOException ex) {
+      throw new SystemError("The test data of this problem could not be loaded.", ex);
+    }
+  }
+
+  /**
+   * Reads the problem's checkpoints. There is nothing to judge a submission against without them,
+   * so a problem without checkpoints is a System Error: every submission that compiles would be
+   * Accepted otherwise.
    *
    * @param submission - the submission object
    * @return the problem's checkpoints (never empty)
-   * @throws SystemError if the test data cannot be loaded or there is none
+   * @throws SystemError if the test data cannot be read or there is none
    */
   private List<Checkpoint> getCheckpoints(Submission submission) throws SystemError {
     long problemId = submission.getProblem().getProblemId();
     List<Checkpoint> checkpoints;
     try {
-      checkpointStore.sync(submission.getProblem());
       checkpoints = checkpointStore.getCheckpoints(problemId);
     } catch (IOException ex) {
       throw new SystemError("The test data of this problem could not be loaded.", ex);
@@ -181,6 +197,7 @@ public class Dispatcher {
    *
    * @param submission - the submission object
    * @param checkpoints - the problem's checkpoints
+   * @param checkpointDirectory - the directory holding the problem's test data
    * @param workDirectory - the directory of the compilation result and the program output
    * @param baseFileName - the file name of the application to run (without file suffix)
    * @throws SystemError if the test data cannot be read
@@ -188,22 +205,20 @@ public class Dispatcher {
   private void runProgram(
       Submission submission,
       List<Checkpoint> checkpoints,
+      Path checkpointDirectory,
       String workDirectory,
       String baseFileName)
       throws SystemError {
     List<Map<String, Object>> runtimeResults = new ArrayList<Map<String, Object>>();
     long submissionId = submission.getSubmissionId();
-    long problemId = submission.getProblem().getProblemId();
 
     for (Checkpoint checkpoint : checkpoints) {
       int checkpointId = checkpoint.getCheckpointId();
       int checkpointScore = checkpoint.getScore();
       String inputFilePath =
-          String.format(
-              "%s/%s/input#%s.txt", new Object[] {checkpointDirectory, problemId, checkpointId});
+          checkpointDirectory.resolve("input#" + checkpointId + ".txt").toString();
       String stdOutputFilePath =
-          String.format(
-              "%s/%s/output#%s.txt", new Object[] {checkpointDirectory, problemId, checkpointId});
+          checkpointDirectory.resolve("output#" + checkpointId + ".txt").toString();
       String outputFilePath = getOutputFilePath(workDirectory, checkpointId);
 
       Map<String, Object> runtimeResult =
@@ -330,10 +345,6 @@ public class Dispatcher {
   /** The working directory of the judger, used to store compilation results and program output. */
   @Value("${judger.workDir}")
   private String workBaseDirectory;
-
-  /** The storage directory of checkpoints, used to store the input/output data of checkpoints. */
-  @Value("${judger.checkpointDir}")
-  private String checkpointDirectory;
 
   /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(Dispatcher.class);

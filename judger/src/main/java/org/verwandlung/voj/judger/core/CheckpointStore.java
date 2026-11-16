@@ -16,18 +16,22 @@
  */
 package org.verwandlung.voj.judger.core;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
+import java.nio.channels.OverlappingFileLockException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.AtomicMoveNotSupportedException;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.StandardOpenOption;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.nio.file.attribute.UserPrincipal;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -36,7 +40,6 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,20 +48,27 @@ import org.springframework.stereotype.Component;
 
 import org.verwandlung.voj.judger.model.Checkpoint;
 import org.verwandlung.voj.judger.model.Problem;
+import org.verwandlung.voj.judger.util.FileSystemUtils;
 
 /**
  * A local, version-aware cache of problem checkpoints (test data).
  *
  * <p>The database remains the source of truth, but a judger no longer reads the input/output of
- * every checkpoint from the database on each submission. Instead it keeps a per-problem copy under
- * {@code judger.checkpointDir/<problemId>/} and re-downloads (via {@link HttpCheckpointProvider}) only
- * when the problem's {@code checkpoints_version} changes — the version the web side bumps whenever the
- * test data is edited.
+ * every checkpoint from the database on each submission. Instead it keeps a per-problem copy and
+ * re-downloads (via {@link HttpCheckpointProvider}) only when the problem's {@code
+ * checkpoints_version} changes — the version the web side bumps whenever the test data is edited.
  *
- * <p>A fresh copy is downloaded into a temporary directory and only then swapped into place, so an
- * interrupted or failed download never leaves a half-written cache that could be mistaken for valid.
- * Judging is serialised on a single judger (see {@code Dispatcher#createNewTask}), so no additional
- * locking between problems is required.
+ * <p>A fresh copy is downloaded into a private temporary directory and only then swapped into
+ * place, so an interrupted or failed download never leaves a half-written cache that could be
+ * mistaken for valid. A temporary directory left behind by a judger that died while downloading is
+ * removed when the cache is opened at the next start.
+ *
+ * <p>Every judger has a cache directory of its own, {@code judger.checkpointDir/judger-<n>/}, so
+ * that several judgers on one host never replace a problem's copy while another one reads it: the
+ * judger claims the first slot <i>n</i> whose lock file ({@code judger-<n>.lock}) no other process
+ * holds, and holds that lock until it exits. A restarted judger usually gets its old slot (and
+ * cache) back. Within a judger, judging is serialised (see {@code Dispatcher#createNewTask}), so a
+ * problem's copy is never replaced while it is read.
  *
  * @author Haozhe Xie
  */
@@ -67,35 +77,58 @@ public class CheckpointStore {
   /** The manifest entry, written by the web side, that records the version and per-checkpoint meta. */
   private static final String MANIFEST_FILE = "manifest.properties";
 
+  /** The most judgers on one host that can share a checkpoint root. */
+  static final int MAX_SLOTS = 64;
+
+  /**
+   * Opens this judger's cache directory, claiming a slot under the checkpoint root, and removes the
+   * temporary directories of downloads that never completed. Called at startup; {@link #sync} does
+   * it on first use otherwise.
+   *
+   * @return this judger's cache directory
+   * @throws IOException if the checkpoint root cannot be trusted or every slot is taken
+   */
+  public synchronized Path open() throws IOException {
+    ensureCheckpointRootIsTrusted();
+    if (cacheDirectory == null) {
+      cacheDirectory = claimSlot(Paths.get(checkpointDirectory));
+      removeTemporaryDirectories(cacheDirectory);
+      LOGGER.info("Caching checkpoints in {}", cacheDirectory);
+    } else if (!Files.isDirectory(cacheDirectory, LinkOption.NOFOLLOW_LINKS)) {
+      // Removed behind the judger's back, e.g. by a clean-up of /tmp.
+      createPrivateDirectory(cacheDirectory);
+    }
+    return cacheDirectory;
+  }
+
   /**
    * Ensures the local cache for a problem matches the problem's current checkpoints version,
    * downloading a fresh copy when the cache is missing or stale.
    *
    * @param problem - the problem whose checkpoints must be available locally
+   * @return the directory holding the problem's checkpoints ({@code input#<id>.txt} and {@code
+   *     output#<id>.txt})
    * @throws IOException if the checkpoints have to be downloaded but cannot be
    */
-  public void sync(Problem problem) throws IOException {
+  public Path sync(Problem problem) throws IOException {
     long problemId = problem.getProblemId();
     int version = problem.getCheckpointsVersion();
-    File problemDirectory = new File(checkpointDirectory, String.valueOf(problemId));
-
-    ensureCheckpointRootIsTrusted();
+    Path problemDirectory = open().resolve(String.valueOf(problemId));
     if (isCacheFresh(problemDirectory, version)) {
-      return;
+      return problemDirectory;
     }
 
-    File temporaryDirectory =
-        new File(checkpointDirectory, "." + problemId + "-" + UUID.randomUUID());
+    Path temporaryDirectory = cacheDirectory.resolve("." + problemId + "-" + UUID.randomUUID());
     try {
-      checkpointProvider.download(problemId, temporaryDirectory);
+      // Private from the start: the root may be readable by others if it existed already.
+      createPrivateDirectory(temporaryDirectory);
+      checkpointProvider.download(problemId, temporaryDirectory.toFile());
       replaceDirectory(problemDirectory, temporaryDirectory);
-      restrictToOwner(problemDirectory);
     } finally {
-      if (temporaryDirectory.exists()) {
-        FileUtils.deleteQuietly(temporaryDirectory);
-      }
+      FileSystemUtils.deleteRecursively(temporaryDirectory);
     }
     LOGGER.info("Synced checkpoints for problem #{} to version {}", problemId, version);
+    return problemDirectory;
   }
 
   /**
@@ -108,8 +141,8 @@ public class CheckpointStore {
    * @throws IOException if the manifest cannot be read
    */
   public List<Checkpoint> getCheckpoints(long problemId) throws IOException {
-    File problemDirectory = new File(checkpointDirectory, String.valueOf(problemId));
-    Properties manifest = loadManifest(new File(problemDirectory, MANIFEST_FILE));
+    Path problemDirectory = open().resolve(String.valueOf(problemId));
+    Properties manifest = loadManifest(problemDirectory.resolve(MANIFEST_FILE));
 
     int count = Integer.parseInt(manifest.getProperty("count", "0"));
     List<Checkpoint> checkpoints = new ArrayList<>(count);
@@ -126,15 +159,81 @@ public class CheckpointStore {
   }
 
   /**
+   * Claims the first free slot under the checkpoint root: locks its lock file, for as long as this
+   * judger runs (the lock is released when the process exits, however it exits), and creates its
+   * cache directory if needed.
+   *
+   * @param root - the checkpoint root
+   * @return the slot's cache directory
+   * @throws IOException if every slot is taken
+   */
+  private static Path claimSlot(Path root) throws IOException {
+    Files.createDirectories(root);
+    for (int slot = 0; slot < MAX_SLOTS; ++slot) {
+      Path lockFile = root.resolve("judger-" + slot + ".lock").toAbsolutePath();
+      // A file lock is held by the whole process, and closing any channel of a locked file may drop
+      // it: never touch a lock file this JVM holds (e.g. another CheckpointStore in a test).
+      synchronized (CLAIMED_LOCK_FILES) {
+        if (CLAIMED_LOCK_FILES.contains(lockFile)) {
+          continue;
+        }
+        FileChannel channel =
+            FileChannel.open(
+                lockFile,
+                StandardOpenOption.CREATE,
+                StandardOpenOption.WRITE,
+                LinkOption.NOFOLLOW_LINKS);
+        FileLock lock;
+        try {
+          lock = channel.tryLock();
+        } catch (OverlappingFileLockException ex) {
+          lock = null;
+        }
+        if (lock == null) {
+          channel.close();
+          continue;
+        }
+        // The channel stays open (and the lock held) until the judger exits.
+        CLAIMED_LOCK_FILES.add(lockFile);
+      }
+      Path directory = root.resolve("judger-" + slot);
+      if (!Files.isDirectory(directory, LinkOption.NOFOLLOW_LINKS)) {
+        createPrivateDirectory(directory);
+      }
+      return directory;
+    }
+    throw new IOException(
+        String.format(
+            "All %d checkpoint cache slots under %s are taken by other judgers.", MAX_SLOTS, root));
+  }
+
+  /**
+   * Removes the temporary directories (named {@code .<problemId>-<uuid>}) of downloads that never
+   * completed because the judger died. Only this judger uses its cache directory, so none of them
+   * is in use.
+   *
+   * @param directory - this judger's cache directory
+   * @throws IOException if a directory cannot be removed
+   */
+  private static void removeTemporaryDirectories(Path directory) throws IOException {
+    try (DirectoryStream<Path> entries = Files.newDirectoryStream(directory, ".*")) {
+      for (Path entry : entries) {
+        LOGGER.info("Removing the incomplete checkpoint download {}", entry);
+        FileSystemUtils.deleteRecursively(entry);
+      }
+    }
+  }
+
+  /**
    * Checks whether the cached copy is present and at the expected version.
    *
    * @param problemDirectory - the per-problem cache directory
    * @param version - the version the cache must match to be considered fresh
    * @return whether the cache can be reused without downloading
    */
-  private boolean isCacheFresh(File problemDirectory, int version) {
-    File manifestFile = new File(problemDirectory, MANIFEST_FILE);
-    if (!problemDirectory.isDirectory() || !manifestFile.isFile()) {
+  private boolean isCacheFresh(Path problemDirectory, int version) {
+    Path manifestFile = problemDirectory.resolve(MANIFEST_FILE);
+    if (!Files.isDirectory(problemDirectory) || !Files.isRegularFile(manifestFile)) {
       return false;
     }
     try {
@@ -153,9 +252,9 @@ public class CheckpointStore {
    * @return the parsed manifest
    * @throws IOException if the file cannot be read
    */
-  private Properties loadManifest(File manifestFile) throws IOException {
+  private Properties loadManifest(Path manifestFile) throws IOException {
     Properties manifest = new Properties();
-    try (InputStream inputStream = new FileInputStream(manifestFile)) {
+    try (InputStream inputStream = Files.newInputStream(manifestFile)) {
       manifest.load(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
     }
     return manifest;
@@ -169,22 +268,13 @@ public class CheckpointStore {
    * @param temporaryDirectory - the directory holding the freshly downloaded data
    * @throws IOException if the directory cannot be swapped into place
    */
-  private void replaceDirectory(File problemDirectory, File temporaryDirectory) throws IOException {
-    if (problemDirectory.exists()) {
-      FileUtils.deleteDirectory(problemDirectory);
-    } else {
-      File parent = problemDirectory.getParentFile();
-      if (parent != null && !parent.exists() && !parent.mkdirs()) {
-        throw new IOException("Failed to create the checkpoint directory: " + parent);
-      }
-    }
+  private void replaceDirectory(Path problemDirectory, Path temporaryDirectory)
+      throws IOException {
+    FileSystemUtils.deleteRecursively(problemDirectory);
     try {
-      Files.move(
-          temporaryDirectory.toPath(),
-          problemDirectory.toPath(),
-          StandardCopyOption.ATOMIC_MOVE);
+      Files.move(temporaryDirectory, problemDirectory, StandardCopyOption.ATOMIC_MOVE);
     } catch (AtomicMoveNotSupportedException ex) {
-      Files.move(temporaryDirectory.toPath(), problemDirectory.toPath());
+      Files.move(temporaryDirectory, problemDirectory);
     }
   }
 
@@ -199,13 +289,13 @@ public class CheckpointStore {
    * @throws IOException if the root cannot be created or is not owned by the judger
    */
   private void ensureCheckpointRootIsTrusted() throws IOException {
-    if (System.getProperty("os.name").contains("Windows")) {
+    if (!isPosix()) {
       return;
     }
-    Path root = new File(checkpointDirectory).toPath();
+    Path root = Paths.get(checkpointDirectory);
     if (!Files.exists(root, LinkOption.NOFOLLOW_LINKS)) {
       Files.createDirectories(root);
-      restrictToOwner(root.toFile());
+      Files.setPosixFilePermissions(root, PosixFilePermissions.fromString("rwx------"));
     }
     if (!Files.isDirectory(root, LinkOption.NOFOLLOW_LINKS)) {
       throw new IOException("The checkpoint directory is not a real directory: " + root);
@@ -225,28 +315,42 @@ public class CheckpointStore {
   }
 
   /**
-   * Restricts the checkpoint directory to its owner (the judger), so that submitted programs running
-   * as the unprivileged sandbox user cannot read the reference answers. Mirrors the protection the
-   * preprocessor previously applied. A no-op on Windows.
+   * Creates a directory restricted to its owner (the judger), so that submitted programs running as
+   * the unprivileged sandbox user cannot read the reference answers in it, whatever the permissions
+   * of its parent. A plain directory on Windows.
    *
-   * @param directory - the per-problem cache directory
-   * @throws IOException if the permissions cannot be set
+   * @param directory - the directory to create
+   * @throws IOException if the directory cannot be created
    */
-  private void restrictToOwner(File directory) throws IOException {
-    if (System.getProperty("os.name").contains("Windows")) {
-      return;
+  private static void createPrivateDirectory(Path directory) throws IOException {
+    if (isPosix()) {
+      Files.createDirectory(
+          directory,
+          PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwx------")));
+    } else {
+      Files.createDirectory(directory);
     }
-    Set<PosixFilePermission> permissions = new HashSet<>();
-    permissions.add(PosixFilePermission.OWNER_READ);
-    permissions.add(PosixFilePermission.OWNER_WRITE);
-    permissions.add(PosixFilePermission.OWNER_EXECUTE);
-    Files.setPosixFilePermissions(directory.toPath(), permissions);
   }
+
+  /**
+   * Checks whether the host file system supports POSIX permissions (i.e. is not Windows).
+   *
+   * @return whether POSIX permissions are available
+   */
+  private static boolean isPosix() {
+    return !System.getProperty("os.name").contains("Windows");
+  }
+
+  /** The lock files of the slots claimed by this JVM, whose locks it holds until it exits. */
+  private static final Set<Path> CLAIMED_LOCK_FILES = new HashSet<>();
+
+  /** This judger's cache directory (its slot under the checkpoint root), once opened. */
+  private Path cacheDirectory;
 
   /** The autowired HttpCheckpointProvider, which performs the actual download. */
   @Autowired private HttpCheckpointProvider checkpointProvider;
 
-  /** The storage directory of checkpoints, used to cache the input/output data of checkpoints. */
+  /** The root of the checkpoint caches, which holds a directory per judger on this host. */
   @Value("${judger.checkpointDir}")
   private String checkpointDirectory;
 

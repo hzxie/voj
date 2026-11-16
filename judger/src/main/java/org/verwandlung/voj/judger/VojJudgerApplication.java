@@ -35,6 +35,7 @@ import org.springframework.context.annotation.PropertySource;
 import org.springframework.jms.listener.DefaultMessageListenerContainer;
 
 import org.verwandlung.voj.judger.application.ApplicationHeartbeat;
+import org.verwandlung.voj.judger.core.CheckpointStore;
 import org.verwandlung.voj.judger.mapper.LanguageMapper;
 import org.verwandlung.voj.judger.model.Language;
 
@@ -66,6 +67,7 @@ public class VojJudgerApplication {
    *
    * @param languageMapper - the data access object for programming languages
    * @param heartbeat - the heartbeat task
+   * @param checkpointStore - the local cache of test data, opened (and cleaned up) here
    * @param submissionTaskListenerContainer - the listener for the judging-task queue, started here
    *     only after the identity check passes
    * @return an ApplicationRunner instance
@@ -74,6 +76,7 @@ public class VojJudgerApplication {
   public ApplicationRunner startupRunner(
       LanguageMapper languageMapper,
       ApplicationHeartbeat heartbeat,
+      CheckpointStore checkpointStore,
       DefaultMessageListenerContainer submissionTaskListenerContainer) {
     return args -> {
       // Fail fast: verify the judger's credentials against the shared user table before consuming
@@ -84,6 +87,9 @@ public class VojJudgerApplication {
         System.exit(-1);
       }
       logSystemEnvironment();
+      // Claims this judger's test data cache and removes downloads a previous run left unfinished.
+      // A checkpoint directory that cannot be used fails every judging, so it fails the startup.
+      checkpointStore.open();
 
       List<String> supportedLanguageSlugs = detectSupportedLanguages(languageMapper);
       if (supportedLanguageSlugs.isEmpty()) {
