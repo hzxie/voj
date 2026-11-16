@@ -66,7 +66,8 @@ site and of the administration show the running judgers from it. Every count of
 the online judgers (the home page, the administration's dashboard and judgers
 page, the judgers page) counts the judger accounts that at least one running
 judger process runs as: several processes running as one account are one judger
-online (the administration's judgers page lists each process).
+online (the administration's judgers page lists each process, with whether it
+takes submissions and the languages it supports).
 
 | Property | Default | Purpose |
 | --- | --- | --- |

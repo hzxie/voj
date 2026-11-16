@@ -61,6 +61,8 @@ public class JudgerService {
       Map<String, Object> node = new HashMap<>(8, 1);
       node.put("username", judger.get("username"));
       node.put("description", judger.get("description"));
+      node.put("isReady", isTrue(judger.get("isReady")));
+      node.put("languageIds", toLanguageIds((String) judger.get("languageIds")));
       node.put("cpuLoad", cpuLoad);
       node.put("memoryUsage", memoryUsage);
       Object uptime = judger.get("uptime");
@@ -78,6 +80,40 @@ public class JudgerService {
         usernames.size(),
         nodesWithMetrics == 0 ? -1 : Math.round((float) cpuLoadTotal / nodesWithMetrics),
         nodesWithMetrics == 0 ? -1 : Math.round((float) memoryUsageTotal / nodesWithMetrics));
+  }
+
+  /**
+   * Tells whether a flag of the registry is set.
+   *
+   * @param value - the flag (a Boolean, or a Number as the driver may read a TINYINT)
+   * @return whether it is set
+   */
+  private static boolean isTrue(Object value) {
+    return value instanceof Boolean
+        ? (Boolean) value
+        : value instanceof Number && ((Number) value).intValue() != 0;
+  }
+
+  /**
+   * Parses the languages a judger supports, as it records them: their identifiers, separated by
+   * commas.
+   *
+   * @param languageIds - the identifiers, separated by commas (may be empty or null)
+   * @return the identifiers
+   */
+  static List<Integer> toLanguageIds(String languageIds) {
+    List<Integer> ids = new ArrayList<>();
+    if (languageIds == null) {
+      return ids;
+    }
+    for (String languageId : languageIds.split(",")) {
+      try {
+        ids.add(Integer.parseInt(languageId.trim()));
+      } catch (NumberFormatException ex) {
+        // Not an identifier (e.g. the empty list): nothing to add.
+      }
+    }
+    return ids;
   }
 
   /**

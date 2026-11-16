@@ -257,6 +257,36 @@ class ViewRenderSmokeTest {
     mockMvc.perform(getWithCsrf(url)).andExpect(status().isOk());
   }
 
+  /**
+   * The judgers page shows of every node whether it takes submissions and the languages it
+   * supports, by name (a language since deleted is left out).
+   */
+  @Test
+  void judgersPageShowsTheReadinessAndLanguagesOfTheNodes() throws Exception {
+    Map<String, Object> ready = new HashMap<>();
+    ready.put("username", "judge-ready");
+    ready.put("isReady", true);
+    ready.put("languageIds", List.of(1, 99));
+    ready.put("cpuLoad", 10);
+    ready.put("memoryUsage", 20);
+    ready.put("description", "node");
+    ready.put("uptime", "1h 0m");
+    Map<String, Object> notReady = new HashMap<>(ready);
+    notReady.put("username", "judge-not-ready");
+    notReady.put("isReady", false);
+    notReady.put("languageIds", List.of());
+    when(judgerService.getJudgerSummary())
+        .thenReturn(new JudgerSummary(List.of(notReady, ready), 2, 10, 20));
+    authenticateAdmin();
+    mockMvc
+        .perform(getWithCsrf("/administration/judgers"))
+        .andExpect(status().isOk())
+        .andExpect(content().string(containsString(">taking submissions<")))
+        .andExpect(content().string(containsString(">not taking submissions<")))
+        .andExpect(content().string(containsString("<span class=\"adm-tagchip\">Java</span>")))
+        .andExpect(content().string(containsString(">no languages<")));
+  }
+
   // ---------------------------------------------------------------------------
   // Error pages. A request whose target entity is missing raises
   // ResourceNotFoundException (handled into the 404 view); an unexpected failure

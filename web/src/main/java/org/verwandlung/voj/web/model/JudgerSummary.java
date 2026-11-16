@@ -48,8 +48,9 @@ public class JudgerSummary {
 
   /**
    * Gets the running judger processes, by username: each with its {@code username}, {@code
-   * description}, {@code cpuLoad} and {@code memoryUsage} (percentages, -1 if unknown) and {@code
-   * uptime} (formatted, e.g. {@code 3d 4h}).
+   * description}, {@code isReady} (whether it takes submissions), {@code languageIds} (the
+   * identifiers of the languages it supports), {@code cpuLoad} and {@code memoryUsage}
+   * (percentages, -1 if unknown) and {@code uptime} (formatted, e.g. {@code 3d 4h}).
    *
    * @return the running judger processes
    */

@@ -25,7 +25,7 @@
                 <div class="adm-node" th:each="node : ${nodes}">
                     <div class="adm-node-top">
                         <span class="nm" th:text="${node.username}">judge-01</span>
-                        <span class="adm-node-dot c-accent"></span>
+                        <span class="adm-node-dot" th:classappend="${node.isReady} ? 'c-accent' : 'c-warn'" aria-hidden="true"></span>
                     </div>
                     <div class="adm-node-track"><div class="fill" th:classappend="${node.cpuLoad > 85 ? 'c-err' : (node.cpuLoad > 60 ? 'c-warn' : 'c-accent')}" th:attr="data-pct=${node.cpuLoad}"></div></div>
                     <div class="adm-node-foot">
@@ -35,6 +35,16 @@
                     <div class="adm-node-foot adm-mt5">
                         <span class="adm-cell muted" th:text="${node.description}">node</span>
                         <span th:text="${node.uptime}">0m</span>
+                    </div>
+                    <div class="adm-node-foot adm-mt5">
+                        <span th:classappend="${node.isReady} ? 'c-accent' : 'c-warn'"
+                              th:text="${node.isReady} ? #{voj.administration.judgers.ready} : #{voj.administration.judgers.not-ready}">taking submissions</span>
+                    </div>
+                    <div class="adm-tagbox adm-mt5">
+                        <th:block th:each="languageId : ${node.languageIds}" th:with="languageName=${languageNames.get(languageId)}">
+                            <span class="adm-tagchip" th:if="${languageName != null}" th:text="${languageName}">C++</span>
+                        </th:block>
+                        <span class="adm-cell muted" th:if="${#lists.isEmpty(node.languageIds)}" th:text="#{voj.administration.judgers.node-no-languages}">no languages</span>
                     </div>
                 </div>
             </div>

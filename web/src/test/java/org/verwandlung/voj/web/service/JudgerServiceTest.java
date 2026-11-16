@@ -91,6 +91,10 @@ public class JudgerServiceTest {
     Assertions.assertEquals(40, node.get("cpuLoad"));
     Assertions.assertEquals(50, node.get("memoryUsage"));
     Assertions.assertEquals("2h 0m", node.get("uptime"));
+    Assertions.assertEquals(true, node.get("isReady"));
+    Assertions.assertEquals(List.of(2, 3), node.get("languageIds"));
+    Assertions.assertEquals(false, nodes.get(0).get("isReady"));
+    Assertions.assertEquals(List.of(5), nodes.get(0).get("languageIds"));
     Assertions.assertEquals(40, summary.getAverageCpuLoad());
     Assertions.assertEquals(50, summary.getAverageMemoryUsage());
   }
@@ -101,6 +105,14 @@ public class JudgerServiceTest {
     Assertions.assertEquals("0m", JudgerService.formatUptime(59_000));
     Assertions.assertEquals("1h 5m", JudgerService.formatUptime(65 * 60_000L));
     Assertions.assertEquals("40d 3h", JudgerService.formatUptime((40 * 24 + 3) * 3_600_000L));
+  }
+
+  /** Test case: tests toLanguageIds(String). Test data: identifiers, none and null. Expected: the identifiers, in order. */
+  @Test
+  public void testToLanguageIds() {
+    Assertions.assertEquals(List.of(2, 3, 10), JudgerService.toLanguageIds("2,3, 10"));
+    Assertions.assertEquals(List.of(), JudgerService.toLanguageIds(""));
+    Assertions.assertEquals(List.of(), JudgerService.toLanguageIds(null));
   }
 
   /** The JudgerService object under test. */

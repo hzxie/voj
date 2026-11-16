@@ -257,7 +257,8 @@ public class DashboardAdministrationController {
   }
 
   /**
-   * Loads the judge-cluster page, showing the live telemetry of every online judger node.
+   * Loads the judge-cluster page, showing every online judger node: whether it takes submissions,
+   * the languages it supports and its live telemetry; and the languages.
    *
    * @param request - the HttpServletRequest object
    * @param response - the HttpServletResponse object
@@ -272,7 +273,13 @@ public class DashboardAdministrationController {
     view.addObject("nodes", judgerSummary.getNodes());
     view.addObject("onlineJudgers", judgerSummary.getOnlineJudgers());
     view.addObject("queueDepth", submissionService.getNumberOfPendingSubmissions());
-    view.addObject("languages", languageService.getAllLanguages());
+    List<Language> languages = languageService.getAllLanguages();
+    Map<Integer, String> languageNames = new HashMap<>();
+    for (Language language : languages) {
+      languageNames.put(language.getLanguageId(), language.getLanguageName());
+    }
+    view.addObject("languages", languages);
+    view.addObject("languageNames", languageNames);
     return view;
   }
 
