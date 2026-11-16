@@ -1246,10 +1246,10 @@ INSERT INTO `voj_problems` (`problem_id`, `problem_status`, `problem_name`, `pro
 
 A permutation is an array consisting of n distinct integers from 1 to n in arbitrary order. For example, [2,3,1,5,4] is a permutation, but [1,2,2] is not a permutation (2 appears twice in the array) and [1,3,4] is also not a permutation (n=3 but there is 4 in the array).
 
-A permutation p(length of 2n) will be counted only if the number of i satisfying p_i&lt;p_{i+1} is no less than n. For example:
+A permutation p(length of 2n) will be counted only if the number of i satisfying p_i<p_{i+1} is no less than n. For example:
 
-  * Permutation [1, 2, 3, 4] will count, because the number of such i that p_i&lt;p_{i+1} equals 3 (i = 1, i = 2, i = 3).
-  * Permutation [3, 2, 1, 4] won''t count, because the number of such i that p_i&lt;p_{i+1} equals 1 (i = 3). 
+  * Permutation [1, 2, 3, 4] will count, because the number of such i that p_i<p_{i+1} equals 3 (i = 1, i = 2, i = 3).
+  * Permutation [3, 2, 1, 4] won''t count, because the number of such i that p_i<p_{i+1} equals 1 (i = 3). 
 
 
 
@@ -1380,7 +1380,7 @@ Now Monocarp asks you to compare these two numbers. Can you help him?
 
 The first line of each testcase contains two integers x_1 and p_1 (1 ≤ x_1 ≤ 10^6; 0 ≤ p_1 ≤ 10^6) — the description of the first number.
 
-The second line of each testcase contains two integers x_2 and p_2 (1 ≤ x_2 ≤ 10^6; 0 ≤ p_2 ≤ 10^6) — the description of the second number.', 'For each testcase print the result of the comparison of the given two numbers. If the first number is smaller than the second one, print ''&lt;''. If the first number is greater than the second one, print ''&gt;''. If they are equal, print ''=''.', '5
+The second line of each testcase contains two integers x_2 and p_2 (1 ≤ x_2 ≤ 10^6; 0 ≤ p_2 ≤ 10^6) — the description of the second number.', 'For each testcase print the result of the comparison of the given two numbers. If the first number is smaller than the second one, print ''<''. If the first number is greater than the second one, print ''>''. If they are equal, print ''=''.', '5
 2 1
 19 0
 10 2
@@ -1391,11 +1391,11 @@ The second line of each testcase contains two integers x_2 and p_2 (1 ≤ x_2 �
 1 0
 99 0
 1 2
-', '&gt;
+', '>
 =
-&lt;
+<
 =
-&lt;
+<
 ', NULL),
 (2005, 'PUBLISHED', 'Groups', 4000, 250000, 'n students attended the first meeting of the Berland SU programming course (n is even). All students will be divided into two groups. Each group will be attending exactly one lesson each week during one of the five working days (Monday, Tuesday, Wednesday, Thursday and Friday), and the days chosen for the groups must be different. Furthermore, both groups should contain the same number of students.
 
@@ -1430,7 +1430,7 @@ The mathematic mean of an array of n elements is the sum of elements divided by 
 
 Monocarp wants to delete exactly two elements from a so that the mathematic mean of the remaining (n - 2) elements is still equal to k.
 
-Your task is to calculate the number of pairs of positions [i, j] (i &lt; j) such that if the elements on these positions are deleted, the mathematic mean of (n - 2) remaining elements is equal to k (that is, it is equal to the mathematic mean of n elements of the original array a).
+Your task is to calculate the number of pairs of positions [i, j] (i < j) such that if the elements on these positions are deleted, the mathematic mean of (n - 2) remaining elements is equal to k (that is, it is equal to the mathematic mean of n elements of the original array a).
 
 ---
 *Source: Codeforces problem, via DeepMind CodeContests (CC BY 4.0).*', 'The first line contains a single integer t (1 ≤ t ≤ 10^4) — the number of testcases.
@@ -1439,7 +1439,7 @@ The first line of each testcase contains one integer n (3 ≤ n ≤ 2 ⋅ 10^5) 
 
 The second line contains a sequence of integers a_1, a_2, ..., a_n (0 ≤ a_i ≤ 10^{9}), where a_i is the i-th element of the array.
 
-The sum of n over all testcases doesn''t exceed 2 ⋅ 10^5.', 'Print one integer — the number of pairs of positions [i, j] (i &lt; j) such that if the elements on these positions are deleted, the mathematic mean of (n - 2) remaining elements is equal to k (that is, it is equal to the mathematic mean of n elements of the original array a).', '4
+The sum of n over all testcases doesn''t exceed 2 ⋅ 10^5.', 'Print one integer — the number of pairs of positions [i, j] (i < j) such that if the elements on these positions are deleted, the mathematic mean of (n - 2) remaining elements is equal to k (that is, it is equal to the mathematic mean of n elements of the original array a).', '4
 4
 8 8 8 8
 3
@@ -1464,7 +1464,7 @@ Monocarp knows that the dragon has h hit points, and if he deals at least h dama
 
 The first line of the test case contains two integers n and h (1 ≤ n ≤ 100; 1 ≤ h ≤ 10^{18}) — the number of Monocarp''s attacks and the amount of damage that needs to be dealt.
 
-The second line contains n integers a_1, a_2, ..., a_n (1 ≤ a_i ≤ 10^9; a_i &lt; a_{i + 1}), where a_i is the second when the i-th attack is performed.', 'For each test case, print a single integer — the minimum value of the parameter k, such that Monocarp will cause at least h damage to the dragon.', '4
+The second line contains n integers a_1, a_2, ..., a_n (1 ≤ a_i ≤ 10^9; a_i < a_{i + 1}), where a_i is the second when the i-th attack is performed.', 'For each test case, print a single integer — the minimum value of the parameter k, such that Monocarp will cause at least h damage to the dragon.', '4
 2 5
 1 5
 3 10
@@ -1623,11 +1623,11 @@ In one step, the array a is replaced by another array of length n according to t
 
 It means that the whole array a^{→ d} can be represented as a sequence $$$a^{→ d} = [a_{n - d}, a_{n - d + 1}, …, a_{n - 1}, a_0, a_1, …, a_{n - d - 1}]$$$
 
-  2. Then each element of the array a_i is replaced by a_i  \\&amp;  a^{→ d}_i, where \\&amp; is a logical "AND" operator. 
+  2. Then each element of the array a_i is replaced by a_i  \\&  a^{→ d}_i, where \\& is a logical "AND" operator. 
 
 
 
-For example, if a = [0, 0, 1, 1] and d = 1, then a^{→ d} = [1, 0, 0, 1] and the value of a after the first step will be [0  \\&amp;  1, 0  \\&amp;  0, 1  \\&amp;  0, 1  \\&amp;  1], that is [0, 0, 0, 1].
+For example, if a = [0, 0, 1, 1] and d = 1, then a^{→ d} = [1, 0, 0, 1] and the value of a after the first step will be [0  \\&  1, 0  \\&  0, 1  \\&  0, 1  \\&  1], that is [0, 0, 0, 1].
 
 The process ends when the array stops changing. For a given array a, determine whether it will consist of only zeros at the end of the process. If yes, also find the number of steps the process will take before it finishes.
 
@@ -1918,7 +1918,7 @@ The second line contains n integers a_1, a_2, …, a_n (1 ≤ a_i ≤ 10^9).', '
 ', '0', NULL),
 (2022, 'PUBLISHED', 'Middle Duplication', 1000, 250000, 'A binary tree of n nodes is given. Nodes of the tree are numbered from 1 to n and the root is the node 1. Each node can have no child, only one left child, only one right child, or both children. For convenience, let''s denote l_u and r_u as the left and the right child of the node u respectively, l_u = 0 if u does not have the left child, and r_u = 0 if the node u does not have the right child.
 
-Each node has a string label, initially is a single character c_u. Let''s define the string representation of the binary tree as the concatenation of the labels of the nodes in the in-order. Formally, let f(u) be the string representation of the tree rooted at the node u. f(u) is defined as follows: $$$ f(u) = \\begin{cases} &lt;empty string&gt;, &amp; if u = 0; \\\\\\ f(l_u) + c_u + f(r_u) &amp; otherwise, \\end{cases}  where +$$$ denotes the string concatenation operation.
+Each node has a string label, initially is a single character c_u. Let''s define the string representation of the binary tree as the concatenation of the labels of the nodes in the in-order. Formally, let f(u) be the string representation of the tree rooted at the node u. f(u) is defined as follows: $$$ f(u) = \\begin{cases} <empty string>, & if u = 0; \\\\\\ f(l_u) + c_u + f(r_u) & otherwise, \\end{cases}  where +$$$ denotes the string concatenation operation.
 
 This way, the string representation of the tree is f(1).
 

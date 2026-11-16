@@ -36,9 +36,10 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 /**
- * Runs the one-time upgrade script sql/upgrades/contest-tables.sql against a database in the state
- * schema.sql of 1.0.2 created: contest foreign keys without an ON DELETE rule, and the
- * contest_mode and contest_is_rated columns.
+ * Runs the one-time upgrade script sql/upgrades/upgrade-from-1.0.2.sql against a database in the
+ * state schema.sql of 1.0.2 created: contest foreign keys without an ON DELETE rule, the
+ * contest_mode and contest_is_rated columns, no submission_judge_generation column, and problem
+ * statements and contest notes written for HTML output (with HTML entities).
  *
  * <p>The script changes the schema (DDL commits implicitly), so this test is not {@code
  * Transactional}: it puts the shared test database back into the 1.0.2 state before each test and
@@ -48,12 +49,28 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
  */
 @ExtendWith(SpringExtension.class)
 @ContextConfiguration({"classpath:test-spring-context.xml"})
-public class ContestTablesUpgradeTest {
+public class UpgradeFrom102Test {
   /** The upgrade script, copied onto the test classpath from sql/upgrades. */
-  private static final String SCRIPT = "db/upgrades/contest-tables.sql";
+  private static final String SCRIPT = "db/upgrades/upgrade-from-1.0.2.sql";
 
   /** The option that marks the upgrade as done. */
-  private static final String MARKER = "contestTablesUpgraded";
+  private static final String MARKER = "upgradeFrom102Applied";
+
+  /** The problem inserted by this test, with a statement written for HTML output. */
+  private static final long PROBLEM_ID = 9101;
+
+  /**
+   * The text fields of that problem: { column, value as written for 1.0.2, value after the upgrade
+   * }. The hint was written as text in 1.0.2 already, so it is not decoded.
+   */
+  private static final String[][] PROBLEM_FIELDS = {
+    {"problem_description", "If $a &lt; b$, print &quot;&lt;&quot;.", "If $a < b$, print \"<\"."},
+    {"problem_input_format", "x &amp;&amp; y, it&#39;s&nbsp;fine", "x && y, it's\u00a0fine"},
+    {"problem_output_format", "Literal &amp;lt; stays", "Literal &lt; stays"},
+    {"problem_sample_input", "1 2", "1 2"},
+    {"problem_sample_output", "&gt; = &lt; = &lt;", "> = < = <"},
+    {"problem_hint", "Use `a &lt; b`", "Use `a &lt; b`"},
+  };
 
   /** The foreign keys the upgrade turns into cascading ones: { table, constraint, definition }. */
   private static final String[][] FOREIGN_KEYS = {
@@ -105,11 +122,29 @@ public class ContestTablesUpgradeTest {
             + " AFTER contest_freeze");
     jdbcTemplate.update(
         "UPDATE voj_contests SET contest_mode = IF(contest_scoring = 'IOI', 'OI', 'ACM')");
+    // The submissions as 1.0.2 created them, without a judge generation.
+    jdbcTemplate.execute("ALTER TABLE voj_submissions DROP COLUMN submission_judge_generation");
+    // A statement and contest notes written for HTML output.
+    StringBuilder columns = new StringBuilder();
+    Object[] values = new Object[PROBLEM_FIELDS.length + 1];
+    values[0] = PROBLEM_ID;
+    for (int i = 0; i < PROBLEM_FIELDS.length; ++i) {
+      columns.append(", ").append(PROBLEM_FIELDS[i][0]);
+      values[i + 1] = PROBLEM_FIELDS[i][1];
+    }
+    jdbcTemplate.update(
+        "INSERT INTO voj_problems (problem_id, problem_name, problem_time_limit,"
+            + " problem_memory_limit"
+            + columns
+            + ") VALUES (?, 'Legacy', 1000, 65536"
+            + ", ?".repeat(PROBLEM_FIELDS.length)
+            + ")",
+        values);
     for (String[] contest : CONTESTS) {
       jdbcTemplate.update(
           "INSERT INTO voj_contests (contest_id, contest_name, contest_notes, contest_start_time,"
               + " contest_end_time, contest_mode, contest_problems, contest_scoring)"
-              + " VALUES (?, 'Legacy', '', NOW(), NOW(), ?, '[]', ?)",
+              + " VALUES (?, 'Legacy', 'Rule: a &lt;= b', NOW(), NOW(), ?, '[]', ?)",
           Long.parseLong(contest[0]),
           contest[1],
           contest[2]);
@@ -130,6 +165,7 @@ public class ContestTablesUpgradeTest {
     // Whatever a test did, leave the schema upgraded and the marker exactly as seed.sql has it.
     runUpgrade();
     jdbcTemplate.update("DELETE FROM voj_contests WHERE contest_id BETWEEN 9101 AND 9104");
+    jdbcTemplate.update("DELETE FROM voj_problems WHERE problem_id = ?", PROBLEM_ID);
     jdbcTemplate.update("DELETE FROM voj_options WHERE option_name = ?", MARKER);
     jdbcTemplate.update(
         "INSERT INTO voj_options (option_id, option_name, option_value, is_autoload)"
@@ -178,13 +214,62 @@ public class ContestTablesUpgradeTest {
     }
     Assertions.assertEquals("IOI", getScoring("1"));
     Assertions.assertEquals("ICPC", getScoring("2"));
-    Assertions.assertFalse(hasColumn("contest_mode"));
-    Assertions.assertFalse(hasColumn("contest_is_rated"));
+    Assertions.assertFalse(hasColumn("voj_contests", "contest_mode"));
+    Assertions.assertFalse(hasColumn("voj_contests", "contest_is_rated"));
 
     jdbcTemplate.update(
         "UPDATE voj_contests SET contest_scoring = 'IOI' WHERE contest_id = 9102");
     runUpgrade();
     Assertions.assertEquals("IOI", getScoring("9102"));
+  }
+
+  /**
+   * Test case: runs the upgrade on a 1.0.2 database, then once more. Test data: no judge
+   * generation column. Expected: the column is added with 0 for the existing submissions, and the
+   * second run leaves it (and a generation a rejudge set since) as it is.
+   */
+  @Test
+  public void testAddsTheJudgeGeneration() throws SQLException {
+    Assertions.assertFalse(hasColumn("voj_submissions", "submission_judge_generation"));
+
+    runUpgrade();
+    Assertions.assertTrue(hasColumn("voj_submissions", "submission_judge_generation"));
+    Assertions.assertEquals(0, getJudgeGeneration(1000));
+
+    jdbcTemplate.update(
+        "UPDATE voj_submissions SET submission_judge_generation = 2 WHERE submission_id = 1000");
+    runUpgrade();
+    Assertions.assertEquals(2, getJudgeGeneration(1000));
+    jdbcTemplate.update(
+        "UPDATE voj_submissions SET submission_judge_generation = 0 WHERE submission_id = 1000");
+  }
+
+  /**
+   * Test case: runs the upgrade on a 1.0.2 database, then once more after an administrator wrote
+   * entities in a statement on the new version. Test data: a statement and contest notes written
+   * for HTML output. Expected: the first run decodes the entities of the description, the formats,
+   * the samples and the notes ({@code &amp;} last, so {@code &amp;lt;} becomes {@code &lt;}) but not
+   * of the hint; the second run decodes nothing.
+   */
+  @Test
+  public void testDecodesTheEntitiesOfStatementsOnce() throws SQLException {
+    runUpgrade();
+
+    for (String[] field : PROBLEM_FIELDS) {
+      Assertions.assertEquals(field[2], getProblemField(field[0]), field[0]);
+    }
+    Assertions.assertEquals(
+        "Rule: a <= b",
+        jdbcTemplate.queryForObject(
+            "SELECT contest_notes FROM voj_contests WHERE contest_id = 9101", String.class));
+    Assertions.assertEquals(1, getNumberOfMarkers());
+
+    jdbcTemplate.update(
+        "UPDATE voj_problems SET problem_sample_output = 'a &amp; b' WHERE problem_id = ?",
+        PROBLEM_ID);
+    runUpgrade();
+    Assertions.assertEquals("a &amp; b", getProblemField("problem_sample_output"));
+    Assertions.assertEquals(1, getNumberOfMarkers());
   }
 
   /**
@@ -240,13 +325,26 @@ public class ContestTablesUpgradeTest {
         Long.parseLong(contestId));
   }
 
-  private boolean hasColumn(String columnName) {
+  private boolean hasColumn(String tableName, String columnName) {
     return jdbcTemplate.queryForObject(
             "SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE()"
-                + " AND TABLE_NAME = 'voj_contests' AND COLUMN_NAME = ?",
+                + " AND TABLE_NAME = ? AND COLUMN_NAME = ?",
             Integer.class,
+            tableName,
             columnName)
         > 0;
+  }
+
+  private int getJudgeGeneration(long submissionId) {
+    return jdbcTemplate.queryForObject(
+        "SELECT submission_judge_generation FROM voj_submissions WHERE submission_id = ?",
+        Integer.class,
+        submissionId);
+  }
+
+  private String getProblemField(String column) {
+    return jdbcTemplate.queryForObject(
+        "SELECT " + column + " FROM voj_problems WHERE problem_id = ?", String.class, PROBLEM_ID);
   }
 
   private int getNumberOfMarkers() {

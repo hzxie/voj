@@ -253,14 +253,6 @@ def sql_str(s):
     return "'" + s.replace("\\", "\\\\").replace("'", "''") + "'"
 
 
-def html_safe(s):
-    # Statements render via th:utext (unescaped) + client-side markdown, so a raw
-    # "<" in the prose (e.g. "p_i < p_{i+1}") is parsed as an HTML tag and swallows
-    # the rest of the page. Escape the markup-significant characters for display.
-    # (Checkpoint data is left raw - it is judged byte-for-byte, never rendered.)
-    return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-
-
 def split_scores(n):
     sc = [100 // n] * n
     sc[0] += 100 - sum(sc)
@@ -295,7 +287,9 @@ def build_fragment(selected, tag_id):
     prows, meta, pid = [], [], PROBLEM_BASE_ID
     for c, tier in selected:
         desc = (
-            html_safe(c["statement"])
+            # Statements are stored as typed: the problem page writes them as text (Markdown),
+            # so they must not be HTML-escaped.
+            c["statement"]
             + "\n\n---\n*Source: %s problem, via DeepMind CodeContests (CC BY 4.0).*"
             % c["source"]
         )
@@ -308,10 +302,10 @@ def build_fragment(selected, tag_id):
                 c["ms"],
                 c["mem_kb"],
                 sql_str(desc),
-                sql_str(html_safe(c["in_fmt"])),
-                sql_str(html_safe(c["out_fmt"])),
-                sql_str(html_safe(si)),
-                sql_str(html_safe(so)),
+                sql_str(c["in_fmt"]),
+                sql_str(c["out_fmt"]),
+                sql_str(si),
+                sql_str(so),
             )
         )
         meta.append((pid, c, tier))

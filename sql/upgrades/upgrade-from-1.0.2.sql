@@ -14,15 +14,30 @@
 --    rule each contest was actually ranked by (OI -> IOI, anything else ->
 --    ICPC) and contest_mode is dropped.
 -- 3. voj_contests.contest_is_rated was stored but never used; it is dropped.
+-- 4. voj_submissions.submission_judge_generation counts the rejudges of a
+--    submission; every judging task carries it, so that a task a rejudge
+--    superseded is told apart from the current one. It is added (0 for every
+--    existing submission).
+-- 5. Up to 1.0.2 the problem page wrote the description, the input and output
+--    formats and the samples of a problem, and the contest page the notes of
+--    a contest, as HTML (th:utext). Statements were therefore written with
+--    HTML entities, e.g. a sample output "a &lt; b". Those fields are now
+--    written as text (Markdown for all but the samples), so the entities would
+--    show literally - in the samples, in code and in math. They are decoded
+--    once: &lt; &gt; &quot; &#39; &nbsp; (to U+00A0) and, last, &amp;, so that
+--    a statement that showed "&lt;" (stored "&amp;lt;") still shows "&lt;".
+--    The hint was already written as text, so it is left alone.
 --
--- Safe to run more than once: every step first checks the information schema
--- and only changes what is still in the old state (MySQL commits DDL
--- implicitly, so a transaction could not make the steps atomic; an interrupted
--- run is completed by running the script again). The last statement records
--- the option contestTablesUpgraded in voj_options; new installations get it
--- from seed.sql.
+-- Safe to run more than once. Steps 1 to 4 first check the information
+-- schema and only change what is still in the old state (MySQL commits DDL
+-- implicitly, so a transaction could not make them atomic; an interrupted run
+-- is completed by running the script again). Step 5 runs in one transaction
+-- with the recording of the option upgradeFrom102Applied in voj_options, and
+-- only if that option was not recorded yet, so that text typed after the
+-- upgrade (e.g. a statement that means "&amp;") is never decoded. New
+-- installations get the option from seed.sql.
 --
--- Usage: mysql -u <user> -p <database> < sql/upgrades/contest-tables.sql
+-- Usage: mysql -u <user> -p <database> < sql/upgrades/upgrade-from-1.0.2.sql
 SET NAMES utf8mb4;
 
 -- 1. Cascading foreign keys. Each one is dropped and added again unless its
@@ -104,5 +119,52 @@ PREPARE voj_stmt FROM @voj_sql;
 EXECUTE voj_stmt;
 DEALLOCATE PREPARE voj_stmt;
 
+-- 4. The judge generation of the submissions.
+SET @voj_has_column = (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'voj_submissions'
+  AND COLUMN_NAME = 'submission_judge_generation');
+SET @voj_sql = IF(@voj_has_column = 0,
+  'ALTER TABLE `voj_submissions` ADD COLUMN `submission_judge_generation` int(8) NOT NULL DEFAULT 0 AFTER `submission_execute_time`', 'DO 0');
+PREPARE voj_stmt FROM @voj_sql;
+EXECUTE voj_stmt;
+DEALLOCATE PREPARE voj_stmt;
+
+-- 5. The HTML entities of the statements and contest notes, decoded on the
+--    first run only: the marker is recorded in the same transaction, and a
+--    later run (or concurrent one, which waits on the unique option_name
+--    index) finds it and decodes nothing.
+START TRANSACTION;
+
 INSERT IGNORE INTO `voj_options` (`option_name`, `option_value`, `is_autoload`)
-VALUES ('contestTablesUpgraded', '1', 0);
+VALUES ('upgradeFrom102Applied', '1', 0);
+SET @voj_first_run = (ROW_COUNT() = 1);
+
+UPDATE `voj_problems` SET
+  `problem_description` = REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(`problem_description`,
+    '&lt;', '<'), '&gt;', '>'), '&quot;', '"'), '&#39;', ''''),
+    '&nbsp;', _utf8mb4 X'C2A0'), '&amp;', '&'),
+  `problem_input_format` = REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(`problem_input_format`,
+    '&lt;', '<'), '&gt;', '>'), '&quot;', '"'), '&#39;', ''''),
+    '&nbsp;', _utf8mb4 X'C2A0'), '&amp;', '&'),
+  `problem_output_format` = REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(`problem_output_format`,
+    '&lt;', '<'), '&gt;', '>'), '&quot;', '"'), '&#39;', ''''),
+    '&nbsp;', _utf8mb4 X'C2A0'), '&amp;', '&'),
+  `problem_sample_input` = REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(`problem_sample_input`,
+    '&lt;', '<'), '&gt;', '>'), '&quot;', '"'), '&#39;', ''''),
+    '&nbsp;', _utf8mb4 X'C2A0'), '&amp;', '&'),
+  `problem_sample_output` = REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(`problem_sample_output`,
+    '&lt;', '<'), '&gt;', '>'), '&quot;', '"'), '&#39;', ''''),
+    '&nbsp;', _utf8mb4 X'C2A0'), '&amp;', '&')
+WHERE @voj_first_run AND (`problem_description` LIKE '%&%'
+    OR `problem_input_format` LIKE '%&%'
+    OR `problem_output_format` LIKE '%&%'
+    OR `problem_sample_input` LIKE '%&%'
+    OR `problem_sample_output` LIKE '%&%');
+
+UPDATE `voj_contests` SET
+  `contest_notes` = REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(`contest_notes`,
+    '&lt;', '<'), '&gt;', '>'), '&quot;', '"'), '&#39;', ''''),
+    '&nbsp;', _utf8mb4 X'C2A0'), '&amp;', '&')
+WHERE @voj_first_run AND `contest_notes` LIKE '%&%';
+
+COMMIT;
