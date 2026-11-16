@@ -675,7 +675,9 @@ read `%ProgramData%` and create files in it, and so they could in anything
 created there with the ACL it inherits: the judger therefore creates the
 directory, its `judger-<n>\` cache and its `work-<n>\` directory each with an ACL
 of its own, which gives only the judger's account access (any account may still
-pass through a directory to one below it, by *Bypass traverse checking*). The
+pass through a directory to one below it, by *Bypass traverse checking*), but
+for the sandbox account reading the attributes of the directory and of
+`work-<n>\` (Node.js reads those of every directory above a script). The
 judger's account is the user of its process's token, not a name looked up
 (which a local and a domain account may share). In `work-<n>\`, what is created
 (the work directory of each judging and what is in it) is also the sandbox
@@ -683,7 +685,8 @@ account's, but for changing the ACL or the owner of what the judger creates
 there. A directory whose ACL cannot be set is removed again, so it is never
 left with the ACL it would inherit. The judger does not change the ACL of a
 `judger.checkpointDir` that exists already: create it yourself only with an
-ACL that gives no other account access.
+ACL that gives no other account access, but the sandbox account *Read
+attributes* (`icacls <dir> /grant voj-sandbox:(RA,S)`) for JavaScript.
 
 What a submission creates in its work directory is its own, so it may give it
 any ACL, even one that denies the judger everything. The judger removes it

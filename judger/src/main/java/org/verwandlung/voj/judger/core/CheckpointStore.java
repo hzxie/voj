@@ -328,16 +328,37 @@ public class CheckpointStore {
       createDirectory(directory, PASSABLE);
       return;
     }
+    UserPrincipal sandboxAccount =
+        directory
+            .getFileSystem()
+            .getUserPrincipalLookupService()
+            .lookupPrincipalByName(sandboxUsername);
     createWindowsDirectory(
         directory,
         List.of(
+            passable(sandboxAccount),
             inheritedOnly(
-                directory
-                    .getFileSystem()
-                    .getUserPrincipalLookupService()
-                    .lookupPrincipalByName(sandboxUsername),
+                sandboxAccount,
                 EnumSet.complementOf(
                     EnumSet.of(AclEntryPermission.WRITE_ACL, AclEntryPermission.WRITE_OWNER)))));
+  }
+
+  /**
+   * Builds an entry of an ACL (Windows) that lets an account read the attributes of a directory on
+   * its way to the work directory of a judging, and nothing else of it: as on Linux, where whoever
+   * may pass through a directory may read the attributes of what is in it. Programs look at the
+   * directories above the one they run in: Node.js resolves the real path of a script, which fails
+   * on a directory whose attributes it may not read, so every JavaScript submission would fail.
+   *
+   * @param account - the account it allows
+   * @return the entry
+   */
+  private static AclEntry passable(UserPrincipal account) {
+    return AclEntry.newBuilder()
+        .setType(AclEntryType.ALLOW)
+        .setPrincipal(account)
+        .setPermissions(AclEntryPermission.READ_ATTRIBUTES, AclEntryPermission.SYNCHRONIZE)
+        .build();
   }
 
   /**
@@ -469,9 +490,21 @@ public class CheckpointStore {
     String directory =
         checkpointDirectory.isBlank() ? defaultCheckpointDirectory() : checkpointDirectory;
     Path root = Paths.get(directory).toAbsolutePath().normalize();
+    // On Windows, the sandbox account may read the root's attributes (see #passable), looked up
+    // before anything is created.
+    UserPrincipal sandboxAccount =
+        isPosix()
+            ? null
+            : root.getFileSystem()
+                .getUserPrincipalLookupService()
+                .lookupPrincipalByName(sandboxUsername);
     try {
       Files.createDirectories(root.getParent());
-      createDirectory(root, PASSABLE);
+      if (isPosix()) {
+        createDirectory(root, PASSABLE);
+      } else {
+        createWindowsDirectory(root, List.of(passable(sandboxAccount)));
+      }
     } catch (FileAlreadyExistsException ex) {
       // Checked below, as any root the judger did not create.
     } catch (IOException ex) {

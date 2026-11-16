@@ -56,8 +56,9 @@ public class CheckpointStoreWindowsTest {
   /**
    * Test case: the checkpoint root does not exist yet. Expected result: the judger creates it and
    * the directories of its slot with an ACL of their own, not the one they would inherit: only the
-   * judger (the account of its process) may access the root and its cache; in its work directory,
-   * what is created is the sandbox account's too, but for changing its ACL or owner.
+   * judger (the account of its process) may access the cache; the sandbox account may read the
+   * attributes of the root and of the work directory, and what is created in the work directory is
+   * the sandbox account's too, but for changing its ACL or owner.
    */
   @Test
   public void testOpenCreatesDirectoriesOnlyTheJudgerMayAccess() throws Exception {
@@ -73,30 +74,36 @@ public class CheckpointStoreWindowsTest {
     Set<AclEntryFlag> inheritedOnly =
         EnumSet.of(
             AclEntryFlag.FILE_INHERIT, AclEntryFlag.DIRECTORY_INHERIT, AclEntryFlag.INHERIT_ONLY);
-    for (Path directory : new Path[] {root, cache}) {
-      List<AclEntry> acl = getAcl(directory);
-      Assertions.assertEquals(1, acl.size(), acl.toString());
-      assertEntry(acl.get(0), judger, EnumSet.allOf(AclEntryPermission.class), inherited);
-    }
-    List<AclEntry> acl = getAcl(work);
+    Set<AclEntryPermission> attributes =
+        EnumSet.of(AclEntryPermission.READ_ATTRIBUTES, AclEntryPermission.SYNCHRONIZE);
+    List<AclEntry> acl = getAcl(cache);
+    Assertions.assertEquals(1, acl.size(), acl.toString());
+    assertEntry(acl.get(0), judger, EnumSet.allOf(AclEntryPermission.class), inherited);
+    acl = getAcl(root);
     Assertions.assertEquals(2, acl.size(), acl.toString());
+    assertEntry(acl.get(0), judger, attributes, EnumSet.noneOf(AclEntryFlag.class));
+    assertEntry(acl.get(1), judger, EnumSet.allOf(AclEntryPermission.class), inherited);
+    acl = getAcl(work);
+    Assertions.assertEquals(3, acl.size(), acl.toString());
+    assertEntry(acl.get(0), judger, attributes, EnumSet.noneOf(AclEntryFlag.class));
     assertEntry(
-        acl.get(0),
+        acl.get(1),
         judger,
         EnumSet.complementOf(
             EnumSet.of(AclEntryPermission.WRITE_ACL, AclEntryPermission.WRITE_OWNER)),
         inheritedOnly);
-    assertEntry(acl.get(1), judger, EnumSet.allOf(AclEntryPermission.class), inherited);
+    assertEntry(acl.get(2), judger, EnumSet.allOf(AclEntryPermission.class), inherited);
   }
 
   /**
-   * Test case: the sandbox account does not exist. Expected result: the judger does not start (it
-   * looks the account up before it creates the work directory); it leaves no work directory
-   * behind, and releases its slot.
+   * Test case: the sandbox account does not exist (and the checkpoint root does: the judger would
+   * not create it otherwise). Expected result: the judger does not start (it looks the account up
+   * before it creates the work directory); it leaves no work directory behind, and releases its
+   * slot.
    */
   @Test
   public void testOpenWithoutTheSandboxAccountLeavesNoWorkDirectory() throws Exception {
-    Path root = tempDir.resolve("voj-judger");
+    Path root = Files.createDirectory(tempDir.resolve("voj-judger"));
     CheckpointStore store = newStore(root, "voj-no-such-account");
 
     Assertions.assertThrows(IOException.class, store::open);
