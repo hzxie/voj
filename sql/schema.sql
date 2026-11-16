@@ -202,9 +202,9 @@ CREATE TABLE `voj_submissions` (
   `submission_submit_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `submission_queued_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `submission_execute_time` timestamp NULL DEFAULT NULL,
-  `submission_judge_generation` int(8) NOT NULL DEFAULT 0,
+  `submission_judge_attempts` int(4) NOT NULL DEFAULT 0,
   `submission_claim_token` bigint(20) DEFAULT NULL,
-  `submission_lease_time` timestamp NULL DEFAULT NULL,
+  `submission_lease_expiry_time` timestamp NULL DEFAULT NULL,
   `submission_used_time` int(8) DEFAULT NULL,
   `submission_used_memory` int(8) DEFAULT NULL,
   `submission_judge_result` varchar(8) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'PD',
@@ -322,6 +322,7 @@ ALTER TABLE `voj_submissions`
   ADD KEY `uid` (`uid`),
   ADD KEY `submission_language_id` (`language_id`),
   ADD KEY `submission_runtime_result` (`submission_judge_result`),
+  ADD KEY `submission_judge_queue` (`submission_judge_result`,`submission_queued_time`),
   ADD KEY `judger_uid` (`judger_uid`);
 
 ALTER TABLE `voj_usermeta`

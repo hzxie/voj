@@ -14,17 +14,13 @@
 --    rule each contest was actually ranked by (OI -> IOI, anything else ->
 --    ICPC) and contest_mode is dropped.
 -- 3. voj_contests.contest_is_rated was stored but never used; it is dropped.
--- 4. voj_submissions.submission_judge_generation counts the rejudges of a
---    submission; every judging task carries it, so that a task a rejudge
---    superseded is told apart from the current one. It is added (0 for every
---    existing submission).
--- 5. voj_email_validation, which holds the token and the daily email counters
+-- 4. voj_email_validation, which holds the token and the daily email counters
 --    of an email address, referenced voj_users.email (ON UPDATE / DELETE
 --    CASCADE), so its counters followed an account to its new address, and
 --    several accounts taking turns on one address could each have it mailed
 --    up to the daily limit. The foreign key is dropped: the counters stay with
 --    the address.
--- 6. Up to 1.0.2 the problem page wrote the description, the input and output
+-- 5. Up to 1.0.2 the problem page wrote the description, the input and output
 --    formats and the samples of a problem, and the contest page the notes of
 --    a contest, as HTML (th:utext). Statements were therefore written with
 --    HTML entities, e.g. a sample output "a &lt; b". Those fields are now
@@ -33,32 +29,33 @@
 --    once: &lt; &gt; &quot; &#39; &nbsp; (to U+00A0) and, last, &amp;, so that
 --    a statement that showed "&lt;" (stored "&amp;lt;") still shows "&lt;".
 --    The hint was already written as text, so it is left alone.
--- 7. voj_contest_contestants.code_snippet was never written; it is dropped.
--- 8. The native sandbox lets a compiler write only inside its work
+-- 6. voj_contest_contestants.code_snippet was never written; it is dropped.
+-- 7. The native sandbox lets a compiler write only inside its work
 --    directory, so kotlinc's default compile command, whose terminal library
 --    unpacks itself into /tmp, now points the compiler's temporary directory
 --    there (the compile succeeded either way, with a warning in its log). A
 --    compile command an administrator changed is left as it is.
--- 9. voj_submissions.submission_queued_time is when the current judging task
---    of a submission was queued (on submission and on every rejudge); the web
---    application judges a submission a System Error that no judger took in
---    time. It is added, with the submit time for every judged submission and
---    the time of the upgrade for a pending one, whose task may still be waiting
---    for a judger.
--- 10. voj_submissions.submission_claim_token identifies the judging that
---    claimed a pending submission, and submission_lease_time is when that
---    judging last renewed its lease; the web application judges a submission a
---    System Error whose judging did not renew its lease in time. They are added
---    empty: no judging of the new version has claimed a pending submission yet.
+-- 8. The judgers take the pending submissions from voj_submissions itself
+--    rather than from a message queue. Four columns are added:
+--    submission_queued_time, when a submission was queued for judging (on
+--    submission and on every rejudge; the judgers take the oldest first),
+--    submission_judge_attempts, how many judgings have taken it since,
+--    submission_claim_token, which identifies the judging that took it, and
+--    submission_lease_expiry_time, until when that judging holds it. The
+--    existing submissions get the time of the upgrade as their queued time
+--    (only that of a pending one is read) and no judging: a pending one is
+--    judged by the first judger of the new version that supports its
+--    language. The index submission_judge_queue serves the judgers' search
+--    for the oldest pending submission.
 --
--- Safe to run more than once. Steps 1 to 5 and 7 to 10 first check the information
--- schema and only change what is still in the old state (MySQL commits DDL
--- implicitly, so a transaction could not make them atomic; an interrupted run
--- is completed by running the script again). Step 6 runs in one transaction
--- with the recording of the option upgradeFrom102Applied in voj_options, and
--- only if that option was not recorded yet, so that text typed after the
--- upgrade (e.g. a statement that means "&amp;") is never decoded. New
--- installations get the option from seed.sql.
+-- Safe to run more than once. Steps 1 to 4 and 6 to 8 first check the
+-- information schema and only change what is still in the old state (MySQL
+-- commits DDL implicitly, so a transaction could not make them atomic; an
+-- interrupted run is completed by running the script again). Step 5 runs in
+-- one transaction with the recording of the option upgradeFrom102Applied in
+-- voj_options, and only if that option was not recorded yet, so that text
+-- typed after the upgrade (e.g. a statement that means "&amp;") is never
+-- decoded. New installations get the option from seed.sql.
 --
 -- Usage: mysql -u <user> -p <database> < sql/upgrades/upgrade-from-1.0.2.sql
 SET NAMES utf8mb4;
@@ -146,17 +143,7 @@ PREPARE voj_stmt FROM @voj_sql;
 EXECUTE voj_stmt;
 DEALLOCATE PREPARE voj_stmt;
 
--- 4. The judge generation of the submissions.
-SET @voj_has_column = (SELECT COUNT(*) FROM information_schema.COLUMNS
-  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'voj_submissions'
-  AND COLUMN_NAME = 'submission_judge_generation');
-SET @voj_sql = IF(@voj_has_column = 0,
-  'ALTER TABLE `voj_submissions` ADD COLUMN `submission_judge_generation` int(8) NOT NULL DEFAULT 0 AFTER `submission_execute_time`', 'DO 0');
-PREPARE voj_stmt FROM @voj_sql;
-EXECUTE voj_stmt;
-DEALLOCATE PREPARE voj_stmt;
-
--- 5. The address-keyed email counters.
+-- 4. The address-keyed email counters.
 SET @voj_has_key = (SELECT COUNT(*) FROM information_schema.REFERENTIAL_CONSTRAINTS
   WHERE CONSTRAINT_SCHEMA = DATABASE() AND CONSTRAINT_NAME = 'voj_email_validation_ibfk_1');
 SET @voj_sql = IF(@voj_has_key > 0,
@@ -165,7 +152,7 @@ PREPARE voj_stmt FROM @voj_sql;
 EXECUTE voj_stmt;
 DEALLOCATE PREPARE voj_stmt;
 
--- 6. The HTML entities of the statements and contest notes, decoded on the
+-- 5. The HTML entities of the statements and contest notes, decoded on the
 --    first run only: the marker is recorded in the same transaction, and a
 --    later run (or concurrent one, which waits on the unique option_name
 --    index) finds it and decodes nothing.
@@ -205,7 +192,7 @@ WHERE @voj_first_run AND `contest_notes` LIKE '%&%';
 
 COMMIT;
 
--- 7. The never-written code snippets of contestants.
+-- 6. The never-written code snippets of contestants.
 SET @voj_has_column = (SELECT COUNT(*) FROM information_schema.COLUMNS
   WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'voj_contest_contestants'
   AND COLUMN_NAME = 'code_snippet');
@@ -215,42 +202,17 @@ PREPARE voj_stmt FROM @voj_sql;
 EXECUTE voj_stmt;
 DEALLOCATE PREPARE voj_stmt;
 
--- 8. Kotlin's temporary directory, in the default compile command only.
+-- 7. Kotlin's temporary directory, in the default compile command only.
 UPDATE `voj_languages`
 SET `language_compile_command` = 'kotlinc -J-Djava.io.tmpdir=. {filename}.kt -include-runtime -d {filename}.jar'
 WHERE `language_compile_command` = 'kotlinc {filename}.kt -include-runtime -d {filename}.jar';
 
--- 9. The time the current judging task of a submission was queued. The
---    column is added without values, filled in where it has none, and only
---    then made NOT NULL, so that running the script again completes a run that
---    was interrupted in between.
+-- 8. The columns of the judging queue, added in one statement.
 SET @voj_has_column = (SELECT COUNT(*) FROM information_schema.COLUMNS
   WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'voj_submissions'
   AND COLUMN_NAME = 'submission_queued_time');
 SET @voj_sql = IF(@voj_has_column = 0,
-  'ALTER TABLE `voj_submissions` ADD COLUMN `submission_queued_time` timestamp NULL DEFAULT NULL AFTER `submission_submit_time`', 'DO 0');
-PREPARE voj_stmt FROM @voj_sql;
-EXECUTE voj_stmt;
-DEALLOCATE PREPARE voj_stmt;
-UPDATE `voj_submissions`
-SET `submission_queued_time` = IF(`submission_judge_result` = 'PD', NOW(), `submission_submit_time`)
-WHERE `submission_queued_time` IS NULL;
-SET @voj_is_nullable = (SELECT IS_NULLABLE FROM information_schema.COLUMNS
-  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'voj_submissions'
-  AND COLUMN_NAME = 'submission_queued_time');
-SET @voj_sql = IF(@voj_is_nullable = 'YES',
-  'ALTER TABLE `voj_submissions` MODIFY COLUMN `submission_queued_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP', 'DO 0');
-PREPARE voj_stmt FROM @voj_sql;
-EXECUTE voj_stmt;
-DEALLOCATE PREPARE voj_stmt;
-
--- 10. The claim token and the lease of the judging of a submission, added in
---    one statement.
-SET @voj_has_column = (SELECT COUNT(*) FROM information_schema.COLUMNS
-  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'voj_submissions'
-  AND COLUMN_NAME = 'submission_claim_token');
-SET @voj_sql = IF(@voj_has_column = 0,
-  'ALTER TABLE `voj_submissions` ADD COLUMN `submission_claim_token` bigint(20) DEFAULT NULL AFTER `submission_judge_generation`, ADD COLUMN `submission_lease_time` timestamp NULL DEFAULT NULL AFTER `submission_claim_token`', 'DO 0');
+  'ALTER TABLE `voj_submissions` ADD COLUMN `submission_queued_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP AFTER `submission_submit_time`, ADD COLUMN `submission_judge_attempts` int(4) NOT NULL DEFAULT 0 AFTER `submission_execute_time`, ADD COLUMN `submission_claim_token` bigint(20) DEFAULT NULL AFTER `submission_judge_attempts`, ADD COLUMN `submission_lease_expiry_time` timestamp NULL DEFAULT NULL AFTER `submission_claim_token`, ADD KEY `submission_judge_queue` (`submission_judge_result`,`submission_queued_time`)', 'DO 0');
 PREPARE voj_stmt FROM @voj_sql;
 EXECUTE voj_stmt;
 DEALLOCATE PREPARE voj_stmt;
