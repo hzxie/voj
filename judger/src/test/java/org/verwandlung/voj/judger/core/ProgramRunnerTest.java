@@ -30,9 +30,7 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.Transactional;
 
-import org.verwandlung.voj.judger.mapper.CheckpointMapper;
 import org.verwandlung.voj.judger.mapper.SubmissionMapper;
-import org.verwandlung.voj.judger.model.Checkpoint;
 import org.verwandlung.voj.judger.model.Submission;
 
 /**
@@ -62,7 +60,7 @@ public class ProgramRunnerTest {
     String outputFilePath = workBaseDirectory + "/voj-1000/output#0.txt";
 
     preprocessor.createTestCode(submission, workDirectory, baseFileName);
-    writeCheckpoints(submission.getProblem().getProblemId());
+    writeInput(inputFilePath, "18820 26832\r\n");
     compiler.getCompileResult(submission, workDirectory, baseFileName);
 
     Map<String, Object> result =
@@ -87,7 +85,7 @@ public class ProgramRunnerTest {
     String outputFilePath = workBaseDirectory + "/voj-1000/output#0.txt";
 
     preprocessor.createTestCode(submission, workDirectory, baseFileName);
-    writeCheckpoints(submission.getProblem().getProblemId());
+    writeInput(inputFilePath, "18820 26832\r\n");
     compiler.getCompileResult(submission, workDirectory, baseFileName);
 
     Map<String, Object> result =
@@ -97,28 +95,18 @@ public class ProgramRunnerTest {
   }
 
   /**
-   * Materializes a problem's checkpoints onto the local disk where the runner expects them. The
-   * judger no longer fetches test data from the database at runtime (it downloads and caches it from
-   * the web side), so this test populates the cache directory directly from the database to stay
-   * self-contained without a running web application.
+   * Writes the input of a checkpoint where the runner reads it from (the first checkpoint of
+   * Problem#1000 in test-data.sql). The judger downloads test data from the web application, which
+   * the test does without.
    *
-   * @param problemId - the unique identifier of the problem
-   * @throws Exception if a checkpoint file cannot be written
+   * @param inputFilePath - the path of the input file
+   * @param input - the input
+   * @throws Exception if the file cannot be written
    */
-  private void writeCheckpoints(long problemId) throws Exception {
-    File problemDirectory = new File(checkpointDirectory, String.valueOf(problemId));
-    problemDirectory.mkdirs();
-    for (Checkpoint checkpoint : checkpointMapper.getCheckpointsUsingProblemId(problemId)) {
-      int checkpointId = checkpoint.getCheckpointId();
-      Files.writeString(
-          new File(problemDirectory, "input#" + checkpointId + ".txt").toPath(),
-          checkpoint.getInput(),
-          StandardCharsets.UTF_8);
-      Files.writeString(
-          new File(problemDirectory, "output#" + checkpointId + ".txt").toPath(),
-          checkpoint.getOutput(),
-          StandardCharsets.UTF_8);
-    }
+  private void writeInput(String inputFilePath, String input) throws Exception {
+    File inputFile = new File(inputFilePath);
+    inputFile.getParentFile().mkdirs();
+    Files.writeString(inputFile.toPath(), input, StandardCharsets.UTF_8);
   }
 
   /** The ProgramRunner object under test. */
@@ -133,14 +121,7 @@ public class ProgramRunnerTest {
   /** The autowired SubmissionMapper object, used to set up the test cases. */
   @Autowired private SubmissionMapper submissionMapper;
 
-  /** The autowired CheckpointMapper object, used to materialize the test data from the database. */
-  @Autowired private CheckpointMapper checkpointMapper;
-
   /** The working directory of the judger, used to store compilation results and program output. */
   @Value("${judger.workDir}")
   private String workBaseDirectory;
-
-  /** The storage directory of checkpoints, where the runner reads its input/output files. */
-  @Value("${judger.checkpointDir}")
-  private String checkpointDirectory;
 }
