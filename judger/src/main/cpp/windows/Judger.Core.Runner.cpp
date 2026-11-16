@@ -131,6 +131,15 @@ static const wchar_t* const ESSENTIAL_ENVIRONMENT_VARIABLES[] = {
     L"SystemRoot", L"SystemDrive", L"windir", L"ComSpec", L"PATHEXT",
 };
 /**
+ * The variables a JVM reads its options from (the java launcher's JDK_JAVA_OPTIONS, and the JVM's
+ * own JAVA_TOOL_OPTIONS and _JAVA_OPTIONS), which are never taken from the sandbox user's
+ * environment: as on Linux, where the sandbox gets none of them, a run gets JDK_JAVA_OPTIONS from
+ * the judger only, and a compilation none.
+ */
+static const wchar_t* const JVM_OPTIONS_VARIABLES[] = {
+    L"JDK_JAVA_OPTIONS", L"JAVA_TOOL_OPTIONS", L"_JAVA_OPTIONS",
+};
+/**
  * The Go toolchain's writable state, which must never be shared between submissions: a build
  * cache that one submission can write is one it can poison for every later Go build. As on Linux
  * (where the sandbox user is always a different user too), both live in the submission's own work
@@ -688,8 +697,9 @@ bool createProcess(const std::wstring& commandLine, const std::wstring& username
 /**
  * Builds the environment of the sandboxed process: the sandbox user's own environment, plus the
  * judger's whitelisted toolchain variables (INHERITED_ENVIRONMENT_VARIABLES), a private Go build
- * cache and GOPATH in the work directory, and the options of the JVM a run starts. Nothing else of
- * the judger's environment is passed on.
+ * cache and GOPATH in the work directory, and the options of the JVM a run starts, in place of any
+ * the user's environment sets (JVM_OPTIONS_VARIABLES). Nothing else of the judger's environment is
+ * passed on.
  *
  * CreateEnvironmentBlock is called with bInherit = FALSE, so the block holds only the system
  * variables and the user's own variables and profile paths (USERPROFILE, APPDATA, LOCALAPPDATA,
@@ -702,8 +712,8 @@ bool createProcess(const std::wstring& commandLine, const std::wstring& username
  *                            are then left to the user's defaults)
  * @param  javaOptions      - the value of JDK_JAVA_OPTIONS, which the java launcher (and nothing
  *                            else) reads: the heap and other settings that fit the JVM to the run's
- *                            limits, derived from them by JavaOptions.java (empty: not set, the
- *                            user's own value, if any, is kept)
+ *                            limits, derived from them by JavaOptions.java (empty: not set; the
+ *                            user's own JVM option variables are dropped either way)
  * @param  environmentBlock - receives the Unicode environment block (sorted "NAME=value" strings,
  *                            each NUL-terminated, followed by an extra NUL)
  * @return whether the block was built (GetLastError() tells why not)
@@ -726,6 +736,12 @@ bool buildEnvironmentBlock(HANDLE hToken, const std::wstring& workDirectory,
         environment[std::wstring(entry, separator - entry)] = std::wstring(separator + 1);
     }
     DestroyEnvironmentBlock(lpUserEnvironment);
+    // The JVM options the sandbox account's profile may set: a compilation never gets them, as on
+    // Linux, and a run only the judger's (see JavaOptions.java), which the profile could otherwise
+    // override (_JAVA_OPTIONS comes after every other option, -Xmx included).
+    for ( const wchar_t* name : JVM_OPTIONS_VARIABLES ) {
+        environment.erase(name);
+    }
 
     std::wstring value;
     for ( const wchar_t* name : INHERITED_ENVIRONMENT_VARIABLES ) {

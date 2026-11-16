@@ -515,7 +515,10 @@ judger's environment (such as `VOJ_DB_PASSWORD` or `VOJ_JUDGER_API_TOKEN`)
 reaches it. `GOCACHE` and `GOPATH` point into the submission's work directory,
 so every Go build starts from its own empty cache, and a run gets
 `JDK_JAVA_OPTIONS` (see [Java and Kotlin runs](#java-and-kotlin-runs)). Toolchains must therefore be
-reachable through the judger's `PATH` and readable by the sandbox account.
+reachable through the judger's `PATH` and readable by the sandbox account. The
+JVM option variables of the account's own environment (`JDK_JAVA_OPTIONS`,
+`JAVA_TOOL_OPTIONS`, `_JAVA_OPTIONS`) are dropped, for compilations and runs
+alike, as on Linux, where the sandbox never gets them.
 
 ### The sandbox account
 
