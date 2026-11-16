@@ -26,6 +26,7 @@ import org.springframework.context.annotation.Primary;
 import org.verwandlung.voj.judger.core.IsolateRunner;
 import org.verwandlung.voj.judger.core.Runner;
 import org.verwandlung.voj.judger.core.SandboxRunner;
+import org.verwandlung.voj.judger.util.FileSystemUtils;
 
 /**
  * Selects the {@link SandboxRunner} by {@code judger.sandbox}. Both backends carry out the same
@@ -38,6 +39,9 @@ import org.verwandlung.voj.judger.core.SandboxRunner;
  *       a judger that is not root (development, the tests) or a host without isolate.
  * </ul>
  *
+ * <p>The judger does not start with any other value, nor with {@code isolate} when it is not root:
+ * it could not hand the box's user the directories of a judging, and every compilation would fail.
+ *
  * @author Haozhe Xie
  */
 @Configuration
@@ -49,6 +53,8 @@ public class SandboxConfiguration {
    * @param nativeRunner - the native runner
    * @param isolateRunner - the isolate runner
    * @return the selected sandbox runner
+   * @throws IllegalStateException if the sandbox is unknown, or isolate for a judger that is not
+   *     root
    */
   @Bean
   @Primary
@@ -57,8 +63,16 @@ public class SandboxConfiguration {
       Runner nativeRunner,
       IsolateRunner isolateRunner) {
     if ("isolate".equalsIgnoreCase(sandbox)) {
+      if (!FileSystemUtils.isRunningAsRoot()) {
+        throw new IllegalStateException(
+            "judger.sandbox = isolate needs a judger running as root on Linux; use native instead");
+      }
       LOGGER.info("Using the isolate sandbox runner.");
       return isolateRunner;
+    }
+    if (!"native".equalsIgnoreCase(sandbox)) {
+      throw new IllegalStateException(
+          "judger.sandbox must be native or isolate, not \"" + sandbox + "\"");
     }
     LOGGER.info("Using the native sandbox runner.");
     return nativeRunner;

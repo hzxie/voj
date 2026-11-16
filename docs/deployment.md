@@ -363,8 +363,8 @@ without extra capabilities. It needs:
 
 ## The isolate backend
 
-With `judger.sandbox = isolate` the judger (running as root) prepares an isolate
-box for every compilation and run. isolate runs box *n* as UID
+With `judger.sandbox = isolate` the judger (running as root: it does not start
+otherwise) prepares an isolate box for every compilation and run. isolate runs box *n* as UID
 `first_uid + n` (its default `first_uid` is 60000), so the judger hands each
 submission's program directory, and the work directory of each run, to that
 UID: set `judger.isolate.firstUid` to isolate's `first_uid` and
