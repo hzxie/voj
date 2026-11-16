@@ -65,8 +65,16 @@ public class Dispatcher {
    */
   public void createNewTask(long submissionId) throws IllgealSubmissionException {
     synchronized (this) {
+      // Unique per judging, not just per submission: another judger on this host may be judging
+      // the same submission (a rejudge, or a task delivered again) in the same directory.
       String baseDirectory =
-          String.format("%s/voj-%s", new Object[] {workBaseDirectory, submissionId});
+          String.format(
+              "%s/voj-%d-%s",
+              new Object[] {
+                workBaseDirectory,
+                submissionId,
+                DigestUtils.getRandomString(12, DigestUtils.Mode.ALPHANUMERIC)
+              });
       String baseFileName = DigestUtils.getRandomString(12, DigestUtils.Mode.ALPHA);
 
       // The web application queues the task only once the submission is committed (after the

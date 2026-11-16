@@ -268,9 +268,15 @@ public class DispatcherTest {
   @Test
   public void testCreateNewTaskCleansUpOnFailure(@TempDir Path tempDir) throws Exception {
     ReflectionTestUtils.setField(dispatcher, "workBaseDirectory", tempDir.toString());
-    Path workDirectory = Files.createDirectory(tempDir.resolve("voj-100"));
-    Files.writeString(workDirectory.resolve("Main.cpp"), "int main() {}");
-
+    org.mockito.Mockito.doAnswer(
+            invocation -> {
+              String workDirectory = invocation.getArgument(1);
+              Path directory = Files.createDirectory(Path.of(workDirectory));
+              Files.writeString(directory.resolve("Main.cpp"), "int main() {}");
+              return null;
+            })
+        .when(preprocessor)
+        .createTestCode(any(), anyString(), anyString());
     when(checkpointStore.getCheckpoints(1000L)).thenReturn(oneCheckpoint());
     when(compiler.getCompileResult(any(), anyString(), anyString()))
         .thenThrow(new IllegalStateException("compiler crashed"));
@@ -278,7 +284,31 @@ public class DispatcherTest {
     dispatcher.createNewTask(100L);
 
     verify(applicationDispatcher).onErrorOccurred(any(), eq(Dispatcher.INTERNAL_ERROR_REASON));
-    Assertions.assertFalse(Files.exists(workDirectory));
+    try (java.util.stream.Stream<Path> leftovers = Files.list(tempDir)) {
+      Assertions.assertEquals(0, leftovers.count());
+    }
+  }
+
+  /**
+   * Test case: tests the createNewTask method. Test data: the same submission judged twice (as by
+   * two judgers on one host). Expected result: each judging gets a work directory of its own.
+   */
+  @Test
+  public void testEachJudgingHasItsOwnWorkDirectory() throws Exception {
+    when(checkpointStore.getCheckpoints(1000L)).thenReturn(oneCheckpoint());
+    when(compiler.getCompileResult(any(), anyString(), anyString()))
+        .thenReturn(compileResult(false));
+
+    dispatcher.createNewTask(100L);
+    dispatcher.createNewTask(100L);
+
+    org.mockito.ArgumentCaptor<String> workDirectories =
+        org.mockito.ArgumentCaptor.forClass(String.class);
+    verify(compiler, times(2)).getCompileResult(any(), workDirectories.capture(), anyString());
+    String first = workDirectories.getAllValues().get(0);
+    String second = workDirectories.getAllValues().get(1);
+    Assertions.assertTrue(first.startsWith("/tmp/voj-dispatcher-tests/voj-100-"), first);
+    Assertions.assertNotEquals(first, second);
   }
 
   /**

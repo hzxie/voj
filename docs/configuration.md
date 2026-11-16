@@ -92,7 +92,7 @@ restarts with it):
 
 | Property | Default | Purpose |
 | --- | --- | --- |
-| `judger.workDir` | `/tmp` | Parent of per-submission work directories. The judger creates a private `0700` subdirectory per submission. |
+| `judger.workDir` | `/tmp` | Parent of the work directories. The judger creates a private `0700` subdirectory, `voj-<submissionId>-<random>`, for every judging and removes it afterwards; the random part keeps two judgers on one host apart when they judge the same submission. |
 | `judger.checkpointDir` | `/tmp/voj-testpoints` | Local cache of downloaded reference inputs/outputs, kept readable only by the judger. |
 
 ### Checkpoint download
