@@ -25,11 +25,17 @@ import java.util.Map;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.AdditionalAnswers;
+import org.mockito.ArgumentMatchers;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
+import org.springframework.test.util.AopTestUtils;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.verwandlung.voj.web.mapper.ContestContestantMapper;
 import org.verwandlung.voj.web.mapper.ContestMapper;
 import org.verwandlung.voj.web.model.Contest;
 import org.verwandlung.voj.web.model.ContestContestant;
@@ -233,6 +239,44 @@ public class ContestServiceTest {
     Assertions.assertFalse(contestService.removeContestant(3, 1002));
     Assertions.assertFalse(contestService.isAttendContest(3, userWithUid(1002)));
     Assertions.assertEquals(1, contestService.getNumberOfContestantsOfContest(3));
+  }
+
+  /**
+   * Test case: tests addContestant(long, String) and attendContest(...) when a concurrent request
+   * registers the user between the test that they are not registered yet and the registration.
+   * Test data: Contest #3, published with open registration, where users 1000 and 1002 are
+   * registered already, but the test whether they are registered says they are not (as it did for
+   * the concurrent request). Expected: the database rejects the second registration, which is
+   * reported as the user being registered already, not thrown.
+   */
+  @Test
+  public void testConcurrentDuplicateRegistrationIsReportedAsRegistered() {
+    publishContest(3, true);
+    contestContestantMapper.createContestContestant(
+        new ContestContestant(contestMapper.getContest(3), userWithUid(1000)));
+    contestContestantMapper.createContestContestant(
+        new ContestContestant(contestMapper.getContest(3), userWithUid(1002)));
+    Object target = AopTestUtils.getTargetObject(contestService);
+    ContestContestantMapper staleMapper =
+        Mockito.mock(
+            ContestContestantMapper.class, AdditionalAnswers.delegatesTo(contestContestantMapper));
+    Mockito.doReturn(null)
+        .when(staleMapper)
+        .getContestantOfContest(ArgumentMatchers.anyLong(), ArgumentMatchers.anyLong());
+    ReflectionTestUtils.setField(target, "contestContestantMapper", staleMapper);
+    try {
+      Map<String, Object> result = contestService.addContestant(3, "zjhzxhz");
+      Assertions.assertEquals(Boolean.FALSE, result.get("isSuccessful"));
+      Assertions.assertEquals(Boolean.TRUE, result.get("isAttendedContest"));
+      Assertions.assertNull(result.get("uid"));
+
+      Map<String, Boolean> attendResult = contestService.attendContest(3, userWithUid(1002));
+      Assertions.assertFalse(attendResult.get("isSuccessful"));
+      Assertions.assertTrue(attendResult.get("isAttendedContest"));
+    } finally {
+      ReflectionTestUtils.setField(target, "contestContestantMapper", contestContestantMapper);
+    }
+    Assertions.assertEquals(2, contestService.getNumberOfContestantsOfContest(3));
   }
 
   /** Test case: tests the attendContest(...) method. Test data: the not-started but hidden Contest #3. Expected: attendance fails as if the contest did not exist. */

@@ -17,6 +17,7 @@
 package org.verwandlung.voj.web.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.verwandlung.voj.web.mapper.ContestContestantMapper;
@@ -516,9 +517,9 @@ public class ContestService {
             && result.get("isRegistrationOpen")
             && result.get("isUserLogin")
             && !result.get("isAttendedContest");
-    if (isSuccessful) {
-      ContestContestant contestContestant = new ContestContestant(contest, currentUser);
-      contestContestantMapper.createContestContestant(contestContestant);
+    if (isSuccessful && !createContestant(contest, currentUser)) {
+      result.put("isAttendedContest", true);
+      isSuccessful = false;
     }
     result.put("isSuccessful", isSuccessful);
     return result;
@@ -558,13 +559,35 @@ public class ContestService {
     boolean isAttended = contest != null && isAttendContest(contestId, user);
     result.put("isAttendedContest", isAttended);
     boolean isSuccessful = contest != null && user != null && !isAttended;
+    if (isSuccessful && !createContestant(contest, user)) {
+      result.put("isAttendedContest", true);
+      isSuccessful = false;
+    }
     if (isSuccessful) {
-      contestContestantMapper.createContestContestant(new ContestContestant(contest, user));
       result.put("uid", user.getUid());
       result.put("username", user.getUsername());
     }
     result.put("isSuccessful", isSuccessful);
     return result;
+  }
+
+  /**
+   * Registers a user for a contest. The callers test first that the user is not registered yet, but
+   * a concurrent request (e.g. a double click) may register them in between: the primary key then
+   * rejects the second registration, which is reported as the user being registered already rather
+   * than as an error.
+   *
+   * @param contest - the contest
+   * @param user - the user to register
+   * @return whether the user was registered; false if they were registered already
+   */
+  private boolean createContestant(Contest contest, User user) {
+    try {
+      contestContestantMapper.createContestContestant(new ContestContestant(contest, user));
+      return true;
+    } catch (DuplicateKeyException ex) {
+      return false;
+    }
   }
 
   /**

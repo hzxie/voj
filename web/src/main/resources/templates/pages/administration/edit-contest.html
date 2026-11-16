@@ -311,7 +311,12 @@
                 if (!m) { return null; }
                 return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
             }
+            var saveButton = document.getElementById('save-contest');
+            function showSaveError(text) { $err.text(text).removeClass('hide'); }
+            // The button stays disabled while a save is running (a second click would create the
+            // contest twice), and after a successful one, while the browser leaves the page.
             function save() {
+                if (saveButton.disabled) { return; }
                 $err.addClass('hide');
                 var startRaw = startInput.value;
                 var durationMinutes = parseHhMm(document.getElementById('contest-duration').value);
@@ -338,15 +343,25 @@
                 };
                 var url = contestId ? [[@{/administration/editContest.action}]] : [[@{/administration/createContest.action}]];
                 if (contestId) { data.contestId = contestId; }
+                var isLeaving = false;
+                saveButton.disabled = true;
                 $.ajax({
                     type: 'POST', url: url, data: data, dataType: 'JSON',
                     success: function (result) {
-                        if (result['isSuccessful']) { window.location.href = [[@{/administration/all-contests}]]; }
-                        else { $err.text([[#{voj.administration.edit-contest.invalid-error}]]).removeClass('hide'); }
-                    }
+                        if (result['isSuccessful']) {
+                            isLeaving = true;
+                            window.location.href = [[@{/administration/all-contests}]];
+                        } else if (result['isContestExists'] === false) {
+                            showSaveError([[#{voj.administration.edit-contest.contest-not-exists}]]);
+                        } else {
+                            showSaveError([[#{voj.administration.edit-contest.invalid-error}]]);
+                        }
+                    },
+                    error: function () { showSaveError([[#{voj.administration.edit-contest.save-error}]]); },
+                    complete: function () { if (!isLeaving) { saveButton.disabled = false; } }
                 });
             }
-            document.getElementById('save-contest').addEventListener('click', save);
+            saveButton.addEventListener('click', save);
 
             function del() {
                 vojConfirm([[#{voj.administration.edit-contest.continue-or-not}]]).then(function (ok) {
@@ -386,16 +401,29 @@
                 document.getElementById('contestants-count').textContent = count;
                 document.getElementById('contestants-empty').classList.toggle('hide', count !== 0);
             }
+            // Each control is disabled while its request is running, so that a second click does
+            // not send it again.
             function bindRemove(row) {
-                row.querySelector('.adm-cprob-x').addEventListener('click', function () {
+                var button = row.querySelector('.adm-cprob-x');
+                button.addEventListener('click', function () {
+                    if (button.disabled) { return; }
                     vojConfirm([[#{voj.administration.edit-contest.remove-contestant-confirm}]]).then(function (ok) {
-                        if (!ok) { return; }
+                        if (!ok || button.disabled) { return; }
+                        button.disabled = true;
+                        showError('');
                         $.ajax({
                             type: 'POST', url: [[@{/administration/removeContestant.action}]],
                             data: { contestId: contestId, uid: row.getAttribute('data-uid') }, dataType: 'JSON',
                             success: function (result) {
-                                if (result['isSuccessful']) { row.remove(); refreshCount(); input.focus(); }
-                            }
+                                // Unsuccessful: the user was not registered (any more), e.g. removed
+                                // from another page. Either way the row is gone from the contest.
+                                if (!result['isSuccessful']) {
+                                    showError([[#{voj.administration.edit-contest.contestant-not-registered}]]);
+                                }
+                                row.remove(); refreshCount(); input.focus();
+                            },
+                            error: function () { showError([[#{voj.administration.edit-contest.contestant-error}]]); },
+                            complete: function () { button.disabled = false; }
                         });
                     });
                 });
@@ -419,9 +447,11 @@
                 list.appendChild(row);
                 bindRemove(row);
             }
+            var addButton = document.getElementById('add-contestant');
             function add() {
                 var username = input.value.trim();
-                if (!username) { return; }
+                if (!username || addButton.disabled) { return; }
+                addButton.disabled = true;
                 showError('');
                 $.ajax({
                     type: 'POST', url: [[@{/administration/addContestant.action}]],
@@ -431,16 +461,22 @@
                             addRow(result['uid'], result['username']);
                             input.value = '';
                             refreshCount();
+                        } else if (!result['isContestExists']) {
+                            showError([[#{voj.administration.edit-contest.contest-not-exists}]]);
                         } else if (!result['isUserExists']) {
                             showError([[#{voj.administration.edit-contest.contestant-not-found}]]);
                         } else if (result['isAttendedContest']) {
                             showError([[#{voj.administration.edit-contest.contestant-already-added}]]);
+                        } else {
+                            showError([[#{voj.administration.edit-contest.contestant-error}]]);
                         }
-                    }
+                    },
+                    error: function () { showError([[#{voj.administration.edit-contest.contestant-error}]]); },
+                    complete: function () { addButton.disabled = false; }
                 });
             }
             Array.prototype.forEach.call(list.children, bindRemove);
-            document.getElementById('add-contestant').addEventListener('click', add);
+            addButton.addEventListener('click', add);
             input.addEventListener('keydown', function (e) {
                 if (e.key === 'Enter') { e.preventDefault(); add(); }
             });

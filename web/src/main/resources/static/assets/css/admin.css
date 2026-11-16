@@ -462,6 +462,7 @@ input.adm-langname:focus { border-color:var(--accent); }
 .adm-btn-tn.danger { color:var(--err); border-color:var(--err); }
 .adm-btn-tn.danger:hover { background:var(--err); color:#fff; }
 .adm-btn-tn.go { font-weight:600; color:var(--accent-ink); background:var(--accent); border:none; padding:0 17px; }
+.adm-btn-tn:disabled { opacity:.6; cursor:default; }
 
 .adm-ed2 { display:grid; grid-template-columns:minmax(0,1fr) 322px; gap:18px; align-items:start; }
 .adm-col { display:flex; flex-direction:column; gap:18px; min-width:0; }
@@ -543,6 +544,7 @@ input.adm-langname:focus { border-color:var(--accent); }
 .adm-cand-pid { font-size:11px; color:var(--text3); font-family:var(--mono); flex-shrink:0; }
 .adm-cand-title { flex:1; font-size:12.5px; color:var(--head); font-weight:600; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .adm-cand-add { font:inherit; font-size:11px; font-weight:600; color:var(--accent-ink); background:var(--accent); border:0; border-radius:7px; padding:5px 11px; cursor:pointer; white-space:nowrap; flex-shrink:0; }
+.adm-cand-add:disabled { opacity:.6; cursor:default; }
 .adm-diff { font-size:9.5px; font-weight:700; color:currentColor; border:1px solid currentColor; border-radius:5px; padding:2px 7px; white-space:nowrap; flex-shrink:0; }
 
 /* Chosen contest problems (ordered, balloon-colored). */
@@ -553,6 +555,7 @@ input.adm-langname:focus { border-color:var(--accent); }
 .adm-cprob-dot { width:13px; height:13px; border-radius:50%; background:var(--balloon); flex-shrink:0; }
 .adm-cprob-x { font:inherit; font-size:14px; line-height:1; color:var(--text3); background:transparent; border:0; border-radius:5px; padding:4px; cursor:pointer; }
 .adm-cprob-x:hover { color:var(--err); }
+.adm-cprob-x:disabled { opacity:.6; cursor:default; }
 .adm-balloon-0 { --balloon:#34d399; } .adm-balloon-1 { --balloon:#e6a445; }
 .adm-balloon-2 { --balloon:#a78bfa; } .adm-balloon-3 { --balloon:#ef6b66; }
 .adm-balloon-4 { --balloon:#22d3ee; } .adm-balloon-5 { --balloon:#f472b6; }
