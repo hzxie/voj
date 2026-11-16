@@ -125,7 +125,7 @@ public class CheckpointStore {
               }
               ensureOwnedByJudger(cache, "judger.checkpointDir");
               removeTemporaryDirectories(cache);
-              FileSystemUtils.deleteRecursively(work);
+              removeLeftovers(root, number);
               createWorkDirectory(work);
               cacheDirectory = cache;
               judgerWorkDirectory = work;
@@ -270,6 +270,42 @@ public class CheckpointStore {
       for (Path entry : entries) {
         LOGGER.info("Removing the incomplete checkpoint download {}", entry);
         FileSystemUtils.deleteRecursively(entry);
+      }
+    }
+  }
+
+  /**
+   * Removes what judgings of a slot that never completed (as the judger died) left in its work
+   * directory, {@code work-<n>/}, with the directory. A leftover the judger cannot remove (e.g. on
+   * Windows, a directory of the sandbox account's whose ACL the judger may not change) does not
+   * keep it from starting: the directory is moved aside, to {@code trash-<n>-<random>/}, and
+   * removed at a later start.
+   *
+   * @param root - the checkpoint root
+   * @param number - the number of the slot
+   * @throws IOException if the work directory can be neither removed nor moved aside
+   */
+  private static void removeLeftovers(Path root, int number) throws IOException {
+    try (DirectoryStream<Path> trash = Files.newDirectoryStream(root, "trash-" + number + "-*")) {
+      for (Path entry : trash) {
+        try {
+          FileSystemUtils.deleteRecursively(entry);
+        } catch (IOException ex) {
+          LOGGER.warn("Cannot remove {} yet: trying again at the next start.", entry, ex);
+        }
+      }
+    }
+    Path work = root.resolve("work-" + number);
+    try {
+      FileSystemUtils.deleteRecursively(work);
+    } catch (IOException ex) {
+      Path trash = root.resolve("trash-" + number + "-" + UUID.randomUUID());
+      LOGGER.warn("Cannot remove {}: moving it to {}, to remove it later.", work, trash, ex);
+      try {
+        Files.move(work, trash);
+      } catch (IOException moveException) {
+        moveException.addSuppressed(ex);
+        throw moveException;
       }
     }
   }

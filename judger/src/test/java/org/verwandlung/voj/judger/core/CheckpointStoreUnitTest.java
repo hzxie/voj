@@ -18,13 +18,17 @@ package org.verwandlung.voj.judger.core;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
@@ -41,14 +45,17 @@ import org.junit.jupiter.api.condition.DisabledOnOs;
 import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
+import org.mockito.ArgumentMatcher;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import org.verwandlung.voj.judger.model.Checkpoint;
 import org.verwandlung.voj.judger.model.Problem;
 import org.verwandlung.voj.judger.util.ExclusiveFileLock;
+import org.verwandlung.voj.judger.util.FileSystemUtils;
 
 /**
  * Database-free unit tests for CheckpointStore: its checkpoint root checks and its slots.
@@ -375,6 +382,50 @@ public class CheckpointStoreUnitTest {
     try (Stream<Path> entries = Files.list(checkpointStore.getWorkDirectory())) {
       Assertions.assertEquals(0, entries.count());
     }
+  }
+
+  /**
+   * Test case: a judging that never completed left something the judger cannot remove in the work
+   * directory of its slot, and an earlier start set such leftovers aside, of its slot and of
+   * another. Expected result: the judger still starts, in an empty work directory: it sets its
+   * leftovers aside, and removes those of its slot an earlier start set aside.
+   */
+  @Test
+  public void testOpenSetsAsideLeftoversItCannotRemove() throws Exception {
+    Path root = createRoot();
+    Path earlierTrash = Files.createDirectories(root.resolve("trash-0-earlier/voj-999-xyz"));
+    Path otherTrash = Files.createDirectories(root.resolve("trash-1-earlier"));
+    Files.createDirectories(root.resolve("work-0/voj-1000-abc"));
+    ReflectionTestUtils.setField(checkpointStore, "checkpointDirectory", root.toString());
+
+    try (MockedStatic<FileSystemUtils> fileSystemUtils =
+        mockStatic(FileSystemUtils.class, CALLS_REAL_METHODS)) {
+      fileSystemUtils
+          .when(() -> FileSystemUtils.deleteRecursively(argThat(isNamed("work-0"))))
+          .thenThrow(new AccessDeniedException("work-0/voj-1000-abc"));
+      checkpointStore.open();
+    }
+
+    try (Stream<Path> entries = Files.list(checkpointStore.getWorkDirectory())) {
+      Assertions.assertEquals(0, entries.count());
+    }
+    Assertions.assertFalse(Files.exists(earlierTrash.getParent()));
+    Assertions.assertTrue(Files.isDirectory(otherTrash));
+    try (Stream<Path> entries = Files.list(root)) {
+      List<Path> trash = entries.filter(isNamed("trash-0-.*")::matches).toList();
+      Assertions.assertEquals(1, trash.size(), trash.toString());
+      Assertions.assertTrue(Files.isDirectory(trash.get(0).resolve("voj-1000-abc")));
+    }
+  }
+
+  /**
+   * Matches a path by its file name.
+   *
+   * @param pattern - the regular expression the file name matches
+   * @return the matcher
+   */
+  private static ArgumentMatcher<Path> isNamed(String pattern) {
+    return path -> path != null && path.getFileName().toString().matches(pattern);
   }
 
   /**

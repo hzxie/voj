@@ -228,6 +228,7 @@ has a slot *n* there (see [`configuration.md`](configuration.md#directories)):
 | `judger-<n>.lock` | `0600` | The lock of the slot, held while the judger runs; it holds the judger's pid |
 | `judger-<n>/` | `0700` | The reference inputs and expected outputs of the problems judged, one directory per problem |
 | `work-<n>/` | `0711` | The work directories of the judgings |
+| `trash-<n>-<random>/` | | What a judging that never completed left in `work-<n>/` and the judger could not remove when it started; removed at a later start |
 
 `judger.workDir` is no longer used (a judger that finds it set logs a warning).
 
