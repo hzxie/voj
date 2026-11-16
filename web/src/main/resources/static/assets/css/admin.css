@@ -319,6 +319,10 @@ textarea.adm-wordlist-input:focus { border-color:var(--accent); }
 /* Tag chip input (problem tags). */
 .adm-tagbox { display:flex; gap:7px; flex-wrap:wrap; align-items:center; }
 .adm-tagchip { display:inline-flex; gap:6px; align-items:center; font-size:11px; color:var(--text2); background:var(--chip); border:1px solid var(--line); padding:4px 9px; border-radius:6px; }
+/* Icon-only remove buttons: no button chrome, sized by their own rules (zero specificity). */
+:where(.adm-tagchip .x, .adm-taxchip .x, .adm-catlist-x, .adm-testfile .x, .del-test) {
+  font:inherit; line-height:1; background:transparent; border:0; border-radius:5px; padding:2px 4px; color:var(--text3);
+}
 .adm-tagchip .x { color:var(--text3); cursor:pointer; }
 .adm-tagchip .x:hover { color:var(--err); }
 input.adm-taginput { width:64px; font-family:var(--mono); font-size:11px; color:var(--text); background:var(--bg3); border:1px solid var(--line); border-radius:6px; padding:4px 8px; outline:none; }
@@ -370,7 +374,7 @@ input.adm-taxinput { width:96px; font-family:var(--mono); font-size:11.5px; colo
 .adm-testfile .x { color:var(--text3); cursor:pointer; flex-shrink:0; }
 .adm-testfile .x:hover { color:var(--err); }
 .adm-testdata-empty { padding:16px 20px; font-size:11.5px; color:var(--text3); }
-.adm-dropzone { margin:14px 20px; padding:18px; border:1px dashed var(--line); border-radius:10px; text-align:center; font-size:11.5px; color:var(--text3); cursor:pointer; }
+.adm-dropzone { display:block; width:calc(100% - 40px); margin:14px 20px; padding:18px; border:1px dashed var(--line); border-radius:10px; background:transparent; text-align:center; font:inherit; font-size:11.5px; color:var(--text3); cursor:pointer; }
 .adm-dropzone:hover, .adm-dropzone.drag { border-color:var(--accent); color:var(--accent); }
 
 /* ----------------------------------------------------------------------------
@@ -463,7 +467,7 @@ input.adm-langname:focus { border-color:var(--accent); }
 .adm-card.vis { overflow:visible; }
 .adm-card-head { padding:14px 20px; border-bottom:1px solid var(--line2); font-size:12px; letter-spacing:1.4px; color:var(--accent); display:flex; align-items:center; justify-content:space-between; }
 .adm-card-head.plain { display:block; }
-.adm-card-head .act { font-size:11px; color:var(--accent); cursor:pointer; letter-spacing:0; }
+.adm-card-head .act { font:inherit; font-size:11px; color:var(--accent); background:transparent; border:0; padding:0; cursor:pointer; letter-spacing:0; }
 .adm-card-body { padding:18px 20px; display:flex; flex-direction:column; gap:16px; }
 .adm-grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
 .adm-block-label { font-size:10px; letter-spacing:1.5px; color:var(--text3); margin-bottom:9px; }

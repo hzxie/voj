@@ -36,7 +36,7 @@
                     </div>
                 </div>
                 <div class="adm-card">
-                    <div class="adm-card-head"><span th:text="#{voj.administration.new-problem.test-cases}">// TEST CASES</span><span class="act" id="new-test-case" th:text="#{voj.administration.new-problem.new-test-case}">+ add sample</span></div>
+                    <div class="adm-card-head"><span th:text="#{voj.administration.new-problem.test-cases}">// TEST CASES</span><button type="button" class="act" id="new-test-case" th:text="#{voj.administration.new-problem.new-test-case}">+ add sample</button></div>
                     <div id="test-cases" class="adm-card-body adm-gap0">
                         <p id="no-test-cases" class="adm-cell muted" th:text="#{voj.administration.new-problem.no-test-cases}">No test cases.</p>
                         <ul class="adm-list-reset adm-stack14"></ul>
@@ -98,7 +98,7 @@
 
         function getTestCaseContainer(n, input, output) {
             return '<li class="test-case adm-card">' +
-                   '  <div class="adm-card-head"><span>' + escapeHtml([[#{voj.administration.new-problem.test-case}]]) + ' #' + n + '</span><span class="del-test">&#10005;</span></div>' +
+                   '  <div class="adm-card-head"><span>' + escapeHtml([[#{voj.administration.new-problem.test-case}]]) + ' #' + n + '</span><button type="button" class="del-test" aria-label="' + escapeHtml([[#{voj.administration.include.remove}]] + ': ' + [[#{voj.administration.new-problem.test-case}]] + ' #' + n) + '">&#10005;</button></div>' +
                    '  <div class="adm-card-body adm-gap10">' +
                    '    <label class="adm-flabel"><span>' + escapeHtml([[#{voj.administration.new-problem.standard-input}]]) + '</span><textarea class="standard-input adm-input code" rows="2">' + escapeHtml(input || '') + '</textarea></label>' +
                    '    <label class="adm-flabel"><span>' + escapeHtml([[#{voj.administration.new-problem.standard-output}]]) + '</span><textarea class="standard-output adm-input code" rows="2">' + escapeHtml(output || '') + '</textarea></label>' +
@@ -106,16 +106,24 @@
                    '</li>';
         }
         function renumberTestCases() {
-            $('li.test-case', '#test-cases').each(function(i) { $('.adm-card-head span:first-child', this).text([[#{voj.administration.new-problem.test-case}]] + ' #' + i); });
+            $('li.test-case', '#test-cases').each(function(i) {
+                var title = [[#{voj.administration.new-problem.test-case}]] + ' #' + i;
+                $('.adm-card-head span:first-child', this).text(title);
+                $('.del-test', this).attr('aria-label', [[#{voj.administration.include.remove}]] + ': ' + title);
+            });
         }
         $('#new-test-case').click(function() {
             $('#no-test-cases').addClass('hide');
-            $('#test-cases > ul').append(getTestCaseContainer($('li.test-case', '#test-cases').length));
+            var item = $(getTestCaseContainer($('li.test-case', '#test-cases').length)).appendTo('#test-cases > ul');
+            $('.standard-input', item).trigger('focus');
         });
         $('#test-cases').on('click', '.del-test', function() {
-            $(this).closest('.test-case').remove();
+            var item = $(this).closest('.test-case');
+            var next = item.next('.test-case').length ? item.next('.test-case') : item.prev('.test-case');
+            item.remove();
             renumberTestCases();
             if ($('li.test-case', '#test-cases').length === 0) { $('#no-test-cases').removeClass('hide'); }
+            (next.length ? $('.del-test', next) : $('#new-test-case')).trigger('focus');
         });
 
         function getTestCases() {

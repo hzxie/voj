@@ -104,10 +104,10 @@
                             <span class="ic">&#9923;</span>
                             <span class="nm" th:text="${#numbers.formatInteger(cp.checkpointId + 1, 2)} + '.in / ' + ${#numbers.formatInteger(cp.checkpointId + 1, 2)} + '.out'">01.in / 01.out</span>
                             <span class="sz" th:text="${cp.size &lt; 1024} ? (${cp.size} + ' B') : (${cp.size / 1024} + ' KB')">0 B</span>
-                            <span class="x del-checkpoint">&#10005;</span>
+                            <button type="button" class="x del-checkpoint" th:aria-label="#{voj.administration.include.remove} + ': ' + ${#numbers.formatInteger(cp.checkpointId + 1, 2)} + '.in / ' + ${#numbers.formatInteger(cp.checkpointId + 1, 2)} + '.out'">&#10005;</button>
                         </div>
                     </div>
-                    <div id="test-data-drop" class="adm-dropzone" th:utext="#{voj.administration.edit-problem.test-data-upload}">drop test archive</div>
+                    <button type="button" id="test-data-drop" class="adm-dropzone" th:text="#{voj.administration.edit-problem.test-data-upload}">drop test archive</button>
                     <input type="file" id="test-data-input" accept=".zip" class="adm-none" />
                 </div>
                 <div class="adm-danger">
@@ -153,7 +153,7 @@
                 box.find('.adm-tagchip').each(function() { if ($(this).attr('data-tag') === name) { exists = true; } });
                 if (exists) { return; }
                 var chip = $('<span class="adm-tagchip" data-tag=""></span>').attr('data-tag', name);
-                chip.text(name + ' ').append($('<span class="x">&#10005;</span>'));
+                chip.text(name + ' ').append($('<button type="button" class="x">&#10005;</button>').attr('aria-label', [[#{voj.administration.include.remove}]] + ': ' + name));
                 field.before(chip);
                 syncHidden();
             }
@@ -166,7 +166,12 @@
                 }
             });
             field.on('blur', function() { addTag(field.val()); field.val(''); });
-            box.on('click', '.adm-tagchip .x', function() { $(this).closest('.adm-tagchip').remove(); syncHidden(); });
+            box.on('click', '.adm-tagchip .x', function() {
+                var chip = $(this).closest('.adm-tagchip');
+                var next = chip.next('.adm-tagchip').length ? chip.next('.adm-tagchip') : chip.prev('.adm-tagchip');
+                chip.remove(); syncHidden();
+                (next.length ? next.find('.x') : field).trigger('focus');
+            });
         }
 
         // Test data: a metadata-only file list (NN.in / NN.out + byte size) plus archive upload.
@@ -183,7 +188,7 @@
                     row.append('<span class="ic">&#9923;</span>');
                     row.append($('<span class="nm"></span>').text(name));
                     row.append($('<span class="sz"></span>').text(fmtSize(cp.size)));
-                    row.append('<span class="x del-checkpoint">&#10005;</span>');
+                    row.append($('<button type="button" class="x del-checkpoint">&#10005;</button>').attr('aria-label', [[#{voj.administration.include.remove}]] + ': ' + name));
                     list.append(row);
                 });
                 $('#test-data-count').text(checkpoints.length + ' ' + [[#{voj.administration.edit-problem.test-data-files}]]);
@@ -217,10 +222,17 @@
             dropZone.on('drop', function(e) { e.preventDefault(); dropZone.removeClass('drag'); upload(e.originalEvent.dataTransfer.files[0]); });
             list.on('click', '.del-checkpoint', function() {
                 var checkpointId = $(this).closest('.adm-testfile').attr('data-checkpoint-id');
+                var index = list.find('.del-checkpoint').index(this);
                 $.ajax({
                     type: 'POST', url: [[@{/administration/deleteProblemCheckpoint.action}]],
                     data: { problemId: $('#problem-id').val(), checkpointId: checkpointId }, dataType: 'JSON',
-                    success: function(result) { if (result['isSuccessful']) { renderList(result['checkpoints']); } }
+                    success: function(result) {
+                        if (!result['isSuccessful']) { return; }
+                        renderList(result['checkpoints']);
+                        // The list was re-rendered: focus the delete now at the same position.
+                        var buttons = list.find('.del-checkpoint');
+                        (buttons.length ? buttons.eq(Math.min(index, buttons.length - 1)) : dropZone).trigger('focus');
+                    }
                 });
             });
         }

@@ -22,7 +22,7 @@
                     <div class="adm-taxbox" id="problem-tags">
                         <span class="adm-taxchip" th:each="problemTag : ${problemTags}" th:attr="data-id=${problemTag.problemTagId}">
                             <span th:text="${problemTag.problemTagName}">Tag</span>
-                            <span class="x" th:title="#{voj.administration.problem-categories.delete}">&#10005;</span>
+                            <button type="button" class="x" th:title="#{voj.administration.problem-categories.delete}" th:aria-label="#{voj.administration.problem-categories.delete} + ': ' + ${problemTag.problemTagName}">&#10005;</button>
                         </span>
                         <input id="new-tag-input" class="adm-taxinput" type="text" maxlength="32" th:placeholder="#{voj.administration.problem-categories.tag-add-placeholder}" />
                     </div>
@@ -50,7 +50,7 @@
                             <input class="adm-catlist-name" type="text" maxlength="32" th:value="${problemCategory.problemCategoryName}"
                                    th:readonly="${problemCategory.problemCategorySlug == 'uncategorized'}" />
                             <span class="adm-catlist-uses"><span th:text="${problemCategoryProblems[problemCategory.problemCategoryId]}">0</span> <span th:text="#{voj.administration.problem-categories.unit}">problems</span></span>
-                            <span class="adm-catlist-x" th:if="${problemCategory.problemCategorySlug != 'uncategorized'}" th:title="#{voj.administration.problem-categories.delete}">&#10005;</span>
+                            <button type="button" class="adm-catlist-x" th:if="${problemCategory.problemCategorySlug != 'uncategorized'}" th:title="#{voj.administration.problem-categories.delete}" th:aria-label="#{voj.administration.problem-categories.delete} + ': ' + ${problemCategory.problemCategoryName}">&#10005;</button>
                             <span th:unless="${problemCategory.problemCategorySlug != 'uncategorized'}"></span>
                         </div>
                         <div class="adm-catlist-row adm-catlist-add">
@@ -186,7 +186,13 @@
                     $.ajax({
                         type: 'POST', url: [[@{/administration/deleteProblemTag.action}]],
                         data: { problemTagId: chip.data('id') }, dataType: 'JSON',
-                        success: function (result) { if (result['isSuccessful']) { chip.remove(); } }
+                        success: function (result) {
+                            if (!result['isSuccessful']) { return; }
+                            // Keep focus in the tag list: the next chip's delete, else the input.
+                            var next = chip.next('.adm-taxchip').length ? chip.next('.adm-taxchip') : chip.prev('.adm-taxchip');
+                            chip.remove();
+                            (next.length ? next.find('.x') : $('#new-tag-input')).trigger('focus');
+                        }
                     });
                 });
             });
@@ -201,10 +207,14 @@
                         data: { 'problemCategories': JSON.stringify([row.data('value')]) }, dataType: 'JSON',
                         success: function (result) {
                             if (result['isSuccessful']) {
+                                var next = row.nextAll('.adm-catlist-item').first();
                                 (result['deletedProblemCategories'] || []).forEach(function (id) {
                                     $cat.find('.adm-catlist-item[data-value="' + id + '"]').remove();
                                 });
                                 refreshTotal();
+                                // Keep focus in the list: the next row's delete, else the add input.
+                                var target = next.closest('body').length ? next.find('.adm-catlist-x') : $();
+                                (target.length ? target : $('#new-category-input')).trigger('focus');
                             }
                         }
                     });
