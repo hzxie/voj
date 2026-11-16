@@ -47,34 +47,21 @@ import org.verwandlung.voj.judger.util.FileSystemUtils;
  */
 @Component
 public class Dispatcher {
-  /** How many more times a submission that cannot be found is looked up before giving up. */
-  static final int SUBMISSION_FETCH_RETRIES = 2;
-
-  /** The delay (milliseconds) before looking a missing submission up again. */
-  static final long SUBMISSION_FETCH_RETRY_DELAY_MS = 200;
-
   /**
    * Creates a new judging task. Only one judging task runs at a time.
    *
    * @param submissionId - the unique identifier of the submission
-   * @throws IllgealSubmissionException
-   * @throws InterruptedException
+   * @throws IllgealSubmissionException if the submission does not exist
    */
-  public void createNewTask(long submissionId)
-      throws IllgealSubmissionException, InterruptedException {
+  public void createNewTask(long submissionId) throws IllgealSubmissionException {
     synchronized (this) {
       String baseDirectory =
           String.format("%s/voj-%s", new Object[] {workBaseDirectory, submissionId});
       String baseFileName = DigestUtils.getRandomString(12, DigestUtils.Mode.ALPHA);
 
-      // The web application queues the task only once the submission is committed, so it can be
-      // read right away. Retry briefly only if it is missing (e.g. a lagging read replica).
+      // The web application queues the task only once the submission is committed (after the
+      // transaction that stores it), so it can be read right away.
       Submission submission = submissionMapper.getSubmission(submissionId);
-      for (int retry = 0; submission == null && retry < SUBMISSION_FETCH_RETRIES; ++retry) {
-        Thread.sleep(SUBMISSION_FETCH_RETRY_DELAY_MS);
-        submission = submissionMapper.getSubmission(submissionId);
-      }
-
       if (submission == null) {
         throw new IllgealSubmissionException(
             String.format("Illegal submission #%s", new Object[] {submissionId}));

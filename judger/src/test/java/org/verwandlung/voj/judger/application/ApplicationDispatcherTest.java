@@ -69,7 +69,7 @@ public class ApplicationDispatcherTest {
    */
   @Test
   public void testOnSubmissionCreatedMarksSystemErrorOnFailure() throws Exception {
-    org.mockito.Mockito.doThrow(new InterruptedException("interrupted"))
+    org.mockito.Mockito.doThrow(new IllegalStateException("crashed"))
         .when(judgerDispatcher)
         .createNewTask(anyLong());
     when(submissionMapper.getSubmission(100L)).thenReturn(new Submission());
