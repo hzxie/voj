@@ -26,6 +26,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.logging.log4j.LogManager;
@@ -65,6 +66,22 @@ import org.verwandlung.voj.web.util.OffensiveWordFilter;
 public class UserService {
   /** The number of days an email validation credential remains valid after it is issued. */
   private static final long EMAIL_VALIDATION_VALID_DAYS = 1;
+
+  /**
+   * The number of wrong current passwords after which the checks of a user's current password are
+   * refused for the rest of {@link #CURRENT_PASSWORD_FAILURE_WINDOW_MILLIS}.
+   */
+  private static final int MAX_CURRENT_PASSWORD_FAILURES = 5;
+
+  /** How long wrong current passwords are counted from the first one, and the checks refused. */
+  private static final long CURRENT_PASSWORD_FAILURE_WINDOW_MILLIS = TimeUnit.MINUTES.toMillis(15);
+
+  /**
+   * The wrong current passwords of each user: {number of failures, time of the first one}. Kept in
+   * memory (per web application instance, and lost on restart), which is enough to make guessing
+   * the password through a session impractical.
+   */
+  private final Map<Long, long[]> currentPasswordFailures = new ConcurrentHashMap<>();
 
   /** The length of the rolling rate-limit window for verification / password-reset emails. */
   private static final long EMAIL_RATE_LIMIT_WINDOW_MILLIS = TimeUnit.DAYS.toMillis(1);
@@ -819,8 +836,12 @@ public class UserService {
    */
   private Map<String, Boolean> getChangePasswordResult(
       User user, String oldPassword, String newPassword, String confirmPassword) {
-    Map<String, Boolean> result = new HashMap<>(5, 1);
-    result.put("isOldPasswordCorrect", isOldPasswordCorrect(user.getPassword(), oldPassword));
+    Map<String, Boolean> result = new HashMap<>(8, 1);
+    boolean isPasswordCheckThrottled = isCurrentPasswordCheckThrottled(user);
+    result.put("isPasswordCheckThrottled", isPasswordCheckThrottled);
+    result.put(
+        "isOldPasswordCorrect",
+        !isPasswordCheckThrottled && checkCurrentPassword(user, oldPassword));
     result.put("isNewPasswordEmpty", newPassword.isEmpty());
     result.put("isNewPasswordLegal", isPasswordLegal(newPassword));
     result.put("isConfirmPasswordMatched", newPassword.equals(confirmPassword));
@@ -865,13 +886,15 @@ public class UserService {
     aboutMe = HtmlTextFilter.filter(aboutMe);
     Map<String, Boolean> result =
         getUpdateProfileResult(user, email, displayName, location, website, socialLinks, aboutMe);
+    boolean isEmailChanged = !email.equals(user.getEmail());
+    boolean isPasswordCheckThrottled = isEmailChanged && isCurrentPasswordCheckThrottled(user);
     boolean isPasswordCorrect =
-        email.equals(user.getEmail()) || isOldPasswordCorrect(user.getPassword(), password);
+        !isEmailChanged || (!isPasswordCheckThrottled && checkCurrentPassword(user, password));
+    result.put("isPasswordCheckThrottled", isPasswordCheckThrottled);
     result.put("isPasswordCorrect", isPasswordCorrect);
     result.put("isSuccessful", result.get("isSuccessful") && isPasswordCorrect);
 
     if (result.get("isSuccessful")) {
-      boolean isEmailChanged = !email.equals(user.getEmail());
       changeEmail(user, email);
 
       updateUserMeta(user, "displayName", displayName);
@@ -889,6 +912,48 @@ public class UserService {
       }
     }
     return result;
+  }
+
+  /**
+   * Tests whether the current password of a user may not be checked for now: after {@value
+   * #MAX_CURRENT_PASSWORD_FAILURES} wrong current passwords (when changing the password or the
+   * email address) within {@link #CURRENT_PASSWORD_FAILURE_WINDOW_MILLIS} of the first one, further
+   * attempts are refused until that window ends. Otherwise a hijacked session could find the
+   * current password by trying passwords one request after another, and then take the account
+   * over.
+   *
+   * @param user - the user whose current password is to be checked
+   * @return whether the check must be refused
+   */
+  private boolean isCurrentPasswordCheckThrottled(User user) {
+    long[] failures = currentPasswordFailures.get(user.getUid());
+    return failures != null
+        && failures[0] >= MAX_CURRENT_PASSWORD_FAILURES
+        && System.currentTimeMillis() - failures[1] < CURRENT_PASSWORD_FAILURE_WINDOW_MILLIS;
+  }
+
+  /**
+   * Checks the current password a user entered, and counts it when it is wrong (see {@link
+   * #isCurrentPasswordCheckThrottled}). A correct password clears the count.
+   *
+   * @param user - the user
+   * @param submittedPassword - the password the user entered
+   * @return whether the password is the user's current password
+   */
+  private boolean checkCurrentPassword(User user, String submittedPassword) {
+    boolean isCorrect = isOldPasswordCorrect(user.getPassword(), submittedPassword);
+    if (isCorrect) {
+      currentPasswordFailures.remove(user.getUid());
+    } else {
+      long now = System.currentTimeMillis();
+      currentPasswordFailures.compute(
+          user.getUid(),
+          (uid, failures) ->
+              failures == null || now - failures[1] >= CURRENT_PASSWORD_FAILURE_WINDOW_MILLIS
+                  ? new long[] {1, now}
+                  : new long[] {failures[0] + 1, failures[1]});
+    }
+    return isCorrect;
   }
 
   /**

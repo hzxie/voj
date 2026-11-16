@@ -23,6 +23,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -360,6 +361,76 @@ public class UserServiceTest {
     Assertions.assertFalse(result.get("isOldPasswordCorrect"));
     Assertions.assertFalse(result.get("isSuccessful"));
     Assertions.assertEquals(encodedPassword, userService.getUserUsingUid(1000).getPassword());
+  }
+
+  /**
+   * Clears the wrong current passwords UserService counted (in memory, in the application context
+   * the test classes share), so that the failures of one test do not throttle another.
+   */
+  @AfterEach
+  public void clearCurrentPasswordFailures() {
+    currentPasswordFailures().clear();
+  }
+
+  /** Gets the wrong current passwords UserService counted, by user. */
+  private Map<?, ?> currentPasswordFailures() {
+    Object target = org.springframework.test.util.AopTestUtils.getTargetObject(userService);
+    return (Map<?, ?>)
+        org.springframework.test.util.ReflectionTestUtils.getField(
+            target, "currentPasswordFailures");
+  }
+
+  /**
+   * Test case: tests the throttling of the current-password checks. Test data: user 1000 enters a
+   * wrong current password 5 times (when changing the password and the email address), then the
+   * right one. Expected: the 5 wrong ones are checked and reported as wrong; after them even the
+   * right password is refused (isPasswordCheckThrottled, nothing is changed), for both operations,
+   * while a profile change that needs no password still works. Another user is not affected, and
+   * their right password clears their count.
+   */
+  @Test
+  public void testCurrentPasswordChecksAreThrottled() {
+    User user = userService.getUserUsingUid(1000);
+    String passwordHash = user.getPassword();
+    for (int i = 0; i < 4; ++i) {
+      Map<String, Boolean> result =
+          userService.changePassword(user, "wrong-" + i, "new-password", "new-password");
+      Assertions.assertFalse(result.get("isOldPasswordCorrect"));
+      Assertions.assertFalse(result.get("isPasswordCheckThrottled"));
+    }
+    Map<String, Boolean> result =
+        userService.updateProfile(user, "wrong-4", "other@example.com", "", "", "", "{}", "");
+    Assertions.assertFalse(result.get("isPasswordCorrect"));
+    Assertions.assertFalse(result.get("isPasswordCheckThrottled"));
+
+    result = userService.changePassword(user, PLAINTEXT_PASSWORD, "new-password", "new-password");
+    Assertions.assertTrue(result.get("isPasswordCheckThrottled"));
+    Assertions.assertFalse(result.get("isOldPasswordCorrect"));
+    Assertions.assertFalse(result.get("isSuccessful"));
+    result =
+        userService.updateProfile(
+            user, PLAINTEXT_PASSWORD, "other@example.com", "", "", "", "{}", "");
+    Assertions.assertTrue(result.get("isPasswordCheckThrottled"));
+    Assertions.assertFalse(result.get("isSuccessful"));
+    User storedUser = userService.getUserUsingUid(1000);
+    Assertions.assertEquals(passwordHash, storedUser.getPassword());
+    Assertions.assertEquals("cshzxie@gmail.com", storedUser.getEmail());
+    Assertions.assertTrue(
+        userService
+            .updateProfile(user, "", "cshzxie@gmail.com", "", "", "", "{}", "")
+            .get("isSuccessful"));
+
+    User anotherUser = userService.getUserUsingUid(1002);
+    Assertions.assertFalse(
+        userService
+            .changePassword(anotherUser, "wrong", "new-password", "new-password")
+            .get("isPasswordCheckThrottled"));
+    Assertions.assertTrue(currentPasswordFailures().containsKey(1002L));
+    Assertions.assertTrue(
+        userService
+            .changePassword(anotherUser, PLAINTEXT_PASSWORD, "new-password", "new-password")
+            .get("isSuccessful"));
+    Assertions.assertFalse(currentPasswordFailures().containsKey(1002L));
   }
 
   /** Test case: tests the changePassword(...) method. Test data: the old password is wrong. Expected: the change fails. */
