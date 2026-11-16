@@ -16,6 +16,7 @@
  */
 package org.verwandlung.voj.web.service;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -64,6 +65,12 @@ public class SubmissionService {
       "System Error.\n\nNo judger is available for the language of this submission at the moment,"
           + " so it could not be judged. An administrator can have it judged again once a judger"
           + " is back.\n";
+
+  /**
+   * The size (bytes, in UTF-8) a submission's code may have at most: what its column, the TEXT
+   * {@code submission_code}, holds.
+   */
+  static final int MAX_CODE_BYTES = 65535;
 
   /** How often (ms) the pending submissions in a language without a judger are looked for. */
   static final long NO_JUDGER_CHECK_INTERVAL_MS = 30000;
@@ -507,6 +514,8 @@ public class SubmissionService {
     result.put("isProblemExists", submission.getProblem() != null);
     result.put("isLanguageExists", submission.getLanguage() != null);
     result.put("isCodeEmpty", code == null || code.length() == 0);
+    result.put(
+        "isCodeTooLong", code != null && code.getBytes(StandardCharsets.UTF_8).length > MAX_CODE_BYTES);
     result.put("isEmailVerified", isSubmitterEmailVerified(submission.getUser()));
 
     boolean isSuccessful =
@@ -514,6 +523,7 @@ public class SubmissionService {
             && result.get("isProblemExists")
             && result.get("isLanguageExists")
             && !result.get("isCodeEmpty")
+            && !result.get("isCodeTooLong")
             && result.get("isEmailVerified");
     result.put("isSuccessful", isSuccessful);
     return result;

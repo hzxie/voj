@@ -247,31 +247,41 @@
                 success: function(result) {
                     if ( result['isSuccessful'] ) {
                         window.location.href = [[@{/submission/}]] + result['submissionId'];
-                    } else {
-                        var errorMessage = '';
-                        if ( !result['isUserLogined'] ) {
-                            errorMessage = [[#{voj.problems.problem.user-not-login}]];
-                        } else if ( result['isContestExists'] === false || result['isContestLive'] === false ) {
-                            errorMessage = [[#{voj.problems.problem.contest-not-live}]];
-                        } else if ( result['isAttended'] === false ) {
-                            errorMessage = [[#{voj.problems.problem.contest-not-attended}]];
-                        } else if ( result['isUserLegal'] === false ) {
-                            errorMessage = [[#{voj.problems.problem.user-forbidden}]];
-                        } else if ( !result['isProblemExists'] ) {
-                            errorMessage = [[#{voj.problems.problem.problem-not-exists}]];
-                        } else if ( !result['isLanguageExists'] ) {
-                            errorMessage = [[#{voj.problems.problem.language-not-exists}]];
-                        } else if ( result['isCodeEmpty'] ) {
-                            errorMessage = [[#{voj.problems.problem.empty-code}]];
-                        } else if ( result['isEmailVerified'] === false ) {
-                            errorMessage = [[#{voj.problems.problem.email-not-verified}]];
-                        }
-                        $('#submission-error').html(errorMessage);
+                        return;
                     }
-                    $('button[type=submit]', '#code-editor').removeAttr('disabled');
-                    $('button[type=submit]', '#code-editor').html([[#{voj.problems.problem.submit}]]);
+                    var errorMessage = '';
+                    if ( !result['isUserLogined'] ) {
+                        errorMessage = [[#{voj.problems.problem.user-not-login}]];
+                    } else if ( result['isContestExists'] === false || result['isContestLive'] === false ) {
+                        errorMessage = [[#{voj.problems.problem.contest-not-live}]];
+                    } else if ( result['isAttended'] === false ) {
+                        errorMessage = [[#{voj.problems.problem.contest-not-attended}]];
+                    } else if ( result['isUserLegal'] === false ) {
+                        errorMessage = [[#{voj.problems.problem.user-forbidden}]];
+                    } else if ( !result['isProblemExists'] ) {
+                        errorMessage = [[#{voj.problems.problem.problem-not-exists}]];
+                    } else if ( !result['isLanguageExists'] ) {
+                        errorMessage = [[#{voj.problems.problem.language-not-exists}]];
+                    } else if ( result['isCodeEmpty'] ) {
+                        errorMessage = [[#{voj.problems.problem.empty-code}]];
+                    } else if ( result['isCodeTooLong'] ) {
+                        errorMessage = [[#{voj.problems.problem.code-too-long}]];
+                    } else if ( result['isEmailVerified'] === false ) {
+                        errorMessage = [[#{voj.problems.problem.email-not-verified}]];
+                    }
+                    $('#submission-error').text(errorMessage);
+                    enableSubmitButton();
+                },
+                // E.g. the session (and with it the CSRF token) expired, or the server failed.
+                error: function() {
+                    $('#submission-error').text([[#{voj.problems.problem.submission-failed}]]);
+                    enableSubmitButton();
                 }
             });
+        }
+        function enableSubmitButton() {
+            $('button[type=submit]', '#code-editor').removeAttr('disabled');
+            $('button[type=submit]', '#code-editor').text([[#{voj.problems.problem.submit}]]);
         }
     </script>
     </th:block>

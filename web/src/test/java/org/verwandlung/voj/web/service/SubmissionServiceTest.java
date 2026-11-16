@@ -194,6 +194,30 @@ public class SubmissionServiceTest {
   }
 
   /**
+   * Test case: tests the createSubmission(...) method. Test data: code of 65535 bytes, the most
+   * its column holds; one byte more; and 21846 characters that take 3 bytes each in UTF-8.
+   * Expected: the first is stored whole; the others are refused with isCodeTooLong, the last
+   * although it has fewer characters than the column has bytes.
+   */
+  @Test
+  public void testCreateSubmissionWithTooLongCode() {
+    String longest = "a".repeat(SubmissionService.MAX_CODE_BYTES);
+    Map<String, Object> result =
+        submissionService.createSubmission(userWithUid(1000), 1000, "text/x-java", longest);
+    Assertions.assertFalse((Boolean) result.get("isCodeTooLong"));
+    Assertions.assertTrue((Boolean) result.get("isSuccessful"));
+    Assertions.assertEquals(
+        longest, submissionService.getSubmission((Long) result.get("submissionId")).getCode());
+
+    for (String code : new String[] {longest + "a", "\u4e2d".repeat(21846)}) {
+      result = submissionService.createSubmission(userWithUid(1000), 1000, "text/x-java", code);
+      Assertions.assertTrue((Boolean) result.get("isCodeTooLong"));
+      Assertions.assertFalse((Boolean) result.get("isSuccessful"));
+      Assertions.assertNull(result.get("submissionId"));
+    }
+  }
+
+  /**
    * Test case: tests the createSubmission(...) method. Test data: email verification is required
    * and the submitter's address is not verified (a banned user, by contrast, never reaches the
    * service: CurrentUserRefreshFilter logs them out). Expected: creation fails with isEmailVerified
