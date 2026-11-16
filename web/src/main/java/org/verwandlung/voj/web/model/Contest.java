@@ -173,19 +173,18 @@ public class Contest {
   /* (non-Javadoc)
    * @see java.lang.Object#hashCode()
    */
+  @Override
   public int hashCode() {
-    return (int) (contestId % 37 + contestId % 1001);
+    return Long.hashCode(contestId);
   }
 
   /* (non-Javadoc)
+   * Two contests are the same contest when they have the same unique identifier.
    * @see java.lang.Object#equals(java.lang.Object)
    */
+  @Override
   public boolean equals(Object o) {
-    if (!(o instanceof Contest)) {
-      return false;
-    }
-    Contest c = (Contest) o;
-    return c.hashCode() == hashCode();
+    return o instanceof Contest && ((Contest) o).getContestId() == contestId;
   }
 
   /* (non-Javadoc)
