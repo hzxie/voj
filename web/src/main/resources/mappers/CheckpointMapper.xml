@@ -48,6 +48,7 @@
 		UPDATE voj_problem_checkpoints
 		SET checkpoint_exactly_match = #{isExactlyMatch}
 		WHERE problem_id = #{problemId}
+		  AND checkpoint_exactly_match &lt;&gt; #{isExactlyMatch}
 	</update>
 	<insert id="createCheckpoint"
 		parameterType="org.verwandlung.voj.web.model.Checkpoint">

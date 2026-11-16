@@ -703,8 +703,11 @@ public class ProblemService {
       problemMapper.updateProblem(problem);
 
       // Test data is managed separately (archive upload / per-checkpoint delete); editing only
-      // re-applies the exact-match flag to the existing checkpoints.
-      checkpointMapper.updateCheckpointsExactlyMatch(problemId, isExactlyMatch);
+      // re-applies the exact-match flag. Judgers cache the flag in their checkpoint manifest, so a
+      // change must bump the version.
+      if (checkpointMapper.updateCheckpointsExactlyMatch(problemId, isExactlyMatch) > 0) {
+        problemMapper.bumpCheckpointsVersion(problemId);
+      }
       updateProblemCategoryRelationships(problemId, problemCategories);
       updateProblemTags(problemId, problemTags);
     }

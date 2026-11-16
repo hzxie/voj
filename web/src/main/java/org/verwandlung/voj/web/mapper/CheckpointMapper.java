@@ -66,6 +66,7 @@ public interface CheckpointMapper {
    *
    * @param problemId - the unique identifier of the problem
    * @param isExactlyMatch - whether the checkpoints require an exact match
+   * @return the number of checkpoints whose flag actually changed
    */
   int updateCheckpointsExactlyMatch(
       @Param("problemId") long problemId, @Param("isExactlyMatch") boolean isExactlyMatch);

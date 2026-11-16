@@ -254,6 +254,21 @@ public class ProblemServiceTest {
     Assertions.assertEquals("A+B Problem (Edited)", problemService.getProblem(1000).getProblemName());
   }
 
+  /** Test case: tests the editProblem(...) method. Test data: problem 1000 (checkpoints not exact-match), edited twice with exact match on. Expected: the first edit flips the flag and bumps the checkpoints version so judgers re-fetch; the second, unchanged edit leaves the version alone. */
+  @Test
+  public void testEditProblemExactlyMatchBumpsCheckpointsVersion() {
+    int version = problemMapper.getCheckpointsVersion(1000);
+    problemService.editProblem(
+        1000, "A+B Problem", 1000, 65536, "Description", "Hint", "Input Format",
+        "Output Format", "1 2", "3", CATEGORIES, TAGS, "PUBLISHED", true, "easy");
+    Assertions.assertEquals(version + 1, problemMapper.getCheckpointsVersion(1000));
+
+    problemService.editProblem(
+        1000, "A+B Problem", 1000, 65536, "Description", "Hint", "Input Format",
+        "Output Format", "1 2", "3", CATEGORIES, TAGS, "PUBLISHED", true, "easy");
+    Assertions.assertEquals(version + 1, problemMapper.getCheckpointsVersion(1000));
+  }
+
   /** Test case: tests the editProblem(...) method. Test data: a non-existing problem. Expected: editing fails. */
   @Test
   public void testEditProblemNotExists() {
