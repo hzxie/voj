@@ -794,9 +794,12 @@ public class UserService {
   }
 
   /**
-   * Validates the new profile and updates the personal profile.
+   * Validates the new profile and updates the personal profile. Changing the email address requires
+   * the current password: the address receives the password-reset emails, so a hijacked session
+   * must not be able to take the account over by pointing it to another mailbox.
    *
    * @param user - the user whose profile is to be changed
+   * @param password - the user's current password (only checked when the email address changes)
    * @param email - the user's email address
    * @param displayName - the user's display name
    * @param location - the user's location
@@ -807,6 +810,7 @@ public class UserService {
    */
   public Map<String, Boolean> updateProfile(
       User user,
+      String password,
       String email,
       String displayName,
       String location,
@@ -820,6 +824,10 @@ public class UserService {
     aboutMe = HtmlTextFilter.filter(aboutMe);
     Map<String, Boolean> result =
         getUpdateProfileResult(user, email, displayName, location, website, socialLinks, aboutMe);
+    boolean isPasswordCorrect =
+        email.equals(user.getEmail()) || isOldPasswordCorrect(user.getPassword(), password);
+    result.put("isPasswordCorrect", isPasswordCorrect);
+    result.put("isSuccessful", result.get("isSuccessful") && isPasswordCorrect);
 
     if (result.get("isSuccessful")) {
       boolean isEmailChanged = !email.equals(user.getEmail());

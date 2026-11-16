@@ -140,6 +140,11 @@
                                 <input class="vw-input" id="edit-email" name="email" type="email" maxlength="64" autocomplete="email" spellcheck="false" th:value="${user.email}" />
                             </div>
                         </div>
+                        <div class="vw-pmodal-field">
+                            <label class="vw-label" for="edit-password" th:text="#{voj.accounts.dashboard.current-password}">Current Password</label>
+                            <input class="vw-input" id="edit-password" type="password" autocomplete="current-password"
+                                   th:placeholder="#{voj.accounts.dashboard.current-password-hint}" />
+                        </div>
                         <div class="vw-pmodal-grid">
                             <div class="vw-pmodal-field">
                                 <label class="vw-label" for="edit-website" th:text="#{voj.accounts.dashboard.website}">Website</label>
@@ -220,6 +225,7 @@
                 url: [[@{/accounts/updateProfile.action}]],
                 data: {
                     'email':       $('#edit-email').val(),
+                    'password':    $('#edit-password').val(),
                     'displayName': $('#edit-display-name').val(),
                     'location':    $('#edit-location').val(),
                     'website':     $('#edit-website').val(),
@@ -251,6 +257,8 @@
                 errorMessage += [[#{voj.accounts.dashboard.email-illegal}]] + '<br>';
             } else if (result['isEmailExists']) {
                 errorMessage += [[#{voj.accounts.dashboard.email-existing}]] + '<br>';
+            } else if (result['isPasswordCorrect'] === false) {
+                errorMessage += [[#{voj.accounts.dashboard.current-password-incorrect}]] + '<br>';
             }
             if (!result['isDisplayNameLegal']) {
                 errorMessage += [[#{voj.accounts.user.display-name-illegal}]] + '<br>';

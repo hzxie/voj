@@ -318,7 +318,7 @@ public class UserServiceTest {
     User user = userService.getUserUsingUid(1000);
     Map<String, Boolean> result =
         userService.updateProfile(
-            user, "cshzxie@gmail.com", "Haozhe Xie", "Beijing", "https://haozhexie.com", "{}",
+            user, "", "cshzxie@gmail.com", "Haozhe Xie", "Beijing", "https://haozhexie.com", "{}",
             "About me");
     Assertions.assertTrue(result.get("isSuccessful"));
     Assertions.assertEquals("Haozhe Xie", userService.getUserMetaUsingUid(user).get("displayName"));
@@ -342,7 +342,7 @@ public class UserServiceTest {
       User user = userService.getUserUsingUid(1000);
       Map<String, Boolean> result =
           userService.updateProfile(
-              user, "cshzxie@gmail.com", "Haozhe Xie", "Beijing", "", socialLinks, "About me");
+              user, "", "cshzxie@gmail.com", "Haozhe Xie", "Beijing", "", socialLinks, "About me");
       Assertions.assertFalse(result.get("isSocialLinksLegal"), socialLinks);
       Assertions.assertFalse(result.get("isSuccessful"), socialLinks);
     }
@@ -357,7 +357,7 @@ public class UserServiceTest {
     User user = userService.getUserUsingUid(1000);
     Map<String, Boolean> result =
         userService.updateProfile(
-            user, "cshzxie@gmail.com", "Haozhe Xie", "Beijing", "",
+            user, "", "cshzxie@gmail.com", "Haozhe Xie", "Beijing", "",
             "{\"GitHub\": \"hzxie\"}", "About me");
     Assertions.assertTrue(result.get("isSuccessful"));
     Assertions.assertEquals(
@@ -385,9 +385,29 @@ public class UserServiceTest {
     User user = userService.getUserUsingUid(1000);
     Map<String, Boolean> result =
         userService.updateProfile(
-            user, "support@verwandlung.org", "", "", "", "{}", "About me");
+            user, PLAINTEXT_PASSWORD, "support@verwandlung.org", "", "", "", "{}", "About me");
     Assertions.assertTrue(result.get("isEmailExists"));
     Assertions.assertFalse(result.get("isSuccessful"));
+  }
+
+  /**
+   * Test case: tests the updateProfile (profile) method. Test data: a new email address with a
+   * wrong or a missing current password. Expected: the update fails with isPasswordCorrect false
+   * and nothing changes.
+   */
+  @Test
+  public void testUpdateProfileRequiresPasswordToChangeEmail() {
+    for (String password : new String[] {"wrong-password", ""}) {
+      User user = userService.getUserUsingUid(1000);
+      Map<String, Boolean> result =
+          userService.updateProfile(
+              user, password, "attacker@example.com", "Mallory", "", "", "{}", "About me");
+      Assertions.assertFalse(result.get("isPasswordCorrect"), password);
+      Assertions.assertFalse(result.get("isSuccessful"), password);
+      Assertions.assertEquals("cshzxie@gmail.com", userService.getUserUsingUid(1000).getEmail());
+      Assertions.assertNotEquals(
+          "Mallory", userService.getUserMetaUsingUid(user).get("displayName"));
+    }
   }
 
   /** Test case: tests the updateProfile (profile) method. Test data: an illegal homepage address. Expected: the update fails. */
@@ -395,7 +415,8 @@ public class UserServiceTest {
   public void testUpdateProfileWithIllegalWebsite() {
     User user = userService.getUserUsingUid(1000);
     Map<String, Boolean> result =
-        userService.updateProfile(user, "cshzxie@gmail.com", "", "", "ftp://invalid", "{}", "Me");
+        userService.updateProfile(
+            user, "", "cshzxie@gmail.com", "", "", "ftp://invalid", "{}", "Me");
     Assertions.assertFalse(result.get("isWebsiteLegal"));
     Assertions.assertFalse(result.get("isSuccessful"));
   }
@@ -454,7 +475,14 @@ public class UserServiceTest {
     User user = userService.getUserUsingUid(1000);
     Map<String, Boolean> result =
         userService.updateProfile(
-            user, "changed@example.com", "Haozhe Xie", "", "", "{}", "About me");
+            user,
+            PLAINTEXT_PASSWORD,
+            "changed@example.com",
+            "Haozhe Xie",
+            "",
+            "",
+            "{}",
+            "About me");
     Assertions.assertTrue(result.get("isSuccessful"));
     Assertions.assertTrue(result.get("isEmailVerificationSent"));
     Assertions.assertFalse(userService.getUserUsingUid(1000).isEmailVerified());
@@ -468,7 +496,7 @@ public class UserServiceTest {
     User user = userService.getUserUsingUid(1000);
     Map<String, Boolean> result =
         userService.updateProfile(
-            user, user.getEmail(), "Haozhe Xie", "Beijing", "", "{}", "About me");
+            user, "", user.getEmail(), "Haozhe Xie", "Beijing", "", "{}", "About me");
     Assertions.assertTrue(result.get("isSuccessful"));
     Assertions.assertNull(result.get("isEmailVerificationSent"));
     Assertions.assertTrue(userService.getUserUsingUid(1000).isEmailVerified());
@@ -482,7 +510,14 @@ public class UserServiceTest {
     User user = userService.getUserUsingUid(1000);
     Map<String, Boolean> result =
         userService.updateProfile(
-            user, "new-address@example.com", "Haozhe Xie", "Beijing", "", "{}", "About me");
+            user,
+            PLAINTEXT_PASSWORD,
+            "new-address@example.com",
+            "Haozhe Xie",
+            "Beijing",
+            "",
+            "{}",
+            "About me");
     Assertions.assertTrue(result.get("isSuccessful"));
 
     Assertions.assertNull(emailValidationMapper.getEmailValidation("cshzxie@gmail.com"));

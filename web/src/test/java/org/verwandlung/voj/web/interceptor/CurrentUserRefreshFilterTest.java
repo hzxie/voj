@@ -143,6 +143,24 @@ public class CurrentUserRefreshFilterTest {
         storedContext.getAuthentication().getAuthorities().iterator().next().getAuthority());
   }
 
+  /**
+   * Test case: the user's password changed after this session logged in (changed in another
+   * session, reset by email or set by an administrator). Expected: the session is invalidated.
+   */
+  @Test
+  public void testUserWhosePasswordChangedIsLoggedOut() throws Exception {
+    login(user("users"));
+    User freshUser = user("users");
+    freshUser.setPassword("{bcrypt}another-password");
+    when(userService.getUserUsingUid(1000L)).thenReturn(freshUser);
+
+    filter.doFilter(request, response, chain);
+
+    Assertions.assertTrue(session.isInvalid());
+    Assertions.assertNull(SecurityContextHolder.getContext().getAuthentication());
+    Assertions.assertNotNull(chain.getRequest());
+  }
+
   /** Test case: an unchanged user. Expected: the session stays valid and the fresh user is used. */
   @Test
   public void testUnchangedUserIsRefreshed() throws Exception {

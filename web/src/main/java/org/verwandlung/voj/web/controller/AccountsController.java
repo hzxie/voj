@@ -509,12 +509,15 @@ public class AccountsController {
   }
 
   /**
-   * Handles the user's password change request.
+   * Handles the user's password change request. Every other session of the user ends with the
+   * change (CurrentUserRefreshFilter logs out a session whose password is no longer the user's);
+   * this session is kept by storing the user with the new password in it.
    *
    * @param oldPassword - the old password
    * @param newPassword - the new password
    * @param confirmPassword - the confirmed new password
    * @param request - the HttpServletRequest object
+   * @param response - the HttpServletResponse object
    * @return a Map<String, Boolean> object containing the password verification result
    */
   @RequestMapping(value = "/changePassword.action", method = RequestMethod.POST)
@@ -522,13 +525,17 @@ public class AccountsController {
       @RequestParam(value = "oldPassword") String oldPassword,
       @RequestParam(value = "newPassword") String newPassword,
       @RequestParam(value = "confirmPassword") String confirmPassword,
-      HttpServletRequest request) {
-    User currentUser = HttpSessionParser.getCurrentUser(request.getSession());
+      HttpServletRequest request,
+      HttpServletResponse response) {
+    User currentUser = HttpSessionParser.getCurrentUser();
     String ipAddress = HttpRequestParser.getRemoteAddr(request);
 
     Map<String, Boolean> result =
         userService.changePassword(currentUser, oldPassword, newPassword, confirmPassword);
     if (result.get("isSuccessful")) {
+      // The security context of this request holds currentUser, which now carries the new
+      // password hash.
+      securityContextRepository.saveContext(SecurityContextHolder.getContext(), request, response);
       LOGGER.info(
           String.format(
               "%s changed password at %s",
@@ -540,6 +547,7 @@ public class AccountsController {
   /**
    * Handles the user's request to change their profile.
    *
+   * @param password - the user's current password, required to change the email address
    * @param email - the user's email address
    * @param displayName - the user's display name
    * @param location - the user's location
@@ -551,6 +559,7 @@ public class AccountsController {
    */
   @RequestMapping(value = "/updateProfile.action", method = RequestMethod.POST)
   public @ResponseBody Map<String, Boolean> updateProfileInDashboardAction(
+      @RequestParam(value = "password", required = false, defaultValue = "") String password,
       @RequestParam(value = "email") String email,
       @RequestParam(value = "displayName", required = false, defaultValue = "") String displayName,
       @RequestParam(value = "location") String location,
@@ -563,7 +572,7 @@ public class AccountsController {
 
     Map<String, Boolean> result =
         userService.updateProfile(
-            currentUser, email, displayName, location, website, socialLinks, aboutMe);
+            currentUser, password, email, displayName, location, website, socialLinks, aboutMe);
     if (result.get("isSuccessful")) {
       LOGGER.info(
           String.format(

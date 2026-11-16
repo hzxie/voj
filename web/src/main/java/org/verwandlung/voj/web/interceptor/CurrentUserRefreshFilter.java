@@ -50,9 +50,11 @@ import org.verwandlung.voj.web.util.LogSanitizer;
  * authorization checks, and reloads the user by its primary key:
  *
  * <ul>
- *   <li>a deleted user, or one whose group may no longer log in (e.g. banned to {@code forbidden}),
- *       is logged out: the security context is cleared and the session invalidated, and the request
- *       continues anonymously;
+ *   <li>a deleted user, one whose group may no longer log in (e.g. banned to {@code forbidden}), or
+ *       one whose password changed since this session stored it (the user changed or reset it, or
+ *       an administrator set a new one) is logged out: the security context is cleared and the
+ *       session invalidated, and the request continues anonymously. The session that changes the
+ *       password itself stores the new one (see AccountsController), so it is kept;
  *   <li>otherwise the fresh user replaces the cached one for this request, so the authorities and
  *       {@code HttpSessionParser.getCurrentUser()} always reflect the database; when the user group
  *       changed, the refreshed context is also written back to the session.
@@ -115,9 +117,14 @@ public class CurrentUserRefreshFilter extends OncePerRequestFilter {
       HttpServletRequest request,
       HttpServletResponse response) {
     User user = userService.getUserUsingUid(cachedUser.getUid());
-    if (user == null || !userService.isAllowedToAccess(user)) {
+    if (user == null
+        || !userService.isAllowedToAccess(user)
+        || !Objects.equals(cachedUser.getPassword(), user.getPassword())) {
+      // A password change ends every other session of the user, including one an attacker may
+      // hold. (Upgrading a legacy MD5 hash to bcrypt on login changes the stored hash too, so a
+      // legacy account's other sessions end once on its first login after the upgrade.)
       LOGGER.info(
-          "{} is no longer allowed to log in; terminating the session",
+          "{} is no longer allowed to log in or changed the password; terminating the session",
           LogSanitizer.forLog(cachedUser));
       new SecurityContextLogoutHandler().logout(request, response, authentication);
       return;

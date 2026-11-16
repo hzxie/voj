@@ -300,10 +300,43 @@ public class AccountsControllerTest {
     when(userService.changePassword(user, "old", "new", "new")).thenReturn(serviceResult);
 
     Map<String, Boolean> result =
-        controller.changePasswordInDashboardAction("old", "new", "new", request());
+        controller.changePasswordInDashboardAction(
+            "old", "new", "new", request(), new MockHttpServletResponse());
 
     Assertions.assertSame(serviceResult, result);
     verify(userService).changePassword(user, "old", "new", "new");
+  }
+
+  /**
+   * Test case: tests changePasswordInDashboardAction(...). Test data: a successful change. Expected:
+   * the session stores the user with the new password, so CurrentUserRefreshFilter keeps this
+   * session while it ends the user's other sessions (which still carry the old one).
+   */
+  @Test
+  public void testChangePasswordKeepsTheCurrentSession() {
+    User user = userWithGroup();
+    authenticate(user);
+    when(userService.changePassword(user, "old", "new-password", "new-password"))
+        .thenAnswer(
+            invocation -> {
+              user.setPassword("{bcrypt}new-hash");
+              return Map.of("isSuccessful", true);
+            });
+    MockHttpServletRequest request = request();
+
+    controller.changePasswordInDashboardAction(
+        "old", "new-password", "new-password", request, new MockHttpServletResponse());
+
+    org.springframework.security.core.context.SecurityContext storedContext =
+        (org.springframework.security.core.context.SecurityContext)
+            request
+                .getSession()
+                .getAttribute(
+                    org.springframework.security.web.context.HttpSessionSecurityContextRepository
+                        .SPRING_SECURITY_CONTEXT_KEY);
+    Assertions.assertEquals(
+        "{bcrypt}new-hash",
+        ((VojUserDetails) storedContext.getAuthentication().getPrincipal()).getUser().getPassword());
   }
 
   /** Test case: tests updateProfileInDashboardAction(...). Test data: an authenticated user updating their profile. Expected: the current user is resolved and passed to UserService.updateProfile. */
@@ -312,16 +345,17 @@ public class AccountsControllerTest {
     User user = userWithGroup();
     authenticate(user);
     Map<String, Boolean> serviceResult = Map.of("isSuccessful", true);
-    when(userService.updateProfile(user, "cshzxie@gmail.com", "Haozhe", "Earth", "x.com", "{}", "Hi"))
+    when(userService.updateProfile(
+            user, "secret", "cshzxie@gmail.com", "Haozhe", "Earth", "x.com", "{}", "Hi"))
         .thenReturn(serviceResult);
 
     Map<String, Boolean> result =
         controller.updateProfileInDashboardAction(
-            "cshzxie@gmail.com", "Haozhe", "Earth", "x.com", "{}", "Hi", request());
+            "secret", "cshzxie@gmail.com", "Haozhe", "Earth", "x.com", "{}", "Hi", request());
 
     Assertions.assertSame(serviceResult, result);
     verify(userService)
-        .updateProfile(user, "cshzxie@gmail.com", "Haozhe", "Earth", "x.com", "{}", "Hi");
+        .updateProfile(user, "secret", "cshzxie@gmail.com", "Haozhe", "Earth", "x.com", "{}", "Hi");
   }
 
   /** Test case: tests getNumberOfSubmissionsOfUsersAction(...). Test data: an explicit uid. Expected: that uid drives the per-day query and the result is keyed under totalSubmissions. */
