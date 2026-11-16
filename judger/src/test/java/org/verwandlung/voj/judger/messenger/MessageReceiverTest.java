@@ -96,6 +96,24 @@ public class MessageReceiverTest {
     verify(dispatcher, never()).onSubmissionCreated(org.mockito.ArgumentMatchers.anyLong());
   }
 
+  /**
+   * Test case: tests the onMessage method. Test data: a judging task whose outcome cannot be
+   * recorded. Expected result: the exception reaches the listener container, which rolls the task
+   * back so that the broker delivers it again.
+   */
+  @Test
+  public void testOnMessagePassesOnJudgingFailures() throws JMSException {
+    MapMessage mapMessage = org.mockito.Mockito.mock(MapMessage.class);
+    when(mapMessage.getString("event")).thenReturn("SubmissionCreated");
+    when(mapMessage.getLong("submissionId")).thenReturn(1234L);
+    org.mockito.Mockito.doThrow(new IllegalStateException("database down"))
+        .when(dispatcher)
+        .onSubmissionCreated(1234L);
+
+    org.junit.jupiter.api.Assertions.assertThrows(
+        IllegalStateException.class, () -> messageReceiver.onMessage(mapMessage));
+  }
+
   /** The mocked ApplicationDispatcher object. */
   @Mock private ApplicationDispatcher dispatcher;
 

@@ -281,6 +281,26 @@ public class DispatcherTest {
   }
 
   /**
+   * Test case: tests the createNewTask method. Test data: the database becomes unreachable while
+   * the verdict is recorded. Expected result: no System Error is attempted (it could not be
+   * recorded either); the exception is passed on so that the task is delivered again.
+   */
+  @Test
+  public void testCreateNewTaskPassesOnDatabaseFailures() throws Exception {
+    when(checkpointStore.getCheckpoints(1000L)).thenReturn(oneCheckpoint());
+    when(compiler.getCompileResult(any(), anyString(), anyString()))
+        .thenReturn(compileResult(false));
+    org.mockito.Mockito.doThrow(
+            new org.springframework.dao.DataAccessResourceFailureException("database down"))
+        .when(applicationDispatcher)
+        .onCompileFinished(anyLong(), any());
+
+    Assertions.assertThrows(
+        org.springframework.dao.DataAccessException.class, () -> dispatcher.createNewTask(100L));
+    verify(applicationDispatcher, never()).onErrorOccurred(anyLong(), anyString());
+  }
+
+  /**
    * Builds a single checkpoint of Problem#1000.
    *
    * @return the checkpoints

@@ -20,6 +20,7 @@ import jakarta.jms.ConnectionFactory;
 import jakarta.jms.MessageListener;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
+import org.apache.activemq.RedeliveryPolicy;
 import org.apache.activemq.command.ActiveMQQueue;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -54,11 +55,24 @@ public class JmsConfig {
   static final long RECOVERY_INTERVAL_MS = 5000;
 
   /**
-   * How many judging tasks the broker may push to this judger ahead of the one being judged. Each
-   * task takes seconds to minutes and judgers share the queue, so a judger must not hoard tasks
-   * (ActiveMQ's default prefetch is 1000) that idle judgers could be judging meanwhile.
+   * How many judging tasks the broker may push to this judger ahead of time. Each task takes
+   * seconds to minutes and judgers share the queue, so a judger must not hoard tasks (ActiveMQ's
+   * default prefetch is 1000) that idle judgers could be judging meanwhile. Not even one: with a
+   * prefetch of 1, the broker extends the window of a consumer whose (transacted) task is still
+   * being judged and pushes it the next task, which then waits behind the current one. With 0 the
+   * consumer pulls a task only when it asks for one, i.e. once it is idle.
    */
-  static final int QUEUE_PREFETCH = 1;
+  static final int QUEUE_PREFETCH = 0;
+
+  /**
+   * How many times a judging task whose judging failed (it could not even be recorded as a System
+   * Error, e.g. while the database is down) is delivered again before the broker moves it to the
+   * dead-letter queue, where the web application marks the submission as failed.
+   */
+  static final int MAXIMUM_REDELIVERIES = 5;
+
+  /** The delay (ms) before the first redelivery; it doubles with each further one. */
+  static final long INITIAL_REDELIVERY_DELAY_MS = 10000;
 
   /**
    * The JMS connection factory for sending, with a cached connection. The cache drops the
@@ -86,8 +100,14 @@ public class JmsConfig {
    * broker is reachable again; a SimpleMessageListenerContainer tries to recover only once, right
    * when the connection fails (while the broker is still down), and then stops consuming for good.
    * It has its own (uncached) connection factory, as the container caches its connection and
-   * consumer itself, with a small prefetch. A single consumer: judging is serialized anyway (see
+   * consumer itself, without prefetch. A single consumer: judging is serialized anyway (see
    * {@code Dispatcher#createNewTask}).
+   *
+   * <p>Each task is received in a local JMS transaction that is committed only once the listener
+   * returns. If it throws, which it does when the outcome of the judging could not be recorded, the
+   * transaction is rolled back and the broker delivers the task again (to this or another judger),
+   * up to {@value #MAXIMUM_REDELIVERIES} times with a growing delay, then dead-letters it. A judger
+   * that dies while judging never commits either, so its task is judged elsewhere.
    *
    * @param brokerUrl - the URL of the message broker
    * @param messageReceiver - the listener for judging tasks
@@ -98,12 +118,19 @@ public class JmsConfig {
       @Value("${jms.broker.url}") String brokerUrl, MessageListener messageReceiver) {
     ActiveMQConnectionFactory amqConnectionFactory = new ActiveMQConnectionFactory(brokerUrl);
     amqConnectionFactory.getPrefetchPolicy().setQueuePrefetch(QUEUE_PREFETCH);
+    RedeliveryPolicy redeliveryPolicy = amqConnectionFactory.getRedeliveryPolicy();
+    redeliveryPolicy.setMaximumRedeliveries(MAXIMUM_REDELIVERIES);
+    redeliveryPolicy.setInitialRedeliveryDelay(INITIAL_REDELIVERY_DELAY_MS);
+    redeliveryPolicy.setRedeliveryDelay(INITIAL_REDELIVERY_DELAY_MS);
+    redeliveryPolicy.setUseExponentialBackOff(true);
+    redeliveryPolicy.setBackOffMultiplier(2);
 
     DefaultMessageListenerContainer listenerContainer = new DefaultMessageListenerContainer();
     listenerContainer.setConnectionFactory(amqConnectionFactory);
     listenerContainer.setDestinationName(SUBMISSION_TASK_QUEUE);
     listenerContainer.setMessageListener(messageReceiver);
     listenerContainer.setConcurrentConsumers(1);
+    listenerContainer.setSessionTransacted(true);
     listenerContainer.setRecoveryInterval(RECOVERY_INTERVAL_MS);
     // Do not consume submissions until the application has verified the judger's identity at
     // startup; the startup runner starts this container only after that check passes.

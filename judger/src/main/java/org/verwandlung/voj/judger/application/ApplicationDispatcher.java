@@ -28,6 +28,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import org.verwandlung.voj.judger.core.Dispatcher;
+import org.verwandlung.voj.judger.exception.IllgealSubmissionException;
 import org.verwandlung.voj.judger.mapper.JudgeResultMapper;
 import org.verwandlung.voj.judger.mapper.SubmissionMapper;
 import org.verwandlung.voj.judger.mapper.UserMapper;
@@ -46,18 +47,19 @@ public class ApplicationDispatcher {
   /**
    * Callback invoked when a new judging request is received from the message queue.
    *
+   * <p>The dispatcher records any failure of the judging itself as a System Error. What it throws
+   * is a failure to record the outcome at all (e.g. the database is unreachable), which is passed
+   * on so that the task is delivered again rather than the submission staying pending forever.
+   *
    * @param submissionId - the unique identifier of the submission
    */
   public void onSubmissionCreated(long submissionId) {
     try {
       judgerDispatcher.createNewTask(submissionId);
-    } catch (Exception ex) {
-      LOGGER.catching(ex);
-      // Any unexpected failure during judging (e.g. in the compile or run stage) must still leave a
-      // terminal result; otherwise the submission stays stuck "pending" forever. Mark it as a
-      // System Error so both the user and the web side see a final state.
-      onErrorOccurred(
-          submissionId, "An internal error occurred in the judger while judging this submission.");
+    } catch (IllgealSubmissionException ex) {
+      LOGGER.warn(
+          String.format(
+              "Ignoring the judging task of submission #%d, which does not exist.", submissionId));
     }
   }
 
@@ -75,7 +77,7 @@ public class ApplicationDispatcher {
     mapMessage.put("event", "ErrorOccurred");
     mapMessage.put("submissionId", submissionId);
 
-    messageSender.sendMessage(mapMessage);
+    notifyWebApplication(mapMessage);
   }
 
   /**
@@ -97,7 +99,7 @@ public class ApplicationDispatcher {
     mapMessage.put("isSuccessful", isSuccessful);
     mapMessage.put("log", log);
 
-    messageSender.sendMessage(mapMessage);
+    notifyWebApplication(mapMessage);
   }
 
   /**
@@ -124,7 +126,7 @@ public class ApplicationDispatcher {
     mapMessage.put("usedMemory", usedMemory);
     mapMessage.put("score", score);
 
-    messageSender.sendMessage(mapMessage);
+    notifyWebApplication(mapMessage);
   }
 
   /**
@@ -170,7 +172,23 @@ public class ApplicationDispatcher {
     mapMessage.put("maxMemory", maxMemory);
     mapMessage.put("totalScore", totalScore);
 
-    messageSender.sendMessage(mapMessage);
+    notifyWebApplication(mapMessage);
+  }
+
+  /**
+   * Sends a progress message to the web application. The verdict itself is stored in the database,
+   * which is what the web application shows once judging is over; the messages only stream the
+   * progress live. So a message that cannot be sent (e.g. while the broker restarts) is logged and
+   * the judging goes on, rather than failing a judging whose verdict can still be recorded.
+   *
+   * @param mapMessage - the message
+   */
+  private void notifyWebApplication(Map<String, Object> mapMessage) {
+    try {
+      messageSender.sendMessage(mapMessage);
+    } catch (RuntimeException ex) {
+      LOGGER.warn("Failed to send the " + mapMessage.get("event") + " message", ex);
+    }
   }
 
   /**

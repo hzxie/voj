@@ -32,6 +32,11 @@ import org.verwandlung.voj.judger.util.LogSanitizer;
 /**
  * The message receiving service.
  *
+ * <p>A message that cannot be understood is logged and dropped: delivering it again would not
+ * help. A failure while handling a judging task is not caught here, though: it makes the listener
+ * container roll back the task's transaction, so that the broker delivers the task again (see
+ * {@code JmsConfig#submissionTaskListenerContainer}).
+ *
  * @author Haozhe Xie
  */
 @Component
@@ -40,36 +45,27 @@ public class MessageReceiver implements MessageListener {
    * @see jakarta.jms.MessageListener#onMessage(jakarta.jms.Message)
    */
   public void onMessage(Message message) {
-    if (message instanceof MapMessage) {
-      final MapMessage mapMessage = (MapMessage) message;
-
-      try {
-        String event = mapMessage.getString("event");
-
-        if ("SubmissionCreated".equals(event)) {
-          newSubmissionHandler(mapMessage);
-        } else {
-          LOGGER.warn(
-              String.format(
-                  "Unknown Event Received. [Event = %s]",
-                  new Object[] {LogSanitizer.forLog(event)}));
-        }
-      } catch (Exception ex) {
-        LOGGER.catching(ex);
-      }
+    if (!(message instanceof MapMessage)) {
+      LOGGER.warn("Ignoring a message that is not a MapMessage: " + message);
+      return;
     }
-  }
-
-  /**
-   * Handles a new submission request.
-   *
-   * @param mapMessage - the MapMessage object received from the message queue
-   * @throws JMSException
-   */
-  private void newSubmissionHandler(MapMessage mapMessage) throws JMSException {
-    long submissionId = mapMessage.getLong("submissionId");
+    long submissionId;
+    try {
+      MapMessage mapMessage = (MapMessage) message;
+      String event = mapMessage.getString("event");
+      if (!"SubmissionCreated".equals(event)) {
+        LOGGER.warn(
+            String.format(
+                "Unknown Event Received. [Event = %s]",
+                new Object[] {LogSanitizer.forLog(event)}));
+        return;
+      }
+      submissionId = mapMessage.getLong("submissionId");
+    } catch (JMSException | RuntimeException ex) {
+      LOGGER.error("Ignoring a malformed message", ex);
+      return;
+    }
     LOGGER.info(String.format("Received new submission task #%d", new Object[] {submissionId}));
-
     dispatcher.onSubmissionCreated(submissionId);
   }
 

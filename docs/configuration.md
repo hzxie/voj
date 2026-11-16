@@ -63,6 +63,23 @@ Judgers pull a problem's test data from the web app over HTTP rather than sharin
 The judger shares the database (`jdbc.*`) and message-queue (`jms.broker.url`)
 settings above. Judger-specific keys:
 
+### Message queue
+
+The judger dials the same `jms.broker.url` as the web app, a plain `tcp://` URL.
+It is built to share the queue with other judgers and to survive the broker
+going away (in the Docker setup the broker lives in the web container, so it
+restarts with it):
+
+- When the broker becomes unreachable, the judger tries to reconnect every 5
+  seconds until it is back, then receives tasks and sends results again.
+- It takes a judging task only once it is idle (no prefetch), so a busy judger
+  never holds back tasks that another judger could judge meanwhile.
+- A task is acknowledged only after its verdict (or a System Error) has been
+  recorded. If that is impossible, e.g. while the database is down, or the
+  judger dies while judging, the broker delivers the task again, up to 5 times
+  with a growing delay (10 s, 20 s, 40 s, ...), then moves it to `ActiveMQ.DLQ`,
+  where the web app marks the submission as failed.
+
 ### Identity
 
 | Property | Default | Purpose |

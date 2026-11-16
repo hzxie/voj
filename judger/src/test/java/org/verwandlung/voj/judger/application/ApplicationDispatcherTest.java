@@ -37,7 +37,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
+import org.springframework.dao.DataAccessResourceFailureException;
+
 import org.verwandlung.voj.judger.core.Dispatcher;
+import org.verwandlung.voj.judger.exception.IllgealSubmissionException;
 import org.verwandlung.voj.judger.mapper.JudgeResultMapper;
 import org.verwandlung.voj.judger.mapper.SubmissionMapper;
 import org.verwandlung.voj.judger.messenger.MessageSender;
@@ -63,22 +66,49 @@ public class ApplicationDispatcherTest {
   }
 
   /**
-   * Test case: tests the onSubmissionCreated method. Test data: the judger dispatcher throws an
-   * exception. Expected result: the exception is swallowed and the submission is marked as a system
-   * error so it does not stay stuck pending.
+   * Test case: tests the onSubmissionCreated method. Test data: the judger dispatcher cannot record
+   * the outcome of the judging (the database is down). Expected result: the exception is passed on,
+   * so that the task is delivered again, rather than swallowed with the submission left pending.
    */
   @Test
-  public void testOnSubmissionCreatedMarksSystemErrorOnFailure() throws Exception {
-    org.mockito.Mockito.doThrow(new IllegalStateException("crashed"))
+  public void testOnSubmissionCreatedPassesOnFailures() throws Exception {
+    org.mockito.Mockito.doThrow(new DataAccessResourceFailureException("database down"))
         .when(judgerDispatcher)
         .createNewTask(anyLong());
-    when(submissionMapper.getSubmission(100L)).thenReturn(new Submission());
+
+    Assertions.assertThrows(
+        DataAccessResourceFailureException.class,
+        () -> applicationDispatcher.onSubmissionCreated(100L));
+  }
+
+  /**
+   * Test case: tests the onSubmissionCreated method. Test data: a task for a submission that does
+   * not exist (any more). Expected result: the task is dropped quietly.
+   */
+  @Test
+  public void testOnSubmissionCreatedIgnoresMissingSubmissions() throws Exception {
+    org.mockito.Mockito.doThrow(new IllgealSubmissionException("Illegal submission #100"))
+        .when(judgerDispatcher)
+        .createNewTask(anyLong());
 
     Assertions.assertDoesNotThrow(() -> applicationDispatcher.onSubmissionCreated(100L));
+    verify(submissionMapper, never()).updateSubmission(any(Submission.class));
+  }
 
-    ArgumentCaptor<Submission> submissionCaptor = ArgumentCaptor.forClass(Submission.class);
-    verify(submissionMapper).updateSubmission(submissionCaptor.capture());
-    Assertions.assertEquals("SE", submissionCaptor.getValue().getJudgeResultSlug());
+  /**
+   * Test case: tests the onErrorOccurred method. Test data: the message broker is unreachable.
+   * Expected result: the System Error is still recorded, without an exception: the progress
+   * messages are only a live view of what is stored in the database.
+   */
+  @Test
+  public void testOnErrorOccurredWithoutBroker() {
+    when(submissionMapper.getSubmission(100L)).thenReturn(new Submission());
+    org.mockito.Mockito.doThrow(new org.springframework.jms.UncategorizedJmsException("down"))
+        .when(messageSender)
+        .sendMessage(any());
+
+    Assertions.assertDoesNotThrow(() -> applicationDispatcher.onErrorOccurred(100L, "reason"));
+    verify(submissionMapper).updateSubmission(any(Submission.class));
   }
 
   /**

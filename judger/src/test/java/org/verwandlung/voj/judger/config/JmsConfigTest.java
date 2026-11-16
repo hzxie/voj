@@ -83,7 +83,7 @@ public class JmsConfigTest {
   /**
    * Test case: tests the submissionTaskListenerContainer bean. Expected result: a single-consumer
    * listener container bound to the judging-task queue and the supplied message listener, with a
-   * small prefetch, that does not start on its own.
+   * prefetch of 0, that does not start on its own.
    */
   @Test
   public void testSubmissionTaskListenerContainer() {
@@ -153,6 +153,124 @@ public class JmsConfigTest {
   }
 
   /**
+   * Test case: the judging of a task keeps failing (the listener throws). Expected result: the task
+   * is delivered again, {@link JmsConfig#MAXIMUM_REDELIVERIES} times, then dead-lettered, where the
+   * web application picks it up.
+   */
+  @Test
+  public void testFailedTaskIsRedeliveredThenDeadLettered() throws Exception {
+    String brokerUrl = startBrokerOnFreePort();
+    java.util.concurrent.atomic.AtomicInteger deliveries =
+        new java.util.concurrent.atomic.AtomicInteger();
+    DefaultMessageListenerContainer listenerContainer =
+        jmsConfig.submissionTaskListenerContainer(
+            brokerUrl,
+            message -> {
+              deliveries.incrementAndGet();
+              throw new IllegalStateException("database down");
+            });
+    Assertions.assertTrue(listenerContainer.isSessionTransacted());
+    org.apache.activemq.RedeliveryPolicy redeliveryPolicy =
+        ((ActiveMQConnectionFactory) listenerContainer.getConnectionFactory())
+            .getRedeliveryPolicy();
+    Assertions.assertEquals(
+        JmsConfig.MAXIMUM_REDELIVERIES, redeliveryPolicy.getMaximumRedeliveries());
+    // Keep the test fast; the delays themselves are the broker client's business.
+    redeliveryPolicy.setInitialRedeliveryDelay(0);
+    redeliveryPolicy.setRedeliveryDelay(0);
+    start(listenerContainer);
+
+    sendTask(brokerUrl, 7L);
+    JmsTemplate deadLetterReceiver = new JmsTemplate(new ActiveMQConnectionFactory(brokerUrl));
+    deadLetterReceiver.setReceiveTimeout(10000);
+    MapMessage deadLetter = (MapMessage) deadLetterReceiver.receive("ActiveMQ.DLQ");
+
+    Assertions.assertNotNull(deadLetter);
+    Assertions.assertEquals(7L, deadLetter.getLong("submissionId"));
+    Assertions.assertEquals(1 + JmsConfig.MAXIMUM_REDELIVERIES, deliveries.get());
+  }
+
+  /**
+   * Test case: two judgers share the queue and one of them is busy judging. Expected result: the
+   * busy judger does not hold back the other tasks; the idle judger judges them meanwhile.
+   */
+  @Test
+  public void testBusyJudgerDoesNotHoardTasks() throws Exception {
+    String brokerUrl = startBrokerOnFreePort();
+    java.util.concurrent.CountDownLatch busy = new java.util.concurrent.CountDownLatch(1);
+    java.util.concurrent.CountDownLatch release = new java.util.concurrent.CountDownLatch(1);
+    BlockingQueue<Long> judgedByIdleJudger = new LinkedBlockingQueue<>();
+    start(
+        jmsConfig.submissionTaskListenerContainer(
+            brokerUrl,
+            message -> {
+              busy.countDown();
+              try {
+                release.await(30, TimeUnit.SECONDS);
+              } catch (InterruptedException ex) {
+                Thread.currentThread().interrupt();
+              }
+            }));
+    sendTask(brokerUrl, 1L);
+    Assertions.assertTrue(busy.await(10, TimeUnit.SECONDS));
+
+    for (long submissionId = 2; submissionId <= 4; ++submissionId) {
+      sendTask(brokerUrl, submissionId);
+    }
+    start(
+        jmsConfig.submissionTaskListenerContainer(
+            brokerUrl,
+            message -> {
+              try {
+                judgedByIdleJudger.add(((MapMessage) message).getLong("submissionId"));
+              } catch (jakarta.jms.JMSException ex) {
+                throw new IllegalStateException(ex);
+              }
+            }));
+    try {
+      for (int i = 0; i < 3; ++i) {
+        Assertions.assertNotNull(
+            judgedByIdleJudger.poll(10, TimeUnit.SECONDS),
+            "The busy judger holds back " + (3 - i) + " task(s)");
+      }
+    } finally {
+      release.countDown();
+    }
+  }
+
+  /**
+   * Starts a broker on a free TCP port, as the broker of the current test.
+   *
+   * @return the URL of the broker
+   */
+  private String startBrokerOnFreePort() throws Exception {
+    int port;
+    try (ServerSocket socket = new ServerSocket(0)) {
+      port = socket.getLocalPort();
+    }
+    String brokerUrl = "tcp://localhost:" + port;
+    broker = startBroker(brokerUrl);
+    return brokerUrl;
+  }
+
+  /**
+   * Sends a judging task, as the web application does.
+   *
+   * @param brokerUrl - the URL of the broker
+   * @param submissionId - the submission to judge
+   */
+  private static void sendTask(String brokerUrl, long submissionId) {
+    JmsTemplate taskSender = new JmsTemplate(new ActiveMQConnectionFactory(brokerUrl));
+    taskSender.setDefaultDestination(new ActiveMQQueue("vojSubmissionTaskQueue"));
+    taskSender.convertAndSend(
+        Map.of("event", "SubmissionCreated", "submissionId", submissionId),
+        message -> {
+          message.setStringProperty("event", "SubmissionCreated");
+          return message;
+        });
+  }
+
+  /**
    * Starts a non-persistent broker listening on a URL.
    *
    * @param brokerUrl - the URL of the broker's transport connector
@@ -179,8 +297,16 @@ public class JmsConfigTest {
    */
   private DefaultMessageListenerContainer startListener(
       String brokerUrl, MessageListener messageListener) {
-    DefaultMessageListenerContainer listenerContainer =
-        jmsConfig.submissionTaskListenerContainer(brokerUrl, messageListener);
+    return start(jmsConfig.submissionTaskListenerContainer(brokerUrl, messageListener));
+  }
+
+  /**
+   * Starts a listener container, as the startup runner does.
+   *
+   * @param listenerContainer - the listener container
+   * @return the started listener container
+   */
+  private DefaultMessageListenerContainer start(DefaultMessageListenerContainer listenerContainer) {
     listenerContainer.afterPropertiesSet();
     listenerContainer.start();
     containers.add(listenerContainer);

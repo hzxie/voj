@@ -27,6 +27,7 @@ import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Component;
 
 import org.verwandlung.voj.judger.application.ApplicationDispatcher;
@@ -59,6 +60,8 @@ public class Dispatcher {
    *
    * @param submissionId - the unique identifier of the submission
    * @throws IllgealSubmissionException if the submission does not exist
+   * @throws DataAccessException if the submission or the outcome of its judging cannot be read or
+   *     written
    */
   public void createNewTask(long submissionId) throws IllgealSubmissionException {
     synchronized (this) {
@@ -75,6 +78,10 @@ public class Dispatcher {
       }
       try {
         judge(submission, baseDirectory, baseFileName);
+      } catch (DataAccessException ex) {
+        // The database cannot be reached: neither the verdict nor a System Error can be recorded.
+        // The task is delivered again later (see MessageReceiver).
+        throw ex;
       } catch (SystemError ex) {
         LOGGER.error(String.format("System Error in submission #%d", submissionId), ex);
         applicationDispatcher.onErrorOccurred(submissionId, ex.getMessage());
