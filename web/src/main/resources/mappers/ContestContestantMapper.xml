@@ -20,14 +20,15 @@
 	</resultMap>
 
 	<!-- A leaderboard row: the contestant's identifier and username (the only user fields the
-	     leaderboards show), joined in rather than loaded with one query per contestant. -->
+	     leaderboards show), joined in rather than loaded with one query per contestant. The user
+	     fields are mapped as flat nested properties, not as a nested association: a result map with
+	     a nested association but no top-level id makes MyBatis merge the rows whose other columns
+	     (score and time) are equal, so tied contestants would vanish from the leaderboard. -->
 	<resultMap id="ContestContestantRankingResultMap" type="org.verwandlung.voj.web.model.ContestContestant">
 		<result property="score" column="contestant_score" />
 		<result property="time" column="contestant_time" />
-		<association property="contestant" javaType="org.verwandlung.voj.web.model.User">
-			<id property="uid" column="contestant_uid" />
-			<result property="username" column="username" />
-		</association>
+		<result property="contestant.uid" column="contestant_uid" />
+		<result property="contestant.username" column="username" />
 	</resultMap>
 
 	<!-- Methods -->

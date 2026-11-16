@@ -103,6 +103,52 @@ public class ContestContestantMapperTest {
   }
 
   /**
+   * Test case: tests the getContestantsOfContestForOi(long, Date, long, int) method. Test data: the
+   * 2nd contest with three contestants, none of whom submitted anything (all tied at score 0 and
+   * time 0). Expected: all three contestants, in UID order; tied rows must not be merged into one.
+   */
+  @Test
+  public void testGetContestantsOfContestForOiKeepsTiedContestants() {
+    addContestantsToSecondContest();
+    List<ContestContestant> contestants =
+        contestContestantMapper.getContestantsOfContestForOi(2, null, 0, 10);
+    Assertions.assertEquals(List.of(1000L, 1001L, 1002L), uidsOf(contestants));
+    Assertions.assertEquals("voj@judger", contestants.get(1).getContestant().getUsername());
+    for (ContestContestant cc : contestants) {
+      Assertions.assertEquals(0, cc.getScore());
+      Assertions.assertEquals(0, cc.getTime());
+    }
+  }
+
+  /**
+   * Test case: tests the getContestantsOfContestForAcm(long, Date, long, int) method. Test data: the
+   * 2nd contest with three contestants, none of whom submitted anything (all tied at 0 solved and 0
+   * rejected). Expected: all three contestants, in UID order; tied rows must not be merged into one.
+   */
+  @Test
+  public void testGetContestantsOfContestForAcmKeepsTiedContestants() {
+    addContestantsToSecondContest();
+    List<ContestContestant> contestants =
+        contestContestantMapper.getContestantsOfContestForAcm(2, null, 0, 10);
+    Assertions.assertEquals(List.of(1000L, 1001L, 1002L), uidsOf(contestants));
+    Assertions.assertEquals("another-user", contestants.get(2).getContestant().getUsername());
+  }
+
+  /** Registers users 1001 and 1002 for the 2nd contest (user 1000 is registered already). */
+  private void addContestantsToSecondContest() {
+    Contest contest = contestMapper.getContest(2);
+    contestContestantMapper.createContestContestant(
+        new ContestContestant(contest, userMapper.getUserUsingUid(1001)));
+    contestContestantMapper.createContestContestant(
+        new ContestContestant(contest, userMapper.getUserUsingUid(1002)));
+  }
+
+  /** Collects the contestant UIDs of a leaderboard, in order. */
+  private static List<Long> uidsOf(List<ContestContestant> contestants) {
+    return contestants.stream().map(cc -> cc.getContestant().getUid()).toList();
+  }
+
+  /**
    * Test case: tests the createContestContestant(Contest, User) method. Test data: valid data, and no
    * identical record exists in the database. Expected: the participation record is created
    * successfully.

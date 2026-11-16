@@ -411,6 +411,78 @@ public class ContestServiceTest {
     Assertions.assertEquals(last, submissions.get(1000L).get(1000L).getSubmissionId());
   }
 
+  /**
+   * Test case: tests the getLeaderBoardForOi(long, User) method with ties. Test data: users 1000 and
+   * 1001 both score 50 in 20 ms on P1000; users 1002, 2000 and 2001 submit nothing. Expected: all
+   * five contestants are on the leaderboard (tied rows are not merged), the two with equal results
+   * share rank 1 and the three without submissions share rank 3.
+   */
+  @Test
+  @SuppressWarnings("unchecked")
+  public void testGetLeaderBoardForOiKeepsTiedContestants() {
+    long now = System.currentTimeMillis() / 1000 * 1000;
+    long start = now - 2 * 3600_000L;
+    insertContest(FIXTURE_CONTEST_ID, "IOI", start, now + 3600_000L, 0);
+    registerTiedContestants();
+    insertSubmission(1000, 1000, "WA", 50, 20, start + 10 * 60_000L);
+    insertSubmission(1001, 1000, "WA", 50, 20, start + 20 * 60_000L);
+
+    List<ContestContestant> contestants =
+        (List<ContestContestant>)
+            contestService.getLeaderBoardForOi(FIXTURE_CONTEST_ID, null).get("contestants");
+    Assertions.assertEquals(List.of(1000L, 1001L, 1002L, 2000L, 2001L), uidsOf(contestants));
+    Assertions.assertEquals(List.of(1L, 1L, 3L, 3L, 3L), ranksOf(contestants));
+    Assertions.assertEquals("tied-user-2001", contestants.get(4).getContestant().getUsername());
+    Contest contest = contestService.getContest(FIXTURE_CONTEST_ID);
+    Assertions.assertEquals(
+        uidsOf(contestants), uidsOf(contestService.getStandings(contest, null, 10)));
+  }
+
+  /**
+   * Test case: tests the getLeaderBoardForAcm(long, User) method with ties. Test data: users 1000 and
+   * 1001 both solve P1000 with no rejected attempt (equal rows in the ranking query); users 1002,
+   * 2000 and 2001 submit nothing. Expected: all five contestants are on the leaderboard (tied rows
+   * are not merged), and the three without submissions share the last rank.
+   */
+  @Test
+  @SuppressWarnings("unchecked")
+  public void testGetLeaderBoardForAcmKeepsTiedContestants() {
+    long now = System.currentTimeMillis() / 1000 * 1000;
+    long start = now - 2 * 3600_000L;
+    insertContest(FIXTURE_CONTEST_ID, "ICPC", start, now + 3600_000L, 0);
+    registerTiedContestants();
+    insertSubmission(1000, 1000, "AC", 100, 10, start + 10 * 60_000L);
+    insertSubmission(1001, 1000, "AC", 100, 10, start + 20 * 60_000L);
+
+    Assertions.assertEquals(
+        5,
+        contestContestantMapper.getContestantsOfContestForAcm(FIXTURE_CONTEST_ID, null, 0, 10)
+            .size());
+    List<ContestContestant> contestants =
+        (List<ContestContestant>)
+            contestService.getLeaderBoardForAcm(FIXTURE_CONTEST_ID, null).get("contestants");
+    Assertions.assertEquals(List.of(1000L, 1001L, 1002L, 2000L, 2001L), uidsOf(contestants));
+    Assertions.assertEquals(List.of(1L, 2L, 3L, 3L, 3L), ranksOf(contestants));
+  }
+
+  /**
+   * Registers users 1000, 1001 and 1002 and two new users (2000 and 2001) for the fixture contest.
+   */
+  private void registerTiedContestants() {
+    for (long uid : new long[] {2000, 2001}) {
+      jdbcTemplate()
+          .update(
+              "INSERT INTO voj_users (uid, username, password, email, user_group_id,"
+                  + " prefer_language_id) VALUES (?, ?, 'x', ?, 2, 1)",
+              uid,
+              "tied-user-" + uid,
+              "tied-user-" + uid + "@example.org");
+    }
+    for (long uid : new long[] {1000, 1001, 1002, 2000, 2001}) {
+      insertContestant(FIXTURE_CONTEST_ID, uid);
+    }
+  }
+
   /** Test case: tests ContestContestant.compareTo(Object). Test data: two contestants with equal score and time. Expected: a consistent order (sgn(a.compareTo(b)) == -sgn(b.compareTo(a))), and 0 against itself. */
   @Test
   public void testCompareToIsConsistentOnFullTies() {
