@@ -82,7 +82,7 @@ public class Compiler {
    * @param baseFileName - the compilation output file name
    * @return the compile command
    */
-  private String getCompileCommandLine(
+  String getCompileCommandLine(
       Submission submission, String workDirectory, String baseFileName) {
     String filePathWithoutExtension =
         String.format("%s/%s", new Object[] {workDirectory, baseFileName});
@@ -90,7 +90,8 @@ public class Compiler {
         submission
             .getLanguage()
             .getCompileCommand()
-            .replaceAll("\\{filename\\}", filePathWithoutExtension);
+            // Literally: a Windows path's backslashes are not escapes.
+            .replace("{filename}", filePathWithoutExtension);
     return compileCommand;
   }
 

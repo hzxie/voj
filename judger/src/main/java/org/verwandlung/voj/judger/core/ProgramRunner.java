@@ -91,13 +91,14 @@ public class ProgramRunner {
    * @param baseFileName - the file name of the application to run (without file suffix)
    * @return the command line to execute
    */
-  private String getCommandLine(Submission submission, String workDirectory, String baseFileName) {
+  String getCommandLine(Submission submission, String workDirectory, String baseFileName) {
     Language language = submission.getLanguage();
     String filePathWithoutExtension =
         String.format("%s/%s", new Object[] {workDirectory, baseFileName});
     StringBuilder runCommand =
         new StringBuilder(
-            language.getRunCommand().replaceAll("\\{filename\\}", filePathWithoutExtension));
+            // Literally: a Windows path's backslashes are not escapes.
+            language.getRunCommand().replace("{filename}", filePathWithoutExtension));
 
     if (language.getLanguageName().equalsIgnoreCase("Java")) {
       int lastIndexOfSpace = runCommand.lastIndexOf("/");
