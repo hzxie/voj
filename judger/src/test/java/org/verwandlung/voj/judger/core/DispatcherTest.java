@@ -18,7 +18,6 @@ package org.verwandlung.voj.judger.core;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -36,7 +35,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.IntConsumer;
 
@@ -124,7 +122,10 @@ public class DispatcherTest {
     dispatcher.judgeNextSubmission(LANGUAGES);
 
     verify(applicationDispatcher).onCompileFinished(any(), any());
-    verify(applicationDispatcher).onOneTestPointFinished(argThat(s -> s.getSubmissionId() == 100L), eq(1), any());
+    verify(applicationDispatcher)
+        .onOneTestPointFinished(
+            argThat(s -> s.getSubmissionId() == 100L),
+            eq(new CheckpointResult(1, "AC", 10, 128, 100)));
     // The test data is read from the directory the checkpoint store synced it to.
     Path checkpointDirectory = Path.of("/tmp/voj-dispatcher-tests/1000");
     verify(programRunner)
@@ -137,18 +138,14 @@ public class DispatcherTest {
         .getComparisonResult(
             eq(checkpointDirectory.resolve("output#1.txt").toString()), anyString(), eq(true));
 
-    @SuppressWarnings("unchecked")
-    org.mockito.ArgumentCaptor<List<Map<String, Object>>> resultsCaptor =
-        org.mockito.ArgumentCaptor.forClass(List.class);
-    verify(applicationDispatcher).onAllTestPointsFinished(any(), resultsCaptor.capture());
-    Assertions.assertEquals("AC", resultsCaptor.getValue().get(0).get("runtimeResult"));
-    Assertions.assertEquals(100, resultsCaptor.getValue().get(0).get("score"));
+    verify(applicationDispatcher)
+        .onAllTestPointsFinished(any(), eq(List.of(new CheckpointResult(1, "AC", 10, 128, 100))));
   }
 
   /**
    * Test case: tests the judgeNextSubmission method. Test data: a submission that compiles
    * successfully but produces incorrect output. Expected result: an accepted runtime result is
-   * downgraded to a wrong answer.
+   * downgraded to a wrong answer, which earns no score.
    */
   @Test
   public void testJudgeNextSubmissionWrongAnswer() throws Exception {
@@ -165,11 +162,10 @@ public class DispatcherTest {
 
     dispatcher.judgeNextSubmission(LANGUAGES);
 
-    @SuppressWarnings("unchecked")
-    org.mockito.ArgumentCaptor<Map<String, Object>> resultCaptor =
-        org.mockito.ArgumentCaptor.forClass(Map.class);
-    verify(applicationDispatcher).onOneTestPointFinished(argThat(s -> s.getSubmissionId() == 100L), eq(1), resultCaptor.capture());
-    Assertions.assertEquals("WA", resultCaptor.getValue().get("runtimeResult"));
+    verify(applicationDispatcher)
+        .onOneTestPointFinished(
+            argThat(s -> s.getSubmissionId() == 100L),
+            eq(new CheckpointResult(1, "WA", 10, 128, 0)));
   }
 
   /**
@@ -195,12 +191,13 @@ public class DispatcherTest {
 
     dispatcher.judgeNextSubmission(LANGUAGES);
 
-    @SuppressWarnings("unchecked")
-    org.mockito.ArgumentCaptor<List<Map<String, Object>>> resultsCaptor =
-        org.mockito.ArgumentCaptor.forClass(List.class);
-    verify(applicationDispatcher).onAllTestPointsFinished(any(), resultsCaptor.capture());
-    Assertions.assertEquals("PE", resultsCaptor.getValue().get(0).get("runtimeResult"));
-    Assertions.assertEquals("AC", resultsCaptor.getValue().get(1).get("runtimeResult"));
+    verify(applicationDispatcher)
+        .onAllTestPointsFinished(
+            any(),
+            eq(
+                List.of(
+                    new CheckpointResult(1, "PE", 10, 128, 0),
+                    new CheckpointResult(2, "AC", 10, 128, 50))));
   }
 
   /**
@@ -392,7 +389,7 @@ public class DispatcherTest {
     verify(applicationDispatcher).requeueSubmission(any(), contains("run the compiler"));
     verify(applicationDispatcher).requeueSubmission(any(), contains("run the program"));
     verify(applicationDispatcher, never()).onErrorOccurred(any(), anyString());
-    verify(applicationDispatcher, never()).onOneTestPointFinished(any(), anyInt(), any());
+    verify(applicationDispatcher, never()).onOneTestPointFinished(any(), any());
     verify(applicationDispatcher, never()).onAllTestPointsFinished(any(), any());
   }
 
@@ -614,7 +611,7 @@ public class DispatcherTest {
     verify(applicationDispatcher).onCompileFinished(any(), any());
     verify(programRunner, times(1))
         .getRuntimeResult(any(), anyString(), anyString(), anyString());
-    verify(applicationDispatcher, never()).onOneTestPointFinished(any(), anyInt(), any());
+    verify(applicationDispatcher, never()).onOneTestPointFinished(any(), any());
     verify(applicationDispatcher, never()).onAllTestPointsFinished(any(), any());
     verify(applicationDispatcher, never()).onErrorOccurred(any(), anyString());
     try (java.util.stream.Stream<Path> entries = Files.list(tempDir)) {

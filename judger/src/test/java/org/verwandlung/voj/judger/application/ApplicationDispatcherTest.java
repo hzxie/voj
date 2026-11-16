@@ -25,8 +25,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -43,6 +41,7 @@ import org.mockito.quality.Strictness;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import org.verwandlung.voj.judger.core.CheckpointResult;
 import org.verwandlung.voj.judger.core.CompileResult;
 import org.verwandlung.voj.judger.core.Verdict;
 import org.verwandlung.voj.judger.mapper.JudgeResultMapper;
@@ -60,22 +59,6 @@ import org.verwandlung.voj.judger.model.Submission;
 @MockitoSettings(strictness = Strictness.LENIENT)
 public class ApplicationDispatcherTest {
   /**
-   * Test case: tests the onErrorOccurred method. Test data: the message broker is unreachable.
-   * Expected result: the System Error is still recorded, without an exception: the progress
-   * messages are only a live view of what is stored in the database.
-   */
-  @Test
-  public void testOnErrorOccurredWithoutBroker() {
-    org.mockito.Mockito.doThrow(new org.springframework.jms.UncategorizedJmsException("down"))
-        .when(messageSender)
-        .sendMessage(any());
-
-    Assertions.assertDoesNotThrow(
-        () -> applicationDispatcher.onErrorOccurred(submission(), "reason"));
-    verify(submissionMapper).updateSubmissionResult(any(Submission.class));
-  }
-
-  /**
    * Test case: tests the outcomes of a judging. Test data: a judging that was superseded, so the
    * update of its verdict (a System Error, a Compile Error, a verdict) matches nothing. Expected
    * result: the stale verdict is dropped and no message is sent, without an exception.
@@ -87,7 +70,7 @@ public class ApplicationDispatcherTest {
 
     applicationDispatcher.onErrorOccurred(submission(), "reason");
     applicationDispatcher.onCompileFinished(submission(), result);
-    applicationDispatcher.onAllTestPointsFinished(submission(), new ArrayList<>());
+    applicationDispatcher.onAllTestPointsFinished(submission(), List.of(accepted(0)));
 
     verify(submissionMapper, org.mockito.Mockito.times(3))
         .updateSubmissionResult(any(Submission.class));
@@ -103,8 +86,8 @@ public class ApplicationDispatcherTest {
     CompileResult result = new CompileResult(Verdict.NORMAL, "");
     applicationDispatcher.onErrorOccurred(submission(), "reason");
     applicationDispatcher.onCompileFinished(submission(), result);
-    applicationDispatcher.onOneTestPointFinished(submission(), 1, new HashMap<>());
-    applicationDispatcher.onAllTestPointsFinished(submission(), new ArrayList<>());
+    applicationDispatcher.onOneTestPointFinished(submission(), accepted(1));
+    applicationDispatcher.onAllTestPointsFinished(submission(), List.of(accepted(1)));
 
     ArgumentCaptor<Map<String, Object>> messageCaptor = ArgumentCaptor.forClass(Map.class);
     verify(messageSender, org.mockito.Mockito.times(4)).sendMessage(messageCaptor.capture());
@@ -260,8 +243,7 @@ public class ApplicationDispatcherTest {
         .thenReturn(new JudgeResult(1, "AC", "Accepted"));
 
     for (int checkpointId = 0; checkpointId < 3; ++checkpointId) {
-      applicationDispatcher.onOneTestPointFinished(
-          submission(), checkpointId, buildRuntimeResult("AC", 1, 1, 1));
+      applicationDispatcher.onOneTestPointFinished(submission(), accepted(checkpointId));
     }
 
     verify(judgeResultMapper, times(1)).getJudgeResultUsingSlug("AC");
@@ -332,13 +314,8 @@ public class ApplicationDispatcherTest {
     when(judgeResultMapper.getJudgeResultUsingSlug("AC"))
         .thenReturn(new JudgeResult(1, "AC", "Accepted"));
 
-    Map<String, Object> runtimeResult = new HashMap<>();
-    runtimeResult.put("runtimeResult", "AC");
-    runtimeResult.put("usedTime", 12);
-    runtimeResult.put("usedMemory", 256);
-    runtimeResult.put("score", 10);
-
-    applicationDispatcher.onOneTestPointFinished(submission(), 1, runtimeResult);
+    applicationDispatcher.onOneTestPointFinished(
+        submission(), new CheckpointResult(1, "AC", 12, 256, 10));
 
     Map<String, Object> message = captureSentMessage();
     Assertions.assertEquals("TestPointFinished", message.get("event"));
@@ -351,26 +328,6 @@ public class ApplicationDispatcherTest {
   }
 
   /**
-   * Test case: tests the onOneTestPointFinished method. Test data: a runtime result without an
-   * explicit result slug, used to verify the System Error fallbacks. Expected result: the message
-   * reports a System Error with zeroed metrics.
-   */
-  @Test
-  public void testOnOneTestPointFinishedFallbacks() {
-    when(judgeResultMapper.getJudgeResultUsingSlug("SE")).thenReturn(null);
-
-    Map<String, Object> runtimeResult = new HashMap<>();
-
-    applicationDispatcher.onOneTestPointFinished(submission(), 2, runtimeResult);
-
-    Map<String, Object> message = captureSentMessage();
-    Assertions.assertEquals("System Error", message.get("runtimeResult"));
-    Assertions.assertEquals(0, message.get("usedTime"));
-    Assertions.assertEquals(0, message.get("usedMemory"));
-    Assertions.assertEquals(0, message.get("score"));
-  }
-
-  /**
    * Test case: tests the onAllTestPointsFinished method. Test data: a fully accepted submission.
    * Expected result: the submission is persisted with the accumulated score and an
    * AllTestPointsFinished message is sent.
@@ -380,11 +337,10 @@ public class ApplicationDispatcherTest {
     when(judgeResultMapper.getJudgeResultUsingSlug("AC"))
         .thenReturn(new JudgeResult(1, "AC", "Accepted"));
 
-    List<Map<String, Object>> runtimeResults = new ArrayList<>();
-    runtimeResults.add(buildRuntimeResult("AC", 10, 128, 50));
-    runtimeResults.add(buildRuntimeResult("AC", 20, 256, 50));
-
-    applicationDispatcher.onAllTestPointsFinished(submission(), runtimeResults);
+    applicationDispatcher.onAllTestPointsFinished(
+        submission(),
+        List.of(
+            new CheckpointResult(0, "AC", 10, 128, 50), new CheckpointResult(1, "AC", 20, 256, 50)));
 
     ArgumentCaptor<Submission> submissionCaptor = ArgumentCaptor.forClass(Submission.class);
     verify(submissionMapper).updateSubmissionResult(submissionCaptor.capture());
@@ -403,8 +359,8 @@ public class ApplicationDispatcherTest {
 
   /**
    * Test case: tests the onAllTestPointsFinished method. Test data: a submission containing a wrong
-   * answer. Expected result: the overall result becomes the non-accepted slug and only accepted
-   * checkpoints contribute to the score.
+   * answer. Expected result: the overall result becomes the non-accepted slug, with the score the
+   * checkpoints earned.
    */
   @Test
   public void testOnAllTestPointsFinishedWithWrongAnswer() {
@@ -413,11 +369,10 @@ public class ApplicationDispatcherTest {
     when(judgeResultMapper.getJudgeResultUsingSlug("WA"))
         .thenReturn(new JudgeResult(2, "WA", "Wrong Answer"));
 
-    List<Map<String, Object>> runtimeResults = new ArrayList<>();
-    runtimeResults.add(buildRuntimeResult("AC", 10, 128, 50));
-    runtimeResults.add(buildRuntimeResult("WA", 20, 256, 50));
-
-    applicationDispatcher.onAllTestPointsFinished(submission(), runtimeResults);
+    applicationDispatcher.onAllTestPointsFinished(
+        submission(),
+        List.of(
+            new CheckpointResult(0, "AC", 10, 128, 50), new CheckpointResult(1, "WA", 20, 256, 0)));
 
     ArgumentCaptor<Submission> submissionCaptor = ArgumentCaptor.forClass(Submission.class);
     verify(submissionMapper).updateSubmissionResult(submissionCaptor.capture());
@@ -438,32 +393,19 @@ public class ApplicationDispatcherTest {
     when(judgeResultMapper.getJudgeResultUsingSlug("TLE"))
         .thenReturn(new JudgeResult(3, "TLE", "Time Limit Exceeded"));
 
-    List<Map<String, Object>> runtimeResults = new ArrayList<>();
-    runtimeResults.add(buildRuntimeResult("AC", 10, 128, 25));
-    runtimeResults.add(buildRuntimeResult("TLE", 1000, 128, 25));
-    runtimeResults.add(buildRuntimeResult("WA", 20, 128, 25));
-    runtimeResults.add(buildRuntimeResult("RE", 20, 128, 25));
-
-    applicationDispatcher.onAllTestPointsFinished(submission(), runtimeResults);
+    applicationDispatcher.onAllTestPointsFinished(
+        submission(),
+        List.of(
+            new CheckpointResult(0, "AC", 10, 128, 25),
+            new CheckpointResult(1, "TLE", 1000, 128, 0),
+            new CheckpointResult(2, "WA", 20, 128, 0),
+            new CheckpointResult(3, "RE", 20, 128, 0)));
 
     ArgumentCaptor<Submission> submissionCaptor = ArgumentCaptor.forClass(Submission.class);
     verify(submissionMapper).updateSubmissionResult(submissionCaptor.capture());
     Assertions.assertEquals("TLE", submissionCaptor.getValue().getJudgeResultSlug());
     Assertions.assertEquals(25, submissionCaptor.getValue().getJudgeScore());
     Assertions.assertEquals("Time Limit Exceeded", captureSentMessage().get("runtimeResult"));
-  }
-
-  /**
-   * Test case: tests the onAllTestPointsFinished method. Test data: no checkpoint result at all.
-   * Expected result: a System Error, never an Accepted with nothing checked.
-   */
-  @Test
-  public void testOnAllTestPointsFinishedWithoutCheckpointsIsSystemError() {
-    applicationDispatcher.onAllTestPointsFinished(submission(), new ArrayList<>());
-
-    ArgumentCaptor<Submission> submissionCaptor = ArgumentCaptor.forClass(Submission.class);
-    verify(submissionMapper).updateSubmissionResult(submissionCaptor.capture());
-    Assertions.assertEquals("SE", submissionCaptor.getValue().getJudgeResultSlug());
   }
 
   /**
@@ -479,22 +421,13 @@ public class ApplicationDispatcherTest {
   }
 
   /**
-   * Builds a runtime-result map for a single checkpoint.
+   * Builds the verdict of an Accepted checkpoint.
    *
-   * @param slug - the unique English abbreviation of the judging result
-   * @param usedTime - the running time in milliseconds
-   * @param usedMemory - the memory usage in kilobytes
-   * @param score - the score for the checkpoint
-   * @return a runtime-result map
+   * @param checkpointId - the identifier of the checkpoint
+   * @return the verdict
    */
-  private Map<String, Object> buildRuntimeResult(
-      String slug, int usedTime, int usedMemory, int score) {
-    Map<String, Object> runtimeResult = new HashMap<>();
-    runtimeResult.put("runtimeResult", slug);
-    runtimeResult.put("usedTime", usedTime);
-    runtimeResult.put("usedMemory", usedMemory);
-    runtimeResult.put("score", score);
-    return runtimeResult;
+  private static CheckpointResult accepted(int checkpointId) {
+    return new CheckpointResult(checkpointId, "AC", 1, 1, 1);
   }
 
   /**

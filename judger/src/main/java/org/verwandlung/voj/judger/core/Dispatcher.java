@@ -20,9 +20,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -516,30 +514,25 @@ public class Dispatcher implements DisposableBean {
       Path checkpointDirectory,
       String workDirectory)
       throws FailedJudging, Superseded {
-    List<Map<String, Object>> runtimeResults = new ArrayList<Map<String, Object>>();
-
+    List<CheckpointResult> results = new ArrayList<>();
     for (Checkpoint checkpoint : checkpoints) {
       int checkpointId = checkpoint.getCheckpointId();
-      int checkpointScore = checkpoint.getScore();
       String inputFilePath =
           checkpointDirectory.resolve("input#" + checkpointId + ".txt").toString();
-      String stdOutputFilePath =
-          checkpointDirectory.resolve("output#" + checkpointId + ".txt").toString();
       String outputFilePath = getOutputFilePath(workDirectory, checkpointId);
-
-      Map<String, Object> runtimeResult =
-          getRuntimeResult(
-              programRunner.getRuntimeResult(
-                  submission, workDirectory, inputFilePath, outputFilePath),
-              stdOutputFilePath,
-              outputFilePath,
-              checkpoint.isExactlyMatch());
-      runtimeResult.put("score", checkpointScore);
-      runtimeResults.add(runtimeResult);
+      RunResult run =
+          programRunner.getRuntimeResult(submission, workDirectory, inputFilePath, outputFilePath);
+      CheckpointResult result =
+          getCheckpointResult(
+              checkpoint,
+              run,
+              checkpointDirectory.resolve("output#" + checkpointId + ".txt").toString(),
+              outputFilePath);
+      results.add(result);
       lease.check();
-      applicationDispatcher.onOneTestPointFinished(submission, checkpointId, runtimeResult);
+      applicationDispatcher.onOneTestPointFinished(submission, result);
     }
-    applicationDispatcher.onAllTestPointsFinished(submission, runtimeResults);
+    applicationDispatcher.onAllTestPointsFinished(submission, results);
   }
 
   /**
@@ -639,48 +632,50 @@ public class Dispatcher implements DisposableBean {
   }
 
   /**
-   * Gets the program's runtime result (and the answer comparison result).
+   * Judges a run of the program on a checkpoint: by how it ended, or, if it exited normally, by
+   * its output.
    *
-   * @param result - the outcome of the run
-   * @param standardOutputFilePath - the path of the standard output file
-   * @param outputFilePath - the path of the user's output file
-   * @param exactlyMatch - whether the checkpoint requires an exact match
-   * @return the Map object containing the program's runtime result
-   * @throws FailedJudging if the sandbox failed to run the program, or the standard output cannot
+   * @param checkpoint - the checkpoint
+   * @param run - how the run ended
+   * @param standardOutputFilePath - the path of the expected output
+   * @param outputFilePath - the path of the program's output
+   * @return the verdict on the checkpoint
+   * @throws FailedJudging if the sandbox failed to run the program, or the expected output cannot
    *     be read
    */
-  private Map<String, Object> getRuntimeResult(
-      RunResult result, String standardOutputFilePath, String outputFilePath, boolean exactlyMatch)
+  private CheckpointResult getCheckpointResult(
+      Checkpoint checkpoint, RunResult run, String standardOutputFilePath, String outputFilePath)
       throws FailedJudging {
-    String runtimeResultSlug = result.verdict().getSlug();
-    int usedTime = result.usedTime();
-    int usedMemory = result.usedMemory();
-
-    if (result.verdict() == Verdict.INTERNAL_ERROR) {
-      throw FailedJudging.ofSubmission(
-          "The sandbox of the judger failed to run the program.", null);
-    }
-    if (result.verdict() == Verdict.NORMAL) {
-      try {
-        runtimeResultSlug =
-            comparator.getComparisonResult(standardOutputFilePath, outputFilePath, exactlyMatch);
-      } catch (IOException ex) {
-        // The comparator judges an output it may not read (e.g. a planted link) a Wrong Answer
-        // itself, so this is the judger failing to read its copy of the test data.
-        throw FailedJudging.ofJudger(
-            "The judger could not read its copy of the test data of the problem.", ex);
-      }
+    String judgeResult;
+    switch (run.verdict()) {
+      case INTERNAL_ERROR:
+        throw FailedJudging.ofSubmission(
+            "The sandbox of the judger failed to run the program.", null);
+      case NORMAL:
+        try {
+          judgeResult =
+              comparator.getComparisonResult(
+                  standardOutputFilePath, outputFilePath, checkpoint.isExactlyMatch());
+        } catch (IOException ex) {
+          // The comparator judges an output it may not read (e.g. a planted link) a Wrong Answer
+          // itself, so this is the judger failing to read its copy of the test data.
+          throw FailedJudging.ofJudger(
+              "The judger could not read its copy of the test data of the problem.", ex);
+        }
+        break;
+      default:
+        judgeResult = run.verdict().getSlug();
     }
     LOGGER.info(
         String.format(
             "RuntimeResult: [%s, Time: %d ms, Memory: %d KB]",
-            new Object[] {runtimeResultSlug, usedTime, usedMemory}));
-
-    Map<String, Object> runtimeResult = new HashMap<>();
-    runtimeResult.put("runtimeResult", runtimeResultSlug);
-    runtimeResult.put("usedTime", usedTime);
-    runtimeResult.put("usedMemory", usedMemory);
-    return runtimeResult;
+            judgeResult, run.usedTime(), run.usedMemory()));
+    return new CheckpointResult(
+        checkpoint.getCheckpointId(),
+        judgeResult,
+        run.usedTime(),
+        run.usedMemory(),
+        CheckpointResult.ACCEPTED.equals(judgeResult) ? checkpoint.getScore() : 0);
   }
 
   /**

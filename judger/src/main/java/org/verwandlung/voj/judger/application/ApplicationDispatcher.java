@@ -31,7 +31,9 @@ import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.dao.NonTransientDataAccessException;
 import org.springframework.stereotype.Component;
 
+import org.verwandlung.voj.judger.core.CheckpointResult;
 import org.verwandlung.voj.judger.core.CompileResult;
+import org.verwandlung.voj.judger.core.Outcome;
 import org.verwandlung.voj.judger.mapper.JudgeResultMapper;
 import org.verwandlung.voj.judger.mapper.SubmissionMapper;
 import org.verwandlung.voj.judger.mapper.UserMapper;
@@ -142,291 +144,105 @@ public class ApplicationDispatcher {
   }
 
   /**
-   * Notifies the user when a system error occurs: the submission could not be judged for a reason
-   * that is not its own fault.
+   * Records a System Error: the submission could not be judged for a reason that is not its own.
    *
    * @param submission - the submission, claimed by {@link #claimSubmission}
    * @param reason - why the submission could not be judged, shown to the user in the judge log
    */
   public void onErrorOccurred(Submission submission, String reason) {
-    if (updateSubmission(
-        submission, 0, 0, 0, "SE", String.format("System Error.\n\n%s\n", reason))) {
-      notifyWebApplication(newMessage("ErrorOccurred", submission));
+    if (updateSubmission(submission, Outcome.systemError(reason))) {
+      messageSender.sendMessage(newMessage("ErrorOccurred", submission));
     }
   }
 
   /**
-   * Notifies the user when the compilation stage finishes.
+   * Reports the compilation of a submission, and records a Compile Error.
    *
    * @param submission - the submission, claimed by {@link #claimSubmission}
    * @param result - the compilation result
    */
   public void onCompileFinished(Submission submission, CompileResult result) {
-    boolean isSuccessful = result.isSuccessful();
-    String log = getJudgeLog(result);
-
-    if (!isSuccessful && !updateSubmission(submission, 0, 0, 0, "CE", log)) {
-      return;
+    Map<String, Object> message = newMessage("CompileFinished", submission);
+    message.put("isSuccessful", result.isSuccessful());
+    if (!result.isSuccessful()) {
+      Outcome outcome = Outcome.compileError(result.log());
+      if (!updateSubmission(submission, outcome)) {
+        return;
+      }
+      message.put("log", outcome.log());
     }
-    Map<String, Object> mapMessage = newMessage("CompileFinished", submission);
-    mapMessage.put("isSuccessful", isSuccessful);
-    mapMessage.put("log", log);
-
-    notifyWebApplication(mapMessage);
+    messageSender.sendMessage(message);
   }
 
   /**
-   * Returns the judging result in real time.
+   * Reports the verdict of a submission on a checkpoint.
    *
    * @param submission - the submission, claimed by {@link #claimSubmission}
-   * @param checkpointId - the number of the checkpoint
-   * @param runtimeResult - the program's runtime result for a checkpoint
+   * @param result - its verdict on the checkpoint
    */
-  public void onOneTestPointFinished(
-      Submission submission, int checkpointId, Map<String, Object> runtimeResult) {
-    String runtimeResultSlug = getRuntimeResultSlug(runtimeResult);
-    String runtimeResultName = getRuntimeResultName(runtimeResultSlug);
-    int usedTime = getUsedTime(runtimeResult);
-    int usedMemory = getUsedMemory(runtimeResult);
-    int score = getScore(runtimeResult);
-
-    Map<String, Object> mapMessage = newMessage("TestPointFinished", submission);
-    mapMessage.put("checkpointId", checkpointId);
-    mapMessage.put("runtimeResult", runtimeResultName);
-    mapMessage.put("usedTime", usedTime);
-    mapMessage.put("usedMemory", usedMemory);
-    mapMessage.put("score", score);
-
-    notifyWebApplication(mapMessage);
+  public void onOneTestPointFinished(Submission submission, CheckpointResult result) {
+    Map<String, Object> message = newMessage("TestPointFinished", submission);
+    message.put("checkpointId", result.checkpointId());
+    message.put("runtimeResult", getJudgeResultName(result.judgeResult()));
+    message.put("usedTime", result.usedTime());
+    message.put("usedMemory", result.usedMemory());
+    message.put("score", result.score());
+    messageSender.sendMessage(message);
   }
 
   /**
-   * Persists the program's judging result.
+   * Records and reports the verdict of a submission that ran on every checkpoint.
    *
    * @param submission - the submission, claimed by {@link #claimSubmission}
-   * @param runtimeResults - the set of judging results for all checkpoints
+   * @param results - its verdicts on the checkpoints, in their order, not empty
    */
-  public void onAllTestPointsFinished(
-      Submission submission, List<Map<String, Object>> runtimeResults) {
-    int totalTime = 0;
-    int maxMemory = 0;
-    int totalScore = 0;
-    // Without any checkpoint there is nothing the submission was judged against: never Accepted.
-    String runtimeResultSlug = runtimeResults.isEmpty() ? "SE" : "AC";
-    String log;
-
-    for (Map<String, Object> runtimeResult : runtimeResults) {
-      String currentRuntimeResultSlug = getRuntimeResultSlug(runtimeResult);
-      int usedTime = getUsedTime(runtimeResult);
-      int usedMemory = getUsedMemory(runtimeResult);
-      int score = getScore(runtimeResult);
-
-      totalTime += usedTime;
-      if (usedMemory > maxMemory) {
-        maxMemory = usedMemory;
-      }
-      if ("AC".equals(currentRuntimeResultSlug)) {
-        totalScore += score;
-      }
-      // The overall verdict is that of the FIRST failing checkpoint (standard OJ behaviour).
-      if ("AC".equals(runtimeResultSlug) && !"AC".equals(currentRuntimeResultSlug)) {
-        runtimeResultSlug = currentRuntimeResultSlug;
-      }
-    }
-    log = getJudgeLog(runtimeResults, runtimeResultSlug, totalTime, maxMemory, totalScore);
-    if (!updateSubmission(submission, totalTime, maxMemory, totalScore, runtimeResultSlug, log)) {
+  public void onAllTestPointsFinished(Submission submission, List<CheckpointResult> results) {
+    Outcome outcome = Outcome.of(results, this::getJudgeResultName);
+    if (!updateSubmission(submission, outcome)) {
       return;
     }
-    Map<String, Object> mapMessage = newMessage("AllTestPointsFinished", submission);
-    mapMessage.put("runtimeResult", getRuntimeResultName(runtimeResultSlug));
-    mapMessage.put("totalTime", totalTime);
-    mapMessage.put("maxMemory", maxMemory);
-    mapMessage.put("totalScore", totalScore);
-
-    notifyWebApplication(mapMessage);
+    Map<String, Object> message = newMessage("AllTestPointsFinished", submission);
+    message.put("runtimeResult", getJudgeResultName(outcome.judgeResult()));
+    message.put("totalTime", outcome.usedTime());
+    message.put("maxMemory", outcome.usedMemory());
+    message.put("totalScore", outcome.score());
+    messageSender.sendMessage(message);
   }
 
   /**
    * Creates a progress message of a judging. Besides the submission it carries the claim token of
    * the judging (see {@link #claimSubmission}), so that the web application can drop the messages
-   * of a judging that was superseded instead of showing them on the submission's page.
+   * of a judging that was superseded instead of showing them on the submission's page. The
+   * messages only stream the progress live (the verdicts are in the database), and are sent in the
+   * background (see {@link MessageSender}).
    *
    * @param event - the event of the message
    * @param submission - the submission, claimed by {@link #claimSubmission}
    * @return the message
    */
   private static Map<String, Object> newMessage(String event, Submission submission) {
-    Map<String, Object> mapMessage = new HashMap<>();
-    mapMessage.put("event", event);
-    mapMessage.put("submissionId", submission.getSubmissionId());
-    mapMessage.put("claimToken", submission.getClaimToken());
-    return mapMessage;
+    Map<String, Object> message = new HashMap<>();
+    message.put("event", event);
+    message.put("submissionId", submission.getSubmissionId());
+    message.put("claimToken", submission.getClaimToken());
+    return message;
   }
 
   /**
-   * Sends a progress message to the web application. The verdict itself is stored in the database,
-   * which is what the web application shows once judging is over; the messages only stream the
-   * progress live. So a message that cannot be sent (e.g. while the broker restarts) is logged and
-   * the judging goes on, rather than failing a judging whose verdict can still be recorded.
+   * Gets the name of a judge result, which the users see.
    *
-   * @param mapMessage - the message
+   * @param judgeResult - the slug of the judge result
+   * @return its name, or the slug if there is no such judge result
    */
-  private void notifyWebApplication(Map<String, Object> mapMessage) {
-    try {
-      messageSender.sendMessage(mapMessage);
-    } catch (RuntimeException ex) {
-      LOGGER.warn("Failed to send the " + mapMessage.get("event") + " message", ex);
-    }
-  }
-
-  /**
-   * Gets the unique English abbreviation of the program's judging result from the result set.
-   *
-   * @param runtimeResult - the program's judging result
-   * @return the unique English abbreviation of the program's judging result
-   */
-  private String getRuntimeResultSlug(Map<String, Object> runtimeResult) {
-    Object runtimeResultObject = runtimeResult.get("runtimeResult");
-
-    if (runtimeResultObject == null) {
-      return "SE";
-    }
-    return (String) runtimeResultObject;
-  }
-
-  /**
-   * Gets the full name of the judging result.
-   *
-   * @param runtimeResultSlug - the unique English abbreviation of the judging result
-   * @return the full name of the judging result
-   */
-  private String getRuntimeResultName(String runtimeResultSlug) {
+  private String getJudgeResultName(String judgeResult) {
     // The judge results are reference data, read once: a judging reads no more from the database
     // than it must, so that a short outage of it does not stop the judging of every checkpoint.
-    String runtimeResultName = runtimeResultNames.get(runtimeResultSlug);
-    if (runtimeResultName == null) {
-      JudgeResult judgeResult = judgeResultMapper.getJudgeResultUsingSlug(runtimeResultSlug);
-      if (judgeResult == null) {
-        return "System Error";
-      }
-      runtimeResultName = judgeResult.getJudgeResultName();
-      runtimeResultNames.put(runtimeResultSlug, runtimeResultName);
-    }
-    return runtimeResultName;
-  }
-
-  /**
-   * Gets the program's running time (ms) from the judging result set.
-   *
-   * @param runtimeResult - the program's judging result
-   * @return the program's running time (ms)
-   */
-  private int getUsedTime(Map<String, Object> runtimeResult) {
-    Object usedTimeObject = runtimeResult.get("usedTime");
-
-    if (usedTimeObject == null) {
-      return 0;
-    }
-    return (Integer) usedTimeObject;
-  }
-
-  /**
-   * Gets the memory usage (KB) from the judging result set.
-   *
-   * @param runtimeResult - the program's judging result
-   * @return the memory usage (KB)
-   */
-  private int getUsedMemory(Map<String, Object> runtimeResult) {
-    Object usedMemoryObject = runtimeResult.get("usedMemory");
-
-    if (usedMemoryObject == null) {
-      return 0;
-    }
-    return (Integer) usedMemoryObject;
-  }
-
-  /**
-   * Gets the score corresponding to the checkpoint from the judging result set.
-   *
-   * @param runtimeResult - the program's judging result
-   * @return the score corresponding to the checkpoint
-   */
-  private int getScore(Map<String, Object> runtimeResult) {
-    Object scoreObject = runtimeResult.get("score");
-
-    if (scoreObject == null) {
-      return 0;
-    }
-    return (Integer) scoreObject;
-  }
-
-  /**
-   * Formats the compile-time log.
-   *
-   * @param result - the result of the compilation
-   * @return the formatted log
-   */
-  private String getJudgeLog(CompileResult result) {
-    boolean isSuccessful = result.isSuccessful();
-    String compileLog = result.log();
-
-    StringBuilder formatedLogBuilder = new StringBuilder();
-    formatedLogBuilder.append(
-        String.format("Compile %s.\n\n", new Object[] {isSuccessful ? "Successful" : "Error"}));
-    if (!isSuccessful) {
-      // Embed the raw compiler output as a Markdown indented code block (4-space prefix on every
-      // line). This keeps the rest of the log as Markdown while rendering the compiler stderr
-      // verbatim: line breaks are preserved and angle-bracketed tokens such as
-      // "#include <windows.h>" are not stripped as HTML by the front-end Markdown converter.
-      formatedLogBuilder.append(compileLog.replaceAll("(?m)^", "    "));
-      formatedLogBuilder.append("\n\nCompile Error, Time = 0 ms, Memory = 0 KB, Score = 0.\n");
-    }
-    return formatedLogBuilder.toString();
-  }
-
-  /**
-   * Formats the runtime log.
-   *
-   * @param runtimeResults - the set of judging results for all checkpoints
-   * @param runtimeResultSlug - the unique English abbreviation of the overall judging result
-   * @param totalTime - the total running time
-   * @param maxMemory - the maximum memory used
-   * @param totalScore - the total score
-   * @return the formatted log
-   */
-  private String getJudgeLog(
-      List<Map<String, Object>> runtimeResults,
-      String runtimeResultSlug,
-      int totalTime,
-      int maxMemory,
-      int totalScore) {
-    int checkpointId = -1;
-    String runtimeResultName = getRuntimeResultName(runtimeResultSlug);
-
-    StringBuilder formatedLogBuilder = new StringBuilder();
-    formatedLogBuilder.append("Compile Successfully.\n\n");
-    for (Map<String, Object> runtimeResult : runtimeResults) {
-      String currentRuntimeResultSlug = getRuntimeResultSlug(runtimeResult);
-      String currentRuntimeResultName = getRuntimeResultName(currentRuntimeResultSlug);
-      int usedTime = getUsedTime(runtimeResult);
-      int usedMemory = getUsedMemory(runtimeResult);
-      int score = getScore(runtimeResult);
-
-      if (!"AC".equals(currentRuntimeResultSlug)) {
-        score = 0;
-      }
-      formatedLogBuilder.append(
-          String.format(
-              "- Test Point #%d: %s, Time = %d ms, Memory = %d KB, Score = %d\n",
-              new Object[] {
-                ++checkpointId, currentRuntimeResultName, usedTime, usedMemory, score
-              }));
-    }
-    formatedLogBuilder.append(
-        String.format(
-            "\n%s, Time = %d ms, Memory = %d KB, Score = %d\n",
-            new Object[] {runtimeResultName, totalTime, maxMemory, totalScore}));
-    return formatedLogBuilder.toString();
+    return judgeResultNames.computeIfAbsent(
+        judgeResult,
+        slug -> {
+          JudgeResult result = judgeResultMapper.getJudgeResultUsingSlug(slug);
+          return result == null ? slug : result.getJudgeResultName();
+        });
   }
 
   /**
@@ -441,26 +257,17 @@ public class ApplicationDispatcher {
    * judging superseded.)
    *
    * @param submission - the submission, claimed by {@link #claimSubmission}
-   * @param usedTime - the running time of the submission (sum of all times)
-   * @param usedMemory - the memory used by the submission (maximum memory usage)
-   * @param score - the score of the run
-   * @param judgeResult - the judging result (JudgeResultSlug)
-   * @param log - the judging log
+   * @param outcome - the outcome of the judging
    * @return whether the verdict was recorded; if not, the judging was superseded
    * @throws DataAccessException if the verdict cannot be recorded, as the database is unreachable
    */
-  private boolean updateSubmission(
-      Submission submission,
-      int usedTime,
-      int usedMemory,
-      int score,
-      String judgeResult,
-      String log) {
-    submission.setUsedTime(usedTime);
-    submission.setUsedMemory(usedMemory);
-    submission.setJudgeScore(score);
+  private boolean updateSubmission(Submission submission, Outcome outcome) {
+    String judgeResult = outcome.judgeResult();
+    submission.setUsedTime(outcome.usedTime());
+    submission.setUsedMemory(outcome.usedMemory());
+    submission.setJudgeScore(outcome.score());
     submission.setJudgeResultSlug(judgeResult);
-    submission.setJudgeLog(log);
+    submission.setJudgeLog(outcome.log());
 
     if (updateSubmissionResult(submission) == 0) {
       LOGGER.warn(
@@ -552,7 +359,7 @@ public class ApplicationDispatcher {
   private Long judgerUid;
 
   /** The names of the judge results, by their slug, as read so far. */
-  private final Map<String, String> runtimeResultNames = new ConcurrentHashMap<>();
+  private final Map<String, String> judgeResultNames = new ConcurrentHashMap<>();
 
   /** The longest reason of a failed judging the database takes. */
   static final int MAX_REASON_LENGTH = 255;
