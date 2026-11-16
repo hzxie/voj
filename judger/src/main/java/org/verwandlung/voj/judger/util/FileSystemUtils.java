@@ -96,7 +96,7 @@ public class FileSystemUtils {
    * when the judger is denied access to a directory, it gives the directory's owner full access to
    * it again and tries once more. Root is never denied access, so a judger running as root never
    * changes a permission. Where there are no directory handles (Windows, whose paths have no such
-   * limit), the tree is walked by path.
+   * limit), the tree is walked by path, never into a directory junction.
    *
    * @param path - the file or directory to delete
    * @throws IOException if something cannot be deleted
@@ -320,7 +320,11 @@ public class FileSystemUtils {
   }
 
   /**
-   * Deletes a directory tree by path, where there are no directory handles (Windows).
+   * Deletes a directory tree by path, where there are no directory handles (Windows). A directory
+   * junction, which a submission may create without any privilege, is removed as a link, never
+   * entered: Java reports a junction (as any reparse point but a symbolic link) as a directory and
+   * as "other", and a symbolic link as neither. A file a submission made read-only is made writable
+   * again to be removed.
    *
    * @param path - the absolute path of the directory
    * @throws IOException if something cannot be deleted
@@ -332,9 +336,19 @@ public class FileSystemUtils {
         path,
         new SimpleFileVisitor<Path>() {
           @Override
+          public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs)
+              throws IOException {
+            if (attrs.isOther()) {
+              deleteByPath(dir);
+              return FileVisitResult.SKIP_SUBTREE;
+            }
+            return FileVisitResult.CONTINUE;
+          }
+
+          @Override
           public FileVisitResult visitFile(Path file, BasicFileAttributes attrs)
               throws IOException {
-            Files.deleteIfExists(file);
+            deleteByPath(file);
             return FileVisitResult.CONTINUE;
           }
 
@@ -343,10 +357,26 @@ public class FileSystemUtils {
             if (ex != null) {
               throw ex;
             }
-            Files.deleteIfExists(dir);
+            deleteByPath(dir);
             return FileVisitResult.CONTINUE;
           }
         });
+  }
+
+  /**
+   * Deletes a file, a link or an empty directory by path, if it still exists, clearing its
+   * read-only attribute (Windows) if it is denied.
+   *
+   * @param file - the absolute path of the file
+   * @throws IOException if it cannot be deleted
+   */
+  private static void deleteByPath(Path file) throws IOException {
+    try {
+      Files.deleteIfExists(file);
+    } catch (AccessDeniedException ex) {
+      Files.setAttribute(file, "dos:readonly", false, LinkOption.NOFOLLOW_LINKS);
+      Files.deleteIfExists(file);
+    }
   }
 
   /** A file operation, which may be denied access. */
