@@ -112,7 +112,8 @@ to the externally visible URL so generated links, e-mails and assets are correct
 
 There is no default account or token to guess. On its first start the web
 container creates an administrator with a random password and prints it once
-in its log (`docker logs voj.web`, or `docker compose logs web`). Without
+in the container log (`docker logs voj.web`, or `docker compose logs web`), not
+in the log files of the web app. Without
 `VOJ_JUDGER_API_TOKEN`, it also generates the judger token, prints it once and
 keeps it in the database volume; `docker-compose.yml` instead requires the
 token in `.env`, since it starts the judger too. `VOJ_DEMO=1` on the first start

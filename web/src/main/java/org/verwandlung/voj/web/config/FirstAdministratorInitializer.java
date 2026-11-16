@@ -27,7 +27,9 @@ import org.verwandlung.voj.web.service.UserService;
 
 /**
  * Creates the first administrator of a new installation when the application starts and no
- * administrator exists, and logs its random password once: there is no default account to guess.
+ * administrator exists, and prints its random password once: there is no default account to
+ * guess. The password goes to the standard output only (the container log of the Docker image),
+ * never to the log files, which are kept and may be read by others.
  *
  * @author Haozhe Xie
  */
@@ -41,10 +43,15 @@ public class FirstAdministratorInitializer implements ApplicationRunner {
     String[] credentials = userService.createFirstAdministratorIfNone();
     if (credentials != null) {
       LOGGER.warn(
-          "No administrator existed, so one was created: username '{}', password '{}'. Sign in and"
-              + " change the password; it is not shown again.",
+          "No administrator existed, so one was created: {}. Its password is on the standard"
+              + " output.",
+          credentials[0]);
+      System.out.printf(
+          "%nNo administrator existed, so one was created: username '%s', password '%s'. Sign in"
+              + " and change the password; it is not shown again.%n%n",
           credentials[0],
           credentials[1]);
+      System.out.flush();
     }
   }
 

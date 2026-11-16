@@ -17,7 +17,7 @@
 # database credentials are correct; if the `voj` schema is empty it imports
 # sql/schema.sql and sql/seed.sql (and, with VOJ_DEMO=1, the sample data of
 # sql/demo.sql, whose passwords equal the usernames). Without the sample data, the
-# app creates an administrator with a random password on its first start and logs it.
+# app creates an administrator with a random password on its first start and prints it.
 #
 # Overridable via environment variables (defaults shown):
 #   JDK_HOME=/opt/homebrew/opt/openjdk@25   # falls back to `java` on PATH

@@ -12,7 +12,7 @@
 #   usernames (root / root is an administrator). Only for trying VOJ out.
 #
 # Without the demo data, the application creates an administrator with a random
-# password on its first start and logs it once (`docker logs voj.web`).
+# password on its first start and prints it once (`docker logs voj.web`).
 set -euo pipefail
 
 TOKEN_FILE=/var/lib/mariadb/voj-judger-api-token

@@ -142,7 +142,7 @@ for /f %%c in ('%MYSQL_BIN% %MYSQL_AUTH% -N -B -e "SELECT COUNT(*) FROM informat
 if not defined TABLE_COUNT set "TABLE_COUNT=0"
 
 REM sql\demo.sql (sample data whose passwords equal the usernames) only with VOJ_DEMO=1;
-REM otherwise the app creates an administrator with a random password and logs it.
+REM otherwise the app creates an administrator with a random password and prints it.
 set "SQL_FILES=schema.sql seed.sql"
 if "%VOJ_DEMO%"=="1" set "SQL_FILES=schema.sql seed.sql demo.sql"
 if "%TABLE_COUNT%"=="0" (

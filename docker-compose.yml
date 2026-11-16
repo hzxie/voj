@@ -38,7 +38,7 @@ services:
       VOJ_JUDGER_API_TOKEN: ${VOJ_JUDGER_API_TOKEN:?set VOJ_JUDGER_API_TOKEN in .env}
       # 1 loads the sample problems and accounts (passwords = usernames) on the
       # first start. Otherwise an administrator with a random password is created
-      # and logged once: `docker compose logs web`.
+      # and printed once: `docker compose logs web`.
       VOJ_DEMO: ${VOJ_DEMO:-0}
       # SMTP (empty host disables e-mail).
       VOJ_MAIL_HOST: ${VOJ_MAIL_HOST:-}

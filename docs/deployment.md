@@ -855,7 +855,8 @@ not need MinGW on its `PATH` to load it (only to compile C/C++ submissions with
 The database is created by `sql/schema.sql` and `sql/seed.sql` on the first
 launch only; there is no automatic migration on startup. When the database has
 no administrator, the web application creates one (`root`) with a random
-password on startup and logs it once. When a release needs a
+password on startup and prints it once on its standard output (not in the log
+files; `docker logs` shows it for the Docker image). When a release needs a
 one-time data change on an existing installation, it ships a script under
 [`../sql/upgrades/`](../sql/upgrades/) that you run once against the database.
 New installations never need these scripts. Each script is safe to run again:
