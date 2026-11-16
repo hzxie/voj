@@ -115,17 +115,16 @@ public class Preprocessor {
 
   /**
    * Seeds the submission's own Go build cache ({@value #GO_BUILD_CACHE_DIRECTORY} in the work
-   * directory, where the native sandbox points GOCACHE when it drops privileges, and IsolateRunner
-   * always does) from the read-only cache at {@code judger.goBuildCacheSeed}, so that the standard
-   * library does not have to be rebuilt for every submission. A cache shared between submissions
+   * directory, where both the native sandbox and IsolateRunner point GOCACHE) from the read-only
+   * cache at {@code judger.goBuildCacheSeed}, so that the standard library does not have to be
+   * rebuilt for every submission. A cache shared between submissions
    * would let one poison the Go builds of all later ones, so every submission gets its own: the
    * seed's files are hard-linked (or, across file systems, copied) into it, and stay owned by the
    * judger and read-only, while the cache's directories are handed to the sandbox user so the build
    * can add its own entries. Linking a file the sandbox user cannot write gives it no way to modify
    * the seed: it can only remove its own link. Only files that are owned by the judger and not
-   * writable by anybody else are taken from the seed. Seeding is skipped (the build then starts
-   * from an empty cache) unless the judger runs as root: only then does the native sandbox move
-   * GOCACHE to the work directory, and isolate needs root anyway.
+   * writable by anybody else are taken from the seed. A judger that does not run as root may not
+   * link files it does not own (protected_hardlinks), so it copies them.
    *
    * @param workDirectory - the submission's work directory
    * @return the directories (and the trim file) created, which the sandbox user must be able to
@@ -133,7 +132,7 @@ public class Preprocessor {
    */
   private List<Path> seedGoBuildCache(Path workDirectory) {
     List<Path> directories = new ArrayList<>();
-    if (goBuildCacheSeed == null || goBuildCacheSeed.isBlank() || !isPosix() || !isRunningAsRoot()) {
+    if (goBuildCacheSeed == null || goBuildCacheSeed.isBlank() || !isPosix()) {
       return directories;
     }
     Path seed = Paths.get(goBuildCacheSeed);
