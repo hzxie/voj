@@ -50,14 +50,23 @@
 #define WALL_TIME_BUFFER_MS 1000
 
 /**
- * How often (ms) the parent samples the child's peak memory while it runs. The memory limit is
- * enforced by polling the Job's peak accounting (a soft limit) rather than the Job's hard
+ * How often (ms) the parent checks the child's CPU time and peak memory while it runs. The memory
+ * limit is enforced by polling the Job's peak accounting (a soft limit) rather than the Job's hard
  * ProcessMemoryLimit, so that an offending peak rises just above the limit before the process is
  * killed and the run is classified as MLE - matching the Linux runner. The hard cap is intentionally
  * not used: under it an allocation simply fails and the program crashes, which is indistinguishable
  * from a plain runtime error.
  */
-#define MEMORY_POLL_INTERVAL_MS 2
+#define POLL_INTERVAL_MS 2
+
+/**
+ * The values of the result's "limitExceeded" key: the limit the program was killed for, or was found
+ * to have exceeded once it exited (Runner.java maps it to the verdict). A program that exceeded a
+ * limit is never reported with exit code 0.
+ */
+static const jint LIMIT_NONE   = 0;
+static const jint LIMIT_TIME   = 1;
+static const jint LIMIT_MEMORY = 2;
 
 /**
  * The only environment variables the sandboxed process inherits from the judger, mirroring the
@@ -116,8 +125,7 @@ bool buildEnvironmentBlock(HANDLE, const std::wstring&, std::vector<wchar_t>&);
 bool getJudgerEnvironmentVariable(const wchar_t*, std::wstring&);
 std::wstring getWorkDirectory(const std::wstring&);
 jint getPeakMemoryUsage(HANDLE& hJob, HANDLE& hProcess);
-jint getCpuTimeUsage(HANDLE& hJob, HANDLE& hProcess, bool includeChildren);
-DWORD getExitCode(HANDLE& hProcess);
+bool getCpuTimeUsage(HANDLE& hJob, HANDLE& hProcess, bool includeChildren, jint& cpuTime);
 unsigned long long fileTimeToUll(const FILETIME&);
 std::string getErrorMessage(const std::string&);
 std::wstring getWideString(const std::string&);
@@ -259,15 +267,29 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
         return NULL;
     }
 
-    // Poll while the child runs: enforce the memory limit as a soft limit (let the peak rise just
-    // above the limit, then kill, so the run is classified as MLE) and apply a wall-clock guard for a
-    // process that blocks/sleeps while consuming little CPU.
-    DWORD     waitTimeout         = ( timeLimit > 0 ) ? (DWORD)(timeLimit + WALL_TIME_BUFFER_MS) : INFINITE;
+    // Kills every process of the run and waits for the program to be gone. If the Job cannot be
+    // terminated, the program itself is; failing that, the run is aborted (closing the Job in
+    // cleanup() still kills what is left, thanks to JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE).
+    auto killRun = [&]() -> bool {
+        if ( !TerminateJobObject(hJob, 1) && !TerminateProcess(processInfo.hProcess, 1) ) {
+            return false;
+        }
+        return WaitForSingleObject(processInfo.hProcess, INFINITE) == WAIT_OBJECT_0;
+    };
+
+    // Poll while the child runs, and kill the whole Job as soon as a limit is exceeded:
+    //  - CPU time, measured exactly as it is reported (see getCpuTimeUsage). The wall-clock guard
+    //    alone would let a program use up to timeLimit + WALL_TIME_BUFFER_MS of CPU and, if it
+    //    exits 0 in that window, be judged on its output;
+    //  - memory, as a soft limit: the peak may rise just above the limit before the kill, so that
+    //    the run is classified as MLE (matching the Linux runner);
+    //  - wall-clock time, a guard for a process that blocks or sleeps while using little CPU.
+    DWORD     wallTimeLimit       = ( timeLimit > 0 ) ? (DWORD)(timeLimit + WALL_TIME_BUFFER_MS) : INFINITE;
+    jint      limitExceeded       = LIMIT_NONE;
     bool      killedByWallTimeout = false;
-    bool      memoryExceeded      = false;
     ULONGLONG startTick           = GetTickCount64();
     for ( ;; ) {
-        DWORD waitResult = WaitForSingleObject(processInfo.hProcess, MEMORY_POLL_INTERVAL_MS);
+        DWORD waitResult = WaitForSingleObject(processInfo.hProcess, POLL_INTERVAL_MS);
         if ( waitResult == WAIT_OBJECT_0 ) {
             break; // the process exited on its own
         }
@@ -279,36 +301,63 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
             throwStringException(jniEnv, message);
             return NULL;
         }
-        if ( memoryLimit > 0 && getPeakMemoryUsage(hJob, processInfo.hProcess) > memoryLimit ) {
-            memoryExceeded = true;
-            TerminateJobObject(hJob, 1);
-            WaitForSingleObject(processInfo.hProcess, INFINITE);
-            break;
+        if ( timeLimit > 0 ) {
+            if ( !getCpuTimeUsage(hJob, processInfo.hProcess, !isCompilation, timeUsage) ) {
+                return fail("GetCpuTimeUsage");
+            }
+            if ( timeUsage > timeLimit ) {
+                limitExceeded = LIMIT_TIME;
+            }
         }
-        if ( waitTimeout != INFINITE && GetTickCount64() - startTick > (ULONGLONG) waitTimeout ) {
+        if ( limitExceeded == LIMIT_NONE && memoryLimit > 0 &&
+                getPeakMemoryUsage(hJob, processInfo.hProcess) > memoryLimit ) {
+            limitExceeded = LIMIT_MEMORY;
+        }
+        if ( limitExceeded == LIMIT_NONE && wallTimeLimit != INFINITE &&
+                GetTickCount64() - startTick > (ULONGLONG) wallTimeLimit ) {
+            limitExceeded       = LIMIT_TIME;
             killedByWallTimeout = true;
-            TerminateJobObject(hJob, 1);
-            WaitForSingleObject(processInfo.hProcess, INFINITE);
+        }
+        if ( limitExceeded != LIMIT_NONE ) {
+            if ( !killRun() ) {
+                return fail("TerminateJobObject");
+            }
             break;
         }
     }
 
-    exitCode    = getExitCode(processInfo.hProcess);
+    if ( !GetExitCodeProcess(processInfo.hProcess, &exitCode) ) {
+        return fail("GetExitCodeProcess");
+    }
     // A run is charged for the CPU of every process it started; a compilation is not, because build
     // tools legitimately run several processes in parallel (matching the Linux runner).
-    timeUsage   = getCpuTimeUsage(hJob, processInfo.hProcess, !isCompilation);
+    if ( !getCpuTimeUsage(hJob, processInfo.hProcess, !isCompilation, timeUsage) ) {
+        return fail("GetCpuTimeUsage");
+    }
     // Both the Job's and the process's peak accounting persist after the process exits.
     memoryUsage = getPeakMemoryUsage(hJob, processInfo.hProcess);
 
-    // A process killed for exceeding the wall-clock guard consumes little CPU, so force the reported
-    // time to the limit, ensuring the Java side classifies it as a Time Limit Exceeded.
-    if ( killedByWallTimeout && timeLimit > 0 && timeUsage < timeLimit ) {
+    // The program may have exceeded a limit after the last poll and exited before the next one
+    // (CPU time and memory accounting are only sampled): judge the final figures too.
+    if ( limitExceeded == LIMIT_NONE ) {
+        if ( timeLimit > 0 && timeUsage > timeLimit ) {
+            limitExceeded = LIMIT_TIME;
+        } else if ( memoryLimit > 0 && memoryUsage > memoryLimit ) {
+            limitExceeded = LIMIT_MEMORY;
+        }
+    }
+    // A process killed by the wall-clock guard used little CPU: report at least the limit, so that
+    // the time shown matches the verdict.
+    if ( killedByWallTimeout && timeUsage < timeLimit ) {
         timeUsage = timeLimit;
     }
-    // A process killed for exceeding the memory limit must report at least the limit, so the Java
-    // side classifies it as a Memory Limit Exceeded.
-    if ( memoryExceeded && memoryLimit > 0 && memoryUsage < memoryLimit ) {
+    // A process killed for exceeding the memory limit must report at least the limit.
+    if ( limitExceeded == LIMIT_MEMORY && memoryUsage < memoryLimit ) {
         memoryUsage = memoryLimit;
+    }
+    // A program that exceeded a limit must never be reported as a clean exit (matching Linux).
+    if ( limitExceeded != LIMIT_NONE && exitCode == 0 ) {
+        exitCode = 1;
     }
 
     cleanup();
@@ -316,6 +365,7 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     result.put("usedTime", timeUsage);
     result.put("usedMemory", memoryUsage);
     result.put("exitCode", (jint)exitCode);
+    result.put("limitExceeded", limitExceeded);
 
     return result.toJObject(jniEnv);
 }
@@ -588,23 +638,30 @@ jint getPeakMemoryUsage(HANDLE& hJob, HANDLE& hProcess) {
 /**
  * Gets the CPU time (user + kernel) used by the run: the main process's own time or, when children
  * are included, the Job's total over every process that ever ran in it (so CPU burnt in child
- * processes counts too), whichever is larger.
+ * processes counts too), whichever is larger. Both figures are live while the processes run - the
+ * Job's totals cover its active processes as well as the terminated ones - so the same function
+ * enforces the limit during the run and measures it afterwards.
+ * See https://learn.microsoft.com/windows/win32/api/winnt/ns-winnt-jobobject_basic_accounting_information
  * @param  hJob             - the Job Object handle
  * @param  hProcess         - the main process handle
  * @param  includeChildren  - whether to charge the CPU time of the other processes in the Job
- * @return the CPU time used (ms)
+ * @param  cpuTime          - receives the CPU time used (ms)
+ * @return whether the CPU time could be measured (GetLastError() tells why not)
  */
-jint getCpuTimeUsage(HANDLE& hJob, HANDLE& hProcess, bool includeChildren) {
+bool getCpuTimeUsage(HANDLE& hJob, HANDLE& hProcess, bool includeChildren, jint& cpuTime) {
     unsigned long long cpu100ns = 0;
     FILETIME creationTime, exitTime, kernelTime, userTime;
-    if ( GetProcessTimes(hProcess, &creationTime, &exitTime, &kernelTime, &userTime) ) {
-        // FILETIME is measured in 100-nanosecond intervals.
-        cpu100ns = fileTimeToUll(kernelTime) + fileTimeToUll(userTime);
+    if ( !GetProcessTimes(hProcess, &creationTime, &exitTime, &kernelTime, &userTime) ) {
+        return false;
     }
-    JOBOBJECT_BASIC_ACCOUNTING_INFORMATION accounting = {0};
-    if ( includeChildren && hJob != NULL &&
-            QueryInformationJobObject(hJob, JobObjectBasicAccountingInformation,
-            &accounting, sizeof(accounting), NULL) ) {
+    // FILETIME is measured in 100-nanosecond intervals.
+    cpu100ns = fileTimeToUll(kernelTime) + fileTimeToUll(userTime);
+    if ( includeChildren ) {
+        JOBOBJECT_BASIC_ACCOUNTING_INFORMATION accounting = {0};
+        if ( !QueryInformationJobObject(hJob, JobObjectBasicAccountingInformation,
+                &accounting, sizeof(accounting), NULL) ) {
+            return false;
+        }
         unsigned long long jobCpu100ns = (unsigned long long) accounting.TotalUserTime.QuadPart +
             (unsigned long long) accounting.TotalKernelTime.QuadPart;
         if ( jobCpu100ns > cpu100ns ) {
@@ -612,21 +669,8 @@ jint getCpuTimeUsage(HANDLE& hJob, HANDLE& hProcess, bool includeChildren) {
         }
     }
     unsigned long long cpuMs = cpu100ns / 10000ULL;
-    if ( cpuMs > (unsigned long long)INT32_MAX ) {
-        return INT32_MAX;
-    }
-    return (jint)cpuMs;
-}
-
-/**
- * Gets the application's exit status.
- * @param  hProcess - the process handle
- * @return the exit status
- */
-DWORD getExitCode(HANDLE& hProcess) {
-    DWORD exitCode = 0;
-    GetExitCodeProcess(hProcess, &exitCode);
-    return exitCode;
+    cpuTime = ( cpuMs > (unsigned long long)INT32_MAX ) ? INT32_MAX : (jint)cpuMs;
+    return true;
 }
 
 /**
