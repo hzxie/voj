@@ -111,8 +111,8 @@ public class SandboxPolicyTest {
    * Test case: a compilation and a run in a language with multipliers of 2. Expected result: the
    * compilation gets the compile limits (memory scaled by the multiplier) and the compile process
    * limit, in the program directory, writing to the log; the run the problem's limits scaled by
-   * the multipliers, a single process (on Linux, judger.processLimit threads; on Windows, with its
-   * console host), in its own work
+   * the multipliers, judger.processLimit processes and threads (on Windows, its process and its
+   * console host), a stack as large as its memory limit and few descriptors, in its own work
    * directory; and both a wall-clock limit of twice the time limit plus a second.
    */
   @Test
@@ -138,6 +138,9 @@ public class SandboxPolicyTest {
     Assertions.assertEquals(1048576, compilation.limits().memoryLimitKb());
     Assertions.assertEquals(262144, compilation.limits().outputLimitKb());
     Assertions.assertEquals(1024, compilation.limits().processLimit());
+    Assertions.assertEquals(8192, compilation.limits().stackLimitKb());
+    Assertions.assertEquals(4096, compilation.limits().fileLimit());
+    Assertions.assertEquals(1024, compilation.limits().signalQueueLimit());
     Assertions.assertFalse(run.compilation());
     Assertions.assertEquals("/w/run", run.workDirectory());
     Assertions.assertEquals(2000, run.limits().timeLimitMs());
@@ -146,6 +149,9 @@ public class SandboxPolicyTest {
     Assertions.assertEquals(262144, run.limits().outputLimitKb());
     Assertions.assertEquals(
         System.getProperty("os.name").contains("Windows") ? 2 : 64, run.limits().processLimit());
+    Assertions.assertEquals(131072, run.limits().stackLimitKb());
+    Assertions.assertEquals(128, run.limits().fileLimit());
+    Assertions.assertEquals(1024, run.limits().signalQueueLimit());
     Assertions.assertEquals(
         Path.of("/w/program", "Main.exe").toString(), run.arguments().get(0));
   }

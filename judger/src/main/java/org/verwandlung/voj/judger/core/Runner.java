@@ -63,8 +63,11 @@ public class Runner implements SandboxRunner {
               limits.wallTimeLimitMs(),
               limits.memoryLimitKb(),
               limits.memoryBackstopKb(),
+              limits.stackLimitKb(),
               limits.outputLimitKb(),
-              limits.processLimit());
+              limits.processLimit(),
+              limits.fileLimit(),
+              limits.signalQueueLimit());
       return new SandboxResult(
           result[0], result[1], result[2], SandboxResult.Stop.values()[result[3]]);
     } catch (RuntimeException ex) {
@@ -104,8 +107,11 @@ public class Runner implements SandboxRunner {
    * @param wallTimeLimit - the wall-clock limit (ms)
    * @param memoryLimit - the limit of the peak resident memory (KB)
    * @param memoryBackstop - the limit of the committed memory (KB)
+   * @param stackLimit - the stack of the main thread (KB, Linux)
    * @param outputLimit - the largest file the program may write (KB)
    * @param processLimit - the processes (on Linux, and threads) the program may have at once
+   * @param fileLimit - the descriptors each process may have open at once (Linux)
+   * @param signalQueueLimit - the signals and POSIX timers that may be queued at once (Linux)
    * @return the CPU time (ms), the peak memory (KB), the exit code and the limit the program was
    *     stopped for (see {@link SandboxResult.Stop})
    */
@@ -120,8 +126,11 @@ public class Runner implements SandboxRunner {
       int wallTimeLimit,
       int memoryLimit,
       int memoryBackstop,
+      int stackLimit,
       int outputLimit,
-      int processLimit);
+      int processLimit,
+      int fileLimit,
+      int signalQueueLimit);
 
   /**
    * Selects the account programs run as when the judger runs as root (Linux), which must exist

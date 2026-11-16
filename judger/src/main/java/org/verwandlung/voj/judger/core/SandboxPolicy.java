@@ -154,7 +154,19 @@ public class SandboxPolicy implements InitializingBean {
    *       measurements, and decides whether a single allocation, or a program's static data, is
    *       beyond any limit (see docs/deployment.md). A compilation's headroom is at least 1/32 of
    *       the host's RAM: its compilers' JVMs (javac, kotlinc) size themselves to the host, and
-   *       commit far more than they touch.
+   *       commit far more than they touch;
+   *   <li>the stack of a run's main thread: its memory limit, as is usual for a judge, so that a
+   *       program may recurse as deep as its memory allows, under every backend alike; a
+   *       compilation's {@value #COMPILE_STACK_LIMIT_KB} KB, Linux's usual default, which every
+   *       toolchain is built for (and which the C library also gives each thread that does not
+   *       choose its own stack, see docs/deployment.md);
+   *   <li>the open descriptors of each process: {@value #RUN_FILE_LIMIT} for a run, since an open
+   *       pipe or socket pair holds kernel memory that no memory limit sees (Node.js opens about
+   *       24, and 6 per worker thread); {@value #COMPILE_FILE_LIMIT} for a compilation, whose
+   *       toolchains open many files at once (javac and kotlinc their jars, go build its
+   *       packages);
+   *   <li>the queued signals and POSIX timers, kernel objects that no memory limit of the native
+   *       sandbox sees: {@value #SIGNAL_QUEUE_LIMIT}.
    * </ul>
    *
    * @param compilation - whether the limits are a compilation's
@@ -178,8 +190,11 @@ public class SandboxPolicy implements InitializingBean {
         saturate((long) timeLimitMs * WALL_TIME_FACTOR + WALL_TIME_SLACK_MS),
         memoryLimitKb,
         saturate(2L * memoryLimitKb + headroomKb),
+        compilation ? COMPILE_STACK_LIMIT_KB : memoryLimitKb,
         outputLimitKb,
-        processLimit);
+        processLimit,
+        compilation ? COMPILE_FILE_LIMIT : RUN_FILE_LIMIT,
+        SIGNAL_QUEUE_LIMIT);
   }
 
   /**
@@ -332,6 +347,18 @@ public class SandboxPolicy implements InitializingBean {
 
   /** The headroom of the memory backstop over twice the memory limit (KB). */
   static final int BACKSTOP_HEADROOM_KB = 256 * 1024;
+
+  /** The stack of a compilation's main thread (KB). */
+  static final int COMPILE_STACK_LIMIT_KB = 8 * 1024;
+
+  /** The descriptors each process of a run may have open at once, ... */
+  static final int RUN_FILE_LIMIT = 128;
+
+  /** ... and of a compilation. */
+  static final int COMPILE_FILE_LIMIT = 4096;
+
+  /** The signals and POSIX timers a compilation or run may have queued at once. */
+  static final int SIGNAL_QUEUE_LIMIT = 1024;
 
   /** The host's physical memory (KB). */
   private static final long TOTAL_MEMORY_KB =

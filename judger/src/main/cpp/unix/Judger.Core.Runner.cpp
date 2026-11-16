@@ -132,14 +132,6 @@ static const uint64_t SCOPE_SIGNAL               = 1ULL << 1;  // ABI 6
 // read it (and no run may write anywhere but its own work directory, see confineFileSystemWrites).
 static const mode_t    OUTPUT_FILE_MODE       = 0600;
 static const int       POLL_INTERVAL_US       = 1000;        // watchdog poll (1 ms)
-// RLIMIT_NOFILE (soft = hard): open pipes and sockets hold kernel memory no memory limit sees, so a
-// run gets few descriptors (Node.js opens about 24, and 6 per worker thread); a compilation runs
-// toolchains that open many files at once (javac and kotlinc their jars, go build its packages).
-static const rlim_t    RUN_FILE_LIMIT         = 128;
-static const rlim_t    COMPILE_FILE_LIMIT     = 4096;
-// RLIMIT_SIGPENDING of a run (soft = hard): its queued signals and POSIX timers, kernel objects no
-// memory limit sees; the default is about half the host's threads-max.
-static const rlim_t    RUN_SIGNAL_QUEUE_LIMIT = 1024;
 static const int       CLEANUP_ATTEMPTS       = 1000;        // wait rounds (x 1 ms) after a run
 
 /**
@@ -167,10 +159,12 @@ struct ChildPlan {
   bool                     compileStep;    // compile: stderr also goes to the output file
   int                      timeLimit;      // ms
   rlim_t                   dataLimit;      // RLIMIT_DATA in bytes
+  rlim_t                   stackLimit;     // RLIMIT_STACK in bytes
   rlim_t                   outputLimit;    // RLIMIT_FSIZE in bytes
   unsigned long long       pageSize;       // the system's page size in bytes
   rlim_t                   processLimit;   // RLIMIT_NPROC of the sandbox user (processes + threads)
   rlim_t                   fileLimit;      // RLIMIT_NOFILE (open descriptors per process)
+  rlim_t                   signalLimit;    // RLIMIT_SIGPENDING (queued signals and POSIX timers)
   bool                     dropPrivileges; // whether to setuid/setgid
   uid_t                    dropUid;
   gid_t                    dropGid;
@@ -288,8 +282,11 @@ JNIEXPORT void JNICALL Java_org_verwandlung_voj_judger_core_Runner_selectSandbox
  * @param  wallTimeLimit   - the wall-clock limit (ms)
  * @param  memoryLimit     - the limit of the peak resident set (KB)
  * @param  memoryBackstop  - RLIMIT_DATA (KB)
+ * @param  stackLimit      - RLIMIT_STACK (KB)
  * @param  outputLimit     - RLIMIT_FSIZE (KB)
  * @param  processLimit    - RLIMIT_NPROC of the sandbox user (processes and threads), as root
+ * @param  fileLimit       - RLIMIT_NOFILE
+ * @param  signalQueueLimit - RLIMIT_SIGPENDING
  * @return the CPU time (ms), the peak memory (KB), the exit code (128 + the signal if killed) and
  *         the limit the program was stopped for (see Stop); throws a Java exception instead if the
  *         sandbox could not be set up
@@ -297,8 +294,8 @@ JNIEXPORT void JNICALL Java_org_verwandlung_voj_judger_core_Runner_selectSandbox
 JNIEXPORT jintArray JNICALL Java_org_verwandlung_voj_judger_core_Runner_execute(
     JNIEnv* jniEnv, jobject selfReference, jobjectArray jArguments, jobjectArray jEnvironment,
     jstring jWorkDirectory, jstring jInputFile, jstring jOutputFile, jboolean compilation,
-    jint timeLimit, jint wallTimeLimit, jint memoryLimit, jint memoryBackstop, jint outputLimit,
-    jint processLimit) {
+    jint timeLimit, jint wallTimeLimit, jint memoryLimit, jint memoryBackstop, jint stackLimit,
+    jint outputLimit, jint processLimit, jint fileLimit, jint signalQueueLimit) {
     (void) selfReference;
     // ----- Resolve everything the child needs before fork -----
     ChildPlan plan;
@@ -315,11 +312,13 @@ JNIEXPORT jintArray JNICALL Java_org_verwandlung_voj_judger_core_Runner_execute(
     plan.compileStep    = (compilation == JNI_TRUE);
     plan.timeLimit      = timeLimit;
     plan.dataLimit      = (rlim_t) memoryBackstop * 1024;
+    plan.stackLimit     = (rlim_t) stackLimit * 1024;
     plan.outputLimit    = (rlim_t) outputLimit * 1024;
     long pageSize       = sysconf(_SC_PAGESIZE);
     plan.pageSize       = pageSize > 0 ? (unsigned long long) pageSize : 4096;
     plan.processLimit   = (rlim_t) processLimit;
-    plan.fileLimit      = plan.compileStep ? COMPILE_FILE_LIMIT : RUN_FILE_LIMIT;
+    plan.fileLimit      = (rlim_t) fileLimit;
+    plan.signalLimit    = (rlim_t) signalQueueLimit;
     plan.dropPrivileges = geteuid() == 0;
     plan.dropUid        = sandboxUid;
     plan.dropGid        = sandboxGid;
@@ -603,13 +602,14 @@ static void runProgram(const ChildPlan& plan, int syncWriteFd) {
     if ( !setResourceLimit(RLIMIT_CPU, cpuSeconds, cpuSeconds + 1) ) {
         reportChildFailure(syncWriteFd, STEP_RESOURCE_LIMIT);
     }
-    if ( !setResourceLimit(RLIMIT_FSIZE, plan.outputLimit, plan.outputLimit) ) {
+    if ( !setResourceLimit(RLIMIT_FSIZE, plan.outputLimit, plan.outputLimit) ||
+         !setResourceLimit(RLIMIT_STACK, plan.stackLimit, plan.stackLimit) ) {
         reportChildFailure(syncWriteFd, STEP_RESOURCE_LIMIT);
     }
-    // The kernel counts queued signals per user, but checks the count against the rlimit of the
-    // process that queues one (or creates a timer): this binds the run alone, never the judger.
-    if ( !plan.compileStep &&
-         !setResourceLimit(RLIMIT_SIGPENDING, RUN_SIGNAL_QUEUE_LIMIT, RUN_SIGNAL_QUEUE_LIMIT) ) {
+    // Queued signals and POSIX timers are kernel objects that no memory limit sees. The kernel
+    // counts them per user, but checks the count against the rlimit of the process that queues one
+    // (or creates a timer): this binds the program alone, never the judger.
+    if ( !setResourceLimit(RLIMIT_SIGPENDING, plan.signalLimit, plan.signalLimit) ) {
         reportChildFailure(syncWriteFd, STEP_RESOURCE_LIMIT);
     }
 
@@ -1170,7 +1170,7 @@ class SeccompFilter {
  *    RLIMIT_FSIZE bounds per file);
  *  - cannot enlarge the kernel buffers of its pipes and sockets, which hold kernel memory that no
  *    memory limit sees: fcntl(F_SETPIPE_SZ) and setsockopt with SO_SNDBUF, SO_RCVBUF or their
- *    *FORCE variants fail with EPERM. RLIMIT_NOFILE bounds how many it has (see RUN_FILE_LIMIT),
+ *    *FORCE variants fail with EPERM. RLIMIT_NOFILE bounds how many it has (see SandboxPolicy.java),
  *    and at their default sizes 64 pipes hold at most 4 MB (64 KB each), 64 socket pairs some 27
  *    MB (wmem_default, 208 KB per socket); but a pipe could grow to pipe-max-size (1 MB) and a
  *    socket's send buffer to twice wmem_max (sysctls, several MB on some hosts). No runtime of a

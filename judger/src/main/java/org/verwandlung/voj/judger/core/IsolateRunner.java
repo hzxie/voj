@@ -185,6 +185,9 @@ public class IsolateRunner implements SandboxRunner {
     isolateCommand.add("--time=" + limits.timeLimitMs() / 1000.0);
     isolateCommand.add("--wall-time=" + limits.wallTimeLimitMs() / 1000.0);
     isolateCommand.add("--cg-mem=" + limits.memoryLimitKb());
+    isolateCommand.add("--stack=" + limits.stackLimitKb());
+    isolateCommand.add("--open-files=" + limits.fileLimit());
+    // isolate cannot limit queued signals; the box's cgroup charges them to its memory instead.
     isolateCommand.add("--dir=" + BOX_JUDGING_DIRECTORY + "=" + judgingDirectory);
     isolateCommand.add("--dir=" + boxWorkDirectory + "=" + workDirectory + ":rw");
     for (String directory : extraDirectories.split(",")) {

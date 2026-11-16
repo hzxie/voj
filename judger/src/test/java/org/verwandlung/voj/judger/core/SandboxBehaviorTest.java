@@ -105,10 +105,27 @@ public class SandboxBehaviorTest {
   /**
    * Test case: a program that burns more CPU time than its limit in four threads, and then exits
    * with 0. Expected result: Time Limit Exceeded, whether or not it was stopped before it exited.
+   * (Under a small memory limit: on Linux, each of its threads gets a stack as large as the limit,
+   * which the native sandbox's backstop counts, see docs/deployment.md.)
    */
   @Test
   public void testExitZeroOverTheTimeLimit() throws Exception {
-    Assertions.assertEquals(Verdict.TIME_LIMIT_EXCEEDED, judge(900013L, CPU_THREADS_CODE, 1000, 262144));
+    Assertions.assertEquals(
+        Verdict.TIME_LIMIT_EXCEEDED, judge(900013L, CPU_THREADS_CODE, 1000, THREADS_MEMORY_KB));
+  }
+
+  /**
+   * Test case: a program that recurses until it has used 128 MB of stack, under a 256 MB limit.
+   * Expected result: Accepted: a run's stack may grow up to its memory limit, on every Linux
+   * backend alike (on Windows, the program's header decides its stack).
+   */
+  @Test
+  public void testRunMayRecurseAsDeepAsItsMemoryAllows() throws Exception {
+    Assumptions.assumeTrue(isLinux(), "Windows cannot change the stack of a program it starts.");
+    Assertions.assertEquals(Verdict.NORMAL, judge(900026L, DEEP_RECURSION_CODE, 5000, 262144));
+    Assertions.assertEquals(
+        "131072\n",
+        Files.readString(Path.of(workBaseDirectory, "voj-sandbox-900026", "output.txt")));
   }
 
   /**
@@ -218,11 +235,12 @@ public class SandboxBehaviorTest {
 
   /**
    * Test case: a multi-threaded program (eight threads). Expected result: Accepted: a run may not
-   * create processes, but it may create threads.
+   * create processes, but it may create threads. (Under a small memory limit, see
+   * testExitZeroOverTheTimeLimit.)
    */
   @Test
   public void testRunCanCreateThreads() throws Exception {
-    Assertions.assertEquals(Verdict.NORMAL, judge(900012L, THREADS_CODE, 5000, 262144));
+    Assertions.assertEquals(Verdict.NORMAL, judge(900012L, THREADS_CODE, 5000, THREADS_MEMORY_KB));
     // printf writes "\r\n" on Windows.
     Assertions.assertEquals(
         "8\n",
@@ -1481,6 +1499,33 @@ public class SandboxBehaviorTest {
           volatile int i = 12345;
           v[i] = 1;
           std::printf("%d\\n", v[i]);
+          return 0;
+      }
+      """;
+
+  /**
+   * The memory limit of a run of C++ threads that take the C library's default stack, which on
+   * Linux is the run's stack limit, its memory limit (KB): small enough for eight such stacks to
+   * fit in the native sandbox's backstop, twice the limit plus 256 MB.
+   */
+  private static final int THREADS_MEMORY_KB = 32768;
+
+  /**
+   * A program that recurses 131072 times with 1 KB of stack each (some 128 MB in all), and prints
+   * how deep it went.
+   */
+  private static final String DEEP_RECURSION_CODE =
+      """
+      #include <cstdio>
+
+      static int recurse(int depth) {
+          volatile char frame[1024];
+          frame[0] = (char) depth;
+          return depth == 0 ? frame[0] : 1 + recurse(depth - 1) + frame[0] - frame[0];
+      }
+
+      int main() {
+          std::printf("%d\\n", recurse(131072 - 1) + 1);
           return 0;
       }
       """;

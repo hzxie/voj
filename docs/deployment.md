@@ -89,12 +89,13 @@ sudo useradd --system --no-create-home --shell /usr/sbin/nologin voj-sandbox
   the sandbox user's `RLIMIT_NPROC`, `judger.processLimit` (64), which counts
   every process and thread of that user. Its queued signals and POSIX timers,
   kernel objects that no memory limit sees, are capped at 1024
-  (`RLIMIT_SIGPENDING`, soft and hard alike): past that, `timer_create` and
-  queueing a real-time signal (`sigqueue`) fail with `EAGAIN`. The kernel
-  counts them per user (every run of the sandbox user, or, for a judger that is
-  not root, every process of the judger's user) but holds the count against the
-  limit of the process they are queued to, so the cap binds the run only, never
-  the judger; runs of one sandbox account on the same host share it.
+  (`RLIMIT_SIGPENDING`, soft and hard alike, for a compilation too): past that,
+  `timer_create` and queueing a real-time signal (`sigqueue`) fail with
+  `EAGAIN`. The kernel counts them per user (every compilation and run of the
+  sandbox user, or, for a judger that is not root, every process of the judger's
+  user) but holds the count against the limit of the process they are queued
+  to, so the cap binds the program only, never the judger; programs of one
+  sandbox account on the same host share it.
   A compilation runs a trusted toolchain, which may start other programs (the
   `gcc` driver, `go build`), under `judger.compileProcessLimit` (1024). Every
   process of a compilation stays in the compiler's process group, since the
@@ -145,6 +146,18 @@ sudo useradd --system --no-create-home --shell /usr/sbin/nologin voj-sandbox
   `mmap.mmap(-1, n)`, a shared mapping, do not work in a run (the JVM's other
   collectors do). A run's JVM is told its memory limit and sizes its heap to
   it (see [Java and Kotlin runs](#java-and-kotlin-runs)).
+- **Stack.** A run's main thread may grow its stack up to the run's memory
+  limit (`RLIMIT_STACK`, soft and hard alike), as is usual for a judge: a
+  program may recurse as deep as its memory allows, and the stack it touches
+  counts against its memory limit like any other memory. A compilation's is
+  8 MB, Linux's usual default. The C library (glibc) also gives every thread
+  that does not choose its stack size (C and C++ threads, `std::thread`,
+  Python's `threading`) a stack of that size, and each such stack counts in full
+  against the backstop above, touched or not: a run can then start only about
+  two of them (a 256 MB limit has a 768 MB backstop), and the next fails to
+  start. Threads that set their stack size (`pthread_attr_setstacksize`,
+  `threading.stack_size`), and those of the JVM, Go, Rust and Node.js, which
+  always do, are not affected. isolate, which has no backstop, is not either.
 - **Disk.** A compilation or run may write in its work directory, and
   `judger.outputLimit` bounds each file, not their number: until it ends and its
   directory is removed, a run can fill whatever file system holds
@@ -170,8 +183,8 @@ sudo useradd --system --no-create-home --shell /usr/sbin/nologin voj-sandbox
   No other descriptor of the judger is
   inherited. A run may have at most 128 descriptors open at once and a
   compilation's processes 4096 each (`RLIMIT_NOFILE`, soft and hard alike, so it
-  cannot be raised): an open pipe or socket pair can hold kernel memory that no
-  memory limit sees. For the same reason a run cannot enlarge those buffers
+  cannot be raised; isolate's `--open-files`): an open pipe or socket pair can
+  hold kernel memory that no memory limit sees. For the same reason a run cannot enlarge those buffers
   beyond their defaults (64 KB for a pipe, `wmem_default` for a socket):
   `fcntl` with `F_SETPIPE_SZ` and `setsockopt` with `SO_SNDBUF`, `SO_RCVBUF`,
   `SO_SNDBUFFORCE` or `SO_RCVBUFFORCE` fail with `EPERM`, which keeps its 128
@@ -375,8 +388,10 @@ UID: set `judger.isolate.firstUid` to isolate's `first_uid` and
   them: the CPU time (`--time`, of the whole box), the wall-clock limit
   (`--wall-time`, twice the time limit plus a second), `judger.processLimit`
   processes and threads for a run and `judger.compileProcessLimit` for a
-  compilation (`--processes`), and `judger.outputLimit` for every file
-  (`--fsize`). The verdict is judged as for the native backend, from what
+  compilation (`--processes`), `judger.outputLimit` for every file
+  (`--fsize`), the stack (`--stack`) and the open descriptors of each process
+  (`--open-files`). isolate cannot limit queued signals and POSIX timers; the
+  box's cgroup charges their kernel memory to its memory limit instead. The verdict is judged as for the native backend, from what
   isolate stopped the program for (the time limit, the cgroup's out-of-memory
   killer, `SIGXFSZ`) and its figures. **Memory** differs: isolate enforces the
   memory limit as the hard limit of the box's cgroup (`--cg-mem`), which counts
@@ -643,6 +658,13 @@ every 2 ms and kills the Job as soon as a limit is exceeded:
   lower that does not also count the JVM's untouched heap. Such a program is
   stopped by the cap only, so on Windows the memory limit is enforced up to
   that cap rather than exactly.
+- **Stack**: the size an executable's header asks for (`SizeOfStackReserve`),
+  which its linker sets, not the judger: Windows cannot change the stack of a
+  process it starts. MinGW and MSVC default to 2 MB and 1 MB, far less than a
+  run gets on Linux; give a language's compile command a larger one (e.g.
+  `-Wl,--stack,268435456` for gcc) to let its programs recurse as deep. Nor is
+  there a limit on a process's handles to set, the counterpart of Linux's
+  descriptor limit.
 - **Output**: `judger.outputLimit` (256 MB) written to standard output: a run
   whose output reaches it is Output Limit Exceeded, as on Linux. Other files
   the program writes are not limited (see [Disk](#what-a-submission-is-held-to)).

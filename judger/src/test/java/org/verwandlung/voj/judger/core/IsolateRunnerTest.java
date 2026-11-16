@@ -138,6 +138,8 @@ public class IsolateRunnerTest {
     Assertions.assertTrue(args.contains("--wall-time=4.0"));
     Assertions.assertTrue(args.contains("--cg-mem=65536"));
     Assertions.assertTrue(args.contains("--fsize=1024"));
+    Assertions.assertTrue(args.contains("--stack=65536"));
+    Assertions.assertTrue(args.contains("--open-files=128"));
   }
 
   /**

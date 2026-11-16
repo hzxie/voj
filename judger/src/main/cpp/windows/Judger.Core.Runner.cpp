@@ -198,16 +198,23 @@ std::vector<std::wstring> getWideStringValues(JNIEnv*, jobjectArray);
  * @param  memoryLimit     - the limit of the peak working set (KB)
  * @param  memoryBackstop  - the Job's commit limit (KB): of the whole Job for a run, of each
  *                           process for a compilation
+ * @param  stackLimit      - not enforced: a program's stack is the one its executable's header
+ *                           asks for (SizeOfStackReserve), which only its linker decides
  * @param  outputLimit     - the largest output (KB)
  * @param  processLimit    - the Job's active process limit
+ * @param  fileLimit       - not enforced: Windows has no limit on a process's handles to set
+ * @param  signalQueueLimit - not enforced: Windows has no signals to queue
  * @return the CPU time (ms), the peak memory (KB), the exit code and the limit the program was
  *         stopped for; throws a Java exception instead if the sandbox could not be set up
  */
 JNIEXPORT jintArray JNICALL Java_org_verwandlung_voj_judger_core_Runner_execute(
     JNIEnv* jniEnv, jobject selfReference, jobjectArray jArguments, jobjectArray jEnvironment,
     jstring jWorkDirectory, jstring jInputFile, jstring jOutputFile, jboolean compilation,
-    jint timeLimit, jint wallTimeLimit, jint memoryLimit, jint memoryBackstop, jint outputLimit,
-    jint processLimit) {
+    jint timeLimit, jint wallTimeLimit, jint memoryLimit, jint memoryBackstop, jint stackLimit,
+    jint outputLimit, jint processLimit, jint fileLimit, jint signalQueueLimit) {
+    (void) stackLimit;
+    (void) fileLimit;
+    (void) signalQueueLimit;
     std::vector<std::wstring> arguments      = getWideStringValues(jniEnv, jArguments);
     std::vector<std::wstring> environment    = getWideStringValues(jniEnv, jEnvironment);
     std::wstring              inputFilePath  = getWideStringValue(jniEnv, jInputFile);
