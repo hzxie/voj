@@ -100,6 +100,9 @@ public class JmsConfigTest {
         ((ActiveMQConnectionFactory) listenerContainer.getConnectionFactory())
             .getPrefetchPolicy()
             .getQueuePrefetch());
+    // The consumer is closed after every receive, which hands a rolled back task to the broker.
+    Assertions.assertEquals(
+        DefaultMessageListenerContainer.CACHE_SESSION, listenerContainer.getCacheLevel());
     // The container must not auto-start; the startup runner starts it only after the identity check.
     Assertions.assertFalse(listenerContainer.isAutoStartup());
   }
@@ -175,9 +178,8 @@ public class JmsConfigTest {
             .getRedeliveryPolicy();
     Assertions.assertEquals(
         JmsConfig.MAXIMUM_REDELIVERIES, redeliveryPolicy.getMaximumRedeliveries());
-    // Keep the test fast; the delays themselves are the broker client's business.
-    redeliveryPolicy.setInitialRedeliveryDelay(0);
-    redeliveryPolicy.setRedeliveryDelay(0);
+    // Keep the test fast: the judger, the only one, takes the task again right away.
+    ((JmsConfig.SubmissionTaskListenerContainer) listenerContainer).setInitialPauseMs(0);
     start(listenerContainer);
 
     sendTask(brokerUrl, 7L);
@@ -188,6 +190,45 @@ public class JmsConfigTest {
     Assertions.assertNotNull(deadLetter);
     Assertions.assertEquals(7L, deadLetter.getLong("submissionId"));
     Assertions.assertEquals(1 + JmsConfig.MAXIMUM_REDELIVERIES, deliveries.get());
+  }
+
+  /**
+   * Test case: a judger with a fault of its own (e.g. wrong database credentials) fails the judging
+   * of a task, and another, healthy judger is idle. Expected result: the task is delivered again to
+   * the healthy judger, right away, rather than again and again to the failing one; the failing
+   * judger pauses before it takes a task again.
+   */
+  @Test
+  public void testFailedTaskIsRedeliveredToAnotherJudger() throws Exception {
+    String brokerUrl = startBrokerOnFreePort();
+    java.util.concurrent.atomic.AtomicInteger failedDeliveries =
+        new java.util.concurrent.atomic.AtomicInteger();
+    java.util.concurrent.CountDownLatch failed = new java.util.concurrent.CountDownLatch(1);
+    start(
+        jmsConfig.submissionTaskListenerContainer(
+            brokerUrl,
+            message -> {
+              failedDeliveries.incrementAndGet();
+              failed.countDown();
+              throw new IllegalStateException("database down");
+            }));
+    sendTask(brokerUrl, 7L);
+    Assertions.assertTrue(failed.await(10, TimeUnit.SECONDS));
+
+    BlockingQueue<Long> judgedByHealthyJudger = new LinkedBlockingQueue<>();
+    start(
+        jmsConfig.submissionTaskListenerContainer(
+            brokerUrl,
+            message -> {
+              try {
+                judgedByHealthyJudger.add(((MapMessage) message).getLong("submissionId"));
+              } catch (jakarta.jms.JMSException ex) {
+                throw new IllegalStateException(ex);
+              }
+            }));
+
+    Assertions.assertEquals(7L, judgedByHealthyJudger.poll(5, TimeUnit.SECONDS));
+    Assertions.assertEquals(1, failedDeliveries.get());
   }
 
   /**

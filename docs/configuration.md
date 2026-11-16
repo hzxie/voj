@@ -78,11 +78,16 @@ restarts with it):
   recorded. If that is impossible, e.g. while the database is down, if the
   test data cannot be downloaded for now (the web app restarting or
   unreachable, an error status other than 404, a download that times out), or
-  if the judger dies while judging, the broker delivers the task again, up to 5 times
-  with a growing delay (10 s, 20 s, 40 s, ...), then moves it to `ActiveMQ.DLQ`,
-  where the web app marks the submission as a System Error whose judge log says
-  that judging it failed repeatedly (a task that expired because no judger took
-  it says instead that no available judger supports the language).
+  if the judger dies while judging, the task goes back to the broker, which
+  delivers it again to whichever judger asks for a task first. The judger whose
+  judging failed waits before it asks again, 10 s after a failure and twice as
+  long after each further failure in a row (up to 160 s), so an idle judger
+  takes the task first, and a judger on its own retries it with a growing
+  delay (10 s, 20 s, 40 s, ...). After 5 redeliveries the task moves to
+  `ActiveMQ.DLQ`, where the web app marks the submission as a System Error
+  whose judge log says that judging it failed repeatedly (a task that expired
+  because no judger took it says instead that no available judger supports
+  the language).
 
 ### Identity
 
