@@ -58,6 +58,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
+import org.verwandlung.voj.web.config.ViewConfig;
 import org.verwandlung.voj.web.interceptor.CommonModelInterceptor;
 import org.verwandlung.voj.web.interceptor.CommonModelPopulator;
 import org.verwandlung.voj.web.interceptor.MaintenanceModeInterceptor;
@@ -121,6 +122,7 @@ import org.verwandlung.voj.web.service.UserService;
 @WebMvcTest
 @AutoConfigureMockMvc(addFilters = false)
 @Import({
+  ViewConfig.class,
   CommonModelInterceptor.class,
   CommonModelPopulator.class,
   MaintenanceModeInterceptor.class,

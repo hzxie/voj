@@ -16,33 +16,23 @@
  */
 package org.verwandlung.voj.web.config;
 
-import java.util.Locale;
-
-import nz.net.ultraq.thymeleaf.layoutdialect.LayoutDialect;
-
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.support.ReloadableResourceBundleMessageSource;
-import org.springframework.web.servlet.LocaleResolver;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.i18n.LocaleChangeInterceptor;
-import org.springframework.web.servlet.i18n.SessionLocaleResolver;
 
 import org.verwandlung.voj.web.interceptor.AdministrationChromeInterceptor;
 import org.verwandlung.voj.web.interceptor.CommonModelInterceptor;
 import org.verwandlung.voj.web.interceptor.MaintenanceModeInterceptor;
 
 /**
- * The Spring MVC configuration. Replaces the internationalization and localization configuration
- * from the original dispatcher-servlet.xml.
+ * The Spring MVC configuration: the interceptors of every request (the beans the views are rendered
+ * with are in {@link ViewConfig}).
  *
  * <p>Static assets live under {@code classpath:/static/assets} and are served at {@code /assets/**}
- * by Spring Boot's default static-resource handling, so no explicit resource handler is needed. The
- * views are rendered by Thymeleaf (auto-configured by Spring Boot) from {@code
- * classpath:/templates}.
+ * by Spring Boot's default static-resource handling, so no explicit resource handler is needed.
  *
  * @author Haozhe Xie
  */
@@ -68,34 +58,6 @@ public class WebMvcConfig implements WebMvcConfigurer {
     registry.addInterceptor(maintenanceModeInterceptor);
     registry.addInterceptor(commonModelInterceptor);
     registry.addInterceptor(administrationChromeInterceptor);
-  }
-
-  /**
-   * Enables the Thymeleaf Layout Dialect, which provides the {@code
-   * layout:decorate} / {@code layout:fragment} decorator model used by the page
-   * templates to share a single master layout.
-   */
-  @Bean
-  public LayoutDialect layoutDialect() {
-    return new LayoutDialect();
-  }
-
-  /** The internationalization resources. */
-  @Bean
-  public MessageSource messageSource() {
-    ReloadableResourceBundleMessageSource messageSource =
-        new ReloadableResourceBundleMessageSource();
-    messageSource.setBasename("classpath:localization/voj");
-    messageSource.setDefaultEncoding("UTF-8");
-    return messageSource;
-  }
-
-  /** The Session-based Locale resolver, with the default language being en_US. */
-  @Bean
-  public LocaleResolver localeResolver() {
-    SessionLocaleResolver localeResolver = new SessionLocaleResolver();
-    localeResolver.setDefaultLocale(Locale.US);
-    return localeResolver;
   }
 
   /** The language switching interceptor. */
