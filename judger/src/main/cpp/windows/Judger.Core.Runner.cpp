@@ -45,15 +45,16 @@
 
 /**
  * The maximum number of processes a run of the submission may have in its Job: a submission may not
- * create processes (as on Linux), but its console host counts too. CreateProcessWithLogonW always
- * gives the new process a console of its own (CREATE_NEW_CONSOLE is implied), and since Windows 8
- * the console host (conhost.exe) is started by the console program itself while it initialises -
- * after it has been assigned to the Job - so it becomes a member of the Job. With a limit of 1 the
- * console host could not start and every console program would fail to initialise
+ * create processes (as on Linux), but its console host counts too. A console program created by
+ * CreateProcessWithTokenW gets a console of its own (CREATE_NO_WINDOW: one without a window), and
+ * since Windows 8 the console host (conhost.exe) is started by the console program itself while it
+ * initialises - after it has been assigned to the Job - so it becomes a member of the Job. With a
+ * limit of 1 the console host could not start and every console program would fail to initialise
  * (STATUS_DLL_INIT_FAILED). With 2, the program plus its console host fill the Job, and any
  * CreateProcess of the submission fails. (Should the console host not be in the Job, the program
  * could have one child process at a time, still confined to the Job.)
- * See https://learn.microsoft.com/windows/win32/api/winbase/nf-winbase-createprocesswithlogonw
+ * See https://learn.microsoft.com/windows/console/creating-a-pseudoconsole-session and
+ * https://learn.microsoft.com/windows/win32/procthread/process-creation-flags
  */
 #define RUN_ACTIVE_PROCESS_LIMIT 2
 
@@ -191,18 +192,33 @@ static const wchar_t* const PROFILE_ENVIRONMENT_VARIABLES[] = {
     L"USERPROFILE", L"HOME", L"APPDATA", L"LOCALAPPDATA",
 };
 /**
- * What the sandbox account needs of the judger's window station and desktop for its programs to
- * start: user32 connects to them as a console program starts (a JVM's does, whoami's does), and
- * without this access it cannot initialise (STATUS_DLL_INIT_FAILED, which Windows reports in a
- * hard-error box the program then waits on). CreateProcessWithLogonW granted it to the logon of
- * each run; CreateProcessWithTokenW does not, so the runner grants it to the account (see
- * grantDesktopAccess). Neither lets a program read the screen, switch desktops, hook the input of
- * other programs, or create desktops; the Job's UI restrictions apply too (see createJobObject).
+ * The window station and desktop of every compilation and run: private ones, which the judger
+ * creates for its programs alone (see createPrivateDesktop), never the operator's (WinSta0\Default),
+ * whose windows a program could otherwise see and send input to, and whose access the account
+ * would need for as long as the session lasts. user32 connects to the window station and desktop
+ * as a console program starts (a JVM's does, whoami's does), and without access to them it cannot
+ * initialise (STATUS_DLL_INIT_FAILED). CreateProcessWithTokenW does not grant that access to the
+ * account (CreateProcessWithLogonW does, for the window station and desktop a process inherits),
+ * so the DACLs of the private ones grant the sandbox account what follows, and nobody but the
+ * judger anything else. Neither lets a program read the screen, enumerate the window station's
+ * desktops, switch desktops, or hook the input of other programs; the Job's UI restrictions apply
+ * too (see createJobObject). Both are labelled Low, as WinSta0\Default is, so that a Low process
+ * may write to them.
+ * See https://learn.microsoft.com/windows/win32/winstation/window-station-security-and-access-rights,
+ * https://learn.microsoft.com/windows/win32/winstation/desktop-security-and-access-rights and
+ * https://learn.microsoft.com/windows/win32/api/winbase/nf-winbase-createprocesswithtokenw
  */
-static const DWORD WINDOW_STATION_ACCESS = READ_CONTROL | WINSTA_ENUMDESKTOPS | WINSTA_READATTRIBUTES |
-                                           WINSTA_ACCESSGLOBALATOMS | WINSTA_EXITWINDOWS;
-static const DWORD DESKTOP_ACCESS        = DESKTOP_READOBJECTS | DESKTOP_CREATEWINDOW |
+static const DWORD WINDOW_STATION_ACCESS = READ_CONTROL | WINSTA_READATTRIBUTES |
+                                           WINSTA_ACCESSGLOBALATOMS;
+static const DWORD DESKTOP_ACCESS        = READ_CONTROL | DESKTOP_READOBJECTS | DESKTOP_CREATEWINDOW |
                                            DESKTOP_CREATEMENU | DESKTOP_WRITEOBJECTS;
+/** The label of the private window station and desktop: Low, with the "no write up" policy. */
+static const wchar_t* const PRIVATE_DESKTOP_LABEL = L"S:(ML;;NW;;;LW)";
+/** The name of the desktop in the private window station. */
+static const wchar_t* const PRIVATE_DESKTOP_NAME  = L"default";
+#ifndef CWF_CREATE_ONLY
+#define CWF_CREATE_ONLY 0x00000001
+#endif
 
 /**
  * Orders environment variable names the way Windows expects an environment block to be sorted:
@@ -229,8 +245,11 @@ struct SandboxSession {
     HANDLE       hToken;    // the account's logon token
     HANDLE       hProfile;  // its loaded profile (registry hive), unloaded with the session
     HANDLE       hRunToken; // the token every program runs with (see createLowIntegrityToken)
+    HWINSTA      hWinsta;   // the private window station of its programs (see createPrivateDesktop)
+    HDESK        hDesktop;  // the private desktop of its programs
+    std::wstring desktop;   // "<window station>\<desktop>", the programs' lpDesktop
 };
-static SandboxSession sandboxSession     = { L"", L"", NULL, NULL, NULL };
+static SandboxSession sandboxSession     = { L"", L"", NULL, NULL, NULL, NULL, NULL, L"" };
 static SRWLOCK        sandboxSessionLock = SRWLOCK_INIT;
 
 /**
@@ -248,8 +267,8 @@ void closeSandboxSession();
 HANDLE createLowIntegrityToken(HANDLE);
 bool labelLowIntegrity(const std::wstring&);
 bool hasLowIntegrityLabel(PACL, PSID);
-bool grantDesktopAccess(HANDLE);
-bool grantAccess(HANDLE, PSID, DWORD);
+bool createPrivateDesktop(HANDLE, HWINSTA&, HDESK&, std::wstring&);
+bool getTokenUserSid(HANDLE, std::wstring&);
 bool buildEnvironmentBlock(const std::wstring&, const std::wstring&, const std::wstring&, std::vector<wchar_t>&);
 bool getJudgerEnvironmentVariable(const wchar_t*, std::wstring&);
 
@@ -632,18 +651,15 @@ bool getJudgerOnlySecurityDescriptor(PSECURITY_DESCRIPTOR& pSecurityDescriptor) 
     if ( !OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken) ) {
         return false;
     }
-    BYTE  tokenUser[sizeof(TOKEN_USER) + SECURITY_MAX_SID_SIZE];
-    DWORD size    = 0;
-    BOOL  queried = GetTokenInformation(hToken, TokenUser, tokenUser, sizeof(tokenUser), &size);
-    DWORD error   = GetLastError();
+    std::wstring sid;
+    bool         known = getTokenUserSid(hToken, sid);
+    DWORD        error = GetLastError();
     CloseHandle(hToken);
-    LPWSTR sid = NULL;
-    if ( !queried || !ConvertSidToStringSidW(((PTOKEN_USER) tokenUser)->User.Sid, &sid) ) {
-        SetLastError(queried ? GetLastError() : error);
+    if ( !known ) {
+        SetLastError(error);
         return false;
     }
-    std::wstring sddl = std::wstring(L"D:P(A;;FA;;;") + sid + L")";
-    LocalFree(sid);
+    std::wstring sddl = L"D:P(A;;FA;;;" + sid + L")";
     return ConvertStringSecurityDescriptorToSecurityDescriptorW(sddl.c_str(), SDDL_REVISION_1,
                &pSecurityDescriptor, NULL) != FALSE;
 }
@@ -727,13 +743,16 @@ HANDLE createJobObject(DWORD activeProcessLimit, jint memoryLimit, bool jobWideM
         return failJob();
     }
 
-    // Cut the sandboxed program off from the interactive desktop (clipboard, global atoms, etc.).
+    // Cut the sandboxed program off from the user interface of the system (clipboard, global atoms,
+    // other desktops, display and system settings, logging off and shutting down) and from the
+    // windows and other USER objects of every process outside its Job (UILIMIT_HANDLES), on top of
+    // the private desktop it runs on (see WINDOW_STATION_ACCESS).
     JOBOBJECT_BASIC_UI_RESTRICTIONS uiRestrictions = {0};
     uiRestrictions.UIRestrictionsClass =
         JOB_OBJECT_UILIMIT_DESKTOP | JOB_OBJECT_UILIMIT_DISPLAYSETTINGS |
         JOB_OBJECT_UILIMIT_EXITWINDOWS | JOB_OBJECT_UILIMIT_GLOBALATOMS |
-        JOB_OBJECT_UILIMIT_READCLIPBOARD | JOB_OBJECT_UILIMIT_WRITECLIPBOARD |
-        JOB_OBJECT_UILIMIT_SYSTEMPARAMETERS;
+        JOB_OBJECT_UILIMIT_HANDLES | JOB_OBJECT_UILIMIT_READCLIPBOARD |
+        JOB_OBJECT_UILIMIT_WRITECLIPBOARD | JOB_OBJECT_UILIMIT_SYSTEMPARAMETERS;
     if ( !SetInformationJobObject(hJob, JobObjectBasicUIRestrictions, &uiRestrictions, sizeof(uiRestrictions)) ) {
         return failJob();
     }
@@ -862,12 +881,8 @@ bool createProcess(const std::wstring& commandLine, const std::wstring& username
         currentDirectory = userProfile;
         failedApi = "GetUserProfileDirectory";
     }
-    if ( created && !grantDesktopAccess(sandboxSession.hToken) ) {
-        created   = false;
-        failedApi = "GrantDesktopAccess";
-    }
     if ( created ) {
-        // lpDesktop is NULL: the program gets the judger's window station and desktop.
+        startupInfo.lpDesktop = &sandboxSession.desktop[0];
         created = CreateProcessWithTokenW(sandboxSession.hRunToken, 0, NULL,
                       mutableCommandLine.data(),
                       CREATE_UNICODE_ENVIRONMENT | CREATE_SUSPENDED | CREATE_NO_WINDOW,
@@ -876,6 +891,7 @@ bool createProcess(const std::wstring& commandLine, const std::wstring& username
         failedApi = "CreateProcessWithToken";
     }
     DWORD error = GetLastError();
+    startupInfo.lpDesktop = NULL;
     ReleaseSRWLockExclusive(&sandboxSessionLock);
     SetLastError(error);
     return created;
@@ -916,6 +932,12 @@ bool openSandboxSession(const std::wstring& username, const std::wstring& passwo
         session.hRunToken = createLowIntegrityToken(session.hToken);
         failedApi         = "CreateLowIntegrityToken";
     }
+    if ( session.hRunToken != NULL &&
+            !createPrivateDesktop(session.hToken, session.hWinsta, session.hDesktop, session.desktop) ) {
+        CloseHandle(session.hRunToken);
+        session.hRunToken = NULL;
+        failedApi         = "CreatePrivateDesktop";
+    }
     if ( session.hRunToken == NULL ) {
         DWORD error = GetLastError();
         closeSandboxSession();
@@ -933,6 +955,15 @@ bool openSandboxSession(const std::wstring& username, const std::wstring& passwo
  */
 void closeSandboxSession() {
     SandboxSession& session = sandboxSession;
+    if ( session.hDesktop != NULL ) {
+        CloseDesktop(session.hDesktop);
+        session.hDesktop = NULL;
+    }
+    if ( session.hWinsta != NULL ) {
+        CloseWindowStation(session.hWinsta);
+        session.hWinsta = NULL;
+    }
+    session.desktop.clear();
     if ( session.hRunToken != NULL ) {
         CloseHandle(session.hRunToken);
         session.hRunToken = NULL;
@@ -1090,74 +1121,99 @@ bool hasLowIntegrityLabel(PACL pSacl, PSID lowSid) {
 }
 
 /**
- * Grants the sandbox account the access to the judger's window station and desktop its programs
- * need to start (see WINDOW_STATION_ACCESS), unless it has it already. The grant is the account's,
- * so it is made once and stays (until the judger's session ends, which takes its window station
- * with it): the ACLs do not grow with every run, and judgers sharing the session grant the same.
- * @param  hToken - the logon token of the sandbox account
- * @return whether the account has that access (GetLastError() tells why not)
+ * Creates the private window station and desktop of the programs of the sandbox account (see
+ * WINDOW_STATION_ACCESS): a window station of its own, named after the judger's process (it is
+ * created anew, never an existing one opened, should someone have taken the name), and a desktop
+ * in it. Their DACLs give the sandbox account the access its programs need, the judger and SYSTEM
+ * full control, and nobody else any access. A desktop is created on the window station of the
+ * calling process, so the judger's process switches to the new one for that moment.
+ * @param  hToken   - the logon token of the sandbox account
+ * @param  hWinsta  - receives the window station
+ * @param  hDesktop - receives the desktop
+ * @param  desktop  - receives the desktop's full name, "<window station>\<desktop>"
+ * @return whether both were created (GetLastError() tells why not)
  */
-bool grantDesktopAccess(HANDLE hToken) {
-    BYTE  tokenUser[sizeof(TOKEN_USER) + SECURITY_MAX_SID_SIZE];
-    DWORD size = 0;
-    if ( !GetTokenInformation(hToken, TokenUser, tokenUser, sizeof(tokenUser), &size) ) {
+bool createPrivateDesktop(HANDLE hToken, HWINSTA& hWinsta, HDESK& hDesktop, std::wstring& desktop) {
+    static LONG  counter = 0;
+    std::wstring sandboxSid;
+    std::wstring judgerSid;
+    HANDLE       hJudgerToken = NULL;
+    if ( !getTokenUserSid(hToken, sandboxSid) ||
+            !OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hJudgerToken) ) {
         return false;
     }
-    PSID    sid      = ((PTOKEN_USER) tokenUser)->User.Sid;
-    HWINSTA hWinsta  = GetProcessWindowStation();
-    HDESK   hDesktop = GetThreadDesktop(GetCurrentThreadId());
-    if ( hWinsta == NULL || hDesktop == NULL ) {
-        return false;
-    }
-    return grantAccess(hWinsta, sid, WINDOW_STATION_ACCESS) && grantAccess(hDesktop, sid, DESKTOP_ACCESS);
-}
-
-/**
- * Grants an account access to a window station or desktop, unless an entry of its DACL already
- * allows the account all of it.
- * @param  hObject - the window station or desktop
- * @param  sid     - the account
- * @param  access  - the access to grant
- * @return whether the account has that access (GetLastError() tells why not)
- */
-bool grantAccess(HANDLE hObject, PSID sid, DWORD access) {
-    PACL                 pDacl = NULL;
-    PSECURITY_DESCRIPTOR pSd   = NULL;
-    DWORD error = GetSecurityInfo(hObject, SE_WINDOW_OBJECT, DACL_SECURITY_INFORMATION, NULL, NULL,
-                      &pDacl, NULL, &pSd);
-    if ( error != ERROR_SUCCESS ) {
+    bool  judgerKnown = getTokenUserSid(hJudgerToken, judgerSid);
+    DWORD error       = GetLastError();
+    CloseHandle(hJudgerToken);
+    if ( !judgerKnown ) {
         SetLastError(error);
         return false;
     }
-    // A NULL DACL allows everyone everything.
-    bool granted = pDacl == NULL;
-    for ( DWORD i = 0; !granted && i < pDacl->AceCount; ++ i ) {
-        PACE_HEADER ace = NULL;
-        if ( GetAce(pDacl, i, (LPVOID*) &ace) && ace->AceType == ACCESS_ALLOWED_ACE_TYPE &&
-                (ace->AceFlags & INHERIT_ONLY_ACE) == 0 ) {
-            PACCESS_ALLOWED_ACE allowed = (PACCESS_ALLOWED_ACE) ace;
-            granted = EqualSid((PSID) &allowed->SidStart, sid) && (allowed->Mask & access) == access;
-        }
+    // Builds the security descriptor of a window station or desktop.
+    auto getSecurityDescriptor = [&](DWORD access, PSECURITY_DESCRIPTOR& pSd) -> bool {
+        wchar_t mask[16];
+        swprintf(mask, sizeof(mask) / sizeof(mask[0]), L"0x%lX", (unsigned long) access);
+        std::wstring sddl = std::wstring(L"D:P(A;;") + mask + L";;;" + sandboxSid + L")(A;;GA;;;" +
+                            judgerSid + L")(A;;GA;;;SY)" + PRIVATE_DESKTOP_LABEL;
+        return ConvertStringSecurityDescriptorToSecurityDescriptorW(sddl.c_str(), SDDL_REVISION_1,
+                   &pSd, NULL) != FALSE;
+    };
+    std::wstring name = L"voj-judger-" + std::to_wstring(GetCurrentProcessId()) + L"-" +
+                        std::to_wstring(InterlockedIncrement(&counter));
+    PSECURITY_DESCRIPTOR pSd = NULL;
+    if ( !getSecurityDescriptor(WINDOW_STATION_ACCESS, pSd) ) {
+        return false;
     }
-    if ( !granted ) {
-        EXPLICIT_ACCESSW entry = {};
-        entry.grfAccessPermissions = access;
-        entry.grfAccessMode        = GRANT_ACCESS;
-        entry.grfInheritance       = NO_INHERITANCE;
-        entry.Trustee.TrusteeForm  = TRUSTEE_IS_SID;
-        entry.Trustee.TrusteeType  = TRUSTEE_IS_USER;
-        entry.Trustee.ptstrName    = (LPWSTR) sid;
-        PACL pNewDacl = NULL;
-        error = SetEntriesInAclW(1, &entry, pDacl, &pNewDacl);
-        if ( error == ERROR_SUCCESS ) {
-            error = SetSecurityInfo(hObject, SE_WINDOW_OBJECT, DACL_SECURITY_INFORMATION, NULL, NULL,
-                        pNewDacl, NULL);
-            LocalFree(pNewDacl);
-        }
-    }
+    SECURITY_ATTRIBUTES sa = { sizeof(SECURITY_ATTRIBUTES), pSd, FALSE };
+    hWinsta = CreateWindowStationW(name.c_str(), CWF_CREATE_ONLY, GENERIC_ALL, &sa);
+    error   = GetLastError();
     LocalFree(pSd);
-    SetLastError(error);
-    return error == ERROR_SUCCESS;
+    if ( hWinsta == NULL ) {
+        SetLastError(error);
+        return false;
+    }
+    pSd = NULL;
+    if ( getSecurityDescriptor(DESKTOP_ACCESS, pSd) ) {
+        sa.lpSecurityDescriptor = pSd;
+        HWINSTA hOriginal = GetProcessWindowStation();
+        if ( hOriginal != NULL && SetProcessWindowStation(hWinsta) ) {
+            hDesktop = CreateDesktopW(PRIVATE_DESKTOP_NAME, NULL, NULL, 0, GENERIC_ALL, &sa);
+            error    = GetLastError();
+            SetProcessWindowStation(hOriginal);
+        } else {
+            error = GetLastError();
+        }
+        LocalFree(pSd);
+    } else {
+        error = GetLastError();
+    }
+    if ( hDesktop == NULL ) {
+        CloseWindowStation(hWinsta);
+        hWinsta = NULL;
+        SetLastError(error);
+        return false;
+    }
+    desktop = name + L"\\" + PRIVATE_DESKTOP_NAME;
+    return true;
+}
+
+/**
+ * Gets the SID of the user of a token, as a string.
+ * @param  hToken - the token (with TOKEN_QUERY access)
+ * @param  sid    - receives the SID, such as "S-1-5-21-...-1001"
+ * @return whether it was read (GetLastError() tells why not)
+ */
+bool getTokenUserSid(HANDLE hToken, std::wstring& sid) {
+    BYTE   tokenUser[sizeof(TOKEN_USER) + SECURITY_MAX_SID_SIZE];
+    DWORD  size   = 0;
+    LPWSTR string = NULL;
+    if ( !GetTokenInformation(hToken, TokenUser, tokenUser, sizeof(tokenUser), &size) ||
+            !ConvertSidToStringSidW(((PTOKEN_USER) tokenUser)->User.Sid, &string) ) {
+        return false;
+    }
+    sid = string;
+    LocalFree(string);
+    return true;
 }
 
 /**
