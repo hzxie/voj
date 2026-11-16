@@ -29,7 +29,7 @@
                     <span class="nm" th:text="${language.languageName}">Language</span>
                     <span class="ext" th:text="${language.languageSlug}">slug</span>
                     <div class="adm-flex1"></div>
-                    <span class="del-lang">&#10005;</span>
+                    <button type="button" class="del-lang" th:aria-label="#{voj.administration.include.remove} + ': ' + ${language.languageName}">&#10005;</button>
                 </div>
                 <div class="adm-langcard-body">
                     <input class="language-id" type="hidden" th:value="${language.languageId}" />
@@ -54,8 +54,10 @@
     <script type="text/javascript" th:inline="javascript">
         $('#languages').on('click', '.del-lang', function() {
             var card = $(this).closest('.language');
+            var next = card.next('.language').length ? card.next('.language') : card.prev('.language');
             card.remove();
             if ($('.language', '#languages').length === 0) { $('#no-languages').removeClass('hide'); }
+            (next.length ? $('.del-lang', next) : $('#new-language')).trigger('focus');
         });
         $('#languages').on('input', 'input.language-name', function() {
             $('.nm', $(this).closest('.language')).text($(this).val());
@@ -116,7 +118,7 @@
                 '  <div class="adm-langcard-head">' +
                 '    <span class="nm"></span><span class="ext"></span>' +
                 '    <div class="adm-flex1"></div>' +
-                '    <span class="del-lang">&#10005;</span>' +
+                '    <button type="button" class="del-lang" aria-label="' + escapeHtml([[#{voj.administration.include.remove}]]) + '">&#10005;</button>' +
                 '  </div>' +
                 '  <div class="adm-langcard-body">' +
                 '    <input class="language-id" type="hidden" value="0" />' +

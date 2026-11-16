@@ -79,10 +79,11 @@
             <div class="adm-langcard language" th:each="language : ${languages}" th:classappend="${language.enabled} ? '' : 'off'">
                 <div class="adm-langcard-head">
                     <button type="button" role="switch" class="adm-switch sm lang-enabled" th:classappend="${language.enabled} ? 'on'"><span class="knob"></span></button>
-                    <input class="adm-langname language-name" type="text" th:value="${language.languageName}" maxlength="16" />
+                    <input class="adm-langname language-name" type="text" th:value="${language.languageName}" maxlength="16"
+                           th:aria-label="#{voj.administration.language-settings.language-name}" />
                     <span class="ext" th:text="${language.languageSlug}">slug</span>
                     <div class="adm-flex1"></div>
-                    <span class="del-lang">&#10005;</span>
+                    <button type="button" class="del-lang" th:aria-label="#{voj.administration.include.remove} + ': ' + ${language.languageName}">&#10005;</button>
                     <input class="language-id" type="hidden" th:value="${language.languageId}" />
                 </div>
                 <div class="adm-langcard-body">
@@ -98,10 +99,10 @@
                                 <div class="t" th:text="#{voj.administration.judgers.time-multiplier}">Time limit multiplier</div>
                                 <div class="d" th:text="#{voj.administration.judgers.time-multiplier-desc}">Wall-clock limit is scaled by this factor.</div>
                             </div>
-                            <div class="adm-step time-mult" th:attr="data-val=${#numbers.formatDecimal(language.timeMultiplier, 1, 1)}">
-                                <span class="btn dec">&minus;</span>
-                                <span class="val">&times;<span class="num" th:text="${#numbers.formatDecimal(language.timeMultiplier, 1, 1)}">1.0</span></span>
-                                <span class="btn inc">+</span>
+                            <div class="adm-step time-mult" role="group" th:aria-label="#{voj.administration.judgers.time-multiplier}" th:attr="data-val=${#numbers.formatDecimal(language.timeMultiplier, 1, 1)}">
+                                <button type="button" class="btn dec">&minus;</button>
+                                <span class="val" aria-live="polite">&times;<span class="num" th:text="${#numbers.formatDecimal(language.timeMultiplier, 1, 1)}">1.0</span></span>
+                                <button type="button" class="btn inc">+</button>
                             </div>
                         </div>
                         <div class="adm-multrow">
@@ -109,10 +110,10 @@
                                 <div class="t" th:text="#{voj.administration.judgers.memory-multiplier}">Memory limit multiplier</div>
                                 <div class="d" th:text="#{voj.administration.judgers.memory-multiplier-desc}">Memory cap is scaled by this factor.</div>
                             </div>
-                            <div class="adm-step memory-mult" th:attr="data-val=${#numbers.formatDecimal(language.memoryMultiplier, 1, 1)}">
-                                <span class="btn dec">&minus;</span>
-                                <span class="val">&times;<span class="num" th:text="${#numbers.formatDecimal(language.memoryMultiplier, 1, 1)}">1.0</span></span>
-                                <span class="btn inc">+</span>
+                            <div class="adm-step memory-mult" role="group" th:aria-label="#{voj.administration.judgers.memory-multiplier}" th:attr="data-val=${#numbers.formatDecimal(language.memoryMultiplier, 1, 1)}">
+                                <button type="button" class="btn dec">&minus;</button>
+                                <span class="val" aria-live="polite">&times;<span class="num" th:text="${#numbers.formatDecimal(language.memoryMultiplier, 1, 1)}">1.0</span></span>
+                                <button type="button" class="btn inc">+</button>
                             </div>
                         </div>
                     </div>
@@ -157,7 +158,9 @@
             memMulDesc:     [[#{voj.administration.judgers.memory-multiplier-desc}]],
             pleaseWait:     [[#{voj.administration.judgers.please-wait}]],
             settingsSaved:  [[#{voj.administration.judgers.settings-saved}]],
-            saveLabel:      [[#{voj.administration.judgers.save}]]
+            saveLabel:      [[#{voj.administration.judgers.save}]],
+            languageName:   [[#{voj.administration.language-settings.language-name}]],
+            remove:         [[#{voj.administration.include.remove}]]
         };
     </script>
     <script type="text/javascript" th:inline="javascript">
@@ -175,10 +178,10 @@
                 '<div class="adm-langcard language' + (enabled ? '' : ' off') + '">' +
                 '  <div class="adm-langcard-head">' +
                 '    <button type="button" role="switch" class="adm-switch sm lang-enabled' + (enabled ? ' on' : '') + '"><span class="knob"></span></button>' +
-                '    <input class="adm-langname language-name" type="text" value="' + esc(l.name) + '" maxlength="16" />' +
+                '    <input class="adm-langname language-name" type="text" value="' + esc(l.name) + '" maxlength="16" aria-label="' + esc(ADM_I18N.languageName) + '" />' +
                 '    <span class="ext">' + esc(l.slug) + '</span>' +
                 '    <div class="adm-flex1"></div>' +
-                '    <span class="del-lang">&#10005;</span>' +
+                '    <button type="button" class="del-lang" aria-label="' + esc(ADM_I18N.remove + ': ' + (l.name || '')) + '">&#10005;</button>' +
                 '    <input class="language-id" type="hidden" value="0" />' +
                 '  </div>' +
                 '  <div class="adm-langcard-body">' +
@@ -191,11 +194,11 @@
                 '    <div class="adm-mult-wrap">' +
                 '      <div class="adm-multrow">' +
                 '        <div class="meta"><div class="t">' + esc(ADM_I18N.timeMul) + '</div><div class="d">' + esc(ADM_I18N.timeMulDesc) + '</div></div>' +
-                '        <div class="adm-step time-mult" data-val="' + t + '"><span class="btn dec">&minus;</span><span class="val">&times;<span class="num">' + t + '</span></span><span class="btn inc">+</span></div>' +
+                '        <div class="adm-step time-mult" role="group" aria-label="' + esc(ADM_I18N.timeMul) + '" data-val="' + t + '"><button type="button" class="btn dec">&minus;</button><span class="val" aria-live="polite">&times;<span class="num">' + t + '</span></span><button type="button" class="btn inc">+</button></div>' +
                 '      </div>' +
                 '      <div class="adm-multrow">' +
                 '        <div class="meta"><div class="t">' + esc(ADM_I18N.memMul) + '</div><div class="d">' + esc(ADM_I18N.memMulDesc) + '</div></div>' +
-                '        <div class="adm-step memory-mult" data-val="' + m + '"><span class="btn dec">&minus;</span><span class="val">&times;<span class="num">' + m + '</span></span><span class="btn inc">+</span></div>' +
+                '        <div class="adm-step memory-mult" role="group" aria-label="' + esc(ADM_I18N.memMul) + '" data-val="' + m + '"><button type="button" class="btn dec">&minus;</button><span class="val" aria-live="polite">&times;<span class="num">' + m + '</span></span><button type="button" class="btn inc">+</button></div>' +
                 '      </div>' +
                 '    </div>' +
                 '  </div>' +
@@ -206,15 +209,17 @@
                 $('#no-languages').addClass('hide');
                 var $card = $(languageCardHtml(data)).appendTo('#languages');
                 window.admEnhance($card[0]);
+                // Continue in the new card: its name comes first.
+                $('.language-name', $card).trigger('focus');
             }
 
             // Render quick-add preset cards.
             ADM_PRESETS.forEach(function(p, i) {
                 $('#quickadd-grid').append(
-                    '<div class="adm-preset" data-preset="' + i + '">' +
-                    '  <span class="ic">+</span>' +
-                    '  <div class="meta"><div class="nm">' + esc(p.name) + '</div><div class="ext">' + esc(p.slug) + '</div></div>' +
-                    '</div>'
+                    '<button type="button" class="adm-preset" data-preset="' + i + '">' +
+                    '  <span class="ic" aria-hidden="true">+</span>' +
+                    '  <span class="meta"><span class="nm">' + esc(p.name) + '</span><span class="ext">' + esc(p.slug) + '</span></span>' +
+                    '</button>'
                 );
             });
 
@@ -230,9 +235,14 @@
             $('#custom-lang').click(function() { addLanguage({ enabled:true, tmul:1.0, mmul:1.0 }); });
 
             // Per-card interactions (delegated, since cards can be added dynamically).
+            // After removing a card, focus the next card's remove button (or the previous
+            // one's, or the add button when none is left) instead of losing focus.
             $('#languages').on('click', '.del-lang', function() {
-                $(this).closest('.language').remove();
+                var $card = $(this).closest('.language');
+                var $next = $card.next('.language').length ? $card.next('.language') : $card.prev('.language');
+                $card.remove();
                 if ($('.language', '#languages').length === 0) { $('#no-languages').removeClass('hide'); }
+                ($next.length ? $('.del-lang', $next) : $('#toggle-quickadd')).trigger('focus');
             });
             $('#languages').on('click', '.lang-enabled', function() {
                 var on = !$(this).hasClass('on');
@@ -240,7 +250,10 @@
                 $(this).closest('.language').toggleClass('off', !on);
             });
             $('#languages').on('input', '.language-name', function() {
-                $('.nm', $(this).closest('.language')).text($(this).val());
+                var $card = $(this).closest('.language');
+                $('.nm', $card).text($(this).val());
+                $('.del-lang', $card).attr('aria-label', ADM_I18N.remove + ': ' + $(this).val());
+                $('.lang-enabled', $card).attr('aria-label', $(this).val());
             });
             $('#languages').on('input', '.language-slug', function() {
                 $('.ext', $(this).closest('.language')).text($(this).val());
