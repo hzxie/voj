@@ -16,6 +16,8 @@
  */
 package org.verwandlung.voj.web.service;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +27,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import org.verwandlung.voj.web.mapper.JudgerMapper;
+import org.verwandlung.voj.web.model.JudgerSummary;
 
 /**
  * The business logic layer of the judgers: reads the registry of the running judgers, which every
@@ -42,66 +45,70 @@ public class JudgerService {
   public static final int JUDGER_TIMEOUT_SECONDS = 30;
 
   /**
-   * Gets the running judgers, with their live telemetry: for each, its {@code username}, {@code
-   * description}, {@code languageIds} (comma-separated), {@code isReady} (whether it takes
-   * submissions), {@code cpuLoad} and {@code memoryUsage} (percentages of its host, -1 if unknown)
-   * and {@code uptime} (ms).
+   * Gets the running judgers (one query), as every page that shows them counts them.
    *
-   * @return the running judgers, by username
+   * @return the running judgers
    */
-  public List<Map<String, Object>> getOnlineJudgers() {
-    return judgerMapper.getOnlineJudgers(JUDGER_TIMEOUT_SECONDS);
-  }
-
-  /**
-   * Gets the number of online judgers: the judger accounts that at least one running judger runs
-   * as. Every page that counts the online judgers counts them so (an account several judgers run
-   * as is one judger, as the judgers page shows it).
-   *
-   * @return the number of online judgers
-   */
-  public long getNumberOfOnlineJudgers() {
+  public JudgerSummary getJudgerSummary() {
+    List<Map<String, Object>> nodes = new ArrayList<>();
     Set<Object> usernames = new HashSet<>();
-    for (Map<String, Object> judger : getOnlineJudgers()) {
+    long cpuLoadTotal = 0;
+    long memoryUsageTotal = 0;
+    int nodesWithMetrics = 0;
+    for (Map<String, Object> judger : judgerMapper.getOnlineJudgers(JUDGER_TIMEOUT_SECONDS)) {
+      int cpuLoad = toInt(judger.get("cpuLoad"), -1);
+      int memoryUsage = toInt(judger.get("memoryUsage"), -1);
+      Map<String, Object> node = new HashMap<>(8, 1);
+      node.put("username", judger.get("username"));
+      node.put("description", judger.get("description"));
+      node.put("cpuLoad", cpuLoad);
+      node.put("memoryUsage", memoryUsage);
+      Object uptime = judger.get("uptime");
+      node.put("uptime", formatUptime(uptime instanceof Number ? ((Number) uptime).longValue() : 0));
+      nodes.add(node);
       usernames.add(judger.get("username"));
+      if (cpuLoad >= 0) {
+        cpuLoadTotal += cpuLoad;
+        memoryUsageTotal += Math.max(memoryUsage, 0);
+        ++nodesWithMetrics;
+      }
     }
-    return usernames.size();
+    return new JudgerSummary(
+        nodes,
+        usernames.size(),
+        nodesWithMetrics == 0 ? -1 : Math.round((float) cpuLoadTotal / nodesWithMetrics),
+        nodesWithMetrics == 0 ? -1 : Math.round((float) memoryUsageTotal / nodesWithMetrics));
   }
 
   /**
-   * Gets the average CPU load of the hosts of the running judgers that report it.
+   * Coerces a telemetry value to an int.
    *
-   * @return the average CPU load (0..100), or -1 when no running judger reports it
+   * @param value - the value (a Number, or null)
+   * @param defaultValue - the value when it is not a Number
+   * @return the int value
    */
-  public double getAverageCpuLoad() {
-    double total = 0;
-    int counted = 0;
-    for (Map<String, Object> judger : getOnlineJudgers()) {
-      Object cpuLoad = judger.get("cpuLoad");
-      if (cpuLoad instanceof Number && ((Number) cpuLoad).intValue() >= 0) {
-        total += ((Number) cpuLoad).doubleValue();
-        ++counted;
-      }
-    }
-    return counted == 0 ? -1 : total / counted;
+  private static int toInt(Object value, int defaultValue) {
+    return value instanceof Number ? ((Number) value).intValue() : defaultValue;
   }
 
   /**
-   * Gets the languages that a running judger taking submissions supports.
+   * Formats an uptime (in milliseconds) as {@code Nd Nh}, {@code Nh Nm} or {@code Nm}.
    *
-   * @return the unique identifiers of the languages
+   * @param uptimeMillis - the uptime in milliseconds
+   * @return the formatted uptime
    */
-  public Set<Integer> getLanguageIdsOfReadyJudgers() {
-    Set<Integer> languageIds = new HashSet<>();
-    for (String languageIdsOfJudger :
-        judgerMapper.getLanguageIdsOfReadyJudgers(JUDGER_TIMEOUT_SECONDS)) {
-      for (String languageId : languageIdsOfJudger.split(",")) {
-        if (!languageId.isBlank()) {
-          languageIds.add(Integer.valueOf(languageId.trim()));
-        }
-      }
+  static String formatUptime(long uptimeMillis) {
+    long totalMinutes = uptimeMillis / 60000L;
+    long days = totalMinutes / 1440L;
+    long hours = (totalMinutes % 1440L) / 60L;
+    long minutes = totalMinutes % 60L;
+    if (days > 0) {
+      return days + "d " + hours + "h";
     }
-    return languageIds;
+    if (hours > 0) {
+      return hours + "h " + minutes + "m";
+    }
+    return minutes + "m";
   }
 
   /** The autowired JudgerMapper object. */

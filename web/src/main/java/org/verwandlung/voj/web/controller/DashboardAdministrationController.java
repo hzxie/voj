@@ -41,6 +41,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.ModelAndView;
 
 import org.verwandlung.voj.web.interceptor.AdministrationSection;
+import org.verwandlung.voj.web.model.JudgerSummary;
 import org.verwandlung.voj.web.model.Language;
 import org.verwandlung.voj.web.model.UserGroup;
 import org.verwandlung.voj.web.service.ContestService;
@@ -138,9 +139,10 @@ public class DashboardAdministrationController {
     view.addObject("moderationCount", discussionService.getNumberOfReportedReplies());
 
     // System status.
-    view.addObject("onlineJudgers", getOnlineJudgers());
-    double averageCpuLoad = judgerService.getAverageCpuLoad();
-    view.addObject("averageCpuLoad", averageCpuLoad < 0 ? -1 : (int) Math.round(averageCpuLoad));
+    JudgerSummary judgerSummary = judgerService.getJudgerSummary();
+    view.addObject("judgerSummary", judgerSummary);
+    view.addObject("onlineJudgers", judgerSummary.getOnlineJudgers());
+    view.addObject("averageCpuLoad", judgerSummary.getAverageCpuLoad());
     view.addObject("storageUsage", getStorageUsagePercentage());
     view.addObject("memoryUsage", getCurrentMemoryUsage());
     return view;
@@ -254,15 +256,6 @@ public class DashboardAdministrationController {
   }
 
   /**
-   * Gets the number of running judgers, from their heartbeats in the database.
-   *
-   * @return the number of running judgers
-   */
-  private long getOnlineJudgers() {
-    return judgerService.getNumberOfOnlineJudgers();
-  }
-
-  /**
    * Loads the judge-cluster page, showing the live telemetry of every online judger node.
    *
    * @param request - the HttpServletRequest object
@@ -272,59 +265,14 @@ public class DashboardAdministrationController {
   @AdministrationSection("judgers")
   @RequestMapping(value = "/judgers", method = RequestMethod.GET)
   public ModelAndView judgersView(HttpServletRequest request, HttpServletResponse response) {
-    List<Map<String, Object>> nodes = new ArrayList<>();
-    for (Map<String, Object> judger : judgerService.getOnlineJudgers()) {
-      int cpuLoad = toInt(judger.get("cpuLoad"));
-      int memoryUsage = toInt(judger.get("memoryUsage"));
-      long uptime = judger.get("uptime") instanceof Number ? ((Number) judger.get("uptime")).longValue() : 0;
-
-      Map<String, Object> node = new HashMap<>(7, 1);
-      node.put("name", judger.get("username"));
-      node.put("description", judger.get("description"));
-      node.put("cpuLoad", cpuLoad);
-      node.put("memoryUsage", memoryUsage);
-      node.put("uptime", formatUptime(uptime));
-      node.put("loadClass", cpuLoad > 85 ? "c-err" : (cpuLoad > 60 ? "c-warn" : "c-accent"));
-      nodes.add(node);
-    }
-
+    JudgerSummary judgerSummary = judgerService.getJudgerSummary();
     ModelAndView view = new ModelAndView("pages/administration/judgers");
-    view.addObject("nodes", nodes);
-    view.addObject("onlineJudgers", getOnlineJudgers());
+    view.addObject("judgerSummary", judgerSummary);
+    view.addObject("nodes", judgerSummary.getNodes());
+    view.addObject("onlineJudgers", judgerSummary.getOnlineJudgers());
     view.addObject("queueDepth", submissionService.getNumberOfPendingSubmissions());
     view.addObject("languages", languageService.getAllLanguages());
     return view;
-  }
-
-  /**
-   * Coerces a possibly-null Number telemetry value to an int.
-   *
-   * @param value - the value to coerce
-   * @return the int value, or 0 when not a Number
-   */
-  private static int toInt(Object value) {
-    return value instanceof Number ? ((Number) value).intValue() : 0;
-  }
-
-  /**
-   * Formats an uptime duration (in milliseconds) into a compact {@code Nd Nh}, {@code Nh Nm} or
-   * {@code Nm} string for the judgers page.
-   *
-   * @param uptimeMillis - the uptime in milliseconds
-   * @return the formatted uptime string
-   */
-  private static String formatUptime(long uptimeMillis) {
-    long totalMinutes = uptimeMillis / 60000L;
-    long days = totalMinutes / 1440L;
-    long hours = (totalMinutes % 1440L) / 60L;
-    long minutes = totalMinutes % 60L;
-    if (days > 0) {
-      return days + "d " + hours + "h";
-    }
-    if (hours > 0) {
-      return hours + "h " + minutes + "m";
-    }
-    return minutes + "m";
   }
 
   /**

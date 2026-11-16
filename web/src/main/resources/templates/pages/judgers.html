@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--/* Reproduced from voj-design/Judgers.dc.html. KPIs + node cards are bound to live
-       telemetry reported by each judger's heartbeat (CPU/memory/uptime/online status).
+       telemetry reported by each running judger's heartbeat (CPU/memory/uptime).
        Cluster KPIs the heartbeat cannot measure (queue depth, median latency, 30-day
        uptime) are replaced with real derived metrics: online count, avg CPU, avg memory.
        Styling lives in app.css; only data-driven bar widths stay as inline style. */-->
@@ -22,10 +22,10 @@
         <!-- KPIs -->
         <section class="vw-section">
             <div class="vw-kpis">
-                <div class="vw-kpi"><div class="v accent"><span th:text="${onlineJudgers}">0</span> / <span th:text="${totalJudgers}">0</span></div><div class="k" th:text="#{voj.misc.judgers.kpi-online}">JUDGERS ONLINE</div></div>
-                <div class="vw-kpi"><div class="v"><span th:text="${averageCpuLoad}">0</span>%</div><div class="k" th:text="#{voj.misc.judgers.kpi-avg-cpu}">AVG CPU LOAD</div></div>
-                <div class="vw-kpi"><div class="v"><span th:text="${averageMemoryUsage}">0</span>%</div><div class="k" th:text="#{voj.misc.judgers.kpi-avg-memory}">AVG MEMORY</div></div>
-                <div class="vw-kpi"><div class="v" th:text="${totalJudgers}">0</div><div class="k" th:text="#{voj.misc.judgers.kpi-nodes}">NODES</div></div>
+                <div class="vw-kpi"><div class="v accent" th:text="${onlineJudgers}">0</div><div class="k" th:text="#{voj.misc.judgers.kpi-online}">JUDGERS ONLINE</div></div>
+                <div class="vw-kpi"><div class="v" th:text="${averageCpuLoad < 0 ? '—' : averageCpuLoad + '%'}">0%</div><div class="k" th:text="#{voj.misc.judgers.kpi-avg-cpu}">AVG CPU LOAD</div></div>
+                <div class="vw-kpi"><div class="v" th:text="${averageMemoryUsage < 0 ? '—' : averageMemoryUsage + '%'}">0%</div><div class="k" th:text="#{voj.misc.judgers.kpi-avg-memory}">AVG MEMORY</div></div>
+                <div class="vw-kpi"><div class="v" th:text="${numberOfNodes}">0</div><div class="k" th:text="#{voj.misc.judgers.kpi-nodes}">NODES</div></div>
             </div>
         </section>
 
@@ -33,31 +33,24 @@
         <section class="vw-section">
             <div class="vw-section-label" th:text="'// ' + #{voj.misc.judgers.nodes}">// NODES</div>
             <div class="vw-jgrid">
-                <div class="vw-jcard" th:each="node : ${judgers}"
-                     th:classappend="${node.online} ? 'is-online' : 'is-offline'">
+                <div class="vw-jcard is-online" th:each="node : ${judgers}">
                     <div class="vw-jcard-head">
-                        <span class="vw-jcard-dot" th:classappend="${node.online} ? 'on' : 'off'"></span>
+                        <span class="vw-jcard-dot on"></span>
                         <span class="vw-jcard-name" th:text="${node.username}">judger</span>
-                        <span class="vw-jcard-status" th:classappend="${node.online} ? 'on' : 'off'"
-                              th:text="${node.online ? #messages.msg('voj.misc.judgers.status-online') : #messages.msg('voj.misc.judgers.status-offline')}">status</span>
+                        <span class="vw-jcard-status on" th:text="#{voj.misc.judgers.status-online}">status</span>
                     </div>
-                    <th:block th:if="${node.online}">
-                        <div class="vw-jcard-spec" th:text="${node.description}">8 vCPU &middot; 16 GB</div>
-                        <div class="vw-bar" th:with="lvl=${node.cpuLoad >= 80 ? 'high' : (node.cpuLoad >= 60 ? 'mid' : 'low')}">
-                            <div class="vw-bar-top"><span class="lbl" th:text="#{voj.misc.judgers.cpu-load}">CPU LOAD</span><span th:classappend="|vw-load-${lvl}|" th:text="${node.cpuLoad} + '%'">0%</span></div>
-                            <div class="vw-bar-track"><div class="vw-bar-fill" th:classappend="|vw-bar-${lvl}|" th:style="|width:${node.cpuLoad}%|"></div></div>
-                        </div>
-                        <div class="vw-bar">
-                            <div class="vw-bar-top"><span class="lbl" th:text="#{voj.misc.judgers.memory}">MEMORY</span><span class="vw-muted2" th:text="${node.memoryUsage} + '%'">0%</span></div>
-                            <div class="vw-bar-track"><div class="vw-bar-fill vw-bar-mem" th:style="|width:${node.memoryUsage}%|"></div></div>
-                        </div>
-                        <div class="vw-jcard-foot">
-                            <span><span th:text="#{voj.misc.judgers.uptime}">uptime</span> <b th:text="${node.uptime}">31d</b></span>
-                        </div>
-                    </th:block>
-                    <th:block th:unless="${node.online}">
-                        <div class="vw-jcard-spec" th:text="#{voj.misc.judgers.offline-awaiting}">offline &middot; awaiting heartbeat</div>
-                    </th:block>
+                    <div class="vw-jcard-spec" th:text="${node.description}">8 vCPU &middot; 16 GB</div>
+                    <div class="vw-bar" th:with="lvl=${node.cpuLoad >= 80 ? 'high' : (node.cpuLoad >= 60 ? 'mid' : 'low')}">
+                        <div class="vw-bar-top"><span class="lbl" th:text="#{voj.misc.judgers.cpu-load}">CPU LOAD</span><span th:classappend="|vw-load-${lvl}|" th:text="${node.cpuLoad} + '%'">0%</span></div>
+                        <div class="vw-bar-track"><div class="vw-bar-fill" th:classappend="|vw-bar-${lvl}|" th:style="|width:${node.cpuLoad}%|"></div></div>
+                    </div>
+                    <div class="vw-bar">
+                        <div class="vw-bar-top"><span class="lbl" th:text="#{voj.misc.judgers.memory}">MEMORY</span><span class="vw-muted2" th:text="${node.memoryUsage} + '%'">0%</span></div>
+                        <div class="vw-bar-track"><div class="vw-bar-fill vw-bar-mem" th:style="|width:${node.memoryUsage}%|"></div></div>
+                    </div>
+                    <div class="vw-jcard-foot">
+                        <span><span th:text="#{voj.misc.judgers.uptime}">uptime</span> <b th:text="${node.uptime}">31d</b></span>
+                    </div>
                 </div>
                 <div class="vw-table-empty" th:if="${judgers == null or judgers.isEmpty()}" th:text="'// ' + #{voj.misc.judgers.no-judgers}">// no judgers registered</div>
             </div>

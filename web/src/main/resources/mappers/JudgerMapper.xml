@@ -16,12 +16,4 @@
 		WHERE j.judger_heartbeat_time &gt; NOW() - INTERVAL #{timeoutSeconds} SECOND
 		ORDER BY u.username
 	</select>
-	<select id="getLanguageIdsOfReadyJudgers"
-		parameterType="int"
-		resultType="string">
-		SELECT judger_language_ids
-		FROM voj_judgers
-		WHERE judger_is_ready = 1
-			AND judger_heartbeat_time &gt; NOW() - INTERVAL #{timeoutSeconds} SECOND
-	</select>
 </mapper>

@@ -72,6 +72,7 @@ import org.verwandlung.voj.web.model.DiscussionReply;
 import org.verwandlung.voj.web.model.DiscussionThread;
 import org.verwandlung.voj.web.model.DiscussionTopic;
 import org.verwandlung.voj.web.model.JudgeResult;
+import org.verwandlung.voj.web.model.JudgerSummary;
 import org.verwandlung.voj.web.model.Language;
 import org.verwandlung.voj.web.model.Option;
 import org.verwandlung.voj.web.model.Problem;
@@ -154,6 +155,7 @@ class ViewRenderSmokeTest {
 
   @BeforeEach
   void stubSharedModel() {
+    when(judgerService.getJudgerSummary()).thenReturn(new JudgerSummary(List.of(), 0, -1, -1));
     // Options consumed by the shared header / footer fragments.
     when(optionService.getAutoloadOptions())
         .thenReturn(
@@ -277,8 +279,7 @@ class ViewRenderSmokeTest {
   /** The 500 view renders when a handler fails unexpectedly. */
   @Test
   void internalServerErrorViewRenders() throws Exception {
-    when(userService.getUserGroupUsingSlug("judgers"))
-        .thenThrow(new RuntimeException("boom"));
+    when(judgerService.getJudgerSummary()).thenThrow(new RuntimeException("boom"));
     mockMvc.perform(getWithCsrf("/judgers")).andExpect(status().isInternalServerError());
   }
 

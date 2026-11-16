@@ -38,13 +38,4 @@ public interface JudgerMapper {
    * @return the judgers, by username
    */
   List<Map<String, Object>> getOnlineJudgers(@Param("timeoutSeconds") int timeoutSeconds);
-
-  /**
-   * Gets the languages of the judgers that take submissions and whose last heartbeat is at most some
-   * seconds old, by the database's clock.
-   *
-   * @param timeoutSeconds - how old (seconds) the last heartbeat of a running judger may be
-   * @return the unique identifiers of the languages of each judger, comma-separated
-   */
-  List<String> getLanguageIdsOfReadyJudgers(@Param("timeoutSeconds") int timeoutSeconds);
 }

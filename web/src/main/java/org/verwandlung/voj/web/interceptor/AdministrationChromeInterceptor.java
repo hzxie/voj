@@ -26,6 +26,7 @@ import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.ModelAndView;
 
+import org.verwandlung.voj.web.model.JudgerSummary;
 import org.verwandlung.voj.web.service.ContestService;
 import org.verwandlung.voj.web.service.DiscussionService;
 import org.verwandlung.voj.web.service.JudgerService;
@@ -34,7 +35,8 @@ import org.verwandlung.voj.web.service.ProblemService;
 /**
  * Adds the chrome of the administration console to the pages it renders: the active sidebar
  * section (see {@link AdministrationSection}) and the sidebar badges. The JSON actions of the
- * console render no page, so they skip the badge queries.
+ * console render no page, so they skip the badge queries; a page that loaded the {@code
+ * judgerSummary} already lends it to the judgers badge.
  *
  * @author Haozhe Xie
  */
@@ -78,7 +80,12 @@ public class AdministrationChromeInterceptor implements HandlerInterceptor {
       modelAndView.addObject("navModerationBadge", reportedReplies);
       modelAndView.addObject("navAlertCount", reportedReplies);
     }
-    long onlineJudgers = judgerService.getNumberOfOnlineJudgers();
+    Object pageSummary = modelAndView.getModel().get("judgerSummary");
+    JudgerSummary judgerSummary =
+        pageSummary instanceof JudgerSummary
+            ? (JudgerSummary) pageSummary
+            : judgerService.getJudgerSummary();
+    int onlineJudgers = judgerSummary.getOnlineJudgers();
     if (onlineJudgers > 0) {
       modelAndView.addObject("navJudgersBadge", onlineJudgers);
     }

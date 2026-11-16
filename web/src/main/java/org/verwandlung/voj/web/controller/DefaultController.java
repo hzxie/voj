@@ -69,7 +69,7 @@ public class DefaultController {
     view.addObject(
         "totalSubmissions",
         submissionService.getNumberOfSubmissionsUsingDate(new Date(0), new Date()));
-    view.addObject("onlineJudgers", judgerService.getNumberOfOnlineJudgers());
+    view.addObject("onlineJudgers", judgerService.getJudgerSummary().getOnlineJudgers());
     view.addObject("languages", languageService.getEnabledLanguages());
     return view;
   }
@@ -122,69 +122,14 @@ public class DefaultController {
    */
   @RequestMapping(value = "/judgers", method = RequestMethod.GET)
   public ModelAndView judgersView(HttpServletRequest request, HttpServletResponse response) {
-    UserGroup userGroup = userService.getUserGroupUsingSlug("judgers");
-    List<User> judgersList =
-        userService.getUserUsingUserGroup(userGroup, 0, NUMBER_OF_JUDGERS_PER_REQUEST);
-
-    Map<String, Map<String, Object>> onlineJudgersByUsername = new HashMap<>();
-    for (Map<String, Object> onlineJudger : judgerService.getOnlineJudgers()) {
-      // An account several judgers run as shows as one, online while any of them is.
-      onlineJudgersByUsername.putIfAbsent((String) onlineJudger.get("username"), onlineJudger);
-    }
-    List<Map<String, Object>> judgers = new ArrayList<>();
-    long cpuSum = 0, memorySum = 0, nodesWithMetrics = 0;
-    for (User judger : judgersList) {
-      String username = judger.getUsername();
-      Map<String, Object> judgerInformation = onlineJudgersByUsername.get(username);
-
-      Map<String, Object> node = new HashMap<>();
-      node.put("username", username);
-      if (judgerInformation != null) {
-        int cpuLoad = ((Number) judgerInformation.getOrDefault("cpuLoad", -1)).intValue();
-        int memoryUsage = ((Number) judgerInformation.getOrDefault("memoryUsage", -1)).intValue();
-        long uptime = ((Number) judgerInformation.getOrDefault("uptime", 0L)).longValue();
-
-        node.put("online", true);
-        node.put("description", judgerInformation.get("description"));
-        node.put("cpuLoad", cpuLoad);
-        node.put("memoryUsage", memoryUsage);
-        node.put("uptime", formatUptime(uptime));
-        if (cpuLoad >= 0) {
-          cpuSum += cpuLoad;
-          memorySum += Math.max(memoryUsage, 0);
-          ++nodesWithMetrics;
-        }
-      } else {
-        node.put("online", false);
-      }
-      judgers.add(node);
-    }
-
+    JudgerSummary judgerSummary = judgerService.getJudgerSummary();
     ModelAndView view = new ModelAndView("pages/judgers");
-    view.addObject("judgers", judgers);
-    view.addObject("onlineJudgers", (long) onlineJudgersByUsername.size());
-    view.addObject("totalJudgers", (long) judgers.size());
-    view.addObject("averageCpuLoad", nodesWithMetrics > 0 ? cpuSum / nodesWithMetrics : 0);
-    view.addObject("averageMemoryUsage", nodesWithMetrics > 0 ? memorySum / nodesWithMetrics : 0);
+    view.addObject("judgers", judgerSummary.getNodes());
+    view.addObject("onlineJudgers", judgerSummary.getOnlineJudgers());
+    view.addObject("numberOfNodes", judgerSummary.getNodes().size());
+    view.addObject("averageCpuLoad", judgerSummary.getAverageCpuLoad());
+    view.addObject("averageMemoryUsage", judgerSummary.getAverageMemoryUsage());
     return view;
-  }
-
-  /**
-   * Formats a JVM uptime (in milliseconds) into a compact human-readable string.
-   *
-   * @param uptimeInMillis - the uptime in milliseconds
-   * @return a compact uptime string such as "31d", "7h", "12m" or "45s"
-   */
-  private String formatUptime(long uptimeInMillis) {
-    long minutes = uptimeInMillis / 60000;
-    if (minutes >= 1440) {
-      return (minutes / 1440) + "d";
-    } else if (minutes >= 60) {
-      return (minutes / 60) + "h";
-    } else if (minutes >= 1) {
-      return minutes + "m";
-    }
-    return (uptimeInMillis / 1000) + "s";
   }
 
   /**
@@ -226,9 +171,6 @@ public class DefaultController {
     view.setStatus(HttpStatus.NOT_FOUND);
     return view;
   }
-
-  /** The number of judgers to load per request. */
-  private static final int NUMBER_OF_JUDGERS_PER_REQUEST = 10;
 
   /** The number of discussion threads to load per request. */
   private static final int NUMBER_OF_DISCUSSION_THREADS_PER_REQUEST = 10;

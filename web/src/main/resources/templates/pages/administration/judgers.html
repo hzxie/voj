@@ -24,10 +24,10 @@
             <div class="adm-nodes" th:if="${!#lists.isEmpty(nodes)}">
                 <div class="adm-node" th:each="node : ${nodes}">
                     <div class="adm-node-top">
-                        <span class="nm" th:text="${node.name}">judge-01</span>
+                        <span class="nm" th:text="${node.username}">judge-01</span>
                         <span class="adm-node-dot c-accent"></span>
                     </div>
-                    <div class="adm-node-track"><div class="fill" th:classappend="${node.loadClass}" th:attr="data-pct=${node.cpuLoad}"></div></div>
+                    <div class="adm-node-track"><div class="fill" th:classappend="${node.cpuLoad > 85 ? 'c-err' : (node.cpuLoad > 60 ? 'c-warn' : 'c-accent')}" th:attr="data-pct=${node.cpuLoad}"></div></div>
                     <div class="adm-node-foot">
                         <span><span th:text="#{voj.administration.judgers.cpu}">CPU</span> <span th:text="${node.cpuLoad}">0</span>%</span>
                         <span><span th:text="#{voj.administration.judgers.memory}">MEM</span> <span th:text="${node.memoryUsage}">0</span>%</span>

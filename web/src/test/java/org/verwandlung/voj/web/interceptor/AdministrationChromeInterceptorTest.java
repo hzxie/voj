@@ -17,8 +17,12 @@
 package org.verwandlung.voj.web.interceptor;
 
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+
+import java.util.List;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,6 +35,7 @@ import org.springframework.web.servlet.ModelAndView;
 
 import org.verwandlung.voj.web.controller.DiscussionAdministrationController;
 import org.verwandlung.voj.web.controller.ProblemsController;
+import org.verwandlung.voj.web.model.JudgerSummary;
 import org.verwandlung.voj.web.service.ContestService;
 import org.verwandlung.voj.web.service.DiscussionService;
 import org.verwandlung.voj.web.service.JudgerService;
@@ -49,6 +54,7 @@ public class AdministrationChromeInterceptorTest {
     contestService = mock(ContestService.class);
     discussionService = mock(DiscussionService.class);
     judgerService = mock(JudgerService.class);
+    when(judgerService.getJudgerSummary()).thenReturn(new JudgerSummary(List.of(), 0, -1, -1));
     interceptor = new AdministrationChromeInterceptor();
     ReflectionTestUtils.setField(interceptor, "problemService", problemService);
     ReflectionTestUtils.setField(interceptor, "contestService", contestService);
@@ -86,7 +92,8 @@ public class AdministrationChromeInterceptorTest {
     interceptor.postHandle(
         new MockHttpServletRequest(), new MockHttpServletResponse(), publicPage, view);
     Assertions.assertNull(view.getModel().get("adminSection"));
-    verifyNoInteractions(problemService, contestService, discussionService, judgerService);
+    verifyNoInteractions(problemService, contestService, discussionService);
+    verify(judgerService, never()).getJudgerSummary();
   }
 
   /** Runs postHandle for a handler method of DiscussionAdministrationController. */
