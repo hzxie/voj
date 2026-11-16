@@ -29,7 +29,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  *
  * <p>The application is packaged as a self-contained executable JAR and runs standalone via {@code
  * java -jar voj.web.jar} with embedded Tomcat. It runs scheduled jobs, such as
- * SubmissionService#failUnclaimedSubmissions.
+ * SubmissionService#failSubmissionsWithoutJudger.
  *
  * @author Haozhe Xie
  */
