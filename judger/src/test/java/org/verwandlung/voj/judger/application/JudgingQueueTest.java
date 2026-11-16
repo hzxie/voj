@@ -410,7 +410,6 @@ public class JudgingQueueTest {
     ReflectionTestUtils.setField(judgerApplication, "messageSender", messageSender);
 
     checkpointStore = mock(CheckpointStore.class);
-    when(checkpointStore.open()).thenReturn(cacheDirectory);
     when(checkpointStore.getWorkDirectory()).thenReturn(Path.of("/tmp/voj-judging-queue-tests"));
     when(checkpointStore.sync(any())).thenReturn(Path.of("/tmp/voj-judging-queue-tests/1000"));
     when(checkpointStore.getCheckpoints(anyLong()))
@@ -504,9 +503,6 @@ public class JudgingQueueTest {
 
   /** The lease (ms) of the judgings of the tests: renewed every 500 ms. */
   private static final long LEASE_TIMEOUT = 2000;
-
-  /** The cache directory of that judger, which holds its count of failed judgings in a row. */
-  @org.junit.jupiter.api.io.TempDir Path cacheDirectory;
 
   /** A judger of the tests, with the steps of a judging mocked. */
   private Dispatcher dispatcher;

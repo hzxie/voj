@@ -68,8 +68,8 @@ import org.verwandlung.voj.judger.model.Submission;
 @MockitoSettings(strictness = Strictness.LENIENT)
 public class DispatcherTest {
   /**
-   * Shortens the times of the judging queue, and injects the working directory, the cache
-   * directory, and a pending submission to claim, without failed judgings. The judger is judging
+   * Shortens the times of the judging queue, and injects the working directory and a pending
+   * submission to claim, without failed judgings. The judger is judging
    * (as in its judging loop), and an exit of the process is recorded rather than done.
    */
   @BeforeEach
@@ -78,11 +78,10 @@ public class DispatcherTest {
     ReflectionTestUtils.setField(dispatcher, "processExit", processExit);
     ReflectionTestUtils.setField(dispatcher, "pollInterval", 10L);
     ReflectionTestUtils.setField(dispatcher, "leaseTimeout", LEASE_TIMEOUT);
-    ReflectionTestUtils.setField(dispatcher, "firstBackoff", 10L);
-    ReflectionTestUtils.setField(dispatcher, "maxBackoff", 40L);
+    ReflectionTestUtils.setField(dispatcher, "firstPause", 10L);
+    ReflectionTestUtils.setField(dispatcher, "maxPause", 40L);
     ReflectionTestUtils.setField(dispatcher, "isJudging", true);
     when(checkpointStore.getWorkDirectory()).thenReturn(Path.of("/tmp/voj-dispatcher-tests"));
-    when(checkpointStore.open()).thenReturn(cacheDirectory);
     when(checkpointStore.sync(any())).thenReturn(Path.of("/tmp/voj-dispatcher-tests/1000"));
     when(applicationDispatcher.claimSubmission(anyList(), anyLong()))
         .thenAnswer(invocation -> buildSubmission());
@@ -254,7 +253,7 @@ public class DispatcherTest {
     verify(applicationDispatcher).onErrorOccurred(any(), eq(Dispatcher.NO_TEST_DATA_REASON));
     verify(applicationDispatcher, never()).requeueSubmission(any(), anyString());
     verify(compiler, never()).getCompileResult(any(), anyString());
-    Assertions.assertEquals("0", readFailuresInARow());
+    Assertions.assertTrue(dispatcher.isReady());
   }
 
   /**
@@ -284,8 +283,6 @@ public class DispatcherTest {
             argThat(s -> s.getSubmissionId() == 100L), contains("could not download"));
     verify(applicationDispatcher, never()).onErrorOccurred(any(), anyString());
     verify(compiler, never()).getCompileResult(any(), anyString());
-    Assertions.assertEquals(
-        String.valueOf(Dispatcher.MAX_FAILURES_IN_A_ROW), readFailuresInARow());
   }
 
   /**
@@ -330,7 +327,7 @@ public class DispatcherTest {
     when(checkpointStore.getCheckpoints(1000L)).thenReturn(oneCheckpoint());
     when(compiler.getCompileResult(any(), anyString()))
         .thenReturn(compileResult(false));
-    ReflectionTestUtils.setField(dispatcher, "localFailures", 1);
+    ReflectionTestUtils.setField(dispatcher, "failuresInARow", 1);
 
     Assertions.assertTrue(dispatcher.judgeNextSubmission(LANGUAGES));
 
@@ -344,7 +341,7 @@ public class DispatcherTest {
                     ApplicationDispatcher.INTERRUPTED_REASON)));
     verify(checkpointStore, never()).sync(any());
     verify(applicationDispatcher, never()).renewLease(any(), anyLong());
-    Assertions.assertEquals(10L, dispatcher.getBackoff());
+    Assertions.assertEquals(10L, dispatcher.getPause());
 
     Assertions.assertTrue(dispatcher.judgeNextSubmission(LANGUAGES));
     verify(applicationDispatcher).onCompileFinished(any(), any());
@@ -417,7 +414,7 @@ public class DispatcherTest {
     List<Long> backoffs = new ArrayList<>();
     for (int i = 0; i < Dispatcher.MAX_FAILURES_IN_A_ROW + 1; ++i) {
       dispatcher.judgeNextSubmission(LANGUAGES);
-      backoffs.add(dispatcher.getBackoff());
+      backoffs.add(dispatcher.getPause());
       Assertions.assertEquals(
           i + 1 < Dispatcher.MAX_FAILURES_IN_A_ROW, dispatcher.isReady(), "" + i);
     }
@@ -427,7 +424,6 @@ public class DispatcherTest {
     dispatcher.judgeNextSubmission(LANGUAGES);
     verify(applicationDispatcher).onCompileFinished(any(), any());
     Assertions.assertTrue(dispatcher.isReady());
-    Assertions.assertEquals("0", readFailuresInARow());
   }
 
   /**
@@ -510,7 +506,6 @@ public class DispatcherTest {
     verify(applicationDispatcher, never()).onErrorOccurred(any(), anyString());
     verify(applicationDispatcher, times(2))
         .requeueSubmission(any(), contains("could not be recorded"));
-    Assertions.assertEquals("2", readFailuresInARow());
   }
 
   /**
@@ -627,21 +622,6 @@ public class DispatcherTest {
   }
 
   /**
-   * Test case: tests the judgeNextSubmission method. Test data: this judger's work directory cannot
-   * be created. Expected result: no submission is even claimed, so that another judger takes it.
-   */
-  @Test
-  public void testJudgeNextSubmissionWithoutWorkDirectoryClaimsNothing() throws Exception {
-    when(checkpointStore.getWorkDirectory()).thenThrow(new java.io.IOException("read-only"));
-
-    Assertions.assertFalse(dispatcher.judgeNextSubmission(LANGUAGES));
-
-    verify(applicationDispatcher, never()).claimSubmission(anyList(), anyLong());
-    Assertions.assertEquals(10L, dispatcher.getBackoff());
-    Assertions.assertEquals("1", readFailuresInARow());
-  }
-
-  /**
    * Test case: tests the judgeSubmissions method. Test data: no pending submission at first, then
    * the database is unreachable once, then a pending submission. Expected result: the judger looks
    * again after each of them, and judges the submission.
@@ -676,8 +656,7 @@ public class DispatcherTest {
    * OutOfMemoryError) while a submission is judged, then the shutdown of the judger that the exit
    * starts. Expected result: the judging loop ends and the process exits with the status of a fatal
    * error, without releasing the submission (its judging counts as a failed one once the lease
-   * expired) or judging it, and the judging still counts as failed on the judger; the judger is
-   * not ready meanwhile.
+   * expired) or judging it; the judger is not ready meanwhile.
    */
   @Test
   public void testJudgeSubmissionsExitsOnAnError() throws Exception {
@@ -694,15 +673,13 @@ public class DispatcherTest {
     verify(applicationDispatcher, never()).requeueSubmission(any(), anyString());
     verify(applicationDispatcher, never()).onErrorOccurred(any(), anyString());
     verify(applicationDispatcher, times(1)).claimSubmission(anyList(), anyLong());
-    Assertions.assertEquals("1", readFailuresInARow());
   }
 
   /**
    * Test case: tests the judgeNextSubmission method. Test data: an Error (as an OutOfMemoryError)
    * while the lease of a judging is renewed, in the background. Expected result: the judging stops
    * (as a superseded one) without recording anything, the process exits with the status of a fatal
-   * error, nothing is released, and the judging counts as failed on the judger, which is not ready
-   * and claims nothing more.
+   * error, nothing is released, and the judger is not ready and claims nothing more.
    */
   @Test
   public void testAnErrorInARenewalStopsTheJudger() throws Exception {
@@ -724,107 +701,35 @@ public class DispatcherTest {
     verify(applicationDispatcher, never()).releaseSubmission(any());
     verify(applicationDispatcher, never()).requeueSubmission(any(), anyString());
     Assertions.assertFalse(dispatcher.isReady());
-    Assertions.assertEquals("1", readFailuresInARow());
     Assertions.assertFalse(dispatcher.judgeNextSubmission(LANGUAGES));
     verify(applicationDispatcher, times(1)).claimSubmission(anyList(), anyLong());
   }
 
   /**
    * Test case: tests the judgeNextSubmission and destroy methods. Test data: the judger shuts down
-   * (e.g. in a rolling update) while it compiles a submission, after a failed judging. Expected
-   * result: the submission is released at its place in the queue, without counting a failed
-   * judging on it or on the judger (whose count is the one before that judging); the judging
-   * counts nothing when it ends, and the judger claims nothing more and is not ready.
+   * (e.g. in a rolling update) while it compiles a submission. Expected result: the submission is
+   * released at its place in the queue, without counting a failed judging on it, and the judger
+   * claims nothing more and is not ready.
    */
   @Test
   public void testAShutdownReleasesTheSubmission() throws Exception {
-    ReflectionTestUtils.setField(dispatcher, "localFailures", 1);
     when(checkpointStore.getCheckpoints(1000L)).thenReturn(oneCheckpoint());
     when(applicationDispatcher.releaseSubmission(any())).thenReturn(true);
-    List<String> failuresWhileJudging = new ArrayList<>();
     when(compiler.getCompileResult(any(), anyString()))
         .thenAnswer(
             invocation -> {
-              failuresWhileJudging.add(readFailuresInARow());
               dispatcher.destroy();
               return compileResult(false);
             });
 
     Assertions.assertTrue(dispatcher.judgeNextSubmission(LANGUAGES));
 
-    Assertions.assertEquals(List.of("2"), failuresWhileJudging);
     verify(applicationDispatcher).releaseSubmission(argThat(s -> s.getClaimToken() == CLAIM_TOKEN));
     verify(applicationDispatcher, never()).requeueSubmission(any(), anyString());
-    Assertions.assertEquals("1", readFailuresInARow());
     Assertions.assertFalse(dispatcher.isReady());
     Assertions.assertFalse(dispatcher.judgeNextSubmission(LANGUAGES));
     verify(applicationDispatcher, times(1)).claimSubmission(anyList(), anyLong());
     Assertions.assertEquals(List.of(), exitStatuses);
-  }
-
-  /**
-   * Test case: tests the judgeNextSubmission method. Test data: a judging that compiles the
-   * submission. Expected result: while it runs, it counts as failed in the count this judger keeps
-   * in its cache directory (in case the process ends with it); once it reached its outcome, the
-   * count is 0.
-   */
-  @Test
-  public void testAJudgingCountsAsFailedUntilItIsOver() throws Exception {
-    when(checkpointStore.getCheckpoints(1000L)).thenReturn(oneCheckpoint());
-    List<String> failuresWhileJudging = new ArrayList<>();
-    when(compiler.getCompileResult(any(), anyString()))
-        .thenAnswer(
-            invocation -> {
-              failuresWhileJudging.add(readFailuresInARow());
-              return compileResult(false);
-            });
-
-    dispatcher.judgeNextSubmission(LANGUAGES);
-
-    Assertions.assertEquals(List.of("1"), failuresWhileJudging);
-    Assertions.assertEquals("0", readFailuresInARow());
-  }
-
-  /**
-   * Test case: tests the judgeSubmissions and isReady methods. Test data: the previous runs of the
-   * judger ended while judging as often in a row as allowed (as a judger that crashes on every
-   * restart does), which the count in its cache directory says. Expected result: the judger is not
-   * ready, and does not claim a submission at once but only after its pause.
-   */
-  @Test
-  public void testAJudgerThatKeepsDyingWhileJudgingIsNotReady() throws Exception {
-    Files.writeString(
-        cacheDirectory.resolve(Dispatcher.FAILURES_IN_A_ROW_FILE),
-        String.valueOf(Dispatcher.MAX_FAILURES_IN_A_ROW));
-    ReflectionTestUtils.setField(dispatcher, "firstBackoff", 250L);
-    ReflectionTestUtils.setField(dispatcher, "maxBackoff", 10000L);
-    when(applicationDispatcher.claimSubmission(anyList(), anyLong())).thenReturn(null);
-
-    Thread judging = new Thread(() -> dispatcher.judgeSubmissions(LANGUAGES));
-    judging.start();
-    try {
-      Thread.sleep(500);
-      Assertions.assertFalse(dispatcher.isReady());
-      verify(applicationDispatcher, never()).claimSubmission(anyList(), anyLong());
-      // Paused 4 * 250 ms (failures in a row: 3), then claims.
-      verify(applicationDispatcher, org.mockito.Mockito.timeout(5000))
-          .claimSubmission(LANGUAGES, LEASE_SECONDS);
-      Assertions.assertFalse(dispatcher.isReady());
-    } finally {
-      judging.interrupt();
-      judging.join(10000);
-    }
-    Assertions.assertFalse(judging.isAlive());
-  }
-
-  /**
-   * Reads the number of failed judgings in a row that the judger keeps in its cache directory.
-   *
-   * @return the number, as written, or {@code null} if none was written
-   */
-  private String readFailuresInARow() throws java.io.IOException {
-    Path file = cacheDirectory.resolve(Dispatcher.FAILURES_IN_A_ROW_FILE);
-    return Files.exists(file) ? Files.readString(file) : null;
   }
 
   /**
@@ -937,7 +842,4 @@ public class DispatcherTest {
 
   /** The exit statuses the Dispatcher exited the process with. */
   private final List<Integer> exitStatuses = new ArrayList<>();
-
-  /** The cache directory of the judger, which holds its count of failed judgings in a row. */
-  @TempDir Path cacheDirectory;
 }

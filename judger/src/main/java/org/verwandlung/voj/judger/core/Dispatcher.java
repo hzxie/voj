@@ -17,9 +17,6 @@
 package org.verwandlung.voj.judger.core;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -66,12 +63,11 @@ import org.verwandlung.voj.judger.util.FileSystemUtils;
  *       other submission up, and is counted on it, with its reason. The judger that claims it after
  *       {@value #MAX_FAILED_JUDGINGS} failed judgings judges it a System Error that gives the
  *       reason of the last one.
- *   <li>The judger's: after a failed judging it pauses (longer after each one in a row), and after
- *       {@value #MAX_FAILURES_IN_A_ROW} in a row it is not ready (see {@link #isReady}) until a
- *       judging of it reaches an outcome again; it keeps trying, at most every {@value
- *       #MAX_BACKOFF_MS} ms. The count is kept in its slot of the checkpoint directory, and a
- *       judging counts as failed there until it is over, so that a judger that dies while judging
- *       (e.g. one that crashes again after every restart) counts it too.
+ *   <li>The judger's: after a failed judging it pauses (see {@link #getPause}), and after {@value
+ *       #MAX_FAILURES_IN_A_ROW} in a row it is not ready (see {@link #isReady}) until a judging of
+ *       it reaches an outcome again. The count lives in memory: a judger that crashes is restarted
+ *       by its supervisor, which bounds how often, and the judging it held counts on its
+ *       submission once its lease expired.
  * </ul>
  *
  * @author Haozhe Xie
@@ -106,26 +102,19 @@ public class Dispatcher implements DisposableBean {
   public static final int MAX_FAILURES_IN_A_ROW = 3;
 
   /** How long (ms) a judger pauses after a failed judging; doubles with each one in a row. */
-  static final long FIRST_BACKOFF_MS = 5000;
+  static final long FIRST_PAUSE_MS = 5000;
 
   /** The longest pause (ms) of a judger after failed judgings. */
-  static final long MAX_BACKOFF_MS = 120000;
+  static final long MAX_PAUSE_MS = 60000;
 
   /** The exit status of a judger that stops after an Error (e.g. it ran out of memory). */
   static final int FATAL_ERROR_EXIT_STATUS = 70;
 
   /**
-   * The file, in this judger's cache directory (see {@link CheckpointStore#open}), that holds how
-   * many judgings of it failed in a row, including the one it is running: it outlives the process.
-   */
-  static final String FAILURES_IN_A_ROW_FILE = "failed-judgings";
-
-  /**
    * Judges the pending submissions in some languages, one after the other, until the thread is
    * interrupted or the judger stops. When there is none, or none can be taken (e.g. the database is
    * unreachable), it looks again every {@value #POLL_INTERVAL_MS} ms; after a failed judging, it
-   * pauses (see {@link #getBackoff}). It starts with the failed judgings in a row of its previous
-   * run, the one that run was busy with when it ended included, and pauses first if there are any.
+   * pauses (see {@link #getPause}).
    *
    * <p>An Error (e.g. an OutOfMemoryError, or a StackOverflowError) leaves the judger in no state
    * to judge: see {@link #onFatalError}.
@@ -133,38 +122,17 @@ public class Dispatcher implements DisposableBean {
    * @param languageIds - the unique identifiers of the languages this judger supports, not empty
    */
   public void judgeSubmissions(List<Integer> languageIds) {
-    localFailures = readFailuresInARow();
     isJudging = true;
     try {
-      long pause = 0;
-      if (localFailures > 0) {
-        pause = getBackoff();
-        LOGGER.warn(
-            String.format(
-                "The last %d judgings of this judger failed (or its previous run stopped while"
-                    + " judging): it waits %d s before it takes a submission%s.",
-                localFailures,
-                pause / 1000,
-                localFailures >= maxFailuresInARow
-                    ? ", and is not ready until a judging of it reaches an outcome"
-                    : ""));
-      }
       while (!Thread.currentThread().isInterrupted() && !isStopping) {
-        if (pause > 0) {
-          try {
-            Thread.sleep(pause);
-          } catch (InterruptedException ex) {
-            Thread.currentThread().interrupt();
-            break;
-          }
-        }
+        long pause;
         try {
           boolean isClaimed = judgeNextSubmission(languageIds);
           if (isClaimFailing) {
             isClaimFailing = false;
             LOGGER.info("This judger takes submissions from the database again.");
           }
-          pause = localFailures > 0 ? getBackoff() : isClaimed ? 0 : pollInterval;
+          pause = !isClaimed ? pollInterval : failuresInARow > 0 ? getPause() : 0;
         } catch (RuntimeException ex) {
           if (!isClaimFailing) {
             isClaimFailing = true;
@@ -180,6 +148,13 @@ public class Dispatcher implements DisposableBean {
           onFatalError(error);
           return;
         }
+        if (pause > 0) {
+          try {
+            Thread.sleep(pause);
+          } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+          }
+        }
       }
     } finally {
       isJudging = false;
@@ -191,8 +166,7 @@ public class Dispatcher implements DisposableBean {
    * process (status {@value #FATAL_ERROR_EXIT_STATUS}), so that its supervisor (e.g. Docker's
    * restart policy) starts it again. The submission it was judging is neither released nor judged
    * (the judging may be in any state): it is held until its lease expired, and the judging is then
-   * counted as a failed one, as is the failed judging in a row of this judger (see {@link
-   * #judgeSubmissions}).
+   * counted as a failed one on it.
    *
    * @param error - the error
    */
@@ -213,8 +187,8 @@ public class Dispatcher implements DisposableBean {
   /**
    * Stops the judger as it shuts down (e.g. it was asked to stop, by its supervisor or in a rolling
    * update): it claims no more submissions, and releases the submission it is judging, at its place
-   * in the queue, without counting the judging as a failed one, neither on the submission nor on
-   * this judger, so that another judger takes it at once. The judging itself runs on until the
+   * in the queue, without counting the judging as a failed one, so that another judger takes it at
+   * once. The judging itself runs on until the
    * process exits, but cannot record anything any more. Nothing is released after a fatal error
    * (see {@link #onFatalError}).
    */
@@ -230,7 +204,6 @@ public class Dispatcher implements DisposableBean {
     }
     try {
       if (applicationDispatcher.releaseSubmission(submission)) {
-        writeFailuresInARow(localFailures);
         LOGGER.info(
             String.format(
                 "Released submission #%d, whose judging stops as this judger shuts down.",
@@ -260,36 +233,25 @@ public class Dispatcher implements DisposableBean {
    * @throws DataAccessException if no submission can be claimed as the database is unreachable
    */
   public boolean judgeNextSubmission(List<Integer> languageIds) {
-    synchronized (this) {
-      if (isStopping) {
-        return false;
-      }
-      // In this judger's own directory, so that a judger that died while judging leaves nothing
-      // behind for good (see CheckpointStore#getWorkDirectory). A judger without one claims nothing.
-      Path workDirectory;
-      try {
-        workDirectory = checkpointStore.getWorkDirectory();
-      } catch (IOException ex) {
-        onFailedJudging(null, "This judger has no usable work directory.", ex);
-        return false;
-      }
-      Submission submission = applicationDispatcher.claimSubmission(languageIds, getLeaseSeconds());
-      if (submission == null) {
-        return false;
-      }
-      claimedSubmission = submission;
-      try {
-        if (isStopping) {
-          // The judger started to shut down while it claimed the submission (see #destroy).
-          applicationDispatcher.releaseSubmission(submission);
-        } else {
-          judgeSubmission(submission, workDirectory);
-        }
-      } finally {
-        claimedSubmission = null;
-      }
-      return true;
+    if (isStopping) {
+      return false;
     }
+    Submission submission = applicationDispatcher.claimSubmission(languageIds, getLeaseSeconds());
+    if (submission == null) {
+      return false;
+    }
+    claimedSubmission = submission;
+    try {
+      if (isStopping) {
+        // The judger started to shut down while it claimed the submission (see #destroy).
+        applicationDispatcher.releaseSubmission(submission);
+      } else {
+        judgeSubmission(submission);
+      }
+    } finally {
+      claimedSubmission = null;
+    }
+    return true;
   }
 
   /**
@@ -297,12 +259,11 @@ public class Dispatcher implements DisposableBean {
    * judgings, and counts the outcome on this judger.
    *
    * @param submission - the submission, claimed by this judger
-   * @param workDirectory - this judger's work directory
    */
-  private void judgeSubmission(Submission submission, Path workDirectory) {
+  private void judgeSubmission(Submission submission) {
     long submissionId = submission.getSubmissionId();
     int failedJudgings = submission.getFailedJudgings();
-    if (failedJudgings >= maxFailedJudgings) {
+    if (failedJudgings >= MAX_FAILED_JUDGINGS) {
       String reason =
           String.format(
               GIVEN_UP_REASON,
@@ -314,12 +275,12 @@ public class Dispatcher implements DisposableBean {
       applicationDispatcher.onErrorOccurred(submission, reason);
       return;
     }
-    // Counted as failed until it is over, in case this process ends with it.
-    recordFailuresInARow(localFailures + 1);
-    // Unique per judging, in case the directory of a judging of the same submission could not be
-    // removed.
+    // In this judger's own directory, so that a judger that died while judging leaves nothing
+    // behind for good (see CheckpointStore#open); unique per judging, in case the directory of a
+    // judging of the same submission could not be removed.
     String baseDirectory =
-        workDirectory
+        checkpointStore
+            .getWorkDirectory()
             .resolve(
                 String.format(
                     "voj-%d-%s",
@@ -336,7 +297,6 @@ public class Dispatcher implements DisposableBean {
               "Stopped judging submission #%d: it was rejudged, or claimed by another judging"
                   + " meanwhile.",
               submissionId));
-      recordFailuresInARow(localFailures);
     } catch (DataAccessException ex) {
       onFailedJudging(
           submission, "The outcome of the judging could not be recorded in the database.", ex);
@@ -359,130 +319,61 @@ public class Dispatcher implements DisposableBean {
    * @return whether this judger takes submissions
    */
   public boolean isReady() {
-    return isJudging && !isStopping && localFailures < maxFailuresInARow;
+    return isJudging && !isStopping && failuresInARow < MAX_FAILURES_IN_A_ROW;
   }
 
   /** Records a judging that reached an outcome: this judger's failed judgings in a row are over. */
   private void onJudged() {
-    if (localFailures >= maxFailuresInARow) {
+    if (failuresInARow >= MAX_FAILURES_IN_A_ROW) {
       LOGGER.info("A judging of this judger reached an outcome again: it is ready.");
     }
-    localFailures = 0;
-    recordFailuresInARow(0);
+    failuresInARow = 0;
   }
 
   /**
    * Records a failed judging: releases its submission to the end of the queue, counting the
-   * failure on it, counts it on this judger, which pauses (see {@link #getBackoff}), and logs it,
-   * once the judger is not ready at most once until it is again.
+   * failure on it, and counts it on this judger, which pauses (see {@link #getPause}).
    *
-   * @param submission - the submission of the judging, or {@code null} if none was claimed
+   * @param submission - the submission of the judging
    * @param reason - why the judging failed, shown to the user if the submission is given up on
    * @param cause - the underlying exception, or {@code null}
    */
   private void onFailedJudging(Submission submission, String reason, Throwable cause) {
-    int failures = ++localFailures;
-    recordFailuresInARow(failures);
-    String message =
-        submission == null
-            ? reason
-            : String.format(
-                "The judging of submission #%d failed (it is judged again later, or a System"
-                    + " Error after %d failed judgings): %s",
-                submission.getSubmissionId(), maxFailedJudgings, reason);
-    if (submission != null) {
-      try {
-        applicationDispatcher.requeueSubmission(submission, reason);
-      } catch (DataAccessException ex) {
-        LOGGER.warn(
-            String.format(
-                "Failed to release submission #%d: it is taken again once the lease of its"
-                    + " judging expired.",
-                submission.getSubmissionId()),
-            ex);
-      }
+    int failures = ++failuresInARow;
+    try {
+      applicationDispatcher.requeueSubmission(submission, reason);
+    } catch (DataAccessException ex) {
+      LOGGER.warn(
+          String.format(
+              "Failed to release submission #%d: it is taken again once the lease of its"
+                  + " judging expired.",
+              submission.getSubmissionId()),
+          ex);
     }
-    if (failures < maxFailuresInARow) {
-      LOGGER.warn(message, cause);
-    } else if (failures == maxFailuresInARow) {
+    LOGGER.warn(
+        String.format(
+            "The judging of submission #%d failed (it is judged again later, or a System Error"
+                + " after %d failed judgings): %s",
+            submission.getSubmissionId(), MAX_FAILED_JUDGINGS, reason),
+        cause);
+    if (failures == MAX_FAILURES_IN_A_ROW) {
       LOGGER.error(
           String.format(
-              "%d judgings of this judger failed in a row, the last one: %s This judger is not"
-                  + " ready until a judging of it reaches an outcome again, which it tries at"
-                  + " most every %d s.",
-              failures, message, maxBackoff / 1000),
-          cause);
-    } else {
-      LOGGER.debug(message, cause);
+              "%d judgings of this judger failed in a row: it is not ready until a judging of it"
+                  + " reaches an outcome again, which it tries at most every %d s.",
+              failures, MAX_PAUSE_MS / 1000));
     }
   }
 
   /**
-   * Gets how long this judger pauses after its failed judgings in a row: {@value
-   * #FIRST_BACKOFF_MS} ms after the first one, twice as long after each next one, at most {@value
-   * #MAX_BACKOFF_MS} ms.
+   * Gets how long this judger pauses after its failed judgings in a row: {@value #FIRST_PAUSE_MS}
+   * ms after the first one, twice as long after each next one, at most {@value #MAX_PAUSE_MS} ms.
    *
    * @return how long (ms) this judger pauses
    */
-  long getBackoff() {
-    int doublings = Math.min(localFailures - 1, 20);
-    return Math.min(firstBackoff << Math.max(doublings, 0), maxBackoff);
-  }
-
-  /**
-   * Records how many judgings of this judger failed in a row (see {@link #FAILURES_IN_A_ROW_FILE}),
-   * unless the judger stops: then the count is the one it stops with (see {@link #destroy} and
-   * {@link #onFatalError}).
-   *
-   * @param failures - the number of failed judgings in a row
-   */
-  private void recordFailuresInARow(int failures) {
-    if (!isStopping) {
-      writeFailuresInARow(failures);
-    }
-  }
-
-  /**
-   * Writes how many judgings of this judger failed in a row to {@link #FAILURES_IN_A_ROW_FILE}. A
-   * failure to write it is logged: it only matters if this judger stops while judging.
-   *
-   * @param failures - the number of failed judgings in a row
-   */
-  private void writeFailuresInARow(int failures) {
-    try {
-      Files.writeString(getFailuresInARowFile(), String.valueOf(failures));
-    } catch (IOException | RuntimeException ex) {
-      LOGGER.warn("Failed to record the number of failed judgings in a row of this judger.", ex);
-    }
-  }
-
-  /**
-   * Reads how many judgings of this judger failed in a row, as its previous run left the count.
-   *
-   * @return the number of failed judgings in a row, 0 if none was recorded
-   */
-  private int readFailuresInARow() {
-    try {
-      return Math.max(
-          Integer.parseInt(
-              Files.readString(getFailuresInARowFile(), StandardCharsets.UTF_8).trim()),
-          0);
-    } catch (NoSuchFileException ex) {
-      return 0;
-    } catch (IOException | RuntimeException ex) {
-      LOGGER.warn("Failed to read the number of failed judgings in a row of this judger.", ex);
-      return 0;
-    }
-  }
-
-  /**
-   * Gets the file that holds how many judgings of this judger failed in a row.
-   *
-   * @return the file, in this judger's cache directory
-   * @throws IOException if the cache directory cannot be opened
-   */
-  private Path getFailuresInARowFile() throws IOException {
-    return checkpointStore.open().resolve(FAILURES_IN_A_ROW_FILE);
+  long getPause() {
+    int doublings = Math.min(Math.max(failuresInARow - 1, 0), 20);
+    return Math.min(firstPause << doublings, maxPause);
   }
 
   /**
@@ -835,17 +726,11 @@ public class Dispatcher implements DisposableBean {
   /** How long (ms) the lease of a judging lasts; it is renewed every quarter of it. */
   private long leaseTimeout = LEASE_TIMEOUT_MS;
 
-  /** How many judgings of a submission may fail before it is a System Error. */
-  private int maxFailedJudgings = MAX_FAILED_JUDGINGS;
-
-  /** After how many failed judgings in a row this judger is not ready. */
-  private int maxFailuresInARow = MAX_FAILURES_IN_A_ROW;
-
   /** How long (ms) this judger pauses after a failed judging. */
-  private long firstBackoff = FIRST_BACKOFF_MS;
+  private long firstPause = FIRST_PAUSE_MS;
 
   /** The longest pause (ms) of this judger after failed judgings. */
-  private long maxBackoff = MAX_BACKOFF_MS;
+  private long maxPause = MAX_PAUSE_MS;
 
   /** Exits the process with a status; replaced by the tests. */
   private IntConsumer processExit = System::exit;
@@ -856,8 +741,8 @@ public class Dispatcher implements DisposableBean {
   /** Whether the judger stops: it shuts down, or ran into an Error. */
   private volatile boolean isStopping;
 
-  /** How many judgings (or attempts to judge) of this judger failed in a row. */
-  private volatile int localFailures;
+  /** How many judgings of this judger failed in a row. */
+  private volatile int failuresInARow;
 
   /** Whether the last attempt to take a submission failed (e.g. the database is unreachable). */
   private boolean isClaimFailing;

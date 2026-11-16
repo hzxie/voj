@@ -540,12 +540,13 @@ under a supervisor that starts it again:
   RestartSec=5
   ```
 
-A judger that keeps failing is not restarted in a tight loop of judgings: a
-judging it was busy with when it crashed counts as a failed judging of the
-judger too, so a judger that crashes after every restart pauses before it takes
-a submission (5 seconds, then twice as long after every next crash, at most 2
-minutes) and, after 3 in a row, is not ready. A submission that makes every
-judger that takes it crash is judged a System Error after 5 failed judgings.
+A judger that crashes while judging holds its submission until the lease of
+the judging expired (a minute); the judger that takes it then counts the
+judging as a failed one of the submission. So a submission that makes every
+judger that takes it crash is judged a System Error after 5 failed judgings,
+and a judger that crashes on every judging costs each submission it takes one
+of them, as often as its supervisor restarts it (keep a restart delay, such as
+`RestartSec=5` or Docker's growing one).
 
 Stop a judger with a signal (`docker stop`, `systemctl stop`, Ctrl+C), not by
 killing it: it then releases the submission it is judging at its place in the

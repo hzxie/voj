@@ -148,10 +148,12 @@ public class CheckpointStore {
    * but may neither list nor change anything else in either.
    *
    * @return this judger's work directory (an absolute path)
-   * @throws IOException if the slot cannot be claimed or the directory cannot be created
+   * @throws IllegalStateException if the store was not opened (see {@link #open}, at startup)
    */
-  public synchronized Path getWorkDirectory() throws IOException {
-    open();
+  public synchronized Path getWorkDirectory() {
+    if (judgerWorkDirectory == null) {
+      throw new IllegalStateException("The checkpoint store was not opened");
+    }
     return judgerWorkDirectory;
   }
 

@@ -328,6 +328,7 @@ public class CheckpointStoreUnitTest {
     ReflectionTestUtils.setField(
         checkpointStore, "checkpointDirectory", root + "//voj-testpoints/./");
 
+    checkpointStore.open();
     Path workDirectory = checkpointStore.getWorkDirectory();
 
     Assertions.assertEquals(tempDir.resolve("voj-testpoints").resolve("work-0"), workDirectory);
