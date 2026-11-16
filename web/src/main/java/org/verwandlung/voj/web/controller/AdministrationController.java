@@ -23,7 +23,9 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -343,16 +345,10 @@ public class AdministrationController {
    * @return the number of submissions today
    */
   private long getSubmissionsToday() {
-    Calendar calendar = Calendar.getInstance();
-    int year = calendar.get(Calendar.YEAR);
-    int month = calendar.get(Calendar.MONTH);
-    int date = calendar.get(Calendar.DAY_OF_MONTH);
-
-    calendar.set(year, month, date, 0, 0, 0);
-    Date startTime = calendar.getTime();
-
-    calendar.set(year, month, date + 1, 0, 0, 0);
-    Date endTime = calendar.getTime();
+    ZoneId zone = ZoneId.systemDefault();
+    LocalDate today = LocalDate.now(zone);
+    Date startTime = Date.from(today.atStartOfDay(zone).toInstant());
+    Date endTime = Date.from(today.plusDays(1).atStartOfDay(zone).toInstant());
     return submissionService.getNumberOfSubmissionsUsingDate(startTime, endTime);
   }
 
