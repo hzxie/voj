@@ -60,7 +60,7 @@
                                 <span><span class="sigil">$</span> <span th:text="#{voj.discussion.new-thread.related-problem}">link-problem</span>
                                     <span class="opt" th:text="'— ' + #{voj.discussion.new-thread.optional}">— optional</span></span>
                             </label>
-                            <input id="related-problem-input" class="vw-composer-problem-input" type="text" inputmode="numeric" placeholder="e.g. 1005"
+                            <input id="related-problem-input" class="vw-composer-problem-input" type="text" inputmode="numeric" th:placeholder="#{voj.discussion.new-thread.related-problem-placeholder}"
                                    th:value="${relatedProblem != null ? relatedProblem.problemId : ''}" />
                         </div>
 

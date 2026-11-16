@@ -57,6 +57,8 @@
     <!-- Site-wide helpers shared with the public pages (CSRF header on AJAX, %s formatter,
          date helpers, load-more). -->
     <script type="text/javascript" th:src="|${cdnUrl}/js/site.js?v=${version}|"></script>
+    <!-- Translated labels for the shared scripts (window.vojMessages). -->
+    <script th:replace="~{fragments/chrome :: client-messages}"></script>
     <!-- Markdown rendering (markdown-it) + shared helpers (renderMarkdown / createMarkdownEditor). -->
     <script type="text/javascript" th:src="|${cdnUrl}/js/markdown-it.min.js?v=${version}|"></script>
     <script type="text/javascript" th:src="|${cdnUrl}/js/markdown.js?v=${version}|"></script>

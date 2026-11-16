@@ -177,7 +177,7 @@
                          '<textarea id="wmd-input-' + replyId + '" class="wmd-input">' + escapeHtml(content) + '</textarea>' +
                          '<div class="vw-replybox-foot"><button class="vw-btn vw-btn-accent vw-btn-sm vw-reply-save">' + [[#{voj.discussion.thread.update-reply}]] + '</button>' +
                          '<button class="vw-btn vw-btn-sm vw-reply-cancel">' + [[#{voj.discussion.thread.cancel}]] + '</button></div></div>';
-            if ( !isAuthor ) { reportLink = '<button type="button" class="vw-post-report" title="report">' + [[#{voj.discussion.thread.report}]] + '</button>'; }
+            if ( !isAuthor ) { reportLink = '<button type="button" class="vw-post-report">' + [[#{voj.discussion.thread.report}]] + '</button>'; }
             /*[/]*/
             /*[# th:unless="${isLogin}"]*/
             var editor = '';

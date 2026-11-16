@@ -54,17 +54,23 @@
         });
     };
 
+    /* The translated labels (window.vojMessages, from fragments/chrome :: client-messages),
+     * with English fallbacks for a page that does not load them. */
+    function msg(key, fallback) {
+        return (global.vojMessages && global.vojMessages['markdown.' + key]) || fallback;
+    }
+
     /* Toolbar: `wrap` surrounds the selection, `line` prefixes each selected line,
      * `link` inserts a link template. */
     var TOOLBAR = [
-        { label: 'B',        title: 'Bold',          wrap: ['**', '**'] },
-        { label: 'I',        title: 'Italic',        wrap: ['*', '*'] },
-        { label: 'H',        title: 'Heading',       line: '### ' },
-        { label: '“',   title: 'Quote',         line: '> ' },
-        { label: '≡',   title: 'List',          line: '- ' },
-        { label: '1.',       title: 'Numbered list', line: '1. ' },
-        { label: '&lt;/&gt;', title: 'Code',         wrap: ['`', '`'] },
-        { label: '🔗', title: 'Link',      link: true }
+        { label: 'B',        title: msg('bold', 'Bold'),                   wrap: ['**', '**'] },
+        { label: 'I',        title: msg('italic', 'Italic'),               wrap: ['*', '*'] },
+        { label: 'H',        title: msg('heading', 'Heading'),             line: '### ' },
+        { label: '“',   title: msg('quote', 'Quote'),                 line: '> ' },
+        { label: '≡',   title: msg('list', 'List'),                   line: '- ' },
+        { label: '1.',       title: msg('numbered-list', 'Numbered list'), line: '1. ' },
+        { label: '&lt;/&gt;', title: msg('code', 'Code'),                 wrap: ['`', '`'] },
+        { label: '🔗', title: msg('link', 'Link'),                   link: true }
     ];
 
     function el(tag, cls) {
@@ -120,6 +126,7 @@
             btn.type = 'button';
             btn.innerHTML = b.label;
             btn.title = b.title;
+            btn.setAttribute('aria-label', b.title);  // named "Bold", not by its glyph "B"
             btn.addEventListener('click', function(ev) {
                 ev.preventDefault();
                 if ( b.wrap ) { wrapSelection(ta, b.wrap[0], b.wrap[1]); }
@@ -133,8 +140,8 @@
         var writeTab   = el('button', 'vw-md-tab active'),
             previewTab = el('button', 'vw-md-tab');
         writeTab.type = previewTab.type = 'button';
-        writeTab.textContent   = options.writeLabel   || 'write';
-        previewTab.textContent = options.previewLabel || 'preview';
+        writeTab.textContent   = options.writeLabel   || msg('write', 'write');
+        previewTab.textContent = options.previewLabel || msg('preview', 'preview');
         writeTab.addEventListener('click', function(ev) {
             ev.preventDefault();
             preview.hidden = true; ta.hidden = false;

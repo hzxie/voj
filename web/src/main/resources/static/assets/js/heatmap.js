@@ -16,8 +16,8 @@
 (function(global) {
     var WEEKS  = 53,
         DAYS   = 7,
-        MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        // Abbreviated month names in the page language (<html lang>).
+        MONTHS = new Intl.DateTimeFormat(document.documentElement.lang || undefined, { month: 'short' });
 
     /* Map a day's submission count to a 0..3 intensity level. */
     function levelOf(count) {
@@ -75,7 +75,7 @@
                 var month = firstOfWeek.getMonth(),
                     label = el('div');
                 if ( month !== prevMonth && firstOfWeek.getDate() <= DAYS ) {
-                    label.textContent = MONTHS[month];
+                    label.textContent = MONTHS.format(firstOfWeek);
                     prevMonth = month;
                 }
                 monthsRow.appendChild(label);

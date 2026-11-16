@@ -12,6 +12,8 @@
                   which replace the browser's blocking confirm() / alert().
   - loadmore:     the "load more" control of the list pages (id, button label), driven by
                   createLoadMore() in js/site.js.
+  - client-messages: window.vojMessages, the translated labels of the shared scripts
+                  (the Markdown editor of js/markdown.js); loaded before them.
 */-->
 <html xmlns:th="http://www.thymeleaf.org" lang="en">
 <head>
@@ -41,5 +43,20 @@
         <span class="vw-spinner hide" role="status" th:aria-label="#{voj.include.loading}"></span>
         <div class="vw-loadmore-error" role="alert" th:data-message="#{voj.include.load-more-failed}"></div>
     </div>
+
+    <script th:fragment="client-messages" type="text/javascript" th:inline="javascript">
+        window.vojMessages = {
+            'markdown.bold':          [[#{voj.include.markdown.bold}]],
+            'markdown.italic':        [[#{voj.include.markdown.italic}]],
+            'markdown.heading':       [[#{voj.include.markdown.heading}]],
+            'markdown.quote':         [[#{voj.include.markdown.quote}]],
+            'markdown.list':          [[#{voj.include.markdown.list}]],
+            'markdown.numbered-list': [[#{voj.include.markdown.numbered-list}]],
+            'markdown.code':          [[#{voj.include.markdown.code}]],
+            'markdown.link':          [[#{voj.include.markdown.link}]],
+            'markdown.write':         [[#{voj.include.markdown.write}]],
+            'markdown.preview':       [[#{voj.include.markdown.preview}]]
+        };
+    </script>
 </body>
 </html>

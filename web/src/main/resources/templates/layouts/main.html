@@ -68,6 +68,8 @@
     <script type="text/javascript" th:src="|${cdnUrl}/js/theme.js?v=${version}|"></script>
     <!-- Site-wide JavaScript (CSRF token wiring for AJAX). -->
     <script type="text/javascript" th:src="|${cdnUrl}/js/site.js?v=${version}|"></script>
+    <!-- Translated labels for the shared scripts (window.vojMessages). -->
+    <script th:replace="~{fragments/chrome :: client-messages}"></script>
     <!-- Markdown rendering (markdown-it) + shared helpers (renderMarkdown / createMarkdownEditor). -->
     <script type="text/javascript" th:src="|${cdnUrl}/js/markdown-it.min.js?v=${version}|"></script>
     <script type="text/javascript" th:src="|${cdnUrl}/js/markdown.js?v=${version}|"></script>
