@@ -842,23 +842,34 @@ unsigned long long fileTimeToUll(const FILETIME& fileTime) {
  * @return the Windows API error message
  */
 std::string getErrorMessage(const std::string& apiName) {
-    LPVOID lpvMessageBuffer;
-    DWORD  errorCode = GetLastError();
-
-    FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER |
-        FORMAT_MESSAGE_FROM_SYSTEM,
+    DWORD  errorCode      = GetLastError();
+    LPWSTR lpMessage      = NULL;
+    // The wide variant, converted to UTF-8 below: the message becomes a Java string, which must not
+    // be in the ANSI code page. IGNORE_INSERTS because a system message may contain %1-style
+    // inserts for which there are no arguments. With ALLOCATE_BUFFER, lpBuffer receives a pointer
+    // to a LocalAlloc'ed buffer, and nothing at all if the call fails.
+    DWORD  messageLength  = FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER |
+        FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
         NULL, errorCode,
         MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-        (LPSTR)&lpvMessageBuffer, 0, NULL);
+        (LPWSTR)&lpMessage, 0, NULL);
+
+    std::string errorMessage;
+    if ( messageLength > 0 && lpMessage != NULL ) {
+        int length = WideCharToMultiByte(CP_UTF8, 0, lpMessage, (int) messageLength, NULL, 0, NULL, NULL);
+        if ( length > 0 ) {
+            errorMessage.resize(length);
+            WideCharToMultiByte(CP_UTF8, 0, lpMessage, (int) messageLength, &errorMessage[0], length, NULL, NULL);
+        }
+    }
+    if ( lpMessage != NULL ) {
+        LocalFree(lpMessage);
+    }
 
     std::stringstream stringStream;
-    std::string errorMessage((LPSTR)lpvMessageBuffer);
-
     stringStream << "API:     " << apiName << std::endl
                  << "Code:    " << errorCode << std::endl
                  << "Message: " << errorMessage << std::endl;
-    LocalFree(lpvMessageBuffer);
-
     return stringStream.str();
 }
 
