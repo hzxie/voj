@@ -26,6 +26,10 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -55,11 +59,12 @@ public class HttpCheckpointProvider {
    * <p>On return the directory holds a {@code manifest.properties} describing the checkpoints plus,
    * per checkpoint, an {@code input#<id>.txt} and an {@code output#<id>.txt}. {@link
    * CheckpointStore} downloads into a temporary directory and only then swaps it into place, so a
-   * failed download never corrupts a usable cache.
+   * failed download never corrupts a usable cache. The whole download, from the request to the
+   * last byte, must be over within {@code judger.web.downloadTimeout} seconds.
    *
    * @param problemId - the unique identifier of the problem
    * @param destinationDirectory - the directory the checkpoints are written into
-   * @throws IOException if the checkpoints cannot be downloaded
+   * @throws IOException if the checkpoints cannot be downloaded, or not in time
    */
   public void download(long problemId, File destinationDirectory) throws IOException {
     if (!destinationDirectory.exists() && !destinationDirectory.mkdirs()) {
@@ -69,9 +74,12 @@ public class HttpCheckpointProvider {
 
     URI uri =
         URI.create(String.format("%s/api/judger/checkpoints/%d", normalizedBaseUrl(), problemId));
+    Duration timeout = Duration.ofSeconds(downloadTimeoutSeconds);
+    long deadline = System.nanoTime() + timeout.toNanos();
+    // The request timeout covers the wait for the response headers only.
     HttpRequest request =
         HttpRequest.newBuilder(uri)
-            .timeout(Duration.ofSeconds(60))
+            .timeout(timeout)
             .header(TOKEN_HEADER, apiToken == null ? "" : apiToken)
             .GET()
             .build();
@@ -84,21 +92,61 @@ public class HttpCheckpointProvider {
       throw new IOException(
           "Interrupted while downloading checkpoints for problem " + problemId, ex);
     }
-    if (response.statusCode() != 200) {
-      // Drain and close the body so the connection can be reused.
-      try (InputStream body = response.body()) {
-        body.readAllBytes();
-      } catch (IOException ignored) {
-        // Nothing actionable; we are already failing.
+    // Closing the body (rather than draining it) also ends the exchange of a failed request.
+    try (InputStream body = response.body()) {
+      if (response.statusCode() != 200) {
+        throw new IOException(
+            String.format(
+                "Failed to download checkpoints for problem %d: HTTP %d",
+                problemId, response.statusCode()));
       }
-      throw new IOException(
-          String.format(
-              "Failed to download checkpoints for problem %d: HTTP %d",
-              problemId, response.statusCode()));
+      extractBefore(deadline, body, destinationDirectory, problemId);
     }
-
-    extract(response.body(), destinationDirectory);
     LOGGER.info("Downloaded checkpoints for problem #{} from {}", problemId, uri);
+  }
+
+  /**
+   * Unpacks the response body, which must be read completely before the deadline. A read of the
+   * body blocks for as long as the web application sends nothing, and the judger judges nothing
+   * else meanwhile (while its heartbeat keeps saying it is online), so a watchdog closes the body
+   * at the deadline, which makes a blocked read fail.
+   *
+   * @param deadline - the deadline, in {@link System#nanoTime()} terms
+   * @param body - the response body
+   * @param destinationDirectory - the directory entries are written into
+   * @param problemId - the unique identifier of the problem (for the error message)
+   * @throws IOException if the body cannot be unpacked, or not in time
+   */
+  private void extractBefore(
+      long deadline, InputStream body, File destinationDirectory, long problemId)
+      throws IOException {
+    AtomicBoolean expired = new AtomicBoolean();
+    ScheduledFuture<?> watchdog =
+        WATCHDOG.schedule(
+            () -> {
+              expired.set(true);
+              try {
+                body.close();
+              } catch (IOException ignored) {
+                // The download fails either way.
+              }
+            },
+            deadline - System.nanoTime(),
+            TimeUnit.NANOSECONDS);
+    try {
+      extract(body, destinationDirectory);
+    } catch (IOException ex) {
+      if (expired.get()) {
+        throw new IOException(
+            String.format(
+                "Timed out after %d s while downloading checkpoints for problem %d",
+                downloadTimeoutSeconds, problemId),
+            ex);
+      }
+      throw ex;
+    } finally {
+      watchdog.cancel(false);
+    }
   }
 
   /**
@@ -142,6 +190,28 @@ public class HttpCheckpointProvider {
     return baseUrl;
   }
 
+  /** Closes the body of a download that is not over by its deadline. */
+  private static final ScheduledThreadPoolExecutor WATCHDOG = newWatchdog();
+
+  /**
+   * Creates the watchdog of the downloads: a single daemon thread, which forgets a download as
+   * soon as it is over.
+   *
+   * @return the watchdog
+   */
+  private static ScheduledThreadPoolExecutor newWatchdog() {
+    ScheduledThreadPoolExecutor watchdog =
+        new ScheduledThreadPoolExecutor(
+            1,
+            runnable -> {
+              Thread thread = new Thread(runnable, "checkpoint-download-watchdog");
+              thread.setDaemon(true);
+              return thread;
+            });
+    watchdog.setRemoveOnCancelPolicy(true);
+    return watchdog;
+  }
+
   /** The shared HTTP client. {@link HttpClient} is thread-safe and intended to be reused. */
   private final HttpClient httpClient =
       HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
@@ -149,6 +219,10 @@ public class HttpCheckpointProvider {
   /** The base URL of the web application, e.g. {@code http://localhost:8080/voj}. */
   @Value("${judger.web.baseUrl:http://localhost:8080/voj}")
   private String baseUrl;
+
+  /** How long (seconds) a download may take as a whole, from the request to the last byte. */
+  @Value("${judger.web.downloadTimeout:300}")
+  private long downloadTimeoutSeconds = 300;
 
   /** The shared secret presented to the web side; must match its {@code judger.apiToken}. */
   @Value("${judger.apiToken:}")

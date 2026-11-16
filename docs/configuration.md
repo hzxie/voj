@@ -102,6 +102,7 @@ restarts with it):
 | Property | Default | Purpose |
 | --- | --- | --- |
 | `judger.web.baseUrl` | `http://localhost:8080/voj` | Web application root the judger downloads test data from. |
+| `judger.web.downloadTimeout` | `300` | Seconds a download of a problem's test data may take as a whole, from the request to the last byte; a download that is not over by then (e.g. the web app stopped sending in the middle) fails. Raise it for very large test data on a slow link. |
 | `judger.apiToken` | `${VOJ_JUDGER_API_TOKEN}` *(empty)* | Shared secret; **must match** `judger.apiToken` on the web app. Left empty, the web app refuses every download, so every submission is judged a System Error; the judger logs an error at startup. The Docker images and `docker-compose.yml` default it to `verwandlung` on both sides; use a long random string in production. |
 
 ### Sandbox
