@@ -21,15 +21,11 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Hashtable;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -45,38 +41,6 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
  */
 @Component
 public class ApplicationEventListener {
-  /** The constructor of ApplicationEventListener. */
-  public ApplicationEventListener() {
-    synchronized (this) {
-      if (scheduler == null) {
-        // Online/offline status is derived from heartbeat freshness at read time (see isOnline), so
-        // this sweep only evicts stale entries to bound the map's memory footprint.
-        scheduler = Executors.newScheduledThreadPool(1);
-        scheduler.scheduleAtFixedRate(
-            new Runnable() {
-              @Override
-              public void run() {
-                long deadline = System.currentTimeMillis() - ONLINE_TIMEOUT_MILLIS;
-
-                for (Iterator<Entry<String, Map<String, Object>>> itr =
-                        onlineJudgers.entrySet().iterator();
-                    itr.hasNext(); ) {
-                  Entry<String, Map<String, Object>> entry = itr.next();
-                  Date lastHeartbeatTime = (Date) entry.getValue().get("heartbeatTime");
-
-                  if (lastHeartbeatTime == null || lastHeartbeatTime.getTime() < deadline) {
-                    itr.remove();
-                  }
-                }
-              }
-            },
-            SWEEP_INTERVAL_SECONDS,
-            SWEEP_INTERVAL_SECONDS,
-            TimeUnit.SECONDS);
-      }
-    }
-  }
-
   /**
    * The handler for submission events. The message is pushed to every viewer subscribed to the
    * submission (e.g. its owner on the submission page and an administrator on the edit-submission
@@ -309,22 +273,18 @@ public class ApplicationEventListener {
 
   /**
    * The list of online judgers. The Key in the Map represents the username of the judger. The Value
-   * in the Map represents the information of the corresponding judger.
+   * in the Map represents the information of the corresponding judger. A judger that stopped
+   * sending heartbeats is treated as offline when the map is read (see isOnline); its entry stays,
+   * which is bounded by the number of judger accounts.
    */
   private static Map<String, Map<String, Object>> onlineJudgers =
       new Hashtable<String, Map<String, Object>>();
-
-  /** The ScheduledExecutorService object. Used to periodically remove offline judgers. */
-  private static ScheduledExecutorService scheduler = null;
 
   /**
    * The maximum age (in milliseconds) of a judger's last heartbeat for it to still be considered
    * online. A judger that misses roughly three 30-second heartbeats is treated as offline.
    */
   private static final long ONLINE_TIMEOUT_MILLIS = 90_000L;
-
-  /** The interval (in seconds) at which stale judger entries are swept from the map. */
-  private static final long SWEEP_INTERVAL_SECONDS = 60L;
 
   /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(ApplicationEventListener.class);
