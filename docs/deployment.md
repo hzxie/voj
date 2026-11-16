@@ -583,12 +583,20 @@ in production.
 ## Windows native sandbox
 
 On Windows the native backend is the only option (`isolate` is Linux-only). Each
-submission runs under a **separate low-privilege Windows account**, at **Low
-integrity**, inside a
+submission runs under a **separate low-privilege Windows account**, with **no
+privileges** (its token is restricted: of the privileges the account's groups
+hold, such as `SeShutdownPrivilege` and `SeTimeZonePrivilege` of *Users*, only
+`SeChangeNotifyPrivilege`, Bypass traverse checking, is left), at **Low
+integrity**, on a **desktop of its own** that the judger creates on the window
+station it runs on (never the operator's desktop), with errors that would wait on a dialog
+nobody can close on that desktop (such as a DLL that cannot be found) ending
+the program at once instead (a runtime error, not a time limit exceeded), inside a
 [Job Object](https://learn.microsoft.com/windows/win32/procthread/job-objects)
-that applies UI restrictions and kills the whole process tree when the run
-ends. While the program runs, the judger polls it every 2 ms and kills the Job
-as soon as a limit is exceeded:
+that applies UI restrictions (including `JOB_OBJECT_UILIMIT_HANDLES`: no use of
+the windows and other USER objects of a process outside the Job) and kills the
+whole process tree when the run ends; the judger waits until every process of
+the Job is gone before it goes on. While the program runs, the judger polls it
+every 2 ms and kills the Job as soon as a limit is exceeded:
 
 - **CPU time**: that of every process of a run (a compilation: the compiler's
   top-level process), plus a wall-clock guard of the time limit + 1 s for a
@@ -684,18 +692,27 @@ Requirements for that account:
   (`SeBatchLogonRight`) — the judger logs it in with `LOGON32_LOGON_BATCH`. Grant
   it via *Local Security Policy → Local Policies → User Rights Assignment → Log
   on as a batch job*, or `secedit`.
-- It must be able to have a **user profile**: the judger loads it for each
-  compilation and run (with `LoadUserProfile`), and creates it at the first.
+- It must be able to have a **user profile**: the judger logs the account on
+  and loads its profile (with `LoadUserProfile`, which creates it the first
+  time) once, at the first compilation or run, and keeps both until it exits.
 - Keep it a plain member of *Users* (no admin rights). It only needs to enter,
   read and write the submission's program directory while compiling (the
   compiler writes the program and, for Go, its build cache there), read and
   execute it afterwards, and write the work directory of each run. The judger
   grants it that access itself, to what it creates in its `work-<n>\` directory
   under `judger.checkpointDir`; the account needs no access to anything else
-  there.
-  The judger also grants it the access to its window station and desktop that a
-  program needs to start (not to read the screen, hook input or switch
-  desktops); the grant lasts until the judger's session ends.
+  there. Its programs run on a desktop the judger creates for them on the
+  window station it runs on, which goes when the judger exits. Only the account's logon
+  session (its logon SID, which no other logon has) is given access: to that
+  desktop, and to the window station what user32 needs to initialise
+  (`READ_CONTROL`, `WINSTA_ACCESSGLOBALATOMS` and `WINSTA_EXITWINDOWS`; logging
+  off and shutting down stay denied, by the Job and for want of
+  `SeShutdownPrivilege`), not to read the screen or the clipboard, list or
+  switch desktops, or hook input. Nothing is granted on the operator's desktop.
+  (A separate window station that the judger would create does not work: on
+  one, every program that loads user32 fails to initialise.) The window station's entry is removed
+  when the judger closes the session; one left by a judger that exited names a
+  logon session that is gone, and grants nothing.
 
 Because the credentials live in `voj.properties`, keep that file readable only by
 the judger account.
@@ -710,13 +727,35 @@ take-ownership privileges (see
 Without them, every compilation and run fails as a System Error rather than
 running with more access than it should.
 
-Run the judger in an interactive session (for example a scheduled task that runs
-at logon, or a console of a logged-on user), not as a service or from an SSH
-session. Processes the judger starts as the sandbox account
-(`CreateProcessWithTokenW`) from session 0 cannot initialise on its window
-station: the JVM (javac, java, kotlinc) then exits at once with
-`STATUS_DLL_INIT_FAILED` (0xC0000142), so Java and Kotlin submissions could not
-be compiled or run, while C and C++ ones may still work.
+The judger may run in an interactive session (a console of a logged-on user, or
+a scheduled task that runs at logon) or in session 0 (it has been verified from
+an SSH session, where it gets a service's non-interactive window station):
+either way its programs run on the desktop it creates on the window station it
+runs on. For a scheduled task, clear *Stop the task if it runs longer than*
+(by default 3 days, which would stop the judger) and give it normal priority:
+Task Scheduler starts a task's program below normal priority (7) by default,
+and `CreateProcessWithTokenW` gives the submissions the judger's priority. In
+PowerShell, as an administrator:
+
+```
+$action    = New-ScheduledTaskAction -Execute 'C:\voj\jdk\bin\java.exe' `
+               -Argument '--enable-native-access=ALL-UNNAMED -jar C:\voj\voj.judger.jar' `
+               -WorkingDirectory 'C:\voj'
+$trigger   = New-ScheduledTaskTrigger -AtLogOn -User 'HOST\judger'
+$principal = New-ScheduledTaskPrincipal -UserId 'HOST\judger' -LogonType Interactive -RunLevel Highest
+$settings  = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -Priority 4
+Register-ScheduledTask -TaskName voj-judger -Action $action -Trigger $trigger `
+  -Principal $principal -Settings $settings
+```
+
+`-ExecutionTimeLimit ([TimeSpan]::Zero)` is "no limit", and `-Priority 4` is
+normal priority (the program's priority class; 7, the default, is below
+normal).
+
+A compilation's or run's command line may be at most 1024 characters long
+(the limit of `CreateProcessWithTokenW`): a longer one is refused as a System
+Error. The commands of `sql/seed.sql` with the default `judger.checkpointDir`
+stay far below it.
 
 ### The checkpoint directory on Windows
 
