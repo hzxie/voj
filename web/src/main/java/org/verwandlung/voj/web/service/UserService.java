@@ -1177,10 +1177,13 @@ public class UserService {
     int month = calendar.get(Calendar.MONTH);
     int date = calendar.get(Calendar.DAY_OF_MONTH);
 
+    // The registration times are stored as strings in this time zone (see createUserMeta), so
+    // they are compared with strings in the same form.
+    SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
     calendar.set(year, month, date, 0, 0, 0);
-    Date startTime = calendar.getTime();
+    String startTime = formatter.format(calendar.getTime());
     calendar.set(year, month, date, 23, 59, 59);
-    Date endTime = calendar.getTime();
+    String endTime = formatter.format(calendar.getTime());
 
     return userMetaMapper.getNumberOfUserRegistered(startTime, endTime);
   }

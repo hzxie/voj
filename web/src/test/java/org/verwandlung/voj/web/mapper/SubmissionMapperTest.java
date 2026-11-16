@@ -16,7 +16,7 @@
  */
 package org.verwandlung.voj.web.mapper;
 
-import java.sql.Date;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -45,13 +45,14 @@ import org.verwandlung.voj.web.model.User;
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class SubmissionMapperTest {
   /**
-   * Test case: tests the getNumberOfSubmissionsUsingDate(String, String) method. Test data: query
-   * using 2014-10-01 to 2014-10-18. Expected: the number of submissions within this time range (2).
+   * Test case: tests the getNumberOfSubmissionsUsingDate(Date, Date) method. Test data: query
+   * using 2014-10-01 to 2014-10-18 (UTC). Expected: the number of submissions within this time range
+   * (2).
    */
   @Test
   public void testGetNumberOfSubmissionsUsingDate() {
-    String startTime = "2014-10-01 00:00:00";
-    String endTime = "2014-10-18 00:00:00";
+    Date startTime = utc("2014-10-01T00:00:00Z");
+    Date endTime = utc("2014-10-18T00:00:00Z");
 
     long numberOfSubmissions = submissionMapper.getNumberOfSubmissionsUsingDate(startTime, endTime);
     Assertions.assertEquals(2, numberOfSubmissions);
@@ -146,91 +147,87 @@ public class SubmissionMapperTest {
   }
 
   /**
-   * Test case: tests the getNumberOfSubmissionsGroupByDay(String, String, int, boolean) method. Test
-   * data: query using 2014-10-01 to 2014-10-31. Expected: the number of submissions per day for the
+   * Test case: tests the getNumberOfSubmissionsGroupByDay(Date, Date, long, boolean, Date) method. Test
+   * data: query using 2014-10 (UTC). Expected: the number of submissions per quarter of an hour of the
    * month.
    */
   @Test
   public void testGetNumberOfTotalSubmissionsGroupByDayWithoutUser() {
-    String startTime = "2014-10-01 00:00:00";
-    String endTime = "2014-11-01 00:00:00";
+    Date startTime = utc("2014-10-01T00:00:00Z");
+    Date endTime = utc("2014-11-01T00:00:00Z");
 
     List<Map<String, Object>> numberOfSubmissions =
         submissionMapper.getNumberOfSubmissionsGroupByDay(startTime, endTime, 0, false, null);
     Assertions.assertEquals(2, numberOfSubmissions.size());
 
+    // Submission #1000 was made at 2014-10-01 00:00:00 UTC: the first quarter of an hour of the day.
     Map<String, Object> firstEntry = numberOfSubmissions.get(0);
-    Date day = (Date) firstEntry.get("date");
-    long submissions = (Long) firstEntry.get("submissions");
-
-    Assertions.assertEquals("2014-10-01", day.toString());
-    Assertions.assertEquals(1, submissions);
+    Assertions.assertEquals(
+        startTime.getTime() / 900_000, ((Number) firstEntry.get("slot")).longValue());
+    Assertions.assertEquals(1L, ((Number) firstEntry.get("submissions")).longValue());
   }
 
   /**
-   * Test case: tests the getNumberOfSubmissionsGroupByDay(String, String, int, boolean) method. Test
-   * data: query the accepted submissions using 2014-10-01 to 2014-10-31. Expected: the number of
-   * accepted submissions per day for the month.
+   * Test case: tests the getNumberOfSubmissionsGroupByDay(Date, Date, long, boolean, Date) method. Test
+   * data: query the accepted submissions using 2014-10 (UTC). Expected: the number of
+   * accepted submissions per quarter of an hour of the month.
    */
   @Test
   public void testGetNumberOfAccpectedSubmissionsGroupByDayWithoutUser() {
-    String startTime = "2014-10-01 00:00:00";
-    String endTime = "2014-11-01 00:00:00";
+    Date startTime = utc("2014-10-01T00:00:00Z");
+    Date endTime = utc("2014-11-01T00:00:00Z");
 
     List<Map<String, Object>> numberOfSubmissions =
         submissionMapper.getNumberOfSubmissionsGroupByDay(startTime, endTime, 0, true, null);
     Assertions.assertEquals(1, numberOfSubmissions.size());
 
+    // Submission #1000 was made at 2014-10-01 00:00:00 UTC: the first quarter of an hour of the day.
     Map<String, Object> firstEntry = numberOfSubmissions.get(0);
-    Date day = (Date) firstEntry.get("date");
-    long submissions = (Long) firstEntry.get("submissions");
-
-    Assertions.assertEquals("2014-10-01", day.toString());
-    Assertions.assertEquals(1, submissions);
+    Assertions.assertEquals(
+        startTime.getTime() / 900_000, ((Number) firstEntry.get("slot")).longValue());
+    Assertions.assertEquals(1L, ((Number) firstEntry.get("submissions")).longValue());
   }
 
   /**
-   * Test case: tests the getNumberOfSubmissionsGroupByDay(String, String, int, boolean) method. Test
-   * data: query a user's submissions using 2014-10-01 to 2014-10-31. Expected: the number of the
-   * user's submissions per day for the month.
+   * Test case: tests the getNumberOfSubmissionsGroupByDay(Date, Date, long, boolean, Date) method. Test
+   * data: query a user's submissions using 2014-10 (UTC). Expected: the number of the
+   * user's submissions per quarter of an hour of the month.
    */
   @Test
   public void testGetNumberOfTotalSubmissionsGroupByDayWithUser() {
-    String startTime = "2014-10-01 00:00:00";
-    String endTime = "2014-11-01 00:00:00";
+    Date startTime = utc("2014-10-01T00:00:00Z");
+    Date endTime = utc("2014-11-01T00:00:00Z");
 
     List<Map<String, Object>> numberOfSubmissions =
         submissionMapper.getNumberOfSubmissionsGroupByDay(startTime, endTime, 1000, false, null);
     Assertions.assertEquals(2, numberOfSubmissions.size());
 
+    // Submission #1000 was made at 2014-10-01 00:00:00 UTC: the first quarter of an hour of the day.
     Map<String, Object> firstEntry = numberOfSubmissions.get(0);
-    Date day = (Date) firstEntry.get("date");
-    long submissions = (Long) firstEntry.get("submissions");
-
-    Assertions.assertEquals("2014-10-01", day.toString());
-    Assertions.assertEquals(1, submissions);
+    Assertions.assertEquals(
+        startTime.getTime() / 900_000, ((Number) firstEntry.get("slot")).longValue());
+    Assertions.assertEquals(1L, ((Number) firstEntry.get("submissions")).longValue());
   }
 
   /**
-   * Test case: tests the getNumberOfSubmissionsGroupByDay(String, String, int, boolean) method. Test
-   * data: query a user's accepted submissions using 2014-10-01 to 2014-10-31. Expected: the number
-   * of the user's accepted submissions per day for the month.
+   * Test case: tests the getNumberOfSubmissionsGroupByDay(Date, Date, long, boolean, Date) method. Test
+   * data: query a user's accepted submissions using 2014-10 (UTC). Expected: the number
+   * of the user's accepted submissions per quarter of an hour of the month.
    */
   @Test
   public void testGetNumberOfAccpectedSubmissionsGroupByDayWithUser() {
-    String startTime = "2014-10-01 00:00:00";
-    String endTime = "2014-11-01 00:00:00";
+    Date startTime = utc("2014-10-01T00:00:00Z");
+    Date endTime = utc("2014-11-01T00:00:00Z");
 
     List<Map<String, Object>> numberOfSubmissions =
         submissionMapper.getNumberOfSubmissionsGroupByDay(startTime, endTime, 1000, true, null);
     Assertions.assertEquals(1, numberOfSubmissions.size());
 
+    // Submission #1000 was made at 2014-10-01 00:00:00 UTC: the first quarter of an hour of the day.
     Map<String, Object> firstEntry = numberOfSubmissions.get(0);
-    Date day = (Date) firstEntry.get("date");
-    long submissions = (Long) firstEntry.get("submissions");
-
-    Assertions.assertEquals("2014-10-01", day.toString());
-    Assertions.assertEquals(1, submissions);
+    Assertions.assertEquals(
+        startTime.getTime() / 900_000, ((Number) firstEntry.get("slot")).longValue());
+    Assertions.assertEquals(1L, ((Number) firstEntry.get("submissions")).longValue());
   }
 
   /**
@@ -545,6 +542,11 @@ public class SubmissionMapperTest {
 
   /** The UserMapper object, used to build the unit test cases. */
   @Autowired private UserMapper userMapper;
+
+  /** Parses an instant, e.g. {@code 2014-10-01T00:00:00Z}, into a Date. */
+  private static Date utc(String instant) {
+    return Date.from(java.time.Instant.parse(instant));
+  }
 
   /** The LanguageMapper object, used to build the unit test cases. */
   @Autowired private LanguageMapper languageMapper;

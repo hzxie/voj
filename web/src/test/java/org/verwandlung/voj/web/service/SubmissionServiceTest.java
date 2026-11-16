@@ -534,25 +534,52 @@ public class SubmissionServiceTest {
   }
 
   /**
-   * Test case: tests the getNumberOfSubmissionsGroupByDay(...) method. Test data: a range starting
-   * mid-day on 2014-10-01 (the day of user 1000's submission #1000) and ending on 2014-10-03.
-   * Expected: one slot per day from the start day through the end day, in chronological order, with
-   * the start day's submission counted in its own slot.
+   * Test case: tests the getNumberOfSubmissionsGroupByDay(...) method in a time zone 5:30 hours
+   * ahead of UTC (the web application's days are those of its time zone, not of the database
+   * session's UTC). Test data: user 1002's submissions at 00:10 and 23:50 on 2026-03-10, at 00:10 on
+   * 2026-03-11 and at 23:50 on 2026-03-09 (local times); a range from noon on 2026-03-10 to 08:00
+   * on 2026-03-12. Expected: one slot per local day from the start day through the end day, in
+   * chronological order; the submissions are counted on their local days (in UTC, 00:10 on
+   * 2026-03-10 is still 2026-03-09, and 00:10 on 2026-03-11 still 2026-03-10), including the start
+   * day's before noon, and the one before the start day is not counted.
    */
   @Test
-  public void testGetNumberOfSubmissionsGroupByDayIncludesStartDay() {
-    java.util.Calendar calendar = new java.util.GregorianCalendar(2014, 9, 1, 12, 0, 0);
-    java.util.Date startTime = calendar.getTime();
-    calendar.set(2014, 9, 3, 8, 0, 0);
-    java.util.Date endTime = calendar.getTime();
+  public void testGetNumberOfSubmissionsGroupByDayUsesTheLocalDays() {
+    java.util.TimeZone defaultTimeZone = java.util.TimeZone.getDefault();
+    java.time.ZoneId zone = java.time.ZoneId.of("Asia/Kolkata");
+    try {
+      java.util.TimeZone.setDefault(java.util.TimeZone.getTimeZone(zone));
+      org.springframework.jdbc.core.JdbcTemplate jdbcTemplate =
+          new org.springframework.jdbc.core.JdbcTemplate(dataSource);
+      for (String localTime :
+          List.of(
+              "2026-03-09T23:50", "2026-03-10T00:10", "2026-03-10T23:50", "2026-03-11T00:10")) {
+        jdbcTemplate.update(
+            "INSERT INTO voj_submissions (problem_id, uid, language_id, submission_submit_time,"
+                + " submission_judge_result, submission_code) VALUES (1000, 1002, 2, ?, 'AC', 'C')",
+            localTimestamp(localTime, zone));
+      }
 
-    Map<String, Long> submissions =
-        submissionService.getNumberOfSubmissionsGroupByDay(startTime, endTime, 1000, false, null);
+      Map<String, Long> submissions =
+          submissionService.getNumberOfSubmissionsGroupByDay(
+              localTimestamp("2026-03-10T12:00", zone),
+              localTimestamp("2026-03-12T08:00", zone),
+              1002,
+              false,
+              null);
 
-    Assertions.assertEquals(
-        List.of("2014/10/01", "2014/10/02", "2014/10/03"), List.copyOf(submissions.keySet()));
-    Assertions.assertEquals(1L, submissions.get("2014/10/01"));
-    Assertions.assertEquals(0L, submissions.get("2014/10/02"));
+      Assertions.assertEquals(
+          List.of("2026/03/10", "2026/03/11", "2026/03/12"), List.copyOf(submissions.keySet()));
+      Assertions.assertEquals(List.of(2L, 1L, 0L), List.copyOf(submissions.values()));
+    } finally {
+      java.util.TimeZone.setDefault(defaultTimeZone);
+    }
+  }
+
+  /** Gets the instant of a local date and time in a time zone. */
+  private static java.sql.Timestamp localTimestamp(String localDateTime, java.time.ZoneId zone) {
+    return java.sql.Timestamp.from(
+        java.time.LocalDateTime.parse(localDateTime).atZone(zone).toInstant());
   }
 
   /**

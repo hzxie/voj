@@ -16,7 +16,6 @@
  */
 package org.verwandlung.voj.web.mapper;
 
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -33,14 +32,16 @@ import org.verwandlung.voj.web.model.UserMeta;
 public interface UserMetaMapper {
   /**
    * [For administrators only] Gets the total number of users registered in the system within a time
-   * period.
+   * period. The registerTime user meta is a string in the time zone of the web application, so the
+   * bounds are strings in the same form ({@code yyyy-MM-dd HH:mm:ss}, same time zone), not dates
+   * the driver would convert to the database session's UTC.
    *
    * @param startTime - the start time of the statistics (inclusive)
    * @param endTime - the end time of the statistics (inclusive)
    * @return the total number of users registered in the system within the time period
    */
   long getNumberOfUserRegistered(
-      @Param("startTime") Date startTime, @Param("endTime") Date endTime);
+      @Param("startTime") String startTime, @Param("endTime") String endTime);
 
   /**
    * Gets all meta information of a user.

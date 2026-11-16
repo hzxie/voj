@@ -17,8 +17,6 @@
 package org.verwandlung.voj.web.mapper;
 
 import java.util.Arrays;
-import java.util.Calendar;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,18 +43,14 @@ import org.verwandlung.voj.web.model.UserMeta;
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class UserMetaMapperTest {
   /**
-   * Test case: tests the getNumberOfUserRegistered(Date, Date) method. Test data: 2014-10-07 00:00:00
-   * - 2014-10-07 23:59:59. Expected: the number of users registered on 2014-10-07 (1 in total).
+   * Test case: tests the getNumberOfUserRegistered(String, String) method. Test data: 2014-10-08
+   * 00:00:00 - 2014-10-08 23:59:59. Expected: the number of users registered on 2014-10-08 (1 in
+   * total; the other one registered on 2014-10-07 12:35:45).
    */
   @Test
   public void testGetNumberOfUserRegistered() {
-    Calendar calendar = Calendar.getInstance();
-    calendar.set(2014, 9, 8, 0, 0, 0);
-    Date startTime = calendar.getTime();
-    calendar.set(2014, 9, 8, 23, 59, 59);
-    Date endTime = calendar.getTime();
-
-    long numberOfUsers = userMetaMapper.getNumberOfUserRegistered(startTime, endTime);
+    long numberOfUsers =
+        userMetaMapper.getNumberOfUserRegistered("2014-10-08 00:00:00", "2014-10-08 23:59:59");
     Assertions.assertEquals(1, numberOfUsers);
   }
 

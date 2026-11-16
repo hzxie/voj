@@ -16,7 +16,7 @@ build time via `--build-arg`; see [`../docker/README.md`](../docker/README.md).
 | Property | Default | Purpose |
 | --- | --- | --- |
 | `jdbc.driverClassName` | `com.mysql.cj.jdbc.Driver` | JDBC driver. Works for both MySQL and MariaDB. |
-| `jdbc.url` | `jdbc:mysql://localhost:3306/voj?...` | Connection URL. Keep the `characterEncoding=UTF-8` and time-zone parameters. |
+| `jdbc.url` | `jdbc:mysql://localhost:3306/voj?...` | Connection URL. Keep the `characterEncoding=UTF-8` and time-zone parameters (`connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true`): times are stored and read in UTC whatever the time zones of the database server and the JVM. Days in the statistics (the activity heat map, the dashboard's daily chart and "today" counts) are those of the JVM's time zone (`TZ` or `-Duser.timezone`). |
 | `jdbc.username` | `root` | Database user. |
 | `jdbc.password` | *(empty)* | Database password. |
 | `jdbc.initialSize` / `jdbc.maxActive` / `jdbc.minIdle` / `jdbc.maxIdle` | `5` / `30` / `3` / `10` | Druid connection-pool sizing. |

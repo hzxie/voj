@@ -16,12 +16,13 @@
  */
 package org.verwandlung.voj.web.service;
 
-import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.AbstractMap;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Date;
-import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -69,10 +70,7 @@ public class SubmissionService {
    * @return the number of submissions within the specified time period
    */
   public long getNumberOfSubmissionsUsingDate(Date startTime, Date endTime) {
-    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-    String startTimeString = startTime != null ? sdf.format(startTime) : null;
-    String endTimeString = endTime != null ? sdf.format(endTime) : null;
-    return submissionMapper.getNumberOfSubmissionsUsingDate(startTimeString, endTimeString);
+    return submissionMapper.getNumberOfSubmissionsUsingDate(startTime, endTime);
   }
 
   /**
@@ -100,7 +98,10 @@ public class SubmissionService {
 
   /**
    * Gets the number of submissions for each day within a time period (always day-granularity).
-   * Feeds the activity heat-map.
+   * Feeds the activity heat-map and the dashboard's daily chart. The days are those of the time zone
+   * of the web application (the JVM's default time zone), like the "today" counts of the dashboard:
+   * the database counts the submissions per quarter of an hour (the offset of every time zone is a
+   * multiple of 15 minutes), and those counts are added up into days here.
    *
    * @param startTime - the start time of the statistics
    * @param endTime - the end time of the statistics
@@ -114,37 +115,39 @@ public class SubmissionService {
       Date startTime, Date endTime, long uid, boolean isAcceptedOnly, User viewer) {
     // Build an empty, chronologically ordered slot for every day from the start day (whose
     // submissions the query below includes from midnight on) through the end day.
+    ZoneId zone = ZoneId.systemDefault();
+    LocalDate startDay = startTime.toInstant().atZone(zone).toLocalDate();
+    LocalDate endDay = endTime.toInstant().atZone(zone).toLocalDate();
     Map<String, Long> numberOfSubmissions = new LinkedHashMap<String, Long>();
-    SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd");
-    Calendar calendar = new GregorianCalendar();
-    calendar.setTime(startTime);
-    calendar.set(Calendar.HOUR_OF_DAY, 0);
-    calendar.set(Calendar.MINUTE, 0);
-    calendar.set(Calendar.SECOND, 0);
-    calendar.set(Calendar.MILLISECOND, 0);
-    while (!calendar.getTime().after(endTime)) {
-      numberOfSubmissions.put(sdf.format(calendar.getTime()), (long) 0);
-      calendar.add(Calendar.DATE, 1);
+    for (LocalDate day = startDay; !day.isAfter(endDay); day = day.plusDays(1)) {
+      numberOfSubmissions.put(day.format(DAY_FORMAT), 0L);
     }
 
-    String startTimeString = new SimpleDateFormat("yyyy-MM-dd 00:00:00").format(startTime);
     // Keep the upper bound at the actual instant so today's (partial-day) submissions are counted.
-    String endTimeString = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(endTime);
     List<Map<String, Object>> submissions =
         submissionMapper.getNumberOfSubmissionsGroupByDay(
-            startTimeString,
-            endTimeString,
+            Date.from(startDay.atStartOfDay(zone).toInstant()),
+            endTime,
             uid,
             isAcceptedOnly,
             getRunningContestsCutoff(uid, viewer));
 
     for (Map<String, Object> e : submissions) {
-      String date = ((java.sql.Date) e.get("date")).toString().replace('-', '/');
-      long submissionTimes = (Long) e.get("submissions");
-      numberOfSubmissions.put(date, submissionTimes);
+      long slotStart = ((Number) e.get("slot")).longValue() * SECONDS_PER_SLOT;
+      String day = Instant.ofEpochSecond(slotStart).atZone(zone).toLocalDate().format(DAY_FORMAT);
+      numberOfSubmissions.merge(day, ((Number) e.get("submissions")).longValue(), Long::sum);
     }
     return numberOfSubmissions;
   }
+
+  /**
+   * The length of the time slots in which SubmissionMapper.getNumberOfSubmissionsGroupByDay counts
+   * the submissions, in seconds.
+   */
+  private static final long SECONDS_PER_SLOT = 15 * 60;
+
+  /** The format of the days in the submission statistics. */
+  private static final DateTimeFormatter DAY_FORMAT = DateTimeFormatter.ofPattern("yyyy/MM/dd");
 
   /**
    * [For administrators only] Gets the number of submissions within a time period grouped by judge
@@ -156,11 +159,13 @@ public class SubmissionService {
    * @return an ordered map of judge-result slug to submission count, highest count first
    */
   public Map<String, Long> getNumberOfSubmissionsGroupByJudgeResult(Date startTime, Date endTime) {
-    String startTimeString = new SimpleDateFormat("yyyy-MM-dd 00:00:00").format(startTime);
-    // Keep the upper bound at the actual instant so today's submissions are part of the mix.
-    String endTimeString = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(endTime);
+    // From the start of the start day (in the web application's time zone), and up to the actual
+    // end instant so today's submissions are part of the mix.
+    ZoneId zone = ZoneId.systemDefault();
+    Date startOfStartDay =
+        Date.from(startTime.toInstant().atZone(zone).toLocalDate().atStartOfDay(zone).toInstant());
     List<Map<String, Object>> rows =
-        submissionMapper.getNumberOfSubmissionsGroupByJudgeResult(startTimeString, endTimeString);
+        submissionMapper.getNumberOfSubmissionsGroupByJudgeResult(startOfStartDay, endTime);
 
     List<Map.Entry<String, Long>> entries = new ArrayList<>();
     for (Map<String, Object> row : rows) {

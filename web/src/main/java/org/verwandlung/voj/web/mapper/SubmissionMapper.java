@@ -38,7 +38,7 @@ public interface SubmissionMapper {
    * @return the number of submissions within the specified time period
    */
   long getNumberOfSubmissionsUsingDate(
-      @Param("startTime") String startTime, @Param("endTime") String endTime);
+      @Param("startTime") Date startTime, @Param("endTime") Date endTime);
 
   /**
    * Gets the number of submissions by a user for a problem.
@@ -77,7 +77,9 @@ public interface SubmissionMapper {
       @Param("isAcceptedOnly") boolean isAcceptedOnly);
 
   /**
-   * Gets the number of submissions within a specified time period, grouped by day.
+   * Gets the number of submissions within a specified time period, grouped by quarter of an hour
+   * (which SubmissionService adds up into the days of its time zone: the database session's time
+   * zone is UTC, and the offset of every time zone is a multiple of 15 minutes).
    *
    * @param startTime - the start time of the statistics
    * @param endTime - the end time of the statistics
@@ -85,11 +87,12 @@ public interface SubmissionMapper {
    * @param isAcceptedOnly - whether to count only accepted submissions
    * @param runningContestsAt - when not null, the submissions made in a contest that has not ended
    *     at this instant are left out (they are not shown to other users before the contest ends)
-   * @return a Map of key-value pairs containing the date and the number of submissions
+   * @return one row per quarter of an hour with submissions: {@code slot}, the number of quarters of
+   *     an hour from the epoch to its start, and {@code submissions}, the number of submissions
    */
   List<Map<String, Object>> getNumberOfSubmissionsGroupByDay(
-      @Param("startTime") String startTime,
-      @Param("endTime") String endTime,
+      @Param("startTime") Date startTime,
+      @Param("endTime") Date endTime,
       @Param("uid") long uid,
       @Param("isAcceptedOnly") boolean isAcceptedOnly,
       @Param("runningContestsAt") Date runningContestsAt);
@@ -103,7 +106,7 @@ public interface SubmissionMapper {
    * @return a list of {slug, submissions} rows, one per judge-result slug
    */
   List<Map<String, Object>> getNumberOfSubmissionsGroupByJudgeResult(
-      @Param("startTime") String startTime, @Param("endTime") String endTime);
+      @Param("startTime") Date startTime, @Param("endTime") Date endTime);
 
   /**
    * [For administrators only] Gets the number of submissions still waiting to be judged (the judge

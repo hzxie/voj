@@ -113,6 +113,26 @@ public class UserServiceTest {
     Assertions.assertEquals(0, userService.getNumberOfUserRegisteredToday());
   }
 
+  /**
+   * Test case: tests the getNumberOfUserRegisteredToday() method in a time zone far from UTC. Test
+   * data: user 1002 registered at the current time, recorded as the registration stores it (a
+   * string in the web application's time zone). Expected: the user is counted.
+   */
+  @Test
+  public void testGetNumberOfUserRegisteredTodayInTheLocalTimeZone() {
+    java.util.TimeZone defaultTimeZone = java.util.TimeZone.getDefault();
+    try {
+      java.util.TimeZone.setDefault(java.util.TimeZone.getTimeZone("Pacific/Kiritimati"));
+      String now = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
+      userMetaMapper.createUserMeta(
+          new UserMeta(userMapper.getUserUsingUid(1002), "registerTime", now));
+
+      Assertions.assertEquals(1, userService.getNumberOfUserRegisteredToday());
+    } finally {
+      java.util.TimeZone.setDefault(defaultTimeZone);
+    }
+  }
+
   /** Test case: tests the getNumberOfUsersUsingUserGroupAndUsername(...) method. Test data: the users user group + a partial username. Expected: the number of matches. */
   @Test
   public void testGetNumberOfUsersUsingUserGroupAndUsername() {
