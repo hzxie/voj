@@ -8,15 +8,16 @@
 */-->
 <html xmlns:th="http://www.thymeleaf.org" lang="en">
 <body>
-    <!--/* Navigation drawer that is also the sidebar (js/admin.js). On wide screens it is
-           the sticky in-flow sidebar. On narrow screens it is a popover="manual" drawer
-           exposed as role="dialog": a horizontal scroll-snap container holds the sheet
-           plus an empty "closed" stop, so the sheet can be swiped shut, and the
-           backdrop fades with the scroll position. */-->
-    <div th:fragment="sidebar" id="adm-sidebar" class="adm-drawer" data-adm="sidebar" popover="manual"
-         th:data-drawer-label="#{voj.include.header.main-navigation}">
-    <div class="adm-drawer-scroller" data-adm="drawer-scroller">
-    <aside class="adm-sidebar" data-adm="drawer-sheet">
+    <!--/* Navigation drawer that is also the sidebar. On wide screens css/admin.css shows
+           the (never opened) <dialog> as the sticky in-flow sidebar. On narrow screens it
+           is hidden until the header's menu button opens it with showModal() (js/admin.js):
+           the browser then supplies the modality, the inert page, Esc and the focus
+           return; closedby="any" adds a tap on the backdrop. It is exposed as a dialog
+           only while it is one (role / aria-label are swapped in js/admin.js); the
+           sidebar itself is the <aside> landmark. */-->
+    <dialog th:fragment="sidebar" id="adm-sidebar" class="adm-drawer" data-adm="sidebar" closedby="any" role="none"
+            th:data-dialog-label="#{voj.include.header.main-navigation}">
+    <aside class="adm-sidebar">
         <a class="adm-logo" th:href="@{/}">
             <span class="b">&lt;</span><span class="n">vwl</span><span class="b">&gt;</span>
             <span class="tag" th:text="#{voj.administration.include.sidebar.admin}">ADMIN</span>
@@ -80,7 +81,6 @@
             </div>
         </div>
     </aside>
-    </div>
-    </div>
+    </dialog>
 </body>
 </html>

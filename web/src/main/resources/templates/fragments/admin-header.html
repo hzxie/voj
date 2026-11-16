@@ -10,9 +10,9 @@
 <body>
     <header th:fragment="header" class="adm-header"
             th:with="section=${adminSection != null ? adminSection : 'dashboard'}">
-        <!--/* Opens the sidebar as a drawer on narrow screens; js/admin.js keeps
-               aria-expanded in sync and handles Esc / focus return. */-->
-        <button type="button" class="adm-burger" data-adm="burger" aria-controls="adm-sidebar" aria-expanded="false"
+        <!--/* Opens the sidebar as a modal drawer on narrow screens (js/admin.js, which
+               keeps aria-expanded in sync). */-->
+        <button type="button" class="adm-burger" data-adm="burger" aria-controls="adm-sidebar" aria-haspopup="dialog" aria-expanded="false"
                 th:title="#{voj.include.header.menu}" th:aria-label="#{voj.include.header.menu}">
             <span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span>
         </button>

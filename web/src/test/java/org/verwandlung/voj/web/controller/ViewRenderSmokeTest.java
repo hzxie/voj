@@ -446,16 +446,16 @@ class ViewRenderSmokeTest {
         .andExpect(content().string(not(containsString("href=\"/p\" aria-current"))));
   }
 
-  /** The admin sidebar is a popover drawer on narrow screens, controlled by the header button. */
+  /** The admin sidebar is a modal {@code <dialog>} drawer on narrow screens, opened by the header button. */
   @Test
   void adminSidebarRendersAsDrawer() throws Exception {
     authenticateAdmin();
     mockMvc
         .perform(getWithCsrf("/administration/all-users"))
         .andExpect(status().isOk())
-        .andExpect(content().string(containsString("id=\"adm-sidebar\" class=\"adm-drawer\" data-adm=\"sidebar\" popover=\"manual\"")))
+        .andExpect(content().string(containsString("<dialog id=\"adm-sidebar\" class=\"adm-drawer\" data-adm=\"sidebar\" closedby=\"any\" role=\"none\"")))
         .andExpect(content().string(containsString("data-adm=\"drawer-close\" autofocus")))
-        .andExpect(content().string(containsString("aria-controls=\"adm-sidebar\" aria-expanded=\"false\"")))
+        .andExpect(content().string(containsString("aria-controls=\"adm-sidebar\" aria-haspopup=\"dialog\" aria-expanded=\"false\"")))
         .andExpect(content().string(not(containsString("adm-scrim"))));
   }
 

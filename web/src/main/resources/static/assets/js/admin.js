@@ -55,107 +55,34 @@
   }
 
   // --- Navigation drawer that is also the sidebar ----------------------------
-  // Wide (>860px): the element is a plain sticky sidebar (no role). Narrow: it is a
-  // popover="manual" drawer exposed as role="dialog". Its scroller holds the sheet
-  // plus an empty "closed" snap stop, so opening/closing is scrolling (swipe works
-  // natively) and an IntersectionObserver on the sheet is the single source of
-  // truth for "fully closed". A popover is not modal, so this code supplies the
-  // modality: the main column is inert and aria-modal is set while open, Esc and a
-  // tap beside the sheet close it, and focus returns to the burger afterwards.
+  // The sidebar is a <dialog>. Wide screens never open it (css/admin.css shows it in
+  // flow); on narrow screens the burger opens it with showModal(), so the browser
+  // supplies the modality, Esc, the inert page and the focus return. Closed, it is
+  // role="none" so the in-flow sidebar is not announced as a dialog.
   function setupDrawer() {
     var drawer = document.querySelector('[data-adm="sidebar"]');
     var burger = document.querySelector('[data-adm="burger"]');
-    if (!drawer || !burger || typeof drawer.showPopover !== 'function') return;
-    var scroller = drawer.querySelector('[data-adm="drawer-scroller"]');
-    var sheet = drawer.querySelector('[data-adm="drawer-sheet"]');
+    if (!drawer || !burger) return;
     var closeBtn = drawer.querySelector('[data-adm="drawer-close"]');
-    var main = document.querySelector('.adm-main');
     var narrow = window.matchMedia('(max-width: 860px)');
-    var opening = false;
 
-    function isOpen() { return drawer.hasAttribute('aria-modal'); }
-    function nextFrames() {
-      return new Promise(function (r) { requestAnimationFrame(function () { requestAnimationFrame(r); }); });
-    }
-
-    function openDrawer() {
-      if (!narrow.matches || isOpen()) return;
-      opening = true;
-      drawer.showPopover();
-      if (main) main.inert = true;
-      drawer.setAttribute('aria-modal', 'true');
-      var ready = Promise.resolve();
-      if (!(window.CSS && CSS.supports('scroll-initial-target', 'nearest'))) {
-        // Start from the closed stop so the scroll below slides the sheet in.
-        scroller.scrollTo({ left: scroller.scrollWidth, behavior: 'instant' });
-        ready = nextFrames();
-      }
-      // `opening` only shields the jump to the closed stop; once the slide-in starts,
-      // a swipe or tap that closes the drawer again must be honoured.
-      ready.then(function () {
-        opening = false;
-        scroller.scrollTo({ left: 0, behavior: 'auto' });
-      });
-    }
-
-    // Slide out; the observer closes the popover once the sheet has left.
-    function closeDrawer() {
-      if (!isOpen()) return;
-      opening = false;
-      scroller.scrollTo({ left: scroller.scrollWidth, behavior: 'auto' });
-    }
-
-    function onDrawerClosed(restoreFocus) {
-      if (!isOpen()) return;
-      opening = false;
-      drawer.hidePopover();
-      if (main) main.inert = false;
-      drawer.removeAttribute('aria-modal');
+    burger.addEventListener('click', function () {
+      if (drawer.open) return;
+      drawer.removeAttribute('role');
+      drawer.setAttribute('aria-label', drawer.getAttribute('data-dialog-label'));
+      drawer.showModal();
+      burger.setAttribute('aria-expanded', 'true');
+    });
+    drawer.addEventListener('close', function () {
+      drawer.setAttribute('role', 'none');
+      drawer.removeAttribute('aria-label');
       burger.setAttribute('aria-expanded', 'false');
-      if (restoreFocus) burger.focus();
-    }
-
-    var visible = 1 / window.innerWidth;
-    new IntersectionObserver(function (entries) {
-      var entry = entries[entries.length - 1];
-      if (!narrow.matches || !isOpen()) return;
-      if (entry.intersectionRatio === 1) {
-        burger.setAttribute('aria-expanded', 'true');
-      } else if (entry.intersectionRatio < visible && !opening) {
-        onDrawerClosed(true);
-      }
-    }, { root: drawer, threshold: [visible, 1] }).observe(sheet);
-
-    // Backdrop fade where scroll-driven animations are unsupported (CSS gates its own).
-    if (!(window.CSS && CSS.supports('animation-timeline: scroll()'))) {
-      scroller.addEventListener('scroll', function () {
-        var ratio = 1 - scroller.scrollLeft / sheet.offsetWidth;
-        drawer.style.setProperty('--drawer-backdrop', Math.max(0, Math.min(1, ratio)));
-      });
-    }
-
-    // Wide: plain sidebar; narrow: dialog. Leaving narrow mode closes an open drawer.
-    function syncMode() {
-      if (narrow.matches) {
-        drawer.setAttribute('role', 'dialog');
-        drawer.setAttribute('aria-label', drawer.getAttribute('data-drawer-label') || '');
-      } else {
-        onDrawerClosed(false);
-        drawer.removeAttribute('role');
-        drawer.removeAttribute('aria-label');
-      }
-    }
-
-    burger.addEventListener('click', openDrawer);
-    if (closeBtn) closeBtn.addEventListener('click', closeDrawer);
-    drawer.addEventListener('click', function (e) {
-      if (isOpen() && !sheet.contains(e.target)) closeDrawer();
     });
-    document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape' && isOpen()) closeDrawer();
+    if (closeBtn) closeBtn.addEventListener('click', function () { drawer.close(); });
+    // The wide layout has no drawer: close one that is open when the window widens.
+    narrow.addEventListener('change', function () {
+      if (!narrow.matches && drawer.open) drawer.close();
     });
-    if (narrow.addEventListener) narrow.addEventListener('change', syncMode);
-    syncMode();
   }
 
   ready(function () {
