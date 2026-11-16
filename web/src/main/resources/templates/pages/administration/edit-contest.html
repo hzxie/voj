@@ -69,11 +69,13 @@
                               th:text="${phase == 'LIVE'} ? #{voj.administration.all-contests.phase-running} : (${phase == 'READY'} ? #{voj.administration.all-contests.phase-upcoming} : #{voj.administration.all-contests.phase-ended})">Running</span>
                     </div>
                     <div class="adm-card-body">
-                        <!--/* Local date-time, yyyy-MM-ddTHH:mm: the format the save action posts as startTime. */-->
+                        <!--/* The start time is entered in the admin's own time zone, which only the browser
+                               knows: the server renders the instant (epoch ms) as data-start-time, the
+                               script fills the datetime-local value from it and posts instants back. */-->
                         <label class="adm-flabel">
-                            <span th:text="#{voj.administration.edit-contest.start-time}">START TIME</span>
+                            <span><span th:text="#{voj.administration.edit-contest.start-time}">START TIME</span><span id="start-time-zone"></span></span>
                             <input id="start-time" class="adm-input" type="datetime-local" required
-                                   th:value="${isEdit ? #dates.format(contest.startTime, 'yyyy-MM-dd''T''HH:mm') : ''}" />
+                                   th:data-start-time="${isEdit ? contest.startTime.time : null}" />
                         </label>
                         <div class="adm-grid2">
                             <label class="adm-flabel">
@@ -257,14 +259,26 @@
             })();
 
             // --- START TIME ------------------------------------------------------
-            // A new contest starts out at the current time (to the minute).
+            // The field shows the start in the browser's time zone (named next to the label);
+            // a new contest starts out at the current time (to the minute).
             var startInput = document.getElementById('start-time');
             function pad2(n) { return String(n).padStart(2, '0'); }
             function fmt(d) {
                 return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()) +
                     'T' + pad2(d.getHours()) + ':' + pad2(d.getMinutes());
             }
-            if (!startInput.value) { startInput.value = fmt(new Date()); }
+            var startTime = startInput.getAttribute('data-start-time');
+            startInput.value = fmt(startTime ? new Date(Number(startTime)) : new Date());
+            (function showTimeZone() {
+                var zone = Intl.DateTimeFormat().resolvedOptions().timeZone || '', offset = [];
+                try {  // 'shortOffset' (GMT+8) is newer than the rest of Intl: optional
+                    offset = new Intl.DateTimeFormat('en', { timeZoneName: 'shortOffset' })
+                        .formatToParts(new Date())
+                        .filter(function (part) { return part.type === 'timeZoneName'; });
+                } catch (e) { /* the zone name alone */ }
+                document.getElementById('start-time-zone').textContent =
+                    ' · ' + zone + (offset.length ? ' (' + offset[0].value + ')' : '');
+            })();
 
             // --- Save ------------------------------------------------------------
             function parseHhMm(text) {
@@ -281,12 +295,15 @@
                 if (!name || !startRaw || durationMinutes === null || durationMinutes <= 0) {
                     $err.text([[#{voj.administration.edit-contest.invalid-error}]]).removeClass('hide'); return;
                 }
-                var endDate = new Date(new Date(startRaw).getTime() + durationMinutes * 60000);
+                // A datetime-local value has no offset, so Date reads it in the browser's zone.
+                // Both ends are posted as instants (epoch ms) and the duration is added to the
+                // instant, so a DST change during the contest does not alter its length.
+                var start = new Date(startRaw).getTime();
                 var data = {
                     contestName: name,
                     contestNotes: notesEditor ? notesEditor.value() : $('#contest-notes').val(),
-                    startTime: startRaw,
-                    endTime: fmt(endDate),
+                    startTime: start,
+                    endTime: start + durationMinutes * 60000,
                     scoring: document.getElementById('contest-scoring').value,
                     problems: document.getElementById('contest-problems').value,
                     status: document.getElementById('contest-status').value,

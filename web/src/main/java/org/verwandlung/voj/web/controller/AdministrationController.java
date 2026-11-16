@@ -23,6 +23,8 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
@@ -1862,8 +1864,8 @@ public class AdministrationController {
    *
    * @param contestName - the name of the contest
    * @param contestNotes - the notes/description of the contest
-   * @param startTime - the start time (local datetime string)
-   * @param endTime - the end time (local datetime string)
+   * @param startTime - the start time (epoch milliseconds, see parseInstant)
+   * @param endTime - the end time (epoch milliseconds, see parseInstant)
    * @param scoring - the scoring rule of the contest (ICPC / IOI)
    * @param problems - the contest problems (a JSON-formatted array of problem IDs)
    * @param request - the HttpServletRequest object
@@ -1886,8 +1888,8 @@ public class AdministrationController {
     return contestService.createContest(
         contestName,
         contestNotes,
-        parseLocalDateTime(startTime),
-        parseLocalDateTime(endTime),
+        parseInstant(startTime),
+        parseInstant(endTime),
         scoring,
         problems,
         status,
@@ -1902,8 +1904,8 @@ public class AdministrationController {
    * @param contestId - the unique identifier of the contest
    * @param contestName - the name of the contest
    * @param contestNotes - the notes/description of the contest
-   * @param startTime - the start time (local datetime string)
-   * @param endTime - the end time (local datetime string)
+   * @param startTime - the start time (epoch milliseconds, see parseInstant)
+   * @param endTime - the end time (epoch milliseconds, see parseInstant)
    * @param scoring - the scoring rule of the contest (ICPC / IOI)
    * @param problems - the contest problems (a JSON-formatted array of problem IDs)
    * @param request - the HttpServletRequest object
@@ -1928,8 +1930,8 @@ public class AdministrationController {
         contestId,
         contestName,
         contestNotes,
-        parseLocalDateTime(startTime),
-        parseLocalDateTime(endTime),
+        parseInstant(startTime),
+        parseInstant(endTime),
         scoring,
         problems,
         status,
@@ -1978,24 +1980,25 @@ public class AdministrationController {
   }
 
   /**
-   * Parses an HTML {@code datetime-local} value ({@code yyyy-MM-dd'T'HH:mm}) into a Date, falling
-   * back to the {@code yyyy-MM-dd HH:mm:ss} format.
+   * Parses an instant posted by the contest editor: epoch milliseconds, or an ISO-8601 date-time
+   * with an offset (e.g. {@code 2030-01-02T03:04:00+08:00}). A wall-clock time without an offset is
+   * rejected: only the browser knows the admin's time zone, and reading such a value in the
+   * server's zone would shift the contest by the difference between the two.
    *
-   * @param value - the datetime string
+   * @param value - the posted instant
    * @return the parsed Date, or null when empty or unparseable
    */
-  private static Date parseLocalDateTime(String value) {
-    if (value == null || value.trim().isEmpty()) {
+  static Date parseInstant(String value) {
+    if (value == null || value.isBlank()) {
       return null;
     }
+    String instant = value.trim();
     try {
-      return new SimpleDateFormat("yyyy-MM-dd'T'HH:mm").parse(value.trim());
-    } catch (ParseException e) {
-      try {
-        return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(value.trim());
-      } catch (ParseException ex) {
-        return null;
-      }
+      return instant.chars().allMatch(Character::isDigit)
+          ? new Date(Long.parseLong(instant))
+          : Date.from(OffsetDateTime.parse(instant).toInstant());
+    } catch (NumberFormatException | DateTimeParseException ex) {
+      return null;
     }
   }
 

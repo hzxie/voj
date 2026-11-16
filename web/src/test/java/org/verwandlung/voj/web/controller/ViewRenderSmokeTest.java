@@ -712,14 +712,15 @@ class ViewRenderSmokeTest {
   }
 
   /**
-   * The contest editor's start time is a native datetime-local input holding the value the save
-   * action posts, and its problem picker is opened by a real button.
+   * The contest editor's start time is a native datetime-local input, and its problem picker is
+   * opened by a real button. The start is rendered as an instant (epoch ms) for the browser to
+   * show in the admin's time zone, never as a wall-clock time in the server's zone.
    */
   @Test
   void adminContestEditorUsesNativeControls() throws Exception {
     authenticateAdmin();
     Contest contest = aContest(1L, "ACM", future(), farFuture());
-    contest.setStartTime(new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm").parse("2030-01-02 03:04"));
+    contest.setStartTime(new Date(1893553440000L));
     when(contestService.getContest(1L)).thenReturn(contest);
     when(contestService.getContestStatus(any())).thenReturn(Contest.CONTEST_STATUS.READY);
     mockMvc
@@ -727,7 +728,7 @@ class ViewRenderSmokeTest {
         .andExpect(status().isOk())
         .andExpect(content().string(containsString(
             "<input id=\"start-time\" class=\"adm-input\" type=\"datetime-local\" required")))
-        .andExpect(content().string(containsString("value=\"2030-01-02T03:04\"")))
+        .andExpect(content().string(containsString("data-start-time=\"1893553440000\" />")))
         .andExpect(content().string(containsString(
             "<button type=\"button\" id=\"picker-toggle\" class=\"toggle\" aria-expanded=\"false\" aria-controls=\"picker-panel\">")))
         .andExpect(content().string(not(containsString("dt-trigger"))));
