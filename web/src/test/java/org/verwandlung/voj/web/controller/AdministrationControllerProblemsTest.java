@@ -219,8 +219,7 @@ public class AdministrationControllerProblemsTest {
         controller.deleteProblemsAction("[1000, 1001]", new MockHttpServletRequest());
 
     Assertions.assertEquals(Boolean.TRUE, result.get("isSuccessful"));
-    verify(problemService).deleteProblem(1000L);
-    verify(problemService).deleteProblem(1001L);
+    verify(problemService).deleteProblems(List.of(1000L, 1001L));
   }
 
   /** A minimal failure result for the create/edit stubs that should not enter the success branch. */

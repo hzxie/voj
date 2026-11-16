@@ -146,13 +146,15 @@ public class BulletinBoardService {
   }
 
   /**
-   * [For administrators only] Deletes a bulletin board message.
+   * [For administrators only] Deletes bulletin board messages in one transaction: either all of
+   * them are deleted or, if one deletion fails, none.
    *
-   * @param messageId - the unique identifier of the message to delete
-   * @return whether the message was deleted
+   * @param messageIds - the unique identifiers of the messages
    */
-  public boolean deleteBulletinBoardMessage(long messageId) {
-    return bulletinBoardMessageMapper.deleteBulletinBoardMessage(messageId) > 0;
+  public void deleteBulletinBoardMessages(List<Long> messageIds) {
+    for (long messageId : messageIds) {
+      bulletinBoardMessageMapper.deleteBulletinBoardMessage(messageId);
+    }
   }
 
   /**

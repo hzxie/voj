@@ -300,7 +300,9 @@ launch only; there is no automatic migration on startup. When a release needs a
 one-time data change on an existing installation, it ships a script under
 [`../sql/upgrades/`](../sql/upgrades/) that you run once against the database.
 New installations never need these scripts. Each script is safe to run again:
-it records that it has run in `voj_options` and does nothing on later runs.
+it records that it has run in `voj_options`, and running it once more changes
+nothing (a script that changes the schema checks the current schema before each
+step, so running it again also completes a run that was interrupted).
 
 Back up the database first, then run the script while the old version is
 stopped (or just before you switch to the new one), using the same credentials
@@ -315,3 +317,4 @@ docker compose exec -T web mysql voj < sql/upgrades/<script>.sql
 | Upgrading from | Script | What it does |
 | --- | --- | --- |
 | 1.0.2 or earlier | `decode-legacy-html-entities.sql` | Up to 1.0.2, discussion titles and replies, display names, locations, websites, social links and bios were stored HTML-escaped, so after the upgrade old rows show `&amp;`, `&lt;`, `&gt;` and `&nbsp;` literally. The script decodes them once. Run it before users post on the new version: its first run decodes every such row, so text typed as `&amp;` on the new version before that would be decoded too. |
+| 1.0.2 or earlier | `contest-tables.sql` | Makes the foreign keys of `voj_contest_contestants` and `voj_contest_submissions` cascade, like every other foreign key to users, problems and submissions. Without it, deleting a user who attended a contest, a contest submission, or a problem that has contest submissions fails. Required: the new version relies on the cascades. |

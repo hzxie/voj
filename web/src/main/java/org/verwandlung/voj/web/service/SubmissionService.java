@@ -590,14 +590,43 @@ public class SubmissionService {
   }
 
   /**
-   * Deletes a submission by its unique identifier.
+   * Deletes a submission by its unique identifier. A contest submission also leaves its contest
+   * (the contest record cascades).
    *
    * @param submissionId - the unique identifier of the submission
-   * @return whether the submission was deleted
+   * @return whether the submission existed and was deleted
    */
   public boolean deleteSubmission(long submissionId) {
-    submissionMapper.deleteSubmission(submissionId);
-    return true;
+    return submissionMapper.deleteSubmission(submissionId) > 0;
+  }
+
+  /**
+   * [For administrators only] Deletes submissions in one transaction: either all of them are
+   * deleted or, if one deletion fails, none.
+   *
+   * @param submissionIds - the unique identifiers of the submissions
+   * @return the identifiers of the submissions that existed and were deleted
+   */
+  public List<Long> deleteSubmissions(List<Long> submissionIds) {
+    List<Long> deletedSubmissions = new ArrayList<>();
+    for (long submissionId : submissionIds) {
+      if (deleteSubmission(submissionId)) {
+        deletedSubmissions.add(submissionId);
+      }
+    }
+    return deletedSubmissions;
+  }
+
+  /**
+   * [For administrators only] Rejudges submissions: resets each of them to pending and, once the
+   * single transaction that does so has committed, queues their judging tasks.
+   *
+   * @param submissionIds - the unique identifiers of the submissions
+   */
+  public void createSubmissionTasks(List<Long> submissionIds) {
+    for (long submissionId : submissionIds) {
+      createSubmissionTask(submissionId);
+    }
   }
 
   /**

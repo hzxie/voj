@@ -135,8 +135,7 @@ public class AdministrationControllerSettingsTest {
   /** Test case: tests deleteSubmissionsAction(...). Test data: two ids where only one is deletable. Expected: only the successfully-deleted id is reported back. */
   @Test
   public void testDeleteSubmissionsKeepsOnlyDeletedIds() {
-    when(submissionService.deleteSubmission(1000L)).thenReturn(true);
-    when(submissionService.deleteSubmission(1001L)).thenReturn(false);
+    when(submissionService.deleteSubmissions(List.of(1000L, 1001L))).thenReturn(List.of(1000L));
 
     Map<String, Object> result =
         controller.deleteSubmissionsAction("[1000, 1001]", new MockHttpServletRequest());
@@ -154,8 +153,7 @@ public class AdministrationControllerSettingsTest {
         controller.restartSubmissionsAction("[1000, 1001]", new MockHttpServletRequest());
 
     Assertions.assertEquals(Boolean.TRUE, result.get("isSuccessful"));
-    verify(submissionService).createSubmissionTask(1000L);
-    verify(submissionService).createSubmissionTask(1001L);
+    verify(submissionService).createSubmissionTasks(List.of(1000L, 1001L));
   }
 
   /** Stubs the base (8-arg) option update used by updateGeneralSettingsAction. */

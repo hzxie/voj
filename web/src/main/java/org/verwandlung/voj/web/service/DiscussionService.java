@@ -960,18 +960,15 @@ public class DiscussionService {
   }
 
   /**
-   * [For administrators only] Deletes a discussion thread.
+   * [For administrators only] Deletes discussion threads (with their replies) in one transaction:
+   * either all of them are deleted or, if one deletion fails, none.
    *
-   * @param discussionThreadId - the unique identifier of the discussion thread
-   * @return the discussion thread deletion result
+   * @param discussionThreadIds - the unique identifiers of the discussion threads
    */
-  public Map<String, Boolean> deleteDiscussionThread(long discussionThreadId) {
-    Map<String, Boolean> result = new HashMap<>(2, 1);
-    long numberOfRowsAffected =
-        discussionThreadMapper.deleteDiscussionThreadUsingThreadId(discussionThreadId);
-
-    result.put("isSuccessful", numberOfRowsAffected > 0);
-    return result;
+  public void deleteDiscussionThreads(List<Long> discussionThreadIds) {
+    for (long discussionThreadId : discussionThreadIds) {
+      discussionThreadMapper.deleteDiscussionThreadUsingThreadId(discussionThreadId);
+    }
   }
 
   /**

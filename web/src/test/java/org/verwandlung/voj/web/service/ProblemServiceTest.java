@@ -30,7 +30,9 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.verwandlung.voj.web.mapper.ContestSubmissionMapper;
 import org.verwandlung.voj.web.mapper.ProblemMapper;
+import org.verwandlung.voj.web.mapper.SubmissionMapper;
 import org.verwandlung.voj.web.model.Checkpoint;
 import org.verwandlung.voj.web.model.Problem;
 import org.verwandlung.voj.web.model.ProblemDifficulty;
@@ -294,8 +296,22 @@ public class ProblemServiceTest {
     problemMapper.createProblem(problem);
     long problemId = problem.getProblemId();
 
-    problemService.deleteProblem(problemId);
+    problemService.deleteProblems(List.of(problemId));
     Assertions.assertNull(problemService.getProblem(problemId));
+  }
+
+  /**
+   * Test case: tests the deleteProblems(List) method. Test data: problem 1000, whose submissions
+   * were made in contest #1. Expected: the problem, its submissions and their contest records are
+   * deleted.
+   */
+  @Test
+  public void testDeleteProblemsWithContestSubmissions() {
+    problemService.deleteProblems(List.of(1000L));
+
+    Assertions.assertNull(problemService.getProblem(1000));
+    Assertions.assertNull(submissionMapper.getSubmission(1000));
+    Assertions.assertTrue(contestSubmissionMapper.getContestIdsOfSubmission(1000).isEmpty());
   }
 
   /** Test case: tests the createProblemCategory(...) method. Test data: valid category data. Expected: creation succeeds and the category identifier is returned. */
@@ -383,6 +399,12 @@ public class ProblemServiceTest {
 
   /** The Mapper used to construct unassociated problem data within the test transaction. */
   @Autowired private ProblemMapper problemMapper;
+
+  /** The SubmissionMapper object, used to check that submissions cascade. */
+  @Autowired private SubmissionMapper submissionMapper;
+
+  /** The ContestSubmissionMapper object, used to check that contest records cascade. */
+  @Autowired private ContestSubmissionMapper contestSubmissionMapper;
 
   /** The data source used to empty the problems table within the test transaction. */
   @Autowired private DataSource dataSource;

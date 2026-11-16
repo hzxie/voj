@@ -25,6 +25,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.Assertions;
@@ -87,8 +88,19 @@ public class AdministrationControllerUsersTest {
         controller.deleteUsersAction("[1000, 1001]", new MockHttpServletRequest());
 
     Assertions.assertEquals(Boolean.TRUE, result.get("isSuccessful"));
-    verify(userService).deleteUser(1000L);
-    verify(userService).deleteUser(1001L);
+    verify(userService).deleteUsers(List.of(1000L, 1001L));
+  }
+
+  /** Test case: tests deleteUsersAction(...). Test data: the database rejects the deletion. Expected: isSuccessful is false instead of an error page. */
+  @Test
+  public void testDeleteUsersActionReportsFailure() {
+    when(userService.deleteUsers(List.of(1000L)))
+        .thenThrow(new org.springframework.dao.DataIntegrityViolationException("fk"));
+
+    Map<String, Boolean> result =
+        controller.deleteUsersAction("[1000]", new MockHttpServletRequest());
+
+    Assertions.assertEquals(Boolean.FALSE, result.get("isSuccessful"));
   }
 
   /** Test case: tests editUserAction(...). Test data: an unknown user id. Expected: isUserExists and isSuccessful are both false and no update is attempted. */

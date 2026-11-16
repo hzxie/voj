@@ -27,6 +27,7 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.verwandlung.voj.web.mapper.ContestSubmissionMapper;
 import org.verwandlung.voj.web.model.Submission;
 import org.verwandlung.voj.web.model.User;
 import org.verwandlung.voj.web.model.UserGroup;
@@ -287,8 +288,37 @@ public class SubmissionServiceTest {
   /** Test case: tests the deleteSubmission(long) method. Test data: a submission record not referenced by any contest. Expected: deletion succeeds and the submission record no longer exists. */
   @Test
   public void testDeleteSubmission() {
-    // Submission record 1004 is not referenced by voj_contest_submissions and can be safely deleted.
     Assertions.assertTrue(submissionService.deleteSubmission(1004));
+    Assertions.assertNull(submissionService.getSubmission(1004));
+  }
+
+  /**
+   * Test case: tests the deleteSubmission(long) method. Test data: submission 1000, which was made
+   * in contest #1. Expected: deletion succeeds and the submission leaves the contest.
+   */
+  @Test
+  public void testDeleteContestSubmission() {
+    Assertions.assertTrue(submissionService.deleteSubmission(1000));
+    Assertions.assertNull(submissionService.getSubmission(1000));
+    Assertions.assertTrue(contestSubmissionMapper.getContestIdsOfSubmission(1000).isEmpty());
+  }
+
+  /** Test case: tests the deleteSubmission(long) method. Test data: a submission that does not exist. Expected: returns false. */
+  @Test
+  public void testDeleteSubmissionNotExists() {
+    Assertions.assertFalse(submissionService.deleteSubmission(0));
+  }
+
+  /**
+   * Test case: tests the deleteSubmissions(List) method. Test data: a contest submission, a plain
+   * submission and a missing identifier. Expected: the two existing submissions are deleted and
+   * reported, the missing one is not.
+   */
+  @Test
+  public void testDeleteSubmissions() {
+    Assertions.assertEquals(
+        List.of(1002L, 1004L), submissionService.deleteSubmissions(List.of(1002L, 1004L, 0L)));
+    Assertions.assertNull(submissionService.getSubmission(1002));
     Assertions.assertNull(submissionService.getSubmission(1004));
   }
 
@@ -358,6 +388,9 @@ public class SubmissionServiceTest {
 
   /** The SubmissionService object under test. */
   @Autowired private SubmissionService submissionService;
+
+  /** The ContestSubmissionMapper object, used to check the contest records of a submission. */
+  @Autowired private ContestSubmissionMapper contestSubmissionMapper;
 
   /** The DataSource of the test database, used to set up fixtures the services cannot create. */
   @Autowired private javax.sql.DataSource dataSource;

@@ -41,6 +41,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
 import org.springframework.security.core.session.SessionRegistry;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -533,13 +534,17 @@ public class AdministrationController {
   @RequestMapping(value = "/deleteUsers.action", method = RequestMethod.POST)
   public @ResponseBody Map<String, Boolean> deleteUsersAction(
       @RequestParam(value = "users") String users, HttpServletRequest request) {
-    Map<String, Boolean> result = new HashMap<>(2, 1);
     List<Long> userList = JsonUtils.toList(users, Long.class);
-
-    for (Long userId : userList) {
-      userService.deleteUser(userId);
+    boolean isSuccessful =
+        runBulkAction("delete users " + userList, () -> userService.deleteUsers(userList));
+    if (isSuccessful) {
+      LOGGER.info(
+          String.format(
+              "Users: %s were deleted by administrator at %s.",
+              userList, LogSanitizer.forLog(HttpRequestParser.getRemoteAddr(request))));
     }
-    result.put("isSuccessful", true);
+    Map<String, Boolean> result = new HashMap<>(2, 1);
+    result.put("isSuccessful", isSuccessful);
     return result;
   }
 
@@ -774,19 +779,18 @@ public class AdministrationController {
   @RequestMapping(value = "/deleteProblems.action", method = RequestMethod.POST)
   public @ResponseBody Map<String, Boolean> deleteProblemsAction(
       @RequestParam(value = "problems") String problems, HttpServletRequest request) {
-    Map<String, Boolean> result = new HashMap<>(2, 1);
     List<Long> problemList = JsonUtils.toList(problems, Long.class);
-
-    for (Long problemId : problemList) {
-      problemService.deleteProblem(problemId);
-
-      String ipAddress = HttpRequestParser.getRemoteAddr(request);
+    boolean isSuccessful =
+        runBulkAction(
+            "delete problems " + problemList, () -> problemService.deleteProblems(problemList));
+    if (isSuccessful) {
       LOGGER.info(
           String.format(
-              "Problem: [ProblemId=%s] was deleted by administrator at %s.",
-              new Object[] {problemId, LogSanitizer.forLog(ipAddress)}));
+              "Problems: %s were deleted by administrator at %s.",
+              problemList, LogSanitizer.forLog(HttpRequestParser.getRemoteAddr(request))));
     }
-    result.put("isSuccessful", true);
+    Map<String, Boolean> result = new HashMap<>(2, 1);
+    result.put("isSuccessful", isSuccessful);
     return result;
   }
 
@@ -1358,21 +1362,20 @@ public class AdministrationController {
   @RequestMapping(value = "/deleteSubmissions.action", method = RequestMethod.POST)
   public @ResponseBody Map<String, Object> deleteSubmissionsAction(
       @RequestParam(value = "submissions") String submissions, HttpServletRequest request) {
-    Map<String, Object> result = new HashMap<>(3, 1);
     List<Long> submissionList = JsonUtils.toList(submissions, Long.class);
     List<Long> deletedSubmissions = new ArrayList<>();
-
-    for (Long submissionId : submissionList) {
-      if (submissionService.deleteSubmission(submissionId)) {
-        deletedSubmissions.add(submissionId);
-      }
-      String ipAddress = HttpRequestParser.getRemoteAddr(request);
+    boolean isSuccessful =
+        runBulkAction(
+            "delete submissions " + submissionList,
+            () -> deletedSubmissions.addAll(submissionService.deleteSubmissions(submissionList)));
+    if (isSuccessful) {
       LOGGER.info(
           String.format(
-              "Submission: [SubmissionId=%s] deleted by administrator at %s.",
-              new Object[] {submissionId, LogSanitizer.forLog(ipAddress)}));
+              "Submissions: %s were deleted by administrator at %s.",
+              deletedSubmissions, LogSanitizer.forLog(HttpRequestParser.getRemoteAddr(request))));
     }
-    result.put("isSuccessful", true);
+    Map<String, Object> result = new HashMap<>(3, 1);
+    result.put("isSuccessful", isSuccessful);
     result.put("deletedSubmissions", deletedSubmissions);
     return result;
   }
@@ -1387,13 +1390,13 @@ public class AdministrationController {
   @RequestMapping(value = "/restartSubmissions.action", method = RequestMethod.POST)
   public @ResponseBody Map<String, Boolean> restartSubmissionsAction(
       @RequestParam(value = "submissions") String submissions, HttpServletRequest request) {
-    Map<String, Boolean> result = new HashMap<>(2, 1);
     List<Long> submissionList = JsonUtils.toList(submissions, Long.class);
-
-    for (Long submissionId : submissionList) {
-      submissionService.createSubmissionTask(submissionId);
-    }
-    result.put("isSuccessful", true);
+    Map<String, Boolean> result = new HashMap<>(2, 1);
+    result.put(
+        "isSuccessful",
+        runBulkAction(
+            "rejudge submissions " + submissionList,
+            () -> submissionService.createSubmissionTasks(submissionList)));
     return result;
   }
 
@@ -1739,12 +1742,13 @@ public class AdministrationController {
   @RequestMapping(value = "/deleteBulletins.action", method = RequestMethod.POST)
   public @ResponseBody Map<String, Boolean> deleteBulletinsAction(
       @RequestParam(value = "bulletins") String bulletins, HttpServletRequest request) {
-    Map<String, Boolean> result = new HashMap<>(2, 1);
     List<Long> bulletinList = JsonUtils.toList(bulletins, Long.class);
-    for (Long messageId : bulletinList) {
-      bulletinBoardService.deleteBulletinBoardMessage(messageId);
-    }
-    result.put("isSuccessful", true);
+    Map<String, Boolean> result = new HashMap<>(2, 1);
+    result.put(
+        "isSuccessful",
+        runBulkAction(
+            "delete bulletins " + bulletinList,
+            () -> bulletinBoardService.deleteBulletinBoardMessages(bulletinList)));
     return result;
   }
 
@@ -1952,13 +1956,33 @@ public class AdministrationController {
   @RequestMapping(value = "/deleteContests.action", method = RequestMethod.POST)
   public @ResponseBody Map<String, Boolean> deleteContestsAction(
       @RequestParam(value = "contests") String contests, HttpServletRequest request) {
-    Map<String, Boolean> result = new HashMap<>(2, 1);
     List<Long> contestList = JsonUtils.toList(contests, Long.class);
-    for (Long contestId : contestList) {
-      contestService.deleteContest(contestId);
-    }
-    result.put("isSuccessful", true);
+    Map<String, Boolean> result = new HashMap<>(2, 1);
+    result.put(
+        "isSuccessful",
+        runBulkAction(
+            "delete contests " + contestList, () -> contestService.deleteContests(contestList)));
     return result;
+  }
+
+  /**
+   * Runs a bulk administration action. Each bulk action is a single service call, i.e. a single
+   * transaction, so it either applies to every selected item or - when the database rejects one of
+   * them - to none; the failure is logged and reported to the console as unsuccessful instead of
+   * surfacing as an error page.
+   *
+   * @param description - what the action does, for the log
+   * @param action - the action
+   * @return whether the action completed
+   */
+  private static boolean runBulkAction(String description, Runnable action) {
+    try {
+      action.run();
+      return true;
+    } catch (DataAccessException ex) {
+      LOGGER.error(String.format("Failed to %s; nothing was changed.", description), ex);
+      return false;
+    }
   }
 
   /**
@@ -2110,12 +2134,13 @@ public class AdministrationController {
   @RequestMapping(value = "/deleteThreads.action", method = RequestMethod.POST)
   public @ResponseBody Map<String, Boolean> deleteThreadsAction(
       @RequestParam(value = "threads") String threads, HttpServletRequest request) {
-    Map<String, Boolean> result = new HashMap<>(2, 1);
     List<Long> threadList = JsonUtils.toList(threads, Long.class);
-    for (Long threadId : threadList) {
-      discussionService.deleteDiscussionThread(threadId);
-    }
-    result.put("isSuccessful", true);
+    Map<String, Boolean> result = new HashMap<>(2, 1);
+    result.put(
+        "isSuccessful",
+        runBulkAction(
+            "delete discussion threads " + threadList,
+            () -> discussionService.deleteDiscussionThreads(threadList)));
     return result;
   }
 

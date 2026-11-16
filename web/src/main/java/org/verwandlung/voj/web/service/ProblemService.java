@@ -877,12 +877,16 @@ public class ProblemService {
   }
 
   /**
-   * [For administrators only] Deletes the specified problem.
+   * [For administrators only] Deletes problems in one transaction: either all of them are deleted
+   * or, if one deletion fails, none. Their submissions (including contest submissions), test cases
+   * and discussion threads are removed by the cascading foreign keys.
    *
-   * @param problemId - the unique identifier of the problem
+   * @param problemIds - the unique identifiers of the problems
    */
-  public void deleteProblem(long problemId) {
-    problemMapper.deleteProblem(problemId);
+  public void deleteProblems(List<Long> problemIds) {
+    for (long problemId : problemIds) {
+      problemMapper.deleteProblem(problemId);
+    }
   }
 
   /**

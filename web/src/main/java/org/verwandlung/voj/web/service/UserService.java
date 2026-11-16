@@ -1263,12 +1263,19 @@ public class UserService {
   }
 
   /**
-   * [For administrators only] Deletes a user by their unique identifier.
+   * [For administrators only] Deletes users by their unique identifiers, in one transaction: either
+   * all of them are deleted or, if one deletion fails, none. Their submissions, contest entries,
+   * discussion posts and meta information are removed by the cascading foreign keys.
    *
-   * @param uid - the unique identifier of the user
+   * @param uids - the unique identifiers of the users
+   * @return the number of users deleted (identifiers of missing users are ignored)
    */
-  public void deleteUser(long uid) {
-    userMapper.deleteUser(uid);
+  public int deleteUsers(List<Long> uids) {
+    int numberOfDeletedUsers = 0;
+    for (long uid : uids) {
+      numberOfDeletedUsers += userMapper.deleteUser(uid);
+    }
+    return numberOfDeletedUsers;
   }
 
   /** The autowired UserMapper object, used to obtain basic user information. */

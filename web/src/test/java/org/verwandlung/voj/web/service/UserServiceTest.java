@@ -31,8 +31,10 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.verwandlung.voj.web.mapper.ContestContestantMapper;
 import org.verwandlung.voj.web.mapper.EmailValidationMapper;
 import org.verwandlung.voj.web.mapper.OptionMapper;
+import org.verwandlung.voj.web.mapper.SubmissionMapper;
 import org.verwandlung.voj.web.mapper.UserMapper;
 import org.verwandlung.voj.web.mapper.UserMetaMapper;
 import org.verwandlung.voj.web.model.EmailValidation;
@@ -628,8 +630,22 @@ public class UserServiceTest {
         new User("throwaway", PASSWORD_HASH, "throwaway@example.com", userGroup, language);
     userMapper.createUser(user);
 
-    userService.deleteUser(user.getUid());
+    Assertions.assertEquals(1, userService.deleteUsers(List.of(user.getUid())));
     Assertions.assertNull(userService.getUserUsingUid(user.getUid()));
+  }
+
+  /**
+   * Test case: tests the deleteUsers(List) method. Test data: user 1001, who attended contest #1
+   * and made contest submissions, and a missing user. Expected: the user, their contest entry and
+   * their submissions are deleted.
+   */
+  @Test
+  public void testDeleteUsersWhoAttendedContest() {
+    Assertions.assertEquals(1, userService.deleteUsers(List.of(1001L, 0L)));
+
+    Assertions.assertNull(userService.getUserUsingUid(1001));
+    Assertions.assertNull(contestContestantMapper.getContestantOfContest(1, 1001));
+    Assertions.assertNull(submissionMapper.getSubmission(1002));
   }
 
   /**
@@ -668,6 +684,12 @@ public class UserServiceTest {
 
   /** The Mapper used to construct unassociated user data within the test transaction. */
   @Autowired private UserMapper userMapper;
+
+  /** The SubmissionMapper object, used to check that submissions cascade. */
+  @Autowired private SubmissionMapper submissionMapper;
+
+  /** The ContestContestantMapper object, used to check that contest entries cascade. */
+  @Autowired private ContestContestantMapper contestContestantMapper;
 
   /** The autowired UserMetaMapper object, used to seed raw meta values. */
   @Autowired private UserMetaMapper userMetaMapper;

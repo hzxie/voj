@@ -180,15 +180,16 @@ public class ContestService {
   }
 
   /**
-   * [For administrators only] Deletes a contest.
+   * [For administrators only] Deletes contests in one transaction: either all of them are deleted
+   * or, if one deletion fails, none. Their contestants and contest records cascade; the submissions
+   * themselves are kept as practice submissions.
    *
-   * @param contestId - the unique identifier of the contest to delete
-   * @return whether the contest was deleted
+   * @param contestIds - the unique identifiers of the contests to delete
    */
-  public boolean deleteContest(long contestId) {
-    contestSubmissionMapper.deleteSubmissionsOfContest(contestId);
-    contestContestantMapper.deleteContestantsOfContest(contestId);
-    return contestMapper.deleteContest(contestId) > 0;
+  public void deleteContests(List<Long> contestIds) {
+    for (long contestId : contestIds) {
+      contestMapper.deleteContest(contestId);
+    }
   }
 
   /**

@@ -90,12 +90,4 @@ public interface ContestSubmissionMapper {
    */
   int deleteContestSubmission(
       @Param("contestId") long contestId, @Param("submissionId") long submissionId);
-
-  /**
-   * Deletes all submissions of a contest.
-   *
-   * @param contestId - the unique identifier of the contest
-   * @return the number of submissions deleted
-   */
-  int deleteSubmissionsOfContest(@Param("contestId") long contestId);
 }

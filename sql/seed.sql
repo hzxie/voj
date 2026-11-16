@@ -111,7 +111,10 @@ INSERT INTO `voj_options` (`option_id`, `option_name`, `option_value`, `is_autol
 (29, 'emailDailyLimit', '3', 0),
 -- Marks the one-time sql/upgrades/decode-legacy-html-entities.sql as done: a
 -- new installation never stored entity-encoded user text.
-(30, 'legacyHtmlEntitiesDecoded', '1', 0);
+(30, 'legacyHtmlEntitiesDecoded', '1', 0),
+-- Marks sql/upgrades/contest-tables.sql as done: schema.sql already creates the
+-- contest tables in their upgraded form.
+(31, 'contestTablesUpgraded', '1', 0);
 
 -- Baseline offensive-word library. Administrators normally replace this by
 -- importing external word lists (see voj_options.offensiveWordSources); the
