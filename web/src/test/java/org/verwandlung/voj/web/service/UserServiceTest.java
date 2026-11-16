@@ -347,7 +347,54 @@ public class UserServiceTest {
         userService.createUser(
             "newuser01", "password", "newuser01@example.com", "users", "text/x-java", "", "", true);
     Assertions.assertTrue(result.get("isSuccessful"));
-    Assertions.assertNotNull(userService.getUserUsingUsernameOrEmail("newuser01"));
+    User user = userService.getUserUsingUsernameOrEmail("newuser01");
+    Assertions.assertNotNull(user);
+    Assertions.assertTrue(user.isEmailVerified());
+    Assertions.assertNull(emailValidationMapper.getEmailValidation("newuser01@example.com"));
+  }
+
+  /**
+   * Test case: tests the createUser(...) method while email verification is required. Test data:
+   * valid registration information. Expected: the user is created unverified, and a verification
+   * link for the address is issued, in the same call.
+   */
+  @Test
+  public void testCreateUserRequiringEmailVerification() {
+    enableEmailVerificationRequirement();
+    Map<String, Boolean> result =
+        userService.createUser(
+            "newuser03", "password", "newuser03@example.com", "users", "text/x-java", "", "", true);
+    Assertions.assertTrue(result.get("isSuccessful"));
+
+    User user = userService.getUserUsingUsernameOrEmail("newuser03");
+    Assertions.assertFalse(user.isEmailVerified());
+    EmailValidation emailValidation =
+        emailValidationMapper.getEmailValidation("newuser03@example.com");
+    Assertions.assertNotNull(emailValidation);
+    Assertions.assertTrue(
+        userService.verifyEmail("newuser03@example.com", emailValidation.getToken())
+            .get("isSuccessful"));
+    Assertions.assertTrue(userService.getUserUsingUid(user.getUid()).isEmailVerified());
+  }
+
+  /**
+   * Test case: tests the updateUserByAdministrator(...) method while email verification is
+   * required. Test data: an administrator changes the email address of a verified user. Expected:
+   * the user is unverified, with a verification link for the new address.
+   */
+  @Test
+  public void testUpdateUserByAdministratorRequiresVerificationOfANewEmail() {
+    enableEmailVerificationRequirement();
+    userMapper.updateEmailVerified(1002, true);
+    User user = userService.getUserUsingUid(1002);
+    Assertions.assertTrue(
+        userService
+            .updateUserByAdministrator(
+                user, "", "users", "text/x-java", "changed@example.com", "", "")
+            .get("isSuccessful"));
+
+    Assertions.assertFalse(userService.getUserUsingUid(1002).isEmailVerified());
+    Assertions.assertNotNull(emailValidationMapper.getEmailValidation("changed@example.com"));
   }
 
   /** Test case: tests the createUser(...) method. Test data: valid info plus a display name and bio. Expected: creation succeeds and both extras persist as user meta. */

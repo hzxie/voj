@@ -242,8 +242,6 @@ public class AccountsControllerTest {
     Assertions.assertSame(serviceResult, result);
     verify(userService)
         .createUser("zjhzxhz", "secret", "cshzxie@gmail.com", "users", "zh_CN", "", "", true);
-    // Email verification is off, so it must not be required.
-    verify(userService, never()).requireEmailVerification(any());
     // A security context is established for the freshly registered user.
     Assertions.assertNotNull(SecurityContextHolder.getContext().getAuthentication());
   }

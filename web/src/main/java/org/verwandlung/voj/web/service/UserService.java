@@ -425,7 +425,9 @@ public class UserService {
 
   /**
    * Validates the account and creates a user, from the registration page or the administration
-   * console. The optional display name and bio are HTML-filtered and stored when not empty.
+   * console. The optional display name and bio are HTML-filtered and stored when not empty. When
+   * email verification is required, the address is unverified and a verification link is mailed to
+   * it (see {@link #changeEmail}).
    *
    * @param username - the username
    * @param password - the plain-text password
@@ -460,10 +462,14 @@ public class UserService {
         "isSuccessful",
         result.get("isSuccessful") && result.get("isDisplayNameLegal") && result.get("isAboutMeLegal"));
     if (result.get("isSuccessful")) {
+      user.setEmailVerified(!isEmailVerificationRequired());
       userMapper.createUser(user);
       createUserMeta(user);
       updateUserMeta(user, "displayName", displayName);
       updateUserMeta(user, "aboutMe", aboutMe);
+      if (!user.isEmailVerified()) {
+        sendEmailVerification(user);
+      }
     }
     return result;
   }
@@ -618,14 +624,12 @@ public class UserService {
   }
 
   /**
-   * Marks a freshly-registered user as unverified and emails them a verification link. Used by the
-   * registration flow when the {@code requireEmailVerification} option is enabled.
+   * Emails a verification link to a user whose address is not verified yet, when email
+   * verification is required.
    *
-   * @param user - the newly-created user
+   * @param user - the user
    */
-  public void requireEmailVerification(User user) {
-    userMapper.updateEmailVerified(user.getUid(), false);
-    user.setEmailVerified(false);
+  private void sendEmailVerification(User user) {
     try {
       dispatchEmail(user.getUsername(), user.getEmail(), "mail/verify-email", VERIFY_EMAIL_SUBJECT);
     } catch (RuntimeException ex) {
@@ -916,21 +920,14 @@ public class UserService {
     result.put("isSuccessful", result.get("isSuccessful") && isPasswordCorrect);
 
     if (result.get("isSuccessful")) {
-      changeEmail(user, email);
-
+      if (changeEmail(user, email)) {
+        result.put("isEmailVerificationSent", true);
+      }
       updateUserMeta(user, "displayName", displayName);
       updateUserMeta(user, "location", location);
       updateUserMeta(user, "website", website);
       updateUserMeta(user, "socialLinks", socialLinks);
       updateUserMeta(user, "aboutMe", aboutMe);
-
-      // A changed email address has not been verified yet. Mirror the registration flow and force
-      // re-verification so a previously verified account cannot silently switch to an unverified
-      // address and keep its verified privileges.
-      if (isEmailChanged && isEmailVerificationRequired()) {
-        requireEmailVerification(user);
-        result.put("isEmailVerificationSent", true);
-      }
     }
     return result;
   }
@@ -1054,6 +1051,10 @@ public class UserService {
    * pending email-validation tokens of the previous and of the new address. Nothing happens when
    * the address is unchanged.
    *
+   * <p>A new address has not been verified: when email verification is required, the user is
+   * unverified until they follow the link mailed to it now, as a new user is, so that an account
+   * cannot keep the privileges of a verified address on another one.
+   *
    * <p>A token mailed to the old address must not stay usable: whoever controls the old address
    * could otherwise reset the account's password (or another account that takes the address over
    * could be reset with it). A token of the new address was mailed for a previous owner. Both are
@@ -1063,11 +1064,12 @@ public class UserService {
    *
    * @param user - the user to update
    * @param email - the (possibly unchanged) new email address
+   * @return whether the new address must be verified (and a verification link was mailed to it)
    */
-  private void changeEmail(User user, String email) {
+  private boolean changeEmail(User user, String email) {
     String oldEmail = user.getEmail();
     if (email.equals(oldEmail)) {
-      return;
+      return false;
     }
     Date now = new Date();
     if (oldEmail != null) {
@@ -1076,6 +1078,13 @@ public class UserService {
     emailValidationMapper.expireEmailValidation(email, DigestUtils.getGuid(), now);
     user.setEmail(email);
     userMapper.updateEmail(user.getUid(), email);
+    if (!isEmailVerificationRequired()) {
+      return false;
+    }
+    user.setEmailVerified(false);
+    userMapper.updateEmailVerified(user.getUid(), false);
+    sendEmailVerification(user);
+    return true;
   }
 
   /**
@@ -1330,18 +1339,11 @@ public class UserService {
     }
     user.setUserGroup(userGroup);
     user.setPreferLanguage(preferLanguage);
-    boolean isEmailChanged = !email.equals(user.getEmail());
     changeEmail(user, email);
     // The administrator edits every column of the user, so the whole row is written.
     userMapper.updateUser(user);
     updateUserMeta(user, "displayName", displayName);
     updateUserMeta(user, "aboutMe", aboutMe);
-
-    // A changed email address has not been verified yet. Force re-verification so the account
-    // cannot keep its verified privileges on an unverified address.
-    if (isEmailChanged && isEmailVerificationRequired()) {
-      requireEmailVerification(user);
-    }
     return result;
   }
 

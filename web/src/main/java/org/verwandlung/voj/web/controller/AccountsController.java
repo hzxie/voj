@@ -295,9 +295,6 @@ public class AccountsController {
 
     if (result.get("isSuccessful")) {
       User user = userService.getUserUsingUsernameOrEmail(username);
-      if (userService.isEmailVerificationRequired()) {
-        userService.requireEmailVerification(user);
-      }
       establishSecurityContext(request, response, user);
 
       String ipAddress = request.getRemoteAddr();
