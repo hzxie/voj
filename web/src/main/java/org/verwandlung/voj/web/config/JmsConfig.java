@@ -119,9 +119,10 @@ public class JmsConfig {
     JmsTemplate jmsTemplate = new JmsTemplate(connectionFactory);
     jmsTemplate.setDefaultDestination(new ActiveMQQueue(SUBMISSION_TASK_QUEUE));
     // Give each judging task a time-to-live, after which no judger is handed it any more:
-    // SubmissionService#failStalledSubmissions marks its submission as a System Error by then.
+    // SubmissionService#failStalledSubmissions marks its submission as a System Error by then. A
+    // time-to-live of 0 (or less) is none: the task never expires.
     jmsTemplate.setExplicitQosEnabled(true);
-    jmsTemplate.setTimeToLive(submissionTaskTtl);
+    jmsTemplate.setTimeToLive(Math.max(0, submissionTaskTtl));
     return jmsTemplate;
   }
 

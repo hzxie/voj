@@ -311,56 +311,63 @@ public class SubmissionServiceTest {
   }
 
   /**
-   * The statement with which a judger claims a pending submission (judger SubmissionMapper).
+   * The statement with which a judger claims a pending submission (judger SubmissionMapper): its
+   * parameters are the claim token, the submission and the judge generation of the task.
    */
   private static final String JUDGER_CLAIM =
-      "UPDATE voj_submissions SET submission_execute_time = ?, judger_uid = 1001"
-          + " WHERE submission_id = ? AND submission_judge_result = 'PD'";
+      "UPDATE voj_submissions SET submission_claim_token = ?, submission_execute_time = NOW(),"
+          + " submission_lease_time = NOW(), judger_uid = 1001"
+          + " WHERE submission_id = ? AND submission_judge_result = 'PD'"
+          + " AND submission_judge_generation = ?";
 
   /**
-   * The statement with which a judger records the verdict of its judging (judger SubmissionMapper).
+   * The statement with which a judger records the verdict of its judging (judger SubmissionMapper):
+   * its parameters are the submission and the claim token.
    */
   private static final String JUDGER_RECORD_VERDICT =
       "UPDATE voj_submissions SET submission_used_time = 10, submission_used_memory = 64,"
           + " submission_judge_score = 100, submission_judge_result = 'AC',"
           + " submission_judge_log = 'Accepted.'"
           + " WHERE submission_id = ? AND submission_judge_result = 'PD'"
-          + " AND submission_execute_time = ?";
+          + " AND submission_claim_token = ?";
 
   /**
    * Test case: tests a rejudge (createSubmissionTasks) together with the judger's claim and verdict
-   * statements. Test data: submission 1001 (judged WA, with an execute time), and a judging of it
-   * that claimed it before the rejudge and finishes after it. Expected: the rejudge resets the row
-   * to pending and clears the execute time and judger, so the stale judging's verdict is dropped
-   * and a new judging can claim the submission and record its verdict.
+   * statements. Test data: submission 1001 (judge generation 0), and a judging of it that claimed
+   * it before the rejudge and finishes after it. Expected: the rejudge resets the row to pending
+   * and clears the claim, so the stale judging's verdict is dropped, the stale task (generation 0)
+   * claims nothing, and the rejudge's task (generation 1) claims the submission and records its
+   * verdict.
    */
   @Test
   public void testRejudgeIsCompatibleWithTheJudgersClaim() {
     org.springframework.jdbc.core.JdbcTemplate jdbcTemplate =
         new org.springframework.jdbc.core.JdbcTemplate(dataSource);
-    java.sql.Timestamp staleJudging = java.sql.Timestamp.valueOf("2026-01-01 10:00:00");
     jdbcTemplate.update(
         "UPDATE voj_submissions SET submission_judge_result = 'PD' WHERE submission_id = 1001");
-    Assertions.assertEquals(1, jdbcTemplate.update(JUDGER_CLAIM, staleJudging, 1001));
+    Assertions.assertEquals(1, jdbcTemplate.update(JUDGER_CLAIM, 7L, 1001, 0));
 
     submissionService.createSubmissionTasks(List.of(1001L));
 
     Map<String, Object> row =
         jdbcTemplate.queryForMap(
             "SELECT submission_judge_result, submission_execute_time, judger_uid,"
-                + " submission_judge_log, submission_judge_score FROM voj_submissions"
-                + " WHERE submission_id = 1001");
+                + " submission_judge_log, submission_judge_score, submission_claim_token,"
+                + " submission_lease_time FROM voj_submissions WHERE submission_id = 1001");
     Assertions.assertEquals("PD", row.get("submission_judge_result"));
     Assertions.assertNull(row.get("submission_execute_time"));
     Assertions.assertNull(row.get("judger_uid"));
     Assertions.assertNull(row.get("submission_judge_log"));
     Assertions.assertNull(row.get("submission_judge_score"));
-    // The judging that started before the rejudge may not record its verdict ...
-    Assertions.assertEquals(0, jdbcTemplate.update(JUDGER_RECORD_VERDICT, 1001, staleJudging));
+    Assertions.assertNull(row.get("submission_claim_token"));
+    Assertions.assertNull(row.get("submission_lease_time"));
+    // The judging that started before the rejudge may not record its verdict, nor may its task
+    // claim the submission again ...
+    Assertions.assertEquals(0, jdbcTemplate.update(JUDGER_RECORD_VERDICT, 1001, 7L));
+    Assertions.assertEquals(0, jdbcTemplate.update(JUDGER_CLAIM, 8L, 1001, 0));
     // ... and the judging of the new task claims the submission and records its own.
-    java.sql.Timestamp newJudging = java.sql.Timestamp.valueOf("2026-01-01 10:05:00");
-    Assertions.assertEquals(1, jdbcTemplate.update(JUDGER_CLAIM, newJudging, 1001));
-    Assertions.assertEquals(1, jdbcTemplate.update(JUDGER_RECORD_VERDICT, 1001, newJudging));
+    Assertions.assertEquals(1, jdbcTemplate.update(JUDGER_CLAIM, 9L, 1001, 1));
+    Assertions.assertEquals(1, jdbcTemplate.update(JUDGER_RECORD_VERDICT, 1001, 9L));
     Assertions.assertEquals(
         "AC",
         jdbcTemplate.queryForObject(
@@ -369,97 +376,34 @@ public class SubmissionServiceTest {
   }
 
   /**
-   * Test case: tests isCurrentJudging(long, Long, Long). Test data: submission 1001 (judge
-   * generation 0) claimed by a judging with the judger's claim statement, then rejudged. Expected:
-   * only that judging's start time and generation are current, and after the rejudge neither is;
-   * an unknown start time or generation is not compared.
+   * Test case: tests isCurrentJudging(long, long). Test data: submission 1001 claimed by a judging
+   * with the judger's claim statement, then claimed by a later delivery of its task, then judged by
+   * it, then rejudged. Expected: only the claim token the submission carries is current, also once
+   * its judging recorded the verdict; after the rejudge none is.
    */
   @Test
   public void testIsCurrentJudging() {
     org.springframework.jdbc.core.JdbcTemplate jdbcTemplate =
         new org.springframework.jdbc.core.JdbcTemplate(dataSource);
-    java.sql.Timestamp judging = java.sql.Timestamp.valueOf("2026-01-01 10:00:00");
     jdbcTemplate.update(
         "UPDATE voj_submissions SET submission_judge_result = 'PD' WHERE submission_id = 1001");
-    jdbcTemplate.update(JUDGER_CLAIM, judging, 1001);
+    Assertions.assertFalse(submissionService.isCurrentJudging(1001, 7L));
+    // The claims are made behind MyBatis's back: any MyBatis update (deleteSubmission(0) changes no
+    // row) clears the query results it cached in this transaction.
+    jdbcTemplate.update(JUDGER_CLAIM, 7L, 1001, 0);
+    submissionService.deleteSubmission(0);
+    Assertions.assertTrue(submissionService.isCurrentJudging(1001, 7L));
+    Assertions.assertFalse(submissionService.isCurrentJudging(1001, 8L));
+    Assertions.assertFalse(submissionService.isCurrentJudging(0, 7L));
 
-    Assertions.assertTrue(submissionService.isCurrentJudging(1001, judging.getTime(), 0L));
-    Assertions.assertTrue(submissionService.isCurrentJudging(1001, judging.getTime(), null));
-    Assertions.assertTrue(submissionService.isCurrentJudging(1001, null, 0L));
-    Assertions.assertFalse(
-        submissionService.isCurrentJudging(1001, judging.getTime() - 1000, 0L));
-    Assertions.assertFalse(submissionService.isCurrentJudging(1001, judging.getTime(), 1L));
-    Assertions.assertFalse(submissionService.isCurrentJudging(0, null, 0L));
+    jdbcTemplate.update(JUDGER_CLAIM, 8L, 1001, 0);
+    jdbcTemplate.update(JUDGER_RECORD_VERDICT, 1001, 8L);
+    submissionService.deleteSubmission(0);
+    Assertions.assertFalse(submissionService.isCurrentJudging(1001, 7L));
+    Assertions.assertTrue(submissionService.isCurrentJudging(1001, 8L));
 
     submissionService.createSubmissionTasks(List.of(1001L));
-    Assertions.assertFalse(submissionService.isCurrentJudging(1001, judging.getTime(), null));
-    Assertions.assertFalse(submissionService.isCurrentJudging(1001, null, 0L));
-    // The judging of the rejudge's task (generation 1) claims the submission in the same second.
-    jdbcTemplate.update(JUDGER_CLAIM, judging, 1001);
-    // The claim was made behind MyBatis's back: any MyBatis update (this one changes no row) clears
-    // the query results it cached in this transaction.
-    submissionService.deleteSubmission(0);
-    Assertions.assertFalse(submissionService.isCurrentJudging(1001, judging.getTime(), 0L));
-    Assertions.assertTrue(submissionService.isCurrentJudging(1001, judging.getTime(), 1L));
-  }
-
-  /**
-   * Test case: tests failStalledSubmissions(). Test data, by the database's clock: pending
-   * submissions queued a minute more than the time-to-live ago and not claimed (1001), claimed
-   * that long ago (1002), claimed a minute ago (1003), queued a minute less than the time-to-live
-   * ago (a new one), and queued long ago, then rejudged (1000); a judged one queued long ago
-   * (1004). Expected: 1001 and 1002 are marked SE, each with the judge log of what happened; the
-   * others are left as they are, and a second run marks nothing.
-   */
-  @Test
-  public void testFailStalledSubmissions() {
-    org.springframework.jdbc.core.JdbcTemplate jdbcTemplate =
-        new org.springframework.jdbc.core.JdbcTemplate(dataSource);
-    long ttl = submissionTaskTtl / 1000;
-    String queue =
-        "UPDATE voj_submissions SET submission_judge_result = 'PD', submission_execute_time = NULL,"
-            + " submission_queued_time = NOW() - INTERVAL ? SECOND WHERE submission_id = ?";
-    String claim =
-        "UPDATE voj_submissions SET submission_execute_time = NOW() - INTERVAL ? SECOND"
-            + " WHERE submission_id = ?";
-    jdbcTemplate.update(queue, ttl + 60, 1001);
-    jdbcTemplate.update(queue, ttl + 120, 1002);
-    jdbcTemplate.update(claim, ttl + 60, 1002);
-    jdbcTemplate.update(queue, ttl + 120, 1003);
-    jdbcTemplate.update(claim, 60, 1003);
-    jdbcTemplate.update(queue, ttl + 60, 1000);
-    submissionService.createSubmissionTasks(List.of(1000L));
-    jdbcTemplate.update(
-        "UPDATE voj_submissions SET submission_queued_time = NOW() - INTERVAL ? SECOND"
-            + " WHERE submission_id = 1004",
-        ttl + 60);
-    jdbcTemplate.update(
-        "INSERT INTO voj_submissions (problem_id, uid, language_id, submission_code,"
-            + " submission_queued_time) VALUES (1000, 1000, 2, 'Code', NOW() - INTERVAL ? SECOND)",
-        ttl - 60);
-    long newSubmissionId =
-        jdbcTemplate.queryForObject("SELECT MAX(submission_id) FROM voj_submissions", Long.class);
-
-    Assertions.assertEquals(2, submissionService.failStalledSubmissions());
-    String getRow =
-        "SELECT submission_judge_result, submission_judge_log FROM voj_submissions"
-            + " WHERE submission_id = ?";
-    Map<String, Object> unclaimed = jdbcTemplate.queryForMap(getRow, 1001);
-    Assertions.assertEquals("SE", unclaimed.get("submission_judge_result"));
-    Assertions.assertEquals(
-        SubmissionService.UNCLAIMED_JUDGE_LOG, unclaimed.get("submission_judge_log"));
-    Map<String, Object> unfinished = jdbcTemplate.queryForMap(getRow, 1002);
-    Assertions.assertEquals("SE", unfinished.get("submission_judge_result"));
-    Assertions.assertEquals(
-        SubmissionService.UNFINISHED_JUDGE_LOG, unfinished.get("submission_judge_log"));
-    for (long submissionId : new long[] {1000, 1003, newSubmissionId}) {
-      Assertions.assertEquals(
-          "PD", jdbcTemplate.queryForMap(getRow, submissionId).get("submission_judge_result"));
-    }
-    Assertions.assertEquals(
-        "CE", jdbcTemplate.queryForMap(getRow, 1004).get("submission_judge_result"));
-
-    Assertions.assertEquals(0, submissionService.failStalledSubmissions());
+    Assertions.assertFalse(submissionService.isCurrentJudging(1001, 8L));
   }
 
   /** Tests whether a list of submissions contains the submission with the given identifier. */
@@ -649,8 +593,4 @@ public class SubmissionServiceTest {
 
   /** The DataSource of the test database, used to set up fixtures the services cannot create. */
   @Autowired private javax.sql.DataSource dataSource;
-
-  /** The time-to-live (ms) of a judging task. */
-  @org.springframework.beans.factory.annotation.Value("${jms.submissionTask.ttl}")
-  private long submissionTaskTtl;
 }

@@ -41,7 +41,12 @@ Email (verification, password reset, notifications) is disabled when `mail.host`
 | Property | Default | Purpose |
 | --- | --- | --- |
 | `jms.broker.url` | `tcp://localhost:61616` | ActiveMQ broker the web app publishes judging tasks to. |
-| `jms.submissionTask.ttl` | `1800000` | Time-to-live (ms) for a judging task, and how long a submission may stay Pending. Every minute the web app marks as a System Error each pending submission that no judger took within this window after its task was queued (no running judger supports its language, all of them were busy, or the task was lost, e.g. when it could not be sent), or whose judging did not finish within it after a judger took it (the judger stopped, or handed the task back); an administrator can rejudge it. The judge log says which of the two happened. The time is measured by the database's clock, from the queued time the web app sets and the start time the judger sets, so a judger host's clock some seconds off does not matter. Keep it generous: a busy or briefly offline (but capable) cluster must not fail valid submissions. |
+| `jms.submissionTask.ttl` | `1800000` | Time-to-live (ms) of a judging task: how long a submission may wait for a judger to take it. Every minute the web app marks as a System Error each pending submission that no judger took within this window after its task was queued (no running judger supports its language, all of them were busy, or the task was lost, e.g. when it could not be sent); an administrator can rejudge it. Keep it generous: a busy or briefly offline (but capable) cluster must not fail valid submissions. It does not limit how long a judging may take once a judger took the submission (see `judging.leaseTimeout`). `0` (or less): tasks never expire, and a submission waits for a judger as long as it takes. |
+| `judging.leaseTimeout` | `600000` | How long (ms) a judging may go without renewing its lease. The judger that took a submission renews its lease after each step of the judging: the download of the test data, the compilation, and the run of each checkpoint. Every minute the web app marks as a System Error each pending submission whose lease is older than this (the judger stopped, or could not reach the database), however long the judging as a whole takes; the judging, should it still be running, stops at its next step. It must exceed the longest step: a download (`judger.web.downloadTimeout`, 300 s by default), a compilation (`judger.compileTimeLimit` of CPU time, and at most three times that plus a second of wall-clock time) and the run of one checkpoint (at most three times the problem's time limit, scaled by the language's time multiplier, plus a second). Must be positive. |
+
+Both times are measured by the database's clock: the web app sets the queued
+time, and the judger the lease, with `NOW()`, so the clocks of the hosts do not
+matter.
 
 ### Checkpoint distribution
 
@@ -86,11 +91,18 @@ restarts with it):
   delay (10 s, 20 s, 40 s, ...). A task is delivered at most 6 times (5
   redeliveries). On its last delivery, a judging that could succeed later
   (e.g. the test data cannot be downloaded) is judged a System Error that says
-  why, instead of being handed back. A task that is handed back nevertheless
-  (the database is down, the judger dies) or expires (`jms.submissionTask.ttl`)
-  ends on `ActiveMQ.DLQ`, from which the web app removes it; the submission
-  is marked as a System Error once it waited too long (see
-  `jms.submissionTask.ttl`).
+  why, instead of being handed back. A judger that hands a task back releases
+  the submission, which waits for a judger again. A task that is handed back
+  nevertheless (the database is down, the judger dies) or expires
+  (`jms.submissionTask.ttl`) ends on `ActiveMQ.DLQ`, from which the web app
+  removes it; the submission is marked as a System Error once no judger took it
+  in time, or its judging stopped renewing its lease (see
+  `jms.submissionTask.ttl` and `judging.leaseTimeout`).
+- A judging stops, without recording a verdict or sending anything more, once
+  it finds (when it renews its lease) that it was superseded: the submission was
+  rejudged, taken by a later delivery of the same task, or marked as a System
+  Error. The web app shows the messages of the current judging of a submission
+  only.
 
 ### Identity
 

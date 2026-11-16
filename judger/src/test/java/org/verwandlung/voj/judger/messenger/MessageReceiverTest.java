@@ -16,7 +16,6 @@
  */
 package org.verwandlung.voj.judger.messenger;
 
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.never;
@@ -53,7 +52,6 @@ public class MessageReceiverTest {
     MapMessage mapMessage = org.mockito.Mockito.mock(MapMessage.class);
     when(mapMessage.getString("event")).thenReturn("SubmissionCreated");
     when(mapMessage.getLong("submissionId")).thenReturn(1234L);
-    when(mapMessage.itemExists("generation")).thenReturn(true);
     when(mapMessage.getLong("generation")).thenReturn(3L);
     when(mapMessage.getIntProperty("JMSXDeliveryCount")).thenReturn(1);
 
@@ -76,25 +74,9 @@ public class MessageReceiverTest {
         .thenReturn(JmsConfig.MAXIMUM_REDELIVERIES, JmsConfig.MAXIMUM_REDELIVERIES + 1);
 
     messageReceiver.onMessage(mapMessage);
-    verify(dispatcher).onSubmissionCreated(1234L, null, false);
+    verify(dispatcher).onSubmissionCreated(1234L, 0L, false);
     messageReceiver.onMessage(mapMessage);
-    verify(dispatcher).onSubmissionCreated(1234L, null, true);
-  }
-
-  /**
-   * Test case: tests the onMessage method. Test data: a SubmissionCreated task without a judging
-   * generation, queued by an older web application. Expected result: it is judged without one.
-   */
-  @Test
-  public void testOnMessageSubmissionCreatedWithoutGeneration() throws JMSException {
-    MapMessage mapMessage = org.mockito.Mockito.mock(MapMessage.class);
-    when(mapMessage.getString("event")).thenReturn("SubmissionCreated");
-    when(mapMessage.getLong("submissionId")).thenReturn(1234L);
-    when(mapMessage.itemExists("generation")).thenReturn(false);
-
-    messageReceiver.onMessage(mapMessage);
-
-    verify(dispatcher).onSubmissionCreated(1234L, null, false);
+    verify(dispatcher).onSubmissionCreated(1234L, 0L, true);
   }
 
   /**
@@ -108,7 +90,7 @@ public class MessageReceiverTest {
 
     messageReceiver.onMessage(mapMessage);
 
-    verify(dispatcher, never()).onSubmissionCreated(anyLong(), any(), anyBoolean());
+    verify(dispatcher, never()).onSubmissionCreated(anyLong(), anyLong(), anyBoolean());
   }
 
   /**
@@ -121,7 +103,7 @@ public class MessageReceiverTest {
 
     messageReceiver.onMessage(message);
 
-    verify(dispatcher, never()).onSubmissionCreated(anyLong(), any(), anyBoolean());
+    verify(dispatcher, never()).onSubmissionCreated(anyLong(), anyLong(), anyBoolean());
   }
 
   /**
@@ -135,7 +117,7 @@ public class MessageReceiverTest {
 
     messageReceiver.onMessage(mapMessage);
 
-    verify(dispatcher, never()).onSubmissionCreated(anyLong(), any(), anyBoolean());
+    verify(dispatcher, never()).onSubmissionCreated(anyLong(), anyLong(), anyBoolean());
   }
 
   /**
@@ -150,7 +132,7 @@ public class MessageReceiverTest {
     when(mapMessage.getLong("submissionId")).thenReturn(1234L);
     org.mockito.Mockito.doThrow(new IllegalStateException("database down"))
         .when(dispatcher)
-        .onSubmissionCreated(1234L, null, false);
+        .onSubmissionCreated(1234L, 0L, false);
 
     org.junit.jupiter.api.Assertions.assertThrows(
         IllegalStateException.class, () -> messageReceiver.onMessage(mapMessage));

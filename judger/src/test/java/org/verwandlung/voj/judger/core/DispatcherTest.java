@@ -32,7 +32,6 @@ import static org.mockito.Mockito.when;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -73,7 +72,8 @@ public class DispatcherTest {
     when(checkpointStore.getWorkDirectory()).thenReturn(Path.of("/tmp/voj-dispatcher-tests"));
     when(checkpointStore.sync(any())).thenReturn(Path.of("/tmp/voj-dispatcher-tests/1000"));
     when(submissionMapper.getSubmission(100L)).thenReturn(buildSubmission());
-    when(applicationDispatcher.onJudgingStarted(anyLong(), any())).thenReturn(START_TIME);
+    when(applicationDispatcher.onJudgingStarted(anyLong(), anyLong())).thenReturn(CLAIM_TOKEN);
+    when(applicationDispatcher.renewLease(any())).thenReturn(true);
   }
 
   /**
@@ -285,6 +285,8 @@ public class DispatcherTest {
     verify(applicationDispatcher, never()).onErrorOccurred(any(), anyString());
     verify(preprocessor, never()).createTestCode(any(), anyString(), anyString());
     verify(compiler, never()).getCompileResult(any(), anyString(), anyString());
+    // The submission waits for a judger again, not for this judging.
+    verify(applicationDispatcher).onJudgingHandedBack(argThat(s -> s.getSubmissionId() == 100L));
   }
 
   /**
@@ -419,7 +421,7 @@ public class DispatcherTest {
    */
   @Test
   public void testCreateNewTaskSkipsSubmissionsThatAreNotPending() throws Exception {
-    when(applicationDispatcher.onJudgingStarted(anyLong(), any())).thenReturn(null);
+    when(applicationDispatcher.onJudgingStarted(anyLong(), anyLong())).thenReturn(null);
 
     dispatcher.createNewTask(100L, GENERATION, NOT_LAST_DELIVERY);
 
@@ -432,7 +434,7 @@ public class DispatcherTest {
   /**
    * Test case: tests the createNewTask method. Test data: a pending submission. Expected result:
    * it is read only once it is claimed (an edit and a rejudge just before the claim are judged),
-   * and judged with the claim's start time, which identifies the judging.
+   * and judged with the claim token, which identifies the judging.
    */
   @Test
   public void testCreateNewTaskReadsTheSubmissionOnlyOnceClaimed() throws Exception {
@@ -447,10 +449,7 @@ public class DispatcherTest {
     inOrder.verify(submissionMapper).getSubmission(100L);
     verify(applicationDispatcher)
         .onCompileFinished(
-            argThat(
-                s -> START_TIME.equals(s.getExecuteTime())
-                    && GENERATION.equals(s.getJudgeGeneration())),
-            any());
+            argThat(s -> s.getClaimToken() == CLAIM_TOKEN), any());
   }
 
   /**
@@ -469,6 +468,98 @@ public class DispatcherTest {
   }
 
   /**
+   * Test case: tests the createNewTask method. Test data: two checkpoints. Expected result: the
+   * lease of the judging is renewed after the download of the test data, after the compilation and
+   * after each checkpoint, before the step is reported.
+   */
+  @Test
+  public void testCreateNewTaskRenewsTheLeaseAfterEachStep() throws Exception {
+    List<Checkpoint> checkpoints = new ArrayList<>(oneCheckpoint());
+    checkpoints.add(new Checkpoint(1000L, 2, true, 100, "input", "output"));
+    when(checkpointStore.getCheckpoints(1000L)).thenReturn(checkpoints);
+    when(compiler.getCompileResult(any(), anyString(), anyString()))
+        .thenReturn(compileResult(true));
+    when(programRunner.getRuntimeResult(any(), anyString(), anyString(), anyString(), anyString()))
+        .thenReturn(runtimeResult("AC"));
+    when(comparator.getComparisonResult(anyString(), anyString(), anyBoolean())).thenReturn("AC");
+
+    dispatcher.createNewTask(100L, GENERATION, NOT_LAST_DELIVERY);
+
+    InOrder inOrder =
+        org.mockito.Mockito.inOrder(
+            checkpointStore, compiler, programRunner, applicationDispatcher);
+    inOrder.verify(checkpointStore).sync(any());
+    inOrder.verify(applicationDispatcher).renewLease(any());
+    inOrder.verify(compiler).getCompileResult(any(), anyString(), anyString());
+    inOrder.verify(applicationDispatcher).renewLease(any());
+    inOrder.verify(applicationDispatcher).onCompileFinished(any(), any());
+    for (int checkpointId = 1; checkpointId <= 2; ++checkpointId) {
+      inOrder
+          .verify(programRunner)
+          .getRuntimeResult(any(), anyString(), anyString(), anyString(), anyString());
+      inOrder.verify(applicationDispatcher).renewLease(any());
+      inOrder.verify(applicationDispatcher).onOneTestPointFinished(any(), eq(checkpointId), any());
+    }
+    inOrder.verify(applicationDispatcher).onAllTestPointsFinished(any(), any());
+  }
+
+  /**
+   * Test case: tests the createNewTask method. Test data: a judging that finds, when it renews its
+   * lease after the first of two checkpoints, that it was superseded (e.g. the submission was
+   * rejudged). Expected result: it stops at once, without reporting that checkpoint, running the
+   * next one, recording a verdict or a System Error, or passing on an exception; its work
+   * directory is removed.
+   */
+  @Test
+  public void testCreateNewTaskStopsOnceSuperseded(@TempDir Path tempDir) throws Exception {
+    when(checkpointStore.getWorkDirectory()).thenReturn(tempDir);
+    List<Checkpoint> checkpoints = new ArrayList<>(oneCheckpoint());
+    checkpoints.add(new Checkpoint(1000L, 2, true, 100, "input", "output"));
+    when(checkpointStore.getCheckpoints(1000L)).thenReturn(checkpoints);
+    when(compiler.getCompileResult(any(), anyString(), anyString()))
+        .thenReturn(compileResult(true));
+    when(programRunner.getRuntimeResult(any(), anyString(), anyString(), anyString(), anyString()))
+        .thenReturn(runtimeResult("AC"));
+    when(comparator.getComparisonResult(anyString(), anyString(), anyBoolean())).thenReturn("AC");
+    // Current after the download and the compilation, superseded after the first checkpoint.
+    when(applicationDispatcher.renewLease(any())).thenReturn(true, true, false);
+    org.mockito.Mockito.doAnswer(
+            invocation -> {
+              Files.createDirectories(Path.of(invocation.<String>getArgument(1)));
+              return null;
+            })
+        .when(preprocessor)
+        .createTestCode(any(), anyString(), anyString());
+
+    dispatcher.createNewTask(100L, GENERATION, NOT_LAST_DELIVERY);
+
+    verify(programRunner, times(1))
+        .getRuntimeResult(any(), anyString(), anyString(), anyString(), anyString());
+    verify(applicationDispatcher, never()).onOneTestPointFinished(any(), anyInt(), any());
+    verify(applicationDispatcher, never()).onAllTestPointsFinished(any(), any());
+    verify(applicationDispatcher, never()).onErrorOccurred(any(), anyString());
+    try (java.util.stream.Stream<Path> entries = Files.list(tempDir)) {
+      Assertions.assertEquals(0, entries.count());
+    }
+  }
+
+  /**
+   * Test case: tests the createNewTask method. Test data: a judging that was superseded while it
+   * downloaded the test data. Expected result: it neither compiles nor reports anything.
+   */
+  @Test
+  public void testCreateNewTaskSupersededWhileDownloadingIsNotCompiled() throws Exception {
+    when(checkpointStore.getCheckpoints(1000L)).thenReturn(oneCheckpoint());
+    when(applicationDispatcher.renewLease(any())).thenReturn(false);
+
+    dispatcher.createNewTask(100L, GENERATION, NOT_LAST_DELIVERY);
+
+    verify(compiler, never()).getCompileResult(any(), anyString(), anyString());
+    verify(applicationDispatcher, never()).onCompileFinished(any(), any());
+    verify(applicationDispatcher, never()).onErrorOccurred(any(), anyString());
+  }
+
+  /**
    * Test case: tests the createNewTask method. Test data: this judger's work directory cannot be
    * created. Expected result: the submission is not even claimed; the exception is passed on so
    * that the task is delivered again, to another judger.
@@ -480,7 +571,7 @@ public class DispatcherTest {
     Assertions.assertThrows(
         RetryableJudgingException.class, () -> dispatcher.createNewTask(100L, GENERATION, NOT_LAST_DELIVERY));
 
-    verify(applicationDispatcher, never()).onJudgingStarted(anyLong(), any());
+    verify(applicationDispatcher, never()).onJudgingStarted(anyLong(), anyLong());
   }
 
   /**
@@ -535,13 +626,13 @@ public class DispatcherTest {
   }
 
   /** The judging generation of the tasks of the tests. */
-  private static final Long GENERATION = 3L;
+  private static final long GENERATION = 3L;
 
   /** Whether the deliveries of the tests are the last of their task: they are not. */
   private static final boolean NOT_LAST_DELIVERY = false;
 
-  /** The start time of the judgings that the tests claim. */
-  private static final Date START_TIME = new Date(1700000000000L);
+  /** The claim token of the judgings that the tests claim. */
+  private static final Long CLAIM_TOKEN = -4242L;
 
   /** The mocked ApplicationDispatcher object. */
   @Mock private ApplicationDispatcher applicationDispatcher;

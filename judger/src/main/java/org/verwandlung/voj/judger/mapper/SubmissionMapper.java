@@ -16,8 +16,6 @@
  */
 package org.verwandlung.voj.judger.mapper;
 
-import java.util.Date;
-
 import org.apache.ibatis.annotations.One;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Result;
@@ -68,53 +66,78 @@ public interface SubmissionMapper {
   Submission getSubmission(@Param("submissionId") long submissionId);
 
   /**
-   * Claims a pending submission for a judging: records when it started (which identifies the
-   * judging) and the judger.
+   * Claims a pending submission for a judging: sets the claim token, which identifies the judging,
+   * the start time of the judging, and the judger. The start time and the lease, which the judging
+   * renews (see {@link #renewLease}), are those of the database's clock.
    *
    * <p>The web application counts the judgings asked for in {@code submission_judge_generation}:
    * a rejudge increments it, and every judging task carries the generation it was queued with. A
    * task whose generation is no longer the submission's is stale (a rejudge queued a newer one),
-   * so it claims nothing.
+   * so it claims nothing. A task delivered again (e.g. its judger died) claims the submission
+   * anew, which supersedes the judging of the earlier delivery.
    *
    * @param submissionId - the unique identifier of the submission
-   * @param executeTime - the start time of the judging, at second precision (the column's)
+   * @param generation - the judging generation of the task
+   * @param claimToken - the claim token of the judging, a random number
    * @param judgerUid - the uid of the judger, or null if unknown
-   * @param generation - the judging generation of the task, or null for a task that carries none
    * @return 1 if the submission was pending (at that generation) and is now claimed, 0 otherwise
    */
   @Update(
-      "<script>UPDATE voj_submissions SET submission_execute_time = #{executeTime},"
+      "UPDATE voj_submissions SET submission_claim_token = #{claimToken},"
+          + " submission_execute_time = NOW(), submission_lease_time = NOW(),"
           + " judger_uid = #{judgerUid}"
           + " WHERE submission_id = #{submissionId} AND submission_judge_result = 'PD'"
-          + "<if test='generation != null'>"
-          + " AND submission_judge_generation = #{generation}"
-          + "</if></script>")
+          + " AND submission_judge_generation = #{generation}")
   int claimSubmission(
       @Param("submissionId") long submissionId,
-      @Param("executeTime") Date executeTime,
-      @Param("judgerUid") Long judgerUid,
-      @Param("generation") Long generation);
+      @Param("generation") long generation,
+      @Param("claimToken") long claimToken,
+      @Param("judgerUid") Long judgerUid);
+
+  /**
+   * Renews the lease of a judging, which tells the web application that the judging is still
+   * going on: a pending submission whose lease is not renewed in time is a System Error. The count
+   * is of the rows found, not of those changed (the default of the MySQL driver), so a renewal
+   * within the same second as the previous one counts too.
+   *
+   * @param submissionId - the unique identifier of the submission
+   * @param claimToken - the claim token of the judging
+   * @return 1 if the submission is still pending and claimed by the judging, 0 if it was rejudged,
+   *     claimed by another judging or failed meanwhile: the judging was superseded
+   */
+  @Update(
+      "UPDATE voj_submissions SET submission_lease_time = NOW()"
+          + " WHERE submission_id = #{submissionId} AND submission_judge_result = 'PD'"
+          + " AND submission_claim_token = #{claimToken}")
+  int renewLease(@Param("submissionId") long submissionId, @Param("claimToken") long claimToken);
+
+  /**
+   * Releases the claim of a judging that hands its task back to be delivered again: the
+   * submission waits for a judger again, as before the claim.
+   *
+   * @param submissionId - the unique identifier of the submission
+   * @param claimToken - the claim token of the judging
+   * @return 1 if the claim was released, 0 if the judging was superseded
+   */
+  @Update(
+      "UPDATE voj_submissions SET submission_claim_token = NULL"
+          + " WHERE submission_id = #{submissionId} AND submission_judge_result = 'PD'"
+          + " AND submission_claim_token = #{claimToken}")
+  int releaseSubmission(
+      @Param("submissionId") long submissionId, @Param("claimToken") long claimToken);
 
   /**
    * Records the verdict of a judging: only the result columns (never e.g. the code), and only if
-   * the submission is still pending and claimed by that judging: its start time and, when the
-   * judging has one, its generation. The start time has a precision of a second only, so two
-   * judgings claimed in the same second (the second one after a rejudge) are told apart by their
-   * generation.
+   * the submission is still pending and claimed by that judging.
    *
-   * @param submission - the submission, whose execute time is the start time of the judging and
-   *     whose judge generation is that of its task (or null)
-   * @return 1 if the verdict was recorded, 0 if the submission was meanwhile rejudged or claimed by
-   *     another judging
+   * @param submission - the submission, with the claim token of the judging
+   * @return 1 if the verdict was recorded, 0 if the judging was superseded
    */
   @Update(
-      "<script>UPDATE voj_submissions SET submission_used_time = #{usedTime},"
+      "UPDATE voj_submissions SET submission_used_time = #{usedTime},"
           + " submission_used_memory = #{usedMemory}, submission_judge_score = #{judgeScore},"
           + " submission_judge_result = #{judgeResultSlug}, submission_judge_log = #{judgeLog}"
           + " WHERE submission_id = #{submissionId} AND submission_judge_result = 'PD'"
-          + " AND submission_execute_time = #{executeTime}"
-          + "<if test='judgeGeneration != null'>"
-          + " AND submission_judge_generation = #{judgeGeneration}"
-          + "</if></script>")
+          + " AND submission_claim_token = #{claimToken}")
   int updateSubmissionResult(Submission submission);
 }

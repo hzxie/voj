@@ -118,15 +118,14 @@ public interface SubmissionMapper {
   Submission getSubmission(@Param("submissionId") long submissionId);
 
   /**
-   * Gets what identifies the current judging of a submission: its execute time (the start time of
-   * the judging that claimed it, or null while none did) and its judge generation. Only these two
-   * fields of the returned object are set.
+   * Gets the claim token of a submission: the one of the judging that claimed it, if it is still
+   * pending or that judging recorded its verdict.
    *
    * @param submissionId - the unique identifier of the submission
-   * @return a Submission object with the execute time and the judge generation, or null when the
-   *     submission does not exist
+   * @return the claim token, or null when no judging claimed the submission since it was queued
+   *     (or rejudged), or it was judged a System Error for waiting too long, or it does not exist
    */
-  Submission getJudgingOfSubmission(@Param("submissionId") long submissionId);
+  Long getClaimTokenOfSubmission(@Param("submissionId") long submissionId);
 
   /**
    * Gets the judge generation of a submission (the number of times it was rejudged).
@@ -338,10 +337,10 @@ public interface SubmissionMapper {
    * Resets a submission back to the pending state so it can be re-judged, clearing the previous
    * verdict, judge log, resource usage, score, executing judger and execute time. Used by the
    * rejudge flow: without this, the record would keep its old verdict and the detail pages would
-   * not show the live judging stream. The judge generation is incremented in the same statement, so
-   * the task queued for this rejudge is told apart from the tasks queued before it, and the queued
-   * time is set to now, so the judging of that task gets the whole time-to-live (see {@link
-   * #failStalledSubmissions}).
+   * not show the live judging stream. The claim token is cleared, so the judging of an earlier task
+   * stops, and the judge generation incremented, so the task queued for this rejudge is told apart
+   * from the tasks queued before it; the queued time is set to now, so that task gets the whole
+   * time-to-live (see {@link #failStalledSubmission}).
    *
    * @param submissionId - the unique identifier of the submission
    * @return the number of rows updated
@@ -349,21 +348,39 @@ public interface SubmissionMapper {
   int resetSubmissionToPending(@Param("submissionId") long submissionId);
 
   /**
-   * Marks as a System Error every pending submission that has waited longer than a time-to-live
-   * by the database's clock: for a judger to claim it since its judging task was queued (no execute
-   * time), or for the judging to finish since a judger claimed it. Only pending submissions are
-   * updated, so a verdict is never overwritten, and the judging, should it still be running, can
-   * no longer record one.
+   * Gets the pending submissions that wait in vain, by the database's clock: no judging claimed
+   * them within a time-to-live since their task was queued, or the judging that claimed them did
+   * not renew its lease within a lease timeout. A plain read, which locks nothing.
    *
-   * @param ttlSeconds - the time-to-live, in seconds
-   * @param unclaimedJudgeLog - the judge log of a submission no judger claimed
-   * @param unfinishedJudgeLog - the judge log of a submission a judger claimed
-   * @return the number of submissions marked
+   * @param ttlSeconds - the time-to-live, in seconds; 0 or less: an unclaimed submission waits as
+   *     long as it takes
+   * @param leaseTimeoutSeconds - the lease timeout, in seconds
+   * @return the unique identifiers of the submissions
    */
-  int failStalledSubmissions(
+  List<Long> getStalledSubmissionIds(
       @Param("ttlSeconds") long ttlSeconds,
+      @Param("leaseTimeoutSeconds") long leaseTimeoutSeconds);
+
+  /**
+   * Marks a pending submission that waits in vain (see {@link #getStalledSubmissionIds}) as a
+   * System Error, if it still does, and clears its claim token, so that the judging that claimed
+   * it, should it still be running, stops and its messages are dropped. A verdict recorded
+   * meanwhile is never overwritten.
+   *
+   * @param submissionId - the unique identifier of the submission
+   * @param ttlSeconds - the time-to-live, in seconds
+   * @param leaseTimeoutSeconds - the lease timeout, in seconds
+   * @param unclaimedJudgeLog - the judge log of a submission no judging claimed
+   * @param abandonedJudgeLog - the judge log of a submission whose judging stopped renewing its
+   *     lease
+   * @return 1 if the submission was marked, 0 otherwise
+   */
+  int failStalledSubmission(
+      @Param("submissionId") long submissionId,
+      @Param("ttlSeconds") long ttlSeconds,
+      @Param("leaseTimeoutSeconds") long leaseTimeoutSeconds,
       @Param("unclaimedJudgeLog") String unclaimedJudgeLog,
-      @Param("unfinishedJudgeLog") String unfinishedJudgeLog);
+      @Param("abandonedJudgeLog") String abandonedJudgeLog);
 
   /**
    * Deletes a submission by its unique identifier.

@@ -219,7 +219,7 @@ public class JmsConfigTest {
               return null;
             })
         .when(applicationDispatcher)
-        .onSubmissionCreated(Mockito.eq(7L), Mockito.any(), Mockito.anyBoolean());
+        .onSubmissionCreated(Mockito.eq(7L), Mockito.anyLong(), Mockito.anyBoolean());
     MessageReceiver messageReceiver = new MessageReceiver();
     ReflectionTestUtils.setField(messageReceiver, "dispatcher", applicationDispatcher);
     DefaultMessageListenerContainer listenerContainer =

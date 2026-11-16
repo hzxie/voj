@@ -62,15 +62,11 @@ public class ApplicationEventListener {
       LOGGER.warn(String.format("CANNOT get the SseEmitter for submission #%d.", submissionId));
       return;
     }
-    // A judging that a rejudge (or a later delivery of its task) superseded may still be running
-    // and sending progress: its messages would show the old judging on the page of the new one.
-    // The submission's execute time is the claim of its current judging and its judge generation
-    // that of its current task, so a message with another claim or generation is dropped (the
-    // streams stay open for the current judging's messages). A message without either (from a
-    // judger that predates them) cannot be checked, so it is passed on without a query.
-    if ((event.getExecuteTime() != null || event.getGeneration() != null)
-        && !submissionService.isCurrentJudging(
-            submissionId, event.getExecuteTime(), event.getGeneration())) {
+    // A judging that was superseded (by a rejudge, a later delivery of its task, or a System Error
+    // for an expired lease) may still be running and sending messages: they would show the old
+    // judging on the page of the new one. So a message whose claim token the submission does not
+    // carry is dropped (the streams stay open for the current judging's messages).
+    if (!submissionService.isCurrentJudging(submissionId, event.getClaimToken())) {
       LOGGER.info(
           String.format(
               "Dropped a message of a superseded judging of submission #%d.", submissionId));

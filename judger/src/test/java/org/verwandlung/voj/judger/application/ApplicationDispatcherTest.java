@@ -25,12 +25,12 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -77,7 +77,7 @@ public class ApplicationDispatcherTest {
   public void testOnSubmissionCreatedPassesOnFailures() throws Exception {
     org.mockito.Mockito.doThrow(new DataAccessResourceFailureException("database down"))
         .when(judgerDispatcher)
-        .createNewTask(anyLong(), any(), anyBoolean());
+        .createNewTask(anyLong(), anyLong(), anyBoolean());
 
     Assertions.assertThrows(
         DataAccessResourceFailureException.class,
@@ -92,7 +92,7 @@ public class ApplicationDispatcherTest {
   public void testOnSubmissionCreatedIgnoresMissingSubmissions() throws Exception {
     org.mockito.Mockito.doThrow(new IllgealSubmissionException("Illegal submission #100"))
         .when(judgerDispatcher)
-        .createNewTask(anyLong(), any(), anyBoolean());
+        .createNewTask(anyLong(), anyLong(), anyBoolean());
 
     Assertions.assertDoesNotThrow(() -> applicationDispatcher.onSubmissionCreated(100L, 3L, true));
     verify(submissionMapper, never()).updateSubmissionResult(any(Submission.class));
@@ -115,82 +115,99 @@ public class ApplicationDispatcherTest {
   }
 
   /**
-   * Test case: tests the onErrorOccurred method. Test data: a submission that was rejudged (or
-   * claimed by another delivery of its task) meanwhile, so the update matches nothing. Expected
-   * result: the stale verdict is dropped and the call does not throw.
+   * Test case: tests the outcomes of a judging. Test data: a judging that was superseded, so the
+   * update of its verdict (a System Error, a Compile Error, a verdict) matches nothing. Expected
+   * result: the stale verdict is dropped and no message is sent, without an exception.
    */
   @Test
-  public void testOnErrorOccurredWithStaleJudging() {
+  public void testOutcomeOfASupersededJudgingIsNotSent() {
     when(submissionMapper.updateSubmissionResult(any(Submission.class))).thenReturn(0);
+    Map<String, Object> result = new HashMap<>();
+    result.put("isSuccessful", false);
+    result.put("log", "error");
 
-    Assertions.assertDoesNotThrow(
-        () -> applicationDispatcher.onErrorOccurred(submission(), "reason"));
+    applicationDispatcher.onErrorOccurred(submission(), "reason");
+    applicationDispatcher.onCompileFinished(submission(), result);
+    applicationDispatcher.onAllTestPointsFinished(submission(), new ArrayList<>());
+
+    verify(submissionMapper, org.mockito.Mockito.times(3))
+        .updateSubmissionResult(any(Submission.class));
+    verify(messageSender, never()).sendMessage(any());
   }
 
   /**
    * Test case: tests the messages of a judging. Test data: a claimed submission. Expected result:
-   * every message (error, compilation, verdict) carries the judging's claim, its start time.
+   * every message (error, compilation, checkpoint, verdict) carries the judging's claim token.
    */
   @Test
-  public void testMessagesCarryTheClaimOfTheJudging() {
+  public void testMessagesCarryTheClaimTokenOfTheJudging() {
     Map<String, Object> result = new HashMap<>();
     result.put("isSuccessful", true);
     result.put("log", "");
     applicationDispatcher.onErrorOccurred(submission(), "reason");
     applicationDispatcher.onCompileFinished(submission(), result);
+    applicationDispatcher.onOneTestPointFinished(submission(), 1, new HashMap<>());
     applicationDispatcher.onAllTestPointsFinished(submission(), new ArrayList<>());
 
     ArgumentCaptor<Map<String, Object>> messageCaptor = ArgumentCaptor.forClass(Map.class);
-    verify(messageSender, org.mockito.Mockito.times(3)).sendMessage(messageCaptor.capture());
+    verify(messageSender, org.mockito.Mockito.times(4)).sendMessage(messageCaptor.capture());
     for (Map<String, Object> message : messageCaptor.getAllValues()) {
-      Assertions.assertEquals(1700000000000L, message.get("executeTime"), message.toString());
-      Assertions.assertEquals(3L, message.get("generation"), message.toString());
+      Assertions.assertEquals(CLAIM_TOKEN, message.get("claimToken"), message.toString());
     }
   }
 
   /**
-   * Test case: tests the messages of a judging. Test data: a judging whose task carried no
-   * generation (queued by an older web application). Expected result: its messages carry none.
-   */
-  @Test
-  public void testMessagesOfALegacyTaskCarryNoGeneration() {
-    Submission submission = submission();
-    submission.setJudgeGeneration(null);
-
-    applicationDispatcher.onErrorOccurred(submission, "reason");
-
-    Assertions.assertFalse(captureSentMessage().containsKey("generation"));
-  }
-
-  /**
    * Test case: tests the onJudgingStarted method. Test data: a pending submission. Expected result:
-   * it is claimed, with the start time at second precision (that of the column) as the token that
-   * identifies this judging.
+   * it is claimed at the generation of the task, with a new random claim token for every judging,
+   * which is returned.
    */
   @Test
   public void testOnJudgingStartedClaimsPendingSubmission() {
-    when(submissionMapper.claimSubmission(eq(100L), any(Date.class), any(), eq(3L)))
-        .thenReturn(1);
+    when(submissionMapper.claimSubmission(eq(100L), eq(3L), anyLong(), any())).thenReturn(1);
 
-    Date startTime = applicationDispatcher.onJudgingStarted(100L, 3L);
+    Long claimToken = applicationDispatcher.onJudgingStarted(100L, 3L);
+    Long nextClaimToken = applicationDispatcher.onJudgingStarted(100L, 3L);
 
-    ArgumentCaptor<Date> startTimeCaptor = ArgumentCaptor.forClass(Date.class);
-    verify(submissionMapper)
-        .claimSubmission(eq(100L), startTimeCaptor.capture(), any(), eq(3L));
-    Assertions.assertEquals(0, startTimeCaptor.getValue().getTime() % 1000);
-    Assertions.assertEquals(startTimeCaptor.getValue(), startTime);
+    ArgumentCaptor<Long> claimTokenCaptor = ArgumentCaptor.forClass(Long.class);
+    verify(submissionMapper, org.mockito.Mockito.times(2))
+        .claimSubmission(eq(100L), eq(3L), claimTokenCaptor.capture(), any());
+    Assertions.assertEquals(claimTokenCaptor.getAllValues(), List.of(claimToken, nextClaimToken));
+    Assertions.assertNotEquals(claimToken, nextClaimToken);
   }
 
   /**
    * Test case: tests the onJudgingStarted method. Test data: a submission that is not pending (it
-   * has been judged already). Expected result: it is not claimed.
+   * has been judged already), or at another generation. Expected result: it is not claimed.
    */
   @Test
   public void testOnJudgingStartedSkipsJudgedSubmission() {
-    when(submissionMapper.claimSubmission(eq(100L), any(Date.class), any(), eq(3L)))
-        .thenReturn(0);
+    when(submissionMapper.claimSubmission(eq(100L), eq(3L), anyLong(), any())).thenReturn(0);
 
     Assertions.assertNull(applicationDispatcher.onJudgingStarted(100L, 3L));
+  }
+
+  /**
+   * Test case: tests the renewLease method. Test data: a judging that is still current, then one
+   * that was superseded. Expected result: the lease of the judging's claim token is renewed, and
+   * whether the judging is still current is returned.
+   */
+  @Test
+  public void testRenewLease() {
+    when(submissionMapper.renewLease(100L, CLAIM_TOKEN)).thenReturn(1, 0);
+
+    Assertions.assertTrue(applicationDispatcher.renewLease(submission()));
+    Assertions.assertFalse(applicationDispatcher.renewLease(submission()));
+  }
+
+  /**
+   * Test case: tests the onJudgingHandedBack method. Expected result: the claim of the judging is
+   * released.
+   */
+  @Test
+  public void testOnJudgingHandedBack() {
+    applicationDispatcher.onJudgingHandedBack(submission());
+
+    verify(submissionMapper).releaseSubmission(100L, CLAIM_TOKEN);
   }
 
   /**
@@ -272,8 +289,6 @@ public class ApplicationDispatcherTest {
     Map<String, Object> message = captureSentMessage();
     Assertions.assertEquals("TestPointFinished", message.get("event"));
     Assertions.assertEquals(100L, message.get("submissionId"));
-    // The claim of the judging, so that the web application can drop a superseded judging's messages.
-    Assertions.assertEquals(1700000000000L, message.get("executeTime"));
     Assertions.assertEquals(1, message.get("checkpointId"));
     Assertions.assertEquals("Accepted", message.get("runtimeResult"));
     Assertions.assertEquals(12, message.get("usedTime"));
@@ -405,8 +420,7 @@ public class ApplicationDispatcherTest {
   private Submission submission() {
     Submission submission = new Submission();
     submission.setSubmissionId(100L);
-    submission.setExecuteTime(new Date(1700000000000L));
-    submission.setJudgeGeneration(3L);
+    submission.setClaimToken(CLAIM_TOKEN);
     return submission;
   }
 
@@ -440,6 +454,15 @@ public class ApplicationDispatcherTest {
     verify(messageSender).sendMessage(messageCaptor.capture());
     return messageCaptor.getValue();
   }
+
+  /** Records every verdict: the judgings of the tests are current, unless a test says otherwise. */
+  @BeforeEach
+  public void setUp() {
+    when(submissionMapper.updateSubmissionResult(any(Submission.class))).thenReturn(1);
+  }
+
+  /** The claim token of the judgings of the tests. */
+  private static final long CLAIM_TOKEN = -4242L;
 
   /** The mocked Dispatcher object. */
   @Mock private Dispatcher judgerDispatcher;

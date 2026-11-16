@@ -8,7 +8,6 @@
 		<result property="submissionId" column="submission_id" />
 		<result property="submitTime" column="submission_submit_time" />
 		<result property="executeTime" column="submission_execute_time" />
-		<result property="judgeGeneration" column="submission_judge_generation" />
 		<result property="usedTime" column="submission_used_time" />
 		<result property="usedMemory" column="submission_used_memory" />
 		<result property="judgeScore" column="submission_judge_score" />
@@ -166,10 +165,10 @@
 		FROM voj_submissions 
 		WHERE submission_id = #{submissionId}
 	</select>
-	<select id="getJudgingOfSubmission"
+	<select id="getClaimTokenOfSubmission"
 		parameterType="long"
-		resultType="org.verwandlung.voj.web.model.Submission">
-		SELECT submission_execute_time AS executeTime, submission_judge_generation AS judgeGeneration
+		resultType="java.lang.Long">
+		SELECT submission_claim_token
 		FROM voj_submissions
 		WHERE submission_id = #{submissionId}
 	</select>
@@ -366,18 +365,34 @@
 		SET submission_judge_result = 'PD', submission_judge_log = NULL, submission_judge_score = NULL,
 			submission_used_time = NULL, submission_used_memory = NULL, submission_execute_time = NULL,
 			judger_uid = NULL, submission_judge_generation = submission_judge_generation + 1,
-			submission_queued_time = NOW()
+			submission_claim_token = NULL, submission_lease_time = NULL, submission_queued_time = NOW()
 		WHERE submission_id = #{submissionId}
 	</update>
-	<update id="failStalledSubmissions"
+	<!-- A pending submission that waits in vain, by the database's clock: no judging claimed it
+	     within the time-to-live of its task since it was queued (unless that is 0 or less: the
+	     task never expires), or its judging did not renew its lease within the lease timeout. -->
+	<sql id="stalledSubmissionCondition">
+		submission_judge_result = 'PD' AND (
+			<if test="ttlSeconds &gt; 0">
+			(submission_claim_token IS NULL AND submission_queued_time &lt;= NOW() - INTERVAL #{ttlSeconds} SECOND) OR
+			</if>
+			(submission_claim_token IS NOT NULL AND submission_lease_time &lt;= NOW() - INTERVAL #{leaseTimeoutSeconds} SECOND))
+	</sql>
+	<select id="getStalledSubmissionIds"
+		parameterType="map"
+		resultType="long">
+		SELECT submission_id
+		FROM voj_submissions
+		WHERE <include refid="stalledSubmissionCondition" />
+	</select>
+	<update id="failStalledSubmission"
 		parameterType="map">
-		<!-- The queued time is set by the database's clock, the execute time by the judger's: with
-		     a time-to-live of minutes, clocks some seconds apart do not matter. -->
+		<!-- The judge log is set before the claim token is cleared: MySQL assigns from left to right,
+		     each assignment seeing the values set before it. -->
 		UPDATE voj_submissions
-		SET submission_judge_result = 'SE',
-			submission_judge_log = IF(submission_execute_time IS NULL, #{unclaimedJudgeLog}, #{unfinishedJudgeLog})
-		WHERE submission_judge_result = 'PD'
-		AND COALESCE(submission_execute_time, submission_queued_time) &lt;= NOW() - INTERVAL #{ttlSeconds} SECOND
+		SET submission_judge_log = IF(submission_claim_token IS NULL, #{unclaimedJudgeLog}, #{abandonedJudgeLog}),
+			submission_judge_result = 'SE', submission_claim_token = NULL
+		WHERE submission_id = #{submissionId} AND <include refid="stalledSubmissionCondition" />
 	</update>
 	<delete id="deleteSubmission"
 		parameterType="long">

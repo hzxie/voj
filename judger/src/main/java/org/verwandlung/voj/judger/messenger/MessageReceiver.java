@@ -51,7 +51,7 @@ public class MessageReceiver implements MessageListener {
       return;
     }
     long submissionId;
-    Long generation;
+    long generation;
     boolean isLastDelivery;
     try {
       MapMessage mapMessage = (MapMessage) message;
@@ -64,9 +64,7 @@ public class MessageReceiver implements MessageListener {
         return;
       }
       submissionId = mapMessage.getLong("submissionId");
-      // Absent from a task queued by a web application that predates judging generations.
-      generation =
-          mapMessage.itemExists("generation") ? mapMessage.getLong("generation") : null;
+      generation = mapMessage.getLong("generation");
       // Counted by the broker client, from 1; the client dead-letters a task delivered once more.
       isLastDelivery =
           mapMessage.getIntProperty("JMSXDeliveryCount") > JmsConfig.MAXIMUM_REDELIVERIES;
@@ -76,7 +74,7 @@ public class MessageReceiver implements MessageListener {
     }
     LOGGER.info(
         String.format(
-            "Received new submission task #%d (generation %s)", submissionId, generation));
+            "Received new submission task #%d (generation %d)", submissionId, generation));
     dispatcher.onSubmissionCreated(submissionId, generation, isLastDelivery);
   }
 

@@ -20,7 +20,6 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -66,15 +65,18 @@ public class Dispatcher {
    * RetryableJudgingException}), is handed back for another delivery, unless this is the last
    * delivery of the task: the submission is then judged a System Error with the actual reason.
    *
+   * <p>The judging renews its lease after each of its steps (see {@link #renewLease}), and stops
+   * once it finds that it was superseded, without recording or sending anything.
+   *
    * @param submissionId - the unique identifier of the submission
-   * @param generation - the judging generation of the task, or {@code null} if it carries none
+   * @param generation - the judging generation of the task
    * @param isLastDelivery - whether the broker will not deliver the task again
    * @throws IllgealSubmissionException if the submission does not exist
    * @throws DataAccessException if the submission or the outcome of its judging cannot be read or
    *     written
    * @throws RetryableJudgingException if the submission cannot be judged now, but likely later
    */
-  public void createNewTask(long submissionId, Long generation, boolean isLastDelivery)
+  public void createNewTask(long submissionId, long generation, boolean isLastDelivery)
       throws IllgealSubmissionException {
     synchronized (this) {
       // In this judger's own directory, so that a judger that died while judging leaves nothing
@@ -96,12 +98,12 @@ public class Dispatcher {
               .toString();
       String baseFileName = DigestUtils.getRandomString(12, DigestUtils.Mode.ALPHA);
 
-      Date startTime = applicationDispatcher.onJudgingStarted(submissionId, generation);
-      if (startTime == null) {
+      Long claimToken = applicationDispatcher.onJudgingStarted(submissionId, generation);
+      if (claimToken == null) {
         LOGGER.info(
             String.format(
                 "Skipping submission #%d: it is not pending (e.g. its task was delivered twice),"
-                    + " was rejudged since its task (generation %s) was queued, or does not exist.",
+                    + " was rejudged since its task (generation %d) was queued, or does not exist.",
                 submissionId, generation));
         return;
       }
@@ -113,8 +115,7 @@ public class Dispatcher {
         throw new IllgealSubmissionException(
             String.format("Illegal submission #%s", new Object[] {submissionId}));
       }
-      submission.setExecuteTime(startTime);
-      submission.setJudgeGeneration(generation);
+      submission.setClaimToken(claimToken);
       try {
         judge(submission, baseDirectory, baseFileName);
       } catch (DataAccessException ex) {
@@ -136,7 +137,14 @@ public class Dispatcher {
             String.format(
                 "Cannot judge submission #%d now; its task is delivered again.", submissionId),
             ex);
+        applicationDispatcher.onJudgingHandedBack(submission);
         throw ex;
+      } catch (Superseded ex) {
+        LOGGER.info(
+            String.format(
+                "Stopped judging submission #%d: it was rejudged, claimed by a later delivery of"
+                    + " its task, or judged a System Error meanwhile.",
+                submissionId));
       } catch (SystemError ex) {
         LOGGER.error(String.format("System Error in submission #%d", submissionId), ex);
         applicationDispatcher.onErrorOccurred(submission, ex.getMessage());
@@ -161,12 +169,14 @@ public class Dispatcher {
    * @param workDirectory - the directory of the compilation result and the program output
    * @param baseFileName - the random file name (without suffix)
    * @throws SystemError if the submission cannot be judged for a known reason
+   * @throws Superseded if the judging was superseded
    * @throws Exception if the submission cannot be judged for an unexpected reason
    */
   private void judge(Submission submission, String workDirectory, String baseFileName)
       throws Exception {
     Path checkpointDirectory = syncCheckpoints(submission);
     List<Checkpoint> checkpoints = getCheckpoints(submission);
+    renewLease(submission);
     preprocessor.createTestCode(submission, workDirectory, baseFileName);
     if (compile(submission, workDirectory, baseFileName)) {
       runProgram(submission, checkpoints, checkpointDirectory, workDirectory, baseFileName);
@@ -242,13 +252,15 @@ public class Dispatcher {
    * @param baseFileName - the random file name (without suffix)
    * @return whether the compilation succeeded
    * @throws SystemError if the sandbox failed to run the compiler
+   * @throws Superseded if the judging was superseded
    */
   private boolean compile(Submission submission, String workDirectory, String baseFileName)
-      throws SystemError {
+      throws SystemError, Superseded {
     Map<String, Object> result = compiler.getCompileResult(submission, workDirectory, baseFileName);
     if (result.get("verdict") == Verdict.INTERNAL_ERROR) {
       throw new SystemError("The sandbox failed to run the compiler.", null);
     }
+    renewLease(submission);
     applicationDispatcher.onCompileFinished(submission, result);
     return (Boolean) result.get("isSuccessful");
   }
@@ -262,6 +274,7 @@ public class Dispatcher {
    * @param workDirectory - the directory of the compilation result and the program output
    * @param baseFileName - the file name of the application to run (without file suffix)
    * @throws SystemError if the test data cannot be read
+   * @throws Superseded if the judging was superseded
    */
   private void runProgram(
       Submission submission,
@@ -269,7 +282,7 @@ public class Dispatcher {
       Path checkpointDirectory,
       String workDirectory,
       String baseFileName)
-      throws SystemError {
+      throws SystemError, Superseded {
     List<Map<String, Object>> runtimeResults = new ArrayList<Map<String, Object>>();
 
     for (Checkpoint checkpoint : checkpoints) {
@@ -290,9 +303,26 @@ public class Dispatcher {
               checkpoint.isExactlyMatch());
       runtimeResult.put("score", checkpointScore);
       runtimeResults.add(runtimeResult);
+      renewLease(submission);
       applicationDispatcher.onOneTestPointFinished(submission, checkpointId, runtimeResult);
     }
     applicationDispatcher.onAllTestPointsFinished(submission, runtimeResults);
+  }
+
+  /**
+   * Renews the lease of the judging after one of its steps (see {@link
+   * ApplicationDispatcher#renewLease}), and before the step is reported: after the download of the
+   * test data, after the compilation and after the run of each checkpoint. So the time between two
+   * renewals is bounded by the longest of these steps (see {@code judging.leaseTimeout} in the
+   * web application's configuration).
+   *
+   * @param submission - the submission object
+   * @throws Superseded if the judging was superseded
+   */
+  private void renewLease(Submission submission) throws Superseded {
+    if (!applicationDispatcher.renewLease(submission)) {
+      throw new Superseded();
+    }
   }
 
   /**
@@ -372,6 +402,20 @@ public class Dispatcher {
      */
     SystemError(String reason, Throwable cause) {
       super(reason, cause);
+    }
+
+    /** The unique serialization identifier. */
+    private static final long serialVersionUID = 1L;
+  }
+
+  /**
+   * A judging that was superseded: the submission was rejudged, claimed by a later delivery of its
+   * task, or judged a System Error as the lease of the judging had expired.
+   */
+  static final class Superseded extends Exception {
+    /** Constructor. */
+    Superseded() {
+      super(null, null, false, false);
     }
 
     /** The unique serialization identifier. */

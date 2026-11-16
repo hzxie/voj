@@ -27,45 +27,26 @@ public class SubmissionEvent extends ApplicationEvent {
   /**
    * The constructor of SubmissionEvent.
    *
-   * @param source - the message publishing source
-   * @param submissionId - the unique identifier of the submission record
-   * @param judgeResult - the current judge result
-   * @param message - the judge message
-   * @param isCompleted - whether the judging is completed
-   */
-  public SubmissionEvent(
-      Object source, long submissionId, String judgeResult, String message, boolean isCompleted) {
-    this(source, submissionId, judgeResult, message, isCompleted, null, null);
-  }
-
-  /**
-   * The constructor of SubmissionEvent for a message that names the judging it belongs to.
-   *
    * @param source - the source of the event
    * @param submissionId - the unique identifier of the submission
+   * @param claimToken - the claim token of the judging that sent the message
    * @param judgeResult - the judge result
    * @param message - the message to show
    * @param isCompleted - whether judging has completed
-   * @param executeTime - the claim of the judging that sent the message: the start time it set on
-   *     the submission, in milliseconds; null when the judger did not send it
-   * @param generation - the judge generation of the task of the judging that sent the message;
-   *     null when the judger did not send it
    */
   public SubmissionEvent(
       Object source,
       long submissionId,
+      long claimToken,
       String judgeResult,
       String message,
-      boolean isCompleted,
-      Long executeTime,
-      Long generation) {
+      boolean isCompleted) {
     super(source);
     this.submissionId = submissionId;
+    this.claimToken = claimToken;
     this.judgeResult = judgeResult;
     this.message = message;
     this.isCompleted = isCompleted;
-    this.executeTime = executeTime;
-    this.generation = generation;
   }
 
   /**
@@ -105,25 +86,19 @@ public class SubmissionEvent extends ApplicationEvent {
   }
 
   /**
-   * Gets the claim of the judging that sent the message.
+   * Gets the claim token of the judging that sent the message.
    *
-   * @return the start time the judging set on the submission, in milliseconds, or null if unknown
+   * @return the claim token of the judging that sent the message
    */
-  public Long getExecuteTime() {
-    return executeTime;
-  }
-
-  /**
-   * Gets the judge generation of the task of the judging that sent the message.
-   *
-   * @return the judge generation, or null if unknown
-   */
-  public Long getGeneration() {
-    return generation;
+  public long getClaimToken() {
+    return claimToken;
   }
 
   /** The unique identifier of the submission record. */
   private final long submissionId;
+
+  /** The claim token of the judging that sent the message. */
+  private final long claimToken;
 
   /** The current judge result. */
   private final String judgeResult;
@@ -133,12 +108,6 @@ public class SubmissionEvent extends ApplicationEvent {
 
   /** Whether the judging is completed. */
   private final boolean isCompleted;
-
-  /** The claim of the judging that sent the message, or null if unknown. */
-  private final Long executeTime;
-
-  /** The judge generation of the task of the judging that sent the message, or null if unknown. */
-  private final Long generation;
 
   /** The unique serialization identifier. */
   private static final long serialVersionUID = 4808514481370058683L;

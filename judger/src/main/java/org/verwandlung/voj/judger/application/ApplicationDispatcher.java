@@ -16,7 +16,7 @@
  */
 package org.verwandlung.voj.judger.application;
 
-import java.util.Date;
+import java.security.SecureRandom;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -54,10 +54,10 @@ public class ApplicationDispatcher {
    * forever or being judged a System Error.
    *
    * @param submissionId - the unique identifier of the submission
-   * @param generation - the judging generation of the task, or {@code null} if it carries none
+   * @param generation - the judging generation of the task
    * @param isLastDelivery - whether the broker will not deliver the task again
    */
-  public void onSubmissionCreated(long submissionId, Long generation, boolean isLastDelivery) {
+  public void onSubmissionCreated(long submissionId, long generation, boolean isLastDelivery) {
     try {
       judgerDispatcher.createNewTask(submissionId, generation, isLastDelivery);
     } catch (IllgealSubmissionException ex) {
@@ -68,31 +68,53 @@ public class ApplicationDispatcher {
   }
 
   /**
-   * Claims a submission for judging: records when (and by which judger) its judging started, if it
-   * is still pending, at the generation of the task. A submission that is no longer pending has
-   * been judged already, e.g. its task was delivered twice, and must not be judged (and
-   * overwritten) again; one at another generation was rejudged since the task was queued, and the
-   * rejudge's own task judges it.
+   * Claims a submission for judging, if it is still pending, at the generation of the task. A
+   * submission that is no longer pending has been judged already, e.g. its task was delivered
+   * twice, and must not be judged (and overwritten) again; one at another generation was rejudged
+   * since the task was queued, and the rejudge's own task judges it.
    *
-   * <p>The start time, at second precision, also identifies this judging: its verdict is only
-   * recorded if the submission still carries it (see {@link #updateSubmission}), so the caller
-   * sets it as the execute time of the submission it judges. A rejudge resets the submission (to
-   * pending, without a start time), so a judging that was still running then cannot overwrite the
-   * new verdict with a stale one; neither can a judging that a later delivery of the same task
-   * took over. The generation tells apart judgings that started in the same second.
+   * <p>The claim token identifies this judging: its lease is renewed (see {@link #renewLease}) and
+   * its verdict recorded only while the submission still carries it, and its messages carry it,
+   * so that the web application shows the messages of the current judging only. A rejudge clears
+   * it and a later delivery of the same task replaces it: the judging they supersede stops, without
+   * overwriting the new verdict with a stale one.
    *
    * @param submissionId - the unique identifier of the submission
-   * @param generation - the judging generation of the task, or {@code null} if it carries none
-   * @return the start time if the submission was pending and is now claimed by this judging,
+   * @param generation - the judging generation of the task
+   * @return the claim token if the submission was pending and is now claimed by this judging,
    *     {@code null} otherwise
    */
-  public Date onJudgingStarted(long submissionId, Long generation) {
-    Date startTime = new Date(System.currentTimeMillis() / 1000 * 1000);
-    if (submissionMapper.claimSubmission(submissionId, startTime, getJudgerUid(), generation)
+  public Long onJudgingStarted(long submissionId, long generation) {
+    long claimToken = RANDOM.nextLong();
+    if (submissionMapper.claimSubmission(submissionId, generation, claimToken, getJudgerUid())
         == 0) {
       return null;
     }
-    return startTime;
+    return claimToken;
+  }
+
+  /**
+   * Renews the lease of a judging, which tells the web application that the judging is still going
+   * on (see {@code SubmissionService#failStalledSubmissions} there).
+   *
+   * @param submission - the submission, claimed by {@link #onJudgingStarted}
+   * @return whether the judging is still the current one; if not, it was superseded (the
+   *     submission was rejudged, claimed by a later delivery of its task, or judged a System Error
+   *     as its lease had expired) and must stop without recording or sending anything
+   */
+  public boolean renewLease(Submission submission) {
+    return submissionMapper.renewLease(submission.getSubmissionId(), submission.getClaimToken())
+        == 1;
+  }
+
+  /**
+   * Releases the claim of a judging that hands its task back to be delivered again, so that the
+   * submission waits for a judger again rather than for this judging.
+   *
+   * @param submission - the submission, claimed by {@link #onJudgingStarted}
+   */
+  public void onJudgingHandedBack(Submission submission) {
+    submissionMapper.releaseSubmission(submission.getSubmissionId(), submission.getClaimToken());
   }
 
   /**
@@ -103,11 +125,10 @@ public class ApplicationDispatcher {
    * @param reason - why the submission could not be judged, shown to the user in the judge log
    */
   public void onErrorOccurred(Submission submission, String reason) {
-    updateSubmission(submission, 0, 0, 0, "SE", String.format("System Error.\n\n%s\n", reason));
-
-    Map<String, Object> mapMessage = newMessage("ErrorOccurred", submission);
-
-    notifyWebApplication(mapMessage);
+    if (updateSubmission(
+        submission, 0, 0, 0, "SE", String.format("System Error.\n\n%s\n", reason))) {
+      notifyWebApplication(newMessage("ErrorOccurred", submission));
+    }
   }
 
   /**
@@ -120,8 +141,8 @@ public class ApplicationDispatcher {
     boolean isSuccessful = (Boolean) result.get("isSuccessful");
     String log = getJudgeLog(result);
 
-    if (!isSuccessful) {
-      updateSubmission(submission, 0, 0, 0, "CE", log);
+    if (!isSuccessful && !updateSubmission(submission, 0, 0, 0, "CE", log)) {
+      return;
     }
     Map<String, Object> mapMessage = newMessage("CompileFinished", submission);
     mapMessage.put("isSuccessful", isSuccessful);
@@ -189,8 +210,9 @@ public class ApplicationDispatcher {
       }
     }
     log = getJudgeLog(runtimeResults, runtimeResultSlug, totalTime, maxMemory, totalScore);
-    updateSubmission(submission, totalTime, maxMemory, totalScore, runtimeResultSlug, log);
-
+    if (!updateSubmission(submission, totalTime, maxMemory, totalScore, runtimeResultSlug, log)) {
+      return;
+    }
     Map<String, Object> mapMessage = newMessage("AllTestPointsFinished", submission);
     mapMessage.put("runtimeResult", getRuntimeResultName(runtimeResultSlug));
     mapMessage.put("totalTime", totalTime);
@@ -201,11 +223,9 @@ public class ApplicationDispatcher {
   }
 
   /**
-   * Creates a progress message of a judging. Besides the submission it carries the judging's claim
-   * ({@code executeTime}: the start time set by {@link #onJudgingStarted}, in milliseconds, and
-   * {@code generation}: the judging generation of its task, unless the task carried none), so that
-   * the web application can drop the messages of a judging that a rejudge (or a later delivery of
-   * the task) superseded instead of showing them on the submission's page.
+   * Creates a progress message of a judging. Besides the submission it carries the claim token of
+   * the judging (see {@link #onJudgingStarted}), so that the web application can drop the messages
+   * of a judging that was superseded instead of showing them on the submission's page.
    *
    * @param event - the event of the message
    * @param submission - the submission, claimed by {@link #onJudgingStarted}
@@ -215,12 +235,7 @@ public class ApplicationDispatcher {
     Map<String, Object> mapMessage = new HashMap<>();
     mapMessage.put("event", event);
     mapMessage.put("submissionId", submission.getSubmissionId());
-    if (submission.getExecuteTime() != null) {
-      mapMessage.put("executeTime", submission.getExecuteTime().getTime());
-    }
-    if (submission.getJudgeGeneration() != null) {
-      mapMessage.put("generation", submission.getJudgeGeneration().longValue());
-    }
+    mapMessage.put("claimToken", submission.getClaimToken());
     return mapMessage;
   }
 
@@ -395,8 +410,9 @@ public class ApplicationDispatcher {
    * @param score - the score of the run
    * @param judgeResult - the judging result (JudgeResultSlug)
    * @param log - the judging log
+   * @return whether the verdict was recorded; if not, the judging was superseded
    */
-  private void updateSubmission(
+  private boolean updateSubmission(
       Submission submission,
       int usedTime,
       int usedMemory,
@@ -412,10 +428,11 @@ public class ApplicationDispatcher {
     if (submissionMapper.updateSubmissionResult(submission) == 0) {
       LOGGER.warn(
           String.format(
-              "Dropped the verdict %s of submission #%d: it was rejudged, or judged by another"
-                  + " delivery of its task, meanwhile (or its task was stale).",
+              "Dropped the verdict %s of submission #%d: its judging was superseded.",
               judgeResult, submission.getSubmissionId()));
+      return false;
     }
+    return true;
   }
 
   /**
@@ -456,6 +473,9 @@ public class ApplicationDispatcher {
 
   /** The lazily-resolved, cached uid of this judger (null until resolved). */
   private Long judgerUid;
+
+  /** The source of the claim tokens. */
+  private static final SecureRandom RANDOM = new SecureRandom();
 
   /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(ApplicationDispatcher.class);

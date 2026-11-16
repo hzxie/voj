@@ -16,8 +16,6 @@
  */
 package org.verwandlung.voj.judger.mapper;
 
-import java.util.Date;
-
 import javax.sql.DataSource;
 
 import org.junit.jupiter.api.Assertions;
@@ -65,17 +63,26 @@ public class SubmissionMapperTest {
 
   /**
    * Test case: tests the claimSubmission and updateSubmissionResult methods. Test data: Submission
-   * #1000, set back to pending. Expected result: it is claimed once, its verdict is recorded with
-   * the result columns only (the code and the rest stay as they were), and a submission that is
-   * no longer pending can be claimed by nobody.
+   * #1000, set back to pending. Expected result: it is claimed, with the start time and the lease
+   * of the database's clock; its verdict is recorded with the result columns only (the code and
+   * the rest stay as they were), and a submission that is no longer pending can be claimed by
+   * nobody.
    */
   @Test
   public void testClaimAndRecordVerdict() {
     Submission before = setPending(1000);
-    Date startTime = startTime(0);
+    long generation = generationOf(1000);
 
-    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, startTime, 1000L, null));
-    Assertions.assertEquals(1, submissionMapper.updateSubmissionResult(verdict(1000, startTime)));
+    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, generation, 7L, 1000L));
+    Assertions.assertEquals(
+        0,
+        new JdbcTemplate(dataSource)
+            .queryForObject(
+                "SELECT COUNT(*) FROM voj_submissions WHERE submission_id = 1000"
+                    + " AND (ABS(TIMESTAMPDIFF(SECOND, submission_execute_time, NOW())) > 60"
+                    + " OR submission_lease_time <> submission_execute_time)",
+                Integer.class));
+    Assertions.assertEquals(1, submissionMapper.updateSubmissionResult(verdict(1000, 7L)));
 
     Submission after = submissionMapper.getSubmission(1000);
     Assertions.assertEquals("WA", after.getJudgeResultSlug());
@@ -83,37 +90,59 @@ public class SubmissionMapperTest {
     Assertions.assertEquals(12, after.getUsedTime());
     Assertions.assertEquals(34, after.getUsedMemory());
     Assertions.assertEquals(5, after.getJudgeScore());
-    Assertions.assertEquals(startTime.getTime(), after.getExecuteTime().getTime());
     Assertions.assertEquals(1000L, after.getJudgerUid());
     Assertions.assertEquals(before.getCode(), after.getCode());
     Assertions.assertEquals(before.getUid(), after.getUid());
-    Assertions.assertEquals(0, submissionMapper.claimSubmission(1000, startTime(1), 1000L, null));
+    Assertions.assertEquals(0, submissionMapper.claimSubmission(1000, generation, 8L, 1000L));
   }
 
   /**
-   * Test case: tests the updateSubmissionResult method. Test data: a judging whose submission was
-   * rejudged (set back to pending) meanwhile, and one whose task was then taken over by another
-   * delivery. Expected result: neither stale verdict is recorded; the current judging's is.
+   * Test case: tests the renewLease and updateSubmissionResult methods. Test data: a judging whose
+   * submission was rejudged meanwhile, and one whose task was then claimed by another delivery.
+   * Expected result: neither superseded judging renews its lease nor records its verdict; the
+   * current judging does both.
    */
   @Test
-  public void testStaleVerdictIsDropped() {
+  public void testSupersededJudgingIsStopped() {
     setPending(1000);
-    Date firstStartTime = startTime(0);
-    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, firstStartTime, null, null));
+    long staleGeneration = generationOf(1000);
+    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, staleGeneration, 7L, null));
+    Assertions.assertEquals(1, submissionMapper.renewLease(1000, 7L));
+    // A renewal within the same second as the previous one counts too.
+    Assertions.assertEquals(1, submissionMapper.renewLease(1000, 7L));
 
     setPending(1000); // a rejudge, as the web application does it
-    Assertions.assertEquals(
-        0, submissionMapper.updateSubmissionResult(verdict(1000, firstStartTime)));
+    Assertions.assertEquals(0, submissionMapper.renewLease(1000, 7L));
+    Assertions.assertEquals(0, submissionMapper.updateSubmissionResult(verdict(1000, 7L)));
 
-    Date secondStartTime = startTime(1);
-    Date thirdStartTime = startTime(2);
-    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, secondStartTime, null, null));
-    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, thirdStartTime, null, null));
-    Assertions.assertEquals(
-        0, submissionMapper.updateSubmissionResult(verdict(1000, secondStartTime)));
-    Assertions.assertEquals(
-        1, submissionMapper.updateSubmissionResult(verdict(1000, thirdStartTime)));
+    long generation = generationOf(1000);
+    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, generation, 8L, null));
+    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, generation, 9L, null));
+    Assertions.assertEquals(0, submissionMapper.renewLease(1000, 8L));
+    Assertions.assertEquals(0, submissionMapper.updateSubmissionResult(verdict(1000, 8L)));
+    Assertions.assertEquals(1, submissionMapper.renewLease(1000, 9L));
+    Assertions.assertEquals(1, submissionMapper.updateSubmissionResult(verdict(1000, 9L)));
     Assertions.assertEquals("WA", submissionMapper.getSubmission(1000).getJudgeResultSlug());
+    // A judged submission has no lease to renew.
+    Assertions.assertEquals(0, submissionMapper.renewLease(1000, 9L));
+  }
+
+  /**
+   * Test case: tests the releaseSubmission method. Test data: a claimed submission, released by a
+   * judging that was superseded, then by its own. Expected result: only the current judging
+   * releases it, after which its verdict is not recorded, and the next delivery of the task claims
+   * the submission again.
+   */
+  @Test
+  public void testReleaseSubmission() {
+    setPending(1000);
+    long generation = generationOf(1000);
+    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, generation, 7L, null));
+
+    Assertions.assertEquals(0, submissionMapper.releaseSubmission(1000, 8L));
+    Assertions.assertEquals(1, submissionMapper.releaseSubmission(1000, 7L));
+    Assertions.assertEquals(0, submissionMapper.updateSubmissionResult(verdict(1000, 7L)));
+    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, generation, 8L, null));
   }
 
   /**
@@ -129,38 +158,8 @@ public class SubmissionMapperTest {
     long generation = generationOf(1000);
     Assertions.assertEquals(staleGeneration + 1, generation);
 
-    Assertions.assertEquals(
-        0, submissionMapper.claimSubmission(1000, startTime(0), null, staleGeneration));
-    Assertions.assertEquals(
-        1, submissionMapper.claimSubmission(1000, startTime(0), null, generation));
-  }
-
-  /**
-   * Test case: tests the updateSubmissionResult method. Test data: a judging, then a rejudge and
-   * the judging of its task, which started in the same second (the precision of the start time).
-   * Expected result: the verdict of the stale judging is dropped all the same, the current
-   * judging's is recorded.
-   */
-  @Test
-  public void testStaleVerdictIsDroppedEvenWithTheSameStartTime() {
-    setPending(1000);
-    long staleGeneration = generationOf(1000);
-    Date startTime = startTime(0);
-    Assertions.assertEquals(
-        1, submissionMapper.claimSubmission(1000, startTime, null, staleGeneration));
-
-    setPending(1000); // a rejudge, as the web application does it
-    long generation = generationOf(1000);
-    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, startTime, null, generation));
-
-    Submission staleVerdict = verdict(1000, startTime);
-    staleVerdict.setJudgeGeneration(staleGeneration);
-    Assertions.assertEquals(0, submissionMapper.updateSubmissionResult(staleVerdict));
-    Submission verdict = verdict(1000, startTime);
-    verdict.setJudgeGeneration(generation);
-    verdict.setJudgeResultSlug("AC");
-    Assertions.assertEquals(1, submissionMapper.updateSubmissionResult(verdict));
-    Assertions.assertEquals("AC", submissionMapper.getSubmission(1000).getJudgeResultSlug());
+    Assertions.assertEquals(0, submissionMapper.claimSubmission(1000, staleGeneration, 7L, null));
+    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, generation, 8L, null));
   }
 
   /**
@@ -192,33 +191,25 @@ public class SubmissionMapperTest {
                 + " NULL, submission_judge_score = NULL, submission_used_time = NULL,"
                 + " submission_used_memory = NULL, submission_execute_time = NULL,"
                 + " judger_uid = NULL,"
-                + " submission_judge_generation = submission_judge_generation + 1"
+                + " submission_judge_generation = submission_judge_generation + 1,"
+                + " submission_claim_token = NULL, submission_lease_time = NULL,"
+                + " submission_queued_time = NOW()"
                 + " WHERE submission_id = ?",
             submissionId);
     return submission;
   }
 
   /**
-   * Gets a distinct start time of a judging, at second precision.
-   *
-   * @param offsetSeconds - the offset (seconds) from a fixed point in time
-   * @return the start time
-   */
-  private static Date startTime(int offsetSeconds) {
-    return new Date((1700000000L + offsetSeconds) * 1000);
-  }
-
-  /**
    * Builds the verdict of a judging.
    *
    * @param submissionId - the unique identifier of the submission
-   * @param startTime - the start time of the judging
+   * @param claimToken - the claim token of the judging
    * @return the submission carrying the verdict
    */
-  private static Submission verdict(long submissionId, Date startTime) {
+  private static Submission verdict(long submissionId, long claimToken) {
     Submission submission = new Submission();
     submission.setSubmissionId(submissionId);
-    submission.setExecuteTime(startTime);
+    submission.setClaimToken(claimToken);
     submission.setJudgeResultSlug("WA");
     submission.setJudgeLog("Wrong Answer.");
     submission.setUsedTime(12);

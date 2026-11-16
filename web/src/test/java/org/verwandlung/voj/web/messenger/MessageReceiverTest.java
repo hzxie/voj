@@ -46,38 +46,20 @@ public class MessageReceiverTest {
   }
 
   /**
-   * Test case: tests onMessage(Message). Test data: a TestPointFinished message with the claim of
-   * the judging that sent it. Expected: the submission event carries the claim.
+   * Test case: tests onMessage(Message). Test data: a TestPointFinished message with the claim
+   * token of the judging that sent it. Expected: the submission event carries the claim token.
    */
   @Test
-  public void testProgressCarriesTheClaimOfTheJudging() throws JMSException {
+  public void testProgressCarriesTheClaimTokenOfTheJudging() throws JMSException {
     MapMessage message = testPointFinished();
-    when(message.itemExists("executeTime")).thenReturn(true);
-    when(message.getLong("executeTime")).thenReturn(1700000000000L);
-    when(message.itemExists("generation")).thenReturn(true);
-    when(message.getLong("generation")).thenReturn(2L);
+    when(message.getLong("claimToken")).thenReturn(-4242L);
 
     receiver.onMessage(message);
 
     SubmissionEvent event = publishedEvent();
     Assertions.assertEquals(1000L, event.getSubmissionId());
-    Assertions.assertEquals(1700000000000L, event.getExecuteTime());
-    Assertions.assertEquals(2L, event.getGeneration());
+    Assertions.assertEquals(-4242L, event.getClaimToken());
     Assertions.assertFalse(event.isCompleted());
-  }
-
-  /**
-   * Test case: tests onMessage(Message). Test data: a TestPointFinished message from a judger that
-   * does not send the claim. Expected: the event has no claim (and is therefore not filtered).
-   */
-  @Test
-  public void testProgressWithoutClaim() throws JMSException {
-    MapMessage message = testPointFinished();
-
-    receiver.onMessage(message);
-
-    Assertions.assertNull(publishedEvent().getExecuteTime());
-    Assertions.assertNull(publishedEvent().getGeneration());
   }
 
   /** Builds a TestPointFinished message of submission 1000. */
