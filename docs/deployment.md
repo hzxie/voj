@@ -520,6 +520,29 @@ Requirements for that account:
 Because the credentials live in `voj.properties`, keep that file readable only by
 the judger account.
 
+### The checkpoint directory on Windows
+
+`judger.checkpointDir` defaults to `%ProgramData%\voj-judger`. Every user may
+read `%ProgramData%` and create files in it, and so they could in anything
+created there with the ACL it inherits: the judger therefore creates the
+directory, its `judger-<n>\` cache and its `work-<n>\` directory each with an ACL
+of its own, which gives only the judger's account access (any account may still
+pass through a directory to one below it, by *Bypass traverse checking*). In
+`work-<n>\`, what is created (the work directory of each judging and what is in
+it) is also the sandbox account's, but for changing its ACL or its owner, and an
+`OWNER RIGHTS` entry keeps the sandbox account from changing the ACL of what it
+creates there either (Windows lets the owner of a file change its ACL
+otherwise). A directory whose ACL cannot be set is removed again, so it is
+never left with the ACL it would inherit. The judger does not change the ACL of
+a `judger.checkpointDir` that exists already: create it yourself only with an
+ACL that gives no other account access.
+
+A lock file `judger-<n>.lock` cannot be deleted or renamed while its judger
+runs. When the judger removes a work directory, it removes a junction or a
+symbolic link a submission left there as a link, never what it points to, and
+takes back what it is denied (it replaces the ACL by one that gives it full
+control, and clears the read-only attribute) before it tries again.
+
 ### Native build prerequisites (Windows)
 
 The JNI library (`JudgerCore.dll`) is built by `judger/Makefile` with the

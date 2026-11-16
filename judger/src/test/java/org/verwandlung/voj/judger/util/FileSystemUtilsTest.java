@@ -218,7 +218,7 @@ public class FileSystemUtilsTest {
    * @param target - the directory it points to
    * @return the junction
    */
-  private static Path createJunction(Path link, Path target) throws Exception {
+  public static Path createJunction(Path link, Path target) throws Exception {
     Process process =
         new ProcessBuilder("cmd", "/c", "mklink", "/J", link.toString(), target.toString())
             .redirectErrorStream(true)

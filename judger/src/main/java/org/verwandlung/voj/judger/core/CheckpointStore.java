@@ -37,6 +37,8 @@ import java.nio.file.attribute.PosixFileAttributeView;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.nio.file.attribute.UserPrincipal;
+import java.nio.file.attribute.UserPrincipalLookupService;
+import java.nio.file.attribute.UserPrincipalNotFoundException;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
@@ -315,39 +317,102 @@ public class CheckpointStore {
    * rwx--x--x}). On Windows, where every account may pass through a directory it cannot read
    * (Bypass traverse checking), the sandbox account is granted access to what is created in it
    * instead (not to the directory itself), i.e. to the work directory of each judging and what is
-   * in it.
+   * in it, but changing its ACL or owner. As the owner of what it creates there, it could still
+   * change the ACL of that (and deny the judger, which then could not remove it): an entry for
+   * {@code OWNER RIGHTS} gives the owner of what is created there no more than reading its ACL
+   * instead.
    *
    * @param directory - the work directory of this judger's slot
    * @throws IOException if the directory cannot be created, or the access cannot be granted
    */
   private void createWorkDirectory(Path directory) throws IOException {
-    createDirectory(directory, PASSABLE);
     if (isPosix()) {
+      createDirectory(directory, PASSABLE);
       return;
     }
-    UserPrincipal account =
-        directory
-            .getFileSystem()
-            .getUserPrincipalLookupService()
-            .lookupPrincipalByName(sandboxUsername);
-    AclFileAttributeView view =
-        Files.getFileAttributeView(
-            directory, AclFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
-    List<AclEntry> acl = new ArrayList<>(view.getAcl());
+    UserPrincipalLookupService accounts =
+        directory.getFileSystem().getUserPrincipalLookupService();
+    List<AclEntry> entries = new ArrayList<>();
+    entries.add(
+        inheritedOnly(
+            accounts.lookupPrincipalByName(sandboxUsername),
+            EnumSet.complementOf(
+                EnumSet.of(AclEntryPermission.WRITE_ACL, AclEntryPermission.WRITE_OWNER))));
+    try {
+      entries.add(
+          inheritedOnly(
+              accounts.lookupPrincipalByName(OWNER_RIGHTS),
+              EnumSet.of(AclEntryPermission.READ_ACL)));
+    } catch (UserPrincipalNotFoundException ex) {
+      // Its name (S-1-3-4) may be translated on Windows in another language.
+      LOGGER.warn(
+          "No account is named {} on this host: the sandbox account may change the ACL of what it"
+              + " creates in {}.",
+          OWNER_RIGHTS,
+          directory);
+    }
+    createWindowsDirectory(directory, entries);
+  }
+
+  /**
+   * Builds an entry of an ACL (Windows) that applies only to what is created in a directory, not to
+   * the directory itself.
+   *
+   * @param account - the account it allows
+   * @param permissions - what it allows
+   * @return the entry
+   */
+  private static AclEntry inheritedOnly(
+      UserPrincipal account, Set<AclEntryPermission> permissions) {
+    return AclEntry.newBuilder()
+        .setType(AclEntryType.ALLOW)
+        .setPrincipal(account)
+        .setPermissions(permissions)
+        .setFlags(
+            AclEntryFlag.FILE_INHERIT, AclEntryFlag.DIRECTORY_INHERIT, AclEntryFlag.INHERIT_ONLY)
+        .build();
+  }
+
+  /** The name of the account that stands for the owner of a file in an ACL (S-1-3-4). */
+  private static final String OWNER_RIGHTS = "OWNER RIGHTS";
+
+  /**
+   * Creates a directory on Windows with an ACL of its own instead of the one it would inherit
+   * (from {@code %ProgramData%}, every user may read and create files): it gives the judger full
+   * control of the directory and of what is created in it, and nobody else any access but the
+   * entries given. The accounts are looked up first, and a directory whose ACL cannot be set is
+   * removed again, so that it never stays with the ACL it inherited.
+   *
+   * @param directory - the directory to create
+   * @param entries - the entries of its ACL besides the judger's
+   * @throws IOException if the directory cannot be created, or its ACL cannot be set
+   */
+  private static void createWindowsDirectory(Path directory, List<AclEntry> entries)
+      throws IOException {
+    List<AclEntry> acl = new ArrayList<>(entries);
     acl.add(
-        0,
         AclEntry.newBuilder()
             .setType(AclEntryType.ALLOW)
-            .setPrincipal(account)
-            .setPermissions(
-                EnumSet.complementOf(
-                    EnumSet.of(AclEntryPermission.WRITE_ACL, AclEntryPermission.WRITE_OWNER)))
-            .setFlags(
-                AclEntryFlag.FILE_INHERIT,
-                AclEntryFlag.DIRECTORY_INHERIT,
-                AclEntryFlag.INHERIT_ONLY)
+            .setPrincipal(
+                directory
+                    .getFileSystem()
+                    .getUserPrincipalLookupService()
+                    .lookupPrincipalByName(System.getProperty("user.name")))
+            .setPermissions(AclEntryPermission.values())
+            .setFlags(AclEntryFlag.FILE_INHERIT, AclEntryFlag.DIRECTORY_INHERIT)
             .build());
-    view.setAcl(acl);
+    Files.createDirectory(directory);
+    try {
+      Files.getFileAttributeView(directory, AclFileAttributeView.class, LinkOption.NOFOLLOW_LINKS)
+          .setAcl(acl);
+    } catch (Throwable ex) {
+      try {
+        Files.delete(directory);
+      } catch (IOException deleteException) {
+        ex.addSuppressed(deleteException);
+      }
+      throw ex;
+    }
   }
 
   /**
@@ -543,8 +608,8 @@ public class CheckpointStore {
   /**
    * Creates a directory with the given permissions (on POSIX systems) from the start, whatever the
    * permissions of its parent and the umask, so that submitted programs running as the
-   * unprivileged sandbox user cannot read the reference answers in a private one. A plain
-   * directory on Windows.
+   * unprivileged sandbox user cannot read the reference answers in a private one. On Windows, one
+   * only the judger may access (see {@link #createWindowsDirectory}), whatever the permissions.
    *
    * @param directory - the directory to create
    * @param permissions - its permissions, e.g. {@code rwx------}
@@ -552,7 +617,8 @@ public class CheckpointStore {
    */
   private static void createDirectory(Path directory, String permissions) throws IOException {
     if (!isPosix()) {
-      Files.createDirectory(directory);
+      // Others may pass through any directory (Bypass traverse checking).
+      createWindowsDirectory(directory, List.of());
       return;
     }
     Set<PosixFilePermission> permissionSet = PosixFilePermissions.fromString(permissions);
