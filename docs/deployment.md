@@ -98,7 +98,10 @@ sudo useradd --system --no-create-home --shell /usr/sbin/nologin voj-sandbox
   than twice the limit, that is rare. Memory that is reserved but never touched
   does not count. A compilation's memory is that of the compiler's top-level
   process, under `judger.compileMemoryLimit`; every process it runs is held to
-  the same `RLIMIT_DATA` backstop, derived from that limit.
+  the same `RLIMIT_DATA` backstop, derived from that limit. A program whose
+  static data alone (`static int a[1 << 30];`) exceeds the backstop cannot even
+  be loaded; it is not run and is Memory Limit Exceeded, rather than the
+  `SIGSEGV` the kernel would kill it with while loading it.
 - **Output.** A file the program writes, standard output included, may reach
   256 MB (`RLIMIT_FSIZE`; fixed). A run that hits the limit is Output Limit
   Exceeded, whether the kernel's `SIGXFSZ` kills it or it ignores the signal,

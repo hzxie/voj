@@ -36,8 +36,10 @@
 #include <thread>
 #include <vector>
 
+#include <elf.h>
 #include <fcntl.h>
 #include <grp.h>
+#include <link.h>
 #include <pwd.h>
 #include <sched.h>
 #include <signal.h>
@@ -125,6 +127,7 @@ struct ChildPlan {
   bool                     compileStep;    // compile: stderr also goes to outputFilePath
   int                      timeLimit;      // ms (0 = no limit)
   rlim_t                   dataLimit;      // RLIMIT_DATA in bytes (0 = none)
+  unsigned long long       pageSize;       // the system's page size in bytes
   rlim_t                   processLimit;   // RLIMIT_NPROC of the sandbox user (processes + threads)
   bool                     dropPrivileges; // whether to setuid/setgid
   uid_t                    dropUid;
@@ -149,6 +152,8 @@ enum ChildStep {
   STEP_DESCRIPTORS, STEP_INPUT, STEP_PROCESS_GROUP, STEP_RESOURCE_LIMIT, STEP_GROUPS, STEP_GID,
   STEP_UID, STEP_WORK_DIRECTORY, STEP_OUTPUT, STEP_DEV_NULL, STEP_NO_NEW_PRIVS, STEP_SECCOMP,
   STEP_EXEC,
+  // Not a failure: the program's static data alone exceeds RLIMIT_DATA (see getWritableImageSize).
+  STEP_STATIC_DATA_LIMIT,
 };
 static const char* const CHILD_STEP_NAMES[] = {
   "marking inherited descriptors close-on-exec", "opening the input file", "setpgid()",
@@ -180,6 +185,7 @@ static void reportChildFailure(int syncWriteFd, int step) __attribute__((noretur
 static bool setResourceLimit(int resource, rlim_t soft, rlim_t hard);
 static int  openOutputFile(const char*);
 static bool markInheritedDescriptorsCloseOnExec();
+static unsigned long long getWritableImageSize(const char* path, unsigned long long pageSize);
 
 /**
  * JNI call entry point.
@@ -237,6 +243,8 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     plan.compileStep    = (isCompilation == JNI_TRUE);
     plan.timeLimit      = timeLimit;
     plan.dataLimit      = getDataLimit(memoryLimit);
+    long pageSize       = sysconf(_SC_PAGESIZE);
+    plan.pageSize       = pageSize > 0 ? (unsigned long long) pageSize : 4096;
     plan.processLimit   = (processLimit > 0) ? (rlim_t) processLimit : PROCESS_NUMBER_LIMIT;
     plan.dropPrivileges = false;
     plan.dropUid        = 0;
@@ -309,11 +317,21 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     }
     close(syncPipe[0]);
     if ( syncBytes != 0 ) {
-        // The sandbox could not be set up, so the program never ran: a system error, never a
-        // verdict on the submission.
         while ( waitpid(pid, nullptr, 0) < 0 && errno == EINTR ) {
             // Retry on interrupted system call.
         }
+        if ( syncBytes == (ssize_t) sizeof(childFailure) && childFailure.step == STEP_STATIC_DATA_LIMIT ) {
+            // The program's static data alone exceeds the memory backstop: execve would have
+            // failed past its point of no return, killing the program with SIGSEGV.
+            JHashMap result;
+            result.put("usedTime", 0);
+            result.put("usedMemory", memoryLimit);
+            result.put("exitCode", 128 + SIGSEGV);
+            result.put("limitExceeded", (jint) LIMIT_MEMORY);
+            return result.toJObject(jniEnv);
+        }
+        // The sandbox could not be set up, so the program never ran: a system error, never a
+        // verdict on the submission.
         std::string message = "Judger: the sandbox failed to start the program";
         if ( syncBytes == (ssize_t) sizeof(childFailure) && childFailure.step >= 0 &&
              childFailure.step < (int) (sizeof(CHILD_STEP_NAMES) / sizeof(CHILD_STEP_NAMES[0])) ) {
@@ -556,6 +574,16 @@ static void runProgram(const ChildPlan& plan, int syncWriteFd) {
     }
     close(nullFd);
 
+    // A program whose static data (initialised data and bss, e.g. `static int a[1 << 30];`) alone
+    // exceeds the backstop below cannot even be loaded: execve would fail past its point of no
+    // return, and the kernel would kill the program with a SIGSEGV that looks like a runtime error.
+    // Like a single mapping beyond the backstop (see buildSeccompProgram), it is Memory Limit
+    // Exceeded. The file is read with the sandbox user's credentials, as execve would read it.
+    if ( !plan.compileStep && plan.dataLimit > 0 &&
+         getWritableImageSize(plan.executable.c_str(), plan.pageSize) > (unsigned long long) plan.dataLimit ) {
+        reportChildFailure(syncWriteFd, STEP_STATIC_DATA_LIMIT);
+    }
+
     // Tier 1: a per-process kernel memory backstop, inherited by every child. RLIMIT_DATA (private
     // writable mappings, i.e. roughly committed memory) is used rather than RLIMIT_AS, because the
     // JVM, V8 (Node.js) and the Go runtime reserve far more address space than they ever commit and
@@ -667,6 +695,47 @@ static bool markInheritedDescriptorsCloseOnExec() {
             }
         }
     }
+}
+
+/**
+ * Gets the private writable memory the kernel maps for an ELF executable as it loads it: its
+ * writable PT_LOAD segments (initialised data and bss), in whole pages. All of it counts against
+ * RLIMIT_DATA. Only the main executable is looked at; the dynamic loader and shared libraries add
+ * comparatively little. Async-signal-safe.
+ * @param  path     - the executable
+ * @param  pageSize - the system's page size in bytes
+ * @return the size in bytes, or 0 if it is not a native ELF file or cannot be read (e.g. a script)
+ */
+static unsigned long long getWritableImageSize(const char* path, unsigned long long pageSize) {
+    // O_NONBLOCK: never block opening a FIFO planted in place of the program.
+    int fd = open(path, O_RDONLY | O_CLOEXEC | O_NOCTTY | O_NONBLOCK);
+    if ( fd < 0 ) {
+        return 0;
+    }
+    unsigned long long size = 0;
+    struct stat st;
+    ElfW(Ehdr) header;
+    if ( fstat(fd, &st) == 0 && S_ISREG(st.st_mode) &&
+         pread(fd, &header, sizeof(header), 0) == (ssize_t) sizeof(header) &&
+         memcmp(header.e_ident, ELFMAG, SELFMAG) == 0 &&
+         header.e_ident[EI_CLASS] == (sizeof(void*) == 8 ? ELFCLASS64 : ELFCLASS32) &&
+         header.e_phentsize == sizeof(ElfW(Phdr)) ) {
+        for ( unsigned int i = 0; i < header.e_phnum; ++i ) {
+            ElfW(Phdr) segment;
+            if ( pread(fd, &segment, sizeof(segment), (off_t) (header.e_phoff + i * sizeof(segment))) !=
+                 (ssize_t) sizeof(segment) ) {
+                size = 0;
+                break;
+            }
+            if ( segment.p_type == PT_LOAD && (segment.p_flags & PF_W) != 0 ) {
+                unsigned long long start = segment.p_vaddr & ~(pageSize - 1);
+                unsigned long long end   = (segment.p_vaddr + segment.p_memsz + pageSize - 1) & ~(pageSize - 1);
+                size += end - start;
+            }
+        }
+    }
+    close(fd);
+    return size;
 }
 
 /**

@@ -339,6 +339,37 @@ public class SandboxBehaviorTest {
   }
 
   /**
+   * Test case: a program whose static data (1 TB of bss) alone exceeds the kernel memory backstop
+   * (RLIMIT_DATA), so that it cannot even be loaded. Expected result: Memory Limit Exceeded, not the
+   * runtime error of the SIGSEGV the kernel kills such a program with while loading it. The program
+   * is compiled with -mcmodel=medium, which static data beyond 2 GB needs on x86-64.
+   */
+  @Test
+  public void testHugeStaticDataIsMemoryLimitExceeded() throws Exception {
+    Assumptions.assumeTrue("native".equalsIgnoreCase(sandbox), "This tests the native runner.");
+    Assumptions.assumeTrue(isLinux(), "RLIMIT_DATA is Linux-only.");
+    Assumptions.assumeTrue(
+        "amd64".equals(System.getProperty("os.arch")), "-mcmodel=medium is x86-64 only.");
+    String workDirectory = createWorkDirectory(900021L);
+    Path source = Files.writeString(Path.of(workDirectory, "static.cpp"), HUGE_STATIC_DATA_CODE);
+    String program = workDirectory + "/static.exe";
+    RunResult compilation =
+        sandboxRunner.run(
+            "g++ -O2 -mcmodel=medium -o " + program + " " + source,
+            null,
+            workDirectory + "/compile.log",
+            20000,
+            0,
+            true);
+    Assertions.assertEquals(
+        Verdict.NORMAL,
+        compilation.getVerdict(),
+        Files.readString(Path.of(workDirectory, "compile.log")));
+    RunResult run = sandboxRunner.run(program, null, workDirectory + "/output.txt", 5000, 65536, false);
+    Assertions.assertEquals(Verdict.MEMORY_LIMIT_EXCEEDED, run.getVerdict());
+  }
+
+  /**
    * Checks whether the judger runs on Linux.
    *
    * @return whether the operating system is Linux
@@ -809,6 +840,17 @@ public class SandboxBehaviorTest {
           }
       #endif
           return 0;
+      }
+      """;
+
+  /** A program with 1 TB of static data (bss), of which it touches a single byte. */
+  private static final String HUGE_STATIC_DATA_CODE =
+      """
+      static char data[1ULL << 40];
+
+      int main(int argc, char**) {
+          data[argc] = 1;
+          return data[argc * 2];
       }
       """;
 
