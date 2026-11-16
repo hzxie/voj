@@ -109,6 +109,12 @@ static const jint LIMIT_OUTPUT = 3;
 static const LONGLONG OUTPUT_FILE_SIZE_LIMIT = 256LL * 1024 * 1024;
 
 /**
+ * How long (ms) the runner waits, once the program is gone, for the rest of its Job (a run's
+ * console host, what a compiler left running) to be killed and gone, before it gives up on the run.
+ */
+static const DWORD JOB_EMPTY_TIMEOUT_MS = 5000;
+
+/**
  * The only environment variables the sandboxed process inherits from the judger, mirroring the
  * Linux runner. The judger's own environment holds secrets (VOJ_DB_PASSWORD, VOJ_JUDGER_API_TOKEN,
  * ...) that a submission could otherwise read (GetEnvironmentVariable, or a compile error that
@@ -212,6 +218,22 @@ struct EnvironmentNameLess {
 typedef std::map<std::wstring, std::wstring, EnvironmentNameLess> EnvironmentMap;
 
 /**
+ * The sandbox account's logon session, which every compilation and run of the judger uses: the
+ * account is logged on (LogonUserW, as a batch job) and its profile loaded once, when the first
+ * compilation or run needs them, and kept until the judger exits (or another account is
+ * configured), rather than for every compilation and run. Guarded by sandboxSessionLock.
+ */
+struct SandboxSession {
+    std::wstring username;
+    std::wstring password;
+    HANDLE       hToken;    // the account's logon token
+    HANDLE       hProfile;  // its loaded profile (registry hive), unloaded with the session
+    HANDLE       hRunToken; // the token every program runs with (see createLowIntegrityToken)
+};
+static SandboxSession sandboxSession     = { L"", L"", NULL, NULL, NULL };
+static SRWLOCK        sandboxSessionLock = SRWLOCK_INIT;
+
+/**
  * Function Prototypes.
  */
 bool setupIoRedirection(const std::wstring&, const std::wstring&, HANDLE&, HANDLE&);
@@ -219,7 +241,10 @@ bool getJudgerOnlySecurityDescriptor(PSECURITY_DESCRIPTOR&);
 void setupStartupInfo(STARTUPINFOW&, HANDLE&, HANDLE&, HANDLE&);
 HANDLE createJobObject(DWORD, jint, bool, HANDLE);
 bool drainJobMessages(HANDLE, bool&);
-bool createProcess(const std::wstring&, const std::wstring&, const std::wstring&, const std::wstring&, const std::wstring&, HANDLE&, HANDLE&, STARTUPINFOW&, PROCESS_INFORMATION&, std::string&);
+bool emptyJob(HANDLE, HANDLE, bool&);
+bool createProcess(const std::wstring&, const std::wstring&, const std::wstring&, const std::wstring&, const std::wstring&, STARTUPINFOW&, PROCESS_INFORMATION&, std::string&);
+bool openSandboxSession(const std::wstring&, const std::wstring&, std::string&);
+void closeSandboxSession();
 HANDLE createLowIntegrityToken(HANDLE);
 bool labelLowIntegrity(const std::wstring&);
 bool hasLowIntegrityLabel(PACL, PSID);
@@ -274,12 +299,12 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     HANDLE              hInput              = NULL;
     HANDLE              hOutput             = NULL;
     HANDLE              hError              = NULL;
-    HANDLE              hToken              = NULL;
-    HANDLE              hProfile            = NULL;
     HANDLE              hJob                = NULL;
     HANDLE              hCompletionPort     = NULL;
     PROCESS_INFORMATION processInfo         = {0};
     STARTUPINFOW        startupInfo         = {0};
+    bool                jobInUse            = false; // processes may be (or have been) in the Job
+    bool                memoryLimitHit      = false;
 
     JHashMap            result;
     jint                timeUsage           = 0;
@@ -288,8 +313,13 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
 
     // Releases everything acquired so far. Every early exit below goes through it: a pending Java
     // exception does not stop this function, so each failure must clean up and return explicitly
-    // instead of carrying on with invalid handles.
+    // instead of carrying on with invalid handles. Whatever is left of the Job's processes is killed,
+    // and gone, first.
     auto cleanup = [&]() {
+        if ( jobInUse ) {
+            emptyJob(hJob, hCompletionPort, memoryLimitHit);
+            jobInUse = false;
+        }
         if ( processInfo.hThread != NULL ) {
             CloseHandle(processInfo.hThread);
             processInfo.hThread = NULL;
@@ -298,7 +328,8 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
             CloseHandle(processInfo.hProcess);
             processInfo.hProcess = NULL;
         }
-        // Closing the job kills any surviving processes in it (JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE).
+        // Closing the job kills any surviving processes in it (JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE),
+        // should emptying it have failed.
         if ( hJob != NULL ) {
             CloseHandle(hJob);
             hJob = NULL;
@@ -318,14 +349,6 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
         if ( hOutput != NULL ) {
             CloseHandle(hOutput);
             hOutput = NULL;
-        }
-        if ( hProfile != NULL ) {
-            UnloadUserProfile(hToken, hProfile);
-            hProfile = NULL;
-        }
-        if ( hToken != NULL ) {
-            CloseHandle(hToken);
-            hToken = NULL;
         }
     };
     // Reports a failed Windows API call as a Java exception and releases everything. The error
@@ -383,7 +406,7 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     // instruction, and only then resumed - so the limits are in force from the very beginning.
     std::string failedApi;
     if ( !createProcess(commandLine, username, password, workDirectory, javaOptions,
-            hToken, hProfile, startupInfo, processInfo, failedApi) ) {
+            startupInfo, processInfo, failedApi) ) {
         return fail(failedApi);
     }
     // If the assignment fails the process would run outside the Job: without the process limit,
@@ -397,13 +420,9 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
         throwStringException(jniEnv, message);
         return NULL;
     }
+    jobInUse = true;
     if ( ResumeThread(processInfo.hThread) == (DWORD) -1 ) {
-        std::string message = getErrorMessage("ResumeThread");
-        TerminateJobObject(hJob, 1);
-        WaitForSingleObject(processInfo.hProcess, INFINITE);
-        cleanup();
-        throwStringException(jniEnv, message);
-        return NULL;
+        return fail("ResumeThread");
     }
 
     // Kills every process of the run and waits for the program to be gone. If the Job cannot be
@@ -429,7 +448,6 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     DWORD     wallTimeLimit       = ( timeLimit > 0 ) ? (DWORD)(timeLimit + WALL_TIME_BUFFER_MS) : INFINITE;
     jint      limitExceeded       = LIMIT_NONE;
     bool      killedByWallTimeout = false;
-    bool      memoryLimitHit      = false;
     LARGE_INTEGER outputSize      = {};
     ULONGLONG startTick           = GetTickCount64();
     for ( ;; ) {
@@ -439,11 +457,7 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
         }
         if ( waitResult == WAIT_FAILED ) {
             // Never spin on a handle that cannot be waited on: kill the run and report the error.
-            std::string message = getErrorMessage("WaitForSingleObject");
-            TerminateJobObject(hJob, 1);
-            cleanup();
-            throwStringException(jniEnv, message);
-            return NULL;
+            return fail("WaitForSingleObject");
         }
         if ( timeLimit > 0 ) {
             if ( !getCpuTimeUsage(hJob, processInfo.hProcess, !isCompilation, timeUsage) ) {
@@ -532,6 +546,17 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
         exitCode = 1;
     }
 
+    // Every process of the Job (a run's console host, whatever a compiler left running) is killed,
+    // and gone, before the judger goes on: it removes the work directory of a run next, and a
+    // process that still had a file of it open would keep it from doing so.
+    if ( !emptyJob(hJob, hCompletionPort, memoryLimitHit) ) {
+        std::string message = getErrorMessage("EmptyJob");
+        jobInUse = false;
+        cleanup();
+        throwStringException(jniEnv, message);
+        return NULL;
+    }
+    jobInUse = false;
     cleanup();
 
     result.put("usedTime", timeUsage);
@@ -740,16 +765,61 @@ bool drainJobMessages(HANDLE hCompletionPort, bool& memoryLimitHit) {
 }
 
 /**
- * Creates a process running as the given (low-privilege) user, at Low integrity.
+ * Kills whatever is left in a Job and waits until it holds no process any more: until the Job
+ * reports no active process, or JOB_OBJECT_MSG_ACTIVE_PROCESS_ZERO arrives on its completion port
+ * (which is not guaranteed to be delivered, hence the count is looked at too).
+ * See https://learn.microsoft.com/windows/win32/api/winnt/ns-winnt-jobobject_associate_completion_port
+ * @param  hJob            - the Job
+ * @param  hCompletionPort - the Job's completion port
+ * @param  memoryLimitHit  - set when an allocation was refused by the Job's hard memory cap
+ * @return whether the Job is empty (GetLastError() tells why not: WAIT_TIMEOUT after
+ *         JOB_EMPTY_TIMEOUT_MS)
+ */
+bool emptyJob(HANDLE hJob, HANDLE hCompletionPort, bool& memoryLimitHit) {
+    // Fails harmlessly for a Job whose processes are all gone already.
+    TerminateJobObject(hJob, 1);
+    ULONGLONG deadline = GetTickCount64() + JOB_EMPTY_TIMEOUT_MS;
+    for ( ;; ) {
+        JOBOBJECT_BASIC_ACCOUNTING_INFORMATION accounting = {0};
+        if ( !QueryInformationJobObject(hJob, JobObjectBasicAccountingInformation,
+                &accounting, sizeof(accounting), NULL) ) {
+            return false;
+        }
+        if ( accounting.ActiveProcesses == 0 ) {
+            return true;
+        }
+        ULONGLONG now = GetTickCount64();
+        if ( now >= deadline ) {
+            SetLastError(WAIT_TIMEOUT);
+            return false;
+        }
+        DWORD        message    = 0;
+        ULONG_PTR    key        = 0;
+        LPOVERLAPPED overlapped = NULL;
+        DWORD        wait       = deadline - now < POLL_INTERVAL_MS ? (DWORD) (deadline - now)
+                                                                     : POLL_INTERVAL_MS;
+        if ( GetQueuedCompletionStatus(hCompletionPort, &message, &key, &overlapped, wait) ) {
+            if ( message == JOB_OBJECT_MSG_ACTIVE_PROCESS_ZERO ) {
+                return true;
+            }
+            if ( message == JOB_OBJECT_MSG_JOB_MEMORY_LIMIT || message == JOB_OBJECT_MSG_PROCESS_MEMORY_LIMIT ) {
+                memoryLimitHit = true;
+            }
+        }
+    }
+}
+
+/**
+ * Creates a process running as the given (low-privilege) user, without privileges and at Low
+ * integrity.
  *
- * The account is logged on (LogonUserW, as a batch job), its profile loaded, and the process
- * created with a copy of its token lowered to Low integrity (see LOW_INTEGRITY_SID) by
- * CreateProcessWithTokenW, which needs the judger to hold SeImpersonatePrivilege (an elevated
- * administrator does; CreateProcessAsUserW would need SeAssignPrimaryTokenPrivilege, which only
- * services have). CreateProcessWithLogonW, which needs no privilege, takes no token: the integrity
- * level of the process it creates cannot be lowered, as the judger may not change that process's
- * token. The process is created suspended so the caller can assign it to a Job Object before it
- * runs.
+ * The process is created with the run token of the account's logon session (see
+ * openSandboxSession and createLowIntegrityToken) by CreateProcessWithTokenW, which needs the judger
+ * to hold SeImpersonatePrivilege (an elevated administrator does; CreateProcessAsUserW would need
+ * SeAssignPrimaryTokenPrivilege, which only services have). CreateProcessWithLogonW, which needs no
+ * privilege, takes no token: the integrity level of the process it creates cannot be lowered, as
+ * the judger may not change that process's token. The process is created suspended so the caller
+ * can assign it to a Job Object before it runs.
  *
  * @param  commandLine   - the command line to execute
  * @param  username      - the Windows username
@@ -757,9 +827,6 @@ bool drainJobMessages(HANDLE hCompletionPort, bool& memoryLimitHit) {
  * @param  workDirectory - the program's work directory, where the process starts (empty if
  *                         none: the sandbox account's profile directory)
  * @param  javaOptions   - the value of JDK_JAVA_OPTIONS (empty: not set), see buildEnvironmentBlock
- * @param  hToken        - receives a token that represents the specified user
- * @param  hProfile      - receives the handle of the user's loaded profile (its registry), which
- *                         must be unloaded once the process is gone
  * @param  startupInfo   - a STARTUPINFO structure
  * @param  processInfo   - receives identification information for the new process
  * @param  failedApi     - receives the name of the call that failed, if one did
@@ -767,31 +834,9 @@ bool drainJobMessages(HANDLE hCompletionPort, bool& memoryLimitHit) {
  */
 bool createProcess(const std::wstring& commandLine, const std::wstring& username,
         const std::wstring& password, const std::wstring& workDirectory,
-        const std::wstring& javaOptions, HANDLE& hToken, HANDLE& hProfile, STARTUPINFOW& startupInfo,
+        const std::wstring& javaOptions, STARTUPINFOW& startupInfo,
         PROCESS_INFORMATION& processInfo, std::string& failedApi) {
-    WCHAR   szUserProfile[MAX_PATH] = L"";
-    DWORD   dwSize                  = sizeof(szUserProfile) / sizeof(WCHAR);
-    std::wstring         profileUsername = username;
     std::vector<wchar_t> environmentBlock;
-
-    if ( !LogonUserW(username.c_str(), L".", password.c_str(), LOGON32_LOGON_BATCH,
-            LOGON32_PROVIDER_DEFAULT, &hToken) ) {
-        failedApi = "LogonUser";
-        return false;
-    }
-    // The account's registry (HKCU) and profile, which programs expect (the JVM finds user.home
-    // there). Loaded by the judger with the logon token, not by CreateProcessWithTokenW
-    // (LOGON_WITH_PROFILE) with the Low one, which cannot create the profile of an account that
-    // has none yet (ERROR_INVALID_STATE at its first run).
-    PROFILEINFOW profileInfo = {0};
-    profileInfo.dwSize     = sizeof(profileInfo);
-    profileInfo.dwFlags    = PI_NOUI;
-    profileInfo.lpUserName = &profileUsername[0];
-    if ( !LoadUserProfileW(hToken, &profileInfo) ) {
-        failedApi = "LoadUserProfile";
-        return false;
-    }
-    hProfile = profileInfo.hProfile;
     if ( !buildEnvironmentBlock(username, workDirectory, javaOptions, environmentBlock) ) {
         failedApi = "CreateEnvironmentBlock";
         return false;
@@ -804,34 +849,107 @@ bool createProcess(const std::wstring& commandLine, const std::wstring& username
             c = L'\\';
         }
     }
-    if ( currentDirectory.empty() ) {
-        if ( !GetUserProfileDirectoryW(hToken, szUserProfile, &dwSize) ) {
-            failedApi = "GetUserProfileDirectory";
-            return false;
-        }
-        currentDirectory = szUserProfile;
-    }
-    if ( !grantDesktopAccess(hToken) ) {
-        failedApi = "GrantDesktopAccess";
-        return false;
-    }
-    HANDLE hLowToken = createLowIntegrityToken(hToken);
-    if ( hLowToken == NULL ) {
-        failedApi = "CreateLowIntegrityToken";
-        return false;
-    }
-    // lpDesktop is NULL: the program gets the judger's window station and desktop.
     // CreateProcessWithTokenW may write to the command line, which is therefore copied.
     std::vector<wchar_t> mutableCommandLine(commandLine.begin(), commandLine.end());
     mutableCommandLine.push_back(L'\0');
-    BOOL  created = CreateProcessWithTokenW(hLowToken, 0, NULL, mutableCommandLine.data(),
-                        CREATE_UNICODE_ENVIRONMENT | CREATE_SUSPENDED | CREATE_NO_WINDOW,
-                        environmentBlock.data(), currentDirectory.c_str(), &startupInfo, &processInfo);
-    DWORD error   = GetLastError();
-    CloseHandle(hLowToken);
+
+    AcquireSRWLockExclusive(&sandboxSessionLock);
+    bool created = openSandboxSession(username, password, failedApi);
+    if ( created && currentDirectory.empty() ) {
+        WCHAR userProfile[MAX_PATH] = L"";
+        DWORD size                  = MAX_PATH;
+        created = GetUserProfileDirectoryW(sandboxSession.hToken, userProfile, &size) != FALSE;
+        currentDirectory = userProfile;
+        failedApi = "GetUserProfileDirectory";
+    }
+    if ( created && !grantDesktopAccess(sandboxSession.hToken) ) {
+        created   = false;
+        failedApi = "GrantDesktopAccess";
+    }
+    if ( created ) {
+        // lpDesktop is NULL: the program gets the judger's window station and desktop.
+        created = CreateProcessWithTokenW(sandboxSession.hRunToken, 0, NULL,
+                      mutableCommandLine.data(),
+                      CREATE_UNICODE_ENVIRONMENT | CREATE_SUSPENDED | CREATE_NO_WINDOW,
+                      environmentBlock.data(), currentDirectory.c_str(), &startupInfo,
+                      &processInfo) != FALSE;
+        failedApi = "CreateProcessWithToken";
+    }
+    DWORD error = GetLastError();
+    ReleaseSRWLockExclusive(&sandboxSessionLock);
     SetLastError(error);
-    failedApi = "CreateProcessWithToken";
     return created;
+}
+
+/**
+ * Opens the sandbox account's logon session (see SandboxSession), unless it is open already for the
+ * same account: logs the account on (as a batch job) and loads its profile, its registry (HKCU),
+ * which programs expect (the JVM finds user.home there), and creates the token every program runs
+ * with. The profile is loaded by the judger with the logon token, not by CreateProcessWithTokenW
+ * (LOGON_WITH_PROFILE) with the run token, which cannot create the profile of an account that has
+ * none yet (ERROR_INVALID_STATE at its first run). Called with sandboxSessionLock held.
+ * @param  username  - the Windows username
+ * @param  password  - the Windows password
+ * @param  failedApi - receives the name of the call that failed, if one did
+ * @return whether the session is open (GetLastError() tells why not)
+ */
+bool openSandboxSession(const std::wstring& username, const std::wstring& password,
+        std::string& failedApi) {
+    SandboxSession& session = sandboxSession;
+    if ( session.hRunToken != NULL && session.username == username && session.password == password ) {
+        return true;
+    }
+    closeSandboxSession();
+    std::wstring profileUsername = username;
+    PROFILEINFOW profileInfo     = {0};
+    profileInfo.dwSize     = sizeof(profileInfo);
+    profileInfo.dwFlags    = PI_NOUI;
+    profileInfo.lpUserName = &profileUsername[0];
+    if ( !LogonUserW(username.c_str(), L".", password.c_str(), LOGON32_LOGON_BATCH,
+            LOGON32_PROVIDER_DEFAULT, &session.hToken) ) {
+        session.hToken = NULL;
+        failedApi      = "LogonUser";
+    } else if ( !LoadUserProfileW(session.hToken, &profileInfo) ) {
+        failedApi = "LoadUserProfile";
+    } else {
+        session.hProfile  = profileInfo.hProfile;
+        session.hRunToken = createLowIntegrityToken(session.hToken);
+        failedApi         = "CreateLowIntegrityToken";
+    }
+    if ( session.hRunToken == NULL ) {
+        DWORD error = GetLastError();
+        closeSandboxSession();
+        SetLastError(error);
+        return false;
+    }
+    session.username = username;
+    session.password = password;
+    return true;
+}
+
+/**
+ * Closes the sandbox account's logon session, if it is open: unloads its profile and closes its
+ * tokens. Called with sandboxSessionLock held, when no program of the session runs any more.
+ */
+void closeSandboxSession() {
+    SandboxSession& session = sandboxSession;
+    if ( session.hRunToken != NULL ) {
+        CloseHandle(session.hRunToken);
+        session.hRunToken = NULL;
+    }
+    if ( session.hProfile != NULL ) {
+        UnloadUserProfile(session.hToken, session.hProfile);
+        session.hProfile = NULL;
+    }
+    if ( session.hToken != NULL ) {
+        CloseHandle(session.hToken);
+        session.hToken = NULL;
+    }
+    if ( !session.password.empty() ) {
+        SecureZeroMemory(&session.password[0], session.password.size() * sizeof(wchar_t));
+    }
+    session.username.clear();
+    session.password.clear();
 }
 
 /**
