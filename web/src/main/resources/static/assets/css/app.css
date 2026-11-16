@@ -80,8 +80,10 @@ input, textarea, select, button { font-family:inherit; }
 @keyframes vwPulse { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:.3;transform:scale(.82);} }
 @keyframes vwBar { 0%{transform:scaleX(.15);} 100%{transform:scaleX(1);} }
 
-/* App shell: header / content / footer in a sticky-footer column. */
-.vw-app { min-height:100vh; display:flex; flex-direction:column; position:relative; overflow-x:hidden; }
+/* App shell: header / content / footer in a sticky-footer column. Wide decorations are
+   clipped, not hidden: overflow-x:hidden would make .vw-app a scroll container (the other
+   axis turns to auto) that never scrolls, so position:sticky inside it would never stick. */
+.vw-app { min-height:100vh; display:flex; flex-direction:column; position:relative; overflow-x:clip; }
 .vw-main { flex:1 0 auto; }
 
 /* Scanline overlay (decorative). */
