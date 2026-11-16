@@ -700,9 +700,46 @@ public class SandboxBehaviorTest {
   }
 
   /**
-   * Test case: a Java program that dies of an uncaught exception, and a C++ program that exits
-   * with 3 (the exit code of a JVM that ran out of memory). Expected result: Runtime Error for
-   * both: only the java launcher exiting with 3 is a JVM that ran out of memory.
+   * Test case: a Java program that asks for a single array of 1.6 GB, under a 256 MB limit (512 MB
+   * with Java's memory multiplier). Expected result: Memory Limit Exceeded, reported at no less than
+   * the limit, although the JVM refuses the array before touching any of it (its peak is some 40
+   * MB): the JVM reports that it ran out of memory, which the judger goes by.
+   */
+  @Test
+  public void testJavaThatAsksForTooLargeAnArrayIsMemoryLimitExceeded() throws Exception {
+    Assumptions.assumeTrue(isLinux(), "The test needs a JDK on the sandbox user's PATH.");
+    Map<String, Object> result =
+        judge(900035L, "text/x-java", JAVA_HUGE_ARRAY_CODE, 5000, 262144, "");
+    Assertions.assertEquals("MLE", result.get("runtimeResult"), result.toString());
+    Assertions.assertTrue((Integer) result.get("usedMemory") >= 524288, result.toString());
+  }
+
+  /**
+   * Test case: a Java program that keeps 768 MB of arrays, under a 256 MB limit, started through
+   * {@code /usr/bin/env java} rather than by the java launcher itself. Expected result: Memory Limit
+   * Exceeded: what tells a JVM that ran out of memory is its own report, not the command.
+   */
+  @Test
+  public void testJavaStartedThroughEnvThatRunsOutOfMemoryIsMemoryLimitExceeded() throws Exception {
+    Assumptions.assumeTrue(isLinux(), "The test needs a JDK on the sandbox user's PATH.");
+    Language java = languageMapper.getLanguageUsingSlug("text/x-java");
+    Language language =
+        new Language(
+            java.getLanguageSlug(),
+            java.getLanguageName(),
+            java.getCompileCommand(),
+            "/usr/bin/env " + java.getRunCommand());
+    language.setTimeMultiplier(java.getTimeMultiplier());
+    language.setMemoryMultiplier(java.getMemoryMultiplier());
+    Map<String, Object> result = judge(900036L, language, JAVA_HOARD_CODE, 5000, 262144, "");
+    Assertions.assertEquals("MLE", result.get("runtimeResult"), result.toString());
+  }
+
+  /**
+   * Test case: a Java program that dies of an uncaught exception, a C++ program that exits with 3
+   * (the exit code of a JVM that ran out of memory), and a C++ program that touches 192 MB of its
+   * 256 MB and then crashes (SIGSEGV). Expected result: Runtime Error for all three: none is a JVM
+   * that reports running out of memory, and none reached its memory limit.
    */
   @Test
   public void testOtherFailuresAreRuntimeErrors() throws Exception {
@@ -711,6 +748,7 @@ public class SandboxBehaviorTest {
         "RE",
         judge(900031L, "text/x-java", JAVA_EXCEPTION_CODE, 5000, 262144, "").get("runtimeResult"));
     Assertions.assertEquals("RE", judge(900032L, EXIT_3_CODE, 5000, 262144));
+    Assertions.assertEquals("RE", judge(900037L, CRASH_AFTER_ALLOCATION_CODE, 5000, 262144));
   }
 
   /**
@@ -788,7 +826,25 @@ public class SandboxBehaviorTest {
       throws Exception {
     Language language = languageMapper.getLanguageUsingSlug(languageSlug);
     Assertions.assertNotNull(language, languageSlug + " must be seeded in the test database.");
+    return judge(id, language, code, timeLimitMs, memoryLimitKb, input);
+  }
 
+  /**
+   * Compiles and runs a program of a language under the active sandbox, with the time and memory
+   * multipliers of the language, and returns the result of the run.
+   *
+   * @param id - a unique id used for the work directory and the in-memory submission
+   * @param language - the program's language
+   * @param code - the source code to compile and run
+   * @param timeLimitMs - the time limit of the problem (ms)
+   * @param memoryLimitKb - the memory limit of the problem (KB)
+   * @param input - the program's standard input
+   * @return the result of the run ("runtimeResult": the verdict slug, "usedTime", "usedMemory")
+   * @throws Exception if the test fixtures cannot be set up
+   */
+  private Map<String, Object> judge(
+      long id, Language language, String code, int timeLimitMs, int memoryLimitKb, String input)
+      throws Exception {
     Problem problem =
         new Problem(id, true, "sandbox-behavior", timeLimitMs, memoryLimitKb, "", "", "", "", "", "");
     Submission submission = new Submission();
@@ -858,6 +914,17 @@ public class SandboxBehaviorTest {
       }
       """;
 
+  /** A Java program that asks for a single array of 1.6 GB. */
+  private static final String JAVA_HUGE_ARRAY_CODE =
+      """
+      public class Main {
+          public static void main(String[] args) {
+              long[] values = new long[200_000_000];
+              System.out.println(values.length);
+          }
+      }
+      """;
+
   /** A Java program that dies of an uncaught exception. */
   private static final String JAVA_EXCEPTION_CODE =
       """
@@ -865,6 +932,21 @@ public class SandboxBehaviorTest {
           public static void main(String[] args) {
               throw new IllegalStateException("failed");
           }
+      }
+      """;
+
+  /** A program that touches 192 MB and then crashes with SIGSEGV. */
+  private static final String CRASH_AFTER_ALLOCATION_CODE =
+      """
+      #include <cstdio>
+      #include <cstring>
+
+      int main() {
+          char* block = new char[192 * 1024 * 1024];
+          std::memset(block, 1, 192 * 1024 * 1024);
+          std::printf("%d\\n", block[12345]);
+          volatile int* nowhere = nullptr;
+          return *nowhere + block[0];
       }
       """;
 

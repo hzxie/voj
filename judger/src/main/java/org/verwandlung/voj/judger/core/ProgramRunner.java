@@ -68,10 +68,10 @@ public class ProgramRunner {
             commandLine, inputFilePath, outputFilePath, timeLimit, memoryLimit, false);
     Verdict verdict = runResult.getVerdict();
     int usedMemory = runResult.getPeakMemoryKb();
-    if (JavaOptions.isOutOfMemoryExit(commandLine, verdict, runResult.getExitCode())) {
+    if (JavaOptions.isOutOfMemoryExit(verdict, runResult.getExitCode(), outputFilePath)) {
       // The JVM's heap, sized to the memory limit (see JavaOptions), ran out: the program needed
-      // more memory than it is allowed. Like a program stopped at the limit, it is reported as
-      // having used at least the limit.
+      // more memory than it is allowed. Like a program stopped at the limit, or one that asked for
+      // more than the memory backstop at once, it is reported as having used at least the limit.
       verdict = Verdict.MEMORY_LIMIT_EXCEEDED;
       usedMemory = Math.max(usedMemory, memoryLimit);
     }

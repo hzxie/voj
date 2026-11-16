@@ -16,6 +16,17 @@
  */
 package org.verwandlung.voj.judger.core;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.SeekableByteChannel;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.LinkOption;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
+import java.nio.file.attribute.BasicFileAttributes;
+
 /**
  * The options every run of a submission gives a JVM it starts (Java, Kotlin, ...), so that the JVM
  * sizes itself to the run's limits rather than to the host. Every sandbox (the native ones on Linux
@@ -57,14 +68,18 @@ package org.verwandlung.voj.judger.core;
  *       that host only. With one CPU the JVM keeps to a handful of threads on any host (7 at most
  *       for a parallel stream), and a parallel stream costs the CPU time of a sequential one (0.2 s
  *       rather than 2 s spread over 24 threads), the time the run is charged for.
- *   <li>{@code -XX:+ExitOnOutOfMemoryError}: a program whose heap (or class metadata) runs out exits
- *       at once with {@value #OUT_OF_MEMORY_EXIT_CODE}, which the judger tells apart from other
- *       failures (an uncaught exception exits with 1) and judges Memory Limit Exceeded (see {@link
- *       #isOutOfMemoryExit}), as a C++ program that keeps allocating is: the program needed more
- *       memory than it is allowed. (A thread the JVM cannot start, at the thread limit, is not such
- *       an exit: it stays a runtime error, as in any other language.) The JVM says so on standard
- *       output ("Terminating due to java.lang.OutOfMemoryError: ..."), which is never compared: only
- *       an Accepted run's output is.
+ *   <li>{@code -XX:+ExitOnOutOfMemoryError}: a program whose heap (or class metadata) runs out, or
+ *       that asks for an array larger than the JVM allows, writes "{@value #OUT_OF_MEMORY_REPORT}..."
+ *       on standard output and exits at once with {@value #OUT_OF_MEMORY_EXIT_CODE}, which the
+ *       judger tells apart from any other failure (see {@link #isOutOfMemoryExit}) and judges Memory
+ *       Limit Exceeded, reported at no less than the limit, as a C++ program that keeps allocating,
+ *       or asks for more than its limit at once, is: the program needed more memory than it is
+ *       allowed. (A thread the JVM cannot start, at the thread limit, is not such an exit: it stays
+ *       a runtime error, as in any other language.) The program cannot catch the OutOfMemoryError
+ *       then, which a judged program rarely does: an uncaught one would exit with 1, a runtime error
+ *       the judger could not tell from any other, with the program's peak memory telling nothing
+ *       either (see {@link #isOutOfMemoryExit}). The output is never compared: only an Accepted
+ *       run's output is.
  * </ul>
  *
  * @author Haozhe Xie
@@ -78,6 +93,16 @@ final class JavaOptions {
 
   /** The exit code of a JVM that ran out of memory ({@code -XX:+ExitOnOutOfMemoryError}). */
   static final int OUT_OF_MEMORY_EXIT_CODE = 3;
+
+  /**
+   * What a JVM that ran out of memory writes on standard output before it exits ({@code
+   * -XX:+ExitOnOutOfMemoryError}), followed by the kind of memory ("Java heap space", "Metaspace",
+   * "Requested array size exceeds VM limit", ...).
+   */
+  static final String OUT_OF_MEMORY_REPORT = "Terminating due to java.lang.OutOfMemoryError: ";
+
+  /** How much of the end of a run's output is read to find the JVM's report (bytes). */
+  private static final int REPORT_TAIL_BYTES = 4096;
 
   /** No instances. */
   private JavaOptions() {}
@@ -106,25 +131,71 @@ final class JavaOptions {
   }
 
   /**
-   * Tells whether a run ended because its JVM ran out of memory: the program is the {@code java}
-   * launcher and exited with {@value #OUT_OF_MEMORY_EXIT_CODE}. A program that calls {@code
-   * System.exit(3)} itself is taken for one, which gains it nothing (it fails either way).
+   * Tells whether a run ended because its JVM ran out of memory: it exited with {@value
+   * #OUT_OF_MEMORY_EXIT_CODE}, and the last line of its standard output holds the JVM's report
+   * ({@value #OUT_OF_MEMORY_REPORT}...), which the JVM writes just before it exits. That is what the
+   * JVM itself says, whatever started it (the {@code java} launcher by any path, {@code env}, a
+   * launcher script that execs it) and on any system, while any other program exiting with 3 is not
+   * taken for it. The report follows whatever the program had written, on the same line if that
+   * did not end with a line break; nothing follows it. A program that writes the report and exits
+   * with 3 itself is taken for one, which gains it nothing (it fails either way).
    *
-   * @param commandLine - the command line of the run
+   * <p>The run's peak memory does not tell it: the JVM refuses an allocation that does not fit in
+   * its heap before touching any of it, so a program that asks for one array larger than the heap
+   * runs out at a peak of some 40 MB, and one that holds a few large arrays, which the JVM puts in
+   * the old generation, runs out with part of the young one never touched (at 70 MB of a 128 MB
+   * limit with 32 MB arrays). Nor does the command: a Kotlin or Scala launcher script, {@code
+   * /usr/bin/env java} or {@code JAVA.EXE} would be missed, and a program of another language that
+   * happens to be named {@code java} taken for one.
+   *
    * @param verdict - the verdict of the run
    * @param exitCode - the exit code of the run
+   * @param outputFilePath - the file that holds the run's standard output ({@code null} for none)
    * @return whether the JVM of the run ran out of memory
    */
-  static boolean isOutOfMemoryExit(String commandLine, Verdict verdict, int exitCode) {
-    if (verdict != Verdict.RUNTIME_ERROR || exitCode != OUT_OF_MEMORY_EXIT_CODE) {
+  static boolean isOutOfMemoryExit(Verdict verdict, int exitCode, String outputFilePath) {
+    if (verdict != Verdict.RUNTIME_ERROR
+        || exitCode != OUT_OF_MEMORY_EXIT_CODE
+        || outputFilePath == null
+        || outputFilePath.isEmpty()) {
       return false;
     }
-    String line = commandLine.trim();
-    String program =
-        line.startsWith("\"")
-            ? line.substring(1, Math.max(1, line.indexOf('"', 1)))
-            : line.split("\\s+")[0];
-    program = program.substring(Math.max(program.lastIndexOf('/'), program.lastIndexOf('\\')) + 1);
-    return program.equals("java") || program.equalsIgnoreCase("java.exe");
+    String output = readTail(Paths.get(outputFilePath));
+    int end = output.length();
+    while (end > 0 && (output.charAt(end - 1) == '\n' || output.charAt(end - 1) == '\r')) {
+      --end;
+    }
+    String lastLine = output.substring(output.lastIndexOf('\n', end - 1) + 1, end);
+    return lastLine.contains(OUT_OF_MEMORY_REPORT);
+  }
+
+  /**
+   * Reads the end of a run's output file, without following a link the program may have planted
+   * in its place.
+   *
+   * @param file - the output file
+   * @return its last {@value #REPORT_TAIL_BYTES} bytes (as ISO-8859-1, so that any byte reads as
+   *     one character), or an empty string if it is not a regular file or cannot be read
+   */
+  private static String readTail(Path file) {
+    try {
+      BasicFileAttributes attributes =
+          Files.readAttributes(file, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
+      if (!attributes.isRegularFile()) {
+        return "";
+      }
+      try (SeekableByteChannel channel =
+          Files.newByteChannel(file, StandardOpenOption.READ, LinkOption.NOFOLLOW_LINKS)) {
+        long start = Math.max(0, channel.size() - REPORT_TAIL_BYTES);
+        ByteBuffer buffer = ByteBuffer.allocate((int) (channel.size() - start));
+        channel.position(start);
+        while (buffer.hasRemaining() && channel.read(buffer) > 0) {
+          // Keep reading until the buffer is full or the file ends.
+        }
+        return new String(buffer.array(), 0, buffer.position(), StandardCharsets.ISO_8859_1);
+      }
+    } catch (IOException ex) {
+      return "";
+    }
   }
 }
