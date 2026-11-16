@@ -888,6 +888,7 @@ needs these changes; the judger ignores a setting it no longer knows.
 
 | Setting | Change |
 | --- | --- |
+| `jdbc.maxWait` | `5000` instead of `30000`: a statement of a judger waits for a connection of the pool for at most 5 seconds, as a verdict, or the release of a submission, is tried 3 times before it is given up (see [`configuration.md`](configuration.md#judging-queue-1)). |
 | `jdbc.url` | `serverTimezone=UTC` is replaced by `connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true` (times are read and written in UTC on a UTC session, as the web application does), and `connectTimeout=10000&socketTimeout=15000` are added, so that a connection that went silent fails a statement rather than holding up a judging or the renewal of its lease. |
 | `judger.workDir` (`VOJ_JUDGER_WORK_DIR`) | Removed: a judger judges in `work-<n>/` under `judger.checkpointDir`. |
 | `judger.checkpointDir` (`VOJ_JUDGER_CHECKPOINT_DIR`) | The default is now `/var/lib/voj-judger` (`%ProgramData%\voj-judger` on Windows) instead of `/tmp/voj-testpoints`, and the directory must belong to the judger and not be writable by its group or others (see [`configuration.md`](configuration.md#directories)). A judger that is not root needs it created for its account, or this set to a directory it may create. |

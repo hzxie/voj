@@ -108,7 +108,8 @@ The judger shares the database (`jdbc.*`) and message-queue (`jms.broker.url`)
 settings above. Its `jdbc.url` has a `connectTimeout` of 10 seconds and a
 `socketTimeout` of 15 seconds: every statement of a judger is short, and a
 connection that went silent must fail well within the lease of a judging (60
-seconds). Judger-specific keys:
+seconds). For the same reason its `jdbc.maxWait` is 5 seconds: a statement
+waits that long at most for a connection of the pool. Judger-specific keys:
 
 ### Message queue
 
@@ -179,19 +180,21 @@ two ways:
   (the web app is unreachable or refuses the judger, e.g. for a wrong
   `judger.apiToken`, a 404 without the mark, e.g. for a wrong
   `judger.web.baseUrl`, an archive that is malformed) or read, the source code
-  cannot be written, or the database is unreachable when the verdict is recorded
-  (it is tried 3 times within a few seconds first, as is the release of a
-  submission). The judger releases the
-  submission to the end of the queue and counts nothing on it, so an outage of
-  the web app or the database does not use up its budget, and a submission whose
-  judgings fail this way every time (e.g. as its test data is broken) holds no
-  other submission up. A submission that cannot even be released, as the
-  database is down, is left to its lease, which counts one failed judging. The
-  judgers then soon are not ready, and an outage longer than
+  cannot be written, or the database is unreachable when the verdict is recorded.
+  The judger releases the submission to the end of the queue and counts nothing
+  on it, so an outage of the web app or the database does not use up its budget,
+  and a submission whose judgings fail this way every time (e.g. as its test
+  data is broken) holds no other submission up. A submission that cannot even be
+  released, as the database is down, is left to its lease, which counts one
+  failed judging. The judgers then soon are not ready, and an outage longer than
   `judging.noJudgerTimeout` of the web app has the waiting submissions judged a
   System Error (see [Judging queue](#judging-queue)).
 
-A submission that the judger claimed but could not read (e.g. the database went
+The judger tries a verdict, and the release of a submission, 3 times before it
+gives up on it, a second after the first try and two seconds after the second;
+a try fails once it got no connection of the pool within `jdbc.maxWait` (5
+seconds) or no answer within the `socketTimeout` of `jdbc.url` (15 seconds). A
+submission that the judger claimed but could not read (e.g. the database went
 away meanwhile) is released at once, rather than held until its lease expired.
 
 Two budgets, independent of each other, keep failed judgings from going on for
@@ -200,7 +203,7 @@ ever:
 | Budget | Counts | When it is spent |
 | --- | --- | --- |
 | The submission's: 5 failed judgings | The failed judgings it may have caused, with their reasons; a vanished judging is counted by the judger that takes the submission once its lease expired. A rejudge starts it over (a submission still waiting for a judger is left alone). | The judger that takes it after the 5th judges it a System Error that gives the number of failed judgings and the reason of the last one (an administrator can rejudge it). |
-| The judger's: 3 failed judgings in a row | Every failed judging of the judger, in memory (a restarted judger starts from none). A judging that reaches an outcome ends the run of failures. | The judger is not ready (its heartbeat says so, which the web app counts as no judger for its languages, see [Judging queue](#judging-queue) of the web app) until one of its judgings reaches an outcome again. After every failed judging it pauses: 5 seconds after the first one, twice as long after each next one in a row, at most a minute. It logs every failure, and an error when it is no longer ready, and keeps trying. |
+| The judger's: 3 failed judgings in a row | Every failed judging of the judger, in memory (a restarted judger starts from none). A judging that reaches an outcome ends the run of failures. | The judger is not ready (its heartbeat says so, which the web app counts as no judger for its languages, see [Judging queue](#judging-queue) of the web app) until one of its judgings reaches an outcome again. After every failed judging it pauses: 5 seconds after the first one, twice as long after each next one in a row, at most a minute (so, once it is not ready, it tries again after 20 seconds, 40 seconds, then every minute). It logs every failure, and an error when it is no longer ready, and keeps trying. |
 
 An `Error` in the judger (e.g. `OutOfMemoryError`), while it judges or renews
 the lease of a judging, leaves it in no state to judge: it logs it and exits
@@ -232,7 +235,7 @@ clocks of the hosts do not matter.
 | --- | --- | --- |
 | `judger.web.baseUrl` | `http://localhost:8080/voj` | Web application root the judger downloads test data from. A problem the web app says it has no test data for (HTTP 404 with the header `X-Checkpoints-Missing`) is a System Error; any other failed download (a wrong URL, whose 404 has no such header, included) is a failed judging (see [Judging queue](#judging-queue-1)), and the judger logs the status and, for a 404, to check this setting. |
 | `judger.web.downloadTimeout` | `300` | Seconds a download of a problem's test data may take as a whole, from the request to the last byte; a download that is not over by then (e.g. the web app stopped sending in the middle) fails. Raise it for very large test data on a slow link. |
-| `judger.apiToken` | `${VOJ_JUDGER_API_TOKEN}` *(empty)* | Shared secret; **must match** `judger.apiToken` on the web app. Left empty (or wrong), the web app refuses every download (HTTP 403 or 401): every judging of the judger that needs test data it has not cached fails (the submission is released to the end of the queue, without counting the judging on it, for another judger), the judger logs the status and to check `judger.apiToken`, and after three failed judgings in a row it is not ready (it takes no submission but a retry every minute at most); if no judger is ready for a language, its pending submissions are judged a System Error after `judging.noJudgerTimeout`. The judger logs an error at startup when it is empty. The web application refuses tokens shorter than 16 characters. The web Docker image generates one when none is given, and `docker-compose.yml` requires it in `.env`; use a long random string. |
+| `judger.apiToken` | `${VOJ_JUDGER_API_TOKEN}` *(empty)* | Shared secret; **must match** `judger.apiToken` on the web app. Left empty (or wrong), the web app refuses every download (HTTP 403 or 401): every judging of the judger that needs test data it has not cached fails (the submission is released to the end of the queue, without counting the judging on it, for another judger), the judger logs the status and to check `judger.apiToken`, and after three failed judgings in a row it is not ready (it takes no submission but a retry after 20 seconds, 40 seconds, then every minute); if no judger is ready for a language, its pending submissions are judged a System Error after `judging.noJudgerTimeout`. The judger logs an error at startup when it is empty. The web application refuses tokens shorter than 16 characters. The web Docker image generates one when none is given, and `docker-compose.yml` requires it in `.env`; use a long random string. |
 
 ### Sandbox
 

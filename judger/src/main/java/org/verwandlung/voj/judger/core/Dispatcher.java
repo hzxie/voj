@@ -400,8 +400,9 @@ public class Dispatcher implements DisposableBean {
       LOGGER.error(
           String.format(
               "%d judgings of this judger failed in a row: it is not ready until a judging of it"
-                  + " reaches an outcome again, which it tries at most every %d s.",
-              failures, times.maxPauseMs() / 1000));
+                  + " reaches an outcome again, which it tries after a pause of %d s, twice as long"
+                  + " after each failure more, at most %d s.",
+              failures, getPause() / 1000, times.maxPauseMs() / 1000));
     }
   }
 
