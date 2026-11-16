@@ -362,9 +362,12 @@ is *L*:
   starts at *L* / 64 and grows only as the program's live data needs it. The
   program above peaks at 41 MB.
 - `-Xmx`: the heap may grow to *L* less max(*L* / 8, 48 MB), but to at least
-  *L* / 2 (and 16 MB, below which the JVM would not start; no JVM fits in a
-  limit that small anyway). That leaves room for what the JVM needs besides
-  (code, class metadata, compiled code, thread stacks): about 40 MB for a small
+  *L* / 2 and 16 MB. The 16 MB is a floor of the judger's choosing (HotSpot
+  itself refuses to start only with a maximum heap below 2 MB): it matters only
+  under an *L* below 32 MB, which no JVM fits in anyway, so that such a run is
+  stopped at its limit (Memory Limit Exceeded) rather than failing to start (a
+  Runtime Error). The reserve leaves room for what the JVM needs besides (code,
+  class metadata, compiled code, thread stacks): about 40 MB for a small
   program. A program that filled its whole heap, until it ran out, peaked at
   most 26 to 36 MB above it, under *L* (OpenJDK 21 and 25): 116 MB under 128
   MB, 243 MB under 256 MB, 481 MB under 512 MB, 923 MB under 1024 MB. Under

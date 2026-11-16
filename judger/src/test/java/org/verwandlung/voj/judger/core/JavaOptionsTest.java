@@ -42,8 +42,8 @@ public class JavaOptionsTest {
    * Test case: the options of runs with memory limits, and without one. Expected result: the JVM
    * takes the limit for the machine's memory, and its heap may take all of it but an eighth, or
    * but 48 MB under a limit below 384 MB, yet at least half of it (under a limit below 96 MB), and
-   * at least 16 MB, below which the JVM would not start; without a limit, the heap is left to the
-   * JVM's defaults.
+   * at least 16 MB (the floor chosen in JavaOptions; HotSpot itself refuses one below 2 MB);
+   * without a limit, the heap is left to the JVM's defaults.
    */
   @Test
   public void testOptionsDeriveTheHeapFromTheLimit() {
