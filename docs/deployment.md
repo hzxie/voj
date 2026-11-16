@@ -239,8 +239,10 @@ How it behaves at runtime:
   privileges and write their output there. To reach it, the sandbox user passes
   through `judger.checkpointDir` and `work-<n>/` (`0711`: it may pass, but
   neither list nor read them), so `judger.checkpointDir` and every directory
-  above it must let others pass (`o+x`), as `/tmp` and a `judger.checkpointDir`
-  the judger creates do. The judger does the rest automatically.
+  above it must let others pass (`o+x`), as a `judger.checkpointDir` the judger
+  creates and `/var/lib` do. The judger checks this when it starts, and does not
+  start otherwise (e.g. when a missing parent of `judger.checkpointDir` was
+  created under a umask of `0077`). The judger does the rest automatically.
 - The judger keeps each problem's reference data in `judger-<n>/`, which only the
   judger may enter. The submission never reads these files (it receives its input
   on stdin, and the judge compares the expected output itself), so the sandbox

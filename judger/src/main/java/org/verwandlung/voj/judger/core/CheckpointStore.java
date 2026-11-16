@@ -421,7 +421,37 @@ public class CheckpointStore {
                   + " else needs it.",
               root, mode & 07777));
     }
-    return root.toRealPath();
+    Path realRoot = root.toRealPath();
+    ensureSandboxCanPassThrough(realRoot);
+    return realRoot;
+  }
+
+  /**
+   * Makes sure the sandbox account, when the judger runs submissions as it, may pass through the
+   * checkpoint root and every directory above it, on its way to the work directory of a judging:
+   * it could not even start a compilation otherwise. A missing directory above the root is created
+   * with the umask (only the judger may enter it under a umask of {@code 0077}, as some hardened
+   * hosts and service units set), and a root the judger did not create may be private too.
+   *
+   * @param realRoot - the real path of the checkpoint root
+   * @throws IOException if others may not pass through one of these directories
+   */
+  private void ensureSandboxCanPassThrough(Path realRoot) throws IOException {
+    if (!SandboxAccountLock.dropsPrivileges(sandbox)) {
+      return;
+    }
+    for (Path directory = realRoot; directory != null; directory = directory.getParent()) {
+      int mode = (Integer) Files.getAttribute(directory, "unix:mode", LinkOption.NOFOLLOW_LINKS);
+      if ((mode & OTHERS_EXECUTE) == 0) {
+        throw new IOException(
+            String.format(
+                "The sandbox account (system.username) may not pass through %s (mode %o) to the"
+                    + " work directories in the checkpoint directory %s, so every submission"
+                    + " would be judged a System Error. Let others pass through it (chmod o+x),"
+                    + " or set judger.checkpointDir to a directory they may pass through to.",
+                directory, mode & 07777, realRoot));
+      }
+    }
   }
 
   /**
@@ -470,6 +500,9 @@ public class CheckpointStore {
 
   /** The permission bit of a file mode that lets other users write. */
   private static final int OTHERS_WRITE = 0002;
+
+  /** The permission bit of a directory's mode that lets other users pass through it. */
+  private static final int OTHERS_EXECUTE = 0001;
 
   /**
    * Creates a directory with the given permissions (on POSIX systems) from the start, whatever the
@@ -530,6 +563,10 @@ public class CheckpointStore {
    */
   @Value("${judger.checkpointDir:}")
   private String checkpointDirectory = "";
+
+  /** The sandbox backend ({@code native} or {@code isolate}). */
+  @Value("${judger.sandbox:native}")
+  private String sandbox = "native";
 
   /** The account the sandbox runs submissions as on Windows. */
   @Value("${system.username:}")

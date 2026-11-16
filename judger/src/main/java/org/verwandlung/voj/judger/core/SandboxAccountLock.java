@@ -59,7 +59,7 @@ public class SandboxAccountLock {
    * @throws IOException if the account does not exist or another judger on the host uses it
    */
   public synchronized void acquire() throws IOException {
-    if (!dropsPrivileges()) {
+    if (!dropsPrivileges(sandbox)) {
       return;
     }
     acquire(lockDirectory());
@@ -94,9 +94,10 @@ public class SandboxAccountLock {
    * Checks whether the judger drops privileges to the sandbox account: the native sandbox does,
    * on Linux, when the judger runs as root.
    *
+   * @param sandbox - the sandbox backend ({@code native} or {@code isolate})
    * @return whether the judger runs submissions as the sandbox account
    */
-  private boolean dropsPrivileges() {
+  static boolean dropsPrivileges(String sandbox) {
     return !"isolate".equalsIgnoreCase(sandbox)
         && !System.getProperty("os.name").contains("Windows")
         && "root".equals(System.getProperty("user.name"));

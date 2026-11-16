@@ -35,6 +35,7 @@ import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
 import org.junit.jupiter.api.condition.OS;
@@ -57,6 +58,39 @@ import org.verwandlung.voj.judger.util.ExclusiveFileLock;
 @ExtendWith(MockitoExtension.class)
 @DisabledOnOs(OS.WINDOWS)
 public class CheckpointStoreUnitTest {
+  /**
+   * Lets the sandbox account pass through the temporary directory (private as JUnit creates it), as
+   * through the directories above a checkpoint root it must (see {@link
+   * #testOpenRefusesARootTheSandboxAccountCannotPassThrough}).
+   */
+  @BeforeEach
+  public void letOthersPassThroughTheTemporaryDirectory() throws IOException {
+    Files.setPosixFilePermissions(tempDir, PosixFilePermissions.fromString("rwx--x--x"));
+  }
+
+  /**
+   * Test case: when the judger runs submissions as the sandbox account (the native sandbox, as
+   * root), the account may not pass through a directory above the checkpoint root, e.g. created
+   * under a umask of 0077. Expected result: the judger does not start, and says which directory to
+   * let others pass through; with isolate, which binds the work directory into its box, it does.
+   */
+  @Test
+  public void testOpenRefusesARootTheSandboxAccountCannotPassThrough() throws Exception {
+    Assumptions.assumeTrue("root".equals(System.getProperty("user.name")), "drops privileges");
+    Path parent =
+        Files.createDirectory(
+            tempDir.resolve("private"),
+            PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwx------")));
+    ReflectionTestUtils.setField(
+        checkpointStore, "checkpointDirectory", parent.resolve("voj-judger").toString());
+
+    IOException ex = Assertions.assertThrows(IOException.class, () -> checkpointStore.open());
+    Assertions.assertTrue(ex.getMessage().contains(parent + " (mode 700)"), ex.getMessage());
+
+    ReflectionTestUtils.setField(checkpointStore, "sandbox", "isolate");
+    Assertions.assertEquals(parent.resolve("voj-judger/judger-0"), checkpointStore.open());
+  }
+
   /**
    * Test case: the checkpoint root does not exist yet. Expected result: the judger creates it, so
    * that others may only pass through it, and downloads the checkpoints into it.
@@ -213,10 +247,7 @@ public class CheckpointStoreUnitTest {
    */
   @Test
   public void testOpenRemovesIncompleteDownloads() throws Exception {
-    Path root =
-        Files.createDirectory(
-            tempDir.resolve("voj-testpoints"),
-            PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwx------")));
+    Path root = createRoot();
     Path slot = Files.createDirectory(root.resolve("judger-0"));
     Path incomplete = Files.createDirectories(slot.resolve(".1000-dead").resolve("sub"));
     Files.writeString(incomplete.resolve("output#1.txt"), "42\n");
