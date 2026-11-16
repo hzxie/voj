@@ -68,6 +68,25 @@ public class SandboxBehaviorTest {
   }
 
   /**
+   * Test case: a program that allocates far more than its memory limit in a single allocation
+   * ({@code std::vector<int>(1e9)}, 4 GB under 256 MB). Expected result: Memory Limit Exceeded, not
+   * the runtime error of the std::bad_alloc that a refused allocation would end in.
+   */
+  @Test
+  public void testSingleHugeAllocationIsMemoryLimitExceeded() throws Exception {
+    Assertions.assertEquals("MLE", judge(900015L, HUGE_ALLOCATION_CODE, 5000, 262144));
+  }
+
+  /**
+   * Test case: a program that aborts (SIGABRT) while using little memory, under a memory limit.
+   * Expected result: Runtime Error.
+   */
+  @Test
+  public void testAbortIsARuntimeError() throws Exception {
+    Assertions.assertEquals("RE", judge(900016L, ABORT_CODE, 5000, 262144));
+  }
+
+  /**
    * Test case: a program that loops forever. Expected result: Time Limit Exceeded.
    */
   @Test
@@ -381,6 +400,29 @@ public class SandboxBehaviorTest {
               blocks.push_back(block);
           }
           return 0;
+      }
+      """;
+
+  /** A program that allocates (and would zero) 4 GB at once. */
+  private static final String HUGE_ALLOCATION_CODE =
+      """
+      #include <cstdio>
+      #include <vector>
+
+      int main() {
+          std::vector<int> v(1000000000);
+          std::printf("%d\\n", v[12345]);
+          return 0;
+      }
+      """;
+
+  /** A program that aborts. */
+  private static final String ABORT_CODE =
+      """
+      #include <cstdlib>
+
+      int main() {
+          std::abort();
       }
       """;
 

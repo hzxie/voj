@@ -164,7 +164,7 @@ struct ChildFailure {
 static std::vector<std::string> splitCommandLine(const std::string&);
 static std::string resolveExecutable(const std::string&);
 static std::vector<std::string> buildEnvironment(bool dropPrivileges, const std::string& outputFilePath);
-static std::string buildSeccompProgram(bool runOfSubmission);
+static std::string buildSeccompProgram(bool runOfSubmission, rlim_t dataLimit);
 static long long getMonotonicMillis();
 static long long readCpuTimeMillis(pid_t);
 static int  readPeakMemoryKb(pid_t);
@@ -265,7 +265,7 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     // The filter is what keeps a submission off the network when the judger has no CAP_SYS_ADMIN
     // (a default Docker container), and away from ptrace, namespaces, setsid and other processes
     // everywhere: a run without it is refused rather than started unconfined.
-    plan.seccompProgram = buildSeccompProgram(!plan.compileStep);
+    plan.seccompProgram = buildSeccompProgram(!plan.compileStep, plan.dataLimit);
     if ( plan.seccompProgram.empty() ) {
         throwStringException(jniEnv, "Judger: failed to build the seccomp filter; refusing to run");
         return NULL;
@@ -410,10 +410,15 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     }
 
     // What the watchdog did not stop still counts, whatever the exit code: CPU time it had not
-    // seen yet (it polls), and the output limit, which the kernel enforces.
+    // seen yet (it polls), a mapping beyond the memory backstop, which the seccomp filter stops, and
+    // the output limit, which the kernel enforces.
     int limit = limitExceeded.load();
     if ( limit == LIMIT_NONE && timeLimit > 0 && usedTime > timeLimit ) {
         limit = LIMIT_TIME;
+    }
+    if ( limit == LIMIT_NONE && !plan.compileStep && plan.dataLimit > 0 && WIFSIGNALED(status) &&
+         WTERMSIG(status) == SIGSYS ) {
+        limit = LIMIT_MEMORY; // a single mapping beyond RLIMIT_DATA (see buildSeccompProgram)
     }
     if ( limit == LIMIT_NONE && reachedOutputLimit(status, plan.outputFilePath) ) {
         limit = LIMIT_OUTPUT;
@@ -545,7 +550,8 @@ static void runProgram(const ChildPlan& plan, int syncWriteFd) {
     // JVM, V8 (Node.js) and the Go runtime reserve far more address space than they ever commit and
     // do not start under a tight RLIMIT_AS. It is generous on purpose (see getDataLimit), so the
     // watchdog normally reports the overrun as MLE first; the backstop only bounds how far a single
-    // process can balloon between two polls. Set last: the forked JVM image itself is far larger.
+    // process can balloon between two polls (a run's single mapping beyond it is MLE as well, see
+    // buildSeccompProgram). Set last: the forked JVM image itself is far larger.
     if ( plan.dataLimit > 0 && !setResourceLimit(RLIMIT_DATA, plan.dataLimit, plan.dataLimit) ) {
         reportChildFailure(syncWriteFd, STEP_RESOURCE_LIMIT);
     }
@@ -804,13 +810,25 @@ static std::vector<std::string> buildEnvironment(bool dropPrivileges, const std:
  * message queue or the internet. Local AF_UNIX sockets stay available (runtimes use socketpair) and
  * are guarded by file permissions. io_uring, whose IORING_OP_SOCKET would create a socket without
  * calling socket(), fails with ENOSYS, so runtimes such as libuv fall back to plain system calls.
- * Only native-architecture system calls pass the filter (libseccomp kills any other ABI, such as
- * i386's socketcall), so these rules cannot be bypassed through a compat entry point.
+ * Only native-architecture system calls pass the filter (any other ABI, such as i386's socketcall,
+ * fails with ENOSYS), so these rules cannot be bypassed through a compat entry point.
+ *
+ * Finally, a run of the submission is killed (SIGSYS) when it maps more private writable memory in
+ * one go than RLIMIT_DATA allows in all (see getDataLimit), e.g. std::vector<int>(1e9) under a
+ * 256 MB limit. The kernel would refuse that mapping anyway; the program would then fail in its own
+ * way (std::bad_alloc, MemoryError, a JVM or Go runtime abort, ...), which cannot be told apart
+ * from a runtime error, whereas a SIGSYS is only ever this rule (nothing else in the filter kills),
+ * so the judger reports Memory Limit Exceeded. A program that would have handled the failure (e.g.
+ * checked malloc for NULL and gone on) is stopped there instead. Mappings that only exceed
+ * RLIMIT_DATA together with earlier ones, brk and mremap cannot be checked by the filter: they still
+ * fail with ENOMEM, but are rare, as the backstop is more than twice the limit and the watchdog
+ * stops any program whose touched memory exceeds the limit first.
  * @param  runOfSubmission - whether the filter is for a run of the submission (not a compilation)
+ * @param  dataLimit       - the run's RLIMIT_DATA in bytes (0 = none)
  * @return the exported BPF bytes, or an empty string if the filter (or any one of its rules) could
  *         not be built - a partial filter is never returned
  */
-static std::string buildSeccompProgram(bool runOfSubmission) {
+static std::string buildSeccompProgram(bool runOfSubmission, rlim_t dataLimit) {
     scmp_filter_ctx ctx = seccomp_init(SCMP_ACT_ALLOW);
     if ( ctx == nullptr ) {
         return std::string();
@@ -823,6 +841,9 @@ static std::string buildSeccompProgram(bool runOfSubmission) {
             allRulesAdded = false;
         }
     };
+    // A system call of a foreign ABI fails rather than killing the program (libseccomp's default),
+    // so that SIGSYS only ever means the memory rule below.
+    addRule(seccomp_attr_set(ctx, SCMP_FLTATR_ACT_BADARCH, SCMP_ACT_ERRNO(ENOSYS)));
     const int deniedSyscalls[] = {
         SCMP_SYS(ptrace),            SCMP_SYS(process_vm_readv), SCMP_SYS(process_vm_writev),
         SCMP_SYS(mount),             SCMP_SYS(umount2),          SCMP_SYS(pivot_root),
@@ -850,6 +871,14 @@ static std::string buildSeccompProgram(bool runOfSubmission) {
         }
         addRule(seccomp_rule_add(ctx, SCMP_ACT_ERRNO(EPERM), SCMP_SYS(clone), 1,
                                  SCMP_A0(SCMP_CMP_MASKED_EQ, CLONE_THREAD, 0)));
+    }
+    if ( runOfSubmission && dataLimit > 0 ) {
+        // mmap(addr, length, prot, flags, ...): a private (MAP_TYPE), writable mapping that is not
+        // a stack (MAP_GROWSDOWN) counts against RLIMIT_DATA.
+        addRule(seccomp_rule_add(ctx, SCMP_ACT_KILL_PROCESS, SCMP_SYS(mmap), 3,
+                                 SCMP_A1(SCMP_CMP_GT, (scmp_datum_t) dataLimit),
+                                 SCMP_A2(SCMP_CMP_MASKED_EQ, PROT_WRITE, PROT_WRITE),
+                                 SCMP_A3(SCMP_CMP_MASKED_EQ, MAP_TYPE | MAP_GROWSDOWN, MAP_PRIVATE)));
     }
 
     // clone(flags, ...): the flags are the first argument on every architecture this builds for
