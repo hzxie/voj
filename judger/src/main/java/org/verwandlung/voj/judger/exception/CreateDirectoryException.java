@@ -16,13 +16,14 @@
  */
 package org.verwandlung.voj.judger.exception;
 
+import java.io.IOException;
+
 /**
- * The IO exception thrown when creating a directory fails. Thrown when java.io.File.mkdirs() returns
- * false.
+ * Thrown when the judger cannot create a directory of a judging afresh.
  *
  * @author Haozhe Xie
  */
-public class CreateDirectoryException extends Exception {
+public class CreateDirectoryException extends IOException {
   /**
    * Constructor of the exception.
    *

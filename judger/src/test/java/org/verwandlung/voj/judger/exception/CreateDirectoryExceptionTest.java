@@ -27,12 +27,12 @@ import org.junit.jupiter.api.Test;
 public class CreateDirectoryExceptionTest {
   /**
    * Test case: tests the constructor. Expected result: the exception carries the supplied message
-   * and is a checked exception.
+   * and is an IOException, as the other failures to write the files of a judging are.
    */
   @Test
   public void testConstructor() {
     CreateDirectoryException exception = new CreateDirectoryException("cannot create directory");
     Assertions.assertEquals("cannot create directory", exception.getMessage());
-    Assertions.assertInstanceOf(Exception.class, exception);
+    Assertions.assertInstanceOf(java.io.IOException.class, exception);
   }
 }

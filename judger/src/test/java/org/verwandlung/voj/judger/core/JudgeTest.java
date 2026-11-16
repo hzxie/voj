@@ -213,6 +213,22 @@ public class JudgeTest {
   }
 
   /**
+   * Test case: writing the source fails for a bug rather than for the disk. Expected result: not a
+   * failed judging of the judger: the exception goes on (the dispatcher counts it on the
+   * submission), without compiling.
+   */
+  @Test
+  public void testABugWhileWritingTheSourceIsNotAFailureOfTheJudger() throws Exception {
+    doThrow(new IllegalStateException("a bug"))
+        .when(preprocessor)
+        .createTestCode(any(), anyString());
+
+    Assertions.assertThrows(
+        IllegalStateException.class, () -> judge.judge(submission(), CURRENT));
+    verify(compiler, never()).getCompileResult(any(), anyString());
+  }
+
+  /**
    * Test case: the expected output cannot be read. Expected result: neither a Wrong Answer nor a
    * System Error: a failed judging of the judger.
    */

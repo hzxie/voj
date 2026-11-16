@@ -76,9 +76,9 @@ public class Preprocessor {
    *
    * @param submission - the submission object
    * @param workDirectory - the directory of the judging
-   * @throws Exception if the code cannot be written
+   * @throws IOException if the code cannot be written
    */
-  public void createTestCode(Submission submission, String workDirectory) throws Exception {
+  public void createTestCode(Submission submission, String workDirectory) throws IOException {
     createJudgingDirectory(Paths.get(workDirectory));
     Path workDirPath = Paths.get(getProgramDirectory(workDirectory));
     try {

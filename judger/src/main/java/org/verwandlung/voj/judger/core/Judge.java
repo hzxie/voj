@@ -127,7 +127,7 @@ public class Judge {
     try {
       try {
         preprocessor.createTestCode(submission, workDirectory);
-      } catch (Exception ex) {
+      } catch (IOException ex) {
         throw FailedJudging.ofJudger("The judger could not write the source code to its disk.", ex);
       }
       if (compile(submission, lease, workDirectory)) {
