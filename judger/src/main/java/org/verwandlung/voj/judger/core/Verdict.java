@@ -41,6 +41,9 @@ public enum Verdict {
   /** The process exceeded the memory limit and was killed. */
   MEMORY_LIMIT_EXCEEDED,
 
+  /** The process exceeded the output size limit and was killed. */
+  OUTPUT_LIMIT_EXCEEDED,
+
   /** The process exited abnormally (non-zero exit code or terminated by a signal). */
   RUNTIME_ERROR,
 

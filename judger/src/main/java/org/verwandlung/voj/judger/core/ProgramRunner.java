@@ -138,6 +138,8 @@ public class ProgramRunner {
         return "TLE";
       case MEMORY_LIMIT_EXCEEDED:
         return "MLE";
+      case OUTPUT_LIMIT_EXCEEDED:
+        return "OLE";
       case RUNTIME_ERROR:
         return "RE";
       case INTERNAL_ERROR:
