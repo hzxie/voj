@@ -176,10 +176,12 @@ sudo useradd --system --no-create-home --shell /usr/sbin/nologin voj-sandbox
   or the internet. This needs no privilege, so it holds in a Docker container
   without `CAP_SYS_ADMIN` too, where the private network namespace, still tried
   first, cannot be created. `AF_UNIX` socket pairs stay available (runtimes use
-  `socketpair`). A run cannot `connect`, `bind`, `listen` or `accept` at all
-  (they are not on its allowlist), but a compilation can, so do not leave a Unix
-  socket that the sandbox user may connect to (e.g. a database's or Docker's)
-  where it can reach it.
+  `socketpair`). A run cannot `connect`, `bind`, `listen` or `accept` at all,
+  nor send to an address (`sendto` with one, `sendmsg`, `sendmmsg`), which
+  would reach a datagram socket such as `/dev/log` without connecting (they are
+  not on its allowlist). A compilation can, so do not leave a Unix socket that
+  the sandbox user may connect or send to (e.g. a database's or Docker's) where
+  it can reach it.
 - **Failing closed.** The seccomp filters, the Landlock rules and, when the
   judger runs as root, the privilege drop (including dropping supplementary
   groups) are mandatory, as are the resource limits and the standard streams.

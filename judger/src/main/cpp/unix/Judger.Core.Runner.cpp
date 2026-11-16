@@ -1071,7 +1071,11 @@ static std::vector<std::string> buildEnvironment(const std::string& workDirector
  *  - memory a limit would not see, or that would leave the resident set: memfd_create, memfd_secret,
  *    process_madvise, mlock & co., remap_file_pages and the NUMA policy calls;
  *  - the network: bind, listen, accept and connect (socket and socketpair are allowed for socket
- *    pairs, the deny-list filter refuses every address family but AF_UNIX);
+ *    pairs, the deny-list filter refuses every address family but AF_UNIX), and sending to an
+ *    address: sendto is allowed without one only (see buildSeccompPrograms), and sendmsg and
+ *    sendmmsg, whose address is in memory, where seccomp cannot see it, not at all (no runtime
+ *    sends with them on its own; send and write work on a socket pair). Otherwise a run could send
+ *    datagrams to the host's Unix sockets, such as /dev/log or the journal's, without connecting;
  *  - files beyond reading and writing them: their owner, mode, times and extended attributes (which
  *    Landlock does not confine), links, device nodes and FIFOs, watching files (inotify, fanotify),
  *    the writeback of the whole system (sync, syncfs), splice, tee and vmsplice, Linux AIO
@@ -1111,9 +1115,10 @@ static const char* const RUN_ALLOWED_SYSCALLS[] = {
     "nanosleep", "clock_nanosleep", "clock_gettime", "clock_getres", "gettimeofday", "time",
     "times", "alarm", "getitimer", "setitimer", "timer_create", "timer_delete", "timer_gettime",
     "timer_settime", "timer_getoverrun", "timerfd_create", "timerfd_gettime", "timerfd_settime",
-    // Socket pairs (the deny-list filter refuses every address family but AF_UNIX).
-    "socket", "socketpair", "sendto", "recvfrom", "sendmsg", "recvmsg", "sendmmsg", "recvmmsg",
-    "shutdown", "getsockopt", "setsockopt", "getsockname", "getpeername",
+    // Socket pairs (the deny-list filter refuses every address family but AF_UNIX; sendto, see
+    // buildSeccompPrograms).
+    "socket", "socketpair", "recvfrom", "recvmsg", "recvmmsg", "shutdown", "getsockopt",
+    "setsockopt", "getsockname", "getpeername",
     // The process itself.
     "execve", "prctl", "arch_prctl", "seccomp", "getrandom", "uname", "sysinfo", "getrusage",
     "getrlimit", "setrlimit", "getpid", "getppid", "gettid", "getpgid", "getpgrp",
@@ -1246,9 +1251,9 @@ class SeccompFilter {
  * for a call both refuse. The argument rules need a filter of their own: libseccomp silently drops
  * the conditional rules of a system call that also has an unconditional one, so the allowlist cannot
  * allow mmap and refuse some of its arguments, and its comparisons cannot express the complement of
- * each rule (allowing what it does not refuse). The allowlist only checks the arguments of a call
- * that it allows in one narrow case alone (prlimit64 on the caller itself), which then has no
- * unconditional rule.
+ * each rule (allowing what it does not refuse). The allowlist checks arguments only of the calls it
+ * allows in a narrow case alone (prlimit64 on the caller itself, sendto without an address), which
+ * have no unconditional rule.
  *
  * Both:
  *  - clone fails with EPERM when it asks for a new namespace (CLONE_NEW*), so threads (and a
@@ -1306,6 +1311,9 @@ static std::vector<std::string> buildSeccompPrograms(bool runOfSubmission, rlim_
         // itself when it is not root, would otherwise be open to it. Not in RUN_ALLOWED_SYSCALLS, as
         // an unconditional rule would swallow this one.
         allowlist.add(SCMP_ACT_ALLOW, SCMP_SYS(prlimit64), {SCMP_A0(SCMP_CMP_EQ, 0)});
+        // sendto(fd, buf, len, flags, dest_addr, addrlen) only without an address (as the C
+        // library's send calls it), i.e. on a connected socket: a socket pair.
+        allowlist.add(SCMP_ACT_ALLOW, SCMP_SYS(sendto), {SCMP_A4(SCMP_CMP_EQ, 0)});
         allowlist.optimize();
         programs.push_back(allowlist.exportProgram());
     }

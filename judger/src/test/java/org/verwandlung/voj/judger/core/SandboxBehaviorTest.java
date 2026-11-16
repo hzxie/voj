@@ -562,6 +562,30 @@ public class SandboxBehaviorTest {
   }
 
   /**
+   * Test case: a run that sends on an AF_UNIX datagram socket pair with send, with sendto without
+   * an address and with write, and that sends to the address of the system log's socket
+   * (/dev/log) with sendto and with sendmsg, which needs no connect. Expected result: the first
+   * three work, while sendto with an address and sendmsg are not allowlisted (ENOSYS).
+   */
+  @Test
+  public void testRunCannotSendToAnAddress() throws Exception {
+    Assumptions.assumeTrue("native".equalsIgnoreCase(sandbox), "This tests the native runner.");
+    Assumptions.assumeTrue(isLinux(), "The seccomp filters are Linux-only.");
+    Assertions.assertEquals("AC", judge(900028L, SEND_CODE, 5000, 262144));
+    Assertions.assertEquals(
+        String.join(
+            "\n",
+            "send: done",
+            "sendto (no address): done",
+            "write: done",
+            "received: 3",
+            "sendto /dev/log: ENOSYS",
+            "sendmsg /dev/log: ENOSYS",
+            ""),
+        Files.readString(Path.of(workBaseDirectory, "voj-sandbox-900028", "output.txt")));
+  }
+
+  /**
    * Test case: a program whose static data (1 TB of bss) alone exceeds the kernel memory backstop
    * (RLIMIT_DATA), so that it cannot even be loaded. Expected result: Memory Limit Exceeded, not the
    * runtime error of the SIGSEGV the kernel kills such a program with while loading it. The program
@@ -1377,6 +1401,62 @@ public class SandboxBehaviorTest {
           std::printf("process group leader: %s\\n", getpgrp() == getpid() ? "yes" : "no");
           report("/dev/tty", open("/dev/tty", O_RDONLY) >= 0);
           report("setsid", setsid() >= 0);
+          return 0;
+      }
+      """;
+
+  /**
+   * A program that sends on a socket pair and to the system log's socket, and reports how each
+   * attempt ends (it exits with 1 if the socket pair cannot be created).
+   */
+  private static final String SEND_CODE =
+      """
+      #include <cerrno>
+      #include <cstdio>
+      #include <cstring>
+      #include <sys/socket.h>
+      #include <sys/un.h>
+      #include <unistd.h>
+
+      static void report(const char* what, bool succeeded) {
+          int error = errno;
+          std::printf("%s: %s\\n", what, succeeded ? "done"
+              : error == EPERM ? "EPERM" : error == ENOSYS ? "ENOSYS" : std::strerror(error));
+      }
+
+      int main() {
+          int pair[2];
+          if (socketpair(AF_UNIX, SOCK_DGRAM, 0, pair) != 0) {
+              return 1;
+          }
+          report("send", send(pair[0], "a", 1, 0) == 1);
+          report("sendto (no address)", sendto(pair[0], "b", 1, 0, nullptr, 0) == 1);
+          report("write", write(pair[0], "c", 1) == 1);
+          char buffer[4];
+          int received = 0;
+          while (recv(pair[1], buffer, sizeof(buffer), MSG_DONTWAIT) == 1) {
+              ++received;
+          }
+          std::printf("received: %d\\n", received);
+          int fd = socket(AF_UNIX, SOCK_DGRAM, 0);
+          if (fd < 0) {
+              return 1;
+          }
+          sockaddr_un log;
+          std::memset(&log, 0, sizeof(log));
+          log.sun_family = AF_UNIX;
+          std::strcpy(log.sun_path, "/dev/log");
+          report("sendto /dev/log",
+              sendto(fd, "<14>voj", 7, 0, (sockaddr*) &log, sizeof(log)) == 7);
+          char text[] = "<14>voj";
+          iovec data = {text, 7};
+          msghdr message;
+          std::memset(&message, 0, sizeof(message));
+          message.msg_name = &log;
+          message.msg_namelen = sizeof(log);
+          message.msg_iov = &data;
+          message.msg_iovlen = 1;
+          report("sendmsg /dev/log", sendmsg(fd, &message, 0) == 7);
           return 0;
       }
       """;
