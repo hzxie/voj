@@ -767,15 +767,16 @@ static void runProgram(const ChildPlan& plan, int syncWriteFd) {
     markInheritedDescriptorsCloseOnExec();
 
     // Standard input is opened before the privilege drop: the checkpoint directory is private to the
-    // judger, and the path is chosen by the judger, not by the submission.
-    if ( !plan.inputFilePath.empty() ) {
-        int inputFd = open(plan.inputFilePath.c_str(), O_RDONLY | O_CLOEXEC);
-        if ( inputFd < 0 ) {
-            reportChildFailure(syncWriteFd, STEP_INPUT);
-        }
-        dup2(inputFd, STDIN_FILENO);
-        close(inputFd);
+    // judger, and the path is chosen by the judger, not by the submission. Without an input file
+    // (a compilation) it is /dev/null: the judger's own standard input must never be readable, e.g.
+    // by a submission that does #include "/dev/stdin".
+    int inputFd = plan.inputFilePath.empty() ? open("/dev/null", O_RDONLY | O_CLOEXEC)
+                                             : open(plan.inputFilePath.c_str(), O_RDONLY | O_CLOEXEC);
+    if ( inputFd < 0 ) {
+        reportChildFailure(syncWriteFd, plan.inputFilePath.empty() ? STEP_DEV_NULL : STEP_INPUT);
     }
+    dup2(inputFd, STDIN_FILENO);
+    close(inputFd);
 
     // Run in a dedicated process group so the watchdog can signal the whole tree.
     if ( setpgid(0, 0) != 0 ) {
@@ -822,25 +823,24 @@ static void runProgram(const ChildPlan& plan, int syncWriteFd) {
     // The output file is opened only now, with the sandbox user's credentials: the work directory is
     // writable by the submission, which may have planted a symlink (or a hard link, FIFO, ...) at
     // this path during an earlier checkpoint, and root must never follow it.
+    // Whatever is not captured goes to /dev/null, never to the judger's own stdout or stderr.
+    int nullFd = open("/dev/null", O_WRONLY | O_CLOEXEC);
+    if ( nullFd < 0 ) {
+        reportChildFailure(syncWriteFd, STEP_DEV_NULL);
+    }
+    int outputFd = nullFd;
     if ( !plan.outputFilePath.empty() ) {
-        int outputFd = openOutputFile(plan.outputFilePath.c_str());
+        outputFd = openOutputFile(plan.outputFilePath.c_str());
         if ( outputFd < 0 ) {
             reportChildFailure(syncWriteFd, STEP_OUTPUT);
         }
-        dup2(outputFd, STDOUT_FILENO);
-        if ( plan.compileStep ) {
-            dup2(outputFd, STDERR_FILENO);
-        }
+    }
+    dup2(outputFd, STDOUT_FILENO);
+    dup2(plan.compileStep ? outputFd : nullFd, STDERR_FILENO);
+    if ( outputFd != nullFd ) {
         close(outputFd);
     }
-    if ( !plan.compileStep ) {
-        int nullFd = open("/dev/null", O_WRONLY | O_CLOEXEC);
-        if ( nullFd < 0 ) {
-            reportChildFailure(syncWriteFd, STEP_DEV_NULL);
-        }
-        dup2(nullFd, STDERR_FILENO);
-        close(nullFd);
-    }
+    close(nullFd);
 
     // Tier 1: a per-process kernel memory backstop, inherited by every child. RLIMIT_DATA (private
     // writable mappings, i.e. roughly committed memory) is used rather than RLIMIT_AS, because the

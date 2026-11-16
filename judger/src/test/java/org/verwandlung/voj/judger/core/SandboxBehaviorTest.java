@@ -222,6 +222,38 @@ public class SandboxBehaviorTest {
   }
 
   /**
+   * Test case: what a compilation's standard input is. Expected result: /dev/null, never the
+   * judger's own standard input (which a submission could otherwise read while it is compiled,
+   * e.g. with {@code #include "/dev/stdin"}).
+   */
+  @Test
+  public void testCompilationStandardInputIsDevNull() throws Exception {
+    Assumptions.assumeTrue("native".equalsIgnoreCase(sandbox), "This tests the native runner.");
+    String workDirectory = createWorkDirectory(900010L);
+    String logFile = workDirectory + "/stdin.log";
+    RunResult result = sandboxRunner.run("readlink /proc/self/fd/0", null, logFile, 5000, 0, true);
+    Assertions.assertEquals(Verdict.NORMAL, result.getVerdict());
+    Assertions.assertEquals("/dev/null", Files.readString(Path.of(logFile)).strip());
+  }
+
+  /**
+   * Creates the work directory of a submission (owned by the sandbox user, as for a real one).
+   *
+   * @param id - a unique id used for the work directory and the in-memory submission
+   * @return the work directory
+   * @throws Exception if the directory cannot be created
+   */
+  private String createWorkDirectory(long id) throws Exception {
+    Submission submission = new Submission();
+    submission.setSubmissionId(id);
+    submission.setLanguage(languageMapper.getLanguageUsingSlug("text/x-c++src"));
+    submission.setCode(RUNTIME_ERROR_CODE);
+    String workDirectory = workBaseDirectory + "/voj-sandbox-" + id;
+    preprocessor.createTestCode(submission, workDirectory, "sandboxtest");
+    return workDirectory;
+  }
+
+  /**
    * Compiles and runs a C++ program under the active sandbox and returns its verdict slug.
    *
    * @param id - a unique id used for the work directory and the in-memory submission
