@@ -22,12 +22,16 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+
+import org.verwandlung.voj.web.service.SubmissionService;
 
 /**
  * The test class for the Server-Sent Event handling of ApplicationEventListener. The emitter
@@ -106,6 +110,38 @@ public class ApplicationEventListenerTest {
             listener.submissionEventHandler(
                 new SubmissionEvent(this, 9401L, "AC", "Accepted", true)));
     Assertions.assertEquals(0, listener.getNumberOfSseEmitters(9401L));
+  }
+
+  /**
+   * Test case: tests submissionEventHandler(...). Test data: a viewer of a submission that was
+   * rejudged while its old judging still runs; messages of the old judging (claim 1000), including
+   * its verdict, then of the new one (claim 2000). Expected: the old judging's messages are dropped
+   * and leave the stream open; the new judging's messages are sent and its verdict completes it.
+   */
+  @Test
+  public void testMessagesOfASupersededJudgingAreDropped() throws IOException {
+    SubmissionService submissionService = mock(SubmissionService.class);
+    when(submissionService.isCurrentJudging(9501L, 1000L)).thenReturn(false);
+    when(submissionService.isCurrentJudging(9501L, 2000L)).thenReturn(true);
+    ReflectionTestUtils.setField(listener, "submissionService", submissionService);
+    SseEmitter viewer = mock(SseEmitter.class);
+    listener.addSseEmitters(9501L, viewer);
+
+    listener.submissionEventHandler(
+        new SubmissionEvent(this, 9501L, "Running", "#1 WA", false, 1000L));
+    listener.submissionEventHandler(
+        new SubmissionEvent(this, 9501L, "Wrong Answer", "Wrong Answer", true, 1000L));
+    verify(viewer, never()).send(any(Object.class));
+    verify(viewer, never()).complete();
+    Assertions.assertEquals(1, listener.getNumberOfSseEmitters(9501L));
+
+    listener.submissionEventHandler(
+        new SubmissionEvent(this, 9501L, "Running", "#1 AC", false, 2000L));
+    listener.submissionEventHandler(
+        new SubmissionEvent(this, 9501L, "Accepted", "Accepted", true, 2000L));
+    verify(viewer, times(2)).send(any(Object.class));
+    verify(viewer).complete();
+    Assertions.assertEquals(0, listener.getNumberOfSseEmitters(9501L));
   }
 
   /** The ApplicationEventListener under test. */

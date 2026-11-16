@@ -168,6 +168,13 @@
 		FROM voj_submissions 
 		WHERE submission_id = #{submissionId}
 	</select>
+	<select id="getExecuteTimeOfSubmission"
+		parameterType="long"
+		resultType="java.util.Date">
+		SELECT submission_execute_time
+		FROM voj_submissions
+		WHERE submission_id = #{submissionId}
+	</select>
 	<select id="getSubmissions" 
 		parameterType="map"
 		resultMap="SubmissionResultMap">

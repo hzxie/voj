@@ -369,6 +369,27 @@ public class SubmissionServiceTest {
   }
 
   /**
+   * Test case: tests isCurrentJudging(long, long). Test data: submission 1001 claimed by a judging
+   * with the judger's claim statement, then rejudged. Expected: only that judging's start time is
+   * current, and after the rejudge none is.
+   */
+  @Test
+  public void testIsCurrentJudging() {
+    org.springframework.jdbc.core.JdbcTemplate jdbcTemplate =
+        new org.springframework.jdbc.core.JdbcTemplate(dataSource);
+    java.sql.Timestamp judging = java.sql.Timestamp.valueOf("2026-01-01 10:00:00");
+    jdbcTemplate.update(
+        "UPDATE voj_submissions SET submission_judge_result = 'PD' WHERE submission_id = 1001");
+    jdbcTemplate.update(JUDGER_CLAIM, judging, 1001);
+
+    Assertions.assertTrue(submissionService.isCurrentJudging(1001, judging.getTime()));
+    Assertions.assertFalse(submissionService.isCurrentJudging(1001, judging.getTime() - 1000));
+
+    submissionService.createSubmissionTasks(List.of(1001L));
+    Assertions.assertFalse(submissionService.isCurrentJudging(1001, judging.getTime()));
+  }
+
+  /**
    * Test case: tests markSubmissionUnjudgeable(long, JudgingTaskFailure). Test data: a pending
    * submission a judging claimed, which then failed repeatedly; a judged submission. Expected: the
    * pending one becomes SE with the log of that failure and keeps the claim's execute time, and the

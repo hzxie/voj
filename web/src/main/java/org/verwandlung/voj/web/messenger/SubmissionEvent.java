@@ -35,11 +35,33 @@ public class SubmissionEvent extends ApplicationEvent {
    */
   public SubmissionEvent(
       Object source, long submissionId, String judgeResult, String message, boolean isCompleted) {
+    this(source, submissionId, judgeResult, message, isCompleted, null);
+  }
+
+  /**
+   * The constructor of SubmissionEvent for a message that names the judging it belongs to.
+   *
+   * @param source - the source of the event
+   * @param submissionId - the unique identifier of the submission
+   * @param judgeResult - the judge result
+   * @param message - the message to show
+   * @param isCompleted - whether judging has completed
+   * @param executeTime - the claim of the judging that sent the message: the start time it set on
+   *     the submission, in milliseconds; null when the judger did not send it
+   */
+  public SubmissionEvent(
+      Object source,
+      long submissionId,
+      String judgeResult,
+      String message,
+      boolean isCompleted,
+      Long executeTime) {
     super(source);
     this.submissionId = submissionId;
     this.judgeResult = judgeResult;
     this.message = message;
     this.isCompleted = isCompleted;
+    this.executeTime = executeTime;
   }
 
   /**
@@ -78,6 +100,15 @@ public class SubmissionEvent extends ApplicationEvent {
     return isCompleted;
   }
 
+  /**
+   * Gets the claim of the judging that sent the message.
+   *
+   * @return the start time the judging set on the submission, in milliseconds, or null if unknown
+   */
+  public Long getExecuteTime() {
+    return executeTime;
+  }
+
   /** The unique identifier of the submission record. */
   private final long submissionId;
 
@@ -89,6 +120,9 @@ public class SubmissionEvent extends ApplicationEvent {
 
   /** Whether the judging is completed. */
   private final boolean isCompleted;
+
+  /** The claim of the judging that sent the message, or null if unknown. */
+  private final Long executeTime;
 
   /** The unique serialization identifier. */
   private static final long serialVersionUID = 4808514481370058683L;

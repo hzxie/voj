@@ -129,6 +129,15 @@ public interface SubmissionMapper {
   Submission getSubmission(@Param("submissionId") long submissionId);
 
   /**
+   * Gets the execute time of a submission: the start time of its current judging, or null while no
+   * judging claimed it.
+   *
+   * @param submissionId - the unique identifier of the submission
+   * @return the execute time, or null
+   */
+  Date getExecuteTimeOfSubmission(@Param("submissionId") long submissionId);
+
+  /**
    * Gets the submissions of a user for a problem.
    *
    * @param problemId - the unique identifier of the problem

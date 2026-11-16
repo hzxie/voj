@@ -639,6 +639,20 @@ public class SubmissionService {
     }
   }
 
+  /**
+   * Tests whether a judging is the current judging of a submission: a judger claims a pending
+   * submission by setting its execute time (its start time, which identifies the judging), and a
+   * rejudge clears it. Used to drop the progress messages of a superseded judging.
+   *
+   * @param submissionId - the unique identifier of the submission
+   * @param executeTime - the start time the judging set, in milliseconds
+   * @return whether the submission still carries that start time
+   */
+  public boolean isCurrentJudging(long submissionId, long executeTime) {
+    Date currentExecuteTime = submissionMapper.getExecuteTimeOfSubmission(submissionId);
+    return currentExecuteTime != null && currentExecuteTime.getTime() == executeTime;
+  }
+
   /** Why a judging task ended on the dead-letter queue. */
   public enum JudgingTaskFailure {
     /** No judger took the task before it expired: none supports the submission's language. */

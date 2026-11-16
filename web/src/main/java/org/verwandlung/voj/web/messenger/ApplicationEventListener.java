@@ -29,9 +29,12 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+
+import org.verwandlung.voj.web.service.SubmissionService;
 
 /**
  * The application event listener. Responsible for forwarding the messages in the message queue to
@@ -53,12 +56,28 @@ public class ApplicationEventListener {
   public void submissionEventHandler(SubmissionEvent event) {
     long submissionId = event.getSubmissionId();
     boolean isCompleted = event.isCompleted();
-    Set<SseEmitter> emitters =
-        isCompleted ? sseEmitters.remove(submissionId) : sseEmitters.get(submissionId);
+    Set<SseEmitter> emitters = sseEmitters.get(submissionId);
 
     if (emitters == null || emitters.isEmpty()) {
       LOGGER.warn(String.format("CANNOT get the SseEmitter for submission #%d.", submissionId));
       return;
+    }
+    // A judging that a rejudge (or a later delivery of its task) superseded may still be running
+    // and sending progress: its messages would show the old judging on the page of the new one.
+    // The submission's execute time is the claim of its current judging, so a message with another
+    // claim is dropped (the streams stay open for the current judging's messages).
+    if (event.getExecuteTime() != null
+        && !submissionService.isCurrentJudging(submissionId, event.getExecuteTime())) {
+      LOGGER.info(
+          String.format(
+              "Dropped a message of a superseded judging of submission #%d.", submissionId));
+      return;
+    }
+    if (isCompleted) {
+      emitters = sseEmitters.remove(submissionId);
+      if (emitters == null) {
+        return;
+      }
     }
     Map<String, String> mapMessage = new HashMap<>(3, 1);
     mapMessage.put("judgeResult", event.getJudgeResult());
@@ -285,6 +304,12 @@ public class ApplicationEventListener {
    * online. A judger that misses roughly three 30-second heartbeats is treated as offline.
    */
   private static final long ONLINE_TIMEOUT_MILLIS = 90_000L;
+
+  /**
+   * The autowired SubmissionService object. Used to tell the current judging of a submission from
+   * a superseded one.
+   */
+  @Autowired private SubmissionService submissionService;
 
   /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(ApplicationEventListener.class);
