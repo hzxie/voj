@@ -85,28 +85,10 @@ public class ContestsController {
     view.addObject("pastContests", pastContests);
     view.addObject("loadedContests", contests.size());
     view.addObject("currentTime", currentTime);
-    view.addObject("entrantsOfContests", getEntrantsOfContests(contests));
+    view.addObject(
+        "entrantsOfContests", contestService.getNumberOfContestantsOfContests(contests));
     view.addObject("problemCountOfContests", getProblemCountOfContests(contests));
     return view;
-  }
-
-  /**
-   * Builds a map of contest id to its number of entrants, used by the contest list to render the
-   * "entrants" field of the design without an N+1 lookup in the view layer.
-   *
-   * @param contests - the list of contests to summarise
-   * @return a Map indexed by contest id whose value is the number of entrants
-   */
-  private Map<Long, Long> getEntrantsOfContests(List<Contest> contests) {
-    Map<Long, Long> entrants = new HashMap<>();
-    if (contests != null) {
-      for (Contest contest : contests) {
-        entrants.put(
-            contest.getContestId(),
-            contestService.getNumberOfContestantsOfContest(contest.getContestId()));
-      }
-    }
-    return entrants;
   }
 
   /**
@@ -149,7 +131,7 @@ public class ContestsController {
             keyword, true, Pagination.getOffset(startIndex), NUMBER_OF_CONTESTS_PER_PAGE);
     result.put("isSuccessful", contests != null && !contests.isEmpty());
     result.put("contests", contests);
-    result.put("entrants", getEntrantsOfContests(contests));
+    result.put("entrants", contestService.getNumberOfContestantsOfContests(contests));
     result.put("problemCount", getProblemCountOfContests(contests));
 
     return result;

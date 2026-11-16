@@ -1766,12 +1766,11 @@ public class AdministrationController {
         contestService.getContests(keyword, false, offset, NUMBER_OF_CONTESTS_PER_PAGE);
 
     Map<Long, String> contestPhases = new HashMap<>();
-    Map<Long, Long> contestEntrants = new HashMap<>();
+    Map<Long, Long> contestEntrants = contestService.getNumberOfContestantsOfContests(contests);
     Map<Long, String> contestDurations = new HashMap<>();
     for (Contest contest : contests) {
       long contestId = contest.getContestId();
       contestPhases.put(contestId, contestService.getContestStatus(contest).name());
-      contestEntrants.put(contestId, contestService.getNumberOfContestantsOfContest(contestId));
       contestDurations.put(
           contestId, formatDuration(contest.getStartTime(), contest.getEndTime()));
     }

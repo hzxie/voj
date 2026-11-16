@@ -80,7 +80,8 @@ public class ContestsControllerTest {
     contest.setProblems("[1000, 1001]");
     when(contestService.getContests(nullable(String.class), eq(true), eq(0L), eq(50)))
         .thenReturn(List.of(contest));
-    when(contestService.getNumberOfContestantsOfContest(7L)).thenReturn(5L);
+    when(contestService.getNumberOfContestantsOfContests(List.of(contest)))
+        .thenReturn(Map.of(7L, 5L));
 
     Map<String, Object> result =
         controller.getContestsAction(null, 0L, new MockHttpServletRequest());

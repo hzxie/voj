@@ -452,6 +452,32 @@ public class ContestService {
   }
 
   /**
+   * Gets the number of contestants of every contest in a list, with one query.
+   *
+   * @param contests - the contests (may be null or empty)
+   * @return a Map from the unique identifier of each contest to its number of contestants (0 for a
+   *     contest nobody attended)
+   */
+  public Map<Long, Long> getNumberOfContestantsOfContests(List<Contest> contests) {
+    Map<Long, Long> numberOfContestants = new HashMap<>();
+    if (contests == null || contests.isEmpty()) {
+      return numberOfContestants;
+    }
+    List<Long> contestIds = new ArrayList<>(contests.size());
+    for (Contest contest : contests) {
+      contestIds.add(contest.getContestId());
+      numberOfContestants.put(contest.getContestId(), 0L);
+    }
+    for (Map<String, Object> row :
+        contestContestantMapper.getNumberOfContestantsOfContests(contestIds)) {
+      numberOfContestants.put(
+          ((Number) row.get("contestId")).longValue(),
+          ((Number) row.get("contestants")).longValue());
+    }
+    return numberOfContestants;
+  }
+
+  /**
    * Gets the number of contests a user has attended.
    *
    * @param userId - the unique identifier of the user

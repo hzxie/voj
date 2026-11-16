@@ -158,6 +158,21 @@ public class ContestServiceTest {
             contestService.getContest(2), 1001, userWithUid(1000)));
   }
 
+  /**
+   * Test case: tests the getNumberOfContestantsOfContests(List) method. Test data: the three
+   * fixture contests. Expected: one count per contest, the same as the per-contest count, and 0 for
+   * the contest nobody attended.
+   */
+  @Test
+  public void testGetNumberOfContestantsOfContests() {
+    List<Contest> contests =
+        List.of(
+            contestService.getContest(1), contestService.getContest(2), contestService.getContest(3));
+    Assertions.assertEquals(
+        Map.of(1L, 2L, 2L, 1L, 3L, 0L), contestService.getNumberOfContestantsOfContests(contests));
+    Assertions.assertTrue(contestService.getNumberOfContestantsOfContests(List.of()).isEmpty());
+  }
+
   /** Test case: tests the getNumberOfContestantsOfContest(long) method. Test data: each contest. Expected: the correct number of participants. */
   @Test
   public void testGetNumberOfContestantsOfContest() {

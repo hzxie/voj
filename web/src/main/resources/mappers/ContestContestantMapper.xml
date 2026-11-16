@@ -38,6 +38,17 @@
 		FROM voj_contest_contestants
 		WHERE contest_id = #{contestId}
 	</select>
+	<select id="getNumberOfContestantsOfContests"
+			parameterType="map"
+			resultType="hashmap">
+		SELECT contest_id AS contestId, COUNT(*) AS contestants
+		FROM voj_contest_contestants
+		WHERE contest_id IN
+		<foreach collection="contestIds" item="contestId" open="(" separator="," close=")">
+			#{contestId}
+		</foreach>
+		GROUP BY contest_id
+	</select>
 	<select id="getNumberOfContestsUsingContestantUid"
 			parameterType="long"
 			resultType="long">

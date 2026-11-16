@@ -37,6 +37,16 @@ public interface ContestContestantMapper {
   long getNumberOfContestantsOfContest(long contestId);
 
   /**
+   * Gets the number of contestants of several contests in one query.
+   *
+   * @param contestIds - the unique identifiers of the contests (not empty)
+   * @return one row per contest that has contestants, with the keys {@code contestId} and {@code
+   *     contestants}
+   */
+  List<java.util.Map<String, Object>> getNumberOfContestantsOfContests(
+      @Param("contestIds") List<Long> contestIds);
+
+  /**
    * Gets the number of contests a user has attended.
    *
    * @param contestantUid - the unique identifier of the contestant
