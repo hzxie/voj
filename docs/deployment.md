@@ -110,7 +110,9 @@ sudo useradd --system --no-create-home --shell /usr/sbin/nologin voj-sandbox
   `std::vector<int>(1e9)` under 256 MB) is stopped by the seccomp filters and is
   Memory Limit Exceeded too, rather than the runtime error its failure would
   look like. A program that would have handled such a failed allocation is
-  stopped there instead. Allocations that exceed the backstop only together
+  stopped there instead. (The judger tells this stop by the `SIGSYS` that ends
+  the program, so a program that kills itself with `SIGSYS` is Memory Limit
+  Exceeded as well, which gains it nothing.) Allocations that exceed the backstop only together
   with earlier untouched ones, or by growing with `brk`/`mremap`, still just
   fail and are judged by how the program then ends; with the backstop at more
   than twice the limit, that is rare. Memory that is reserved but never touched

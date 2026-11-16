@@ -520,7 +520,9 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     }
     if ( limit == LIMIT_NONE && !plan.compileStep && plan.dataLimit > 0 && WIFSIGNALED(status) &&
          WTERMSIG(status) == SIGSYS ) {
-        limit = LIMIT_MEMORY; // a single mapping beyond RLIMIT_DATA (see buildSeccompPrograms)
+        // A single mapping beyond RLIMIT_DATA (see buildSeccompPrograms), or a program that
+        // killed itself with SIGSYS, which gains it nothing.
+        limit = LIMIT_MEMORY;
     }
     if ( limit == LIMIT_NONE && reachedOutputLimit(status, plan.outputFilePath) ) {
         limit = LIMIT_OUTPUT;
@@ -1162,8 +1164,9 @@ class SeccompFilter {
     explicit SeccompFilter(uint32_t defaultAction)
         : ctx_(seccomp_init(defaultAction)), complete_(ctx_ != nullptr) {
         // A system call of a foreign ABI (such as i386's socketcall on amd64) fails rather than
-        // killing the program (libseccomp's default), so that SIGSYS only ever means the memory
-        // rule; and no rule can be bypassed through a compat entry point.
+        // killing the program (libseccomp's default), so that the filters only kill for the memory
+        // rule, whose SIGSYS the judger reports as Memory Limit Exceeded; and no rule can be
+        // bypassed through a compat entry point.
         if ( ctx_ != nullptr ) {
             check(seccomp_attr_set(ctx_, SCMP_FLTATR_ACT_BADARCH, SCMP_ACT_ERRNO(ENOSYS)));
         }
@@ -1291,11 +1294,15 @@ class SeccompFilter {
  *    in all (see getDataLimit), e.g. std::vector<int>(1e9) under a 256 MB limit. The kernel would
  *    refuse that mapping anyway; the program would then fail in its own way (std::bad_alloc,
  *    MemoryError, a JVM or Go runtime abort, ...), which cannot be told apart from a runtime error,
- *    whereas a SIGSYS is only ever this rule (nothing else in the filters kills), so the judger
- *    reports Memory Limit Exceeded. A program that would have handled the failure is stopped there
- *    instead. Mappings that only exceed RLIMIT_DATA together with earlier ones, brk and mremap cannot
- *    be checked: they still fail with ENOMEM, but are rare, as the backstop is more than twice the
- *    limit and the watchdog stops any program whose touched memory exceeds the limit first.
+ *    whereas this is the only rule of the filters that kills, so the judger reports a run killed by
+ *    SIGSYS as Memory Limit Exceeded. The exit status does not tell which system call (if any) the
+ *    signal came from: a program that raises SIGSYS itself, or installs a filter of its own that
+ *    kills or traps, is judged Memory Limit Exceeded as well, which gains it nothing (it could exit
+ *    with any other error just as well). A program that would have handled the failure is stopped
+ *    there instead. Mappings that only exceed RLIMIT_DATA together with earlier ones, brk and
+ *    mremap cannot be checked: they still fail with ENOMEM, but are rare, as the backstop is more
+ *    than twice the limit and the watchdog stops any program whose touched memory exceeds the limit
+ *    first.
  * @param  runOfSubmission - whether the filters are for a run of the submission (not a compilation)
  * @param  dataLimit       - the run's RLIMIT_DATA in bytes (0 = none)
  * @return the programs, or none if any filter (or any one of its rules) could not be built - a
