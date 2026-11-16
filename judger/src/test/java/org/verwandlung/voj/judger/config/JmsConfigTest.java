@@ -62,7 +62,7 @@ public class JmsConfigTest {
 
   /**
    * Test case: tests the jmsTemplate bean. Expected result: a JmsTemplate that publishes to the
-   * topic of the progress of the judgings, messages that are not persistent and expire.
+   * topic of the progress of the judgings, messages that are not persistent and do not expire.
    */
   @Test
   public void testJmsTemplate() throws jakarta.jms.JMSException {
@@ -77,7 +77,7 @@ public class JmsConfigTest {
         ((ActiveMQTopic) jmsTemplate.getDefaultDestination()).getTopicName());
     Assertions.assertTrue(jmsTemplate.isExplicitQosEnabled());
     Assertions.assertEquals(DeliveryMode.NON_PERSISTENT, jmsTemplate.getDeliveryMode());
-    Assertions.assertEquals(JmsConfig.MESSAGE_TIME_TO_LIVE_MS, jmsTemplate.getTimeToLive());
+    Assertions.assertEquals(0, jmsTemplate.getTimeToLive());
   }
 
   /**
@@ -99,7 +99,7 @@ public class JmsConfigTest {
     Message message = sendAndReceive(brokerUrl, resultSender);
     Assertions.assertNotNull(message);
     Assertions.assertEquals(DeliveryMode.NON_PERSISTENT, message.getJMSDeliveryMode());
-    Assertions.assertTrue(message.getJMSExpiration() > 0);
+    Assertions.assertEquals(0, message.getJMSExpiration());
 
     broker.stop();
     broker.waitUntilStopped();

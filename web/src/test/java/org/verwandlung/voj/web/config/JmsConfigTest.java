@@ -149,8 +149,7 @@ public class JmsConfigTest {
   private static void sendUntilReceived(
       JmsTemplate sender, long submissionId, BlockingQueue<Long>... subscribers)
       throws InterruptedException {
-    long deadline =
-        System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(JmsConfig.RECOVERY_INTERVAL_MS * 4);
+    long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(20);
     for (BlockingQueue<Long> subscriber : subscribers) {
       Long received = null;
       while (received == null || received != submissionId) {

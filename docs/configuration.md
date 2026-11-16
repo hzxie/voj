@@ -42,11 +42,10 @@ The judgers publish the progress of their judgings (shown live on a submission's
 page) on the topic `vojJudgeProgressTopic`, which every instance of the web app
 subscribes to: the viewers of a judging see its progress whichever instance
 serves them. The messages are live updates, the database holds the verdicts:
-they are not persistent, expire after 5 minutes (by the clocks of the hosts, which
-must not be further apart than that), and an instance that is not running misses
-them; a viewer's page reads the verdict from the database every 10 seconds
-anyway. The web app only receives from the broker. It survives a restart of an external broker: its listener tries to subscribe again
-every 5 seconds until the broker is back.
+they are not persistent, and an instance that is not running misses them; a
+viewer's page reads the verdict from the database every 10 seconds anyway. The
+web app only receives from the broker. It survives a restart of an external
+broker: its listener keeps trying to subscribe again until the broker is back.
 
 | Property | Default | Purpose |
 | --- | --- | --- |

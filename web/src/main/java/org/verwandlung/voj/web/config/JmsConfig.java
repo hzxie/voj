@@ -36,12 +36,11 @@ import org.springframework.jms.listener.DefaultMessageListenerContainer;
  * progress whichever instance serves them. The web module only receives. The judgers take the
  * pending submissions from the database, and record their heartbeats there.
  *
- * <p>The messages are live updates, the database holds the verdicts: they are not persistent and
- * expire after {@value #MESSAGE_TIME_TO_LIVE_MS} ms, and a subscriber that is not running misses
- * them.
+ * <p>The messages are live updates, the database holds the verdicts: they are not persistent, and
+ * a subscriber that is not running misses them.
  *
  * <p>It survives a restart of an external broker: the listener container keeps trying to reconnect
- * every {@value #RECOVERY_INTERVAL_MS} ms until the broker is back.
+ * until the broker is back.
  *
  * @author Haozhe Xie
  */
@@ -49,16 +48,6 @@ import org.springframework.jms.listener.DefaultMessageListenerContainer;
 public class JmsConfig {
   /** The name of the topic of the progress of the judgings (Judger -> Web). */
   static final String JUDGE_PROGRESS_TOPIC = "vojJudgeProgressTopic";
-
-  /**
-   * How long (ms) a message lives in the broker before it is dropped. Its expiry is set by the
-   * clock of its sender and checked by the broker's and the receiver's: this leaves the clocks of
-   * the hosts minutes to disagree by.
-   */
-  static final long MESSAGE_TIME_TO_LIVE_MS = 300000;
-
-  /** How long (ms) the listener container waits between two attempts to reconnect. */
-  static final long RECOVERY_INTERVAL_MS = 5000;
 
   /** The well-known name of the in-JVM broker, matched by the {@code vm://localhost} transport. */
   private static final String EMBEDDED_BROKER_NAME = "localhost";
@@ -137,7 +126,6 @@ public class JmsConfig {
     listenerContainer.setPubSubDomain(true);
     listenerContainer.setDestinationName(JUDGE_PROGRESS_TOPIC);
     listenerContainer.setMessageListener(messageReceiver);
-    listenerContainer.setRecoveryInterval(RECOVERY_INTERVAL_MS);
     return listenerContainer;
   }
 }

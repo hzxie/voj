@@ -35,10 +35,10 @@ import org.springframework.jms.core.JmsTemplate;
  * its progress whichever instance serves them. It receives nothing: it takes the pending
  * submissions from the database, and records its heartbeats there.
  *
- * <p>The messages are live updates, the database holds the verdicts: they are not persistent and
- * expire after {@value #MESSAGE_TIME_TO_LIVE_MS} ms, so the broker keeps no backlog of them for a
- * web application that is down, and a send that the broker holds up (by flow control) fails after
- * {@value #SEND_TIMEOUT_MS} ms (see also {@code MessageSender}, which sends in the background).
+ * <p>The messages are live updates, the database holds the verdicts: they are not persistent, a
+ * web application that is not subscribed misses them, and a send that the broker holds up (by flow
+ * control) fails after {@value #SEND_TIMEOUT_MS} ms (see also {@code MessageSender}, which sends in
+ * the background).
  *
  * <p>It survives a restart of the broker (in the Docker setup it lives in the web container, so it
  * restarts with it): the cached connection is dropped once it fails, and the next message is sent
@@ -50,13 +50,6 @@ import org.springframework.jms.core.JmsTemplate;
 public class JmsConfig {
   /** The name of the topic of the progress of the judgings (Judger -> Web). */
   static final String JUDGE_PROGRESS_TOPIC = "vojJudgeProgressTopic";
-
-  /**
-   * How long (ms) a progress message lives in the broker before it is dropped. Its expiry is set by
-   * the judger's clock and checked by the broker's and the web application's: this leaves the
-   * clocks of the hosts minutes to disagree by.
-   */
-  static final long MESSAGE_TIME_TO_LIVE_MS = 300000;
 
   /** How long (ms) a send may be held up by the broker's flow control before it fails. */
   static final int SEND_TIMEOUT_MS = 10000;
@@ -81,7 +74,6 @@ public class JmsConfig {
     jmsTemplate.setDefaultDestination(new ActiveMQTopic(JUDGE_PROGRESS_TOPIC));
     jmsTemplate.setExplicitQosEnabled(true);
     jmsTemplate.setDeliveryPersistent(false);
-    jmsTemplate.setTimeToLive(MESSAGE_TIME_TO_LIVE_MS);
     return jmsTemplate;
   }
 }
