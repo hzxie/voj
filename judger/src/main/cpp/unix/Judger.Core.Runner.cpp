@@ -1123,7 +1123,8 @@ static std::vector<std::string> buildEnvironment(const std::string& workDirector
  *  - other processes' resource limits: prlimit64 is allowed on the caller only (see
  *    buildSeccompPrograms);
  *  - credentials, capabilities and scheduling: set*uid, set*gid, setgroups, capset, setpriority,
- *    sched_setaffinity & co., ioprio_set, personality, Landlock; and what else no runtime needs
+ *    sched_setaffinity & co. (sched_setscheduler is allowed to SCHED_OTHER only, see
+ *    buildSeccompPrograms), ioprio_set, personality, Landlock; and what else no runtime needs
  *    (cachestat, listmount, statmount, ...).
  * seccomp is allowed: the deny-list filter is installed after this one, and a filter the program
  * adds can only restrict it further. Names are resolved for the native architecture: the list is for
@@ -1296,8 +1297,8 @@ class SeccompFilter {
  * the conditional rules of a system call that also has an unconditional one, so the allowlist cannot
  * allow mmap and refuse some of its arguments, and its comparisons cannot express the complement of
  * each rule (allowing what it does not refuse). The allowlist checks arguments only of the calls it
- * allows in a narrow case alone (prlimit64 on the caller itself, sendto without an address), which
- * have no unconditional rule.
+ * allows in a narrow case alone (prlimit64 on the caller itself, sendto without an address,
+ * sched_setscheduler to SCHED_OTHER), which have no unconditional rule.
  *
  * Both:
  *  - clone fails with EPERM when it asks for a new namespace (CLONE_NEW*), so threads (and a
@@ -1370,6 +1371,15 @@ static std::vector<std::string> buildSeccompPrograms(bool runOfSubmission, rlim_
         // sendto(fd, buf, len, flags, dest_addr, addrlen) only without an address (as the C
         // library's send calls it), i.e. on a connected socket: a socket pair.
         allowlist.add(SCMP_ACT_ALLOW, SCMP_SYS(sendto), {SCMP_A4(SCMP_CMP_EQ, 0)});
+        // sched_setscheduler(pid, policy, param) only to SCHED_OTHER, the policy every process of
+        // the run has: the C library calls it on a new thread created with PTHREAD_EXPLICIT_SCHED,
+        // which Free Pascal's threads are, and pthread_create fails if it does. It cannot target
+        // the caller alone (the C library passes the thread's id), but for a process of the same
+        // user that is SCHED_OTHER, as the judger and every other run are, it changes nothing: the
+        // policy stays, its priority must be 0, and the nice value is kept. The policy is an int
+        // (the lower 32 bits, SCHED_RESET_ON_FORK included).
+        allowlist.add(SCMP_ACT_ALLOW, SCMP_SYS(sched_setscheduler),
+                      {SCMP_A1(SCMP_CMP_MASKED_EQ, 0xFFFFFFFFULL, (scmp_datum_t) SCHED_OTHER)});
         allowlist.optimize();
         programs.push_back(allowlist.exportProgram());
     }

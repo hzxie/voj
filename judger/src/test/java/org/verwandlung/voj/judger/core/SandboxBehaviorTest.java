@@ -586,6 +586,29 @@ public class SandboxBehaviorTest {
   }
 
   /**
+   * Test case: a run that creates threads with an explicit scheduling policy
+   * (PTHREAD_EXPLICIT_SCHED, as Free Pascal's threads are), with which the C library calls
+   * sched_setscheduler on the new thread, and that changes its parent's policy. Expected result:
+   * a thread with the policy every process has (SCHED_OTHER) is created, while one with another
+   * policy (SCHED_FIFO) is not, nor is the parent's changed: sched_setscheduler is allowlisted to
+   * SCHED_OTHER only (ENOSYS otherwise).
+   */
+  @Test
+  public void testRunCanCreateThreadsWithAnExplicitPolicy() throws Exception {
+    Assumptions.assumeTrue("native".equalsIgnoreCase(sandbox), "This tests the native runner.");
+    Assumptions.assumeTrue(isLinux(), "The seccomp filters are Linux-only.");
+    Assertions.assertEquals("AC", judge(900040L, EXPLICIT_SCHED_CODE, 5000, 262144));
+    Assertions.assertEquals(
+        String.join(
+            "\n",
+            "explicit SCHED_OTHER: created",
+            "explicit SCHED_FIFO: ENOSYS",
+            "parent SCHED_IDLE: ENOSYS",
+            ""),
+        Files.readString(Path.of(workBaseDirectory, "voj-sandbox-900040", "output.txt")));
+  }
+
+  /**
    * Test case: a run that tries to enlarge the kernel buffer of a pipe (fcntl F_SETPIPE_SZ) and
    * those of a socket pair (setsockopt SO_SNDBUF, SO_RCVBUF, SO_SNDBUFFORCE, SO_RCVBUFFORCE), and
    * reads them and sets another socket option. Expected result: enlarging is refused (EPERM),
@@ -1784,6 +1807,54 @@ public class SandboxBehaviorTest {
           message.msg_iov = &data;
           message.msg_iovlen = 1;
           report("sendmsg /dev/log", sendmsg(fd, &message, 0) == 7);
+          return 0;
+      }
+      """;
+
+  /**
+   * A program that creates threads with an explicit scheduling policy, and changes its parent's,
+   * and reports how each attempt ends.
+   */
+  private static final String EXPLICIT_SCHED_CODE =
+      """
+      #include <cerrno>
+      #include <cstdio>
+      #include <cstring>
+      #include <pthread.h>
+      #include <sched.h>
+      #include <unistd.h>
+
+      static const char* name(int error) {
+          return error == EPERM ? "EPERM" : error == ENOSYS ? "ENOSYS" : std::strerror(error);
+      }
+
+      static void* threadMain(void*) {
+          return nullptr;
+      }
+
+      static void tryThread(const char* what, int policy) {
+          pthread_attr_t attributes;
+          pthread_attr_init(&attributes);
+          pthread_attr_setinheritsched(&attributes, PTHREAD_EXPLICIT_SCHED);
+          pthread_attr_setschedpolicy(&attributes, policy);
+          sched_param parameters;
+          parameters.sched_priority = sched_get_priority_min(policy);
+          pthread_attr_setschedparam(&attributes, &parameters);
+          pthread_t thread;
+          int error = pthread_create(&thread, &attributes, threadMain, nullptr);
+          if (error == 0) {
+              pthread_join(thread, nullptr);
+          }
+          std::printf("%s: %s\\n", what, error == 0 ? "created" : name(error));
+      }
+
+      int main() {
+          tryThread("explicit SCHED_OTHER", SCHED_OTHER);
+          tryThread("explicit SCHED_FIFO", SCHED_FIFO);
+          sched_param parameters;
+          parameters.sched_priority = 0;
+          std::printf("parent SCHED_IDLE: %s\\n",
+              sched_setscheduler(getppid(), SCHED_IDLE, &parameters) == 0 ? "changed" : name(errno));
           return 0;
       }
       """;
