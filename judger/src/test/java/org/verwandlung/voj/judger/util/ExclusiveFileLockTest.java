@@ -73,6 +73,25 @@ public class ExclusiveFileLockTest {
   }
 
   /**
+   * Test case: an earlier build left a lock file others may read, which they could take a lock on.
+   * Expected result: it is made private once locked, and the lock holds: making it private never
+   * opens (and closes) the file again, which would release the lock.
+   */
+  @Test
+  public void testLockFileOthersMayReadIsMadePrivate() throws Exception {
+    Path lockFile =
+        Files.createFile(
+            tempDir.resolve("judger-0.lock"),
+            PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-r--r--")));
+
+    try (ExclusiveFileLock lock = ExclusiveFileLock.tryAcquire(lockFile)) {
+      Assertions.assertEquals(
+          "rw-------", PosixFilePermissions.toString(Files.getPosixFilePermissions(lockFile)));
+      Assertions.assertFalse(isFreeForAnotherProcess(lockFile));
+    }
+  }
+
+  /**
    * Test case: a lock file locked by this process is locked again through another path of the same
    * file (a link to its directory), while another process tries to lock it. Expected result: the
    * second lock is not granted, and the other process still cannot lock the file: the failed

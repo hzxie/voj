@@ -31,6 +31,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileAttribute;
+import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -67,11 +68,17 @@ public final class ExclusiveFileLock implements Closeable {
       if (HELD_LOCK_FILES.contains(identityOf(lockFile))) {
         return null;
       }
-      FileChannel channel = FileChannel.open(lockFile, OPEN_OPTIONS, ownerOnly());
+      FileChannel channel = FileChannel.open(lockFile, OPEN_OPTIONS, CREATION_ATTRIBUTES);
       try {
         if (channel.tryLock() == null) {
           channel.close();
           return null;
+        }
+        if (IS_POSIX) {
+          // A lock file an earlier build created may be readable by others, who could then take a
+          // (shared) lock on it that keeps the judger from it. By its path: a descriptor of it
+          // opened (and closed) to change its permissions would release the lock.
+          Files.setPosixFilePermissions(lockFile, OWNER_ONLY);
         }
         channel.truncate(0);
         channel.write(ByteBuffer.wrap(CONTENT), 0);
@@ -135,20 +142,6 @@ public final class ExclusiveFileLock implements Closeable {
   }
 
   /**
-   * Gets the permissions of a new lock file: read and write for its owner only (POSIX).
-   *
-   * @return the file attributes to create a lock file with
-   */
-  private static FileAttribute<?>[] ownerOnly() {
-    if (!FileSystems.getDefault().supportedFileAttributeViews().contains("posix")) {
-      return new FileAttribute<?>[0];
-    }
-    return new FileAttribute<?>[] {
-      PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------"))
-    };
-  }
-
-  /**
    * Constructor.
    *
    * @param file - the lock file
@@ -160,6 +153,20 @@ public final class ExclusiveFileLock implements Closeable {
     this.channel = channel;
     this.identity = identity;
   }
+
+  /** Whether the file system has POSIX permissions (i.e. is not Windows). */
+  private static final boolean IS_POSIX =
+      FileSystems.getDefault().supportedFileAttributeViews().contains("posix");
+
+  /** The permissions of a lock file: read and write for its owner only (POSIX). */
+  private static final Set<PosixFilePermission> OWNER_ONLY =
+      PosixFilePermissions.fromString("rw-------");
+
+  /** The attributes a lock file is created with: its permissions (POSIX). */
+  private static final FileAttribute<?>[] CREATION_ATTRIBUTES =
+      IS_POSIX
+          ? new FileAttribute<?>[] {PosixFilePermissions.asFileAttribute(OWNER_ONLY)}
+          : new FileAttribute<?>[0];
 
   /** How a lock file is opened: created if needed, for writing, never through a link. */
   private static final Set<OpenOption> OPEN_OPTIONS =
