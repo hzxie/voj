@@ -120,6 +120,34 @@
                         </div>
                     </div>
                 </div>
+                <!--/* CONTESTANTS: an administrator registers users by username (the only way into a
+                     contest whose registration is closed) and removes them. Each change is saved at
+                     once, not with the contest. */-->
+                <div class="adm-card" id="contestants-card" th:if="${isEdit}">
+                    <div class="adm-card-head">
+                        <span th:text="#{voj.administration.edit-contest.contestants}">// CONTESTANTS</span>
+                        <span class="adm-pill c-muted" id="contestants-count" th:text="${#lists.size(contestants)}">0</span>
+                    </div>
+                    <div class="adm-card-body">
+                        <div class="alert alert-error hide" role="alert" id="contestant-error"></div>
+                        <div class="adm-picker-search">
+                            <span class="p">$</span>
+                            <input id="contestant-username" type="text" maxlength="16" autocomplete="off"
+                                   th:placeholder="#{voj.administration.edit-contest.contestant-username}"
+                                   th:attr="aria-label=#{voj.administration.edit-contest.contestant-username}" />
+                            <button type="button" class="adm-cand-add" id="add-contestant" th:text="'+ ' + #{voj.administration.edit-contest.add-contestant}">+ register</button>
+                        </div>
+                        <div class="adm-picker-list" id="contestant-list">
+                            <div class="adm-cand" th:each="contestant : ${contestants}" th:attr="data-uid=${contestant.uid}">
+                                <span class="adm-cand-pid" th:text="'#' + ${contestant.uid}">#1000</span>
+                                <span class="adm-cand-title" th:text="${contestant.username}">username</span>
+                                <button type="button" class="adm-cprob-x" th:attr="aria-label=#{voj.administration.edit-contest.remove-contestant} + ': ' + ${contestant.username}">&#x2715;</button>
+                            </div>
+                        </div>
+                        <div class="adm-picker-empty" id="contestants-empty" th:classappend="${#lists.isEmpty(contestants)} ? '' : 'hide'"
+                             th:text="#{voj.administration.edit-contest.no-contestants}">// nobody is registered yet</div>
+                    </div>
+                </div>
                 <div class="adm-danger" th:if="${isEdit}">
                     <div>
                         <div class="t" th:text="#{voj.administration.edit-contest.delete-contest}">Delete contest</div>
@@ -335,6 +363,86 @@
             ['delete-contest-2'].forEach(function (id) {
                 var el = document.getElementById(id);
                 if (el) el.addEventListener('click', del);
+            });
+        });
+    </script>
+    <script type="text/javascript" th:inline="javascript">
+        // --- CONTESTANTS (edit page only) ---------------------------------------
+        document.addEventListener('DOMContentLoaded', function () {
+            var card = document.getElementById('contestants-card');
+            if (!card) { return; }
+            var contestId = document.getElementById('contest-id').value;
+            var list = document.getElementById('contestant-list');
+            var input = document.getElementById('contestant-username');
+            var error = document.getElementById('contestant-error');
+            var removeText = [[#{voj.administration.edit-contest.remove-contestant}]];
+
+            function showError(text) {
+                error.textContent = text || '';
+                error.classList.toggle('hide', !text);
+            }
+            function refreshCount() {
+                var count = list.children.length;
+                document.getElementById('contestants-count').textContent = count;
+                document.getElementById('contestants-empty').classList.toggle('hide', count !== 0);
+            }
+            function bindRemove(row) {
+                row.querySelector('.adm-cprob-x').addEventListener('click', function () {
+                    vojConfirm([[#{voj.administration.edit-contest.remove-contestant-confirm}]]).then(function (ok) {
+                        if (!ok) { return; }
+                        $.ajax({
+                            type: 'POST', url: [[@{/administration/removeContestant.action}]],
+                            data: { contestId: contestId, uid: row.getAttribute('data-uid') }, dataType: 'JSON',
+                            success: function (result) {
+                                if (result['isSuccessful']) { row.remove(); refreshCount(); input.focus(); }
+                            }
+                        });
+                    });
+                });
+            }
+            function addRow(uid, username) {
+                var row = document.createElement('div');
+                row.className = 'adm-cand';
+                row.setAttribute('data-uid', uid);
+                var idEl = document.createElement('span');
+                idEl.className = 'adm-cand-pid';
+                idEl.textContent = '#' + uid;
+                var name = document.createElement('span');
+                name.className = 'adm-cand-title';
+                name.textContent = username;
+                var x = document.createElement('button');
+                x.type = 'button';
+                x.className = 'adm-cprob-x';
+                x.textContent = '✕';
+                x.setAttribute('aria-label', removeText + ': ' + username);
+                row.appendChild(idEl); row.appendChild(name); row.appendChild(x);
+                list.appendChild(row);
+                bindRemove(row);
+            }
+            function add() {
+                var username = input.value.trim();
+                if (!username) { return; }
+                showError('');
+                $.ajax({
+                    type: 'POST', url: [[@{/administration/addContestant.action}]],
+                    data: { contestId: contestId, username: username }, dataType: 'JSON',
+                    success: function (result) {
+                        if (result['isSuccessful']) {
+                            addRow(result['uid'], result['username']);
+                            input.value = '';
+                            refreshCount();
+                        } else if (!result['isUserExists']) {
+                            showError([[#{voj.administration.edit-contest.contestant-not-found}]]);
+                        } else if (result['isAttendedContest']) {
+                            showError([[#{voj.administration.edit-contest.contestant-already-added}]]);
+                        }
+                    }
+                });
+            }
+            Array.prototype.forEach.call(list.children, bindRemove);
+            document.getElementById('add-contestant').addEventListener('click', add);
+            input.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') { e.preventDefault(); add(); }
             });
         });
     </script>

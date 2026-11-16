@@ -125,6 +125,15 @@
 		ORDER BY contestant_score DESC, cc.contestant_uid
 		LIMIT #{offset}, #{limit}
 	</select>
+	<select id="getContestantsOfContest"
+			parameterType="long"
+			resultType="org.verwandlung.voj.web.model.User">
+		SELECT u.uid AS uid, u.username AS username
+		FROM voj_contest_contestants cc
+		JOIN voj_users u ON u.uid = cc.contestant_uid
+		WHERE cc.contest_id = #{contestId}
+		ORDER BY u.username
+	</select>
 	<select id="getContestantOfContest"
 			parameterType="map"
 			resultMap="ContestContestantResultMap">

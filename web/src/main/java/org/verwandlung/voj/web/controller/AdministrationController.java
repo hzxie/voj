@@ -1856,7 +1856,50 @@ public class AdministrationController {
     view.addObject(
         "contestDuration", formatDuration(contest.getStartTime(), contest.getEndTime()));
     view.addObject("allProblems", getProblemsForPicker());
+    view.addObject("contestants", contestService.getContestantsOfContest(contestId));
     return view;
+  }
+
+  /**
+   * Registers a user for a contest, whatever its registration setting (the only way into a contest
+   * whose registration is closed).
+   *
+   * @param contestId - the unique identifier of the contest
+   * @param username - the username of the user to register
+   * @param request - the HttpServletRequest object
+   * @return the result of ContestService.addContestant
+   */
+  @RequestMapping(value = "/addContestant.action", method = RequestMethod.POST)
+  public @ResponseBody Map<String, Object> addContestantAction(
+      @RequestParam(value = "contestId") long contestId,
+      @RequestParam(value = "username") String username,
+      HttpServletRequest request) {
+    Map<String, Object> result = contestService.addContestant(contestId, username);
+    if ((Boolean) result.get("isSuccessful")) {
+      LOGGER.info(
+          String.format(
+              "User[%s] was registered for contest #%d by an administrator.",
+              LogSanitizer.forLog(username), contestId));
+    }
+    return result;
+  }
+
+  /**
+   * Removes a contestant from a contest.
+   *
+   * @param contestId - the unique identifier of the contest
+   * @param uid - the unique identifier of the contestant
+   * @param request - the HttpServletRequest object
+   * @return a Map whose {@code isSuccessful} tells whether the user was a contestant
+   */
+  @RequestMapping(value = "/removeContestant.action", method = RequestMethod.POST)
+  public @ResponseBody Map<String, Boolean> removeContestantAction(
+      @RequestParam(value = "contestId") long contestId,
+      @RequestParam(value = "uid") long uid,
+      HttpServletRequest request) {
+    Map<String, Boolean> result = new HashMap<>(2, 1);
+    result.put("isSuccessful", contestService.removeContestant(contestId, uid));
+    return result;
   }
 
   /**

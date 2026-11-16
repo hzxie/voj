@@ -134,6 +134,20 @@ public class ContestContestantMapperTest {
     Assertions.assertEquals("another-user", contestants.get(2).getContestant().getUsername());
   }
 
+  /**
+   * Test case: tests the getContestantsOfContest(long) method. Test data: the 1st contest (users
+   * 1000 and 1001) and the 3rd one (nobody). Expected: the contestants' identifiers and usernames,
+   * ordered by username; an empty list for the 3rd contest.
+   */
+  @Test
+  public void testGetContestantsOfContest() {
+    List<User> contestants = contestContestantMapper.getContestantsOfContest(1);
+    Assertions.assertEquals(
+        List.of("voj@judger", "zjhzxhz"), contestants.stream().map(User::getUsername).toList());
+    Assertions.assertEquals(1001L, contestants.get(0).getUid());
+    Assertions.assertTrue(contestContestantMapper.getContestantsOfContest(3).isEmpty());
+  }
+
   /** Registers users 1001 and 1002 for the 2nd contest (user 1000 is registered already). */
   private void addContestantsToSecondContest() {
     Contest contest = contestMapper.getContest(2);

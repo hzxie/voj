@@ -197,6 +197,44 @@ public class ContestServiceTest {
     Assertions.assertEquals(0, contestService.getNumberOfContestantsOfContest(3));
   }
 
+  /**
+   * Test case: tests addContestant(long, String), getContestantsOfContest(long) and
+   * removeContestant(long, long). Test data: the published, not-started Contest #3 with its
+   * registration closed. Expected: an administrator registers users 1002 and 1000 by username
+   * (ordered by username in the list); registering one of them again, an unknown username or for
+   * an unknown contest fails; removing a contestant takes them off the contest once.
+   */
+  @Test
+  public void testAddAndRemoveContestantsOfClosedContest() {
+    publishContest(3, false);
+
+    Map<String, Object> result = contestService.addContestant(3, " another-user ");
+    Assertions.assertEquals(Boolean.TRUE, result.get("isSuccessful"));
+    Assertions.assertEquals(1002L, result.get("uid"));
+    Assertions.assertEquals("another-user", result.get("username"));
+    Assertions.assertEquals(
+        Boolean.TRUE, contestService.addContestant(3, "zjhzxhz").get("isSuccessful"));
+    Assertions.assertEquals(
+        List.of("another-user", "zjhzxhz"),
+        contestService.getContestantsOfContest(3).stream().map(User::getUsername).toList());
+    Assertions.assertTrue(contestService.isAttendContest(3, userWithUid(1002)));
+
+    result = contestService.addContestant(3, "zjhzxhz");
+    Assertions.assertEquals(Boolean.FALSE, result.get("isSuccessful"));
+    Assertions.assertEquals(Boolean.TRUE, result.get("isAttendedContest"));
+    result = contestService.addContestant(3, "nobody-here");
+    Assertions.assertEquals(Boolean.FALSE, result.get("isSuccessful"));
+    Assertions.assertEquals(Boolean.FALSE, result.get("isUserExists"));
+    result = contestService.addContestant(0, "zjhzxhz");
+    Assertions.assertEquals(Boolean.FALSE, result.get("isSuccessful"));
+    Assertions.assertEquals(Boolean.FALSE, result.get("isContestExists"));
+
+    Assertions.assertTrue(contestService.removeContestant(3, 1002));
+    Assertions.assertFalse(contestService.removeContestant(3, 1002));
+    Assertions.assertFalse(contestService.isAttendContest(3, userWithUid(1002)));
+    Assertions.assertEquals(1, contestService.getNumberOfContestantsOfContest(3));
+  }
+
   /** Test case: tests the attendContest(...) method. Test data: the not-started but hidden Contest #3. Expected: attendance fails as if the contest did not exist. */
   @Test
   public void testAttendContestThatIsNotPublished() {

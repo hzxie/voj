@@ -18,6 +18,7 @@ package org.verwandlung.voj.web.mapper;
 
 import org.apache.ibatis.annotations.Param;
 import org.verwandlung.voj.web.model.ContestContestant;
+import org.verwandlung.voj.web.model.User;
 
 import java.util.Date;
 import java.util.List;
@@ -90,6 +91,14 @@ public interface ContestContestantMapper {
       @Param("frozenAt") Date frozenAt,
       @Param("offset") long offset,
       @Param("limit") int limit);
+
+  /**
+   * Gets the contestants of a contest, ordered by username, for the contest editor.
+   *
+   * @param contestId - the unique identifier of the contest
+   * @return the contestants, with only their unique identifier and username set
+   */
+  List<User> getContestantsOfContest(@Param("contestId") long contestId);
 
   /**
    * Gets the participation record of a contestant in a contest.

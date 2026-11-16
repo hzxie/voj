@@ -115,8 +115,10 @@
 
                 <!-- ACTIONS -->
                 <div class="vw-contest-actions">
-                    <button class="vw-btn vw-btn-accent vw-btn-block" type="button" th:if="${not isAttended and contestStatus != 'Done'}"
+                    <button class="vw-btn vw-btn-accent vw-btn-block" type="button" th:if="${not isAttended and contestStatus != 'Done' and contest.openRegistration}"
                             id="attend-contest-button" th:text="#{voj.contests.contest.attend-contest}">Attend the contest</button>
+                    <p class="vw-muted" th:if="${not isAttended and contestStatus != 'Done' and !contest.openRegistration}"
+                       th:text="#{voj.contests.contest.registration-closed}">Registration for this contest is closed.</p>
                     <a class="vw-btn vw-btn-block" th:if="${contestStatus != 'Ready'}"
                        th:href="@{/contest/{id}/leaderboard(id=${contest.contestId})}" th:text="#{voj.contests.contest.view-leaderboard}">View leaderboard</a>
                 </div>

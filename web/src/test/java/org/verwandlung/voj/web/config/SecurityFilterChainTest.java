@@ -167,6 +167,30 @@ public class SecurityFilterChainTest {
     Assertions.assertFalse(session.isInvalid());
   }
 
+  /**
+   * Test case: registering a contestant through the contest editor
+   * (/administration/addContestant.action) as a regular user, as an administrator without a CSRF
+   * token and as an administrator with one. Expected: only the last one reaches the action.
+   */
+  @Test
+  public void testAddingContestantsRequiresAnAdministratorAndCsrfToken() throws Exception {
+    MockHttpSession userSession = sessionOf(user("users"));
+    when(userService.getUserUsingUid(1000L)).thenReturn(user("users"));
+    mockMvc
+        .perform(post("/administration/addContestant.action").with(csrf()).session(userSession))
+        .andExpect(status().isForbidden());
+
+    MockHttpSession administratorSession = sessionOf(user("administrators"));
+    when(userService.getUserUsingUid(1000L)).thenReturn(user("administrators"));
+    mockMvc
+        .perform(post("/administration/addContestant.action").session(administratorSession))
+        .andExpect(status().isForbidden());
+    mockMvc
+        .perform(
+            post("/administration/addContestant.action").with(csrf()).session(administratorSession))
+        .andExpect(status().isOk());
+  }
+
   /** Test case: an anonymous request to an authenticated endpoint. Expected: a redirect to the login page. */
   @Test
   public void testAnonymousUserIsRedirectedToLogin() throws Exception {
@@ -247,6 +271,11 @@ public class SecurityFilterChainTest {
     @PostMapping("/accounts/resendVerificationEmail.action")
     public String resendVerificationEmail() {
       return "resent";
+    }
+
+    @PostMapping("/administration/addContestant.action")
+    public String addContestant() {
+      return "added";
     }
   }
 

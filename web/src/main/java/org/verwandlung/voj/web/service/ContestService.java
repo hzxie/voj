@@ -23,6 +23,7 @@ import org.verwandlung.voj.web.mapper.ContestContestantMapper;
 import org.verwandlung.voj.web.mapper.ContestMapper;
 import org.verwandlung.voj.web.mapper.ContestSubmissionMapper;
 import org.verwandlung.voj.web.mapper.ProblemMapper;
+import org.verwandlung.voj.web.mapper.UserMapper;
 import org.verwandlung.voj.web.model.*;
 import org.verwandlung.voj.web.util.JsonUtils;
 
@@ -524,6 +525,61 @@ public class ContestService {
   }
 
   /**
+   * [For administrators only] Gets the contestants of a contest, ordered by username.
+   *
+   * @param contestId - the unique identifier of the contest
+   * @return the contestants, with only their unique identifier and username set
+   */
+  public List<User> getContestantsOfContest(long contestId) {
+    return contestContestantMapper.getContestantsOfContest(contestId);
+  }
+
+  /**
+   * [For administrators only] Registers a user for a contest. Unlike {@link #attendContest}, it
+   * works whatever the contest's registration setting, publication status and phase: it is how an
+   * administrator admits contestants to a contest whose registration is closed.
+   *
+   * @param contestId - the unique identifier of the contest
+   * @param username - the username of the user to register
+   * @return a Map with {@code isContestExists}, {@code isUserExists}, {@code isAttendedContest}
+   *     (the user was registered already) and {@code isSuccessful}; on success also {@code uid}
+   *     and {@code username} of the registered user
+   */
+  public Map<String, Object> addContestant(long contestId, String username) {
+    Contest contest = contestMapper.getContest(contestId);
+    User user =
+        username == null || username.isBlank()
+            ? null
+            : userMapper.getUserUsingUsername(username.trim());
+
+    Map<String, Object> result = new HashMap<>(8, 1);
+    result.put("isContestExists", contest != null);
+    result.put("isUserExists", user != null);
+    boolean isAttended = contest != null && isAttendContest(contestId, user);
+    result.put("isAttendedContest", isAttended);
+    boolean isSuccessful = contest != null && user != null && !isAttended;
+    if (isSuccessful) {
+      contestContestantMapper.createContestContestant(new ContestContestant(contest, user));
+      result.put("uid", user.getUid());
+      result.put("username", user.getUsername());
+    }
+    result.put("isSuccessful", isSuccessful);
+    return result;
+  }
+
+  /**
+   * [For administrators only] Removes a contestant from a contest. The submissions they made in the
+   * contest are kept, but they no longer rank on its leaderboard.
+   *
+   * @param contestId - the unique identifier of the contest
+   * @param contestantUid - the unique identifier of the contestant
+   * @return whether the user was a contestant of the contest
+   */
+  public boolean removeContestant(long contestId, long contestantUid) {
+    return contestContestantMapper.deleteContestContestant(contestId, contestantUid) > 0;
+  }
+
+  /**
    * Gets the instant from which submissions are hidden from a viewer's leaderboard because of the
    * contest's scoreboard freeze ({@code contest_freeze}, in minutes before the end). The freeze is
    * in effect for non-administrators from {@code endTime - freeze} until the contest ends; after the
@@ -717,6 +773,9 @@ public class ContestService {
 
   /** The autowired ContestSubmissionMapper object. */
   @Autowired private ContestSubmissionMapper contestSubmissionMapper;
+
+  /** The autowired UserMapper object, used to find the users an administrator registers. */
+  @Autowired private UserMapper userMapper;
 
   /** The autowired ProblemMapper object, used to obtain the problem information in a contest. */
   @Autowired private ProblemMapper problemMapper;

@@ -593,7 +593,26 @@ class ViewRenderSmokeTest {
   void contestViewRenders() throws Exception {
     when(contestService.getContest(1L))
         .thenReturn(aContest(1L, "ACM", future(), farFuture()));
-    mockMvc.perform(getWithCsrf("/contest/1")).andExpect(status().isOk());
+    mockMvc
+        .perform(getWithCsrf("/contest/1"))
+        .andExpect(status().isOk())
+        .andExpect(content().string(containsString("id=\"attend-contest-button\"")));
+  }
+
+  /**
+   * An upcoming contest whose registration is closed offers no "Attend" button (attending would be
+   * refused) but says that registration is closed.
+   */
+  @Test
+  void contestWithClosedRegistrationOffersNoAttendButton() throws Exception {
+    Contest contest = aContest(1L, "ACM", future(), farFuture());
+    contest.setOpenRegistration(false);
+    when(contestService.getContest(1L)).thenReturn(contest);
+    mockMvc
+        .perform(getWithCsrf("/contest/1"))
+        .andExpect(status().isOk())
+        .andExpect(content().string(not(containsString("id=\"attend-contest-button\""))))
+        .andExpect(content().string(containsString("Registration for this contest is closed.")));
   }
 
   /** An unpublished contest is not found for anonymous users but still renders for administrators. */
@@ -966,6 +985,25 @@ class ViewRenderSmokeTest {
     when(contestService.getContest(1L)).thenReturn(aContest(1L, "ACM", future(), farFuture()));
     when(contestService.getContestStatus(any())).thenReturn(Contest.CONTEST_STATUS.READY);
     mockMvc.perform(getWithCsrf("/administration/edit-contest/1")).andExpect(status().isOk());
+  }
+
+  /** The contest editor lists the contestants (escaped) and offers to register more. */
+  @Test
+  void adminEditContestListsContestants() throws Exception {
+    authenticateAdmin();
+    when(contestService.getContest(1L)).thenReturn(aContest(1L, "ACM", future(), farFuture()));
+    when(contestService.getContestStatus(any())).thenReturn(Contest.CONTEST_STATUS.READY);
+    User contestant = new User();
+    contestant.setUid(1002L);
+    contestant.setUsername("a<b");
+    when(contestService.getContestantsOfContest(1L)).thenReturn(List.of(contestant));
+    mockMvc
+        .perform(getWithCsrf("/administration/edit-contest/1"))
+        .andExpect(status().isOk())
+        .andExpect(content().string(containsString("id=\"contestant-username\"")))
+        .andExpect(content().string(containsString("data-uid=\"1002\"")))
+        .andExpect(content().string(containsString(">a&lt;b</span>")))
+        .andExpect(content().string(not(containsString("a<b"))));
   }
 
   /** The admin thread-edit form renders for an existing thread. */
