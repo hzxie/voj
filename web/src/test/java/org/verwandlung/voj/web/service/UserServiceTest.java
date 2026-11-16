@@ -40,7 +40,6 @@ import org.verwandlung.voj.web.mapper.UserMetaMapper;
 import org.verwandlung.voj.web.model.EmailValidation;
 import org.verwandlung.voj.web.model.Language;
 import org.verwandlung.voj.web.model.User;
-import org.verwandlung.voj.web.util.FailureLimiter;
 import org.verwandlung.voj.web.model.UserGroup;
 import org.verwandlung.voj.web.model.UserMeta;
 
@@ -193,23 +192,97 @@ public class UserServiceTest {
     Assertions.assertFalse(result.get("isSuccessful"));
   }
 
-  /** Test case: tests the throttling of isAllowedToLogin(...). Test data: 10 wrong passwords for user zjhzxhz, alternating its username and email address, then the right one. Expected: the right password is refused with isThrottled, while another account still logs in from the same address. */
+  /**
+   * Test case: tests the throttling of isAllowedToLogin(...). Test data: 10 wrong passwords for user
+   * zjhzxhz from one address, alternating its username and email address, then the right one from
+   * that address and from another. Expected: the right password is refused with isThrottled from
+   * the first address only; another account still logs in from it.
+   */
   @Test
-  public void testIsAllowedToLoginThrottlesAnAccount() {
-    for (int i = 0; i < 10; ++i) {
-      String login = i % 2 == 0 ? "zjhzxhz" : "cshzxie@gmail.com";
-      Map<String, Boolean> result = userService.isAllowedToLogin(login, "wrong-" + i, "10.0.0.1");
-      Assertions.assertFalse(result.get("isThrottled"));
-      Assertions.assertFalse(result.get("isAccountValid"));
-    }
+  public void testIsAllowedToLoginThrottlesAnAccountFromAnAddress() {
+    guessPasswordOfZjhzxhz("10.0.1.1");
     Map<String, Boolean> result =
-        userService.isAllowedToLogin("zjhzxhz", PLAINTEXT_PASSWORD, "10.0.0.2");
+        userService.isAllowedToLogin("zjhzxhz", PLAINTEXT_PASSWORD, "10.0.1.1");
     Assertions.assertTrue(result.get("isThrottled"));
     Assertions.assertFalse(result.get("isSuccessful"));
     Assertions.assertTrue(
+        userService.isAllowedToLogin("zjhzxhz", PLAINTEXT_PASSWORD, "10.0.1.2").get("isSuccessful"));
+    Assertions.assertTrue(
         userService
-            .isAllowedToLogin("support@verwandlung.org", PLAINTEXT_PASSWORD, "10.0.0.1")
+            .isAllowedToLogin("support@verwandlung.org", PLAINTEXT_PASSWORD, "10.0.1.1")
             .get("isAccountValid"));
+  }
+
+  /**
+   * Test case: tests the throttling of isAllowedToLogin(...) with the addresses of an IPv6 network.
+   * Test data: 10 wrong passwords for user zjhzxhz from addresses of one /64. Expected: the right
+   * password is refused from another address of that /64, but not from another /64.
+   */
+  @Test
+  public void testIsAllowedToLoginThrottlesAnIpv6Network() {
+    for (int i = 0; i < 10; ++i) {
+      userService.isAllowedToLogin("zjhzxhz", "wrong-" + i, "2001:db8:1:1::" + (i + 1));
+    }
+    Assertions.assertTrue(
+        userService
+            .isAllowedToLogin("zjhzxhz", PLAINTEXT_PASSWORD, "2001:db8:1:1:ffff::1")
+            .get("isThrottled"));
+    Assertions.assertTrue(
+        userService
+            .isAllowedToLogin("zjhzxhz", PLAINTEXT_PASSWORD, "2001:db8:1:2::1")
+            .get("isSuccessful"));
+  }
+
+  /**
+   * Test case: tests resetPassword(...) after the logins to an account were throttled. Test data:
+   * 10 wrong passwords for user zjhzxhz from one address, then a password reset. Expected: the new
+   * password logs in from that address at once.
+   */
+  @Test
+  public void testResetPasswordClearsTheFailedLogins() {
+    guessPasswordOfZjhzxhz("10.0.1.3");
+    emailValidationMapper.createEmailValidation(
+        new EmailValidation("cshzxie@gmail.com", "reset-token", tomorrow()));
+    Assertions.assertTrue(
+        userService
+            .resetPassword("cshzxie@gmail.com", "reset-token", "new-password", "new-password")
+            .get("isSuccessful"));
+
+    Assertions.assertTrue(
+        userService.isAllowedToLogin("zjhzxhz", "new-password", "10.0.1.3").get("isSuccessful"));
+  }
+
+  /**
+   * Tries 10 wrong passwords for user zjhzxhz from an address, alternating its username and email
+   * address; none of them is throttled.
+   *
+   * @param ipAddress - the client address
+   */
+  private void guessPasswordOfZjhzxhz(String ipAddress) {
+    for (int i = 0; i < 10; ++i) {
+      String login = i % 2 == 0 ? "zjhzxhz" : "cshzxie@gmail.com";
+      Map<String, Boolean> result = userService.isAllowedToLogin(login, "wrong-" + i, ipAddress);
+      Assertions.assertFalse(result.get("isThrottled"));
+      Assertions.assertFalse(result.get("isAccountValid"));
+    }
+  }
+
+  /**
+   * Test case: tests getAddressKey(String). Test data: IPv4 addresses, IPv6 addresses (with a zone
+   * and an embedded IPv4 address) and what is not an address. Expected: an IPv4 address is its own
+   * key, an IPv6 address is keyed by its /64, and anything else is left as it is.
+   */
+  @Test
+  public void testGetAddressKey() {
+    Assertions.assertEquals("192.0.2.1", UserService.getAddressKey("192.0.2.1"));
+    Assertions.assertEquals(
+        "2001:db8:1:2:0:0:0:0/64", UserService.getAddressKey("2001:db8:1:2:3:4:5:6"));
+    Assertions.assertEquals("2001:db8:0:0:0:0:0:0/64", UserService.getAddressKey("2001:db8::1%eth0"));
+    Assertions.assertEquals("0:0:0:0:0:0:0:0/64", UserService.getAddressKey("::1"));
+    Assertions.assertEquals("192.0.2.1", UserService.getAddressKey("::ffff:192.0.2.1"));
+    Assertions.assertEquals("not:an.address", UserService.getAddressKey("not:an.address"));
+    Assertions.assertEquals("12::34::56", UserService.getAddressKey("12::34::56"));
+    Assertions.assertEquals("null", UserService.getAddressKey(null));
   }
 
   /** Test case: tests isAllowedToLogin(...) with an over-long password. Test data: a password of 100 bytes. Expected: it is wrong, without an error from the bcrypt encoder. */

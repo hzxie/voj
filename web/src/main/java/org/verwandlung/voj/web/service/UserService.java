@@ -16,6 +16,9 @@
  */
 package org.verwandlung.voj.web.service;
 
+import java.net.Inet6Address;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.text.SimpleDateFormat;
@@ -27,7 +30,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -73,23 +75,30 @@ public class UserService {
   /** How long wrong passwords are counted from the first one, and further attempts refused. */
   private static final long PASSWORD_FAILURE_WINDOW_MILLIS = TimeUnit.MINUTES.toMillis(15);
 
+  /** The number of keys (users, addresses) each limiter of wrong passwords holds at most. */
+  private static final int MAX_PASSWORD_FAILURE_KEYS = 10000;
+
   /**
    * The wrong current passwords of each user (when changing the password or the email address):
    * after 5, a hijacked session cannot keep guessing the password to take the account over.
    */
-  private FailureLimiter currentPasswordLimiter =
-      new FailureLimiter(5, PASSWORD_FAILURE_WINDOW_MILLIS);
-
-  /** The failed logins of each account, so its password cannot be guessed online. */
-  private FailureLimiter loginAccountLimiter =
-      new FailureLimiter(10, PASSWORD_FAILURE_WINDOW_MILLIS);
+  private final FailureLimiter currentPasswordLimiter =
+      new FailureLimiter(5, PASSWORD_FAILURE_WINDOW_MILLIS, MAX_PASSWORD_FAILURE_KEYS);
 
   /**
-   * The failed logins from each client address, so one client cannot try a password on many
-   * accounts. Generous, as a classroom may share an address.
+   * The failed logins to each account from each client address (see {@link #getAddressKey}): after
+   * 10, that address may not try the account's password any more for a while, so it cannot be
+   * guessed online. Its owner still logs in from other addresses: nobody can lock an account out.
    */
-  private FailureLimiter loginAddressLimiter =
-      new FailureLimiter(100, PASSWORD_FAILURE_WINDOW_MILLIS);
+  private final FailureLimiter loginAccountLimiter =
+      new FailureLimiter(10, PASSWORD_FAILURE_WINDOW_MILLIS, MAX_PASSWORD_FAILURE_KEYS);
+
+  /**
+   * The failed logins from each client address (see {@link #getAddressKey}), so one client cannot
+   * try passwords on many accounts. Generous, as a classroom may share an address.
+   */
+  private final FailureLimiter loginAddressLimiter =
+      new FailureLimiter(100, PASSWORD_FAILURE_WINDOW_MILLIS, MAX_PASSWORD_FAILURE_KEYS);
 
   /** The minimum length of a password. */
   private static final int MIN_PASSWORD_LENGTH = 6;
@@ -277,9 +286,10 @@ public class UserService {
   }
 
   /**
-   * Verifies whether the user's identity is valid. Failed logins are limited per account and per
-   * client address (see {@link #loginAccountLimiter} and {@link #loginAddressLimiter}): once either
-   * limit is reached, logins are refused with {@code isThrottled} without checking the password.
+   * Verifies whether the user's identity is valid. Failed logins are limited per client address and
+   * per account and client address (see {@link #loginAddressLimiter} and {@link
+   * #loginAccountLimiter}): once either limit is reached, logins are refused with {@code
+   * isThrottled} without checking the password.
    *
    * @param username - the username or email address
    * @param password - the plain-text password
@@ -297,15 +307,16 @@ public class UserService {
 
     if (!result.get("isUsernameEmpty") && !result.get("isPasswordEmpty")) {
       User user = getUserUsingUsernameOrEmail(username);
-      // A user may log in with the username or the email address: both count for the account.
-      Object accountKey = user != null ? user.getUid() : username.toLowerCase(Locale.ROOT);
-      String addressKey = String.valueOf(ipAddress);
-      if (!loginAccountLimiter.tryAcquire(accountKey)) {
+      String addressKey = getAddressKey(ipAddress);
+      if (!loginAddressLimiter.tryAcquire(addressKey)) {
         result.put("isThrottled", true);
         return result;
       }
-      if (!loginAddressLimiter.tryAcquire(addressKey)) {
-        loginAccountLimiter.release(accountKey);
+      // A user may log in with the username or the email address: both count for the account. A
+      // name that is no account's has no password to guess: the address limit is enough.
+      LoginKey accountKey = user != null ? new LoginKey(user.getUid(), addressKey) : null;
+      if (accountKey != null && !loginAccountLimiter.tryAcquire(accountKey)) {
+        loginAddressLimiter.release(addressKey);
         result.put("isThrottled", true);
         return result;
       }
@@ -322,6 +333,48 @@ public class UserService {
     }
     return result;
   }
+
+  /**
+   * Gets what the failed logins of a client address are counted by: the address itself, or the /64
+   * network of an IPv6 address, as a client is usually given a whole /64 and may pick any address
+   * in it.
+   *
+   * @param ipAddress - the client address
+   * @return the key of the address
+   */
+  static String getAddressKey(String ipAddress) {
+    String address = String.valueOf(ipAddress);
+    int zoneIndex = address.indexOf('%');
+    if (zoneIndex >= 0) {
+      address = address.substring(0, zoneIndex);
+    }
+    // Only what can be an IPv6 literal (hexadecimal digits and colons, with the dots of an embedded
+    // IPv4 address) is parsed, as a literal: nothing is ever looked up in the DNS.
+    if (address.indexOf(':') < 0
+        || address.charAt(0) == '.'
+        || !address.chars().allMatch(c -> Character.digit(c, 16) >= 0 || c == ':' || c == '.')) {
+      return address;
+    }
+    try {
+      InetAddress inetAddress = InetAddress.getByName(address);
+      if (!(inetAddress instanceof Inet6Address)) {
+        return inetAddress.getHostAddress();
+      }
+      byte[] network = Arrays.copyOf(inetAddress.getAddress(), 16);
+      Arrays.fill(network, 8, 16, (byte) 0);
+      return InetAddress.getByAddress(network).getHostAddress() + "/64";
+    } catch (UnknownHostException ex) {
+      return address;
+    }
+  }
+
+  /**
+   * The key of the failed logins to an account from a client address.
+   *
+   * @param uid - the unique identifier of the account
+   * @param addressKey - the key of the client address (see {@link #getAddressKey})
+   */
+  private record LoginKey(long uid, String addressKey) {}
 
   /**
    * Re-encodes the user's password with the preferred encoder (bcrypt) when the stored value uses a
@@ -710,7 +763,8 @@ public class UserService {
    * Validates the data and resets the user's password. The token was mailed to the user's address,
    * so using it proves that the user owns the address: it is marked as verified as well (a reset
    * email replaces a pending verification link, which would otherwise leave the user unverified).
-   * Every session of the user ends (see CurrentUserRefreshFilter).
+   * Every session of the user ends (see CurrentUserRefreshFilter), and the failed logins to the
+   * account are forgotten, so that its owner may log in at once from an address that was refused.
    *
    * @param email - the user's email address
    * @param token - the token used for validation
@@ -730,6 +784,9 @@ public class UserService {
 
       userMapper.updatePassword(user.getUid(), passwordEncoder.encode(newPassword));
       userMapper.updateEmailVerified(user.getUid(), true);
+      // The failed logins to the account counted guesses of the old password.
+      long uid = user.getUid();
+      loginAccountLimiter.resetIf(key -> ((LoginKey) key).uid() == uid);
     }
     return result;
   }

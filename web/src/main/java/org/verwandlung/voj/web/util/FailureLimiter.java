@@ -16,8 +16,10 @@
  */
 package org.verwandlung.voj.web.util;
 
+import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Predicate;
 
 /**
  * Limits failed attempts (of a password, for instance) per key: after {@code maxFailures} failures
@@ -29,6 +31,11 @@ import java.util.concurrent.ConcurrentHashMap;
  * the count is cleared only when the attempt succeeds. Testing first and counting after a (slow)
  * password hash would let any number of concurrent attempts through.
  *
+ * <p>The limiter holds at most {@code maxKeys} keys, in the order their windows began: the expired
+ * ones are dropped from the front as attempts come in, and when every key is live, the one whose
+ * window began first makes room for a new one. Every operation but {@link #resetIf} takes constant
+ * (amortised) time, however many keys there are.
+ *
  * @author Haozhe Xie
  */
 public class FailureLimiter {
@@ -37,39 +44,39 @@ public class FailureLimiter {
    *
    * @param maxFailures - the number of failures after which attempts are refused
    * @param windowMillis - how long failures are counted from the first one, and attempts refused
+   * @param maxKeys - the number of keys the limiter holds at most
    */
-  public FailureLimiter(int maxFailures, long windowMillis) {
+  public FailureLimiter(int maxFailures, long windowMillis, int maxKeys) {
     this.maxFailures = maxFailures;
     this.windowMillis = windowMillis;
+    this.maxKeys = maxKeys;
   }
 
   /**
-   * Takes an attempt for a key, if one is left, counting it as a failure until {@link #reset} is
-   * called for the key.
+   * Takes an attempt for a key, if one is left, counting it as a failure until {@link #release} or
+   * {@link #reset} is called for the key.
    *
    * @param key - what the attempts are limited for (an account, an address)
    * @return whether the attempt may be made; false if it must be refused
    */
-  public boolean tryAcquire(Object key) {
-    long now = System.currentTimeMillis();
-    if (failures.size() > MAX_KEYS) {
-      failures.values().removeIf(entry -> now - entry[1] >= windowMillis);
+  public synchronized boolean tryAcquire(Object key) {
+    long now = currentTimeMillis();
+    removeExpiredKeys(now);
+    Failures entry = failures.get(key);
+    if (entry == null) {
+      if (failures.size() >= maxKeys) {
+        Iterator<Failures> eldest = failures.values().iterator();
+        eldest.next();
+        eldest.remove();
+      }
+      failures.put(key, new Failures(now));
+      return true;
     }
-    boolean[] isAcquired = {false};
-    failures.compute(
-        key,
-        (k, entry) -> {
-          if (entry == null || now - entry[1] >= windowMillis) {
-            isAcquired[0] = true;
-            return new long[] {1, now};
-          }
-          if (entry[0] >= maxFailures) {
-            return entry;
-          }
-          isAcquired[0] = true;
-          return new long[] {entry[0] + 1, entry[1]};
-        });
-    return isAcquired[0];
+    if (entry.count >= maxFailures) {
+      return false;
+    }
+    ++entry.count;
+    return true;
   }
 
   /**
@@ -78,9 +85,11 @@ public class FailureLimiter {
    *
    * @param key - what the attempts are limited for
    */
-  public void release(Object key) {
-    failures.computeIfPresent(
-        key, (k, entry) -> entry[0] <= 1 ? null : new long[] {entry[0] - 1, entry[1]});
+  public synchronized void release(Object key) {
+    Failures entry = failures.get(key);
+    if (entry != null && --entry.count <= 0) {
+      failures.remove(key);
+    }
   }
 
   /**
@@ -88,12 +97,53 @@ public class FailureLimiter {
    *
    * @param key - what the attempts are limited for
    */
-  public void reset(Object key) {
+  public synchronized void reset(Object key) {
     failures.remove(key);
   }
 
-  /** The number of keys above which expired entries are purged. */
-  private static final int MAX_KEYS = 10000;
+  /**
+   * Clears the failures of every key that matches a condition. Takes time in proportion to the
+   * number of keys.
+   *
+   * @param condition - the keys to clear
+   */
+  public synchronized void resetIf(Predicate<Object> condition) {
+    failures.keySet().removeIf(condition);
+  }
+
+  /**
+   * Drops the keys whose windows ended, which are at the front.
+   *
+   * @param now - the current time, in milliseconds
+   */
+  private void removeExpiredKeys(long now) {
+    Iterator<Failures> iterator = failures.values().iterator();
+    while (iterator.hasNext() && now - iterator.next().firstFailureTime >= windowMillis) {
+      iterator.remove();
+    }
+  }
+
+  /**
+   * Gets the time of a monotonic clock, which the windows are measured by.
+   *
+   * @return the time, in milliseconds
+   */
+  private static long currentTimeMillis() {
+    return System.nanoTime() / 1_000_000;
+  }
+
+  /** The failures of a key within its window. */
+  private static class Failures {
+    Failures(long firstFailureTime) {
+      this.firstFailureTime = firstFailureTime;
+    }
+
+    /** The time of the first failure, when the window began. */
+    final long firstFailureTime;
+
+    /** The number of failures (attempts taken and not released) so far. */
+    int count = 1;
+  }
 
   /** The number of failures after which attempts are refused. */
   private final int maxFailures;
@@ -101,6 +151,9 @@ public class FailureLimiter {
   /** How long failures are counted from the first one. */
   private final long windowMillis;
 
-  /** The failures of each key: {number of failures, time of the first one}. */
-  private final Map<Object, long[]> failures = new ConcurrentHashMap<>();
+  /** The number of keys the limiter holds at most. */
+  private final int maxKeys;
+
+  /** The failures of each key, in the order their windows began. */
+  private final Map<Object, Failures> failures = new LinkedHashMap<>();
 }
