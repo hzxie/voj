@@ -82,11 +82,12 @@
 -- information schema (or create a table only if it is missing) and only change
 -- what is still in the old state (MySQL commits DDL implicitly, so a
 -- transaction could not make them atomic; an interrupted run is completed by
--- running the script again). Steps 7 and 13 change the old commands only. Step 5 runs in
--- one transaction with the recording of the option upgradeFrom102Applied in
--- voj_options, and only if that option was not recorded yet, so that text
--- typed after the upgrade (e.g. a statement that means "&amp;") is never
--- decoded. New installations get the option from seed.sql.
+-- running the script again). Steps 7 and 13 change the old commands only.
+-- Step 5 runs in one transaction with the recording of the option
+-- upgradeFrom102Applied in voj_options, and only if that option was not
+-- recorded yet, so that text typed after the upgrade (e.g. a statement that
+-- means "&amp;") is never decoded. New installations get the option from
+-- seed.sql.
 --
 -- Usage: mysql -u <user> -p <database> < sql/upgrades/upgrade-from-1.0.2.sql
 SET NAMES utf8mb4;
