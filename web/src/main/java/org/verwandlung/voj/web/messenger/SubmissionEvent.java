@@ -29,7 +29,9 @@ public class SubmissionEvent extends ApplicationEvent {
    *
    * @param source - the source of the event
    * @param submissionId - the unique identifier of the submission
-   * @param claimToken - the claim token of the judging that sent the message
+   * @param claimToken - the claim token of the judging that sent the message, or null for the
+   *     outcome the web application recorded itself (see {@code
+   *     SubmissionService#failUnclaimedSubmissions})
    * @param judgeResult - the judge result
    * @param message - the message to show
    * @param isCompleted - whether judging has completed
@@ -37,7 +39,7 @@ public class SubmissionEvent extends ApplicationEvent {
   public SubmissionEvent(
       Object source,
       long submissionId,
-      long claimToken,
+      Long claimToken,
       String judgeResult,
       String message,
       boolean isCompleted) {
@@ -88,17 +90,18 @@ public class SubmissionEvent extends ApplicationEvent {
   /**
    * Gets the claim token of the judging that sent the message.
    *
-   * @return the claim token of the judging that sent the message
+   * @return the claim token of the judging that sent the message, or null for the outcome the web
+   *     application recorded itself
    */
-  public long getClaimToken() {
+  public Long getClaimToken() {
     return claimToken;
   }
 
   /** The unique identifier of the submission record. */
   private final long submissionId;
 
-  /** The claim token of the judging that sent the message. */
-  private final long claimToken;
+  /** The claim token of the judging that sent the message, or null. */
+  private final Long claimToken;
 
   /** The current judge result. */
   private final String judgeResult;

@@ -33,19 +33,18 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import org.verwandlung.voj.web.mapper.JudgeResultMapper;
 import org.verwandlung.voj.web.mapper.LanguageMapper;
 import org.verwandlung.voj.web.mapper.OptionMapper;
 import org.verwandlung.voj.web.mapper.ProblemMapper;
 import org.verwandlung.voj.web.mapper.SubmissionMapper;
-import org.verwandlung.voj.web.messenger.MessageSender;
+import org.verwandlung.voj.web.messenger.SubmissionEvent;
 import org.verwandlung.voj.web.model.JudgeResult;
 import org.verwandlung.voj.web.model.Language;
 import org.verwandlung.voj.web.model.Option;
@@ -63,16 +62,11 @@ import org.verwandlung.voj.web.util.Pagination;
 @Service
 @Transactional
 public class SubmissionService {
-  /** The judge log of a submission that no judger took in time. */
+  /** The judge log of a submission that no judger took in time, by the maximum wait in minutes. */
   static final String UNCLAIMED_JUDGE_LOG =
-      "System Error.\n\nNo judger took the judging task of this submission in time: no running"
-          + " judger supports its language, all of them were busy, or the task was lost."
-          + " An administrator can rejudge this submission.\n";
-
-  /** The judge log of a submission whose judging stopped renewing its lease. */
-  static final String ABANDONED_JUDGE_LOG =
-      "System Error.\n\nA judger took this submission but stopped judging it: the judger stopped,"
-          + " or could not reach the database. An administrator can rejudge this submission.\n";
+      "System Error.\n\nNo judger took this submission within %d minutes: no running judger"
+          + " supports its language, or all of them were busy for that long. An administrator can"
+          + " rejudge this submission.\n";
 
   /**
    * [For administrators only] Gets the number of submissions within a specified time period.
@@ -469,7 +463,7 @@ public class SubmissionService {
   }
 
   /**
-   * Creates a submission and adds the judging task to the message queue.
+   * Creates a submission, which the judgers take from the database once it is committed.
    *
    * @param user - the logged-in user object
    * @param problemId - the unique identifier of the problem
@@ -488,19 +482,17 @@ public class SubmissionService {
     if (problem != null && !PublicationStatus.isVisibleTo(problem.getStatus(), user)) {
       problem = null;
     }
-    Map<String, Object> result = saveSubmission(user, problem, languageSlug, code);
-    if ((Boolean) result.get("isSuccessful")) {
-      createSubmissionTask((Long) result.get("submissionId"), languageSlug);
-    }
-    return result;
+    return saveSubmission(user, problem, languageSlug, code);
   }
 
   /**
-   * Validates and stores a submission without enqueuing its judging task. The caller is
-   * responsible for having checked that the user may submit to the problem (the normal path only
-   * allows published problems, the contest path only problems of a running contest the user
-   * attends) and for calling {@link #createSubmissionTask(long, String)} once everything that
-   * belongs to the submission has been stored.
+   * Validates and stores a submission. The caller is responsible for having checked that the user
+   * may submit to the problem (the normal path only allows published problems, the contest path
+   * only problems of a running contest the user attends).
+   *
+   * <p>A stored submission is pending, which queues it for judging: a judger takes it from the
+   * database, which it can only once the transaction that stored it, with everything that belongs
+   * to it (e.g. its contest record), has committed.
    *
    * @param user - the logged-in user object
    * @param problem - the problem to submit to, or null when it does not exist / may not be used
@@ -556,102 +548,10 @@ public class SubmissionService {
   }
 
   /**
-   * Creates a judging task and submits the submission information to the message queue. Looks up the
-   * submission's language so the task can be tagged for language-aware routing; used by the rejudge
-   * flow, which only knows the submission's unique identifier.
-   *
-   * @param submissionId - the unique identifier of the submission
-   */
-  public void createSubmissionTask(long submissionId) {
-    Submission submission = submissionMapper.getSubmission(submissionId);
-    String languageSlug =
-        (submission != null && submission.getLanguage() != null)
-            ? submission.getLanguage().getLanguageSlug()
-            : null;
-    // Rejudge path: clear the previous verdict/log so the record returns to pending before the new
-    // task is enqueued. This makes the detail pages stream the live judging result again, and the
-    // reset queued time gives the new task the whole time-to-live (see failStalledSubmissions).
-    // The reset clears the claim token, which stops a judging still running, and increments the
-    // judge generation, which the new task carries (read back in this transaction, so it is the
-    // value this reset wrote), so that no judger takes an older task of the submission.
-    submissionMapper.resetSubmissionToPending(submissionId);
-    Long generation = submissionMapper.getJudgeGenerationOfSubmission(submissionId);
-    createSubmissionTask(submissionId, languageSlug, generation == null ? 0 : generation);
-  }
-
-  /**
-   * Creates a judging task and submits the submission information to the message queue.
-   *
-   * <p>Inside a transaction (the normal case, as this service is transactional) the task is only
-   * sent once that transaction has committed: a judger must not be able to fetch a submission that
-   * is not visible yet, and a transaction that rolls back must not leave a task behind. Outside a
-   * transaction the task is sent immediately. See {@link #sendSubmissionTask(long, String)} for what
-   * happens when sending fails.
-   *
-   * @param submissionId - the unique identifier of the submission
-   * @param languageSlug - the slug of the submission's language, used by judgers to claim only the
-   *     tasks they can build
-   */
-  public void createSubmissionTask(long submissionId, String languageSlug) {
-    // The task of a new submission: its judge generation is still 0.
-    createSubmissionTask(submissionId, languageSlug, 0);
-  }
-
-  /**
-   * Creates a judging task for a judge generation of a submission; see {@link
-   * #createSubmissionTask(long, String)}.
-   *
-   * @param submissionId - the unique identifier of the submission
-   * @param languageSlug - the slug of the submission's language
-   * @param generation - the judge generation of the submission the task is queued for
-   */
-  private void createSubmissionTask(long submissionId, String languageSlug, long generation) {
-    if (TransactionSynchronizationManager.isSynchronizationActive()) {
-      TransactionSynchronizationManager.registerSynchronization(
-          new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-              sendSubmissionTask(submissionId, languageSlug, generation);
-            }
-          });
-    } else {
-      sendSubmissionTask(submissionId, languageSlug, generation);
-    }
-  }
-
-  /**
-   * Sends the judging task of a stored submission to the message queue.
-   *
-   * <p>The submission is already committed at this point, so a failure cannot be rolled back and
-   * must not reach the user either: the submission was accepted. It is only logged: the submission
-   * stays pending, and is marked as a System Error once no judger took it in time (see {@link
-   * #failStalledSubmissions}), after which an administrator can rejudge it. Retrying here is
-   * deliberately avoided: it would hold the request thread while the broker is down, and a retry
-   * that only lives in memory is lost on restart anyway.
-   *
-   * @param submissionId - the unique identifier of the submission
-   * @param languageSlug - the slug of the submission's language
-   * @param generation - the judge generation of the submission the task is queued for
-   */
-  private void sendSubmissionTask(long submissionId, String languageSlug, long generation) {
-    Map<String, Object> mapMessage = new HashMap<>();
-    mapMessage.put("event", "SubmissionCreated");
-    mapMessage.put("submissionId", submissionId);
-    mapMessage.put("generation", generation);
-
-    try {
-      messageSender.sendMessage(mapMessage, languageSlug);
-    } catch (RuntimeException ex) {
-      LOGGER.error(
-          String.format("Failed to queue the judging task of submission #%d.", submissionId), ex);
-    }
-  }
-
-  /**
    * Tests whether a judging is the current judging of a submission: a judger claims a pending
-   * submission by setting its claim token, which identifies the judging; a rejudge, a later claim
-   * of the submission and a System Error for waiting too long (see {@link #failStalledSubmissions})
-   * replace or clear it. Used to drop the messages of a superseded judging.
+   * submission by setting its claim token, which identifies the judging; a rejudge and a later
+   * claim of the submission (once the lease of the judging expired) replace or clear it. Used to
+   * drop the messages of a superseded judging.
    *
    * @param submissionId - the unique identifier of the submission
    * @param claimToken - the claim token of the judging
@@ -663,51 +563,44 @@ public class SubmissionService {
   }
 
   /**
-   * Marks as a System Error every pending submission that waits in vain, so that it does not stay
-   * pending forever:
+   * Marks as a System Error every pending submission that no judger took within the maximum wait
+   * ({@code judging.maxWait}) since it was queued (submitted or rejudged): no running judger
+   * supports its language, or all of them were busy for that long. With a maximum wait of 0 or
+   * less, a submission waits for a judger as long as it takes. A submission that a judger took is
+   * left to the judgers: one whose judging failed or stopped is taken again once its lease expired,
+   * until the judgers give up on it (see the judger's {@code judging.maxAttempts}).
    *
-   * <ul>
-   *   <li>no judger took it within the time-to-live of its judging task ({@code
-   *       jms.submissionTask.ttl}) since the task was queued: no running judger supports its
-   *       language, all of them were busy, or the task was lost. By then the broker no longer
-   *       delivers the task. With a time-to-live of 0 or less the task never expires, and the
-   *       submission waits for a judger as long as it takes;
-   *   <li>the judging that took it did not renew its lease within the lease timeout ({@code
-   *       judging.leaseTimeout}): the judger stopped, or could not reach the database. A judging
-   *       renews its lease after each of its steps, however long it runs.
-   * </ul>
-   *
-   * <p>A judger that knows why it cannot judge a submission records that itself; this catches
-   * everything else. Runs every minute, on every web application instance, by the database's
-   * clock. The submissions are found by a plain read, which locks nothing, then marked one at a
-   * time, by primary key, each in a statement of its own (outside any transaction, so that no lock
-   * is held for longer), which checks again that the submission still waits in vain: instances
-   * running this at the same time, a rejudge and a judger recording a verdict meanwhile neither
-   * deadlock with it nor lose their change.
+   * <p>Runs every minute, on every web application instance, by the database's clock. The
+   * submissions are found by a plain read, which locks nothing, then marked one at a time, by
+   * primary key, each in a statement of its own (outside any transaction, so that no lock is held
+   * for longer), which checks again that no judger took the submission: instances running this at
+   * the same time, a rejudge and a judger's claim meanwhile neither deadlock with it nor lose their
+   * change. The live judging streams (on this instance) of a marked submission are completed with
+   * its judge log.
    *
    * @return the number of submissions marked
    */
   @Scheduled(initialDelay = 1, fixedDelay = 1, timeUnit = TimeUnit.MINUTES)
   @Transactional(propagation = Propagation.NOT_SUPPORTED)
-  public int failStalledSubmissions() {
-    // In whole seconds, rounded up; a time-to-live of 0 (or less) turns the first check off.
-    long ttlSeconds = (Math.max(0, submissionTaskTtl) + 999) / 1000;
-    long leaseTimeoutSeconds = (leaseTimeout + 999) / 1000;
+  public int failUnclaimedSubmissions() {
+    if (maxWait <= 0) {
+      return 0;
+    }
+    // In whole seconds, rounded up.
+    long maxWaitSeconds = (maxWait + 999) / 1000;
+    String judgeLog = String.format(UNCLAIMED_JUDGE_LOG, (maxWaitSeconds + 59) / 60);
     int failed = 0;
-    for (long submissionId :
-        submissionMapper.getStalledSubmissionIds(ttlSeconds, leaseTimeoutSeconds)) {
-      failed +=
-          submissionMapper.failStalledSubmission(
-              submissionId,
-              ttlSeconds,
-              leaseTimeoutSeconds,
-              UNCLAIMED_JUDGE_LOG,
-              ABANDONED_JUDGE_LOG);
+    for (long submissionId : submissionMapper.getUnclaimedSubmissionIds(maxWaitSeconds)) {
+      if (submissionMapper.failUnclaimedSubmission(submissionId, maxWaitSeconds, judgeLog) == 1) {
+        ++failed;
+        eventPublisher.publishEvent(
+            new SubmissionEvent(this, submissionId, null, "System Error", judgeLog, true));
+      }
     }
     if (failed > 0) {
       LOGGER.warn(
           String.format(
-              "Marked %d pending submission(s) that were not judged in time as System Error.",
+              "Marked %d pending submission(s) that no judger took in time as System Error.",
               failed));
     }
     return failed;
@@ -742,14 +635,14 @@ public class SubmissionService {
   }
 
   /**
-   * [For administrators only] Rejudges submissions: resets each of them to pending and, once the
-   * single transaction that does so has committed, queues their judging tasks.
+   * [For administrators only] Rejudges submissions: resets each of them to pending, at the end of
+   * the judging queue (see {@link SubmissionMapper#resetSubmissionToPending}), in one transaction.
    *
    * @param submissionIds - the unique identifiers of the submissions
    */
-  public void createSubmissionTasks(List<Long> submissionIds) {
+  public void rejudgeSubmissions(List<Long> submissionIds) {
     for (long submissionId : submissionIds) {
-      createSubmissionTask(submissionId);
+      submissionMapper.resetSubmissionToPending(submissionId);
     }
   }
 
@@ -789,29 +682,12 @@ public class SubmissionService {
   /** The autowired LanguageMapper object. */
   @Autowired private LanguageMapper languageMapper;
 
-  /** The autowired MessageSender object. */
-  @Autowired private MessageSender messageSender;
+  /** The autowired ApplicationEventPublisher, which completes the live judging streams. */
+  @Autowired private ApplicationEventPublisher eventPublisher;
 
-  /** How long (ms) a judging task waits for a judger; 0 or less: as long as it takes. */
-  @Value("${jms.submissionTask.ttl:1800000}")
-  private long submissionTaskTtl;
-
-  /** How long (ms) a judging may go without renewing its lease. */
-  private long leaseTimeout;
-
-  /**
-   * Sets how long (ms) a judging may go without renewing its lease.
-   *
-   * @param leaseTimeout - the lease timeout (ms), which must be positive
-   */
-  @Value("${judging.leaseTimeout:600000}")
-  void setLeaseTimeout(long leaseTimeout) {
-    if (leaseTimeout <= 0) {
-      throw new IllegalArgumentException(
-          "judging.leaseTimeout must be positive, not " + leaseTimeout);
-    }
-    this.leaseTimeout = leaseTimeout;
-  }
+  /** How long (ms) a submission waits for a judger to take it; 0 or less: as long as it takes. */
+  @Value("${judging.maxWait:1800000}")
+  private long maxWait;
 
   /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(SubmissionService.class);

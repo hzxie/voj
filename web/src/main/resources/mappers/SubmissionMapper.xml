@@ -172,13 +172,6 @@
 		FROM voj_submissions
 		WHERE submission_id = #{submissionId}
 	</select>
-	<select id="getJudgeGenerationOfSubmission"
-		parameterType="long"
-		resultType="java.lang.Long">
-		SELECT submission_judge_generation
-		FROM voj_submissions
-		WHERE submission_id = #{submissionId}
-	</select>
 	<select id="getSubmissions" 
 		parameterType="map"
 		resultMap="SubmissionResultMap">
@@ -364,35 +357,28 @@
 		UPDATE voj_submissions
 		SET submission_judge_result = 'PD', submission_judge_log = NULL, submission_judge_score = NULL,
 			submission_used_time = NULL, submission_used_memory = NULL, submission_execute_time = NULL,
-			judger_uid = NULL, submission_judge_generation = submission_judge_generation + 1,
-			submission_claim_token = NULL, submission_lease_time = NULL, submission_queued_time = NOW()
+			judger_uid = NULL, submission_queued_time = NOW(), submission_judge_attempts = 0,
+			submission_claim_token = NULL, submission_lease_expiry_time = NULL
 		WHERE submission_id = #{submissionId}
 	</update>
-	<!-- A pending submission that waits in vain, by the database's clock: no judging claimed it
-	     within the time-to-live of its task since it was queued (unless that is 0 or less: the
-	     task never expires), or its judging did not renew its lease within the lease timeout. -->
-	<sql id="stalledSubmissionCondition">
-		submission_judge_result = 'PD' AND (
-			<if test="ttlSeconds &gt; 0">
-			(submission_claim_token IS NULL AND submission_queued_time &lt;= NOW() - INTERVAL #{ttlSeconds} SECOND) OR
-			</if>
-			(submission_claim_token IS NOT NULL AND submission_lease_time &lt;= NOW() - INTERVAL #{leaseTimeoutSeconds} SECOND))
+	<!-- A pending submission that no judging has taken since it was queued, for longer than the
+	     maximum wait by the database's clock. (A judging that took it counted an attempt.) -->
+	<sql id="unclaimedSubmissionCondition">
+		submission_judge_result = 'PD' AND submission_judge_attempts = 0
+			AND submission_queued_time &lt;= NOW() - INTERVAL #{maxWaitSeconds} SECOND
 	</sql>
-	<select id="getStalledSubmissionIds"
-		parameterType="map"
+	<select id="getUnclaimedSubmissionIds"
+		parameterType="long"
 		resultType="long">
 		SELECT submission_id
 		FROM voj_submissions
-		WHERE <include refid="stalledSubmissionCondition" />
+		WHERE <include refid="unclaimedSubmissionCondition" />
 	</select>
-	<update id="failStalledSubmission"
+	<update id="failUnclaimedSubmission"
 		parameterType="map">
-		<!-- The judge log is set before the claim token is cleared: MySQL assigns from left to right,
-		     each assignment seeing the values set before it. -->
 		UPDATE voj_submissions
-		SET submission_judge_log = IF(submission_claim_token IS NULL, #{unclaimedJudgeLog}, #{abandonedJudgeLog}),
-			submission_judge_result = 'SE', submission_claim_token = NULL
-		WHERE submission_id = #{submissionId} AND <include refid="stalledSubmissionCondition" />
+		SET submission_judge_result = 'SE', submission_judge_log = #{judgeLog}
+		WHERE submission_id = #{submissionId} AND <include refid="unclaimedSubmissionCondition" />
 	</update>
 	<delete id="deleteSubmission"
 		parameterType="long">

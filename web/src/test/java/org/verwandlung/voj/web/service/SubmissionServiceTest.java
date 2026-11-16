@@ -311,14 +311,17 @@ public class SubmissionServiceTest {
   }
 
   /**
-   * The statement with which a judger claims a pending submission (judger SubmissionMapper): its
-   * parameters are the claim token, the submission and the judge generation of the task.
+   * The statement with which a judger claims a pending submission that no judging holds (judger
+   * SubmissionMapper), with a lease of a minute: its parameters are the claim token and the
+   * submission.
    */
   private static final String JUDGER_CLAIM =
       "UPDATE voj_submissions SET submission_claim_token = ?, submission_execute_time = NOW(),"
-          + " submission_lease_time = NOW(), judger_uid = 1001"
+          + " submission_lease_expiry_time = NOW() + INTERVAL 60 SECOND,"
+          + " submission_judge_attempts = submission_judge_attempts + 1, judger_uid = 1001"
           + " WHERE submission_id = ? AND submission_judge_result = 'PD'"
-          + " AND submission_judge_generation = ?";
+          + " AND (submission_lease_expiry_time IS NULL OR submission_lease_expiry_time < NOW())";
+
 
   /**
    * The statement with which a judger records the verdict of its judging (judger SubmissionMapper):
@@ -332,41 +335,45 @@ public class SubmissionServiceTest {
           + " AND submission_claim_token = ?";
 
   /**
-   * Test case: tests a rejudge (createSubmissionTasks) together with the judger's claim and verdict
-   * statements. Test data: submission 1001 (judge generation 0), and a judging of it that claimed
-   * it before the rejudge and finishes after it. Expected: the rejudge resets the row to pending
-   * and clears the claim, so the stale judging's verdict is dropped, the stale task (generation 0)
-   * claims nothing, and the rejudge's task (generation 1) claims the submission and records its
-   * verdict.
+   * Test case: tests a rejudge (rejudgeSubmissions) together with the judger's claim and verdict
+   * statements. Test data: submission 1001, queued long ago, and a judging of it that claimed it
+   * (its second attempt) before the rejudge and finishes after it. Expected: the rejudge resets
+   * the row to pending, at the end of the queue, without attempts or claim, so the stale judging's
+   * verdict is dropped, and a new judging claims the submission and records its verdict.
    */
   @Test
   public void testRejudgeIsCompatibleWithTheJudgersClaim() {
     org.springframework.jdbc.core.JdbcTemplate jdbcTemplate =
         new org.springframework.jdbc.core.JdbcTemplate(dataSource);
     jdbcTemplate.update(
-        "UPDATE voj_submissions SET submission_judge_result = 'PD' WHERE submission_id = 1001");
-    Assertions.assertEquals(1, jdbcTemplate.update(JUDGER_CLAIM, 7L, 1001, 0));
+        "UPDATE voj_submissions SET submission_judge_result = 'PD', submission_judge_attempts = 1,"
+            + " submission_queued_time = '2014-10-17 23:59:59' WHERE submission_id = 1001");
+    Assertions.assertEquals(1, jdbcTemplate.update(JUDGER_CLAIM, 7L, 1001));
+    // A judging that holds the submission may not be claimed by another one.
+    Assertions.assertEquals(0, jdbcTemplate.update(JUDGER_CLAIM, 8L, 1001));
 
-    submissionService.createSubmissionTasks(List.of(1001L));
+    submissionService.rejudgeSubmissions(List.of(1001L));
 
     Map<String, Object> row =
         jdbcTemplate.queryForMap(
             "SELECT submission_judge_result, submission_execute_time, judger_uid,"
                 + " submission_judge_log, submission_judge_score, submission_claim_token,"
-                + " submission_lease_time FROM voj_submissions WHERE submission_id = 1001");
+                + " submission_lease_expiry_time, submission_judge_attempts,"
+                + " TIMESTAMPDIFF(SECOND, submission_queued_time, NOW()) AS queued_seconds_ago"
+                + " FROM voj_submissions WHERE submission_id = 1001");
     Assertions.assertEquals("PD", row.get("submission_judge_result"));
     Assertions.assertNull(row.get("submission_execute_time"));
     Assertions.assertNull(row.get("judger_uid"));
     Assertions.assertNull(row.get("submission_judge_log"));
     Assertions.assertNull(row.get("submission_judge_score"));
     Assertions.assertNull(row.get("submission_claim_token"));
-    Assertions.assertNull(row.get("submission_lease_time"));
-    // The judging that started before the rejudge may not record its verdict, nor may its task
-    // claim the submission again ...
+    Assertions.assertNull(row.get("submission_lease_expiry_time"));
+    Assertions.assertEquals(0, ((Number) row.get("submission_judge_attempts")).intValue());
+    Assertions.assertTrue(((Number) row.get("queued_seconds_ago")).longValue() < 60);
+    // The judging that started before the rejudge may not record its verdict ...
     Assertions.assertEquals(0, jdbcTemplate.update(JUDGER_RECORD_VERDICT, 1001, 7L));
-    Assertions.assertEquals(0, jdbcTemplate.update(JUDGER_CLAIM, 8L, 1001, 0));
-    // ... and the judging of the new task claims the submission and records its own.
-    Assertions.assertEquals(1, jdbcTemplate.update(JUDGER_CLAIM, 9L, 1001, 1));
+    // ... and a new judging claims the submission and records its own.
+    Assertions.assertEquals(1, jdbcTemplate.update(JUDGER_CLAIM, 9L, 1001));
     Assertions.assertEquals(1, jdbcTemplate.update(JUDGER_RECORD_VERDICT, 1001, 9L));
     Assertions.assertEquals(
         "AC",
@@ -377,9 +384,9 @@ public class SubmissionServiceTest {
 
   /**
    * Test case: tests isCurrentJudging(long, long). Test data: submission 1001 claimed by a judging
-   * with the judger's claim statement, then claimed by a later delivery of its task, then judged by
-   * it, then rejudged. Expected: only the claim token the submission carries is current, also once
-   * its judging recorded the verdict; after the rejudge none is.
+   * with the judger's claim statement, claimed by another judging once its lease expired, then
+   * judged by it, then rejudged. Expected: only the claim token the submission carries is
+   * current, also once its judging recorded the verdict; after the rejudge none is.
    */
   @Test
   public void testIsCurrentJudging() {
@@ -390,19 +397,22 @@ public class SubmissionServiceTest {
     Assertions.assertFalse(submissionService.isCurrentJudging(1001, 7L));
     // The claims are made behind MyBatis's back: any MyBatis update (deleteSubmission(0) changes no
     // row) clears the query results it cached in this transaction.
-    jdbcTemplate.update(JUDGER_CLAIM, 7L, 1001, 0);
+    jdbcTemplate.update(JUDGER_CLAIM, 7L, 1001);
     submissionService.deleteSubmission(0);
     Assertions.assertTrue(submissionService.isCurrentJudging(1001, 7L));
     Assertions.assertFalse(submissionService.isCurrentJudging(1001, 8L));
     Assertions.assertFalse(submissionService.isCurrentJudging(0, 7L));
 
-    jdbcTemplate.update(JUDGER_CLAIM, 8L, 1001, 0);
+    jdbcTemplate.update(
+        "UPDATE voj_submissions SET submission_lease_expiry_time = NOW() - INTERVAL 1 SECOND"
+            + " WHERE submission_id = 1001");
+    jdbcTemplate.update(JUDGER_CLAIM, 8L, 1001);
     jdbcTemplate.update(JUDGER_RECORD_VERDICT, 1001, 8L);
     submissionService.deleteSubmission(0);
     Assertions.assertFalse(submissionService.isCurrentJudging(1001, 7L));
     Assertions.assertTrue(submissionService.isCurrentJudging(1001, 8L));
 
-    submissionService.createSubmissionTasks(List.of(1001L));
+    submissionService.rejudgeSubmissions(List.of(1001L));
     Assertions.assertFalse(submissionService.isCurrentJudging(1001, 8L));
   }
 
@@ -453,12 +463,6 @@ public class SubmissionServiceTest {
         List.of(1002L, 1004L), submissionService.deleteSubmissions(List.of(1002L, 1004L, 0L)));
     Assertions.assertNull(submissionService.getSubmission(1002));
     Assertions.assertNull(submissionService.getSubmission(1004));
-  }
-
-  /** Test case: tests the createSubmissionTask(long) method. Test data: an arbitrary submission identifier. Expected: sending the message does not throw an exception. */
-  @Test
-  public void testCreateSubmissionTask() {
-    Assertions.assertDoesNotThrow(() -> submissionService.createSubmissionTask(1000));
   }
 
   /**

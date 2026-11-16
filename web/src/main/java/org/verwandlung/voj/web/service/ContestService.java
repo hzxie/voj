@@ -355,11 +355,11 @@ public class ContestService {
   }
 
   /**
-   * Creates a submission to a problem of a contest and adds the judging task to the message queue.
-   * The contest must be visible to the user and running (start &lt;= now &lt; end), the user must
-   * have attended it and the problem must be one of its problems; the problem itself may be
-   * unpublished (contest problems usually are). The submission and its contest record are stored in
-   * one transaction, and the judging task is only enqueued once that transaction has committed.
+   * Creates a submission to a problem of a contest. The contest must be visible to the user and
+   * running (start &lt;= now &lt; end), the user must have attended it and the problem must be one
+   * of its problems; the problem itself may be unpublished (contest problems usually are). The
+   * submission and its contest record are stored in one transaction, so a judger takes the
+   * submission only with its contest record.
    *
    * @param contestId - the unique identifier of the contest
    * @param problemId - the unique identifier of the problem
@@ -403,7 +403,6 @@ public class ContestService {
       Submission submission = new Submission();
       submission.setSubmissionId(submissionId);
       contestSubmissionMapper.createContestSubmission(new ContestSubmission(contest, submission));
-      submissionService.createSubmissionTask(submissionId, languageSlug);
     }
     return result;
   }

@@ -146,14 +146,14 @@ public class AdministrationControllerSettingsTest {
     Assertions.assertEquals(List.of(1000L), deleted);
   }
 
-  /** Test case: tests restartSubmissionsAction(...). Test data: a JSON array of two ids. Expected: a rejudge task is created for each. */
+  /** Test case: tests restartSubmissionsAction(...). Test data: a JSON array of two ids. Expected: both are rejudged. */
   @Test
-  public void testRestartSubmissionsCreatesTaskPerId() {
+  public void testRestartSubmissionsRejudgesEachId() {
     Map<String, Boolean> result =
         controller.restartSubmissionsAction("[1000, 1001]", new MockHttpServletRequest());
 
     Assertions.assertEquals(Boolean.TRUE, result.get("isSuccessful"));
-    verify(submissionService).createSubmissionTasks(List.of(1000L, 1001L));
+    verify(submissionService).rejudgeSubmissions(List.of(1000L, 1001L));
   }
 
   /** Stubs the base (8-arg) option update used by updateGeneralSettingsAction. */

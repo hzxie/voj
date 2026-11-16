@@ -62,11 +62,13 @@ public class ApplicationEventListener {
       LOGGER.warn(String.format("CANNOT get the SseEmitter for submission #%d.", submissionId));
       return;
     }
-    // A judging that was superseded (by a rejudge, a later delivery of its task, or a System Error
-    // for an expired lease) may still be running and sending messages: they would show the old
-    // judging on the page of the new one. So a message whose claim token the submission does not
-    // carry is dropped (the streams stay open for the current judging's messages).
-    if (!submissionService.isCurrentJudging(submissionId, event.getClaimToken())) {
+    // A judging that was superseded (by a rejudge, or by a later claim once its lease expired) may
+    // still be running and sending messages: they would show the old judging on the page of the new
+    // one. So a message whose claim token the submission
+    // does not carry is dropped (the streams stay open for the current judging's messages). An
+    // event without a claim token is an outcome the web application recorded itself.
+    Long claimToken = event.getClaimToken();
+    if (claimToken != null && !submissionService.isCurrentJudging(submissionId, claimToken)) {
       LOGGER.info(
           String.format(
               "Dropped a message of a superseded judging of submission #%d.", submissionId));

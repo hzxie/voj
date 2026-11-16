@@ -21,43 +21,31 @@ import jakarta.jms.MessageListener;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.broker.BrokerService;
-import org.apache.activemq.command.ActiveMQQueue;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.jms.connection.CachingConnectionFactory;
-import org.springframework.jms.core.JmsTemplate;
 import org.springframework.jms.listener.DefaultMessageListenerContainer;
 
 /**
  * The message queue configuration. Replaces the ActiveMQ / JMS definitions in the original
  * dispatcher-servlet.xml.
  *
- * <p>The web module dispatches pending judge tasks to {@code vojSubmissionTaskQueue}, and listens to
- * {@code vojJudgeResultQueue} to receive judge results.
+ * <p>The web module listens to {@code vojJudgeResultQueue} for the progress of the judgings and the
+ * heartbeats of the judgers. It sends nothing: the judgers take the pending submissions from the
+ * database.
  *
- * <p>It survives a restart of an external broker: the listener containers keep trying to reconnect
- * every {@value #RECOVERY_INTERVAL_MS} ms until the broker is back, and the sending side drops its
- * cached connection once it fails and opens a new one for the next task.
+ * <p>It survives a restart of an external broker: the listener container keeps trying to reconnect
+ * every {@value #RECOVERY_INTERVAL_MS} ms until the broker is back.
  *
  * @author Haozhe Xie
  */
 @Configuration
 public class JmsConfig {
-  /** The name of the judge task queue (Web -> Judger). */
-  private static final String SUBMISSION_TASK_QUEUE = "vojSubmissionTaskQueue";
-
   /** The name of the judge result queue (Judger -> Web). */
   private static final String JUDGE_RESULT_QUEUE = "vojJudgeResultQueue";
 
-  /**
-   * The ActiveMQ dead-letter queue on which, by default, the messages land that expired or reached
-   * the redelivery limit.
-   */
-  private static final String DEAD_LETTER_QUEUE = "ActiveMQ.DLQ";
-
-  /** How long (ms) a listener container waits between two attempts to reconnect. */
+  /** How long (ms) the listener container waits between two attempts to reconnect. */
   static final long RECOVERY_INTERVAL_MS = 5000;
 
   /** The well-known name of the in-JVM broker, matched by the {@code vm://localhost} transport. */
@@ -71,10 +59,9 @@ public class JmsConfig {
    * transport, while out-of-process judgers still reach it through the TCP connector opened here
    * (the same {@code jms.broker.url} address the judger already dials).
    *
-   * <p>The broker is non-persistent: a web restart drops any in-flight submission tasks. That keeps
-   * the embedded footprint small and is acceptable for the single-node use case this mode targets;
-   * deployments that need durable queues should run an external broker (the default,
-   * {@code jms.broker.embedded=false}) instead.
+   * <p>The broker is non-persistent: a web restart drops the progress messages in flight, which
+   * only feed the live view of a judging (the verdicts are in the database). That keeps the
+   * embedded footprint small and suits the single-node use case this mode targets.
    *
    * <p><strong>Do not run the bundled standalone broker at the same time</strong> — both bind
    * {@code jms.broker.url}, so the Docker image / supervisord must skip the separate ActiveMQ
@@ -104,8 +91,7 @@ public class JmsConfig {
   @Bean
   @ConditionalOnProperty(name = "jms.broker.embedded", havingValue = "true")
   public ConnectionFactory connectionFactory(BrokerService embeddedBroker) {
-    return new CachingConnectionFactory(
-        new ActiveMQConnectionFactory("vm://" + EMBEDDED_BROKER_NAME + "?create=false"));
+    return new ActiveMQConnectionFactory("vm://" + EMBEDDED_BROKER_NAME + "?create=false");
   }
 
   /**
@@ -115,70 +101,27 @@ public class JmsConfig {
   @Bean
   @ConditionalOnProperty(name = "jms.broker.embedded", havingValue = "false", matchIfMissing = true)
   public ConnectionFactory externalConnectionFactory(@Value("${jms.broker.url}") String brokerUrl) {
-    return new CachingConnectionFactory(new ActiveMQConnectionFactory(brokerUrl));
-  }
-
-  /** The JmsTemplate used to dispatch messages to the judge task queue. */
-  @Bean
-  public JmsTemplate jmsTemplate(
-      ConnectionFactory connectionFactory,
-      @Value("${jms.submissionTask.ttl:1800000}") long submissionTaskTtl) {
-    JmsTemplate jmsTemplate = new JmsTemplate(connectionFactory);
-    jmsTemplate.setDefaultDestination(new ActiveMQQueue(SUBMISSION_TASK_QUEUE));
-    // Give each judging task a time-to-live, after which no judger is handed it any more:
-    // SubmissionService#failStalledSubmissions marks its submission as a System Error by then. A
-    // time-to-live of 0 (or less) is none: the task never expires.
-    jmsTemplate.setExplicitQosEnabled(true);
-    jmsTemplate.setTimeToLive(Math.max(0, submissionTaskTtl));
-    return jmsTemplate;
-  }
-
-  /** The message listener container that listens to the judge result queue. */
-  @Bean
-  public DefaultMessageListenerContainer judgeResultListenerContainer(
-      ConnectionFactory connectionFactory, MessageListener messageReceiver) {
-    return newListenerContainer(connectionFactory, JUDGE_RESULT_QUEUE, messageReceiver);
+    return new ActiveMQConnectionFactory(brokerUrl);
   }
 
   /**
-   * The message listener container that removes the judging tasks from the dead-letter queue: the
-   * broker moves a task there that expired, or that judgers handed back too often. What became of
-   * its submission is in the database (see SubmissionService#failStalledSubmissions), so the task
-   * is only dropped, rather than left to pile up there. The selector keeps this consumer from
-   * touching other dead-lettered messages (only judging tasks carry this {@code event} property).
-   */
-  @Bean
-  public DefaultMessageListenerContainer deadLetterListenerContainer(
-      ConnectionFactory connectionFactory) {
-    DefaultMessageListenerContainer listenerContainer =
-        newListenerContainer(connectionFactory, DEAD_LETTER_QUEUE, (MessageListener) message -> {});
-    listenerContainer.setMessageSelector("event = 'SubmissionCreated'");
-    return listenerContainer;
-  }
-
-  /**
-   * Creates a message listener container with a single consumer.
+   * The message listener container that listens to the judge result queue, with a single consumer.
    *
    * <p>A DefaultMessageListenerContainer, which re-establishes its connection in a loop until the
    * broker is reachable again; a SimpleMessageListenerContainer tries to recover only once, right
    * when the connection fails (while the broker is still down), and then stops consuming for good.
-   * It connects through the broker's own connection factory rather than the cached one of the
-   * JmsTemplate, as it caches its connection itself.
    *
-   * @param connectionFactory - the connection factory of the JmsTemplate
-   * @param destinationName - the name of the queue to listen to
-   * @param listener - the listener of the messages
+   * @param connectionFactory - the connection factory of the broker
+   * @param messageReceiver - the listener of the messages
    * @return the listener container
    */
-  private static DefaultMessageListenerContainer newListenerContainer(
-      ConnectionFactory connectionFactory, String destinationName, MessageListener listener) {
+  @Bean
+  public DefaultMessageListenerContainer judgeResultListenerContainer(
+      ConnectionFactory connectionFactory, MessageListener messageReceiver) {
     DefaultMessageListenerContainer listenerContainer = new DefaultMessageListenerContainer();
-    listenerContainer.setConnectionFactory(
-        connectionFactory instanceof CachingConnectionFactory cachingConnectionFactory
-            ? cachingConnectionFactory.getTargetConnectionFactory()
-            : connectionFactory);
-    listenerContainer.setDestinationName(destinationName);
-    listenerContainer.setMessageListener(listener);
+    listenerContainer.setConnectionFactory(connectionFactory);
+    listenerContainer.setDestinationName(JUDGE_RESULT_QUEUE);
+    listenerContainer.setMessageListener(messageReceiver);
     listenerContainer.setRecoveryInterval(RECOVERY_INTERVAL_MS);
     return listenerContainer;
   }

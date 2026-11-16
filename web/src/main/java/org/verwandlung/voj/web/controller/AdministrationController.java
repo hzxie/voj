@@ -1391,7 +1391,7 @@ public class AdministrationController {
         "isSuccessful",
         runBulkAction(
             "rejudge submissions " + submissionList,
-            () -> submissionService.createSubmissionTasks(submissionList)));
+            () -> submissionService.rejudgeSubmissions(submissionList)));
     return result;
   }
 
