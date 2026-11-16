@@ -16,9 +16,13 @@
  */
 package org.verwandlung.voj.judger.core;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Assumptions;
@@ -285,7 +289,7 @@ public class SandboxBehaviorTest {
     Object username = ReflectionTestUtils.getField(runner, "systemUsername");
     ReflectionTestUtils.setField(runner, "systemUsername", "voj-no-such-user");
     try {
-      RunResult result = sandboxRunner.run("/bin/true", null, null, 1000, 65536, false);
+      RunResult result = sandboxRunner.run("/bin/true", null, null, null, null, 1000, 65536, false);
       Assertions.assertEquals(Verdict.INTERNAL_ERROR, result.getVerdict());
     } finally {
       ReflectionTestUtils.setField(runner, "systemUsername", username);
@@ -301,9 +305,11 @@ public class SandboxBehaviorTest {
     Assumptions.assumeTrue("native".equalsIgnoreCase(sandbox), "This tests the native runner.");
     String command = "/voj-no-such-directory/program";
     Assertions.assertEquals(
-        Verdict.INTERNAL_ERROR, sandboxRunner.run(command, null, null, 1000, 65536, false).getVerdict());
+        Verdict.INTERNAL_ERROR,
+        sandboxRunner.run(command, null, null, null, null, 1000, 65536, false).getVerdict());
     Assertions.assertEquals(
-        Verdict.INTERNAL_ERROR, sandboxRunner.run(command, null, null, 1000, 65536, true).getVerdict());
+        Verdict.INTERNAL_ERROR,
+        sandboxRunner.run(command, null, null, null, null, 1000, 65536, true).getVerdict());
   }
 
   /**
@@ -316,31 +322,106 @@ public class SandboxBehaviorTest {
     Assumptions.assumeTrue("native".equalsIgnoreCase(sandbox), "This tests the native runner.");
     Assumptions.assumeTrue(isLinux(), "This reads /proc/self/fd/0.");
     String workDirectory = createWorkDirectory(900010L);
+    String programDirectory = Preprocessor.getProgramDirectory(workDirectory);
     String logFile = workDirectory + "/stdin.log";
-    RunResult result = sandboxRunner.run("readlink /proc/self/fd/0", null, logFile, 5000, 0, true);
+    RunResult result =
+        sandboxRunner.run(
+            "readlink /proc/self/fd/0", programDirectory, programDirectory, null, logFile, 5000, 0,
+            true);
     Assertions.assertEquals(Verdict.NORMAL, result.getVerdict());
     Assertions.assertEquals("/dev/null", Files.readString(Path.of(logFile)).strip());
   }
 
   /**
-   * Test case: the working directory of a compilation. Expected result: the submission's work
-   * directory, not the judger's own (which the sandbox user may not even be able to enter, e.g.
-   * /root in the judger's Docker image, where the Go toolchain then fails to run its compiler), nor
-   * the sandbox account's profile directory on Windows.
+   * Test case: the working directory of a compilation and of a run. Expected result: the work
+   * directory each is given (the program directory of the submission for a compilation, a
+   * directory of its own for a run), not the judger's own (which the sandbox user may not even be
+   * able to enter, e.g. /root in the judger's Docker image, where the Go toolchain then fails to
+   * run its compiler), nor the sandbox account's profile directory on Windows.
    */
   @Test
   public void testProgramRunsInItsWorkDirectory() throws Exception {
     Assumptions.assumeTrue("native".equalsIgnoreCase(sandbox), "This tests the native runner.");
     String workDirectory = createWorkDirectory(900017L);
+    String programDirectory = Preprocessor.getProgramDirectory(workDirectory);
+    String runDirectory = preprocessor.createRunDirectory(workDirectory);
     String logFile = workDirectory + "/cwd.log";
     String command = isLinux() ? "/bin/pwd" : "cmd /c cd";
-    RunResult result = sandboxRunner.run(command, null, logFile, 5000, 0, true);
-    Assertions.assertEquals(Verdict.NORMAL, result.getVerdict());
-    String expected = Path.of(workDirectory).toRealPath().toString();
-    String actual = Files.readString(Path.of(logFile)).strip();
-    Assertions.assertTrue(
-        isLinux() ? expected.equals(actual) : expected.equalsIgnoreCase(actual),
-        "Expected " + expected + ", got " + actual);
+    for (String directory : new String[] {programDirectory, runDirectory}) {
+      boolean isCompilation = directory.equals(programDirectory);
+      RunResult result =
+          sandboxRunner.run(
+              command, programDirectory, directory, null, logFile, 5000, 0, isCompilation);
+      Assertions.assertEquals(Verdict.NORMAL, result.getVerdict());
+      String expected = Path.of(directory).toRealPath().toString();
+      String actual = Files.readString(Path.of(logFile)).strip();
+      Assertions.assertTrue(
+          isLinux() ? expected.equals(actual) : expected.equalsIgnoreCase(actual),
+          "Expected " + expected + ", got " + actual);
+    }
+  }
+
+  /**
+   * Test case: a program that, run for one checkpoint, tries to change what the runs of the later
+   * checkpoints use: to remove, rename, change the mode of, write to and truncate itself, to create
+   * a file and a directory next to it in the program directory, and a file and a directory at the
+   * path of the next checkpoint's output (that of its own, with the next number), in the directory
+   * of the judging; and that creates a file
+   * in its own work directory. Expected result: every attempt but the last is denied, the program
+   * and its directory are unchanged, and the run of the next checkpoint runs the same program
+   * normally, with the same outcome (rather than failing to start, a system error).
+   */
+  @Test
+  public void testRunCannotChangeWhatLaterRunsUse() throws Exception {
+    Assumptions.assumeTrue("native".equalsIgnoreCase(sandbox), "This tests the native runner.");
+    String code = isLinux() ? LATER_RUNS_CODE : WINDOWS_LATER_RUNS_CODE;
+    Problem problem =
+        new Problem(900043L, true, "sandbox-behavior", 5000, 262144, "", "", "", "", "", "");
+    Submission submission = new Submission();
+    submission.setSubmissionId(900043L);
+    submission.setProblem(problem);
+    submission.setLanguage(languageMapper.getLanguageUsingSlug("text/x-c++src"));
+    submission.setCode(code);
+    String workDirectory = workBaseDirectory + "/voj-sandbox-900043";
+    preprocessor.createTestCode(submission, workDirectory, "sandboxtest");
+    Map<String, Object> compileResult =
+        compiler.getCompileResult(submission, workDirectory, "sandboxtest");
+    Assertions.assertEquals(true, compileResult.get("isSuccessful"), compileResult.toString());
+    Path programDirectory = Path.of(Preprocessor.getProgramDirectory(workDirectory));
+    Path program = programDirectory.resolve("sandboxtest.exe");
+    byte[] binary = Files.readAllBytes(program);
+    List<String> programFiles = listFiles(programDirectory);
+    Path inputFile = Files.writeString(Path.of(workDirectory, "input.txt"), "");
+    String expected =
+        String.join(
+            "\n",
+            "remove: denied",
+            "rename: denied",
+            "change mode: denied",
+            "write: denied",
+            "truncate: denied",
+            "create a file next to it: denied",
+            "create a directory next to it: denied",
+            "create the next output: denied",
+            "create a directory at the next output: denied",
+            "create a file in its work directory: done",
+            "");
+
+    for (int checkpoint = 1; checkpoint <= 2; ++checkpoint) {
+      Path outputFile = Path.of(workDirectory, "output#" + checkpoint + ".txt");
+      Map<String, Object> result =
+          programRunner.getRuntimeResult(
+              submission,
+              workDirectory,
+              "sandboxtest",
+              inputFile.toString(),
+              outputFile.toString());
+      Assertions.assertEquals("AC", result.get("runtimeResult"), "Checkpoint " + checkpoint);
+      Assertions.assertEquals(expected, Files.readString(outputFile).replace("\r\n", "\n"));
+      Assertions.assertArrayEquals(binary, Files.readAllBytes(program));
+      Assertions.assertEquals(programFiles, listFiles(programDirectory));
+    }
+    Assertions.assertFalse(Files.exists(Path.of(workDirectory, Preprocessor.RUN_DIRECTORY)));
   }
 
   /**
@@ -399,24 +480,40 @@ public class SandboxBehaviorTest {
     Assumptions.assumeTrue("native".equalsIgnoreCase(sandbox), "This tests the native runner.");
     Assumptions.assumeTrue(isLinux(), "Landlock is Linux-only.");
     String workDirectory = createWorkDirectory(900020L);
+    String programDirectory = Preprocessor.getProgramDirectory(workDirectory);
     String logFile = workDirectory + "/compile.log";
     Path outside = Path.of("/tmp", "voj-sandbox-leak-900020");
     Files.deleteIfExists(outside);
     Assertions.assertEquals(
-        Verdict.RUNTIME_ERROR,
-        sandboxRunner.run("/usr/bin/touch " + outside, null, logFile, 5000, 0, true).getVerdict());
+        Verdict.RUNTIME_ERROR, compile("/usr/bin/touch " + outside, programDirectory, logFile));
     Assertions.assertFalse(Files.exists(outside));
+    // Nor next to its log, in the directory of the judging.
+    Assertions.assertEquals(
+        Verdict.RUNTIME_ERROR,
+        compile("/usr/bin/touch " + workDirectory + "/planted", programDirectory, logFile));
+    Assertions.assertFalse(Files.exists(Path.of(workDirectory, "planted")));
     Assertions.assertEquals(
         Verdict.NORMAL,
-        sandboxRunner
-            .run("/usr/bin/touch " + workDirectory + "/inside", null, logFile, 5000, 0, true)
-            .getVerdict());
-    Assertions.assertTrue(Files.exists(Path.of(workDirectory, "inside")));
-    Assertions.assertEquals(
-        Verdict.NORMAL, sandboxRunner.run("/usr/bin/env", null, logFile, 5000, 0, true).getVerdict());
+        compile("/usr/bin/touch " + programDirectory + "/inside", programDirectory, logFile));
+    Assertions.assertTrue(Files.exists(Path.of(programDirectory, "inside")));
+    Assertions.assertEquals(Verdict.NORMAL, compile("/usr/bin/env", programDirectory, logFile));
     String environment = "\n" + Files.readString(Path.of(logFile));
-    Assertions.assertTrue(environment.contains("\nHOME=" + workDirectory + "\n"), environment);
-    Assertions.assertTrue(environment.contains("\nTMPDIR=" + workDirectory + "\n"), environment);
+    Assertions.assertTrue(environment.contains("\nHOME=" + programDirectory + "\n"), environment);
+    Assertions.assertTrue(environment.contains("\nTMPDIR=" + programDirectory + "\n"), environment);
+  }
+
+  /**
+   * Compiles in a program directory: runs a command as a compilation, there.
+   *
+   * @param commandLine - the command
+   * @param programDirectory - the program directory
+   * @param logFile - the compile log
+   * @return the verdict
+   */
+  private Verdict compile(String commandLine, String programDirectory, String logFile) {
+    return sandboxRunner
+        .run(commandLine, programDirectory, programDirectory, null, logFile, 5000, 0, true)
+        .getVerdict();
   }
 
   /**
@@ -444,15 +541,16 @@ public class SandboxBehaviorTest {
             "USERPROFILE: created",
             ""),
         Files.readString(workDirectory.resolve("output.txt")).replace("\r\n", "\n"));
-    Assertions.assertTrue(Files.exists(workDirectory.resolve("voj-sandbox-leak-900041")));
-    Assertions.assertTrue(Files.exists(workDirectory.resolve("home.txt")));
+    // What it created in its work directory went with it.
+    Assertions.assertFalse(Files.exists(workDirectory.resolve(Preprocessor.RUN_DIRECTORY)));
   }
 
   /**
    * Test case: a run on Windows that creates, in its work directory, a directory with a file in it
    * and an ACL that allows nobody anything, which it may set as their owner, and which keeps the
    * judger from listing, deleting or changing the ACL of either. Expected result: the judger, as
-   * an elevated administrator, removes the work directory anyway, by its backup privileges.
+   * an elevated administrator, removes the work directory of the run anyway, by its backup
+   * privileges, once the run is over, and then the directory of the judging.
    */
   @Test
   public void testWhatARunDeniesTheJudgerIsRemovedOnWindows() throws Exception {
@@ -462,7 +560,7 @@ public class SandboxBehaviorTest {
     Path workDirectory = Path.of(workBaseDirectory, "voj-sandbox-900042");
     Assertions.assertEquals(
         "locked\n", Files.readString(workDirectory.resolve("output.txt")).replace("\r\n", "\n"));
-    Assertions.assertTrue(Files.exists(workDirectory.resolve("locked")));
+    Assertions.assertFalse(Files.exists(workDirectory.resolve(Preprocessor.RUN_DIRECTORY)));
 
     FileSystemUtils.deleteRecursively(workDirectory);
 
@@ -724,11 +822,14 @@ public class SandboxBehaviorTest {
     Assumptions.assumeTrue(
         "amd64".equals(System.getProperty("os.arch")), "-mcmodel=medium is x86-64 only.");
     String workDirectory = createWorkDirectory(900021L);
-    Path source = Files.writeString(Path.of(workDirectory, "static.cpp"), HUGE_STATIC_DATA_CODE);
-    String program = workDirectory + "/static.exe";
+    String programDirectory = Preprocessor.getProgramDirectory(workDirectory);
+    Path source = Files.writeString(Path.of(programDirectory, "static.cpp"), HUGE_STATIC_DATA_CODE);
+    String program = programDirectory + "/static.exe";
     RunResult compilation =
         sandboxRunner.run(
             "g++ -O2 -mcmodel=medium -o " + program + " " + source,
+            programDirectory,
+            programDirectory,
             null,
             workDirectory + "/compile.log",
             20000,
@@ -738,7 +839,16 @@ public class SandboxBehaviorTest {
         Verdict.NORMAL,
         compilation.getVerdict(),
         Files.readString(Path.of(workDirectory, "compile.log")));
-    RunResult run = sandboxRunner.run(program, null, workDirectory + "/output.txt", 5000, 65536, false);
+    RunResult run =
+        sandboxRunner.run(
+            program,
+            programDirectory,
+            preprocessor.createRunDirectory(workDirectory),
+            null,
+            workDirectory + "/output.txt",
+            5000,
+            65536,
+            false);
     Assertions.assertEquals(Verdict.MEMORY_LIMIT_EXCEEDED, run.getVerdict());
   }
 
@@ -877,10 +987,24 @@ public class SandboxBehaviorTest {
   }
 
   /**
-   * Creates the work directory of a submission (owned by the sandbox user, as for a real one).
+   * Lists the names of what is in a directory.
+   *
+   * @param directory - the directory
+   * @return the names, sorted
+   * @throws IOException if the directory cannot be listed
+   */
+  private static List<String> listFiles(Path directory) throws IOException {
+    try (Stream<Path> files = Files.list(directory)) {
+      return files.map(file -> file.getFileName().toString()).sorted().collect(Collectors.toList());
+    }
+  }
+
+  /**
+   * Creates the directory of the judging of a submission, with its program directory (owned by
+   * the sandbox user, as for a real one).
    *
    * @param id - a unique id used for the work directory and the in-memory submission
-   * @return the work directory
+   * @return the directory of the judging
    * @throws Exception if the directory cannot be created
    */
   private String createWorkDirectory(long id) throws Exception {
@@ -1639,6 +1763,142 @@ public class SandboxBehaviorTest {
               return 4;
           }
           std::printf("USERPROFILE: %s\\n", create(std::string(home) + "\\\\home.txt", true));
+          return 0;
+      }
+      """;
+
+  /**
+   * A program that reports how its attempts to change what later runs of it use end (see
+   * testRunCannotChangeWhatLaterRunsUse): each is "denied" when it fails as a write the sandbox
+   * refuses (EACCES, EPERM, EROFS, ETXTBSY), or as a system call off the allowlist (ENOSYS).
+   */
+  private static final String LATER_RUNS_CODE =
+      """
+      #include <cerrno>
+      #include <climits>
+      #include <cstdio>
+      #include <cstring>
+      #include <string>
+      #include <fcntl.h>
+      #include <sys/stat.h>
+      #include <unistd.h>
+
+      static void report(const char* attempt, bool done) {
+          int error = errno;
+          if (done) {
+              std::printf("%s: done\\n", attempt);
+          } else if (error == EACCES || error == EPERM || error == EROFS || error == ETXTBSY ||
+                     error == ENOSYS) {
+              std::printf("%s: denied\\n", attempt);
+          } else {
+              std::printf("%s: %s\\n", attempt, std::strerror(error));
+          }
+      }
+
+      int main() {
+          char self[PATH_MAX];
+          ssize_t length = readlink("/proc/self/exe", self, sizeof(self) - 1);
+          if (length <= 0) {
+              return 1;
+          }
+          self[length] = '\\0';
+          std::string program(self);
+          std::string directory = program.substr(0, program.rfind('/'));
+          // Its standard output is the output file of its checkpoint, output#N.txt.
+          char output[PATH_MAX];
+          length = readlink("/proc/self/fd/1", output, sizeof(output) - 1);
+          if (length <= 0) {
+              return 2;
+          }
+          output[length] = '\\0';
+          std::string path(output);
+          size_t number = path.rfind('#') + 1;
+          std::string next = path.substr(0, number) +
+              std::to_string(std::stoi(path.substr(number)) + 1) + ".txt";
+          report("remove", unlink(self) == 0);
+          report("rename", rename(self, (directory + "/moved").c_str()) == 0);
+          report("change mode", chmod(self, 0777) == 0);
+          report("write", open(self, O_WRONLY) >= 0);
+          report("truncate", truncate(self, 0) == 0);
+          report("create a file next to it",
+                 open((directory + "/planted").c_str(), O_CREAT | O_EXCL | O_WRONLY, 0644) >= 0);
+          report("create a directory next to it",
+                 mkdir((directory + "/planted.d").c_str(), 0755) == 0);
+          report("create the next output",
+                 open(next.c_str(), O_CREAT | O_EXCL | O_WRONLY, 0644) >= 0);
+          report("create a directory at the next output", mkdir(next.c_str(), 0755) == 0);
+          report("create a file in its work directory",
+                 open("scratch", O_CREAT | O_EXCL | O_WRONLY, 0644) >= 0);
+          return 0;
+      }
+      """;
+
+  /**
+   * The Windows counterpart of LATER_RUNS_CODE: each attempt is "denied" when it fails with
+   * ERROR_ACCESS_DENIED (or, for the program itself, ERROR_SHARING_VIOLATION). Changing the mode
+   * is giving it an ACL that allows everyone everything, as its owner could.
+   */
+  private static final String WINDOWS_LATER_RUNS_CODE =
+      """
+      #include <windows.h>
+      #include <aclapi.h>
+      #include <cstdio>
+      #include <string>
+
+      static void report(const char* attempt, bool done, DWORD error) {
+          if (done) {
+              std::printf("%s: done\\n", attempt);
+          } else if (error == ERROR_ACCESS_DENIED || error == ERROR_SHARING_VIOLATION) {
+              std::printf("%s: denied\\n", attempt);
+          } else {
+              std::printf("%s: error %lu\\n", attempt, error);
+          }
+      }
+
+      static void report(const char* attempt, BOOL done) {
+          report(attempt, done != FALSE, GetLastError());
+      }
+
+      static void reportFile(const char* attempt, HANDLE file) {
+          report(attempt, file != INVALID_HANDLE_VALUE, GetLastError());
+      }
+
+      int main() {
+          wchar_t self[MAX_PATH];
+          if (GetModuleFileNameW(NULL, self, MAX_PATH) == 0) {
+              return 1;
+          }
+          std::wstring program(self);
+          std::wstring directory = program.substr(0, program.rfind(L'\\\\'));
+          // Its standard output is the output file of its checkpoint, output#N.txt.
+          wchar_t output[MAX_PATH];
+          if (GetFinalPathNameByHandleW(GetStdHandle(STD_OUTPUT_HANDLE), output, MAX_PATH,
+                                        FILE_NAME_NORMALIZED) == 0) {
+              return 2;
+          }
+          std::wstring path(output);
+          size_t number = path.rfind(L'#') + 1;
+          std::wstring next = path.substr(0, number) +
+              std::to_wstring(std::stoi(path.substr(number)) + 1) + L".txt";
+          report("remove", DeleteFileW(self));
+          report("rename", MoveFileW(self, (directory + L"\\\\moved").c_str()));
+          // A NULL DACL allows everyone everything, as chmod 0777 does.
+          DWORD error = SetNamedSecurityInfoW(self, SE_FILE_OBJECT, DACL_SECURITY_INFORMATION,
+                                              NULL, NULL, NULL, NULL);
+          report("change mode", error == ERROR_SUCCESS, error);
+          reportFile("write", CreateFileW(self, GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE |
+                     FILE_SHARE_DELETE, NULL, OPEN_EXISTING, 0, NULL));
+          reportFile("truncate", CreateFileW(self, GENERIC_WRITE, FILE_SHARE_READ |
+                     FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, TRUNCATE_EXISTING, 0, NULL));
+          reportFile("create a file next to it", CreateFileW((directory + L"\\\\planted").c_str(),
+                     GENERIC_WRITE, 0, NULL, CREATE_NEW, 0, NULL));
+          report("create a directory next to it",
+                 CreateDirectoryW((directory + L"\\\\planted.d").c_str(), NULL));
+          reportFile("create the next output", CreateFileW(next.c_str(), GENERIC_WRITE, 0, NULL,
+                     CREATE_NEW, 0, NULL));
+          report("create a directory at the next output", CreateDirectoryW(next.c_str(), NULL));
+          reportFile("create a file in its work directory", CreateFileW(L"scratch", GENERIC_WRITE,
+                     0, NULL, CREATE_NEW, 0, NULL));
           return 0;
       }
       """;

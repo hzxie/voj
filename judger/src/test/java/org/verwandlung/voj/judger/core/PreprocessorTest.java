@@ -53,7 +53,7 @@ public class PreprocessorTest {
     String baseFileName = "random-name";
 
     preprocessor.createTestCode(submission, workDirectory, baseFileName);
-    FileInputStream inputStream = new FileInputStream("/tmp/voj-1000/random-name.cpp");
+    FileInputStream inputStream = new FileInputStream("/tmp/voj-1000/program/random-name.cpp");
     String code = IOUtils.toString(inputStream);
     inputStream.close();
     Assertions.assertEquals(submission.getCode(), code);
@@ -73,7 +73,7 @@ public class PreprocessorTest {
     String baseFileName = "RandomName";
 
     preprocessor.createTestCode(submission, workDirectory, baseFileName);
-    FileInputStream inputStream = new FileInputStream("/tmp/voj-1001/RandomName.java");
+    FileInputStream inputStream = new FileInputStream("/tmp/voj-1001/program/RandomName.java");
     String code = IOUtils.toString(inputStream).replace("RandomName", "Main");
     inputStream.close();
     Assertions.assertEquals(submission.getCode(), code);

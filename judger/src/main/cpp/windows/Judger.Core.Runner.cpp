@@ -158,7 +158,7 @@ static const wchar_t* const GO_PATH_DIRECTORY        = L"/go";              // G
  * grants, and an object without a label is Medium. So a Low process of the sandbox account cannot
  * write to the account's registry (HKCU, such as HKCU\Environment) and profile (such as the
  * Python user site), nor to C:\Users\Public or the other directories every account may write
- * to, but only to what is labelled Low: the work directory (see WORK_DIRECTORY_LABEL), and what
+ * to, but only to what is labelled Low: its work directory (see WORK_DIRECTORY_LABEL), and what
  * Windows keeps for Low processes, the account's own %USERPROFILE%\AppData\LocalLow (and
  * HKCU\Software\AppDataLow, once something created it). Reading is not restricted (files have
  * no "no read up" policy). Nor can it open the processes of the account that are not Low, or
@@ -167,9 +167,12 @@ static const wchar_t* const GO_PATH_DIRECTORY        = L"/go";              // G
  */
 static const wchar_t* const LOW_INTEGRITY_SID = L"S-1-16-4096";
 /**
- * The label the work directory gets so that a Low process may write to it (only the DACL decides
- * then): Low, with the "no write up" policy, inherited by what is created in it (OI, CI), as the
- * files the judger creates there and the program's own.
+ * The label the work directory of a compilation or run gets so that a Low process may write to it
+ * (only the DACL decides then): Low, with the "no write up" policy, inherited by what is created in
+ * it (OI, CI), as the files the judger creates there and the program's own. A compilation's work
+ * directory is the program directory, which the judger takes once the program is compiled (see
+ * Preprocessor.java): its ACL then lets the sandbox account read it only. A run's is a fresh
+ * directory of its own, so no run can change what a later one uses.
  */
 static const wchar_t* const WORK_DIRECTORY_LABEL = L"S:(ML;OICI;NW;;;LW)";
 /**
@@ -212,6 +215,7 @@ typedef std::map<std::wstring, std::wstring, EnvironmentNameLess> EnvironmentMap
  * Function Prototypes.
  */
 bool setupIoRedirection(const std::wstring&, const std::wstring&, HANDLE&, HANDLE&);
+bool getJudgerOnlySecurityDescriptor(PSECURITY_DESCRIPTOR&);
 void setupStartupInfo(STARTUPINFOW&, HANDLE&, HANDLE&, HANDLE&);
 HANDLE createJobObject(DWORD, jint, bool, HANDLE);
 bool drainJobMessages(HANDLE, bool&);
@@ -223,7 +227,7 @@ bool grantDesktopAccess(HANDLE);
 bool grantAccess(HANDLE, PSID, DWORD);
 bool buildEnvironmentBlock(const std::wstring&, const std::wstring&, const std::wstring&, std::vector<wchar_t>&);
 bool getJudgerEnvironmentVariable(const wchar_t*, std::wstring&);
-std::wstring getWorkDirectory(const std::wstring&);
+
 bool getPeakMemoryUsage(HANDLE& hProcess, jint& memory);
 bool getCpuTimeUsage(HANDLE& hJob, HANDLE& hProcess, bool includeChildren, jint& cpuTime);
 unsigned long long fileTimeToUll(const FILETIME&);
@@ -241,7 +245,11 @@ LPWSTR getWideStringPointer(const std::wstring&);
  * @param  jPassword       - the Windows password
  * @param  jInputFilePath  - the input file path when running the program (may be NULL)
  * @param  jOutputFilePath - the file receiving stdout (may be NULL); for a compilation it also
- *                           receives stderr, otherwise stderr is discarded
+ *                           receives stderr, otherwise stderr is discarded. Created by the judger
+ *                           (see setupIoRedirection): it must be in a directory the program may
+ *                           not write to
+ * @param  jWorkDirectory  - the directory the program starts in, and the only one it may write to
+ *                           (may be NULL: the sandbox account's profile directory, and none)
  * @param  timeLimit       - the program execution time limit (ms, 0 means no limit)
  * @param  memoryLimit     - the program execution memory limit (KB, 0 means no limit)
  * @param  isCompilation   - whether this is a compilation (as opposed to a run of the submission)
@@ -253,13 +261,15 @@ LPWSTR getWideStringPointer(const std::wstring&);
  */
 JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntimeResult(
     JNIEnv* jniEnv, jobject selfReference, jstring jCommandLine, jstring jUsername,
-    jstring jPassword, jstring jInputFilePath, jstring jOutputFilePath, jint timeLimit,
-    jint memoryLimit, jboolean isCompilation, jint processLimit, jstring jJavaOptions) {
+    jstring jPassword, jstring jInputFilePath, jstring jOutputFilePath, jstring jWorkDirectory,
+    jint timeLimit, jint memoryLimit, jboolean isCompilation, jint processLimit,
+    jstring jJavaOptions) {
     std::wstring        commandLine         = getWideString(getStringValue(jniEnv, jCommandLine));
     std::wstring        username            = getWideString(getStringValue(jniEnv, jUsername));
     std::wstring        password            = getWideString(getStringValue(jniEnv, jPassword));
     std::wstring        inputFilePath       = getWideString(getStringValue(jniEnv, jInputFilePath));
     std::wstring        outputFilePath      = getWideString(getStringValue(jniEnv, jOutputFilePath));
+    std::wstring        workDirectory       = getWideString(getStringValue(jniEnv, jWorkDirectory));
     std::wstring        javaOptions         = getWideString(getStringValue(jniEnv, jJavaOptions));
 
     HANDLE              hInput              = NULL;
@@ -367,7 +377,6 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
 
     // The program runs at Low integrity (see LOW_INTEGRITY_SID): its work directory is the one
     // place it may write to.
-    std::wstring workDirectory = getWorkDirectory(outputFilePath);
     if ( !workDirectory.empty() && !labelLowIntegrity(workDirectory) ) {
         return fail("LabelLowIntegrity");
     }
@@ -558,25 +567,61 @@ bool setupIoRedirection(const std::wstring& inputFilePath, const std::wstring& o
         }
     }
     if ( !outputFilePath.empty() ) {
-        // The work directory is writable by the sandbox account, which may have left a hard link (or,
-        // given the right to create one, a symbolic link) at this path during an earlier checkpoint.
-        // Opening it with CREATE_ALWAYS would truncate the link's target with the judger's rights.
-        // So whatever is at the path is removed first (DeleteFileW removes a link, never its target)
-        // and the file is created with CREATE_NEW, which fails rather than open anything that is
-        // still, or again, at the path; FILE_FLAG_OPEN_REPARSE_POINT never follows a reparse point.
-        // A failed deletion is not an error of its own: CREATE_NEW then fails, and the run is
-        // refused. FILE_READ_ATTRIBUTES lets the runner poll the file's size through this handle
+        // The output file is in the directory of the judging, which no compilation or run may write
+        // to (see Preprocessor.java), so nothing can have been planted at its path. As defence in
+        // depth, whatever is at the path is removed first (DeleteFileW removes a link, never its
+        // target) and the file is created with CREATE_NEW, which fails rather than open anything
+        // that is still, or again, at the path; FILE_FLAG_OPEN_REPARSE_POINT never follows a reparse
+        // point. A failed deletion is not an error of its own: CREATE_NEW then fails, and the run
+        // is refused. The file gets an ACL of its own that allows the judger alone (rather than the
+        // one it would inherit, which lets the sandbox account read it): a later run cannot read
+        // it. FILE_READ_ATTRIBUTES lets the runner poll the file's size through this handle
         // (GetFileSizeEx needs it, and GENERIC_WRITE does not include it). The child inherits the
         // handle as its stdout, which only lets it read the attributes of its own output file.
+        PSECURITY_DESCRIPTOR pSecurityDescriptor = NULL;
+        if ( !getJudgerOnlySecurityDescriptor(pSecurityDescriptor) ) {
+            return false;
+        }
+        SECURITY_ATTRIBUTES outputSa = { sizeof(SECURITY_ATTRIBUTES), pSecurityDescriptor, TRUE };
         DeleteFileW(outputFilePath.c_str());
-        hOutput = CreateFileW(outputFilePath.c_str(), GENERIC_WRITE | FILE_READ_ATTRIBUTES, FILE_SHARE_READ, &sa,
-                    CREATE_NEW, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OPEN_REPARSE_POINT, NULL);
+        hOutput = CreateFileW(outputFilePath.c_str(), GENERIC_WRITE | FILE_READ_ATTRIBUTES, FILE_SHARE_READ,
+                    &outputSa, CREATE_NEW, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OPEN_REPARSE_POINT, NULL);
+        DWORD error = GetLastError();
+        LocalFree(pSecurityDescriptor);
         if ( hOutput == INVALID_HANDLE_VALUE )  {
             hOutput = NULL;
+            SetLastError(error);
             return false;
         }
     }
     return true;
+}
+
+/**
+ * Builds a security descriptor whose (protected) DACL gives the user of the judger's process full
+ * control, and nobody else any access.
+ * @param  pSecurityDescriptor - receives the security descriptor, to be freed with LocalFree
+ * @return whether it was built (GetLastError() tells why not)
+ */
+bool getJudgerOnlySecurityDescriptor(PSECURITY_DESCRIPTOR& pSecurityDescriptor) {
+    HANDLE hToken = NULL;
+    if ( !OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken) ) {
+        return false;
+    }
+    BYTE  tokenUser[sizeof(TOKEN_USER) + SECURITY_MAX_SID_SIZE];
+    DWORD size    = 0;
+    BOOL  queried = GetTokenInformation(hToken, TokenUser, tokenUser, sizeof(tokenUser), &size);
+    DWORD error   = GetLastError();
+    CloseHandle(hToken);
+    LPWSTR sid = NULL;
+    if ( !queried || !ConvertSidToStringSidW(((PTOKEN_USER) tokenUser)->User.Sid, &sid) ) {
+        SetLastError(queried ? GetLastError() : error);
+        return false;
+    }
+    std::wstring sddl = std::wstring(L"D:P(A;;FA;;;") + sid + L")";
+    LocalFree(sid);
+    return ConvertStringSecurityDescriptorToSecurityDescriptorW(sddl.c_str(), SDDL_REVISION_1,
+               &pSecurityDescriptor, NULL) != FALSE;
 }
 
 /**
@@ -710,8 +755,8 @@ bool drainJobMessages(HANDLE hCompletionPort, bool& memoryLimitHit) {
  * @param  commandLine   - the command line to execute
  * @param  username      - the Windows username
  * @param  password      - the Windows password
- * @param  workDirectory - the submission's work directory, where the process starts (empty if
- *                         unknown: the sandbox account's profile directory)
+ * @param  workDirectory - the program's work directory, where the process starts (empty if
+ *                         none: the sandbox account's profile directory)
  * @param  javaOptions   - the value of JDK_JAVA_OPTIONS (empty: not set), see buildEnvironmentBlock
  * @param  hToken        - receives a token that represents the specified user
  * @param  hProfile      - receives the handle of the user's loaded profile (its registry), which
@@ -752,10 +797,8 @@ bool createProcess(const std::wstring& commandLine, const std::wstring& username
         failedApi = "CreateEnvironmentBlock";
         return false;
     }
-    // The program starts in the submission's own work directory, as on Linux, never in a directory
-    // that outlives the submission or that every submission shares. The sandbox account can always
-    // enter it: it reads the source and writes the program there when compiling, and runs the
-    // program from there.
+    // The program starts in its own work directory, as on Linux, never in a directory that outlives
+    // the submission or that every submission shares. The sandbox account can always enter it.
     std::wstring currentDirectory = workDirectory;
     for ( wchar_t& c : currentDirectory ) {
         if ( c == L'/' ) {
@@ -835,7 +878,7 @@ HANDLE createLowIntegrityToken(HANDLE hToken) {
  * program of the submission has run in it, and the label is passed on to what the judger created
  * in it so far (the source). The program cannot change the label: only the owner of the directory
  * (the judger) may, and the sandbox account is not given that right (see
- * CheckpointStore#createWorkDirectory).
+ * Preprocessor#createJudgingDirectory).
  * @param  directory - the work directory (the judger passes '/'-separated paths)
  * @return whether the directory is labelled Low (GetLastError() tells why not)
  */
@@ -1098,18 +1141,6 @@ bool getJudgerEnvironmentVariable(const wchar_t* name, std::wstring& value) {
     return true;
 }
 
-/**
- * Gets the submission's work directory: the directory holding the output file, as on Linux.
- * @param  outputFilePath - the output file path (the judger passes '/'-separated paths)
- * @return the work directory, or an empty string if the path has no directory part
- */
-std::wstring getWorkDirectory(const std::wstring& outputFilePath) {
-    size_t lastSeparator = outputFilePath.find_last_of(L"/\\");
-    if ( lastSeparator == std::wstring::npos || lastSeparator == 0 ) {
-        return std::wstring();
-    }
-    return outputFilePath.substr(0, lastSeparator);
-}
 
 /**
  * Gets the peak memory usage: the peak working set (resident memory) of the program's process,

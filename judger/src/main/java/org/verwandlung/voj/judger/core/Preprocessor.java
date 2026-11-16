@@ -32,7 +32,6 @@ import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.PosixFileAttributes;
 import java.nio.file.attribute.PosixFilePermission;
-import java.nio.file.attribute.PosixFilePermissions;
 import java.nio.file.attribute.UserPrincipal;
 import java.util.ArrayList;
 import java.util.List;
@@ -53,25 +52,53 @@ import org.verwandlung.voj.judger.util.FileSystemUtils;
 /**
  * The preprocessor, used to perform preparation work before judging.
  *
- * <p>This now covers only the submission's source code; a problem's checkpoints (test data) are
- * managed by {@link CheckpointStore}, which caches them locally and downloads them on demand.
+ * <p>This now covers only the submission's source code and the directories it is judged in; a
+ * problem's checkpoints (test data) are managed by {@link CheckpointStore}, which caches them
+ * locally and downloads them on demand.
+ *
+ * <p>A judging has a directory of its own (the work directory the dispatcher gives it), which
+ * belongs to the judger and which no compilation or run may write to: the compile log and the
+ * output of every run are created there by the judger. In it:
+ *
+ * <ul>
+ *   <li>{@value #PROGRAM_DIRECTORY}: the program directory, which holds the source and, once
+ *       compiled, the program. The compilation runs there and may write there (and nowhere else);
+ *       afterwards the judger takes the directory and what is in it, which the runs may then only
+ *       read (see {@link #sealProgramDirectory}), so that no run can change, remove or add to what
+ *       a later run of the program uses.
+ *   <li>{@value #RUN_DIRECTORY}: the work directory of a run, created empty for each run (see
+ *       {@link #createRunDirectory}) and removed after it: the only directory a run may write to,
+ *       its current, home and temporary directory.
+ * </ul>
  *
  * @author Haozhe Xie
  */
 @Component
 public class Preprocessor {
   /**
-   * Writes the code to be tested to the local disk.
+   * Creates the directory of a judging and its program directory, and writes the code to be tested
+   * into the program directory.
    *
    * @param submission - the submission object
-   * @param workDirectory - the directory used for producing compilation output
+   * @param workDirectory - the directory of the judging
    * @param baseFileName - the random file name (without suffix)
    * @throws Exception
    */
   public void createTestCode(Submission submission, String workDirectory, String baseFileName)
       throws Exception {
-    Path workDirPath = Paths.get(workDirectory);
-    createFreshWorkDirectory(workDirPath);
+    createJudgingDirectory(Paths.get(workDirectory));
+    Path workDirPath = Paths.get(getProgramDirectory(workDirectory));
+    try {
+      if (isPosix()) {
+        CheckpointStore.createDirectory(workDirPath, CheckpointStore.PRIVATE);
+      } else {
+        // With the access to it the judging directory passes on to the sandbox account.
+        Files.createDirectory(workDirPath);
+      }
+    } catch (IOException ex) {
+      throw new CreateDirectoryException(
+          "Failed to create directory: " + workDirPath + " (" + ex + ")");
+    }
 
     Language language = submission.getLanguage();
     String code = replaceClassName(language, submission.getCode(), baseFileName);
@@ -202,17 +229,67 @@ public class Preprocessor {
   }
 
   /**
-   * Creates an empty, private work directory for a submission. Any existing directory at that path
-   * (left over from a crashed run, or pre-created by an earlier submission running as the same
-   * sandbox user to plant files or symbolic links such as {@code output#1.txt -> /etc/...}) is
-   * removed first, without following symbolic links. The directory is then created atomically with
-   * owner-only permissions; if something re-appears at the path in between, judging is aborted
-   * rather than reusing a directory the judger did not create.
+   * Gets the program directory of a judging (see {@link #PROGRAM_DIRECTORY}).
    *
-   * @param workDirectory - the directory used for producing compilation output
+   * @param workDirectory - the directory of the judging
+   * @return the program directory
+   */
+  public static String getProgramDirectory(String workDirectory) {
+    return workDirectory + "/" + PROGRAM_DIRECTORY;
+  }
+
+  /**
+   * Hands the program directory of a judging, once compiled, to the judger: from now on, the
+   * sandbox may only read it and what is in it (see {@link FileSystemUtils#makeTreeReadOnly}), so
+   * that a run of the program can neither change nor remove the program (or anything else a later
+   * run reads, such as the class files, the jar or the script), nor create anything next to it.
+   *
+   * @param workDirectory - the directory of the judging
+   * @throws IOException if the directory cannot be made read-only
+   */
+  public void sealProgramDirectory(String workDirectory) throws IOException {
+    FileSystemUtils.makeTreeReadOnly(
+        Paths.get(getProgramDirectory(workDirectory)), isPosix() ? null : getSandboxAccount());
+  }
+
+  /**
+   * Creates the work directory of a run (see {@link #RUN_DIRECTORY}), empty: whatever an earlier
+   * run left at its path is removed first. The run may write there, and nowhere else; when the
+   * judger runs as root, the directory is handed to the sandbox user.
+   *
+   * @param workDirectory - the directory of the judging
+   * @return the work directory of the run
+   * @throws IOException if the directory cannot be created
+   */
+  public String createRunDirectory(String workDirectory) throws IOException {
+    Path runDirectory = Paths.get(workDirectory, RUN_DIRECTORY);
+    FileSystemUtils.deleteRecursively(runDirectory);
+    if (isPosix()) {
+      CheckpointStore.createDirectory(runDirectory, CheckpointStore.PRIVATE);
+      setWorkDirectoryOwner(runDirectory);
+    } else {
+      // With the access to it the judging directory passes on to the sandbox account; the sandbox
+      // labels it so that a run (at Low integrity) may write to it.
+      Files.createDirectory(runDirectory);
+    }
+    return runDirectory.toString();
+  }
+
+  /**
+   * Creates the directory of a judging, empty, for the judger alone: no compilation or run may
+   * write to it. Any existing directory at that path (left over from a crashed run, or pre-created
+   * to plant files or symbolic links such as {@code output#1.txt -> /etc/...}) is removed first,
+   * without following symbolic links. The directory is then created atomically with its
+   * permissions; if something re-appears at the path in between, judging is aborted rather than
+   * reusing a directory the judger did not create. Others may pass through it (on Linux, {@code
+   * rwx--x--x}; on Windows, the sandbox account may read its attributes, as Node.js needs to),
+   * to the program and run directories in it, which are the sandbox account's (on Windows, by the
+   * access it passes on to what is created in it).
+   *
+   * @param workDirectory - the directory of the judging
    * @throws CreateDirectoryException if a fresh directory cannot be created
    */
-  private void createFreshWorkDirectory(Path workDirectory) throws CreateDirectoryException {
+  private void createJudgingDirectory(Path workDirectory) throws CreateDirectoryException {
     try {
       FileSystemUtils.deleteRecursively(workDirectory);
       Path parent = workDirectory.toAbsolutePath().getParent();
@@ -220,11 +297,16 @@ public class Preprocessor {
         Files.createDirectories(parent);
       }
       if (isPosix()) {
-        Files.createDirectory(
-            workDirectory,
-            PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwx------")));
+        CheckpointStore.createDirectory(workDirectory, CheckpointStore.PASSABLE);
+      } else if (sandboxUsername == null || sandboxUsername.isEmpty()) {
+        CheckpointStore.createWindowsDirectory(workDirectory, List.of());
       } else {
-        Files.createDirectory(workDirectory);
+        UserPrincipal sandboxAccount = getSandboxAccount();
+        CheckpointStore.createWindowsDirectory(
+            workDirectory,
+            List.of(
+                CheckpointStore.passable(sandboxAccount),
+                CheckpointStore.inheritedOnly(sandboxAccount, CheckpointStore.SANDBOX_ACCESS)));
       }
     } catch (FileAlreadyExistsException ex) {
       throw new CreateDirectoryException(
@@ -279,14 +361,26 @@ public class Preprocessor {
   private static final Pattern JAVA_MAIN_CLASS_DECLARATION = Pattern.compile("\\bclass\\s+Main\\b");
 
   /**
-   * Hands the work directory to the unprivileged sandbox user. The directory is private (owner
-   * only, see {@link #createFreshWorkDirectory}), so that other accounts on the host cannot read a
-   * submission's files. When the judger runs as root the directory is then handed to the sandbox
-   * user, so that the compiler and the submitted program, which run with dropped privileges, can
-   * still write their output here: the native sandbox runs them as system.username, isolate as the
-   * box's own user, whose UID is isolate's first_uid plus the box id (see {@link #isolateUid()}).
+   * Gets the sandbox account (Windows).
    *
-   * @param workDirectory the directory used for producing compilation output
+   * @return the account system.username names
+   * @throws IOException if there is no such account
+   */
+  private UserPrincipal getSandboxAccount() throws IOException {
+    return FileSystems.getDefault()
+        .getUserPrincipalLookupService()
+        .lookupPrincipalByName(sandboxUsername);
+  }
+
+  /**
+   * Hands a program or run directory to the unprivileged sandbox user. The directory is private
+   * (owner only), so that other accounts on the host cannot read a submission's files. When the
+   * judger runs as root the directory is then handed to the sandbox user, so that the compiler and
+   * the submitted program, which run with dropped privileges, can write there: the native sandbox
+   * runs them as system.username, isolate as the box's own user, whose UID is isolate's first_uid
+   * plus the box id (see {@link #isolateUid()}).
+   *
+   * @param workDirectory the directory the sandbox writes in
    */
   private void setWorkDirectoryOwner(Path workDirectory) {
     if (!isPosix()) {
@@ -369,6 +463,12 @@ public class Preprocessor {
    * the native sandbox (GO_BUILD_CACHE_DIRECTORY in Judger.Core.Runner.cpp) and by IsolateRunner.
    */
   static final String GO_BUILD_CACHE_DIRECTORY = ".cache/go-build";
+
+  /** The program directory of a judging, in its directory (see the class comment). */
+  static final String PROGRAM_DIRECTORY = "program";
+
+  /** The work directory of a run, in the directory of its judging (see the class comment). */
+  static final String RUN_DIRECTORY = "run";
 
   /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(Preprocessor.class);

@@ -41,14 +41,27 @@ public interface SandboxRunner {
    * Runs a command under the sandbox, telling a compilation apart from a run of the submission.
    *
    * <ul>
-   *   <li>A compilation ({@code isCompilation == true}) captures standard output <em>and</em>
-   *       standard error into {@code outputFilePath}, so the compile log keeps the diagnostics.
-   *   <li>A run of the submission ({@code isCompilation == false}) captures only standard output
-   *       into {@code outputFilePath}, which is compared against the expected answer; standard
-   *       error must be kept out of it (sent elsewhere or discarded).
+   *   <li>A compilation ({@code isCompilation == true}) runs in the program directory, the only
+   *       directory it may write to (the compiler writes the program there), and captures standard
+   *       output <em>and</em> standard error into {@code outputFilePath}, so the compile log keeps
+   *       the diagnostics.
+   *   <li>A run of the submission ({@code isCompilation == false}) may only read the program
+   *       directory: it runs in its work directory, a fresh, empty directory of its own that is the
+   *       only one it may write to, and captures only standard output into {@code outputFilePath},
+   *       which is compared against the expected answer; standard error must be kept out of it
+   *       (sent elsewhere or discarded). So nothing a run does changes what a later run of the same
+   *       program finds.
    * </ul>
    *
+   * <p>The output file is never in a directory the program may write to: the sandbox creates it,
+   * and the program only gets it as its standard output (or error).
+   *
    * @param commandLine - the command line to execute
+   * @param programDirectory - the directory of the program (its source and what the compiler made
+   *     of it), or {@code null} for none
+   * @param workDirectory - the directory the program runs in, its home and temporary directory and
+   *     the only one it may write to: the program directory for a compilation, a fresh one for a
+   *     run ({@code null} for none: the program may write nowhere)
    * @param inputFilePath - the file to redirect to standard input, or {@code null} for none
    * @param outputFilePath - the file to capture the output into, or {@code null} for none
    * @param timeLimitMs - the time limit in milliseconds (0 means no limit)
@@ -59,6 +72,8 @@ public interface SandboxRunner {
    */
   RunResult run(
       String commandLine,
+      String programDirectory,
+      String workDirectory,
       String inputFilePath,
       String outputFilePath,
       int timeLimitMs,

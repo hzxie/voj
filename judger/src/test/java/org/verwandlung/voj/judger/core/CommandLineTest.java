@@ -33,14 +33,19 @@ public class CommandLineTest {
 
   /**
    * Test case: tests Compiler.getCompileCommandLine(). Test data: a Windows work directory.
-   * Expected: the path is inserted literally, its backslashes kept.
+   * Expected: the path of the program directory in it is inserted literally, its backslashes
+   * kept.
    */
   @Test
   public void testCompileCommandKeepsBackslashes() {
     Submission submission = submissionOf("g++ -o {filename}.exe {filename}.cpp", "{filename}.exe");
 
     Assertions.assertEquals(
-        "g++ -o " + WINDOWS_WORK_DIRECTORY + "/Main.exe " + WINDOWS_WORK_DIRECTORY + "/Main.cpp",
+        "g++ -o "
+            + WINDOWS_WORK_DIRECTORY
+            + "/program/Main.exe "
+            + WINDOWS_WORK_DIRECTORY
+            + "/program/Main.cpp",
         new Compiler().getCompileCommandLine(submission, WINDOWS_WORK_DIRECTORY, "Main"));
   }
 
@@ -53,10 +58,10 @@ public class CommandLineTest {
     Submission submission = submissionOf("g++ {filename}.cpp", "{filename}.exe");
 
     Assertions.assertEquals(
-        WINDOWS_WORK_DIRECTORY + "/Main.exe",
+        WINDOWS_WORK_DIRECTORY + "/program/Main.exe",
         new ProgramRunner().getCommandLine(submission, WINDOWS_WORK_DIRECTORY, "Main"));
     Assertions.assertEquals(
-        "/srv/$1/Main.exe", new ProgramRunner().getCommandLine(submission, "/srv/$1", "Main"));
+        "/srv/$1/program/Main.exe", new ProgramRunner().getCommandLine(submission, "/srv/$1", "Main"));
   }
 
   /** Creates a submission in a language with the given commands. */

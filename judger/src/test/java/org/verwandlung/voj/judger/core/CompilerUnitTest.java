@@ -119,6 +119,8 @@ public class CompilerUnitTest {
             sandboxRunner.run(
                 Mockito.anyString(),
                 Mockito.any(),
+                Mockito.any(),
+                Mockito.any(),
                 Mockito.anyString(),
                 Mockito.anyInt(),
                 Mockito.anyInt(),

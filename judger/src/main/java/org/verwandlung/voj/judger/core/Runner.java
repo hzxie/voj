@@ -46,8 +46,12 @@ public class Runner implements SandboxRunner {
    * Runs a command under the legacy native sandbox. A compilation captures standard output and
    * standard error into {@code outputFilePath} (the compile log); a run of the submission captures
    * only standard output, and its standard error is discarded so it never reaches the judged output.
+   * The program runs in {@code workDirectory}, the only directory it may write to; the native
+   * sandbox does not need the program directory, which a run may only read like any other.
    *
    * @param commandLine - the command line to execute
+   * @param programDirectory - the directory of the program (unused)
+   * @param workDirectory - the directory the program runs in and may write to, or {@code null}
    * @param inputFilePath - the file to redirect to standard input, or {@code null} for none
    * @param outputFilePath - the file to capture the output into, or {@code null} for none
    * @param timeLimitMs - the time limit in milliseconds (0 means no limit)
@@ -58,6 +62,8 @@ public class Runner implements SandboxRunner {
   @Override
   public RunResult run(
       String commandLine,
+      String programDirectory,
+      String workDirectory,
       String inputFilePath,
       String outputFilePath,
       int timeLimitMs,
@@ -78,6 +84,7 @@ public class Runner implements SandboxRunner {
               systemPassword,
               inputFilePath,
               outputFilePath,
+              workDirectory,
               timeLimitMs,
               memoryLimitKb,
               isCompilation,
@@ -180,7 +187,11 @@ public class Runner implements SandboxRunner {
    * @param systemUsername - the username for logging into the operating system
    * @param systemPassword - the password for logging into the operating system
    * @param inputFilePath - the input file path (may be NULL)
-   * @param outputFilePath - the output file path (may be NULL)
+   * @param outputFilePath - the output file path (may be NULL), which the sandbox creates (or
+   *     empties) itself: it must not be in a directory the program may write to
+   * @param workDirectory - the directory the program runs in, its home and temporary directory
+   *     and the only one it may write to (may be NULL: it runs in the root directory, or on Windows
+   *     the sandbox account's profile, and may write nowhere)
    * @param timeLimit - the time limit (in ms, 0 means no limit)
    * @param memoryLimit - the memory limit (in KB, 0 means no limit)
    * @param isCompilation - whether this is a compilation (stderr is then captured with stdout)
@@ -196,6 +207,7 @@ public class Runner implements SandboxRunner {
       String systemPassword,
       String inputFilePath,
       String outputFilePath,
+      String workDirectory,
       int timeLimit,
       int memoryLimit,
       boolean isCompilation,

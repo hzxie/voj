@@ -13,7 +13,9 @@ The judger picks a sandbox backend with `judger.sandbox` in `voj.properties`:
 - `native` (default): an in-process JNI runner. On Linux it confines each
   submission with `setrlimit`, a seccomp syscall filter (which also refuses
   network sockets and System V IPC), Landlock rules that confine its writes to
-  its own work directory, a private network namespace where one can be created,
+  its own work directory (a run's is a fresh, empty one: it cannot change the
+  compiled program, which the judger takes once compiled, nor anything a later
+  run uses), a private network namespace where one can be created,
   and a privilege drop. It needs Linux 5.13 or later with Landlock enabled (see
   [Kernel requirements](#kernel-requirements)). On Windows it runs the
   submission under a separate low-privilege account. This is the only option on
@@ -23,7 +25,7 @@ The judger picks a sandbox backend with `judger.sandbox` in `voj.properties`:
   filesystem isolation (each submission gets its own mount namespace). It requires
   `isolate` to be installed and the judger to run as root. isolate runs box *n*
   as UID `first_uid + n` (its default `first_uid` is 60000), so the judger hands
-  each submission's private work directory to that UID: set
+  each submission's private program directory to that UID: set
   `judger.isolate.firstUid` to isolate's `first_uid` and `judger.isolate.boxId`
   to the box id. See [The isolate backend](#the-isolate-backend) for how the
   judger sets up each box.
@@ -138,7 +140,8 @@ sudo useradd --system --no-create-home --shell /usr/sbin/nologin voj-sandbox
   `mmap.mmap(-1, n)`, a shared mapping, do not work in a run (the JVM's other
   collectors do). A run's JVM is told its memory limit and sizes its heap to
   it (see [Java and Kotlin runs](#java-and-kotlin-runs)). Files a run writes in its work directory hold data outside its
-  memory limit, though: `RLIMIT_FSIZE` bounds each file (see below), not their
+  memory limit, though, until the run is over and the directory removed:
+  `RLIMIT_FSIZE` bounds each file (see below), not their
   number, and `fallocate` with `FALLOC_FL_KEEP_SIZE` reserves space beyond a
   file's size. The work directories are under `judger.checkpointDir`; on tmpfs,
   that space is RAM: keep `judger.checkpointDir` on a disk-backed file system
@@ -151,7 +154,11 @@ sudo useradd --system --no-create-home --shell /usr/sbin/nologin voj-sandbox
 - **Standard streams and descriptors.** A run reads its standard input from the
   test's input file and a compilation from `/dev/null`; standard output goes to
   the output file (for a compilation, standard error too: the compile log), and
-  a run's standard error is discarded. No other descriptor of the judger is
+  a run's standard error is discarded. The judger creates the output file
+  itself, before the program starts, in a directory the program may not write
+  to, and the program only gets its descriptor (see
+  [Filesystem layout and permissions](#filesystem-layout-and-permissions)).
+  No other descriptor of the judger is
   inherited. A run may have at most 128 descriptors open at once and a
   compilation's processes 4096 each (`RLIMIT_NOFILE`, soft and hard alike, so it
   cannot be raised): an open pipe or socket pair can hold kernel memory that no
@@ -162,8 +169,8 @@ sudo useradd --system --no-create-home --shell /usr/sbin/nologin voj-sandbox
   descriptors to some 30 MB of kernel memory at most rather than hundreds of MB.
   A run's threads must share its descriptor table (`clone`
   with `CLONE_THREAD` but without `CLONE_FILES` fails with `EPERM`), so the
-  limit is the run's, not each thread's. Compilations and runs start in the
-  submission's work directory, in a session of their own without a
+  limit is the run's, not each thread's. Compilations and runs start in their
+  work directory, in a session of their own without a
   controlling terminal: `/dev/tty` cannot be opened (`ENXIO`), and `TIOCSTI`,
   which pushes input into a terminal, works only on the caller's controlling
   terminal (without `CAP_SYS_ADMIN`), so a submission cannot type into the
@@ -175,7 +182,7 @@ sudo useradd --system --no-create-home --shell /usr/sbin/nologin voj-sandbox
   with a sandbox user, which owns no terminal.
 - **Environment.** Only the locale and toolchain variables of the judger are
   passed on (`PATH`, `LANG`, `JAVA_HOME`, the Go and Rust settings, ...), never
-  its secrets, with `HOME` and `TMPDIR` set to the submission's work directory,
+  its secrets, with `HOME` and `TMPDIR` set to the program's work directory,
   and, for a run, `JDK_JAVA_OPTIONS` (see
   [Java and Kotlin runs](#java-and-kotlin-runs)).
 - **Files and shared state.** Every compilation and run is the same sandbox
@@ -184,10 +191,19 @@ sudo useradd --system --no-create-home --shell /usr/sbin/nologin voj-sandbox
   hidden input to `/tmp`, for a later compilation to `#include` it into its
   compile log), and could hold memory or disk no limit accounts for. So
   compilations and runs can create, write, truncate, rename or remove files only
-  in their own work directory, which is removed once the submission is judged
-  (enforced with [Landlock](https://docs.kernel.org/userspace-api/landlock.html);
+  in their own work directory (enforced with
+  [Landlock](https://docs.kernel.org/userspace-api/landlock.html);
   `/dev/null` stays writable): not in `/tmp`, `/var/tmp`, `/dev/shm` or anywhere
-  else the sandbox user could otherwise write. Compilers find their temporary
+  else the sandbox user could otherwise write. A compilation's work directory is
+  the submission's program directory, where it writes the program; a run's is a
+  fresh, empty directory of its own, removed once the run is over. Once the
+  program is compiled, the judger takes the program directory and what is in it
+  (when it runs as root, it becomes their owner, and nobody else may write to
+  them), so a run can neither remove, rename, change nor truncate the program
+  (or the class files, jar or script a later run reads), nor create anything
+  next to it, nor at the path of a later run's output: what one run does never
+  changes what a later run of the same submission uses, and a later run never
+  fails to start because of it. Compilers find their temporary
   directory and caches there through `TMPDIR` and `HOME`. System V shared
   memory, semaphores and message queues, POSIX message queues and the kernel
   keyrings (`add_key`, `request_key`, `keyctl`: a user's keyrings belong to the
@@ -220,7 +236,7 @@ sudo useradd --system --no-create-home --shell /usr/sbin/nologin voj-sandbox
   groups) are mandatory, as are the resource limits and the standard streams.
   If any of them cannot be set up, or the program cannot be executed at all, it
   is not run and is judged a system error, never a runtime or compile error.
-- **Go.** `GOCACHE` and `GOPATH` point into the submission's own work directory,
+- **Go.** `GOCACHE` and `GOPATH` point into the submission's own program directory,
   never at a cache other submissions can write: a shared build cache could be
   poisoned by one submission for every later Go build. Set
   `judger.goBuildCacheSeed` to a root-owned, read-only build cache (the Docker
@@ -253,11 +269,25 @@ has a slot *n* there (see [`configuration.md`](configuration.md#directories)):
 
 How it behaves at runtime:
 
-- For each submission the judger creates a private work directory in
-  `work-<n>/`, with mode `0700`, and, when running as root, hands it to
-  `system.username`. The compiler and the submitted program run with dropped
-  privileges and write their output there. To reach it, the sandbox user passes
-  through `judger.checkpointDir` and `work-<n>/` (`0711`: it may pass, but
+- For each judging the judger creates a directory of its own in `work-<n>/`,
+  `voj-<submission>-<random>/` (mode `0711`), which only the judger may write
+  to, and in it:
+
+  | Path | Owner, mode | Contents |
+  | --- | --- | --- |
+  | `program/` | `system.username`, `0700`; once compiled, the judger, `0755` | The source and what the compiler made of it (the compiler runs there, and may write there only) |
+  | `run/` | `system.username`, `0700` | The work directory of a run, created empty before each run and removed after it (the only directory the run may write to) |
+  | `<random>-compile.log`, `output#<checkpoint>.txt` | the judger, `0600` | The compile log and the output of each run, created by the judger before the program starts |
+
+  When the judger runs as root, it hands `program/` and `run/` to
+  `system.username` (isolate: to the box's UID); once the program is compiled,
+  it takes `program/` back, with what the compiler left in it (files keep
+  their execute permission, but nobody else may write to them), so the runs
+  may only read and execute the program. A judger that is not root runs
+  submissions as its own user, and Landlock alone keeps a run's writes in
+  `run/`. To reach them, the sandbox user passes
+  through `judger.checkpointDir`, `work-<n>/` and the directory of the judging
+  (`0711`: it may pass, but
   neither list nor read them), so `judger.checkpointDir` and every directory
   above it must let others pass (`o+x`), as a `judger.checkpointDir` the judger
   creates and `/var/lib` do. The judger checks this when it starts, and does not
@@ -309,16 +339,18 @@ Go, Kotlin, JavaScript and Rust).
 
 - **Filesystem.** The box sees isolate's default mounts (`/bin`, `/lib`, `/usr`,
   ...) plus `judger.isolate.extraDirs` (by default `/etc/alternatives` and
-  `/opt`, read-only), and the submission's work directory at `/work`, writable
-  while compiling and read-only while running. The checkpoint directory is never
-  bound: the input of the current run is copied into the box.
+  `/opt`, read-only), and the submission's program directory at `/work`, writable
+  while compiling and read-only while running (a run writes in its box only, which
+  is emptied after every run). The checkpoint directory is never
+  bound: the input of the current run is copied into the box, and the captured
+  output copied out of it.
 - **Compiler configuration.** isolate binds directories only, so configuration
   files a compiler expects outside the box are copied into it before a
   compilation (`judger.isolate.compileFiles`): Free Pascal's `/etc/fpc.cfg`, which
   holds its unit search paths, becomes `~/.fpc.cfg` in the box.
 - **Environment.** As with the native backend, the box gets only the locale and
   toolchain variables of the judger (no secrets), `HOME=/box`, a Go build
-  cache and `GOPATH` of its own in the work directory, seeded from
+  cache and `GOPATH` of its own in the program directory, seeded from
   `judger.goBuildCacheSeed`, and, for a run, `JDK_JAVA_OPTIONS` (see
   [Java and Kotlin runs](#java-and-kotlin-runs)).
 - **System calls.** isolate's own seccomp filter makes file locks fail (`flock`
@@ -585,19 +617,24 @@ as soon as a limit is exceeded:
 
 The final CPU time, memory and output size are checked again after the program
 exits, so a program that exceeds a limit between two polls is never judged on
-its output. Compilations and runs start in the submission's work directory. The
-output file is created anew for every run: whatever the sandbox account may have
-left at its path (such as a hard link to another file) is removed first, never
-written through.
+its output. As on Linux, a compilation starts in the submission's program
+directory, and a run in a fresh, empty work directory of its own, removed once
+the run is over. The output file is created anew for every run, by the judger,
+in the directory of the judging, which no compilation or run may write to, with
+an ACL that lets the judger alone access it (a later run cannot read it).
 
 **Writes** are confined by
 [mandatory integrity control](https://learn.microsoft.com/windows/win32/secauthz/mandatory-integrity-control),
 the counterpart of Landlock on Linux: compilations and runs are Low integrity
 processes, which may not write to anything labelled with a higher integrity
 level, whatever its ACL grants, and anything without a label is Medium. Before
-the first compilation in a submission's work directory, the judger labels the
-directory Low (and so what is created in it), so that is where a submission can
-write. It cannot write to the sandbox account's registry (`HKCU`, such as the
+a compilation or a run, the judger labels its work directory Low (and so what is
+created in it), so that is where a submission can write; the directory of the
+judging is not. Once the program is compiled, the judger takes the program
+directory and everything in it (with its take-ownership privilege) and gives
+them an ACL that lets the sandbox account read and execute them only, so a run
+can neither remove, rename, change nor give itself access to the program, nor
+create anything next to it. It cannot write to the sandbox account's registry (`HKCU`, such as the
 account's variables in `HKCU\Environment`), its profile (such as the Python
 user site in `%APPDATA%`), `C:\Users\Public`, `%ProgramData%` or anywhere else
 every account may write to, nor open the account's processes that are not Low.
@@ -617,9 +654,9 @@ the variables of the sandbox account, plus only these variables of the judger:
 `RUSTUP_HOME`, `RUSTUP_TOOLCHAIN` and `CARGO_HOME`. Nothing else of the
 judger's environment (such as `VOJ_DB_PASSWORD` or `VOJ_JUDGER_API_TOKEN`)
 reaches it. `TEMP`, `TMP`, `USERPROFILE`, `HOME`, `APPDATA`, `LOCALAPPDATA`,
-`GOCACHE` and `GOPATH` point into the submission's work directory, the one
-place it can write to, so temporary files stay with the submission and every Go
-build starts from its own empty cache; `USERNAME` is the sandbox account, and a
+`GOCACHE` and `GOPATH` point into the program's work directory, the one
+place it can write to, so temporary files stay with the compilation or run and
+every Go build starts from its own empty cache; `USERNAME` is the sandbox account, and a
 run gets
 `JDK_JAVA_OPTIONS` (see [Java and Kotlin runs](#java-and-kotlin-runs)). Toolchains must therefore be
 reachable through the judger's `PATH` and readable by the sandbox account; what
@@ -651,11 +688,12 @@ Requirements for that account:
 - It must be able to have a **user profile**: the judger loads it for each
   compilation and run (with `LoadUserProfile`), and creates it at the first.
 - Keep it a plain member of *Users* (no admin rights). It only needs to enter,
-  read and write the submission's work directory (each compilation and run
-  starts there; the compiler writes the program and, for Go, its build cache
-  there) and execute the compiled program. The judger grants it that access
-  itself, to what it creates in its `work-<n>\` directory under
-  `judger.checkpointDir`; the account needs no access to anything else there.
+  read and write the submission's program directory while compiling (the
+  compiler writes the program and, for Go, its build cache there), read and
+  execute it afterwards, and write the work directory of each run. The judger
+  grants it that access itself, to what it creates in its `work-<n>\` directory
+  under `judger.checkpointDir`; the account needs no access to anything else
+  there.
   The judger also grants it the access to its window station and desktop that a
   program needs to start (not to read the screen, hook input or switch
   desktops); the grant lasts until the judger's session ends.

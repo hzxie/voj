@@ -10,10 +10,10 @@ extern "C" {
 /*
  * Class:     org_verwandlung_voj_judger_core_Runner
  * Method:    getRuntimeResult
- * Signature: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IIZILjava/lang/String;)Ljava/util/Map;
+ * Signature: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IIZILjava/lang/String;)Ljava/util/Map;
  */
 JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntimeResult
-  (JNIEnv *, jobject, jstring, jstring, jstring, jstring, jstring, jint, jint, jboolean, jint, jstring);
+  (JNIEnv *, jobject, jstring, jstring, jstring, jstring, jstring, jstring, jint, jint, jboolean, jint, jstring);
 
 #ifdef __cplusplus
 }

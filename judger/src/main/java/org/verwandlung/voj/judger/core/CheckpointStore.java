@@ -38,6 +38,7 @@ import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.nio.file.attribute.UserPrincipal;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Properties;
@@ -335,13 +336,17 @@ public class CheckpointStore {
             .lookupPrincipalByName(sandboxUsername);
     createWindowsDirectory(
         directory,
-        List.of(
-            passable(sandboxAccount),
-            inheritedOnly(
-                sandboxAccount,
-                EnumSet.complementOf(
-                    EnumSet.of(AclEntryPermission.WRITE_ACL, AclEntryPermission.WRITE_OWNER)))));
+        List.of(passable(sandboxAccount), inheritedOnly(sandboxAccount, SANDBOX_ACCESS)));
   }
+
+  /**
+   * What the sandbox account may do (Windows) with what is created in the work directory of a
+   * judger's slot and in the directory of a judging: everything but changing its ACL or owner.
+   */
+  static final Set<AclEntryPermission> SANDBOX_ACCESS =
+      Collections.unmodifiableSet(
+          EnumSet.complementOf(
+              EnumSet.of(AclEntryPermission.WRITE_ACL, AclEntryPermission.WRITE_OWNER)));
 
   /**
    * Builds an entry of an ACL (Windows) that lets an account read the attributes of a directory on
@@ -353,7 +358,7 @@ public class CheckpointStore {
    * @param account - the account it allows
    * @return the entry
    */
-  private static AclEntry passable(UserPrincipal account) {
+  static AclEntry passable(UserPrincipal account) {
     return AclEntry.newBuilder()
         .setType(AclEntryType.ALLOW)
         .setPrincipal(account)
@@ -369,7 +374,7 @@ public class CheckpointStore {
    * @param permissions - what it allows
    * @return the entry
    */
-  private static AclEntry inheritedOnly(
+  static AclEntry inheritedOnly(
       UserPrincipal account, Set<AclEntryPermission> permissions) {
     return AclEntry.newBuilder()
         .setType(AclEntryType.ALLOW)
@@ -627,7 +632,7 @@ public class CheckpointStore {
    * @param permissions - its permissions, e.g. {@code rwx------}
    * @throws IOException if the directory cannot be created
    */
-  private static void createDirectory(Path directory, String permissions) throws IOException {
+  static void createDirectory(Path directory, String permissions) throws IOException {
     if (!isPosix()) {
       // Others may pass through any directory (Bypass traverse checking).
       createWindowsDirectory(directory, List.of());
@@ -641,14 +646,15 @@ public class CheckpointStore {
         .setPermissions(permissionSet);
   }
 
-  /** The permissions of a directory only the judger may enter: a cache. */
-  private static final String PRIVATE = "rwx------";
+  /** The permissions of a directory only its owner may enter: a cache. */
+  static final String PRIVATE = "rwx------";
 
   /**
    * The permissions of a directory others may pass through, but neither list nor change: the
-   * checkpoint root and a work directory, on the way to the work directory of a judging.
+   * checkpoint root, a work directory and the directory of a judging, on the way to the program
+   * and run directories of a judging.
    */
-  private static final String PASSABLE = "rwx--x--x";
+  static final String PASSABLE = "rwx--x--x";
 
   /**
    * Checks whether the host file system supports POSIX permissions (i.e. is not Windows).

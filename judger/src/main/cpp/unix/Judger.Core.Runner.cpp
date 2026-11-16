@@ -134,7 +134,9 @@ static const uint64_t SCOPE_SIGNAL               = 1ULL << 1;  // ABI 6
 /**
  * Tunables for the sandbox.
  */
-static const mode_t    OUTPUT_FILE_MODE       = 0644;
+// The output file is the judger's: a later run of the same program, as the sandbox user, cannot
+// read it (and no run may write anywhere but its own work directory, see confineFileSystemWrites).
+static const mode_t    OUTPUT_FILE_MODE       = 0600;
 static const int       POLL_INTERVAL_US       = 1000;        // watchdog poll (1 ms)
 static const int       WALL_TIME_FACTOR       = 3;           // wall-clock backstop multiplier
 static const long long WALL_TIME_SLACK_MS     = 1000;        // wall-clock backstop slack
@@ -195,10 +197,10 @@ struct ChildPlan {
   std::vector<std::string> environment;    // sanitized "NAME=value" environment
   std::vector<char*>       envp;           // NULL-terminated pointers into environment
   std::string              inputFilePath;  // stdin redirect (empty = /dev/null)
-  std::string              outputFilePath; // stdout redirect (empty = /dev/null)
+  int                      outputFd;       // stdout redirect, opened by the judger (-1 = /dev/null)
   std::string              workDirectory;  // working directory, HOME and the only writable
-                                           // directory (empty without an output file: none)
-  bool                     compileStep;    // compile: stderr also goes to outputFilePath
+                                           // directory (empty: /, and none)
+  bool                     compileStep;    // compile: stderr also goes to the output file
   int                      timeLimit;      // ms (0 = no limit)
   rlim_t                   dataLimit;      // RLIMIT_DATA in bytes (0 = none)
   unsigned long long       pageSize;       // the system's page size in bytes
@@ -233,7 +235,7 @@ enum ChildStep {
 static const char* const CHILD_STEP_NAMES[] = {
   "marking inherited descriptors close-on-exec", "opening the input file", "setsid()",
   "setrlimit()", "setgroups()", "setgid()", "setuid()", "entering the work directory",
-  "opening the output file", "opening /dev/null", "prctl(PR_SET_NO_NEW_PRIVS)",
+  "redirecting standard output", "opening /dev/null", "prctl(PR_SET_NO_NEW_PRIVS)",
   "confining writes to the work directory with Landlock (needs Linux 5.13+ with Landlock enabled)",
   "confining truncation to the work directory with Landlock (needs Linux 6.2+, Landlock ABI 3, "
   "unless the judger runs as root and drops privileges to the sandbox user)",
@@ -249,7 +251,6 @@ struct ChildFailure {
  */
 static std::vector<std::string> splitCommandLine(const std::string&);
 static std::string resolveExecutable(const std::string&);
-static std::string getWorkDirectory(const std::string& outputFilePath);
 static std::vector<std::string> buildEnvironment(const std::string& workDirectory,
                                                  const std::string& javaOptions);
 static std::vector<std::string> buildSeccompPrograms(bool runOfSubmission, rlim_t dataLimit);
@@ -257,7 +258,7 @@ static long long getMonotonicMillis();
 static long long readCpuTimeMillis(pid_t);
 static int  readPeakMemoryKb(pid_t);
 static rlim_t getDataLimit(int memoryLimitKb);
-static bool reachedOutputLimit(int status, const std::string& outputFilePath);
+static bool reachedOutputLimit(int status, int outputFd);
 static void awaitProcessGroupExit(pid_t);
 static void runProgram(const ChildPlan&, int syncWriteFd) __attribute__((noreturn));
 static void reportChildFailure(int syncWriteFd, int step) __attribute__((noreturn));
@@ -286,7 +287,14 @@ static unsigned long long getWritableImageSize(const char* path, unsigned long l
  * compilation to #include it into its compile log). Landlock (see confineFileSystemWrites) and the
  * filters (System V IPC, POSIX message queues and kernel keyrings) rule that out; they need no
  * privilege, so they hold in a default Docker container as well. The work directory is removed once
- * the submission has been judged.
+ * the submission has been judged. A compilation's work directory is the program directory, where
+ * it writes the program; a run's is a fresh directory of its own (removed after it), so that it
+ * cannot change the program, which the judger takes once compiled (see Preprocessor.java), nor
+ * anything else a later run uses.
+ *
+ * The output file is created (or emptied) and opened here, by the judger, before the program
+ * starts, and the program only gets the descriptor: it is never in the work directory, so the
+ * program can neither replace it nor put anything at the path of a later run's output.
  *
  * A run of the submission is a single process: the filters let it create threads, but no other
  * process (see buildSeccompPrograms). A compilation runs a trusted compiler, which may run others;
@@ -299,7 +307,10 @@ static unsigned long long getWritableImageSize(const char* path, unsigned long l
  * @param  jPassword       - unused on Unix (privilege drop is resolved from the username)
  * @param  jInputFilePath  - the file to read stdin from (may be NULL: /dev/null)
  * @param  jOutputFilePath - the file receiving stdout (may be NULL: /dev/null); for a compilation it
- *                           also receives stderr, otherwise stderr is discarded
+ *                           also receives stderr, otherwise stderr is discarded. Created by the
+ *                           judger: it must be in a directory the program may not write to
+ * @param  jWorkDirectory  - the directory the program runs in, its HOME and TMPDIR, and the only
+ *                           one it may write to (may be NULL: it runs in / and may write nowhere)
  * @param  timeLimit       - the program execution time limit (ms, 0 means no limit)
  * @param  memoryLimit     - the program execution memory limit (KB, 0 means no limit)
  * @param  isCompilation   - whether this is a compilation (as opposed to a run of the submission)
@@ -314,8 +325,9 @@ static unsigned long long getWritableImageSize(const char* path, unsigned long l
  */
 JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntimeResult(
     JNIEnv* jniEnv, jobject selfReference, jstring jCommandLine, jstring jUsername,
-    jstring jPassword, jstring jInputFilePath, jstring jOutputFilePath, jint timeLimit,
-    jint memoryLimit, jboolean isCompilation, jint processLimit, jstring jJavaOptions) {
+    jstring jPassword, jstring jInputFilePath, jstring jOutputFilePath, jstring jWorkDirectory,
+    jint timeLimit, jint memoryLimit, jboolean isCompilation, jint processLimit,
+    jstring jJavaOptions) {
     (void) selfReference;
     (void) jPassword;
     std::string commandLine = getStringValue(jniEnv, jCommandLine);
@@ -331,8 +343,8 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     ChildPlan plan;
     plan.executable     = resolveExecutable(args[0]);
     plan.inputFilePath  = getStringValue(jniEnv, jInputFilePath);
-    plan.outputFilePath = getStringValue(jniEnv, jOutputFilePath);
-    plan.workDirectory  = getWorkDirectory(plan.outputFilePath);
+    plan.outputFd       = -1;
+    plan.workDirectory  = getStringValue(jniEnv, jWorkDirectory);
     // A compiler's diagnostics (stderr) are the compile log, but a submission's stderr must never
     // reach the judged output.
     plan.compileStep    = (isCompilation == JNI_TRUE);
@@ -379,6 +391,26 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
         throwStringException(jniEnv, "Judger: failed to build the seccomp filters; refusing to run");
         return NULL;
     }
+
+    // The output file, created (or emptied) by the judger: the program gets its descriptor only.
+    std::string outputFilePath = getStringValue(jniEnv, jOutputFilePath);
+    if ( !outputFilePath.empty() ) {
+        plan.outputFd = openOutputFile(outputFilePath.c_str());
+        if ( plan.outputFd < 0 ) {
+            throwStringException(jniEnv, "Judger: failed to create the output file " +
+                                         outputFilePath + ": " + strerror(errno));
+            return NULL;
+        }
+    }
+    // Closes the output file once the program is gone (or never started).
+    struct OutputFileCloser {
+        int fd;
+        ~OutputFileCloser() {
+            if ( fd >= 0 ) {
+                close(fd);
+            }
+        }
+    } outputFileCloser = { plan.outputFd };
 
     // A close-on-exec pipe: it stays open until execve succeeds (then it auto-closes, the parent's
     // read sees EOF) or the child reports a failed step on it. The parent blocks on it so the
@@ -542,7 +574,7 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
         // killed itself with SIGSYS, which gains it nothing.
         limit = LIMIT_MEMORY;
     }
-    if ( limit == LIMIT_NONE && reachedOutputLimit(status, plan.outputFilePath) ) {
+    if ( limit == LIMIT_NONE && reachedOutputLimit(status, plan.outputFd) ) {
         limit = LIMIT_OUTPUT;
     }
     // A program stopped at a limit is reported as having used at least that much.
@@ -668,25 +700,19 @@ static void runProgram(const ChildPlan& plan, int syncWriteFd) {
         reportChildFailure(syncWriteFd, STEP_WORK_DIRECTORY);
     }
 
-    // The output file is opened only now, with the sandbox user's credentials: the work directory is
-    // writable by the submission, which may have planted a symlink (or a hard link, FIFO, ...) at
-    // this path during an earlier checkpoint, and root must never follow it. Whatever is not
-    // captured goes to /dev/null, never to the judger's own stdout or stderr.
+    // Standard output goes to the output file the judger opened; whatever is not captured goes to
+    // /dev/null, never to the judger's own stdout or stderr. (dup2 clears close-on-exec.)
     int nullFd = open("/dev/null", O_WRONLY | O_CLOEXEC);
     if ( nullFd < 0 ) {
         reportChildFailure(syncWriteFd, STEP_DEV_NULL);
     }
-    int outputFd = nullFd;
-    if ( !plan.outputFilePath.empty() ) {
-        outputFd = openOutputFile(plan.outputFilePath.c_str());
-        if ( outputFd < 0 ) {
-            reportChildFailure(syncWriteFd, STEP_OUTPUT);
-        }
+    int outputFd = plan.outputFd >= 0 ? plan.outputFd : nullFd;
+    if ( dup2(outputFd, STDOUT_FILENO) < 0 ||
+         dup2(plan.compileStep ? outputFd : nullFd, STDERR_FILENO) < 0 ) {
+        reportChildFailure(syncWriteFd, STEP_OUTPUT);
     }
-    dup2(outputFd, STDOUT_FILENO);
-    dup2(plan.compileStep ? outputFd : nullFd, STDERR_FILENO);
-    if ( outputFd != nullFd ) {
-        close(outputFd);
+    if ( plan.outputFd >= 0 ) {
+        close(plan.outputFd);
     }
     close(nullFd);
 
@@ -967,17 +993,18 @@ static unsigned long long getWritableImageSize(const char* path, unsigned long l
 }
 
 /**
- * Opens (creating or truncating) the file that receives the program's output. Must be called after
- * the privilege drop, so that whatever the path resolves to is only writable if the sandbox user
- * could write it anyway. As defence in depth it also refuses to follow a symlink in the last path
- * component, never blocks on a FIFO and only accepts a regular file with a single link.
- * Async-signal-safe.
+ * Creates (or empties) and opens the file that receives the program's output, as the judger, before
+ * the program starts. The file is in a directory of the judger's that no compilation or run may
+ * write to (see Preprocessor.java), so nothing can be planted at its path; as defence in depth, a
+ * symlink in the last path component is never followed, a FIFO never blocks the judger, and only a
+ * regular file with a single link is accepted, and emptied only then (not by O_TRUNC, which would
+ * empty whatever a planted hard link leads to).
  *
  * @param  path - the output file path
- * @return the open file descriptor, or -1 (with errno set) on failure
+ * @return the open (close-on-exec) file descriptor, or -1 (with errno set) on failure
  */
 static int openOutputFile(const char* path) {
-    int fd = open(path, O_CREAT | O_WRONLY | O_TRUNC | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC,
+    int fd = open(path, O_CREAT | O_WRONLY | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC | O_NOCTTY,
                   OUTPUT_FILE_MODE);
     if ( fd < 0 ) {
         return -1;
@@ -989,8 +1016,10 @@ static int openOutputFile(const char* path) {
         return -1;
     }
     int flags = fcntl(fd, F_GETFL);
-    if ( flags < 0 || fcntl(fd, F_SETFL, flags & ~O_NONBLOCK) != 0 ) {
+    if ( flags < 0 || fcntl(fd, F_SETFL, flags & ~O_NONBLOCK) != 0 || ftruncate(fd, 0) != 0 ) {
+        int error = errno;
         close(fd);
+        errno = error;
         return -1;
     }
     return fd;
@@ -1044,18 +1073,6 @@ static std::string resolveExecutable(const std::string& file) {
     return file;
 }
 
-/**
- * Gets the work directory of a compilation or run: the directory holding its output file, which
- * the sandbox user owns.
- * @param  outputFilePath - the output file path (may be empty)
- * @return the work directory, or an empty string without an output file (the program then runs in
- *         /, with nowhere to write)
- */
-static std::string getWorkDirectory(const std::string& outputFilePath) {
-    size_t lastSlash = outputFilePath.rfind('/');
-    return (lastSlash != std::string::npos && lastSlash > 0) ? outputFilePath.substr(0, lastSlash)
-                                                             : std::string();
-}
 
 /**
  * Builds the minimal environment of the sandboxed process: the whitelisted variables of the judger
@@ -1509,18 +1526,18 @@ static rlim_t getDataLimit(int memoryLimitKb) {
  * Checks whether a program ran into the output limit (RLIMIT_FSIZE): either it was killed by the
  * SIGXFSZ the kernel sends, or - if it ignored the signal, so that the write failed with EFBIG
  * instead and the program went on to exit some way - its output file has reached the limit.
- * @param  status         - the program's wait status
- * @param  outputFilePath - the file that received its standard output (may be empty)
+ * @param  status   - the program's wait status
+ * @param  outputFd - the judger's descriptor of the file that received its standard output (-1
+ *                    for none)
  * @return whether the output limit was reached
  */
-static bool reachedOutputLimit(int status, const std::string& outputFilePath) {
+static bool reachedOutputLimit(int status, int outputFd) {
     if ( WIFSIGNALED(status) && WTERMSIG(status) == SIGXFSZ ) {
         return true;
     }
-    // lstat: the program may have replaced the file with a link; never follow it.
     struct stat st;
-    return !outputFilePath.empty() && lstat(outputFilePath.c_str(), &st) == 0 &&
-           S_ISREG(st.st_mode) && (rlim_t) st.st_size >= OUTPUT_FILE_SIZE_LIMIT;
+    return outputFd >= 0 && fstat(outputFd, &st) == 0 && S_ISREG(st.st_mode) &&
+           (rlim_t) st.st_size >= OUTPUT_FILE_SIZE_LIMIT;
 }
 
 /**

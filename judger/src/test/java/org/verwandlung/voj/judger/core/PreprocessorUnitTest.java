@@ -44,8 +44,8 @@ public class PreprocessorUnitTest {
   /**
    * Test case: tests the createTestCode(Submission, String, String) method. Test data: a work
    * directory pre-populated with a stale file and a symbolic link pointing outside of it. Expected
-   * result: the directory is recreated empty and private, holds only the source file, and the
-   * link's target is untouched.
+   * result: the directory is recreated empty, others may only pass through it, and it holds only
+   * the private program directory with the source file in it, and the link's target is untouched.
    */
   @Test
   @DisabledOnOs(OS.WINDOWS)
@@ -60,17 +60,77 @@ public class PreprocessorUnitTest {
         workDirectory.toString(),
         "random");
 
+    Path programDirectory = workDirectory.resolve("program");
     try (Stream<Path> files = Files.list(workDirectory)) {
+      List<String> names =
+          files.map(path -> path.getFileName().toString()).collect(Collectors.toList());
+      Assertions.assertEquals(List.of("program"), names);
+    }
+    try (Stream<Path> files = Files.list(programDirectory)) {
       List<String> names =
           files.map(path -> path.getFileName().toString()).collect(Collectors.toList());
       Assertions.assertEquals(List.of("random.cpp"), names);
     }
-    Assertions.assertEquals("int main() {}", Files.readString(workDirectory.resolve("random.cpp")));
+    Assertions.assertEquals(
+        "int main() {}", Files.readString(programDirectory.resolve("random.cpp")));
     Assertions.assertEquals("secret", Files.readString(outsideFile));
+    Assertions.assertEquals(
+        "rwx--x--x",
+        PosixFilePermissions.toString(
+            Files.getPosixFilePermissions(workDirectory, LinkOption.NOFOLLOW_LINKS)));
     Assertions.assertEquals(
         "rwx------",
         PosixFilePermissions.toString(
-            Files.getPosixFilePermissions(workDirectory, LinkOption.NOFOLLOW_LINKS)));
+            Files.getPosixFilePermissions(programDirectory, LinkOption.NOFOLLOW_LINKS)));
+  }
+
+  /**
+   * Test case: tests the sealProgramDirectory(String) and createRunDirectory(String) methods. Test
+   * data: a program directory with a program (with the set-user-ID bit and writable by everyone),
+   * a source file, a subdirectory and a symbolic link, and a run directory a run left a file in.
+   * Expected result: nobody but the owner may write to anything in the program directory any more
+   * (as root, the judger owns all of it), the program keeps its execute permissions but loses the
+   * set-user-ID bit, the link is left alone; and the run directory is created anew, empty and
+   * private.
+   */
+  @Test
+  @DisabledOnOs(OS.WINDOWS)
+  public void testSealProgramDirectoryAndCreateRunDirectory() throws Exception {
+    Path workDirectory = tempDir.resolve("voj-1006");
+    preprocessor.createTestCode(
+        submission("C++", "g++ -o {filename}.exe {filename}.cpp", "int main() {}"),
+        workDirectory.toString(),
+        "random");
+    Path programDirectory = workDirectory.resolve("program");
+    Path program = Files.writeString(programDirectory.resolve("random.exe"), "binary");
+    Files.setPosixFilePermissions(program, PosixFilePermissions.fromString("rwxrwxrwx"));
+    Files.setAttribute(program, "unix:mode", 04777);
+    Path subdirectory = Files.createDirectory(programDirectory.resolve("sub"));
+    Files.setPosixFilePermissions(subdirectory, PosixFilePermissions.fromString("rwxrwxrwx"));
+    Files.createSymbolicLink(programDirectory.resolve("link"), tempDir);
+    String runDirectory = preprocessor.createRunDirectory(workDirectory.toString());
+    Files.writeString(Path.of(runDirectory, "left.txt"), "left");
+
+    preprocessor.sealProgramDirectory(workDirectory.toString());
+
+    Assertions.assertEquals(
+        "rwxr-xr-x",
+        PosixFilePermissions.toString(Files.getPosixFilePermissions(programDirectory)));
+    Assertions.assertEquals(
+        "rwxr-xr-x", PosixFilePermissions.toString(Files.getPosixFilePermissions(subdirectory)));
+    Assertions.assertEquals(
+        0755, (Integer) Files.getAttribute(program, "unix:mode") & 07777);
+    Assertions.assertTrue(Files.isSymbolicLink(programDirectory.resolve("link")));
+    Assertions.assertEquals(
+        System.getProperty("user.name"), Files.getOwner(program).getName());
+    Assertions.assertEquals(
+        runDirectory, preprocessor.createRunDirectory(workDirectory.toString()));
+    try (Stream<Path> files = Files.list(Path.of(runDirectory))) {
+      Assertions.assertEquals(0, files.count());
+    }
+    Assertions.assertEquals(
+        "rwx------",
+        PosixFilePermissions.toString(Files.getPosixFilePermissions(Path.of(runDirectory))));
   }
 
   /**
@@ -90,7 +150,7 @@ public class PreprocessorUnitTest {
         "random");
 
     Assertions.assertFalse(Files.isSymbolicLink(workDirectory));
-    Assertions.assertTrue(Files.isRegularFile(workDirectory.resolve("random.cpp")));
+    Assertions.assertTrue(Files.isRegularFile(workDirectory.resolve("program/random.cpp")));
     try (Stream<Path> files = Files.list(target)) {
       Assertions.assertEquals(0, files.count());
     }
@@ -120,7 +180,8 @@ public class PreprocessorUnitTest {
             + "}\r\n"
             + "class MainHelper { static void run() {} }\n"
             + "final class\r\nMain2 {}\n";
-    Assertions.assertEquals(expected, Files.readString(workDirectory.resolve("Random.java")));
+    Assertions.assertEquals(
+        expected, Files.readString(workDirectory.resolve("program/Random.java")));
   }
 
   /**
@@ -137,16 +198,17 @@ public class PreprocessorUnitTest {
         "Random");
 
     Assertions.assertEquals(
-        "class Random<T> {}", Files.readString(workDirectory.resolve("Random.java")));
+        "class Random<T> {}", Files.readString(workDirectory.resolve("program/Random.java")));
   }
 
   /**
    * Test case: tests the createTestCode(Submission, String, String) method. Test data: a Go
    * submission, a root-owned read-only build cache seed holding an entry, a group-writable entry
-   * and a stale trim file. Expected result: the submission gets its own cache in its work
+   * and a stale trim file. Expected result: the submission gets its own cache in its program
    * directory whose directories belong to the sandbox user, the trusted entry is a link to the
    * seed's file that stays root-owned and read-only, the untrusted entry is left out, and the
-   * cache is marked as just trimmed. Needs root (it hands files to another user).
+   * cache is marked as just trimmed; once the program directory is made read-only, the seed's file
+   * is still unchanged. Needs root (it hands files to another user).
    */
   @Test
   @DisabledOnOs(OS.WINDOWS)
@@ -168,7 +230,7 @@ public class PreprocessorUnitTest {
         workDirectory.toString(),
         "random");
 
-    Path cache = workDirectory.resolve(".cache/go-build");
+    Path cache = workDirectory.resolve("program/.cache/go-build");
     Assertions.assertEquals("nobody", Files.getOwner(cache.resolve("ab")).getName());
     Assertions.assertEquals("nobody", Files.getOwner(cache.getParent()).getName());
     Path linked = cache.resolve("ab/0123-d");
@@ -179,12 +241,19 @@ public class PreprocessorUnitTest {
     Assertions.assertFalse(Files.exists(cache.resolve("ab/4567-d")));
     long trimmed = Long.parseLong(Files.readString(cache.resolve("trim.txt")));
     Assertions.assertTrue(Math.abs(System.currentTimeMillis() / 1000 - trimmed) < 60);
+
+    preprocessor.sealProgramDirectory(workDirectory.toString());
+
+    Assertions.assertEquals("root", Files.getOwner(cache.resolve("ab")).getName());
+    Assertions.assertEquals("root", Files.getOwner(entry).getName());
+    Assertions.assertEquals(
+        "r--r--r--", PosixFilePermissions.toString(Files.getPosixFilePermissions(entry)));
   }
 
   /**
    * Test case: tests the createTestCode(Submission, String, String) method. Test data: the isolate
-   * backend with box 3. Expected result: the private work directory belongs to isolate's box user,
-   * UID first_uid + 3. Needs root.
+   * backend with box 3. Expected result: the private program directory belongs to isolate's box
+   * user, UID first_uid + 3, the directory of the judging to the judger. Needs root.
    */
   @Test
   @DisabledOnOs(OS.WINDOWS)
@@ -201,12 +270,15 @@ public class PreprocessorUnitTest {
         workDirectory.toString(),
         "random");
 
+    Path programDirectory = workDirectory.resolve("program");
     Assertions.assertEquals(
-        60003, Files.getAttribute(workDirectory, "unix:uid", LinkOption.NOFOLLOW_LINKS));
+        60003, Files.getAttribute(programDirectory, "unix:uid", LinkOption.NOFOLLOW_LINKS));
+    Assertions.assertEquals(
+        0, Files.getAttribute(workDirectory, "unix:uid", LinkOption.NOFOLLOW_LINKS));
     Assertions.assertEquals(
         "rwx------",
         PosixFilePermissions.toString(
-            Files.getPosixFilePermissions(workDirectory, LinkOption.NOFOLLOW_LINKS)));
+            Files.getPosixFilePermissions(programDirectory, LinkOption.NOFOLLOW_LINKS)));
   }
 
   /**

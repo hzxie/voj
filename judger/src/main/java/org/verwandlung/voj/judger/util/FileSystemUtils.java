@@ -29,6 +29,7 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.SecureDirectoryStream;
 import java.nio.file.attribute.AclEntry;
+import java.nio.file.attribute.AclEntryFlag;
 import java.nio.file.attribute.AclEntryPermission;
 import java.nio.file.attribute.AclEntryType;
 import java.nio.file.attribute.AclFileAttributeView;
@@ -422,6 +423,146 @@ public class FileSystemUtils {
       pending.pop();
     }
   }
+
+  /**
+   * Makes a directory tree that sandboxed code wrote (the program directory, once compiled) the
+   * judger's, which the sandbox may then only read and execute: it can no longer change, remove,
+   * rename or create anything in it. The tree is walked without following links, parents before
+   * what is in them.
+   *
+   * <ul>
+   *   <li>On POSIX systems, a judger that runs as root takes what is not its own yet ({@code
+   *       lchown} to root), and every directory gets mode {@code 0755}, every file its mode without
+   *       the write permission of the group and others, the set-user-ID, set-group-ID and sticky
+   *       bits, plus the read permission of everyone: so the sandbox user, now one of the others,
+   *       may read and execute it, but not write it. A file the judger owns already, such as a
+   *       link to a file of the Go build cache seed, keeps its mode but for those write
+   *       permissions, which it does not have anyway: the seed is never changed. A judger that is
+   *       not root runs submissions as its own user, whom no permission keeps from writing: the
+   *       sandbox's Landlock rules do (a run may write only to its own work directory), and the
+   *       modes are set all the same. Symbolic links are left as they are.
+   *   <li>On Windows, the judger takes every file and directory (with its take-ownership
+   *       privilege, which no ACL withstands) and replaces its ACL by one that gives the judger
+   *       full control and {@code reader} read and execute access, and nothing else: as their
+   *       owner, the sandbox account could otherwise give itself any access again. A link or a
+   *       junction is removed (it is never followed): no program needs one.
+   * </ul>
+   *
+   * @param directory - the root of the tree
+   * @param reader - the account that may read the tree (Windows; ignored elsewhere)
+   * @throws IOException if anything in the tree cannot be made read-only
+   */
+  public static void makeTreeReadOnly(Path directory, UserPrincipal reader) throws IOException {
+    Path root = directory.toAbsolutePath();
+    if (IS_WINDOWS) {
+      enableBackupPrivilegesOnce();
+    }
+    boolean isRoot = !IS_WINDOWS && "root".equals(System.getProperty("user.name"));
+    Deque<Path> pending = new ArrayDeque<>();
+    pending.push(root);
+    while (!pending.isEmpty()) {
+      Path file = pending.pop();
+      BasicFileAttributes attributes =
+          Files.readAttributes(file, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
+      if (IS_WINDOWS) {
+        if (attributes.isSymbolicLink() || attributes.isOther()) {
+          if (file.equals(root)) {
+            throw new IOException("Refusing to make a link read-only: " + file);
+          }
+          Files.delete(file);
+          continue;
+        }
+        makeReadOnlyOnWindows(file, attributes.isDirectory(), reader);
+      } else if (!attributes.isSymbolicLink()) {
+        makeReadOnlyOnPosix(file, attributes.isDirectory(), isRoot);
+      } else if (isRoot) {
+        Files.setAttribute(file, "unix:uid", 0, LinkOption.NOFOLLOW_LINKS);
+        Files.setAttribute(file, "unix:gid", 0, LinkOption.NOFOLLOW_LINKS);
+      }
+      if (attributes.isDirectory()) {
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(file)) {
+          stream.forEach(pending::push);
+        } catch (DirectoryIteratorException ex) {
+          throw ex.getCause();
+        }
+      }
+    }
+  }
+
+  /**
+   * Makes a file or directory read-only for everybody but its owner, the judger (POSIX; see {@link
+   * #makeTreeReadOnly}).
+   *
+   * @param file - the file or directory (not a link)
+   * @param isDirectory - whether it is a directory
+   * @param isRoot - whether the judger runs as root, and takes what is not its own
+   * @throws IOException if its owner or mode cannot be changed
+   */
+  private static void makeReadOnlyOnPosix(Path file, boolean isDirectory, boolean isRoot)
+      throws IOException {
+    int mode = (Integer) Files.getAttribute(file, "unix:mode", LinkOption.NOFOLLOW_LINKS) & 07777;
+    int owner = (Integer) Files.getAttribute(file, "unix:uid", LinkOption.NOFOLLOW_LINKS);
+    int newMode;
+    if (isRoot && owner != 0) {
+      // Taken before its mode is set: chown clears the set-user-ID and set-group-ID bits anyway.
+      Files.setAttribute(file, "unix:uid", 0, LinkOption.NOFOLLOW_LINKS);
+      Files.setAttribute(file, "unix:gid", 0, LinkOption.NOFOLLOW_LINKS);
+      newMode = isDirectory ? 0755 : (mode & 0755) | 0444;
+    } else if (isDirectory) {
+      newMode = 0755;
+    } else {
+      newMode = mode & ~(07000 | 0022);
+    }
+    if (newMode != mode) {
+      Files.setAttribute(file, "unix:mode", newMode, LinkOption.NOFOLLOW_LINKS);
+    }
+  }
+
+  /**
+   * Makes a file or directory the judger's, which another account may only read and execute
+   * (Windows; see {@link #makeTreeReadOnly}).
+   *
+   * @param file - the file or directory (not a link)
+   * @param isDirectory - whether it is a directory: its entries are then passed on to what is
+   *     created in it (nothing is, any more)
+   * @param reader - the account that may read it
+   * @throws IOException if its owner or ACL cannot be changed
+   */
+  private static void makeReadOnlyOnWindows(Path file, boolean isDirectory, UserPrincipal reader)
+      throws IOException {
+    UserPrincipal judger = getJudgerAccount();
+    AclFileAttributeView view =
+        Files.getFileAttributeView(file, AclFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
+    Set<AclEntryFlag> flags =
+        isDirectory
+            ? EnumSet.of(AclEntryFlag.FILE_INHERIT, AclEntryFlag.DIRECTORY_INHERIT)
+            : EnumSet.noneOf(AclEntryFlag.class);
+    view.setOwner(judger);
+    view.setAcl(
+        List.of(
+            AclEntry.newBuilder()
+                .setType(AclEntryType.ALLOW)
+                .setPrincipal(judger)
+                .setPermissions(AclEntryPermission.values())
+                .setFlags(flags)
+                .build(),
+            AclEntry.newBuilder()
+                .setType(AclEntryType.ALLOW)
+                .setPrincipal(reader)
+                .setPermissions(READ_AND_EXECUTE)
+                .setFlags(flags)
+                .build()));
+  }
+
+  /** What the sandbox account may do with a program directory once it is compiled (Windows). */
+  private static final Set<AclEntryPermission> READ_AND_EXECUTE =
+      EnumSet.of(
+          AclEntryPermission.READ_DATA,
+          AclEntryPermission.READ_NAMED_ATTRS,
+          AclEntryPermission.EXECUTE,
+          AclEntryPermission.READ_ATTRIBUTES,
+          AclEntryPermission.READ_ACL,
+          AclEntryPermission.SYNCHRONIZE);
 
   /** A file operation, which may be denied access. */
   @FunctionalInterface

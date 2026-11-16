@@ -16,6 +16,8 @@
  */
 package org.verwandlung.voj.judger.core;
 
+import java.io.IOException;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -26,6 +28,7 @@ import org.springframework.stereotype.Component;
 
 import org.verwandlung.voj.judger.model.Language;
 import org.verwandlung.voj.judger.model.Submission;
+import org.verwandlung.voj.judger.util.FileSystemUtils;
 
 /**
  * Runs a user's compiled program for a single checkpoint.
@@ -40,13 +43,16 @@ import org.verwandlung.voj.judger.model.Submission;
 @Component
 public class ProgramRunner {
   /**
-   * Gets the runtime result of the (user's) program for a single checkpoint.
+   * Gets the runtime result of the (user's) program for a single checkpoint. The program, in the
+   * program directory of the judging, which the run may only read, runs in a work directory of its
+   * own, created empty for the run and removed after it (see {@link Preprocessor}): nothing a run
+   * writes reaches a later one.
    *
    * @param submission - the submission object
-   * @param workDirectory - the directory of the compilation result and the program output
+   * @param workDirectory - the directory of the judging
    * @param baseFileName - the file name of the application to run (without file suffix)
    * @param inputFilePath - the input file path
-   * @param outputFilePath - the output file path
+   * @param outputFilePath - the output file path, in a directory the run may not write to
    * @return a Map<String, Object> object containing the program's runtime result
    */
   public Map<String, Object> getRuntimeResult(
@@ -63,9 +69,26 @@ public class ProgramRunner {
         String.format(
             "[Submission #%d] Start running with command %s (TimeLimit=%d, MemoryLimit=%s)",
             new Object[] {submission.getSubmissionId(), commandLine, timeLimit, memoryLimit}));
-    RunResult runResult =
-        sandboxRunner.run(
-            commandLine, inputFilePath, outputFilePath, timeLimit, memoryLimit, false);
+    RunResult runResult;
+    String runDirectory = null;
+    try {
+      runDirectory = preprocessor.createRunDirectory(workDirectory);
+      runResult =
+          sandboxRunner.run(
+              commandLine,
+              Preprocessor.getProgramDirectory(workDirectory),
+              runDirectory,
+              inputFilePath,
+              outputFilePath,
+              timeLimit,
+              memoryLimit,
+              false);
+    } catch (IOException ex) {
+      LOGGER.error("Failed to create the work directory of a run in " + workDirectory, ex);
+      runResult = RunResult.internalError();
+    } finally {
+      removeRunDirectory(runDirectory);
+    }
     Verdict verdict = runResult.getVerdict();
     int usedMemory = runResult.getPeakMemoryKb();
     if (JavaOptions.isOutOfMemoryExit(verdict, runResult.getExitCode(), outputFilePath)) {
@@ -84,17 +107,35 @@ public class ProgramRunner {
   }
 
   /**
+   * Removes the work directory of a run once it is over, with what the run left there.
+   *
+   * @param runDirectory - the work directory of the run ({@code null} if it was not created)
+   */
+  private void removeRunDirectory(String runDirectory) {
+    if (runDirectory == null) {
+      return;
+    }
+    try {
+      FileSystemUtils.deleteRecursively(Paths.get(runDirectory));
+    } catch (IOException ex) {
+      // Removed before the next run (or with the directory of the judging) all the same.
+      LOGGER.warn("Failed to remove the work directory of a run, " + runDirectory, ex);
+    }
+  }
+
+  /**
    * Gets the command line to execute.
    *
    * @param submission - the submission object
-   * @param workDirectory - the directory of the compilation result and the program output
+   * @param workDirectory - the directory of the judging
    * @param baseFileName - the file name of the application to run (without file suffix)
    * @return the command line to execute
    */
   String getCommandLine(Submission submission, String workDirectory, String baseFileName) {
     Language language = submission.getLanguage();
     String filePathWithoutExtension =
-        String.format("%s/%s", new Object[] {workDirectory, baseFileName});
+        String.format(
+            "%s/%s", new Object[] {Preprocessor.getProgramDirectory(workDirectory), baseFileName});
     StringBuilder runCommand =
         new StringBuilder(
             // Literally: a Windows path's backslashes are not escapes.
@@ -160,6 +201,9 @@ public class ProgramRunner {
 
   /** The configured sandbox runner (native or isolate); see {@code SandboxConfiguration}. */
   @Autowired private SandboxRunner sandboxRunner;
+
+  /** The preprocessor, which creates the work directory of each run. */
+  @Autowired private Preprocessor preprocessor;
 
   /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(ProgramRunner.class);

@@ -39,6 +39,36 @@ import org.springframework.test.util.ReflectionTestUtils;
  */
 @DisabledOnOs(OS.WINDOWS)
 public class IsolateRunnerTest {
+  /**
+   * Runs a command under the runner, with the work directory of the test as the program directory
+   * (bound into the box) and no work directory of its own (a run writes in its box).
+   *
+   * @param commandLine - the command line
+   * @param inputFilePath - the input file, or {@code null}
+   * @param outputFilePath - the output file
+   * @param timeLimitMs - the time limit (ms)
+   * @param memoryLimitKb - the memory limit (KB)
+   * @param isCompilation - whether it is a compilation
+   * @return the result
+   */
+  private RunResult run(
+      String commandLine,
+      String inputFilePath,
+      String outputFilePath,
+      int timeLimitMs,
+      int memoryLimitKb,
+      boolean isCompilation) {
+    return runner.run(
+        commandLine,
+        workDirectory.toString(),
+        null,
+        inputFilePath,
+        outputFilePath,
+        timeLimitMs,
+        memoryLimitKb,
+        isCompilation);
+  }
+
   /** Creates the fake isolate, a checkpoint directory and a work directory. */
   @BeforeEach
   public void setUp() throws Exception {
@@ -71,7 +101,7 @@ public class IsolateRunnerTest {
     Path outputFile = workDirectory.resolve("output#1.txt");
 
     RunResult result =
-        runner.run(program.toString(), inputFile.toString(), outputFile.toString(), 1000, 0, false);
+        run(program.toString(), inputFile.toString(), outputFile.toString(), 1000, 0, false);
 
     Assertions.assertEquals(Verdict.NORMAL, result.getVerdict());
     Assertions.assertEquals("1 2\n", Files.readString(outputFile));
@@ -98,7 +128,7 @@ public class IsolateRunnerTest {
     Path program = writeProgram("cc.sh", "#!/bin/sh\necho out\necho err >&2\nexit 1\n");
     Path logFile = workDirectory.resolve("random-compile.log");
 
-    RunResult result = runner.run(program.toString(), null, logFile.toString(), 1000, 0, true);
+    RunResult result = run(program.toString(), null, logFile.toString(), 1000, 0, true);
 
     Assertions.assertEquals(Verdict.RUNTIME_ERROR, result.getVerdict());
     Assertions.assertEquals("out\nerr\n", Files.readString(logFile));
@@ -120,7 +150,7 @@ public class IsolateRunnerTest {
     Path script = writeProgram("hello.sh", "echo hello\n");
     Path logFile = workDirectory.resolve("random-compile.log");
 
-    RunResult result = runner.run("sh " + script, null, logFile.toString(), 1000, 0, true);
+    RunResult result = run("sh " + script, null, logFile.toString(), 1000, 0, true);
 
     Assertions.assertEquals(Verdict.NORMAL, result.getVerdict());
     Assertions.assertEquals("hello\n", Files.readString(logFile));
@@ -138,11 +168,11 @@ public class IsolateRunnerTest {
   public void testProcessLimits() throws Exception {
     ReflectionTestUtils.setField(runner, "processLimit", 7);
     Path logFile = workDirectory.resolve("random-compile.log");
-    runner.run("true", null, logFile.toString(), 1000, 0, true);
+    run("true", null, logFile.toString(), 1000, 0, true);
     Assertions.assertTrue(
         Files.readAllLines(isolateRoot.resolve("args.log")).contains("--processes=1024"));
 
-    runner.run("true", null, workDirectory.resolve("output#1.txt").toString(), 1000, 0, false);
+    run("true", null, workDirectory.resolve("output#1.txt").toString(), 1000, 0, false);
     Assertions.assertTrue(
         Files.readAllLines(isolateRoot.resolve("args.log")).contains("--processes=7"));
   }
@@ -153,13 +183,13 @@ public class IsolateRunnerTest {
    */
   @Test
   public void testOnlyRunsGetTheJavaOptions() throws Exception {
-    runner.run("true", null, workDirectory.resolve("output#1.txt").toString(), 1000, 65536, false);
+    run("true", null, workDirectory.resolve("output#1.txt").toString(), 1000, 65536, false);
     Assertions.assertTrue(
         Files.readAllLines(isolateRoot.resolve("args.log"))
             .contains("--env=JDK_JAVA_OPTIONS=" + JavaOptions.forRun(65536)));
 
     Path logFile = workDirectory.resolve("random-compile.log");
-    runner.run("true", null, logFile.toString(), 1000, 65536, true);
+    run("true", null, logFile.toString(), 1000, 65536, true);
     Assertions.assertTrue(
         Files.readAllLines(isolateRoot.resolve("args.log")).stream()
             .noneMatch(arg -> arg.startsWith("--env=JDK_JAVA_OPTIONS=")));
@@ -227,14 +257,14 @@ public class IsolateRunnerTest {
   @Test
   public void testOnlyCompilationsMayLockFiles() throws Exception {
     Path logFile = workDirectory.resolve("random-compile.log");
-    RunResult compilation = runner.run("true", null, logFile.toString(), 1000, 0, true);
+    RunResult compilation = run("true", null, logFile.toString(), 1000, 0, true);
 
     Assertions.assertEquals(Verdict.NORMAL, compilation.getVerdict());
     Assertions.assertTrue(
         Files.readAllLines(isolateRoot.resolve("args.log")).contains("--syscalls=27"));
 
     Path outputFile = workDirectory.resolve("output#1.txt");
-    RunResult run = runner.run("true", null, outputFile.toString(), 1000, 0, false);
+    RunResult run = run("true", null, outputFile.toString(), 1000, 0, false);
 
     Assertions.assertEquals(Verdict.NORMAL, run.getVerdict());
     Assertions.assertTrue(
@@ -258,13 +288,13 @@ public class IsolateRunnerTest {
         ".fpc.cfg=" + configFile + ",..=" + configFile + ",sub/x=" + configFile);
     Path logFile = workDirectory.resolve("random-compile.log");
 
-    RunResult compilation = runner.run("cat .fpc.cfg", null, logFile.toString(), 1000, 0, true);
+    RunResult compilation = run("cat .fpc.cfg", null, logFile.toString(), 1000, 0, true);
 
     Assertions.assertEquals(Verdict.NORMAL, compilation.getVerdict());
     Assertions.assertEquals("-Fu/usr/lib/fpc\n", Files.readString(logFile));
 
     Path outputFile = workDirectory.resolve("output#1.txt");
-    RunResult run = runner.run("cat .fpc.cfg", null, outputFile.toString(), 1000, 0, false);
+    RunResult run = run("cat .fpc.cfg", null, outputFile.toString(), 1000, 0, false);
 
     Assertions.assertEquals(Verdict.RUNTIME_ERROR, run.getVerdict());
   }
@@ -312,19 +342,19 @@ public class IsolateRunnerTest {
 
     Assertions.assertEquals(
         Verdict.OUTPUT_LIMIT_EXCEEDED,
-        runner.run(exitsNormally.toString(), null, outputFile.toString(), 1000, 0, false)
+        run(exitsNormally.toString(), null, outputFile.toString(), 1000, 0, false)
             .getVerdict());
     Assertions.assertEquals(
         Verdict.OUTPUT_LIMIT_EXCEEDED,
-        runner.run(exitsWithError.toString(), null, outputFile.toString(), 1000, 0, false)
+        run(exitsWithError.toString(), null, outputFile.toString(), 1000, 0, false)
             .getVerdict());
     Assertions.assertEquals(
         Verdict.NORMAL,
-        runner.run(smallOutput.toString(), null, outputFile.toString(), 1000, 0, false)
+        run(smallOutput.toString(), null, outputFile.toString(), 1000, 0, false)
             .getVerdict());
     Assertions.assertEquals(
         Verdict.NORMAL,
-        runner.run(exitsNormally.toString(), null, logFile.toString(), 1000, 0, true).getVerdict());
+        run(exitsNormally.toString(), null, logFile.toString(), 1000, 0, true).getVerdict());
     // A program killed for exceeding another limit keeps that verdict.
     Assertions.assertEquals(
         Verdict.TIME_LIMIT_EXCEEDED,
@@ -347,7 +377,7 @@ public class IsolateRunnerTest {
                 + IsolateRunner.BOX_STDOUT_FILE + "\n");
     Path outputFile = workDirectory.resolve("output#1.txt");
 
-    runner.run(program.toString(), inputFile.toString(), outputFile.toString(), 1000, 0, false);
+    run(program.toString(), inputFile.toString(), outputFile.toString(), 1000, 0, false);
 
     Assertions.assertFalse(Files.isSymbolicLink(outputFile));
     Assertions.assertEquals("", Files.readString(outputFile));

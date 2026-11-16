@@ -40,10 +40,14 @@ import org.verwandlung.voj.judger.util.FileSystemUtils;
 @Component
 public class Compiler {
   /**
-   * Gets the compilation result.
+   * Gets the compilation result. The compiler runs in the program directory of the judging (see
+   * {@link Preprocessor}), the only directory it may write to, and its log goes to the directory
+   * of the judging, which it may not write to. Once the program is compiled, the judger takes the
+   * program directory, which the runs of the program may then only read (see {@link
+   * Preprocessor#sealProgramDirectory}).
    *
    * @param submission - the submission object
-   * @param workDirectory - the compilation output directory
+   * @param workDirectory - the directory of the judging
    * @param baseFileName - the compilation output file name
    * @return a Map<String, Object> object containing the compilation result
    */
@@ -53,7 +57,23 @@ public class Compiler {
     String compileLogPath = getCompileLogPath(workDirectory, baseFileName);
     int memoryLimit = getCompileMemoryLimit(submission.getLanguage());
 
-    return getCompileResult(commandLine, compileLogPath, memoryLimit);
+    Map<String, Object> result =
+        getCompileResult(
+            commandLine,
+            Preprocessor.getProgramDirectory(workDirectory),
+            compileLogPath,
+            memoryLimit);
+    if ((Boolean) result.get("isSuccessful")) {
+      try {
+        preprocessor.sealProgramDirectory(workDirectory);
+      } catch (Exception ex) {
+        // The runs would otherwise be able to change the program for the runs after them.
+        LOGGER.error("Failed to make the program directory of " + workDirectory + " read-only", ex);
+        result.put("verdict", Verdict.INTERNAL_ERROR);
+        result.put("isSuccessful", false);
+      }
+    }
+    return result;
   }
 
   /**
@@ -78,14 +98,15 @@ public class Compiler {
    * Gets the compile command.
    *
    * @param submission - the submission object
-   * @param workDirectory - the compilation output directory
+   * @param workDirectory - the directory of the judging
    * @param baseFileName - the compilation output file name
    * @return the compile command
    */
   String getCompileCommandLine(
       Submission submission, String workDirectory, String baseFileName) {
     String filePathWithoutExtension =
-        String.format("%s/%s", new Object[] {workDirectory, baseFileName});
+        String.format(
+            "%s/%s", new Object[] {Preprocessor.getProgramDirectory(workDirectory), baseFileName});
     String compileCommand =
         submission
             .getLanguage()
@@ -96,9 +117,10 @@ public class Compiler {
   }
 
   /**
-   * Gets the file path of the compilation log output.
+   * Gets the file path of the compilation log output: in the directory of the judging, which the
+   * compiler may not write to.
    *
-   * @param workDirectory - the compilation output directory
+   * @param workDirectory - the directory of the judging
    * @param baseFileName - the compilation output file name
    * @return the file path of the compilation log output
    */
@@ -110,18 +132,26 @@ public class Compiler {
    * Gets the compilation result.
    *
    * @param commandLine - the compile command
+   * @param programDirectory - the program directory, where the compiler runs
    * @param compileLogPath - the path of the compilation log output
    * @param memoryLimit - the memory limit (KB, 0 means no limit)
    * @return a Map<String, Object> object containing the compilation result
    */
   private Map<String, Object> getCompileResult(
-      String commandLine, String compileLogPath, int memoryLimit) {
+      String commandLine, String programDirectory, String compileLogPath, int memoryLimit) {
     String inputFilePath = null;
 
     LOGGER.info("Start compiling with command: " + commandLine);
     RunResult runResult =
         sandboxRunner.run(
-            commandLine, inputFilePath, compileLogPath, compileTimeLimit, memoryLimit, true);
+            commandLine,
+            programDirectory,
+            programDirectory,
+            inputFilePath,
+            compileLogPath,
+            compileTimeLimit,
+            memoryLimit,
+            true);
     Map<String, Object> result = new HashMap<>(4, 1);
 
     Verdict verdict = runResult.getVerdict();
@@ -161,8 +191,9 @@ public class Compiler {
    * @return the content of the compilation log
    */
   private String getCompileOutput(String compileLogPath) {
-    // The log is written by the compiler as the sandbox user into its own directory: never follow
-    // a link planted there, or the log shown to the user could be any file the judger can read.
+    // The log is created by the sandbox, outside the compiler's directory; as defence in depth,
+    // never follow a link at its path, or the log shown to the user could be any file the judger
+    // can read.
     try (InputStream inputStream =
         FileSystemUtils.newSandboxFileInputStream(Paths.get(compileLogPath))) {
       byte[] log = inputStream.readNBytes(MAX_COMPILE_LOG_BYTES + 1);
@@ -184,6 +215,9 @@ public class Compiler {
 
   /** The configured sandbox runner, used to execute the compile command. */
   @Autowired private SandboxRunner sandboxRunner;
+
+  /** The preprocessor, which hands the compiled program directory to the judger. */
+  @Autowired private Preprocessor preprocessor;
 
   /**
    * The CPU time limit (milliseconds) for a compilation. Heavyweight toolchains such as the Go build

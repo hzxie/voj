@@ -56,11 +56,12 @@ import org.springframework.stereotype.Component;
  *   <li>isolate 2.x with cgroup v2 support is installed and the {@code --cg} option is available.
  *   <li>The judger process is allowed to run isolate (isolate is installed setuid-root, or the
  *       judger runs with the appropriate privileges / via {@code isolate}'s init).
- *   <li>The work directory is bound into the sandbox at {@link #BOX_WORK_DIRECTORY} via {@code
+ *   <li>The program directory is bound into the sandbox at {@link #BOX_WORK_DIRECTORY} via {@code
  *       --dir}, and its host path in the command line is rewritten to that. It is writable while
- *       compiling (the compiler writes the binary there) and read-only while running a submission.
- *       It must belong to isolate's box user (UID first_uid + box id, see
- *       judger.isolate.firstUid), which the judger arranges when it runs as root.
+ *       compiling (the compiler writes the binary there) and read-only while running a submission,
+ *       which writes in its box only (the work directory the judger gives a run is not used). It
+ *       must belong to isolate's box user (UID first_uid + box id, see judger.isolate.firstUid)
+ *       while compiling, which the judger arranges when it runs as root.
  *   <li>isolate neither searches PATH nor passes on the environment: the program is resolved on the
  *       judger's PATH, and the box gets the locale and toolchain variables the native sandbox
  *       passes on, HOME, and a Go build cache and GOPATH of its own in the work directory.
@@ -95,6 +96,8 @@ public class IsolateRunner implements SandboxRunner {
    * judger on a host has a box of its own (judger.isolate.boxId).
    *
    * @param commandLine - the command line to execute (absolute paths)
+   * @param programDirectory - the program directory, bound at {@link #BOX_WORK_DIRECTORY}
+   * @param workDirectory - unused: a run writes in its box
    * @param inputFilePath - the file to redirect to standard input, or {@code null} for none
    * @param outputFilePath - the file to capture the output into, or {@code null} for none
    * @param timeLimitMs - the time limit in milliseconds (0 means no limit)
@@ -106,6 +109,8 @@ public class IsolateRunner implements SandboxRunner {
   @Override
   public RunResult run(
       String commandLine,
+      String programDirectory,
+      String workDirectory,
       String inputFilePath,
       String outputFilePath,
       int timeLimitMs,
@@ -129,6 +134,7 @@ public class IsolateRunner implements SandboxRunner {
       List<String> command =
           buildRunCommand(
               commandLine,
+              programDirectory,
               hasInput,
               outputFilePath,
               timeLimitMs,
@@ -200,6 +206,7 @@ public class IsolateRunner implements SandboxRunner {
    * Builds the {@code isolate --run} command.
    *
    * @param commandLine - the command line to execute
+   * @param programDirectory - the program directory, or {@code null} for none
    * @param hasInput - whether the input was copied into the box as {@link #BOX_STDIN_FILE}
    * @param outputFilePath - the file the output is eventually copied to, or {@code null}
    * @param timeLimitMs - the time limit (ms, 0 means no limit)
@@ -210,6 +217,7 @@ public class IsolateRunner implements SandboxRunner {
    */
   List<String> buildRunCommand(
       String commandLine,
+      String programDirectory,
       boolean hasInput,
       String outputFilePath,
       int timeLimitMs,
@@ -252,16 +260,14 @@ public class IsolateRunner implements SandboxRunner {
       command.add("--cg-mem=" + memoryLimitKb);
     }
 
-    // Bind the work directory (source + compiled binary) at BOX_WORK_DIRECTORY: read-write while
+    // Bind the program directory (source + compiled binary) at BOX_WORK_DIRECTORY: read-write while
     // compiling, read-only while running a submission, so a submission cannot leave files behind
-    // for later checkpoints. The work directory is derived from the output file, which always lives
-    // in it (the program output for a run, or the compile log for a compilation); this is robust
-    // regardless of whether the first command-line token is a path (e.g. "java", "python") or the
-    // binary itself. The checkpoint directory (inputs AND expected outputs) is never bound. It
+    // for later checkpoints. The checkpoint directory (inputs AND expected outputs) is never bound,
+    // nor the directory of the output file, which is copied out of the box. The program directory
     // cannot be bound at its own path: isolate mounts the box's private /tmp over every mount point
     // below /tmp (where judger.checkpointDir may be), so the command line's paths are rewritten
     // instead.
-    String workDirectory = directoryOf(outputFilePath);
+    String workDirectory = normalize(programDirectory);
     if (workDirectory != null) {
       command.add(
           "--dir=" + BOX_WORK_DIRECTORY + "=" + workDirectory + (isCompilation ? ":rw" : ""));
@@ -400,7 +406,7 @@ public class IsolateRunner implements SandboxRunner {
    * Rewrites the work directory's host path, wherever it appears in a command-line argument (e.g.
    * {@code /tmp/voj-1/a.cpp}, {@code -o/tmp/voj-1/a.exe} or {@code -cp /tmp/voj-1}), to its path in
    * the box, {@link #BOX_WORK_DIRECTORY}. The path is matched however its separators are repeated
-   * ({@code /tmp//voj-1/a.cpp}): the bound directory comes from {@link #directoryOf}, which
+   * ({@code /tmp//voj-1/a.cpp}): the bound directory comes from {@link #normalize}, which
    * collapses them, the command line from the compile and run commands, which do not; a path that
    * was not rewritten names nothing in the box, so every compilation would fail.
    *
@@ -616,17 +622,16 @@ public class IsolateRunner implements SandboxRunner {
   }
 
   /**
-   * Gets the parent directory of an absolute file path.
+   * Gets the absolute path of a directory, with its separators collapsed.
    *
-   * @param filePath - the file path (may be {@code null})
-   * @return the parent directory, or {@code null} if it cannot be determined
+   * @param directory - the directory (may be {@code null} or empty)
+   * @return its absolute path, or {@code null} for none
    */
-  private String directoryOf(String filePath) {
-    if (filePath == null) {
+  private static String normalize(String directory) {
+    if (directory == null || directory.isEmpty()) {
       return null;
     }
-    File parent = new File(filePath).getParentFile();
-    return parent == null ? null : parent.getAbsolutePath();
+    return new File(directory).getAbsolutePath();
   }
 
   /**
