@@ -82,7 +82,11 @@ examples are in [`reverse-proxy/`](reverse-proxy/). Three things matter:
    expression that matches exactly its address, e.g. `-e
    VOJ_TRUSTED_PROXIES='172\.30\.0\.10'` (never a whole network, whose other
    hosts could then set their own address). If the logs show every client at the
-   proxy's address, the app does not trust it yet.
+   proxy's address, the app does not trust it yet. Publish the port on loopback
+   only (as `docker-compose.yml` does) when the gateway is trusted: under rootless
+   Docker, or Docker without its iptables rules, every connection to a published
+   port arrives from the gateway, so a client that reaches the port directly
+   could choose its address.
 
 ## Configuration model
 
