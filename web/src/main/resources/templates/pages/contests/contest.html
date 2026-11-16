@@ -156,7 +156,13 @@
     <th:block th:if="${isLogin}">
     <script type="text/javascript" th:inline="javascript">
         $('#attend-contest-button').on('click', attendContest);
+        // One request at a time, and none once the user attended. Only the request that registered
+        // the user counts them, so that the answer "already attended" (e.g. to a request of another
+        // tab) does not count them twice.
+        var isAttending = false;
         function attendContest() {
+            if ( isAttending ) { return; }
+            isAttending = true;
             $.ajax({
                 type: 'POST',
                 url: [[@{/contest/{id}/attend.action(id=${contest.contestId})}]],
@@ -164,22 +170,25 @@
                 dataType: 'JSON',
                 success: function(result) {
                     if ( result['isSuccessful'] ) {
-                        $('#attend-contest-button').off('click', attendContest);
-                        setContestAttended();
-                    } else {
-                        if ( !result['isContestExists'] ) { vojAlert([[#{voj.contests.contest.contest-not-exists}]]); }
-                        else if ( !result['isContestReady'] ) { vojAlert([[#{voj.contests.contest.contest-not-ready}]]); }
-                        else if ( !result['isUserLogin'] ) { vojAlert([[#{voj.contests.contest.user-not-login}]]); }
-                        else if ( result['isAttendedContest'] ) { vojAlert([[#{voj.contests.contest.already-attended}]]).then(setContestAttended); }
-                        else if ( result['isRegistrationOpen'] === false ) { vojAlert([[#{voj.contests.contest.registration-closed}]]); }
+                        setContestAttended(true);
+                        return;
                     }
-                }
+                    isAttending = false;
+                    if ( !result['isContestExists'] ) { vojAlert([[#{voj.contests.contest.contest-not-exists}]]); }
+                    else if ( !result['isContestReady'] ) { vojAlert([[#{voj.contests.contest.contest-not-ready}]]); }
+                    else if ( !result['isUserLogin'] ) { vojAlert([[#{voj.contests.contest.user-not-login}]]); }
+                    else if ( result['isAttendedContest'] ) { vojAlert([[#{voj.contests.contest.already-attended}]]).then(function() { setContestAttended(false); }); }
+                    else if ( result['isRegistrationOpen'] === false ) { vojAlert([[#{voj.contests.contest.registration-closed}]]); }
+                },
+                error: function() { isAttending = false; }
             });
         }
-        function setContestAttended() {
+        function setContestAttended(isNewContestant) {
             var numberOfContestants = parseInt($('#number-of-contestants').html());
             $('#attendance-status').html([[#{voj.contests.contest.attended}]]);
-            $('#number-of-contestants').html(numberOfContestants + 1);
+            if ( isNewContestant ) {
+                $('#number-of-contestants').html(numberOfContestants + 1);
+            }
             $('#attend-contest-button').html([[#{voj.contests.contest.attended-contest}]]);
             setTimeout(function(){ $('#attend-contest-button').remove(); }, 1500);
         }
