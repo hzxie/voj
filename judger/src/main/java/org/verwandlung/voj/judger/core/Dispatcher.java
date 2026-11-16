@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -81,20 +82,24 @@ public class Dispatcher {
               });
       String baseFileName = DigestUtils.getRandomString(12, DigestUtils.Mode.ALPHA);
 
-      // The web application queues the task only once the submission is committed (after the
-      // transaction that stores it), so it can be read right away.
+      Date startTime = applicationDispatcher.onJudgingStarted(submissionId);
+      if (startTime == null) {
+        LOGGER.info(
+            String.format(
+                "Skipping submission #%d: it is not pending (e.g. its task was delivered twice)"
+                    + " or does not exist.",
+                submissionId));
+        return;
+      }
+      // Read only once claimed, never before: an administrator may edit the submission's problem
+      // or test data and rejudge it in between, and the judging must be of what was rejudged. (The
+      // web application queues the task only once the submission is committed, so it exists.)
       Submission submission = submissionMapper.getSubmission(submissionId);
       if (submission == null) {
         throw new IllgealSubmissionException(
             String.format("Illegal submission #%s", new Object[] {submissionId}));
       }
-      if (!applicationDispatcher.onJudgingStarted(submission)) {
-        LOGGER.info(
-            String.format(
-                "Skipping submission #%d: it is not pending (e.g. its task was delivered twice).",
-                submissionId));
-        return;
-      }
+      submission.setExecuteTime(startTime);
       try {
         judge(submission, baseDirectory, baseFileName);
       } catch (DataAccessException ex) {

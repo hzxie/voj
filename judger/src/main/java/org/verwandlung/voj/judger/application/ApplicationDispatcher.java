@@ -71,22 +71,22 @@ public class ApplicationDispatcher {
    * was delivered twice, and must not be judged (and overwritten) again.
    *
    * <p>The start time, at second precision, also identifies this judging: its verdict is only
-   * recorded if the submission still carries it (see {@link #updateSubmission}). A rejudge resets
-   * the submission (to pending, without a start time), so a judging that was still running then
-   * cannot overwrite the new verdict with a stale one; neither can a judging that a later delivery
-   * of the same task took over.
+   * recorded if the submission still carries it (see {@link #updateSubmission}), so the caller
+   * sets it as the execute time of the submission it judges. A rejudge resets the submission (to
+   * pending, without a start time), so a judging that was still running then cannot overwrite the
+   * new verdict with a stale one; neither can a judging that a later delivery of the same task
+   * took over.
    *
-   * @param submission - the submission, whose execute time is set to the start time when claimed
-   * @return whether the submission was pending and is now claimed by this judging
+   * @param submissionId - the unique identifier of the submission
+   * @return the start time if the submission was pending and is now claimed by this judging,
+   *     {@code null} otherwise
    */
-  public boolean onJudgingStarted(Submission submission) {
+  public Date onJudgingStarted(long submissionId) {
     Date startTime = new Date(System.currentTimeMillis() / 1000 * 1000);
-    if (submissionMapper.claimSubmission(submission.getSubmissionId(), startTime, getJudgerUid())
-        == 0) {
-      return false;
+    if (submissionMapper.claimSubmission(submissionId, startTime, getJudgerUid()) == 0) {
+      return null;
     }
-    submission.setExecuteTime(startTime);
-    return true;
+    return startTime;
   }
 
   /**

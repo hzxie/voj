@@ -32,6 +32,7 @@ import static org.mockito.Mockito.when;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,6 +42,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -71,7 +73,7 @@ public class DispatcherTest {
     ReflectionTestUtils.setField(dispatcher, "workBaseDirectory", "/tmp/voj-dispatcher-tests");
     when(checkpointStore.sync(any())).thenReturn(Path.of("/tmp/voj-dispatcher-tests/1000"));
     when(submissionMapper.getSubmission(100L)).thenReturn(buildSubmission());
-    when(applicationDispatcher.onJudgingStarted(any())).thenReturn(true);
+    when(applicationDispatcher.onJudgingStarted(anyLong())).thenReturn(START_TIME);
   }
 
   /**
@@ -375,13 +377,34 @@ public class DispatcherTest {
    */
   @Test
   public void testCreateNewTaskSkipsSubmissionsThatAreNotPending() throws Exception {
-    when(applicationDispatcher.onJudgingStarted(any())).thenReturn(false);
+    when(applicationDispatcher.onJudgingStarted(anyLong())).thenReturn(null);
 
     dispatcher.createNewTask(100L);
 
+    verify(submissionMapper, never()).getSubmission(anyLong());
     verify(checkpointStore, never()).sync(any());
     verify(compiler, never()).getCompileResult(any(), anyString(), anyString());
     verify(applicationDispatcher, never()).onErrorOccurred(any(), anyString());
+  }
+
+  /**
+   * Test case: tests the createNewTask method. Test data: a pending submission. Expected result:
+   * it is read only once it is claimed (an edit and a rejudge just before the claim are judged),
+   * and judged with the claim's start time, which identifies the judging.
+   */
+  @Test
+  public void testCreateNewTaskReadsTheSubmissionOnlyOnceClaimed() throws Exception {
+    when(checkpointStore.getCheckpoints(1000L)).thenReturn(oneCheckpoint());
+    when(compiler.getCompileResult(any(), anyString(), anyString()))
+        .thenReturn(compileResult(false));
+
+    dispatcher.createNewTask(100L);
+
+    InOrder inOrder = org.mockito.Mockito.inOrder(applicationDispatcher, submissionMapper);
+    inOrder.verify(applicationDispatcher).onJudgingStarted(100L);
+    inOrder.verify(submissionMapper).getSubmission(100L);
+    verify(applicationDispatcher)
+        .onCompileFinished(argThat(s -> START_TIME.equals(s.getExecuteTime())), any());
   }
 
   /**
@@ -434,6 +457,9 @@ public class DispatcherTest {
     result.put("usedMemory", 128);
     return result;
   }
+
+  /** The start time of the judgings that the tests claim. */
+  private static final Date START_TIME = new Date(1700000000000L);
 
   /** The mocked ApplicationDispatcher object. */
   @Mock private ApplicationDispatcher applicationDispatcher;

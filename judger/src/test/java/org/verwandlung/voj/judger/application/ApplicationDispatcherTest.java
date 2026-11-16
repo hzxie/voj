@@ -154,15 +154,13 @@ public class ApplicationDispatcherTest {
   @Test
   public void testOnJudgingStartedClaimsPendingSubmission() {
     when(submissionMapper.claimSubmission(eq(100L), any(Date.class), any())).thenReturn(1);
-    Submission submission = new Submission();
-    submission.setSubmissionId(100L);
 
-    Assertions.assertTrue(applicationDispatcher.onJudgingStarted(submission));
+    Date startTime = applicationDispatcher.onJudgingStarted(100L);
 
     ArgumentCaptor<Date> startTimeCaptor = ArgumentCaptor.forClass(Date.class);
     verify(submissionMapper).claimSubmission(eq(100L), startTimeCaptor.capture(), any());
     Assertions.assertEquals(0, startTimeCaptor.getValue().getTime() % 1000);
-    Assertions.assertEquals(startTimeCaptor.getValue(), submission.getExecuteTime());
+    Assertions.assertEquals(startTimeCaptor.getValue(), startTime);
   }
 
   /**
@@ -172,11 +170,8 @@ public class ApplicationDispatcherTest {
   @Test
   public void testOnJudgingStartedSkipsJudgedSubmission() {
     when(submissionMapper.claimSubmission(eq(100L), any(Date.class), any())).thenReturn(0);
-    Submission submission = new Submission();
-    submission.setSubmissionId(100L);
 
-    Assertions.assertFalse(applicationDispatcher.onJudgingStarted(submission));
-    Assertions.assertNull(submission.getExecuteTime());
+    Assertions.assertNull(applicationDispatcher.onJudgingStarted(100L));
   }
 
   /**
