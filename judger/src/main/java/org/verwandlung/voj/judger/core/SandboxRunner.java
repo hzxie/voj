@@ -38,26 +38,6 @@ package org.verwandlung.voj.judger.core;
  */
 public interface SandboxRunner {
   /**
-   * Runs a command under the sandbox.
-   *
-   * @param commandLine - the command line to execute
-   * @param inputFilePath - the file to redirect to standard input, or {@code null} for none
-   * @param outputFilePath - the file to capture the output into, or {@code null} for none; whether
-   *     standard error is included depends on the implementation (see the overload taking {@code
-   *     isCompilation})
-   * @param timeLimitMs - the time limit in milliseconds (0 means no limit)
-   * @param memoryLimitKb - the memory limit in kilobytes (0 means no limit)
-   * @return the structured run result; never {@code null} (use {@link RunResult#internalError()} on
-   *     failure)
-   */
-  RunResult run(
-      String commandLine,
-      String inputFilePath,
-      String outputFilePath,
-      int timeLimitMs,
-      int memoryLimitKb);
-
-  /**
    * Runs a command under the sandbox, telling a compilation apart from a run of the submission.
    *
    * <ul>
@@ -68,24 +48,48 @@ public interface SandboxRunner {
    *       error must be kept out of it (sent elsewhere or discarded).
    * </ul>
    *
-   * <p>The default implementation ignores the distinction and delegates to {@link #run(String,
-   * String, String, int, int)}, for runners that do not support it yet.
-   *
    * @param commandLine - the command line to execute
    * @param inputFilePath - the file to redirect to standard input, or {@code null} for none
    * @param outputFilePath - the file to capture the output into, or {@code null} for none
    * @param timeLimitMs - the time limit in milliseconds (0 means no limit)
    * @param memoryLimitKb - the memory limit in kilobytes (0 means no limit)
    * @param isCompilation - whether this is a compilation (as opposed to a run of the submission)
-   * @return the structured run result; never {@code null}
+   * @return the structured run result; never {@code null} (use {@link RunResult#internalError()} on
+   *     failure)
    */
-  default RunResult run(
+  RunResult run(
       String commandLine,
       String inputFilePath,
       String outputFilePath,
       int timeLimitMs,
       int memoryLimitKb,
-      boolean isCompilation) {
-    return run(commandLine, inputFilePath, outputFilePath, timeLimitMs, memoryLimitKb);
+      boolean isCompilation);
+
+  /**
+   * Runs a command under the sandbox, as a compilation exactly when there is no standard input.
+   *
+   * @param commandLine - the command line to execute
+   * @param inputFilePath - the file to redirect to standard input, or {@code null} for none
+   * @param outputFilePath - the file to capture the output into, or {@code null} for none
+   * @param timeLimitMs - the time limit in milliseconds (0 means no limit)
+   * @param memoryLimitKb - the memory limit in kilobytes (0 means no limit)
+   * @return the structured run result; never {@code null}
+   * @deprecated Unused: every caller says whether it compiles. Only kept while {@code Runner}
+   *     still overrides it; remove it together with that override.
+   */
+  @Deprecated
+  default RunResult run(
+      String commandLine,
+      String inputFilePath,
+      String outputFilePath,
+      int timeLimitMs,
+      int memoryLimitKb) {
+    return run(
+        commandLine,
+        inputFilePath,
+        outputFilePath,
+        timeLimitMs,
+        memoryLimitKb,
+        inputFilePath == null);
   }
 }

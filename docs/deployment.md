@@ -189,6 +189,17 @@ Go, Kotlin, JavaScript and Rust).
   one on file locks); runs of the submission keep all of them. For an isolate
   without `--syscalls`, set `judger.isolate.compileSyscalls` empty.
 - **Network.** isolate gives each box its own, empty network namespace.
+- **Limits and verdicts.** A run may have `judger.processLimit` processes and
+  threads at once (`--processes`), a compilation `judger.compileProcessLimit`.
+  Files are capped at `judger.isolate.fileSizeLimitKb` (`--fsize`): a program
+  killed for writing past it (`SIGXFSZ`) is judged Output Limit Exceeded. A
+  program killed by the out-of-memory killer of its box's cgroup
+  (`cg-oom-killed`), or that fails at or above its memory limit, is judged
+  Memory Limit Exceeded.
+- **Boxes.** Every judger on a host needs a box of its own
+  (`judger.isolate.boxId`). The box is cleaned up after every compilation and
+  run, which frees the captured output right away; `--init` empties a box that a
+  judger which died mid-run left behind.
 
 ## Native build prerequisites (Linux)
 

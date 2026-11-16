@@ -54,7 +54,7 @@ public class IsolateRunnerTest {
 
     ReflectionTestUtils.setField(runner, "isolateExecutable", fakeIsolate.toString());
     ReflectionTestUtils.setField(runner, "boxId", 0);
-    ReflectionTestUtils.setField(runner, "maxProcesses", 64);
+    ReflectionTestUtils.setField(runner, "processLimit", 64);
     ReflectionTestUtils.setField(runner, "compileProcessLimit", 1024);
     ReflectionTestUtils.setField(runner, "fileSizeLimitKb", 0);
     ReflectionTestUtils.setField(runner, "wallTimeBufferSec", 1.0);
@@ -128,6 +128,56 @@ public class IsolateRunnerTest {
     String program = args.get(args.indexOf("--") + 1);
     Assertions.assertTrue(program.startsWith("/") && program.endsWith("/sh"), program);
     Assertions.assertTrue(args.stream().anyMatch(arg -> arg.startsWith("--env=PATH=/")));
+  }
+
+  /**
+   * Test case: a run and a compilation. Expected result: a run may have judger.processLimit
+   * processes and threads, a compilation judger.compileProcessLimit.
+   */
+  @Test
+  public void testProcessLimits() throws Exception {
+    ReflectionTestUtils.setField(runner, "processLimit", 7);
+    Path logFile = workDirectory.resolve("random-compile.log");
+    runner.run("true", null, logFile.toString(), 1000, 0, true);
+    Assertions.assertTrue(
+        Files.readAllLines(isolateRoot.resolve("args.log")).contains("--processes=1024"));
+
+    runner.run("true", null, workDirectory.resolve("output#1.txt").toString(), 1000, 0, false);
+    Assertions.assertTrue(
+        Files.readAllLines(isolateRoot.resolve("args.log")).contains("--processes=7"));
+  }
+
+  /**
+   * Test case: tests the mapVerdict(Map, int) method with the fields isolate writes. Expected
+   * result: a program killed by SIGXFSZ (its output outgrew --fsize) exceeded the output limit; one
+   * killed by the cgroup's OOM killer exceeded the memory limit, whatever its status says.
+   */
+  @Test
+  public void testMapVerdict() {
+    Assertions.assertEquals(Verdict.NORMAL, IsolateRunner.mapVerdict(Map.of(), 65536));
+    Assertions.assertEquals(
+        Verdict.TIME_LIMIT_EXCEEDED, IsolateRunner.mapVerdict(Map.of("status", "TO"), 65536));
+    Assertions.assertEquals(
+        Verdict.OUTPUT_LIMIT_EXCEEDED,
+        IsolateRunner.mapVerdict(Map.of("status", "SG", "exitsig", "25"), 65536));
+    Assertions.assertEquals(
+        Verdict.RUNTIME_ERROR,
+        IsolateRunner.mapVerdict(Map.of("status", "SG", "exitsig", "11"), 65536));
+    Assertions.assertEquals(
+        Verdict.MEMORY_LIMIT_EXCEEDED,
+        IsolateRunner.mapVerdict(
+            Map.of("status", "SG", "exitsig", "9", "cg-oom-killed", "1", "cg-mem", "1024"),
+            65536));
+    Assertions.assertEquals(
+        Verdict.MEMORY_LIMIT_EXCEEDED,
+        IsolateRunner.mapVerdict(Map.of("status", "TO", "cg-oom-killed", "1"), 65536));
+    Assertions.assertEquals(
+        Verdict.MEMORY_LIMIT_EXCEEDED,
+        IsolateRunner.mapVerdict(Map.of("status", "RE", "max-rss", "65536"), 65536));
+    Assertions.assertEquals(
+        Verdict.RUNTIME_ERROR, IsolateRunner.mapVerdict(Map.of("status", "RE"), 65536));
+    Assertions.assertEquals(
+        Verdict.INTERNAL_ERROR, IsolateRunner.mapVerdict(Map.of("status", "XX"), 65536));
   }
 
   /**

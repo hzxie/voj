@@ -87,28 +87,9 @@ public class IsolateRunner implements SandboxRunner {
   static final String BOX_STDERR_FILE = "stderr.txt";
 
   /**
-   * Runs a command inside an isolate sandbox, capturing standard output and standard error together
-   * (the semantics of a compilation).
-   *
-   * @param commandLine - the command line to execute (absolute paths)
-   * @param inputFilePath - the file to redirect to standard input, or {@code null} for none
-   * @param outputFilePath - the file to capture standard output/error into, or {@code null} for none
-   * @param timeLimitMs - the time limit in milliseconds (0 means no limit)
-   * @param memoryLimitKb - the memory limit in kilobytes (0 means no limit)
-   * @return the structured run result; never {@code null}
-   */
-  @Override
-  public RunResult run(
-      String commandLine,
-      String inputFilePath,
-      String outputFilePath,
-      int timeLimitMs,
-      int memoryLimitKb) {
-    return run(commandLine, inputFilePath, outputFilePath, timeLimitMs, memoryLimitKb, true);
-  }
-
-  /**
-   * Runs a command inside an isolate sandbox.
+   * Runs a command inside an isolate sandbox. Not synchronized: the box is used by one run at a
+   * time because judging is serialized (see {@code Dispatcher#createNewTask}), and every judger on
+   * a host has a box of its own (judger.isolate.boxId).
    *
    * @param commandLine - the command line to execute (absolute paths)
    * @param inputFilePath - the file to redirect to standard input, or {@code null} for none
@@ -120,7 +101,7 @@ public class IsolateRunner implements SandboxRunner {
    * @return the structured run result; never {@code null}
    */
   @Override
-  public synchronized RunResult run(
+  public RunResult run(
       String commandLine,
       String inputFilePath,
       String outputFilePath,
@@ -178,8 +159,9 @@ public class IsolateRunner implements SandboxRunner {
    * @throws Exception if the box cannot be initialized
    */
   private Path initBox() throws Exception {
-    // Start from an empty box even if a previous judger process died before cleaning up.
-    cleanupBox();
+    // --init re-initializes (empties) a box that a judger which died mid-run left behind, so no
+    // --cleanup is needed first; the box is cleaned up after every run instead (see run), which
+    // frees its files (up to --fsize per captured stream) and its cgroup right away.
     ProcessOutput init =
         execute(Arrays.asList(isolateExecutable, "--cg", "-b", String.valueOf(boxId), "--init"));
     if (init.exitCode != 0) {
@@ -235,7 +217,7 @@ public class IsolateRunner implements SandboxRunner {
     command.add("-M");
     command.add(metaFile.getAbsolutePath());
     // isolate counts threads too; compilers get a higher cap (see judger.compileProcessLimit).
-    command.add("--processes=" + (isCompilation ? compileProcessLimit : maxProcesses));
+    command.add("--processes=" + (isCompilation ? compileProcessLimit : processLimit));
     // isolate's syscall filter makes file locks fail (flock with ENOSYS, fcntl locks with EPERM),
     // because a lock on an inode visible in several boxes (e.g. under the read-only /usr) is a side
     // channel between them. The Go build cache cannot do without locks ("go: failed to trim cache:
@@ -475,8 +457,9 @@ public class IsolateRunner implements SandboxRunner {
    *
    * <p>isolate writes {@code key:value} lines. The fields used here are {@code status} (TO=time
    * limit, SG=killed by signal, RE=runtime error, XX=internal error; absent means a normal exit),
-   * {@code time} (CPU seconds), {@code cg-mem}/{@code max-rss} (peak memory in KB) and
-   * {@code exitcode}.
+   * {@code exitsig} (the signal), {@code cg-oom-killed} (killed by the out-of-memory killer of the
+   * box's cgroup), {@code time} (CPU seconds), {@code cg-mem}/{@code max-rss} (peak memory in KB)
+   * and {@code exitcode}.
    *
    * @param metaFile - the meta file written by isolate
    * @param memoryLimitKb - the memory limit (KB, 0 means no limit), used to disambiguate OOM kills
@@ -495,36 +478,58 @@ public class IsolateRunner implements SandboxRunner {
     int cpuTimeMs = (int) Math.round(parseDouble(meta.get("time")) * 1000);
     int peakMemoryKb = Math.max(parseInt(meta.get("cg-mem")), parseInt(meta.get("max-rss")));
     int exitCode = parseInt(meta.get("exitcode"));
-    Verdict verdict = mapVerdict(meta.get("status"), peakMemoryKb, memoryLimitKb);
-    return new RunResult(verdict, cpuTimeMs, peakMemoryKb, exitCode);
+    return new RunResult(mapVerdict(meta, memoryLimitKb), cpuTimeMs, peakMemoryKb, exitCode);
   }
 
   /**
-   * Maps an isolate {@code status} to a {@link Verdict}.
+   * Maps the fields of an isolate meta file to a {@link Verdict}.
    *
-   * @param status - the isolate status (may be {@code null} for a normal exit)
-   * @param peakMemoryKb - the peak memory used (KB)
+   * @param meta - the fields of the meta file
    * @param memoryLimitKb - the memory limit (KB, 0 means no limit)
    * @return the verdict
    */
-  private Verdict mapVerdict(String status, int peakMemoryKb, int memoryLimitKb) {
+  static Verdict mapVerdict(Map<String, String> meta, int memoryLimitKb) {
+    String status = meta.get("status");
     if (status == null || status.isEmpty()) {
       return Verdict.NORMAL;
     }
-    switch (status) {
-      case "TO":
-        return Verdict.TIME_LIMIT_EXCEEDED;
-      case "SG":
-      case "RE":
-        // A signal/runtime failure at or above the memory limit is reported as a memory-limit error.
-        if (memoryLimitKb > 0 && peakMemoryKb >= memoryLimitKb) {
-          return Verdict.MEMORY_LIMIT_EXCEEDED;
-        }
-        return Verdict.RUNTIME_ERROR;
-      case "XX":
-      default:
-        return Verdict.INTERNAL_ERROR;
+    if ("XX".equals(status)) {
+      return Verdict.INTERNAL_ERROR;
     }
+    // The box's cgroup ran out of memory and its OOM killer stepped in (status SG with SIGKILL, or
+    // TO when the program was thrashing): whatever the status says, the memory limit was exceeded.
+    if ("1".equals(trim(meta.get("cg-oom-killed")))) {
+      return Verdict.MEMORY_LIMIT_EXCEEDED;
+    }
+    if ("TO".equals(status)) {
+      return Verdict.TIME_LIMIT_EXCEEDED;
+    }
+    if (!"SG".equals(status) && !"RE".equals(status)) {
+      return Verdict.INTERNAL_ERROR;
+    }
+    // The kernel raises SIGXFSZ when a file outgrows --fsize (the output size limit).
+    if ("SG".equals(status) && parseInt(meta.get("exitsig")) == SIGXFSZ) {
+      return Verdict.OUTPUT_LIMIT_EXCEEDED;
+    }
+    // E.g. a program that died of a failed allocation at the memory limit.
+    int peakMemoryKb = Math.max(parseInt(meta.get("cg-mem")), parseInt(meta.get("max-rss")));
+    if (memoryLimitKb > 0 && peakMemoryKb >= memoryLimitKb) {
+      return Verdict.MEMORY_LIMIT_EXCEEDED;
+    }
+    return Verdict.RUNTIME_ERROR;
+  }
+
+  /** The signal raised when a file outgrows the file size limit (SIGXFSZ on Linux). */
+  private static final int SIGXFSZ = 25;
+
+  /**
+   * Trims a (possibly {@code null}) meta value.
+   *
+   * @param value - the value
+   * @return the trimmed value, or {@code null}
+   */
+  private static String trim(String value) {
+    return value == null ? null : value.trim();
   }
 
   /**
@@ -568,7 +573,7 @@ public class IsolateRunner implements SandboxRunner {
    * @param value - the value to parse
    * @return the parsed integer, or 0
    */
-  private int parseInt(String value) {
+  private static int parseInt(String value) {
     try {
       return value == null ? 0 : Integer.parseInt(value.trim());
     } catch (NumberFormatException ex) {
@@ -618,9 +623,12 @@ public class IsolateRunner implements SandboxRunner {
   @Value("${judger.isolate.boxId:0}")
   private int boxId;
 
-  /** The maximum number of processes/threads the sandboxed program may create. */
-  @Value("${judger.isolate.maxProcesses:64}")
-  private int maxProcesses;
+  /**
+   * The maximum number of processes and threads a run of the submission may have at once (isolate
+   * counts both).
+   */
+  @Value("${judger.processLimit:64}")
+  private int processLimit;
 
   /**
    * Extra directory rules (isolate {@code --dir} syntax, comma-separated) bound read-only into the
