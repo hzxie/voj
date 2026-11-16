@@ -121,16 +121,17 @@ public class DispatcherTest {
     verify(applicationDispatcher).onCompileFinished(any(), any());
     verify(applicationDispatcher).onOneTestPointFinished(argThat(s -> s.getSubmissionId() == 100L), eq(1), any());
     // The test data is read from the directory the checkpoint store synced it to.
-    String checkpointDirectory = "/tmp/voj-dispatcher-tests/1000/";
+    Path checkpointDirectory = Path.of("/tmp/voj-dispatcher-tests/1000");
     verify(programRunner)
         .getRuntimeResult(
             any(),
             anyString(),
             anyString(),
-            eq(checkpointDirectory + "input#1.txt"),
+            eq(checkpointDirectory.resolve("input#1.txt").toString()),
             anyString());
     verify(comparator)
-        .getComparisonResult(eq(checkpointDirectory + "output#1.txt"), anyString(), eq(true));
+        .getComparisonResult(
+            eq(checkpointDirectory.resolve("output#1.txt").toString()), anyString(), eq(true));
 
     @SuppressWarnings("unchecked")
     org.mockito.ArgumentCaptor<List<Map<String, Object>>> resultsCaptor =
@@ -431,7 +432,8 @@ public class DispatcherTest {
     verify(compiler, times(2)).getCompileResult(any(), workDirectories.capture(), anyString());
     String first = workDirectories.getAllValues().get(0);
     String second = workDirectories.getAllValues().get(1);
-    Assertions.assertTrue(first.startsWith("/tmp/voj-dispatcher-tests/voj-100-"), first);
+    Assertions.assertTrue(
+        first.startsWith(Path.of("/tmp/voj-dispatcher-tests", "voj-100-").toString()), first);
     Assertions.assertNotEquals(first, second);
   }
 

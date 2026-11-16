@@ -215,8 +215,11 @@ public class SandboxBehaviorTest {
   @Test
   public void testRunCanCreateThreads() throws Exception {
     Assertions.assertEquals("AC", judge(900012L, THREADS_CODE, 5000, 262144));
+    // printf writes "\r\n" on Windows.
     Assertions.assertEquals(
-        "8\n", Files.readString(Path.of(workBaseDirectory, "voj-sandbox-900012", "output.txt")));
+        "8\n",
+        Files.readString(Path.of(workBaseDirectory, "voj-sandbox-900012", "output.txt"))
+            .replace("\r\n", "\n"));
   }
 
   /**
@@ -1067,7 +1070,11 @@ public class SandboxBehaviorTest {
       }
       """;
 
-  /** A program that allocates (and would zero) 4 GB at once. */
+  /**
+   * A program that allocates (and would zero) 4 GB at once. The element it reads is chosen at run
+   * time: an element known to be zero lets an optimising compiler (GCC 16 at -O2) drop the
+   * allocation altogether.
+   */
   private static final String HUGE_ALLOCATION_CODE =
       """
       #include <cstdio>
@@ -1075,7 +1082,9 @@ public class SandboxBehaviorTest {
 
       int main() {
           std::vector<int> v(1000000000);
-          std::printf("%d\\n", v[12345]);
+          volatile int i = 12345;
+          v[i] = 1;
+          std::printf("%d\\n", v[i]);
           return 0;
       }
       """;
