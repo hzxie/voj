@@ -48,13 +48,11 @@ public class Compiler {
    *
    * @param submission - the submission object
    * @param workDirectory - the directory of the judging
-   * @param baseFileName - the compilation output file name
    * @return a Map<String, Object> object containing the compilation result
    */
-  public Map<String, Object> getCompileResult(
-      Submission submission, String workDirectory, String baseFileName) {
-    String commandLine = getCompileCommandLine(submission, workDirectory, baseFileName);
-    String compileLogPath = getCompileLogPath(workDirectory, baseFileName);
+  public Map<String, Object> getCompileResult(Submission submission, String workDirectory) {
+    String commandLine = getCompileCommandLine(submission, workDirectory);
+    String compileLogPath = workDirectory + "/" + COMPILE_LOG_FILE;
     int memoryLimit = getCompileMemoryLimit(submission.getLanguage());
 
     Map<String, Object> result =
@@ -99,33 +97,14 @@ public class Compiler {
    *
    * @param submission - the submission object
    * @param workDirectory - the directory of the judging
-   * @param baseFileName - the compilation output file name
    * @return the compile command
    */
-  String getCompileCommandLine(
-      Submission submission, String workDirectory, String baseFileName) {
-    String filePathWithoutExtension =
-        String.format(
-            "%s/%s", new Object[] {Preprocessor.getProgramDirectory(workDirectory), baseFileName});
-    String compileCommand =
-        submission
-            .getLanguage()
-            .getCompileCommand()
-            // Literally: a Windows path's backslashes are not escapes.
-            .replace("{filename}", filePathWithoutExtension);
-    return compileCommand;
-  }
-
-  /**
-   * Gets the file path of the compilation log output: in the directory of the judging, which the
-   * compiler may not write to.
-   *
-   * @param workDirectory - the directory of the judging
-   * @param baseFileName - the compilation output file name
-   * @return the file path of the compilation log output
-   */
-  private String getCompileLogPath(String workDirectory, String baseFileName) {
-    return String.format("%s/%s-compile.log", new Object[] {workDirectory, baseFileName});
+  String getCompileCommandLine(Submission submission, String workDirectory) {
+    Language language = submission.getLanguage();
+    // Literally: a Windows path's backslashes are not escapes.
+    return language
+        .getCompileCommand()
+        .replace("{filename}", Preprocessor.getFilename(workDirectory, language));
   }
 
   /**
@@ -212,6 +191,9 @@ public class Compiler {
    * indented by four spaces, and must fit a TEXT column (64 KB) even for a log of empty lines.
    */
   static final int MAX_COMPILE_LOG_BYTES = 8192;
+
+  /** The name of the compile log, in the directory of the judging. */
+  static final String COMPILE_LOG_FILE = "compile.log";
 
   /** The configured sandbox runner, used to execute the compile command. */
   @Autowired private SandboxRunner sandboxRunner;

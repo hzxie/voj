@@ -159,13 +159,13 @@ public class SandboxBehaviorTest {
     submission.setLanguage(cpp);
     submission.setCode(RUNTIME_ERROR_CODE);
     String workDirectory = workBaseDirectory + "/voj-sandbox-900008";
-    preprocessor.createTestCode(submission, workDirectory, "sandboxtest");
-    compiler.getCompileResult(submission, workDirectory, "sandboxtest");
+    preprocessor.createTestCode(submission, workDirectory);
+    compiler.getCompileResult(submission, workDirectory);
     Path inputFile = Files.write(Path.of(workDirectory, "input.txt"), new byte[0]);
 
     long startNanos = System.nanoTime();
     programRunner.getRuntimeResult(
-        submission, workDirectory, "sandboxtest", inputFile.toString(), workDirectory + "/out.txt");
+        submission, workDirectory, inputFile.toString(), workDirectory + "/out.txt");
     long elapsedMs = (System.nanoTime() - startNanos) / 1_000_000;
     Assertions.assertTrue(elapsedMs < 800, "A trivial run took " + elapsedMs + " ms.");
   }
@@ -383,12 +383,12 @@ public class SandboxBehaviorTest {
     submission.setLanguage(languageMapper.getLanguageUsingSlug("text/x-c++src"));
     submission.setCode(code);
     String workDirectory = workBaseDirectory + "/voj-sandbox-900043";
-    preprocessor.createTestCode(submission, workDirectory, "sandboxtest");
+    preprocessor.createTestCode(submission, workDirectory);
     Map<String, Object> compileResult =
-        compiler.getCompileResult(submission, workDirectory, "sandboxtest");
+        compiler.getCompileResult(submission, workDirectory);
     Assertions.assertEquals(true, compileResult.get("isSuccessful"), compileResult.toString());
     Path programDirectory = Path.of(Preprocessor.getProgramDirectory(workDirectory));
-    Path program = programDirectory.resolve("sandboxtest.exe");
+    Path program = programDirectory.resolve("Main.exe");
     byte[] binary = Files.readAllBytes(program);
     List<String> programFiles = listFiles(programDirectory);
     Path inputFile = Files.writeString(Path.of(workDirectory, "input.txt"), "");
@@ -411,11 +411,7 @@ public class SandboxBehaviorTest {
       Path outputFile = Path.of(workDirectory, "output#" + checkpoint + ".txt");
       Map<String, Object> result =
           programRunner.getRuntimeResult(
-              submission,
-              workDirectory,
-              "sandboxtest",
-              inputFile.toString(),
-              outputFile.toString());
+              submission, workDirectory, inputFile.toString(), outputFile.toString());
       Assertions.assertEquals("AC", result.get("runtimeResult"), "Checkpoint " + checkpoint);
       Assertions.assertEquals(expected, Files.readString(outputFile).replace("\r\n", "\n"));
       Assertions.assertArrayEquals(binary, Files.readAllBytes(program));
@@ -1027,6 +1023,7 @@ public class SandboxBehaviorTest {
             java.getLanguageName(),
             java.getCompileCommand(),
             "/usr/bin/env " + java.getRunCommand());
+    language.setSourceFilename(java.getSourceFilename());
     language.setTimeMultiplier(java.getTimeMultiplier());
     language.setMemoryMultiplier(java.getMemoryMultiplier());
     Map<String, Object> result = judge(900036L, language, JAVA_HOARD_CODE, 5000, 262144, "");
@@ -1108,7 +1105,7 @@ public class SandboxBehaviorTest {
     submission.setLanguage(languageMapper.getLanguageUsingSlug("text/x-c++src"));
     submission.setCode(RUNTIME_ERROR_CODE);
     String workDirectory = workBaseDirectory + "/voj-sandbox-" + id;
-    preprocessor.createTestCode(submission, workDirectory, "sandboxtest");
+    preprocessor.createTestCode(submission, workDirectory);
     return workDirectory;
   }
 
@@ -1189,11 +1186,9 @@ public class SandboxBehaviorTest {
     submission.setCode(code);
 
     String workDirectory = workBaseDirectory + "/voj-sandbox-" + id;
-    String baseFileName = "sandboxtest";
-    preprocessor.createTestCode(submission, workDirectory, baseFileName);
+    preprocessor.createTestCode(submission, workDirectory);
 
-    Map<String, Object> compileResult =
-        compiler.getCompileResult(submission, workDirectory, baseFileName);
+    Map<String, Object> compileResult = compiler.getCompileResult(submission, workDirectory);
     Assertions.assertEquals(
         true, compileResult.get("isSuccessful"),
         "The test program must compile: " + compileResult.get("log"));
@@ -1203,7 +1198,7 @@ public class SandboxBehaviorTest {
     String outputFile = workDirectory + "/output.txt";
 
     return programRunner.getRuntimeResult(
-        submission, workDirectory, baseFileName, inputFile.toString(), outputFile);
+        submission, workDirectory, inputFile.toString(), outputFile);
   }
 
   /**

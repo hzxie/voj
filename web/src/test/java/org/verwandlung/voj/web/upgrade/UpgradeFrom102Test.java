@@ -377,6 +377,43 @@ public class UpgradeFrom102Test {
   }
 
   /**
+   * Test case: runs the upgrade on a database with Java's 1.0.2 commands, then once more after an
+   * administrator changed them. Expected: the default commands compile the class into a directory
+   * of its own and run Main from there, and the second run keeps the administrator's commands.
+   */
+  @Test
+  public void testRunsJavasMainClass() throws SQLException {
+    setJavaCommands("javac {filename}.java", "java -cp {filename}");
+    runUpgrade();
+    Assertions.assertEquals(
+        List.of("javac -d {filename} {filename}.java", "java -cp {filename} Main"),
+        getJavaCommands());
+
+    setJavaCommands("javac {filename}.java", "java -Xss64m -cp {filename}");
+    runUpgrade();
+    Assertions.assertEquals(
+        List.of("javac {filename}.java", "java -Xss64m -cp {filename}"), getJavaCommands());
+    setJavaCommands("javac -d {filename} {filename}.java", "java -cp {filename} Main");
+  }
+
+  private void setJavaCommands(String compileCommand, String runCommand) {
+    jdbcTemplate.update(
+        "UPDATE voj_languages SET language_compile_command = ?, language_run_command = ?"
+            + " WHERE language_slug = ?",
+        compileCommand,
+        runCommand,
+        "text/x-java");
+  }
+
+  private List<String> getJavaCommands() {
+    return jdbcTemplate.queryForObject(
+        "SELECT language_compile_command, language_run_command FROM voj_languages"
+            + " WHERE language_slug = ?",
+        (resultSet, row) -> List.of(resultSet.getString(1), resultSet.getString(2)),
+        "text/x-java");
+  }
+
+  /**
    * Test case: runs the upgrade on a 1.0.2 database, then once more. Test data: a pending
    * submission submitted long ago, and none of the columns of the judging queue. Expected: they are
    * added as schema.sql creates them (names, positions, types, defaults), with the index of the

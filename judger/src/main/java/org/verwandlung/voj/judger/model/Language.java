@@ -153,6 +153,24 @@ public class Language implements Serializable {
   }
 
   /**
+   * Gets the name of the file the source of a submission is saved as (e.g. {@code Main.java}).
+   *
+   * @return the name of the source file
+   */
+  public String getSourceFilename() {
+    return sourceFilename;
+  }
+
+  /**
+   * Sets the name of the file the source of a submission is saved as.
+   *
+   * @param sourceFilename - the name of the source file
+   */
+  public void setSourceFilename(String sourceFilename) {
+    this.sourceFilename = sourceFilename;
+  }
+
+  /**
    * Gets the factor applied to a problem's time limit for this language.
    *
    * @return the time-limit multiplier of the programming language
@@ -212,6 +230,9 @@ public class Language implements Serializable {
 
   /** The run command of the programming language. */
   private String runCommand;
+
+  /** The name of the file the source of a submission is saved as. */
+  private String sourceFilename;
 
   /** The factor applied to a problem's time limit for this language. */
   private double timeMultiplier;

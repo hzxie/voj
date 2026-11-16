@@ -44,6 +44,7 @@ public interface LanguageMapper {
     @Result(property = "languageName", column = "language_name"),
     @Result(property = "compileCommand", column = "language_compile_command"),
     @Result(property = "runCommand", column = "language_run_command"),
+    @Result(property = "sourceFilename", column = "language_source_filename"),
     @Result(property = "timeMultiplier", column = "language_time_multiplier"),
     @Result(property = "memoryMultiplier", column = "language_memory_multiplier"),
   })
@@ -62,6 +63,7 @@ public interface LanguageMapper {
     @Result(property = "languageName", column = "language_name"),
     @Result(property = "compileCommand", column = "language_compile_command"),
     @Result(property = "runCommand", column = "language_run_command"),
+    @Result(property = "sourceFilename", column = "language_source_filename"),
     @Result(property = "timeMultiplier", column = "language_time_multiplier"),
     @Result(property = "memoryMultiplier", column = "language_memory_multiplier"),
   })
@@ -79,6 +81,7 @@ public interface LanguageMapper {
     @Result(property = "languageName", column = "language_name"),
     @Result(property = "compileCommand", column = "language_compile_command"),
     @Result(property = "runCommand", column = "language_run_command"),
+    @Result(property = "sourceFilename", column = "language_source_filename"),
     @Result(property = "timeMultiplier", column = "language_time_multiplier"),
     @Result(property = "memoryMultiplier", column = "language_memory_multiplier"),
   })

@@ -36,8 +36,6 @@ import java.nio.file.attribute.UserPrincipal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -81,11 +79,9 @@ public class Preprocessor {
    *
    * @param submission - the submission object
    * @param workDirectory - the directory of the judging
-   * @param baseFileName - the random file name (without suffix)
-   * @throws Exception
+   * @throws Exception if the code cannot be written
    */
-  public void createTestCode(Submission submission, String workDirectory, String baseFileName)
-      throws Exception {
+  public void createTestCode(Submission submission, String workDirectory) throws Exception {
     createJudgingDirectory(Paths.get(workDirectory));
     Path workDirPath = Paths.get(getProgramDirectory(workDirectory));
     try {
@@ -101,8 +97,7 @@ public class Preprocessor {
     }
 
     Language language = submission.getLanguage();
-    String code = replaceClassName(language, submission.getCode(), baseFileName);
-    Path codeFilePath = workDirPath.resolve(baseFileName + "." + getCodeFileSuffix(language));
+    Path codeFilePath = workDirPath.resolve(getSourceFilename(language));
 
     // CREATE_NEW + NOFOLLOW_LINKS: the directory was just created empty, so anything already at
     // this path (e.g. a planted symbolic link) is an attack and must not be written through.
@@ -112,7 +107,7 @@ public class Preprocessor {
             StandardOpenOption.CREATE_NEW,
             StandardOpenOption.WRITE,
             LinkOption.NOFOLLOW_LINKS)) {
-      outputStream.write(code.getBytes(StandardCharsets.UTF_8));
+      outputStream.write(submission.getCode().getBytes(StandardCharsets.UTF_8));
     }
     List<Path> sandboxWritablePaths = new ArrayList<>();
     sandboxWritablePaths.add(workDirPath);
@@ -318,47 +313,42 @@ public class Preprocessor {
   }
 
   /**
-   * Gets the suffix of the code file.
+   * Gets the name the source of a submission is saved as, the language's (e.g. {@code Main.java},
+   * which names the class of a Java program): a plain file name, which only the administrator sets.
    *
    * @param language - the programming language object
-   * @return the suffix of the code file
+   * @return the name of the source file
+   * @throws IOException if the language has none, or one that is not a plain file name
    */
-  private String getCodeFileSuffix(Language language) {
-    String compileCommand = language.getCompileCommand();
-
-    Pattern pattern = Pattern.compile("\\{filename\\}\\.((?!exe| ).)+");
-    Matcher matcher = pattern.matcher(compileCommand);
-
-    if (matcher.find()) {
-      String sourceFileName = matcher.group();
-      return sourceFileName.replaceAll("\\{filename\\}\\.", "");
+  private static String getSourceFilename(Language language) throws IOException {
+    String filename = language.getSourceFilename();
+    if (filename == null
+        || filename.isBlank()
+        || filename.equals(".")
+        || filename.equals("..")
+        || filename.contains("/")
+        || filename.contains("\\")) {
+      throw new IOException(
+          "The language " + language.getLanguageName() + " has no valid source file name");
     }
-    return "";
+    return filename;
   }
 
   /**
-   * Replaces the class name in certain languages (such as Java) to ensure compilation succeeds.
+   * Gets what {@code {filename}} stands for in a language's commands: the path of the source file
+   * in the program directory of a judging, without its extension (e.g. {@code .../program/Main}).
    *
-   * <p>Only the declaration {@code class Main} is renamed: the word boundaries keep e.g. {@code
-   * class MainHelper} or {@code subclass Main} intact, and {@code \s+} accepts any whitespace
-   * (tabs, CRLF line breaks) between the keyword and the name. This is a plain text substitution,
-   * so a {@code "class Main"} inside a string literal or comment is rewritten as well.
-   *
+   * @param workDirectory - the directory of the judging
    * @param language - the programming language object
-   * @param code - the code in which to perform the replacement
-   * @param newClassName - the new class name
+   * @return the path of the source file without its extension
    */
-  private String replaceClassName(Language language, String code, String newClassName) {
-    if (!language.getLanguageName().equalsIgnoreCase("Java")) {
-      return code;
-    }
-    return JAVA_MAIN_CLASS_DECLARATION
-        .matcher(code)
-        .replaceAll(Matcher.quoteReplacement("class " + newClassName));
+  static String getFilename(String workDirectory, Language language) {
+    String sourceFile = language.getSourceFilename();
+    int extension = sourceFile.lastIndexOf('.');
+    return getProgramDirectory(workDirectory)
+        + "/"
+        + (extension > 0 ? sourceFile.substring(0, extension) : sourceFile);
   }
-
-  /** Matches the declaration of the Java class {@code Main}, which is renamed before compiling. */
-  private static final Pattern JAVA_MAIN_CLASS_DECLARATION = Pattern.compile("\\bclass\\s+Main\\b");
 
   /**
    * Gets the sandbox account (Windows).

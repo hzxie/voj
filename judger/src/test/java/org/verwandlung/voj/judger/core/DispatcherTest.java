@@ -104,7 +104,7 @@ public class DispatcherTest {
     Assertions.assertFalse(dispatcher.judgeNextSubmission(LANGUAGES));
     verify(applicationDispatcher).claimSubmission(LANGUAGES, LEASE_SECONDS);
     verify(checkpointStore, never()).sync(any());
-    verify(compiler, never()).getCompileResult(any(), anyString(), anyString());
+    verify(compiler, never()).getCompileResult(any(), anyString());
   }
 
   /**
@@ -114,14 +114,14 @@ public class DispatcherTest {
    */
   @Test
   public void testJudgeNextSubmissionAccepted() throws Exception {
-    when(compiler.getCompileResult(any(), anyString(), anyString()))
+    when(compiler.getCompileResult(any(), anyString()))
         .thenReturn(compileResult(true));
 
     List<Checkpoint> checkpoints = new ArrayList<>();
     checkpoints.add(new Checkpoint(1000L, 1, true, 100, "input", "output"));
     when(checkpointStore.getCheckpoints(1000L)).thenReturn(checkpoints);
 
-    when(programRunner.getRuntimeResult(any(), anyString(), anyString(), anyString(), anyString()))
+    when(programRunner.getRuntimeResult(any(), anyString(), anyString(), anyString()))
         .thenReturn(runtimeResult("AC"));
     when(comparator.getComparisonResult(anyString(), anyString(), anyBoolean())).thenReturn("AC");
 
@@ -134,7 +134,6 @@ public class DispatcherTest {
     verify(programRunner)
         .getRuntimeResult(
             any(),
-            anyString(),
             anyString(),
             eq(checkpointDirectory.resolve("input#1.txt").toString()),
             anyString());
@@ -157,14 +156,14 @@ public class DispatcherTest {
    */
   @Test
   public void testJudgeNextSubmissionWrongAnswer() throws Exception {
-    when(compiler.getCompileResult(any(), anyString(), anyString()))
+    when(compiler.getCompileResult(any(), anyString()))
         .thenReturn(compileResult(true));
 
     List<Checkpoint> checkpoints = new ArrayList<>();
     checkpoints.add(new Checkpoint(1000L, 1, true, 100, "input", "output"));
     when(checkpointStore.getCheckpoints(1000L)).thenReturn(checkpoints);
 
-    when(programRunner.getRuntimeResult(any(), anyString(), anyString(), anyString(), anyString()))
+    when(programRunner.getRuntimeResult(any(), anyString(), anyString(), anyString()))
         .thenReturn(runtimeResult("AC"));
     when(comparator.getComparisonResult(anyString(), anyString(), anyBoolean())).thenReturn("WA");
 
@@ -185,7 +184,7 @@ public class DispatcherTest {
    */
   @Test
   public void testJudgeNextSubmissionHonoursExactlyMatch() throws Exception {
-    when(compiler.getCompileResult(any(), anyString(), anyString()))
+    when(compiler.getCompileResult(any(), anyString()))
         .thenReturn(compileResult(true));
 
     List<Checkpoint> checkpoints = new ArrayList<>();
@@ -193,7 +192,7 @@ public class DispatcherTest {
     checkpoints.add(new Checkpoint(1000L, 2, false, 50, "input", "output"));
     when(checkpointStore.getCheckpoints(1000L)).thenReturn(checkpoints);
 
-    when(programRunner.getRuntimeResult(any(), anyString(), anyString(), anyString(), anyString()))
+    when(programRunner.getRuntimeResult(any(), anyString(), anyString(), anyString()))
         .thenAnswer(invocation -> runtimeResult("AC"));
     when(comparator.getComparisonResult(anyString(), anyString(), eq(true))).thenReturn("PE");
     when(comparator.getComparisonResult(anyString(), anyString(), eq(false))).thenReturn("AC");
@@ -215,14 +214,14 @@ public class DispatcherTest {
   @Test
   public void testJudgeNextSubmissionCompileFailed() throws Exception {
     when(checkpointStore.getCheckpoints(1000L)).thenReturn(oneCheckpoint());
-    when(compiler.getCompileResult(any(), anyString(), anyString()))
+    when(compiler.getCompileResult(any(), anyString()))
         .thenReturn(compileResult(false));
 
     dispatcher.judgeNextSubmission(LANGUAGES);
 
     verify(applicationDispatcher).onCompileFinished(any(), any());
     verify(programRunner, never())
-        .getRuntimeResult(any(), anyString(), anyString(), anyString(), anyString());
+        .getRuntimeResult(any(), anyString(), anyString(), anyString());
     verify(applicationDispatcher, never()).onAllTestPointsFinished(any(), any());
     verify(applicationDispatcher, never()).onErrorOccurred(any(), anyString());
   }
@@ -238,7 +237,7 @@ public class DispatcherTest {
     dispatcher.judgeNextSubmission(LANGUAGES);
 
     verify(applicationDispatcher).onErrorOccurred(any(), contains("no test data"));
-    verify(compiler, never()).getCompileResult(any(), anyString(), anyString());
+    verify(compiler, never()).getCompileResult(any(), anyString());
     verify(applicationDispatcher, never()).onAllTestPointsFinished(any(), any());
   }
 
@@ -257,7 +256,7 @@ public class DispatcherTest {
 
     verify(applicationDispatcher).onErrorOccurred(any(), eq(Dispatcher.NO_TEST_DATA_REASON));
     verify(applicationDispatcher, never()).requeueSubmission(any(), anyString());
-    verify(compiler, never()).getCompileResult(any(), anyString(), anyString());
+    verify(compiler, never()).getCompileResult(any(), anyString());
     Assertions.assertEquals("0", readFailuresInARow());
   }
 
@@ -287,7 +286,7 @@ public class DispatcherTest {
         .requeueSubmission(
             argThat(s -> s.getSubmissionId() == 100L), contains("could not download"));
     verify(applicationDispatcher, never()).onErrorOccurred(any(), anyString());
-    verify(compiler, never()).getCompileResult(any(), anyString(), anyString());
+    verify(compiler, never()).getCompileResult(any(), anyString());
     Assertions.assertEquals(
         String.valueOf(Dispatcher.MAX_FAILURES_IN_A_ROW), readFailuresInARow());
   }
@@ -311,8 +310,8 @@ public class DispatcherTest {
         .requeueSubmission(argThat(s -> s.getClaimToken() == CLAIM_TOKEN), anyString());
     verify(applicationDispatcher, never()).releaseSubmission(any());
     verify(applicationDispatcher, never()).onErrorOccurred(any(), anyString());
-    verify(preprocessor, never()).createTestCode(any(), anyString(), anyString());
-    verify(compiler, never()).getCompileResult(any(), anyString(), anyString());
+    verify(preprocessor, never()).createTestCode(any(), anyString());
+    verify(compiler, never()).getCompileResult(any(), anyString());
     int renewals = numberOfRenewals();
     Thread.sleep(LEASE_TIMEOUT);
     Assertions.assertEquals(renewals, numberOfRenewals());
@@ -332,7 +331,7 @@ public class DispatcherTest {
             buildSubmission(MAX_FAILED_JUDGINGS, ApplicationDispatcher.INTERRUPTED_REASON),
             buildSubmission(MAX_FAILED_JUDGINGS - 1, "The sandbox failed."));
     when(checkpointStore.getCheckpoints(1000L)).thenReturn(oneCheckpoint());
-    when(compiler.getCompileResult(any(), anyString(), anyString()))
+    when(compiler.getCompileResult(any(), anyString()))
         .thenReturn(compileResult(false));
     ReflectionTestUtils.setField(dispatcher, "localFailures", 1);
 
@@ -366,9 +365,9 @@ public class DispatcherTest {
     when(checkpointStore.getCheckpoints(1000L)).thenReturn(oneCheckpoint());
     Map<String, Object> result = compileResult(false);
     result.put("verdict", Verdict.INTERNAL_ERROR);
-    when(compiler.getCompileResult(any(), anyString(), anyString()))
+    when(compiler.getCompileResult(any(), anyString()))
         .thenReturn(result, compileResult(true));
-    when(programRunner.getRuntimeResult(any(), anyString(), anyString(), anyString(), anyString()))
+    when(programRunner.getRuntimeResult(any(), anyString(), anyString(), anyString()))
         .thenReturn(runtimeResult("SE"));
 
     dispatcher.judgeNextSubmission(LANGUAGES);
@@ -390,9 +389,9 @@ public class DispatcherTest {
   @Test
   public void testJudgeNextSubmissionUnreadableAnswerIsAFailedJudging() throws Exception {
     when(checkpointStore.getCheckpoints(1000L)).thenReturn(oneCheckpoint());
-    when(compiler.getCompileResult(any(), anyString(), anyString()))
+    when(compiler.getCompileResult(any(), anyString()))
         .thenReturn(compileResult(true));
-    when(programRunner.getRuntimeResult(any(), anyString(), anyString(), anyString(), anyString()))
+    when(programRunner.getRuntimeResult(any(), anyString(), anyString(), anyString()))
         .thenReturn(runtimeResult("AC"));
     when(comparator.getComparisonResult(anyString(), anyString(), anyBoolean()))
         .thenThrow(new java.io.IOException("No such file"));
@@ -417,7 +416,7 @@ public class DispatcherTest {
     when(checkpointStore.getCheckpoints(1000L)).thenReturn(oneCheckpoint());
     Map<String, Object> failure = compileResult(false);
     failure.put("verdict", Verdict.INTERNAL_ERROR);
-    when(compiler.getCompileResult(any(), anyString(), anyString()))
+    when(compiler.getCompileResult(any(), anyString()))
         .thenReturn(failure, failure, failure, failure, compileResult(false));
 
     Assertions.assertTrue(dispatcher.isReady());
@@ -454,7 +453,7 @@ public class DispatcherTest {
         .thenReturn(submission);
     when(checkpointStore.getCheckpoints(1000L)).thenReturn(oneCheckpoint());
     AtomicBoolean wasReady = new AtomicBoolean(true);
-    when(compiler.getCompileResult(any(), anyString(), anyString()))
+    when(compiler.getCompileResult(any(), anyString()))
         .thenAnswer(
             invocation -> {
               Thread.sleep(3000 + LEASE_TIMEOUT);
@@ -488,9 +487,9 @@ public class DispatcherTest {
               return null;
             })
         .when(preprocessor)
-        .createTestCode(any(), anyString(), anyString());
+        .createTestCode(any(), anyString());
     when(checkpointStore.getCheckpoints(1000L)).thenReturn(oneCheckpoint());
-    when(compiler.getCompileResult(any(), anyString(), anyString()))
+    when(compiler.getCompileResult(any(), anyString()))
         .thenThrow(new IllegalStateException("compiler crashed"));
 
     dispatcher.judgeNextSubmission(LANGUAGES);
@@ -510,7 +509,7 @@ public class DispatcherTest {
   @Test
   public void testEachJudgingHasItsOwnWorkDirectory() throws Exception {
     when(checkpointStore.getCheckpoints(1000L)).thenReturn(oneCheckpoint());
-    when(compiler.getCompileResult(any(), anyString(), anyString()))
+    when(compiler.getCompileResult(any(), anyString()))
         .thenReturn(compileResult(false));
 
     dispatcher.judgeNextSubmission(LANGUAGES);
@@ -518,7 +517,7 @@ public class DispatcherTest {
 
     org.mockito.ArgumentCaptor<String> workDirectories =
         org.mockito.ArgumentCaptor.forClass(String.class);
-    verify(compiler, times(2)).getCompileResult(any(), workDirectories.capture(), anyString());
+    verify(compiler, times(2)).getCompileResult(any(), workDirectories.capture());
     String first = workDirectories.getAllValues().get(0);
     String second = workDirectories.getAllValues().get(1);
     Assertions.assertTrue(
@@ -535,7 +534,7 @@ public class DispatcherTest {
   @Test
   public void testAVerdictThatCannotBeRecordedIsAFailedJudging() throws Exception {
     when(checkpointStore.getCheckpoints(1000L)).thenReturn(oneCheckpoint());
-    when(compiler.getCompileResult(any(), anyString(), anyString()))
+    when(compiler.getCompileResult(any(), anyString()))
         .thenReturn(compileResult(false));
     org.mockito.Mockito.doThrow(
             new org.springframework.dao.DataAccessResourceFailureException("database down"),
@@ -563,7 +562,7 @@ public class DispatcherTest {
   @Test
   public void testJudgeNextSubmissionJudgesWithTheClaimToken() throws Exception {
     when(checkpointStore.getCheckpoints(1000L)).thenReturn(oneCheckpoint());
-    when(compiler.getCompileResult(any(), anyString(), anyString()))
+    when(compiler.getCompileResult(any(), anyString()))
         .thenReturn(compileResult(false));
 
     dispatcher.judgeNextSubmission(LANGUAGES);
@@ -582,7 +581,7 @@ public class DispatcherTest {
   @Test
   public void testJudgeNextSubmissionRenewsTheLeaseWhileAStepRuns() throws Exception {
     when(checkpointStore.getCheckpoints(1000L)).thenReturn(oneCheckpoint());
-    when(compiler.getCompileResult(any(), anyString(), anyString()))
+    when(compiler.getCompileResult(any(), anyString()))
         .thenAnswer(
             invocation -> {
               Thread.sleep(LEASE_TIMEOUT * 4);
@@ -611,13 +610,13 @@ public class DispatcherTest {
     List<Checkpoint> checkpoints = new ArrayList<>(oneCheckpoint());
     checkpoints.add(new Checkpoint(1000L, 2, true, 100, "input", "output"));
     when(checkpointStore.getCheckpoints(1000L)).thenReturn(checkpoints);
-    when(compiler.getCompileResult(any(), anyString(), anyString()))
+    when(compiler.getCompileResult(any(), anyString()))
         .thenReturn(compileResult(true));
     // Current until the first checkpoint runs, superseded while it runs.
     AtomicBoolean isRejudged = new AtomicBoolean();
     when(applicationDispatcher.renewLease(any(), anyLong()))
         .thenAnswer(invocation -> !isRejudged.get());
-    when(programRunner.getRuntimeResult(any(), anyString(), anyString(), anyString(), anyString()))
+    when(programRunner.getRuntimeResult(any(), anyString(), anyString(), anyString()))
         .thenAnswer(
             invocation -> {
               isRejudged.set(true);
@@ -631,13 +630,13 @@ public class DispatcherTest {
               return null;
             })
         .when(preprocessor)
-        .createTestCode(any(), anyString(), anyString());
+        .createTestCode(any(), anyString());
 
     dispatcher.judgeNextSubmission(LANGUAGES);
 
     verify(applicationDispatcher).onCompileFinished(any(), any());
     verify(programRunner, times(1))
-        .getRuntimeResult(any(), anyString(), anyString(), anyString(), anyString());
+        .getRuntimeResult(any(), anyString(), anyString(), anyString());
     verify(applicationDispatcher, never()).onOneTestPointFinished(any(), anyInt(), any());
     verify(applicationDispatcher, never()).onAllTestPointsFinished(any(), any());
     verify(applicationDispatcher, never()).onErrorOccurred(any(), anyString());
@@ -663,7 +662,7 @@ public class DispatcherTest {
 
     dispatcher.judgeNextSubmission(LANGUAGES);
 
-    verify(compiler, never()).getCompileResult(any(), anyString(), anyString());
+    verify(compiler, never()).getCompileResult(any(), anyString());
     verify(applicationDispatcher, never()).onCompileFinished(any(), any());
     verify(applicationDispatcher, never()).onErrorOccurred(any(), anyString());
   }
@@ -691,7 +690,7 @@ public class DispatcherTest {
   @Test
   public void testJudgeSubmissionsLooksAgainUntilThereIsASubmission() throws Exception {
     when(checkpointStore.getCheckpoints(1000L)).thenReturn(oneCheckpoint());
-    when(compiler.getCompileResult(any(), anyString(), anyString()))
+    when(compiler.getCompileResult(any(), anyString()))
         .thenReturn(compileResult(false));
     when(applicationDispatcher.claimSubmission(anyList(), anyLong()))
         .thenReturn(null)
@@ -724,7 +723,7 @@ public class DispatcherTest {
   @Test
   public void testJudgeSubmissionsExitsOnAnError() throws Exception {
     when(checkpointStore.getCheckpoints(1000L)).thenReturn(oneCheckpoint());
-    when(compiler.getCompileResult(any(), anyString(), anyString()))
+    when(compiler.getCompileResult(any(), anyString()))
         .thenThrow(new OutOfMemoryError("Java heap space"));
 
     dispatcher.judgeSubmissions(LANGUAGES);
@@ -751,7 +750,7 @@ public class DispatcherTest {
     when(checkpointStore.getCheckpoints(1000L)).thenReturn(oneCheckpoint());
     when(applicationDispatcher.renewLease(any(), anyLong()))
         .thenThrow(new OutOfMemoryError("Java heap space"));
-    when(compiler.getCompileResult(any(), anyString(), anyString()))
+    when(compiler.getCompileResult(any(), anyString()))
         .thenAnswer(
             invocation -> {
               Thread.sleep(LEASE_TIMEOUT);
@@ -784,7 +783,7 @@ public class DispatcherTest {
     when(checkpointStore.getCheckpoints(1000L)).thenReturn(oneCheckpoint());
     when(applicationDispatcher.releaseSubmission(any())).thenReturn(true);
     List<String> failuresWhileJudging = new ArrayList<>();
-    when(compiler.getCompileResult(any(), anyString(), anyString()))
+    when(compiler.getCompileResult(any(), anyString()))
         .thenAnswer(
             invocation -> {
               failuresWhileJudging.add(readFailuresInARow());
@@ -814,7 +813,7 @@ public class DispatcherTest {
   public void testAJudgingCountsAsFailedUntilItIsOver() throws Exception {
     when(checkpointStore.getCheckpoints(1000L)).thenReturn(oneCheckpoint());
     List<String> failuresWhileJudging = new ArrayList<>();
-    when(compiler.getCompileResult(any(), anyString(), anyString()))
+    when(compiler.getCompileResult(any(), anyString()))
         .thenAnswer(
             invocation -> {
               failuresWhileJudging.add(readFailuresInARow());

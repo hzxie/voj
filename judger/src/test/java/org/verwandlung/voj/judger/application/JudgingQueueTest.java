@@ -152,7 +152,7 @@ public class JudgingQueueTest {
   public void testLeaseKeepsALongJudgingAlive() throws Exception {
     long submissionId = insertPendingSubmission(FIRST_SUBMISSION_ID);
     AtomicReference<Submission> claimedByAnotherJudger = new AtomicReference<>();
-    when(compiler.getCompileResult(any(), anyString(), anyString()))
+    when(compiler.getCompileResult(any(), anyString()))
         .thenAnswer(
             invocation -> {
               Thread.sleep(LEASE_TIMEOUT * 3 / 2);
@@ -187,7 +187,7 @@ public class JudgingQueueTest {
   @Test
   public void testSupersededJudgingStopsSilently() throws Exception {
     long submissionId = insertPendingSubmission(FIRST_SUBMISSION_ID);
-    when(compiler.getCompileResult(any(), anyString(), anyString()))
+    when(compiler.getCompileResult(any(), anyString()))
         .thenAnswer(
             invocation -> {
               // A rejudge, as the web application does it (resetSubmissionToPending).
@@ -205,7 +205,7 @@ public class JudgingQueueTest {
     Assertions.assertTrue(dispatcher.judgeNextSubmission(CPP));
 
     verify(programRunner, never())
-        .getRuntimeResult(any(), anyString(), anyString(), anyString(), anyString());
+        .getRuntimeResult(any(), anyString(), anyString(), anyString());
     verify(messageSender, never()).sendMessage(any());
     Map<String, Object> row =
         jdbcTemplate.queryForMap(
@@ -235,7 +235,7 @@ public class JudgingQueueTest {
 
     Assertions.assertTrue(dispatcher.judgeNextSubmission(CPP));
 
-    verify(compiler, never()).getCompileResult(any(), anyString(), anyString());
+    verify(compiler, never()).getCompileResult(any(), anyString());
     Map<String, Object> row = getRow(submissionId);
     Assertions.assertEquals("SE", row.get("submission_judge_result"));
     Assertions.assertEquals(
@@ -262,7 +262,7 @@ public class JudgingQueueTest {
     long other = insertPendingSubmission(FIRST_SUBMISSION_ID + 1, 60);
     Map<String, Object> sandboxFailure = compileResult(false);
     sandboxFailure.put("verdict", org.verwandlung.voj.judger.core.Verdict.INTERNAL_ERROR);
-    when(compiler.getCompileResult(any(), anyString(), anyString()))
+    when(compiler.getCompileResult(any(), anyString()))
         .thenAnswer(
             invocation ->
                 invocation.<Submission>getArgument(0).getSubmissionId() == failing
@@ -381,7 +381,7 @@ public class JudgingQueueTest {
   @Test
   public void testAShutdownReleasesTheSubmissionAtItsPlace() throws Exception {
     long submissionId = insertPendingSubmission(FIRST_SUBMISSION_ID, 3600);
-    when(compiler.getCompileResult(any(), anyString(), anyString()))
+    when(compiler.getCompileResult(any(), anyString()))
         .thenAnswer(
             invocation -> {
               dispatcher.destroy();

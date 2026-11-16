@@ -40,7 +40,7 @@ import org.verwandlung.voj.judger.model.Submission;
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class PreprocessorTest {
   /**
-   * Test case: tests the createTestCode(Submission, String, String) method. Test data: an existing
+   * Test case: tests the createTestCode(Submission, String) method. Test data: an existing
    * submission (Submission#1000). Expected result: the source code file is created at the specified
    * location.
    *
@@ -50,17 +50,16 @@ public class PreprocessorTest {
   public void testCreateTestCodeCpp() throws Exception {
     Submission submission = submissionMapper.getSubmission(1000);
     String workDirectory = "/tmp/voj-1000/";
-    String baseFileName = "random-name";
 
-    preprocessor.createTestCode(submission, workDirectory, baseFileName);
-    FileInputStream inputStream = new FileInputStream("/tmp/voj-1000/program/random-name.cpp");
+    preprocessor.createTestCode(submission, workDirectory);
+    FileInputStream inputStream = new FileInputStream("/tmp/voj-1000/program/Main.cpp");
     String code = IOUtils.toString(inputStream);
     inputStream.close();
     Assertions.assertEquals(submission.getCode(), code);
   }
 
   /**
-   * Test case: tests the createTestCode(Submission, String, String) method. Test data: an existing
+   * Test case: tests the createTestCode(Submission, String) method. Test data: an existing
    * submission (Submission#1001). Expected result: the source code file is created at the specified
    * location.
    *
@@ -70,11 +69,10 @@ public class PreprocessorTest {
   public void testCreateTestCodeJava() throws Exception {
     Submission submission = submissionMapper.getSubmission(1001);
     String workDirectory = "/tmp/voj-1001/";
-    String baseFileName = "RandomName";
 
-    preprocessor.createTestCode(submission, workDirectory, baseFileName);
-    FileInputStream inputStream = new FileInputStream("/tmp/voj-1001/program/RandomName.java");
-    String code = IOUtils.toString(inputStream).replace("RandomName", "Main");
+    preprocessor.createTestCode(submission, workDirectory);
+    FileInputStream inputStream = new FileInputStream("/tmp/voj-1001/program/Main.java");
+    String code = IOUtils.toString(inputStream);
     inputStream.close();
     Assertions.assertEquals(submission.getCode(), code);
   }

@@ -33,8 +33,8 @@ public class CommandLineTest {
 
   /**
    * Test case: tests Compiler.getCompileCommandLine(). Test data: a Windows work directory.
-   * Expected: the path of the program directory in it is inserted literally, its backslashes
-   * kept.
+   * Expected: {filename} is the path of the language's source file in the program directory,
+   * without its extension, inserted literally, its backslashes kept.
    */
   @Test
   public void testCompileCommandKeepsBackslashes() {
@@ -46,7 +46,7 @@ public class CommandLineTest {
             + "/program/Main.exe "
             + WINDOWS_WORK_DIRECTORY
             + "/program/Main.cpp",
-        new Compiler().getCompileCommandLine(submission, WINDOWS_WORK_DIRECTORY, "Main"));
+        new Compiler().getCompileCommandLine(submission, WINDOWS_WORK_DIRECTORY));
   }
 
   /**
@@ -59,15 +59,31 @@ public class CommandLineTest {
 
     Assertions.assertEquals(
         WINDOWS_WORK_DIRECTORY + "/program/Main.exe",
-        new ProgramRunner().getCommandLine(submission, WINDOWS_WORK_DIRECTORY, "Main"));
+        new ProgramRunner().getCommandLine(submission, WINDOWS_WORK_DIRECTORY));
     Assertions.assertEquals(
-        "/srv/$1/program/Main.exe", new ProgramRunner().getCommandLine(submission, "/srv/$1", "Main"));
+        "/srv/$1/program/Main.exe", new ProgramRunner().getCommandLine(submission, "/srv/$1"));
+  }
+
+  /**
+   * Test case: tests ProgramRunner.getCommandLine(). Test data: Java's commands. Expected: the run
+   * command is used as it is, the class directory named after the source file.
+   */
+  @Test
+  public void testJavaRunsItsMainClass() {
+    Submission submission =
+        submissionOf("javac -d {filename} {filename}.java", "java -cp {filename} Main");
+    submission.getLanguage().setSourceFilename("Main.java");
+    Assertions.assertEquals(
+        "java -cp /srv/voj-1/program/Main Main",
+        new ProgramRunner().getCommandLine(submission, "/srv/voj-1"));
   }
 
   /** Creates a submission in a language with the given commands. */
   private static Submission submissionOf(String compileCommand, String runCommand) {
     Submission submission = new Submission();
-    submission.setLanguage(new Language("cpp", "C++", compileCommand, runCommand));
+    Language language = new Language("cpp", "C++", compileCommand, runCommand);
+    language.setSourceFilename("Main.cpp");
+    submission.setLanguage(language);
     return submission;
   }
 }

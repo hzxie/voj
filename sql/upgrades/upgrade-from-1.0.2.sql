@@ -71,12 +71,18 @@
 --    duplicate keeps its first position, and anything that is not the id of
 --    an existing problem (a deleted problem, a malformed value) is dropped.
 --    Then contest_problems is dropped.
+-- 13. The judger saves a submission under its language's source file name
+--    (Main.java), where it used to save it under a random name and rename
+--    the class Main in the code to match. Java's default commands compile
+--    the class into a directory of its own and run Main from there. Like
+--    step 7, it changes the default commands only, so it is safe to run
+--    again.
 --
 -- Safe to run more than once. Steps 1 to 4, 6 and 8 to 12 first check the
 -- information schema (or create a table only if it is missing) and only change
 -- what is still in the old state (MySQL commits DDL implicitly, so a
 -- transaction could not make them atomic; an interrupted run is completed by
--- running the script again). Step 7 changes the old command only. Step 5 runs in
+-- running the script again). Steps 7 and 13 change the old commands only. Step 5 runs in
 -- one transaction with the recording of the option upgradeFrom102Applied in
 -- voj_options, and only if that option was not recorded yet, so that text
 -- typed after the upgrade (e.g. a statement that means "&amp;") is never
@@ -328,3 +334,10 @@ SET @voj_sql = IF(@voj_has_column > 0,
 PREPARE voj_stmt FROM @voj_sql;
 EXECUTE voj_stmt;
 DEALLOCATE PREPARE voj_stmt;
+
+-- 13. Java's commands, for the source saved as Main.java, in the default commands only.
+UPDATE `voj_languages`
+SET `language_compile_command` = 'javac -d {filename} {filename}.java',
+    `language_run_command` = 'java -cp {filename} Main'
+WHERE `language_compile_command` = 'javac {filename}.java'
+  AND `language_run_command` = 'java -cp {filename}';

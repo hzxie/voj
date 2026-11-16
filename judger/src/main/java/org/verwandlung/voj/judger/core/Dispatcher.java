@@ -326,10 +326,9 @@ public class Dispatcher implements DisposableBean {
                     "voj-%d-%s",
                     submissionId, DigestUtils.getRandomString(12, DigestUtils.Mode.ALPHANUMERIC)))
             .toString();
-    String baseFileName = DigestUtils.getRandomString(12, DigestUtils.Mode.ALPHA);
     try (Lease lease = new Lease(submission)) {
       currentLease = lease;
-      judge(submission, lease, baseDirectory, baseFileName);
+      judge(submission, lease, baseDirectory);
       onJudged();
     } catch (FailedJudging ex) {
       onFailedJudging(submission, ex.getMessage(), ex.getCause());
@@ -507,14 +506,11 @@ public class Dispatcher implements DisposableBean {
    * @param submission - the submission object
    * @param lease - the lease of the judging
    * @param workDirectory - the directory of the compilation result and the program output
-   * @param baseFileName - the random file name (without suffix)
    * @throws FailedJudging if the judging failed for a known reason
    * @throws Superseded if the judging was superseded
    * @throws Exception if the judging failed for an unexpected reason
    */
-  private void judge(
-      Submission submission, Lease lease, String workDirectory, String baseFileName)
-      throws Exception {
+  private void judge(Submission submission, Lease lease, String workDirectory) throws Exception {
     long problemId = submission.getProblem().getProblemId();
     Path checkpointDirectory;
     List<Checkpoint> checkpoints;
@@ -540,12 +536,12 @@ public class Dispatcher implements DisposableBean {
     lease.setDeadline(checkpoints.size(), getRunTimeLimit(submission));
     lease.check();
     try {
-      preprocessor.createTestCode(submission, workDirectory, baseFileName);
+      preprocessor.createTestCode(submission, workDirectory);
     } catch (Exception ex) {
       throw new FailedJudging("The judger could not write the source code to its disk.", ex);
     }
-    if (compile(submission, lease, workDirectory, baseFileName)) {
-      runProgram(submission, lease, checkpoints, checkpointDirectory, workDirectory, baseFileName);
+    if (compile(submission, lease, workDirectory)) {
+      runProgram(submission, lease, checkpoints, checkpointDirectory, workDirectory);
     }
   }
 
@@ -576,21 +572,18 @@ public class Dispatcher implements DisposableBean {
   }
 
   /**
-   * Creates a compilation task. Note: the random file name is used to prevent the application from
-   * recursively invoking itself.
+   * Creates a compilation task.
    *
    * @param submission - the submission object
    * @param lease - the lease of the judging
    * @param workDirectory - the directory used for producing compilation output
-   * @param baseFileName - the random file name (without suffix)
    * @return whether the compilation succeeded
    * @throws FailedJudging if the sandbox failed to run the compiler
    * @throws Superseded if the judging was superseded
    */
-  private boolean compile(
-      Submission submission, Lease lease, String workDirectory, String baseFileName)
+  private boolean compile(Submission submission, Lease lease, String workDirectory)
       throws FailedJudging, Superseded {
-    Map<String, Object> result = compiler.getCompileResult(submission, workDirectory, baseFileName);
+    Map<String, Object> result = compiler.getCompileResult(submission, workDirectory);
     if (result.get("verdict") == Verdict.INTERNAL_ERROR) {
       throw new FailedJudging("The sandbox of the judger failed to run the compiler.", null);
     }
@@ -607,7 +600,6 @@ public class Dispatcher implements DisposableBean {
    * @param checkpoints - the problem's checkpoints
    * @param checkpointDirectory - the directory holding the problem's test data
    * @param workDirectory - the directory of the compilation result and the program output
-   * @param baseFileName - the file name of the application to run (without file suffix)
    * @throws FailedJudging if the sandbox failed to run the program, or the test data cannot be read
    * @throws Superseded if the judging was superseded
    */
@@ -616,8 +608,7 @@ public class Dispatcher implements DisposableBean {
       Lease lease,
       List<Checkpoint> checkpoints,
       Path checkpointDirectory,
-      String workDirectory,
-      String baseFileName)
+      String workDirectory)
       throws FailedJudging, Superseded {
     List<Map<String, Object>> runtimeResults = new ArrayList<Map<String, Object>>();
 
@@ -633,7 +624,7 @@ public class Dispatcher implements DisposableBean {
       Map<String, Object> runtimeResult =
           getRuntimeResult(
               programRunner.getRuntimeResult(
-                  submission, workDirectory, baseFileName, inputFilePath, outputFilePath),
+                  submission, workDirectory, inputFilePath, outputFilePath),
               stdOutputFilePath,
               outputFilePath,
               checkpoint.isExactlyMatch());

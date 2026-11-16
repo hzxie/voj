@@ -113,7 +113,7 @@ public class CompilerUnitTest {
    */
   private Map<String, Object> compile(Verdict verdict, String log) throws Exception {
     Path workDirectory = Files.createTempDirectory(tempDir, "voj-");
-    Files.writeString(workDirectory.resolve("Main-compile.log"), log);
+    Files.writeString(workDirectory.resolve(Compiler.COMPILE_LOG_FILE), log);
     SandboxRunner sandboxRunner = Mockito.mock(SandboxRunner.class);
     Mockito.when(
             sandboxRunner.run(
@@ -132,7 +132,7 @@ public class CompilerUnitTest {
     ReflectionTestUtils.setField(compiler, "compileMemoryLimit", 524288);
     Submission submission = new Submission();
     submission.setLanguage(language(1.0));
-    return compiler.getCompileResult(submission, workDirectory.toString(), "Main");
+    return compiler.getCompileResult(submission, workDirectory.toString());
   }
 
   /**
@@ -143,6 +143,7 @@ public class CompilerUnitTest {
    */
   private Language language(double memoryMultiplier) {
     Language language = new Language("text/x-test", "Test", "cc {filename}.c", "{filename}.exe");
+    language.setSourceFilename("Main.c");
     language.setMemoryMultiplier(memoryMultiplier);
     return language;
   }

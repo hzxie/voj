@@ -46,11 +46,10 @@ public class CompilerTest {
   @Test
   public void testGetCompileResultCppWithSuccess() throws Exception {
     String workDirectory = workBaseDirectory + "/voj-1000";
-    String baseFileName = "random-name";
     Submission submission = submissionMapper.getSubmission(1000);
-    preprocessor.createTestCode(submission, workDirectory, baseFileName);
+    preprocessor.createTestCode(submission, workDirectory);
 
-    Map<String, Object> result = compiler.getCompileResult(submission, workDirectory, baseFileName);
+    Map<String, Object> result = compiler.getCompileResult(submission, workDirectory);
     Assertions.assertEquals(true, result.get("isSuccessful"));
   }
 
@@ -61,11 +60,10 @@ public class CompilerTest {
   @Test
   public void testGetCompileResultJavaWithSuccess() throws Exception {
     String workDirectory = workBaseDirectory + "/voj-1001";
-    String baseFileName = "RandomName";
     Submission submission = submissionMapper.getSubmission(1001);
-    preprocessor.createTestCode(submission, workDirectory, baseFileName);
+    preprocessor.createTestCode(submission, workDirectory);
 
-    Map<String, Object> result = compiler.getCompileResult(submission, workDirectory, baseFileName);
+    Map<String, Object> result = compiler.getCompileResult(submission, workDirectory);
     Assertions.assertEquals(true, result.get("isSuccessful"));
   }
 
@@ -76,11 +74,10 @@ public class CompilerTest {
   @Test
   public void testGetCompileResultCppWithError() throws Exception {
     String workDirectory = workBaseDirectory + "/voj-1002";
-    String baseFileName = "random-name";
     Submission submission = submissionMapper.getSubmission(1002);
-    preprocessor.createTestCode(submission, workDirectory, baseFileName);
+    preprocessor.createTestCode(submission, workDirectory);
 
-    Map<String, Object> result = compiler.getCompileResult(submission, workDirectory, baseFileName);
+    Map<String, Object> result = compiler.getCompileResult(submission, workDirectory);
     Assertions.assertEquals(false, result.get("isSuccessful"));
   }
 

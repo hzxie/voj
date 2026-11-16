@@ -46,31 +46,30 @@ import org.verwandlung.voj.judger.model.Submission;
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class ProgramRunnerTest {
   /**
-   * Test case: tests the getRuntimeResult(Submission, String, String, String, String) method. Test
+   * Test case: tests the getRuntimeResult(Submission, String, String, String) method. Test
    * data: C++ code that compiles successfully. Expected result: compiles successfully and produces
    * output when run.
    */
   @Test
   public void testGetRuntimeResultCpp() throws Exception {
     String workDirectory = workBaseDirectory + "/voj-1000";
-    String baseFileName = "random-name";
     Submission submission = submissionMapper.getSubmission(1000);
 
     String inputFilePath = workBaseDirectory + "/testpoints/1000/input#0.txt";
     String outputFilePath = workBaseDirectory + "/voj-1000/output#0.txt";
 
-    preprocessor.createTestCode(submission, workDirectory, baseFileName);
+    preprocessor.createTestCode(submission, workDirectory);
     writeInput(inputFilePath, "18820 26832\r\n");
-    compiler.getCompileResult(submission, workDirectory, baseFileName);
+    compiler.getCompileResult(submission, workDirectory);
 
     Map<String, Object> result =
         programRunner.getRuntimeResult(
-            submission, workDirectory, baseFileName, inputFilePath, outputFilePath);
+            submission, workDirectory, inputFilePath, outputFilePath);
     Assertions.assertEquals("AC", result.get("runtimeResult"));
   }
 
   /**
-   * Test case: tests the getRuntimeResult(Submission, String, String, String, String) method. Test
+   * Test case: tests the getRuntimeResult(Submission, String, String, String) method. Test
    * data: Java code that compiles successfully. Expected result: compiles successfully and produces
    * output when run.
    *
@@ -78,19 +77,18 @@ public class ProgramRunnerTest {
    */
   public void testGetRuntimeResultJava() throws Exception {
     String workDirectory = workBaseDirectory + "/voj-1001";
-    String baseFileName = "RandomName";
     Submission submission = submissionMapper.getSubmission(1001);
 
     String inputFilePath = workBaseDirectory + "/testpoints/1001/input#0.txt";
     String outputFilePath = workBaseDirectory + "/voj-1000/output#0.txt";
 
-    preprocessor.createTestCode(submission, workDirectory, baseFileName);
+    preprocessor.createTestCode(submission, workDirectory);
     writeInput(inputFilePath, "18820 26832\r\n");
-    compiler.getCompileResult(submission, workDirectory, baseFileName);
+    compiler.getCompileResult(submission, workDirectory);
 
     Map<String, Object> result =
         programRunner.getRuntimeResult(
-            submission, workDirectory, baseFileName, inputFilePath, outputFilePath);
+            submission, workDirectory, inputFilePath, outputFilePath);
     Assertions.assertEquals("AC", result.get("runtimeResult"));
   }
 

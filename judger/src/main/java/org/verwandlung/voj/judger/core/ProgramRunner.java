@@ -50,7 +50,6 @@ public class ProgramRunner {
    *
    * @param submission - the submission object
    * @param workDirectory - the directory of the judging
-   * @param baseFileName - the file name of the application to run (without file suffix)
    * @param inputFilePath - the input file path
    * @param outputFilePath - the output file path, in a directory the run may not write to
    * @return a Map<String, Object> object containing the program's runtime result
@@ -58,10 +57,9 @@ public class ProgramRunner {
   public Map<String, Object> getRuntimeResult(
       Submission submission,
       String workDirectory,
-      String baseFileName,
       String inputFilePath,
       String outputFilePath) {
-    String commandLine = getCommandLine(submission, workDirectory, baseFileName);
+    String commandLine = getCommandLine(submission, workDirectory);
     int timeLimit = getTimeLimit(submission);
     int memoryLimit = getMemoryLimit(submission);
 
@@ -128,24 +126,14 @@ public class ProgramRunner {
    *
    * @param submission - the submission object
    * @param workDirectory - the directory of the judging
-   * @param baseFileName - the file name of the application to run (without file suffix)
    * @return the command line to execute
    */
-  String getCommandLine(Submission submission, String workDirectory, String baseFileName) {
+  String getCommandLine(Submission submission, String workDirectory) {
     Language language = submission.getLanguage();
-    String filePathWithoutExtension =
-        String.format(
-            "%s/%s", new Object[] {Preprocessor.getProgramDirectory(workDirectory), baseFileName});
-    StringBuilder runCommand =
-        new StringBuilder(
-            // Literally: a Windows path's backslashes are not escapes.
-            language.getRunCommand().replace("{filename}", filePathWithoutExtension));
-
-    if (language.getLanguageName().equalsIgnoreCase("Java")) {
-      int lastIndexOfSpace = runCommand.lastIndexOf("/");
-      runCommand.setCharAt(lastIndexOfSpace, ' ');
-    }
-    return runCommand.toString();
+    // Literally: a Windows path's backslashes are not escapes.
+    return language
+        .getRunCommand()
+        .replace("{filename}", Preprocessor.getFilename(workDirectory, language));
   }
 
   /**

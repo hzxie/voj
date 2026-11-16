@@ -16,6 +16,7 @@
  */
 package org.verwandlung.voj.judger.core;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
@@ -42,7 +43,7 @@ import org.verwandlung.voj.judger.model.Submission;
  */
 public class PreprocessorUnitTest {
   /**
-   * Test case: tests the createTestCode(Submission, String, String) method. Test data: a work
+   * Test case: tests the createTestCode(Submission, String) method. Test data: a work
    * directory pre-populated with a stale file and a symbolic link pointing outside of it. Expected
    * result: the directory is recreated empty, others may only pass through it, and it holds only
    * the private program directory with the source file in it, and the link's target is untouched.
@@ -57,8 +58,7 @@ public class PreprocessorUnitTest {
 
     preprocessor.createTestCode(
         submission("C++", "g++ -o {filename}.exe {filename}.cpp", "int main() {}"),
-        workDirectory.toString(),
-        "random");
+        workDirectory.toString());
 
     Path programDirectory = workDirectory.resolve("program");
     try (Stream<Path> files = Files.list(workDirectory)) {
@@ -69,10 +69,10 @@ public class PreprocessorUnitTest {
     try (Stream<Path> files = Files.list(programDirectory)) {
       List<String> names =
           files.map(path -> path.getFileName().toString()).collect(Collectors.toList());
-      Assertions.assertEquals(List.of("random.cpp"), names);
+      Assertions.assertEquals(List.of("Main.cpp"), names);
     }
     Assertions.assertEquals(
-        "int main() {}", Files.readString(programDirectory.resolve("random.cpp")));
+        "int main() {}", Files.readString(programDirectory.resolve("Main.cpp")));
     Assertions.assertEquals("secret", Files.readString(outsideFile));
     Assertions.assertEquals(
         "rwx--x--x",
@@ -99,10 +99,9 @@ public class PreprocessorUnitTest {
     Path workDirectory = tempDir.resolve("voj-1006");
     preprocessor.createTestCode(
         submission("C++", "g++ -o {filename}.exe {filename}.cpp", "int main() {}"),
-        workDirectory.toString(),
-        "random");
+        workDirectory.toString());
     Path programDirectory = workDirectory.resolve("program");
-    Path program = Files.writeString(programDirectory.resolve("random.exe"), "binary");
+    Path program = Files.writeString(programDirectory.resolve("Main.exe"), "binary");
     Files.setPosixFilePermissions(program, PosixFilePermissions.fromString("rwxrwxrwx"));
     Files.setAttribute(program, "unix:mode", 04777);
     Path subdirectory = Files.createDirectory(programDirectory.resolve("sub"));
@@ -134,7 +133,7 @@ public class PreprocessorUnitTest {
   }
 
   /**
-   * Test case: tests the createTestCode(Submission, String, String) method. Test data: the work
+   * Test case: tests the createTestCode(Submission, String) method. Test data: the work
    * directory path is a symbolic link to another directory. Expected result: the link is replaced
    * by a real directory and nothing is written into the link's target.
    */
@@ -146,63 +145,52 @@ public class PreprocessorUnitTest {
 
     preprocessor.createTestCode(
         submission("C++", "g++ -o {filename}.exe {filename}.cpp", "int main() {}"),
-        workDirectory.toString(),
-        "random");
+        workDirectory.toString());
 
     Assertions.assertFalse(Files.isSymbolicLink(workDirectory));
-    Assertions.assertTrue(Files.isRegularFile(workDirectory.resolve("program/random.cpp")));
+    Assertions.assertTrue(Files.isRegularFile(workDirectory.resolve("program/Main.cpp")));
     try (Stream<Path> files = Files.list(target)) {
       Assertions.assertEquals(0, files.count());
     }
   }
 
   /**
-   * Test case: tests the createTestCode(Submission, String, String) method. Test data: Java code
-   * declaring Main (separated by a tab / CRLF) alongside a MainHelper class. Expected result: only
-   * the Main declarations are renamed.
+   * Test case: tests the createTestCode(Submission, String) method. Test data: Java code that
+   * prints "class Main". Expected result: the code is saved as it is, as the language's source
+   * file.
    */
   @Test
-  public void testCreateTestCodeRenamesOnlyJavaMainClass() throws Exception {
+  public void testCreateTestCodeSavesTheCodeAsTheLanguagesSourceFile() throws Exception {
     String code =
-        "public class\tMain {\r\n"
-            + "  public static void main(String[] args) { MainHelper.run(); }\r\n"
-            + "}\r\n"
-            + "class MainHelper { static void run() {} }\n"
-            + "final class\r\nMain2 {}\n";
+        "public class Main {\r\n"
+            + "  public static void main(String[] args) { System.out.println(\"class Main\"); }\r\n"
+            + "}\r\n";
     Path workDirectory = tempDir.resolve("voj-1002");
 
     preprocessor.createTestCode(
-        submission("Java", "javac {filename}.java", code), workDirectory.toString(), "Random");
+        submission("Java", "javac -d {filename} {filename}.java", code), workDirectory.toString());
 
-    String expected =
-        "public class Random {\r\n"
-            + "  public static void main(String[] args) { MainHelper.run(); }\r\n"
-            + "}\r\n"
-            + "class MainHelper { static void run() {} }\n"
-            + "final class\r\nMain2 {}\n";
-    Assertions.assertEquals(
-        expected, Files.readString(workDirectory.resolve("program/Random.java")));
+    Assertions.assertEquals(code, Files.readString(workDirectory.resolve("program/Main.java")));
   }
 
   /**
-   * Test case: tests the createTestCode(Submission, String, String) method. Test data: Java code
-   * whose Main class is declared on the line after the keyword. Expected result: it is renamed.
+   * Test case: tests the createTestCode(Submission, String) method. Test data: languages whose
+   * source file name is missing or not a plain file name. Expected result: no code is written.
    */
   @Test
-  public void testCreateTestCodeRenamesJavaMainClassAcrossLines() throws Exception {
-    Path workDirectory = tempDir.resolve("voj-1003");
-
-    preprocessor.createTestCode(
-        submission("Java", "javac {filename}.java", "class\r\n  Main<T> {}"),
-        workDirectory.toString(),
-        "Random");
-
-    Assertions.assertEquals(
-        "class Random<T> {}", Files.readString(workDirectory.resolve("program/Random.java")));
+  public void testCreateTestCodeRefusesASourceFileNameThatIsNotAPlainName() {
+    for (String name : new String[] {"", "..", "../Main.c", "sub/Main.c", "sub\\Main.c"}) {
+      Submission submission = submission("C", "gcc {filename}.c", "int main() {}");
+      submission.getLanguage().setSourceFilename(name);
+      Assertions.assertThrows(
+          IOException.class,
+          () -> preprocessor.createTestCode(submission, tempDir.resolve("voj-1003").toString()),
+          name);
+    }
   }
 
   /**
-   * Test case: tests the createTestCode(Submission, String, String) method. Test data: a Go
+   * Test case: tests the createTestCode(Submission, String) method. Test data: a Go
    * submission, a root-owned read-only build cache seed holding an entry, a group-writable entry
    * and a stale trim file. Expected result: the submission gets its own cache in its program
    * directory whose directories belong to the sandbox user, the trusted entry is a link to the
@@ -227,8 +215,7 @@ public class PreprocessorUnitTest {
 
     preprocessor.createTestCode(
         submission("Go", "go build -o {filename}.exe {filename}.go", "package main"),
-        workDirectory.toString(),
-        "random");
+        workDirectory.toString());
 
     Path cache = workDirectory.resolve("program/.cache/go-build");
     Assertions.assertEquals("nobody", Files.getOwner(cache.resolve("ab")).getName());
@@ -251,7 +238,7 @@ public class PreprocessorUnitTest {
   }
 
   /**
-   * Test case: tests the createTestCode(Submission, String, String) method. Test data: the isolate
+   * Test case: tests the createTestCode(Submission, String) method. Test data: the isolate
    * backend with box 3. Expected result: the private program directory belongs to isolate's box
    * user, UID first_uid + 3, the directory of the judging to the judger. Needs root.
    */
@@ -267,8 +254,7 @@ public class PreprocessorUnitTest {
 
     preprocessor.createTestCode(
         submission("C++", "g++ -o {filename}.exe {filename}.cpp", "int main() {}"),
-        workDirectory.toString(),
-        "random");
+        workDirectory.toString());
 
     Path programDirectory = workDirectory.resolve("program");
     Assertions.assertEquals(
@@ -290,8 +276,11 @@ public class PreprocessorUnitTest {
    * @return a submission object
    */
   private Submission submission(String languageName, String compileCommand, String code) {
+    Language language = new Language("text/x-test", languageName, compileCommand, "");
+    String extension = compileCommand.substring(compileCommand.lastIndexOf("{filename}.") + 11);
+    language.setSourceFilename("Main." + extension.split(" ")[0]);
     Submission submission = new Submission();
-    submission.setLanguage(new Language("text/x-test", languageName, compileCommand, ""));
+    submission.setLanguage(language);
     submission.setCode(code);
     return submission;
   }
