@@ -27,7 +27,6 @@ import java.util.Map;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Component;
@@ -72,16 +71,23 @@ public class Dispatcher {
   public void createNewTask(long submissionId, Long generation)
       throws IllgealSubmissionException {
     synchronized (this) {
-      // Unique per judging, not just per submission: another judger on this host may be judging
-      // the same submission (a rejudge, or a task delivered again) in the same directory.
+      // In this judger's own directory, so that a judger that died while judging leaves nothing
+      // behind for good (see CheckpointStore#getWorkDirectory); unique per judging, in case the
+      // directory of a judging of the same submission could not be removed.
+      Path workDirectory;
+      try {
+        workDirectory = checkpointStore.getWorkDirectory();
+      } catch (IOException ex) {
+        throw new RetryableJudgingException("This judger has no usable work directory.", ex);
+      }
       String baseDirectory =
-          String.format(
-              "%s/voj-%d-%s",
-              new Object[] {
-                workBaseDirectory,
-                submissionId,
-                DigestUtils.getRandomString(12, DigestUtils.Mode.ALPHANUMERIC)
-              });
+          workDirectory
+              .resolve(
+                  String.format(
+                      "voj-%d-%s",
+                      submissionId,
+                      DigestUtils.getRandomString(12, DigestUtils.Mode.ALPHANUMERIC)))
+              .toString();
       String baseFileName = DigestUtils.getRandomString(12, DigestUtils.Mode.ALPHA);
 
       Date startTime = applicationDispatcher.onJudgingStarted(submissionId, generation);
@@ -366,10 +372,6 @@ public class Dispatcher {
 
   /** The autowired CheckpointStore, which caches a problem's checkpoints locally. */
   @Autowired private CheckpointStore checkpointStore;
-
-  /** The working directory of the judger, used to store compilation results and program output. */
-  @Value("${judger.workDir}")
-  private String workBaseDirectory;
 
   /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(Dispatcher.class);

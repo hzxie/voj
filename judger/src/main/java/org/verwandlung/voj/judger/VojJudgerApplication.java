@@ -97,8 +97,9 @@ public class VojJudgerApplication {
         System.exit(-1);
       }
       logSystemEnvironment();
-      // Claims this judger's test data cache and removes downloads a previous run left unfinished.
-      // A checkpoint directory that cannot be used fails every judging, so it fails the startup.
+      // Claims this judger's test data cache and work directory, and removes the downloads and the
+      // judgings a previous run left unfinished. A checkpoint or work directory that cannot be
+      // used fails every judging, so it fails the startup.
       checkpointStore.open();
 
       List<String> supportedLanguageSlugs = detectSupportedLanguages(languageMapper);

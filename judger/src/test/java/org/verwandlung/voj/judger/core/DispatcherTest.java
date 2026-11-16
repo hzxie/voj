@@ -48,7 +48,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import org.verwandlung.voj.judger.application.ApplicationDispatcher;
 import org.verwandlung.voj.judger.exception.IllgealSubmissionException;
@@ -70,7 +69,7 @@ public class DispatcherTest {
   /** Injects the working-directory configuration that would normally come from the property files. */
   @BeforeEach
   public void setUp() throws Exception {
-    ReflectionTestUtils.setField(dispatcher, "workBaseDirectory", "/tmp/voj-dispatcher-tests");
+    when(checkpointStore.getWorkDirectory()).thenReturn(Path.of("/tmp/voj-dispatcher-tests"));
     when(checkpointStore.sync(any())).thenReturn(Path.of("/tmp/voj-dispatcher-tests/1000"));
     when(submissionMapper.getSubmission(100L)).thenReturn(buildSubmission());
     when(applicationDispatcher.onJudgingStarted(anyLong(), any())).thenReturn(START_TIME);
@@ -248,7 +247,7 @@ public class DispatcherTest {
   @Test
   public void testCreateNewTaskWithUnavailableCheckpointsIsRetried(@TempDir Path tempDir)
       throws Exception {
-    ReflectionTestUtils.setField(dispatcher, "workBaseDirectory", tempDir.toString());
+    when(checkpointStore.getWorkDirectory()).thenReturn(tempDir);
     org.mockito.Mockito.doThrow(new java.io.IOException("HTTP 503"))
         .when(checkpointStore)
         .sync(any());
@@ -306,7 +305,7 @@ public class DispatcherTest {
    */
   @Test
   public void testCreateNewTaskCleansUpOnFailure(@TempDir Path tempDir) throws Exception {
-    ReflectionTestUtils.setField(dispatcher, "workBaseDirectory", tempDir.toString());
+    when(checkpointStore.getWorkDirectory()).thenReturn(tempDir);
     org.mockito.Mockito.doAnswer(
             invocation -> {
               String workDirectory = invocation.getArgument(1);
@@ -425,6 +424,21 @@ public class DispatcherTest {
 
     verify(submissionMapper, never()).getSubmission(anyLong());
     verify(compiler, never()).getCompileResult(any(), anyString(), anyString());
+  }
+
+  /**
+   * Test case: tests the createNewTask method. Test data: this judger's work directory cannot be
+   * created. Expected result: the submission is not even claimed; the exception is passed on so
+   * that the task is delivered again, to another judger.
+   */
+  @Test
+  public void testCreateNewTaskWithoutWorkDirectoryIsRetried() throws Exception {
+    when(checkpointStore.getWorkDirectory()).thenThrow(new java.io.IOException("read-only"));
+
+    Assertions.assertThrows(
+        RetryableJudgingException.class, () -> dispatcher.createNewTask(100L, GENERATION));
+
+    verify(applicationDispatcher, never()).onJudgingStarted(anyLong(), any());
   }
 
   /**

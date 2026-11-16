@@ -68,6 +68,14 @@ import org.verwandlung.voj.judger.util.FileSystemUtils;
  * path: so before each use the judger checks that the file at the path is still the one it
  * locked (and marks it as just used), and claims a slot again if not.
  *
+ * <p>The slot also gives the judger a directory of its own under {@code judger.workDir}, {@code
+ * voj-judger-<n>/}, which holds the work directory of each judging (see {@link
+ * #getWorkDirectory}). A judger that died while judging (killed, out of memory) leaves the work
+ * directory of that judging behind, with a submission's source and binary in it: it is removed
+ * when the slot is claimed again, while the judgings of other judgers on the host, in directories
+ * of their own slots, are left alone. Judgers that share {@code judger.workDir} must therefore
+ * share {@code judger.checkpointDir} too, as they do by default.
+ *
  * @author Haozhe Xie
  */
 @Component
@@ -80,8 +88,8 @@ public class CheckpointStore {
 
   /**
    * Opens this judger's cache directory, claiming a slot under the checkpoint root, and removes the
-   * temporary directories of downloads that never completed. Called at startup; {@link #sync} does
-   * it on first use otherwise.
+   * temporary directories of downloads that never completed and the work directories of judgings
+   * that never completed. Called at startup; {@link #sync} does it on first use otherwise.
    *
    * @return this judger's cache directory
    * @throws IOException if the checkpoint root cannot be trusted or every slot is taken
@@ -96,6 +104,7 @@ public class CheckpointStore {
       slotLock.close();
       slotLock = null;
       cacheDirectory = null;
+      judgerWorkDirectory = null;
     }
     if (cacheDirectory == null) {
       cacheDirectory = claimSlot(Paths.get(checkpointDirectory));
@@ -106,6 +115,24 @@ public class CheckpointStore {
       createPrivateDirectory(cacheDirectory);
     }
     return cacheDirectory;
+  }
+
+  /**
+   * Gets this judger's directory under {@code judger.workDir} (absolute and normalized, whatever
+   * the setting looks like), in which a judging creates its work directory. It belongs to the
+   * judger and lets others through ({@code rwx--x--x}), so that the sandbox user reaches the work
+   * directory it is handed but cannot list or change anything else in it.
+   *
+   * @return this judger's work directory
+   * @throws IOException if the slot cannot be claimed or the directory cannot be created
+   */
+  public synchronized Path getWorkDirectory() throws IOException {
+    open();
+    if (!Files.isDirectory(judgerWorkDirectory, LinkOption.NOFOLLOW_LINKS)) {
+      // Removed behind the judger's back, e.g. by a clean-up of /tmp.
+      resetWorkDirectory(judgerWorkDirectory);
+    }
+    return judgerWorkDirectory;
   }
 
   /**
@@ -167,8 +194,8 @@ public class CheckpointStore {
 
   /**
    * Claims the first free slot under the checkpoint root: locks its lock file, for as long as this
-   * judger runs (the lock is released when the process exits, however it exits), and creates its
-   * cache directory if needed.
+   * judger runs (the lock is released when the process exits, however it exits), creates its
+   * cache directory if needed, and empties its work directory.
    *
    * @param root - the checkpoint root
    * @return the slot's cache directory
@@ -188,7 +215,14 @@ public class CheckpointStore {
           createPrivateDirectory(directory);
         }
         ensureOwnedByJudger(directory);
+        // Relative to the directory the judger was started in, as any relative path is; but the
+        // sandbox resolves the paths of a judging after entering its work directory.
+        Path workDirectory =
+            Paths.get(workRootDirectory).toAbsolutePath().normalize().resolve("voj-judger-" + slot);
+        resetWorkDirectory(workDirectory);
+        LOGGER.info("Judging in {}", workDirectory);
         slotLock = lock;
+        judgerWorkDirectory = workDirectory;
         return directory;
       } catch (IOException ex) {
         lock.close();
@@ -214,6 +248,27 @@ public class CheckpointStore {
         LOGGER.info("Removing the incomplete checkpoint download {}", entry);
         FileSystemUtils.deleteRecursively(entry);
       }
+    }
+  }
+
+  /**
+   * Creates the work directory of this judger's slot afresh: whatever is there (the work
+   * directories of judgings a judger with this slot never finished, or anything else) is removed
+   * first, without following links. The directory is created restricted to the judger (the umask
+   * can only narrow that), then opened for others to pass through.
+   *
+   * @param directory - the work directory of this judger's slot
+   * @throws IOException if the directory cannot be emptied or created
+   */
+  private static void resetWorkDirectory(Path directory) throws IOException {
+    if (Files.exists(directory, LinkOption.NOFOLLOW_LINKS)) {
+      LOGGER.info("Removing what judgings that never completed left in {}", directory);
+      FileSystemUtils.deleteRecursively(directory);
+    }
+    Files.createDirectories(directory.getParent());
+    createPrivateDirectory(directory);
+    if (isPosix()) {
+      Files.setPosixFilePermissions(directory, PosixFilePermissions.fromString("rwx--x--x"));
     }
   }
 
@@ -385,12 +440,19 @@ public class CheckpointStore {
   /** This judger's cache directory (its slot under the checkpoint root), once opened. */
   private Path cacheDirectory;
 
+  /** This judger's work directory (its slot's under the work root), once opened. */
+  private Path judgerWorkDirectory;
+
   /** The autowired HttpCheckpointProvider, which performs the actual download. */
   @Autowired private HttpCheckpointProvider checkpointProvider;
 
   /** The root of the checkpoint caches, which holds a directory per judger on this host. */
   @Value("${judger.checkpointDir}")
   private String checkpointDirectory;
+
+  /** The root of the work directories, which holds a directory per judger on this host. */
+  @Value("${judger.workDir}")
+  private String workRootDirectory;
 
   /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(CheckpointStore.class);

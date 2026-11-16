@@ -173,9 +173,10 @@ The judger manages two directories from `voj.properties`:
 
 How it behaves at runtime:
 
-- For each submission the judger creates a private work directory under
-  `judger.workDir`, sets it to mode `0700` and, when running as root, hands it to
-  `system.username`. The compiler and the submitted program run with dropped
+- For each submission the judger creates a private work directory in its own
+  directory under `judger.workDir` (`voj-judger-<n>/`, see
+  [`configuration.md`](configuration.md#directories)), sets it to mode `0700`
+  and, when running as root, hands it to `system.username`. The compiler and the submitted program run with dropped
   privileges and write their output here, so the work directory must be owned by
   (or writable by) the sandbox user. The judger does this automatically; you only
   need to ensure `judger.workDir` itself lets the judger create subdirectories.

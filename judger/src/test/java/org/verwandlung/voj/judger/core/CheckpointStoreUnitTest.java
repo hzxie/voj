@@ -35,6 +35,7 @@ import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
 import org.junit.jupiter.api.condition.OS;
@@ -56,6 +57,13 @@ import org.verwandlung.voj.judger.model.Problem;
 @ExtendWith(MockitoExtension.class)
 @DisabledOnOs(OS.WINDOWS)
 public class CheckpointStoreUnitTest {
+  /** Points the judger's work directories into the temporary directory. */
+  @BeforeEach
+  public void setUp() {
+    ReflectionTestUtils.setField(
+        checkpointStore, "workRootDirectory", tempDir.resolve("work").toString());
+  }
+
   /**
    * Test case: the checkpoint root does not exist yet. Expected result: the judger creates it,
    * restricted to its owner, and downloads the checkpoints into it.
@@ -208,6 +216,8 @@ public class CheckpointStoreUnitTest {
     ReflectionTestUtils.setField(checkpointStore, "checkpointDirectory", root.toString());
     CheckpointStore otherStore = new CheckpointStore();
     ReflectionTestUtils.setField(otherStore, "checkpointDirectory", root.toString());
+    ReflectionTestUtils.setField(
+        otherStore, "workRootDirectory", tempDir.resolve("work").toString());
 
     Path first = checkpointStore.open();
     Path second = otherStore.open();
@@ -233,6 +243,57 @@ public class CheckpointStoreUnitTest {
     Assertions.assertEquals(root.resolve("judger-0"), checkpointStore.open());
 
     Assertions.assertTrue(Files.exists(lockFile));
+  }
+
+  /**
+   * Test case: judger.workDir is relative and ends with a slash. Expected result: the judger's work
+   * directory is absolute and normalized (the native sandbox resolves paths after entering the
+   * work directory, isolate binds it as java.io.File spells it), restricted so that others can
+   * only pass through it, and the judger's own.
+   */
+  @Test
+  public void testWorkDirectoryIsAbsoluteAndNormalized() throws Exception {
+    ReflectionTestUtils.setField(
+        checkpointStore, "checkpointDirectory", tempDir.resolve("voj-testpoints").toString());
+    Path workRoot = Path.of("").toAbsolutePath().relativize(tempDir);
+    ReflectionTestUtils.setField(
+        checkpointStore, "workRootDirectory", workRoot + "//work/./");
+
+    Path workDirectory = checkpointStore.getWorkDirectory();
+
+    Assertions.assertEquals(tempDir.resolve("work").resolve("voj-judger-0"), workDirectory);
+    Assertions.assertTrue(workDirectory.isAbsolute());
+    Assertions.assertEquals(
+        "rwx--x--x", PosixFilePermissions.toString(Files.getPosixFilePermissions(workDirectory)));
+  }
+
+  /**
+   * Test case: judgings that a judger with the same slot never finished (it was killed) left their
+   * work directories behind, and another judger on the host is judging in the directory of its own
+   * slot. Expected result: when the slot is claimed, the leftovers of its own slot are removed,
+   * without following a link planted in them, and the other judger's are left alone.
+   */
+  @Test
+  public void testOpenRemovesLeftoversOfItsOwnSlotOnly() throws Exception {
+    Path workRoot = Files.createDirectory(tempDir.resolve("work"));
+    Path leftover = Files.createDirectories(workRoot.resolve("voj-judger-0/voj-1000-abc"));
+    Files.writeString(leftover.resolve("a.cpp"), "int main() {}");
+    Path outside = Files.writeString(tempDir.resolve("outside.txt"), "keep");
+    Files.createSymbolicLink(leftover.resolve("link"), outside);
+    Path otherJudging = Files.createDirectories(workRoot.resolve("voj-judger-1/voj-1001-def"));
+    ReflectionTestUtils.setField(
+        checkpointStore, "checkpointDirectory", tempDir.resolve("voj-testpoints").toString());
+    ReflectionTestUtils.setField(checkpointStore, "workRootDirectory", workRoot.toString());
+
+    checkpointStore.open();
+
+    Path workDirectory = checkpointStore.getWorkDirectory();
+    Assertions.assertEquals(workRoot.resolve("voj-judger-0"), workDirectory);
+    try (Stream<Path> entries = Files.list(workDirectory)) {
+      Assertions.assertEquals(0, entries.count());
+    }
+    Assertions.assertEquals("keep", Files.readString(outside));
+    Assertions.assertTrue(Files.isDirectory(otherJudging));
   }
 
   /**
