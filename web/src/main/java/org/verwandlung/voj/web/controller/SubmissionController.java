@@ -252,22 +252,31 @@ public class SubmissionController {
     SseEmitter sseEmitter = new SseEmitter();
     sseEmitter.send("Established");
     submissionEventListener.addSseEmitters(submissionId, sseEmitter);
-    Submission submission = submissionService.getSubmission(submissionId);
+    // Unless the stream is returned, it never starts, so it never completes either: it is
+    // unregistered here, whatever the checks throw (e.g. the database is unreachable).
+    boolean isReturned = false;
+    try {
+      Submission submission = submissionService.getSubmission(submissionId);
 
-    // Anyone allowed to see the source code may also follow the live judge log (which can echo the
-    // source for compiler errors): the owner and administrators (see canViewSourceCode). Without
-    // the administrators, the administration console's edit-submission page could never subscribe
-    // to another user's pending submission.
-    if (submission == null
-        || !contestService.isSubmissionVisible(submission, currentUser)
-        || !canViewSourceCode(submission, currentUser)
-        || !submission.getJudgeResult().getJudgeResultSlug().equals("PD")) {
-      submissionEventListener.removeSseEmitter(submissionId, sseEmitter);
-      throw new ResourceNotFoundException();
+      // Anyone allowed to see the source code may also follow the live judge log (which can echo
+      // the source for compiler errors): the owner and administrators (see canViewSourceCode).
+      // Without the administrators, the administration console's edit-submission page could never
+      // subscribe to another user's pending submission.
+      if (submission == null
+          || !contestService.isSubmissionVisible(submission, currentUser)
+          || !canViewSourceCode(submission, currentUser)
+          || !submission.getJudgeResult().getJudgeResultSlug().equals("PD")) {
+        throw new ResourceNotFoundException();
+      }
+
+      response.addHeader("X-Accel-Buffering", "no");
+      isReturned = true;
+      return sseEmitter;
+    } finally {
+      if (!isReturned) {
+        submissionEventListener.removeSseEmitter(submissionId, sseEmitter);
+      }
     }
-
-    response.addHeader("X-Accel-Buffering", "no");
-    return sseEmitter;
   }
 
   /**

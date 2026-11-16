@@ -334,6 +334,28 @@ public class SubmissionControllerTest {
     Assertions.assertEquals(0, listener.getNumberOfSseEmitters(submissionId));
   }
 
+  /**
+   * Test case: tests getRealTimeJudgeResultAction(...). Test data: the submission cannot be read
+   * (the database is unreachable). Expected: the failure propagates, and the stream, which is
+   * never returned, is not left registered.
+   */
+  @Test
+  public void testNoStreamIsLeftRegisteredWhenTheChecksFail() throws Exception {
+    authenticate(ownerUser());
+    long submissionId = 987654323L;
+    ApplicationEventListener listener = new ApplicationEventListener();
+    ReflectionTestUtils.setField(controller, "submissionEventListener", listener);
+    when(submissionService.getSubmission(submissionId))
+        .thenThrow(new org.springframework.dao.DataAccessResourceFailureException("down"));
+
+    Assertions.assertThrows(
+        org.springframework.dao.DataAccessResourceFailureException.class,
+        () ->
+            controller.getRealTimeJudgeResultAction(
+                submissionId, new MockHttpServletRequest(), new MockHttpServletResponse()));
+    Assertions.assertEquals(0, listener.getNumberOfSseEmitters(submissionId));
+  }
+
   /** Places the given user into the Spring Security context. */
   private static void authenticate(User user) {
     VojUserDetails userDetails = new VojUserDetails(user);
