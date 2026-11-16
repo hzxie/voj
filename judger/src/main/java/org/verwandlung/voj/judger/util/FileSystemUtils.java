@@ -47,6 +47,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import com.sun.security.auth.module.NTSystem;
+import com.sun.security.auth.module.UnixSystem;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -454,7 +455,7 @@ public class FileSystemUtils {
     if (IS_WINDOWS) {
       enableBackupPrivilegesOnce();
     }
-    boolean isRoot = !IS_WINDOWS && "root".equals(System.getProperty("user.name"));
+    boolean isRoot = isRunningAsRoot();
     Deque<Path> pending = new ArrayDeque<>();
     pending.push(root);
     while (!pending.isEmpty()) {
@@ -571,6 +572,16 @@ public class FileSystemUtils {
      * @throws IOException if it fails
      */
     T perform() throws IOException;
+  }
+
+  /**
+   * Tells whether the judger runs as root (uid 0), as the native sandbox tells it: then it takes
+   * what is not its own, and runs submissions as the sandbox account.
+   *
+   * @return whether the judger runs as root (never on Windows)
+   */
+  public static boolean isRunningAsRoot() {
+    return !IS_WINDOWS && new UnixSystem().getUid() == 0;
   }
 
   /**

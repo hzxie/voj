@@ -29,6 +29,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import org.verwandlung.voj.judger.util.ExclusiveFileLock;
+import org.verwandlung.voj.judger.util.FileSystemUtils;
 
 /**
  * Makes sure no two judgers on a host run their submissions as the same sandbox account.
@@ -100,7 +101,7 @@ public class SandboxAccountLock {
   static boolean dropsPrivileges(String sandbox) {
     return !"isolate".equalsIgnoreCase(sandbox)
         && !System.getProperty("os.name").contains("Windows")
-        && "root".equals(System.getProperty("user.name"));
+        && FileSystemUtils.isRunningAsRoot();
   }
 
   /**

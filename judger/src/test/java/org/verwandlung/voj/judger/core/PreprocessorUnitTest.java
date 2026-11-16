@@ -35,6 +35,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import org.verwandlung.voj.judger.model.Language;
 import org.verwandlung.voj.judger.model.Submission;
+import org.verwandlung.voj.judger.util.FileSystemUtils;
 
 /**
  * Database-free unit tests for the preprocessor.
@@ -201,7 +202,7 @@ public class PreprocessorUnitTest {
   @Test
   @DisabledOnOs(OS.WINDOWS)
   public void testCreateTestCodeSeedsAPrivateGoBuildCache() throws Exception {
-    Assumptions.assumeTrue("root".equals(System.getProperty("user.name")), "Needs root.");
+    Assumptions.assumeTrue(FileSystemUtils.isRunningAsRoot(), "Needs root.");
     Path seed = Files.createDirectories(tempDir.resolve("seed/ab"));
     Path entry = Files.writeString(seed.resolve("0123-d"), "compiled");
     Path untrusted = Files.writeString(seed.resolve("4567-d"), "untrusted");
@@ -245,7 +246,7 @@ public class PreprocessorUnitTest {
   @Test
   @DisabledOnOs(OS.WINDOWS)
   public void testCreateTestCodeHandsWorkDirectoryToIsolateBoxUser() throws Exception {
-    Assumptions.assumeTrue("root".equals(System.getProperty("user.name")), "Needs root.");
+    Assumptions.assumeTrue(FileSystemUtils.isRunningAsRoot(), "Needs root.");
     ReflectionTestUtils.setField(preprocessor, "sandbox", "isolate");
     ReflectionTestUtils.setField(preprocessor, "isolateFirstUid", 60000);
     ReflectionTestUtils.setField(preprocessor, "isolateBoxId", 3);

@@ -162,7 +162,7 @@ public class Preprocessor {
     try {
       PosixFileAttributes seedAttributes =
           Files.readAttributes(seed, PosixFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
-      if (!seedAttributes.isDirectory() || !isTrusted(seedAttributes)) {
+      if (!seedAttributes.isDirectory() || !isTrusted(seed, seedAttributes)) {
         LOGGER.warn("Ignoring the Go build cache seed " + seed + ": not a root-owned directory.");
         return directories;
       }
@@ -182,7 +182,7 @@ public class Preprocessor {
                 throws IOException {
               PosixFileAttributes fileAttributes =
                   Files.readAttributes(file, PosixFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
-              if (fileAttributes.isRegularFile() && isTrusted(fileAttributes)) {
+              if (fileAttributes.isRegularFile() && isTrusted(file, fileAttributes)) {
                 Path target = cache.resolve(seed.relativize(file));
                 try {
                   Files.createLink(target, file);
@@ -213,12 +213,15 @@ public class Preprocessor {
    * Checks that a file of the Go build cache seed is owned by the judger (root) and cannot be
    * written by anybody else, so that linking it into a submission's cache cannot expose it.
    *
+   * @param file - the file
    * @param attributes - the file's attributes
    * @return whether the file can be trusted
+   * @throws IOException if its owner cannot be read
    */
-  private boolean isTrusted(PosixFileAttributes attributes) {
+  private boolean isTrusted(Path file, PosixFileAttributes attributes) throws IOException {
     Set<PosixFilePermission> permissions = attributes.permissions();
-    return "root".equals(attributes.owner().getName())
+    return Integer.valueOf(0)
+            .equals(Files.getAttribute(file, "unix:uid", LinkOption.NOFOLLOW_LINKS))
         && !permissions.contains(PosixFilePermission.GROUP_WRITE)
         && !permissions.contains(PosixFilePermission.OTHERS_WRITE);
   }
@@ -360,7 +363,7 @@ public class Preprocessor {
     if (!isPosix()) {
       return;
     }
-    if (isRunningAsRoot() && "isolate".equalsIgnoreCase(sandbox)) {
+    if (FileSystemUtils.isRunningAsRoot() && "isolate".equalsIgnoreCase(sandbox)) {
       try {
         Files.setAttribute(workDirectory, "unix:uid", isolateUid(), LinkOption.NOFOLLOW_LINKS);
       } catch (IOException ex) {
@@ -368,7 +371,9 @@ public class Preprocessor {
       }
       return;
     }
-    if (isRunningAsRoot() && sandboxUsername != null && !sandboxUsername.isEmpty()) {
+    if (FileSystemUtils.isRunningAsRoot()
+        && sandboxUsername != null
+        && !sandboxUsername.isEmpty()) {
       try {
         UserPrincipal owner =
             FileSystems.getDefault().getUserPrincipalLookupService().lookupPrincipalByName(
@@ -398,15 +403,6 @@ public class Preprocessor {
    */
   private boolean isPosix() {
     return !System.getProperty("os.name").contains("Windows");
-  }
-
-  /**
-   * Checks whether the judger is running as the root user.
-   *
-   * @return whether the current process is running as root
-   */
-  private boolean isRunningAsRoot() {
-    return "root".equals(System.getProperty("user.name"));
   }
 
   /** The unprivileged user the native sandbox drops to; the work directory is handed to it. */

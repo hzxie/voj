@@ -291,7 +291,7 @@ public class SandboxBehaviorTest {
   public void testMissingSandboxUserIsASystemError() throws Exception {
     Assumptions.assumeTrue("native".equalsIgnoreCase(sandbox), "This tests the native runner.");
     Assumptions.assumeTrue(
-        "root".equals(System.getProperty("user.name")), "Privileges are only dropped by root.");
+        FileSystemUtils.isRunningAsRoot(), "Privileges are only dropped by root.");
     Runner runner = new Runner();
     ReflectionTestUtils.setField(runner, "sandboxUsername", "voj-no-such-user");
     SandboxCommand command = command("/bin/true", createWorkDirectory(900046L), null, false);
