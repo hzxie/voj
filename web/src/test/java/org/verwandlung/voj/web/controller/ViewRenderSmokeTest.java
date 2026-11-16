@@ -714,6 +714,7 @@ class ViewRenderSmokeTest {
     Submission submission = aSubmission(7000L);
     submission.setJudgeLog("#error <img src=x onerror=alert(1)>");
     when(submissionService.getSubmission(7000L)).thenReturn(submission);
+    when(contestService.isSubmissionVisible(any(), any())).thenReturn(true);
     mockMvc
         .perform(getWithCsrf("/submission/7000"))
         .andExpect(status().isOk())
@@ -830,25 +831,21 @@ class ViewRenderSmokeTest {
   @Test
   void submissionViewRenders() throws Exception {
     when(submissionService.getSubmission(7000L)).thenReturn(aSubmission(7000L));
+    when(contestService.isSubmissionVisible(any(), any())).thenReturn(true);
     mockMvc.perform(getWithCsrf("/submission/7000")).andExpect(status().isOk());
   }
 
   /**
-   * A submission to an unpublished problem is not found for non-administrators (even its owner), so
-   * the page does not reveal the problem's name, but still renders for administrators.
+   * A submission the viewer may not see (ContestService#isSubmissionVisible: a submission to an
+   * unpublished problem, or another user's during a contest) is not found, so the page reveals
+   * neither the verdict nor the problem's name.
    */
   @Test
-  void submissionToDraftProblemIsHiddenFromNonAdministrators() throws Exception {
-    Submission submission = aSubmission(7000L);
-    submission.getProblem().setStatus("DRAFT");
-    when(submissionService.getSubmission(7000L)).thenReturn(submission);
-    mockMvc.perform(getWithCsrf("/submission/7000")).andExpect(status().isNotFound());
-
+  void invisibleSubmissionIsNotFound() throws Exception {
+    when(submissionService.getSubmission(7000L)).thenReturn(aSubmission(7000L));
+    when(contestService.isSubmissionVisible(any(), any())).thenReturn(false);
     authenticateUser();
     mockMvc.perform(getWithCsrf("/submission/7000")).andExpect(status().isNotFound());
-
-    authenticateAdmin();
-    mockMvc.perform(getWithCsrf("/submission/7000")).andExpect(status().isOk());
   }
 
   /** The OI-mode leaderboard renders for a started OI contest. */

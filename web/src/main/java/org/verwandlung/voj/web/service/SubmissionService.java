@@ -194,33 +194,59 @@ public class SubmissionService {
   }
 
   /**
-   * Gets the list of submissions.
+   * Gets the list of submissions a viewer may see: an administrator sees every submission; anybody
+   * else neither sees the submissions to unpublished problems nor, until the contest ends, the
+   * submissions other users made in a contest (see {@link ContestService#isSubmissionVisible}).
    *
    * @param problemId - the unique identifier of the problem
    * @param username - the username of the user
    * @param limit - the number of submissions to load each time
-   * @param isPublicOnly - when {@code true}, submissions to unpublished problems are excluded
+   * @param viewer - the user viewing the list (may be null)
    * @return the list of submissions (a List<Submission> object)
    */
   public List<Submission> getSubmissions(
-      long problemId, String username, int limit, boolean isPublicOnly) {
-    return submissionMapper.getSubmissions(problemId, username, limit, isPublicOnly);
+      long problemId, String username, int limit, User viewer) {
+    return submissionMapper.getSubmissions(
+        problemId,
+        username,
+        limit,
+        !PublicationStatus.isAdministrator(viewer),
+        getUid(viewer),
+        new Date());
   }
 
   /**
-   * Gets the list of submissions. Used to load submissions asynchronously.
+   * Gets the list of submissions a viewer may see (see {@link #getSubmissions(long, String, int,
+   * User)}). Used to load submissions asynchronously.
    *
    * @param problemId - the unique identifier of the problem
    * @param username - the username of the user
    * @param offset - the starting number of the submission identifier
    * @param limit - the number of submissions to load each time
-   * @param isPublicOnly - when {@code true}, submissions to unpublished problems are excluded
+   * @param viewer - the user viewing the list (may be null)
    * @return the list of submissions (a List<Submission> object)
    */
   public List<Submission> getSubmissions(
-      long problemId, String username, long offset, int limit, boolean isPublicOnly) {
+      long problemId, String username, long offset, int limit, User viewer) {
     return submissionMapper.getSubmissionsUsingOffset(
-        problemId, username, "", offset, limit, isPublicOnly);
+        problemId,
+        username,
+        "",
+        offset,
+        limit,
+        !PublicationStatus.isAdministrator(viewer),
+        getUid(viewer),
+        new Date());
+  }
+
+  /**
+   * Gets the unique identifier of a viewer.
+   *
+   * @param viewer - the viewer (may be null)
+   * @return the unique identifier of the viewer, or 0 for an anonymous viewer
+   */
+  private static long getUid(User viewer) {
+    return viewer == null ? 0 : viewer.getUid();
   }
 
   /**
@@ -252,19 +278,26 @@ public class SubmissionService {
   }
 
   /**
-   * Gets the list of latest submissions. Used to periodically fetch the latest submissions.
+   * Gets the list of latest submissions a viewer may see (see {@link #getSubmissions(long, String,
+   * int, User)}). Used to periodically fetch the latest submissions.
    *
    * @param problemId - the unique identifier of the problem
    * @param username - the username of the user
    * @param offset - the starting number of the submission identifier
    * @param limit - the number of submissions to load each time
-   * @param isPublicOnly - when {@code true}, submissions to unpublished problems are excluded
+   * @param viewer - the user viewing the list (may be null)
    * @return the list of submissions (a List<Submission> object)
    */
   public List<Submission> getLatestSubmissions(
-      long problemId, String username, long offset, int limit, boolean isPublicOnly) {
+      long problemId, String username, long offset, int limit, User viewer) {
     return submissionMapper.getLatestSubmissionsUsingOffset(
-        problemId, username, offset, limit, isPublicOnly);
+        problemId,
+        username,
+        offset,
+        limit,
+        !PublicationStatus.isAdministrator(viewer),
+        getUid(viewer),
+        new Date());
   }
 
   /**

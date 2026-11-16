@@ -35,6 +35,29 @@
 			select="org.verwandlung.voj.web.mapper.UserMapper.getUserUsingUid" />
 	</resultMap>
 	
+	<!-- The restriction of the submission lists for a viewer who is not an administrator: no
+	     submissions to unpublished problems, and no submissions made in a contest that has not ended
+	     yet - except the viewer's own. Until a contest ends, a contestant sees only their own
+	     contest submissions and nobody else sees any (in particular no verdict made after the
+	     scoreboard freeze). Mirrors ContestService#isSubmissionVisible. -->
+	<sql id="publicOnly">
+		AND problem_id IN (
+			SELECT problem_id
+			FROM voj_problems
+			WHERE problem_status = 'PUBLISHED'
+		)
+		AND (
+			uid = #{viewerUid}
+			OR NOT EXISTS (
+				SELECT 1
+				FROM voj_contest_submissions running_cs
+				JOIN voj_contests running_c ON running_c.contest_id = running_cs.contest_id
+				WHERE running_cs.submission_id = voj_submissions.submission_id
+				AND running_c.contest_end_time &gt; #{now}
+			)
+		)
+	</sql>
+
 	<!-- Methods -->
 	<select id="getNumberOfSubmissionsUsingDate" 
 		parameterType="map"
@@ -143,11 +166,7 @@
 				AND username = #{username}
 			</if>
 			<if test="isPublicOnly">
-				AND problem_id IN (
-					SELECT problem_id
-					FROM voj_problems
-					WHERE problem_status = 'PUBLISHED'
-				)
+				<include refid="publicOnly" />
 			</if>
 		</where>
 		ORDER BY submission_id DESC 
@@ -190,11 +209,7 @@
 			AND submission_judge_result = #{judgeResult}
 		</if>
 		<if test="isPublicOnly">
-			AND problem_id IN (
-				SELECT problem_id
-				FROM voj_problems
-				WHERE problem_status = 'PUBLISHED'
-			)
+			<include refid="publicOnly" />
 		</if>
 		ORDER BY submission_id DESC
 		LIMIT #{limit}
@@ -213,11 +228,7 @@
 			AND username = #{username} 
 		</if>
 		<if test="isPublicOnly">
-			AND problem_id IN (
-				SELECT problem_id
-				FROM voj_problems
-				WHERE problem_status = 'PUBLISHED'
-			)
+			<include refid="publicOnly" />
 		</if>
 		ORDER BY submission_id 
 		LIMIT #{limit}

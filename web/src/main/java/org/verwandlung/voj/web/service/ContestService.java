@@ -336,33 +336,55 @@ public class ContestService {
   }
 
   /**
-   * Tests whether a user may see a submission because it was made in a contest whose problem pages
-   * the user may view. Contest problems are often unpublished, and the submission pages otherwise
-   * hide submissions to unpublished problems from non-administrators; this keeps a contestant's own
-   * contest submissions (and, after the contest, everyone's) reachable from the contest pages.
+   * Tests whether a user may see a submission (its verdict, judge log and details; the source code
+   * is further restricted to its owner and administrators). This is the rule every page and action
+   * that shows a single submission applies; the submission lists apply the same rule in SQL (see
+   * the {@code publicOnly} fragment of SubmissionMapper.xml).
+   *
+   * <ul>
+   *   <li>Administrators see every submission.
+   *   <li>Until a contest ends, the submissions made in it are visible to their owner only: a
+   *       contestant must not follow another contestant's verdicts (or code), and nobody may see
+   *       the verdicts made after the scoreboard freeze before the leaderboard is unfrozen.
+   *   <li>Otherwise a submission is visible when its problem is published, or when it was made in
+   *       a contest whose problem pages the user may view (contest problems are often unpublished;
+   *       this keeps a contestant's own contest submissions and, after the contest, everyone's
+   *       reachable from the contest pages).
+   * </ul>
    *
    * @param submission - the submission
    * @param user - the user (may be null)
-   * @return whether the submission belongs to a contest whose problems the user may view
+   * @return whether the user may see the submission
    */
-  public boolean isSubmissionViewableThroughContest(Submission submission, User user) {
-    if (submission == null || submission.getProblem() == null) {
+  public boolean isSubmissionVisible(Submission submission, User user) {
+    if (submission == null) {
       return false;
     }
+    if (PublicationStatus.isAdministrator(user)) {
+      return true;
+    }
+    boolean isOwner = user != null && user.equals(submission.getUser());
+    boolean isViewableThroughContest = false;
+    Date currentTime = new Date();
     for (long contestId :
         contestSubmissionMapper.getContestIdsOfSubmission(submission.getSubmissionId())) {
       Contest contest = contestMapper.getContest(contestId);
-      if (contest == null || !PublicationStatus.isVisibleTo(contest.getStatus(), user)) {
+      if (contest == null) {
         continue;
       }
+      if (!isOwner && currentTime.before(contest.getEndTime())) {
+        return false;
+      }
       List<Long> problemIds = JsonUtils.toList(contest.getProblems(), Long.class);
-      if (problemIds != null
+      if (PublicationStatus.isVisibleTo(contest.getStatus(), user)
+          && problemIds != null
           && problemIds.contains(submission.getProblem().getProblemId())
           && isContestProblemsViewable(contest, user)) {
-        return true;
+        isViewableThroughContest = true;
       }
     }
-    return false;
+    return isViewableThroughContest
+        || PublicationStatus.isVisibleTo(submission.getProblem().getStatus(), user);
   }
 
   /**

@@ -38,7 +38,6 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import org.verwandlung.voj.web.exception.ResourceNotFoundException;
 import org.verwandlung.voj.web.messenger.ApplicationEventListener;
-import org.verwandlung.voj.web.model.Problem;
 import org.verwandlung.voj.web.model.PublicationStatus;
 import org.verwandlung.voj.web.model.Submission;
 import org.verwandlung.voj.web.model.User;
@@ -75,10 +74,7 @@ public class SubmissionController {
     User currentUser = HttpSessionParser.getCurrentUser(request.getSession());
     List<Submission> submissions =
         submissionService.getSubmissions(
-            problemId,
-            username,
-            NUMBER_OF_SUBMISSION_PER_PAGE,
-            !PublicationStatus.isAdministrator(currentUser));
+            problemId, username, NUMBER_OF_SUBMISSION_PER_PAGE, currentUser);
     redactSubmissions(submissions, currentUser);
     return new ModelAndView("pages/submissions/submissions").addObject("submissions", submissions);
   }
@@ -105,11 +101,7 @@ public class SubmissionController {
     User currentUser = HttpSessionParser.getCurrentUser(request.getSession());
     List<Submission> submissions =
         submissionService.getSubmissions(
-            problemId,
-            username,
-            startIndex,
-            NUMBER_OF_SUBMISSION_PER_PAGE,
-            !PublicationStatus.isAdministrator(currentUser));
+            problemId, username, startIndex, NUMBER_OF_SUBMISSION_PER_PAGE, currentUser);
     redactSubmissions(submissions, currentUser);
     result.put("isSuccessful", submissions != null && !submissions.isEmpty());
     result.put("submissions", submissions);
@@ -139,11 +131,7 @@ public class SubmissionController {
     User currentUser = HttpSessionParser.getCurrentUser(request.getSession());
     List<Submission> submissions =
         submissionService.getLatestSubmissions(
-            problemId,
-            username,
-            startIndex,
-            NUMBER_OF_SUBMISSION_PER_PAGE,
-            !PublicationStatus.isAdministrator(currentUser));
+            problemId, username, startIndex, NUMBER_OF_SUBMISSION_PER_PAGE, currentUser);
     redactSubmissions(submissions, currentUser);
     result.put("isSuccessful", submissions != null && !submissions.isEmpty());
     result.put("submissions", submissions);
@@ -166,7 +154,7 @@ public class SubmissionController {
       HttpServletResponse response) {
     Submission submission = submissionService.getSubmission(submissionId);
     User currentUser = HttpSessionParser.getCurrentUser(request.getSession());
-    if (submission == null || !isSubmissionVisible(submission, currentUser)) {
+    if (submission == null || !contestService.isSubmissionVisible(submission, currentUser)) {
       throw new ResourceNotFoundException();
     }
     boolean canViewCode = canViewSourceCode(submission, currentUser);
@@ -242,24 +230,6 @@ public class SubmissionController {
   }
 
   /**
-   * Determines whether the given viewer is allowed to see a submission at all. A submission to an
-   * unpublished (draft / hidden) problem is visible to administrators only, so that neither the
-   * submission nor the problem it names is exposed through the submission pages - unless it was
-   * made in a contest whose problem pages the viewer may open (e.g. a contestant following their own
-   * contest submission while the contest runs).
-   *
-   * @param submission - the submission record
-   * @param currentUser - the currently logged-in user, or null
-   * @return whether the viewer may see the submission
-   */
-  private boolean isSubmissionVisible(Submission submission, User currentUser) {
-    Problem problem = submission.getProblem();
-    return problem == null
-        || PublicationStatus.isVisibleTo(problem.getStatus(), currentUser)
-        || contestService.isSubmissionViewableThroughContest(submission, currentUser);
-  }
-
-  /**
    * Gets the real-time judge result.
    *
    * @param submissionId - the unique identifier of the submission record
@@ -280,7 +250,7 @@ public class SubmissionController {
     // submissions are enabled, everyone else. Without this, the administration console's
     // edit-submission page could never subscribe to another user's pending submission.
     if (submission == null
-        || !isSubmissionVisible(submission, currentUser)
+        || !contestService.isSubmissionVisible(submission, currentUser)
         || !canViewSourceCode(submission, currentUser)
         || !submission.getJudgeResult().getJudgeResultSlug().equals("PD")) {
       throw new ResourceNotFoundException();
@@ -307,7 +277,7 @@ public class SubmissionController {
 
     User currentUser = HttpSessionParser.getCurrentUser(request.getSession());
     Submission submission = submissionService.getSubmission(submissionId);
-    if (submission != null && !isSubmissionVisible(submission, currentUser)) {
+    if (submission != null && !contestService.isSubmissionVisible(submission, currentUser)) {
       submission = null;
     }
     if (submission != null) {
@@ -330,8 +300,8 @@ public class SubmissionController {
   @Autowired private SubmissionService submissionService;
 
   /**
-   * The autowired ContestService object. Used to show contest submissions to unpublished problems
-   * to the users who may view that contest's problems.
+   * The autowired ContestService object. Decides who may see a submission (unpublished problems,
+   * running contests).
    */
   @Autowired private ContestService contestService;
 

@@ -16,6 +16,7 @@
  */
 package org.verwandlung.voj.web.mapper;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -130,14 +131,20 @@ public interface SubmissionMapper {
    * @param problemId - the unique identifier of the problem
    * @param username - the username of the user
    * @param limit - the number of submissions to load each time
-   * @param isPublicOnly - when {@code true}, submissions to unpublished problems are excluded
+   * @param isPublicOnly - when {@code true} (a viewer who is not an administrator), submissions to
+   *     unpublished problems are excluded, and so are the submissions made in a contest that has not
+   *     ended at {@code now} unless they are the viewer's own
+   * @param viewerUid - the unique identifier of the viewer (0 for an anonymous viewer)
+   * @param now - the current time
    * @return all submissions within a range
    */
   List<Submission> getSubmissions(
       @Param("problemId") long problemId,
       @Param("username") String username,
       @Param("limit") int limit,
-      @Param("isPublicOnly") boolean isPublicOnly);
+      @Param("isPublicOnly") boolean isPublicOnly,
+      @Param("viewerUid") long viewerUid,
+      @Param("now") Date now);
 
   /**
    * [For administrators only] Gets a page of the submissions matching the filters, newest first.
@@ -166,7 +173,11 @@ public interface SubmissionMapper {
    * @param judgeResult - the slug of the judge result to filter by, or empty for all
    * @param offset - the starting number of the submission identifier
    * @param limit - the number of submissions to load each time
-   * @param isPublicOnly - when {@code true}, submissions to unpublished problems are excluded
+   * @param isPublicOnly - when {@code true} (a viewer who is not an administrator), submissions to
+   *     unpublished problems are excluded, and so are the submissions made in a contest that has not
+   *     ended at {@code now} unless they are the viewer's own
+   * @param viewerUid - the unique identifier of the viewer (0 for an anonymous viewer)
+   * @param now - the current time
    * @return all submissions within a range
    */
   List<Submission> getSubmissionsUsingOffset(
@@ -175,7 +186,9 @@ public interface SubmissionMapper {
       @Param("judgeResult") String judgeResult,
       @Param("submissionId") long offset,
       @Param("limit") int limit,
-      @Param("isPublicOnly") boolean isPublicOnly);
+      @Param("isPublicOnly") boolean isPublicOnly,
+      @Param("viewerUid") long viewerUid,
+      @Param("now") Date now);
 
   /**
    * Gets the submissions of a user for a problem.
@@ -184,7 +197,11 @@ public interface SubmissionMapper {
    * @param username - the username of the user
    * @param offset - the starting number of the submission identifier
    * @param limit - the number of submissions to load each time
-   * @param isPublicOnly - when {@code true}, submissions to unpublished problems are excluded
+   * @param isPublicOnly - when {@code true} (a viewer who is not an administrator), submissions to
+   *     unpublished problems are excluded, and so are the submissions made in a contest that has not
+   *     ended at {@code now} unless they are the viewer's own
+   * @param viewerUid - the unique identifier of the viewer (0 for an anonymous viewer)
+   * @param now - the current time
    * @return all submissions within a range
    */
   List<Submission> getLatestSubmissionsUsingOffset(
@@ -192,7 +209,9 @@ public interface SubmissionMapper {
       @Param("username") String username,
       @Param("submissionId") long offset,
       @Param("limit") int limit,
-      @Param("isPublicOnly") boolean isPublicOnly);
+      @Param("isPublicOnly") boolean isPublicOnly,
+      @Param("viewerUid") long viewerUid,
+      @Param("now") Date now);
 
   /**
    * Gets the submissions of a user for a problem.

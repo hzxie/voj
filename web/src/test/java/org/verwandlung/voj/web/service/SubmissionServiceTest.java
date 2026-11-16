@@ -86,10 +86,10 @@ public class SubmissionServiceTest {
     Assertions.assertNull(submissionService.getSubmission(0));
   }
 
-  /** Test case: tests the getSubmissions(long, String, int, boolean) method. Test data: the submissions of user zjhzxhz for problem 1000. Expected: exactly submissions 1000 and 1001, each belonging to problem 1000. */
+  /** Test case: tests the getSubmissions(long, String, int, User) method. Test data: the submissions of user zjhzxhz for problem 1000. Expected: exactly submissions 1000 and 1001, each belonging to problem 1000. */
   @Test
   public void testGetSubmissions() {
-    List<Submission> submissions = submissionService.getSubmissions(1000, "zjhzxhz", 10, true);
+    List<Submission> submissions = submissionService.getSubmissions(1000, "zjhzxhz", 10, null);
     Assertions.assertEquals(2, submissions.size());
 
     // Assert which submissions came back, not just how many: a wrong join or a
@@ -256,21 +256,23 @@ public class SubmissionServiceTest {
                 .get("submissionId");
 
     Assertions.assertFalse(
-        containsSubmission(submissionService.getSubmissions(0, "", 100, true), submissionId));
+        containsSubmission(submissionService.getSubmissions(0, "", 100, null), submissionId));
     Assertions.assertTrue(
-        containsSubmission(submissionService.getSubmissions(0, "", 100, false), submissionId));
+        containsSubmission(
+            submissionService.getSubmissions(0, "", 100, administrator()), submissionId));
     Assertions.assertFalse(
         containsSubmission(
-            submissionService.getSubmissions(0, "", submissionId, 100, true), submissionId));
+            submissionService.getSubmissions(0, "", submissionId, 100, null), submissionId));
     Assertions.assertTrue(
         containsSubmission(
-            submissionService.getSubmissions(0, "", submissionId, 100, false), submissionId));
+            submissionService.getSubmissions(0, "", submissionId, 100, administrator()),
+            submissionId));
     Assertions.assertFalse(
         containsSubmission(
-            submissionService.getLatestSubmissions(0, "", 0, 100, true), submissionId));
+            submissionService.getLatestSubmissions(0, "", 0, 100, null), submissionId));
     Assertions.assertTrue(
         containsSubmission(
-            submissionService.getLatestSubmissions(0, "", 0, 100, false), submissionId));
+            submissionService.getLatestSubmissions(0, "", 0, 100, administrator()), submissionId));
   }
 
   /** Tests whether a list of submissions contains the submission with the given identifier. */

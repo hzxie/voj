@@ -50,7 +50,6 @@ import org.verwandlung.voj.web.config.SecurityConfig;
 import org.verwandlung.voj.web.exception.ResourceNotFoundException;
 import org.verwandlung.voj.web.model.Language;
 import org.verwandlung.voj.web.model.Option;
-import org.verwandlung.voj.web.model.PublicationStatus;
 import org.verwandlung.voj.web.model.User;
 import org.verwandlung.voj.web.model.VojUserDetails;
 import org.verwandlung.voj.web.service.ContestService;
@@ -473,10 +472,7 @@ public class AccountsController {
     view.addObject(
         "recentSubmissions",
         submissionService.getSubmissions(
-            0,
-            user.getUsername(),
-            NUMBER_OF_RECENT_SUBMISSIONS,
-            !PublicationStatus.isAdministrator(HttpSessionParser.getCurrentUser())));
+            0, user.getUsername(), NUMBER_OF_RECENT_SUBMISSIONS, HttpSessionParser.getCurrentUser()));
     view.addObject("submissionStats", submissionService.getSubmissionStatsOfUser(userId));
     view.addObject("contestsAttended", contestService.getNumberOfContestsOfUser(userId));
     view.addObject("solvedByDifficulty", submissionService.getSolvedProblemsByDifficulty(userId));

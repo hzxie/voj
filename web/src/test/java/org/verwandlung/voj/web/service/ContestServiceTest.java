@@ -18,6 +18,7 @@ package org.verwandlung.voj.web.service;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -429,11 +430,20 @@ public class ContestServiceTest {
         contestSubmissionMapper.getContestIdsOfSubmission(submissionId));
 
     Submission submission = submissionService.getSubmission(submissionId);
-    Assertions.assertTrue(
-        contestService.isSubmissionViewableThroughContest(submission, userWithUid(1000)));
-    Assertions.assertFalse(
-        contestService.isSubmissionViewableThroughContest(submission, userWithUid(1002)));
-    Assertions.assertFalse(contestService.isSubmissionViewableThroughContest(submission, null));
+    Assertions.assertTrue(contestService.isSubmissionVisible(submission, userWithUid(1000)));
+    Assertions.assertFalse(contestService.isSubmissionVisible(submission, userWithUid(1002)));
+    Assertions.assertFalse(contestService.isSubmissionVisible(submission, null));
+
+    // After the contest, everyone who may see the (published) contest may see the submission to
+    // its hidden problem - unless the contest itself is hidden.
+    endFixtureContest();
+    Assertions.assertTrue(contestService.isSubmissionVisible(submission, userWithUid(1002)));
+    Assertions.assertTrue(contestService.isSubmissionVisible(submission, null));
+    Contest contest = contestMapper.getContest(FIXTURE_CONTEST_ID);
+    contest.setStatus(PublicationStatus.HIDDEN);
+    contestMapper.updateContest(contest);
+    Assertions.assertFalse(contestService.isSubmissionVisible(submission, userWithUid(1002)));
+    Assertions.assertTrue(contestService.isSubmissionVisible(submission, administrator()));
 
     // The normal submission path still refuses the hidden problem.
     Assertions.assertEquals(
@@ -441,6 +451,164 @@ public class ContestServiceTest {
         submissionService
             .createSubmission(userWithUid(1000), 1002, "text/x-java", "Code")
             .get("isProblemExists"));
+  }
+
+  /**
+   * Test case: tests isSubmissionVisible(Submission, User) while a contest with a scoreboard freeze
+   * runs. Test data: the ACM fixture (published problems), frozen from 30 minutes after the start;
+   * user 1000's accepted submission to P1001 was made after the freeze. Expected: only its owner
+   * and administrators may see it - not another contestant, not a user who did not attend, not an
+   * anonymous visitor - and the same holds for a submission made before the freeze.
+   */
+  @Test
+  public void testIsSubmissionVisibleDuringContest() {
+    createAcmContestFixture(150);
+    Submission afterFreeze = getFixtureSubmission(1000, 1001);
+    Submission beforeFreeze = getFixtureSubmission(1001, 1000);
+
+    for (Submission submission : List.of(afterFreeze, beforeFreeze)) {
+      User owner = submission.getUser();
+      Assertions.assertTrue(contestService.isSubmissionVisible(submission, owner));
+      Assertions.assertTrue(contestService.isSubmissionVisible(submission, administrator()));
+      for (long uid : new long[] {1000, 1001, 1002}) {
+        if (uid != owner.getUid()) {
+          Assertions.assertFalse(
+              contestService.isSubmissionVisible(submission, userWithUid(uid)), "uid " + uid);
+        }
+      }
+      Assertions.assertFalse(contestService.isSubmissionVisible(submission, null));
+    }
+  }
+
+  /**
+   * Test case: tests isSubmissionVisible(Submission, User) outside contests. Test data: submission
+   * 1003 (published problem) and a submission by user 1000 to the hidden problem 1002. Expected:
+   * the first is visible to everyone; the second only to administrators - not even to its owner, so
+   * the submission pages do not reveal the hidden problem.
+   */
+  @Test
+  public void testIsSubmissionVisibleOutsideContests() {
+    Submission published = submissionService.getSubmission(1003);
+    Assertions.assertTrue(contestService.isSubmissionVisible(published, null));
+    Assertions.assertTrue(contestService.isSubmissionVisible(published, userWithUid(1002)));
+
+    jdbcTemplate()
+        .update(
+            "INSERT INTO voj_submissions (problem_id, uid, language_id, submission_code)"
+                + " VALUES (1002, 1000, 2, 'Code')");
+    long submissionId =
+        jdbcTemplate().queryForObject("SELECT LAST_INSERT_ID()", Long.class);
+    Submission hidden = submissionService.getSubmission(submissionId);
+    Assertions.assertFalse(contestService.isSubmissionVisible(hidden, userWithUid(1000)));
+    Assertions.assertFalse(contestService.isSubmissionVisible(hidden, null));
+    Assertions.assertTrue(contestService.isSubmissionVisible(hidden, administrator()));
+    Assertions.assertFalse(contestService.isSubmissionVisible(null, administrator()));
+  }
+
+  /**
+   * Test case: tests isSubmissionVisible(Submission, User) after the contest. Test data: the ACM
+   * fixture, ended. Expected: every submission to its published problems is visible to everyone.
+   */
+  @Test
+  public void testIsSubmissionVisibleAfterContest() {
+    createAcmContestFixture(150);
+    endFixtureContest();
+    Submission submission = getFixtureSubmission(1000, 1001);
+
+    Assertions.assertTrue(contestService.isSubmissionVisible(submission, userWithUid(1001)));
+    Assertions.assertTrue(contestService.isSubmissionVisible(submission, userWithUid(1002)));
+    Assertions.assertTrue(contestService.isSubmissionVisible(submission, null));
+  }
+
+  /**
+   * Test case: tests the submission lists of SubmissionService (getSubmissions with and without an
+   * offset, getLatestSubmissions) while a contest runs, and after it. Test data: the ACM fixture,
+   * whose problems are published. Expected: a contestant lists their own contest submissions but
+   * not the other contestant's; an anonymous visitor lists none of them; an administrator lists all
+   * of them; after the contest everyone lists all of them.
+   */
+  @Test
+  public void testSubmissionListsHideRunningContestSubmissions() {
+    createAcmContestFixture(150);
+    List<Long> of1000 = getFixtureSubmissionIds(1000);
+    List<Long> of1001 = getFixtureSubmissionIds(1001);
+
+    Assertions.assertTrue(listedSubmissionIds(userWithUid(1001)).containsAll(of1001));
+    Assertions.assertTrue(
+        java.util.Collections.disjoint(listedSubmissionIds(userWithUid(1001)), of1000));
+    Assertions.assertTrue(java.util.Collections.disjoint(listedSubmissionIds(null), of1000));
+    Assertions.assertTrue(java.util.Collections.disjoint(listedSubmissionIds(null), of1001));
+    Assertions.assertTrue(listedSubmissionIds(administrator()).containsAll(of1000));
+    Assertions.assertTrue(listedSubmissionIds(administrator()).containsAll(of1001));
+    // The profile page lists a user's recent submissions with the same rule.
+    Assertions.assertTrue(
+        submissionService.getSubmissions(0, "zjhzxhz", 100, userWithUid(1001)).stream()
+            .noneMatch(s -> of1000.contains(s.getSubmissionId())));
+
+    endFixtureContest();
+    Assertions.assertTrue(listedSubmissionIds(null).containsAll(of1000));
+    Assertions.assertTrue(listedSubmissionIds(userWithUid(1001)).containsAll(of1000));
+  }
+
+  /**
+   * Lists the identifiers of the submissions a viewer sees through every list of SubmissionService,
+   * checking that the three lists agree.
+   */
+  private List<Long> listedSubmissionIds(User viewer) {
+    List<Long> listed =
+        submissionService.getSubmissions(0, "", 1000, viewer).stream()
+            .map(Submission::getSubmissionId)
+            .sorted()
+            .toList();
+    Assertions.assertEquals(
+        listed,
+        submissionService.getSubmissions(0, "", Long.MAX_VALUE, 1000, viewer).stream()
+            .map(Submission::getSubmissionId)
+            .sorted()
+            .toList());
+    Assertions.assertEquals(
+        listed,
+        submissionService.getLatestSubmissions(0, "", 0, 1000, viewer).stream()
+            .map(Submission::getSubmissionId)
+            .sorted()
+            .toList());
+    return listed;
+  }
+
+  /** Gets the identifiers of a user's submissions in the fixture contest. */
+  private List<Long> getFixtureSubmissionIds(long uid) {
+    return contestSubmissionMapper.getSubmissionOfContestOfContest(FIXTURE_CONTEST_ID, uid).stream()
+        .map(cs -> cs.getSubmission().getSubmissionId())
+        .toList();
+  }
+
+  /** Gets a user's last submission to a problem in the fixture contest. */
+  private Submission getFixtureSubmission(long uid, long problemId) {
+    long submissionId =
+        contestSubmissionMapper
+            .getSubmissionOfContestOfContestProblem(FIXTURE_CONTEST_ID, problemId, uid)
+            .get(0)
+            .getSubmission()
+            .getSubmissionId();
+    return submissionService.getSubmission(submissionId);
+  }
+
+  /**
+   * Moves the end of the fixture contest into the past. Goes through the mapper, so the contest
+   * MyBatis cached in this transaction is evicted.
+   */
+  private void endFixtureContest() {
+    Contest contest = contestMapper.getContest(FIXTURE_CONTEST_ID);
+    contest.setEndTime(new Date(System.currentTimeMillis() - 1000));
+    contestMapper.updateContest(contest);
+  }
+
+  /** Constructs an administrator. */
+  private User administrator() {
+    User administrator = userWithUid(1);
+    administrator.setUserGroup(
+        new org.verwandlung.voj.web.model.UserGroup(8, "administrators", "Administrators"));
+    return administrator;
   }
 
   /** Test case: tests createSubmission(long, long, User, String, String). Test data: user 1002, who did not attend the running contest. Expected: rejected with isAttended = false. */
