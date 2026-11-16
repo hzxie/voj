@@ -283,7 +283,7 @@ public interface SubmissionMapper {
    * not show the live judging stream. It is queued anew: at the end of the queue (its queued time
    * is now), with no failed judging so far, and without the claim of a judging, so that a
    * judging of it still running stops (it finds its claim token gone) and the judgers take it
-   * again.
+   * again. A pending submission that no judging claimed is left alone, at its place in the queue.
    *
    * @param submissionId - the unique identifier of the submission
    * @return the number of rows updated

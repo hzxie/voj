@@ -680,6 +680,7 @@ public class SubmissionService {
   /**
    * [For administrators only] Rejudges submissions: resets each of them to pending, at the end of
    * the judging queue (see {@link SubmissionMapper#resetSubmissionToPending}), in one transaction.
+   * A submission still waiting for a judger keeps its place in the queue.
    *
    * @param submissionIds - the unique identifiers of the submissions
    */

@@ -324,6 +324,7 @@
 			submission_judge_failure = NULL, submission_claim_token = NULL,
 			submission_lease_expiry_time = NULL
 		WHERE submission_id = #{submissionId}
+			AND (submission_judge_result &lt;&gt; 'PD' OR submission_claim_token IS NOT NULL)
 	</update>
 	<!-- A pending submission that no judging holds: none claimed it, or the lease of the one that
 	     did expired, by the database's clock. -->

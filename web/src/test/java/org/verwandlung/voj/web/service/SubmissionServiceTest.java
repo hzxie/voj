@@ -386,6 +386,33 @@ public class SubmissionServiceTest {
   }
 
   /**
+   * Test case: tests rejudgeSubmissions(List). Test data: submission 1001, pending since long ago
+   * and claimed by no judging, after a failed judging. Expected: it is left alone: it keeps its
+   * place in the queue and its failed judging.
+   */
+  @Test
+  public void testRejudgeLeavesAWaitingSubmissionAlone() {
+    org.springframework.jdbc.core.JdbcTemplate jdbcTemplate =
+        new org.springframework.jdbc.core.JdbcTemplate(dataSource);
+    jdbcTemplate.update(
+        "UPDATE voj_submissions SET submission_judge_result = 'PD', submission_judge_attempts = 1,"
+            + " submission_judge_failure = 'Failed.',"
+            + " submission_queued_time = '2014-10-17 23:59:59' WHERE submission_id = 1001");
+
+    submissionService.rejudgeSubmissions(List.of(1001L));
+
+    Map<String, Object> row =
+        jdbcTemplate.queryForMap(
+            "SELECT submission_judge_result, submission_judge_attempts, submission_judge_failure,"
+                + " submission_queued_time = '2014-10-17 23:59:59' AS keeps_its_place"
+                + " FROM voj_submissions WHERE submission_id = 1001");
+    Assertions.assertEquals("PD", row.get("submission_judge_result"));
+    Assertions.assertEquals(1, ((Number) row.get("submission_judge_attempts")).intValue());
+    Assertions.assertEquals("Failed.", row.get("submission_judge_failure"));
+    Assertions.assertEquals(1, ((Number) row.get("keeps_its_place")).intValue());
+  }
+
+  /**
    * Test case: tests isCurrentJudging(long, long). Test data: submission 1001 claimed by a judging
    * with the judger's claim statement, claimed by another judging once its lease expired, then
    * judged by it, then rejudged. Expected: only the claim token the submission carries is
