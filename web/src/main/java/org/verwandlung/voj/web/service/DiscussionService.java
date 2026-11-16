@@ -1087,6 +1087,17 @@ public class DiscussionService {
   }
 
   /**
+   * Gets the unique identifier of the opening post of a thread, i.e. its first reply, which cannot
+   * be deleted on its own.
+   *
+   * @param discussionThreadId - the unique identifier of the discussion thread
+   * @return the unique identifier of the opening post, or null if the thread has no reply
+   */
+  public Long getOpeningPostIdOfThread(long discussionThreadId) {
+    return discussionReplyMapper.getFirstDiscussionReplyIdOfThread(discussionThreadId);
+  }
+
+  /**
    * Checks whether the thread of a reply is locked for a user: a locked thread can no longer be
    * changed by its participants, only by administrators.
    *

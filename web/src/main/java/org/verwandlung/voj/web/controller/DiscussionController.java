@@ -159,6 +159,8 @@ public class DiscussionController {
           "pageDescription",
           SeoUtils.getDescription(openingPost.get(0).getDiscussionReplyContent()));
     }
+    // The page offers no delete control for the opening post: it cannot be deleted on its own.
+    view.addObject("openingPostId", discussionService.getOpeningPostIdOfThread(discussionThreadId));
     view.addObject("minSolvedToVote", discussionService.getMinSolvedToVote());
     view.addObject("minSolvedToReport", discussionService.getMinSolvedToReport());
     view.addObject("postDelayMinutes", discussionService.getNewUserPostDelay());

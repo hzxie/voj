@@ -85,7 +85,7 @@
                         </div>
                     </div>
 
-                    <th:block th:if="${myProfile != null and myProfile.uid == creator.uid}">
+                    <th:block th:if="${myProfile != null and myProfile.uid == creator.uid and (!discussionThread.locked or myProfile.userGroup?.userGroupSlug == 'administrators')}">
                         <button class="vw-btn vw-btn-ghost vw-btn-block" id="edit-discussion-btn"
                                 th:text="#{voj.discussion.thread.edit-discussion}">Edit</button>
                         <button class="vw-btn vw-btn-block hide" id="cancel-edit-discussion-btn"
@@ -101,6 +101,12 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
     <script type="text/javascript" th:inline="javascript">
         var mainEditor, threadCreatorUid = [[${discussionThread.discussionThreadCreator.uid}]], seenParticipants = {};
+        // The opening post cannot be deleted on its own (the thread is deleted instead), and a locked
+        // thread can only be changed by administrators: no controls are offered for what the server
+        // would refuse.
+        var openingPostId = [[${openingPostId}]],
+            isAdministrator = [[${myProfile?.userGroup?.userGroupSlug}]] == 'administrators',
+            isThreadLocked = [[${discussionThread.locked}]];
         // The offset of the next page of replies on the server. It only advances by the number of
         // replies the server returned, so replies posted on this page (appended locally) do not
         // shift it; serverReplyIds remembers which rendered replies came from the server, so that
@@ -166,11 +172,12 @@
                 role     = (creator['userGroup'] && creator['userGroup']['userGroupName']) || '',
                 isOp     = creator['uid'] == threadCreatorUid,
                 isAuthor = creator['uid'] == [[${myProfile?.uid}]],
-                isMine   = isAuthor || [[${myProfile?.userGroup?.userGroupSlug}]] == 'administrators';
-            var actions = isMine
-                ? '<button type="button" class="vw-post-edit" title="' + [[#{voj.discussion.thread.edit}]] + '">' + [[#{voj.discussion.thread.edit}]] + '</button>' +
-                  '<button type="button" class="vw-post-delete" title="' + [[#{voj.discussion.thread.delete}]] + '">' + [[#{voj.discussion.thread.delete}]] + '</button>'
-                : '';
+                canModify = isAdministrator || (isAuthor && !isThreadLocked);
+            var actions = (canModify
+                ? '<button type="button" class="vw-post-edit" title="' + [[#{voj.discussion.thread.edit}]] + '">' + [[#{voj.discussion.thread.edit}]] + '</button>'
+                : '') + (canModify && replyId != openingPostId
+                ? '<button type="button" class="vw-post-delete" title="' + [[#{voj.discussion.thread.delete}]] + '">' + [[#{voj.discussion.thread.delete}]] + '</button>'
+                : '');
             // Users cannot vote on or report their own reply, so those controls are hidden there.
             var voteButtons = isAuthor ? '' :
                 '<button type="button" class="vw-post-vote vw-vote-up' + (reply['isVotedUp'] ? ' active' : '') + '">&#9650; <span class="vote-ups">' + (reply['numberOfVoteUp'] || 0) + '</span></button>' +

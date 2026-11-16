@@ -638,6 +638,31 @@ class ViewRenderSmokeTest {
     mockMvc.perform(getWithCsrf("/discussion/5000")).andExpect(status().isOk());
   }
 
+  /**
+   * The thread page tells its script which reply is the opening post (which it offers no delete
+   * control for), and its creator gets the edit-thread control only while the thread is unlocked.
+   */
+  @Test
+  void threadPageOffersOnlyTheControlsTheServerAccepts() throws Exception {
+    DiscussionThread thread = aThread(5000L);
+    when(discussionService.getDiscussionThreadForDisplay(5000L)).thenReturn(thread);
+    when(discussionService.isDiscussionThreadViewable(any(), any())).thenReturn(true);
+    when(discussionService.getOpeningPostIdOfThread(5000L)).thenReturn(42L);
+    authenticateUser();
+    mockMvc
+        .perform(getWithCsrf("/discussion/5000"))
+        .andExpect(status().isOk())
+        .andExpect(content().string(containsString("openingPostId = 42")))
+        .andExpect(content().string(containsString("id=\"edit-discussion-btn\"")));
+
+    thread.setLocked(true);
+    mockMvc
+        .perform(getWithCsrf("/discussion/5000"))
+        .andExpect(status().isOk())
+        .andExpect(content().string(containsString("isThreadLocked = true")))
+        .andExpect(content().string(not(containsString("id=\"edit-discussion-btn\""))));
+  }
+
   /** User text is stored as plain text: the thread page escapes markup in the title exactly once. */
   @Test
   void discussionThreadTitleIsEscapedOnce() throws Exception {
