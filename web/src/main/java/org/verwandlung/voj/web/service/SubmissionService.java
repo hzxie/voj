@@ -62,9 +62,9 @@ import org.verwandlung.voj.web.util.Pagination;
 public class SubmissionService {
   /** The judge log of a submission in a language that no judger taking submissions supports. */
   static final String NO_JUDGER_JUDGE_LOG =
-      "System Error.\n\nNo running judger that takes submissions supports the language of this"
-          + " submission: the judgers that do stopped, or are not ready as their judgings failed"
-          + " (see their logs). An administrator can rejudge this submission.\n";
+      "System Error.\n\nNo judger is available for the language of this submission at the moment,"
+          + " so it could not be judged. An administrator can have it judged again once a judger"
+          + " is back.\n";
 
   /** How often (ms) the pending submissions in a language without a judger are looked for. */
   static final long NO_JUDGER_CHECK_INTERVAL_MS = 30000;
