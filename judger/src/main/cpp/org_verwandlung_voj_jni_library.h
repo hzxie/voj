@@ -17,54 +17,48 @@
 #include <string>
 
 #include <jni.h>
-/* Header for class org_verwandlung_voj_jni_library */
+/* Helpers shared by the native runners (C++ only: they use std::string). */
 
 #ifndef _Included_org_verwandlung_voj_jni_library
 #define _Included_org_verwandlung_voj_jni_library
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /**
- * Gets the value of a Java String.
+ * Gets the value of a Java String (in JNI's modified UTF-8). The JNI copy of the characters is
+ * released before returning: the judger's JVM is long-lived, and an unreleased copy is C heap that
+ * is never freed (one per string per run).
  * @param  jniEnv - a reference to the JNI runtime environment
- * @param  jStr   - the Java string whose value is to be retrieved
- * @return the value of the Java string
+ * @param  jStr   - the Java string whose value is to be retrieved (may be null)
+ * @return the value of the Java string, or an empty string for null (or if the JVM is out of
+ *         memory, in which case an OutOfMemoryError is pending)
  */
-const char* getStringValue(JNIEnv* JniEnv, jstring jStr) {
-    if ( jStr == nullptr || jStr == NULL ) {
-        return "";
+inline std::string getStringValue(JNIEnv* jniEnv, jstring jStr) {
+    if ( jStr == nullptr ) {
+        return std::string();
     }
-    const char* str = JniEnv->GetStringUTFChars(jStr, 0);
-    return str;
+    const char* chars = jniEnv->GetStringUTFChars(jStr, nullptr);
+    if ( chars == nullptr ) {
+        return std::string();
+    }
+    std::string value(chars);
+    jniEnv->ReleaseStringUTFChars(jStr, chars);
+    return value;
 }
 
 /**
- * Throws an exception into the Java runtime environment.
+ * Throws a java.lang.IllegalStateException into the Java runtime environment. It is a
+ * RuntimeException, so the caller's ordinary exception handling sees a sandbox failure, whereas a
+ * java.lang.Error (meant for unrecoverable JVM conditions) escaped catch (Exception). The native
+ * code must still return right after calling this.
  * @param  jniEnv  - a reference to the JNI runtime environment
  * @param  message - the exception message
- * @return a Java.lang.Error object
+ * @return 0 on success, a negative value if the exception could not be thrown
  */
-jint throwCStringException(JNIEnv* jniEnv, char* message) {
-    jclass exClass;
-    char* className = "java/lang/Error";
-    exClass = jniEnv->FindClass(className);
-
-    return jniEnv->ThrowNew(exClass, message);
+inline jint throwStringException(JNIEnv* jniEnv, const std::string& message) {
+    jclass exClass = jniEnv->FindClass("java/lang/IllegalStateException");
+    if ( exClass == nullptr ) {
+        return -1; // a NoClassDefFoundError is pending instead
+    }
+    return jniEnv->ThrowNew(exClass, message.c_str());
 }
 
-/**
- * Throws an exception into the Java runtime environment.
- * @param  jniEnv  - a reference to the JNI runtime environment
- * @param  message - the exception message
- * @return a Java.lang.Error object
- */
-jint throwStringException(JNIEnv* jniEnv, std::string message) {
-    char* pMessage = const_cast<char *>(message.c_str());
-    return throwCStringException(jniEnv, pMessage);
-}
-
-#ifdef __cplusplus
-}
-#endif
 #endif

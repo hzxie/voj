@@ -14,7 +14,6 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#pragma GCC diagnostic ignored "-Wwrite-strings"
 #ifndef _WIN32_WINNT
 #define _WIN32_WINNT 0x0600
 #endif
