@@ -64,7 +64,11 @@ it takes submissions, and the load of its host. A judger whose last heartbeat is
 more than 30 seconds old (by the database's clock) counts as stopped; every
 judger process has an entry of its own, and the first heartbeat of a process
 removes those of the processes that stopped a day ago. The judgers pages of the
-site and of the administration show the running judgers from it.
+site and of the administration show the running judgers from it. Every count of
+the online judgers (the home page, the administration's dashboard and judgers
+page, the judgers page) counts the judger accounts that at least one running
+judger process runs as: several processes running as one account are one judger
+online (the administration's judgers page lists each process).
 
 | Property | Default | Purpose |
 | --- | --- | --- |
@@ -189,7 +193,7 @@ clocks of the hosts do not matter.
 
 | Property | Default | Purpose |
 | --- | --- | --- |
-| `judger.username` | `voj@judger` | Account this judger authenticates as (in the `judgers` group). Several judgers may run as one account: each process records heartbeats of its own; the public judgers page shows an account as online while any of them runs, the administration's every process. |
+| `judger.username` | `voj@judger` | Account this judger authenticates as (in the `judgers` group). Several judgers may run as one account: each process records heartbeats of its own; the account is one judger online while any of them runs (the administration's judgers page lists every process). |
 | `judger.password` | *(empty)* | Password for that account. |
 | `judger.description` | *(empty)* | Free-text label shown in the admin console (helps tell judgers apart). |
 

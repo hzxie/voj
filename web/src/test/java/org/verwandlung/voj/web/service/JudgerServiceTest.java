@@ -59,21 +59,33 @@ public class JudgerServiceTest {
             + " ('b', 1002, 'Judger #2', '5', 0, NOW(), NOW(), -1, -1),"
             + " ('c', 1000, 'Judger #3', '1', 1, NOW() - INTERVAL 1 DAY,"
             + " NOW() - INTERVAL 1 MINUTE, 90, 90)");
+    // A second process of voj@judger, which is still one judger online.
+    jdbcTemplate.update(
+        "INSERT INTO voj_judgers (judger_instance, judger_uid, judger_description,"
+            + " judger_language_ids, judger_is_ready, judger_start_time, judger_heartbeat_time,"
+            + " judger_cpu_load, judger_memory_usage) VALUES"
+            + " ('d', 1001, 'Judger #1', '2,3', 0, NOW() - INTERVAL 2 HOUR, NOW(), -1, -1)");
   }
 
   /**
    * Test case: tests getOnlineJudgers(), getNumberOfOnlineJudgers() and getAverageCpuLoad().
-   * Expected: the two running judgers, by username, with their telemetry and uptime; the average
-   * CPU load is the one of the judger that reports it.
+   * Expected: the three running judger processes, by username, with their telemetry and uptime,
+   * which are two judgers online (two of the processes run as one account); the average CPU load
+   * is the one of the judger that reports it.
    */
   @Test
   public void testOnlineJudgers() {
     List<Map<String, Object>> judgers = judgerService.getOnlineJudgers();
 
-    Assertions.assertEquals(2, judgers.size());
+    Assertions.assertEquals(3, judgers.size());
     Assertions.assertEquals(2, judgerService.getNumberOfOnlineJudgers());
     Map<String, Object> another = judgers.get(0);
-    Map<String, Object> judger = judgers.get(1);
+    Map<String, Object> judger =
+        judgers.stream()
+            .filter(process -> "Judger #1".equals(process.get("description")))
+            .filter(process -> ((Number) process.get("cpuLoad")).intValue() >= 0)
+            .findFirst()
+            .orElseThrow();
     Assertions.assertEquals("another-user", another.get("username"));
     Assertions.assertEquals("voj@judger", judger.get("username"));
     Assertions.assertEquals("Judger #1", judger.get("description"));

@@ -54,12 +54,18 @@ public class JudgerService {
   }
 
   /**
-   * Gets the number of running judgers.
+   * Gets the number of online judgers: the judger accounts that at least one running judger runs
+   * as. Every page that counts the online judgers counts them so (an account several judgers run
+   * as is one judger, as the judgers page shows it).
    *
-   * @return the number of running judgers
+   * @return the number of online judgers
    */
   public long getNumberOfOnlineJudgers() {
-    return getOnlineJudgers().size();
+    Set<Object> usernames = new HashSet<>();
+    for (Map<String, Object> judger : getOnlineJudgers()) {
+      usernames.add(judger.get("username"));
+    }
+    return usernames.size();
   }
 
   /**

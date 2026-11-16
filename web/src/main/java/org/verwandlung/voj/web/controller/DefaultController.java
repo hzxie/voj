@@ -132,7 +132,7 @@ public class DefaultController {
       onlineJudgersByUsername.putIfAbsent((String) onlineJudger.get("username"), onlineJudger);
     }
     List<Map<String, Object>> judgers = new ArrayList<>();
-    long onlineJudgers = 0, cpuSum = 0, memorySum = 0, nodesWithMetrics = 0;
+    long cpuSum = 0, memorySum = 0, nodesWithMetrics = 0;
     for (User judger : judgersList) {
       String username = judger.getUsername();
       Map<String, Object> judgerInformation = onlineJudgersByUsername.get(username);
@@ -140,7 +140,6 @@ public class DefaultController {
       Map<String, Object> node = new HashMap<>();
       node.put("username", username);
       if (judgerInformation != null) {
-        ++onlineJudgers;
         int cpuLoad = ((Number) judgerInformation.getOrDefault("cpuLoad", -1)).intValue();
         int memoryUsage = ((Number) judgerInformation.getOrDefault("memoryUsage", -1)).intValue();
         long uptime = ((Number) judgerInformation.getOrDefault("uptime", 0L)).longValue();
@@ -163,7 +162,7 @@ public class DefaultController {
 
     ModelAndView view = new ModelAndView("pages/judgers");
     view.addObject("judgers", judgers);
-    view.addObject("onlineJudgers", onlineJudgers);
+    view.addObject("onlineJudgers", (long) onlineJudgersByUsername.size());
     view.addObject("totalJudgers", (long) judgers.size());
     view.addObject("averageCpuLoad", nodesWithMetrics > 0 ? cpuSum / nodesWithMetrics : 0);
     view.addObject("averageMemoryUsage", nodesWithMetrics > 0 ? memorySum / nodesWithMetrics : 0);

@@ -400,7 +400,7 @@ public class AdministrationController {
 
     ModelAndView view = new ModelAndView("pages/administration/judgers");
     view.addObject("nodes", nodes);
-    view.addObject("onlineJudgers", nodes.size());
+    view.addObject("onlineJudgers", getOnlineJudgers());
     view.addObject("queueDepth", submissionService.getNumberOfPendingSubmissions());
     view.addObject("languages", languageService.getAllLanguages());
     return view;
