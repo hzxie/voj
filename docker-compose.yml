@@ -33,6 +33,10 @@ services:
       # this (and VOJ_CONTEXT_PATH=/) to the externally visible URL in .env.
       VOJ_BASE_URL: ${VOJ_BASE_URL:-http://localhost:8080/voj}
       VOJ_CONTEXT_PATH: ${VOJ_CONTEXT_PATH:-/voj}
+      # The reverse proxies the client address is taken from (X-Forwarded-For), a
+      # regular expression. Empty: loopback and this network's gateway, which a
+      # proxy on the Docker host connects from (see docker/README.md).
+      VOJ_TRUSTED_PROXIES: ${VOJ_TRUSTED_PROXIES:-}
       # Shared secret the judger presents to download test data; must match the
       # judger service below. Required: set it in .env (e.g. `openssl rand -hex 24`).
       VOJ_JUDGER_API_TOKEN: ${VOJ_JUDGER_API_TOKEN:?set VOJ_JUDGER_API_TOKEN in .env}
