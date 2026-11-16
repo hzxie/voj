@@ -595,7 +595,7 @@ public class SubmissionService {
    * that no lock is held for longer), which checks again that no judging holds them and no judger
    * taking submissions supports the language: a judger's claim or a judger that came back meanwhile
    * is never overridden. Their claim tokens are cleared, so that the messages of a judging that
-   * held one are dropped. The pages of a marked submission read its verdict from the database.
+   * held one are dropped, and so are the judger and the execute time of that judging. The pages of a marked submission read its verdict from the database.
    *
    * @return the number of submissions marked
    */

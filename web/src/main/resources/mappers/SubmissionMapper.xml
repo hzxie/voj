@@ -361,7 +361,8 @@
 		parameterType="map">
 		UPDATE voj_submissions
 		SET submission_judge_result = 'SE', submission_judge_log = #{judgeLog},
-			submission_claim_token = NULL, submission_lease_expiry_time = NULL
+			submission_claim_token = NULL, submission_lease_expiry_time = NULL,
+			submission_execute_time = NULL, judger_uid = NULL
 		WHERE language_id = #{languageId} AND <include refid="waitingSubmissionCondition" />
 			AND NOT <include refid="readyJudgerSupports">
 				<property name="languageId" value="voj_submissions.language_id" />

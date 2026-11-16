@@ -306,10 +306,11 @@ public interface SubmissionMapper {
 
   /**
    * Marks the pending submissions in a language that no judging holds (see {@link
-   * #getLanguageIdsOfWaitingSubmissions}) as a System Error, without a claim token, unless a
-   * running judger taking submissions supports the language (see {@link
-   * #getLanguageIdsOfReadyJudgers}), as checked by the statement itself: a judging that took one of
-   * them meanwhile, or a judger that came back meanwhile, is never failed.
+   * #getLanguageIdsOfWaitingSubmissions}) as a System Error, without the claim token, the judger and
+   * the execute time of a judging that held one before its lease expired, unless a running judger
+   * taking submissions supports the language (see {@link #getLanguageIdsOfReadyJudgers}), as
+   * checked by the statement itself: a judging that took one of them meanwhile, or a judger that
+   * came back meanwhile, is never failed.
    *
    * @param languageId - the unique identifier of the language
    * @param judgerTimeoutSeconds - how old (seconds) the last heartbeat of a running judger may be

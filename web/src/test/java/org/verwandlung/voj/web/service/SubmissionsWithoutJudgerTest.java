@@ -25,6 +25,7 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import javax.sql.DataSource;
@@ -124,7 +125,7 @@ public class SubmissionsWithoutJudgerTest {
    * Test case: tests failSubmissionsWithoutJudger(). Test data: a pending submission in C++ claimed
    * by the only judger that supports C++, which stopped (its last heartbeat is 2 minutes old) and
    * whose lease expired. Expected: it is marked SE once the timeout is over, without the claim
-   * token of the vanished judging.
+   * token, the judger and the execute time of the vanished judging.
    */
   @Test
   public void testSubmissionOfAStoppedJudgerIsSystemErrorAfterTheTimeout() throws Exception {
@@ -137,11 +138,12 @@ public class SubmissionsWithoutJudgerTest {
 
     Assertions.assertEquals("SE", getJudgeResult(abandoned));
     Assertions.assertFalse(submissionService.isCurrentJudging(abandoned, 7L));
-    Assertions.assertNull(
-        jdbcTemplate.queryForObject(
-            "SELECT submission_claim_token FROM voj_submissions WHERE submission_id = ?",
-            Long.class,
-            abandoned));
+    Map<String, Object> judging =
+        jdbcTemplate.queryForMap(
+            "SELECT submission_claim_token, judger_uid, submission_execute_time"
+                + " FROM voj_submissions WHERE submission_id = ?",
+            abandoned);
+    Assertions.assertTrue(judging.values().stream().allMatch(Objects::isNull), judging.toString());
   }
 
   /**
@@ -315,6 +317,7 @@ public class SubmissionsWithoutJudgerTest {
 
   /**
    * Inserts a pending submission of Problem #1000, queued now, committed, by the database's clock.
+   * A judging that holds it runs on the judger account #1001 (voj@judger) and started now.
    *
    * @param languageId - the unique identifier of its language
    * @param claimToken - the claim token of the judging that holds it, or null
@@ -329,12 +332,16 @@ public class SubmissionsWithoutJudgerTest {
           PreparedStatement statement =
               connection.prepareStatement(
                   "INSERT INTO voj_submissions (problem_id, uid, language_id, submission_code,"
-                      + " submission_claim_token, submission_lease_expiry_time)"
-                      + " VALUES (1000, 1000, ?, 'Code', ?, NOW() + INTERVAL ? SECOND)",
+                      + " submission_claim_token, submission_lease_expiry_time, judger_uid,"
+                      + " submission_execute_time)"
+                      + " VALUES (1000, 1000, ?, 'Code', ?, NOW() + INTERVAL ? SECOND,"
+                      + " IF(? IS NULL, NULL, 1001), IF(? IS NULL, NULL, NOW()))",
                   Statement.RETURN_GENERATED_KEYS);
           statement.setInt(1, languageId);
           statement.setObject(2, claimToken);
           statement.setObject(3, leaseExpiresInSeconds);
+          statement.setObject(4, claimToken);
+          statement.setObject(5, claimToken);
           return statement;
         },
         keyHolder);
