@@ -123,6 +123,8 @@ public class LanguageService {
           "isCompileCommandLegal", isCompileCommandLegal(language.getCompileCommand()));
       languageResult.put("isRunCommandEmpty", language.getRunCommand().isEmpty());
       languageResult.put("isRunCommandLegal", isRunCommandLegal(language.getRunCommand()));
+      languageResult.put(
+          "isSourceFilenameLegal", isSourceFilenameLegal(language.getSourceFilename()));
 
       boolean isLanguageSuccessful =
           !languageResult.get("isLanguageSlugEmpty")
@@ -133,7 +135,8 @@ public class LanguageService {
               && !languageResult.get("isCompileCommandEmpty")
               && languageResult.get("isCompileCommandLegal")
               && !languageResult.get("isRunCommandEmpty")
-              && languageResult.get("isRunCommandLegal");
+              && languageResult.get("isRunCommandLegal")
+              && languageResult.get("isSourceFilenameLegal");
       languageResult.put("isSuccessful", isLanguageSuccessful);
       result.put(language.getLanguageName(), languageResult);
 
@@ -321,6 +324,24 @@ public class LanguageService {
    */
   private boolean isRunCommandLegal(String runCommand) {
     return runCommand.length() <= 128 && runCommand.contains("{filename}");
+  }
+
+  /**
+   * Checks whether the name of a language's source file is legal: the judger saves a submission
+   * under it (and {@code {filename}} stands for it without its extension), so it is a plain file
+   * name of at most 32 characters.
+   *
+   * @param sourceFilename - the name of the source file
+   * @return whether the name is legal
+   */
+  private boolean isSourceFilenameLegal(String sourceFilename) {
+    return sourceFilename != null
+        && !sourceFilename.isBlank()
+        && sourceFilename.length() <= 32
+        && !sourceFilename.equals(".")
+        && !sourceFilename.equals("..")
+        && !sourceFilename.contains("/")
+        && !sourceFilename.contains("\\");
   }
 
   /**

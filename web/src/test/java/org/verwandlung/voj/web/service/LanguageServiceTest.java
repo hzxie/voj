@@ -73,13 +73,30 @@ public class LanguageServiceTest {
   public void testUpdateLanguageSettingsCreateLanguage() {
     List<Language> newLanguages = currentLanguages();
     int baseCount = newLanguages.size();
-    newLanguages.add(
-        new Language("text/x-haskell", "Haskell", "ghc -o {filename}.exe {filename}.hs", "{filename}.exe"));
+    Language haskell =
+        new Language("text/x-haskell", "Haskell", "ghc -o {filename}.exe {filename}.hs", "{filename}.exe");
+    haskell.setSourceFilename("Main.hs");
+    newLanguages.add(haskell);
 
     Map<String, Object> result = languageService.updateLanguageSettings(newLanguages);
     Assertions.assertTrue((Boolean) result.get("isSuccessful"));
     Assertions.assertEquals(1, ((List<Language>) result.get("languageCreated")).size());
     Assertions.assertEquals(baseCount + 1, languageService.getAllLanguages().size());
+  }
+
+  /** Test case: tests the updateLanguageSettings(List) method. Test data: new languages whose source file name is missing or not a plain file name. Expected: the update fails. */
+  @Test
+  public void testUpdateLanguageSettingsCreateLanguageWithIllegalSourceFilename() {
+    for (String sourceFilename : new String[] {"", "..", "src/Main.hs", "src\\Main.hs"}) {
+      List<Language> newLanguages = currentLanguages();
+      Language haskell =
+          new Language("text/x-haskell", "Haskell", "ghc -o {filename}.exe {filename}.hs", "{filename}.exe");
+      haskell.setSourceFilename(sourceFilename);
+      newLanguages.add(haskell);
+
+      Map<String, Object> result = languageService.updateLanguageSettings(newLanguages);
+      Assertions.assertFalse((Boolean) result.get("isSuccessful"), sourceFilename);
+    }
   }
 
   /**
