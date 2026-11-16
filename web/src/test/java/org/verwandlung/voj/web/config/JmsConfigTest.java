@@ -34,6 +34,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.jms.connection.CachingConnectionFactory;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.jms.listener.DefaultMessageListenerContainer;
 
@@ -88,6 +89,44 @@ public class JmsConfigTest {
     Assertions.assertTrue(deliveryModes.contains(DeliveryMode.NON_PERSISTENT));
     Assertions.assertTrue(instance.isPubSubDomain());
     Assertions.assertEquals(JmsConfig.MESSAGE_TIME_TO_LIVE_MS, instance.getTimeToLive());
+  }
+
+  /**
+   * Test case: the web application publishes several messages on the topic of the progress, then
+   * the broker restarts, and it publishes again. Expected: the messages go over one connection to
+   * the broker, not one each; after the restart, over one new connection.
+   */
+  @Test
+  public void testThePublisherKeepsOneConnection() throws Exception {
+    CachingConnectionFactory connectionFactory =
+        jmsConfig.judgeProgressConnectionFactory(jmsConfig.externalConnectionFactory(brokerUrl));
+    try {
+      JmsTemplate instance = jmsConfig.judgeProgressTemplate(connectionFactory);
+      Assertions.assertSame(connectionFactory, instance.getConnectionFactory());
+      for (long submissionId = 1; submissionId <= 5; ++submissionId) {
+        instance.convertAndSend(Map.of("submissionId", submissionId));
+      }
+      Assertions.assertEquals(1, tcpBroker.getBroker().getClients().length);
+
+      tcpBroker.stop();
+      tcpBroker.waitUntilStopped();
+      tcpBroker = startBroker(brokerUrl);
+      long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+      for (long submissionId = 6; ; ++submissionId) {
+        try {
+          instance.convertAndSend(Map.of("submissionId", submissionId));
+          break;
+        } catch (RuntimeException ex) {
+          // The failed connection is dropped; the next message opens a new one.
+          Assertions.assertTrue(System.nanoTime() < deadline, ex.toString());
+          Thread.sleep(100);
+        }
+      }
+      instance.convertAndSend(Map.of("submissionId", 100L));
+      Assertions.assertEquals(1, tcpBroker.getBroker().getClients().length);
+    } finally {
+      connectionFactory.destroy();
+    }
   }
 
   /**

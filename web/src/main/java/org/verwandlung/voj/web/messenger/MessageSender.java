@@ -43,14 +43,17 @@ public class MessageSender {
    *
    * @param submissionId - the unique identifier of the submission
    * @param judgeLog - the judge log of the System Error
+   * @return whether the message was sent
    */
-  public void sendSystemError(long submissionId, String judgeLog) {
+  public boolean sendSystemError(long submissionId, String judgeLog) {
     try {
       judgeProgressTemplate.convertAndSend(
           Map.of("event", "ErrorOccurred", "submissionId", submissionId, "log", judgeLog));
+      return true;
     } catch (RuntimeException ex) {
       LOGGER.warn(
           String.format("Failed to send the System Error of submission #%d.", submissionId), ex);
+      return false;
     }
   }
 

@@ -76,7 +76,10 @@ and marks them once it saw that language without one for the whole timeout, run
 after run: a run that fails (e.g. the database is unreachable) and a start of the
 instance start the timeout over, so that heartbeats that could not be recorded
 meanwhile never make running judgers look stopped. The live views of a
-submission it marks end with the System Error, on every instance.
+submission it marks end with the System Error, on every instance; once a message
+cannot be sent (the broker is down), the run sends no more, as the pages read
+the verdicts from the database anyway. The web app publishes over one connection
+to the broker that it keeps, and opens again once it failed.
 
 ### Checkpoint distribution
 

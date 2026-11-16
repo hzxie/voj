@@ -16,9 +16,12 @@
  */
 package org.verwandlung.voj.web.service;
 
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.timeout;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import java.sql.PreparedStatement;
@@ -47,6 +50,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import org.verwandlung.voj.web.messenger.ApplicationEventListener;
+import org.verwandlung.voj.web.messenger.MessageSender;
 
 /**
  * Checks that the pending submissions in a language that no judger taking submissions supports are
@@ -155,7 +159,7 @@ public class SubmissionsWithoutJudgerTest {
 
   /**
    * Test case: tests failSubmissionsWithoutJudger(). Test data: the only judger that supports C++
-   * runs but takes no submissions (its judgings failed for reasons of its own), a pending
+   * runs but takes no submissions (its judgings failed too often in a row), a pending
    * submission in C++ that a judging holds (its lease has not expired) and one that waits. Expected:
    * only the waiting one is marked once the timeout is over; the held one is left to its judging.
    */
@@ -246,6 +250,33 @@ public class SubmissionsWithoutJudgerTest {
                             SubmissionService.NO_JUDGER_JUDGE_LOG)
                         .equals(message)));
     verify(viewer, timeout(10000)).complete();
+  }
+
+  /**
+   * Test case: tests failSubmissionsWithoutJudger(). Test data: two pending submissions in C++,
+   * which no judger supports, and a broker that takes no message. Expected: both are marked SE, but
+   * the run publishes no more System Error after the first one that could not be sent (each would
+   * wait for the broker in vain); the next run tries again.
+   */
+  @Test
+  public void testARunStopsPublishingAfterAFailedSend() throws Exception {
+    insertSubmission(CPP, null, null);
+    insertSubmission(CPP, null, null);
+    MessageSender messageSender = mock(MessageSender.class);
+    Object originalMessageSender = ReflectionTestUtils.getField(getTarget(), "messageSender");
+    ReflectionTestUtils.setField(getTarget(), "messageSender", messageSender);
+    try {
+      Assertions.assertEquals(0, submissionService.failSubmissionsWithoutJudger());
+      Thread.sleep(TIMEOUT + 200);
+      Assertions.assertEquals(2, submissionService.failSubmissionsWithoutJudger());
+      verify(messageSender, times(1)).sendSystemError(anyLong(), anyString());
+
+      insertSubmission(CPP, null, null);
+      Assertions.assertEquals(1, submissionService.failSubmissionsWithoutJudger());
+      verify(messageSender, times(2)).sendSystemError(anyLong(), anyString());
+    } finally {
+      ReflectionTestUtils.setField(getTarget(), "messageSender", originalMessageSender);
+    }
   }
 
   /**

@@ -598,6 +598,10 @@ public class SubmissionService {
     if (noJudgerTimeout <= 0) {
       return 0;
     }
+    // A broker that does not take one message would hold every next one up (each send waits for
+    // its timeout): the rest of the run marks the submissions without telling the live views,
+    // whose pages read the verdicts from the database anyway.
+    isPublishing = true;
     try {
       long now = System.nanoTime();
       Set<Integer> languagesOfReadyJudgers = judgerService.getLanguageIdsOfReadyJudgers();
@@ -647,7 +651,9 @@ public class SubmissionService {
               submissionId, languageId, JudgerService.JUDGER_TIMEOUT_SECONDS, NO_JUDGER_JUDGE_LOG)
           == 1) {
         ++failed;
-        messageSender.sendSystemError(submissionId, NO_JUDGER_JUDGE_LOG);
+        if (isPublishing) {
+          isPublishing = messageSender.sendSystemError(submissionId, NO_JUDGER_JUDGE_LOG);
+        }
       }
     }
     if (failed > 0) {
@@ -754,6 +760,12 @@ public class SubmissionService {
    * runs of {@link #failSubmissionsWithoutJudger()}, and since when (by {@link System#nanoTime()}).
    */
   private final Map<Integer, Long> languagesWithoutJudgerSince = new HashMap<>();
+
+  /**
+   * Whether the current run of {@link #failSubmissionsWithoutJudger()} publishes the System Errors
+   * it marks: until a message cannot be sent.
+   */
+  private boolean isPublishing;
 
   /** Whether the last run of {@link #failSubmissionsWithoutJudger()} failed. */
   private boolean isReconciliationFailing;
