@@ -96,6 +96,7 @@ public class CompilerUnitTest {
     SandboxPolicy sandboxPolicy = new SandboxPolicy();
     ReflectionTestUtils.setField(sandboxPolicy, "compileTimeLimit", 20000);
     ReflectionTestUtils.setField(sandboxPolicy, "compileMemoryLimit", 524288);
+    ReflectionTestUtils.setField(sandboxPolicy, "compileProcessLimit", 1024);
     ReflectionTestUtils.setField(sandboxPolicy, "outputLimitKb", 262144);
     Compiler compiler = new Compiler();
     ReflectionTestUtils.setField(compiler, "sandboxRunner", sandboxRunner);
