@@ -25,6 +25,7 @@
 
 #include <atomic>
 #include <cerrno>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -118,8 +119,8 @@ struct ChildPlan {
   std::vector<char*>       argv;           // NULL-terminated argument vector
   std::vector<std::string> environment;    // sanitized "NAME=value" environment
   std::vector<char*>       envp;           // NULL-terminated pointers into environment
-  std::string              inputFilePath;  // stdin redirect (empty = none)
-  std::string              outputFilePath; // stdout redirect (empty = none)
+  std::string              inputFilePath;  // stdin redirect (empty = /dev/null)
+  std::string              outputFilePath; // stdout redirect (empty = /dev/null)
   bool                     compileStep;    // compile: stderr also goes to outputFilePath
   int                      timeLimit;      // ms (0 = no limit)
   rlim_t                   dataLimit;      // RLIMIT_DATA in bytes (0 = none)
@@ -136,13 +137,13 @@ struct ChildPlan {
  * error), so that a broken sandbox is never mistaken for a fault of the submission.
  */
 enum ChildStep {
-  STEP_INPUT, STEP_PROCESS_GROUP, STEP_RESOURCE_LIMIT, STEP_GROUPS, STEP_GID, STEP_UID,
-  STEP_OUTPUT, STEP_DEV_NULL, STEP_NO_NEW_PRIVS, STEP_SECCOMP, STEP_EXEC,
+  STEP_DESCRIPTORS, STEP_INPUT, STEP_PROCESS_GROUP, STEP_RESOURCE_LIMIT, STEP_GROUPS, STEP_GID,
+  STEP_UID, STEP_OUTPUT, STEP_DEV_NULL, STEP_NO_NEW_PRIVS, STEP_SECCOMP, STEP_EXEC,
 };
 static const char* const CHILD_STEP_NAMES[] = {
-  "opening the input file", "setpgid()", "setrlimit()", "setgroups()", "setgid()", "setuid()",
-  "opening the output file", "opening /dev/null", "prctl(PR_SET_NO_NEW_PRIVS)",
-  "installing the seccomp filter", "execve()",
+  "marking inherited descriptors close-on-exec", "opening the input file", "setpgid()",
+  "setrlimit()", "setgroups()", "setgid()", "setuid()", "opening the output file",
+  "opening /dev/null", "prctl(PR_SET_NO_NEW_PRIVS)", "installing the seccomp filter", "execve()",
 };
 struct ChildFailure {
   int step;
@@ -165,7 +166,7 @@ static void runProgram(const ChildPlan&, int syncWriteFd) __attribute__((noretur
 static void reportChildFailure(int syncWriteFd, int step) __attribute__((noreturn));
 static bool setResourceLimit(int resource, rlim_t soft, rlim_t hard);
 static int  openOutputFile(const char*);
-static void markInheritedDescriptorsCloseOnExec();
+static bool markInheritedDescriptorsCloseOnExec();
 
 /**
  * JNI call entry point.
@@ -446,7 +447,9 @@ static void runProgram(const ChildPlan& plan, int syncWriteFd) {
 
     // Nothing the JVM has open (database and message-broker sockets, jars, logs, ...) may leak into
     // the sandbox, where it would bypass the network namespace and file permissions.
-    markInheritedDescriptorsCloseOnExec();
+    if ( !markInheritedDescriptorsCloseOnExec() ) {
+        reportChildFailure(syncWriteFd, STEP_DESCRIPTORS);
+    }
 
     // Standard input is opened before the privilege drop: the checkpoint directory is private to the
     // judger, and the path is chosen by the judger, not by the submission. Without an input file
@@ -590,24 +593,49 @@ static bool setResourceLimit(int resource, rlim_t soft, rlim_t hard) {
 
 /**
  * Marks every file descriptor above standard error close-on-exec, so the sandboxed program only
- * inherits stdin, stdout and stderr. Closing them right away is not an option: the sync pipe must
- * stay open until exec. Async-signal-safe.
+ * inherits stdin, stdout and stderr; they are marked rather than closed because the sync pipe must
+ * stay open until exec. Only the open descriptors are touched: the JVM raises its RLIMIT_NOFILE to
+ * the hard limit (often 2^20), and a system call for every possible descriptor would cost the
+ * program up to a second of CPU time before it even starts. Async-signal-safe.
+ * @return whether every inherited descriptor is marked
  */
-static void markInheritedDescriptorsCloseOnExec() {
+static bool markInheritedDescriptorsCloseOnExec() {
     if ( syscall(SYS_close_range, 3U, ~0U, CLOSE_RANGE_CLOEXEC) == 0 ) {
-        return;
+        return true;
     }
-    // Fallback for kernels without close_range: walk the whole descriptor table.
-    struct rlimit noFile;
-    rlim_t        maxFd = 65536;
-    if ( getrlimit(RLIMIT_NOFILE, &noFile) == 0 && noFile.rlim_cur != RLIM_INFINITY ) {
-        maxFd = noFile.rlim_cur;
+    // Linux < 5.11: list the open descriptors in /proc/self/fd, with the raw getdents64 system call
+    // into a buffer on the stack (opendir would allocate).
+    int directory = open("/proc/self/fd", O_RDONLY | O_DIRECTORY | O_CLOEXEC);
+    if ( directory < 0 ) {
+        return false;
     }
-    if ( maxFd > ((rlim_t) 1 << 20) ) {
-        maxFd = (rlim_t) 1 << 20;
-    }
-    for ( rlim_t fd = 3; fd < maxFd; ++fd ) {
-        fcntl((int) fd, F_SETFD, FD_CLOEXEC);
+    struct LinuxDirent64 {
+        uint64_t       d_ino;
+        int64_t        d_off;
+        unsigned short d_reclen;
+        unsigned char  d_type;
+        char           d_name[1];
+    };
+    alignas(LinuxDirent64) char buffer[4096];
+    for ( ;; ) {
+        long length = syscall(SYS_getdents64, directory, buffer, sizeof(buffer));
+        if ( length <= 0 ) {
+            close(directory);
+            return length == 0;
+        }
+        for ( long offset = 0; offset < length; ) {
+            const LinuxDirent64* entry = reinterpret_cast<const LinuxDirent64*>(buffer + offset);
+            offset += entry->d_reclen;
+            int  fd      = 0;
+            bool numeric = entry->d_name[0] != '\0';
+            for ( const char* c = entry->d_name; *c != '\0' && numeric; ++c ) {
+                numeric = (*c >= '0' && *c <= '9');
+                fd      = fd * 10 + (*c - '0');
+            }
+            if ( numeric && fd > STDERR_FILENO && fd != directory ) {
+                fcntl(fd, F_SETFD, FD_CLOEXEC);
+            }
+        }
     }
 }
 
