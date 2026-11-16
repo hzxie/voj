@@ -1242,10 +1242,10 @@ bool ensureMediumLabel(const std::wstring& name, SE_OBJECT_TYPE type, const wcha
 
 /**
  * Creates the private desktop of the programs of the sandbox account (see WINDOW_STATION_ACCESS) on
- * the judger's window station, named after the judger's process (it is created anew, never an
- * existing one opened, should someone have taken the name), and lets the account's logon session
- * use the window station. The desktop's DACL gives that logon session DESKTOP_ACCESS, the judger
- * and SYSTEM full control, and nobody else any access.
+ * the judger's window station, and lets the account's logon session use the window station. The
+ * desktop's DACL gives that logon session DESKTOP_ACCESS, the judger and SYSTEM full control, and
+ * nobody else any access. CreateDesktopW opens a desktop of that name that exists already, with
+ * the DACL it has: the name is random, so nobody can have created it first.
  * @param  hToken   - the logon token of the sandbox account
  * @param  hDesktop - receives the desktop
  * @param  desktop  - receives the desktop's full name, "<window station>\<desktop>"
@@ -1255,7 +1255,6 @@ bool ensureMediumLabel(const std::wstring& name, SE_OBJECT_TYPE type, const wcha
  *         tells why not)
  */
 bool createPrivateDesktop(HANDLE hToken, HDESK& hDesktop, std::wstring& desktop, PSID& logonSid) {
-    static LONG  counter = 0;
     std::wstring sessionSid;
     std::wstring judgerSid;
     HANDLE       hJudgerToken = NULL;
@@ -1308,17 +1307,16 @@ bool createPrivateDesktop(HANDLE hToken, HDESK& hDesktop, std::wstring& desktop,
         SetLastError(error);
         return false;
     }
-    std::wstring        name = L"voj-judger-" + std::to_wstring(GetCurrentProcessId()) + L"-" +
-                               std::to_wstring(InterlockedIncrement(&counter));
-    SECURITY_ATTRIBUTES sa   = { sizeof(SECURITY_ATTRIBUTES), pSd, FALSE };
-    // CreateDesktopW opens a desktop that exists already: make sure none has the name.
-    HDESK hExisting = OpenDesktopW(name.c_str(), 0, FALSE, READ_CONTROL);
-    if ( hExisting != NULL ) {
-        CloseDesktop(hExisting);
+    UUID     uuid;
+    RPC_WSTR uuidString = NULL;
+    if ( UuidCreate(&uuid) != RPC_S_OK || UuidToStringW(&uuid, &uuidString) != RPC_S_OK ) {
         LocalFree(pSd);
-        SetLastError(ERROR_ALREADY_EXISTS);
+        SetLastError(ERROR_GEN_FAILURE);
         return false;
     }
+    std::wstring name = L"voj-judger-" + std::wstring((wchar_t*) uuidString);
+    RpcStringFreeW(&uuidString);
+    SECURITY_ATTRIBUTES sa = { sizeof(SECURITY_ATTRIBUTES), pSd, FALSE };
     hDesktop = CreateDesktopW(name.c_str(), NULL, NULL, 0, GENERIC_ALL, &sa);
     error    = GetLastError();
     LocalFree(pSd);
