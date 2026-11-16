@@ -232,19 +232,20 @@ input, textarea, select, button { font-family:inherit; }
   padding:5px 8px; border:1px solid var(--line); border-radius:7px; user-select:none; background:transparent;
 }
 .vw-lang-btn:hover { border-color:var(--accent); color:var(--accent); }
-.vw-lang-menu {
-  display:none; position:absolute; bottom:calc(100% + 8px); right:0; min-width:152px;
-  background:var(--bg2); border:1px solid var(--line); border-radius:10px;
-  box-shadow:var(--shadow-card); overflow:hidden; z-index:30;
-}
-.vw-lang.open .vw-lang-menu { display:block; } /* no-popover fallback (js/theme.js) */
-/* Native popover: top layer, so it is positioned against the viewport. Anchor positioning
-   puts it above the button, right-aligned; without it js/theme.js sets left/top. */
+/* A native popover: top layer, so it is positioned against the viewport. Anchor
+   positioning puts it above the button, right-aligned; browsers without it show the
+   list in the bottom corner of the viewport, next to the footer. */
 .vw-lang-btn { anchor-name:--vw-lang; }
-.vw-lang-menu:popover-open { display:block; position:fixed; inset:auto; margin:0; padding:0; color:inherit; }
+.vw-lang-menu {
+  min-width:152px; background:var(--bg2); border:1px solid var(--line); border-radius:10px;
+  box-shadow:var(--shadow-card); overflow:hidden;
+}
+.vw-lang-menu:popover-open {
+  display:block; position:fixed; inset:auto var(--pad) 16px auto; margin:0; padding:0; color:inherit;
+}
 @supports (position-area: block-start) {
   .vw-lang-menu:popover-open {
-    position-anchor:--vw-lang; position-area:block-start span-inline-start;
+    inset:auto; position-anchor:--vw-lang; position-area:block-start span-inline-start;
     position-try-fallbacks:flip-block; margin-block-end:8px;
   }
 }

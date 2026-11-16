@@ -7,9 +7,8 @@
  *    The initial theme is applied by the inline script in fragments/chrome.html
  *    (theme-head) before first paint.
  *  - Footer language menu: a native popover (light dismiss, Esc, focus return and
- *    the expanded state come from the browser), positioned here where CSS anchor
- *    positioning is missing. Both menus fall back to class toggling where popover
- *    itself is unsupported.
+ *    the expanded state come from the browser) placed by CSS anchor positioning;
+ *    its links reload the page in the chosen language.
  *  - vojConfirm(message) / vojAlert(message): promise-based replacements for the
  *    blocking confirm() / alert(), rendered in the shared <dialog> (fragments/chrome).
  */
@@ -19,7 +18,6 @@
   var STORAGE_KEY = 'voj-theme';
   var root = document.documentElement;
   var systemLight = window.matchMedia ? window.matchMedia('(prefers-color-scheme: light)') : null;
-  var supportsPopover = 'popover' in HTMLElement.prototype;
 
   function forEach(list, fn) { Array.prototype.forEach.call(list, fn); }
 
@@ -71,50 +69,12 @@
 
   if (systemLight) {
     var onSystemChange = function () { if (!storedTheme()) { render(systemTheme()); } };
-    if (systemLight.addEventListener) { systemLight.addEventListener('change', onSystemChange); }
-    else if (systemLight.addListener) { systemLight.addListener(onSystemChange); }
+    systemLight.addEventListener('change', onSystemChange);
   }
   // Another tab changed the override.
   window.addEventListener('storage', function (e) {
     if (e.key === STORAGE_KEY || e.key === null) { render(storedTheme() || systemTheme()); }
   });
-
-  // ---- Popover fallbacks ---------------------------------------------------
-  // Where popover is unsupported, the trigger toggles an `.open` class instead
-  // (styled in app.css) and keeps aria-expanded in sync; Esc and outside clicks close it.
-  function classToggle(trigger, panel, openTarget) {
-    function set(open) {
-      openTarget.classList.toggle('open', open);
-      trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
-    }
-    set(false);
-    trigger.addEventListener('click', function (e) {
-      e.stopPropagation();
-      set(!openTarget.classList.contains('open'));
-    });
-    document.addEventListener('click', function (e) {
-      if (!panel.contains(e.target)) { set(false); }
-    });
-    document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape' && openTarget.classList.contains('open')) {
-        set(false);
-        trigger.focus();
-      }
-    });
-  }
-
-  // Place the language popover above its button, right-aligned, where CSS anchor
-  // positioning is unavailable (with it, app.css does this declaratively).
-  var supportsAnchoring = window.CSS && CSS.supports && CSS.supports('position-area', 'block-start');
-  function positionAbove(trigger, panel) {
-    var r = trigger.getBoundingClientRect(), gap = 8;
-    var w = panel.offsetWidth, h = panel.offsetHeight;
-    var left = Math.min(Math.max(gap, r.right - w), window.innerWidth - w - gap);
-    var top = r.top - h - gap;
-    if (top < gap) { top = r.bottom + gap; }
-    panel.style.left = Math.max(gap, left) + 'px';
-    panel.style.top = top + 'px';
-  }
 
   // ---- Shared confirm / alert dialog ---------------------------------------
   var dialogQueue = Promise.resolve();
@@ -193,20 +153,6 @@
     syncToggles(currentTheme());
     forEach(document.querySelectorAll('[data-vw="theme-toggle"]'), function (el) {
       el.addEventListener('click', toggleTheme);
-    });
-
-    // Footer language menu.
-    forEach(document.querySelectorAll('[data-vw="dropdown"]'), function (dd) {
-      var btn = dd.querySelector('[data-vw="dropdown-btn"]');
-      var panel = dd.querySelector('[popover]');
-      if (!btn || !panel) { return; }
-      if (!supportsPopover) {
-        classToggle(btn, dd, dd);
-      } else if (!supportsAnchoring) {
-        panel.addEventListener('toggle', function (e) {
-          if (e.newState === 'open') { positionAbove(btn, panel); }
-        });
-      }
     });
 
     // Language switch: reload the current page with ?language=<code> (read by the

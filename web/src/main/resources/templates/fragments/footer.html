@@ -3,8 +3,8 @@
   Public site footer (terminal aesthetic). Used via ~{fragments/footer :: footer}.
   Reproduced from the design (Footer in every *.dc.html): a single copyright line,
   Judgers/About/Terms/Privacy/Help links, and a language dropdown. Styling lives in
-  css/app.css (.vw-footer / .vw-footlinks / .vw-lang); the dropdown open/close and the
-  ?language= locale switch are handled by js/theme.js.
+  css/app.css (.vw-footer / .vw-footlinks / .vw-lang); the dropdown is a native
+  popover, and the ?language= locale switch is handled by js/theme.js.
 */-->
 <html xmlns:th="http://www.thymeleaf.org" lang="en">
 <body>
@@ -29,10 +29,9 @@
                 <a th:href="@{/privacy}" th:text="#{voj.include.footer.privacy}">Privacy</a>
                 <a th:href="@{/help}" th:text="#{voj.include.footer.help}">Help</a>
                 <!--/* The language list is a popover anchored to its button (light dismiss, Esc and
-                       focus return come from the browser); js/theme.js positions it and covers
-                       browsers without popover support. */-->
-                <div class="vw-lang" data-vw="dropdown">
-                    <button class="vw-lang-btn" data-vw="dropdown-btn" type="button" popovertarget="vw-lang-menu"
+                       focus return come from the browser; css/app.css places it). */-->
+                <div class="vw-lang">
+                    <button class="vw-lang-btn" type="button" popovertarget="vw-lang-menu"
                             th:title="#{voj.include.header.language}" th:aria-label="#{voj.include.header.language}">
                         <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg>
                     </button>
