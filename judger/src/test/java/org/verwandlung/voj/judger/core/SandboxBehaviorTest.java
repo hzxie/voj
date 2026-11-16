@@ -494,6 +494,30 @@ public class SandboxBehaviorTest {
   }
 
   /**
+   * Test case: a run that opens descriptors until it cannot, tries to raise its descriptor limit,
+   * and creates a thread with a descriptor table of its own (clone with CLONE_THREAD but without
+   * CLONE_FILES), which would get a limit of its own. Expected result: the limit is 128 (soft and
+   * hard), cannot be raised (EPERM), opening fails with EMFILE once 128 descriptors are open, and
+   * the thread without CLONE_FILES is refused (EPERM) while one with it is created.
+   */
+  @Test
+  public void testRunHasFewDescriptors() throws Exception {
+    Assumptions.assumeTrue("native".equalsIgnoreCase(sandbox), "This tests the native runner.");
+    Assumptions.assumeTrue(isLinux(), "RLIMIT_NOFILE and clone are Linux-only.");
+    Assertions.assertEquals("AC", judge(900025L, DESCRIPTOR_LIMIT_CODE, 5000, 262144));
+    Assertions.assertEquals(
+        String.join(
+            "\n",
+            "limit: 128 128",
+            "raise: EPERM",
+            "thread without CLONE_FILES: EPERM",
+            "thread with CLONE_FILES: created",
+            "open: EMFILE at 128",
+            ""),
+        Files.readString(Path.of(workBaseDirectory, "voj-sandbox-900025", "output.txt")));
+  }
+
+  /**
    * Test case: a program whose static data (1 TB of bss) alone exceeds the kernel memory backstop
    * (RLIMIT_DATA), so that it cannot even be loaded. Expected result: Memory Limit Exceeded, not the
    * runtime error of the SIGSEGV the kernel kills such a program with while loading it. The program
@@ -1182,6 +1206,76 @@ public class SandboxBehaviorTest {
           address.sun_family = AF_UNIX;
           std::strcpy(address.sun_path, "/voj-no-such-socket");
           report("connect", connect(fd, (sockaddr*) &address, sizeof(address)) == 0);
+          return 0;
+      }
+      """;
+
+  /**
+   * A program that reports its descriptor limit, how raising it, creating a thread with and
+   * without CLONE_FILES and opening descriptors until it cannot end (it exits with 1 if setting up
+   * an attempt fails).
+   */
+  private static final String DESCRIPTOR_LIMIT_CODE =
+      """
+      #include <cerrno>
+      #include <cstdio>
+      #include <cstring>
+      #include <fcntl.h>
+      #include <sched.h>
+      #include <signal.h>
+      #include <sys/resource.h>
+      #include <sys/syscall.h>
+      #include <unistd.h>
+
+      static const char* name(int error) {
+          return error == EPERM ? "EPERM" : error == EMFILE ? "EMFILE"
+              : error == ENOSYS ? "ENOSYS" : std::strerror(error);
+      }
+
+      static volatile int threadRan = 0;
+      static int threadMain(void*) {
+          threadRan = 1;
+          return 0;
+      }
+
+      static void tryThread(const char* what, int flags) {
+          static char stacks[2][64 * 1024];
+          static int used = 0;
+          char* stack = stacks[used++] + sizeof(stacks[0]);
+          int tid = clone(threadMain, stack, flags, nullptr);
+          if (tid < 0) {
+              std::printf("%s: %s\\n", what, name(errno));
+              return;
+          }
+          while (!threadRan) {
+              sched_yield();
+          }
+          threadRan = 0;
+          std::printf("%s: created\\n", what);
+      }
+
+      int main() {
+          rlimit limit;
+          if (getrlimit(RLIMIT_NOFILE, &limit) != 0) {
+              return 1;
+          }
+          std::printf("limit: %llu %llu\\n", (unsigned long long) limit.rlim_cur,
+              (unsigned long long) limit.rlim_max);
+          rlimit raised = {limit.rlim_max + 1, limit.rlim_max + 1};
+          std::printf("raise: %s\\n", setrlimit(RLIMIT_NOFILE, &raised) == 0 ? "raised" : name(errno));
+          const int threadFlags = CLONE_VM | CLONE_FS | CLONE_SIGHAND | CLONE_THREAD | CLONE_SYSVSEM;
+          tryThread("thread without CLONE_FILES", threadFlags);
+          tryThread("thread with CLONE_FILES", threadFlags | CLONE_FILES);
+          std::fflush(stdout);
+          int last = -1;
+          for (;;) {
+              int fd = open("/dev/null", O_RDONLY);
+              if (fd < 0) {
+                  std::printf("open: %s at %d\\n", name(errno), last + 1);
+                  break;
+              }
+              last = fd;
+          }
           return 0;
       }
       """;

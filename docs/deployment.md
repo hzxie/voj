@@ -132,7 +132,13 @@ sudo useradd --system --no-create-home --shell /usr/sbin/nologin voj-sandbox
   test's input file and a compilation from `/dev/null`; standard output goes to
   the output file (for a compilation, standard error too: the compile log), and
   a run's standard error is discarded. No other descriptor of the judger is
-  inherited. Compilations and runs start in the submission's work directory.
+  inherited. A run may have at most 128 descriptors open at once and a
+  compilation's processes 4096 each (`RLIMIT_NOFILE`, soft and hard alike, so it
+  cannot be raised): an open pipe or socket pair can hold kernel memory that no
+  memory limit sees. A run's threads must share its descriptor table (`clone`
+  with `CLONE_THREAD` but without `CLONE_FILES` fails with `EPERM`), so the
+  limit is the run's, not each thread's. Compilations and runs start in the
+  submission's work directory.
 - **Environment.** Only the locale and toolchain variables of the judger are
   passed on (`PATH`, `LANG`, `JAVA_HOME`, the Go and Rust settings, ...), never
   its secrets, with `HOME` and `TMPDIR` set to the submission's work directory.

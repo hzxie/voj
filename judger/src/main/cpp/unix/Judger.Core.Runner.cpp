@@ -131,6 +131,14 @@ static const int       WALL_TIME_FACTOR       = 3;           // wall-clock backs
 static const long long WALL_TIME_SLACK_MS     = 1000;        // wall-clock backstop slack
 static const rlim_t    OUTPUT_FILE_SIZE_LIMIT = (rlim_t)256 * 1024 * 1024; // RLIMIT_FSIZE (256 MB)
 static const rlim_t    PROCESS_NUMBER_LIMIT   = 64;          // default RLIMIT_NPROC (threads)
+// RLIMIT_NOFILE (soft = hard, so it cannot be raised): open pipes and sockets hold kernel memory
+// that no memory limit sees (a socket pair with full buffers holds hundreds of KB), so a run gets
+// few descriptors. Its runtimes need a handful (Java, Go, Python, ...) to a few dozen: Node.js
+// opens about 24, and about 6 more for each worker thread, so 128 leaves room for some 16 workers.
+// A compilation runs trusted toolchains that open many files at once (javac and kotlinc their
+// jars, go build its packages), so it gets more, as a backstop against a toolchain gone wrong.
+static const rlim_t    RUN_FILE_LIMIT         = 128;
+static const rlim_t    COMPILE_FILE_LIMIT     = 4096;
 static const int       CLEANUP_ATTEMPTS       = 1000;        // wait rounds (x 1 ms) after a run
 // RLIMIT_DATA backstop: 2 x the memory limit plus a headroom of max(256 MB, physical RAM / 32). The
 // headroom matters for the JVM, whose committed initial heap defaults to physical RAM / 64.
@@ -180,6 +188,7 @@ struct ChildPlan {
   rlim_t                   dataLimit;      // RLIMIT_DATA in bytes (0 = none)
   unsigned long long       pageSize;       // the system's page size in bytes
   rlim_t                   processLimit;   // RLIMIT_NPROC of the sandbox user (processes + threads)
+  rlim_t                   fileLimit;      // RLIMIT_NOFILE (open descriptors per process)
   bool                     dropPrivileges; // whether to setuid/setgid
   uid_t                    dropUid;
   gid_t                    dropGid;
@@ -314,6 +323,7 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     long pageSize       = sysconf(_SC_PAGESIZE);
     plan.pageSize       = pageSize > 0 ? (unsigned long long) pageSize : 4096;
     plan.processLimit   = (processLimit > 0) ? (rlim_t) processLimit : PROCESS_NUMBER_LIMIT;
+    plan.fileLimit      = plan.compileStep ? COMPILE_FILE_LIMIT : RUN_FILE_LIMIT;
     plan.dropPrivileges = false;
     plan.dropUid        = 0;
     plan.dropGid        = 0;
@@ -683,6 +693,14 @@ static void runProgram(const ChildPlan& plan, int syncWriteFd) {
     }
     if ( !confineFileSystemWrites(plan.workDirectory, landlockAbi) ) {
         reportChildFailure(syncWriteFd, STEP_LANDLOCK);
+    }
+    // Tier 1: the open descriptors, each of which may hold kernel memory no limit sees (a pipe or a
+    // socket pair with full buffers), soft = hard so the program cannot raise it. Set after every
+    // step that opens one: the JVM's own descriptors, which close only on exec, may already be above
+    // the limit, so that a later open would fail with EMFILE. The filters keep a run's threads on
+    // one descriptor table (see buildSeccompPrograms), so the limit holds for the run as a whole.
+    if ( !setResourceLimit(RLIMIT_NOFILE, plan.fileLimit, plan.fileLimit) ) {
+        reportChildFailure(syncWriteFd, STEP_RESOURCE_LIMIT);
     }
     // Install the pre-built seccomp filters via the raw system call, so the child does not have to
     // call into libseccomp (which would allocate), after Landlock's rules, whose system calls are no
@@ -1238,7 +1256,10 @@ class SeccompFilter {
  * A run of the submission only:
  *  - is a single process: clone without CLONE_THREAD (how the C library forks and posix_spawn
  *    spawns) fails with EPERM, as fork and vfork are not allowlisted. Its CPU time and memory are
- *    then exactly those of the program, and nothing is left behind once it is gone;
+ *    then exactly those of the program, and nothing is left behind once it is gone. A thread must
+ *    share the descriptor table as well (CLONE_FILES, as every C library and runtime does), or
+ *    clone fails with EPERM: a thread with a table of its own would get a further RLIMIT_NOFILE of
+ *    descriptors (unshare, which could split the table later, is refused);
  *  - cannot move its memory out of its resident set while keeping it, which would let it use far
  *    more than its memory limit, measured on the resident set (VmHWM), without ever reaching it: on
  *    a host with swap, madvise(MADV_PAGEOUT) swaps pages out at once and MADV_COLD makes them the
@@ -1302,6 +1323,8 @@ static std::vector<std::string> buildSeccompPrograms(bool runOfSubmission, rlim_
     if ( runOfSubmission ) {
         filter.add(SCMP_ACT_ERRNO(EPERM), SCMP_SYS(clone),
                    {SCMP_A0(SCMP_CMP_MASKED_EQ, CLONE_THREAD, 0)});
+        filter.add(SCMP_ACT_ERRNO(EPERM), SCMP_SYS(clone),
+                   {SCMP_A0(SCMP_CMP_MASKED_EQ, CLONE_THREAD | CLONE_FILES, CLONE_THREAD)});
         // madvise(addr, length, advice): the advice is an int, of which the kernel ignores the upper
         // half of the register, so only the lower 32 bits are compared.
         const int pageOutAdvice[] = { MADV_COLD, MADV_PAGEOUT };
