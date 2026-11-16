@@ -31,6 +31,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.i18n.LocaleChangeInterceptor;
 import org.springframework.web.servlet.i18n.SessionLocaleResolver;
 
+import org.verwandlung.voj.web.interceptor.AdministrationChromeInterceptor;
 import org.verwandlung.voj.web.interceptor.CommonModelInterceptor;
 import org.verwandlung.voj.web.interceptor.MaintenanceModeInterceptor;
 
@@ -53,15 +54,20 @@ public class WebMvcConfig implements WebMvcConfigurer {
   /** The interceptor that takes the site offline for non-administrators during maintenance. */
   @Autowired private MaintenanceModeInterceptor maintenanceModeInterceptor;
 
+  /** The interceptor that adds the sidebar section and badges to the administration pages. */
+  @Autowired private AdministrationChromeInterceptor administrationChromeInterceptor;
+
   /* (non-Javadoc)
    * Registers the language switching interceptor (switches the display language via ?language=xx_XX),
-   * the maintenance-mode gate, and the interceptor that injects the shared page model attributes.
+   * the maintenance-mode gate, the interceptor that injects the shared page model attributes, and
+   * the one that adds the chrome of the administration pages.
    */
   @Override
   public void addInterceptors(InterceptorRegistry registry) {
     registry.addInterceptor(localeChangeInterceptor());
     registry.addInterceptor(maintenanceModeInterceptor);
     registry.addInterceptor(commonModelInterceptor);
+    registry.addInterceptor(administrationChromeInterceptor);
   }
 
   /**

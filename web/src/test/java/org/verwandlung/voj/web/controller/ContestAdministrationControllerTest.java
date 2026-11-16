@@ -31,17 +31,17 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.verwandlung.voj.web.service.ContestService;
 
 /**
- * The test class for AdministrationController - the contestants of the contest editor. (Only
+ * The test class for ContestAdministrationController - the contestants of the contest editor. (Only
  * administrators reach these actions, and only with a CSRF token: see SecurityFilterChainTest.)
  *
  * @author Haozhe Xie
  */
-public class AdministrationControllerContestsTest {
+public class ContestAdministrationControllerTest {
   /** Wires a mocked ContestService into a fresh controller before every test. */
   @BeforeEach
   public void setUp() {
     contestService = mock(ContestService.class);
-    controller = new AdministrationController();
+    controller = new ContestAdministrationController();
     ReflectionTestUtils.setField(controller, "contestService", contestService);
   }
 
@@ -79,6 +79,6 @@ public class AdministrationControllerContestsTest {
   /** The mocked ContestService. */
   private ContestService contestService;
 
-  /** The AdministrationController under test. */
-  private AdministrationController controller;
+  /** The ContestAdministrationController under test. */
+  private ContestAdministrationController controller;
 }

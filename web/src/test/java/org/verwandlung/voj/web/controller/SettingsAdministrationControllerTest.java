@@ -16,16 +16,10 @@
  */
 package org.verwandlung.voj.web.controller;
 
-import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.Assertions;
@@ -35,39 +29,31 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import org.verwandlung.voj.web.service.LanguageService;
 import org.verwandlung.voj.web.service.OffensiveWordImportService;
 import org.verwandlung.voj.web.service.OffensiveWordService;
 import org.verwandlung.voj.web.service.OptionService;
-import org.verwandlung.voj.web.service.SubmissionService;
 
 /**
- * The test class for AdministrationController - the settings / moderation area.
+ * The test class for SettingsAdministrationController.
  *
- * <p>Covers the controller-specific logic: the page-size and non-negative clamping plus
- * boolean-to-"1"/"0" mapping applied before the option store is written, the illegal-contact-email
- * short circuit, and the "keep only the ids that were actually removed" fan-out of the bulk
- * submission endpoints.
+ * <p>Covers the controller-specific logic: the page-size and non-negative clamping plus the
+ * boolean-to-"1"/"0" mapping applied before the settings are saved, and the offensive word import.
  *
  * @author Haozhe Xie
  */
-public class AdministrationControllerSettingsTest {
+public class SettingsAdministrationControllerTest {
   /** Wires mocked collaborators into a fresh controller before every test. */
   @BeforeEach
   public void setUp() {
     optionService = mock(OptionService.class);
     offensiveWordService = mock(OffensiveWordService.class);
     offensiveWordImportService = mock(OffensiveWordImportService.class);
-    languageService = mock(LanguageService.class);
-    submissionService = mock(SubmissionService.class);
 
-    controller = new AdministrationController();
+    controller = new SettingsAdministrationController();
     ReflectionTestUtils.setField(controller, "optionService", optionService);
     ReflectionTestUtils.setField(controller, "offensiveWordService", offensiveWordService);
     ReflectionTestUtils.setField(
         controller, "offensiveWordImportService", offensiveWordImportService);
-    ReflectionTestUtils.setField(controller, "languageService", languageService);
-    ReflectionTestUtils.setField(controller, "submissionService", submissionService);
   }
 
   /** Test case: tests updateGeneralSettingsAction(...). Test data: an oversized page size and a zero email limit. Expected: every setting goes to OptionService in one call, with the page size clamped to 1000, the email daily limit to a minimum of 1 and the booleans mapped to "1"/"0". */
@@ -104,43 +90,6 @@ public class AdministrationControllerSettingsTest {
     verify(offensiveWordImportService).importFromSources();
   }
 
-  /** Test case: tests updateLanguageSettingsAction(...). Test data: a JSON languages array. Expected: the parsed list is forwarded to LanguageService and its result returned. */
-  @Test
-  public void testUpdateLanguageSettingsDelegates() {
-    Map<String, Object> serviceResult = Map.of("isSuccessful", true);
-    when(languageService.updateLanguageSettings(org.mockito.ArgumentMatchers.anyList()))
-        .thenReturn(serviceResult);
-
-    Map<String, Object> result =
-        controller.updateLanguageSettingsAction("[]", new MockHttpServletRequest());
-
-    Assertions.assertSame(serviceResult, result);
-  }
-
-  /** Test case: tests deleteSubmissionsAction(...). Test data: two ids where only one is deletable. Expected: only the successfully-deleted id is reported back. */
-  @Test
-  public void testDeleteSubmissionsKeepsOnlyDeletedIds() {
-    when(submissionService.deleteSubmissions(List.of(1000L, 1001L))).thenReturn(List.of(1000L));
-
-    Map<String, Object> result =
-        controller.deleteSubmissionsAction("[1000, 1001]", new MockHttpServletRequest());
-
-    Assertions.assertEquals(Boolean.TRUE, result.get("isSuccessful"));
-    @SuppressWarnings("unchecked")
-    List<Long> deleted = (List<Long>) result.get("deletedSubmissions");
-    Assertions.assertEquals(List.of(1000L), deleted);
-  }
-
-  /** Test case: tests restartSubmissionsAction(...). Test data: a JSON array of two ids. Expected: both are rejudged. */
-  @Test
-  public void testRestartSubmissionsRejudgesEachId() {
-    Map<String, Boolean> result =
-        controller.restartSubmissionsAction("[1000, 1001]", new MockHttpServletRequest());
-
-    Assertions.assertEquals(Boolean.TRUE, result.get("isSuccessful"));
-    verify(submissionService).rejudgeSubmissions(List.of(1000L, 1001L));
-  }
-
   /** Invokes updateGeneralSettingsAction with mostly-fixed arguments, varying the values under test. */
   private Map<String, Boolean> updateGeneralSettings(
       String contactEmail, int problemsPerPage, int emailDailyLimit) {
@@ -159,12 +108,6 @@ public class AdministrationControllerSettingsTest {
   /** The mocked OffensiveWordImportService. */
   private OffensiveWordImportService offensiveWordImportService;
 
-  /** The mocked LanguageService. */
-  private LanguageService languageService;
-
-  /** The mocked SubmissionService. */
-  private SubmissionService submissionService;
-
-  /** The AdministrationController object under test. */
-  private AdministrationController controller;
+  /** The SettingsAdministrationController object under test. */
+  private SettingsAdministrationController controller;
 }

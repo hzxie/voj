@@ -42,7 +42,7 @@ import org.verwandlung.voj.web.service.SubmissionService;
 import org.verwandlung.voj.web.service.UserService;
 
 /**
- * The test class for AdministrationController - the user-administration area.
+ * The test class for UserAdministrationController - the user-administration area.
  *
  * <p>Covers the controller-specific logic: the standard-competition ranking computed for the user
  * list, the comma/JSON id list fan-out of {@code deleteUsersAction}, and the existence guard plus
@@ -50,14 +50,14 @@ import org.verwandlung.voj.web.service.UserService;
  *
  * @author Haozhe Xie
  */
-public class AdministrationControllerUsersTest {
+public class UserAdministrationControllerTest {
   /** Wires mocked collaborators into a fresh controller before every test. */
   @BeforeEach
   public void setUp() {
     userService = mock(UserService.class);
     submissionService = mock(SubmissionService.class);
 
-    controller = new AdministrationController();
+    controller = new UserAdministrationController();
     ReflectionTestUtils.setField(controller, "userService", userService);
     ReflectionTestUtils.setField(controller, "submissionService", submissionService);
   }
@@ -220,6 +220,6 @@ public class AdministrationControllerUsersTest {
   /** The mocked SubmissionService. */
   private SubmissionService submissionService;
 
-  /** The AdministrationController object under test. */
-  private AdministrationController controller;
+  /** The UserAdministrationController object under test. */
+  private UserAdministrationController controller;
 }

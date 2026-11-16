@@ -47,7 +47,7 @@ import org.verwandlung.voj.web.model.Problem;
 import org.verwandlung.voj.web.service.ProblemService;
 
 /**
- * The test class for AdministrationController - the problem-administration area.
+ * The test class for ProblemAdministrationController - the problem-administration area.
  *
  * <p>Covers the controller-specific logic: the non-numeric time/memory-limit sanitization shared by
  * create/edit, the test-data archive parser that pairs {@code NN.in}/{@code NN.out} entries, and the
@@ -55,13 +55,15 @@ import org.verwandlung.voj.web.service.ProblemService;
  *
  * @author Haozhe Xie
  */
-public class AdministrationControllerProblemsTest {
+public class ProblemAdministrationControllerTest {
   /** Wires a mocked ProblemService into a fresh controller before every test. */
   @BeforeEach
-  public void setUp() {
+  public void setUp() throws IOException {
     problemService = mock(ProblemService.class);
-    controller = new AdministrationController();
+    controller = new ProblemAdministrationController();
     ReflectionTestUtils.setField(controller, "problemService", problemService);
+    when(problemService.parseTestDataArchive(org.mockito.ArgumentMatchers.any()))
+        .thenCallRealMethod();
   }
 
   /** Test case: tests createProblemAction(...). Test data: an empty time limit and a non-numeric memory limit. Expected: both are sanitized to -1 before the service call. */
@@ -251,6 +253,6 @@ public class AdministrationControllerProblemsTest {
   /** The mocked ProblemService. */
   private ProblemService problemService;
 
-  /** The AdministrationController object under test. */
-  private AdministrationController controller;
+  /** The ProblemAdministrationController object under test. */
+  private ProblemAdministrationController controller;
 }

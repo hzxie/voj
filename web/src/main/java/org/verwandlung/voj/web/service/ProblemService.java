@@ -16,7 +16,14 @@
  */
 package org.verwandlung.voj.web.service;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.TreeMap;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -712,6 +719,72 @@ public class ProblemService {
     }
     return result;
   }
+
+  /**
+   * Parses an uploaded test-data archive into ordered input/output pairs. Entries are paired by
+   * file stem: {@code NN.in} with {@code NN.out} (or {@code NN.ans}); unmatched or unrelated entries
+   * are ignored. The total uncompressed size is capped to guard against archive bombs.
+   *
+   * @param archive - the content of the uploaded .zip archive
+   * @return the input/output pairs in file-name order (each map holds {@code input}/{@code output})
+   * @throws IOException if the archive cannot be read or is too large
+   */
+  public List<Map<String, String>> parseTestDataArchive(InputStream archive) throws IOException {
+    Map<String, String> inputs = new TreeMap<>();
+    Map<String, String> outputs = new TreeMap<>();
+    long totalBytes = 0;
+
+    try (ZipInputStream zipStream =
+        new ZipInputStream(archive, StandardCharsets.UTF_8)) {
+      ZipEntry entry;
+      while ((entry = zipStream.getNextEntry()) != null) {
+        if (entry.isDirectory()) {
+          continue;
+        }
+        String name = entry.getName();
+        String base = name.substring(Math.max(name.lastIndexOf('/'), name.lastIndexOf('\\')) + 1);
+        int dot = base.lastIndexOf('.');
+        if (dot < 0) {
+          continue;
+        }
+        String stem = base.substring(0, dot);
+        String extension = base.substring(dot + 1).toLowerCase();
+        boolean isInput = extension.equals("in");
+        boolean isOutput = extension.equals("out") || extension.equals("ans");
+        if (!isInput && !isOutput) {
+          continue;
+        }
+
+        ByteArrayOutputStream content = new ByteArrayOutputStream();
+        byte[] buffer = new byte[8192];
+        int bytesRead;
+        while ((bytesRead = zipStream.read(buffer)) != -1) {
+          totalBytes += bytesRead;
+          if (totalBytes > MAX_TEST_DATA_BYTES) {
+            throw new IOException("Test-data archive exceeds the maximum allowed size.");
+          }
+          content.write(buffer, 0, bytesRead);
+        }
+        (isInput ? inputs : outputs).put(stem, content.toString(StandardCharsets.UTF_8));
+      }
+    }
+
+    List<Map<String, String>> testCases = new ArrayList<>();
+    for (Map.Entry<String, String> input : inputs.entrySet()) {
+      String output = outputs.get(input.getKey());
+      if (output == null) {
+        continue;
+      }
+      Map<String, String> testCase = new HashMap<>();
+      testCase.put("input", input.getValue());
+      testCase.put("output", output);
+      testCases.add(testCase);
+    }
+    return testCases;
+  }
+
+  /** The maximum total uncompressed size accepted from a test-data archive (128 MiB). */
+  private static final long MAX_TEST_DATA_BYTES = 128L * 1024 * 1024;
 
   /**
    * Creates the test cases.

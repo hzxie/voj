@@ -38,26 +38,26 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.verwandlung.voj.web.service.ContestService;
 
 /**
- * The test class for AdministrationController - the contest start / end times.
+ * The test class for ContestAdministrationController - the contest start / end times.
  *
  * <p>The contest editor posts instants (epoch milliseconds) computed in the admin's browser; the
  * controller must read them as instants, independent of the server's time zone.
  *
  * @author Haozhe Xie
  */
-public class AdministrationControllerContestTimesTest {
+public class ContestAdministrationControllerTimesTest {
   /** Wires a mocked ContestService into a fresh controller before every test. */
   @BeforeEach
   public void setUp() {
     contestService = mock(ContestService.class);
-    controller = new AdministrationController();
+    controller = new ContestAdministrationController();
     ReflectionTestUtils.setField(controller, "contestService", contestService);
   }
 
   /** Test case: tests parseInstant(...). Test data: epoch milliseconds. Expected: that instant. */
   @Test
   public void testParseInstantReadsEpochMilliseconds() {
-    Assertions.assertEquals(new Date(1893553440000L), AdministrationController.parseInstant("1893553440000"));
+    Assertions.assertEquals(new Date(1893553440000L), ContestAdministrationController.parseInstant("1893553440000"));
   }
 
   /** Test case: tests parseInstant(...). Test data: ISO-8601 with an offset. Expected: that instant, whatever the server's zone. */
@@ -65,17 +65,17 @@ public class AdministrationControllerContestTimesTest {
   public void testParseInstantReadsIsoOffsetDateTime() {
     Assertions.assertEquals(
         Date.from(Instant.parse("2030-01-01T19:04:00Z")),
-        AdministrationController.parseInstant("2030-01-02T03:04:00+08:00"));
+        ContestAdministrationController.parseInstant("2030-01-02T03:04:00+08:00"));
   }
 
   /** Test case: tests parseInstant(...). Test data: a wall-clock time without an offset, garbage, blank. Expected: null (rejected). */
   @Test
   public void testParseInstantRejectsAmbiguousOrInvalidValues() {
-    Assertions.assertNull(AdministrationController.parseInstant("2030-01-02T03:04"));
-    Assertions.assertNull(AdministrationController.parseInstant("2030-01-02 03:04:00"));
-    Assertions.assertNull(AdministrationController.parseInstant("tomorrow"));
-    Assertions.assertNull(AdministrationController.parseInstant(" "));
-    Assertions.assertNull(AdministrationController.parseInstant(null));
+    Assertions.assertNull(ContestAdministrationController.parseInstant("2030-01-02T03:04"));
+    Assertions.assertNull(ContestAdministrationController.parseInstant("2030-01-02 03:04:00"));
+    Assertions.assertNull(ContestAdministrationController.parseInstant("tomorrow"));
+    Assertions.assertNull(ContestAdministrationController.parseInstant(" "));
+    Assertions.assertNull(ContestAdministrationController.parseInstant(null));
   }
 
   /** Test case: tests createContestAction(...). Test data: start and end as epoch ms. Expected: the service gets those instants. */
@@ -109,5 +109,5 @@ public class AdministrationControllerContestTimesTest {
   }
 
   private ContestService contestService;
-  private AdministrationController controller;
+  private ContestAdministrationController controller;
 }

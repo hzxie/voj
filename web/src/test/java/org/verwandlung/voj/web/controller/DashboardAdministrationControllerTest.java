@@ -18,24 +18,28 @@ package org.verwandlung.voj.web.controller;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Date;
+import java.util.Map;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import org.verwandlung.voj.web.service.LanguageService;
 import org.verwandlung.voj.web.service.SubmissionService;
 
 /**
- * The test class for AdministrationController - the counts of the dashboard.
+ * The test class for DashboardAdministrationController - the counts of the dashboard.
  *
  * @author Haozhe Xie
  */
-public class AdministrationControllerDashboardTest {
+public class DashboardAdministrationControllerTest {
   /**
    * Test case: tests getSubmissionsToday(). Expected: the submissions are counted from midnight
    * (00:00:00.000, not with the milliseconds of the current time) of today, in the application's
@@ -44,7 +48,7 @@ public class AdministrationControllerDashboardTest {
   @Test
   public void testSubmissionsTodayAreCountedFromMidnight() {
     SubmissionService submissionService = mock(SubmissionService.class);
-    AdministrationController controller = new AdministrationController();
+    DashboardAdministrationController controller = new DashboardAdministrationController();
     ReflectionTestUtils.setField(controller, "submissionService", submissionService);
 
     ZoneId zone = ZoneId.systemDefault();
@@ -65,5 +69,21 @@ public class AdministrationControllerDashboardTest {
         Date.from(today.atStartOfDay(zone).toInstant()), startTime.getValue());
     Assertions.assertEquals(
         Date.from(today.plusDays(1).atStartOfDay(zone).toInstant()), endTime.getValue());
+  }
+
+  /** Test case: tests updateLanguageSettingsAction(...). Test data: a JSON languages array. Expected: the parsed list is forwarded to LanguageService and its result returned. */
+  @Test
+  public void testUpdateLanguageSettingsDelegates() {
+    LanguageService languageService = mock(LanguageService.class);
+    DashboardAdministrationController controller = new DashboardAdministrationController();
+    ReflectionTestUtils.setField(controller, "languageService", languageService);
+    Map<String, Object> serviceResult = Map.of("isSuccessful", true);
+    when(languageService.updateLanguageSettings(org.mockito.ArgumentMatchers.anyList()))
+        .thenReturn(serviceResult);
+
+    Map<String, Object> result =
+        controller.updateLanguageSettingsAction("[]", new MockHttpServletRequest());
+
+    Assertions.assertSame(serviceResult, result);
   }
 }
