@@ -116,6 +116,32 @@ static const LONGLONG OUTPUT_FILE_SIZE_LIMIT = 256LL * 1024 * 1024;
 static const DWORD JOB_EMPTY_TIMEOUT_MS = 5000;
 
 /**
+ * The longest command line CreateProcessWithTokenW takes (in characters, the terminating NUL not
+ * included). A longer one is refused before the call, with a message that says why.
+ * See https://learn.microsoft.com/windows/win32/api/winbase/nf-winbase-createprocesswithtokenw
+ */
+static const size_t MAX_COMMAND_LINE_LENGTH = 1024;
+
+/**
+ * The error mode every compilation and run starts with, as SetErrorMode(SEM_FAILCRITICALERRORS |
+ * SEM_NOGPFAULTERRORBOX | SEM_NOOPENFILEERRORBOX) would set it: no error box the program would wait
+ * on, nobody being there to close it on its desktop (see WINDOW_STATION_ACCESS). A program that
+ * imports a DLL that cannot be found (or that fails to initialise) is then ended at once
+ * (STATUS_DLL_NOT_FOUND, ...), a runtime error, rather than kept waiting until it is killed at the
+ * wall-clock limit, a time limit exceeded. The Job's JOB_OBJECT_LIMIT_DIE_ON_UNHANDLED_EXCEPTION
+ * covers SEM_NOGPFAULTERRORBOX only. The error mode is a process's own (it is what processes it
+ * creates inherit), so it is set on the program's process while it is still suspended, through
+ * NtSetInformationProcess(ProcessDefaultHardErrorMode), which is what SetErrorMode does for the
+ * calling process; there, the bit of SEM_FAILCRITICALERRORS means the opposite (critical errors
+ * are reported), so it is left clear.
+ * See https://learn.microsoft.com/windows/win32/api/errhandlingapi/nf-errhandlingapi-seterrormode
+ */
+static const ULONG PROCESS_DEFAULT_HARD_ERROR_MODE = 12;
+static const ULONG HARD_ERROR_MODE                 = SEM_NOGPFAULTERRORBOX | SEM_NOOPENFILEERRORBOX;
+typedef LONG (NTAPI *NtSetInformationProcessFunction)(HANDLE, ULONG, PVOID, ULONG);
+typedef ULONG (NTAPI *RtlNtStatusToDosErrorFunction)(LONG);
+
+/**
  * The only environment variables the sandboxed process inherits from the judger, mirroring the
  * Linux runner. The judger's own environment holds secrets (VOJ_DB_PASSWORD, VOJ_JUDGER_API_TOKEN,
  * ...) that a submission could otherwise read (GetEnvironmentVariable, or a compile error that
@@ -270,6 +296,7 @@ void setupStartupInfo(STARTUPINFOW&, HANDLE&, HANDLE&, HANDLE&);
 HANDLE createJobObject(DWORD, jint, bool, HANDLE);
 bool drainJobMessages(HANDLE, bool&);
 bool emptyJob(HANDLE, HANDLE, bool&);
+bool disableErrorDialogs(HANDLE);
 bool createProcess(const std::wstring&, const std::wstring&, const std::wstring&, const std::wstring&, const std::wstring&, STARTUPINFOW&, PROCESS_INFORMATION&, std::string&);
 bool openSandboxSession(const std::wstring&, const std::wstring&, std::string&);
 void closeSandboxSession();
@@ -451,6 +478,9 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
         return NULL;
     }
     jobInUse = true;
+    if ( !disableErrorDialogs(processInfo.hProcess) ) {
+        return fail("NtSetInformationProcess(ProcessDefaultHardErrorMode)");
+    }
     if ( ResumeThread(processInfo.hThread) == (DWORD) -1 ) {
         return fail("ResumeThread");
     }
@@ -840,6 +870,29 @@ bool emptyJob(HANDLE hJob, HANDLE hCompletionPort, bool& memoryLimitHit) {
 }
 
 /**
+ * Sets the error mode of a (suspended) process, see HARD_ERROR_MODE.
+ * @param  hProcess - the process
+ * @return whether it was set (GetLastError() tells why not)
+ */
+bool disableErrorDialogs(HANDLE hProcess) {
+    HMODULE ntdll = GetModuleHandleW(L"ntdll.dll");
+    NtSetInformationProcessFunction setInformationProcess = ntdll == NULL ? NULL :
+        (NtSetInformationProcessFunction) (void*) GetProcAddress(ntdll, "NtSetInformationProcess");
+    RtlNtStatusToDosErrorFunction ntStatusToDosError = ntdll == NULL ? NULL :
+        (RtlNtStatusToDosErrorFunction) (void*) GetProcAddress(ntdll, "RtlNtStatusToDosError");
+    if ( setInformationProcess == NULL || ntStatusToDosError == NULL ) {
+        return false;
+    }
+    ULONG mode   = HARD_ERROR_MODE;
+    LONG  status = setInformationProcess(hProcess, PROCESS_DEFAULT_HARD_ERROR_MODE, &mode, sizeof(mode));
+    if ( status < 0 ) {
+        SetLastError(ntStatusToDosError(status));
+        return false;
+    }
+    return true;
+}
+
+/**
  * Creates a process running as the given (low-privilege) user, without privileges and at Low
  * integrity.
  *
@@ -866,6 +919,12 @@ bool createProcess(const std::wstring& commandLine, const std::wstring& username
         const std::wstring& password, const std::wstring& workDirectory,
         const std::wstring& javaOptions, STARTUPINFOW& startupInfo,
         PROCESS_INFORMATION& processInfo, std::string& failedApi) {
+    if ( commandLine.size() > MAX_COMMAND_LINE_LENGTH ) {
+        failedApi = "CreateProcessWithToken (the command line is longer than its limit of " +
+                    std::to_string(MAX_COMMAND_LINE_LENGTH) + " characters)";
+        SetLastError(ERROR_INVALID_PARAMETER);
+        return false;
+    }
     std::vector<wchar_t> environmentBlock;
     if ( !buildEnvironmentBlock(username, workDirectory, javaOptions, environmentBlock) ) {
         failedApi = "CreateEnvironmentBlock";
