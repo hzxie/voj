@@ -734,10 +734,10 @@ judger's account is the user of its process's token, not a name looked up
 (the work directory of each judging and what is in it) is also the sandbox
 account's, but for changing the ACL or the owner of what the judger creates
 there. A directory whose ACL cannot be set is removed again, so it is never
-left with the ACL it would inherit. The judger does not change the ACL of a
-`judger.checkpointDir` that exists already: create it yourself only with an
-ACL that gives no other account access, but the sandbox account *Read
-attributes* (`icacls <dir> /grant voj-sandbox:(RA,S)`) for JavaScript.
+left with the ACL it would inherit. Of a `judger.checkpointDir` that exists
+already, the judger only adds the sandbox account's *Read attributes* entry if
+it lacks one (once, when it starts): create it yourself only with an ACL that
+gives no other account access.
 
 What a submission creates in its work directory is its own, so it may give it
 any ACL, even one that denies the judger everything. The judger removes it

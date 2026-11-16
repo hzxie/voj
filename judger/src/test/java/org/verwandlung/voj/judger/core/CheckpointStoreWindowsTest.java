@@ -96,6 +96,37 @@ public class CheckpointStoreWindowsTest {
   }
 
   /**
+   * Test case: the checkpoint root exists already, with an ACL that gives the judger alone access
+   * (as one created by an earlier version of the judger). Expected result: the judger lets the
+   * sandbox account read the attributes of the root, once: a later start leaves the ACL as it is.
+   */
+  @Test
+  public void testOpenLetsTheSandboxAccountReadTheAttributesOfAnExistingRoot() throws Exception {
+    Path root = tempDir.resolve("voj-judger");
+    UserPrincipal judger = FileSystemUtils.getJudgerAccount();
+    UserPrincipal users =
+        root.getFileSystem().getUserPrincipalLookupService().lookupPrincipalByName("Users");
+    CheckpointStore.createWindowsDirectory(root, List.of());
+
+    newStore(root, "Users").open();
+    releaseSlots();
+    newStore(root, "Users").open();
+
+    List<AclEntry> acl = getAcl(root);
+    Assertions.assertEquals(2, acl.size(), acl.toString());
+    assertEntry(
+        acl.get(0),
+        judger,
+        EnumSet.allOf(AclEntryPermission.class),
+        EnumSet.of(AclEntryFlag.FILE_INHERIT, AclEntryFlag.DIRECTORY_INHERIT));
+    assertEntry(
+        acl.get(1),
+        users,
+        EnumSet.of(AclEntryPermission.READ_ATTRIBUTES, AclEntryPermission.SYNCHRONIZE),
+        EnumSet.noneOf(AclEntryFlag.class));
+  }
+
+  /**
    * Test case: the sandbox account does not exist (and the checkpoint root does: the judger would
    * not create it otherwise). Expected result: the judger does not start (it looks the account up
    * before it creates the work directory); it leaves no work directory behind, and releases its
@@ -226,6 +257,7 @@ public class CheckpointStoreWindowsTest {
         lock.close();
       }
     }
+    stores.clear();
   }
 
   /** The stores of the test. */

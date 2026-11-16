@@ -337,6 +337,36 @@ public class CheckpointStore {
     createWindowsDirectory(
         directory,
         List.of(passable(sandboxAccount), inheritedOnly(sandboxAccount, SANDBOX_ACCESS)));
+    ensurePassable(directory, sandboxAccount);
+  }
+
+  /**
+   * Makes sure an account may read the attributes of a directory (Windows, see {@link #passable}):
+   * unless an entry of its ACL already allows the account that (on the directory itself, not only
+   * on what is created in it), the entry is added. A directory the judger creates has it from the
+   * start; one that existed already, such as a checkpoint root created by an earlier version of the
+   * judger or by hand, gets it once, at the judger's next start.
+   *
+   * @param directory - the directory
+   * @param account - the account
+   * @throws IOException if the ACL cannot be read or changed
+   */
+  static void ensurePassable(Path directory, UserPrincipal account) throws IOException {
+    AclFileAttributeView view =
+        Files.getFileAttributeView(directory, AclFileAttributeView.class, LinkOption.NOFOLLOW_LINKS);
+    List<AclEntry> acl = new ArrayList<>(view.getAcl());
+    AclEntry entry = passable(account);
+    for (AclEntry existing : acl) {
+      if (existing.type() == AclEntryType.ALLOW
+          && existing.principal().equals(account)
+          && !existing.flags().contains(AclEntryFlag.INHERIT_ONLY)
+          && existing.permissions().containsAll(entry.permissions())) {
+        return;
+      }
+    }
+    // After every entry, so that an entry that denies stays before those that allow.
+    acl.add(entry);
+    view.setAcl(acl);
   }
 
   /**
@@ -522,6 +552,18 @@ public class CheckpointStore {
           ex);
     }
     if (!isPosix()) {
+      try {
+        ensurePassable(root, sandboxAccount);
+      } catch (IOException ex) {
+        LOGGER.warn(
+            "The sandbox account may not read the attributes of the checkpoint directory {}, and"
+                + " the judger cannot let it (JavaScript submissions fail without): grant it, e.g."
+                + " icacls \"{}\" /grant {}:(RA,S)",
+            root,
+            root,
+            sandboxUsername,
+            ex);
+      }
       return root.toRealPath();
     }
     if (!Files.isDirectory(root, LinkOption.NOFOLLOW_LINKS)) {
