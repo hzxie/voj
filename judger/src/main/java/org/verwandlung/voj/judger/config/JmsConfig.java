@@ -68,11 +68,13 @@ public class JmsConfig {
   static final int QUEUE_PREFETCH = 0;
 
   /**
-   * How many times a judging task whose judging failed (it could not even be recorded as a System
-   * Error, e.g. while the database is down) is delivered again before the broker moves it to the
-   * dead-letter queue, where the web application marks the submission as failed.
+   * How many times a judging task whose judging failed is delivered again before the broker client
+   * moves it to the dead-letter queue. On the last delivery, a judging that could succeed later is
+   * judged a System Error instead (see {@code Dispatcher#createNewTask}); a submission whose
+   * outcome cannot be recorded at all (e.g. while the database is down) the web application marks
+   * as a System Error once it waited too long.
    */
-  static final int MAXIMUM_REDELIVERIES = 5;
+  public static final int MAXIMUM_REDELIVERIES = 5;
 
   /**
    * How long (ms) a judger whose judging of a task failed waits before it takes a task again; it
@@ -81,7 +83,7 @@ public class JmsConfig {
   static final long INITIAL_PAUSE_MS = 10000;
 
   /** The longest pause (ms) of a judger whose judgings keep failing. */
-  public static final long MAXIMUM_PAUSE_MS = INITIAL_PAUSE_MS << (MAXIMUM_REDELIVERIES - 1);
+  static final long MAXIMUM_PAUSE_MS = INITIAL_PAUSE_MS << (MAXIMUM_REDELIVERIES - 1);
 
   /**
    * The JMS connection factory for sending, with a cached connection. The cache drops the

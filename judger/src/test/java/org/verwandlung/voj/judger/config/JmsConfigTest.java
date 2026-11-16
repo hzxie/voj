@@ -32,9 +32,15 @@ import org.apache.activemq.command.ActiveMQQueue;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.jms.connection.CachingConnectionFactory;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.jms.listener.DefaultMessageListenerContainer;
+import org.springframework.test.util.ReflectionTestUtils;
+
+import org.verwandlung.voj.judger.application.ApplicationDispatcher;
+import org.verwandlung.voj.judger.exception.RetryableJudgingException;
+import org.verwandlung.voj.judger.messenger.MessageReceiver;
 
 /**
  * Test class for JmsConfig.
@@ -157,8 +163,7 @@ public class JmsConfigTest {
 
   /**
    * Test case: the judging of a task keeps failing (the listener throws). Expected result: the task
-   * is delivered again, {@link JmsConfig#MAXIMUM_REDELIVERIES} times, then dead-lettered, where the
-   * web application picks it up.
+   * is delivered again, {@link JmsConfig#MAXIMUM_REDELIVERIES} times, then dead-lettered.
    */
   @Test
   public void testFailedTaskIsRedeliveredThenDeadLettered() throws Exception {
@@ -190,6 +195,55 @@ public class JmsConfigTest {
     Assertions.assertNotNull(deadLetter);
     Assertions.assertEquals(7L, deadLetter.getLong("submissionId"));
     Assertions.assertEquals(1 + JmsConfig.MAXIMUM_REDELIVERIES, deliveries.get());
+  }
+
+  /**
+   * Test case: the judger's MessageReceiver gets a task whose judging could succeed later, and the
+   * judging hands it back every time it may. Expected result: of its 1 + {@link
+   * JmsConfig#MAXIMUM_REDELIVERIES} deliveries, only the last is reported as such; the judging,
+   * which then records a System Error rather than hand the task back, ends it: nothing is
+   * dead-lettered.
+   */
+  @Test
+  public void testLastDeliveryIsToldToTheJudging() throws Exception {
+    String brokerUrl = startBrokerOnFreePort();
+    java.util.List<Boolean> lastDeliveries = new java.util.concurrent.CopyOnWriteArrayList<>();
+    ApplicationDispatcher applicationDispatcher = Mockito.mock(ApplicationDispatcher.class);
+    Mockito.doAnswer(
+            invocation -> {
+              boolean isLastDelivery = invocation.getArgument(2);
+              lastDeliveries.add(isLastDelivery);
+              if (!isLastDelivery) {
+                throw new RetryableJudgingException("The test data could not be downloaded.", null);
+              }
+              return null;
+            })
+        .when(applicationDispatcher)
+        .onSubmissionCreated(Mockito.eq(7L), Mockito.any(), Mockito.anyBoolean());
+    MessageReceiver messageReceiver = new MessageReceiver();
+    ReflectionTestUtils.setField(messageReceiver, "dispatcher", applicationDispatcher);
+    DefaultMessageListenerContainer listenerContainer =
+        jmsConfig.submissionTaskListenerContainer(brokerUrl, messageReceiver);
+    ((JmsConfig.SubmissionTaskListenerContainer) listenerContainer).setInitialPauseMs(0);
+    start(listenerContainer);
+
+    sendTask(brokerUrl, 7L);
+    long deadline = System.currentTimeMillis() + 10000;
+    while (lastDeliveries.size() <= JmsConfig.MAXIMUM_REDELIVERIES
+        && System.currentTimeMillis() < deadline) {
+      Thread.sleep(50);
+    }
+
+    java.util.List<Boolean> expected = new java.util.ArrayList<>();
+    for (int i = 0; i < JmsConfig.MAXIMUM_REDELIVERIES; ++i) {
+      expected.add(false);
+    }
+    expected.add(true);
+    Assertions.assertEquals(expected, lastDeliveries);
+    JmsTemplate deadLetterReceiver = new JmsTemplate(new ActiveMQConnectionFactory(brokerUrl));
+    deadLetterReceiver.setReceiveTimeout(1000);
+    Assertions.assertNull(deadLetterReceiver.receive("ActiveMQ.DLQ"));
+    Assertions.assertEquals(1 + JmsConfig.MAXIMUM_REDELIVERIES, lastDeliveries.size());
   }
 
   /**

@@ -27,6 +27,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import org.verwandlung.voj.judger.application.ApplicationDispatcher;
+import org.verwandlung.voj.judger.config.JmsConfig;
 import org.verwandlung.voj.judger.util.LogSanitizer;
 
 /**
@@ -51,7 +52,7 @@ public class MessageReceiver implements MessageListener {
     }
     long submissionId;
     Long generation;
-    long expiration;
+    boolean isLastDelivery;
     try {
       MapMessage mapMessage = (MapMessage) message;
       String event = mapMessage.getString("event");
@@ -66,8 +67,9 @@ public class MessageReceiver implements MessageListener {
       // Absent from a task queued by a web application that predates judging generations.
       generation =
           mapMessage.itemExists("generation") ? mapMessage.getLong("generation") : null;
-      // Set by the web application from its jms.submissionTask.ttl.
-      expiration = mapMessage.getJMSExpiration();
+      // Counted by the broker client, from 1; the client dead-letters a task delivered once more.
+      isLastDelivery =
+          mapMessage.getIntProperty("JMSXDeliveryCount") > JmsConfig.MAXIMUM_REDELIVERIES;
     } catch (JMSException | RuntimeException ex) {
       LOGGER.error("Ignoring a malformed message", ex);
       return;
@@ -75,7 +77,7 @@ public class MessageReceiver implements MessageListener {
     LOGGER.info(
         String.format(
             "Received new submission task #%d (generation %s)", submissionId, generation));
-    dispatcher.onSubmissionCreated(submissionId, generation, expiration);
+    dispatcher.onSubmissionCreated(submissionId, generation, isLastDelivery);
   }
 
   /** The autowired ApplicationDispatcher object, used to perform the callback after a message is received. */

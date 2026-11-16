@@ -17,6 +17,7 @@
 package org.verwandlung.voj.judger.messenger;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -33,6 +34,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import org.verwandlung.voj.judger.application.ApplicationDispatcher;
+import org.verwandlung.voj.judger.config.JmsConfig;
 
 /**
  * Test class for MessageReceiver.
@@ -44,7 +46,7 @@ public class MessageReceiverTest {
   /**
    * Test case: tests the onMessage method. Test data: a MapMessage carrying a SubmissionCreated
    * event. Expected result: the dispatcher's onSubmissionCreated callback is invoked with the
-   * submission identifier, the judging generation and when the task expires.
+   * submission identifier, the judging generation and that this is not the task's last delivery.
    */
   @Test
   public void testOnMessageSubmissionCreated() throws JMSException {
@@ -53,11 +55,30 @@ public class MessageReceiverTest {
     when(mapMessage.getLong("submissionId")).thenReturn(1234L);
     when(mapMessage.itemExists("generation")).thenReturn(true);
     when(mapMessage.getLong("generation")).thenReturn(3L);
-    when(mapMessage.getJMSExpiration()).thenReturn(1700000000000L);
+    when(mapMessage.getIntProperty("JMSXDeliveryCount")).thenReturn(1);
 
     messageReceiver.onMessage(mapMessage);
 
-    verify(dispatcher).onSubmissionCreated(1234L, 3L, 1700000000000L);
+    verify(dispatcher).onSubmissionCreated(1234L, 3L, false);
+  }
+
+  /**
+   * Test case: tests the onMessage method. Test data: the deliveries of a task that was handed back
+   * {@link JmsConfig#MAXIMUM_REDELIVERIES} times before its last one. Expected result: only the
+   * last one, after which the broker client dead-letters the task, is told it is the last.
+   */
+  @Test
+  public void testOnMessageTellsTheLastDelivery() throws JMSException {
+    MapMessage mapMessage = org.mockito.Mockito.mock(MapMessage.class);
+    when(mapMessage.getString("event")).thenReturn("SubmissionCreated");
+    when(mapMessage.getLong("submissionId")).thenReturn(1234L);
+    when(mapMessage.getIntProperty("JMSXDeliveryCount"))
+        .thenReturn(JmsConfig.MAXIMUM_REDELIVERIES, JmsConfig.MAXIMUM_REDELIVERIES + 1);
+
+    messageReceiver.onMessage(mapMessage);
+    verify(dispatcher).onSubmissionCreated(1234L, null, false);
+    messageReceiver.onMessage(mapMessage);
+    verify(dispatcher).onSubmissionCreated(1234L, null, true);
   }
 
   /**
@@ -73,7 +94,7 @@ public class MessageReceiverTest {
 
     messageReceiver.onMessage(mapMessage);
 
-    verify(dispatcher).onSubmissionCreated(1234L, null, 0L);
+    verify(dispatcher).onSubmissionCreated(1234L, null, false);
   }
 
   /**
@@ -87,7 +108,7 @@ public class MessageReceiverTest {
 
     messageReceiver.onMessage(mapMessage);
 
-    verify(dispatcher, never()).onSubmissionCreated(anyLong(), any(), anyLong());
+    verify(dispatcher, never()).onSubmissionCreated(anyLong(), any(), anyBoolean());
   }
 
   /**
@@ -100,7 +121,7 @@ public class MessageReceiverTest {
 
     messageReceiver.onMessage(message);
 
-    verify(dispatcher, never()).onSubmissionCreated(anyLong(), any(), anyLong());
+    verify(dispatcher, never()).onSubmissionCreated(anyLong(), any(), anyBoolean());
   }
 
   /**
@@ -114,7 +135,7 @@ public class MessageReceiverTest {
 
     messageReceiver.onMessage(mapMessage);
 
-    verify(dispatcher, never()).onSubmissionCreated(anyLong(), any(), anyLong());
+    verify(dispatcher, never()).onSubmissionCreated(anyLong(), any(), anyBoolean());
   }
 
   /**
@@ -129,7 +150,7 @@ public class MessageReceiverTest {
     when(mapMessage.getLong("submissionId")).thenReturn(1234L);
     org.mockito.Mockito.doThrow(new IllegalStateException("database down"))
         .when(dispatcher)
-        .onSubmissionCreated(1234L, null, 0L);
+        .onSubmissionCreated(1234L, null, false);
 
     org.junit.jupiter.api.Assertions.assertThrows(
         IllegalStateException.class, () -> messageReceiver.onMessage(mapMessage));

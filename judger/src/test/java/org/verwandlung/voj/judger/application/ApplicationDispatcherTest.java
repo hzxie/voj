@@ -17,6 +17,7 @@
 package org.verwandlung.voj.judger.application;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -63,8 +64,8 @@ public class ApplicationDispatcherTest {
    */
   @Test
   public void testOnSubmissionCreated() throws Exception {
-    applicationDispatcher.onSubmissionCreated(100L, 3L, 0L);
-    verify(judgerDispatcher).createNewTask(100L, 3L, 0L);
+    applicationDispatcher.onSubmissionCreated(100L, 3L, true);
+    verify(judgerDispatcher).createNewTask(100L, 3L, true);
   }
 
   /**
@@ -76,11 +77,11 @@ public class ApplicationDispatcherTest {
   public void testOnSubmissionCreatedPassesOnFailures() throws Exception {
     org.mockito.Mockito.doThrow(new DataAccessResourceFailureException("database down"))
         .when(judgerDispatcher)
-        .createNewTask(anyLong(), any(), anyLong());
+        .createNewTask(anyLong(), any(), anyBoolean());
 
     Assertions.assertThrows(
         DataAccessResourceFailureException.class,
-        () -> applicationDispatcher.onSubmissionCreated(100L, 3L, 0L));
+        () -> applicationDispatcher.onSubmissionCreated(100L, 3L, true));
   }
 
   /**
@@ -91,9 +92,9 @@ public class ApplicationDispatcherTest {
   public void testOnSubmissionCreatedIgnoresMissingSubmissions() throws Exception {
     org.mockito.Mockito.doThrow(new IllgealSubmissionException("Illegal submission #100"))
         .when(judgerDispatcher)
-        .createNewTask(anyLong(), any(), anyLong());
+        .createNewTask(anyLong(), any(), anyBoolean());
 
-    Assertions.assertDoesNotThrow(() -> applicationDispatcher.onSubmissionCreated(100L, 3L, 0L));
+    Assertions.assertDoesNotThrow(() -> applicationDispatcher.onSubmissionCreated(100L, 3L, true));
     verify(submissionMapper, never()).updateSubmissionResult(any(Submission.class));
   }
 
