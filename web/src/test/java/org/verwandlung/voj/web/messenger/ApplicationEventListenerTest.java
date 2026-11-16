@@ -36,8 +36,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import org.verwandlung.voj.web.service.SubmissionService;
 
 /**
- * The test class for the Server-Sent Event handling of ApplicationEventListener. The emitter
- * registry is static, so every test uses its own submission ids.
+ * The test class for the Server-Sent Event handling of ApplicationEventListener.
  *
  * @author Haozhe Xie
  */

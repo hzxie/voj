@@ -181,7 +181,7 @@ public class ApplicationEventListener {
    * submission record. The Value in the Map is the set of SseEmitter objects of every viewer
    * following that submission, used to push real-time judge information.
    */
-  private static final Map<Long, Set<SseEmitter>> sseEmitters = new ConcurrentHashMap<>();
+  private final Map<Long, Set<SseEmitter>> sseEmitters = new ConcurrentHashMap<>();
 
   /**
    * The autowired SubmissionService object. Used to tell the current judging of a submission from

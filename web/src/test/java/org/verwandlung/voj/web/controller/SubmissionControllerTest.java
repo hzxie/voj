@@ -312,6 +312,30 @@ public class SubmissionControllerTest {
   }
 
   /**
+   * Test case: tests getRealTimeJudgeResultAction(...). Test data: the owner of a pending
+   * submission follows its judging. Expected: the stream is registered and lasts 10 minutes, rather
+   * than the servlet container's default timeout of the asynchronous requests (30 seconds).
+   */
+  @Test
+  public void testTheStreamOfAPendingSubmissionLastsTenMinutes() throws Exception {
+    User owner = ownerUser();
+    authenticate(owner);
+    long submissionId = 987654320L;
+    ApplicationEventListener listener = new ApplicationEventListener();
+    ReflectionTestUtils.setField(controller, "submissionEventListener", listener);
+    Submission pending = submissionWithCode(owner, "code");
+    pending.setJudgeResult(new JudgeResult(1, "PD", "Pending"));
+    when(submissionService.getSubmission(submissionId)).thenReturn(pending);
+
+    SseEmitter sseEmitter =
+        controller.getRealTimeJudgeResultAction(
+            submissionId, new MockHttpServletRequest(), new MockHttpServletResponse());
+
+    Assertions.assertEquals(600000L, sseEmitter.getTimeout());
+    Assertions.assertEquals(1, listener.getNumberOfSseEmitters(submissionId));
+  }
+
+  /**
    * Test case: tests getRealTimeJudgeResultAction(...). Test data: a submission that is no longer
    * pending. Expected: no stream (404), and none is left registered.
    */

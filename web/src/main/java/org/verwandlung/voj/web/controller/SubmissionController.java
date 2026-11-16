@@ -247,10 +247,11 @@ public class SubmissionController {
     User currentUser = HttpSessionParser.getCurrentUser();
     // The stream is registered before the submission is read: an outcome recorded after the read
     // found the submission pending is then sent to it, whereas one sent between the read and a
-    // later registration would reach no stream, which would wait for nothing. ("Established" is
-    // held by the stream until it is returned, and sent first.)
-    SseEmitter sseEmitter = new SseEmitter();
-    sseEmitter.send("Established");
+    // later registration would reach no stream, which would wait for nothing. It opens with a
+    // comment, which the page ignores, so that the response starts at once (the stream holds it
+    // until it is returned, and sends it first).
+    SseEmitter sseEmitter = new SseEmitter(STREAM_TIMEOUT_MS);
+    sseEmitter.send(SseEmitter.event().comment("connected"));
     submissionEventListener.addSseEmitters(submissionId, sseEmitter);
     // Unless the stream is returned, it never starts, so it never completes either: it is
     // unregistered here, whatever the checks throw (e.g. the database is unreachable).
@@ -308,6 +309,12 @@ public class SubmissionController {
 
     return result;
   }
+
+  /**
+   * How long (ms) a live stream of a judging lasts. The browser then opens another one, which is
+   * refused once the submission is no longer pending.
+   */
+  private static final long STREAM_TIMEOUT_MS = 600000;
 
   /** The default number of submission records to load per request when the admin option is unset. */
   private static final int DEFAULT_NUMBER_OF_SUBMISSION_PER_PAGE = 100;

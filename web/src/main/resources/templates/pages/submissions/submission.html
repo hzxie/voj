@@ -105,7 +105,7 @@
             $('.markdown').each(function() { $(this).html(renderMarkdown($(this).text())); });
         });
     </script>
-    <th:block th:if="${submission.judgeResult != null and submission.judgeResult.judgeResultName == 'Pending'}">
+    <th:block th:if="${submission.judgeResult != null and submission.judgeResult.judgeResultSlug == 'PD'}">
     <script type="text/javascript" th:inline="javascript">
         // Swaps the verdict name and its colour (the `flag-<slug>` class drives the colour in CSS)
         // on both the title-bar headline and the sidebar badge. The slug is taken from the
@@ -116,29 +116,30 @@
             $('#judge-result').text(name).closest('.vw-verdict-lg').removeClass(strip).addClass(flag);
             $('.vw-side-verdict-name').text(name).removeClass(strip).addClass(flag);
         }
-        var getterInterval = setInterval(getRealTimeJudgeResult, 10000);
-        $(function() {
-            var subscriptionUrl = [[@{/submission/getRealTimeJudgeResult.action(submissionId=${submission.submissionId})}]],
-                source          = new EventSource(subscriptionUrl),
-                lastMessage     = '';
-            source.onmessage = function(e) {
-                var message = e['data'];
-                if ( message == lastMessage ) { return; }
-                lastMessage = message;
-                if ( message == 'Established' ) {
-                    $('#judge-log').append('<p>' + [[#{voj.submissions.submission.connected-to-server}]] + '</p>');
-                    return;
-                }
-                var mapMessage  = JSON.parse(message),
-                    judgeResult = mapMessage['judgeResult'],
-                    judgeLog    = mapMessage['message'];
-                $('#judge-result').text(judgeResult);
-                $('#judge-log').append(renderMarkdown(judgeLog));
-                // 'Running' is an intermediate marker; any other verdict is terminal, so pull the
-                // final slug/time/memory immediately instead of waiting for the next poll tick.
-                if ( judgeResult != 'Running' ) { getRealTimeJudgeResult(); }
+        // The live log of the judging. The browser reconnects a stream that ends (e.g. it timed out)
+        // while the submission is pending; it is closed once the verdict is in, by the stream or by
+        // the poll below, which reads it from the database every 10 seconds.
+        var getterInterval = setInterval(getRealTimeJudgeResult, 10000),
+            source         = new EventSource([[@{/submission/getRealTimeJudgeResult.action(submissionId=${submission.submissionId})}]]),
+            isConnected    = false;
+        source.onopen = function() {
+            if ( isConnected ) { return; }
+            isConnected = true;
+            $('#judge-log').append('<p>' + [[#{voj.submissions.submission.connected-to-server}]] + '</p>');
+        };
+        source.onmessage = function(e) {
+            var mapMessage  = JSON.parse(e['data']),
+                judgeResult = mapMessage['judgeResult'],
+                judgeLog    = mapMessage['message'];
+            $('#judge-result').text(judgeResult);
+            $('#judge-log').append(renderMarkdown(judgeLog));
+            // 'Running' is intermediate; any other verdict is terminal, so pull the final
+            // slug/time/memory at once instead of waiting for the next poll.
+            if ( judgeResult != 'Running' ) {
+                source.close();
+                getRealTimeJudgeResult();
             }
-        });
+        };
         function getRealTimeJudgeResult() {
             $.ajax({
                 type: 'GET',
@@ -157,6 +158,7 @@
                             $('#judger-name').text(submission['judger']['username']);
                         }
                         clearInterval(getterInterval);
+                        source.close();
                     }
                 }
             });
