@@ -60,14 +60,10 @@ public class FileSystemUtils {
   private FileSystemUtils() {}
 
   /**
-   * Opens a file that sandboxed code may have written (a submission's output or the compile log)
-   * for reading, refusing anything but a plain regular file. The judger reads these files with its
-   * own (typically root) privileges, while the directory holding them belongs to the sandbox user:
-   * a submission could otherwise replace its output with a symbolic link to e.g. {@code
-   * /etc/shadow} (and have it compared against the answer or echoed back in the compile log), a
-   * hard link, or a FIFO that blocks the judger forever. All sandboxed processes have been killed
-   * by the time the judger reads the file, so the file cannot change between the check and the
-   * open; the open itself also refuses symbolic links.
+   * Opens a file a program wrote (its output or the compile log) for reading, refusing anything but
+   * a regular file with a single link. The sandbox creates these files for the judger, in a
+   * directory no program may write to; this is defence in depth against a link or a FIFO in their
+   * place, read with the judger's privileges. Every program is gone by the time it is read.
    *
    * @param path - the file to open
    * @return an input stream over the file

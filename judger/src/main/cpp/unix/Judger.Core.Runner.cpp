@@ -770,49 +770,12 @@ static bool setResourceLimit(int resource, rlim_t soft, rlim_t hard) {
 /**
  * Marks every file descriptor above standard error close-on-exec, so the sandboxed program only
  * inherits stdin, stdout and stderr; they are marked rather than closed because the sync pipe must
- * stay open until exec. Only the open descriptors are touched: the JVM raises its RLIMIT_NOFILE to
- * the hard limit (often 2^20), and a system call for every possible descriptor would cost the
- * program up to a second of CPU time before it even starts. Async-signal-safe.
+ * stay open until exec. close_range(CLOSE_RANGE_CLOEXEC) is Linux 5.11, older than Landlock (5.13),
+ * which the sandbox needs anyway. Async-signal-safe.
  * @return whether every inherited descriptor is marked
  */
 static bool markInheritedDescriptorsCloseOnExec() {
-    if ( syscall(SYS_close_range, 3U, ~0U, CLOSE_RANGE_CLOEXEC) == 0 ) {
-        return true;
-    }
-    // Linux < 5.11: list the open descriptors in /proc/self/fd, with the raw getdents64 system call
-    // into a buffer on the stack (opendir would allocate).
-    int directory = open("/proc/self/fd", O_RDONLY | O_DIRECTORY | O_CLOEXEC);
-    if ( directory < 0 ) {
-        return false;
-    }
-    struct LinuxDirent64 {
-        uint64_t       d_ino;
-        int64_t        d_off;
-        unsigned short d_reclen;
-        unsigned char  d_type;
-        char           d_name[1];
-    };
-    alignas(LinuxDirent64) char buffer[4096];
-    for ( ;; ) {
-        long length = syscall(SYS_getdents64, directory, buffer, sizeof(buffer));
-        if ( length <= 0 ) {
-            close(directory);
-            return length == 0;
-        }
-        for ( long offset = 0; offset < length; ) {
-            const LinuxDirent64* entry = reinterpret_cast<const LinuxDirent64*>(buffer + offset);
-            offset += entry->d_reclen;
-            int  fd      = 0;
-            bool numeric = entry->d_name[0] != '\0';
-            for ( const char* c = entry->d_name; *c != '\0' && numeric; ++c ) {
-                numeric = (*c >= '0' && *c <= '9');
-                fd      = fd * 10 + (*c - '0');
-            }
-            if ( numeric && fd > STDERR_FILENO && fd != directory ) {
-                fcntl(fd, F_SETFD, FD_CLOEXEC);
-            }
-        }
-    }
+    return syscall(SYS_close_range, 3U, ~0U, CLOSE_RANGE_CLOEXEC) == 0;
 }
 
 /**
