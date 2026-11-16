@@ -179,7 +179,7 @@
                 window.location.href = [[@{/discussion/}]] + result['discussionThreadId'];
             } else {
                 var errorMessage = '';
-                if ( !result['isThreadCreatorExists'] || !result['isThreadCreatorLegal'] ) { errorMessage += [[#{voj.discussion.new-thread.not-allow-to-create-discussion}]] + '<br>'; }
+                if ( !result['isThreadCreatorExists'] ) { errorMessage += [[#{voj.discussion.new-thread.not-allow-to-create-discussion}]] + '<br>'; }
                 if ( !result['isDiscussionTopicExists'] ) { errorMessage += [[#{voj.discussion.new-thread.discussion-topic-invalid}]] + '<br>'; }
                 if ( !result['isRelatedProblemExists'] ) { errorMessage += [[#{voj.discussion.new-thread.related-problem-not-exists}]] + '<br>'; }
                 if ( result['isThreadTitleEmpty'] ) { errorMessage += [[#{voj.discussion.new-thread.discussion-thread-title-empty}]] + '<br>'; }

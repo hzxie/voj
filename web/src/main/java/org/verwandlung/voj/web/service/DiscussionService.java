@@ -586,21 +586,10 @@ public class DiscussionService {
     if (user == null) {
       return false;
     }
-    if (minSolvedProblems <= 0 || isAdministrator(user)) {
+    if (minSolvedProblems <= 0 || PublicationStatus.isAdministrator(user)) {
       return true;
     }
     return submissionMapper.getAcceptedSubmissionUsingUserId(user.getUid()) >= minSolvedProblems;
-  }
-
-  /**
-   * Checks whether a user belongs to the administrators user group.
-   *
-   * @param user - the user to check
-   * @return whether the user is an administrator
-   */
-  private boolean isAdministrator(User user) {
-    return user.getUserGroup() != null
-        && "administrators".equals(user.getUserGroup().getUserGroupSlug());
   }
 
   /**
@@ -623,7 +612,7 @@ public class DiscussionService {
    * @return whether the editor is allowed to modify the content
    */
   private boolean canModify(User creator, User editor) {
-    return editor != null && (editor.equals(creator) || isAdministrator(editor));
+    return editor != null && (editor.equals(creator) || PublicationStatus.isAdministrator(editor));
   }
 
   /**
@@ -690,7 +679,7 @@ public class DiscussionService {
    */
   private boolean isPostDelayElapsed(User user) {
     int delayMinutes = getIntOption(OPTION_NEW_USER_POST_DELAY, 0);
-    if (delayMinutes <= 0 || user == null || isAdministrator(user)) {
+    if (delayMinutes <= 0 || user == null || PublicationStatus.isAdministrator(user)) {
       return true;
     }
     UserMeta registerTimeMeta =
@@ -887,14 +876,9 @@ public class DiscussionService {
   private Map<String, ? extends Object> getDiscussionThreadCreationResult(
       DiscussionThread dt, String discussionThreadContent) {
     Map<String, Boolean> result = new HashMap<>(9, 1);
+    // A banned (forbidden) user never gets here: CurrentUserRefreshFilter logs them out, so they
+    // post as nobody.
     result.put("isThreadCreatorExists", dt.getDiscussionThreadCreator() != null);
-    result.put(
-        "isThreadCreatorLegal",
-        dt.getDiscussionThreadCreator() != null
-            && !dt.getDiscussionThreadCreator()
-                .getUserGroup()
-                .getUserGroupSlug()
-                .equals("forbidden"));
     result.put("isDiscussionTopicExists", dt.getDiscussionTopic() != null);
     result.put("isThreadTitleEmpty", isBlank(dt.getDiscussionThreadTitle()));
     result.put("isThreadTitleLegal", dt.getDiscussionThreadTitle().length() <= 128);
@@ -903,7 +887,6 @@ public class DiscussionService {
 
     boolean isSuccessful =
         result.get("isThreadCreatorExists")
-            && result.get("isThreadCreatorLegal")
             && result.get("isDiscussionTopicExists")
             && !result.get("isThreadTitleEmpty")
             && result.get("isThreadTitleLegal")
@@ -1019,11 +1002,9 @@ public class DiscussionService {
         "isDiscussionThreadExists",
         discussionThread != null && isDiscussionThreadViewable(discussionThread, replyCreator));
     result.put("isDiscussionThreadLocked", discussionThread != null && discussionThread.isLocked());
+    // A banned (forbidden) user never gets here: CurrentUserRefreshFilter logs them out, so they
+    // post as nobody.
     result.put("isReplyCreatorExists", replyCreator != null);
-    result.put(
-        "isReplyCreatorLegal",
-        replyCreator != null
-            && !replyCreator.getUserGroup().getUserGroupSlug().equals("forbidden"));
     result.put("isReplyContentEmpty", isBlank(replyContent));
     result.put("isPostDelayElapsed", isPostDelayElapsed(replyCreator));
 
@@ -1031,7 +1012,6 @@ public class DiscussionService {
         result.get("isDiscussionThreadExists")
             && !result.get("isDiscussionThreadLocked")
             && result.get("isReplyCreatorExists")
-            && result.get("isReplyCreatorLegal")
             && !result.get("isReplyContentEmpty")
             && result.get("isPostDelayElapsed");
     result.put("isSuccessful", isSuccessful);

@@ -345,7 +345,6 @@
                 if ( !result['isDiscussionThreadExists'] ) { msg += [[#{voj.discussion.thread.thread-not-exists}]] + '<br>'; }
                 else if ( result['isDiscussionThreadLocked'] ) { msg += [[#{voj.discussion.thread.thread-locked}]] + '<br>'; }
                 if ( !result['isReplyCreatorExists'] ) { msg += [[#{voj.discussion.thread.user-not-login}]] + '<br>'; }
-                else if ( !result['isReplyCreatorLegal'] ) { msg += [[#{voj.discussion.thread.user-not-permitted}]] + '<br>'; }
                 if ( result['isReplyContentEmpty'] ) { msg += [[#{voj.discussion.thread.empty-reply}]] + '<br>'; }
                 if ( result['isPostDelayElapsed'] === false ) { msg += [[#{voj.discussion.thread.post-delay-active}]].replace('{0}', [[${postDelayMinutes}]]) + '<br>'; }
                 $('.alert-error', '#editor').html(msg).removeClass('hide');

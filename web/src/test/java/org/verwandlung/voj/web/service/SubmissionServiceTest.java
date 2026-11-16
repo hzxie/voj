@@ -193,18 +193,30 @@ public class SubmissionServiceTest {
     Assertions.assertFalse((Boolean) result.get("isSuccessful"));
   }
 
-  /** Test case: tests the createSubmission(...) method. Test data: user 1002 is moved to the forbidden (banned) user group after signing in. Expected: the user is reported as not legal and creation fails. */
+  /**
+   * Test case: tests the createSubmission(...) method. Test data: email verification is required
+   * and the submitter's address is not verified (a banned user, by contrast, never reaches the
+   * service: CurrentUserRefreshFilter logs them out). Expected: creation fails with isEmailVerified
+   * false; it succeeds once the address is verified.
+   */
   @Test
-  public void testCreateSubmissionByBannedUser() {
+  public void testCreateSubmissionRequiresVerifiedEmail() {
     new org.springframework.jdbc.core.JdbcTemplate(dataSource)
         .update(
-            "UPDATE voj_users SET user_group_id = (SELECT user_group_id FROM voj_user_groups"
-                + " WHERE user_group_slug = 'forbidden') WHERE uid = 1002");
+            "UPDATE voj_options SET option_value = '1'"
+                + " WHERE option_name = 'requireEmailVerification'");
+    User user = userWithUid(1002);
+    user.setEmailVerified(false);
 
     Map<String, Object> result =
-        submissionService.createSubmission(userWithUid(1002), 1000, "text/x-java", "Code");
-    Assertions.assertFalse((Boolean) result.get("isUserLegal"));
+        submissionService.createSubmission(user, 1000, "text/x-java", "Code");
+    Assertions.assertFalse((Boolean) result.get("isEmailVerified"));
     Assertions.assertFalse((Boolean) result.get("isSuccessful"));
+
+    user.setEmailVerified(true);
+    Assertions.assertTrue(
+        (Boolean)
+            submissionService.createSubmission(user, 1000, "text/x-java", "Code").get("isSuccessful"));
   }
 
   /** Test case: tests the createSubmission(...) method. Test data: a submission in Java after Java has been disabled. Expected: the language is rejected and creation fails. */

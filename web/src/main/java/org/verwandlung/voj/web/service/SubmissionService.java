@@ -43,7 +43,6 @@ import org.verwandlung.voj.web.mapper.LanguageMapper;
 import org.verwandlung.voj.web.mapper.OptionMapper;
 import org.verwandlung.voj.web.mapper.ProblemMapper;
 import org.verwandlung.voj.web.mapper.SubmissionMapper;
-import org.verwandlung.voj.web.mapper.UserMapper;
 import org.verwandlung.voj.web.messenger.MessageSender;
 import org.verwandlung.voj.web.model.JudgeResult;
 import org.verwandlung.voj.web.model.Language;
@@ -475,7 +474,6 @@ public class SubmissionService {
     Map<String, Boolean> result = new HashMap<>(8, 1);
     String code = submission.getCode();
     result.put("isUserLogined", submission.getUser() != null);
-    result.put("isUserLegal", isSubmitterLegal(submission.getUser()));
     result.put("isProblemExists", submission.getProblem() != null);
     result.put("isLanguageExists", submission.getLanguage() != null);
     result.put("isCodeEmpty", code == null || code.length() == 0);
@@ -483,7 +481,6 @@ public class SubmissionService {
 
     boolean isSuccessful =
         result.get("isUserLogined")
-            && result.get("isUserLegal")
             && result.get("isProblemExists")
             && result.get("isLanguageExists")
             && !result.get("isCodeEmpty")
@@ -651,27 +648,13 @@ public class SubmissionService {
   }
 
   /**
-   * Checks whether the submitter is allowed to submit at all: banned users (the {@code forbidden}
-   * user group) may not, mirroring the rule for creating discussion threads. The user group is
-   * re-read from the database so a ban takes effect even for a session that was signed in before.
-   *
-   * @param user - the submitting user, or null
-   * @return whether the submitter exists and is not banned
-   */
-  private boolean isSubmitterLegal(User user) {
-    if (user == null) {
-      return false;
-    }
-    User freshUser = userMapper.getUserUsingUid(user.getUid());
-    return freshUser != null
-        && freshUser.getUserGroup() != null
-        && !"forbidden".equals(freshUser.getUserGroup().getUserGroupSlug());
-  }
-
-  /**
    * Checks whether the submitter is allowed to submit with respect to email verification. When the
    * {@code requireEmailVerification} option is enabled, only users whose email address has been
    * verified may submit; otherwise everyone may submit.
+   *
+   * <p>The user is the one of the current request, which CurrentUserRefreshFilter reloaded from the
+   * database, so its verification status is current. A banned user never gets here: the filter
+   * logs them out, so they submit as nobody ({@code isUserLogined} false).
    *
    * @param user - the submitting user, or null
    * @return whether the submitter satisfies the email-verification requirement
@@ -682,11 +665,7 @@ public class SubmissionService {
     if (!isRequired) {
       return true;
     }
-    if (user == null) {
-      return false;
-    }
-    User freshUser = userMapper.getUserUsingUid(user.getUid());
-    return freshUser != null && freshUser.isEmailVerified();
+    return user != null && user.isEmailVerified();
   }
 
   /** The autowired SubmissionMapper object. */
@@ -697,12 +676,6 @@ public class SubmissionService {
 
   /** The autowired OptionMapper object. Used to resolve the email-verification requirement. */
   @Autowired private OptionMapper optionMapper;
-
-  /**
-   * The autowired UserMapper object. Used to read a submitter's current user group and verification
-   * status.
-   */
-  @Autowired private UserMapper userMapper;
 
   /** The autowired ProblemMapper object. */
   @Autowired private ProblemMapper problemMapper;
