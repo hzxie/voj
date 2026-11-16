@@ -72,12 +72,12 @@ online (the administration's judgers page lists each process).
 | --- | --- | --- |
 | `judging.noJudgerTimeout` | `300000` | How long (ms) the pending submissions in a language wait while no running judger takes submissions in it, before the web app marks them as a System Error that says so (an administrator can rejudge them): no judger supports the language, the ones that do stopped, or they are not ready as too many of their judgings in a row failed (see [Judging queue](#judging-queue-1) of the judger). A queue however long is never failed while a judger takes submissions in its language, and a submission a judging holds is left to it. `0` (or less): a submission waits for a judger as long as it takes. |
 
-Every 30 seconds, each instance of the web app looks for the pending submissions
-that no judging holds in a language without a judger that takes submissions,
-and marks them once it saw that language without one for the whole timeout, run
-after run: a run that fails (e.g. the database is unreachable) and a start of the
-instance start the timeout over, so that heartbeats that could not be recorded
-meanwhile never make running judgers look stopped. The pages of a submission it
+Every 30 seconds, each instance of the web app notes the languages that a
+running judger taking submissions supports, and marks the pending submissions
+that no judging holds in a language it has not seen supported for the timeout. A
+start of the instance and a run that fails (e.g. the database is unreachable)
+count as seeing every language supported, so that heartbeats that could not be
+recorded meanwhile never make running judgers look stopped. The pages of a submission it
 marks show the System Error at their next read of the database.
 
 ### Checkpoint distribution

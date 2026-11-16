@@ -24,11 +24,9 @@ import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.logging.log4j.LogManager;
@@ -575,12 +573,12 @@ public class SubmissionService {
    * the queue: the judgers judge it in turn.
    *
    * <p>Runs every {@value #NO_JUDGER_CHECK_INTERVAL_MS} ms, on every web application instance. The
-   * judgers are told by their heartbeats (see {@link JudgerService}), by the database's clock. How
-   * long a language has had no judger is what this instance saw itself, run after run (by its own
-   * monotonic clock): a run that fails (e.g. the database is unreachable) starts it over, and so
-   * does a start of the instance, so that heartbeats that could not be recorded meanwhile (e.g.
-   * while the database was down) never make a running judger look stopped, and the judgers that
-   * could not reach this instance while it was down have the timeout to come back.
+   * judgers are told by their heartbeats (see {@link JudgerService}), by the database's clock. Each
+   * run records, by this instance's monotonic clock, that the languages a ready judger supports are
+   * supported now; a language this instance never saw supported counts as supported when it started
+   * observing: at its start, or at the end of its last failed run (e.g. the database was
+   * unreachable), so that heartbeats that could not be recorded meanwhile never make a running
+   * judger look stopped.
    *
    * <p>The submissions of a language are marked by one statement (outside any transaction, so
    * that no lock is held for longer), which checks again that no judging holds them and no judger
@@ -598,28 +596,22 @@ public class SubmissionService {
     }
     try {
       long now = System.nanoTime();
-      Set<Integer> languagesOfReadyJudgers =
-          new HashSet<>(
-              submissionMapper.getLanguageIdsOfReadyJudgers(JudgerService.JUDGER_TIMEOUT_SECONDS));
-      Map<Integer, Long> languagesWithoutJudger = new HashMap<>();
-      for (int languageId : submissionMapper.getLanguageIdsOfWaitingSubmissions()) {
-        if (!languagesOfReadyJudgers.contains(languageId)) {
-          languagesWithoutJudger.put(
-              languageId, languagesWithoutJudgerSince.getOrDefault(languageId, now));
-        }
+      for (int languageId :
+          submissionMapper.getLanguageIdsOfReadyJudgers(JudgerService.JUDGER_TIMEOUT_SECONDS)) {
+        languagesLastSupportedAt.put(languageId, now);
       }
-      languagesWithoutJudgerSince.clear();
-      languagesWithoutJudgerSince.putAll(languagesWithoutJudger);
       int failed = 0;
-      for (Map.Entry<Integer, Long> language : languagesWithoutJudger.entrySet()) {
-        if (now - language.getValue() >= TimeUnit.MILLISECONDS.toNanos(noJudgerTimeout)) {
-          failed += failSubmissionsWithoutJudger(language.getKey());
+      for (int languageId : submissionMapper.getLanguageIdsOfWaitingSubmissions()) {
+        long lastSupportedAt = languagesLastSupportedAt.getOrDefault(languageId, observedSince);
+        if (now - lastSupportedAt >= TimeUnit.MILLISECONDS.toNanos(noJudgerTimeout)) {
+          failed += failSubmissionsWithoutJudger(languageId);
         }
       }
       return failed;
     } catch (RuntimeException ex) {
-      // What was seen is no longer seen continuously.
-      languagesWithoutJudgerSince.clear();
+      // What this instance could not see does not count as time without a judger.
+      languagesLastSupportedAt.clear();
+      observedSince = System.nanoTime();
       throw ex;
     }
   }
@@ -729,10 +721,17 @@ public class SubmissionService {
   private long noJudgerTimeout;
 
   /**
-   * The languages of pending submissions that no judger taking submissions supported at the last
-   * runs of {@link #failSubmissionsWithoutJudger()}, and since when (by {@link System#nanoTime()}).
+   * When (by {@link System#nanoTime()}) a run of {@link #failSubmissionsWithoutJudger()} last saw a
+   * ready judger support a language, by the unique identifier of the language.
    */
-  private final Map<Integer, Long> languagesWithoutJudgerSince = new HashMap<>();
+  private final Map<Integer, Long> languagesLastSupportedAt = new HashMap<>();
+
+  /**
+   * Since when (by {@link System#nanoTime()}) the runs of {@link #failSubmissionsWithoutJudger()}
+   * have observed the judgers without a gap: the start of this instance, or the end of the last
+   * failed run.
+   */
+  private long observedSince = System.nanoTime();
 
   /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(SubmissionService.class);

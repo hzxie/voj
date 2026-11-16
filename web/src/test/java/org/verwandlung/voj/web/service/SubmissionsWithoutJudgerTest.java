@@ -16,6 +16,10 @@
  */
 package org.verwandlung.voj.web.service;
 
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.util.ArrayList;
@@ -31,6 +35,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
@@ -60,8 +65,9 @@ public class SubmissionsWithoutJudgerTest {
     jdbcTemplate = new JdbcTemplate(dataSource);
     jdbcTemplate.update("DELETE FROM voj_judgers");
     setTimeout(TIMEOUT);
-    // What a previous test let it see.
-    ((Map<?, ?>) ReflectionTestUtils.getField(getTarget(), "languagesWithoutJudgerSince")).clear();
+    // Observes from now on, as an instance that has just started.
+    ((Map<?, ?>) ReflectionTestUtils.getField(getTarget(), "languagesLastSupportedAt")).clear();
+    ReflectionTestUtils.setField(getTarget(), "observedSince", System.nanoTime());
   }
 
   @AfterEach
@@ -205,6 +211,70 @@ public class SubmissionsWithoutJudgerTest {
     Assertions.assertEquals(0, submissionService.failSubmissionsWithoutJudger());
     Assertions.assertEquals("PD", getJudgeResult(pending));
 
+    Thread.sleep(TIMEOUT + 200);
+    Assertions.assertEquals(1, submissionService.failSubmissionsWithoutJudger());
+    Assertions.assertEquals("SE", getJudgeResult(pending));
+  }
+
+  /**
+   * Test case: tests failSubmissionsWithoutJudger(). Test data: the instance has seen no judger
+   * support C++ for longer than the timeout when a submission in C++ arrives. Expected: the first
+   * run after it arrives marks it; it does not wait for the timeout again.
+   */
+  @Test
+  public void testASubmissionInALanguageLongWithoutAJudgerIsMarkedAtOnce() throws Exception {
+    Assertions.assertEquals(0, submissionService.failSubmissionsWithoutJudger());
+    Thread.sleep(TIMEOUT + 200);
+
+    long pending = insertSubmission(CPP, null, null);
+    Assertions.assertEquals(1, submissionService.failSubmissionsWithoutJudger());
+    Assertions.assertEquals("SE", getJudgeResult(pending));
+  }
+
+  /**
+   * Test case: tests failSubmissionsWithoutJudger(). Test data: a judger supports C++ (the instance
+   * has observed for longer than the timeout), then stops; a submission in C++ arrives. Expected:
+   * it waits for the timeout from when the judger was last seen, then it is marked.
+   */
+  @Test
+  public void testASubmissionWaitsForTheTimeoutFromTheLastJudgerOfItsLanguage() throws Exception {
+    registerJudger("2", true, 0);
+    Thread.sleep(TIMEOUT + 200);
+    Assertions.assertEquals(0, submissionService.failSubmissionsWithoutJudger());
+    jdbcTemplate.update("DELETE FROM voj_judgers");
+
+    long pending = insertSubmission(CPP, null, null);
+    Assertions.assertEquals(0, submissionService.failSubmissionsWithoutJudger());
+    Assertions.assertEquals("PD", getJudgeResult(pending));
+
+    Thread.sleep(TIMEOUT + 200);
+    Assertions.assertEquals(1, submissionService.failSubmissionsWithoutJudger());
+    Assertions.assertEquals("SE", getJudgeResult(pending));
+  }
+
+  /**
+   * Test case: tests failSubmissionsWithoutJudger(). Test data: no judger supports C++ for longer
+   * than the timeout, then a run fails (the database is unreachable); a submission in C++ arrives.
+   * Expected: the failed run starts the timeout over, as the judgers' heartbeats may not have been
+   * recorded meanwhile; the submission is marked a timeout later.
+   */
+  @Test
+  public void testAFailedRunStartsTheTimeoutOver() throws Exception {
+    Thread.sleep(TIMEOUT + 200);
+    SubmissionMapper unreachable = mock(SubmissionMapper.class);
+    when(unreachable.getLanguageIdsOfReadyJudgers(anyInt()))
+        .thenThrow(new DataAccessResourceFailureException("down"));
+    ReflectionTestUtils.setField(getTarget(), "submissionMapper", unreachable);
+    try {
+      Assertions.assertThrows(
+          DataAccessResourceFailureException.class,
+          () -> submissionService.failSubmissionsWithoutJudger());
+    } finally {
+      ReflectionTestUtils.setField(getTarget(), "submissionMapper", submissionMapper);
+    }
+
+    long pending = insertSubmission(CPP, null, null);
+    Assertions.assertEquals(0, submissionService.failSubmissionsWithoutJudger());
     Thread.sleep(TIMEOUT + 200);
     Assertions.assertEquals(1, submissionService.failSubmissionsWithoutJudger());
     Assertions.assertEquals("SE", getJudgeResult(pending));
