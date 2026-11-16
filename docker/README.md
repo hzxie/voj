@@ -142,7 +142,7 @@ docker network create voj
 # Web (MySQL + ActiveMQ + the Spring Boot web app with embedded Tomcat live here)
 # By default the broker is embedded in the web process (saves a JVM, ~150 MB+);
 # run with -e VOJ_JMS_BROKER_EMBEDDED=false to use a standalone broker.
-docker run -d --name voj.web --network voj -p 8080:8080 \
+docker run -d --name voj.web --network voj --restart unless-stopped -p 8080:8080 \
   -e VOJ_JUDGER_API_TOKEN=your-shared-secret \
   zjhzxhz/voj.web
 

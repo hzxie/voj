@@ -474,8 +474,8 @@ failed judging (see [Judging queue](configuration.md#judging-queue-1)). Run it
 under a supervisor that starts it again:
 
 - **Docker:** `docker-compose.yml` and `scripts/run-docker.sh` give the judger
-  the restart policy `unless-stopped`; give a judger you start yourself
-  `--restart unless-stopped` too.
+  (and the web app) the restart policy `unless-stopped`; give a container you
+  start yourself `--restart unless-stopped` too.
 - **Bare metal:** a systemd unit with `Restart=on-failure`, e.g.
 
   ```ini

@@ -120,8 +120,10 @@ echo "==> Starting voj.web ..."
 # The named volume persists the database (problems, users, submissions and the
 # problem test data all live in MariaDB), so recreating the container after an
 # image update does not lose data. Docker seeds the empty volume from the image's
-# bundled database on the first start.
-docker run -d --name voj.web --network "${NETWORK}" -p "${WEB_PORT}:8080" \
+# bundled database on the first start. Docker starts it again if it stops (e.g.
+# after a crash, or when the host reboots), as it does the judger.
+docker run -d --name voj.web --network "${NETWORK}" --restart unless-stopped \
+  -p "${WEB_PORT}:8080" \
   -v "${DB_VOLUME}:/var/lib/mariadb" \
   -e "VOJ_DB_PASSWORD=${MYSQL_USER_PASS}" \
   -e "VOJ_BASE_URL=${VOJ_BASE_URL}" \

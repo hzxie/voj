@@ -20,7 +20,7 @@ put both on a shared user-defined network (`--link` is deprecated):
 docker network create voj
 
 # Web (MySQL + ActiveMQ + the Spring Boot web app all live here)
-docker run -d --name voj.web --network voj -p 8080:8080 \
+docker run -d --name voj.web --network voj --restart unless-stopped -p 8080:8080 \
   -e VOJ_JUDGER_API_TOKEN=your-shared-secret zjhzxhz/voj.web
 
 # Judger (resolves "voj.web" over the shared network; token must match the web's).
