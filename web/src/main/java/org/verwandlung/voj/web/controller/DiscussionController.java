@@ -203,7 +203,8 @@ public class DiscussionController {
       // reporting require).
       view.addObject(
           "mySubmissionStats",
-          submissionService.getSubmissionStatsOfUser(HttpSessionParser.getCurrentUser().getUid()));
+          submissionService.getSubmissionStatsOfUser(
+              HttpSessionParser.getCurrentUser().getUid(), HttpSessionParser.getCurrentUser()));
       view.addObject("discussionTopics", discussionTopics);
       view.addObject("relatedProblem", problem);
       view.addObject("postDelayMinutes", discussionService.getNewUserPostDelay());

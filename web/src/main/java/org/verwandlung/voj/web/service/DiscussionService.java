@@ -589,7 +589,7 @@ public class DiscussionService {
     if (minSolvedProblems <= 0 || PublicationStatus.isAdministrator(user)) {
       return true;
     }
-    return submissionMapper.getAcceptedSubmissionUsingUserId(user.getUid()) >= minSolvedProblems;
+    return submissionMapper.getAcceptedSubmissionUsingUserId(user.getUid(), null) >= minSolvedProblems;
   }
 
   /**

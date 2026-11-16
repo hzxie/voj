@@ -156,7 +156,7 @@ public class SubmissionMapperTest {
     String endTime = "2014-11-01 00:00:00";
 
     List<Map<String, Object>> numberOfSubmissions =
-        submissionMapper.getNumberOfSubmissionsGroupByDay(startTime, endTime, 0, false);
+        submissionMapper.getNumberOfSubmissionsGroupByDay(startTime, endTime, 0, false, null);
     Assertions.assertEquals(2, numberOfSubmissions.size());
 
     Map<String, Object> firstEntry = numberOfSubmissions.get(0);
@@ -178,7 +178,7 @@ public class SubmissionMapperTest {
     String endTime = "2014-11-01 00:00:00";
 
     List<Map<String, Object>> numberOfSubmissions =
-        submissionMapper.getNumberOfSubmissionsGroupByDay(startTime, endTime, 0, true);
+        submissionMapper.getNumberOfSubmissionsGroupByDay(startTime, endTime, 0, true, null);
     Assertions.assertEquals(1, numberOfSubmissions.size());
 
     Map<String, Object> firstEntry = numberOfSubmissions.get(0);
@@ -200,7 +200,7 @@ public class SubmissionMapperTest {
     String endTime = "2014-11-01 00:00:00";
 
     List<Map<String, Object>> numberOfSubmissions =
-        submissionMapper.getNumberOfSubmissionsGroupByDay(startTime, endTime, 1000, false);
+        submissionMapper.getNumberOfSubmissionsGroupByDay(startTime, endTime, 1000, false, null);
     Assertions.assertEquals(2, numberOfSubmissions.size());
 
     Map<String, Object> firstEntry = numberOfSubmissions.get(0);
@@ -222,7 +222,7 @@ public class SubmissionMapperTest {
     String endTime = "2014-11-01 00:00:00";
 
     List<Map<String, Object>> numberOfSubmissions =
-        submissionMapper.getNumberOfSubmissionsGroupByDay(startTime, endTime, 1000, true);
+        submissionMapper.getNumberOfSubmissionsGroupByDay(startTime, endTime, 1000, true, null);
     Assertions.assertEquals(1, numberOfSubmissions.size());
 
     Map<String, Object> firstEntry = numberOfSubmissions.get(0);
@@ -429,7 +429,7 @@ public class SubmissionMapperTest {
    */
   @Test
   public void testGetAcceptedSubmissionUsingUserIdWithUser1000() {
-    long acceptedSubmission = submissionMapper.getAcceptedSubmissionUsingUserId(1000);
+    long acceptedSubmission = submissionMapper.getAcceptedSubmissionUsingUserId(1000, null);
     Assertions.assertEquals(2, acceptedSubmission);
   }
 
@@ -439,7 +439,7 @@ public class SubmissionMapperTest {
    */
   @Test
   public void testGetTotalSubmissionUsingUserIdWithUser1000() {
-    long acceptedSubmission = submissionMapper.getTotalSubmissionUsingUserId(1000);
+    long acceptedSubmission = submissionMapper.getTotalSubmissionUsingUserId(1000, null);
     Assertions.assertEquals(3, acceptedSubmission);
   }
 
@@ -455,8 +455,8 @@ public class SubmissionMapperTest {
             "INSERT INTO voj_submissions (problem_id, uid, language_id, submission_judge_result,"
                 + " submission_code) VALUES (1002, 1000, 2, 'AC', 'Code')");
 
-    Assertions.assertEquals(2, submissionMapper.getAcceptedSubmissionUsingUserId(1000));
-    Assertions.assertEquals(3, submissionMapper.getTotalSubmissionUsingUserId(1000));
+    Assertions.assertEquals(2, submissionMapper.getAcceptedSubmissionUsingUserId(1000, null));
+    Assertions.assertEquals(3, submissionMapper.getTotalSubmissionUsingUserId(1000, null));
   }
 
   /**

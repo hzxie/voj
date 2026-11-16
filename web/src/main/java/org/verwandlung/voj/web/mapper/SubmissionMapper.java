@@ -83,13 +83,16 @@ public interface SubmissionMapper {
    * @param endTime - the end time of the statistics
    * @param uid - the unique identifier of the user
    * @param isAcceptedOnly - whether to count only accepted submissions
+   * @param runningContestsAt - when not null, the submissions made in a contest that has not ended
+   *     at this instant are left out (they are not shown to other users before the contest ends)
    * @return a Map of key-value pairs containing the date and the number of submissions
    */
   List<Map<String, Object>> getNumberOfSubmissionsGroupByDay(
       @Param("startTime") String startTime,
       @Param("endTime") String endTime,
       @Param("uid") long uid,
-      @Param("isAcceptedOnly") boolean isAcceptedOnly);
+      @Param("isAcceptedOnly") boolean isAcceptedOnly,
+      @Param("runningContestsAt") Date runningContestsAt);
 
   /**
    * [For administrators only] Gets the number of submissions within a specified time period, grouped
@@ -256,18 +259,24 @@ public interface SubmissionMapper {
    * shown on public pages such as the user profile.
    *
    * @param uid - the unique identifier of the user
+   * @param runningContestsAt - when not null, the submissions made in a contest that has not ended
+   *     at this instant are left out (they are not shown to other users before the contest ends)
    * @return the number of distinct published problems the user has solved
    */
-  long getAcceptedSubmissionUsingUserId(@Param("uid") long uid);
+  long getAcceptedSubmissionUsingUserId(
+      @Param("uid") long uid, @Param("runningContestsAt") Date runningContestsAt);
 
   /**
    * Gets the total number of judged submissions of a user to published problems (pending and
    * system-error submissions, and submissions to draft / hidden problems, are not counted).
    *
    * @param uid - the unique identifier of the user
+   * @param runningContestsAt - when not null, the submissions made in a contest that has not ended
+   *     at this instant are left out (they are not shown to other users before the contest ends)
    * @return the total number of judged submissions of the user to published problems
    */
-  long getTotalSubmissionUsingUserId(@Param("uid") long uid);
+  long getTotalSubmissionUsingUserId(
+      @Param("uid") long uid, @Param("runningContestsAt") Date runningContestsAt);
 
   /**
    * Gets a user's public-problem counts broken down by difficulty level. Each row carries the
@@ -275,9 +284,12 @@ public interface SubmissionMapper {
    * number the user has an accepted submission for (solved).
    *
    * @param uid - the unique identifier of the user
+   * @param runningContestsAt - when not null, the submissions made in a contest that has not ended
+   *     at this instant are left out (they are not shown to other users before the contest ends)
    * @return an ordered list of per-difficulty rows (slug, name, total, solved)
    */
-  List<Map<String, Object>> getNumberOfSolvedProblemsByDifficulty(@Param("uid") long uid);
+  List<Map<String, Object>> getNumberOfSolvedProblemsByDifficulty(
+      @Param("uid") long uid, @Param("runningContestsAt") Date runningContestsAt);
 
   /**
    * Gets the number of distinct solved (accepted) problems for every user who has at least one

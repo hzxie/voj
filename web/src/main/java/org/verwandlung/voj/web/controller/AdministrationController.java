@@ -187,7 +187,11 @@ public class AdministrationController {
     // Submissions over the last 14 days (bar chart).
     Map<String, Long> dailySubmissions =
         submissionService.getNumberOfSubmissionsGroupByDay(
-            DateUtils.getDateBefore(DASHBOARD_CHART_DAYS), today, 0, false);
+            DateUtils.getDateBefore(DASHBOARD_CHART_DAYS),
+            today,
+            0,
+            false,
+            HttpSessionParser.getCurrentUser());
     List<Map<String, Object>> submissionBars = new ArrayList<>();
     long maxDaily = 1;
     long totalDaily = 0;
@@ -562,7 +566,8 @@ public class AdministrationController {
     Map<String, Long> solvedCountAndRank = submissionService.getSolvedCountAndRankOfUser(userId);
     long solvedCount = solvedCountAndRank.get("solvedCount");
     Long userRank = solvedCountAndRank.get("rank");
-    Map<String, Long> submissionStats = submissionService.getSubmissionStatsOfUser(userId);
+    Map<String, Long> submissionStats =
+        submissionService.getSubmissionStatsOfUser(userId, HttpSessionParser.getCurrentUser());
     List<Submission> recentSubmissions =
         submissionService.getLatestSubmissions(
             0,

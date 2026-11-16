@@ -58,6 +58,21 @@
 		)
 	</sql>
 
+	<!-- Leaves out the submissions (aliased ${alias}) made in a contest that has not ended at
+	     runningContestsAt, for the per-user aggregates other users see (see
+	     ContestService#isSubmissionVisible). Nothing is left out when runningContestsAt is null. -->
+	<sql id="notInRunningContest">
+		<if test="runningContestsAt != null">
+			AND NOT EXISTS (
+				SELECT 1
+				FROM voj_contest_submissions running_cs
+				JOIN voj_contests running_c ON running_c.contest_id = running_cs.contest_id
+				WHERE running_cs.submission_id = ${alias}.submission_id
+				AND running_c.contest_end_time &gt; #{runningContestsAt}
+			)
+		</if>
+	</sql>
+
 	<!-- Methods -->
 	<select id="getNumberOfSubmissionsUsingDate" 
 		parameterType="map"
@@ -117,6 +132,7 @@
 		<if test="isAcceptedOnly == true">
 			AND submission_judge_result = 'AC'
 		</if>
+		<include refid="notInRunningContest"><property name="alias" value="voj_submissions" /></include>
 		GROUP BY DATE(submission_submit_time)
 	</select>
 	<select id="getNumberOfSubmissionsGroupByJudgeResult"
@@ -270,6 +286,7 @@
 		JOIN voj_problems p ON p.problem_id = s.problem_id
 		WHERE s.uid = #{uid} AND s.submission_judge_result = 'AC'
 		AND p.problem_status = 'PUBLISHED'
+		<include refid="notInRunningContest"><property name="alias" value="s" /></include>
 	</select>
 	<select id="getTotalSubmissionUsingUserId"
 		parameterType="long"
@@ -279,6 +296,7 @@
 		JOIN voj_problems p ON p.problem_id = s.problem_id
 		WHERE s.uid = #{uid} AND s.submission_judge_result != 'PD' AND s.submission_judge_result != 'SE'
 		AND p.problem_status = 'PUBLISHED'
+		<include refid="notInRunningContest"><property name="alias" value="s" /></include>
 	</select>
 	<select id="getNumberOfSolvedProblemsByDifficulty"
 		parameterType="long"
@@ -290,6 +308,7 @@
 		FROM voj_problem_difficulty d
 		LEFT JOIN voj_problems p ON p.problem_difficulty_id = d.problem_difficulty_id
 		LEFT JOIN voj_submissions s ON s.problem_id = p.problem_id AND s.uid = #{uid}
+			<include refid="notInRunningContest"><property name="alias" value="s" /></include>
 		GROUP BY d.problem_difficulty_id, d.problem_difficulty_slug, d.problem_difficulty_name
 		ORDER BY d.problem_difficulty_id
 	</select>

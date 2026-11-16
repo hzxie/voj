@@ -122,7 +122,7 @@ public class SubmissionServiceTest {
   /** Test case: tests the getSubmissionStatsOfUser(long) method. Test data: user 1000. Expected: the correct accepted count, total count and acceptance rate. */
   @Test
   public void testGetSubmissionStatsOfUser() {
-    Map<String, Long> stats = submissionService.getSubmissionStatsOfUser(1000);
+    Map<String, Long> stats = submissionService.getSubmissionStatsOfUser(1000, null);
     Assertions.assertEquals(2L, stats.get("acceptedSubmission"));
     Assertions.assertEquals(3L, stats.get("totalSubmission"));
     Assertions.assertEquals(66L, stats.get("acRate"));
@@ -131,7 +131,7 @@ public class SubmissionServiceTest {
   /** Test case: tests the getSubmissionStatsOfUser(long) method. Test data: a user with no submission records. Expected: the acceptance rate is 0 and no division-by-zero exception is thrown. */
   @Test
   public void testGetSubmissionStatsOfUserWithoutSubmissions() {
-    Map<String, Long> stats = submissionService.getSubmissionStatsOfUser(9999);
+    Map<String, Long> stats = submissionService.getSubmissionStatsOfUser(9999, null);
     Assertions.assertEquals(0L, stats.get("acceptedSubmission"));
     Assertions.assertEquals(0L, stats.get("totalSubmission"));
     Assertions.assertEquals(0L, stats.get("acRate"));
@@ -379,7 +379,7 @@ public class SubmissionServiceTest {
     java.util.Date endTime = calendar.getTime();
 
     Map<String, Long> submissions =
-        submissionService.getNumberOfSubmissionsGroupByDay(startTime, endTime, 1000, false);
+        submissionService.getNumberOfSubmissionsGroupByDay(startTime, endTime, 1000, false, null);
 
     Assertions.assertEquals(
         List.of("2014/10/01", "2014/10/02", "2014/10/03"), List.copyOf(submissions.keySet()));

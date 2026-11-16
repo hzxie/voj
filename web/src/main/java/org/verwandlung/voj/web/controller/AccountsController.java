@@ -476,13 +476,15 @@ public class AccountsController {
     view.addObject("user", user);
     view.addAllObjects(userService.getUserMetaUsingUid(user));
 
+    // Contest submissions are kept out of what other users see until the contest ends.
+    User viewer = HttpSessionParser.getCurrentUser();
     view.addObject(
         "recentSubmissions",
-        submissionService.getSubmissions(
-            0, user.getUsername(), NUMBER_OF_RECENT_SUBMISSIONS, HttpSessionParser.getCurrentUser()));
-    view.addObject("submissionStats", submissionService.getSubmissionStatsOfUser(userId));
+        submissionService.getSubmissions(0, user.getUsername(), NUMBER_OF_RECENT_SUBMISSIONS, viewer));
+    view.addObject("submissionStats", submissionService.getSubmissionStatsOfUser(userId, viewer));
     view.addObject("contestsAttended", contestService.getNumberOfContestsOfUser(userId));
-    view.addObject("solvedByDifficulty", submissionService.getSolvedProblemsByDifficulty(userId));
+    view.addObject(
+        "solvedByDifficulty", submissionService.getSolvedProblemsByDifficulty(userId, viewer));
     return view;
   }
 
@@ -498,9 +500,9 @@ public class AccountsController {
       @RequestParam(value = "uid", required = false, defaultValue = "0") long userId,
       HttpServletRequest request) {
     Map<String, Object> submissions = new HashMap<>(1, 1);
+    User currentUser = HttpSessionParser.getCurrentUser();
     if (userId == 0) {
       // Without an explicit uid the heat-map is the current user's; an anonymous visitor has none.
-      User currentUser = HttpSessionParser.getCurrentUser();
       if (currentUser == null) {
         submissions.put("totalSubmissions", new HashMap<String, Long>());
         return submissions;
@@ -511,7 +513,8 @@ public class AccountsController {
     Date startDate = DateUtils.getDateBefore(ACTIVITY_HEAT_MAP_DAYS);
     submissions.put(
         "totalSubmissions",
-        submissionService.getNumberOfSubmissionsGroupByDay(startDate, today, userId, false));
+        submissionService.getNumberOfSubmissionsGroupByDay(
+            startDate, today, userId, false, currentUser));
     return submissions;
   }
 

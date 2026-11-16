@@ -106,10 +106,12 @@ public class SubmissionService {
    * @param endTime - the end time of the statistics
    * @param uid - the unique identifier of the user
    * @param isAcceptedOnly - whether to count only accepted submissions
+   * @param viewer - the user viewing the statistics (may be null); unless it is the user or an
+   *     administrator, the submissions made in contests that have not ended are not counted
    * @return a Map of key-value pairs containing the date and the number of submissions
    */
   public Map<String, Long> getNumberOfSubmissionsGroupByDay(
-      Date startTime, Date endTime, long uid, boolean isAcceptedOnly) {
+      Date startTime, Date endTime, long uid, boolean isAcceptedOnly, User viewer) {
     // Build an empty, chronologically ordered slot for every day from the start day (whose
     // submissions the query below includes from midnight on) through the end day.
     Map<String, Long> numberOfSubmissions = new LinkedHashMap<String, Long>();
@@ -130,7 +132,11 @@ public class SubmissionService {
     String endTimeString = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(endTime);
     List<Map<String, Object>> submissions =
         submissionMapper.getNumberOfSubmissionsGroupByDay(
-            startTimeString, endTimeString, uid, isAcceptedOnly);
+            startTimeString,
+            endTimeString,
+            uid,
+            isAcceptedOnly,
+            getRunningContestsCutoff(uid, viewer));
 
     for (Map<String, Object> e : submissions) {
       String date = ((java.sql.Date) e.get("date")).toString().replace('-', '/');
@@ -344,14 +350,32 @@ public class SubmissionService {
   }
 
   /**
+   * Gets the instant from which a viewer may not see a user's contest submissions in aggregates:
+   * until a contest ends, its submissions are only visible to their owner and administrators (see
+   * ContestService#isSubmissionVisible), so they are not counted in the statistics other users see.
+   *
+   * @param uid - the unique identifier of the user the statistics are about (0 for all users)
+   * @param viewer - the user viewing the statistics (may be null)
+   * @return the current time when running contests must be left out, otherwise null
+   */
+  private static Date getRunningContestsCutoff(long uid, User viewer) {
+    boolean isOwnStatistics = viewer != null && uid != 0 && viewer.getUid() == uid;
+    return isOwnStatistics || PublicationStatus.isAdministrator(viewer) ? null : new Date();
+  }
+
+  /**
    * Gets the submission statistics overview of a user.
    *
    * @param userId - the unique identifier of the user
+   * @param viewer - the user viewing the statistics (may be null); unless it is the user or an
+   *     administrator, the submissions made in contests that have not ended are not counted
    * @return a HashMap containing the user's submission statistics overview
    */
-  public Map<String, Long> getSubmissionStatsOfUser(long userId) {
-    long acceptedSubmission = submissionMapper.getAcceptedSubmissionUsingUserId(userId);
-    long totalSubmission = submissionMapper.getTotalSubmissionUsingUserId(userId);
+  public Map<String, Long> getSubmissionStatsOfUser(long userId, User viewer) {
+    Date runningContestsAt = getRunningContestsCutoff(userId, viewer);
+    long acceptedSubmission =
+        submissionMapper.getAcceptedSubmissionUsingUserId(userId, runningContestsAt);
+    long totalSubmission = submissionMapper.getTotalSubmissionUsingUserId(userId, runningContestsAt);
     long acRate = 0;
     if (totalSubmission != 0) {
       acRate = acceptedSubmission * 100 / totalSubmission;
@@ -371,11 +395,14 @@ public class SubmissionService {
    * completion percentage.
    *
    * @param userId - the unique identifier of the user
+   * @param viewer - the user viewing the statistics (may be null); unless it is the user or an
+   *     administrator, the submissions made in contests that have not ended are not counted
    * @return an ordered list of per-difficulty stat maps
    */
-  public List<Map<String, Object>> getSolvedProblemsByDifficulty(long userId) {
+  public List<Map<String, Object>> getSolvedProblemsByDifficulty(long userId, User viewer) {
     List<Map<String, Object>> difficulties =
-        submissionMapper.getNumberOfSolvedProblemsByDifficulty(userId);
+        submissionMapper.getNumberOfSolvedProblemsByDifficulty(
+            userId, getRunningContestsCutoff(userId, viewer));
     for (Map<String, Object> difficulty : difficulties) {
       long total = ((Number) difficulty.get("total")).longValue();
       long solved = ((Number) difficulty.get("solved")).longValue();

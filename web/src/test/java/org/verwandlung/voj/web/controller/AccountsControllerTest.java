@@ -374,7 +374,7 @@ public class AccountsControllerTest {
   public void testGetNumberOfSubmissionsOfUsersWithExplicitUid() {
     Map<String, Long> perDay = Map.of("2026-06-28", 3L);
     when(submissionService.getNumberOfSubmissionsGroupByDay(
-            any(), any(), eq(1000L), eq(false)))
+            any(), any(), eq(1000L), eq(false), any()))
         .thenReturn(perDay);
 
     Map<String, Object> result =
@@ -390,14 +390,14 @@ public class AccountsControllerTest {
     authenticate(user);
     Map<String, Long> perDay = Map.of("2026-06-28", 5L);
     when(submissionService.getNumberOfSubmissionsGroupByDay(
-            any(), any(), eq(1000L), eq(false)))
+            any(), any(), eq(1000L), eq(false), any()))
         .thenReturn(perDay);
 
     Map<String, Object> result = controller.getNumberOfSubmissionsOfUsersAction(0L, request());
 
     Assertions.assertSame(perDay, result.get("totalSubmissions"));
     verify(submissionService)
-        .getNumberOfSubmissionsGroupByDay(any(), any(), eq(1000L), eq(false));
+        .getNumberOfSubmissionsGroupByDay(any(), any(), eq(1000L), eq(false), any());
   }
 
   /** Test case: tests getNumberOfSubmissionsOfUsersAction(...). Test data: uid 0 with no authenticated user. Expected: an empty heat-map instead of a NullPointerException, and no query. */
@@ -407,7 +407,7 @@ public class AccountsControllerTest {
 
     Assertions.assertEquals(Map.of(), result.get("totalSubmissions"));
     verify(submissionService, never())
-        .getNumberOfSubmissionsGroupByDay(any(), any(), anyLong(), anyBoolean());
+        .getNumberOfSubmissionsGroupByDay(any(), any(), anyLong(), anyBoolean(), any());
   }
 
   /** Test case: tests getSafeForwardUrl(...). Test data: same-origin relative paths. Expected: they are kept unchanged. */

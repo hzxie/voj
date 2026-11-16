@@ -566,6 +566,59 @@ public class ContestServiceTest {
   }
 
   /**
+   * Test case: tests the per-user statistics of SubmissionService (getSubmissionStatsOfUser,
+   * getSolvedProblemsByDifficulty, getNumberOfSubmissionsGroupByDay) while a contest runs, and
+   * after it. Test data: the ACM fixture, in which user 1001 (two compile errors outside contests)
+   * gets two accepted submissions to P1000. Expected: user 1001 and administrators see them
+   * counted; another user and an anonymous visitor do not, until the contest ends.
+   */
+  @Test
+  public void testProfileStatisticsHideRunningContestSubmissions() {
+    createAcmContestFixture(150);
+    User owner = userWithUid(1001);
+
+    for (User viewer : java.util.Arrays.asList(owner, administrator())) {
+      Map<String, Long> stats = submissionService.getSubmissionStatsOfUser(1001, viewer);
+      Assertions.assertEquals(1L, stats.get("acceptedSubmission"));
+      Assertions.assertEquals(4L, stats.get("totalSubmission"));
+      Assertions.assertEquals(1L, solvedByDifficulty(1001, viewer));
+      Assertions.assertEquals(2L, submissionsOfLastDay(1001, viewer));
+    }
+    for (User viewer : java.util.Arrays.asList(userWithUid(1002), null)) {
+      Map<String, Long> stats = submissionService.getSubmissionStatsOfUser(1001, viewer);
+      Assertions.assertEquals(0L, stats.get("acceptedSubmission"));
+      Assertions.assertEquals(2L, stats.get("totalSubmission"));
+      Assertions.assertEquals(0L, solvedByDifficulty(1001, viewer));
+      Assertions.assertEquals(0L, submissionsOfLastDay(1001, viewer));
+    }
+
+    endFixtureContest();
+    Assertions.assertEquals(
+        1L, submissionService.getSubmissionStatsOfUser(1001, null).get("acceptedSubmission"));
+    Assertions.assertEquals(1L, solvedByDifficulty(1001, null));
+    Assertions.assertEquals(2L, submissionsOfLastDay(1001, null));
+  }
+
+  /** Sums the solved counts of a user's "solved by difficulty" breakdown as a viewer sees it. */
+  private long solvedByDifficulty(long uid, User viewer) {
+    return submissionService.getSolvedProblemsByDifficulty(uid, viewer).stream()
+        .mapToLong(difficulty -> ((Number) difficulty.get("solved")).longValue())
+        .sum();
+  }
+
+  /** Sums a user's heat-map counts of the last day as a viewer sees them. */
+  private long submissionsOfLastDay(long uid, User viewer) {
+    Date now = new Date();
+    return submissionService
+        .getNumberOfSubmissionsGroupByDay(
+            new Date(now.getTime() - 86_400_000L), now, uid, false, viewer)
+        .values()
+        .stream()
+        .mapToLong(Long::longValue)
+        .sum();
+  }
+
+  /**
    * Lists the identifiers of the submissions a viewer sees through every list of SubmissionService,
    * checking that the three lists agree.
    */
