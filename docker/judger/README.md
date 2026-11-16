@@ -63,7 +63,7 @@ container named `voj.web`; point them at external services for a split deploymen
 | `VOJ_DB_USERNAME` / `VOJ_DB_PASSWORD` | `voj` / `voj` | Database credentials |
 | `VOJ_JMS_BROKER_URL` | `tcp://voj.web:61616` | ActiveMQ connector |
 | `VOJ_WEB_BASE_URL` | `http://voj.web:8080/voj` | Where the judger downloads test data |
-| `VOJ_JUDGER_API_TOKEN` | `verwandlung` | Shared test-data secret (**must match** the web) |
+| `VOJ_JUDGER_API_TOKEN` | none | Shared test-data secret, at least 16 characters (**must match** the web) |
 
 > **Heads-up on secrets.** Out of the box the image uses a non-secret default
 > `VOJ_JUDGER_API_TOKEN` and the bundled web image's demo database password (`voj`).

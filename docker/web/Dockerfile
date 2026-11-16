@@ -33,9 +33,8 @@ ENV VOJ_DB_PASSWORD=voj
 # connector binds 0.0.0.0 so a separate voj.judger container can connect.
 ENV VOJ_JMS_BROKER_EMBEDDED=true
 ENV VOJ_JMS_BROKER_URL=tcp://0.0.0.0:61616
-# Non-secret default so the published web + judger images interoperate out of the
-# box. Override on BOTH images with a long random value for a real deployment.
-ENV VOJ_JUDGER_API_TOKEN=verwandlung
+# VOJ_JUDGER_API_TOKEN has no default: pass the same long random value to this
+# image and every judger, or let start-web.sh generate one on the first start.
 
 # Define working directory.
 WORKDIR /root
@@ -99,10 +98,10 @@ COPY . /root/voj
 RUN $M2_HOME/bin/mvn package -DskipTests -Drevision=${VOJ_VERSION} -f voj/web/pom.xml && \
     mkdir -p /opt/voj && \
     cp voj/web/target/voj.web.jar /opt/voj/voj.web.jar && \
+    cp voj/sql/demo.sql voj/docker/web/start-web.sh /opt/voj/ && \
     /etc/init.d/mariadb start && \
     mysql voj < voj/sql/schema.sql && \
-    mysql voj < voj/sql/seed.sql && \
-    mysql voj < voj/sql/demo.sql
+    mysql voj < voj/sql/seed.sql
 
 # Expose Ports
 EXPOSE 3306

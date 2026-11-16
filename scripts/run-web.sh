@@ -15,7 +15,9 @@
 #
 # Before launching it verifies that MySQL and ActiveMQ are running and that the
 # database credentials are correct; if the `voj` schema is empty it imports
-# sql/{schema,seed,demo}.sql automatically.
+# sql/schema.sql and sql/seed.sql (and, with VOJ_DEMO=1, the sample data of
+# sql/demo.sql, whose passwords equal the usernames). Without the sample data, the
+# app creates an administrator with a random password on its first start and logs it.
 #
 # Overridable via environment variables (defaults shown):
 #   JDK_HOME=/opt/homebrew/opt/openjdk@25   # falls back to `java` on PATH
@@ -73,7 +75,7 @@ fi
 
 # --------------------------------------------------------------------------- #
 # Preflight: verify MySQL and ActiveMQ are up, credentials are valid, and the
-# voj schema is populated (importing sql/{schema,seed,demo}.sql on first run).
+# voj schema is populated (importing the SQL scripts on first run).
 # --------------------------------------------------------------------------- #
 
 # Test whether a TCP port is accepting connections. For "localhost" we also try
@@ -170,9 +172,13 @@ preflight() {
     "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='$db_name'")"
 
   if [ "${table_count:-0}" -eq 0 ]; then
-    echo "==> Database '$db_name' is empty; importing sql/{schema,seed,demo}.sql ..."
+    local sql_names=(schema.sql seed.sql)
+    if [ "${VOJ_DEMO:-0}" = "1" ]; then
+      sql_names+=(demo.sql)
+    fi
+    echo "==> Database '$db_name' is empty; importing ${sql_names[*]} ..."
     local sql_name sql_file
-    for sql_name in schema.sql seed.sql demo.sql; do
+    for sql_name in "${sql_names[@]}"; do
       sql_file="$PROJECT_ROOT/sql/$sql_name"
       if [ ! -f "$sql_file" ]; then
         echo "ERROR: database '$db_name' is empty but $sql_file is missing." >&2
@@ -181,7 +187,7 @@ preflight() {
       echo "    - $sql_name"
       "$MYSQL_BIN" "${mysql_args[@]}" "$db_name" < "$sql_file"
     done
-    echo "==> Imported sql/{schema,seed,demo}.sql into '$db_name'."
+    echo "==> Imported ${sql_names[*]} into '$db_name'."
   else
     echo "==> Database '$db_name' already has $table_count table(s); skipping import."
   fi

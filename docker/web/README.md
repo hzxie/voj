@@ -30,6 +30,18 @@ docker run -d --name voj.judger --network voj --restart unless-stopped \
 
 The web UI is then available at <http://localhost:8080/voj>.
 
+On its first start the web container creates an administrator with a random
+password and prints it once: `docker logs voj.web`. If you leave out
+`VOJ_JUDGER_API_TOKEN`, it also generates a token, prints it once and keeps it in
+the database volume (read it again with
+`docker exec voj.web cat /var/lib/mariadb/voj-judger-api-token`); run the judgers
+with that value. The token must have at least 16 characters, or the judgers
+cannot download test data.
+
+To try VOJ out with sample problems, contests and accounts, add `-e VOJ_DEMO=1`
+on the first start: every sample account's password is its username (`root` /
+`root` is an administrator), so never use it for a real site.
+
 ## Configuration
 
 The image is generic: every deployment knob is read from a `VOJ_*` environment
@@ -40,7 +52,8 @@ rebuild needed. Common variables:
 | --- | --- | --- |
 | `VOJ_DB_HOST` / `VOJ_DB_PORT` / `VOJ_DB_NAME` | bundled / `3306` / `voj` | Database location |
 | `VOJ_DB_USERNAME` / `VOJ_DB_PASSWORD` | `voj` / `voj` | Database credentials |
-| `VOJ_JUDGER_API_TOKEN` | `verwandlung` | Shared test-data secret (**must match** the judger) |
+| `VOJ_JUDGER_API_TOKEN` | generated on the first start | Shared test-data secret, at least 16 characters (**must match** the judger) |
+| `VOJ_DEMO` | `0` | `1` loads the sample data (passwords = usernames) on the first start |
 | `VOJ_BASE_URL` | `http://localhost:8080/voj` | Public root used in e-mails/links |
 | `VOJ_CONTEXT_PATH` | `/voj` | Servlet context path (`/` serves at root) |
 | `VOJ_JMS_BROKER_EMBEDDED` | `true` | Host the ActiveMQ broker in the web process |
@@ -50,12 +63,11 @@ rebuild needed. Common variables:
 Behind a reverse proxy, set `VOJ_BASE_URL` to the externally visible URL so links,
 e-mails and assets are correct.
 
-> **Heads-up on secrets.** Out of the box the image uses a non-secret default
-> `VOJ_JUDGER_API_TOKEN` and a bundled demo database with password `voj` — fine
-> for a local trial, **not** for production. For a real deployment pass a long
-> random `-e VOJ_JUDGER_API_TOKEN=...` (the same value on the web and judger
-> containers) and point `-e VOJ_DB_HOST=... -e VOJ_DB_PASSWORD=...` at a database
-> you manage.
+> **Heads-up on secrets.** The bundled database's password is `voj` unless you
+> build the image with another one; that is fine while port 3306 is only reachable
+> by your judgers, **not** on a public network. For a real deployment point
+> `-e VOJ_DB_HOST=... -e VOJ_DB_PASSWORD=...` at a database you manage, and publish
+> port 8080 only to a reverse proxy (`-p 127.0.0.1:8080:8080`).
 
 ## Ports
 

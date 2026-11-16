@@ -8,8 +8,8 @@
 #   scripts/run-docker.sh          # plain `docker run`, no compose
 #
 # Configuration is read from VOJ_* environment variables at runtime (see
-# voj.properties). Copy .env.example to .env to set your own URL, secrets and SMTP;
-# the defaults below let `docker compose up` work with zero config for a local try.
+# voj.properties). Copy .env.example to .env and set at least VOJ_JUDGER_API_TOKEN;
+# the other defaults below work for a local try.
 #
 # Persistence: the database (problems, users, submissions AND problem test data --
 # all of it lives in MariaDB) is kept in the named volume `voj-db`, so pulling a
@@ -25,15 +25,21 @@ services:
     #   dockerfile: docker/web/Dockerfile
     restart: unless-stopped
     ports:
-      - "${VOJ_HTTP_PORT:-8080}:8080"
+      # Published on the loopback interface only: put a reverse proxy in front (see
+      # docker/README.md), or set VOJ_HTTP_BIND=0.0.0.0 in .env to expose it directly.
+      - "${VOJ_HTTP_BIND:-127.0.0.1}:${VOJ_HTTP_PORT:-8080}:8080"
     environment:
       # Public root used in e-mails and absolute links. Behind a reverse proxy set
       # this (and VOJ_CONTEXT_PATH=/) to the externally visible URL in .env.
       VOJ_BASE_URL: ${VOJ_BASE_URL:-http://localhost:8080/voj}
       VOJ_CONTEXT_PATH: ${VOJ_CONTEXT_PATH:-/voj}
       # Shared secret the judger presents to download test data; must match the
-      # judger service below. Override in .env for anything but a local trial.
-      VOJ_JUDGER_API_TOKEN: ${VOJ_JUDGER_API_TOKEN:-verwandlung}
+      # judger service below. Required: set it in .env (e.g. `openssl rand -hex 24`).
+      VOJ_JUDGER_API_TOKEN: ${VOJ_JUDGER_API_TOKEN:?set VOJ_JUDGER_API_TOKEN in .env}
+      # 1 loads the sample problems and accounts (passwords = usernames) on the
+      # first start. Otherwise an administrator with a random password is created
+      # and logged once: `docker compose logs web`.
+      VOJ_DEMO: ${VOJ_DEMO:-0}
       # SMTP (empty host disables e-mail).
       VOJ_MAIL_HOST: ${VOJ_MAIL_HOST:-}
       VOJ_MAIL_PORT: ${VOJ_MAIL_PORT:-587}
@@ -62,7 +68,7 @@ services:
     environment:
       # Must match the web service. Everything else (DB host, broker, web base URL)
       # defaults to "voj.web" in the image, resolved via the alias above.
-      VOJ_JUDGER_API_TOKEN: ${VOJ_JUDGER_API_TOKEN:-verwandlung}
+      VOJ_JUDGER_API_TOKEN: ${VOJ_JUDGER_API_TOKEN:?set VOJ_JUDGER_API_TOKEN in .env}
 
 volumes:
   voj-db:

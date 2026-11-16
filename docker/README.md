@@ -91,13 +91,27 @@ URL, or to move behind a reverse proxy. The most common variables:
 | `VOJ_DB_USERNAME` / `VOJ_DB_PASSWORD` | web, judger | `voj` / `voj` | Database credentials |
 | `VOJ_JMS_BROKER_URL` | web, judger | `tcp://0.0.0.0:61616` (web) | ActiveMQ connector |
 | `VOJ_JMS_BROKER_EMBEDDED` | web | `true` | Host the broker in the web process |
-| `VOJ_JUDGER_API_TOKEN` | web, judger | `verwandlung` | Shared test-data download secret (**must match** on both) |
+| `VOJ_JUDGER_API_TOKEN` | web, judger | none (the web container generates one) | Shared test-data download secret, at least 16 characters (**must match** on both) |
+| `VOJ_DEMO` | web | `0` | `1` loads the sample data on the first start (passwords = usernames) |
 | `VOJ_BASE_URL` | web | `http://localhost:8080/voj` | Public root used in e-mails/links |
 | `VOJ_CONTEXT_PATH` | web | `/voj` | Servlet context path (set `/` to serve at root) |
 | `VOJ_MAIL_HOST` / `VOJ_MAIL_USERNAME` / `VOJ_MAIL_PASSWORD` | web | empty | SMTP (empty disables e-mail) |
 
 Behind a reverse proxy, set `VOJ_BASE_URL` (and optionally `VOJ_CONTEXT_PATH=/`)
 to the externally visible URL so generated links, e-mails and assets are correct.
+
+### First start
+
+There is no default account or token to guess. On its first start the web
+container creates an administrator with a random password and prints it once
+in its log (`docker logs voj.web`, or `docker compose logs web`). Without
+`VOJ_JUDGER_API_TOKEN`, it also generates the judger token, prints it once and
+keeps it in the database volume; `docker-compose.yml` instead requires the
+token in `.env`, since it starts the judger too. `VOJ_DEMO=1` on the first start
+loads sample problems, contests and accounts instead, whose passwords equal
+their usernames (`root` / `root` is an administrator): for trying VOJ out only.
+`docker-compose.yml` publishes the web port on `127.0.0.1` for a reverse proxy
+on the same host; set `VOJ_HTTP_BIND=0.0.0.0` in `.env` to expose it directly.
 
 The only build-time setting that remains is the **bundled demo MariaDB** password,
 which initialises the in-image database and defaults to `voj`.

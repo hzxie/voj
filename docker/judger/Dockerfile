@@ -24,13 +24,12 @@ ENV M2_HOME=/opt/maven
 # Defaults assume the judger shares a Docker network with a container named
 # "voj.web" (the bundled MariaDB + ActiveMQ + web app); point them at external
 # services for a split deployment. VOJ_DB_PASSWORD matches the web image's bundled
-# database, and VOJ_JUDGER_API_TOKEN must match the web image's value.
+# database. VOJ_JUDGER_API_TOKEN has no default: pass the web container's value.
 ENV VOJ_DB_HOST=voj.web
 ENV VOJ_DB_USERNAME=voj
 ENV VOJ_DB_PASSWORD=voj
 ENV VOJ_JMS_BROKER_URL=tcp://voj.web:61616
 ENV VOJ_WEB_BASE_URL=http://voj.web:8080/voj
-ENV VOJ_JUDGER_API_TOKEN=verwandlung
 # Go toolchain settings. GOROOT/PATH point at the official tarball unpacked into
 # /opt/go below. GOCACHE and GOPATH are deliberately not set: the judger gives
 # every submission its own, in its private work directory, because a build cache

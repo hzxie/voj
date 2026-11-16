@@ -141,9 +141,13 @@ set "TABLE_COUNT="
 for /f %%c in ('%MYSQL_BIN% %MYSQL_AUTH% -N -B -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='%VOJ_DB_NAME%'" 2^>nul') do set "TABLE_COUNT=%%c"
 if not defined TABLE_COUNT set "TABLE_COUNT=0"
 
+REM sql\demo.sql (sample data whose passwords equal the usernames) only with VOJ_DEMO=1;
+REM otherwise the app creates an administrator with a random password and logs it.
+set "SQL_FILES=schema.sql seed.sql"
+if "%VOJ_DEMO%"=="1" set "SQL_FILES=schema.sql seed.sql demo.sql"
 if "%TABLE_COUNT%"=="0" (
-  echo ==^> Database '%VOJ_DB_NAME%' is empty; importing sql\schema.sql + seed.sql + demo.sql ...
-  for %%f in (schema.sql seed.sql demo.sql) do (
+  echo ==^> Database '%VOJ_DB_NAME%' is empty; importing %SQL_FILES% ...
+  for %%f in (%SQL_FILES%) do (
     if not exist "%PROJECT_ROOT%\sql\%%f" (
       echo ERROR: database '%VOJ_DB_NAME%' is empty but %PROJECT_ROOT%\sql\%%f is missing. 1>&2
       exit /b 1
@@ -155,7 +159,7 @@ if "%TABLE_COUNT%"=="0" (
       exit /b 1
     )
   )
-  echo ==^> Imported sql\schema.sql + seed.sql + demo.sql into '%VOJ_DB_NAME%'.
+  echo ==^> Imported %SQL_FILES% into '%VOJ_DB_NAME%'.
 ) else (
   echo ==^> Database '%VOJ_DB_NAME%' already has %TABLE_COUNT% table^(s^); skipping import.
 )

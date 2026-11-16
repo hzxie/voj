@@ -100,8 +100,9 @@ mvn package -DskipTests        # -> judger/target/voj.judger.jar
 
 Convenience wrappers live in [`scripts/`](scripts/): `build-jars.sh`,
 `build-docker.sh`, `run-web.sh` and `run-judger.sh` (the run scripts preflight
-MySQL/ActiveMQ and import `sql/schema.sql`, `sql/seed.sql` and `sql/demo.sql` on
-first launch).
+MySQL/ActiveMQ and import `sql/schema.sql` and `sql/seed.sql` on first launch, and
+the sample data of `sql/demo.sql` with `VOJ_DEMO=1`). On its first start the web
+application creates an administrator with a random password and logs it once.
 
 Both components read a `voj.properties` file (database, mail, message queue,
 sandbox, etc.). See [`docs/configuration.md`](docs/configuration.md) for the full
