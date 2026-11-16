@@ -78,30 +78,6 @@
 		ORDER BY problem_id
 		LIMIT #{limit}
 	</select>
-	<select id="getLowerBoundOfProblems"
-		resultType="long">
-		SELECT COALESCE(MIN(problem_id), 0)
-		FROM voj_problems
-	</select>
-	<select id="getUpperBoundOfProblems"
-		resultType="long">
-		SELECT COALESCE(MAX(problem_id), 0)
-		FROM voj_problems
-	</select>
-	<select id="getUpperBoundOfProblemsWithLimit"
-		parameterType="map"
-		resultType="long">
-		SELECT COALESCE(MAX(problem_id), 0)
-		FROM (
-			SELECT problem_id
-			FROM voj_problems
-			WHERE problem_id >= #{problemId}
-			<if test="isPublicOnly == true">
-				AND problem_status = 'PUBLISHED'
-			</if>
-			LIMIT #{limit}
-		) p
-	</select>
 	<select id="getProblem"
 		parameterType="long"
 		resultMap="ProblemResultMap">

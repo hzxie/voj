@@ -27,7 +27,6 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.ModelAndView;
 
 import org.verwandlung.voj.web.messenger.ApplicationEventListener;
@@ -183,49 +182,6 @@ public class DefaultController {
       return minutes + "m";
     }
     return (uptimeInMillis / 1000) + "s";
-  }
-
-  /**
-   * Gets the list of judgers.
-   *
-   * @param offset - the UID of the currently-loaded judger
-   * @param request - the HttpRequest object
-   * @return a List<Map<String, String>> object containing the list of judgers
-   */
-  @RequestMapping(value = "/getJudgers.action", method = RequestMethod.GET)
-  public @ResponseBody Map<String, Object> getJudgersAction(
-      @RequestParam(value = "startIndex", required = false, defaultValue = "0") long offset,
-      HttpServletRequest request) {
-    Map<String, Object> result = new HashMap<>();
-    List<Map<String, String>> judgers = getJudgers(offset);
-
-    result.put("isSuccessful", judgers != null && !judgers.isEmpty());
-    result.put("judgers", judgers);
-    return result;
-  }
-
-  /**
-   * Gets the detailed information of judgers.
-   *
-   * @param offset - the UID of the currently-loaded judger
-   * @return a List<Map<String, String>> object containing the detailed information of judgers
-   */
-  private List<Map<String, String>> getJudgers(long offset) {
-    UserGroup userGroup = userService.getUserGroupUsingSlug("judgers");
-    List<User> judgersList =
-        userService.getUserUsingUserGroup(userGroup, offset, NUMBER_OF_JUDGERS_PER_REQUEST);
-    List<Map<String, String>> judgers = new ArrayList<Map<String, String>>();
-
-    for (User judger : judgersList) {
-      Map<String, String> judgerInformation = new HashMap<>(3, 1);
-      String username = judger.getUsername();
-      String description = keepAliveEventListener.getJudgerDescription(username);
-
-      judgerInformation.put("username", username);
-      judgerInformation.put("description", description);
-      judgers.add(judgerInformation);
-    }
-    return judgers;
   }
 
   /**

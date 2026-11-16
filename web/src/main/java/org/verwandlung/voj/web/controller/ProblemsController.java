@@ -134,49 +134,6 @@ public class ProblemsController {
   }
 
   /**
-   * Gets the start index of the problems.
-   *
-   * @return the start index of the problems
-   */
-  private long getFirstIndexOfProblems() {
-    return problemService.getFirstIndexOfProblems();
-  }
-
-  /**
-   * Gets the list of problems.
-   *
-   * @param startIndex - the start index of the problems
-   * @param request - the HttpRequest object
-   * @return a HashMap object containing the list of problems
-   */
-  @RequestMapping(value = "/getProblems.action", method = RequestMethod.GET)
-  public @ResponseBody Map<String, Object> getProblemsAction(
-      @RequestParam(value = "startIndex") long startIndex,
-      @RequestParam(value = "keyword", required = false) String keyword,
-      @RequestParam(value = "category", required = false) String problemCategorySlug,
-      HttpServletRequest request) {
-    HttpSession session = request.getSession();
-    final int NUMBER_OF_PROBLEMS_PER_PAGE =
-        optionService.getIntOption("problemsPerPage", DEFAULT_NUMBER_OF_PROBLEMS_PER_PAGE);
-    List<Problem> problems =
-        problemService.getProblemsUsingFilters(
-            startIndex, keyword, problemCategorySlug, null, null, true, NUMBER_OF_PROBLEMS_PER_PAGE);
-    Map<Long, Submission> submissionOfProblems = null;
-    if (isLoggedIn(session)) {
-      long userId = HttpSessionParser.getCurrentUser().getUid();
-      submissionOfProblems =
-          submissionService.getSubmissionOfProblems(
-              userId, startIndex, startIndex + NUMBER_OF_PROBLEMS_PER_PAGE);
-    }
-
-    Map<String, Object> result = new HashMap<>(4, 1);
-    result.put("isSuccessful", problems != null && !problems.isEmpty());
-    result.put("problems", problems);
-    result.put("submissionOfProblems", submissionOfProblems);
-    return result;
-  }
-
-  /**
    * Checks whether the user has logged in.
    *
    * @param session - the HttpSession object

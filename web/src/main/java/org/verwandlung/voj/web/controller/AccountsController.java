@@ -192,7 +192,6 @@ public class AccountsController {
   public @ResponseBody Map<String, Boolean> loginAction(
       @RequestParam(value = "username") String username,
       @RequestParam(value = "password") String password,
-      @RequestParam(value = "rememberMe") boolean isAutoLoginAllowed,
       @RequestParam(value = "cf-turnstile-response", required = false, defaultValue = "")
           String captchaResponse,
       HttpServletRequest request,

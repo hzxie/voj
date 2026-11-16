@@ -53,33 +53,6 @@ public interface ProblemMapper {
       @Param("isPublicOnly") boolean isPublicOnly);
 
   /**
-   * Gets the ID of the first problem.
-   *
-   * @return the ID of the first problem, or 0 if there are no problems
-   */
-  long getLowerBoundOfProblems();
-
-  /**
-   * Gets the ID of the last problem.
-   *
-   * @return the ID of the last problem, or 0 if there are no problems
-   */
-  long getUpperBoundOfProblems();
-
-  /**
-   * Gets the ID of the last problem within a problem range.
-   *
-   * @param isPublicOnly - whether to filter only public problems
-   * @param offset - the starting number of the problem identifier
-   * @param limit - the number of problems to fetch
-   * @return the ID of the last problem within the problem range, or 0 if there are no problems
-   */
-  long getUpperBoundOfProblemsWithLimit(
-      @Param("isPublicOnly") boolean isPublicOnly,
-      @Param("problemId") long offset,
-      @Param("limit") int limit);
-
-  /**
    * Gets the IDs of the public problems, in ascending order. Used by the sitemap.
    *
    * @param limit - the maximum number of IDs to return

@@ -202,21 +202,6 @@ public class AdministrationControllerUsersTest {
             .getPassword());
   }
 
-  /** Test case: tests getNumberOfSubmissionsAction(...). Test data: a stubbed per-day count. Expected: the per-day counts are returned under the totalSubmissions key. */
-  @Test
-  public void testGetNumberOfSubmissionsAction() {
-    Map<String, Long> perDay = Map.of("2026-06-28", 9L);
-    when(submissionService.getNumberOfSubmissionsGroupByDay(
-            org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), eq(0L),
-            eq(false)))
-        .thenReturn(perDay);
-
-    Map<String, Object> result =
-        controller.getNumberOfSubmissionsAction(new MockHttpServletRequest());
-
-    Assertions.assertSame(perDay, result.get("totalSubmissions"));
-  }
-
   /** Builds a User in the given group. */
   private static User userWithGroup(String groupSlug) {
     return new User(1000, "zjhzxhz", "p", "a@b.com", new UserGroup(2, groupSlug, groupSlug), null);

@@ -228,21 +228,6 @@ public class ApplicationEventListener {
   }
 
   /**
-   * Gets the description information of a judger.
-   *
-   * @param judgerUsername - the username of the judger
-   * @return the description information of the judger
-   */
-  public String getJudgerDescription(String judgerUsername) {
-    Map<String, Object> judgerInformation = onlineJudgers.get(judgerUsername);
-
-    if (isOnline(judgerInformation)) {
-      return "[Online] " + judgerInformation.get("description");
-    }
-    return "[Offline]";
-  }
-
-  /**
    * Gets the number of online judgers.
    *
    * @return the number of online judgers

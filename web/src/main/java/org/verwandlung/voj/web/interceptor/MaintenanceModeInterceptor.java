@@ -80,8 +80,7 @@ public class MaintenanceModeInterceptor implements HandlerInterceptor {
         || path.equals("/terms")
         || path.equals("/privacy")
         || path.equals("/help")
-        || path.equals("/judgers")
-        || path.equals("/getJudgers.action");
+        || path.equals("/judgers");
   }
 
   /**

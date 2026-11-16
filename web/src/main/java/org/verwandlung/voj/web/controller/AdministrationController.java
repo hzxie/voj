@@ -373,23 +373,6 @@ public class AdministrationController {
   }
 
   /**
-   * Gets the system's daily submission counts over the last year, feeding the activity heat-map.
-   *
-   * @param request - the HttpServletRequest object
-   * @return a Map object containing the system's daily submission counts keyed by date
-   */
-  @RequestMapping(value = "/getNumberOfSubmissions.action", method = RequestMethod.GET)
-  public @ResponseBody Map<String, Object> getNumberOfSubmissionsAction(HttpServletRequest request) {
-    Date today = new Date();
-    Date startDate = DateUtils.getDateBefore(ACTIVITY_HEAT_MAP_DAYS);
-    Map<String, Object> submissions = new HashMap<>(1, 1);
-    submissions.put(
-        "totalSubmissions",
-        submissionService.getNumberOfSubmissionsGroupByDay(startDate, today, 0, false));
-    return submissions;
-  }
-
-  /**
    * Loads the judge-cluster page, showing the live telemetry of every online judger node.
    *
    * @param request - the HttpServletRequest object
@@ -2344,9 +2327,6 @@ public class AdministrationController {
    * The autowired ApplicationEventListener object. Used for getting the number of online judgers.
    */
   @Autowired private ApplicationEventListener eventListener;
-
-  /** The number of days of daily activity returned for the heat-map (53 weeks). */
-  private static final int ACTIVITY_HEAT_MAP_DAYS = 53 * 7;
 
   /** The number of days shown in the dashboard's submissions bar chart. */
   private static final int DASHBOARD_CHART_DAYS = 14;

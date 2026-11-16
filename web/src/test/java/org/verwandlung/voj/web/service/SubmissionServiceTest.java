@@ -137,16 +137,6 @@ public class SubmissionServiceTest {
     Assertions.assertEquals(0L, stats.get("acRate"));
   }
 
-  /** Test case: tests the getSubmissionOfUser(long) method. Test data: user 1000. Expected: the latest submission records indexed by problem. */
-  @Test
-  public void testGetSubmissionOfUser() {
-    Map<Long, Submission> submissions = submissionService.getSubmissionOfUser(1000);
-    Assertions.assertNotNull(submissions);
-    // User 1000 has submission records for both problems 1000 and 1001.
-    Assertions.assertTrue(submissions.containsKey(1000L));
-    Assertions.assertTrue(submissions.containsKey(1001L));
-  }
-
   /** Test case: tests the getSubmissionOfProblems(long, long, long) method. Test data: user 1000 in the problem range [1000, 1001]. Expected: the AC submission record overrides the latest submission record. */
   @Test
   public void testGetSubmissionOfProblems() {

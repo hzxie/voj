@@ -95,7 +95,7 @@ public class AccountsControllerTest {
 
     Map<String, Boolean> result =
         controller.loginAction(
-            "zjhzxhz", "secret", false, "bad-captcha", request(), new MockHttpServletResponse());
+            "zjhzxhz", "secret", "bad-captcha", request(), new MockHttpServletResponse());
 
     Assertions.assertEquals(Boolean.FALSE, result.get("isCaptchaValid"));
     Assertions.assertEquals(Boolean.FALSE, result.get("isSuccessful"));
@@ -112,7 +112,7 @@ public class AccountsControllerTest {
 
     Map<String, Boolean> result =
         controller.loginAction(
-            "zjhzxhz", "secret", false, "captcha", request(), new MockHttpServletResponse());
+            "zjhzxhz", "secret", "captcha", request(), new MockHttpServletResponse());
 
     Assertions.assertEquals(Boolean.FALSE, result.get("isSuccessful"));
     verify(userService, never()).getUserUsingUsernameOrEmail(anyString());
@@ -132,7 +132,7 @@ public class AccountsControllerTest {
     MockHttpServletRequest request = request();
     Map<String, Boolean> result =
         controller.loginAction(
-            "zjhzxhz", "secret", false, "captcha", request, new MockHttpServletResponse());
+            "zjhzxhz", "secret", "captcha", request, new MockHttpServletResponse());
 
     Assertions.assertEquals(Boolean.TRUE, result.get("isSuccessful"));
     verify(sessionRegistry).registerNewSession(eq(request.getSession().getId()), any());
@@ -159,7 +159,7 @@ public class AccountsControllerTest {
         csrfTokenRepository.generateToken(request), request, response);
     String anonymousSessionId = request.getSession().getId();
 
-    controller.loginAction("zjhzxhz", "secret", false, "captcha", request, response);
+    controller.loginAction("zjhzxhz", "secret", "captcha", request, response);
 
     Assertions.assertNotEquals(anonymousSessionId, request.getSession().getId());
     Assertions.assertNull(csrfTokenRepository.loadToken(request));

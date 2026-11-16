@@ -41,26 +41,6 @@ import org.verwandlung.voj.web.util.Pagination;
 @Service
 @Transactional
 public class ProblemService {
-  /**
-   * Gets the starting number of the problems.
-   *
-   * @return the starting number of the problems
-   */
-  public long getFirstIndexOfProblems() {
-    return problemMapper.getLowerBoundOfProblems();
-  }
-
-  /**
-   * Gets the ending number of the problems.
-   *
-   * @param isPublicOnly - whether to filter only public problems
-   * @param offset - the starting number of the problem identifier
-   * @param limit - the number of problems to load each time
-   * @return the ending number of the problems
-   */
-  public long getLastIndexOfProblems(boolean isPublicOnly, long offset, int limit) {
-    return problemMapper.getUpperBoundOfProblemsWithLimit(isPublicOnly, offset, limit);
-  }
 
   /**
    * Gets the IDs of the public problems, in ascending order.

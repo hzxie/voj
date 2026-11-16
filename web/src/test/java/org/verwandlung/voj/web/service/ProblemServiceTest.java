@@ -56,24 +56,6 @@ public class ProblemServiceTest {
   private static final String CATEGORIES = "[\"uncategorized\"]";
   private static final String TAGS = "[\"Greedy\"]";
 
-  /** Test case: tests the getFirstIndexOfProblems() method. Test data: N/a. Expected: the lower bound of the problem IDs. */
-  @Test
-  public void testGetFirstIndexOfProblems() {
-    Assertions.assertEquals(1000, problemService.getFirstIndexOfProblems());
-  }
-
-  /**
-   * Test case: tests the getFirstIndexOfProblems() method when no problem exists. Test data: an
-   * emptied problems table. Expected: 0, rather than a BindingException. Regression test for the
-   * all-problems administration view, which crashed with "attempted to return null from a method
-   * with a primitive return type (long)" when the problems table was empty.
-   */
-  @Test
-  public void testGetFirstIndexOfProblemsWhenEmpty() {
-    deleteAllProblems();
-    Assertions.assertEquals(0, problemService.getFirstIndexOfProblems());
-  }
-
   /** Test case: tests the getNumberOfProblems() method. Test data: N/a. Expected: the number of all problems. */
   @Test
   public void testGetNumberOfProblems() {

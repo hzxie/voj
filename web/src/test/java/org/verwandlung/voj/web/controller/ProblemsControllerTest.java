@@ -79,42 +79,6 @@ public class ProblemsControllerTest {
     SecurityContextHolder.clearContext();
   }
 
-  /** Test case: tests getProblemsAction(...). Test data: an anonymous viewer. Expected: the problems are returned but no per-user solved-status map is attached. */
-  @Test
-  public void testGetProblemsActionAnonymous() {
-    List<Problem> problems = List.of(new Problem());
-    when(problemService.getProblemsUsingFilters(
-            anyLong(), nullable(String.class), nullable(String.class), any(), any(), anyBoolean(),
-            anyInt()))
-        .thenReturn(problems);
-
-    Map<String, Object> result =
-        controller.getProblemsAction(0L, null, null, new MockHttpServletRequest());
-
-    Assertions.assertEquals(Boolean.TRUE, result.get("isSuccessful"));
-    Assertions.assertSame(problems, result.get("problems"));
-    Assertions.assertNull(result.get("submissionOfProblems"));
-    verify(submissionService, never()).getSubmissionOfProblems(anyLong(), anyLong(), anyLong());
-  }
-
-  /** Test case: tests getProblemsAction(...). Test data: an authenticated viewer. Expected: the per-user solved-status map is attached for that user. */
-  @Test
-  public void testGetProblemsActionAuthenticated() {
-    List<Problem> problems = List.of(new Problem());
-    when(problemService.getProblemsUsingFilters(
-            anyLong(), nullable(String.class), nullable(String.class), any(), any(), anyBoolean(),
-            anyInt()))
-        .thenReturn(problems);
-    authenticate(currentUser());
-    Map<Long, Submission> solved = Map.of(1000L, new Submission());
-    when(submissionService.getSubmissionOfProblems(eq(1000L), eq(0L), eq(100L))).thenReturn(solved);
-
-    Map<String, Object> result =
-        controller.getProblemsAction(0L, null, null, new MockHttpServletRequest());
-
-    Assertions.assertSame(solved, result.get("submissionOfProblems"));
-  }
-
   /** Test case: tests createSubmissionAction(...). Test data: a successful submission for the current user. Expected: the current user is passed through and the service result returned verbatim. */
   @Test
   public void testCreateSubmissionActionSuccess() {

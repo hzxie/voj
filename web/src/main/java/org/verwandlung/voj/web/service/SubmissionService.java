@@ -315,19 +315,6 @@ public class SubmissionService {
   }
 
   /**
-   * Gets the judging results of all problems for a user.
-   *
-   * @param userId - the unique identifier of the user
-   * @return the judging results of all problems for the user
-   */
-  public Map<Long, Submission> getSubmissionOfUser(long userId) {
-    long problemIdLowerBound = problemMapper.getLowerBoundOfProblems();
-    long problemIdUpperBound = problemMapper.getUpperBoundOfProblems();
-
-    return getSubmissionOfProblems(userId, problemIdLowerBound, problemIdUpperBound);
-  }
-
-  /**
    * Gets the judging results of a user within a problem ID range.
    *
    * @param userId - the unique identifier of the user
