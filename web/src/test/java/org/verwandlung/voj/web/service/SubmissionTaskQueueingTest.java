@@ -31,13 +31,13 @@ import java.util.Map;
 
 import javax.sql.DataSource;
 
-import com.alibaba.druid.pool.DruidDataSource;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jms.UncategorizedJmsException;
 import org.springframework.test.context.ContextConfiguration;
@@ -51,8 +51,8 @@ import org.verwandlung.voj.web.model.User;
 
 /**
  * Checks that judging tasks are queued only once the transaction that stored the submission has
- * committed: never for a transaction that rolls back, and that a task that cannot be queued after
- * the commit marks the submission as a system error instead of leaving it pending.
+ * committed: never for a transaction that rolls back, and that a submission whose task cannot be
+ * queued after the commit is marked as a system error once it waited too long.
  *
  * <p>The tests drive real transactions, so this class is not {@code @Transactional}; rows that a
  * test commits are removed afterwards. The message queue is replaced by a mock.
@@ -142,37 +142,35 @@ public class SubmissionTaskQueueingTest {
 
   /**
    * Test case: creates a submission (outside any caller transaction, as the controller does) while
-   * the message queue is unavailable. Test data: a valid submission; sending throws. Expected: the
-   * user still gets the successful result, and the submission is marked as a system error rather
-   * than left pending.
+   * the message queue is unavailable, then lets the time-to-live of its task pass. Test data: a
+   * valid submission; sending throws. Expected: the user still gets the successful result, and the
+   * submission stays pending until it waited too long for a judger, then is a system error.
    */
   @Test
-  public void testSubmissionIsMarkedAsSystemErrorWhenTheTaskCannotBeQueued() {
+  public void testSubmissionWhoseTaskCannotBeQueuedIsFailedInTime() {
     doThrow(new UncategorizedJmsException("broker down"))
         .when(messageSender)
         .sendMessage(anyMap(), any());
-    // The failure is recorded in a new transaction while the committed one still holds its
-    // connection. The test pool has a single connection (production pools have several), so allow
-    // a second one for this test.
-    DruidDataSource druidDataSource = (DruidDataSource) dataSource;
-    int maxActive = druidDataSource.getMaxActive();
-    druidDataSource.setMaxActive(maxActive + 1);
 
-    Map<String, Object> result;
-    try {
-      result =
-          submissionService.createSubmission(
-              userWithUid(1000), 1000, "text/x-java", "public class Main {}");
-    } finally {
-      druidDataSource.setMaxActive(maxActive);
-    }
+    Map<String, Object> result =
+        submissionService.createSubmission(
+            userWithUid(1000), 1000, "text/x-java", "public class Main {}");
     Assertions.assertTrue((Boolean) result.get("isSuccessful"));
     long submissionId = (Long) result.get("submissionId");
     committedSubmissionIds.add(submissionId);
-
     verify(messageSender).sendMessage(isTaskOf(submissionId), eq("text/x-java"));
     Assertions.assertEquals(
-        "SE", submissionService.getSubmission(submissionId).getJudgeResult().getJudgeResultSlug());
+        "PD", submissionService.getSubmission(submissionId).getJudgeResult().getJudgeResultSlug());
+
+    jdbcTemplate.update(
+        "UPDATE voj_submissions SET submission_queued_time = NOW() - INTERVAL ? SECOND"
+            + " WHERE submission_id = ?",
+        submissionTaskTtl / 1000,
+        submissionId);
+    Assertions.assertEquals(1, submissionService.failStalledSubmissions());
+    Assertions.assertEquals(
+        SubmissionService.UNCLAIMED_JUDGE_LOG,
+        submissionService.getSubmission(submissionId).getJudgeLog());
   }
 
   /**
@@ -262,6 +260,10 @@ public class SubmissionTaskQueueingTest {
 
   /** The data source of the test database. */
   @Autowired private DataSource dataSource;
+
+  /** The time-to-live (ms) of a judging task. */
+  @Value("${jms.submissionTask.ttl}")
+  private long submissionTaskTtl;
 
   /** The transaction manager, used to drive the transactions under test. */
   @Autowired private PlatformTransactionManager transactionManager;

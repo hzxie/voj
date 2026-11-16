@@ -35,12 +35,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
-import org.springframework.transaction.support.TransactionTemplate;
 
 import org.verwandlung.voj.web.mapper.JudgeResultMapper;
 import org.verwandlung.voj.web.mapper.LanguageMapper;
@@ -572,11 +569,11 @@ public class SubmissionService {
             ? submission.getLanguage().getLanguageSlug()
             : null;
     // Rejudge path: clear the previous verdict/log so the record returns to pending before the new
-    // task is enqueued. This makes the detail pages stream the live judging result again and lets
-    // the expired-task guard fall back to marking it unjudgeable if no judger ever claims it. The
-    // reset also increments the judge generation, which the new task carries (read back in this
-    // transaction, so it is the value this reset wrote), so that the judger, the dead-letter
-    // listener and the live judge log can tell the older tasks of the submission from this one.
+    // task is enqueued. This makes the detail pages stream the live judging result again, and the
+    // reset queued time gives the new judging the whole time-to-live (see failStalledSubmissions).
+    // The reset also increments the judge generation, which the new task carries (read back in this
+    // transaction, so it is the value this reset wrote), so that the judger and the live judge log
+    // can tell the older tasks of the submission from this one.
     submissionMapper.resetSubmissionToPending(submissionId);
     Long generation = submissionMapper.getJudgeGenerationOfSubmission(submissionId);
     createSubmissionTask(submissionId, languageSlug, generation == null ? 0 : generation);
@@ -626,10 +623,9 @@ public class SubmissionService {
    * Sends the judging task of a stored submission to the message queue.
    *
    * <p>The submission is already committed at this point, so a failure cannot be rolled back and
-   * must not reach the user either: the submission was accepted. Instead of leaving it pending
-   * forever (no judger will ever see it, and the expired-task guard only covers tasks that reached
-   * the queue), it is marked as a system error in a new transaction, which tells the user what
-   * happened and lets an administrator rejudge it once the message queue is back. Retrying here is
+   * must not reach the user either: the submission was accepted. It is only logged: the submission
+   * stays pending, and is marked as a System Error once no judger took it in time (see {@link
+   * #failStalledSubmissions}), after which an administrator can rejudge it. Retrying here is
    * deliberately avoided: it would hold the request thread while the broker is down, and a retry
    * that only lives in memory is lost on restart anyway.
    *
@@ -647,39 +643,7 @@ public class SubmissionService {
       messageSender.sendMessage(mapMessage, languageSlug);
     } catch (RuntimeException ex) {
       LOGGER.error(
-          String.format(
-              "Failed to queue the judging task of submission #%d; marking it as a system error.",
-              submissionId),
-          ex);
-      markSubmissionTaskNotQueued(submissionId, generation);
-    }
-  }
-
-  /**
-   * Marks a still-pending submission as a system error because its judging task could not be sent
-   * to the message queue. Runs in a new transaction, as Spring requires for writes made after a
-   * commit: the committed transaction still holds its connection at that point, so this briefly
-   * takes a second one from the pool. Only this failure path does, and if no connection can be had
-   * the error is logged and the submission stays pending, as before.
-   *
-   * @param submissionId - the unique identifier of the submission
-   * @param generation - the judge generation of the task that could not be queued (a later rejudge,
-   *     whose task may have been queued, is left alone)
-   */
-  private void markSubmissionTaskNotQueued(long submissionId, long generation) {
-    String judgeLog =
-        "System Error.\n\nThe judging task could not be sent to the message queue. "
-            + "An administrator can rejudge this submission.\n";
-    try {
-      TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
-      transactionTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
-      transactionTemplate.executeWithoutResult(
-          status ->
-              submissionMapper.markSubmissionUnjudgeable(
-                  submissionId, generation, "SE", judgeLog, judgeLog));
-    } catch (RuntimeException ex) {
-      LOGGER.error(
-          String.format("Failed to mark submission #%d as a system error.", submissionId), ex);
+          String.format("Failed to queue the judging task of submission #%d.", submissionId), ex);
     }
   }
 
@@ -738,77 +702,6 @@ public class SubmissionService {
               failed));
     }
     return failed;
-  }
-
-  /** Why a judging task ended on the dead-letter queue. */
-  public enum JudgingTaskFailure {
-    /** No judger took the task before it expired: none supports the submission's language. */
-    NO_JUDGER_AVAILABLE(
-        "No available judger supports this submission's language, so the judging task expired"
-            + " before it could be processed."),
-
-    /**
-     * The task expired after a judger had claimed the submission: the judger handed the task back
-     * (e.g. its test data could not be downloaded), and it expired before another delivery. The
-     * broker reports this as {@link #NO_JUDGER_AVAILABLE}; the claim tells them apart.
-     */
-    EXPIRED_AFTER_CLAIM(
-        "A judger took this submission but could not judge it before its judging task expired."
-            + " An administrator can rejudge this submission."),
-
-    /** Judgers took the task, but judging it failed every time until the redelivery limit. */
-    JUDGING_FAILED_REPEATEDLY(
-        "Judging this submission failed repeatedly, so its judging task was given up."
-            + " An administrator can rejudge this submission."),
-
-    /** The broker gave the task up for another (or an unrecorded) reason. */
-    UNKNOWN(
-        "The judging task could not be completed. An administrator can rejudge this submission.");
-
-    /** The explanation shown in the submission's judge log. */
-    private final String explanation;
-
-    JudgingTaskFailure(String explanation) {
-      this.explanation = explanation;
-    }
-
-    /**
-     * Gets the judge log of a submission whose judging task failed this way.
-     *
-     * @return the judge log
-     */
-    public String getJudgeLog() {
-      return "System Error.\n\n" + explanation + "\n";
-    }
-  }
-
-  /**
-   * Marks a still-pending submission as a terminal failure because its judging task ended on the
-   * dead-letter queue, with a judge log that says why. Invoked from the dead-letter listener. The
-   * update only touches submissions that are still pending, so it never overwrites a real verdict
-   * (and is safe to apply more than once); a judging that is still running cannot record its
-   * verdict afterwards, as the judger only records a verdict over a pending submission. Nor does it
-   * touch a submission rejudged since the task was queued (its judge generation moved on): the
-   * dead-lettered task is then a stale one, and the pending submission belongs to a newer task.
-   * An expired task whose submission a judger had claimed (its execute time is set) is reported as
-   * {@link JudgingTaskFailure#EXPIRED_AFTER_CLAIM} rather than as no judger being available.
-   *
-   * @param submissionId - the unique identifier of the submission whose task was dead-lettered
-   * @param generation - the judge generation the task carried, or null for a task queued before
-   *     judge generations existed (the submission is then marked whatever its generation)
-   * @param failure - why the task was dead-lettered
-   * @return whether the submission was marked (false when it was already judged, was rejudged since
-   *     the task was queued, or does not exist)
-   */
-  public boolean markSubmissionUnjudgeable(
-      long submissionId, Long generation, JudgingTaskFailure failure) {
-    JudgingTaskFailure failureOfClaim =
-        failure == JudgingTaskFailure.NO_JUDGER_AVAILABLE
-            ? JudgingTaskFailure.EXPIRED_AFTER_CLAIM
-            : failure;
-    return submissionMapper.markSubmissionUnjudgeable(
-            submissionId, generation, "SE", failure.getJudgeLog(), failureOfClaim.getJudgeLog())
-        > 0;
   }
 
   /**
@@ -894,11 +787,6 @@ public class SubmissionService {
   @Value("${jms.submissionTask.ttl:1800000}")
   private long submissionTaskTtl;
 
-  /**
-   * The autowired transaction manager. Used to record a failed task submission in a transaction of
-   * its own.
-   */
-  @Autowired private PlatformTransactionManager transactionManager;
 
   /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(SubmissionService.class);

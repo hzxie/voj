@@ -302,8 +302,7 @@ public class SubmissionServiceTest {
     jdbcTemplate.update(insertAccepted, 1003);
     // The rows were inserted behind MyBatis's back: any MyBatis update (this one changes no row)
     // clears the query results it cached in this transaction.
-    submissionService.markSubmissionUnjudgeable(
-        0, null, SubmissionService.JudgingTaskFailure.UNKNOWN);
+    submissionService.deleteSubmission(0);
     Assertions.assertEquals(1L, submissionService.getSolvedCountAndRankOfUser(1002).get("rank"));
     Assertions.assertEquals(1L, submissionService.getSolvedCountAndRankOfUser(1000).get("rank"));
     Assertions.assertEquals(
@@ -399,112 +398,9 @@ public class SubmissionServiceTest {
     jdbcTemplate.update(JUDGER_CLAIM, judging, 1001);
     // The claim was made behind MyBatis's back: any MyBatis update (this one changes no row) clears
     // the query results it cached in this transaction.
-    submissionService.markSubmissionUnjudgeable(
-        0, null, SubmissionService.JudgingTaskFailure.UNKNOWN);
+    submissionService.deleteSubmission(0);
     Assertions.assertFalse(submissionService.isCurrentJudging(1001, judging.getTime(), 0L));
     Assertions.assertTrue(submissionService.isCurrentJudging(1001, judging.getTime(), 1L));
-  }
-
-  /**
-   * Test case: tests a rejudge (createSubmissionTasks) followed by the dead-lettering of the task
-   * queued before it. Test data: submission 1001 (judge generation 0) rejudged twice. Expected:
-   * each rejudge increments the judge generation; the dead-lettered task of an older generation
-   * leaves the pending submission alone, the task of the current generation marks it, and a task
-   * without a generation (queued before generations existed) marks any pending submission.
-   */
-  @Test
-  public void testStaleDeadLetteredTaskDoesNotFailARejudge() {
-    org.springframework.jdbc.core.JdbcTemplate jdbcTemplate =
-        new org.springframework.jdbc.core.JdbcTemplate(dataSource);
-    Assertions.assertEquals(0, submissionService.getSubmission(1001).getJudgeGeneration());
-    submissionService.createSubmissionTasks(List.of(1001L));
-    submissionService.createSubmissionTasks(List.of(1001L));
-    Assertions.assertEquals(2, submissionService.getSubmission(1001).getJudgeGeneration());
-
-    for (long staleGeneration : new long[] {0, 1}) {
-      Assertions.assertFalse(
-          submissionService.markSubmissionUnjudgeable(
-              1001, staleGeneration, SubmissionService.JudgingTaskFailure.NO_JUDGER_AVAILABLE));
-    }
-    Assertions.assertEquals(
-        "PD",
-        jdbcTemplate.queryForObject(
-            "SELECT submission_judge_result FROM voj_submissions WHERE submission_id = 1001",
-            String.class));
-
-    Assertions.assertTrue(
-        submissionService.markSubmissionUnjudgeable(
-            1001, 2L, SubmissionService.JudgingTaskFailure.NO_JUDGER_AVAILABLE));
-    Assertions.assertEquals(
-        "SE", submissionService.getSubmission(1001).getJudgeResult().getJudgeResultSlug());
-
-    submissionService.createSubmissionTasks(List.of(1001L));
-    Assertions.assertTrue(
-        submissionService.markSubmissionUnjudgeable(
-            1001, null, SubmissionService.JudgingTaskFailure.UNKNOWN));
-  }
-
-  /**
-   * Test case: tests markSubmissionUnjudgeable(long, Long, JudgingTaskFailure). Test data: a pending
-   * submission a judging claimed, which then failed repeatedly; a judged submission. Expected: the
-   * pending one becomes SE with the log of that failure and keeps the claim's execute time, and the
-   * judging can no longer record a verdict; the judged one is left alone.
-   */
-  @Test
-  public void testMarkSubmissionUnjudgeable() {
-    org.springframework.jdbc.core.JdbcTemplate jdbcTemplate =
-        new org.springframework.jdbc.core.JdbcTemplate(dataSource);
-    java.sql.Timestamp judging = java.sql.Timestamp.valueOf("2026-01-01 10:00:00");
-    jdbcTemplate.update(
-        "UPDATE voj_submissions SET submission_judge_result = 'PD' WHERE submission_id = 1001");
-    jdbcTemplate.update(JUDGER_CLAIM, judging, 1001);
-
-    Assertions.assertTrue(
-        submissionService.markSubmissionUnjudgeable(
-            1001, 0L, SubmissionService.JudgingTaskFailure.JUDGING_FAILED_REPEATEDLY));
-    Map<String, Object> row =
-        jdbcTemplate.queryForMap(
-            "SELECT submission_judge_result, submission_judge_log, submission_execute_time"
-                + " FROM voj_submissions WHERE submission_id = 1001");
-    Assertions.assertEquals("SE", row.get("submission_judge_result"));
-    Assertions.assertEquals(
-        SubmissionService.JudgingTaskFailure.JUDGING_FAILED_REPEATEDLY.getJudgeLog(),
-        row.get("submission_judge_log"));
-    Assertions.assertEquals(judging, row.get("submission_execute_time"));
-    Assertions.assertEquals(0, jdbcTemplate.update(JUDGER_RECORD_VERDICT, 1001, judging));
-
-    Assertions.assertFalse(
-        submissionService.markSubmissionUnjudgeable(
-            1000, null, SubmissionService.JudgingTaskFailure.NO_JUDGER_AVAILABLE));
-  }
-
-  /**
-   * Test case: tests markSubmissionUnjudgeable(long, Long, JudgingTaskFailure) with an expired
-   * task. Test data: a pending submission no judging claimed, and one a judging claimed and handed
-   * back. Expected: the first says no judger was available, the second that a judger took it but
-   * could not judge it before the task expired.
-   */
-  @Test
-  public void testExpiredTaskOfAClaimedSubmissionSaysAJudgerTookIt() {
-    org.springframework.jdbc.core.JdbcTemplate jdbcTemplate =
-        new org.springframework.jdbc.core.JdbcTemplate(dataSource);
-    jdbcTemplate.update(
-        "UPDATE voj_submissions SET submission_judge_result = 'PD', submission_execute_time = NULL"
-            + " WHERE submission_id IN (1000, 1001)");
-    jdbcTemplate.update(JUDGER_CLAIM, java.sql.Timestamp.valueOf("2026-01-01 10:00:00"), 1001);
-
-    for (long submissionId : new long[] {1000, 1001}) {
-      Assertions.assertTrue(
-          submissionService.markSubmissionUnjudgeable(
-              submissionId, null, SubmissionService.JudgingTaskFailure.NO_JUDGER_AVAILABLE));
-    }
-    String getJudgeLog = "SELECT submission_judge_log FROM voj_submissions WHERE submission_id = ?";
-    Assertions.assertEquals(
-        SubmissionService.JudgingTaskFailure.NO_JUDGER_AVAILABLE.getJudgeLog(),
-        jdbcTemplate.queryForObject(getJudgeLog, String.class, 1000));
-    Assertions.assertEquals(
-        SubmissionService.JudgingTaskFailure.EXPIRED_AFTER_CLAIM.getJudgeLog(),
-        jdbcTemplate.queryForObject(getJudgeLog, String.class, 1001));
   }
 
   /**

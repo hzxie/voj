@@ -335,30 +335,6 @@ public interface SubmissionMapper {
   int createSubmission(Submission submission);
 
   /**
-   * Marks a still-pending submission as a terminal failure (used when its judging task was
-   * dead-lettered or could not be queued). Only rows whose result is still pending are updated, so
-   * a real verdict is never overwritten, and a judging still running can no longer record one (the
-   * judger records a verdict only over a pending submission). The execute time of a judging that
-   * claimed the submission is kept; otherwise it becomes the current time.
-   *
-   * @param submissionId - the unique identifier of the submission
-   * @param generation - the judge generation of the failed task: the submission is only marked
-   *     while it still has this generation (a rejudge queued a newer task otherwise); null marks it
-   *     whatever its generation (a task queued before generations existed)
-   * @param judgeResultSlug - the terminal judge-result slug to set
-   * @param judgeLog - the judge log explaining the failure, for a submission no judging claimed
-   * @param claimedJudgeLog - the judge log explaining the failure, for a submission a judging
-   *     claimed (its execute time is set)
-   * @return the number of rows updated (1 when the submission was still pending, 0 otherwise)
-   */
-  int markSubmissionUnjudgeable(
-      @Param("submissionId") long submissionId,
-      @Param("generation") Long generation,
-      @Param("judgeResultSlug") String judgeResultSlug,
-      @Param("judgeLog") String judgeLog,
-      @Param("claimedJudgeLog") String claimedJudgeLog);
-
-  /**
    * Resets a submission back to the pending state so it can be re-judged, clearing the previous
    * verdict, judge log, resource usage, score, executing judger and execute time. Used by the
    * rejudge flow: without this, the record would keep its old verdict and the detail pages would

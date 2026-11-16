@@ -360,19 +360,6 @@
 		INSERT INTO voj_submissions(problem_id, uid, language_id, submission_code) 
 		VALUES (#{problem.problemId}, #{user.uid}, #{language.languageId}, #{code})
 	</insert>
-	<update id="markSubmissionUnjudgeable"
-		parameterType="map">
-		UPDATE voj_submissions
-		<!-- MySQL assigns from left to right: the log is chosen by the execute time before the
-		     update gives an unclaimed submission one. -->
-		SET submission_judge_result = #{judgeResultSlug},
-			submission_judge_log = IF(submission_execute_time IS NULL, #{judgeLog}, #{claimedJudgeLog}),
-			submission_execute_time = COALESCE(submission_execute_time, NOW())
-		WHERE submission_id = #{submissionId} AND submission_judge_result = 'PD'
-		<if test="generation != null">
-			AND submission_judge_generation = #{generation}
-		</if>
-	</update>
 	<update id="resetSubmissionToPending"
 		parameterType="long">
 		UPDATE voj_submissions

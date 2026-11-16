@@ -16,16 +16,12 @@
  */
 package org.verwandlung.voj.web.config;
 
-import static org.mockito.Mockito.after;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.timeout;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
+import java.util.Collections;
 import java.util.Map;
 
+import jakarta.jms.Message;
+
 import org.apache.activemq.ActiveMQConnectionFactory;
-import org.apache.activemq.RedeliveryPolicy;
 import org.apache.activemq.broker.BrokerService;
 import org.apache.activemq.command.ActiveMQQueue;
 import org.junit.jupiter.api.AfterEach;
@@ -35,12 +31,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.jms.connection.CachingConnectionFactory;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.jms.listener.SimpleMessageListenerContainer;
-import org.springframework.test.util.ReflectionTestUtils;
-import org.springframework.transaction.CannotCreateTransactionException;
-
-import org.verwandlung.voj.web.messenger.DeadLetterSubmissionTaskReceiver;
-import org.verwandlung.voj.web.service.SubmissionService;
-import org.verwandlung.voj.web.service.SubmissionService.JudgingTaskFailure;
 
 /**
  * The test class for JmsConfig, against a broker embedded in the test.
@@ -67,6 +57,8 @@ public class JmsConfigTest {
     connectionFactory =
         (CachingConnectionFactory)
             jmsConfig.externalConnectionFactory("vm://" + BROKER_NAME + "?create=false");
+    jmsTemplate =
+        new JmsTemplate(new ActiveMQConnectionFactory("vm://" + BROKER_NAME + "?create=false"));
   }
 
   /** Stops the listener container, the connections and the broker. */
@@ -81,91 +73,48 @@ public class JmsConfigTest {
   }
 
   /**
-   * Test case: tests the redelivery policies of the connection factory. Expected: the consumer of
-   * the dead-letter queue redelivers without a limit, with an exponential back-off; the other
-   * consumers keep ActiveMQ's default policy.
+   * Test case: a judging task and another message are on the dead-letter queue. Expected: the
+   * dead-letter consumer removes the judging task, and leaves the other message alone.
    */
   @Test
-  public void testDeadLetterQueueIsRedeliveredWithoutLimit() {
-    RedeliveryPolicy deadLetterPolicy = getRedeliveryPolicy(DEAD_LETTER_QUEUE);
-    Assertions.assertEquals(
-        RedeliveryPolicy.NO_MAXIMUM_REDELIVERIES, deadLetterPolicy.getMaximumRedeliveries());
-    Assertions.assertTrue(deadLetterPolicy.isUseExponentialBackOff());
-    Assertions.assertEquals(
-        JmsConfig.DEAD_LETTER_INITIAL_REDELIVERY_DELAY_MS,
-        deadLetterPolicy.getInitialRedeliveryDelay());
-    Assertions.assertEquals(
-        JmsConfig.DEAD_LETTER_MAXIMUM_REDELIVERY_DELAY_MS,
-        deadLetterPolicy.getMaximumRedeliveryDelay());
-
-    RedeliveryPolicy judgeResultPolicy =
-        getRedeliveryPolicy(new ActiveMQQueue("vojJudgeResultQueue"));
-    Assertions.assertEquals(
-        RedeliveryPolicy.DEFAULT_MAXIMUM_REDELIVERIES, judgeResultPolicy.getMaximumRedeliveries());
-  }
-
-  /**
-   * Test case: a judging task is dead-lettered while the database is down: finalizing its
-   * submission fails 8 times (more than ActiveMQ's default limit of 6 redeliveries), then succeeds.
-   * Expected: the task is delivered again after every failure, its submission is finalized on the
-   * 9th delivery, and it is then consumed: it is neither delivered again nor left on the queue.
-   */
-  @Test
-  public void testDeadLetteredTaskIsRetriedUntilTheDatabaseIsBack() throws Exception {
-    // Keep the test fast; the back-off itself is ActiveMQ's.
-    RedeliveryPolicy deadLetterPolicy = getRedeliveryPolicy(DEAD_LETTER_QUEUE);
-    deadLetterPolicy.setInitialRedeliveryDelay(10);
-    deadLetterPolicy.setRedeliveryDelay(10);
-    deadLetterPolicy.setMaximumRedeliveryDelay(40);
-
-    SubmissionService submissionService = mock(SubmissionService.class);
-    CannotCreateTransactionException databaseDown =
-        new CannotCreateTransactionException("database down");
-    when(submissionService.markSubmissionUnjudgeable(
-            1000L, 3L, JudgingTaskFailure.NO_JUDGER_AVAILABLE))
-        .thenThrow(
-            databaseDown,
-            databaseDown,
-            databaseDown,
-            databaseDown,
-            databaseDown,
-            databaseDown,
-            databaseDown,
-            databaseDown)
-        .thenReturn(true);
-    DeadLetterSubmissionTaskReceiver receiver = new DeadLetterSubmissionTaskReceiver();
-    ReflectionTestUtils.setField(receiver, "submissionService", submissionService);
-    listenerContainer = jmsConfig.deadLetterListenerContainer(connectionFactory, receiver);
-    Assertions.assertTrue(listenerContainer.isSessionTransacted());
+  public void testDeadLetteredTasksAreDropped() throws Exception {
+    sendDeadLetter("KeepAlive");
+    sendDeadLetter("SubmissionCreated");
+    listenerContainer = jmsConfig.deadLetterListenerContainer(connectionFactory);
     listenerContainer.afterPropertiesSet();
     listenerContainer.start();
 
-    JmsTemplate jmsTemplate =
-        new JmsTemplate(new ActiveMQConnectionFactory("vm://" + BROKER_NAME + "?create=false"));
-    jmsTemplate.convertAndSend(
-        DEAD_LETTER_QUEUE,
-        Map.of("event", "SubmissionCreated", "submissionId", 1000L, "generation", 3L),
-        message -> {
-          message.setStringProperty("event", "SubmissionCreated");
-          message.setStringProperty(
-              "dlqDeliveryFailureCause", "java.lang.Throwable: Message Expired. Expiration:1");
-          return message;
-        });
-
-    verify(submissionService, timeout(10000).times(9))
-        .markSubmissionUnjudgeable(1000L, 3L, JudgingTaskFailure.NO_JUDGER_AVAILABLE);
-    verify(submissionService, after(500).times(9))
-        .markSubmissionUnjudgeable(1000L, 3L, JudgingTaskFailure.NO_JUDGER_AVAILABLE);
+    long deadline = System.currentTimeMillis() + 10000;
+    while (getNumberOfDeadLetters() > 1 && System.currentTimeMillis() < deadline) {
+      Thread.sleep(50);
+    }
     listenerContainer.shutdown();
-    jmsTemplate.setReceiveTimeout(500);
+    jmsTemplate.setReceiveTimeout(1000);
+    Message deadLetter = jmsTemplate.receive(DEAD_LETTER_QUEUE);
+    Assertions.assertNotNull(deadLetter);
+    Assertions.assertEquals("KeepAlive", deadLetter.getStringProperty("event"));
     Assertions.assertNull(jmsTemplate.receive(DEAD_LETTER_QUEUE));
   }
 
-  /** Gets the redelivery policy of the consumers of a destination. */
-  private RedeliveryPolicy getRedeliveryPolicy(ActiveMQQueue destination) {
-    return ((ActiveMQConnectionFactory) connectionFactory.getTargetConnectionFactory())
-        .getRedeliveryPolicyMap()
-        .getEntryFor(destination);
+  /**
+   * Sends a message to the dead-letter queue, with its event as a property, as the web application
+   * and the judger send theirs.
+   */
+  private void sendDeadLetter(String event) {
+    jmsTemplate.convertAndSend(
+        DEAD_LETTER_QUEUE,
+        Map.of("event", event, "submissionId", 1000L),
+        message -> {
+          message.setStringProperty("event", event);
+          return message;
+        });
+  }
+
+  /** Counts the messages on the dead-letter queue. */
+  private int getNumberOfDeadLetters() {
+    return jmsTemplate.browse(
+        DEAD_LETTER_QUEUE,
+        (session, queueBrowser) -> Collections.list(queueBrowser.getEnumeration()).size());
   }
 
   /** The JmsConfig object under test. */
@@ -176,6 +125,9 @@ public class JmsConfigTest {
 
   /** The web application's connection factory, connected to the broker. */
   private CachingConnectionFactory connectionFactory;
+
+  /** Sends, browses and receives the messages of the dead-letter queue. */
+  private JmsTemplate jmsTemplate;
 
   /** The dead-letter listener container a test started, if any. */
   private SimpleMessageListenerContainer listenerContainer;

@@ -16,14 +16,10 @@
  */
 package org.verwandlung.voj.web.config;
 
-import java.util.List;
-import java.util.concurrent.TimeUnit;
-
 import jakarta.jms.ConnectionFactory;
 import jakarta.jms.MessageListener;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
-import org.apache.activemq.RedeliveryPolicy;
 import org.apache.activemq.broker.BrokerService;
 import org.apache.activemq.command.ActiveMQQueue;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,8 +29,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.jms.connection.CachingConnectionFactory;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.jms.listener.SimpleMessageListenerContainer;
-
-import org.verwandlung.voj.web.messenger.DeadLetterSubmissionTaskReceiver;
 
 /**
  * The message queue configuration. Replaces the ActiveMQ / JMS definitions in the original
@@ -58,16 +52,6 @@ public class JmsConfig {
    * the redelivery limit.
    */
   private static final String DEAD_LETTER_QUEUE = "ActiveMQ.DLQ";
-
-  /**
-   * How long the dead-letter consumer waits before it takes a judging task again whose submission
-   * it could not finalize, the first time. The wait doubles with every further failure, up to
-   * {@link #DEAD_LETTER_MAXIMUM_REDELIVERY_DELAY_MS}.
-   */
-  static final long DEAD_LETTER_INITIAL_REDELIVERY_DELAY_MS = TimeUnit.SECONDS.toMillis(1);
-
-  /** The longest wait of the dead-letter consumer between two attempts at the same judging task. */
-  static final long DEAD_LETTER_MAXIMUM_REDELIVERY_DELAY_MS = TimeUnit.MINUTES.toMillis(1);
 
   /** The well-known name of the in-JVM broker, matched by the {@code vm://localhost} transport. */
   private static final String EMBEDDED_BROKER_NAME = "localhost";
@@ -114,7 +98,7 @@ public class JmsConfig {
   @ConditionalOnProperty(name = "jms.broker.embedded", havingValue = "true")
   public ConnectionFactory connectionFactory(BrokerService embeddedBroker) {
     return new CachingConnectionFactory(
-        createActiveMQConnectionFactory("vm://" + EMBEDDED_BROKER_NAME + "?create=false"));
+        new ActiveMQConnectionFactory("vm://" + EMBEDDED_BROKER_NAME + "?create=false"));
   }
 
   /**
@@ -124,40 +108,7 @@ public class JmsConfig {
   @Bean
   @ConditionalOnProperty(name = "jms.broker.embedded", havingValue = "false", matchIfMissing = true)
   public ConnectionFactory externalConnectionFactory(@Value("${jms.broker.url}") String brokerUrl) {
-    return new CachingConnectionFactory(createActiveMQConnectionFactory(brokerUrl));
-  }
-
-  /**
-   * Creates the ActiveMQ connection factory of the web application.
-   *
-   * <p>ActiveMQ redelivers a message whose listener failed (threw, or rolled its transaction back)
-   * on the client, up to 6 times by default, and then acknowledges it as a "poison" message, which
-   * sends it to the dead-letter queue. A message that already is on the dead-letter queue is then
-   * dropped. That is what happened to a dead-lettered judging task when its submission could not be
-   * finalized because the database was down, often the very outage that got the task
-   * dead-lettered: the submission stayed pending forever. So the consumer of the dead-letter queue,
-   * and only that one, redelivers without a limit, waiting {@value
-   * #DEAD_LETTER_INITIAL_REDELIVERY_DELAY_MS} ms after the first failure and twice as long after
-   * every further one (up to {@link #DEAD_LETTER_MAXIMUM_REDELIVERY_DELAY_MS} ms). The other
-   * consumers keep the default policy.
-   *
-   * @param brokerUrl - the URL of the message broker
-   * @return the connection factory
-   */
-  static ActiveMQConnectionFactory createActiveMQConnectionFactory(String brokerUrl) {
-    ActiveMQConnectionFactory amqConnectionFactory = new ActiveMQConnectionFactory(brokerUrl);
-    RedeliveryPolicy deadLetterRedeliveryPolicy = new RedeliveryPolicy();
-    deadLetterRedeliveryPolicy.setDestination(new ActiveMQQueue(DEAD_LETTER_QUEUE));
-    deadLetterRedeliveryPolicy.setMaximumRedeliveries(RedeliveryPolicy.NO_MAXIMUM_REDELIVERIES);
-    deadLetterRedeliveryPolicy.setInitialRedeliveryDelay(DEAD_LETTER_INITIAL_REDELIVERY_DELAY_MS);
-    deadLetterRedeliveryPolicy.setRedeliveryDelay(DEAD_LETTER_INITIAL_REDELIVERY_DELAY_MS);
-    deadLetterRedeliveryPolicy.setUseExponentialBackOff(true);
-    deadLetterRedeliveryPolicy.setBackOffMultiplier(2);
-    deadLetterRedeliveryPolicy.setMaximumRedeliveryDelay(DEAD_LETTER_MAXIMUM_REDELIVERY_DELAY_MS);
-    amqConnectionFactory
-        .getRedeliveryPolicyMap()
-        .setRedeliveryPolicyEntries(List.of(deadLetterRedeliveryPolicy));
-    return amqConnectionFactory;
+    return new CachingConnectionFactory(new ActiveMQConnectionFactory(brokerUrl));
   }
 
   /** The JmsTemplate used to dispatch messages to the judge task queue. */
@@ -167,11 +118,8 @@ public class JmsConfig {
       @Value("${jms.submissionTask.ttl:1800000}") long submissionTaskTtl) {
     JmsTemplate jmsTemplate = new JmsTemplate(connectionFactory);
     jmsTemplate.setDefaultDestination(new ActiveMQQueue(SUBMISSION_TASK_QUEUE));
-    // Give each submission task a time-to-live. If no judger claims it before then (e.g. no online
-    // judger supports its language), the broker expires it to the dead-letter queue, where
-    // deadLetterListenerContainer picks it up and marks the submission as failed instead of leaving
-    // it Pending forever. Keep the default generous so a temporarily busy or offline (but capable)
-    // cluster does not fail otherwise valid submissions.
+    // Give each judging task a time-to-live, after which no judger is handed it any more:
+    // SubmissionService#failStalledSubmissions marks its submission as a System Error by then.
     jmsTemplate.setExplicitQosEnabled(true);
     jmsTemplate.setTimeToLive(submissionTaskTtl);
     return jmsTemplate;
@@ -189,26 +137,20 @@ public class JmsConfig {
   }
 
   /**
-   * The message listener container that watches the dead-letter queue for judging tasks that
-   * expired before any judger could handle them, or that judgers failed to judge until the
-   * redelivery limit. The selector keeps this consumer from touching unrelated dead-lettered
-   * messages (only our submission tasks carry the {@code event} property).
-   *
-   * <p>The session is transacted: a task is consumed only once its submission has been finalized.
-   * When that fails because the database cannot be reached, the receiver throws, the container
-   * rolls the task back, and it is delivered again after a growing delay until the database is
-   * back (see {@link #createActiveMQConnectionFactory}).
+   * The message listener container that removes the judging tasks from the dead-letter queue: the
+   * broker moves a task there that expired, or that judgers handed back too often. What became of
+   * its submission is in the database (see SubmissionService#failStalledSubmissions), so the task
+   * is only dropped, rather than left to pile up there. The selector keeps this consumer from
+   * touching other dead-lettered messages (only judging tasks carry this {@code event} property).
    */
   @Bean
   public SimpleMessageListenerContainer deadLetterListenerContainer(
-      ConnectionFactory connectionFactory,
-      DeadLetterSubmissionTaskReceiver deadLetterSubmissionTaskReceiver) {
+      ConnectionFactory connectionFactory) {
     SimpleMessageListenerContainer listenerContainer = new SimpleMessageListenerContainer();
     listenerContainer.setConnectionFactory(connectionFactory);
     listenerContainer.setDestinationName(DEAD_LETTER_QUEUE);
     listenerContainer.setMessageSelector("event = 'SubmissionCreated'");
-    listenerContainer.setSessionTransacted(true);
-    listenerContainer.setMessageListener(deadLetterSubmissionTaskReceiver);
+    listenerContainer.setMessageListener((MessageListener) message -> {});
     return listenerContainer;
   }
 }
