@@ -586,6 +586,80 @@ public class UserServiceTest {
     Assertions.assertTrue(result.get("isSuccessful"));
   }
 
+  /**
+   * Test case: tests the resetPassword(...) method. Test data: an unverified user resetting the
+   * password through the emailed link. Expected: the reset proves that the user owns the address,
+   * so it is marked as verified.
+   */
+  @Test
+  public void testResetPasswordVerifiesEmail() {
+    userMapper.updateEmailVerified(1000, false);
+    emailValidationMapper.createEmailValidation(
+        new EmailValidation("cshzxie@gmail.com", "reset-token", tomorrow()));
+
+    Assertions.assertTrue(
+        userService
+            .resetPassword("cshzxie@gmail.com", "reset-token", "new-password", "new-password")
+            .get("isSuccessful"));
+    Assertions.assertTrue(userService.getUserUsingUid(1000).isEmailVerified());
+  }
+
+  /**
+   * Test case: tests the resendVerificationEmail(User) method. Test data: an unverified user.
+   * Expected: a new verification token is issued for the address and the email is sent.
+   */
+  @Test
+  public void testResendVerificationEmail() {
+    userMapper.updateEmailVerified(1000, false);
+    User user = userService.getUserUsingUid(1000);
+
+    Map<String, Boolean> result = userService.resendVerificationEmail(user);
+
+    Assertions.assertTrue(result.get("isSuccessful"));
+    EmailValidation emailValidation = emailValidationMapper.getEmailValidation(user.getEmail());
+    Assertions.assertNotNull(emailValidation);
+    Assertions.assertTrue(
+        userService.verifyEmail(user.getEmail(), emailValidation.getToken()).get("isSuccessful"));
+    Assertions.assertTrue(userService.getUserUsingUid(1000).isEmailVerified());
+  }
+
+  /**
+   * Test case: tests the resendVerificationEmail(User) method. Test data: a verified user, an
+   * anonymous caller. Expected: nothing is sent.
+   */
+  @Test
+  public void testResendVerificationEmailToVerifiedOrAnonymousUser() {
+    userMapper.updateEmailVerified(1000, true);
+    Map<String, Boolean> result =
+        userService.resendVerificationEmail(userService.getUserUsingUid(1000));
+    Assertions.assertTrue(result.get("isEmailVerified"));
+    Assertions.assertFalse(result.get("isSuccessful"));
+    Assertions.assertNull(emailValidationMapper.getEmailValidation("cshzxie@gmail.com"));
+
+    result = userService.resendVerificationEmail(null);
+    Assertions.assertFalse(result.get("isUserLogin"));
+    Assertions.assertFalse(result.get("isSuccessful"));
+  }
+
+  /**
+   * Test case: tests the resendVerificationEmail(User) method. Test data: the address already
+   * received the daily maximum of emails. Expected: nothing is sent and isRateLimited is true.
+   */
+  @Test
+  public void testResendVerificationEmailIsRateLimited() {
+    userMapper.updateEmailVerified(1000, false);
+    emailValidationMapper.createEmailValidation(
+        new EmailValidation("cshzxie@gmail.com", "pending-token", tomorrow(), 3, new Date()));
+
+    Map<String, Boolean> result =
+        userService.resendVerificationEmail(userService.getUserUsingUid(1000));
+
+    Assertions.assertTrue(result.get("isRateLimited"));
+    Assertions.assertFalse(result.get("isSuccessful"));
+    Assertions.assertEquals(
+        "pending-token", emailValidationMapper.getEmailValidation("cshzxie@gmail.com").getToken());
+  }
+
   /** Test case: tests the resetPassword(...) method. Test data: invalid validation credentials. Expected: the reset fails. */
   @Test
   public void testResetPasswordWithInvalidToken() {

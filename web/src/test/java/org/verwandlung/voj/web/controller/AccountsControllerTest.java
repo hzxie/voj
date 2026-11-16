@@ -358,6 +358,17 @@ public class AccountsControllerTest {
         .updateProfile(user, "secret", "cshzxie@gmail.com", "Haozhe", "Earth", "x.com", "{}", "Hi");
   }
 
+  /** Test case: tests resendVerificationEmailAction(...). Test data: an authenticated user. Expected: the current user is passed to UserService.resendVerificationEmail and the result returned. */
+  @Test
+  public void testResendVerificationEmailResolvesCurrentUser() {
+    User user = userWithGroup();
+    authenticate(user);
+    Map<String, Boolean> serviceResult = Map.of("isSuccessful", true);
+    when(userService.resendVerificationEmail(user)).thenReturn(serviceResult);
+
+    Assertions.assertSame(serviceResult, controller.resendVerificationEmailAction(request()));
+  }
+
   /** Test case: tests getNumberOfSubmissionsOfUsersAction(...). Test data: an explicit uid. Expected: that uid drives the per-day query and the result is keyed under totalSubmissions. */
   @Test
   public void testGetNumberOfSubmissionsOfUsersWithExplicitUid() {

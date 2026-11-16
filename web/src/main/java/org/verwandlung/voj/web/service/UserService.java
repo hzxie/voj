@@ -28,6 +28,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -580,18 +583,48 @@ public class UserService {
   }
 
   /**
+   * Sends a new verification link to a logged-in user whose email address is not verified yet: the
+   * link expires after a day, and a password-reset email sent in between replaces it (both use the
+   * single validation token of the address). Rate-limited by the same per-address daily email
+   * limit as the other emails.
+   *
+   * @param user - the logged-in user (may be null)
+   * @return a Map containing {@code isUserLogin}, {@code isEmailVerified} (nothing is sent to a
+   *     verified address), {@code isRateLimited} and {@code isSuccessful}
+   */
+  public Map<String, Boolean> resendVerificationEmail(User user) {
+    Map<String, Boolean> result = new HashMap<>(6, 1);
+    result.put("isUserLogin", user != null);
+    result.put("isEmailVerified", user != null && user.isEmailVerified());
+    result.put("isRateLimited", false);
+    result.put("isSuccessful", false);
+    if (user == null || user.isEmailVerified()) {
+      return result;
+    }
+    try {
+      boolean isSent = dispatchEmailVerificationEmail(user.getUsername(), user.getEmail());
+      result.put("isRateLimited", !isSent);
+      result.put("isSuccessful", isSent);
+    } catch (RuntimeException ex) {
+      LOGGER.error("Failed to resend the verification email of " + user.getUid(), ex);
+    }
+    return result;
+  }
+
+  /**
    * Sends the email-verification email containing the confirmation link.
    *
    * @param username - the user's username
    * @param email - the user's email address
+   * @return whether the email was sent (false when the address reached its daily email limit)
    */
-  private void dispatchEmailVerificationEmail(String username, String email) {
+  private boolean dispatchEmailVerificationEmail(String username, String email) {
     String token = DigestUtils.getGuid();
     // Rate-limit: skip the send once the address has reached its daily email limit, so repeated
     // registrations / email changes cannot flood an inbox with verifications.
     EmailValidation emailValidation = nextEmailValidation(email, token);
     if (emailValidation == null) {
-      return;
+      return false;
     }
     Map<String, Object> model = new HashMap<>(4, 1);
     model.put("username", username);
@@ -603,6 +636,7 @@ public class UserService {
 
     String body = mailSender.getMailContent("mail/verify-email", model);
     mailSender.sendMail(email, "Verify Your Email Address", body);
+    return true;
   }
 
   /**
@@ -677,7 +711,10 @@ public class UserService {
   }
 
   /**
-   * Validates the data and resets the user's password.
+   * Validates the data and resets the user's password. The token was mailed to the user's address,
+   * so using it proves that the user owns the address: it is marked as verified as well (a reset
+   * email replaces a pending verification link, which would otherwise leave the user unverified).
+   * Every session of the user ends (see CurrentUserRefreshFilter).
    *
    * @param email - the user's email address
    * @param token - the token used for validation
@@ -697,6 +734,7 @@ public class UserService {
       User user = userMapper.getUserUsingEmail(email);
       user.setPassword(passwordEncoder.encode(newPassword));
       userMapper.updateUser(user);
+      userMapper.updateEmailVerified(user.getUid(), true);
     }
     return result;
   }
@@ -1317,6 +1355,9 @@ public class UserService {
    */
   private static final Set<String> CENSORED_PROFILE_FIELDS =
       new HashSet<>(Arrays.asList("displayName", "location"));
+
+  /** The logger. */
+  private static final Logger LOGGER = LogManager.getLogger(UserService.class);
 
   /** The autowired MailSender object, used to send emails to users' mailboxes. */
   @Autowired

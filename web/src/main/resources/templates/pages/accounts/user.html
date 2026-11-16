@@ -32,6 +32,7 @@
                     <p class="vw-profile-bio markdown" th:if="${!#strings.isEmpty(aboutMe)}" th:text="${aboutMe}">bio</p>
                     <div class="vw-profile-contact">
                         <span th:if="${isLogin and myProfile != null and (myProfile.uid == user.uid or (myProfile.userGroup != null and myProfile.userGroup.userGroupSlug == 'administrators'))}">&#9993; <span th:text="${user.email}">email</span></span>
+                        <span th:if="${isLogin and myProfile != null and myProfile.uid == user.uid and !user.emailVerified}"><span th:text="#{voj.accounts.user.email-unverified}">Unverified</span> &middot; <a href="#" id="resend-verification" th:text="#{voj.accounts.user.resend-verification}">Resend verification email</a></span>
                         <span th:if="${!#strings.isEmpty(website)}">&#9740; <a th:href="${website}" target="_blank" th:text="${website}">website</a></span>
                         <span th:if="${socialLinks != null and !#strings.isEmpty(socialLinks['GitHub'])}">&#9881; <a th:href="|https://github.com/${socialLinks['GitHub']}|" target="_blank" th:text="|github.com/${socialLinks['GitHub']}|">github</a></span>
                     </div>
@@ -192,6 +193,31 @@
                         moreLabel:  [[#{voj.common.heatmap.more}]]
                     });
                 }
+            });
+        });
+
+        $('#resend-verification').on('click', function(e) {
+            e.preventDefault();
+            var $link = $(this);
+            if ($link.data('pending')) { return; }
+            $link.data('pending', true);
+            $.ajax({
+                type: 'POST',
+                url: [[@{/accounts/resendVerificationEmail.action}]],
+                dataType: 'JSON',
+                success: function(result) {
+                    if (result['isSuccessful']) {
+                        vojAlert([[#{voj.accounts.user.verification-sent}]]);
+                    } else if (result['isRateLimited']) {
+                        vojAlert([[#{voj.accounts.user.verification-rate-limited}]]);
+                    } else if (result['isEmailVerified']) {
+                        window.location.reload();
+                    } else {
+                        vojAlert([[#{voj.accounts.user.verification-failed}]]);
+                    }
+                },
+                error: function() { vojAlert([[#{voj.accounts.user.verification-failed}]]); },
+                complete: function() { $link.data('pending', false); }
             });
         });
 

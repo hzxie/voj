@@ -18,6 +18,7 @@ package org.verwandlung.voj.web.config;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -114,6 +115,48 @@ public class SecurityFilterChainTest {
     Assertions.assertTrue(session.isInvalid());
   }
 
+  /**
+   * Test case: the user's password changed (in another session, by a reset or by an administrator)
+   * after this session logged in. Expected: the session is terminated on its next request.
+   */
+  @Test
+  public void testSessionEndsWhenPasswordChanged() throws Exception {
+    MockHttpSession session = sessionOf(user("users"));
+    User freshUser = user("users");
+    freshUser.setPassword("{bcrypt}new-password-hash");
+    when(userService.getUserUsingUid(1000L)).thenReturn(freshUser);
+
+    mockMvc
+        .perform(get("/accounts/changePassword.action").session(session))
+        .andExpect(redirectedUrl("/accounts/login"));
+    Assertions.assertTrue(session.isInvalid());
+  }
+
+  /**
+   * Test case: the live judge-result stream is opened by an EventSource, which can only send a GET
+   * and cannot add a CSRF token. Expected: a logged-in GET without a token is served.
+   */
+  @Test
+  public void testRealTimeJudgeResultNeedsNoCsrfToken() throws Exception {
+    MockHttpSession session = sessionOf(user("users"));
+    when(userService.getUserUsingUid(1000L)).thenReturn(user("users"));
+
+    mockMvc
+        .perform(
+            get("/submission/getRealTimeJudgeResult.action")
+                .param("submissionId", "1000")
+                .session(session))
+        .andExpect(status().isOk());
+  }
+
+  /** Test case: an anonymous request to resend the verification email. Expected: a redirect to the login page. */
+  @Test
+  public void testResendVerificationEmailRequiresLogin() throws Exception {
+    mockMvc
+        .perform(post("/accounts/resendVerificationEmail.action").with(csrf()))
+        .andExpect(redirectedUrl("/accounts/login"));
+  }
+
   /** Test case: a logout POST without a CSRF token (e.g. a cross-site form). Expected: it is rejected. */
   @Test
   public void testLogoutRequiresCsrfToken() throws Exception {
@@ -194,6 +237,16 @@ public class SecurityFilterChainTest {
     @PostMapping("/accounts/logout")
     public String logout() {
       return "logout";
+    }
+
+    @GetMapping("/submission/getRealTimeJudgeResult.action")
+    public String realTimeJudgeResult() {
+      return "stream";
+    }
+
+    @PostMapping("/accounts/resendVerificationEmail.action")
+    public String resendVerificationEmail() {
+      return "resent";
     }
   }
 

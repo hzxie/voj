@@ -350,6 +350,28 @@ public class AccountsController {
   }
 
   /**
+   * Sends a new verification link to the logged-in user, whose email address is not verified yet.
+   *
+   * @param request - the HttpServletRequest object
+   * @return a Map<String, Boolean> object containing the result (see
+   *     UserService#resendVerificationEmail)
+   */
+  @RequestMapping(value = "/resendVerificationEmail.action", method = RequestMethod.POST)
+  public @ResponseBody Map<String, Boolean> resendVerificationEmailAction(
+      HttpServletRequest request) {
+    User currentUser = HttpSessionParser.getCurrentUser();
+    Map<String, Boolean> result = userService.resendVerificationEmail(currentUser);
+    if (result.get("isSuccessful")) {
+      LOGGER.info(
+          String.format(
+              "%s requested a new verification email at %s",
+              LogSanitizer.forLog(currentUser),
+              LogSanitizer.forLog(HttpRequestParser.getRemoteAddr(request))));
+    }
+    return result;
+  }
+
+  /**
    * Loads the reset password page.
    *
    * @param email - the user's email address

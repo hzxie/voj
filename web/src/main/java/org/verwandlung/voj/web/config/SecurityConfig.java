@@ -50,8 +50,9 @@ import org.verwandlung.voj.web.service.UserService;
  *   <li><b>Authentication</b> is performed programmatically by {@code AccountsController} so that the
  *       existing AJAX login (which returns a JSON result) is preserved.
  *   <li><b>Authorisation</b> guards {@code /administration/**} (administrators only), the account
- *       self-service actions (change password / update profile — any authenticated user) and every
- *       discussion mutation (POST {@code /discussion/**} — any authenticated user).
+ *       self-service actions (change password / update profile / resend the verification email —
+ *       any authenticated user) and every discussion mutation (POST {@code /discussion/**} — any
+ *       authenticated user).
  *   <li><b>CSRF</b> protection is enabled globally; the token is submitted via the {@code csrfToken}
  *       request parameter (matching the existing forms) or the {@code X-CSRF-TOKEN} header.
  *   <li><b>Content-Security-Policy</b> blocks plugins, {@code <base>} hijacking and framing (see
@@ -97,7 +98,9 @@ public class SecurityConfig {
                     .requestMatchers("/administration", "/administration/**")
                     .hasRole("ADMINISTRATORS")
                     .requestMatchers(
-                        "/accounts/changePassword.action", "/accounts/updateProfile.action")
+                        "/accounts/changePassword.action",
+                        "/accounts/updateProfile.action",
+                        "/accounts/resendVerificationEmail.action")
                     .authenticated()
                     // Every discussion mutation (create/edit/delete a thread or reply, vote, report)
                     // is a POST under /discussion and acts on behalf of the current user, so it must
