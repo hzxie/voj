@@ -141,9 +141,11 @@ Untrusted submissions run inside a sandbox so they cannot harm the judging host:
 - **Windows (native).** Each submission runs under a separate low-privilege Windows
   account (`CreateProcessWithLogonW`) inside a
   [Job Object](https://learn.microsoft.com/windows/win32/procthread/job-objects)
-  that caps the process count (anti fork-bomb), enforces memory and wall-clock
-  limits, applies UI restrictions (no access to the interactive desktop or
-  clipboard), and kills the whole process tree when the run ends.
+  that keeps a run from creating processes, enforces CPU time, memory and
+  output limits, applies UI restrictions (no access to the interactive desktop
+  or clipboard), and kills the whole process tree when the run ends. The
+  submission sees the sandbox account's own environment plus only the judger's
+  toolchain variables, never its secrets.
 
 The native sandbox does not provide full filesystem isolation. Reference answers
 and configuration are protected by file permissions (the work directory is handed

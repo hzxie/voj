@@ -187,9 +187,36 @@ integration but provides no isolation, so do not use it in production.
 On Windows the native backend is the only option (`isolate` is Linux-only). Each
 submission runs under a **separate low-privilege Windows account** inside a
 [Job Object](https://learn.microsoft.com/windows/win32/procthread/job-objects)
-that caps the process count (anti fork-bomb), enforces memory and wall-clock
-limits, applies UI restrictions, and kills the whole process tree when the run
-ends.
+that applies UI restrictions and kills the whole process tree when the run
+ends. While the program runs, the judger polls it every 2 ms and kills the Job
+as soon as a limit is exceeded:
+
+- **CPU time**: that of every process of a run (a compilation: the compiler's
+  top-level process), plus a wall-clock guard of the time limit + 1 s for a
+  program that sleeps or blocks.
+- **Memory**: the peak commit of all the run's processes together (a
+  compilation: its largest process). The Job also has a hard cap a little above
+  the limit (limit + max(limit / 4, 16 MB)); an allocation refused by the cap is
+  judged Memory Limit Exceeded as well.
+- **Output**: 256 MB written to standard output (the Linux runner's
+  `RLIMIT_FSIZE`). Other files the program writes are not limited.
+- **Processes**: a run of the submission may not create processes (its Job
+  holds the program and its console host only); a compilation may have up to
+  `judger.compileProcessLimit`.
+
+The final CPU time, memory and output size are checked again after the program
+exits, so a program that exceeds a limit between two polls is never judged on
+its output.
+
+The submission's environment is the sandbox account's own (system variables,
+the account's variables and profile paths such as `TEMP` and `APPDATA`) plus
+only these variables of the judger: `PATH`, `LANG`, `LC_ALL`, `TZ`,
+`JAVA_HOME`, `KOTLIN_HOME`, `GOROOT`, `GOENV`, `GOTOOLCHAIN`, `GOFLAGS`,
+`RUSTUP_HOME`, `RUSTUP_TOOLCHAIN` and `CARGO_HOME`. Nothing else of the
+judger's environment (such as `VOJ_DB_PASSWORD` or `VOJ_JUDGER_API_TOKEN`)
+reaches it. `GOCACHE` and `GOPATH` point into the submission's work directory,
+so every Go build starts from its own empty cache. Toolchains must therefore be
+reachable through the judger's `PATH` and readable by the sandbox account.
 
 ### The sandbox account
 
@@ -213,9 +240,10 @@ Requirements for that account:
 - It must have a **loadable user profile**; the judger creates each submission
   process with `LOGON_WITH_PROFILE`. Logging in once interactively, or letting
   the first batch logon create it, is enough.
-- Keep it a plain member of *Users* (no admin rights). It only needs to read the
-  submission's work directory under `judger.workDir` and execute the compiled
-  program.
+- Keep it a plain member of *Users* (no admin rights). It only needs to read and
+  write the submission's work directory under `judger.workDir` (the compiler
+  writes the program and, for Go, its build cache there) and execute the
+  compiled program.
 
 Because the credentials live in `voj.properties`, keep that file readable only by
 the judger account.
