@@ -76,8 +76,8 @@
         });
         function onSubmit() {
             $('.alert-error').addClass('hide');
-            $('button[type=submit]').attr('disabled', 'disabled');
-            $('button[type=submit]').html([[#{voj.accounts.register.please-wait}]]);
+            $('button[type=submit]', '#register-form').attr('disabled', 'disabled');
+            $('button[type=submit]', '#register-form').html([[#{voj.accounts.register.please-wait}]]);
 
             var username            = $('#username').val(),
                 password            = $('#password').val(),
@@ -108,8 +108,8 @@
                 $('.alert-error').html([[#{voj.accounts.captcha-invalid}]]);
                 $('.alert-error').removeClass('hide');
                 if ( window.turnstile ) { turnstile.reset(); }
-                $('button[type=submit]').html('$ ' + [[#{voj.accounts.register.create-account}]]);
-                $('button[type=submit]').removeAttr('disabled');
+                $('button[type=submit]', '#register-form').html('$ ' + [[#{voj.accounts.register.create-account}]]);
+                $('button[type=submit]', '#register-form').removeAttr('disabled');
                 $('html, body').animate({ scrollTop: 0 }, 100);
                 return;
             } else {
@@ -146,8 +146,8 @@
                 $('.alert-error').html(errorMessage);
                 $('.alert-error').removeClass('hide');
             }
-            $('button[type=submit]').html('$ ' + [[#{voj.accounts.register.create-account}]]);
-            $('button[type=submit]').removeAttr('disabled');
+            $('button[type=submit]', '#register-form').html('$ ' + [[#{voj.accounts.register.create-account}]]);
+            $('button[type=submit]', '#register-form').removeAttr('disabled');
             $('html, body').animate({ scrollTop: 0 }, 100);
         }
     </script>

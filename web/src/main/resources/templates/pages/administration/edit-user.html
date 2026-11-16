@@ -218,7 +218,7 @@
                 if (!result['isAboutMeLegal']) { m += [[#{voj.administration.edit-user.about-me-legal}]] + '<br>'; }
                 $('.alert-error').html(m).removeClass('hide');
             }
-            $('button[type=submit]').removeAttr('disabled').text('$ ' + [[#{voj.administration.edit-user.save}]]);
+            $('button[type=submit]', '#profile-form').removeAttr('disabled').text('$ ' + [[#{voj.administration.edit-user.save}]]);
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 

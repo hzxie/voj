@@ -69,8 +69,8 @@
         function onSubmit() {
             $('.alert-success').addClass('hide');
             $('.alert-error').addClass('hide');
-            $('button[type=submit]').attr('disabled', 'disabled');
-            $('button[type=submit]').html([[#{voj.accounts.login.please-wait}]]);
+            $('button[type=submit]', '#login-form').attr('disabled', 'disabled');
+            $('button[type=submit]', '#login-form').html([[#{voj.accounts.login.please-wait}]]);
 
             var username   = $('#username').val(),
                 password   = $('#password').val(),
@@ -108,8 +108,8 @@
                 $('.alert-error').removeClass('hide');
                 if ( window.turnstile ) { turnstile.reset(); }
             }
-            $('button[type=submit]').html('$ ' + [[#{voj.accounts.login.sign-in}]]);
-            $('button[type=submit]').removeAttr('disabled');
+            $('button[type=submit]', '#login-form').html('$ ' + [[#{voj.accounts.login.sign-in}]]);
+            $('button[type=submit]', '#login-form').removeAttr('disabled');
         }
     </script>
     </th:block>
