@@ -32,7 +32,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.PropertySource;
-import org.springframework.jms.listener.SimpleMessageListenerContainer;
+import org.springframework.jms.listener.DefaultMessageListenerContainer;
 
 import org.verwandlung.voj.judger.application.ApplicationHeartbeat;
 import org.verwandlung.voj.judger.mapper.LanguageMapper;
@@ -74,7 +74,7 @@ public class VojJudgerApplication {
   public ApplicationRunner startupRunner(
       LanguageMapper languageMapper,
       ApplicationHeartbeat heartbeat,
-      SimpleMessageListenerContainer submissionTaskListenerContainer) {
+      DefaultMessageListenerContainer submissionTaskListenerContainer) {
     return args -> {
       // Fail fast: verify the judger's credentials against the shared user table before consuming
       // any task. Otherwise a misconfigured judger would accept submissions and abort them

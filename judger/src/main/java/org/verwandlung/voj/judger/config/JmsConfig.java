@@ -26,7 +26,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jms.connection.CachingConnectionFactory;
 import org.springframework.jms.core.JmsTemplate;
-import org.springframework.jms.listener.SimpleMessageListenerContainer;
+import org.springframework.jms.listener.DefaultMessageListenerContainer;
 
 /**
  * The message queue configuration. Replaces the ActiveMQ / JMS definitions from the original
@@ -34,6 +34,11 @@ import org.springframework.jms.listener.SimpleMessageListenerContainer;
  *
  * <p>The judger listens on {@code vojSubmissionTaskQueue} to receive tasks to be judged, and sends
  * judging results to {@code vojJudgeResultQueue}.
+ *
+ * <p>Both sides survive a restart of the broker (in the Docker setup it lives in the web
+ * container, so it restarts with it): the listener container keeps trying to reconnect every
+ * {@value #RECOVERY_INTERVAL_MS} ms until the broker is back, and the sending side drops its
+ * cached connection once it fails and opens a new one for the next message.
  *
  * @author Haozhe Xie
  */
@@ -45,7 +50,21 @@ public class JmsConfig {
   /** The name of the judging result queue (Judger -> Web). */
   private static final String JUDGE_RESULT_QUEUE = "vojJudgeResultQueue";
 
-  /** The JMS connection factory with connection caching. */
+  /** How long (ms) the listener container waits between two attempts to reconnect. */
+  static final long RECOVERY_INTERVAL_MS = 5000;
+
+  /**
+   * How many judging tasks the broker may push to this judger ahead of the one being judged. Each
+   * task takes seconds to minutes and judgers share the queue, so a judger must not hoard tasks
+   * (ActiveMQ's default prefetch is 1000) that idle judgers could be judging meanwhile.
+   */
+  static final int QUEUE_PREFETCH = 1;
+
+  /**
+   * The JMS connection factory for sending, with a cached connection. The cache drops the
+   * connection when it fails (reconnectOnException), so the next message after a broker restart is
+   * sent over a new one.
+   */
   @Bean
   public ConnectionFactory connectionFactory(@Value("${jms.broker.url}") String brokerUrl) {
     ActiveMQConnectionFactory amqConnectionFactory = new ActiveMQConnectionFactory(brokerUrl);
@@ -60,14 +79,32 @@ public class JmsConfig {
     return jmsTemplate;
   }
 
-  /** The message listener container that listens on the judging task queue. */
+  /**
+   * The message listener container that listens on the judging task queue.
+   *
+   * <p>A DefaultMessageListenerContainer, which re-establishes its connection in a loop until the
+   * broker is reachable again; a SimpleMessageListenerContainer tries to recover only once, right
+   * when the connection fails (while the broker is still down), and then stops consuming for good.
+   * It has its own (uncached) connection factory, as the container caches its connection and
+   * consumer itself, with a small prefetch. A single consumer: judging is serialized anyway (see
+   * {@code Dispatcher#createNewTask}).
+   *
+   * @param brokerUrl - the URL of the message broker
+   * @param messageReceiver - the listener for judging tasks
+   * @return the listener container, which the startup runner starts once the judger is ready
+   */
   @Bean
-  public SimpleMessageListenerContainer submissionTaskListenerContainer(
-      ConnectionFactory connectionFactory, MessageListener messageReceiver) {
-    SimpleMessageListenerContainer listenerContainer = new SimpleMessageListenerContainer();
-    listenerContainer.setConnectionFactory(connectionFactory);
+  public DefaultMessageListenerContainer submissionTaskListenerContainer(
+      @Value("${jms.broker.url}") String brokerUrl, MessageListener messageReceiver) {
+    ActiveMQConnectionFactory amqConnectionFactory = new ActiveMQConnectionFactory(brokerUrl);
+    amqConnectionFactory.getPrefetchPolicy().setQueuePrefetch(QUEUE_PREFETCH);
+
+    DefaultMessageListenerContainer listenerContainer = new DefaultMessageListenerContainer();
+    listenerContainer.setConnectionFactory(amqConnectionFactory);
     listenerContainer.setDestinationName(SUBMISSION_TASK_QUEUE);
     listenerContainer.setMessageListener(messageReceiver);
+    listenerContainer.setConcurrentConsumers(1);
+    listenerContainer.setRecoveryInterval(RECOVERY_INTERVAL_MS);
     // Do not consume submissions until the application has verified the judger's identity at
     // startup; the startup runner starts this container only after that check passes.
     listenerContainer.setAutoStartup(false);
