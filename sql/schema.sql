@@ -56,8 +56,7 @@ CREATE TABLE `voj_contests` (
 
 CREATE TABLE `voj_contest_contestants` (
   `contest_id` bigint(20) NOT NULL,
-  `contestant_uid` bigint(20) NOT NULL,
-  `code_snippet` text COLLATE utf8mb4_unicode_ci
+  `contestant_uid` bigint(20) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `voj_contest_submissions` (

@@ -39,8 +39,8 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
  * Runs the one-time upgrade script sql/upgrades/upgrade-from-1.0.2.sql against a database in the
  * state schema.sql of 1.0.2 created: contest foreign keys without an ON DELETE rule, the
  * contest_mode and contest_is_rated columns, no submission_judge_generation column, the foreign
- * key from voj_email_validation to voj_users, and problem statements and contest notes written for
- * HTML output (with HTML entities).
+ * key from voj_email_validation to voj_users, problem statements and contest notes written for
+ * HTML output (with HTML entities) and the contestants' code_snippet column.
  *
  * <p>The script changes the schema (DDL commits implicitly), so this test is not {@code
  * Transactional}: it puts the shared test database back into the 1.0.2 state before each test and
@@ -123,6 +123,8 @@ public class UpgradeFrom102Test {
             + " AFTER contest_freeze");
     jdbcTemplate.update(
         "UPDATE voj_contests SET contest_mode = IF(contest_scoring = 'IOI', 'OI', 'ACM')");
+    // The contestants as 1.0.2 created them, with a code snippet.
+    jdbcTemplate.execute("ALTER TABLE voj_contest_contestants ADD COLUMN code_snippet text");
     // The submissions as 1.0.2 created them, without a judge generation.
     jdbcTemplate.execute("ALTER TABLE voj_submissions DROP COLUMN submission_judge_generation");
     // The email validations as 1.0.2 created them, owned by a user.
@@ -227,6 +229,17 @@ public class UpgradeFrom102Test {
         "UPDATE voj_contests SET contest_scoring = 'IOI' WHERE contest_id = 9102");
     runUpgrade();
     Assertions.assertEquals("IOI", getScoring("9102"));
+  }
+
+  /**
+   * Test case: runs the upgrade on a 1.0.2 database. Test data: contestants with a code snippet
+   * column. Expected: the column is dropped.
+   */
+  @Test
+  public void testDropsTheCodeSnippets() throws SQLException {
+    Assertions.assertTrue(hasColumn("voj_contest_contestants", "code_snippet"));
+    runUpgrade();
+    Assertions.assertFalse(hasColumn("voj_contest_contestants", "code_snippet"));
   }
 
   /**

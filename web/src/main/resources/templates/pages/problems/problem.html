@@ -83,7 +83,7 @@
                                 <option th:each="language : ${languages}" th:value="${language.languageSlug}" th:text="${language.languageName}">Language</option>
                             </select>
                         </div>
-                        <textarea name="codemirror-editor" id="codemirror-editor" th:text="${isContest and codeSnippet != null ? codeSnippet['code'] : ''}"></textarea>
+                        <textarea name="codemirror-editor" id="codemirror-editor"></textarea>
                         <div class="vw-editor-foot">
                             <input type="hidden" id="csrf-token" th:value="${_csrf.token}" />
                             <button type="submit" class="vw-btn vw-btn-accent" th:text="#{voj.problems.problem.submit}">Submit</button>
@@ -203,9 +203,6 @@
         $(function() {
             var preferLanguage = [[${myProfile?.preferLanguage?.languageSlug}]];
             if (preferLanguage) { $('select#languages').val(preferLanguage); }
-            /*[# th:if="${isContest and codeSnippet != null}"]*/
-            $('select#languages').val([[${codeSnippet != null ? codeSnippet['language'] : ''}]]);
-            /*[/]*/
         });
         $('select#languages').change(function() {
             setEditorMode($(this).val());

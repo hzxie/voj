@@ -33,8 +33,9 @@
 --    once: &lt; &gt; &quot; &#39; &nbsp; (to U+00A0) and, last, &amp;, so that
 --    a statement that showed "&lt;" (stored "&amp;lt;") still shows "&lt;".
 --    The hint was already written as text, so it is left alone.
+-- 7. voj_contest_contestants.code_snippet was never written; it is dropped.
 --
--- Safe to run more than once. Steps 1 to 5 first check the information
+-- Safe to run more than once. Steps 1 to 5 and 7 first check the information
 -- schema and only change what is still in the old state (MySQL commits DDL
 -- implicitly, so a transaction could not make them atomic; an interrupted run
 -- is completed by running the script again). Step 6 runs in one transaction
@@ -183,3 +184,14 @@ UPDATE `voj_contests` SET
 WHERE @voj_first_run AND `contest_notes` LIKE '%&%';
 
 COMMIT;
+
+-- 7. The never-written code snippets of contestants.
+SET @voj_has_column = (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'voj_contest_contestants'
+  AND COLUMN_NAME = 'code_snippet');
+SET @voj_sql = IF(@voj_has_column > 0,
+  'ALTER TABLE `voj_contest_contestants` DROP COLUMN `code_snippet`', 'DO 0');
+PREPARE voj_stmt FROM @voj_sql;
+EXECUTE voj_stmt;
+DEALLOCATE PREPARE voj_stmt;
+
