@@ -116,18 +116,21 @@ function getTimeElapsed(dateTime, locale) {
     }
 }
 
-/* "Load more" pagination shared by the list pages. The container holds
- *     <p class="availble"><button type="button" class="vw-loadmore-btn">More...</button></p>
- *     <span class="vw-spinner hide" role="status" aria-label="Loading"></span>
- * and options.load(done) fetches the next page, renders it and calls
- * done(newElements, hasMore). While loading, the spinner replaces the button; once the
- * list is exhausted the paragraph shows options.doneText instead. Hiding the button
- * drops keyboard focus, so when it had focus, focus moves to the first newly loaded item
- * (or to the "no more" note). Returns { load: fn } to load a page without a click. */
+/* "Load more" pagination shared by the list pages. The container is the
+ * fragments/chrome :: loadmore fragment: a paragraph with the .vw-loadmore-btn button, a
+ * spinner and an (empty) error note. Each load GETs options.url with options.data() and,
+ * when the JSON result isSuccessful, passes it to options.render(result), which appends the
+ * new items and returns their elements; an unsuccessful result means there is nothing more.
+ * While loading, the spinner replaces the button; once the list is exhausted the paragraph
+ * shows options.doneText instead. When the request fails the button comes back with the
+ * error note, so the reader can retry. Hiding the button drops keyboard focus, so when it
+ * had focus, focus moves to the first newly loaded item (or to the "no more" note, or back
+ * to the button). Returns { load: fn } to load a page without a click. */
 function createLoadMore(container, options) {
     var $box     = $(container),
         $p       = $('p', $box),
         $spinner = $('.vw-spinner', $box),
+        $error   = $('.vw-loadmore-error', $box),
         loading  = false;
 
     function setLoading(isLoading) {
@@ -147,8 +150,13 @@ function createLoadMore(container, options) {
     function load() {
         if ( loading || !$p.hasClass('availble') ) { return; }
         var hadFocus = $box[0].contains(document.activeElement);
+        $error.text('');
         setLoading(true);
-        options.load(function(newElements, hasMore) {
+        $.ajax({
+            type: 'GET', url: options.url, data: options.data(), dataType: 'JSON'
+        }).done(function(result) {
+            var hasMore     = !!(result && result['isSuccessful']),
+                newElements = hasMore ? options.render(result) : [];
             if ( !hasMore ) {
                 $p.removeClass('availble').attr('tabindex', '-1').text(options.doneText);
                 $box.addClass('is-done');
@@ -157,6 +165,10 @@ function createLoadMore(container, options) {
             if ( hadFocus && !focusFirst(newElements || []) ) {
                 ( hasMore ? $('button', $p) : $p )[0].focus();
             }
+        }).fail(function() {
+            setLoading(false);
+            $error.text($error.attr('data-message') || '');
+            if ( hadFocus ) { $('button', $p)[0].focus(); }
         });
     }
     $box.on('click', '.vw-loadmore-btn', load);

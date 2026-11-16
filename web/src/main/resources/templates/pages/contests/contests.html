@@ -71,10 +71,7 @@
                     </div>
                 </div>
             </div>
-            <div id="more-contests" class="vw-loadmore">
-                <p class="availble"><button type="button" class="vw-loadmore-btn" th:text="#{voj.contests.contests.more-contests}">More Contests...</button></p>
-                <span class="vw-spinner hide" role="status" aria-label="Loading"></span>
-            </div>
+            <div th:replace="~{fragments/chrome :: loadmore('more-contests', #{voj.contests.contests.more-contests})}"></div>
         </section>
     </div>
 
@@ -84,17 +81,10 @@
 
         createLoadMore('#more-contests', {
             doneText: [[#{voj.contests.contests.no-more-contests}]],
-            load: function(done) {
-                $.ajax({
-                    type: 'GET',
-                    url: [[@{/contest/getContests.action}]],
-                    data: { 'startIndex': loadedContests },
-                    dataType: 'JSON',
-                    success: function(result) {
-                        if ( result['isSuccessful'] ) { done(displayPastContests(result['contests'], result['entrants'], result['problemCount']), true); }
-                        else { done([], false); }
-                    }
-                });
+            url: [[@{/contest/getContests.action}]],
+            data: function() { return { 'startIndex': loadedContests }; },
+            render: function(result) {
+                return displayPastContests(result['contests'], result['entrants'], result['problemCount']);
             }
         });
         function displayPastContests(contests, entrants, problemCount) {

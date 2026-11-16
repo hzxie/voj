@@ -10,6 +10,8 @@
                   in sync by js/theme.js.
   - dialog:       the shared modal behind window.vojConfirm / window.vojAlert (js/theme.js),
                   which replace the browser's blocking confirm() / alert().
+  - loadmore:     the "load more" control of the list pages (id, button label), driven by
+                  createLoadMore() in js/site.js.
 */-->
 <html xmlns:th="http://www.thymeleaf.org" lang="en">
 <head>
@@ -33,5 +35,11 @@
             </div>
         </form>
     </dialog>
+
+    <div th:fragment="loadmore(id, label)" th:id="${id}" class="vw-loadmore">
+        <p class="availble"><button type="button" class="vw-loadmore-btn" th:text="${label}">More...</button></p>
+        <span class="vw-spinner hide" role="status" th:aria-label="#{voj.include.loading}"></span>
+        <div class="vw-loadmore-error" role="alert" th:data-message="#{voj.include.load-more-failed}"></div>
+    </div>
 </body>
 </html>

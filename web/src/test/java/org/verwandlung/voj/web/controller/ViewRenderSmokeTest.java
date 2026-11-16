@@ -446,6 +446,22 @@ class ViewRenderSmokeTest {
         .andExpect(content().string(not(containsString("href=\"/p\" aria-current"))));
   }
 
+  /** The list pages share the "load more" fragment, with its failure note for createLoadMore. */
+  @Test
+  void listPagesRenderTheLoadMoreFragment() throws Exception {
+    for (String url : new String[] {"/submission", "/contest", "/discussion"}) {
+      mockMvc
+          .perform(getWithCsrf(url))
+          .andExpect(status().isOk())
+          .andExpect(content().string(containsString("<div id=\"more-")))
+          .andExpect(content().string(containsString(
+              "<span class=\"vw-spinner hide\" role=\"status\" aria-label=\"Loading\"></span>")))
+          .andExpect(content().string(containsString(
+              "<div class=\"vw-loadmore-error\" role=\"alert\""
+                  + " data-message=\"Could not load more. Please try again.\"></div>")));
+    }
+  }
+
   /** The admin sidebar is a modal {@code <dialog>} drawer on narrow screens, opened by the header button. */
   @Test
   void adminSidebarRendersAsDrawer() throws Exception {

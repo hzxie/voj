@@ -69,10 +69,7 @@
                     </div>
                 </div>
             </div>
-            <div id="more-submissions" class="vw-loadmore">
-                <p class="availble"><button type="button" class="vw-loadmore-btn" th:text="#{voj.submissions.submissions.more-submission}">More Submission...</button></p>
-                <span class="vw-spinner hide" role="status" aria-label="Loading"></span>
-            </div>
+            <div th:replace="~{fragments/chrome :: loadmore('more-submissions', #{voj.submissions.submissions.more-submission})}"></div>
         </section>
     </div>
 
@@ -101,24 +98,17 @@
         }
         createLoadMore('#more-submissions', {
             doneText: [[#{voj.submissions.submissions.no-more-submission}]],
-            load: function(done) {
+            url: [[@{/submission/getSubmissions.action}]],
+            data: function() {
                 var lastId = parseInt($('#submission-body > .vw-table-row:last-child').attr('data-value'));
                 if ( isNaN(lastId) ) { lastId = 0; }
-                $.ajax({
-                    type: 'GET',
-                    url: [[@{/submission/getSubmissions.action}]],
-                    data: {
-                        'problemId': [[${param.problemId != null ? param.problemId[0] : ''}]],
-                        'username': [[${param.username != null ? param.username[0] : ''}]],
-                        'startIndex': lastId - 1
-                    },
-                    dataType: 'JSON',
-                    success: function(result) {
-                        if ( result['isSuccessful'] ) { done(displayRecords(result['submissions'], false), true); }
-                        else { done([], false); }
-                    }
-                });
-            }
+                return {
+                    'problemId': [[${param.problemId != null ? param.problemId[0] : ''}]],
+                    'username': [[${param.username != null ? param.username[0] : ''}]],
+                    'startIndex': lastId - 1
+                };
+            },
+            render: function(result) { return displayRecords(result['submissions'], false); }
         });
         function displayRecords(submissions, prepend) {
             var added = [];

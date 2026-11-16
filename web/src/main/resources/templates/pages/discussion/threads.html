@@ -75,10 +75,7 @@
                     </div>
                 </div>
             </div>
-            <div id="more-discussion-threads" class="vw-loadmore">
-                <p class="availble"><button type="button" class="vw-loadmore-btn" th:text="#{voj.discussion.threads.more-discussion}">More discussion threads...</button></p>
-                <span class="vw-spinner hide" role="status" aria-label="Loading"></span>
-            </div>
+            <div th:replace="~{fragments/chrome :: loadmore('more-discussion-threads', #{voj.discussion.threads.more-discussion})}"></div>
         </section>
     </div>
 
@@ -86,18 +83,11 @@
     <script type="text/javascript" th:inline="javascript">
         createLoadMore('#more-discussion-threads', {
             doneText: [[#{voj.discussion.threads.no-more-discussion}]],
-            load: function(done) {
-                $.ajax({
-                    type: 'GET',
-                    url: [[@{/discussion/getDiscussionThreads.action}]],
-                    data: { 'startIndex': $('.discussion-thread').length, 'topicSlug': [[${selectedTopicSlug}]], 'problemId': [[${problemId}]] },
-                    dataType: 'JSON',
-                    success: function(result) {
-                        if ( result['isSuccessful'] ) { done(displayDiscussionThreadRecords(result['discussionThreads']), true); }
-                        else { done([], false); }
-                    }
-                });
-            }
+            url: [[@{/discussion/getDiscussionThreads.action}]],
+            data: function() {
+                return { 'startIndex': $('.discussion-thread').length, 'topicSlug': [[${selectedTopicSlug}]], 'problemId': [[${problemId}]] };
+            },
+            render: function(result) { return displayDiscussionThreadRecords(result['discussionThreads']); }
         });
         function categoryClass(slug) {
             slug = (slug || '').toLowerCase();

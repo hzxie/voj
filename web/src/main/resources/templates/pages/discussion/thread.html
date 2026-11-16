@@ -46,10 +46,7 @@
 
                     <!-- POSTS (replies) -->
                     <div id="discussion-replies" class="vw-posts"></div>
-                    <div id="more-discussion-replies" class="vw-loadmore">
-                        <p class="availble"><button type="button" class="vw-loadmore-btn" th:text="#{voj.discussion.thread.more-replies}">More Replies...</button></p>
-                        <span class="vw-spinner hide" role="status" aria-label="Loading"></span>
-                    </div>
+                    <div th:replace="~{fragments/chrome :: loadmore('more-discussion-replies', #{voj.discussion.thread.more-replies})}"></div>
 
                     <!-- REPLY BOX -->
                     <div class="vw-alert vw-alert-warning" th:if="${discussionThread.locked}" th:text="#{voj.discussion.thread.thread-locked}">This thread is locked and no longer accepts new replies.</div>
@@ -123,22 +120,15 @@
         });
         var moreReplies = createLoadMore('#more-discussion-replies', {
             doneText: [[#{voj.discussion.threads.no-more-discussion}]],
-            load: function(done) {
-                $.ajax({
-                    type: 'GET',
-                    url: [[@{/discussion/{tid}/getDiscussionReplies.action(tid=${discussionThread.discussionThreadId})}]],
-                    data: { 'startIndex': replyOffset },
-                    dataType: 'JSON',
-                    success: function(result) {
-                        if ( !result['isSuccessful'] ) { done([], false); return; }
-                        var replies = result['discussionReplies'];
-                        replyOffset += replies.length;
-                        for ( var i = 0; i < replies.length; ++ i ) {
-                            serverReplyIds[replies[i]['discussionReplyId']] = true;
-                        }
-                        done(displayDiscussionReplyRecords(replies), true);
-                    }
-                });
+            url: [[@{/discussion/{tid}/getDiscussionReplies.action(tid=${discussionThread.discussionThreadId})}]],
+            data: function() { return { 'startIndex': replyOffset }; },
+            render: function(result) {
+                var replies = result['discussionReplies'];
+                replyOffset += replies.length;
+                for ( var i = 0; i < replies.length; ++ i ) {
+                    serverReplyIds[replies[i]['discussionReplyId']] = true;
+                }
+                return displayDiscussionReplyRecords(replies);
             }
         });
         function loadDiscussionReplies() { moreReplies.load(); }
