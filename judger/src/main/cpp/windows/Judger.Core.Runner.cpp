@@ -20,9 +20,12 @@
 #endif
 
 #include <cstdint>
+#include <cwchar>
 #include <iostream>
+#include <map>
 #include <sstream>
 #include <string>
+#include <vector>
 
 #include <windows.h>
 #include <userenv.h>
@@ -57,12 +60,61 @@
 #define MEMORY_POLL_INTERVAL_MS 2
 
 /**
+ * The only environment variables the sandboxed process inherits from the judger, mirroring the
+ * Linux runner. The judger's own environment holds secrets (VOJ_DB_PASSWORD, VOJ_JUDGER_API_TOKEN,
+ * ...) that a submission could otherwise read (GetEnvironmentVariable, or a compile error that
+ * echoes it into the compile log), so the sandbox gets the sandbox user's own environment plus
+ * only the locale and toolchain settings that compilers and runtimes genuinely need. PATH is the
+ * judger's because that is where the toolchains are found (e.g. a MinGW bin directory added to
+ * PATH only for the judger, as on AppVeyor).
+ */
+static const wchar_t* const INHERITED_ENVIRONMENT_VARIABLES[] = {
+    L"PATH", L"LANG", L"LC_ALL", L"TZ",
+    L"JAVA_HOME", L"KOTLIN_HOME",
+    L"GOROOT", L"GOENV", L"GOTOOLCHAIN", L"GOFLAGS",
+    L"RUSTUP_HOME", L"RUSTUP_TOOLCHAIN", L"CARGO_HOME",
+};
+/**
+ * Variables without which Windows programs misbehave (Winsock and the CRT need SystemRoot, cmd
+ * needs ComSpec and PATHEXT). They are system variables, which CreateEnvironmentBlock always puts
+ * in the sandbox user's environment; the judger's values are only a fallback for a block that
+ * somehow lacks one. None of them is a secret.
+ */
+static const wchar_t* const ESSENTIAL_ENVIRONMENT_VARIABLES[] = {
+    L"SystemRoot", L"SystemDrive", L"windir", L"ComSpec", L"PATHEXT",
+};
+/**
+ * The Go toolchain's writable state, which must never be shared between submissions: a build
+ * cache that one submission can write is one it can poison for every later Go build. As on Linux
+ * (where the sandbox user is always a different user too), both live in the submission's own work
+ * directory instead of the sandbox user's profile. Must match Preprocessor.GO_BUILD_CACHE_DIRECTORY.
+ */
+static const wchar_t* const GO_BUILD_CACHE_DIRECTORY = L"/.cache/go-build"; // GOCACHE (work dir relative)
+static const wchar_t* const GO_PATH_DIRECTORY        = L"/go";              // GOPATH (work dir relative)
+
+/**
+ * Orders environment variable names the way Windows expects an environment block to be sorted:
+ * case-insensitively, in Unicode (ordinal) order, without regard to locale. Names that differ only
+ * in case (Path, PATH) are the same variable.
+ * See https://learn.microsoft.com/windows/win32/procthread/changing-environment-variables
+ */
+struct EnvironmentNameLess {
+    bool operator()(const std::wstring& a, const std::wstring& b) const {
+        return CompareStringOrdinal(a.c_str(), (int) a.size(), b.c_str(), (int) b.size(), TRUE) == CSTR_LESS_THAN;
+    }
+};
+typedef std::map<std::wstring, std::wstring, EnvironmentNameLess> EnvironmentMap;
+
+/**
  * Function Prototypes.
  */
 bool setupIoRedirection(const std::wstring&, const std::wstring&, HANDLE&, HANDLE&);
 void setupStartupInfo(STARTUPINFOW&, HANDLE&, HANDLE&, HANDLE&);
 HANDLE createJobObject(DWORD);
-bool createProcess(const std::wstring&, const std::wstring&, const std::wstring&, HANDLE&, LPVOID&, STARTUPINFOW&, PROCESS_INFORMATION&);
+bool createProcess(const std::wstring&, const std::wstring&, const std::wstring&, const std::wstring&, HANDLE&, STARTUPINFOW&, PROCESS_INFORMATION&);
+bool buildEnvironmentBlock(HANDLE, const std::wstring&, std::vector<wchar_t>&);
+bool getJudgerEnvironmentVariable(const wchar_t*, std::wstring&);
+std::wstring getWorkDirectory(const std::wstring&);
 jint getPeakMemoryUsage(HANDLE& hJob, HANDLE& hProcess);
 jint getCpuTimeUsage(HANDLE& hJob, HANDLE& hProcess, bool includeChildren);
 DWORD getExitCode(HANDLE& hProcess);
@@ -104,7 +156,6 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     HANDLE              hError              = NULL;
     HANDLE              hToken              = NULL;
     HANDLE              hJob                = NULL;
-    LPVOID              lpEnvironment       = NULL;
     PROCESS_INFORMATION processInfo         = {0};
     STARTUPINFOW        startupInfo         = {0};
 
@@ -117,10 +168,6 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     // exception does not stop this function, so each failure must clean up and return explicitly
     // instead of carrying on with invalid handles.
     auto cleanup = [&]() {
-        if ( lpEnvironment != NULL ) {
-            DestroyEnvironmentBlock(lpEnvironment);
-            lpEnvironment = NULL;
-        }
         if ( hToken != NULL ) {
             CloseHandle(hToken);
             hToken = NULL;
@@ -188,7 +235,8 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
 
     // The process is created suspended, assigned to the Job Object before it runs a single
     // instruction, and only then resumed - so the limits are in force from the very beginning.
-    if ( !createProcess(commandLine, username, password, hToken, lpEnvironment, startupInfo, processInfo) ) {
+    if ( !createProcess(commandLine, username, password, getWorkDirectory(outputFilePath), hToken,
+            startupInfo, processInfo) ) {
         return fail("CreateProcess");
     }
     // If the assignment fails the process would run outside the Job: without the process limit,
@@ -369,14 +417,14 @@ HANDLE createJobObject(DWORD activeProcessLimit) {
  * @param  commandLine   - the command line to execute
  * @param  username      - the Windows username
  * @param  password      - the Windows password
+ * @param  workDirectory - the submission's work directory (empty if unknown)
  * @param  hToken        - receives a token that represents the specified user
- * @param  lpEnvironment - receives the environment block for the new process
  * @param  startupInfo   - a STARTUPINFO structure
  * @param  processInfo   - receives identification information for the new process
- * @return whether the process was created successfully
+ * @return whether the process was created successfully (GetLastError() tells why not)
  */
 bool createProcess(const std::wstring& commandLine, const std::wstring& username,
-        const std::wstring& password, HANDLE& hToken, LPVOID& lpEnvironment,
+        const std::wstring& password, const std::wstring& workDirectory, HANDLE& hToken,
         STARTUPINFOW& startupInfo, PROCESS_INFORMATION& processInfo) {
     WCHAR   szUserProfile[256]  = L"";
     DWORD   dwSize              = sizeof(szUserProfile) / sizeof(WCHAR);
@@ -384,12 +432,13 @@ bool createProcess(const std::wstring& commandLine, const std::wstring& username
     LPCWSTR lpDomain            = L".";
     LPCWSTR lpPassword          = getConstWideStringPointer(password);
     LPWSTR  lpCommandLine       = getWideStringPointer(commandLine);
+    std::vector<wchar_t> environmentBlock;
 
     if ( !LogonUserW(lpUsername, lpDomain, lpPassword, LOGON32_LOGON_BATCH,
             LOGON32_PROVIDER_DEFAULT, &hToken) ) {
         return false;
     }
-    if ( !CreateEnvironmentBlock(&lpEnvironment, hToken, TRUE) ) {
+    if ( !buildEnvironmentBlock(hToken, workDirectory, environmentBlock) ) {
         return false;
     }
     if ( !GetUserProfileDirectoryW(hToken, szUserProfile, &dwSize) ) {
@@ -398,10 +447,112 @@ bool createProcess(const std::wstring& commandLine, const std::wstring& username
     if ( !CreateProcessWithLogonW(lpUsername, lpDomain, lpPassword,
             LOGON_WITH_PROFILE, NULL, lpCommandLine,
             CREATE_UNICODE_ENVIRONMENT | CREATE_SUSPENDED | CREATE_NO_WINDOW,
-            lpEnvironment, szUserProfile, &startupInfo, &processInfo) ) {
+            environmentBlock.data(), szUserProfile, &startupInfo, &processInfo) ) {
         return false;
     }
     return true;
+}
+
+/**
+ * Builds the environment of the sandboxed process: the sandbox user's own environment, plus the
+ * judger's whitelisted toolchain variables (INHERITED_ENVIRONMENT_VARIABLES) and a private Go build
+ * cache and GOPATH in the work directory. Nothing else of the judger's environment is passed on.
+ *
+ * CreateEnvironmentBlock is called with bInherit = FALSE, so the block holds only the system
+ * variables and the user's own variables and profile paths (USERPROFILE, APPDATA, LOCALAPPDATA,
+ * TEMP, ...), never the judger's environment. With TRUE it would also copy the judger's whole
+ * environment, secrets included.
+ * See https://learn.microsoft.com/windows/win32/api/userenv/nf-userenv-createenvironmentblock
+ *
+ * @param  hToken           - the sandbox user's token
+ * @param  workDirectory    - the submission's work directory (empty if unknown: the Go variables
+ *                            are then left to the user's defaults)
+ * @param  environmentBlock - receives the Unicode environment block (sorted "NAME=value" strings,
+ *                            each NUL-terminated, followed by an extra NUL)
+ * @return whether the block was built (GetLastError() tells why not)
+ */
+bool buildEnvironmentBlock(HANDLE hToken, const std::wstring& workDirectory,
+        std::vector<wchar_t>& environmentBlock) {
+    LPVOID lpUserEnvironment = NULL;
+    if ( !CreateEnvironmentBlock(&lpUserEnvironment, hToken, FALSE) ) {
+        return false;
+    }
+    EnvironmentMap environment;
+    for ( const wchar_t* entry = static_cast<const wchar_t*>(lpUserEnvironment);
+            *entry != L'\0'; entry += wcslen(entry) + 1 ) {
+        // A name never contains '=' but may start with one (the per-drive current directories,
+        // "=C:=C:\..."): look for the separator after the first character, and drop those entries.
+        const wchar_t* separator = wcschr(entry + 1, L'=');
+        if ( entry[0] == L'=' || separator == NULL ) {
+            continue;
+        }
+        environment[std::wstring(entry, separator - entry)] = std::wstring(separator + 1);
+    }
+    DestroyEnvironmentBlock(lpUserEnvironment);
+
+    std::wstring value;
+    for ( const wchar_t* name : INHERITED_ENVIRONMENT_VARIABLES ) {
+        if ( getJudgerEnvironmentVariable(name, value) ) {
+            environment[name] = value;
+        }
+    }
+    for ( const wchar_t* name : ESSENTIAL_ENVIRONMENT_VARIABLES ) {
+        if ( environment.find(name) == environment.end() && getJudgerEnvironmentVariable(name, value) ) {
+            environment[name] = value;
+        }
+    }
+    if ( !workDirectory.empty() ) {
+        environment[L"GOCACHE"] = workDirectory + GO_BUILD_CACHE_DIRECTORY;
+        environment[L"GOPATH"]  = workDirectory + GO_PATH_DIRECTORY;
+    }
+
+    environmentBlock.clear();
+    for ( const auto& variable : environment ) {
+        environmentBlock.insert(environmentBlock.end(), variable.first.begin(), variable.first.end());
+        environmentBlock.push_back(L'=');
+        environmentBlock.insert(environmentBlock.end(), variable.second.begin(), variable.second.end());
+        environmentBlock.push_back(L'\0');
+    }
+    // The block ends with an empty string; an empty block is two NULs.
+    if ( environmentBlock.empty() ) {
+        environmentBlock.push_back(L'\0');
+    }
+    environmentBlock.push_back(L'\0');
+    return true;
+}
+
+/**
+ * Gets an environment variable of the judger.
+ * @param  name  - the variable's name
+ * @param  value - receives its value
+ * @return whether the variable is set
+ */
+bool getJudgerEnvironmentVariable(const wchar_t* name, std::wstring& value) {
+    // With a too small buffer, the returned size includes the terminating NUL; 0 means unset.
+    DWORD size = GetEnvironmentVariableW(name, NULL, 0);
+    if ( size == 0 ) {
+        return false;
+    }
+    std::vector<wchar_t> buffer(size);
+    DWORD length = GetEnvironmentVariableW(name, buffer.data(), size);
+    if ( length >= size || (length == 0 && GetLastError() == ERROR_ENVVAR_NOT_FOUND) ) {
+        return false;
+    }
+    value.assign(buffer.data(), length);
+    return true;
+}
+
+/**
+ * Gets the submission's work directory: the directory holding the output file, as on Linux.
+ * @param  outputFilePath - the output file path (the judger passes '/'-separated paths)
+ * @return the work directory, or an empty string if the path has no directory part
+ */
+std::wstring getWorkDirectory(const std::wstring& outputFilePath) {
+    size_t lastSeparator = outputFilePath.find_last_of(L"/\\");
+    if ( lastSeparator == std::wstring::npos || lastSeparator == 0 ) {
+        return std::wstring();
+    }
+    return outputFilePath.substr(0, lastSeparator);
 }
 
 /**
