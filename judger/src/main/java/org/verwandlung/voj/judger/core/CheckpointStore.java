@@ -371,8 +371,7 @@ public class CheckpointStore {
    * @param entries - the entries of its ACL besides the judger's
    * @throws IOException if the directory cannot be created, or its ACL cannot be set
    */
-  private static void createWindowsDirectory(Path directory, List<AclEntry> entries)
-      throws IOException {
+  static void createWindowsDirectory(Path directory, List<AclEntry> entries) throws IOException {
     List<AclEntry> acl = new ArrayList<>(entries);
     acl.add(
         AclEntry.newBuilder()

@@ -20,9 +20,11 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
+import java.nio.file.ProviderMismatchException;
 import java.nio.file.attribute.AclEntry;
 import java.nio.file.attribute.AclEntryFlag;
 import java.nio.file.attribute.AclEntryPermission;
+import java.nio.file.attribute.AclEntryType;
 import java.nio.file.attribute.AclFileAttributeView;
 import java.nio.file.attribute.UserPrincipal;
 import java.util.ArrayList;
@@ -88,8 +90,9 @@ public class CheckpointStoreWindowsTest {
   }
 
   /**
-   * Test case: the sandbox account does not exist. Expected result: the judger does not start; it
-   * leaves no work directory behind without the sandbox account's access, and releases its slot.
+   * Test case: the sandbox account does not exist. Expected result: the judger does not start (it
+   * looks the account up before it creates the work directory); it leaves no work directory
+   * behind, and releases its slot.
    */
   @Test
   public void testOpenWithoutTheSandboxAccountLeavesNoWorkDirectory() throws Exception {
@@ -102,6 +105,29 @@ public class CheckpointStoreWindowsTest {
     try (ExclusiveFileLock lock = ExclusiveFileLock.tryAcquire(root.resolve("judger-0.lock"))) {
       Assertions.assertNotNull(lock);
     }
+  }
+
+  /**
+   * Test case: a directory is created, but its ACL cannot be set (an entry names an account of
+   * another provider). Expected result: the directory is removed again, rather than left with the
+   * ACL it inherited, and the failure is reported.
+   */
+  @Test
+  public void testDirectoryWhoseAclCannotBeSetIsRemoved() throws Exception {
+    Path directory = tempDir.resolve("voj-judger");
+    UserPrincipal foreign = () -> "voj-foreign-account";
+    AclEntry entry =
+        AclEntry.newBuilder()
+            .setType(AclEntryType.ALLOW)
+            .setPrincipal(foreign)
+            .setPermissions(AclEntryPermission.READ_DATA)
+            .build();
+
+    Assertions.assertThrows(
+        ProviderMismatchException.class,
+        () -> CheckpointStore.createWindowsDirectory(directory, List.of(entry)));
+
+    Assertions.assertFalse(Files.exists(directory, LinkOption.NOFOLLOW_LINKS));
   }
 
   /**
