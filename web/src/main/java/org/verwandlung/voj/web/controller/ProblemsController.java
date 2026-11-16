@@ -118,14 +118,10 @@ public class ProblemsController {
 
     view.addObject("problemTagsOfProblems", problemService.getProblemTagsOfProblems(problems));
     if (!problems.isEmpty() && HttpSessionParser.isLoggedIn()) {
-      // SubmissionService looks the solved status up by an identifier range; the page's problems
-      // are ordered by identifier, so the range spans them.
-      long minProblemId = problems.get(0).getProblemId();
-      long maxProblemId = problems.get(problems.size() - 1).getProblemId();
       long userId = HttpSessionParser.getCurrentUser().getUid();
+      List<Long> problemIds = problems.stream().map(Problem::getProblemId).toList();
       view.addObject(
-          "submissionOfProblems",
-          submissionService.getSubmissionOfProblems(userId, minProblemId, maxProblemId + 1));
+          "submissionOfProblems", submissionService.getSubmissionOfProblems(userId, problemIds));
     }
     return view;
   }
@@ -163,7 +159,7 @@ public class ProblemsController {
     if (isLoggedIn) {
       long userId = HttpSessionParser.getCurrentUser().getUid();
       Map<Long, Submission> submissionOfProblems =
-          submissionService.getSubmissionOfProblems(userId, problemId, problemId + 1);
+          submissionService.getSubmissionOfProblems(userId, List.of(problemId));
       List<Submission> submissions =
           submissionService.getSubmissionUsingProblemIdAndUserId(
               problemId, userId, NUMBER_OF_SUBMISSIONS_PER_PROBLEM);

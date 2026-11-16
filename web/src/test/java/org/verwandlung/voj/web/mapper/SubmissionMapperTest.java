@@ -19,6 +19,7 @@ package org.verwandlung.voj.web.mapper;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.LongStream;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -44,6 +45,10 @@ import org.verwandlung.voj.web.model.User;
 @Transactional
 @ContextConfiguration({"classpath:test-spring-context.xml"})
 public class SubmissionMapperTest {
+  /** The problems #1000 to #1009. */
+  private static final List<Long> PROBLEMS_1000_TO_1009 =
+      LongStream.range(1000, 1010).boxed().toList();
+
   /**
    * Test case: tests the getNumberOfSubmissionsUsingDate(Date, Date) method. Test data: query
    * using 2014-10-01 to 2014-10-18 (UTC). Expected: the number of submissions within this time range
@@ -303,13 +308,13 @@ public class SubmissionMapperTest {
   }
 
   /**
-   * Test case: tests the getLatestSubmissionOfProblems(long, long, long) method. Test data: get the
-   * latest judge results of user ID #1000 in the problem ID range [1000, 1010). Expected: the
+   * Test case: tests the getLatestSubmissionOfProblems(long, Collection) method. Test data: get the
+   * latest judge results of user ID #1000 for problems #1000-#1009. Expected: the
    * expected submission list (problem ID #1000 - WA, problem ID #1001 - AC).
    */
   @Test
   public void testGetLatestSubmissionOfProblemsWithUser1000() {
-    List<Submission> submissions = submissionMapper.getLatestSubmissionOfProblems(1000, 1000, 1010);
+    List<Submission> submissions = submissionMapper.getLatestSubmissionOfProblems(1000, PROBLEMS_1000_TO_1009);
     Assertions.assertEquals(2, submissions.size());
 
     Submission firstSubmission = submissions.get(0);
@@ -322,13 +327,13 @@ public class SubmissionMapperTest {
   }
 
   /**
-   * Test case: tests the getLatestSubmissionOfProblems(long, long, long) method. Test data: get the
-   * latest judge results of user ID #1001 in the problem ID range [1000, 1010). Expected: the
+   * Test case: tests the getLatestSubmissionOfProblems(long, Collection) method. Test data: get the
+   * latest judge results of user ID #1001 for problems #1000-#1009. Expected: the
    * expected submission list (problem ID #1000 - CE).
    */
   @Test
   public void testGetLatestSubmissionOfProblemsWithUser1001() {
-    List<Submission> submissions = submissionMapper.getLatestSubmissionOfProblems(1001, 1000, 1010);
+    List<Submission> submissions = submissionMapper.getLatestSubmissionOfProblems(1001, PROBLEMS_1000_TO_1009);
     Assertions.assertEquals(1, submissions.size());
 
     Submission firstSubmission = submissions.get(0);
@@ -337,14 +342,14 @@ public class SubmissionMapperTest {
   }
 
   /**
-   * Test case: tests the getAcceptedSubmissionOfProblems(long, long, long) method. Test data: get the
-   * accepted judge results of user ID #1000 in the problem ID range [1000, 1010). Expected: the
+   * Test case: tests the getAcceptedSubmissionOfProblems(long, Collection) method. Test data: get the
+   * accepted judge results of user ID #1000 for problems #1000-#1009. Expected: the
    * expected submission list (problem ID #1000 - AC, problem ID #1001 - AC).
    */
   @Test
   public void testGetAcceptedSubmissionOfProblemsWithUser1000() {
     List<Submission> submissions =
-        submissionMapper.getAcceptedSubmissionOfProblems(1000, 1000, 1010);
+        submissionMapper.getAcceptedSubmissionOfProblems(1000, PROBLEMS_1000_TO_1009);
     Assertions.assertEquals(2, submissions.size());
 
     Submission firstSubmission = submissions.get(0);
@@ -357,14 +362,14 @@ public class SubmissionMapperTest {
   }
 
   /**
-   * Test case: tests the getAcceptedSubmissionOfProblems(long, long, long) method. Test data: get the
-   * accepted judge results of user ID #1001 in the problem ID range [1000, 1010). Expected: an empty
+   * Test case: tests the getAcceptedSubmissionOfProblems(long, Collection) method. Test data: get the
+   * accepted judge results of user ID #1001 for problems #1000-#1009. Expected: an empty
    * submission list.
    */
   @Test
   public void testGetAcceptedSubmissionOfProblemsWithUser1001() {
     List<Submission> submissions =
-        submissionMapper.getAcceptedSubmissionOfProblems(1001, 1000, 1010);
+        submissionMapper.getAcceptedSubmissionOfProblems(1001, PROBLEMS_1000_TO_1009);
     Assertions.assertEquals(0, submissions.size());
   }
 

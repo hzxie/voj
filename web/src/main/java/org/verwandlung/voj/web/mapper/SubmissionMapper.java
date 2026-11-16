@@ -17,6 +17,7 @@
 package org.verwandlung.voj.web.mapper;
 
 import java.util.Date;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -178,30 +179,24 @@ public interface SubmissionMapper {
       @Param("problemId") long problemId, @Param("uid") long uid, @Param("limit") int limit);
 
   /**
-   * Gets the latest judging results of a user within a problem ID range.
+   * Gets the latest judging results of a user for some problems.
    *
    * @param uid - the unique identifier of the user
-   * @param problemIdLowerBound - the lower bound of the problem ID range
-   * @param problemIdUpperBound - the upper bound of the problem ID range
-   * @return the latest judging results within the problem ID range
+   * @param problemIds - the unique identifiers of the problems (not empty)
+   * @return the latest judging results, at most one per problem
    */
   List<Submission> getLatestSubmissionOfProblems(
-      @Param("uid") long uid,
-      @Param("problemIdLowerBound") long problemIdLowerBound,
-      @Param("problemIdUpperBound") long problemIdUpperBound);
+      @Param("uid") long uid, @Param("problemIds") Collection<Long> problemIds);
 
   /**
-   * Gets the accepted judging results of a user within a problem ID range.
+   * Gets the accepted judging results of a user for some problems.
    *
    * @param uid - the unique identifier of the user
-   * @param problemIdLowerBound - the lower bound of the problem ID range
-   * @param problemIdUpperBound - the upper bound of the problem ID range
-   * @return the accepted judging results within the problem ID range
+   * @param problemIds - the unique identifiers of the problems (not empty)
+   * @return the accepted judging results, at most one per problem
    */
   List<Submission> getAcceptedSubmissionOfProblems(
-      @Param("uid") long uid,
-      @Param("problemIdLowerBound") long problemIdLowerBound,
-      @Param("problemIdUpperBound") long problemIdUpperBound);
+      @Param("uid") long uid, @Param("problemIds") Collection<Long> problemIds);
 
   /**
    * Gets the number of distinct published problems a user has solved. Problems that are not

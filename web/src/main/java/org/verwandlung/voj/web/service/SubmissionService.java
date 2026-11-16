@@ -22,6 +22,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.AbstractMap;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -40,12 +41,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import org.verwandlung.voj.web.mapper.JudgeResultMapper;
 import org.verwandlung.voj.web.mapper.LanguageMapper;
-import org.verwandlung.voj.web.mapper.OptionMapper;
 import org.verwandlung.voj.web.mapper.ProblemMapper;
 import org.verwandlung.voj.web.mapper.SubmissionMapper;
 import org.verwandlung.voj.web.model.JudgeResult;
 import org.verwandlung.voj.web.model.Language;
-import org.verwandlung.voj.web.model.Option;
 import org.verwandlung.voj.web.model.Problem;
 import org.verwandlung.voj.web.model.PublicationStatus;
 import org.verwandlung.voj.web.model.Submission;
@@ -345,22 +344,22 @@ public class SubmissionService {
   }
 
   /**
-   * Gets the judging results of a user within a problem ID range.
+   * Gets a user's judging result of each of some problems: an accepted submission if there is
+   * one, otherwise the latest.
    *
    * @param userId - the unique identifier of the user
-   * @param problemIdLowerBound - the lower bound of the problem ID range
-   * @param problemIdUpperBound - the upper bound of the problem ID range
-   * @return the judging results within the problem ID range
+   * @param problemIds - the unique identifiers of the problems
+   * @return the judging results, keyed by problem
    */
-  public Map<Long, Submission> getSubmissionOfProblems(
-      long userId, long problemIdLowerBound, long problemIdUpperBound) {
+  public Map<Long, Submission> getSubmissionOfProblems(long userId, Collection<Long> problemIds) {
     Map<Long, Submission> submissionOfProblems = new HashMap<>();
+    if (problemIds.isEmpty()) {
+      return submissionOfProblems;
+    }
     List<Submission> latestSubmission =
-        submissionMapper.getLatestSubmissionOfProblems(
-            userId, problemIdLowerBound, problemIdUpperBound);
+        submissionMapper.getLatestSubmissionOfProblems(userId, problemIds);
     List<Submission> acceptedSubmission =
-        submissionMapper.getAcceptedSubmissionOfProblems(
-            userId, problemIdLowerBound, problemIdUpperBound);
+        submissionMapper.getAcceptedSubmissionOfProblems(userId, problemIds);
 
     for (Submission s : latestSubmission) {
       long problemId = s.getProblem().getProblemId();
@@ -703,9 +702,7 @@ public class SubmissionService {
    * @return whether the submitter satisfies the email-verification requirement
    */
   private boolean isSubmitterEmailVerified(User user) {
-    Option option = optionMapper.getOption("requireEmailVerification");
-    boolean isRequired = option != null && "1".equals(option.getOptionValue());
-    if (!isRequired) {
+    if (!optionService.isOptionEnabled("requireEmailVerification", false)) {
       return true;
     }
     return user != null && user.isEmailVerified();
@@ -717,8 +714,8 @@ public class SubmissionService {
   /** The autowired JudgeResultMapper object. Used to populate the verdict filter. */
   @Autowired private JudgeResultMapper judgeResultMapper;
 
-  /** The autowired OptionMapper object. Used to resolve the email-verification requirement. */
-  @Autowired private OptionMapper optionMapper;
+  /** The autowired OptionService object. Used to resolve the email-verification requirement. */
+  @Autowired private OptionService optionService;
 
   /** The autowired ProblemMapper object. */
   @Autowired private ProblemMapper problemMapper;
