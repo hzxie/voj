@@ -42,7 +42,6 @@ import org.verwandlung.voj.web.service.LanguageService;
 import org.verwandlung.voj.web.service.OptionService;
 import org.verwandlung.voj.web.service.ProblemService;
 import org.verwandlung.voj.web.service.SubmissionService;
-import org.verwandlung.voj.web.util.HttpRequestParser;
 import org.verwandlung.voj.web.util.HttpSessionParser;
 import org.verwandlung.voj.web.util.LogSanitizer;
 import org.verwandlung.voj.web.util.SeoUtils;
@@ -223,7 +222,7 @@ public class ProblemsController {
       @RequestParam(value = "languageSlug") String languageSlug,
       @RequestParam(value = "code") String code,
       HttpServletRequest request) {
-    String ipAddress = HttpRequestParser.getRemoteAddr(request);
+    String ipAddress = request.getRemoteAddr();
     User currentUser = HttpSessionParser.getCurrentUser();
 
     Map<String, Object> result =

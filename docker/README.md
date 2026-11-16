@@ -60,7 +60,7 @@ re-fetched from the web app on demand.
 ## Reverse proxy
 
 Put TLS and a public hostname in front with nginx or Caddy; ready-to-adapt
-examples are in [`reverse-proxy/`](reverse-proxy/). Two things matter:
+examples are in [`reverse-proxy/`](reverse-proxy/). Three things matter:
 
 1. Run the web container with the public URL so generated links, e-mails and
    assets are correct: `-e VOJ_BASE_URL=https://oj.example.edu/voj` (or
@@ -71,6 +71,11 @@ examples are in [`reverse-proxy/`](reverse-proxy/). Two things matter:
    read timeout — otherwise results never reach the browser. The example configs
    handle this (nginx needs `proxy_buffering off`; Caddy does not buffer by
    default).
+3. The proxy must pass the client address and scheme in `X-Forwarded-For` /
+   `X-Forwarded-Proto` (Caddy does by default; the nginx example sets them). The
+   app trusts these headers only from loopback and private-network addresses,
+   so the proxy has to reach the container over one of those (as it does through
+   a published port on the same host).
 
 ## Configuration model
 

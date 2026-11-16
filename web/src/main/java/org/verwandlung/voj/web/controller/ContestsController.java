@@ -31,7 +31,6 @@ import org.verwandlung.voj.web.service.ContestService;
 import org.verwandlung.voj.web.service.LanguageService;
 import org.verwandlung.voj.web.service.OptionService;
 import org.verwandlung.voj.web.service.ProblemService;
-import org.verwandlung.voj.web.util.HttpRequestParser;
 import org.verwandlung.voj.web.util.HttpSessionParser;
 import org.verwandlung.voj.web.util.JsonUtils;
 import org.verwandlung.voj.web.util.LogSanitizer;
@@ -196,7 +195,7 @@ public class ContestsController {
       @PathVariable("contestId") long contestId,
       HttpServletRequest request,
       HttpServletResponse response) {
-    String ipAddress = HttpRequestParser.getRemoteAddr(request);
+    String ipAddress = request.getRemoteAddr();
     User currentUser = HttpSessionParser.getCurrentUser();
 
     Map<String, Boolean> result = contestService.attendContest(contestId, currentUser);
@@ -313,7 +312,7 @@ public class ContestsController {
       @RequestParam(value = "languageSlug") String languageSlug,
       @RequestParam(value = "code") String code,
       HttpServletRequest request) {
-    String ipAddress = HttpRequestParser.getRemoteAddr(request);
+    String ipAddress = request.getRemoteAddr();
     User currentUser = HttpSessionParser.getCurrentUser();
 
     Map<String, Object> result =

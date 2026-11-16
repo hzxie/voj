@@ -87,7 +87,6 @@ import org.verwandlung.voj.web.service.ProblemService;
 import org.verwandlung.voj.web.service.SubmissionService;
 import org.verwandlung.voj.web.service.UserService;
 import org.verwandlung.voj.web.util.DateUtils;
-import org.verwandlung.voj.web.util.HttpRequestParser;
 import org.verwandlung.voj.web.util.HttpSessionParser;
 import org.verwandlung.voj.web.util.JsonUtils;
 import org.verwandlung.voj.web.util.LogSanitizer;
@@ -520,7 +519,7 @@ public class AdministrationController {
       LOGGER.info(
           String.format(
               "Users: %s were deleted by administrator at %s.",
-              userList, LogSanitizer.forLog(HttpRequestParser.getRemoteAddr(request))));
+              userList, LogSanitizer.forLog(request.getRemoteAddr())));
     }
     Map<String, Boolean> result = new HashMap<>(2, 1);
     result.put("isSuccessful", isSuccessful);
@@ -680,7 +679,7 @@ public class AdministrationController {
             true);
 
     if (result.get("isSuccessful")) {
-      String ipAddress = HttpRequestParser.getRemoteAddr(request);
+      String ipAddress = request.getRemoteAddr();
       LOGGER.info(
           String.format(
               "User: [Username=%s] was created by administrator at %s.",
@@ -778,7 +777,7 @@ public class AdministrationController {
       LOGGER.info(
           String.format(
               "Problems: %s were deleted by administrator at %s.",
-              problemList, LogSanitizer.forLog(HttpRequestParser.getRemoteAddr(request))));
+              problemList, LogSanitizer.forLog(request.getRemoteAddr())));
     }
     Map<String, Boolean> result = new HashMap<>(2, 1);
     result.put("isSuccessful", isSuccessful);
@@ -867,7 +866,7 @@ public class AdministrationController {
 
     if ((boolean) result.get("isSuccessful")) {
       long problemId = (Long) result.get("problemId");
-      String ipAddress = HttpRequestParser.getRemoteAddr(request);
+      String ipAddress = request.getRemoteAddr();
 
       LOGGER.info(
           String.format(
@@ -976,7 +975,7 @@ public class AdministrationController {
             problemDifficulty);
 
     if (result.get("isSuccessful")) {
-      String ipAddress = HttpRequestParser.getRemoteAddr(request);
+      String ipAddress = request.getRemoteAddr();
 
       LOGGER.info(
           String.format(
@@ -1035,7 +1034,7 @@ public class AdministrationController {
             new Object[] {
               problemId,
               testCases.size(),
-              LogSanitizer.forLog(HttpRequestParser.getRemoteAddr(request))
+              LogSanitizer.forLog(request.getRemoteAddr())
             }));
     return result;
   }
@@ -1178,7 +1177,7 @@ public class AdministrationController {
 
     if ((boolean) result.get("isSuccessful")) {
       long problemCategoryId = (Long) result.get("problemCategoryId");
-      String ipAddress = HttpRequestParser.getRemoteAddr(request);
+      String ipAddress = request.getRemoteAddr();
 
       LOGGER.info(
           String.format(
@@ -1213,7 +1212,7 @@ public class AdministrationController {
             parentProblemCategorySlug);
 
     if (result.get("isSuccessful")) {
-      String ipAddress = HttpRequestParser.getRemoteAddr(request);
+      String ipAddress = request.getRemoteAddr();
 
       LOGGER.info(
           String.format(
@@ -1244,7 +1243,7 @@ public class AdministrationController {
       if (problemService.deleteProblemCategory(problemCategoryId)) {
         deletedProblemCategories.add(problemCategoryId);
       }
-      String ipAddress = HttpRequestParser.getRemoteAddr(request);
+      String ipAddress = request.getRemoteAddr();
       LOGGER.info(
           String.format(
               "ProblemCategory: [ProblemCategoryId=%s] was deleted by administrator at %s.",
@@ -1269,7 +1268,7 @@ public class AdministrationController {
 
     if ((boolean) result.get("isSuccessful")) {
       long problemTagId = (Long) result.get("problemTagId");
-      String ipAddress = HttpRequestParser.getRemoteAddr(request);
+      String ipAddress = request.getRemoteAddr();
 
       LOGGER.info(
           String.format(
@@ -1293,7 +1292,7 @@ public class AdministrationController {
     boolean isSuccessful = problemService.deleteProblemTag(problemTagId);
 
     if (isSuccessful) {
-      String ipAddress = HttpRequestParser.getRemoteAddr(request);
+      String ipAddress = request.getRemoteAddr();
       LOGGER.info(
           String.format(
               "ProblemTag: [ProblemTagId=%s] was deleted by administrator at %s.",
@@ -1363,7 +1362,7 @@ public class AdministrationController {
       LOGGER.info(
           String.format(
               "Submissions: %s were deleted by administrator at %s.",
-              deletedSubmissions, LogSanitizer.forLog(HttpRequestParser.getRemoteAddr(request))));
+              deletedSubmissions, LogSanitizer.forLog(request.getRemoteAddr())));
     }
     Map<String, Object> result = new HashMap<>(3, 1);
     result.put("isSuccessful", isSuccessful);

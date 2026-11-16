@@ -58,7 +58,6 @@ import org.verwandlung.voj.web.service.SubmissionService;
 import org.verwandlung.voj.web.service.TurnstileService;
 import org.verwandlung.voj.web.service.UserService;
 import org.verwandlung.voj.web.util.DateUtils;
-import org.verwandlung.voj.web.util.HttpRequestParser;
 import org.verwandlung.voj.web.util.HttpSessionParser;
 import org.verwandlung.voj.web.util.LogSanitizer;
 
@@ -158,7 +157,7 @@ public class AccountsController {
    */
   private void destroySession(HttpServletRequest request, HttpServletResponse response) {
     User currentUser = HttpSessionParser.getCurrentUser();
-    String ipAddress = HttpRequestParser.getRemoteAddr(request);
+    String ipAddress = request.getRemoteAddr();
     LOGGER.info(
         String.format(
             "%s logged out at %s",
@@ -184,7 +183,7 @@ public class AccountsController {
           String captchaResponse,
       HttpServletRequest request,
       HttpServletResponse response) {
-    String ipAddress = HttpRequestParser.getRemoteAddr(request);
+    String ipAddress = request.getRemoteAddr();
     if (!turnstileService.verify(captchaResponse, ipAddress)) {
       return captchaFailureResult();
     }
@@ -229,7 +228,7 @@ public class AccountsController {
     securityContextRepository.saveContext(securityContext, request, response);
     sessionRegistry.registerNewSession(request.getSession().getId(), userDetails);
 
-    String ipAddress = HttpRequestParser.getRemoteAddr(request);
+    String ipAddress = request.getRemoteAddr();
     LOGGER.info(
         String.format(
             "%s logged in at %s",
@@ -287,7 +286,7 @@ public class AccountsController {
           String captchaResponse,
       HttpServletRequest request,
       HttpServletResponse response) {
-    if (!turnstileService.verify(captchaResponse, HttpRequestParser.getRemoteAddr(request))) {
+    if (!turnstileService.verify(captchaResponse, request.getRemoteAddr())) {
       return captchaFailureResult();
     }
     boolean isAllowRegister =
@@ -305,7 +304,7 @@ public class AccountsController {
       }
       establishSecurityContext(request, response, user);
 
-      String ipAddress = HttpRequestParser.getRemoteAddr(request);
+      String ipAddress = request.getRemoteAddr();
       LOGGER.info(
           String.format(
               "User: [Username=%s] created at %s.",
@@ -352,7 +351,7 @@ public class AccountsController {
           String.format(
               "%s requested a new verification email at %s",
               LogSanitizer.forLog(currentUser),
-              LogSanitizer.forLog(HttpRequestParser.getRemoteAddr(request))));
+              LogSanitizer.forLog(request.getRemoteAddr())));
     }
     return result;
   }
@@ -407,7 +406,7 @@ public class AccountsController {
       @RequestParam(value = "cf-turnstile-response", required = false, defaultValue = "")
           String captchaResponse,
       HttpServletRequest request) {
-    String ipAddress = HttpRequestParser.getRemoteAddr(request);
+    String ipAddress = request.getRemoteAddr();
     if (!turnstileService.verify(captchaResponse, ipAddress)) {
       return captchaFailureResult();
     }
@@ -439,7 +438,7 @@ public class AccountsController {
       @RequestParam(value = "newPassword") String newPassword,
       @RequestParam(value = "confirmPassword") String confirmPassword,
       HttpServletRequest request) {
-    String ipAddress = HttpRequestParser.getRemoteAddr(request);
+    String ipAddress = request.getRemoteAddr();
     Map<String, Boolean> result =
         userService.resetPassword(email, token, newPassword, confirmPassword);
 
@@ -538,7 +537,7 @@ public class AccountsController {
       HttpServletRequest request,
       HttpServletResponse response) {
     User currentUser = HttpSessionParser.getCurrentUser();
-    String ipAddress = HttpRequestParser.getRemoteAddr(request);
+    String ipAddress = request.getRemoteAddr();
 
     Map<String, Boolean> result =
         userService.changePassword(currentUser, oldPassword, newPassword, confirmPassword);
@@ -578,7 +577,7 @@ public class AccountsController {
       @RequestParam(value = "aboutMe") String aboutMe,
       HttpServletRequest request) {
     User currentUser = HttpSessionParser.getCurrentUser();
-    String ipAddress = HttpRequestParser.getRemoteAddr(request);
+    String ipAddress = request.getRemoteAddr();
 
     Map<String, Boolean> result =
         userService.updateProfile(

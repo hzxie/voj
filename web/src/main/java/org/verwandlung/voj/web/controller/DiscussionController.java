@@ -32,7 +32,6 @@ import org.verwandlung.voj.web.service.DiscussionService;
 import org.verwandlung.voj.web.service.OptionService;
 import org.verwandlung.voj.web.service.ProblemService;
 import org.verwandlung.voj.web.service.SubmissionService;
-import org.verwandlung.voj.web.util.HttpRequestParser;
 import org.verwandlung.voj.web.util.HttpSessionParser;
 import org.verwandlung.voj.web.util.LogSanitizer;
 import org.verwandlung.voj.web.util.SeoUtils;
@@ -281,7 +280,7 @@ public class DiscussionController {
       @RequestParam(value = "voteUp") int voteUp,
       @RequestParam(value = "voteDown") int voteDown,
       HttpServletRequest request) {
-    String ipAddress = HttpRequestParser.getRemoteAddr(request);
+    String ipAddress = request.getRemoteAddr();
     User currentUser = HttpSessionParser.getCurrentUser();
 
     Map<String, Boolean> result =
@@ -315,7 +314,7 @@ public class DiscussionController {
       @PathVariable("threadId") long discussionThreadId,
       @RequestParam(value = "discussionReplyId") long discussionReplyId,
       HttpServletRequest request) {
-    String ipAddress = HttpRequestParser.getRemoteAddr(request);
+    String ipAddress = request.getRemoteAddr();
     User currentUser = HttpSessionParser.getCurrentUser();
 
     Map<String, Boolean> result =
@@ -349,7 +348,7 @@ public class DiscussionController {
       @RequestParam(value = "threadTitle") String discussionThreadTitle,
       @RequestParam(value = "threadContent") String discussionThreadContent,
       HttpServletRequest request) {
-    String ipAddress = HttpRequestParser.getRemoteAddr(request);
+    String ipAddress = request.getRemoteAddr();
     User currentUser = HttpSessionParser.getCurrentUser();
     long relatedProblemId = parseRelatedProblemId(relatedProblemIdString);
 
@@ -411,7 +410,7 @@ public class DiscussionController {
       @RequestParam(value = "discussionTopicSlug") String discussionTopicSlug,
       @RequestParam(value = "discussionThreadTitle") String discussionThreadTitle,
       HttpServletRequest request) {
-    String ipAddress = HttpRequestParser.getRemoteAddr(request);
+    String ipAddress = request.getRemoteAddr();
     User currentUser = HttpSessionParser.getCurrentUser();
 
     Map<String, Boolean> result =
@@ -441,7 +440,7 @@ public class DiscussionController {
       @PathVariable("threadId") long discussionThreadId,
       @RequestParam(value = "replyContent") String replyContent,
       HttpServletRequest request) {
-    String ipAddress = HttpRequestParser.getRemoteAddr(request);
+    String ipAddress = request.getRemoteAddr();
     User currentUser = HttpSessionParser.getCurrentUser();
 
     Map<String, Object> result =
@@ -472,7 +471,7 @@ public class DiscussionController {
       @RequestParam(value = "discussionReplyId") long discussionReplyId,
       @RequestParam(value = "replyContent") String replyContent,
       HttpServletRequest request) {
-    String ipAddress = HttpRequestParser.getRemoteAddr(request);
+    String ipAddress = request.getRemoteAddr();
     User currentUser = HttpSessionParser.getCurrentUser();
 
     Map<String, Boolean> result =
@@ -502,7 +501,7 @@ public class DiscussionController {
       @PathVariable("threadId") long discussionThreadId,
       @RequestParam(value = "discussionReplyId") long discussionReplyId,
       HttpServletRequest request) {
-    String ipAddress = HttpRequestParser.getRemoteAddr(request);
+    String ipAddress = request.getRemoteAddr();
     User currentUser = HttpSessionParser.getCurrentUser();
 
     Map<String, Boolean> result =
