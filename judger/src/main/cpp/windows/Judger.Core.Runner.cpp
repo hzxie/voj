@@ -49,6 +49,9 @@ static const jint STOP_TIME   = 1;
 static const jint STOP_MEMORY = 2;
 static const jint STOP_OUTPUT = 3;
 
+/** The exit code of a run ended for starting a process (STATUS_ACCESS_DENIED). */
+static const UINT STARTED_A_PROCESS_EXIT_CODE = 0xC0000022;
+
 /**
  * How long (ms) the runner waits, once the program is gone, for the rest of its Job (what a
  * compiler left running) to be killed and gone, before it gives up on the run.
@@ -119,7 +122,8 @@ static SRWLOCK        sandboxSessionLock = SRWLOCK_INIT;
 bool setupIoRedirection(const std::wstring&, const std::wstring&, HANDLE&, HANDLE&);
 bool getJudgerOnlySecurityDescriptor(PSECURITY_DESCRIPTOR&);
 HANDLE createJobObject(DWORD, jint, bool, HANDLE);
-bool drainJobMessages(HANDLE, bool&);
+bool drainJobMessages(HANDLE, bool&, DWORD, DWORD&, bool&);
+bool isConsoleHost(DWORD);
 bool emptyJob(HANDLE, HANDLE, bool&);
 bool disableErrorDialogs(HANDLE);
 bool createProcess(const std::vector<std::wstring>&, const std::vector<std::wstring>&, const std::wstring&, STARTUPINFOW&, PROCESS_INFORMATION&, std::string&);
@@ -187,6 +191,8 @@ JNIEXPORT jintArray JNICALL Java_org_verwandlung_voj_judger_core_Runner_execute(
     STARTUPINFOW        startupInfo         = {0};
     bool                jobInUse            = false; // processes may be (or have been) in the Job
     bool                memoryLimitHit      = false;
+    DWORD               consoleHost         = 0;     // the run's console host, once it joined
+    bool                otherProcess        = false; // a run started another process
 
     jint                timeUsage           = 0;
     jint                memoryUsage         = 0;
@@ -304,7 +310,9 @@ JNIEXPORT jintArray JNICALL Java_org_verwandlung_voj_judger_core_Runner_execute(
 
     // Poll while the program runs, and kill the whole Job as soon as it reaches a limit: CPU time
     // (of every process of the Job), the peak working set or an allocation the commit limit
-    // refused, the size of the output file, and wall-clock time.
+    // refused, the size of the output file, and wall-clock time; or, for a run, as soon as a
+    // process but its console host joins the Job (see drainJobMessages).
+    DWORD     runPid     = compilation ? 0 : processInfo.dwProcessId;
     jint      stop       = STOP_NONE;
     ULONGLONG startTick  = GetTickCount64();
     for ( ;; ) {
@@ -319,11 +327,19 @@ JNIEXPORT jintArray JNICALL Java_org_verwandlung_voj_judger_core_Runner_execute(
         if ( !getCpuTimeUsage(hJob, timeUsage) ) {
             return fail("GetCpuTimeUsage");
         }
-        if ( !drainJobMessages(hCompletionPort, memoryLimitHit) ) {
+        if ( !drainJobMessages(hCompletionPort, memoryLimitHit, runPid, consoleHost, otherProcess) ) {
             return fail("GetQueuedCompletionStatus");
         }
         if ( !getPeakMemoryUsage(processInfo.hProcess, memoryUsage) ) {
             return fail("GetPeakMemoryUsage");
+        }
+        if ( otherProcess ) {
+            // Not a limit: the run is ended as a program that may not do this (a runtime error).
+            if ( !TerminateJobObject(hJob, STARTED_A_PROCESS_EXIT_CODE) ||
+                 WaitForSingleObject(processInfo.hProcess, INFINITE) != WAIT_OBJECT_0 ) {
+                return fail("TerminateJobObject");
+            }
+            break;
         }
         if ( hOutput != NULL && !GetFileSizeEx(hOutput, &outputSize) ) {
             return fail("GetFileSizeEx");
@@ -358,7 +374,7 @@ JNIEXPORT jintArray JNICALL Java_org_verwandlung_voj_judger_core_Runner_execute(
     if ( !getPeakMemoryUsage(processInfo.hProcess, memoryUsage) ) {
         return fail("GetPeakMemoryUsage");
     }
-    if ( !drainJobMessages(hCompletionPort, memoryLimitHit) ) {
+    if ( !drainJobMessages(hCompletionPort, memoryLimitHit, runPid, consoleHost, otherProcess) ) {
         return fail("GetQueuedCompletionStatus");
     }
     if ( stop == STOP_NONE && memoryLimitHit ) {
@@ -603,15 +619,23 @@ HANDLE createJobObject(DWORD activeProcessLimit, jint memoryBackstop, bool jobWi
 }
 
 /**
- * Takes every message the Job has posted so far off its completion port. With a zero timeout,
- * GetQueuedCompletionStatus returns FALSE with no packet (lpOverlapped NULL) and WAIT_TIMEOUT once
- * the queue is empty. For a Job message, lpNumberOfBytesTransferred carries the message identifier.
+ * Takes every message the Job has posted so far off its completion port: whether the commit limit
+ * refused an allocation, and, for a run, whether a process but the program and its console host
+ * joined the Job. A run is a single process, but its Job must hold its console host too (since
+ * Windows 8 a console program starts it as it initialises, and CreateProcessWithTokenW cannot
+ * start one without a console), so it holds two: a run that frees its console could otherwise
+ * start a process in the console host's place, whose memory would go unmeasured.
  * See https://learn.microsoft.com/windows/win32/api/winnt/ns-winnt-jobobject_associate_completion_port
  * @param  hCompletionPort - the Job's completion port
- * @param  memoryLimitHit  - set when an allocation was refused by the Job's hard memory cap
+ * @param  memoryLimitHit  - set when an allocation was refused by the Job's commit limit
+ * @param  runPid          - the program's process id for a run (0 for a compilation, which may
+ *                           start processes)
+ * @param  consoleHost     - the run's console host, once it joined the Job
+ * @param  otherProcess    - set when any other process joined the Job of a run
  * @return whether the port could be read (GetLastError() tells why not)
  */
-bool drainJobMessages(HANDLE hCompletionPort, bool& memoryLimitHit) {
+bool drainJobMessages(HANDLE hCompletionPort, bool& memoryLimitHit, DWORD runPid,
+        DWORD& consoleHost, bool& otherProcess) {
     for ( ;; ) {
         DWORD        message    = 0;
         ULONG_PTR    key        = 0;
@@ -622,7 +646,37 @@ bool drainJobMessages(HANDLE hCompletionPort, bool& memoryLimitHit) {
         if ( message == JOB_OBJECT_MSG_JOB_MEMORY_LIMIT || message == JOB_OBJECT_MSG_PROCESS_MEMORY_LIMIT ) {
             memoryLimitHit = true;
         }
+        // For a process message, lpOverlapped carries the process id.
+        DWORD pid = (DWORD) (ULONG_PTR) overlapped;
+        if ( message == JOB_OBJECT_MSG_NEW_PROCESS && runPid != 0 && pid != runPid ) {
+            if ( consoleHost == 0 && isConsoleHost(pid) ) {
+                consoleHost = pid;
+            } else {
+                otherProcess = true;
+            }
+        }
     }
+}
+
+/**
+ * Tells whether a process is the system's console host (%SystemRoot%\System32\conhost.exe).
+ * @param  pid - the process id
+ * @return whether it is, false if it cannot be told (e.g. it is gone already)
+ */
+bool isConsoleHost(DWORD pid) {
+    wchar_t system[MAX_PATH];
+    wchar_t image[MAX_PATH];
+    DWORD   length  = MAX_PATH;
+    UINT    size    = GetSystemDirectoryW(system, MAX_PATH);
+    HANDLE  process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid);
+    bool    known   = process != NULL && QueryFullProcessImageNameW(process, 0, image, &length);
+    if ( process != NULL ) {
+        CloseHandle(process);
+    }
+    std::wstring expected = std::wstring(system, size) + L"\\conhost.exe";
+    return known && size > 0 && size < MAX_PATH &&
+           CompareStringOrdinal(image, (int) length, expected.c_str(), (int) expected.size(),
+                                TRUE) == CSTR_EQUAL;
 }
 
 /**
