@@ -19,11 +19,11 @@ build time via `--build-arg`; see [`../docker/README.md`](../docker/README.md).
 | `jdbc.url` | `jdbc:mysql://localhost:3306/voj?...` | Connection URL. Keep the `characterEncoding=UTF-8` and time-zone parameters (`connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true`): times are stored and read in UTC whatever the time zones of the database server and the JVM. Days in the statistics (the activity heat map, the dashboard's daily chart and "today" counts) are those of the JVM's time zone (`TZ` or `-Duser.timezone`). Keep the timeouts too (`connectTimeout=10000&socketTimeout=120000`, in ms): a connection that went silent (e.g. half-open after a network failure) then fails instead of holding a request or a scheduled job up forever. Raise `socketTimeout` if a slow statistics query of the administration hits it. |
 | `jdbc.username` | `root` | Database user. |
 | `jdbc.password` | *(empty)* | Database password. |
-| `jdbc.initialSize` / `jdbc.maxActive` / `jdbc.minIdle` / `jdbc.maxIdle` | `5` / `30` / `3` / `10` | Druid connection-pool sizing. |
+| `jdbc.initialSize` / `jdbc.maxActive` / `jdbc.minIdle` | `2` / `8` / `2` | Druid connection-pool sizing. |
 | `jdbc.maxWait` | `30000` | Max wait (ms) for a pooled connection. |
 | `jdbc.timeBetweenEvictionRunsMillis` | `60000` | Idle-connection eviction interval (ms). |
 | `jdbc.minEvictableIdleTimeMillis` | `25200000` | Minimum idle time (ms) before a connection is evictable. |
-| `jdbc.removeAbandoned` / `jdbc.removeAbandonedTimeout` | `true` / `1800` | Reclaim leaked connections after N seconds. |
+| `jdbc.removeAbandoned` / `jdbc.removeAbandonedTimeout` | `false` / `1800` | Whether to reclaim a connection held for longer than N seconds. |
 
 ### Mail
 
@@ -50,6 +50,7 @@ broker: its listener keeps trying to subscribe again until the broker is back.
 | Property | Default | Purpose |
 | --- | --- | --- |
 | `jms.broker.url` | `tcp://localhost:61616` | ActiveMQ broker the web app receives the judgers' messages from. |
+| `jms.broker.embedded` | `false` | `true` runs a non-persistent broker inside the web app, which the judgers reach at `jms.broker.url`, instead of a standalone one (do not start both: they bind the same address). For a single web app instance only (see [deployment](deployment.md#several-web-application-instances)). |
 
 ### Judging queue
 
