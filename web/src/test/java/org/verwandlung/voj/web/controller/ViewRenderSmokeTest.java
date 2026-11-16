@@ -989,27 +989,14 @@ class ViewRenderSmokeTest {
         .andExpect(status().isOk());
   }
 
-  /**
-   * The login form still sends rememberMe, which the login action no longer declares: the request
-   * must keep working (Spring ignores parameters a handler does not bind).
-   */
+  /** The login page offers no "Remember Me", which the login action never honoured. */
   @Test
-  void loginActionAcceptsTheRememberMeTheFormSends() throws Exception {
-    when(turnstileService.verify(any(), any())).thenReturn(true);
-    when(userService.isAllowedToLogin(eq("zjhzxhz"), eq("secret"), anyString()))
-        .thenReturn(new java.util.HashMap<>(Map.of("isSuccessful", false)));
+  void loginViewOffersNoRememberMe() throws Exception {
     mockMvc
-        .perform(
-            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(
-                    "/accounts/login.action")
-                .param("username", "zjhzxhz")
-                .param("password", "secret")
-                .param("rememberMe", "true")
-                .with(
-                    org.springframework.security.test.web.servlet.request
-                        .SecurityMockMvcRequestPostProcessors.csrf()))
+        .perform(getWithCsrf("/accounts/login"))
         .andExpect(status().isOk())
-        .andExpect(content().string(containsString("\"isSuccessful\":false")));
+        .andExpect(content().string(containsString("id=\"login-form\"")))
+        .andExpect(content().string(not(containsString("remember-me"))));
   }
 
   /** The public submission-detail page renders for an existing submission. */

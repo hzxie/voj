@@ -38,11 +38,6 @@
                                 </label>
                                 <input id="password" class="vw-input" name="password" type="password" maxlength="64" autocomplete="current-password" required />
                             </div>
-                            <div class="vw-formrow">
-                                <label class="vw-check" for="remember-me">
-                                    <input id="remember-me" type="checkbox" /> <span th:text="#{voj.accounts.login.remember-me}">Remember Me</span>
-                                </label>
-                            </div>
                             <div class="vw-formrow" th:if="${turnstileEnabled == '1'}">
                                 <div class="cf-turnstile" th:attr="data-sitekey=${turnstileSiteKey}"></div>
                             </div>
@@ -73,17 +68,16 @@
             $('button[type=submit]', '#login-form').html([[#{voj.accounts.login.please-wait}]]);
 
             var username   = $('#username').val(),
-                password   = $('#password').val(),
-                rememberMe = $('input#remember-me').is(':checked');
+                password   = $('#password').val();
 
-            return doLoginAction(username, password, rememberMe);
+            return doLoginAction(username, password);
         };
-        function doLoginAction(username, password, rememberMe) {
+        function doLoginAction(username, password) {
             $.ajax({
                 type: 'POST',
                 url: [[@{/accounts/login.action}]],
                 data: {
-                    'username': username, 'password': password, 'rememberMe': rememberMe,
+                    'username': username, 'password': password,
                     'cf-turnstile-response': $('[name="cf-turnstile-response"]').val()
                 },
                 dataType: 'JSON',
