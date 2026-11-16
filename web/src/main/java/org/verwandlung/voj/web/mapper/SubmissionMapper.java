@@ -83,7 +83,8 @@ public interface SubmissionMapper {
    *
    * @param startTime - the start time of the statistics
    * @param endTime - the end time of the statistics
-   * @param uid - the unique identifier of the user
+   * @param uid - the unique identifier of the user (whose submissions to unpublished problems are
+   *     not counted, as in the other statistics of a profile), or 0 for all submissions
    * @param isAcceptedOnly - whether to count only accepted submissions
    * @param runningContestsAt - when not null, the submissions made in a contest that has not ended
    *     at this instant are left out (they are not shown to other users before the contest ends)

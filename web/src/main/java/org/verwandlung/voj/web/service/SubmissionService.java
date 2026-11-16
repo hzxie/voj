@@ -105,7 +105,8 @@ public class SubmissionService {
    *
    * @param startTime - the start time of the statistics
    * @param endTime - the end time of the statistics
-   * @param uid - the unique identifier of the user
+   * @param uid - the unique identifier of the user (only the submissions to published problems are
+   *     counted, as in the other statistics of a profile), or 0 for every submission
    * @param isAcceptedOnly - whether to count only accepted submissions
    * @param viewer - the user viewing the statistics (may be null); unless it is the user or an
    *     administrator, the submissions made in contests that have not ended are not counted

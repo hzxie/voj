@@ -132,7 +132,14 @@
 		FROM `voj_submissions`
 		WHERE submission_submit_time &gt;= #{startTime} AND submission_submit_time &lt; #{endTime}
 		<if test="uid != 0">
+			<!-- A user's heat map counts the submissions to published problems only, like the other
+			     statistics of the profile; the site-wide counts of the dashboard count them all. -->
 			AND uid = #{uid}
+			AND problem_id IN (
+				SELECT problem_id
+				FROM voj_problems
+				WHERE problem_status = 'PUBLISHED'
+			)
 		</if>
 		<if test="isAcceptedOnly == true">
 			AND submission_judge_result = 'AC'

@@ -576,6 +576,45 @@ public class SubmissionServiceTest {
     }
   }
 
+  /**
+   * Test case: tests the getNumberOfSubmissionsGroupByDay(...) method. Test data: user 1002's
+   * submissions of today to the published problem 1000 and to the hidden problem 1002. Expected:
+   * the user's heat map counts only the one to the published problem, as the other statistics of
+   * the profile do (even for an administrator); the site-wide count (uid 0) counts both.
+   */
+  @Test
+  public void testGetNumberOfSubmissionsGroupByDayOfUserCountsPublishedProblemsOnly() {
+    org.springframework.jdbc.core.JdbcTemplate jdbcTemplate =
+        new org.springframework.jdbc.core.JdbcTemplate(dataSource);
+    java.util.Date now = new java.util.Date();
+    for (long problemId : new long[] {1000, 1002}) {
+      jdbcTemplate.update(
+          "INSERT INTO voj_submissions (problem_id, uid, language_id, submission_submit_time,"
+              + " submission_judge_result, submission_code) VALUES (?, 1002, 2, ?, 'AC', 'Code')",
+          problemId,
+          new java.sql.Timestamp(now.getTime()));
+    }
+    java.util.Date startOfToday =
+        java.util.Date.from(
+            java.time.LocalDate.now().atStartOfDay(java.time.ZoneId.systemDefault()).toInstant());
+    java.util.Date end = new java.util.Date(now.getTime() + 1000);
+
+    for (User viewer : java.util.Arrays.asList(null, administrator())) {
+      Assertions.assertEquals(
+          List.of(1L),
+          List.copyOf(
+              submissionService
+                  .getNumberOfSubmissionsGroupByDay(startOfToday, end, 1002, false, viewer)
+                  .values()));
+    }
+    Assertions.assertEquals(
+        List.of(2L),
+        List.copyOf(
+            submissionService
+                .getNumberOfSubmissionsGroupByDay(startOfToday, end, 0, false, administrator())
+                .values()));
+  }
+
   /** Gets the instant of a local date and time in a time zone. */
   private static java.sql.Timestamp localTimestamp(String localDateTime, java.time.ZoneId zone) {
     return java.sql.Timestamp.from(
