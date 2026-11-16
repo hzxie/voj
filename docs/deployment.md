@@ -67,12 +67,13 @@ sudo useradd --system --no-create-home --shell /usr/sbin/nologin voj-sandbox
 
 - **System calls.** A run of the submission may only make the system calls on
   an allowlist, which starts from Docker's default seccomp profile and leaves
-  out what a judged program has no business with (other processes, the network
-  beyond socket pairs, links, file owners, modes and extended attributes,
-  inotify, `sync`, Linux AIO, `io_uring`, credentials, scheduling, ...); any
-  other system call, including one a future kernel adds, fails with `ENOSYS`, so
-  the C library and the runtimes fall back where they can. Compilations run
-  trusted toolchains, too varied to allowlist, under a deny-list instead. The
+  out what a judged program has no business with (other processes, the
+  resource limits of any process but itself, the network beyond socket pairs,
+  links, file owners, modes and extended attributes, inotify, `sync`, Linux
+  AIO, `io_uring`, credentials, scheduling, ...); any other system call,
+  including one a future kernel adds, fails with `ENOSYS`, so the C library
+  and the runtimes fall back where they can. Compilations run trusted
+  toolchains, too varied to allowlist, under a deny-list instead. The
   rules below hold for both: where they refuse a compilation a system call with
   `EPERM` or `EACCES`, a run gets the same error, even when its allowlist alone
   would refuse the call.

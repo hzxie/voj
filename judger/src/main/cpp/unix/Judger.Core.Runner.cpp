@@ -1071,6 +1071,8 @@ static std::vector<std::string> buildEnvironment(const std::string& workDirector
  *    Landlock does not confine), links, device nodes and FIFOs, watching files (inotify, fanotify),
  *    the writeback of the whole system (sync, syncfs), splice, tee and vmsplice, Linux AIO
  *    (io_setup & co.) and io_uring;
+ *  - other processes' resource limits: prlimit64 is allowed on the caller only (see
+ *    buildSeccompPrograms);
  *  - credentials, capabilities and scheduling: set*uid, set*gid, setgroups, capset, setpriority,
  *    sched_setaffinity & co., ioprio_set, personality, Landlock; and what else no runtime needs
  *    (cachestat, listmount, statmount, ...).
@@ -1109,7 +1111,7 @@ static const char* const RUN_ALLOWED_SYSCALLS[] = {
     "shutdown", "getsockopt", "setsockopt", "getsockname", "getpeername",
     // The process itself.
     "execve", "prctl", "arch_prctl", "seccomp", "getrandom", "uname", "sysinfo", "getrusage",
-    "getrlimit", "setrlimit", "prlimit64", "getpid", "getppid", "gettid", "getpgid", "getpgrp",
+    "getrlimit", "setrlimit", "getpid", "getppid", "gettid", "getpgid", "getpgrp",
     "getsid", "getuid", "geteuid", "getgid", "getegid", "getgroups", "getresuid", "getresgid",
     "capget", "uretprobe",
 };
@@ -1239,7 +1241,9 @@ class SeccompFilter {
  * for a call both refuse. The argument rules need a filter of their own: libseccomp silently drops
  * the conditional rules of a system call that also has an unconditional one, so the allowlist cannot
  * allow mmap and refuse some of its arguments, and its comparisons cannot express the complement of
- * each rule (allowing what it does not refuse).
+ * each rule (allowing what it does not refuse). The allowlist only checks the arguments of a call
+ * that it allows in one narrow case alone (prlimit64 on the caller itself), which then has no
+ * unconditional rule.
  *
  * Both:
  *  - clone fails with EPERM when it asks for a new namespace (CLONE_NEW*), so threads (and a
@@ -1292,6 +1296,11 @@ static std::vector<std::string> buildSeccompPrograms(bool runOfSubmission, rlim_
     if ( runOfSubmission ) {
         SeccompFilter allowlist(SCMP_ACT_ERRNO(ENOSYS));
         allowlist.addEach(SCMP_ACT_ALLOW, RUN_ALLOWED_SYSCALLS);
+        // prlimit64(pid, ...) only on the caller itself (pid 0, which is how the C library's
+        // getrlimit and setrlimit call it): another process of the same user, such as the judger
+        // itself when it is not root, would otherwise be open to it. Not in RUN_ALLOWED_SYSCALLS, as
+        // an unconditional rule would swallow this one.
+        allowlist.add(SCMP_ACT_ALLOW, SCMP_SYS(prlimit64), {SCMP_A0(SCMP_CMP_EQ, 0)});
         allowlist.optimize();
         programs.push_back(allowlist.exportProgram());
     }

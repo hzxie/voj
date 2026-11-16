@@ -518,6 +518,28 @@ public class SandboxBehaviorTest {
   }
 
   /**
+   * Test case: a run that reads and changes resource limits with prlimit64, its own (pid 0) and
+   * its parent's (the judger, of the same user when the judger is not root). Expected result: its
+   * own limits can be read and lowered, while prlimit64 on another process is not allowlisted
+   * (ENOSYS), even only to read its limits.
+   */
+  @Test
+  public void testRunCanOnlyChangeItsOwnLimits() throws Exception {
+    Assumptions.assumeTrue("native".equalsIgnoreCase(sandbox), "This tests the native runner.");
+    Assumptions.assumeTrue(isLinux(), "prlimit64 is Linux-only.");
+    Assertions.assertEquals("AC", judge(900026L, PRLIMIT_CODE, 5000, 262144));
+    Assertions.assertEquals(
+        String.join(
+            "\n",
+            "own (read): done",
+            "own (lower): done",
+            "parent (read): ENOSYS",
+            "parent (lower): ENOSYS",
+            ""),
+        Files.readString(Path.of(workBaseDirectory, "voj-sandbox-900026", "output.txt")));
+  }
+
+  /**
    * Test case: a program whose static data (1 TB of bss) alone exceeds the kernel memory backstop
    * (RLIMIT_DATA), so that it cannot even be loaded. Expected result: Memory Limit Exceeded, not the
    * runtime error of the SIGSEGV the kernel kills such a program with while loading it. The program
@@ -1276,6 +1298,36 @@ public class SandboxBehaviorTest {
               }
               last = fd;
           }
+          return 0;
+      }
+      """;
+
+  /**
+   * A program that reads and lowers its own core file size limit and its parent's with the raw
+   * prlimit64 system call, and reports how each attempt ends.
+   */
+  private static final String PRLIMIT_CODE =
+      """
+      #include <cerrno>
+      #include <cstdio>
+      #include <cstring>
+      #include <sys/resource.h>
+      #include <sys/syscall.h>
+      #include <unistd.h>
+
+      static void report(const char* what, bool succeeded) {
+          int error = errno;
+          std::printf("%s: %s\\n", what, succeeded ? "done"
+              : error == EPERM ? "EPERM" : error == ENOSYS ? "ENOSYS" : std::strerror(error));
+      }
+
+      int main() {
+          rlimit limit, lowered = {0, 0};
+          report("own (read)", syscall(SYS_prlimit64, 0, RLIMIT_CORE, nullptr, &limit) == 0);
+          report("own (lower)", syscall(SYS_prlimit64, 0, RLIMIT_CORE, &lowered, nullptr) == 0);
+          long parent = getppid();
+          report("parent (read)", syscall(SYS_prlimit64, parent, RLIMIT_CORE, nullptr, &limit) == 0);
+          report("parent (lower)", syscall(SYS_prlimit64, parent, RLIMIT_CORE, &lowered, nullptr) == 0);
           return 0;
       }
       """;
