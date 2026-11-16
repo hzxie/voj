@@ -102,9 +102,8 @@ public class VojJudgerApplication {
                 + " test data download, so the judgings of this judger fail and it is soon not"
                 + " ready. Set it to the judger.apiToken of the web application.");
       }
-      // Fail fast: verify the judger's credentials against the shared user table before taking any
-      // submission. Otherwise a misconfigured judger would accept submissions and abort them
-      // mid-judging (leaving them stuck) once the heartbeat later detected the bad credentials.
+      // The claims and the heartbeats of the judger are recorded by its account, so a judger whose
+      // credentials are wrong does not start.
       if (!judgerAccount.authenticate()) {
         LOGGER.error("Unauthorized: please check judger.username / judger.password. Shutting down.");
         System.exit(-1);

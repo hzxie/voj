@@ -24,8 +24,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * The persistence layer configuration. Replaces the Druid data source definition from the original
- * application-context.xml.
+ * The persistence layer configuration: the Druid pool of connections to the database, configured by
+ * the {@code jdbc.*} settings.
  *
  * @author Haozhe Xie
  */

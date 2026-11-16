@@ -27,8 +27,7 @@ import org.springframework.jms.connection.CachingConnectionFactory;
 import org.springframework.jms.core.JmsTemplate;
 
 /**
- * The message queue configuration. Replaces the ActiveMQ / JMS definitions from the original
- * application-context.xml.
+ * The message queue configuration: the connection to the ActiveMQ broker at {@code jms.broker.url}.
  *
  * <p>The judger publishes the progress of its judgings on the topic {@value #JUDGE_PROGRESS_TOPIC},
  * which every instance of the web application subscribes to, so that the viewers of a judging see
