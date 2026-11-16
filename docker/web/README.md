@@ -20,23 +20,29 @@ docker network create voj
 
 # Web (MySQL + ActiveMQ + the Spring Boot web app all live here)
 docker run -d --name voj.web --network voj --restart unless-stopped -p 8080:8080 \
-  -e VOJ_JUDGER_API_TOKEN=your-shared-secret zjhzxhz/voj.web
+  -e VOJ_JUDGER_API_TOKEN=your-shared-secret \
+  -e VOJ_JUDGER_PASSWORD=your-judger-password zjhzxhz/voj.web
 
-# Judger (resolves "voj.web" over the shared network; token must match the web's).
-# A judger that runs into a fatal error exits for Docker to restart it.
+# Judger (resolves "voj.web" over the shared network; the token and the password
+# must match the web's). A judger that runs into a fatal error exits for Docker to
+# restart it.
 docker run -d --name voj.judger --network voj --restart unless-stopped \
-  -e VOJ_JUDGER_API_TOKEN=your-shared-secret zjhzxhz/voj.judger
+  -e VOJ_JUDGER_API_TOKEN=your-shared-secret \
+  -e VOJ_JUDGER_PASSWORD=your-judger-password zjhzxhz/voj.judger
 ```
 
 The web UI is then available at <http://localhost:8080/voj>.
 
 On its first start the web container creates an administrator with a random
 password and prints it once: `docker logs voj.web`. If you leave out
-`VOJ_JUDGER_API_TOKEN`, it also generates a token, prints it once and keeps it in
-the database volume (read it again with
-`docker exec voj.web cat /var/lib/mariadb/voj-judger-api-token`); run the judgers
-with that value. The token must have at least 16 characters, or the judgers
-cannot download test data.
+`VOJ_JUDGER_API_TOKEN` or `VOJ_JUDGER_PASSWORD`, it also generates it, prints it
+once and keeps it in the database volume (read them again with
+`docker exec voj.web cat /var/lib/mariadb/voj-judger-api-token` and
+`docker exec voj.web cat /var/lib/mariadb/voj-judger-password`); run the judgers
+with those values. The token must have at least 16 characters, or the judgers
+cannot download test data. On every start the web container makes
+`VOJ_JUDGER_USERNAME` (`judger` by default) a judger account with the password,
+the account the judgers sign in as.
 
 To try VOJ out with sample problems, contests and accounts, add `-e VOJ_DEMO=1`
 on the first start: every sample account's password is its username (`root` /
@@ -53,6 +59,7 @@ rebuild needed. Common variables:
 | `VOJ_DB_HOST` / `VOJ_DB_PORT` / `VOJ_DB_NAME` | bundled / `3306` / `voj` | Database location |
 | `VOJ_DB_USERNAME` / `VOJ_DB_PASSWORD` | `voj` / `voj` | Database credentials |
 | `VOJ_JUDGER_API_TOKEN` | generated on the first start | Shared test-data secret, at least 16 characters (**must match** the judger) |
+| `VOJ_JUDGER_USERNAME` / `VOJ_JUDGER_PASSWORD` | `judger` / generated on the first start | The account the judgers sign in as, made a judger account with this password on every start (**must match** the judger) |
 | `VOJ_DEMO` | `0` | `1` loads the sample data (passwords = usernames) on the first start |
 | `VOJ_BASE_URL` | `http://localhost:8080/voj` | Public root used in e-mails/links |
 | `VOJ_CONTEXT_PATH` | `/voj` | Servlet context path (`/` serves at root) |

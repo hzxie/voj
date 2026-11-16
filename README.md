@@ -56,6 +56,7 @@ git clone https://github.com/hzxie/voj.git
 cd voj
 
 # A) Docker Compose
+cp .env.example .env    # then set VOJ_JUDGER_API_TOKEN and VOJ_JUDGER_PASSWORD
 docker compose up -d
 
 # B) Plain `docker run`, no compose
@@ -69,7 +70,7 @@ secrets and prints them once; to run the prebuilt Docker Hub images instead of
 building locally, use `VOJ_PULL=1 scripts/run-docker.sh` (or `docker compose up`,
 which pulls by default).
 
-Configuration (database, mail, URLs, the judger token) is read from `VOJ_*`
+Configuration (database, mail, URLs, the judgers' secrets) is read from `VOJ_*`
 environment variables at runtime, so you can reconfigure or sit behind a reverse
 proxy without rebuilding. See [`docker/README.md`](docker/README.md) for the full
 configuration, persistence and reverse-proxy details.

@@ -332,6 +332,41 @@ public class UserServiceTest {
     Assertions.assertNull(userService.createFirstAdministratorIfNone());
   }
 
+  /**
+   * Test case: tests provisionJudgerAccount(...). Test data: a new name, then the same name with
+   * another password, a name of a user who is not a judger, and an illegal password. Expected: a
+   * judger account is created, then its password set; the other user and an illegal password
+   * change nothing.
+   */
+  @Test
+  public void testProvisionJudgerAccount() {
+    Assertions.assertEquals(
+        UserService.JudgerAccountProvision.CREATED,
+        userService.provisionJudgerAccount("judger", "first-password"));
+    User judger = userService.getUserUsingUsernameOrEmail("judger");
+    Assertions.assertEquals("judgers", judger.getUserGroup().getUserGroupSlug());
+    Assertions.assertTrue(passwordEncoder.matches("first-password", judger.getPassword()));
+    Assertions.assertEquals(
+        UserService.JudgerAccountProvision.UNCHANGED,
+        userService.provisionJudgerAccount("judger", "first-password"));
+
+    Assertions.assertEquals(
+        UserService.JudgerAccountProvision.PASSWORD_SET,
+        userService.provisionJudgerAccount("judger", "second-password"));
+    Assertions.assertTrue(
+        passwordEncoder.matches(
+            "second-password", userService.getUserUsingUsernameOrEmail("judger").getPassword()));
+
+    String password = userService.getUserUsingUid(1002).getPassword();
+    Assertions.assertEquals(
+        UserService.JudgerAccountProvision.NOT_A_JUDGER,
+        userService.provisionJudgerAccount("another-user", "second-password"));
+    Assertions.assertEquals(password, userService.getUserUsingUid(1002).getPassword());
+    Assertions.assertEquals(
+        UserService.JudgerAccountProvision.PASSWORD_ILLEGAL,
+        userService.provisionJudgerAccount("judger", "short"));
+  }
+
   /** Test case: tests the isAllowedToLogin(...) method. Test data: an empty username. Expected: login fails. */
   @Test
   public void testIsAllowedToLoginWithEmptyUsername() {

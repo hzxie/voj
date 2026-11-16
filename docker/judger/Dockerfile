@@ -24,7 +24,8 @@ ENV M2_HOME=/opt/maven
 # Defaults assume the judger shares a Docker network with a container named
 # "voj.web" (the bundled MariaDB + ActiveMQ + web app); point them at external
 # services for a split deployment. VOJ_DB_PASSWORD matches the web image's bundled
-# database. VOJ_JUDGER_API_TOKEN has no default: pass the web container's value.
+# database. VOJ_JUDGER_API_TOKEN and VOJ_JUDGER_PASSWORD have no default: pass the
+# web container's values.
 ENV VOJ_DB_HOST=voj.web
 ENV VOJ_DB_USERNAME=voj
 ENV VOJ_DB_PASSWORD=voj

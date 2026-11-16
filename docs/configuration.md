@@ -101,6 +101,22 @@ data, as it does for a problem without checkpoints). Any other failure of a
 download, a 404 without that header included (e.g. a wrong
 `judger.web.baseUrl`), is a failed judging.
 
+### Judger account
+
+Every judger signs in as an account of the `judgers` group (its
+`judger.username` and `judger.password`, see [Identity](#identity)), and does
+not start without one. Such an account cannot sign in to the site.
+
+| Property | Default | Purpose |
+| --- | --- | --- |
+| `judger.username` | `judger` (`VOJ_JUDGER_USERNAME`) | The account the judgers sign in as. |
+| `judger.password` | *(empty)* (`VOJ_JUDGER_PASSWORD`) | Its password, 6 to 64 characters. When it is set, the web app makes the account a judger account with this password on every start: it creates it when no user has the name, or sets its password; a user of that name who is not a judger is left alone (an error is logged). Empty: the web app leaves the accounts alone, and an administrator creates the judgers' accounts (user group *Judgers*) in the administration. |
+
+Set the same three values (`VOJ_JUDGER_USERNAME`, `VOJ_JUDGER_PASSWORD`, and
+`VOJ_JUDGER_API_TOKEN`) on the web app and on every judger. The Docker image of
+the web app generates the password on its first start when it is not set (see
+[`../docker/README.md`](../docker/README.md#first-start)).
+
 ### Web service
 
 | Property | Default | Purpose |
@@ -238,7 +254,7 @@ clocks of the hosts do not matter.
 
 | Property | Default | Purpose |
 | --- | --- | --- |
-| `judger.username` | `voj@judger` | Account this judger authenticates as (in the `judgers` group). Several judgers may run as one account: each process records heartbeats of its own; the account is one judger online while any of them runs (the administration's judgers page lists every process). |
+| `judger.username` | `judger` | Account this judger authenticates as (in the `judgers` group, see [Judger account](#judger-account)); the judger does not start without it. Several judgers may run as one account: each process records heartbeats of its own; the account is one judger online while any of them runs (the administration's judgers page lists every process). |
 | `judger.password` | *(empty)* | Password for that account. |
 | `judger.description` | *(empty)* | Free-text label shown in the admin console (helps tell judgers apart). |
 

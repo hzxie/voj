@@ -33,8 +33,9 @@ ENV VOJ_DB_PASSWORD=voj
 # connector binds 0.0.0.0 so a separate voj.judger container can connect.
 ENV VOJ_JMS_BROKER_EMBEDDED=true
 ENV VOJ_JMS_BROKER_URL=tcp://0.0.0.0:61616
-# VOJ_JUDGER_API_TOKEN has no default: pass the same long random value to this
-# image and every judger, or let start-web.sh generate one on the first start.
+# VOJ_JUDGER_API_TOKEN and VOJ_JUDGER_PASSWORD have no default: pass the same long
+# random values to this image and every judger, or let start-web.sh generate them on
+# the first start.
 
 # Define working directory.
 WORKDIR /root

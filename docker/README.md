@@ -16,7 +16,7 @@ judger) — pick whichever you prefer:
 
 ```
 # A) Docker Compose (declarative)
-cp .env.example .env        # optional: set your URL, secrets, SMTP
+cp .env.example .env        # set the judger's secrets; optionally your URL, SMTP
 docker compose up -d
 
 # B) Plain `docker run`, no compose (imperative)
@@ -24,10 +24,10 @@ scripts/run-docker.sh
 ```
 
 `scripts/run-docker.sh` builds both images, generates a strong random judger API
-token (and, when building locally, a database password), and starts the `voj.web`
-and `voj.judger` containers on a shared network, passing the secrets in as
-environment variables (printed once at the end). To run the published images
-instead of building locally, use `VOJ_PULL=1 scripts/run-docker.sh`.
+token and judger password (and, when building locally, a database password), and
+starts the `voj.web` and `voj.judger` containers on a shared network, passing the
+secrets in as environment variables (printed once at the end). To run the
+published images instead of building locally, use `VOJ_PULL=1 scripts/run-docker.sh`.
 
 `docker compose up` pulls the published images by default; uncomment the `build:`
 blocks in [`../docker-compose.yml`](../docker-compose.yml) to build from this
@@ -99,6 +99,7 @@ URL, or to move behind a reverse proxy. The most common variables:
 | `VOJ_JMS_BROKER_URL` | web, judger | `tcp://0.0.0.0:61616` (web) | ActiveMQ connector |
 | `VOJ_JMS_BROKER_EMBEDDED` | web | `true` | Host the broker in the web process |
 | `VOJ_JUDGER_API_TOKEN` | web, judger | none (the web container generates one) | Shared test-data download secret, at least 16 characters (**must match** on both) |
+| `VOJ_JUDGER_USERNAME` / `VOJ_JUDGER_PASSWORD` | web, judger | `judger` / none (the web container generates one) | The account the judgers sign in as; the web app makes it a judger account with this password on every start (**must match** on both) |
 | `VOJ_DEMO` | web | `0` | `1` loads the sample data on the first start (passwords = usernames) |
 | `VOJ_BASE_URL` | web | `http://localhost:8080/voj` | Public root used in e-mails/links |
 | `VOJ_CONTEXT_PATH` | web | `/voj` | Servlet context path (set `/` to serve at root) |
@@ -113,10 +114,13 @@ to the externally visible URL so generated links, e-mails and assets are correct
 There is no default account or token to guess. On its first start the web
 container creates an administrator with a random password and prints it once
 in the container log (`docker logs voj.web`, or `docker compose logs web`), not
-in the log files of the web app. Without
-`VOJ_JUDGER_API_TOKEN`, it also generates the judger token, prints it once and
-keeps it in the database volume; `docker-compose.yml` instead requires the
-token in `.env`, since it starts the judger too. `VOJ_DEMO=1` on the first start
+in the log files of the web app. Without `VOJ_JUDGER_API_TOKEN` and
+`VOJ_JUDGER_PASSWORD`, it also generates the judger token and the password of
+the judgers' account, prints them once and keeps them in the database volume;
+`docker-compose.yml` instead requires both in `.env`, since it starts the judger
+too. On every start, the web container makes `VOJ_JUDGER_USERNAME` (`judger` by
+default) a judger account with that password, so a judger with the same three
+values signs in without an account made by hand. `VOJ_DEMO=1` on the first start
 loads sample problems, contests and accounts instead, whose passwords equal
 their usernames (`root` / `root` is an administrator): for trying VOJ out only.
 `docker-compose.yml` publishes the web port on `127.0.0.1` for a reverse proxy
@@ -172,12 +176,15 @@ docker network create voj
 # run with -e VOJ_JMS_BROKER_EMBEDDED=false to use a standalone broker.
 docker run -d --name voj.web --network voj --restart unless-stopped -p 8080:8080 \
   -e VOJ_JUDGER_API_TOKEN=your-shared-secret \
+  -e VOJ_JUDGER_PASSWORD=your-judger-password \
   zjhzxhz/voj.web
 
-# Judger (resolves "voj.web" over the shared network; token must match the web's).
-# A judger that runs into a fatal error exits for Docker to restart it.
+# Judger (resolves "voj.web" over the shared network; the token and the password
+# must match the web's). A judger that runs into a fatal error exits for Docker to
+# restart it.
 docker run -d --name voj.judger --network voj --restart unless-stopped \
   -e VOJ_JUDGER_API_TOKEN=your-shared-secret \
+  -e VOJ_JUDGER_PASSWORD=your-judger-password \
   zjhzxhz/voj.judger
 ```
 

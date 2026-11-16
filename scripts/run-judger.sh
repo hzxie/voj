@@ -29,6 +29,10 @@
 #   MYSQL_BIN=mysql                         # mysql client used for checks/import
 #   SKIP_PREFLIGHT=                         # set to 1 to skip the service checks
 #
+# Deployment config is read from VOJ_* environment variables (see voj.properties),
+# e.g. VOJ_JUDGER_API_TOKEN, VOJ_JUDGER_USERNAME and VOJ_JUDGER_PASSWORD, which must
+# match the web app's.
+#
 set -euo pipefail
 
 JDK_HOME="${JDK_HOME:-/opt/homebrew/opt/openjdk@25}"

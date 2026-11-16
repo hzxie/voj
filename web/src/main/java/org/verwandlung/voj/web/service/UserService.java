@@ -507,6 +507,58 @@ public class UserService {
     return new String[] {username, password};
   }
 
+  /** What {@link #provisionJudgerAccount} did. */
+  public enum JudgerAccountProvision {
+    /** The account was created. */
+    CREATED,
+    /** The account's password was set. */
+    PASSWORD_SET,
+    /** The account was the judger's already, with that password. */
+    UNCHANGED,
+    /** A user of that name is not a judger: nothing was changed. */
+    NOT_A_JUDGER,
+    /** The password is not a legal one (6 to 64 characters): nothing was changed. */
+    PASSWORD_ILLEGAL
+  }
+
+  /**
+   * Makes the account the judgers sign in as a judger account (in the {@code judgers} group) with
+   * the given password: creates it when no user has the name, or sets its password when it is
+   * another one. A user of that name who is not a judger is left alone.
+   *
+   * @param username - the username of the judgers' account
+   * @param password - the password of the judgers' account
+   * @return what was done
+   */
+  public JudgerAccountProvision provisionJudgerAccount(String username, String password) {
+    if (!isPasswordLegal(password)) {
+      return JudgerAccountProvision.PASSWORD_ILLEGAL;
+    }
+    User user = userMapper.getUserUsingUsername(username);
+    if (user == null) {
+      UserGroup judgers = userGroupMapper.getUserGroupUsingSlug("judgers");
+      Language language = languageMapper.getAllLanguages().get(0);
+      user =
+          new User(
+              username,
+              passwordEncoder.encode(password),
+              username + "@localhost.invalid",
+              judgers,
+              language);
+      userMapper.createUser(user);
+      createUserMeta(user);
+      return JudgerAccountProvision.CREATED;
+    }
+    if (!"judgers".equals(user.getUserGroup().getUserGroupSlug())) {
+      return JudgerAccountProvision.NOT_A_JUDGER;
+    }
+    if (isPasswordCorrect(password, user.getPassword())) {
+      return JudgerAccountProvision.UNCHANGED;
+    }
+    userMapper.updatePassword(user.getUid(), passwordEncoder.encode(password));
+    return JudgerAccountProvision.PASSWORD_SET;
+  }
+
   /**
    * Creates the user meta information.
    *

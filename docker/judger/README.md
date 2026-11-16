@@ -21,12 +21,15 @@ docker network create voj
 
 # Web (MySQL + ActiveMQ + the Spring Boot web app all live here)
 docker run -d --name voj.web --network voj --restart unless-stopped -p 8080:8080 \
-  -e VOJ_JUDGER_API_TOKEN=your-shared-secret zjhzxhz/voj.web
+  -e VOJ_JUDGER_API_TOKEN=your-shared-secret \
+  -e VOJ_JUDGER_PASSWORD=your-judger-password zjhzxhz/voj.web
 
-# Judger (resolves "voj.web" over the shared network; token must match the web's).
-# A judger that runs into a fatal error exits for Docker to restart it.
+# Judger (resolves "voj.web" over the shared network; the token and the password
+# must match the web's). A judger that runs into a fatal error exits for Docker to
+# restart it.
 docker run -d --name voj.judger --network voj --restart unless-stopped \
-  -e VOJ_JUDGER_API_TOKEN=your-shared-secret zjhzxhz/voj.judger
+  -e VOJ_JUDGER_API_TOKEN=your-shared-secret \
+  -e VOJ_JUDGER_PASSWORD=your-judger-password zjhzxhz/voj.judger
 ```
 
 You can run as many judgers in parallel as you need — they take the submissions
@@ -64,11 +67,12 @@ container named `voj.web`; point them at external services for a split deploymen
 | `VOJ_JMS_BROKER_URL` | `tcp://voj.web:61616` | ActiveMQ connector |
 | `VOJ_WEB_BASE_URL` | `http://voj.web:8080/voj` | Where the judger downloads test data |
 | `VOJ_JUDGER_API_TOKEN` | none | Shared test-data secret, at least 16 characters (**must match** the web) |
+| `VOJ_JUDGER_USERNAME` / `VOJ_JUDGER_PASSWORD` | `judger` / none | The account the judger signs in as, in the `judgers` group (**must match** the web, which makes it a judger account with this password); without it the judger does not start |
 
-> **Heads-up on secrets.** Out of the box the image uses a non-secret default
-> `VOJ_JUDGER_API_TOKEN` and the bundled web image's demo database password (`voj`).
-> For a real deployment pass a long random `-e VOJ_JUDGER_API_TOKEN=...` (the **same
-> value** as the web container) and matching `-e VOJ_DB_*` for your database.
+> **Heads-up on secrets.** Out of the box the image uses the bundled web image's
+> demo database password (`voj`). For a real deployment pass the web container's
+> `VOJ_JUDGER_API_TOKEN` and `VOJ_JUDGER_PASSWORD` (the **same values**) and
+> matching `-e VOJ_DB_*` for your database.
 
 ## Requirements
 
@@ -91,9 +95,9 @@ docker build -t zjhzxhz/voj.judger -f docker/judger/Dockerfile .
 ```
 
 No credentials are baked in — configure the running container with `-e VOJ_*`
-(see **Configuration** above), making sure `VOJ_JUDGER_API_TOKEN` and the database
-settings match the web image. Or let `scripts/run-docker.sh` generate a token and
-build/run both images for you.
+(see **Configuration** above), making sure `VOJ_JUDGER_API_TOKEN`,
+`VOJ_JUDGER_PASSWORD` and the database settings match the web image. Or let
+`scripts/run-docker.sh` generate the secrets and build/run both images for you.
 
 ## Links
 

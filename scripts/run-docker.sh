@@ -27,6 +27,8 @@
 #   DB_VOLUME=voj-db               # named volume that persists the MariaDB data
 #   VOJ_BASE_URL=http://localhost:${WEB_PORT}/voj  # public root (used in e-mails/links)
 #   VOJ_JUDGER_API_TOKEN            # shared web<->judger secret; generated if unset
+#   VOJ_JUDGER_USERNAME=judger      # the account the judger signs in as
+#   VOJ_JUDGER_PASSWORD             # its password (the web app sets it); generated if unset
 #   VOJ_JMS_BROKER_EMBEDDED=true    # host the broker inside voj.web (saves a JVM, ~150 MB+)
 #   VOJ_MAIL_HOST= / VOJ_MAIL_PORT=587 / VOJ_MAIL_USERNAME= / VOJ_MAIL_PASSWORD=   # empty host -> email disabled
 #   MYSQL_USER_PASS                 # bundled-DB password (build mode only); generated if unset
@@ -48,6 +50,7 @@ VOJ_MAIL_PORT="${VOJ_MAIL_PORT:-587}"
 VOJ_MAIL_USERNAME="${VOJ_MAIL_USERNAME:-}"
 VOJ_MAIL_PASSWORD="${VOJ_MAIL_PASSWORD:-}"
 VOJ_JMS_BROKER_EMBEDDED="${VOJ_JMS_BROKER_EMBEDDED:-true}"
+VOJ_JUDGER_USERNAME="${VOJ_JUDGER_USERNAME:-judger}"
 
 if ! command -v docker >/dev/null 2>&1; then
   echo "ERROR: docker is not installed or not on PATH." >&2
@@ -70,6 +73,13 @@ GENERATED=()
 if [ -z "${VOJ_JUDGER_API_TOKEN:-}" ]; then
   VOJ_JUDGER_API_TOKEN="$(gen_secret)"
   GENERATED+=("VOJ_JUDGER_API_TOKEN=${VOJ_JUDGER_API_TOKEN}")
+fi
+
+# So is the password of the judger's account: the web app makes the account a judger
+# account with this password on every start.
+if [ -z "${VOJ_JUDGER_PASSWORD:-}" ]; then
+  VOJ_JUDGER_PASSWORD="$(gen_secret)"
+  GENERATED+=("VOJ_JUDGER_PASSWORD=${VOJ_JUDGER_PASSWORD}")
 fi
 
 # The bundled MariaDB password is initialised at build time. In build mode we can
@@ -128,6 +138,8 @@ docker run -d --name voj.web --network "${NETWORK}" --restart unless-stopped \
   -e "VOJ_DB_PASSWORD=${MYSQL_USER_PASS}" \
   -e "VOJ_BASE_URL=${VOJ_BASE_URL}" \
   -e "VOJ_JUDGER_API_TOKEN=${VOJ_JUDGER_API_TOKEN}" \
+  -e "VOJ_JUDGER_USERNAME=${VOJ_JUDGER_USERNAME}" \
+  -e "VOJ_JUDGER_PASSWORD=${VOJ_JUDGER_PASSWORD}" \
   -e "VOJ_JMS_BROKER_EMBEDDED=${VOJ_JMS_BROKER_EMBEDDED}" \
   -e "VOJ_MAIL_HOST=${VOJ_MAIL_HOST}" \
   -e "VOJ_MAIL_PORT=${VOJ_MAIL_PORT}" \
@@ -141,6 +153,8 @@ echo "==> Starting voj.judger ..."
 docker run -d --name voj.judger --network "${NETWORK}" --restart unless-stopped \
   -e "VOJ_DB_PASSWORD=${MYSQL_USER_PASS}" \
   -e "VOJ_JUDGER_API_TOKEN=${VOJ_JUDGER_API_TOKEN}" \
+  -e "VOJ_JUDGER_USERNAME=${VOJ_JUDGER_USERNAME}" \
+  -e "VOJ_JUDGER_PASSWORD=${VOJ_JUDGER_PASSWORD}" \
   "${JUDGER_IMAGE}" >/dev/null
 
 # --------------------------------------------------------------------------- #

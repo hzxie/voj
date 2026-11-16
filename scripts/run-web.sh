@@ -30,6 +30,8 @@
 # same ones, e.g.:
 #   VOJ_DB_HOST / VOJ_DB_PORT / VOJ_DB_NAME / VOJ_DB_USERNAME / VOJ_DB_PASSWORD
 #   VOJ_JMS_BROKER_URL / VOJ_JMS_BROKER_EMBEDDED (true/false) / VOJ_BASE_URL
+#   VOJ_JUDGER_API_TOKEN / VOJ_JUDGER_USERNAME / VOJ_JUDGER_PASSWORD (the judgers'
+#     secrets; with a password, the app makes the account a judger account)
 #
 set -euo pipefail
 

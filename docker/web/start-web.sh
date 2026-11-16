@@ -3,10 +3,14 @@
 # Starts the web application in the voj.web image (run by supervisord, after the
 # bundled MariaDB).
 #
-# - VOJ_JUDGER_API_TOKEN: when it is not set, a random token is generated on the
-#   first start, printed once, and kept next to the database (so it survives
-#   image updates); run every judger with it. Read it again with
-#   `docker exec voj.web cat /var/lib/mariadb/voj-judger-api-token`.
+# - VOJ_JUDGER_API_TOKEN and VOJ_JUDGER_PASSWORD, the secrets the judgers need:
+#   when one is not set, a random value is generated on the first start, printed
+#   once, and kept next to the database (so it survives image updates); run every
+#   judger with both. Read them again with
+#   `docker exec voj.web cat /var/lib/mariadb/voj-judger-api-token` and
+#   `docker exec voj.web cat /var/lib/mariadb/voj-judger-password`. The application
+#   makes VOJ_JUDGER_USERNAME (default `judger`) a judger account with that
+#   password on every start.
 # - VOJ_DEMO=1: on the first start (no user in the database yet), loads the sample
 #   problems, contests and accounts of sql/demo.sql, whose passwords equal their
 #   usernames (root / root is an administrator). Only for trying VOJ out.
@@ -15,17 +19,22 @@
 # password on its first start and prints it once (`docker logs voj.web`).
 set -euo pipefail
 
-TOKEN_FILE=/var/lib/mariadb/voj-judger-api-token
-if [ -z "${VOJ_JUDGER_API_TOKEN:-}" ]; then
-  if [ ! -s "$TOKEN_FILE" ]; then
-    head -c 24 /dev/urandom | od -An -tx1 | tr -d ' \n' > "$TOKEN_FILE"
-    chmod 600 "$TOKEN_FILE"
-    echo "Generated VOJ_JUDGER_API_TOKEN=$(cat "$TOKEN_FILE")"
-    echo "Run every judger with -e VOJ_JUDGER_API_TOKEN=<that value>."
+# Exports the variable $1 when it is not set, with the value kept in the file $2,
+# which is generated (and printed) on the first start.
+use_judger_secret() {
+  local name="$1" file="$2"
+  if [ -z "${!name:-}" ]; then
+    if [ ! -s "$file" ]; then
+      head -c 24 /dev/urandom | od -An -tx1 | tr -d ' \n' > "$file"
+      chmod 600 "$file"
+      echo "Generated $name=$(cat "$file")"
+      echo "Run every judger with -e $name=<that value>."
+    fi
+    export "$name=$(cat "$file")"
   fi
-  VOJ_JUDGER_API_TOKEN="$(cat "$TOKEN_FILE")"
-  export VOJ_JUDGER_API_TOKEN
-fi
+}
+use_judger_secret VOJ_JUDGER_API_TOKEN /var/lib/mariadb/voj-judger-api-token
+use_judger_secret VOJ_JUDGER_PASSWORD /var/lib/mariadb/voj-judger-password
 
 # A reverse proxy on the Docker host connects through the gateway of the container's
 # network (a published port is forwarded from there), so the web application takes the
