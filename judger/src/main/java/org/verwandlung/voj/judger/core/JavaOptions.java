@@ -41,7 +41,8 @@ import java.nio.file.attribute.BasicFileAttributes;
  * compile log, which the note would clutter.
  *
  * <p>The options (figures measured with OpenJDK 21 and 25 on a host with 24 CPUs and 60 GB of RAM,
- * under a limit of 512 MB, i.e. 256 MB times Java's memory multiplier of 2):
+ * under a limit of 512 MB, i.e. 256 MB times Java's memory multiplier of 2, unless they say
+ * otherwise):
  *
  * <ul>
  *   <li>{@code -XX:MaxRAM=<limit>}: the JVM takes the run's memory limit (the problem's, times the
@@ -52,12 +53,17 @@ import java.nio.file.attribute.BasicFileAttributes;
  *       its first collection, and was judged Memory Limit Exceeded (the limit is on the peak
  *       resident set, heap and all). With it, the heap starts at 1/64 of the limit and grows only
  *       as the program's live data needs: the same program peaks at 41 MB.
- *   <li>{@code -Xmx}: the heap may grow to the limit less {@value #NON_HEAP_RESERVE_KB} KB (64
- *       MB), but at least to half of the limit. The rest is left to what the JVM needs besides (its
+ *   <li>{@code -Xmx}: the heap may grow to the limit less a reserve of 1/8 of it, but at least
+ *       {@value #MIN_NON_HEAP_RESERVE_KB} KB (48 MB), and to at least half of the limit (and {@value
+ *       #MIN_MAX_HEAP_KB} KB, see there). The reserve is left to what the JVM needs besides (its
  *       code, class metadata, compiled code, thread stacks, the collector's own structures): about
- *       40 MB for a small program; one that filled its whole heap peaked 20 to 44 MB above it (at
- *       most 492 MB of 512, 100 MB of 128). A program that needs more heap than that runs out of
- *       it, rather than past its limit.
+ *       40 MB for a small program. A program that filled its whole heap, until it ran out, peaked
+ *       at most 26 to 36 MB above it: 84 MB of 96, 116 of 128, 177 of 192, 243 of 256, 362 of 384,
+ *       481 of 512, 706 of 768 and 923 of 1024. A program that needs more heap than that runs out
+ *       of it, rather than past its limit. (Under a limit below 96 MB, where half of it is the
+ *       heap, the JVM may pass the limit before its heap runs out: at 64 MB, that program peaked at
+ *       68 MB, Memory Limit Exceeded all the same.) A fixed reserve of 64 MB left a 128 MB limit
+ *       only 64 MB of heap; one of 40 MB left a 128 MB limit 5 MB to spare, and 256 MB 8 MB.
  *   <li>{@code -XX:+UseSerialGC}: the collector with the least memory and CPU of its own (G1, the
  *       default on a host with 2 CPUs or more, peaked at 110 to 120 MB for the program above), whose
  *       pauses do not matter to a run.
@@ -88,8 +94,19 @@ final class JavaOptions {
   /** The environment variable the options are passed in, read by the {@code java} launcher. */
   static final String ENVIRONMENT_VARIABLE = "JDK_JAVA_OPTIONS";
 
-  /** The part of the memory limit (KB) left to the JVM besides its heap. */
-  static final int NON_HEAP_RESERVE_KB = 64 * 1024;
+  /** The part of the memory limit left to the JVM besides its heap: 1/8 of it, ... */
+  static final int NON_HEAP_RESERVE_DIVISOR = 8;
+
+  /** ... but at least this much (KB). */
+  static final int MIN_NON_HEAP_RESERVE_KB = 48 * 1024;
+
+  /**
+   * The least maximum heap (KB): HotSpot refuses to start with one below 2 MB ("Too small maximum
+   * heap"). It only matters under a limit below 32 MB, which no JVM fits in (it needs some 40 MB
+   * of its own), so that the run is stopped at its memory limit (Memory Limit Exceeded) rather
+   * than failing to start (a Runtime Error).
+   */
+  static final int MIN_MAX_HEAP_KB = 16 * 1024;
 
   /** The exit code of a JVM that ran out of memory ({@code -XX:+ExitOnOutOfMemoryError}). */
   static final int OUT_OF_MEMORY_EXIT_CODE = 3;
@@ -117,7 +134,10 @@ final class JavaOptions {
   static String forRun(int memoryLimitKb) {
     StringBuilder options = new StringBuilder();
     if (memoryLimitKb > 0) {
-      int maxHeapKb = Math.max(memoryLimitKb / 2, memoryLimitKb - NON_HEAP_RESERVE_KB);
+      int reserveKb =
+          Math.max(memoryLimitKb / NON_HEAP_RESERVE_DIVISOR, MIN_NON_HEAP_RESERVE_KB);
+      int maxHeapKb =
+          Math.max(MIN_MAX_HEAP_KB, Math.max(memoryLimitKb / 2, memoryLimitKb - reserveKb));
       options
           .append("-XX:MaxRAM=")
           .append(memoryLimitKb)

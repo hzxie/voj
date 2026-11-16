@@ -361,11 +361,15 @@ is *L*:
   it derives from that is relative to the limit, the same on any host: the heap
   starts at *L* / 64 and grows only as the program's live data needs it. The
   program above peaks at 41 MB.
-- `-Xmx`: the heap may grow to *L* less 64 MB (at least *L* / 2), which leaves
-  room for what the JVM needs besides (code, class metadata, compiled code,
-  thread stacks): about 40 MB for a small program. A program that filled its
-  whole heap peaked at most 492 MB under 512 MB, and 100 MB under 128 MB
-  (OpenJDK 21 and 25).
+- `-Xmx`: the heap may grow to *L* less max(*L* / 8, 48 MB), but to at least
+  *L* / 2 (and 16 MB, below which the JVM would not start; no JVM fits in a
+  limit that small anyway). That leaves room for what the JVM needs besides
+  (code, class metadata, compiled code, thread stacks): about 40 MB for a small
+  program. A program that filled its whole heap, until it ran out, peaked at
+  most 26 to 36 MB above it, under *L* (OpenJDK 21 and 25): 116 MB under 128
+  MB, 243 MB under 256 MB, 481 MB under 512 MB, 923 MB under 1024 MB. Under
+  *L* below 96 MB, where half of it is the heap, the JVM may pass *L* before
+  its heap runs out (68 MB under 64 MB), Memory Limit Exceeded all the same.
 - `-XX:+UseSerialGC`: the collector with the least memory and CPU time of its
   own (G1, the default on hosts with two CPUs or more, peaked at 110 to 120 MB
   for the program above).

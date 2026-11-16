@@ -32,28 +32,36 @@ import org.junit.jupiter.api.io.TempDir;
  * @author Haozhe Xie
  */
 public class JavaOptionsTest {
+  /** The options of every run that do not depend on its limits. */
+  private static final String OTHER_OPTIONS =
+      "-XX:+UseSerialGC -XX:ActiveProcessorCount=1 -XX:+ExitOnOutOfMemoryError";
+
   /**
    * Test case: the options of runs with memory limits, and without one. Expected result: the JVM
-   * takes the limit for the machine's memory, and its heap may take all of it but 64 MB, or half
-   * of it under a small limit; without a limit, the heap is left to the JVM's defaults.
+   * takes the limit for the machine's memory, and its heap may take all of it but an eighth, or
+   * but 48 MB under a limit below 384 MB, yet at least half of it (under a limit below 96 MB), and
+   * at least 16 MB, below which the JVM would not start; without a limit, the heap is left to the
+   * JVM's defaults.
    */
   @Test
   public void testOptionsDeriveTheHeapFromTheLimit() {
     Assertions.assertEquals(
-        "-XX:MaxRAM=524288k -Xmx458752k"
-            + " -XX:+UseSerialGC -XX:ActiveProcessorCount=1 -XX:+ExitOnOutOfMemoryError",
-        JavaOptions.forRun(524288));
+        "-XX:MaxRAM=1048576k -Xmx917504k " + OTHER_OPTIONS, JavaOptions.forRun(1048576));
     Assertions.assertEquals(
-        "-XX:MaxRAM=131072k -Xmx65536k"
-            + " -XX:+UseSerialGC -XX:ActiveProcessorCount=1 -XX:+ExitOnOutOfMemoryError",
-        JavaOptions.forRun(131072));
+        "-XX:MaxRAM=524288k -Xmx458752k " + OTHER_OPTIONS, JavaOptions.forRun(524288));
     Assertions.assertEquals(
-        "-XX:MaxRAM=65536k -Xmx32768k"
-            + " -XX:+UseSerialGC -XX:ActiveProcessorCount=1 -XX:+ExitOnOutOfMemoryError",
-        JavaOptions.forRun(65536));
+        "-XX:MaxRAM=393216k -Xmx344064k " + OTHER_OPTIONS, JavaOptions.forRun(393216));
     Assertions.assertEquals(
-        "-XX:+UseSerialGC -XX:ActiveProcessorCount=1 -XX:+ExitOnOutOfMemoryError",
-        JavaOptions.forRun(0));
+        "-XX:MaxRAM=262144k -Xmx212992k " + OTHER_OPTIONS, JavaOptions.forRun(262144));
+    Assertions.assertEquals(
+        "-XX:MaxRAM=131072k -Xmx81920k " + OTHER_OPTIONS, JavaOptions.forRun(131072));
+    Assertions.assertEquals(
+        "-XX:MaxRAM=98304k -Xmx49152k " + OTHER_OPTIONS, JavaOptions.forRun(98304));
+    Assertions.assertEquals(
+        "-XX:MaxRAM=65536k -Xmx32768k " + OTHER_OPTIONS, JavaOptions.forRun(65536));
+    Assertions.assertEquals(
+        "-XX:MaxRAM=2048k -Xmx16384k " + OTHER_OPTIONS, JavaOptions.forRun(2048));
+    Assertions.assertEquals(OTHER_OPTIONS, JavaOptions.forRun(0));
   }
 
   /**
