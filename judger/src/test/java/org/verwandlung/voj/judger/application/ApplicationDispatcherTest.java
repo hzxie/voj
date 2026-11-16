@@ -17,8 +17,8 @@
 package org.verwandlung.voj.judger.application;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -136,6 +136,43 @@ public class ApplicationDispatcherTest {
   }
 
   /**
+   * Test case: tests the claimSubmission method. Test data: a submission whose claim succeeds, but
+   * which cannot be read then, as the database went away (once, then for the release too). Expected
+   * result: the failure is thrown, and the submission released with the claim token of the claim,
+   * to the end of the queue, rather than held until its lease expired; when the release fails as
+   * well, the failure of the read is thrown all the same, with that of the release.
+   */
+  @Test
+  public void testAClaimedSubmissionThatCannotBeReadIsReleased() throws Exception {
+    DataAccessResourceFailureException outage = new DataAccessResourceFailureException("down");
+    when(submissionMapper.getNextSubmissionId(LANGUAGES)).thenReturn(100L);
+    when(submissionMapper.claimSubmission(eq(100L), anyLong(), anyLong(), anyLong(), any()))
+        .thenReturn(1);
+    when(submissionMapper.getSubmission(100L)).thenThrow(outage);
+    DataAccessResourceFailureException stillDown = new DataAccessResourceFailureException("down");
+    when(submissionMapper.releaseSubmission(eq(100L), anyLong(), eq(false)))
+        .thenReturn(1)
+        .thenThrow(stillDown);
+
+    Assertions.assertSame(
+        outage,
+        Assertions.assertThrows(
+            DataAccessResourceFailureException.class,
+            () -> applicationDispatcher.claimSubmission(LANGUAGES, 60)));
+    ArgumentCaptor<Long> claimToken = ArgumentCaptor.forClass(Long.class);
+    verify(submissionMapper)
+        .claimSubmission(eq(100L), claimToken.capture(), anyLong(), anyLong(), any());
+    verify(submissionMapper).releaseSubmission(100L, claimToken.getValue(), false);
+
+    DataAccessResourceFailureException failure =
+        Assertions.assertThrows(
+            DataAccessResourceFailureException.class,
+            () -> applicationDispatcher.claimSubmission(LANGUAGES, 60));
+    Assertions.assertSame(outage, failure);
+    Assertions.assertArrayEquals(new Throwable[] {stillDown}, failure.getSuppressed());
+  }
+
+  /**
    * Test case: tests the claimSubmission method. Test data: no pending submission in the languages
    * of the judger. Expected result: nothing is claimed.
    */
@@ -179,22 +216,53 @@ public class ApplicationDispatcherTest {
   }
 
   /**
-   * Test case: tests the requeueSubmission method. Test data: a judging that is still current, with
-   * a short reason, then one with a reason longer than the column takes, then one that was
-   * superseded. Expected result: the submission of the judging's claim token is released with the
-   * reason (cut to 255 characters), and whether it was is returned.
+   * Test case: tests the requeueSubmission method. Test data: a judging that is still current, then
+   * one that was superseded. Expected result: the submission of the judging's claim token is
+   * released with the reason, and whether it was is returned.
    */
   @Test
   public void testRequeueSubmission() throws Exception {
-    String longReason = "x".repeat(300);
-    when(submissionMapper.requeueSubmission(eq(100L), eq(CLAIM_TOKEN), anyString()))
-        .thenReturn(1, 1, 0);
+    when(submissionMapper.requeueSubmission(100L, CLAIM_TOKEN, "Failed.")).thenReturn(1, 0);
 
     Assertions.assertTrue(applicationDispatcher.requeueSubmission(submission(), "Failed."));
-    Assertions.assertTrue(applicationDispatcher.requeueSubmission(submission(), longReason));
     Assertions.assertFalse(applicationDispatcher.requeueSubmission(submission(), "Failed."));
-    verify(submissionMapper, times(2)).requeueSubmission(100L, CLAIM_TOKEN, "Failed.");
-    verify(submissionMapper).requeueSubmission(100L, CLAIM_TOKEN, "x".repeat(255));
+  }
+
+  /**
+   * Test case: tests the releaseSubmission, handBackSubmission and requeueSubmission methods. Test
+   * data: the database fails the first two times each is run, then a third time. Expected result:
+   * each is done at the third try, as a verdict is recorded; when every try fails, the failure is
+   * thrown after three tries. A refused statement is not tried again.
+   */
+  @Test
+  public void testReleasesAreDoneDespiteShortOutages() throws Exception {
+    DataAccessResourceFailureException outage = new DataAccessResourceFailureException("down");
+    when(submissionMapper.releaseSubmission(eq(100L), eq(CLAIM_TOKEN), anyBoolean()))
+        .thenThrow(outage, outage)
+        .thenReturn(1)
+        .thenThrow(outage, outage)
+        .thenReturn(1)
+        .thenThrow(outage);
+    when(submissionMapper.requeueSubmission(100L, CLAIM_TOKEN, "Failed."))
+        .thenThrow(outage, outage)
+        .thenReturn(1)
+        .thenThrow(new org.springframework.dao.DataIntegrityViolationException("Data too long"));
+
+    Assertions.assertTrue(applicationDispatcher.releaseSubmission(submission()));
+    Assertions.assertTrue(applicationDispatcher.handBackSubmission(submission()));
+    Assertions.assertTrue(applicationDispatcher.requeueSubmission(submission(), "Failed."));
+    verify(submissionMapper, times(3)).releaseSubmission(100L, CLAIM_TOKEN, false);
+    verify(submissionMapper, times(3)).releaseSubmission(100L, CLAIM_TOKEN, true);
+    verify(submissionMapper, times(3)).requeueSubmission(100L, CLAIM_TOKEN, "Failed.");
+
+    Assertions.assertThrows(
+        DataAccessResourceFailureException.class,
+        () -> applicationDispatcher.releaseSubmission(submission()));
+    verify(submissionMapper, times(6)).releaseSubmission(100L, CLAIM_TOKEN, false);
+    Assertions.assertThrows(
+        org.springframework.dao.DataIntegrityViolationException.class,
+        () -> applicationDispatcher.requeueSubmission(submission(), "Failed."));
+    verify(submissionMapper, times(4)).requeueSubmission(100L, CLAIM_TOKEN, "Failed.");
   }
 
   /**

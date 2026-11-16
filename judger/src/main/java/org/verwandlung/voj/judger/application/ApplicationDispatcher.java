@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.IntSupplier;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -103,7 +104,9 @@ public class ApplicationDispatcher {
    * administrator may edit its problem or test data and rejudge it until then, and the judging
    * must be of what was rejudged. A submission whose previous judging held it until its lease
    * expired is claimed with that judging counted as a failed one (see {@link
-   * #INTERRUPTED_REASON}).
+   * #INTERRUPTED_REASON}). A claimed submission that cannot be read (e.g. the database went away
+   * meanwhile) is released at once if the database lets it (see {@link #releaseSubmission}), rather
+   * than held until its lease expired, which would count a failed judging on it.
    *
    * <p>The claim token, a random number, identifies the judging: its lease is renewed (see {@link
    * #renewLease}) and its verdict recorded only while the submission still carries it, and its
@@ -115,6 +118,7 @@ public class ApplicationDispatcher {
    * @param leaseSeconds - how long the lease of the judging lasts, in seconds
    * @return the submission, with the claim token of the judging, or {@code null} if there is none
    *     to judge
+   * @throws DataAccessException if no submission can be claimed as the database is unreachable
    */
   public Submission claimSubmission(List<Integer> languageIds, long leaseSeconds) {
     for (Long submissionId = submissionMapper.getNextSubmissionId(languageIds);
@@ -125,7 +129,17 @@ public class ApplicationDispatcher {
       if (submissionMapper.claimSubmission(
               submissionId, claimToken, judgerAccount.getUid(), leaseSeconds, INTERRUPTED_REASON)
           == 1) {
-        Submission submission = submissionMapper.getSubmission(submissionId);
+        Submission submission;
+        try {
+          submission = submissionMapper.getSubmission(submissionId);
+        } catch (RuntimeException ex) {
+          try {
+            release(submissionId, claimToken, false);
+          } catch (RuntimeException releaseFailure) {
+            ex.addSuppressed(releaseFailure);
+          }
+          throw ex;
+        }
         if (submission != null) {
           submission.setClaimToken(claimToken);
           return submission;
@@ -158,6 +172,7 @@ public class ApplicationDispatcher {
    *
    * @param submission - the submission, claimed by {@link #claimSubmission}
    * @return whether the submission was released
+   * @throws DataAccessException if the database could not be written (see {@link #write})
    */
   public boolean releaseSubmission(Submission submission) {
     return release(submission.getSubmissionId(), submission.getClaimToken(), false);
@@ -170,6 +185,7 @@ public class ApplicationDispatcher {
    *
    * @param submission - the submission, claimed by {@link #claimSubmission}
    * @return whether the submission was released
+   * @throws DataAccessException if the database could not be written (see {@link #write})
    */
   public boolean handBackSubmission(Submission submission) {
     return release(submission.getSubmissionId(), submission.getClaimToken(), true);
@@ -182,26 +198,34 @@ public class ApplicationDispatcher {
    * @param claimToken - the claim token of the judging
    * @param keepsPlace - whether it keeps its place in the queue, rather than going to the end
    * @return whether the submission was released
+   * @throws DataAccessException if the database could not be written (see {@link #write})
    */
   private boolean release(long submissionId, long claimToken, boolean keepsPlace) {
-    return submissionMapper.releaseSubmission(submissionId, claimToken, keepsPlace) == 1;
+    return write(
+            "release",
+            submissionId,
+            () -> submissionMapper.releaseSubmission(submissionId, claimToken, keepsPlace))
+        == 1;
   }
 
   /**
    * Releases a submission whose judging failed in a way it may have caused (see {@code
-   * Dispatcher}), at the end of the queue, and counts the failed judging, with its reason, which the System Error of the submission tells
-   * once too many of its judgings failed. A judging that was superseded meanwhile releases nothing.
+   * Dispatcher}), to the end of the queue, and counts the failed judging, with its reason, which
+   * the System Error of the submission tells once too many of its judgings failed. A judging that
+   * was superseded meanwhile releases nothing.
    *
    * @param submission - the submission, claimed by {@link #claimSubmission}
-   * @param reason - why the judging failed, shown to the user (cut to {@value #MAX_REASON_LENGTH}
-   *     characters)
+   * @param reason - why the judging failed, shown to the user, at most 255 characters
    * @return whether the submission was released
+   * @throws DataAccessException if the database could not be written (see {@link #write})
    */
   public boolean requeueSubmission(Submission submission, String reason) {
-    String storedReason =
-        reason.length() <= MAX_REASON_LENGTH ? reason : reason.substring(0, MAX_REASON_LENGTH);
-    return submissionMapper.requeueSubmission(
-            submission.getSubmissionId(), submission.getClaimToken(), storedReason)
+    return write(
+            "requeue",
+            submission.getSubmissionId(),
+            () ->
+                submissionMapper.requeueSubmission(
+                    submission.getSubmissionId(), submission.getClaimToken(), reason))
         == 1;
   }
 
@@ -310,16 +334,10 @@ public class ApplicationDispatcher {
    * Records the outcome of a judging: only the result columns, and only if the submission is still
    * claimed by this judging (see {@link #claimSubmission}).
    *
-   * <p>A statement that fails for now (e.g. while the database fails over, or a connection broke,
-   * see {@link #isUnreachable}) is tried again, {@value #UPDATE_TRIES} times in all, a little later
-   * each time, which is still well within the lease of the judging: a verdict is not lost to a
-   * short outage. Recording is idempotent, so a statement that did record the verdict though its
-   * answer was lost records it again when tried again.
-   *
    * @param submission - the submission, claimed by {@link #claimSubmission}
    * @param outcome - the outcome of the judging
    * @throws Superseded if the judging was superseded: the verdict is stale, and not recorded
-   * @throws DataAccessException if the verdict cannot be recorded
+   * @throws DataAccessException if the verdict cannot be recorded (see {@link #write})
    */
   private void record(Submission submission, Outcome outcome) throws Superseded {
     submission.setUsedTime(outcome.usedTime());
@@ -327,31 +345,44 @@ public class ApplicationDispatcher {
     submission.setJudgeScore(outcome.score());
     submission.setJudgeResultSlug(outcome.judgeResult());
     submission.setJudgeLog(outcome.log());
-    if (updateSubmissionResult(submission) == 0) {
+    int recorded =
+        write(
+            "record the verdict of",
+            submission.getSubmissionId(),
+            () -> submissionMapper.updateSubmissionResult(submission));
+    if (recorded == 0) {
       throw new Superseded();
     }
   }
 
   /**
-   * Updates the result columns of a submission, trying a failed statement again.
+   * Runs a write of a judging to its submission, which changes the submission only while the
+   * judging still holds it (by its claim token): records its verdict, or releases it.
    *
-   * @param submission - the submission, with its verdict
-   * @return the number of submissions updated
-   * @throws DataAccessException if no try succeeded
+   * <p>A statement that fails for now (e.g. while the database fails over, or a connection broke,
+   * see {@link #isUnreachable}) is tried again, {@value #WRITE_TRIES} times in all, a second after
+   * the first try and two after the second: what a judging found is not lost to a short outage. A
+   * try fails once it got no connection within {@code jdbc.maxWait} or no answer within the {@code
+   * socketTimeout} of the {@code jdbc.url}. Each write may be tried again after it was done though
+   * its answer was lost: a verdict is recorded once more (the claim token stays), and a release
+   * finds the claim token gone and changes nothing.
+   *
+   * @param action - what the statement does to the submission, for the log
+   * @param submissionId - the unique identifier of the submission
+   * @param statement - the statement, which returns the number of submissions it changed
+   * @return the number of submissions changed
+   * @throws DataAccessException if the database refused the statement, or no try succeeded
    */
-  private int updateSubmissionResult(Submission submission) {
+  private int write(String action, long submissionId, IntSupplier statement) {
     for (int tries = 1; ; ++tries) {
       try {
-        return submissionMapper.updateSubmissionResult(submission);
+        return statement.getAsInt();
       } catch (DataAccessException ex) {
-        if (tries == UPDATE_TRIES || !isUnreachable(ex)) {
+        if (tries == WRITE_TRIES || !isUnreachable(ex)) {
           throw ex;
         }
         LOGGER.warn(
-            String.format(
-                "Failed to record the verdict of submission #%d; trying again.",
-                submission.getSubmissionId()),
-            ex);
+            String.format("Failed to %s submission #%d; trying again.", action, submissionId), ex);
         try {
           Thread.sleep(retryDelay << (tries - 1));
         } catch (InterruptedException interruption) {
@@ -390,11 +421,8 @@ public class ApplicationDispatcher {
   /** The names of the judge results, by their slug, as read so far. */
   private final Map<String, String> judgeResultNames = new ConcurrentHashMap<>();
 
-  /** The longest reason of a failed judging the database takes. */
-  static final int MAX_REASON_LENGTH = 255;
-
-  /** How many times a verdict is recorded before a failure to do so is given up. */
-  static final int UPDATE_TRIES = 3;
+  /** How many times a write of a judging is tried before a failure to do it is given up. */
+  static final int WRITE_TRIES = 3;
 
   /** How long (ms) a failed statement waits before it is tried again; doubles each time. */
   private final long retryDelay;

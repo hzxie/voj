@@ -174,7 +174,8 @@ two ways:
   `judger.apiToken`, a 404 without the mark, e.g. for a wrong
   `judger.web.baseUrl`, an archive that is malformed) or read, the source code
   cannot be written, or the database is unreachable when the verdict is recorded
-  (it is tried 3 times within a few seconds first). The judger releases the
+  (it is tried 3 times within a few seconds first, as is the release of a
+  submission). The judger releases the
   submission to the end of the queue and counts nothing on it, so an outage of
   the web app or the database does not use up its budget, and a submission whose
   judgings fail this way every time (e.g. as its test data is broken) holds no
@@ -183,6 +184,9 @@ two ways:
   judgers then soon are not ready, and an outage longer than
   `judging.noJudgerTimeout` of the web app has the waiting submissions judged a
   System Error (see [Judging queue](#judging-queue)).
+
+A submission that the judger claimed but could not read (e.g. the database went
+away meanwhile) is released at once, rather than held until its lease expired.
 
 Two budgets, independent of each other, keep failed judgings from going on for
 ever:
