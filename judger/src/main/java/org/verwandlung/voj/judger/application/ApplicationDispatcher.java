@@ -64,18 +64,42 @@ public class ApplicationDispatcher {
   }
 
   /**
+   * Claims a submission for judging: records when (and by which judger) its judging started, if it
+   * is still pending. A submission that is no longer pending has been judged already, e.g. its task
+   * was delivered twice, and must not be judged (and overwritten) again.
+   *
+   * <p>The start time, at second precision, also identifies this judging: its verdict is only
+   * recorded if the submission still carries it (see {@link #updateSubmission}). A rejudge resets
+   * the submission (to pending, without a start time), so a judging that was still running then
+   * cannot overwrite the new verdict with a stale one; neither can a judging that a later delivery
+   * of the same task took over.
+   *
+   * @param submission - the submission, whose execute time is set to the start time when claimed
+   * @return whether the submission was pending and is now claimed by this judging
+   */
+  public boolean onJudgingStarted(Submission submission) {
+    Date startTime = new Date(System.currentTimeMillis() / 1000 * 1000);
+    if (submissionMapper.claimSubmission(submission.getSubmissionId(), startTime, getJudgerUid())
+        == 0) {
+      return false;
+    }
+    submission.setExecuteTime(startTime);
+    return true;
+  }
+
+  /**
    * Notifies the user when a system error occurs: the submission could not be judged for a reason
    * that is not its own fault.
    *
-   * @param submissionId - the unique identifier of the submission
+   * @param submission - the submission, claimed by {@link #onJudgingStarted}
    * @param reason - why the submission could not be judged, shown to the user in the judge log
    */
-  public void onErrorOccurred(long submissionId, String reason) {
-    updateSubmission(submissionId, 0, 0, 0, "SE", String.format("System Error.\n\n%s\n", reason));
+  public void onErrorOccurred(Submission submission, String reason) {
+    updateSubmission(submission, 0, 0, 0, "SE", String.format("System Error.\n\n%s\n", reason));
 
     Map<String, Object> mapMessage = new HashMap<>();
     mapMessage.put("event", "ErrorOccurred");
-    mapMessage.put("submissionId", submissionId);
+    mapMessage.put("submissionId", submission.getSubmissionId());
 
     notifyWebApplication(mapMessage);
   }
@@ -83,19 +107,19 @@ public class ApplicationDispatcher {
   /**
    * Notifies the user when the compilation stage finishes.
    *
-   * @param submissionId - the unique identifier of the submission
+   * @param submission - the submission, claimed by {@link #onJudgingStarted}
    * @param result - the compilation result
    */
-  public void onCompileFinished(long submissionId, Map<String, Object> result) {
+  public void onCompileFinished(Submission submission, Map<String, Object> result) {
     boolean isSuccessful = (Boolean) result.get("isSuccessful");
     String log = getJudgeLog(result);
 
     if (!isSuccessful) {
-      updateSubmission(submissionId, 0, 0, 0, "CE", log);
+      updateSubmission(submission, 0, 0, 0, "CE", log);
     }
     Map<String, Object> mapMessage = new HashMap<>();
     mapMessage.put("event", "CompileFinished");
-    mapMessage.put("submissionId", submissionId);
+    mapMessage.put("submissionId", submission.getSubmissionId());
     mapMessage.put("isSuccessful", isSuccessful);
     mapMessage.put("log", log);
 
@@ -132,10 +156,11 @@ public class ApplicationDispatcher {
   /**
    * Persists the program's judging result.
    *
-   * @param submissionId - the number of the submission
+   * @param submission - the submission, claimed by {@link #onJudgingStarted}
    * @param runtimeResults - the set of judging results for all checkpoints
    */
-  public void onAllTestPointsFinished(long submissionId, List<Map<String, Object>> runtimeResults) {
+  public void onAllTestPointsFinished(
+      Submission submission, List<Map<String, Object>> runtimeResults) {
     int totalTime = 0;
     int maxMemory = 0;
     int totalScore = 0;
@@ -162,11 +187,11 @@ public class ApplicationDispatcher {
       }
     }
     log = getJudgeLog(runtimeResults, runtimeResultSlug, totalTime, maxMemory, totalScore);
-    updateSubmission(submissionId, totalTime, maxMemory, totalScore, runtimeResultSlug, log);
+    updateSubmission(submission, totalTime, maxMemory, totalScore, runtimeResultSlug, log);
 
     Map<String, Object> mapMessage = new HashMap<>();
     mapMessage.put("event", "AllTestPointsFinished");
-    mapMessage.put("submissionId", submissionId);
+    mapMessage.put("submissionId", submission.getSubmissionId());
     mapMessage.put("runtimeResult", getRuntimeResultName(runtimeResultSlug));
     mapMessage.put("totalTime", totalTime);
     mapMessage.put("maxMemory", maxMemory);
@@ -336,9 +361,11 @@ public class ApplicationDispatcher {
   }
 
   /**
-   * Updates the submission information.
+   * Records the verdict of a judging: only the result columns, and only if the submission is still
+   * claimed by this judging (see {@link #onJudgingStarted}); otherwise the verdict is stale and
+   * dropped.
    *
-   * @param submissionId - the unique identifier of the submission
+   * @param submission - the submission, claimed by {@link #onJudgingStarted}
    * @param usedTime - the running time of the submission (sum of all times)
    * @param usedMemory - the memory used by the submission (maximum memory usage)
    * @param score - the score of the run
@@ -346,21 +373,25 @@ public class ApplicationDispatcher {
    * @param log - the judging log
    */
   private void updateSubmission(
-      long submissionId, int usedTime, int usedMemory, int score, String judgeResult, String log) {
-    Submission submission = submissionMapper.getSubmission(submissionId);
-    if (submission == null) {
-      LOGGER.warn(String.format("Cannot update a non-existent submission #%d", submissionId));
-      return;
-    }
-    submission.setExecuteTime(new Date());
+      Submission submission,
+      int usedTime,
+      int usedMemory,
+      int score,
+      String judgeResult,
+      String log) {
     submission.setUsedTime(usedTime);
     submission.setUsedMemory(usedMemory);
     submission.setJudgeScore(score);
     submission.setJudgeResultSlug(judgeResult);
     submission.setJudgeLog(log);
-    submission.setJudgerUid(getJudgerUid());
 
-    submissionMapper.updateSubmission(submission);
+    if (submissionMapper.updateSubmissionResult(submission) == 0) {
+      LOGGER.warn(
+          String.format(
+              "Dropped the verdict %s of submission #%d: it was rejudged, or judged by another"
+                  + " delivery of its task, meanwhile.",
+              judgeResult, submission.getSubmissionId()));
+    }
   }
 
   /**

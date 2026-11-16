@@ -18,11 +18,13 @@ package org.verwandlung.voj.judger.application;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -92,7 +94,7 @@ public class ApplicationDispatcherTest {
         .createNewTask(anyLong());
 
     Assertions.assertDoesNotThrow(() -> applicationDispatcher.onSubmissionCreated(100L));
-    verify(submissionMapper, never()).updateSubmission(any(Submission.class));
+    verify(submissionMapper, never()).updateSubmissionResult(any(Submission.class));
   }
 
   /**
@@ -102,25 +104,59 @@ public class ApplicationDispatcherTest {
    */
   @Test
   public void testOnErrorOccurredWithoutBroker() {
-    when(submissionMapper.getSubmission(100L)).thenReturn(new Submission());
     org.mockito.Mockito.doThrow(new org.springframework.jms.UncategorizedJmsException("down"))
         .when(messageSender)
         .sendMessage(any());
 
-    Assertions.assertDoesNotThrow(() -> applicationDispatcher.onErrorOccurred(100L, "reason"));
-    verify(submissionMapper).updateSubmission(any(Submission.class));
+    Assertions.assertDoesNotThrow(
+        () -> applicationDispatcher.onErrorOccurred(submission(), "reason"));
+    verify(submissionMapper).updateSubmissionResult(any(Submission.class));
   }
 
   /**
-   * Test case: tests the onErrorOccurred method. Test data: a submission that no longer exists.
-   * Expected result: no update is attempted and the call does not throw.
+   * Test case: tests the onErrorOccurred method. Test data: a submission that was rejudged (or
+   * claimed by another delivery of its task) meanwhile, so the update matches nothing. Expected
+   * result: the stale verdict is dropped and the call does not throw.
    */
   @Test
-  public void testOnErrorOccurredWithMissingSubmission() {
-    when(submissionMapper.getSubmission(100L)).thenReturn(null);
+  public void testOnErrorOccurredWithStaleJudging() {
+    when(submissionMapper.updateSubmissionResult(any(Submission.class))).thenReturn(0);
 
-    Assertions.assertDoesNotThrow(() -> applicationDispatcher.onErrorOccurred(100L, "reason"));
-    verify(submissionMapper, never()).updateSubmission(any(Submission.class));
+    Assertions.assertDoesNotThrow(
+        () -> applicationDispatcher.onErrorOccurred(submission(), "reason"));
+  }
+
+  /**
+   * Test case: tests the onJudgingStarted method. Test data: a pending submission. Expected result:
+   * it is claimed, with the start time at second precision (that of the column) as the token that
+   * identifies this judging.
+   */
+  @Test
+  public void testOnJudgingStartedClaimsPendingSubmission() {
+    when(submissionMapper.claimSubmission(eq(100L), any(Date.class), any())).thenReturn(1);
+    Submission submission = new Submission();
+    submission.setSubmissionId(100L);
+
+    Assertions.assertTrue(applicationDispatcher.onJudgingStarted(submission));
+
+    ArgumentCaptor<Date> startTimeCaptor = ArgumentCaptor.forClass(Date.class);
+    verify(submissionMapper).claimSubmission(eq(100L), startTimeCaptor.capture(), any());
+    Assertions.assertEquals(0, startTimeCaptor.getValue().getTime() % 1000);
+    Assertions.assertEquals(startTimeCaptor.getValue(), submission.getExecuteTime());
+  }
+
+  /**
+   * Test case: tests the onJudgingStarted method. Test data: a submission that is not pending (it
+   * has been judged already). Expected result: it is not claimed.
+   */
+  @Test
+  public void testOnJudgingStartedSkipsJudgedSubmission() {
+    when(submissionMapper.claimSubmission(eq(100L), any(Date.class), any())).thenReturn(0);
+    Submission submission = new Submission();
+    submission.setSubmissionId(100L);
+
+    Assertions.assertFalse(applicationDispatcher.onJudgingStarted(submission));
+    Assertions.assertNull(submission.getExecuteTime());
   }
 
   /**
@@ -129,12 +165,10 @@ public class ApplicationDispatcherTest {
    */
   @Test
   public void testOnErrorOccurred() {
-    when(submissionMapper.getSubmission(100L)).thenReturn(new Submission());
-
-    applicationDispatcher.onErrorOccurred(100L, "This problem has no test data.");
+    applicationDispatcher.onErrorOccurred(submission(), "This problem has no test data.");
 
     ArgumentCaptor<Submission> submissionCaptor = ArgumentCaptor.forClass(Submission.class);
-    verify(submissionMapper).updateSubmission(submissionCaptor.capture());
+    verify(submissionMapper).updateSubmissionResult(submissionCaptor.capture());
     Assertions.assertEquals("SE", submissionCaptor.getValue().getJudgeResultSlug());
     Assertions.assertEquals(
         "System Error.\n\nThis problem has no test data.\n",
@@ -155,9 +189,9 @@ public class ApplicationDispatcherTest {
     result.put("isSuccessful", true);
     result.put("log", "");
 
-    applicationDispatcher.onCompileFinished(100L, result);
+    applicationDispatcher.onCompileFinished(submission(), result);
 
-    verify(submissionMapper, never()).updateSubmission(any(Submission.class));
+    verify(submissionMapper, never()).updateSubmissionResult(any(Submission.class));
 
     Map<String, Object> message = captureSentMessage();
     Assertions.assertEquals("CompileFinished", message.get("event"));
@@ -170,15 +204,14 @@ public class ApplicationDispatcherTest {
    */
   @Test
   public void testOnCompileFinishedFailed() {
-    when(submissionMapper.getSubmission(100L)).thenReturn(new Submission());
     Map<String, Object> result = new HashMap<>();
     result.put("isSuccessful", false);
     result.put("log", "error: expected ';'");
 
-    applicationDispatcher.onCompileFinished(100L, result);
+    applicationDispatcher.onCompileFinished(submission(), result);
 
     ArgumentCaptor<Submission> submissionCaptor = ArgumentCaptor.forClass(Submission.class);
-    verify(submissionMapper).updateSubmission(submissionCaptor.capture());
+    verify(submissionMapper).updateSubmissionResult(submissionCaptor.capture());
     Assertions.assertEquals("CE", submissionCaptor.getValue().getJudgeResultSlug());
 
     Map<String, Object> message = captureSentMessage();
@@ -238,7 +271,6 @@ public class ApplicationDispatcherTest {
    */
   @Test
   public void testOnAllTestPointsFinishedAccepted() {
-    when(submissionMapper.getSubmission(100L)).thenReturn(new Submission());
     when(judgeResultMapper.getJudgeResultUsingSlug("AC"))
         .thenReturn(new JudgeResult(1, "AC", "Accepted"));
 
@@ -246,10 +278,10 @@ public class ApplicationDispatcherTest {
     runtimeResults.add(buildRuntimeResult("AC", 10, 128, 50));
     runtimeResults.add(buildRuntimeResult("AC", 20, 256, 50));
 
-    applicationDispatcher.onAllTestPointsFinished(100L, runtimeResults);
+    applicationDispatcher.onAllTestPointsFinished(submission(), runtimeResults);
 
     ArgumentCaptor<Submission> submissionCaptor = ArgumentCaptor.forClass(Submission.class);
-    verify(submissionMapper).updateSubmission(submissionCaptor.capture());
+    verify(submissionMapper).updateSubmissionResult(submissionCaptor.capture());
     Submission submission = submissionCaptor.getValue();
     Assertions.assertEquals("AC", submission.getJudgeResultSlug());
     Assertions.assertEquals(100, submission.getJudgeScore());
@@ -270,7 +302,6 @@ public class ApplicationDispatcherTest {
    */
   @Test
   public void testOnAllTestPointsFinishedWithWrongAnswer() {
-    when(submissionMapper.getSubmission(100L)).thenReturn(new Submission());
     when(judgeResultMapper.getJudgeResultUsingSlug("AC"))
         .thenReturn(new JudgeResult(1, "AC", "Accepted"));
     when(judgeResultMapper.getJudgeResultUsingSlug("WA"))
@@ -280,10 +311,10 @@ public class ApplicationDispatcherTest {
     runtimeResults.add(buildRuntimeResult("AC", 10, 128, 50));
     runtimeResults.add(buildRuntimeResult("WA", 20, 256, 50));
 
-    applicationDispatcher.onAllTestPointsFinished(100L, runtimeResults);
+    applicationDispatcher.onAllTestPointsFinished(submission(), runtimeResults);
 
     ArgumentCaptor<Submission> submissionCaptor = ArgumentCaptor.forClass(Submission.class);
-    verify(submissionMapper).updateSubmission(submissionCaptor.capture());
+    verify(submissionMapper).updateSubmissionResult(submissionCaptor.capture());
     Submission submission = submissionCaptor.getValue();
     Assertions.assertEquals("WA", submission.getJudgeResultSlug());
     Assertions.assertEquals(50, submission.getJudgeScore());
@@ -298,7 +329,6 @@ public class ApplicationDispatcherTest {
    */
   @Test
   public void testOnAllTestPointsFinishedReportsFirstFailure() {
-    when(submissionMapper.getSubmission(100L)).thenReturn(new Submission());
     when(judgeResultMapper.getJudgeResultUsingSlug("TLE"))
         .thenReturn(new JudgeResult(3, "TLE", "Time Limit Exceeded"));
 
@@ -308,10 +338,10 @@ public class ApplicationDispatcherTest {
     runtimeResults.add(buildRuntimeResult("WA", 20, 128, 25));
     runtimeResults.add(buildRuntimeResult("RE", 20, 128, 25));
 
-    applicationDispatcher.onAllTestPointsFinished(100L, runtimeResults);
+    applicationDispatcher.onAllTestPointsFinished(submission(), runtimeResults);
 
     ArgumentCaptor<Submission> submissionCaptor = ArgumentCaptor.forClass(Submission.class);
-    verify(submissionMapper).updateSubmission(submissionCaptor.capture());
+    verify(submissionMapper).updateSubmissionResult(submissionCaptor.capture());
     Assertions.assertEquals("TLE", submissionCaptor.getValue().getJudgeResultSlug());
     Assertions.assertEquals(25, submissionCaptor.getValue().getJudgeScore());
     Assertions.assertEquals("Time Limit Exceeded", captureSentMessage().get("runtimeResult"));
@@ -323,13 +353,23 @@ public class ApplicationDispatcherTest {
    */
   @Test
   public void testOnAllTestPointsFinishedWithoutCheckpointsIsSystemError() {
-    when(submissionMapper.getSubmission(100L)).thenReturn(new Submission());
-
-    applicationDispatcher.onAllTestPointsFinished(100L, new ArrayList<>());
+    applicationDispatcher.onAllTestPointsFinished(submission(), new ArrayList<>());
 
     ArgumentCaptor<Submission> submissionCaptor = ArgumentCaptor.forClass(Submission.class);
-    verify(submissionMapper).updateSubmission(submissionCaptor.capture());
+    verify(submissionMapper).updateSubmissionResult(submissionCaptor.capture());
     Assertions.assertEquals("SE", submissionCaptor.getValue().getJudgeResultSlug());
+  }
+
+  /**
+   * Builds Submission#100, claimed by a judging.
+   *
+   * @return the submission
+   */
+  private Submission submission() {
+    Submission submission = new Submission();
+    submission.setSubmissionId(100L);
+    submission.setExecuteTime(new Date(1700000000000L));
+    return submission;
   }
 
   /**

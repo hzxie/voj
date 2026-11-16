@@ -76,6 +76,13 @@ public class Dispatcher {
         throw new IllgealSubmissionException(
             String.format("Illegal submission #%s", new Object[] {submissionId}));
       }
+      if (!applicationDispatcher.onJudgingStarted(submission)) {
+        LOGGER.info(
+            String.format(
+                "Skipping submission #%d: it is not pending (e.g. its task was delivered twice).",
+                submissionId));
+        return;
+      }
       try {
         judge(submission, baseDirectory, baseFileName);
       } catch (DataAccessException ex) {
@@ -84,10 +91,10 @@ public class Dispatcher {
         throw ex;
       } catch (SystemError ex) {
         LOGGER.error(String.format("System Error in submission #%d", submissionId), ex);
-        applicationDispatcher.onErrorOccurred(submissionId, ex.getMessage());
+        applicationDispatcher.onErrorOccurred(submission, ex.getMessage());
       } catch (Exception ex) {
         LOGGER.error(String.format("Failed to judge submission #%d", submissionId), ex);
-        applicationDispatcher.onErrorOccurred(submissionId, INTERNAL_ERROR_REASON);
+        applicationDispatcher.onErrorOccurred(submission, INTERNAL_ERROR_REASON);
       } finally {
         // Always remove the work directory (source, binary and program output), even when a stage
         // throws; otherwise it lingers in a shared location, readable by later submissions that
@@ -153,12 +160,11 @@ public class Dispatcher {
    */
   private boolean compile(Submission submission, String workDirectory, String baseFileName)
       throws SystemError {
-    long submissionId = submission.getSubmissionId();
     Map<String, Object> result = compiler.getCompileResult(submission, workDirectory, baseFileName);
     if (result.get("verdict") == Verdict.INTERNAL_ERROR) {
       throw new SystemError("The sandbox failed to run the compiler.", null);
     }
-    applicationDispatcher.onCompileFinished(submissionId, result);
+    applicationDispatcher.onCompileFinished(submission, result);
     return (Boolean) result.get("isSuccessful");
   }
 
@@ -203,7 +209,7 @@ public class Dispatcher {
       runtimeResults.add(runtimeResult);
       applicationDispatcher.onOneTestPointFinished(submissionId, checkpointId, runtimeResult);
     }
-    applicationDispatcher.onAllTestPointsFinished(submissionId, runtimeResults);
+    applicationDispatcher.onAllTestPointsFinished(submission, runtimeResults);
   }
 
   /**

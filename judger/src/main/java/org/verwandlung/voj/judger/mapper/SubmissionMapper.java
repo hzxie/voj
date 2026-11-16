@@ -16,6 +16,8 @@
  */
 package org.verwandlung.voj.judger.mapper;
 
+import java.util.Date;
+
 import org.apache.ibatis.annotations.One;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Result;
@@ -66,17 +68,36 @@ public interface SubmissionMapper {
   Submission getSubmission(@Param("submissionId") long submissionId);
 
   /**
-   * Updates a submission.
+   * Claims a pending submission for a judging: records when it started (which identifies the
+   * judging) and the judger.
    *
-   * @param submission - the submission object to update
+   * @param submissionId - the unique identifier of the submission
+   * @param executeTime - the start time of the judging, at second precision (the column's)
+   * @param judgerUid - the uid of the judger, or null if unknown
+   * @return 1 if the submission was pending and is now claimed, 0 otherwise
    */
   @Update(
-      "UPDATE voj_submissions SET problem_id = #{problem.problemId}, uid = #{uid}, language_id ="
-          + " #{language.languageId}, submission_submit_time = #{submitTime},"
-          + " submission_execute_time = #{executeTime}, submission_used_time = #{usedTime},"
-          + " submission_used_memory = #{usedMemory}, submission_judge_result = #{judgeResultSlug},"
-          + " submission_judge_score = #{judgeScore}, submission_judge_log = #{judgeLog},"
-          + " judger_uid = #{judgerUid}, submission_code = #{code} WHERE submission_id ="
-          + " #{submissionId}")
-  void updateSubmission(Submission submission);
+      "UPDATE voj_submissions SET submission_execute_time = #{executeTime},"
+          + " judger_uid = #{judgerUid}"
+          + " WHERE submission_id = #{submissionId} AND submission_judge_result = 'PD'")
+  int claimSubmission(
+      @Param("submissionId") long submissionId,
+      @Param("executeTime") Date executeTime,
+      @Param("judgerUid") Long judgerUid);
+
+  /**
+   * Records the verdict of a judging: only the result columns (never e.g. the code), and only if
+   * the submission is still pending and claimed by that judging.
+   *
+   * @param submission - the submission, whose execute time is the start time of the judging
+   * @return 1 if the verdict was recorded, 0 if the submission was meanwhile rejudged or claimed by
+   *     another judging
+   */
+  @Update(
+      "UPDATE voj_submissions SET submission_used_time = #{usedTime},"
+          + " submission_used_memory = #{usedMemory}, submission_judge_score = #{judgeScore},"
+          + " submission_judge_result = #{judgeResultSlug}, submission_judge_log = #{judgeLog}"
+          + " WHERE submission_id = #{submissionId} AND submission_judge_result = 'PD'"
+          + " AND submission_execute_time = #{executeTime}")
+  int updateSubmissionResult(Submission submission);
 }

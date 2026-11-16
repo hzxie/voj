@@ -68,6 +68,7 @@ public class DispatcherTest {
     ReflectionTestUtils.setField(dispatcher, "workBaseDirectory", "/tmp/voj-dispatcher-tests");
     ReflectionTestUtils.setField(dispatcher, "checkpointDirectory", "/tmp/voj-dispatcher-tests");
     when(submissionMapper.getSubmission(100L)).thenReturn(buildSubmission());
+    when(applicationDispatcher.onJudgingStarted(any())).thenReturn(true);
   }
 
   /**
@@ -105,13 +106,13 @@ public class DispatcherTest {
     dispatcher.createNewTask(100L);
 
     verify(submissionMapper, times(1)).getSubmission(100L);
-    verify(applicationDispatcher).onCompileFinished(eq(100L), any());
+    verify(applicationDispatcher).onCompileFinished(any(), any());
     verify(applicationDispatcher).onOneTestPointFinished(eq(100L), eq(1), any());
 
     @SuppressWarnings("unchecked")
     org.mockito.ArgumentCaptor<List<Map<String, Object>>> resultsCaptor =
         org.mockito.ArgumentCaptor.forClass(List.class);
-    verify(applicationDispatcher).onAllTestPointsFinished(eq(100L), resultsCaptor.capture());
+    verify(applicationDispatcher).onAllTestPointsFinished(any(), resultsCaptor.capture());
     Assertions.assertEquals("AC", resultsCaptor.getValue().get(0).get("runtimeResult"));
     Assertions.assertEquals(100, resultsCaptor.getValue().get(0).get("score"));
   }
@@ -168,7 +169,7 @@ public class DispatcherTest {
     @SuppressWarnings("unchecked")
     org.mockito.ArgumentCaptor<List<Map<String, Object>>> resultsCaptor =
         org.mockito.ArgumentCaptor.forClass(List.class);
-    verify(applicationDispatcher).onAllTestPointsFinished(eq(100L), resultsCaptor.capture());
+    verify(applicationDispatcher).onAllTestPointsFinished(any(), resultsCaptor.capture());
     Assertions.assertEquals("PE", resultsCaptor.getValue().get(0).get("runtimeResult"));
     Assertions.assertEquals("AC", resultsCaptor.getValue().get(1).get("runtimeResult"));
   }
@@ -185,11 +186,11 @@ public class DispatcherTest {
 
     dispatcher.createNewTask(100L);
 
-    verify(applicationDispatcher).onCompileFinished(eq(100L), any());
+    verify(applicationDispatcher).onCompileFinished(any(), any());
     verify(programRunner, never())
         .getRuntimeResult(any(), anyString(), anyString(), anyString(), anyString());
-    verify(applicationDispatcher, never()).onAllTestPointsFinished(anyLong(), any());
-    verify(applicationDispatcher, never()).onErrorOccurred(anyLong(), anyString());
+    verify(applicationDispatcher, never()).onAllTestPointsFinished(any(), any());
+    verify(applicationDispatcher, never()).onErrorOccurred(any(), anyString());
   }
 
   /**
@@ -202,9 +203,9 @@ public class DispatcherTest {
 
     dispatcher.createNewTask(100L);
 
-    verify(applicationDispatcher).onErrorOccurred(eq(100L), contains("no test data"));
+    verify(applicationDispatcher).onErrorOccurred(any(), contains("no test data"));
     verify(compiler, never()).getCompileResult(any(), anyString(), anyString());
-    verify(applicationDispatcher, never()).onAllTestPointsFinished(anyLong(), any());
+    verify(applicationDispatcher, never()).onAllTestPointsFinished(any(), any());
   }
 
   /**
@@ -219,7 +220,7 @@ public class DispatcherTest {
 
     dispatcher.createNewTask(100L);
 
-    verify(applicationDispatcher).onErrorOccurred(eq(100L), contains("could not be loaded"));
+    verify(applicationDispatcher).onErrorOccurred(any(), contains("could not be loaded"));
     verify(compiler, never()).getCompileResult(any(), anyString(), anyString());
   }
 
@@ -236,8 +237,8 @@ public class DispatcherTest {
 
     dispatcher.createNewTask(100L);
 
-    verify(applicationDispatcher).onErrorOccurred(eq(100L), contains("compiler"));
-    verify(applicationDispatcher, never()).onCompileFinished(anyLong(), any());
+    verify(applicationDispatcher).onErrorOccurred(any(), contains("compiler"));
+    verify(applicationDispatcher, never()).onCompileFinished(any(), any());
   }
 
   /**
@@ -256,8 +257,8 @@ public class DispatcherTest {
 
     dispatcher.createNewTask(100L);
 
-    verify(applicationDispatcher).onErrorOccurred(eq(100L), contains("could not be read"));
-    verify(applicationDispatcher, never()).onAllTestPointsFinished(anyLong(), any());
+    verify(applicationDispatcher).onErrorOccurred(any(), contains("could not be read"));
+    verify(applicationDispatcher, never()).onAllTestPointsFinished(any(), any());
   }
 
   /**
@@ -276,7 +277,7 @@ public class DispatcherTest {
 
     dispatcher.createNewTask(100L);
 
-    verify(applicationDispatcher).onErrorOccurred(100L, Dispatcher.INTERNAL_ERROR_REASON);
+    verify(applicationDispatcher).onErrorOccurred(any(), eq(Dispatcher.INTERNAL_ERROR_REASON));
     Assertions.assertFalse(Files.exists(workDirectory));
   }
 
@@ -293,11 +294,27 @@ public class DispatcherTest {
     org.mockito.Mockito.doThrow(
             new org.springframework.dao.DataAccessResourceFailureException("database down"))
         .when(applicationDispatcher)
-        .onCompileFinished(anyLong(), any());
+        .onCompileFinished(any(), any());
 
     Assertions.assertThrows(
         org.springframework.dao.DataAccessException.class, () -> dispatcher.createNewTask(100L));
-    verify(applicationDispatcher, never()).onErrorOccurred(anyLong(), anyString());
+    verify(applicationDispatcher, never()).onErrorOccurred(any(), anyString());
+  }
+
+  /**
+   * Test case: tests the createNewTask method. Test data: a submission that is no longer pending,
+   * e.g. its task was delivered a second time after it had been judged. Expected result: it is not
+   * judged (nor its verdict overwritten) again.
+   */
+  @Test
+  public void testCreateNewTaskSkipsSubmissionsThatAreNotPending() throws Exception {
+    when(applicationDispatcher.onJudgingStarted(any())).thenReturn(false);
+
+    dispatcher.createNewTask(100L);
+
+    verify(checkpointStore, never()).sync(any());
+    verify(compiler, never()).getCompileResult(any(), anyString(), anyString());
+    verify(applicationDispatcher, never()).onErrorOccurred(any(), anyString());
   }
 
   /**
