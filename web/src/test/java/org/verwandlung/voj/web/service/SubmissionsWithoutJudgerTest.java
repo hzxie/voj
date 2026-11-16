@@ -21,6 +21,7 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.sql.DataSource;
 
@@ -37,6 +38,8 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.util.AopTestUtils;
 import org.springframework.test.util.ReflectionTestUtils;
+
+import org.verwandlung.voj.web.mapper.SubmissionMapper;
 
 /**
  * Checks that the pending submissions in a language that no judger taking submissions supports are
@@ -71,24 +74,44 @@ public class SubmissionsWithoutJudgerTest {
   }
 
   /**
-   * Test case: tests failSubmissionsWithoutJudger(). Test data: a pending submission in C++, which
-   * no judger supports. Expected: it waits for the timeout, then it is marked SE with the judge log
-   * that says no running judger takes submissions in its language; a further run marks nothing.
+   * Test case: tests failSubmissionsWithoutJudger(). Test data: two pending submissions in C++,
+   * which no judger supports. Expected: they wait for the timeout, then both are marked SE by one
+   * run, with the judge log that says no judger is available for their language; a further run marks
+   * nothing.
    */
   @Test
   public void testUnsupportedLanguageIsSystemErrorAfterTheTimeout() throws Exception {
     long pending = insertSubmission(CPP, null, null);
+    long another = insertSubmission(CPP, null, null);
 
     Assertions.assertEquals(0, submissionService.failSubmissionsWithoutJudger());
     Assertions.assertEquals("PD", getJudgeResult(pending));
     Thread.sleep(TIMEOUT + 200);
 
-    Assertions.assertEquals(1, submissionService.failSubmissionsWithoutJudger());
+    Assertions.assertEquals(2, submissionService.failSubmissionsWithoutJudger());
     Assertions.assertEquals("SE", getJudgeResult(pending));
+    Assertions.assertEquals("SE", getJudgeResult(another));
     Assertions.assertEquals(
         SubmissionService.NO_JUDGER_JUDGE_LOG,
         submissionService.getSubmission(pending).getJudgeLog());
     Assertions.assertEquals(0, submissionService.failSubmissionsWithoutJudger());
+  }
+
+  /**
+   * Test case: tests SubmissionMapper.getLanguageIdsOfReadyJudgers(int). Test data: a running judger
+   * that takes submissions in C++ and Java, one that takes none in Python (not ready), and one in
+   * Pascal whose last heartbeat is 2 minutes old. Expected: C++ and Java only.
+   */
+  @Test
+  public void testTheLanguagesOfReadyJudgers() {
+    registerJudger("3,2", true, 0);
+    registerJudger("5", false, 0);
+    registerJudger("4", true, 120);
+
+    Assertions.assertEquals(
+        Set.of(CPP, JAVA),
+        Set.copyOf(
+            submissionMapper.getLanguageIdsOfReadyJudgers(JudgerService.JUDGER_TIMEOUT_SECONDS)));
   }
 
   /**
@@ -279,6 +302,9 @@ public class SubmissionsWithoutJudgerTest {
 
   /** The autowired SubmissionService object. */
   @Autowired private SubmissionService submissionService;
+
+  /** The autowired SubmissionMapper object. */
+  @Autowired private SubmissionMapper submissionMapper;
 
   /** The data source of the test database. */
   @Autowired private DataSource dataSource;

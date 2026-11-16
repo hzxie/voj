@@ -24,6 +24,7 @@ import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -581,25 +582,25 @@ public class SubmissionService {
    * while the database was down) never make a running judger look stopped, and the judgers that
    * could not reach this instance while it was down have the timeout to come back.
    *
-   * <p>The submissions are found by a plain read, which locks nothing, then marked one at a time,
-   * by primary key, each in a statement of its own (outside any transaction, so that no lock is
-   * held for longer), which checks again that no judging holds it and no judger taking submissions
-   * supports its language: instances running this at the same time, a rejudge and a judger's claim
-   * meanwhile neither deadlock with it nor lose their change. Its claim token is cleared, so that
-   * the messages of a judging that held it are dropped. The pages of a marked submission read its
-   * verdict from the database.
+   * <p>The submissions of a language are marked by one statement (outside any transaction, so
+   * that no lock is held for longer), which checks again that no judging holds them and no judger
+   * taking submissions supports the language: a judger's claim or a judger that came back meanwhile
+   * is never overridden. Their claim tokens are cleared, so that the messages of a judging that
+   * held one are dropped. The pages of a marked submission read its verdict from the database.
    *
    * @return the number of submissions marked
    */
   @Scheduled(fixedDelay = NO_JUDGER_CHECK_INTERVAL_MS)
   @Transactional(propagation = Propagation.NOT_SUPPORTED)
-  public synchronized int failSubmissionsWithoutJudger() {
+  public int failSubmissionsWithoutJudger() {
     if (noJudgerTimeout <= 0) {
       return 0;
     }
     try {
       long now = System.nanoTime();
-      Set<Integer> languagesOfReadyJudgers = judgerService.getLanguageIdsOfReadyJudgers();
+      Set<Integer> languagesOfReadyJudgers =
+          new HashSet<>(
+              submissionMapper.getLanguageIdsOfReadyJudgers(JudgerService.JUDGER_TIMEOUT_SECONDS));
       Map<Integer, Long> languagesWithoutJudger = new HashMap<>();
       for (int languageId : submissionMapper.getLanguageIdsOfWaitingSubmissions()) {
         if (!languagesOfReadyJudgers.contains(languageId)) {
@@ -615,20 +616,11 @@ public class SubmissionService {
           failed += failSubmissionsWithoutJudger(language.getKey());
         }
       }
-      if (isReconciliationFailing) {
-        isReconciliationFailing = false;
-        LOGGER.info("The pending submissions in languages without a judger are looked for again.");
-      }
       return failed;
     } catch (RuntimeException ex) {
       // What was seen is no longer seen continuously.
       languagesWithoutJudgerSince.clear();
-      if (!isReconciliationFailing) {
-        isReconciliationFailing = true;
-        LOGGER.error(
-            "Failed to look for the pending submissions in languages without a judger.", ex);
-      }
-      return 0;
+      throw ex;
     }
   }
 
@@ -640,14 +632,9 @@ public class SubmissionService {
    * @return the number of submissions marked
    */
   private int failSubmissionsWithoutJudger(int languageId) {
-    int failed = 0;
-    for (long submissionId : submissionMapper.getWaitingSubmissionIds(languageId)) {
-      if (submissionMapper.failSubmissionWithoutJudger(
-              submissionId, languageId, JudgerService.JUDGER_TIMEOUT_SECONDS, NO_JUDGER_JUDGE_LOG)
-          == 1) {
-        ++failed;
-      }
-    }
+    int failed =
+        submissionMapper.failSubmissionsWithoutJudger(
+            languageId, JudgerService.JUDGER_TIMEOUT_SECONDS, NO_JUDGER_JUDGE_LOG);
     if (failed > 0) {
       LOGGER.warn(
           String.format(
@@ -734,9 +721,6 @@ public class SubmissionService {
   /** The autowired LanguageMapper object. */
   @Autowired private LanguageMapper languageMapper;
 
-  /** The autowired JudgerService object, which tells the languages of the running judgers. */
-  @Autowired private JudgerService judgerService;
-
   /**
    * How long (ms) the pending submissions in a language wait while no judger taking submissions
    * supports it; 0 or less: as long as it takes.
@@ -749,9 +733,6 @@ public class SubmissionService {
    * runs of {@link #failSubmissionsWithoutJudger()}, and since when (by {@link System#nanoTime()}).
    */
   private final Map<Integer, Long> languagesWithoutJudgerSince = new HashMap<>();
-
-  /** Whether the last run of {@link #failSubmissionsWithoutJudger()} failed. */
-  private boolean isReconciliationFailing;
 
   /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(SubmissionService.class);

@@ -349,28 +349,28 @@ public interface SubmissionMapper {
   List<Integer> getLanguageIdsOfWaitingSubmissions();
 
   /**
-   * Gets the pending submissions in a language that no judging holds (see {@link
-   * #getLanguageIdsOfWaitingSubmissions}). A plain read, which locks nothing.
+   * Gets the languages that a running judger taking submissions supports: one whose last heartbeat
+   * is at most some seconds old, by the database's clock.
    *
-   * @param languageId - the unique identifier of the language
-   * @return the unique identifiers of the submissions
+   * @param judgerTimeoutSeconds - how old (seconds) the last heartbeat of a running judger may be
+   * @return the unique identifiers of the languages
    */
-  List<Long> getWaitingSubmissionIds(@Param("languageId") int languageId);
+  List<Integer> getLanguageIdsOfReadyJudgers(
+      @Param("judgerTimeoutSeconds") int judgerTimeoutSeconds);
 
   /**
-   * Marks a pending submission that no judging holds (see {@link #getWaitingSubmissionIds}) as a
-   * System Error, without a claim token, if that is still so and no judger taking submissions whose
-   * last heartbeat is at most some seconds old (by the database's clock) supports its language: a
-   * judging that took it meanwhile is never failed.
+   * Marks the pending submissions in a language that no judging holds (see {@link
+   * #getLanguageIdsOfWaitingSubmissions}) as a System Error, without a claim token, unless a
+   * running judger taking submissions supports the language (see {@link
+   * #getLanguageIdsOfReadyJudgers}), as checked by the statement itself: a judging that took one of
+   * them meanwhile, or a judger that came back meanwhile, is never failed.
    *
-   * @param submissionId - the unique identifier of the submission
-   * @param languageId - the unique identifier of its language
+   * @param languageId - the unique identifier of the language
    * @param judgerTimeoutSeconds - how old (seconds) the last heartbeat of a running judger may be
    * @param judgeLog - the judge log of the System Error
-   * @return 1 if the submission was marked, 0 otherwise
+   * @return the number of submissions marked
    */
-  int failSubmissionWithoutJudger(
-      @Param("submissionId") long submissionId,
+  int failSubmissionsWithoutJudger(
       @Param("languageId") int languageId,
       @Param("judgerTimeoutSeconds") int judgerTimeoutSeconds,
       @Param("judgeLog") String judgeLog);

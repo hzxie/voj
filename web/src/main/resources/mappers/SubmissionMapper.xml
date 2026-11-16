@@ -374,24 +374,32 @@
 		FROM voj_submissions
 		WHERE <include refid="waitingSubmissionCondition" />
 	</select>
-	<select id="getWaitingSubmissionIds"
+	<!-- A running judger that takes submissions supports the language ${languageId}: its last
+	     heartbeat is at most judgerTimeoutSeconds old, by the database's clock. -->
+	<sql id="readyJudgerSupports">
+		EXISTS (SELECT 1 FROM voj_judgers
+			WHERE judger_is_ready = 1
+				AND judger_heartbeat_time &gt; NOW() - INTERVAL #{judgerTimeoutSeconds} SECOND
+				AND FIND_IN_SET(${languageId}, judger_language_ids) &gt; 0)
+	</sql>
+	<select id="getLanguageIdsOfReadyJudgers"
 		parameterType="int"
-		resultType="long">
-		SELECT submission_id
-		FROM voj_submissions
-		WHERE <include refid="waitingSubmissionCondition" /> AND language_id = #{languageId}
+		resultType="int">
+		SELECT language_id
+		FROM voj_languages
+		WHERE <include refid="readyJudgerSupports">
+			<property name="languageId" value="voj_languages.language_id" />
+		</include>
 	</select>
-	<update id="failSubmissionWithoutJudger"
+	<update id="failSubmissionsWithoutJudger"
 		parameterType="map">
 		UPDATE voj_submissions
 		SET submission_judge_result = 'SE', submission_judge_log = #{judgeLog},
 			submission_claim_token = NULL, submission_lease_expiry_time = NULL
-		WHERE submission_id = #{submissionId} AND language_id = #{languageId}
-			AND <include refid="waitingSubmissionCondition" />
-			AND NOT EXISTS (SELECT 1 FROM voj_judgers
-				WHERE judger_is_ready = 1
-					AND judger_heartbeat_time &gt; NOW() - INTERVAL #{judgerTimeoutSeconds} SECOND
-					AND FIND_IN_SET(#{languageId}, judger_language_ids) &gt; 0)
+		WHERE language_id = #{languageId} AND <include refid="waitingSubmissionCondition" />
+			AND NOT <include refid="readyJudgerSupports">
+				<property name="languageId" value="voj_submissions.language_id" />
+			</include>
 	</update>
 	<delete id="deleteSubmission"
 		parameterType="long">
