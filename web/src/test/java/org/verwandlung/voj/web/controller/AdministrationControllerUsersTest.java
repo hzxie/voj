@@ -16,6 +16,7 @@
  */
 package org.verwandlung.voj.web.controller;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -32,6 +33,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import org.verwandlung.voj.web.model.User;
@@ -110,42 +112,28 @@ public class AdministrationControllerUsersTest {
 
     Map<String, Boolean> result =
         controller.editUserAction(
-            9999L, "pw", "a@b.com", "users", "en_US", "Name", "Bio", new MockHttpServletRequest());
+            9999L, "pw", "a@b.com", "users", "en_US", "Name", "Bio",
+            new MockHttpServletRequest(), new MockHttpServletResponse());
 
     Assertions.assertEquals(Boolean.FALSE, result.get("isUserExists"));
     Assertions.assertEquals(Boolean.FALSE, result.get("isSuccessful"));
-    verify(userService, never()).updateProfile(org.mockito.ArgumentMatchers.any(), eq("pw"), eq("users"), eq("en_US"));
+    verify(userService, never())
+        .updateUserByAdministrator(any(), any(), any(), any(), any(), any(), any());
   }
 
-  /** Test case: tests editUserAction(...). Test data: an existing user where both updates succeed. Expected: isUserExists is true and isSuccessful is true. */
+  /** Test case: tests editUserAction(...). Test data: an existing user. Expected: one service call (one transaction) saves everything and its result is returned with isUserExists. */
   @Test
-  public void testEditUserActionBothUpdatesSucceed() {
+  public void testEditUserActionUpdatesInOneCall() {
     User user = userWithGroup("users");
     when(userService.getUserUsingUid(1000L)).thenReturn(user);
-    when(userService.updateProfile(user, "pw", "users", "en_US")).thenReturn(map("isSuccessful", true));
-    when(userService.updateProfileByAdmin(user, "a@b.com", "Name", "Bio"))
-        .thenReturn(map("isSuccessful", true));
-
-    Map<String, Boolean> result =
-        controller.editUserAction(
-            1000L, "pw", "a@b.com", "users", "en_US", "Name", "Bio", new MockHttpServletRequest());
-
-    Assertions.assertEquals(Boolean.TRUE, result.get("isUserExists"));
-    Assertions.assertEquals(Boolean.TRUE, result.get("isSuccessful"));
-  }
-
-  /** Test case: tests editUserAction(...). Test data: an existing user where the meta update fails. Expected: isUserExists is true but isSuccessful is false (the two results are AND-combined). */
-  @Test
-  public void testEditUserActionMetaUpdateFails() {
-    User user = userWithGroup("users");
-    when(userService.getUserUsingUid(1000L)).thenReturn(user);
-    when(userService.updateProfile(user, "pw", "users", "en_US")).thenReturn(map("isSuccessful", true));
-    when(userService.updateProfileByAdmin(user, "a@b.com", "Name", "Bio"))
+    when(userService.updateUserByAdministrator(
+            user, "pw", "users", "en_US", "a@b.com", "Name", "Bio"))
         .thenReturn(map("isSuccessful", false));
 
     Map<String, Boolean> result =
         controller.editUserAction(
-            1000L, "pw", "a@b.com", "users", "en_US", "Name", "Bio", new MockHttpServletRequest());
+            1000L, "pw", "a@b.com", "users", "en_US", "Name", "Bio",
+            new MockHttpServletRequest(), new MockHttpServletResponse());
 
     Assertions.assertEquals(Boolean.TRUE, result.get("isUserExists"));
     Assertions.assertEquals(Boolean.FALSE, result.get("isSuccessful"));
@@ -164,6 +152,54 @@ public class AdministrationControllerUsersTest {
             new MockHttpServletRequest());
 
     Assertions.assertSame(serviceResult, result);
+  }
+
+  /**
+   * Test case: tests editUserAction(...). Test data: an administrator who sets their own password.
+   * Expected: this session stores the new password, so it is kept while the administrator's other
+   * sessions end.
+   */
+  @Test
+  public void testEditUserActionKeepsTheSessionOfAnAdministratorEditingThemselves() {
+    User administrator = userWithGroup("administrators");
+    org.verwandlung.voj.web.model.VojUserDetails userDetails =
+        new org.verwandlung.voj.web.model.VojUserDetails(administrator);
+    org.springframework.security.core.context.SecurityContextHolder.getContext()
+        .setAuthentication(
+            org.springframework.security.authentication.UsernamePasswordAuthenticationToken
+                .authenticated(userDetails, null, userDetails.getAuthorities()));
+    User storedAdministrator = userWithGroup("administrators");
+    when(userService.getUserUsingUid(1000L)).thenReturn(storedAdministrator);
+    when(userService.updateUserByAdministrator(
+            storedAdministrator, "new-pw", "administrators", "en_US", "a@b.com", "", ""))
+        .thenAnswer(
+            invocation -> {
+              storedAdministrator.setPassword("{bcrypt}new-hash");
+              return map("isSuccessful", true);
+            });
+    MockHttpServletRequest request = new MockHttpServletRequest();
+
+    try {
+      controller.editUserAction(
+          1000L, "new-pw", "a@b.com", "administrators", "en_US", "", "", request,
+          new MockHttpServletResponse());
+    } finally {
+      org.springframework.security.core.context.SecurityContextHolder.clearContext();
+    }
+
+    org.springframework.security.core.context.SecurityContext storedContext =
+        (org.springframework.security.core.context.SecurityContext)
+            request
+                .getSession()
+                .getAttribute(
+                    org.springframework.security.web.context.HttpSessionSecurityContextRepository
+                        .SPRING_SECURITY_CONTEXT_KEY);
+    Assertions.assertEquals(
+        "{bcrypt}new-hash",
+        ((org.verwandlung.voj.web.model.VojUserDetails)
+                storedContext.getAuthentication().getPrincipal())
+            .getUser()
+            .getPassword());
   }
 
   /** Test case: tests getNumberOfSubmissionsAction(...). Test data: a stubbed per-day count. Expected: the per-day counts are returned under the totalSubmissions key. */

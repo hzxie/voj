@@ -42,7 +42,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.session.SessionRegistry;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -613,6 +616,7 @@ public class AdministrationController {
    * @param displayName - the user's display name
    * @param aboutMe - the user's personal bio
    * @param request - the HttpServletRequest object
+   * @param response - the HttpServletResponse object
    * @return a Map<String, Boolean> object containing the profile update result
    */
   @RequestMapping(value = "/editUser.action", method = RequestMethod.POST)
@@ -624,25 +628,26 @@ public class AdministrationController {
       @RequestParam(value = "preferLanguage") String preferLanguageSlug,
       @RequestParam(value = "displayName") String displayName,
       @RequestParam(value = "aboutMe") String aboutMe,
-      HttpServletRequest request) {
+      HttpServletRequest request,
+      HttpServletResponse response) {
     User user = userService.getUserUsingUid(uid);
-    Map<String, Boolean> result = new HashMap<>(12, 1);
-    result.put("isSuccessful", false);
-    result.put("isUserExists", false);
-
+    Map<String, Boolean> result = new HashMap<>(16, 1);
     if (user != null) {
-      Map<String, Boolean> updateProfileResult =
-          userService.updateProfile(user, password, userGroupSlug, preferLanguageSlug);
-      Map<String, Boolean> updateUserMetaResult =
-          userService.updateProfileByAdmin(user, email, displayName, aboutMe);
-      boolean isUpdateProfileSuccessful = updateProfileResult.get("isSuccessful");
-      boolean isUpdateUserMetaSuccessful = updateUserMetaResult.get("isSuccessful");
-
-      result.putAll(updateProfileResult);
-      result.putAll(updateUserMetaResult);
-      result.put("isUserExists", true);
-      result.put("isSuccessful", isUpdateProfileSuccessful && isUpdateUserMetaSuccessful);
+      result.putAll(
+          userService.updateUserByAdministrator(
+              user, password, userGroupSlug, preferLanguageSlug, email, displayName, aboutMe));
+      // An administrator who sets their own password keeps this session (their other sessions
+      // end, see CurrentUserRefreshFilter).
+      User currentUser = HttpSessionParser.getCurrentUser();
+      if (result.get("isSuccessful") && user.equals(currentUser)) {
+        currentUser.setPassword(user.getPassword());
+        securityContextRepository.saveContext(
+            SecurityContextHolder.getContext(), request, response);
+      }
+    } else {
+      result.put("isSuccessful", false);
     }
+    result.put("isUserExists", user != null);
     return result;
   }
 
@@ -2299,6 +2304,10 @@ public class AdministrationController {
 
   /** The autowired session registry. Used for counting the number of online users. */
   @Autowired private SessionRegistry sessionRegistry;
+
+  /** Stores the refreshed security context when an administrator changes their own password. */
+  private final SecurityContextRepository securityContextRepository =
+      new HttpSessionSecurityContextRepository();
 
   /** The autowired ProblemService object. Used for getting problem record information. */
   @Autowired private ProblemService problemService;

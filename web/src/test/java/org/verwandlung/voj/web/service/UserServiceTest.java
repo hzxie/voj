@@ -421,46 +421,65 @@ public class UserServiceTest {
     Assertions.assertFalse(result.get("isSuccessful"));
   }
 
-  /** Test case: tests the updateProfile (administrator) method. Test data: a valid password / user group / language. Expected: the update succeeds. */
+  /** Test case: tests the updateUserByAdministrator(...) method. Test data: a valid password / user group / language / email / display name / bio. Expected: the update succeeds and persists. */
   @Test
-  public void testUpdateProfileByAdministratorSuccessfully() {
+  public void testUpdateUserByAdministratorSuccessfully() {
     User user = userService.getUserUsingUid(1002);
+    String passwordHash = user.getPassword();
     Map<String, Boolean> result =
-        userService.updateProfile(user, "new-password", "users", "text/x-java");
+        userService.updateUserByAdministrator(
+            user, "new-password", "administrators", "text/x-java", "new@example.com",
+            "Another", "About me");
     Assertions.assertTrue(result.get("isSuccessful"));
+
+    User updatedUser = userService.getUserUsingUid(1002);
+    Assertions.assertNotEquals(passwordHash, updatedUser.getPassword());
+    Assertions.assertEquals("administrators", updatedUser.getUserGroup().getUserGroupSlug());
+    Assertions.assertEquals("new@example.com", updatedUser.getEmail());
+    Assertions.assertEquals(
+        "Another", userService.getUserMetaUsingUid(updatedUser).get("displayName"));
   }
 
-  /** Test case: tests the updateProfile (administrator) method. Test data: a non-existing user group. Expected: the update fails. */
+  /** Test case: tests the updateUserByAdministrator(...) method. Test data: a non-existing user group. Expected: the update fails. */
   @Test
-  public void testUpdateProfileByAdministratorWithIllegalUserGroup() {
+  public void testUpdateUserByAdministratorWithIllegalUserGroup() {
     User user = userService.getUserUsingUid(1002);
     Map<String, Boolean> result =
-        userService.updateProfile(user, "new-password", "no-group", "text/x-java");
+        userService.updateUserByAdministrator(
+            user, "new-password", "no-group", "text/x-java", user.getEmail(), "", "");
     Assertions.assertFalse(result.get("isUserGroupLegal"));
     Assertions.assertFalse(result.get("isSuccessful"));
   }
 
-  /** Test case: tests the updateProfileByAdmin(...) method. Test data: a valid email / display name / bio. Expected: the update succeeds and the display name persists. */
+  /**
+   * Test case: tests the updateUserByAdministrator(...) method. Test data: a new password and user
+   * group with an email address another user has. Expected: the update fails and nothing is saved -
+   * neither the password nor the group.
+   */
   @Test
-  public void testUpdateProfileByAdminSuccessfully() {
-    User user = userService.getUserUsingUid(1000);
+  public void testUpdateUserByAdministratorSavesNothingWhenEmailIsTaken() {
+    User user = userService.getUserUsingUid(1002);
+    String passwordHash = user.getPassword();
     Map<String, Boolean> result =
-        userService.updateProfileByAdmin(user, "cshzxie@gmail.com", "Haozhe Xie", "About me");
-    Assertions.assertTrue(result.get("isSuccessful"));
-    Assertions.assertEquals("Haozhe Xie", userService.getUserMetaUsingUid(user).get("displayName"));
+        userService.updateUserByAdministrator(
+            user, "new-password", "administrators", "text/x-java", "cshzxie@gmail.com", "", "");
+    Assertions.assertTrue(result.get("isEmailExists"));
+    Assertions.assertFalse(result.get("isSuccessful"));
+
+    User storedUser = userService.getUserUsingUid(1002);
+    Assertions.assertEquals(passwordHash, storedUser.getPassword());
+    Assertions.assertEquals("users", storedUser.getUserGroup().getUserGroupSlug());
+    Assertions.assertEquals("noreply@verwandlung.org", storedUser.getEmail());
   }
 
-  /** Test case: tests the updateProfileByAdmin(...) method. Test data: an over-long display name. Expected: the update fails and personal profile fields are left untouched. */
+  /** Test case: tests the updateUserByAdministrator(...) method. Test data: an over-long display name. Expected: the update fails and personal profile fields are left untouched. */
   @Test
-  public void testUpdateProfileByAdminWithIllegalDisplayName() {
+  public void testUpdateUserByAdministratorWithIllegalDisplayName() {
     User user = userService.getUserUsingUid(1000);
     String location = (String) userService.getUserMetaUsingUid(user).get("location");
-    StringBuilder displayName = new StringBuilder();
-    for (int i = 0; i < 65; ++i) {
-      displayName.append('x');
-    }
     Map<String, Boolean> result =
-        userService.updateProfileByAdmin(user, "cshzxie@gmail.com", displayName.toString(), "Bio");
+        userService.updateUserByAdministrator(
+            user, "", "administrators", "text/x-java", "cshzxie@gmail.com", "x".repeat(65), "Bio");
     Assertions.assertFalse(result.get("isDisplayNameLegal"));
     Assertions.assertFalse(result.get("isSuccessful"));
     // The admin editor must not wipe location / website / social links it never edits.
@@ -533,14 +552,15 @@ public class UserServiceTest {
     Assertions.assertEquals(2, moved.getDailyCount());
   }
 
-  /** Test case: tests the updateProfileByAdmin(...) method. Test data: a pending verification token for the old address, then an email change by an administrator. Expected: the token is not usable for the new address. */
+  /** Test case: tests the updateUserByAdministrator(...) method. Test data: a pending verification token for the old address, then an email change by an administrator. Expected: the token is not usable for the new address. */
   @Test
-  public void testUpdateProfileByAdminInvalidatesTokenOfOldEmail() {
+  public void testUpdateUserByAdministratorInvalidatesTokenOfOldEmail() {
     emailValidationMapper.createEmailValidation(
         new EmailValidation("cshzxie@gmail.com", "old-token", tomorrow()));
     User user = userService.getUserUsingUid(1000);
     Map<String, Boolean> result =
-        userService.updateProfileByAdmin(user, "new-address@example.com", "Haozhe Xie", "");
+        userService.updateUserByAdministrator(
+            user, "", "administrators", "text/x-java", "new-address@example.com", "Haozhe Xie", "");
     Assertions.assertTrue(result.get("isSuccessful"));
 
     Assertions.assertFalse(

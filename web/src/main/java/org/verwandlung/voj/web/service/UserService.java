@@ -889,54 +889,6 @@ public class UserService {
   }
 
   /**
-   * Validates and updates the subset of a user's profile that an administrator manages from the
-   * admin console: the email address, the display name and the bio. Personal-profile fields the
-   * admin editor does not surface (location, website, social links) are intentionally left
-   * untouched so that re-saving here does not wipe data the user maintains on their own dashboard.
-   *
-   * @param user - the user whose profile is to be changed
-   * @param email - the user's email address
-   * @param displayName - the user's display name
-   * @param aboutMe - the user's personal bio
-   * @return a Map<String, Boolean> object containing the personal profile update result
-   */
-  public Map<String, Boolean> updateProfileByAdmin(
-      User user, String email, String displayName, String aboutMe) {
-    displayName = HtmlTextFilter.filter(displayName);
-    aboutMe = HtmlTextFilter.filter(aboutMe);
-
-    Map<String, Boolean> result = new HashMap<>(6, 1);
-    result.put("isEmailEmpty", email.isEmpty());
-    result.put("isEmailLegal", isEmailLegal(email));
-    result.put("isEmailExists", isEmailExists(user.getEmail(), email));
-    result.put("isDisplayNameLegal", displayName.length() <= 64);
-    result.put("isAboutMeLegal", aboutMe.length() <= 256);
-
-    boolean isSuccessful =
-        !result.get("isEmailEmpty")
-            && result.get("isEmailLegal")
-            && !result.get("isEmailExists")
-            && result.get("isDisplayNameLegal")
-            && result.get("isAboutMeLegal");
-    result.put("isSuccessful", isSuccessful);
-
-    if (isSuccessful) {
-      boolean isEmailChanged = !email.equals(user.getEmail());
-      changeEmailAndUpdateUser(user, email);
-
-      updateUserMeta(user, "displayName", displayName);
-      updateUserMeta(user, "aboutMe", aboutMe);
-
-      // A changed email address has not been verified yet. Force re-verification so the account
-      // cannot keep its verified privileges on an unverified address.
-      if (isEmailChanged && isEmailVerificationRequired()) {
-        requireEmailVerification(user);
-      }
-    }
-    return result;
-  }
-
-  /**
    * Validates the new profile.
    *
    * @param user - the user whose profile is to be changed
@@ -1259,52 +1211,75 @@ public class UserService {
   }
 
   /**
-   * [For administrators only] Updates a user's profile.
+   * [For administrators only] Updates a user from the administration console: the password (when
+   * not empty), the user group, the preferred language, the email address, the display name and
+   * the bio. Personal-profile fields the console does not show (location, website, social links)
+   * are left untouched. Everything is validated first and saved in one transaction, so an invalid
+   * or taken email address no longer leaves the password or group change committed.
    *
-   * @param user - the user whose profile is to be changed
-   * @param password - the user's password
+   * @param user - the user to update
+   * @param password - the new password, or empty to keep the current one
    * @param userGroupSlug - the alias of the user group the user belongs to
    * @param preferLanguageSlug - the alias of the user's preferred programming language
-   * @return a Map<String, Boolean> object containing the user profile update result
+   * @param email - the user's email address
+   * @param displayName - the user's display name
+   * @param aboutMe - the user's personal bio
+   * @return a Map<String, Boolean> object containing the validation flags and {@code isSuccessful}
    */
-  public Map<String, Boolean> updateProfile(
-      User user, String password, String userGroupSlug, String preferLanguageSlug) {
+  public Map<String, Boolean> updateUserByAdministrator(
+      User user,
+      String password,
+      String userGroupSlug,
+      String preferLanguageSlug,
+      String email,
+      String displayName,
+      String aboutMe) {
     UserGroup userGroup = userGroupMapper.getUserGroupUsingSlug(userGroupSlug);
     Language preferLanguage = languageMapper.getLanguageUsingSlug(preferLanguageSlug);
-    Map<String, Boolean> result = getUpdateProfileResult(password, userGroup, preferLanguage);
+    displayName = HtmlTextFilter.filter(displayName);
+    aboutMe = HtmlTextFilter.filter(aboutMe);
 
-    if (result.get("isSuccessful")) {
-      if (!password.isEmpty()) {
-        user.setPassword(passwordEncoder.encode(password));
-      }
-      user.setUserGroup(userGroup);
-      user.setPreferLanguage(preferLanguage);
-      userMapper.updateUser(user);
-    }
-    return result;
-  }
-
-  /**
-   * [For administrators only] Changes a user's basic information.
-   *
-   * @param password - the user's password
-   * @param userGroup - the user group the user belongs to
-   * @param preferLanguage - the user's preferred programming language
-   * @return a Map<String, Boolean> object containing the user profile update result
-   */
-  private Map<String, Boolean> getUpdateProfileResult(
-      String password, UserGroup userGroup, Language preferLanguage) {
-    Map<String, Boolean> result = new HashMap<>(6, 1);
+    Map<String, Boolean> result = new HashMap<>(16, 1);
     result.put("isPasswordEmpty", password.isEmpty());
     result.put("isPasswordLegal", isPasswordLegal(password));
     result.put("isUserGroupLegal", userGroup != null);
     result.put("isPreferLanguageLegal", preferLanguage != null);
+    result.put("isEmailEmpty", email.isEmpty());
+    result.put("isEmailLegal", isEmailLegal(email));
+    result.put("isEmailExists", isEmailExists(user.getEmail(), email));
+    result.put("isDisplayNameLegal", displayName.length() <= 64);
+    result.put("isAboutMeLegal", aboutMe.length() <= 256);
 
     boolean isSuccessful =
-        result.get("isPasswordEmpty") ^ result.get("isPasswordLegal")
+        (result.get("isPasswordEmpty") || result.get("isPasswordLegal"))
             && result.get("isUserGroupLegal")
-            && result.get("isPreferLanguageLegal");
+            && result.get("isPreferLanguageLegal")
+            && !result.get("isEmailEmpty")
+            && result.get("isEmailLegal")
+            && !result.get("isEmailExists")
+            && result.get("isDisplayNameLegal")
+            && result.get("isAboutMeLegal");
     result.put("isSuccessful", isSuccessful);
+    if (!isSuccessful) {
+      return result;
+    }
+
+    // A new password ends the user's sessions (see CurrentUserRefreshFilter).
+    if (!password.isEmpty()) {
+      user.setPassword(passwordEncoder.encode(password));
+    }
+    user.setUserGroup(userGroup);
+    user.setPreferLanguage(preferLanguage);
+    boolean isEmailChanged = !email.equals(user.getEmail());
+    changeEmailAndUpdateUser(user, email);
+    updateUserMeta(user, "displayName", displayName);
+    updateUserMeta(user, "aboutMe", aboutMe);
+
+    // A changed email address has not been verified yet. Force re-verification so the account
+    // cannot keep its verified privileges on an unverified address.
+    if (isEmailChanged && isEmailVerificationRequired()) {
+      requireEmailVerification(user);
+    }
     return result;
   }
 
