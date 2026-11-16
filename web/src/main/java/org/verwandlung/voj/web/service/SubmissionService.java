@@ -314,33 +314,23 @@ public class SubmissionService {
   }
 
   /**
-   * Gets a user's judging result of each of some problems: an accepted submission if there is
-   * one, otherwise the latest.
+   * Gets a user's verdict of each of some problems: AC if one of the user's submissions to it was
+   * accepted, otherwise the verdict of the latest.
    *
    * @param userId - the unique identifier of the user
    * @param problemIds - the unique identifiers of the problems
-   * @return the judging results, keyed by problem
+   * @return the slugs of the verdicts, by the unique identifier of the problem (the problems the
+   *     user never submitted to are left out)
    */
-  public Map<Long, Submission> getSubmissionOfProblems(long userId, Collection<Long> problemIds) {
-    Map<Long, Submission> submissionOfProblems = new HashMap<>();
+  public Map<Long, String> getJudgeResultsOfProblems(long userId, Collection<Long> problemIds) {
+    Map<Long, String> judgeResults = new HashMap<>();
     if (problemIds.isEmpty()) {
-      return submissionOfProblems;
+      return judgeResults;
     }
-    List<Submission> latestSubmission =
-        submissionMapper.getLatestSubmissionOfProblems(userId, problemIds);
-    List<Submission> acceptedSubmission =
-        submissionMapper.getAcceptedSubmissionOfProblems(userId, problemIds);
-
-    for (Submission s : latestSubmission) {
-      long problemId = s.getProblem().getProblemId();
-      submissionOfProblems.put(problemId, s);
+    for (Map<String, Object> row : submissionMapper.getJudgeResultsOfProblems(userId, problemIds)) {
+      judgeResults.put(((Number) row.get("problemId")).longValue(), (String) row.get("judgeResult"));
     }
-    // Update some values with the accepted submissions
-    for (Submission s : acceptedSubmission) {
-      long problemId = s.getProblem().getProblemId();
-      submissionOfProblems.put(problemId, s);
-    }
-    return submissionOfProblems;
+    return judgeResults;
   }
 
   /**

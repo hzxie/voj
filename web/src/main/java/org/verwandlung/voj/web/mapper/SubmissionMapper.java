@@ -111,7 +111,8 @@ public interface SubmissionMapper {
   long getLatestSubmissionId();
 
   /**
-   * Gets a submission object by its unique identifier.
+   * Gets a submission by its unique identifier, with the names of its problem, user, language,
+   * verdict and judger (one query).
    *
    * @param submissionId - the unique identifier of the submission
    * @return a submission object
@@ -137,8 +138,9 @@ public interface SubmissionMapper {
   Long getClaimTokenOfSubmission(@Param("submissionId") long submissionId);
 
   /**
-   * Gets the submissions matching some filters, without their judge logs and codes: newest first,
-   * or oldest first from {@code minSubmissionId} on.
+   * Gets the submissions matching some filters, with the names of their problems, users, languages
+   * and verdicts but without their judge logs, codes and judgers (one query): newest first, or
+   * oldest first from {@code minSubmissionId} on.
    *
    * @param problemId - the unique identifier of the problem (0 = no filter)
    * @param username - the username of the user (empty = no filter)
@@ -168,7 +170,7 @@ public interface SubmissionMapper {
       @Param("now") Date now);
 
   /**
-   * Gets the submissions of a user for a problem.
+   * Gets the latest submissions of a user for a problem, as {@link #getSubmissions} gets them.
    *
    * @param problemId - the unique identifier of the problem
    * @param uid - the unique identifier of the user
@@ -179,23 +181,15 @@ public interface SubmissionMapper {
       @Param("problemId") long problemId, @Param("uid") long uid, @Param("limit") int limit);
 
   /**
-   * Gets the latest judging results of a user for some problems.
+   * Gets a user's verdict of each of some problems: AC if one of the user's submissions to it was
+   * accepted, otherwise the verdict of the latest.
    *
    * @param uid - the unique identifier of the user
    * @param problemIds - the unique identifiers of the problems (not empty)
-   * @return the latest judging results, at most one per problem
+   * @return one row per problem the user submitted to: {@code problemId} and {@code judgeResult},
+   *     the slug of the verdict
    */
-  List<Submission> getLatestSubmissionOfProblems(
-      @Param("uid") long uid, @Param("problemIds") Collection<Long> problemIds);
-
-  /**
-   * Gets the accepted judging results of a user for some problems.
-   *
-   * @param uid - the unique identifier of the user
-   * @param problemIds - the unique identifiers of the problems (not empty)
-   * @return the accepted judging results, at most one per problem
-   */
-  List<Submission> getAcceptedSubmissionOfProblems(
+  List<Map<String, Object>> getJudgeResultsOfProblems(
       @Param("uid") long uid, @Param("problemIds") Collection<Long> problemIds);
 
   /**

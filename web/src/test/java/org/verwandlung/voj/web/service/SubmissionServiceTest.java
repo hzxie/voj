@@ -137,13 +137,13 @@ public class SubmissionServiceTest {
     Assertions.assertEquals(0L, stats.get("acRate"));
   }
 
-  /** Test case: tests the getSubmissionOfProblems(long, Collection) method. Test data: user 1000, problems #1000 and #1001. Expected: the AC submission record overrides the latest submission record. */
+  /** Test case: tests the getJudgeResultsOfProblems(long, Collection) method. Test data: user 1000, problems #1000, #1001 and #1002, and no problem. Expected: AC for #1000 (whose latest WA an earlier AC overrides) and #1001, nothing for #1002, which the user never submitted to. */
   @Test
-  public void testGetSubmissionOfProblems() {
-    Map<Long, Submission> submissions = submissionService.getSubmissionOfProblems(1000, List.of(1000L, 1001L));
-    // Although problem 1000 has a latest WA (1001) submission, it should be overridden by the AC
-    // (1000) submission.
-    Assertions.assertEquals("AC", submissions.get(1000L).getJudgeResult().getJudgeResultSlug());
+  public void testGetJudgeResultsOfProblems() {
+    Assertions.assertEquals(
+        Map.of(1000L, "AC", 1001L, "AC"),
+        submissionService.getJudgeResultsOfProblems(1000, List.of(1000L, 1001L, 1002L)));
+    Assertions.assertTrue(submissionService.getJudgeResultsOfProblems(1000, List.of()).isEmpty());
   }
 
   /** Test case: tests the createSubmission(...) method. Test data: valid submission data. Expected: creation succeeds and the submission record identifier is returned. */

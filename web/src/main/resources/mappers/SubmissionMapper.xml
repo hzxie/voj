@@ -4,42 +4,67 @@
 	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="org.verwandlung.voj.web.mapper.SubmissionMapper">
 	<!-- ResultMap -->
-	<resultMap id="SubmissionResultMap" type="org.verwandlung.voj.web.model.Submission">
-		<result property="submissionId" column="submission_id" />
+	<!-- A submission as the lists show it, from one row of summaryColumns: with the name of its
+	     problem, user, language and verdict, but without its judge log and code (which only its own
+	     pages show) and its judger. -->
+	<resultMap id="SubmissionSummaryResultMap" type="org.verwandlung.voj.web.model.Submission">
+		<id property="submissionId" column="submission_id" />
 		<result property="submitTime" column="submission_submit_time" />
 		<result property="executeTime" column="submission_execute_time" />
 		<result property="usedTime" column="submission_used_time" />
 		<result property="usedMemory" column="submission_used_memory" />
 		<result property="judgeScore" column="submission_judge_score" />
+		<association property="problem" javaType="org.verwandlung.voj.web.model.Problem">
+			<id property="problemId" column="problem_id" />
+			<result property="problemName" column="problem_name" />
+			<result property="status" column="problem_status" />
+		</association>
+		<association property="user" javaType="org.verwandlung.voj.web.model.User">
+			<id property="uid" column="uid" />
+			<result property="username" column="username" />
+		</association>
+		<association property="language" javaType="org.verwandlung.voj.web.model.Language">
+			<id property="languageId" column="language_id" />
+			<result property="languageSlug" column="language_slug" />
+			<result property="languageName" column="language_name" />
+		</association>
+		<association property="judgeResult" javaType="org.verwandlung.voj.web.model.JudgeResult">
+			<id property="judgeResultSlug" column="submission_judge_result" />
+			<result property="judgeResultName" column="judge_result_name" />
+		</association>
+	</resultMap>
+	<!-- A submission as its own pages show it, from one row of detailColumns: with its judge log, its
+	     code (when it is read) and the judger that judged it. -->
+	<resultMap id="SubmissionResultMap" type="org.verwandlung.voj.web.model.Submission"
+		extends="SubmissionSummaryResultMap">
 		<result property="judgeLog" column="submission_judge_log" />
 		<result property="code" column="submission_code" />
-		<association property="problem" 
-			javaType="org.verwandlung.voj.web.model.Problem" 
-			column="problem_id"
-			select="org.verwandlung.voj.web.mapper.ProblemMapper.getProblem" />
-		<association property="user" 
-			javaType="org.verwandlung.voj.web.model.User" 
-			column="uid"
-			select="org.verwandlung.voj.web.mapper.UserMapper.getUserUsingUid" />
-		<association property="language" 
-			javaType="org.verwandlung.voj.web.model.Language" 
-			column="language_id"
-			select="org.verwandlung.voj.web.mapper.LanguageMapper.getLanguageUsingId" />
-		<association property="judgeResult"
-			javaType="org.verwandlung.voj.web.model.JudgeResult"
-			column="submission_judge_result"
-			select="org.verwandlung.voj.web.mapper.JudgeResultMapper.getJudgeResultUsingSlug" />
-		<association property="judger"
-			javaType="org.verwandlung.voj.web.model.User"
-			column="judger_uid"
-			select="org.verwandlung.voj.web.mapper.UserMapper.getUserUsingUid" />
+		<association property="judger" javaType="org.verwandlung.voj.web.model.User"
+			columnPrefix="judger_">
+			<id property="uid" column="uid" />
+			<result property="username" column="username" />
+		</association>
 	</resultMap>
-	
-	<!-- The columns of a submission but its judge log and its code, which only its own pages show. -->
+
+	<!-- The columns of SubmissionSummaryResultMap and the tables they come from: the submissions are
+	     s, their problems p and their users u. -->
 	<sql id="summaryColumns">
-		submission_id, problem_id, uid, language_id, submission_submit_time, submission_execute_time,
-		submission_used_time, submission_used_memory, submission_judge_result, submission_judge_score,
-		judger_uid
+		s.submission_id, s.submission_submit_time, s.submission_execute_time, s.submission_used_time,
+		s.submission_used_memory, s.submission_judge_score, s.submission_judge_result,
+		p.problem_id, p.problem_name, p.problem_status, u.uid, u.username,
+		l.language_id, l.language_slug, l.language_name, jr.judge_result_name
+		FROM voj_submissions s
+		JOIN voj_problems p ON p.problem_id = s.problem_id
+		JOIN voj_users u ON u.uid = s.uid
+		JOIN voj_languages l ON l.language_id = s.language_id
+		JOIN voj_judge_results jr ON jr.judge_result_slug = s.submission_judge_result
+	</sql>
+	<!-- The columns of SubmissionResultMap but the code, and the tables they come from (see
+	     summaryColumns). -->
+	<sql id="detailColumns">
+		s.submission_judge_log, judger.uid AS judger_uid, judger.username AS judger_username,
+		<include refid="summaryColumns" />
+		LEFT JOIN voj_users judger ON judger.uid = s.judger_uid
 	</sql>
 
 	<!-- The restriction of the submission lists for a viewer who is not an administrator: no
@@ -48,18 +73,14 @@
 	     contest submissions and nobody else sees any (in particular no verdict made after the
 	     scoreboard freeze). Mirrors ContestService#isSubmissionVisible. -->
 	<sql id="publicOnly">
-		AND problem_id IN (
-			SELECT problem_id
-			FROM voj_problems
-			WHERE problem_status = 'PUBLISHED'
-		)
+		AND p.problem_status = 'PUBLISHED'
 		AND (
-			uid = #{viewerUid}
+			s.uid = #{viewerUid}
 			OR NOT EXISTS (
 				SELECT 1
 				FROM voj_contest_submissions running_cs
 				JOIN voj_contests running_c ON running_c.contest_id = running_cs.contest_id
-				WHERE running_cs.submission_id = voj_submissions.submission_id
+				WHERE running_cs.submission_id = s.submission_id
 				AND running_c.contest_end_time &gt; #{now}
 			)
 		)
@@ -168,16 +189,14 @@
 	<select id="getSubmission"
 		parameterType="long"
 		resultMap="SubmissionResultMap">
-		SELECT <include refid="summaryColumns" />, submission_judge_log, submission_code
-		FROM voj_submissions
-		WHERE submission_id = #{submissionId}
+		SELECT s.submission_code, <include refid="detailColumns" />
+		WHERE s.submission_id = #{submissionId}
 	</select>
 	<select id="getSubmissionWithoutCode"
 		parameterType="long"
 		resultMap="SubmissionResultMap">
-		SELECT <include refid="summaryColumns" />, submission_judge_log
-		FROM voj_submissions
-		WHERE submission_id = #{submissionId}
+		SELECT <include refid="detailColumns" />
+		WHERE s.submission_id = #{submissionId}
 	</select>
 	<select id="getClaimTokenOfSubmission"
 		parameterType="long"
@@ -190,62 +209,55 @@
 	     match getNumberOfSubmissionsUsingProblemIdAndUsername, so the two can back one pager. -->
 	<select id="getSubmissions"
 		parameterType="map"
-		resultMap="SubmissionResultMap">
+		resultMap="SubmissionSummaryResultMap">
 		SELECT <include refid="summaryColumns" />
-		FROM voj_submissions
 		<where>
 			<if test="problemId != 0">
-				AND problem_id = #{problemId}
+				AND s.problem_id = #{problemId}
 			</if>
 			<if test="username != null and username != ''">
-				AND uid IN (SELECT uid FROM voj_users WHERE username = #{username})
+				AND u.username = #{username}
 			</if>
 			<if test="judgeResult != null and judgeResult != ''">
-				AND submission_judge_result = #{judgeResult}
+				AND s.submission_judge_result = #{judgeResult}
 			</if>
 			<if test="maxSubmissionId != null">
-				AND submission_id &lt;= #{maxSubmissionId}
+				AND s.submission_id &lt;= #{maxSubmissionId}
 			</if>
 			<if test="minSubmissionId != null">
-				AND submission_id &gt;= #{minSubmissionId}
+				AND s.submission_id &gt;= #{minSubmissionId}
 			</if>
 			<if test="isPublicOnly">
 				<include refid="publicOnly" />
 			</if>
 		</where>
-		ORDER BY submission_id <if test="minSubmissionId != null">ASC</if><if test="minSubmissionId == null">DESC</if>
+		ORDER BY s.submission_id <if test="minSubmissionId != null">ASC</if><if test="minSubmissionId == null">DESC</if>
 		LIMIT #{offset}, #{limit}
 	</select>
 	<select id="getSubmissionUsingProblemIdAndUserId"
 		parameterType="map"
-		resultMap="SubmissionResultMap">
+		resultMap="SubmissionSummaryResultMap">
 		SELECT <include refid="summaryColumns" />
-		FROM voj_submissions 
-		WHERE problem_id = #{problemId} AND uid = #{uid} 
-		ORDER BY submission_id DESC 
+		WHERE s.problem_id = #{problemId} AND s.uid = #{uid}
+		ORDER BY s.submission_id DESC
 		LIMIT #{limit}
 	</select>
-	<select id="getLatestSubmissionOfProblems" 
+	<!-- Per problem, AC if one of the user's submissions to it was accepted, otherwise the verdict
+	     of the latest. -->
+	<select id="getJudgeResultsOfProblems"
 		parameterType="map"
-		resultMap="SubmissionResultMap">
-		SELECT submission_id, s1.problem_id, submission_judge_result 
-		FROM voj_submissions s1 
-		INNER JOIN ( 
-			SELECT MAX(submission_id) AS max_submission_id, problem_id 
-			FROM voj_submissions 
+		resultType="java.util.HashMap">
+		SELECT s.problem_id AS problemId,
+			IF(problems.is_accepted, 'AC', s.submission_judge_result) AS judgeResult
+		FROM (
+			SELECT problem_id, MAX(submission_id) AS latest_submission_id,
+				MAX(submission_judge_result = 'AC') AS is_accepted
+			FROM voj_submissions
 			WHERE uid = #{uid} AND problem_id IN
 				<foreach collection="problemIds" item="problemId" open="(" separator="," close=")">#{problemId}</foreach>
-			GROUP BY problem_id 
-		) s2 ON s1.problem_id = s2.problem_id AND s1.submission_id = s2.max_submission_id
-	</select>
-	<select id="getAcceptedSubmissionOfProblems" 
-		parameterType="map"
-		resultMap="SubmissionResultMap">
-		SELECT MAX(submission_id) AS submission_id, problem_id, MAX(submission_judge_result) AS submission_judge_result
-		FROM voj_submissions
-		WHERE uid = #{uid} AND problem_id IN
-				<foreach collection="problemIds" item="problemId" open="(" separator="," close=")">#{problemId}</foreach> AND submission_judge_result = 'AC'
-		GROUP BY problem_id
+			GROUP BY problem_id
+		) problems
+		JOIN voj_submissions s ON s.submission_id = problems.latest_submission_id
 	</select>
 	<select id="getAcceptedSubmissionUsingUserId" 
 		parameterType="long"

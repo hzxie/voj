@@ -50,10 +50,10 @@
                     <div class="ptable-hide" th:text="#{voj.problems.problems.col-accept}">ACCEPT</div>
                 </div>
                 <a class="vw-table-row" th:each="problem : ${problems}" th:href="@{/p/{id}(id=${problem.problemId})}">
-                    <div th:if="${isLogin}" th:with="sub=${submissionOfProblems != null ? submissionOfProblems[problem.problemId] : null}">
-                        <span th:if="${sub != null and sub.judgeResult != null}" class="vw-vbadge"
-                              th:classappend="|flag-${#strings.toLowerCase(sub.judgeResult.judgeResultSlug)}|"
-                              th:text="${sub.judgeResult.judgeResultSlug}">AC</span>
+                    <div th:if="${isLogin}" th:with="judgeResult=${judgeResultsOfProblems != null ? judgeResultsOfProblems[problem.problemId] : null}">
+                        <span th:if="${judgeResult != null}" class="vw-vbadge"
+                              th:classappend="|flag-${#strings.toLowerCase(judgeResult)}|"
+                              th:text="${judgeResult}">AC</span>
                     </div>
                     <div class="vw-muted" th:text="${problem.problemId}">1000</div>
                     <div class="vw-head vw-strong" th:text="${problem.problemName}">Problem</div>

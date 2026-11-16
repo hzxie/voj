@@ -121,7 +121,7 @@ public class ProblemsController {
       long userId = HttpSessionParser.getCurrentUser().getUid();
       List<Long> problemIds = problems.stream().map(Problem::getProblemId).toList();
       view.addObject(
-          "submissionOfProblems", submissionService.getSubmissionOfProblems(userId, problemIds));
+          "judgeResultsOfProblems", submissionService.getJudgeResultsOfProblems(userId, problemIds));
     }
     return view;
   }
@@ -158,14 +158,11 @@ public class ProblemsController {
             problemId, 0, NUMBER_OF_DISCUSSTION_THREADS_PER_PROBLEM));
     if (isLoggedIn) {
       long userId = HttpSessionParser.getCurrentUser().getUid();
-      Map<Long, Submission> submissionOfProblems =
-          submissionService.getSubmissionOfProblems(userId, List.of(problemId));
       List<Submission> submissions =
           submissionService.getSubmissionUsingProblemIdAndUserId(
               problemId, userId, NUMBER_OF_SUBMISSIONS_PER_PROBLEM);
       List<Language> languages = languageService.getEnabledLanguages();
 
-      view.addObject("latestSubmission", submissionOfProblems);
       view.addObject("submissions", submissions);
       view.addObject("languages", languages);
     }

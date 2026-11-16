@@ -267,6 +267,50 @@ public class SubmissionMapperTest {
   }
 
   /**
+   * Test case: tests the getSubmission(long) method. Test data: submission #1002 (a Compile Error
+   * of user #1001 to the published problem #1000 in C++), judged by the judger account #1001, and
+   * submission #1000, which no judger judged. Expected: everything the submission pages show, from
+   * one query: the names of its problem, user, language, verdict and judger, and the status of its
+   * problem; no judger for #1000.
+   */
+  @Test
+  public void testGetSubmissionReadsWhatItsPagesShow() {
+    new JdbcTemplate(dataSource)
+        .update("UPDATE voj_submissions SET judger_uid = 1001 WHERE submission_id = 1002");
+
+    Submission submission = submissionMapper.getSubmission(1002);
+    Assertions.assertEquals(1000, submission.getProblem().getProblemId());
+    Assertions.assertEquals("A+B Problem", submission.getProblem().getProblemName());
+    Assertions.assertEquals("PUBLISHED", submission.getProblem().getStatus());
+    Assertions.assertEquals(1001, submission.getUser().getUid());
+    Assertions.assertEquals("voj@judger", submission.getUser().getUsername());
+    Assertions.assertEquals(2, submission.getLanguage().getLanguageId());
+    Assertions.assertEquals("text/x-c++src", submission.getLanguage().getLanguageSlug());
+    Assertions.assertEquals("C++", submission.getLanguage().getLanguageName());
+    Assertions.assertEquals("Compile Error", submission.getJudgeResult().getJudgeResultName());
+    Assertions.assertEquals(1001, submission.getJudger().getUid());
+    Assertions.assertEquals("voj@judger", submission.getJudger().getUsername());
+    Assertions.assertNull(submissionMapper.getSubmission(1000).getJudger());
+  }
+
+  /**
+   * Test case: tests the getSubmissions(...) method. Test data: the submissions of problem #1000.
+   * Expected: each with the names of its problem, user, language and verdict, which the lists show.
+   */
+  @Test
+  public void testGetSubmissionsReadsWhatTheListsShow() {
+    List<Submission> submissions =
+        submissionMapper.getSubmissions(1000, "", "", null, null, 0, 10, false, 0, null);
+    Assertions.assertEquals(4, submissions.size());
+    for (Submission submission : submissions) {
+      Assertions.assertEquals("A+B Problem", submission.getProblem().getProblemName());
+      Assertions.assertNotNull(submission.getUser().getUsername());
+      Assertions.assertNotNull(submission.getLanguage().getLanguageName());
+      Assertions.assertNotNull(submission.getJudgeResult().getJudgeResultName());
+    }
+  }
+
+  /**
    * Test case: tests the getSubmissionUsingProblemIdAndUserId(long, long, int) method. Test data: get
    * the latest 1 submission of problem ID #1000 and user ID #1000. Expected: the expected submission
    * list (1 submission).
@@ -308,69 +352,46 @@ public class SubmissionMapperTest {
   }
 
   /**
-   * Test case: tests the getLatestSubmissionOfProblems(long, Collection) method. Test data: get the
-   * latest judge results of user ID #1000 for problems #1000-#1009. Expected: the
-   * expected submission list (problem ID #1000 - WA, problem ID #1001 - AC).
+   * Test case: tests the getJudgeResultsOfProblems(long, Collection) method. Test data: user #1000,
+   * whose latest submission to problem #1000 is a WA after an AC, and who solved problem #1001; and
+   * user #1001, whose submissions to problem #1000 are Compile Errors. Expected: AC for both problems
+   * of user #1000, CE for problem #1000 of user #1001, and no other problem.
    */
   @Test
-  public void testGetLatestSubmissionOfProblemsWithUser1000() {
-    List<Submission> submissions = submissionMapper.getLatestSubmissionOfProblems(1000, PROBLEMS_1000_TO_1009);
-    Assertions.assertEquals(2, submissions.size());
-
-    Submission firstSubmission = submissions.get(0);
-    String firstJudgeResultSlug = firstSubmission.getJudgeResult().getJudgeResultSlug();
-    Assertions.assertEquals("WA", firstJudgeResultSlug);
-
-    Submission secondSubmission = submissions.get(1);
-    String secondJudgeResultSlug = secondSubmission.getJudgeResult().getJudgeResultSlug();
-    Assertions.assertEquals("AC", secondJudgeResultSlug);
+  public void testGetJudgeResultsOfProblems() {
+    Assertions.assertEquals(
+        Map.of(1000L, "AC", 1001L, "AC"),
+        judgeResultsOf(submissionMapper.getJudgeResultsOfProblems(1000, PROBLEMS_1000_TO_1009)));
+    Assertions.assertEquals(
+        Map.of(1000L, "CE"),
+        judgeResultsOf(submissionMapper.getJudgeResultsOfProblems(1001, PROBLEMS_1000_TO_1009)));
+    Assertions.assertTrue(submissionMapper.getJudgeResultsOfProblems(1002, PROBLEMS_1000_TO_1009).isEmpty());
   }
 
   /**
-   * Test case: tests the getLatestSubmissionOfProblems(long, Collection) method. Test data: get the
-   * latest judge results of user ID #1001 for problems #1000-#1009. Expected: the
-   * expected submission list (problem ID #1000 - CE).
+   * Test case: tests the getJudgeResultsOfProblems(long, Collection) method. Test data: user #1001
+   * gets an AC for problem #1000 and then a WA. Expected: AC, the accepted submission wins over the
+   * latest.
    */
   @Test
-  public void testGetLatestSubmissionOfProblemsWithUser1001() {
-    List<Submission> submissions = submissionMapper.getLatestSubmissionOfProblems(1001, PROBLEMS_1000_TO_1009);
-    Assertions.assertEquals(1, submissions.size());
+  public void testGetJudgeResultsOfProblemsPrefersAnAcceptedSubmission() {
+    JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
+    jdbcTemplate.update(
+        "INSERT INTO voj_submissions (problem_id, uid, language_id, submission_judge_result,"
+            + " submission_code) VALUES (1000, 1001, 2, 'AC', 'Code'), (1000, 1001, 2, 'WA', 'Code')");
 
-    Submission firstSubmission = submissions.get(0);
-    String firstJudgeResultSlug = firstSubmission.getJudgeResult().getJudgeResultSlug();
-    Assertions.assertEquals("CE", firstJudgeResultSlug);
+    Assertions.assertEquals(
+        Map.of(1000L, "AC"),
+        judgeResultsOf(submissionMapper.getJudgeResultsOfProblems(1001, List.of(1000L))));
   }
 
-  /**
-   * Test case: tests the getAcceptedSubmissionOfProblems(long, Collection) method. Test data: get the
-   * accepted judge results of user ID #1000 for problems #1000-#1009. Expected: the
-   * expected submission list (problem ID #1000 - AC, problem ID #1001 - AC).
-   */
-  @Test
-  public void testGetAcceptedSubmissionOfProblemsWithUser1000() {
-    List<Submission> submissions =
-        submissionMapper.getAcceptedSubmissionOfProblems(1000, PROBLEMS_1000_TO_1009);
-    Assertions.assertEquals(2, submissions.size());
-
-    Submission firstSubmission = submissions.get(0);
-    String firstJudgeResultSlug = firstSubmission.getJudgeResult().getJudgeResultSlug();
-    Assertions.assertEquals("AC", firstJudgeResultSlug);
-
-    Submission secondSubmission = submissions.get(1);
-    String secondJudgeResultSlug = secondSubmission.getJudgeResult().getJudgeResultSlug();
-    Assertions.assertEquals("AC", secondJudgeResultSlug);
-  }
-
-  /**
-   * Test case: tests the getAcceptedSubmissionOfProblems(long, Collection) method. Test data: get the
-   * accepted judge results of user ID #1001 for problems #1000-#1009. Expected: an empty
-   * submission list.
-   */
-  @Test
-  public void testGetAcceptedSubmissionOfProblemsWithUser1001() {
-    List<Submission> submissions =
-        submissionMapper.getAcceptedSubmissionOfProblems(1001, PROBLEMS_1000_TO_1009);
-    Assertions.assertEquals(0, submissions.size());
+  /** Gets the verdicts that getJudgeResultsOfProblems returns, by problem. */
+  private static Map<Long, String> judgeResultsOf(List<Map<String, Object>> rows) {
+    return rows.stream()
+        .collect(
+            java.util.stream.Collectors.toMap(
+                row -> ((Number) row.get("problemId")).longValue(),
+                row -> (String) row.get("judgeResult")));
   }
 
   /**
