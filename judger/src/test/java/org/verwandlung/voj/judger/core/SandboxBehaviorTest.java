@@ -829,6 +829,20 @@ public class SandboxBehaviorTest {
   }
 
   /**
+   * Test case: a run that reports the signal it gets when its parent dies and tries to clear it.
+   * Expected result: SIGKILL, which it cannot clear (EPERM): the run dies with the judger.
+   */
+  @Test
+  public void testRunDiesWithTheJudger() throws Exception {
+    Assumptions.assumeTrue("native".equalsIgnoreCase(sandbox), "This tests the native runner.");
+    Assumptions.assumeTrue(isLinux(), "PR_SET_PDEATHSIG is Linux-only.");
+    Assertions.assertEquals(Verdict.NORMAL, judge(900028L, PARENT_DEATH_SIGNAL_CODE, 5000, 262144));
+    Assertions.assertEquals(
+        "signal: 9\nclear: EPERM\nsignal: 9\n",
+        Files.readString(Path.of(workBaseDirectory, "voj-sandbox-900028", "output.txt")));
+  }
+
+  /**
    * Test case: a run that opens descriptors until it cannot, tries to raise its descriptor limit,
    * and creates a thread with a descriptor table of its own (clone with CLONE_THREAD but without
    * CLONE_FILES), which would get a limit of its own. Expected result: the limit is 128 (soft and
@@ -1563,6 +1577,31 @@ public class SandboxBehaviorTest {
           std::printf("raise: %s\\n", raised == 0 ? "raised" : errno == EPERM ? "EPERM" : "failed");
           std::fflush(stdout);
           std::raise(SIGSEGV);
+          return 0;
+      }
+      """;
+
+  /**
+   * A program that reports the signal it gets when its parent dies, tries to clear it, and reports
+   * it again.
+   */
+  private static final String PARENT_DEATH_SIGNAL_CODE =
+      """
+      #include <cerrno>
+      #include <cstdio>
+      #include <sys/prctl.h>
+
+      static void report() {
+          int signal = -1;
+          prctl(PR_GET_PDEATHSIG, &signal, 0, 0, 0);
+          std::printf("signal: %d\\n", signal);
+      }
+
+      int main() {
+          report();
+          int cleared = prctl(PR_SET_PDEATHSIG, 0, 0, 0, 0);
+          std::printf("clear: %s\\n", cleared == 0 ? "cleared" : errno == EPERM ? "EPERM" : "failed");
+          report();
           return 0;
       }
       """;

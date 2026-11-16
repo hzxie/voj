@@ -101,7 +101,10 @@ sudo useradd --system --no-create-home --shell /usr/sbin/nologin voj-sandbox
   process of a compilation stays in the compiler's process group, since the
   filters deny leaving it (`setsid`, `setpgid`); the whole group is killed when
   a limit is hit and as soon as the compiler exits, so nothing outlives a
-  compile or a run. The filters also deny `ptrace`, `mount`, module loading
+  compile or a run. Should the judger itself die while a program runs, the
+  kernel kills the program (`PR_SET_PDEATHSIG`, which a run may not change:
+  `prctl` with it fails with `EPERM`); what a compiler started is not killed
+  then, and ends on its own or at its CPU time limit. The filters also deny `ptrace`, `mount`, module loading
   and the like, and creating namespaces (`unshare`, `setns`, `clone` with a
   `CLONE_NEW*` flag; `clone3` fails with `ENOSYS` so the C library falls back
   to `clone`), so a submission cannot obtain the capabilities of an

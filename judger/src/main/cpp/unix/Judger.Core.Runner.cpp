@@ -165,6 +165,7 @@ struct ChildPlan {
   rlim_t                   processLimit;   // RLIMIT_NPROC of the sandbox user (processes + threads)
   rlim_t                   fileLimit;      // RLIMIT_NOFILE (open descriptors per process)
   rlim_t                   signalLimit;    // RLIMIT_SIGPENDING (queued signals and POSIX timers)
+  pid_t                    judgerPid;      // the judger's process, the program's parent
   bool                     dropPrivileges; // whether to setuid/setgid
   uid_t                    dropUid;
   gid_t                    dropGid;
@@ -185,14 +186,15 @@ enum Stop {
  */
 enum ChildStep {
   STEP_DESCRIPTORS, STEP_INPUT, STEP_PROCESS_GROUP, STEP_RESOURCE_LIMIT, STEP_GROUPS, STEP_GID,
-  STEP_UID, STEP_WORK_DIRECTORY, STEP_OUTPUT, STEP_DEV_NULL, STEP_NO_NEW_PRIVS, STEP_LANDLOCK,
-  STEP_LANDLOCK_TRUNCATE, STEP_SECCOMP, STEP_EXEC,
+  STEP_UID, STEP_PARENT_DEATH_SIGNAL, STEP_WORK_DIRECTORY, STEP_OUTPUT, STEP_DEV_NULL,
+  STEP_NO_NEW_PRIVS, STEP_LANDLOCK, STEP_LANDLOCK_TRUNCATE, STEP_SECCOMP, STEP_EXEC,
   // Not a failure: the program's static data alone exceeds RLIMIT_DATA (see getWritableImageSize).
   STEP_STATIC_DATA_LIMIT,
 };
 static const char* const CHILD_STEP_NAMES[] = {
   "marking inherited descriptors close-on-exec", "opening the input file", "setsid()",
-  "setrlimit()", "setgroups()", "setgid()", "setuid()", "entering the work directory",
+  "setrlimit()", "setgroups()", "setgid()", "setuid()", "prctl(PR_SET_PDEATHSIG)",
+  "entering the work directory",
   "redirecting standard output", "opening /dev/null", "prctl(PR_SET_NO_NEW_PRIVS)",
   "confining writes to the work directory with Landlock (needs Linux 5.13+ with Landlock enabled)",
   "confining truncation to the work directory with Landlock (needs Linux 6.2+, Landlock ABI 3, "
@@ -319,6 +321,7 @@ JNIEXPORT jintArray JNICALL Java_org_verwandlung_voj_judger_core_Runner_execute(
     plan.processLimit   = (rlim_t) processLimit;
     plan.fileLimit      = (rlim_t) fileLimit;
     plan.signalLimit    = (rlim_t) signalQueueLimit;
+    plan.judgerPid      = getpid();
     plan.dropPrivileges = geteuid() == 0;
     plan.dropUid        = sandboxUid;
     plan.dropGid        = sandboxGid;
@@ -375,6 +378,8 @@ JNIEXPORT jintArray JNICALL Java_org_verwandlung_voj_judger_core_Runner_execute(
         throwStringException(jniEnv, std::string("Judger: pipe2() failed: ") + strerror(errno));
         return NULL;
     }
+    // The program is killed if the thread that forks it exits (see runProgram): this one, which
+    // waits for it, and reaps it, before it returns.
     pid_t pid = fork();
     if ( pid < 0 ) {
         int error = errno;
@@ -642,6 +647,20 @@ static void runProgram(const ChildPlan& plan, int syncWriteFd) {
         if ( setuid(plan.dropUid) != 0 ) {
             reportChildFailure(syncWriteFd, STEP_UID);
         }
+    }
+
+    // The program dies with the judger: in a session of its own, nothing else would end it, and a
+    // run blocked in pause() would outlive the judger, free to signal later programs of its user
+    // on kernels before 6.12 (see confineFileSystemWrites). The kernel sends the signal when the
+    // thread that forked the program exits, which waits for it until it is gone, so it is only
+    // sent when the judger dies. Set after the privilege drop, which clears it; a run may not
+    // change it (see buildSeccompPrograms). A judger that died before it was set is not there to
+    // send it: then the program is not run.
+    if ( prctl(PR_SET_PDEATHSIG, SIGKILL, 0, 0, 0) != 0 ) {
+        reportChildFailure(syncWriteFd, STEP_PARENT_DEATH_SIGNAL);
+    }
+    if ( getppid() != plan.judgerPid ) {
+        _exit(127);
     }
 
     // Run in the submission's own work directory, never in the judger's (e.g. /root in its Docker
@@ -1173,6 +1192,8 @@ class SeccompFilter {
  *    shared mapping of /dev/zero cannot be written, as Landlock refuses to open it for writing, and
  *    one of a file in the work directory holds no more than writing the file would, which
  *    RLIMIT_FSIZE bounds per file);
+ *  - cannot change the signal it gets when the judger dies (prctl(PR_SET_PDEATHSIG), EPERM), set
+ *    to SIGKILL before exec (see runProgram);
  *  - cannot enlarge the kernel buffers of its pipes and sockets, which hold kernel memory that no
  *    memory limit sees: fcntl(F_SETPIPE_SZ) and setsockopt with SO_SNDBUF, SO_RCVBUF or their
  *    *FORCE variants fail with EPERM. RLIMIT_NOFILE bounds how many it has (see SandboxPolicy.java),
@@ -1263,6 +1284,10 @@ static std::vector<std::string> buildSeccompPrograms(bool runOfSubmission, rlim_
         // accepts for an anonymous mapping (MAP_SHARED_VALIDATE fails with EINVAL).
         filter.add(SCMP_ACT_ERRNO(EPERM), SCMP_SYS(mmap), {SCMP_A3(SCMP_CMP_MASKED_EQ,
                    MAP_TYPE | MAP_ANONYMOUS, MAP_SHARED | MAP_ANONYMOUS)});
+        // prctl(PR_SET_PDEATHSIG, signal): the option is an int, so only the lower 32 bits are
+        // compared. A run that could clear the signal set before exec would outlive the judger.
+        filter.add(SCMP_ACT_ERRNO(EPERM), SCMP_SYS(prctl),
+                   {SCMP_A0(SCMP_CMP_MASKED_EQ, 0xFFFFFFFFULL, (scmp_datum_t) PR_SET_PDEATHSIG)});
         // fcntl(fd, F_SETPIPE_SZ, size) and setsockopt(fd, SOL_SOCKET, SO_{SND,RCV}BUF[FORCE], ...):
         // the command, level and option are ints, so only the lower 32 bits are compared.
         filter.add(SCMP_ACT_ERRNO(EPERM), SCMP_SYS(fcntl),
