@@ -18,25 +18,23 @@ package org.verwandlung.voj.judger.exception;
 
 import java.io.IOException;
 
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+
 /**
- * Thrown when the web application answered a download of a problem's test data, and the answer is
- * final: the problem has no test data to download (HTTP 404), or the archive is malformed. Unlike
- * other failures of a download (the web application restarting, a network failure, a timeout),
- * asking again, here or on another judger, would not help.
+ * Test class for NoCheckpointsException.
  *
  * @author Haozhe Xie
  */
-public class InvalidCheckpointsException extends IOException {
+public class NoCheckpointsExceptionTest {
   /**
-   * Constructor of the exception.
-   *
-   * @param message - the error message
-   * @param cause - the underlying exception, or {@code null}
+   * Test case: tests the constructor. Expected result: the exception carries the supplied message,
+   * and is an IOException.
    */
-  public InvalidCheckpointsException(String message, Throwable cause) {
-    super(message, cause);
+  @Test
+  public void testConstructor() {
+    NoCheckpointsException exception = new NoCheckpointsException("HTTP 404");
+    Assertions.assertEquals("HTTP 404", exception.getMessage());
+    Assertions.assertInstanceOf(IOException.class, exception);
   }
-
-  /** The unique serialization identifier. */
-  private static final long serialVersionUID = 1L;
 }

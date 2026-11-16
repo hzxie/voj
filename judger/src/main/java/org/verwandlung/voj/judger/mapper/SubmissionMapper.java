@@ -16,7 +16,6 @@
  */
 package org.verwandlung.voj.judger.mapper;
 
-import java.util.Collection;
 import java.util.List;
 
 import org.apache.ibatis.annotations.One;
@@ -67,7 +66,8 @@ public interface SubmissionMapper {
         one = @One(select = "org.verwandlung.voj.judger.mapper.LanguageMapper.getLanguageUsingId")),
     @Result(property = "submitTime", column = "submission_submit_time"),
     @Result(property = "executeTime", column = "submission_execute_time"),
-    @Result(property = "interruptions", column = "submission_judge_attempts"),
+    @Result(property = "failedJudgings", column = "submission_judge_attempts"),
+    @Result(property = "lastFailure", column = "submission_judge_failure"),
     @Result(property = "usedTime", column = "submission_used_time"),
     @Result(property = "usedMemory", column = "submission_used_memory"),
     @Result(property = "judgeResultSlug", column = "submission_judge_result"),
@@ -80,16 +80,14 @@ public interface SubmissionMapper {
 
   /**
    * Gets the next submission to judge in one of some languages: the pending submission that was
-   * queued first (submitted or rejudged) and that no judging holds, i.e. none claimed it, or the
-   * lease of the one that did expired (by the database's clock). A plain read, which locks
-   * nothing: several judgers may get the same submission, and the first to claim it judges it.
-   * The index of the judging queue (judge result, queued time, language, lease) answers it alone:
-   * the pending submissions in other languages, or held by a judging, are skipped in the index,
-   * without reading their rows.
+   * queued first (submitted, rejudged, or released after a failed judging) and that no judging
+   * holds, i.e. none claimed it, or the lease of the one that did expired (by the database's
+   * clock). A plain read, which locks nothing: several judgers may get the same submission, and the
+   * first to claim it judges it. The index of the judging queue (judge result, queued time,
+   * language, lease) answers it alone: the pending submissions in other languages, or held by a
+   * judging, are skipped in the index, without reading their rows.
    *
    * @param languageIds - the unique identifiers of the languages, not empty
-   * @param skippedProblemIds - the unique identifiers of the problems whose submissions to leave to
-   *     other judgers for now (empty: none)
    * @return the unique identifier of the submission, or null if there is none
    */
   @Select({
@@ -99,15 +97,10 @@ public interface SubmissionMapper {
     " <foreach item='languageId' collection='languageIds' open='(' separator=',' close=')'>",
     "#{languageId}</foreach>",
     " AND (submission_lease_expiry_time IS NULL OR submission_lease_expiry_time &lt; NOW())",
-    " <if test='!skippedProblemIds.isEmpty()'>AND problem_id NOT IN",
-    " <foreach item='problemId' collection='skippedProblemIds' open='(' separator=','",
-    " close=')'>#{problemId}</foreach></if>",
     " ORDER BY submission_queued_time LIMIT 1",
     "</script>"
   })
-  Long getNextSubmissionId(
-      @Param("languageIds") List<Integer> languageIds,
-      @Param("skippedProblemIds") Collection<Long> skippedProblemIds);
+  Long getNextSubmissionId(@Param("languageIds") List<Integer> languageIds);
 
   /**
    * Claims a pending submission that no judging holds (see {@link #getNextSubmissionId}) for a
@@ -118,20 +111,23 @@ public interface SubmissionMapper {
    * one does.
    *
    * <p>A submission that still has a claim token was held by a judging whose lease expired: its
-   * judger stopped (or was killed, or lost the database) while judging it, so that judging was
-   * interrupted, which is counted here (the count is set first, while the claim token is still the
-   * old one). A submission a judging released (see {@link #releaseSubmission}), or that was
-   * rejudged, has none, so that is not counted.
+   * judger stopped (or was killed, or lost the database) while judging it, or the judging ran past
+   * its deadline. That judging failed, which is counted here, with its reason (both are set first,
+   * while the claim token is still the old one). A submission a judging released (see {@link
+   * #releaseSubmission} and {@link #requeueSubmission}), or that was rejudged, has none.
    *
    * @param submissionId - the unique identifier of the submission
    * @param claimToken - the claim token of the judging, a random number
    * @param judgerUid - the uid of the judger, or null if unknown
    * @param leaseSeconds - how long the lease lasts, in seconds
+   * @param interruptedReason - the reason of a failed judging whose lease expired
    * @return 1 if the submission is now claimed by the judging, 0 if it was not to be claimed (any
    *     more)
    */
   @Update(
       "UPDATE voj_submissions SET"
+          + " submission_judge_failure = IF(submission_claim_token IS NULL,"
+          + " submission_judge_failure, #{interruptedReason}),"
           + " submission_judge_attempts ="
           + " submission_judge_attempts + (submission_claim_token IS NOT NULL),"
           + " submission_claim_token = #{claimToken},"
@@ -144,7 +140,8 @@ public interface SubmissionMapper {
       @Param("submissionId") long submissionId,
       @Param("claimToken") long claimToken,
       @Param("judgerUid") Long judgerUid,
-      @Param("leaseSeconds") long leaseSeconds);
+      @Param("leaseSeconds") long leaseSeconds,
+      @Param("interruptedReason") String interruptedReason);
 
   /**
    * Renews the lease of a judging, so that no other judging claims the submission while it runs.
@@ -169,9 +166,9 @@ public interface SubmissionMapper {
       @Param("leaseSeconds") long leaseSeconds);
 
   /**
-   * Releases a submission that a judging could not judge for a reason of its judger's own (see
-   * {@code Dispatcher}): it is pending and held by no judging again, at its place in the queue, so
-   * that the next judger that looks takes it. It is not counted as an interrupted judging.
+   * Releases a submission whose judging stops as its judger shuts down: it is pending and held by
+   * no judging again, at its place in the queue, so that the next judger that looks takes it. The
+   * judging is not counted as a failed one.
    *
    * @param submissionId - the unique identifier of the submission
    * @param claimToken - the claim token of the judging
@@ -186,6 +183,29 @@ public interface SubmissionMapper {
   @Options(timeout = STATEMENT_TIMEOUT_SECONDS)
   int releaseSubmission(
       @Param("submissionId") long submissionId, @Param("claimToken") long claimToken);
+
+  /**
+   * Releases a submission whose judging failed (see {@code Dispatcher}): it is pending and held by
+   * no judging again, at the end of the queue (its queued time is now), so that it holds no other
+   * submission up, and the failed judging is counted, with its reason.
+   *
+   * @param submissionId - the unique identifier of the submission
+   * @param claimToken - the claim token of the judging
+   * @param reason - why the judging failed, at most 255 characters
+   * @return 1 if the submission was released, 0 if the judging was superseded meanwhile
+   */
+  @Update(
+      "UPDATE voj_submissions SET submission_judge_attempts = submission_judge_attempts + 1,"
+          + " submission_judge_failure = #{reason}, submission_queued_time = NOW(),"
+          + " submission_claim_token = NULL, submission_lease_expiry_time = NULL,"
+          + " submission_execute_time = NULL, judger_uid = NULL"
+          + " WHERE submission_id = #{submissionId} AND submission_judge_result = 'PD'"
+          + " AND submission_claim_token = #{claimToken}")
+  @Options(timeout = STATEMENT_TIMEOUT_SECONDS)
+  int requeueSubmission(
+      @Param("submissionId") long submissionId,
+      @Param("claimToken") long claimToken,
+      @Param("reason") String reason);
 
   /**
    * Records the verdict of a judging: only the result columns (never e.g. the code), and only if

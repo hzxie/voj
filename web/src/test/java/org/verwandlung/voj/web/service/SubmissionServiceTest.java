@@ -347,6 +347,7 @@ public class SubmissionServiceTest {
         new org.springframework.jdbc.core.JdbcTemplate(dataSource);
     jdbcTemplate.update(
         "UPDATE voj_submissions SET submission_judge_result = 'PD', submission_judge_attempts = 1,"
+            + " submission_judge_failure = 'Failed.',"
             + " submission_queued_time = '2014-10-17 23:59:59' WHERE submission_id = 1001");
     Assertions.assertEquals(1, jdbcTemplate.update(JUDGER_CLAIM, 7L, 1001));
     // A judging that holds the submission may not be claimed by another one.
@@ -359,6 +360,7 @@ public class SubmissionServiceTest {
             "SELECT submission_judge_result, submission_execute_time, judger_uid,"
                 + " submission_judge_log, submission_judge_score, submission_claim_token,"
                 + " submission_lease_expiry_time, submission_judge_attempts,"
+                + " submission_judge_failure,"
                 + " TIMESTAMPDIFF(SECOND, submission_queued_time, NOW()) AS queued_seconds_ago"
                 + " FROM voj_submissions WHERE submission_id = 1001");
     Assertions.assertEquals("PD", row.get("submission_judge_result"));
@@ -369,6 +371,7 @@ public class SubmissionServiceTest {
     Assertions.assertNull(row.get("submission_claim_token"));
     Assertions.assertNull(row.get("submission_lease_expiry_time"));
     Assertions.assertEquals(0, ((Number) row.get("submission_judge_attempts")).intValue());
+    Assertions.assertNull(row.get("submission_judge_failure"));
     Assertions.assertTrue(((Number) row.get("queued_seconds_ago")).longValue() < 60);
     // The judging that started before the rejudge may not record its verdict ...
     Assertions.assertEquals(0, jdbcTemplate.update(JUDGER_RECORD_VERDICT, 1001, 7L));

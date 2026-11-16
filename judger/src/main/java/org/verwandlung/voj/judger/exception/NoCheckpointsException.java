@@ -19,37 +19,22 @@ package org.verwandlung.voj.judger.exception;
 import java.io.IOException;
 
 /**
- * Thrown when the web application refused a download of a problem's test data for good: it
- * answered with a client error (HTTP 4xx) other than 404 (no test data, see {@link
- * InvalidCheckpointsException}), 408 (Request Timeout) or 429 (Too Many Requests), most likely 403
- * because the judger's {@code judger.apiToken} is not the web application's. Asking again would get
- * the same answer.
+ * Thrown when the web application says that it has no test data for a problem: it answered the
+ * download with HTTP 404 and marked the answer as its own (see {@code HttpCheckpointProvider}).
+ * Every other failure of a download, an unmarked 404 included (e.g. from a wrong {@code
+ * judger.web.baseUrl}), is a plain {@link IOException}: the judging failed, not the problem.
  *
  * @author Haozhe Xie
  */
-public class CheckpointsRefusedException extends IOException {
+public class NoCheckpointsException extends IOException {
   /**
    * Constructor of the exception.
    *
    * @param message - the error message
-   * @param statusCode - the HTTP status code of the refusal
    */
-  public CheckpointsRefusedException(String message, int statusCode) {
+  public NoCheckpointsException(String message) {
     super(message);
-    this.statusCode = statusCode;
   }
-
-  /**
-   * Gets the HTTP status code of the refusal.
-   *
-   * @return the status code
-   */
-  public int getStatusCode() {
-    return statusCode;
-  }
-
-  /** The HTTP status code of the refusal. */
-  private final int statusCode;
 
   /** The unique serialization identifier. */
   private static final long serialVersionUID = 1L;

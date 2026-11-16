@@ -41,8 +41,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import org.verwandlung.voj.judger.exception.CheckpointsRefusedException;
-import org.verwandlung.voj.judger.exception.InvalidCheckpointsException;
+import org.verwandlung.voj.judger.exception.NoCheckpointsException;
 
 /**
  * Tests for HttpCheckpointProvider against a stub of the web application's checkpoint endpoint.
@@ -81,79 +80,60 @@ public class HttpCheckpointProviderTest {
   }
 
   /**
-   * Test case: the web application has no test data for the problem, or answers with something
-   * that is not an archive of checkpoints. Expected result: the download fails for good (an
-   * InvalidCheckpointsException), as asking again would not help.
+   * Test case: the web application says that it has no test data for the problem: HTTP 404, marked
+   * with its header. Expected result: a NoCheckpointsException, the only failure that says
+   * something about the problem.
    */
   @Test
-  public void testFinalAnswersAreInvalidCheckpoints() throws Exception {
+  public void testAMarked404IsTheProblemWithoutTestData() throws Exception {
+    startServer(
+        exchange -> {
+          exchange.getResponseHeaders().add(HttpCheckpointProvider.NO_CHECKPOINTS_HEADER, "true");
+          exchange.sendResponseHeaders(404, -1);
+          exchange.close();
+        });
+
+    Assertions.assertThrows(
+        NoCheckpointsException.class, () -> provider.download(1000, tempDir.toFile()));
+  }
+
+  /**
+   * Test case: every other answer than the checkpoints: a 404 without the mark (e.g. of a wrong
+   * judger.web.baseUrl, or a proxy), a refusal of the judger (HTTP 403 for a wrong or empty token,
+   * 401), another client or server error, a timeout asked for (HTTP 408, 429), a body that is not
+   * an archive of checkpoints, or an archive with an entry outside its directory. Expected result:
+   * the download fails, without saying anything about the problem (a plain IOException), and a
+   * refusal or an unmarked 404 says which setting to check.
+   */
+  @Test
+  public void testEveryOtherAnswerIsAFailedDownload() throws Exception {
     byte[][] body = new byte[1][];
     int[] status = new int[1];
     startServer(
         exchange -> {
-          exchange.sendResponseHeaders(status[0], body[0].length);
+          exchange.sendResponseHeaders(status[0], body[0].length == 0 ? -1 : body[0].length);
           try (OutputStream output = exchange.getResponseBody()) {
             output.write(body[0]);
           }
         });
 
-    status[0] = 404;
-    body[0] = "Not Found".getBytes(StandardCharsets.UTF_8);
-    assertInvalidCheckpoints();
+    body[0] = new byte[0];
+    for (int code : new int[] {404, 403, 401, 400, 410, 503, 502, 500, 408, 429}) {
+      status[0] = code;
+      IOException ex = assertFailedDownload();
+      Assertions.assertTrue(ex.getMessage().contains("HTTP " + code), ex.getMessage());
+      if (code == 401 || code == 403) {
+        Assertions.assertTrue(ex.getMessage().contains("judger.apiToken"), ex.getMessage());
+      } else if (code == 404) {
+        Assertions.assertTrue(ex.getMessage().contains("judger.web.baseUrl"), ex.getMessage());
+      }
+    }
     status[0] = 200;
     body[0] = "<html>Bad Gateway</html>".getBytes(StandardCharsets.UTF_8);
-    assertInvalidCheckpoints();
+    assertFailedDownload();
     body[0] = archiveWithEntry("../escaped.txt");
-    assertInvalidCheckpoints();
+    assertFailedDownload();
     Assertions.assertFalse(Files.exists(tempDir.resolveSibling("escaped.txt")));
-  }
-
-  /**
-   * Test case: the web application refuses the judger (HTTP 403 for a wrong or empty token, 401,
-   * or another client error). Expected result: the download fails for good (a
-   * CheckpointsRefusedException with the status), as asking again would get the same answer.
-   */
-  @Test
-  public void testClientErrorsAreRefusals() throws Exception {
-    int[] status = new int[1];
-    startServer(
-        exchange -> {
-          exchange.sendResponseHeaders(status[0], -1);
-          exchange.close();
-        });
-
-    for (int code : new int[] {403, 401, 400, 410}) {
-      status[0] = code;
-      CheckpointsRefusedException ex =
-          Assertions.assertThrows(
-              CheckpointsRefusedException.class,
-              () -> provider.download(1000, tempDir.toFile()));
-      Assertions.assertEquals(code, ex.getStatusCode());
-    }
-  }
-
-  /**
-   * Test case: the web application is restarting or overloaded (HTTP 503, 502 from a proxy, 500),
-   * or asks the judger to ask again later (HTTP 408, 429). Expected result: the download fails, but
-   * not for good: another judger, or a later attempt, may succeed.
-   */
-  @Test
-  public void testOtherFailuresAreNotFinal() throws Exception {
-    int[] status = new int[1];
-    startServer(
-        exchange -> {
-          exchange.sendResponseHeaders(status[0], -1);
-          exchange.close();
-        });
-
-    for (int code : new int[] {503, 502, 500, 408, 429}) {
-      status[0] = code;
-      IOException ex =
-          Assertions.assertThrows(
-              IOException.class, () -> provider.download(1000, tempDir.toFile()));
-      Assertions.assertFalse(ex instanceof InvalidCheckpointsException, ex.toString());
-      Assertions.assertFalse(ex instanceof CheckpointsRefusedException, ex.toString());
-    }
   }
 
   /**
@@ -223,10 +203,16 @@ public class HttpCheckpointProviderTest {
     }
   }
 
-  /** Asserts that a download fails for good. */
-  private void assertInvalidCheckpoints() {
-    Assertions.assertThrows(
-        InvalidCheckpointsException.class, () -> provider.download(1000, tempDir.toFile()));
+  /**
+   * Asserts that a download fails without saying anything about the problem.
+   *
+   * @return the failure
+   */
+  private IOException assertFailedDownload() {
+    IOException ex =
+        Assertions.assertThrows(IOException.class, () -> provider.download(1000, tempDir.toFile()));
+    Assertions.assertFalse(ex instanceof NoCheckpointsException, ex.toString());
+    return ex;
   }
 
   /**

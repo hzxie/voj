@@ -39,9 +39,9 @@
 --    rather than from a message queue. Four columns are added:
 --    submission_queued_time, when a submission was queued for judging (on
 --    submission and on every rejudge; the judgers take the oldest first),
---    submission_judge_attempts, how many judgings of it were interrupted
---    since (their judger stopped, or lost the database, and their lease
---    expired), submission_claim_token, which identifies the judging that
+--    submission_judge_attempts, how many judgings of it failed since (they
+--    reached no verdict: their judger released it, or stopped and let their
+--    lease expire), submission_claim_token, which identifies the judging that
 --    took it, and submission_lease_expiry_time, until when that judging
 --    holds it. The existing submissions get the time of the upgrade as their
 --    queued time (only that of a pending one is read) and no judging: a
@@ -59,8 +59,12 @@
 --    from it (rather than from the judgers' heartbeats over the message
 --    queue), and marks as a System Error the pending submissions in a
 --    language that no judger taking submissions has supported for a while.
+-- 11. submission_judge_failure is added to voj_submissions: why the last
+--    failed judging of a submission failed, which its System Error tells once
+--    too many of its judgings failed. It is a step of its own, so that a
+--    database that already has the columns of step 8 gets it too.
 --
--- Safe to run more than once. Steps 1 to 4, 6 and 8 to 10 first check the
+-- Safe to run more than once. Steps 1 to 4, 6 and 8 to 11 first check the
 -- information schema (or create a table only if it is missing) and only change
 -- what is still in the old state (MySQL commits DDL implicitly, so a
 -- transaction could not make them atomic; an interrupted run is completed by
@@ -256,3 +260,13 @@ CREATE TABLE IF NOT EXISTS `voj_judgers` (
   KEY `judger_uid` (`judger_uid`),
   CONSTRAINT `voj_judgers_ibfk_1` FOREIGN KEY (`judger_uid`) REFERENCES `voj_users` (`uid`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 11. The reason of the last failed judging of a submission.
+SET @voj_has_column = (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'voj_submissions'
+  AND COLUMN_NAME = 'submission_judge_failure');
+SET @voj_sql = IF(@voj_has_column = 0,
+  'ALTER TABLE `voj_submissions` ADD COLUMN `submission_judge_failure` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL AFTER `submission_judge_attempts`', 'DO 0');
+PREPARE voj_stmt FROM @voj_sql;
+EXECUTE voj_stmt;
+DEALLOCATE PREPARE voj_stmt;

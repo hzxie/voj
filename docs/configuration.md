@@ -68,7 +68,7 @@ site and of the administration show the running judgers from it.
 
 | Property | Default | Purpose |
 | --- | --- | --- |
-| `judging.noJudgerTimeout` | `300000` | How long (ms) the pending submissions in a language wait while no running judger takes submissions in it, before the web app marks them as a System Error that says so (an administrator can rejudge them): no judger supports the language, the ones that do stopped, or they are not ready as their judgings failed for reasons of their own (see [Judging queue](#judging-queue-1) of the judger). A queue however long is never failed while a judger takes submissions in its language, and a submission a judging holds is left to it. `0` (or less): a submission waits for a judger as long as it takes. |
+| `judging.noJudgerTimeout` | `300000` | How long (ms) the pending submissions in a language wait while no running judger takes submissions in it, before the web app marks them as a System Error that says so (an administrator can rejudge them): no judger supports the language, the ones that do stopped, or they are not ready as too many of their judgings in a row failed (see [Judging queue](#judging-queue-1) of the judger). A queue however long is never failed while a judger takes submissions in its language, and a submission a judging holds is left to it. `0` (or less): a submission waits for a judger as long as it takes. |
 
 Every 30 seconds, each instance of the web app looks for the pending submissions
 that no judging holds in a language without a judger that takes submissions,
@@ -84,7 +84,14 @@ Judgers pull a problem's test data from the web app over HTTP rather than sharin
 
 | Property | Default | Purpose |
 | --- | --- | --- |
-| `judger.apiToken` | `${VOJ_JUDGER_API_TOKEN}` *(empty)* | Shared secret a judger must send in the `X-Judger-Token` header to download test data from `/api/judger/checkpoints/{problemId}`. Must match `judger.apiToken` on every judger. An **empty value disables the endpoint** (all requests refused). Use a long random string in production. |
+| `judger.apiToken` | `${VOJ_JUDGER_API_TOKEN}` *(empty)* | Shared secret a judger must send in the `X-Judger-Token` header to download test data from `/api/judger/checkpoints/{problemId}`. Must match `judger.apiToken` on every judger. An **empty value disables the endpoint** (all requests refused with HTTP 403). Use a long random string in production. |
+
+The endpoint answers a problem that does not exist with HTTP 404 and the header
+`X-Checkpoints-Missing: true`, the only answer a judger takes as the problem's
+(it judges the submission a System Error that says the problem has no test
+data, as it does for a problem without checkpoints). Any other failure of a
+download, a 404 without that header included (e.g. a wrong
+`judger.web.baseUrl`), is a failed judging.
 
 ### Web service
 
@@ -117,8 +124,9 @@ heartbeats go to the database, not to the broker.
 ### Judging queue
 
 The judger takes the pending submissions from the database, in the languages
-whose compilers it found at startup, the one submitted (or rejudged) first
-first, and judges one at a time. Any number of judgers can share the database.
+whose compilers it found at startup, the one queued first (when it was
+submitted, rejudged, or released after a failed judging) first, and judges one
+at a time. Any number of judgers can share the database.
 The policy of the queue is the same on every judger, so it has no settings:
 
 - A judger claims a submission with a statement that only one judger can
@@ -131,42 +139,43 @@ The policy of the queue is the same on every judger, so it has no settings:
   judging past its deadline is stuck (e.g. on a connection that went silent):
   its lease is no longer renewed, so another judger takes the submission, and
   the judger is not ready until it is over.
-- A judging that vanishes (its judger stopped, crashed, was killed or lost the
-  database, until its lease expired) is counted as interrupted by the judger
-  that takes the submission next. After 3 interrupted judgings, that judger
-  judges the submission a System Error that says so, instead of judging it
-  again: a submission that crashes every judger ends there too.
 - A judging stops, without recording a verdict or sending anything more, once
   it finds (when it renews its lease) that it was superseded: the submission was
   rejudged, or taken by another judging as its lease had expired. The web app
   shows the messages of the current judging of a submission only.
+- A judger that is stopped (e.g. `docker stop`, a rolling update, `systemctl
+  stop`) releases the submission it is judging at its place in the queue, for
+  another judger to take at once, without counting a failed judging on it.
 
-Who is to blame for a judging that cannot be completed decides what becomes of
-its submission:
+A judging either reaches an outcome or fails. The outcomes are the verdicts of
+the submission (Accepted, Wrong Answer, Compile Error, time, memory or output
+limit, runtime error, ...) and one System Error: the web app says that the
+problem has no test data (a marked HTTP 404, see
+[Checkpoint distribution](#checkpoint-distribution)), or its test data has no
+checkpoints. Every other judging that ends without an outcome failed, whoever
+is to blame, as a judger cannot tell for sure: the test data cannot be
+downloaded (the web app is unreachable or refuses the judger, e.g. for a wrong
+`judger.apiToken`, a 404 without the mark, e.g. for a wrong
+`judger.web.baseUrl`, an archive that is malformed) or read, the source code
+cannot be written, the sandbox cannot run the compiler or the program (e.g. as
+the submission broke its own runs), the outcome cannot be recorded (the
+database is unreachable or refuses it; it is tried 3 times within a few seconds
+first), an unexpected exception (a bug), or the judging vanished: its judger
+stopped, crashed or was killed while judging, or the judging ran past its
+deadline, and its lease expired. Two budgets, independent of each other, keep
+failed judgings from going on for ever:
 
-| Failure | To blame | Outcome |
+| Budget | Counts | When it is spent |
 | --- | --- | --- |
-| Compile error, wrong answer, time, memory or output limit, runtime error | The submission | Its verdict. |
-| The web app has no test data for the problem (HTTP 404), its archive is malformed, or it has no checkpoints | The problem | System Error that says so. |
-| An unexpected exception in the judger (a bug) | Unknown | System Error ("internal error"). |
-| The test data cannot be downloaded: the web app is unreachable or restarting, a timeout, HTTP 5xx, 408 or 429 | The judger (or the web app) | Released for another judger, not recorded or counted; this judger leaves the problem to the others for 2 minutes. |
-| The web app refuses this judger the test data (HTTP 401, 403 or another client error: e.g. a wrong `judger.apiToken`) | The judger | Same. |
-| The judger cannot read its copy of the test data | The judger | Same. |
-| The work directory cannot be used, or the source code not written | The judger | Released (or not claimed), not recorded or counted. |
-| The sandbox cannot run the compiler or the program (it cannot be set up) | The judger | Same. |
-| The database fails while the outcome is recorded | The judger or the database | The verdict is tried again (3 times in all, within a few seconds); then the submission is released, or, if the database is still unreachable, taken again once its lease expired (an interrupted judging). |
-| The database refuses the outcome (e.g. a value its column does not take) | Unknown | System Error ("internal error"). |
-| The judger stops, crashes or is killed while judging, or the judging runs past its deadline | Unknown | Taken again once its lease expired, as an interrupted judging; System Error after 3 of them. |
-| An Error in the judger (e.g. `OutOfMemoryError`) | Unknown | The judger exits with status 70, for its supervisor to restart it (see [deployment](deployment.md#keeping-the-judgers-running)); the submission is an interrupted judging. |
+| The submission's: 5 failed judgings | Every failed judging of it, with its reason. A judger whose judging fails releases the submission at once, to the end of the queue (so that it holds no other submission up); a vanished judging is counted by the judger that takes the submission once its lease expired. A rejudge starts it over. | The judger that takes it after the 5th judges it a System Error that gives the number of failed judgings and the reason of the last one (an administrator can rejudge it). |
+| The judger's: 3 failed judgings in a row | Every failed judging of the judger (and its work directory being unusable), including the one it was busy with when it last stopped without releasing it (it crashed, was killed, or exited after an `Error`): the count is kept in `failed-judgings` in its cache directory (see [Directories](#directories)), and a judging counts as failed there until it is over. A judging that reaches an outcome ends the run of failures. | The judger is not ready (its heartbeat says so, which the web app counts as no judger for its languages, see [Judging queue](#judging-queue) of the web app) until one of its judgings reaches an outcome again. After every failed judging it pauses: 5 seconds after the first one, twice as long after each next one in a row, at most 2 minutes; a judger that starts after failed judgings in a row pauses so first (a judger that crashes after every restart does not take a submission at once each time). It logs the failures, the third one as an error, and keeps trying. |
 
-A judger whose judgings fail for reasons of its own pauses: 5 seconds after the
-first failure, twice as long after each next one in a row, at most 2 minutes.
-After 3 failures in a row it is not ready (its heartbeat says so, which the web
-app counts as no judger for its languages, see
-[Judging queue](#judging-queue) of the web app) until one of its judgings
-reaches an outcome again; it logs that once, and keeps trying every 2 minutes at
-most. A failure of the database while it looks for a submission only makes it
-look again every 2 seconds, logged once until it succeeds.
+An `Error` in the judger (e.g. `OutOfMemoryError`), while it judges or renews
+the lease of a judging, leaves it in no state to judge: it logs it and exits
+with status 70, for its supervisor to restart it (see
+[deployment](deployment.md#keeping-the-judgers-running)); its judging is a
+vanished one. A failure of the database while a judger looks for a submission
+only makes it look again every 2 seconds, logged once until it succeeds.
 
 The leases and heartbeats are measured by the database's clock (`NOW()`), so the
 clocks of the hosts do not matter.
@@ -184,15 +193,15 @@ clocks of the hosts do not matter.
 | Property | Default | Purpose |
 | --- | --- | --- |
 | `judger.workDir` | — | No longer used: the judger judges in `work-<n>/` under `judger.checkpointDir`. A judger that finds it set (or `VOJ_JUDGER_WORK_DIR`) logs a warning and ignores it. |
-| `judger.checkpointDir` | `/var/lib/voj-judger` (`%ProgramData%\voj-judger` on Windows) | The judger's own directory, never in the temporary directory (whose clean-up of old files would remove what the judger keeps there): the local cache of downloaded reference inputs/outputs, and the work directories of the judgings. Every judger on the host claims the first slot *n* here whose lock file `judger-<n>.lock` no other judger holds (held from its start until it exits). It caches in `judger-<n>/` (`0700`), so judgers sharing this setting never replace test data another one is reading, and judges in `work-<n>/` (`0711`): it creates a private `0700` subdirectory, `voj-<submissionId>-<random>`, there for every judging and removes it afterwards, however deep the tree a submission built there or whatever permissions it took away. When it claims its slot, the judger removes what a judger with that slot left in `work-<n>/` (one that was killed while judging), without following links; what it cannot remove does not keep it from starting: it moves the directory aside, to `trash-<n>-<random>/`, and removes that at a later start. The directory must belong to the judger's account, and other users (the group included) must not be able to write to it, as they could replace the test data or the lock files in it: the judger refuses to start otherwise, rather than change the permissions of a directory it did not create (e.g. `/tmp`). A missing one it creates with mode `0711`: others may pass through it, but neither list nor read anything in it but the work directory of a judging they are handed. A judger that may not create it (one that is not root may not create the default) does not start: create it for the judger's account, or set this (`VOJ_JUDGER_CHECKPOINT_DIR`) to a directory the judger may create. When the judger runs submissions as `system.username` (the native sandbox, as root), that account must be able to pass through every directory above `work-<n>/`: this directory and every one above it must let others pass (`o+x`), or the judger does not start. On Windows, it and the directories of the slots are created with ACLs of their own instead of modes (see [The checkpoint directory on Windows](deployment.md#the-checkpoint-directory-on-windows)). Directories named after a problem id directly under it are the cache of an older version and can be deleted. |
+| `judger.checkpointDir` | `/var/lib/voj-judger` (`%ProgramData%\voj-judger` on Windows) | The judger's own directory, never in the temporary directory (whose clean-up of old files would remove what the judger keeps there): the local cache of downloaded reference inputs/outputs, and the work directories of the judgings. Every judger on the host claims the first slot *n* here whose lock file `judger-<n>.lock` no other judger holds (held from its start until it exits). It caches in `judger-<n>/` (`0700`), so judgers sharing this setting never replace test data another one is reading (it also keeps `failed-judgings` there, its count of failed judgings in a row, see [Judging queue](#judging-queue-1)), and judges in `work-<n>/` (`0711`): it creates a private `0700` subdirectory, `voj-<submissionId>-<random>`, there for every judging and removes it afterwards, however deep the tree a submission built there or whatever permissions it took away. When it claims its slot, the judger removes what a judger with that slot left in `work-<n>/` (one that was killed while judging), without following links; what it cannot remove does not keep it from starting: it moves the directory aside, to `trash-<n>-<random>/`, and removes that at a later start. The directory must belong to the judger's account, and other users (the group included) must not be able to write to it, as they could replace the test data or the lock files in it: the judger refuses to start otherwise, rather than change the permissions of a directory it did not create (e.g. `/tmp`). A missing one it creates with mode `0711`: others may pass through it, but neither list nor read anything in it but the work directory of a judging they are handed. A judger that may not create it (one that is not root may not create the default) does not start: create it for the judger's account, or set this (`VOJ_JUDGER_CHECKPOINT_DIR`) to a directory the judger may create. When the judger runs submissions as `system.username` (the native sandbox, as root), that account must be able to pass through every directory above `work-<n>/`: this directory and every one above it must let others pass (`o+x`), or the judger does not start. On Windows, it and the directories of the slots are created with ACLs of their own instead of modes (see [The checkpoint directory on Windows](deployment.md#the-checkpoint-directory-on-windows)). Directories named after a problem id directly under it are the cache of an older version and can be deleted. |
 
 ### Checkpoint download
 
 | Property | Default | Purpose |
 | --- | --- | --- |
-| `judger.web.baseUrl` | `http://localhost:8080/voj` | Web application root the judger downloads test data from. A problem the web app has no test data for (HTTP 404), or an archive that is malformed, is a System Error; any other failed download is a failure of the judger's own, and the submission is left to another judger (see [Judging queue](#judging-queue-1)). |
+| `judger.web.baseUrl` | `http://localhost:8080/voj` | Web application root the judger downloads test data from. A problem the web app says it has no test data for (HTTP 404 with the header `X-Checkpoints-Missing`) is a System Error; any other failed download (a wrong URL, whose 404 has no such header, included) is a failed judging (see [Judging queue](#judging-queue-1)), and the judger logs the status and, for a 404, to check this setting. |
 | `judger.web.downloadTimeout` | `300` | Seconds a download of a problem's test data may take as a whole, from the request to the last byte; a download that is not over by then (e.g. the web app stopped sending in the middle) fails. Raise it for very large test data on a slow link. |
-| `judger.apiToken` | `${VOJ_JUDGER_API_TOKEN}` *(empty)* | Shared secret; **must match** `judger.apiToken` on the web app. Left empty (or wrong), the web app refuses every download (HTTP 403): the judger leaves the submissions to other judgers, logs that it was refused and to check `judger.apiToken`, and after three such failures in a row is not ready (it takes no submission but a retry every 2 minutes at most); if no judger is ready for a language, its pending submissions are judged a System Error after `judging.noJudgerTimeout`. The judger logs an error at startup when it is empty. (Any client error but 404, 408 and 429 is such a refusal; 404 means the problem has no test data.) The Docker images and `docker-compose.yml` default it to `verwandlung` on both sides; use a long random string in production. |
+| `judger.apiToken` | `${VOJ_JUDGER_API_TOKEN}` *(empty)* | Shared secret; **must match** `judger.apiToken` on the web app. Left empty (or wrong), the web app refuses every download (HTTP 403 or 401): every judging of the judger that needs test data it has not cached fails (the submission goes to the end of the queue, for another judger), the judger logs the status and to check `judger.apiToken`, and after three failed judgings in a row it is not ready (it takes no submission but a retry every 2 minutes at most); if no judger is ready for a language, its pending submissions are judged a System Error after `judging.noJudgerTimeout`. The judger logs an error at startup when it is empty. The Docker images and `docker-compose.yml` default it to `verwandlung` on both sides; use a long random string in production. |
 
 ### Sandbox
 

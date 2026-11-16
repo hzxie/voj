@@ -330,7 +330,7 @@ public interface SubmissionMapper {
    * verdict, judge log, resource usage, score, executing judger and execute time. Used by the
    * rejudge flow: without this, the record would keep its old verdict and the detail pages would
    * not show the live judging stream. It is queued anew: at the end of the queue (its queued time
-   * is now), with no interrupted judging so far, and without the claim of a judging, so that a
+   * is now), with no failed judging so far, and without the claim of a judging, so that a
    * judging of it still running stops (it finds its claim token gone) and the judgers take it
    * again.
    *

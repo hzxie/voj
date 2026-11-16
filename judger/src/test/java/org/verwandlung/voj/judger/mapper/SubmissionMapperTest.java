@@ -30,6 +30,7 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.verwandlung.voj.judger.application.ApplicationDispatcher;
 import org.verwandlung.voj.judger.model.Submission;
 
 /**
@@ -68,7 +69,7 @@ public class SubmissionMapperTest {
    * Test case: tests the getNextSubmissionId, claimSubmission and updateSubmissionResult methods.
    * Test data: Submission #1000 (in C++), set back to pending. Expected result: it is the next one
    * in C++, and claimed, with the start time and a lease of a minute by the database's clock,
-   * without counting an interrupted judging; no other judging claims it while it holds the lease. Its verdict is recorded
+   * without counting a failed judging; no other judging claims it while it holds the lease. Its verdict is recorded
    * with the result columns only (the code and the rest stay as they were), and a submission that
    * is no longer pending is neither next nor claimed by anybody.
    */
@@ -76,21 +77,21 @@ public class SubmissionMapperTest {
   public void testClaimAndRecordVerdict() {
     Submission before = setPending(1000, "2020-01-01 00:00:00");
 
-    Assertions.assertEquals(1000L, submissionMapper.getNextSubmissionId(CPP, NONE));
-    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, 7L, 1000L, 60));
+    Assertions.assertEquals(1000L, submissionMapper.getNextSubmissionId(CPP));
+    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, 7L, 1000L, 60, INTERRUPTED));
     Map<String, Object> claim =
         jdbcTemplate()
             .queryForMap(
-                "SELECT submission_judge_attempts AS interruptions,"
+                "SELECT submission_judge_attempts AS failed_judgings,"
                     + " TIMESTAMPDIFF(SECOND, submission_execute_time, NOW()) AS started,"
                     + " TIMESTAMPDIFF(SECOND, NOW(), submission_lease_expiry_time) AS lease"
                     + " FROM voj_submissions WHERE submission_id = 1000");
-    Assertions.assertEquals(0, ((Number) claim.get("interruptions")).intValue());
+    Assertions.assertEquals(0, ((Number) claim.get("failed_judgings")).intValue());
     Assertions.assertTrue(
         Math.abs(((Number) claim.get("started")).longValue()) <= 5, claim.toString());
     Assertions.assertTrue(((Number) claim.get("lease")).longValue() >= 55, claim.toString());
-    Assertions.assertNull(submissionMapper.getNextSubmissionId(CPP, NONE));
-    Assertions.assertEquals(0, submissionMapper.claimSubmission(1000, 8L, 1000L, 60));
+    Assertions.assertNull(submissionMapper.getNextSubmissionId(CPP));
+    Assertions.assertEquals(0, submissionMapper.claimSubmission(1000, 8L, 1000L, 60, INTERRUPTED));
 
     Assertions.assertEquals(1, submissionMapper.updateSubmissionResult(verdict(1000, 7L)));
     Submission after = submissionMapper.getSubmission(1000);
@@ -100,12 +101,12 @@ public class SubmissionMapperTest {
     Assertions.assertEquals(34, after.getUsedMemory());
     Assertions.assertEquals(5, after.getJudgeScore());
     Assertions.assertEquals(1000L, after.getJudgerUid());
-    Assertions.assertEquals(0, after.getInterruptions());
+    Assertions.assertEquals(0, after.getFailedJudgings());
     Assertions.assertEquals(before.getCode(), after.getCode());
     Assertions.assertEquals(before.getUid(), after.getUid());
-    Assertions.assertNull(submissionMapper.getNextSubmissionId(CPP, NONE));
+    Assertions.assertNull(submissionMapper.getNextSubmissionId(CPP));
     expireLease(1000);
-    Assertions.assertEquals(0, submissionMapper.claimSubmission(1000, 8L, 1000L, 60));
+    Assertions.assertEquals(0, submissionMapper.claimSubmission(1000, 8L, 1000L, 60, INTERRUPTED));
   }
 
   /**
@@ -120,46 +121,33 @@ public class SubmissionMapperTest {
     setPending(1001, "2020-01-01 00:00:00");
     setPending(1002, "2020-01-02 00:00:00");
 
-    Assertions.assertEquals(1002L, submissionMapper.getNextSubmissionId(CPP, NONE));
-    Assertions.assertEquals(1001L, submissionMapper.getNextSubmissionId(List.of(3), NONE));
-    Assertions.assertEquals(1001L, submissionMapper.getNextSubmissionId(List.of(2, 3), NONE));
-    Assertions.assertNull(submissionMapper.getNextSubmissionId(List.of(1), NONE));
+    Assertions.assertEquals(1002L, submissionMapper.getNextSubmissionId(CPP));
+    Assertions.assertEquals(1001L, submissionMapper.getNextSubmissionId(List.of(3)));
+    Assertions.assertEquals(1001L, submissionMapper.getNextSubmissionId(List.of(2, 3)));
+    Assertions.assertNull(submissionMapper.getNextSubmissionId(List.of(1)));
 
     setPending(1002, "2020-01-03 00:00:00");
     Assertions.assertTrue(
-        List.of(1000L, 1002L).contains(submissionMapper.getNextSubmissionId(CPP, NONE)));
-  }
-
-  /**
-   * Test case: tests the getNextSubmissionId method. Test data: pending submissions #1000 (Problem
-   * #1000) and #1003 (Problem #1001) in C++, #1000 queued first. Expected result: a judger that
-   * leaves Problem #1000 to the others gets #1003; one that leaves both problems, none.
-   */
-  @Test
-  public void testNextSubmissionSkipsTheProblemsLeftToOthers() {
-    setPending(1000, "2020-01-01 00:00:00");
-    setPending(1003, "2020-01-02 00:00:00");
-
-    Assertions.assertEquals(1000L, submissionMapper.getNextSubmissionId(CPP, NONE));
-    Assertions.assertEquals(1003L, submissionMapper.getNextSubmissionId(CPP, List.of(1000L)));
-    Assertions.assertNull(submissionMapper.getNextSubmissionId(CPP, List.of(1000L, 1001L)));
+        List.of(1000L, 1002L).contains(submissionMapper.getNextSubmissionId(CPP)));
   }
 
   /**
    * Test case: tests the claimSubmission method. Test data: a submission whose judging stopped
    * renewing its lease (e.g. its judger died) until it expired. Expected result: it is the next one
-   * again, another judging claims it and counts the first one as interrupted, and the first judging
-   * neither renews its lease nor records its verdict any more.
+   * again, another judging claims it and counts the first one as failed, with the reason of an
+   * interrupted judging, and the first judging neither renews its lease nor records its verdict any
+   * more.
    */
   @Test
   public void testExpiredLeaseIsClaimedAgain() {
     setPending(1000, "2020-01-01 00:00:00");
-    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, 7L, null, 60));
+    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, 7L, null, 60, INTERRUPTED));
     expireLease(1000);
 
-    Assertions.assertEquals(1000L, submissionMapper.getNextSubmissionId(CPP, NONE));
-    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, 8L, null, 60));
-    Assertions.assertEquals(1, submissionMapper.getSubmission(1000).getInterruptions());
+    Assertions.assertEquals(1000L, submissionMapper.getNextSubmissionId(CPP));
+    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, 8L, null, 60, INTERRUPTED));
+    Assertions.assertEquals(1, submissionMapper.getSubmission(1000).getFailedJudgings());
+    Assertions.assertEquals(INTERRUPTED, submissionMapper.getSubmission(1000).getLastFailure());
     Assertions.assertEquals(0, submissionMapper.renewLease(1000, 7L, 60));
     Assertions.assertEquals(0, submissionMapper.updateSubmissionResult(verdict(1000, 7L)));
     Assertions.assertEquals(1, submissionMapper.renewLease(1000, 8L, 60));
@@ -167,16 +155,17 @@ public class SubmissionMapperTest {
 
   /**
    * Test case: tests the releaseSubmission method. Test data: a submission claimed by a judging
-   * after an interrupted one, which releases it. Expected result: it holds no claim token, lease,
-   * start time or judger any more and is the next one again; the judging that claims it next counts
-   * no further interruption, and a release by the superseded judging changes nothing.
+   * after an interrupted one, which releases it (as its judger shuts down). Expected result: it
+   * holds no claim token, lease, start time or judger any more and is the next one again, at its
+   * place in the queue; the judging that claims it next counts no further failed judging, and a
+   * release by the superseded judging changes nothing.
    */
   @Test
-  public void testReleasedSubmissionIsClaimedWithoutCountingAnInterruption() {
+  public void testReleasedSubmissionIsClaimedWithoutCountingAFailedJudging() {
     setPending(1000, "2020-01-01 00:00:00");
-    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, 6L, 1000L, 60));
+    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, 6L, 1000L, 60, INTERRUPTED));
     expireLease(1000);
-    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, 7L, 1000L, 60));
+    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, 7L, 1000L, 60, INTERRUPTED));
 
     Assertions.assertEquals(1, submissionMapper.releaseSubmission(1000, 7L));
     Map<String, Object> released =
@@ -184,7 +173,8 @@ public class SubmissionMapperTest {
             .queryForMap(
                 "SELECT submission_judge_result, submission_judge_attempts,"
                     + " submission_claim_token, submission_lease_expiry_time,"
-                    + " submission_execute_time, judger_uid"
+                    + " submission_execute_time, judger_uid,"
+                    + " submission_queued_time = '2020-01-01 00:00:00' AS is_at_its_place"
                     + " FROM voj_submissions WHERE submission_id = 1000");
     Assertions.assertEquals("PD", released.get("submission_judge_result"));
     Assertions.assertEquals(1, ((Number) released.get("submission_judge_attempts")).intValue());
@@ -192,11 +182,49 @@ public class SubmissionMapperTest {
     Assertions.assertNull(released.get("submission_lease_expiry_time"));
     Assertions.assertNull(released.get("submission_execute_time"));
     Assertions.assertNull(released.get("judger_uid"));
-    Assertions.assertEquals(1000L, submissionMapper.getNextSubmissionId(CPP, NONE));
+    Assertions.assertEquals(1, ((Number) released.get("is_at_its_place")).intValue());
+    Assertions.assertEquals(1000L, submissionMapper.getNextSubmissionId(CPP));
 
-    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, 8L, 1000L, 60));
-    Assertions.assertEquals(1, submissionMapper.getSubmission(1000).getInterruptions());
+    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, 8L, 1000L, 60, INTERRUPTED));
+    Assertions.assertEquals(1, submissionMapper.getSubmission(1000).getFailedJudgings());
     Assertions.assertEquals(0, submissionMapper.releaseSubmission(1000, 7L));
+    Assertions.assertEquals(1, submissionMapper.renewLease(1000, 8L, 60));
+  }
+
+  /**
+   * Test case: tests the requeueSubmission method. Test data: pending submissions #1000 and #1002
+   * in C++, #1000 queued first and claimed by a judging that fails. Expected result: #1000 is
+   * released to the end of the queue, after #1002, with the failed judging counted and its reason;
+   * the judging that claims it next counts nothing more, and a requeue by the superseded judging
+   * changes nothing.
+   */
+  @Test
+  public void testRequeuedSubmissionGoesToTheEndOfTheQueue() {
+    setPending(1000, "2020-01-01 00:00:00");
+    setPending(1002, "2020-01-02 00:00:00");
+    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, 7L, 1000L, 60, INTERRUPTED));
+
+    Assertions.assertEquals(1, submissionMapper.requeueSubmission(1000, 7L, "Failed."));
+    Submission requeued = submissionMapper.getSubmission(1000);
+    Assertions.assertEquals(1, requeued.getFailedJudgings());
+    Assertions.assertEquals("Failed.", requeued.getLastFailure());
+    Assertions.assertNull(requeued.getJudgerUid());
+    Assertions.assertEquals("PD", requeued.getJudgeResultSlug());
+    Assertions.assertEquals(1002L, submissionMapper.getNextSubmissionId(CPP));
+    Assertions.assertEquals(
+        1L,
+        jdbcTemplate()
+            .queryForObject(
+                "SELECT COUNT(*) FROM voj_submissions WHERE submission_id = 1000"
+                    + " AND submission_claim_token IS NULL"
+                    + " AND submission_lease_expiry_time IS NULL"
+                    + " AND ABS(TIMESTAMPDIFF(SECOND, submission_queued_time, NOW())) <= 5",
+                Long.class));
+
+    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, 8L, 1000L, 60, INTERRUPTED));
+    Assertions.assertEquals(1, submissionMapper.getSubmission(1000).getFailedJudgings());
+    Assertions.assertEquals("Failed.", submissionMapper.getSubmission(1000).getLastFailure());
+    Assertions.assertEquals(0, submissionMapper.requeueSubmission(1000, 7L, "Stale."));
     Assertions.assertEquals(1, submissionMapper.renewLease(1000, 8L, 60));
   }
 
@@ -209,7 +237,7 @@ public class SubmissionMapperTest {
   @Test
   public void testSupersededJudgingIsStopped() {
     setPending(1000, "2020-01-01 00:00:00");
-    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, 7L, null, 60));
+    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, 7L, null, 60, INTERRUPTED));
     Assertions.assertEquals(1, submissionMapper.renewLease(1000, 7L, 60));
     // A renewal within the same second as the previous one counts too.
     Assertions.assertEquals(1, submissionMapper.renewLease(1000, 7L, 60));
@@ -218,8 +246,8 @@ public class SubmissionMapperTest {
     Assertions.assertEquals(0, submissionMapper.renewLease(1000, 7L, 60));
     Assertions.assertEquals(0, submissionMapper.updateSubmissionResult(verdict(1000, 7L)));
 
-    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, 9L, null, 60));
-    Assertions.assertEquals(0, submissionMapper.getSubmission(1000).getInterruptions());
+    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, 9L, null, 60, INTERRUPTED));
+    Assertions.assertEquals(0, submissionMapper.getSubmission(1000).getFailedJudgings());
     Assertions.assertEquals(1, submissionMapper.renewLease(1000, 9L, 3600));
     Assertions.assertTrue(
         jdbcTemplate()
@@ -250,7 +278,8 @@ public class SubmissionMapperTest {
                 + " NULL, submission_judge_score = NULL, submission_used_time = NULL,"
                 + " submission_used_memory = NULL, submission_execute_time = NULL,"
                 + " judger_uid = NULL, submission_queued_time = ?, submission_judge_attempts = 0,"
-                + " submission_claim_token = NULL, submission_lease_expiry_time = NULL"
+                + " submission_judge_failure = NULL, submission_claim_token = NULL,"
+                + " submission_lease_expiry_time = NULL"
                 + " WHERE submission_id = ?",
             queuedTime,
             submissionId);
@@ -307,8 +336,8 @@ public class SubmissionMapperTest {
   /** The languages of the tests: C++ only. */
   private static final List<Integer> CPP = List.of(2);
 
-  /** No problem left to other judgers. */
-  private static final List<Long> NONE = List.of();
+  /** The reason of a judging whose lease expired, as the judgers record it. */
+  private static final String INTERRUPTED = ApplicationDispatcher.INTERRUPTED_REASON;
 
   /** The SubmissionMapper object under test. */
   @Autowired private SubmissionMapper submissionMapper;

@@ -17,10 +17,12 @@
 package org.verwandlung.voj.judger.core;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
@@ -31,15 +33,14 @@ import java.util.function.IntConsumer;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Component;
 
 import org.verwandlung.voj.judger.application.ApplicationDispatcher;
-import org.verwandlung.voj.judger.exception.CheckpointsRefusedException;
-import org.verwandlung.voj.judger.exception.CreateDirectoryException;
-import org.verwandlung.voj.judger.exception.InvalidCheckpointsException;
+import org.verwandlung.voj.judger.exception.NoCheckpointsException;
 import org.verwandlung.voj.judger.model.Checkpoint;
 import org.verwandlung.voj.judger.model.Language;
 import org.verwandlung.voj.judger.model.Submission;
@@ -51,83 +52,113 @@ import org.verwandlung.voj.judger.util.FileSystemUtils;
  * their judging. After each stage finishes, a message is pushed to the message queue; after judging
  * completes, the result is written to the database.
  *
- * <p>Who is to blame for a judging that cannot be completed decides what becomes of its submission:
+ * <p>A judging either reaches an outcome or fails. The outcomes are the verdicts of the submission
+ * (e.g. a Compile Error or a Wrong Answer), and a System Error when the web application says that
+ * its problem has no test data. Every other way a judging can end without an outcome is a failed
+ * judging, whoever is to blame (this judger, the web application, the database, the submission
+ * itself, or a bug), as the judger cannot tell for sure: its test data cannot be downloaded or
+ * read, its source code cannot be written, the sandbox cannot run the compiler or the program, the
+ * outcome cannot be recorded, an unexpected exception, or (see {@link Lease}) its judger stopped
+ * while judging it or the judging ran past its deadline. Two budgets, independent of each other,
+ * keep failed judgings from going on for ever:
  *
  * <ul>
- *   <li>The submission or its problem: the verdict (e.g. a Compile Error), or a System Error that
- *       says why, when the problem has no usable test data (the web application has none, its
- *       archive is malformed, it has no checkpoints). So is a failure of the judger nobody expected
- *       (a bug), which may as well be the submission's doing.
- *   <li>This judger (see {@link LocalFailure}): its work directory, its copy of the test data,
- *       the download of the test data (refused, e.g. for a wrong API token, or failed), its
- *       sandbox. The submission is released at once, at its place in the queue, for another
- *       judger, and nothing is recorded on it. This judger pauses (longer after each failure in a
- *       row), leaves the problem to the other judgers for a while if it could not get its test
- *       data, and after {@value #MAX_LOCAL_FAILURES} failures in a row is not ready (see {@link
- *       #isReady}) until a judging of it succeeds again: it keeps trying, at most every {@value
- *       #MAX_BACKOFF_MS} ms.
- *   <li>Nobody knows: the judging stopped without an outcome, its judger died, was killed, lost the
- *       database or ran past the time the limits of the submission allow (see {@link Lease}). Its
- *       lease expires, and the judger that takes the submission next counts an interrupted
- *       judging: after {@value #MAX_INTERRUPTIONS} of them, the submission is judged a System Error
- *       that says so. A submission that crashes every judger that takes it ends there too.
+ *   <li>The submission's: a failed judging releases it to the end of the queue, so that it holds no
+ *       other submission up, and is counted on it, with its reason. The judger that claims it after
+ *       {@value #MAX_FAILED_JUDGINGS} failed judgings judges it a System Error that gives the
+ *       reason of the last one.
+ *   <li>The judger's: after a failed judging it pauses (longer after each one in a row), and after
+ *       {@value #MAX_FAILURES_IN_A_ROW} in a row it is not ready (see {@link #isReady}) until a
+ *       judging of it reaches an outcome again; it keeps trying, at most every {@value
+ *       #MAX_BACKOFF_MS} ms. The count is kept in its slot of the checkpoint directory, and a
+ *       judging counts as failed there until it is over, so that a judger that dies while judging
+ *       (e.g. one that crashes again after every restart) counts it too.
  * </ul>
  *
  * @author Haozhe Xie
  */
 @Component
-public class Dispatcher {
-  /** The judge log reason of a System Error with an unexpected cause. */
+public class Dispatcher implements DisposableBean {
+  /** The judge log reason of a failed judging with an unexpected cause. */
   static final String INTERNAL_ERROR_REASON =
       "An internal error occurred in the judger while judging this submission.";
 
-  /** The judge log reason of a System Error after interrupted judgings, by their number. */
-  static final String INTERRUPTED_REASON =
-      "The judging of this submission was interrupted %d times: the judger stopped, crashed or"
-          + " lost the database while judging it.";
+  /** The judge log reason of a System Error of a problem without test data. */
+  static final String NO_TEST_DATA_REASON =
+      "This problem has no test data (checkpoints) to judge against.";
+
+  /**
+   * The judge log reason of a System Error after too many failed judgings, by their number and the
+   * reason of the last one.
+   */
+  static final String GIVEN_UP_REASON =
+      "%d judgings of this submission failed, the last one as follows: %s";
 
   /** How long (ms) the lease of a judging lasts; it is renewed every quarter of it. */
   static final long LEASE_TIMEOUT_MS = 60000;
 
-  /** How many judgings of a submission may be interrupted before it is judged a System Error. */
-  public static final int MAX_INTERRUPTIONS = 3;
+  /** How many judgings of a submission may fail before it is judged a System Error. */
+  public static final int MAX_FAILED_JUDGINGS = 5;
 
   /** How long (ms) an idle judger waits before it looks for a pending submission again. */
   static final long POLL_INTERVAL_MS = 2000;
 
-  /** After how many failures of its own in a row a judger is not ready. */
-  static final int MAX_LOCAL_FAILURES = 3;
+  /** After how many failed judgings in a row a judger is not ready. */
+  public static final int MAX_FAILURES_IN_A_ROW = 3;
 
-  /** How long (ms) a judger pauses after a failure of its own; doubles with each in a row. */
+  /** How long (ms) a judger pauses after a failed judging; doubles with each one in a row. */
   static final long FIRST_BACKOFF_MS = 5000;
 
-  /** The longest pause (ms) of a judger after failures of its own. */
+  /** The longest pause (ms) of a judger after failed judgings. */
   static final long MAX_BACKOFF_MS = 120000;
-
-  /** How long (ms) a judger leaves a problem whose test data it could not get to other judgers. */
-  static final long PROBLEM_SKIP_MS = 120000;
 
   /** The exit status of a judger that stops after an Error (e.g. it ran out of memory). */
   static final int FATAL_ERROR_EXIT_STATUS = 70;
 
   /**
+   * The file, in this judger's cache directory (see {@link CheckpointStore#open}), that holds how
+   * many judgings of it failed in a row, including the one it is running: it outlives the process.
+   */
+  static final String FAILURES_IN_A_ROW_FILE = "failed-judgings";
+
+  /**
    * Judges the pending submissions in some languages, one after the other, until the thread is
-   * interrupted. When there is none, or none can be taken (e.g. the database is unreachable), it
-   * looks again every {@value #POLL_INTERVAL_MS} ms; after a failure of its own, it pauses (see
-   * {@link #getBackoff}).
+   * interrupted or the judger stops. When there is none, or none can be taken (e.g. the database is
+   * unreachable), it looks again every {@value #POLL_INTERVAL_MS} ms; after a failed judging, it
+   * pauses (see {@link #getBackoff}). It starts with the failed judgings in a row of its previous
+   * run, the one that run was busy with when it ended included, and pauses first if there are any.
    *
    * <p>An Error (e.g. an OutOfMemoryError, or a StackOverflowError) leaves the judger in no state
-   * to judge: it is logged and the process exits (status {@value #FATAL_ERROR_EXIT_STATUS}), so
-   * that its supervisor (e.g. Docker's restart policy) starts it again. The submission it was
-   * judging is held until its lease expired, and is then counted an interrupted judging.
+   * to judge: see {@link #onFatalError}.
    *
    * @param languageIds - the unique identifiers of the languages this judger supports, not empty
    */
   public void judgeSubmissions(List<Integer> languageIds) {
+    localFailures = readFailuresInARow();
     isJudging = true;
     try {
-      while (!Thread.currentThread().isInterrupted()) {
-        long pause;
+      long pause = 0;
+      if (localFailures > 0) {
+        pause = getBackoff();
+        LOGGER.warn(
+            String.format(
+                "The last %d judgings of this judger failed (or its previous run stopped while"
+                    + " judging): it waits %d s before it takes a submission%s.",
+                localFailures,
+                pause / 1000,
+                localFailures >= maxFailuresInARow
+                    ? ", and is not ready until a judging of it reaches an outcome"
+                    : ""));
+      }
+      while (!Thread.currentThread().isInterrupted() && !isStopping) {
+        if (pause > 0) {
+          try {
+            Thread.sleep(pause);
+          } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            break;
+          }
+        }
         try {
           boolean isClaimed = judgeNextSubmission(languageIds);
           if (isClaimFailing) {
@@ -150,13 +181,6 @@ public class Dispatcher {
           onFatalError(error);
           return;
         }
-        if (pause > 0) {
-          try {
-            Thread.sleep(pause);
-          } catch (InterruptedException ex) {
-            Thread.currentThread().interrupt();
-          }
-        }
       }
     } finally {
       isJudging = false;
@@ -165,11 +189,17 @@ public class Dispatcher {
 
   /**
    * Stops the judger after an Error, which leaves it in no state to judge: logs it and exits the
-   * process, so that its supervisor starts it again.
+   * process (status {@value #FATAL_ERROR_EXIT_STATUS}), so that its supervisor (e.g. Docker's
+   * restart policy) starts it again. The submission it was judging is neither released nor judged
+   * (the judging may be in any state): it is held until its lease expired, and the judging is then
+   * counted as a failed one, as is the failed judging in a row of this judger (see {@link
+   * #judgeSubmissions}).
    *
    * @param error - the error
    */
   void onFatalError(Error error) {
+    // Nothing more is claimed, recorded or released (see #destroy).
+    isStopping = true;
     isJudging = false;
     try {
       LOGGER.fatal(
@@ -182,15 +212,49 @@ public class Dispatcher {
   }
 
   /**
+   * Stops the judger as it shuts down (e.g. it was asked to stop, by its supervisor or in a rolling
+   * update): it claims no more submissions, and releases the submission it is judging, at its place
+   * in the queue, without counting the judging as a failed one, neither on the submission nor on
+   * this judger, so that another judger takes it at once. The judging itself runs on until the
+   * process exits, but cannot record anything any more. Nothing is released after a fatal error
+   * (see {@link #onFatalError}).
+   */
+  @Override
+  public void destroy() {
+    if (isStopping) {
+      return;
+    }
+    isStopping = true;
+    Submission submission = claimedSubmission;
+    if (submission == null) {
+      return;
+    }
+    try {
+      if (applicationDispatcher.releaseSubmission(submission)) {
+        writeFailuresInARow(localFailures);
+        LOGGER.info(
+            String.format(
+                "Released submission #%d, whose judging stops as this judger shuts down.",
+                submission.getSubmissionId()));
+      }
+    } catch (RuntimeException ex) {
+      LOGGER.warn(
+          String.format(
+              "Failed to release submission #%d as this judger shuts down: it is taken again once"
+                  + " the lease of its judging expired.",
+              submission.getSubmissionId()),
+          ex);
+    }
+  }
+
+  /**
    * Claims the next pending submission in some languages (the one queued first) and judges it. Only
    * one judging runs at a time.
    *
    * <p>A judging renews its lease in the background while it runs (see {@link Lease}). A judging
-   * that cannot be completed for a reason of this judger's own (see {@link LocalFailure}) releases
-   * the submission at once for another judger; one that cannot record its outcome as the database
-   * is unreachable releases it if it can, or else leaves it to the lease (which is not counted as a
-   * failure of this judger's own: its heartbeats cannot be recorded either meanwhile). A submission whose judgings
-   * were interrupted {@value #MAX_INTERRUPTIONS} times is judged a System Error instead.
+   * that fails releases the submission to the end of the queue and is counted (see {@link
+   * Dispatcher}); a submission with {@value #MAX_FAILED_JUDGINGS} failed judgings is judged a
+   * System Error instead.
    *
    * @param languageIds - the unique identifiers of the languages this judger supports, not empty
    * @return whether a submission was claimed
@@ -198,141 +262,174 @@ public class Dispatcher {
    */
   public boolean judgeNextSubmission(List<Integer> languageIds) {
     synchronized (this) {
+      if (isStopping) {
+        return false;
+      }
       // In this judger's own directory, so that a judger that died while judging leaves nothing
       // behind for good (see CheckpointStore#getWorkDirectory). A judger without one claims nothing.
       Path workDirectory;
       try {
         workDirectory = checkpointStore.getWorkDirectory();
       } catch (IOException ex) {
-        onLocalFailure(new LocalFailure(null, "This judger has no usable work directory.", ex));
+        onFailedJudging(null, "This judger has no usable work directory.", ex);
         return false;
       }
-      Submission submission =
-          applicationDispatcher.claimSubmission(
-              languageIds, getSkippedProblemIds(), getLeaseSeconds());
+      Submission submission = applicationDispatcher.claimSubmission(languageIds, getLeaseSeconds());
       if (submission == null) {
         return false;
       }
-      long submissionId = submission.getSubmissionId();
-      if (submission.getInterruptions() >= maxInterruptions) {
-        LOGGER.error(
-            String.format(
-                "The judgings of submission #%d were interrupted %d times: System Error.",
-                submissionId, submission.getInterruptions()));
-        applicationDispatcher.onErrorOccurred(
-            submission, String.format(INTERRUPTED_REASON, submission.getInterruptions()));
-        return true;
-      }
-      // Unique per judging, in case the directory of a judging of the same submission could not be
-      // removed.
-      String baseDirectory =
-          workDirectory
-              .resolve(
-                  String.format(
-                      "voj-%d-%s",
-                      submissionId,
-                      DigestUtils.getRandomString(12, DigestUtils.Mode.ALPHANUMERIC)))
-              .toString();
-      String baseFileName = DigestUtils.getRandomString(12, DigestUtils.Mode.ALPHA);
-      try (Lease lease = new Lease(submission)) {
-        currentLease = lease;
-        judge(submission, lease, baseDirectory, baseFileName);
-        onJudged();
-      } catch (LocalFailure ex) {
-        release(submission);
-        onLocalFailure(ex);
-      } catch (DataAccessException ex) {
-        if (!ApplicationDispatcher.isUnreachable(ex)) {
-          // The database refused what was to be recorded, which may be the submission's doing:
-          // judged like any unexpected failure, rather than by every judger in turn.
-          LOGGER.error(String.format("Failed to judge submission #%d", submissionId), ex);
-          applicationDispatcher.onErrorOccurred(submission, INTERNAL_ERROR_REASON);
+      claimedSubmission = submission;
+      try {
+        if (isStopping) {
+          // The judger started to shut down while it claimed the submission (see #destroy).
+          applicationDispatcher.releaseSubmission(submission);
         } else {
-          // Neither the verdict nor a System Error can be recorded now.
-          LOGGER.error(
-              String.format(
-                  "Failed to record the outcome of submission #%d: it is released for another"
-                      + " judging, or taken again once the lease of this one expired.",
-                  submissionId),
-              ex);
-          release(submission);
+          judgeSubmission(submission, workDirectory);
         }
-      } catch (Superseded ex) {
-        LOGGER.info(
-            String.format(
-                "Stopped judging submission #%d: it was rejudged, or claimed by another judging"
-                    + " meanwhile.",
-                submissionId));
-      } catch (SystemError ex) {
-        LOGGER.error(String.format("System Error in submission #%d", submissionId), ex);
-        applicationDispatcher.onErrorOccurred(submission, ex.getMessage());
-        onJudged();
-      } catch (Exception ex) {
-        LOGGER.error(String.format("Failed to judge submission #%d", submissionId), ex);
-        applicationDispatcher.onErrorOccurred(submission, INTERNAL_ERROR_REASON);
       } finally {
-        currentLease = null;
-        // Always remove the work directory (source, binary and program output), even when a stage
-        // throws; otherwise it lingers in a shared location, readable by later submissions that
-        // run as the same sandbox user.
-        cleanUp(baseDirectory);
+        claimedSubmission = null;
       }
       return true;
     }
   }
 
   /**
+   * Judges a submission this judger claimed, or judges it a System Error after too many failed
+   * judgings, and counts the outcome on this judger.
+   *
+   * @param submission - the submission, claimed by this judger
+   * @param workDirectory - this judger's work directory
+   */
+  private void judgeSubmission(Submission submission, Path workDirectory) {
+    long submissionId = submission.getSubmissionId();
+    int failedJudgings = submission.getFailedJudgings();
+    if (failedJudgings >= maxFailedJudgings) {
+      String reason =
+          String.format(
+              GIVEN_UP_REASON,
+              failedJudgings,
+              submission.getLastFailure() == null
+                  ? INTERNAL_ERROR_REASON
+                  : submission.getLastFailure());
+      LOGGER.error(String.format("System Error in submission #%d: %s", submissionId, reason));
+      applicationDispatcher.onErrorOccurred(submission, reason);
+      return;
+    }
+    // Counted as failed until it is over, in case this process ends with it.
+    recordFailuresInARow(localFailures + 1);
+    // Unique per judging, in case the directory of a judging of the same submission could not be
+    // removed.
+    String baseDirectory =
+        workDirectory
+            .resolve(
+                String.format(
+                    "voj-%d-%s",
+                    submissionId, DigestUtils.getRandomString(12, DigestUtils.Mode.ALPHANUMERIC)))
+            .toString();
+    String baseFileName = DigestUtils.getRandomString(12, DigestUtils.Mode.ALPHA);
+    try (Lease lease = new Lease(submission)) {
+      currentLease = lease;
+      judge(submission, lease, baseDirectory, baseFileName);
+      onJudged();
+    } catch (FailedJudging ex) {
+      onFailedJudging(submission, ex.getMessage(), ex.getCause());
+    } catch (Superseded ex) {
+      LOGGER.info(
+          String.format(
+              "Stopped judging submission #%d: it was rejudged, or claimed by another judging"
+                  + " meanwhile.",
+              submissionId));
+      recordFailuresInARow(localFailures);
+    } catch (DataAccessException ex) {
+      onFailedJudging(
+          submission, "The outcome of the judging could not be recorded in the database.", ex);
+    } catch (Exception ex) {
+      onFailedJudging(submission, INTERNAL_ERROR_REASON, ex);
+    } finally {
+      currentLease = null;
+      // Always remove the work directory (source, binary and program output), even when a stage
+      // throws; otherwise it lingers in a shared location, readable by later submissions that
+      // run as the same sandbox user.
+      cleanUp(baseDirectory);
+    }
+  }
+
+  /**
    * Tells whether this judger takes submissions: it judges, fewer than {@value
-   * #MAX_LOCAL_FAILURES} of its judgings in a row failed for a reason of its own, and its judging
-   * (if any) has not run past the time the limits of its submission allow. Recorded with its
-   * heartbeat, for the web application, which judges a System Error the pending submissions in a
-   * language that no ready judger supports for a while.
+   * #MAX_FAILURES_IN_A_ROW} of its judgings in a row failed, and its judging (if any) has not run
+   * past the time the limits of its submission allow. Recorded with its heartbeat, for the web
+   * application, which judges a System Error the pending submissions in a language that no ready
+   * judger supports for a while.
    *
    * @return whether this judger takes submissions
    */
   public boolean isReady() {
     Lease lease = currentLease;
-    return isJudging && localFailures < maxLocalFailures && (lease == null || !lease.isOverdue);
+    return isJudging
+        && !isStopping
+        && localFailures < maxFailuresInARow
+        && (lease == null || !lease.isOverdue);
   }
 
-  /** Records a judging that reached an outcome: this judger's failures in a row are over. */
+  /** Records a judging that reached an outcome: this judger's failed judgings in a row are over. */
   private void onJudged() {
-    if (localFailures >= maxLocalFailures) {
-      LOGGER.info("This judger judged a submission again: it is ready.");
+    if (localFailures >= maxFailuresInARow) {
+      LOGGER.info("A judging of this judger reached an outcome again: it is ready.");
     }
     localFailures = 0;
+    recordFailuresInARow(0);
   }
 
   /**
-   * Records a failure of this judger's own: pauses the judger (see {@link #getBackoff}), leaves
-   * the problem whose test data it could not get to the other judgers for a while, and logs it,
+   * Records a failed judging: releases its submission to the end of the queue, counting the
+   * failure on it, counts it on this judger, which pauses (see {@link #getBackoff}), and logs it,
    * once the judger is not ready at most once until it is again.
    *
-   * @param failure - the failure
+   * @param submission - the submission of the judging, or {@code null} if none was claimed
+   * @param reason - why the judging failed, shown to the user if the submission is given up on
+   * @param cause - the underlying exception, or {@code null}
    */
-  private void onLocalFailure(LocalFailure failure) {
+  private void onFailedJudging(Submission submission, String reason, Throwable cause) {
     int failures = ++localFailures;
-    if (failure.problemId != null) {
-      skippedProblems.put(failure.problemId, System.nanoTime() + problemSkipTime * 1_000_000);
+    recordFailuresInARow(failures);
+    String message =
+        submission == null
+            ? reason
+            : String.format(
+                "The judging of submission #%d failed (it is judged again later, or a System"
+                    + " Error after %d failed judgings): %s",
+                submission.getSubmissionId(), maxFailedJudgings, reason);
+    if (submission != null) {
+      try {
+        applicationDispatcher.requeueSubmission(submission, reason);
+      } catch (DataAccessException ex) {
+        LOGGER.warn(
+            String.format(
+                "Failed to release submission #%d: it is taken again once the lease of its"
+                    + " judging expired.",
+                submission.getSubmissionId()),
+            ex);
+      }
     }
-    if (failures < maxLocalFailures) {
-      LOGGER.warn(failure.getMessage() + " It is left to another judger.", failure.getCause());
-    } else if (failures == maxLocalFailures) {
+    if (failures < maxFailuresInARow) {
+      LOGGER.warn(message, cause);
+    } else if (failures == maxFailuresInARow) {
       LOGGER.error(
           String.format(
-              "%d judgings in a row failed for reasons of this judger's own, the last one: %s"
-                  + " This judger is not ready until it judged a submission again, which it tries"
-                  + " at most every %d s.",
-              failures, failure.getMessage(), maxBackoff / 1000),
-          failure.getCause());
+              "%d judgings of this judger failed in a row, the last one: %s This judger is not"
+                  + " ready until a judging of it reaches an outcome again, which it tries at"
+                  + " most every %d s.",
+              failures, message, maxBackoff / 1000),
+          cause);
     } else {
-      LOGGER.debug(failure.getMessage(), failure.getCause());
+      LOGGER.debug(message, cause);
     }
   }
 
   /**
-   * Gets how long this judger pauses after its failures in a row: {@value #FIRST_BACKOFF_MS} ms
-   * after the first one, twice as long after each next one, at most {@value #MAX_BACKOFF_MS} ms.
+   * Gets how long this judger pauses after its failed judgings in a row: {@value
+   * #FIRST_BACKOFF_MS} ms after the first one, twice as long after each next one, at most {@value
+   * #MAX_BACKOFF_MS} ms.
    *
    * @return how long (ms) this judger pauses
    */
@@ -342,34 +439,59 @@ public class Dispatcher {
   }
 
   /**
-   * Gets the problems this judger could not get the test data of lately, which it leaves to the
-   * other judgers for now.
+   * Records how many judgings of this judger failed in a row (see {@link #FAILURES_IN_A_ROW_FILE}),
+   * unless the judger stops: then the count is the one it stops with (see {@link #destroy} and
+   * {@link #onFatalError}).
    *
-   * @return the unique identifiers of the problems
+   * @param failures - the number of failed judgings in a row
    */
-  private List<Long> getSkippedProblemIds() {
-    long now = System.nanoTime();
-    skippedProblems.values().removeIf(until -> now - until >= 0);
-    return new ArrayList<>(skippedProblems.keySet());
+  private void recordFailuresInARow(int failures) {
+    if (!isStopping) {
+      writeFailuresInARow(failures);
+    }
   }
 
   /**
-   * Releases a submission this judging could not judge for another judging. If the database is
-   * unreachable, the submission is taken again once the lease of this judging expired.
+   * Writes how many judgings of this judger failed in a row to {@link #FAILURES_IN_A_ROW_FILE}. A
+   * failure to write it is logged: it only matters if this judger stops while judging.
    *
-   * @param submission - the submission, claimed by the judging
+   * @param failures - the number of failed judgings in a row
    */
-  private void release(Submission submission) {
+  private void writeFailuresInARow(int failures) {
     try {
-      applicationDispatcher.releaseSubmission(submission);
-    } catch (DataAccessException ex) {
-      LOGGER.warn(
-          String.format(
-              "Failed to release submission #%d: it is taken again once the lease of its judging"
-                  + " expired.",
-              submission.getSubmissionId()),
-          ex);
+      Files.writeString(getFailuresInARowFile(), String.valueOf(failures));
+    } catch (IOException | RuntimeException ex) {
+      LOGGER.warn("Failed to record the number of failed judgings in a row of this judger.", ex);
     }
+  }
+
+  /**
+   * Reads how many judgings of this judger failed in a row, as its previous run left the count.
+   *
+   * @return the number of failed judgings in a row, 0 if none was recorded
+   */
+  private int readFailuresInARow() {
+    try {
+      return Math.max(
+          Integer.parseInt(
+              Files.readString(getFailuresInARowFile(), StandardCharsets.UTF_8).trim()),
+          0);
+    } catch (NoSuchFileException ex) {
+      return 0;
+    } catch (IOException | RuntimeException ex) {
+      LOGGER.warn("Failed to read the number of failed judgings in a row of this judger.", ex);
+      return 0;
+    }
+  }
+
+  /**
+   * Gets the file that holds how many judgings of this judger failed in a row.
+   *
+   * @return the file, in this judger's cache directory
+   * @throws IOException if the cache directory cannot be opened
+   */
+  private Path getFailuresInARowFile() throws IOException {
+    return checkpointStore.open().resolve(FAILURES_IN_A_ROW_FILE);
   }
 
   /**
@@ -386,22 +508,41 @@ public class Dispatcher {
    * @param lease - the lease of the judging
    * @param workDirectory - the directory of the compilation result and the program output
    * @param baseFileName - the random file name (without suffix)
-   * @throws SystemError if the submission cannot be judged for a reason of its problem's
-   * @throws LocalFailure if the submission cannot be judged for a reason of this judger's own
+   * @throws FailedJudging if the judging failed for a known reason
    * @throws Superseded if the judging was superseded
-   * @throws Exception if the submission cannot be judged for an unexpected reason
+   * @throws Exception if the judging failed for an unexpected reason
    */
   private void judge(
       Submission submission, Lease lease, String workDirectory, String baseFileName)
       throws Exception {
-    Path checkpointDirectory = syncCheckpoints(submission);
-    List<Checkpoint> checkpoints = getCheckpoints(submission);
+    long problemId = submission.getProblem().getProblemId();
+    Path checkpointDirectory;
+    List<Checkpoint> checkpoints;
+    try {
+      checkpointDirectory = checkpointStore.sync(submission.getProblem());
+    } catch (NoCheckpointsException ex) {
+      onProblemWithoutTestData(submission);
+      return;
+    } catch (IOException ex) {
+      throw new FailedJudging("The judger could not download the test data of the problem.", ex);
+    }
+    try {
+      checkpoints = checkpointStore.getCheckpoints(problemId);
+    } catch (IOException ex) {
+      throw new FailedJudging(
+          "The judger could not read its copy of the test data of the problem.", ex);
+    }
+    if (checkpoints.isEmpty()) {
+      // There is nothing to judge a submission against: every one that compiles would be Accepted.
+      onProblemWithoutTestData(submission);
+      return;
+    }
     lease.setDeadline(checkpoints.size(), getRunTimeLimit(submission));
     lease.check();
     try {
       preprocessor.createTestCode(submission, workDirectory, baseFileName);
-    } catch (IOException | CreateDirectoryException ex) {
-      throw new LocalFailure(null, "The source code could not be written to the disk.", ex);
+    } catch (Exception ex) {
+      throw new FailedJudging("The judger could not write the source code to its disk.", ex);
     }
     if (compile(submission, lease, workDirectory, baseFileName)) {
       runProgram(submission, lease, checkpoints, checkpointDirectory, workDirectory, baseFileName);
@@ -409,71 +550,16 @@ public class Dispatcher {
   }
 
   /**
-   * Makes the problem's test data available locally.
-   *
-   * <p>Only a download whose answer is final for the problem (the web application has no test data
-   * for it, or its archive is malformed) is a System Error. A download that the web application
-   * refuses this judger (e.g. for a wrong API token) or that fails otherwise (the web application
-   * restarting or overloaded, a network failure or timeout, this judger's own disk) is no fault of
-   * the submission or its problem, and likely not one of another judger, so it is left to one.
+   * Judges a submission whose problem has no test data a System Error that says so.
    *
    * @param submission - the submission object
-   * @return the directory holding the problem's test data
-   * @throws SystemError if the problem has no usable test data
-   * @throws LocalFailure if this judger cannot get the test data
    */
-  private Path syncCheckpoints(Submission submission) throws SystemError, LocalFailure {
-    long problemId = submission.getProblem().getProblemId();
-    try {
-      return checkpointStore.sync(submission.getProblem());
-    } catch (InvalidCheckpointsException ex) {
-      throw new SystemError("The test data of this problem could not be loaded.", ex);
-    } catch (CheckpointsRefusedException ex) {
-      int statusCode = ex.getStatusCode();
-      String reason =
-          String.format(
-              "The web application refused this judger the test data of problem #%d (HTTP %d).",
-              problemId, statusCode);
-      if (statusCode == 401 || statusCode == 403) {
-        reason +=
-            " Check that the judger's judger.apiToken (VOJ_JUDGER_API_TOKEN) is the web"
-                + " application's.";
-      }
-      throw new LocalFailure(problemId, reason, ex);
-    } catch (IOException ex) {
-      throw new LocalFailure(
-          problemId,
-          String.format("The test data of problem #%d could not be downloaded.", problemId),
-          ex);
-    }
-  }
-
-  /**
-   * Reads the problem's checkpoints. There is nothing to judge a submission against without them,
-   * so a problem without checkpoints is a System Error: every submission that compiles would be
-   * Accepted otherwise.
-   *
-   * @param submission - the submission object
-   * @return the problem's checkpoints (never empty)
-   * @throws SystemError if there is no checkpoint
-   * @throws LocalFailure if this judger cannot read its copy of the test data
-   */
-  private List<Checkpoint> getCheckpoints(Submission submission)
-      throws SystemError, LocalFailure {
-    long problemId = submission.getProblem().getProblemId();
-    List<Checkpoint> checkpoints;
-    try {
-      checkpoints = checkpointStore.getCheckpoints(problemId);
-    } catch (IOException ex) {
-      throw new LocalFailure(
-          problemId,
-          String.format("This judger could not read the test data of problem #%d.", problemId),
-          ex);
-    }
-    if (checkpoints.isEmpty()) {
-      throw new SystemError("This problem has no test data (checkpoints) to judge against.", null);
-    }
-    return checkpoints;
+  private void onProblemWithoutTestData(Submission submission) {
+    LOGGER.error(
+        String.format(
+            "System Error in submission #%d: problem #%d has no test data.",
+            submission.getSubmissionId(), submission.getProblem().getProblemId()));
+    applicationDispatcher.onErrorOccurred(submission, NO_TEST_DATA_REASON);
   }
 
   /**
@@ -498,15 +584,15 @@ public class Dispatcher {
    * @param workDirectory - the directory used for producing compilation output
    * @param baseFileName - the random file name (without suffix)
    * @return whether the compilation succeeded
-   * @throws LocalFailure if the sandbox failed to run the compiler
+   * @throws FailedJudging if the sandbox failed to run the compiler
    * @throws Superseded if the judging was superseded
    */
   private boolean compile(
       Submission submission, Lease lease, String workDirectory, String baseFileName)
-      throws LocalFailure, Superseded {
+      throws FailedJudging, Superseded {
     Map<String, Object> result = compiler.getCompileResult(submission, workDirectory, baseFileName);
     if (result.get("verdict") == Verdict.INTERNAL_ERROR) {
-      throw new LocalFailure(null, "The sandbox of this judger failed to run the compiler.", null);
+      throw new FailedJudging("The sandbox of the judger failed to run the compiler.", null);
     }
     lease.check();
     applicationDispatcher.onCompileFinished(submission, result);
@@ -522,7 +608,7 @@ public class Dispatcher {
    * @param checkpointDirectory - the directory holding the problem's test data
    * @param workDirectory - the directory of the compilation result and the program output
    * @param baseFileName - the file name of the application to run (without file suffix)
-   * @throws LocalFailure if the sandbox failed to run the program, or the test data cannot be read
+   * @throws FailedJudging if the sandbox failed to run the program, or the test data cannot be read
    * @throws Superseded if the judging was superseded
    */
   private void runProgram(
@@ -532,7 +618,7 @@ public class Dispatcher {
       Path checkpointDirectory,
       String workDirectory,
       String baseFileName)
-      throws LocalFailure, Superseded {
+      throws FailedJudging, Superseded {
     List<Map<String, Object>> runtimeResults = new ArrayList<Map<String, Object>>();
 
     for (Checkpoint checkpoint : checkpoints) {
@@ -546,7 +632,6 @@ public class Dispatcher {
 
       Map<String, Object> runtimeResult =
           getRuntimeResult(
-              submission,
               programRunner.getRuntimeResult(
                   submission, workDirectory, baseFileName, inputFilePath, outputFilePath),
               stdOutputFilePath,
@@ -573,8 +658,11 @@ public class Dispatcher {
    * submission can take: the download of its test data, its compilation and its runs, each bounded
    * by its timeout or the sandbox's wall-clock limit (three times the time limit, plus a second),
    * plus a lease timeout. A judging past it is stuck (e.g. on a connection that went silent): the
-   * submission is taken by another judger once its lease expired, and this judger is not ready
-   * meanwhile (see {@link #isReady}).
+   * submission is taken by another judger once its lease expired (which counts the judging as a
+   * failed one), and this judger is not ready meanwhile (see {@link #isReady}).
+   *
+   * <p>An Error in a renewal stops the judging, as one in the judging itself does (see {@link
+   * #onFatalError}): without its renewals, the lease would expire under a judging that goes on.
    */
   final class Lease implements AutoCloseable {
     /**
@@ -608,22 +696,26 @@ public class Dispatcher {
       deadline = startTime + budget * 1_000_000;
     }
 
-    /** Renews the lease; a failure (e.g. the database is unreachable) is retried next time. */
+    /**
+     * Renews the lease; a failure (e.g. the database is unreachable) is retried next time. An
+     * Error marks the judging superseded, so that it stops without recording anything, and stops
+     * the judger.
+     */
     private void renew() {
-      if (System.nanoTime() - deadline > 0) {
-        isOverdue = true;
-        renewal.cancel(false);
-        LOGGER.error(
-            String.format(
-                "The judging of submission #%d still runs %d s after it started, longer than the"
-                    + " limits of the submission allow: its lease is no longer renewed, so that"
-                    + " another judger takes it, and this judger is not ready until the judging is"
-                    + " over.",
-                submission.getSubmissionId(),
-                (System.nanoTime() - startTime) / 1_000_000_000));
-        return;
-      }
       try {
+        if (System.nanoTime() - deadline > 0) {
+          isOverdue = true;
+          renewal.cancel(false);
+          LOGGER.error(
+              String.format(
+                  "The judging of submission #%d still runs %d s after it started, longer than"
+                      + " the limits of the submission allow: its lease is no longer renewed, so"
+                      + " that another judger takes it, and this judger is not ready until the"
+                      + " judging is over.",
+                  submission.getSubmissionId(),
+                  (System.nanoTime() - startTime) / 1_000_000_000));
+          return;
+        }
         if (!applicationDispatcher.renewLease(submission, getLeaseSeconds())) {
           isSuperseded = true;
         }
@@ -633,6 +725,10 @@ public class Dispatcher {
                 "Failed to renew the lease of the judging of submission #%d.",
                 submission.getSubmissionId()),
             ex);
+      } catch (Error error) {
+        isSuperseded = true;
+        renewal.cancel(false);
+        onFatalError(error);
       }
     }
 
@@ -706,41 +802,36 @@ public class Dispatcher {
   /**
    * Gets the program's runtime result (and the answer comparison result).
    *
-   * @param submission - the submission object
    * @param result - the Map object containing the program's runtime result
    * @param standardOutputFilePath - the path of the standard output file
    * @param outputFilePath - the path of the user's output file
    * @param exactlyMatch - whether the checkpoint requires an exact match
    * @return the Map object containing the program's runtime result
-   * @throws LocalFailure if the sandbox failed to run the program, or the standard output cannot be
-   *     read
+   * @throws FailedJudging if the sandbox failed to run the program, or the standard output cannot
+   *     be read
    */
   private Map<String, Object> getRuntimeResult(
-      Submission submission,
       Map<String, Object> result,
       String standardOutputFilePath,
       String outputFilePath,
       boolean exactlyMatch)
-      throws LocalFailure {
+      throws FailedJudging {
     String runtimeResultSlug = (String) result.get("runtimeResult");
     int usedTime = (Integer) result.get("usedTime");
     int usedMemory = (Integer) result.get("usedMemory");
 
     if ("SE".equals(runtimeResultSlug)) {
-      throw new LocalFailure(null, "The sandbox of this judger failed to run the program.", null);
+      throw new FailedJudging("The sandbox of the judger failed to run the program.", null);
     }
     if (runtimeResultSlug.equals("AC")) {
-      long problemId = submission.getProblem().getProblemId();
       try {
         runtimeResultSlug =
             comparator.getComparisonResult(standardOutputFilePath, outputFilePath, exactlyMatch);
       } catch (IOException ex) {
         // The comparator judges an output it may not read (e.g. a planted link) a Wrong Answer
         // itself, so this is the judger failing to read its copy of the test data.
-        throw new LocalFailure(
-            problemId,
-            String.format("This judger could not read the test data of problem #%d.", problemId),
-            ex);
+        throw new FailedJudging(
+            "The judger could not read its copy of the test data of the problem.", ex);
       }
       result.put("runtimeResult", runtimeResultSlug);
     }
@@ -767,47 +858,20 @@ public class Dispatcher {
   }
 
   /**
-   * A judging that cannot be completed for a known reason of the submission's problem. Its message
-   * is shown to the user in the judge log of the resulting System Error.
+   * A judging that failed for a known reason (see {@link Dispatcher}). Its message is the reason,
+   * shown to the user in the System Error of the submission if it is the last of too many failed
+   * judgings.
    */
-  static final class SystemError extends Exception {
+  static final class FailedJudging extends Exception {
     /**
      * Constructor.
      *
-     * @param reason - the reason, shown to the user
+     * @param reason - the reason
      * @param cause - the underlying exception, or {@code null}
      */
-    SystemError(String reason, Throwable cause) {
+    FailedJudging(String reason, Throwable cause) {
       super(reason, cause);
     }
-
-    /** The unique serialization identifier. */
-    private static final long serialVersionUID = 1L;
-  }
-
-  /**
-   * A judging that cannot be completed for a reason of this judger's own, which another judger
-   * likely does not have: its work directory or its copy of the test data cannot be used, the
-   * test data cannot be downloaded (the web application refuses this judger, or cannot be
-   * reached), or its sandbox cannot run the compiler or the program. Nothing is recorded on the
-   * submission: it is released for another judger.
-   */
-  static final class LocalFailure extends Exception {
-    /**
-     * Constructor.
-     *
-     * @param problemId - the unique identifier of the problem whose test data this judger cannot
-     *     get, or {@code null} if the failure is not one of the test data
-     * @param reason - the reason, logged
-     * @param cause - the underlying exception, or {@code null}
-     */
-    LocalFailure(Long problemId, String reason, Throwable cause) {
-      super(reason, cause);
-      this.problemId = problemId;
-    }
-
-    /** The problem whose test data this judger cannot get, or {@code null}. */
-    private final Long problemId;
 
     /** The unique serialization identifier. */
     private static final long serialVersionUID = 1L;
@@ -867,20 +931,17 @@ public class Dispatcher {
   /** How long (ms) the lease of a judging lasts; it is renewed every quarter of it. */
   private long leaseTimeout = LEASE_TIMEOUT_MS;
 
-  /** How many judgings of a submission may be interrupted before it is a System Error. */
-  private int maxInterruptions = MAX_INTERRUPTIONS;
+  /** How many judgings of a submission may fail before it is a System Error. */
+  private int maxFailedJudgings = MAX_FAILED_JUDGINGS;
 
-  /** After how many failures of its own in a row this judger is not ready. */
-  private int maxLocalFailures = MAX_LOCAL_FAILURES;
+  /** After how many failed judgings in a row this judger is not ready. */
+  private int maxFailuresInARow = MAX_FAILURES_IN_A_ROW;
 
-  /** How long (ms) this judger pauses after a failure of its own. */
+  /** How long (ms) this judger pauses after a failed judging. */
   private long firstBackoff = FIRST_BACKOFF_MS;
 
-  /** The longest pause (ms) of this judger after failures of its own. */
+  /** The longest pause (ms) of this judger after failed judgings. */
   private long maxBackoff = MAX_BACKOFF_MS;
-
-  /** How long (ms) this judger leaves a problem whose test data it could not get to others. */
-  private long problemSkipTime = PROBLEM_SKIP_MS;
 
   /** Exits the process with a status; replaced by the tests. */
   private IntConsumer processExit = System::exit;
@@ -888,14 +949,17 @@ public class Dispatcher {
   /** Whether the judging loop runs. */
   private volatile boolean isJudging;
 
-  /** How many judgings (or attempts to judge) in a row failed for a reason of this judger's own. */
+  /** Whether the judger stops: it shuts down, or ran into an Error. */
+  private volatile boolean isStopping;
+
+  /** How many judgings (or attempts to judge) of this judger failed in a row. */
   private volatile int localFailures;
 
   /** Whether the last attempt to take a submission failed (e.g. the database is unreachable). */
   private boolean isClaimFailing;
 
-  /** The problems this judger could not get the test data of, and until when it skips them. */
-  private final Map<Long, Long> skippedProblems = new HashMap<>();
+  /** The submission this judger claimed and judges, or {@code null}. */
+  private volatile Submission claimedSubmission;
 
   /** The lease of the current judging, or {@code null}. */
   private volatile Lease currentLease;

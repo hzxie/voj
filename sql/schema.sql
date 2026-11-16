@@ -216,6 +216,7 @@ CREATE TABLE `voj_submissions` (
   `submission_queued_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `submission_execute_time` timestamp NULL DEFAULT NULL,
   `submission_judge_attempts` int(4) NOT NULL DEFAULT 0,
+  `submission_judge_failure` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `submission_claim_token` bigint(20) DEFAULT NULL,
   `submission_lease_expiry_time` timestamp NULL DEFAULT NULL,
   `submission_used_time` int(8) DEFAULT NULL,

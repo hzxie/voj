@@ -99,7 +99,7 @@ public class ApplicationHeartbeatTest {
 
   /**
    * Test case: tests the run method. Test data: a judger that supports no language, and one whose
-   * dispatcher is not ready (e.g. its judgings failed for reasons of its own). Expected result:
+   * dispatcher is not ready (e.g. too many of its judgings in a row failed). Expected result:
    * neither is recorded ready.
    */
   @Test

@@ -160,6 +160,7 @@ public class UpgradeFrom102Test {
     jdbcTemplate.execute(
         "ALTER TABLE voj_submissions DROP KEY submission_judge_queue,"
             + " DROP COLUMN submission_queued_time, DROP COLUMN submission_judge_attempts,"
+            + " DROP COLUMN submission_judge_failure,"
             + " DROP COLUMN submission_claim_token, DROP COLUMN submission_lease_expiry_time,"
             + " ADD KEY submission_runtime_result (submission_judge_result)");
     jdbcTemplate.execute("DROP TABLE voj_judgers");
@@ -329,6 +330,7 @@ public class UpgradeFrom102Test {
         0,
         jdbcTemplate.queryForObject(
             "SELECT COUNT(*) FROM voj_submissions WHERE submission_judge_attempts <> 0"
+                + " OR submission_judge_failure IS NOT NULL"
                 + " OR submission_claim_token IS NOT NULL"
                 + " OR submission_lease_expiry_time IS NOT NULL"
                 + " OR ABS(TIMESTAMPDIFF(SECOND, submission_queued_time, NOW())) > 60",
@@ -343,6 +345,36 @@ public class UpgradeFrom102Test {
         Map.of("submission_judge_attempts", 1, "submission_claim_token", 7L),
         jdbcTemplate.queryForMap(
             "SELECT submission_judge_attempts, submission_claim_token FROM voj_submissions"
+                + " WHERE submission_id = ?",
+            PENDING_SUBMISSION_ID));
+  }
+
+  /**
+   * Test case: runs the upgrade on a database that has the columns of the judging queue but not the
+   * reason of the last failed judging (as a development build of this version created them), then
+   * once more. Test data: a pending submission. Expected: the column is added as schema.sql creates
+   * it (the other columns of the queue are left as they are), and the second run keeps a reason
+   * recorded since.
+   */
+  @Test
+  public void testAddsTheReasonOfTheLastFailedJudging() throws SQLException {
+    runUpgrade();
+    jdbcTemplate.execute("ALTER TABLE voj_submissions DROP COLUMN submission_judge_failure");
+    insertPendingSubmission();
+    jdbcTemplate.update(
+        "UPDATE voj_submissions SET submission_judge_attempts = 2 WHERE submission_id = ?",
+        PENDING_SUBMISSION_ID);
+
+    runUpgrade();
+    Assertions.assertEquals(judgingQueueColumns, getColumnsOfSubmissions());
+    jdbcTemplate.update(
+        "UPDATE voj_submissions SET submission_judge_failure = 'Failed.' WHERE submission_id = ?",
+        PENDING_SUBMISSION_ID);
+    runUpgrade();
+    Assertions.assertEquals(
+        Map.of("submission_judge_attempts", 2, "submission_judge_failure", "Failed."),
+        jdbcTemplate.queryForMap(
+            "SELECT submission_judge_attempts, submission_judge_failure FROM voj_submissions"
                 + " WHERE submission_id = ?",
             PENDING_SUBMISSION_ID));
   }

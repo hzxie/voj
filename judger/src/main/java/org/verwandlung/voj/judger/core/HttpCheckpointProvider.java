@@ -39,8 +39,7 @@ import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import org.verwandlung.voj.judger.exception.CheckpointsRefusedException;
-import org.verwandlung.voj.judger.exception.InvalidCheckpointsException;
+import org.verwandlung.voj.judger.exception.NoCheckpointsException;
 
 /**
  * Downloads a problem's checkpoints from the web application over HTTP.
@@ -50,12 +49,24 @@ import org.verwandlung.voj.judger.exception.InvalidCheckpointsException;
  * destination directory. {@link CheckpointStore} owns the local cache (versioning, atomic
  * replacement) and delegates the transfer to this class.
  *
+ * <p>Only one answer says something about the problem: a 404 that the web application marks with
+ * the header {@value #NO_CHECKPOINTS_HEADER}, which it sends when it has no test data for the
+ * problem. Any other failure (an unmarked 404, e.g. from a wrong {@code judger.web.baseUrl}, any
+ * other status, a body that is not a well-formed archive, a network failure or a timeout) says
+ * nothing about the problem: the judging failed.
+ *
  * @author Haozhe Xie
  */
 @Component
 public class HttpCheckpointProvider {
   /** The HTTP header carrying the shared secret that authenticates this judger to the web side. */
   private static final String TOKEN_HEADER = "X-Judger-Token";
+
+  /**
+   * The header with which the web application marks its answer that it has no test data for a
+   * problem (HTTP 404); must match the web application's {@code CheckpointApiController}.
+   */
+  static final String NO_CHECKPOINTS_HEADER = "X-Checkpoints-Missing";
 
   /** The entry of the archive that describes the checkpoints; every archive has one. */
   private static final String MANIFEST_FILE = "manifest.properties";
@@ -71,11 +82,9 @@ public class HttpCheckpointProvider {
    *
    * @param problemId - the unique identifier of the problem
    * @param destinationDirectory - the directory the checkpoints are written into
-   * @throws InvalidCheckpointsException if the problem has no test data, or its archive is
-   *     malformed
-   * @throws CheckpointsRefusedException if the web application refuses the download for good
-   *     (e.g. HTTP 403, as the judger's API token is not the web application's)
-   * @throws IOException if the checkpoints cannot be downloaded for another reason, or not in time
+   * @throws NoCheckpointsException if the web application has no test data for the problem
+   * @throws IOException if the checkpoints cannot be downloaded, or not in time (e.g. HTTP 403, as
+   *     the judger's API token is not the web application's), or the archive is malformed
    */
   public void download(long problemId, File destinationDirectory) throws IOException {
     if (!destinationDirectory.exists() && !destinationDirectory.mkdirs()) {
@@ -106,38 +115,23 @@ public class HttpCheckpointProvider {
     // Closing the body (rather than draining it) also ends the exchange of a failed request.
     try (InputStream body = response.body()) {
       int statusCode = response.statusCode();
-      if (statusCode == 404) {
-        throw new InvalidCheckpointsException(
-            String.format("Problem %d has no test data to download (HTTP 404)", problemId), null);
-      }
-      if (isRefusal(statusCode)) {
-        throw new CheckpointsRefusedException(
-            String.format(
-                "The web application refused the checkpoints for problem %d: HTTP %d",
-                problemId, statusCode),
-            statusCode);
+      if (statusCode == 404 && response.headers().firstValue(NO_CHECKPOINTS_HEADER).isPresent()) {
+        throw new NoCheckpointsException(
+            String.format("The web application has no test data for problem %d", problemId));
       }
       if (statusCode != 200) {
+        String hint =
+            statusCode == 401 || statusCode == 403
+                ? " (is judger.apiToken, VOJ_JUDGER_API_TOKEN, the web application's?)"
+                : statusCode == 404 ? " (is judger.web.baseUrl the web application's?)" : "";
         throw new IOException(
             String.format(
-                "Failed to download checkpoints for problem %d: HTTP %d",
-                problemId, response.statusCode()));
+                "Failed to download checkpoints for problem %d from %s: HTTP %d%s",
+                problemId, uri, statusCode, hint));
       }
       extractBefore(deadline, body, destinationDirectory, problemId);
     }
     LOGGER.info("Downloaded checkpoints for problem #{} from {}", problemId, uri);
-  }
-
-  /**
-   * Checks whether an answer of the web application refuses a download for good: a client error,
-   * but for 408 (Request Timeout) and 429 (Too Many Requests), which may be over later. Server
-   * errors (5xx), e.g. while the web application restarts behind a proxy, may be over later too.
-   *
-   * @param statusCode - the HTTP status code of the answer
-   * @return whether asking again would get the same answer
-   */
-  private static boolean isRefusal(int statusCode) {
-    return statusCode >= 400 && statusCode < 500 && statusCode != 408 && statusCode != 429;
   }
 
   /**
@@ -190,8 +184,8 @@ public class HttpCheckpointProvider {
    *
    * @param zipBody - the ZIP response body
    * @param destinationDirectory - the directory entries are written into
-   * @throws InvalidCheckpointsException if the archive is malformed
-   * @throws IOException if the body cannot be read or an entry cannot be written
+   * @throws IOException if the archive is malformed, the body cannot be read or an entry cannot
+   *     be written
    */
   private void extract(InputStream zipBody, File destinationDirectory) throws IOException {
     String destinationPrefix = destinationDirectory.getCanonicalPath() + File.separator;
@@ -203,21 +197,19 @@ public class HttpCheckpointProvider {
         }
         File outputFile = new File(destinationDirectory, entry.getName());
         if (!outputFile.getCanonicalPath().startsWith(destinationPrefix)) {
-          throw new InvalidCheckpointsException(
-              "Refusing to extract entry outside the destination directory: " + entry.getName(),
-              null);
+          throw new IOException(
+              "Refusing to extract entry outside the destination directory: " + entry.getName());
         }
         try (OutputStream outputStream = new FileOutputStream(outputFile)) {
           zipStream.transferTo(outputStream);
         }
       }
     } catch (ZipException ex) {
-      throw new InvalidCheckpointsException("The checkpoint archive is malformed", ex);
+      throw new IOException("The checkpoint archive is malformed", ex);
     }
     // Something that is no ZIP at all (e.g. an error page of a proxy) has no entries.
     if (!new File(destinationDirectory, MANIFEST_FILE).isFile()) {
-      throw new InvalidCheckpointsException(
-          "The checkpoint archive has no " + MANIFEST_FILE, null);
+      throw new IOException("The checkpoint archive has no " + MANIFEST_FILE);
     }
   }
 

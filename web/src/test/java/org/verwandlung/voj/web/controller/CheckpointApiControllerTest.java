@@ -80,14 +80,34 @@ public class CheckpointApiControllerTest {
         .andExpect(status().isForbidden());
   }
 
-  /** Test case: tests GET /api/judger/checkpoints/{problemId}. Test data: a valid token but a problem that does not exist. Expected: HTTP 404 Not Found. */
+  /**
+   * Test case: tests GET /api/judger/checkpoints/{problemId}. Test data: a valid token but a
+   * problem that does not exist. Expected: HTTP 404 Not Found, marked as the answer that the
+   * problem has no test data (a 404 of a wrong URL would not be).
+   */
   @Test
   public void testGetCheckpointsForUnknownProblem() throws Exception {
     when(problemMapper.getCheckpointsVersion(404L)).thenReturn(null);
 
     mockMvc
         .perform(get("/api/judger/checkpoints/404").header("X-Judger-Token", API_TOKEN))
-        .andExpect(status().isNotFound());
+        .andExpect(status().isNotFound())
+        .andExpect(header().string("X-Checkpoints-Missing", "true"));
+  }
+
+  /**
+   * Test case: tests GET /api/judger/checkpoints/{problemId}. Test data: a request with the wrong
+   * token for a problem that does not exist. Expected: HTTP 403, without the mark of a missing
+   * problem.
+   */
+  @Test
+  public void testRefusedRequestIsNotMarkedAsMissing() throws Exception {
+    when(problemMapper.getCheckpointsVersion(404L)).thenReturn(null);
+
+    mockMvc
+        .perform(get("/api/judger/checkpoints/404").header("X-Judger-Token", "wrong-token"))
+        .andExpect(status().isForbidden())
+        .andExpect(header().doesNotExist("X-Checkpoints-Missing"));
   }
 
   /** Test case: tests GET /api/judger/checkpoints/{problemId}. Test data: a valid token and a problem with two checkpoints. Expected: HTTP 200 with a ZIP carrying the version header, a manifest, and an input/output entry per checkpoint. */

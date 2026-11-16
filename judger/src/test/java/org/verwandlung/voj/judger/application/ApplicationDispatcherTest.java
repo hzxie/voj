@@ -18,6 +18,7 @@ package org.verwandlung.voj.judger.application;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -121,24 +122,24 @@ public class ApplicationDispatcherTest {
    */
   @Test
   public void testClaimSubmissionClaimsTheNextOne() {
-    when(submissionMapper.getNextSubmissionId(LANGUAGES, SKIPPED)).thenReturn(100L, 101L);
-    when(submissionMapper.claimSubmission(eq(100L), anyLong(), any(), eq(60L))).thenReturn(0);
-    when(submissionMapper.claimSubmission(eq(101L), anyLong(), any(), eq(60L))).thenReturn(1);
+    when(submissionMapper.getNextSubmissionId(LANGUAGES)).thenReturn(100L, 101L);
+    when(submissionMapper.claimSubmission(eq(100L), anyLong(), any(), eq(60L), eq(ApplicationDispatcher.INTERRUPTED_REASON))).thenReturn(0);
+    when(submissionMapper.claimSubmission(eq(101L), anyLong(), any(), eq(60L), eq(ApplicationDispatcher.INTERRUPTED_REASON))).thenReturn(1);
     Submission pending = new Submission();
     pending.setSubmissionId(101L);
     when(submissionMapper.getSubmission(101L)).thenReturn(pending);
 
-    Submission submission = applicationDispatcher.claimSubmission(LANGUAGES, SKIPPED, 60);
+    Submission submission = applicationDispatcher.claimSubmission(LANGUAGES, 60);
 
     Assertions.assertSame(pending, submission);
     ArgumentCaptor<Long> claimTokenCaptor = ArgumentCaptor.forClass(Long.class);
     org.mockito.InOrder inOrder = org.mockito.Mockito.inOrder(submissionMapper);
     inOrder
         .verify(submissionMapper)
-        .claimSubmission(eq(100L), claimTokenCaptor.capture(), any(), eq(60L));
+        .claimSubmission(eq(100L), claimTokenCaptor.capture(), any(), eq(60L), any());
     inOrder
         .verify(submissionMapper)
-        .claimSubmission(eq(101L), claimTokenCaptor.capture(), any(), eq(60L));
+        .claimSubmission(eq(101L), claimTokenCaptor.capture(), any(), eq(60L), any());
     inOrder.verify(submissionMapper).getSubmission(101L);
     List<Long> claimTokens = claimTokenCaptor.getAllValues();
     Assertions.assertNotEquals(claimTokens.get(0), claimTokens.get(1));
@@ -152,10 +153,10 @@ public class ApplicationDispatcherTest {
    */
   @Test
   public void testClaimSubmissionWithoutPendingSubmission() {
-    when(submissionMapper.getNextSubmissionId(LANGUAGES, SKIPPED)).thenReturn(null);
+    when(submissionMapper.getNextSubmissionId(LANGUAGES)).thenReturn(null);
 
-    Assertions.assertNull(applicationDispatcher.claimSubmission(LANGUAGES, SKIPPED, 60));
-    verify(submissionMapper, never()).claimSubmission(anyLong(), anyLong(), any(), anyLong());
+    Assertions.assertNull(applicationDispatcher.claimSubmission(LANGUAGES, 60));
+    verify(submissionMapper, never()).claimSubmission(anyLong(), anyLong(), any(), anyLong(), any());
   }
 
   /**
@@ -182,6 +183,25 @@ public class ApplicationDispatcherTest {
 
     Assertions.assertTrue(applicationDispatcher.releaseSubmission(submission()));
     Assertions.assertFalse(applicationDispatcher.releaseSubmission(submission()));
+  }
+
+  /**
+   * Test case: tests the requeueSubmission method. Test data: a judging that is still current, with
+   * a short reason, then one with a reason longer than the column takes, then one that was
+   * superseded. Expected result: the submission of the judging's claim token is released with the
+   * reason (cut to 255 characters), and whether it was is returned.
+   */
+  @Test
+  public void testRequeueSubmission() {
+    String longReason = "x".repeat(300);
+    when(submissionMapper.requeueSubmission(eq(100L), eq(CLAIM_TOKEN), anyString()))
+        .thenReturn(1, 1, 0);
+
+    Assertions.assertTrue(applicationDispatcher.requeueSubmission(submission(), "Failed."));
+    Assertions.assertTrue(applicationDispatcher.requeueSubmission(submission(), longReason));
+    Assertions.assertFalse(applicationDispatcher.requeueSubmission(submission(), "Failed."));
+    verify(submissionMapper, times(2)).requeueSubmission(100L, CLAIM_TOKEN, "Failed.");
+    verify(submissionMapper).requeueSubmission(100L, CLAIM_TOKEN, "x".repeat(255));
   }
 
   /**
@@ -506,9 +526,6 @@ public class ApplicationDispatcherTest {
 
   /** The languages of the judger of the tests. */
   private static final List<Integer> LANGUAGES = List.of(2, 3);
-
-  /** The problems the judger of the tests leaves to others. */
-  private static final List<Long> SKIPPED = List.of(1001L);
 
   /** The mocked MessageSender object. */
   @Mock private MessageSender messageSender;

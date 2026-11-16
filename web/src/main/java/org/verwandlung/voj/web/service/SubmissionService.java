@@ -65,7 +65,7 @@ public class SubmissionService {
   /** The judge log of a submission in a language that no judger taking submissions supports. */
   static final String NO_JUDGER_JUDGE_LOG =
       "System Error.\n\nNo running judger that takes submissions supports the language of this"
-          + " submission: the judgers that do stopped, or failed to judge for reasons of their own"
+          + " submission: the judgers that do stopped, or are not ready as their judgings failed"
           + " (see their logs). An administrator can rejudge this submission.\n";
 
   /** How often (ms) the pending submissions in a language without a judger are looked for. */
@@ -568,7 +568,7 @@ public class SubmissionService {
   /**
    * Marks as a System Error the pending submissions in a language that no judger taking submissions
    * supports, and has not for {@code judging.noJudgerTimeout} (5 minutes): the judgers that do
-   * stopped, or are not ready as their judgings failed for reasons of their own (see the judger's
+   * stopped, or are not ready as too many of their judgings in a row failed (see the judger's
    * {@code Dispatcher}). With a timeout of 0 or less, a submission waits for a judger as long as it
    * takes. A submission that a judging holds (by a lease that has not expired) is left to it, and
    * so is every submission in a language that a running judger takes submissions in, however long

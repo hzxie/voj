@@ -180,23 +180,41 @@ public class Submission implements Serializable {
   }
 
   /**
-   * Gets how many judgings of this submission were interrupted since it was queued: their judger
-   * stopped (or was killed, or lost the database) while it held the submission, until its lease
-   * expired.
+   * Gets how many judgings of this submission failed since it was queued: they reached no verdict,
+   * as their judger released the submission (see {@code Dispatcher}), or stopped while it held it
+   * and let the lease of the judging expire.
    *
-   * @return the number of interrupted judgings of this submission
+   * @return the number of failed judgings of this submission
    */
-  public int getInterruptions() {
-    return interruptions;
+  public int getFailedJudgings() {
+    return failedJudgings;
   }
 
   /**
-   * Sets how many judgings of this submission were interrupted since it was queued.
+   * Sets how many judgings of this submission failed since it was queued.
    *
-   * @param interruptions - the number of interrupted judgings of this submission
+   * @param failedJudgings - the number of failed judgings of this submission
    */
-  public void setInterruptions(int interruptions) {
-    this.interruptions = interruptions;
+  public void setFailedJudgings(int failedJudgings) {
+    this.failedJudgings = failedJudgings;
+  }
+
+  /**
+   * Gets why the last failed judging of this submission failed.
+   *
+   * @return the reason, or {@code null} if no judging of it failed
+   */
+  public String getLastFailure() {
+    return lastFailure;
+  }
+
+  /**
+   * Sets why the last failed judging of this submission failed.
+   *
+   * @param lastFailure - the reason, or {@code null} if no judging of it failed
+   */
+  public void setLastFailure(String lastFailure) {
+    this.lastFailure = lastFailure;
   }
 
   /**
@@ -386,8 +404,11 @@ public class Submission implements Serializable {
   /** The time the judging started. */
   private Date executeTime;
 
-  /** How many judgings of this submission were interrupted since it was queued. */
-  private int interruptions;
+  /** How many judgings of this submission failed since it was queued. */
+  private int failedJudgings;
+
+  /** Why the last failed judging of this submission failed, or {@code null}. */
+  private String lastFailure;
 
   /**
    * The claim token of the judging of this submission, which identifies it (see {@code

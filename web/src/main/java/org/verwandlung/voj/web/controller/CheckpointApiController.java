@@ -66,6 +66,13 @@ public class CheckpointApiController {
   /** The response header that reports the version of the checkpoints contained in the ZIP. */
   private static final String VERSION_HEADER = "X-Checkpoints-Version";
 
+  /**
+   * The response header that marks the answer that there is no such problem (HTTP 404). The
+   * judgers judge a submission a System Error for it only with this mark: a 404 without it (e.g.
+   * from a wrong base URL) is a failure of their judging, not an answer about the problem.
+   */
+  static final String NO_CHECKPOINTS_HEADER = "X-Checkpoints-Missing";
+
   /** The name of the manifest entry inside the ZIP that lists each checkpoint's metadata. */
   private static final String MANIFEST_ENTRY = "manifest.properties";
 
@@ -75,7 +82,8 @@ public class CheckpointApiController {
    * <p>The archive contains a {@code manifest.properties} describing every checkpoint (id, score and
    * whether an exact match is required) plus, per checkpoint, an {@code input#<id>.txt} and an {@code
    * output#<id>.txt}. The current checkpoints version is reported both in the manifest and in the
-   * {@value #VERSION_HEADER} response header.
+   * {@value #VERSION_HEADER} response header. A problem that does not exist is answered with HTTP
+   * 404 marked with the {@value #NO_CHECKPOINTS_HEADER} header.
    *
    * @param problemId - the unique identifier of the problem
    * @param token - the shared secret submitted by the judger
@@ -95,7 +103,8 @@ public class CheckpointApiController {
 
     Integer version = problemMapper.getCheckpointsVersion(problemId);
     if (version == null) {
-      response.sendError(HttpServletResponse.SC_NOT_FOUND);
+      response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+      response.setHeader(NO_CHECKPOINTS_HEADER, "true");
       return;
     }
     List<Checkpoint> checkpoints = checkpointMapper.getCheckpointsUsingProblemId(problemId);

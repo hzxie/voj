@@ -91,8 +91,8 @@ public class VojJudgerApplication {
         // The web application refuses to hand out test data without a shared secret.
         LOGGER.error(
             "judger.apiToken (VOJ_JUDGER_API_TOKEN) is empty: the web application refuses every"
-                + " test data download, so every submission will be judged a System Error. Set it"
-                + " to the judger.apiToken of the web application.");
+                + " test data download, so the judgings of this judger fail and it is soon not"
+                + " ready. Set it to the judger.apiToken of the web application.");
       }
       // Fail fast: verify the judger's credentials against the shared user table before taking any
       // submission. Otherwise a misconfigured judger would accept submissions and abort them

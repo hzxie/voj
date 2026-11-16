@@ -84,11 +84,11 @@ public class Runner implements SandboxRunner {
               isCompilation ? compileProcessLimit : processLimit,
               isCompilation ? null : JavaOptions.forRun(memoryLimitKb));
       return toRunResult(nativeResult, timeLimitMs, memoryLimitKb);
-    } catch (Throwable ex) {
+    } catch (Exception ex) {
       // The native runner throws when the sandbox cannot be set up (no sandbox user, a failed
-      // privilege drop or seccomp filter, an executable that cannot be run, ...). That is a system
-      // error, never a verdict on the submission, and must not escape: the caller would leave the
-      // submission pending.
+      // privilege drop or seccomp filter, an executable that cannot be run, ...). That is a failure
+      // of the judging, never a verdict on the submission. An Error (e.g. an OutOfMemoryError)
+      // escapes: it leaves the judger in no state to judge (see Dispatcher#onFatalError).
       LOGGER.error("The native sandbox failed to run " + commandLine, ex);
       return RunResult.internalError();
     }

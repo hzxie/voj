@@ -17,7 +17,6 @@
 package org.verwandlung.voj.judger.application;
 
 import java.security.SecureRandom;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -49,10 +48,20 @@ import org.verwandlung.voj.judger.model.User;
 @Component
 public class ApplicationDispatcher {
   /**
+   * Why a judging whose lease expired failed, as the judger that claims its submission next records
+   * it (see {@link #claimSubmission}).
+   */
+  public static final String INTERRUPTED_REASON =
+      "Its judger stopped, crashed or lost the database while judging it, or the judging ran past"
+          + " its deadline.";
+
+  /**
    * Claims the next submission to judge in one of some languages (see {@code
    * SubmissionMapper#getNextSubmissionId}) for a new judging, and reads it once claimed: an
    * administrator may edit its problem or test data and rejudge it until then, and the judging
-   * must be of what was rejudged.
+   * must be of what was rejudged. A submission whose previous judging held it until its lease
+   * expired is claimed with that judging counted as a failed one (see {@link
+   * #INTERRUPTED_REASON}).
    *
    * <p>The claim token, a random number, identifies the judging: its lease is renewed (see {@link
    * #renewLease}) and its verdict recorded only while the submission still carries it, and its
@@ -61,20 +70,18 @@ public class ApplicationDispatcher {
    * judging they supersede stops, without overwriting the new verdict with a stale one.
    *
    * @param languageIds - the unique identifiers of the languages this judger supports, not empty
-   * @param skippedProblemIds - the unique identifiers of the problems whose submissions to leave to
-   *     other judgers for now (empty: none)
    * @param leaseSeconds - how long the lease of the judging lasts, in seconds
    * @return the submission, with the claim token of the judging, or {@code null} if there is none
    *     to judge
    */
-  public Submission claimSubmission(
-      List<Integer> languageIds, Collection<Long> skippedProblemIds, long leaseSeconds) {
-    for (Long submissionId = submissionMapper.getNextSubmissionId(languageIds, skippedProblemIds);
+  public Submission claimSubmission(List<Integer> languageIds, long leaseSeconds) {
+    for (Long submissionId = submissionMapper.getNextSubmissionId(languageIds);
         submissionId != null;
-        submissionId = submissionMapper.getNextSubmissionId(languageIds, skippedProblemIds)) {
+        submissionId = submissionMapper.getNextSubmissionId(languageIds)) {
       // Another judger may have claimed the submission since it was read: then the next one.
       long claimToken = RANDOM.nextLong();
-      if (submissionMapper.claimSubmission(submissionId, claimToken, getJudgerUid(), leaseSeconds)
+      if (submissionMapper.claimSubmission(
+              submissionId, claimToken, getJudgerUid(), leaseSeconds, INTERRUPTED_REASON)
           == 1) {
         Submission submission = submissionMapper.getSubmission(submissionId);
         if (submission != null) {
@@ -102,9 +109,9 @@ public class ApplicationDispatcher {
   }
 
   /**
-   * Releases a submission that a judging could not judge for a reason of its judger's own (see
-   * {@code Dispatcher}), so that another judger takes it at once, without counting an interrupted
-   * judging. A judging that was superseded meanwhile releases nothing.
+   * Releases a submission whose judging stops as this judger shuts down, at its place in the
+   * queue, so that another judger takes it at once, without counting a failed judging. A judging
+   * that was superseded meanwhile releases nothing.
    *
    * @param submission - the submission, claimed by {@link #claimSubmission}
    * @return whether the submission was released
@@ -112,6 +119,24 @@ public class ApplicationDispatcher {
   public boolean releaseSubmission(Submission submission) {
     return submissionMapper.releaseSubmission(
             submission.getSubmissionId(), submission.getClaimToken())
+        == 1;
+  }
+
+  /**
+   * Releases a submission whose judging failed (see {@code Dispatcher}), at the end of the queue,
+   * and counts the failed judging, with its reason, which the System Error of the submission tells
+   * once too many of its judgings failed. A judging that was superseded meanwhile releases nothing.
+   *
+   * @param submission - the submission, claimed by {@link #claimSubmission}
+   * @param reason - why the judging failed, shown to the user (cut to {@value #MAX_REASON_LENGTH}
+   *     characters)
+   * @return whether the submission was released
+   */
+  public boolean requeueSubmission(Submission submission, String reason) {
+    String storedReason =
+        reason.length() <= MAX_REASON_LENGTH ? reason : reason.substring(0, MAX_REASON_LENGTH);
+    return submissionMapper.requeueSubmission(
+            submission.getSubmissionId(), submission.getClaimToken(), storedReason)
         == 1;
   }
 
@@ -527,6 +552,9 @@ public class ApplicationDispatcher {
 
   /** The names of the judge results, by their slug, as read so far. */
   private final Map<String, String> runtimeResultNames = new ConcurrentHashMap<>();
+
+  /** The longest reason of a failed judging the database takes. */
+  static final int MAX_REASON_LENGTH = 255;
 
   /** How many times a verdict is recorded before a failure to do so is given up. */
   static final int UPDATE_TRIES = 3;
