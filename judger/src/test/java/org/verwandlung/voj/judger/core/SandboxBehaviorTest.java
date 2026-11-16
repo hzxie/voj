@@ -133,8 +133,8 @@ public class SandboxBehaviorTest {
 
   /**
    * Test case: a program that tries to create a user namespace with clone, clone3 and unshare, and
-   * then checks that threads and fork still work. Expected result: Accepted (every attempt is
-   * refused, see USER_NAMESPACE_CODE).
+   * then checks that threads still work. Expected result: Accepted (every attempt is refused, see
+   * USER_NAMESPACE_CODE).
    */
   @Test
   public void testUserNamespacesAreDenied() throws Exception {
@@ -144,15 +144,42 @@ public class SandboxBehaviorTest {
   }
 
   /**
+   * Test case: a program that tries to create processes with fork, the raw fork system call and
+   * posix_spawn. Expected result: under the native sandbox, a run of the submission is a single
+   * process: every attempt fails with EPERM, which the program reports (see FORK_CODE).
+   */
+  @Test
+  public void testRunCannotCreateProcesses() throws Exception {
+    Assumptions.assumeTrue("native".equalsIgnoreCase(sandbox), "This tests the native runner.");
+    Assertions.assertEquals("AC", judge(900011L, FORK_CODE, 5000, 262144));
+    Assertions.assertEquals(
+        "fork: EPERM\nSYS_fork: EPERM\nposix_spawn: EPERM\n",
+        Files.readString(Path.of(workBaseDirectory, "voj-sandbox-900011", "output.txt")));
+  }
+
+  /**
+   * Test case: a multi-threaded program (eight threads). Expected result: Accepted: a run may not
+   * create processes, but it may create threads.
+   */
+  @Test
+  public void testRunCanCreateThreads() throws Exception {
+    Assertions.assertEquals("AC", judge(900012L, THREADS_CODE, 5000, 262144));
+    Assertions.assertEquals(
+        "8\n", Files.readString(Path.of(workBaseDirectory, "voj-sandbox-900012", "output.txt")));
+  }
+
+  /**
    * Test case: a program that touches 48 MB and then forks seven children that share those pages
-   * until they exit. Expected result: Accepted under a 128 MB limit: the group's memory is the
-   * proportional set size, which counts each shared page once rather than once per process (as
-   * the sum of the resident set sizes, 8 x 48 MB, would).
+   * until they exit. Expected result: Accepted under a 128 MB limit: the group's memory counts
+   * each shared page once rather than once per process (as the sum of the resident set sizes, 8 x
+   * 48 MB, would). Only for a sandbox that lets a run create processes (not the native one).
    */
   @Test
   public void testMemorySharedAfterForkIsCountedOnce() throws Exception {
     Assumptions.assumeFalse(
         System.getProperty("os.name").contains("Windows"), "This test uses fork().");
+    Assumptions.assumeFalse(
+        "native".equalsIgnoreCase(sandbox), "A native run cannot create processes.");
     Assertions.assertEquals("AC", judge(900006L, SHARED_MEMORY_CODE, 5000, 131072));
   }
 
@@ -160,12 +187,15 @@ public class SandboxBehaviorTest {
    * Test case: a program that has three orphaned grandchildren, one after the other, each burn 600
    * ms of CPU time and exit, while it itself stays idle. Expected result: Time Limit Exceeded under
    * a 1000 ms limit: the CPU time of a process that exits after being orphaned still counts, even
-   * though none of the program's processes ever waits for it.
+   * though none of the program's processes ever waits for it. Only for a sandbox that lets a run
+   * create processes (not the native one).
    */
   @Test
   public void testCpuTimeOfOrphansIsCounted() throws Exception {
     Assumptions.assumeFalse(
         System.getProperty("os.name").contains("Windows"), "This test uses fork().");
+    Assumptions.assumeFalse(
+        "native".equalsIgnoreCase(sandbox), "A native run cannot create processes.");
     Assertions.assertEquals("TLE", judge(900007L, ORPHAN_CPU_CODE, 1000, 262144));
   }
 
@@ -350,7 +380,7 @@ public class SandboxBehaviorTest {
 
   /**
    * A program that exits with 1, 2 or 3 if it managed to create a user namespace with clone, clone3
-   * or unshare, with 4 if fork or a thread fails, and with 0 otherwise.
+   * or unshare, with 4 if a thread fails, and with 0 otherwise.
    */
   private static final String USER_NAMESPACE_CODE =
       """
@@ -390,16 +420,80 @@ public class SandboxBehaviorTest {
           if (unshare(CLONE_NEWUSER) == 0) {
               return 3;
           }
-          pid_t child = fork();
-          if (child < 0) {
+          try {
+              std::thread thread([] {});
+              thread.join();
+          } catch (...) {
               return 4;
           }
-          if (child == 0) {
+          return 0;
+      }
+      """;
+
+  /** A program that reports how its attempts to create a process fail. */
+  private static final String FORK_CODE =
+      """
+      #include <cerrno>
+      #include <cstdio>
+      #include <spawn.h>
+      #include <sys/syscall.h>
+      #include <sys/wait.h>
+      #include <unistd.h>
+
+      extern char** environ;
+
+      static void report(const char* how, long pid, int error) {
+          if (pid == 0) {
               _exit(0);
           }
-          waitpid(child, nullptr, 0);
-          std::thread thread([] {});
-          thread.join();
+          if (pid > 0) {
+              waitpid((pid_t) pid, nullptr, 0);
+          }
+          std::printf("%s: %s\\n", how, pid > 0 ? "created" : error == EPERM ? "EPERM" : "error");
+      }
+
+      int main() {
+          long pid = fork();
+          report("fork", pid, errno);
+      #ifdef SYS_fork
+          pid = syscall(SYS_fork);
+      #else
+          pid = -1;
+          errno = EPERM;
+      #endif
+          report("SYS_fork", pid, errno);
+          char* argv[] = {(char*) "/bin/true", nullptr};
+          pid_t spawned = -1;
+          int error = posix_spawn(&spawned, "/bin/true", nullptr, nullptr, argv, environ);
+          report("posix_spawn", error == 0 ? spawned : -1, error);
+          return 0;
+      }
+      """;
+
+  /** A program that sums the work of eight threads. */
+  private static final String THREADS_CODE =
+      """
+      #include <atomic>
+      #include <cstdio>
+      #include <thread>
+      #include <vector>
+
+      int main() {
+          std::atomic<int> done(0);
+          std::vector<std::thread> threads;
+          for (int i = 0; i < 8; ++i) {
+              threads.emplace_back([&done] {
+                  volatile long sum = 0;
+                  for (long j = 0; j < 10000000; ++j) {
+                      sum = sum + j;
+                  }
+                  ++done;
+              });
+          }
+          for (std::thread& thread : threads) {
+              thread.join();
+          }
+          std::printf("%d\\n", done.load());
           return 0;
       }
       """;
@@ -478,13 +572,14 @@ public class SandboxBehaviorTest {
   private static final String NETWORK_CODE =
       """
       #include <arpa/inet.h>
+      #include <atomic>
       #include <cerrno>
       #include <cstdio>
       #include <cstring>
       #include <netinet/in.h>
       #include <poll.h>
       #include <sys/socket.h>
-      #include <sys/wait.h>
+      #include <thread>
       #include <unistd.h>
 
       static bool connects(const char* address, int port) {
@@ -542,17 +637,16 @@ public class SandboxBehaviorTest {
               return 5;
           }
       #if defined(__x86_64__)
-          // The i386 entry point (socketcall) must not get around the filter either.
-          pid_t child = fork();
-          if (child == 0) {
+          // The i386 entry point (socketcall) must not get around the filter either. It is tried in
+          // a thread of its own, which the filter may kill (a run cannot create processes).
+          static std::atomic<long> i386Socket(-1);
+          std::thread([] {
               static unsigned int args[3] = {AF_INET, SOCK_STREAM, 0};
               long fd;
               asm volatile("int $0x80" : "=a"(fd) : "a"(102), "b"(1), "c"(args) : "memory");
-              _exit(fd >= 0 ? 7 : 0);
-          }
-          int status = 0;
-          waitpid(child, &status, 0);
-          if (strict && WIFEXITED(status) && WEXITSTATUS(status) == 7) {
+              i386Socket = fd;
+          }).join();
+          if (strict && i386Socket >= 0) {
               return 6;
           }
       #endif

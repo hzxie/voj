@@ -26,8 +26,8 @@ import org.springframework.stereotype.Component;
 import org.verwandlung.voj.judger.util.NativeLibraryLoader;
 
 /**
- * The legacy native {@link SandboxRunner}, backed by the JNI runner ({@code posix_spawn} on Unix,
- * {@code CreateProcess} on Windows).
+ * The legacy native {@link SandboxRunner}, backed by the JNI runner ({@code fork}/{@code exec}
+ * under a seccomp filter on Linux, {@code CreateProcess} on Windows).
  *
  * <p>This implementation does not have first-class resource accounting, so it <em>infers</em> the
  * {@link Verdict} from the exit code and the measured time/memory. That inference is best-effort and
@@ -197,8 +197,9 @@ public class Runner implements SandboxRunner {
   private String systemPassword;
 
   /**
-   * The maximum number of processes a submission may have at once (anti fork bomb). On Linux this
-   * is the sandbox user's RLIMIT_NPROC, which counts threads too.
+   * The maximum number of processes a submission may have at once. On Linux, where a run of the
+   * submission cannot create processes, this is the sandbox user's RLIMIT_NPROC, which caps its
+   * threads.
    */
   @Value("${judger.processLimit:64}")
   private int processLimit;

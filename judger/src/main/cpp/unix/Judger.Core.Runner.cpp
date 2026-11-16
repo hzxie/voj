@@ -14,14 +14,15 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
 #pragma GCC diagnostic ignored "-Wwrite-strings"
 
 #include "../org_verwandlung_voj_jni_hashmap.h"
 #include "../org_verwandlung_voj_jni_library.h"
 #include "../org_verwandlung_voj_judger_core_Runner.h"
 
-#include <algorithm>
 #include <atomic>
 #include <cerrno>
 #include <cstdio>
@@ -30,13 +31,12 @@
 #include <iterator>
 #include <sstream>
 #include <string>
+#include <system_error>
 #include <thread>
 #include <vector>
 
-#include <dirent.h>
 #include <fcntl.h>
 #include <grp.h>
-#include <poll.h>
 #include <pwd.h>
 #include <sched.h>
 #include <signal.h>
@@ -77,15 +77,8 @@ static const int       POLL_INTERVAL_US       = 1000;        // watchdog poll (1
 static const int       WALL_TIME_FACTOR       = 3;           // wall-clock backstop multiplier
 static const long long WALL_TIME_SLACK_MS     = 1000;        // wall-clock backstop slack
 static const rlim_t    OUTPUT_FILE_SIZE_LIMIT = (rlim_t)256 * 1024 * 1024; // RLIMIT_FSIZE (256 MB)
-static const rlim_t    PROCESS_NUMBER_LIMIT   = 64;          // default RLIMIT_NPROC (anti fork-bomb)
-static const int       CLEANUP_ATTEMPTS       = 1000;        // kill/reap rounds (x 1 ms) after a run
-static const int       GROUP_SCAN_INTERVAL    = 10;          // scan the whole group every 10th poll
-// Reading a process's PSS walks its page tables (~3 ms for a 550 MB JVM, ~1000 x reading its stat),
-// so the group's PSS is read at most every 10 ms and at most every 10 x the last read's duration
-// (<= 10% of the watchdog's time), and only when it can raise the peak (see the watchdog).
-static const long long PSS_SCAN_MIN_INTERVAL_MS = 10;
-static const long long PSS_SCAN_COST_FACTOR     = 10;
-static const int       SUPERVISOR_EXIT_TIMEOUT_MS = 5000;    // wait for the supervisor after the sweeps
+static const rlim_t    PROCESS_NUMBER_LIMIT   = 64;          // default RLIMIT_NPROC (threads)
+static const int       CLEANUP_ATTEMPTS       = 1000;        // wait rounds (x 1 ms) after a run
 // RLIMIT_DATA backstop: 2 x the memory limit plus a headroom of max(256 MB, physical RAM / 32). The
 // headroom matters for the JVM, whose committed initial heap defaults to physical RAM / 64.
 static const unsigned long long DATA_LIMIT_MIN_HEADROOM_KB = 256ULL * 1024;
@@ -143,32 +136,17 @@ struct ChildPlan {
  * error), so that a broken sandbox is never mistaken for a fault of the submission.
  */
 enum ChildStep {
-  STEP_SUBREAPER, STEP_FORK, STEP_INPUT, STEP_PROCESS_GROUP, STEP_RESOURCE_LIMIT, STEP_GROUPS,
-  STEP_GID, STEP_UID, STEP_OUTPUT, STEP_DEV_NULL, STEP_NO_NEW_PRIVS, STEP_SECCOMP, STEP_EXEC,
+  STEP_INPUT, STEP_PROCESS_GROUP, STEP_RESOURCE_LIMIT, STEP_GROUPS, STEP_GID, STEP_UID,
+  STEP_OUTPUT, STEP_DEV_NULL, STEP_NO_NEW_PRIVS, STEP_SECCOMP, STEP_EXEC,
 };
 static const char* const CHILD_STEP_NAMES[] = {
-  "prctl(PR_SET_CHILD_SUBREAPER)", "fork()", "opening the input file", "setpgid()", "setrlimit()",
-  "setgroups()", "setgid()", "setuid()", "opening the output file", "opening /dev/null",
-  "prctl(PR_SET_NO_NEW_PRIVS)", "installing the seccomp filter", "execve()",
+  "opening the input file", "setpgid()", "setrlimit()", "setgroups()", "setgid()", "setuid()",
+  "opening the output file", "opening /dev/null", "prctl(PR_SET_NO_NEW_PRIVS)",
+  "installing the seccomp filter", "execve()",
 };
 struct ChildFailure {
   int step;
   int error;
-};
-
-/**
- * A report of the supervisor (see runSupervisor) to the judger, written to a pipe in one atomic
- * write.
- */
-enum SupervisorMessageType {
-  SUPERVISOR_STARTED = 1, // value: the program's PID (and process group)
-  SUPERVISOR_EXITED  = 2, // status: the program's wait status, value: its CPU time (us)
-  SUPERVISOR_DONE    = 3, // value: the CPU time of every process of the run (us)
-};
-struct SupervisorMessage {
-  int       type;
-  int       status;
-  long long value;
 };
 
 /**
@@ -177,24 +155,13 @@ struct SupervisorMessage {
 static std::vector<std::string> splitCommandLine(const std::string&);
 static std::string resolveExecutable(const std::string&);
 static std::vector<std::string> buildEnvironment(bool dropPrivileges, const std::string& outputFilePath);
-static std::string buildSeccompProgram();
+static std::string buildSeccompProgram(bool runOfSubmission);
 static long long getMonotonicMillis();
-static int  readCpuTimeMillis(pid_t);
+static long long readCpuTimeMillis(pid_t);
 static int  readPeakMemoryKb(pid_t);
-static bool readProcessGroupUsage(pid_t, long long* cpuMillis,
-                                  std::vector<std::pair<pid_t, long long>>* members);
-static long long readProportionalSetSizeKb(pid_t);
 static rlim_t getDataLimit(int memoryLimitKb);
-static void reapProcessGroup(pid_t);
-static void killProcessGroup(pid_t);
-static void killSandboxUserProcesses(uid_t, pid_t);
-static bool hasLiveProcessOf(uid_t, pid_t exclude);
-static void runSupervisor(const ChildPlan&, int syncWriteFd, int reportWriteFd,
-                          long long* reapedCpuMicros) __attribute__((noreturn));
+static void awaitProcessGroupExit(pid_t);
 static void runProgram(const ChildPlan&, int syncWriteFd) __attribute__((noreturn));
-static void writeSupervisorMessage(int fd, int type, int status, long long value);
-static bool readSupervisorMessage(int fd, SupervisorMessage*, int timeoutMs);
-static void closeDescriptorsExcept(int keepFd1, int keepFd2);
 static void reportChildFailure(int syncWriteFd, int step) __attribute__((noreturn));
 static bool setResourceLimit(int resource, rlim_t soft, rlim_t hard);
 static int  openOutputFile(const char*);
@@ -208,20 +175,25 @@ static void markInheritedDescriptorsCloseOnExec();
  * are mandatory - the run is refused if either cannot be applied - while the network namespace is
  * best-effort, as the filter already refuses every socket but AF_UNIX.
  *
+ * A run of the submission is a single process: the filter lets it create threads, but no other
+ * process (see buildSeccompProgram). A compilation runs a trusted compiler, which may run others;
+ * they all stay in the compiler's process group, which is killed as a whole.
+ *
  * @param  jniEnv          - a reference to the JNI runtime environment
  * @param  selfReference   - a reference to the calling Java object
  * @param  jCommandLine    - the command line to execute
  * @param  jUsername       - the unprivileged user to drop to (when running as root)
  * @param  jPassword       - unused on Unix (privilege drop is resolved from the username)
- * @param  jInputFilePath  - the input file path when running the program (may be NULL)
- * @param  jOutputFilePath - the file receiving stdout (may be NULL); for a compilation it also
- *                           receives stderr, otherwise stderr is discarded
+ * @param  jInputFilePath  - the file to read stdin from (may be NULL: /dev/null)
+ * @param  jOutputFilePath - the file receiving stdout (may be NULL: /dev/null); for a compilation it
+ *                           also receives stderr, otherwise stderr is discarded
  * @param  timeLimit       - the program execution time limit (ms, 0 means no limit)
  * @param  memoryLimit     - the program execution memory limit (KB, 0 means no limit)
  * @param  isCompilation   - whether this is a compilation (as opposed to a run of the submission)
  * @param  processLimit    - the maximum number of processes and threads of the sandbox user
  *                           (RLIMIT_NPROC, applied when privileges are dropped; 0 means the default)
- * @return a Map<String, Object> object containing the runtime result
+ * @return a Map<String, Object> object containing the runtime result; throws a Java exception
+ *         instead if the sandbox could not be set up
  */
 JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntimeResult(
     JNIEnv* jniEnv, jobject selfReference, jstring jCommandLine, jstring jUsername,
@@ -232,12 +204,7 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     std::string commandLine = getStringValue(jniEnv, jCommandLine);
     std::string username    = getStringValue(jniEnv, jUsername);
 
-    JHashMap result;
-    int usedTime   = 0;
-    int usedMemory = 0;
-    int exitCode   = 127;
-
-    // ----- Resolve everything the child needs while still single-threaded-safe -----
+    // ----- Resolve everything the child needs before fork -----
     std::vector<std::string> args = splitCommandLine(commandLine);
     if ( args.empty() ) {
         throwStringException(jniEnv, "Judger: the command line is empty");
@@ -284,16 +251,16 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     plan.envp.push_back(nullptr);
 
     // The filter is what keeps a submission off the network when the judger has no CAP_SYS_ADMIN
-    // (a default Docker container), and away from ptrace, namespaces and setsid everywhere: a run
-    // without it is refused rather than started unconfined.
-    plan.seccompProgram = buildSeccompProgram();
+    // (a default Docker container), and away from ptrace, namespaces, setsid and other processes
+    // everywhere: a run without it is refused rather than started unconfined.
+    plan.seccompProgram = buildSeccompProgram(!plan.compileStep);
     if ( plan.seccompProgram.empty() ) {
         throwStringException(jniEnv, "Judger: failed to build the seccomp filter; refusing to run");
         return NULL;
     }
 
     // A close-on-exec pipe: it stays open until execve succeeds (then it auto-closes, the parent's
-    // read sees EOF) or the child reports an errno on failure. The parent blocks on it so the
+    // read sees EOF) or the child reports a failed step on it. The parent blocks on it so the
     // watchdog only starts once the real program is running, avoiding measuring the JVM image that
     // the freshly forked child still shares before exec.
     int syncPipe[2];
@@ -301,57 +268,21 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
         throwStringException(jniEnv, std::string("Judger: pipe2() failed: ") + strerror(errno));
         return NULL;
     }
-    // The supervisor's reports (see runSupervisor): the program's PID, its exit, and the end of the
-    // run with the CPU time of every process it ran. A page shared with the supervisor carries the
-    // running total of the CPU time of the processes reaped so far, for the watchdog.
-    int reportPipe[2];
-    if ( pipe2(reportPipe, O_CLOEXEC) != 0 ) {
+    pid_t pid = fork();
+    if ( pid < 0 ) {
+        int error = errno;
         close(syncPipe[0]);
         close(syncPipe[1]);
-        throwStringException(jniEnv, std::string("Judger: pipe2() failed: ") + strerror(errno));
+        throwStringException(jniEnv, std::string("Judger: fork() failed: ") + strerror(error));
         return NULL;
     }
-    void* sharedPage = mmap(nullptr, sizeof(long long), PROT_READ | PROT_WRITE,
-                            MAP_SHARED | MAP_ANONYMOUS, -1, 0);
-    if ( sharedPage == MAP_FAILED ) {
+    if ( pid == 0 ) {
         close(syncPipe[0]);
-        close(syncPipe[1]);
-        close(reportPipe[0]);
-        close(reportPipe[1]);
-        throwStringException(jniEnv, std::string("Judger: mmap() failed: ") + strerror(errno));
-        return NULL;
-    }
-    long long* reapedCpuMicros = static_cast<long long*>(sharedPage);
-    __atomic_store_n(reapedCpuMicros, 0LL, __ATOMIC_SEQ_CST);
-
-    pid_t supervisor = fork();
-    if ( supervisor < 0 ) {
-        close(syncPipe[0]);
-        close(syncPipe[1]);
-        close(reportPipe[0]);
-        close(reportPipe[1]);
-        munmap(sharedPage, sizeof(long long));
-        throwStringException(jniEnv, std::string("Judger: fork() failed: ") + strerror(errno));
-        return NULL;
-    }
-    if ( supervisor == 0 ) {
-        close(syncPipe[0]);
-        close(reportPipe[0]);
-        runSupervisor(plan, syncPipe[1], reportPipe[1], reapedCpuMicros); // never returns
+        runProgram(plan, syncPipe[1]); // never returns
     }
 
     // ----- Parent process -----
     close(syncPipe[1]);
-    close(reportPipe[1]);
-
-    // The supervisor reports the program's PID (which is also its process group) once it has forked
-    // it; end-of-file instead means the supervisor failed before that, with the errno on syncPipe.
-    SupervisorMessage message;
-    pid_t pid = -1;
-    if ( readSupervisorMessage(reportPipe[0], &message, -1) && message.type == SUPERVISOR_STARTED ) {
-        pid = (pid_t) message.value;
-    }
-
     ChildFailure childFailure;
     childFailure.step  = -1;
     childFailure.error = 0;
@@ -360,191 +291,12 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
         // Retry on interrupted read.
     }
     close(syncPipe[0]);
-
-    std::atomic<bool> finished(false);
-    std::atomic<bool> timedOut(false);
-    std::atomic<bool> memoryExceeded(false);
-    std::atomic<int>  peakMemoryKb(0);
-    std::atomic<long long> groupCpuMillis(0);
-    long long startMillis = getMonotonicMillis();
-
-    // Child processes are accounted for, not only the top-level process: every GROUP_SCAN_INTERVAL
-    // polls the watchdog sums the CPU time and the memory (PSS) of the whole process group (the
-    // seccomp filter keeps every descendant in it), plus the CPU time of the descendants that have
-    // already exited and been reaped by the supervisor. Memory is always summed, so the compile
-    // memory limit also covers cc1plus, rustc's linker, go's compile/link children, kotlinc's JVM,
-    // ... For a compilation, CPU time keeps being measured on the top-level process only (plus the
-    // wall-clock backstop and each process's own RLIMIT_CPU): the toolchains legitimately burn CPU
-    // in parallel children (go build, the JVM-based kotlinc) and must not turn into compile errors.
-    bool countGroupCpu = !plan.compileStep;
-
-    std::thread watchdog([&]() {
-        if ( pid <= 0 ) {
-            return; // the program was never started
-        }
-        // PSS (/proc/<pid>/smaps_rollup) is only readable with ptrace-read access to the process,
-        // which root lacks for another user's process without CAP_SYS_PTRACE (Docker drops it).
-        // The kernel checks the file-system UID/GID for it, so this thread - and only this thread,
-        // which the raw syscalls affect, unlike the glibc wrappers - takes on the sandbox user's
-        // for file access. It does nothing but read /proc and send signals (which use the real UID).
-        if ( plan.dropPrivileges ) {
-            syscall(SYS_setfsgid, plan.dropGid);
-            syscall(SYS_setfsuid, plan.dropUid);
-        }
-        long long wallBackstopMs =
-            (timeLimit > 0) ? (long long) timeLimit * WALL_TIME_FACTOR + WALL_TIME_SLACK_MS : 0;
-        // The group's memory is the sum of its processes' PSS. Reading it is costly (see
-        // PSS_SCAN_COST_FACTOR), so it is only read when it can matter: when the group has more
-        // than one process (a single one's VmHWM, sampled on every poll, is at least its PSS) and
-        // the cheap sum of their RSS, an upper bound of the PSS sum, exceeds the peak so far. When
-        // that happens too soon after the last read, the read waits for a later scan; the memory
-        // is never estimated.
-        long long nextPssScanMs = 0;
-        std::vector<std::pair<pid_t, long long>> members;
-        auto scanProcessGroup = [&](long long* cpuMs, long long* memoryKb) {
-            if ( !readProcessGroupUsage(pid, cpuMs, &members) ) {
-                return false;
-            }
-            long long rssKb = 0;
-            for ( const auto& member : members ) {
-                rssKb += member.second;
-            }
-            long long startMs = getMonotonicMillis();
-            if ( members.size() < 2 || rssKb <= peakMemoryKb.load() || startMs < nextPssScanMs ) {
-                *memoryKb = (members.size() < 2) ? rssKb : -1;
-                return true;
-            }
-            long long pssKb = 0;
-            for ( const auto& member : members ) {
-                long long processPssKb = readProportionalSetSizeKb(member.first);
-                pssKb += (processPssKb >= 0) ? processPssKb : member.second;
-            }
-            long long elapsedMs = getMonotonicMillis() - startMs;
-            nextPssScanMs = startMs + std::max(PSS_SCAN_MIN_INTERVAL_MS,
-                                               elapsedMs * PSS_SCAN_COST_FACTOR);
-            *memoryKb = pssKb;
-            return true;
-        };
-        for ( int poll = 0; !finished.load(); ++poll ) {
-            long long groupCpuMs = -1;
-            long long groupMemKb = -1;
-            if ( poll % GROUP_SCAN_INTERVAL == 0 ) {
-                // Read the reaped total first: a process reaped during the scan is then missed
-                // until the next scan rather than counted twice.
-                long long reapedMs = __atomic_load_n(reapedCpuMicros, __ATOMIC_SEQ_CST) / 1000;
-                if ( scanProcessGroup(&groupCpuMs, &groupMemKb) ) {
-                    groupCpuMs += reapedMs;
-                    if ( countGroupCpu && groupCpuMs > groupCpuMillis.load() ) {
-                        groupCpuMillis.store(groupCpuMs);
-                    }
-                }
-            }
-            if ( timeLimit > 0 ) {
-                long long cpuMs = readCpuTimeMillis(pid);
-                if ( countGroupCpu && groupCpuMs > cpuMs ) {
-                    cpuMs = groupCpuMs;
-                }
-                if ( cpuMs >= 0 && cpuMs > timeLimit ) {
-                    timedOut.store(true);
-                    kill(-pid, SIGKILL);
-                }
-                long long wallMs = getMonotonicMillis() - startMillis;
-                if ( wallBackstopMs > 0 && wallMs > wallBackstopMs ) {
-                    timedOut.store(true);
-                    kill(-pid, SIGKILL);
-                }
-            }
-            // Sample the top-level process's peak RSS from /proc (VmHWM), which also catches a spike
-            // between two polls, and the whole group's memory (PSS). The watchdog only runs after
-            // the child has exec'd (the parent blocks on the sync pipe until then), so this never
-            // sees the JVM image the freshly forked child briefly shared before exec.
-            int peakKb = readPeakMemoryKb(pid);
-            if ( groupMemKb > peakKb ) {
-                peakKb = (int) groupMemKb;
-            }
-            if ( peakKb > peakMemoryKb.load() ) {
-                peakMemoryKb.store(peakKb);
-            }
-            if ( memoryLimit > 0 && peakKb > memoryLimit ) {
-                memoryExceeded.store(true);
-                kill(-pid, SIGKILL);
-            }
-            usleep(POLL_INTERVAL_US);
-        }
-        if ( plan.dropPrivileges ) {
-            syscall(SYS_setfsuid, 0);
-            syscall(SYS_setfsgid, 0);
-        }
-    });
-
-    // Wait until the supervisor has reaped the program (or has died, which never happens normally).
-    bool      programExited    = false;
-    int       status           = 0;
-    long long programCpuMicros = 0;
-    while ( pid > 0 && readSupervisorMessage(reportPipe[0], &message, -1) ) {
-        if ( message.type == SUPERVISOR_EXITED ) {
-            programExited    = true;
-            status           = message.status;
-            programCpuMicros = message.value;
-            break;
-        }
-    }
-    finished.store(true);
-    watchdog.join();
-
-    // Kill everything the program left behind (background children, a fork bomb) before the caller
-    // looks at its output. setsid/setpgid are denied by the seccomp filter, so every descendant is
-    // still in the process group; when running as a dedicated sandbox user, also sweep every
-    // process of that user, in case one got out of the group anyway (e.g. no seccomp filter).
-    if ( pid > 0 ) {
-        killProcessGroup(pid);
-    }
-    if ( plan.dropPrivileges ) {
-        killSandboxUserProcesses(plan.dropUid, pid > 0 ? pid : 0);
-    }
-
-    // Every descendant is reparented to the supervisor (a child subreaper) when its parent exits,
-    // so once they are all gone the supervisor's children's CPU time is that of every process the
-    // run created, including orphans that would otherwise have been reaped by init unaccounted.
-    long long totalCpuMicros = __atomic_load_n(reapedCpuMicros, __ATOMIC_SEQ_CST);
-    bool      supervisorDone = false;
-    while ( readSupervisorMessage(reportPipe[0], &message, SUPERVISOR_EXIT_TIMEOUT_MS) ) {
-        if ( message.type == SUPERVISOR_DONE ) {
-            supervisorDone = true;
-            totalCpuMicros = message.value;
-            break;
-        }
-    }
-    close(reportPipe[0]);
-    if ( !supervisorDone ) {
-        // Something the kill sweeps cannot reach outlived the run: stop waiting for it.
-        kill(supervisor, SIGKILL);
-    }
-    while ( waitpid(supervisor, nullptr, 0) < 0 && errno == EINTR ) {
-        // Retry on interrupted system call.
-    }
-    long long reapedTotal = __atomic_load_n(reapedCpuMicros, __ATOMIC_SEQ_CST);
-    if ( reapedTotal > totalCpuMicros ) {
-        totalCpuMicros = reapedTotal;
-    }
-    munmap(sharedPage, sizeof(long long));
-
-    // Kernel-accounted CPU time (user + system): the whole process tree for a run of the
-    // submission, the top-level process (including the children it waited for) for a compilation.
-    long long cpuMillis = (countGroupCpu ? totalCpuMicros : programCpuMicros) / 1000;
-    if ( countGroupCpu && groupCpuMillis.load() > cpuMillis ) {
-        cpuMillis = groupCpuMillis.load();
-    }
-    usedTime   = (int) cpuMillis;
-    // Peak memory sampled from /proc after exec. rusage's ru_maxrss is deliberately NOT used: for a
-    // child forked from the multi-threaded JVM it can include the parent's resident pages, briefly
-    // shared through the fork/exec window, hugely over-reporting memory on some architectures (e.g.
-    // a trivial program measured as the whole JVM heap).
-    usedMemory = peakMemoryKb.load();
-
-    if ( syncBytes != 0 || pid <= 0 ) {
+    if ( syncBytes != 0 ) {
         // The sandbox could not be set up, so the program never ran: a system error, never a
         // verdict on the submission.
+        while ( waitpid(pid, nullptr, 0) < 0 && errno == EINTR ) {
+            // Retry on interrupted system call.
+        }
         std::string message = "Judger: the sandbox failed to start the program";
         if ( syncBytes == (ssize_t) sizeof(childFailure) && childFailure.step >= 0 &&
              childFailure.step < (int) (sizeof(CHILD_STEP_NAMES) / sizeof(CHILD_STEP_NAMES[0])) ) {
@@ -554,19 +306,99 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
         throwStringException(jniEnv, message + " (" + commandLine + ")");
         return NULL;
     }
-    if ( !programExited ) {
-        exitCode = 1;
-    } else if ( WIFEXITED(status) ) {
+
+    // The program has been exec'd and is in its own process group (pid), set up before exec.
+    std::atomic<bool> finished(false);
+    std::atomic<bool> timedOut(false);
+    std::atomic<bool> memoryExceeded(false);
+    std::atomic<int>  peakMemoryKb(0);
+    long long startMillis = getMonotonicMillis();
+    std::thread watchdog;
+    try {
+        watchdog = std::thread([&]() {
+            long long wallBackstopMs =
+                (timeLimit > 0) ? (long long) timeLimit * WALL_TIME_FACTOR + WALL_TIME_SLACK_MS : 0;
+            while ( !finished.load() ) {
+                if ( timeLimit > 0 ) {
+                    long long cpuMs  = readCpuTimeMillis(pid);
+                    long long wallMs = getMonotonicMillis() - startMillis;
+                    if ( cpuMs > timeLimit || (wallBackstopMs > 0 && wallMs > wallBackstopMs) ) {
+                        timedOut.store(true);
+                        kill(-pid, SIGKILL);
+                    }
+                }
+                // The peak RSS (VmHWM), which also catches a spike between two polls. The watchdog
+                // only starts once the program has been exec'd, so it never sees the JVM image the
+                // child shared before exec. For a compilation, this is the compiler's top-level
+                // process only; the others are each held to RLIMIT_DATA.
+                int peakKb = readPeakMemoryKb(pid);
+                if ( peakKb > peakMemoryKb.load() ) {
+                    peakMemoryKb.store(peakKb);
+                }
+                if ( memoryLimit > 0 && peakKb > memoryLimit ) {
+                    memoryExceeded.store(true);
+                    kill(-pid, SIGKILL);
+                }
+                usleep(POLL_INTERVAL_US);
+            }
+        });
+    } catch ( const std::system_error& ex ) {
+        kill(-pid, SIGKILL);
+        while ( waitpid(pid, nullptr, 0) < 0 && errno == EINTR ) {
+            // Retry on interrupted system call.
+        }
+        throwStringException(jniEnv, std::string("Judger: failed to start the watchdog: ") + ex.what());
+        return NULL;
+    }
+
+    // Wait for the program to exit, but leave it unreaped (a zombie) for now: as long as it is, its
+    // process group cannot be reused by another process.
+    siginfo_t exitInfo;
+    while ( waitid(P_PID, (id_t) pid, &exitInfo, WEXITED | WNOWAIT) != 0 && errno == EINTR ) {
+        // Retry on interrupted system call.
+    }
+    finished.store(true);
+    watchdog.join();
+
+    // Kill whatever is left of the process group (a compiler's children: a run of the submission
+    // has no other process), in one go, before the caller looks at the output. setsid and setpgid
+    // are denied by the seccomp filter, so nothing can have left the group.
+    kill(-pid, SIGKILL);
+    int           status = 0;
+    struct rusage usage;
+    memset(&usage, 0, sizeof(usage));
+    pid_t reaped = -1;
+    while ( (reaped = wait4(pid, &status, 0, &usage)) < 0 && errno == EINTR ) {
+        // Retry on interrupted system call.
+    }
+    int waitError = errno;
+    awaitProcessGroupExit(pid);
+    if ( reaped != pid ) {
+        throwStringException(jniEnv, std::string("Judger: failed to wait for the program: ") +
+                                     strerror(waitError) + " (" + commandLine + ")");
+        return NULL;
+    }
+
+    // Kernel-accounted CPU time (user + system) of the program and of the children it waited for
+    // (a compiler's; a run of the submission has none), every thread included.
+    long long cpuMicros = (long long) usage.ru_utime.tv_sec * 1000000 + usage.ru_utime.tv_usec +
+                          (long long) usage.ru_stime.tv_sec * 1000000 + usage.ru_stime.tv_usec;
+    int usedTime = (int) (cpuMicros / 1000);
+    // Peak memory sampled from /proc after exec. rusage's ru_maxrss is deliberately NOT used: for a
+    // child forked from the multi-threaded JVM it can include the parent's resident pages, briefly
+    // shared through the fork/exec window, hugely over-reporting memory on some architectures (e.g.
+    // a trivial program measured as the whole JVM heap).
+    int usedMemory = peakMemoryKb.load();
+    int exitCode   = 1;
+    if ( WIFEXITED(status) ) {
         exitCode = WEXITSTATUS(status);
     } else if ( WIFSIGNALED(status) ) {
         exitCode = 128 + WTERMSIG(status);
-    } else {
-        exitCode = 1;
     }
 
-    // CPU time the watchdog could not see while the run lasted (it polls, and descendants are only
-    // counted once reaped) still counts: a run whose total exceeds the limit is a time-out.
-    if ( countGroupCpu && timeLimit > 0 && usedTime > timeLimit ) {
+    // CPU time the watchdog could not see while the run lasted (it polls) still counts: a run
+    // whose total exceeds the limit is a time-out.
+    if ( timeLimit > 0 && usedTime > timeLimit ) {
         timedOut.store(true);
     }
 
@@ -581,6 +413,7 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
         exitCode = 1; // a killed program must never be reported as a clean exit
     }
 
+    JHashMap result;
     result.put("usedTime", usedTime);
     result.put("usedMemory", usedMemory);
     result.put("exitCode", exitCode);
@@ -588,28 +421,18 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
 }
 
 /**
- * The body of the supervisor, the judger's direct child, which forks and then accounts for the
- * sandboxed program. It makes itself a child subreaper (PR_SET_CHILD_SUBREAPER), so every
- * descendant of the program whose parent exits is reparented to it rather than to init (or to the
- * judger, when it is PID 1 in Docker), and it reaps everything until no descendant is left. The
- * CPU time of each reaped process (which includes the children it reaped itself) is added to the
- * shared running total, so the CPU time of a process that exits after being orphaned is not lost.
- * It reports the program's PID, its exit and, once the run's last process is gone, the total.
+ * The body of the sandboxed program's process before exec. Runs only async-signal-safe operations
+ * (no malloc, NSS or C++ runtime), because it is a fork of the multi-threaded JVM, whose locks
+ * fork leaves frozen. Everything else was resolved into the ChildPlan before fork. On any failure
+ * it reports the failed step through the sync pipe and exits; on success execve replaces the image
+ * and closes the close-on-exec pipe, which the judger observes as EOF.
  *
- * The supervisor keeps root's (the judger's) credentials, so the program, which runs as the
- * sandbox user, can neither signal nor trace it, and it is not in the program's process group, so
- * the kill sweeps leave it alone. Like the program before exec, it is a fork of the multi-threaded
- * JVM and runs only async-signal-safe operations; it never executes anything else.
- *
- * @param  plan            - the pre-resolved execution plan of the program
- * @param  syncWriteFd     - the write end of the close-on-exec sync pipe (handed to the program)
- * @param  reportWriteFd   - the write end of the report pipe
- * @param  reapedCpuMicros - the shared running total of the CPU time of the reaped processes
+ * @param  plan        - the pre-resolved execution plan
+ * @param  syncWriteFd - the write end of the close-on-exec sync pipe
  */
-static void runSupervisor(const ChildPlan& plan, int syncWriteFd, int reportWriteFd,
-                          long long* reapedCpuMicros) {
-    // Drop the JVM's signal handlers and mask: neither means anything in this process, and the
-    // program would otherwise inherit the mask (and any ignored signal) across exec.
+static void runProgram(const ChildPlan& plan, int syncWriteFd) {
+    // Drop the JVM's signal handlers and mask: the program would otherwise inherit the mask (and
+    // any ignored signal) across exec.
     struct sigaction defaultAction;
     memset(&defaultAction, 0, sizeof(defaultAction));
     defaultAction.sa_handler = SIG_DFL;
@@ -621,147 +444,6 @@ static void runSupervisor(const ChildPlan& plan, int syncWriteFd, int reportWrit
     sigemptyset(&emptySet);
     sigprocmask(SIG_SETMASK, &emptySet, nullptr);
 
-    // Nothing the JVM has open (database and message-broker sockets, ...) may be held open for as
-    // long as the run lasts, nor be inherited by the program.
-    closeDescriptorsExcept(syncWriteFd, reportWriteFd);
-
-    if ( prctl(PR_SET_CHILD_SUBREAPER, 1, 0, 0, 0) != 0 ) {
-        reportChildFailure(syncWriteFd, STEP_SUBREAPER);
-    }
-
-    pid_t program = fork();
-    if ( program < 0 ) {
-        reportChildFailure(syncWriteFd, STEP_FORK);
-    }
-    if ( program == 0 ) {
-        close(reportWriteFd);
-        runProgram(plan, syncWriteFd); // never returns
-    }
-    setpgid(program, program); // close the setpgid race with the program
-    close(syncWriteFd);
-    writeSupervisorMessage(reportWriteFd, SUPERVISOR_STARTED, 0, program);
-
-    long long totalCpuMicros = 0;
-    for ( ;; ) {
-        int           status = 0;
-        struct rusage usage;
-        memset(&usage, 0, sizeof(usage));
-        pid_t reaped = wait4(-1, &status, __WALL, &usage);
-        if ( reaped < 0 ) {
-            if ( errno == EINTR ) {
-                continue;
-            }
-            break; // ECHILD: no descendant is left
-        }
-        long long cpuMicros =
-            (long long) usage.ru_utime.tv_sec * 1000000 + usage.ru_utime.tv_usec +
-            (long long) usage.ru_stime.tv_sec * 1000000 + usage.ru_stime.tv_usec;
-        totalCpuMicros += cpuMicros;
-        __atomic_store_n(reapedCpuMicros, totalCpuMicros, __ATOMIC_SEQ_CST);
-        if ( reaped == program ) {
-            writeSupervisorMessage(reportWriteFd, SUPERVISOR_EXITED, status, cpuMicros);
-        }
-    }
-    writeSupervisorMessage(reportWriteFd, SUPERVISOR_DONE, 0, totalCpuMicros);
-    _exit(0);
-}
-
-/**
- * Writes a report of the supervisor. Async-signal-safe.
- * @param  fd     - the write end of the report pipe
- * @param  type   - the SupervisorMessageType
- * @param  status - the wait status (SUPERVISOR_EXITED only)
- * @param  value  - the message's value (see SupervisorMessageType)
- */
-static void writeSupervisorMessage(int fd, int type, int status, long long value) {
-    SupervisorMessage message;
-    memset(&message, 0, sizeof(message));
-    message.type   = type;
-    message.status = status;
-    message.value  = value;
-    // Smaller than PIPE_BUF, so written atomically, in one piece.
-    while ( write(fd, &message, sizeof(message)) < 0 && errno == EINTR ) {
-        // Retry on interrupted write.
-    }
-}
-
-/**
- * Reads a report of the supervisor.
- * @param  fd        - the read end of the report pipe
- * @param  message   - receives the message
- * @param  timeoutMs - how long to wait for it (negative: forever)
- * @return whether a message was read (false on end-of-file, error or time-out)
- */
-static bool readSupervisorMessage(int fd, SupervisorMessage* message, int timeoutMs) {
-    long long deadline = getMonotonicMillis() + timeoutMs;
-    for ( ;; ) {
-        struct pollfd pfd;
-        pfd.fd      = fd;
-        pfd.events  = POLLIN;
-        pfd.revents = 0;
-        int wait = -1;
-        if ( timeoutMs >= 0 ) {
-            long long remaining = deadline - getMonotonicMillis();
-            wait = remaining > 0 ? (int) remaining : 0;
-        }
-        int ready = poll(&pfd, 1, wait);
-        if ( ready < 0 && errno == EINTR ) {
-            continue;
-        }
-        if ( ready <= 0 ) {
-            return false;
-        }
-        ssize_t length = read(fd, message, sizeof(*message));
-        if ( length < 0 && errno == EINTR ) {
-            continue;
-        }
-        return length == (ssize_t) sizeof(*message);
-    }
-}
-
-/**
- * Closes every file descriptor above standard error except the given two. Async-signal-safe.
- * @param  keepFd1 - a descriptor to keep open
- * @param  keepFd2 - another descriptor to keep open
- */
-static void closeDescriptorsExcept(int keepFd1, int keepFd2) {
-    unsigned int low  = (unsigned int) (keepFd1 < keepFd2 ? keepFd1 : keepFd2);
-    unsigned int high = (unsigned int) (keepFd1 < keepFd2 ? keepFd2 : keepFd1);
-    // The ranges [3, low), (low, high) and (high, ~0].
-    unsigned int ranges[3][2] = {
-        {3U, low - 1}, {low + 1, high - 1}, {high + 1, ~0U},
-    };
-    for ( auto& range : ranges ) {
-        if ( range[0] < 3U || range[0] > range[1] ) {
-            continue;
-        }
-        if ( syscall(SYS_close_range, range[0], range[1], 0U) == 0 ) {
-            continue;
-        }
-        // Fallback for kernels without close_range: walk the descriptor table.
-        struct rlimit noFile;
-        unsigned int  maxFd = 65536;
-        if ( getrlimit(RLIMIT_NOFILE, &noFile) == 0 && noFile.rlim_cur != RLIM_INFINITY &&
-             noFile.rlim_cur < ((rlim_t) 1 << 20) ) {
-            maxFd = (unsigned int) noFile.rlim_cur;
-        }
-        for ( unsigned int fd = range[0]; fd <= range[1] && fd < maxFd; ++fd ) {
-            close((int) fd);
-        }
-    }
-}
-
-/**
- * The body of the sandboxed program's process before exec. Runs only async-signal-safe operations
- * (no malloc, NSS or C++ runtime), because it is a fork of the multi-threaded JVM, whose locks
- * fork leaves frozen. Everything else was resolved into the ChildPlan before fork. On any failure
- * it reports the errno through the sync pipe and exits; on success execve replaces the image and
- * closes the close-on-exec pipe, which the judger observes as EOF.
- *
- * @param  plan        - the pre-resolved execution plan
- * @param  syncWriteFd - the write end of the close-on-exec sync pipe
- */
-static void runProgram(const ChildPlan& plan, int syncWriteFd) {
     // Nothing the JVM has open (database and message-broker sockets, jars, logs, ...) may leak into
     // the sandbox, where it would bypass the network namespace and file permissions.
     markInheritedDescriptorsCloseOnExec();
@@ -799,7 +481,7 @@ static void runProgram(const ChildPlan& plan, int syncWriteFd) {
     unshare(CLONE_NEWNET);
 
     // Drop privileges to the unprivileged sandbox user (only when running as root). The process
-    // count cap is applied only here, because RLIMIT_NPROC is per real-UID: enforcing it without a
+    // (and thread) count cap is applied only here, because RLIMIT_NPROC is per real-UID: enforcing it without a
     // dedicated user would count, and throttle, every process owned by the shared account. It
     // counts threads too, so a compilation gets a higher cap than a run of the submission: the Go
     // toolchain runs one compiler per CPU, each with a thread per CPU.
@@ -822,8 +504,8 @@ static void runProgram(const ChildPlan& plan, int syncWriteFd) {
 
     // The output file is opened only now, with the sandbox user's credentials: the work directory is
     // writable by the submission, which may have planted a symlink (or a hard link, FIFO, ...) at
-    // this path during an earlier checkpoint, and root must never follow it.
-    // Whatever is not captured goes to /dev/null, never to the judger's own stdout or stderr.
+    // this path during an earlier checkpoint, and root must never follow it. Whatever is not
+    // captured goes to /dev/null, never to the judger's own stdout or stderr.
     int nullFd = open("/dev/null", O_WRONLY | O_CLOEXEC);
     if ( nullFd < 0 ) {
         reportChildFailure(syncWriteFd, STEP_DEV_NULL);
@@ -1064,9 +746,16 @@ static std::vector<std::string> buildEnvironment(bool dropPrivileges, const std:
  * Creating namespaces is denied as well. An unprivileged user namespace hands the submission a full
  * set of capabilities inside it, which turns every namespaced kernel interface (mount, netfilter,
  * ...) into attack surface and lets it undo the filesystem and network confinement. unshare and
- * setns are denied outright; clone is denied only when it asks for a new namespace, so threads and
- * fork keep working; clone3 passes its flags in memory, which seccomp cannot inspect, so it fails
- * with ENOSYS, and the C library (glibc 2.34+ creates threads with clone3) falls back to clone.
+ * setns are denied outright; clone is denied only when it asks for a new namespace, so threads (and
+ * a compiler's fork) keep working; clone3 passes its flags in memory, which seccomp cannot inspect,
+ * so it fails with ENOSYS, and the C library (glibc 2.34+ creates threads with clone3) falls back to
+ * clone.
+ *
+ * A run of the submission may not create processes either, only threads: fork and vfork fail with
+ * EPERM, and so does clone without CLONE_THREAD (which is how the C library forks and posix_spawn
+ * spawns). The run is then a single process, whose CPU time and memory are exactly those of the
+ * program, and which leaves nothing behind once it is gone. Threads count against RLIMIT_NPROC.
+ * Compilers are trusted and legitimately run other programs (the gcc driver, go build, ...).
  *
  * Network sockets are denied too: socket and socketpair fail with EACCES for every address family
  * but AF_UNIX. The private network namespace cannot be created without CAP_SYS_ADMIN (e.g. in a
@@ -1076,10 +765,11 @@ static std::vector<std::string> buildEnvironment(bool dropPrivileges, const std:
  * calling socket(), fails with ENOSYS, so runtimes such as libuv fall back to plain system calls.
  * Only native-architecture system calls pass the filter (libseccomp kills any other ABI, such as
  * i386's socketcall), so these rules cannot be bypassed through a compat entry point.
+ * @param  runOfSubmission - whether the filter is for a run of the submission (not a compilation)
  * @return the exported BPF bytes, or an empty string if the filter (or any one of its rules) could
  *         not be built - a partial filter is never returned
  */
-static std::string buildSeccompProgram() {
+static std::string buildSeccompProgram(bool runOfSubmission) {
     scmp_filter_ctx ctx = seccomp_init(SCMP_ACT_ALLOW);
     if ( ctx == nullptr ) {
         return std::string();
@@ -1100,14 +790,25 @@ static std::string buildSeccompProgram() {
         SCMP_SYS(swapon),            SCMP_SYS(swapoff),          SCMP_SYS(settimeofday),
         SCMP_SYS(clock_settime),     SCMP_SYS(adjtimex),         SCMP_SYS(setns),
         SCMP_SYS(unshare),
-        // Leaving the process group would escape the watchdog's kill(-pgid) and the group's
-        // resource accounting, letting a process outlive the run and tamper with later ones.
+        // Leaving the process group would escape the kill(-pgid) that ends a compilation, letting
+        // a process outlive it and tamper with later runs.
         SCMP_SYS(setsid),            SCMP_SYS(setpgid),
     };
     for ( int syscallNr : deniedSyscalls ) {
         if ( syscallNr >= 0 ) {
             addRule(seccomp_rule_add(ctx, SCMP_ACT_ERRNO(EPERM), syscallNr, 0));
         }
+    }
+    if ( runOfSubmission ) {
+        // fork and vfork do not exist on every architecture (arm64 has clone only).
+        const int processSyscalls[] = { SCMP_SYS(fork), SCMP_SYS(vfork) };
+        for ( int syscallNr : processSyscalls ) {
+            if ( syscallNr >= 0 ) {
+                addRule(seccomp_rule_add(ctx, SCMP_ACT_ERRNO(EPERM), syscallNr, 0));
+            }
+        }
+        addRule(seccomp_rule_add(ctx, SCMP_ACT_ERRNO(EPERM), SCMP_SYS(clone), 1,
+                                 SCMP_A0(SCMP_CMP_MASKED_EQ, CLONE_THREAD, 0)));
     }
 
     // clone(flags, ...): the flags are the first argument on every architecture this builds for
@@ -1166,145 +867,22 @@ static std::string buildSeccompProgram() {
 }
 
 /**
- * Reaps the members of a process group that are children of this process. The program's
- * descendants are reparented to the supervisor, which reaps them; only if the supervisor died would
- * they be reparented to init or, when the judger is PID 1 (e.g. in its Docker image), to us, and
- * linger as zombies counted against RLIMIT_NPROC. Only the given group is waited for, so the JVM's
- * other children are never touched.
- * @param  pgid - the process group ID
+ * Waits (bounded) until a process group that has been sent SIGKILL is empty. A member whose parent
+ * died is reparented to init or, when the judger is PID 1 (as in its Docker image), to the judger,
+ * which then reaps it here: only this group is waited for, so the JVM's other children are never
+ * touched.
+ * @param  pgid - the process group ID (> 0)
  */
-static void reapProcessGroup(pid_t pgid) {
-    if ( pgid <= 0 ) {
-        return; // waitpid(0) or waitpid(-1) would reap the JVM's own children
-    }
-    while ( waitpid(-pgid, nullptr, WNOHANG | __WALL) > 0 ) {
-        // Keep reaping.
-    }
-}
-
-/**
- * Kills every process in the group and waits (bounded) until the group is empty.
- * @param  pgid - the process group ID
- */
-static void killProcessGroup(pid_t pgid) {
+static void awaitProcessGroupExit(pid_t pgid) {
     for ( int attempt = 0; attempt < CLEANUP_ATTEMPTS; ++attempt ) {
-        reapProcessGroup(pgid);
-        if ( kill(-pgid, SIGKILL) != 0 ) {
+        while ( waitpid(-pgid, nullptr, WNOHANG | __WALL) > 0 ) {
+            // Keep reaping.
+        }
+        if ( kill(-pgid, 0) != 0 ) {
             return; // ESRCH: nothing is left in the group
         }
         usleep(POLL_INTERVAL_US);
     }
-}
-
-/**
- * Kills every process owned by the sandbox user. A helper process drops to that user and calls
- * kill(-1, SIGKILL), which signals every process it is allowed to signal (all of the sandbox user's
- * processes in this PID namespace) except itself, until the judger sees none of them left. This is
- * only safe when the sandbox user is dedicated to the judger, i.e. when privileges are dropped; it
- * is never called otherwise, since it would kill the judger's own user's processes.
- *
- * kill(-1) cannot tell when the user has no process left: it fails with ESRCH only when there is
- * no other process at all, and succeeds (signalling nobody) as long as there is any, so the judger
- * checks /proc instead. When nothing of the user survived the run, which is the norm, no helper
- * is started at all.
- * @param  uid  - the sandbox user ID (never root)
- * @param  pgid - the run's process group, reaped meanwhile in case its members are our children
- */
-static void killSandboxUserProcesses(uid_t uid, pid_t pgid) {
-    if ( uid == 0 || !hasLiveProcessOf(uid, 0) ) {
-        return;
-    }
-    int stopPipe[2];
-    if ( pipe2(stopPipe, O_CLOEXEC) != 0 ) {
-        return;
-    }
-    pid_t helper = fork();
-    if ( helper < 0 ) {
-        close(stopPipe[0]);
-        close(stopPipe[1]);
-        return;
-    }
-    if ( helper == 0 ) {
-        // Async-signal-safe only: this is a fork of the multi-threaded JVM. A failed or partial
-        // setuid must never reach kill(-1), which as root would signal every process on the host.
-        close(stopPipe[1]);
-        if ( setuid(uid) != 0 || getuid() != uid || geteuid() != uid ) {
-            _exit(2);
-        }
-        struct pollfd stop;
-        stop.fd     = stopPipe[0];
-        stop.events = POLLIN;
-        for ( int attempt = 0; attempt < CLEANUP_ATTEMPTS; ++attempt ) {
-            kill(-1, SIGKILL);
-            // The judger closes the pipe once none of the user's processes is left.
-            stop.revents = 0;
-            if ( poll(&stop, 1, POLL_INTERVAL_US / 1000) > 0 ) {
-                _exit(0);
-            }
-        }
-        _exit(1);
-    }
-    close(stopPipe[0]);
-    for ( int attempt = 0; attempt < CLEANUP_ATTEMPTS; ++attempt ) {
-        reapProcessGroup(pgid);
-        if ( !hasLiveProcessOf(uid, helper) ) {
-            break;
-        }
-        usleep(POLL_INTERVAL_US);
-    }
-    close(stopPipe[1]);
-    while ( waitpid(helper, nullptr, 0) < 0 && errno == EINTR ) {
-        // Retry on interrupted system call.
-    }
-}
-
-/**
- * Checks whether a user has a live (not zombie) process, by scanning /proc. A process counts when
- * the user is its real, effective or saved user, i.e. when the user may signal it.
- * @param  uid     - the user ID
- * @param  exclude - a process to ignore (0 for none)
- * @return whether such a process exists (true if /proc cannot be read, to stay on the safe side)
- */
-static bool hasLiveProcessOf(uid_t uid, pid_t exclude) {
-    DIR* procDir = opendir("/proc");
-    if ( procDir == nullptr ) {
-        return true;
-    }
-    bool found = false;
-    struct dirent* entry;
-    while ( !found && (entry = readdir(procDir)) != nullptr ) {
-        if ( entry->d_name[0] < '0' || entry->d_name[0] > '9' || atoi(entry->d_name) == exclude ) {
-            continue;
-        }
-        char path[64];
-        snprintf(path, sizeof(path), "/proc/%s/status", entry->d_name);
-        int fd = open(path, O_RDONLY | O_CLOEXEC);
-        if ( fd < 0 ) {
-            continue;
-        }
-        // "Name:", "Umask:", "State:", ..., "Uid:" are the first lines: 2 KB is plenty.
-        char    buffer[2048];
-        ssize_t length = read(fd, buffer, sizeof(buffer) - 1);
-        close(fd);
-        if ( length <= 0 ) {
-            continue;
-        }
-        buffer[length] = '\0';
-        const char*  stateLine = strstr(buffer, "\nState:");
-        const char*  uidLine   = strstr(buffer, "\nUid:");
-        char         state     = '?';
-        unsigned int realUid, effectiveUid, savedUid;
-        if ( stateLine == nullptr || uidLine == nullptr || sscanf(stateLine + 7, " %c", &state) != 1 ||
-             sscanf(uidLine + 5, " %u %u %u", &realUid, &effectiveUid, &savedUid) != 3 ) {
-            continue;
-        }
-        if ( state != 'Z' && state != 'X' &&
-             (realUid == uid || effectiveUid == uid || savedUid == uid) ) {
-            found = true;
-        }
-    }
-    closedir(procDir);
-    return found;
 }
 
 /**
@@ -1330,108 +908,6 @@ static rlim_t getDataLimit(int memoryLimitKb) {
 }
 
 /**
- * Sums the CPU time of every live process in a process group and lists them with their resident
- * set size (RSS), by scanning /proc. A process's CPU time includes its children that it has already
- * waited for, so a process tree is counted once. The RSS counts a page shared between processes
- * (e.g. after fork) once per process, so their sum is an upper bound of the group's memory; the
- * watchdog reads their proportional set size (readProportionalSetSizeKb) when it needs the exact
- * figure.
- * @param  pgid      - the process group ID
- * @param  cpuMillis - receives the total CPU time (user + system) in milliseconds
- * @param  members   - receives the group's processes and their RSS in KB
- * @return whether /proc could be scanned
- */
-static bool readProcessGroupUsage(pid_t pgid, long long* cpuMillis,
-                                  std::vector<std::pair<pid_t, long long>>* members) {
-    members->clear();
-    DIR* procDir = opendir("/proc");
-    if ( procDir == nullptr ) {
-        return false;
-    }
-    long hertz    = sysconf(_SC_CLK_TCK);
-    long pageSize = sysconf(_SC_PAGESIZE);
-    if ( hertz <= 0 ) {
-        hertz = 100;
-    }
-    if ( pageSize <= 0 ) {
-        pageSize = 4096;
-    }
-    long long ticks = 0;
-    struct dirent* entry;
-    while ( (entry = readdir(procDir)) != nullptr ) {
-        if ( entry->d_name[0] < '0' || entry->d_name[0] > '9' ) {
-            continue;
-        }
-        char path[64];
-        snprintf(path, sizeof(path), "/proc/%s/stat", entry->d_name);
-        int fd = open(path, O_RDONLY | O_CLOEXEC);
-        if ( fd < 0 ) {
-            continue;
-        }
-        char    buffer[1024];
-        ssize_t length = read(fd, buffer, sizeof(buffer) - 1);
-        close(fd);
-        if ( length <= 0 ) {
-            continue;
-        }
-        buffer[length] = '\0';
-
-        // The comm field may contain spaces/parentheses, so parse after the last ')'. The fields
-        // read are 3 (state), 5 (pgrp), 14-17 (utime, stime, cutime, cstime) and 24 (rss).
-        char* rightParen = strrchr(buffer, ')');
-        if ( rightParen == nullptr ) {
-            continue;
-        }
-        char      state;
-        int       processGroup;
-        long long utime, stime, cutime, cstime, rss;
-        int fields = sscanf(rightParen + 1,
-            " %c %*s %d %*s %*s %*s %*s %*s %*s %*s %*s %lld %lld %lld %lld %*s %*s %*s %*s %*s %*s %lld",
-            &state, &processGroup, &utime, &stime, &cutime, &cstime, &rss);
-        if ( fields != 7 || processGroup != pgid || state == 'Z' || state == 'X' ) {
-            continue;
-        }
-        ticks += utime + stime + cutime + cstime;
-        members->push_back(std::make_pair((pid_t) atoi(entry->d_name), rss * (pageSize / 1024)));
-    }
-    closedir(procDir);
-    *cpuMillis = ticks * 1000 / hertz;
-    return true;
-}
-
-/**
- * Reads the proportional set size (PSS) of a process from /proc/<pid>/smaps_rollup (Linux 4.14+):
- * a page shared by n processes counts 1/n towards each, so the PSS of a group's processes adds up
- * pages shared after fork, or the shared libraries of the JVM and other runtimes, only once.
- * Reading it requires ptrace-read access to the process (see the watchdog) and walks its page
- * tables, so it costs far more than its stat.
- * @param  pid - the process ID
- * @return the PSS in KB, or -1 if it cannot be read (the caller then counts the RSS instead)
- */
-static long long readProportionalSetSizeKb(pid_t pid) {
-    char path[64];
-    snprintf(path, sizeof(path), "/proc/%d/smaps_rollup", (int) pid);
-    int fd = open(path, O_RDONLY | O_CLOEXEC);
-    if ( fd < 0 ) {
-        return -1;
-    }
-    // The file is a header line and a few dozen "Name:   value kB" lines; Pss is the third field.
-    char    buffer[4096];
-    ssize_t length = read(fd, buffer, sizeof(buffer) - 1);
-    close(fd);
-    if ( length <= 0 ) {
-        return -1;
-    }
-    buffer[length] = '\0';
-    const char* pss = strstr(buffer, "\nPss:");
-    if ( pss == nullptr ) {
-        return -1;
-    }
-    long long kb = -1;
-    return sscanf(pss + 5, " %lld", &kb) == 1 ? kb : -1;
-}
-
-/**
  * Gets a monotonic timestamp in milliseconds (immune to wall-clock adjustments).
  * @return the current monotonic time in milliseconds
  */
@@ -1442,46 +918,54 @@ static long long getMonotonicMillis() {
 }
 
 /**
- * Reads the consumed CPU time (user + system) of a process from /proc.
+ * Reads a file of /proc/<pid> (in one read: the files read here are small) as a string.
+ * @param  pid    - the process ID
+ * @param  name   - the file name, e.g. "stat"
+ * @param  buffer - receives the NUL-terminated content
+ * @param  size   - the size of the buffer
+ * @return whether anything could be read
+ */
+static bool readProcessFile(pid_t pid, const char* name, char* buffer, size_t size) {
+    char path[64];
+    snprintf(path, sizeof(path), "/proc/%d/%s", (int) pid, name);
+    int fd = open(path, O_RDONLY | O_CLOEXEC);
+    if ( fd < 0 ) {
+        return false;
+    }
+    ssize_t length = read(fd, buffer, size - 1);
+    close(fd);
+    if ( length <= 0 ) {
+        return false;
+    }
+    buffer[length] = '\0';
+    return true;
+}
+
+/**
+ * Reads the consumed CPU time (user + system, every thread) of a process from /proc.
  * @param  pid - the process ID
  * @return the consumed CPU time in milliseconds, or -1 if it cannot be read
  */
-static int readCpuTimeMillis(pid_t pid) {
-    char path[64];
-    snprintf(path, sizeof(path), "/proc/%d/stat", (int) pid);
-
-    FILE* fp = fopen(path, "r");
-    if ( fp == nullptr ) {
+static long long readCpuTimeMillis(pid_t pid) {
+    char buffer[1024];
+    if ( !readProcessFile(pid, "stat", buffer, sizeof(buffer)) ) {
         return -1;
     }
-    std::string content;
-    char        buffer[4096];
-    size_t      bytesRead;
-    while ( (bytesRead = fread(buffer, 1, sizeof(buffer), fp)) > 0 ) {
-        content.append(buffer, bytesRead);
-    }
-    fclose(fp);
-
-    // The comm field (field 2) may contain spaces/parentheses, so parse after the last ')'.
-    // The remaining tokens start at field 3 (state); utime is field 14, stime is field 15.
-    size_t rightParen = content.rfind(')');
-    if ( rightParen == std::string::npos ) {
+    // The comm field (field 2) may contain spaces and parentheses, so parse after the last ')'.
+    // utime and stime are fields 14 and 15.
+    const char*        fields = strrchr(buffer, ')');
+    unsigned long long utime  = 0;
+    unsigned long long stime  = 0;
+    if ( fields == nullptr ||
+         sscanf(fields + 1, " %*s %*s %*s %*s %*s %*s %*s %*s %*s %*s %*s %llu %llu",
+                &utime, &stime) != 2 ) {
         return -1;
     }
-    std::istringstream iss(content.substr(rightParen + 1));
-    std::vector<std::string> tokens{
-        std::istream_iterator<std::string>{iss},
-        std::istream_iterator<std::string>{}
-    };
-    if ( tokens.size() <= 12 ) {
-        return -1;
-    }
-    long long ticks = atoll(tokens[11].c_str()) + atoll(tokens[12].c_str());
-    long      hertz = sysconf(_SC_CLK_TCK);
+    long hertz = sysconf(_SC_CLK_TCK);
     if ( hertz <= 0 ) {
         hertz = 100;
     }
-    return (int) (ticks * 1000 / hertz);
+    return (long long) ((utime + stime) * 1000 / (unsigned long long) hertz);
 }
 
 /**
@@ -1492,21 +976,10 @@ static int readCpuTimeMillis(pid_t pid) {
  * @return the peak resident set size in KB, or -1 if it cannot be read
  */
 static int readPeakMemoryKb(pid_t pid) {
-    char path[64];
-    snprintf(path, sizeof(path), "/proc/%d/status", (int) pid);
-
-    FILE* fp = fopen(path, "r");
-    if ( fp == nullptr ) {
+    char buffer[4096];
+    if ( !readProcessFile(pid, "status", buffer, sizeof(buffer)) ) {
         return -1;
     }
-    char line[256];
-    int  peakMemoryKb = -1;
-    while ( fgets(line, sizeof(line), fp) != nullptr ) {
-        if ( strncmp(line, "VmHWM:", 6) == 0 ) {
-            peakMemoryKb = atoi(line + 6);
-            break;
-        }
-    }
-    fclose(fp);
-    return peakMemoryKb;
+    const char* line = strstr(buffer, "\nVmHWM:");
+    return line != nullptr ? atoi(line + 7) : -1;
 }
