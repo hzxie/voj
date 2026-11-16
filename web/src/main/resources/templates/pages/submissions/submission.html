@@ -29,7 +29,7 @@
                     <div class="vw-header-spacer"></div>
                     <div class="vw-titlebar-meta">
                         <span><span th:text="#{voj.submissions.submission.meta-time}">Time</span> <b class="vw-head" th:text="|${submission.usedTime} ms|">0 ms</b></span>
-                        <span><span th:text="#{voj.submissions.submission.meta-memory}">Memory</span> <b class="vw-head" th:text="|${submission.usedMemory} K|">0 K</b></span>
+                        <span><span th:text="#{voj.submissions.submission.meta-memory}">Memory</span> <b class="vw-head" th:text="|${submission.usedMemory} KB|">0 KB</b></span>
                         <span><span th:text="#{voj.submissions.submission.meta-lang}">Lang</span> <b class="vw-head" th:text="${lang != null ? lang.languageName : ''}">Lang</b></span>
                     </div>
                 </div>
@@ -76,7 +76,7 @@
                             <div><span class="k" th:text="#{voj.submissions.submission.submitted-by}">Submitted by</span><a class="vw-accent" th:href="@{/accounts/user/{id}(id=${usr != null ? usr.uid : 0})}" th:text="${usr != null ? usr.username : ''}">user</a></div>
                             <div><span class="k" th:text="#{voj.submissions.submission.language}">Language</span><span class="v" th:text="${lang != null ? lang.languageName : ''}">Lang</span></div>
                             <div><span class="k" th:text="#{voj.submissions.submission.used-time}">Time</span><span class="v" id="used-time" th:text="|${submission.usedTime} ms|">0 ms</span></div>
-                            <div><span class="k" th:text="#{voj.submissions.submission.used-memory}">Memory</span><span class="v" id="used-memory" th:text="|${submission.usedMemory} K|">0 K</span></div>
+                            <div><span class="k" th:text="#{voj.submissions.submission.used-memory}">Memory</span><span class="v" id="used-memory" th:text="|${submission.usedMemory} KB|">0 KB</span></div>
                             <div><span class="k" th:text="#{voj.submissions.submission.code-length}">Code length</span><span class="v" th:text="|${#strings.length(submission.code)} B|">0 B</span></div>
                             <div><span class="k" th:text="#{voj.submissions.submission.submit-time}">Submit Time</span><span class="v" th:text="${@dateFormatter.dateTimeLongMedium(submission.submitTime, language)}" th:data-time="${submission.submitTime?.time}" data-format="datetime">time</span></div>
                             <div><span class="k" th:text="#{voj.submissions.submission.execute-time}">Execute Time</span><span class="v" id="execute-time" th:text="${@dateFormatter.dateTimeLongMedium(submission.executeTime, language)}" th:data-time="${submission.executeTime?.time}" data-format="datetime">time</span></div>
@@ -106,63 +106,27 @@
         });
     </script>
     <th:block th:if="${submission.judgeResult != null and submission.judgeResult.judgeResultSlug == 'PD'}">
+    <script type="text/javascript" th:src="|${cdnUrl}/js/live-judging.js?v=${version}|"></script>
     <script type="text/javascript" th:inline="javascript">
-        // Swaps the verdict name and its colour (the `flag-<slug>` class drives the colour in CSS)
-        // on both the title-bar headline and the sidebar badge. The slug is taken from the
-        // authoritative poll below, not from the SSE stream, so the colour always matches the result.
-        function applyVerdict(slug, name) {
-            var flag = 'flag-' + slug.toLowerCase(),
-                strip = function(i, c) { return (c.match(/flag-\S+/g) || []).join(' '); };
-            $('#judge-result').text(name).closest('.vw-verdict-lg').removeClass(strip).addClass(flag);
-            $('.vw-side-verdict-name').text(name).removeClass(strip).addClass(flag);
-        }
-        // The live log of the judging. The browser reconnects a stream that ends (e.g. it timed out)
-        // while the submission is pending; it is closed once the verdict is in, by the stream or by
-        // the poll below, which reads it from the database every 10 seconds.
-        var getterInterval = setInterval(getRealTimeJudgeResult, 10000),
-            source         = new EventSource([[@{/submission/getRealTimeJudgeResult.action(submissionId=${submission.submissionId})}]]),
-            isConnected    = false;
-        source.onopen = function() {
-            if ( isConnected ) { return; }
-            isConnected = true;
-            $('#judge-log').append('<p>' + [[#{voj.submissions.submission.connected-to-server}]] + '</p>');
-        };
-        source.onmessage = function(e) {
-            var mapMessage  = JSON.parse(e['data']),
-                judgeResult = mapMessage['judgeResult'],
-                judgeLog    = mapMessage['message'];
-            $('#judge-result').text(judgeResult);
-            $('#judge-log').append(renderMarkdown(judgeLog));
-            // 'Running' is intermediate; any other verdict is terminal, so pull the final
-            // slug/time/memory at once instead of waiting for the next poll.
-            if ( judgeResult != 'Running' ) {
-                source.close();
-                getRealTimeJudgeResult();
+        followJudging({
+            submissionId:  [[${submission.submissionId}]],
+            streamUrl:     [[@{/submission/getRealTimeJudgeResult.action(submissionId=${submission.submissionId})}]],
+            submissionUrl: [[@{/submission/getSubmission.action}]],
+            connectedText: [[#{voj.submissions.submission.connected-to-server}]],
+            // The verdict's name, and its colour (the `flag-<slug>` class drives it in CSS) once
+            // its slug is known, on both the title-bar headline and the sidebar badge.
+            showVerdict: function(name, slug) {
+                $('#judge-result, .vw-side-verdict-name').text(name);
+                if ( !slug ) { return; }
+                $('#judge-result').closest('.vw-verdict-lg').add('.vw-side-verdict-name')
+                    .removeClass(function(i, c) { return (c.match(/flag-\S+/g) || []).join(' '); })
+                    .addClass('flag-' + slug.toLowerCase());
+            },
+            elements: {
+                judgeLog: '#judge-log', usedTime: '#used-time', usedMemory: '#used-memory',
+                executeTime: '#execute-time', judgerName: '#judger-name'
             }
-        };
-        function getRealTimeJudgeResult() {
-            $.ajax({
-                type: 'GET',
-                url: [[@{/submission/getSubmission.action}]],
-                data: { 'submissionId': [[${submission.submissionId}]] },
-                dataType: 'JSON',
-                success: function(result){
-                    if ( result['isSuccessful'] && result['submission']['judgeResult']['judgeResultSlug'] != 'PD' ) {
-                        var submission = result['submission'];
-                        applyVerdict(submission['judgeResult']['judgeResultSlug'], submission['judgeResult']['judgeResultName']);
-                        $('#used-time').html(submission['usedTime'] + " ms");
-                        $('#used-memory').html(submission['usedMemory'] + " K");
-                        $('#execute-time').text(formatDateTime(submission['executeTime'], 'datetime'));
-                        $('#judge-log').html(renderMarkdown(submission['judgeLog']));
-                        if ( submission['judger'] ) {
-                            $('#judger-name').text(submission['judger']['username']);
-                        }
-                        clearInterval(getterInterval);
-                        source.close();
-                    }
-                }
-            });
-        }
+        });
     </script>
     </th:block>
     <script type="text/javascript" th:src="|${cdnUrl}/js/highlight.min.js?v=${version}|"></script>

@@ -100,10 +100,9 @@
         }
     </script>
     <th:block th:if="${submission.judgeResult != null and submission.judgeResult.judgeResultSlug == 'PD'}">
+    <script type="text/javascript" th:src="|${cdnUrl}/js/live-judging.js?v=${version}|"></script>
     <script type="text/javascript" th:inline="javascript">
-        // Mirrors the server-side `vcls` mapping (see the th:with on .adm-detail): the verdict pill's
-        // colour follows the result slug. Re-applied here so the live update recolours the pill too,
-        // not just its text.
+        // The colour of the verdict pill follows its slug, as the `vcls` of the .adm-detail above.
         function verdictClass(slug) {
             if ( slug == 'AC' ) { return 'c-accent'; }
             if ( slug == 'WA' ) { return 'c-err'; }
@@ -111,52 +110,21 @@
             if ( slug == 'RE' || slug == 'PE' ) { return 'c-info'; }
             return 'c-warn';
         }
-        function applyVerdict(slug, name) {
-            $('#judge-result').text(name)
-                .removeClass('c-accent c-err c-muted c-info c-warn').addClass(verdictClass(slug));
-        }
-        // The live log of the judging. The browser reconnects a stream that ends (e.g. it timed out)
-        // while the submission is pending; it is closed once the verdict is in, by the stream or by
-        // the poll below, which reads it from the database every 10 seconds.
-        var getterInterval = setInterval(getRealTimeJudgeResult, 10000),
-            source         = new EventSource([[@{/submission/getRealTimeJudgeResult.action(submissionId=${submission.submissionId})}]]),
-            isConnected    = false;
-        source.onopen = function() {
-            if ( isConnected ) { return; }
-            isConnected = true;
-            $('#judge-log').append('<p>' + escapeHtml([[#{voj.administration.edit-submission.connected-to-server}]]) + '</p>');
-        };
-        source.onmessage = function(e) {
-            var mapMessage  = JSON.parse(e['data']),
-                judgeResult = mapMessage['judgeResult'],
-                judgeLog    = mapMessage['message'];
-            $('#judge-result').text(judgeResult);
-            $('#judge-log').append(renderMarkdown(judgeLog));
-            // 'Running' is intermediate; any other verdict is terminal, so pull the final
-            // slug/time/memory at once instead of waiting for the next poll.
-            if ( judgeResult != 'Running' ) {
-                source.close();
-                getRealTimeJudgeResult();
+        followJudging({
+            submissionId:  [[${submission.submissionId}]],
+            streamUrl:     [[@{/submission/getRealTimeJudgeResult.action(submissionId=${submission.submissionId})}]],
+            submissionUrl: [[@{/submission/getSubmission.action}]],
+            connectedText: [[#{voj.administration.edit-submission.connected-to-server}]],
+            showVerdict: function(name, slug) {
+                $('#judge-result').text(name);
+                if ( !slug ) { return; }
+                $('#judge-result').removeClass('c-accent c-err c-muted c-info c-warn').addClass(verdictClass(slug));
+            },
+            elements: {
+                judgeLog: '#judge-log', usedTime: '#used-time', usedMemory: '#used-memory',
+                executeTime: '#execute-time'
             }
-        };
-        function getRealTimeJudgeResult() {
-            $.ajax({
-                type: 'GET', url: [[@{/submission/getSubmission.action}]],
-                data: { 'submissionId': [[${submission.submissionId}]] }, dataType: 'JSON',
-                success: function(result){
-                    if ( result['isSuccessful'] && result['submission']['judgeResult']['judgeResultSlug'] != 'PD' ) {
-                        var submission = result['submission'];
-                        applyVerdict(submission['judgeResult']['judgeResultSlug'], submission['judgeResult']['judgeResultName']);
-                        $('#used-time').html(submission['usedTime'] + " ms");
-                        $('#used-memory').html(submission['usedMemory'] + " KB");
-                        $('#execute-time').text(formatDateTime(submission['executeTime'], 'datetime'));
-                        $('#judge-log').html(renderMarkdown(submission['judgeLog']));
-                        clearInterval(getterInterval);
-                        source.close();
-                    }
-                }
-            });
-        }
+        });
     </script>
     </th:block>
     </th:block>

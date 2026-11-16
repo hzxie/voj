@@ -806,6 +806,28 @@ class ViewRenderSmokeTest {
         .andExpect(content().string(not(containsString("<img src=x"))));
   }
 
+  /** Both pages of a pending submission follow its judging with the shared script. */
+  @Test
+  void pendingSubmissionPagesFollowTheJudging() throws Exception {
+    Submission submission = aSubmission(7000L);
+    submission.setJudgeResult(new JudgeResult(1, "PD", "Pending"));
+    when(submissionService.getSubmission(7000L)).thenReturn(submission);
+    when(contestService.isSubmissionVisible(any(), any())).thenReturn(true);
+    mockMvc
+        .perform(getWithCsrf("/submission/7000"))
+        .andExpect(status().isOk())
+        .andExpect(content().string(containsString("/js/live-judging.js?v=")))
+        .andExpect(content().string(containsString("followJudging({")))
+        .andExpect(content().string(containsString("judgerName: '#judger-name'")));
+
+    authenticateAdmin();
+    mockMvc
+        .perform(getWithCsrf("/administration/edit-submission/7000"))
+        .andExpect(status().isOk())
+        .andExpect(content().string(containsString("/js/live-judging.js?v=")))
+        .andExpect(content().string(containsString("followJudging({")));
+  }
+
   /** The profile escapes the display name and the bio (the bio is rendered as Markdown client-side). */
   @Test
   void userProfileTextIsEscaped() throws Exception {
