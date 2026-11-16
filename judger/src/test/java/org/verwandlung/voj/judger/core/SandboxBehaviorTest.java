@@ -105,13 +105,11 @@ public class SandboxBehaviorTest {
   /**
    * Test case: a program that burns more CPU time than its limit in four threads, and then exits
    * with 0. Expected result: Time Limit Exceeded, whether or not it was stopped before it exited.
-   * (Under a small memory limit: on Linux, each of its threads gets a stack as large as the limit,
-   * which the native sandbox's backstop counts, see docs/deployment.md.)
    */
   @Test
   public void testExitZeroOverTheTimeLimit() throws Exception {
     Assertions.assertEquals(
-        Verdict.TIME_LIMIT_EXCEEDED, judge(900013L, CPU_THREADS_CODE, 1000, THREADS_MEMORY_KB));
+        Verdict.TIME_LIMIT_EXCEEDED, judge(900013L, CPU_THREADS_CODE, 1000, 262144));
   }
 
   /**
@@ -234,13 +232,13 @@ public class SandboxBehaviorTest {
   }
 
   /**
-   * Test case: a multi-threaded program (eight threads). Expected result: Accepted: a run may not
-   * create processes, but it may create threads. (Under a small memory limit, see
-   * testExitZeroOverTheTimeLimit.)
+   * Test case: a multi-threaded program (eight threads that take the C library's default stack).
+   * Expected result: Accepted: a run may not create processes, but it may create threads, whose
+   * default stacks are small (a run has no stack limit, from which they would take their size).
    */
   @Test
   public void testRunCanCreateThreads() throws Exception {
-    Assertions.assertEquals(Verdict.NORMAL, judge(900012L, THREADS_CODE, 5000, THREADS_MEMORY_KB));
+    Assertions.assertEquals(Verdict.NORMAL, judge(900012L, THREADS_CODE, 5000, 262144));
     // printf writes "\r\n" on Windows.
     Assertions.assertEquals(
         "8\n",
@@ -1538,13 +1536,6 @@ public class SandboxBehaviorTest {
           return 0;
       }
       """;
-
-  /**
-   * The memory limit of a run of C++ threads that take the C library's default stack, which on
-   * Linux is the run's stack limit, its memory limit (KB): small enough for eight such stacks to
-   * fit in the native sandbox's backstop, twice the limit plus 256 MB.
-   */
-  private static final int THREADS_MEMORY_KB = 32768;
 
   /**
    * A program that recurses 131072 times with 1 KB of stack each (some 128 MB in all), and prints

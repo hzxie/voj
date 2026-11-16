@@ -141,7 +141,8 @@ public class IsolateRunnerTest {
     Assertions.assertTrue(args.contains("--wall-time=4.0"));
     Assertions.assertTrue(args.contains("--cg-mem=65536"));
     Assertions.assertTrue(args.contains("--fsize=1024"));
-    Assertions.assertTrue(args.contains("--stack=65536"));
+    // No stack limit but the memory limit, isolate's default (see SandboxPolicy).
+    Assertions.assertTrue(args.stream().noneMatch(arg -> arg.startsWith("--stack")));
     Assertions.assertTrue(args.contains("--open-files=128"));
   }
 

@@ -138,7 +138,6 @@ public class SandboxPolicyTest {
     Assertions.assertEquals(1048576, compilation.limits().memoryLimitKb());
     Assertions.assertEquals(262144, compilation.limits().outputLimitKb());
     Assertions.assertEquals(1024, compilation.limits().processLimit());
-    Assertions.assertEquals(8192, compilation.limits().stackLimitKb());
     Assertions.assertEquals(4096, compilation.limits().fileLimit());
     Assertions.assertEquals(1024, compilation.limits().signalQueueLimit());
     Assertions.assertFalse(run.compilation());
@@ -149,7 +148,6 @@ public class SandboxPolicyTest {
     Assertions.assertEquals(262144, run.limits().outputLimitKb());
     Assertions.assertEquals(
         System.getProperty("os.name").contains("Windows") ? 2 : 64, run.limits().processLimit());
-    Assertions.assertEquals(131072, run.limits().stackLimitKb());
     Assertions.assertEquals(128, run.limits().fileLimit());
     Assertions.assertEquals(1024, run.limits().signalQueueLimit());
     Assertions.assertEquals(

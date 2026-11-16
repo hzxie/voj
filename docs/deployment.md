@@ -149,18 +149,16 @@ sudo useradd --system --no-create-home --shell /usr/sbin/nologin voj-sandbox
   `mmap.mmap(-1, n)`, a shared mapping, do not work in a run (the JVM's other
   collectors do). A run's JVM is told its memory limit and sizes its heap to
   it (see [Java and Kotlin runs](#java-and-kotlin-runs)).
-- **Stack.** A run's main thread may grow its stack up to the run's memory
-  limit (`RLIMIT_STACK`, soft and hard alike), as is usual for a judge: a
-  program may recurse as deep as its memory allows, and the stack it touches
-  counts against its memory limit like any other memory. A compilation's is
-  8 MB, Linux's usual default. The C library (glibc) also gives every thread
-  that does not choose its stack size (C and C++ threads, `std::thread`,
-  Python's `threading`) a stack of that size, and each such stack counts in full
-  against the backstop above, touched or not: a run can then start only about
-  two of them (a 256 MB limit has a 768 MB backstop), and the next fails to
-  start. Threads that set their stack size (`pthread_attr_setstacksize`,
-  `threading.stack_size`), and those of the JVM, Go, Rust and Node.js, which
-  always do, are not affected. isolate, which has no backstop, is not either.
+- **Stack.** A compilation or run has no stack limit but its memory limit, as
+  under isolate by default: a program may recurse as deep as its memory allows,
+  and the stack it touches counts against its memory limit like any other
+  memory (the native sandbox lifts `RLIMIT_STACK`, up to the judger's own hard
+  limit, which is normally none). It sets no stack limit of its own because the
+  C library (glibc) gives every thread that does not choose its stack size (C
+  and C++ threads, `std::thread`, Python's `threading`, the threads Node.js
+  starts) a stack as large as that limit, and each such stack would count in
+  full against the backstop above, touched or not: a few threads would exhaust
+  it. Under no limit, each gets 2 MB.
 - **Disk.** A compilation or run may write in its work directory, and
   `judger.outputLimit` bounds each file, not their number: until it ends and its
   directory is removed, a run can fill whatever file system holds

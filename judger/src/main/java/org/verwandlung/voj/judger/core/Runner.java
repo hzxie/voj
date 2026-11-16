@@ -63,7 +63,6 @@ public class Runner implements SandboxRunner {
               limits.wallTimeLimitMs(),
               limits.memoryLimitKb(),
               limits.memoryBackstopKb(),
-              limits.stackLimitKb(),
               limits.outputLimitKb(),
               limits.processLimit(),
               limits.fileLimit(),
@@ -107,7 +106,6 @@ public class Runner implements SandboxRunner {
    * @param wallTimeLimit - the wall-clock limit (ms)
    * @param memoryLimit - the limit of the peak resident memory (KB)
    * @param memoryBackstop - the limit of the committed memory (KB)
-   * @param stackLimit - the stack of the main thread (KB, Linux)
    * @param outputLimit - the largest file the program may write (KB)
    * @param processLimit - the processes (on Linux, and threads) the program may have at once
    * @param fileLimit - the descriptors each process may have open at once (Linux)
@@ -126,7 +124,6 @@ public class Runner implements SandboxRunner {
       int wallTimeLimit,
       int memoryLimit,
       int memoryBackstop,
-      int stackLimit,
       int outputLimit,
       int processLimit,
       int fileLimit,

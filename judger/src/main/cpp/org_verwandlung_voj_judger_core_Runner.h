@@ -13,7 +13,7 @@ extern "C" {
  * Signature: ([Ljava/lang/String;[Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZIIIIIIIII)[I
  */
 JNIEXPORT jintArray JNICALL Java_org_verwandlung_voj_judger_core_Runner_execute
-  (JNIEnv *, jobject, jobjectArray, jobjectArray, jstring, jstring, jstring, jboolean, jint, jint, jint, jint, jint, jint, jint, jint, jint);
+  (JNIEnv *, jobject, jobjectArray, jobjectArray, jstring, jstring, jstring, jboolean, jint, jint, jint, jint, jint, jint, jint, jint);
 
 /*
  * Class:     org_verwandlung_voj_judger_core_Runner

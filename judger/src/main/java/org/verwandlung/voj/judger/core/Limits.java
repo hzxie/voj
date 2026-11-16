@@ -27,8 +27,6 @@ package org.verwandlung.voj.judger.core;
  * @param memoryBackstopKb - the committed memory the native sandbox holds a process to (KB; Linux:
  *     RLIMIT_DATA, Windows: the Job's commit limit), which bounds how far a program gets between
  *     two measurements of its memory
- * @param stackLimitKb - the stack of the program's main thread (KB; Linux: RLIMIT_STACK, isolate's
- *     {@code --stack}; on Windows, the program's own header decides it)
  * @param outputLimitKb - the largest file the program may write, its output included (KB)
  * @param processLimit - how many processes the program may have at once; on Linux, whose kernel
  *     counts threads as processes, its threads too
@@ -43,7 +41,6 @@ public record Limits(
     int wallTimeLimitMs,
     int memoryLimitKb,
     int memoryBackstopKb,
-    int stackLimitKb,
     int outputLimitKb,
     int processLimit,
     int fileLimit,
@@ -58,7 +55,6 @@ public record Limits(
     requirePositive("wall-clock limit", wallTimeLimitMs);
     requirePositive("memory limit", memoryLimitKb);
     requirePositive("memory backstop", memoryBackstopKb);
-    requirePositive("stack limit", stackLimitKb);
     requirePositive("output limit", outputLimitKb);
     requirePositive("process limit", processLimit);
     requirePositive("descriptor limit", fileLimit);

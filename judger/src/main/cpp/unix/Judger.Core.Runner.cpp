@@ -159,7 +159,6 @@ struct ChildPlan {
   bool                     compileStep;    // compile: stderr also goes to the output file
   int                      timeLimit;      // ms
   rlim_t                   dataLimit;      // RLIMIT_DATA in bytes
-  rlim_t                   stackLimit;     // RLIMIT_STACK in bytes
   rlim_t                   outputLimit;    // RLIMIT_FSIZE in bytes
   unsigned long long       pageSize;       // the system's page size in bytes
   rlim_t                   processLimit;   // RLIMIT_NPROC of the sandbox user (processes + threads)
@@ -284,7 +283,6 @@ JNIEXPORT void JNICALL Java_org_verwandlung_voj_judger_core_Runner_selectSandbox
  * @param  wallTimeLimit   - the wall-clock limit (ms)
  * @param  memoryLimit     - the limit of the peak resident set (KB)
  * @param  memoryBackstop  - RLIMIT_DATA (KB)
- * @param  stackLimit      - RLIMIT_STACK (KB)
  * @param  outputLimit     - RLIMIT_FSIZE (KB)
  * @param  processLimit    - RLIMIT_NPROC of the sandbox user (processes and threads), as root
  * @param  fileLimit       - RLIMIT_NOFILE
@@ -296,7 +294,7 @@ JNIEXPORT void JNICALL Java_org_verwandlung_voj_judger_core_Runner_selectSandbox
 JNIEXPORT jintArray JNICALL Java_org_verwandlung_voj_judger_core_Runner_execute(
     JNIEnv* jniEnv, jobject selfReference, jobjectArray jArguments, jobjectArray jEnvironment,
     jstring jWorkDirectory, jstring jInputFile, jstring jOutputFile, jboolean compilation,
-    jint timeLimit, jint wallTimeLimit, jint memoryLimit, jint memoryBackstop, jint stackLimit,
+    jint timeLimit, jint wallTimeLimit, jint memoryLimit, jint memoryBackstop,
     jint outputLimit, jint processLimit, jint fileLimit, jint signalQueueLimit) {
     (void) selfReference;
     // ----- Resolve everything the child needs before fork -----
@@ -314,7 +312,6 @@ JNIEXPORT jintArray JNICALL Java_org_verwandlung_voj_judger_core_Runner_execute(
     plan.compileStep    = (compilation == JNI_TRUE);
     plan.timeLimit      = timeLimit;
     plan.dataLimit      = (rlim_t) memoryBackstop * 1024;
-    plan.stackLimit     = (rlim_t) stackLimit * 1024;
     plan.outputLimit    = (rlim_t) outputLimit * 1024;
     long pageSize       = sysconf(_SC_PAGESIZE);
     plan.pageSize       = pageSize > 0 ? (unsigned long long) pageSize : 4096;
@@ -603,8 +600,13 @@ static void runProgram(const ChildPlan& plan, int syncWriteFd) {
     if ( !setResourceLimit(RLIMIT_CPU, cpuSeconds, cpuSeconds + 1) ) {
         reportChildFailure(syncWriteFd, STEP_RESOURCE_LIMIT);
     }
+    // No stack limit but the memory limit, as under isolate: a program may recurse as deep as its
+    // memory allows (unless the judger's own hard limit is lower, which is kept). Not a limit of
+    // its own: the C library gives each thread that does not choose its stack one as large as
+    // RLIMIT_STACK, which RLIMIT_DATA counts in full, touched or not, so a few threads (Node.js
+    // starts some) would exhaust it; under no limit, it gives each 2 MB instead.
     if ( !setResourceLimit(RLIMIT_FSIZE, plan.outputLimit, plan.outputLimit) ||
-         !setResourceLimit(RLIMIT_STACK, plan.stackLimit, plan.stackLimit) ) {
+         !setResourceLimit(RLIMIT_STACK, RLIM_INFINITY, RLIM_INFINITY) ) {
         reportChildFailure(syncWriteFd, STEP_RESOURCE_LIMIT);
     }
     // No core dump, as under isolate: the host's core_pattern may pipe it to a handler that runs as
