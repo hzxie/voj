@@ -148,6 +148,10 @@ static const rlim_t    PROCESS_NUMBER_LIMIT   = 64;          // default RLIMIT_N
 // jars, go build its packages), so it gets more, as a backstop against a toolchain gone wrong.
 static const rlim_t    RUN_FILE_LIMIT         = 128;
 static const rlim_t    COMPILE_FILE_LIMIT     = 4096;
+// RLIMIT_SIGPENDING of a run (soft = hard): the signals queued to it and its POSIX timers, each a
+// kernel object outside any memory limit. Without it, the bound is the default of about half the
+// host's threads-max (some 240,000 on a host with 60 GB of RAM); no runtime needs more than a few.
+static const rlim_t    RUN_SIGNAL_QUEUE_LIMIT = 1024;
 static const int       CLEANUP_ATTEMPTS       = 1000;        // wait rounds (x 1 ms) after a run
 // RLIMIT_DATA backstop: 2 x the memory limit plus a headroom of max(256 MB, physical RAM / 32). The
 // headroom matters for the JVM, whose committed initial heap defaults to physical RAM / 64.
@@ -616,6 +620,19 @@ static void runProgram(const ChildPlan& plan, int syncWriteFd) {
         }
     }
     if ( !setResourceLimit(RLIMIT_FSIZE, OUTPUT_FILE_SIZE_LIMIT, OUTPUT_FILE_SIZE_LIMIT) ) {
+        reportChildFailure(syncWriteFd, STEP_RESOURCE_LIMIT);
+    }
+    // The queued signals and POSIX timers of a run (timer_create, rt_sigqueueinfo and
+    // rt_tgsigqueueinfo allocate one each), which no memory limit sees. The kernel counts them per
+    // real user (the sandbox user's processes, or, for a judger that is not root, those of the
+    // judger's user), but holds the count against the rlimit of the process a signal is queued to
+    // (for a timer, the one that creates it): the run's own, inherited by its threads, which it
+    // cannot raise. So the limit binds the run alone, never the judger, whose own limit is
+    // unchanged: the run's timer_create and real-time sigqueue fail (EAGAIN) once its user has that
+    // many queued, its own included. Other signals sent to it past the limit are delivered all the
+    // same, without their details (a standard signal is never queued twice, so it holds no more).
+    if ( !plan.compileStep &&
+         !setResourceLimit(RLIMIT_SIGPENDING, RUN_SIGNAL_QUEUE_LIMIT, RUN_SIGNAL_QUEUE_LIMIT) ) {
         reportChildFailure(syncWriteFd, STEP_RESOURCE_LIMIT);
     }
 

@@ -612,6 +612,29 @@ public class SandboxBehaviorTest {
   }
 
   /**
+   * Test case: a run that reads and tries to raise its limit of queued signals (RLIMIT_SIGPENDING),
+   * then creates POSIX timers, and queues a blocked real-time signal to itself, until it cannot.
+   * Expected result: the limit is 1024 (soft and hard) and cannot be raised (EPERM); timer_create
+   * and sigqueue fail with EAGAIN after at most 1024 (the count is per user, so the judger's own
+   * pending signals count too when it is not root).
+   */
+  @Test
+  public void testRunHasFewQueuedSignals() throws Exception {
+    Assumptions.assumeTrue("native".equalsIgnoreCase(sandbox), "This tests the native runner.");
+    Assumptions.assumeTrue(isLinux(), "RLIMIT_SIGPENDING is Linux-only.");
+    Assertions.assertEquals("AC", judge(900034L, SIGNAL_QUEUE_CODE, 5000, 262144));
+    Assertions.assertEquals(
+        String.join(
+            "\n",
+            "limit: 1024 1024",
+            "raise: EPERM",
+            "timer_create: EAGAIN after at most 1024: yes",
+            "sigqueue: EAGAIN after at most 1024: yes",
+            ""),
+        Files.readString(Path.of(workBaseDirectory, "voj-sandbox-900034", "output.txt")));
+  }
+
+  /**
    * Test case: a program whose static data (1 TB of bss) alone exceeds the kernel memory backstop
    * (RLIMIT_DATA), so that it cannot even be loaded. Expected result: Memory Limit Exceeded, not the
    * runtime error of the SIGSEGV the kernel kills such a program with while loading it. The program
@@ -1653,6 +1676,65 @@ public class SandboxBehaviorTest {
           }
           int on = 1;
           report("SO_PASSCRED", setsockopt(pair[0], SOL_SOCKET, SO_PASSCRED, &on, sizeof(on)) == 0);
+          return 0;
+      }
+      """;
+
+  /**
+   * A program that reads and tries to raise its RLIMIT_SIGPENDING, then creates POSIX timers and
+   * queues a blocked real-time signal to itself until it cannot, and reports how each ends.
+   */
+  private static final String SIGNAL_QUEUE_CODE =
+      """
+      #include <cerrno>
+      #include <csignal>
+      #include <cstdio>
+      #include <cstring>
+      #include <ctime>
+      #include <sys/resource.h>
+      #include <unistd.h>
+
+      static const char* name(int error) {
+          return error == EPERM ? "EPERM" : error == EAGAIN ? "EAGAIN" : std::strerror(error);
+      }
+
+      static timer_t timers[1 << 20];
+
+      int main() {
+          rlimit limit;
+          if (getrlimit(RLIMIT_SIGPENDING, &limit) != 0) {
+              return 1;
+          }
+          std::printf("limit: %llu %llu\\n", (unsigned long long) limit.rlim_cur,
+              (unsigned long long) limit.rlim_max);
+          rlimit raised = {limit.rlim_max + 1, limit.rlim_max + 1};
+          std::printf("raise: %s\\n", setrlimit(RLIMIT_SIGPENDING, &raised) == 0 ? "raised" : name(errno));
+          sigevent event;
+          std::memset(&event, 0, sizeof(event));
+          event.sigev_notify = SIGEV_NONE;
+          int created = 0;
+          while (created < (1 << 20) && timer_create(CLOCK_MONOTONIC, &event, &timers[created]) == 0) {
+              ++created;
+          }
+          int error = errno;
+          std::printf("timer_create: %s after at most 1024: %s\\n", name(error),
+              created <= 1024 ? "yes" : "no");
+          for (int i = 0; i < created; ++i) {
+              timer_delete(timers[i]);
+          }
+          sigset_t blocked;
+          sigemptyset(&blocked);
+          sigaddset(&blocked, SIGRTMIN);
+          sigprocmask(SIG_BLOCK, &blocked, nullptr);
+          int queued = 0;
+          union sigval value;
+          value.sival_int = 0;
+          while (queued < (1 << 20) && sigqueue(getpid(), SIGRTMIN, value) == 0) {
+              ++queued;
+          }
+          error = errno;
+          std::printf("sigqueue: %s after at most 1024: %s\\n", name(error),
+              queued <= 1024 ? "yes" : "no");
           return 0;
       }
       """;

@@ -82,7 +82,14 @@ sudo useradd --system --no-create-home --shell /usr/sbin/nologin voj-sandbox
   library's `fork`, `posix_spawn`, `system`) fail with `EPERM`, and the `fork`
   and `vfork` system calls are not on its allowlist. Its threads are capped by
   the sandbox user's `RLIMIT_NPROC`, `judger.processLimit` (64), which counts
-  every process and thread of that user.
+  every process and thread of that user. Its queued signals and POSIX timers,
+  kernel objects that no memory limit sees, are capped at 1024
+  (`RLIMIT_SIGPENDING`, soft and hard alike): past that, `timer_create` and
+  queueing a real-time signal (`sigqueue`) fail with `EAGAIN`. The kernel
+  counts them per user (every run of the sandbox user, or, for a judger that is
+  not root, every process of the judger's user) but holds the count against the
+  limit of the process they are queued to, so the cap binds the run only, never
+  the judger; runs of one sandbox account on the same host share it.
   A compilation runs a trusted toolchain, which may start other programs (the
   `gcc` driver, `go build`), under `judger.compileProcessLimit` (1024). Every
   process of a compilation stays in the compiler's process group, since the
