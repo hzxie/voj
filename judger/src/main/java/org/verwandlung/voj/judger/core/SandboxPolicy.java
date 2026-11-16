@@ -37,7 +37,8 @@ import org.verwandlung.voj.judger.model.Problem;
 /**
  * Decides what a compilation or a run of a submission gets: its command line, its environment and
  * its limits. Every sandbox backend (see {@link SandboxRunner}) enforces what this builds, and
- * nothing of it is decided anywhere else.
+ * nothing of it is decided anywhere else. What no program gets at all, whatever its limits (the
+ * network, core dumps, ...), is the backends' own, alike for both.
  *
  * @author Haozhe Xie
  */

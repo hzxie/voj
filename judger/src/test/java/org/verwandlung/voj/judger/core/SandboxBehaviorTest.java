@@ -814,6 +814,21 @@ public class SandboxBehaviorTest {
   }
 
   /**
+   * Test case: a run that reports its core file limit, tries to raise it and then crashes
+   * (SIGSEGV). Expected result: a Runtime Error, with a core file limit of 0 (soft and hard) that
+   * cannot be raised, so that no core is dumped.
+   */
+  @Test
+  public void testCrashedRunDumpsNoCore() throws Exception {
+    Assumptions.assumeTrue("native".equalsIgnoreCase(sandbox), "This tests the native runner.");
+    Assumptions.assumeTrue(isLinux(), "RLIMIT_CORE is Linux-only.");
+    Assertions.assertEquals(Verdict.RUNTIME_ERROR, judge(900027L, CORE_LIMIT_CODE, 5000, 262144));
+    Assertions.assertEquals(
+        "core: 0 0\nraise: EPERM\n",
+        Files.readString(Path.of(workBaseDirectory, "voj-sandbox-900027", "output.txt")));
+  }
+
+  /**
    * Test case: a run that opens descriptors until it cannot, tries to raise its descriptor limit,
    * and creates a thread with a descriptor table of its own (clone with CLONE_THREAD but without
    * CLONE_FILES), which would get a limit of its own. Expected result: the limit is 128 (soft and
@@ -1526,6 +1541,28 @@ public class SandboxBehaviorTest {
 
       int main() {
           std::printf("%d\\n", recurse(131072 - 1) + 1);
+          return 0;
+      }
+      """;
+
+  /** A program that reports its core file limit, tries to raise it, and crashes. */
+  private static final String CORE_LIMIT_CODE =
+      """
+      #include <cerrno>
+      #include <csignal>
+      #include <cstdio>
+      #include <sys/resource.h>
+
+      int main() {
+          rlimit limit;
+          getrlimit(RLIMIT_CORE, &limit);
+          std::printf("core: %llu %llu\\n", (unsigned long long) limit.rlim_cur,
+                      (unsigned long long) limit.rlim_max);
+          limit.rlim_cur = limit.rlim_max = RLIM_INFINITY;
+          int raised = setrlimit(RLIMIT_CORE, &limit);
+          std::printf("raise: %s\\n", raised == 0 ? "raised" : errno == EPERM ? "EPERM" : "failed");
+          std::fflush(stdout);
+          std::raise(SIGSEGV);
           return 0;
       }
       """;

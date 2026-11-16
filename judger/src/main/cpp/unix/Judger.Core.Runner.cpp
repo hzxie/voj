@@ -606,6 +606,11 @@ static void runProgram(const ChildPlan& plan, int syncWriteFd) {
          !setResourceLimit(RLIMIT_STACK, plan.stackLimit, plan.stackLimit) ) {
         reportChildFailure(syncWriteFd, STEP_RESOURCE_LIMIT);
     }
+    // No core dump, as under isolate: the host's core_pattern may pipe it to a handler that runs as
+    // root outside every limit, and writing it would cost the program time it is judged on.
+    if ( !setResourceLimit(RLIMIT_CORE, 0, 0) ) {
+        reportChildFailure(syncWriteFd, STEP_RESOURCE_LIMIT);
+    }
     // Queued signals and POSIX timers are kernel objects that no memory limit sees. The kernel
     // counts them per user, but checks the count against the rlimit of the process that queues one
     // (or creates a timer): this binds the program alone, never the judger.

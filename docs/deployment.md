@@ -169,6 +169,11 @@ sudo useradd --system --no-create-home --shell /usr/sbin/nologin voj-sandbox
   judger's next download). `fallocate`, which could reserve space past
   `RLIMIT_FSIZE`, is not on a run's allowlist (the C library's
   `posix_fallocate` falls back to writing).
+- **Core dumps.** No compilation or run dumps core (`RLIMIT_CORE` is 0, soft
+  and hard alike), as under isolate: the host's `core_pattern` may hand a dump
+  to a program that runs as root outside every limit, and writing one would
+  cost a crashed run time it is judged on (a Runtime Error could become a Time
+  Limit Exceeded).
 - **Output.** A file the program writes, standard output included, may reach
   `judger.outputLimit` (256 MB; `RLIMIT_FSIZE`). A run whose output reaches the
   limit is Output Limit Exceeded, whether the kernel's `SIGXFSZ` kills it or it
