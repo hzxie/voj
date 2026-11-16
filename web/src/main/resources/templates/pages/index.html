@@ -75,7 +75,7 @@
                                     <div class="vw-head vw-contest-name" th:text="${contest.contestName}">Contest</div>
                                     <div class="vw-muted vw-contest-meta">
                                         <span th:text="${contest.contestMode}">Mode</span> &middot;
-                                        <span th:text="${@dateFormatter.dateTimeLongMedium(contest.startTime, language)}">time</span>
+                                        <span th:text="${@dateFormatter.dateTimeLongMedium(contest.startTime, language)}" th:data-time="${contest.startTime?.time}" data-format="datetime">time</span>
                                     </div>
                                 </div>
                                 <span class="vw-pill" th:classappend="${pill}"><span class="led"></span><span th:text="${contestStatus}">Status</span></span>
@@ -92,7 +92,7 @@
                             th:if="${bulletinBoardMessages != null and bulletinBoardMessages.size() > 0}">
                             <li th:each="bulletinBoardMessage : ${bulletinBoardMessages}" class="vw-bulletin-item">
                                 <button type="button" class="vw-bulletin-link" aria-haspopup="dialog">
-                                    <span class="vw-accent vw-bulletin-date"><span class="message-create-time" th:text="${@dateFormatter.dateShort(bulletinBoardMessage.messageCreateTime, language)}">date</span></span>
+                                    <span class="vw-accent vw-bulletin-date"><span class="message-create-time" th:text="${@dateFormatter.dateShort(bulletinBoardMessage.messageCreateTime, language)}" th:data-time="${bulletinBoardMessage.messageCreateTime?.time}" data-format="date-short">date</span></span>
                                     <span class="message-title vw-bulletin-title" th:text="${bulletinBoardMessage.messageTitle}">Title</span>
                                     <span class="message-body hide" th:text="${bulletinBoardMessage.messageBody}">Body</span>
                                 </button>

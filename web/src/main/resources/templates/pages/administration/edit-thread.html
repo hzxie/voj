@@ -30,7 +30,7 @@
                     <div class="adm-min0 adm-flex1">
                         <div class="adm-reply-head">
                             <span class="adm-cell head" th:text="${op.discussionReplyCreator != null ? '@' + op.discussionReplyCreator.username : '—'}">@author</span>
-                            <span class="adm-feed-when" th:text="${@dateFormatter.dateTimeLongMedium(op.discussionReplyCreateTime, language)}">when</span>
+                            <span class="adm-feed-when" th:text="${@dateFormatter.dateTimeLongMedium(op.discussionReplyCreateTime, language)}" th:data-time="${op.discussionReplyCreateTime?.time}" data-format="datetime">when</span>
                             <span class="adm-pill c-info xs" th:text="#{voj.administration.edit-thread.op}">OP</span>
                         </div>
                         <p class="adm-reply-body" th:text="${op.discussionReplyContent}">body</p>
@@ -43,7 +43,7 @@
                         <div class="adm-min0 adm-flex1">
                             <div class="adm-reply-head">
                                 <span class="adm-cell head" th:text="${reply.discussionReplyCreator != null ? '@' + reply.discussionReplyCreator.username : '—'}">@author</span>
-                                <span class="adm-feed-when" th:text="${@dateFormatter.dateTimeLongMedium(reply.discussionReplyCreateTime, language)}">when</span>
+                                <span class="adm-feed-when" th:text="${@dateFormatter.dateTimeLongMedium(reply.discussionReplyCreateTime, language)}" th:data-time="${reply.discussionReplyCreateTime?.time}" data-format="datetime">when</span>
                             </div>
                             <p class="adm-reply-body" th:text="${reply.discussionReplyContent}">body</p>
                         </div>
@@ -88,7 +88,7 @@
                     <a class="adm-report" th:each="reporter : ${reporters}" th:href="@{/administration/moderation/{id}(id=${reporter.reportedReplyId})}">
                         <div class="adm-report-top">
                             <span class="who" th:text="'@' + ${reporter.username}">@user</span>
-                            <span class="when" th:text="${@dateFormatter.dateTimeLongMedium(reporter.reportTime, language)}">when</span>
+                            <span class="when" th:text="${@dateFormatter.dateTimeLongMedium(reporter.reportTime, language)}" th:data-time="${reporter.reportTime?.time}" data-format="datetime">when</span>
                         </div>
                         <div class="adm-report-target">
                             <span th:text="#{voj.administration.edit-thread.reported}">reported</span>

@@ -68,7 +68,8 @@
                             <div class="vw-thread-replies"
                                  th:text="${topicSlug == 'solutions' ? discussionThread.numberOfReplies : (discussionThread.numberOfReplies <= 1 ? 0 : discussionThread.numberOfReplies - 1)}">0</div>
                             <div class="vw-thide vw-muted">
-                                <span class="reply-datetime" th:text="${latest == null ? #dates.format(discussionThread.discussionThreadCreateTime, 'yyyy-MM-dd HH:mm:ss') : #dates.format(latest.discussionReplyCreateTime, 'yyyy-MM-dd HH:mm:ss')}">time</span>
+                                <span th:with="when=${latest == null ? discussionThread.discussionThreadCreateTime : latest.discussionReplyCreateTime}"
+                                      th:text="${#dates.format(when, 'yyyy-MM-dd HH:mm')}" th:data-time="${when?.time}" data-format="relative">time</span>
                             </div>
                         </a>
                     </div>
@@ -83,9 +84,6 @@
 
     <th:block layout:fragment="scripts">
     <script type="text/javascript" th:inline="javascript">
-        $('span.reply-datetime').each(function() {
-            $(this).html(getTimeElapsed($(this).html(), [[${language}]]));
-        });
         createLoadMore('#more-discussion-threads', {
             doneText: [[#{voj.discussion.threads.no-more-discussion}]],
             load: function(done) {
@@ -135,7 +133,7 @@
                 '</div></div>' +
                 '<div class="vw-thide"><span class="vw-cat-badge ' + categoryClass(slug) + '">' + escapeHtml(topicName) + '</span></div>' +
                 '<div class="vw-thread-replies">' + escapeHtml(replies) + '</div>' +
-                '<div class="vw-thide vw-muted">' + getTimeElapsed(rtime, [[${language}]]) + '</div>' +
+                '<div class="vw-thide vw-muted">' + formatDateTime(rtime, 'relative') + '</div>' +
                 '</a>';
         }
     </script>

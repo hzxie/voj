@@ -55,13 +55,38 @@ function toBcp47Locale(locale) {
     return (locale || 'en_US').replace('_', '-');
 }
 
-/* Absolute, localized date-time string (consumed by submissions/contests).
- * Uses the built-in Intl API, replacing the legacy Date.js / Moment.js bundles. */
-function getFormatedDateString(dateTime, locale) {
-    return new Intl.DateTimeFormat(toBcp47Locale(locale), {
-        dateStyle: 'medium', timeStyle: 'medium'
-    }).format(new Date(dateTime));
+/* Dates and times are shown in the viewer's time zone, which only the browser knows. The
+ * server renders each timestamp as
+ *     <span data-time="<epoch ms>" data-format="datetime">fallback, in the server's zone</span>
+ * and localizeDateTimes() rewrites the text on load; scripts that build content format the
+ * timestamps of the JSON responses (epoch ms) with formatDateTime(), so a page and the rows
+ * or live updates added to it later agree. The format names map to Intl options below, plus
+ * 'relative' for "x ago". The locale defaults to the page language (<html lang>). */
+var DATE_TIME_FORMATS = {
+    'datetime':       { dateStyle: 'long',   timeStyle: 'medium' },
+    'datetime-short': { dateStyle: 'medium', timeStyle: 'short' },
+    'date':           { dateStyle: 'medium' },
+    'date-short':     { dateStyle: 'short' },
+    'month':          { year: 'numeric', month: 'short' }
+};
+function formatDateTime(dateTime, format, locale) {
+    locale = locale || document.documentElement.lang;
+    if ( format === 'relative' ) {
+        return getTimeElapsed(dateTime, locale);
+    }
+    var date = (dateTime == null || dateTime === '') ? new Date(NaN) : new Date(dateTime);
+    if ( isNaN(date.getTime()) ) {
+        return '';
+    }
+    return new Intl.DateTimeFormat(toBcp47Locale(locale), DATE_TIME_FORMATS[format]).format(date);
 }
+function localizeDateTimes(root) {
+    $('[data-time][data-format]', root || document).each(function() {
+        var text = formatDateTime(Number(this.getAttribute('data-time')), this.getAttribute('data-format'));
+        if ( text ) { this.textContent = text; }
+    });
+}
+$(function() { localizeDateTimes(); });
 
 /* Relative "x ago" string (consumed by the discussion threads).
  * Uses the built-in Intl.RelativeTimeFormat, replacing moment().fromNow(). */

@@ -36,7 +36,7 @@
                         </span>
                     </div>
                     <div class="vw-cmeta">
-                        <span>&#128197; <span th:text="${@dateFormatter.dateTimeLongMedium(contest.startTime, language)}">start</span> &rarr; <span th:text="${@dateFormatter.dateTimeLongMedium(contest.endTime, language)}">end</span></span>
+                        <span>&#128197; <span th:text="${@dateFormatter.dateTimeLongMedium(contest.startTime, language)}" th:data-time="${contest.startTime?.time}" data-format="datetime">start</span> &rarr; <span th:text="${@dateFormatter.dateTimeLongMedium(contest.endTime, language)}" th:data-time="${contest.endTime?.time}" data-format="datetime">end</span></span>
                         <span>&#9201; <span th:text="|${durMin / 60}h ${#numbers.formatInteger(durMin % 60, 2)}m|">2h 00m</span></span>
                         <span>&#128221; <span th:text="${problemCountOfContests.get(contest.contestId)}">0</span> <span th:text="#{voj.contests.contests.problems}">problems</span></span>
                         <span>&#128101; <span th:text="${entrantsOfContests.get(contest.contestId)}">0</span> <span th:text="#{voj.contests.contests.entrants}">entrants</span></span>
@@ -64,7 +64,7 @@
                            th:href="@{/contest/{id}(id=${contest.contestId})}">
                             <div><span class="vw-ctype-sm" th:classappend="${contest.contestMode == 'ACM'} ? 'vw-ctype-acm' : 'vw-ctype-oi'" th:text="${contest.contestMode}">OI</span></div>
                             <div class="vw-cell-title vw-ellipsis" th:text="${contest.contestName}">Contest</div>
-                            <div class="vw-muted2" th:text="|${@dateFormatter.dateShort(contest.startTime, language)} · ${durMin / 60}h|">window</div>
+                            <div class="vw-muted2"><span th:text="${@dateFormatter.dateShort(contest.startTime, language)}" th:data-time="${contest.startTime.time}" data-format="date-short">date</span> · <span th:text="|${durMin / 60}h|">0h</span></div>
                             <div class="vw-muted2" th:text="${entrantsOfContests.get(contest.contestId)}">0</div>
                             <div class="vw-muted2" th:text="${problemCountOfContests.get(contest.contestId)}">0</div>
                         </a>
@@ -111,7 +111,7 @@
                 var html = '<a class="vw-table-row" href="' + [[@{/contest/}]] + cid + '">' +
                     '<div><span class="vw-ctype-sm ' + typeClass(c['contestMode']) + '">' + escapeHtml(c['contestMode']) + '</span></div>' +
                     '<div class="vw-cell-title vw-ellipsis">' + escapeHtml(c['contestName']) + '</div>' +
-                    '<div class="vw-muted2">' + getFormatedDateString(c['startTime'], [[${language}]]) + ' · ' + hours + 'h</div>' +
+                    '<div class="vw-muted2">' + formatDateTime(c['startTime'], 'date-short') + ' · ' + hours + 'h</div>' +
                     '<div class="vw-muted2">' + (entrants[cid] || 0) + '</div>' +
                     '<div class="vw-muted2">' + (problemCount[cid] || 0) + '</div>' +
                     '</a>';

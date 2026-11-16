@@ -29,7 +29,7 @@
                         <div class="adm-cell muted adm-mono-sm">
                             <span th:text="${author != null ? '@' + author.username : '—'}">@author</span>
                             &#183; <span th:text="#{voj.administration.moderation-review.posted}">posted</span>
-                            <span th:text="${@dateFormatter.dateTimeLongMedium(reply.discussionReplyCreateTime, language)}">date</span>
+                            <span th:text="${@dateFormatter.dateTimeLongMedium(reply.discussionReplyCreateTime, language)}" th:data-time="${reply.discussionReplyCreateTime?.time}" data-format="datetime">date</span>
                         </div>
                     </div>
                 </div>
@@ -42,7 +42,7 @@
                         <div class="av" th:text="${r.username != null ? #strings.substring(r.username,0,1) : '?'}">A</div>
                         <div class="adm-min0 adm-flex1">
                             <div class="who" th:text="${r.username != null ? '@' + r.username : '—'}">@reporter</div>
-                            <div class="when" th:text="${@dateFormatter.dateTimeLongMedium(r.reportTime, language)}">when</div>
+                            <div class="when" th:text="${@dateFormatter.dateTimeLongMedium(r.reportTime, language)}" th:data-time="${r.reportTime?.time}" data-format="datetime">when</div>
                         </div>
                     </div>
                     <div class="adm-table-empty" th:if="${#lists.isEmpty(reporters)}" th:text="#{voj.administration.moderation-review.no-reports}">// no outstanding reports</div>

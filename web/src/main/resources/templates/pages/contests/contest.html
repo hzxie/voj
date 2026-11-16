@@ -31,7 +31,7 @@
                           th:text="${isAttended ? #messages.msg('voj.contests.contest.attended') : #messages.msg('voj.contests.contest.not-attended')}">Attendance</span>
                 </div>
                 <div class="vw-cmeta vw-mt-12">
-                    <span>&#128197; <span th:text="${@dateFormatter.dateTimeLongMedium(contest.startTime, language)}">start</span> &rarr; <span th:text="${@dateFormatter.dateTimeLongMedium(contest.endTime, language)}">end</span></span>
+                    <span>&#128197; <span th:text="${@dateFormatter.dateTimeLongMedium(contest.startTime, language)}" th:data-time="${contest.startTime?.time}" data-format="datetime">start</span> &rarr; <span th:text="${@dateFormatter.dateTimeLongMedium(contest.endTime, language)}" th:data-time="${contest.endTime?.time}" data-format="datetime">end</span></span>
                     <span>&#9201; <span th:text="|${durMin / 60}h ${#numbers.formatInteger(durMin % 60, 2)}m|">2h 00m</span></span>
                     <span>&#128221; <span th:text="${problems.size()}">0</span> <span th:text="#{voj.contests.contest.problems-count}">problems</span></span>
                     <span>&#128101; <span id="number-of-contestants" th:text="${numberOfContestants}">0</span> <span th:text="#{voj.contests.contest.entrants}">entrants</span></span>
@@ -91,9 +91,9 @@
                     <div class="vw-timecard-clock" id="countdown"
                          th:attr="data-target=${contestStatus == 'Ready' ? contest.startTime.time : contest.endTime.time},data-status=${contestStatus}">--:--:--</div>
                     <div class="vw-timecard-sub">
-                        <span th:text="${@dateFormatter.dateTimeLongMedium(contest.startTime, language)}">start</span>
+                        <span th:text="${@dateFormatter.dateTimeLongMedium(contest.startTime, language)}" th:data-time="${contest.startTime?.time}" data-format="datetime">start</span>
                         &rarr;
-                        <span th:text="${@dateFormatter.dateTimeLongMedium(contest.endTime, language)}">end</span>
+                        <span th:text="${@dateFormatter.dateTimeLongMedium(contest.endTime, language)}" th:data-time="${contest.endTime?.time}" data-format="datetime">end</span>
                     </div>
                 </div>
 

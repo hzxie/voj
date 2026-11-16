@@ -891,6 +891,30 @@ class ViewRenderSmokeTest {
   }
 
   /**
+   * Both submission pages render the execute time as an instant that site.js formats in the
+   * viewer's time zone, as the live update that replaces it does, so the time does not jump.
+   */
+  @Test
+  void submissionExecuteTimeIsFormattedInTheBrowser() throws Exception {
+    Submission submission = aSubmission(7000L);
+    submission.setExecuteTime(new Date(1893553440000L));
+    when(submissionService.getSubmission(7000L)).thenReturn(submission);
+    when(contestService.isSubmissionVisible(any(), any())).thenReturn(true);
+    String executeTime =
+        "id=\"execute-time\" data-time=\"1893553440000\" data-format=\"datetime\"";
+    mockMvc
+        .perform(getWithCsrf("/submission/7000"))
+        .andExpect(status().isOk())
+        .andExpect(content().string(containsString(executeTime)));
+
+    authenticateAdmin();
+    mockMvc
+        .perform(getWithCsrf("/administration/edit-submission/7000"))
+        .andExpect(status().isOk())
+        .andExpect(content().string(containsString(executeTime)));
+  }
+
+  /**
    * A submission the viewer may not see (ContestService#isSubmissionVisible: a submission to an
    * unpublished problem, or another user's during a contest) is not found, so the page reveals
    * neither the verdict nor the problem's name.

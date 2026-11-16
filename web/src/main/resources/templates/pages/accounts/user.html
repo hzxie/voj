@@ -96,7 +96,7 @@
                             <span class="vw-vbadge" th:classappend="|flag-${slug}|" th:text="${#strings.toUpperCase(slug)}">AC</span>
                             <span class="vw-recent-prob" th:text="${submission.problem != null ? 'P' + submission.problem.problemId + ' ' + submission.problem.problemName : ''}">Problem</span>
                             <span class="vw-muted2" th:text="${submission.language != null ? submission.language.languageName : ''}">Lang</span>
-                            <span class="vw-muted vw-recent-when" th:text="${submission.submitTime != null ? @dateFormatter.dateShort(submission.submitTime, language) : ''}">when</span>
+                            <span class="vw-muted vw-recent-when" th:text="${@dateFormatter.dateShort(submission.submitTime, language)}" th:data-time="${submission.submitTime?.time}" data-format="date-short">when</span>
                         </a>
                     </div>
                 </div>

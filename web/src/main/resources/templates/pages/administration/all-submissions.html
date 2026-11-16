@@ -56,7 +56,7 @@
                     <a class="adm-cell mono muted adm-row-link" th:href="@{/administration/edit-submission/{id}(id=${submission.submissionId})}" th:text="'#' + ${submission.submissionId}">#1</a>
                     <span class="adm-cell head" th:text="${submission.user != null ? submission.user.username : ''}">user</span>
                     <span class="adm-cell txt" th:text="${submission.problem != null ? submission.problem.problemName : ''}">problem</span>
-                    <span class="adm-cell mono muted" th:text="${@dateFormatter.dateTimeMediumShort(submission.submitTime, language)}">when</span>
+                    <span class="adm-cell mono muted" th:text="${@dateFormatter.dateTimeMediumShort(submission.submitTime, language)}" th:data-time="${submission.submitTime?.time}" data-format="datetime-short">when</span>
                     <span class="adm-cell muted" th:text="${submission.language != null ? submission.language.languageName : ''}">lang</span>
                     <span class="adm-cell mono muted" th:text="|${submission.usedTime} ms|">0 ms</span>
                     <span class="adm-cell mono muted" th:text="|${submission.usedMemory} KB|">0 KB</span>

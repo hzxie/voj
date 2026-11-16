@@ -54,7 +54,7 @@
                     <span><span class="adm-pill" th:classappend="${slug == 'administrators' ? 'c-err' : (slug == 'judgers' ? 'c-info' : (slug == 'forbidden' ? 'c-err' : 'c-muted'))}" th:text="${user.userGroup.userGroupName}">role</span></span>
                     <span class="adm-cell mono txt" th:text="${userRanks.containsKey(user.uid) ? '#' + userRanks.get(user.uid) : '—'}">#7</span>
                     <span class="adm-cell" th:text="${solvedCounts.containsKey(user.uid) ? #numbers.formatInteger(solvedCounts.get(user.uid), 1, 'COMMA') : '0'}">0</span>
-                    <span class="adm-cell muted" th:text="${@dateFormatter.monthYear(joinedDates.get(user.uid), language)}">Mar 2015</span>
+                    <span class="adm-cell muted" th:text="${@dateFormatter.monthYear(joinedDates.get(user.uid), language)}" th:data-time="${joinedDates.get(user.uid)?.time}" data-format="month">Mar 2015</span>
                     <span><span class="adm-pill" th:classappend="${slug == 'forbidden' ? 'c-err' : 'c-accent'}" th:text="${slug == 'forbidden'} ? #{voj.administration.all-users.banned} : #{voj.administration.all-users.active}">Active</span></span>
                     <span></span>
                     <span class="adm-menu" aria-hidden="true">&#183;&#183;&#183;</span>

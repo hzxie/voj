@@ -30,7 +30,7 @@
                 <div class="adm-mod-main">
                     <div class="adm-mod-title" th:text="${m.threadTitle != null ? m.threadTitle : #messages.msg('voj.administration.moderation.untitled-thread')}">Thread title</div>
                     <div class="adm-mod-snip" th:text="${m.content}">Reported reply content…</div>
-                    <div class="adm-mod-meta" th:text="'#' + ${m.replyId} + '  ·  ' + ${@dateFormatter.dateTimeLongMedium(m.lastReportTime, language)}">#1 · reported</div>
+                    <div class="adm-mod-meta"><span th:text="'#' + ${m.replyId}">#1</span> · <span th:text="${@dateFormatter.dateTimeLongMedium(m.lastReportTime, language)}" th:data-time="${m.lastReportTime?.time}" data-format="datetime">reported</span></div>
                 </div>
                 <span class="adm-mod-count"
                       th:classappend="${reports >= 5} ? 's-err' : (${reports >= 3} ? 's-warn' : 's-info')">

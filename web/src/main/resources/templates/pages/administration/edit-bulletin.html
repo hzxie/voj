@@ -68,7 +68,7 @@
                     </div>
                     <div class="adm-meta">
                         <span class="k" th:text="#{voj.administration.edit-bulletin.created}">Created</span>
-                        <span class="v" th:text="${@dateFormatter.dateMedium(message.messageCreateTime, language)}">Jun 24, 2026</span>
+                        <span class="v" th:text="${@dateFormatter.dateMedium(message.messageCreateTime, language)}" th:data-time="${message.messageCreateTime?.time}" data-format="date">Jun 24, 2026</span>
                     </div>
                 </div>
                 <div class="adm-danger" th:if="${isEdit}">

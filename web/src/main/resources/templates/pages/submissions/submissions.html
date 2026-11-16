@@ -58,7 +58,7 @@
                             <div class="vw-muted" th:text="${submission.submissionId}">0</div>
                             <div class="vw-head vw-strong vw-ellipsis" th:text="${submission.problem != null ? 'P' + submission.problem.problemId + ' ' + submission.problem.problemName : ''}">Problem</div>
                             <div class="vw-accent" th:text="${submission.user != null ? submission.user.username : ''}">User</div>
-                            <div class="vw-muted vw-cell-when" th:text="${@dateFormatter.dateTimeMediumShort(submission.submitTime, language)}">when</div>
+                            <div class="vw-muted vw-cell-when" th:text="${@dateFormatter.dateTimeMediumShort(submission.submitTime, language)}" th:data-time="${submission.submitTime?.time}" data-format="datetime-short">when</div>
                             <div class="vw-muted2 vw-cell-lang" th:text="${submission.language != null ? submission.language.languageName : ''}">Lang</div>
                             <div class="vw-cell-verdict">
                                 <span class="vw-vbadge" th:classappend="|flag-${slug}|" th:text="${#strings.toUpperCase(slug)}">AC</span>
@@ -150,7 +150,7 @@
                       '</a>';
             return tpl.format(submissionId, submissionId, submissionId,
                               problem['problemId'], escapeHtml(problem['problemName']), escapeHtml(user['username']),
-                              getFormatedDateString(submitTime, [[${language}]]),
+                              formatDateTime(submitTime, 'datetime-short'),
                               escapeHtml(language['languageName']), escapeHtml(slug), escapeHtml(slug.toUpperCase()),
                               escapeHtml(slug), escapeHtml(judgeResult['judgeResultName']), usedTime, usedMemory);
         }

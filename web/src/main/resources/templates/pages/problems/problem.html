@@ -125,7 +125,7 @@
                             <a class="vw-subrow" th:classappend="|flag-${slug}|" th:href="@{/submission/{id}(id=${submission.submissionId})}">
                                 <span class="vw-sub-badge" th:text="${#strings.toUpperCase(slug)}">AC</span>
                                 <span class="vw-sub-name" th:text="${submission.judgeResult != null ? submission.judgeResult.judgeResultName : ''}">Accepted</span>
-                                <span class="vw-sub-when" th:text="${@dateFormatter.dateShort(submission.submitTime, language)}">date</span>
+                                <span class="vw-sub-when" th:text="${@dateFormatter.dateShort(submission.submitTime, language)}" th:data-time="${submission.submitTime?.time}" data-format="date-short">date</span>
                             </a>
                         </li>
                     </ul>

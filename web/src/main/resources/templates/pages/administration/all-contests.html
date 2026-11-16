@@ -51,7 +51,7 @@
                               th:text="${phase == 'LIVE'} ? #{voj.administration.all-contests.phase-running} : (${phase == 'READY'} ? #{voj.administration.all-contests.phase-upcoming} : #{voj.administration.all-contests.phase-ended})">Running</span>
                     </span>
                     <span class="adm-cell txt" th:text="${contest.contestMode}">ACM</span>
-                    <span class="adm-cell muted" th:text="${@dateFormatter.dateTimeMediumShort(contest.startTime, language)}">starts</span>
+                    <span class="adm-cell muted" th:text="${@dateFormatter.dateTimeMediumShort(contest.startTime, language)}" th:data-time="${contest.startTime?.time}" data-format="datetime-short">starts</span>
                     <span class="adm-cell mono" th:text="${contestDurations[contest.contestId]}">02:30</span>
                     <span class="adm-cell txt" th:text="${contestEntrants[contest.contestId]}">0</span>
                     <span>

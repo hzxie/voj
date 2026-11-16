@@ -72,7 +72,7 @@
                         <div class="vw-thread-meta-list">
                             <div><span class="k" th:text="#{voj.discussion.thread.comments}">Replies</span><span class="v" id="number-of-comments" th:text="${topicSlug == 'solutions' ? discussionThread.numberOfReplies : (discussionThread.numberOfReplies <= 1 ? 0 : discussionThread.numberOfReplies - 1)}">0</span></div>
                             <div><span class="k" th:text="#{voj.discussion.threads.author}">Author</span><a class="v vw-accent" th:href="@{/accounts/user/{id}(id=${creator.uid})}" th:text="${creator.username}">author</a></div>
-                            <div><span class="k" th:text="#{voj.discussion.thread.created}">Created</span><span class="v datetime" th:text="${#dates.format(discussionThread.discussionThreadCreateTime, 'yyyy-MM-dd HH:mm:ss')}">time</span></div>
+                            <div><span class="k" th:text="#{voj.discussion.thread.created}">Created</span><span class="v" th:text="${#dates.format(discussionThread.discussionThreadCreateTime, 'yyyy-MM-dd HH:mm')}" th:data-time="${discussionThread.discussionThreadCreateTime?.time}" data-format="relative">time</span></div>
                         </div>
                     </div>
 
@@ -113,7 +113,6 @@
         // deleting one of them moves the offset back by one.
         var replyOffset = 0, serverReplyIds = {};
         $(function() {
-            $('span.datetime').html(getTimeElapsed($('span.datetime').html(), [[${language}]]));
             /*[# th:if="${isLogin}"]*/
             mainEditor = createMarkdownEditor('#wmd-input');
             loadDiscussionReplies();
@@ -204,7 +203,7 @@
                 '<div class="vw-minw0">' +
                 '<div class="vw-post-head">' +
                 (isOp ? '<span class="vw-post-op">' + [[#{voj.discussion.thread.op}]] + '</span>' : '') +
-                '<span class="vw-post-when">' + getTimeElapsed(createTime, [[${language}]]) + '</span>' +
+                '<span class="vw-post-when">' + formatDateTime(createTime, 'relative') + '</span>' +
                 '<div class="vw-header-spacer"></div>' +
                 voteButtons +
                 reportLink +

@@ -70,7 +70,7 @@
                          th:with="vs=${submission.judgeResult != null ? submission.judgeResult.judgeResultSlug : ''},vcls=${vs == 'AC' ? 'c-accent' : (vs == 'WA' ? 'c-err' : ((vs == 'CE' or vs == 'SE' or vs == 'PD') ? 'c-muted' : ((vs == 'RE' or vs == 'PE') ? 'c-info' : 'c-warn')))}">
                         <span class="v" th:classappend="${vcls}" th:text="${vs}">AC</span>
                         <span class="nm" th:text="${submission.problem.problemName}">A + B Problem</span>
-                        <span class="when" th:text="${@dateFormatter.dateTimeMediumShort(submission.submitTime, language)}">2m ago</span>
+                        <span class="when" th:text="${@dateFormatter.dateTimeMediumShort(submission.submitTime, language)}" th:data-time="${submission.submitTime?.time}" data-format="datetime-short">2m ago</span>
                     </div>
                 </div>
             </div>
@@ -102,7 +102,7 @@
                     <div class="adm-card-head plain" th:text="#{voj.administration.edit-user.stats}">// STATS</div>
                     <div class="adm-meta"><span class="k" th:text="#{voj.administration.edit-user.solved}">Solved</span><span class="v" th:text="${#numbers.formatInteger(solvedCount, 1, 'COMMA')}">412</span></div>
                     <div class="adm-meta"><span class="k" th:text="#{voj.administration.edit-user.rank}">Rank</span><span class="v" th:text="${userRank != null ? '#' + userRank : '—'}">#7</span></div>
-                    <div class="adm-meta"><span class="k" th:text="#{voj.administration.edit-user.joined}">Joined</span><span class="v" th:text="${joinedDate != null ? @dateFormatter.monthYear(joinedDate, language) : '—'}">Mar 2015</span></div>
+                    <div class="adm-meta"><span class="k" th:text="#{voj.administration.edit-user.joined}">Joined</span><span class="v" th:text="${joinedDate != null ? @dateFormatter.monthYear(joinedDate, language) : '—'}" th:data-time="${joinedDate?.time}" data-format="month">Mar 2015</span></div>
                     <div class="adm-meta"><span class="k" th:text="#{voj.administration.edit-user.submissions}">Submissions</span><span class="v" th:text="${#numbers.formatInteger(totalSubmissions, 1, 'COMMA')}">1,089</span></div>
                 </div>
                 <div class="adm-danger col">

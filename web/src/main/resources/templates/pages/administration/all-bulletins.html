@@ -44,7 +44,7 @@
                     <a class="adm-cell head adm-row-link" th:href="@{/administration/edit-bulletin/{id}(id=${message.messageId})}" th:text="${message.messageTitle}">Title</a>
                     <span class="adm-cell muted" th:text="${message.messageAuthor != null} ? '@' + ${message.messageAuthor.username} : '—'">@admin</span>
                     <span class="adm-cell" th:classappend="${message.pinned} ? 'c-warn' : 'muted'" th:text="${message.pinned} ? '★ ' + #{voj.administration.all-bulletins.pinned-flag} : '—'">—</span>
-                    <span class="adm-cell mono muted" th:text="${@dateFormatter.dateMedium(message.messageCreateTime, language)}">Jun 24, 2026</span>
+                    <span class="adm-cell mono muted" th:text="${@dateFormatter.dateMedium(message.messageCreateTime, language)}" th:data-time="${message.messageCreateTime?.time}" data-format="date">Jun 24, 2026</span>
                     <span>
                         <span class="adm-pill"
                               th:classappend="${message.status == 'PUBLISHED'} ? 'c-accent' : (${message.status == 'DRAFT'} ? 'c-warn' : 'c-err')"
