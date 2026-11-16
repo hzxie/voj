@@ -65,17 +65,29 @@ sudo useradd --system --no-create-home --shell /usr/sbin/nologin voj-sandbox
 
 ### What a submission is held to
 
+- **System calls.** A run of the submission may only make the system calls on
+  an allowlist, which starts from Docker's default seccomp profile and leaves
+  out what a judged program has no business with (other processes, the network
+  beyond socket pairs, links, file owners, modes and extended attributes,
+  inotify, `sync`, Linux AIO, `io_uring`, credentials, scheduling, ...); any
+  other system call, including one a future kernel adds, fails with `ENOSYS`, so
+  the C library and the runtimes fall back where they can. Compilations run
+  trusted toolchains, too varied to allowlist, under a deny-list instead. The
+  rules below hold for both: where they refuse a compilation a system call with
+  `EPERM` or `EACCES`, a run gets the same error, even when its allowlist alone
+  would refuse the call.
 - **Processes.** A run of the submission is a single process: it may create
-  threads, but the seccomp filter makes `fork`, `vfork` and `clone` without
-  `CLONE_THREAD` (the C library's `fork`, `posix_spawn`, `system`) fail with
-  `EPERM`. Its threads are capped by the sandbox user's `RLIMIT_NPROC`,
-  `judger.processLimit` (64), which counts every process and thread of that user.
+  threads, but the seccomp filters make `clone` without `CLONE_THREAD` (the C
+  library's `fork`, `posix_spawn`, `system`) fail with `EPERM`, and the `fork`
+  and `vfork` system calls are not on its allowlist. Its threads are capped by
+  the sandbox user's `RLIMIT_NPROC`, `judger.processLimit` (64), which counts
+  every process and thread of that user.
   A compilation runs a trusted toolchain, which may start other programs (the
   `gcc` driver, `go build`), under `judger.compileProcessLimit` (1024). Every
   process of a compilation stays in the compiler's process group, since the
-  filter denies leaving it (`setsid`, `setpgid`); the whole group is killed when
+  filters deny leaving it (`setsid`, `setpgid`); the whole group is killed when
   a limit is hit and as soon as the compiler exits, so nothing outlives a
-  compile or a run. The filter also denies `ptrace`, `mount`, module loading
+  compile or a run. The filters also deny `ptrace`, `mount`, module loading
   and the like, and creating namespaces (`unshare`, `setns`, `clone` with a
   `CLONE_NEW*` flag; `clone3` fails with `ENOSYS` so the C library falls back
   to `clone`), so a submission cannot obtain the capabilities of an
@@ -94,7 +106,7 @@ sudo useradd --system --no-create-home --shell /usr/sbin/nologin voj-sandbox
   exceeds the limit). The kernel backs this with `RLIMIT_DATA` at twice the
   limit plus max(256 MB, RAM / 32), which bounds how far a process can grow
   between two polls; a single allocation larger than that (say,
-  `std::vector<int>(1e9)` under 256 MB) is stopped by the seccomp filter and is
+  `std::vector<int>(1e9)` under 256 MB) is stopped by the seccomp filters and is
   Memory Limit Exceeded too, rather than the runtime error its failure would
   look like. A program that would have handled such a failed allocation is
   stopped there instead. Allocations that exceed the backstop only together
@@ -107,10 +119,11 @@ sudo useradd --system --no-create-home --shell /usr/sbin/nologin voj-sandbox
   static data alone (`static int a[1 << 30];`) exceeds the backstop cannot even
   be loaded; it is not run and is Memory Limit Exceeded, rather than the
   `SIGSEGV` the kernel would kill it with while loading it. A run cannot create
-  memory files (`memfd_create`) or shared anonymous mappings, whose contents
-  would count against no limit once dropped from its resident set, nor push its
-  pages out of that set (`madvise` with `MADV_PAGEOUT` or `MADV_COLD`,
-  `process_madvise`) to keep its peak low on a host with swap.
+  memory files (`memfd_create` is not on its allowlist) or shared anonymous
+  mappings, whose contents would count against no limit once dropped from its
+  resident set, nor push its pages out of that set (`madvise` with
+  `MADV_PAGEOUT` or `MADV_COLD`; `process_madvise` is not allowlisted) to keep
+  its peak low on a host with swap.
 - **Output.** A file the program writes, standard output included, may reach
   256 MB (`RLIMIT_FSIZE`; fixed). A run that hits the limit is Output Limit
   Exceeded, whether the kernel's `SIGXFSZ` kills it or it ignores the signal,
@@ -137,25 +150,28 @@ sudo useradd --system --no-create-home --shell /usr/sbin/nologin voj-sandbox
   memory, semaphores and message queues, POSIX message queues and the kernel
   keyrings (`add_key`, `request_key`, `keyctl`: a user's keyrings belong to the
   user, not to a process, so they outlive every run) are refused (`EPERM`) by
-  the seccomp filter. Landlock also denies a submission `ptrace`
-  access (including `/proc/<pid>/fd`, `/proc/<pid>/mem`, ...) to any process
-  outside its own sandbox, such as a concurrent run on another judger, and from
-  Linux 6.12 (Landlock ABI 6) on keeps it from signalling such processes or
-  connecting to their abstract Unix sockets. Reading is not restricted: a
-  submission can read whatever the sandbox user can (see below), including,
-  while they exist, the work directories of submissions judged at the same time
-  by other judgers on the host that use the same `system.username` — give each
-  judger on a host its own sandbox account if that matters.
-- **Network.** The seccomp filter refuses `socket` and `socketpair` with
+  the seccomp filters, for compilations and runs alike. Landlock also denies a
+  submission `ptrace` access (including `/proc/<pid>/fd`, `/proc/<pid>/mem`,
+  ...) to any process outside its own sandbox, such as a concurrent run on
+  another judger, and from Linux 6.12 (Landlock ABI 6) on keeps it from
+  signalling such processes or connecting to their abstract Unix sockets.
+  Reading is not restricted: a submission can read whatever the sandbox user
+  can (see below), including, while they exist, the work directories of
+  submissions judged at the same time by other judgers on the host that use the
+  same `system.username` — give each judger on a host its own sandbox account if
+  that matters.
+- **Network.** The seccomp filters refuse `socket` and `socketpair` with
   `EACCES` for every address family but `AF_UNIX`, and `io_uring` (which can
-  create sockets on its own) with `ENOSYS`, so a submission cannot reach the
-  judger's database or message queue, other hosts or the internet. This needs no
-  privilege, so it holds in a Docker container without `CAP_SYS_ADMIN` too, where
-  the private network namespace, still tried first, cannot be created. Compilers
-  run under the same filter. `AF_UNIX` sockets stay available (runtimes use
-  `socketpair`), so do not leave a Unix socket that the sandbox user may connect
-  to (e.g. a database's or Docker's) where it can reach it.
-- **Failing closed.** The seccomp filter, the Landlock rules and, when the
+  create sockets on its own) with `ENOSYS`, for compilations and runs alike, so
+  a submission cannot reach the judger's database or message queue, other hosts
+  or the internet. This needs no privilege, so it holds in a Docker container
+  without `CAP_SYS_ADMIN` too, where the private network namespace, still tried
+  first, cannot be created. `AF_UNIX` socket pairs stay available (runtimes use
+  `socketpair`). A run cannot `connect`, `bind`, `listen` or `accept` at all
+  (they are not on its allowlist), but a compilation can, so do not leave a Unix
+  socket that the sandbox user may connect to (e.g. a database's or Docker's)
+  where it can reach it.
+- **Failing closed.** The seccomp filters, the Landlock rules and, when the
   judger runs as root, the privilege drop (including dropping supplementary
   groups) are mandatory, as are the resource limits and the standard streams.
   If any of them cannot be set up, or the program cannot be executed at all, it

@@ -195,7 +195,8 @@ public class SandboxBehaviorTest {
   /**
    * Test case: a program that tries to create processes with fork, the raw fork system call and
    * posix_spawn. Expected result: under the native sandbox, a run of the submission is a single
-   * process: every attempt fails with EPERM, which the program reports (see FORK_CODE).
+   * process: every attempt fails, which the program reports (see FORK_CODE): with EPERM where the C
+   * library calls clone without CLONE_THREAD, with ENOSYS for fork, which is not allowlisted.
    */
   @Test
   public void testRunCannotCreateProcesses() throws Exception {
@@ -203,7 +204,7 @@ public class SandboxBehaviorTest {
     Assumptions.assumeTrue(isLinux(), "The test program uses fork() and posix_spawn().");
     Assertions.assertEquals("AC", judge(900011L, FORK_CODE, 5000, 262144));
     Assertions.assertEquals(
-        "fork: EPERM\nSYS_fork: EPERM\nposix_spawn: EPERM\n",
+        "fork: EPERM\nSYS_fork: ENOSYS\nposix_spawn: EPERM\n",
         Files.readString(Path.of(workBaseDirectory, "voj-sandbox-900011", "output.txt")));
   }
 
@@ -344,7 +345,7 @@ public class SandboxBehaviorTest {
    * user's keyring and a memory file, which would outlive it or escape its memory limit; then a
    * later run that looks for the files. Expected result: every attempt is refused (Landlock
    * confines writes to the work directory, where the run can still create files; the seccomp
-   * filter refuses the rest), and the later run finds nothing. (Docker's default seccomp profile
+   * filters refuse the rest: memfd_create is not allowlisted), and the later run finds nothing. (Docker's default seccomp profile
    * refuses the keyring system calls on its own: run the tests unconfined to test the filter's.)
    */
   @Test
@@ -372,7 +373,7 @@ public class SandboxBehaviorTest {
             "add_key: EPERM",
             "request_key: EPERM",
             "keyctl: EPERM",
-            "memfd_create: EPERM",
+            "memfd_create: ENOSYS",
             ""),
         Files.readString(Path.of(workBaseDirectory, "voj-sandbox-900018", "output.txt")));
     for (String directory : directories) {
@@ -445,8 +446,9 @@ public class SandboxBehaviorTest {
    * would let it use more than its memory limit without its measured peak reaching it: paging out
    * (madvise MADV_PAGEOUT, also with garbage in the upper half of the advice's register, MADV_COLD,
    * process_madvise), and unmapping shared anonymous memory (MAP_SHARED | MAP_ANONYMOUS), whose
-   * pages would stay in memory. Expected result: every attempt fails with EPERM, while the advice
-   * the runtimes' allocators use (MADV_DONTNEED, MADV_FREE) still works.
+   * pages would stay in memory. Expected result: every attempt fails, with EPERM (process_madvise,
+   * which is not allowlisted, with ENOSYS), while the advice the runtimes' allocators use
+   * (MADV_DONTNEED, MADV_FREE) still works.
    */
   @Test
   public void testRunCannotPageOutItsMemory() throws Exception {
@@ -459,12 +461,36 @@ public class SandboxBehaviorTest {
             "MADV_PAGEOUT: EPERM",
             "MADV_PAGEOUT (upper bits set): EPERM",
             "MADV_COLD: EPERM",
-            "process_madvise: EPERM",
+            "process_madvise: ENOSYS",
             "MAP_SHARED | MAP_ANONYMOUS: EPERM",
             "MADV_DONTNEED: done",
             "MADV_FREE: done",
             ""),
         Files.readString(Path.of(workBaseDirectory, "voj-sandbox-900023", "output.txt")));
+  }
+
+  /**
+   * Test case: a run that makes system calls which are not on the native sandbox's allowlist, each
+   * harmless had it been allowed: querying its personality, creating an inotify instance, making a
+   * symbolic link and changing a file's mode in its work directory, and connecting an AF_UNIX
+   * socket. Expected result: each fails with ENOSYS, while the calls around them that are allowed
+   * (creating the socket and the file) succeed.
+   */
+  @Test
+  public void testSystemCallsOffTheAllowlistAreNotImplemented() throws Exception {
+    Assumptions.assumeTrue("native".equalsIgnoreCase(sandbox), "This tests the native runner.");
+    Assumptions.assumeTrue(isLinux(), "The seccomp filters are Linux-only.");
+    Assertions.assertEquals("AC", judge(900024L, UNLISTED_SYSCALLS_CODE, 5000, 262144));
+    Assertions.assertEquals(
+        String.join(
+            "\n",
+            "personality: ENOSYS",
+            "inotify_init1: ENOSYS",
+            "symlink: ENOSYS",
+            "chmod: ENOSYS",
+            "connect: ENOSYS",
+            ""),
+        Files.readString(Path.of(workBaseDirectory, "voj-sandbox-900024", "output.txt")));
   }
 
   /**
@@ -767,7 +793,8 @@ public class SandboxBehaviorTest {
           if (pid > 0) {
               waitpid((pid_t) pid, nullptr, 0);
           }
-          std::printf("%s: %s\\n", how, pid > 0 ? "created" : error == EPERM ? "EPERM" : "error");
+          std::printf("%s: %s\\n", how, pid > 0 ? "created"
+              : error == EPERM ? "EPERM" : error == ENOSYS ? "ENOSYS" : "error");
       }
 
       int main() {
@@ -777,7 +804,7 @@ public class SandboxBehaviorTest {
           pid = syscall(SYS_fork);
       #else
           pid = -1;
-          errno = EPERM;
+          errno = ENOSYS;
       #endif
           report("SYS_fork", pid, errno);
           char* argv[] = {(char*) "/bin/true", nullptr};
@@ -999,7 +1026,8 @@ public class SandboxBehaviorTest {
       static void report(const char* what, bool succeeded, const char* success) {
           int error = errno;
           std::printf("%s: %s\\n", what, succeeded ? success
-              : error == EACCES ? "EACCES" : error == EPERM ? "EPERM" : std::strerror(error));
+              : error == EACCES ? "EACCES" : error == EPERM ? "EPERM"
+              : error == ENOSYS ? "ENOSYS" : std::strerror(error));
       }
 
       int main() {
@@ -1085,7 +1113,7 @@ public class SandboxBehaviorTest {
       static void report(const char* what, bool succeeded) {
           int error = errno;
           std::printf("%s: %s\\n", what, succeeded ? "done"
-              : error == EPERM ? "EPERM" : std::strerror(error));
+              : error == EPERM ? "EPERM" : error == ENOSYS ? "ENOSYS" : std::strerror(error));
       }
 
       int main() {
@@ -1108,6 +1136,52 @@ public class SandboxBehaviorTest {
               MAP_SHARED | MAP_ANONYMOUS, -1, 0) != MAP_FAILED);
           report("MADV_DONTNEED", madvise(memory, length, MADV_DONTNEED) == 0);
           report("MADV_FREE", madvise(memory, length, MADV_FREE) == 0);
+          return 0;
+      }
+      """;
+
+  /**
+   * A program that makes system calls which are not on the native sandbox's allowlist, and reports
+   * how each ends (it exits with 1 if a call that is allowed fails).
+   */
+  private static final String UNLISTED_SYSCALLS_CODE =
+      """
+      #include <cerrno>
+      #include <cstdio>
+      #include <cstring>
+      #include <fcntl.h>
+      #include <sys/inotify.h>
+      #include <sys/personality.h>
+      #include <sys/socket.h>
+      #include <sys/stat.h>
+      #include <sys/un.h>
+      #include <unistd.h>
+
+      static void report(const char* what, bool succeeded) {
+          int error = errno;
+          std::printf("%s: %s\\n", what, succeeded ? "done"
+              : error == ENOSYS ? "ENOSYS" : std::strerror(error));
+      }
+
+      int main() {
+          report("personality", personality(0xffffffff) != -1);
+          report("inotify_init1", inotify_init1(IN_CLOEXEC) >= 0);
+          int file = open("unlisted.txt", O_WRONLY | O_CREAT | O_EXCL, 0644);
+          if (file < 0) {
+              return 1;
+          }
+          close(file);
+          report("symlink", symlink("unlisted.txt", "unlisted.lnk") == 0);
+          report("chmod", chmod("unlisted.txt", 0666) == 0);
+          int fd = socket(AF_UNIX, SOCK_STREAM, 0);
+          if (fd < 0) {
+              return 1;
+          }
+          sockaddr_un address;
+          std::memset(&address, 0, sizeof(address));
+          address.sun_family = AF_UNIX;
+          std::strcpy(address.sun_path, "/voj-no-such-socket");
+          report("connect", connect(fd, (sockaddr*) &address, sizeof(address)) == 0);
           return 0;
       }
       """;

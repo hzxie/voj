@@ -29,6 +29,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <initializer_list>
 #include <iterator>
 #include <sstream>
 #include <string>
@@ -182,7 +183,7 @@ struct ChildPlan {
   bool                     dropPrivileges; // whether to setuid/setgid
   uid_t                    dropUid;
   gid_t                    dropGid;
-  std::string              seccompProgram; // exported classic BPF bytes (empty = no filter)
+  std::vector<std::string> seccompPrograms; // classic BPF filters, in the order to install them
 };
 
 /**
@@ -212,7 +213,7 @@ static const char* const CHILD_STEP_NAMES[] = {
   "confining writes to the work directory with Landlock (needs Linux 5.13+ with Landlock enabled)",
   "confining truncation to the work directory with Landlock (needs Linux 6.2+, Landlock ABI 3, "
   "unless the judger runs as root and drops privileges to the sandbox user)",
-  "installing the seccomp filter", "execve()",
+  "installing the seccomp filters", "execve()",
 };
 struct ChildFailure {
   int step;
@@ -226,7 +227,7 @@ static std::vector<std::string> splitCommandLine(const std::string&);
 static std::string resolveExecutable(const std::string&);
 static std::string getWorkDirectory(const std::string& outputFilePath);
 static std::vector<std::string> buildEnvironment(const std::string& workDirectory);
-static std::string buildSeccompProgram(bool runOfSubmission, rlim_t dataLimit);
+static std::vector<std::string> buildSeccompPrograms(bool runOfSubmission, rlim_t dataLimit);
 static long long getMonotonicMillis();
 static long long readCpuTimeMillis(pid_t);
 static int  readPeakMemoryKb(pid_t);
@@ -246,23 +247,24 @@ static unsigned long long getWritableImageSize(const char* path, unsigned long l
  * JNI call entry point.
  * Runs the given command in a sandboxed child process and measures its CPU time and peak memory
  * usage. Limits are enforced both by the kernel (setrlimit) and by a fine-grained watchdog;
- * isolation is layered: the seccomp syscall filter, the Landlock rules that confine writes to the
- * work directory and (when running as root) the privilege drop are mandatory - the run is refused
- * if any of them cannot be applied - while the network namespace is best-effort, as the filter
- * already refuses every socket but AF_UNIX. Without the privilege drop (a judger that is not root),
- * the Landlock rules must also cover truncation, which needs Linux 6.2 (see runProgram).
+ * isolation is layered: the seccomp syscall filters (an allowlist for a run of the submission, a
+ * deny-list for a compilation, see buildSeccompPrograms), the Landlock rules that confine writes to
+ * the work directory and (when running as root) the privilege drop are mandatory - the run is
+ * refused if any of them cannot be applied - while the network namespace is best-effort, as the
+ * filters already refuse every socket but AF_UNIX. Without the privilege drop (a judger that is not
+ * root), the Landlock rules must also cover truncation, which needs Linux 6.2 (see runProgram).
  *
  * Every compilation and run is the same sandbox user, so whatever one of them could leave behind
  * outside its own work directory (a file in /tmp or /dev/shm, a System V shared memory segment, a
  * POSIX message queue, a key in the user's keyring, ...) would outlive it, unaccounted for, and
  * could be read by a later submission (e.g. a run copying its hidden input to /tmp, for a later
  * compilation to #include it into its compile log). Landlock (see confineFileSystemWrites) and the
- * filter (System V IPC, POSIX message queues and kernel keyrings) rule that out; they need no
+ * filters (System V IPC, POSIX message queues and kernel keyrings) rule that out; they need no
  * privilege, so they hold in a default Docker container as well. The work directory is removed once
  * the submission has been judged.
  *
- * A run of the submission is a single process: the filter lets it create threads, but no other
- * process (see buildSeccompProgram). A compilation runs a trusted compiler, which may run others;
+ * A run of the submission is a single process: the filters let it create threads, but no other
+ * process (see buildSeccompPrograms). A compilation runs a trusted compiler, which may run others;
  * they all stay in the compiler's process group, which is killed as a whole.
  *
  * @param  jniEnv          - a reference to the JNI runtime environment
@@ -341,12 +343,12 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     }
     plan.envp.push_back(nullptr);
 
-    // The filter is what keeps a submission off the network when the judger has no CAP_SYS_ADMIN
+    // The filters are what keep a submission off the network when the judger has no CAP_SYS_ADMIN
     // (a default Docker container), and away from ptrace, namespaces, setsid and other processes
-    // everywhere: a run without it is refused rather than started unconfined.
-    plan.seccompProgram = buildSeccompProgram(!plan.compileStep, plan.dataLimit);
-    if ( plan.seccompProgram.empty() ) {
-        throwStringException(jniEnv, "Judger: failed to build the seccomp filter; refusing to run");
+    // everywhere: a run without them is refused rather than started unconfined.
+    plan.seccompPrograms = buildSeccompPrograms(!plan.compileStep, plan.dataLimit);
+    if ( plan.seccompPrograms.empty() ) {
+        throwStringException(jniEnv, "Judger: failed to build the seccomp filters; refusing to run");
         return NULL;
     }
 
@@ -464,7 +466,7 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
 
     // Kill whatever is left of the process group (a compiler's children: a run of the submission
     // has no other process), in one go, before the caller looks at the output. setsid and setpgid
-    // are denied by the seccomp filter, so nothing can have left the group.
+    // are denied by the seccomp filters, so nothing can have left the group.
     kill(-pid, SIGKILL);
     int           status = 0;
     struct rusage usage;
@@ -499,7 +501,7 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     }
 
     // What the watchdog did not stop still counts, whatever the exit code: CPU time it had not
-    // seen yet (it polls), a mapping beyond the memory backstop, which the seccomp filter stops, and
+    // seen yet (it polls), a mapping beyond the memory backstop, which the seccomp filters stop, and
     // the output limit, which the kernel enforces.
     int limit = limitExceeded.load();
     if ( limit == LIMIT_NONE && timeLimit > 0 && usedTime > timeLimit ) {
@@ -507,7 +509,7 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     }
     if ( limit == LIMIT_NONE && !plan.compileStep && plan.dataLimit > 0 && WIFSIGNALED(status) &&
          WTERMSIG(status) == SIGSYS ) {
-        limit = LIMIT_MEMORY; // a single mapping beyond RLIMIT_DATA (see buildSeccompProgram)
+        limit = LIMIT_MEMORY; // a single mapping beyond RLIMIT_DATA (see buildSeccompPrograms)
     }
     if ( limit == LIMIT_NONE && reachedOutputLimit(status, plan.outputFilePath) ) {
         limit = LIMIT_OUTPUT;
@@ -587,7 +589,7 @@ static void runProgram(const ChildPlan& plan, int syncWriteFd) {
     }
 
     // Tier 2 (best-effort): cut off the network. This needs CAP_SYS_ADMIN, which a default Docker
-    // container lacks; the seccomp filter, which refuses every socket but AF_UNIX, does not.
+    // container lacks; the seccomp filters, which refuse every socket but AF_UNIX, do not.
     unshare(CLONE_NEWNET);
 
     // Drop privileges to the unprivileged sandbox user (only when running as root). The process
@@ -643,7 +645,7 @@ static void runProgram(const ChildPlan& plan, int syncWriteFd) {
     // A program whose static data (initialised data and bss, e.g. `static int a[1 << 30];`) alone
     // exceeds the backstop below cannot even be loaded: execve would fail past its point of no
     // return, and the kernel would kill the program with a SIGSEGV that looks like a runtime error.
-    // Like a single mapping beyond the backstop (see buildSeccompProgram), it is Memory Limit
+    // Like a single mapping beyond the backstop (see buildSeccompPrograms), it is Memory Limit
     // Exceeded. The file is read with the sandbox user's credentials, as execve would read it.
     if ( !plan.compileStep && plan.dataLimit > 0 &&
          getWritableImageSize(plan.executable.c_str(), plan.pageSize) > (unsigned long long) plan.dataLimit ) {
@@ -656,17 +658,11 @@ static void runProgram(const ChildPlan& plan, int syncWriteFd) {
     // do not start under a tight RLIMIT_AS. It is generous on purpose (see getDataLimit), so the
     // watchdog normally reports the overrun as MLE first; the backstop only bounds how far a single
     // process can balloon between two polls (a run's single mapping beyond it is MLE as well, see
-    // buildSeccompProgram). Set last: the forked JVM image itself is far larger.
+    // buildSeccompPrograms). Set last: the forked JVM image itself is far larger.
     if ( plan.dataLimit > 0 && !setResourceLimit(RLIMIT_DATA, plan.dataLimit, plan.dataLimit) ) {
         reportChildFailure(syncWriteFd, STEP_RESOURCE_LIMIT);
     }
 
-    // Install the pre-built seccomp syscall filter via the raw syscall, so the child does not have
-    // to call into libseccomp (which would allocate), after Landlock's rules, whose system calls
-    // are no concern of the filter. Mandatory: if it cannot be installed the program is not run.
-    struct sock_fprog prog;
-    prog.len    = (unsigned short) (plan.seccompProgram.size() / sizeof(struct sock_filter));
-    prog.filter = (struct sock_filter*) plan.seccompProgram.data();
     if ( prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) != 0 ) {
         reportChildFailure(syncWriteFd, STEP_NO_NEW_PRIVS);
     }
@@ -688,8 +684,17 @@ static void runProgram(const ChildPlan& plan, int syncWriteFd) {
     if ( !confineFileSystemWrites(plan.workDirectory, landlockAbi) ) {
         reportChildFailure(syncWriteFd, STEP_LANDLOCK);
     }
-    if ( syscall(SYS_seccomp, SECCOMP_SET_MODE_FILTER, 0, &prog) != 0 ) {
-        reportChildFailure(syncWriteFd, STEP_SECCOMP);
+    // Install the pre-built seccomp filters via the raw system call, so the child does not have to
+    // call into libseccomp (which would allocate), after Landlock's rules, whose system calls are no
+    // concern of the filters, and in their order (see buildSeccompPrograms). Mandatory: if one
+    // cannot be installed, the program is not run.
+    for ( const std::string& program : plan.seccompPrograms ) {
+        struct sock_fprog prog;
+        prog.len    = (unsigned short) (program.size() / sizeof(struct sock_filter));
+        prog.filter = (struct sock_filter*) program.data();
+        if ( syscall(SYS_seccomp, SECCOMP_SET_MODE_FILTER, 0, &prog) != 0 ) {
+            reportChildFailure(syncWriteFd, STEP_SECCOMP);
+        }
     }
 
     execve(plan.executable.c_str(), plan.argv.data(), plan.envp.data());
@@ -1032,159 +1037,246 @@ static std::vector<std::string> buildEnvironment(const std::string& workDirector
 }
 
 /**
- * Builds the seccomp syscall filter and exports it as a classic BPF program. Uses a default-allow
- * policy and denies a curated set of syscalls that a competitive-programming submission never
- * legitimately needs but that are useful for sandbox escape, host tampering or persistence. Rules
- * are added by syscall name through libseccomp, so the filter is portable across architectures
- * (amd64/arm64). The program is exported here, in the parent, so the child can install it without
- * calling into libseccomp.
- *
- * Creating namespaces is denied as well. An unprivileged user namespace hands the submission a full
- * set of capabilities inside it, which turns every namespaced kernel interface (mount, netfilter,
- * ...) into attack surface and lets it undo the filesystem and network confinement. unshare and
- * setns are denied outright; clone is denied only when it asks for a new namespace, so threads (and
- * a compiler's fork) keep working; clone3 passes its flags in memory, which seccomp cannot inspect,
- * so it fails with ENOSYS, and the C library (glibc 2.34+ creates threads with clone3) falls back to
- * clone.
- *
- * A run of the submission may not create processes either, only threads: fork and vfork fail with
- * EPERM, and so does clone without CLONE_THREAD (which is how the C library forks and posix_spawn
- * spawns). The run is then a single process, whose CPU time and memory are exactly those of the
- * program, and which leaves nothing behind once it is gone. Threads count against RLIMIT_NPROC.
- * Compilers are trusted and legitimately run other programs (the gcc driver, go build, ...).
- *
- * Network sockets are denied too: socket and socketpair fail with EACCES for every address family
- * but AF_UNIX. The private network namespace cannot be created without CAP_SYS_ADMIN (e.g. in a
- * default Docker container), and without it a submission could reach the judger's database and
- * message queue or the internet. Local AF_UNIX sockets stay available (runtimes use socketpair) and
- * are guarded by file permissions. io_uring, whose IORING_OP_SOCKET would create a socket without
- * calling socket(), fails with ENOSYS, so runtimes such as libuv fall back to plain system calls.
- * Only native-architecture system calls pass the filter (any other ABI, such as i386's socketcall,
- * fails with ENOSYS), so these rules cannot be bypassed through a compat entry point.
- *
- * System V IPC (shared memory, semaphores, message queues) and POSIX message queues fail with EPERM,
- * for compilers too: they are kernel objects that outlive the process that created them, so a run
- * could leave behind shared memory that no limit accounts for, for good, or data for a later
- * submission to pick up (their file system counterparts, such as POSIX shared memory in /dev/shm,
- * are kept out by Landlock, see confineFileSystemWrites). So do the kernel keyrings (add_key,
- * request_key, keyctl), for the same reason: the user keyring and the user session keyring belong
- * to the user, not to a process, and outlive every run, so a key one run adds could be read by the
- * next (and when the judger is not root, they are the judger's own). A run of the submission cannot
- * create anonymous memory files (memfd_create, memfd_secret) either: memory written to one without
- * ever mapping it would count against no limit until the run ends.
- *
- * Nor can a run move its memory out of its resident set while keeping it, which would let it use
- * far more than its memory limit, measured on the resident set (VmHWM), without ever reaching it:
- *  - on a host with swap, madvise(MADV_PAGEOUT) swaps pages out at once, and MADV_COLD makes them
- *    the first to go. Both fail with EPERM, as does process_madvise, which applies them through a
- *    pidfd. The other advice the runtimes' allocators use (glibc, the JVM, Go, V8) either lets the
- *    kernel drop private pages, contents and all (MADV_DONTNEED, MADV_FREE), or keeps them resident
- *    or only tunes their handling (MADV_HUGEPAGE, MADV_COLLAPSE, MADV_WILLNEED, ...);
- *  - MADV_DONTNEED on shared anonymous memory (MAP_SHARED | MAP_ANONYMOUS) only unmaps the pages,
- *    which stay in memory, with their contents, until they are touched again, even without swap;
- *    and RLIMIT_DATA does not count shared mappings, so this would be bounded by nothing. Such a
- *    mapping cannot be created (EPERM): a single process has no use for it, and none of the
- *    runtimes allocates one. (A shared mapping of /dev/zero cannot be written, as Landlock refuses
- *    to open it for writing, and one of a file in the work directory holds no more than writing
- *    the file would, which RLIMIT_FSIZE bounds per file.)
- *
- * Finally, a run of the submission is killed (SIGSYS) when it maps more private writable memory in
- * one go than RLIMIT_DATA allows in all (see getDataLimit), e.g. std::vector<int>(1e9) under a
- * 256 MB limit. The kernel would refuse that mapping anyway; the program would then fail in its own
- * way (std::bad_alloc, MemoryError, a JVM or Go runtime abort, ...), which cannot be told apart
- * from a runtime error, whereas a SIGSYS is only ever this rule (nothing else in the filter kills),
- * so the judger reports Memory Limit Exceeded. A program that would have handled the failure (e.g.
- * checked malloc for NULL and gone on) is stopped there instead. Mappings that only exceed
- * RLIMIT_DATA together with earlier ones, brk and mremap cannot be checked by the filter: they still
- * fail with ENOMEM, but are rare, as the backstop is more than twice the limit and the watchdog
- * stops any program whose touched memory exceeds the limit first.
- * @param  runOfSubmission - whether the filter is for a run of the submission (not a compilation)
- * @param  dataLimit       - the run's RLIMIT_DATA in bytes (0 = none)
- * @return the exported BPF bytes, or an empty string if the filter (or any one of its rules) could
- *         not be built - a partial filter is never returned
+ * The system calls a run of the submission may make: any other fails with ENOSYS, which lets the C
+ * library and the runtimes fall back where they can (clone3 to clone, rseq, io_uring, ...). The
+ * list starts from what Docker's default seccomp profile allows unconditionally (seccomp/default.json
+ * in https://github.com/moby/profiles; nothing it allows only with a capability) and leaves out:
+ *  - what the deny-list filter refuses compilations too (ptrace & co., setsid and setpgid, System V
+ *    IPC, POSIX message queues, keyrings, ...: see buildSeccompPrograms), which still answers EPERM;
+ *  - other processes: fork, vfork, clone3, execveat, pidfd_open, pidfd_send_signal, kcmp and
+ *    process_mrelease (a run is a single process: clone is allowed for threads only);
+ *  - memory a limit would not see, or that would leave the resident set: memfd_create, memfd_secret,
+ *    process_madvise, mlock & co., remap_file_pages and the NUMA policy calls;
+ *  - the network: bind, listen, accept and connect (socket and socketpair are allowed for socket
+ *    pairs, the deny-list filter refuses every address family but AF_UNIX);
+ *  - files beyond reading and writing them: their owner, mode, times and extended attributes (which
+ *    Landlock does not confine), links, device nodes and FIFOs, watching files (inotify, fanotify),
+ *    the writeback of the whole system (sync, syncfs), splice, tee and vmsplice, Linux AIO
+ *    (io_setup & co.) and io_uring;
+ *  - credentials, capabilities and scheduling: set*uid, set*gid, setgroups, capset, setpriority,
+ *    sched_setaffinity & co., ioprio_set, personality, Landlock; and what else no runtime needs
+ *    (cachestat, listmount, statmount, ...).
+ * seccomp is allowed: the deny-list filter is installed after this one, and a filter the program
+ * adds can only restrict it further. Names are resolved for the native architecture: the list is for
+ * amd64 and arm64, where calls that do not exist (open, fork, ... on arm64) are left out.
  */
-static std::string buildSeccompProgram(bool runOfSubmission, rlim_t dataLimit) {
-    scmp_filter_ctx ctx = seccomp_init(SCMP_ACT_ALLOW);
-    if ( ctx == nullptr ) {
-        return std::string();
+static const char* const RUN_ALLOWED_SYSCALLS[] = {
+    // Files (Landlock confines writes to the work directory).
+    "read", "readv", "pread64", "preadv", "preadv2", "write", "writev", "pwrite64", "pwritev",
+    "pwritev2", "lseek", "open", "openat", "openat2", "creat", "close", "close_range", "dup",
+    "dup2", "dup3", "fcntl", "ioctl", "flock", "pipe", "pipe2", "stat", "fstat", "lstat",
+    "newfstatat", "statx", "statfs", "fstatfs", "access", "faccessat", "faccessat2", "getdents",
+    "getdents64", "getcwd", "chdir", "fchdir", "readlink", "readlinkat", "mkdir", "mkdirat", "rmdir",
+    "unlink", "unlinkat", "rename", "renameat", "renameat2", "truncate", "ftruncate", "fallocate",
+    "fadvise64", "readahead", "fsync", "fdatasync", "sendfile", "copy_file_range", "umask",
+    // Memory (the deny-list filter checks mmap and madvise).
+    "brk", "mmap", "munmap", "mremap", "mprotect", "madvise", "mincore", "msync", "membarrier",
+    "pkey_alloc", "pkey_free", "pkey_mprotect", "map_shadow_stack", "mseal",
+    // Threads (the deny-list filter allows clone for threads only), futexes and signals.
+    "clone", "exit", "exit_group", "set_tid_address", "set_robust_list", "rseq", "futex",
+    "futex_waitv", "futex_wait", "futex_wake", "futex_requeue", "sched_yield", "sched_getaffinity",
+    "sched_getparam", "sched_getscheduler", "sched_getattr", "sched_get_priority_max",
+    "sched_get_priority_min", "sched_rr_get_interval", "getcpu", "getpriority", "rt_sigaction",
+    "rt_sigprocmask", "rt_sigreturn", "rt_sigpending", "rt_sigsuspend", "rt_sigtimedwait",
+    "rt_sigqueueinfo", "rt_tgsigqueueinfo", "sigaltstack", "kill", "tkill", "tgkill", "pause",
+    "restart_syscall", "wait4", "waitid",
+    // Waiting, clocks and timers.
+    "poll", "ppoll", "select", "pselect6", "epoll_create", "epoll_create1", "epoll_ctl",
+    "epoll_wait", "epoll_pwait", "epoll_pwait2", "eventfd", "eventfd2", "signalfd", "signalfd4",
+    "nanosleep", "clock_nanosleep", "clock_gettime", "clock_getres", "gettimeofday", "time",
+    "times", "alarm", "getitimer", "setitimer", "timer_create", "timer_delete", "timer_gettime",
+    "timer_settime", "timer_getoverrun", "timerfd_create", "timerfd_gettime", "timerfd_settime",
+    // Socket pairs (the deny-list filter refuses every address family but AF_UNIX).
+    "socket", "socketpair", "sendto", "recvfrom", "sendmsg", "recvmsg", "sendmmsg", "recvmmsg",
+    "shutdown", "getsockopt", "setsockopt", "getsockname", "getpeername",
+    // The process itself.
+    "execve", "prctl", "arch_prctl", "seccomp", "getrandom", "uname", "sysinfo", "getrusage",
+    "getrlimit", "setrlimit", "prlimit64", "getpid", "getppid", "gettid", "getpgid", "getpgrp",
+    "getsid", "getuid", "geteuid", "getgid", "getegid", "getgroups", "getresuid", "getresgid",
+    "capget", "uretprobe",
+};
+
+/**
+ * The system calls the deny-list filter refuses (EPERM), compilations and runs alike. A compilation
+ * runs a trusted compiler, which may run others, too varied to allowlist; these are what neither has
+ * any business with but what serves sandbox escape, host tampering or persistence:
+ *  - ptrace & co., mounting, modules, the clock, and namespaces (unshare, setns; clone with a
+ *    CLONE_NEW* flag is refused by an argument rule): an unprivileged user namespace hands the
+ *    program a full set of capabilities inside it, which turns every namespaced kernel interface
+ *    into attack surface and lets it undo the filesystem and network confinement;
+ *  - leaving the process group (setsid, setpgid), which would escape the kill(-pgid) that ends a
+ *    compilation, letting a process outlive it and tamper with later runs;
+ *  - System V IPC (shared memory, semaphores, message queues), POSIX message queues and the kernel
+ *    keyrings: they outlive the process that created them (a user's keyrings belong to the user), so
+ *    a run could leave memory behind that no limit accounts for, or data for a later submission to
+ *    pick up (their file system counterparts, such as /dev/shm, are kept out by Landlock).
+ * ipc (the System V multiplexer of some 32-bit architectures) is resolved away on amd64 and arm64.
+ */
+static const char* const DENIED_SYSCALLS[] = {
+    "ptrace", "process_vm_readv", "process_vm_writev", "mount", "umount2", "pivot_root", "chroot",
+    "reboot", "kexec_load", "init_module", "finit_module", "delete_module", "swapon", "swapoff",
+    "settimeofday", "clock_settime", "adjtimex", "setns", "unshare", "setsid", "setpgid", "shmget",
+    "shmat", "shmdt", "shmctl", "semget", "semop", "semtimedop", "semctl", "msgget", "msgsnd",
+    "msgrcv", "msgctl", "ipc", "mq_open", "mq_unlink", "mq_timedsend", "mq_timedreceive",
+    "mq_notify", "mq_getsetattr", "add_key", "request_key", "keyctl",
+};
+
+namespace {
+/**
+ * A seccomp filter being built with libseccomp, which remembers whether every one of its rules
+ * made it in: one that silently failed to be added would leave a hole (e.g. sockets allowed) in a
+ * filter that otherwise looks fine, so such a filter is never exported.
+ */
+class SeccompFilter {
+  public:
+    explicit SeccompFilter(uint32_t defaultAction)
+        : ctx_(seccomp_init(defaultAction)), complete_(ctx_ != nullptr) {
+        // A system call of a foreign ABI (such as i386's socketcall on amd64) fails rather than
+        // killing the program (libseccomp's default), so that SIGSYS only ever means the memory
+        // rule; and no rule can be bypassed through a compat entry point.
+        if ( ctx_ != nullptr ) {
+            check(seccomp_attr_set(ctx_, SCMP_FLTATR_ACT_BADARCH, SCMP_ACT_ERRNO(ENOSYS)));
+        }
     }
-    // Every rule must make it into the filter: one that silently failed to be added would leave a
-    // hole (e.g. sockets allowed) in a filter that otherwise looks fine.
-    bool allRulesAdded = true;
-    auto addRule = [&allRulesAdded](int rc) {
-        if ( rc != 0 ) {
-            allRulesAdded = false;
-        }
-    };
-    // A system call of a foreign ABI fails rather than killing the program (libseccomp's default),
-    // so that SIGSYS only ever means the memory rule below.
-    addRule(seccomp_attr_set(ctx, SCMP_FLTATR_ACT_BADARCH, SCMP_ACT_ERRNO(ENOSYS)));
-    const int deniedSyscalls[] = {
-        SCMP_SYS(ptrace),            SCMP_SYS(process_vm_readv), SCMP_SYS(process_vm_writev),
-        SCMP_SYS(mount),             SCMP_SYS(umount2),          SCMP_SYS(pivot_root),
-        SCMP_SYS(chroot),            SCMP_SYS(reboot),           SCMP_SYS(kexec_load),
-        SCMP_SYS(init_module),       SCMP_SYS(finit_module),     SCMP_SYS(delete_module),
-        SCMP_SYS(swapon),            SCMP_SYS(swapoff),          SCMP_SYS(settimeofday),
-        SCMP_SYS(clock_settime),     SCMP_SYS(adjtimex),         SCMP_SYS(setns),
-        SCMP_SYS(unshare),
-        // Leaving the process group would escape the kill(-pgid) that ends a compilation, letting
-        // a process outlive it and tamper with later runs.
-        SCMP_SYS(setsid),            SCMP_SYS(setpgid),
-    };
-    for ( int syscallNr : deniedSyscalls ) {
-        if ( syscallNr >= 0 ) {
-            addRule(seccomp_rule_add(ctx, SCMP_ACT_ERRNO(EPERM), syscallNr, 0));
+    ~SeccompFilter() {
+        if ( ctx_ != nullptr ) {
+            seccomp_release(ctx_);
         }
     }
-    // Resolved by name, so that a system call this architecture lacks (ipc, the multiplexer of the
-    // System V calls on some 32-bit ones) or this libseccomp does not know is simply left out.
-    auto denyByName = [&](const char* const* names, size_t count) {
-        for ( size_t i = 0; i < count; ++i ) {
-            int syscallNr = seccomp_syscall_resolve_name(names[i]);
-            if ( syscallNr >= 0 ) {
-                addRule(seccomp_rule_add(ctx, SCMP_ACT_ERRNO(EPERM), syscallNr, 0));
-            }
+    SeccompFilter(const SeccompFilter&) = delete;
+    SeccompFilter& operator=(const SeccompFilter&) = delete;
+
+    void add(uint32_t action, int syscallNr, std::initializer_list<scmp_arg_cmp> conditions = {}) {
+        if ( ctx_ != nullptr ) {
+            check(seccomp_rule_add_array(ctx_, action, syscallNr, (unsigned int) conditions.size(),
+                                         conditions.begin()));
         }
-    };
-    const char* const ipcSyscalls[] = {
-        "shmget", "shmat", "shmdt", "shmctl", "semget", "semop", "semtimedop", "semctl",
-        "msgget", "msgsnd", "msgrcv", "msgctl", "ipc", "mq_open", "mq_unlink", "mq_timedsend",
-        "mq_timedreceive", "mq_notify", "mq_getsetattr",
-    };
-    denyByName(ipcSyscalls, sizeof(ipcSyscalls) / sizeof(ipcSyscalls[0]));
-    const char* const keyringSyscalls[] = { "add_key", "request_key", "keyctl" };
-    denyByName(keyringSyscalls, sizeof(keyringSyscalls) / sizeof(keyringSyscalls[0]));
-    if ( runOfSubmission ) {
-        // fork and vfork do not exist on every architecture (arm64 has clone only).
-        const char* const runSyscalls[] = {
-            "fork", "vfork", "memfd_create", "memfd_secret", "process_madvise",
-        };
-        denyByName(runSyscalls, sizeof(runSyscalls) / sizeof(runSyscalls[0]));
-        // madvise(addr, length, advice): the advice is an int, of which the kernel ignores the
-        // upper half of the register, so only the lower 32 bits are compared.
-        const int pageOutAdvice[] = { MADV_COLD, MADV_PAGEOUT };
-        for ( int advice : pageOutAdvice ) {
-            addRule(seccomp_rule_add(ctx, SCMP_ACT_ERRNO(EPERM), SCMP_SYS(madvise), 1,
-                                     SCMP_A2(SCMP_CMP_MASKED_EQ, 0xFFFFFFFFULL, (scmp_datum_t) advice)));
-        }
-        // mmap(addr, length, prot, flags, ...): a shared anonymous mapping, whatever its protection
-        // (mprotect could make it writable later). MAP_SHARED is the only shared type the kernel
-        // accepts for an anonymous mapping (MAP_SHARED_VALIDATE fails with EINVAL).
-        addRule(seccomp_rule_add(ctx, SCMP_ACT_ERRNO(EPERM), SCMP_SYS(mmap), 1,
-                                 SCMP_A3(SCMP_CMP_MASKED_EQ, MAP_TYPE | MAP_ANONYMOUS,
-                                         MAP_SHARED | MAP_ANONYMOUS)));
-        addRule(seccomp_rule_add(ctx, SCMP_ACT_ERRNO(EPERM), SCMP_SYS(clone), 1,
-                                 SCMP_A0(SCMP_CMP_MASKED_EQ, CLONE_THREAD, 0)));
-    }
-    if ( runOfSubmission && dataLimit > 0 ) {
-        // mmap(addr, length, prot, flags, ...): a private (MAP_TYPE), writable mapping that is not
-        // a stack (MAP_GROWSDOWN) counts against RLIMIT_DATA.
-        addRule(seccomp_rule_add(ctx, SCMP_ACT_KILL_PROCESS, SCMP_SYS(mmap), 3,
-                                 SCMP_A1(SCMP_CMP_GT, (scmp_datum_t) dataLimit),
-                                 SCMP_A2(SCMP_CMP_MASKED_EQ, PROT_WRITE, PROT_WRITE),
-                                 SCMP_A3(SCMP_CMP_MASKED_EQ, MAP_TYPE | MAP_GROWSDOWN, MAP_PRIVATE)));
     }
 
+    // Unconditional rules, by name: a system call that this architecture lacks (fork on arm64) or
+    // that this libseccomp does not know is left out.
+    template <size_t N> void addEach(uint32_t action, const char* const (&names)[N]) {
+        for ( const char* name : names ) {
+            int syscallNr = seccomp_syscall_resolve_name(name);
+            if ( syscallNr >= 0 ) {
+                add(action, syscallNr);
+            }
+        }
+    }
+
+    // Compiles the rules into a binary search tree rather than a linear list (libseccomp 2.5+), so
+    // that a long allowlist costs a run a handful of comparisons per system call. Best-effort.
+    void optimize() {
+#if SCMP_VER_MAJOR > 2 || (SCMP_VER_MAJOR == 2 && SCMP_VER_MINOR >= 5)
+        if ( ctx_ != nullptr ) {
+            seccomp_attr_set(ctx_, SCMP_FLTATR_CTL_OPTIMIZE, 2);
+        }
+#endif
+    }
+
+    // Exports the filter as a classic BPF program, here in the parent, so that the child can install
+    // it without calling into libseccomp. Empty if any rule is missing or the export failed.
+    std::string exportProgram() const {
+        std::string program;
+        int memFd = complete_ ? memfd_create("voj-seccomp", 0) : -1;
+        if ( memFd < 0 ) {
+            return program;
+        }
+        if ( seccomp_export_bpf(ctx_, memFd) == 0 ) {
+            off_t size = lseek(memFd, 0, SEEK_END);
+            if ( size > 0 ) {
+                lseek(memFd, 0, SEEK_SET);
+                program.resize((size_t) size);
+                if ( read(memFd, &program[0], (size_t) size) != size ) {
+                    program.clear();
+                }
+            }
+        }
+        close(memFd);
+        return program;
+    }
+
+  private:
+    void check(int rc) {
+        if ( rc != 0 ) {
+            complete_ = false;
+        }
+    }
+
+    scmp_filter_ctx ctx_;
+    bool            complete_;
+};
+}
+
+/**
+ * Builds the seccomp filters of a compilation or of a run of the submission, as classic BPF programs
+ * to install in this order. The kernel runs every filter a process has, and the most restrictive
+ * action wins (a kill over an errno over allowing); between two errnos, that of the filter installed
+ * last.
+ *
+ * A run gets two: the allowlist (default ENOSYS, see RUN_ALLOWED_SYSCALLS), so that a system call
+ * nobody thought of, including one of a future kernel, is refused by default; then the deny-list
+ * filter, which a compilation gets on its own. The deny-list filter allows by default and refuses
+ * DENIED_SYSCALLS (EPERM) and the arguments below; it comes last, so its errno is the one a run sees
+ * for a call both refuse. The argument rules need a filter of their own: libseccomp silently drops
+ * the conditional rules of a system call that also has an unconditional one, so the allowlist cannot
+ * allow mmap and refuse some of its arguments, and its comparisons cannot express the complement of
+ * each rule (allowing what it does not refuse).
+ *
+ * Both:
+ *  - clone fails with EPERM when it asks for a new namespace (CLONE_NEW*), so threads (and a
+ *    compiler's fork) keep working. clone3 passes its flags in memory, which seccomp cannot
+ *    inspect, so it fails with ENOSYS, and the C library (glibc 2.34+ creates threads with clone3)
+ *    falls back to clone;
+ *  - socket and socketpair fail with EACCES for every address family but AF_UNIX: the private
+ *    network namespace cannot be created without CAP_SYS_ADMIN (e.g. in a default Docker container),
+ *    and without it a submission could reach the judger's database and message queue or the
+ *    internet. Socket pairs stay available (runtimes use them). io_uring, whose IORING_OP_SOCKET
+ *    would create a socket without calling socket(), fails with ENOSYS, so runtimes such as libuv
+ *    fall back to plain system calls.
+ *
+ * A run of the submission only:
+ *  - is a single process: clone without CLONE_THREAD (how the C library forks and posix_spawn
+ *    spawns) fails with EPERM, as fork and vfork are not allowlisted. Its CPU time and memory are
+ *    then exactly those of the program, and nothing is left behind once it is gone;
+ *  - cannot move its memory out of its resident set while keeping it, which would let it use far
+ *    more than its memory limit, measured on the resident set (VmHWM), without ever reaching it: on
+ *    a host with swap, madvise(MADV_PAGEOUT) swaps pages out at once and MADV_COLD makes them the
+ *    first to go, so both fail with EPERM (process_madvise, which applies them through a pidfd, is
+ *    not allowlisted). The other advice the runtimes' allocators use (glibc, the JVM, Go, V8) either
+ *    lets the kernel drop private pages, contents and all (MADV_DONTNEED, MADV_FREE), or keeps them
+ *    resident or only tunes their handling. MADV_DONTNEED on shared anonymous memory (MAP_SHARED |
+ *    MAP_ANONYMOUS) only unmaps the pages, which stay in memory, with their contents, until touched
+ *    again, even without swap; and RLIMIT_DATA does not count shared mappings. So such a mapping
+ *    cannot be created (EPERM): a single process has no use for it, and no runtime allocates one. (A
+ *    shared mapping of /dev/zero cannot be written, as Landlock refuses to open it for writing, and
+ *    one of a file in the work directory holds no more than writing the file would, which
+ *    RLIMIT_FSIZE bounds per file);
+ *  - is killed (SIGSYS) when it maps more private writable memory in one go than RLIMIT_DATA allows
+ *    in all (see getDataLimit), e.g. std::vector<int>(1e9) under a 256 MB limit. The kernel would
+ *    refuse that mapping anyway; the program would then fail in its own way (std::bad_alloc,
+ *    MemoryError, a JVM or Go runtime abort, ...), which cannot be told apart from a runtime error,
+ *    whereas a SIGSYS is only ever this rule (nothing else in the filters kills), so the judger
+ *    reports Memory Limit Exceeded. A program that would have handled the failure is stopped there
+ *    instead. Mappings that only exceed RLIMIT_DATA together with earlier ones, brk and mremap cannot
+ *    be checked: they still fail with ENOMEM, but are rare, as the backstop is more than twice the
+ *    limit and the watchdog stops any program whose touched memory exceeds the limit first.
+ * @param  runOfSubmission - whether the filters are for a run of the submission (not a compilation)
+ * @param  dataLimit       - the run's RLIMIT_DATA in bytes (0 = none)
+ * @return the programs, or none if any filter (or any one of its rules) could not be built - a
+ *         partial filter is never returned
+ */
+static std::vector<std::string> buildSeccompPrograms(bool runOfSubmission, rlim_t dataLimit) {
+    std::vector<std::string> programs;
+    if ( runOfSubmission ) {
+        SeccompFilter allowlist(SCMP_ACT_ERRNO(ENOSYS));
+        allowlist.addEach(SCMP_ACT_ALLOW, RUN_ALLOWED_SYSCALLS);
+        allowlist.optimize();
+        programs.push_back(allowlist.exportProgram());
+    }
+
+    SeccompFilter filter(SCMP_ACT_ALLOW);
+    filter.addEach(SCMP_ACT_ERRNO(EPERM), DENIED_SYSCALLS);
     // clone(flags, ...): the flags are the first argument on every architecture this builds for
     // (amd64/arm64; s390 swaps the first two). One rule per flag: any of them set means EPERM.
     const unsigned long long namespaceFlags[] = {
@@ -1192,52 +1284,53 @@ static std::string buildSeccompProgram(bool runOfSubmission, rlim_t dataLimit) {
         CLONE_NEWCGROUP,
     };
     for ( unsigned long long flag : namespaceFlags ) {
-        addRule(seccomp_rule_add(ctx, SCMP_ACT_ERRNO(EPERM), SCMP_SYS(clone), 1,
-                                 SCMP_A0(SCMP_CMP_MASKED_EQ, flag, flag)));
+        filter.add(SCMP_ACT_ERRNO(EPERM), SCMP_SYS(clone),
+                   {SCMP_A0(SCMP_CMP_MASKED_EQ, flag, flag)});
     }
-    // Resolved by name, so this still builds against a libseccomp that predates clone3.
-    int clone3Nr = seccomp_syscall_resolve_name("clone3");
-    if ( clone3Nr != __NR_SCMP_ERROR ) {
-        addRule(seccomp_rule_add(ctx, SCMP_ACT_ERRNO(ENOSYS), clone3Nr, 0));
-    }
-
-    // socket(domain, ...) and socketpair(domain, ...): an allow-list of AF_UNIX. The comparison is
-    // on the full 64-bit argument, so a value with stray upper bits is refused as well.
+    // socket(domain, ...) and socketpair(domain, ...): only AF_UNIX. The comparison is on the full
+    // 64-bit argument, so a value with stray upper bits is refused as well.
     const int socketSyscalls[] = { SCMP_SYS(socket), SCMP_SYS(socketpair) };
     for ( int syscallNr : socketSyscalls ) {
-        addRule(seccomp_rule_add(ctx, SCMP_ACT_ERRNO(EACCES), syscallNr, 1,
-                                 SCMP_A0(SCMP_CMP_NE, (scmp_datum_t) AF_UNIX)));
+        filter.add(SCMP_ACT_ERRNO(EACCES), syscallNr, {SCMP_A0(SCMP_CMP_NE, (scmp_datum_t) AF_UNIX)});
     }
-    const char* const ioUringSyscalls[] = { "io_uring_setup", "io_uring_enter", "io_uring_register" };
-    for ( const char* name : ioUringSyscalls ) {
-        int syscallNr = seccomp_syscall_resolve_name(name);
-        if ( syscallNr != __NR_SCMP_ERROR ) {
-            addRule(seccomp_rule_add(ctx, SCMP_ACT_ERRNO(ENOSYS), syscallNr, 0));
-        }
-    }
-    if ( !allRulesAdded ) {
-        seccomp_release(ctx);
-        return std::string();
-    }
+    // By name, so this still builds against a libseccomp that predates them.
+    const char* const unimplementedSyscalls[] = {
+        "clone3", "io_uring_setup", "io_uring_enter", "io_uring_register",
+    };
+    filter.addEach(SCMP_ACT_ERRNO(ENOSYS), unimplementedSyscalls);
 
-    std::string program;
-    int memFd = memfd_create("voj-seccomp", 0);
-    if ( memFd >= 0 ) {
-        if ( seccomp_export_bpf(ctx, memFd) == 0 ) {
-            off_t size = lseek(memFd, 0, SEEK_END);
-            if ( size > 0 ) {
-                lseek(memFd, 0, SEEK_SET);
-                program.resize((size_t) size);
-                ssize_t got = read(memFd, &program[0], (size_t) size);
-                if ( got != size ) {
-                    program.clear();
-                }
-            }
+    if ( runOfSubmission ) {
+        filter.add(SCMP_ACT_ERRNO(EPERM), SCMP_SYS(clone),
+                   {SCMP_A0(SCMP_CMP_MASKED_EQ, CLONE_THREAD, 0)});
+        // madvise(addr, length, advice): the advice is an int, of which the kernel ignores the upper
+        // half of the register, so only the lower 32 bits are compared.
+        const int pageOutAdvice[] = { MADV_COLD, MADV_PAGEOUT };
+        for ( int advice : pageOutAdvice ) {
+            filter.add(SCMP_ACT_ERRNO(EPERM), SCMP_SYS(madvise),
+                       {SCMP_A2(SCMP_CMP_MASKED_EQ, 0xFFFFFFFFULL, (scmp_datum_t) advice)});
         }
-        close(memFd);
+        // mmap(addr, length, prot, flags, ...): a shared anonymous mapping, whatever its protection
+        // (mprotect could make it writable later). MAP_SHARED is the only shared type the kernel
+        // accepts for an anonymous mapping (MAP_SHARED_VALIDATE fails with EINVAL).
+        filter.add(SCMP_ACT_ERRNO(EPERM), SCMP_SYS(mmap), {SCMP_A3(SCMP_CMP_MASKED_EQ,
+                   MAP_TYPE | MAP_ANONYMOUS, MAP_SHARED | MAP_ANONYMOUS)});
+        if ( dataLimit > 0 ) {
+            // A private (MAP_TYPE), writable mapping that is not a stack (MAP_GROWSDOWN) counts
+            // against RLIMIT_DATA.
+            filter.add(SCMP_ACT_KILL_PROCESS, SCMP_SYS(mmap),
+                       {SCMP_A1(SCMP_CMP_GT, (scmp_datum_t) dataLimit),
+                        SCMP_A2(SCMP_CMP_MASKED_EQ, PROT_WRITE, PROT_WRITE),
+                        SCMP_A3(SCMP_CMP_MASKED_EQ, MAP_TYPE | MAP_GROWSDOWN, MAP_PRIVATE)});
+        }
     }
-    seccomp_release(ctx);
-    return program;
+    programs.push_back(filter.exportProgram());
+
+    for ( const std::string& program : programs ) {
+        if ( program.empty() ) {
+            return std::vector<std::string>();
+        }
+    }
+    return programs;
 }
 
 /**
