@@ -15,8 +15,7 @@
 <body>
     <div layout:fragment="content"
          th:with="contestStatus=${currentTime.before(contest.startTime) ? 'Ready' : (currentTime.after(contest.endTime) ? 'Done' : 'Live')},
-                  durMin=${(contest.endTime.time - contest.startTime.time) / 60000},
-                  problemsVisible=${(currentTime.after(contest.startTime) and isAttended) or currentTime.after(contest.endTime)}">
+                  durMin=${(contest.endTime.time - contest.startTime.time) / 60000}">
         <!-- TITLE BAR -->
         <section class="vw-titlebar">
             <div class="vw-titlebar-inner">
@@ -46,7 +45,7 @@
                 <!-- PROBLEMS -->
                 <article class="vw-card">
                     <div class="vw-card-strip" th:text="'// ' + #{voj.contests.contest.problems}">// PROBLEMS</div>
-                    <div class="vw-cproblem-table" th:if="${problemsVisible}">
+                    <div class="vw-cproblem-table" th:if="${isProblemsViewable}">
                         <div class="vw-cproblem-head">
                             <div th:text="#{voj.contests.contest.col-id}">ID</div><div th:text="#{voj.contests.contest.col-title}">TITLE</div><div th:text="#{voj.contests.contest.col-score}">SCORE</div><div th:text="#{voj.contests.contest.col-status}">STATUS</div>
                         </div>
@@ -63,7 +62,7 @@
                             </div>
                         </a>
                     </div>
-                    <div class="vw-card-body" th:unless="${problemsVisible}">
+                    <div class="vw-card-body" th:unless="${isProblemsViewable}">
                         <p class="vw-muted" th:text="#{voj.contests.contest.problems-hidden}">Attend the contest to view the problems.</p>
                     </div>
                 </article>

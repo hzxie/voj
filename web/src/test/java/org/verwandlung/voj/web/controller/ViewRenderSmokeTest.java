@@ -664,6 +664,30 @@ class ViewRenderSmokeTest {
         .andExpect(content().string(containsString("Registration for this contest is closed.")));
   }
 
+  /**
+   * The problems of a running contest show to whom ContestService lets see them (e.g. an
+   * administrator, who did not attend it), and to nobody else.
+   */
+  @Test
+  void contestProblemsShowAsContestServiceSays() throws Exception {
+    Contest contest = aContest(1L, "ACM", past(), future());
+    when(contestService.getContest(1L)).thenReturn(contest);
+    mockMvc
+        .perform(getWithCsrf("/contest/1"))
+        .andExpect(status().isOk())
+        .andExpect(content().string(not(containsString("vw-cproblem-table"))))
+        .andExpect(content().string(containsString("Attend the contest to view the problems.")));
+
+    authenticateAdmin();
+    when(contestService.isContestProblemsViewable(eq(contest), any())).thenReturn(true);
+    mockMvc
+        .perform(getWithCsrf("/contest/1"))
+        .andExpect(status().isOk())
+        .andExpect(content().string(containsString("vw-cproblem-table")))
+        .andExpect(
+            content().string(not(containsString("Attend the contest to view the problems."))));
+  }
+
   /** An unpublished contest is not found for anonymous users but still renders for administrators. */
   @Test
   void draftContestIsHiddenFromNonAdministrators() throws Exception {

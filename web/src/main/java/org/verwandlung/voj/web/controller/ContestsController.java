@@ -157,6 +157,8 @@ public class ContestsController {
         .addObject("problems", problems)
         .addObject("submissions", submissions)
         .addObject("isAttended", isAttended)
+        .addObject(
+            "isProblemsViewable", contestService.isContestProblemsViewable(contest, currentUser))
         .addObject("numberOfContestants", numberOfContestants)
         .addObject("standings", standings);
     return view;
