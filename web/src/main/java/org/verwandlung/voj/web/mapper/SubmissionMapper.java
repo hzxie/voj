@@ -150,9 +150,9 @@ public interface SubmissionMapper {
    *     submissions are then in ascending order
    * @param offset - the number of matching submissions to skip
    * @param limit - the number of submissions to get
-   * @param isPublicOnly - when {@code true} (a viewer who is not an administrator), submissions to
-   *     unpublished problems are excluded, and so are the submissions made in a contest that has not
-   *     ended at {@code now} unless they are the viewer's own
+   * @param isPublicOnly - when {@code true} (a viewer who is not an administrator), only the
+   *     submissions the viewer may see at {@code now}, by the rule of {@code
+   *     ContestService#isSubmissionVisible}
    * @param viewerUid - the unique identifier of the viewer (0 for an anonymous viewer)
    * @param now - the current time
    * @return the submissions

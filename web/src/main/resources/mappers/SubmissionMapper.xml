@@ -67,13 +67,14 @@
 		LEFT JOIN voj_users judger ON judger.uid = s.judger_uid
 	</sql>
 
-	<!-- The restriction of the submission lists for a viewer who is not an administrator: no
-	     submissions to unpublished problems, and no submissions made in a contest that has not ended
-	     yet - except the viewer's own. Until a contest ends, a contestant sees only their own
-	     contest submissions and nobody else sees any (in particular no verdict made after the
-	     scoreboard freeze). Mirrors ContestService#isSubmissionVisible. -->
+	<!-- The submissions s (to the problems p) of the lists that a viewer who is not an administrator
+	     (#{viewerUid}, 0 if anonymous) may see at #{now}, by the rule of
+	     ContestService#isSubmissionVisible: a submission made in a contest that has not ended is
+	     its owner's only (in particular no verdict made after the scoreboard freeze); otherwise a
+	     submission is seen when its problem is published, or when it was made in a published
+	     contest that has the problem and whose problems the viewer may view: one that has started
+	     and either ended or is attended by the viewer. -->
 	<sql id="publicOnly">
-		AND p.problem_status = 'PUBLISHED'
 		AND (
 			s.uid = #{viewerUid}
 			OR NOT EXISTS (
@@ -82,6 +83,28 @@
 				JOIN voj_contests running_c ON running_c.contest_id = running_cs.contest_id
 				WHERE running_cs.submission_id = s.submission_id
 				AND running_c.contest_end_time &gt; #{now}
+			)
+		)
+		AND (
+			p.problem_status = 'PUBLISHED'
+			OR EXISTS (
+				SELECT 1
+				FROM voj_contest_submissions viewable_cs
+				JOIN voj_contests viewable_c ON viewable_c.contest_id = viewable_cs.contest_id
+				JOIN voj_contest_problems viewable_cp ON viewable_cp.contest_id = viewable_cs.contest_id
+					AND viewable_cp.problem_id = s.problem_id
+				WHERE viewable_cs.submission_id = s.submission_id
+				AND viewable_c.contest_status = 'PUBLISHED'
+				AND viewable_c.contest_start_time &lt;= #{now}
+				AND (
+					viewable_c.contest_end_time &lt;= #{now}
+					OR EXISTS (
+						SELECT 1
+						FROM voj_contest_contestants viewable_cc
+						WHERE viewable_cc.contest_id = viewable_cs.contest_id
+						AND viewable_cc.contestant_uid = #{viewerUid}
+					)
+				)
 			)
 		)
 	</sql>
@@ -205,8 +228,8 @@
 		FROM voj_submissions
 		WHERE submission_id = #{submissionId}
 	</select>
-	<!-- Without the published-problems and running-contests restriction of publicOnly, the filters
-	     match getNumberOfSubmissionsUsingProblemIdAndUsername, so the two can back one pager. -->
+	<!-- Without the restriction of publicOnly, the filters match
+	     getNumberOfSubmissionsUsingProblemIdAndUsername, so the two can back one pager. -->
 	<select id="getSubmissions"
 		parameterType="map"
 		resultMap="SubmissionSummaryResultMap">

@@ -237,10 +237,10 @@ public class SubmissionService {
   }
 
   /**
-   * Gets the submissions a viewer may see, without their judge logs and codes: an administrator
-   * sees every submission; anybody else neither sees the submissions to unpublished problems nor,
-   * until the contest ends, the submissions other users made in a contest (see {@link
-   * ContestService#isSubmissionVisible}).
+   * Gets the submissions a viewer may see by {@link ContestService#isSubmissionVisible}, without
+   * their judge logs and codes: an administrator sees every submission; anybody else sees neither,
+   * until the contest ends, the submissions other users made in a contest, nor the submissions to
+   * unpublished problems that were not made in a contest whose problems the viewer may view.
    *
    * @param problemId - the unique identifier of the problem (0 = no filter)
    * @param username - the username of the user (empty = no filter)

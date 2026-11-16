@@ -758,6 +758,48 @@ public class ContestServiceTest {
   }
 
   /**
+   * Test case: tests the submission lists of SubmissionService against isSubmissionVisible(Submission,
+   * User). Test data: user 1000's submission to the hidden problem 1002 in a running contest user
+   * 1000 attends; then the contest ends; then it is hidden. Expected: every viewer lists the
+   * submission exactly when isSubmissionVisible lets them see it: while the contest runs, its owner
+   * and administrators; after it, everyone; once the contest is hidden, administrators only.
+   */
+  @Test
+  public void testSubmissionListsShowWhatIsSubmissionVisibleShows() {
+    createRunningContestWithHiddenProblem();
+    long submissionId =
+        (Long)
+            contestService
+                .createSubmission(FIXTURE_CONTEST_ID, 1002, userWithUid(1000), "text/x-java", "Code")
+                .get("submissionId");
+    Submission submission = submissionService.getSubmission(submissionId);
+    List<User> viewers =
+        java.util.Arrays.asList(userWithUid(1000), userWithUid(1002), null, administrator());
+
+    Runnable listsAgree =
+        () -> {
+          for (User viewer : viewers) {
+            Assertions.assertEquals(
+                contestService.isSubmissionVisible(submission, viewer),
+                listedSubmissionIds(viewer).contains(submissionId),
+                String.valueOf(viewer));
+          }
+        };
+    listsAgree.run();
+    Assertions.assertTrue(listedSubmissionIds(userWithUid(1000)).contains(submissionId));
+
+    endFixtureContest();
+    listsAgree.run();
+    Assertions.assertTrue(listedSubmissionIds(null).contains(submissionId));
+
+    Contest contest = contestMapper.getContest(FIXTURE_CONTEST_ID);
+    contest.setStatus(PublicationStatus.HIDDEN);
+    contestMapper.updateContest(contest);
+    listsAgree.run();
+    Assertions.assertFalse(listedSubmissionIds(userWithUid(1000)).contains(submissionId));
+  }
+
+  /**
    * Test case: tests the per-user statistics of SubmissionService (getSubmissionStatsOfUser,
    * getSolvedProblemsByDifficulty, getNumberOfSubmissionsGroupByDay) while a contest runs, and
    * after it. Test data: the ACM fixture, in which user 1001 (two compile errors outside contests)
