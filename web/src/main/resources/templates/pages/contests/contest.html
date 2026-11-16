@@ -78,7 +78,7 @@
                             <li th:unless="${contest.contestMode == 'ACM'}" th:text="#{voj.contests.contest.rule-oi-1}">OI scoring &mdash; each problem awards partial points; contestants are ranked by total score.</li>
                             <li th:unless="${contest.contestMode == 'ACM'}" th:text="#{voj.contests.contest.rule-oi-2}">Only the last submission for each problem counts toward the score.</li>
                         </ul>
-                        <div class="markdown description" th:unless="${contest.contestNotes == ''}" th:utext="${contest.contestNotes}">notes</div>
+                        <div class="markdown description" th:unless="${#strings.isEmpty(contest.contestNotes)}" th:text="${contest.contestNotes}">notes</div>
                     </div>
                 </article>
             </div>

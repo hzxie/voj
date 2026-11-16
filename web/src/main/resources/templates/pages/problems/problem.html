@@ -42,15 +42,15 @@
                 <article id="desc" class="vw-card vw-stmt vw-anchored">
                     <div class="vw-card-body">
                         <div class="vw-eyebrow vw-block-label" th:text="'// ' + #{voj.problems.problem.description}">// DESCRIPTION</div>
-                        <div class="description markdown" th:utext="${problem.description}">description</div>
+                        <div class="description markdown" th:text="${problem.description}">description</div>
 
                         <th:block th:if="${problem.inputFormat != null and problem.inputFormat != ''}">
                             <div class="vw-eyebrow vw-block-label" th:text="'// ' + #{voj.problems.problem.input}">// INPUT</div>
-                            <div class="description" th:utext="${problem.inputFormat}">input format</div>
+                            <div class="description markdown" th:text="${problem.inputFormat}">input format</div>
                         </th:block>
                         <th:block th:if="${problem.outputFormat != null and problem.outputFormat != ''}">
                             <div class="vw-eyebrow vw-block-label" th:text="'// ' + #{voj.problems.problem.output}">// OUTPUT</div>
-                            <div class="description" th:utext="${problem.outputFormat}">output format</div>
+                            <div class="description markdown" th:text="${problem.outputFormat}">output format</div>
                         </th:block>
 
                         <th:block th:if="${problem.hint != null and problem.hint != ''}">
@@ -65,11 +65,11 @@
                         <div class="vw-eyebrow vw-block-label" th:text="'// ' + #{voj.problems.problem.samples}">// SAMPLES</div>
                         <div class="vw-sample">
                             <div class="vw-sample-label" th:text="#{voj.problems.problem.sample-input}">INPUT</div>
-                            <pre class="vw-sample-pre" th:utext="${problem.sampleInput}">sample input</pre>
+                            <pre class="vw-sample-pre" th:text="${problem.sampleInput}">sample input</pre>
                         </div>
                         <div class="vw-sample">
                             <div class="vw-sample-label" th:text="#{voj.problems.problem.sample-output}">OUTPUT</div>
-                            <pre class="vw-sample-pre vw-sample-out" th:utext="${problem.sampleOutput}">sample output</pre>
+                            <pre class="vw-sample-pre vw-sample-out" th:text="${problem.sampleOutput}">sample output</pre>
                         </div>
                     </div>
                 </article>

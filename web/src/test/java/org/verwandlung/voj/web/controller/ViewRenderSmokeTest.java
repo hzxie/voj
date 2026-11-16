@@ -652,6 +652,40 @@ class ViewRenderSmokeTest {
         .andExpect(content().string(not(containsString("<img src=x"))));
   }
 
+  /**
+   * Problem statements and contest notes are Markdown sources that the page renders client-side
+   * from the element's text: they are written escaped, so "a<b" survives and admin-entered HTML
+   * never reaches the DOM as markup.
+   */
+  @Test
+  void markdownSourcesAreEscaped() throws Exception {
+    Problem problem = aPublishedProblem(1000L);
+    problem.setDescription("If $x<y$ and a<b <img src=x onerror=alert(1)>");
+    problem.setInpuFormatt("n<m");
+    problem.setOutputFormat("<b>sum</b>");
+    problem.setSampleInput("1<2");
+    problem.setSampleOutput("<3");
+    when(problemService.getProblem(1000L)).thenReturn(problem);
+    mockMvc
+        .perform(getWithCsrf("/p/1000"))
+        .andExpect(status().isOk())
+        .andExpect(content().string(containsString("If $x&lt;y$ and a&lt;b &lt;img src=x onerror=alert(1)&gt;")))
+        .andExpect(content().string(containsString(">n&lt;m</div>")))
+        .andExpect(content().string(containsString(">&lt;b&gt;sum&lt;/b&gt;</div>")))
+        .andExpect(content().string(containsString(">1&lt;2</pre>")))
+        .andExpect(content().string(containsString(">&lt;3</pre>")))
+        .andExpect(content().string(not(containsString("<img src=x"))));
+
+    Contest contest = aContest(1L, "ACM", future(), farFuture());
+    contest.setContestNotes("a<b <script>alert(1)</script>");
+    when(contestService.getContest(1L)).thenReturn(contest);
+    mockMvc
+        .perform(getWithCsrf("/contest/1"))
+        .andExpect(status().isOk())
+        .andExpect(content().string(containsString("a&lt;b &lt;script&gt;alert(1)&lt;/script&gt;")))
+        .andExpect(content().string(not(containsString("<script>alert(1)"))));
+  }
+
   /** The judge log carries raw compiler output, so both submission pages must escape it. */
   @Test
   void judgeLogIsEscaped() throws Exception {
