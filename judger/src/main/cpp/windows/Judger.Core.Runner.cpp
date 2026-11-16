@@ -170,6 +170,8 @@ bool ensureMediumLabel(const std::wstring&, SE_OBJECT_TYPE, const wchar_t*, BYTE
 bool createPrivateDesktop(HANDLE, HDESK&, std::wstring&, PSID&);
 bool setWindowStationAccess(PSID, bool);
 bool getTokenUserSid(HANDLE, std::wstring&);
+bool getJudgerSid(std::wstring&);
+bool isJudgersOwnAccount(HANDLE);
 
 bool getPeakMemoryUsage(HANDLE, jint&);
 bool getCpuTimeUsage(HANDLE, jint&);
@@ -442,7 +444,8 @@ JNIEXPORT jintArray JNICALL Java_org_verwandlung_voj_judger_core_Runner_execute(
 /**
  * JNI call entry point.
  * Logs the sandbox account on: the logon session every compilation and run uses, until
- * logOffSandboxAccount. It claims the account for this judger (see claimSandboxAccount), keeps the
+ * logOffSandboxAccount. It refuses the account the judger runs as (see isJudgersOwnAccount), claims
+ * the account for this judger (see claimSandboxAccount), keeps the
  * account's processes off the network (see blockNetwork), loads the account's profile (programs
  * expect HKCU; the JVM finds user.home there) with the logon token, as the run token cannot create
  * the profile of an account that has none yet, and creates the token and the desktop every program
@@ -468,6 +471,11 @@ JNIEXPORT void JNICALL Java_org_verwandlung_voj_judger_core_Runner_logOnSandboxA
             LOGON32_PROVIDER_DEFAULT, &session.hToken) ) {
         session.hToken = NULL;
         failedApi      = "LogonUser";
+    } else if ( isJudgersOwnAccount(session.hToken) ) {
+        // Its programs would run with the judger's rights, and the network filter would cut the
+        // judger itself off (its database included).
+        failedApi = "IsJudgersOwnAccount (system.username is the account the judger runs as: give " +
+                    std::string("its programs an account of their own)");
     } else if ( !claimSandboxAccount(session.hToken, session.hMutex) ) {
         failedApi = "ClaimSandboxAccount (another judger on this host runs its programs as " +
                     std::string("the account: give each judger an account of its own)");
@@ -570,16 +578,8 @@ bool setupIoRedirection(const std::wstring& inputFilePath, const std::wstring& o
  * @return whether it was built (GetLastError() tells why not)
  */
 bool getJudgerOnlySecurityDescriptor(PSECURITY_DESCRIPTOR& pSecurityDescriptor) {
-    HANDLE hToken = NULL;
-    if ( !OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken) ) {
-        return false;
-    }
     std::wstring sid;
-    bool         known = getTokenUserSid(hToken, sid);
-    DWORD        error = GetLastError();
-    CloseHandle(hToken);
-    if ( !known ) {
-        SetLastError(error);
+    if ( !getJudgerSid(sid) ) {
         return false;
     }
     std::wstring sddl = L"D:P(A;;FA;;;" + sid + L")";
@@ -1251,7 +1251,6 @@ bool ensureMediumLabel(const std::wstring& name, SE_OBJECT_TYPE type, const wcha
 bool createPrivateDesktop(HANDLE hToken, HDESK& hDesktop, std::wstring& desktop, PSID& logonSid) {
     std::wstring sessionSid;
     std::wstring judgerSid;
-    HANDLE       hJudgerToken = NULL;
     // The logon SID of the account's logon session, one of the groups of its token.
     DWORD size = 0;
     GetTokenInformation(hToken, TokenGroups, NULL, 0, &size);
@@ -1272,21 +1271,15 @@ bool createPrivateDesktop(HANDLE hToken, HDESK& hDesktop, std::wstring& desktop,
         SetLastError(ERROR_NO_SUCH_LOGON_SESSION);
         return false;
     }
-    if ( !OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hJudgerToken) ) {
-        return false;
-    }
-    bool  judgerKnown = getTokenUserSid(hJudgerToken, judgerSid);
-    DWORD error       = GetLastError();
-    CloseHandle(hJudgerToken);
-    if ( !judgerKnown ) {
-        SetLastError(error);
+    if ( !getJudgerSid(judgerSid) ) {
         return false;
     }
     wchar_t      mask[16];
     swprintf(mask, sizeof(mask) / sizeof(mask[0]), L"0x%lX", (unsigned long) DESKTOP_ACCESS);
     std::wstring sddl = std::wstring(L"D:P(A;;") + mask + L";;;" + sessionSid + L")(A;;GA;;;" +
                         judgerSid + L")(A;;GA;;;SY)" + PRIVATE_DESKTOP_LABEL;
-    PSECURITY_DESCRIPTOR pSd = NULL;
+    PSECURITY_DESCRIPTOR pSd   = NULL;
+    DWORD                error = ERROR_SUCCESS;
     if ( !ConvertStringSecurityDescriptorToSecurityDescriptorW(sddl.c_str(), SDDL_REVISION_1, &pSd,
             NULL) ) {
         return false;
@@ -1383,6 +1376,42 @@ bool getTokenUserSid(HANDLE hToken, std::wstring& sid) {
     }
     sid = string;
     LocalFree(string);
+    return true;
+}
+
+/**
+ * Gets the SID of the account the judger's process runs as.
+ * @param  sid - receives the SID, as a string
+ * @return whether it was found (GetLastError() tells why not)
+ */
+bool getJudgerSid(std::wstring& sid) {
+    HANDLE hToken = NULL;
+    if ( !OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken) ) {
+        return false;
+    }
+    bool  known = getTokenUserSid(hToken, sid);
+    DWORD error = GetLastError();
+    CloseHandle(hToken);
+    SetLastError(error);
+    return known;
+}
+
+/**
+ * Tells whether the sandbox account is the account the judger runs as. When their SIDs cannot be
+ * read, it is taken to be (and the logon fails), as nothing else is known of it.
+ * @param  hToken - the logon token of the sandbox account
+ * @return whether it is the judger's own account (GetLastError() tells why, if it is not known)
+ */
+bool isJudgersOwnAccount(HANDLE hToken) {
+    std::wstring sandboxSid;
+    std::wstring judgerSid;
+    if ( !getTokenUserSid(hToken, sandboxSid) || !getJudgerSid(judgerSid) ) {
+        return true;
+    }
+    if ( sandboxSid != judgerSid ) {
+        return false;
+    }
+    SetLastError(ERROR_ACCESS_DENIED);
     return true;
 }
 

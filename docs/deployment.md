@@ -780,6 +780,10 @@ Requirements for that account:
   time) once, at the first compilation or run, and keeps both until it exits
   (then it unloads the profile). The password is used for that logon only, and
   not kept.
+- It must not be the account the judger runs as: every process of the sandbox
+  account is kept off the network (loopback included), which would cut the
+  judger off from its database, and its programs would have the judger's
+  rights. The judger refuses it at the first compilation or run.
 - It must be this judger's alone: see
   [Several judgers on one host](#several-judgers-on-one-host).
 - Keep it a plain member of *Users* (no admin rights). It only needs to enter,
