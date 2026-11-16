@@ -30,26 +30,19 @@ import org.verwandlung.voj.judger.model.Problem;
  */
 public interface ProblemMapper {
   /**
-   * Gets a problem object by its unique identifier.
+   * Gets a problem by its unique identifier: what the judger needs of it, its limits and the
+   * version of its test data.
    *
    * @param problemId - the unique identifier of the problem
-   * @return a problem object
+   * @return the problem, or null if there is none
    */
-  @Select("SELECT * FROM voj_problems WHERE problem_id = #{problemId}")
+  @Select(
+      "SELECT problem_id, problem_time_limit, problem_memory_limit, checkpoints_version"
+          + " FROM voj_problems WHERE problem_id = #{problemId}")
   @Results({
     @Result(property = "problemId", column = "problem_id"),
-    @Result(property = "isPublic", column = "problem_is_public"),
-    @Result(property = "problemName", column = "problem_name"),
-    @Result(property = "totalSubmission", column = "total_submission"),
-    @Result(property = "acceptedSubmission", column = "accepted_submission"),
     @Result(property = "timeLimit", column = "problem_time_limit"),
     @Result(property = "memoryLimit", column = "problem_memory_limit"),
-    @Result(property = "description", column = "problem_description"),
-    @Result(property = "inputFormat", column = "problem_input_format"),
-    @Result(property = "outputFormat", column = "problem_output_format"),
-    @Result(property = "sampleInput", column = "problem_sample_input"),
-    @Result(property = "sampleOutput", column = "problem_sample_output"),
-    @Result(property = "hint", column = "problem_hint"),
     @Result(property = "checkpointsVersion", column = "checkpoints_version")
   })
   Problem getProblem(@Param("problemId") long problemId);

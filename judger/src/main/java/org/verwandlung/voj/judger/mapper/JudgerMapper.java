@@ -39,8 +39,8 @@ public interface JudgerMapper {
    * @param description - the description of the judger
    * @param languageIds - the unique identifiers of the languages it supports, comma-separated
    * @param isReady - whether it takes submissions
-   * @param cpuLoad - the CPU load of its host, in percent, or -1 if unknown
-   * @param memoryUsage - the memory usage of its host, in percent, or -1 if unknown
+   * @param cpuLoad - the CPU load of its host, in percent, or 0 if unknown
+   * @param memoryUsage - the memory usage of its host, in percent, or 0 if unknown
    */
   @Insert(
       "INSERT INTO voj_judgers (judger_instance, judger_uid, judger_description,"

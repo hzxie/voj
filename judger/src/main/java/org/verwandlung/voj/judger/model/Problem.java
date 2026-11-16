@@ -19,7 +19,8 @@ package org.verwandlung.voj.judger.model;
 import java.io.Serializable;
 
 /**
- * The model of a problem. Maps to the voj_problems table in the database.
+ * A problem, as the judger needs it: its limits and the version of its test data. Maps to the
+ * voj_problems table in the database.
  *
  * @author Haozhe Xie
  */
@@ -28,81 +29,16 @@ public class Problem implements Serializable {
   public Problem() {}
 
   /**
-   * Constructor of the problem.
-   *
-   * @param isPublic - whether the problem is public
-   * @param problemName - the name of the problem
-   * @param timeLimit - the maximum running time
-   * @param memoryLimit - the maximum running memory
-   * @param description - the description of the problem
-   * @param inputFormat - the description of the problem's input format
-   * @param outputFormat - the description of the problem's output format
-   * @param sampleInput - the sample input of the problem
-   * @param sampleOutput - the sample output of the problem
-   * @param hint - the hint of the problem
-   */
-  public Problem(
-      boolean isPublic,
-      String problemName,
-      int timeLimit,
-      int memoryLimit,
-      String description,
-      String inputFormat,
-      String outputFormat,
-      String sampleInput,
-      String sampleOutput,
-      String hint) {
-    this.isPublic = isPublic;
-    this.problemName = problemName;
-    this.timeLimit = timeLimit;
-    this.memoryLimit = memoryLimit;
-    this.description = description;
-    this.inputFormat = inputFormat;
-    this.outputFormat = outputFormat;
-    this.sampleInput = sampleInput;
-    this.sampleOutput = sampleOutput;
-    this.hint = hint;
-  }
-
-  /**
    * Constructor of the Problem class.
    *
    * @param problemId - the unique identifier of the problem
-   * @param isPublic - whether the problem is public
-   * @param problemName - the name of the problem
-   * @param timeLimit - the maximum running time
-   * @param memoryLimit - the maximum running memory
-   * @param description - the description of the problem
-   * @param inputFormat - the description of the problem's input format
-   * @param outputFormat - the description of the problem's output format
-   * @param sampleInput - the sample input of the problem
-   * @param sampleOutput - the sample output of the problem
-   * @param hint - the hint of the problem
+   * @param timeLimit - the time limit of a run (ms)
+   * @param memoryLimit - the memory limit of a run (KB)
    */
-  public Problem(
-      long problemId,
-      boolean isPublic,
-      String problemName,
-      int timeLimit,
-      int memoryLimit,
-      String description,
-      String inputFormat,
-      String outputFormat,
-      String sampleInput,
-      String sampleOutput,
-      String hint) {
-    this(
-        isPublic,
-        problemName,
-        timeLimit,
-        memoryLimit,
-        description,
-        inputFormat,
-        outputFormat,
-        sampleInput,
-        sampleOutput,
-        hint);
+  public Problem(long problemId, int timeLimit, int memoryLimit) {
     this.problemId = problemId;
+    this.timeLimit = timeLimit;
+    this.memoryLimit = memoryLimit;
   }
 
   /**
@@ -124,199 +60,54 @@ public class Problem implements Serializable {
   }
 
   /**
-   * Gets whether the problem is public.
+   * Gets the time limit of a run.
    *
-   * @return whether the problem is public
-   */
-  public boolean isPublic() {
-    return isPublic;
-  }
-
-  /**
-   * Sets whether the problem is public.
-   *
-   * @param isPublic - whether the problem is public
-   */
-  public void setPublic(boolean isPublic) {
-    this.isPublic = isPublic;
-  }
-
-  /**
-   * Gets the name of the problem.
-   *
-   * @return the name of the problem
-   */
-  public String getProblemName() {
-    return problemName;
-  }
-
-  /**
-   * Sets the name of the problem.
-   *
-   * @param problemName - the name of the problem
-   */
-  public void setProblemName(String problemName) {
-    this.problemName = problemName;
-  }
-
-  /**
-   * Gets the maximum running time.
-   *
-   * @return the maximum running time
+   * @return the time limit (ms)
    */
   public int getTimeLimit() {
     return timeLimit;
   }
 
   /**
-   * Sets the maximum running time.
+   * Sets the time limit of a run.
    *
-   * @param timeLimit - the maximum running time
+   * @param timeLimit - the time limit (ms)
    */
   public void setTimeLimit(int timeLimit) {
     this.timeLimit = timeLimit;
   }
 
   /**
-   * Gets the maximum running memory.
+   * Gets the memory limit of a run.
    *
-   * @return the maximum running memory
+   * @return the memory limit (KB)
    */
   public int getMemoryLimit() {
     return memoryLimit;
   }
 
   /**
-   * Sets the maximum running memory.
+   * Sets the memory limit of a run.
    *
-   * @param memoryLimit - the maximum running memory
+   * @param memoryLimit - the memory limit (KB)
    */
   public void setMemoryLimit(int memoryLimit) {
     this.memoryLimit = memoryLimit;
   }
 
   /**
-   * Gets the description of the problem.
+   * Gets the version of the problem's test data.
    *
-   * @return the description of the problem
-   */
-  public String getDescription() {
-    return description;
-  }
-
-  /**
-   * Sets the description of the problem.
-   *
-   * @param description - the description of the problem
-   */
-  public void setDescription(String description) {
-    this.description = description;
-  }
-
-  /**
-   * Gets the description of the input format.
-   *
-   * @return the description of the input format
-   */
-  public String getInputFormat() {
-    return inputFormat;
-  }
-
-  /**
-   * Sets the description of the input format.
-   *
-   * @param inputFormat - the description of the input format
-   */
-  public void setInpuFormatt(String inputFormat) {
-    this.inputFormat = inputFormat;
-  }
-
-  /**
-   * Gets the description of the output format.
-   *
-   * @return the description of the output format
-   */
-  public String getOutputFormat() {
-    return outputFormat;
-  }
-
-  /**
-   * Sets the description of the output format.
-   *
-   * @param outputFormat - the description of the output format
-   */
-  public void setOutputFormat(String outputFormat) {
-    this.outputFormat = outputFormat;
-  }
-
-  /**
-   * Gets the sample input.
-   *
-   * @return the sample input
-   */
-  public String getSampleInput() {
-    return sampleInput;
-  }
-
-  /**
-   * Sets the sample input.
-   *
-   * @param sampleInput - the sample input
-   */
-  public void setSampleInput(String sampleInput) {
-    this.sampleInput = sampleInput;
-  }
-
-  /**
-   * Gets the sample output.
-   *
-   * @return the sample output
-   */
-  public String getSampleOutput() {
-    return sampleOutput;
-  }
-
-  /**
-   * Sets the sample output.
-   *
-   * @param sampleOutput - the sample output
-   */
-  public void setSampleOutput(String sampleOutput) {
-    this.sampleOutput = sampleOutput;
-  }
-
-  /**
-   * Gets the hint of the problem.
-   *
-   * @return the hint of the problem
-   */
-  public String getHint() {
-    return hint;
-  }
-
-  /**
-   * Sets the hint of the problem.
-   *
-   * @param hint - the hint of the problem
-   */
-  public void setHint(String hint) {
-    this.hint = hint;
-  }
-
-  /**
-   * Gets the checkpoints version of the problem. The judger compares this against the version of its
-   * locally cached test data to decide whether the cache is stale.
-   *
-   * @return the checkpoints version
+   * @return the version, bumped by the web application whenever the test data changes
    */
   public int getCheckpointsVersion() {
     return checkpointsVersion;
   }
 
   /**
-   * Sets the checkpoints version of the problem.
+   * Sets the version of the problem's test data.
    *
-   * @param checkpointsVersion - the checkpoints version
+   * @param checkpointsVersion - the version
    */
   public void setCheckpointsVersion(int checkpointsVersion) {
     this.checkpointsVersion = checkpointsVersion;
@@ -328,56 +119,18 @@ public class Problem implements Serializable {
   @Override
   public String toString() {
     return String.format(
-        "Problem: [ProblemID=%s, isPublic=%s, ProblemName=%s, TimeLimit=%s, "
-            + "MemoryLimit=%s, Description=%s, InputFormat=%s, OutputFormat=%s, "
-            + "SampleInput=%s, SampleOutput=%s, Hint=%s]",
-        new Object[] {
-          problemId,
-          isPublic,
-          problemName,
-          timeLimit,
-          memoryLimit,
-          description,
-          inputFormat,
-          outputFormat,
-          sampleInput,
-          sampleOutput,
-          hint
-        });
+        "Problem: [ProblemID=%s, TimeLimit=%s, MemoryLimit=%s, CheckpointsVersion=%s]",
+        problemId, timeLimit, memoryLimit, checkpointsVersion);
   }
 
   /** The unique identifier of the problem. */
   private long problemId;
 
-  /** Whether the problem is public. */
-  private boolean isPublic;
-
-  /** The name of the problem. */
-  private String problemName;
-
-  /** The maximum running time. */
+  /** The time limit of a run (ms). */
   private int timeLimit;
 
-  /** The maximum running memory. */
+  /** The memory limit of a run (KB). */
   private int memoryLimit;
-
-  /** The description of the problem. */
-  private String description;
-
-  /** The input format. */
-  private String inputFormat;
-
-  /** The output format. */
-  private String outputFormat;
-
-  /** The sample input. */
-  private String sampleInput;
-
-  /** The sample output. */
-  private String sampleOutput;
-
-  /** The hint of the problem. */
-  private String hint;
 
   /** The checkpoints version, bumped by the web side whenever a problem's test data changes. */
   private int checkpointsVersion;

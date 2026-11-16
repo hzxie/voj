@@ -37,15 +37,16 @@ import org.verwandlung.voj.judger.model.Problem;
 public class ProblemMapperTest {
   /**
    * Test case: tests the getProblem() method. Test data: the unique identifier of the "A+B Problem".
-   * Expected result: returns the expected problem object.
+   * Expected result: returns the problem, with its limits.
    */
   @Test
   public void testGetProblemExists() {
     Problem problem = problemMapper.getProblem(1000);
     Assertions.assertNotNull(problem);
 
-    String problemName = problem.getProblemName();
-    Assertions.assertEquals("A+B Problem", problemName);
+    Assertions.assertEquals(1000, problem.getProblemId());
+    Assertions.assertTrue(problem.getTimeLimit() > 0);
+    Assertions.assertTrue(problem.getMemoryLimit() > 0);
   }
 
   /**

@@ -59,10 +59,9 @@ import org.verwandlung.voj.judger.util.FileSystemUtils;
 /**
  * A local, version-aware cache of problem checkpoints (test data).
  *
- * <p>The database remains the source of truth, but a judger no longer reads the input/output of
- * every checkpoint from the database on each submission. Instead it keeps a per-problem copy and
- * re-downloads (via {@link HttpCheckpointProvider}) only when the problem's {@code
- * checkpoints_version} changes — the version the web side bumps whenever the test data is edited.
+ * <p>The web application holds the test data. A judger keeps a copy per problem and downloads it
+ * (via {@link HttpCheckpointProvider}) only when the problem's {@code checkpoints_version} changes:
+ * the version the web side bumps whenever the test data is edited.
  *
  * <p>A fresh copy is downloaded into a private temporary directory and only then swapped into
  * place, so an interrupted or failed download never leaves a half-written cache that could be
@@ -132,12 +131,6 @@ public class CheckpointStore {
               judgerWorkDirectory = work;
             });
     LOGGER.info("Caching checkpoints in {}, judging in {}", cacheDirectory, judgerWorkDirectory);
-    if (!obsoleteWorkDirectory.isBlank()) {
-      LOGGER.warn(
-          "judger.workDir ({}) is no longer used: the judger judges in {}. Remove the setting.",
-          obsoleteWorkDirectory,
-          judgerWorkDirectory);
-    }
     return cacheDirectory;
   }
 
@@ -346,8 +339,8 @@ public class CheckpointStore {
    * Makes sure an account may read the attributes of a directory (Windows, see {@link #passable}):
    * unless an entry of its ACL already allows the account that (on the directory itself, not only
    * on what is created in it), the entry is added. A directory the judger creates has it from the
-   * start; one that existed already, such as a checkpoint root created by an earlier version of the
-   * judger or by hand, gets it once, at the judger's next start.
+   * start; one that existed already, such as a checkpoint root created by hand, gets it at the
+   * judger's next start.
    *
    * @param directory - the directory
    * @param account - the account
@@ -735,10 +728,6 @@ public class CheckpointStore {
   /** The account the sandbox runs submissions as on Windows. */
   @Value("${system.username:}")
   private String sandboxUsername;
-
-  /** What judger.workDir, which is no longer used, is set to, if anything. */
-  @Value("${judger.workDir:${VOJ_JUDGER_WORK_DIR:}}")
-  private String obsoleteWorkDirectory = "";
 
   /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(CheckpointStore.class);

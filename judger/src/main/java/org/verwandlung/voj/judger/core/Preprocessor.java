@@ -48,11 +48,8 @@ import org.verwandlung.voj.judger.model.Submission;
 import org.verwandlung.voj.judger.util.FileSystemUtils;
 
 /**
- * The preprocessor, used to perform preparation work before judging.
- *
- * <p>This now covers only the submission's source code and the directories it is judged in; a
- * problem's checkpoints (test data) are managed by {@link CheckpointStore}, which caches them
- * locally and downloads them on demand.
+ * The preprocessor: writes the source code of a submission and creates the directories it is
+ * judged in (a problem's test data is {@link CheckpointStore}'s).
  *
  * <p>A judging has a directory of its own (the work directory the dispatcher gives it), which
  * belongs to the judger and which no compilation or run may write to: the compile log and the

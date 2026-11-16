@@ -33,7 +33,7 @@ public class SubmissionTest {
    */
   @Test
   public void testConstructorAndGetters() {
-    Problem problem = new Problem(1000L, true, "A+B", 1000, 65536, "", "", "", "", "", "");
+    Problem problem = new Problem(1000L, 1000, 65536);
     Language language = new Language("cpp", "C++", "g++", "./a.out");
     Date submitTime = new Date(1000L);
     Date executeTime = new Date(2000L);

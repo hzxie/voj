@@ -276,8 +276,6 @@ has a slot *n* there (see [`configuration.md`](configuration.md#directories)):
 | `work-<n>/` | `0711` | The work directories of the judgings |
 | `trash-<n>-<random>/` | | What a judging that never completed left in `work-<n>/` and the judger could not remove when it started; removed at a later start |
 
-`judger.workDir` is no longer used (a judger that finds it set logs a warning).
-
 How it behaves at runtime:
 
 - For each judging the judger creates a directory of its own in `work-<n>/`,

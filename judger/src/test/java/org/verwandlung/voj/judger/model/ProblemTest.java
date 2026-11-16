@@ -26,80 +26,34 @@ import org.junit.jupiter.api.Test;
  */
 public class ProblemTest {
   /**
-   * Test case: tests the constructor without an identifier. Expected result: the getters return the
-   * values passed to the constructor and the identifier defaults to zero.
+   * Test case: tests the constructor. Expected result: the getters return the values passed to it,
+   * and the version of the test data defaults to zero.
    */
   @Test
-  public void testConstructorWithoutId() {
-    Problem problem =
-        new Problem(
-            true, "A+B", 1000, 65536, "desc", "input", "output", "1 2", "3", "hint");
-
-    Assertions.assertEquals(0, problem.getProblemId());
-    Assertions.assertTrue(problem.isPublic());
-    Assertions.assertEquals("A+B", problem.getProblemName());
-    Assertions.assertEquals(1000, problem.getTimeLimit());
-    Assertions.assertEquals(65536, problem.getMemoryLimit());
-    Assertions.assertEquals("desc", problem.getDescription());
-    Assertions.assertEquals("input", problem.getInputFormat());
-    Assertions.assertEquals("output", problem.getOutputFormat());
-    Assertions.assertEquals("1 2", problem.getSampleInput());
-    Assertions.assertEquals("3", problem.getSampleOutput());
-    Assertions.assertEquals("hint", problem.getHint());
-  }
-
-  /**
-   * Test case: tests the constructor with an identifier. Expected result: the getters return the
-   * values passed to the constructor, including the identifier.
-   */
-  @Test
-  public void testConstructorWithId() {
-    Problem problem =
-        new Problem(
-            1000L, true, "A+B", 1000, 65536, "desc", "input", "output", "1 2", "3", "hint");
+  public void testConstructor() {
+    Problem problem = new Problem(1000L, 1000, 65536);
 
     Assertions.assertEquals(1000L, problem.getProblemId());
-    Assertions.assertEquals("A+B", problem.getProblemName());
+    Assertions.assertEquals(1000, problem.getTimeLimit());
+    Assertions.assertEquals(65536, problem.getMemoryLimit());
+    Assertions.assertEquals(0, problem.getCheckpointsVersion());
   }
 
   /**
-   * Test case: tests the default constructor together with the setters. Expected result: the
-   * getters return the values set by the setters.
+   * Test case: tests the setters. Expected result: the getters return the values set.
    */
   @Test
   public void testSetters() {
     Problem problem = new Problem();
     problem.setProblemId(1001L);
-    problem.setPublic(false);
-    problem.setProblemName("Hello");
     problem.setTimeLimit(2000);
     problem.setMemoryLimit(131072);
-    problem.setDescription("d");
-    problem.setInpuFormatt("i");
-    problem.setOutputFormat("o");
-    problem.setSampleInput("si");
-    problem.setSampleOutput("so");
-    problem.setHint("h");
+    problem.setCheckpointsVersion(3);
 
     Assertions.assertEquals(1001L, problem.getProblemId());
-    Assertions.assertFalse(problem.isPublic());
-    Assertions.assertEquals("Hello", problem.getProblemName());
     Assertions.assertEquals(2000, problem.getTimeLimit());
     Assertions.assertEquals(131072, problem.getMemoryLimit());
-    Assertions.assertEquals("d", problem.getDescription());
-    Assertions.assertEquals("i", problem.getInputFormat());
-    Assertions.assertEquals("o", problem.getOutputFormat());
-    Assertions.assertEquals("si", problem.getSampleInput());
-    Assertions.assertEquals("so", problem.getSampleOutput());
-    Assertions.assertEquals("h", problem.getHint());
-  }
-
-  /** Test case: tests toString. Expected result: a string containing the problem name. */
-  @Test
-  public void testToString() {
-    Problem problem =
-        new Problem(
-            1000L, true, "A+B", 1000, 65536, "desc", "input", "output", "1 2", "3", "hint");
-    Assertions.assertTrue(problem.toString().contains("A+B"));
+    Assertions.assertEquals(3, problem.getCheckpointsVersion());
+    Assertions.assertTrue(problem.toString().contains("ProblemID=1001"));
   }
 }

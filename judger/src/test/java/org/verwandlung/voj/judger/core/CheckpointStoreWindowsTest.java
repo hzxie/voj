@@ -97,7 +97,7 @@ public class CheckpointStoreWindowsTest {
 
   /**
    * Test case: the checkpoint root exists already, with an ACL that gives the judger alone access
-   * (as one created by an earlier version of the judger). Expected result: the judger lets the
+   * (as one created by hand). Expected result: the judger lets the
    * sandbox account read the attributes of the root, once: a later start leaves the ACL as it is.
    */
   @Test

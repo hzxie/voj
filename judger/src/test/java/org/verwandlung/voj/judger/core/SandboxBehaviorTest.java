@@ -156,9 +156,8 @@ public class SandboxBehaviorTest {
    */
   @Test
   public void testCleanupDoesNotDelayTheRun() throws Exception {
-    Language cpp = languageMapper.getLanguageUsingSlug("text/x-c++src");
-    Problem problem =
-        new Problem(900008L, true, "sandbox-behavior", 1000, 65536, "", "", "", "", "", "");
+    Language cpp = languageOf("text/x-c++src");
+    Problem problem = new Problem(900008L, 1000, 65536);
     Submission submission = new Submission();
     submission.setSubmissionId(900008L);
     submission.setProblem(problem);
@@ -370,12 +369,11 @@ public class SandboxBehaviorTest {
   public void testRunCannotChangeWhatLaterRunsUse() throws Exception {
     Assumptions.assumeTrue("native".equalsIgnoreCase(sandbox), "This tests the native runner.");
     String code = isLinux() ? LATER_RUNS_CODE : WINDOWS_LATER_RUNS_CODE;
-    Problem problem =
-        new Problem(900043L, true, "sandbox-behavior", 5000, 262144, "", "", "", "", "", "");
+    Problem problem = new Problem(900043L, 5000, 262144);
     Submission submission = new Submission();
     submission.setSubmissionId(900043L);
     submission.setProblem(problem);
-    submission.setLanguage(languageMapper.getLanguageUsingSlug("text/x-c++src"));
+    submission.setLanguage(languageOf("text/x-c++src"));
     submission.setCode(code);
     String workDirectory = workBaseDirectory + "/voj-sandbox-900043";
     preprocessor.createTestCode(submission, workDirectory);
@@ -1074,7 +1072,7 @@ public class SandboxBehaviorTest {
   @Test
   public void testJavaStartedThroughEnvThatRunsOutOfMemoryIsMemoryLimitExceeded() throws Exception {
     Assumptions.assumeTrue(isLinux(), "The test needs a JDK on the sandbox user's PATH.");
-    Language java = languageMapper.getLanguageUsingSlug("text/x-java");
+    Language java = languageOf("text/x-java");
     Language language =
         new Language(
             java.getLanguageSlug(),
@@ -1161,7 +1159,7 @@ public class SandboxBehaviorTest {
   private String createWorkDirectory(long id) throws Exception {
     Submission submission = new Submission();
     submission.setSubmissionId(id);
-    submission.setLanguage(languageMapper.getLanguageUsingSlug("text/x-c++src"));
+    submission.setLanguage(languageOf("text/x-c++src"));
     submission.setCode(RUNTIME_ERROR_CODE);
     String workDirectory = workBaseDirectory + "/voj-sandbox-" + id;
     preprocessor.createTestCode(submission, workDirectory);
@@ -1214,9 +1212,22 @@ public class SandboxBehaviorTest {
   private RunResult judge(
       long id, String languageSlug, String code, int timeLimitMs, int memoryLimitKb, String input)
       throws Exception {
-    Language language = languageMapper.getLanguageUsingSlug(languageSlug);
+    Language language = languageOf(languageSlug);
     Assertions.assertNotNull(language, languageSlug + " must be seeded in the test database.");
     return judge(id, language, code, timeLimitMs, memoryLimitKb, input);
+  }
+
+  /**
+   * Gets a language of the test database.
+   *
+   * @param languageSlug - the slug of the language
+   * @return the language, or {@code null} if there is none
+   */
+  private Language languageOf(String languageSlug) {
+    return languageMapper.getAllLanguages().stream()
+        .filter(language -> language.getLanguageSlug().equals(languageSlug))
+        .findFirst()
+        .orElse(null);
   }
 
   /**
@@ -1235,8 +1246,7 @@ public class SandboxBehaviorTest {
   private RunResult judge(
       long id, Language language, String code, int timeLimitMs, int memoryLimitKb, String input)
       throws Exception {
-    Problem problem =
-        new Problem(id, true, "sandbox-behavior", timeLimitMs, memoryLimitKb, "", "", "", "", "", "");
+    Problem problem = new Problem(id, timeLimitMs, memoryLimitKb);
     Submission submission = new Submission();
     submission.setSubmissionId(id);
     submission.setProblem(problem);

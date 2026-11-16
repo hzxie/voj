@@ -61,29 +61,6 @@ public class LanguageMapperTest {
   }
 
   /**
-   * Test case: tests the getLanguageUsingSlug(String) method. Test data: the unique English
-   * abbreviation of the C language. Expected result: returns the programming language object for C.
-   */
-  @Test
-  public void testGetLanguageUsingSlugExists() {
-    Language language = languageMapper.getLanguageUsingSlug("text/x-csrc");
-    Assertions.assertNotNull(language);
-
-    String languageName = language.getLanguageName();
-    Assertions.assertEquals("C", languageName);
-  }
-
-  /**
-   * Test case: tests the getLanguageUsingSlug(String) method. Test data: a non-existent unique
-   * English abbreviation of a programming language. Expected result: returns a null reference.
-   */
-  @Test
-  public void testGetLanguageUsingSlugNotExists() {
-    Language language = languageMapper.getLanguageUsingSlug("Not-Exists");
-    Assertions.assertNull(language);
-  }
-
-  /**
    * Test case: tests the getAllLanguages() method. Test data: N/A. Expected result: returns the
    * list of all programming languages (6 languages in total).
    */

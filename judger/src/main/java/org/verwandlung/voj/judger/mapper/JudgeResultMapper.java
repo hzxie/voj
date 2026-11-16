@@ -16,8 +16,6 @@
  */
 package org.verwandlung.voj.judger.mapper;
 
-import java.util.List;
-
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Result;
 import org.apache.ibatis.annotations.Results;
@@ -31,19 +29,6 @@ import org.verwandlung.voj.judger.model.JudgeResult;
  * @author Haozhe Xie
  */
 public interface JudgeResultMapper {
-  /**
-   * Gets all judge result objects.
-   *
-   * @return a list of all judge result objects
-   */
-  @Select("SELECT * FROM voj_judge_results")
-  @Results({
-    @Result(property = "judgeResultId", column = "judge_result_id"),
-    @Result(property = "judgeResultSlug", column = "judge_result_slug"),
-    @Result(property = "judgeResultName", column = "judge_result_name")
-  })
-  List<JudgeResult> getAllJudgeResults();
-
   /**
    * Gets a judge result object by its unique English abbreviation.
    *

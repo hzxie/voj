@@ -51,25 +51,6 @@ public interface LanguageMapper {
   Language getLanguageUsingId(@Param("languageId") int languageId);
 
   /**
-   * Gets a programming language object by its unique English abbreviation.
-   *
-   * @param languageSlug - the unique English abbreviation of the programming language
-   * @return the expected programming language object, or a null reference
-   */
-  @Select("SELECT * FROM voj_languages WHERE language_slug = #{languageSlug}")
-  @Results({
-    @Result(property = "languageId", column = "language_id"),
-    @Result(property = "languageSlug", column = "language_slug"),
-    @Result(property = "languageName", column = "language_name"),
-    @Result(property = "compileCommand", column = "language_compile_command"),
-    @Result(property = "runCommand", column = "language_run_command"),
-    @Result(property = "sourceFilename", column = "language_source_filename"),
-    @Result(property = "timeMultiplier", column = "language_time_multiplier"),
-    @Result(property = "memoryMultiplier", column = "language_memory_multiplier"),
-  })
-  Language getLanguageUsingSlug(@Param("languageSlug") String languageSlug);
-
-  /**
    * Gets the supported programming languages.
    *
    * @return the list of programming languages (a List<Language> object)

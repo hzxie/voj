@@ -814,7 +814,7 @@ public class DispatcherTest {
    * @return a submission object
    */
   private Submission buildSubmission(int failedJudgings, String lastFailure) {
-    Problem problem = new Problem(1000L, true, "A+B", 1000, 65536, "", "", "", "", "", "");
+    Problem problem = new Problem(1000L, 1000, 65536);
     Submission submission = new Submission();
     submission.setSubmissionId(100L);
     submission.setProblem(problem);
