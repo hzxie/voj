@@ -329,7 +329,9 @@ public class CheckpointStore {
   }
 
   /**
-   * Checks whether the cached copy is present and at the expected version.
+   * Checks whether the cached copy is present, whole and at the expected version. A clean-up of old
+   * files (e.g. in {@code /tmp}) may remove some of its files and leave the manifest, so the input
+   * and the output of every checkpoint the manifest lists must be there too.
    *
    * @param problemDirectory - the per-problem cache directory
    * @param version - the version the cache must match to be considered fresh
@@ -342,7 +344,20 @@ public class CheckpointStore {
     }
     try {
       Properties manifest = loadManifest(manifestFile);
-      return Integer.parseInt(manifest.getProperty("version", "-1")) == version;
+      if (Integer.parseInt(manifest.getProperty("version", "-1")) != version) {
+        return false;
+      }
+      int count = Integer.parseInt(manifest.getProperty("count", "0"));
+      for (int i = 0; i < count; ++i) {
+        String id = manifest.getProperty("checkpoint." + i + ".id");
+        for (String name : new String[] {"input#" + id + ".txt", "output#" + id + ".txt"}) {
+          if (!Files.isRegularFile(problemDirectory.resolve(name))) {
+            LOGGER.warn("{} is missing: downloading it again", problemDirectory.resolve(name));
+            return false;
+          }
+        }
+      }
+      return true;
     } catch (IOException | NumberFormatException ex) {
       LOGGER.warn("Ignoring unreadable checkpoint manifest at {}", manifestFile, ex);
       return false;

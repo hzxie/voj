@@ -136,7 +136,8 @@ public class CheckpointStoreUnitTest {
   /**
    * Test case: the checkpoint root already exists and is readable by others. Expected result: the
    * download goes into a directory of this judger's own that only the judger can read, and the
-   * checkpoints are then read from there; the same version is not downloaded twice, a new one is.
+   * checkpoints are then read from there; the same version is not downloaded twice unless a file
+   * of it is gone (e.g. removed by a clean-up of old files), a new one is.
    */
   @Test
   public void testSyncDownloadsPrivatelyIntoTheJudgersSlot() throws Exception {
@@ -154,6 +155,7 @@ public class CheckpointStoreUnitTest {
                   "version=1\ncount=1\ncheckpoint.0.id=3\ncheckpoint.0.score=100\n"
                       + "checkpoint.0.exactlyMatch=true\n");
               Files.writeString(destination.resolve("input#3.txt"), "1 2\n");
+              Files.writeString(destination.resolve("output#3.txt"), "3\n");
               return null;
             })
         .when(checkpointProvider)
@@ -176,10 +178,15 @@ public class CheckpointStoreUnitTest {
       Assertions.assertEquals(List.of(problemDirectory), entries.toList());
     }
 
+    Files.delete(problemDirectory.resolve("output#3.txt"));
+    checkpointStore.sync(getProblem());
+    Assertions.assertEquals("3\n", Files.readString(problemDirectory.resolve("output#3.txt")));
+    verify(checkpointProvider, times(2)).download(anyLong(), any(File.class));
+
     Problem updated = getProblem();
     updated.setCheckpointsVersion(2);
     checkpointStore.sync(updated);
-    verify(checkpointProvider, times(2)).download(anyLong(), any(File.class));
+    verify(checkpointProvider, times(3)).download(anyLong(), any(File.class));
   }
 
   /**
