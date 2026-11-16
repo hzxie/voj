@@ -835,21 +835,37 @@ bool createProcess(const std::wstring& commandLine, const std::wstring& username
 }
 
 /**
- * Creates a primary token for a process from the logon token of the sandbox account, at Low
- * integrity (see LOW_INTEGRITY_SID). A token's integrity level can be lowered by whoever may adjust
+ * Creates a primary token for a process from the logon token of the sandbox account, without
+ * privileges and at Low integrity (see LOW_INTEGRITY_SID). The logon token holds the privileges of
+ * the account's groups, those of Users among them: SeShutdownPrivilege (on client editions),
+ * SeTimeZonePrivilege, SeUndockPrivilege, SeIncreaseWorkingSetPrivilege and
+ * SeChangeNotifyPrivilege. None but the last (Bypass traverse checking, which every program needs
+ * to reach a file through directories it may not list) is any use to a compiler or a submission,
+ * so the token is restricted first (CreateRestrictedToken with DISABLE_MAX_PRIVILEGE removes every
+ * other privilege), then lowered. A token's integrity level can be lowered by whoever may adjust
  * it, never raised.
- * See https://learn.microsoft.com/windows/win32/secauthz/mandatory-integrity-control
+ * See https://learn.microsoft.com/windows/win32/secauthz/mandatory-integrity-control and
+ * https://learn.microsoft.com/windows/win32/api/securitybaseapi/nf-securitybaseapi-createrestrictedtoken
  * @param  hToken - the logon token of the sandbox account
  * @return the new token, or NULL on failure (GetLastError() tells why)
  */
 HANDLE createLowIntegrityToken(HANDLE hToken) {
+    HANDLE hRestrictedToken = NULL;
+    if ( !CreateRestrictedToken(hToken, DISABLE_MAX_PRIVILEGE, 0, NULL, 0, NULL, 0, NULL,
+            &hRestrictedToken) ) {
+        return NULL;
+    }
     // CreateProcessWithTokenW puts the token in the judger's session, which takes
     // TOKEN_ADJUST_SESSIONID besides the rights it documents (it fails with ERROR_ACCESS_DENIED
     // otherwise); TOKEN_ADJUST_DEFAULT is for the integrity level.
-    HANDLE hLowToken = NULL;
-    if ( !DuplicateTokenEx(hToken, TOKEN_QUERY | TOKEN_DUPLICATE | TOKEN_ASSIGN_PRIMARY |
-            TOKEN_ADJUST_DEFAULT | TOKEN_ADJUST_SESSIONID,
-            NULL, SecurityImpersonation, TokenPrimary, &hLowToken) ) {
+    HANDLE hLowToken  = NULL;
+    BOOL   duplicated = DuplicateTokenEx(hRestrictedToken, TOKEN_QUERY | TOKEN_DUPLICATE |
+                            TOKEN_ASSIGN_PRIMARY | TOKEN_ADJUST_DEFAULT | TOKEN_ADJUST_SESSIONID,
+                            NULL, SecurityImpersonation, TokenPrimary, &hLowToken);
+    DWORD  duplicateError = GetLastError();
+    CloseHandle(hRestrictedToken);
+    if ( !duplicated ) {
+        SetLastError(duplicateError);
         return NULL;
     }
     PSID lowSid = NULL;
