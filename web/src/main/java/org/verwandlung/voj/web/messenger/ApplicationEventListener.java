@@ -115,7 +115,14 @@ public class ApplicationEventListener {
     // completion, container timeout or a client disconnect). Without this a closed
     // connection would linger in the map and keep failing on every future send().
     sseEmitter.onCompletion(() -> removeSseEmitter(submissionId, sseEmitter));
-    sseEmitter.onTimeout(() -> removeSseEmitter(submissionId, sseEmitter));
+    // A stream that lasted its time ends like any other: completed, the response ends normally and
+    // the page opens another stream if the submission is still pending. Left alone, it would end
+    // with an AsyncRequestTimeoutException, which the error handling logs.
+    sseEmitter.onTimeout(
+        () -> {
+          removeSseEmitter(submissionId, sseEmitter);
+          completeQuietly(sseEmitter, null);
+        });
     sseEmitter.onError(throwable -> removeSseEmitter(submissionId, sseEmitter));
     sseEmitters.compute(
         submissionId,

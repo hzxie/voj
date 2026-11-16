@@ -30,6 +30,7 @@ import java.io.IOException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -147,6 +148,24 @@ public class ApplicationEventListenerTest {
     verify(viewer, times(2)).send(any(Object.class));
     verify(viewer).complete();
     Assertions.assertEquals(0, listener.getNumberOfSseEmitters(9501L));
+  }
+
+  /**
+   * Test case: tests addSseEmitters(...). Test data: a stream that lasted its time. Expected: it is
+   * unregistered and completed, so that its response ends normally rather than with an
+   * AsyncRequestTimeoutException.
+   */
+  @Test
+  public void testAStreamThatTimesOutIsCompleted() {
+    SseEmitter viewer = mock(SseEmitter.class);
+    listener.addSseEmitters(9601L, viewer);
+    ArgumentCaptor<Runnable> onTimeout = ArgumentCaptor.forClass(Runnable.class);
+    verify(viewer).onTimeout(onTimeout.capture());
+
+    onTimeout.getValue().run();
+
+    verify(viewer).complete();
+    Assertions.assertEquals(0, listener.getNumberOfSseEmitters(9601L));
   }
 
   /** Creates the listener under test, whose service says that every judging is current. */
