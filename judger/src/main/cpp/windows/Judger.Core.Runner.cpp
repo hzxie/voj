@@ -232,8 +232,7 @@ bool getPeakMemoryUsage(HANDLE& hProcess, jint& memory);
 bool getCpuTimeUsage(HANDLE& hJob, HANDLE& hProcess, bool includeChildren, jint& cpuTime);
 unsigned long long fileTimeToUll(const FILETIME&);
 std::string getErrorMessage(const std::string&);
-std::wstring getWideString(const std::string&);
-LPWSTR getWideStringPointer(const std::wstring&);
+std::wstring getWideStringValue(JNIEnv*, jstring);
 
 /**
  * JNI call entry point.
@@ -264,13 +263,13 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     jstring jPassword, jstring jInputFilePath, jstring jOutputFilePath, jstring jWorkDirectory,
     jint timeLimit, jint memoryLimit, jboolean isCompilation, jint processLimit,
     jstring jJavaOptions) {
-    std::wstring        commandLine         = getWideString(getStringValue(jniEnv, jCommandLine));
-    std::wstring        username            = getWideString(getStringValue(jniEnv, jUsername));
-    std::wstring        password            = getWideString(getStringValue(jniEnv, jPassword));
-    std::wstring        inputFilePath       = getWideString(getStringValue(jniEnv, jInputFilePath));
-    std::wstring        outputFilePath      = getWideString(getStringValue(jniEnv, jOutputFilePath));
-    std::wstring        workDirectory       = getWideString(getStringValue(jniEnv, jWorkDirectory));
-    std::wstring        javaOptions         = getWideString(getStringValue(jniEnv, jJavaOptions));
+    std::wstring        commandLine         = getWideStringValue(jniEnv, jCommandLine);
+    std::wstring        username            = getWideStringValue(jniEnv, jUsername);
+    std::wstring        password            = getWideStringValue(jniEnv, jPassword);
+    std::wstring        inputFilePath       = getWideStringValue(jniEnv, jInputFilePath);
+    std::wstring        outputFilePath      = getWideStringValue(jniEnv, jOutputFilePath);
+    std::wstring        workDirectory       = getWideStringValue(jniEnv, jWorkDirectory);
+    std::wstring        javaOptions         = getWideStringValue(jniEnv, jJavaOptions);
 
     HANDLE              hInput              = NULL;
     HANDLE              hOutput             = NULL;
@@ -822,7 +821,10 @@ bool createProcess(const std::wstring& commandLine, const std::wstring& username
         return false;
     }
     // lpDesktop is NULL: the program gets the judger's window station and desktop.
-    BOOL  created = CreateProcessWithTokenW(hLowToken, 0, NULL, getWideStringPointer(commandLine),
+    // CreateProcessWithTokenW may write to the command line, which is therefore copied.
+    std::vector<wchar_t> mutableCommandLine(commandLine.begin(), commandLine.end());
+    mutableCommandLine.push_back(L'\0');
+    BOOL  created = CreateProcessWithTokenW(hLowToken, 0, NULL, mutableCommandLine.data(),
                         CREATE_UNICODE_ENVIRONMENT | CREATE_SUSPENDED | CREATE_NO_WINDOW,
                         environmentBlock.data(), currentDirectory.c_str(), &startupInfo, &processInfo);
     DWORD error   = GetLastError();
@@ -1272,25 +1274,23 @@ std::string getErrorMessage(const std::string& apiName) {
 }
 
 /**
- * Converts a (UTF-8) std::string to a std::wstring.
- * @param  str - a UTF-8 std::string
- * @return the corresponding std::wstring
+ * Gets the value of a Java String as a wide string. A Java string is UTF-16, as a wide string is on
+ * Windows, so its characters are copied as they are: JNI's modified UTF-8 (GetStringUTFChars)
+ * encodes a character outside the Basic Multilingual Plane (such as an emoji in a password) as two
+ * surrogates of three bytes each, which a UTF-8 decoder rejects.
+ * @param  jniEnv - a reference to the JNI runtime environment
+ * @param  jStr   - the Java string (may be null)
+ * @return its value, or an empty string for null
  */
-std::wstring getWideString(const std::string& str) {
-    if ( str.empty() ) {
+std::wstring getWideStringValue(JNIEnv* jniEnv, jstring jStr) {
+    static_assert(sizeof(wchar_t) == sizeof(jchar), "a wide character is a UTF-16 code unit");
+    if ( jStr == NULL ) {
         return std::wstring();
     }
-    int length = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), (int)str.size(), NULL, 0);
-    std::wstring wstr(length, 0);
-    MultiByteToWideChar(CP_UTF8, 0, str.c_str(), (int)str.size(), &wstr[0], length);
-    return wstr;
-}
-
-/**
- * Gets the LPWSTR pointer corresponding to a std::wstring.
- * @param  str - a std::wstring string
- * @return the corresponding LPWSTR pointer
- */
-LPWSTR getWideStringPointer(const std::wstring& str) {
-    return const_cast<LPWSTR>(str.c_str());
+    jsize        length = jniEnv->GetStringLength(jStr);
+    std::wstring value((size_t) length, L'\0');
+    if ( length > 0 ) {
+        jniEnv->GetStringRegion(jStr, 0, length, reinterpret_cast<jchar*>(&value[0]));
+    }
+    return value;
 }
