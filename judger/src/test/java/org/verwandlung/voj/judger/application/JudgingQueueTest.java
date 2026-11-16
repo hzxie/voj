@@ -1,0 +1,308 @@
+/* Verwandlung Online Judge - A cross-platform judge online system
+ * Copyright (C) 2014-2026 Haozhe Xie <root@haozhexie.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+package org.verwandlung.voj.judger.application;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicReference;
+
+import javax.sql.DataSource;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
+import org.springframework.test.util.ReflectionTestUtils;
+
+import org.verwandlung.voj.judger.core.CheckpointStore;
+import org.verwandlung.voj.judger.core.Comparator;
+import org.verwandlung.voj.judger.core.Compiler;
+import org.verwandlung.voj.judger.core.Dispatcher;
+import org.verwandlung.voj.judger.core.Preprocessor;
+import org.verwandlung.voj.judger.core.ProgramRunner;
+import org.verwandlung.voj.judger.mapper.JudgeResultMapper;
+import org.verwandlung.voj.judger.mapper.SubmissionMapper;
+import org.verwandlung.voj.judger.messenger.MessageSender;
+import org.verwandlung.voj.judger.model.Checkpoint;
+import org.verwandlung.voj.judger.model.Submission;
+
+/**
+ * Checks the judging queue against the database: judgers that claim at the same time never claim
+ * the same submission, and the lease of a judging keeps other judgings off its submission however
+ * long a step takes, until the judging is superseded.
+ *
+ * <p>The judgers claim in transactions of their own, so this class is not {@code @Transactional};
+ * the submissions a test commits are removed afterwards.
+ *
+ * @author Haozhe Xie
+ */
+@ExtendWith(SpringExtension.class)
+@ContextConfiguration({"classpath:test-spring-context.xml"})
+public class JudgingQueueTest {
+  @BeforeEach
+  public void setUp() {
+    jdbcTemplate = new JdbcTemplate(dataSource);
+  }
+
+  @AfterEach
+  public void tearDown() {
+    jdbcTemplate.update(
+        "DELETE FROM voj_submissions WHERE submission_id BETWEEN ? AND ?",
+        FIRST_SUBMISSION_ID,
+        FIRST_SUBMISSION_ID + 999);
+  }
+
+  /**
+   * Test case: two judgers claim the pending submissions in C++ at the same time, each until there
+   * is none left. Test data: 50 pending submissions in C++, queued at the same time. Expected
+   * result: every submission is claimed by exactly one of them, once.
+   */
+  @Test
+  public void testJudgersNeverClaimTheSameSubmission() throws Exception {
+    Set<Long> pending = new HashSet<>();
+    for (int i = 0; i < 50; ++i) {
+      pending.add(insertPendingSubmission(FIRST_SUBMISSION_ID + i));
+    }
+    CyclicBarrier start = new CyclicBarrier(2);
+    Callable<List<Long>> judger =
+        () -> {
+          List<Long> claimed = new ArrayList<>();
+          start.await();
+          for (Submission submission = applicationDispatcher.claimSubmission(CPP, 60);
+              submission != null;
+              submission = applicationDispatcher.claimSubmission(CPP, 60)) {
+            claimed.add(submission.getSubmissionId());
+          }
+          return claimed;
+        };
+    ExecutorService executor = Executors.newFixedThreadPool(2);
+    List<Long> first;
+    List<Long> second;
+    try {
+      Future<List<Long>> firstJudger = executor.submit(judger);
+      Future<List<Long>> secondJudger = executor.submit(judger);
+      first = firstJudger.get();
+      second = secondJudger.get();
+    } finally {
+      executor.shutdownNow();
+    }
+
+    Set<Long> claimed = new HashSet<>(first);
+    claimed.addAll(second);
+    Assertions.assertEquals(first.size() + second.size(), claimed.size(), first + " / " + second);
+    Assertions.assertEquals(pending, claimed);
+    Assertions.assertEquals(
+        0,
+        jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM voj_submissions WHERE submission_id BETWEEN ? AND ?"
+                + " AND submission_judge_attempts <> 1",
+            Integer.class,
+            FIRST_SUBMISSION_ID,
+            FIRST_SUBMISSION_ID + 999));
+  }
+
+  /**
+   * Test case: a judging whose compilation takes two and a half times as long as its lease (2 s),
+   * while another judger looks for a submission in the middle of it. Test data: a pending
+   * submission in C++. Expected result: the lease, renewed in the background, keeps the other
+   * judger off the submission, and the judging records its verdict (a Compile Error) and reports
+   * it.
+   */
+  @Test
+  public void testLeaseKeepsALongJudgingAlive() throws Exception {
+    long submissionId = insertPendingSubmission(FIRST_SUBMISSION_ID);
+    AtomicReference<Submission> claimedByAnotherJudger = new AtomicReference<>();
+    when(compiler.getCompileResult(any(), anyString(), anyString()))
+        .thenAnswer(
+            invocation -> {
+              Thread.sleep(LEASE_TIMEOUT * 3 / 2);
+              claimedByAnotherJudger.set(applicationDispatcher.claimSubmission(CPP, 2));
+              Thread.sleep(LEASE_TIMEOUT);
+              return compileResult(false);
+            });
+
+    Assertions.assertTrue(dispatcher.judgeNextSubmission(CPP));
+
+    Assertions.assertNull(claimedByAnotherJudger.get());
+    Assertions.assertEquals(
+        Map.of("submission_judge_result", "CE", "submission_judge_attempts", 1),
+        jdbcTemplate.queryForMap(
+            "SELECT submission_judge_result, submission_judge_attempts FROM voj_submissions"
+                + " WHERE submission_id = ?",
+            submissionId));
+    verify(messageSender)
+        .sendMessage(
+            argThat(
+                message ->
+                    "CompileFinished".equals(message.get("event"))
+                        && Long.valueOf(submissionId).equals(message.get("submissionId"))));
+  }
+
+  /**
+   * Test case: a submission is rejudged while its judging compiles it. Test data: a pending
+   * submission in C++. Expected result: the judging finds, when it renews its lease, that it was
+   * superseded, and stops without running the program, recording anything or sending any message;
+   * the submission waits for a judger, as the rejudge left it.
+   */
+  @Test
+  public void testSupersededJudgingStopsSilently() throws Exception {
+    long submissionId = insertPendingSubmission(FIRST_SUBMISSION_ID);
+    when(compiler.getCompileResult(any(), anyString(), anyString()))
+        .thenAnswer(
+            invocation -> {
+              // A rejudge, as the web application does it (resetSubmissionToPending).
+              jdbcTemplate.update(
+                  "UPDATE voj_submissions SET submission_judge_result = 'PD',"
+                      + " submission_execute_time = NULL, judger_uid = NULL,"
+                      + " submission_queued_time = NOW(), submission_judge_attempts = 0,"
+                      + " submission_claim_token = NULL, submission_lease_expiry_time = NULL"
+                      + " WHERE submission_id = ?",
+                  submissionId);
+              Thread.sleep(LEASE_TIMEOUT);
+              return compileResult(true);
+            });
+
+    Assertions.assertTrue(dispatcher.judgeNextSubmission(CPP));
+
+    verify(programRunner, never())
+        .getRuntimeResult(any(), anyString(), anyString(), anyString(), anyString());
+    verify(messageSender, never()).sendMessage(any());
+    Map<String, Object> row =
+        jdbcTemplate.queryForMap(
+            "SELECT submission_judge_result, submission_judge_attempts, submission_claim_token"
+                + " FROM voj_submissions WHERE submission_id = ?",
+            submissionId);
+    Assertions.assertEquals("PD", row.get("submission_judge_result"));
+    Assertions.assertEquals(0, ((Number) row.get("submission_judge_attempts")).intValue());
+    Assertions.assertNull(row.get("submission_claim_token"));
+  }
+
+  /** Creates a judger whose judging steps are mocks, on the database of the tests. */
+  @BeforeEach
+  public void setUpJudger() throws Exception {
+    messageSender = mock(MessageSender.class);
+    ApplicationDispatcher judgerApplication = new ApplicationDispatcher();
+    ReflectionTestUtils.setField(judgerApplication, "submissionMapper", submissionMapper);
+    ReflectionTestUtils.setField(judgerApplication, "judgeResultMapper", judgeResultMapper);
+    ReflectionTestUtils.setField(judgerApplication, "messageSender", messageSender);
+
+    CheckpointStore checkpointStore = mock(CheckpointStore.class);
+    when(checkpointStore.getWorkDirectory()).thenReturn(Path.of("/tmp/voj-judging-queue-tests"));
+    when(checkpointStore.sync(any())).thenReturn(Path.of("/tmp/voj-judging-queue-tests/1000"));
+    when(checkpointStore.getCheckpoints(anyLong()))
+        .thenReturn(List.of(new Checkpoint(1000L, 1, true, 100, "input", "output")));
+    compiler = mock(Compiler.class);
+    programRunner = mock(ProgramRunner.class);
+    dispatcher = new Dispatcher();
+    ReflectionTestUtils.setField(dispatcher, "applicationDispatcher", judgerApplication);
+    ReflectionTestUtils.setField(dispatcher, "checkpointStore", checkpointStore);
+    ReflectionTestUtils.setField(dispatcher, "preprocessor", mock(Preprocessor.class));
+    ReflectionTestUtils.setField(dispatcher, "compiler", compiler);
+    ReflectionTestUtils.setField(dispatcher, "programRunner", programRunner);
+    ReflectionTestUtils.setField(dispatcher, "comparator", mock(Comparator.class));
+    ReflectionTestUtils.setField(dispatcher, "pollInterval", 10L);
+    ReflectionTestUtils.setField(dispatcher, "leaseTimeout", LEASE_TIMEOUT);
+    ReflectionTestUtils.setField(dispatcher, "maxAttempts", 3);
+  }
+
+  /**
+   * Inserts a pending submission in C++ of Problem #1000, queued now, committed.
+   *
+   * @param submissionId - the unique identifier of the submission
+   * @return the unique identifier of the submission
+   */
+  private long insertPendingSubmission(long submissionId) {
+    jdbcTemplate.update(
+        "INSERT INTO voj_submissions (submission_id, problem_id, uid, language_id,"
+            + " submission_code) VALUES (?, 1000, 1000, 2, 'Code')",
+        submissionId);
+    return submissionId;
+  }
+
+  /**
+   * Builds a compilation result.
+   *
+   * @param isSuccessful - whether the compilation succeeded
+   * @return a compilation-result map
+   */
+  private static Map<String, Object> compileResult(boolean isSuccessful) {
+    Map<String, Object> result = new HashMap<>();
+    result.put("isSuccessful", isSuccessful);
+    result.put("log", isSuccessful ? "" : "error");
+    return result;
+  }
+
+  /** The first identifier of the submissions the tests insert (test-data.sql uses none of them). */
+  private static final long FIRST_SUBMISSION_ID = 5000;
+
+  /** The languages of the judgers of the tests: C++ only. */
+  private static final List<Integer> CPP = List.of(2);
+
+  /** The lease (ms) of the judgings of the tests: renewed every 500 ms. */
+  private static final long LEASE_TIMEOUT = 2000;
+
+  /** A judger of the tests, with the steps of a judging mocked. */
+  private Dispatcher dispatcher;
+
+  /** The mocked compiler of that judger. */
+  private Compiler compiler;
+
+  /** The mocked program runner of that judger. */
+  private ProgramRunner programRunner;
+
+  /** The mocked messages of that judger. */
+  private MessageSender messageSender;
+
+  /** Another judger, which claims the submissions with the claim statements of the judger. */
+  @Autowired private ApplicationDispatcher applicationDispatcher;
+
+  /** The SubmissionMapper of the judgers. */
+  @Autowired private SubmissionMapper submissionMapper;
+
+  /** The JudgeResultMapper of the judgers. */
+  @Autowired private JudgeResultMapper judgeResultMapper;
+
+  /** The data source of the test database. */
+  @Autowired private DataSource dataSource;
+
+  /** Runs the fixture and assertion queries (auto-commit). */
+  private JdbcTemplate jdbcTemplate;
+}

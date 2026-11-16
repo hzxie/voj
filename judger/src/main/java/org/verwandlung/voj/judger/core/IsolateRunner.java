@@ -91,8 +91,8 @@ public class IsolateRunner implements SandboxRunner {
 
   /**
    * Runs a command inside an isolate sandbox. Not synchronized: the box is used by one run at a
-   * time because judging is serialized (see {@code Dispatcher#createNewTask}), and every judger on
-   * a host has a box of its own (judger.isolate.boxId).
+   * time because judging is serialized (see {@code Dispatcher#judgeNextSubmission}), and every
+   * judger on a host has a box of its own (judger.isolate.boxId).
    *
    * @param commandLine - the command line to execute (absolute paths)
    * @param inputFilePath - the file to redirect to standard input, or {@code null} for none

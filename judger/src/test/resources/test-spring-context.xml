@@ -103,11 +103,5 @@
 		<property name="connectionFactory" ref="connectionFactory" />
 		<property name="defaultDestination" ref="defaultDestination" />
 	</bean>
-	<bean class="org.springframework.jms.listener.SimpleMessageListenerContainer">
-		<property name="connectionFactory" ref="connectionFactory" />
-		<property name="destinationName" value="vojMessageQueue" />
-		<property name="messageListener" ref="messageReceiver" />
-	</bean>
 	<bean id="messageSender" class="org.verwandlung.voj.judger.messenger.MessageSender"></bean>
-	<bean id="messageReceiver" class="org.verwandlung.voj.judger.messenger.MessageReceiver"></bean>
 </beans>

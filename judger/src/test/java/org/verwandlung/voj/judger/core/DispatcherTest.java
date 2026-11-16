@@ -17,13 +17,16 @@
 package org.verwandlung.voj.judger.core;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeast;
+import static org.mockito.Mockito.mockingDetails;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -35,6 +38,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -47,13 +51,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import org.verwandlung.voj.judger.application.ApplicationDispatcher;
 import org.verwandlung.voj.judger.exception.CheckpointsRefusedException;
-import org.verwandlung.voj.judger.exception.IllgealSubmissionException;
 import org.verwandlung.voj.judger.exception.InvalidCheckpointsException;
-import org.verwandlung.voj.judger.exception.RetryableJudgingException;
-import org.verwandlung.voj.judger.mapper.SubmissionMapper;
 import org.verwandlung.voj.judger.model.Checkpoint;
 import org.verwandlung.voj.judger.model.Problem;
 import org.verwandlung.voj.judger.model.Submission;
@@ -66,37 +68,43 @@ import org.verwandlung.voj.judger.model.Submission;
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 public class DispatcherTest {
-  /** Injects the working-directory configuration that would normally come from the property files. */
+  /**
+   * Injects the working-directory and the judging-queue configuration that would normally come from
+   * the property files, and a pending submission to claim: its first attempt.
+   */
   @BeforeEach
   public void setUp() throws Exception {
+    ReflectionTestUtils.setField(dispatcher, "pollInterval", 10L);
+    ReflectionTestUtils.setField(dispatcher, "leaseTimeout", LEASE_TIMEOUT);
+    ReflectionTestUtils.setField(dispatcher, "maxAttempts", MAX_ATTEMPTS);
     when(checkpointStore.getWorkDirectory()).thenReturn(Path.of("/tmp/voj-dispatcher-tests"));
     when(checkpointStore.sync(any())).thenReturn(Path.of("/tmp/voj-dispatcher-tests/1000"));
-    when(submissionMapper.getSubmission(100L)).thenReturn(buildSubmission());
-    when(applicationDispatcher.onJudgingStarted(anyLong(), anyLong())).thenReturn(CLAIM_TOKEN);
-    when(applicationDispatcher.renewLease(any())).thenReturn(true);
+    when(applicationDispatcher.claimSubmission(anyList(), anyLong()))
+        .thenAnswer(invocation -> buildSubmission(1));
+    when(applicationDispatcher.renewLease(any(), anyLong())).thenReturn(true);
   }
 
   /**
-   * Test case: tests the createNewTask method. Test data: a non-existent submission. Expected
-   * result: an IllgealSubmissionException is thrown and no compilation is attempted.
+   * Test case: tests the judgeNextSubmission method. Test data: no pending submission in the
+   * languages of the judger. Expected result: nothing is judged, and it says so.
    */
   @Test
-  public void testCreateNewTaskIllegalSubmission() throws Exception {
-    when(submissionMapper.getSubmission(anyLong())).thenReturn(null);
+  public void testJudgeNextSubmissionWithoutPendingSubmission() throws Exception {
+    when(applicationDispatcher.claimSubmission(anyList(), anyLong())).thenReturn(null);
 
-    Assertions.assertThrows(
-        IllgealSubmissionException.class, () -> dispatcher.createNewTask(404L, GENERATION, NOT_LAST_DELIVERY));
-    verify(submissionMapper, times(1)).getSubmission(404L);
+    Assertions.assertFalse(dispatcher.judgeNextSubmission(LANGUAGES));
+    verify(applicationDispatcher).claimSubmission(LANGUAGES, LEASE_SECONDS);
+    verify(checkpointStore, never()).sync(any());
     verify(compiler, never()).getCompileResult(any(), anyString(), anyString());
   }
 
   /**
-   * Test case: tests the createNewTask method. Test data: a submission that compiles successfully
-   * and produces the correct output. Expected result: every judging stage is dispatched and the
-   * runtime result is reported as accepted.
+   * Test case: tests the judgeNextSubmission method. Test data: a submission that compiles
+   * successfully and produces the correct output. Expected result: every judging stage is
+   * dispatched and the runtime result is reported as accepted.
    */
   @Test
-  public void testCreateNewTaskAccepted() throws Exception {
+  public void testJudgeNextSubmissionAccepted() throws Exception {
     when(compiler.getCompileResult(any(), anyString(), anyString()))
         .thenReturn(compileResult(true));
 
@@ -108,9 +116,8 @@ public class DispatcherTest {
         .thenReturn(runtimeResult("AC"));
     when(comparator.getComparisonResult(anyString(), anyString(), anyBoolean())).thenReturn("AC");
 
-    dispatcher.createNewTask(100L, GENERATION, NOT_LAST_DELIVERY);
+    dispatcher.judgeNextSubmission(LANGUAGES);
 
-    verify(submissionMapper, times(1)).getSubmission(100L);
     verify(applicationDispatcher).onCompileFinished(any(), any());
     verify(applicationDispatcher).onOneTestPointFinished(argThat(s -> s.getSubmissionId() == 100L), eq(1), any());
     // The test data is read from the directory the checkpoint store synced it to.
@@ -134,12 +141,12 @@ public class DispatcherTest {
   }
 
   /**
-   * Test case: tests the createNewTask method. Test data: a submission that compiles successfully
-   * but produces incorrect output. Expected result: an accepted runtime result is downgraded to a
-   * wrong answer.
+   * Test case: tests the judgeNextSubmission method. Test data: a submission that compiles
+   * successfully but produces incorrect output. Expected result: an accepted runtime result is
+   * downgraded to a wrong answer.
    */
   @Test
-  public void testCreateNewTaskWrongAnswer() throws Exception {
+  public void testJudgeNextSubmissionWrongAnswer() throws Exception {
     when(compiler.getCompileResult(any(), anyString(), anyString()))
         .thenReturn(compileResult(true));
 
@@ -151,7 +158,7 @@ public class DispatcherTest {
         .thenReturn(runtimeResult("AC"));
     when(comparator.getComparisonResult(anyString(), anyString(), anyBoolean())).thenReturn("WA");
 
-    dispatcher.createNewTask(100L, GENERATION, NOT_LAST_DELIVERY);
+    dispatcher.judgeNextSubmission(LANGUAGES);
 
     @SuppressWarnings("unchecked")
     org.mockito.ArgumentCaptor<Map<String, Object>> resultCaptor =
@@ -161,12 +168,13 @@ public class DispatcherTest {
   }
 
   /**
-   * Test case: tests the createNewTask method. Test data: two checkpoints, only the first requiring
-   * an exact match, whose output differs only in presentation. Expected result: each checkpoint's
-   * exactlyMatch flag is passed to the comparator and its verdict (PE / AC) is reported.
+   * Test case: tests the judgeNextSubmission method. Test data: two checkpoints, only the first
+   * requiring an exact match, whose output differs only in presentation. Expected result: each
+   * checkpoint's exactlyMatch flag is passed to the comparator and its verdict (PE / AC) is
+   * reported.
    */
   @Test
-  public void testCreateNewTaskHonoursExactlyMatch() throws Exception {
+  public void testJudgeNextSubmissionHonoursExactlyMatch() throws Exception {
     when(compiler.getCompileResult(any(), anyString(), anyString()))
         .thenReturn(compileResult(true));
 
@@ -180,7 +188,7 @@ public class DispatcherTest {
     when(comparator.getComparisonResult(anyString(), anyString(), eq(true))).thenReturn("PE");
     when(comparator.getComparisonResult(anyString(), anyString(), eq(false))).thenReturn("AC");
 
-    dispatcher.createNewTask(100L, GENERATION, NOT_LAST_DELIVERY);
+    dispatcher.judgeNextSubmission(LANGUAGES);
 
     @SuppressWarnings("unchecked")
     org.mockito.ArgumentCaptor<List<Map<String, Object>>> resultsCaptor =
@@ -191,16 +199,16 @@ public class DispatcherTest {
   }
 
   /**
-   * Test case: tests the createNewTask method. Test data: a submission that fails to compile.
+   * Test case: tests the judgeNextSubmission method. Test data: a submission that fails to compile.
    * Expected result: the program is never executed.
    */
   @Test
-  public void testCreateNewTaskCompileFailed() throws Exception {
+  public void testJudgeNextSubmissionCompileFailed() throws Exception {
     when(checkpointStore.getCheckpoints(1000L)).thenReturn(oneCheckpoint());
     when(compiler.getCompileResult(any(), anyString(), anyString()))
         .thenReturn(compileResult(false));
 
-    dispatcher.createNewTask(100L, GENERATION, NOT_LAST_DELIVERY);
+    dispatcher.judgeNextSubmission(LANGUAGES);
 
     verify(applicationDispatcher).onCompileFinished(any(), any());
     verify(programRunner, never())
@@ -210,14 +218,14 @@ public class DispatcherTest {
   }
 
   /**
-   * Test case: tests the createNewTask method. Test data: a problem without any checkpoint.
+   * Test case: tests the judgeNextSubmission method. Test data: a problem without any checkpoint.
    * Expected result: a System Error, without compiling; never an Accepted with nothing checked.
    */
   @Test
-  public void testCreateNewTaskWithoutCheckpointsIsSystemError() throws Exception {
+  public void testJudgeNextSubmissionWithoutCheckpointsIsSystemError() throws Exception {
     when(checkpointStore.getCheckpoints(1000L)).thenReturn(new ArrayList<>());
 
-    dispatcher.createNewTask(100L, GENERATION, NOT_LAST_DELIVERY);
+    dispatcher.judgeNextSubmission(LANGUAGES);
 
     verify(applicationDispatcher).onErrorOccurred(any(), contains("no test data"));
     verify(compiler, never()).getCompileResult(any(), anyString(), anyString());
@@ -225,37 +233,37 @@ public class DispatcherTest {
   }
 
   /**
-   * Test case: tests the createNewTask method. Test data: the web application has no test data
-   * for the problem (or a malformed archive). Expected result: a System Error.
+   * Test case: tests the judgeNextSubmission method. Test data: the web application has no test
+   * data for the problem (or a malformed archive). Expected result: a System Error.
    */
   @Test
-  public void testCreateNewTaskWithInvalidCheckpointsIsSystemError() throws Exception {
+  public void testJudgeNextSubmissionWithInvalidCheckpointsIsSystemError() throws Exception {
     org.mockito.Mockito.doThrow(new InvalidCheckpointsException("HTTP 404", null))
         .when(checkpointStore)
         .sync(any());
 
-    dispatcher.createNewTask(100L, GENERATION, NOT_LAST_DELIVERY);
+    dispatcher.judgeNextSubmission(LANGUAGES);
 
     verify(applicationDispatcher).onErrorOccurred(any(), contains("could not be loaded"));
     verify(compiler, never()).getCompileResult(any(), anyString(), anyString());
   }
 
   /**
-   * Test case: tests the createNewTask method. Test data: the web application refuses this judger
-   * the test data (HTTP 403: its API token is wrong or empty), or refuses the request otherwise
-   * (HTTP 400). Expected result: a System Error, at once, whose judge log says that the judger was
-   * refused (and to check its API token for a 403), rather than tries until the task expires.
+   * Test case: tests the judgeNextSubmission method. Test data: the web application refuses this
+   * judger the test data (HTTP 403: its API token is wrong or empty), or refuses the request
+   * otherwise (HTTP 400). Expected result: a System Error, at once, whose judge log says that the
+   * judger was refused (and to check its API token for a 403), rather than tries again.
    */
   @Test
-  public void testCreateNewTaskWithRefusedCheckpointsIsSystemError() throws Exception {
+  public void testJudgeNextSubmissionWithRefusedCheckpointsIsSystemError() throws Exception {
     org.mockito.Mockito.doThrow(
             new CheckpointsRefusedException("HTTP 403", 403),
             new CheckpointsRefusedException("HTTP 400", 400))
         .when(checkpointStore)
         .sync(any());
 
-    dispatcher.createNewTask(100L, GENERATION, NOT_LAST_DELIVERY);
-    dispatcher.createNewTask(100L, GENERATION, NOT_LAST_DELIVERY);
+    dispatcher.judgeNextSubmission(LANGUAGES);
+    dispatcher.judgeNextSubmission(LANGUAGES);
 
     org.mockito.ArgumentCaptor<String> reasons = org.mockito.ArgumentCaptor.forClass(String.class);
     verify(applicationDispatcher, times(2)).onErrorOccurred(any(), reasons.capture());
@@ -267,68 +275,100 @@ public class DispatcherTest {
   }
 
   /**
-   * Test case: tests the createNewTask method. Test data: the test data cannot be downloaded now
-   * (e.g. the web application is restarting). Expected result: no System Error; the exception is
-   * passed on so that the task is delivered again. (The test data is synced before the work
-   * directory is created, so there is none to remove yet; the removal of one after a failure is
-   * tested by testCreateNewTaskCleansUpOnFailure.)
+   * Test case: tests the judgeNextSubmission method. Test data: the test data cannot be downloaded
+   * now (e.g. the web application is restarting), on the first attempt. Expected result: no System
+   * Error; the lease is no longer renewed, so that the submission is judged again once it expired.
+   * (The test data is synced before the work directory is created, so there is none to remove yet;
+   * the removal of one after a failure is tested by testJudgeNextSubmissionCleansUpOnFailure.)
    */
   @Test
-  public void testCreateNewTaskWithUnavailableCheckpointsIsRetried() throws Exception {
+  public void testJudgeNextSubmissionWithUnavailableCheckpointsIsRetried() throws Exception {
     org.mockito.Mockito.doThrow(new java.io.IOException("HTTP 503"))
         .when(checkpointStore)
         .sync(any());
 
-    Assertions.assertThrows(
-        RetryableJudgingException.class, () -> dispatcher.createNewTask(100L, GENERATION, NOT_LAST_DELIVERY));
+    Assertions.assertTrue(dispatcher.judgeNextSubmission(LANGUAGES));
 
     verify(applicationDispatcher, never()).onErrorOccurred(any(), anyString());
     verify(preprocessor, never()).createTestCode(any(), anyString(), anyString());
     verify(compiler, never()).getCompileResult(any(), anyString(), anyString());
-    // The submission waits for a judger again, not for this judging.
-    verify(applicationDispatcher).onJudgingHandedBack(argThat(s -> s.getSubmissionId() == 100L));
+    int renewals = numberOfRenewals();
+    Thread.sleep(LEASE_TIMEOUT);
+    Assertions.assertEquals(renewals, numberOfRenewals());
   }
 
   /**
-   * Test case: tests the createNewTask method. Test data: the test data cannot be downloaded now,
-   * on the last delivery of the task. Expected result: rather than handed back to be
-   * dead-lettered, the submission is a System Error saying why.
+   * Test case: tests the judgeNextSubmission method. Test data: the test data cannot be downloaded
+   * now, on the last attempt. Expected result: rather than judged once more, the submission is a
+   * System Error saying why, and after how many attempts.
    */
   @Test
-  public void testCreateNewTaskIsNotRetriedOnItsLastDelivery() throws Exception {
+  public void testJudgeNextSubmissionIsNotRetriedAfterItsLastAttempt() throws Exception {
+    when(applicationDispatcher.claimSubmission(anyList(), anyLong()))
+        .thenReturn(buildSubmission(MAX_ATTEMPTS));
     org.mockito.Mockito.doThrow(new java.io.IOException("HTTP 503"))
         .when(checkpointStore)
         .sync(any());
 
-    dispatcher.createNewTask(100L, GENERATION, true);
+    dispatcher.judgeNextSubmission(LANGUAGES);
 
-    verify(applicationDispatcher).onErrorOccurred(any(), contains("could not be downloaded"));
+    verify(applicationDispatcher)
+        .onErrorOccurred(
+            any(),
+            argThat(
+                reason ->
+                    reason.startsWith("The test data could not be downloaded.")
+                        && reason.contains("after 3 attempts")));
     verify(compiler, never()).getCompileResult(any(), anyString(), anyString());
   }
 
   /**
-   * Test case: tests the createNewTask method. Test data: the sandbox fails to run the compiler.
-   * Expected result: a System Error rather than a Compile Error with an empty log.
+   * Test case: tests the judgeNextSubmission method. Test data: a submission claimed once more than
+   * the attempts allow, as its last attempt stopped without an outcome (its judger died, or lost
+   * the database until the lease expired). Expected result: it is not judged again but a System
+   * Error that says so.
    */
   @Test
-  public void testCreateNewTaskCompilerSandboxFailureIsSystemError() throws Exception {
+  public void testJudgeNextSubmissionGivesUpAfterAnAbandonedLastAttempt() throws Exception {
+    when(applicationDispatcher.claimSubmission(anyList(), anyLong()))
+        .thenReturn(buildSubmission(MAX_ATTEMPTS + 1));
+
+    Assertions.assertTrue(dispatcher.judgeNextSubmission(LANGUAGES));
+
+    verify(applicationDispatcher)
+        .onErrorOccurred(
+            argThat(s -> s.getClaimToken() == CLAIM_TOKEN),
+            argThat(
+                reason ->
+                    reason.startsWith(Dispatcher.ABANDONED_REASON)
+                        && reason.contains("after 3 attempts")));
+    verify(checkpointStore, never()).sync(any());
+    verify(applicationDispatcher, never()).renewLease(any(), anyLong());
+  }
+
+  /**
+   * Test case: tests the judgeNextSubmission method. Test data: the sandbox fails to run the
+   * compiler. Expected result: a System Error rather than a Compile Error with an empty log.
+   */
+  @Test
+  public void testJudgeNextSubmissionCompilerSandboxFailureIsSystemError() throws Exception {
     when(checkpointStore.getCheckpoints(1000L)).thenReturn(oneCheckpoint());
     Map<String, Object> result = compileResult(false);
     result.put("verdict", Verdict.INTERNAL_ERROR);
     when(compiler.getCompileResult(any(), anyString(), anyString())).thenReturn(result);
 
-    dispatcher.createNewTask(100L, GENERATION, NOT_LAST_DELIVERY);
+    dispatcher.judgeNextSubmission(LANGUAGES);
 
     verify(applicationDispatcher).onErrorOccurred(any(), contains("compiler"));
     verify(applicationDispatcher, never()).onCompileFinished(any(), any());
   }
 
   /**
-   * Test case: tests the createNewTask method. Test data: the expected output cannot be read.
+   * Test case: tests the judgeNextSubmission method. Test data: the expected output cannot be read.
    * Expected result: a System Error rather than a Wrong Answer.
    */
   @Test
-  public void testCreateNewTaskUnreadableAnswerIsSystemError() throws Exception {
+  public void testJudgeNextSubmissionUnreadableAnswerIsSystemError() throws Exception {
     when(checkpointStore.getCheckpoints(1000L)).thenReturn(oneCheckpoint());
     when(compiler.getCompileResult(any(), anyString(), anyString()))
         .thenReturn(compileResult(true));
@@ -337,18 +377,19 @@ public class DispatcherTest {
     when(comparator.getComparisonResult(anyString(), anyString(), anyBoolean()))
         .thenThrow(new java.io.IOException("No such file"));
 
-    dispatcher.createNewTask(100L, GENERATION, NOT_LAST_DELIVERY);
+    dispatcher.judgeNextSubmission(LANGUAGES);
 
     verify(applicationDispatcher).onErrorOccurred(any(), contains("could not be read"));
     verify(applicationDispatcher, never()).onAllTestPointsFinished(any(), any());
   }
 
   /**
-   * Test case: tests the createNewTask method. Test data: a stage throws after the work directory
-   * was created. Expected result: a System Error, and the work directory is still removed.
+   * Test case: tests the judgeNextSubmission method. Test data: a stage throws after the work
+   * directory was created. Expected result: a System Error, and the work directory is still
+   * removed.
    */
   @Test
-  public void testCreateNewTaskCleansUpOnFailure(@TempDir Path tempDir) throws Exception {
+  public void testJudgeNextSubmissionCleansUpOnFailure(@TempDir Path tempDir) throws Exception {
     when(checkpointStore.getWorkDirectory()).thenReturn(tempDir);
     org.mockito.Mockito.doAnswer(
             invocation -> {
@@ -363,7 +404,7 @@ public class DispatcherTest {
     when(compiler.getCompileResult(any(), anyString(), anyString()))
         .thenThrow(new IllegalStateException("compiler crashed"));
 
-    dispatcher.createNewTask(100L, GENERATION, NOT_LAST_DELIVERY);
+    dispatcher.judgeNextSubmission(LANGUAGES);
 
     verify(applicationDispatcher).onErrorOccurred(any(), eq(Dispatcher.INTERNAL_ERROR_REASON));
     try (java.util.stream.Stream<Path> leftovers = Files.list(tempDir)) {
@@ -372,8 +413,9 @@ public class DispatcherTest {
   }
 
   /**
-   * Test case: tests the createNewTask method. Test data: the same submission judged twice (as by
-   * two judgers on one host). Expected result: each judging gets a work directory of its own.
+   * Test case: tests the judgeNextSubmission method. Test data: the same submission judged twice
+   * (as by two judgers on one host). Expected result: each judging gets a work directory of its
+   * own.
    */
   @Test
   public void testEachJudgingHasItsOwnWorkDirectory() throws Exception {
@@ -381,8 +423,8 @@ public class DispatcherTest {
     when(compiler.getCompileResult(any(), anyString(), anyString()))
         .thenReturn(compileResult(false));
 
-    dispatcher.createNewTask(100L, GENERATION, NOT_LAST_DELIVERY);
-    dispatcher.createNewTask(100L, GENERATION, NOT_LAST_DELIVERY);
+    dispatcher.judgeNextSubmission(LANGUAGES);
+    dispatcher.judgeNextSubmission(LANGUAGES);
 
     org.mockito.ArgumentCaptor<String> workDirectories =
         org.mockito.ArgumentCaptor.forClass(String.class);
@@ -394,12 +436,12 @@ public class DispatcherTest {
   }
 
   /**
-   * Test case: tests the createNewTask method. Test data: the database becomes unreachable while
-   * the verdict is recorded. Expected result: no System Error is attempted (it could not be
-   * recorded either); the exception is passed on so that the task is delivered again.
+   * Test case: tests the judgeNextSubmission method. Test data: the database becomes unreachable
+   * while the verdict is recorded. Expected result: no System Error is attempted (it could not be
+   * recorded either): the submission is claimed again once its lease expired.
    */
   @Test
-  public void testCreateNewTaskPassesOnDatabaseFailures() throws Exception {
+  public void testJudgeNextSubmissionLeavesDatabaseFailuresToTheLease() throws Exception {
     when(checkpointStore.getCheckpoints(1000L)).thenReturn(oneCheckpoint());
     when(compiler.getCompileResult(any(), anyString(), anyString()))
         .thenReturn(compileResult(false));
@@ -408,121 +450,80 @@ public class DispatcherTest {
         .when(applicationDispatcher)
         .onCompileFinished(any(), any());
 
-    Assertions.assertThrows(
-        org.springframework.dao.DataAccessException.class,
-        () -> dispatcher.createNewTask(100L, GENERATION, NOT_LAST_DELIVERY));
+    Assertions.assertTrue(dispatcher.judgeNextSubmission(LANGUAGES));
     verify(applicationDispatcher, never()).onErrorOccurred(any(), anyString());
   }
 
   /**
-   * Test case: tests the createNewTask method. Test data: a submission that is no longer pending,
-   * e.g. its task was delivered a second time after it had been judged. Expected result: it is not
-   * judged (nor its verdict overwritten) again.
+   * Test case: tests the judgeNextSubmission method. Test data: a pending submission. Expected
+   * result: it is judged with the claim token of the judging that claimed it, in the languages of
+   * the judger.
    */
   @Test
-  public void testCreateNewTaskSkipsSubmissionsThatAreNotPending() throws Exception {
-    when(applicationDispatcher.onJudgingStarted(anyLong(), anyLong())).thenReturn(null);
-
-    dispatcher.createNewTask(100L, GENERATION, NOT_LAST_DELIVERY);
-
-    verify(submissionMapper, never()).getSubmission(anyLong());
-    verify(checkpointStore, never()).sync(any());
-    verify(compiler, never()).getCompileResult(any(), anyString(), anyString());
-    verify(applicationDispatcher, never()).onErrorOccurred(any(), anyString());
-  }
-
-  /**
-   * Test case: tests the createNewTask method. Test data: a pending submission. Expected result:
-   * it is read only once it is claimed (an edit and a rejudge just before the claim are judged),
-   * and judged with the claim token, which identifies the judging.
-   */
-  @Test
-  public void testCreateNewTaskReadsTheSubmissionOnlyOnceClaimed() throws Exception {
+  public void testJudgeNextSubmissionJudgesWithTheClaimToken() throws Exception {
     when(checkpointStore.getCheckpoints(1000L)).thenReturn(oneCheckpoint());
     when(compiler.getCompileResult(any(), anyString(), anyString()))
         .thenReturn(compileResult(false));
 
-    dispatcher.createNewTask(100L, GENERATION, NOT_LAST_DELIVERY);
+    dispatcher.judgeNextSubmission(LANGUAGES);
 
-    InOrder inOrder = org.mockito.Mockito.inOrder(applicationDispatcher, submissionMapper);
-    inOrder.verify(applicationDispatcher).onJudgingStarted(100L, GENERATION);
-    inOrder.verify(submissionMapper).getSubmission(100L);
+    verify(applicationDispatcher).claimSubmission(eq(LANGUAGES), anyLong());
     verify(applicationDispatcher)
-        .onCompileFinished(
-            argThat(s -> s.getClaimToken() == CLAIM_TOKEN), any());
+        .onCompileFinished(argThat(s -> s.getClaimToken() == CLAIM_TOKEN), any());
   }
 
   /**
-   * Test case: tests the createNewTask method. Test data: a stale task, queued before the
-   * submission was rejudged (its generation is not the submission's any more), so the claim
-   * matches nothing. Expected result: the task is skipped, the submission not even read.
+   * Test case: tests the judgeNextSubmission method. Test data: a compilation that takes four
+   * times as long as the lease of the judging. Expected result: the lease is renewed in the
+   * background while the compilation runs, so the judging goes on and records its verdict; the
+   * renewals stop once the judging is over.
    */
   @Test
-  public void testCreateNewTaskSkipsStaleTasks() throws Exception {
-    when(applicationDispatcher.onJudgingStarted(100L, 2L)).thenReturn(null);
-
-    dispatcher.createNewTask(100L, 2L, NOT_LAST_DELIVERY);
-
-    verify(submissionMapper, never()).getSubmission(anyLong());
-    verify(compiler, never()).getCompileResult(any(), anyString(), anyString());
-  }
-
-  /**
-   * Test case: tests the createNewTask method. Test data: two checkpoints. Expected result: the
-   * lease of the judging is renewed after the download of the test data, after the compilation and
-   * after each checkpoint, before the step is reported.
-   */
-  @Test
-  public void testCreateNewTaskRenewsTheLeaseAfterEachStep() throws Exception {
-    List<Checkpoint> checkpoints = new ArrayList<>(oneCheckpoint());
-    checkpoints.add(new Checkpoint(1000L, 2, true, 100, "input", "output"));
-    when(checkpointStore.getCheckpoints(1000L)).thenReturn(checkpoints);
+  public void testJudgeNextSubmissionRenewsTheLeaseWhileAStepRuns() throws Exception {
+    when(checkpointStore.getCheckpoints(1000L)).thenReturn(oneCheckpoint());
     when(compiler.getCompileResult(any(), anyString(), anyString()))
-        .thenReturn(compileResult(true));
-    when(programRunner.getRuntimeResult(any(), anyString(), anyString(), anyString(), anyString()))
-        .thenReturn(runtimeResult("AC"));
-    when(comparator.getComparisonResult(anyString(), anyString(), anyBoolean())).thenReturn("AC");
+        .thenAnswer(
+            invocation -> {
+              Thread.sleep(LEASE_TIMEOUT * 4);
+              return compileResult(false);
+            });
 
-    dispatcher.createNewTask(100L, GENERATION, NOT_LAST_DELIVERY);
+    dispatcher.judgeNextSubmission(LANGUAGES);
 
-    InOrder inOrder =
-        org.mockito.Mockito.inOrder(
-            checkpointStore, compiler, programRunner, applicationDispatcher);
-    inOrder.verify(checkpointStore).sync(any());
-    inOrder.verify(applicationDispatcher).renewLease(any());
-    inOrder.verify(compiler).getCompileResult(any(), anyString(), anyString());
-    inOrder.verify(applicationDispatcher).renewLease(any());
-    inOrder.verify(applicationDispatcher).onCompileFinished(any(), any());
-    for (int checkpointId = 1; checkpointId <= 2; ++checkpointId) {
-      inOrder
-          .verify(programRunner)
-          .getRuntimeResult(any(), anyString(), anyString(), anyString(), anyString());
-      inOrder.verify(applicationDispatcher).renewLease(any());
-      inOrder.verify(applicationDispatcher).onOneTestPointFinished(any(), eq(checkpointId), any());
-    }
-    inOrder.verify(applicationDispatcher).onAllTestPointsFinished(any(), any());
+    verify(applicationDispatcher, atLeast(8)).renewLease(any(), eq(LEASE_SECONDS));
+    verify(applicationDispatcher).onCompileFinished(any(), any());
+    int renewals = numberOfRenewals();
+    Thread.sleep(LEASE_TIMEOUT);
+    Assertions.assertEquals(renewals, numberOfRenewals());
   }
 
   /**
-   * Test case: tests the createNewTask method. Test data: a judging that finds, when it renews its
-   * lease after the first of two checkpoints, that it was superseded (e.g. the submission was
-   * rejudged). Expected result: it stops at once, without reporting that checkpoint, running the
-   * next one, recording a verdict or a System Error, or passing on an exception; its work
+   * Test case: tests the judgeNextSubmission method. Test data: a judging that finds, when it
+   * renews its lease while the first of two checkpoints runs, that it was superseded (e.g. the
+   * submission was rejudged). Expected result: it stops once that run is over, without reporting
+   * that checkpoint, running the next one, or recording a verdict or a System Error; its work
    * directory is removed.
    */
   @Test
-  public void testCreateNewTaskStopsOnceSuperseded(@TempDir Path tempDir) throws Exception {
+  public void testJudgeNextSubmissionStopsOnceSuperseded(@TempDir Path tempDir) throws Exception {
     when(checkpointStore.getWorkDirectory()).thenReturn(tempDir);
     List<Checkpoint> checkpoints = new ArrayList<>(oneCheckpoint());
     checkpoints.add(new Checkpoint(1000L, 2, true, 100, "input", "output"));
     when(checkpointStore.getCheckpoints(1000L)).thenReturn(checkpoints);
     when(compiler.getCompileResult(any(), anyString(), anyString()))
         .thenReturn(compileResult(true));
+    // Current until the first checkpoint runs, superseded while it runs.
+    AtomicBoolean isRejudged = new AtomicBoolean();
+    when(applicationDispatcher.renewLease(any(), anyLong()))
+        .thenAnswer(invocation -> !isRejudged.get());
     when(programRunner.getRuntimeResult(any(), anyString(), anyString(), anyString(), anyString()))
-        .thenReturn(runtimeResult("AC"));
+        .thenAnswer(
+            invocation -> {
+              isRejudged.set(true);
+              Thread.sleep(LEASE_TIMEOUT);
+              return runtimeResult("AC");
+            });
     when(comparator.getComparisonResult(anyString(), anyString(), anyBoolean())).thenReturn("AC");
-    // Current after the download and the compilation, superseded after the first checkpoint.
-    when(applicationDispatcher.renewLease(any())).thenReturn(true, true, false);
     org.mockito.Mockito.doAnswer(
             invocation -> {
               Files.createDirectories(Path.of(invocation.<String>getArgument(1)));
@@ -531,8 +532,9 @@ public class DispatcherTest {
         .when(preprocessor)
         .createTestCode(any(), anyString(), anyString());
 
-    dispatcher.createNewTask(100L, GENERATION, NOT_LAST_DELIVERY);
+    dispatcher.judgeNextSubmission(LANGUAGES);
 
+    verify(applicationDispatcher).onCompileFinished(any(), any());
     verify(programRunner, times(1))
         .getRuntimeResult(any(), anyString(), anyString(), anyString(), anyString());
     verify(applicationDispatcher, never()).onOneTestPointFinished(any(), anyInt(), any());
@@ -544,15 +546,21 @@ public class DispatcherTest {
   }
 
   /**
-   * Test case: tests the createNewTask method. Test data: a judging that was superseded while it
-   * downloaded the test data. Expected result: it neither compiles nor reports anything.
+   * Test case: tests the judgeNextSubmission method. Test data: a judging that was superseded while
+   * it downloaded the test data. Expected result: it neither compiles nor reports anything.
    */
   @Test
-  public void testCreateNewTaskSupersededWhileDownloadingIsNotCompiled() throws Exception {
+  public void testJudgeNextSubmissionSupersededWhileDownloadingIsNotCompiled() throws Exception {
     when(checkpointStore.getCheckpoints(1000L)).thenReturn(oneCheckpoint());
-    when(applicationDispatcher.renewLease(any())).thenReturn(false);
+    when(applicationDispatcher.renewLease(any(), anyLong())).thenReturn(false);
+    when(checkpointStore.sync(any()))
+        .thenAnswer(
+            invocation -> {
+              Thread.sleep(LEASE_TIMEOUT);
+              return Path.of("/tmp/voj-dispatcher-tests/1000");
+            });
 
-    dispatcher.createNewTask(100L, GENERATION, NOT_LAST_DELIVERY);
+    dispatcher.judgeNextSubmission(LANGUAGES);
 
     verify(compiler, never()).getCompileResult(any(), anyString(), anyString());
     verify(applicationDispatcher, never()).onCompileFinished(any(), any());
@@ -560,18 +568,57 @@ public class DispatcherTest {
   }
 
   /**
-   * Test case: tests the createNewTask method. Test data: this judger's work directory cannot be
-   * created. Expected result: the submission is not even claimed; the exception is passed on so
-   * that the task is delivered again, to another judger.
+   * Test case: tests the judgeNextSubmission method. Test data: this judger's work directory cannot
+   * be created. Expected result: no submission is even claimed, so that another judger takes it.
    */
   @Test
-  public void testCreateNewTaskWithoutWorkDirectoryIsRetried() throws Exception {
+  public void testJudgeNextSubmissionWithoutWorkDirectoryClaimsNothing() throws Exception {
     when(checkpointStore.getWorkDirectory()).thenThrow(new java.io.IOException("read-only"));
 
-    Assertions.assertThrows(
-        RetryableJudgingException.class, () -> dispatcher.createNewTask(100L, GENERATION, NOT_LAST_DELIVERY));
+    Assertions.assertFalse(dispatcher.judgeNextSubmission(LANGUAGES));
 
-    verify(applicationDispatcher, never()).onJudgingStarted(anyLong(), anyLong());
+    verify(applicationDispatcher, never()).claimSubmission(anyList(), anyLong());
+  }
+
+  /**
+   * Test case: tests the judgeSubmissions method. Test data: no pending submission at first, then
+   * the database is unreachable once, then a pending submission. Expected result: the judger looks
+   * again after each of them, and judges the submission.
+   */
+  @Test
+  public void testJudgeSubmissionsLooksAgainUntilThereIsASubmission() throws Exception {
+    when(checkpointStore.getCheckpoints(1000L)).thenReturn(oneCheckpoint());
+    when(compiler.getCompileResult(any(), anyString(), anyString()))
+        .thenReturn(compileResult(false));
+    when(applicationDispatcher.claimSubmission(anyList(), anyLong()))
+        .thenReturn(null)
+        .thenThrow(new org.springframework.dao.DataAccessResourceFailureException("down"))
+        .thenReturn(buildSubmission(1))
+        .thenReturn(null);
+
+    Thread judging = new Thread(() -> dispatcher.judgeSubmissions(LANGUAGES));
+    judging.start();
+    try {
+      verify(applicationDispatcher, org.mockito.Mockito.timeout(10000))
+          .onCompileFinished(any(), any());
+    } finally {
+      judging.interrupt();
+      judging.join(10000);
+    }
+    Assertions.assertFalse(judging.isAlive());
+    verify(applicationDispatcher, atLeast(4)).claimSubmission(LANGUAGES, LEASE_SECONDS);
+  }
+
+  /**
+   * Gets how many times the lease of a judging was renewed.
+   *
+   * @return the number of renewals
+   */
+  private int numberOfRenewals() {
+    return (int)
+        mockingDetails(applicationDispatcher).getInvocations().stream()
+            .filter(invocation -> invocation.getMethod().getName().equals("renewLease"))
+            .count();
   }
 
   /**
@@ -586,15 +633,18 @@ public class DispatcherTest {
   }
 
   /**
-   * Builds a submission referencing Problem#1000.
+   * Builds a submission referencing Problem#1000, claimed by a judging.
    *
+   * @param attempts - how many judgings have taken it, this one included
    * @return a submission object
    */
-  private Submission buildSubmission() {
+  private Submission buildSubmission(int attempts) {
     Problem problem = new Problem(1000L, true, "A+B", 1000, 65536, "", "", "", "", "", "");
     Submission submission = new Submission();
     submission.setSubmissionId(100L);
     submission.setProblem(problem);
+    submission.setJudgeAttempts(attempts);
+    submission.setClaimToken(CLAIM_TOKEN);
     return submission;
   }
 
@@ -625,14 +675,20 @@ public class DispatcherTest {
     return result;
   }
 
-  /** The judging generation of the tasks of the tests. */
-  private static final long GENERATION = 3L;
+  /** The languages of the judger of the tests. */
+  private static final List<Integer> LANGUAGES = List.of(2, 3);
 
-  /** Whether the deliveries of the tests are the last of their task: they are not. */
-  private static final boolean NOT_LAST_DELIVERY = false;
+  /** The lease (ms) of the judgings of the tests: renewed every 100 ms. */
+  private static final long LEASE_TIMEOUT = 400;
+
+  /** The lease of the judgings of the tests in whole seconds, rounded up. */
+  private static final long LEASE_SECONDS = 1;
+
+  /** How many judgings may take a submission. */
+  private static final int MAX_ATTEMPTS = 3;
 
   /** The claim token of the judgings that the tests claim. */
-  private static final Long CLAIM_TOKEN = -4242L;
+  private static final long CLAIM_TOKEN = -4242L;
 
   /** The mocked ApplicationDispatcher object. */
   @Mock private ApplicationDispatcher applicationDispatcher;
@@ -648,9 +704,6 @@ public class DispatcherTest {
 
   /** The mocked Comparator object. */
   @Mock private Comparator comparator;
-
-  /** The mocked SubmissionMapper object. */
-  @Mock private SubmissionMapper submissionMapper;
 
   /** The mocked CheckpointStore object. */
   @Mock private CheckpointStore checkpointStore;

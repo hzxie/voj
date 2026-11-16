@@ -33,10 +33,10 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.PropertySource;
-import org.springframework.jms.listener.DefaultMessageListenerContainer;
 
 import org.verwandlung.voj.judger.application.ApplicationHeartbeat;
 import org.verwandlung.voj.judger.core.CheckpointStore;
+import org.verwandlung.voj.judger.core.Dispatcher;
 import org.verwandlung.voj.judger.core.SandboxAccountLock;
 import org.verwandlung.voj.judger.mapper.LanguageMapper;
 import org.verwandlung.voj.judger.model.Language;
@@ -44,9 +44,9 @@ import org.verwandlung.voj.judger.model.Language;
 /**
  * The application entry point of the Verwandlung Online Judge judger.
  *
- * <p>The judger is a non-web Spring Boot application that, once started, listens for judging tasks
- * via ActiveMQ. Because the JMS listener container holds non-daemon threads, the JVM does not exit
- * while it is listening.
+ * <p>The judger is a non-web Spring Boot application that, once started, takes the pending
+ * submissions from the database and judges them on a thread of its own, which keeps the JVM
+ * running, and sends their progress and its heartbeats to the web application via ActiveMQ.
  *
  * @author Haozhe Xie
  */
@@ -64,15 +64,16 @@ public class VojJudgerApplication {
   }
 
   /**
-   * Initialization task executed after the application starts: logs runtime environment information
-   * and starts the heartbeat with the web module.
+   * Initialization task executed after the application starts: logs runtime environment
+   * information, starts the heartbeat with the web module and the judging of the pending
+   * submissions.
    *
    * @param languageMapper - the data access object for programming languages
    * @param heartbeat - the heartbeat task
    * @param sandboxAccountLock - the lock that keeps other judgers off this judger's sandbox account
    * @param checkpointStore - the local cache of test data, opened (and cleaned up) here
-   * @param submissionTaskListenerContainer - the listener for the judging-task queue, started here
-   *     only after the identity check passes
+   * @param dispatcher - the judger dispatcher, which judges the pending submissions once the
+   *     identity check passes
    * @param apiToken - the shared secret for downloading test data from the web application
    * @return an ApplicationRunner instance
    */
@@ -82,7 +83,7 @@ public class VojJudgerApplication {
       ApplicationHeartbeat heartbeat,
       SandboxAccountLock sandboxAccountLock,
       CheckpointStore checkpointStore,
-      DefaultMessageListenerContainer submissionTaskListenerContainer,
+      Dispatcher dispatcher,
       @Value("${judger.apiToken:}") String apiToken) {
     return args -> {
       if (apiToken == null || apiToken.isBlank()) {
@@ -92,8 +93,8 @@ public class VojJudgerApplication {
                 + " test data download, so every submission will be judged a System Error. Set it"
                 + " to the judger.apiToken of the web application.");
       }
-      // Fail fast: verify the judger's credentials against the shared user table before consuming
-      // any task. Otherwise a misconfigured judger would accept submissions and abort them
+      // Fail fast: verify the judger's credentials against the shared user table before taking any
+      // submission. Otherwise a misconfigured judger would accept submissions and abort them
       // mid-judging (leaving them stuck) once the heartbeat later detected the bad credentials.
       if (!heartbeat.isIdentityValid()) {
         LOGGER.error("Unauthorized: please check judger.username / judger.password. Shutting down.");
@@ -107,28 +108,24 @@ public class VojJudgerApplication {
       // used fails every judging, so it fails the startup.
       checkpointStore.open();
 
-      List<String> supportedLanguageSlugs = detectSupportedLanguages(languageMapper);
-      if (supportedLanguageSlugs.isEmpty()) {
-        // No usable toolchain on this host. Rather than accepting tasks we cannot build (and then
-        // either failing them with a bogus Compile Error or bouncing them around the queue), stay
-        // online for telemetry but never consume a submission. The web side's task TTL eventually
-        // fails any submission that no judger can handle.
+      List<Integer> supportedLanguageIds = detectSupportedLanguages(languageMapper);
+      setupHeartBeat(heartbeat);
+      if (supportedLanguageIds.isEmpty()) {
+        // No usable toolchain on this host. Rather than taking submissions we cannot build (and
+        // failing them with a bogus Compile Error), stay online for telemetry but never take one.
+        // The submissions no judger takes are judged a System Error by the web application once
+        // they waited too long (judging.maxWait).
         LOGGER.error(
-            "No supported language compilers were detected; this judger will not consume any "
+            "No supported language compilers were detected; this judger will not take any "
                 + "submission. Check the toolchain installation.");
-        setupHeartBeat(heartbeat);
         return;
       }
-      // Only claim tasks this judger can actually build. The broker evaluates this selector, so
-      // unsupported tasks are never delivered here (no take-and-requeue loop, hence no busy loop
-      // when nobody supports a language); they simply wait in the queue for a capable judger.
-      String messageSelector = buildLanguageSelector(supportedLanguageSlugs);
-      LOGGER.info("Listening for submission tasks with selector: " + messageSelector);
-      submissionTaskListenerContainer.setMessageSelector(messageSelector);
-      // The listener is configured with autoStartup=false; only now, with a valid identity and a
-      // known set of supported languages, do we begin receiving submissions.
-      submissionTaskListenerContainer.start();
-      setupHeartBeat(heartbeat);
+      // Only take the submissions this judger can actually build: the others wait in the database
+      // for a capable judger.
+      LOGGER.info("Judging the submissions in the languages " + supportedLanguageIds);
+      Thread judging =
+          new Thread(() -> dispatcher.judgeSubmissions(supportedLanguageIds), "voj-judging");
+      judging.start();
     };
   }
 
@@ -153,16 +150,16 @@ public class VojJudgerApplication {
   }
 
   /**
-   * Probes the toolchain for every language known to the system and returns the slugs of those this
-   * host can actually compile. A language counts as supported when its compiler can be launched; the
+   * Probes the toolchain for every language known to the system and returns those this host can
+   * actually compile. A language counts as supported when its compiler can be launched; the
    * compiler version is logged along the way to make bug reproduction easier.
    *
    * @param languageMapper - the data access object for programming languages
-   * @return the slugs of the languages this judger supports
+   * @return the unique identifiers of the languages this judger supports
    */
-  private List<String> detectSupportedLanguages(LanguageMapper languageMapper) {
+  private List<Integer> detectSupportedLanguages(LanguageMapper languageMapper) {
     LOGGER.info("Compiler Information: ");
-    List<String> supportedLanguageSlugs = new ArrayList<>();
+    List<Integer> supportedLanguageIds = new ArrayList<>();
     List<Language> languages = languageMapper.getAllLanguages();
     for (Language language : languages) {
       String languageName = language.getLanguageName();
@@ -172,31 +169,10 @@ public class VojJudgerApplication {
       LOGGER.info(
           "\t" + languageName + ": " + (compilerVersion == null ? "Not Found" : compilerVersion));
       if (compilerVersion != null) {
-        supportedLanguageSlugs.add(language.getLanguageSlug());
+        supportedLanguageIds.add(language.getLanguageId());
       }
     }
-    return supportedLanguageSlugs;
-  }
-
-  /**
-   * Builds the JMS message selector that limits this judger to submission tasks it can build. Tasks
-   * that carry no {@code languageSlug} property (e.g. produced by an older web build) are also
-   * accepted so they are never stranded in the queue.
-   *
-   * @param supportedLanguageSlugs - the slugs of the languages this judger supports
-   * @return the JMS message selector expression
-   */
-  private String buildLanguageSelector(List<String> supportedLanguageSlugs) {
-    StringBuilder quotedSlugs = new StringBuilder();
-    for (int i = 0; i < supportedLanguageSlugs.size(); ++i) {
-      if (i > 0) {
-        quotedSlugs.append(", ");
-      }
-      // Language slugs are CodeMirror MIME types (e.g. text/x-csrc); none contains a single quote,
-      // so they are safe to embed directly in the selector literal.
-      quotedSlugs.append('\'').append(supportedLanguageSlugs.get(i)).append('\'');
-    }
-    return String.format("languageSlug IS NULL OR languageSlug IN (%s)", quotedSlugs);
+    return supportedLanguageIds;
   }
 
   /**

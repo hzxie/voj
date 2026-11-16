@@ -180,6 +180,25 @@ public class Submission implements Serializable {
   }
 
   /**
+   * Gets how many judgings have taken this submission since it was queued, the current one
+   * included.
+   *
+   * @return the number of judgings that have taken this submission
+   */
+  public int getJudgeAttempts() {
+    return judgeAttempts;
+  }
+
+  /**
+   * Sets how many judgings have taken this submission since it was queued.
+   *
+   * @param judgeAttempts - the number of judgings that have taken this submission
+   */
+  public void setJudgeAttempts(int judgeAttempts) {
+    this.judgeAttempts = judgeAttempts;
+  }
+
+  /**
    * Gets the claim token of the judging of this submission.
    *
    * @return the claim token (see {@code SubmissionMapper#claimSubmission})
@@ -365,6 +384,9 @@ public class Submission implements Serializable {
 
   /** The time the judging started. */
   private Date executeTime;
+
+  /** How many judgings have taken this submission since it was queued. */
+  private int judgeAttempts;
 
   /**
    * The claim token of the judging of this submission, which identifies it (see {@code

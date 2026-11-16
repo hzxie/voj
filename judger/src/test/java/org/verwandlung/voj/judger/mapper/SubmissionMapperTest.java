@@ -16,6 +16,9 @@
  */
 package org.verwandlung.voj.judger.mapper;
 
+import java.util.List;
+import java.util.Map;
+
 import javax.sql.DataSource;
 
 import org.junit.jupiter.api.Assertions;
@@ -62,28 +65,34 @@ public class SubmissionMapperTest {
   }
 
   /**
-   * Test case: tests the claimSubmission and updateSubmissionResult methods. Test data: Submission
-   * #1000, set back to pending. Expected result: it is claimed, with the start time and the lease
-   * of the database's clock; its verdict is recorded with the result columns only (the code and
-   * the rest stay as they were), and a submission that is no longer pending can be claimed by
-   * nobody.
+   * Test case: tests the getNextSubmissionId, claimSubmission and updateSubmissionResult methods.
+   * Test data: Submission #1000 (in C++), set back to pending. Expected result: it is the next one
+   * in C++, and claimed, with the start time and a lease of a minute by the database's clock, as
+   * its first attempt; no other judging claims it while it holds the lease. Its verdict is recorded
+   * with the result columns only (the code and the rest stay as they were), and a submission that
+   * is no longer pending is neither next nor claimed by anybody.
    */
   @Test
   public void testClaimAndRecordVerdict() {
-    Submission before = setPending(1000);
-    long generation = generationOf(1000);
+    Submission before = setPending(1000, "2020-01-01 00:00:00");
 
-    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, generation, 7L, 1000L));
-    Assertions.assertEquals(
-        0,
-        new JdbcTemplate(dataSource)
-            .queryForObject(
-                "SELECT COUNT(*) FROM voj_submissions WHERE submission_id = 1000"
-                    + " AND (ABS(TIMESTAMPDIFF(SECOND, submission_execute_time, NOW())) > 60"
-                    + " OR submission_lease_time <> submission_execute_time)",
-                Integer.class));
+    Assertions.assertEquals(1000L, submissionMapper.getNextSubmissionId(CPP));
+    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, 7L, 1000L, 60));
+    Map<String, Object> claim =
+        jdbcTemplate()
+            .queryForMap(
+                "SELECT submission_judge_attempts AS attempts,"
+                    + " TIMESTAMPDIFF(SECOND, submission_execute_time, NOW()) AS started,"
+                    + " TIMESTAMPDIFF(SECOND, NOW(), submission_lease_expiry_time) AS lease"
+                    + " FROM voj_submissions WHERE submission_id = 1000");
+    Assertions.assertEquals(1, ((Number) claim.get("attempts")).intValue());
+    Assertions.assertTrue(
+        Math.abs(((Number) claim.get("started")).longValue()) <= 5, claim.toString());
+    Assertions.assertTrue(((Number) claim.get("lease")).longValue() >= 55, claim.toString());
+    Assertions.assertNull(submissionMapper.getNextSubmissionId(CPP));
+    Assertions.assertEquals(0, submissionMapper.claimSubmission(1000, 8L, 1000L, 60));
+
     Assertions.assertEquals(1, submissionMapper.updateSubmissionResult(verdict(1000, 7L)));
-
     Submission after = submissionMapper.getSubmission(1000);
     Assertions.assertEquals("WA", after.getJudgeResultSlug());
     Assertions.assertEquals("Wrong Answer.", after.getJudgeLog());
@@ -91,112 +100,138 @@ public class SubmissionMapperTest {
     Assertions.assertEquals(34, after.getUsedMemory());
     Assertions.assertEquals(5, after.getJudgeScore());
     Assertions.assertEquals(1000L, after.getJudgerUid());
+    Assertions.assertEquals(1, after.getJudgeAttempts());
     Assertions.assertEquals(before.getCode(), after.getCode());
     Assertions.assertEquals(before.getUid(), after.getUid());
-    Assertions.assertEquals(0, submissionMapper.claimSubmission(1000, generation, 8L, 1000L));
+    Assertions.assertNull(submissionMapper.getNextSubmissionId(CPP));
+    expireLease(1000);
+    Assertions.assertEquals(0, submissionMapper.claimSubmission(1000, 8L, 1000L, 60));
+  }
+
+  /**
+   * Test case: tests the getNextSubmissionId method. Test data: pending submissions #1000 and #1002
+   * in C++, #1001 in Java, queued in the order #1001, #1002, #1000; then #1002 and #1000 queued at
+   * the same time. Expected result: the next one is the one queued first in the languages asked
+   * for, and of those queued at the same time the one submitted first; there is none in C.
+   */
+  @Test
+  public void testNextSubmissionIsTheOldestInTheLanguages() {
+    setPending(1000, "2020-01-03 00:00:00");
+    setPending(1001, "2020-01-01 00:00:00");
+    setPending(1002, "2020-01-02 00:00:00");
+
+    Assertions.assertEquals(1002L, submissionMapper.getNextSubmissionId(CPP));
+    Assertions.assertEquals(1001L, submissionMapper.getNextSubmissionId(List.of(3)));
+    Assertions.assertEquals(1001L, submissionMapper.getNextSubmissionId(List.of(2, 3)));
+    Assertions.assertNull(submissionMapper.getNextSubmissionId(List.of(1)));
+
+    setPending(1002, "2020-01-03 00:00:00");
+    Assertions.assertEquals(1000L, submissionMapper.getNextSubmissionId(CPP));
+  }
+
+  /**
+   * Test case: tests the claimSubmission method. Test data: a submission whose judging stopped
+   * renewing its lease (e.g. its judger died) until it expired. Expected result: it is the next one
+   * again, another judging claims it as its second attempt, and the first judging neither renews
+   * its lease nor records its verdict any more.
+   */
+  @Test
+  public void testExpiredLeaseIsClaimedAgain() {
+    setPending(1000, "2020-01-01 00:00:00");
+    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, 7L, null, 60));
+    expireLease(1000);
+
+    Assertions.assertEquals(1000L, submissionMapper.getNextSubmissionId(CPP));
+    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, 8L, null, 60));
+    Assertions.assertEquals(2, submissionMapper.getSubmission(1000).getJudgeAttempts());
+    Assertions.assertEquals(0, submissionMapper.renewLease(1000, 7L, 60));
+    Assertions.assertEquals(0, submissionMapper.updateSubmissionResult(verdict(1000, 7L)));
+    Assertions.assertEquals(1, submissionMapper.renewLease(1000, 8L, 60));
   }
 
   /**
    * Test case: tests the renewLease and updateSubmissionResult methods. Test data: a judging whose
-   * submission was rejudged meanwhile, and one whose task was then claimed by another delivery.
-   * Expected result: neither superseded judging renews its lease nor records its verdict; the
-   * current judging does both.
+   * submission was rejudged meanwhile, and the judging that claimed it then. Expected result: the
+   * superseded judging neither renews its lease nor records its verdict; the current judging does
+   * both, and a renewal by it extends the lease.
    */
   @Test
   public void testSupersededJudgingIsStopped() {
-    setPending(1000);
-    long staleGeneration = generationOf(1000);
-    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, staleGeneration, 7L, null));
-    Assertions.assertEquals(1, submissionMapper.renewLease(1000, 7L));
+    setPending(1000, "2020-01-01 00:00:00");
+    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, 7L, null, 60));
+    Assertions.assertEquals(1, submissionMapper.renewLease(1000, 7L, 60));
     // A renewal within the same second as the previous one counts too.
-    Assertions.assertEquals(1, submissionMapper.renewLease(1000, 7L));
+    Assertions.assertEquals(1, submissionMapper.renewLease(1000, 7L, 60));
 
-    setPending(1000); // a rejudge, as the web application does it
-    Assertions.assertEquals(0, submissionMapper.renewLease(1000, 7L));
+    setPending(1000, "2020-01-01 00:00:00"); // a rejudge, as the web application does it
+    Assertions.assertEquals(0, submissionMapper.renewLease(1000, 7L, 60));
     Assertions.assertEquals(0, submissionMapper.updateSubmissionResult(verdict(1000, 7L)));
 
-    long generation = generationOf(1000);
-    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, generation, 8L, null));
-    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, generation, 9L, null));
-    Assertions.assertEquals(0, submissionMapper.renewLease(1000, 8L));
-    Assertions.assertEquals(0, submissionMapper.updateSubmissionResult(verdict(1000, 8L)));
-    Assertions.assertEquals(1, submissionMapper.renewLease(1000, 9L));
+    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, 9L, null, 60));
+    Assertions.assertEquals(1, submissionMapper.getSubmission(1000).getJudgeAttempts());
+    Assertions.assertEquals(1, submissionMapper.renewLease(1000, 9L, 3600));
+    Assertions.assertTrue(
+        jdbcTemplate()
+                .queryForObject(
+                    "SELECT TIMESTAMPDIFF(SECOND, NOW(), submission_lease_expiry_time)"
+                        + " FROM voj_submissions WHERE submission_id = 1000",
+                    Long.class)
+            > 3000);
     Assertions.assertEquals(1, submissionMapper.updateSubmissionResult(verdict(1000, 9L)));
     Assertions.assertEquals("WA", submissionMapper.getSubmission(1000).getJudgeResultSlug());
     // A judged submission has no lease to renew.
-    Assertions.assertEquals(0, submissionMapper.renewLease(1000, 9L));
-  }
-
-  /**
-   * Test case: tests the releaseSubmission method. Test data: a claimed submission, released by a
-   * judging that was superseded, then by its own. Expected result: only the current judging
-   * releases it, after which its verdict is not recorded, and the next delivery of the task claims
-   * the submission again.
-   */
-  @Test
-  public void testReleaseSubmission() {
-    setPending(1000);
-    long generation = generationOf(1000);
-    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, generation, 7L, null));
-
-    Assertions.assertEquals(0, submissionMapper.releaseSubmission(1000, 8L));
-    Assertions.assertEquals(1, submissionMapper.releaseSubmission(1000, 7L));
-    Assertions.assertEquals(0, submissionMapper.updateSubmissionResult(verdict(1000, 7L)));
-    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, generation, 8L, null));
-  }
-
-  /**
-   * Test case: tests the claimSubmission method. Test data: a task queued before the submission was
-   * rejudged, i.e. of an older generation, and the rejudge's task. Expected result: only the task
-   * of the current generation claims it.
-   */
-  @Test
-  public void testStaleGenerationIsNotClaimed() {
-    setPending(1000);
-    long staleGeneration = generationOf(1000);
-    setPending(1000); // a rejudge, as the web application does it
-    long generation = generationOf(1000);
-    Assertions.assertEquals(staleGeneration + 1, generation);
-
-    Assertions.assertEquals(0, submissionMapper.claimSubmission(1000, staleGeneration, 7L, null));
-    Assertions.assertEquals(1, submissionMapper.claimSubmission(1000, generation, 8L, null));
-  }
-
-  /**
-   * Gets the judging generation of a submission.
-   *
-   * @param submissionId - the unique identifier of the submission
-   * @return its judging generation
-   */
-  private long generationOf(long submissionId) {
-    return new JdbcTemplate(dataSource)
-        .queryForObject(
-            "SELECT submission_judge_generation FROM voj_submissions WHERE submission_id = ?",
-            Long.class,
-            submissionId);
+    Assertions.assertEquals(0, submissionMapper.renewLease(1000, 9L, 60));
   }
 
   /**
    * Sets a submission back to pending, as a rejudge does (resetSubmissionToPending in the web
-   * application's SubmissionMapper.xml), which also counts the judging asked for.
+   * application's SubmissionMapper.xml), but queued at a given time.
    *
    * @param submissionId - the unique identifier of the submission
+   * @param queuedTime - when it was queued
    * @return the submission as it was before
    */
-  private Submission setPending(long submissionId) {
+  private Submission setPending(long submissionId, String queuedTime) {
     Submission submission = submissionMapper.getSubmission(submissionId);
-    new JdbcTemplate(dataSource)
+    jdbcTemplate()
         .update(
             "UPDATE voj_submissions SET submission_judge_result = 'PD', submission_judge_log ="
                 + " NULL, submission_judge_score = NULL, submission_used_time = NULL,"
                 + " submission_used_memory = NULL, submission_execute_time = NULL,"
-                + " judger_uid = NULL,"
-                + " submission_judge_generation = submission_judge_generation + 1,"
-                + " submission_claim_token = NULL, submission_lease_time = NULL,"
-                + " submission_queued_time = NOW()"
+                + " judger_uid = NULL, submission_queued_time = ?, submission_judge_attempts = 0,"
+                + " submission_claim_token = NULL, submission_lease_expiry_time = NULL"
+                + " WHERE submission_id = ?",
+            queuedTime,
+            submissionId);
+    clearCachedQueries();
+    return submission;
+  }
+
+  /**
+   * Lets the lease of the judging of a submission expire.
+   *
+   * @param submissionId - the unique identifier of the submission
+   */
+  private void expireLease(long submissionId) {
+    jdbcTemplate()
+        .update(
+            "UPDATE voj_submissions SET submission_lease_expiry_time = NOW() - INTERVAL 1 SECOND"
                 + " WHERE submission_id = ?",
             submissionId);
-    return submission;
+    clearCachedQueries();
+  }
+
+  /**
+   * Clears the query results MyBatis cached in the transaction of the test, after a change made
+   * behind its back: any MyBatis update does (this one changes no row).
+   */
+  private void clearCachedQueries() {
+    submissionMapper.renewLease(0, 0, 1);
+  }
+
+  /** Gets a JdbcTemplate on the data source, which runs in the transaction of the test. */
+  private JdbcTemplate jdbcTemplate() {
+    return new JdbcTemplate(dataSource);
   }
 
   /**
@@ -217,6 +252,9 @@ public class SubmissionMapperTest {
     submission.setJudgeScore(5);
     return submission;
   }
+
+  /** The languages of the tests: C++ only. */
+  private static final List<Integer> CPP = List.of(2);
 
   /** The SubmissionMapper object under test. */
   @Autowired private SubmissionMapper submissionMapper;

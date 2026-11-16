@@ -27,8 +27,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import org.verwandlung.voj.judger.core.Dispatcher;
-import org.verwandlung.voj.judger.exception.IllgealSubmissionException;
 import org.verwandlung.voj.judger.mapper.JudgeResultMapper;
 import org.verwandlung.voj.judger.mapper.SubmissionMapper;
 import org.verwandlung.voj.judger.mapper.UserMapper;
@@ -38,90 +36,68 @@ import org.verwandlung.voj.judger.model.Submission;
 import org.verwandlung.voj.judger.model.User;
 
 /**
- * The application dispatcher.
+ * The application dispatcher: claims the submissions to judge in the database, records the outcome
+ * of their judgings there, and streams their progress to the web application.
  *
  * @author Haozhe Xie
  */
 @Component
 public class ApplicationDispatcher {
   /**
-   * Callback invoked when a new judging request is received from the message queue.
+   * Claims the next submission to judge in one of some languages (see {@code
+   * SubmissionMapper#getNextSubmissionId}) for a new judging, and reads it once claimed: an
+   * administrator may edit its problem or test data and rejudge it until then, and the judging
+   * must be of what was rejudged.
    *
-   * <p>The dispatcher records any failure of the judging itself as a System Error. What it throws
-   * is a failure to record the outcome at all (e.g. the database is unreachable), or a failure that
-   * is likely gone later or on another judger (e.g. the test data cannot be downloaded now), which
-   * is passed on so that the task is delivered again rather than the submission staying pending
-   * forever or being judged a System Error.
+   * <p>The claim token, a random number, identifies the judging: its lease is renewed (see {@link
+   * #renewLease}) and its verdict recorded only while the submission still carries it, and its
+   * messages carry it, so that the web application shows the messages of the current judging only.
+   * A rejudge clears it, and a later claim (once the lease of this one expired) replaces it: the
+   * judging they supersede stops, without overwriting the new verdict with a stale one.
    *
-   * @param submissionId - the unique identifier of the submission
-   * @param generation - the judging generation of the task
-   * @param isLastDelivery - whether the broker will not deliver the task again
+   * @param languageIds - the unique identifiers of the languages this judger supports, not empty
+   * @param leaseSeconds - how long the lease of the judging lasts, in seconds
+   * @return the submission, with the claim token of the judging, or {@code null} if there is none
+   *     to judge
    */
-  public void onSubmissionCreated(long submissionId, long generation, boolean isLastDelivery) {
-    try {
-      judgerDispatcher.createNewTask(submissionId, generation, isLastDelivery);
-    } catch (IllgealSubmissionException ex) {
-      LOGGER.warn(
-          String.format(
-              "Ignoring the judging task of submission #%d, which does not exist.", submissionId));
+  public Submission claimSubmission(List<Integer> languageIds, long leaseSeconds) {
+    for (Long submissionId = submissionMapper.getNextSubmissionId(languageIds);
+        submissionId != null;
+        submissionId = submissionMapper.getNextSubmissionId(languageIds)) {
+      // Another judger may have claimed the submission since it was read: then the next one.
+      long claimToken = RANDOM.nextLong();
+      if (submissionMapper.claimSubmission(submissionId, claimToken, getJudgerUid(), leaseSeconds)
+          == 1) {
+        Submission submission = submissionMapper.getSubmission(submissionId);
+        if (submission != null) {
+          submission.setClaimToken(claimToken);
+          return submission;
+        }
+      }
     }
+    return null;
   }
 
   /**
-   * Claims a submission for judging, if it is still pending, at the generation of the task. A
-   * submission that is no longer pending has been judged already, e.g. its task was delivered
-   * twice, and must not be judged (and overwritten) again; one at another generation was rejudged
-   * since the task was queued, and the rejudge's own task judges it.
+   * Renews the lease of a judging, so that no other judging claims its submission meanwhile.
    *
-   * <p>The claim token identifies this judging: its lease is renewed (see {@link #renewLease}) and
-   * its verdict recorded only while the submission still carries it, and its messages carry it,
-   * so that the web application shows the messages of the current judging only. A rejudge clears
-   * it and a later delivery of the same task replaces it: the judging they supersede stops, without
-   * overwriting the new verdict with a stale one.
-   *
-   * @param submissionId - the unique identifier of the submission
-   * @param generation - the judging generation of the task
-   * @return the claim token if the submission was pending and is now claimed by this judging,
-   *     {@code null} otherwise
-   */
-  public Long onJudgingStarted(long submissionId, long generation) {
-    long claimToken = RANDOM.nextLong();
-    if (submissionMapper.claimSubmission(submissionId, generation, claimToken, getJudgerUid())
-        == 0) {
-      return null;
-    }
-    return claimToken;
-  }
-
-  /**
-   * Renews the lease of a judging, which tells the web application that the judging is still going
-   * on (see {@code SubmissionService#failStalledSubmissions} there).
-   *
-   * @param submission - the submission, claimed by {@link #onJudgingStarted}
+   * @param submission - the submission, claimed by {@link #claimSubmission}
+   * @param leaseSeconds - how long the lease lasts from now, in seconds
    * @return whether the judging is still the current one; if not, it was superseded (the
-   *     submission was rejudged, claimed by a later delivery of its task, or judged a System Error
-   *     as its lease had expired) and must stop without recording or sending anything
+   *     submission was rejudged, or claimed by another judging as its lease had expired) and must
+   *     stop without recording or sending anything
    */
-  public boolean renewLease(Submission submission) {
-    return submissionMapper.renewLease(submission.getSubmissionId(), submission.getClaimToken())
+  public boolean renewLease(Submission submission, long leaseSeconds) {
+    return submissionMapper.renewLease(
+            submission.getSubmissionId(), submission.getClaimToken(), leaseSeconds)
         == 1;
-  }
-
-  /**
-   * Releases the claim of a judging that hands its task back to be delivered again, so that the
-   * submission waits for a judger again rather than for this judging.
-   *
-   * @param submission - the submission, claimed by {@link #onJudgingStarted}
-   */
-  public void onJudgingHandedBack(Submission submission) {
-    submissionMapper.releaseSubmission(submission.getSubmissionId(), submission.getClaimToken());
   }
 
   /**
    * Notifies the user when a system error occurs: the submission could not be judged for a reason
    * that is not its own fault.
    *
-   * @param submission - the submission, claimed by {@link #onJudgingStarted}
+   * @param submission - the submission, claimed by {@link #claimSubmission}
    * @param reason - why the submission could not be judged, shown to the user in the judge log
    */
   public void onErrorOccurred(Submission submission, String reason) {
@@ -134,7 +110,7 @@ public class ApplicationDispatcher {
   /**
    * Notifies the user when the compilation stage finishes.
    *
-   * @param submission - the submission, claimed by {@link #onJudgingStarted}
+   * @param submission - the submission, claimed by {@link #claimSubmission}
    * @param result - the compilation result
    */
   public void onCompileFinished(Submission submission, Map<String, Object> result) {
@@ -154,7 +130,7 @@ public class ApplicationDispatcher {
   /**
    * Returns the judging result in real time.
    *
-   * @param submission - the submission, claimed by {@link #onJudgingStarted}
+   * @param submission - the submission, claimed by {@link #claimSubmission}
    * @param checkpointId - the number of the checkpoint
    * @param runtimeResult - the program's runtime result for a checkpoint
    */
@@ -179,7 +155,7 @@ public class ApplicationDispatcher {
   /**
    * Persists the program's judging result.
    *
-   * @param submission - the submission, claimed by {@link #onJudgingStarted}
+   * @param submission - the submission, claimed by {@link #claimSubmission}
    * @param runtimeResults - the set of judging results for all checkpoints
    */
   public void onAllTestPointsFinished(
@@ -224,11 +200,11 @@ public class ApplicationDispatcher {
 
   /**
    * Creates a progress message of a judging. Besides the submission it carries the claim token of
-   * the judging (see {@link #onJudgingStarted}), so that the web application can drop the messages
+   * the judging (see {@link #claimSubmission}), so that the web application can drop the messages
    * of a judging that was superseded instead of showing them on the submission's page.
    *
    * @param event - the event of the message
-   * @param submission - the submission, claimed by {@link #onJudgingStarted}
+   * @param submission - the submission, claimed by {@link #claimSubmission}
    * @return the message
    */
   private static Map<String, Object> newMessage(String event, Submission submission) {
@@ -401,10 +377,10 @@ public class ApplicationDispatcher {
 
   /**
    * Records the verdict of a judging: only the result columns, and only if the submission is still
-   * claimed by this judging (see {@link #onJudgingStarted}); otherwise the verdict is stale and
+   * claimed by this judging (see {@link #claimSubmission}); otherwise the verdict is stale and
    * dropped.
    *
-   * @param submission - the submission, claimed by {@link #onJudgingStarted}
+   * @param submission - the submission, claimed by {@link #claimSubmission}
    * @param usedTime - the running time of the submission (sum of all times)
    * @param usedMemory - the memory used by the submission (maximum memory usage)
    * @param score - the score of the run
@@ -451,9 +427,6 @@ public class ApplicationDispatcher {
     }
     return judgerUid;
   }
-
-  /** The autowired Dispatcher object, used to schedule judging jobs. */
-  @Autowired private Dispatcher judgerDispatcher;
 
   /** The autowired MessageSender object, used to send messages to the message queue. */
   @Autowired private MessageSender messageSender;

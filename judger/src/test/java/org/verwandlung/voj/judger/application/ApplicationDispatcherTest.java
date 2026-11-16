@@ -17,7 +17,6 @@
 package org.verwandlung.voj.judger.application;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -40,10 +39,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
-import org.springframework.dao.DataAccessResourceFailureException;
-
-import org.verwandlung.voj.judger.core.Dispatcher;
-import org.verwandlung.voj.judger.exception.IllgealSubmissionException;
 import org.verwandlung.voj.judger.mapper.JudgeResultMapper;
 import org.verwandlung.voj.judger.mapper.SubmissionMapper;
 import org.verwandlung.voj.judger.messenger.MessageSender;
@@ -58,46 +53,6 @@ import org.verwandlung.voj.judger.model.Submission;
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 public class ApplicationDispatcherTest {
-  /**
-   * Test case: tests the onSubmissionCreated method. Expected result: the judging task is delegated
-   * to the judger dispatcher.
-   */
-  @Test
-  public void testOnSubmissionCreated() throws Exception {
-    applicationDispatcher.onSubmissionCreated(100L, 3L, true);
-    verify(judgerDispatcher).createNewTask(100L, 3L, true);
-  }
-
-  /**
-   * Test case: tests the onSubmissionCreated method. Test data: the judger dispatcher cannot record
-   * the outcome of the judging (the database is down). Expected result: the exception is passed on,
-   * so that the task is delivered again, rather than swallowed with the submission left pending.
-   */
-  @Test
-  public void testOnSubmissionCreatedPassesOnFailures() throws Exception {
-    org.mockito.Mockito.doThrow(new DataAccessResourceFailureException("database down"))
-        .when(judgerDispatcher)
-        .createNewTask(anyLong(), anyLong(), anyBoolean());
-
-    Assertions.assertThrows(
-        DataAccessResourceFailureException.class,
-        () -> applicationDispatcher.onSubmissionCreated(100L, 3L, true));
-  }
-
-  /**
-   * Test case: tests the onSubmissionCreated method. Test data: a task for a submission that does
-   * not exist (any more). Expected result: the task is dropped quietly.
-   */
-  @Test
-  public void testOnSubmissionCreatedIgnoresMissingSubmissions() throws Exception {
-    org.mockito.Mockito.doThrow(new IllgealSubmissionException("Illegal submission #100"))
-        .when(judgerDispatcher)
-        .createNewTask(anyLong(), anyLong(), anyBoolean());
-
-    Assertions.assertDoesNotThrow(() -> applicationDispatcher.onSubmissionCreated(100L, 3L, true));
-    verify(submissionMapper, never()).updateSubmissionResult(any(Submission.class));
-  }
-
   /**
    * Test case: tests the onErrorOccurred method. Test data: the message broker is unreachable.
    * Expected result: the System Error is still recorded, without an exception: the progress
@@ -157,57 +112,60 @@ public class ApplicationDispatcherTest {
   }
 
   /**
-   * Test case: tests the onJudgingStarted method. Test data: a pending submission. Expected result:
-   * it is claimed at the generation of the task, with a new random claim token for every judging,
-   * which is returned.
+   * Test case: tests the claimSubmission method. Test data: the next submission in the languages of
+   * the judger, 100, which another judger claims first, then 101. Expected result: 101 is claimed
+   * and read once claimed, with a new random claim token for every claim, which it carries.
    */
   @Test
-  public void testOnJudgingStartedClaimsPendingSubmission() {
-    when(submissionMapper.claimSubmission(eq(100L), eq(3L), anyLong(), any())).thenReturn(1);
+  public void testClaimSubmissionClaimsTheNextOne() {
+    when(submissionMapper.getNextSubmissionId(LANGUAGES)).thenReturn(100L, 101L);
+    when(submissionMapper.claimSubmission(eq(100L), anyLong(), any(), eq(60L))).thenReturn(0);
+    when(submissionMapper.claimSubmission(eq(101L), anyLong(), any(), eq(60L))).thenReturn(1);
+    Submission pending = new Submission();
+    pending.setSubmissionId(101L);
+    when(submissionMapper.getSubmission(101L)).thenReturn(pending);
 
-    Long claimToken = applicationDispatcher.onJudgingStarted(100L, 3L);
-    Long nextClaimToken = applicationDispatcher.onJudgingStarted(100L, 3L);
+    Submission submission = applicationDispatcher.claimSubmission(LANGUAGES, 60);
 
+    Assertions.assertSame(pending, submission);
     ArgumentCaptor<Long> claimTokenCaptor = ArgumentCaptor.forClass(Long.class);
-    verify(submissionMapper, org.mockito.Mockito.times(2))
-        .claimSubmission(eq(100L), eq(3L), claimTokenCaptor.capture(), any());
-    Assertions.assertEquals(claimTokenCaptor.getAllValues(), List.of(claimToken, nextClaimToken));
-    Assertions.assertNotEquals(claimToken, nextClaimToken);
+    org.mockito.InOrder inOrder = org.mockito.Mockito.inOrder(submissionMapper);
+    inOrder
+        .verify(submissionMapper)
+        .claimSubmission(eq(100L), claimTokenCaptor.capture(), any(), eq(60L));
+    inOrder
+        .verify(submissionMapper)
+        .claimSubmission(eq(101L), claimTokenCaptor.capture(), any(), eq(60L));
+    inOrder.verify(submissionMapper).getSubmission(101L);
+    List<Long> claimTokens = claimTokenCaptor.getAllValues();
+    Assertions.assertNotEquals(claimTokens.get(0), claimTokens.get(1));
+    Assertions.assertEquals(claimTokens.get(1), submission.getClaimToken());
+    verify(submissionMapper, never()).getSubmission(100L);
   }
 
   /**
-   * Test case: tests the onJudgingStarted method. Test data: a submission that is not pending (it
-   * has been judged already), or at another generation. Expected result: it is not claimed.
+   * Test case: tests the claimSubmission method. Test data: no pending submission in the languages
+   * of the judger. Expected result: nothing is claimed.
    */
   @Test
-  public void testOnJudgingStartedSkipsJudgedSubmission() {
-    when(submissionMapper.claimSubmission(eq(100L), eq(3L), anyLong(), any())).thenReturn(0);
+  public void testClaimSubmissionWithoutPendingSubmission() {
+    when(submissionMapper.getNextSubmissionId(LANGUAGES)).thenReturn(null);
 
-    Assertions.assertNull(applicationDispatcher.onJudgingStarted(100L, 3L));
+    Assertions.assertNull(applicationDispatcher.claimSubmission(LANGUAGES, 60));
+    verify(submissionMapper, never()).claimSubmission(anyLong(), anyLong(), any(), anyLong());
   }
 
   /**
    * Test case: tests the renewLease method. Test data: a judging that is still current, then one
-   * that was superseded. Expected result: the lease of the judging's claim token is renewed, and
-   * whether the judging is still current is returned.
+   * that was superseded. Expected result: the lease of the judging's claim token is renewed for the
+   * given time, and whether the judging is still current is returned.
    */
   @Test
   public void testRenewLease() {
-    when(submissionMapper.renewLease(100L, CLAIM_TOKEN)).thenReturn(1, 0);
+    when(submissionMapper.renewLease(100L, CLAIM_TOKEN, 60L)).thenReturn(1, 0);
 
-    Assertions.assertTrue(applicationDispatcher.renewLease(submission()));
-    Assertions.assertFalse(applicationDispatcher.renewLease(submission()));
-  }
-
-  /**
-   * Test case: tests the onJudgingHandedBack method. Expected result: the claim of the judging is
-   * released.
-   */
-  @Test
-  public void testOnJudgingHandedBack() {
-    applicationDispatcher.onJudgingHandedBack(submission());
-
-    verify(submissionMapper).releaseSubmission(100L, CLAIM_TOKEN);
+    Assertions.assertTrue(applicationDispatcher.renewLease(submission(), 60));
+    Assertions.assertFalse(applicationDispatcher.renewLease(submission(), 60));
   }
 
   /**
@@ -464,8 +422,8 @@ public class ApplicationDispatcherTest {
   /** The claim token of the judgings of the tests. */
   private static final long CLAIM_TOKEN = -4242L;
 
-  /** The mocked Dispatcher object. */
-  @Mock private Dispatcher judgerDispatcher;
+  /** The languages of the judger of the tests. */
+  private static final List<Integer> LANGUAGES = List.of(2, 3);
 
   /** The mocked MessageSender object. */
   @Mock private MessageSender messageSender;

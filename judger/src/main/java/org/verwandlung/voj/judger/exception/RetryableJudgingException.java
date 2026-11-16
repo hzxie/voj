@@ -19,9 +19,9 @@ package org.verwandlung.voj.judger.exception;
 /**
  * Thrown when a submission cannot be judged now, for a reason that is neither its fault nor its
  * problem's and is likely gone later or on another judger (e.g. its test data could not be
- * downloaded while the web application restarts). Rather than being judged a System Error, its
- * judging task is delivered again (see {@code JmsConfig#submissionTaskListenerContainer}), unless
- * this was its last delivery.
+ * downloaded while the web application restarts). Rather than being judged a System Error, it is
+ * judged again, by any judger, unless this was its last attempt (see {@code
+ * Dispatcher#judgeNextSubmission}).
  *
  * @author Haozhe Xie
  */

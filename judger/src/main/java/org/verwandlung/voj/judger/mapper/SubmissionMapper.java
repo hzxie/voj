@@ -16,6 +16,8 @@
  */
 package org.verwandlung.voj.judger.mapper;
 
+import java.util.List;
+
 import org.apache.ibatis.annotations.One;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Result;
@@ -55,6 +57,7 @@ public interface SubmissionMapper {
         one = @One(select = "org.verwandlung.voj.judger.mapper.LanguageMapper.getLanguageUsingId")),
     @Result(property = "submitTime", column = "submission_submit_time"),
     @Result(property = "executeTime", column = "submission_execute_time"),
+    @Result(property = "judgeAttempts", column = "submission_judge_attempts"),
     @Result(property = "usedTime", column = "submission_used_time"),
     @Result(property = "usedMemory", column = "submission_used_memory"),
     @Result(property = "judgeResultSlug", column = "submission_judge_result"),
@@ -66,65 +69,75 @@ public interface SubmissionMapper {
   Submission getSubmission(@Param("submissionId") long submissionId);
 
   /**
-   * Claims a pending submission for a judging: sets the claim token, which identifies the judging,
-   * the start time of the judging, and the judger. The start time and the lease, which the judging
-   * renews (see {@link #renewLease}), are those of the database's clock.
+   * Gets the next submission to judge in one of some languages: the pending submission that was
+   * queued first (submitted or rejudged) and that no judging holds, i.e. none claimed it, or the
+   * lease of the one that did expired (by the database's clock). A plain read, which locks
+   * nothing: several judgers may get the same submission, and the first to claim it judges it.
    *
-   * <p>The web application counts the judgings asked for in {@code submission_judge_generation}:
-   * a rejudge increments it, and every judging task carries the generation it was queued with. A
-   * task whose generation is no longer the submission's is stale (a rejudge queued a newer one),
-   * so it claims nothing. A task delivered again (e.g. its judger died) claims the submission
-   * anew, which supersedes the judging of the earlier delivery.
+   * @param languageIds - the unique identifiers of the languages, not empty
+   * @return the unique identifier of the submission, or null if there is none
+   */
+  @Select({
+    "<script>",
+    "SELECT submission_id FROM voj_submissions WHERE submission_judge_result = 'PD'",
+    " AND language_id IN",
+    " <foreach item='languageId' collection='languageIds' open='(' separator=',' close=')'>",
+    "#{languageId}</foreach>",
+    " AND (submission_lease_expiry_time IS NULL OR submission_lease_expiry_time &lt; NOW())",
+    " ORDER BY submission_queued_time, submission_id LIMIT 1",
+    "</script>"
+  })
+  Long getNextSubmissionId(@Param("languageIds") List<Integer> languageIds);
+
+  /**
+   * Claims a pending submission that no judging holds (see {@link #getNextSubmissionId}) for a
+   * judging, which counts as an attempt to judge it: sets the claim token, which identifies the
+   * judging, the start time of the judging, the expiry of its lease, which it renews while it runs
+   * (see {@link #renewLease}), and the judger. The times are those of the database's clock. One
+   * statement, by primary key, that checks the submission again: of the judgers that try to claim
+   * a submission at the same time, one does.
    *
    * @param submissionId - the unique identifier of the submission
-   * @param generation - the judging generation of the task
    * @param claimToken - the claim token of the judging, a random number
    * @param judgerUid - the uid of the judger, or null if unknown
-   * @return 1 if the submission was pending (at that generation) and is now claimed, 0 otherwise
+   * @param leaseSeconds - how long the lease lasts, in seconds
+   * @return 1 if the submission is now claimed by the judging, 0 if it was not to be claimed (any
+   *     more)
    */
   @Update(
       "UPDATE voj_submissions SET submission_claim_token = #{claimToken},"
-          + " submission_execute_time = NOW(), submission_lease_time = NOW(),"
+          + " submission_execute_time = NOW(),"
+          + " submission_lease_expiry_time = NOW() + INTERVAL #{leaseSeconds} SECOND,"
+          + " submission_judge_attempts = submission_judge_attempts + 1,"
           + " judger_uid = #{judgerUid}"
           + " WHERE submission_id = #{submissionId} AND submission_judge_result = 'PD'"
-          + " AND submission_judge_generation = #{generation}")
+          + " AND (submission_lease_expiry_time IS NULL OR submission_lease_expiry_time < NOW())")
   int claimSubmission(
       @Param("submissionId") long submissionId,
-      @Param("generation") long generation,
       @Param("claimToken") long claimToken,
-      @Param("judgerUid") Long judgerUid);
+      @Param("judgerUid") Long judgerUid,
+      @Param("leaseSeconds") long leaseSeconds);
 
   /**
-   * Renews the lease of a judging, which tells the web application that the judging is still
-   * going on: a pending submission whose lease is not renewed in time is a System Error. The count
-   * is of the rows found, not of those changed (the default of the MySQL driver), so a renewal
-   * within the same second as the previous one counts too.
+   * Renews the lease of a judging, so that no other judging claims the submission while it runs.
+   * The count is of the rows found, not of those changed (the default of the MySQL driver), so a
+   * renewal within the same second as the previous one counts too.
    *
    * @param submissionId - the unique identifier of the submission
    * @param claimToken - the claim token of the judging
-   * @return 1 if the submission is still pending and claimed by the judging, 0 if it was rejudged,
-   *     claimed by another judging or failed meanwhile: the judging was superseded
+   * @param leaseSeconds - how long the lease lasts from now, in seconds
+   * @return 1 if the submission is still pending and claimed by the judging, 0 if it was rejudged
+   *     or claimed by another judging meanwhile: the judging was superseded
    */
   @Update(
-      "UPDATE voj_submissions SET submission_lease_time = NOW()"
+      "UPDATE voj_submissions"
+          + " SET submission_lease_expiry_time = NOW() + INTERVAL #{leaseSeconds} SECOND"
           + " WHERE submission_id = #{submissionId} AND submission_judge_result = 'PD'"
           + " AND submission_claim_token = #{claimToken}")
-  int renewLease(@Param("submissionId") long submissionId, @Param("claimToken") long claimToken);
-
-  /**
-   * Releases the claim of a judging that hands its task back to be delivered again: the
-   * submission waits for a judger again, as before the claim.
-   *
-   * @param submissionId - the unique identifier of the submission
-   * @param claimToken - the claim token of the judging
-   * @return 1 if the claim was released, 0 if the judging was superseded
-   */
-  @Update(
-      "UPDATE voj_submissions SET submission_claim_token = NULL"
-          + " WHERE submission_id = #{submissionId} AND submission_judge_result = 'PD'"
-          + " AND submission_claim_token = #{claimToken}")
-  int releaseSubmission(
-      @Param("submissionId") long submissionId, @Param("claimToken") long claimToken);
+  int renewLease(
+      @Param("submissionId") long submissionId,
+      @Param("claimToken") long claimToken,
+      @Param("leaseSeconds") long leaseSeconds);
 
   /**
    * Records the verdict of a judging: only the result columns (never e.g. the code), and only if
