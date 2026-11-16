@@ -237,10 +237,14 @@ as soon as a limit is exceeded:
 - **CPU time**: that of every process of a run (a compilation: the compiler's
   top-level process), plus a wall-clock guard of the time limit + 1 s for a
   program that sleeps or blocks.
-- **Memory**: the peak commit of all the run's processes together (a
-  compilation: its largest process). The Job also has a hard cap a little above
-  the limit (limit + max(limit / 4, 16 MB)); an allocation refused by the cap is
-  judged Memory Limit Exceeded as well.
+- **Memory**: the peak working set (resident memory) of the program's process,
+  like the peak resident set size on Linux (a compilation: the compiler's
+  top-level process). Memory that is committed but never touched does not
+  count: the JVM commits its initial heap (RAM / 64 by default) as it starts.
+  The Job also has a hard cap on commit, the counterpart of Linux's
+  `RLIMIT_DATA`: twice the limit plus max(256 MB, RAM / 32), for all of a run's
+  processes together (a compilation: for each process). An allocation refused
+  by the cap is judged Memory Limit Exceeded as well.
 - **Output**: 256 MB written to standard output (the Linux runner's
   `RLIMIT_FSIZE`). Other files the program writes are not limited.
 - **Processes**: a run of the submission may not create processes (its Job
