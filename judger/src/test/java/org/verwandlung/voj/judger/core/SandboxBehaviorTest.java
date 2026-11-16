@@ -339,6 +339,78 @@ public class SandboxBehaviorTest {
   }
 
   /**
+   * Test case: a run that tries to leave files where a later submission could find them (/tmp,
+   * /var/tmp, /dev/shm), and to create System V IPC objects, a POSIX message queue and a memory
+   * file, which would outlive it or escape its memory limit; then a later run that looks for the
+   * files. Expected result: every attempt is refused (Landlock confines writes to the work
+   * directory, where the run can still create files; the seccomp filter refuses the rest), and the
+   * later run finds nothing.
+   */
+  @Test
+  public void testRunLeavesNothingBehind() throws Exception {
+    Assumptions.assumeTrue("native".equalsIgnoreCase(sandbox), "This tests the native runner.");
+    Assumptions.assumeTrue(isLinux(), "Landlock and the seccomp filter are Linux-only.");
+    String name = "voj-sandbox-leak-900018";
+    String[] directories = {"/tmp", "/var/tmp", "/dev/shm"};
+    for (String directory : directories) {
+      Files.deleteIfExists(Path.of(directory, name)); // left behind by an unconfined sandbox
+    }
+    Assertions.assertEquals("AC", judge(900018L, LEAVE_BEHIND_CODE, 5000, 262144, "leave " + name));
+    Assertions.assertEquals(
+        String.join(
+            "\n",
+            "/tmp: EACCES",
+            "/var/tmp: EACCES",
+            "/dev/shm: EACCES",
+            "work: created",
+            "/dev/null: written",
+            "shmget: EPERM",
+            "semget: EPERM",
+            "msgget: EPERM",
+            "mq_open: EPERM",
+            "memfd_create: EPERM",
+            ""),
+        Files.readString(Path.of(workBaseDirectory, "voj-sandbox-900018", "output.txt")));
+    for (String directory : directories) {
+      Assertions.assertFalse(Files.exists(Path.of(directory, name)), directory + " was written");
+    }
+    Assertions.assertEquals("AC", judge(900019L, LEAVE_BEHIND_CODE, 5000, 262144, "find " + name));
+    Assertions.assertEquals(
+        "/tmp: absent\n/var/tmp: absent\n/dev/shm: absent\n",
+        Files.readString(Path.of(workBaseDirectory, "voj-sandbox-900019", "output.txt")));
+  }
+
+  /**
+   * Test case: a compilation that writes outside its work directory, and one that writes inside.
+   * Expected result: the first fails and leaves nothing behind, the second succeeds; the compiler's
+   * HOME and TMPDIR are the work directory, where it can write its temporary files.
+   */
+  @Test
+  public void testCompilationWritesOnlyInItsWorkDirectory() throws Exception {
+    Assumptions.assumeTrue("native".equalsIgnoreCase(sandbox), "This tests the native runner.");
+    Assumptions.assumeTrue(isLinux(), "Landlock is Linux-only.");
+    String workDirectory = createWorkDirectory(900020L);
+    String logFile = workDirectory + "/compile.log";
+    Path outside = Path.of("/tmp", "voj-sandbox-leak-900020");
+    Files.deleteIfExists(outside);
+    Assertions.assertEquals(
+        Verdict.RUNTIME_ERROR,
+        sandboxRunner.run("/usr/bin/touch " + outside, null, logFile, 5000, 0, true).getVerdict());
+    Assertions.assertFalse(Files.exists(outside));
+    Assertions.assertEquals(
+        Verdict.NORMAL,
+        sandboxRunner
+            .run("/usr/bin/touch " + workDirectory + "/inside", null, logFile, 5000, 0, true)
+            .getVerdict());
+    Assertions.assertTrue(Files.exists(Path.of(workDirectory, "inside")));
+    Assertions.assertEquals(
+        Verdict.NORMAL, sandboxRunner.run("/usr/bin/env", null, logFile, 5000, 0, true).getVerdict());
+    String environment = "\n" + Files.readString(Path.of(logFile));
+    Assertions.assertTrue(environment.contains("\nHOME=" + workDirectory + "\n"), environment);
+    Assertions.assertTrue(environment.contains("\nTMPDIR=" + workDirectory + "\n"), environment);
+  }
+
+  /**
    * Test case: a program whose static data (1 TB of bss) alone exceeds the kernel memory backstop
    * (RLIMIT_DATA), so that it cannot even be loaded. Expected result: Memory Limit Exceeded, not the
    * runtime error of the SIGSEGV the kernel kills such a program with while loading it. The program
@@ -839,6 +911,62 @@ public class SandboxBehaviorTest {
               return 6;
           }
       #endif
+          return 0;
+      }
+      """;
+
+  /**
+   * Given "leave NAME" on its input, a program that tries to create the file NAME in /tmp, /var/tmp,
+   * /dev/shm and its work directory, to write to /dev/null, and to create System V IPC objects, a
+   * POSIX message queue and a memory file, and reports how each attempt ends. Given "find NAME", it
+   * reports whether NAME exists in /tmp, /var/tmp and /dev/shm.
+   */
+  private static final String LEAVE_BEHIND_CODE =
+      """
+      #include <cerrno>
+      #include <cstdio>
+      #include <cstring>
+      #include <fcntl.h>
+      #include <mqueue.h>
+      #include <sys/mman.h>
+      #include <sys/msg.h>
+      #include <sys/sem.h>
+      #include <sys/shm.h>
+      #include <unistd.h>
+
+      static void report(const char* what, bool succeeded, const char* success) {
+          int error = errno;
+          std::printf("%s: %s\\n", what, succeeded ? success
+              : error == EACCES ? "EACCES" : error == EPERM ? "EPERM" : std::strerror(error));
+      }
+
+      int main() {
+          char mode[16] = "", name[64] = "";
+          if (std::scanf("%15s %63s", mode, name) != 2) {
+              return 1;
+          }
+          const char* directories[] = {"/tmp", "/var/tmp", "/dev/shm"};
+          char path[128];
+          for (const char* directory : directories) {
+              std::snprintf(path, sizeof(path), "%s/%s", directory, name);
+              if (std::strcmp(mode, "find") == 0) {
+                  std::printf("%s: %s\\n", directory, access(path, F_OK) == 0 ? "present" : "absent");
+              } else {
+                  int fd = open(path, O_WRONLY | O_CREAT | O_EXCL, 0644);
+                  report(directory, fd >= 0, "created");
+              }
+          }
+          if (std::strcmp(mode, "find") == 0) {
+              return 0;
+          }
+          report("work", open(name, O_WRONLY | O_CREAT | O_EXCL, 0644) >= 0, "created");
+          report("/dev/null", open("/dev/null", O_WRONLY | O_TRUNC) >= 0, "written");
+          report("shmget", shmget(IPC_PRIVATE, 1 << 20, IPC_CREAT | 0600) >= 0, "created");
+          report("semget", semget(IPC_PRIVATE, 1, IPC_CREAT | 0600) >= 0, "created");
+          report("msgget", msgget(IPC_PRIVATE, IPC_CREAT | 0600) >= 0, "created");
+          report("mq_open", mq_open("/voj-sandbox-leak", O_RDWR | O_CREAT, 0600, nullptr) != (mqd_t) -1,
+              "created");
+          report("memfd_create", memfd_create("voj-sandbox-leak", 0) >= 0, "created");
           return 0;
       }
       """;

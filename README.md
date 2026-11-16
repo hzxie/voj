@@ -22,8 +22,9 @@ Highlights:
 - **Cross-platform native judging.** Submissions are judged natively on **Linux**
   and **Windows** through JNI, rather than relying on a Linux-only runtime.
 - **Sandboxed execution.** On Linux each submission runs under kernel-enforced
-  resource limits and a seccomp syscall filter that also cuts off the network, as
-  an unprivileged user; on Windows it runs under a separate low-privilege account
+  resource limits, a seccomp syscall filter that also cuts off the network and
+  Landlock rules that keep its writes in its own work directory, as an
+  unprivileged user; on Windows it runs under a separate low-privilege account
   inside a Job Object that caps the process count and enforces resource limits.
 - **Real-time feedback** streamed to the browser with Server-Sent Events (SSE), so
   results appear progressively as each test case finishes.
@@ -117,7 +118,7 @@ script from [`sql/upgrades/`](sql/upgrades/); see
 | Database | [MySQL](https://www.mysql.com) 8.0+ or [MariaDB](https://mariadb.org/) 10.4+ |
 | Message queue | [ActiveMQ](https://activemq.apache.org) 6.0+ (Jakarta JMS) |
 | Judger (Linux build) | GCC/g++, make, libseccomp |
-| Judger OS | Linux or Windows |
+| Judger OS | Linux 5.13+ with Landlock enabled, or Windows |
 
 ## Security model
 
@@ -127,7 +128,9 @@ Untrusted submissions run inside a sandbox so they cannot harm the judging host:
   (CPU time, memory backstop, output size and thread caps), a seccomp syscall
   filter (blocking creating processes, `ptrace`, `mount`, module loading,
   leaving the process group, creating namespaces, network sockets other than
-  `AF_UNIX`, etc.), a private network namespace where one can be created, and
+  `AF_UNIX`, System V IPC, etc.), Landlock rules that let it write only in its
+  own work directory (so nothing it leaves behind outlives it or reaches a later
+  submission), a private network namespace where one can be created, and
   privileges dropped to an unprivileged user (`system.username`, defaulting to
   `nobody`). A run is a single process, so its CPU time and peak memory are
   exactly those of the program, and nothing it starts outlives it. Each Go
@@ -147,10 +150,11 @@ Untrusted submissions run inside a sandbox so they cannot harm the judging host:
   submission sees the sandbox account's own environment plus only the judger's
   toolchain variables, never its secrets.
 
-The native sandbox does not provide full filesystem isolation. Reference answers
-and configuration are protected by file permissions (the work directory is handed
-to the sandbox user, while the checkpoint directory stays readable only by the
-judger), but a submission can still read world-readable host files. For complete
+The native sandbox confines what a submission writes, not what it reads.
+Reference answers and configuration are protected by file permissions (the work
+directory is handed to the sandbox user, while the checkpoint directory stays
+readable only by the judger), but a submission can still read world-readable host
+files. For complete
 filesystem isolation, run the judger as root with `judger.sandbox = isolate`, which
 confines each submission to its own mount namespace.
 

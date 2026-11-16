@@ -36,9 +36,15 @@ The container runs as root and drops each submission to the unprivileged `nobody
 account, so native Linux sandboxing works out of the box: per-submission
 `setrlimit` caps, peak-memory accounting, a seccomp syscall filter (which also
 refuses network sockets, so submissions cannot reach the network even though the
-container lacks the `CAP_SYS_ADMIN` a private network namespace needs) and
-privilege drop. If the judger cannot drop privileges, a
-submission is **refused** rather than run as root.
+container lacks the `CAP_SYS_ADMIN` a private network namespace needs, and System
+V IPC), [Landlock](https://docs.kernel.org/userspace-api/landlock.html) rules that
+let a submission write only in its own work directory (so nothing it leaves in
+`/tmp`, `/dev/shm`, ... can outlive it or reach a later submission, again without
+the mount namespace the container could not create) and privilege drop. None of
+this needs extra capabilities or a custom seccomp profile, but the host kernel
+must be Linux 5.13 or later with Landlock enabled. If the judger cannot drop
+privileges or set up any part of the sandbox, a submission is **refused** (a
+system error) rather than run unconfined.
 
 ## Configuration
 
@@ -61,7 +67,9 @@ container named `voj.web`; point them at external services for a split deploymen
 
 ## Requirements
 
-- **OS:** Linux (native sandbox). The judger also runs on Windows when built from source.
+- **OS:** Linux 5.13+ with Landlock enabled (native sandbox; `landlock` is listed in
+  `/sys/kernel/security/lsm` on most distributions). The judger also runs on Windows when
+  built from source.
 - **CPU/RAM:** any 64-bit host; the judger JVM is capped small (~256 MB) since the
   judged program runs as a separate OS process.
 - All compilers and the JDK are baked into the image.

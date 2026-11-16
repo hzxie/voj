@@ -12,9 +12,12 @@ The judger picks a sandbox backend with `judger.sandbox` in `voj.properties`:
 
 - `native` (default): an in-process JNI runner. On Linux it confines each
   submission with `setrlimit`, a seccomp syscall filter (which also refuses
-  network sockets), a private network namespace where one can be created, and a
-  privilege drop. On Windows it runs the submission under a separate
-  low-privilege account. This is the only option on Windows.
+  network sockets and System V IPC), Landlock rules that confine its writes to
+  its own work directory, a private network namespace where one can be created,
+  and a privilege drop. It needs Linux 5.13 or later with Landlock enabled (see
+  [Kernel requirements](#kernel-requirements)). On Windows it runs the
+  submission under a separate low-privilege account. This is the only option on
+  Windows.
 - `isolate` (Linux only): delegates to the external
   [isolate](https://github.com/ioi/isolate) tool. Choose this when you need full
   filesystem isolation (each submission gets its own mount namespace). It requires
@@ -51,7 +54,9 @@ On a host where other services run as `nobody`, a dedicated account is still the
 better choice, for two reasons: `RLIMIT_NPROC`, which caps a submission's
 threads, counts every process and thread of the account, so busy `nobody`
 services eat into it (a run that cannot even start is then a system error); and
-processes of the same account can signal one another.
+processes of the same account that are not sandboxed can signal a submission
+(a submission itself can only signal processes outside its sandbox on kernels
+older than 6.12, see below).
 
 ```
 sudo useradd --system --no-create-home --shell /usr/sbin/nologin voj-sandbox
@@ -101,7 +106,8 @@ sudo useradd --system --no-create-home --shell /usr/sbin/nologin voj-sandbox
   the same `RLIMIT_DATA` backstop, derived from that limit. A program whose
   static data alone (`static int a[1 << 30];`) exceeds the backstop cannot even
   be loaded; it is not run and is Memory Limit Exceeded, rather than the
-  `SIGSEGV` the kernel would kill it with while loading it.
+  `SIGSEGV` the kernel would kill it with while loading it. A run cannot create
+  memory files (`memfd_create`), whose contents would count against no limit.
 - **Output.** A file the program writes, standard output included, may reach
   256 MB (`RLIMIT_FSIZE`; fixed). A run that hits the limit is Output Limit
   Exceeded, whether the kernel's `SIGXFSZ` kills it or it ignores the signal,
@@ -113,7 +119,28 @@ sudo useradd --system --no-create-home --shell /usr/sbin/nologin voj-sandbox
   inherited. Compilations and runs start in the submission's work directory.
 - **Environment.** Only the locale and toolchain variables of the judger are
   passed on (`PATH`, `LANG`, `JAVA_HOME`, the Go and Rust settings, ...), never
-  its secrets, with `HOME` set to the submission's work directory.
+  its secrets, with `HOME` and `TMPDIR` set to the submission's work directory.
+- **Files and shared state.** Every compilation and run is the same sandbox
+  user, so whatever one could leave behind outside its work directory would
+  outlive it and could be read by a later submission (say, a run that copies its
+  hidden input to `/tmp`, for a later compilation to `#include` it into its
+  compile log), and could hold memory or disk no limit accounts for. So
+  compilations and runs can create, write, truncate, rename or remove files only
+  in their own work directory, which is removed once the submission is judged
+  (enforced with [Landlock](https://docs.kernel.org/userspace-api/landlock.html);
+  `/dev/null` stays writable): not in `/tmp`, `/var/tmp`, `/dev/shm` or anywhere
+  else the sandbox user could otherwise write. Compilers find their temporary
+  directory and caches there through `TMPDIR` and `HOME`. System V shared
+  memory, semaphores and message queues and POSIX message queues are refused
+  (`EPERM`) by the seccomp filter. Landlock also denies a submission `ptrace`
+  access (including `/proc/<pid>/fd`, `/proc/<pid>/mem`, ...) to any process
+  outside its own sandbox, such as a concurrent run on another judger, and from
+  Linux 6.12 (Landlock ABI 6) on keeps it from signalling such processes or
+  connecting to their abstract Unix sockets. Reading is not restricted: a
+  submission can read whatever the sandbox user can (see below), including,
+  while they exist, the work directories of submissions judged at the same time
+  by other judgers on the host that use the same `system.username` — give each
+  judger on a host its own sandbox account if that matters.
 - **Network.** The seccomp filter refuses `socket` and `socketpair` with
   `EACCES` for every address family but `AF_UNIX`, and `io_uring` (which can
   create sockets on its own) with `ENOSYS`, so a submission cannot reach the
@@ -123,11 +150,11 @@ sudo useradd --system --no-create-home --shell /usr/sbin/nologin voj-sandbox
   run under the same filter. `AF_UNIX` sockets stay available (runtimes use
   `socketpair`), so do not leave a Unix socket that the sandbox user may connect
   to (e.g. a database's or Docker's) where it can reach it.
-- **Failing closed.** The seccomp filter and, when the judger runs as root, the
-  privilege drop (including dropping supplementary groups) are mandatory, as are
-  the resource limits and the standard streams. If any of them cannot be set
-  up, or the program cannot be executed at all, it is not run and is judged a
-  system error, never a runtime or compile error.
+- **Failing closed.** The seccomp filter, the Landlock rules and, when the
+  judger runs as root, the privilege drop (including dropping supplementary
+  groups) are mandatory, as are the resource limits and the standard streams.
+  If any of them cannot be set up, or the program cannot be executed at all, it
+  is not run and is judged a system error, never a runtime or compile error.
 - **Go.** `GOCACHE` and `GOPATH` point into the submission's own work directory,
   never at a cache other submissions can write: a shared build cache could be
   poisoned by one submission for every later Go build. Set
@@ -159,11 +186,27 @@ How it behaves at runtime:
   answers.
 
 Do not place secrets where the sandbox user can read them. The native backend
-does not provide full filesystem isolation, so a submission running as the sandbox
-user can still read world-readable files on the host. Keep `voj.properties` and
-the judger jar readable only by the judger account (for example mode `0640`), and
-use `judger.sandbox = isolate` if you need to prevent reads of arbitrary host
-files entirely.
+confines what a submission writes, not what it reads, so a submission running as
+the sandbox user can still read world-readable files on the host. Keep
+`voj.properties` and the judger jar readable only by the judger account (for
+example mode `0640`), and use `judger.sandbox = isolate` if you need to prevent
+reads of arbitrary host files entirely.
+
+### Kernel requirements
+
+The native sandbox needs no privilege for its seccomp filter and Landlock rules,
+so it works the same on a bare host, as root or not, and in a Docker container
+without extra capabilities. It needs:
+
+- **Linux 5.13 or later with Landlock enabled.** Most distributions enable it
+  (`landlock` is then listed in `/sys/kernel/security/lsm`); otherwise add it to
+  the `lsm=` kernel parameter. Linux 6.12 or later adds the signal and abstract
+  Unix socket scoping described above.
+- **A seccomp profile that allows Landlock**, in a container. Docker's default
+  profile allows the `landlock_*` system calls (verified with Docker 29); a
+  custom or older profile that denies them, like a kernel without Landlock,
+  makes every compilation and run a system error, with a log message that names
+  Landlock. The judger never runs a submission without it.
 
 ## The isolate backend
 
@@ -225,8 +268,9 @@ configuration. See [`../docker/README.md`](../docker/README.md).
 ## Running without root (development and CI)
 
 When the judger is not running as root it cannot drop privileges, so submissions
-run as the same user as the judger. This is fine for development and continuous
-integration but provides no isolation, so do not use it in production.
+run as the same user as the judger. The seccomp filter and the Landlock rules
+still apply, but the submission can read whatever the judger's account can. This is fine for development and continuous integration but is not
+isolation, so do not use it in production.
 
 ## Windows native sandbox
 

@@ -72,6 +72,46 @@
 #define CLOSE_RANGE_CLOEXEC (1U << 2)
 #endif
 
+// Landlock (Linux 5.13+), declared here: the kernel headers of older C libraries lack <linux/landlock.h>
+// or the access rights of its later ABI versions. The system calls have the same numbers on every
+// architecture. See https://docs.kernel.org/userspace-api/landlock.html
+#ifndef SYS_landlock_create_ruleset
+#define SYS_landlock_create_ruleset 444
+#endif
+#ifndef SYS_landlock_add_rule
+#define SYS_landlock_add_rule 445
+#endif
+#ifndef SYS_landlock_restrict_self
+#define SYS_landlock_restrict_self 446
+#endif
+namespace landlock {
+struct RulesetAttr {
+  uint64_t handledAccessFs;
+  uint64_t handledAccessNet; // ABI 4
+  uint64_t scoped;           // ABI 6
+};
+struct PathBeneathAttr {
+  uint64_t allowedAccess;
+  int32_t  parentFd;
+} __attribute__((packed));
+static const uint32_t CREATE_RULESET_VERSION     = 1U << 0;
+static const int      RULE_PATH_BENEATH          = 1;
+static const uint64_t ACCESS_FS_WRITE_FILE       = 1ULL << 1;
+static const uint64_t ACCESS_FS_REMOVE_DIR       = 1ULL << 4;
+static const uint64_t ACCESS_FS_REMOVE_FILE      = 1ULL << 5;
+static const uint64_t ACCESS_FS_MAKE_CHAR        = 1ULL << 6;
+static const uint64_t ACCESS_FS_MAKE_DIR         = 1ULL << 7;
+static const uint64_t ACCESS_FS_MAKE_REG         = 1ULL << 8;
+static const uint64_t ACCESS_FS_MAKE_SOCK        = 1ULL << 9;
+static const uint64_t ACCESS_FS_MAKE_FIFO        = 1ULL << 10;
+static const uint64_t ACCESS_FS_MAKE_BLOCK       = 1ULL << 11;
+static const uint64_t ACCESS_FS_MAKE_SYM         = 1ULL << 12;
+static const uint64_t ACCESS_FS_REFER            = 1ULL << 13; // ABI 2
+static const uint64_t ACCESS_FS_TRUNCATE         = 1ULL << 14; // ABI 3
+static const uint64_t SCOPE_ABSTRACT_UNIX_SOCKET = 1ULL << 0;  // ABI 6
+static const uint64_t SCOPE_SIGNAL               = 1ULL << 1;  // ABI 6
+}
+
 /**
  * Tunables for the sandbox.
  */
@@ -96,15 +136,15 @@ static const unsigned long long DATA_LIMIT_RAM_DIVISOR     = 32;
 static const char* const INHERITED_ENVIRONMENT_VARIABLES[] = {
     "PATH", "LANG", "LC_ALL", "TZ",
     "JAVA_HOME", "KOTLIN_HOME",
-    "GOROOT", "GOPATH", "GOCACHE", "GOENV", "GOTOOLCHAIN", "GOFLAGS",
+    "GOROOT", "GOENV", "GOTOOLCHAIN", "GOFLAGS",
     "RUSTUP_HOME", "RUSTUP_TOOLCHAIN", "CARGO_HOME",
 };
 /**
  * The Go toolchain's writable state, which must never be shared between submissions: a cache that
  * one submission (compiled or run as the sandbox user) can write is one it can poison for every
- * later Go build. When privileges are dropped these are not inherited but placed in the work
- * directory, which is fresh and private for every submission (the judger may seed the build cache
- * there from a read-only copy, see judger.goBuildCacheSeed).
+ * later Go build. These are not inherited but placed in the work directory, which is fresh and
+ * private for every submission (the judger may seed the build cache there from a read-only copy,
+ * see judger.goBuildCacheSeed).
  */
 static const char* const GO_BUILD_CACHE_DIRECTORY = "/.cache/go-build"; // GOCACHE (work dir relative)
 static const char* const GO_PATH_DIRECTORY        = "/go";              // GOPATH (work dir relative)
@@ -123,7 +163,8 @@ struct ChildPlan {
   std::vector<char*>       envp;           // NULL-terminated pointers into environment
   std::string              inputFilePath;  // stdin redirect (empty = /dev/null)
   std::string              outputFilePath; // stdout redirect (empty = /dev/null)
-  std::string              workDirectory;  // working directory (and HOME of the sandbox user)
+  std::string              workDirectory;  // working directory, HOME and the only writable
+                                           // directory (empty without an output file: none)
   bool                     compileStep;    // compile: stderr also goes to outputFilePath
   int                      timeLimit;      // ms (0 = no limit)
   rlim_t                   dataLimit;      // RLIMIT_DATA in bytes (0 = none)
@@ -150,8 +191,8 @@ enum LimitExceeded {
  */
 enum ChildStep {
   STEP_DESCRIPTORS, STEP_INPUT, STEP_PROCESS_GROUP, STEP_RESOURCE_LIMIT, STEP_GROUPS, STEP_GID,
-  STEP_UID, STEP_WORK_DIRECTORY, STEP_OUTPUT, STEP_DEV_NULL, STEP_NO_NEW_PRIVS, STEP_SECCOMP,
-  STEP_EXEC,
+  STEP_UID, STEP_WORK_DIRECTORY, STEP_OUTPUT, STEP_DEV_NULL, STEP_NO_NEW_PRIVS, STEP_LANDLOCK,
+  STEP_SECCOMP, STEP_EXEC,
   // Not a failure: the program's static data alone exceeds RLIMIT_DATA (see getWritableImageSize).
   STEP_STATIC_DATA_LIMIT,
 };
@@ -159,6 +200,7 @@ static const char* const CHILD_STEP_NAMES[] = {
   "marking inherited descriptors close-on-exec", "opening the input file", "setpgid()",
   "setrlimit()", "setgroups()", "setgid()", "setuid()", "entering the work directory",
   "opening the output file", "opening /dev/null", "prctl(PR_SET_NO_NEW_PRIVS)",
+  "confining writes to the work directory with Landlock (needs Linux 5.13+ with Landlock enabled)",
   "installing the seccomp filter", "execve()",
 };
 struct ChildFailure {
@@ -172,7 +214,7 @@ struct ChildFailure {
 static std::vector<std::string> splitCommandLine(const std::string&);
 static std::string resolveExecutable(const std::string&);
 static std::string getWorkDirectory(const std::string& outputFilePath);
-static std::vector<std::string> buildEnvironment(bool dropPrivileges, const std::string& workDirectory);
+static std::vector<std::string> buildEnvironment(const std::string& workDirectory);
 static std::string buildSeccompProgram(bool runOfSubmission, rlim_t dataLimit);
 static long long getMonotonicMillis();
 static long long readCpuTimeMillis(pid_t);
@@ -185,15 +227,25 @@ static void reportChildFailure(int syncWriteFd, int step) __attribute__((noretur
 static bool setResourceLimit(int resource, rlim_t soft, rlim_t hard);
 static int  openOutputFile(const char*);
 static bool markInheritedDescriptorsCloseOnExec();
+static bool confineFileSystemWrites(const std::string& workDirectory);
 static unsigned long long getWritableImageSize(const char* path, unsigned long long pageSize);
 
 /**
  * JNI call entry point.
  * Runs the given command in a sandboxed child process and measures its CPU time and peak memory
  * usage. Limits are enforced both by the kernel (setrlimit) and by a fine-grained watchdog;
- * isolation is layered: the seccomp syscall filter and (when running as root) the privilege drop
- * are mandatory - the run is refused if either cannot be applied - while the network namespace is
- * best-effort, as the filter already refuses every socket but AF_UNIX.
+ * isolation is layered: the seccomp syscall filter, the Landlock rules that confine writes to the
+ * work directory and (when running as root) the privilege drop are mandatory - the run is refused
+ * if any of them cannot be applied - while the network namespace is best-effort, as the filter
+ * already refuses every socket but AF_UNIX.
+ *
+ * Every compilation and run is the same sandbox user, so whatever one of them could leave behind
+ * outside its own work directory (a file in /tmp or /dev/shm, a System V shared memory segment, a
+ * POSIX message queue, ...) would outlive it, unaccounted for, and could be read by a later
+ * submission (e.g. a run copying its hidden input to /tmp, for a later compilation to #include it
+ * into its compile log). Landlock (see confineFileSystemWrites) and the filter (System V IPC and
+ * POSIX message queues) rule that out; they need no privilege, so they hold in a default Docker
+ * container as well. The work directory is removed once the submission has been judged.
  *
  * A run of the submission is a single process: the filter lets it create threads, but no other
  * process (see buildSeccompProgram). A compilation runs a trusted compiler, which may run others;
@@ -269,7 +321,7 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
         plan.dropGid        = pw->pw_gid;
     }
 
-    plan.environment = buildEnvironment(plan.dropPrivileges, plan.workDirectory);
+    plan.environment = buildEnvironment(plan.workDirectory);
     for ( std::string& variable : plan.environment ) {
         plan.envp.push_back(const_cast<char*>(variable.c_str()));
     }
@@ -548,7 +600,7 @@ static void runProgram(const ChildPlan& plan, int syncWriteFd) {
 
     // Run in the submission's own work directory, never in the judger's (e.g. /root in its Docker
     // image, which the sandbox user cannot enter: the Go toolchain runs its compiler there).
-    if ( chdir(plan.workDirectory.c_str()) != 0 ) {
+    if ( chdir(plan.workDirectory.empty() ? "/" : plan.workDirectory.c_str()) != 0 ) {
         reportChildFailure(syncWriteFd, STEP_WORK_DIRECTORY);
     }
 
@@ -596,13 +648,18 @@ static void runProgram(const ChildPlan& plan, int syncWriteFd) {
     }
 
     // Install the pre-built seccomp syscall filter via the raw syscall, so the child does not have
-    // to call into libseccomp (which would allocate). Mandatory: if it cannot be installed the
-    // program is not run.
+    // to call into libseccomp (which would allocate), after Landlock's rules, whose system calls
+    // are no concern of the filter. Mandatory: if it cannot be installed the program is not run.
     struct sock_fprog prog;
     prog.len    = (unsigned short) (plan.seccompProgram.size() / sizeof(struct sock_filter));
     prog.filter = (struct sock_filter*) plan.seccompProgram.data();
     if ( prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) != 0 ) {
         reportChildFailure(syncWriteFd, STEP_NO_NEW_PRIVS);
+    }
+    // Mandatory as well (it needs no_new_privs): nothing may outlive the program outside its work
+    // directory.
+    if ( !confineFileSystemWrites(plan.workDirectory) ) {
+        reportChildFailure(syncWriteFd, STEP_LANDLOCK);
     }
     if ( syscall(SYS_seccomp, SECCOMP_SET_MODE_FILTER, 0, &prog) != 0 ) {
         reportChildFailure(syncWriteFd, STEP_SECCOMP);
@@ -695,6 +752,79 @@ static bool markInheritedDescriptorsCloseOnExec() {
             }
         }
     }
+}
+
+/**
+ * Confines the file system writes of the calling process, and of everything it runs, to the work
+ * directory with Landlock: outside it, files cannot be created, written, truncated, renamed, linked
+ * or removed (only /dev/null may be written). Descriptors opened before, such as standard output,
+ * are not affected, and nothing is hidden: the program can still read whatever the sandbox user can
+ * read. Landlock is unprivileged (it only needs no_new_privs), so this holds in a default Docker
+ * container too, where a private mount namespace cannot be created. The rights handled are those of
+ * the running kernel's Landlock ABI; from ABI 6 (Linux 6.12) on, the program is also scoped: it can
+ * neither signal nor connect to an abstract Unix socket of a process outside its own Landlock
+ * domain (such as a concurrent run on another judger, also running as the sandbox user). Whatever
+ * the ABI, Landlock denies ptrace access, including to /proc/<pid>/fd and the like, to processes
+ * outside the domain. Async-signal-safe.
+ *
+ * TMPDIR and HOME point into the work directory (see buildEnvironment), so the compilers' and
+ * runtimes' temporary files and caches land there.
+ * See https://docs.kernel.org/userspace-api/landlock.html
+ *
+ * @param  workDirectory - the only directory to allow writes beneath (empty for none)
+ * @return whether the rules are in force (errno tells why not: ENOSYS without Landlock, EOPNOTSUPP
+ *         if it is disabled at boot, EPERM if a container's seccomp profile denies it)
+ */
+static bool confineFileSystemWrites(const std::string& workDirectory) {
+    long abi = syscall(SYS_landlock_create_ruleset, nullptr, 0, landlock::CREATE_RULESET_VERSION);
+    if ( abi < 1 ) {
+        return false;
+    }
+    uint64_t writeAccess =
+        landlock::ACCESS_FS_WRITE_FILE | landlock::ACCESS_FS_REMOVE_DIR |
+        landlock::ACCESS_FS_REMOVE_FILE | landlock::ACCESS_FS_MAKE_CHAR | landlock::ACCESS_FS_MAKE_DIR |
+        landlock::ACCESS_FS_MAKE_REG | landlock::ACCESS_FS_MAKE_SOCK | landlock::ACCESS_FS_MAKE_FIFO |
+        landlock::ACCESS_FS_MAKE_BLOCK | landlock::ACCESS_FS_MAKE_SYM;
+    if ( abi >= 2 ) {
+        writeAccess |= landlock::ACCESS_FS_REFER;
+    }
+    if ( abi >= 3 ) {
+        writeAccess |= landlock::ACCESS_FS_TRUNCATE;
+    }
+    landlock::RulesetAttr rulesetAttr;
+    memset(&rulesetAttr, 0, sizeof(rulesetAttr));
+    rulesetAttr.handledAccessFs = writeAccess;
+    if ( abi >= 6 ) {
+        rulesetAttr.scoped = landlock::SCOPE_ABSTRACT_UNIX_SOCKET | landlock::SCOPE_SIGNAL;
+    }
+    int ruleset = (int) syscall(SYS_landlock_create_ruleset, &rulesetAttr, sizeof(rulesetAttr), 0);
+    if ( ruleset < 0 ) {
+        return false;
+    }
+
+    // Adds a rule for a path; O_NOFOLLOW: the work directory itself is never a link.
+    auto allow = [ruleset](const char* path, int flags, uint64_t access) {
+        int fd = open(path, O_PATH | O_CLOEXEC | O_NOFOLLOW | flags);
+        if ( fd < 0 ) {
+            return false;
+        }
+        landlock::PathBeneathAttr pathBeneath;
+        pathBeneath.allowedAccess = access;
+        pathBeneath.parentFd      = fd;
+        bool added = syscall(SYS_landlock_add_rule, ruleset, landlock::RULE_PATH_BENEATH, &pathBeneath, 0) == 0;
+        int error = errno;
+        close(fd);
+        errno = error;
+        return added;
+    };
+    bool confined =
+        (workDirectory.empty() || allow(workDirectory.c_str(), O_DIRECTORY, writeAccess)) &&
+        allow("/dev/null", 0, writeAccess & (landlock::ACCESS_FS_WRITE_FILE | landlock::ACCESS_FS_TRUNCATE)) &&
+        syscall(SYS_landlock_restrict_self, ruleset, 0) == 0;
+    int error = errno;
+    close(ruleset);
+    errno = error;
+    return confined;
 }
 
 /**
@@ -818,40 +948,34 @@ static std::string resolveExecutable(const std::string& file) {
 
 /**
  * Gets the work directory of a compilation or run: the directory holding its output file, which
- * the sandbox user owns (or /tmp without an output file).
+ * the sandbox user owns.
  * @param  outputFilePath - the output file path (may be empty)
- * @return the work directory
+ * @return the work directory, or an empty string without an output file (the program then runs in
+ *         /, with nowhere to write)
  */
 static std::string getWorkDirectory(const std::string& outputFilePath) {
     size_t lastSlash = outputFilePath.rfind('/');
     return (lastSlash != std::string::npos && lastSlash > 0) ? outputFilePath.substr(0, lastSlash)
-                                                             : std::string("/tmp");
+                                                             : std::string();
 }
 
 /**
  * Builds the minimal environment of the sandboxed process: the whitelisted variables of the judger
- * (INHERITED_ENVIRONMENT_VARIABLES), defaults for PATH and LANG, and HOME. When privileges are
- * dropped, the judger's HOME (e.g. /root) is useless to the sandbox user, so HOME is set to the
- * work directory, which the sandbox user owns, and so are the Go build cache (GOCACHE) and GOPATH,
- * which would otherwise be shared between submissions.
- * @param  dropPrivileges - whether the child drops to the sandbox user
- * @param  workDirectory  - the work directory
+ * (INHERITED_ENVIRONMENT_VARIABLES), defaults for PATH and LANG, and HOME and TMPDIR. The program can
+ * only write in its work directory (see confineFileSystemWrites), so HOME (the judger's own, e.g.
+ * /root, would be useless anyway), TMPDIR (compilers' temporary files: gcc, rustc, go build, ...),
+ * the Go build cache (GOCACHE) and GOPATH all point there; the latter two would otherwise be shared
+ * between submissions.
+ * @param  workDirectory - the work directory (empty for none: HOME is then /, and TMPDIR unset)
  * @return the list of "NAME=value" strings
  */
-static std::vector<std::string> buildEnvironment(bool dropPrivileges, const std::string& workDirectory) {
+static std::vector<std::string> buildEnvironment(const std::string& workDirectory) {
     std::vector<std::string> environment;
     for ( const char* name : INHERITED_ENVIRONMENT_VARIABLES ) {
-        if ( dropPrivileges && (strcmp(name, "GOCACHE") == 0 || strcmp(name, "GOPATH") == 0) ) {
-            continue;
-        }
         const char* value = getenv(name);
         if ( value != nullptr ) {
             environment.push_back(std::string(name) + "=" + value);
         }
-    }
-    if ( dropPrivileges ) {
-        environment.push_back("GOCACHE=" + workDirectory + GO_BUILD_CACHE_DIRECTORY);
-        environment.push_back("GOPATH=" + workDirectory + GO_PATH_DIRECTORY);
     }
     if ( getenv("PATH") == nullptr ) {
         environment.push_back(std::string("PATH=") + DEFAULT_PATH);
@@ -859,13 +983,14 @@ static std::vector<std::string> buildEnvironment(bool dropPrivileges, const std:
     if ( getenv("LANG") == nullptr ) {
         environment.push_back(std::string("LANG=") + DEFAULT_LANG);
     }
-
-    const char* home = getenv("HOME");
-    if ( dropPrivileges || home == nullptr ) {
-        environment.push_back("HOME=" + workDirectory);
-    } else {
-        environment.push_back(std::string("HOME=") + home);
+    if ( workDirectory.empty() ) {
+        environment.push_back("HOME=/");
+        return environment;
     }
+    environment.push_back("HOME=" + workDirectory);
+    environment.push_back("TMPDIR=" + workDirectory);
+    environment.push_back("GOCACHE=" + workDirectory + GO_BUILD_CACHE_DIRECTORY);
+    environment.push_back("GOPATH=" + workDirectory + GO_PATH_DIRECTORY);
     return environment;
 }
 
@@ -899,6 +1024,14 @@ static std::vector<std::string> buildEnvironment(bool dropPrivileges, const std:
  * calling socket(), fails with ENOSYS, so runtimes such as libuv fall back to plain system calls.
  * Only native-architecture system calls pass the filter (any other ABI, such as i386's socketcall,
  * fails with ENOSYS), so these rules cannot be bypassed through a compat entry point.
+ *
+ * System V IPC (shared memory, semaphores, message queues) and POSIX message queues fail with EPERM,
+ * for compilers too: they are kernel objects that outlive the process that created them, so a run
+ * could leave behind shared memory that no limit accounts for, for good, or data for a later
+ * submission to pick up (their file system counterparts, such as POSIX shared memory in /dev/shm,
+ * are kept out by Landlock, see confineFileSystemWrites). A run of the submission cannot create
+ * anonymous memory files (memfd_create, memfd_secret) either: memory written to one without ever
+ * mapping it would count against no limit until the run ends.
  *
  * Finally, a run of the submission is killed (SIGSYS) when it maps more private writable memory in
  * one go than RLIMIT_DATA allows in all (see getDataLimit), e.g. std::vector<int>(1e9) under a
@@ -948,14 +1081,26 @@ static std::string buildSeccompProgram(bool runOfSubmission, rlim_t dataLimit) {
             addRule(seccomp_rule_add(ctx, SCMP_ACT_ERRNO(EPERM), syscallNr, 0));
         }
     }
-    if ( runOfSubmission ) {
-        // fork and vfork do not exist on every architecture (arm64 has clone only).
-        const int processSyscalls[] = { SCMP_SYS(fork), SCMP_SYS(vfork) };
-        for ( int syscallNr : processSyscalls ) {
+    // Resolved by name, so that a system call this architecture lacks (ipc, the multiplexer of the
+    // System V calls on some 32-bit ones) or this libseccomp does not know is simply left out.
+    auto denyByName = [&](const char* const* names, size_t count) {
+        for ( size_t i = 0; i < count; ++i ) {
+            int syscallNr = seccomp_syscall_resolve_name(names[i]);
             if ( syscallNr >= 0 ) {
                 addRule(seccomp_rule_add(ctx, SCMP_ACT_ERRNO(EPERM), syscallNr, 0));
             }
         }
+    };
+    const char* const ipcSyscalls[] = {
+        "shmget", "shmat", "shmdt", "shmctl", "semget", "semop", "semtimedop", "semctl",
+        "msgget", "msgsnd", "msgrcv", "msgctl", "ipc", "mq_open", "mq_unlink", "mq_timedsend",
+        "mq_timedreceive", "mq_notify", "mq_getsetattr",
+    };
+    denyByName(ipcSyscalls, sizeof(ipcSyscalls) / sizeof(ipcSyscalls[0]));
+    if ( runOfSubmission ) {
+        // fork and vfork do not exist on every architecture (arm64 has clone only).
+        const char* const runSyscalls[] = { "fork", "vfork", "memfd_create", "memfd_secret" };
+        denyByName(runSyscalls, sizeof(runSyscalls) / sizeof(runSyscalls[0]));
         addRule(seccomp_rule_add(ctx, SCMP_ACT_ERRNO(EPERM), SCMP_SYS(clone), 1,
                                  SCMP_A0(SCMP_CMP_MASKED_EQ, CLONE_THREAD, 0)));
     }
