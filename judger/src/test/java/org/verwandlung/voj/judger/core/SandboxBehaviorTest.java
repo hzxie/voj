@@ -586,6 +586,32 @@ public class SandboxBehaviorTest {
   }
 
   /**
+   * Test case: a run that tries to enlarge the kernel buffer of a pipe (fcntl F_SETPIPE_SZ) and
+   * those of a socket pair (setsockopt SO_SNDBUF, SO_RCVBUF, SO_SNDBUFFORCE, SO_RCVBUFFORCE), and
+   * reads them and sets another socket option. Expected result: enlarging is refused (EPERM),
+   * reading the sizes and setting another option work.
+   */
+  @Test
+  public void testRunCannotEnlargeItsKernelBuffers() throws Exception {
+    Assumptions.assumeTrue("native".equalsIgnoreCase(sandbox), "This tests the native runner.");
+    Assumptions.assumeTrue(isLinux(), "The seccomp filters are Linux-only.");
+    Assertions.assertEquals("AC", judge(900033L, KERNEL_BUFFER_CODE, 5000, 262144));
+    Assertions.assertEquals(
+        String.join(
+            "\n",
+            "F_GETPIPE_SZ: done",
+            "F_SETPIPE_SZ: EPERM",
+            "getsockopt SO_SNDBUF: done",
+            "SO_SNDBUF: EPERM",
+            "SO_RCVBUF: EPERM",
+            "SO_SNDBUFFORCE: EPERM",
+            "SO_RCVBUFFORCE: EPERM",
+            "SO_PASSCRED: done",
+            ""),
+        Files.readString(Path.of(workBaseDirectory, "voj-sandbox-900033", "output.txt")));
+  }
+
+  /**
    * Test case: a program whose static data (1 TB of bss) alone exceeds the kernel memory backstop
    * (RLIMIT_DATA), so that it cannot even be loaded. Expected result: Memory Limit Exceeded, not the
    * runtime error of the SIGSEGV the kernel kills such a program with while loading it. The program
@@ -1584,6 +1610,49 @@ public class SandboxBehaviorTest {
           message.msg_iov = &data;
           message.msg_iovlen = 1;
           report("sendmsg /dev/log", sendmsg(fd, &message, 0) == 7);
+          return 0;
+      }
+      """;
+
+  /**
+   * A program that reads and tries to enlarge the kernel buffers of a pipe and of a socket pair,
+   * and sets another socket option, and reports how each attempt ends.
+   */
+  private static final String KERNEL_BUFFER_CODE =
+      """
+      #include <cerrno>
+      #include <cstdio>
+      #include <cstring>
+      #include <fcntl.h>
+      #include <sys/socket.h>
+      #include <unistd.h>
+
+      static void report(const char* what, bool succeeded) {
+          int error = errno;
+          std::printf("%s: %s\\n", what, succeeded ? "done"
+              : error == EPERM ? "EPERM" : error == ENOSYS ? "ENOSYS" : std::strerror(error));
+      }
+
+      int main() {
+          int pipeFds[2];
+          int pair[2];
+          if (pipe(pipeFds) != 0 || socketpair(AF_UNIX, SOCK_STREAM, 0, pair) != 0) {
+              return 1;
+          }
+          report("F_GETPIPE_SZ", fcntl(pipeFds[0], F_GETPIPE_SZ) > 0);
+          report("F_SETPIPE_SZ", fcntl(pipeFds[0], F_SETPIPE_SZ, 1 << 20) >= 0);
+          int size = 0;
+          socklen_t length = sizeof(size);
+          report("getsockopt SO_SNDBUF",
+              getsockopt(pair[0], SOL_SOCKET, SO_SNDBUF, &size, &length) == 0 && size > 0);
+          const int options[] = {SO_SNDBUF, SO_RCVBUF, SO_SNDBUFFORCE, SO_RCVBUFFORCE};
+          const char* names[] = {"SO_SNDBUF", "SO_RCVBUF", "SO_SNDBUFFORCE", "SO_RCVBUFFORCE"};
+          for (int i = 0; i < 4; ++i) {
+              size = 1 << 24;
+              report(names[i], setsockopt(pair[0], SOL_SOCKET, options[i], &size, sizeof(size)) == 0);
+          }
+          int on = 1;
+          report("SO_PASSCRED", setsockopt(pair[0], SOL_SOCKET, SO_PASSCRED, &on, sizeof(on)) == 0);
           return 0;
       }
       """;

@@ -148,7 +148,12 @@ sudo useradd --system --no-create-home --shell /usr/sbin/nologin voj-sandbox
   inherited. A run may have at most 128 descriptors open at once and a
   compilation's processes 4096 each (`RLIMIT_NOFILE`, soft and hard alike, so it
   cannot be raised): an open pipe or socket pair can hold kernel memory that no
-  memory limit sees. A run's threads must share its descriptor table (`clone`
+  memory limit sees. For the same reason a run cannot enlarge those buffers
+  beyond their defaults (64 KB for a pipe, `wmem_default` for a socket):
+  `fcntl` with `F_SETPIPE_SZ` and `setsockopt` with `SO_SNDBUF`, `SO_RCVBUF`,
+  `SO_SNDBUFFORCE` or `SO_RCVBUFFORCE` fail with `EPERM`, which keeps its 128
+  descriptors to some 30 MB of kernel memory at most rather than hundreds of MB.
+  A run's threads must share its descriptor table (`clone`
   with `CLONE_THREAD` but without `CLONE_FILES` fails with `EPERM`), so the
   limit is the run's, not each thread's. Compilations and runs start in the
   submission's work directory, in a session of their own without a

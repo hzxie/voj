@@ -1314,6 +1314,14 @@ class SeccompFilter {
  *    shared mapping of /dev/zero cannot be written, as Landlock refuses to open it for writing, and
  *    one of a file in the work directory holds no more than writing the file would, which
  *    RLIMIT_FSIZE bounds per file);
+ *  - cannot enlarge the kernel buffers of its pipes and sockets, which hold kernel memory that no
+ *    memory limit sees: fcntl(F_SETPIPE_SZ) and setsockopt with SO_SNDBUF, SO_RCVBUF or their
+ *    *FORCE variants fail with EPERM. RLIMIT_NOFILE bounds how many it has (see RUN_FILE_LIMIT),
+ *    and at their default sizes 64 pipes hold at most 4 MB (64 KB each), 64 socket pairs some 27
+ *    MB (wmem_default, 208 KB per socket); but a pipe could grow to pipe-max-size (1 MB) and a
+ *    socket's send buffer to twice wmem_max (sysctls, several MB on some hosts). No runtime of a
+ *    judged language sets them on its own (a run has no network, and its standard streams are
+ *    files);
  *  - is killed (SIGSYS) when it maps more private writable memory in one go than RLIMIT_DATA allows
  *    in all (see getDataLimit), e.g. std::vector<int>(1e9) under a 256 MB limit. The kernel would
  *    refuse that mapping anyway; the program would then fail in its own way (std::bad_alloc,
@@ -1390,6 +1398,16 @@ static std::vector<std::string> buildSeccompPrograms(bool runOfSubmission, rlim_
         // accepts for an anonymous mapping (MAP_SHARED_VALIDATE fails with EINVAL).
         filter.add(SCMP_ACT_ERRNO(EPERM), SCMP_SYS(mmap), {SCMP_A3(SCMP_CMP_MASKED_EQ,
                    MAP_TYPE | MAP_ANONYMOUS, MAP_SHARED | MAP_ANONYMOUS)});
+        // fcntl(fd, F_SETPIPE_SZ, size) and setsockopt(fd, SOL_SOCKET, SO_{SND,RCV}BUF[FORCE], ...):
+        // the command, level and option are ints, so only the lower 32 bits are compared.
+        filter.add(SCMP_ACT_ERRNO(EPERM), SCMP_SYS(fcntl),
+                   {SCMP_A1(SCMP_CMP_MASKED_EQ, 0xFFFFFFFFULL, (scmp_datum_t) F_SETPIPE_SZ)});
+        const int bufferOptions[] = { SO_SNDBUF, SO_RCVBUF, SO_SNDBUFFORCE, SO_RCVBUFFORCE };
+        for ( int option : bufferOptions ) {
+            filter.add(SCMP_ACT_ERRNO(EPERM), SCMP_SYS(setsockopt),
+                       {SCMP_A1(SCMP_CMP_MASKED_EQ, 0xFFFFFFFFULL, (scmp_datum_t) SOL_SOCKET),
+                        SCMP_A2(SCMP_CMP_MASKED_EQ, 0xFFFFFFFFULL, (scmp_datum_t) option)});
+        }
         if ( dataLimit > 0 ) {
             // A private (MAP_TYPE), writable mapping that is not a stack (MAP_GROWSDOWN) counts
             // against RLIMIT_DATA.
