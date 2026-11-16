@@ -256,8 +256,6 @@
                         errorMessage = [[#{voj.problems.problem.contest-not-live}]];
                     } else if ( result['isAttended'] === false ) {
                         errorMessage = [[#{voj.problems.problem.contest-not-attended}]];
-                    } else if ( result['isUserLegal'] === false ) {
-                        errorMessage = [[#{voj.problems.problem.user-forbidden}]];
                     } else if ( !result['isProblemExists'] ) {
                         errorMessage = [[#{voj.problems.problem.problem-not-exists}]];
                     } else if ( !result['isLanguageExists'] ) {
