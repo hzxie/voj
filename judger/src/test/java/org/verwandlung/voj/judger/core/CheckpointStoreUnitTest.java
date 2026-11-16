@@ -106,19 +106,22 @@ public class CheckpointStoreUnitTest {
 
   /**
    * Test case: the checkpoint root may be written to by other users (the sandbox user among them),
-   * with or without a sticky bit, or by the group. Expected result: their write permission is
-   * taken away before the judger uses it.
+   * with or without a sticky bit (as /tmp), or by the group. Expected result: the judger refuses
+   * it, and leaves its permissions alone, as other users may rely on them.
    */
   @Test
-  public void testOpenTakesWritePermissionOfOthersAway() throws Exception {
+  public void testOpenRefusesARootOthersMayWriteTo() throws Exception {
     Path root = Files.createDirectory(tempDir.resolve("voj-testpoints"));
     ReflectionTestUtils.setField(checkpointStore, "checkpointDirectory", root.toString());
 
     for (int mode : new int[] {0777, 01777, 0770}) {
       Files.setAttribute(root, "unix:mode", mode);
-      checkpointStore.open();
-      Assertions.assertEquals(
-          mode & ~0022, (Integer) Files.getAttribute(root, "unix:mode") & 07777);
+      IOException ex = Assertions.assertThrows(IOException.class, () -> checkpointStore.open());
+      Assertions.assertTrue(ex.getMessage().contains("other users may write to it"), ex.toString());
+      Assertions.assertEquals(mode, (Integer) Files.getAttribute(root, "unix:mode") & 07777);
+      try (Stream<Path> entries = Files.list(root)) {
+        Assertions.assertEquals(0, entries.count());
+      }
     }
   }
 
@@ -192,7 +195,10 @@ public class CheckpointStoreUnitTest {
    */
   @Test
   public void testOpenRemovesIncompleteDownloads() throws Exception {
-    Path root = Files.createDirectory(tempDir.resolve("voj-testpoints"));
+    Path root =
+        Files.createDirectory(
+            tempDir.resolve("voj-testpoints"),
+            PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwx------")));
     Path slot = Files.createDirectory(root.resolve("judger-0"));
     Path incomplete = Files.createDirectories(slot.resolve(".1000-dead").resolve("sub"));
     Files.writeString(incomplete.resolve("output#1.txt"), "42\n");

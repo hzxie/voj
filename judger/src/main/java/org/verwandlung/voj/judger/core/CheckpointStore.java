@@ -459,10 +459,12 @@ public class CheckpointStore {
    * restricted to its owner, and refused when it is a link or owned by someone else. Other users
    * must not be able to write to it either: they could rename the judger's directories in it and
    * put their own in place (a sticky bit would prevent that, but not creating the directory of a
-   * slot before the judger does). The judger owns the root, so it takes their write permission
-   * away; a slot directory someone else created meanwhile is refused when it is claimed.
+   * slot before the judger does). Such a root is refused too, rather than its permissions changed:
+   * a root the judger did not create may be a directory others rely on (e.g. {@code /tmp}, when
+   * the judger runs as root); one the judger creates is restricted to it from the start.
    *
-   * @throws IOException if the root cannot be created or is not owned by the judger
+   * @throws IOException if the root cannot be created, is not owned by the judger or others may
+   *     write to it
    */
   private void ensureCheckpointRootIsTrusted() throws IOException {
     if (!isPosix()) {
@@ -490,13 +492,13 @@ public class CheckpointStore {
     }
     int mode = (Integer) Files.getAttribute(root, "unix:mode", LinkOption.NOFOLLOW_LINKS);
     if ((mode & (GROUP_WRITE | OTHERS_WRITE)) != 0) {
-      LOGGER.warn(
-          "Other users may write to the checkpoint directory {} (mode {}), so they could replace"
-              + " the test data in it: taking their write permission away.",
-          root,
-          Integer.toOctalString(mode & 07777));
-      int restrictedMode = mode & 07777 & ~(GROUP_WRITE | OTHERS_WRITE);
-      Files.setAttribute(root, "unix:mode", restrictedMode, LinkOption.NOFOLLOW_LINKS);
+      throw new IOException(
+          String.format(
+              "Refusing to use the checkpoint directory %s: other users may write to it (mode"
+                  + " %o), so they could replace the test data in it. Set judger.checkpointDir to"
+                  + " a directory of the judger's own (it creates a missing one for itself only),"
+                  + " or take their write permission away (chmod go-w) if nothing else needs it.",
+              root, mode & 07777));
     }
   }
 
