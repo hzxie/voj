@@ -25,7 +25,6 @@
         <div class="alert alert-success hide" role="status" th:text="#{voj.administration.edit-contest.saved}">Saved.</div>
         <input type="hidden" id="contest-id" th:value="${isEdit ? contest.contestId : ''}" />
         <input type="hidden" id="contest-scoring" th:value="${scoring}" />
-        <input type="hidden" id="contest-is-rated" th:value="${!isEdit or contest.isRated()} ? '1' : '0'" />
         <input type="hidden" id="contest-open-registration" th:value="${!isEdit or contest.isOpenRegistration()} ? '1' : '0'" />
         <input type="hidden" id="contest-problems" th:value="${isEdit ? contest.problems : '[]'}" />
 
@@ -106,18 +105,12 @@
                             <div class="adm-seg" data-adm="seg" data-input="contest-scoring">
                                 <button type="button" data-value="ICPC" th:classappend="${scoring == 'ICPC'} ? 'active'">ICPC</button>
                                 <button type="button" data-value="IOI" th:classappend="${scoring == 'IOI'} ? 'active'">IOI</button>
-                                <button type="button" data-value="Codeforces" th:classappend="${scoring == 'Codeforces'} ? 'active'">Codeforces</button>
                             </div>
                         </div>
                         <label class="adm-flabel">
                             <span th:text="#{voj.administration.edit-contest.penalty}">PENALTY · min / wrong</span>
                             <input id="contest-penalty" class="adm-input" type="number" min="0" th:value="${isEdit ? contest.penalty : 20}" />
                         </label>
-                        <div class="adm-togrow">
-                            <span th:text="#{voj.administration.edit-contest.rated}">Rated contest</span>
-                            <button type="button" role="switch" class="adm-switch" data-adm="switch" data-input="contest-is-rated"
-                                 th:classappend="${!isEdit or contest.isRated()} ? 'on'"><span class="knob"></span></button>
-                        </div>
                         <div class="adm-togrow">
                             <span th:text="#{voj.administration.edit-contest.open-registration}">Open registration</span>
                             <button type="button" role="switch" class="adm-switch" data-adm="switch" data-input="contest-open-registration"
@@ -299,7 +292,6 @@
                     status: document.getElementById('contest-status').value,
                     penalty: parseInt($('#contest-penalty').val(), 10) || 0,
                     freeze: freezeMinutes === null ? 0 : freezeMinutes,
-                    isRated: document.getElementById('contest-is-rated').value === '1',
                     openRegistration: document.getElementById('contest-open-registration').value === '1'
                 };
                 var url = contestId ? [[@{/administration/editContest.action}]] : [[@{/administration/createContest.action}]];

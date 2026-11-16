@@ -168,6 +168,7 @@
                         else if ( !result['isContestReady'] ) { vojAlert([[#{voj.contests.contest.contest-not-ready}]]); }
                         else if ( !result['isUserLogin'] ) { vojAlert([[#{voj.contests.contest.user-not-login}]]); }
                         else if ( result['isAttendedContest'] ) { vojAlert([[#{voj.contests.contest.already-attended}]]).then(setContestAttended); }
+                        else if ( result['isRegistrationOpen'] === false ) { vojAlert([[#{voj.contests.contest.registration-closed}]]); }
                     }
                 }
             });

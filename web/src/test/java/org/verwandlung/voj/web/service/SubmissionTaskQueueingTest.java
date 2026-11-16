@@ -162,9 +162,9 @@ public class SubmissionTaskQueueingTest {
           long now = System.currentTimeMillis();
           jdbcTemplate.update(
               "INSERT INTO voj_contests (contest_id, contest_name, contest_notes,"
-                  + " contest_start_time, contest_end_time, contest_mode, contest_problems,"
+                  + " contest_start_time, contest_end_time, contest_problems,"
                   + " contest_status, contest_scoring, contest_penalty, contest_freeze)"
-                  + " VALUES (?, 'Fixture', '', ?, ?, 'ACM', '[1000]', 'PUBLISHED', 'ICPC', 20, 0)",
+                  + " VALUES (?, 'Fixture', '', ?, ?, '[1000]', 'PUBLISHED', 'ICPC', 20, 0)",
               CONTEST_ID,
               new Timestamp(now - 3600_000L),
               new Timestamp(now + 3600_000L));

@@ -940,9 +940,8 @@ class ViewRenderSmokeTest {
     contest.setContestNotes("Have fun.");
     contest.setStartTime(start);
     contest.setEndTime(end);
-    contest.setContestMode(mode);
     contest.setStatus("PUBLISHED");
-    contest.setScoring("ICPC");
+    contest.setScoring("OI".equals(mode) ? "IOI" : "ICPC");
     contest.setProblems("[]");
     return contest;
   }

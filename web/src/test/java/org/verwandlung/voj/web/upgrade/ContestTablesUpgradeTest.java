@@ -37,7 +37,8 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 /**
  * Runs the one-time upgrade script sql/upgrades/contest-tables.sql against a database in the state
- * schema.sql of 1.0.2 created.
+ * schema.sql of 1.0.2 created: contest foreign keys without an ON DELETE rule, and the
+ * contest_mode and contest_is_rated columns.
  *
  * <p>The script changes the schema (DDL commits implicitly), so this test is not {@code
  * Transactional}: it puts the shared test database back into the 1.0.2 state before each test and
@@ -78,10 +79,41 @@ public class ContestTablesUpgradeTest {
     },
   };
 
+  /**
+   * The contests inserted by this test: { id, contest_mode, contest_scoring as stored by 1.0.2,
+   * contest_scoring after the upgrade }. 9101 was created before the scoring setting existed (the
+   * column was added with the default ICPC) and ranked OI-style; 9102 was created with the
+   * Codeforces rule, which was ranked ICPC-style.
+   */
+  private static final String[][] CONTESTS = {
+    {"9101", "OI", "ICPC", "IOI"},
+    {"9102", "ACM", "Codeforces", "ICPC"},
+    {"9103", "OI", "IOI", "IOI"},
+    {"9104", "ACM", "ICPC", "ICPC"},
+  };
+
   @BeforeEach
   public void setUp() {
     jdbcTemplate = new JdbcTemplate(dataSource);
     jdbcTemplate.update("DELETE FROM voj_options WHERE option_name = ?", MARKER);
+    // The contest columns as 1.0.2 created them.
+    jdbcTemplate.execute(
+        "ALTER TABLE voj_contests ADD COLUMN contest_mode varchar(4) NOT NULL DEFAULT ''"
+            + " AFTER contest_end_time");
+    jdbcTemplate.execute(
+        "ALTER TABLE voj_contests ADD COLUMN contest_is_rated tinyint(1) NOT NULL DEFAULT '1'"
+            + " AFTER contest_freeze");
+    jdbcTemplate.update(
+        "UPDATE voj_contests SET contest_mode = IF(contest_scoring = 'IOI', 'OI', 'ACM')");
+    for (String[] contest : CONTESTS) {
+      jdbcTemplate.update(
+          "INSERT INTO voj_contests (contest_id, contest_name, contest_notes, contest_start_time,"
+              + " contest_end_time, contest_mode, contest_problems, contest_scoring)"
+              + " VALUES (?, 'Legacy', '', NOW(), NOW(), ?, '[]', ?)",
+          Long.parseLong(contest[0]),
+          contest[1],
+          contest[2]);
+    }
     // The foreign keys as 1.0.2 created them: without an ON DELETE rule.
     for (String[] foreignKey : FOREIGN_KEYS) {
       jdbcTemplate.execute(
@@ -97,6 +129,7 @@ public class ContestTablesUpgradeTest {
   public void tearDown() throws SQLException {
     // Whatever a test did, leave the schema upgraded and the marker exactly as seed.sql has it.
     runUpgrade();
+    jdbcTemplate.update("DELETE FROM voj_contests WHERE contest_id BETWEEN 9101 AND 9104");
     jdbcTemplate.update("DELETE FROM voj_options WHERE option_name = ?", MARKER);
     jdbcTemplate.update(
         "INSERT INTO voj_options (option_id, option_name, option_value, is_autoload)"
@@ -127,6 +160,31 @@ public class ContestTablesUpgradeTest {
       Assertions.assertEquals("CASCADE", getDeleteRule(foreignKey[1]), foreignKey[1]);
     }
     Assertions.assertEquals(1, getNumberOfMarkers());
+  }
+
+  /**
+   * Test case: runs the upgrade on a 1.0.2 database, then once more after an administrator changed
+   * a scoring rule. Test data: contests whose contest_scoring disagrees with the contest_mode that
+   * ranked them, and the fixture contests. Expected: contest_scoring is set to the rule each
+   * contest was ranked by, contest_mode and contest_is_rated are dropped, and the second run keeps
+   * the administrator's change.
+   */
+  @Test
+  public void testKeepsOnlyTheScoringColumn() throws SQLException {
+    runUpgrade();
+
+    for (String[] contest : CONTESTS) {
+      Assertions.assertEquals(contest[3], getScoring(contest[0]), contest[0]);
+    }
+    Assertions.assertEquals("IOI", getScoring("1"));
+    Assertions.assertEquals("ICPC", getScoring("2"));
+    Assertions.assertFalse(hasColumn("contest_mode"));
+    Assertions.assertFalse(hasColumn("contest_is_rated"));
+
+    jdbcTemplate.update(
+        "UPDATE voj_contests SET contest_scoring = 'IOI' WHERE contest_id = 9102");
+    runUpgrade();
+    Assertions.assertEquals("IOI", getScoring("9102"));
   }
 
   /**
@@ -173,6 +231,22 @@ public class ContestTablesUpgradeTest {
         .stream()
         .findFirst()
         .orElse(null);
+  }
+
+  private String getScoring(String contestId) {
+    return jdbcTemplate.queryForObject(
+        "SELECT contest_scoring FROM voj_contests WHERE contest_id = ?",
+        String.class,
+        Long.parseLong(contestId));
+  }
+
+  private boolean hasColumn(String columnName) {
+    return jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE()"
+                + " AND TABLE_NAME = 'voj_contests' AND COLUMN_NAME = ?",
+            Integer.class,
+            columnName)
+        > 0;
   }
 
   private int getNumberOfMarkers() {

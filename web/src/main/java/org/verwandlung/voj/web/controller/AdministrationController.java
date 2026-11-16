@@ -1868,7 +1868,7 @@ public class AdministrationController {
    * @param contestNotes - the notes/description of the contest
    * @param startTime - the start time (local datetime string)
    * @param endTime - the end time (local datetime string)
-   * @param scoring - the scoring rule of the contest (ICPC / IOI / Codeforces)
+   * @param scoring - the scoring rule of the contest (ICPC / IOI)
    * @param problems - the contest problems (a JSON-formatted array of problem IDs)
    * @param request - the HttpServletRequest object
    * @return a Map containing the creation result
@@ -1884,7 +1884,6 @@ public class AdministrationController {
       @RequestParam(value = "status", required = false, defaultValue = "PUBLISHED") String status,
       @RequestParam(value = "penalty", required = false, defaultValue = "20") int penalty,
       @RequestParam(value = "freeze", required = false, defaultValue = "0") int freeze,
-      @RequestParam(value = "isRated", required = false, defaultValue = "true") boolean isRated,
       @RequestParam(value = "openRegistration", required = false, defaultValue = "true")
           boolean openRegistration,
       HttpServletRequest request) {
@@ -1898,7 +1897,6 @@ public class AdministrationController {
         status,
         penalty,
         freeze,
-        isRated,
         openRegistration);
   }
 
@@ -1910,7 +1908,7 @@ public class AdministrationController {
    * @param contestNotes - the notes/description of the contest
    * @param startTime - the start time (local datetime string)
    * @param endTime - the end time (local datetime string)
-   * @param scoring - the scoring rule of the contest (ICPC / IOI / Codeforces)
+   * @param scoring - the scoring rule of the contest (ICPC / IOI)
    * @param problems - the contest problems (a JSON-formatted array of problem IDs)
    * @param request - the HttpServletRequest object
    * @return a Map containing the edit result
@@ -1927,7 +1925,6 @@ public class AdministrationController {
       @RequestParam(value = "status", required = false, defaultValue = "PUBLISHED") String status,
       @RequestParam(value = "penalty", required = false, defaultValue = "20") int penalty,
       @RequestParam(value = "freeze", required = false, defaultValue = "0") int freeze,
-      @RequestParam(value = "isRated", required = false, defaultValue = "true") boolean isRated,
       @RequestParam(value = "openRegistration", required = false, defaultValue = "true")
           boolean openRegistration,
       HttpServletRequest request) {
@@ -1942,7 +1939,6 @@ public class AdministrationController {
         status,
         penalty,
         freeze,
-        isRated,
         openRegistration);
   }
 

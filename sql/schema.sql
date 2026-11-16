@@ -46,13 +46,11 @@ CREATE TABLE `voj_contests` (
   `contest_notes` text COLLATE utf8mb4_unicode_ci NOT NULL,
   `contest_start_time` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
   `contest_end_time` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
-  `contest_mode` varchar(4) COLLATE utf8mb4_unicode_ci NOT NULL,
   `contest_problems` text COLLATE utf8mb4_unicode_ci NOT NULL,
   `contest_status` varchar(16) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'PUBLISHED',
   `contest_scoring` varchar(16) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'ICPC',
   `contest_penalty` int(11) NOT NULL DEFAULT '20',
   `contest_freeze` int(11) NOT NULL DEFAULT '0',
-  `contest_is_rated` tinyint(1) NOT NULL DEFAULT '1',
   `contest_open_registration` tinyint(1) NOT NULL DEFAULT '1'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

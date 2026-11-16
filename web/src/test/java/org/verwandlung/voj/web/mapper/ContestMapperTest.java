@@ -141,16 +141,32 @@ public class ContestMapperTest {
     calendar.set(2016, Calendar.MAY, 7, 20, 0, 0);
     Date endTime = calendar.getTime();
 
-    Contest contest = new Contest("Contest", "Contest Notes", startTime, endTime, "OI", "[]");
+    Contest contest = new Contest("Contest", "Contest Notes", startTime, endTime, "IOI", "[]");
     int numberOfRowsAffected = contestMapper.createContest(contest);
     Assertions.assertEquals(1, numberOfRowsAffected);
   }
 
   /**
-   * Test case: tests the createContest(Contest) method. Test data: a string with a contest mode that is too long. Expected: a DataIntegrityViolationException is thrown.
+   * Test case: tests the createContest(Contest) method. Test data: a contest created with the
+   * retired Codeforces scoring rule. Expected: it is stored, and ranked, as an ICPC contest.
    */
   @Test
-  public void testCreateContestUsingTooLongContestMode() {
+  public void testCreateContestWithRetiredScoring() {
+    Date startTime = new Date();
+    Contest contest =
+        new Contest("Contest", "Contest Notes", startTime, startTime, "Codeforces", "[]");
+    contestMapper.createContest(contest);
+
+    List<Contest> contests = contestMapper.getContests("Contest", false, 0, 1);
+    Assertions.assertEquals("ICPC", contests.get(0).getScoring());
+    Assertions.assertEquals("ACM", contests.get(0).getContestMode());
+  }
+
+  /**
+   * Test case: tests the createContest(Contest) method. Test data: a contest name that is too long. Expected: a DataIntegrityViolationException is thrown.
+   */
+  @Test
+  public void testCreateContestUsingTooLongContestName() {
     Calendar calendar = Calendar.getInstance();
     calendar.set(2016, Calendar.MAY, 7, 18, 0, 0);
     Date startTime = calendar.getTime();
@@ -159,7 +175,7 @@ public class ContestMapperTest {
     Date endTime = calendar.getTime();
 
     Contest contest =
-        new Contest("Contest", "Contest Notes", startTime, endTime, "OOOOI", "[1000]");
+        new Contest("C".repeat(129), "Contest Notes", startTime, endTime, "IOI", "[1000]");
     Executable e =
         () -> {
           contestMapper.createContest(contest);

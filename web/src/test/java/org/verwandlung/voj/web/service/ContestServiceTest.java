@@ -182,6 +182,16 @@ public class ContestServiceTest {
     Assertions.assertEquals(1, contestService.getNumberOfContestantsOfContest(3));
   }
 
+  /** Test case: tests the attendContest(...) method. Test data: the published, not-started Contest #3 with its registration closed. Expected: attendance fails with isRegistrationOpen false. */
+  @Test
+  public void testAttendContestWithClosedRegistration() {
+    publishContest(3, false);
+    Map<String, Boolean> result = contestService.attendContest(3, userWithUid(1000));
+    Assertions.assertFalse(result.get("isRegistrationOpen"));
+    Assertions.assertFalse(result.get("isSuccessful"));
+    Assertions.assertEquals(0, contestService.getNumberOfContestantsOfContest(3));
+  }
+
   /** Test case: tests the attendContest(...) method. Test data: the not-started but hidden Contest #3. Expected: attendance fails as if the contest did not exist. */
   @Test
   public void testAttendContestThatIsNotPublished() {
@@ -324,7 +334,7 @@ public class ContestServiceTest {
   public void testGetLeaderBoardForOiCountsLastSubmissionPerProblem() {
     long now = System.currentTimeMillis() / 1000 * 1000;
     long start = now - 2 * 3600_000L;
-    insertContest(FIXTURE_CONTEST_ID, "OI", "IOI", start, now + 3600_000L, 0);
+    insertContest(FIXTURE_CONTEST_ID, "IOI", start, now + 3600_000L, 0);
     insertContestant(FIXTURE_CONTEST_ID, 1000);
     insertContestant(FIXTURE_CONTEST_ID, 1001);
     insertSubmission(1000, 1000, "AC", 100, 30, start + 10 * 60_000L);
@@ -470,7 +480,7 @@ public class ContestServiceTest {
   /** Creates a running contest (problems 1001 and the hidden 1002) attended by user 1000. */
   private void createRunningContestWithHiddenProblem() {
     long now = System.currentTimeMillis() / 1000 * 1000;
-    insertContest(FIXTURE_CONTEST_ID, "ACM", "ICPC", now - 3600_000L, now + 3600_000L, 0);
+    insertContest(FIXTURE_CONTEST_ID, "ICPC", now - 3600_000L, now + 3600_000L, 0);
     jdbcTemplate()
         .update(
             "UPDATE voj_contests SET contest_problems = '[1001, 1002]' WHERE contest_id = ?",
@@ -488,7 +498,7 @@ public class ContestServiceTest {
   private long createAcmContestFixture(int freeze) {
     long now = System.currentTimeMillis() / 1000 * 1000;
     long start = now - 2 * 3600_000L;
-    insertContest(FIXTURE_CONTEST_ID, "ACM", "ICPC", start, now + 3600_000L, freeze);
+    insertContest(FIXTURE_CONTEST_ID, "ICPC", start, now + 3600_000L, freeze);
     insertContestant(FIXTURE_CONTEST_ID, 1000);
     insertContestant(FIXTURE_CONTEST_ID, 1001);
     insertContestant(FIXTURE_CONTEST_ID, 1002);
@@ -505,18 +515,16 @@ public class ContestServiceTest {
   }
 
   /** Inserts a published contest over problems 1000, 1001 and 1003. */
-  private void insertContest(
-      long contestId, String mode, String scoring, long start, long end, int freeze) {
+  private void insertContest(long contestId, String scoring, long start, long end, int freeze) {
     jdbcTemplate()
         .update(
             "INSERT INTO voj_contests (contest_id, contest_name, contest_notes, contest_start_time,"
-                + " contest_end_time, contest_mode, contest_problems, contest_status,"
-                + " contest_scoring, contest_penalty, contest_freeze) VALUES (?, 'Fixture', '', ?,"
-                + " ?, ?, '[1000, 1001, 1003]', 'PUBLISHED', ?, 20, ?)",
+                + " contest_end_time, contest_problems, contest_status, contest_scoring,"
+                + " contest_penalty, contest_freeze) VALUES (?, 'Fixture', '', ?, ?,"
+                + " '[1000, 1001, 1003]', 'PUBLISHED', ?, 20, ?)",
             contestId,
             new java.sql.Timestamp(start),
             new java.sql.Timestamp(end),
-            mode,
             scoring,
             freeze);
   }
@@ -599,8 +607,14 @@ public class ContestServiceTest {
 
   /** Publishes a contest (the hidden Contest #3 is the only not-started one in the test data). */
   private void publishContest(long contestId) {
+    publishContest(contestId, true);
+  }
+
+  /** Publishes a contest and opens or closes its registration. */
+  private void publishContest(long contestId, boolean openRegistration) {
     Contest contest = contestService.getContest(contestId);
     contest.setStatus(PublicationStatus.PUBLISHED);
+    contest.setOpenRegistration(openRegistration);
     contestMapper.updateContest(contest);
   }
 

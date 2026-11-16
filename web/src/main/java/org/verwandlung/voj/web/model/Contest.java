@@ -29,7 +29,7 @@ public class Contest {
    * @param contestNotes - the notes of the contest
    * @param startTime - the start time of the contest
    * @param endTime - the end time of the contest
-   * @param mode - the mode of the contest
+   * @param scoring - the scoring rule of the contest (ICPC / IOI)
    * @param problems - the problems included in the contest
    */
   public Contest(
@@ -37,13 +37,13 @@ public class Contest {
       String contestNotes,
       Date startTime,
       Date endTime,
-      String mode,
+      String scoring,
       String problems) {
     this.contestName = contestName;
     this.contestNotes = contestNotes;
     this.startTime = startTime;
     this.endTime = endTime;
-    this.contestMode = mode;
+    setScoring(scoring);
     this.problems = problems;
   }
 
@@ -55,7 +55,7 @@ public class Contest {
    * @param contestNotes - the notes of the contest
    * @param startTime - the start time of the contest
    * @param endTime - the end time of the contest
-   * @param mode - the mode of the contest
+   * @param scoring - the scoring rule of the contest (ICPC / IOI)
    * @param problems - the problems included in the contest
    */
   public Contest(
@@ -64,9 +64,9 @@ public class Contest {
       String contestName,
       Date startTime,
       Date endTime,
-      String mode,
+      String scoring,
       String problems) {
-    this(contestName, contestNotes, startTime, endTime, mode, problems);
+    this(contestName, contestNotes, startTime, endTime, scoring, problems);
     this.contestId = contestId;
   }
 
@@ -161,21 +161,13 @@ public class Contest {
   }
 
   /**
-   * Gets the mode of the contest.
+   * Gets the ranking mode of the contest, derived from its scoring rule: IOI contests are ranked in
+   * the OI style (by score), ICPC contests in the ACM style (by solved problems and penalty time).
    *
-   * @return the mode of the contest
+   * @return the ranking mode of the contest (ACM / OI)
    */
   public String getContestMode() {
-    return contestMode;
-  }
-
-  /**
-   * Sets the mode of the contest.
-   *
-   * @param contestMode - the mode of the contest
-   */
-  public void setContestMode(String contestMode) {
-    this.contestMode = contestMode;
+    return SCORING_IOI.equals(scoring) ? "OI" : "ACM";
   }
 
   /* (non-Javadoc)
@@ -202,7 +194,7 @@ public class Contest {
   public String toString() {
     return String.format(
         "Contest [ID=%d, Name=%s, StartTime=%s, EndTime=%s, Mode=%s]",
-        new Object[] {contestId, contestName, startTime, endTime, contestMode});
+        new Object[] {contestId, contestName, startTime, endTime, getContestMode()});
   }
 
   /**
@@ -252,7 +244,7 @@ public class Contest {
   }
 
   /**
-   * Gets the scoring rule of the contest (ICPC / IOI / Codeforces).
+   * Gets the scoring rule of the contest (ICPC / IOI).
    *
    * @return the scoring rule of the contest
    */
@@ -261,12 +253,13 @@ public class Contest {
   }
 
   /**
-   * Sets the scoring rule of the contest (ICPC / IOI / Codeforces).
+   * Sets the scoring rule of the contest. Anything but IOI is ranked in the ICPC style, so it is
+   * stored as ICPC.
    *
-   * @param scoring - the scoring rule of the contest
+   * @param scoring - the scoring rule of the contest (ICPC / IOI)
    */
   public void setScoring(String scoring) {
-    this.scoring = scoring;
+    this.scoring = SCORING_IOI.equals(scoring) ? SCORING_IOI : SCORING_ICPC;
   }
 
   /**
@@ -306,24 +299,6 @@ public class Contest {
   }
 
   /**
-   * Gets whether the contest is rated.
-   *
-   * @return whether the contest is rated
-   */
-  public boolean isRated() {
-    return isRated;
-  }
-
-  /**
-   * Sets whether the contest is rated.
-   *
-   * @param isRated - whether the contest is rated
-   */
-  public void setRated(boolean isRated) {
-    this.isRated = isRated;
-  }
-
-  /**
    * Gets whether the contest is open for registration.
    *
    * @return whether the contest is open for registration
@@ -356,26 +331,26 @@ public class Contest {
   /** The end time of the contest. */
   private Date endTime;
 
-  /** The mode of the contest. The available modes are: ACM and OI. */
-  private String contestMode;
-
   /** The problems included in the contest (a JSON-formatted string). */
   private String problems;
 
   /** The publication status of the contest (PUBLISHED / DRAFT / HIDDEN). */
   private String status = PublicationStatus.PUBLISHED;
 
-  /** The scoring rule of the contest. The available rules are: ICPC, IOI and Codeforces. */
-  private String scoring = "ICPC";
+  /** The ICPC scoring rule: ranked by solved problems, then penalty time. */
+  public static final String SCORING_ICPC = "ICPC";
+
+  /** The IOI scoring rule: ranked by the total score of the last submission to every problem. */
+  public static final String SCORING_IOI = "IOI";
+
+  /** The scoring rule of the contest (ICPC / IOI). */
+  private String scoring = SCORING_ICPC;
 
   /** The penalty (in minutes) applied for each wrong submission. */
   private int penalty = 20;
 
   /** The scoreboard freeze duration (in minutes) before the contest ends. */
   private int freeze = 0;
-
-  /** Whether the contest is rated. */
-  private boolean isRated = true;
 
   /** Whether the contest is open for registration. */
   private boolean openRegistration = true;

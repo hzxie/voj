@@ -54,15 +54,15 @@ UPDATE `voj_problems` SET `problem_difficulty_id` = 3 WHERE `problem_id` IN (100
 
 -- A spread of finished / running / upcoming contests in both OI and ACM modes.
 -- "Running" rows straddle the seed date of 2026-06-27 so the home page shows live contests.
-INSERT INTO `voj_contests` (`contest_id`, `contest_name`, `contest_notes`, `contest_start_time`, `contest_end_time`, `contest_mode`, `contest_problems`, `contest_status`, `contest_scoring`, `contest_penalty`, `contest_freeze`, `contest_is_rated`, `contest_open_registration`) VALUES
-(1, 'Welcome Round 2025', 'A friendly ACM-style opener for newcomers: two beginner problems, five hours.', '2025-03-01 09:00:00', '2025-03-01 14:00:00', 'ACM', '[1000, 1001]', 'PUBLISHED', 'ICPC', 20, 0, 0, 1),
-(2, 'Spring Algorithm Cup', 'An OI-scored round mixing implementation with a dynamic-programming finale.', '2025-04-15 13:00:00', '2025-04-15 18:00:00', 'OI', '[1000, 1001, 1003]', 'PUBLISHED', 'IOI', 0, 0, 1, 1),
-(3, 'Summer Sprint 2025', 'A short ACM sprint where speed matters and partial scores do not.', '2025-07-12 09:00:00', '2025-07-12 14:00:00', 'ACM', '[1000, 1001]', 'PUBLISHED', 'ICPC', 20, 0, 1, 1),
-(4, 'DP Masters Cup', 'For seasoned solvers: the river-crossing and equivalent-expression problems.', '2025-10-18 09:00:00', '2025-10-18 13:00:00', 'OI', '[1002, 1003]', 'PUBLISHED', 'IOI', 0, 0, 1, 0),
-(5, 'Summer Showdown 2026', 'Our flagship ACM round of the season. Good luck to all contestants!', '2026-06-25 00:00:00', '2026-06-29 23:59:59', 'ACM', '[1000, 1001, 1003]', 'PUBLISHED', 'ICPC', 20, 15, 1, 1),
-(6, 'Weekly Contest 42', 'The regular Saturday OI round: two problems, one day.', '2026-06-27 00:00:00', '2026-06-27 23:59:59', 'OI', '[1000, 1003]', 'PUBLISHED', 'IOI', 0, 0, 1, 1),
-(7, 'Autumn Championship 2026', 'Season finale featuring all four problems. Registration is open.', '2026-09-01 09:00:00', '2026-09-01 14:00:00', 'ACM', '[1000, 1001, 1002, 1003]', 'HIDDEN', 'Codeforces', 10, 30, 1, 1),
-(8, 'New Year Warmup 2027', 'Kick off the year with a relaxed OI round.', '2027-01-01 10:00:00', '2027-01-01 13:00:00', 'OI', '[1000, 1003]', 'HIDDEN', 'IOI', 0, 0, 0, 1);
+INSERT INTO `voj_contests` (`contest_id`, `contest_name`, `contest_notes`, `contest_start_time`, `contest_end_time`, `contest_problems`, `contest_status`, `contest_scoring`, `contest_penalty`, `contest_freeze`, `contest_open_registration`) VALUES
+(1, 'Welcome Round 2025', 'A friendly ACM-style opener for newcomers: two beginner problems, five hours.', '2025-03-01 09:00:00', '2025-03-01 14:00:00', '[1000, 1001]', 'PUBLISHED', 'ICPC', 20, 0, 1),
+(2, 'Spring Algorithm Cup', 'An OI-scored round mixing implementation with a dynamic-programming finale.', '2025-04-15 13:00:00', '2025-04-15 18:00:00', '[1000, 1001, 1003]', 'PUBLISHED', 'IOI', 0, 0, 1),
+(3, 'Summer Sprint 2025', 'A short ACM sprint where speed matters and partial scores do not.', '2025-07-12 09:00:00', '2025-07-12 14:00:00', '[1000, 1001]', 'PUBLISHED', 'ICPC', 20, 0, 1),
+(4, 'DP Masters Cup', 'For seasoned solvers: the river-crossing and equivalent-expression problems.', '2025-10-18 09:00:00', '2025-10-18 13:00:00', '[1002, 1003]', 'PUBLISHED', 'IOI', 0, 0, 0),
+(5, 'Summer Showdown 2026', 'Our flagship ACM round of the season. Good luck to all contestants!', '2026-06-25 00:00:00', '2026-06-29 23:59:59', '[1000, 1001, 1003]', 'PUBLISHED', 'ICPC', 20, 15, 1),
+(6, 'Weekly Contest 42', 'The regular Saturday OI round: two problems, one day.', '2026-06-27 00:00:00', '2026-06-27 23:59:59', '[1000, 1003]', 'PUBLISHED', 'IOI', 0, 0, 1),
+(7, 'Autumn Championship 2026', 'Season finale featuring all four problems. Registration is open.', '2026-09-01 09:00:00', '2026-09-01 14:00:00', '[1000, 1001, 1002, 1003]', 'HIDDEN', 'ICPC', 10, 30, 1),
+(8, 'New Year Warmup 2027', 'Kick off the year with a relaxed OI round.', '2027-01-01 10:00:00', '2027-01-01 13:00:00', '[1000, 1003]', 'HIDDEN', 'IOI', 0, 0, 1);
 
 -- registerTime drives the profile "member since" line and the account age.
 -- A few users also carry optional profile fields (location / website / aboutMe /
