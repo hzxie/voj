@@ -297,6 +297,28 @@ public class CheckpointStoreUnitTest {
   }
 
   /**
+   * Test case: a judging that never completed left a directory without any permission behind (as
+   * a submission running as the judger's own account can leave it). Expected result: the judger
+   * still starts, and the leftovers are removed.
+   */
+  @Test
+  public void testOpenRemovesLeftoversWithoutPermissions() throws Exception {
+    Path workRoot = Files.createDirectory(tempDir.resolve("work"));
+    Path locked = Files.createDirectories(workRoot.resolve("voj-judger-0/voj-1000-abc/locked"));
+    Files.writeString(locked.resolve("a.out"), "binary");
+    Files.setPosixFilePermissions(locked, PosixFilePermissions.fromString("---------"));
+    ReflectionTestUtils.setField(
+        checkpointStore, "checkpointDirectory", tempDir.resolve("voj-testpoints").toString());
+    ReflectionTestUtils.setField(checkpointStore, "workRootDirectory", workRoot.toString());
+
+    checkpointStore.open();
+
+    try (Stream<Path> entries = Files.list(checkpointStore.getWorkDirectory())) {
+      Assertions.assertEquals(0, entries.count());
+    }
+  }
+
+  /**
    * Builds the problem used by the tests.
    *
    * @return a problem with a checkpoints version

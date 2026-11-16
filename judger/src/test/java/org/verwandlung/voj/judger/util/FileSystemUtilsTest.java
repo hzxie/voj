@@ -21,6 +21,7 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermissions;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -81,6 +82,64 @@ public class FileSystemUtilsTest {
     FileSystemUtils.deleteRecursively(rootLink);
     Assertions.assertFalse(Files.exists(rootLink, LinkOption.NOFOLLOW_LINKS));
     Assertions.assertEquals("secret", Files.readString(outsideFile));
+  }
+
+  /**
+   * Test case: tests the deleteRecursively(Path) method. Test data: a chain of directories nested
+   * deeper than a path may be long (as a submission builds it by creating a directory and entering
+   * it again and again), with a file at the bottom and a symbolic link to a directory outside it
+   * halfway down. Expected result: the whole tree is removed, the link's target is left untouched.
+   */
+  @Test
+  @DisabledOnOs(OS.WINDOWS)
+  public void testDeleteRecursivelyRemovesATreeDeeperThanPathMax() throws Exception {
+    Path outside = Files.createDirectory(tempDir.resolve("outside"));
+    Path outsideFile = Files.writeString(outside.resolve("secret.txt"), "secret");
+    Path root = Files.createDirectory(tempDir.resolve("work"));
+    // Built bottom-up by short paths only: the chain is moved into a new directory, which then
+    // takes the chain's place, one level at a time.
+    Path chain = Files.createDirectory(root.resolve("d"));
+    Files.writeString(chain.resolve("deepest.txt"), "data");
+    int depth = 3000;
+    for (int level = 1; level < depth; ++level) {
+      Path parent = Files.createDirectory(root.resolve("n"));
+      if (level == depth / 2) {
+        Files.createSymbolicLink(parent.resolve("link"), outside);
+      }
+      Files.move(chain, parent.resolve("d"));
+      Files.move(parent, chain);
+    }
+    // "/d" per level: the deepest directory's path is longer than PATH_MAX (4096 on Linux).
+    Assertions.assertTrue(root.toString().length() + 2 * depth > 4096);
+
+    FileSystemUtils.deleteRecursively(root);
+
+    Assertions.assertFalse(Files.exists(root, LinkOption.NOFOLLOW_LINKS));
+    Assertions.assertEquals("secret", Files.readString(outsideFile));
+  }
+
+  /**
+   * Test case: tests the deleteRecursively(Path) method. Test data: a tree whose directories had
+   * their permissions taken away (as a submission running as the judger's own account can do): the
+   * directory itself, a subdirectory and its subdirectory without any, another one without write
+   * permission. Expected result: the whole tree is removed.
+   */
+  @Test
+  @DisabledOnOs(OS.WINDOWS)
+  public void testDeleteRecursivelyRemovesDirectoriesWithoutPermissions() throws Exception {
+    Path root = Files.createDirectory(tempDir.resolve("work"));
+    Path locked = Files.createDirectories(root.resolve("locked/inner"));
+    Files.writeString(locked.resolve("file.txt"), "data");
+    Path readOnly = Files.createDirectory(root.resolve("read-only"));
+    Files.writeString(readOnly.resolve("file.txt"), "data");
+    Files.setPosixFilePermissions(locked, PosixFilePermissions.fromString("---------"));
+    Files.setPosixFilePermissions(locked.getParent(), PosixFilePermissions.fromString("---------"));
+    Files.setPosixFilePermissions(readOnly, PosixFilePermissions.fromString("r-x------"));
+    Files.setPosixFilePermissions(root, PosixFilePermissions.fromString("---------"));
+
+    FileSystemUtils.deleteRecursively(root);
+
+    Assertions.assertFalse(Files.exists(root, LinkOption.NOFOLLOW_LINKS));
   }
 
   /**
