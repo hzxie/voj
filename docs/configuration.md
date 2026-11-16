@@ -118,8 +118,10 @@ holds up by its flow control fails after 10 seconds, and while 1,000 messages
 wait to be sent, further ones are dropped. When the broker goes away (in the
 Docker setup it lives in the web container, so it restarts with it), a message
 that cannot be sent is dropped and the next one is sent over a new connection:
-the verdicts are in the database, the messages only stream the progress. Its
-heartbeats go to the database, not to the broker.
+the verdicts are in the database, the messages only stream the progress. The
+first message of an outage that cannot be sent is logged, and so is the end of
+the outage, not every message. Its heartbeats go to the database, not to the
+broker.
 
 ### Judging queue
 

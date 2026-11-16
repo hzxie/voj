@@ -24,9 +24,20 @@ import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.core.LogEvent;
+import org.apache.logging.log4j.core.LoggerContext;
+import org.apache.logging.log4j.core.appender.AbstractAppender;
+import org.apache.logging.log4j.core.config.Configuration;
+import org.apache.logging.log4j.core.config.LoggerConfig;
+import org.apache.logging.log4j.core.config.Property;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -94,6 +105,56 @@ public class MessageSenderTest {
     Thread.sleep(100);
     verify(jmsTemplate, times(MessageSender.MAX_PENDING_MESSAGES + 1))
         .convertAndSend(any(Object.class));
+  }
+
+  /**
+   * Test case: tests the sendMessage method. Test data: three messages the broker does not take
+   * (an outage), one it takes, then one it does not take again. Expected result: each outage is
+   * logged once, with a warning, and its end once; the other failures are not logged above debug.
+   */
+  @Test
+  public void testABrokerOutageIsLoggedOnce() throws Exception {
+    Map<String, Object> sent = Map.of("event", "AllTestPointsFinished");
+    doAnswer(
+            invocation -> {
+              if (!sent.equals(invocation.getArgument(0))) {
+                throw new UncategorizedJmsException("broker down");
+              }
+              return null;
+            })
+        .when(jmsTemplate)
+        .convertAndSend(any(Object.class));
+    List<Level> levels = new CopyOnWriteArrayList<>();
+    LoggerContext context = (LoggerContext) LogManager.getContext(false);
+    Configuration configuration = context.getConfiguration();
+    AbstractAppender appender =
+        new AbstractAppender("MessageSenderTest", null, null, true, Property.EMPTY_ARRAY) {
+          @Override
+          public void append(LogEvent event) {
+            levels.add(event.getLevel());
+          }
+        };
+    appender.start();
+    LoggerConfig loggerConfig = new LoggerConfig(MessageSender.class.getName(), Level.INFO, false);
+    loggerConfig.addAppender(appender, Level.INFO, null);
+    configuration.addLogger(MessageSender.class.getName(), loggerConfig);
+    context.updateLoggers();
+    try {
+      for (int i = 0; i < 3; ++i) {
+        messageSender.sendMessage(Map.of("event", "TestPointFinished"));
+      }
+      messageSender.sendMessage(sent);
+      messageSender.sendMessage(Map.of("event", "TestPointFinished"));
+      verify(jmsTemplate, timeout(10000).times(4))
+          .convertAndSend(Map.of("event", "TestPointFinished"));
+      Thread.sleep(100);
+
+      Assertions.assertEquals(List.of(Level.WARN, Level.INFO, Level.WARN), levels);
+    } finally {
+      configuration.removeLogger(MessageSender.class.getName());
+      context.updateLoggers();
+      appender.stop();
+    }
   }
 
   /** The mocked JmsTemplate object. */

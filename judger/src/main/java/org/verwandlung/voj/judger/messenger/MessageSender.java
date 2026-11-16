@@ -36,7 +36,8 @@ import org.springframework.stereotype.Component;
  * progress live (the verdicts are in the database), and a broker that is down, slow or holds the
  * sender up (e.g. by flow control) must not hold a judging up. While {@value #MAX_PENDING_MESSAGES}
  * messages wait to be sent, further ones are dropped, which is logged once until the sender caught
- * up.
+ * up. A message the broker does not take (e.g. while it restarts) is dropped too: the first one of
+ * an outage is logged, and the next one that is sent ends it.
  *
  * @author Haozhe Xie
  */
@@ -68,8 +69,22 @@ public class MessageSender {
   private void send(Map<String, Object> mapMessage) {
     try {
       jmsTemplate.convertAndSend(mapMessage);
+      if (isFailing) {
+        isFailing = false;
+        LOGGER.info("The messages to the web application are sent again.");
+      }
     } catch (RuntimeException ex) {
-      LOGGER.warn("Failed to send the " + mapMessage.get("event") + " message", ex);
+      if (!isFailing) {
+        isFailing = true;
+        LOGGER.warn(
+            "Failed to send the "
+                + mapMessage.get("event")
+                + " message to the web application (is the broker reachable?): dropping the"
+                + " messages until one is sent again.",
+            ex);
+      } else {
+        LOGGER.debug("Failed to send the " + mapMessage.get("event") + " message", ex);
+      }
     }
     if (isDropping && sender.getQueue().isEmpty()) {
       isDropping = false;
@@ -102,6 +117,9 @@ public class MessageSender {
 
   /** Whether messages are being dropped as the sender is behind. */
   private volatile boolean isDropping;
+
+  /** Whether the last message could not be sent; only the sender's thread uses it. */
+  private boolean isFailing;
 
   /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(MessageSender.class);
