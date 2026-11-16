@@ -51,7 +51,7 @@ import org.verwandlung.voj.web.model.Checkpoint;
  */
 public class CheckpointApiControllerTest {
   /** The shared secret the controller is configured with for the tests. */
-  private static final String API_TOKEN = "s3cr3t-judger-token";
+  private static final String API_TOKEN = "s3cr3t-judger-token-0123456789";
 
   /** Wires mocked mappers and a known API token into a fresh controller before every test. */
   @BeforeEach
@@ -77,6 +77,19 @@ public class CheckpointApiControllerTest {
   public void testGetCheckpointsWithWrongToken() throws Exception {
     mockMvc
         .perform(get("/api/judger/checkpoints/1000").header("X-Judger-Token", "wrong-token"))
+        .andExpect(status().isForbidden());
+  }
+
+  /** Test case: tests GET /api/judger/checkpoints/{problemId}. Test data: the web configured with a short token (the published default "verwandlung"), which the judger presents. Expected: HTTP 403 Forbidden. */
+  @Test
+  public void testGetCheckpointsWithShortConfiguredToken() throws Exception {
+    CheckpointApiController controller = new CheckpointApiController();
+    ReflectionTestUtils.setField(controller, "problemMapper", problemMapper);
+    ReflectionTestUtils.setField(controller, "checkpointMapper", checkpointMapper);
+    ReflectionTestUtils.setField(controller, "apiToken", "verwandlung");
+    MockMvcBuilders.standaloneSetup(controller)
+        .build()
+        .perform(get("/api/judger/checkpoints/1000").header("X-Judger-Token", "verwandlung"))
         .andExpect(status().isForbidden());
   }
 

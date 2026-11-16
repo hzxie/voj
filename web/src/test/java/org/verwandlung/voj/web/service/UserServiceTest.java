@@ -240,6 +240,23 @@ public class UserServiceTest {
             .get("isNewPasswordLegal"));
   }
 
+  /** Test case: tests createFirstAdministratorIfNone(). Test data: the test data's administrator, then none. Expected: nothing is created while one exists; then an administrator with a random password that logs in. */
+  @Test
+  public void testCreateFirstAdministratorIfNone() {
+    Assertions.assertNull(userService.createFirstAdministratorIfNone());
+    userService.banUser(1000);
+
+    String[] credentials = userService.createFirstAdministratorIfNone();
+    Assertions.assertNotNull(credentials);
+    Assertions.assertEquals("root", credentials[0]);
+    Assertions.assertTrue(credentials[1].length() >= 20);
+    User root = userService.getUserUsingUsernameOrEmail("root");
+    Assertions.assertEquals("administrators", root.getUserGroup().getUserGroupSlug());
+    Assertions.assertTrue(
+        userService.isAllowedToLogin("root", credentials[1], "127.0.0.1").get("isSuccessful"));
+    Assertions.assertNull(userService.createFirstAdministratorIfNone());
+  }
+
   /** Test case: tests the isAllowedToLogin(...) method. Test data: an empty username. Expected: login fails. */
   @Test
   public void testIsAllowedToLoginWithEmptyUsername() {

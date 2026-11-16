@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletResponse;
 
 import org.apache.logging.log4j.LogManager;
@@ -137,14 +138,15 @@ public class CheckpointApiController {
   }
 
   /**
-   * Checks the shared secret in constant time. The endpoint is refused outright when no token is
-   * configured, so a blank {@code judger.apiToken} cannot accidentally expose the reference answers.
+   * Checks the shared secret in constant time. The endpoint is refused outright unless a token of at
+   * least {@value #MIN_API_TOKEN_LENGTH} characters is configured, so a blank or short (guessable,
+   * such as a published default) {@code judger.apiToken} cannot expose the reference answers.
    *
    * @param token - the token submitted by the caller
    * @return whether the caller is authorized
    */
   private boolean isAuthorized(String token) {
-    if (apiToken == null || apiToken.isBlank() || token == null) {
+    if (!isApiTokenConfigured() || token == null) {
       return false;
     }
     return MessageDigest.isEqual(
@@ -193,6 +195,30 @@ public class CheckpointApiController {
     zipStream.write(content);
     zipStream.closeEntry();
   }
+
+  /**
+   * Checks whether a usable shared secret is configured.
+   *
+   * @return whether {@code judger.apiToken} has at least {@value #MIN_API_TOKEN_LENGTH} characters
+   */
+  private boolean isApiTokenConfigured() {
+    return apiToken != null && apiToken.strip().length() >= MIN_API_TOKEN_LENGTH;
+  }
+
+  /** Warns at startup when the judgers cannot download test data for want of a usable token. */
+  @PostConstruct
+  void warnIfApiTokenIsNotConfigured() {
+    if (!isApiTokenConfigured()) {
+      LOGGER.error(
+          "judger.apiToken (VOJ_JUDGER_API_TOKEN) is empty or shorter than {} characters: the"
+              + " judgers cannot download test data. Set it to the same long random value on the"
+              + " web application and on every judger.",
+          MIN_API_TOKEN_LENGTH);
+    }
+  }
+
+  /** The minimum length of a usable shared secret. */
+  static final int MIN_API_TOKEN_LENGTH = 16;
 
   /** The shared secret a judger must present to download checkpoints; empty disables the endpoint. */
   @Value("${judger.apiToken:}")

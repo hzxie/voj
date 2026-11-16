@@ -17,8 +17,10 @@
 package org.verwandlung.voj.web.service;
 
 import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
@@ -411,6 +413,39 @@ public class UserService {
       updateUserMeta(user, "aboutMe", aboutMe);
     }
     return result;
+  }
+
+  /**
+   * Creates an administrator account when there is none, as on the first start of a new
+   * installation: the account is {@code root} (or {@code root} and a number when a user took that
+   * name) with a random password, which is returned once for the caller to show.
+   *
+   * @return the username and the password of the created administrator, or null when an
+   *     administrator exists
+   */
+  public String[] createFirstAdministratorIfNone() {
+    UserGroup administrators = userGroupMapper.getUserGroupUsingSlug("administrators");
+    if (userMapper.getNumberOfUsersUsingUserGroup(administrators) > 0) {
+      return null;
+    }
+    String username = "root";
+    while (userMapper.getUserUsingUsername(username) != null) {
+      username = "root" + (1000 + SECURE_RANDOM.nextInt(9000));
+    }
+    byte[] secret = new byte[18];
+    SECURE_RANDOM.nextBytes(secret);
+    String password = Base64.getUrlEncoder().withoutPadding().encodeToString(secret);
+    Language language = languageMapper.getAllLanguages().get(0);
+    User user =
+        new User(
+            username,
+            passwordEncoder.encode(password),
+            username + "@localhost.invalid",
+            administrators,
+            language);
+    userMapper.createUser(user);
+    createUserMeta(user);
+    return new String[] {username, password};
   }
 
   /**
@@ -1291,6 +1326,9 @@ public class UserService {
    */
   private static final Set<String> CENSORED_PROFILE_FIELDS =
       new HashSet<>(Arrays.asList("displayName", "location"));
+
+  /** The source of the random passwords and names of {@link #createFirstAdministratorIfNone}. */
+  private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
   /** The subject of the email-verification email. */
   private static final String VERIFY_EMAIL_SUBJECT = "Verify Your Email Address";
