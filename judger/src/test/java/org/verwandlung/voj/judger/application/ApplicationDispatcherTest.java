@@ -43,6 +43,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import org.verwandlung.voj.judger.core.CheckpointResult;
 import org.verwandlung.voj.judger.core.CompileResult;
+import org.verwandlung.voj.judger.core.Superseded;
 import org.verwandlung.voj.judger.core.Verdict;
 import org.verwandlung.voj.judger.mapper.JudgeResultMapper;
 import org.verwandlung.voj.judger.mapper.SubmissionMapper;
@@ -61,16 +62,20 @@ public class ApplicationDispatcherTest {
   /**
    * Test case: tests the outcomes of a judging. Test data: a judging that was superseded, so the
    * update of its verdict (a System Error, a Compile Error, a verdict) matches nothing. Expected
-   * result: the stale verdict is dropped and no message is sent, without an exception.
+   * result: the judging is told that it was superseded, and no message is sent.
    */
   @Test
-  public void testOutcomeOfASupersededJudgingIsNotSent() {
+  public void testOutcomeOfASupersededJudgingIsNotSent() throws Exception {
     when(submissionMapper.updateSubmissionResult(any(Submission.class))).thenReturn(0);
     CompileResult result = new CompileResult(Verdict.RUNTIME_ERROR, "error");
 
-    applicationDispatcher.onErrorOccurred(submission(), "reason");
-    applicationDispatcher.onCompileFinished(submission(), result);
-    applicationDispatcher.onAllTestPointsFinished(submission(), List.of(accepted(0)));
+    Assertions.assertThrows(
+        Superseded.class, () -> applicationDispatcher.onErrorOccurred(submission(), "reason"));
+    Assertions.assertThrows(
+        Superseded.class, () -> applicationDispatcher.onCompileFinished(submission(), result));
+    Assertions.assertThrows(
+        Superseded.class,
+        () -> applicationDispatcher.onAllTestPointsFinished(submission(), List.of(accepted(0))));
 
     verify(submissionMapper, org.mockito.Mockito.times(3))
         .updateSubmissionResult(any(Submission.class));
@@ -82,7 +87,7 @@ public class ApplicationDispatcherTest {
    * every message (error, compilation, checkpoint, verdict) carries the judging's claim token.
    */
   @Test
-  public void testMessagesCarryTheClaimTokenOfTheJudging() {
+  public void testMessagesCarryTheClaimTokenOfTheJudging() throws Exception {
     CompileResult result = new CompileResult(Verdict.NORMAL, "");
     applicationDispatcher.onErrorOccurred(submission(), "reason");
     applicationDispatcher.onCompileFinished(submission(), result);
@@ -102,7 +107,7 @@ public class ApplicationDispatcherTest {
    * and read once claimed, with a new random claim token for every claim, which it carries.
    */
   @Test
-  public void testClaimSubmissionClaimsTheNextOne() {
+  public void testClaimSubmissionClaimsTheNextOne() throws Exception {
     when(submissionMapper.getNextSubmissionId(LANGUAGES)).thenReturn(100L, 101L);
     when(submissionMapper.claimSubmission(eq(100L), anyLong(), any(), eq(60L), eq(ApplicationDispatcher.INTERRUPTED_REASON))).thenReturn(0);
     when(submissionMapper.claimSubmission(eq(101L), anyLong(), any(), eq(60L), eq(ApplicationDispatcher.INTERRUPTED_REASON))).thenReturn(1);
@@ -133,7 +138,7 @@ public class ApplicationDispatcherTest {
    * of the judger. Expected result: nothing is claimed.
    */
   @Test
-  public void testClaimSubmissionWithoutPendingSubmission() {
+  public void testClaimSubmissionWithoutPendingSubmission() throws Exception {
     when(submissionMapper.getNextSubmissionId(LANGUAGES)).thenReturn(null);
 
     Assertions.assertNull(applicationDispatcher.claimSubmission(LANGUAGES, 60));
@@ -146,7 +151,7 @@ public class ApplicationDispatcherTest {
    * given time, and whether the judging is still current is returned.
    */
   @Test
-  public void testRenewLease() {
+  public void testRenewLease() throws Exception {
     when(submissionMapper.renewLease(100L, CLAIM_TOKEN, 60L)).thenReturn(1, 0);
 
     Assertions.assertTrue(applicationDispatcher.renewLease(submission(), 60));
@@ -159,7 +164,7 @@ public class ApplicationDispatcherTest {
    * released, and whether it was is returned.
    */
   @Test
-  public void testReleaseSubmission() {
+  public void testReleaseSubmission() throws Exception {
     when(submissionMapper.releaseSubmission(100L, CLAIM_TOKEN)).thenReturn(1, 0);
 
     Assertions.assertTrue(applicationDispatcher.releaseSubmission(submission()));
@@ -173,7 +178,7 @@ public class ApplicationDispatcherTest {
    * reason (cut to 255 characters), and whether it was is returned.
    */
   @Test
-  public void testRequeueSubmission() {
+  public void testRequeueSubmission() throws Exception {
     String longReason = "x".repeat(300);
     when(submissionMapper.requeueSubmission(eq(100L), eq(CLAIM_TOKEN), anyString()))
         .thenReturn(1, 1, 0);
@@ -192,7 +197,7 @@ public class ApplicationDispatcherTest {
    * failure is thrown after three tries, and nothing is sent.
    */
   @Test
-  public void testVerdictIsRecordedDespiteShortOutages() {
+  public void testVerdictIsRecordedDespiteShortOutages() throws Exception {
     ReflectionTestUtils.setField(applicationDispatcher, "retryDelay", 1L);
     DataAccessResourceFailureException outage = new DataAccessResourceFailureException("down");
     when(submissionMapper.updateSubmissionResult(any(Submission.class)))
@@ -217,7 +222,7 @@ public class ApplicationDispatcherTest {
    * refused again.
    */
   @Test
-  public void testRefusedVerdictIsNotTriedAgain() {
+  public void testRefusedVerdictIsNotTriedAgain() throws Exception {
     when(submissionMapper.updateSubmissionResult(any(Submission.class)))
         .thenThrow(new org.springframework.dao.DataIntegrityViolationException("Data too long"));
 
@@ -238,7 +243,7 @@ public class ApplicationDispatcherTest {
    * Accepted. Expected result: the name of the judge result is read from the database once.
    */
   @Test
-  public void testJudgeResultNamesAreReadOnce() {
+  public void testJudgeResultNamesAreReadOnce() throws Exception {
     when(judgeResultMapper.getJudgeResultUsingSlug("AC"))
         .thenReturn(new JudgeResult(1, "AC", "Accepted"));
 
@@ -255,7 +260,7 @@ public class ApplicationDispatcherTest {
    * system error and an ErrorOccurred message is sent.
    */
   @Test
-  public void testOnErrorOccurred() {
+  public void testOnErrorOccurred() throws Exception {
     applicationDispatcher.onErrorOccurred(submission(), "This problem has no test data.");
 
     ArgumentCaptor<Submission> submissionCaptor = ArgumentCaptor.forClass(Submission.class);
@@ -275,7 +280,7 @@ public class ApplicationDispatcherTest {
    * result: the submission is left untouched and a CompileFinished message is sent.
    */
   @Test
-  public void testOnCompileFinishedSuccessful() {
+  public void testOnCompileFinishedSuccessful() throws Exception {
     CompileResult result = new CompileResult(Verdict.NORMAL, "");
 
     applicationDispatcher.onCompileFinished(submission(), result);
@@ -292,7 +297,7 @@ public class ApplicationDispatcherTest {
    * result: the submission is marked as a compile error and a CompileFinished message is sent.
    */
   @Test
-  public void testOnCompileFinishedFailed() {
+  public void testOnCompileFinishedFailed() throws Exception {
     CompileResult result = new CompileResult(Verdict.RUNTIME_ERROR, "error: expected ';'");
 
     applicationDispatcher.onCompileFinished(submission(), result);
@@ -310,7 +315,7 @@ public class ApplicationDispatcherTest {
    * carrying the resolved judge-result name is sent.
    */
   @Test
-  public void testOnOneTestPointFinished() {
+  public void testOnOneTestPointFinished() throws Exception {
     when(judgeResultMapper.getJudgeResultUsingSlug("AC"))
         .thenReturn(new JudgeResult(1, "AC", "Accepted"));
 
@@ -333,7 +338,7 @@ public class ApplicationDispatcherTest {
    * AllTestPointsFinished message is sent.
    */
   @Test
-  public void testOnAllTestPointsFinishedAccepted() {
+  public void testOnAllTestPointsFinishedAccepted() throws Exception {
     when(judgeResultMapper.getJudgeResultUsingSlug("AC"))
         .thenReturn(new JudgeResult(1, "AC", "Accepted"));
 
@@ -363,7 +368,7 @@ public class ApplicationDispatcherTest {
    * checkpoints earned.
    */
   @Test
-  public void testOnAllTestPointsFinishedWithWrongAnswer() {
+  public void testOnAllTestPointsFinishedWithWrongAnswer() throws Exception {
     when(judgeResultMapper.getJudgeResultUsingSlug("AC"))
         .thenReturn(new JudgeResult(1, "AC", "Accepted"));
     when(judgeResultMapper.getJudgeResultUsingSlug("WA"))
@@ -389,7 +394,7 @@ public class ApplicationDispatcherTest {
    * with different verdicts. Expected result: the overall verdict is the first failing one.
    */
   @Test
-  public void testOnAllTestPointsFinishedReportsFirstFailure() {
+  public void testOnAllTestPointsFinishedReportsFirstFailure() throws Exception {
     when(judgeResultMapper.getJudgeResultUsingSlug("TLE"))
         .thenReturn(new JudgeResult(3, "TLE", "Time Limit Exceeded"));
 

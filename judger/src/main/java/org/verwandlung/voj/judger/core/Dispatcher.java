@@ -317,8 +317,9 @@ public class Dispatcher implements DisposableBean {
    * gives their number and the reason of the last one.
    *
    * @param submission - the submission, claimed by this judger
+   * @throws Superseded if the judging was superseded
    */
-  private void giveUp(Submission submission) {
+  private void giveUp(Submission submission) throws Superseded {
     String reason =
         String.format(
             GIVEN_UP_REASON,
@@ -465,8 +466,9 @@ public class Dispatcher implements DisposableBean {
    * Judges a submission whose problem has no test data a System Error that says so.
    *
    * @param submission - the submission object
+   * @throws Superseded if the judging was superseded
    */
-  private void onProblemWithoutTestData(Submission submission) {
+  private void onProblemWithoutTestData(Submission submission) throws Superseded {
     LOGGER.error(
         String.format(
             "System Error in submission #%d: problem #%d has no test data.",
@@ -743,20 +745,6 @@ public class Dispatcher implements DisposableBean {
 
     /** Whether the failed judging counts on the submission. */
     private final boolean countsOnSubmission;
-
-    /** The unique serialization identifier. */
-    private static final long serialVersionUID = 1L;
-  }
-
-  /**
-   * A judging that was superseded: the submission was rejudged, or claimed by another judging as
-   * the lease of the judging had expired.
-   */
-  static final class Superseded extends Exception {
-    /** Constructor. */
-    Superseded() {
-      super(null, null, false, false);
-    }
 
     /** The unique serialization identifier. */
     private static final long serialVersionUID = 1L;

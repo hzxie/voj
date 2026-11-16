@@ -620,6 +620,28 @@ public class DispatcherTest {
   }
 
   /**
+   * Test case: tests the judgeNextSubmission method. Test data: after two failed judgings, a
+   * judging superseded just before its Compile Error is recorded (the update finds the submission
+   * rejudged). Expected result: it is neither an outcome nor a failure: the failed judgings in a
+   * row stay two, and the submission is neither released nor counted.
+   */
+  @Test
+  public void testASupersededRecordIsNeitherAnOutcomeNorAFailure() throws Exception {
+    ReflectionTestUtils.setField(dispatcher, "failuresInARow", 2);
+    when(checkpointStore.getCheckpoints(1000L)).thenReturn(oneCheckpoint());
+    when(compiler.getCompileResult(any(), anyString())).thenReturn(compileResult(false));
+    org.mockito.Mockito.doThrow(new Superseded())
+        .when(applicationDispatcher)
+        .onCompileFinished(any(), any());
+
+    Assertions.assertTrue(dispatcher.judgeNextSubmission(LANGUAGES));
+
+    Assertions.assertEquals(2, ReflectionTestUtils.getField(dispatcher, "failuresInARow"));
+    verify(applicationDispatcher, never()).releaseSubmission(any());
+    verify(applicationDispatcher, never()).requeueSubmission(any(), anyString());
+  }
+
+  /**
    * Test case: tests the judgeNextSubmission method. Test data: a judging that was superseded while
    * it downloaded the test data. Expected result: it neither compiles nor reports anything.
    */

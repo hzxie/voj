@@ -70,8 +70,8 @@ public class SubmissionMapperTest {
    * Test data: Submission #1000 (in C++), set back to pending. Expected result: it is the next one
    * in C++, and claimed, with the start time and a lease of a minute by the database's clock,
    * without counting a failed judging; no other judging claims it while it holds the lease. Its verdict is recorded
-   * with the result columns only (the code and the rest stay as they were), and a submission that
-   * is no longer pending is neither next nor claimed by anybody.
+   * with the result columns only (the code and the rest stay as they were), as often as the judging
+   * records it, and a submission that is no longer pending is neither next nor claimed by anybody.
    */
   @Test
   public void testClaimAndRecordVerdict() {
@@ -93,6 +93,8 @@ public class SubmissionMapperTest {
     Assertions.assertNull(submissionMapper.getNextSubmissionId(CPP));
     Assertions.assertEquals(0, submissionMapper.claimSubmission(1000, 8L, 1000L, 60, INTERRUPTED));
 
+    Assertions.assertEquals(1, submissionMapper.updateSubmissionResult(verdict(1000, 7L)));
+    // Again, as when the answer to the first statement was lost: still recorded.
     Assertions.assertEquals(1, submissionMapper.updateSubmissionResult(verdict(1000, 7L)));
     Submission after = submissionMapper.getSubmission(1000);
     Assertions.assertEquals("WA", after.getJudgeResultSlug());

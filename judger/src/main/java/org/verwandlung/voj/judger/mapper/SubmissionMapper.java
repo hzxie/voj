@@ -208,7 +208,10 @@ public interface SubmissionMapper {
 
   /**
    * Records the verdict of a judging: only the result columns (never e.g. the code), and only if
-   * the submission is still pending and claimed by that judging.
+   * the submission is still claimed by that judging. The claim token stays, so recording the same
+   * verdict again (e.g. as the answer to the first statement was lost) finds the submission and
+   * changes nothing; a rejudge, and the claim of another judging, replace the token. The count is
+   * of the rows found (see {@link #renewLease}).
    *
    * @param submission - the submission, with the claim token of the judging
    * @return 1 if the verdict was recorded, 0 if the judging was superseded
@@ -217,8 +220,7 @@ public interface SubmissionMapper {
       "UPDATE voj_submissions SET submission_used_time = #{usedTime},"
           + " submission_used_memory = #{usedMemory}, submission_judge_score = #{judgeScore},"
           + " submission_judge_result = #{judgeResultSlug}, submission_judge_log = #{judgeLog}"
-          + " WHERE submission_id = #{submissionId} AND submission_judge_result = 'PD'"
-          + " AND submission_claim_token = #{claimToken}")
+          + " WHERE submission_id = #{submissionId} AND submission_claim_token = #{claimToken}")
   @Options(timeout = STATEMENT_TIMEOUT_SECONDS)
   int updateSubmissionResult(Submission submission);
 }

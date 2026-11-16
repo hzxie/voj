@@ -191,14 +191,7 @@ public class JudgingQueueTest {
     when(compiler.getCompileResult(any(), anyString()))
         .thenAnswer(
             invocation -> {
-              // A rejudge, as the web application does it (resetSubmissionToPending).
-              jdbcTemplate.update(
-                  "UPDATE voj_submissions SET submission_judge_result = 'PD',"
-                      + " submission_execute_time = NULL, judger_uid = NULL,"
-                      + " submission_queued_time = NOW(), submission_judge_attempts = 0,"
-                      + " submission_claim_token = NULL, submission_lease_expiry_time = NULL"
-                      + " WHERE submission_id = ?",
-                  submissionId);
+              rejudge(submissionId);
               Thread.sleep(LEASE_TIMEOUT);
               return compileResult(true);
             });
@@ -216,6 +209,32 @@ public class JudgingQueueTest {
     Assertions.assertEquals("PD", row.get("submission_judge_result"));
     Assertions.assertEquals(0, ((Number) row.get("submission_judge_attempts")).intValue());
     Assertions.assertNull(row.get("submission_claim_token"));
+  }
+
+  /**
+   * Test case: a submission is rejudged just before its judging records its verdict (a Compile
+   * Error), and nothing renews the lease meanwhile. Test data: a pending submission in C++.
+   * Expected result: the record finds the judging superseded: nothing is recorded or sent, and the
+   * submission waits for a judger, as the rejudge left it.
+   */
+  @Test
+  public void testARecordOfASupersededJudgingIsDropped() throws Exception {
+    long submissionId = insertPendingSubmission(FIRST_SUBMISSION_ID);
+    when(compiler.getCompileResult(any(), anyString()))
+        .thenAnswer(
+            invocation -> {
+              rejudge(submissionId);
+              return compileResult(false);
+            });
+
+    Assertions.assertTrue(dispatcher.judgeNextSubmission(CPP));
+
+    verify(messageSender, never()).sendMessage(any());
+    Map<String, Object> row = getRow(submissionId);
+    Assertions.assertEquals("PD", row.get("submission_judge_result"));
+    Assertions.assertNull(row.get("submission_judge_log"));
+    Assertions.assertNull(row.get("submission_claim_token"));
+    Assertions.assertTrue(dispatcher.isReady());
   }
 
   /**
@@ -462,6 +481,21 @@ public class JudgingQueueTest {
         submissionId,
         queuedSecondsAgo);
     return submissionId;
+  }
+
+  /**
+   * Rejudges a submission, as the web application does it (resetSubmissionToPending).
+   *
+   * @param submissionId - the unique identifier of the submission
+   */
+  private void rejudge(long submissionId) {
+    jdbcTemplate.update(
+        "UPDATE voj_submissions SET submission_judge_result = 'PD', submission_judge_log = NULL,"
+            + " submission_execute_time = NULL, judger_uid = NULL,"
+            + " submission_queued_time = NOW(), submission_judge_attempts = 0,"
+            + " submission_claim_token = NULL, submission_lease_expiry_time = NULL"
+            + " WHERE submission_id = ?",
+        submissionId);
   }
 
   /**

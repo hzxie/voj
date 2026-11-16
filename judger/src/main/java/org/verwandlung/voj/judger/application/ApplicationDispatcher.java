@@ -34,6 +34,7 @@ import org.springframework.stereotype.Component;
 import org.verwandlung.voj.judger.core.CheckpointResult;
 import org.verwandlung.voj.judger.core.CompileResult;
 import org.verwandlung.voj.judger.core.Outcome;
+import org.verwandlung.voj.judger.core.Superseded;
 import org.verwandlung.voj.judger.mapper.JudgeResultMapper;
 import org.verwandlung.voj.judger.mapper.SubmissionMapper;
 import org.verwandlung.voj.judger.mapper.UserMapper;
@@ -148,11 +149,11 @@ public class ApplicationDispatcher {
    *
    * @param submission - the submission, claimed by {@link #claimSubmission}
    * @param reason - why the submission could not be judged, shown to the user in the judge log
+   * @throws Superseded if the judging was superseded
    */
-  public void onErrorOccurred(Submission submission, String reason) {
-    if (updateSubmission(submission, Outcome.systemError(reason))) {
-      messageSender.sendMessage(newMessage("ErrorOccurred", submission));
-    }
+  public void onErrorOccurred(Submission submission, String reason) throws Superseded {
+    record(submission, Outcome.systemError(reason));
+    messageSender.sendMessage(newMessage("ErrorOccurred", submission));
   }
 
   /**
@@ -160,15 +161,14 @@ public class ApplicationDispatcher {
    *
    * @param submission - the submission, claimed by {@link #claimSubmission}
    * @param result - the compilation result
+   * @throws Superseded if the judging was superseded
    */
-  public void onCompileFinished(Submission submission, CompileResult result) {
+  public void onCompileFinished(Submission submission, CompileResult result) throws Superseded {
     Map<String, Object> message = newMessage("CompileFinished", submission);
     message.put("isSuccessful", result.isSuccessful());
     if (!result.isSuccessful()) {
       Outcome outcome = Outcome.compileError(result.log());
-      if (!updateSubmission(submission, outcome)) {
-        return;
-      }
+      record(submission, outcome);
       message.put("log", outcome.log());
     }
     messageSender.sendMessage(message);
@@ -195,12 +195,12 @@ public class ApplicationDispatcher {
    *
    * @param submission - the submission, claimed by {@link #claimSubmission}
    * @param results - its verdicts on the checkpoints, in their order, not empty
+   * @throws Superseded if the judging was superseded
    */
-  public void onAllTestPointsFinished(Submission submission, List<CheckpointResult> results) {
+  public void onAllTestPointsFinished(Submission submission, List<CheckpointResult> results)
+      throws Superseded {
     Outcome outcome = Outcome.of(results, this::getJudgeResultName);
-    if (!updateSubmission(submission, outcome)) {
-      return;
-    }
+    record(submission, outcome);
     Map<String, Object> message = newMessage("AllTestPointsFinished", submission);
     message.put("runtimeResult", getJudgeResultName(outcome.judgeResult()));
     message.put("totalTime", outcome.usedTime());
@@ -246,37 +246,29 @@ public class ApplicationDispatcher {
   }
 
   /**
-   * Records the verdict of a judging: only the result columns, and only if the submission is still
-   * claimed by this judging (see {@link #claimSubmission}); otherwise the verdict is stale and
-   * dropped.
+   * Records the outcome of a judging: only the result columns, and only if the submission is still
+   * claimed by this judging (see {@link #claimSubmission}).
    *
    * <p>A statement that fails for now (e.g. while the database fails over, or a connection broke,
-   * see {@link #isUnreachable}) is tried again, {@value #UPDATE_TRIES} times in all, a little later each time, which is still well within
-   * the lease of the judging: a verdict is not lost to a short outage. (A statement that did change
-   * the submission though its answer was lost finds it judged when tried again, and reports the
-   * judging superseded.)
+   * see {@link #isUnreachable}) is tried again, {@value #UPDATE_TRIES} times in all, a little later
+   * each time, which is still well within the lease of the judging: a verdict is not lost to a
+   * short outage. Recording is idempotent, so a statement that did record the verdict though its
+   * answer was lost records it again when tried again.
    *
    * @param submission - the submission, claimed by {@link #claimSubmission}
    * @param outcome - the outcome of the judging
-   * @return whether the verdict was recorded; if not, the judging was superseded
-   * @throws DataAccessException if the verdict cannot be recorded, as the database is unreachable
+   * @throws Superseded if the judging was superseded: the verdict is stale, and not recorded
+   * @throws DataAccessException if the verdict cannot be recorded
    */
-  private boolean updateSubmission(Submission submission, Outcome outcome) {
-    String judgeResult = outcome.judgeResult();
+  private void record(Submission submission, Outcome outcome) throws Superseded {
     submission.setUsedTime(outcome.usedTime());
     submission.setUsedMemory(outcome.usedMemory());
     submission.setJudgeScore(outcome.score());
-    submission.setJudgeResultSlug(judgeResult);
+    submission.setJudgeResultSlug(outcome.judgeResult());
     submission.setJudgeLog(outcome.log());
-
     if (updateSubmissionResult(submission) == 0) {
-      LOGGER.warn(
-          String.format(
-              "Dropped the verdict %s of submission #%d: its judging was superseded.",
-              judgeResult, submission.getSubmissionId()));
-      return false;
+      throw new Superseded();
     }
-    return true;
   }
 
   /**
