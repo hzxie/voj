@@ -617,6 +617,54 @@ public class SandboxBehaviorTest {
   }
 
   /**
+   * Test case: a Java program that allocates 2 GB in all, in arrays of 1 MB that it drops at once,
+   * under a 256 MB limit (512 MB with Java's memory multiplier), and writes a line to standard
+   * error. Expected result: Accepted, using less than the problem's 256 MB, with its standard output
+   * alone as the output: the JVM is told the limit (see JavaOptions), so it collects its garbage long
+   * before the limit, rather than growing its heap to a quarter of the host's RAM first; and neither
+   * the program's line nor the java launcher's note about JDK_JAVA_OPTIONS on standard error reaches
+   * the output.
+   */
+  @Test
+  public void testJavaGarbageWithinTheLimitIsAccepted() throws Exception {
+    Assumptions.assumeTrue(isLinux(), "The test needs a JDK on the sandbox user's PATH.");
+    Map<String, Object> result =
+        judge(900029L, "text/x-java", JAVA_GARBAGE_CODE, 5000, 262144, "");
+    Assertions.assertEquals("AC", result.get("runtimeResult"), result.toString());
+    Assertions.assertTrue((Integer) result.get("usedMemory") < 262144, result.toString());
+    Assertions.assertEquals(
+        "2048\n", Files.readString(Path.of(workBaseDirectory, "voj-sandbox-900029", "output.txt")));
+  }
+
+  /**
+   * Test case: a Java program that keeps 768 MB of arrays, under a 256 MB limit (512 MB with Java's
+   * memory multiplier). Expected result: Memory Limit Exceeded, reported at no less than the limit:
+   * its heap, sized to the limit, runs out, and the JVM, told to exit when it runs out of memory
+   * (see JavaOptions), ends in a way the judger tells from a runtime error.
+   */
+  @Test
+  public void testJavaThatNeedsMoreThanItsLimitIsMemoryLimitExceeded() throws Exception {
+    Assumptions.assumeTrue(isLinux(), "The test needs a JDK on the sandbox user's PATH.");
+    Map<String, Object> result = judge(900030L, "text/x-java", JAVA_HOARD_CODE, 5000, 262144, "");
+    Assertions.assertEquals("MLE", result.get("runtimeResult"), result.toString());
+    Assertions.assertTrue((Integer) result.get("usedMemory") >= 524288, result.toString());
+  }
+
+  /**
+   * Test case: a Java program that dies of an uncaught exception, and a C++ program that exits
+   * with 3 (the exit code of a JVM that ran out of memory). Expected result: Runtime Error for
+   * both: only the java launcher exiting with 3 is a JVM that ran out of memory.
+   */
+  @Test
+  public void testOtherFailuresAreRuntimeErrors() throws Exception {
+    Assumptions.assumeTrue(isLinux(), "The test needs a JDK on the sandbox user's PATH.");
+    Assertions.assertEquals(
+        "RE",
+        judge(900031L, "text/x-java", JAVA_EXCEPTION_CODE, 5000, 262144, "").get("runtimeResult"));
+    Assertions.assertEquals("RE", judge(900032L, EXIT_3_CODE, 5000, 262144));
+  }
+
+  /**
    * Checks whether the judger runs on Linux.
    *
    * @return whether the operating system is Linux
@@ -669,15 +717,35 @@ public class SandboxBehaviorTest {
    */
   private String judge(long id, String code, int timeLimitMs, int memoryLimitKb, String input)
       throws Exception {
-    Language cpp = languageMapper.getLanguageUsingSlug("text/x-c++src");
-    Assertions.assertNotNull(cpp, "The C++ language must be seeded in the test database.");
+    return (String)
+        judge(id, "text/x-c++src", code, timeLimitMs, memoryLimitKb, input).get("runtimeResult");
+  }
+
+  /**
+   * Compiles and runs a program under the active sandbox, with the time and memory multipliers of
+   * its language, and returns the result of the run.
+   *
+   * @param id - a unique id used for the work directory and the in-memory submission
+   * @param languageSlug - the slug of the program's language, seeded in the test database
+   * @param code - the source code to compile and run
+   * @param timeLimitMs - the time limit of the problem (ms)
+   * @param memoryLimitKb - the memory limit of the problem (KB)
+   * @param input - the program's standard input
+   * @return the result of the run ("runtimeResult": the verdict slug, "usedTime", "usedMemory")
+   * @throws Exception if the test fixtures cannot be set up
+   */
+  private Map<String, Object> judge(
+      long id, String languageSlug, String code, int timeLimitMs, int memoryLimitKb, String input)
+      throws Exception {
+    Language language = languageMapper.getLanguageUsingSlug(languageSlug);
+    Assertions.assertNotNull(language, languageSlug + " must be seeded in the test database.");
 
     Problem problem =
         new Problem(id, true, "sandbox-behavior", timeLimitMs, memoryLimitKb, "", "", "", "", "", "");
     Submission submission = new Submission();
     submission.setSubmissionId(id);
     submission.setProblem(problem);
-    submission.setLanguage(cpp);
+    submission.setLanguage(language);
     submission.setCode(code);
 
     String workDirectory = workBaseDirectory + "/voj-sandbox-" + id;
@@ -694,11 +762,70 @@ public class SandboxBehaviorTest {
     Files.writeString(inputFile, input);
     String outputFile = workDirectory + "/output.txt";
 
-    Map<String, Object> result =
-        programRunner.getRuntimeResult(
-            submission, workDirectory, baseFileName, inputFile.toString(), outputFile);
-    return (String) result.get("runtimeResult");
+    return programRunner.getRuntimeResult(
+        submission, workDirectory, baseFileName, inputFile.toString(), outputFile);
   }
+
+  /**
+   * A Java program that allocates 2 GB in all, in arrays of 1 MB, each dropped at once (no
+   * System.gc()), and writes to standard error as well.
+   */
+  private static final String JAVA_GARBAGE_CODE =
+      """
+      public class Main {
+          public static void main(String[] args) {
+              System.err.println("garbage ahead");
+              long sum = 0;
+              for (int i = 0; i < 2048; ++i) {
+                  byte[] block = new byte[1 << 20];
+                  for (int j = 0; j < block.length; j += 4096) {
+                      block[j] = 1;
+                  }
+                  sum += block[(i % 256) * 4096];
+              }
+              System.out.println(sum);
+          }
+      }
+      """;
+
+  /** A Java program that keeps 768 MB of arrays of 1 MB, touching every page. */
+  private static final String JAVA_HOARD_CODE =
+      """
+      import java.util.ArrayList;
+      import java.util.List;
+
+      public class Main {
+          public static void main(String[] args) {
+              List<byte[]> blocks = new ArrayList<>();
+              for (int i = 0; i < 768; ++i) {
+                  byte[] block = new byte[1 << 20];
+                  for (int j = 0; j < block.length; j += 4096) {
+                      block[j] = 1;
+                  }
+                  blocks.add(block);
+              }
+              System.out.println(blocks.size());
+          }
+      }
+      """;
+
+  /** A Java program that dies of an uncaught exception. */
+  private static final String JAVA_EXCEPTION_CODE =
+      """
+      public class Main {
+          public static void main(String[] args) {
+              throw new IllegalStateException("failed");
+          }
+      }
+      """;
+
+  /** A program that exits with 3. */
+  private static final String EXIT_3_CODE =
+      """
+      int main() {
+          return 3;
+      }
+      """;
 
   /** A program that allocates ~200 MB (well above the test memory limit), touching every page. */
   private static final String MEMORY_BOMB_CODE =

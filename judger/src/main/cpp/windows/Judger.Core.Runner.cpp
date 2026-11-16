@@ -159,8 +159,8 @@ bool setupIoRedirection(const std::wstring&, const std::wstring&, HANDLE&, HANDL
 void setupStartupInfo(STARTUPINFOW&, HANDLE&, HANDLE&, HANDLE&);
 HANDLE createJobObject(DWORD, jint, bool, HANDLE);
 bool drainJobMessages(HANDLE, bool&);
-bool createProcess(const std::wstring&, const std::wstring&, const std::wstring&, const std::wstring&, HANDLE&, STARTUPINFOW&, PROCESS_INFORMATION&);
-bool buildEnvironmentBlock(HANDLE, const std::wstring&, std::vector<wchar_t>&);
+bool createProcess(const std::wstring&, const std::wstring&, const std::wstring&, const std::wstring&, const std::wstring&, HANDLE&, STARTUPINFOW&, PROCESS_INFORMATION&);
+bool buildEnvironmentBlock(HANDLE, const std::wstring&, const std::wstring&, std::vector<wchar_t>&);
 bool getJudgerEnvironmentVariable(const wchar_t*, std::wstring&);
 std::wstring getWorkDirectory(const std::wstring&);
 bool getPeakMemoryUsage(HANDLE& hProcess, jint& memory);
@@ -187,17 +187,20 @@ LPCWSTR getConstWideStringPointer(const std::wstring&);
  * @param  isCompilation   - whether this is a compilation (as opposed to a run of the submission)
  * @param  processLimit    - the maximum number of active processes of a compilation (0 means the
  *                           default); a run may not create processes (RUN_ACTIVE_PROCESS_LIMIT)
+ * @param  jJavaOptions    - the options of a JVM the program starts, given to it as JDK_JAVA_OPTIONS
+ *                           (may be NULL or empty: not set); see JavaOptions.java
  * @return a Map<String, Object> object containing the runtime result
  */
 JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntimeResult(
     JNIEnv* jniEnv, jobject selfReference, jstring jCommandLine, jstring jUsername,
     jstring jPassword, jstring jInputFilePath, jstring jOutputFilePath, jint timeLimit,
-    jint memoryLimit, jboolean isCompilation, jint processLimit) {
+    jint memoryLimit, jboolean isCompilation, jint processLimit, jstring jJavaOptions) {
     std::wstring        commandLine         = getWideString(getStringValue(jniEnv, jCommandLine));
     std::wstring        username            = getWideString(getStringValue(jniEnv, jUsername));
     std::wstring        password            = getWideString(getStringValue(jniEnv, jPassword));
     std::wstring        inputFilePath       = getWideString(getStringValue(jniEnv, jInputFilePath));
     std::wstring        outputFilePath      = getWideString(getStringValue(jniEnv, jOutputFilePath));
+    std::wstring        javaOptions         = getWideString(getStringValue(jniEnv, jJavaOptions));
 
     HANDLE              hInput              = NULL;
     HANDLE              hOutput             = NULL;
@@ -299,8 +302,8 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
 
     // The process is created suspended, assigned to the Job Object before it runs a single
     // instruction, and only then resumed - so the limits are in force from the very beginning.
-    if ( !createProcess(commandLine, username, password, getWorkDirectory(outputFilePath), hToken,
-            startupInfo, processInfo) ) {
+    if ( !createProcess(commandLine, username, password, getWorkDirectory(outputFilePath), javaOptions,
+            hToken, startupInfo, processInfo) ) {
         return fail("CreateProcess");
     }
     // If the assignment fails the process would run outside the Job: without the process limit,
@@ -632,14 +635,16 @@ bool drainJobMessages(HANDLE hCompletionPort, bool& memoryLimitHit) {
  * @param  password      - the Windows password
  * @param  workDirectory - the submission's work directory, where the process starts (empty if
  *                         unknown: the sandbox account's profile directory)
+ * @param  javaOptions   - the value of JDK_JAVA_OPTIONS (empty: not set), see buildEnvironmentBlock
  * @param  hToken        - receives a token that represents the specified user
  * @param  startupInfo   - a STARTUPINFO structure
  * @param  processInfo   - receives identification information for the new process
  * @return whether the process was created successfully (GetLastError() tells why not)
  */
 bool createProcess(const std::wstring& commandLine, const std::wstring& username,
-        const std::wstring& password, const std::wstring& workDirectory, HANDLE& hToken,
-        STARTUPINFOW& startupInfo, PROCESS_INFORMATION& processInfo) {
+        const std::wstring& password, const std::wstring& workDirectory,
+        const std::wstring& javaOptions, HANDLE& hToken, STARTUPINFOW& startupInfo,
+        PROCESS_INFORMATION& processInfo) {
     WCHAR   szUserProfile[256]  = L"";
     DWORD   dwSize              = sizeof(szUserProfile) / sizeof(WCHAR);
     LPCWSTR lpUsername          = getConstWideStringPointer(username);
@@ -652,7 +657,7 @@ bool createProcess(const std::wstring& commandLine, const std::wstring& username
             LOGON32_PROVIDER_DEFAULT, &hToken) ) {
         return false;
     }
-    if ( !buildEnvironmentBlock(hToken, workDirectory, environmentBlock) ) {
+    if ( !buildEnvironmentBlock(hToken, workDirectory, javaOptions, environmentBlock) ) {
         return false;
     }
     // The program starts in the submission's own work directory, as on Linux, never in a directory
@@ -682,8 +687,9 @@ bool createProcess(const std::wstring& commandLine, const std::wstring& username
 
 /**
  * Builds the environment of the sandboxed process: the sandbox user's own environment, plus the
- * judger's whitelisted toolchain variables (INHERITED_ENVIRONMENT_VARIABLES) and a private Go build
- * cache and GOPATH in the work directory. Nothing else of the judger's environment is passed on.
+ * judger's whitelisted toolchain variables (INHERITED_ENVIRONMENT_VARIABLES), a private Go build
+ * cache and GOPATH in the work directory, and the options of the JVM a run starts. Nothing else of
+ * the judger's environment is passed on.
  *
  * CreateEnvironmentBlock is called with bInherit = FALSE, so the block holds only the system
  * variables and the user's own variables and profile paths (USERPROFILE, APPDATA, LOCALAPPDATA,
@@ -694,12 +700,16 @@ bool createProcess(const std::wstring& commandLine, const std::wstring& username
  * @param  hToken           - the sandbox user's token
  * @param  workDirectory    - the submission's work directory (empty if unknown: the Go variables
  *                            are then left to the user's defaults)
+ * @param  javaOptions      - the value of JDK_JAVA_OPTIONS, which the java launcher (and nothing
+ *                            else) reads: the heap and other settings that fit the JVM to the run's
+ *                            limits, derived from them by JavaOptions.java (empty: not set, the
+ *                            user's own value, if any, is kept)
  * @param  environmentBlock - receives the Unicode environment block (sorted "NAME=value" strings,
  *                            each NUL-terminated, followed by an extra NUL)
  * @return whether the block was built (GetLastError() tells why not)
  */
 bool buildEnvironmentBlock(HANDLE hToken, const std::wstring& workDirectory,
-        std::vector<wchar_t>& environmentBlock) {
+        const std::wstring& javaOptions, std::vector<wchar_t>& environmentBlock) {
     LPVOID lpUserEnvironment = NULL;
     if ( !CreateEnvironmentBlock(&lpUserEnvironment, hToken, FALSE) ) {
         return false;
@@ -731,6 +741,9 @@ bool buildEnvironmentBlock(HANDLE hToken, const std::wstring& workDirectory,
     if ( !workDirectory.empty() ) {
         environment[L"GOCACHE"] = workDirectory + GO_BUILD_CACHE_DIRECTORY;
         environment[L"GOPATH"]  = workDirectory + GO_PATH_DIRECTORY;
+    }
+    if ( !javaOptions.empty() ) {
+        environment[L"JDK_JAVA_OPTIONS"] = javaOptions;
     }
 
     environmentBlock.clear();

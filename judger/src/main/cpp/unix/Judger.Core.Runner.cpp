@@ -176,6 +176,8 @@ static const char* const INHERITED_ENVIRONMENT_VARIABLES[] = {
 static const char* const GO_BUILD_CACHE_DIRECTORY = "/.cache/go-build"; // GOCACHE (work dir relative)
 static const char* const GO_PATH_DIRECTORY        = "/go";              // GOPATH (work dir relative)
 static const char* const DEFAULT_PATH = "/usr/local/bin:/usr/bin:/bin";
+// The options of the JVM of a run (see JavaOptions.java): read by the java launcher only (JDK 9+).
+static const char* const JAVA_OPTIONS_VARIABLE = "JDK_JAVA_OPTIONS";
 static const char* const DEFAULT_LANG = "C.UTF-8";
 
 /**
@@ -244,7 +246,8 @@ struct ChildFailure {
 static std::vector<std::string> splitCommandLine(const std::string&);
 static std::string resolveExecutable(const std::string&);
 static std::string getWorkDirectory(const std::string& outputFilePath);
-static std::vector<std::string> buildEnvironment(const std::string& workDirectory);
+static std::vector<std::string> buildEnvironment(const std::string& workDirectory,
+                                                 const std::string& javaOptions);
 static std::vector<std::string> buildSeccompPrograms(bool runOfSubmission, rlim_t dataLimit);
 static long long getMonotonicMillis();
 static long long readCpuTimeMillis(pid_t);
@@ -298,6 +301,8 @@ static unsigned long long getWritableImageSize(const char* path, unsigned long l
  * @param  isCompilation   - whether this is a compilation (as opposed to a run of the submission)
  * @param  processLimit    - the maximum number of processes and threads of the sandbox user
  *                           (RLIMIT_NPROC, applied when privileges are dropped; 0 means the default)
+ * @param  jJavaOptions    - the options of a JVM the program starts, given to it as JDK_JAVA_OPTIONS
+ *                           (may be NULL or empty: not set); see JavaOptions.java
  * @return a Map<String, Object> with the CPU time ("usedTime", ms), the peak memory ("usedMemory",
  *         KB), the exit code ("exitCode", 128 + the signal if killed) and the limit the program
  *         exceeded ("limitExceeded", see LimitExceeded); throws a Java exception instead if the
@@ -306,7 +311,7 @@ static unsigned long long getWritableImageSize(const char* path, unsigned long l
 JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntimeResult(
     JNIEnv* jniEnv, jobject selfReference, jstring jCommandLine, jstring jUsername,
     jstring jPassword, jstring jInputFilePath, jstring jOutputFilePath, jint timeLimit,
-    jint memoryLimit, jboolean isCompilation, jint processLimit) {
+    jint memoryLimit, jboolean isCompilation, jint processLimit, jstring jJavaOptions) {
     (void) selfReference;
     (void) jPassword;
     std::string commandLine = getStringValue(jniEnv, jCommandLine);
@@ -356,7 +361,7 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
         plan.dropGid        = pw->pw_gid;
     }
 
-    plan.environment = buildEnvironment(plan.workDirectory);
+    plan.environment = buildEnvironment(plan.workDirectory, getStringValue(jniEnv, jJavaOptions));
     for ( std::string& variable : plan.environment ) {
         plan.envp.push_back(const_cast<char*>(variable.c_str()));
     }
@@ -1037,16 +1042,23 @@ static std::string getWorkDirectory(const std::string& outputFilePath) {
 
 /**
  * Builds the minimal environment of the sandboxed process: the whitelisted variables of the judger
- * (INHERITED_ENVIRONMENT_VARIABLES), defaults for PATH and LANG, and HOME and TMPDIR. The program can
- * only write in its work directory (see confineFileSystemWrites), so HOME (the judger's own, e.g.
- * /root, would be useless anyway), TMPDIR (compilers' temporary files: gcc, rustc, go build, ...),
- * the Go build cache (GOCACHE) and GOPATH all point there; the latter two would otherwise be shared
- * between submissions.
+ * (INHERITED_ENVIRONMENT_VARIABLES), defaults for PATH and LANG, HOME and TMPDIR, and the options
+ * of the JVM a run starts. The program can only write in its work directory (see
+ * confineFileSystemWrites), so HOME (the judger's own, e.g. /root, would be useless anyway), TMPDIR
+ * (compilers' temporary files: gcc, rustc, go build, ...), the Go build cache (GOCACHE) and GOPATH
+ * all point there; the latter two would otherwise be shared between submissions.
  * @param  workDirectory - the work directory (empty for none: HOME is then /, and TMPDIR unset)
+ * @param  javaOptions   - the value of JDK_JAVA_OPTIONS, which the java launcher (and nothing else)
+ *                         reads: the heap and other settings that fit the JVM to the run's limits,
+ *                         derived from them by JavaOptions.java (empty: not set)
  * @return the list of "NAME=value" strings
  */
-static std::vector<std::string> buildEnvironment(const std::string& workDirectory) {
+static std::vector<std::string> buildEnvironment(const std::string& workDirectory,
+                                                 const std::string& javaOptions) {
     std::vector<std::string> environment;
+    if ( !javaOptions.empty() ) {
+        environment.push_back(std::string(JAVA_OPTIONS_VARIABLE) + "=" + javaOptions);
+    }
     for ( const char* name : INHERITED_ENVIRONMENT_VARIABLES ) {
         const char* value = getenv(name);
         if ( value != nullptr ) {

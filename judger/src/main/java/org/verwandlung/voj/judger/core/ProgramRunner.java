@@ -66,11 +66,20 @@ public class ProgramRunner {
     RunResult runResult =
         sandboxRunner.run(
             commandLine, inputFilePath, outputFilePath, timeLimit, memoryLimit, false);
+    Verdict verdict = runResult.getVerdict();
+    int usedMemory = runResult.getPeakMemoryKb();
+    if (JavaOptions.isOutOfMemoryExit(commandLine, verdict, runResult.getExitCode())) {
+      // The JVM's heap, sized to the memory limit (see JavaOptions), ran out: the program needed
+      // more memory than it is allowed. Like a program stopped at the limit, it is reported as
+      // having used at least the limit.
+      verdict = Verdict.MEMORY_LIMIT_EXCEEDED;
+      usedMemory = Math.max(usedMemory, memoryLimit);
+    }
 
     Map<String, Object> result = new HashMap<>(4, 1);
-    result.put("runtimeResult", getRuntimeResultSlug(runResult.getVerdict()));
+    result.put("runtimeResult", getRuntimeResultSlug(verdict));
     result.put("usedTime", runResult.getCpuTimeMs());
-    result.put("usedMemory", runResult.getPeakMemoryKb());
+    result.put("usedMemory", usedMemory);
     return result;
   }
 

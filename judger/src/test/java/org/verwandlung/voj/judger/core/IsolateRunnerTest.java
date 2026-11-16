@@ -148,6 +148,24 @@ public class IsolateRunnerTest {
   }
 
   /**
+   * Test case: a run and a compilation. Expected result: the run's JVM is given the options derived
+   * from its memory limit (see JavaOptions); a compilation's is not.
+   */
+  @Test
+  public void testOnlyRunsGetTheJavaOptions() throws Exception {
+    runner.run("true", null, workDirectory.resolve("output#1.txt").toString(), 1000, 65536, false);
+    Assertions.assertTrue(
+        Files.readAllLines(isolateRoot.resolve("args.log"))
+            .contains("--env=JDK_JAVA_OPTIONS=" + JavaOptions.forRun(65536)));
+
+    Path logFile = workDirectory.resolve("random-compile.log");
+    runner.run("true", null, logFile.toString(), 1000, 65536, true);
+    Assertions.assertTrue(
+        Files.readAllLines(isolateRoot.resolve("args.log")).stream()
+            .noneMatch(arg -> arg.startsWith("--env=JDK_JAVA_OPTIONS=")));
+  }
+
+  /**
    * Test case: tests the mapVerdict(Map, int) method with the fields isolate writes. Expected
    * result: a program killed by SIGXFSZ (its output outgrew --fsize) exceeded the output limit; one
    * killed by the cgroup's OOM killer exceeded the memory limit, whatever its status says.

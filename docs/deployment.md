@@ -129,7 +129,8 @@ sudo useradd --system --no-create-home --shell /usr/sbin/nologin voj-sandbox
   allowlisted) to keep its peak low on a host with swap. So the JVM's ZGC, which
   maps its heap through a memory file, and Python's anonymous
   `mmap.mmap(-1, n)`, a shared mapping, do not work in a run (the JVM's other
-  collectors do). Files a run writes in its work directory hold data outside its
+  collectors do). A run's JVM is told its memory limit and sizes its heap to
+  it (see [Java and Kotlin runs](#java-and-kotlin-runs)). Files a run writes in its work directory hold data outside its
   memory limit, though: `RLIMIT_FSIZE` bounds each file (see below), not their
   number, and `fallocate` with `FALLOC_FL_KEEP_SIZE` reserves space beyond a
   file's size. The work directories are under `judger.checkpointDir`; on tmpfs
@@ -155,7 +156,9 @@ sudo useradd --system --no-create-home --shell /usr/sbin/nologin voj-sandbox
   from (to push input into its shell with `TIOCSTI`, say).
 - **Environment.** Only the locale and toolchain variables of the judger are
   passed on (`PATH`, `LANG`, `JAVA_HOME`, the Go and Rust settings, ...), never
-  its secrets, with `HOME` and `TMPDIR` set to the submission's work directory.
+  its secrets, with `HOME` and `TMPDIR` set to the submission's work directory,
+  and, for a run, `JDK_JAVA_OPTIONS` (see
+  [Java and Kotlin runs](#java-and-kotlin-runs)).
 - **Files and shared state.** Every compilation and run is the same sandbox
   user, so whatever one could leave behind outside its work directory would
   outlive it and could be read by a later submission (say, a run that copies its
@@ -285,9 +288,10 @@ Go, Kotlin, JavaScript and Rust).
   compilation (`judger.isolate.compileFiles`): Free Pascal's `/etc/fpc.cfg`, which
   holds its unit search paths, becomes `~/.fpc.cfg` in the box.
 - **Environment.** As with the native backend, the box gets only the locale and
-  toolchain variables of the judger (no secrets), `HOME=/box`, and a Go build
+  toolchain variables of the judger (no secrets), `HOME=/box`, a Go build
   cache and `GOPATH` of its own in the work directory, seeded from
-  `judger.goBuildCacheSeed`.
+  `judger.goBuildCacheSeed`, and, for a run, `JDK_JAVA_OPTIONS` (see
+  [Java and Kotlin runs](#java-and-kotlin-runs)).
 - **System calls.** isolate's own seccomp filter makes file locks fail (`flock`
   with `ENOSYS`), which the Go build cache cannot do without. Compilations, which
   run a trusted compiler rather than the submission, are given
@@ -307,6 +311,60 @@ Go, Kotlin, JavaScript and Rust).
   (`judger.isolate.boxId`). The box is cleaned up after every compilation and
   run, which frees the captured output right away; `--init` empties a box that a
   judger which died mid-run left behind.
+
+## Java and Kotlin runs
+
+A JVM sizes itself to the machine it runs on: by default its heap may grow to a
+quarter of the host's RAM, and starts at 1/64 of it. The memory limit, though,
+is on the run's peak resident set, heap and all, so on a large host a correct
+program that merely makes garbage grew its heap far past its limit before the
+JVM first collected it: allocating 2 GB in arrays of 1 MB, each dropped at
+once, peaked at 560 to 670 MB, Memory Limit Exceeded under a 256 MB problem
+limit (512 MB with Java's memory multiplier of 2), on a host with 60 GB of RAM.
+So every run, whatever the backend (native on Linux and Windows, or isolate),
+tells the JVM its limits in the environment variable `JDK_JAVA_OPTIONS`. The
+`java` launcher (JDK 9 and later) reads it, and nothing else does, so no
+language's run command has to change and no other language is affected. For a
+run whose memory limit (the problem's, times the language's memory multiplier)
+is *L*:
+
+- `-XX:MaxRAM=`*L*: the JVM takes the limit for the machine's memory, so what
+  it derives from that is relative to the limit, the same on any host: the heap
+  starts at *L* / 64 and grows only as the program's live data needs it. The
+  program above peaks at 41 MB.
+- `-Xmx`: the heap may grow to *L* less 64 MB (at least *L* / 2), which leaves
+  room for what the JVM needs besides (code, class metadata, compiled code,
+  thread stacks): about 40 MB for a small program. A program that filled its
+  whole heap peaked at most 492 MB under 512 MB, and 100 MB under 128 MB
+  (OpenJDK 21 and 25).
+- `-XX:+UseSerialGC`: the collector with the least memory and CPU time of its
+  own (G1, the default on hosts with two CPUs or more, peaked at 110 to 120 MB
+  for the program above).
+- `-XX:ActiveProcessorCount=1`: the JVM sizes its own threads and the
+  program's default parallelism (parallel streams, the common fork-join pool)
+  by the CPU count. On a host with 64 CPUs, a parallel stream would start 63
+  workers and fail at a run's 64 threads (`judger.processLimit`), a runtime
+  error on that host only. With one CPU a run's JVM keeps to a handful of
+  threads on any host, and a parallel stream costs the CPU time of a sequential
+  one, the time a run is charged for, rather than ten times that spread over
+  many threads.
+- `-XX:+ExitOnOutOfMemoryError`: a program that runs out of heap (or class
+  metadata) exits at once with status 3, which, for a run of the `java`
+  launcher, the judger judges Memory Limit Exceeded, as it does a C++ program
+  that keeps allocating; a program that calls `System.exit(3)` itself is judged
+  so too, which gains it nothing. Any other failure (an uncaught exception, a
+  thread that cannot be started at the thread limit) stays a Runtime Error.
+  (The JVM then prints `Terminating due to java.lang.OutOfMemoryError: ...` on
+  standard output, which is never compared: only an accepted run's output is.)
+
+Options on a language's run command come after these, so a command that sets
+its own (say `-Xmx`) still has the last word. The launcher announces the
+options on standard error (`NOTE: Picked up JDK_JAVA_OPTIONS: ...`), which a
+run discards: it never reaches the output that is judged. Compilations do not
+get them: `javac` does not read them, `kotlinc` sets a heap of its own
+(`-Xmx512M`) under `judger.compileMemoryLimit`, and the note would only
+clutter the compile log. The options are derived in `JavaOptions.java`, in one
+place for every backend.
 
 ## Several judgers on one host
 
@@ -383,7 +441,9 @@ as soon as a limit is exceeded:
 - **Memory**: the peak working set (resident memory) of the program's process,
   like the peak resident set size on Linux (a compilation: the compiler's
   top-level process). Memory that is committed but never touched does not
-  count: the JVM commits its initial heap (RAM / 64 by default) as it starts.
+  count: the JVM commits its initial heap as it starts (a run's JVM 1/64 of
+  its memory limit, see [Java and Kotlin runs](#java-and-kotlin-runs); a
+  compiler's RAM / 64).
   The Job also has a hard cap on commit, the counterpart of Linux's
   `RLIMIT_DATA`: twice the limit plus max(256 MB, RAM / 32), for all of a run's
   processes together (a compilation: for each process). An allocation refused
@@ -414,7 +474,8 @@ only these variables of the judger: `PATH`, `LANG`, `LC_ALL`, `TZ`,
 `RUSTUP_HOME`, `RUSTUP_TOOLCHAIN` and `CARGO_HOME`. Nothing else of the
 judger's environment (such as `VOJ_DB_PASSWORD` or `VOJ_JUDGER_API_TOKEN`)
 reaches it. `GOCACHE` and `GOPATH` point into the submission's work directory,
-so every Go build starts from its own empty cache. Toolchains must therefore be
+so every Go build starts from its own empty cache, and a run gets
+`JDK_JAVA_OPTIONS` (see [Java and Kotlin runs](#java-and-kotlin-runs)). Toolchains must therefore be
 reachable through the judger's `PATH` and readable by the sandbox account.
 
 ### The sandbox account

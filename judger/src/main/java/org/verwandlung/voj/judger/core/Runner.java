@@ -81,7 +81,8 @@ public class Runner implements SandboxRunner {
               timeLimitMs,
               memoryLimitKb,
               isCompilation,
-              isCompilation ? compileProcessLimit : processLimit);
+              isCompilation ? compileProcessLimit : processLimit,
+              isCompilation ? null : JavaOptions.forRun(memoryLimitKb));
       return toRunResult(nativeResult, timeLimitMs, memoryLimitKb);
     } catch (Throwable ex) {
       // The native runner throws when the sandbox cannot be set up (no sandbox user, a failed
@@ -185,6 +186,8 @@ public class Runner implements SandboxRunner {
    * @param isCompilation - whether this is a compilation (stderr is then captured with stdout)
    * @param processLimit - the maximum number of processes (Linux: processes and threads) the
    *     sandbox may have at once (0 means the native default)
+   * @param javaOptions - the options of a JVM the program starts, passed to it as {@value
+   *     JavaOptions#ENVIRONMENT_VARIABLE} ({@code null} or empty for none); see {@link JavaOptions}
    * @return a Map<String, Object> object containing the program's runtime result
    */
   public native Map<String, Object> getRuntimeResult(
@@ -196,7 +199,8 @@ public class Runner implements SandboxRunner {
       int timeLimit,
       int memoryLimit,
       boolean isCompilation,
-      int processLimit);
+      int processLimit,
+      String javaOptions);
 
   /**
    * The username for logging into the operating system. For security, we recommend running the

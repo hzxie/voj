@@ -293,8 +293,12 @@ public class IsolateRunner implements SandboxRunner {
     // isolate starts the program with an empty environment and execve()s it without searching
     // PATH, so a compile/run command such as "g++ ..." or "python3 ..." would fail with ENOENT:
     // resolve the program on the judger's PATH, and give the box a minimal environment (the
-    // compilers and runtimes themselves look up their helpers on PATH), like the native sandbox.
+    // compilers and runtimes themselves look up their helpers on PATH), like the native sandbox,
+    // with the options that fit a run's JVM to its limits (see JavaOptions).
     Map<String, String> environment = boxEnvironment(System.getenv());
+    if (!isCompilation) {
+      environment.put(JavaOptions.ENVIRONMENT_VARIABLE, JavaOptions.forRun(memoryLimitKb));
+    }
     String searchPath = environment.get("PATH");
     for (Map.Entry<String, String> variable : environment.entrySet()) {
       command.add("--env=" + variable.getKey() + "=" + variable.getValue());
