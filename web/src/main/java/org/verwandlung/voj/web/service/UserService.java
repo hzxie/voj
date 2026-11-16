@@ -22,6 +22,8 @@ import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Calendar;
@@ -1136,7 +1138,9 @@ public class UserService {
     if (email.equals(oldEmail)) {
       return false;
     }
-    Date now = new Date();
+    // Whole seconds, which the column holds as they are: MySQL rounds a fraction (MariaDB drops
+    // it), so a token expired now could otherwise stay valid for up to half a second.
+    Date now = Date.from(Instant.now().truncatedTo(ChronoUnit.SECONDS));
     if (oldEmail != null) {
       emailValidationMapper.expireEmailValidation(oldEmail, DigestUtils.getGuid(), now);
     }
