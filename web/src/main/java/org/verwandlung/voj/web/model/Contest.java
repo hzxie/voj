@@ -161,13 +161,13 @@ public class Contest {
   }
 
   /**
-   * Gets the ranking mode of the contest, derived from its scoring rule: IOI contests are ranked in
-   * the OI style (by score), ICPC contests in the ACM style (by solved problems and penalty time).
+   * Checks whether the contest uses the IOI scoring rule (ranked by score) rather than the ICPC one
+   * (ranked by solved problems and penalty time).
    *
-   * @return the ranking mode of the contest (ACM / OI)
+   * @return whether the contest uses the IOI scoring rule
    */
-  public String getContestMode() {
-    return SCORING_IOI.equals(scoring) ? "OI" : "ACM";
+  public boolean isIoi() {
+    return SCORING_IOI.equals(scoring);
   }
 
   /* (non-Javadoc)
@@ -192,8 +192,8 @@ public class Contest {
    */
   public String toString() {
     return String.format(
-        "Contest [ID=%d, Name=%s, StartTime=%s, EndTime=%s, Mode=%s]",
-        new Object[] {contestId, contestName, startTime, endTime, getContestMode()});
+        "Contest [ID=%d, Name=%s, StartTime=%s, EndTime=%s, Scoring=%s]",
+        new Object[] {contestId, contestName, startTime, endTime, scoring});
   }
 
   /**

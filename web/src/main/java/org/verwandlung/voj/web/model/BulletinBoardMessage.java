@@ -211,15 +211,6 @@ public class BulletinBoardMessage implements Serializable {
     this.status = status;
   }
 
-  /** The publication status: visible to everyone. */
-  public static final String STATUS_PUBLISHED = "PUBLISHED";
-
-  /** The publication status: not yet published, visible only to administrators. */
-  public static final String STATUS_DRAFT = "DRAFT";
-
-  /** The publication status: withdrawn, hidden from everyone. */
-  public static final String STATUS_HIDDEN = "HIDDEN";
-
   /** The unique identifier of the bulletin board message. */
   private long messageId;
 
@@ -239,7 +230,7 @@ public class BulletinBoardMessage implements Serializable {
   private boolean pinned;
 
   /** The publication status of the bulletin board message (PUBLISHED / DRAFT / HIDDEN). */
-  private String status = STATUS_PUBLISHED;
+  private String status = PublicationStatus.PUBLISHED;
 
   /** The creation time of the bulletin board message. */
   private Date messageCreateTime;

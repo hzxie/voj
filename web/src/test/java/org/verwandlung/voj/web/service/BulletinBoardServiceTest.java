@@ -29,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import org.verwandlung.voj.web.mapper.BulletinBoardMessageMapper;
 import org.verwandlung.voj.web.model.BulletinBoardMessage;
+import org.verwandlung.voj.web.model.PublicationStatus;
 
 /**
  * The test class for BulletinBoardService.
@@ -90,7 +91,7 @@ public class BulletinBoardServiceTest {
     BulletinBoardMessage stored = bulletinBoardService.getBulletinBoardMessages(0, 1).get(0);
     Assertions.assertEquals(1000, stored.getMessageAuthorId());
     Assertions.assertTrue(stored.isPinned());
-    Assertions.assertEquals(BulletinBoardMessage.STATUS_PUBLISHED, stored.getStatus());
+    Assertions.assertEquals(PublicationStatus.PUBLISHED, stored.getStatus());
   }
 
   /** Test case: tests the editBulletinBoardMessage(...) method. Test data: an existing message edited to be pinned and hidden. Expected: the pin and status are persisted. */
@@ -100,12 +101,12 @@ public class BulletinBoardServiceTest {
 
     java.util.Map<String, Boolean> result =
         bulletinBoardService.editBulletinBoardMessage(
-            created.getMessageId(), "Title", "Body", true, BulletinBoardMessage.STATUS_HIDDEN);
+            created.getMessageId(), "Title", "Body", true, PublicationStatus.HIDDEN);
     Assertions.assertTrue(result.get("isSuccessful"));
 
     BulletinBoardMessage stored = bulletinBoardService.getBulletinBoardMessage(created.getMessageId());
     Assertions.assertTrue(stored.isPinned());
-    Assertions.assertEquals(BulletinBoardMessage.STATUS_HIDDEN, stored.getStatus());
+    Assertions.assertEquals(PublicationStatus.HIDDEN, stored.getStatus());
   }
 
   /** Creates a bulletin board message through the Mapper in order to test the read logic of the Service. */

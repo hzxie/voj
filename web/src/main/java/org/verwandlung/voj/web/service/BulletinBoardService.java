@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.verwandlung.voj.web.mapper.BulletinBoardMessageMapper;
 import org.verwandlung.voj.web.model.BulletinBoardMessage;
+import org.verwandlung.voj.web.model.PublicationStatus;
 
 import java.util.Date;
 import java.util.HashMap;
@@ -95,7 +96,7 @@ public class BulletinBoardService {
           new BulletinBoardMessage(messageTitle, messageBody, new Date());
       message.setMessageAuthorId(authorId);
       message.setPinned(isPinned);
-      message.setStatus(normalizeStatus(status));
+      message.setStatus(PublicationStatus.normalize(status));
       bulletinBoardMessageMapper.createBulletinBoardMessage(message);
     }
     return result;
@@ -125,24 +126,10 @@ public class BulletinBoardService {
       message.setMessageTitle(messageTitle);
       message.setMessageBody(messageBody);
       message.setPinned(isPinned);
-      message.setStatus(normalizeStatus(status));
+      message.setStatus(PublicationStatus.normalize(status));
       bulletinBoardMessageMapper.updateBulletinBoardMessage(message);
     }
     return result;
-  }
-
-  /**
-   * Normalizes a publication status string, falling back to {@code PUBLISHED} for unknown values.
-   *
-   * @param status - the raw status string supplied by the caller
-   * @return one of {@code PUBLISHED}, {@code DRAFT}, or {@code HIDDEN}
-   */
-  private String normalizeStatus(String status) {
-    if (BulletinBoardMessage.STATUS_DRAFT.equals(status)
-        || BulletinBoardMessage.STATUS_HIDDEN.equals(status)) {
-      return status;
-    }
-    return BulletinBoardMessage.STATUS_PUBLISHED;
   }
 
   /**

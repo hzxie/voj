@@ -17,9 +17,10 @@
 package org.verwandlung.voj.web.model;
 
 /**
- * The shared publication status for content that can be published, drafted, or withdrawn (problems,
- * contests, bulletin board messages). Stored as a short string in the corresponding {@code *_status}
- * column; only {@link #PUBLISHED} content is visible to the public.
+ * The publication status of problems, contests and bulletin board messages, stored as a short string
+ * in their {@code *_status} column. Only {@link #PUBLISHED} content is public; {@link #DRAFT} and
+ * {@link #HIDDEN} content is visible to administrators only. The two behave the same and differ only
+ * in the label the administration console shows (not published yet / withdrawn).
  *
  * @author Haozhe Xie
  */
@@ -27,10 +28,10 @@ public final class PublicationStatus {
   /** Visible to everyone. */
   public static final String PUBLISHED = "PUBLISHED";
 
-  /** Not yet published, visible only to administrators. */
+  /** Not published yet: visible to administrators only. */
   public static final String DRAFT = "DRAFT";
 
-  /** Withdrawn, hidden from everyone. */
+  /** Withdrawn after publication: visible to administrators only. */
   public static final String HIDDEN = "HIDDEN";
 
   /**

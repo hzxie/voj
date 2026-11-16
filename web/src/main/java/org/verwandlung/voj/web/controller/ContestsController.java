@@ -227,25 +227,19 @@ public class ContestsController {
     User currentUser = HttpSessionParser.getCurrentUser();
     Contest contest = getVisibleContest(contestId, currentUser);
     Date currentTime = new Date();
-    if (contest.getStartTime().after(currentTime)
-        || !(contest.getContestMode().equals("OI") || contest.getContestMode().equals("ACM"))) {
+    if (contest.getStartTime().after(currentTime)) {
       throw new ResourceNotFoundException();
     }
 
     List<Long> problemIdList = JsonUtils.toList(contest.getProblems(), Long.class);
     List<Problem> problems = contestService.getProblemsOfContests(problemIdList);
-    ModelAndView view = null;
-    Map<String, Object> result = null;
-
-    if (contest.getContestMode().equals("OI")) {
-      view = new ModelAndView("pages/contests/leaderboard-oi");
-      result = contestService.getLeaderBoardForOi(contestId, currentUser);
-    } else if (contest.getContestMode().equals("ACM")) {
-      view = new ModelAndView("pages/contests/leaderboard-acm");
-      result = contestService.getLeaderBoardForAcm(contestId, currentUser);
-    } else {
-      throw new ResourceNotFoundException();
-    }
+    ModelAndView view =
+        new ModelAndView(
+            contest.isIoi() ? "pages/contests/leaderboard-oi" : "pages/contests/leaderboard-acm");
+    Map<String, Object> result =
+        contest.isIoi()
+            ? contestService.getLeaderBoardForOi(contestId, currentUser)
+            : contestService.getLeaderBoardForAcm(contestId, currentUser);
     List<ContestContestant> contestants = (List<ContestContestant>) result.get("contestants");
     Map<Long, Map<Long, Submission>> submissions =
         (Map<Long, Map<Long, Submission>>) result.get("submissions");

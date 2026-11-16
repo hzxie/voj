@@ -159,7 +159,7 @@ public class ContestMapperTest {
 
     List<Contest> contests = contestMapper.getContests("Contest", false, 0, 1);
     Assertions.assertEquals("ICPC", contests.get(0).getScoring());
-    Assertions.assertEquals("ACM", contests.get(0).getContestMode());
+    Assertions.assertFalse(contests.get(0).isIoi());
   }
 
   /**

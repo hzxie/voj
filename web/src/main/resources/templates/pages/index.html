@@ -74,7 +74,7 @@
                                 <div class="vw-minw0">
                                     <div class="vw-head vw-contest-name" th:text="${contest.contestName}">Contest</div>
                                     <div class="vw-muted vw-contest-meta">
-                                        <span th:text="${contest.contestMode}">Mode</span> &middot;
+                                        <span th:text="${contest.scoring}">Mode</span> &middot;
                                         <span th:text="${@dateFormatter.dateTimeLongMedium(contest.startTime, language)}" th:data-time="${contest.startTime?.time}" data-format="datetime">time</span>
                                     </div>
                                 </div>

@@ -76,7 +76,7 @@ public class ContestServiceTest {
   public void testGetContestExists() {
     Contest contest = contestService.getContest(1);
     Assertions.assertNotNull(contest);
-    Assertions.assertEquals("OI", contest.getContestMode());
+    Assertions.assertTrue(contest.isIoi());
   }
 
   /** Test case: tests the getContest(long) method. Test data: a non-existing contest identifier. Expected: a null reference. */

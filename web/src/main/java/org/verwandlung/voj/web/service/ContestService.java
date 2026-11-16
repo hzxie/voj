@@ -714,7 +714,7 @@ public class ContestService {
    * @return the best-ranked contestants, best first
    */
   public List<ContestContestant> getStandings(Contest contest, User viewer, int limit) {
-    if ("OI".equals(contest.getContestMode())) {
+    if (contest.isIoi()) {
       List<ContestContestant> contestants =
           contestContestantMapper.getContestantsOfContestForOi(
               contest.getContestId(), getScoreboardFrozenAt(contest, viewer), 0, limit);

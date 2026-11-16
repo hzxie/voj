@@ -28,7 +28,7 @@
                             isReady=${currentTime.before(contest.startTime)}"
                    th:href="@{/contest/{id}(id=${contest.contestId})}">
                     <div class="vw-contest-cardhead">
-                        <span class="vw-ctype" th:classappend="${contest.contestMode == 'ACM'} ? 'vw-ctype-acm' : 'vw-ctype-oi'" th:text="${contest.contestMode}">ACM</span>
+                        <span class="vw-ctype" th:classappend="${contest.ioi} ? 'vw-ctype-oi' : 'vw-ctype-acm'" th:text="${contest.scoring}">ACM</span>
                         <span class="vw-ctitle" th:text="${contest.contestName}">Contest</span>
                         <div class="vw-header-spacer"></div>
                         <span class="vw-cstatus" th:classappend="${isReady} ? 'vw-cstatus-ready' : 'vw-cstatus-live'">
@@ -62,7 +62,7 @@
                         <a class="vw-table-row" th:each="contest : ${pastContests}"
                            th:with="durMin=${(contest.endTime.time - contest.startTime.time) / 60000}"
                            th:href="@{/contest/{id}(id=${contest.contestId})}">
-                            <div><span class="vw-ctype-sm" th:classappend="${contest.contestMode == 'ACM'} ? 'vw-ctype-acm' : 'vw-ctype-oi'" th:text="${contest.contestMode}">OI</span></div>
+                            <div><span class="vw-ctype-sm" th:classappend="${contest.ioi} ? 'vw-ctype-oi' : 'vw-ctype-acm'" th:text="${contest.scoring}">OI</span></div>
                             <div class="vw-cell-title vw-ellipsis" th:text="${contest.contestName}">Contest</div>
                             <div class="vw-muted2"><span th:text="${@dateFormatter.dateShort(contest.startTime, language)}" th:data-time="${contest.startTime.time}" data-format="date-short">date</span> · <span th:text="|${durMin / 60}h|">0h</span></div>
                             <div class="vw-muted2" th:text="${entrantsOfContests.get(contest.contestId)}">0</div>
@@ -88,7 +88,7 @@
             }
         });
         function displayPastContests(contests, entrants, problemCount) {
-            var typeClass = function(mode){ return mode === 'ACM' ? 'vw-ctype-acm' : 'vw-ctype-oi'; },
+            var typeClass = function(scoring){ return scoring === 'IOI' ? 'vw-ctype-oi' : 'vw-ctype-acm'; },
                 added     = [];
             for ( var i = 0; i < contests.length; ++ i ) {
                 var c = contests[i];
@@ -99,7 +99,7 @@
                     hours  = Math.floor(durMin / 60),
                     cid    = c['contestId'];
                 var html = '<a class="vw-table-row" href="' + [[@{/contest/}]] + cid + '">' +
-                    '<div><span class="vw-ctype-sm ' + typeClass(c['contestMode']) + '">' + escapeHtml(c['contestMode']) + '</span></div>' +
+                    '<div><span class="vw-ctype-sm ' + typeClass(c['scoring']) + '">' + escapeHtml(c['scoring']) + '</span></div>' +
                     '<div class="vw-cell-title vw-ellipsis">' + escapeHtml(c['contestName']) + '</div>' +
                     '<div class="vw-muted2">' + formatDateTime(c['startTime'], 'date-short') + ' · ' + hours + 'h</div>' +
                     '<div class="vw-muted2">' + (entrants[cid] || 0) + '</div>' +
