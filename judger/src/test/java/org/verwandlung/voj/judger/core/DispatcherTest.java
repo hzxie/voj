@@ -33,9 +33,12 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.apache.ibatis.exceptions.PersistenceException;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -45,8 +48,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.mybatis.spring.MyBatisSystemException;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.jdbc.CannotGetJdbcConnectionException;
 
 import org.verwandlung.voj.judger.application.ApplicationDispatcher;
 import org.verwandlung.voj.judger.model.Problem;
@@ -102,20 +107,27 @@ public class DispatcherTest {
 
   /**
    * Test case: judgings that fail for the judger or its environment: a failure of the judger, and
-   * the database unreachable as the verdict is recorded. Expected result: each releases its
-   * submission (to the end of the queue), counting nothing on it.
+   * the database unreachable as the verdict is recorded, also as MyBatis and Spring hand on a
+   * connection that could not be had. Expected result: each releases its submission (to the end of
+   * the queue), counting nothing on it.
    */
   @Test
   public void testAFailureOfTheJudgerReleasesTheSubmission() throws Exception {
     doThrow(FailedJudging.ofJudger("The judger could not download the test data.", null))
         .doThrow(new DataAccessResourceFailureException("database down"))
+        .doThrow(
+            new MyBatisSystemException(
+                new PersistenceException(
+                    new CannotGetJdbcConnectionException(
+                        "Failed to obtain JDBC Connection", new SQLException("wait millis")))))
         .when(judge)
         .judge(any(), any());
 
     dispatcher.judgeNextSubmission(LANGUAGES);
     dispatcher.judgeNextSubmission(LANGUAGES);
+    dispatcher.judgeNextSubmission(LANGUAGES);
 
-    verify(applicationDispatcher, times(2))
+    verify(applicationDispatcher, times(3))
         .releaseSubmission(argThat(s -> s.getClaimToken() == CLAIM_TOKEN));
     verify(applicationDispatcher, never()).requeueSubmission(any(), anyString());
     verify(applicationDispatcher, never()).handBackSubmission(any());

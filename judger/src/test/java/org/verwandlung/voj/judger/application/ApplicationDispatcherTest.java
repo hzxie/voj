@@ -25,8 +25,14 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.sql.SQLDataException;
+import java.sql.SQLException;
+import java.sql.SQLNonTransientConnectionException;
+import java.sql.SQLRecoverableException;
 import java.util.List;
 import java.util.Map;
+
+import org.apache.ibatis.exceptions.PersistenceException;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,7 +43,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.mybatis.spring.MyBatisExceptionTranslator;
+import org.mybatis.spring.MyBatisSystemException;
+import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataAccessResourceFailureException;
+import org.springframework.jdbc.CannotGetJdbcConnectionException;
+import org.springframework.jdbc.support.SQLStateSQLExceptionTranslator;
 
 import org.verwandlung.voj.judger.core.CheckpointResult;
 import org.verwandlung.voj.judger.core.CompileResult;
@@ -310,6 +321,46 @@ public class ApplicationDispatcherTest {
     Assertions.assertTrue(
         ApplicationDispatcher.isUnreachable(
             new org.springframework.jdbc.CannotGetJdbcConnectionException("no connection")));
+  }
+
+  /**
+   * Test case: tests the isUnreachable method. Test data: the failures of a statement as MyBatis and
+   * Spring hand them to the judger: no connection to be had from the pool (which MyBatis wraps, and
+   * Spring then translates to an uncategorized failure), a connection that broke, and a value the
+   * column does not take. Expected result: the database is unreachable for the first two only.
+   */
+  @Test
+  public void testIsUnreachableLooksThroughWrappedFailures() {
+    MyBatisExceptionTranslator translator =
+        new MyBatisExceptionTranslator(SQLStateSQLExceptionTranslator::new, false);
+
+    DataAccessException noConnection =
+        translator.translateExceptionIfPossible(
+            new PersistenceException(
+                "Error querying database.",
+                new CannotGetJdbcConnectionException(
+                    "Failed to obtain JDBC Connection",
+                    new SQLException("wait millis 5000, active 4, maxActive 4"))));
+    Assertions.assertInstanceOf(MyBatisSystemException.class, noConnection);
+    Assertions.assertTrue(ApplicationDispatcher.isUnreachable(noConnection));
+    Assertions.assertTrue(
+        ApplicationDispatcher.isUnreachable(
+            new MyBatisSystemException(
+                new PersistenceException(
+                    new SQLNonTransientConnectionException("Communications link failure")))));
+    Assertions.assertTrue(
+        ApplicationDispatcher.isUnreachable(
+            new MyBatisSystemException(
+                new PersistenceException(new SQLRecoverableException("Connection reset")))));
+
+    Assertions.assertFalse(
+        ApplicationDispatcher.isUnreachable(
+            translator.translateExceptionIfPossible(
+                new PersistenceException(
+                    new SQLDataException("Data too long for column", "22001")))));
+    Assertions.assertFalse(
+        ApplicationDispatcher.isUnreachable(
+            new MyBatisSystemException(new PersistenceException(new IllegalStateException()))));
   }
 
   /**

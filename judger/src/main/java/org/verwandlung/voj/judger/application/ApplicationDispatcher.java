@@ -17,6 +17,9 @@
 package org.verwandlung.voj.judger.application;
 
 import java.security.SecureRandom;
+import java.sql.SQLNonTransientConnectionException;
+import java.sql.SQLRecoverableException;
+import java.sql.SQLTransientException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -396,14 +399,29 @@ public class ApplicationDispatcher {
   /**
    * Tells a failure of the database that a statement may get over if tried again (the database is
    * unreachable, a connection broke or timed out, a lock could not be had) from one it may not (e.g.
-   * a value the column does not take), which may be the doing of what is recorded.
+   * a value the column does not take), which may be the doing of what is recorded. A connection
+   * that could not be had comes wrapped (by MyBatis, which Spring then translates to an
+   * uncategorized failure), so the causes of a failure are looked through too.
    *
    * @param ex - the failure
    * @return whether the database failed for now
    */
   public static boolean isUnreachable(DataAccessException ex) {
-    return !(ex instanceof NonTransientDataAccessException)
-        || ex instanceof DataAccessResourceFailureException;
+    if (!(ex instanceof NonTransientDataAccessException)) {
+      return true;
+    }
+    // Bounded, in case the causes form a cycle.
+    Throwable cause = ex;
+    for (int depth = 0; cause != null && depth < MAX_CAUSE_DEPTH; ++depth) {
+      if (cause instanceof DataAccessResourceFailureException
+          || cause instanceof SQLTransientException
+          || cause instanceof SQLRecoverableException
+          || cause instanceof SQLNonTransientConnectionException) {
+        return true;
+      }
+      cause = cause.getCause();
+    }
+    return false;
   }
 
   /** Sends the progress of the judgings to the web application. */
@@ -423,6 +441,9 @@ public class ApplicationDispatcher {
 
   /** How many times a write of a judging is tried before a failure to do it is given up. */
   static final int WRITE_TRIES = 3;
+
+  /** How deep {@link #isUnreachable} looks into the causes of a failure. */
+  private static final int MAX_CAUSE_DEPTH = 32;
 
   /** How long (ms) a failed statement waits before it is tried again; doubles each time. */
   private final long retryDelay;
