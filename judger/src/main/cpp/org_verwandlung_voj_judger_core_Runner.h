@@ -15,6 +15,14 @@ extern "C" {
 JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntimeResult
   (JNIEnv *, jobject, jstring, jstring, jstring, jstring, jstring, jstring, jint, jint, jboolean, jint, jstring);
 
+/*
+ * Class:     org_verwandlung_voj_judger_core_Runner
+ * Method:    closeSandboxSession
+ * Signature: ()V
+ */
+JNIEXPORT void JNICALL Java_org_verwandlung_voj_judger_core_Runner_closeSandboxSession
+  (JNIEnv *, jclass);
+
 #ifdef __cplusplus
 }
 #endif

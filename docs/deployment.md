@@ -694,7 +694,8 @@ Requirements for that account:
   on as a batch job*, or `secedit`.
 - It must be able to have a **user profile**: the judger logs the account on
   and loads its profile (with `LoadUserProfile`, which creates it the first
-  time) once, at the first compilation or run, and keeps both until it exits.
+  time) once, at the first compilation or run, and keeps both until it exits
+  (then it unloads the profile).
 - Keep it a plain member of *Users* (no admin rights). It only needs to enter,
   read and write the submission's program directory while compiling (the
   compiler writes the program and, for Go, its build cache there), read and

@@ -631,6 +631,21 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
 }
 
 /**
+ * JNI call entry point.
+ * Closes the sandbox account's logon session, if it is open (see closeSandboxSession): unloads its
+ * profile, which Windows would otherwise keep loaded once the judger has exited, and revokes the
+ * access to the judger's window station it gave the session. Called as the judger exits.
+ * @param  jniEnv - a reference to the JNI runtime environment
+ * @param  jClass - the calling Java class
+ */
+JNIEXPORT void JNICALL Java_org_verwandlung_voj_judger_core_Runner_closeSandboxSession(
+    JNIEnv* jniEnv, jclass jClass) {
+    AcquireSRWLockExclusive(&sandboxSessionLock);
+    closeSandboxSession();
+    ReleaseSRWLockExclusive(&sandboxSessionLock);
+}
+
+/**
  * Redirects the child process's I/O.
  * @param inputFilePath  - the input file path
  * @param outputFilePath - the output file path

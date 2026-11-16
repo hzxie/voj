@@ -274,10 +274,22 @@ public class Runner implements SandboxRunner {
   private static Throwable loadNativeLibrary() {
     try {
       NativeLibraryLoader.loadLibrary("JudgerCore");
+      if (System.getProperty("os.name").contains("Windows")) {
+        Runtime.getRuntime()
+            .addShutdownHook(new Thread(Runner::closeSandboxSession, "voj-sandbox-session"));
+      }
       return null;
     } catch (Throwable ex) {
       LOGGER.error("Failed to load the native sandbox library JudgerCore", ex);
       return ex;
     }
   }
+
+  /**
+   * Closes the sandbox account's logon session (Windows), which the native runner opens at the
+   * first compilation or run and keeps: unloads the account's profile, which Windows would
+   * otherwise keep loaded after the judger exits, and takes back the access to the judger's window
+   * station it gave the session. Called as the judger exits.
+   */
+  private static native void closeSandboxSession();
 }
