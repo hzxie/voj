@@ -16,9 +16,11 @@
  */
 package org.verwandlung.voj.judger.mapper;
 
+import java.util.Collection;
 import java.util.List;
 
 import org.apache.ibatis.annotations.One;
+import org.apache.ibatis.annotations.Options;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Result;
 import org.apache.ibatis.annotations.Results;
@@ -35,6 +37,14 @@ import org.verwandlung.voj.judger.model.Submission;
  * @author Haozhe Xie
  */
 public interface SubmissionMapper {
+  /**
+   * How long (seconds) a statement of a judging that holds a submission may take. The JDBC
+   * driver's socket timeout ends a statement on a connection that went silent (e.g. a half-open
+   * one); this ends one that waits on a lock, so that neither the renewals of the lease nor the
+   * outcome of a judging wait for longer than its lease.
+   */
+  int STATEMENT_TIMEOUT_SECONDS = 10;
+
   /**
    * Gets a submission object by its unique identifier.
    *
@@ -57,7 +67,7 @@ public interface SubmissionMapper {
         one = @One(select = "org.verwandlung.voj.judger.mapper.LanguageMapper.getLanguageUsingId")),
     @Result(property = "submitTime", column = "submission_submit_time"),
     @Result(property = "executeTime", column = "submission_execute_time"),
-    @Result(property = "judgeAttempts", column = "submission_judge_attempts"),
+    @Result(property = "interruptions", column = "submission_judge_attempts"),
     @Result(property = "usedTime", column = "submission_used_time"),
     @Result(property = "usedMemory", column = "submission_used_memory"),
     @Result(property = "judgeResultSlug", column = "submission_judge_result"),
@@ -73,8 +83,13 @@ public interface SubmissionMapper {
    * queued first (submitted or rejudged) and that no judging holds, i.e. none claimed it, or the
    * lease of the one that did expired (by the database's clock). A plain read, which locks
    * nothing: several judgers may get the same submission, and the first to claim it judges it.
+   * The index of the judging queue (judge result, queued time, language, lease) answers it alone:
+   * the pending submissions in other languages, or held by a judging, are skipped in the index,
+   * without reading their rows.
    *
    * @param languageIds - the unique identifiers of the languages, not empty
+   * @param skippedProblemIds - the unique identifiers of the problems whose submissions to leave to
+   *     other judgers for now (empty: none)
    * @return the unique identifier of the submission, or null if there is none
    */
   @Select({
@@ -84,18 +99,29 @@ public interface SubmissionMapper {
     " <foreach item='languageId' collection='languageIds' open='(' separator=',' close=')'>",
     "#{languageId}</foreach>",
     " AND (submission_lease_expiry_time IS NULL OR submission_lease_expiry_time &lt; NOW())",
-    " ORDER BY submission_queued_time, submission_id LIMIT 1",
+    " <if test='!skippedProblemIds.isEmpty()'>AND problem_id NOT IN",
+    " <foreach item='problemId' collection='skippedProblemIds' open='(' separator=','",
+    " close=')'>#{problemId}</foreach></if>",
+    " ORDER BY submission_queued_time LIMIT 1",
     "</script>"
   })
-  Long getNextSubmissionId(@Param("languageIds") List<Integer> languageIds);
+  Long getNextSubmissionId(
+      @Param("languageIds") List<Integer> languageIds,
+      @Param("skippedProblemIds") Collection<Long> skippedProblemIds);
 
   /**
    * Claims a pending submission that no judging holds (see {@link #getNextSubmissionId}) for a
-   * judging, which counts as an attempt to judge it: sets the claim token, which identifies the
-   * judging, the start time of the judging, the expiry of its lease, which it renews while it runs
-   * (see {@link #renewLease}), and the judger. The times are those of the database's clock. One
-   * statement, by primary key, that checks the submission again: of the judgers that try to claim
-   * a submission at the same time, one does.
+   * judging: sets the claim token, which identifies the judging, the start time of the judging,
+   * the expiry of its lease, which it renews while it runs (see {@link #renewLease}), and the
+   * judger. The times are those of the database's clock. One statement, by primary key, that
+   * checks the submission again: of the judgers that try to claim a submission at the same time,
+   * one does.
+   *
+   * <p>A submission that still has a claim token was held by a judging whose lease expired: its
+   * judger stopped (or was killed, or lost the database) while judging it, so that judging was
+   * interrupted, which is counted here (the count is set first, while the claim token is still the
+   * old one). A submission a judging released (see {@link #releaseSubmission}), or that was
+   * rejudged, has none, so that is not counted.
    *
    * @param submissionId - the unique identifier of the submission
    * @param claimToken - the claim token of the judging, a random number
@@ -105,10 +131,12 @@ public interface SubmissionMapper {
    *     more)
    */
   @Update(
-      "UPDATE voj_submissions SET submission_claim_token = #{claimToken},"
+      "UPDATE voj_submissions SET"
+          + " submission_judge_attempts ="
+          + " submission_judge_attempts + (submission_claim_token IS NOT NULL),"
+          + " submission_claim_token = #{claimToken},"
           + " submission_execute_time = NOW(),"
           + " submission_lease_expiry_time = NOW() + INTERVAL #{leaseSeconds} SECOND,"
-          + " submission_judge_attempts = submission_judge_attempts + 1,"
           + " judger_uid = #{judgerUid}"
           + " WHERE submission_id = #{submissionId} AND submission_judge_result = 'PD'"
           + " AND (submission_lease_expiry_time IS NULL OR submission_lease_expiry_time < NOW())")
@@ -134,10 +162,30 @@ public interface SubmissionMapper {
           + " SET submission_lease_expiry_time = NOW() + INTERVAL #{leaseSeconds} SECOND"
           + " WHERE submission_id = #{submissionId} AND submission_judge_result = 'PD'"
           + " AND submission_claim_token = #{claimToken}")
+  @Options(timeout = STATEMENT_TIMEOUT_SECONDS)
   int renewLease(
       @Param("submissionId") long submissionId,
       @Param("claimToken") long claimToken,
       @Param("leaseSeconds") long leaseSeconds);
+
+  /**
+   * Releases a submission that a judging could not judge for a reason of its judger's own (see
+   * {@code Dispatcher}): it is pending and held by no judging again, at its place in the queue, so
+   * that the next judger that looks takes it. It is not counted as an interrupted judging.
+   *
+   * @param submissionId - the unique identifier of the submission
+   * @param claimToken - the claim token of the judging
+   * @return 1 if the submission was released, 0 if the judging was superseded meanwhile
+   */
+  @Update(
+      "UPDATE voj_submissions SET submission_claim_token = NULL,"
+          + " submission_lease_expiry_time = NULL, submission_execute_time = NULL,"
+          + " judger_uid = NULL"
+          + " WHERE submission_id = #{submissionId} AND submission_judge_result = 'PD'"
+          + " AND submission_claim_token = #{claimToken}")
+  @Options(timeout = STATEMENT_TIMEOUT_SECONDS)
+  int releaseSubmission(
+      @Param("submissionId") long submissionId, @Param("claimToken") long claimToken);
 
   /**
    * Records the verdict of a judging: only the result columns (never e.g. the code), and only if
@@ -152,5 +200,6 @@ public interface SubmissionMapper {
           + " submission_judge_result = #{judgeResultSlug}, submission_judge_log = #{judgeLog}"
           + " WHERE submission_id = #{submissionId} AND submission_judge_result = 'PD'"
           + " AND submission_claim_token = #{claimToken}")
+  @Options(timeout = STATEMENT_TIMEOUT_SECONDS)
   int updateSubmissionResult(Submission submission);
 }

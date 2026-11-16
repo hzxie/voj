@@ -180,22 +180,23 @@ public class Submission implements Serializable {
   }
 
   /**
-   * Gets how many judgings have taken this submission since it was queued, the current one
-   * included.
+   * Gets how many judgings of this submission were interrupted since it was queued: their judger
+   * stopped (or was killed, or lost the database) while it held the submission, until its lease
+   * expired.
    *
-   * @return the number of judgings that have taken this submission
+   * @return the number of interrupted judgings of this submission
    */
-  public int getJudgeAttempts() {
-    return judgeAttempts;
+  public int getInterruptions() {
+    return interruptions;
   }
 
   /**
-   * Sets how many judgings have taken this submission since it was queued.
+   * Sets how many judgings of this submission were interrupted since it was queued.
    *
-   * @param judgeAttempts - the number of judgings that have taken this submission
+   * @param interruptions - the number of interrupted judgings of this submission
    */
-  public void setJudgeAttempts(int judgeAttempts) {
-    this.judgeAttempts = judgeAttempts;
+  public void setInterruptions(int interruptions) {
+    this.interruptions = interruptions;
   }
 
   /**
@@ -385,8 +386,8 @@ public class Submission implements Serializable {
   /** The time the judging started. */
   private Date executeTime;
 
-  /** How many judgings have taken this submission since it was queued. */
-  private int judgeAttempts;
+  /** How many judgings of this submission were interrupted since it was queued. */
+  private int interruptions;
 
   /**
    * The claim token of the judging of this submission, which identifies it (see {@code

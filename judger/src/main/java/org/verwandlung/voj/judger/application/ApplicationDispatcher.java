@@ -17,14 +17,19 @@
 package org.verwandlung.voj.judger.application;
 
 import java.security.SecureRandom;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataAccessException;
+import org.springframework.dao.DataAccessResourceFailureException;
+import org.springframework.dao.NonTransientDataAccessException;
 import org.springframework.stereotype.Component;
 
 import org.verwandlung.voj.judger.mapper.JudgeResultMapper;
@@ -56,14 +61,17 @@ public class ApplicationDispatcher {
    * judging they supersede stops, without overwriting the new verdict with a stale one.
    *
    * @param languageIds - the unique identifiers of the languages this judger supports, not empty
+   * @param skippedProblemIds - the unique identifiers of the problems whose submissions to leave to
+   *     other judgers for now (empty: none)
    * @param leaseSeconds - how long the lease of the judging lasts, in seconds
    * @return the submission, with the claim token of the judging, or {@code null} if there is none
    *     to judge
    */
-  public Submission claimSubmission(List<Integer> languageIds, long leaseSeconds) {
-    for (Long submissionId = submissionMapper.getNextSubmissionId(languageIds);
+  public Submission claimSubmission(
+      List<Integer> languageIds, Collection<Long> skippedProblemIds, long leaseSeconds) {
+    for (Long submissionId = submissionMapper.getNextSubmissionId(languageIds, skippedProblemIds);
         submissionId != null;
-        submissionId = submissionMapper.getNextSubmissionId(languageIds)) {
+        submissionId = submissionMapper.getNextSubmissionId(languageIds, skippedProblemIds)) {
       // Another judger may have claimed the submission since it was read: then the next one.
       long claimToken = RANDOM.nextLong();
       if (submissionMapper.claimSubmission(submissionId, claimToken, getJudgerUid(), leaseSeconds)
@@ -90,6 +98,20 @@ public class ApplicationDispatcher {
   public boolean renewLease(Submission submission, long leaseSeconds) {
     return submissionMapper.renewLease(
             submission.getSubmissionId(), submission.getClaimToken(), leaseSeconds)
+        == 1;
+  }
+
+  /**
+   * Releases a submission that a judging could not judge for a reason of its judger's own (see
+   * {@code Dispatcher}), so that another judger takes it at once, without counting an interrupted
+   * judging. A judging that was superseded meanwhile releases nothing.
+   *
+   * @param submission - the submission, claimed by {@link #claimSubmission}
+   * @return whether the submission was released
+   */
+  public boolean releaseSubmission(Submission submission) {
+    return submissionMapper.releaseSubmission(
+            submission.getSubmissionId(), submission.getClaimToken())
         == 1;
   }
 
@@ -253,12 +275,18 @@ public class ApplicationDispatcher {
    * @return the full name of the judging result
    */
   private String getRuntimeResultName(String runtimeResultSlug) {
-    JudgeResult judgeResult = judgeResultMapper.getJudgeResultUsingSlug(runtimeResultSlug);
-
-    if (judgeResult == null) {
-      return "System Error";
+    // The judge results are reference data, read once: a judging reads no more from the database
+    // than it must, so that a short outage of it does not stop the judging of every checkpoint.
+    String runtimeResultName = runtimeResultNames.get(runtimeResultSlug);
+    if (runtimeResultName == null) {
+      JudgeResult judgeResult = judgeResultMapper.getJudgeResultUsingSlug(runtimeResultSlug);
+      if (judgeResult == null) {
+        return "System Error";
+      }
+      runtimeResultName = judgeResult.getJudgeResultName();
+      runtimeResultNames.put(runtimeResultSlug, runtimeResultName);
     }
-    return judgeResult.getJudgeResultName();
+    return runtimeResultName;
   }
 
   /**
@@ -380,6 +408,12 @@ public class ApplicationDispatcher {
    * claimed by this judging (see {@link #claimSubmission}); otherwise the verdict is stale and
    * dropped.
    *
+   * <p>A statement that fails for now (e.g. while the database fails over, or a connection broke,
+   * see {@link #isUnreachable}) is tried again, {@value #UPDATE_TRIES} times in all, a little later each time, which is still well within
+   * the lease of the judging: a verdict is not lost to a short outage. (A statement that did change
+   * the submission though its answer was lost finds it judged when tried again, and reports the
+   * judging superseded.)
+   *
    * @param submission - the submission, claimed by {@link #claimSubmission}
    * @param usedTime - the running time of the submission (sum of all times)
    * @param usedMemory - the memory used by the submission (maximum memory usage)
@@ -387,6 +421,7 @@ public class ApplicationDispatcher {
    * @param judgeResult - the judging result (JudgeResultSlug)
    * @param log - the judging log
    * @return whether the verdict was recorded; if not, the judging was superseded
+   * @throws DataAccessException if the verdict cannot be recorded, as the database is unreachable
    */
   private boolean updateSubmission(
       Submission submission,
@@ -401,7 +436,7 @@ public class ApplicationDispatcher {
     submission.setJudgeResultSlug(judgeResult);
     submission.setJudgeLog(log);
 
-    if (submissionMapper.updateSubmissionResult(submission) == 0) {
+    if (updateSubmissionResult(submission) == 0) {
       LOGGER.warn(
           String.format(
               "Dropped the verdict %s of submission #%d: its judging was superseded.",
@@ -409,6 +444,49 @@ public class ApplicationDispatcher {
       return false;
     }
     return true;
+  }
+
+  /**
+   * Updates the result columns of a submission, trying a failed statement again.
+   *
+   * @param submission - the submission, with its verdict
+   * @return the number of submissions updated
+   * @throws DataAccessException if no try succeeded
+   */
+  private int updateSubmissionResult(Submission submission) {
+    for (int tries = 1; ; ++tries) {
+      try {
+        return submissionMapper.updateSubmissionResult(submission);
+      } catch (DataAccessException ex) {
+        if (tries == UPDATE_TRIES || !isUnreachable(ex)) {
+          throw ex;
+        }
+        LOGGER.warn(
+            String.format(
+                "Failed to record the verdict of submission #%d; trying again.",
+                submission.getSubmissionId()),
+            ex);
+        try {
+          Thread.sleep(retryDelay << (tries - 1));
+        } catch (InterruptedException interruption) {
+          Thread.currentThread().interrupt();
+          throw ex;
+        }
+      }
+    }
+  }
+
+  /**
+   * Tells a failure of the database that a statement may get over if tried again (the database is
+   * unreachable, a connection broke or timed out, a lock could not be had) from one it may not (e.g.
+   * a value the column does not take), which may be the doing of what is recorded.
+   *
+   * @param ex - the failure
+   * @return whether the database failed for now
+   */
+  public static boolean isUnreachable(DataAccessException ex) {
+    return !(ex instanceof NonTransientDataAccessException)
+        || ex instanceof DataAccessResourceFailureException;
   }
 
   /**
@@ -446,6 +524,15 @@ public class ApplicationDispatcher {
 
   /** The lazily-resolved, cached uid of this judger (null until resolved). */
   private Long judgerUid;
+
+  /** The names of the judge results, by their slug, as read so far. */
+  private final Map<String, String> runtimeResultNames = new ConcurrentHashMap<>();
+
+  /** How many times a verdict is recorded before a failure to do so is given up. */
+  static final int UPDATE_TRIES = 3;
+
+  /** How long (ms) a failed statement waits before it is tried again; doubles each time. */
+  private long retryDelay = 1000;
 
   /** The source of the claim tokens. */
   private static final SecureRandom RANDOM = new SecureRandom();

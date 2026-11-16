@@ -21,9 +21,9 @@ import java.lang.management.ManagementFactory;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Calendar;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -32,47 +32,86 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import org.verwandlung.voj.judger.core.Dispatcher;
+import org.verwandlung.voj.judger.mapper.JudgerMapper;
 import org.verwandlung.voj.judger.mapper.UserMapper;
-import org.verwandlung.voj.judger.messenger.MessageSender;
 import org.verwandlung.voj.judger.model.User;
 
 /**
- * The application heartbeat, used to send Keep-Alive messages to the web module.
+ * The application heartbeat: records, every {@value #HEARTBEAT_INTERVAL_MS} ms, in the registry of
+ * the judgers in the database (voj_judgers), that this judger runs, the languages it supports,
+ * whether it takes submissions (see {@link Dispatcher#isReady}), and the load of its host. The web
+ * application shows the judgers from it, and counts a judger whose last heartbeat is older than
+ * three intervals as stopped. Every judger process has an entry of its own, by a random
+ * identifier; the first heartbeat of a process removes the entries of the processes that stopped
+ * a day ago or earlier.
  *
  * @author Haozhe Xie
  */
 @Component
 public class ApplicationHeartbeat implements Runnable {
+  /** How often (ms) the judger records its heartbeat. */
+  public static final long HEARTBEAT_INTERVAL_MS = 10000;
+
+  /** The longest description the registry holds. */
+  private static final int MAX_DESCRIPTION_LENGTH = 255;
+
   /**
-   * Sends a heartbeat. It runs on a fixed-rate schedule, which cancels every later run once a run
-   * throws, so a failure (e.g. the broker restarting) is logged here and the next heartbeat simply
-   * tries again.
+   * Records a heartbeat. It runs on a schedule, which cancels every later run once a run throws,
+   * so a failure (e.g. the database restarting) is logged here, once until a heartbeat is recorded
+   * again, and the next heartbeat simply tries again.
    */
   @Override
   public void run() {
     try {
-      sendHeartbeat();
+      recordHeartbeat();
+      if (isFailing) {
+        isFailing = false;
+        LOGGER.info("The heartbeats of this judger are recorded again.");
+      }
     } catch (Throwable ex) {
-      LOGGER.error("Failed to send the heartbeat to the web server.", ex);
+      if (!isFailing) {
+        isFailing = true;
+        LOGGER.error(
+            "Failed to record the heartbeat of this judger in the database; trying again every "
+                + HEARTBEAT_INTERVAL_MS / 1000
+                + " s.",
+            ex);
+      } else {
+        LOGGER.debug("Failed to record the heartbeat of this judger.", ex);
+      }
     }
   }
 
-  /** Sends a Keep-Alive message with the judger's identity and live telemetry. */
-  private void sendHeartbeat() {
-    Calendar calendar = Calendar.getInstance();
-    long currentTime = calendar.getTimeInMillis();
+  /**
+   * Sets the languages this judger supports, which its heartbeats record. Until it is set, the
+   * judger records none, and is not ready.
+   *
+   * @param languageIds - the unique identifiers of the languages
+   */
+  public void setLanguageIds(List<Integer> languageIds) {
+    this.languageIds = List.copyOf(languageIds);
+  }
 
-    Map<String, Object> mapMessage = new HashMap<>();
-    mapMessage.put("event", "KeepAlive");
-    mapMessage.put("username", judgerUsername);
-    mapMessage.put("description", getDescription());
-    mapMessage.put("heartbeatTime", currentTime);
-    // Live telemetry sampled from the JVM/host so the web dashboard can show node load.
-    mapMessage.put("cpuLoad", getCpuLoad());
-    mapMessage.put("memoryUsage", getMemoryUsage());
-    mapMessage.put("uptime", ManagementFactory.getRuntimeMXBean().getUptime());
-    messageSender.sendMessage(mapMessage);
-    LOGGER.info("Heartbeat sent to the web server.");
+  /** Records a heartbeat with the judger's languages, readiness and live telemetry. */
+  private void recordHeartbeat() {
+    String description = judgerDescription == null ? "" : judgerDescription.trim();
+    if (description.length() > MAX_DESCRIPTION_LENGTH) {
+      description = description.substring(0, MAX_DESCRIPTION_LENGTH);
+    }
+    List<Integer> languages = languageIds;
+    if (isFirstHeartbeat) {
+      judgerMapper.deleteStoppedJudgers();
+    }
+    judgerMapper.recordHeartbeat(
+        INSTANCE,
+        judgerUid,
+        description,
+        languages.stream().map(String::valueOf).collect(Collectors.joining(",")),
+        !languages.isEmpty() && dispatcher.isReady(),
+        getCpuLoad(),
+        getMemoryUsage());
+    isFirstHeartbeat = false;
   }
 
   /**
@@ -181,8 +220,9 @@ public class ApplicationHeartbeat implements Runnable {
   }
 
   /**
-   * Checks whether the judger's identity information is valid. Invoked once at startup, so that the
-   * judger fails fast on bad credentials before accepting any judging task.
+   * Checks whether the judger's identity information is valid, and remembers the uid of its
+   * account, which its heartbeats are recorded by. Invoked once at startup, so that the judger fails
+   * fast on bad credentials before accepting any judging task.
    *
    * @return whether the judger's identity information is valid
    */
@@ -192,18 +232,10 @@ public class ApplicationHeartbeat implements Runnable {
     if (user != null
         && "judgers".equals(user.getUserGroup().getUserGroupSlug())
         && passwordEncoder.matches(judgerPassword, user.getPassword())) {
+      judgerUid = user.getUid();
       return true;
     }
     return false;
-  }
-
-  /**
-   * Gets the judger's description. TODO use JNI to obtain the computer's hardware information.
-   *
-   * @return the judger's description
-   */
-  private String getDescription() {
-    return judgerDescription;
   }
 
   /** The judger's identity information: the judger's username. */
@@ -218,14 +250,32 @@ public class ApplicationHeartbeat implements Runnable {
   @Value("${judger.description}")
   private String judgerDescription;
 
-  /** The autowired MessageSender object, used to send messages to the message queue. */
-  @Autowired private MessageSender messageSender;
+  /** The autowired JudgerMapper object, used to record the heartbeats. */
+  @Autowired private JudgerMapper judgerMapper;
+
+  /** The autowired Dispatcher object, which tells whether this judger takes submissions. */
+  @Autowired private Dispatcher dispatcher;
 
   /** The autowired UserMapper object, used to verify the judger's identity information. */
   @Autowired private UserMapper userMapper;
 
   /** The autowired password encoder, used to verify the judger's password against the stored hash. */
   @Autowired private PasswordEncoder passwordEncoder;
+
+  /** The uid of the judger's account, known once its identity was checked. */
+  private long judgerUid;
+
+  /** The unique identifiers of the languages this judger supports. */
+  private volatile List<Integer> languageIds = List.of();
+
+  /** The identifier of this judger process in the registry. */
+  private static final String INSTANCE = UUID.randomUUID().toString();
+
+  /** Whether no heartbeat of this process was recorded yet. */
+  private boolean isFirstHeartbeat = true;
+
+  /** Whether the last heartbeat failed. */
+  private boolean isFailing;
 
   /** The window (in milliseconds) over which the CPU load is sampled for each heartbeat. */
   private static final long CPU_SAMPLE_INTERVAL = 500;

@@ -20,6 +20,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -38,6 +39,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.springframework.dao.DataAccessResourceFailureException;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import org.verwandlung.voj.judger.mapper.JudgeResultMapper;
 import org.verwandlung.voj.judger.mapper.SubmissionMapper;
@@ -118,14 +121,14 @@ public class ApplicationDispatcherTest {
    */
   @Test
   public void testClaimSubmissionClaimsTheNextOne() {
-    when(submissionMapper.getNextSubmissionId(LANGUAGES)).thenReturn(100L, 101L);
+    when(submissionMapper.getNextSubmissionId(LANGUAGES, SKIPPED)).thenReturn(100L, 101L);
     when(submissionMapper.claimSubmission(eq(100L), anyLong(), any(), eq(60L))).thenReturn(0);
     when(submissionMapper.claimSubmission(eq(101L), anyLong(), any(), eq(60L))).thenReturn(1);
     Submission pending = new Submission();
     pending.setSubmissionId(101L);
     when(submissionMapper.getSubmission(101L)).thenReturn(pending);
 
-    Submission submission = applicationDispatcher.claimSubmission(LANGUAGES, 60);
+    Submission submission = applicationDispatcher.claimSubmission(LANGUAGES, SKIPPED, 60);
 
     Assertions.assertSame(pending, submission);
     ArgumentCaptor<Long> claimTokenCaptor = ArgumentCaptor.forClass(Long.class);
@@ -149,9 +152,9 @@ public class ApplicationDispatcherTest {
    */
   @Test
   public void testClaimSubmissionWithoutPendingSubmission() {
-    when(submissionMapper.getNextSubmissionId(LANGUAGES)).thenReturn(null);
+    when(submissionMapper.getNextSubmissionId(LANGUAGES, SKIPPED)).thenReturn(null);
 
-    Assertions.assertNull(applicationDispatcher.claimSubmission(LANGUAGES, 60));
+    Assertions.assertNull(applicationDispatcher.claimSubmission(LANGUAGES, SKIPPED, 60));
     verify(submissionMapper, never()).claimSubmission(anyLong(), anyLong(), any(), anyLong());
   }
 
@@ -166,6 +169,85 @@ public class ApplicationDispatcherTest {
 
     Assertions.assertTrue(applicationDispatcher.renewLease(submission(), 60));
     Assertions.assertFalse(applicationDispatcher.renewLease(submission(), 60));
+  }
+
+  /**
+   * Test case: tests the releaseSubmission method. Test data: a judging that is still current, then
+   * one that was superseded. Expected result: the submission of the judging's claim token is
+   * released, and whether it was is returned.
+   */
+  @Test
+  public void testReleaseSubmission() {
+    when(submissionMapper.releaseSubmission(100L, CLAIM_TOKEN)).thenReturn(1, 0);
+
+    Assertions.assertTrue(applicationDispatcher.releaseSubmission(submission()));
+    Assertions.assertFalse(applicationDispatcher.releaseSubmission(submission()));
+  }
+
+  /**
+   * Test case: tests the onErrorOccurred method. Test data: the database fails the first two times
+   * the System Error is recorded (e.g. while it fails over), then three times. Expected result: the
+   * verdict is recorded at the third try, and the message is sent; when every try fails, the
+   * failure is thrown after three tries, and nothing is sent.
+   */
+  @Test
+  public void testVerdictIsRecordedDespiteShortOutages() {
+    ReflectionTestUtils.setField(applicationDispatcher, "retryDelay", 1L);
+    DataAccessResourceFailureException outage = new DataAccessResourceFailureException("down");
+    when(submissionMapper.updateSubmissionResult(any(Submission.class)))
+        .thenThrow(outage, outage)
+        .thenReturn(1)
+        .thenThrow(outage);
+
+    applicationDispatcher.onErrorOccurred(submission(), "No test data.");
+    verify(submissionMapper, times(3)).updateSubmissionResult(any(Submission.class));
+    Assertions.assertEquals("ErrorOccurred", captureSentMessage().get("event"));
+
+    Assertions.assertThrows(
+        DataAccessResourceFailureException.class,
+        () -> applicationDispatcher.onErrorOccurred(submission(), "No test data."));
+    verify(submissionMapper, times(6)).updateSubmissionResult(any(Submission.class));
+    verify(messageSender, times(1)).sendMessage(any());
+  }
+
+  /**
+   * Test case: tests the onErrorOccurred method. Test data: the database refuses the verdict (a
+   * value its column does not take). Expected result: it is not tried again, which would be
+   * refused again.
+   */
+  @Test
+  public void testRefusedVerdictIsNotTriedAgain() {
+    when(submissionMapper.updateSubmissionResult(any(Submission.class)))
+        .thenThrow(new org.springframework.dao.DataIntegrityViolationException("Data too long"));
+
+    Assertions.assertThrows(
+        org.springframework.dao.DataIntegrityViolationException.class,
+        () -> applicationDispatcher.onErrorOccurred(submission(), "No test data."));
+    verify(submissionMapper, times(1)).updateSubmissionResult(any(Submission.class));
+    Assertions.assertTrue(
+        ApplicationDispatcher.isUnreachable(
+            new org.springframework.dao.QueryTimeoutException("timed out")));
+    Assertions.assertTrue(
+        ApplicationDispatcher.isUnreachable(
+            new org.springframework.jdbc.CannotGetJdbcConnectionException("no connection")));
+  }
+
+  /**
+   * Test case: tests the onOneTestPointFinished method. Test data: several checkpoints judged
+   * Accepted. Expected result: the name of the judge result is read from the database once.
+   */
+  @Test
+  public void testJudgeResultNamesAreReadOnce() {
+    when(judgeResultMapper.getJudgeResultUsingSlug("AC"))
+        .thenReturn(new JudgeResult(1, "AC", "Accepted"));
+
+    for (int checkpointId = 0; checkpointId < 3; ++checkpointId) {
+      applicationDispatcher.onOneTestPointFinished(
+          submission(), checkpointId, buildRuntimeResult("AC", 1, 1, 1));
+    }
+
+    verify(judgeResultMapper, times(1)).getJudgeResultUsingSlug("AC");
+    verify(messageSender, times(3)).sendMessage(any());
   }
 
   /**
@@ -424,6 +506,9 @@ public class ApplicationDispatcherTest {
 
   /** The languages of the judger of the tests. */
   private static final List<Integer> LANGUAGES = List.of(2, 3);
+
+  /** The problems the judger of the tests leaves to others. */
+  private static final List<Long> SKIPPED = List.of(1001L);
 
   /** The mocked MessageSender object. */
   @Mock private MessageSender messageSender;

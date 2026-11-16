@@ -18,6 +18,7 @@ package org.verwandlung.voj.judger.core;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -39,6 +40,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.IntConsumer;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -69,18 +71,22 @@ import org.verwandlung.voj.judger.model.Submission;
 @MockitoSettings(strictness = Strictness.LENIENT)
 public class DispatcherTest {
   /**
-   * Injects the working-directory and the judging-queue configuration that would normally come from
-   * the property files, and a pending submission to claim: its first attempt.
+   * Shortens the times of the judging queue, and injects the working directory, and a pending
+   * submission to claim, never interrupted. The judger is judging (as in its judging loop).
    */
   @BeforeEach
   public void setUp() throws Exception {
     ReflectionTestUtils.setField(dispatcher, "pollInterval", 10L);
     ReflectionTestUtils.setField(dispatcher, "leaseTimeout", LEASE_TIMEOUT);
-    ReflectionTestUtils.setField(dispatcher, "maxAttempts", MAX_ATTEMPTS);
+    ReflectionTestUtils.setField(dispatcher, "firstBackoff", 10L);
+    ReflectionTestUtils.setField(dispatcher, "maxBackoff", 40L);
+    ReflectionTestUtils.setField(dispatcher, "downloadTimeout", 300L);
+    ReflectionTestUtils.setField(dispatcher, "compileTimeLimit", 20000L);
+    ReflectionTestUtils.setField(dispatcher, "isJudging", true);
     when(checkpointStore.getWorkDirectory()).thenReturn(Path.of("/tmp/voj-dispatcher-tests"));
     when(checkpointStore.sync(any())).thenReturn(Path.of("/tmp/voj-dispatcher-tests/1000"));
-    when(applicationDispatcher.claimSubmission(anyList(), anyLong()))
-        .thenAnswer(invocation -> buildSubmission(1));
+    when(applicationDispatcher.claimSubmission(anyList(), anyCollection(), anyLong()))
+        .thenAnswer(invocation -> buildSubmission(0));
     when(applicationDispatcher.renewLease(any(), anyLong())).thenReturn(true);
   }
 
@@ -90,10 +96,11 @@ public class DispatcherTest {
    */
   @Test
   public void testJudgeNextSubmissionWithoutPendingSubmission() throws Exception {
-    when(applicationDispatcher.claimSubmission(anyList(), anyLong())).thenReturn(null);
+    when(applicationDispatcher.claimSubmission(anyList(), anyCollection(), anyLong()))
+        .thenReturn(null);
 
     Assertions.assertFalse(dispatcher.judgeNextSubmission(LANGUAGES));
-    verify(applicationDispatcher).claimSubmission(LANGUAGES, LEASE_SECONDS);
+    verify(applicationDispatcher).claimSubmission(LANGUAGES, List.of(), LEASE_SECONDS);
     verify(checkpointStore, never()).sync(any());
     verify(compiler, never()).getCompileResult(any(), anyString(), anyString());
   }
@@ -251,45 +258,47 @@ public class DispatcherTest {
 
   /**
    * Test case: tests the judgeNextSubmission method. Test data: the web application refuses this
-   * judger the test data (HTTP 403: its API token is wrong or empty), or refuses the request
-   * otherwise (HTTP 400). Expected result: a System Error, at once, whose judge log says that the
-   * judger was refused (and to check its API token for a 403), rather than tries again.
+   * judger the test data (HTTP 403: its API token is wrong or empty), then refuses the request
+   * otherwise (HTTP 400). Expected result: no System Error: the submission is released for another
+   * judger each time, without compiling, and this judger leaves the problem to the others.
    */
   @Test
-  public void testJudgeNextSubmissionWithRefusedCheckpointsIsSystemError() throws Exception {
+  public void testJudgeNextSubmissionWithRefusedCheckpointsIsLeftToAnotherJudger()
+      throws Exception {
     org.mockito.Mockito.doThrow(
             new CheckpointsRefusedException("HTTP 403", 403),
             new CheckpointsRefusedException("HTTP 400", 400))
         .when(checkpointStore)
         .sync(any());
 
-    dispatcher.judgeNextSubmission(LANGUAGES);
-    dispatcher.judgeNextSubmission(LANGUAGES);
+    Assertions.assertTrue(dispatcher.judgeNextSubmission(LANGUAGES));
+    Assertions.assertTrue(dispatcher.judgeNextSubmission(LANGUAGES));
 
-    org.mockito.ArgumentCaptor<String> reasons = org.mockito.ArgumentCaptor.forClass(String.class);
-    verify(applicationDispatcher, times(2)).onErrorOccurred(any(), reasons.capture());
-    Assertions.assertTrue(reasons.getAllValues().get(0).contains("refused"));
-    Assertions.assertTrue(reasons.getAllValues().get(0).contains("judger.apiToken"));
-    Assertions.assertTrue(reasons.getAllValues().get(1).contains("(HTTP 400)"));
-    Assertions.assertFalse(reasons.getAllValues().get(1).contains("judger.apiToken"));
+    verify(applicationDispatcher, times(2))
+        .releaseSubmission(argThat(s -> s.getSubmissionId() == 100L));
+    verify(applicationDispatcher, never()).onErrorOccurred(any(), anyString());
     verify(compiler, never()).getCompileResult(any(), anyString(), anyString());
+    verify(applicationDispatcher).claimSubmission(LANGUAGES, List.of(1000L), LEASE_SECONDS);
   }
 
   /**
    * Test case: tests the judgeNextSubmission method. Test data: the test data cannot be downloaded
-   * now (e.g. the web application is restarting), on the first attempt. Expected result: no System
-   * Error; the lease is no longer renewed, so that the submission is judged again once it expired.
-   * (The test data is synced before the work directory is created, so there is none to remove yet;
-   * the removal of one after a failure is tested by testJudgeNextSubmissionCleansUpOnFailure.)
+   * now (e.g. the web application is restarting). Expected result: no System Error: the submission
+   * is released at once for another judger, and the lease is no longer renewed. (The test data is
+   * synced before the work directory is created, so there is none to remove yet; the removal of one
+   * after a failure is tested by testJudgeNextSubmissionCleansUpOnFailure.)
    */
   @Test
-  public void testJudgeNextSubmissionWithUnavailableCheckpointsIsRetried() throws Exception {
+  public void testJudgeNextSubmissionWithUnavailableCheckpointsIsLeftToAnotherJudger()
+      throws Exception {
     org.mockito.Mockito.doThrow(new java.io.IOException("HTTP 503"))
         .when(checkpointStore)
         .sync(any());
 
     Assertions.assertTrue(dispatcher.judgeNextSubmission(LANGUAGES));
 
+    verify(applicationDispatcher)
+        .releaseSubmission(argThat(s -> s.getClaimToken() == CLAIM_TOKEN));
     verify(applicationDispatcher, never()).onErrorOccurred(any(), anyString());
     verify(preprocessor, never()).createTestCode(any(), anyString(), anyString());
     verify(compiler, never()).getCompileResult(any(), anyString(), anyString());
@@ -299,77 +308,88 @@ public class DispatcherTest {
   }
 
   /**
-   * Test case: tests the judgeNextSubmission method. Test data: the test data cannot be downloaded
-   * now, on the last attempt. Expected result: rather than judged once more, the submission is a
-   * System Error saying why, and after how many attempts.
+   * Test case: tests the judgeNextSubmission method. Test data: the test data of Problem #1000
+   * cannot be downloaded once. Expected result: the next claims leave Problem #1000 to the other
+   * judgers until the time to skip it is over, and then take it again.
    */
   @Test
-  public void testJudgeNextSubmissionIsNotRetriedAfterItsLastAttempt() throws Exception {
-    when(applicationDispatcher.claimSubmission(anyList(), anyLong()))
-        .thenReturn(buildSubmission(MAX_ATTEMPTS));
-    org.mockito.Mockito.doThrow(new java.io.IOException("HTTP 503"))
+  public void testAProblemWhoseTestDataFailedIsSkippedForAWhile() throws Exception {
+    ReflectionTestUtils.setField(dispatcher, "problemSkipTime", 300L);
+    when(applicationDispatcher.claimSubmission(anyList(), anyCollection(), anyLong()))
+        .thenAnswer(invocation -> buildSubmission(0))
+        .thenReturn(null);
+    org.mockito.Mockito.doThrow(new java.io.IOException("Connection refused"))
         .when(checkpointStore)
         .sync(any());
 
     dispatcher.judgeNextSubmission(LANGUAGES);
-
-    verify(applicationDispatcher)
-        .onErrorOccurred(
-            any(),
-            argThat(
-                reason ->
-                    reason.startsWith("The test data could not be downloaded.")
-                        && reason.contains("after 3 attempts")));
-    verify(compiler, never()).getCompileResult(any(), anyString(), anyString());
+    dispatcher.judgeNextSubmission(LANGUAGES);
+    verify(applicationDispatcher).claimSubmission(LANGUAGES, List.of(1000L), LEASE_SECONDS);
+    Thread.sleep(400);
+    dispatcher.judgeNextSubmission(LANGUAGES);
+    verify(applicationDispatcher, times(2)).claimSubmission(LANGUAGES, List.of(), LEASE_SECONDS);
   }
 
   /**
-   * Test case: tests the judgeNextSubmission method. Test data: a submission claimed once more than
-   * the attempts allow, as its last attempt stopped without an outcome (its judger died, or lost
-   * the database until the lease expired). Expected result: it is not judged again but a System
-   * Error that says so.
+   * Test case: tests the judgeNextSubmission method. Test data: a submission whose judgings were
+   * interrupted (their judgers died, or lost the database, until their leases expired) as often as
+   * allowed, and one interrupted once less. Expected result: the first is not judged again but a
+   * System Error that says so; the second is judged.
    */
   @Test
-  public void testJudgeNextSubmissionGivesUpAfterAnAbandonedLastAttempt() throws Exception {
-    when(applicationDispatcher.claimSubmission(anyList(), anyLong()))
-        .thenReturn(buildSubmission(MAX_ATTEMPTS + 1));
+  public void testJudgeNextSubmissionGivesUpAfterTooManyInterruptions() throws Exception {
+    when(applicationDispatcher.claimSubmission(anyList(), anyCollection(), anyLong()))
+        .thenReturn(buildSubmission(MAX_INTERRUPTIONS), buildSubmission(MAX_INTERRUPTIONS - 1));
+    when(checkpointStore.getCheckpoints(1000L)).thenReturn(oneCheckpoint());
+    when(compiler.getCompileResult(any(), anyString(), anyString()))
+        .thenReturn(compileResult(false));
 
     Assertions.assertTrue(dispatcher.judgeNextSubmission(LANGUAGES));
 
     verify(applicationDispatcher)
         .onErrorOccurred(
             argThat(s -> s.getClaimToken() == CLAIM_TOKEN),
-            argThat(
-                reason ->
-                    reason.startsWith(Dispatcher.ABANDONED_REASON)
-                        && reason.contains("after 3 attempts")));
+            eq(String.format(Dispatcher.INTERRUPTED_REASON, MAX_INTERRUPTIONS)));
     verify(checkpointStore, never()).sync(any());
     verify(applicationDispatcher, never()).renewLease(any(), anyLong());
+
+    Assertions.assertTrue(dispatcher.judgeNextSubmission(LANGUAGES));
+    verify(applicationDispatcher).onCompileFinished(any(), any());
+    verify(applicationDispatcher, times(1)).onErrorOccurred(any(), anyString());
   }
 
   /**
    * Test case: tests the judgeNextSubmission method. Test data: the sandbox fails to run the
-   * compiler. Expected result: a System Error rather than a Compile Error with an empty log.
+   * compiler, then the program. Expected result: neither a Compile Error with an empty log nor a
+   * System Error: the submission is released for another judger each time.
    */
   @Test
-  public void testJudgeNextSubmissionCompilerSandboxFailureIsSystemError() throws Exception {
+  public void testJudgeNextSubmissionSandboxFailureIsLeftToAnotherJudger() throws Exception {
     when(checkpointStore.getCheckpoints(1000L)).thenReturn(oneCheckpoint());
     Map<String, Object> result = compileResult(false);
     result.put("verdict", Verdict.INTERNAL_ERROR);
-    when(compiler.getCompileResult(any(), anyString(), anyString())).thenReturn(result);
+    when(compiler.getCompileResult(any(), anyString(), anyString()))
+        .thenReturn(result, compileResult(true));
+    when(programRunner.getRuntimeResult(any(), anyString(), anyString(), anyString(), anyString()))
+        .thenReturn(runtimeResult("SE"));
 
     dispatcher.judgeNextSubmission(LANGUAGES);
-
-    verify(applicationDispatcher).onErrorOccurred(any(), contains("compiler"));
     verify(applicationDispatcher, never()).onCompileFinished(any(), any());
+    dispatcher.judgeNextSubmission(LANGUAGES);
+
+    verify(applicationDispatcher, times(2)).releaseSubmission(any());
+    verify(applicationDispatcher, never()).onErrorOccurred(any(), anyString());
+    verify(applicationDispatcher, never()).onOneTestPointFinished(any(), anyInt(), any());
+    verify(applicationDispatcher, never()).onAllTestPointsFinished(any(), any());
   }
 
   /**
-   * Test case: tests the judgeNextSubmission method. Test data: the expected output cannot be read.
-   * Expected result: a System Error rather than a Wrong Answer.
+   * Test case: tests the judgeNextSubmission method. Test data: this judger cannot read its copy of
+   * the expected output. Expected result: neither a Wrong Answer nor a System Error: the submission
+   * is released for another judger, and this judger leaves the problem to the others for a while.
    */
   @Test
-  public void testJudgeNextSubmissionUnreadableAnswerIsSystemError() throws Exception {
+  public void testJudgeNextSubmissionUnreadableAnswerIsLeftToAnotherJudger() throws Exception {
     when(checkpointStore.getCheckpoints(1000L)).thenReturn(oneCheckpoint());
     when(compiler.getCompileResult(any(), anyString(), anyString()))
         .thenReturn(compileResult(true));
@@ -379,9 +399,77 @@ public class DispatcherTest {
         .thenThrow(new java.io.IOException("No such file"));
 
     dispatcher.judgeNextSubmission(LANGUAGES);
+    dispatcher.judgeNextSubmission(LANGUAGES);
 
-    verify(applicationDispatcher).onErrorOccurred(any(), contains("could not be read"));
+    verify(applicationDispatcher, times(2)).releaseSubmission(any());
+    verify(applicationDispatcher, never()).onErrorOccurred(any(), anyString());
     verify(applicationDispatcher, never()).onAllTestPointsFinished(any(), any());
+    verify(applicationDispatcher).claimSubmission(LANGUAGES, List.of(1000L), LEASE_SECONDS);
+  }
+
+  /**
+   * Test case: tests the judgeNextSubmission and isReady methods. Test data: as many judgings in a
+   * row as allowed fail for reasons of this judger's own (its sandbox cannot run the compiler), and
+   * one more, then one compiles. Expected result: the judger pauses longer after each of them, up
+   * to the longest pause, and is not ready after the last allowed one; it is ready again once it
+   * judged a submission.
+   */
+  @Test
+  public void testLocalFailuresInARowMakeTheJudgerNotReady() throws Exception {
+    when(checkpointStore.getCheckpoints(1000L)).thenReturn(oneCheckpoint());
+    Map<String, Object> failure = compileResult(false);
+    failure.put("verdict", Verdict.INTERNAL_ERROR);
+    when(compiler.getCompileResult(any(), anyString(), anyString()))
+        .thenReturn(failure, failure, failure, failure, compileResult(false));
+
+    Assertions.assertTrue(dispatcher.isReady());
+    List<Long> backoffs = new ArrayList<>();
+    for (int i = 0; i < Dispatcher.MAX_LOCAL_FAILURES + 1; ++i) {
+      dispatcher.judgeNextSubmission(LANGUAGES);
+      backoffs.add(dispatcher.getBackoff());
+      Assertions.assertEquals(i + 1 < Dispatcher.MAX_LOCAL_FAILURES, dispatcher.isReady(), "" + i);
+    }
+    Assertions.assertEquals(List.of(10L, 20L, 40L, 40L), backoffs);
+    verify(applicationDispatcher, never()).onErrorOccurred(any(), anyString());
+
+    dispatcher.judgeNextSubmission(LANGUAGES);
+    verify(applicationDispatcher).onCompileFinished(any(), any());
+    Assertions.assertTrue(dispatcher.isReady());
+  }
+
+  /**
+   * Test case: tests the judgeNextSubmission and isReady methods. Test data: a compilation that
+   * runs past the deadline of its judging (a problem with a time limit of 100 ms and one checkpoint,
+   * compilations limited to 100 ms, no time to download the test data: 1300 + 1300 + 400 ms of
+   * lease timeout, 3 s). Expected result: the lease is no longer renewed after the deadline, and
+   * the judger is not ready while that judging runs; it is ready again once it is over.
+   */
+  @Test
+  public void testAJudgingPastItsDeadlineLosesItsLease() throws Exception {
+    ReflectionTestUtils.setField(dispatcher, "downloadTimeout", 0L);
+    ReflectionTestUtils.setField(dispatcher, "compileTimeLimit", 100L);
+    Submission submission = buildSubmission(0);
+    submission.getProblem().setTimeLimit(100);
+    when(applicationDispatcher.claimSubmission(anyList(), anyCollection(), anyLong()))
+        .thenReturn(submission);
+    when(checkpointStore.getCheckpoints(1000L)).thenReturn(oneCheckpoint());
+    AtomicBoolean wasReady = new AtomicBoolean(true);
+    when(compiler.getCompileResult(any(), anyString(), anyString()))
+        .thenAnswer(
+            invocation -> {
+              Thread.sleep(3000 + LEASE_TIMEOUT);
+              wasReady.set(dispatcher.isReady());
+              Thread.sleep(LEASE_TIMEOUT);
+              return compileResult(false);
+            });
+
+    dispatcher.judgeNextSubmission(LANGUAGES);
+
+    Assertions.assertFalse(wasReady.get());
+    Assertions.assertTrue(dispatcher.isReady());
+    // Renewed every 100 ms until the deadline, 3 s after the start, and not after it.
+    int renewals = numberOfRenewals();
+    Assertions.assertTrue(renewals >= 20 && renewals <= 31, "" + renewals);
   }
 
   /**
@@ -440,7 +528,8 @@ public class DispatcherTest {
   /**
    * Test case: tests the judgeNextSubmission method. Test data: the database becomes unreachable
    * while the verdict is recorded. Expected result: no System Error is attempted (it could not be
-   * recorded either): the submission is claimed again once its lease expired.
+   * recorded either): the submission is released (or claimed again once its lease expired, if the
+   * database is still unreachable), and this judger is still ready.
    */
   @Test
   public void testJudgeNextSubmissionLeavesDatabaseFailuresToTheLease() throws Exception {
@@ -454,6 +543,29 @@ public class DispatcherTest {
 
     Assertions.assertTrue(dispatcher.judgeNextSubmission(LANGUAGES));
     verify(applicationDispatcher, never()).onErrorOccurred(any(), anyString());
+    verify(applicationDispatcher).releaseSubmission(any());
+    Assertions.assertTrue(dispatcher.isReady());
+  }
+
+  /**
+   * Test case: tests the judgeNextSubmission method. Test data: the database refuses the verdict
+   * (a value its column does not take), which may be the submission's doing. Expected result: a
+   * System Error, as for any unexpected failure, rather than a release, which would have every
+   * judger fail on it in turn.
+   */
+  @Test
+  public void testJudgeNextSubmissionWithARefusedVerdictIsSystemError() throws Exception {
+    when(checkpointStore.getCheckpoints(1000L)).thenReturn(oneCheckpoint());
+    when(compiler.getCompileResult(any(), anyString(), anyString()))
+        .thenReturn(compileResult(false));
+    org.mockito.Mockito.doThrow(
+            new org.springframework.dao.DataIntegrityViolationException("Data too long"))
+        .when(applicationDispatcher)
+        .onCompileFinished(any(), any());
+
+    Assertions.assertTrue(dispatcher.judgeNextSubmission(LANGUAGES));
+    verify(applicationDispatcher).onErrorOccurred(any(), eq(Dispatcher.INTERNAL_ERROR_REASON));
+    verify(applicationDispatcher, never()).releaseSubmission(any());
   }
 
   /**
@@ -469,7 +581,7 @@ public class DispatcherTest {
 
     dispatcher.judgeNextSubmission(LANGUAGES);
 
-    verify(applicationDispatcher).claimSubmission(eq(LANGUAGES), anyLong());
+    verify(applicationDispatcher).claimSubmission(eq(LANGUAGES), eq(List.of()), anyLong());
     verify(applicationDispatcher)
         .onCompileFinished(argThat(s -> s.getClaimToken() == CLAIM_TOKEN), any());
   }
@@ -579,7 +691,8 @@ public class DispatcherTest {
 
     Assertions.assertFalse(dispatcher.judgeNextSubmission(LANGUAGES));
 
-    verify(applicationDispatcher, never()).claimSubmission(anyList(), anyLong());
+    verify(applicationDispatcher, never()).claimSubmission(anyList(), anyCollection(), anyLong());
+    Assertions.assertEquals(10L, dispatcher.getBackoff());
   }
 
   /**
@@ -592,10 +705,10 @@ public class DispatcherTest {
     when(checkpointStore.getCheckpoints(1000L)).thenReturn(oneCheckpoint());
     when(compiler.getCompileResult(any(), anyString(), anyString()))
         .thenReturn(compileResult(false));
-    when(applicationDispatcher.claimSubmission(anyList(), anyLong()))
+    when(applicationDispatcher.claimSubmission(anyList(), anyCollection(), anyLong()))
         .thenReturn(null)
         .thenThrow(new org.springframework.dao.DataAccessResourceFailureException("down"))
-        .thenReturn(buildSubmission(1))
+        .thenReturn(buildSubmission(0))
         .thenReturn(null);
 
     Thread judging = new Thread(() -> dispatcher.judgeSubmissions(LANGUAGES));
@@ -608,7 +721,32 @@ public class DispatcherTest {
       judging.join(10000);
     }
     Assertions.assertFalse(judging.isAlive());
-    verify(applicationDispatcher, atLeast(4)).claimSubmission(LANGUAGES, LEASE_SECONDS);
+    verify(applicationDispatcher, atLeast(4))
+        .claimSubmission(LANGUAGES, List.of(), LEASE_SECONDS);
+  }
+
+  /**
+   * Test case: tests the judgeSubmissions method. Test data: an Error (as an OutOfMemoryError)
+   * while a submission is judged. Expected result: the judging loop ends and the process exits with the
+   * status of a fatal error, without releasing the submission (it is counted an interrupted judging
+   * once the lease expired) or judging it; the judger is not ready meanwhile.
+   */
+  @Test
+  public void testJudgeSubmissionsExitsOnAnError() throws Exception {
+    when(checkpointStore.getCheckpoints(1000L)).thenReturn(oneCheckpoint());
+    when(compiler.getCompileResult(any(), anyString(), anyString()))
+        .thenThrow(new OutOfMemoryError("Java heap space"));
+    List<Integer> exitStatuses = new ArrayList<>();
+    IntConsumer processExit = exitStatuses::add;
+    ReflectionTestUtils.setField(dispatcher, "processExit", processExit);
+
+    dispatcher.judgeSubmissions(LANGUAGES);
+
+    Assertions.assertEquals(List.of(Dispatcher.FATAL_ERROR_EXIT_STATUS), exitStatuses);
+    Assertions.assertFalse(dispatcher.isReady());
+    verify(applicationDispatcher, never()).releaseSubmission(any());
+    verify(applicationDispatcher, never()).onErrorOccurred(any(), anyString());
+    verify(applicationDispatcher, times(1)).claimSubmission(anyList(), anyCollection(), anyLong());
   }
 
   /**
@@ -637,15 +775,15 @@ public class DispatcherTest {
   /**
    * Builds a submission referencing Problem#1000, claimed by a judging.
    *
-   * @param attempts - how many judgings have taken it, this one included
+   * @param interruptions - how many judgings of it were interrupted
    * @return a submission object
    */
-  private Submission buildSubmission(int attempts) {
+  private Submission buildSubmission(int interruptions) {
     Problem problem = new Problem(1000L, true, "A+B", 1000, 65536, "", "", "", "", "", "");
     Submission submission = new Submission();
     submission.setSubmissionId(100L);
     submission.setProblem(problem);
-    submission.setJudgeAttempts(attempts);
+    submission.setInterruptions(interruptions);
     submission.setClaimToken(CLAIM_TOKEN);
     return submission;
   }
@@ -686,8 +824,8 @@ public class DispatcherTest {
   /** The lease of the judgings of the tests in whole seconds, rounded up. */
   private static final long LEASE_SECONDS = 1;
 
-  /** How many judgings may take a submission. */
-  private static final int MAX_ATTEMPTS = 3;
+  /** How many judgings of a submission may be interrupted. */
+  private static final int MAX_INTERRUPTIONS = Dispatcher.MAX_INTERRUPTIONS;
 
   /** The claim token of the judgings that the tests claim. */
   private static final long CLAIM_TOKEN = -4242L;

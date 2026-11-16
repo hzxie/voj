@@ -93,7 +93,8 @@ public class JudgingQueueTest {
   /**
    * Test case: two judgers claim the pending submissions in C++ at the same time, each until there
    * is none left. Test data: 50 pending submissions in C++, queued at the same time. Expected
-   * result: every submission is claimed by exactly one of them, once.
+   * result: every submission is claimed by exactly one of them, once, and none counts an
+   * interrupted judging.
    */
   @Test
   public void testJudgersNeverClaimTheSameSubmission() throws Exception {
@@ -106,9 +107,9 @@ public class JudgingQueueTest {
         () -> {
           List<Long> claimed = new ArrayList<>();
           start.await();
-          for (Submission submission = applicationDispatcher.claimSubmission(CPP, 60);
+          for (Submission submission = applicationDispatcher.claimSubmission(CPP, NONE, 60);
               submission != null;
-              submission = applicationDispatcher.claimSubmission(CPP, 60)) {
+              submission = applicationDispatcher.claimSubmission(CPP, NONE, 60)) {
             claimed.add(submission.getSubmissionId());
           }
           return claimed;
@@ -133,7 +134,7 @@ public class JudgingQueueTest {
         0,
         jdbcTemplate.queryForObject(
             "SELECT COUNT(*) FROM voj_submissions WHERE submission_id BETWEEN ? AND ?"
-                + " AND submission_judge_attempts <> 1",
+                + " AND (submission_judge_attempts <> 0 OR submission_claim_token IS NULL)",
             Integer.class,
             FIRST_SUBMISSION_ID,
             FIRST_SUBMISSION_ID + 999));
@@ -154,7 +155,7 @@ public class JudgingQueueTest {
         .thenAnswer(
             invocation -> {
               Thread.sleep(LEASE_TIMEOUT * 3 / 2);
-              claimedByAnotherJudger.set(applicationDispatcher.claimSubmission(CPP, 2));
+              claimedByAnotherJudger.set(applicationDispatcher.claimSubmission(CPP, NONE, 2));
               Thread.sleep(LEASE_TIMEOUT);
               return compileResult(false);
             });
@@ -163,7 +164,7 @@ public class JudgingQueueTest {
 
     Assertions.assertNull(claimedByAnotherJudger.get());
     Assertions.assertEquals(
-        Map.of("submission_judge_result", "CE", "submission_judge_attempts", 1),
+        Map.of("submission_judge_result", "CE", "submission_judge_attempts", 0),
         jdbcTemplate.queryForMap(
             "SELECT submission_judge_result, submission_judge_attempts FROM voj_submissions"
                 + " WHERE submission_id = ?",
@@ -215,6 +216,69 @@ public class JudgingQueueTest {
     Assertions.assertNull(row.get("submission_claim_token"));
   }
 
+  /**
+   * Test case: a judger takes a submission and vanishes (its lease of a second is never renewed),
+   * twice, then a judger takes it and vanishes as often as allowed. Test data: a pending submission
+   * in C++. Expected result: each judger that takes it after a vanished one counts an interrupted
+   * judging; the one that takes it after the last allowed one judges it a System Error that says
+   * how often its judging was interrupted, without judging it.
+   */
+  @Test
+  public void testVanishedJudgingsAreCountedUntilTheSubmissionIsGivenUpOn() throws Exception {
+    long submissionId = insertPendingSubmission(FIRST_SUBMISSION_ID);
+    for (int interruptions = 0; interruptions < Dispatcher.MAX_INTERRUPTIONS; ++interruptions) {
+      Submission submission = applicationDispatcher.claimSubmission(CPP, NONE, 1);
+      Assertions.assertEquals(interruptions, submission.getInterruptions());
+      // Leases are by the database's clock, to the second.
+      Thread.sleep(2100);
+    }
+
+    Assertions.assertTrue(dispatcher.judgeNextSubmission(CPP));
+
+    verify(compiler, never()).getCompileResult(any(), anyString(), anyString());
+    Map<String, Object> row =
+        jdbcTemplate.queryForMap(
+            "SELECT submission_judge_result, submission_judge_attempts, submission_judge_log"
+                + " FROM voj_submissions WHERE submission_id = ?",
+            submissionId);
+    Assertions.assertEquals("SE", row.get("submission_judge_result"));
+    Assertions.assertEquals(
+        Dispatcher.MAX_INTERRUPTIONS, ((Number) row.get("submission_judge_attempts")).intValue());
+    Assertions.assertTrue(
+        ((String) row.get("submission_judge_log"))
+            .contains("interrupted " + Dispatcher.MAX_INTERRUPTIONS + " times"),
+        row.toString());
+  }
+
+  /**
+   * Test case: a judger cannot download the test data of a submission (e.g. the web application
+   * cannot be reached from its host). Test data: a pending submission in C++. Expected result: the
+   * submission is released at once, as it was: pending, held by no judging, without an interrupted
+   * judging or a System Error, so that another judger takes it right away.
+   */
+  @Test
+  public void testALocalFailureReleasesTheSubmissionToAnotherJudger() throws Exception {
+    long submissionId = insertPendingSubmission(FIRST_SUBMISSION_ID);
+    when(checkpointStore.sync(any())).thenThrow(new java.io.IOException("Connection refused"));
+
+    Assertions.assertTrue(dispatcher.judgeNextSubmission(CPP));
+
+    Map<String, Object> row =
+        jdbcTemplate.queryForMap(
+            "SELECT submission_judge_result, submission_judge_attempts, submission_claim_token,"
+                + " submission_lease_expiry_time FROM voj_submissions WHERE submission_id = ?",
+            submissionId);
+    Assertions.assertEquals("PD", row.get("submission_judge_result"));
+    Assertions.assertEquals(0, ((Number) row.get("submission_judge_attempts")).intValue());
+    Assertions.assertNull(row.get("submission_claim_token"));
+    Assertions.assertNull(row.get("submission_lease_expiry_time"));
+    verify(messageSender, never()).sendMessage(any());
+
+    Submission submission = applicationDispatcher.claimSubmission(CPP, NONE, 60);
+    Assertions.assertEquals(submissionId, submission.getSubmissionId());
+    Assertions.assertEquals(0, submission.getInterruptions());
+  }
+
   /** Creates a judger whose judging steps are mocks, on the database of the tests. */
   @BeforeEach
   public void setUpJudger() throws Exception {
@@ -224,7 +288,7 @@ public class JudgingQueueTest {
     ReflectionTestUtils.setField(judgerApplication, "judgeResultMapper", judgeResultMapper);
     ReflectionTestUtils.setField(judgerApplication, "messageSender", messageSender);
 
-    CheckpointStore checkpointStore = mock(CheckpointStore.class);
+    checkpointStore = mock(CheckpointStore.class);
     when(checkpointStore.getWorkDirectory()).thenReturn(Path.of("/tmp/voj-judging-queue-tests"));
     when(checkpointStore.sync(any())).thenReturn(Path.of("/tmp/voj-judging-queue-tests/1000"));
     when(checkpointStore.getCheckpoints(anyLong()))
@@ -240,7 +304,9 @@ public class JudgingQueueTest {
     ReflectionTestUtils.setField(dispatcher, "comparator", mock(Comparator.class));
     ReflectionTestUtils.setField(dispatcher, "pollInterval", 10L);
     ReflectionTestUtils.setField(dispatcher, "leaseTimeout", LEASE_TIMEOUT);
-    ReflectionTestUtils.setField(dispatcher, "maxAttempts", 3);
+    ReflectionTestUtils.setField(dispatcher, "isJudging", true);
+    ReflectionTestUtils.setField(dispatcher, "downloadTimeout", 300L);
+    ReflectionTestUtils.setField(dispatcher, "compileTimeLimit", 20000L);
   }
 
   /**
@@ -276,11 +342,17 @@ public class JudgingQueueTest {
   /** The languages of the judgers of the tests: C++ only. */
   private static final List<Integer> CPP = List.of(2);
 
+  /** No problem left to other judgers. */
+  private static final List<Long> NONE = List.of();
+
   /** The lease (ms) of the judgings of the tests: renewed every 500 ms. */
   private static final long LEASE_TIMEOUT = 2000;
 
   /** A judger of the tests, with the steps of a judging mocked. */
   private Dispatcher dispatcher;
+
+  /** The mocked test data of that judger. */
+  private CheckpointStore checkpointStore;
 
   /** The mocked compiler of that judger. */
   private Compiler compiler;

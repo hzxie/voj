@@ -46,7 +46,8 @@ import org.verwandlung.voj.judger.model.Language;
  *
  * <p>The judger is a non-web Spring Boot application that, once started, takes the pending
  * submissions from the database and judges them on a thread of its own, which keeps the JVM
- * running, and sends their progress and its heartbeats to the web application via ActiveMQ.
+ * running, records its heartbeats in the database, and sends the progress of its judgings to the
+ * web application via ActiveMQ.
  *
  * @author Haozhe Xie
  */
@@ -65,8 +66,8 @@ public class VojJudgerApplication {
 
   /**
    * Initialization task executed after the application starts: logs runtime environment
-   * information, starts the heartbeat with the web module and the judging of the pending
-   * submissions.
+   * information, starts the heartbeats in the registry of the judgers and the judging of the
+   * pending submissions.
    *
    * @param languageMapper - the data access object for programming languages
    * @param heartbeat - the heartbeat task
@@ -109,12 +110,13 @@ public class VojJudgerApplication {
       checkpointStore.open();
 
       List<Integer> supportedLanguageIds = detectSupportedLanguages(languageMapper);
+      heartbeat.setLanguageIds(supportedLanguageIds);
       setupHeartBeat(heartbeat);
       if (supportedLanguageIds.isEmpty()) {
         // No usable toolchain on this host. Rather than taking submissions we cannot build (and
         // failing them with a bogus Compile Error), stay online for telemetry but never take one.
-        // The submissions no judger takes are judged a System Error by the web application once
-        // they waited too long (judging.maxWait).
+        // The submissions in a language no judger supports are judged a System Error by the web
+        // application.
         LOGGER.error(
             "No supported language compilers were detected; this judger will not take any "
                 + "submission. Check the toolchain installation.");
@@ -129,15 +131,17 @@ public class VojJudgerApplication {
     };
   }
 
-  /** Configures the heartbeat connection with the web module, periodically sending Keep-Alive signals to it. */
+  /**
+   * Records the heartbeats of the judger in the database from now on, every {@value
+   * ApplicationHeartbeat#HEARTBEAT_INTERVAL_MS} ms; the web application treats a judger as stopped
+   * after a few missed heartbeats.
+   *
+   * @param heartbeat - the heartbeat task
+   */
   private void setupHeartBeat(ApplicationHeartbeat heartbeat) {
-    final int INITIAL_DELAY = 0;
-    // A short interval keeps the web dashboard's telemetry (CPU/memory/uptime) and online status
-    // live; the web side treats a judger as offline after a few missed heartbeats.
-    final int PERIOD = 30;
-
-    ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
-    scheduler.scheduleAtFixedRate(heartbeat, INITIAL_DELAY, PERIOD, TimeUnit.SECONDS);
+    ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+    scheduler.scheduleWithFixedDelay(
+        heartbeat, 0, ApplicationHeartbeat.HEARTBEAT_INTERVAL_MS, TimeUnit.MILLISECONDS);
   }
 
   /** Logs the system environment variables to make bug reproduction easier. */
