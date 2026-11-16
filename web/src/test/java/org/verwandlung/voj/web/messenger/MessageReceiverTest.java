@@ -62,6 +62,41 @@ public class MessageReceiverTest {
     Assertions.assertFalse(event.isCompleted());
   }
 
+  /**
+   * Test case: tests onMessage(Message). Test data: the ErrorOccurred message of a judging (with its
+   * claim token), and the one the web application sends for a submission it judged itself (with a
+   * judge log and no claim token). Expected: both complete the streams with a System Error; the
+   * first carries the claim token, the second carries none and shows the judge log.
+   */
+  @Test
+  public void testSystemErrors() throws JMSException {
+    MapMessage ofAJudging = mock(MapMessage.class);
+    when(ofAJudging.getString("event")).thenReturn("ErrorOccurred");
+    when(ofAJudging.getLong("submissionId")).thenReturn(1000L);
+    when(ofAJudging.itemExists("claimToken")).thenReturn(true);
+    when(ofAJudging.getLong("claimToken")).thenReturn(-4242L);
+    MapMessage ofTheWebApplication = mock(MapMessage.class);
+    when(ofTheWebApplication.getString("event")).thenReturn("ErrorOccurred");
+    when(ofTheWebApplication.getLong("submissionId")).thenReturn(1001L);
+    when(ofTheWebApplication.itemExists("log")).thenReturn(true);
+    when(ofTheWebApplication.getString("log")).thenReturn("System Error.\n\nNo judger.\n");
+
+    receiver.onMessage(ofAJudging);
+    receiver.onMessage(ofTheWebApplication);
+
+    ArgumentCaptor<ApplicationEvent> eventCaptor = ArgumentCaptor.forClass(ApplicationEvent.class);
+    verify(eventPublisher, org.mockito.Mockito.times(2)).publishEvent(eventCaptor.capture());
+    SubmissionEvent first = (SubmissionEvent) eventCaptor.getAllValues().get(0);
+    Assertions.assertEquals(-4242L, first.getClaimToken());
+    Assertions.assertEquals("System Error", first.getJudgeResult());
+    Assertions.assertTrue(first.isCompleted());
+    SubmissionEvent second = (SubmissionEvent) eventCaptor.getAllValues().get(1);
+    Assertions.assertEquals(1001L, second.getSubmissionId());
+    Assertions.assertNull(second.getClaimToken());
+    Assertions.assertEquals("System Error.\n\nNo judger.\n", second.getMessage());
+    Assertions.assertTrue(second.isCompleted());
+  }
+
   /** Builds a TestPointFinished message of submission 1000. */
   private static MapMessage testPointFinished() throws JMSException {
     MapMessage message = mock(MapMessage.class);

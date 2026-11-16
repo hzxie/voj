@@ -16,9 +16,6 @@
  */
 package org.verwandlung.voj.web.messenger;
 
-import java.util.Calendar;
-import java.util.Date;
-
 import jakarta.jms.JMSException;
 import jakarta.jms.MapMessage;
 import jakarta.jms.Message;
@@ -32,7 +29,9 @@ import org.springframework.stereotype.Component;
 import org.verwandlung.voj.web.util.LogSanitizer;
 
 /**
- * The message receiving service. Used to receive real-time judge results from the judgers.
+ * The message receiving service. Receives the progress of the judgings, which the judgers publish
+ * on a topic (and the web application the outcome of a submission it judged itself), and forwards
+ * it to the live streams of the submissions on this instance.
  *
  * @author Haozhe Xie
  */
@@ -56,8 +55,6 @@ public class MessageReceiver implements MessageListener {
           testPointFinishedHandler(mapMessage);
         } else if ("AllTestPointsFinished".equals(event)) {
           allTestPointsFinishedHandler(mapMessage);
-        } else if ("KeepAlive".equals(event)) {
-          receiveFromAliveJudgersHandler(mapMessage);
         } else {
           LOGGER.warn(String.format("Unknown Event Received. [Event = %s]", new Object[] {event}));
         }
@@ -68,16 +65,19 @@ public class MessageReceiver implements MessageListener {
   }
 
   /**
-   * Handles the message of an internal error occurring in the judger.
+   * Handles the message of a System Error: one of a judging, with its claim token, or one the web
+   * application recorded itself, without a claim token but with its judge log.
    *
    * @param mapMessage - the MapMessage object received from the message queue
    * @throws JMSException
    */
   private void errorHandler(MapMessage mapMessage) throws JMSException {
     long submissionId = mapMessage.getLong("submissionId");
-    long claimToken = mapMessage.getLong("claimToken");
+    Long claimToken =
+        mapMessage.itemExists("claimToken") ? mapMessage.getLong("claimToken") : null;
+    String log = mapMessage.itemExists("log") ? mapMessage.getString("log") : "System Error.";
     eventPublisher.publishEvent(
-        new SubmissionEvent(this, submissionId, claimToken, "System Error", "System Error.", true));
+        new SubmissionEvent(this, submissionId, claimToken, "System Error", log, true));
     LOGGER.info(String.format("Submission #%d returned [System Error].", submissionId));
   }
 
@@ -172,34 +172,6 @@ public class MessageReceiver implements MessageListener {
             new Object[] {
               submissionId, LogSanitizer.forLog(runtimeResult), usedTime, usedMemory, score
             }));
-  }
-
-  /**
-   * Handles the Keep-Alive message from the judger. Used to obtain the information of backend
-   * judgers on the web side.
-   *
-   * @param mapMessage - the MapMessage object received from the message queue
-   * @throws JMSException
-   */
-  private void receiveFromAliveJudgersHandler(MapMessage mapMessage) throws JMSException {
-    String judgerUsername = mapMessage.getString("username");
-    String judgerDescription = mapMessage.getString("description");
-    long heartbeatTimeInMillis = mapMessage.getLong("heartbeatTime");
-    // Telemetry fields are tolerated as optional so older judgers still report in.
-    int cpuLoad = mapMessage.itemExists("cpuLoad") ? mapMessage.getInt("cpuLoad") : -1;
-    int memoryUsage = mapMessage.itemExists("memoryUsage") ? mapMessage.getInt("memoryUsage") : -1;
-    long uptime = mapMessage.itemExists("uptime") ? mapMessage.getLong("uptime") : 0;
-
-    Calendar calendar = Calendar.getInstance();
-    calendar.setTimeInMillis(heartbeatTimeInMillis);
-    Date heartbeatTime = calendar.getTime();
-
-    eventPublisher.publishEvent(
-        new KeepAliveEvent(
-            this, judgerUsername, judgerDescription, heartbeatTime, cpuLoad, memoryUsage, uptime));
-    LOGGER.info(
-        String.format(
-            "Received heartbeat from Judger[%s]", LogSanitizer.forLog(judgerUsername)));
   }
 
   /**

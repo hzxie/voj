@@ -29,7 +29,6 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
 
-import org.verwandlung.voj.web.messenger.ApplicationEventListener;
 import org.verwandlung.voj.web.model.*;
 import org.verwandlung.voj.web.service.*;
 
@@ -70,7 +69,7 @@ public class DefaultController {
     view.addObject(
         "totalSubmissions",
         submissionService.getNumberOfSubmissionsUsingDate(new Date(0), new Date()));
-    view.addObject("onlineJudgers", keepAliveEventListener.getOnlineJudgers());
+    view.addObject("onlineJudgers", judgerService.getNumberOfOnlineJudgers());
     view.addObject("languages", languageService.getEnabledLanguages());
     return view;
   }
@@ -127,19 +126,24 @@ public class DefaultController {
     List<User> judgersList =
         userService.getUserUsingUserGroup(userGroup, 0, NUMBER_OF_JUDGERS_PER_REQUEST);
 
+    Map<String, Map<String, Object>> onlineJudgersByUsername = new HashMap<>();
+    for (Map<String, Object> onlineJudger : judgerService.getOnlineJudgers()) {
+      // An account several judgers run as shows as one, online while any of them is.
+      onlineJudgersByUsername.putIfAbsent((String) onlineJudger.get("username"), onlineJudger);
+    }
     List<Map<String, Object>> judgers = new ArrayList<>();
     long onlineJudgers = 0, cpuSum = 0, memorySum = 0, nodesWithMetrics = 0;
     for (User judger : judgersList) {
       String username = judger.getUsername();
-      Map<String, Object> judgerInformation = keepAliveEventListener.getJudgerInformation(username);
+      Map<String, Object> judgerInformation = onlineJudgersByUsername.get(username);
 
       Map<String, Object> node = new HashMap<>();
       node.put("username", username);
       if (judgerInformation != null) {
         ++onlineJudgers;
-        int cpuLoad = (Integer) judgerInformation.getOrDefault("cpuLoad", -1);
-        int memoryUsage = (Integer) judgerInformation.getOrDefault("memoryUsage", -1);
-        long uptime = (Long) judgerInformation.getOrDefault("uptime", 0L);
+        int cpuLoad = ((Number) judgerInformation.getOrDefault("cpuLoad", -1)).intValue();
+        int memoryUsage = ((Number) judgerInformation.getOrDefault("memoryUsage", -1)).intValue();
+        long uptime = ((Number) judgerInformation.getOrDefault("uptime", 0L)).longValue();
 
         node.put("online", true);
         node.put("description", judgerInformation.get("description"));
@@ -265,8 +269,6 @@ public class DefaultController {
    */
   @Autowired private BulletinBoardService bulletinBoardService;
 
-  /**
-   * The autowired ApplicationEventListener object. Used for getting the online status of judgers.
-   */
-  @Autowired private ApplicationEventListener keepAliveEventListener;
+  /** The autowired JudgerService object. Used for getting the running judgers. */
+  @Autowired private JudgerService judgerService;
 }

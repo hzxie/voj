@@ -83,6 +83,7 @@ import org.verwandlung.voj.web.model.VojUserDetails;
 import org.verwandlung.voj.web.service.BulletinBoardService;
 import org.verwandlung.voj.web.service.ContestService;
 import org.verwandlung.voj.web.service.DiscussionService;
+import org.verwandlung.voj.web.service.JudgerService;
 import org.verwandlung.voj.web.service.LanguageService;
 import org.verwandlung.voj.web.service.OffensiveWordImportService;
 import org.verwandlung.voj.web.service.OffensiveWordService;
@@ -141,6 +142,7 @@ class ViewRenderSmokeTest {
   @MockitoBean private BulletinBoardService bulletinBoardService;
   @MockitoBean private SessionRegistry sessionRegistry;
   @MockitoBean private ApplicationEventListener applicationEventListener;
+  @MockitoBean private JudgerService judgerService;
   // CheckpointApiController is a @RestController, so the @WebMvcTest slice picks it up; unlike the
   // other controllers it injects these mappers directly rather than going through a (mocked) service.
   @MockitoBean private ProblemMapper problemMapper;

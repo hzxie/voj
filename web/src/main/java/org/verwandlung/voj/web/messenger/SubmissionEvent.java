@@ -31,7 +31,7 @@ public class SubmissionEvent extends ApplicationEvent {
    * @param submissionId - the unique identifier of the submission
    * @param claimToken - the claim token of the judging that sent the message, or null for the
    *     outcome the web application recorded itself (see {@code
-   *     SubmissionService#failUnclaimedSubmissions})
+   *     SubmissionService#failSubmissionsWithoutJudger})
    * @param judgeResult - the judge result
    * @param message - the message to show
    * @param isCompleted - whether judging has completed

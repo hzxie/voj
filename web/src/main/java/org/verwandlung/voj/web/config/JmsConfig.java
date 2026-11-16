@@ -21,19 +21,28 @@ import jakarta.jms.MessageListener;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.broker.BrokerService;
+import org.apache.activemq.command.ActiveMQTopic;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.jms.core.JmsTemplate;
 import org.springframework.jms.listener.DefaultMessageListenerContainer;
 
 /**
  * The message queue configuration. Replaces the ActiveMQ / JMS definitions in the original
  * dispatcher-servlet.xml.
  *
- * <p>The web module listens to {@code vojJudgeResultQueue} for the progress of the judgings and the
- * heartbeats of the judgers. It sends nothing: the judgers take the pending submissions from the
- * database.
+ * <p>Every instance of the web module subscribes to the topic {@value #JUDGE_PROGRESS_TOPIC}, on
+ * which the judgers publish the progress of their judgings, so that the viewers of a judging see its
+ * progress whichever instance serves them. The web module publishes there too, the outcome of a
+ * submission it judged itself (see {@code SubmissionService#failSubmissionsWithoutJudger}), so that
+ * every instance ends the live streams of the submission. The judgers take the pending submissions
+ * from the database, and record their heartbeats there.
+ *
+ * <p>The messages are live updates, the database holds the verdicts: they are not persistent and
+ * expire after {@value #MESSAGE_TIME_TO_LIVE_MS} ms, and a subscriber that is not running misses
+ * them.
  *
  * <p>It survives a restart of an external broker: the listener container keeps trying to reconnect
  * every {@value #RECOVERY_INTERVAL_MS} ms until the broker is back.
@@ -42,8 +51,18 @@ import org.springframework.jms.listener.DefaultMessageListenerContainer;
  */
 @Configuration
 public class JmsConfig {
-  /** The name of the judge result queue (Judger -> Web). */
-  private static final String JUDGE_RESULT_QUEUE = "vojJudgeResultQueue";
+  /** The name of the topic of the progress of the judgings (Judger, Web -> Web). */
+  static final String JUDGE_PROGRESS_TOPIC = "vojJudgeProgressTopic";
+
+  /**
+   * How long (ms) a message lives in the broker before it is dropped. Its expiry is set by the
+   * clock of its sender and checked by the broker's and the receiver's: this leaves the clocks of
+   * the hosts minutes to disagree by.
+   */
+  static final long MESSAGE_TIME_TO_LIVE_MS = 300000;
+
+  /** How long (ms) a send may be held up by the broker's flow control before it fails. */
+  static final int SEND_TIMEOUT_MS = 10000;
 
   /** How long (ms) the listener container waits between two attempts to reconnect. */
   static final long RECOVERY_INTERVAL_MS = 5000;
@@ -91,7 +110,10 @@ public class JmsConfig {
   @Bean
   @ConditionalOnProperty(name = "jms.broker.embedded", havingValue = "true")
   public ConnectionFactory connectionFactory(BrokerService embeddedBroker) {
-    return new ActiveMQConnectionFactory("vm://" + EMBEDDED_BROKER_NAME + "?create=false");
+    ActiveMQConnectionFactory connectionFactory =
+        new ActiveMQConnectionFactory("vm://" + EMBEDDED_BROKER_NAME + "?create=false");
+    connectionFactory.setSendTimeout(SEND_TIMEOUT_MS);
+    return connectionFactory;
   }
 
   /**
@@ -101,11 +123,33 @@ public class JmsConfig {
   @Bean
   @ConditionalOnProperty(name = "jms.broker.embedded", havingValue = "false", matchIfMissing = true)
   public ConnectionFactory externalConnectionFactory(@Value("${jms.broker.url}") String brokerUrl) {
-    return new ActiveMQConnectionFactory(brokerUrl);
+    ActiveMQConnectionFactory connectionFactory = new ActiveMQConnectionFactory(brokerUrl);
+    connectionFactory.setSendTimeout(SEND_TIMEOUT_MS);
+    return connectionFactory;
   }
 
   /**
-   * The message listener container that listens to the judge result queue, with a single consumer.
+   * The JmsTemplate that publishes to the topic of the progress of the judgings: messages that are
+   * not persistent and expire.
+   *
+   * @param connectionFactory - the connection factory of the broker
+   * @return the JmsTemplate
+   */
+  @Bean
+  public JmsTemplate judgeProgressTemplate(ConnectionFactory connectionFactory) {
+    JmsTemplate jmsTemplate = new JmsTemplate(connectionFactory);
+    jmsTemplate.setPubSubDomain(true);
+    jmsTemplate.setDefaultDestination(new ActiveMQTopic(JUDGE_PROGRESS_TOPIC));
+    jmsTemplate.setExplicitQosEnabled(true);
+    jmsTemplate.setDeliveryPersistent(false);
+    jmsTemplate.setTimeToLive(MESSAGE_TIME_TO_LIVE_MS);
+    return jmsTemplate;
+  }
+
+  /**
+   * The message listener container that subscribes to the topic of the progress of the judgings,
+   * with a single consumer (a subscription, which receives every message published while it
+   * lasts).
    *
    * <p>A DefaultMessageListenerContainer, which re-establishes its connection in a loop until the
    * broker is reachable again; a SimpleMessageListenerContainer tries to recover only once, right
@@ -116,11 +160,12 @@ public class JmsConfig {
    * @return the listener container
    */
   @Bean
-  public DefaultMessageListenerContainer judgeResultListenerContainer(
+  public DefaultMessageListenerContainer judgeProgressListenerContainer(
       ConnectionFactory connectionFactory, MessageListener messageReceiver) {
     DefaultMessageListenerContainer listenerContainer = new DefaultMessageListenerContainer();
     listenerContainer.setConnectionFactory(connectionFactory);
-    listenerContainer.setDestinationName(JUDGE_RESULT_QUEUE);
+    listenerContainer.setPubSubDomain(true);
+    listenerContainer.setDestinationName(JUDGE_PROGRESS_TOPIC);
     listenerContainer.setMessageListener(messageReceiver);
     listenerContainer.setRecoveryInterval(RECOVERY_INTERVAL_MS);
     return listenerContainer;

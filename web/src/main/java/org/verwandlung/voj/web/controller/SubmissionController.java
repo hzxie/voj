@@ -245,6 +245,13 @@ public class SubmissionController {
       HttpServletResponse response)
       throws IOException {
     User currentUser = HttpSessionParser.getCurrentUser();
+    // The stream is registered before the submission is read: an outcome recorded after the read
+    // found the submission pending is then sent to it, whereas one sent between the read and a
+    // later registration would reach no stream, which would wait for nothing. ("Established" is
+    // held by the stream until it is returned, and sent first.)
+    SseEmitter sseEmitter = new SseEmitter();
+    sseEmitter.send("Established");
+    submissionEventListener.addSseEmitters(submissionId, sseEmitter);
     Submission submission = submissionService.getSubmission(submissionId);
 
     // Anyone allowed to see the source code may also follow the live judge log (which can echo the
@@ -255,13 +262,11 @@ public class SubmissionController {
         || !contestService.isSubmissionVisible(submission, currentUser)
         || !canViewSourceCode(submission, currentUser)
         || !submission.getJudgeResult().getJudgeResultSlug().equals("PD")) {
+      submissionEventListener.removeSseEmitter(submissionId, sseEmitter);
       throw new ResourceNotFoundException();
     }
 
     response.addHeader("X-Accel-Buffering", "no");
-    SseEmitter sseEmitter = new SseEmitter();
-    submissionEventListener.addSseEmitters(submissionId, sseEmitter);
-    sseEmitter.send("Established");
     return sseEmitter;
   }
 

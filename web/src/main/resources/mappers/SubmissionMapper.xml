@@ -361,24 +361,36 @@
 			submission_claim_token = NULL, submission_lease_expiry_time = NULL
 		WHERE submission_id = #{submissionId}
 	</update>
-	<!-- A pending submission that no judging has taken since it was queued, for longer than the
-	     maximum wait by the database's clock. (A judging that took it counted an attempt.) -->
-	<sql id="unclaimedSubmissionCondition">
-		submission_judge_result = 'PD' AND submission_judge_attempts = 0
-			AND submission_queued_time &lt;= NOW() - INTERVAL #{maxWaitSeconds} SECOND
+	<!-- A pending submission that no judging holds: none claimed it, or the lease of the one that
+	     did expired, by the database's clock. -->
+	<sql id="waitingSubmissionCondition">
+		submission_judge_result = 'PD'
+			AND (submission_lease_expiry_time IS NULL OR submission_lease_expiry_time &lt; NOW())
 	</sql>
-	<select id="getUnclaimedSubmissionIds"
-		parameterType="long"
+	<select id="getLanguageIdsOfWaitingSubmissions"
+		resultType="int">
+		SELECT DISTINCT language_id
+		FROM voj_submissions
+		WHERE <include refid="waitingSubmissionCondition" />
+	</select>
+	<select id="getWaitingSubmissionIds"
+		parameterType="int"
 		resultType="long">
 		SELECT submission_id
 		FROM voj_submissions
-		WHERE <include refid="unclaimedSubmissionCondition" />
+		WHERE <include refid="waitingSubmissionCondition" /> AND language_id = #{languageId}
 	</select>
-	<update id="failUnclaimedSubmission"
+	<update id="failSubmissionWithoutJudger"
 		parameterType="map">
 		UPDATE voj_submissions
-		SET submission_judge_result = 'SE', submission_judge_log = #{judgeLog}
-		WHERE submission_id = #{submissionId} AND <include refid="unclaimedSubmissionCondition" />
+		SET submission_judge_result = 'SE', submission_judge_log = #{judgeLog},
+			submission_claim_token = NULL, submission_lease_expiry_time = NULL
+		WHERE submission_id = #{submissionId} AND language_id = #{languageId}
+			AND <include refid="waitingSubmissionCondition" />
+			AND NOT EXISTS (SELECT 1 FROM voj_judgers
+				WHERE judger_is_ready = 1
+					AND judger_heartbeat_time &gt; NOW() - INTERVAL #{judgerTimeoutSeconds} SECOND
+					AND FIND_IN_SET(#{languageId}, judger_language_ids) &gt; 0)
 	</update>
 	<delete id="deleteSubmission"
 		parameterType="long">

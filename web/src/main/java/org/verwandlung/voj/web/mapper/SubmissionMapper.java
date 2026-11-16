@@ -330,8 +330,9 @@ public interface SubmissionMapper {
    * verdict, judge log, resource usage, score, executing judger and execute time. Used by the
    * rejudge flow: without this, the record would keep its old verdict and the detail pages would
    * not show the live judging stream. It is queued anew: at the end of the queue (its queued time
-   * is now), with no attempt so far, and without the claim of a judging, so that a judging of it
-   * still running stops (it finds its claim token gone) and the judgers take it again.
+   * is now), with no interrupted judging so far, and without the claim of a judging, so that a
+   * judging of it still running stops (it finds its claim token gone) and the judgers take it
+   * again.
    *
    * @param submissionId - the unique identifier of the submission
    * @return the number of rows updated
@@ -339,27 +340,39 @@ public interface SubmissionMapper {
   int resetSubmissionToPending(@Param("submissionId") long submissionId);
 
   /**
-   * Gets the pending submissions that no judging has taken within a maximum wait since they were
-   * queued, by the database's clock. A plain read, which locks nothing.
+   * Gets the languages of the pending submissions that no judging holds: none claimed them, or the
+   * lease of the one that did expired (by the database's clock). A plain read, which locks nothing;
+   * the index of the judging queue answers it alone.
    *
-   * @param maxWaitSeconds - the maximum wait, in seconds
-   * @return the unique identifiers of the submissions
+   * @return the unique identifiers of the languages
    */
-  List<Long> getUnclaimedSubmissionIds(@Param("maxWaitSeconds") long maxWaitSeconds);
+  List<Integer> getLanguageIdsOfWaitingSubmissions();
 
   /**
-   * Marks a pending submission that no judging has taken within a maximum wait (see {@link
-   * #getUnclaimedSubmissionIds}) as a System Error, if that is still so: a judging that took it
-   * meanwhile is never failed.
+   * Gets the pending submissions in a language that no judging holds (see {@link
+   * #getLanguageIdsOfWaitingSubmissions}). A plain read, which locks nothing.
+   *
+   * @param languageId - the unique identifier of the language
+   * @return the unique identifiers of the submissions
+   */
+  List<Long> getWaitingSubmissionIds(@Param("languageId") int languageId);
+
+  /**
+   * Marks a pending submission that no judging holds (see {@link #getWaitingSubmissionIds}) as a
+   * System Error, without a claim token, if that is still so and no judger taking submissions whose
+   * last heartbeat is at most some seconds old (by the database's clock) supports its language: a
+   * judging that took it meanwhile is never failed.
    *
    * @param submissionId - the unique identifier of the submission
-   * @param maxWaitSeconds - the maximum wait, in seconds
+   * @param languageId - the unique identifier of its language
+   * @param judgerTimeoutSeconds - how old (seconds) the last heartbeat of a running judger may be
    * @param judgeLog - the judge log of the System Error
    * @return 1 if the submission was marked, 0 otherwise
    */
-  int failUnclaimedSubmission(
+  int failSubmissionWithoutJudger(
       @Param("submissionId") long submissionId,
-      @Param("maxWaitSeconds") long maxWaitSeconds,
+      @Param("languageId") int languageId,
+      @Param("judgerTimeoutSeconds") int judgerTimeoutSeconds,
       @Param("judgeLog") String judgeLog);
 
   /**

@@ -1,0 +1,344 @@
+/* Verwandlung Online Judge - A cross-platform judge online system
+ * Copyright (C) 2014-2026 Haozhe Xie <root@haozhexie.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+package org.verwandlung.voj.web.service;
+
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.timeout;
+import static org.mockito.Mockito.verify;
+
+import java.sql.PreparedStatement;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+import javax.sql.DataSource;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
+import org.springframework.jms.listener.DefaultMessageListenerContainer;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
+import org.springframework.test.util.AopTestUtils;
+import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+
+import org.verwandlung.voj.web.messenger.ApplicationEventListener;
+
+/**
+ * Checks that the pending submissions in a language that no judger taking submissions supports are
+ * marked as a System Error once that lasted the timeout, and only those: neither a submission a
+ * judging holds, nor one in a language a running judger takes submissions in, however long it
+ * waited.
+ *
+ * <p>The marking runs outside any transaction, so this class is not {@code @Transactional}; the
+ * rows a test commits are removed afterwards. The timeout is shortened to {@value #TIMEOUT} ms.
+ *
+ * @author Haozhe Xie
+ */
+@ExtendWith(SpringExtension.class)
+@ContextConfiguration({"classpath:test-spring-context.xml"})
+public class SubmissionsWithoutJudgerTest {
+  @BeforeEach
+  public void setUp() {
+    jdbcTemplate = new JdbcTemplate(dataSource);
+    jdbcTemplate.update("DELETE FROM voj_judgers");
+    setTimeout(TIMEOUT);
+    // What a previous test let it see.
+    ((Map<?, ?>) ReflectionTestUtils.getField(getTarget(), "languagesWithoutJudgerSince")).clear();
+  }
+
+  @AfterEach
+  public void tearDown() {
+    setTimeout(300000);
+    jdbcTemplate.update("DELETE FROM voj_judgers");
+    for (long submissionId : committedSubmissionIds) {
+      jdbcTemplate.update("DELETE FROM voj_submissions WHERE submission_id = ?", submissionId);
+    }
+  }
+
+  /**
+   * Test case: tests failSubmissionsWithoutJudger(). Test data: a pending submission in C++, which
+   * no judger supports. Expected: it waits for the timeout, then it is marked SE with the judge log
+   * that says no running judger takes submissions in its language; a further run marks nothing.
+   */
+  @Test
+  public void testUnsupportedLanguageIsSystemErrorAfterTheTimeout() throws Exception {
+    long pending = insertSubmission(CPP, null, null);
+
+    Assertions.assertEquals(0, submissionService.failSubmissionsWithoutJudger());
+    Assertions.assertEquals("PD", getJudgeResult(pending));
+    Thread.sleep(TIMEOUT + 200);
+
+    Assertions.assertEquals(1, submissionService.failSubmissionsWithoutJudger());
+    Assertions.assertEquals("SE", getJudgeResult(pending));
+    Assertions.assertEquals(
+        SubmissionService.NO_JUDGER_JUDGE_LOG,
+        submissionService.getSubmission(pending).getJudgeLog());
+    Assertions.assertEquals(0, submissionService.failSubmissionsWithoutJudger());
+  }
+
+  /**
+   * Test case: tests failSubmissionsWithoutJudger(). Test data: a pending submission in C++ claimed
+   * by the only judger that supports C++, which stopped (its last heartbeat is 2 minutes old) and
+   * whose lease expired. Expected: it is marked SE once the timeout is over, without the claim
+   * token of the vanished judging.
+   */
+  @Test
+  public void testSubmissionOfAStoppedJudgerIsSystemErrorAfterTheTimeout() throws Exception {
+    registerJudger("2", true, 120);
+    long abandoned = insertSubmission(CPP, 7L, -30L);
+
+    Assertions.assertEquals(0, submissionService.failSubmissionsWithoutJudger());
+    Thread.sleep(TIMEOUT + 200);
+    Assertions.assertEquals(1, submissionService.failSubmissionsWithoutJudger());
+
+    Assertions.assertEquals("SE", getJudgeResult(abandoned));
+    Assertions.assertFalse(submissionService.isCurrentJudging(abandoned, 7L));
+    Assertions.assertNull(
+        jdbcTemplate.queryForObject(
+            "SELECT submission_claim_token FROM voj_submissions WHERE submission_id = ?",
+            Long.class,
+            abandoned));
+  }
+
+  /**
+   * Test case: tests failSubmissionsWithoutJudger(). Test data: a backlog of pending submissions in
+   * C++ queued a day ago (one of which a judging held until its lease expired), and a running
+   * judger that takes submissions in C++ and Java. Expected: however long they waited, none is
+   * marked, run after run.
+   */
+  @Test
+  public void testBacklogWithARunningJudgerIsNeverSystemError() throws Exception {
+    registerJudger("3,2", true, 0);
+    List<Long> backlog = new ArrayList<>();
+    for (int i = 0; i < 3; ++i) {
+      backlog.add(insertSubmission(CPP, null, null));
+    }
+    backlog.add(insertSubmission(CPP, 8L, -60L));
+    jdbcTemplate.update(
+        "UPDATE voj_submissions SET submission_queued_time = NOW() - INTERVAL 1 DAY"
+            + " WHERE submission_id IN (?, ?, ?, ?)",
+        backlog.toArray());
+
+    for (int run = 0; run < 3; ++run) {
+      Assertions.assertEquals(0, submissionService.failSubmissionsWithoutJudger());
+      Thread.sleep(TIMEOUT / 2 + 100);
+    }
+    for (long submissionId : backlog) {
+      Assertions.assertEquals("PD", getJudgeResult(submissionId));
+    }
+  }
+
+  /**
+   * Test case: tests failSubmissionsWithoutJudger(). Test data: the only judger that supports C++
+   * runs but takes no submissions (its judgings failed for reasons of its own), a pending
+   * submission in C++ that a judging holds (its lease has not expired) and one that waits. Expected:
+   * only the waiting one is marked once the timeout is over; the held one is left to its judging.
+   */
+  @Test
+  public void testAJudgingThatHoldsASubmissionIsLeftAlone() throws Exception {
+    registerJudger("2", false, 0);
+    long held = insertSubmission(CPP, 7L, 60L);
+    long waiting = insertSubmission(CPP, null, null);
+
+    Assertions.assertEquals(0, submissionService.failSubmissionsWithoutJudger());
+    Thread.sleep(TIMEOUT + 200);
+    Assertions.assertEquals(1, submissionService.failSubmissionsWithoutJudger());
+
+    Assertions.assertEquals("SE", getJudgeResult(waiting));
+    Assertions.assertEquals("PD", getJudgeResult(held));
+    Assertions.assertTrue(submissionService.isCurrentJudging(held, 7L));
+  }
+
+  /**
+   * Test case: tests failSubmissionsWithoutJudger(). Test data: a pending submission in Java, which
+   * a judger that takes submissions supports for a while, then not any more (it stopped). Expected:
+   * the timeout starts over once the judger is gone, so the submission is marked only a timeout
+   * after that.
+   */
+  @Test
+  public void testTheTimeoutStartsOverOnceAJudgerWasBack() throws Exception {
+    long pending = insertSubmission(JAVA, null, null);
+    Assertions.assertEquals(0, submissionService.failSubmissionsWithoutJudger());
+    Thread.sleep(TIMEOUT + 200);
+
+    registerJudger("3", true, 0);
+    Assertions.assertEquals(0, submissionService.failSubmissionsWithoutJudger());
+    jdbcTemplate.update("DELETE FROM voj_judgers");
+    Assertions.assertEquals(0, submissionService.failSubmissionsWithoutJudger());
+    Assertions.assertEquals("PD", getJudgeResult(pending));
+
+    Thread.sleep(TIMEOUT + 200);
+    Assertions.assertEquals(1, submissionService.failSubmissionsWithoutJudger());
+    Assertions.assertEquals("SE", getJudgeResult(pending));
+  }
+
+  /**
+   * Test case: tests failSubmissionsWithoutJudger() with a timeout of 0. Test data: a pending
+   * submission in C++ that no judger supports. Expected: it waits for a judger, as long as it
+   * takes.
+   */
+  @Test
+  public void testWithoutTimeoutSubmissionsWaitForever() throws Exception {
+    long pending = insertSubmission(CPP, null, null);
+    setTimeout(0);
+
+    Assertions.assertEquals(0, submissionService.failSubmissionsWithoutJudger());
+    Thread.sleep(TIMEOUT + 200);
+    Assertions.assertEquals(0, submissionService.failSubmissionsWithoutJudger());
+    Assertions.assertEquals("PD", getJudgeResult(pending));
+  }
+
+  /**
+   * Test case: tests failSubmissionsWithoutJudger(). Test data: a viewer following the live judging
+   * of a pending submission in a language without a judger. Expected: the System Error goes over
+   * the topic of the progress, which every instance receives (this one included), so that its
+   * stream receives the System Error with the judge log, and is completed.
+   */
+  @Test
+  public void testTheLiveStreamOfAFailedSubmissionIsCompleted() throws Exception {
+    long pending = insertSubmission(CPP, null, null);
+    SseEmitter viewer = mock(SseEmitter.class);
+    applicationEventListener.addSseEmitters(pending, viewer);
+    // A message published before this instance subscribed would reach nobody.
+    long deadline = System.nanoTime() + 10_000_000_000L;
+    while (!judgeProgressListenerContainer.isRegisteredWithDestination()) {
+      Assertions.assertTrue(System.nanoTime() < deadline);
+      Thread.sleep(50);
+    }
+
+    submissionService.failSubmissionsWithoutJudger();
+    Thread.sleep(TIMEOUT + 200);
+    Assertions.assertEquals(1, submissionService.failSubmissionsWithoutJudger());
+
+    verify(viewer, timeout(10000))
+        .send(
+            argThat(
+                (Object message) ->
+                    Map.of(
+                            "judgeResult",
+                            "System Error",
+                            "message",
+                            SubmissionService.NO_JUDGER_JUDGE_LOG)
+                        .equals(message)));
+    verify(viewer, timeout(10000)).complete();
+  }
+
+  /**
+   * Registers a process of the judger account #1001 (voj@judger) as a running judger.
+   *
+   * @param languageIds - the languages it supports, comma-separated
+   * @param isReady - whether it takes submissions
+   * @param heartbeatSecondsAgo - how long ago its last heartbeat was, by the database's clock
+   */
+  private void registerJudger(String languageIds, boolean isReady, long heartbeatSecondsAgo) {
+    jdbcTemplate.update(
+        "INSERT INTO voj_judgers (judger_instance, judger_uid, judger_language_ids,"
+            + " judger_is_ready, judger_heartbeat_time)"
+            + " VALUES (UUID(), 1001, ?, ?, NOW() - INTERVAL ? SECOND)",
+        languageIds,
+        isReady,
+        heartbeatSecondsAgo);
+  }
+
+  /**
+   * Inserts a pending submission of Problem #1000, queued now, committed, by the database's clock.
+   *
+   * @param languageId - the unique identifier of its language
+   * @param claimToken - the claim token of the judging that holds it, or null
+   * @param leaseExpiresInSeconds - in how many seconds the lease of that judging expires (negative:
+   *     it expired), or null
+   * @return the unique identifier of the submission
+   */
+  private long insertSubmission(int languageId, Long claimToken, Long leaseExpiresInSeconds) {
+    KeyHolder keyHolder = new GeneratedKeyHolder();
+    jdbcTemplate.update(
+        connection -> {
+          PreparedStatement statement =
+              connection.prepareStatement(
+                  "INSERT INTO voj_submissions (problem_id, uid, language_id, submission_code,"
+                      + " submission_claim_token, submission_lease_expiry_time)"
+                      + " VALUES (1000, 1000, ?, 'Code', ?, NOW() + INTERVAL ? SECOND)",
+                  Statement.RETURN_GENERATED_KEYS);
+          statement.setInt(1, languageId);
+          statement.setObject(2, claimToken);
+          statement.setObject(3, leaseExpiresInSeconds);
+          return statement;
+        },
+        keyHolder);
+    long submissionId = keyHolder.getKey().longValue();
+    committedSubmissionIds.add(submissionId);
+    return submissionId;
+  }
+
+  /** Gets the submission service behind its transactional proxy. */
+  private SubmissionService getTarget() {
+    return AopTestUtils.getTargetObject(submissionService);
+  }
+
+  /** Sets the timeout (ms) of the submission service. */
+  private void setTimeout(long timeout) {
+    ReflectionTestUtils.setField(getTarget(), "noJudgerTimeout", timeout);
+  }
+
+  /** Gets the slug of the judge result of a submission. */
+  private String getJudgeResult(long submissionId) {
+    return jdbcTemplate.queryForObject(
+        "SELECT submission_judge_result FROM voj_submissions WHERE submission_id = ?",
+        String.class,
+        submissionId);
+  }
+
+  /** The timeout (ms) of the tests. */
+  private static final long TIMEOUT = 1500;
+
+  /** The language C++. */
+  private static final int CPP = 2;
+
+  /** The language Java. */
+  private static final int JAVA = 3;
+
+  /** The autowired SubmissionService object. */
+  @Autowired private SubmissionService submissionService;
+
+  /** The autowired ApplicationEventListener, which holds the live judging streams. */
+  @Autowired private ApplicationEventListener applicationEventListener;
+
+  /** The subscription of this instance to the topic of the progress of the judgings. */
+  @Autowired
+  @Qualifier("judgeProgressListenerContainer")
+  private DefaultMessageListenerContainer judgeProgressListenerContainer;
+
+  /** The data source of the test database. */
+  @Autowired private DataSource dataSource;
+
+  /** Runs the fixture and assertion queries (auto-commit). */
+  private JdbcTemplate jdbcTemplate;
+
+  /** The submissions a test committed, removed after it. */
+  private final List<Long> committedSubmissionIds = new ArrayList<>();
+}

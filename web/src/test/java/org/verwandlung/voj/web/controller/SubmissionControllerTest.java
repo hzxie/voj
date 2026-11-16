@@ -32,10 +32,16 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import org.verwandlung.voj.web.exception.ResourceNotFoundException;
+import org.verwandlung.voj.web.messenger.ApplicationEventListener;
+import org.verwandlung.voj.web.messenger.SubmissionEvent;
+import org.verwandlung.voj.web.model.JudgeResult;
 import org.verwandlung.voj.web.model.Submission;
 import org.verwandlung.voj.web.model.User;
 import org.verwandlung.voj.web.model.UserGroup;
@@ -271,6 +277,61 @@ public class SubmissionControllerTest {
     submission.setUser(user);
     submission.setCode(code);
     return submission;
+  }
+
+  /**
+   * Test case: tests getRealTimeJudgeResultAction(...). Test data: the owner of a pending
+   * submission follows its judging, and its outcome is sent while the controller reads the
+   * submission (after the read found it pending, before the controller returns). Expected: the
+   * stream the controller returns received it and is completed, rather than waiting for messages
+   * that will never come.
+   */
+  @Test
+  public void testAnOutcomeSentWhileTheStreamIsOpenedReachesIt() throws Exception {
+    User owner = ownerUser();
+    authenticate(owner);
+    long submissionId = 987654321L;
+    ApplicationEventListener listener = new ApplicationEventListener();
+    ReflectionTestUtils.setField(controller, "submissionEventListener", listener);
+    Submission pending = submissionWithCode(owner, "code");
+    pending.setJudgeResult(new JudgeResult(1, "PD", "Pending"));
+    when(submissionService.getSubmission(submissionId))
+        .thenAnswer(
+            invocation -> {
+              listener.submissionEventHandler(
+                  new SubmissionEvent(this, submissionId, null, "System Error", "Log", true));
+              return pending;
+            });
+
+    SseEmitter sseEmitter =
+        controller.getRealTimeJudgeResultAction(
+            submissionId, new MockHttpServletRequest(), new MockHttpServletResponse());
+
+    Assertions.assertThrows(IllegalStateException.class, () -> sseEmitter.send("more"));
+    Assertions.assertEquals(0, listener.getNumberOfSseEmitters(submissionId));
+  }
+
+  /**
+   * Test case: tests getRealTimeJudgeResultAction(...). Test data: a submission that is no longer
+   * pending. Expected: no stream (404), and none is left registered.
+   */
+  @Test
+  public void testNoStreamOfAJudgedSubmission() throws Exception {
+    User owner = ownerUser();
+    authenticate(owner);
+    long submissionId = 987654322L;
+    ApplicationEventListener listener = new ApplicationEventListener();
+    ReflectionTestUtils.setField(controller, "submissionEventListener", listener);
+    Submission judged = submissionWithCode(owner, "code");
+    judged.setJudgeResult(new JudgeResult(2, "AC", "Accepted"));
+    when(submissionService.getSubmission(submissionId)).thenReturn(judged);
+
+    Assertions.assertThrows(
+        ResourceNotFoundException.class,
+        () ->
+            controller.getRealTimeJudgeResultAction(
+                submissionId, new MockHttpServletRequest(), new MockHttpServletResponse()));
+    Assertions.assertEquals(0, listener.getNumberOfSseEmitters(submissionId));
   }
 
   /** Places the given user into the Spring Security context. */

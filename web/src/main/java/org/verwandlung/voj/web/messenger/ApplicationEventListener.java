@@ -17,13 +17,8 @@
 package org.verwandlung.voj.web.messenger;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
-import java.util.Hashtable;
-import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -37,8 +32,9 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import org.verwandlung.voj.web.service.SubmissionService;
 
 /**
- * The application event listener. Responsible for forwarding the messages in the message queue to
- * the controllers.
+ * The application event listener. Forwards the progress of the judgings, which every instance
+ * receives on the topic of the progress (see {@link MessageReceiver}), to the live streams of the
+ * submissions on this instance.
  *
  * @author Haozhe Xie
  */
@@ -59,7 +55,8 @@ public class ApplicationEventListener {
     Set<SseEmitter> emitters = sseEmitters.get(submissionId);
 
     if (emitters == null || emitters.isEmpty()) {
-      LOGGER.warn(String.format("CANNOT get the SseEmitter for submission #%d.", submissionId));
+      // Every instance receives the progress of every judging; most have no viewer of it.
+      LOGGER.debug(String.format("No viewer of submission #%d on this instance.", submissionId));
       return;
     }
     // A judging that was superseded (by a rejudge, or by a later claim once its lease expired) may
@@ -140,7 +137,7 @@ public class ApplicationEventListener {
    * @param submissionId - the unique identifier of the submission record
    * @param sseEmitter - the Server-Sent Event emitter object to unregister
    */
-  private void removeSseEmitter(long submissionId, SseEmitter sseEmitter) {
+  public void removeSseEmitter(long submissionId, SseEmitter sseEmitter) {
     sseEmitters.computeIfPresent(
         submissionId,
         (id, emitters) -> {
@@ -174,114 +171,9 @@ public class ApplicationEventListener {
    * @param submissionId - the unique identifier of the submission record
    * @return the number of registered emitters
    */
-  int getNumberOfSseEmitters(long submissionId) {
+  public int getNumberOfSseEmitters(long submissionId) {
     Set<SseEmitter> emitters = sseEmitters.get(submissionId);
     return emitters == null ? 0 : emitters.size();
-  }
-
-  /**
-   * Handles judger heartbeat events.
-   *
-   * @param event - the judger heartbeat event
-   */
-  @EventListener
-  public void keepAliveEventHandler(KeepAliveEvent event) {
-    String judgerUsername = event.getJudgerUsername();
-    String judgerDescription = event.getJudgerDescription();
-    Date heartbeatTime = event.getHeartbeatTime();
-
-    Map<String, Object> judgerInformation = new HashMap<>();
-    judgerInformation.put("description", judgerDescription);
-    judgerInformation.put("heartbeatTime", heartbeatTime);
-    judgerInformation.put("cpuLoad", event.getCpuLoad());
-    judgerInformation.put("memoryUsage", event.getMemoryUsage());
-    judgerInformation.put("uptime", event.getUptime());
-
-    onlineJudgers.put(judgerUsername, judgerInformation);
-  }
-
-  /**
-   * Gets the live information (description + telemetry) of an online judger.
-   *
-   * @param judgerUsername - the username of the judger
-   * @return the judger's information map, or null when the judger is offline
-   */
-  public Map<String, Object> getJudgerInformation(String judgerUsername) {
-    Map<String, Object> judgerInformation = onlineJudgers.get(judgerUsername);
-    return isOnline(judgerInformation) ? judgerInformation : null;
-  }
-
-  /**
-   * Gets the number of online judgers.
-   *
-   * @return the number of online judgers
-   */
-  public long getOnlineJudgers() {
-    long onlineJudgersCount = 0;
-
-    for (Map<String, Object> judgerInformation : onlineJudgers.values()) {
-      if (isOnline(judgerInformation)) {
-        ++onlineJudgersCount;
-      }
-    }
-    return onlineJudgersCount;
-  }
-
-  /**
-   * Gets a snapshot of the currently online judgers and their live telemetry (description, CPU load,
-   * memory usage, uptime), used by the administration dashboard and the judgers page. Each entry is a
-   * copy that also carries the judger's {@code username}.
-   *
-   * @return a list of telemetry maps, one per online judger
-   */
-  public List<Map<String, Object>> getOnlineJudgerList() {
-    List<Map<String, Object>> judgers = new ArrayList<>();
-    for (Entry<String, Map<String, Object>> entry : onlineJudgers.entrySet()) {
-      if (isOnline(entry.getValue())) {
-        Map<String, Object> telemetry = new HashMap<>(entry.getValue());
-        telemetry.put("username", entry.getKey());
-        judgers.add(telemetry);
-      }
-    }
-    return judgers;
-  }
-
-  /**
-   * Gets the average CPU load across the currently online judgers, used by the dashboard's system
-   * status. CPU load is reported as a percentage in {@code [0, 100]} by each judger's heartbeat.
-   *
-   * @return the average CPU load (0..100), or {@code -1} when no judger is online or none reports it
-   */
-  public double getAverageCpuLoad() {
-    double total = 0;
-    int counted = 0;
-    for (Map<String, Object> judgerInformation : onlineJudgers.values()) {
-      if (!isOnline(judgerInformation)) {
-        continue;
-      }
-      Object cpuLoad = judgerInformation.get("cpuLoad");
-      if (cpuLoad instanceof Number) {
-        total += ((Number) cpuLoad).doubleValue();
-        ++counted;
-      }
-    }
-    return counted == 0 ? -1 : total / counted;
-  }
-
-  /**
-   * Checks whether a judger is currently online, i.e. whether its most recent heartbeat is recent
-   * enough that the judger is still considered alive.
-   *
-   * @param judgerInformation - the judger's information map, or null when never seen
-   * @return whether the judger is currently online
-   */
-  private boolean isOnline(Map<String, Object> judgerInformation) {
-    if (judgerInformation == null) {
-      return false;
-    }
-    Date lastHeartbeatTime = (Date) judgerInformation.get("heartbeatTime");
-    return lastHeartbeatTime != null
-        && System.currentTimeMillis() - lastHeartbeatTime.getTime() <= ONLINE_TIMEOUT_MILLIS;
   }
 
   /**
@@ -290,21 +182,6 @@ public class ApplicationEventListener {
    * following that submission, used to push real-time judge information.
    */
   private static final Map<Long, Set<SseEmitter>> sseEmitters = new ConcurrentHashMap<>();
-
-  /**
-   * The list of online judgers. The Key in the Map represents the username of the judger. The Value
-   * in the Map represents the information of the corresponding judger. A judger that stopped
-   * sending heartbeats is treated as offline when the map is read (see isOnline); its entry stays,
-   * which is bounded by the number of judger accounts.
-   */
-  private static Map<String, Map<String, Object>> onlineJudgers =
-      new Hashtable<String, Map<String, Object>>();
-
-  /**
-   * The maximum age (in milliseconds) of a judger's last heartbeat for it to still be considered
-   * online. A judger that misses roughly three 30-second heartbeats is treated as offline.
-   */
-  private static final long ONLINE_TIMEOUT_MILLIS = 90_000L;
 
   /**
    * The autowired SubmissionService object. Used to tell the current judging of a submission from

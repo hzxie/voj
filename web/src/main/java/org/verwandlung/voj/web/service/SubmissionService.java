@@ -27,13 +27,13 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -44,7 +44,7 @@ import org.verwandlung.voj.web.mapper.LanguageMapper;
 import org.verwandlung.voj.web.mapper.OptionMapper;
 import org.verwandlung.voj.web.mapper.ProblemMapper;
 import org.verwandlung.voj.web.mapper.SubmissionMapper;
-import org.verwandlung.voj.web.messenger.SubmissionEvent;
+import org.verwandlung.voj.web.messenger.MessageSender;
 import org.verwandlung.voj.web.model.JudgeResult;
 import org.verwandlung.voj.web.model.Language;
 import org.verwandlung.voj.web.model.Option;
@@ -62,11 +62,14 @@ import org.verwandlung.voj.web.util.Pagination;
 @Service
 @Transactional
 public class SubmissionService {
-  /** The judge log of a submission that no judger took in time, by the maximum wait in minutes. */
-  static final String UNCLAIMED_JUDGE_LOG =
-      "System Error.\n\nNo judger took this submission within %d minutes: no running judger"
-          + " supports its language, or all of them were busy for that long. An administrator can"
-          + " rejudge this submission.\n";
+  /** The judge log of a submission in a language that no judger taking submissions supports. */
+  static final String NO_JUDGER_JUDGE_LOG =
+      "System Error.\n\nNo running judger that takes submissions supports the language of this"
+          + " submission: the judgers that do stopped, or failed to judge for reasons of their own"
+          + " (see their logs). An administrator can rejudge this submission.\n";
+
+  /** How often (ms) the pending submissions in a language without a judger are looked for. */
+  static final long NO_JUDGER_CHECK_INTERVAL_MS = 30000;
 
   /**
    * [For administrators only] Gets the number of submissions within a specified time period.
@@ -563,45 +566,96 @@ public class SubmissionService {
   }
 
   /**
-   * Marks as a System Error every pending submission that no judger took within the maximum wait
-   * ({@code judging.maxWait}) since it was queued (submitted or rejudged): no running judger
-   * supports its language, or all of them were busy for that long. With a maximum wait of 0 or
-   * less, a submission waits for a judger as long as it takes. A submission that a judger took is
-   * left to the judgers: one whose judging failed or stopped is taken again once its lease expired,
-   * until the judgers give up on it (see the judger's {@code judging.maxAttempts}).
+   * Marks as a System Error the pending submissions in a language that no judger taking submissions
+   * supports, and has not for {@code judging.noJudgerTimeout} (5 minutes): the judgers that do
+   * stopped, or are not ready as their judgings failed for reasons of their own (see the judger's
+   * {@code Dispatcher}). With a timeout of 0 or less, a submission waits for a judger as long as it
+   * takes. A submission that a judging holds (by a lease that has not expired) is left to it, and
+   * so is every submission in a language that a running judger takes submissions in, however long
+   * the queue: the judgers judge it in turn.
    *
-   * <p>Runs every minute, on every web application instance, by the database's clock. The
-   * submissions are found by a plain read, which locks nothing, then marked one at a time, by
-   * primary key, each in a statement of its own (outside any transaction, so that no lock is held
-   * for longer), which checks again that no judger took the submission: instances running this at
-   * the same time, a rejudge and a judger's claim meanwhile neither deadlock with it nor lose their
-   * change. The live judging streams (on this instance) of a marked submission are completed with
-   * its judge log.
+   * <p>Runs every {@value #NO_JUDGER_CHECK_INTERVAL_MS} ms, on every web application instance. The
+   * judgers are told by their heartbeats (see {@link JudgerService}), by the database's clock. How
+   * long a language has had no judger is what this instance saw itself, run after run (by its own
+   * monotonic clock): a run that fails (e.g. the database is unreachable) starts it over, and so
+   * does a start of the instance, so that heartbeats that could not be recorded meanwhile (e.g.
+   * while the database was down) never make a running judger look stopped, and the judgers that
+   * could not reach this instance while it was down have the timeout to come back.
+   *
+   * <p>The submissions are found by a plain read, which locks nothing, then marked one at a time,
+   * by primary key, each in a statement of its own (outside any transaction, so that no lock is
+   * held for longer), which checks again that no judging holds it and no judger taking submissions
+   * supports its language: instances running this at the same time, a rejudge and a judger's claim
+   * meanwhile neither deadlock with it nor lose their change. Its claim token is cleared, so that
+   * the messages of a judging that held it are dropped. The live streams of a marked submission, on
+   * every instance, are completed with its judge log (see {@link MessageSender}).
    *
    * @return the number of submissions marked
    */
-  @Scheduled(initialDelay = 1, fixedDelay = 1, timeUnit = TimeUnit.MINUTES)
+  @Scheduled(fixedDelay = NO_JUDGER_CHECK_INTERVAL_MS)
   @Transactional(propagation = Propagation.NOT_SUPPORTED)
-  public int failUnclaimedSubmissions() {
-    if (maxWait <= 0) {
+  public synchronized int failSubmissionsWithoutJudger() {
+    if (noJudgerTimeout <= 0) {
       return 0;
     }
-    // In whole seconds, rounded up.
-    long maxWaitSeconds = (maxWait + 999) / 1000;
-    String judgeLog = String.format(UNCLAIMED_JUDGE_LOG, (maxWaitSeconds + 59) / 60);
+    try {
+      long now = System.nanoTime();
+      Set<Integer> languagesOfReadyJudgers = judgerService.getLanguageIdsOfReadyJudgers();
+      Map<Integer, Long> languagesWithoutJudger = new HashMap<>();
+      for (int languageId : submissionMapper.getLanguageIdsOfWaitingSubmissions()) {
+        if (!languagesOfReadyJudgers.contains(languageId)) {
+          languagesWithoutJudger.put(
+              languageId, languagesWithoutJudgerSince.getOrDefault(languageId, now));
+        }
+      }
+      languagesWithoutJudgerSince.clear();
+      languagesWithoutJudgerSince.putAll(languagesWithoutJudger);
+      int failed = 0;
+      for (Map.Entry<Integer, Long> language : languagesWithoutJudger.entrySet()) {
+        if (now - language.getValue() >= TimeUnit.MILLISECONDS.toNanos(noJudgerTimeout)) {
+          failed += failSubmissionsWithoutJudger(language.getKey());
+        }
+      }
+      if (isReconciliationFailing) {
+        isReconciliationFailing = false;
+        LOGGER.info("The pending submissions in languages without a judger are looked for again.");
+      }
+      return failed;
+    } catch (RuntimeException ex) {
+      // What was seen is no longer seen continuously.
+      languagesWithoutJudgerSince.clear();
+      if (!isReconciliationFailing) {
+        isReconciliationFailing = true;
+        LOGGER.error(
+            "Failed to look for the pending submissions in languages without a judger.", ex);
+      }
+      return 0;
+    }
+  }
+
+  /**
+   * Marks as a System Error the pending submissions in a language that no judging holds, if no
+   * judger taking submissions supports the language still.
+   *
+   * @param languageId - the unique identifier of the language
+   * @return the number of submissions marked
+   */
+  private int failSubmissionsWithoutJudger(int languageId) {
     int failed = 0;
-    for (long submissionId : submissionMapper.getUnclaimedSubmissionIds(maxWaitSeconds)) {
-      if (submissionMapper.failUnclaimedSubmission(submissionId, maxWaitSeconds, judgeLog) == 1) {
+    for (long submissionId : submissionMapper.getWaitingSubmissionIds(languageId)) {
+      if (submissionMapper.failSubmissionWithoutJudger(
+              submissionId, languageId, JudgerService.JUDGER_TIMEOUT_SECONDS, NO_JUDGER_JUDGE_LOG)
+          == 1) {
         ++failed;
-        eventPublisher.publishEvent(
-            new SubmissionEvent(this, submissionId, null, "System Error", judgeLog, true));
+        messageSender.sendSystemError(submissionId, NO_JUDGER_JUDGE_LOG);
       }
     }
     if (failed > 0) {
       LOGGER.warn(
           String.format(
-              "Marked %d pending submission(s) that no judger took in time as System Error.",
-              failed));
+              "Marked %d pending submission(s) in language #%d, which no running judger taking"
+                  + " submissions has supported for %d s, as System Error.",
+              failed, languageId, noJudgerTimeout / 1000));
     }
     return failed;
   }
@@ -682,12 +736,27 @@ public class SubmissionService {
   /** The autowired LanguageMapper object. */
   @Autowired private LanguageMapper languageMapper;
 
-  /** The autowired ApplicationEventPublisher, which completes the live judging streams. */
-  @Autowired private ApplicationEventPublisher eventPublisher;
+  /** The autowired JudgerService object, which tells the languages of the running judgers. */
+  @Autowired private JudgerService judgerService;
 
-  /** How long (ms) a submission waits for a judger to take it; 0 or less: as long as it takes. */
-  @Value("${judging.maxWait:1800000}")
-  private long maxWait;
+  /** The autowired MessageSender, which completes the live judging streams on every instance. */
+  @Autowired private MessageSender messageSender;
+
+  /**
+   * How long (ms) the pending submissions in a language wait while no judger taking submissions
+   * supports it; 0 or less: as long as it takes.
+   */
+  @Value("${judging.noJudgerTimeout:300000}")
+  private long noJudgerTimeout;
+
+  /**
+   * The languages of pending submissions that no judger taking submissions supported at the last
+   * runs of {@link #failSubmissionsWithoutJudger()}, and since when (by {@link System#nanoTime()}).
+   */
+  private final Map<Integer, Long> languagesWithoutJudgerSince = new HashMap<>();
+
+  /** Whether the last run of {@link #failSubmissionsWithoutJudger()} failed. */
+  private boolean isReconciliationFailing;
 
   /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(SubmissionService.class);

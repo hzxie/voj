@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+	PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.verwandlung.voj.web.mapper.JudgerMapper">
+	<!-- The judgers whose last heartbeat is recent enough, by the database's clock. -->
+	<select id="getOnlineJudgers"
+		parameterType="int"
+		resultType="java.util.LinkedHashMap">
+		SELECT u.username AS username, j.judger_description AS description,
+			j.judger_language_ids AS languageIds, j.judger_is_ready AS isReady,
+			j.judger_cpu_load AS cpuLoad, j.judger_memory_usage AS memoryUsage,
+			TIMESTAMPDIFF(SECOND, j.judger_start_time, NOW()) * 1000 AS uptime
+		FROM voj_judgers j
+		JOIN voj_users u ON u.uid = j.judger_uid
+		WHERE j.judger_heartbeat_time &gt; NOW() - INTERVAL #{timeoutSeconds} SECOND
+		ORDER BY u.username
+	</select>
+	<select id="getLanguageIdsOfReadyJudgers"
+		parameterType="int"
+		resultType="string">
+		SELECT judger_language_ids
+		FROM voj_judgers
+		WHERE judger_is_ready = 1
+			AND judger_heartbeat_time &gt; NOW() - INTERVAL #{timeoutSeconds} SECOND
+	</select>
+</mapper>

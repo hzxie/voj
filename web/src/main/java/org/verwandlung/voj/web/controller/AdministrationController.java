@@ -62,7 +62,6 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.ModelAndView;
 
 import org.verwandlung.voj.web.exception.ResourceNotFoundException;
-import org.verwandlung.voj.web.messenger.ApplicationEventListener;
 import org.verwandlung.voj.web.model.BulletinBoardMessage;
 import org.verwandlung.voj.web.model.Contest;
 import org.verwandlung.voj.web.model.DiscussionReply;
@@ -79,6 +78,7 @@ import org.verwandlung.voj.web.model.UserGroup;
 import org.verwandlung.voj.web.service.BulletinBoardService;
 import org.verwandlung.voj.web.service.ContestService;
 import org.verwandlung.voj.web.service.DiscussionService;
+import org.verwandlung.voj.web.service.JudgerService;
 import org.verwandlung.voj.web.service.LanguageService;
 import org.verwandlung.voj.web.service.OffensiveWordImportService;
 import org.verwandlung.voj.web.service.OffensiveWordService;
@@ -241,7 +241,7 @@ public class AdministrationController {
 
     // System status.
     view.addObject("onlineJudgers", getOnlineJudgers());
-    double averageCpuLoad = eventListener.getAverageCpuLoad();
+    double averageCpuLoad = judgerService.getAverageCpuLoad();
     view.addObject("averageCpuLoad", averageCpuLoad < 0 ? -1 : (int) Math.round(averageCpuLoad));
     view.addObject("storageUsage", getStorageUsagePercentage());
     view.addObject("memoryUsage", getCurrentMemoryUsage());
@@ -365,13 +365,12 @@ public class AdministrationController {
   }
 
   /**
-   * Gets the number of online judgers, by getting the number of consumers listening to the message
-   * queue.
+   * Gets the number of running judgers, from their heartbeats in the database.
    *
-   * @return the number of online judgers
+   * @return the number of running judgers
    */
   private long getOnlineJudgers() {
-    return eventListener.getOnlineJudgers();
+    return judgerService.getNumberOfOnlineJudgers();
   }
 
   /**
@@ -384,7 +383,7 @@ public class AdministrationController {
   @RequestMapping(value = "/judgers", method = RequestMethod.GET)
   public ModelAndView judgersView(HttpServletRequest request, HttpServletResponse response) {
     List<Map<String, Object>> nodes = new ArrayList<>();
-    for (Map<String, Object> judger : eventListener.getOnlineJudgerList()) {
+    for (Map<String, Object> judger : judgerService.getOnlineJudgers()) {
       int cpuLoad = toInt(judger.get("cpuLoad"));
       int memoryUsage = toInt(judger.get("memoryUsage"));
       long uptime = judger.get("uptime") instanceof Number ? ((Number) judger.get("uptime")).longValue() : 0;
@@ -2368,10 +2367,8 @@ public class AdministrationController {
    */
   @Autowired private LanguageService languageService;
 
-  /**
-   * The autowired ApplicationEventListener object. Used for getting the number of online judgers.
-   */
-  @Autowired private ApplicationEventListener eventListener;
+  /** The autowired JudgerService object. Used for getting the running judgers. */
+  @Autowired private JudgerService judgerService;
 
   /** The number of days shown in the dashboard's submissions bar chart. */
   private static final int DASHBOARD_CHART_DAYS = 14;
