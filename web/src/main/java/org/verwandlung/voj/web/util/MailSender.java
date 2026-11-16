@@ -17,6 +17,7 @@
 package org.verwandlung.voj.web.util;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -35,7 +36,7 @@ import org.thymeleaf.context.Context;
 import org.verwandlung.voj.web.service.OptionService;
 
 /**
- * The email sending service.
+ * The email sending service. It sends nothing when no SMTP server is configured (see MailConfig).
  *
  * @author Haozhe Xie
  */
@@ -45,12 +46,21 @@ public class MailSender {
    * The constructor of MailSender.
    *
    * @param templateEngine - the shared Thymeleaf template engine
-   * @param mailSender - the JavaMailSender object
+   * @param mailSender - the JavaMailSender object, absent when no SMTP server is configured
    */
   @Autowired
-  private MailSender(ITemplateEngine templateEngine, JavaMailSender mailSender) {
+  private MailSender(ITemplateEngine templateEngine, Optional<JavaMailSender> mailSender) {
     this.templateEngine = templateEngine;
-    this.mailSender = mailSender;
+    this.mailSender = mailSender.orElse(null);
+  }
+
+  /**
+   * Tells whether emails can be sent: whether an SMTP server is configured ({@code mail.host}).
+   *
+   * @return whether emails can be sent
+   */
+  public boolean isEnabled() {
+    return mailSender != null;
   }
 
   /**
@@ -79,8 +89,12 @@ public class MailSender {
    * @param subject - the subject of the email
    * @param body - the content of the email
    * @param onFailure - run (on the delivery thread) when the email cannot be sent
+   * @throws IllegalStateException if emails cannot be sent (see {@link #isEnabled})
    */
   public void sendAfterCommit(String recipient, String subject, String body, Runnable onFailure) {
+    if (!isEnabled()) {
+      throw new IllegalStateException("No SMTP server is configured (mail.host)");
+    }
     Runnable delivery =
         () -> deliveryExecutor.execute(() -> deliver(recipient, subject, body, onFailure));
     if (TransactionSynchronizationManager.isSynchronizationActive()) {
@@ -160,7 +174,7 @@ public class MailSender {
             return thread;
           });
 
-  /** The autowired JavaMailSender object. Used to send emails. */
+  /** The autowired JavaMailSender object, used to send emails; null when none can be sent. */
   private final JavaMailSender mailSender;
 
   /** The email address of the sender. */

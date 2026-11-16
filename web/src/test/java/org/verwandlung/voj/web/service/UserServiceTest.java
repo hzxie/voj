@@ -30,6 +30,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.annotation.Transactional;
 
 import org.verwandlung.voj.web.mapper.ContestContestantMapper;
@@ -42,6 +43,7 @@ import org.verwandlung.voj.web.model.Language;
 import org.verwandlung.voj.web.model.User;
 import org.verwandlung.voj.web.model.UserGroup;
 import org.verwandlung.voj.web.model.UserMeta;
+import org.verwandlung.voj.web.util.MailSender;
 
 /**
  * The test class for UserService.
@@ -1000,6 +1002,37 @@ public class UserServiceTest {
             "cshzxie@gmail.com", "invalid-token", "new-password", "new-password");
     Assertions.assertFalse(result.get("isEmailValidationValid"));
     Assertions.assertFalse(result.get("isSuccessful"));
+  }
+
+  /**
+   * Test case: tests the emails of UserService on a site that sends no email. Test data: a site
+   * without an SMTP server, which requires email verification. Expected: no verification is
+   * required, and asking for a password-reset or verification email fails with isMailEnabled
+   * false, issuing no token.
+   */
+  @Test
+  public void testEmailsWithoutAnSmtpServer() {
+    enableEmailVerificationRequirement();
+    Assertions.assertTrue(userService.isEmailVerificationRequired());
+    Object enabledMailSender = ReflectionTestUtils.getField(userService, "mailSender");
+    MailSender disabledMailSender = org.mockito.Mockito.mock(MailSender.class);
+    ReflectionTestUtils.setField(userService, "mailSender", disabledMailSender);
+    try {
+      Assertions.assertFalse(userService.isEmailVerificationRequired());
+
+      Map<String, Boolean> result =
+          userService.sendVerificationEmail("zjhzxhz", "cshzxie@gmail.com");
+      Assertions.assertFalse(result.get("isMailEnabled"));
+      Assertions.assertFalse(result.get("isSuccessful"));
+
+      userMapper.updateEmailVerified(1000, false);
+      result = userService.resendVerificationEmail(userService.getUserUsingUid(1000));
+      Assertions.assertFalse(result.get("isMailEnabled"));
+      Assertions.assertFalse(result.get("isSuccessful"));
+      Assertions.assertNull(emailValidationMapper.getEmailValidation("cshzxie@gmail.com"));
+    } finally {
+      ReflectionTestUtils.setField(userService, "mailSender", enabledMailSender);
+    }
   }
 
   /** Test case: tests the sendVerificationEmail(...) method. Test data: the username and email do not match. Expected: the user does not exist and it fails. */

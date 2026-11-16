@@ -577,12 +577,18 @@ public class UserService {
    *
    * @param username - the user's username
    * @param email - the user's email address
-   * @return a Map<String, Boolean> object containing the account validation result
+   * @return a Map<String, Boolean> object containing the account validation result, and {@code
+   *     isMailEnabled}: whether this site sends email at all (nothing is checked when it does not)
    */
   public Map<String, Boolean> sendVerificationEmail(String username, String email) {
     boolean isSuccessful = true;
     boolean isUserExists = false;
     Map<String, Boolean> result = new HashMap<>(4, 1);
+    result.put("isMailEnabled", mailSender.isEnabled());
+    if (!mailSender.isEnabled()) {
+      result.put("isSuccessful", false);
+      return result;
+    }
 
     User user = userMapper.getUserUsingUsername(username);
     if (user != null && user.getEmail().equals(email)) {
@@ -601,13 +607,14 @@ public class UserService {
   }
 
   /**
-   * Checks whether email verification is currently required, i.e. whether the {@code
-   * requireEmailVerification} option is enabled.
+   * Checks whether email verification is currently required: whether the {@code
+   * requireEmailVerification} option is enabled, and the site sends email (without it, nobody could
+   * verify an address).
    *
    * @return whether email verification is required
    */
   public boolean isEmailVerificationRequired() {
-    return optionService.isOptionEnabled("requireEmailVerification", false);
+    return mailSender.isEnabled() && optionService.isOptionEnabled("requireEmailVerification", false);
   }
 
   /**
@@ -657,15 +664,17 @@ public class UserService {
    *
    * @param user - the logged-in user (may be null)
    * @return a Map containing {@code isUserLogin}, {@code isEmailVerified} (nothing is sent to a
-   *     verified address), {@code isRateLimited} and {@code isSuccessful}
+   *     verified address), {@code isMailEnabled} (nor when the site sends no email), {@code
+   *     isRateLimited} and {@code isSuccessful}
    */
   public Map<String, Boolean> resendVerificationEmail(User user) {
-    Map<String, Boolean> result = new HashMap<>(6, 1);
+    Map<String, Boolean> result = new HashMap<>(8, 1);
     result.put("isUserLogin", user != null);
     result.put("isEmailVerified", user != null && user.isEmailVerified());
+    result.put("isMailEnabled", mailSender.isEnabled());
     result.put("isRateLimited", false);
     result.put("isSuccessful", false);
-    if (user == null || user.isEmailVerified()) {
+    if (user == null || user.isEmailVerified() || !mailSender.isEnabled()) {
       return result;
     }
     try {

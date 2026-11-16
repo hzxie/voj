@@ -62,6 +62,7 @@ import org.verwandlung.voj.web.interceptor.CommonModelInterceptor;
 import org.verwandlung.voj.web.interceptor.CommonModelPopulator;
 import org.verwandlung.voj.web.interceptor.MaintenanceModeInterceptor;
 import org.verwandlung.voj.web.util.DateFormatter;
+import org.verwandlung.voj.web.util.MailSender;
 import org.verwandlung.voj.web.mapper.CheckpointMapper;
 import org.verwandlung.voj.web.mapper.OptionMapper;
 import org.verwandlung.voj.web.mapper.ProblemMapper;
@@ -144,6 +145,7 @@ class ViewRenderSmokeTest {
   @MockitoBean private SessionRegistry sessionRegistry;
   @MockitoBean private ApplicationEventListener applicationEventListener;
   @MockitoBean private JudgerService judgerService;
+  @MockitoBean private MailSender mailSender;
   // CheckpointApiController is a @RestController, so the @WebMvcTest slice picks it up; unlike the
   // other controllers it injects these mappers directly rather than going through a (mocked) service.
   @MockitoBean private ProblemMapper problemMapper;

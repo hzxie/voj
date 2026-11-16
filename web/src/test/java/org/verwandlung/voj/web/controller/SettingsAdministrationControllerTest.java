@@ -32,6 +32,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.verwandlung.voj.web.service.OffensiveWordImportService;
 import org.verwandlung.voj.web.service.OffensiveWordService;
 import org.verwandlung.voj.web.service.OptionService;
+import org.verwandlung.voj.web.util.MailSender;
 
 /**
  * The test class for SettingsAdministrationController.
@@ -73,6 +74,29 @@ public class SettingsAdministrationControllerTest {
     Assertions.assertEquals("1", settings.get("emailDailyLimit"));
     Assertions.assertEquals("1", settings.get("maintenanceMode"));
     Assertions.assertEquals("1000", settings.get("problemsPerPage"));
+  }
+
+  /**
+   * Test case: tests updateGeneralSettingsAction(...) on a site that sends no email. Test data:
+   * email verification required. Expected: nothing is saved, and the result says that the site
+   * sends no email.
+   */
+  @Test
+  public void testUpdateGeneralSettingsRefusesEmailVerificationWithoutMail() {
+    MailSender mailSender = mock(MailSender.class);
+    when(mailSender.isEnabled()).thenReturn(false);
+    ReflectionTestUtils.setField(controller, "mailSender", mailSender);
+
+    Map<String, Boolean> result =
+        controller.updateGeneralSettingsAction(
+            "VOJ", "desc", "(c)", true, "icp", "police", "ga", "src", "", true, true, true,
+            true, true, 0, 5, 1, 3, 100, 100, 100, 50, 50, 50, false, "", "", 3,
+            new MockHttpServletRequest());
+
+    Assertions.assertFalse(result.get("isSuccessful"));
+    Assertions.assertFalse(result.get("isMailEnabled"));
+    verify(optionService, org.mockito.Mockito.never())
+        .updateGeneralSettings(org.mockito.ArgumentMatchers.any());
   }
 
   /** Test case: tests importOffensiveWordsAction(...). Test data: a sources string. Expected: the sources are saved, the dictionary re-imported and the import result returned. */

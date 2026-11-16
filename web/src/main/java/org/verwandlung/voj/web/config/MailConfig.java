@@ -20,31 +20,37 @@ import java.util.Properties;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Condition;
+import org.springframework.context.annotation.ConditionContext;
+import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.type.AnnotatedTypeMetadata;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 
 /**
- * The mail service configuration. Replaces the JavaMailSender definition in the original
- * dispatcher-servlet.xml.
+ * The mail service configuration: the SMTP server the emails are sent through, when {@code
+ * mail.host} names one. Without it the application sends no email (see MailSender#isEnabled): an
+ * empty host would not disable JavaMail, which connects to localhost instead.
  *
  * <p>The HTML mail body is rendered by the shared Thymeleaf engine (auto-configured by Spring Boot)
- * from templates under classpath:/templates/mails, so no dedicated templating configuration is
+ * from templates under classpath:/templates/mail, so no dedicated templating configuration is
  * required here.
  *
  * @author Haozhe Xie
  */
 @Configuration
 public class MailConfig {
-  /** The SMTP-based mail sender. */
+  /** The SMTP-based mail sender, when an SMTP server is configured. */
   @Bean
+  @Conditional(MailHostCondition.class)
   public JavaMailSender javaMailSender(
       @Value("${mail.host}") String host,
       @Value("${mail.port}") int port,
       @Value("${mail.username}") String username,
       @Value("${mail.password}") String password) {
     JavaMailSenderImpl mailSender = new JavaMailSenderImpl();
-    mailSender.setHost(host);
+    mailSender.setHost(host.trim());
     mailSender.setPort(port);
     mailSender.setUsername(username);
     mailSender.setPassword(password);
@@ -54,5 +60,13 @@ public class MailConfig {
     javaMailProperties.put("mail.smtp.starttls.enable", "true");
     mailSender.setJavaMailProperties(javaMailProperties);
     return mailSender;
+  }
+
+  /** Matches when {@code mail.host} names an SMTP server. */
+  static class MailHostCondition implements Condition {
+    @Override
+    public boolean matches(ConditionContext context, AnnotatedTypeMetadata metadata) {
+      return !context.getEnvironment().getProperty("mail.host", "").isBlank();
+    }
   }
 }

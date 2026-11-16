@@ -23,6 +23,7 @@ import static org.mockito.Mockito.when;
 import java.lang.reflect.Constructor;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -54,12 +55,37 @@ public class MailSenderTest {
     templateEngine = mock(ITemplateEngine.class);
     mailSender = mock(JavaMailSender.class);
 
+    vojMailSender = newMailSender(Optional.of(mailSender));
+  }
+
+  /**
+   * Builds a MailSender (its constructor is private).
+   *
+   * @param javaMailSender - the JavaMailSender, absent when no SMTP server is configured
+   * @return the MailSender
+   */
+  private MailSender newMailSender(Optional<JavaMailSender> javaMailSender) throws Exception {
     Constructor<MailSender> constructor =
-        MailSender.class.getDeclaredConstructor(ITemplateEngine.class, JavaMailSender.class);
+        MailSender.class.getDeclaredConstructor(ITemplateEngine.class, Optional.class);
     constructor.setAccessible(true);
-    vojMailSender = constructor.newInstance(templateEngine, mailSender);
-    ReflectionTestUtils.setField(vojMailSender, "baseUrl", "https://voj.example.org");
-    ReflectionTestUtils.setField(vojMailSender, "optionService", mock(OptionService.class));
+    MailSender sender = constructor.newInstance(templateEngine, javaMailSender);
+    ReflectionTestUtils.setField(sender, "baseUrl", "https://voj.example.org");
+    ReflectionTestUtils.setField(sender, "optionService", mock(OptionService.class));
+    return sender;
+  }
+
+  /**
+   * Test case: tests isEnabled() and sendAfterCommit(...) without an SMTP server. Test data: no
+   * JavaMailSender. Expected: the sender is disabled and refuses to send.
+   */
+  @Test
+  public void testDisabledWithoutAnSmtpServer() throws Exception {
+    Assertions.assertTrue(vojMailSender.isEnabled());
+    MailSender disabledSender = newMailSender(Optional.empty());
+    Assertions.assertFalse(disabledSender.isEnabled());
+    Assertions.assertThrows(
+        IllegalStateException.class,
+        () -> disabledSender.sendAfterCommit("a@example.org", "Subject", "Body", () -> {}));
   }
 
   /** Test case: tests getMailContent(String, Map). Test data: a template name and a model. Expected: the rendered output is returned and the base URL is injected into the model. */

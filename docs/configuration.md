@@ -27,11 +27,16 @@ build time via `--build-arg`; see [`../docker/README.md`](../docker/README.md).
 
 ### Mail
 
-Email (verification, password reset, notifications) is disabled when `mail.host` is empty.
+The web app sends email (password-reset and email-verification links) through the
+SMTP server `mail.host`, with STARTTLS and authentication. When it is empty, the
+site sends no email: the password-reset page tells users to ask an administrator,
+and email verification cannot be required (the setting is refused, and one
+enabled before is not applied to new addresses).
 
 | Property | Default | Purpose |
 | --- | --- | --- |
 | `mail.host` | *(empty)* | SMTP host. Empty disables outbound email. |
+| `mail.port` | `587` | SMTP port (submission with STARTTLS). |
 | `mail.username` / `mail.password` | *(empty)* | SMTP credentials. |
 | `mail.senderMail` | `noreply@example.com` | `From` address. |
 | `mail.senderName` | `Verwandlung Online Judge` | `From` display name. |

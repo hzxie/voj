@@ -325,7 +325,9 @@
                     success: function (result) {
                         if (result['isSuccessful']) { $ok.removeClass('hide'); }
                         else {
-                            var msg = result['isContactEmailLegal'] === false
+                            var msg = result['isMailEnabled'] === false
+                                ? [[#{voj.administration.general-settings.email-verification-needs-mail}]]
+                                : result['isContactEmailLegal'] === false
                                 ? [[#{voj.administration.general-settings.contact-email-illegal}]]
                                 : [[#{voj.administration.general-settings.save-error}]];
                             $err.text(msg).removeClass('hide');

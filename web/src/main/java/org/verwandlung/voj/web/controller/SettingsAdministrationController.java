@@ -36,6 +36,7 @@ import org.verwandlung.voj.web.model.Option;
 import org.verwandlung.voj.web.service.OffensiveWordImportService;
 import org.verwandlung.voj.web.service.OffensiveWordService;
 import org.verwandlung.voj.web.service.OptionService;
+import org.verwandlung.voj.web.util.MailSender;
 
 /**
  * The general settings of the website, and the offensive word import.
@@ -89,7 +90,8 @@ public class SettingsAdministrationController {
    * @param googleAnalyticsCode - the Google Analytics code
    * @param offensiveWordSources - the offensive word import sources, one URL per line
    * @param request - the HttpServletRequest object
-   * @return the update result of the general settings of the website
+   * @return the update result of the general settings of the website; {@code isMailEnabled} is
+   *     false when email verification is to be required on a site that sends no email
    */
   @RequestMapping(value = "/updateGeneralSettings.action", method = RequestMethod.POST)
   public @ResponseBody Map<String, Boolean> updateGeneralSettingsAction(
@@ -127,6 +129,13 @@ public class SettingsAdministrationController {
       @RequestParam(value = "turnstileSecretKey", defaultValue = "") String turnstileSecretKey,
       @RequestParam(value = "emailDailyLimit", defaultValue = "3") int emailDailyLimit,
       HttpServletRequest request) {
+    // Nobody could verify an address on a site that sends no email.
+    if (requireEmailVerification && !mailSender.isEnabled()) {
+      Map<String, Boolean> result = new HashMap<>(2, 1);
+      result.put("isMailEnabled", false);
+      result.put("isSuccessful", false);
+      return result;
+    }
     Map<String, String> settings = new HashMap<>();
     settings.put("websiteName", websiteName);
     settings.put("description", websiteDescription);
@@ -197,6 +206,9 @@ public class SettingsAdministrationController {
 
   /** The autowired OptionService object. Used for getting the settings options of the system. */
   @Autowired private OptionService optionService;
+
+  /** The autowired MailSender object. Used for telling whether the site sends email. */
+  @Autowired private MailSender mailSender;
 
   /** The autowired OffensiveWordService object. Used for managing the offensive word dictionary. */
   @Autowired private OffensiveWordService offensiveWordService;
