@@ -60,8 +60,8 @@ public class IsolateRunnerTest {
   }
 
   /**
-   * Test case: a run. Expected result: only the input file (copied into the box) is visible,
-   * stdout is captured without stderr, the checkpoint directory is never bound, the directory of
+   * Test case: a run. Expected result: only the input file (copied into the box, readable by the
+   * box's user) is visible, stdout is captured without stderr (into a file of the judger's alone), the checkpoint directory is never bound, the directory of
    * the judging is bound read-only and the run's work directory read-write, the program runs
    * there, and the box is cleaned up.
    */
@@ -74,6 +74,9 @@ public class IsolateRunnerTest {
 
     Assertions.assertEquals(new SandboxResult(10, 0, 0, SandboxResult.Stop.NONE), result);
     Assertions.assertEquals("1 2\n", Files.readString(outputFile));
+    Assertions.assertEquals(
+        PosixFilePermissions.fromString("rw-------"), Files.getPosixFilePermissions(outputFile));
+    Assertions.assertEquals("444\n", Files.readString(isolateRoot.resolve("stdin.mode")));
     Assertions.assertTrue(Files.exists(runDirectory.resolve("where")));
     List<String> args = Files.readAllLines(isolateRoot.resolve("args.log"));
     Assertions.assertTrue(args.contains("--stdin=" + IsolateRunner.BOX_STDIN_FILE));
@@ -198,8 +201,8 @@ public class IsolateRunnerTest {
   /**
    * Test case: a compilation and a run of a program that prints a configured compile file from its
    * work directory, as fpc reads its configuration from HOME. Expected result: the compilation
-   * finds the host file copied there (rules naming a path rather than a plain file name are
-   * ignored); a run's work directory does not get it.
+   * finds the host file copied there, readable by the box's user (rules naming a path rather than
+   * a plain file name are ignored); a run's work directory does not get it.
    */
   @Test
   public void testOnlyCompilationsGetTheirConfigFiles() throws Exception {
@@ -215,6 +218,9 @@ public class IsolateRunnerTest {
 
     Assertions.assertEquals(0, compilation.exitCode());
     Assertions.assertEquals("-Fu/usr/lib/fpc\n", Files.readString(logFile));
+    Assertions.assertEquals(
+        PosixFilePermissions.fromString("r--r--r--"),
+        Files.getPosixFilePermissions(programDirectory.resolve(".fpc.cfg")));
 
     Path outputFile = judgingDirectory.resolve("output#1.txt");
     SandboxResult run = runner.run(run(cat + " .fpc.cfg", null, outputFile));
@@ -352,7 +358,8 @@ public class IsolateRunnerTest {
           "  run)",
           "    printf '%s\\n' \"${ARGS[@]}\" > \"$ROOT/args.log\"",
           "    cd \"$(host \"$chdir\")\" || exit 2",
-          "    if [ -n \"$stdin\" ]; then exec 0<\"$(host \"$stdin\")\"; fi",
+          "    if [ -n \"$stdin\" ]; then stat -c %a \"$(host \"$stdin\")\" > \"$ROOT/stdin.mode\";"
+              + " exec 0<\"$(host \"$stdin\")\"; fi",
           "    if [ -n \"$stdout\" ]; then exec 1>\"$(host \"$stdout\")\"; fi",
           "    if [ $merge = 1 ]; then exec 2>&1;",
           "    elif [ -n \"$stderr\" ]; then exec 2>\"$(host \"$stderr\")\"; fi",

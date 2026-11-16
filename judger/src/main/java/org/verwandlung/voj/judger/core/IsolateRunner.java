@@ -19,17 +19,21 @@ package org.verwandlung.voj.judger.core;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -51,7 +55,9 @@ import org.springframework.stereotype.Component;
  * host path in the arguments and the environment is rewritten to its path in the box (isolate
  * mounts a private {@code /tmp} over anything below the host's). Standard input and output never go
  * through a bound directory: the input is copied into isolate's own box directory and the output
- * copied out of it after the run, so the checkpoint directory is never bound.
+ * copied out of it after the run, so the checkpoint directory is never bound. Whatever the judger's
+ * umask, what it copies in may be read by the box's user ({@code r--r--r--}), and what it copies
+ * out is its own ({@code rw-------}).
  *
  * @author Haozhe Xie
  */
@@ -79,21 +85,23 @@ public class IsolateRunner implements SandboxRunner {
    */
   @Override
   public SandboxResult run(SandboxCommand command) throws IOException {
-    File metaFile = null;
+    Path metaFile = null;
     try {
       Path boxDirectory = initBox();
-      metaFile = File.createTempFile("voj-isolate-", ".meta");
+      metaFile = Files.createTempFile("voj-isolate-", ".meta");
       if (command.inputFile() != null) {
-        Files.copy(Paths.get(command.inputFile()), inBox(boxDirectory, BOX_STDIN_FILE));
+        Path boxInputFile = inBox(boxDirectory, BOX_STDIN_FILE);
+        Files.copy(Paths.get(command.inputFile()), boxInputFile);
+        Files.setPosixFilePermissions(boxInputFile, READ_ONLY);
       }
       if (command.compilation()) {
         copyCompileFiles(Paths.get(command.workDirectory()));
       }
-      List<String> isolateCommand = buildRunCommand(command, metaFile);
+      List<String> isolateCommand = buildRunCommand(command, metaFile.toFile());
       LOGGER.info("Running under isolate: " + String.join(" ", isolateCommand));
       execute(isolateCommand);
 
-      SandboxResult result = parseMeta(metaFile);
+      SandboxResult result = parseMeta(metaFile.toFile());
       if (command.outputFile() != null) {
         copyOutOfBox(inBox(boxDirectory, BOX_STDOUT_FILE), Paths.get(command.outputFile()));
       }
@@ -104,7 +112,7 @@ public class IsolateRunner implements SandboxRunner {
     } finally {
       cleanupBox();
       if (metaFile != null) {
-        metaFile.delete();
+        Files.deleteIfExists(metaFile);
       }
     }
   }
@@ -237,9 +245,11 @@ public class IsolateRunner implements SandboxRunner {
         continue;
       }
       if (Files.isRegularFile(hostFile)) {
+        Path copy = workDirectory.resolve(name);
         try (InputStream inputStream = Files.newInputStream(hostFile)) {
-          Files.copy(inputStream, workDirectory.resolve(name));
+          Files.copy(inputStream, copy);
         }
+        Files.setPosixFilePermissions(copy, READ_ONLY);
       }
     }
   }
@@ -268,23 +278,35 @@ public class IsolateRunner implements SandboxRunner {
   }
 
   /**
-   * Copies the captured output out of the box once the program is gone. Only a regular file is
-   * copied (the program may have put a link in its place); anything else is an empty output.
+   * Copies the captured output out of the box once the program is gone, into a file of the
+   * judger's alone ({@code rw-------}). Only a regular file is copied (the program may have put a
+   * link in its place); anything else is an empty output.
    *
    * @param boxFile - the output file in the box
    * @param destination - the output file of the judger
    * @throws IOException if the output cannot be copied
    */
   private void copyOutOfBox(Path boxFile, Path destination) throws IOException {
+    Files.deleteIfExists(destination);
+    Files.createFile(destination, PosixFilePermissions.asFileAttribute(PRIVATE));
+    Files.setPosixFilePermissions(destination, PRIVATE);
     if (Files.isRegularFile(boxFile, LinkOption.NOFOLLOW_LINKS)) {
-      try (InputStream inputStream = Files.newInputStream(boxFile, LinkOption.NOFOLLOW_LINKS)) {
-        Files.copy(inputStream, destination, StandardCopyOption.REPLACE_EXISTING);
+      try (InputStream inputStream = Files.newInputStream(boxFile, LinkOption.NOFOLLOW_LINKS);
+          OutputStream outputStream =
+              Files.newOutputStream(
+                  destination, StandardOpenOption.WRITE, LinkOption.NOFOLLOW_LINKS)) {
+        inputStream.transferTo(outputStream);
       }
-    } else {
-      Files.deleteIfExists(destination);
-      Files.createFile(destination);
     }
   }
+
+  /** The mode of what the judger copies into the box, which the box's user reads. */
+  private static final Set<PosixFilePermission> READ_ONLY =
+      PosixFilePermissions.fromString("r--r--r--");
+
+  /** The mode of what the judger copies out of the box, for itself alone. */
+  private static final Set<PosixFilePermission> PRIVATE =
+      PosixFilePermissions.fromString("rw-------");
 
   /**
    * Reads isolate's measurements: {@code time} (CPU seconds of the box's cgroup), {@code cg-mem}
