@@ -102,9 +102,7 @@ public class IsolateRunner implements SandboxRunner {
       execute(isolateCommand);
 
       SandboxResult result = parseMeta(metaFile.toFile());
-      if (command.outputFile() != null) {
-        copyOutOfBox(inBox(boxDirectory, BOX_STDOUT_FILE), Paths.get(command.outputFile()));
-      }
+      copyOutOfBox(inBox(boxDirectory, BOX_STDOUT_FILE), Paths.get(command.outputFile()));
       return result;
     } catch (InterruptedException ex) {
       Thread.currentThread().interrupt();
@@ -207,11 +205,8 @@ public class IsolateRunner implements SandboxRunner {
     if (command.inputFile() != null) {
       isolateCommand.add("--stdin=" + BOX_STDIN_FILE);
     }
-    if (command.outputFile() != null) {
-      isolateCommand.add("--stdout=" + BOX_STDOUT_FILE);
-      isolateCommand.add(
-          command.compilation() ? "--stderr-to-stdout" : "--stderr=" + BOX_STDERR_FILE);
-    }
+    isolateCommand.add("--stdout=" + BOX_STDOUT_FILE);
+    isolateCommand.add(command.compilation() ? "--stderr-to-stdout" : "--stderr=" + BOX_STDERR_FILE);
     for (String variable : command.environment()) {
       isolateCommand.add("--env=" + toBoxPath(variable, judgingDirectory));
     }
@@ -355,7 +350,9 @@ public class IsolateRunner implements SandboxRunner {
    * ended.
    *
    * @param command - the command
-   * @return its exit code and its output (isolate's own diagnostics, which are short)
+   * @return its exit code and its output: isolate's own diagnostics, as a program's output and
+   *     errors go to files of the box (at most the first {@value #MAX_DIAGNOSTICS_BYTES} bytes of
+   *     them; the rest is read and dropped)
    * @throws IOException if it cannot be started
    * @throws InterruptedException if interrupted
    */
@@ -365,9 +362,17 @@ public class IsolateRunner implements SandboxRunner {
             .redirectErrorStream(true)
             .redirectInput(ProcessBuilder.Redirect.from(new File("/dev/null")))
             .start();
-    String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+    String output;
+    try (InputStream inputStream = process.getInputStream()) {
+      output =
+          new String(inputStream.readNBytes(MAX_DIAGNOSTICS_BYTES), StandardCharsets.UTF_8);
+      inputStream.transferTo(OutputStream.nullOutputStream());
+    }
     return new ProcessOutput(process.waitFor(), output);
   }
+
+  /** The most of isolate's diagnostics that is kept (bytes). */
+  private static final int MAX_DIAGNOSTICS_BYTES = 64 * 1024;
 
   /**
    * Parses an integer of the meta file.

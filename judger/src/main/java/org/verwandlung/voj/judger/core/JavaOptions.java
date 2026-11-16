@@ -190,16 +190,12 @@ final class JavaOptions {
    * happens to be named {@code java} taken for one.
    *
    * @param exitCode - the exit code of the run
-   * @param outputFilePath - the file that holds the run's standard output ({@code null} for none)
+   * @param outputFilePath - the file that holds the run's standard output
    * @return whether the JVM of the run ran out of memory
    */
   static boolean isOutOfMemoryExit(int exitCode, String outputFilePath) {
-    if (exitCode != OUT_OF_MEMORY_EXIT_CODE
-        || outputFilePath == null
-        || outputFilePath.isEmpty()) {
-      return false;
-    }
-    return readTail(Paths.get(outputFilePath)).contains(OUT_OF_MEMORY_REPORT);
+    return exitCode == OUT_OF_MEMORY_EXIT_CODE
+        && readTail(Paths.get(outputFilePath)).contains(OUT_OF_MEMORY_REPORT);
   }
 
   /**

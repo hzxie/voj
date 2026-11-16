@@ -100,8 +100,8 @@ public class Runner implements SandboxRunner {
    * @param environment - the environment of the program ({@code NAME=value})
    * @param workDirectory - the directory the program runs in and the only one it may write to
    * @param inputFile - the file standard input is read from ({@code null}: none)
-   * @param outputFile - the file standard output goes to ({@code null}: none), created by the
-   *     sandbox; standard error goes there too for a compilation
+   * @param outputFile - the file standard output goes to, created by the sandbox; standard error
+   *     goes there too for a compilation
    * @param compilation - whether a trusted compiler runs, rather than the submission
    * @param timeLimit - the CPU time limit (ms)
    * @param wallTimeLimit - the wall-clock limit (ms)

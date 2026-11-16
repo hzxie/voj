@@ -102,7 +102,26 @@ public class VerdictTest {
   }
 
   /**
-   * Judges a program under a 1000 ms / 65536 KB limit, without an output file.
+   * Test case: a command without an output file. Expected result: refused, as every compilation
+   * and run is judged by its output.
+   */
+  @Test
+  public void testEveryCommandHasAnOutputFile() {
+    Assertions.assertThrows(
+        NullPointerException.class,
+        () ->
+            new SandboxCommand(
+                List.of("/bin/true"),
+                List.of(),
+                "/tmp",
+                null,
+                null,
+                false,
+                SandboxPolicy.limits(false, 1000, 65536, 1, 1)));
+  }
+
+  /**
+   * Judges a program under a 1000 ms / 65536 KB limit, whose output file does not exist.
    *
    * @param stop - the limit the sandbox stopped it for
    * @param exitCode - its exit code
@@ -118,7 +137,7 @@ public class VerdictTest {
             List.of(),
             "/tmp",
             null,
-            null,
+            "/voj-no-such-directory/output.txt",
             false,
             SandboxPolicy.limits(false, 1000, 65536, 1, 1));
     return Verdict.of(command, new SandboxResult(cpuTime, peakMemory, exitCode, stop));

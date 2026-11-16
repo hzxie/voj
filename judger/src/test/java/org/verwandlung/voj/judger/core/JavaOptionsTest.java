@@ -114,7 +114,6 @@ public class JavaOptionsTest {
     Assertions.assertFalse(
         JavaOptions.isOutOfMemoryExit(
             3, directory.resolve("missing").toString()));
-    Assertions.assertFalse(JavaOptions.isOutOfMemoryExit(3, null));
   }
 
   /**

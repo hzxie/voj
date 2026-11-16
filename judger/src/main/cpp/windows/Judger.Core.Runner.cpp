@@ -190,8 +190,8 @@ std::vector<std::wstring> getWideStringValues(JNIEnv*, jobjectArray);
  * @param  jEnvironment    - the whole environment of the program ("NAME=value")
  * @param  jWorkDirectory  - the directory the program runs in, and the only one it may write to
  * @param  jInputFile      - the file to read stdin from (may be NULL)
- * @param  jOutputFile     - the file receiving stdout (may be NULL), and stderr for a compilation (a
- *                           run's is discarded). Created by the judger (see setupIoRedirection)
+ * @param  jOutputFile     - the file receiving stdout, and stderr for a compilation (a run's is
+ *                           discarded). Created by the judger (see setupIoRedirection)
  * @param  compilation     - whether a trusted compiler runs, rather than the submission
  * @param  timeLimit       - the CPU time limit (ms)
  * @param  wallTimeLimit   - the wall-clock limit (ms)
@@ -381,7 +381,7 @@ JNIEXPORT jintArray JNICALL Java_org_verwandlung_voj_judger_core_Runner_execute(
             }
             break;
         }
-        if ( hOutput != NULL && !GetFileSizeEx(hOutput, &outputSize) ) {
+        if ( !GetFileSizeEx(hOutput, &outputSize) ) {
             return fail("GetFileSizeEx");
         }
         if ( timeUsage > timeLimit || GetTickCount64() - startTick > (ULONGLONG) wallTimeLimit ) {
@@ -536,33 +536,31 @@ bool setupIoRedirection(const std::wstring& inputFilePath, const std::wstring& o
             return false;
         }
     }
-    if ( !outputFilePath.empty() ) {
-        // The output file is in the directory of the judging, which no compilation or run may write
-        // to (see Preprocessor.java), so nothing can have been planted at its path. As defence in
-        // depth, whatever is at the path is removed first (DeleteFileW removes a link, never its
-        // target) and the file is created with CREATE_NEW, which fails rather than open anything
-        // that is still, or again, at the path; FILE_FLAG_OPEN_REPARSE_POINT never follows a reparse
-        // point. A failed deletion is not an error of its own: CREATE_NEW then fails, and the run
-        // is refused. The file gets an ACL of its own that allows the judger alone (rather than the
-        // one it would inherit, which lets the sandbox account read it): a later run cannot read
-        // it. FILE_READ_ATTRIBUTES lets the runner poll the file's size through this handle
-        // (GetFileSizeEx needs it, and GENERIC_WRITE does not include it). The child inherits the
-        // handle as its stdout, which only lets it read the attributes of its own output file.
-        PSECURITY_DESCRIPTOR pSecurityDescriptor = NULL;
-        if ( !getJudgerOnlySecurityDescriptor(pSecurityDescriptor) ) {
-            return false;
-        }
-        SECURITY_ATTRIBUTES outputSa = { sizeof(SECURITY_ATTRIBUTES), pSecurityDescriptor, TRUE };
-        DeleteFileW(outputFilePath.c_str());
-        hOutput = CreateFileW(outputFilePath.c_str(), GENERIC_WRITE | FILE_READ_ATTRIBUTES, FILE_SHARE_READ,
-                    &outputSa, CREATE_NEW, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OPEN_REPARSE_POINT, NULL);
-        DWORD error = GetLastError();
-        LocalFree(pSecurityDescriptor);
-        if ( hOutput == INVALID_HANDLE_VALUE )  {
-            hOutput = NULL;
-            SetLastError(error);
-            return false;
-        }
+    // The output file is in the directory of the judging, which no compilation or run may write
+    // to (see Preprocessor.java), so nothing can have been planted at its path. As defence in
+    // depth, whatever is at the path is removed first (DeleteFileW removes a link, never its
+    // target) and the file is created with CREATE_NEW, which fails rather than open anything
+    // that is still, or again, at the path; FILE_FLAG_OPEN_REPARSE_POINT never follows a reparse
+    // point. A failed deletion is not an error of its own: CREATE_NEW then fails, and the run
+    // is refused. The file gets an ACL of its own that allows the judger alone (rather than the
+    // one it would inherit, which lets the sandbox account read it): a later run cannot read
+    // it. FILE_READ_ATTRIBUTES lets the runner poll the file's size through this handle
+    // (GetFileSizeEx needs it, and GENERIC_WRITE does not include it). The child inherits the
+    // handle as its stdout, which only lets it read the attributes of its own output file.
+    PSECURITY_DESCRIPTOR pSecurityDescriptor = NULL;
+    if ( !getJudgerOnlySecurityDescriptor(pSecurityDescriptor) ) {
+        return false;
+    }
+    SECURITY_ATTRIBUTES outputSa = { sizeof(SECURITY_ATTRIBUTES), pSecurityDescriptor, TRUE };
+    DeleteFileW(outputFilePath.c_str());
+    hOutput = CreateFileW(outputFilePath.c_str(), GENERIC_WRITE | FILE_READ_ATTRIBUTES, FILE_SHARE_READ,
+                &outputSa, CREATE_NEW, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OPEN_REPARSE_POINT, NULL);
+    DWORD error = GetLastError();
+    LocalFree(pSecurityDescriptor);
+    if ( hOutput == INVALID_HANDLE_VALUE )  {
+        hOutput = NULL;
+        SetLastError(error);
+        return false;
     }
     return true;
 }

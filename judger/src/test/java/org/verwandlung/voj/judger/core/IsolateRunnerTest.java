@@ -131,7 +131,7 @@ public class IsolateRunnerTest {
                 List.of(),
                 runDirectory.toString(),
                 null,
-                null,
+                judgingDirectory.resolve("output#1.txt").toString(),
                 false,
                 SandboxPolicy.limits(false, 1500, 65536, 1024, 7)),
             new File("meta"));

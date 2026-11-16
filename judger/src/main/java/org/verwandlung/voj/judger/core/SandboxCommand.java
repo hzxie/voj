@@ -17,6 +17,7 @@
 package org.verwandlung.voj.judger.core;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
  * A compilation or run, as a sandbox is to carry it out. Built by {@link SandboxPolicy}, the one
@@ -28,8 +29,8 @@ import java.util.List;
  *     the only one it may write to: the program directory for a compilation, a fresh directory next
  *     to it for a run (see {@link Preprocessor})
  * @param inputFile - the file standard input is read from ({@code null}: none)
- * @param outputFile - the file standard output goes to ({@code null}: none), in a directory the
- *     program may not write to; standard error goes there too for a compilation (the compile log),
+ * @param outputFile - the file standard output goes to, in a directory the program may not write
+ *     to, created by the sandbox for the judger; standard error goes there too for a compilation (the compile log),
  *     never for a run, whose output is judged
  * @param compilation - whether a trusted compiler runs (which may start processes), rather than the
  *     submission
@@ -43,4 +44,9 @@ public record SandboxCommand(
     String inputFile,
     String outputFile,
     boolean compilation,
-    Limits limits) {}
+    Limits limits) {
+  /** Creates the command: every one has an output file, which it is judged by. */
+  public SandboxCommand {
+    Objects.requireNonNull(outputFile, "outputFile");
+  }
+}

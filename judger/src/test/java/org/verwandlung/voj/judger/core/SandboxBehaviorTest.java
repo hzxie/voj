@@ -309,7 +309,9 @@ public class SandboxBehaviorTest {
         FileSystemUtils.isRunningAsRoot(), "Privileges are only dropped by root.");
     Runner runner = new Runner();
     ReflectionTestUtils.setField(runner, "sandboxUsername", "voj-no-such-user");
-    SandboxCommand command = command("/bin/true", createWorkDirectory(900046L), null, false);
+    String workDirectory = createWorkDirectory(900046L);
+    SandboxCommand command =
+        command("/bin/true", workDirectory, workDirectory + "/output.txt", false);
     Assertions.assertThrows(IOException.class, () -> runner.run(command));
   }
 
@@ -320,10 +322,15 @@ public class SandboxBehaviorTest {
   @Test
   public void testUnrunnableCommandIsASystemError() throws Exception {
     Assumptions.assumeTrue("native".equalsIgnoreCase(sandbox), "This tests the native runner.");
-    String workDirectory = Preprocessor.getProgramDirectory(createWorkDirectory(900047L));
+    String judgingDirectory = createWorkDirectory(900047L);
+    String workDirectory = Preprocessor.getProgramDirectory(judgingDirectory);
     for (boolean compilation : new boolean[] {false, true}) {
       SandboxCommand command =
-          command("/voj-no-such-directory/program", workDirectory, null, compilation);
+          command(
+              "/voj-no-such-directory/program",
+              workDirectory,
+              judgingDirectory + "/output.txt",
+              compilation);
       Assertions.assertThrows(IOException.class, () -> sandboxRunner.run(command));
     }
   }
@@ -527,7 +534,7 @@ public class SandboxBehaviorTest {
    *
    * @param commandLine - the command, its arguments separated by spaces
    * @param workDirectory - the work directory
-   * @param outputFile - the output file ({@code null}: none)
+   * @param outputFile - the output file
    * @param compilation - whether it is a compilation
    * @return the verdict
    * @throws IOException if the sandbox fails
@@ -545,7 +552,7 @@ public class SandboxBehaviorTest {
    *
    * @param commandLine - the command, its arguments separated by spaces
    * @param workDirectory - the work directory
-   * @param outputFile - the output file ({@code null}: none)
+   * @param outputFile - the output file
    * @param compilation - whether it is a compilation
    * @return the command
    */
@@ -560,7 +567,7 @@ public class SandboxBehaviorTest {
    *
    * @param commandLine - the command, its arguments separated by spaces
    * @param workDirectory - the work directory
-   * @param outputFile - the output file ({@code null}: none)
+   * @param outputFile - the output file
    * @param compilation - whether it is a compilation
    * @param timeLimitMs - the time limit (ms)
    * @param memoryLimitKb - the memory limit (KB)

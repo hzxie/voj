@@ -111,13 +111,10 @@ public enum Verdict {
   /**
    * Gets the size of the output file, created by the sandbox for the judger.
    *
-   * @param outputFile - the output file ({@code null}: none)
-   * @return its size (bytes), 0 for none
+   * @param outputFile - the output file
+   * @return its size (bytes), 0 if it cannot be read
    */
   private static long sizeOf(String outputFile) {
-    if (outputFile == null) {
-      return 0;
-    }
     try {
       return Files.readAttributes(
               Paths.get(outputFile), BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS)

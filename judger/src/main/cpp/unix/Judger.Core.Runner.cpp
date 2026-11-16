@@ -153,7 +153,7 @@ struct ChildPlan {
   std::vector<std::string> environment;    // "NAME=value", built by the judger
   std::vector<char*>       envp;           // NULL-terminated pointers into environment
   std::string              inputFilePath;  // stdin redirect (empty = /dev/null)
-  int                      outputFd;       // stdout redirect, opened by the judger (-1 = /dev/null)
+  int                      outputFd;       // stdout redirect, opened by the judger
   std::string              workDirectory;  // working directory, HOME and the only writable
                                            // directory (empty: /, and none)
   bool                     compileStep;    // compile: stderr also goes to the output file
@@ -277,8 +277,8 @@ JNIEXPORT void JNICALL Java_org_verwandlung_voj_judger_core_Runner_selectSandbox
  * @param  jEnvironment    - the whole environment of the program ("NAME=value")
  * @param  jWorkDirectory  - the directory the program runs in, and the only one it may write to
  * @param  jInputFile      - the file to read stdin from (may be NULL: /dev/null)
- * @param  jOutputFile     - the file receiving stdout (may be NULL: /dev/null), and stderr for a
- *                           compilation (a run's is discarded)
+ * @param  jOutputFile     - the file receiving stdout, and stderr for a compilation (a run's is
+ *                           discarded)
  * @param  compilation     - whether a trusted compiler runs, rather than the submission
  * @param  timeLimit       - the CPU time limit (ms)
  * @param  wallTimeLimit   - the wall-clock limit (ms)
@@ -351,21 +351,17 @@ JNIEXPORT jintArray JNICALL Java_org_verwandlung_voj_judger_core_Runner_execute(
 
     // The output file, created (or emptied) by the judger: the program gets its descriptor only.
     std::string outputFilePath = getStringValue(jniEnv, jOutputFile);
-    if ( !outputFilePath.empty() ) {
-        plan.outputFd = openOutputFile(outputFilePath.c_str());
-        if ( plan.outputFd < 0 ) {
-            throwStringException(jniEnv, "Judger: failed to create the output file " +
-                                         outputFilePath + ": " + strerror(errno));
-            return NULL;
-        }
+    plan.outputFd = openOutputFile(outputFilePath.c_str());
+    if ( plan.outputFd < 0 ) {
+        throwStringException(jniEnv, "Judger: failed to create the output file \"" +
+                                     outputFilePath + "\": " + strerror(errno));
+        return NULL;
     }
     // Closes the output file once the program is gone (or never started).
     struct OutputFileCloser {
         int fd;
         ~OutputFileCloser() {
-            if ( fd >= 0 ) {
-                close(fd);
-            }
+            close(fd);
         }
     } outputFileCloser = { plan.outputFd };
 
@@ -675,14 +671,11 @@ static void runProgram(const ChildPlan& plan, int syncWriteFd) {
     if ( nullFd < 0 ) {
         reportChildFailure(syncWriteFd, STEP_DEV_NULL);
     }
-    int outputFd = plan.outputFd >= 0 ? plan.outputFd : nullFd;
-    if ( dup2(outputFd, STDOUT_FILENO) < 0 ||
-         dup2(plan.compileStep ? outputFd : nullFd, STDERR_FILENO) < 0 ) {
+    if ( dup2(plan.outputFd, STDOUT_FILENO) < 0 ||
+         dup2(plan.compileStep ? plan.outputFd : nullFd, STDERR_FILENO) < 0 ) {
         reportChildFailure(syncWriteFd, STEP_OUTPUT);
     }
-    if ( plan.outputFd >= 0 ) {
-        close(plan.outputFd);
-    }
+    close(plan.outputFd);
     close(nullFd);
 
     // A program whose static data (initialised data and bss, e.g. `static int a[1 << 30];`) alone
