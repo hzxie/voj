@@ -33,8 +33,14 @@ import java.nio.file.attribute.BasicFileAttributes;
  * and Windows, and isolate) passes them in the environment variable {@value #ENVIRONMENT_VARIABLE},
  * which only the {@code java} launcher reads (JDK 9 and later): no other runtime or compiler is
  * affected, and no language's run command has to change. Options on the run command itself come
- * after them, so a command that sets its own (say {@code -Xmx}) still has the last word. The launcher
- * announces them on standard error ("NOTE: Picked up JDK_JAVA_OPTIONS: ..."), which a run discards.
+ * after them, and the last of an option given twice wins, so a command can set its own {@code -Xmx}
+ * (or {@code -XX:ActiveProcessorCount}, ...) instead. A command that selects another collector
+ * ({@code -XX:+UseG1GC}: "Multiple garbage collectors selected"), or an initial heap ({@code -Xms})
+ * larger than the {@code -Xmx} here without an {@code -Xmx} of its own ("Initial heap size set to
+ * a larger value than the maximum heap size"), conflicts with them instead, and the JVM refuses to
+ * start: the deployment guide tells administrators to keep such options off the run commands. The
+ * launcher announces them on standard error ("NOTE: Picked up JDK_JAVA_OPTIONS: ..."), which a run
+ * discards.
  *
  * <p>Compilations do not get them: they run trusted compilers under a limit of their own, with their
  * own heap settings (kotlinc's launcher passes -Xmx512M), and a compilation's standard error is its

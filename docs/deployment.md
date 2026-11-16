@@ -406,8 +406,22 @@ is *L*:
   is never compared with the expected output: only an accepted run's output
   is.)
 
-Options on a language's run command come after these, so a command that sets
-its own (say `-Xmx`) still has the last word. The launcher announces the
+Options on a language's run command come after these. Where an option is
+given twice, the last one wins, so a command can set its own `-Xmx`,
+`-XX:MaxRAM`, `-XX:ActiveProcessorCount` or common pool parallelism instead.
+Two kinds of options conflict with these, though, and the JVM then refuses to
+start, so that every run of the language fails as a Runtime Error:
+
+- another collector (`-XX:+UseG1GC`, `-XX:+UseParallelGC`, `-XX:+UseZGC`,
+  ...): "Multiple garbage collectors selected";
+- an initial heap (`-Xms`, `-XX:InitialHeapSize`) larger than the `-Xmx`
+  above, unless the command sets its own `-Xmx` as well: "Initial heap size
+  set to a larger value than the maximum heap size".
+
+So keep collector options and `-Xms` off a language's run command (with an
+`-Xms`, set an `-Xmx` at least as large, which then replaces the one sized to
+the limit). The collector, like the other options, is chosen in
+`JavaOptions.java`. The launcher announces the
 options on standard error (`NOTE: Picked up JDK_JAVA_OPTIONS: ...`), which a
 run discards: it never reaches the output that is judged. Compilations do not
 get them: `javac` does not read them, `kotlinc` sets a heap of its own
