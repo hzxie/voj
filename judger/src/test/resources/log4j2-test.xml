@@ -9,6 +9,10 @@
 		</Console>
 	</Appenders>
 	<Loggers>
+		<!-- Why the judger could not compile (the sandbox could not run the compiler, or the
+		     program directory could not be sealed), which the result of a compilation does not
+		     say: a test that fails on it shows the cause, as CI runs it on hosts like no other. -->
+		<Logger name="org.verwandlung.voj.judger.core.Compiler" level="ERROR" />
 		<Root level="OFF">
 			<AppenderRef ref="Console" />
 		</Root>
