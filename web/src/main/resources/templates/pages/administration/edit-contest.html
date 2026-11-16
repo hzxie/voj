@@ -163,12 +163,9 @@
             var addText = [[#{voj.administration.edit-contest.add}]];
             var removeText = [[#{voj.administration.edit-contest.remove-problem}]];
 
-            // Re-rendering a list destroys the focused button: focus the one now at the
-            // same position (or the last one), else the fallback.
+            // Re-rendering a list destroys the focused button (see admFocusAt in admin.js).
             function focusIn(host, selector, index, fallback) {
-                var items = host.querySelectorAll(selector);
-                var target = items[Math.min(index, items.length - 1)] || fallback;
-                if (target) { target.focus(); }
+                admFocusAt(host.querySelectorAll(selector), index, fallback);
             }
 
             function renderChosen() {

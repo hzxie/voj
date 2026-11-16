@@ -118,12 +118,11 @@
             $('.standard-input', item).trigger('focus');
         });
         $('#test-cases').on('click', '.del-test', function() {
-            var item = $(this).closest('.test-case');
-            var next = item.next('.test-case').length ? item.next('.test-case') : item.prev('.test-case');
-            item.remove();
+            var index = $('#test-cases .del-test').index(this);
+            $(this).closest('.test-case').remove();
             renumberTestCases();
             if ($('li.test-case', '#test-cases').length === 0) { $('#no-test-cases').removeClass('hide'); }
-            (next.length ? $('.del-test', next) : $('#new-test-case')).trigger('focus');
+            admFocusAt($('#test-cases .del-test'), index, $('#new-test-case'));
         });
 
         function getTestCases() {

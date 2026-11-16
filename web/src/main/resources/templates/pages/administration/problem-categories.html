@@ -181,6 +181,7 @@
             // ----- tags: delete -----
             $('#problem-tags').on('click', '.adm-taxchip .x', function () {
                 var chip = $(this).closest('.adm-taxchip');
+                var index = $('#problem-tags .adm-taxchip .x').index(this);
                 vojConfirm([[#{voj.administration.problem-categories.continue-or-not}]]).then(function (ok) {
                     if (!ok) return;
                     $.ajax({
@@ -188,10 +189,8 @@
                         data: { problemTagId: chip.data('id') }, dataType: 'JSON',
                         success: function (result) {
                             if (!result['isSuccessful']) { return; }
-                            // Keep focus in the tag list: the next chip's delete, else the input.
-                            var next = chip.next('.adm-taxchip').length ? chip.next('.adm-taxchip') : chip.prev('.adm-taxchip');
                             chip.remove();
-                            (next.length ? next.find('.x') : $('#new-tag-input')).trigger('focus');
+                            admFocusAt($('#problem-tags .adm-taxchip .x'), index, $('#new-tag-input'));
                         }
                     });
                 });
@@ -200,6 +199,7 @@
             // ----- delete -----
             $cat.on('click', '.adm-catlist-x', function () {
                 var row = $(this).closest('.adm-catlist-item');
+                var index = $cat.find('.adm-catlist-x').index(this);
                 vojConfirm([[#{voj.administration.problem-categories.continue-or-not}]]).then(function (ok) {
                     if (!ok) return;
                     $.ajax({
@@ -207,14 +207,11 @@
                         data: { 'problemCategories': JSON.stringify([row.data('value')]) }, dataType: 'JSON',
                         success: function (result) {
                             if (result['isSuccessful']) {
-                                var next = row.nextAll('.adm-catlist-item').first();
                                 (result['deletedProblemCategories'] || []).forEach(function (id) {
                                     $cat.find('.adm-catlist-item[data-value="' + id + '"]').remove();
                                 });
                                 refreshTotal();
-                                // Keep focus in the list: the next row's delete, else the add input.
-                                var target = next.closest('body').length ? next.find('.adm-catlist-x') : $();
-                                (target.length ? target : $('#new-category-input')).trigger('focus');
+                                admFocusAt($cat.find('.adm-catlist-x'), index, $('#new-category-input'));
                             }
                         }
                     });

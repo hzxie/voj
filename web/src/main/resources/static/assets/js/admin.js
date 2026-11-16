@@ -53,9 +53,22 @@
     });
   }
 
+  // --- Focus after removing a list item ---------------------------------------
+  // Removing an item (or re-rendering its list) destroys the focused delete button.
+  // Keep keyboard focus in the list: `controls` are the list's delete buttons after the
+  // change (a NodeList or jQuery set) and `index` the position of the one that was
+  // clicked, so the button now at that position is the next item's, or the last one's
+  // when the removed item was last; with none left, focus `fallback` (the add control).
+  function focusAt(controls, index, fallback) {
+    var target = controls[Math.min(index, controls.length - 1)] ||
+                 (fallback && fallback.jquery ? fallback[0] : fallback);
+    if (target) target.focus();
+  }
+
   window.admSetSwitch = setSwitch;
   window.admSetSegment = setSegment;
   window.admEnhance = enhance;
+  window.admFocusAt = focusAt;
 
   // --- Navigation drawer that is also the sidebar ----------------------------
   // The sidebar is a <dialog>. Wide screens never open it (css/admin.css shows it in

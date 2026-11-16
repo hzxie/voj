@@ -167,10 +167,9 @@
             });
             field.on('blur', function() { addTag(field.val()); field.val(''); });
             box.on('click', '.adm-tagchip .x', function() {
-                var chip = $(this).closest('.adm-tagchip');
-                var next = chip.next('.adm-tagchip').length ? chip.next('.adm-tagchip') : chip.prev('.adm-tagchip');
-                chip.remove(); syncHidden();
-                (next.length ? next.find('.x') : field).trigger('focus');
+                var index = box.find('.adm-tagchip .x').index(this);
+                $(this).closest('.adm-tagchip').remove(); syncHidden();
+                admFocusAt(box.find('.adm-tagchip .x'), index, field);
             });
         }
 
@@ -229,9 +228,7 @@
                     success: function(result) {
                         if (!result['isSuccessful']) { return; }
                         renderList(result['checkpoints']);
-                        // The list was re-rendered: focus the delete now at the same position.
-                        var buttons = list.find('.del-checkpoint');
-                        (buttons.length ? buttons.eq(Math.min(index, buttons.length - 1)) : dropZone).trigger('focus');
+                        admFocusAt(list.find('.del-checkpoint'), index, dropZone);
                     }
                 });
             });

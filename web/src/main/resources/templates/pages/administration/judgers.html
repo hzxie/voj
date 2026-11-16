@@ -235,14 +235,11 @@
             $('#custom-lang').click(function() { addLanguage({ enabled:true, tmul:1.0, mmul:1.0 }); });
 
             // Per-card interactions (delegated, since cards can be added dynamically).
-            // After removing a card, focus the next card's remove button (or the previous
-            // one's, or the add button when none is left) instead of losing focus.
             $('#languages').on('click', '.del-lang', function() {
-                var $card = $(this).closest('.language');
-                var $next = $card.next('.language').length ? $card.next('.language') : $card.prev('.language');
-                $card.remove();
+                var index = $('#languages .del-lang').index(this);
+                $(this).closest('.language').remove();
                 if ($('.language', '#languages').length === 0) { $('#no-languages').removeClass('hide'); }
-                ($next.length ? $('.del-lang', $next) : $('#toggle-quickadd')).trigger('focus');
+                admFocusAt($('#languages .del-lang'), index, $('#toggle-quickadd'));
             });
             $('#languages').on('click', '.lang-enabled', function() {
                 var on = !$(this).hasClass('on');
