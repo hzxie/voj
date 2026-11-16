@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
 import org.junit.jupiter.api.condition.OS;
@@ -93,6 +94,39 @@ public class CheckpointStoreUnitTest {
 
     Assertions.assertThrows(IOException.class, () -> checkpointStore.sync(getProblem()));
     verify(checkpointProvider, never()).download(anyLong(), any(File.class));
+  }
+
+  /**
+   * Test case: the checkpoint root may be written to by other users (the sandbox user among them),
+   * with or without a sticky bit, or by the group. Expected result: their write permission is
+   * taken away before the judger uses it.
+   */
+  @Test
+  public void testOpenTakesWritePermissionOfOthersAway() throws Exception {
+    Path root = Files.createDirectory(tempDir.resolve("voj-testpoints"));
+    ReflectionTestUtils.setField(checkpointStore, "checkpointDirectory", root.toString());
+
+    for (int mode : new int[] {0777, 01777, 0770}) {
+      Files.setAttribute(root, "unix:mode", mode);
+      checkpointStore.open();
+      Assertions.assertEquals(
+          mode & ~0022, (Integer) Files.getAttribute(root, "unix:mode") & 07777);
+    }
+  }
+
+  /**
+   * Test case: someone else (here the sandbox user nobody) created the directory of a slot while
+   * the checkpoint root was writable by others. Expected result: the judger refuses to use it.
+   */
+  @Test
+  public void testOpenRefusesSlotOfAnotherUser() throws Exception {
+    Assumptions.assumeTrue("root".equals(System.getProperty("user.name")), "needs root to chown");
+    Path root = Files.createDirectory(tempDir.resolve("voj-testpoints"));
+    Path slot = Files.createDirectory(root.resolve("judger-0"));
+    Files.setAttribute(slot, "unix:uid", 65534);
+    ReflectionTestUtils.setField(checkpointStore, "checkpointDirectory", root.toString());
+
+    Assertions.assertThrows(IOException.class, () -> checkpointStore.open());
   }
 
   /**

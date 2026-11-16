@@ -197,9 +197,10 @@ public class CheckpointStore {
         CLAIMED_LOCK_FILES.add(lockFile);
       }
       Path directory = root.resolve("judger-" + slot);
-      if (!Files.isDirectory(directory, LinkOption.NOFOLLOW_LINKS)) {
+      if (!Files.exists(directory, LinkOption.NOFOLLOW_LINKS)) {
         createPrivateDirectory(directory);
       }
+      ensureOwnedByJudger(directory);
       return directory;
     }
     throw new IOException(
@@ -284,7 +285,11 @@ public class CheckpointStore {
    * sandbox user (or any local account) could create it first, or plant a symbolic link there. The
    * owner of the root can rename and replace the per-problem directories inside it, which would let
    * a submission swap in answers of its choosing. The root is therefore created by the judger,
-   * restricted to its owner, and refused when it is a link or owned by someone else.
+   * restricted to its owner, and refused when it is a link or owned by someone else. Other users
+   * must not be able to write to it either: they could rename the judger's directories in it and
+   * put their own in place (a sticky bit would prevent that, but not creating the directory of a
+   * slot before the judger does). The judger owns the root, so it takes their write permission
+   * away; a slot directory someone else created meanwhile is refused when it is claimed.
    *
    * @throws IOException if the root cannot be created or is not owned by the judger
    */
@@ -312,7 +317,48 @@ public class CheckpointStore {
                   + " (%s). Remove it or set judger.checkpointDir to a directory the judger owns.",
               root, owner.getName(), judger.getName()));
     }
+    int mode = (Integer) Files.getAttribute(root, "unix:mode", LinkOption.NOFOLLOW_LINKS);
+    if ((mode & (GROUP_WRITE | OTHERS_WRITE)) != 0) {
+      LOGGER.warn(
+          "Other users may write to the checkpoint directory {} (mode {}), so they could replace"
+              + " the test data in it: taking their write permission away.",
+          root,
+          Integer.toOctalString(mode & 07777));
+      int restrictedMode = mode & 07777 & ~(GROUP_WRITE | OTHERS_WRITE);
+      Files.setAttribute(root, "unix:mode", restrictedMode, LinkOption.NOFOLLOW_LINKS);
+    }
   }
+
+  /**
+   * Makes sure a directory in the checkpoint root (a slot's) belongs to the judger, rather than to
+   * a user who created it while the root was writable by others.
+   *
+   * @param directory - the directory
+   * @throws IOException if it is not a real directory or not owned by the judger
+   */
+  private static void ensureOwnedByJudger(Path directory) throws IOException {
+    if (!isPosix()) {
+      return;
+    }
+    UserPrincipal owner = Files.getOwner(directory, LinkOption.NOFOLLOW_LINKS);
+    UserPrincipal judger =
+        directory
+            .getFileSystem()
+            .getUserPrincipalLookupService()
+            .lookupPrincipalByName(System.getProperty("user.name"));
+    if (!Files.isDirectory(directory, LinkOption.NOFOLLOW_LINKS) || !owner.equals(judger)) {
+      throw new IOException(
+          String.format(
+              "Refusing to use %s: it is not a directory of the judger (%s) but of %s. Remove it.",
+              directory, judger.getName(), owner.getName()));
+    }
+  }
+
+  /** The permission bit of a file mode that lets the group write. */
+  private static final int GROUP_WRITE = 0020;
+
+  /** The permission bit of a file mode that lets other users write. */
+  private static final int OTHERS_WRITE = 0002;
 
   /**
    * Creates a directory restricted to its owner (the judger), so that submitted programs running as
