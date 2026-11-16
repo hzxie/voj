@@ -439,6 +439,16 @@ public class DispatcherTest {
               return submission(0, null);
             });
     when(applicationDispatcher.handBackSubmission(any())).thenReturn(true);
+    // The judging lasts until the shutdown is over, as a real one would: one over before the
+    // shutdown looked has nothing left to release.
+    CountDownLatch isDestroyed = new CountDownLatch(1);
+    doAnswer(
+            invocation -> {
+              isDestroyed.await(10, TimeUnit.SECONDS);
+              return null;
+            })
+        .when(judge)
+        .judge(any(), any());
 
     Thread judging = new Thread(() -> dispatcher.judgeNextSubmission(LANGUAGES));
     judging.start();
@@ -446,6 +456,7 @@ public class DispatcherTest {
       Assertions.assertTrue(isClaiming.await(10, TimeUnit.SECONDS));
       dispatcher.destroy();
     } finally {
+      isDestroyed.countDown();
       judging.join(10000);
     }
 
