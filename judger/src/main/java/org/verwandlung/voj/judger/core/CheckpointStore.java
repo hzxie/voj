@@ -22,6 +22,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.DirectoryStream;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
@@ -107,7 +108,7 @@ public class CheckpointStore {
    *     slot's directories cannot be prepared
    */
   public synchronized Path open() throws IOException {
-    ensureCheckpointRootIsTrusted();
+    Path root = openCheckpointRoot();
     if (slotLock != null && !slotLock.isValid()) {
       LOGGER.warn(
           "The lock file {} of this judger's slot was removed or replaced (e.g. by a clean-up of"
@@ -117,7 +118,6 @@ public class CheckpointStore {
       slotLock = null;
     }
     if (slotLock == null) {
-      Path root = Files.createDirectories(Paths.get(checkpointDirectory)).toRealPath();
       // Relative to the directory the judger was started in, as any relative path is; but the
       // sandbox resolves the paths of a judging after entering its work directory.
       Path workRoot = Paths.get(workRootDirectory).toAbsolutePath().normalize();
@@ -389,29 +389,33 @@ public class CheckpointStore {
   }
 
   /**
-   * Makes sure the checkpoint root directory belongs to the judger before anything in it is trusted.
-   * The default root ({@code /tmp/voj-testpoints}) lives in the world-writable {@code /tmp}, so the
-   * sandbox user (or any local account) could create it first, or plant a symbolic link there. The
-   * owner of the root can rename and replace the per-problem directories inside it, which would let
-   * a submission swap in answers of its choosing. The root is therefore created by the judger,
-   * restricted to its owner, and refused when it is a link or owned by someone else. Other users
-   * must not be able to write to it either: they could rename the judger's directories in it and
-   * put their own in place (a sticky bit would prevent that, but not creating the directory of a
-   * slot before the judger does). Such a root is refused too, rather than its permissions changed:
-   * a root the judger did not create may be a directory others rely on (e.g. {@code /tmp}, when
-   * the judger runs as root); one the judger creates is restricted to it from the start.
+   * Opens the checkpoint root, making sure it belongs to the judger before anything in it is
+   * trusted. The default root ({@code /tmp/voj-testpoints}) lives in the world-writable {@code
+   * /tmp}, so the sandbox user (or any local account) could create it first, or plant a symbolic
+   * link there. The owner of the root can rename and replace the per-problem directories inside
+   * it, which would let a submission swap in answers of its choosing. The root is therefore
+   * created by the judger, with its permissions from the start (never changed afterwards, through
+   * a path someone else may have put a link at meanwhile), and refused when it is a link or owned
+   * by someone else. Other users must not be able to write to it either: they could rename the
+   * judger's directories in it and put their own in place (a sticky bit would prevent that, but not
+   * creating the directory of a slot before the judger does). Such a root is refused too, rather
+   * than its permissions changed: a root the judger did not create may be a directory others rely
+   * on (e.g. {@code /tmp}, when the judger runs as root).
    *
+   * @return the real path of the root, so that every spelling of it agrees
    * @throws IOException if the root cannot be created, is not owned by the judger or others may
    *     write to it
    */
-  private void ensureCheckpointRootIsTrusted() throws IOException {
+  private Path openCheckpointRoot() throws IOException {
+    Path root = Paths.get(checkpointDirectory).toAbsolutePath().normalize();
     if (!isPosix()) {
-      return;
+      return Files.createDirectories(root).toRealPath();
     }
-    Path root = Paths.get(checkpointDirectory);
-    if (!Files.exists(root, LinkOption.NOFOLLOW_LINKS)) {
-      Files.createDirectories(root);
-      Files.setPosixFilePermissions(root, PosixFilePermissions.fromString("rwx------"));
+    Files.createDirectories(root.getParent());
+    try {
+      createPrivateDirectory(root);
+    } catch (FileAlreadyExistsException ex) {
+      // Checked below, as any root the judger did not create.
     }
     if (!Files.isDirectory(root, LinkOption.NOFOLLOW_LINKS)) {
       throw new IOException("The checkpoint directory is not a real directory: " + root);
@@ -427,6 +431,7 @@ public class CheckpointStore {
                   + " or take their write permission away (chmod go-w) if nothing else needs it.",
               root, mode & 07777));
     }
+    return root.toRealPath();
   }
 
   /**
