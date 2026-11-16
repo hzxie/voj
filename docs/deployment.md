@@ -780,6 +780,11 @@ Requirements for that account:
   time) once, at the first compilation or run, and keeps both until it exits
   (then it unloads the profile). The password is used for that logon only, and
   not kept.
+- It must be able to read and run the compilers and runtimes: the
+  directories of the JDK, MinGW, Python and so on must let *Users* (or the
+  account) read and execute them, as `C:\Program Files` does. A compiler it
+  cannot read fails to start (`CreateProcessWithToken`, access denied) and the
+  compilation is a System Error.
 - It must not be the account the judger runs as: every process of the sandbox
   account is kept off the network (loopback included), which would cut the
   judger off from its database, and its programs would have the judger's

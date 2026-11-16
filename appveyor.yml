@@ -28,11 +28,13 @@ install:
   - copy "judger\src\test\resources\voj-test-windows.properties" "judger\src\test\resources\voj-test.properties"
 # The sandbox runs programs as an account of its own, never the one that runs the tests: the judger
 # refuses that one, whose network the sandbox would cut off. It needs the "Log on as a batch job"
-# right; its password goes into the test configuration.
+# right, and to read and run the JDK under test, which the image lets only administrators into; its
+# password goes into the test configuration.
   - ps: |
       $password = 'Voj-' + [guid]::NewGuid().ToString('N')
       New-LocalUser -Name voj-sandbox -Password (ConvertTo-SecureString $password -AsPlainText -Force) -PasswordNeverExpires | Out-Null
       $sid = (Get-LocalUser voj-sandbox).SID.Value
+      icacls "$env:JAVA_HOME" /grant "voj-sandbox:(OI)(CI)RX" /T /Q | Out-Null
       secedit /export /cfg "$env:TEMP\rights.inf" /areas USER_RIGHTS | Out-Null
       $line = Get-Content "$env:TEMP\rights.inf" | Where-Object { $_ -like 'SeBatchLogonRight*' }
       $right = if ($line) { "$line,*$sid" } else { "SeBatchLogonRight = *$sid" }
