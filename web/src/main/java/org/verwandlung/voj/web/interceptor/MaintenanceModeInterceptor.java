@@ -25,7 +25,7 @@ import org.springframework.web.servlet.HandlerInterceptor;
 
 import org.verwandlung.voj.web.mapper.OptionMapper;
 import org.verwandlung.voj.web.model.Option;
-import org.verwandlung.voj.web.model.User;
+import org.verwandlung.voj.web.model.PublicationStatus;
 import org.verwandlung.voj.web.util.HttpSessionParser;
 
 /**
@@ -51,7 +51,7 @@ public class MaintenanceModeInterceptor implements HandlerInterceptor {
     }
 
     String path = request.getRequestURI().substring(request.getContextPath().length());
-    if (isAllowedDuringMaintenance(path) || isAdministrator(HttpSessionParser.getCurrentUser())) {
+    if (isAllowedDuringMaintenance(path) || PublicationStatus.isAdministrator(HttpSessionParser.getCurrentUser())) {
       return true;
     }
 
@@ -81,18 +81,6 @@ public class MaintenanceModeInterceptor implements HandlerInterceptor {
         || path.equals("/privacy")
         || path.equals("/help")
         || path.equals("/judgers");
-  }
-
-  /**
-   * Checks whether the given user is an administrator.
-   *
-   * @param user - the user object, or null
-   * @return whether the user belongs to the administrators group
-   */
-  private boolean isAdministrator(User user) {
-    return user != null
-        && user.getUserGroup() != null
-        && "administrators".equals(user.getUserGroup().getUserGroupSlug());
   }
 
   /** The autowired OptionMapper object. Used to resolve the maintenance-mode option. */

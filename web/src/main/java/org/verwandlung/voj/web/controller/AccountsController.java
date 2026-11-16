@@ -23,7 +23,6 @@ import java.util.Map;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
 
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
@@ -88,9 +87,8 @@ public class AccountsController {
       HttpServletResponse response) {
     // ?logout=true only shows the "you are now logged out" notice: the logout itself is the
     // CSRF-protected POST /accounts/logout, so a cross-site GET can no longer end the session.
-    HttpSession session = request.getSession();
     ModelAndView view = null;
-    if (isLoggedIn(session)) {
+    if (HttpSessionParser.isLoggedIn()) {
       RedirectView redirectView = new RedirectView(request.getContextPath());
       redirectView.setExposeModelAttributes(false);
       view = new ModelAndView(redirectView);
@@ -144,7 +142,7 @@ public class AccountsController {
    */
   @RequestMapping(value = "/logout", method = RequestMethod.POST)
   public ModelAndView logoutAction(HttpServletRequest request, HttpServletResponse response) {
-    if (isLoggedIn(request.getSession(false))) {
+    if (HttpSessionParser.isLoggedIn()) {
       destroySession(request, response);
     }
     RedirectView redirectView = new RedirectView("/accounts/login?logout=true", true);
@@ -168,16 +166,6 @@ public class AccountsController {
 
     Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
     new SecurityContextLogoutHandler().logout(request, response, authentication);
-  }
-
-  /**
-   * Checks whether the user has logged in.
-   *
-   * @param session - the HttpSession object (unused)
-   * @return whether the user has logged in
-   */
-  private boolean isLoggedIn(HttpSession session) {
-    return HttpSessionParser.getCurrentUser() != null;
   }
 
   /**
@@ -261,9 +249,8 @@ public class AccountsController {
       @RequestParam(value = "forward", required = false, defaultValue = "") String forwardUrl,
       HttpServletRequest request,
       HttpServletResponse response) {
-    HttpSession session = request.getSession();
     ModelAndView view = null;
-    if (isLoggedIn(session)) {
+    if (HttpSessionParser.isLoggedIn()) {
       RedirectView redirectView = new RedirectView(request.getContextPath());
       redirectView.setExposeModelAttributes(false);
       view = new ModelAndView(redirectView);
@@ -385,10 +372,9 @@ public class AccountsController {
       @RequestParam(value = "token", required = false) String token,
       HttpServletRequest request,
       HttpServletResponse response) {
-    HttpSession session = request.getSession();
     ModelAndView view = null;
 
-    if (isLoggedIn(session)) {
+    if (HttpSessionParser.isLoggedIn()) {
       RedirectView redirectView = new RedirectView(request.getContextPath());
       redirectView.setExposeModelAttributes(false);
       view = new ModelAndView(redirectView);

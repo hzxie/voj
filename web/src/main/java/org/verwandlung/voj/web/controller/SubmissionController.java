@@ -71,7 +71,7 @@ public class SubmissionController {
       HttpServletResponse response) {
     final int NUMBER_OF_SUBMISSION_PER_PAGE =
         optionService.getIntOption("submissionsPerPage", DEFAULT_NUMBER_OF_SUBMISSION_PER_PAGE);
-    User currentUser = HttpSessionParser.getCurrentUser(request.getSession());
+    User currentUser = HttpSessionParser.getCurrentUser();
     List<Submission> submissions =
         submissionService.getSubmissions(
             problemId, username, NUMBER_OF_SUBMISSION_PER_PAGE, currentUser);
@@ -98,7 +98,7 @@ public class SubmissionController {
 
     final int NUMBER_OF_SUBMISSION_PER_PAGE =
         optionService.getIntOption("submissionsPerPage", DEFAULT_NUMBER_OF_SUBMISSION_PER_PAGE);
-    User currentUser = HttpSessionParser.getCurrentUser(request.getSession());
+    User currentUser = HttpSessionParser.getCurrentUser();
     List<Submission> submissions =
         submissionService.getSubmissions(
             problemId, username, startIndex, NUMBER_OF_SUBMISSION_PER_PAGE, currentUser);
@@ -128,7 +128,7 @@ public class SubmissionController {
 
     final int NUMBER_OF_SUBMISSION_PER_PAGE =
         optionService.getIntOption("submissionsPerPage", DEFAULT_NUMBER_OF_SUBMISSION_PER_PAGE);
-    User currentUser = HttpSessionParser.getCurrentUser(request.getSession());
+    User currentUser = HttpSessionParser.getCurrentUser();
     List<Submission> submissions =
         submissionService.getLatestSubmissions(
             problemId, username, startIndex, NUMBER_OF_SUBMISSION_PER_PAGE, currentUser);
@@ -153,7 +153,7 @@ public class SubmissionController {
       HttpServletRequest request,
       HttpServletResponse response) {
     Submission submission = submissionService.getSubmission(submissionId);
-    User currentUser = HttpSessionParser.getCurrentUser(request.getSession());
+    User currentUser = HttpSessionParser.getCurrentUser();
     if (submission == null || !contestService.isSubmissionVisible(submission, currentUser)) {
       throw new ResourceNotFoundException();
     }
@@ -244,7 +244,7 @@ public class SubmissionController {
       HttpServletRequest request,
       HttpServletResponse response)
       throws IOException {
-    User currentUser = HttpSessionParser.getCurrentUser(request.getSession());
+    User currentUser = HttpSessionParser.getCurrentUser();
     Submission submission = submissionService.getSubmission(submissionId);
 
     // Anyone allowed to see the source code may also follow the live judge log (which can echo the
@@ -277,7 +277,7 @@ public class SubmissionController {
       @RequestParam(value = "submissionId") long submissionId, HttpServletRequest request) {
     Map<String, Object> result = new HashMap<>(3, 1);
 
-    User currentUser = HttpSessionParser.getCurrentUser(request.getSession());
+    User currentUser = HttpSessionParser.getCurrentUser();
     Submission submission = submissionService.getSubmission(submissionId);
     if (submission != null && !contestService.isSubmissionVisible(submission, currentUser)) {
       submission = null;

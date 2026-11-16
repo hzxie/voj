@@ -18,7 +18,6 @@ package org.verwandlung.voj.web.controller;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -169,8 +168,7 @@ public class ContestsController {
       @PathVariable("contestId") long contestId,
       HttpServletRequest request,
       HttpServletResponse response) {
-    HttpSession session = request.getSession();
-    User currentUser = HttpSessionParser.getCurrentUser(session);
+    User currentUser = HttpSessionParser.getCurrentUser();
     Contest contest = getVisibleContest(contestId, currentUser);
 
     Date currentTime = new Date();
@@ -292,8 +290,7 @@ public class ContestsController {
       @PathVariable("problemId") long problemId,
       HttpServletRequest request,
       HttpServletResponse response) {
-    HttpSession session = request.getSession();
-    User currentUser = HttpSessionParser.getCurrentUser(session);
+    User currentUser = HttpSessionParser.getCurrentUser();
     Contest contest = getVisibleContest(contestId, currentUser);
     // The problem does not exist in the contest's problem list
     List<Long> problems = JsonUtils.toList(contest.getProblems(), Long.class);

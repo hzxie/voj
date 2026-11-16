@@ -23,7 +23,6 @@ import java.util.Map;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -122,8 +121,7 @@ public class ProblemsController {
           "problemTagsOfProblems",
           problemService.getProblemTagsOfProblems(minProblemId, maxProblemId));
 
-      HttpSession session = request.getSession();
-      if (isLoggedIn(session)) {
+      if (HttpSessionParser.isLoggedIn()) {
         long userId = HttpSessionParser.getCurrentUser().getUid();
         Map<Long, Submission> submissionOfProblems =
             submissionService.getSubmissionOfProblems(userId, minProblemId, maxProblemId + 1);
@@ -131,16 +129,6 @@ public class ProblemsController {
       }
     }
     return view;
-  }
-
-  /**
-   * Checks whether the user has logged in.
-   *
-   * @param session - the HttpSession object
-   * @return whether the user has logged in
-   */
-  private boolean isLoggedIn(HttpSession session) {
-    return HttpSessionParser.getCurrentUser() != null;
   }
 
   /**
@@ -156,9 +144,8 @@ public class ProblemsController {
       @PathVariable("problemId") long problemId,
       HttpServletRequest request,
       HttpServletResponse response) {
-    HttpSession session = request.getSession();
-    boolean isLoggedIn = isLoggedIn(session);
-    Problem problem = getVisibleProblem(problemId, HttpSessionParser.getCurrentUser(session));
+    boolean isLoggedIn = HttpSessionParser.isLoggedIn();
+    Problem problem = getVisibleProblem(problemId, HttpSessionParser.getCurrentUser());
 
     ModelAndView view = new ModelAndView("pages/problems/problem");
     // The main content is authored in a single language (see CommonModelPopulator).
@@ -203,7 +190,7 @@ public class ProblemsController {
       @PathVariable("problemId") long problemId,
       HttpServletRequest request,
       HttpServletResponse response) {
-    User currentUser = HttpSessionParser.getCurrentUser(request.getSession());
+    User currentUser = HttpSessionParser.getCurrentUser();
     getVisibleProblem(problemId, currentUser);
     DiscussionThread discussionThread = discussionService.getSolutionThreadOfProblem(problemId);
     if (discussionThread == null

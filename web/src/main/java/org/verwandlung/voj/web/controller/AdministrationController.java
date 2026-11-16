@@ -1698,7 +1698,7 @@ public class AdministrationController {
       @RequestParam(value = "isPinned", defaultValue = "false") boolean isPinned,
       @RequestParam(value = "status", defaultValue = "PUBLISHED") String status,
       HttpServletRequest request) {
-    User currentUser = HttpSessionParser.getCurrentUser(request.getSession());
+    User currentUser = HttpSessionParser.getCurrentUser();
     long authorId = currentUser != null ? currentUser.getUid() : 0;
     return bulletinBoardService.createBulletinBoardMessage(
         messageTitle, messageBody, authorId, isPinned, status);
@@ -2161,7 +2161,7 @@ public class AdministrationController {
   @RequestMapping(value = "/deleteReply.action", method = RequestMethod.POST)
   public @ResponseBody Map<String, Boolean> deleteReplyAction(
       @RequestParam(value = "replyId") long replyId, HttpServletRequest request) {
-    User currentUser = HttpSessionParser.getCurrentUser(request.getSession());
+    User currentUser = HttpSessionParser.getCurrentUser();
     return discussionService.deleteDiscussionReply(replyId, currentUser);
   }
 

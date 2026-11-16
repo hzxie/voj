@@ -16,7 +16,6 @@
  */
 package org.verwandlung.voj.web.util;
 
-import jakarta.servlet.http.HttpSession;
 
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -35,19 +34,6 @@ public final class HttpSessionParser {
   private HttpSessionParser() {}
 
   /**
-   * Gets the currently authenticated user.
-   *
-   * <p>The {@code session} argument is retained for source compatibility with existing callers; the
-   * user is now resolved from the {@link SecurityContextHolder} rather than session attributes.
-   *
-   * @param session - the HttpSession object (unused)
-   * @return the authenticated user object, or a {@code null} reference if no user is logged in
-   */
-  public static User getCurrentUser(HttpSession session) {
-    return getCurrentUser();
-  }
-
-  /**
    * Gets the currently authenticated user from the Spring Security context.
    *
    * @return the authenticated user object, or a {@code null} reference if no user is logged in
@@ -62,5 +48,14 @@ public final class HttpSessionParser {
       return ((VojUserDetails) principal).getUser();
     }
     return null;
+  }
+
+  /**
+   * Checks whether a user is logged in.
+   *
+   * @return whether the current request is authenticated as a user
+   */
+  public static boolean isLoggedIn() {
+    return getCurrentUser() != null;
   }
 }
