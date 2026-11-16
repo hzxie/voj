@@ -20,6 +20,7 @@ import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Timestamp;
 
 import javax.sql.DataSource;
 
@@ -39,8 +40,8 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 /**
  * Runs the one-time upgrade script sql/upgrades/upgrade-from-1.0.2.sql against a database in the
  * state schema.sql of 1.0.2 created: contest foreign keys without an ON DELETE rule, the
- * contest_mode and contest_is_rated columns, no submission_judge_generation column, the foreign
- * key from voj_email_validation to voj_users, problem statements and contest notes written for
+ * contest_mode and contest_is_rated columns, no submission_judge_generation or
+ * submission_queued_time column, the foreign key from voj_email_validation to voj_users, problem statements and contest notes written for
  * HTML output (with HTML entities), the contestants' code_snippet column and Kotlin's old compile
  * command.
  *
@@ -146,6 +147,7 @@ public class UpgradeFrom102Test {
         "text/x-kotlin");
     // The submissions as 1.0.2 created them, without a judge generation.
     jdbcTemplate.execute("ALTER TABLE voj_submissions DROP COLUMN submission_judge_generation");
+    jdbcTemplate.execute("ALTER TABLE voj_submissions DROP COLUMN submission_queued_time");
     // The email validations as 1.0.2 created them, owned by a user.
     jdbcTemplate.execute(
         "ALTER TABLE voj_email_validation ADD CONSTRAINT voj_email_validation_ibfk_1"
@@ -303,6 +305,36 @@ public class UpgradeFrom102Test {
     Assertions.assertEquals(2, getJudgeGeneration(1000));
     jdbcTemplate.update(
         "UPDATE voj_submissions SET submission_judge_generation = 0 WHERE submission_id = 1000");
+  }
+
+  /**
+   * Test case: runs the upgrade on a 1.0.2 database, then once more. Test data: no queued time
+   * column. Expected: the column is added with the submit time of the existing submissions, and
+   * the second run leaves it (and a queued time a rejudge set since) as it is.
+   */
+  @Test
+  public void testAddsTheQueuedTime() throws SQLException {
+    Assertions.assertFalse(hasColumn("voj_submissions", "submission_queued_time"));
+
+    runUpgrade();
+    Assertions.assertEquals(
+        0,
+        jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM voj_submissions"
+                + " WHERE submission_queued_time <> submission_submit_time",
+            Integer.class));
+
+    String getQueuedTime =
+        "SELECT submission_queued_time FROM voj_submissions WHERE submission_id = 1000";
+    jdbcTemplate.update(
+        "UPDATE voj_submissions SET submission_queued_time = '2026-01-01 10:00:00'"
+            + " WHERE submission_id = 1000");
+    Timestamp rejudged = jdbcTemplate.queryForObject(getQueuedTime, Timestamp.class);
+    runUpgrade();
+    Assertions.assertEquals(rejudged, jdbcTemplate.queryForObject(getQueuedTime, Timestamp.class));
+    jdbcTemplate.update(
+        "UPDATE voj_submissions SET submission_queued_time = submission_submit_time"
+            + " WHERE submission_id = 1000");
   }
 
   /**

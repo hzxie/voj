@@ -200,6 +200,7 @@ CREATE TABLE `voj_submissions` (
   `uid` bigint(20) NOT NULL,
   `language_id` int(4) NOT NULL,
   `submission_submit_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `submission_queued_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `submission_execute_time` timestamp NULL DEFAULT NULL,
   `submission_judge_generation` int(8) NOT NULL DEFAULT 0,
   `submission_used_time` int(8) DEFAULT NULL,

@@ -39,8 +39,13 @@
 --    unpacks itself into /tmp, now points the compiler's temporary directory
 --    there (the compile succeeded either way, with a warning in its log). A
 --    compile command an administrator changed is left as it is.
+-- 9. voj_submissions.submission_queued_time is when the current judging task
+--    of a submission was queued (on submission and on every rejudge); the web
+--    application judges a submission a System Error that no judger took, or
+--    finished judging, in time. It is added, with the submit time for every
+--    existing submission.
 --
--- Safe to run more than once. Steps 1 to 5, 7 and 8 first check the information
+-- Safe to run more than once. Steps 1 to 5 and 7 to 9 first check the information
 -- schema and only change what is still in the old state (MySQL commits DDL
 -- implicitly, so a transaction could not make them atomic; an interrupted run
 -- is completed by running the script again). Step 6 runs in one transaction
@@ -208,3 +213,20 @@ DEALLOCATE PREPARE voj_stmt;
 UPDATE `voj_languages`
 SET `language_compile_command` = 'kotlinc -J-Djava.io.tmpdir=. {filename}.kt -include-runtime -d {filename}.jar'
 WHERE `language_compile_command` = 'kotlinc {filename}.kt -include-runtime -d {filename}.jar';
+
+-- 9. The time the current judging task of a submission was queued. The submit
+--    time is filled in only when the column is added, so that a later run
+--    keeps the time of a rejudge.
+SET @voj_has_column = (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'voj_submissions'
+  AND COLUMN_NAME = 'submission_queued_time');
+SET @voj_sql = IF(@voj_has_column = 0,
+  'ALTER TABLE `voj_submissions` ADD COLUMN `submission_queued_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP AFTER `submission_submit_time`', 'DO 0');
+PREPARE voj_stmt FROM @voj_sql;
+EXECUTE voj_stmt;
+DEALLOCATE PREPARE voj_stmt;
+SET @voj_sql = IF(@voj_has_column = 0,
+  'UPDATE `voj_submissions` SET `submission_queued_time` = `submission_submit_time`', 'DO 0');
+PREPARE voj_stmt FROM @voj_sql;
+EXECUTE voj_stmt;
+DEALLOCATE PREPARE voj_stmt;
