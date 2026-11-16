@@ -140,6 +140,28 @@ public class JavaOptionsTest {
   }
 
   /**
+   * Test case: a run whose output file was replaced by a hard link to a file that ends with the
+   * JVM's report. Expected result: a hard-linked file is not read (as no file a run leaves is), so
+   * the run did not run out of memory.
+   */
+  @Test
+  public void testAHardLinkInPlaceOfTheOutputIsNotRead(@TempDir Path directory) throws Exception {
+    Assumptions.assumeFalse(
+        System.getProperty("os.name").toLowerCase().contains("win"),
+        "The link count is only checked on Unix");
+    Path target =
+        Path.of(
+            write(
+                directory, "target", "Terminating due to java.lang.OutOfMemoryError: Metaspace\n"));
+    Path link = directory.resolve("output");
+    Files.createLink(link, target);
+    Assertions.assertFalse(
+        JavaOptions.isOutOfMemoryExit(Verdict.RUNTIME_ERROR, 3, target.toString()));
+    Assertions.assertFalse(
+        JavaOptions.isOutOfMemoryExit(Verdict.RUNTIME_ERROR, 3, link.toString()));
+  }
+
+  /**
    * Writes a file.
    *
    * @param directory - the directory to write it in

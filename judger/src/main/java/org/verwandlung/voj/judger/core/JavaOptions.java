@@ -17,15 +17,15 @@
 package org.verwandlung.voj.judger.core;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.SeekableByteChannel;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.BasicFileAttributes;
+
+import org.verwandlung.voj.judger.util.FileSystemUtils;
 
 /**
  * The options every run of a submission gives a JVM it starts (Java, Kotlin, ...), so that the JVM
@@ -209,30 +209,28 @@ final class JavaOptions {
   }
 
   /**
-   * Reads the end of a run's output file, without following a link the program may have planted
-   * in its place.
+   * Reads the end of a run's output file, opened as every file a run leaves is read (see {@link
+   * FileSystemUtils#newSandboxFileInputStream}): a link, a hard link or anything but a regular file
+   * the program may have put in its place is not read.
    *
    * @param file - the output file
    * @return its last {@value #REPORT_TAIL_BYTES} bytes (as ISO-8859-1, so that any byte reads as
-   *     one character), or an empty string if it is not a regular file or cannot be read
+   *     one character), or an empty string if it is refused or cannot be read
    */
   private static String readTail(Path file) {
-    try {
-      BasicFileAttributes attributes =
-          Files.readAttributes(file, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
-      if (!attributes.isRegularFile()) {
-        return "";
-      }
-      try (SeekableByteChannel channel =
-          Files.newByteChannel(file, StandardOpenOption.READ, LinkOption.NOFOLLOW_LINKS)) {
-        long start = Math.max(0, channel.size() - REPORT_TAIL_BYTES);
-        ByteBuffer buffer = ByteBuffer.allocate((int) (channel.size() - start));
-        channel.position(start);
-        while (buffer.hasRemaining() && channel.read(buffer) > 0) {
-          // Keep reading until the buffer is full or the file ends.
+    try (InputStream input = FileSystemUtils.newSandboxFileInputStream(file)) {
+      long size =
+          Files.readAttributes(file, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS).size();
+      long toSkip = Math.max(0, size - REPORT_TAIL_BYTES);
+      while (toSkip > 0) {
+        // A file's stream skips by moving its position, without reading what it skips.
+        long skipped = input.skip(toSkip);
+        if (skipped <= 0) {
+          break;
         }
-        return new String(buffer.array(), 0, buffer.position(), StandardCharsets.ISO_8859_1);
+        toSkip -= skipped;
       }
+      return new String(input.readNBytes(REPORT_TAIL_BYTES), StandardCharsets.ISO_8859_1);
     } catch (IOException ex) {
       return "";
     }
