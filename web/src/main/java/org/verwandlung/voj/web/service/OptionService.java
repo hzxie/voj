@@ -28,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import org.verwandlung.voj.web.mapper.OptionMapper;
 import org.verwandlung.voj.web.model.Option;
+import org.verwandlung.voj.web.util.InputValidator;
 
 /**
  * The system administration service, used to perform the administration functions of the whole
@@ -227,15 +228,14 @@ public class OptionService {
   }
 
   /**
-   * Checks whether the contact email address is legal. Rule: a legal contact email is either empty
-   * or a syntactically valid email address.
+   * Checks whether the contact email address is legal: empty, or an email address by the same rule
+   * as users' addresses.
    *
    * @param contactEmail - the contact email address
    * @return whether the contact email address is legal
    */
   public boolean isContactEmailLegal(String contactEmail) {
-    return contactEmail.isEmpty()
-        || contactEmail.matches("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
+    return contactEmail.isEmpty() || InputValidator.isEmail(contactEmail);
   }
 
   /**

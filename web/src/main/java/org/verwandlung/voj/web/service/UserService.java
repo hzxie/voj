@@ -52,6 +52,7 @@ import org.verwandlung.voj.web.model.UserGroup;
 import org.verwandlung.voj.web.model.UserMeta;
 import org.verwandlung.voj.web.util.DigestUtils;
 import org.verwandlung.voj.web.util.HtmlTextFilter;
+import org.verwandlung.voj.web.util.InputValidator;
 import org.verwandlung.voj.web.util.JsonUtils;
 import org.verwandlung.voj.web.util.MailSender;
 import org.verwandlung.voj.web.util.OffensiveWordFilter;
@@ -456,7 +457,7 @@ public class UserService {
     result.put("isPasswordEmpty", password.isEmpty());
     result.put("isPasswordLegal", isPasswordLegal(password));
     result.put("isEmailEmpty", user.getEmail().isEmpty());
-    result.put("isEmailLegal", isEmailLegal(user.getEmail()));
+    result.put("isEmailLegal", InputValidator.isEmail(user.getEmail()));
     result.put("isEmailExists", isEmailExists(user.getEmail()));
     result.put("isUserGroupLegal", user.getUserGroup() != null);
     result.put("isLanguageLegal", user.getPreferLanguage() != null);
@@ -987,11 +988,12 @@ public class UserService {
       String aboutMe) {
     Map<String, Boolean> result = new HashMap<>(9, 1);
     result.put("isEmailEmpty", email.isEmpty());
-    result.put("isEmailLegal", isEmailLegal(email));
+    result.put("isEmailLegal", InputValidator.isEmail(email));
     result.put("isEmailExists", isEmailExists(user.getEmail(), email));
     result.put("isDisplayNameLegal", displayName.length() <= 64);
     result.put("isLocationLegal", location.length() <= 128);
-    result.put("isWebsiteLegal", isWebsiteLegal(website));
+    result.put(
+        "isWebsiteLegal", website.isEmpty() || InputValidator.isHttpUrl(website));
     result.put("isSocialLinksLegal", socialLinks != null);
     result.put("isAboutMeLegal", aboutMe.length() <= 256);
 
@@ -1152,19 +1154,6 @@ public class UserService {
   }
 
   /**
-   * Checks whether an email address is legal. Rule: a valid email address not exceeding 64
-   * characters.
-   *
-   * @param email - the email address
-   * @return whether the email address is legal
-   */
-  private boolean isEmailLegal(String email) {
-    int emailLength = email.length();
-    return emailLength <= 64
-        && email.matches("^[A-Za-z0-9\\._-]+@[A-Za-z0-9_-]+\\.[A-Za-z0-9\\._-]+$");
-  }
-
-  /**
    * Checks whether an email address exists. Note: only used when a user creates a new account.
    *
    * @param email - the email address
@@ -1188,20 +1177,6 @@ public class UserService {
     }
     User user = userMapper.getUserUsingEmail(email);
     return user != null;
-  }
-
-  /**
-   * Checks whether a personal homepage address is legal. Rule: a valid HTTP(S) protocol URL not
-   * exceeding 64 characters.
-   *
-   * @param website - the personal homepage address
-   * @return whether the personal homepage address is legal
-   */
-  private boolean isWebsiteLegal(String website) {
-    int websiteLength = website.length();
-    return website.isEmpty()
-        || (websiteLength <= 64
-            && website.matches("^(http|https):\\/\\/[A-Za-z0-9-]+\\.[A-Za-z0-9_.]+$"));
   }
 
   /**
@@ -1317,7 +1292,7 @@ public class UserService {
     result.put("isUserGroupLegal", userGroup != null);
     result.put("isPreferLanguageLegal", preferLanguage != null);
     result.put("isEmailEmpty", email.isEmpty());
-    result.put("isEmailLegal", isEmailLegal(email));
+    result.put("isEmailLegal", InputValidator.isEmail(email));
     result.put("isEmailExists", isEmailExists(user.getEmail(), email));
     result.put("isDisplayNameLegal", displayName.length() <= 64);
     result.put("isAboutMeLegal", aboutMe.length() <= 256);

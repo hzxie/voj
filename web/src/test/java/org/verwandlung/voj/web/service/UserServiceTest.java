@@ -562,6 +562,25 @@ public class UserServiceTest {
     Assertions.assertFalse(result.get("isSuccessful"));
   }
 
+  /** Test case: tests the updateProfile (profile) method. Test data: a homepage with a path and a plus-tagged email address. Expected: both are accepted and stored. */
+  @Test
+  public void testUpdateProfileWithWebsitePathAndPlusEmail() {
+    User user = userService.getUserUsingUid(1000);
+    Map<String, Boolean> result =
+        userService.updateProfile(
+            user, "", "cshzxie@gmail.com", "", "", "https://github.com/alice", "{}", "Me");
+    Assertions.assertTrue(result.get("isWebsiteLegal"));
+    Assertions.assertTrue(result.get("isSuccessful"));
+    Assertions.assertEquals(
+        "https://github.com/alice", userService.getUserMetaUsingUid(user).get("website"));
+
+    Map<String, Boolean> creation =
+        userService.createUser(
+            "plusmail01", "password", "alice+oj@example.com", "users", "text/x-java", true);
+    Assertions.assertTrue(creation.get("isEmailLegal"));
+    Assertions.assertTrue(creation.get("isSuccessful"));
+  }
+
   /** Test case: tests the updateUserByAdministrator(...) method. Test data: a valid password / user group / language / email / display name / bio. Expected: the update succeeds and persists. */
   @Test
   public void testUpdateUserByAdministratorSuccessfully() {
