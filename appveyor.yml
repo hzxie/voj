@@ -24,6 +24,21 @@ install:
   - copy "C:\mingw-w64\x86_64-8.1.0-posix-seh-rt_v6-rev0\mingw64\bin\mingw32-make.exe" "C:\mingw-w64\x86_64-8.1.0-posix-seh-rt_v6-rev0\mingw64\bin\make.exe"
 # Setup test environment for Windows
   - copy "judger\src\test\resources\voj-test-windows.properties" "judger\src\test\resources\voj-test.properties"
+# The sandbox runs programs as an account of its own, never the one that runs the tests: the judger
+# refuses that one, whose network the sandbox would cut off. It needs the "Log on as a batch job"
+# right; its password goes into the test configuration.
+  - ps: |
+      $password = 'Voj-' + [guid]::NewGuid().ToString('N')
+      New-LocalUser -Name voj-sandbox -Password (ConvertTo-SecureString $password -AsPlainText -Force) -PasswordNeverExpires | Out-Null
+      $sid = (Get-LocalUser voj-sandbox).SID.Value
+      secedit /export /cfg "$env:TEMP\rights.inf" /areas USER_RIGHTS | Out-Null
+      $line = Get-Content "$env:TEMP\rights.inf" | Where-Object { $_ -like 'SeBatchLogonRight*' }
+      $right = if ($line) { "$line,*$sid" } else { "SeBatchLogonRight = *$sid" }
+      Set-Content -Encoding Unicode "$env:TEMP\rights.inf" @('[Unicode]', 'Unicode=yes', '[Version]', 'signature="$CHICAGO$"', 'Revision=1', '[Privilege Rights]', $right)
+      secedit /configure /db "$env:TEMP\rights.sdb" /cfg "$env:TEMP\rights.inf" /areas USER_RIGHTS /quiet | Out-Null
+      Remove-Item "$env:TEMP\rights.inf", "$env:TEMP\rights.sdb"
+      $properties = 'judger\src\test\resources\voj-test.properties'
+      (Get-Content $properties) -replace '^system.password =.*', "system.password = $password" | Set-Content $properties
 
 build: off
 
