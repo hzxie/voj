@@ -22,18 +22,24 @@ import java.nio.file.AccessDeniedException;
 import java.nio.file.DirectoryIteratorException;
 import java.nio.file.DirectoryNotEmptyException;
 import java.nio.file.DirectoryStream;
-import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.SecureDirectoryStream;
-import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.AclEntry;
+import java.nio.file.attribute.AclEntryPermission;
+import java.nio.file.attribute.AclEntryType;
+import java.nio.file.attribute.AclFileAttributeView;
 import java.nio.file.attribute.BasicFileAttributeView;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.PosixFileAttributes;
 import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.UserPrincipal;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
@@ -68,7 +74,7 @@ public class FileSystemUtils {
     if (!attributes.isRegularFile()) {
       throw new IOException("Refusing to read a non-regular sandbox file: " + path);
     }
-    if (!System.getProperty("os.name").contains("Windows")) {
+    if (!IS_WINDOWS) {
       Object numberOfLinks = Files.getAttribute(path, "unix:nlink", LinkOption.NOFOLLOW_LINKS);
       if (numberOfLinks instanceof Integer && (Integer) numberOfLinks != 1) {
         throw new IOException("Refusing to read a hard-linked sandbox file: " + path);
@@ -96,13 +102,18 @@ public class FileSystemUtils {
    * when the judger is denied access to a directory, it gives the directory's owner full access to
    * it again and tries once more. Root is never denied access, so a judger running as root never
    * changes a permission. Where there are no directory handles (Windows, whose paths have no such
-   * limit), the tree is walked by path, never into a directory junction.
+   * limit), the tree is walked by path (see {@link #deleteTreeByPath}).
    *
    * @param path - the file or directory to delete
    * @throws IOException if something cannot be deleted
    */
   public static void deleteRecursively(Path path) throws IOException {
     Path file = path.toAbsolutePath();
+    if (IS_WINDOWS) {
+      // Never opened as a directory first: it may be a junction.
+      deleteTreeByPath(file);
+      return;
+    }
     BasicFileAttributes attributes;
     try {
       attributes = Files.readAttributes(file, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
@@ -271,22 +282,22 @@ public class FileSystemUtils {
   }
 
   /**
-   * Performs a file operation and, if access is denied, gives the owner of the directories
-   * involved full access to them and performs it once more.
+   * Performs a file operation and, if access is denied, gives the judger full access to the files
+   * involved (see {@link #grantOwnerAccess}) and performs it once more.
    *
    * @param operation - the operation
-   * @param directories - the absolute paths of the directories involved, parents first
+   * @param files - the absolute paths of the files involved (no links), parents first
    * @return the result of the operation
    * @throws IOException if the operation fails
    */
-  private static <T> T withOwnerAccess(FileOperation<T> operation, Path... directories)
+  private static <T> T withOwnerAccess(FileOperation<T> operation, Path... files)
       throws IOException {
     try {
       return operation.perform();
     } catch (AccessDeniedException ex) {
       boolean granted = false;
-      for (Path directory : directories) {
-        granted |= grantOwnerAccess(directory);
+      for (Path file : files) {
+        granted |= grantOwnerAccess(file);
       }
       if (!granted) {
         throw ex;
@@ -296,23 +307,55 @@ public class FileSystemUtils {
   }
 
   /**
-   * Gives the owner of a directory full access ({@code rwx}) to it, if the owner lacks any.
+   * Gives the judger full access to a file it is denied access to. On POSIX systems, the owner of
+   * a directory gets full access ({@code rwx}) to it, if the owner lacks any. On Windows, the ACL
+   * of the file, which a submission may have changed, is replaced by one that gives the judger full
+   * control (which it may do if it owns the file or may change its ACL), and its read-only
+   * attribute, which keeps it from being deleted, is cleared. Never applied to a link or a
+   * junction: on Windows, that would change its target.
    *
-   * @param directory - the absolute path of the directory: short, as it is at most two levels
-   *     below the directory being deleted
-   * @return whether the permissions were changed
+   * @param file - the absolute path of the file: on POSIX systems short, as it is at most two
+   *     levels below the directory being deleted
+   * @return whether the access was changed
    */
-  private static boolean grantOwnerAccess(Path directory) {
+  private static boolean grantOwnerAccess(Path file) {
+    if (IS_WINDOWS) {
+      boolean granted = false;
+      try {
+        UserPrincipal judger =
+            file.getFileSystem()
+                .getUserPrincipalLookupService()
+                .lookupPrincipalByName(System.getProperty("user.name"));
+        Files.getFileAttributeView(file, AclFileAttributeView.class, LinkOption.NOFOLLOW_LINKS)
+            .setAcl(
+                List.of(
+                    AclEntry.newBuilder()
+                        .setType(AclEntryType.ALLOW)
+                        .setPrincipal(judger)
+                        .setPermissions(AclEntryPermission.values())
+                        .build()));
+        granted = true;
+      } catch (IOException ex) {
+        // Not the judger's to change: perhaps its read-only attribute only.
+      }
+      try {
+        Files.setAttribute(file, "dos:readonly", false, LinkOption.NOFOLLOW_LINKS);
+        granted = true;
+      } catch (IOException ex) {
+        // Denied too.
+      }
+      return granted;
+    }
     try {
       PosixFileAttributes attributes =
-          Files.readAttributes(directory, PosixFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
+          Files.readAttributes(file, PosixFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
       Set<PosixFilePermission> permissions = attributes.permissions();
       if (!attributes.isDirectory() || permissions.containsAll(OWNER_PERMISSIONS)) {
         return false;
       }
       permissions.addAll(OWNER_PERMISSIONS);
       // By path: through a handle, the directory would have to be opened, i.e. readable.
-      Files.setPosixFilePermissions(directory, permissions);
+      Files.setPosixFilePermissions(file, permissions);
       return true;
     } catch (IOException | UnsupportedOperationException ex) {
       return false;
@@ -320,62 +363,50 @@ public class FileSystemUtils {
   }
 
   /**
-   * Deletes a directory tree by path, where there are no directory handles (Windows). A directory
-   * junction, which a submission may create without any privilege, is removed as a link, never
-   * entered: Java reports a junction (as any reparse point but a symbolic link) as a directory and
-   * as "other", and a symbolic link as neither. A file a submission made read-only is made writable
-   * again to be removed.
+   * Deletes a file or directory tree by path, where there are no directory handles (Windows), if
+   * it exists. A link, or a directory junction, which a submission may create without any
+   * privilege, is removed as a link: never listed, nor anything done to it but its removal, which
+   * would reach its target (a junction to a missing target cannot even be listed). Java reports a
+   * junction (as any reparse point but a symbolic link) as a directory and as "other", and a
+   * symbolic link as neither. Anything else the judger is denied, it takes back (see {@link
+   * #grantOwnerAccess}). A directory is listed again once the entries it had are deleted, until it
+   * is empty, rather than entered recursively, however deep the tree.
    *
-   * @param path - the absolute path of the directory
+   * @param path - the absolute path of the file or directory
    * @throws IOException if something cannot be deleted
    */
   private static void deleteTreeByPath(Path path) throws IOException {
-    // Files.walkFileTree does not follow links unless FOLLOW_LINKS is requested: a link (to a file
-    // or a directory) is reported through visitFile and is deleted as a link.
-    Files.walkFileTree(
-        path,
-        new SimpleFileVisitor<Path>() {
-          @Override
-          public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs)
-              throws IOException {
-            if (attrs.isOther()) {
-              deleteByPath(dir);
-              return FileVisitResult.SKIP_SUBTREE;
-            }
-            return FileVisitResult.CONTINUE;
-          }
-
-          @Override
-          public FileVisitResult visitFile(Path file, BasicFileAttributes attrs)
-              throws IOException {
-            deleteByPath(file);
-            return FileVisitResult.CONTINUE;
-          }
-
-          @Override
-          public FileVisitResult postVisitDirectory(Path dir, IOException ex) throws IOException {
-            if (ex != null) {
-              throw ex;
-            }
-            deleteByPath(dir);
-            return FileVisitResult.CONTINUE;
-          }
-        });
-  }
-
-  /**
-   * Deletes a file, a link or an empty directory by path, if it still exists, clearing its
-   * read-only attribute (Windows) if it is denied.
-   *
-   * @param file - the absolute path of the file
-   * @throws IOException if it cannot be deleted
-   */
-  private static void deleteByPath(Path file) throws IOException {
-    try {
-      Files.deleteIfExists(file);
-    } catch (AccessDeniedException ex) {
-      Files.setAttribute(file, "dos:readonly", false, LinkOption.NOFOLLOW_LINKS);
-      Files.deleteIfExists(file);
+    Deque<Path> pending = new ArrayDeque<>();
+    pending.push(path);
+    while (!pending.isEmpty()) {
+      Path file = pending.peek();
+      BasicFileAttributes attributes;
+      try {
+        attributes =
+            Files.readAttributes(file, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
+      } catch (NoSuchFileException ex) {
+        pending.pop();
+        continue;
+      }
+      if (attributes.isSymbolicLink() || attributes.isOther()) {
+        Files.deleteIfExists(file);
+        pending.pop();
+        continue;
+      }
+      if (attributes.isDirectory()) {
+        int entries = pending.size();
+        try (DirectoryStream<Path> stream =
+            withOwnerAccess(() -> Files.newDirectoryStream(file), file)) {
+          stream.forEach(pending::push);
+        } catch (DirectoryIteratorException ex) {
+          throw ex.getCause();
+        }
+        if (pending.size() > entries) {
+          continue;
+        }
+      }
+      withOwnerAccess(() -> Files.deleteIfExists(file), file);
+      pending.pop();
     }
   }
 
@@ -390,6 +421,9 @@ public class FileSystemUtils {
      */
     T perform() throws IOException;
   }
+
+  /** Whether the judger runs on Windows. */
+  private static final boolean IS_WINDOWS = System.getProperty("os.name").contains("Windows");
 
   /** The permissions the owner of a directory needs to empty it. */
   private static final Set<PosixFilePermission> OWNER_PERMISSIONS =

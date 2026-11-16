@@ -21,12 +21,17 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
+import java.nio.file.attribute.AclEntry;
+import java.nio.file.attribute.AclFileAttributeView;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.PosixFilePermissions;
+import java.util.List;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
+import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -143,6 +148,106 @@ public class FileSystemUtilsTest {
     FileSystemUtils.deleteRecursively(root);
 
     Assertions.assertFalse(Files.exists(root, LinkOption.NOFOLLOW_LINKS));
+  }
+
+  /**
+   * Test case: tests the deleteRecursively(Path) method on Windows. Test data: a directory holding
+   * a junction to a directory outside it, a junction whose target is gone, and a junction to a
+   * directory the judger may not list; and a junction passed as the root. Expected result: only
+   * the junctions are removed, never listed nor followed; their targets are left untouched.
+   */
+  @Test
+  @EnabledOnOs(OS.WINDOWS)
+  public void testDeleteRecursivelyRemovesJunctionsAsLinksOnWindows() throws Exception {
+    Path outside = Files.createDirectory(tempDir.resolve("outside"));
+    Path outsideFile = Files.writeString(outside.resolve("secret.txt"), "secret");
+    Path gone = Files.createDirectory(tempDir.resolve("gone"));
+    Path denied = Files.createDirectory(tempDir.resolve("denied"));
+    Path root = Files.createDirectory(tempDir.resolve("work"));
+    createJunction(root.resolve("outside"), outside);
+    createJunction(root.resolve("gone"), gone);
+    Files.delete(gone);
+    createJunction(root.resolve("denied"), denied);
+    List<AclEntry> deniedAcl = getAcl(denied);
+    setAcl(denied, List.of());
+
+    try {
+      FileSystemUtils.deleteRecursively(root);
+      Assertions.assertFalse(Files.exists(root, LinkOption.NOFOLLOW_LINKS));
+      Assertions.assertEquals(List.of(), getAcl(denied));
+    } finally {
+      setAcl(denied, deniedAcl);
+    }
+    Assertions.assertEquals("secret", Files.readString(outsideFile));
+
+    Path rootJunction = createJunction(tempDir.resolve("root-junction"), outside);
+    FileSystemUtils.deleteRecursively(rootJunction);
+    Assertions.assertFalse(Files.exists(rootJunction, LinkOption.NOFOLLOW_LINKS));
+    Assertions.assertEquals("secret", Files.readString(outsideFile));
+  }
+
+  /**
+   * Test case: tests the deleteRecursively(Path) method on Windows. Test data: a tree with a
+   * read-only file, a read-only directory and a directory whose ACL a submission emptied, which
+   * denies everyone (the judger, its owner, but changing its ACL) any access. Expected result: the
+   * whole tree is removed.
+   */
+  @Test
+  @EnabledOnOs(OS.WINDOWS)
+  public void testDeleteRecursivelyRemovesReadOnlyAndDeniedFilesOnWindows() throws Exception {
+    Path root = Files.createDirectory(tempDir.resolve("work"));
+    Path readOnlyFile = Files.writeString(root.resolve("a.exe"), "binary");
+    Files.setAttribute(readOnlyFile, "dos:readonly", true);
+    Path readOnlyDirectory = Files.createDirectory(root.resolve("read-only"));
+    Files.writeString(readOnlyDirectory.resolve("file.txt"), "data");
+    Files.setAttribute(readOnlyDirectory, "dos:readonly", true);
+    Path denied = Files.createDirectory(root.resolve("denied"));
+    Files.writeString(Files.createDirectory(denied.resolve("inner")).resolve("file.txt"), "data");
+    setAcl(denied, List.of());
+    Assertions.assertThrows(IOException.class, () -> Files.list(denied).close());
+
+    FileSystemUtils.deleteRecursively(root);
+
+    Assertions.assertFalse(Files.exists(root, LinkOption.NOFOLLOW_LINKS));
+  }
+
+  /**
+   * Creates a directory junction, as a submission may without any privilege.
+   *
+   * @param link - the junction
+   * @param target - the directory it points to
+   * @return the junction
+   */
+  private static Path createJunction(Path link, Path target) throws Exception {
+    Process process =
+        new ProcessBuilder("cmd", "/c", "mklink", "/J", link.toString(), target.toString())
+            .redirectErrorStream(true)
+            .start();
+    String output = new String(process.getInputStream().readAllBytes());
+    Assertions.assertEquals(0, process.waitFor(), output);
+    Assertions.assertTrue(
+        Files.readAttributes(link, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS).isOther());
+    return link;
+  }
+
+  /**
+   * Reads the ACL of a file (Windows).
+   *
+   * @param file - the file
+   * @return its ACL
+   */
+  private static List<AclEntry> getAcl(Path file) throws IOException {
+    return Files.getFileAttributeView(file, AclFileAttributeView.class).getAcl();
+  }
+
+  /**
+   * Replaces the ACL of a file (Windows).
+   *
+   * @param file - the file
+   * @param acl - its new ACL
+   */
+  private static void setAcl(Path file, List<AclEntry> acl) throws IOException {
+    Files.getFileAttributeView(file, AclFileAttributeView.class).setAcl(acl);
   }
 
   /**
