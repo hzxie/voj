@@ -16,17 +16,9 @@
  */
 package org.verwandlung.voj.judger;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
-import java.util.concurrent.FutureTask;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -41,11 +33,10 @@ import org.springframework.context.annotation.PropertySource;
 
 import org.verwandlung.voj.judger.application.ApplicationHeartbeat;
 import org.verwandlung.voj.judger.application.JudgerAccount;
+import org.verwandlung.voj.judger.application.SupportedLanguages;
 import org.verwandlung.voj.judger.core.CheckpointStore;
 import org.verwandlung.voj.judger.core.Dispatcher;
 import org.verwandlung.voj.judger.core.SandboxAccountLock;
-import org.verwandlung.voj.judger.mapper.LanguageMapper;
-import org.verwandlung.voj.judger.model.Language;
 
 /**
  * The application entry point of the Verwandlung Online Judge judger.
@@ -72,11 +63,11 @@ public class VojJudgerApplication {
 
   /**
    * Initialization task executed after the application starts: logs runtime environment
-   * information, starts the heartbeats in the registry of the judgers and the judging of the
-   * pending submissions.
+   * information, finds the languages this judger supports, and starts the heartbeats in the
+   * registry of the judgers and the judging of the pending submissions.
    *
-   * @param languageMapper - the data access object for programming languages
    * @param judgerAccount - the account of the judger, checked first
+   * @param supportedLanguages - the languages this judger supports, probed here
    * @param heartbeat - the heartbeat task
    * @param sandboxAccountLock - the lock that keeps other judgers off this judger's sandbox account
    * @param checkpointStore - the local cache of test data, opened (and cleaned up) here
@@ -87,8 +78,8 @@ public class VojJudgerApplication {
    */
   @Bean
   public ApplicationRunner startupRunner(
-      LanguageMapper languageMapper,
       JudgerAccount judgerAccount,
+      SupportedLanguages supportedLanguages,
       ApplicationHeartbeat heartbeat,
       SandboxAccountLock sandboxAccountLock,
       CheckpointStore checkpointStore,
@@ -116,25 +107,13 @@ public class VojJudgerApplication {
       // used fails every judging, so it fails the startup.
       checkpointStore.open();
 
-      List<Integer> supportedLanguageIds = detectSupportedLanguages(languageMapper);
-      heartbeat.setLanguageIds(supportedLanguageIds);
+      // Only the submissions this judger can build are taken: the others wait in the database for
+      // a capable judger. The heartbeats probe the languages again once they changed.
+      supportedLanguages.detect();
       setupHeartBeat(heartbeat);
-      if (supportedLanguageIds.isEmpty()) {
-        // No usable toolchain on this host. Rather than taking submissions we cannot build (and
-        // failing them with a bogus Compile Error), stay online for telemetry but never take one.
-        // The submissions in a language no judger supports are judged a System Error by the web
-        // application.
-        LOGGER.error(
-            "No supported language compilers were detected; this judger will not take any "
-                + "submission. Check the toolchain installation.");
-        return;
-      }
-      // Only take the submissions this judger can actually build: the others wait in the database
-      // for a capable judger.
-      LOGGER.info("Judging the submissions in the languages " + supportedLanguageIds);
-      Thread judging =
-          new Thread(() -> dispatcher.judgeSubmissions(supportedLanguageIds), "voj-judging");
-      judging.start();
+      new Thread(
+              () -> dispatcher.judgeSubmissions(supportedLanguages::getLanguageIds), "voj-judging")
+          .start();
     };
   }
 
@@ -159,104 +138,6 @@ public class VojJudgerApplication {
     LOGGER.info("\tJava VM Name: " + System.getProperty("java.vm.name"));
     LOGGER.info("\tJava Runtime Version: " + System.getProperty("java.runtime.version"));
   }
-
-  /**
-   * Probes the compiler of every language and returns those this host can compile, once, at
-   * startup: a compiler installed later is found at the next start. A language counts as supported
-   * when its compiler prints its version and exits with 0 (see {@link #getVersionCommand}), which
-   * is logged to make bug reproduction easier.
-   *
-   * @param languageMapper - the data access object for programming languages
-   * @return the unique identifiers of the languages this judger supports
-   */
-  private List<Integer> detectSupportedLanguages(LanguageMapper languageMapper) {
-    LOGGER.info("Compiler Information: ");
-    List<Integer> supportedLanguageIds = new ArrayList<>();
-    for (Language language : languageMapper.getAllLanguages()) {
-      List<String> versionCommand = getVersionCommand(language.getCompileCommand());
-      String version =
-          versionCommand == null ? null : getCommandOutput(versionCommand, PROBE_TIMEOUT_MS);
-      LOGGER.info(
-          "\t{}: {}",
-          language.getLanguageName(),
-          version == null ? "Not Found" : version.lines().findFirst().orElse(""));
-      if (version != null) {
-        supportedLanguageIds.add(language.getLanguageId());
-      }
-    }
-    return supportedLanguageIds;
-  }
-
-  /**
-   * Gets the command that prints the version of the compiler that a compile command runs (its
-   * first word): {@code -version} for javac and kotlinc, {@code version} for go, {@code -iV} for
-   * Free Pascal, {@code --version} for any other.
-   *
-   * @param compileCommand - the command line of the compile command
-   * @return the command, or {@code null} if the compile command is empty
-   */
-  static List<String> getVersionCommand(String compileCommand) {
-    if (compileCommand == null || compileCommand.isBlank()) {
-      return null;
-    }
-    String compiler = compileCommand.trim().split("\\s+")[0];
-    String name =
-        compiler
-            .substring(Math.max(compiler.lastIndexOf('/'), compiler.lastIndexOf('\\')) + 1)
-            .toLowerCase(Locale.ROOT)
-            .replaceFirst("\\.exe$", "");
-    switch (name) {
-      case "javac":
-      case "kotlinc":
-        return List.of(compiler, "-version");
-      case "go":
-        return List.of(compiler, "version");
-      case "fpc":
-        return List.of(compiler, "-iV");
-      default:
-        return List.of(compiler, "--version");
-    }
-  }
-
-  /**
-   * Runs a command and gets what it prints (its standard output and error, read as it runs, so it
-   * never blocks on a full pipe). A command that does not exit in time is killed.
-   *
-   * @param command - the command
-   * @param timeoutMs - how long (ms) it may run
-   * @return what it printed, or {@code null} if it cannot be started, does not exit with 0, or
-   *     does not exit in time
-   */
-  static String getCommandOutput(List<String> command, long timeoutMs) {
-    Process process;
-    try {
-      process = new ProcessBuilder(command).redirectErrorStream(true).start();
-    } catch (IOException ex) {
-      return null;
-    }
-    try {
-      process.getOutputStream().close();
-      FutureTask<byte[]> output = new FutureTask<>(process.getInputStream()::readAllBytes);
-      Thread reader = new Thread(output, "voj-compiler-probe");
-      reader.setDaemon(true);
-      reader.start();
-      if (!process.waitFor(timeoutMs, TimeUnit.MILLISECONDS) || process.exitValue() != 0) {
-        return null;
-      }
-      return new String(output.get(timeoutMs, TimeUnit.MILLISECONDS), StandardCharsets.UTF_8)
-          .trim();
-    } catch (IOException | ExecutionException | TimeoutException ex) {
-      return null;
-    } catch (InterruptedException ex) {
-      Thread.currentThread().interrupt();
-      return null;
-    } finally {
-      process.destroyForcibly();
-    }
-  }
-
-  /** How long (ms) the compiler of a language may take to print its version. */
-  static final long PROBE_TIMEOUT_MS = 30000;
 
   /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(VojJudgerApplication.class);

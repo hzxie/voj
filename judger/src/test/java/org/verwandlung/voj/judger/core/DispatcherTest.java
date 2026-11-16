@@ -39,6 +39,7 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.ibatis.exceptions.PersistenceException;
 
@@ -196,7 +197,7 @@ public class DispatcherTest {
         .when(judge)
         .judge(any(), any());
 
-    Thread judging = new Thread(() -> dispatcher.judgeSubmissions(LANGUAGES));
+    Thread judging = new Thread(() -> dispatcher.judgeSubmissions(() -> LANGUAGES));
     judging.start();
     try {
       verify(judge, timeout(10000).times(5)).judge(any(), any());
@@ -333,7 +334,7 @@ public class DispatcherTest {
         .thenReturn(submission(0, null))
         .thenReturn(null);
 
-    Thread judging = new Thread(() -> dispatcher.judgeSubmissions(LANGUAGES));
+    Thread judging = new Thread(() -> dispatcher.judgeSubmissions(() -> LANGUAGES));
     judging.start();
     try {
       verify(judge, timeout(10000)).judge(any(), any());
@@ -355,7 +356,7 @@ public class DispatcherTest {
   public void testAnErrorExitsTheProcess() throws Exception {
     doThrow(new OutOfMemoryError("Java heap space")).when(judge).judge(any(), any());
 
-    dispatcher.judgeSubmissions(LANGUAGES);
+    dispatcher.judgeSubmissions(() -> LANGUAGES);
     dispatcher.destroy();
 
     Assertions.assertEquals(List.of(Dispatcher.FATAL_ERROR_EXIT_STATUS), exitStatuses);
@@ -452,6 +453,31 @@ public class DispatcherTest {
         .handBackSubmission(argThat(s -> s.getClaimToken() == CLAIM_TOKEN));
     Assertions.assertFalse(dispatcher.judgeNextSubmission(LANGUAGES));
     verify(applicationDispatcher, times(1)).claimSubmission(anyList(), anyLong());
+  }
+
+  /**
+   * Test case: a judger that supports no language at first (e.g. no compiler of them was found),
+   * then some (an administrator added one). Expected result: it claims nothing until it supports
+   * a language, then judges the submissions in the languages it supports now.
+   */
+  @Test
+  public void testTheJudgerClaimsInTheLanguagesItSupportsNow() throws Exception {
+    AtomicReference<List<Integer>> languages = new AtomicReference<>(List.of());
+
+    Thread judging = new Thread(() -> dispatcher.judgeSubmissions(languages::get));
+    judging.start();
+    try {
+      Thread.sleep(TIMES.pollIntervalMs() * 10);
+      verify(applicationDispatcher, never()).claimSubmission(anyList(), anyLong());
+      Assertions.assertTrue(dispatcher.isReady());
+
+      languages.set(LANGUAGES);
+      verify(judge, timeout(10000).atLeastOnce()).judge(any(), any());
+    } finally {
+      judging.interrupt();
+      judging.join(10000);
+    }
+    verify(applicationDispatcher, atLeast(1)).claimSubmission(LANGUAGES, LEASE_SECONDS);
   }
 
   /**

@@ -62,16 +62,18 @@ public class ApplicationHeartbeatTest {
     ReflectionTestUtils.setField(applicationHeartbeat, "judgerDescription", "Test Judger");
     when(judgerAccount.getUid()).thenReturn(1001L);
     when(dispatcher.isReady()).thenReturn(true);
+    when(supportedLanguages.getLanguageIds()).thenReturn(List.of());
   }
 
   /**
    * Test case: tests the run method. Test data: a ready judger that supports C++ and Java.
    * Expected result: its heartbeats record, as one process, its account, description, languages
    * and readiness; the first one also removes the entries of the processes that stopped long ago.
+   * Each one looks whether the languages changed.
    */
   @Test
   public void testRun() {
-    applicationHeartbeat.setLanguageIds(List.of(2, 3));
+    when(supportedLanguages.getLanguageIds()).thenReturn(List.of(2, 3));
 
     applicationHeartbeat.run();
     applicationHeartbeat.run();
@@ -88,6 +90,7 @@ public class ApplicationHeartbeatTest {
             anyInt());
     Assertions.assertEquals(instances.getAllValues().get(0), instances.getAllValues().get(1));
     verify(judgerMapper, times(1)).deleteStoppedJudgers();
+    verify(supportedLanguages, times(2)).checkForChanges();
   }
 
   /**
@@ -96,7 +99,7 @@ public class ApplicationHeartbeatTest {
    */
   @Test
   public void testRunRecordsAJudgerThatTakesNothingAsNotReady() {
-    applicationHeartbeat.setLanguageIds(List.of(2));
+    when(supportedLanguages.getLanguageIds()).thenReturn(List.of(2));
     when(dispatcher.isReady()).thenReturn(false);
     applicationHeartbeat.run();
 
@@ -138,6 +141,9 @@ public class ApplicationHeartbeatTest {
 
   /** The mocked account of the judger. */
   @Mock private JudgerAccount judgerAccount;
+
+  /** The mocked languages of the judger. */
+  @Mock private SupportedLanguages supportedLanguages;
 
   /** The ApplicationHeartbeat object under test. */
   @InjectMocks private ApplicationHeartbeat applicationHeartbeat;

@@ -22,6 +22,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.IntConsumer;
+import java.util.function.Supplier;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -138,23 +139,24 @@ public class Dispatcher implements DisposableBean {
   }
 
   /**
-   * Judges the pending submissions in some languages, one after the other, until the thread is
-   * interrupted or the judger stops. When there is none, or none can be taken (e.g. the database is
-   * unreachable), it looks again after the poll interval; after a failed judging, it pauses (see
-   * {@link #getPause}).
+   * Judges the pending submissions in the languages this judger supports, one after the other,
+   * until the thread is interrupted or the judger stops. When there is none, or none can be taken
+   * (e.g. the database is unreachable, or this judger supports no language for now), it looks again
+   * after the poll interval; after a failed judging, it pauses (see {@link #getPause}).
    *
    * <p>An Error (e.g. an OutOfMemoryError, or a StackOverflowError) leaves the judger in no state
    * to judge: see {@link #onFatalError}.
    *
-   * @param languageIds - the unique identifiers of the languages this judger supports, not empty
+   * @param languageIds - gives the unique identifiers of the languages this judger supports now
    */
-  public void judgeSubmissions(List<Integer> languageIds) {
+  public void judgeSubmissions(Supplier<List<Integer>> languageIds) {
     isJudging = true;
     try {
       while (!Thread.currentThread().isInterrupted() && !isStopping) {
         long pause;
         try {
-          boolean isClaimed = judgeNextSubmission(languageIds);
+          List<Integer> languages = languageIds.get();
+          boolean isClaimed = !languages.isEmpty() && judgeNextSubmission(languages);
           if (isClaimFailing) {
             isClaimFailing = false;
             LOGGER.info("This judger takes submissions from the database again.");

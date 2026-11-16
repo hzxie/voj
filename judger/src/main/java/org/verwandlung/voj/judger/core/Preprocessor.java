@@ -322,16 +322,28 @@ public class Preprocessor {
    */
   private static String getSourceFilename(Language language) throws IOException {
     String filename = language.getSourceFilename();
-    if (filename == null
-        || filename.isBlank()
-        || filename.equals(".")
-        || filename.equals("..")
-        || filename.contains("/")
-        || filename.contains("\\")) {
+    if (!isValidSourceFilename(filename)) {
       throw new IOException(
           "The language " + language.getLanguageName() + " has no valid source file name");
     }
     return filename;
+  }
+
+  /**
+   * Tells whether a language's source file name is one a source can be saved as: a plain file
+   * name, not empty, and neither {@code .} nor {@code ..}. A judger supports no language whose
+   * source file name is not (see {@code SupportedLanguages}).
+   *
+   * @param filename - the source file name of the language
+   * @return whether it is a plain file name
+   */
+  public static boolean isValidSourceFilename(String filename) {
+    return filename != null
+        && !filename.isBlank()
+        && !filename.equals(".")
+        && !filename.equals("..")
+        && !filename.contains("/")
+        && !filename.contains("\\");
   }
 
   /**

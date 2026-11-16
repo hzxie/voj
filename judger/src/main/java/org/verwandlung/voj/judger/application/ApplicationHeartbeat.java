@@ -41,7 +41,8 @@ import org.verwandlung.voj.judger.mapper.JudgerMapper;
  * application shows the judgers from it, and counts a judger whose last heartbeat is older than
  * three intervals as stopped. Every judger process has an entry of its own, by a random
  * identifier; the first heartbeat of a process removes the entries of the processes that stopped
- * a day ago or earlier.
+ * a day ago or earlier. Each heartbeat also looks whether the languages changed, to probe their
+ * compilers again (see {@link SupportedLanguages#checkForChanges}).
  *
  * @author Haozhe Xie
  */
@@ -54,14 +55,16 @@ public class ApplicationHeartbeat implements Runnable {
   private static final int MAX_DESCRIPTION_LENGTH = 255;
 
   /**
-   * Records a heartbeat. It runs on a schedule, which cancels every later run once a run throws,
-   * so a failure (e.g. the database restarting) is logged here, once until a heartbeat is recorded
-   * again, and the next heartbeat simply tries again.
+   * Records a heartbeat, and looks whether the languages changed. It runs on a schedule, which
+   * cancels every later run once a run throws, so a failure (e.g. the database restarting) is
+   * logged here, once until a heartbeat is recorded again, and the next heartbeat simply tries
+   * again.
    */
   @Override
   public void run() {
     try {
       recordHeartbeat();
+      supportedLanguages.checkForChanges();
       if (isFailing) {
         isFailing = false;
         LOGGER.info("The heartbeats of this judger are recorded again.");
@@ -70,24 +73,15 @@ public class ApplicationHeartbeat implements Runnable {
       if (!isFailing) {
         isFailing = true;
         LOGGER.error(
-            "Failed to record the heartbeat of this judger in the database; trying again every "
+            "Failed to record the heartbeat of this judger, or to read the languages, in the"
+                + " database; trying again every "
                 + HEARTBEAT_INTERVAL_MS / 1000
                 + " s.",
             ex);
       } else {
-        LOGGER.debug("Failed to record the heartbeat of this judger.", ex);
+        LOGGER.debug("Failed to record the heartbeat of this judger, or to read the languages.", ex);
       }
     }
-  }
-
-  /**
-   * Sets the languages this judger supports, which its heartbeats record. Until it is set, the
-   * judger records none (and is not ready, see {@link Dispatcher#isReady}).
-   *
-   * @param languageIds - the unique identifiers of the languages
-   */
-  public void setLanguageIds(List<Integer> languageIds) {
-    this.languageIds = List.copyOf(languageIds);
   }
 
   /** Records a heartbeat with the judger's languages, readiness and live telemetry. */
@@ -96,7 +90,7 @@ public class ApplicationHeartbeat implements Runnable {
     if (description.length() > MAX_DESCRIPTION_LENGTH) {
       description = description.substring(0, MAX_DESCRIPTION_LENGTH);
     }
-    List<Integer> languages = languageIds;
+    List<Integer> languages = supportedLanguages.getLanguageIds();
     if (isFirstHeartbeat) {
       judgerMapper.deleteStoppedJudgers();
     }
@@ -229,8 +223,8 @@ public class ApplicationHeartbeat implements Runnable {
   /** The account of the judger, which its heartbeats are recorded by. */
   @Autowired private JudgerAccount judgerAccount;
 
-  /** The unique identifiers of the languages this judger supports. */
-  private volatile List<Integer> languageIds = List.of();
+  /** The languages this judger supports, which its heartbeats record. */
+  @Autowired private SupportedLanguages supportedLanguages;
 
   /** The identifier of this judger process in the registry. */
   private static final String INSTANCE = UUID.randomUUID().toString();
