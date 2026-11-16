@@ -282,6 +282,8 @@
                 errorMessage += [[#{voj.accounts.dashboard.email-illegal}]] + '<br>';
             } else if (result['isEmailExists']) {
                 errorMessage += [[#{voj.accounts.dashboard.email-existing}]] + '<br>';
+            } else if (result['isPasswordCheckThrottled']) {
+                errorMessage += [[#{voj.accounts.dashboard.password-check-throttled}]] + '<br>';
             } else if (result['isPasswordCorrect'] === false) {
                 errorMessage += [[#{voj.accounts.dashboard.current-password-incorrect}]] + '<br>';
             }
