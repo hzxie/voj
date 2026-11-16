@@ -41,11 +41,17 @@
 --    compile command an administrator changed is left as it is.
 -- 9. voj_submissions.submission_queued_time is when the current judging task
 --    of a submission was queued (on submission and on every rejudge); the web
---    application judges a submission a System Error that no judger took, or
---    finished judging, in time. It is added, with the submit time for every
---    existing submission.
+--    application judges a submission a System Error that no judger took in
+--    time. It is added, with the submit time for every judged submission and
+--    the time of the upgrade for a pending one, whose task may still be waiting
+--    for a judger.
+-- 10. voj_submissions.submission_claim_token identifies the judging that
+--    claimed a pending submission, and submission_lease_time is when that
+--    judging last renewed its lease; the web application judges a submission a
+--    System Error whose judging did not renew its lease in time. They are added
+--    empty: no judging of the new version has claimed a pending submission yet.
 --
--- Safe to run more than once. Steps 1 to 5 and 7 to 9 first check the information
+-- Safe to run more than once. Steps 1 to 5 and 7 to 10 first check the information
 -- schema and only change what is still in the old state (MySQL commits DDL
 -- implicitly, so a transaction could not make them atomic; an interrupted run
 -- is completed by running the script again). Step 6 runs in one transaction
@@ -214,19 +220,37 @@ UPDATE `voj_languages`
 SET `language_compile_command` = 'kotlinc -J-Djava.io.tmpdir=. {filename}.kt -include-runtime -d {filename}.jar'
 WHERE `language_compile_command` = 'kotlinc {filename}.kt -include-runtime -d {filename}.jar';
 
--- 9. The time the current judging task of a submission was queued. The submit
---    time is filled in only when the column is added, so that a later run
---    keeps the time of a rejudge.
+-- 9. The time the current judging task of a submission was queued. The
+--    column is added without values, filled in where it has none, and only
+--    then made NOT NULL, so that running the script again completes a run that
+--    was interrupted in between.
 SET @voj_has_column = (SELECT COUNT(*) FROM information_schema.COLUMNS
   WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'voj_submissions'
   AND COLUMN_NAME = 'submission_queued_time');
 SET @voj_sql = IF(@voj_has_column = 0,
-  'ALTER TABLE `voj_submissions` ADD COLUMN `submission_queued_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP AFTER `submission_submit_time`', 'DO 0');
+  'ALTER TABLE `voj_submissions` ADD COLUMN `submission_queued_time` timestamp NULL DEFAULT NULL AFTER `submission_submit_time`', 'DO 0');
 PREPARE voj_stmt FROM @voj_sql;
 EXECUTE voj_stmt;
 DEALLOCATE PREPARE voj_stmt;
+UPDATE `voj_submissions`
+SET `submission_queued_time` = IF(`submission_judge_result` = 'PD', NOW(), `submission_submit_time`)
+WHERE `submission_queued_time` IS NULL;
+SET @voj_is_nullable = (SELECT IS_NULLABLE FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'voj_submissions'
+  AND COLUMN_NAME = 'submission_queued_time');
+SET @voj_sql = IF(@voj_is_nullable = 'YES',
+  'ALTER TABLE `voj_submissions` MODIFY COLUMN `submission_queued_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP', 'DO 0');
+PREPARE voj_stmt FROM @voj_sql;
+EXECUTE voj_stmt;
+DEALLOCATE PREPARE voj_stmt;
+
+-- 10. The claim token and the lease of the judging of a submission, added in
+--    one statement.
+SET @voj_has_column = (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'voj_submissions'
+  AND COLUMN_NAME = 'submission_claim_token');
 SET @voj_sql = IF(@voj_has_column = 0,
-  'UPDATE `voj_submissions` SET `submission_queued_time` = `submission_submit_time`', 'DO 0');
+  'ALTER TABLE `voj_submissions` ADD COLUMN `submission_claim_token` bigint(20) DEFAULT NULL AFTER `submission_judge_generation`, ADD COLUMN `submission_lease_time` timestamp NULL DEFAULT NULL AFTER `submission_claim_token`', 'DO 0');
 PREPARE voj_stmt FROM @voj_sql;
 EXECUTE voj_stmt;
 DEALLOCATE PREPARE voj_stmt;

@@ -40,9 +40,10 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 /**
  * Runs the one-time upgrade script sql/upgrades/upgrade-from-1.0.2.sql against a database in the
  * state schema.sql of 1.0.2 created: contest foreign keys without an ON DELETE rule, the
- * contest_mode and contest_is_rated columns, no submission_judge_generation or
- * submission_queued_time column, the foreign key from voj_email_validation to voj_users, problem statements and contest notes written for
- * HTML output (with HTML entities), the contestants' code_snippet column and Kotlin's old compile
+ * contest_mode and contest_is_rated columns, none of the submission_judge_generation,
+ * submission_queued_time, submission_claim_token and submission_lease_time columns, the foreign key
+ * from voj_email_validation to voj_users, problem statements and contest notes written for HTML
+ * output (with HTML entities), the contestants' code_snippet column and Kotlin's old compile
  * command.
  *
  * <p>The script changes the schema (DDL commits implicitly), so this test is not {@code
@@ -64,6 +65,9 @@ public class UpgradeFrom102Test {
 
   /** The option that marks the upgrade as done. */
   private static final String MARKER = "upgradeFrom102Applied";
+
+  /** The pending submission a test inserts. */
+  private static final long PENDING_SUBMISSION_ID = 9101;
 
   /** The problem inserted by this test, with a statement written for HTML output. */
   private static final long PROBLEM_ID = 9101;
@@ -145,9 +149,11 @@ public class UpgradeFrom102Test {
         "UPDATE voj_languages SET language_compile_command = ? WHERE language_slug = ?",
         OLD_KOTLIN_COMPILE_COMMAND,
         "text/x-kotlin");
-    // The submissions as 1.0.2 created them, without a judge generation.
-    jdbcTemplate.execute("ALTER TABLE voj_submissions DROP COLUMN submission_judge_generation");
-    jdbcTemplate.execute("ALTER TABLE voj_submissions DROP COLUMN submission_queued_time");
+    // The submissions as 1.0.2 created them, without the columns of the judging's lifecycle.
+    jdbcTemplate.execute(
+        "ALTER TABLE voj_submissions DROP COLUMN submission_judge_generation,"
+            + " DROP COLUMN submission_queued_time, DROP COLUMN submission_claim_token,"
+            + " DROP COLUMN submission_lease_time");
     // The email validations as 1.0.2 created them, owned by a user.
     jdbcTemplate.execute(
         "ALTER TABLE voj_email_validation ADD CONSTRAINT voj_email_validation_ibfk_1"
@@ -193,6 +199,8 @@ public class UpgradeFrom102Test {
   public void tearDown() throws SQLException {
     // Whatever a test did, leave the schema upgraded and the marker exactly as seed.sql has it.
     runUpgrade();
+    jdbcTemplate.update(
+        "DELETE FROM voj_submissions WHERE submission_id = ?", PENDING_SUBMISSION_ID);
     jdbcTemplate.update("DELETE FROM voj_contests WHERE contest_id BETWEEN 9101 AND 9104");
     jdbcTemplate.update("DELETE FROM voj_problems WHERE problem_id = ?", PROBLEM_ID);
     jdbcTemplate.update("DELETE FROM voj_options WHERE option_name = ?", MARKER);
@@ -309,20 +317,32 @@ public class UpgradeFrom102Test {
 
   /**
    * Test case: runs the upgrade on a 1.0.2 database, then once more. Test data: no queued time
-   * column. Expected: the column is added with the submit time of the existing submissions, and
-   * the second run leaves it (and a queued time a rejudge set since) as it is.
+   * column, and a pending submission submitted long ago. Expected: the column is added, NOT NULL,
+   * with the submit time of the judged submissions and the time of the upgrade for the pending one
+   * (whose task may still wait for a judger), and the second run leaves it (and a queued time a
+   * rejudge set since) as it is.
    */
   @Test
   public void testAddsTheQueuedTime() throws SQLException {
     Assertions.assertFalse(hasColumn("voj_submissions", "submission_queued_time"));
+    insertPendingSubmission();
 
     runUpgrade();
+    Assertions.assertEquals("NO", getNullability("submission_queued_time"));
     Assertions.assertEquals(
         0,
         jdbcTemplate.queryForObject(
-            "SELECT COUNT(*) FROM voj_submissions"
-                + " WHERE submission_queued_time <> submission_submit_time",
-            Integer.class));
+            "SELECT COUNT(*) FROM voj_submissions WHERE submission_id <> ?"
+                + " AND submission_queued_time <> submission_submit_time",
+            Integer.class,
+            PENDING_SUBMISSION_ID));
+    Assertions.assertTrue(
+        jdbcTemplate.queryForObject(
+                "SELECT TIMESTAMPDIFF(SECOND, submission_queued_time, NOW()) FROM voj_submissions"
+                    + " WHERE submission_id = ?",
+                Integer.class,
+                PENDING_SUBMISSION_ID)
+            < 60);
 
     String getQueuedTime =
         "SELECT submission_queued_time FROM voj_submissions WHERE submission_id = 1000";
@@ -335,6 +355,86 @@ public class UpgradeFrom102Test {
     jdbcTemplate.update(
         "UPDATE voj_submissions SET submission_queued_time = submission_submit_time"
             + " WHERE submission_id = 1000");
+  }
+
+  /**
+   * Test case: completes an interrupted upgrade. Test data: the queued time column without values,
+   * as after a run that stopped right after adding it, and a pending submission. Expected: the
+   * values are filled in as by an uninterrupted run, and the column is made NOT NULL.
+   */
+  @Test
+  public void testCompletesAnInterruptedQueuedTimeStep() throws SQLException {
+    insertPendingSubmission();
+    jdbcTemplate.execute(
+        "ALTER TABLE voj_submissions ADD COLUMN submission_queued_time timestamp NULL DEFAULT NULL"
+            + " AFTER submission_submit_time");
+
+    runUpgrade();
+    Assertions.assertEquals("NO", getNullability("submission_queued_time"));
+    Assertions.assertEquals(
+        0,
+        jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM voj_submissions WHERE submission_id <> ?"
+                + " AND submission_queued_time <> submission_submit_time",
+            Integer.class,
+            PENDING_SUBMISSION_ID));
+    Assertions.assertTrue(
+        jdbcTemplate.queryForObject(
+                "SELECT TIMESTAMPDIFF(SECOND, submission_queued_time, NOW()) FROM voj_submissions"
+                    + " WHERE submission_id = ?",
+                Integer.class,
+                PENDING_SUBMISSION_ID)
+            < 60);
+  }
+
+  /**
+   * Test case: runs the upgrade on a 1.0.2 database, then once more. Test data: a pending
+   * submission, no claim token and no lease column. Expected: both are added, empty, and the second
+   * run leaves them (and a claim made since) as they are.
+   */
+  @Test
+  public void testAddsTheClaimTokenAndTheLease() throws SQLException {
+    insertPendingSubmission();
+    Assertions.assertFalse(hasColumn("voj_submissions", "submission_claim_token"));
+    Assertions.assertFalse(hasColumn("voj_submissions", "submission_lease_time"));
+
+    runUpgrade();
+    Assertions.assertEquals(
+        0,
+        jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM voj_submissions WHERE submission_claim_token IS NOT NULL"
+                + " OR submission_lease_time IS NOT NULL",
+            Integer.class));
+
+    jdbcTemplate.update(
+        "UPDATE voj_submissions SET submission_claim_token = 7, submission_lease_time = NOW()"
+            + " WHERE submission_id = ?",
+        PENDING_SUBMISSION_ID);
+    runUpgrade();
+    Assertions.assertEquals(
+        7L,
+        jdbcTemplate.queryForObject(
+            "SELECT submission_claim_token FROM voj_submissions WHERE submission_id = ?",
+            Long.class,
+            PENDING_SUBMISSION_ID));
+  }
+
+  /** Inserts a pending submission, submitted long ago, as 1.0.2 stores it. */
+  private void insertPendingSubmission() {
+    jdbcTemplate.update(
+        "INSERT INTO voj_submissions (submission_id, problem_id, uid, language_id,"
+            + " submission_submit_time, submission_code)"
+            + " VALUES (?, 1000, 1000, 2, '2026-01-01 10:00:00', 'Code')",
+        PENDING_SUBMISSION_ID);
+  }
+
+  /** Gets whether a column of voj_submissions is nullable ("YES" or "NO"). */
+  private String getNullability(String columnName) {
+    return jdbcTemplate.queryForObject(
+        "SELECT IS_NULLABLE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE()"
+            + " AND TABLE_NAME = 'voj_submissions' AND COLUMN_NAME = ?",
+        String.class,
+        columnName);
   }
 
   /**
