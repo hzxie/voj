@@ -441,6 +441,33 @@ public class SandboxBehaviorTest {
   }
 
   /**
+   * Test case: a run that tries to move its memory out of its resident set while keeping it, which
+   * would let it use more than its memory limit without its measured peak reaching it: paging out
+   * (madvise MADV_PAGEOUT, also with garbage in the upper half of the advice's register, MADV_COLD,
+   * process_madvise), and unmapping shared anonymous memory (MAP_SHARED | MAP_ANONYMOUS), whose
+   * pages would stay in memory. Expected result: every attempt fails with EPERM, while the advice
+   * the runtimes' allocators use (MADV_DONTNEED, MADV_FREE) still works.
+   */
+  @Test
+  public void testRunCannotPageOutItsMemory() throws Exception {
+    Assumptions.assumeTrue("native".equalsIgnoreCase(sandbox), "This tests the native runner.");
+    Assumptions.assumeTrue(isLinux(), "The seccomp filter is Linux-only.");
+    Assertions.assertEquals("AC", judge(900023L, PAGE_OUT_CODE, 5000, 262144));
+    Assertions.assertEquals(
+        String.join(
+            "\n",
+            "MADV_PAGEOUT: EPERM",
+            "MADV_PAGEOUT (upper bits set): EPERM",
+            "MADV_COLD: EPERM",
+            "process_madvise: EPERM",
+            "MAP_SHARED | MAP_ANONYMOUS: EPERM",
+            "MADV_DONTNEED: done",
+            "MADV_FREE: done",
+            ""),
+        Files.readString(Path.of(workBaseDirectory, "voj-sandbox-900023", "output.txt")));
+  }
+
+  /**
    * Test case: a program whose static data (1 TB of bss) alone exceeds the kernel memory backstop
    * (RLIMIT_DATA), so that it cannot even be loaded. Expected result: Memory Limit Exceeded, not the
    * runtime error of the SIGSEGV the kernel kills such a program with while loading it. The program
@@ -1037,6 +1064,50 @@ public class SandboxBehaviorTest {
           }
           report("truncate", truncate(path, 0) == 0);
           report("open", open(path, O_RDONLY | O_TRUNC) >= 0);
+          return 0;
+      }
+      """;
+
+  /**
+   * A program that tries to page out its memory and to create shared anonymous memory, and reports
+   * how each attempt ends.
+   */
+  private static final String PAGE_OUT_CODE =
+      """
+      #include <cerrno>
+      #include <cstdio>
+      #include <cstring>
+      #include <sys/mman.h>
+      #include <sys/syscall.h>
+      #include <sys/uio.h>
+      #include <unistd.h>
+
+      static void report(const char* what, bool succeeded) {
+          int error = errno;
+          std::printf("%s: %s\\n", what, succeeded ? "done"
+              : error == EPERM ? "EPERM" : std::strerror(error));
+      }
+
+      int main() {
+          const size_t length = 1 << 20;
+          char* memory = static_cast<char*>(mmap(nullptr, length, PROT_READ | PROT_WRITE,
+              MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
+          if (memory == MAP_FAILED) {
+              return 1;
+          }
+          std::memset(memory, 1, length);
+          report("MADV_PAGEOUT", madvise(memory, length, MADV_PAGEOUT) == 0);
+          report("MADV_PAGEOUT (upper bits set)",
+              syscall(SYS_madvise, memory, length, (1L << 32) | MADV_PAGEOUT) == 0);
+          report("MADV_COLD", madvise(memory, length, MADV_COLD) == 0);
+          int self = (int) syscall(SYS_pidfd_open, getpid(), 0);
+          struct iovec range = {memory, length};
+          report("process_madvise",
+              syscall(SYS_process_madvise, self, &range, 1, MADV_PAGEOUT, 0) >= 0);
+          report("MAP_SHARED | MAP_ANONYMOUS", mmap(nullptr, length, PROT_READ | PROT_WRITE,
+              MAP_SHARED | MAP_ANONYMOUS, -1, 0) != MAP_FAILED);
+          report("MADV_DONTNEED", madvise(memory, length, MADV_DONTNEED) == 0);
+          report("MADV_FREE", madvise(memory, length, MADV_FREE) == 0);
           return 0;
       }
       """;

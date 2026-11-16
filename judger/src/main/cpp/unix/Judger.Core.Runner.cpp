@@ -72,6 +72,15 @@
 #define CLOSE_RANGE_CLOEXEC (1U << 2)
 #endif
 
+// madvise(2) advice of Linux 5.4+, which older C libraries may not define; the same on every
+// architecture this builds for.
+#ifndef MADV_COLD
+#define MADV_COLD 20
+#endif
+#ifndef MADV_PAGEOUT
+#define MADV_PAGEOUT 21
+#endif
+
 // Landlock (Linux 5.13+), declared here: the kernel headers of older C libraries lack <linux/landlock.h>
 // or the access rights of its later ABI versions. The system calls have the same numbers on every
 // architecture. See https://docs.kernel.org/userspace-api/landlock.html
@@ -1064,6 +1073,21 @@ static std::vector<std::string> buildEnvironment(const std::string& workDirector
  * create anonymous memory files (memfd_create, memfd_secret) either: memory written to one without
  * ever mapping it would count against no limit until the run ends.
  *
+ * Nor can a run move its memory out of its resident set while keeping it, which would let it use
+ * far more than its memory limit, measured on the resident set (VmHWM), without ever reaching it:
+ *  - on a host with swap, madvise(MADV_PAGEOUT) swaps pages out at once, and MADV_COLD makes them
+ *    the first to go. Both fail with EPERM, as does process_madvise, which applies them through a
+ *    pidfd. The other advice the runtimes' allocators use (glibc, the JVM, Go, V8) either lets the
+ *    kernel drop private pages, contents and all (MADV_DONTNEED, MADV_FREE), or keeps them resident
+ *    or only tunes their handling (MADV_HUGEPAGE, MADV_COLLAPSE, MADV_WILLNEED, ...);
+ *  - MADV_DONTNEED on shared anonymous memory (MAP_SHARED | MAP_ANONYMOUS) only unmaps the pages,
+ *    which stay in memory, with their contents, until they are touched again, even without swap;
+ *    and RLIMIT_DATA does not count shared mappings, so this would be bounded by nothing. Such a
+ *    mapping cannot be created (EPERM): a single process has no use for it, and none of the
+ *    runtimes allocates one. (A shared mapping of /dev/zero cannot be written, as Landlock refuses
+ *    to open it for writing, and one of a file in the work directory holds no more than writing
+ *    the file would, which RLIMIT_FSIZE bounds per file.)
+ *
  * Finally, a run of the submission is killed (SIGSYS) when it maps more private writable memory in
  * one go than RLIMIT_DATA allows in all (see getDataLimit), e.g. std::vector<int>(1e9) under a
  * 256 MB limit. The kernel would refuse that mapping anyway; the program would then fail in its own
@@ -1132,8 +1156,23 @@ static std::string buildSeccompProgram(bool runOfSubmission, rlim_t dataLimit) {
     denyByName(keyringSyscalls, sizeof(keyringSyscalls) / sizeof(keyringSyscalls[0]));
     if ( runOfSubmission ) {
         // fork and vfork do not exist on every architecture (arm64 has clone only).
-        const char* const runSyscalls[] = { "fork", "vfork", "memfd_create", "memfd_secret" };
+        const char* const runSyscalls[] = {
+            "fork", "vfork", "memfd_create", "memfd_secret", "process_madvise",
+        };
         denyByName(runSyscalls, sizeof(runSyscalls) / sizeof(runSyscalls[0]));
+        // madvise(addr, length, advice): the advice is an int, of which the kernel ignores the
+        // upper half of the register, so only the lower 32 bits are compared.
+        const int pageOutAdvice[] = { MADV_COLD, MADV_PAGEOUT };
+        for ( int advice : pageOutAdvice ) {
+            addRule(seccomp_rule_add(ctx, SCMP_ACT_ERRNO(EPERM), SCMP_SYS(madvise), 1,
+                                     SCMP_A2(SCMP_CMP_MASKED_EQ, 0xFFFFFFFFULL, (scmp_datum_t) advice)));
+        }
+        // mmap(addr, length, prot, flags, ...): a shared anonymous mapping, whatever its protection
+        // (mprotect could make it writable later). MAP_SHARED is the only shared type the kernel
+        // accepts for an anonymous mapping (MAP_SHARED_VALIDATE fails with EINVAL).
+        addRule(seccomp_rule_add(ctx, SCMP_ACT_ERRNO(EPERM), SCMP_SYS(mmap), 1,
+                                 SCMP_A3(SCMP_CMP_MASKED_EQ, MAP_TYPE | MAP_ANONYMOUS,
+                                         MAP_SHARED | MAP_ANONYMOUS)));
         addRule(seccomp_rule_add(ctx, SCMP_ACT_ERRNO(EPERM), SCMP_SYS(clone), 1,
                                  SCMP_A0(SCMP_CMP_MASKED_EQ, CLONE_THREAD, 0)));
     }
