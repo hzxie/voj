@@ -25,18 +25,15 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
-import java.nio.file.NoSuchFileException;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import com.sun.nio.file.ExtendedOpenOption;
 
@@ -45,9 +42,9 @@ import com.sun.nio.file.ExtendedOpenOption;
  * (however it exits), which tells judgers on one host apart.
  *
  * <p>The lock is a POSIX record lock on Linux, which belongs to the process, not to the channel
- * that took it: closing <em>any</em> descriptor of the file releases it. So a file this process
- * holds is never opened again: it is written to only through the channel that holds the lock, and
- * not opened to be locked again, whatever path names it.
+ * that took it: closing <em>any</em> descriptor of the file releases it. A judger takes each of its
+ * locks once; should this process try to lock a file it holds (whatever path names it), the JVM
+ * refuses the second lock, and the channel opened for it is kept open rather than closed.
  *
  * <p>Lock files belong in a directory only the judger may write to, and that no clean-up of old
  * files touches, so that nobody removes or replaces a lock file while it is held. The file holds
@@ -66,40 +63,32 @@ public final class ExclusiveFileLock implements Closeable {
    */
   public static ExclusiveFileLock tryAcquire(Path file) throws IOException {
     Path lockFile = file.toAbsolutePath().normalize();
-    synchronized (HELD_LOCK_FILES) {
-      if (HELD_LOCK_FILES.contains(identityOf(lockFile))) {
+    FileChannel channel = FileChannel.open(lockFile, OPEN_OPTIONS, CREATION_ATTRIBUTES);
+    try {
+      if (channel.tryLock() == null) {
+        channel.close();
         return null;
       }
-      FileChannel channel = FileChannel.open(lockFile, OPEN_OPTIONS, CREATION_ATTRIBUTES);
+      if (IS_POSIX) {
+        // A lock file others may read could take a (shared) lock that keeps the judger from it. By
+        // its path: a descriptor of it opened (and closed) to change its permissions would release
+        // the lock.
+        Files.setPosixFilePermissions(lockFile, OWNER_ONLY);
+      }
+      channel.truncate(0);
+      channel.write(ByteBuffer.wrap(CONTENT), 0);
+      return new ExclusiveFileLock(lockFile, channel);
+    } catch (OverlappingFileLockException ex) {
+      // This process holds the file already: closing the channel would release that lock.
+      UNCLOSED_CHANNELS.add(channel);
+      return null;
+    } catch (Throwable ex) {
       try {
-        if (channel.tryLock() == null) {
-          channel.close();
-          return null;
-        }
-        if (IS_POSIX) {
-          // A lock file an earlier build created may be readable by others, who could then take a
-          // (shared) lock on it that keeps the judger from it. By its path: a descriptor of it
-          // opened (and closed) to change its permissions would release the lock.
-          Files.setPosixFilePermissions(lockFile, OWNER_ONLY);
-        }
-        channel.truncate(0);
-        channel.write(ByteBuffer.wrap(CONTENT), 0);
-        ExclusiveFileLock lock = new ExclusiveFileLock(lockFile, channel, identityOf(lockFile));
-        HELD_LOCK_FILES.add(lock.identity);
-        return lock;
-      } catch (OverlappingFileLockException ex) {
-        // Held by this process after all (moved to this path meanwhile): closing the channel would
-        // release that lock, so it is kept open instead.
-        UNCLOSED_CHANNELS.add(channel);
-        return null;
-      } catch (Throwable ex) {
-        try {
-          channel.close();
-        } catch (IOException closeException) {
-          ex.addSuppressed(closeException);
-        }
-        throw ex;
+        channel.close();
+      } catch (IOException closeException) {
+        ex.addSuppressed(closeException);
       }
+      throw ex;
     }
   }
 
@@ -115,32 +104,7 @@ public final class ExclusiveFileLock implements Closeable {
   /** Releases the lock. */
   @Override
   public void close() throws IOException {
-    synchronized (HELD_LOCK_FILES) {
-      if (channel.isOpen()) {
-        HELD_LOCK_FILES.remove(identity);
-        channel.close();
-      }
-    }
-  }
-
-  /**
-   * Gets what identifies a lock file among those this process holds, without opening it: its file
-   * key (its device and inode on Linux), whatever path names it, or its path on a platform without
-   * file keys.
-   *
-   * @param file - the absolute, normalized path of the lock file
-   * @return what identifies it, or {@code null} if there is no file at the path
-   * @throws IOException if its attributes cannot be read
-   */
-  private static Object identityOf(Path file) throws IOException {
-    try {
-      Object fileKey =
-          Files.readAttributes(file, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS)
-              .fileKey();
-      return fileKey != null ? fileKey : file;
-    } catch (NoSuchFileException ex) {
-      return null;
-    }
+    channel.close();
   }
 
   /**
@@ -148,12 +112,10 @@ public final class ExclusiveFileLock implements Closeable {
    *
    * @param file - the lock file
    * @param channel - the open channel of the lock file, which holds the lock
-   * @param identity - what identifies the lock file among those this process holds
    */
-  private ExclusiveFileLock(Path file, FileChannel channel, Object identity) {
+  private ExclusiveFileLock(Path file, FileChannel channel) {
     this.file = file;
     this.channel = channel;
-    this.identity = identity;
   }
 
   /** Whether the file system has POSIX permissions (i.e. is not Windows). */
@@ -189,14 +151,11 @@ public final class ExclusiveFileLock implements Closeable {
   private static final byte[] CONTENT =
       (ProcessHandle.current().pid() + "\n").getBytes(StandardCharsets.US_ASCII);
 
-  /** What identifies the lock files this process holds (see {@link #identityOf}). */
-  private static final Set<Object> HELD_LOCK_FILES = new HashSet<>();
-
   /**
-   * The channels of lock files this process held already when it opened them again, which are
-   * never closed, as closing them would release the lock.
+   * The channels of lock files this process held already when it opened them again: referenced
+   * for good, as an unreachable channel is closed when it is garbage collected.
    */
-  private static final List<FileChannel> UNCLOSED_CHANNELS = new ArrayList<>();
+  private static final List<FileChannel> UNCLOSED_CHANNELS = new CopyOnWriteArrayList<>();
 
   /** The lock file. */
   private final Path file;
@@ -206,7 +165,4 @@ public final class ExclusiveFileLock implements Closeable {
    * held: an unreachable channel is closed (and the lock released) when it is garbage collected.
    */
   private final FileChannel channel;
-
-  /** What identifies the lock file among those this process holds (see {@link #identityOf}). */
-  private final Object identity;
 }

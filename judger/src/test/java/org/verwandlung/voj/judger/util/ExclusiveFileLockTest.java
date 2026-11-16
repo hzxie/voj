@@ -96,7 +96,7 @@ public class ExclusiveFileLockTest {
   }
 
   /**
-   * Test case: an earlier build left a lock file others may read, which they could take a lock on.
+   * Test case: a lock file others may read (e.g. one created by hand), which they could lock.
    * Expected result: it is made private once locked, and the lock holds: making it private never
    * opens (and closes) the file again, which would release the lock.
    */
