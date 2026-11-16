@@ -24,6 +24,7 @@ import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermissions;
 
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
 import org.junit.jupiter.api.condition.OS;
@@ -127,6 +128,8 @@ public class FileSystemUtilsTest {
   @Test
   @DisabledOnOs(OS.WINDOWS)
   public void testDeleteRecursivelyRemovesDirectoriesWithoutPermissions() throws Exception {
+    Assumptions.assumeFalse(
+        "root".equals(System.getProperty("user.name")), "root is never denied access");
     Path root = Files.createDirectory(tempDir.resolve("work"));
     Path locked = Files.createDirectories(root.resolve("locked/inner"));
     Files.writeString(locked.resolve("file.txt"), "data");
