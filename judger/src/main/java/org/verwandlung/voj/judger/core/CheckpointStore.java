@@ -51,7 +51,7 @@ import org.verwandlung.voj.judger.model.Problem;
  *
  * <p>The database remains the source of truth, but a judger no longer reads the input/output of
  * every checkpoint from the database on each submission. Instead it keeps a per-problem copy under
- * {@code judger.checkpointDir/<problemId>/} and re-downloads (via a {@link CheckpointProvider}) only
+ * {@code judger.checkpointDir/<problemId>/} and re-downloads (via {@link HttpCheckpointProvider}) only
  * when the problem's {@code checkpoints_version} changes — the version the web side bumps whenever the
  * test data is edited.
  *
@@ -243,8 +243,8 @@ public class CheckpointStore {
     Files.setPosixFilePermissions(directory.toPath(), permissions);
   }
 
-  /** The autowired CheckpointProvider, which performs the actual download. */
-  @Autowired private CheckpointProvider checkpointProvider;
+  /** The autowired HttpCheckpointProvider, which performs the actual download. */
+  @Autowired private HttpCheckpointProvider checkpointProvider;
 
   /** The storage directory of checkpoints, used to cache the input/output data of checkpoints. */
   @Value("${judger.checkpointDir}")

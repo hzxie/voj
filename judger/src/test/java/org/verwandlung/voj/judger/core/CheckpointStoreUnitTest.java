@@ -103,7 +103,7 @@ public class CheckpointStoreUnitTest {
   }
 
   /** The download back-end, mocked. */
-  @Mock private CheckpointProvider checkpointProvider;
+  @Mock private HttpCheckpointProvider checkpointProvider;
 
   /** The CheckpointStore object under test. */
   @InjectMocks private CheckpointStore checkpointStore;

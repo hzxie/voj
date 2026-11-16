@@ -39,20 +39,28 @@ import org.springframework.stereotype.Component;
  *
  * <p>Issues a {@code GET} to {@code <judger.web.baseUrl>/api/judger/checkpoints/<problemId>} with the
  * shared secret in the {@code X-Judger-Token} header and unpacks the returned ZIP into the
- * destination directory.
+ * destination directory. {@link CheckpointStore} owns the local cache (versioning, atomic
+ * replacement) and delegates the transfer to this class.
  *
  * @author Haozhe Xie
  */
 @Component
-public class HttpCheckpointProvider implements CheckpointProvider {
+public class HttpCheckpointProvider {
   /** The HTTP header carrying the shared secret that authenticates this judger to the web side. */
   private static final String TOKEN_HEADER = "X-Judger-Token";
 
-  /*
-   * (non-Javadoc)
-   * @see CheckpointProvider#download(long, File)
+  /**
+   * Downloads a problem's checkpoints into the given directory.
+   *
+   * <p>On return the directory holds a {@code manifest.properties} describing the checkpoints plus,
+   * per checkpoint, an {@code input#<id>.txt} and an {@code output#<id>.txt}. {@link
+   * CheckpointStore} downloads into a temporary directory and only then swaps it into place, so a
+   * failed download never corrupts a usable cache.
+   *
+   * @param problemId - the unique identifier of the problem
+   * @param destinationDirectory - the directory the checkpoints are written into
+   * @throws IOException if the checkpoints cannot be downloaded
    */
-  @Override
   public void download(long problemId, File destinationDirectory) throws IOException {
     if (!destinationDirectory.exists() && !destinationDirectory.mkdirs()) {
       throw new IOException(
