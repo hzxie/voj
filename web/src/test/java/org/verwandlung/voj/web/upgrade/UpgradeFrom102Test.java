@@ -45,8 +45,8 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
  * of voj_submissions but the index of the judge result alone, no registry of the judgers, the
  * foreign key from voj_email_validation to voj_users, problem statements
  * and contest notes written for HTML output (with HTML entities), the contestants' code_snippet
- * column, Kotlin's old compile command and the problems of the contests as a JSON array in
- * voj_contests.contest_problems.
+ * column, Kotlin's old compile command, the problems of the contests as a JSON array in
+ * voj_contests.contest_problems, and languages an administrator added without a source file name.
  *
  * <p>The script changes the schema (DDL commits implicitly), so this test is not {@code
  * Transactional}: it puts the shared test database back into the 1.0.2 state before each test and
@@ -136,6 +136,21 @@ public class UpgradeFrom102Test {
     {"9104", "[1000,", "1000"},
   };
 
+  /**
+   * The languages inserted by this test, as an administrator of 1.0.2 may have added them: { id,
+   * compile command, run command, source file name as stored by 1.0.2, source file name after the
+   * upgrade }.
+   */
+  private static final String[][] LANGUAGES = {
+    {"9101", "ghc -O2 -o {filename}.exe {filename}.hs", "{filename}.exe", "", "Main.hs"},
+    {"9102", "fpc -O2 -o{filename}.exe {filename}.pp", "{filename}.exe", "", "Main.pp"},
+    {"9103", "pypy3 -m py_compile {filename}.py", "pypy3 {filename}.py", "", "Main.py"},
+    {"9104", "true", "ruby\t{filename}.rb", "", "Main.rb"},
+    {"9105", "tar xzf {filename}.tar.gz", "./run", "", ""},
+    {"9106", "make", "./run", "", ""},
+    {"9107", "gcc {filename}.c -o {filename}.exe", "{filename}.exe", "Solution.c", "Solution.c"},
+  };
+
   /** Kotlin's compile command as 1.0.2 seeded it, and as the upgrade sets it. */
   private static final String OLD_KOTLIN_COMPILE_COMMAND =
       "kotlinc {filename}.kt -include-runtime -d {filename}.jar";
@@ -170,6 +185,18 @@ public class UpgradeFrom102Test {
     jdbcTemplate.execute("DROP TABLE voj_contest_problems");
     // The contestants as 1.0.2 created them, with a code snippet.
     jdbcTemplate.execute("ALTER TABLE voj_contest_contestants ADD COLUMN code_snippet text");
+    // Languages an administrator added in 1.0.2, which did not read their source file name.
+    for (String[] language : LANGUAGES) {
+      jdbcTemplate.update(
+          "INSERT INTO voj_languages (language_id, language_slug, language_name,"
+              + " language_compile_command, language_run_command, language_source_filename)"
+              + " VALUES (?, ?, 'Legacy', ?, ?, ?)",
+          Long.parseLong(language[0]),
+          "text/x-" + language[0],
+          language[1],
+          language[2],
+          language[3]);
+    }
     // Kotlin's compile command as 1.0.2 seeded it.
     jdbcTemplate.update(
         "UPDATE voj_languages SET language_compile_command = ? WHERE language_slug = ?",
@@ -240,6 +267,7 @@ public class UpgradeFrom102Test {
         "DELETE FROM voj_submissions WHERE submission_id = ?", PENDING_SUBMISSION_ID);
     jdbcTemplate.update("DELETE FROM voj_contests WHERE contest_id BETWEEN 9101 AND 9104");
     jdbcTemplate.update("DELETE FROM voj_problems WHERE problem_id = ?", PROBLEM_ID);
+    jdbcTemplate.update("DELETE FROM voj_languages WHERE language_id BETWEEN 9101 AND 9107");
     jdbcTemplate.update("DELETE FROM voj_options WHERE option_name = ?", MARKER);
     jdbcTemplate.update(
         "INSERT INTO voj_options (option_id, option_name, option_value, is_autoload)"
@@ -394,6 +422,44 @@ public class UpgradeFrom102Test {
     Assertions.assertEquals(
         List.of("javac {filename}.java", "java -Xss64m -cp {filename}"), getJavaCommands());
     setJavaCommands("javac -d {filename} {filename}.java", "java -cp {filename} Main");
+  }
+
+  /**
+   * Test case: runs the upgrade on a database with languages that an administrator added in 1.0.2,
+   * then once more. Test data: languages without a source file name whose compile command names
+   * the source (after the program, as in Pascal's -o{filename}.exe), whose run command does, whose
+   * extension has a dot, and whose commands name no source at all, and a language with a name of
+   * its own. Expected: each language without a name gets Main and the extension of the source in
+   * its compile command, or else in its run command; the others keep theirs, empty or not; the
+   * second run changes nothing; the default languages keep their names.
+   */
+  @Test
+  public void testGivesTheLanguagesWithoutOneASourceFileName() throws SQLException {
+    List<String> defaultNames = getSourceFilenames("language_id < 9101");
+
+    runUpgrade();
+    for (String[] language : LANGUAGES) {
+      Assertions.assertEquals(
+          language[4],
+          getSourceFilenames("language_id = " + Long.parseLong(language[0])).get(0),
+          language[0]);
+    }
+    runUpgrade();
+    for (String[] language : LANGUAGES) {
+      Assertions.assertEquals(
+          language[4],
+          getSourceFilenames("language_id = " + Long.parseLong(language[0])).get(0),
+          language[0]);
+    }
+    Assertions.assertEquals(defaultNames, getSourceFilenames("language_id < 9101"));
+  }
+
+  private List<String> getSourceFilenames(String condition) {
+    return jdbcTemplate.queryForList(
+        "SELECT language_source_filename FROM voj_languages WHERE "
+            + condition
+            + " ORDER BY language_id",
+        String.class);
   }
 
   private void setJavaCommands(String compileCommand, String runCommand) {

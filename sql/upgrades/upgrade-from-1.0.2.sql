@@ -77,12 +77,24 @@
 --    the class into a directory of its own and run Main from there. Like
 --    step 7, it changes the default commands only, so it is safe to run
 --    again.
+-- 14. Up to 1.0.2 the judger took the extension of the source from the
+--    compile command, and voj_languages.language_source_filename was not
+--    read, so a language added by an administrator may have it empty: the
+--    judger now saves the source under that name, and judges no language
+--    without one. An empty name is set to Main.<extension>, the extension
+--    being that of the first {filename}.<extension> in the compile command
+--    other than {filename}.exe, as 1.0.2 took it, or else in the run command
+--    (each command is split at white space, and {filename} stands for the
+--    name without its extension). A language for which neither command
+--    gives an extension without a dot, slash or backslash keeps its empty
+--    name, for an administrator to set.
 --
 -- Safe to run more than once. Steps 1 to 4, 6 and 8 to 12 first check the
 -- information schema (or create a table only if it is missing) and only change
 -- what is still in the old state (MySQL commits DDL implicitly, so a
 -- transaction could not make them atomic; an interrupted run is completed by
--- running the script again). Steps 7 and 13 change the old commands only.
+-- running the script again). Steps 7 and 13 change the old commands only,
+-- and step 14 empty source file names only.
 -- Step 5 runs in one transaction with the recording of the option
 -- upgradeFrom102Applied in voj_options, and only if that option was not
 -- recorded yet, so that text typed after the upgrade (e.g. a statement that
@@ -342,3 +354,28 @@ SET `language_compile_command` = 'javac -d {filename} {filename}.java',
     `language_run_command` = 'java -cp {filename} Main'
 WHERE `language_compile_command` = 'javac {filename}.java'
   AND `language_run_command` = 'java -cp {filename}';
+
+-- 14. A source file name for the languages without one, from the extensions their
+--    commands give (in a temporary table, as an UPDATE may not read the table
+--    it changes in a subquery).
+DROP TEMPORARY TABLE IF EXISTS `voj_source_extensions`;
+CREATE TEMPORARY TABLE `voj_source_extensions` AS
+SELECT `language_id`,
+  SUBSTRING(REGEXP_SUBSTR(REPLACE(`language_compile_command`, '{filename}.exe', ''),
+    '[{]filename[}][.][^[:space:]]+'), 12) AS `compile_extension`,
+  SUBSTRING(REGEXP_SUBSTR(REPLACE(`language_run_command`, '{filename}.exe', ''),
+    '[{]filename[}][.][^[:space:]]+'), 12) AS `run_extension`
+FROM `voj_languages`
+WHERE `language_source_filename` = '';
+UPDATE `voj_languages` l
+JOIN `voj_source_extensions` e ON e.`language_id` = l.`language_id`
+SET l.`language_source_filename` = CONCAT('Main.', IF(
+  e.`compile_extension` REGEXP '^[^./]{1,27}$'
+    AND LOCATE(CHAR(92 USING utf8mb4), e.`compile_extension`) = 0,
+  e.`compile_extension`, e.`run_extension`))
+WHERE l.`language_source_filename` = ''
+  AND ((e.`compile_extension` REGEXP '^[^./]{1,27}$'
+      AND LOCATE(CHAR(92 USING utf8mb4), e.`compile_extension`) = 0)
+    OR (e.`run_extension` REGEXP '^[^./]{1,27}$'
+      AND LOCATE(CHAR(92 USING utf8mb4), e.`run_extension`) = 0));
+DROP TEMPORARY TABLE `voj_source_extensions`;
