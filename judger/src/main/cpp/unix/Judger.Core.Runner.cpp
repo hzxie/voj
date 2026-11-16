@@ -241,11 +241,12 @@ static unsigned long long getWritableImageSize(const char* path, unsigned long l
  *
  * Every compilation and run is the same sandbox user, so whatever one of them could leave behind
  * outside its own work directory (a file in /tmp or /dev/shm, a System V shared memory segment, a
- * POSIX message queue, ...) would outlive it, unaccounted for, and could be read by a later
- * submission (e.g. a run copying its hidden input to /tmp, for a later compilation to #include it
- * into its compile log). Landlock (see confineFileSystemWrites) and the filter (System V IPC and
- * POSIX message queues) rule that out; they need no privilege, so they hold in a default Docker
- * container as well. The work directory is removed once the submission has been judged.
+ * POSIX message queue, a key in the user's keyring, ...) would outlive it, unaccounted for, and
+ * could be read by a later submission (e.g. a run copying its hidden input to /tmp, for a later
+ * compilation to #include it into its compile log). Landlock (see confineFileSystemWrites) and the
+ * filter (System V IPC, POSIX message queues and kernel keyrings) rule that out; they need no
+ * privilege, so they hold in a default Docker container as well. The work directory is removed once
+ * the submission has been judged.
  *
  * A run of the submission is a single process: the filter lets it create threads, but no other
  * process (see buildSeccompProgram). A compilation runs a trusted compiler, which may run others;
@@ -1029,9 +1030,12 @@ static std::vector<std::string> buildEnvironment(const std::string& workDirector
  * for compilers too: they are kernel objects that outlive the process that created them, so a run
  * could leave behind shared memory that no limit accounts for, for good, or data for a later
  * submission to pick up (their file system counterparts, such as POSIX shared memory in /dev/shm,
- * are kept out by Landlock, see confineFileSystemWrites). A run of the submission cannot create
- * anonymous memory files (memfd_create, memfd_secret) either: memory written to one without ever
- * mapping it would count against no limit until the run ends.
+ * are kept out by Landlock, see confineFileSystemWrites). So do the kernel keyrings (add_key,
+ * request_key, keyctl), for the same reason: the user keyring and the user session keyring belong
+ * to the user, not to a process, and outlive every run, so a key one run adds could be read by the
+ * next (and when the judger is not root, they are the judger's own). A run of the submission cannot
+ * create anonymous memory files (memfd_create, memfd_secret) either: memory written to one without
+ * ever mapping it would count against no limit until the run ends.
  *
  * Finally, a run of the submission is killed (SIGSYS) when it maps more private writable memory in
  * one go than RLIMIT_DATA allows in all (see getDataLimit), e.g. std::vector<int>(1e9) under a
@@ -1097,6 +1101,8 @@ static std::string buildSeccompProgram(bool runOfSubmission, rlim_t dataLimit) {
         "mq_timedreceive", "mq_notify", "mq_getsetattr",
     };
     denyByName(ipcSyscalls, sizeof(ipcSyscalls) / sizeof(ipcSyscalls[0]));
+    const char* const keyringSyscalls[] = { "add_key", "request_key", "keyctl" };
+    denyByName(keyringSyscalls, sizeof(keyringSyscalls) / sizeof(keyringSyscalls[0]));
     if ( runOfSubmission ) {
         // fork and vfork do not exist on every architecture (arm64 has clone only).
         const char* const runSyscalls[] = { "fork", "vfork", "memfd_create", "memfd_secret" };

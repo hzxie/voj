@@ -340,11 +340,12 @@ public class SandboxBehaviorTest {
 
   /**
    * Test case: a run that tries to leave files where a later submission could find them (/tmp,
-   * /var/tmp, /dev/shm), and to create System V IPC objects, a POSIX message queue and a memory
-   * file, which would outlive it or escape its memory limit; then a later run that looks for the
-   * files. Expected result: every attempt is refused (Landlock confines writes to the work
-   * directory, where the run can still create files; the seccomp filter refuses the rest), and the
-   * later run finds nothing.
+   * /var/tmp, /dev/shm), and to create System V IPC objects, a POSIX message queue, a key in the
+   * user's keyring and a memory file, which would outlive it or escape its memory limit; then a
+   * later run that looks for the files. Expected result: every attempt is refused (Landlock
+   * confines writes to the work directory, where the run can still create files; the seccomp
+   * filter refuses the rest), and the later run finds nothing. (Docker's default seccomp profile
+   * refuses the keyring system calls on its own: run the tests unconfined to test the filter's.)
    */
   @Test
   public void testRunLeavesNothingBehind() throws Exception {
@@ -368,6 +369,9 @@ public class SandboxBehaviorTest {
             "semget: EPERM",
             "msgget: EPERM",
             "mq_open: EPERM",
+            "add_key: EPERM",
+            "request_key: EPERM",
+            "keyctl: EPERM",
             "memfd_create: EPERM",
             ""),
         Files.readString(Path.of(workBaseDirectory, "voj-sandbox-900018", "output.txt")));
@@ -918,7 +922,8 @@ public class SandboxBehaviorTest {
   /**
    * Given "leave NAME" on its input, a program that tries to create the file NAME in /tmp, /var/tmp,
    * /dev/shm and its work directory, to write to /dev/null, and to create System V IPC objects, a
-   * POSIX message queue and a memory file, and reports how each attempt ends. Given "find NAME", it
+   * POSIX message queue, a key in the user keyring (through the raw system calls: libkeyutils need
+   * not be installed) and a memory file, and reports how each attempt ends. Given "find NAME", it
    * reports whether NAME exists in /tmp, /var/tmp and /dev/shm.
    */
   private static final String LEAVE_BEHIND_CODE =
@@ -932,7 +937,11 @@ public class SandboxBehaviorTest {
       #include <sys/msg.h>
       #include <sys/sem.h>
       #include <sys/shm.h>
+      #include <sys/syscall.h>
       #include <unistd.h>
+
+      static const long KEY_SPEC_USER_KEYRING = -4;
+      static const long KEYCTL_GET_KEYRING_ID = 0;
 
       static void report(const char* what, bool succeeded, const char* success) {
           int error = errno;
@@ -966,6 +975,12 @@ public class SandboxBehaviorTest {
           report("msgget", msgget(IPC_PRIVATE, IPC_CREAT | 0600) >= 0, "created");
           report("mq_open", mq_open("/voj-sandbox-leak", O_RDWR | O_CREAT, 0600, nullptr) != (mqd_t) -1,
               "created");
+          report("add_key", syscall(SYS_add_key, "user", "voj-sandbox-leak", "secret", 6L,
+              KEY_SPEC_USER_KEYRING) >= 0, "created");
+          report("request_key", syscall(SYS_request_key, "user", "voj-sandbox-leak", nullptr,
+              0L) >= 0, "found");
+          report("keyctl",
+              syscall(SYS_keyctl, KEYCTL_GET_KEYRING_ID, KEY_SPEC_USER_KEYRING, 1L) >= 0, "created");
           report("memfd_create", memfd_create("voj-sandbox-leak", 0) >= 0, "created");
           return 0;
       }
