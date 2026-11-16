@@ -17,8 +17,6 @@
 package org.verwandlung.voj.web.interceptor;
 
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
@@ -29,7 +27,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentMatchers;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -44,7 +41,6 @@ import org.verwandlung.voj.web.model.User;
 import org.verwandlung.voj.web.model.UserGroup;
 import org.verwandlung.voj.web.model.VojUserDetails;
 import org.verwandlung.voj.web.service.OptionService;
-import org.verwandlung.voj.web.service.SubmissionService;
 
 /**
  * The test class for CommonModelPopulator.
@@ -59,7 +55,6 @@ public class CommonModelPopulatorTest {
   @BeforeEach
   public void setUp() {
     optionService = mock(OptionService.class);
-    submissionService = mock(SubmissionService.class);
     when(optionService.getAutoloadOptions())
         .thenReturn(List.of(new Option("siteName", "Verwandlung OJ", true)));
 
@@ -71,7 +66,6 @@ public class CommonModelPopulatorTest {
 
     populator = new CommonModelPopulator();
     ReflectionTestUtils.setField(populator, "optionService", optionService);
-    ReflectionTestUtils.setField(populator, "submissionService", submissionService);
     ReflectionTestUtils.setField(populator, "applicationProperties", properties);
   }
 
@@ -81,7 +75,7 @@ public class CommonModelPopulatorTest {
     SecurityContextHolder.clearContext();
   }
 
-  /** Test case: tests populate(...). Test data: an anonymous request (empty security context). Expected: isLogin is false and no myProfile / mySubmissionStats are added; the submission service is never queried. */
+  /** Test case: tests populate(...). Test data: an anonymous request (empty security context). Expected: isLogin is false and no myProfile is added. */
   @Test
   public void testPopulateAnonymous() {
     ModelAndView view = new ModelAndView();
@@ -92,11 +86,9 @@ public class CommonModelPopulatorTest {
     Map<String, Object> model = view.getModel();
     Assertions.assertEquals(Boolean.FALSE, model.get("isLogin"));
     Assertions.assertFalse(model.containsKey("myProfile"));
-    Assertions.assertFalse(model.containsKey("mySubmissionStats"));
-    verify(submissionService, never()).getSubmissionStatsOfUser(ArgumentMatchers.anyLong());
   }
 
-  /** Test case: tests populate(...). Test data: a request whose security context holds an authenticated user. Expected: isLogin is true, myProfile is the user and mySubmissionStats is the user's stats. */
+  /** Test case: tests populate(...). Test data: a request whose security context holds an authenticated user. Expected: isLogin is true and myProfile is the user; no per-user statistics are queried on every page. */
   @Test
   public void testPopulateAuthenticated() {
     UserGroup userGroup = new UserGroup(8, "administrators", "Administrators");
@@ -107,9 +99,6 @@ public class CommonModelPopulatorTest {
             new UsernamePasswordAuthenticationToken(
                 userDetails, null, userDetails.getAuthorities()));
 
-    Map<String, Long> stats = Map.of("acceptedSubmission", 2L, "totalSubmission", 3L, "acRate", 66L);
-    when(submissionService.getSubmissionStatsOfUser(1000L)).thenReturn(stats);
-
     ModelAndView view = new ModelAndView();
     MockHttpServletRequest request = requestFor("/problems");
 
@@ -118,7 +107,7 @@ public class CommonModelPopulatorTest {
     Map<String, Object> model = view.getModel();
     Assertions.assertEquals(Boolean.TRUE, model.get("isLogin"));
     Assertions.assertSame(user, model.get("myProfile"));
-    Assertions.assertSame(stats, model.get("mySubmissionStats"));
+    Assertions.assertFalse(model.containsKey("mySubmissionStats"));
   }
 
   /** Test case: tests populate(...). Test data: any request. Expected: the shared option, CDN/version and forward-URI attributes are populated on the view. */
@@ -193,8 +182,6 @@ public class CommonModelPopulatorTest {
   /** The mocked OptionService the populator reads autoload options from. */
   private OptionService optionService;
 
-  /** The mocked SubmissionService the populator reads the user's stats from. */
-  private SubmissionService submissionService;
 
   /** The CommonModelPopulator object under test. */
   private CommonModelPopulator populator;

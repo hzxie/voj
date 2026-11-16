@@ -38,7 +38,6 @@ import org.springframework.web.util.UriComponentsBuilder;
 import org.verwandlung.voj.web.model.Option;
 import org.verwandlung.voj.web.model.User;
 import org.verwandlung.voj.web.service.OptionService;
-import org.verwandlung.voj.web.service.SubmissionService;
 import org.verwandlung.voj.web.util.HttpSessionParser;
 import org.verwandlung.voj.web.util.LocaleUtils;
 
@@ -85,11 +84,7 @@ public class CommonModelPopulator {
 
     User user = HttpSessionParser.getCurrentUser();
     if (user != null) {
-      long userId = user.getUid();
-
-      view.addObject("isLogin", true)
-          .addObject("myProfile", user)
-          .addObject("mySubmissionStats", submissionService.getSubmissionStatsOfUser(userId));
+      view.addObject("isLogin", true).addObject("myProfile", user);
     } else {
       // Always expose isLogin so templates can use it inside compound boolean
       // expressions (e.g. ${isLogin and ...}). The JSP views relied on EL
@@ -248,9 +243,6 @@ public class CommonModelPopulator {
     HREFLANGS_OF_SUPPORTED_LANGUAGES.put("vi_VN", "vi");
     HREFLANGS_OF_SUPPORTED_LANGUAGES.put("ru_RU", "ru");
   }
-
-  /** The autowired SubmissionService object. */
-  @Autowired private SubmissionService submissionService;
 
   /** The autowired OptionService object. */
   @Autowired private OptionService optionService;

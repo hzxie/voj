@@ -18,7 +18,6 @@ package org.verwandlung.voj.web.controller;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -32,6 +31,7 @@ import org.verwandlung.voj.web.model.*;
 import org.verwandlung.voj.web.service.DiscussionService;
 import org.verwandlung.voj.web.service.OptionService;
 import org.verwandlung.voj.web.service.ProblemService;
+import org.verwandlung.voj.web.service.SubmissionService;
 import org.verwandlung.voj.web.util.HttpRequestParser;
 import org.verwandlung.voj.web.util.HttpSessionParser;
 import org.verwandlung.voj.web.util.LogSanitizer;
@@ -147,7 +147,6 @@ public class DiscussionController {
       throw new ResourceNotFoundException();
     }
 
-    HttpSession session = request.getSession();
     ModelAndView view = new ModelAndView("pages/discussion/thread");
     // The main content is authored in a single language (see CommonModelPopulator).
     view.addObject("isAuthoredContent", true);
@@ -163,7 +162,7 @@ public class DiscussionController {
     view.addObject("minSolvedToVote", discussionService.getMinSolvedToVote());
     view.addObject("minSolvedToReport", discussionService.getMinSolvedToReport());
     view.addObject("postDelayMinutes", discussionService.getNewUserPostDelay());
-    if (isLoggedIn(session)) {
+    if (HttpSessionParser.isLoggedIn()) {
       List<DiscussionTopic> discussionTopics = discussionService.getDiscussionTopics();
       view.addObject("discussionTopics", discussionTopics);
     }
@@ -182,9 +181,8 @@ public class DiscussionController {
       @RequestParam(value = "problemId", required = false, defaultValue = "-1") long problemId,
       HttpServletRequest request,
       HttpServletResponse response) {
-    HttpSession session = request.getSession();
     ModelAndView view = null;
-    if (!isLoggedIn(session)) {
+    if (!HttpSessionParser.isLoggedIn()) {
       RedirectView redirectView = new RedirectView(request.getContextPath() + "/accounts/login");
       redirectView.setExposeModelAttributes(false);
       view = new ModelAndView(redirectView);
@@ -201,21 +199,16 @@ public class DiscussionController {
       }
 
       view = new ModelAndView("pages/discussion/new-thread");
+      // The form shows how many problems the author has solved (the reputation that voting and
+      // reporting require).
+      view.addObject(
+          "mySubmissionStats",
+          submissionService.getSubmissionStatsOfUser(HttpSessionParser.getCurrentUser().getUid()));
       view.addObject("discussionTopics", discussionTopics);
       view.addObject("relatedProblem", problem);
       view.addObject("postDelayMinutes", discussionService.getNewUserPostDelay());
     }
     return view;
-  }
-
-  /**
-   * Checks whether the user has logged in.
-   *
-   * @param session - the HttpSession object
-   * @return whether the user has logged in
-   */
-  private boolean isLoggedIn(HttpSession session) {
-    return HttpSessionParser.getCurrentUser() != null;
   }
 
   /**
@@ -232,7 +225,7 @@ public class DiscussionController {
       @PathVariable("threadId") long discussionThreadId,
       @RequestParam(value = "startIndex") long startIndex,
       HttpServletRequest request) {
-    long currentUserUid = getUidOfUserLoggedIn(request.getSession());
+    long currentUserUid = getUidOfUserLoggedIn();
     startIndex = Pagination.getOffset(startIndex);
 
     // Replies follow the visibility of their thread, so a thread that would be treated as not
@@ -256,10 +249,9 @@ public class DiscussionController {
   /**
    * Gets the unique user identifier of the currently logged-in user.
    *
-   * @param session - the HttpSession object
-   * @return the unique user identifier of the currently logged-in user
+   * @return the unique user identifier of the currently logged-in user, or -1 for a visitor
    */
-  private long getUidOfUserLoggedIn(HttpSession session) {
+  private long getUidOfUserLoggedIn() {
     User currentUser = HttpSessionParser.getCurrentUser();
     if (currentUser == null) {
       return -1;
@@ -534,6 +526,9 @@ public class DiscussionController {
 
   /** The autowired ProblemService object. */
   @Autowired private ProblemService problemService;
+
+  /** The autowired SubmissionService object. Used for the solved count on the new-thread form. */
+  @Autowired private SubmissionService submissionService;
 
   /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(DiscussionController.class);
