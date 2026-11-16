@@ -107,7 +107,7 @@ sudo useradd --system --no-create-home --shell /usr/sbin/nologin voj-sandbox
   test's input file and a compilation from `/dev/null`; standard output goes to
   the output file (for a compilation, standard error too: the compile log), and
   a run's standard error is discarded. No other descriptor of the judger is
-  inherited.
+  inherited. Compilations and runs start in the submission's work directory.
 - **Environment.** Only the locale and toolchain variables of the judger are
   passed on (`PATH`, `LANG`, `JAVA_HOME`, the Go and Rust settings, ...), never
   its secrets, with `HOME` set to the submission's work directory.

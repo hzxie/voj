@@ -312,6 +312,22 @@ public class SandboxBehaviorTest {
   }
 
   /**
+   * Test case: the working directory of a compilation. Expected result: the submission's work
+   * directory, not the judger's own (which the sandbox user may not even be able to enter, e.g.
+   * /root in the judger's Docker image, where the Go toolchain then fails to run its compiler).
+   */
+  @Test
+  public void testProgramRunsInItsWorkDirectory() throws Exception {
+    Assumptions.assumeTrue("native".equalsIgnoreCase(sandbox), "This tests the native runner.");
+    String workDirectory = createWorkDirectory(900017L);
+    String logFile = workDirectory + "/cwd.log";
+    RunResult result = sandboxRunner.run("/bin/pwd", null, logFile, 5000, 0, true);
+    Assertions.assertEquals(Verdict.NORMAL, result.getVerdict());
+    Assertions.assertEquals(
+        Path.of(workDirectory).toRealPath().toString(), Files.readString(Path.of(logFile)).strip());
+  }
+
+  /**
    * Creates the work directory of a submission (owned by the sandbox user, as for a real one).
    *
    * @param id - a unique id used for the work directory and the in-memory submission

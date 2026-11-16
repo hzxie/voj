@@ -121,6 +121,7 @@ struct ChildPlan {
   std::vector<char*>       envp;           // NULL-terminated pointers into environment
   std::string              inputFilePath;  // stdin redirect (empty = /dev/null)
   std::string              outputFilePath; // stdout redirect (empty = /dev/null)
+  std::string              workDirectory;  // working directory (and HOME of the sandbox user)
   bool                     compileStep;    // compile: stderr also goes to outputFilePath
   int                      timeLimit;      // ms (0 = no limit)
   rlim_t                   dataLimit;      // RLIMIT_DATA in bytes (0 = none)
@@ -146,12 +147,14 @@ enum LimitExceeded {
  */
 enum ChildStep {
   STEP_DESCRIPTORS, STEP_INPUT, STEP_PROCESS_GROUP, STEP_RESOURCE_LIMIT, STEP_GROUPS, STEP_GID,
-  STEP_UID, STEP_OUTPUT, STEP_DEV_NULL, STEP_NO_NEW_PRIVS, STEP_SECCOMP, STEP_EXEC,
+  STEP_UID, STEP_WORK_DIRECTORY, STEP_OUTPUT, STEP_DEV_NULL, STEP_NO_NEW_PRIVS, STEP_SECCOMP,
+  STEP_EXEC,
 };
 static const char* const CHILD_STEP_NAMES[] = {
   "marking inherited descriptors close-on-exec", "opening the input file", "setpgid()",
-  "setrlimit()", "setgroups()", "setgid()", "setuid()", "opening the output file",
-  "opening /dev/null", "prctl(PR_SET_NO_NEW_PRIVS)", "installing the seccomp filter", "execve()",
+  "setrlimit()", "setgroups()", "setgid()", "setuid()", "entering the work directory",
+  "opening the output file", "opening /dev/null", "prctl(PR_SET_NO_NEW_PRIVS)",
+  "installing the seccomp filter", "execve()",
 };
 struct ChildFailure {
   int step;
@@ -163,7 +166,8 @@ struct ChildFailure {
  */
 static std::vector<std::string> splitCommandLine(const std::string&);
 static std::string resolveExecutable(const std::string&);
-static std::vector<std::string> buildEnvironment(bool dropPrivileges, const std::string& outputFilePath);
+static std::string getWorkDirectory(const std::string& outputFilePath);
+static std::vector<std::string> buildEnvironment(bool dropPrivileges, const std::string& workDirectory);
 static std::string buildSeccompProgram(bool runOfSubmission, rlim_t dataLimit);
 static long long getMonotonicMillis();
 static long long readCpuTimeMillis(pid_t);
@@ -227,6 +231,7 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
     plan.executable     = resolveExecutable(args[0]);
     plan.inputFilePath  = getStringValue(jniEnv, jInputFilePath);
     plan.outputFilePath = getStringValue(jniEnv, jOutputFilePath);
+    plan.workDirectory  = getWorkDirectory(plan.outputFilePath);
     // A compiler's diagnostics (stderr) are the compile log, but a submission's stderr must never
     // reach the judged output.
     plan.compileStep    = (isCompilation == JNI_TRUE);
@@ -256,7 +261,7 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
         plan.dropGid        = pw->pw_gid;
     }
 
-    plan.environment = buildEnvironment(plan.dropPrivileges, plan.outputFilePath);
+    plan.environment = buildEnvironment(plan.dropPrivileges, plan.workDirectory);
     for ( std::string& variable : plan.environment ) {
         plan.envp.push_back(const_cast<char*>(variable.c_str()));
     }
@@ -523,6 +528,12 @@ static void runProgram(const ChildPlan& plan, int syncWriteFd) {
         }
     }
 
+    // Run in the submission's own work directory, never in the judger's (e.g. /root in its Docker
+    // image, which the sandbox user cannot enter: the Go toolchain runs its compiler there).
+    if ( chdir(plan.workDirectory.c_str()) != 0 ) {
+        reportChildFailure(syncWriteFd, STEP_WORK_DIRECTORY);
+    }
+
     // The output file is opened only now, with the sandbox user's credentials: the work directory is
     // writable by the submission, which may have planted a symlink (or a hard link, FIFO, ...) at
     // this path during an earlier checkpoint, and root must never follow it. Whatever is not
@@ -737,21 +748,28 @@ static std::string resolveExecutable(const std::string& file) {
 }
 
 /**
+ * Gets the work directory of a compilation or run: the directory holding its output file, which
+ * the sandbox user owns (or /tmp without an output file).
+ * @param  outputFilePath - the output file path (may be empty)
+ * @return the work directory
+ */
+static std::string getWorkDirectory(const std::string& outputFilePath) {
+    size_t lastSlash = outputFilePath.rfind('/');
+    return (lastSlash != std::string::npos && lastSlash > 0) ? outputFilePath.substr(0, lastSlash)
+                                                             : std::string("/tmp");
+}
+
+/**
  * Builds the minimal environment of the sandboxed process: the whitelisted variables of the judger
  * (INHERITED_ENVIRONMENT_VARIABLES), defaults for PATH and LANG, and HOME. When privileges are
  * dropped, the judger's HOME (e.g. /root) is useless to the sandbox user, so HOME is set to the
- * work directory (the directory holding the output file), which the sandbox user owns, and so are
- * the Go build cache (GOCACHE) and GOPATH, which would otherwise be shared between submissions.
+ * work directory, which the sandbox user owns, and so are the Go build cache (GOCACHE) and GOPATH,
+ * which would otherwise be shared between submissions.
  * @param  dropPrivileges - whether the child drops to the sandbox user
- * @param  outputFilePath - the output file path (its directory is the work directory)
+ * @param  workDirectory  - the work directory
  * @return the list of "NAME=value" strings
  */
-static std::vector<std::string> buildEnvironment(bool dropPrivileges, const std::string& outputFilePath) {
-    size_t      lastSlash     = outputFilePath.rfind('/');
-    std::string workDirectory = (lastSlash != std::string::npos && lastSlash > 0)
-                                    ? outputFilePath.substr(0, lastSlash)
-                                    : std::string("/tmp");
-
+static std::vector<std::string> buildEnvironment(bool dropPrivileges, const std::string& workDirectory) {
     std::vector<std::string> environment;
     for ( const char* name : INHERITED_ENVIRONMENT_VARIABLES ) {
         if ( dropPrivileges && (strcmp(name, "GOCACHE") == 0 || strcmp(name, "GOPATH") == 0) ) {
