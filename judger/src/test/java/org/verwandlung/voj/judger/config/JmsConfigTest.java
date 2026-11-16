@@ -19,11 +19,16 @@ package org.verwandlung.voj.judger.config;
 import java.net.ServerSocket;
 import java.util.Map;
 
+import jakarta.jms.Connection;
 import jakarta.jms.ConnectionFactory;
+import jakarta.jms.DeliveryMode;
+import jakarta.jms.Message;
+import jakarta.jms.MessageConsumer;
+import jakarta.jms.Session;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.broker.BrokerService;
-import org.apache.activemq.command.ActiveMQQueue;
+import org.apache.activemq.command.ActiveMQTopic;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -56,8 +61,8 @@ public class JmsConfigTest {
   }
 
   /**
-   * Test case: tests the jmsTemplate bean. Expected result: a JmsTemplate whose default destination
-   * is the judging-result queue is returned.
+   * Test case: tests the jmsTemplate bean. Expected result: a JmsTemplate that publishes to the
+   * topic of the progress of the judgings, messages that are not persistent and expire.
    */
   @Test
   public void testJmsTemplate() throws jakarta.jms.JMSException {
@@ -65,16 +70,21 @@ public class JmsConfigTest {
     JmsTemplate jmsTemplate = jmsConfig.jmsTemplate(connectionFactory);
 
     Assertions.assertSame(connectionFactory, jmsTemplate.getConnectionFactory());
-    Assertions.assertInstanceOf(ActiveMQQueue.class, jmsTemplate.getDefaultDestination());
+    Assertions.assertTrue(jmsTemplate.isPubSubDomain());
+    Assertions.assertInstanceOf(ActiveMQTopic.class, jmsTemplate.getDefaultDestination());
     Assertions.assertEquals(
-        "vojJudgeResultQueue",
-        ((ActiveMQQueue) jmsTemplate.getDefaultDestination()).getQueueName());
+        "vojJudgeProgressTopic",
+        ((ActiveMQTopic) jmsTemplate.getDefaultDestination()).getTopicName());
+    Assertions.assertTrue(jmsTemplate.isExplicitQosEnabled());
+    Assertions.assertEquals(DeliveryMode.NON_PERSISTENT, jmsTemplate.getDeliveryMode());
+    Assertions.assertEquals(JmsConfig.MESSAGE_TIME_TO_LIVE_MS, jmsTemplate.getTimeToLive());
   }
 
   /**
-   * Test case: the broker (over TCP, as in a deployment) is restarted while the judger is running.
-   * Expected result: once it is back, the judger sends messages again, without being restarted
-   * itself.
+   * Test case: the broker (over TCP, as in a deployment) is restarted while the judger is running,
+   * and a subscriber of the topic (as the web application) subscribes again. Expected result: once
+   * it is back, the judger sends messages again, without being restarted itself, and they are not
+   * persistent.
    */
   @Test
   public void testJudgerSendsAgainAfterBrokerRestart() throws Exception {
@@ -85,19 +95,41 @@ public class JmsConfigTest {
     String brokerUrl = "tcp://localhost:" + port;
     broker = startBroker(brokerUrl);
     JmsTemplate resultSender = jmsConfig.jmsTemplate(jmsConfig.connectionFactory(brokerUrl));
-    JmsTemplate resultReceiver = new JmsTemplate(new ActiveMQConnectionFactory(brokerUrl));
-    resultReceiver.setReceiveTimeout(5000);
 
-    resultSender.convertAndSend(Map.of("event", "KeepAlive"));
-    Assertions.assertNotNull(resultReceiver.receive("vojJudgeResultQueue"));
+    Message message = sendAndReceive(brokerUrl, resultSender);
+    Assertions.assertNotNull(message);
+    Assertions.assertEquals(DeliveryMode.NON_PERSISTENT, message.getJMSDeliveryMode());
+    Assertions.assertTrue(message.getJMSExpiration() > 0);
 
     broker.stop();
     broker.waitUntilStopped();
     broker = startBroker(brokerUrl);
 
     // The cached sending connection died with the broker; the next message gets a new one.
-    resultSender.convertAndSend(Map.of("event", "KeepAlive"));
-    Assertions.assertNotNull(resultReceiver.receive("vojJudgeResultQueue"));
+    Assertions.assertNotNull(sendAndReceive(brokerUrl, resultSender));
+  }
+
+  /**
+   * Subscribes to the topic of the progress of the judgings, has the judger send a message, and
+   * receives it.
+   *
+   * @param brokerUrl - the URL of the broker
+   * @param resultSender - the JmsTemplate of the judger
+   * @return the message received, or null if none came within 5 seconds
+   */
+  private static Message sendAndReceive(String brokerUrl, JmsTemplate resultSender)
+      throws jakarta.jms.JMSException {
+    Connection connection = new ActiveMQConnectionFactory(brokerUrl).createConnection();
+    try {
+      connection.start();
+      Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+      MessageConsumer subscriber =
+          session.createConsumer(new ActiveMQTopic(JmsConfig.JUDGE_PROGRESS_TOPIC));
+      resultSender.convertAndSend(Map.of("event", "CompileFinished"));
+      return subscriber.receive(5000);
+    } finally {
+      connection.close();
+    }
   }
 
   /**

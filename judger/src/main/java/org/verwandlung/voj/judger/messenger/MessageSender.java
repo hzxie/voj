@@ -17,27 +17,92 @@
 package org.verwandlung.voj.judger.messenger;
 
 import java.util.Map;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.stereotype.Component;
 
 /**
- * The message sending service.
+ * The message sending service: streams the progress of the judgings to the web application.
+ *
+ * <p>The messages are sent in the background, by a thread of their own, in the order they were
+ * given, so the caller (a judging) never waits for the broker: the messages only stream the
+ * progress live (the verdicts are in the database), and a broker that is down, slow or holds the
+ * sender up (e.g. by flow control) must not hold a judging up. While {@value #MAX_PENDING_MESSAGES}
+ * messages wait to be sent, further ones are dropped, which is logged once until the sender caught
+ * up.
  *
  * @author Haozhe Xie
  */
 @Component
 public class MessageSender {
   /**
-   * Sends a message to the message queue.
+   * Sends a message to the web application, in the background.
    *
    * @param mapMessage - the message in key-value format
    */
   public void sendMessage(final Map<String, Object> mapMessage) {
-    jmsTemplate.convertAndSend(mapMessage);
+    try {
+      sender.execute(() -> send(mapMessage));
+    } catch (RejectedExecutionException ex) {
+      if (!isDropping) {
+        isDropping = true;
+        LOGGER.warn(
+            "The messages to the web application are not sent as fast as they come (the broker is"
+                + " unreachable or slow): dropping them until the sender caught up.");
+      }
+    }
+  }
+
+  /**
+   * Sends a message, on the sender's thread.
+   *
+   * @param mapMessage - the message in key-value format
+   */
+  private void send(Map<String, Object> mapMessage) {
+    try {
+      jmsTemplate.convertAndSend(mapMessage);
+    } catch (RuntimeException ex) {
+      LOGGER.warn("Failed to send the " + mapMessage.get("event") + " message", ex);
+    }
+    if (isDropping && sender.getQueue().isEmpty()) {
+      isDropping = false;
+      LOGGER.info("The sender of the messages to the web application caught up.");
+    }
   }
 
   /** The autowired JmsTemplate object, used to send messages to the message queue. */
   @Autowired private JmsTemplate jmsTemplate;
+
+  /** How many messages may wait to be sent. */
+  static final int MAX_PENDING_MESSAGES = 1000;
+
+  /**
+   * Sends the messages, one at a time, on a daemon thread (which never keeps the judger alive); a
+   * message that does not fit the queue is rejected.
+   */
+  private final ThreadPoolExecutor sender =
+      new ThreadPoolExecutor(
+          1,
+          1,
+          0,
+          TimeUnit.MILLISECONDS,
+          new ArrayBlockingQueue<>(MAX_PENDING_MESSAGES),
+          runnable -> {
+            Thread thread = new Thread(runnable, "voj-message-sender");
+            thread.setDaemon(true);
+            return thread;
+          });
+
+  /** Whether messages are being dropped as the sender is behind. */
+  private volatile boolean isDropping;
+
+  /** The logger. */
+  private static final Logger LOGGER = LogManager.getLogger(MessageSender.class);
 }

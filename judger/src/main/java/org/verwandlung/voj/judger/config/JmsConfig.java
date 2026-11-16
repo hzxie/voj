@@ -19,7 +19,7 @@ package org.verwandlung.voj.judger.config;
 import jakarta.jms.ConnectionFactory;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
-import org.apache.activemq.command.ActiveMQQueue;
+import org.apache.activemq.command.ActiveMQTopic;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -30,8 +30,15 @@ import org.springframework.jms.core.JmsTemplate;
  * The message queue configuration. Replaces the ActiveMQ / JMS definitions from the original
  * application-context.xml.
  *
- * <p>The judger sends the progress of its judgings and its heartbeats to {@code
- * vojJudgeResultQueue}. It receives nothing: it takes the pending submissions from the database.
+ * <p>The judger publishes the progress of its judgings on the topic {@value #JUDGE_PROGRESS_TOPIC},
+ * which every instance of the web application subscribes to, so that the viewers of a judging see
+ * its progress whichever instance serves them. It receives nothing: it takes the pending
+ * submissions from the database, and records its heartbeats there.
+ *
+ * <p>The messages are live updates, the database holds the verdicts: they are not persistent and
+ * expire after {@value #MESSAGE_TIME_TO_LIVE_MS} ms, so the broker keeps no backlog of them for a
+ * web application that is down, and a send that the broker holds up (by flow control) fails after
+ * {@value #SEND_TIMEOUT_MS} ms (see also {@code MessageSender}, which sends in the background).
  *
  * <p>It survives a restart of the broker (in the Docker setup it lives in the web container, so it
  * restarts with it): the cached connection is dropped once it fails, and the next message is sent
@@ -41,8 +48,18 @@ import org.springframework.jms.core.JmsTemplate;
  */
 @Configuration
 public class JmsConfig {
-  /** The name of the judging result queue (Judger -> Web). */
-  private static final String JUDGE_RESULT_QUEUE = "vojJudgeResultQueue";
+  /** The name of the topic of the progress of the judgings (Judger -> Web). */
+  static final String JUDGE_PROGRESS_TOPIC = "vojJudgeProgressTopic";
+
+  /**
+   * How long (ms) a progress message lives in the broker before it is dropped. Its expiry is set by
+   * the judger's clock and checked by the broker's and the web application's: this leaves the
+   * clocks of the hosts minutes to disagree by.
+   */
+  static final long MESSAGE_TIME_TO_LIVE_MS = 300000;
+
+  /** How long (ms) a send may be held up by the broker's flow control before it fails. */
+  static final int SEND_TIMEOUT_MS = 10000;
 
   /**
    * The JMS connection factory for sending, with a cached connection. The cache drops the
@@ -51,14 +68,20 @@ public class JmsConfig {
    */
   @Bean
   public ConnectionFactory connectionFactory(@Value("${jms.broker.url}") String brokerUrl) {
-    return new CachingConnectionFactory(new ActiveMQConnectionFactory(brokerUrl));
+    ActiveMQConnectionFactory connectionFactory = new ActiveMQConnectionFactory(brokerUrl);
+    connectionFactory.setSendTimeout(SEND_TIMEOUT_MS);
+    return new CachingConnectionFactory(connectionFactory);
   }
 
-  /** The JmsTemplate used to send messages to the judging result queue. */
+  /** The JmsTemplate used to publish to the topic of the progress of the judgings. */
   @Bean
   public JmsTemplate jmsTemplate(ConnectionFactory connectionFactory) {
     JmsTemplate jmsTemplate = new JmsTemplate(connectionFactory);
-    jmsTemplate.setDefaultDestination(new ActiveMQQueue(JUDGE_RESULT_QUEUE));
+    jmsTemplate.setPubSubDomain(true);
+    jmsTemplate.setDefaultDestination(new ActiveMQTopic(JUDGE_PROGRESS_TOPIC));
+    jmsTemplate.setExplicitQosEnabled(true);
+    jmsTemplate.setDeliveryPersistent(false);
+    jmsTemplate.setTimeToLive(MESSAGE_TIME_TO_LIVE_MS);
     return jmsTemplate;
   }
 }
