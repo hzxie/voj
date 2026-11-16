@@ -23,9 +23,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
-import org.verwandlung.voj.web.mapper.OptionMapper;
-import org.verwandlung.voj.web.model.Option;
 import org.verwandlung.voj.web.model.PublicationStatus;
+import org.verwandlung.voj.web.service.OptionService;
 import org.verwandlung.voj.web.util.HttpSessionParser;
 
 /**
@@ -44,9 +43,7 @@ public class MaintenanceModeInterceptor implements HandlerInterceptor {
   @Override
   public boolean preHandle(
       HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-    Option option = optionMapper.getOption("maintenanceMode");
-    boolean isMaintenance = option != null && "1".equals(option.getOptionValue());
-    if (!isMaintenance) {
+    if (!optionService.isOptionEnabled("maintenanceMode", false)) {
       return true;
     }
 
@@ -83,6 +80,6 @@ public class MaintenanceModeInterceptor implements HandlerInterceptor {
         || path.equals("/judgers");
   }
 
-  /** The autowired OptionMapper object. Used to resolve the maintenance-mode option. */
-  @Autowired private OptionMapper optionMapper;
+  /** The autowired OptionService object. Used to resolve the maintenance-mode option. */
+  @Autowired private OptionService optionService;
 }

@@ -30,7 +30,7 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.Transactional;
 
 import org.verwandlung.voj.web.mapper.OffensiveWordMapper;
-import org.verwandlung.voj.web.mapper.OptionMapper;
+import org.verwandlung.voj.web.service.OptionService;
 
 /**
  * The test class for SensitiveWordFilter.
@@ -108,9 +108,11 @@ public class OffensiveWordFilterTest {
     try {
       Constructor<OffensiveWordFilter> constructor =
           OffensiveWordFilter.class.getDeclaredConstructor(
-              OffensiveWordMapper.class, OptionMapper.class);
+              OffensiveWordMapper.class, OptionService.class);
       constructor.setAccessible(true);
-      return constructor.newInstance(offensiveWordMapper, Mockito.mock(OptionMapper.class));
+      OptionService optionService = Mockito.mock(OptionService.class);
+      Mockito.when(optionService.isOptionEnabled("autoCensorOffensiveWords", true)).thenReturn(true);
+      return constructor.newInstance(offensiveWordMapper, optionService);
     } catch (ReflectiveOperationException ex) {
       throw new RuntimeException(ex);
     }

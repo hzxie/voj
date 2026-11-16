@@ -43,7 +43,6 @@ import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.view.RedirectView;
 
 import org.verwandlung.voj.web.config.SecurityConfig;
-import org.verwandlung.voj.web.model.Option;
 import org.verwandlung.voj.web.model.User;
 import org.verwandlung.voj.web.model.UserGroup;
 import org.verwandlung.voj.web.model.VojUserDetails;
@@ -223,10 +222,7 @@ public class AccountsControllerTest {
   @Test
   public void testRegisterActionSuccessDelegates() {
     when(turnstileService.verify(anyString(), anyString())).thenReturn(true);
-    when(optionService.getOption("allowUserRegister"))
-        .thenReturn(new Option("allowUserRegister", "1", true));
-    when(optionService.getOption("requireEmailVerification"))
-        .thenReturn(new Option("requireEmailVerification", "0", true));
+    when(optionService.isOptionEnabled("allowUserRegister", true)).thenReturn(true);
     Map<String, Boolean> serviceResult = Map.of("isSuccessful", true);
     when(userService.createUser("zjhzxhz", "secret", "cshzxie@gmail.com", "users", "zh_CN", "", "", true))
         .thenReturn(serviceResult);
@@ -458,8 +454,7 @@ public class AccountsControllerTest {
   public void testRegisterViewPassesSafeForwardUrl() {
     LanguageService languageService = mock(LanguageService.class);
     ReflectionTestUtils.setField(controller, "languageService", languageService);
-    when(optionService.getOption("allowUserRegister"))
-        .thenReturn(new Option("allowUserRegister", "1", true));
+    when(optionService.isOptionEnabled("allowUserRegister", true)).thenReturn(true);
 
     ModelAndView view =
         controller.registerView("/p/1000", request(), new MockHttpServletResponse());

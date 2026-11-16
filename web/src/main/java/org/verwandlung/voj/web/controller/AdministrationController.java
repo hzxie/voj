@@ -441,7 +441,7 @@ public class AdministrationController {
       @RequestParam(value = "page", required = false, defaultValue = "1") long pageNumber,
       HttpServletRequest request,
       HttpServletResponse response) {
-    final int NUMBER_OF_USERS_PER_PAGE = getIntOption("usersPerPage", 100);
+    final int NUMBER_OF_USERS_PER_PAGE = optionService.getIntOption("usersPerPage", 100);
     List<UserGroup> userGroups = userService.getUserGroups();
     UserGroup userGroup = userService.getUserGroupUsingSlug(userGroupSlug);
     long totalUsers = userService.getNumberOfUsersUsingUserGroupAndUsername(userGroup, username);
@@ -707,7 +707,7 @@ public class AdministrationController {
       @RequestParam(value = "page", required = false, defaultValue = "1") long pageNumber,
       HttpServletRequest request,
       HttpServletResponse response) {
-    final int NUMBER_OF_PROBLEMS_PER_PAGE = getIntOption("problemsPerPage", 100);
+    final int NUMBER_OF_PROBLEMS_PER_PAGE = optionService.getIntOption("problemsPerPage", 100);
     List<ProblemCategory> problemCategories = problemService.getProblemCategories();
     List<ProblemDifficulty> problemDifficulties = problemService.getProblemDifficulties();
     long totalProblems =
@@ -1321,7 +1321,7 @@ public class AdministrationController {
       @RequestParam(value = "page", required = false, defaultValue = "1") long pageNumber,
       HttpServletRequest request,
       HttpServletResponse response) {
-    final int NUMBER_OF_SUBMISSIONS_PER_PAGE = getIntOption("submissionsPerPage", 100);
+    final int NUMBER_OF_SUBMISSIONS_PER_PAGE = optionService.getIntOption("submissionsPerPage", 100);
 
     long totalSubmissions =
         submissionService.getNumberOfSubmissionsUsingProblemIdAndUsername(
@@ -1444,19 +1444,7 @@ public class AdministrationController {
   }
 
   /**
-   * Gets the value of an integer option, falling back to the default value when the option is
-   * missing, blank, non-numeric or non-positive.
-   *
-   * @param optionName - the name of the option
-   * @param defaultValue - the value used when the option cannot be resolved to a positive integer
-   * @return the option value as a positive integer, or the default value
-   */
-  private int getIntOption(String optionName, int defaultValue) {
-    return optionService.getIntOption(optionName, defaultValue);
-  }
-
-  /**
-   * Updates the general settings of the website.
+   * Updates the general settings of the website, all of them or (when one is illegal) none.
    *
    * @param websiteName - the name of the website
    * @param websiteDescription - the description of the website
@@ -1505,55 +1493,40 @@ public class AdministrationController {
       @RequestParam(value = "turnstileSecretKey", defaultValue = "") String turnstileSecretKey,
       @RequestParam(value = "emailDailyLimit", defaultValue = "3") int emailDailyLimit,
       HttpServletRequest request) {
-    Map<String, Boolean> result =
-        optionService.updateOptions(
-            websiteName,
-            websiteDescription,
-            copyright,
-            allowUserRegister,
-            icpNumber,
-            policeIcpNumber,
-            googleAnalyticsCode,
-            offensiveWordSources);
-
-    boolean isContactEmailLegal = optionService.isContactEmailLegal(contactEmail);
-    result.put("isContactEmailLegal", isContactEmailLegal);
-    if (!isContactEmailLegal) {
-      result.put("isSuccessful", false);
-    }
-
-    if (result.get("isSuccessful")) {
-      Map<String, String> moderationOptions = new HashMap<>();
-      moderationOptions.put("contactEmail", contactEmail);
-      moderationOptions.put("requireEmailVerification", requireEmailVerification ? "1" : "0");
-      moderationOptions.put("publicSubmissions", publicSubmissions ? "1" : "0");
-      moderationOptions.put("maintenanceMode", maintenanceMode ? "1" : "0");
-      moderationOptions.put("autoHideOnReports", autoHideOnReports ? "1" : "0");
-      moderationOptions.put("autoCensorOffensiveWords", autoCensorOffensiveWords ? "1" : "0");
-      moderationOptions.put("newUserPostDelay", String.valueOf(clampNonNegative(newUserPostDelay)));
-      moderationOptions.put(
-          "discussionReportHideThreshold",
-          String.valueOf(clampNonNegative(discussionReportHideThreshold)));
-      moderationOptions.put(
-          "discussionMinSolvedToVote", String.valueOf(clampNonNegative(discussionMinSolvedToVote)));
-      moderationOptions.put(
-          "discussionMinSolvedToReport",
-          String.valueOf(clampNonNegative(discussionMinSolvedToReport)));
-      moderationOptions.put("turnstileEnabled", turnstileEnabled ? "1" : "0");
-      moderationOptions.put("turnstileSiteKey", turnstileSiteKey.trim());
-      moderationOptions.put("turnstileSecretKey", turnstileSecretKey.trim());
-      moderationOptions.put("emailDailyLimit", String.valueOf(Math.max(1, emailDailyLimit)));
-      optionService.updateOptions(moderationOptions);
-
-      Map<String, String> pageSizeOptions = new HashMap<>();
-      pageSizeOptions.put("problemsPerPage", String.valueOf(clampPageSize(problemsPerPage)));
-      pageSizeOptions.put("usersPerPage", String.valueOf(clampPageSize(usersPerPage)));
-      pageSizeOptions.put("submissionsPerPage", String.valueOf(clampPageSize(submissionsPerPage)));
-      pageSizeOptions.put("contestsPerPage", String.valueOf(clampPageSize(contestsPerPage)));
-      pageSizeOptions.put("bulletinsPerPage", String.valueOf(clampPageSize(bulletinsPerPage)));
-      pageSizeOptions.put("discussionsPerPage", String.valueOf(clampPageSize(discussionsPerPage)));
-      optionService.updateOptions(pageSizeOptions);
-    }
+    Map<String, String> settings = new HashMap<>();
+    settings.put("websiteName", websiteName);
+    settings.put("description", websiteDescription);
+    settings.put("copyright", copyright);
+    settings.put("allowUserRegister", allowUserRegister ? "1" : "0");
+    settings.put("icpNumber", icpNumber);
+    settings.put("policeIcpNumber", policeIcpNumber);
+    settings.put("googleAnalyticsCode", googleAnalyticsCode);
+    settings.put("offensiveWordSources", offensiveWordSources);
+    settings.put("contactEmail", contactEmail);
+    settings.put("requireEmailVerification", requireEmailVerification ? "1" : "0");
+    settings.put("publicSubmissions", publicSubmissions ? "1" : "0");
+    settings.put("maintenanceMode", maintenanceMode ? "1" : "0");
+    settings.put("autoHideOnReports", autoHideOnReports ? "1" : "0");
+    settings.put("autoCensorOffensiveWords", autoCensorOffensiveWords ? "1" : "0");
+    settings.put("newUserPostDelay", String.valueOf(clampNonNegative(newUserPostDelay)));
+    settings.put(
+        "discussionReportHideThreshold",
+        String.valueOf(clampNonNegative(discussionReportHideThreshold)));
+    settings.put(
+        "discussionMinSolvedToVote", String.valueOf(clampNonNegative(discussionMinSolvedToVote)));
+    settings.put(
+        "discussionMinSolvedToReport", String.valueOf(clampNonNegative(discussionMinSolvedToReport)));
+    settings.put("turnstileEnabled", turnstileEnabled ? "1" : "0");
+    settings.put("turnstileSiteKey", turnstileSiteKey.trim());
+    settings.put("turnstileSecretKey", turnstileSecretKey.trim());
+    settings.put("emailDailyLimit", String.valueOf(Math.max(1, emailDailyLimit)));
+    settings.put("problemsPerPage", String.valueOf(clampPageSize(problemsPerPage)));
+    settings.put("usersPerPage", String.valueOf(clampPageSize(usersPerPage)));
+    settings.put("submissionsPerPage", String.valueOf(clampPageSize(submissionsPerPage)));
+    settings.put("contestsPerPage", String.valueOf(clampPageSize(contestsPerPage)));
+    settings.put("bulletinsPerPage", String.valueOf(clampPageSize(bulletinsPerPage)));
+    settings.put("discussionsPerPage", String.valueOf(clampPageSize(discussionsPerPage)));
+    Map<String, Boolean> result = optionService.updateGeneralSettings(settings);
 
     return result;
   }
@@ -1616,7 +1589,7 @@ public class AdministrationController {
       @RequestParam(value = "page", required = false, defaultValue = "1") long pageNumber,
       HttpServletRequest request,
       HttpServletResponse response) {
-    final int NUMBER_OF_BULLETINS_PER_PAGE = getIntOption("bulletinsPerPage", 50);
+    final int NUMBER_OF_BULLETINS_PER_PAGE = optionService.getIntOption("bulletinsPerPage", 50);
     long totalBulletins = bulletinBoardService.getNumberOfBulletinBoardMessages();
     long offset = Pagination.getOffset(pageNumber, NUMBER_OF_BULLETINS_PER_PAGE);
     List<BulletinBoardMessage> messages =
@@ -1742,7 +1715,7 @@ public class AdministrationController {
       @RequestParam(value = "page", required = false, defaultValue = "1") long pageNumber,
       HttpServletRequest request,
       HttpServletResponse response) {
-    final int NUMBER_OF_CONTESTS_PER_PAGE = getIntOption("contestsPerPage", 50);
+    final int NUMBER_OF_CONTESTS_PER_PAGE = optionService.getIntOption("contestsPerPage", 50);
     long totalContests = contestService.getNumberOfContests(keyword);
     long offset = Pagination.getOffset(pageNumber, NUMBER_OF_CONTESTS_PER_PAGE);
     List<Contest> contests =
@@ -2053,7 +2026,7 @@ public class AdministrationController {
       @RequestParam(value = "page", required = false, defaultValue = "1") long pageNumber,
       HttpServletRequest request,
       HttpServletResponse response) {
-    final int NUMBER_OF_THREADS_PER_PAGE = getIntOption("discussionsPerPage", 50);
+    final int NUMBER_OF_THREADS_PER_PAGE = optionService.getIntOption("discussionsPerPage", 50);
     long totalThreads = discussionService.getNumberOfDiscussionThreads();
     long offset = Pagination.getOffset(pageNumber, NUMBER_OF_THREADS_PER_PAGE);
 

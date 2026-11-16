@@ -21,14 +21,13 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import org.verwandlung.voj.web.mapper.OffensiveWordMapper;
-import org.verwandlung.voj.web.mapper.OptionMapper;
-import org.verwandlung.voj.web.model.Option;
 
 /**
  * The offensive word service, responsible for the persistence side of the offensive word
@@ -48,8 +47,7 @@ public class OffensiveWordService {
    * @return the offensive word import sources
    */
   public String getOffensiveWordSources() {
-    Option option = optionMapper.getOption(OFFENSIVE_WORD_SOURCES_OPTION_KEY);
-    return option == null ? "" : option.getOptionValue();
+    return optionService.getStringOption(OFFENSIVE_WORD_SOURCES_OPTION_KEY, "");
   }
 
   /**
@@ -76,8 +74,7 @@ public class OffensiveWordService {
    * @return the last import time, or an empty string if it has never been imported
    */
   public String getOffensiveWordsImportedAt() {
-    Option option = optionMapper.getOption(OFFENSIVE_WORDS_IMPORTED_AT_OPTION_KEY);
-    return option == null ? "" : option.getOptionValue();
+    return optionService.getStringOption(OFFENSIVE_WORDS_IMPORTED_AT_OPTION_KEY, "");
   }
 
   /**
@@ -110,9 +107,7 @@ public class OffensiveWordService {
    * @param optionValue - the new value of the option
    */
   private void updateOption(String optionName, String optionValue) {
-    Option option = optionMapper.getOption(optionName);
-    option.setOptionValue(optionValue);
-    optionMapper.updateOption(option);
+    optionService.updateOptions(Map.of(optionName, optionValue));
   }
 
   /** The maximum number of offensive words inserted per SQL statement. */
@@ -131,6 +126,6 @@ public class OffensiveWordService {
   /** The autowired OffensiveWordMapper object. */
   @Autowired private OffensiveWordMapper offensiveWordMapper;
 
-  /** The autowired OptionMapper object. */
-  @Autowired private OptionMapper optionMapper;
+  /** The autowired OptionService object. */
+  @Autowired private OptionService optionService;
 }

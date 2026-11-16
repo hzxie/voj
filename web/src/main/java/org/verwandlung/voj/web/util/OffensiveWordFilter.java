@@ -28,8 +28,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import org.verwandlung.voj.web.mapper.OffensiveWordMapper;
-import org.verwandlung.voj.web.mapper.OptionMapper;
-import org.verwandlung.voj.web.model.Option;
+import org.verwandlung.voj.web.service.OptionService;
 
 /**
  * The offensive word filtering class.
@@ -50,11 +49,13 @@ public class OffensiveWordFilter {
    *
    * @param offensiveWordMapper - the autowired OffensiveWordMapper object, used to get the offensive
    *     words from the database
+   * @param optionService - the autowired OptionService object, used to read the auto-censor option
    */
   @Autowired
-  private OffensiveWordFilter(OffensiveWordMapper offensiveWordMapper, OptionMapper optionMapper) {
+  private OffensiveWordFilter(
+      OffensiveWordMapper offensiveWordMapper, OptionService optionService) {
     this.offensiveWordMapper = offensiveWordMapper;
-    this.optionMapper = optionMapper;
+    this.optionService = optionService;
   }
 
   /**
@@ -154,11 +155,7 @@ public class OffensiveWordFilter {
    * @return whether automatic censoring of offensive words is enabled
    */
   private boolean isAutoCensorEnabled() {
-    Option option = optionMapper.getOption(OPTION_AUTO_CENSOR);
-    if (option == null || option.getOptionValue() == null) {
-      return true;
-    }
-    return "1".equals(option.getOptionValue().trim());
+    return optionService.isOptionEnabled(OPTION_AUTO_CENSOR, true);
   }
 
   /**
@@ -375,8 +372,8 @@ public class OffensiveWordFilter {
   /** The autowired OffensiveWordMapper object, used to load the offensive words from the database. */
   private final OffensiveWordMapper offensiveWordMapper;
 
-  /** The autowired OptionMapper object, used to read the auto-censor system option. */
-  private final OptionMapper optionMapper;
+  /** The autowired OptionService object, used to read the auto-censor system option. */
+  private final OptionService optionService;
 }
 
 /**

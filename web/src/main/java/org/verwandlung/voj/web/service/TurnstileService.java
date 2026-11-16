@@ -30,8 +30,6 @@ import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import org.verwandlung.voj.web.mapper.OptionMapper;
-import org.verwandlung.voj.web.model.Option;
 import org.verwandlung.voj.web.util.JsonUtils;
 
 /**
@@ -51,12 +49,7 @@ public class TurnstileService {
    * @return whether the {@code turnstileEnabled} option is on and a secret key is configured
    */
   public boolean isEnabled() {
-    Option enabled = optionMapper.getOption("turnstileEnabled");
-    if (enabled == null || !"1".equals(enabled.getOptionValue())) {
-      return false;
-    }
-    Option secretKey = optionMapper.getOption("turnstileSecretKey");
-    return secretKey != null && !secretKey.getOptionValue().isEmpty();
+    return optionService.isOptionEnabled("turnstileEnabled", false) && !getSecretKey().isEmpty();
   }
 
   /**
@@ -75,7 +68,7 @@ public class TurnstileService {
     if (token == null || token.isEmpty()) {
       return false;
     }
-    String secretKey = optionMapper.getOption("turnstileSecretKey").getOptionValue();
+    String secretKey = getSecretKey();
     try {
       String form =
           "secret=" + encode(secretKey) + "&response=" + encode(token);
@@ -106,6 +99,11 @@ public class TurnstileService {
     }
   }
 
+  /** Gets the configured Turnstile secret key (empty when none is configured). */
+  private String getSecretKey() {
+    return optionService.getStringOption("turnstileSecretKey", "");
+  }
+
   /** URL-encodes a form value as UTF-8. */
   private static String encode(String value) {
     return URLEncoder.encode(value, StandardCharsets.UTF_8);
@@ -122,8 +120,8 @@ public class TurnstileService {
   private final HttpClient httpClient =
       HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
 
-  /** The autowired OptionMapper object, used to resolve the Turnstile configuration. */
-  @Autowired private OptionMapper optionMapper;
+  /** The autowired OptionService object, used to resolve the Turnstile configuration. */
+  @Autowired private OptionService optionService;
 
   /** The log4j2 logger. */
   private static final Logger LOGGER = LogManager.getLogger(TurnstileService.class);

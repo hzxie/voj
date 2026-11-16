@@ -34,13 +34,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import org.verwandlung.voj.web.mapper.ContestContestantMapper;
 import org.verwandlung.voj.web.mapper.EmailValidationMapper;
-import org.verwandlung.voj.web.mapper.OptionMapper;
 import org.verwandlung.voj.web.mapper.SubmissionMapper;
 import org.verwandlung.voj.web.mapper.UserMapper;
 import org.verwandlung.voj.web.mapper.UserMetaMapper;
 import org.verwandlung.voj.web.model.EmailValidation;
 import org.verwandlung.voj.web.model.Language;
-import org.verwandlung.voj.web.model.Option;
 import org.verwandlung.voj.web.model.User;
 import org.verwandlung.voj.web.model.UserGroup;
 import org.verwandlung.voj.web.model.UserMeta;
@@ -751,9 +749,7 @@ public class UserServiceTest {
 
   /** Enables the requireEmailVerification option within the current test transaction. */
   private void enableEmailVerificationRequirement() {
-    Option option = optionMapper.getOption("requireEmailVerification");
-    option.setOptionValue("1");
-    optionMapper.updateOption(option);
+    optionService.updateOptions(java.util.Map.of("requireEmailVerification", "1"));
   }
 
   /** Test case: tests the isEmailValidationValid(...) method. Test data: valid validation credentials. Expected: returns true. */
@@ -899,9 +895,7 @@ public class UserServiceTest {
   /** Test case: the daily email limit is configurable. Test data: the emailDailyLimit option set to one. Expected: the second send to an address is suppressed. */
   @Test
   public void testSendVerificationEmailDailyLimitIsConfigurable() {
-    Option option = optionMapper.getOption("emailDailyLimit");
-    option.setOptionValue("1");
-    optionMapper.updateOption(option);
+    optionService.updateOptions(java.util.Map.of("emailDailyLimit", "1"));
 
     userService.sendVerificationEmail("zjhzxhz", "cshzxie@gmail.com");
     EmailValidation first = emailValidationMapper.getEmailValidation("cshzxie@gmail.com");
@@ -1010,6 +1004,6 @@ public class UserServiceTest {
   /** The Mapper used to construct email validation credentials within the test transaction. */
   @Autowired private EmailValidationMapper emailValidationMapper;
 
-  /** The Mapper used to toggle the email-verification requirement within the test transaction. */
-  @Autowired private OptionMapper optionMapper;
+  /** The OptionService object, used to change options within the test transaction. */
+  @Autowired private OptionService optionService;
 }

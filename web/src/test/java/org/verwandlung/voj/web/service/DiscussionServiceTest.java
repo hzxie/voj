@@ -27,12 +27,10 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.Transactional;
 
-import org.verwandlung.voj.web.mapper.OptionMapper;
 import org.verwandlung.voj.web.mapper.UserMapper;
 import org.verwandlung.voj.web.model.DiscussionReply;
 import org.verwandlung.voj.web.model.DiscussionThread;
 import org.verwandlung.voj.web.model.DiscussionTopic;
-import org.verwandlung.voj.web.model.Option;
 import org.verwandlung.voj.web.model.User;
 
 /**
@@ -850,9 +848,7 @@ public class DiscussionServiceTest {
 
   /** Sets a system option value (rolled back after each test by the transactional context). */
   private void setOption(String optionName, String optionValue) {
-    Option option = optionMapper.getOption(optionName);
-    option.setOptionValue(optionValue);
-    optionMapper.updateOption(option);
+    optionService.updateOptions(java.util.Map.of(optionName, optionValue));
   }
 
   /** Returns the administrator user (user 1000). */
@@ -888,6 +884,6 @@ public class DiscussionServiceTest {
   /** Used to get real user objects with user group information. */
   @Autowired private UserMapper userMapper;
 
-  /** Used to adjust the configurable discussion thresholds within a test. */
-  @Autowired private OptionMapper optionMapper;
+  /** The OptionService object, used to change options within the test transaction. */
+  @Autowired private OptionService optionService;
 }

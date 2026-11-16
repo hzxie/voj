@@ -23,7 +23,6 @@ import org.verwandlung.voj.web.mapper.DiscussionReplyMapper;
 import org.verwandlung.voj.web.mapper.DiscussionReplyVoteMapper;
 import org.verwandlung.voj.web.mapper.DiscussionThreadMapper;
 import org.verwandlung.voj.web.mapper.DiscussionTopicMapper;
-import org.verwandlung.voj.web.mapper.OptionMapper;
 import org.verwandlung.voj.web.mapper.ProblemMapper;
 import org.verwandlung.voj.web.mapper.SubmissionMapper;
 import org.verwandlung.voj.web.mapper.UserMetaMapper;
@@ -458,7 +457,7 @@ public class DiscussionService {
     result.put("isNotSelfVote", !isOwnReply(discussionReply, currentUser));
     result.put(
         "isReputationEnough",
-        hasEnoughReputation(currentUser, getIntOption(OPTION_MIN_SOLVED_TO_VOTE, 1)));
+        hasEnoughReputation(currentUser, optionService.getNonNegativeIntOption(OPTION_MIN_SOLVED_TO_VOTE, 1)));
 
     boolean isSuccessful =
         result.get("isDiscussionReplyExists")
@@ -516,7 +515,7 @@ public class DiscussionService {
     result.put("isNotSelfReport", !isOwnReply(discussionReply, currentUser));
     result.put(
         "isReputationEnough",
-        hasEnoughReputation(currentUser, getIntOption(OPTION_MIN_SOLVED_TO_REPORT, 3)));
+        hasEnoughReputation(currentUser, optionService.getNonNegativeIntOption(OPTION_MIN_SOLVED_TO_REPORT, 3)));
 
     boolean isSuccessful =
         result.get("isDiscussionReplyExists")
@@ -622,10 +621,10 @@ public class DiscussionService {
    * @return the number of reports at which a thread is hidden (0 or below disables hiding)
    */
   private int getReportHideThreshold() {
-    if (!isOptionEnabled(OPTION_AUTO_HIDE_ON_REPORTS, true)) {
+    if (!optionService.isOptionEnabled(OPTION_AUTO_HIDE_ON_REPORTS, true)) {
       return 0;
     }
-    return getIntOption(OPTION_REPORT_HIDE_THRESHOLD, 0);
+    return optionService.getNonNegativeIntOption(OPTION_REPORT_HIDE_THRESHOLD, 0);
   }
 
   /**
@@ -634,7 +633,7 @@ public class DiscussionService {
    * @return the minimum number of solved problems required to vote
    */
   public int getMinSolvedToVote() {
-    return getIntOption(OPTION_MIN_SOLVED_TO_VOTE, 1);
+    return optionService.getNonNegativeIntOption(OPTION_MIN_SOLVED_TO_VOTE, 1);
   }
 
   /**
@@ -643,7 +642,7 @@ public class DiscussionService {
    * @return the minimum number of solved problems required to report
    */
   public int getMinSolvedToReport() {
-    return getIntOption(OPTION_MIN_SOLVED_TO_REPORT, 3);
+    return optionService.getNonNegativeIntOption(OPTION_MIN_SOLVED_TO_REPORT, 3);
   }
 
   /**
@@ -652,22 +651,7 @@ public class DiscussionService {
    * @return the cooldown (in minutes) before a freshly-registered user can post
    */
   public int getNewUserPostDelay() {
-    return getIntOption(OPTION_NEW_USER_POST_DELAY, 0);
-  }
-
-  /**
-   * Reads a boolean-valued system option, treating {@code "1"} as enabled.
-   *
-   * @param optionName - the name of the option
-   * @param defaultValue - the value to return when the option is absent
-   * @return whether the option is enabled
-   */
-  private boolean isOptionEnabled(String optionName, boolean defaultValue) {
-    Option option = optionMapper.getOption(optionName);
-    if (option == null || option.getOptionValue() == null) {
-      return defaultValue;
-    }
-    return "1".equals(option.getOptionValue().trim());
+    return optionService.getNonNegativeIntOption(OPTION_NEW_USER_POST_DELAY, 0);
   }
 
   /**
@@ -679,7 +663,7 @@ public class DiscussionService {
    * @return whether the user is allowed to post now
    */
   private boolean isPostDelayElapsed(User user) {
-    int delayMinutes = getIntOption(OPTION_NEW_USER_POST_DELAY, 0);
+    int delayMinutes = optionService.getNonNegativeIntOption(OPTION_NEW_USER_POST_DELAY, 0);
     if (delayMinutes <= 0 || user == null || PublicationStatus.isAdministrator(user)) {
       return true;
     }
@@ -695,26 +679,6 @@ public class DiscussionService {
       return elapsedMillis >= delayMinutes * 60_000L;
     } catch (ParseException e) {
       return true;
-    }
-  }
-
-  /**
-   * Reads an integer-valued system option, falling back to a default value if the option is missing
-   * or not a valid integer.
-   *
-   * @param optionName - the name of the option
-   * @param defaultValue - the value to return when the option is absent or malformed
-   * @return the option value as an integer
-   */
-  private int getIntOption(String optionName, int defaultValue) {
-    Option option = optionMapper.getOption(optionName);
-    if (option == null || option.getOptionValue() == null) {
-      return defaultValue;
-    }
-    try {
-      return Integer.parseInt(option.getOptionValue().trim());
-    } catch (NumberFormatException e) {
-      return defaultValue;
     }
   }
 
@@ -1138,8 +1102,8 @@ public class DiscussionService {
   /** The autowired DiscussionReplyVoteMapper object, used to obtain and persist reply votes. */
   @Autowired private DiscussionReplyVoteMapper discussionReplyVoteMapper;
 
-  /** The autowired OptionMapper object, used to read the configurable discussion thresholds. */
-  @Autowired private OptionMapper optionMapper;
+  /** The autowired OptionService object, used to read the configurable discussion thresholds. */
+  @Autowired private OptionService optionService;
 
   /** The autowired SubmissionMapper object, used to measure a user's reputation (solved problems). */
   @Autowired private SubmissionMapper submissionMapper;

@@ -31,11 +31,10 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import org.verwandlung.voj.web.mapper.OptionMapper;
-import org.verwandlung.voj.web.model.Option;
 import org.verwandlung.voj.web.model.User;
 import org.verwandlung.voj.web.model.UserGroup;
 import org.verwandlung.voj.web.model.VojUserDetails;
+import org.verwandlung.voj.web.service.OptionService;
 
 /**
  * The test class for MaintenanceModeInterceptor.
@@ -43,12 +42,12 @@ import org.verwandlung.voj.web.model.VojUserDetails;
  * @author Haozhe Xie
  */
 public class MaintenanceModeInterceptorTest {
-  /** Wires a mocked OptionMapper into a fresh interceptor before every test. */
+  /** Wires a mocked OptionService into a fresh interceptor before every test. */
   @BeforeEach
   public void setUp() {
-    optionMapper = mock(OptionMapper.class);
+    optionService = mock(OptionService.class);
     interceptor = new MaintenanceModeInterceptor();
-    ReflectionTestUtils.setField(interceptor, "optionMapper", optionMapper);
+    ReflectionTestUtils.setField(interceptor, "optionService", optionService);
   }
 
   /** Clears the security context after every test so authentication does not leak between cases. */
@@ -66,16 +65,6 @@ public class MaintenanceModeInterceptorTest {
 
     Assertions.assertTrue(interceptor.preHandle(request, response, new Object()));
     Assertions.assertNull(response.getForwardedUrl());
-  }
-
-  /** Test case: tests preHandle(...). Test data: the maintenance-mode option is absent. Expected: the request proceeds (returns true). */
-  @Test
-  public void testPreHandleWhenOptionMissing() throws Exception {
-    when(optionMapper.getOption("maintenanceMode")).thenReturn(null);
-    MockHttpServletRequest request = requestFor("/problems");
-    MockHttpServletResponse response = new MockHttpServletResponse();
-
-    Assertions.assertTrue(interceptor.preHandle(request, response, new Object()));
   }
 
   /** Test case: tests preHandle(...). Test data: maintenance mode enabled, an anonymous user requesting an allow-listed path. Expected: the request proceeds (returns true). */
@@ -125,10 +114,9 @@ public class MaintenanceModeInterceptorTest {
     Assertions.assertEquals("/maintenance", response.getForwardedUrl());
   }
 
-  /** Stubs the maintenance-mode option to the given raw value. */
+  /** Stubs the maintenance-mode switch ("1" on, anything else off; off when the option is missing). */
   private void setMaintenanceMode(String value) {
-    Option option = new Option("maintenanceMode", value, false);
-    when(optionMapper.getOption("maintenanceMode")).thenReturn(option);
+    when(optionService.isOptionEnabled("maintenanceMode", false)).thenReturn("1".equals(value));
   }
 
   /** Places an authenticated user belonging to the given group into the security context. */
@@ -149,8 +137,8 @@ public class MaintenanceModeInterceptorTest {
     return request;
   }
 
-  /** The mocked OptionMapper resolving the maintenance-mode flag. */
-  private OptionMapper optionMapper;
+  /** The mocked OptionService resolving the maintenance-mode flag. */
+  private OptionService optionService;
 
   /** The MaintenanceModeInterceptor object under test. */
   private MaintenanceModeInterceptor interceptor;

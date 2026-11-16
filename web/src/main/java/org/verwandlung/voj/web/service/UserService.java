@@ -40,13 +40,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import org.verwandlung.voj.web.mapper.EmailValidationMapper;
 import org.verwandlung.voj.web.mapper.LanguageMapper;
-import org.verwandlung.voj.web.mapper.OptionMapper;
 import org.verwandlung.voj.web.mapper.UserGroupMapper;
 import org.verwandlung.voj.web.mapper.UserMapper;
 import org.verwandlung.voj.web.mapper.UserMetaMapper;
 import org.verwandlung.voj.web.model.EmailValidation;
 import org.verwandlung.voj.web.model.Language;
-import org.verwandlung.voj.web.model.Option;
 import org.verwandlung.voj.web.model.User;
 import org.verwandlung.voj.web.model.UserGroup;
 import org.verwandlung.voj.web.model.UserMeta;
@@ -515,8 +513,7 @@ public class UserService {
    * @return whether email verification is required
    */
   public boolean isEmailVerificationRequired() {
-    Option option = optionMapper.getOption("requireEmailVerification");
-    return option != null && "1".equals(option.getOptionValue());
+    return optionService.isOptionEnabled("requireEmailVerification", false);
   }
 
   /**
@@ -652,7 +649,7 @@ public class UserService {
             && existing.getWindowStart() != null
             && now - existing.getWindowStart().getTime() < EMAIL_RATE_LIMIT_WINDOW_MILLIS;
     if (withinWindow) {
-      if (existing.getDailyCount() >= getEmailDailyLimit()) {
+      if (existing.getDailyCount() >= optionService.getIntOption("emailDailyLimit", DEFAULT_EMAIL_DAILY_LIMIT)) {
         return null;
       }
       dailyCount = existing.getDailyCount() + 1;
@@ -662,28 +659,6 @@ public class UserService {
       windowStart = new Date(now);
     }
     return new EmailValidation(email, token, getExpireTime(), dailyCount, windowStart);
-  }
-
-  /**
-   * Resolves the configured maximum number of verification / password-reset emails per address per
-   * rate-limit window, falling back to {@link #DEFAULT_EMAIL_DAILY_LIMIT} when the {@code
-   * emailDailyLimit} option is missing or not a positive integer.
-   *
-   * @return the maximum number of emails allowed per address per window
-   */
-  private int getEmailDailyLimit() {
-    Option option = optionMapper.getOption("emailDailyLimit");
-    if (option != null) {
-      try {
-        int limit = Integer.parseInt(option.getOptionValue().trim());
-        if (limit > 0) {
-          return limit;
-        }
-      } catch (NumberFormatException e) {
-        // Fall through to the default when the stored value is malformed.
-      }
-    }
-    return DEFAULT_EMAIL_DAILY_LIMIT;
   }
 
   /**
@@ -1297,8 +1272,8 @@ public class UserService {
   /** The autowired EmailValidationMapper object, used to generate password reset tokens. */
   @Autowired private EmailValidationMapper emailValidationMapper;
 
-  /** The autowired OptionMapper object, used to resolve the email-verification requirement. */
-  @Autowired private OptionMapper optionMapper;
+  /** The autowired OptionService object, used to read the email settings. */
+  @Autowired private OptionService optionService;
 
   /** The autowired password encoder, used to encode and verify user passwords. */
   @Autowired private PasswordEncoder passwordEncoder;

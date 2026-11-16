@@ -164,9 +164,8 @@ class ViewRenderSmokeTest {
                 new Option("googleAnalyticsCode", "", true),
                 new Option("icpNumber", "", true),
                 new Option("policeIcpNumber", "", true)));
-    // The registration page reads this option's value in the controller.
-    when(optionService.getOption("allowUserRegister"))
-        .thenReturn(new Option("allowUserRegister", "1", false));
+    // The registration page reads this option in the controller.
+    when(optionService.isOptionEnabled("allowUserRegister", true)).thenReturn(true);
     // Paginated list controllers resolve their page size via getIntOption; return the default.
     when(optionService.getIntOption(anyString(), anyInt()))
         .thenAnswer(invocation -> invocation.getArgument(1));
@@ -296,8 +295,7 @@ class ViewRenderSmokeTest {
    */
   @Test
   void maintenanceModeBlocksAnonymousButAllowsAdmin() throws Exception {
-    when(optionMapper.getOption("maintenanceMode"))
-        .thenReturn(new Option("maintenanceMode", "1", false));
+    when(optionService.isOptionEnabled("maintenanceMode", false)).thenReturn(true);
 
     // Anonymous visitor (no authentication) is forwarded to the maintenance page with 503.
     mockMvc

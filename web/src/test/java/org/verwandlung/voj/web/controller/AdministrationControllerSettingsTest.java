@@ -70,38 +70,23 @@ public class AdministrationControllerSettingsTest {
     ReflectionTestUtils.setField(controller, "submissionService", submissionService);
   }
 
-  /** Test case: tests updateGeneralSettingsAction(...). Test data: an illegal contact email. Expected: the result is marked unsuccessful and the moderation / page-size options are never written. */
-  @Test
-  public void testUpdateGeneralSettingsRejectsIllegalContactEmail() {
-    stubBaseOptionsUpdate(true);
-    when(optionService.isContactEmailLegal("not-an-email")).thenReturn(false);
-
-    Map<String, Boolean> result = updateGeneralSettings("not-an-email", 100, 3);
-
-    Assertions.assertEquals(Boolean.FALSE, result.get("isContactEmailLegal"));
-    Assertions.assertEquals(Boolean.FALSE, result.get("isSuccessful"));
-    verify(optionService, never()).updateOptions(org.mockito.ArgumentMatchers.<Map<String, String>>any());
-  }
-
-  /** Test case: tests updateGeneralSettingsAction(...). Test data: an oversized page size and a zero email limit. Expected: the page size is clamped to 1000 and the email daily limit to a minimum of 1 before being written. */
+  /** Test case: tests updateGeneralSettingsAction(...). Test data: an oversized page size and a zero email limit. Expected: every setting goes to OptionService in one call, with the page size clamped to 1000, the email daily limit to a minimum of 1 and the booleans mapped to "1"/"0". */
   @Test
   public void testUpdateGeneralSettingsClampsValues() {
-    stubBaseOptionsUpdate(true);
-    when(optionService.isContactEmailLegal("admin@voj.org")).thenReturn(true);
+    Map<String, Boolean> serviceResult = Map.of("isSuccessful", true);
+    when(optionService.updateGeneralSettings(org.mockito.ArgumentMatchers.any()))
+        .thenReturn(serviceResult);
 
-    updateGeneralSettings("admin@voj.org", 5000, 0);
+    Assertions.assertSame(serviceResult, updateGeneralSettings("admin@voj.org", 5000, 0));
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     ArgumentCaptor<Map<String, String>> captor = ArgumentCaptor.forClass((Class) Map.class);
-    verify(optionService, times(2)).updateOptions(captor.capture());
-
-    Map<String, String> moderation = mapContaining(captor.getAllValues(), "emailDailyLimit");
-    Map<String, String> pageSizes = mapContaining(captor.getAllValues(), "problemsPerPage");
-    // emailDailyLimit 0 -> clamped to a minimum of 1; booleans mapped to "1"/"0".
-    Assertions.assertEquals("1", moderation.get("emailDailyLimit"));
-    Assertions.assertEquals("1", moderation.get("maintenanceMode"));
-    // problemsPerPage 5000 -> clamped to the [1, 1000] range.
-    Assertions.assertEquals("1000", pageSizes.get("problemsPerPage"));
+    verify(optionService).updateGeneralSettings(captor.capture());
+    Map<String, String> settings = captor.getValue();
+    Assertions.assertEquals("admin@voj.org", settings.get("contactEmail"));
+    Assertions.assertEquals("1", settings.get("emailDailyLimit"));
+    Assertions.assertEquals("1", settings.get("maintenanceMode"));
+    Assertions.assertEquals("1000", settings.get("problemsPerPage"));
   }
 
   /** Test case: tests importOffensiveWordsAction(...). Test data: a sources string. Expected: the sources are saved, the dictionary re-imported and the import result returned. */
@@ -156,16 +141,6 @@ public class AdministrationControllerSettingsTest {
     verify(submissionService).rejudgeSubmissions(List.of(1000L, 1001L));
   }
 
-  /** Stubs the base (8-arg) option update used by updateGeneralSettingsAction. */
-  private void stubBaseOptionsUpdate(boolean successful) {
-    Map<String, Boolean> base = new HashMap<>();
-    base.put("isSuccessful", successful);
-    when(optionService.updateOptions(
-            anyString(), anyString(), anyString(), anyBoolean(), anyString(), anyString(),
-            anyString(), anyString()))
-        .thenReturn(base);
-  }
-
   /** Invokes updateGeneralSettingsAction with mostly-fixed arguments, varying the values under test. */
   private Map<String, Boolean> updateGeneralSettings(
       String contactEmail, int problemsPerPage, int emailDailyLimit) {
@@ -173,16 +148,6 @@ public class AdministrationControllerSettingsTest {
         "VOJ", "desc", "(c)", true, "icp", "police", "ga", "src", contactEmail, false, true, true,
         true, true, 0, 5, 1, 3, problemsPerPage, 100, 100, 50, 50, 50, false, "", "",
         emailDailyLimit, new MockHttpServletRequest());
-  }
-
-  /** Returns the first captured map that contains the given key. */
-  private static Map<String, String> mapContaining(List<Map<String, String>> maps, String key) {
-    for (Map<String, String> map : maps) {
-      if (map.containsKey(key)) {
-        return map;
-      }
-    }
-    return new HashMap<>();
   }
 
   /** The mocked OptionService. */

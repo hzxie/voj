@@ -24,8 +24,6 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.transaction.annotation.Transactional;
 
-import org.verwandlung.voj.web.mapper.OptionMapper;
-import org.verwandlung.voj.web.model.Option;
 
 /**
  * The test class for TurnstileService. The successful-verification path is intentionally not
@@ -66,14 +64,12 @@ public class TurnstileServiceTest {
 
   /** Sets an option value within the current test transaction. */
   private void setOption(String name, String value) {
-    Option option = optionMapper.getOption(name);
-    option.setOptionValue(value);
-    optionMapper.updateOption(option);
+    optionService.updateOptions(java.util.Map.of(name, value));
   }
 
   /** The TurnstileService object under test. */
   @Autowired private TurnstileService turnstileService;
 
-  /** The Mapper used to toggle the Turnstile configuration within the test transaction. */
-  @Autowired private OptionMapper optionMapper;
+  /** The OptionService object, used to change options within the test transaction. */
+  @Autowired private OptionService optionService;
 }

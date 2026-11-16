@@ -48,7 +48,6 @@ import org.springframework.web.servlet.view.RedirectView;
 import org.verwandlung.voj.web.config.SecurityConfig;
 import org.verwandlung.voj.web.exception.ResourceNotFoundException;
 import org.verwandlung.voj.web.model.Language;
-import org.verwandlung.voj.web.model.Option;
 import org.verwandlung.voj.web.model.User;
 import org.verwandlung.voj.web.model.VojUserDetails;
 import org.verwandlung.voj.web.service.ContestService;
@@ -255,8 +254,7 @@ public class AccountsController {
       view = new ModelAndView(redirectView);
     } else {
       List<Language> languages = languageService.getEnabledLanguages();
-      boolean isAllowRegister =
-          optionService.getOption("allowUserRegister").getOptionValue().equals("1");
+      boolean isAllowRegister = optionService.isOptionEnabled("allowUserRegister", true);
 
       view = new ModelAndView("pages/accounts/register");
       view.addObject("languages", languages);
@@ -289,8 +287,7 @@ public class AccountsController {
     if (!turnstileService.verify(captchaResponse, request.getRemoteAddr())) {
       return captchaFailureResult();
     }
-    boolean isAllowRegister =
-        optionService.getOption("allowUserRegister").getOptionValue().equals("1");
+    boolean isAllowRegister = optionService.isOptionEnabled("allowUserRegister", true);
     String userGroupSlug = "users";
     Map<String, Boolean> result =
         userService.createUser(
@@ -298,8 +295,7 @@ public class AccountsController {
 
     if (result.get("isSuccessful")) {
       User user = userService.getUserUsingUsernameOrEmail(username);
-      Option requireVerification = optionService.getOption("requireEmailVerification");
-      if (requireVerification != null && "1".equals(requireVerification.getOptionValue())) {
+      if (userService.isEmailVerificationRequired()) {
         userService.requireEmailVerification(user);
       }
       establishSecurityContext(request, response, user);
