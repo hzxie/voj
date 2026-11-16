@@ -293,9 +293,9 @@ public class JudgingQueueTest {
   /**
    * Test case: a judger whose downloads of the test data all fail with an HTTP 404 that the web
    * application did not mark (its judger.web.baseUrl is wrong). Test data: three pending
-   * submissions in C++. Expected result: the judger takes each of them in turn (each failed judging
-   * sends its submission to the end of the queue), is not ready after as many failed judgings in a
-   * row as allowed, and judges none of them a System Error.
+   * submissions in C++. Expected result: each failed judging releases the first one at its place,
+   * without counting it there, so the judger takes it again; it is not ready after as many failed
+   * judgings in a row as allowed, and neither judges nor counts anything on any submission.
    */
   @Test
   public void testAJudgerWhoseDownloadsFailIsNotReadyWithoutFailingSubmissions()
@@ -317,9 +317,11 @@ public class JudgingQueueTest {
     for (long submissionId : submissionIds) {
       Map<String, Object> row = getRow(submissionId);
       Assertions.assertEquals("PD", row.get("submission_judge_result"), row.toString());
-      Assertions.assertEquals(1, ((Number) row.get("submission_judge_attempts")).intValue());
+      Assertions.assertEquals(0, ((Number) row.get("submission_judge_attempts")).intValue());
       Assertions.assertNull(row.get("submission_claim_token"));
     }
+    Assertions.assertEquals(
+        submissionIds.get(0), applicationDispatcher.claimSubmission(CPP, 60).getSubmissionId());
   }
 
   /**
@@ -344,32 +346,39 @@ public class JudgingQueueTest {
   }
 
   /**
-   * Test case: a judging fails (e.g. the web application cannot be reached from its judger's host).
-   * Test data: a pending submission in C++. Expected result: the submission is released at once:
-   * pending, held by no judging, with the failed judging and its reason counted, and queued anew,
-   * so that a judger takes it again.
+   * Test case: the web application cannot be reached from the judger (e.g. while it restarts), for
+   * longer than as many judgings as a submission may fail. Test data: a pending submission in C++,
+   * queued an hour ago. Expected result: each judging fails and releases the submission at once,
+   * pending and held by no judging, at its place in the queue, without counting anything on it;
+   * once the web application is back, the submission is judged.
    */
   @Test
-  public void testAFailedJudgingReleasesTheSubmission() throws Exception {
+  public void testAnOutageDoesNotCountOnTheSubmission() throws Exception {
     long submissionId = insertPendingSubmission(FIRST_SUBMISSION_ID, 3600);
     when(checkpointStore.sync(any())).thenThrow(new java.io.IOException("Connection refused"));
 
-    Assertions.assertTrue(dispatcher.judgeNextSubmission(CPP));
+    for (int i = 0; i <= Dispatcher.MAX_FAILED_JUDGINGS; ++i) {
+      Assertions.assertTrue(dispatcher.judgeNextSubmission(CPP));
+    }
 
     Map<String, Object> row = getRow(submissionId);
     Assertions.assertEquals("PD", row.get("submission_judge_result"));
-    Assertions.assertEquals(1, ((Number) row.get("submission_judge_attempts")).intValue());
+    Assertions.assertEquals(0, ((Number) row.get("submission_judge_attempts")).intValue());
+    Assertions.assertNull(row.get("submission_judge_failure"));
     Assertions.assertNull(row.get("submission_claim_token"));
     Assertions.assertNull(row.get("submission_lease_expiry_time"));
-    Assertions.assertTrue(((Number) row.get("queued_seconds_ago")).longValue() < 60, row.toString());
+    Assertions.assertTrue(
+        ((Number) row.get("queued_seconds_ago")).longValue() >= 3500, row.toString());
     verify(messageSender, never()).sendMessage(any());
 
-    Submission submission = applicationDispatcher.claimSubmission(CPP, 60);
-    Assertions.assertEquals(submissionId, submission.getSubmissionId());
-    Assertions.assertEquals(1, submission.getFailedJudgings());
-    Assertions.assertEquals(
-        "The judger could not download the test data of the problem.",
-        submission.getLastFailure());
+    org.mockito.Mockito.reset(checkpointStore);
+    when(checkpointStore.getWorkDirectory()).thenReturn(Path.of("/tmp/voj-judging-queue-tests"));
+    when(checkpointStore.sync(any())).thenReturn(Path.of("/tmp/voj-judging-queue-tests/1000"));
+    when(checkpointStore.getCheckpoints(anyLong()))
+        .thenReturn(List.of(new Checkpoint(1000L, 1, true, 100, "input", "output")));
+    when(compiler.getCompileResult(any(), anyString())).thenReturn(compileResult(false));
+    Assertions.assertTrue(dispatcher.judgeNextSubmission(CPP));
+    Assertions.assertEquals("CE", getRow(submissionId).get("submission_judge_result"));
   }
 
   /**

@@ -260,8 +260,8 @@ public class DispatcherTest {
    * Test case: tests the judgeNextSubmission and isReady methods. Test data: every download fails
    * as the judger's settings are wrong: HTTP 404 without the mark of the web application (a wrong
    * judger.web.baseUrl), then HTTP 403 (a wrong judger.apiToken). Expected result: no System Error:
-   * each judging fails, which releases its submission (counted, with the reason) without compiling,
-   * and after as many in a row as allowed the judger is not ready.
+   * each judging fails, which releases its submission at its place without counting it there and
+   * without compiling, and after as many in a row as allowed the judger is not ready.
    */
   @Test
   public void testFailedDownloadsAreFailedJudgings() throws Exception {
@@ -279,8 +279,8 @@ public class DispatcherTest {
 
     Assertions.assertFalse(dispatcher.isReady());
     verify(applicationDispatcher, times(Dispatcher.MAX_FAILURES_IN_A_ROW))
-        .requeueSubmission(
-            argThat(s -> s.getSubmissionId() == 100L), contains("could not download"));
+        .releaseSubmission(argThat(s -> s.getSubmissionId() == 100L));
+    verify(applicationDispatcher, never()).requeueSubmission(any(), anyString());
     verify(applicationDispatcher, never()).onErrorOccurred(any(), anyString());
     verify(compiler, never()).getCompileResult(any(), anyString());
   }
@@ -288,7 +288,8 @@ public class DispatcherTest {
   /**
    * Test case: tests the judgeNextSubmission method. Test data: the test data cannot be downloaded
    * now (e.g. the web application is restarting). Expected result: no System Error: the submission
-   * is released at once, counting the failed judging, and the lease is no longer renewed. (The test data is
+   * is released at once, at its place in the queue and without counting the failed judging on it,
+   * and the lease is no longer renewed. (The test data is
    * synced before the work directory is created, so there is none to remove yet; the removal of one
    * after a failure is tested by testJudgeNextSubmissionCleansUpOnFailure.)
    */
@@ -300,9 +301,8 @@ public class DispatcherTest {
 
     Assertions.assertTrue(dispatcher.judgeNextSubmission(LANGUAGES));
 
-    verify(applicationDispatcher)
-        .requeueSubmission(argThat(s -> s.getClaimToken() == CLAIM_TOKEN), anyString());
-    verify(applicationDispatcher, never()).releaseSubmission(any());
+    verify(applicationDispatcher).releaseSubmission(argThat(s -> s.getClaimToken() == CLAIM_TOKEN));
+    verify(applicationDispatcher, never()).requeueSubmission(any(), anyString());
     verify(applicationDispatcher, never()).onErrorOccurred(any(), anyString());
     verify(preprocessor, never()).createTestCode(any(), anyString());
     verify(compiler, never()).getCompileResult(any(), anyString());
@@ -340,12 +340,35 @@ public class DispatcherTest {
                     MAX_FAILED_JUDGINGS,
                     ApplicationDispatcher.INTERRUPTED_REASON)));
     verify(checkpointStore, never()).sync(any());
-    verify(applicationDispatcher, never()).renewLease(any(), anyLong());
     Assertions.assertEquals(10L, dispatcher.getPause());
 
     Assertions.assertTrue(dispatcher.judgeNextSubmission(LANGUAGES));
     verify(applicationDispatcher).onCompileFinished(any(), any());
     verify(applicationDispatcher, times(1)).onErrorOccurred(any(), anyString());
+  }
+
+  /**
+   * Test case: tests the judgeSubmissions method. Test data: a submission with as many failed
+   * judgings as allowed, whose System Error cannot be recorded as the database is unreachable.
+   * Expected result: a failed judging of the judger (the submission is released without counting
+   * it), not a failure to take a submission: the judger pauses after it.
+   */
+  @Test
+  public void testAGiveUpThatCannotBeRecordedIsAFailedJudging() throws Exception {
+    when(applicationDispatcher.claimSubmission(anyList(), anyLong()))
+        .thenReturn(buildSubmission(MAX_FAILED_JUDGINGS, "The sandbox failed."))
+        .thenReturn(null);
+    org.mockito.Mockito.doThrow(
+            new org.springframework.dao.DataAccessResourceFailureException("database down"))
+        .when(applicationDispatcher)
+        .onErrorOccurred(any(), anyString());
+
+    Assertions.assertTrue(dispatcher.judgeNextSubmission(LANGUAGES));
+
+    verify(applicationDispatcher).releaseSubmission(argThat(s -> s.getClaimToken() == CLAIM_TOKEN));
+    verify(applicationDispatcher, never()).requeueSubmission(any(), anyString());
+    Assertions.assertEquals(10L, dispatcher.getPause());
+    Assertions.assertTrue(dispatcher.isReady());
   }
 
   /**
@@ -376,7 +399,7 @@ public class DispatcherTest {
   /**
    * Test case: tests the judgeNextSubmission method. Test data: this judger cannot read its copy of
    * the expected output. Expected result: neither a Wrong Answer nor a System Error: the judgings
-   * fail, which releases the submission.
+   * fail, which releases the submission without counting them on it.
    */
   @Test
   public void testJudgeNextSubmissionUnreadableAnswerIsAFailedJudging() throws Exception {
@@ -391,8 +414,8 @@ public class DispatcherTest {
     dispatcher.judgeNextSubmission(LANGUAGES);
     dispatcher.judgeNextSubmission(LANGUAGES);
 
-    verify(applicationDispatcher, times(2))
-        .requeueSubmission(any(), contains("could not read its copy"));
+    verify(applicationDispatcher, times(2)).releaseSubmission(any());
+    verify(applicationDispatcher, never()).requeueSubmission(any(), anyString());
     verify(applicationDispatcher, never()).onErrorOccurred(any(), anyString());
     verify(applicationDispatcher, never()).onAllTestPointsFinished(any(), any());
   }
@@ -483,8 +506,9 @@ public class DispatcherTest {
   /**
    * Test case: tests the judgeNextSubmission method. Test data: the database becomes unreachable
    * while the verdict is recorded, then refuses it (a value its column does not take). Expected
-   * result: no System Error is attempted: each judging fails, which releases the submission (or,
-   * if the database is still unreachable, leaves it to the lease, which counts it then).
+   * result: no System Error is attempted: each judging fails, which releases the submission, at its
+   * place for the outage (or, if the database is still unreachable, leaves it to the lease), to the
+   * end of the queue counting the failed judging for the refusal, which the verdict may cause.
    */
   @Test
   public void testAVerdictThatCannotBeRecordedIsAFailedJudging() throws Exception {
@@ -496,16 +520,15 @@ public class DispatcherTest {
             new org.springframework.dao.DataIntegrityViolationException("Data too long"))
         .when(applicationDispatcher)
         .onCompileFinished(any(), any());
-    when(applicationDispatcher.requeueSubmission(any(), anyString()))
-        .thenThrow(new org.springframework.dao.DataAccessResourceFailureException("still down"))
-        .thenReturn(true);
+    when(applicationDispatcher.releaseSubmission(any()))
+        .thenThrow(new org.springframework.dao.DataAccessResourceFailureException("still down"));
 
     Assertions.assertTrue(dispatcher.judgeNextSubmission(LANGUAGES));
     Assertions.assertTrue(dispatcher.judgeNextSubmission(LANGUAGES));
 
     verify(applicationDispatcher, never()).onErrorOccurred(any(), anyString());
-    verify(applicationDispatcher, times(2))
-        .requeueSubmission(any(), contains("could not be recorded"));
+    verify(applicationDispatcher).releaseSubmission(any());
+    verify(applicationDispatcher).requeueSubmission(any(), contains("could not be recorded"));
   }
 
   /**

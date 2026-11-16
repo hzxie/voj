@@ -109,9 +109,10 @@ public class ApplicationDispatcher {
   }
 
   /**
-   * Releases a submission whose judging stops as this judger shuts down, at its place in the
-   * queue, so that another judger takes it at once, without counting a failed judging. A judging
-   * that was superseded meanwhile releases nothing.
+   * Releases a submission at its place in the queue, without counting a failed judging, so that
+   * another judger takes it at once: its judging stops as this judger shuts down, or failed for a
+   * reason of the judger or its environment (see {@code Dispatcher}). A judging that was superseded
+   * meanwhile releases nothing.
    *
    * @param submission - the submission, claimed by {@link #claimSubmission}
    * @return whether the submission was released
@@ -123,8 +124,8 @@ public class ApplicationDispatcher {
   }
 
   /**
-   * Releases a submission whose judging failed (see {@code Dispatcher}), at the end of the queue,
-   * and counts the failed judging, with its reason, which the System Error of the submission tells
+   * Releases a submission whose judging failed in a way it may have caused (see {@code
+   * Dispatcher}), at the end of the queue, and counts the failed judging, with its reason, which the System Error of the submission tells
    * once too many of its judgings failed. A judging that was superseded meanwhile releases nothing.
    *
    * @param submission - the submission, claimed by {@link #claimSubmission}

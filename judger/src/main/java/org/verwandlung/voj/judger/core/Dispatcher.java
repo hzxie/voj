@@ -50,25 +50,30 @@ import org.verwandlung.voj.judger.util.FileSystemUtils;
  *
  * <p>A judging either reaches an outcome or fails. The outcomes are the verdicts of the submission
  * (e.g. a Compile Error or a Wrong Answer), and a System Error when the web application says that
- * its problem has no test data. Every other way a judging can end without an outcome is a failed
- * judging, whoever is to blame (this judger, the web application, the database, the submission
- * itself, or a bug), as the judger cannot tell for sure: its test data cannot be downloaded or
- * read, its source code cannot be written, the sandbox cannot run the compiler or the program, the
- * outcome cannot be recorded, an unexpected exception, or (see {@link Lease}) its judger stopped
- * while judging it. Two budgets, independent of each other, keep failed judgings from going on for
- * ever:
+ * its problem has no test data. Every other way a judging can end is a failed judging (see {@link
+ * FailedJudging}), of one of two kinds:
  *
  * <ul>
- *   <li>The submission's: a failed judging releases it to the end of the queue, so that it holds no
- *       other submission up, and is counted on it, with its reason. The judger that claims it after
- *       {@value #MAX_FAILED_JUDGINGS} failed judgings judges it a System Error that gives the
- *       reason of the last one.
- *   <li>The judger's: after a failed judging it pauses (see {@link #getPause}), and after {@value
- *       #MAX_FAILURES_IN_A_ROW} in a row it is not ready (see {@link #isReady}) until a judging of
- *       it reaches an outcome again. The count lives in memory: a judger that crashes is restarted
- *       by its supervisor, which bounds how often, and the judging it held counts on its
- *       submission once its lease expired.
+ *   <li>One the submission may have caused: the sandbox failed while running its compiler or its
+ *       program, its verdict was refused by the database, an unexpected exception (a bug it may
+ *       trigger), or (see {@link Lease}) its judger stopped while judging it. The submission is
+ *       released to the end of the queue, so that it holds no other submission up, and the failed
+ *       judging is counted on it, with its reason. The judger that claims it after {@value
+ *       #MAX_FAILED_JUDGINGS} failed judgings judges it a System Error that gives the reason of the
+ *       last one.
+ *   <li>One of the judger or its environment: the test data cannot be downloaded or read, the
+ *       source code cannot be written, the database is unreachable. The submission is released at
+ *       its place in the queue without counting anything on it, so that an outage of the web
+ *       application or the database never fails a submission.
  * </ul>
+ *
+ * <p>Either kind counts on the judger: after a failed judging it pauses (see {@link #getPause}),
+ * and after {@value #MAX_FAILURES_IN_A_ROW} in a row it is not ready (see {@link #isReady}) until a
+ * judging of it reaches an outcome again. The web application judges a System Error the pending
+ * submissions in a language that no ready judger supports for a while, which bounds the failures
+ * of the second kind. The count lives in memory: a judger that crashes is restarted by its
+ * supervisor, which bounds how often, and the judging it held counts on its submission once its
+ * lease expired.
  *
  * @author Haozhe Xie
  */
@@ -224,9 +229,8 @@ public class Dispatcher implements DisposableBean {
    * one judging runs at a time.
    *
    * <p>A judging renews its lease in the background while it runs (see {@link Lease}). A judging
-   * that fails releases the submission to the end of the queue and is counted (see {@link
-   * Dispatcher}); a submission with {@value #MAX_FAILED_JUDGINGS} failed judgings is judged a
-   * System Error instead.
+   * that fails releases the submission (see {@link Dispatcher}); a submission with {@value
+   * #MAX_FAILED_JUDGINGS} failed judgings is judged a System Error instead.
    *
    * @param languageIds - the unique identifiers of the languages this judger supports, not empty
    * @return whether a submission was claimed
@@ -262,35 +266,29 @@ public class Dispatcher implements DisposableBean {
    */
   private void judgeSubmission(Submission submission) {
     long submissionId = submission.getSubmissionId();
-    int failedJudgings = submission.getFailedJudgings();
-    if (failedJudgings >= MAX_FAILED_JUDGINGS) {
-      String reason =
-          String.format(
-              GIVEN_UP_REASON,
-              failedJudgings,
-              submission.getLastFailure() == null
-                  ? INTERNAL_ERROR_REASON
-                  : submission.getLastFailure());
-      LOGGER.error(String.format("System Error in submission #%d: %s", submissionId, reason));
-      applicationDispatcher.onErrorOccurred(submission, reason);
-      return;
-    }
-    // In this judger's own directory, so that a judger that died while judging leaves nothing
-    // behind for good (see CheckpointStore#open); unique per judging, in case the directory of a
-    // judging of the same submission could not be removed.
-    String baseDirectory =
-        checkpointStore
-            .getWorkDirectory()
-            .resolve(
-                String.format(
-                    "voj-%d-%s",
-                    submissionId, DigestUtils.getRandomString(12, DigestUtils.Mode.ALPHANUMERIC)))
-            .toString();
+    String baseDirectory = null;
     try (Lease lease = new Lease(submission)) {
+      if (submission.getFailedJudgings() >= MAX_FAILED_JUDGINGS) {
+        // Neither an outcome of this judger's judging nor a failure of it.
+        giveUp(submission);
+        return;
+      }
+      // In this judger's own directory, so that a judger that died while judging leaves nothing
+      // behind for good (see CheckpointStore#open); unique per judging, in case the directory of
+      // a judging of the same submission could not be removed.
+      baseDirectory =
+          checkpointStore
+              .getWorkDirectory()
+              .resolve(
+                  String.format(
+                      "voj-%d-%s",
+                      submissionId,
+                      DigestUtils.getRandomString(12, DigestUtils.Mode.ALPHANUMERIC)))
+              .toString();
       judge(submission, lease, baseDirectory);
       onJudged();
     } catch (FailedJudging ex) {
-      onFailedJudging(submission, ex.getMessage(), ex.getCause());
+      onFailedJudging(submission, ex);
     } catch (Superseded ex) {
       LOGGER.info(
           String.format(
@@ -298,16 +296,41 @@ public class Dispatcher implements DisposableBean {
                   + " meanwhile.",
               submissionId));
     } catch (DataAccessException ex) {
+      String reason = "The outcome of the judging could not be recorded in the database.";
       onFailedJudging(
-          submission, "The outcome of the judging could not be recorded in the database.", ex);
+          submission,
+          ApplicationDispatcher.isUnreachable(ex)
+              ? FailedJudging.ofJudger(reason, ex)
+              : FailedJudging.ofSubmission(reason, ex));
     } catch (Exception ex) {
-      onFailedJudging(submission, INTERNAL_ERROR_REASON, ex);
+      onFailedJudging(submission, FailedJudging.ofSubmission(INTERNAL_ERROR_REASON, ex));
     } finally {
       // Always remove the work directory (source, binary and program output), even when a stage
       // throws; otherwise it lingers in a shared location, readable by later submissions that
       // run as the same sandbox user.
-      cleanUp(baseDirectory);
+      if (baseDirectory != null) {
+        cleanUp(baseDirectory);
+      }
     }
+  }
+
+  /**
+   * Judges a submission with {@value #MAX_FAILED_JUDGINGS} failed judgings a System Error that
+   * gives their number and the reason of the last one.
+   *
+   * @param submission - the submission, claimed by this judger
+   */
+  private void giveUp(Submission submission) {
+    String reason =
+        String.format(
+            GIVEN_UP_REASON,
+            submission.getFailedJudgings(),
+            submission.getLastFailure() == null
+                ? INTERNAL_ERROR_REASON
+                : submission.getLastFailure());
+    LOGGER.error(
+        String.format("System Error in submission #%d: %s", submission.getSubmissionId(), reason));
+    applicationDispatcher.onErrorOccurred(submission, reason);
   }
 
   /**
@@ -331,31 +354,42 @@ public class Dispatcher implements DisposableBean {
   }
 
   /**
-   * Records a failed judging: releases its submission to the end of the queue, counting the
-   * failure on it, and counts it on this judger, which pauses (see {@link #getPause}).
+   * Records a failed judging (see {@link Dispatcher}): releases its submission, to the end of the
+   * queue counting the failure on it if the submission may have caused it, else at its place
+   * without counting anything on it, and counts it on this judger, which pauses (see {@link
+   * #getPause}).
    *
    * @param submission - the submission of the judging
-   * @param reason - why the judging failed, shown to the user if the submission is given up on
-   * @param cause - the underlying exception, or {@code null}
+   * @param failure - why the judging failed
    */
-  private void onFailedJudging(Submission submission, String reason, Throwable cause) {
+  private void onFailedJudging(Submission submission, FailedJudging failure) {
     int failures = ++failuresInARow;
+    long submissionId = submission.getSubmissionId();
     try {
-      applicationDispatcher.requeueSubmission(submission, reason);
+      if (failure.countsOnSubmission()) {
+        applicationDispatcher.requeueSubmission(submission, failure.getMessage());
+      } else {
+        applicationDispatcher.releaseSubmission(submission);
+      }
     } catch (DataAccessException ex) {
       LOGGER.warn(
           String.format(
               "Failed to release submission #%d: it is taken again once the lease of its"
                   + " judging expired.",
-              submission.getSubmissionId()),
+              submissionId),
           ex);
     }
     LOGGER.warn(
-        String.format(
-            "The judging of submission #%d failed (it is judged again later, or a System Error"
-                + " after %d failed judgings): %s",
-            submission.getSubmissionId(), MAX_FAILED_JUDGINGS, reason),
-        cause);
+        failure.countsOnSubmission()
+            ? String.format(
+                "The judging of submission #%d failed (it is judged again later, or a System Error"
+                    + " after %d failed judgings): %s",
+                submissionId, MAX_FAILED_JUDGINGS, failure.getMessage())
+            : String.format(
+                "The judging of submission #%d failed, not for anything of the submission's (it"
+                    + " is judged again later): %s",
+                submissionId, failure.getMessage()),
+        failure.getCause());
     if (failures == MAX_FAILURES_IN_A_ROW) {
       LOGGER.error(
           String.format(
@@ -404,12 +438,13 @@ public class Dispatcher implements DisposableBean {
       onProblemWithoutTestData(submission);
       return;
     } catch (IOException ex) {
-      throw new FailedJudging("The judger could not download the test data of the problem.", ex);
+      throw FailedJudging.ofJudger(
+          "The judger could not download the test data of the problem.", ex);
     }
     try {
       checkpoints = checkpointStore.getCheckpoints(problemId);
     } catch (IOException ex) {
-      throw new FailedJudging(
+      throw FailedJudging.ofJudger(
           "The judger could not read its copy of the test data of the problem.", ex);
     }
     if (checkpoints.isEmpty()) {
@@ -421,7 +456,7 @@ public class Dispatcher implements DisposableBean {
     try {
       preprocessor.createTestCode(submission, workDirectory);
     } catch (Exception ex) {
-      throw new FailedJudging("The judger could not write the source code to its disk.", ex);
+      throw FailedJudging.ofJudger("The judger could not write the source code to its disk.", ex);
     }
     if (compile(submission, lease, workDirectory)) {
       runProgram(submission, lease, checkpoints, checkpointDirectory, workDirectory);
@@ -455,7 +490,8 @@ public class Dispatcher implements DisposableBean {
       throws FailedJudging, Superseded {
     CompileResult result = compiler.getCompileResult(submission, workDirectory);
     if (result.verdict() == Verdict.INTERNAL_ERROR) {
-      throw new FailedJudging("The sandbox of the judger failed to run the compiler.", null);
+      throw FailedJudging.ofSubmission(
+          "The sandbox of the judger failed to run the compiler.", null);
     }
     lease.check();
     applicationDispatcher.onCompileFinished(submission, result);
@@ -621,7 +657,8 @@ public class Dispatcher implements DisposableBean {
     int usedMemory = result.usedMemory();
 
     if (result.verdict() == Verdict.INTERNAL_ERROR) {
-      throw new FailedJudging("The sandbox of the judger failed to run the program.", null);
+      throw FailedJudging.ofSubmission(
+          "The sandbox of the judger failed to run the program.", null);
     }
     if (result.verdict() == Verdict.NORMAL) {
       try {
@@ -630,7 +667,7 @@ public class Dispatcher implements DisposableBean {
       } catch (IOException ex) {
         // The comparator judges an output it may not read (e.g. a planted link) a Wrong Answer
         // itself, so this is the judger failing to read its copy of the test data.
-        throw new FailedJudging(
+        throw FailedJudging.ofJudger(
             "The judger could not read its copy of the test data of the problem.", ex);
       }
     }
@@ -667,14 +704,50 @@ public class Dispatcher implements DisposableBean {
    */
   static final class FailedJudging extends Exception {
     /**
+     * A failed judging that the submission may have caused, which counts on it.
+     *
+     * @param reason - the reason
+     * @param cause - the underlying exception, or {@code null}
+     * @return the failed judging
+     */
+    static FailedJudging ofSubmission(String reason, Throwable cause) {
+      return new FailedJudging(reason, cause, true);
+    }
+
+    /**
+     * A failed judging of the judger or its environment, which does not count on the submission.
+     *
+     * @param reason - the reason
+     * @param cause - the underlying exception, or {@code null}
+     * @return the failed judging
+     */
+    static FailedJudging ofJudger(String reason, Throwable cause) {
+      return new FailedJudging(reason, cause, false);
+    }
+
+    /**
      * Constructor.
      *
      * @param reason - the reason
      * @param cause - the underlying exception, or {@code null}
+     * @param countsOnSubmission - whether it counts on the submission
      */
-    FailedJudging(String reason, Throwable cause) {
+    private FailedJudging(String reason, Throwable cause, boolean countsOnSubmission) {
       super(reason, cause);
+      this.countsOnSubmission = countsOnSubmission;
     }
+
+    /**
+     * Tells whether the failed judging counts on the submission.
+     *
+     * @return whether the submission may have caused it
+     */
+    boolean countsOnSubmission() {
+      return countsOnSubmission;
+    }
+
+    /** Whether the failed judging counts on the submission. */
+    private final boolean countsOnSubmission;
 
     /** The unique serialization identifier. */
     private static final long serialVersionUID = 1L;

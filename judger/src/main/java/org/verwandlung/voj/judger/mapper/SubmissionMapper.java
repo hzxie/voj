@@ -165,9 +165,9 @@ public interface SubmissionMapper {
       @Param("leaseSeconds") long leaseSeconds);
 
   /**
-   * Releases a submission whose judging stops as its judger shuts down: it is pending and held by
-   * no judging again, at its place in the queue, so that the next judger that looks takes it. The
-   * judging is not counted as a failed one.
+   * Releases a submission whose judging stops as its judger shuts down, or failed for a reason of
+   * the judger or its environment: it is pending and held by no judging again, at its place in the
+   * queue, so that the next judger that looks takes it. The judging is not counted as a failed one.
    *
    * @param submissionId - the unique identifier of the submission
    * @param claimToken - the claim token of the judging
@@ -184,8 +184,8 @@ public interface SubmissionMapper {
       @Param("submissionId") long submissionId, @Param("claimToken") long claimToken);
 
   /**
-   * Releases a submission whose judging failed (see {@code Dispatcher}): it is pending and held by
-   * no judging again, at the end of the queue (its queued time is now), so that it holds no other
+   * Releases a submission whose judging failed in a way it may have caused (see {@code
+   * Dispatcher}): it is pending and held by no judging again, at the end of the queue (its queued time is now), so that it holds no other
    * submission up, and the failed judging is counted, with its reason.
    *
    * @param submissionId - the unique identifier of the submission
