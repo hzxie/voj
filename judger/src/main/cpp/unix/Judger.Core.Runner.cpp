@@ -132,6 +132,14 @@ struct ChildPlan {
 };
 
 /**
+ * The limit a program exceeded, reported as "limitExceeded" in the result (the Java side maps it to
+ * the verdict before looking at the exit code).
+ */
+enum LimitExceeded {
+  LIMIT_NONE = 0, LIMIT_TIME = 1, LIMIT_MEMORY = 2, LIMIT_OUTPUT = 3,
+};
+
+/**
  * The steps that prepare the sandbox before exec. A step that fails is reported to the judger, with
  * its errno, through the sync pipe, and the judger refuses the run with an exception (a system
  * error), so that a broken sandbox is never mistaken for a fault of the submission.
@@ -161,6 +169,7 @@ static long long getMonotonicMillis();
 static long long readCpuTimeMillis(pid_t);
 static int  readPeakMemoryKb(pid_t);
 static rlim_t getDataLimit(int memoryLimitKb);
+static bool reachedOutputLimit(int status, const std::string& outputFilePath);
 static void awaitProcessGroupExit(pid_t);
 static void runProgram(const ChildPlan&, int syncWriteFd) __attribute__((noreturn));
 static void reportChildFailure(int syncWriteFd, int step) __attribute__((noreturn));
@@ -193,8 +202,10 @@ static bool markInheritedDescriptorsCloseOnExec();
  * @param  isCompilation   - whether this is a compilation (as opposed to a run of the submission)
  * @param  processLimit    - the maximum number of processes and threads of the sandbox user
  *                           (RLIMIT_NPROC, applied when privileges are dropped; 0 means the default)
- * @return a Map<String, Object> object containing the runtime result; throws a Java exception
- *         instead if the sandbox could not be set up
+ * @return a Map<String, Object> with the CPU time ("usedTime", ms), the peak memory ("usedMemory",
+ *         KB), the exit code ("exitCode", 128 + the signal if killed) and the limit the program
+ *         exceeded ("limitExceeded", see LimitExceeded); throws a Java exception instead if the
+ *         sandbox could not be set up
  */
 JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntimeResult(
     JNIEnv* jniEnv, jobject selfReference, jstring jCommandLine, jstring jUsername,
@@ -310,8 +321,7 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
 
     // The program has been exec'd and is in its own process group (pid), set up before exec.
     std::atomic<bool> finished(false);
-    std::atomic<bool> timedOut(false);
-    std::atomic<bool> memoryExceeded(false);
+    std::atomic<int>  limitExceeded(LIMIT_NONE); // the first limit the watchdog enforced
     std::atomic<int>  peakMemoryKb(0);
     long long startMillis = getMonotonicMillis();
     std::thread watchdog;
@@ -324,7 +334,8 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
                     long long cpuMs  = readCpuTimeMillis(pid);
                     long long wallMs = getMonotonicMillis() - startMillis;
                     if ( cpuMs > timeLimit || (wallBackstopMs > 0 && wallMs > wallBackstopMs) ) {
-                        timedOut.store(true);
+                        int none = LIMIT_NONE;
+                        limitExceeded.compare_exchange_strong(none, LIMIT_TIME);
                         kill(-pid, SIGKILL);
                     }
                 }
@@ -337,7 +348,8 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
                     peakMemoryKb.store(peakKb);
                 }
                 if ( memoryLimit > 0 && peakKb > memoryLimit ) {
-                    memoryExceeded.store(true);
+                    int none = LIMIT_NONE;
+                    limitExceeded.compare_exchange_strong(none, LIMIT_MEMORY);
                     kill(-pid, SIGKILL);
                 }
                 usleep(POLL_INTERVAL_US);
@@ -397,27 +409,28 @@ JNIEXPORT jobject JNICALL Java_org_verwandlung_voj_judger_core_Runner_getRuntime
         exitCode = 128 + WTERMSIG(status);
     }
 
-    // CPU time the watchdog could not see while the run lasted (it polls) still counts: a run
-    // whose total exceeds the limit is a time-out.
-    if ( timeLimit > 0 && usedTime > timeLimit ) {
-        timedOut.store(true);
+    // What the watchdog did not stop still counts, whatever the exit code: CPU time it had not
+    // seen yet (it polls), and the output limit, which the kernel enforces.
+    int limit = limitExceeded.load();
+    if ( limit == LIMIT_NONE && timeLimit > 0 && usedTime > timeLimit ) {
+        limit = LIMIT_TIME;
     }
-
-    // Keep the verdict mapping on the Java side (exitCode / time / memory) consistent.
-    if ( timedOut.load() && usedTime < timeLimit ) {
+    if ( limit == LIMIT_NONE && reachedOutputLimit(status, plan.outputFilePath) ) {
+        limit = LIMIT_OUTPUT;
+    }
+    // A program stopped at a limit is reported as having used at least that much.
+    if ( limit == LIMIT_TIME && usedTime < timeLimit ) {
         usedTime = timeLimit;
     }
-    if ( memoryExceeded.load() && memoryLimit > 0 && usedMemory < memoryLimit ) {
+    if ( limit == LIMIT_MEMORY && memoryLimit > 0 && usedMemory < memoryLimit ) {
         usedMemory = memoryLimit;
-    }
-    if ( (timedOut.load() || memoryExceeded.load()) && exitCode == 0 ) {
-        exitCode = 1; // a killed program must never be reported as a clean exit
     }
 
     JHashMap result;
     result.put("usedTime", usedTime);
     result.put("usedMemory", usedMemory);
     result.put("exitCode", exitCode);
+    result.put("limitExceeded", limit);
     return result.toJObject(jniEnv);
 }
 
@@ -933,6 +946,24 @@ static rlim_t getDataLimit(int memoryLimitKb) {
         }
     }
     return (rlim_t) ((2ULL * (unsigned long long) memoryLimitKb + headroomKb) * 1024);
+}
+
+/**
+ * Checks whether a program ran into the output limit (RLIMIT_FSIZE): either it was killed by the
+ * SIGXFSZ the kernel sends, or - if it ignored the signal, so that the write failed with EFBIG
+ * instead and the program went on to exit some way - its output file has reached the limit.
+ * @param  status         - the program's wait status
+ * @param  outputFilePath - the file that received its standard output (may be empty)
+ * @return whether the output limit was reached
+ */
+static bool reachedOutputLimit(int status, const std::string& outputFilePath) {
+    if ( WIFSIGNALED(status) && WTERMSIG(status) == SIGXFSZ ) {
+        return true;
+    }
+    // lstat: the program may have replaced the file with a link; never follow it.
+    struct stat st;
+    return !outputFilePath.empty() && lstat(outputFilePath.c_str(), &st) == 0 &&
+           S_ISREG(st.st_mode) && (rlim_t) st.st_size >= OUTPUT_FILE_SIZE_LIMIT;
 }
 
 /**

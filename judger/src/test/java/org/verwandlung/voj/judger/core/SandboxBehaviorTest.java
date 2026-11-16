@@ -78,6 +78,32 @@ public class SandboxBehaviorTest {
   }
 
   /**
+   * Test case: a program that burns more CPU time than its limit in four threads, and then exits
+   * with 0. Expected result: Time Limit Exceeded, whether or not it was stopped before it exited.
+   */
+  @Test
+  public void testExitZeroOverTheTimeLimit() throws Exception {
+    Assertions.assertEquals("TLE", judge(900013L, CPU_THREADS_CODE, 1000, 0));
+  }
+
+  /**
+   * Test case: a program that writes far more than the output limit (256 MB) to standard output.
+   * Expected result: Output Limit Exceeded, both when the kernel's SIGXFSZ kills it and when it
+   * ignores the signal, so that its writes fail, and exits with 0.
+   */
+  @Test
+  public void testOutputLimitExceeded() throws Exception {
+    Assumptions.assumeTrue("native".equalsIgnoreCase(sandbox), "This tests the native runner.");
+    try {
+      Assertions.assertEquals("OLE", judge(900014L, OUTPUT_BOMB_CODE, 10000, 262144));
+      Files.deleteIfExists(Path.of(workBaseDirectory, "voj-sandbox-900014", "output.txt"));
+      Assertions.assertEquals("OLE", judge(900014L, OUTPUT_BOMB_CODE, 10000, 262144, "ignore"));
+    } finally {
+      Files.deleteIfExists(Path.of(workBaseDirectory, "voj-sandbox-900014", "output.txt"));
+    }
+  }
+
+  /**
    * Test case: a program that exits with a non-zero status. Expected result: Runtime Error.
    */
   @Test
@@ -365,6 +391,58 @@ public class SandboxBehaviorTest {
           volatile long counter = 0;
           while (true) {
               counter = counter + 1;
+          }
+          return 0;
+      }
+      """;
+
+  /** A program whose four threads burn 1.5 s of CPU time in total, after which it exits with 0. */
+  private static final String CPU_THREADS_CODE =
+      """
+      #include <ctime>
+      #include <thread>
+      #include <vector>
+
+      int main() {
+          std::vector<std::thread> threads;
+          for (int i = 0; i < 4; ++i) {
+              threads.emplace_back([] {
+                  timespec now;
+                  do {
+                      clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &now);
+                  } while (now.tv_sec + now.tv_nsec / 1e9 < 1.5);
+              });
+          }
+          for (std::thread& thread : threads) {
+              thread.join();
+          }
+          return 0;
+      }
+      """;
+
+  /**
+   * A program that writes 512 MB to standard output. Given "ignore" on its input, it ignores
+   * SIGXFSZ and exits with 0 as soon as a write fails.
+   */
+  private static final String OUTPUT_BOMB_CODE =
+      """
+      #include <csignal>
+      #include <cstdio>
+      #include <cstring>
+      #include <unistd.h>
+
+      static char block[1 << 20];
+
+      int main() {
+          char mode[16] = "";
+          if (std::scanf("%15s", mode) == 1 && std::strcmp(mode, "ignore") == 0) {
+              std::signal(SIGXFSZ, SIG_IGN);
+          }
+          std::memset(block, 'x', sizeof(block));
+          for (int i = 0; i < 512; ++i) {
+              if (write(STDOUT_FILENO, block, sizeof(block)) < 0) {
+                  return 0;
+              }
           }
           return 0;
       }

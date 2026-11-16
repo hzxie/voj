@@ -110,15 +110,7 @@ public class Runner implements SandboxRunner {
               memoryLimitKb,
               isCompilation,
               isCompilation ? compileProcessLimit : processLimit);
-      if (nativeResult == null) {
-        return RunResult.internalError();
-      }
-
-      int exitCode = (Integer) nativeResult.get("exitCode");
-      int usedTime = (Integer) nativeResult.get("usedTime");
-      int usedMemory = (Integer) nativeResult.get("usedMemory");
-      Verdict verdict = inferVerdict(exitCode, usedTime, usedMemory, timeLimitMs, memoryLimitKb);
-      return new RunResult(verdict, usedTime, usedMemory, exitCode);
+      return toRunResult(nativeResult, timeLimitMs, memoryLimitKb);
     } catch (Throwable ex) {
       // The native runner throws when the sandbox cannot be set up (no sandbox user, a failed
       // privilege drop or seccomp filter, an executable that cannot be run, ...). That is a system
@@ -130,11 +122,42 @@ public class Runner implements SandboxRunner {
   }
 
   /**
-   * Infers the verdict from the legacy runner's output. The native runner only reports an exit code
-   * and the measured time/memory, so this reproduces the historical heuristic: an exit code of 0 is
-   * a normal run; otherwise we attribute the failure to the limit that was reached, falling back to
-   * a runtime error.
+   * Converts the native runner's result map into a run result.
    *
+   * @param nativeResult - the map returned by {@link #getRuntimeResult}
+   * @param timeLimitMs - the time limit (ms, 0 means no limit)
+   * @param memoryLimitKb - the memory limit (KB, 0 means no limit)
+   * @return the run result ({@link Verdict#INTERNAL_ERROR} for a missing map)
+   */
+  static RunResult toRunResult(
+      Map<String, Object> nativeResult, int timeLimitMs, int memoryLimitKb) {
+    if (nativeResult == null) {
+      return RunResult.internalError();
+    }
+    int exitCode = (Integer) nativeResult.get("exitCode");
+    int usedTime = (Integer) nativeResult.get("usedTime");
+    int usedMemory = (Integer) nativeResult.get("usedMemory");
+    // Absent from a native library that predates it.
+    Object limitExceeded = nativeResult.get("limitExceeded");
+    Verdict verdict =
+        inferVerdict(
+            limitExceeded == null ? LIMIT_NONE : (Integer) limitExceeded,
+            exitCode,
+            usedTime,
+            usedMemory,
+            timeLimitMs,
+            memoryLimitKb);
+    return new RunResult(verdict, usedTime, usedMemory, exitCode);
+  }
+
+  /**
+   * Infers the verdict from the native runner's output. The limit the runner reports the program
+   * exceeded comes first. Then, whatever the exit code, a run that used more than a limit is never
+   * a normal one: the runners poll, so a program can finish just past a limit before it is
+   * stopped. Otherwise an exit code of 0 is a normal run, and a failed run is attributed to the
+   * limit it reached, falling back to a runtime error.
+   *
+   * @param limitExceeded - the limit the native runner reports exceeded (LIMIT_*)
    * @param exitCode - the raw exit code reported by the native runner
    * @param usedTime - the measured time used (ms)
    * @param usedMemory - the measured memory used (KB)
@@ -142,8 +165,29 @@ public class Runner implements SandboxRunner {
    * @param memoryLimitKb - the memory limit (KB, 0 means no limit)
    * @return the inferred verdict
    */
-  private Verdict inferVerdict(
-      int exitCode, int usedTime, int usedMemory, int timeLimitMs, int memoryLimitKb) {
+  private static Verdict inferVerdict(
+      int limitExceeded,
+      int exitCode,
+      int usedTime,
+      int usedMemory,
+      int timeLimitMs,
+      int memoryLimitKb) {
+    switch (limitExceeded) {
+      case LIMIT_TIME:
+        return Verdict.TIME_LIMIT_EXCEEDED;
+      case LIMIT_MEMORY:
+        return Verdict.MEMORY_LIMIT_EXCEEDED;
+      case LIMIT_OUTPUT:
+        return Verdict.OUTPUT_LIMIT_EXCEEDED;
+      default:
+        break;
+    }
+    if (timeLimitMs != 0 && usedTime > timeLimitMs) {
+      return Verdict.TIME_LIMIT_EXCEEDED;
+    }
+    if (memoryLimitKb != 0 && usedMemory > memoryLimitKb) {
+      return Verdict.MEMORY_LIMIT_EXCEEDED;
+    }
     if (exitCode == 0) {
       return Verdict.NORMAL;
     }
@@ -211,6 +255,18 @@ public class Runner implements SandboxRunner {
    */
   @Value("${judger.compileProcessLimit:1024}")
   private int compileProcessLimit;
+
+  /** The "limitExceeded" values of the native result: no limit was exceeded. */
+  static final int LIMIT_NONE = 0;
+
+  /** The "limitExceeded" values of the native result: the time limit. */
+  static final int LIMIT_TIME = 1;
+
+  /** The "limitExceeded" values of the native result: the memory limit. */
+  static final int LIMIT_MEMORY = 2;
+
+  /** The "limitExceeded" values of the native result: the output limit. */
+  static final int LIMIT_OUTPUT = 3;
 
   /** The logger. */
   private static final Logger LOGGER = LogManager.getLogger(Runner.class);
