@@ -86,11 +86,11 @@ public class ProblemTagMapperTest {
     Assertions.assertEquals(0, problemTags.size());
   }
 
-  /** Test case: tests the getProblemTagsOfProblems() method. Test data: a problem ID range from 1000 to 1002. Expected: all the problem tag information (4 records in total). */
+  /** Test case: tests the getProblemTagsOfProblems() method. Test data: the problem IDs 1000 to 1002. Expected: all the problem tag information (4 records in total). */
   @Test
   public void testGetProblemTagsOfProblemsFrom1000WithLimit3() {
     List<ProblemTagRelationship> problemTagRelationships =
-        problemTagMapper.getProblemTagsOfProblems(1000, 1002);
+        problemTagMapper.getProblemTagsOfProblems(java.util.List.of(1000L, 1001L, 1002L));
     Assertions.assertEquals(4, problemTagRelationships.size());
 
     ProblemTagRelationship ptr = problemTagRelationships.get(1);
@@ -98,11 +98,11 @@ public class ProblemTagMapperTest {
     Assertions.assertEquals(1, ptr.getProblemTagId());
   }
 
-  /** Test case: tests the getProblemTagsOfProblems() method. Test data: a problem ID range from 999 to 1000. Expected: all the problem tag information (1 record in total). */
+  /** Test case: tests the getProblemTagsOfProblems() method. Test data: the problem IDs 999 to 1000. Expected: all the problem tag information (1 record in total). */
   @Test
   public void testGetProblemTagsOfProblemsFrom999WithLimit2() {
     List<ProblemTagRelationship> problemTagRelationships =
-        problemTagMapper.getProblemTagsOfProblems(999, 1000);
+        problemTagMapper.getProblemTagsOfProblems(java.util.List.of(999L, 1000L));
     Assertions.assertEquals(1, problemTagRelationships.size());
 
     ProblemTagRelationship ptr = problemTagRelationships.get(0);
@@ -110,11 +110,11 @@ public class ProblemTagMapperTest {
     Assertions.assertEquals(1, ptr.getProblemTagId());
   }
 
-  /** Test case: tests the getProblemTagsOfProblems() method. Test data: a problem ID range from 999 to 999. Expected: all the problem tag information (0 records in total). */
+  /** Test case: tests the getProblemTagsOfProblems() method. Test data: the problem IDs 999 to 999. Expected: all the problem tag information (0 records in total). */
   @Test
   public void testGetProblemTagsOfProblemsFrom999WithLimit1() {
     List<ProblemTagRelationship> problemTagRelationships =
-        problemTagMapper.getProblemTagsOfProblems(999, 999);
+        problemTagMapper.getProblemTagsOfProblems(java.util.List.of(999L));
     Assertions.assertEquals(0, problemTagRelationships.size());
   }
 
@@ -135,11 +135,11 @@ public class ProblemTagMapperTest {
     Assertions.assertNull(problemTag);
   }
 
-  /** Test case: tests the getProblemTagsOfProblems(long, long) method. Test data: problem IDs 1000-1010. Expected: the problem tags of the corresponding problems. */
+  /** Test case: tests the getProblemTagsOfProblems(List) method. Test data: problem IDs 1000-1010. Expected: the problem tags of the corresponding problems. */
   @Test
   public void testGetProblemTagsOfProblems() {
     List<ProblemTagRelationship> problemTagRelationships =
-        problemTagMapper.getProblemTagsOfProblems(1000, 1010);
+        problemTagMapper.getProblemTagsOfProblems(java.util.List.of(1000L, 1001L, 1002L, 1003L, 1004L, 1005L, 1006L, 1007L, 1008L, 1009L, 1010L));
     Assertions.assertEquals(5, problemTagRelationships.size());
 
     ProblemTagRelationship ptr = problemTagRelationships.get(0);

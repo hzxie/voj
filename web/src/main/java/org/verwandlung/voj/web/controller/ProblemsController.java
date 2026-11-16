@@ -44,6 +44,7 @@ import org.verwandlung.voj.web.service.ProblemService;
 import org.verwandlung.voj.web.service.SubmissionService;
 import org.verwandlung.voj.web.util.HttpSessionParser;
 import org.verwandlung.voj.web.util.LogSanitizer;
+import org.verwandlung.voj.web.util.Pagination;
 import org.verwandlung.voj.web.util.SeoUtils;
 
 /**
@@ -84,15 +85,24 @@ public class ProblemsController {
 
     final int NUMBER_OF_PROBLEMS_PER_PAGE =
         optionService.getIntOption("problemsPerPage", DEFAULT_NUMBER_OF_PROBLEMS_PER_PAGE);
-    long totalProblems =
-        problemService.getNumberOfProblemsByPage(field, query, problemDifficultySlug, true);
+    ProblemFilter filter = new ProblemFilter().publicOnly().withDifficulty(problemDifficultySlug);
+    if ("id".equals(field)) {
+      filter.withProblemIdQuery(query);
+    } else if ("tag".equals(field)) {
+      filter.withTag(query);
+    } else {
+      filter.withKeyword(query);
+    }
+    long totalProblems = problemService.getNumberOfProblems(filter);
     long totalPages = (totalProblems + NUMBER_OF_PROBLEMS_PER_PAGE - 1) / NUMBER_OF_PROBLEMS_PER_PAGE;
     if (totalPages > 0 && pageNumber > totalPages) {
       pageNumber = (int) totalPages;
     }
     List<Problem> problems =
-        problemService.getProblemsByPage(
-            pageNumber, NUMBER_OF_PROBLEMS_PER_PAGE, field, query, problemDifficultySlug, true);
+        problemService.getProblems(
+            filter,
+            Pagination.getOffset(pageNumber, NUMBER_OF_PROBLEMS_PER_PAGE),
+            NUMBER_OF_PROBLEMS_PER_PAGE);
 
     ModelAndView view = new ModelAndView("pages/problems/problems");
     view.addObject("problems", problems)
@@ -106,26 +116,16 @@ public class ProblemsController {
         .addObject("problemDifficulties", problemService.getProblemDifficulties())
         .addObject("selectedProblemDifficulty", problemDifficultySlug);
 
-    // Tags + (when logged in) solved status are keyed by problem id; the page's
-    // problems may not be a contiguous id range once filtered, so bound the
-    // lookups by the min/max id actually shown.
-    if (problems != null && !problems.isEmpty()) {
+    view.addObject("problemTagsOfProblems", problemService.getProblemTagsOfProblems(problems));
+    if (!problems.isEmpty() && HttpSessionParser.isLoggedIn()) {
+      // SubmissionService looks the solved status up by an identifier range; the page's problems
+      // are ordered by identifier, so the range spans them.
       long minProblemId = problems.get(0).getProblemId();
-      long maxProblemId = problems.get(0).getProblemId();
-      for (Problem problem : problems) {
-        minProblemId = Math.min(minProblemId, problem.getProblemId());
-        maxProblemId = Math.max(maxProblemId, problem.getProblemId());
-      }
+      long maxProblemId = problems.get(problems.size() - 1).getProblemId();
+      long userId = HttpSessionParser.getCurrentUser().getUid();
       view.addObject(
-          "problemTagsOfProblems",
-          problemService.getProblemTagsOfProblems(minProblemId, maxProblemId));
-
-      if (HttpSessionParser.isLoggedIn()) {
-        long userId = HttpSessionParser.getCurrentUser().getUid();
-        Map<Long, Submission> submissionOfProblems =
-            submissionService.getSubmissionOfProblems(userId, minProblemId, maxProblemId + 1);
-        view.addObject("submissionOfProblems", submissionOfProblems);
-      }
+          "submissionOfProblems",
+          submissionService.getSubmissionOfProblems(userId, minProblemId, maxProblemId + 1));
     }
     return view;
   }

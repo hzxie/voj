@@ -339,9 +339,7 @@ class ViewRenderSmokeTest {
   @Test
   void newContestViewRenders() throws Exception {
     authenticateAdmin();
-    when(problemService.getProblemsUsingFilters(
-            anyLong(), anyString(), anyString(), anyString(), anyString(), anyBoolean(), anyInt()))
-        .thenReturn(List.of());
+    when(problemService.getProblems(any(), anyLong(), anyInt())).thenReturn(List.of());
     mockMvc.perform(getWithCsrf("/administration/new-contest")).andExpect(status().isOk());
   }
 

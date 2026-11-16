@@ -56,11 +56,11 @@ public class ProblemMapperTest {
   }
 
   /**
-   * Test case: tests the getNumberOfProblemsUsingFilters(String, int, long, int, boolean) method. Test data: N/a. Expected: the number of public problems in the table.
+   * Test case: tests the getNumberOfProblemsUsingFilters(String, String, int, long, int, boolean) method. Test data: N/a. Expected: the number of public problems in the table.
    */
   @Test
   public void testGetNumberOfPublicProblems() {
-    long totalProblems = problemMapper.getNumberOfProblemsUsingFilters(null, 0, 0, 0, true);
+    long totalProblems = problemMapper.getNumberOfProblemsUsingFilters(null, null, 0, 0, 0, true);
     Assertions.assertEquals(3, totalProblems);
   }
 
@@ -90,7 +90,7 @@ public class ProblemMapperTest {
    */
   @Test
   public void testGetProblemsFrom1000WithLimit10() {
-    List<Problem> problems = problemMapper.getProblemsUsingFilters(null, 0, 0, 0, true, 0, 10);
+    List<Problem> problems = problemMapper.getProblemsUsingFilters(null, null, 0, 0, 0, true, 0, 10);
     Assertions.assertEquals(3, problems.size());
 
     Problem firstProblem = problems.get(0);
@@ -110,7 +110,7 @@ public class ProblemMapperTest {
    */
   @Test
   public void testGetProblemsFrom1001WithLimit1() {
-    List<Problem> problems = problemMapper.getProblemsUsingFilters("", 0, 0, 0, true, 1, 1);
+    List<Problem> problems = problemMapper.getProblemsUsingFilters("", null, 0, 0, 0, true, 1, 1);
     Assertions.assertEquals(1, problems.size());
 
     Problem firstProblem = problems.get(0);
@@ -127,7 +127,7 @@ public class ProblemMapperTest {
    */
   @Test
   public void testGetProblemsFrom1010WithLimit10() {
-    List<Problem> problems = problemMapper.getProblemsUsingFilters(null, 0, 0, 0, true, 10, 10);
+    List<Problem> problems = problemMapper.getProblemsUsingFilters(null, null, 0, 0, 0, true, 10, 10);
     Assertions.assertEquals(0, problems.size());
   }
 

@@ -43,6 +43,7 @@ import org.verwandlung.voj.web.interceptor.AdministrationSection;
 import org.verwandlung.voj.web.model.Problem;
 import org.verwandlung.voj.web.model.ProblemCategory;
 import org.verwandlung.voj.web.model.ProblemDifficulty;
+import org.verwandlung.voj.web.model.ProblemFilter;
 import org.verwandlung.voj.web.model.ProblemTag;
 import org.verwandlung.voj.web.service.OptionService;
 import org.verwandlung.voj.web.service.ProblemService;
@@ -81,38 +82,22 @@ public class ProblemAdministrationController {
     final int NUMBER_OF_PROBLEMS_PER_PAGE = optionService.getIntOption("problemsPerPage", 100);
     List<ProblemCategory> problemCategories = problemService.getProblemCategories();
     List<ProblemDifficulty> problemDifficulties = problemService.getProblemDifficulties();
-    long totalProblems =
-        problemService.getNumberOfProblemsUsingFilters(
-            keyword, problemCategorySlug, problemTagSlug, problemDifficultySlug, false);
+    ProblemFilter filter =
+        new ProblemFilter()
+            .withKeyword(keyword)
+            .withCategory(problemCategorySlug)
+            .withTag(problemTagSlug)
+            .withDifficulty(problemDifficultySlug);
+    long totalProblems = problemService.getNumberOfProblems(filter);
 
     long offset = Pagination.getOffset(pageNumber, NUMBER_OF_PROBLEMS_PER_PAGE);
 
-    List<Problem> problems =
-        problemService.getProblemsUsingFilters(
-            offset,
-            keyword,
-            problemCategorySlug,
-            problemTagSlug,
-            problemDifficultySlug,
-            false,
-            NUMBER_OF_PROBLEMS_PER_PAGE);
+    List<Problem> problems = problemService.getProblems(filter, offset, NUMBER_OF_PROBLEMS_PER_PAGE);
 
-    // The page's problems are no longer a contiguous id range, so bound the
-    // relationship lookups by the min/max id actually shown.
-    Map<Long, List<ProblemCategory>> problemCategoryRelationships = new HashMap<>();
-    Map<Long, List<ProblemTag>> problemTagRelationships = new HashMap<>();
-    if (!problems.isEmpty()) {
-      long minProblemId = problems.get(0).getProblemId();
-      long maxProblemId = problems.get(0).getProblemId();
-      for (Problem problem : problems) {
-        minProblemId = Math.min(minProblemId, problem.getProblemId());
-        maxProblemId = Math.max(maxProblemId, problem.getProblemId());
-      }
-      problemCategoryRelationships =
-          problemService.getProblemCategoriesOfProblems(minProblemId, maxProblemId);
-      problemTagRelationships =
-          problemService.getProblemTagsOfProblems(minProblemId, maxProblemId);
-    }
+    Map<Long, List<ProblemCategory>> problemCategoryRelationships =
+        problemService.getProblemCategoriesOfProblems(problems);
+    Map<Long, List<ProblemTag>> problemTagRelationships =
+        problemService.getProblemTagsOfProblems(problems);
 
     ModelAndView view = new ModelAndView("pages/administration/all-problems");
     view.addObject("problemCategories", problemCategories);
@@ -448,8 +433,8 @@ public class ProblemAdministrationController {
     Map<Integer, Long> problemCategoryProblems = new HashMap<>();
     for (ProblemCategory problemCategory : problemCategories) {
       long numberOfProblems =
-          problemService.getNumberOfProblemsUsingFilters(
-              "", problemCategory.getProblemCategorySlug(), "", false);
+          problemService.getNumberOfProblems(
+              new ProblemFilter().withCategory(problemCategory.getProblemCategorySlug()));
       problemCategoryProblems.put(problemCategory.getProblemCategoryId(), numberOfProblems);
     }
 

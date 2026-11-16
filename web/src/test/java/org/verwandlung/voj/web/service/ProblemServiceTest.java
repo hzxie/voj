@@ -36,6 +36,7 @@ import org.verwandlung.voj.web.mapper.SubmissionMapper;
 import org.verwandlung.voj.web.model.Checkpoint;
 import org.verwandlung.voj.web.model.Problem;
 import org.verwandlung.voj.web.model.ProblemDifficulty;
+import org.verwandlung.voj.web.model.ProblemFilter;
 import org.verwandlung.voj.web.model.ProblemCategory;
 import org.verwandlung.voj.web.model.ProblemTag;
 
@@ -69,10 +70,10 @@ public class ProblemServiceTest {
     Assertions.assertNull(problemService.getProblem(0));
   }
 
-  /** Test case: tests the getProblemsUsingFilters(...) method. Test data: without filter conditions. Expected: all four problems, including the hidden problem 1002. */
+  /** Test case: tests the getProblems(...) method. Test data: without filter conditions. Expected: all four problems, including the hidden problem 1002. */
   @Test
   public void testGetProblemsUsingFiltersWithoutFilters() {
-    List<Problem> problems = problemService.getProblemsUsingFilters(0, "", "", "", "", false, 100);
+    List<Problem> problems = problemService.getProblems(new ProblemFilter(), 0, 100);
     Assertions.assertEquals(4, problems.size());
 
     // Unlike the public-only query, the unfiltered query must surface the hidden
@@ -81,10 +82,10 @@ public class ProblemServiceTest {
         problemIdsOf(problems).contains(1002L), "the unfiltered list must include the hidden problem");
   }
 
-  /** Test case: tests the getProblemsUsingFilters(...) method. Test data: public problems only. Expected: the three published problems, with the hidden problem 1002 excluded. */
+  /** Test case: tests the getProblems(...) method. Test data: public problems only. Expected: the three published problems, with the hidden problem 1002 excluded. */
   @Test
   public void testGetProblemsUsingFiltersPublicOnly() {
-    List<Problem> problems = problemService.getProblemsUsingFilters(0, "", "", "", "", true, 100);
+    List<Problem> problems = problemService.getProblems(new ProblemFilter().publicOnly(), 0, 100);
     Assertions.assertEquals(3, problems.size());
 
     // The point of the public-only filter is that no hidden problem can leak; a
@@ -106,47 +107,47 @@ public class ProblemServiceTest {
     return ids;
   }
 
-  /** Test case: tests the getProblemsUsingFilters(...) method. Test data: filtering by category. Expected: only the problems under that category. */
+  /** Test case: tests the getProblems(...) method. Test data: filtering by category. Expected: only the problems under that category. */
   @Test
   public void testGetProblemsUsingFiltersByCategory() {
     List<Problem> problems =
-        problemService.getProblemsUsingFilters(0, "", "dynamic-programming", "", "", false, 100);
+        problemService.getProblems(new ProblemFilter().withCategory("dynamic-programming"), 0, 100);
     // Only problem 1000 belongs to the dynamic-programming category.
     Assertions.assertEquals(1, problems.size());
     Assertions.assertEquals(1000, problems.get(0).getProblemId());
   }
 
-  /** Test case: tests getProblemsUsingFilters(...) and getNumberOfProblemsUsingFilters(...) with a tag filter. Test data: the "greedy" tag (problems 1000, 1001 and the hidden 1002). Expected: the count agrees with the listed problems. */
+  /** Test case: tests getProblems(...) and getNumberOfProblems(ProblemFilter) with a tag filter. Test data: the "greedy" tag (problems 1000, 1001 and the hidden 1002). Expected: the count agrees with the listed problems. */
   @Test
   public void testGetNumberOfProblemsUsingFiltersByTagMatchesList() {
     List<Problem> problems =
-        problemService.getProblemsUsingFilters(0, "", "", "greedy", "", false, 100);
+        problemService.getProblems(new ProblemFilter().withTag("greedy"), 0, 100);
     Assertions.assertEquals(java.util.Set.of(1000L, 1001L, 1002L), problemIdsOf(problems));
     Assertions.assertEquals(
-        3, problemService.getNumberOfProblemsUsingFilters("", "", "greedy", "", false));
+        3, problemService.getNumberOfProblems(new ProblemFilter().withTag("greedy")));
     Assertions.assertEquals(
-        2, problemService.getNumberOfProblemsUsingFilters("", "", "greedy", "", true));
+        2, problemService.getNumberOfProblems(new ProblemFilter().publicOnly().withTag("greedy")));
   }
 
-  /** Test case: tests getProblemsUsingFilters(...) and getNumberOfProblemsUsingFilters(...) with unknown slugs. Test data: a category slug and a tag slug that do not exist. Expected: no problems instead of every problem. */
+  /** Test case: tests getProblems(...) and getNumberOfProblems(ProblemFilter) with unknown slugs. Test data: a category slug and a tag slug that do not exist. Expected: no problems instead of every problem. */
   @Test
   public void testGetProblemsUsingFiltersWithUnknownSlugsMatchesNothing() {
     Assertions.assertTrue(
-        problemService.getProblemsUsingFilters(0, "", "no-such-category", "", "", false, 100)
+        problemService.getProblems(new ProblemFilter().withCategory("no-such-category"), 0, 100)
             .isEmpty());
     Assertions.assertTrue(
-        problemService.getProblemsUsingFilters(0, "", "", "no-such-tag", "", false, 100).isEmpty());
+        problemService.getProblems(new ProblemFilter().withTag("no-such-tag"), 0, 100).isEmpty());
     Assertions.assertEquals(
-        0, problemService.getNumberOfProblemsUsingFilters("", "no-such-category", "", false));
+        0, problemService.getNumberOfProblems(new ProblemFilter().withCategory("no-such-category")));
     Assertions.assertEquals(
-        0, problemService.getNumberOfProblemsUsingFilters("", "", "no-such-tag", "", false));
+        0, problemService.getNumberOfProblems(new ProblemFilter().withTag("no-such-tag")));
   }
 
-  /** Test case: tests the getNumberOfProblemsUsingFilters(...) method. Test data: all / public only. Expected: the corresponding count. */
+  /** Test case: tests the getNumberOfProblems(ProblemFilter) method. Test data: all / public only. Expected: the corresponding count. */
   @Test
   public void testGetNumberOfProblemsUsingFilters() {
-    Assertions.assertEquals(4, problemService.getNumberOfProblemsUsingFilters("", "", "", false));
-    Assertions.assertEquals(3, problemService.getNumberOfProblemsUsingFilters("", "", "", true));
+    Assertions.assertEquals(4, problemService.getNumberOfProblems(new ProblemFilter()));
+    Assertions.assertEquals(3, problemService.getNumberOfProblems(new ProblemFilter().publicOnly()));
   }
 
   /** Test case: tests the getProblemCategories() method. Test data: N/a. Expected: all problem categories. */
@@ -173,11 +174,23 @@ public class ProblemServiceTest {
     Assertions.assertEquals(2, categories.size());
   }
 
-  /** Test case: tests the getProblemCategoriesOfProblems(long, long) method. Test data: the problem range [1000, 1003]. Expected: the categories indexed by problem. */
+  /** Test case: tests getProblems(...) and getNumberOfProblems(ProblemFilter) with the public problem set's filters. Test data: the identifier digits "100" and the tag name "Greedy". Expected: the matching published problems, counted alike. */
+  @Test
+  public void testGetProblemsByIdAndTagName() {
+    ProblemFilter byId = new ProblemFilter().publicOnly().withProblemIdQuery("100");
+    Assertions.assertEquals(3, problemService.getProblems(byId, 0, 100).size());
+    Assertions.assertEquals(3, problemService.getNumberOfProblems(byId));
+    ProblemFilter byTag = new ProblemFilter().publicOnly().withTag("Greedy");
+    Assertions.assertEquals(2, problemService.getProblems(byTag, 0, 100).size());
+    Assertions.assertEquals(2, problemService.getNumberOfProblems(byTag));
+  }
+
+  /** Test case: tests the getProblemCategoriesOfProblems(List) method. Test data: all the problems. Expected: the categories indexed by problem. */
   @Test
   public void testGetProblemCategoriesOfProblems() {
     Map<Long, List<ProblemCategory>> categories =
-        problemService.getProblemCategoriesOfProblems(1000, 1003);
+        problemService.getProblemCategoriesOfProblems(
+            problemService.getProblems(new ProblemFilter(), 0, 100));
     Assertions.assertEquals(2, categories.get(1000L).size());
   }
 
@@ -188,10 +201,12 @@ public class ProblemServiceTest {
     Assertions.assertEquals(2, tags.size());
   }
 
-  /** Test case: tests the getProblemTagsOfProblems(long, long) method. Test data: the problem range [1000, 1003]. Expected: the tags indexed by problem. */
+  /** Test case: tests the getProblemTagsOfProblems(List) method. Test data: all the problems. Expected: the tags indexed by problem. */
   @Test
   public void testGetProblemTagsOfProblems() {
-    Map<Long, List<ProblemTag>> tags = problemService.getProblemTagsOfProblems(1000, 1003);
+    Map<Long, List<ProblemTag>> tags =
+        problemService.getProblemTagsOfProblems(
+            problemService.getProblems(new ProblemFilter(), 0, 100));
     Assertions.assertEquals(2, tags.get(1001L).size());
   }
 
@@ -378,7 +393,7 @@ public class ProblemServiceTest {
   }
 
   /**
-   * Test case: tests the submission counts of a published problem (getProblem, getProblemsByPage)
+   * Test case: tests the submission counts of a published problem (getProblem, getProblems)
    * while a contest over it runs, and after it ends. Test data: problem 1001 (one accepted
    * submission outside contests) and a running contest in which it gets one more accepted
    * submission. Expected: the counts leave the contest submission out until the contest ends.
@@ -402,7 +417,7 @@ public class ProblemServiceTest {
     Problem problem = problemService.getProblem(1001);
     Assertions.assertEquals(1, problem.getTotalSubmission());
     Assertions.assertEquals(1, problem.getAcceptedSubmission());
-    Problem listed = findProblem(problemService.getProblemsByPage(1, 100, "title", null, "", true));
+    Problem listed = findProblem(problemService.getProblems(new ProblemFilter().publicOnly(), 0, 100));
     Assertions.assertEquals(1, listed.getTotalSubmission());
     Assertions.assertEquals(1, listed.getAcceptedSubmission());
 
@@ -415,7 +430,7 @@ public class ProblemServiceTest {
     problem = problemService.getProblem(1001);
     Assertions.assertEquals(2, problem.getTotalSubmission());
     Assertions.assertEquals(2, problem.getAcceptedSubmission());
-    listed = findProblem(problemService.getProblemsByPage(1, 100, "title", null, "", true));
+    listed = findProblem(problemService.getProblems(new ProblemFilter().publicOnly(), 0, 100));
     Assertions.assertEquals(2, listed.getAcceptedSubmission());
   }
 

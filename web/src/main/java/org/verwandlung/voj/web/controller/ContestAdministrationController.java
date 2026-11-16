@@ -43,6 +43,7 @@ import org.verwandlung.voj.web.interceptor.AdministrationSection;
 import org.verwandlung.voj.web.model.Contest;
 import org.verwandlung.voj.web.model.Problem;
 import org.verwandlung.voj.web.model.ProblemDifficulty;
+import org.verwandlung.voj.web.model.ProblemFilter;
 import org.verwandlung.voj.web.model.User;
 import org.verwandlung.voj.web.service.ContestService;
 import org.verwandlung.voj.web.service.OptionService;
@@ -124,7 +125,7 @@ public class ContestAdministrationController {
    */
   private List<Map<String, Object>> getProblemsForPicker() {
     List<Problem> problems =
-        problemService.getProblemsUsingFilters(0, "", "", "", "", false, Integer.MAX_VALUE);
+        problemService.getProblems(new ProblemFilter(), 0, Integer.MAX_VALUE);
     List<Map<String, Object>> picker = new ArrayList<>(problems.size());
     for (Problem problem : problems) {
       Map<String, Object> entry = new HashMap<>(4, 1);

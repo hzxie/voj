@@ -38,7 +38,6 @@ import org.verwandlung.voj.web.model.*;
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.verwandlung.voj.web.util.JsonUtils;
 import org.verwandlung.voj.web.util.SlugifyUtils;
-import org.verwandlung.voj.web.util.Pagination;
 
 /**
  * The business logic layer of the Problem class.
@@ -70,162 +69,39 @@ public class ProblemService {
   }
 
   /**
-   * Gets the list of problems. An unknown category or tag slug matches no problems.
+   * Gets a page of the problems matching a filter, by identifier.
    *
-   * @param offset - the number of matching problems to skip (zero-based)
-   * @param keyword - the keyword
-   * @param problemCategorySlug - the alias of the problem category (null/empty = no filter)
-   * @param problemTagSlug - the alias of the problem tag (null/empty = no filter)
-   * @param problemDifficultySlug - the alias of the problem difficulty (null/empty = no filter)
-   * @param isPublicOnly - whether to filter only public problems
-   * @param limit - the number of problems to load each time
-   * @return the list of problems (a List<Problem> object)
+   * @param filter - the conditions of the search
+   * @param offset - the number of matching problems to skip
+   * @param limit - the maximum number of problems to get
+   * @return the problems
    */
-  public List<Problem> getProblemsUsingFilters(
-      long offset,
-      String keyword,
-      String problemCategorySlug,
-      String problemTagSlug,
-      String problemDifficultySlug,
-      boolean isPublicOnly,
-      int limit) {
-    if (offset < 0) {
-      offset = 0;
-    }
+  public List<Problem> getProblems(ProblemFilter filter, long offset, int limit) {
     return problemMapper.getProblemsUsingFilters(
-        keyword,
-        resolveProblemCategoryId(problemCategorySlug),
-        resolveProblemTagIdUsingSlug(problemTagSlug),
-        resolveProblemDifficultyId(problemDifficultySlug),
-        isPublicOnly,
-        offset,
+        filter.getKeyword(),
+        filter.getProblemIdQuery(),
+        resolveProblemCategoryId(filter.getProblemCategorySlug()),
+        resolveProblemTagId(filter.getProblemTag()),
+        resolveProblemDifficultyId(filter.getProblemDifficultySlug()),
+        filter.isPublicOnly(),
+        Math.max(offset, 0),
         limit);
   }
 
   /**
-   * Gets a page of problems for the public problem set, filtered by a single field. Backs the
-   * numbered-pager problem list (the ID/Title/Tag segmented filter in the redesigned page).
+   * Gets the number of problems matching a filter, consistent with {@link #getProblems}.
    *
-   * @param pageNumber - the 1-based page number
-   * @param pageSize - the number of problems per page
-   * @param field - the filter field ("id", "title" or "tag")
-   * @param query - the filter value (may be null/empty for no filtering)
-   * @param problemDifficultySlug - the alias of the problem difficulty (null/empty = no filter)
-   * @param isPublicOnly - whether to filter only public problems
-   * @return the list of problems on the requested page
+   * @param filter - the conditions of the search
+   * @return the number of matching problems
    */
-  public List<Problem> getProblemsByPage(
-      int pageNumber,
-      int pageSize,
-      String field,
-      String query,
-      String problemDifficultySlug,
-      boolean isPublicOnly) {
-    long offset = Pagination.getOffset(pageNumber, pageSize);
-    return problemMapper.getProblemsByPage(
-        field,
-        query,
-        resolveProblemTagId(field, query),
-        resolveProblemDifficultyId(problemDifficultySlug),
-        isPublicOnly,
-        offset,
-        pageSize);
-  }
-
-  /**
-   * Gets the total number of problems matching the public problem-set filters.
-   *
-   * @param field - the filter field ("id", "title" or "tag")
-   * @param query - the filter value (may be null/empty for no filtering)
-   * @param problemDifficultySlug - the alias of the problem difficulty (null/empty = no filter)
-   * @param isPublicOnly - whether to filter only public problems
-   * @return the total number of matching problems
-   */
-  public long getNumberOfProblemsByPage(
-      String field, String query, String problemDifficultySlug, boolean isPublicOnly) {
-    return problemMapper.getNumberOfProblemsByPage(
-        field,
-        query,
-        resolveProblemTagId(field, query),
-        resolveProblemDifficultyId(problemDifficultySlug),
-        isPublicOnly);
-  }
-
-  /**
-   * Resolves the tag filter to a tag identifier. Returns 0 when no tag filter applies and -1 (a
-   * sentinel that matches no rows) when filtering by a tag that does not exist.
-   *
-   * @param field - the filter field
-   * @param query - the filter value
-   * @return the tag identifier to filter by
-   */
-  private long resolveProblemTagId(String field, String query) {
-    if (!"tag".equals(field) || query == null || query.isEmpty()) {
-      return 0;
-    }
-    ProblemTag problemTag = problemTagMapper.getProblemTagUsingTagSlug(SlugifyUtils.getSlug(query));
-    return problemTag != null ? problemTag.getProblemTagId() : -1;
-  }
-
-  /**
-   * Resolves a difficulty filter slug to a difficulty identifier. Returns 0 when no difficulty
-   * filter applies and -1 (a sentinel that matches no rows) when filtering by a difficulty that does
-   * not exist.
-   *
-   * @param problemDifficultySlug - the slug of the problem difficulty
-   * @return the difficulty identifier to filter by
-   */
-  private int resolveProblemDifficultyId(String problemDifficultySlug) {
-    if (problemDifficultySlug == null || problemDifficultySlug.isEmpty()) {
-      return 0;
-    }
-    ProblemDifficulty problemDifficulty =
-        problemDifficultyMapper.getProblemDifficultyUsingSlug(problemDifficultySlug);
-    return problemDifficulty != null ? problemDifficulty.getProblemDifficultyId() : -1;
-  }
-
-  /**
-   * Gets the total number of problems.
-   *
-   * @param keyword - the keyword
-   * @param problemCategorySlug - the alias of the problem category
-   * @param problemDifficultySlug - the alias of the problem difficulty (null/empty = no filter)
-   * @param isPublicOnly - whether to filter only public problems
-   * @return the total number of problems
-   */
-  public long getNumberOfProblemsUsingFilters(
-      String keyword,
-      String problemCategorySlug,
-      String problemDifficultySlug,
-      boolean isPublicOnly) {
-    return getNumberOfProblemsUsingFilters(
-        keyword, problemCategorySlug, null, problemDifficultySlug, isPublicOnly);
-  }
-
-  /**
-   * Gets the total number of problems matching the same filters as {@link
-   * #getProblemsUsingFilters(long, String, String, String, String, boolean, int)}, so that a pager
-   * built on the two stays consistent.
-   *
-   * @param keyword - the keyword
-   * @param problemCategorySlug - the alias of the problem category (null/empty = no filter)
-   * @param problemTagSlug - the alias of the problem tag (null/empty = no filter)
-   * @param problemDifficultySlug - the alias of the problem difficulty (null/empty = no filter)
-   * @param isPublicOnly - whether to filter only public problems
-   * @return the total number of problems
-   */
-  public long getNumberOfProblemsUsingFilters(
-      String keyword,
-      String problemCategorySlug,
-      String problemTagSlug,
-      String problemDifficultySlug,
-      boolean isPublicOnly) {
+  public long getNumberOfProblems(ProblemFilter filter) {
     return problemMapper.getNumberOfProblemsUsingFilters(
-        keyword,
-        resolveProblemCategoryId(problemCategorySlug),
-        resolveProblemTagIdUsingSlug(problemTagSlug),
-        resolveProblemDifficultyId(problemDifficultySlug),
-        isPublicOnly);
+        filter.getKeyword(),
+        filter.getProblemIdQuery(),
+        resolveProblemCategoryId(filter.getProblemCategorySlug()),
+        resolveProblemTagId(filter.getProblemTag()),
+        resolveProblemDifficultyId(filter.getProblemDifficultySlug()),
+        filter.isPublicOnly());
   }
 
   /**
@@ -246,35 +122,51 @@ public class ProblemService {
   }
 
   /**
-   * Resolves a tag filter slug to a tag identifier. Returns 0 when no tag filter applies and -1 (a
+   * Resolves a tag filter to a tag identifier. Returns 0 when no tag filter applies and -1 (a
    * sentinel that matches no rows) when filtering by a tag that does not exist.
    *
-   * @param problemTagSlug - the slug (or name) of the problem tag
+   * @param problemTag - the slug or the name of the problem tag
    * @return the tag identifier to filter by
    */
-  private long resolveProblemTagIdUsingSlug(String problemTagSlug) {
-    if (problemTagSlug == null || problemTagSlug.isEmpty()) {
+  private long resolveProblemTagId(String problemTag) {
+    if (problemTag == null || problemTag.isEmpty()) {
       return 0;
     }
-    ProblemTag problemTag =
-        problemTagMapper.getProblemTagUsingTagSlug(SlugifyUtils.getSlug(problemTagSlug));
-    return problemTag != null ? problemTag.getProblemTagId() : -1;
+    ProblemTag tag = problemTagMapper.getProblemTagUsingTagSlug(SlugifyUtils.getSlug(problemTag));
+    return tag != null ? tag.getProblemTagId() : -1;
   }
 
   /**
-   * Gets the categories of problems within a range.
+   * Resolves a difficulty filter slug to a difficulty identifier. Returns 0 when no difficulty
+   * filter applies and -1 (a sentinel that matches no rows) when filtering by a difficulty that does
+   * not exist.
    *
-   * @param problemIdLowerBound - the lower bound of the problem ID range
-   * @param problemIdUpperBound - the upper bound of the problem ID range
-   * @return a list containing the problem category information
+   * @param problemDifficultySlug - the slug of the problem difficulty
+   * @return the difficulty identifier to filter by
    */
-  public Map<Long, List<ProblemCategory>> getProblemCategoriesOfProblems(
-      long problemIdLowerBound, long problemIdUpperBound) {
-    List<ProblemCategoryRelationship> problemCategoryRelationships =
-        problemCategoryMapper.getProblemCategoriesOfProblems(
-            problemIdLowerBound, problemIdUpperBound);
+  private int resolveProblemDifficultyId(String problemDifficultySlug) {
+    if (problemDifficultySlug == null || problemDifficultySlug.isEmpty()) {
+      return 0;
+    }
+    ProblemDifficulty problemDifficulty =
+        problemDifficultyMapper.getProblemDifficultyUsingSlug(problemDifficultySlug);
+    return problemDifficulty != null ? problemDifficulty.getProblemDifficultyId() : -1;
+  }
 
+  /**
+   * Gets the categories of some problems.
+   *
+   * @param problems - the problems
+   * @return the categories of each problem, by problem identifier
+   */
+  public Map<Long, List<ProblemCategory>> getProblemCategoriesOfProblems(List<Problem> problems) {
     Map<Long, List<ProblemCategory>> problemCategoriesOfProblems = new HashMap<>();
+    if (problems.isEmpty()) {
+      return problemCategoriesOfProblems;
+    }
+    List<ProblemCategoryRelationship> problemCategoryRelationships =
+        problemCategoryMapper.getProblemCategoriesOfProblems(getProblemIds(problems));
+
     for (ProblemCategoryRelationship pcr : problemCategoryRelationships) {
       long problemId = pcr.getProblemId();
       if (!problemCategoriesOfProblems.containsKey(problemId)) {
@@ -303,18 +195,19 @@ public class ProblemService {
   }
 
   /**
-   * Gets the tags of problems within a range.
+   * Gets the tags of some problems.
    *
-   * @param problemIdLowerBound - the lower bound of the problem ID range
-   * @param problemIdUpperBound - the upper bound of the problem ID range
-   * @return a list containing the problem tag information
+   * @param problems - the problems
+   * @return the tags of each problem, by problem identifier
    */
-  public Map<Long, List<ProblemTag>> getProblemTagsOfProblems(
-      long problemIdLowerBound, long problemIdUpperBound) {
-    List<ProblemTagRelationship> problemTagRelationships =
-        problemTagMapper.getProblemTagsOfProblems(problemIdLowerBound, problemIdUpperBound);
-
+  public Map<Long, List<ProblemTag>> getProblemTagsOfProblems(List<Problem> problems) {
     Map<Long, List<ProblemTag>> problemTagsOfProblems = new HashMap<>();
+    if (problems.isEmpty()) {
+      return problemTagsOfProblems;
+    }
+    List<ProblemTagRelationship> problemTagRelationships =
+        problemTagMapper.getProblemTagsOfProblems(getProblemIds(problems));
+
     for (ProblemTagRelationship ptr : problemTagRelationships) {
       long problemId = ptr.getProblemId();
       if (!problemTagsOfProblems.containsKey(problemId)) {
@@ -326,6 +219,20 @@ public class ProblemService {
           new ProblemTag(ptr.getProblemTagId(), ptr.getProblemTagSlug(), ptr.getProblemTagName()));
     }
     return problemTagsOfProblems;
+  }
+
+  /**
+   * Gets the identifiers of some problems.
+   *
+   * @param problems - the problems
+   * @return their identifiers
+   */
+  private static List<Long> getProblemIds(List<Problem> problems) {
+    List<Long> problemIds = new ArrayList<>(problems.size());
+    for (Problem problem : problems) {
+      problemIds.add(problem.getProblemId());
+    }
+    return problemIds;
   }
 
   /**

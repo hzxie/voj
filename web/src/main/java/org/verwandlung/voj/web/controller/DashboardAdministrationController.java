@@ -43,6 +43,7 @@ import org.springframework.web.servlet.ModelAndView;
 import org.verwandlung.voj.web.interceptor.AdministrationSection;
 import org.verwandlung.voj.web.model.JudgerSummary;
 import org.verwandlung.voj.web.model.Language;
+import org.verwandlung.voj.web.model.ProblemFilter;
 import org.verwandlung.voj.web.model.UserGroup;
 import org.verwandlung.voj.web.service.ContestService;
 import org.verwandlung.voj.web.service.DiscussionService;
@@ -226,7 +227,7 @@ public class DashboardAdministrationController {
   private long getPrivateProblems() {
     long numberOfTotalProblems = getTotalProblems();
     long numberOfPublicProblems =
-        problemService.getNumberOfProblemsUsingFilters(null, "", "", true);
+        problemService.getNumberOfProblems(new ProblemFilter().publicOnly());
     return numberOfTotalProblems - numberOfPublicProblems;
   }
 

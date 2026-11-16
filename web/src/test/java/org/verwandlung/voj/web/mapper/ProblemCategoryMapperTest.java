@@ -89,12 +89,12 @@ public class ProblemCategoryMapperTest {
   }
 
   /**
-   * Test case: tests the getProblemCategoriesOfProblems() method. Test data: a problem ID range from 1000 to 1002. Expected: all the problem category information (4 records in total).
+   * Test case: tests the getProblemCategoriesOfProblems() method. Test data: the problem IDs 1000 to 1002. Expected: all the problem category information (4 records in total).
    */
   @Test
   public void testGetProblemCategoriesOfProblemsFrom1000WithLimit3() {
     List<ProblemCategoryRelationship> problemCategoryRelationships =
-        problemCategoryMapper.getProblemCategoriesOfProblems(1000, 1002);
+        problemCategoryMapper.getProblemCategoriesOfProblems(java.util.List.of(1000L, 1001L, 1002L));
     Assertions.assertEquals(4, problemCategoryRelationships.size());
 
     ProblemCategoryRelationship pcr = problemCategoryRelationships.get(0);
@@ -102,11 +102,11 @@ public class ProblemCategoryMapperTest {
     Assertions.assertEquals(1, pcr.getProblemCategoryId());
   }
 
-  /** Test case: tests the getProblemCategoriesOfProblems() method. Test data: a problem ID range from 999 to 1000. Expected: all the problem category information (2 records in total). */
+  /** Test case: tests the getProblemCategoriesOfProblems() method. Test data: the problem IDs 999 to 1000. Expected: all the problem category information (2 records in total). */
   @Test
   public void testGetProblemCategoriesOfProblemsFrom999WithLimit2() {
     List<ProblemCategoryRelationship> problemCategoryRelationships =
-        problemCategoryMapper.getProblemCategoriesOfProblems(999, 1000);
+        problemCategoryMapper.getProblemCategoriesOfProblems(java.util.List.of(999L, 1000L));
     Assertions.assertEquals(2, problemCategoryRelationships.size());
 
     ProblemCategoryRelationship pcr = problemCategoryRelationships.get(0);
@@ -114,11 +114,11 @@ public class ProblemCategoryMapperTest {
     Assertions.assertEquals(1, pcr.getProblemCategoryId());
   }
 
-  /** Test case: tests the getProblemCategoriesOfProblems() method. Test data: a problem ID range from 999 to 999. Expected: all the problem category information (0 records in total). */
+  /** Test case: tests the getProblemCategoriesOfProblems() method. Test data: the problem IDs 999 to 999. Expected: all the problem category information (0 records in total). */
   @Test
   public void testGetProblemCategoriesOfProblemsFrom999WithLimit1() {
     List<ProblemCategoryRelationship> problemCategoryRelationships =
-        problemCategoryMapper.getProblemCategoriesOfProblems(999, 999);
+        problemCategoryMapper.getProblemCategoriesOfProblems(java.util.List.of(999L));
     Assertions.assertEquals(0, problemCategoryRelationships.size());
   }
 

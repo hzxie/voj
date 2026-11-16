@@ -56,6 +56,9 @@
 		<if test="keyword != null and keyword != ''">
 			AND p.problem_name LIKE CONCAT('%', #{keyword}, '%')
 		</if>
+		<if test="problemIdQuery != null and problemIdQuery != ''">
+			AND p.problem_id LIKE CONCAT('%', #{problemIdQuery}, '%')
+		</if>
 		<if test="problemCategoryId != 0">
 			AND EXISTS (
 				SELECT 1
@@ -111,73 +114,6 @@
 		LEFT JOIN voj_problem_difficulty d ON d.problem_difficulty_id = p.problem_difficulty_id
 		WHERE p.problem_id = #{problemId}
 	</select>
-	<!-- Page-based listing for the public problem set (numbered pager + ID/Title/Tag filter). -->
-	<select id="getNumberOfProblemsByPage"
-		parameterType="map"
-		resultType="long">
-		SELECT COUNT(DISTINCT p.problem_id)
-		FROM voj_problems p
-		<if test="problemTagId != 0">
-			JOIN voj_problem_tag_relationships ptr ON ptr.problem_id = p.problem_id
-		</if>
-		<where>
-			<if test="isPublicOnly == true">
-				p.problem_status = 'PUBLISHED'
-			</if>
-			<if test="field == 'id' and query != null and query != ''">
-				AND p.problem_id LIKE CONCAT('%', #{query}, '%')
-			</if>
-			<if test="field == 'title' and query != null and query != ''">
-				AND p.problem_name LIKE CONCAT('%', #{query}, '%')
-			</if>
-			<if test="problemTagId != 0">
-				AND ptr.problem_tag_id = #{problemTagId}
-			</if>
-			<if test="problemDifficultyId != 0">
-				AND p.problem_difficulty_id = #{problemDifficultyId}
-			</if>
-		</where>
-	</select>
-	<select id="getProblemsByPage"
-		parameterType="map"
-		resultMap="ProblemResultMap">
-		SELECT DISTINCT p.problem_id, p.problem_name, p.problem_status, p.problem_difficulty_id,
-			d.problem_difficulty_slug, d.problem_difficulty_name, (
-			SELECT COUNT(*)
-			FROM voj_submissions s
-			WHERE s.problem_id = p.problem_id
-			<include refid="notInRunningContest" />
-		) AS total_submission, (
-			SELECT COUNT(*)
-			FROM voj_submissions s
-			WHERE s.problem_id = p.problem_id AND s.submission_judge_result = 'AC'
-			<include refid="notInRunningContest" />
-		) AS accepted_submission
-		FROM voj_problems p
-		LEFT JOIN voj_problem_difficulty d ON d.problem_difficulty_id = p.problem_difficulty_id
-		<if test="problemTagId != 0">
-			JOIN voj_problem_tag_relationships ptr ON ptr.problem_id = p.problem_id
-		</if>
-		<where>
-			<if test="isPublicOnly == true">
-				p.problem_status = 'PUBLISHED'
-			</if>
-			<if test="field == 'id' and query != null and query != ''">
-				AND p.problem_id LIKE CONCAT('%', #{query}, '%')
-			</if>
-			<if test="field == 'title' and query != null and query != ''">
-				AND p.problem_name LIKE CONCAT('%', #{query}, '%')
-			</if>
-			<if test="problemTagId != 0">
-				AND ptr.problem_tag_id = #{problemTagId}
-			</if>
-			<if test="problemDifficultyId != 0">
-				AND p.problem_difficulty_id = #{problemDifficultyId}
-			</if>
-		</where>
-		ORDER BY p.problem_id
-		LIMIT #{offset}, #{limit}
-	</select>
 	<select id="getProblemsUsingFilters" 
 		parameterType="map"
 		resultMap="ProblemResultMap">
@@ -186,10 +122,16 @@
 			SELECT COUNT(*)
 			FROM voj_submissions s
 			WHERE s.problem_id = p.problem_id
+			<if test="isPublicOnly == true">
+				<include refid="notInRunningContest" />
+			</if>
 		) AS total_submission, (
 			SELECT COUNT(*)
 			FROM voj_submissions s
 			WHERE s.problem_id = p.problem_id AND s.submission_judge_result = 'AC'
+			<if test="isPublicOnly == true">
+				<include refid="notInRunningContest" />
+			</if>
 		) AS accepted_submission
 		FROM voj_problems p
 		LEFT JOIN voj_problem_difficulty d ON d.problem_difficulty_id = p.problem_difficulty_id

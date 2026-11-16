@@ -52,15 +52,12 @@ public interface ProblemCategoryMapper {
   List<ProblemCategory> getProblemCategoriesUsingProblemId(long problemId);
 
   /**
-   * Gets the categories of problems within a range.
+   * Gets the categories of some problems.
    *
-   * @param problemIdLowerBound - the lower bound of the problem ID range
-   * @param problemIdUpperBound - the upper bound of the problem ID range
-   * @return a list containing the problem category information
+   * @param problemIds - the unique identifiers of the problems (not empty)
+   * @return the categories of the problems
    */
-  List<ProblemCategoryRelationship> getProblemCategoriesOfProblems(
-      @Param(value = "problemIdLowerBound") long problemIdLowerBound,
-      @Param(value = "problemIdUpperBound") long problemIdUpperBound);
+  List<ProblemCategoryRelationship> getProblemCategoriesOfProblems(@Param("problemIds") List<Long> problemIds);
 
   /**
    * Gets a problem category object by its alias.

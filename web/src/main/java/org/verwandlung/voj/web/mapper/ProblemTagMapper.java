@@ -52,15 +52,12 @@ public interface ProblemTagMapper {
   List<ProblemTag> getProblemTagsUsingProblemId(long problemId);
 
   /**
-   * Gets the tags of problems within a range.
+   * Gets the tags of some problems.
    *
-   * @param problemIdLowerBound - the lower bound of the problem ID range
-   * @param problemIdUpperBound - the upper bound of the problem ID range
-   * @return a list containing the problem tag information
+   * @param problemIds - the unique identifiers of the problems (not empty)
+   * @return the tags of the problems
    */
-  List<ProblemTagRelationship> getProblemTagsOfProblems(
-      @Param(value = "problemIdLowerBound") long problemIdLowerBound,
-      @Param(value = "problemIdUpperBound") long problemIdUpperBound);
+  List<ProblemTagRelationship> getProblemTagsOfProblems(@Param("problemIds") List<Long> problemIds);
 
   /**
    * Gets a problem tag object by its alias.

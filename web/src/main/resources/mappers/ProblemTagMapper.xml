@@ -45,8 +45,10 @@
 		SELECT *
 		FROM voj_problem_tag_relationships
 		NATURAL JOIN voj_problem_tags
-		WHERE problem_id &gt;= #{problemIdLowerBound}
-		AND problem_id &lt;= #{problemIdUpperBound}
+		WHERE problem_id IN
+		<foreach collection="problemIds" item="problemId" open="(" separator="," close=")">
+			#{problemId}
+		</foreach>
 		ORDER BY problem_id, problem_tag_id
 	</select>
 	<select id="getProblemTagUsingTagSlug"
