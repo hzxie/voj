@@ -102,9 +102,10 @@ public class SandboxPolicy implements InitializingBean {
 
   /**
    * Builds a run of a compiled submission on one checkpoint, under the problem's limits scaled by
-   * the language's multipliers. A run is a single process: on Linux the process limit counts its
-   * threads (judger.processLimit); a Windows Job counts processes only, and holds the program and
-   * its console host.
+   * the language's multipliers. On Linux the process limit (judger.processLimit) counts processes
+   * and threads alike: the native sandbox holds a run to a single process, so that the limit is on
+   * its threads, while isolate cannot tell threads from processes, and lets a run fork within it.
+   * A Windows Job counts processes only, and holds the program and its console host.
    *
    * @param language - the language of the submission
    * @param problem - the problem
@@ -421,7 +422,10 @@ public class SandboxPolicy implements InitializingBean {
   @Value("${judger.compileMemoryLimit:524288}")
   private int compileMemoryLimit;
 
-  /** The threads a run may have at once (Linux, where a run cannot start processes). */
+  /**
+   * The threads a run may have at once on Linux (under isolate, its processes and threads
+   * together).
+   */
   @Value("${judger.processLimit:64}")
   private int processLimit;
 

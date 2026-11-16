@@ -392,6 +392,13 @@ UID: set `judger.isolate.firstUid` to isolate's `first_uid` and
   one on file locks); runs of the submission keep all of them. For an isolate
   without `--syscalls`, set `judger.isolate.compileSyscalls` empty.
 - **Network.** isolate gives each box its own, empty network namespace.
+- **Processes.** isolate cannot tell threads from processes: `--processes`
+  limits both together, and a run of the submission may fork, which the native
+  backend refuses (a run there is a single process). Its children count against
+  `judger.processLimit` with its threads, their CPU time against its time limit
+  and their memory against its memory limit (the box's cgroup holds them all),
+  and they are killed with the box: the verdict cannot gain from them, but a
+  program that forks is not a Runtime Error under isolate as it is natively.
 - **Limits and verdicts.** The judger's limits, as the native backend gets
   them: the CPU time (`--time`, of the whole box), the wall-clock limit
   (`--wall-time`, twice the time limit plus a second), `judger.processLimit`
